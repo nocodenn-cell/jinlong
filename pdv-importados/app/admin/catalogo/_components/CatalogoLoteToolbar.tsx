@@ -236,12 +236,19 @@ export function CatalogoLoteToolbar({ ids, m, ui, opcoes, onLimpar, onExcluir }:
               type="button"
               variant="primary"
               disabled={pending}
+              loading={pending}
               onClick={() => {
-                setCategoriaModal(false)
-                run(async () => {
+                startTransition(async () => {
                   const r = await alterarCategoriaLoteProdutos(alvo, categoriaId || null)
-                  return r.success ? { success: true } : { success: false, error: r.error }
-                }, m.comum.sucesso)
+                  if (!r.success) {
+                    emitGerenteToast({ kind: 'error', message: r.error || m.comum.erro })
+                    return
+                  }
+                  emitGerenteToast({ kind: 'success', message: m.comum.sucesso })
+                  setCategoriaModal(false)
+                  onLimpar()
+                  router.refresh()
+                })
               }}
             >
               {m.comum.salvar}
