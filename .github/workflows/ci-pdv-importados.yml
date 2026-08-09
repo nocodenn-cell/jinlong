@@ -132,7 +132,22 @@ jobs:
           {
             printf 'SYNC_ENDPOINT=%s\n' "$SYNC_EP"
             printf 'SYNC_KEY=%s\n' "$SYNC_K"
+            printf 'SUPABASE_ANON_KEY=%s\n' "$PW_ANON"
+            printf 'NEXT_PUBLIC_SUPABASE_URL=%s\n' "$PW_URL"
           } > pdv-local/.env
+
+      - name: Seed usuários E2E no Supabase de staging
+        env:
+          SUPABASE_URL: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.PLAYWRIGHT_SUPABASE_SERVICE_ROLE_KEY }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SEED_DEV_PASSWORD: ${{ secrets.PLAYWRIGHT_TEST_PASSWORD }}
+          PLAYWRIGHT_TEST_PASSWORD: ${{ secrets.PLAYWRIGHT_TEST_PASSWORD }}
+          PLAYWRIGHT_CAIXA_TEST_PASSWORD: ${{ secrets.PLAYWRIGHT_CAIXA_TEST_PASSWORD }}
+          SEED_GERENTE_EMAIL: ${{ secrets.PLAYWRIGHT_TEST_EMAIL }}
+          SEED_OPERADOR_EMAIL: ${{ secrets.PLAYWRIGHT_CAIXA_TEST_EMAIL }}
+        run: node pdv-importados/scripts/seed-dev-users.mjs
 
       - name: Pipeline E2E crítico
         env:
@@ -153,6 +168,17 @@ jobs:
           STRICT_MANAGER_DISCOUNT_AUTH: 'true'
           AUTO_ENQUEUE_FISCAL_ON_SALE: 'true'
         run: npm run test:e2e:critical -w pdv-importados
+
+      # Harness: preservar trace.zip / error-context.md quando o E2E crítico falha.
+      - name: Upload Playwright test-results (E2E crítico)
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: e2e-critical-test-results
+          path: |
+            pdv-importados/test-results/**
+          if-no-files-found: ignore
+          retention-days: 7
 
   # Deploy de produção: responsabilidade exclusiva da integração nativa da Vercel
   # (GitHub App). O job `deploy` com amondnet/vercel-action foi removido — ver

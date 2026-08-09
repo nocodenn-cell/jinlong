@@ -35,6 +35,8 @@ REVOKE ALL ON TABLE public.vendas_em_espera FROM anon;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.vendas_em_espera TO authenticated;
 GRANT ALL ON TABLE public.vendas_em_espera TO service_role;
 
+-- Greenfield: 24703 (reordered to 20260621*) may already have created these policies.
+DROP POLICY IF EXISTS vendas_em_espera_select ON public.vendas_em_espera;
 CREATE POLICY vendas_em_espera_select ON public.vendas_em_espera
   FOR SELECT TO authenticated
   USING (
@@ -46,10 +48,12 @@ CREATE POLICY vendas_em_espera_select ON public.vendas_em_espera
     )
   );
 
+DROP POLICY IF EXISTS vendas_em_espera_insert ON public.vendas_em_espera;
 CREATE POLICY vendas_em_espera_insert ON public.vendas_em_espera
   FOR INSERT TO authenticated
   WITH CHECK (operador_id = auth.uid());
 
+DROP POLICY IF EXISTS vendas_em_espera_update ON public.vendas_em_espera;
 CREATE POLICY vendas_em_espera_update ON public.vendas_em_espera
   FOR UPDATE TO authenticated
   USING (

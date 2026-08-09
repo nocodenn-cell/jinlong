@@ -1,0 +1,1059 @@
+{
+  "generatedAt": "2026-08-08T01:42:37.868Z",
+  "source": "Supabase MCP execute_sql string_agg (read-only)",
+  "count": 263,
+  "migrations": [
+    {
+      "version": "001",
+      "name": "schema_inicial"
+    },
+    {
+      "version": "002",
+      "name": "mvp_desconto_gerente"
+    },
+    {
+      "version": "003",
+      "name": "mvp_idioma_usuario_update"
+    },
+    {
+      "version": "004",
+      "name": "mvp_idioma_preferido_zh_hk"
+    },
+    {
+      "version": "005",
+      "name": "mvp_pdv_config"
+    },
+    {
+      "version": "006",
+      "name": "pdv_caixa_sync"
+    },
+    {
+      "version": "007",
+      "name": "estoque_baixa_idempotente"
+    },
+    {
+      "version": "008",
+      "name": "descontos_venda_rls"
+    },
+    {
+      "version": "009",
+      "name": "web_caixa_rpc_estoque_grant"
+    },
+    {
+      "version": "010",
+      "name": "estoque_baixas_rls_gerente"
+    },
+    {
+      "version": "011",
+      "name": "relatorios_periodo_rpc"
+    },
+    {
+      "version": "012",
+      "name": "relatorios_fuso_brasilia"
+    },
+    {
+      "version": "013",
+      "name": "relatorios_timezone_configuravel"
+    },
+    {
+      "version": "014",
+      "name": "rpc_registrar_venda_com_itens"
+    },
+    {
+      "version": "015",
+      "name": "security_rpc_hardening"
+    },
+    {
+      "version": "016",
+      "name": "estoque_atomic_lock"
+    },
+    {
+      "version": "017",
+      "name": "decrementar_estoque_seguro_auth"
+    },
+    {
+      "version": "018",
+      "name": "tokens_desconto_gerente"
+    },
+    {
+      "version": "019",
+      "name": "rls_hardening_insert_policies"
+    },
+    {
+      "version": "020",
+      "name": "rpc_finalizar_venda_transacional"
+    },
+    {
+      "version": "021",
+      "name": "validar_gerente_rate_limit"
+    },
+    {
+      "version": "022",
+      "name": "validar_gerente_rate_limit_scopes"
+    },
+    {
+      "version": "023",
+      "name": "finalizar_venda_transacional_desconto_gerente_token"
+    },
+    {
+      "version": "024",
+      "name": "sync_outbox_hmac_nonce_replay"
+    },
+    {
+      "version": "025",
+      "name": "finalizar_venda_transacional_canonica_v2"
+    },
+    {
+      "version": "026",
+      "name": "pdv_config_retire_default_gerente_hash"
+    },
+    {
+      "version": "027",
+      "name": "seed_produtos_demo_importados_zh"
+    },
+    {
+      "version": "028",
+      "name": "finalizar_venda_canonica_v2_ordem_fk"
+    },
+    {
+      "version": "029",
+      "name": "decrementar_estoque_seguro_system_context"
+    },
+    {
+      "version": "030",
+      "name": "decrementar_estoque_seguro_sem_coluna_id"
+    },
+    {
+      "version": "031",
+      "name": "finalizar_venda_canonica_v2_desconto_sem_token"
+    },
+    {
+      "version": "032",
+      "name": "lojas_estoque_por_loja"
+    },
+    {
+      "version": "033",
+      "name": "preco_atacado_catalogo"
+    },
+    {
+      "version": "034",
+      "name": "remessas_movimentos_transferencias"
+    },
+    {
+      "version": "035",
+      "name": "fiado_fiscal_stub"
+    },
+    {
+      "version": "036",
+      "name": "loja_filial_demo"
+    },
+    {
+      "version": "037",
+      "name": "fiscal_emissao_real_worker"
+    },
+    {
+      "version": "038",
+      "name": "fix_decrementar_estoque_seguro_estoque_baixas_schema"
+    },
+    {
+      "version": "039",
+      "name": "caixa_fechamento_diferenca_observacao"
+    },
+    {
+      "version": "040",
+      "name": "v_estoque_baixo_security_invoker"
+    },
+    {
+      "version": "041",
+      "name": "vendas_rls_consolidate_authenticated"
+    },
+    {
+      "version": "042",
+      "name": "estoque_vendas_rls_por_loja"
+    },
+    {
+      "version": "043",
+      "name": "caixas_loja_id_index_dono_visao_macro_rls"
+    },
+    {
+      "version": "044",
+      "name": "usuario_perfil_admin_rls"
+    },
+    {
+      "version": "045",
+      "name": "caixa_movimentacoes_transacionais"
+    },
+    {
+      "version": "046",
+      "name": "aprovar_movimentacao_por_token_gerente"
+    },
+    {
+      "version": "047",
+      "name": "obter_limite_sangria_sem_gerente"
+    },
+    {
+      "version": "048",
+      "name": "devolucoes"
+    },
+    {
+      "version": "049",
+      "name": "calcular_valor_sistema_dinheiro_caixa"
+    },
+    {
+      "version": "050",
+      "name": "cancelar_venda_transacional"
+    },
+    {
+      "version": "051",
+      "name": "split_payment_vendas_pagamentos"
+    },
+    {
+      "version": "052",
+      "name": "split_payment_finalize_venda_rpc"
+    },
+    {
+      "version": "053",
+      "name": "split_payment_valor_sistema_dinheiro"
+    },
+    {
+      "version": "054",
+      "name": "pdv_config_blind_closure"
+    },
+    {
+      "version": "055",
+      "name": "round_abnt_finalize_v2"
+    },
+    {
+      "version": "056",
+      "name": "enable_rls_vendas_pagamentos_reconcile"
+    },
+    {
+      "version": "057",
+      "name": "caixas_rls_consolidate_permissive"
+    },
+    {
+      "version": "058",
+      "name": "pdv_config_rls_e_rpc_caixa_web"
+    },
+    {
+      "version": "059",
+      "name": "cancelar_venda_split_e_auditoria_nao_dinheiro"
+    },
+    {
+      "version": "060",
+      "name": "v_kardex_unificado"
+    },
+    {
+      "version": "061",
+      "name": "finalizar_venda_canonica_v2_idempotencia"
+    },
+    {
+      "version": "062",
+      "name": "fiscal_enqueue_on_sale_rpc"
+    },
+    {
+      "version": "063",
+      "name": "ajuste_manual_estoque_kardex"
+    },
+    {
+      "version": "064",
+      "name": "relatorio_resumo_executivo_periodo"
+    },
+    {
+      "version": "065",
+      "name": "fiscal_error_normalization"
+    },
+    {
+      "version": "066",
+      "name": "fiscal_documento_timeline"
+    },
+    {
+      "version": "067",
+      "name": "pdv_config_bcrypt_gerente"
+    },
+    {
+      "version": "068",
+      "name": "usuarios_rls_dono_sem_recursao"
+    },
+    {
+      "version": "069",
+      "name": "fiscal_enqueue_service_role_sync_outbox"
+    },
+    {
+      "version": "070",
+      "name": "decrementar_estoque_idempotente_delega_seguro"
+    },
+    {
+      "version": "071",
+      "name": "revoke_execute_decrementar_estoque_idempotente_authenticated"
+    },
+    {
+      "version": "072",
+      "name": "remove_zh_hk_idioma"
+    },
+    {
+      "version": "073",
+      "name": "feature_flags"
+    },
+    {
+      "version": "074",
+      "name": "remove_zhHK"
+    },
+    {
+      "version": "075",
+      "name": "importacao_nfe_compra"
+    },
+    {
+      "version": "076",
+      "name": "seed_preco_atacado_demo"
+    },
+    {
+      "version": "077",
+      "name": "precos_atacado_tiers_e_rpc"
+    },
+    {
+      "version": "078",
+      "name": "dashboard_gerente_resumo"
+    },
+    {
+      "version": "079",
+      "name": "dashboard_gerente_resumo_v2"
+    },
+    {
+      "version": "080",
+      "name": "dashboard_gerente_resumo_structured"
+    },
+    {
+      "version": "081",
+      "name": "gerente_estoque_list_page_rpc"
+    },
+    {
+      "version": "082",
+      "name": "transferencia_segura_idempotente"
+    },
+    {
+      "version": "083",
+      "name": "tabela_marcas"
+    },
+    {
+      "version": "084",
+      "name": "adicionar_marca_imagem_tags_produtos"
+    },
+    {
+      "version": "085",
+      "name": "indices_filtros_produtos"
+    },
+    {
+      "version": "086",
+      "name": "rpc_list_produtos_gerente_filtrados"
+    },
+    {
+      "version": "087",
+      "name": "configuracoes_gerais"
+    },
+    {
+      "version": "088",
+      "name": "produto_imagens_storage_bucket"
+    },
+    {
+      "version": "089",
+      "name": "finalizar_venda_canonica_v3"
+    },
+    {
+      "version": "090",
+      "name": "fiscal_enqueue_on_conflict_and_erro_enqueue_evento"
+    },
+    {
+      "version": "091",
+      "name": "fiscal_correlation_id"
+    },
+    {
+      "version": "092",
+      "name": "fiscal_state_machine"
+    },
+    {
+      "version": "093",
+      "name": "fiscal_marcar_erro_backoff_quadratico"
+    },
+    {
+      "version": "094",
+      "name": "fiscal_rls_loja_scope_transferencias_idempotencia"
+    },
+    {
+      "version": "095",
+      "name": "caixa_scan_telemetry_events"
+    },
+    {
+      "version": "096",
+      "name": "caixa_scan_telemetry_schema_version"
+    },
+    {
+      "version": "097",
+      "name": "caixa_scan_telemetry_indexes_correlation"
+    },
+    {
+      "version": "098",
+      "name": "documentos_fiscais_dlq"
+    },
+    {
+      "version": "099",
+      "name": "fiscal_enqueue_valida_tipo_venda"
+    },
+    {
+      "version": "100",
+      "name": "dashboard_gerente_top_produto"
+    },
+    {
+      "version": "101",
+      "name": "fix_dashboard_atividades_limit"
+    },
+    {
+      "version": "102",
+      "name": "produtos_unique_codigo_loja"
+    },
+    {
+      "version": "103",
+      "name": "comissoes"
+    },
+    {
+      "version": "104",
+      "name": "contas_pagar_nfe"
+    },
+    {
+      "version": "105",
+      "name": "suspensao_vendas"
+    },
+    {
+      "version": "106",
+      "name": "categorias_ativo"
+    },
+    {
+      "version": "107",
+      "name": "categorias_financeiras"
+    },
+    {
+      "version": "108",
+      "name": "contas_pagar_schema_e_rpc_pagamento"
+    },
+    {
+      "version": "109",
+      "name": "ordens_compra"
+    },
+    {
+      "version": "110",
+      "name": "receber_ordem_compra"
+    },
+    {
+      "version": "111",
+      "name": "lgpd_clientes_compliance"
+    },
+    {
+      "version": "112",
+      "name": "clientes_contas_receber_loja_isolamento"
+    },
+    {
+      "version": "113",
+      "name": "descontos_venda_auditoria_operador"
+    },
+    {
+      "version": "114",
+      "name": "fiscal_enqueue_loja_validation"
+    },
+    {
+      "version": "115",
+      "name": "security_hardening_search_path_rls_permissions"
+    },
+    {
+      "version": "116",
+      "name": "drop_calcular_valor_sistema_dinheiro_caixa_overloads"
+    },
+    {
+      "version": "117",
+      "name": "fix_oc_rls_usuarios_pattern"
+    },
+    {
+      "version": "118",
+      "name": "fix_vendas_pagamentos_concurrency"
+    },
+    {
+      "version": "119",
+      "name": "realtime_movimentacoes_caixa"
+    },
+    {
+      "version": "122",
+      "name": "limite_desconto_manual_itens"
+    },
+    {
+      "version": "123",
+      "name": "revalidar_preco_commit_v3_e_revoke_v2"
+    },
+    {
+      "version": "124",
+      "name": "guard_margem_negativa_cadastro_precos"
+    },
+    {
+      "version": "125",
+      "name": "guard_margem_produtos_catalogo"
+    },
+    {
+      "version": "126",
+      "name": "ajuste_triggers_when_update"
+    },
+    {
+      "version": "127",
+      "name": "kardex_vendas_imutavel"
+    },
+    {
+      "version": "20260419013345",
+      "name": "fix_venda_idempotency_key"
+    },
+    {
+      "version": "20260515000000",
+      "name": "fiscal_worker_cron"
+    },
+    {
+      "version": "20260618011821",
+      "name": "113_rls_audit_fixes"
+    },
+    {
+      "version": "20260618011922",
+      "name": "114_pdv_config_loja_backfill"
+    },
+    {
+      "version": "20260618161315",
+      "name": "264_dashboard_venda_eventos_kpis"
+    },
+    {
+      "version": "20260619174508",
+      "name": "fix_finalizar_venda_v2_stub_quebrado"
+    },
+    {
+      "version": "20260619234314",
+      "name": "block_v2_legacy_overloads_and_create_flags_visuais"
+    },
+    {
+      "version": "20260620004913",
+      "name": "stub_v3_full_overload_legacy_disabled"
+    },
+    {
+      "version": "20260620020436",
+      "name": "complete_v2_block_all_overloads_legacy_disabled"
+    },
+    {
+      "version": "20260620200253",
+      "name": "244_clientes_tipo_endereco_e_view_gerente"
+    },
+    {
+      "version": "20260620222629",
+      "name": "245_remover_venda_fiado"
+    },
+    {
+      "version": "20260707000000",
+      "name": "venda_eventos_ledger"
+    },
+    {
+      "version": "20260707010000",
+      "name": "gerente_venda_eventos_rpcs"
+    },
+    {
+      "version": "20260707020000",
+      "name": "consistencia_vendas_auditoria"
+    },
+    {
+      "version": "20260709184734",
+      "name": "259_historico_precos_produto"
+    },
+    {
+      "version": "20260710163032",
+      "name": "255_vendas_em_espera_e_consulta_rapida"
+    },
+    {
+      "version": "20260710212200",
+      "name": "263_vendas_cliente_id"
+    },
+    {
+      "version": "20260710212305",
+      "name": "264_finalizar_venda_canonica_v4_cliente_id"
+    },
+    {
+      "version": "20260710212349",
+      "name": "265_clientes_insert_operador_pdv"
+    },
+    {
+      "version": "20260710212628",
+      "name": "266_clientes_unique_documento_loja"
+    },
+    {
+      "version": "20260711015958",
+      "name": "259_funcionarios_separate_from_usuarios"
+    },
+    {
+      "version": "20260711020021",
+      "name": "260_comissoes_regras_funcionario"
+    },
+    {
+      "version": "20260711020053",
+      "name": "261_comissoes_vendedores_regra_e_congelamento"
+    },
+    {
+      "version": "20260711143312",
+      "name": "267_funcionarios_meta_crud"
+    },
+    {
+      "version": "20260713174909",
+      "name": "268_drop_v4_overloads"
+    },
+    {
+      "version": "20260717031500",
+      "name": "248_devolver_ou_trocar_venda"
+    },
+    {
+      "version": "20260717031639",
+      "name": "248_fix_anon_grant_drift"
+    },
+    {
+      "version": "20260717031919",
+      "name": "248_fix_quantidade_devolvida_grant"
+    },
+    {
+      "version": "20260717031938",
+      "name": "248_fix_quantidade_devolvida_anon_grant"
+    },
+    {
+      "version": "20260717033836",
+      "name": "278_fix_v_clientes_gerente_ultima_compra"
+    },
+    {
+      "version": "20260718133633",
+      "name": "revoke_anon_pdv_rpcs_and_fix_diag"
+    },
+    {
+      "version": "20260718135138",
+      "name": "criar_produto_permite_operador_pdv"
+    },
+    {
+      "version": "20260718135500",
+      "name": "ajuste_estoque_inicial_operador_pdv"
+    },
+    {
+      "version": "20260718181600",
+      "name": "fix_verificar_consistencia_venda_total_liquido"
+    },
+    {
+      "version": "20260718184800",
+      "name": "adr_caixa_002_modelo_alpha_e_cancel"
+    },
+    {
+      "version": "20260719032927",
+      "name": "implantacao_checklist_go_live"
+    },
+    {
+      "version": "20260730093000",
+      "name": "revoga_operador_cadastro_produto_pdv"
+    },
+    {
+      "version": "20260731195704",
+      "name": "fix_movimentacao_gerente_id_bypass_seguranca"
+    },
+    {
+      "version": "20260731195933",
+      "name": "credita_saldo_caixa_venda_dinheiro"
+    },
+    {
+      "version": "20260731200258",
+      "name": "hardening_trg_creditar_saldo_caixa"
+    },
+    {
+      "version": "20260801090000",
+      "name": "v_estoque_ledger_divergencia"
+    },
+    {
+      "version": "20260801120000",
+      "name": "recebimento_conferencia_explicita"
+    },
+    {
+      "version": "20260805151822",
+      "name": "289_hardening_autorizacao_rpcs_p0"
+    },
+    {
+      "version": "20260805185445",
+      "name": "291_estoque_baixas_integridade"
+    },
+    {
+      "version": "20260805185458",
+      "name": "293_documentos_fiscais_dlq_enable_rls"
+    },
+    {
+      "version": "20260805190920",
+      "name": "294_fornecedores_multi_tenant"
+    },
+    {
+      "version": "20260805193920",
+      "name": "295_ordem_compra_conferencia"
+    },
+    {
+      "version": "20260805213357",
+      "name": "296_nfe_conferencia"
+    },
+    {
+      "version": "20260806000032",
+      "name": "297_configuracoes_gerais_whitelist"
+    },
+    {
+      "version": "20260806002522",
+      "name": "298_br01_limite_credito_por_modo_loja"
+    },
+    {
+      "version": "20260806002925",
+      "name": "299_tb07_pagamento_contas_pagar_limite_saldo"
+    },
+    {
+      "version": "20260806004637",
+      "name": "300_br03_custo_unitario_snap_servidor"
+    },
+    {
+      "version": "20260806005804",
+      "name": "301_revoke_anon_execute_finalizar_venda_v4_pos_br01"
+    },
+    {
+      "version": "20260806011719",
+      "name": "302_f1_05_formas_pagamento_parametrizavel"
+    },
+    {
+      "version": "20260806090414",
+      "name": "303_ssot04_kardex_cancelamento_devolucao"
+    },
+    {
+      "version": "20260806090531",
+      "name": "304_ssot04_drop_baixar_estoque_venda"
+    },
+    {
+      "version": "20260806134834",
+      "name": "305_d1_drop_fiscal_reprocessar_documento_overload"
+    },
+    {
+      "version": "20260806135106",
+      "name": "306_d2_maquina_estados_fiscal"
+    },
+    {
+      "version": "20260806135429",
+      "name": "307_d3_reaper_fiscal_em_processamento"
+    },
+    {
+      "version": "20260806140528",
+      "name": "308_hardening_tg_documentos_fiscais_estado"
+    },
+    {
+      "version": "20260806235913",
+      "name": "309_reaplica_091_fiscal_correlation_id"
+    },
+    {
+      "version": "20260807000105",
+      "name": "310_reaplica_288_venda_em_espera_e_caixa_unico"
+    },
+    {
+      "version": "20260807000138",
+      "name": "311_reaplica_235_236_237_observabilidade_e_system_alerts"
+    },
+    {
+      "version": "20260807000157",
+      "name": "312_rls_backup_schema_migrations"
+    },
+    {
+      "version": "20260807000525",
+      "name": "313_pdv_config_caixa_web_limite_desconto_manual"
+    },
+    {
+      "version": "205",
+      "name": "force_com_nf"
+    },
+    {
+      "version": "206",
+      "name": "vendas_caixa_imutabilidade_trigger"
+    },
+    {
+      "version": "207",
+      "name": "fechar_caixa_atomico_rpc"
+    },
+    {
+      "version": "208",
+      "name": "indices_busca_produto_trgm"
+    },
+    {
+      "version": "209",
+      "name": "fiscal_campos_loja_pdvconfig"
+    },
+    {
+      "version": "210",
+      "name": "fiscal_campos_produto"
+    },
+    {
+      "version": "211",
+      "name": "vinculos_fornecedor_produto_depara"
+    },
+    {
+      "version": "212",
+      "name": "restaura_movimentos_caixa_legado"
+    },
+    {
+      "version": "213",
+      "name": "restaura_configuracoes_gerais_drift"
+    },
+    {
+      "version": "214",
+      "name": "restaura_comissoes_loja_via_caixa"
+    },
+    {
+      "version": "215",
+      "name": "backfill_comissoes_vendas_concluidas"
+    },
+    {
+      "version": "216",
+      "name": "fix_marcas_drift_ativo_rls_usuarios"
+    },
+    {
+      "version": "217",
+      "name": "feature_flags_rls_perfil_uppercase"
+    },
+    {
+      "version": "218",
+      "name": "revoke_anon_execute_security_definer"
+    },
+    {
+      "version": "219",
+      "name": "revoke_anon_dml_grants"
+    },
+    {
+      "version": "220",
+      "name": "finalizar_venda_v2_search_path"
+    },
+    {
+      "version": "221",
+      "name": "revoke_public_execute_security_definer"
+    },
+    {
+      "version": "222",
+      "name": "drop_indices_duplicados"
+    },
+    {
+      "version": "223",
+      "name": "indices_fks_sem_cobertura"
+    },
+    {
+      "version": "224",
+      "name": "rls_initplan_wrap_auth_select"
+    },
+    {
+      "version": "225",
+      "name": "dashboard_serie_horaria_semana_anterior"
+    },
+    {
+      "version": "226",
+      "name": "rls_movimentos_caixa_insert_amarra_loja"
+    },
+    {
+      "version": "227",
+      "name": "fechar_caixa_pdv_atomico"
+    },
+    {
+      "version": "229",
+      "name": "venda_eventos_rpc_hooks"
+    },
+    {
+      "version": "230",
+      "name": "caixa_status_fechamento"
+    },
+    {
+      "version": "232",
+      "name": "produtos_status_publicacao"
+    },
+    {
+      "version": "233",
+      "name": "import_nfe_status_draft"
+    },
+    {
+      "version": "234",
+      "name": "calcular_preco_produto_security_definer"
+    },
+    {
+      "version": "235",
+      "name": "observabilidade_pdv_visual"
+    },
+    {
+      "version": "236",
+      "name": "system_alerts_log_leve"
+    },
+    {
+      "version": "237",
+      "name": "system_alerts_remove_triggers"
+    },
+    {
+      "version": "238",
+      "name": "relatorio_margem_por_venda"
+    },
+    {
+      "version": "239",
+      "name": "relatorio_curva_abc"
+    },
+    {
+      "version": "240",
+      "name": "relatorio_previsao_estoque"
+    },
+    {
+      "version": "241",
+      "name": "relatorio_margem_por_venda_snapshot_only"
+    },
+    {
+      "version": "242",
+      "name": "relatorio_cobertura_estoque_reclassificacao"
+    },
+    {
+      "version": "243",
+      "name": "finalizar_venda_canonica_v4_captura"
+    },
+    {
+      "version": "245",
+      "name": "calcular_preco_produto_precedence_comment"
+    },
+    {
+      "version": "246",
+      "name": "remover_venda_fiado"
+    },
+    {
+      "version": "24701",
+      "name": "contas_receber_idempotencia_unique_venda"
+    },
+    {
+      "version": "24702",
+      "name": "finalizar_venda_v4_contas_receber_automatico"
+    },
+    {
+      "version": "24703",
+      "name": "vendas_em_espera_e_consulta_rapida"
+    },
+    {
+      "version": "249",
+      "name": "pricing_version_governance"
+    },
+    {
+      "version": "250",
+      "name": "calcular_preco_produto_decision_fields"
+    },
+    {
+      "version": "251",
+      "name": "rls_admin_alinha_painel_gerente"
+    },
+    {
+      "version": "252",
+      "name": "venda_finance_context_mirror"
+    },
+    {
+      "version": "253",
+      "name": "clientes_tipo_endereco_e_view_gerente"
+    },
+    {
+      "version": "254",
+      "name": "pricing_version_venda_scope_guard"
+    },
+    {
+      "version": "255",
+      "name": "grant_baseline_tabelas_authenticated"
+    },
+    {
+      "version": "256",
+      "name": "pdv_diagnostico_pre_producao"
+    },
+    {
+      "version": "258",
+      "name": "produtos_localizacao_nome_reduzido"
+    },
+    {
+      "version": "268",
+      "name": "reconcile_finalizar_venda_v4_single_overload"
+    },
+    {
+      "version": "269",
+      "name": "ajustar_estoque_manual_service_ator"
+    },
+    {
+      "version": "270",
+      "name": "criar_produto_com_estoque_inicial"
+    },
+    {
+      "version": "271",
+      "name": "gtin_lookup_cache_e_cadastro_telemetry"
+    },
+    {
+      "version": "272",
+      "name": "reconciliacao_bl1_descontos_token_auditoria_motivo"
+    },
+    {
+      "version": "273",
+      "name": "bl2_promocao_schema_regra_aplicada"
+    },
+    {
+      "version": "274",
+      "name": "bl2_promocao_rpc_e_precedencia"
+    },
+    {
+      "version": "275",
+      "name": "fix_drift_colunas_observabilidade_itens_venda"
+    },
+    {
+      "version": "276",
+      "name": "hardening_tipo_preco_remove_promocao_residual"
+    },
+    {
+      "version": "277",
+      "name": "revoke_anon_execute_finalizar_venda_v4"
+    },
+    {
+      "version": "278",
+      "name": "revoke_anon_authenticated_funcoes_sem_uso_publico"
+    },
+    {
+      "version": "279",
+      "name": "checks_matematicos_vendas_itens"
+    },
+    {
+      "version": "280",
+      "name": "check_formato_chave_fiscal"
+    },
+    {
+      "version": "281",
+      "name": "gtin_lookup_cache_integridade"
+    },
+    {
+      "version": "282",
+      "name": "restringe_rpcs_fiscais_worker"
+    },
+    {
+      "version": "283",
+      "name": "consolida_constraints_fiado"
+    },
+    {
+      "version": "284",
+      "name": "devolucoes_remove_fiado"
+    },
+    {
+      "version": "285",
+      "name": "desagenda_fiscal_worker_cron"
+    },
+    {
+      "version": "286",
+      "name": "revoke_authenticated_finalizar_venda_transacional_9args"
+    },
+    {
+      "version": "287",
+      "name": "usuarios_select_gerente_mesma_loja"
+    },
+    {
+      "version": "288",
+      "name": "pdv_certificacao_operacional_caixa_e_espera"
+    },
+    {
+      "version": "289",
+      "name": "314_reafirma_grants_pos_venda_apos_248"
+    }
+  ]
+}

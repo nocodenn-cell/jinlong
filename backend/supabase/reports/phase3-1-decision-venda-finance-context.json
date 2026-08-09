@@ -1,0 +1,63 @@
+{
+  "generatedAt": "2026-08-08T12:59:00.000Z",
+  "phase": "3.1",
+  "decision": "MANTER_IDEMPOTENTIZAR",
+  "decisionLabel": "Manter espelho no SSOT; aplicar DDL idempotente apenas via nova migration timestamp (Fase 3.2). Não replay da chave 252.",
+  "productionTouched": false,
+  "productionProjectNote": "FastProduct prod — ref omitido no artefato",
+  "repo": {
+    "file": "backend/supabase/migrations/252_venda_finance_context_mirror.sql",
+    "sha256": "96f45cd68c54521ee5ce557a2cd172ba73c556c2458f1f0d23327a3eac2ac295",
+    "lines": 232,
+    "idempotentDdl": true,
+    "purpose": "Espelho passivo venda ↔ status financeiro; não é fonte de verdade (caixa + contas_receber permanecem autoridade)."
+  },
+  "productionCatalog20260808": {
+    "source": "Supabase MCP execute_sql (read-only)",
+    "migration252Tracked": true,
+    "migration252Name": "venda_finance_context_mirror",
+    "migration252StmtCount": 22,
+    "table_venda_finance_context": false,
+    "fn_sincronizar_finance_context_venda": false,
+    "fn_trg_finance_context_via_pagamento": false,
+    "fn_trg_finance_context_via_conta": false,
+    "trg_finance_context_pagamento": false,
+    "trg_finance_context_conta": false,
+    "rls_policy_on_table": false,
+    "financeTriggersOnPagamentosOrContas": [],
+    "laterMigrationDropHits": 0
+  },
+  "runtimeUsage": {
+    "pdvImportados": "database.types.ts only (generated)",
+    "pdvLocal": "none",
+    "sharedCore": "none",
+    "rpcHardDependency": false,
+    "passo7CommentsOnly": ["24702", "268", "272", "274"]
+  },
+  "optionsAnalysis": {
+    "replay_252": {
+      "verdict": "REJEITADO",
+      "reason": "Versão 252 já existe em schema_migrations; replay viola PK ou gera falso positivo sem corrigir drift de forma controlada."
+    },
+    "descartar_formal": {
+      "verdict": "REJEITADO",
+      "reason": "Repo SSOT e db reset incluem 252; tracking prod diz applied; descarte deixaria drift permanente tracking×catálogo e contradiz intent documentado do espelho passivo sem remover arquivo do SSOT."
+    },
+    "manter_idempotentizar_nova_timestamp": {
+      "verdict": "APROVADO",
+      "reason": "Alinha catálogo prod ao SSOT git sem replay; DDL já idempotente; zero consumidor app → risco operacional baixo; triggers só espelham em INSERT/UPDATE existentes.",
+      "nextStep": "Fase 3.2 — extrair corpo de 252 para migration timestamp (ex. 20260808130000_reapply_venda_finance_context_idempotent.sql); staging db reset + smoke antes de gate prod."
+    }
+  },
+  "risksIfApply32": [
+    "Backfill DO sobre vendas CONCLUIDA pode ser custoso em prod grande — considerar batch ou janela em staging primeiro.",
+    "Triggers adicionais em vendas_pagamentos / contas_receber (escrita espelho por linha).",
+    "Nenhum impacto em finalizar_venda_v4 hoje (objetos ausentes não quebram RPC)."
+  ],
+  "humanGateBeforeProd": true,
+  "relatedDocs": [
+    "docs/FASE_3_1_DECISAO_VENDA_FINANCE_CONTEXT.md",
+    "backend/supabase/reports/phase2-forensic-252.json",
+    "docs/FASE_3_RECONCILIACAO_SUPABASE_PLANO.md"
+  ]
+}

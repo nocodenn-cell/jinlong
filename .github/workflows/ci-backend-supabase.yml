@@ -42,79 +42,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  supabase-local-rls-smoke:
-    name: Supabase local RLS smoke
+  supabase-local-gates:
+    name: Supabase local gates (RLS smoke + scope + REST)
     runs-on: ubuntu-latest
-    timeout-minutes: 25
-    steps:
-      # Ações fixadas por SHA completo (Sonar githubactions:S7637). Tag de referência: v4
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-
-      # Tag de referência: v4
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
-        with:
-          node-version: '22'
-
-      - name: Install PostgreSQL client
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client
-
-      - name: Start Supabase local stack (isolado por job)
-        run: |
-          set -euo pipefail
-          cd backend
-          npx supabase --version
-          timeout 240s npx supabase start
-
-      - name: Reset + seed determinístico (local)
-        run: |
-          set -euo pipefail
-          cd backend
-          # Reaplica migrations do zero e executa seed.sql (quando existir).
-          # Garante base determinística para os testes do job.
-          npx supabase db reset --local --yes
-
-      - name: Smoke SQL de governança RLS
-        run: |
-          set -euo pipefail
-          cd backend
-          eval "$(npx supabase status -o env | sed 's/^/export /')"
-          # CLI recente exporta DB_URL; documentação antiga usava POSTGRES_URL.
-          PSQL_URL="${POSTGRES_URL:-${DB_URL:-}}"
-          if [ -z "$PSQL_URL" ]; then
-            echo "::error::Sem URL do Postgres (POSTGRES_URL ou DB_URL). Saída de status:" >&2
-            npx supabase status -o env >&2 || true
-            exit 1
-          fi
-          psql "$PSQL_URL" -v ON_ERROR_STOP=1 -f supabase/scripts/smoke_rls_painel_gerente.sql
-
-      - name: Diagnóstico em falha (logs + status)
-        if: failure()
-        run: |
-          set +e
-          cd backend
-          echo "=== supabase status ==="
-          npx supabase status || true
-          echo "=== docker ps -a ==="
-          docker ps -a || true
-          echo "=== logs dos containers supabase ==="
-          for c in $(docker ps -a --format '{{.Names}}' | rg supabase); do
-            echo "--- $c ---"
-            docker logs "$c" --tail 200 || true
-          done
-
-      - name: Teardown Supabase local
-        if: always()
-        run: |
-          set +e
-          cd backend
-          npx supabase stop --project-id fastproduct --no-backup
-
-  test-rls-scope:
-    name: Test RLS scope by profile
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
@@ -130,41 +61,86 @@ jobs:
       - name: Install dependencies (workspace root)
         run: npm ci
 
-      - name: Start Supabase local stack
+      - name: Enforce seed password secret for internal PRs
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          CI_RLS_SMOKE_SEED_PASSWORD: ${{ secrets.PLAYWRIGHT_TEST_PASSWORD }}
         run: |
           set -euo pipefail
-          cd backend
-          npx supabase --version
-          timeout 240s npx supabase start
+          [ -n "${CI_RLS_SMOKE_SEED_PASSWORD:-}" ] || (
+            echo "Secret ausente: PLAYWRIGHT_TEST_PASSWORD (senha E2E / smoke RLS local)."
+            exit 1
+          )
 
-      - name: Reset + seed base determinístico
+      - name: Start Supabase local stack (single pull, retry ECR)
+        run: bash backend/scripts/ci-supabase-local-start.sh
+
+      - name: Reset + seed determinístico (local)
         run: |
           set -euo pipefail
           cd backend
           npx supabase db reset --local --yes
 
-      - name: Run RLS scope test suite
+      - name: Smoke SQL de governança RLS
+        run: |
+          set -euo pipefail
+          cd backend
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          PSQL_URL="${POSTGRES_URL:-${DB_URL:-}}"
+          if [ -z "$PSQL_URL" ]; then
+            echo "::error::Sem URL do Postgres (POSTGRES_URL ou DB_URL)." >&2
+            npx supabase status -o env >&2 || true
+            exit 1
+          fi
+          psql "$PSQL_URL" -v ON_ERROR_STOP=1 -f supabase/scripts/smoke_rls_painel_gerente.sql
+
+      - name: Test RLS scope by profile
         run: |
           set -euo pipefail
           cd backend
           eval "$(npx supabase status -o env | sed 's/^/export /')"
           if [ -z "${POSTGRES_URL:-}" ] && [ -z "${DB_URL:-}" ]; then
-            echo "::error::Sem URL do Postgres (POSTGRES_URL ou DB_URL). Saída de status:" >&2
-            npx supabase status -o env >&2 || true
+            echo "::error::Sem URL do Postgres." >&2
             exit 1
           fi
           npm run test:rls-scope -w fastproduct-backend
+
+      - name: Seed Auth + usuarios (gerente/operador E2E)
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          CI_RLS_SMOKE_SEED_PASSWORD: ${{ secrets.PLAYWRIGHT_TEST_PASSWORD }}
+        run: |
+          set -euo pipefail
+          cd backend
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          export SUPABASE_URL="${API_URL:-${SUPABASE_URL:-}}"
+          export SUPABASE_SERVICE_ROLE_KEY="${SERVICE_ROLE_KEY:-${SUPABASE_SERVICE_ROLE_KEY:-}}"
+          export NEXT_PUBLIC_SUPABASE_ANON_KEY="${ANON_KEY:-${PUBLISHABLE_KEY:-}}"
+          export SEED_DEV_PASSWORD="${CI_RLS_SMOKE_SEED_PASSWORD}"
+          node ../pdv-importados/scripts/seed-dev-users.mjs
+
+      - name: REST RLS smoke (local stack)
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          CI_RLS_SMOKE_REQUIRED: 'true'
+          CI_RLS_SMOKE_SEED_PASSWORD: ${{ secrets.PLAYWRIGHT_TEST_PASSWORD }}
+        run: |
+          set -euo pipefail
+          cd backend
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          export SUPABASE_URL="${API_URL:-${SUPABASE_URL:-}}"
+          export SUPABASE_ANON_KEY="${ANON_KEY:-${PUBLISHABLE_KEY:-}}"
+          export SEED_DEV_PASSWORD="${CI_RLS_SMOKE_SEED_PASSWORD}"
+          eval "$(node scripts/fetch-rls-smoke-jwts.mjs | sed 's/^/export /')"
+          node scripts/p0-rls-rest-smoke.mjs
 
       - name: Diagnóstico em falha (logs + status)
         if: failure()
         run: |
           set +e
           cd backend
-          echo "=== supabase status ==="
           npx supabase status || true
-          echo "=== docker ps -a ==="
           docker ps -a || true
-          echo "=== logs dos containers supabase ==="
           for c in $(docker ps -a --format '{{.Names}}' | rg supabase); do
             echo "--- $c ---"
             docker logs "$c" --tail 200 || true
@@ -204,41 +180,6 @@ jobs:
 
       - name: Contract smoke (sync-outbox payload v1)
         run: node backend/scripts/sync-outbox-contract-smoke.mjs
-
-  rls-rest-gate:
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
-        with:
-          node-version: '22'
-
-      - name: Enforce required secrets for internal PRs
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-        shell: bash
-        env:
-          SUPABASE_URL: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          RLS_SMOKE_JWT_PAINEL: ${{ secrets.RLS_SMOKE_JWT_PAINEL }}
-          RLS_SMOKE_JWT_CAIXA: ${{ secrets.RLS_SMOKE_JWT_CAIXA }}
-        run: |
-          set -euo pipefail
-          [ -n "${SUPABASE_URL:-}" ] || (echo "Secret ausente: PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL" && exit 1)
-          [ -n "${SUPABASE_ANON_KEY:-}" ] || (echo "Secret ausente: PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY" && exit 1)
-          [ -n "${RLS_SMOKE_JWT_PAINEL:-}" ] || (echo "Secret ausente: RLS_SMOKE_JWT_PAINEL" && exit 1)
-          [ -n "${RLS_SMOKE_JWT_CAIXA:-}" ] || (echo "Secret ausente: RLS_SMOKE_JWT_CAIXA" && exit 1)
-
-      - name: Run mandatory REST RLS smoke
-        env:
-          CI_RLS_SMOKE_REQUIRED: 'true'
-          SUPABASE_URL: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          RLS_SMOKE_JWT_PAINEL: ${{ secrets.RLS_SMOKE_JWT_PAINEL }}
-          RLS_SMOKE_JWT_CAIXA: ${{ secrets.RLS_SMOKE_JWT_CAIXA }}
-        run: node backend/scripts/p0-rls-rest-smoke.mjs
 
   migration-remote-drift:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository

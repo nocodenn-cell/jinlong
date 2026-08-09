@@ -29,7 +29,7 @@
 -- Fecha essa porta residual na camada de tabela — proteção válida
 -- independente de qual RPC (ou bypass futuro) tente escrever em itens_venda.
 --
--- Validado (aplicado e testado em kbabmewnahysfvlybiak antes deste commit):
+-- Validado (aplicado e testado em ambiente BL-2 antes deste commit):
 --   - Venda real com promoção via BL-2 (regra_aplicada_id) continua CONCLUIDA
 --     normalmente após o fechamento.
 --   - INSERT direto com tipo_preco='PROMOCAO' (preço sem desconto, isolando

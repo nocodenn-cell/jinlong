@@ -75,7 +75,7 @@ const MATRIZ: readonly PilarRow[] = [
         mustContain: ['cancelar_venda_transacional'],
       },
       {
-        path: '../backend/supabase/migrations/229_venda_eventos_rpc_hooks.sql',
+        path: '../backend/supabase/migrations/20260621002500_229_venda_eventos_rpc_hooks.sql',
         mustContain: ['quantidade_atual = e.quantidade_atual +'],
       },
     ],
@@ -87,7 +87,7 @@ const MATRIZ: readonly PilarRow[] = [
     artefatos: [
       { path: 'app/caixa/server/cancelarVendaContrato.integration.test.ts', mustContain: ['devolucoes'] },
       {
-        path: '../backend/supabase/migrations/229_venda_eventos_rpc_hooks.sql',
+        path: '../backend/supabase/migrations/20260621002500_229_venda_eventos_rpc_hooks.sql',
         mustContain: ['saldo_atual', 'devolucoes'],
       },
     ],
