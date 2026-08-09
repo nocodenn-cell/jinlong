@@ -4,9 +4,6 @@
  * Server Component. Reusa `carregarDadosRelatoriosGerente`
  * (`@/app/gerente/relatorios/actions`) — nenhuma query nova. Carrega um pacote
  * único: período, vendas por dia, top produtos, estoque baixo, resumo executivo.
- *
- * Estrutura lean: resumo executivo em KPIs, tabelas para vendas/top/baixo.
- * Sem gráficos (Recharts viria se aprovado em outra fase).
  */
 
 import { carregarDadosRelatoriosGerente } from '@/app/gerente/relatorios/actions'
@@ -19,6 +16,7 @@ import { RelatoriosContent, type RelatoriosDados } from './_components/Relatorio
 type SearchParams = {
   de?: string
   ate?: string
+  tab?: string
 }
 
 type PageProps = { searchParams?: Promise<SearchParams> }
@@ -40,6 +38,7 @@ export default async function AdminRelatoriosPage({ searchParams }: PageProps) {
 
   const relDados: RelatoriosDados = {
     periodo: dados.periodo,
+    tzRelatorio: dados.tzRelatorio,
     resumoExecutivo: dados.resumoExecutivo,
     porDia: dados.porDia,
     top: dados.top,
@@ -53,18 +52,35 @@ export default async function AdminRelatoriosPage({ searchParams }: PageProps) {
   return (
     <RelatoriosContent
       dados={relDados}
+      initialTab={sp.tab}
       labels={{
         titulo: ui.relatorios_titulo,
         periodoLabel: ui.relatorios_periodo_label,
         aSeparator: ui.relatorios_a_separator,
+        fusoLabel: ui.relatorios_fuso_label,
+        avisoDatasInvalidas: ui.relatorios_aviso_datas_invalidas,
+        avisoPeriodoInvertido: ui.relatorios_aviso_periodo_invertido,
+        avisoPeriodoLimitado: ui.relatorios_aviso_periodo_limitado,
         custoNaoConfiavel: ui.relatorios_custo_nao_confiavel,
         chartFaturamento: ui.relatorios_chart_faturamento,
-        chartPagamentos: ui.relatorios_chart_pagamentos,
+        chartStatusVendas: ui.relatorios_chart_status_vendas,
         labelConcluidas: ui.relatorios_label_concluidas,
         labelCanceladas: ui.relatorios_label_canceladas,
-        labelAjustes: ui.relatorios_label_ajustes,
+        kpiFaturamento: ui.relatorios_kpi_faturamento,
+        kpiTicket: ui.relatorios_kpi_ticket,
+        kpiVendas: ui.relatorios_kpi_vendas,
+        kpiCancelamento: ui.relatorios_kpi_cancelamento,
+        kpiMargem: ui.relatorios_kpi_margem,
+        kpiMargemIndisponivel: ui.relatorios_kpi_margem_indisponivel,
+        tabVisao: ui.relatorios_tab_visao,
+        tabProdutos: ui.relatorios_tab_produtos,
+        tabEstoque: ui.relatorios_tab_estoque,
+        tabMargem: ui.relatorios_tab_margem,
+        tabsAria: ui.relatorios_tabs_aria,
         secTopProdutos: ui.relatorios_sec_top_produtos,
         secEstoqueReposicao: ui.relatorios_sec_estoque_reposicao,
+        linkAbrirEstoque: ui.relatorios_link_abrir_estoque,
+        minZeroHint: ui.relatorios_min_zero_hint,
         secMargemPorVenda: ui.relatorios_sec_margem_por_venda,
         margemVendaColData: ui.relatorios_margem_venda_col_data,
         margemVendaColLiquido: ui.relatorios_margem_venda_col_liquido,
@@ -83,6 +99,7 @@ export default async function AdminRelatoriosPage({ searchParams }: PageProps) {
         coberturaEstoqueColAtual: ui.relatorios_cobertura_estoque_col_atual,
         coberturaEstoqueColMedia: ui.relatorios_cobertura_estoque_col_media,
         coberturaEstoqueColDias: ui.relatorios_cobertura_estoque_col_dias,
+        coberturaEstoqueDiasCap: ui.relatorios_cobertura_estoque_dias_cap,
         vazioCoberturaEstoque: ui.relatorios_vazio_cobertura_estoque,
         origemChina: ui.relatorios_origem_china,
         origemBrasil: ui.relatorios_origem_brasil,
@@ -92,13 +109,17 @@ export default async function AdminRelatoriosPage({ searchParams }: PageProps) {
         vazioEstoque: ui.relatorios_vazio_estoque,
         tooltipFaturado: ui.relatorios_tooltip_faturado,
         noDataLabel: ui.relatorios_vazio_produtos,
+        erroTitulo: ui.relatorios_erro_titulo,
         filtros: {
           de: ui.relatorios_filtro_de,
           ate: ui.relatorios_filtro_ate,
           aplicar: ui.relatorios_filtro_aplicar,
-          exportarCsv: ui.relatorios_filtro_exportar_csv,
-          xlsx: ui.relatorios_filtro_xlsx,
+          exportarCsv: ui.relatorios_filtro_exportar_csv_vendas_dia,
           csvFilename: ui.relatorios_csv_filename,
+          preset7: ui.relatorios_filtro_preset_7,
+          preset15: ui.relatorios_filtro_preset_15,
+          preset30: ui.relatorios_filtro_preset_30,
+          presetsAria: ui.relatorios_filtro_presets_aria,
         },
         locale,
       }}

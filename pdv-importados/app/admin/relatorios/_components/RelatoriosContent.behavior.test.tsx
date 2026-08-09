@@ -1,0 +1,217 @@
+/** @vitest-environment jsdom */
+import React from 'react'
+import { createRoot, type Root } from 'react-dom/client'
+import { flushSync } from 'react-dom'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { RelatoriosDados, RelatoriosLabels } from './RelatoriosContent'
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: vi.fn() }),
+}))
+
+vi.mock('next/link', () => ({
+  default: ({
+    href,
+    children,
+    ...rest
+  }: {
+    href: string
+    children: React.ReactNode
+  } & Record<string, unknown>) => React.createElement('a', { href, ...rest }, children),
+}))
+
+vi.mock('./RelatoriosBarChart', () => ({
+  RelatoriosBarChart: () => React.createElement('div', { 'data-testid': 'bar-chart' }),
+}))
+
+vi.mock('@/app/admin/dashboard/_components/PaymentDonutChart', () => ({
+  PaymentDonutChart: ({ slices }: { slices: Array<{ label: string; value: number }> }) =>
+    React.createElement(
+      'div',
+      { 'data-testid': 'donut' },
+      slices.map((s) =>
+        React.createElement('span', { key: s.label }, `${s.label}:${s.value}`),
+      ),
+    ),
+}))
+
+const { RelatoriosContent } = await import('./RelatoriosContent')
+const { AdminV2SessionProvider } = await import('@/components/ui/admin-v2/AdminV2SessionContext')
+
+function renderRelatorios(ui: React.ReactElement) {
+  return React.createElement(AdminV2SessionProvider, { idioma: 'pt' }, ui)
+}
+
+const labels = {
+  titulo: 'Relatórios',
+  periodoLabel: 'Período',
+  aSeparator: ' a ',
+  fusoLabel: 'Fuso {{tz}}',
+  avisoDatasInvalidas: 'Datas inválidas',
+  avisoPeriodoInvertido: 'Invertido',
+  avisoPeriodoLimitado: 'Limitado',
+  custoNaoConfiavel: 'Custo não confiável',
+  chartFaturamento: 'Faturamento por dia',
+  chartStatusVendas: 'Status das vendas',
+  labelConcluidas: 'Concluídas',
+  labelCanceladas: 'Canceladas',
+  kpiFaturamento: 'Faturamento',
+  kpiTicket: 'Ticket médio',
+  kpiVendas: 'Vendas concluídas',
+  kpiCancelamento: 'Cancelamento',
+  kpiMargem: 'Margem estimada',
+  kpiMargemIndisponivel: 'Indisponível',
+  tabVisao: 'Visão geral',
+  tabProdutos: 'Produtos',
+  tabEstoque: 'Estoque',
+  tabMargem: 'Margem e ABC',
+  tabsAria: 'Seções',
+  secTopProdutos: 'Top produtos',
+  secEstoqueReposicao: 'Estoque para reposição',
+  linkAbrirEstoque: 'Abrir Estoque',
+  minZeroHint: 'mínimo não configurado',
+  secMargemPorVenda: 'Margem por venda',
+  margemVendaColData: 'Data',
+  margemVendaColLiquido: 'Líquido',
+  margemVendaColCusto: 'Custo',
+  margemVendaColMargem: 'Margem',
+  margemVendaCustoIndisponivel: '—',
+  vazioMargemVenda: 'Sem margem',
+  secCurvaAbc: 'Curva ABC',
+  curvaAbcColNome: 'Produto',
+  curvaAbcColValor: 'Faturado',
+  curvaAbcColAcumulado: 'Acumulado',
+  curvaAbcColClasse: 'Classe',
+  vazioCurvaAbc: 'Sem ABC',
+  secCoberturaEstoque: 'Cobertura',
+  coberturaEstoqueHint: 'hint',
+  coberturaEstoqueColAtual: 'Saldo',
+  coberturaEstoqueColMedia: 'Média/dia',
+  coberturaEstoqueColDias: 'dias de cobertura',
+  coberturaEstoqueDiasCap: '>{{n}} dias de cobertura',
+  vazioCoberturaEstoque: 'Sem cobertura',
+  origemChina: 'China',
+  origemBrasil: 'Brasil',
+  vazioProdutos: 'Sem produtos',
+  saldoMinTemplate: 'Saldo {{atual}} / Min {{min}}',
+  reporTemplate: 'REPOR {{n}}',
+  vazioEstoque: 'Sem estoque crítico',
+  tooltipFaturado: 'Faturado',
+  noDataLabel: 'Sem dados',
+  erroTitulo: 'Erro',
+  filtros: {
+    de: 'De',
+    ate: 'Até',
+    aplicar: 'Aplicar',
+    exportarCsv: 'Exportar vendas/dia (CSV)',
+    csvFilename: 'relatorios.csv',
+    preset7: '7 dias',
+    preset15: '15 dias',
+    preset30: '30 dias',
+    presetsAria: 'Presets',
+  },
+  locale: 'pt-BR',
+} satisfies RelatoriosLabels
+
+function baseDados(overrides: Partial<RelatoriosDados> = {}): RelatoriosDados {
+  return {
+    periodo: { de: '2026-07-18', ate: '2026-08-08', aviso: 'nenhum' },
+    tzRelatorio: 'America/Sao_Paulo',
+    resumoExecutivo: {
+      itens_vendidos: 10,
+      vendas_concluidas: 4,
+      vendas_canceladas: 0,
+      taxa_cancelamento: 0,
+      cobertura_custo: 0.5,
+      custo_confiavel: false,
+      margem_bruta_estimada: null,
+    },
+    porDia: [
+      { dia: '2026-08-07', num_vendas: 1, total_liquido: 30, ticket_medio: 30, total_desconto: 0 },
+      { dia: '2026-07-19', num_vendas: 2, total_liquido: 20, ticket_medio: 10, total_desconto: 0 },
+    ],
+    top: [],
+    baixo: [
+      {
+        id: 'p1',
+        nome: 'Item',
+        codigo_barras: null,
+        quantidade_atual: 0,
+        estoque_minimo: 0,
+        deficit: 1,
+      },
+    ],
+    margemPorVenda: [],
+    curvaAbc: [],
+    coberturaEstoque: [
+      {
+        produtoId: 'g1',
+        nome: 'geladeira',
+        lojaId: 'l1',
+        quantidadeAtual: 10,
+        mediaDiariaVendida: 0.001,
+        diasCobertura: 7470,
+      },
+    ],
+    rpcErro: null,
+    ...overrides,
+  }
+}
+
+describe('RelatoriosContent presentation', () => {
+  let container: HTMLDivElement
+  let root: Root
+
+  beforeEach(() => {
+    class ResizeObserverStub {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+    vi.stubGlobal('ResizeObserver', ResizeObserverStub)
+    HTMLCanvasElement.prototype.getContext = vi.fn(() => null) as never
+
+    container = document.createElement('div')
+    document.body.appendChild(container)
+    root = createRoot(container)
+  })
+
+  afterEach(() => {
+    flushSync(() => root.unmount())
+    container.remove()
+    vi.unstubAllGlobals()
+  })
+
+  it('não exibe enum nenhum e remove fatia inventada de ajustes', () => {
+    flushSync(() => {
+      root.render(renderRelatorios(<RelatoriosContent dados={baseDados()} labels={labels} />))
+    })
+    expect(container.textContent).toContain('Período: 2026-07-18 a 2026-08-08')
+    expect(container.textContent).not.toContain('(nenhum)')
+    expect(container.textContent).toContain('Status das vendas')
+    expect(container.textContent).not.toMatch(/Ajustes/i)
+    const donut = container.querySelector('[data-testid="donut"]')
+    expect(donut?.textContent).toContain('Concluídas:4')
+    expect(donut?.textContent).toContain('Canceladas:0')
+    expect(container.textContent).toContain('Faturamento')
+    expect(container.textContent).toContain('Custo não confiável')
+    expect(container.textContent).not.toContain('XLSX')
+  })
+
+  it('mostra reposição e cobertura na aba estoque', () => {
+    flushSync(() => {
+      root.render(renderRelatorios(<RelatoriosContent dados={baseDados()} labels={labels} />))
+    })
+    const estoqueTab = Array.from(container.querySelectorAll('[role="tab"]')).find(
+      (el) => el.textContent === 'Estoque',
+    ) as HTMLButtonElement
+    expect(estoqueTab).toBeTruthy()
+    flushSync(() => {
+      estoqueTab.click()
+    })
+    expect(container.textContent).toContain('mínimo não configurado')
+    expect(container.textContent).toContain('>365 dias de cobertura')
+    const link = container.querySelector('a[href="/admin/estoque"]')
+    expect(link?.textContent).toContain('Abrir Estoque')
+  })
+})
