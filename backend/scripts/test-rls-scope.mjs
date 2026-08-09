@@ -385,6 +385,28 @@ async function main() {
     });
   });
 
+  // Migration 289: wrapper de escopo — loja divergente deve falhar ANTES de
+  // qualquer escrita (preço/estoque/caixa). Assinatura 21 args (pós-272/274).
+  await run("RPC finalizar v4 bloqueia loja divergente da sessão", async () => {
+    await assertRpcErrorContains(operador, "finalizar_venda_transacional_canonica_v4", {
+      p_venda_id: randomUUID(),
+      p_caixa_id: IDS.caixaOperador,
+      p_operador_id: authByPerfil.OPERADOR,
+      p_loja_id: IDS.loja2,
+      p_itens: [],
+    }, "FINALIZAR_VENDA_CANONICA_LOJA_INVALIDA");
+  });
+
+  await run("RPC finalizar v4 preserva validação após escopo autorizado", async () => {
+    await assertRpcErrorContains(operador, "finalizar_venda_transacional_canonica_v4", {
+      p_venda_id: randomUUID(),
+      p_caixa_id: IDS.caixaOperador,
+      p_operador_id: authByPerfil.OPERADOR,
+      p_loja_id: IDS.loja,
+      p_itens: [],
+    }, "FINALIZAR_VENDA_CANONICA_ITENS_INVALIDOS");
+  });
+
   await run("RPC registrar_pricing_version_venda permite venda propria", async () => {
     await assertRpcOk(operador, "registrar_pricing_version_venda", {
       p_venda_id: IDS.vendaOperador,
