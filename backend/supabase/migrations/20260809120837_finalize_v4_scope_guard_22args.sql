@@ -9,8 +9,9 @@
 --
 -- O PR #187 tentou o mesmo guard com timestamp 20260714110959 e assinatura de
 -- 19 args (pré-272). Em main isso é inócuo: 274 recria a função DEPOIS (ordem
--- lexical `274_*` > `20260714*`) e a assinatura vigente tem 21 args
--- (+ motivo_desconto / motivo_descricao).
+-- lexical `274_*` > `20260714*`). A assinatura vigente em produção jinlong tem
+-- 22 args (+ motivo_desconto / motivo_descricao + p_limite_credito_gerente_token).
+-- Versão alinhada ao schema_migrations de prod (MCP apply 20260809120837).
 --
 -- CORREÇÃO
 -- --------
@@ -23,16 +24,17 @@
 DO $migrate$
 BEGIN
   IF to_regprocedure(
-    'public.finalizar_venda_transacional_canonica_v4(uuid,uuid,uuid,uuid,text,numeric,numeric,numeric,jsonb,jsonb,text,numeric,boolean,boolean,text,text,text,text,uuid,public.motivo_desconto_enum_tipo,text)'
+    'public.finalizar_venda_transacional_canonica_v4(uuid,uuid,uuid,uuid,text,numeric,numeric,numeric,jsonb,jsonb,text,numeric,boolean,boolean,text,text,text,text,uuid,public.motivo_desconto_enum_tipo,text,text)'
   ) IS NOT NULL
   AND to_regprocedure(
-    'public.finalizar_venda_transacional_canonica_v4_unscoped(uuid,uuid,uuid,uuid,text,numeric,numeric,numeric,jsonb,jsonb,text,numeric,boolean,boolean,text,text,text,text,uuid,public.motivo_desconto_enum_tipo,text)'
+    'public.finalizar_venda_transacional_canonica_v4_unscoped(uuid,uuid,uuid,uuid,text,numeric,numeric,numeric,jsonb,jsonb,text,numeric,boolean,boolean,text,text,text,text,uuid,public.motivo_desconto_enum_tipo,text,text)'
   ) IS NULL
   THEN
     ALTER FUNCTION public.finalizar_venda_transacional_canonica_v4(
       uuid, uuid, uuid, uuid, text, numeric, numeric, numeric,
       jsonb, jsonb, text, numeric, boolean, boolean, text, text, text, text, uuid,
-      public.motivo_desconto_enum_tipo, text
+      public.motivo_desconto_enum_tipo, text,
+      text
     ) RENAME TO finalizar_venda_transacional_canonica_v4_unscoped;
   END IF;
 END
@@ -41,7 +43,8 @@ $migrate$;
 REVOKE ALL ON FUNCTION public.finalizar_venda_transacional_canonica_v4_unscoped(
   uuid, uuid, uuid, uuid, text, numeric, numeric, numeric,
   jsonb, jsonb, text, numeric, boolean, boolean, text, text, text, text, uuid,
-  public.motivo_desconto_enum_tipo, text
+  public.motivo_desconto_enum_tipo, text,
+  text
 ) FROM PUBLIC, anon, authenticated, service_role;
 
 CREATE OR REPLACE FUNCTION public.finalizar_venda_transacional_canonica_v4(
@@ -65,7 +68,8 @@ CREATE OR REPLACE FUNCTION public.finalizar_venda_transacional_canonica_v4(
   p_terminal_id text DEFAULT NULL::text,
   p_cliente_id uuid DEFAULT NULL::uuid,
   p_motivo_desconto public.motivo_desconto_enum_tipo DEFAULT 'NAO_ESPECIFICADO'::public.motivo_desconto_enum_tipo,
-  p_motivo_descricao text DEFAULT NULL::text
+  p_motivo_descricao text DEFAULT NULL::text,
+  p_limite_credito_gerente_token text DEFAULT NULL::text
 )
 RETURNS TABLE(
   venda_id uuid,
@@ -156,7 +160,8 @@ BEGIN
       p_terminal_id,
       p_cliente_id,
       p_motivo_desconto,
-      p_motivo_descricao
+      p_motivo_descricao,
+      p_limite_credito_gerente_token
     );
 END;
 $function$;
@@ -164,19 +169,22 @@ $function$;
 COMMENT ON FUNCTION public.finalizar_venda_transacional_canonica_v4(
   uuid, uuid, uuid, uuid, text, numeric, numeric, numeric,
   jsonb, jsonb, text, numeric, boolean, boolean, text, text, text, text, uuid,
-  public.motivo_desconto_enum_tipo, text
+  public.motivo_desconto_enum_tipo, text,
+  text
 ) IS 'Finaliza venda após validar auth.uid, operador, caixa aberto e loja da sessão.';
 
 REVOKE ALL ON FUNCTION public.finalizar_venda_transacional_canonica_v4(
   uuid, uuid, uuid, uuid, text, numeric, numeric, numeric,
   jsonb, jsonb, text, numeric, boolean, boolean, text, text, text, text, uuid,
-  public.motivo_desconto_enum_tipo, text
+  public.motivo_desconto_enum_tipo, text,
+  text
 ) FROM PUBLIC, anon;
 
 GRANT EXECUTE ON FUNCTION public.finalizar_venda_transacional_canonica_v4(
   uuid, uuid, uuid, uuid, text, numeric, numeric, numeric,
   jsonb, jsonb, text, numeric, boolean, boolean, text, text, text, text, uuid,
-  public.motivo_desconto_enum_tipo, text
+  public.motivo_desconto_enum_tipo, text,
+  text
 ) TO authenticated, service_role;
 
 NOTIFY pgrst, 'reload schema';
