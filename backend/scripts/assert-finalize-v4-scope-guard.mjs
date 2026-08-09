@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const migrationsDir = path.join(root, 'supabase/migrations')
-const guardName = '289_finalize_v4_scope_guard.sql'
+const guardName = '20260809120100_finalize_v4_scope_guard.sql'
 const bodyName = '274_bl2_promocao_rpc_e_precedencia.sql'
 
 const files = fs.readdirSync(migrationsDir).filter((f) => f.endsWith('.sql')).sort()

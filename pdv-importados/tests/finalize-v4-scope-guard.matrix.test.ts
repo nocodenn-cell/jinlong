@@ -11,7 +11,7 @@ import { describe, expect, it } from 'vitest'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const MIGRATIONS = path.resolve(ROOT, '../backend/supabase/migrations')
-const GUARD = '289_finalize_v4_scope_guard.sql'
+const GUARD = '20260809120100_finalize_v4_scope_guard.sql'
 const BODY_RECREATE = '274_bl2_promocao_rpc_e_precedencia.sql'
 
 describe('finalize v4 scope guard (migration 289)', () => {
