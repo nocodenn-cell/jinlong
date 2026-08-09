@@ -34,6 +34,8 @@ export type FilterDef =
       label?: string
       placeholder?: string
       debounceMs?: number
+      /** Classe extra do input (ex.: ampliar busca em telas operacionais). */
+      inputClassName?: string
     }
 
 type FilterBarProps = {
@@ -150,31 +152,36 @@ function PillsControl({
   onChange: (value: string) => void
 }) {
   return (
-    <div
-      className="inline-flex items-center gap-0.5 rounded-control border border-[var(--color-border)] bg-[var(--color-surface-soft)] p-0.5"
-      role="group"
-      aria-label={filter.label}
-    >
-      {filter.options.map((opt) => {
-        const active = current === opt.value
-        return (
-          <button
-            key={opt.value}
-            type="button"
-            onClick={() => onChange(opt.value)}
-            aria-pressed={active}
-            aria-label={`${opt.label}${active ? ' (ativo)' : ''}`}
-            className={cn(
-              'fp-focus-ring rounded-sm px-2.5 py-1 text-caption font-medium leading-none transition-colors',
-              active
-                ? 'bg-[var(--color-info-bg)] text-brand'
-                : 'text-fg-subtle hover:text-fg',
-            )}
-          >
-            {opt.label}
-          </button>
-        )
-      })}
+    <div className="inline-flex items-center gap-1.5">
+      {filter.label ? (
+        <span className="shrink-0 text-caption text-fg-subtle">{filter.label}</span>
+      ) : null}
+      <div
+        className="inline-flex items-center gap-0.5 rounded-control border border-[var(--color-border)] bg-[var(--color-surface-soft)] p-0.5"
+        role="group"
+        aria-label={filter.label}
+      >
+        {filter.options.map((opt) => {
+          const active = current === opt.value
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => onChange(opt.value)}
+              aria-pressed={active}
+              aria-label={`${opt.label}${active ? ' (ativo)' : ''}`}
+              className={cn(
+                'fp-focus-ring rounded-sm px-2.5 py-1 text-caption font-medium leading-none transition-colors',
+                active
+                  ? 'bg-[var(--color-info-bg)] text-brand'
+                  : 'text-fg-subtle hover:text-fg',
+              )}
+            >
+              {opt.label}
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -248,7 +255,12 @@ function SearchControl({
   }
 
   return (
-    <div className="inline-flex items-center gap-1.5 rounded-control border border-[var(--color-border)] bg-[var(--color-surface-soft)] px-2.5 py-1.5">
+    <div
+      className={cn(
+        'inline-flex min-w-0 items-center gap-1.5 rounded-control border border-[var(--color-border)] bg-[var(--color-surface-soft)] px-2.5 py-1.5',
+        filter.inputClassName ? 'flex-1 sm:flex-none' : null,
+      )}
+    >
       <Search size={14} strokeWidth={2} aria-hidden className="text-fg-subtle" />
       <input
         type="text"
@@ -259,7 +271,10 @@ function SearchControl({
         onKeyDown={(e) => {
           if (e.key === 'Enter') flush(value)
         }}
-        className="fp-focus-ring w-44 bg-transparent text-caption text-fg outline-none placeholder:text-fg-subtle"
+        className={cn(
+          'fp-focus-ring w-44 min-w-0 bg-transparent text-caption text-fg outline-none placeholder:text-fg-subtle',
+          filter.inputClassName,
+        )}
       />
       {value ? (
         <button

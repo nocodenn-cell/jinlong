@@ -1,15 +1,16 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { History, SlidersHorizontal } from 'lucide-react'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/ui/feedback'
-import { QuantityCell } from '@/components/ui/QuantityCell'
 import { cn } from '@/lib/utils'
 import { AjusteSaldoModal, type AjusteAlvo } from './AjusteSaldoModal'
 import { KardexSheet, type KardexAlvo } from './KardexSheet'
+import { estoqueSaldoTone } from './estoqueSaldoDisplay'
 
 export type EstoqueLinha = {
   id: string
@@ -34,7 +35,10 @@ export type EstoqueLabels = {
   origemBrasil: string
   vazioTitulo: string
   vazioSub: string
+  vazioActionLabel?: string
+  vazioActionHref?: string
   ajusteTitulo: string
+  ajusteAcao: string
   saldoAtual: string
   estoqueMinimo: string
   motivo: string
@@ -71,19 +75,47 @@ const ORIGEM_BADGE: Record<string, string> = {
   brasil_sem_nf: 'border-[var(--color-border)] bg-[var(--color-surface-muted)] text-fg-muted',
 }
 
+const SALDO_TONE_CLASS = {
+  empty: 'text-fg-subtle',
+  'neutral-zero': 'tabular-nums text-fg-muted',
+  'danger-zero': 'font-semibold tabular-nums text-[var(--color-danger-strong)]',
+  low: 'font-semibold tabular-nums text-[var(--color-warning-strong)]',
+  ok: 'tabular-nums text-[var(--color-success-strong)]',
+} as const
+
+function SaldoCell({
+  value,
+  minimo,
+}: {
+  value: number | null
+  minimo: number | null
+}) {
+  const tone = estoqueSaldoTone(value, minimo)
+  if (tone === 'empty') {
+    return <span className={SALDO_TONE_CLASS.empty}>—</span>
+  }
+  return <span className={SALDO_TONE_CLASS[tone]}>{value}</span>
+}
+
 export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; labels: EstoqueLabels }) {
   const [ajusteAlvo, setAjusteAlvo] = useState<AjusteAlvo | null>(null)
   const [kardexAlvo, setKardexAlvo] = useState<KardexAlvo | null>(null)
+
+  const showDeficit = linhas.some((r) => r.deficit != null && r.deficit > 0)
 
   const columns: Column<EstoqueLinha>[] = [
     {
       key: 'produto',
       header: labels.produto,
-      sortValue: (r) => r.nome,
+      priority: 'primary',
       cell: (r) => (
-        <div className="min-w-0">
-          <p className="max-w-[240px] truncate text-body font-medium text-fg">{r.nome}</p>
-          <p className="font-mono text-caption text-fg-subtle">{r.codigo_barras ?? '—'}</p>
+        <div className="min-w-0 max-w-[280px]">
+          <p className="truncate text-body font-medium text-fg" title={r.nome}>
+            {r.nome}
+          </p>
+          <p className="font-mono text-caption text-fg-muted">
+            {r.codigo_barras?.trim() ? r.codigo_barras : '—'}
+          </p>
         </div>
       ),
     },
@@ -91,16 +123,13 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
       key: 'saldo',
       header: labels.saldo,
       align: 'right',
-      sortValue: (r) => r.quantidade_atual ?? Number.NEGATIVE_INFINITY,
-      cell: (r) => (
-        <QuantityCell value={r.quantidade_atual} threshold={r.estoque_minimo} />
-      ),
+      priority: 'primary',
+      cell: (r) => <SaldoCell value={r.quantidade_atual} minimo={r.estoque_minimo} />,
     },
     {
       key: 'minimo',
       header: labels.minimo,
       align: 'right',
-      sortValue: (r) => r.estoque_minimo ?? Number.NEGATIVE_INFINITY,
       cell: (r) =>
         r.estoque_minimo === null ? (
           <span className="text-fg-subtle">—</span>
@@ -108,24 +137,28 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
           <span className="tabular-nums text-fg-muted">{r.estoque_minimo}</span>
         ),
     },
-    {
-      key: 'deficit',
-      header: labels.deficit,
-      align: 'right',
-      sortValue: (r) => r.deficit ?? 0,
-      cell: (r) =>
-        r.deficit != null && r.deficit > 0 ? (
-          <span className="font-medium tabular-nums text-[var(--color-warning-strong)]">
-            -{r.deficit}
-          </span>
-        ) : (
-          <span className="text-fg-subtle">—</span>
-        ),
-    },
+    ...(showDeficit
+      ? [
+          {
+            key: 'deficit',
+            header: labels.deficit,
+            align: 'right' as const,
+            cell: (r: EstoqueLinha) =>
+              r.deficit != null && r.deficit > 0 ? (
+                <span className="font-medium tabular-nums text-[var(--color-warning-strong)]">
+                  -{r.deficit}
+                </span>
+              ) : (
+                <span className="text-fg-subtle">—</span>
+              ),
+          } satisfies Column<EstoqueLinha>,
+        ]
+      : []),
     {
       key: 'unidade',
       header: labels.unidade,
       align: 'center',
+      priority: 'contextual',
       cell: (r) => (
         <span className="text-caption uppercase text-fg-subtle">{r.unidade_medida}</span>
       ),
@@ -147,20 +180,34 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
     },
   ]
 
+  const emptyNode =
+    labels.vazioActionHref && labels.vazioActionLabel ? (
+      <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
+        <EmptyState title={labels.vazioTitulo} description={labels.vazioSub} className="py-0" />
+        <Button asChild variant="secondary" size="sm">
+          <Link href={labels.vazioActionHref}>{labels.vazioActionLabel}</Link>
+        </Button>
+      </div>
+    ) : (
+      <EmptyState title={labels.vazioTitulo} description={labels.vazioSub} />
+    )
+
   return (
     <>
       <DataTable
         data={linhas}
         columns={columns}
         rowKey={(r) => r.id}
-        emptyState={<EmptyState title={labels.vazioTitulo} description={labels.vazioSub} />}
+        emptyState={emptyNode}
+        stickyHeader
         className="rounded-none border-x-0 border-b-0"
         rowActions={(row) => (
-          <div className="flex items-center justify-end gap-1">
+          <div className="flex items-center justify-end gap-1.5">
             <Button
               type="button"
-              size="icon"
-              variant="ghost"
+              size="sm"
+              variant="secondary"
+              className="gap-1.5"
               aria-label={`${labels.ajusteTitulo} ${row.nome}`}
               title={labels.ajusteTitulo}
               onClick={(e) => {
@@ -174,6 +221,7 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
               }}
             >
               <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden />
+              <span className="hidden sm:inline">{labels.ajusteAcao}</span>
             </Button>
             <Button
               type="button"
@@ -186,7 +234,7 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
                 setKardexAlvo({ produtoId: row.id, produtoNome: row.nome })
               }}
             >
-              <History className="h-3.5 w-3.5" aria-hidden />
+              <History className="h-4 w-4" aria-hidden />
             </Button>
           </div>
         )}

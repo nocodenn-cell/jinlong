@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { CadastroRapidoBlock } from '@/components/gerente/cadastro'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { readFormDataString } from '@/lib/forms/readFormDataString'
@@ -39,9 +39,16 @@ type Props = Readonly<{
   idioma: Idioma
   produtos: RecebimentoProdutoOpt[]
   remessasRecentes: RemessaRecenteRow[]
+  /** Subnav do módulo Admin Estoque (opcional). */
+  moduleNav?: ReactNode
 }>
 
-export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecentes }: Props) {
+export function RecebimentoGerentePageClient({
+  idioma,
+  produtos,
+  remessasRecentes,
+  moduleNav,
+}: Props) {
   const m = getMessages(idioma)
   const r = m.gerente.recebimento_page
   const locale = useMemo(() => localeFromIdioma(idioma), [idioma])
@@ -149,9 +156,11 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
         }
       />
 
-      <Link href={ROUTES.admin.estoque} className="gerente-nav-back text-sm font-medium hover:underline">
-        ← {m.gerente.inicio}
-      </Link>
+      {moduleNav ?? (
+        <Link href={ROUTES.admin.estoque} className="gerente-nav-back text-sm font-medium hover:underline">
+          ← {m.gerente.inicio}
+        </Link>
+      )}
 
       {semProdutos ? (
         <div

@@ -2,7 +2,15 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from 'react'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import { Button } from '@/components/ui/button'
@@ -28,9 +36,16 @@ type Props = Readonly<{
   idioma: Idioma
   lojas: TransferenciaLojaRow[]
   produtos: TransferenciaProdutoOpt[]
+  /** Subnav do módulo Admin Estoque (opcional). */
+  moduleNav?: ReactNode
 }>
 
-export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Props) {
+export function TransferenciasGerentePageClient({
+  idioma,
+  lojas,
+  produtos,
+  moduleNav,
+}: Props) {
   const m = getMessages(idioma)
   const t = m.gerente.transferencias_page
   const router = useRouter()
@@ -201,9 +216,11 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
     <div className={`admin-v2-page ${idioma === 'pt' ? '' : 'font-chinese'}`}>
       <PageHeader title={m.gerente.nav_transferencias} subtitle={t.intro} />
 
-      <Link href={ROUTES.admin.estoque} className="gerente-nav-back text-sm font-medium hover:underline">
-        ← {m.gerente.inicio}
-      </Link>
+      {moduleNav ?? (
+        <Link href={ROUTES.admin.estoque} className="gerente-nav-back text-sm font-medium hover:underline">
+          ← {m.gerente.inicio}
+        </Link>
+      )}
 
       {!podeTransferir ? (
         <div

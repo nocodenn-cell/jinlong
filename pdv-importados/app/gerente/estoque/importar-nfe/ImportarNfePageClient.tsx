@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { StatusChip } from '@/components/ui/StatusChip'
@@ -22,7 +22,11 @@ import {
   previewImportacaoNfe,
 } from './actions'
 
-type Props = Readonly<{ idioma: Idioma }>
+type Props = Readonly<{
+  idioma: Idioma
+  /** Subnav do módulo Admin Estoque (opcional). */
+  moduleNav?: ReactNode
+}>
 
 type LinhaEditavel = LinhaPreviewNfe & {
   fator: number
@@ -49,7 +53,7 @@ function linhaResolvida(l: LinhaEditavel): boolean {
   return l.acao === 'VINCULAR' && !!l.produto_id_destino
 }
 
-export function ImportarNfePageClient({ idioma }: Props) {
+export function ImportarNfePageClient({ idioma, moduleNav }: Props) {
   const m = getMessages(idioma)
   const mi = m.estoque.import_nfe
   const locale = localeFromIdioma(idioma)
@@ -399,9 +403,11 @@ export function ImportarNfePageClient({ idioma }: Props) {
     <div className={`admin-v2-page space-y-4 ${fontClass}`}>
       <PageHeader title={mi.titulo} subtitle={mi.subtitulo} />
 
-      <Link href={ROUTES.admin.estoque} className="gerente-nav-back text-sm font-medium hover:underline">
-        ← {mi.voltar}
-      </Link>
+      {moduleNav ?? (
+        <Link href={ROUTES.admin.estoque} className="gerente-nav-back text-sm font-medium hover:underline">
+          ← {mi.voltar}
+        </Link>
+      )}
 
       <section
         onDragOver={(e) => {

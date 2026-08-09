@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, type ReactNode } from 'react'
 import { Printer, Search, Package, Layers } from 'lucide-react'
 import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import { Button } from '@/components/ui/button'
@@ -25,6 +25,8 @@ type Props = {
   idioma: Idioma
   initialCodigo?: string
   initialProdutoId?: string
+  /** Subnav do módulo Admin Estoque (opcional). */
+  moduleNav?: ReactNode
 }
 
 const LABELS = {
@@ -80,6 +82,7 @@ export function ImprimirEtiquetasPageClient({
   idioma,
   initialCodigo,
   initialProdutoId,
+  moduleNav,
 }: Props) {
   const t = LABELS[idioma]
   const [carrinho, setCarrinho] = useState<ItemCarrinho[]>([])
@@ -270,8 +273,9 @@ export function ImprimirEtiquetasPageClient({
   return (
     <div className="admin-v2-page mx-auto max-w-[1100px]">
       <PageHeader title={t.titulo} />
+      {moduleNav}
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="mt-4 grid gap-6 lg:grid-cols-2">
         <div className="space-y-6">
           <SectionCard title={t.busca}>
             <div className="flex gap-2">

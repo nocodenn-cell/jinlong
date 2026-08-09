@@ -1,11 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { ROUTES } from '@shared-core/navigation/routes'
+import { getMessages } from '@/i18n/getMessages'
 import {
   RecebimentoGerentePageClient,
   type RecebimentoProdutoOpt,
   type RemessaRecenteRow,
 } from '@/app/gerente/recebimento/RecebimentoGerentePageClient'
+import { EstoqueModuleNav } from '../_components/EstoqueModuleNav'
+import { estoqueNavLabelsFromUi } from '../_components/estoqueNavLabels'
 
 export default async function AdminEstoqueRecebimentoPage() {
   const { session } = await loadAdminContext({
@@ -13,6 +16,7 @@ export default async function AdminEstoqueRecebimentoPage() {
     resource: `route:${ROUTES.admin.estoqueRecebimento}`,
   })
   const { idioma, lojaId } = session
+  const ui = getMessages(idioma).admin_ui
   const supabase = await createClient()
 
   const [{ data: produtosRaw }, { data: remessasRaw }] = await Promise.all([
@@ -59,6 +63,7 @@ export default async function AdminEstoqueRecebimentoPage() {
       idioma={idioma}
       produtos={produtos}
       remessasRecentes={remessasRecentes}
+      moduleNav={<EstoqueModuleNav active="recebimento" labels={estoqueNavLabelsFromUi(ui)} />}
     />
   )
 }

@@ -1,11 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { ROUTES } from '@shared-core/navigation/routes'
+import { getMessages } from '@/i18n/getMessages'
 import {
   TransferenciasGerentePageClient,
   type TransferenciaLojaRow,
   type TransferenciaProdutoOpt,
 } from '@/app/gerente/transferencias/TransferenciasGerentePageClient'
+import { EstoqueModuleNav } from '../_components/EstoqueModuleNav'
+import { estoqueNavLabelsFromUi } from '../_components/estoqueNavLabels'
 
 export default async function AdminEstoqueTransferenciasPage() {
   const { session } = await loadAdminContext({
@@ -13,6 +16,7 @@ export default async function AdminEstoqueTransferenciasPage() {
     resource: `route:${ROUTES.admin.estoqueTransferencias}`,
   })
   const { idioma } = session
+  const ui = getMessages(idioma).admin_ui
   const supabase = await createClient()
 
   const [{ data: lojasRaw }, { data: produtosRaw }] = await Promise.all([
@@ -47,6 +51,7 @@ export default async function AdminEstoqueTransferenciasPage() {
       idioma={idioma}
       lojas={lojas}
       produtos={produtos}
+      moduleNav={<EstoqueModuleNav active="transferencias" labels={estoqueNavLabelsFromUi(ui)} />}
     />
   )
 }

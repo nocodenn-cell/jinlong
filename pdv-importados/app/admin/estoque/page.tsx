@@ -1,25 +1,25 @@
 /**
- * FastProduct Admin — Estoque (Onda 7 · DS).
- * Server Component. Queries/RPC inalteradas. Chrome = CrudListShell + FilterBar + DataTable.
+ * FastProduct Admin — Estoque / Saldos (UI/UX loop).
+ * Server Component. Queries/RPC inalteradas. Chrome = ModuleNav + KPI + CrudListShell + FilterBar + DataTable.
  */
 
 import { Suspense } from 'react'
 import Link from 'next/link'
-import { Upload } from 'lucide-react'
 import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
 import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
 import {
   PageHeader,
-  PageActions,
   CrudListShell,
 } from '@/components/ui/admin-v2'
-import { Button } from '@/components/ui/button'
 import { ErrorState } from '@/components/ui/feedback'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
 import { obterListaEstoqueGerente } from '@/app/gerente/estoque/actions'
 import { listarOpcoesFiltrosProdutos } from '@/app/gerente/produtos/actions'
 import { EstoqueTable, type EstoqueLinha } from './_components/EstoqueTable'
+import { EstoqueModuleNav } from './_components/EstoqueModuleNav'
+import { estoqueNavLabelsFromUi } from './_components/estoqueNavLabels'
+import { EstoqueKpiRow } from './_components/EstoqueKpiRow'
 import { cn } from '@/lib/utils'
 
 const PAGE_SIZE = 25
@@ -51,6 +51,25 @@ type SearchParams = {
 
 type PageProps = { searchParams?: Promise<SearchParams> }
 
+type ListaOutcome =
+  | { ok: true; data: Awaited<ReturnType<typeof obterListaEstoqueGerente>> }
+  | { ok: false; error: string }
+
+async function fetchLista(
+  params: Parameters<typeof obterListaEstoqueGerente>[0],
+  fallbackError: string,
+): Promise<ListaOutcome> {
+  try {
+    const data = await obterListaEstoqueGerente(params)
+    return { ok: true, data }
+  } catch (err: unknown) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : fallbackError,
+    }
+  }
+}
+
 export default async function AdminEstoquePage({ searchParams }: PageProps) {
   const { session } = await loadAdminContext({
     pathname: ROUTES.admin.estoque,
@@ -70,23 +89,35 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
   const categoria = uuidOrUndef(sp.categoria)
   const page = clampPage(sp.page)
 
-  const [opcoesRes, listaRes] = await Promise.all([
+  const listBase = {
+    busca: q,
+    categoria_id: categoria ?? null,
+    origem,
+    ordem: 'nome' as const,
+    dir_asc: true,
+  }
+
+  const siblingVisao: Visao = visao === 'critico' ? 'geral' : 'critico'
+
+  const [opcoesRes, listaRes, siblingRes] = await Promise.all([
     listarOpcoesFiltrosProdutos(),
-    obterListaEstoqueGerente({
-      visao,
-      busca: q,
-      categoria_id: categoria ?? null,
-      origem,
-      ordem: 'nome',
-      dir_asc: true,
-      limite: PAGE_SIZE,
-      offset: (page - 1) * PAGE_SIZE,
-    }).then(
-      (data) => ({ ok: true as const, data }),
-      (err: unknown) => ({
-        ok: false as const,
-        error: err instanceof Error ? err.message : ui.estoque_erro_carregar,
-      }),
+    fetchLista(
+      {
+        ...listBase,
+        visao,
+        limite: PAGE_SIZE,
+        offset: (page - 1) * PAGE_SIZE,
+      },
+      ui.estoque_erro_carregar,
+    ),
+    fetchLista(
+      {
+        ...listBase,
+        visao: siblingVisao,
+        limite: 1,
+        offset: 0,
+      },
+      ui.estoque_erro_carregar,
     ),
   ])
 
@@ -95,6 +126,11 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
     : { categorias: [], marcas: [], fornecedores: [] }
   const lista = listaRes.ok ? listaRes.data : { total: 0, rows: [] }
   const loadError = listaRes.ok ? null : listaRes.error
+
+  const totalAtual = lista.total
+  const totalSibling = siblingRes.ok ? siblingRes.data.total : 0
+  const totalGeral = visao === 'geral' ? totalAtual : totalSibling
+  const totalCritico = visao === 'critico' ? totalAtual : totalSibling
 
   const linhas: EstoqueLinha[] = lista.rows.map((r) => ({
     id: r.id,
@@ -116,10 +152,16 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
   ]
 
   const filters: FilterDef[] = [
-    { type: 'search', key: 'q', placeholder: m.estoque.buscar_placeholder },
+    {
+      type: 'search',
+      key: 'q',
+      placeholder: m.estoque.buscar_placeholder,
+      inputClassName: 'w-full min-w-[16rem] max-w-md sm:w-72',
+    },
     {
       type: 'pills',
       key: 'visao',
+      label: ui.estoque_filtro_visao,
       defaultValue: 'geral',
       options: [
         { value: 'geral', label: ui.filtro_todos },
@@ -129,6 +171,7 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
     {
       type: 'pills',
       key: 'origem',
+      label: ui.estoque_filtro_origem,
       defaultValue: '',
       options: [
         { value: '', label: m.produtos.filtro_todas_origens },
@@ -163,6 +206,13 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
     if (target > 1) p.set('page', String(target))
     return pathWithQuery(ROUTES.admin.estoque, p)
   }
+  const visaoHref = (target: Visao) => {
+    const p = new URLSearchParams(activeParams)
+    p.delete('page')
+    if (target === 'geral') p.delete('visao')
+    else p.set('visao', target)
+    return pathWithQuery(ROUTES.admin.estoque, p)
+  }
 
   const nomeCategoria = (id: string) => opcoes.categorias.find((c) => c.id === id)?.nome ?? id
 
@@ -187,34 +237,56 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
     })
   }
 
-  return (
-    <div className="admin-v2-page">
-      <PageHeader
-        title={m.estoque.titulo}
-        subtitle={m.estoque.subtitulo}
-        actions={
-          <PageActions>
-            <Button asChild variant="secondary" size="sm" className="gap-1.5">
-              <Link href={ROUTES.admin.importNfe}>
-                <Upload className="h-4 w-4" aria-hidden />
-                {ui.catalogo_importar_nfe}
-              </Link>
-            </Button>
-          </PageActions>
+  const metaLabel =
+    totalCount === 1 ? ui.estoque_itens_sg : ui.estoque_itens_pl.replace('{{n}}', String(totalCount))
+
+  const emptyAction =
+    visao !== 'geral' || q || origem || categoria
+      ? {
+          vazioActionLabel: ui.estoque_ver_todos,
+          vazioActionHref: ROUTES.admin.estoque,
         }
+      : {}
+
+  const navLabels = estoqueNavLabelsFromUi(ui)
+
+  return (
+    <div className="admin-v2-page flex flex-col gap-4">
+      <PageHeader title={m.estoque.titulo} subtitle={m.estoque.subtitulo} />
+
+      <EstoqueModuleNav active="saldos" labels={navLabels} />
+
+      <EstoqueKpiRow
+        ariaLabel={ui.estoque_kpi_aria}
+        items={[
+          {
+            key: 'geral',
+            label: m.estoque.kpi_total_itens,
+            value: totalGeral,
+            href: visaoHref('geral'),
+            active: visao === 'geral',
+          },
+          {
+            key: 'critico',
+            label: m.estoque.kpi_estoque_critico,
+            value: totalCritico,
+            href: visaoHref('critico'),
+            active: visao === 'critico',
+            tone: 'warning',
+          },
+        ]}
       />
 
       <CrudListShell
         title={ui.estoque_saldos_titulo}
         meta={
           <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-soft)] px-2.5 py-0.5 text-caption text-fg-subtle">
-            {totalCount}{' '}
-            {totalCount === 1 ? m.estoque.col_produto.toLowerCase() : m.estoque.titulo.toLowerCase()}
+            {metaLabel}
           </span>
         }
         toolbar={
           <div className="flex w-full flex-col gap-2.5">
-            <Suspense fallback={<div className="h-9" />}>
+            <Suspense fallback={<div className="h-9 animate-pulse rounded-control bg-[var(--color-surface-soft)]" />}>
               <FilterBar filters={filters} />
             </Suspense>
             {chips.length > 0 ? (
@@ -223,6 +295,7 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
                   <Link
                     key={chip.key}
                     href={hrefWithout(chip.key)}
+                    aria-label={`${ui.estoque_remover_filtro}: ${chip.label}`}
                     className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-soft)] px-2.5 py-0.5 text-caption text-fg-muted hover:text-fg"
                   >
                     {chip.label}
@@ -237,13 +310,13 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
         }
         footer={
           totalPages > 1 ? (
-            <div className="flex w-full items-center justify-between gap-3">
+            <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <span className="text-caption text-fg-subtle">
                 {m.produtos.pag_info
                   .replace('{{atual}}', String(page))
                   .replace('{{total}}', String(totalPages))}
               </span>
-              <div className="flex items-center gap-1">
+              <div className="flex flex-wrap items-center gap-1">
                 <PageLink href={pageHref(page - 1)} disabled={page <= 1}>
                   {ui.paginacao_anterior}
                 </PageLink>
@@ -283,9 +356,12 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
               origemChina: ui.estoque_origem_china,
               origemBrasilNf: ui.estoque_origem_brasil_nf,
               origemBrasil: ui.estoque_origem_brasil,
-              vazioTitulo: ui.estoque_vazio_titulo,
+              vazioTitulo:
+                visao === 'critico' ? m.estoque.vazio_baixo : ui.estoque_vazio_titulo,
               vazioSub: ui.estoque_vazio_sub,
+              ...emptyAction,
               ajusteTitulo: ui.estoque_ajuste_titulo,
+              ajusteAcao: ui.estoque_ajuste_acao,
               saldoAtual: ui.estoque_saldo_atual,
               estoqueMinimo: m.estoque.col_estoque_minimo,
               motivo: m.estoque.ajuste_motivo_label,
