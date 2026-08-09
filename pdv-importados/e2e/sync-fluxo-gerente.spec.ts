@@ -273,14 +273,15 @@ test.describe('Fluxo crítico sync-outbox -> gerente/vendas', () => {
     expect(docErr?.message).toBeFalsy()
     expect(doc?.id, 'Documento fiscal não encontrado para a venda criada no teste.').toBeTruthy()
 
-    // Artifact CI #1102: 3-arg fiscal_marcar_erro é ambíguo no schema cache
-    // (overload 3 vs 6 args). Desambigua com a assinatura longa.
-    const { error: errRpc } = await admin.rpc('fiscal_marcar_erro', {
+    // Artifact CI #1102/#1103: fiscal_marcar_erro 3-arg ambíguo; 6-arg quebra
+    // (coluna erro_normalizado ausente no remoto). Usa normalizado com
+    // p_error_code (assinatura presente e alinhada ao schema atual).
+    const { error: errRpc } = await admin.rpc('fiscal_marcar_erro_normalizado', {
       p_documento_id: doc!.id,
       p_erro: 'E2E_TIMELINE_ERRO',
       p_transitorio: true,
-      p_erro_normalizado: 'E2E_TIMELINE_ERRO',
-      p_erro_detalhe: { origem: 'e2e_sync_fluxo' },
+      p_error_code: 'E2E_TIMELINE_ERRO',
+      p_error_category: 'FALHA_COMUNICACAO_PROVIDER',
       p_retryable: true,
     })
     expect(errRpc?.message).toBeFalsy()
