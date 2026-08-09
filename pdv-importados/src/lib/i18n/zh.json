@@ -1486,7 +1486,7 @@
       },
       "metricStock": {
         "cn": "库存预警",
-        "pt": "Alertas de estoque baixo"
+        "pt": "Estoque baixo"
       },
       "metricStockHint": { "cn": "点击查看库存", "pt": "Clique para abrir Estoque" },
       "trendNew": { "cn": "新增", "pt": "novo" },

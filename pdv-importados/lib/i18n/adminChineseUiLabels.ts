@@ -93,7 +93,7 @@ const legacyAdminUi = {
     metricTotalSales: { cn: '总销售额', pt: 'Vendas totais no período' } satisfies BilingualLine,
     metricOrders: { cn: '订单量', pt: 'Pedidos registrados' } satisfies BilingualLine,
     metricTicket: { cn: '客单价', pt: 'Ticket médio' } satisfies BilingualLine,
-    metricStock: { cn: '库存预警', pt: 'Alertas de estoque baixo' } satisfies BilingualLine,
+    metricStock: { cn: '库存预警', pt: 'Estoque baixo' } satisfies BilingualLine,
     metricStockHint: { cn: '点击查看库存', pt: 'Clique para abrir Estoque' } satisfies BilingualLine,
     trendNew: { cn: '新增', pt: 'novo' } satisfies BilingualLine,
     trendStockOk: { cn: '正常', pt: 'OK' } satisfies BilingualLine,
