@@ -28,7 +28,16 @@ vi.mock('next/navigation', () => ({
 
 import { CatalogoPublicacaoActions } from '@/app/admin/catalogo/_components/CatalogoPublicacaoActions'
 
-const LABELS = { publicar: 'Publicar', inativar: 'Inativar', reativar: 'Reativar' }
+const LABELS = {
+  publicar: 'Publicar',
+  inativar: 'Inativar',
+  reativar: 'Reativar',
+  confirmarTitulo: 'Inativar produto',
+  confirmarTexto: 'O produto "{{nome}}" será inativado.',
+  confirmar: 'Confirmar',
+  cancelar: 'Cancelar',
+  fechar: 'Fechar',
+}
 const ERRO_GENERICO = 'Ocorreu um erro'
 
 let container: HTMLDivElement
@@ -38,6 +47,16 @@ function render(ui: React.ReactElement) {
   act(() => {
     root.render(ui)
   })
+}
+
+function props(status: 'DRAFT' | 'PUBLICADO' | 'INATIVO') {
+  return {
+    produtoId: 'p1',
+    produtoNome: 'Cabo USB',
+    status,
+    labels: LABELS,
+    erroGenerico: ERRO_GENERICO,
+  } as const
 }
 
 beforeEach(() => {
@@ -57,42 +76,19 @@ afterEach(() => {
 })
 
 describe('CatalogoPublicacaoActions', () => {
-  it('rascunho mostra botão Publicar; publicado mostra Inativar (via predicado do core, não literal)', () => {
-    render(
-      <CatalogoPublicacaoActions
-        produtoId="p1"
-        status="DRAFT"
-        labels={LABELS}
-        erroGenerico={ERRO_GENERICO}
-      />,
-    )
+  it('rascunho mostra botão Publicar; publicado mostra controle Inativar (ícone)', () => {
+    render(<CatalogoPublicacaoActions {...props('DRAFT')} />)
     expect(container.textContent).toContain('Publicar')
 
-    render(
-      <CatalogoPublicacaoActions
-        produtoId="p1"
-        status="PUBLICADO"
-        labels={LABELS}
-        erroGenerico={ERRO_GENERICO}
-      />,
-    )
-    expect(container.textContent).toContain('Inativar')
+    render(<CatalogoPublicacaoActions {...props('PUBLICADO')} />)
+    const inativar = container.querySelector('button[aria-label="Inativar"]')
+    expect(inativar).toBeTruthy()
+    expect(container.textContent).not.toContain('Publicar')
   })
 
   it('INATIVO oferece Reativar, nunca Publicar (podePublicarProduto só libera rascunho)', async () => {
-    // Regressão da decisão registrada em
-    // Jinlong/decisoes/CATALOGO_CATEGORIA_INATIVA_E_PUBLICAR.md: a UI decidia por
-    // `ativoFromStatusPublicacao`, então oferecia "Publicar" para produto inativo
-    // — contra a regra declarada no core.
     reativarProdutoMock.mockResolvedValue({ success: true, data: null })
-    render(
-      <CatalogoPublicacaoActions
-        produtoId="p1"
-        status="INATIVO"
-        labels={LABELS}
-        erroGenerico={ERRO_GENERICO}
-      />,
-    )
+    render(<CatalogoPublicacaoActions {...props('INATIVO')} />)
     expect(container.textContent).toContain('Reativar')
     expect(container.textContent).not.toContain('Publicar')
 
@@ -106,14 +102,7 @@ describe('CatalogoPublicacaoActions', () => {
 
   it('sucesso: chama router.refresh() e não emite toast de erro', async () => {
     publicarProdutoMock.mockResolvedValue({ success: true, data: null })
-    render(
-      <CatalogoPublicacaoActions
-        produtoId="p1"
-        status="DRAFT"
-        labels={LABELS}
-        erroGenerico={ERRO_GENERICO}
-      />,
-    )
+    render(<CatalogoPublicacaoActions {...props('DRAFT')} />)
     const btn = container.querySelector('button') as HTMLButtonElement
     await act(async () => {
       btn.click()
@@ -124,14 +113,7 @@ describe('CatalogoPublicacaoActions', () => {
 
   it('falha do servidor: mostra toast de erro em vez de falhar silenciosamente (regressão)', async () => {
     publicarProdutoMock.mockResolvedValue({ success: false, error: 'RLS negou a operação.' })
-    render(
-      <CatalogoPublicacaoActions
-        produtoId="p1"
-        status="DRAFT"
-        labels={LABELS}
-        erroGenerico={ERRO_GENERICO}
-      />,
-    )
+    render(<CatalogoPublicacaoActions {...props('DRAFT')} />)
     const btn = container.querySelector('button') as HTMLButtonElement
     await act(async () => {
       btn.click()
@@ -143,19 +125,40 @@ describe('CatalogoPublicacaoActions', () => {
     })
   })
 
+  it('Inativar exige confirmação antes de chamar a action', async () => {
+    inativarProdutoMock.mockResolvedValue({ success: true, data: null })
+    render(<CatalogoPublicacaoActions {...props('PUBLICADO')} />)
+
+    const trigger = container.querySelector('button[aria-label="Inativar"]') as HTMLButtonElement
+    await act(async () => {
+      trigger.click()
+    })
+    expect(inativarProdutoMock).not.toHaveBeenCalled()
+    expect(container.textContent).toContain('Inativar produto')
+    expect(container.textContent).toContain('Cabo USB')
+
+    const confirmar = Array.from(container.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Confirmar'),
+    ) as HTMLButtonElement
+    await act(async () => {
+      confirmar.click()
+    })
+    expect(inativarProdutoMock).toHaveBeenCalledWith('p1')
+  })
+
   it('falha sem mensagem do servidor: recorre ao erro genérico', async () => {
     inativarProdutoMock.mockResolvedValue({ success: false, error: '' })
-    render(
-      <CatalogoPublicacaoActions
-        produtoId="p1"
-        status="PUBLICADO"
-        labels={LABELS}
-        erroGenerico={ERRO_GENERICO}
-      />,
-    )
-    const btn = container.querySelector('button') as HTMLButtonElement
+    render(<CatalogoPublicacaoActions {...props('PUBLICADO')} />)
+
+    const trigger = container.querySelector('button[aria-label="Inativar"]') as HTMLButtonElement
     await act(async () => {
-      btn.click()
+      trigger.click()
+    })
+    const confirmar = Array.from(container.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Confirmar'),
+    ) as HTMLButtonElement
+    await act(async () => {
+      confirmar.click()
     })
     expect(emitGerenteToastMock).toHaveBeenCalledWith({
       kind: 'error',

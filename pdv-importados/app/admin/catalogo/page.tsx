@@ -1,5 +1,5 @@
 /**
- * FastProduct Admin — Catálogo (Fase 4)
+ * FastProduct Admin — Catálogo (Fase 4 + UX Fase 1)
  *
  * Server Component. Reusa a query EXISTENTE de produtos do gerente
  * (`buscarProdutosComFiltros` → RPC list_produtos_gerente_filtrados) — nenhuma
@@ -7,12 +7,13 @@
  * (filtros + paginação server-side). As opções de select (categorias/marcas/
  * fornecedores) vêm de `listarOpcoesFiltrosProdutos` (cacheada).
  *
- * Fase 4 "lean" (sem modificar components/ui/):
- *   - FilterBar (Fase 2): busca + pills (status/origem) + selects.
- *   - DataTable (Fase 2): colunas + ações no hover + sort client-side.
- *   - Paginação: links server-side via ?page= (a RPC já pagina).
- *   - Chips de filtros avançados ativos: removíveis (links server-side).
- *   - Seleção/ações em lote e filtro de TAGS: deferidos (existem em /gerente/produtos).
+ * UX Fase 1 (UI apenas): hierarquia de CTAs, “Mais filtros” local, busca ampla,
+ * reset de `page` opt-in no FilterBar, ações de linha compactas + confirmação
+ * ao inativar, empty/loading/erro e a11y dos chips/pills.
+ *
+ * C6 (CrudListShell): não migrado nesta rodada — o ganho seria sobretudo
+ * cosmético; PageHeader.actions + SectionCard já cobrem o fluxo sem risco
+ * estrutural. Reavaliar após validação visual.
  */
 
 import { Suspense } from 'react'
@@ -22,8 +23,7 @@ import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
 import { opcoesSelecionaveis } from '@/core/catalog/opcoesCadastro'
 import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
-import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
-import { ErrorState } from '@/components/ui/feedback'
+import type { FilterDef } from '@/components/ui/FilterBar'
 import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import { CatalogoHubNav } from '@/components/ui/admin-v2/CatalogoHubNav'
 import {
@@ -32,6 +32,8 @@ import {
 } from '@/app/gerente/produtos/actions'
 import { CatalogoTable, type CatalogoProduto } from './_components/CatalogoTable'
 import { CatalogoHeaderActions } from './_components/CatalogoHeaderActions'
+import { CatalogoFiltrosBar } from './_components/CatalogoFiltrosBar'
+import { CatalogoLoadError } from './_components/CatalogoLoadError'
 
 const PAGE_SIZE = 20
 
@@ -55,8 +57,6 @@ function clampPage(raw: string | undefined): number {
   const n = Number.parseInt(raw ?? '1', 10)
   return Number.isFinite(n) && n >= 1 ? n : 1
 }
-
-
 
 type SearchParams = {
   q?: string
@@ -96,7 +96,6 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
   const fornecedor = uuidOrUndef(sp.fornecedor)
   const page = clampPage(sp.page)
 
-  // ─── Dados (queries EXISTENTES — nenhuma nova) ───────────────────────────
   const [opcoesRes, produtosRes] = await Promise.all([
     listarOpcoesFiltrosProdutos(),
     buscarProdutosComFiltros({
@@ -129,30 +128,35 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
   const totalCount = produtosRes.success ? produtosRes.data.total : 0
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
   const loadError = !produtosRes.success
-    ? mensagemErroParaUsuario(produtosRes.error, idioma)
+    ? mensagemErroParaUsuario(produtosRes.error, idioma) || ui.catalogo_erro_carregar
     : null
 
-  // ─── FilterBar (Fase 2) ──────────────────────────────────────────────────
-  // Opção inativa não é oferecida como filtro novo, mas continua listada se for
-  // a que está filtrando agora — senão o filtro ativo sumiria do seletor.
   const catOptions = [
     { value: '', label: m.estoque.filtro_todas_categorias },
     ...opcoesSelecionaveis(opcoes.categorias, categoria ?? '').map((c) => ({ value: c.id, label: c.nome })),
   ]
   const marcaOptions = [
     { value: '', label: ui.catalogo_todas_marcas },
-    ...opcoesSelecionaveis(opcoes.marcas, marca ?? '').map((m) => ({ value: m.id, label: m.nome })),
+    ...opcoesSelecionaveis(opcoes.marcas, marca ?? '').map((item) => ({ value: item.id, label: item.nome })),
   ]
   const fornOptions = [
     { value: '', label: ui.catalogo_todos_fornecedores },
     ...opcoes.fornecedores.map((f) => ({ value: f.id, label: f.nome })),
   ]
 
-  const filters: FilterDef[] = [
-    { type: 'search', key: 'q', placeholder: ui.filtro_nfe_busca_placeholder },
+  const primaryFilters: FilterDef[] = [
+    {
+      type: 'search',
+      key: 'q',
+      label: ui.catalogo_filtro_busca,
+      placeholder: ui.filtro_nfe_busca_placeholder,
+      className: 'min-w-[16rem] flex-1 max-w-2xl',
+      inputClassName: 'w-full min-w-0',
+    },
     {
       type: 'pills',
       key: 'status',
+      label: ui.catalogo_filtro_status,
       defaultValue: 'todos',
       options: [
         { value: 'todos', label: ui.filtro_todos },
@@ -163,6 +167,7 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
     {
       type: 'pills',
       key: 'origem',
+      label: ui.catalogo_filtro_origem,
       defaultValue: 'all',
       options: [
         { value: 'all', label: m.produtos.filtro_todas_origens },
@@ -171,6 +176,9 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
         { value: 'brasil_sem_nf', label: ui.estoque_origem_brasil },
       ],
     },
+  ]
+
+  const advancedFilters: FilterDef[] = [
     { type: 'select', key: 'categoria', label: m.produtos.categoria, defaultValue: '', options: catOptions },
     { type: 'select', key: 'marca', label: ui.catalogo_filtro_marca, defaultValue: '', options: marcaOptions },
     {
@@ -204,7 +212,6 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
     },
   ]
 
-  // ─── Chips de filtros avançados ativos (server-side, removíveis) ──────────
   const activeParams: Record<string, string> = {}
   if (q) activeParams.q = q
   if (status !== 'todos') activeParams.status = status
@@ -214,6 +221,11 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
   if (categoria) activeParams.categoria = categoria
   if (marca) activeParams.marca = marca
   if (fornecedor) activeParams.fornecedor = fornecedor
+
+  const hasActiveFilters = Object.keys(activeParams).length > 0
+  const advancedActive = Boolean(
+    categoria || marca || fornecedor || estoque !== 'todos' || imagem !== 'todos',
+  )
 
   const hrefWithout = (key: string) => {
     const p = new URLSearchParams(activeParams)
@@ -267,20 +279,33 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
       <PageHeader
         title={ui.catalogo_titulo}
         subtitle={ui.catalogo_subtitulo}
-        filters={headerActions}
+        actions={headerActions}
       />
+      <p className="-mt-3 mb-4 text-caption text-fg-subtle">{ui.catalogo_hint_volume}</p>
 
       <CatalogoHubNav />
 
       <div className="mb-4 border-b border-[var(--color-border-secondary)] pb-3">
         <Suspense fallback={<div className="h-9" />}>
-          <FilterBar filters={filters} />
+          <CatalogoFiltrosBar
+            primaryFilters={primaryFilters}
+            advancedFilters={advancedFilters}
+            advancedActive={advancedActive}
+            maisFiltrosLabel={ui.catalogo_mais_filtros}
+            menosFiltrosLabel={ui.catalogo_menos_filtros}
+            clearLabel={m.comum.limpar_filtros}
+          />
         </Suspense>
 
         {chips.length > 0 ? (
           <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
             {chips.map((chip) => (
-              <Link key={chip.key} href={hrefWithout(chip.key)} className="admin-v2-chip">
+              <Link
+                key={chip.key}
+                href={hrefWithout(chip.key)}
+                className="admin-v2-chip"
+                aria-label={ui.catalogo_chip_remover.replace('{{label}}', chip.label)}
+              >
                 {chip.label}
                 <span aria-hidden className="text-fg-subtle">
                   ✕
@@ -292,14 +317,57 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
       </div>
 
       {loadError ? (
-        <ErrorState dense description={loadError} className="mb-4 items-start text-left" />
+        <CatalogoLoadError description={loadError} retryLabel={ui.catalogo_tentar_novamente} />
       ) : null}
 
       <SectionCard title={m.produtos.lista_produtos} action={countBadge}>
-        <Suspense fallback={<div className="admin-v2-panel h-24 animate-pulse rounded-lg" />}>
+        <Suspense
+          fallback={
+            <div className="space-y-2 p-3" aria-busy="true">
+              {Array.from({ length: 6 }, (_, i) => (
+                <div
+                  key={i}
+                  className="h-10 animate-pulse rounded-md bg-[var(--color-surface-soft)]"
+                />
+              ))}
+            </div>
+          }
+        >
           <CatalogoTable
             produtos={produtos}
-            labels={{ produto: m.estoque.col_produto, varejo: ui.catalogo_col_varejo, atacado: ui.catalogo_col_atacado, estoque: m.estoque.titulo, origem: m.produtos.origem_label, status: m.produtos.status, rascunho: ui.catalogo_status_rascunho, publicado: ui.catalogo_status_publicado, inativo: m.produtos.inativo, publicar: ui.catalogo_publicar, inativar: m.produtos.inativar, vazioTitulo: ui.catalogo_vazio_titulo, vazioSub: ui.catalogo_vazio_sub, cadastroRapido: m.produtos.cadastro_produto, origemChina: ui.estoque_origem_china, origemBrasilNf: ui.estoque_origem_brasil_nf, origemBrasil: ui.estoque_origem_brasil, acaoEditar: ui.catalogo_acao_editar, acaoDuplicar: ui.catalogo_acao_duplicar, acaoVerEstoque: ui.catalogo_acao_ver_estoque, acaoSelecionarLinha: ui.catalogo_acao_selecionar_linha, reativar: ui.catalogo_acao_reativar }}
+            hasActiveFilters={hasActiveFilters}
+            labels={{
+              produto: m.estoque.col_produto,
+              varejo: ui.catalogo_col_varejo,
+              atacado: ui.catalogo_col_atacado,
+              estoque: m.estoque.titulo,
+              origem: m.produtos.origem_label,
+              status: m.produtos.status,
+              rascunho: ui.catalogo_status_rascunho,
+              publicado: ui.catalogo_status_publicado,
+              inativo: m.produtos.inativo,
+              publicar: ui.catalogo_publicar,
+              inativar: m.produtos.inativar,
+              vazioTitulo: ui.catalogo_vazio_titulo,
+              vazioSub: ui.catalogo_vazio_sub,
+              vazioFiltrosTitulo: ui.catalogo_vazio_filtros_titulo,
+              vazioFiltrosSub: ui.catalogo_vazio_filtros_sub,
+              limparFiltros: m.comum.limpar_filtros,
+              cadastroRapido: m.produtos.cadastro_produto,
+              origemChina: ui.estoque_origem_china,
+              origemBrasilNf: ui.estoque_origem_brasil_nf,
+              origemBrasil: ui.estoque_origem_brasil,
+              acaoEditar: ui.catalogo_acao_editar,
+              acaoDuplicar: ui.catalogo_acao_duplicar,
+              acaoVerEstoque: ui.catalogo_acao_ver_estoque,
+              acaoSelecionarLinha: ui.catalogo_acao_selecionar_linha,
+              reativar: ui.catalogo_acao_reativar,
+              inativarConfirmTitulo: ui.catalogo_inativar_confirm_titulo,
+              inativarConfirmTexto: ui.catalogo_inativar_confirm_texto,
+              confirmar: m.comum.confirmar,
+              cancelar: m.comum.cancelar,
+              fechar: m.comum.fechar,
+            }}
             m={m}
             opcoes={opcoes}
             idioma={idioma}
