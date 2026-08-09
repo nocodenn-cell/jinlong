@@ -153,35 +153,31 @@ const { data: produtos } = await supabase.rpc('list_produtos_gerente_filtrados',
 
 ### 3️⃣ Estoque (`/admin/estoque`)
 
+> **UX 2026-08-09 (PR [#275](https://github.com/nocodenn-cell/fastproduct/pull/275)):** subnav do módulo, KPIs Total/Crítico, botão Ajustar com label, severidade local de saldo (zero sem mínimo não é danger), Déficit condicional. Sem mudança de RPC/regras.
+
 **Funcionalidades:**
-- Tabela com saldo colorido (≤0 vermelho, >0 verde)
-- Filtros: busca, visão (geral/crítico), origem, categoria
-- Ações hover: Ajustar Saldo, Kardex
+- Subnav do módulo: Saldos · Recebimento · Transferências · Importar NF-e · Etiquetas
+- KPIs clicáveis: Total de itens · Estoque crítico (deep-link em `visao`)
+- Tabela: Produto (+ código de barras), Saldo, Mínimo, Déficit (só se houver), Un., Origem
+- Saldo com severidade local: danger se ≤0 **e** mínimo > 0; warning se abaixo do mínimo; neutro se zero sem mínimo; success se ok
+- Filtros URL: busca ampliada, visão (Todos/Crítico), origem, categoria + chips removíveis
+- Ações de linha sempre visíveis: **Ajustar** (secundário) + Kardex (ghost)
 - Modal ajuste: Quantidade, Mínimo, Motivo, Observação
 - Sheet kardex: Histórico entrada (verde +) / saída (vermelho −)
 
 **Dados Conectados:**
 ```typescript
-// RPC: gerente_estoque_list_page (paginação server-side)
-const { data: estoque } = await supabase.rpc('gerente_estoque_list_page', {
-  p_loja_id: lojaId,
-  p_busca: q,
-  p_visao: visao,
-  p_page: page,
-})
-
-// Action: obterKardexProduto (nova, read-only)
-const { data: kardex } = await obterKardexProduto(produtoId)
-// Lê movimentos_estoque_log com timestamps e tipos
-
-// Action: atualizarEstoqueProduto (reusa /gerente)
-await atualizarEstoqueProduto({ produto_id, quantidade, ... })
+// Action: obterListaEstoqueGerente → RPC gerente_estoque_list_page (paginação server-side)
+// KPI sibling: mesma action com limite 1 (sem contrato novo)
+// Action: obterKardexProduto (read-only → movimentos_estoque_log)
+// Action: atualizarEstoqueProduto (reusa /gerente → ajustar_estoque_manual)
 ```
 
 **Componentes:**
+- `EstoqueModuleNav.tsx` / `EstoqueKpiRow.tsx` — chrome local do módulo
 - `EstoqueTable.tsx` — DataTable (Client)
-- `AjusteSaldoModal.tsx` — Form inline (Client, useTransition)
-- `KardexSheet.tsx` — Painel lateral com scroll (Client)
+- `AjusteSaldoModal.tsx` — Form (Client, useTransition)
+- `KardexSheet.tsx` — Painel lateral (Client)
 
 ---
 

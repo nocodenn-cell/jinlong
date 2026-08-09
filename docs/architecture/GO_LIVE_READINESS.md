@@ -16,7 +16,7 @@
 |--------|---------|--------------------|------------|
 | Cadastro | **GO** (telas + SSoT + P0-DADOS) | pendente loja real | **NO-GO** até P0-HOM |
 | Venda / Caixa | **GO** (RPC finalize/cancel + desconto + sangria/suprimento) | pendente P0-VEN-PROOF | **NO-GO** até P0-HOM |
-| Estoque | **GO** (admin estoque + NF-e + SSoT) | pendente prova pós-venda | **NO-GO** até P0-HOM |
+| Estoque | **GO** (admin estoque + NF-e + SSoT; UX Saldos PR [#275](https://github.com/nocodenn-cell/fastproduct/pull/275) — subnav/KPIs/Ajustar/severidade local) | pendente prova pós-venda + smoke autenticado da UX | **NO-GO** até P0-HOM |
 | Financeiro | **GO** (AR liquidar + AP pagar/cancel + NF-e only) | pendente amostra real | **NO-GO** até P0-HOM |
 | Fiscal Stub | **GO** (enqueue Stub + fila + aviso UI) | pendente smoke pós-venda | **NO-GO** até P0-HOM |
 | Auditoria | **GO** (`/admin/auditoria`) | pendente eventos na prova | **NO-GO** até P0-HOM |

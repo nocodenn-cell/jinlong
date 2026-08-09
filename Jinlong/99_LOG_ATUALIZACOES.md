@@ -6,6 +6,34 @@
 
 ---
 
+## 2026-08-09 — UI/UX `/admin/estoque` (Saldos) ✅ ENGINEER LOOP
+
+| Campo | Valor |
+|---|---|
+| **Mudança** | Auditoria + implementação UI/UX da tela Saldos e wayfinding do módulo Estoque |
+| **Motivo** | Operação diária: reduzir fadiga de alerta, tornar ajuste acionável e unificar navegação do módulo antes do go-live |
+| **Arquivos** | `pdv-importados/app/admin/estoque/**` · `FilterBar.tsx` (opt-in) · clients gerente com `moduleNav?` · i18n PT/ZH · guia/auditoria do painel |
+| **PR / Branch** | [#275](https://github.com/nocodenn-cell/fastproduct/pull/275) · `cursor/uiux-estoque-e3d1` |
+| **Commits** | `4f654e4b` feat · `55789594` test · `c7023cf2` fix KPI/Ajustar |
+| **Impacto** | Sem mudança de backend/RPC/regras; só apresentação e fluxo da tela |
+
+**Entregue (P0/P1 da auditoria):**
+1. Subnav local nas 5 rotas: Saldos · Recebimento · Transferências · Importar NF-e · Etiquetas
+2. KPIs clicáveis Total / Crítico (sem inventar `0` se o fetch sibling falhar)
+3. Botão **Ajustar** com label + Kardex secundário
+4. Severidade local de saldo: zero sem mínimo deixa de pintar danger em massa
+5. Meta “N itens”; busca ampliada; rótulos Visão/Origem; coluna Déficit só com valor
+6. Empty “Ver todos”; sticky header; sort client removido
+7. Testes de comportamento (nav, KPI, tabela, tone)
+
+**Validação:** typecheck OK · vitest `estoque/_components` OK · CI `build-and-test` OK · Vercel READY · smoke autenticado no preview pendente (login)
+
+**Fora de escopo / residual:** KPI “zerados” (sem filtro de contrato) · sort server · alinhar cores do Catálogo a `QuantityCell` · falhas E2E sync/Playwright não ligadas a esta UI
+
+**Docs atualizados nesta entrada:** `ADMIN_PANEL_GUIDE.md` § Estoque · `AUDITORIA_PAINEL_ADMIN.md` § `/admin/estoque` · `docs/architecture/GO_LIVE_READINESS.md` (nota UX)
+
+---
+
 ## 2026-07-30 — Auditoria do Catálogo e cadastro de produto ✅ RODADAS 1 e 2
 
 | Campo | Valor |

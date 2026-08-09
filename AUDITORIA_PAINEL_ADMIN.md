@@ -77,22 +77,26 @@
 |----------|--------|----------|
 | Arquivo | ✅ | `app/admin/estoque/page.tsx` existe |
 | Server Component | ✅ | Server RSC com filtros |
-| Dados Reais | ✅ | RPC `gerente_estoque_list_page` |
-| Client Components | ✅ | 3: EstoqueTable, AjusteSaldoModal, KardexSheet |
-| Filtros | ✅ | q, visão (geral/crítico), origem, categoria |
-| FilterBar | ✅ | Search + Pills |
-| Tabela | ✅ | Colunas: Produto, Saldo (colorido), Mínimo, Déficit, Un, Origem |
-| Saldo Colorido | ✅ | ≤0 vermelho, >0 verde (via Severity) |
-| Ações | ✅ | Hover: Ajustar Saldo, Kardex |
-| Modal Ajuste | ✅ | Form inline: Quantidade, Mínimo, Motivo, Observação |
+| Dados Reais | ✅ | RPC `gerente_estoque_list_page` via `obterListaEstoqueGerente` |
+| Client Components | ✅ | EstoqueTable, AjusteSaldoModal, KardexSheet (+ ModuleNav/KPI locais) |
+| Filtros | ✅ | q, visão (geral/crítico), origem, categoria + chips |
+| FilterBar | ✅ | Search ampliada + pills com rótulo Visão/Origem + select |
+| Subnav módulo | ✅ | Saldos · Recebimento · Transferências · Importar NF-e · Etiquetas |
+| KPIs | ✅ | Total / Crítico (deep-link; `—` se contagem sibling indisponível) |
+| Tabela | ✅ | Produto, Saldo, Mínimo, Déficit (condicional), Un, Origem |
+| Saldo colorido | ✅ | Severidade **local** (`estoqueSaldoTone`): danger só zero com mínimo > 0 |
+| Ações | ✅ | Sempre visíveis: botão **Ajustar** + ícone Kardex (não hover-only) |
+| Modal Ajuste | ✅ | Quantidade, Mínimo, Motivo, Observação |
 | Sheet Kardex | ✅ | Histórico: entrada (verde +), saída (vermelho −) |
-| Empty State | ✅ | "Nenhum produto..." |
-| Tratamento de Erro | ✅ | Error banner no modal/sheet |
+| Empty State | ✅ | + CTA “Ver todos” quando há filtro ativo |
+| Tratamento de Erro | ✅ | ErrorState na lista; erros no modal/sheet |
+| UX Engineer Loop | ✅ | PR [#275](https://github.com/nocodenn-cell/fastproduct/pull/275) (2026-08-09) |
 
 **Observações:**
-- Nova ação read-only: `obterKardexProduto()` (lê `movimentos_estoque_log`)
+- `obterKardexProduto()` (read-only → `movimentos_estoque_log`)
 - Modal ajuste usa `atualizarEstoqueProduto()` de /gerente
-- Saldo crítico via RPC (v_estoque_baixo)
+- Saldo crítico via RPC (`v_estoque_baixo` / visão `critico`)
+- Docs de UX desatualizados (hover-only / vermelho binário) corrigidos nesta revisão
 
 ---
 
