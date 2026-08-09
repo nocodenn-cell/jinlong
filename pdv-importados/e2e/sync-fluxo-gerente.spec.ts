@@ -220,7 +220,8 @@ test.describe('Fluxo crítico sync-outbox -> gerente/vendas', () => {
     await loginGerente(page, { postLoginUrl: /\/(caixa|gerente|admin)/ })
 
     await gotoApp(page, '/gerente/vendas')
-    await expect(page.getByRole('heading', { name: /vendas/i })).toBeVisible()
+    // Artifact CI #1105: /vendas/i casa 2 headings (h1 "Vendas e caixa" + h2 "Vendas do dia").
+    await expect(page.getByRole('heading', { name: 'Vendas e caixa' })).toBeVisible()
 
     // Dívida do spec (não corrigir nesta etapa): lista UI usa caixa_id curto, não venda.id.
     const vendaPrefix = `${vendaId.slice(0, 8)}…`
