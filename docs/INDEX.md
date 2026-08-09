@@ -37,6 +37,7 @@ Welcome to the fastproduct documentation hub. Find guides for development, opera
 | [GO_LIVE_CERTIFICATION_REPORT.md](../GO_LIVE_CERTIFICATION_REPORT.md) | **Canônico** — certificação GO 2026-08-09 + evidências | Release manager, CTO |
 | [GO_LIVE_EXECUTIVO_RESUMO.md](../GO_LIVE_EXECUTIVO_RESUMO.md) | **Canônico** — decisão executiva PRONTO PARA GO-LIVE | Dono, CTO |
 | [GO_LIVE_STATUS_ATUAL.md](./GO_LIVE_STATUS_ATUAL.md) | Snapshot curto do status (aponta aos canônicos) | Todos |
+| [GO_LIVE_STATUS_FINAL.md](./GO_LIVE_STATUS_FINAL.md) | **Passo 7** — snapshot final READY FOR GO-LIVE + gates | Release manager, CTO |
 | [POST-DEPLOY-MONITORING.md](./POST-DEPLOY-MONITORING.md) | Monitoring checklist, alert thresholds, 24h post-launch | Ops, on-call engineer |
 
 ### **🏗️ For Workspace Setup**
