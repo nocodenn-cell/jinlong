@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { DragonModal } from '@/components/ui/DragonModal'
+import { Field, Input, Select } from '@/components/ui/forms'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { PASSWORD_MIN_LENGTH } from '@/lib/auth/passwordPolicy'
-import { cn } from '@/lib/utils'
 import {
   atualizarFuncionarioAction,
   criarFuncionarioAction,
@@ -21,6 +21,7 @@ export type FuncionarioModalLabels = {
   editar: string
   nome: string
   email: string
+  emailHint: string
   perfil: string
   idioma: string
   senha: string
@@ -42,9 +43,6 @@ type Props = {
   onClose: () => void
   onSalvo: (row: FuncionarioListRow) => void
 }
-
-const inputClass =
-  'w-full rounded-md border border-jl-border-1 bg-jl-surface-soft px-3 py-2 text-sm text-jl-fg-1 outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50'
 
 export function FuncionarioEditarModal({
   labels: L,
@@ -118,49 +116,59 @@ export function FuncionarioEditarModal({
       onClose={onClose}
       title={editando ? L.editar : L.novo}
       size="md"
+      dismissable={!salvando}
+      footer={
+        <>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={salvando}>
+            {L.cancelar}
+          </Button>
+          <Button type="submit" form="funcionario-form" variant="primary" disabled={salvando}>
+            {salvando ? L.salvando : L.salvar}
+          </Button>
+        </>
+      }
     >
-      <form onSubmit={onSubmit} className="flex flex-col gap-4" data-testid="funcionario-form">
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="func-nome" className="text-xs font-medium text-jl-fg-3">
-            {L.nome}
-          </label>
-          <input
-            id="func-nome"
+      <form
+        id="funcionario-form"
+        onSubmit={onSubmit}
+        className="flex flex-col gap-4 pb-1"
+        data-testid="funcionario-form"
+      >
+        <Field id="func-nome" label={L.nome} required>
+          <Input
             ref={nomeRef}
             value={nome}
             onChange={(ev) => setNome(ev.target.value)}
             required
             minLength={2}
-            className={inputClass}
+            autoComplete="name"
+            disabled={salvando}
           />
-        </div>
+        </Field>
 
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="func-email" className="text-xs font-medium text-jl-fg-3">
-            {L.email}
-          </label>
-          <input
-            id="func-email"
+        <Field
+          id="func-email"
+          label={L.email}
+          required={!editando}
+          hint={editando ? L.emailHint : undefined}
+        >
+          <Input
             type="email"
             value={email}
             onChange={(ev) => setEmail(ev.target.value)}
             required={!editando}
-            disabled={editando}
+            disabled={editando || salvando}
+            readOnly={editando}
             autoComplete="off"
-            className={cn(inputClass, editando && 'opacity-70')}
           />
-        </div>
+        </Field>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="func-perfil" className="text-xs font-medium text-jl-fg-3">
-              {L.perfil}
-            </label>
-            <select
-              id="func-perfil"
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field id="func-perfil" label={L.perfil} required>
+            <Select
               value={perfil}
               onChange={(ev) => setPerfil(ev.target.value as PerfilFuncionarioUi)}
-              className={inputClass}
+              disabled={salvando}
             >
               {perfis.includes('OPERADOR') ? (
                 <option value="OPERADOR">{L.perfilOperador}</option>
@@ -168,49 +176,36 @@ export function FuncionarioEditarModal({
               {perfis.includes('GERENTE') ? (
                 <option value="GERENTE">{L.perfilGerente}</option>
               ) : null}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="func-idioma" className="text-xs font-medium text-jl-fg-3">
-              {L.idioma}
-            </label>
-            <select
-              id="func-idioma"
+            </Select>
+          </Field>
+          <Field id="func-idioma" label={L.idioma}>
+            <Select
               value={idioma}
               onChange={(ev) => setIdioma(ev.target.value as 'pt' | 'zh')}
-              className={inputClass}
+              disabled={salvando}
             >
               <option value="pt">{L.idiomaPt}</option>
               <option value="zh">{L.idiomaZh}</option>
-            </select>
-          </div>
+            </Select>
+          </Field>
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="func-senha" className="text-xs font-medium text-jl-fg-3">
-            {editando ? L.senhaNovaOpcional : L.senha}
-          </label>
-          <input
-            id="func-senha"
+        <Field
+          id="func-senha"
+          label={editando ? L.senhaNovaOpcional : L.senha}
+          required={!editando}
+          hint={L.senhaHint.replace('{n}', String(PASSWORD_MIN_LENGTH))}
+        >
+          <Input
             type="password"
             value={senha}
             onChange={(ev) => setSenha(ev.target.value)}
             required={!editando}
             minLength={editando && !senha ? undefined : PASSWORD_MIN_LENGTH}
             autoComplete="new-password"
-            className={inputClass}
+            disabled={salvando}
           />
-          <p className="text-[11px] text-jl-fg-3">{L.senhaHint.replace('{n}', String(PASSWORD_MIN_LENGTH))}</p>
-        </div>
-
-        <div className="mt-2 flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onClose} disabled={salvando}>
-            {L.cancelar}
-          </Button>
-          <Button type="submit" disabled={salvando}>
-            {salvando ? L.salvando : L.salvar}
-          </Button>
-        </div>
+        </Field>
       </form>
     </DragonModal>
   )
