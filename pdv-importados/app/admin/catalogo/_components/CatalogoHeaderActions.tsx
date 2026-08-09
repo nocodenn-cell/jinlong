@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation'
 import { Download, FileUp, Upload } from 'lucide-react'
 import { ROUTES } from '@shared-core/navigation/routes'
 import { buscarProdutosParaExportacao } from '@/app/gerente/produtos/actions'
-import type { OpcoesFiltrosProdutos } from '@/app/gerente/produtos/actions'
 import { Button } from '@/components/ui/button'
 import { PageActions } from '@/components/ui/admin-v2'
 import { ProdutosImportarModal } from '@/components/gerente/produtos/ProdutosImportarModal'
@@ -15,21 +14,19 @@ import { toCatalogoExportInput, type CatalogoExportFiltros } from './catalogoFil
 import { downloadCsvBrowser } from '@/lib/gerente/gerenteCadastroUi'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import type { Mensagens } from '@/i18n/getMessages'
-import type { Idioma } from '@/idioma/normalizeIdioma'
 
 type Props = Readonly<{
   m: Mensagens
   ui: Mensagens['admin_ui']
-  opcoes: OpcoesFiltrosProdutos
   filtrosExport: CatalogoExportFiltros
-  idioma: Idioma
 }>
 
 /**
  * CTAs do Catálogo — hierarquia: Importar CSV (volume) = primary;
  * NF-e / Exportar / Cadastro rápido = secondary.
+ * Cadastro rápido abre o host único via ?modal=novo.
  */
-export function CatalogoHeaderActions({ m, ui, opcoes, filtrosExport, idioma }: Props) {
+export function CatalogoHeaderActions({ m, ui, filtrosExport }: Props) {
   const router = useRouter()
   const [importOpen, setImportOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
@@ -93,9 +90,6 @@ export function CatalogoHeaderActions({ m, ui, opcoes, filtrosExport, idioma }: 
         <CatalogoNovoButton
           label={m.produtos.cadastro_rapido}
           titleHint={ui.catalogo_atalho_novo}
-          m={m}
-          opcoes={opcoes}
-          idioma={idioma}
         />
       </PageActions>
 

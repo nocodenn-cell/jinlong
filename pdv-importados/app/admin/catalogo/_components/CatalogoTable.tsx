@@ -1,11 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { ROUTES, adminEstoqueProdutoQuery } from '@shared-core/navigation/routes'
 import { Copy, FilterX, ImageIcon, Package, Pencil, Trash2 } from 'lucide-react'
+import { openCatalogoNovoModal } from './CatalogoNovoModalHost'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/ui/feedback'
@@ -95,9 +95,9 @@ export function CatalogoTable({
   hasActiveFilters?: boolean
 }) {
   const router = useRouter()
+  const pathname = usePathname()
   const searchParams = useSearchParams()
   const [editando, setEditando] = useState<CatalogoProduto | null>(null)
-  const [novoOpen, setNovoOpen] = useState(false)
   const [duplicando, setDuplicando] = useState<CatalogoProduto | null>(null)
   const [selecionados, setSelecionados] = useState<ReadonlySet<string>>(() => new Set())
   const [excluirOpen, setExcluirOpen] = useState(false)
@@ -134,25 +134,6 @@ export function CatalogoTable({
   useEffect(() => {
     setSelecionados(new Set())
   }, [chavePagina])
-
-  useEffect(() => {
-    if (searchParams.get('modal') === 'novo') {
-      setNovoOpen(true)
-    }
-  }, [searchParams])
-
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'n' && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        const tag = (e.target as HTMLElement).tagName
-        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
-        e.preventDefault()
-        setNovoOpen(true)
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [])
 
   const statusLabel: Record<StatusPublicacao, string> = {
     DRAFT: labels.rascunho,
@@ -287,12 +268,9 @@ export function CatalogoTable({
   return (
     <>
       <NovoProdutoModal
-        open={novoOpen || duplicando !== null}
+        open={duplicando !== null}
         onOpenChange={(open) => {
-          if (!open) {
-            setNovoOpen(false)
-            setDuplicando(null)
-          }
+          if (!open) setDuplicando(null)
         }}
         m={m}
         opcoes={opcoes}
@@ -351,7 +329,7 @@ export function CatalogoTable({
               title={labels.vazioTitulo}
               description={labels.vazioSub}
               actionLabel={labels.cadastroRapido}
-              onAction={() => setNovoOpen(true)}
+              onAction={() => openCatalogoNovoModal(router, pathname, searchParams)}
             />
           )
         }

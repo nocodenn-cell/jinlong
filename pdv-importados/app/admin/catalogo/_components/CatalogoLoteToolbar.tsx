@@ -189,11 +189,17 @@ export function CatalogoLoteToolbar({ ids, m, ui, opcoes, onLimpar, onExcluir }:
               disabled={pending}
               loading={pending}
               onClick={() => {
-                setInativarModal(false)
-                run(async () => {
+                startTransition(async () => {
                   const r = await alterarAtivoLoteProdutos(alvo, false)
-                  return r.success ? { success: true } : { success: false, error: r.error }
-                }, m.comum.sucesso)
+                  if (!r.success) {
+                    emitGerenteToast({ kind: 'error', message: r.error || m.comum.erro })
+                    return
+                  }
+                  emitGerenteToast({ kind: 'success', message: m.comum.sucesso })
+                  setInativarModal(false)
+                  onLimpar()
+                  router.refresh()
+                })
               }}
             >
               {m.comum.confirmar}

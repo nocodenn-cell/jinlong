@@ -2,13 +2,13 @@
 
 /**
  * Toolbar de filtros do Catálogo — composição local sobre FilterBar.
- * Não altera o default do FilterBar: busca + pills sempre visíveis;
- * selects avançados ficam atrás de “Mais filtros” (abertos se já houver filtro ativo).
+ * Limpar é local e remove primary + advanced + page (evita regressão do split).
  */
 
-import { useEffect, useState } from 'react'
-import { ChevronDown, ChevronUp } from 'lucide-react'
-import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { ChevronDown, ChevronUp, X } from 'lucide-react'
+import { FilterBar, type FilterBarAriaLabels, type FilterDef } from '@/components/ui/FilterBar'
 import { Button } from '@/components/ui/button'
 
 type Props = Readonly<{
@@ -18,7 +18,18 @@ type Props = Readonly<{
   maisFiltrosLabel: string
   menosFiltrosLabel: string
   clearLabel: string
+  ariaLabels?: FilterBarAriaLabels
 }>
+
+function filterIsActive(
+  filter: FilterDef,
+  searchParams: URLSearchParams,
+): boolean {
+  const current = searchParams.get(filter.key)
+  if (current === null) return false
+  if (filter.type !== 'search' && current === filter.defaultValue) return false
+  return current.length > 0
+}
 
 export function CatalogoFiltrosBar({
   primaryFilters,
@@ -27,12 +38,34 @@ export function CatalogoFiltrosBar({
   maisFiltrosLabel,
   menosFiltrosLabel,
   clearLabel,
+  ariaLabels,
 }: Props) {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const [open, setOpen] = useState(advancedActive)
 
   useEffect(() => {
     if (advancedActive) setOpen(true)
   }, [advancedActive])
+
+  const allFilters = useMemo(
+    () => [...primaryFilters, ...advancedFilters],
+    [primaryFilters, advancedFilters],
+  )
+
+  const hasAnyActive = useMemo(
+    () => allFilters.some((f) => filterIsActive(f, searchParams)),
+    [allFilters, searchParams],
+  )
+
+  const clearAll = useCallback(() => {
+    const params = new URLSearchParams(searchParams.toString())
+    for (const f of allFilters) params.delete(f.key)
+    params.delete('page')
+    const qs = params.toString()
+    router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+  }, [allFilters, searchParams, router, pathname])
 
   return (
     <div className="flex flex-col gap-2.5">
@@ -40,8 +73,9 @@ export function CatalogoFiltrosBar({
         <FilterBar
           filters={primaryFilters}
           resetPageOnChange
-          clearLabel={clearLabel}
+          clearable={false}
           className="min-w-0 flex-1"
+          ariaLabels={ariaLabels}
         />
         <Button
           type="button"
@@ -55,6 +89,19 @@ export function CatalogoFiltrosBar({
           {open ? menosFiltrosLabel : maisFiltrosLabel}
           {open ? <ChevronUp size={14} aria-hidden /> : <ChevronDown size={14} aria-hidden />}
         </Button>
+        {hasAnyActive ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={clearAll}
+            aria-label={clearLabel}
+            className="gap-1 text-caption text-fg-subtle"
+          >
+            <X size={12} strokeWidth={2.5} aria-hidden />
+            {clearLabel}
+          </Button>
+        ) : null}
       </div>
 
       {open ? (
@@ -64,6 +111,7 @@ export function CatalogoFiltrosBar({
             resetPageOnChange
             clearable={false}
             className="w-full"
+            ariaLabels={ariaLabels}
           />
         </div>
       ) : null}

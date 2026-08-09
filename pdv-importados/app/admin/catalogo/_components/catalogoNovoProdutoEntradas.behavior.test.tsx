@@ -12,6 +12,7 @@ import {
 const criarProdutoMock = vi.fn()
 const routerRefreshMock = vi.fn()
 const routerPushMock = vi.fn()
+const routerReplaceMock = vi.fn()
 const { getMockSearchParams, setMockSearchParams } = vi.hoisted(() => {
   let value = ''
   return {
@@ -31,7 +32,12 @@ vi.mock('@/lib/gerente/toast', () => ({
 }))
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ refresh: routerRefreshMock, push: routerPushMock }),
+  useRouter: () => ({
+    refresh: routerRefreshMock,
+    push: routerPushMock,
+    replace: routerReplaceMock,
+  }),
+  usePathname: () => '/admin/catalogo',
   useSearchParams: () => new URLSearchParams(getMockSearchParams()),
 }))
 
@@ -50,6 +56,7 @@ vi.mock('@/app/admin/catalogo/_components/CatalogoPublicacaoActions', () => ({
 }))
 
 import { CatalogoNovoButton } from '@/app/admin/catalogo/_components/CatalogoNovoButton'
+import { CatalogoNovoModalHost } from '@/app/admin/catalogo/_components/CatalogoNovoModalHost'
 import { CatalogoTable } from '@/app/admin/catalogo/_components/CatalogoTable'
 
 const m = getMessages('pt')
@@ -96,6 +103,7 @@ beforeEach(() => {
   criarProdutoMock.mockResolvedValue({ success: true, data: { id: 'produto-uuid-entrada' } })
   routerRefreshMock.mockReset()
   routerPushMock.mockReset()
+  routerReplaceMock.mockReset()
   setMockSearchParams('')
   container = document.createElement('div')
   document.body.appendChild(container)
@@ -115,46 +123,44 @@ function modalAberto() {
   return container.textContent?.includes(m.produtos.secao_essencial) ?? false
 }
 
-describe('Cadastro produto — entradas alinhadas ao CatalogoNovoButton', () => {
-  it('entrada header (CatalogoNovoButton): salvar fecha modal e envia gatilho', async () => {
-    render(
-      <CatalogoNovoButton label={m.produtos.cadastro_produto} m={m} opcoes={opcoes} idioma="pt" />,
-    )
+describe('Cadastro produto — entradas alinhadas ao host único', () => {
+  it('entrada header (CatalogoNovoButton): navega para ?modal=novo', () => {
+    render(<CatalogoNovoButton label={m.produtos.cadastro_produto} />)
 
     const abrir = Array.from(container.querySelectorAll('button')).find((el) =>
       el.textContent?.includes(m.produtos.cadastro_produto),
     ) as HTMLButtonElement
     flushSync(() => abrir.click())
-    expect(modalAberto()).toBe(true)
 
+    expect(routerPushMock).toHaveBeenCalledWith(
+      expect.stringContaining('modal=novo'),
+      expect.objectContaining({ scroll: false }),
+    )
+  })
+
+  it('entrada empty state (CatalogoTable): navega para ?modal=novo', () => {
+    render(<CatalogoTable produtos={[]} labels={labels} m={m} opcoes={opcoes} idioma="pt" />)
+
+    const abrir = Array.from(container.querySelectorAll('button')).find((el) =>
+      el.textContent?.includes(m.produtos.cadastro_produto),
+    ) as HTMLButtonElement
+    flushSync(() => abrir.click())
+
+    expect(routerPushMock).toHaveBeenCalledWith(
+      expect.stringContaining('modal=novo'),
+      expect.objectContaining({ scroll: false }),
+    )
+  })
+
+  it('host ?modal=novo: abre modal, salva e limpa query', async () => {
+    setMockSearchParams('modal=novo')
+    render(<CatalogoNovoModalHost m={m} opcoes={opcoes} idioma="pt" />)
+
+    await vi.waitFor(() => expect(modalAberto()).toBe(true))
     await preencherESalvarProdutoDemo(container, m, criarProdutoMock)
     expectPayloadComGatilho(criarProdutoMock)
     await vi.waitFor(() => expect(modalAberto()).toBe(false))
     expect(routerRefreshMock).toHaveBeenCalled()
-    expect(routerPushMock).not.toHaveBeenCalled()
-  })
-
-  it('entrada empty state (CatalogoTable): salvar fecha modal', async () => {
-    render(<CatalogoTable produtos={[]} labels={labels} m={m} opcoes={opcoes} idioma="pt" />)
-
-    const abrir = Array.from(container.querySelectorAll('button')).find((el) =>
-      el.textContent?.includes(m.produtos.cadastro_produto),
-    ) as HTMLButtonElement
-    flushSync(() => abrir.click())
-
-    await preencherESalvarProdutoDemo(container, m, criarProdutoMock)
-    await vi.waitFor(() => expect(modalAberto()).toBe(false))
-    expect(routerRefreshMock).toHaveBeenCalled()
-  })
-
-  it('entrada deep-link ?modal=novo (CatalogoTable): abre modal e salva', async () => {
-    setMockSearchParams('modal=novo')
-    render(<CatalogoTable produtos={[]} labels={labels} m={m} opcoes={opcoes} idioma="pt" />)
-
-    await vi.waitFor(() => expect(modalAberto()).toBe(true))
-    await preencherESalvarProdutoDemo(container, m, criarProdutoMock)
-    await vi.waitFor(() => expect(modalAberto()).toBe(false))
-    expect(routerRefreshMock).toHaveBeenCalled()
-    expect(routerPushMock).not.toHaveBeenCalled()
+    expect(routerReplaceMock).toHaveBeenCalled()
   })
 })

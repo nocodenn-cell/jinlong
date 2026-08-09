@@ -11,9 +11,9 @@
  * reset de `page` opt-in no FilterBar, ações de linha compactas + confirmação
  * ao inativar, empty/loading/erro e a11y dos chips/pills.
  *
- * C6 (CrudListShell): não migrado nesta rodada — o ganho seria sobretudo
- * cosmético; PageHeader.actions + SectionCard já cobrem o fluxo sem risco
- * estrutural. Reavaliar após validação visual.
+ * C6 (CrudListShell): não migrado — ganho sobretudo cosmético; PageHeader.actions
+ * + SectionCard cobrem o fluxo sem risco estrutural.
+ * Cadastro rápido: host único (`CatalogoNovoModalHost`) via ?modal=novo / atalho N.
  */
 
 import { Suspense } from 'react'
@@ -33,6 +33,7 @@ import { CatalogoTable, type CatalogoProduto } from './_components/CatalogoTable
 import { CatalogoHeaderActions } from './_components/CatalogoHeaderActions'
 import { CatalogoFiltrosBar } from './_components/CatalogoFiltrosBar'
 import { CatalogoLoadError } from './_components/CatalogoLoadError'
+import { CatalogoNovoModalHost } from './_components/CatalogoNovoModalHost'
 
 const PAGE_SIZE = 20
 
@@ -252,8 +253,6 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
     <CatalogoHeaderActions
       m={m}
       ui={ui}
-      opcoes={opcoes}
-      idioma={idioma}
       filtrosExport={{
         situacao: status,
         origem,
@@ -291,6 +290,12 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
             maisFiltrosLabel={ui.catalogo_mais_filtros}
             menosFiltrosLabel={ui.catalogo_menos_filtros}
             clearLabel={m.comum.limpar_filtros}
+            ariaLabels={{
+              searchRegion: ui.catalogo_filtros_aria,
+              clearAll: m.comum.limpar_filtros,
+              clearSearch: ui.catalogo_limpar_busca_aria,
+              activeSuffix: ui.catalogo_filtro_ativo_suffix,
+            }}
           />
         </Suspense>
 
@@ -313,66 +318,70 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
         ) : null}
       </div>
 
+      <Suspense fallback={null}>
+        <CatalogoNovoModalHost m={m} opcoes={opcoes} idioma={idioma} />
+      </Suspense>
+
       {loadError ? (
         <CatalogoLoadError description={loadError} retryLabel={ui.catalogo_tentar_novamente} />
-      ) : null}
+      ) : (
+        <SectionCard title={m.produtos.lista_produtos} action={countBadge}>
+          <Suspense
+            fallback={
+              <div className="space-y-2 p-3" aria-busy="true">
+                {Array.from({ length: 6 }, (_, i) => (
+                  <div
+                    key={i}
+                    className="h-10 animate-pulse rounded-md bg-[var(--color-surface-soft)]"
+                  />
+                ))}
+              </div>
+            }
+          >
+            <CatalogoTable
+              produtos={produtos}
+              hasActiveFilters={hasActiveFilters}
+              labels={{
+                produto: m.estoque.col_produto,
+                varejo: ui.catalogo_col_varejo,
+                atacado: ui.catalogo_col_atacado,
+                estoque: m.estoque.titulo,
+                origem: m.produtos.origem_label,
+                status: m.produtos.status,
+                rascunho: ui.catalogo_status_rascunho,
+                publicado: ui.catalogo_status_publicado,
+                inativo: m.produtos.inativo,
+                publicar: ui.catalogo_publicar,
+                inativar: m.produtos.inativar,
+                vazioTitulo: ui.catalogo_vazio_titulo,
+                vazioSub: ui.catalogo_vazio_sub,
+                vazioFiltrosTitulo: ui.catalogo_vazio_filtros_titulo,
+                vazioFiltrosSub: ui.catalogo_vazio_filtros_sub,
+                limparFiltros: m.comum.limpar_filtros,
+                cadastroRapido: m.produtos.cadastro_produto,
+                origemChina: ui.estoque_origem_china,
+                origemBrasilNf: ui.estoque_origem_brasil_nf,
+                origemBrasil: ui.estoque_origem_brasil,
+                acaoEditar: ui.catalogo_acao_editar,
+                acaoDuplicar: ui.catalogo_acao_duplicar,
+                acaoVerEstoque: ui.catalogo_acao_ver_estoque,
+                acaoSelecionarLinha: ui.catalogo_acao_selecionar_linha,
+                reativar: ui.catalogo_acao_reativar,
+                inativarConfirmTitulo: ui.catalogo_inativar_confirm_titulo,
+                inativarConfirmTexto: ui.catalogo_inativar_confirm_texto,
+                confirmar: m.comum.confirmar,
+                cancelar: m.comum.cancelar,
+                fechar: m.comum.fechar,
+              }}
+              m={m}
+              opcoes={opcoes}
+              idioma={idioma}
+            />
+          </Suspense>
+        </SectionCard>
+      )}
 
-      <SectionCard title={m.produtos.lista_produtos} action={countBadge}>
-        <Suspense
-          fallback={
-            <div className="space-y-2 p-3" aria-busy="true">
-              {Array.from({ length: 6 }, (_, i) => (
-                <div
-                  key={i}
-                  className="h-10 animate-pulse rounded-md bg-[var(--color-surface-soft)]"
-                />
-              ))}
-            </div>
-          }
-        >
-          <CatalogoTable
-            produtos={produtos}
-            hasActiveFilters={hasActiveFilters}
-            labels={{
-              produto: m.estoque.col_produto,
-              varejo: ui.catalogo_col_varejo,
-              atacado: ui.catalogo_col_atacado,
-              estoque: m.estoque.titulo,
-              origem: m.produtos.origem_label,
-              status: m.produtos.status,
-              rascunho: ui.catalogo_status_rascunho,
-              publicado: ui.catalogo_status_publicado,
-              inativo: m.produtos.inativo,
-              publicar: ui.catalogo_publicar,
-              inativar: m.produtos.inativar,
-              vazioTitulo: ui.catalogo_vazio_titulo,
-              vazioSub: ui.catalogo_vazio_sub,
-              vazioFiltrosTitulo: ui.catalogo_vazio_filtros_titulo,
-              vazioFiltrosSub: ui.catalogo_vazio_filtros_sub,
-              limparFiltros: m.comum.limpar_filtros,
-              cadastroRapido: m.produtos.cadastro_produto,
-              origemChina: ui.estoque_origem_china,
-              origemBrasilNf: ui.estoque_origem_brasil_nf,
-              origemBrasil: ui.estoque_origem_brasil,
-              acaoEditar: ui.catalogo_acao_editar,
-              acaoDuplicar: ui.catalogo_acao_duplicar,
-              acaoVerEstoque: ui.catalogo_acao_ver_estoque,
-              acaoSelecionarLinha: ui.catalogo_acao_selecionar_linha,
-              reativar: ui.catalogo_acao_reativar,
-              inativarConfirmTitulo: ui.catalogo_inativar_confirm_titulo,
-              inativarConfirmTexto: ui.catalogo_inativar_confirm_texto,
-              confirmar: m.comum.confirmar,
-              cancelar: m.comum.cancelar,
-              fechar: m.comum.fechar,
-            }}
-            m={m}
-            opcoes={opcoes}
-            idioma={idioma}
-          />
-        </Suspense>
-      </SectionCard>
-
-      {totalPages > 1 ? (
+      {!loadError && totalPages > 1 ? (
         <div className="mt-4 flex items-center justify-between gap-3">
           <span className="text-caption text-fg-subtle">
             {m.produtos.pag_info.replace('{{atual}}', String(page)).replace('{{total}}', String(totalPages))}

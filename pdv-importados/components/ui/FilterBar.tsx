@@ -40,6 +40,17 @@ export type FilterDef =
       inputClassName?: string
     }
 
+export type FilterBarAriaLabels = {
+  /** aria-label da região role=search. Default PT histórico. */
+  searchRegion?: string
+  /** aria-label do botão limpar todos. */
+  clearAll?: string
+  /** aria-label do X da busca. */
+  clearSearch?: string
+  /** Sufixo em pills ativas, ex. " (ativo)". */
+  activeSuffix?: string
+}
+
 type FilterBarProps = {
   filters: FilterDef[]
   clearable?: boolean
@@ -50,6 +61,15 @@ type FilterBarProps = {
    * Opt-in: o default permanece o comportamento histórico (não reseta página).
    */
   resetPageOnChange?: boolean
+  /** Rótulos a11y opt-in (default = strings PT históricas). */
+  ariaLabels?: FilterBarAriaLabels
+}
+
+const DEFAULT_ARIA: Required<FilterBarAriaLabels> = {
+  searchRegion: 'Filtros de busca',
+  clearAll: 'Limpar todos os filtros',
+  clearSearch: 'Limpar busca',
+  activeSuffix: ' (ativo)',
 }
 
 export function FilterBar({
@@ -58,7 +78,9 @@ export function FilterBar({
   clearLabel = 'Limpar',
   className,
   resetPageOnChange = false,
+  ariaLabels,
 }: FilterBarProps) {
+  const a11y = { ...DEFAULT_ARIA, ...ariaLabels }
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -98,7 +120,7 @@ export function FilterBar({
   return (
     <section
       role="search"
-      aria-label="Filtros de busca"
+      aria-label={a11y.searchRegion}
       className={cn('flex flex-wrap items-center gap-2', className)}
     >
       {filters.map((filter) => {
@@ -110,6 +132,7 @@ export function FilterBar({
                 filter={filter}
                 current={searchParams.get(filter.key) ?? filter.defaultValue ?? ''}
                 onChange={(v) => setParam(filter.key, v, filter.defaultValue, false)}
+                activeSuffix={a11y.activeSuffix}
               />
             )
           case 'select':
@@ -128,6 +151,7 @@ export function FilterBar({
                 filter={filter}
                 current={searchParams.get(filter.key) ?? ''}
                 onCommit={(v) => setParam(filter.key, v, undefined, true)}
+                clearSearchLabel={a11y.clearSearch}
               />
             )
           default:
@@ -141,7 +165,7 @@ export function FilterBar({
           variant="ghost"
           size="sm"
           onClick={clearAll}
-          aria-label="Limpar todos os filtros"
+          aria-label={a11y.clearAll}
           className="gap-1 text-caption text-fg-subtle"
         >
           <X size={12} strokeWidth={2.5} aria-hidden />
@@ -156,10 +180,12 @@ function PillsControl({
   filter,
   current,
   onChange,
+  activeSuffix,
 }: {
   filter: Extract<FilterDef, { type: 'pills' }>
   current: string
   onChange: (value: string) => void
+  activeSuffix: string
 }) {
   return (
     <div
@@ -175,7 +201,7 @@ function PillsControl({
             type="button"
             onClick={() => onChange(opt.value)}
             aria-pressed={active}
-            aria-label={`${opt.label}${active ? ' (ativo)' : ''}`}
+            aria-label={`${opt.label}${active ? activeSuffix : ''}`}
             className={cn(
               'fp-focus-ring rounded-sm px-2.5 py-1 text-caption font-medium leading-none transition-colors',
               active
@@ -221,10 +247,12 @@ function SearchControl({
   filter,
   current,
   onCommit,
+  clearSearchLabel,
 }: {
   filter: Extract<FilterDef, { type: 'search' }>
   current: string
   onCommit: (value: string) => void
+  clearSearchLabel: string
 }) {
   const [value, setValue] = useState(current)
   const debounceMs = filter.debounceMs ?? 350
@@ -285,7 +313,7 @@ function SearchControl({
         <button
           type="button"
           onClick={() => flush('')}
-          aria-label="Limpar busca"
+          aria-label={clearSearchLabel}
           className="fp-focus-ring shrink-0 text-fg-subtle hover:text-fg"
         >
           <X size={12} strokeWidth={2.5} aria-hidden />
