@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Building2 } from 'lucide-react'
+import { Building2, ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Field, Input, Select } from '@/components/ui/forms'
 import { DragonModal } from '@/components/ui/DragonModal'
@@ -10,6 +10,7 @@ import type { Idioma } from '@/idioma/normalizeIdioma'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { cn } from '@/lib/utils'
 import { salvarFornecedorAction, type FornecedorInput, type FornecedorListRow } from './actions'
+import { fornecedorTemEndereco } from './fornecedoresListUi'
 
 type Props = Readonly<{
   idioma: Idioma
@@ -65,6 +66,9 @@ export function FornecedorEditarModal({ idioma, fornecedor, onClose, onSalvo }: 
 
   const [erros, setErros] = useState<Record<string, string | null>>({})
   const [salvando, setSalvando] = useState(false)
+  const [enderecoAberto, setEnderecoAberto] = useState(
+    () => (fornecedor ? fornecedorTemEndereco(fornecedor) : false),
+  )
 
   useEffect(() => {
     const t = setTimeout(() => document.getElementById('forn-nome')?.focus(), 30)
@@ -309,55 +313,79 @@ export function FornecedorEditarModal({ idioma, fornecedor, onClose, onSalvo }: 
         </Field>
 
         <div className="mt-2 border-t border-dashed border-[var(--color-border)] pt-4">
-          <div className="mb-3 flex items-center gap-2.5 text-caption font-bold uppercase tracking-[0.12em] text-fg-subtle">
-            {m.fornecedores.section_endereco}
-            <span className="text-small font-medium tracking-[0.08em] text-brand" style={{ fontFamily: 'var(--font-serif-han)' }}>
-              地址
+          <button
+            type="button"
+            className="fp-focus-ring mb-3 flex w-full items-center gap-2 text-left"
+            aria-expanded={enderecoAberto}
+            aria-controls="forn-endereco-fields"
+            onClick={() => setEnderecoAberto((v) => !v)}
+          >
+            <span className="flex items-center gap-2.5 text-caption font-bold uppercase tracking-[0.12em] text-fg-subtle">
+              {m.fornecedores.section_endereco}
+              <span
+                className="text-small font-medium tracking-[0.08em] text-brand"
+                style={{ fontFamily: 'var(--font-serif-han)' }}
+              >
+                地址
+              </span>
             </span>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[140px_1fr_100px]">
-            <Field id="forn-cep" label={m.fornecedores.field_cep} error={erros.cep ?? undefined}>
-              <Input
-                inputMode="numeric"
-                value={cep}
-                onChange={handleCep}
-                disabled={salvando}
-                placeholder="00000-000"
-                className="font-mono tabular-nums"
+            <span className="ml-auto inline-flex items-center gap-1 text-caption font-medium text-brand">
+              {enderecoAberto
+                ? m.fornecedores.section_endereco_recolher
+                : m.fornecedores.section_endereco_expandir}
+              <ChevronDown
+                className={cn('h-4 w-4 transition-transform', enderecoAberto && 'rotate-180')}
+                aria-hidden
               />
-            </Field>
-            <Field id="forn-logradouro" label={m.fornecedores.field_logradouro}>
-              <Input value={logradouro} onChange={(e) => setLogradouro(e.target.value)} disabled={salvando} />
-            </Field>
-            <Field id="forn-numero" label={m.fornecedores.field_numero}>
-              <Input value={numero} onChange={(e) => setNumero(e.target.value)} disabled={salvando} />
-            </Field>
-          </div>
+            </span>
+          </button>
 
-          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Field id="forn-complemento" label={m.fornecedores.field_complemento}>
-              <Input value={complemento} onChange={(e) => setComplemento(e.target.value)} disabled={salvando} />
-            </Field>
-            <Field id="forn-bairro" label={m.fornecedores.field_bairro}>
-              <Input value={bairro} onChange={(e) => setBairro(e.target.value)} disabled={salvando} />
-            </Field>
-          </div>
+          {enderecoAberto ? (
+            <div id="forn-endereco-fields" className="space-y-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-[140px_1fr_100px]">
+                <Field id="forn-cep" label={m.fornecedores.field_cep} error={erros.cep ?? undefined}>
+                  <Input
+                    inputMode="numeric"
+                    value={cep}
+                    onChange={handleCep}
+                    disabled={salvando}
+                    placeholder="00000-000"
+                    className="font-mono tabular-nums"
+                  />
+                </Field>
+                <Field id="forn-logradouro" label={m.fornecedores.field_logradouro}>
+                  <Input value={logradouro} onChange={(e) => setLogradouro(e.target.value)} disabled={salvando} />
+                </Field>
+                <Field id="forn-numero" label={m.fornecedores.field_numero}>
+                  <Input value={numero} onChange={(e) => setNumero(e.target.value)} disabled={salvando} />
+                </Field>
+              </div>
 
-          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_120px]">
-            <Field id="forn-cidade" label={m.fornecedores.field_cidade}>
-              <Input value={cidade} onChange={(e) => setCidade(e.target.value)} disabled={salvando} />
-            </Field>
-            <Field id="forn-uf" label={m.fornecedores.field_uf}>
-              <Select value={uf} onChange={(e) => setUf(e.target.value)} disabled={salvando}>
-                {UFs.map((u) => (
-                  <option key={u} value={u}>
-                    {u}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-          </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Field id="forn-complemento" label={m.fornecedores.field_complemento}>
+                  <Input value={complemento} onChange={(e) => setComplemento(e.target.value)} disabled={salvando} />
+                </Field>
+                <Field id="forn-bairro" label={m.fornecedores.field_bairro}>
+                  <Input value={bairro} onChange={(e) => setBairro(e.target.value)} disabled={salvando} />
+                </Field>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_120px]">
+                <Field id="forn-cidade" label={m.fornecedores.field_cidade}>
+                  <Input value={cidade} onChange={(e) => setCidade(e.target.value)} disabled={salvando} />
+                </Field>
+                <Field id="forn-uf" label={m.fornecedores.field_uf}>
+                  <Select value={uf} onChange={(e) => setUf(e.target.value)} disabled={salvando}>
+                    {UFs.map((u) => (
+                      <option key={u} value={u}>
+                        {u}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              </div>
+            </div>
+          ) : null}
         </div>
       </form>
     </DragonModal>
