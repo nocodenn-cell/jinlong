@@ -56,7 +56,7 @@
     "@vercel/speed-insights": "^2.0.0",
     "@vitest/ui": "^4.1.9",
     "autoprefixer": "^10.0.0",
-    "bwip-js": "^4.10.1",
+    "bwip-js": "^4.11.2",
     "chart.js": "^4.5.1",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
