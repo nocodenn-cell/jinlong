@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   analyze,
+  deriveOverallStatus,
   parseMigrationListOutput,
   parseMigrationListTable,
 } from "./p0-migration-status.mjs";
@@ -49,5 +50,38 @@ test("falha explicitamente em saída desconhecida ou JSON malformado", () => {
   assert.throws(
     () => parseMigrationListOutput('{"migrations":[{"local":"abc","remote":"001"}]}'),
     /local não é numérico/,
+  );
+});
+
+test("HUMAN GATE nunca é reportado como ALIGNED", () => {
+  assert.equal(
+    deriveOverallStatus({
+      blocking: [],
+      phase32GitOnly: [{ version: "20260808130200" }],
+      missingInList: [],
+      extraBlocking: [],
+    }),
+    "HUMAN_GATE",
+  );
+});
+
+test("BLOCKING_DRIFT tem precedência e ALIGNED exige ausência total de pendências", () => {
+  assert.equal(
+    deriveOverallStatus({
+      blocking: [{ version: "999" }],
+      phase32GitOnly: [{ version: "20260808130200" }],
+      missingInList: [],
+      extraBlocking: [],
+    }),
+    "BLOCKING_DRIFT",
+  );
+  assert.equal(
+    deriveOverallStatus({
+      blocking: [],
+      phase32GitOnly: [],
+      missingInList: [],
+      extraBlocking: [],
+    }),
+    "ALIGNED",
   );
 });

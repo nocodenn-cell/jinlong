@@ -78,7 +78,7 @@ function isPhase32GitOnlyDrift(entry) {
   );
 }
 
-function classifyDriftEntries(drift) {
+export function classifyDriftEntries(drift) {
   const blocking = [];
   const phase32GitOnly = [];
   const legacyNumericMirror = [];
@@ -95,6 +95,21 @@ function classifyDriftEntries(drift) {
     }
   }
   return { blocking, phase32GitOnly, legacyNumericMirror, greenfieldSsotReorder };
+}
+
+export function deriveOverallStatus({
+  blocking,
+  phase32GitOnly,
+  missingInList,
+  extraBlocking,
+}) {
+  if (blocking.length > 0 || missingInList.length > 0 || extraBlocking.length > 0) {
+    return "BLOCKING_DRIFT";
+  }
+  if (phase32GitOnly.length > 0) {
+    return "HUMAN_GATE";
+  }
+  return "ALIGNED";
 }
 
 function listMigrationVersionsFromDisk() {
@@ -327,13 +342,17 @@ function main() {
     classifyDriftEntries(drift);
   const extraLegacyRemote = extraInList.filter(isLegacyRemoteOnlyNumeric);
   const extraBlocking = extraInList.filter((v) => !isLegacyRemoteOnlyNumeric(v));
-  const aligned =
-    blocking.length === 0 &&
-    missingInList.length === 0 &&
-    extraBlocking.length === 0;
+  const status = deriveOverallStatus({
+    blocking,
+    phase32GitOnly,
+    missingInList,
+    extraBlocking,
+  });
+  const aligned = status === "ALIGNED";
 
   const payload = {
     ok: aligned,
+    status,
     backendRoot: BACKEND_ROOT,
     maxOnDisk: maxDisk,
     rowCount: rows.length,
@@ -352,7 +371,7 @@ function main() {
     driftPhase32GitOnly: phase32GitOnly.map((d) => ({
       version: d.version,
       reason: d.reason,
-      note: "Fase 3.2 / HUMAN GATE — esperado até apply no projeto do secret",
+      note: "Fase 3.2 / HUMAN GATE — decisão explícita pendente; Git e produção não estão equivalentes",
     })),
     driftLegacyNumericMirror: legacyNumericMirror.map((d) => ({
       version: d.version,
@@ -377,17 +396,17 @@ function main() {
     console.log(`Arquivos .sql (prefixo numérico): ${diskVersions.length}`);
     console.log(`Linhas parseadas do CLI: ${rows.length}`);
     console.log(`Maior versão no disco: ${maxDisk ?? "(nenhuma)"}\n`);
-    if (aligned) {
+    if (status === "ALIGNED") {
       console.log("Resultado: ALINHADO (Local = Remote para todas as linhas bloqueantes).");
-    } else if (blocking.length === 0) {
+    } else if (status === "HUMAN_GATE") {
       console.log(
-        "Resultado: DRIFT INFORMATIVO — apenas itens esperados (Fase 3.2 git-only e/ou espelhos numéricos 205–289).\n",
+        "Resultado: HUMAN GATE — Git e produção não são equivalentes; decisão explícita necessária.\n",
       );
     } else {
       console.log("Resultado: DRIFT BLOQUEANTE — ação sugerida: revisar migrations / projeto linkado.\n");
     }
     if (phase32GitOnly.length) {
-      console.log("Fase 3.2 git-only (não bloqueia o gate):");
+      console.log("Fase 3.2 git-only (HUMAN GATE; impede status ALIGNED):");
       for (const d of phase32GitOnly) {
         console.log(`  - ${d.version} (${d.reason})`);
       }
