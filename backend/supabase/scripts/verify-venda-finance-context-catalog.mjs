@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Verifica catálogo venda_finance_context vs expectativa migration 252 / 3.2.
+ * Verifica que os objetos aposentados de venda_finance_context estão ausentes.
  * Uso local/staging:
  *   psql "$DATABASE_URL" -f - <<'SQL' | node verify-venda-finance-context-catalog.mjs --stdin
  *   ... query ...
@@ -12,22 +12,23 @@
  */
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const ROOT = join(import.meta.dirname, '..')
-const OUT = join(ROOT, 'reports', 'phase3-2-catalog-verify.json')
+const OUT = join(ROOT, 'reports', 'venda-finance-context-retirement-verify.json')
 
 /** @type {Record<string, boolean>} */
 const EXPECTED = {
-  table_venda_finance_context: true,
-  fn_sincronizar: true,
-  fn_trg_pagamento: true,
-  fn_trg_conta: true,
-  trg_pagamento: true,
-  trg_conta: true,
-  policy_select: true,
-  idx_loja: true,
-  idx_status: true,
-  idx_conta: true,
+  table_venda_finance_context: false,
+  fn_sincronizar: false,
+  fn_trg_pagamento: false,
+  fn_trg_conta: false,
+  trg_pagamento: false,
+  trg_conta: false,
+  policy_select: false,
+  idx_loja: false,
+  idx_status: false,
+  idx_conta: false,
 }
 
 const VERIFY_SQL = `
@@ -86,7 +87,7 @@ function parseCatalogInput(raw) {
   }
 }
 
-function evaluate(catalog) {
+export function evaluate(catalog) {
   /** @type {Record<string, { expected: boolean, actual: boolean, ok: boolean }>} */
   const checks = {}
   let allOk = true
@@ -110,16 +111,15 @@ function main() {
     catalog = parseCatalogInput(readFileSync(process.argv[i + 1], 'utf8'))
   }
   if (!catalog) {
-    writeFileSync(join(ROOT, 'scripts', 'verify-venda-finance-context-catalog.sql'), `${VERIFY_SQL};\n`)
-    console.error('Wrote verify SQL snippet; run against DB and pipe JSON to --stdin')
+    console.error('Run verify-venda-finance-context-catalog.sql against the target DB and pipe JSON to --stdin')
     process.exit(2)
   }
   const { allOk, checks } = evaluate(catalog)
   const report = {
     generatedAt: new Date().toISOString(),
-    phase: '3.2',
-    migrationFile: '20260808130200_24704_reapply_venda_finance_context_idempotent.sql',
-    source252: '252_venda_finance_context_mirror.sql',
+    phase: 'retirement',
+    migrationFile: '20260810222702_retire_obsolete_venda_finance_context.sql',
+    historicalSource: '20260621005000_252_venda_finance_context_mirror.sql',
     allOk,
     checks,
   }
@@ -128,4 +128,6 @@ function main() {
   process.exit(allOk ? 0 : 1)
 }
 
-main()
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  main()
+}

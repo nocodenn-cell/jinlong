@@ -12,8 +12,9 @@
     "smoke:rls-rest": "node scripts/p0-rls-rest-smoke.mjs",
     "test:rls-policies": "node scripts/test-rls-policies.mjs",
     "test:rls-scope": "node scripts/test-rls-scope.mjs",
-    "check:phase3-2": "node supabase/scripts/validate-phase3-2.mjs",
-    "test:migration-status": "node --test scripts/p0-migration-status.test.mjs"
+    "check:venda-finance-context-retirement": "node supabase/scripts/validate-venda-finance-context-retirement.mjs",
+    "test:migration-status": "node --test scripts/p0-migration-status.test.mjs",
+    "test:venda-finance-context-retirement": "node --test supabase/scripts/verify-venda-finance-context-catalog.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.104.0",

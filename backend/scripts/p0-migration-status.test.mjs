@@ -12,7 +12,7 @@ test("interpreta JSON atual do Supabase CLI, inclusive linhas remote-only", () =
   const parsed = parseMigrationListOutput(`Connecting to remote database...\n{
     "migrations": [
       {"local":"001","remote":"001","time":""},
-      {"local":"20260808130200","remote":"","time":""},
+      {"local":"20260810222702","remote":"","time":""},
       {"local":"","remote":"252","time":""}
     ]
   }`);
@@ -20,13 +20,13 @@ test("interpreta JSON atual do Supabase CLI, inclusive linhas remote-only", () =
   assert.equal(parsed.format, "json");
   assert.deepEqual(parsed.rows, [
     { local: "001", remote: "001" },
-    { local: "20260808130200", remote: null },
+    { local: "20260810222702", remote: null },
     { local: null, remote: "252" },
   ]);
 
-  const result = analyze(parsed.rows, ["001", "20260808130200"]);
+  const result = analyze(parsed.rows, ["001", "20260810222702"]);
   assert.deepEqual(result.drift, [
-    { version: "20260808130200", reason: "remote_ausente", remote: null },
+    { version: "20260810222702", reason: "remote_ausente", remote: null },
   ]);
   assert.deepEqual(result.extraInList, ["252"]);
 });
@@ -53,15 +53,14 @@ test("falha explicitamente em saída desconhecida ou JSON malformado", () => {
   );
 });
 
-test("HUMAN GATE nunca é reportado como ALIGNED", () => {
+test("tombstone local ainda não aplicada é drift bloqueante", () => {
   assert.equal(
     deriveOverallStatus({
-      blocking: [],
-      phase32GitOnly: [{ version: "20260808130200" }],
+      blocking: [{ version: "20260810222702" }],
       missingInList: [],
       extraBlocking: [],
     }),
-    "HUMAN_GATE",
+    "BLOCKING_DRIFT",
   );
 });
 
@@ -69,7 +68,6 @@ test("BLOCKING_DRIFT tem precedência e ALIGNED exige ausência total de pendên
   assert.equal(
     deriveOverallStatus({
       blocking: [{ version: "999" }],
-      phase32GitOnly: [{ version: "20260808130200" }],
       missingInList: [],
       extraBlocking: [],
     }),
@@ -78,7 +76,6 @@ test("BLOCKING_DRIFT tem precedência e ALIGNED exige ausência total de pendên
   assert.equal(
     deriveOverallStatus({
       blocking: [],
-      phase32GitOnly: [],
       missingInList: [],
       extraBlocking: [],
     }),

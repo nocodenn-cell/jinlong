@@ -20,8 +20,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const BACKEND_ROOT = path.resolve(__dirname, "..");
 const MIGRATIONS_DIR = path.join(BACKEND_ROOT, "supabase", "migrations");
 
-const PHASE_3_2_GIT_ONLY_VERSION = "20260808130200";
-
 function readArgs(argv) {
   return {
     json: argv.includes("--json"),
@@ -71,22 +69,12 @@ function isLegacyRemoteOnlyNumeric(version) {
   return n >= 205 && n <= 289;
 }
 
-function isPhase32GitOnlyDrift(entry) {
-  return (
-    entry.reason === "remote_ausente" &&
-    entry.version === PHASE_3_2_GIT_ONLY_VERSION
-  );
-}
-
 export function classifyDriftEntries(drift) {
   const blocking = [];
-  const phase32GitOnly = [];
   const legacyNumericMirror = [];
   const greenfieldSsotReorder = [];
   for (const d of drift) {
-    if (isPhase32GitOnlyDrift(d)) {
-      phase32GitOnly.push(d);
-    } else if (isGreenfieldSsotReorderDrift(d)) {
+    if (isGreenfieldSsotReorderDrift(d)) {
       greenfieldSsotReorder.push(d);
     } else if (isLegacyNumericMirrorDrift(d)) {
       legacyNumericMirror.push(d);
@@ -94,20 +82,16 @@ export function classifyDriftEntries(drift) {
       blocking.push(d);
     }
   }
-  return { blocking, phase32GitOnly, legacyNumericMirror, greenfieldSsotReorder };
+  return { blocking, legacyNumericMirror, greenfieldSsotReorder };
 }
 
 export function deriveOverallStatus({
   blocking,
-  phase32GitOnly,
   missingInList,
   extraBlocking,
 }) {
   if (blocking.length > 0 || missingInList.length > 0 || extraBlocking.length > 0) {
     return "BLOCKING_DRIFT";
-  }
-  if (phase32GitOnly.length > 0) {
-    return "HUMAN_GATE";
   }
   return "ALIGNED";
 }
@@ -338,13 +322,12 @@ function main() {
   const { format: cliOutputFormat, rows } = parsed;
 
   const { drift, missingInList, extraInList, maxDisk } = analyze(rows, diskVersions);
-  const { blocking, phase32GitOnly, legacyNumericMirror, greenfieldSsotReorder } =
+  const { blocking, legacyNumericMirror, greenfieldSsotReorder } =
     classifyDriftEntries(drift);
   const extraLegacyRemote = extraInList.filter(isLegacyRemoteOnlyNumeric);
   const extraBlocking = extraInList.filter((v) => !isLegacyRemoteOnlyNumeric(v));
   const status = deriveOverallStatus({
     blocking,
-    phase32GitOnly,
     missingInList,
     extraBlocking,
   });
@@ -367,11 +350,6 @@ function main() {
       version: d.version,
       reason: d.reason,
       remote: d.remote,
-    })),
-    driftPhase32GitOnly: phase32GitOnly.map((d) => ({
-      version: d.version,
-      reason: d.reason,
-      note: "Fase 3.2 / HUMAN GATE — decisão explícita pendente; Git e produção não estão equivalentes",
     })),
     driftLegacyNumericMirror: legacyNumericMirror.map((d) => ({
       version: d.version,
@@ -398,19 +376,8 @@ function main() {
     console.log(`Maior versão no disco: ${maxDisk ?? "(nenhuma)"}\n`);
     if (status === "ALIGNED") {
       console.log("Resultado: ALINHADO (Local = Remote para todas as linhas bloqueantes).");
-    } else if (status === "HUMAN_GATE") {
-      console.log(
-        "Resultado: HUMAN GATE — Git e produção não são equivalentes; decisão explícita necessária.\n",
-      );
     } else {
       console.log("Resultado: DRIFT BLOQUEANTE — ação sugerida: revisar migrations / projeto linkado.\n");
-    }
-    if (phase32GitOnly.length) {
-      console.log("Fase 3.2 git-only (HUMAN GATE; impede status ALIGNED):");
-      for (const d of phase32GitOnly) {
-        console.log(`  - ${d.version} (${d.reason})`);
-      }
-      console.log("");
     }
     if (legacyNumericMirror.length) {
       console.log("Espelhos numéricos 205–289 (reconciliação SSOT; não bloqueia o gate):");
