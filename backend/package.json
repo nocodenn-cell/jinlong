@@ -12,6 +12,7 @@
     "smoke:rls-rest": "node scripts/p0-rls-rest-smoke.mjs",
     "test:rls-policies": "node scripts/test-rls-policies.mjs",
     "test:rls-scope": "node scripts/test-rls-scope.mjs",
+    "assert:descontos-venda-rls-loja": "node scripts/assert-descontos-venda-rls-loja.mjs",
     "check:phase3-2": "node supabase/scripts/validate-phase3-2.mjs"
   },
   "dependencies": {

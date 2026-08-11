@@ -26,7 +26,7 @@ Ultima revisao: **2026-03-20**
 - Nunca commitar `.env` / `.env.local` (ver `.gitignore` na raiz do monorepo).
 - Service role Supabase apenas server-side; nunca `NEXT_PUBLIC_*` para secrets.
 - Edge `sync-outbox`: autenticacao via `X-SYNC-KEY` + secrets no Supabase.
-- Tabela `public.descontos_venda`: migration **`008_descontos_venda_rls.sql`** — RLS restrito a GERENTE/DONO; aplicar em todos os ambientes (local/remoto).
+- Tabela `public.descontos_venda`: RLS GERENTE/DONO/ADMIN + escopo de loja via `vendas→caixas` (`008`/`044` role-only; endurecido em **`20260811110000_descontos_venda_rls_loja_scope.sql`** — GERENTE só a própria loja; DONO/ADMIN todas).
 
 ## Proxima revisao
 

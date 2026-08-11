@@ -16,6 +16,8 @@
  *   - movimentos_estoque_log   (ajustes/movimentos)          → created_at
  *   - system_alerts            (anomalias margem/preço/estq) → criado_em
  *   - descontos_venda          (desconto gerente aplicado)   → aplicado_em
+ *     Isolamento por loja via RLS (migration 20260811110000: vendas→caixas),
+ *     não há coluna loja_id na tabela — igual ao padrão de DEVOLUCAO.
  *
  * Estratégia anti-duplicação: o cancelamento vem APENAS de
  * `vendas_canceladas_auditoria` (mais rico: traz `motivo`), e de `venda_eventos`
