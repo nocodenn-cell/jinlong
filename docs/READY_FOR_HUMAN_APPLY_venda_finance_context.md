@@ -1,11 +1,35 @@
-# READY FOR HUMAN APPLY — `venda_finance_context` (20260808130200)
+# ~~READY FOR HUMAN APPLY~~ → **BLOCKED** — `venda_finance_context` (20260808130200)
 
-**Preparado em:** 2026-08-13 · **Executor:** o dono do projeto, manualmente
-**Estado:** validado em ambiente efêmero · **produção NÃO tocada** nesta preparação
+**Preparado em:** 2026-08-13 · **Rebaixado a BLOCKED em:** 2026-08-13, mesma data
+**Estado:** validado tecnicamente · **NÃO EXECUTAR** · **produção NÃO tocada**
 
-> Este documento existe para ser executado por um humano. Nenhum comando abaixo foi rodado contra
-> produção. Decisão de origem: `FASE_3_1` (**MANTER + idempotentizar**) — a solução **não** foi
-> redesenhada, apenas validada.
+> # ⛔ NÃO EXECUTE ESTE PROCEDIMENTO
+>
+> Existe evidência de uma decisão **posterior e contrária** a este pacote, tomada fora deste
+> repositório. Em `codex/reconcile-db-final` (branch local do dono, **não publicada**), um
+> `supabase db reset --local` verde produziu uma sequência que **não contém** a migration
+> `20260808130200` e **termina** com:
+>
+> ```
+> 20260810222702_retire_obsolete_venda_finance_context.sql
+> ```
+>
+> Ou seja: a estratégia pode ter mudado de **MANTER + idempotentizar** para **retirar** o espelho.
+> Aplicar este pacote criaria em produção exatamente os objetos que uma migration posterior existe
+> para remover.
+>
+> **Bloqueio:** a branch não existe no `origin` — nenhuma ref deste repositório contém essa
+> migration (verificado com `git log --all --diff-filter=A`). Não é possível auditar o que não
+> está publicado.
+>
+> **Para desbloquear:** publicar a branch (`git push -u origin codex/reconcile-db-final`).
+> Reconciliação completa em [`RECONCILIACAO_venda_finance_context_2026-08-13.md`](./RECONCILIACAO_venda_finance_context_2026-08-13.md).
+
+---
+
+**Decisão de origem deste pacote:** `FASE_3_1` (**MANTER + idempotentizar**) — a solução não foi
+redesenhada, apenas validada. O conteúdo abaixo permanece **tecnicamente correto para essa
+decisão**, e só volta a valer se ela for reconfirmada.
 
 ---
 
