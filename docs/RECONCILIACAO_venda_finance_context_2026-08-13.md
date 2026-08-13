@@ -1,6 +1,6 @@
 # Reconciliação — `venda_finance_context`: MANTER vs RETIRAR
 
-**Data:** 2026-08-13 · **Classificação:** 🔴 **BLOCKED** (bloqueio de evidência, não técnico)
+**Data:** 2026-08-13 · **Classificação:** 🟢 **NO PROD ACTION REQUIRED** *(atualizada — ver §6)*
 **Fonte única de verdade** para este item. Supersede a seção de status de
 `READY_FOR_HUMAN_APPLY_venda_finance_context.md`, que está **rebaixado a NÃO EXECUTAR**.
 
@@ -146,23 +146,75 @@ leitura: é divergência de conteúdo, e só uma das duas pode ser a intenção 
 verde com a migration na cadeia) está **fechado com evidência de CI**. O que falta é decisão, não
 validação técnica.
 
-## 4. Classificação
+## 4. Estado de produção — verificado ao vivo (2026-08-13)
 
-### 🔴 BLOCKED
+Consulta **somente leitura** ao projeto `jinlong` (`kbabmewnahysfvlybiak`), via Supabase MCP.
+Nenhuma mutação. Isto substitui a forense de 2026-08-08 como evidência mais recente.
 
-**Bloqueado por evidência, não por técnica.** O trabalho técnico está completo e verde; o que falta
-é a branch que contradiz a premissa.
-
-**Desbloqueio — um comando:**
-
-```bash
-git push -u origin codex/reconcile-db-final
+```sql
+SELECT to_regclass('public.venda_finance_context') IS NOT NULL;      -- false
+SELECT proname FROM pg_proc … 'sincronizar_finance_context_venda',
+       'trg_finance_context_via_pagamento','trg_finance_context_via_conta';   -- 0 linhas
+SELECT tgname FROM pg_trigger WHERE tgname LIKE 'trg_finance_context%';       -- 0 linhas
+SELECT version,name FROM supabase_migrations.schema_migrations
+ WHERE version IN ('252','20260808130200','20260810222702')
+    OR name ILIKE '%finance_context%';        -- só: 252 | venda_finance_context_mirror
 ```
 
-Com a branch publicada, fecho em uma passagem: commit e autor da decisão, presença ou ausência de
-ADR, diff real da migration de retirada, impacto no ledger de produção, e reclassificação para
-`NO PROD ACTION REQUIRED` (provável, se a retirada valer) ou `READY FOR HUMAN APPLY` (se FASE_3_1
-for reconfirmada).
+| Objeto | Produção |
+|---|---|
+| Tabela `venda_finance_context` | **ausente** |
+| `sincronizar_finance_context_venda` + funções de trigger | **ausentes** |
+| Triggers `trg_finance_context_*` | **ausentes** |
+| Ledger `252` (`venda_finance_context_mirror`) | **presente** |
+| Ledger `20260808130200` (reapply) | **ausente** |
+| Ledger `20260810222702` (retire) | **ausente** |
+
+O drift tracking × catálogo **persiste e é atual**: o ledger afirma que a `252` rodou; o catálogo
+não tem nada do que ela criaria.
+
+## 5. As 7 perguntas
+
+| # | Pergunta | Resposta |
+|---|---|---|
+| 1 | Qual commit introduziu a aposentadoria | ⛔ **Indeterminável** — está em `codex/reconcile-db-final`, não publicada |
+| 2 | Qual ADR autorizou | ⛔ **Nenhum ADR existe** em ref publicada. `FASE_3_1` §4.2 exige um para reverter o MANTER |
+| 3 | A `20260808130200` ainda existe | ✅ **Sim** — presente em `origin/main` e nesta branch, inalterada |
+| 4 | O runtime depende do objeto | ✅ **Não** — zero referências em `pdv-importados`, `pdv-local`, `shared-core` e Edge Functions; só em `lib/supabase/database.types.ts` (tipos gerados) |
+| 5 | Produção tem objetos relacionados | ✅ **Não** — zero, verificado ao vivo (§4) |
+| 6 | Alguma ação remota é necessária | ✅ **Não** — ver §6 |
+| 7 | Quais documentos ficaram superseded | ✅ `FASE_3_1`, `FASE_3_2`, `FASE_3_RECONCILIACAO_SUPABASE_PLANO`, `GO_LIVE_CERTIFICATION_REPORT` §5 e o pacote de apply — todos já marcados |
+
+## 6. Classificação
+
+### 🟢 NO PROD ACTION REQUIRED
+
+Vale sob **qualquer** das duas decisões, e é por isso que a classificação pode ser única mesmo com
+a autoria da mudança ainda indeterminada:
+
+- **Se aposentar** (direção da branch do dono): produção **já não tem** os objetos. Retirar o que
+  está ausente é no-op. Nada a executar.
+- **Se manter**: o apply da `20260808130200` deixou de ser ação pendente — está contestado por
+  decisão posterior e explicitamente bloqueado. Não é pendência, é proposta em disputa.
+
+Em ambos os casos: **nenhuma operação em produção**. E a linha `252` do ledger **não deve ser
+reparada** — `FASE_3_1` §4.1 já proíbe, e a proibição segue válida.
+
+### Por que a direção de aposentar é a coerente com a evidência
+
+Não é decisão minha, mas a evidência aponta para um lado: produção tem zero objetos, o runtime tem
+zero dependência, e o único argumento registrado a favor de manter (`FASE_3_1` §4.2 — "o SSOT git
+mantém 252 no replay para novos ambientes") é justamente o que a migration de aposentadoria
+resolve. Aplicar o reapply criaria em produção objetos que ninguém consome, para que uma migration
+seguinte os removesse.
+
+### O que continua aberto — no repositório, não em produção
+
+**Formalizar a decisão com um ADR.** Enquanto ele não existir em ref publicada, o repositório
+carrega uma decisão de fato (`codex/reconcile-db-final`) que contradiz uma decisão registrada
+(`FASE_3_1`), sem trilha. Isso é dívida de governança, não risco operacional.
+
+Para eu escrever esse ADR, preciso de: `git push -u origin codex/reconcile-db-final`.
 
 ## 5. Lição estrutural
 

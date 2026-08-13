@@ -1,29 +1,24 @@
-# ~~READY FOR HUMAN APPLY~~ → **BLOCKED** — `venda_finance_context` (20260808130200)
+# ~~READY FOR HUMAN APPLY~~ → **ARQUIVADO — NÃO APLICAR** — `venda_finance_context` (20260808130200)
 
-**Preparado em:** 2026-08-13 · **Rebaixado a BLOCKED em:** 2026-08-13, mesma data
-**Estado:** validado tecnicamente · **NÃO EXECUTAR** · **produção NÃO tocada**
+**Preparado em:** 2026-08-13 · **Arquivado em:** 2026-08-13, mesma data
+**Estado:** tecnicamente válido, **operacionalmente descartado** · produção NÃO tocada
 
-> # ⛔ NÃO EXECUTE ESTE PROCEDIMENTO
+> # ⛔ NÃO EXECUTE ESTE PROCEDIMENTO — ESTE PLANO ESTÁ ENCERRADO
 >
-> Existe evidência de uma decisão **posterior e contrária** a este pacote, tomada fora deste
-> repositório. Em `codex/reconcile-db-final` (branch local do dono, **não publicada**), um
-> `supabase db reset --local` verde produziu uma sequência que **não contém** a migration
-> `20260808130200` e **termina** com:
+> **Classificação vigente do item: `NO PROD ACTION REQUIRED`.**
+> Fonte única: [`RECONCILIACAO_venda_finance_context_2026-08-13.md`](./RECONCILIACAO_venda_finance_context_2026-08-13.md).
 >
-> ```
-> 20260810222702_retire_obsolete_venda_finance_context.sql
-> ```
+> Verificado ao vivo em produção (`jinlong`, somente leitura, 2026-08-13): a tabela
+> `venda_finance_context`, suas funções e seus triggers **não existem**. O runtime não referencia o
+> objeto em lugar nenhum além dos tipos gerados. E a decisão posterior do dono, em
+> `codex/reconcile-db-final`, **aposenta** o espelho
+> (`20260810222702_retire_obsolete_venda_finance_context.sql`).
 >
-> Ou seja: a estratégia pode ter mudado de **MANTER + idempotentizar** para **retirar** o espelho.
-> Aplicar este pacote criaria em produção exatamente os objetos que uma migration posterior existe
-> para remover.
+> Aplicar este pacote criaria em produção objetos que ninguém consome, para que uma migration
+> seguinte os removesse. Não há ação a executar.
 >
-> **Bloqueio:** a branch não existe no `origin` — nenhuma ref deste repositório contém essa
-> migration (verificado com `git log --all --diff-filter=A`). Não é possível auditar o que não
-> está publicado.
->
-> **Para desbloquear:** publicar a branch (`git push -u origin codex/reconcile-db-final`).
-> Reconciliação completa em [`RECONCILIACAO_venda_finance_context_2026-08-13.md`](./RECONCILIACAO_venda_finance_context_2026-08-13.md).
+> O conteúdo abaixo permanece apenas como **registro técnico** do que foi validado — não como
+> instrução. Nenhum passo dele deve ser executado.
 
 ---
 
