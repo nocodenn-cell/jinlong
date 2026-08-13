@@ -30,8 +30,9 @@
 /pdv-importados/app/admin/         @nocodenn-cell/product @nocodenn-cell/tech-lead
 
 # Authentication & security
-# `/pdv-importados/src/lib/auth/` não existe (não há diretório `src/` neste workspace) — a regra
-# nunca casava, deixando o código de auth sem owner de segurança. Corrigido em 2026-08-13.
+# `/pdv-importados/src/lib/auth/` não existe — `src/` existe, mas só contém `src/lib/i18n/` e
+# `src/lib/idioma/`. A regra nunca casava, deixando o código de auth sem owner de segurança.
+# Corrigido em 2026-08-13.
 /pdv-importados/lib/auth/          @nocodenn-cell/security @nocodenn-cell/backend-lead
 /pdv-importados/lib/admin/auth/    @nocodenn-cell/security @nocodenn-cell/backend-lead
 /pdv-importados/app/auth/          @nocodenn-cell/security @nocodenn-cell/frontend-lead
