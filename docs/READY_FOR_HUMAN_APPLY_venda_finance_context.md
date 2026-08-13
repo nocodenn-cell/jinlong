@@ -84,7 +84,32 @@ Ver arquivo completo para o DDL literal.
 `fn_trg_pagamento` · `fn_trg_conta` · `trg_pagamento` · `trg_conta` · `policy_select` ·
 `idx_loja` · `idx_status` · `idx_conta`.
 
-### 3.1 Gate que NÃO foi possível fechar
+### 3.0 `db reset` completo — **FECHADO no CI** (2026-08-13, posterior ao §3.1)
+
+O gate que a §3.1 registra como bloqueado foi fechado pelo próprio CI desta branch, no job
+**`Supabase local gates (RLS smoke + scope + REST)`**
+([run 31736472990 / job 94569341772](https://github.com/nocodenn-cell/fastproduct/actions/runs/31736472990/job/94569341772), ✅ success):
+
+```
+19:37:44  npx supabase db reset --local --yes
+19:37:21  Applying migration 20260808130200_24704_reapply_venda_finance_context_idempotent.sql...
+19:38:15  Applying migration 20260808130200_24704_reapply_venda_finance_context_idempotent.sql...   (2ª passagem)
+19:38:27  Finished supabase db reset on branch claude/jinlong-doc-assimilation-f155hr.
+19:38:42  RLS_REST_SMOKE_OK
+```
+
+A cadeia completa de 270 migrations replaya limpa **com** esta migration na sequência, e os gates de
+RLS/scope/REST passam depois. O runner tem Docker; o agente cloud não — era só isso.
+
+> **Isso NÃO desbloqueia o apply.** O Passo 1 deixou de ser o obstáculo, mas o item continua
+> **BLOCKED** pelo mérito: decidir entre **manter** e **retirar** o espelho. Gate verde não decide
+> produto.
+>
+> O log também é a prova mais limpa da divergência: `retire_obsolete` tem **0 ocorrências** nesta
+> branch. O mesmo comando que o dono rodou (`Finished supabase db reset on branch
+> codex/reconcile-db-final`) produz, nas duas branches, **conjuntos diferentes de migrations**.
+
+### 3.1 Gate que não foi possível fechar *neste agente* (superado pelo §3.0)
 
 `supabase db reset --local` — **BLOCKED EXTERNALLY**. O agente cloud tem cliente Docker mas
 **nenhum daemon** (`/var/run/docker.sock` inexistente), e `ci-backend-supabase.yml` depende da stack
