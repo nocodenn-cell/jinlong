@@ -30,7 +30,10 @@
 /pdv-importados/app/admin/         @nocodenn-cell/product @nocodenn-cell/tech-lead
 
 # Authentication & security
-/pdv-importados/src/lib/auth/      @nocodenn-cell/security @nocodenn-cell/backend-lead
+# `/pdv-importados/src/lib/auth/` não existe (não há diretório `src/` neste workspace) — a regra
+# nunca casava, deixando o código de auth sem owner de segurança. Corrigido em 2026-08-13.
+/pdv-importados/lib/auth/          @nocodenn-cell/security @nocodenn-cell/backend-lead
+/pdv-importados/lib/admin/auth/    @nocodenn-cell/security @nocodenn-cell/backend-lead
 /pdv-importados/app/auth/          @nocodenn-cell/security @nocodenn-cell/frontend-lead
 
 # E2E tests
@@ -45,9 +48,8 @@
 # Core desktop app
 /pdv-local/src/                    @nocodenn-cell/desktop-lead @nocodenn-cell/backend-lead
 
-# Rust/Tauri specific
+# Rust/Tauri specific (Cargo.toml vive em src-tauri/, já coberto pela regra acima)
 /pdv-local/src-tauri/              @nocodenn-cell/desktop-lead
-/pdv-local/Cargo.toml              @nocodenn-cell/desktop-lead
 
 # ==================== BACKEND (Supabase Edge Functions) ====================
 # Sync service (critical for data consistency)
@@ -70,7 +72,9 @@
 /docs/GO-LIVE-RUNBOOK.md           @nocodenn-cell/ops @nocodenn-cell/tech-lead
 /docs/POST-DEPLOY-MONITORING.md    @nocodenn-cell/ops @nocodenn-cell/tech-lead
 /docs/ARCHITECTURE.md              @nocodenn-cell/architecture @nocodenn-cell/tech-lead
-/docs/DECISION-LOG.md              @nocodenn-cell/architecture
+/docs/adr/                         @nocodenn-cell/architecture
+/docs/contracts/                    @nocodenn-cell/architecture @nocodenn-cell/backend-lead
+/docs/AUTHORIZATION_MATRIX.md      @nocodenn-cell/security @nocodenn-cell/backend-lead
 
 # Contributing guidelines
 /CONTRIBUTING.md                    @nocodenn-cell/tech-lead
@@ -82,13 +86,11 @@
 /.gitignore                         @nocodenn-cell/tech-lead
 /.nvmrc                             @nocodenn-cell/tech-lead
 
-# Linting & formatting
+# Linting & formatting (não há tsconfig.json na raiz — são por workspace)
 /.eslintrc.json                     @nocodenn-cell/tech-lead
-/tsconfig.json                      @nocodenn-cell/tech-lead
 
 # Dependencies & security
 /package-lock.json                  @nocodenn-cell/tech-lead
-/npm-audit.log                      @nocodenn-cell/security @nocodenn-cell/tech-lead
 
 # ==================== DEFAULT ====================
 # Fallback for files not matched above
