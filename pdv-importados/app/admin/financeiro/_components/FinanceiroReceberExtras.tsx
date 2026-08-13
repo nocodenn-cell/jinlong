@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { ROUTES } from '@shared-core/navigation/routes'
 import { formatBRL } from '@/lib/format/money'
 import { emitGerenteToast } from '@/lib/gerente/toast'
@@ -14,6 +14,7 @@ type ClienteOpt = { id: string; nome: string }
 type Props = {
   contas: ContaLinha[]
   clientesIniciais: ClienteOpt[]
+  caixasAbertos: Array<{ id: string; loja_id: string; operador: string }>
 }
 
 const FORMAS = ['DINHEIRO', 'PIX', 'CARTAO_DEBITO', 'CARTAO_CREDITO'] as const
@@ -21,9 +22,10 @@ const FORMAS = ['DINHEIRO', 'PIX', 'CARTAO_DEBITO', 'CARTAO_CREDITO'] as const
 const LINK_MUTED =
   'text-caption font-medium text-[var(--color-warning-strong)] hover:underline'
 
-export function FinanceiroReceberExtras({ contas, clientesIniciais }: Props) {
+export function FinanceiroReceberExtras({ contas, clientesIniciais, caixasAbertos }: Props) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
+  const [formasPorTitulo, setFormasPorTitulo] = useState<Record<string, (typeof FORMAS)[number]>>({})
 
   function refresh() {
     router.refresh()
@@ -33,16 +35,26 @@ export function FinanceiroReceberExtras({ contas, clientesIniciais }: Props) {
     const fd = new FormData(form)
     const valor = Number(fd.get('valor'))
     const forma = String(fd.get('forma') ?? 'DINHEIRO') as (typeof FORMAS)[number]
+    const caixaId = String(fd.get('caixa_id') ?? '') || null
+    const idempotencyKey = form.dataset.idempotencyKey || crypto.randomUUID()
+    form.dataset.idempotencyKey = idempotencyKey
     if (!Number.isFinite(valor) || valor <= 0) {
       emitGerenteToast({ kind: 'error', message: 'Informe um valor válido.' })
       return
     }
     startTransition(async () => {
-      const r = await liquidarTitulo({ titulo_id: tituloId, valor, forma_pagamento: forma })
+      const r = await liquidarTitulo({
+        titulo_id: tituloId,
+        valor,
+        forma_pagamento: forma,
+        caixa_id: forma === 'DINHEIRO' ? caixaId : null,
+        idempotency_key: idempotencyKey,
+      })
       if (!r.success) {
         emitGerenteToast({ kind: 'error', message: r.error })
         return
       }
+      delete form.dataset.idempotencyKey
       emitGerenteToast({ kind: 'success', message: 'Liquidação registrada.' })
       refresh()
     })
@@ -79,7 +91,9 @@ export function FinanceiroReceberExtras({ contas, clientesIniciais }: Props) {
             Liquidar título
           </h3>
           <ul className="space-y-2">
-            {abertas.slice(0, 8).map((c) => (
+            {abertas.slice(0, 8).map((c) => {
+              const caixasTitulo = caixasAbertos.filter((caixa) => caixa.loja_id === c.loja_id)
+              return (
               <li
                 key={c.id}
                 className="flex flex-col gap-2 rounded-md border border-[var(--color-border-secondary)] bg-jl-surface-base p-2 sm:flex-row sm:items-center"
@@ -90,6 +104,9 @@ export function FinanceiroReceberExtras({ contas, clientesIniciais }: Props) {
                 </div>
                 <form
                   className="flex flex-wrap items-center gap-1.5"
+                  onChange={(e) => {
+                    delete e.currentTarget.dataset.idempotencyKey
+                  }}
                   onSubmit={(e) => {
                     e.preventDefault()
                     handleLiquidar(c.id, e.currentTarget)
@@ -109,6 +126,9 @@ export function FinanceiroReceberExtras({ contas, clientesIniciais }: Props) {
                     className="fp-control fp-control--sm text-small"
                     defaultValue="DINHEIRO"
                     aria-label="Forma de pagamento"
+                    onChange={(e) => {
+                      setFormasPorTitulo((atual) => ({ ...atual, [c.id]: e.target.value as (typeof FORMAS)[number] }))
+                    }}
                   >
                     {FORMAS.map((f) => (
                       <option key={f} value={f}>
@@ -116,12 +136,19 @@ export function FinanceiroReceberExtras({ contas, clientesIniciais }: Props) {
                       </option>
                     ))}
                   </select>
+                  {caixasTitulo.length > 1 && (formasPorTitulo[c.id] ?? 'DINHEIRO') === 'DINHEIRO' ? (
+                    <select name="caixa_id" required className="fp-control fp-control--sm text-small" aria-label="Caixa físico">
+                      <option value="">Selecione o caixa</option>
+                      {caixasTitulo.map((caixa) => <option key={caixa.id} value={caixa.id}>{caixa.operador}</option>)}
+                    </select>
+                  ) : null}
                   <button type="submit" disabled={pending} className="admin-v2-btn-secondary text-small">
                     Liquidar
                   </button>
                 </form>
               </li>
-            ))}
+              )
+            })}
           </ul>
         </div>
       ) : null}

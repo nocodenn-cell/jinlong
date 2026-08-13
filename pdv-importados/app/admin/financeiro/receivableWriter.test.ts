@@ -18,18 +18,24 @@ describe('receivable adapters', () => {
   })
 
   it('liquidate chama RPC registrar_liquidacao_receber', async () => {
-    const rpc = vi.fn(async () => ({ error: null }))
+    const rpc = vi.fn(async () => ({
+      data: [{ liquidacao_id: 'l1', idempotent_replay: false, caixa_id: null }],
+      error: null,
+    }))
     const svc = createReceivableLiquidationService({ rpc } as never)
     await expect(
       svc.liquidate({
         tituloId: 't1',
         valor: 5,
         formaPagamento: 'PIX',
+        idempotencyKey: 'key-1',
       }),
-    ).resolves.toEqual({ ok: true })
+    ).resolves.toEqual({ ok: true, liquidacaoId: 'l1', idempotentReplay: false, caixaId: null })
     expect(rpc).toHaveBeenCalledWith(
       'registrar_liquidacao_receber',
-      expect.objectContaining({ p_titulo_id: 't1', p_valor: 5 }),
+      expect.objectContaining({
+        p_titulo_id: 't1', p_valor: 5, p_idempotency_key: 'key-1', p_caixa_id: null,
+      }),
     )
   })
 })

@@ -29,10 +29,12 @@ export type LiquidateReceivableCommand = {
   valor: number
   formaPagamento: FormaPagamentoReceber
   observacao?: string | null
+  idempotencyKey: string
+  caixaId?: string | null
 }
 
 export type LiquidateReceivableResult =
-  | { ok: true }
+  | { ok: true; liquidacaoId: string; idempotentReplay: boolean; caixaId?: string | null }
   | { ok: false; error: string; code?: FinancialErrorCode }
 
 export type ReceivableLiquidationService = {

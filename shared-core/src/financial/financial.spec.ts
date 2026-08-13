@@ -24,7 +24,7 @@ describe('financial — contracts', () => {
   it('ReceivableLiquidationService tipa liquidate', async () => {
     const svc: ReceivableLiquidationService = {
       async liquidate() {
-        return { ok: true }
+        return { ok: true, liquidacaoId: 'l1', idempotentReplay: false }
       },
     }
     expect(svc.liquidate).toBeTypeOf('function')
