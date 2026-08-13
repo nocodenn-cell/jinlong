@@ -126,6 +126,26 @@ Todos sobre `HEAD` desta branch (270 `.sql`):
 > **não** detectam a divergência: nenhum deles enxerga uma branch não publicada. Passar aqui **não**
 > valida a decisão de retirada.
 
+### 3.1 Prova direta da divergência — `db reset` nas duas branches
+
+O CI desta branch executou o **mesmo comando** que o dono rodou localmente, com resultado oposto
+([job 94569341772](https://github.com/nocodenn-cell/fastproduct/actions/runs/31736472990/job/94569341772), ✅ success):
+
+| | `claude/jinlong-doc-assimilation-f155hr` (CI, verificável) | `codex/reconcile-db-final` (local do dono, relatado) |
+|---|---|---|
+| Comando | `npx supabase db reset --local --yes` | idem |
+| Resultado | `Finished supabase db reset on branch claude/jinlong-doc-assimilation-f155hr.` | `Finished supabase db reset on branch codex/reconcile-db-final.` |
+| `20260808130200` | **aplicada** (`Applying migration 20260808130200_24704_reapply…`) | **ausente** |
+| `20260810222702_retire_obsolete…` | **0 ocorrências no log** | **última da sequência** |
+| Pós-reset | `RLS_REST_SMOKE_OK` | — |
+
+Duas branches, o mesmo comando, **conjuntos de migrations diferentes**. Não é ambiguidade de
+leitura: é divergência de conteúdo, e só uma das duas pode ser a intenção vigente.
+
+**Efeito colateral positivo:** o pré-requisito do Passo 1 do pacote de apply (`db reset` completo
+verde com a migration na cadeia) está **fechado com evidência de CI**. O que falta é decisão, não
+validação técnica.
+
 ## 4. Classificação
 
 ### 🔴 BLOCKED
