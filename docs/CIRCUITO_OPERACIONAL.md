@@ -12,10 +12,18 @@ Documento único para **deploy da Edge**, **secrets**, **teste ponta a ponta** e
 |---|---------------------------|---------------------------|
 | **Quem usa** | OPERADOR logado no navegador (idealmente com internet). | Operador na frente de loja (Windows); funciona **offline-first** com cache SQLite. |
 | **Catálogo e preços** | Online: RPC `calcular_preco_produto` (`PRICE_RESOLUTION_CHAIN` — `precos_atacado` → catálogo → varejo). Autoridade: ver `docs/regras-negocio/MATRIZ_AUTORIDADES_P1.md`. | Offline-first: cache SQLite; **deve** espelhar a mesma cadeia (plano Aut#1). `regras_preco` **não** é SSoT de atacado. |
-| **Registro de venda** | **Finalizar venda** grava `vendas` / `itens_venda` e baixa estoque via **`decrementar_estoque_seguro`** (dentro de `finalizar_venda_transacional_canonica_v2` ou `finalizar_venda_transacional`; migrations **016**+**038**, com **007**/`estoque_baixas` para idempotência por par venda+produto). Alternativa: fluxo desktop + outbox (abaixo). | **Grava venda em SQLite**, enfileira **outbox** e envia para a Edge **`sync-outbox`** (`SYNC_*`), que aplica a mesma lógica (**`decrementar_estoque_seguro`** ou RPC canónica v2). |
+| **Registro de venda** | **Finalizar venda** chama a RPC **canônica `finalizar_venda_transacional_canonica_v4`** (22 args, wrapper com scope-guard de loja/caixa/operador), que baixa estoque via **`decrementar_estoque_seguro`**. Caller único: `app/caixa/server/caixaVendas.impl.ts`. Contrato: [`rpc-finalizar-venda-canonica-v4.json`](./contracts/v1/rpc-finalizar-venda-canonica-v4.json). | **Grava venda em SQLite**, enfileira **outbox** e envia para a Edge **`sync-outbox`** (`SYNC_*`), que persiste via **`registrar_venda_com_itens`** + **`decrementar_estoque_seguro`** (`functions/sync-outbox/index.ts:606,653`). **Não** usa a v4 — ver nota de divergência abaixo. |
 | **Para relatórios / gerente** | Vendas gravadas pela web ou pelo desktop aparecem em `/gerente/*` após persistência no Postgres. | Após sync com sucesso, vendas e estoque refletem no Supabase. |
 
-**Conclusão para operação:** o **desktop** continua indicado para **loja offline-first** e fila outbox. O **caixa web** passa a registrar venda direto no Postgres (ex.: **009** em diante, incluindo **`decrementar_estoque_seguro`** e RPCs de finalizar venda). Exige **conexão** e o **mesmo modelo de dados** (`vendas`, itens, RPC de estoque).
+**Conclusão para operação:** o **desktop** continua indicado para **loja offline-first** e fila outbox. O **caixa web** registra venda direto no Postgres pela RPC canônica v4. Ambos compartilham o mesmo modelo de dados (`vendas`, `itens_venda`) e a mesma baixa de estoque (`decrementar_estoque_seguro`).
+
+> **Divergência conhecida — caminhos de escrita distintos.** O caixa web usa a canônica **v4**
+> (com scope-guard de loja/caixa/operador); o caminho desktop→outbox usa **`registrar_venda_com_itens`**,
+> que **não** tem o mesmo guard. Ambos convergem em `decrementar_estoque_seguro` para a baixa
+> atômica, então não há divergência de estoque — a diferença é de **autorização na borda de escrita**.
+> Registrada como dívida em `Jinlong/Dívida Técnica.md` ("Desktop usa RPC legada"). Unificar exige
+> tocar o núcleo transacional, hoje sob freeze (`caixaVendas.impl.ts:3`), e depende de decisão
+> explícita de produto — não é ajuste de documentação.
 
 ---
 
@@ -23,9 +31,12 @@ Documento único para **deploy da Edge**, **secrets**, **teste ponta a ponta** e
 
 Pré-requisitos: **Docker não é obrigatório** para deploy remoto; projeto linkado (`npx supabase link --project-ref <ref>`) na pasta **`backend`**.
 
-### 2.1 Migrations (anti-replay + RPC canônica v2)
+### 2.1 Migrations (anti-replay + RPC canônica)
 
-Antes ou logo após o deploy da function, aplique as migrations remotas que incluem **024** (`sync_request_nonces`) e **025** (`finalizar_venda_transacional_canonica_v2`), por exemplo:
+Antes ou logo após o deploy da function, aplique as migrations remotas. As relevantes para este
+circuito são **024** (`sync_request_nonces`, anti-replay) e a cadeia de finalização de venda até
+**`20260809120837_finalize_v4_scope_guard_22args`**, que estabelece a canônica **v4**. As versões
+**025** (v2) e **089** (v3) são históricas e estão bloqueadas para `authenticated`.
 
 ```powershell
 cd C:\Naturecode\fastproduct\backend
@@ -67,9 +78,20 @@ Defina conforme a fase de rollout (ver também [AMBIENTES_E_RELEASE.md](./AMBIEN
 
 | Secret / env na Edge | Efeito |
 |----------------------|--------|
-| `USE_UNIFIED_SALES_FLOW` = `true` | Todas as vendas do outbox usam a RPC `finalizar_venda_transacional_canonica_v2`. |
-| `CANARY_DEVICE_FINGERPRINTS` | Lista CSV (case-insensitive): só esses `x-device-fingerprint` usam o fluxo unificado; combine com `USE_UNIFIED_SALES_FLOW` desligado para canário. |
 | `STRICT_MANAGER_DISCOUNT_AUTH` = `true` | Exige `desconto_gerente_token` na venda quando há desconto de gerente; o desktop obtém token via `POST ?op=validar_gerente` na mesma Edge (HMAC). |
+
+> **Fim do rollout — nenhuma dessas variáveis seleciona RPC de venda hoje.**
+>
+> - `CANARY_DEVICE_FINGERPRINTS`: **removida**, sem nenhuma ocorrência no código.
+> - `USE_UNIFIED_SALES_FLOW`: **não escolhe mais RPC alguma**. Foi eliminada da Edge
+>   (`functions/sync-outbox/index.ts:2` proíbe reintroduzir branches de RPC de venda) e, no web,
+>   sobrevive **apenas como check de diagnóstico pré-produção**
+>   (`lib/caixa/diagnosticoPreProducaoEnv.ts`, `scripts/check-env.mjs`). O caller da v4 consome
+>   somente `strictManagerDiscountAuth` e `autoEnqueueFiscalOnSale`
+>   (`caixaVendas.impl.ts:279,301`) — nunca essa flag.
+>
+> Mantê-la definida como `true` continua sendo o esperado pelo diagnóstico; alterá-la **não** muda
+> qual RPC é chamada.
 
 ### 2.5 PDV local (`.env` na raiz de `pdv-local`)
 
