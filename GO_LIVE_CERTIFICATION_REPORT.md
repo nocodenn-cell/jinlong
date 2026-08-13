@@ -73,7 +73,7 @@ A versão anterior deste relatório concluiu **NO-GO** por SYNC_KEY / evidência
 | Item | Classificação | Nota |
 |---|---|---|
 | E2E crítico (Playwright sync-fluxo) | Sistema de risco | Não é gate SSRA; monitorar pós-piloto |
-| Fase 3.2 `20260808130200` (git-only) | P2 | HUMAN GATE — aplicar em janela controlada se o app consumir `venda_finance_context` |
+| Fase 3.2 `20260808130200` (git-only) | P2 | ⚠️ **Instrução superseded em 2026-08-13 — não aplicar.** Há decisão posterior e contrária (`20260810222702_retire_obsolete_venda_finance_context.sql` em `codex/reconcile-db-final`). Estado vigente: [`docs/RECONCILIACAO_venda_finance_context_2026-08-13.md`](./docs/RECONCILIACAO_venda_finance_context_2026-08-13.md) |
 | Branches/PRs legados | Higiene P2 | Passo 8 do plano de fechamento |
 
 ---

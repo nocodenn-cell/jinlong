@@ -1,5 +1,18 @@
 # Fase 3 — Reconciliação Supabase (plano de execução)
 
+> ## ⚠️ DECISÃO POSSIVELMENTE SUPERSEDED — 2026-08-13
+>
+> Este documento decide **MANTER + idempotentizar** o `venda_finance_context` e trata
+> `20260808130200_24704_reapply_venda_finance_context_idempotent.sql` como o caminho a aplicar.
+>
+> **Não prepare nem execute apply com base nele.** Há evidência de decisão posterior e contrária:
+> em `codex/reconcile-db-final`, um `supabase db reset --local` verde termina aplicando
+> `20260810222702_retire_obsolete_venda_finance_context.sql` — ou seja, **retirar** o espelho.
+>
+> Reconciliação e estado vigente: [`RECONCILIACAO_venda_finance_context_2026-08-13.md`](./RECONCILIACAO_venda_finance_context_2026-08-13.md).
+
+
+
 **Branch:** `cursor/reconciliacao-supabase-audit-633a` · **PR:** [#267](https://github.com/nocodenn-cell/fastproduct/pull/267)  
 **Pré-requisito documental:** Fases 1–2 concluídas (`docs/RECONCILIACAO_SUPABASE_PRODUCAO_REPOSITORIO.md` §13)  
 **Início Fase 3 (planejamento):** 2026-08-08 (UTC)  
