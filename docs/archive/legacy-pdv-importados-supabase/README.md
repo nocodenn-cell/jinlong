@@ -50,10 +50,17 @@ scope-guard** ao lado da v4 canônica. `rls_policies.sql` agravava: aplicava um 
 alternativo, condicionado a uma feature flag (`feature_flag_ativa('ENABLE_RLS_POLICIES')`) que não
 faz parte do modelo de RLS vigente.
 
-Nenhuma evidência foi encontrada de que esses scripts tenham sido executados contra produção — o
-inventário de reconciliação fecha em `onlyProd=0` e `nameMismatch=0`
-(`backend/supabase/reports/reconcile-prod-repo-inventory.json`). O risco era **latente**, não
-consumado.
+Nenhuma evidência foi encontrada de que esses scripts tenham sido executados contra produção:
+nenhum dos objetos que eles criariam — `feature_flags` com o modelo de RLS por flag, ou uma
+`finalizar_venda_transacional_canonica_v3` de 18 args — aparece no ledger de produção
+(`backend/supabase/reports/prod_migrations.tsv`), cujas entradas correspondem todas a migrations do
+SSOT canônico. O risco era **latente**, não consumado.
+
+> **Correção de 2026-08-13.** Uma versão anterior deste parágrafo citava `onlyProd=0` do
+> `reconcile-prod-repo-inventory.json` como prova. Esse número é de 2026-08-08 e **não reproduz**:
+> rodando o script hoje, dá `onlyProd=73` — todos falsos positivos da renomeação sequencial →
+> timestamp, sem nenhuma migration realmente ausente. A conclusão acima se sustenta, mas por outra
+> evidência. Ver [ADR-011 §4](../../adr/ADR-011-ssot-unico-migrations.md).
 
 ## Conteúdo já coberto pelo SSOT canônico
 

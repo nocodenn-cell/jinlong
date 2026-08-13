@@ -68,7 +68,40 @@ Regra por par já registrada em `phase3-collision-diff-summary.json` (ex.: `255_
 
 `INHERITED_COLLISIONS` no guard permanece **vazio**: qualquer colisão *nova* falha o CI.
 
-### 4. Ledger remoto
+### 4. O reconciliador superestima o drift — não confiar nos números crus
+
+`reconcile-prod-repo-inventory.mjs` casa repo × produção **apenas pelo prefixo de versão**. Como a
+renomeação sequencial → timestamp mudou esse prefixo sem mudar o conteúdo, o mesmo arquivo aparece
+duas vezes: como `onlyRepo` (chave nova) e como `onlyProd` (chave antiga).
+
+Medição de 2026-08-13 (3 execuções idênticas — o script **é** determinístico):
+
+| Métrica | Valor |
+|---|---|
+| `repoFiles` / `prodTracked` | 270 / 263 |
+| `onlyRepo` / `onlyProd` | **80 / 73** |
+| `nameMismatch` | 0 |
+| Entradas de `onlyProd` com arquivo correspondente no repo | **73 de 73** |
+| Migrations realmente ausentes | **0** |
+
+Exemplo do par: prod rastreia `205 force_com_nf`; o repo tem
+`20260621000100_205_force_com_nf.sql`. Mesma migration, duas chaves.
+
+**Consequências práticas:**
+
+1. O relatório commitado `backend/supabase/reports/reconcile-prod-repo-inventory.json` foi gerado em
+   2026-08-08 com `onlyRepo=4 / onlyProd=0`. **Esses números não reproduzem hoje** — rodar o script
+   sobrescreve o arquivo com 80/73. Não citar o valor antigo como prova de alinhamento.
+2. `onlyProd > 0` **não** significa que produção tem migration que o repo não tem. Antes de tratar
+   qualquer entrada como drift, pareie por **nome** da migration, não por versão.
+3. O drift real e comprovado continua sendo apenas o de `venda_finance_context`
+   (tracking × catálogo), tratado na trilha FASE_3.
+
+Corrigir o script para parear por nome é melhoria desejável, **não** feita aqui: mexer no
+reconciliador durante uma reconciliação em aberto trocaria uma medição conhecida-imprecisa por uma
+não validada.
+
+### 5. Ledger remoto
 
 Este ADR **não** autoriza correção do ledger remoto. O drift conhecido
 (`schema_migrations.version='252'` marcada como applied com objetos ausentes do catálogo) é tratado
