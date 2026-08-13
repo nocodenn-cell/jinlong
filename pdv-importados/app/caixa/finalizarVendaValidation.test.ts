@@ -57,6 +57,27 @@ describe('finalizarVendaValidation', () => {
     ).toBe(false)
   })
 
+  it('totalsMatchDeclared rejeita diferença de R$ 0,01', () => {
+    const computed = totaisFromItens([itemPrecificadoBase])
+    expect(
+      totalsMatchDeclared(computed, {
+        totalBruto: 20,
+        totalDesconto: 2,
+        totalLiquido: 18.01,
+      }),
+    ).toBe(false)
+  })
+
+  it.each([
+    { quantidade: 1, precoOriginal: 0.01, precoUnitario: 0.01, esperado: 0.01 },
+    { quantidade: 1, precoOriginal: 0.1, precoUnitario: 0.1, esperado: 0.1 },
+    { quantidade: 1, precoOriginal: 1.99, precoUnitario: 1.99, esperado: 1.99 },
+    { quantidade: 3, precoOriginal: 1.99, precoUnitario: 1.99, esperado: 5.97 },
+    { quantidade: 0.125, precoOriginal: 1.99, precoUnitario: 1.99, esperado: 0.25 },
+  ])('totaliza centavos e quantidade $quantidade sem float residual', (item) => {
+    expect(totaisFromItens([item]).totalLiquido).toBe(item.esperado)
+  })
+
   it('finalizarVendaInputSchema exige ao menos um item', () => {
     const r = finalizarVendaInputSchema.safeParse({
       formaPagamento: 'DINHEIRO',
@@ -79,6 +100,30 @@ describe('finalizarVendaValidation', () => {
       itens: [itemBase],
     })
     expect(r.success).toBe(true)
+  })
+
+  it('reconcilia split exatamente e rejeita excesso de R$ 0,01', () => {
+    const base = {
+      formaPagamento: 'DINHEIRO' as const,
+      totalBruto: 20,
+      totalDesconto: 2,
+      totalLiquido: 18,
+      itens: [itemBase],
+    }
+    expect(finalizarVendaInputSchema.safeParse({
+      ...base,
+      pagamentos: [
+        { formaPagamento: 'DINHEIRO', valor: 7.99 },
+        { formaPagamento: 'PIX', valor: 10.01 },
+      ],
+    }).success).toBe(true)
+    expect(finalizarVendaInputSchema.safeParse({
+      ...base,
+      pagamentos: [
+        { formaPagamento: 'DINHEIRO', valor: 8 },
+        { formaPagamento: 'PIX', valor: 10.01 },
+      ],
+    }).success).toBe(false)
   })
 
   it('finalizarVendaInputSchema aceita quantidade com 3 casas decimais', () => {
