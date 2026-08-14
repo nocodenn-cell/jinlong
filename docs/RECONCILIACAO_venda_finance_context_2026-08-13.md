@@ -208,13 +208,29 @@ mantém 252 no replay para novos ambientes") é justamente o que a migration de 
 resolve. Aplicar o reapply criaria em produção objetos que ninguém consome, para que uma migration
 seguinte os removesse.
 
-### O que continua aberto — no repositório, não em produção
+### ✅ Formalização concluída — [ADR-012](./adr/ADR-012-aposentadoria-venda-finance-context.md)
 
-**Formalizar a decisão com um ADR.** Enquanto ele não existir em ref publicada, o repositório
-carrega uma decisão de fato (`codex/reconcile-db-final`) que contradiz uma decisão registrada
-(`FASE_3_1`), sem trilha. Isso é dívida de governança, não risco operacional.
+A branch foi publicada em 2026-08-13 (`eb6c5c4`), o que permitiu fechar as duas perguntas antes
+indetermináveis:
 
-Para eu escrever esse ADR, preciso de: `git push -u origin codex/reconcile-db-final`.
+| # | Pergunta | Resposta auditada |
+|---|---|---|
+| 1 | Commit da aposentadoria | `17890230c7e92b1320eaa4580bb100b313ac20ed` — *"fix(db): retire obsolete venda finance context"*, autor **`nocodenn-cell <nocodenn@gmail.com>`** (dono), 2026-08-10 19:39:48 -0300 |
+| 2 | ADR que autorizou | **Não existia** — nenhum dos 5 commits da branch toca `docs/`. Lacuna suprida agora por **ADR-012** |
+
+O commit remove `20260808130200` (203 linhas), adiciona `20260810222702` (25 linhas), mais smoke e
+validador da aposentadoria, e aposenta `validate-phase3-2.mjs`.
+
+A decisão é do dono e é **autoritativa** — o que faltava era o registro exigido pela própria
+`FASE_3_1` §4.2. Com o ADR-012, não há mais decisão de fato sem trilha.
+
+**Item encerrado.** Classificação final inalterada: **`NO PROD ACTION REQUIRED`**.
+
+### Único resíduo — a resolver no merge, não avulso
+
+`20260808130200` foi removida em `codex/reconcile-db-final` mas **ainda existe em `origin/main`**.
+Enquanto as branches não convergirem, `main` carrega uma migration que o ADR-012 declara obsoleta.
+Não removê-la isoladamente: isso é trabalho de merge entre as duas branches.
 
 ## 5. Lição estrutural
 
