@@ -1476,6 +1476,170 @@ BEGIN
 END $g$;
 
 -- ═══════════════════════════════════════════════════════════════════════════
+-- GATE 22 — DB-05D: cancelamento não depende da ordem acidental entre a
+-- apuração da comissão original e o próprio cancelamento.
+-- Regressão DB05-F3, falsificada empiricamente antes da correção:
+--   Ordem A (venda -> comissão automática -> cancelamento):
+--     comissões=1 (R$4,50), ajustes=1 (R$4,50), líquido 0.
+--   Ordem B (venda -> [apuração original ainda não rodou] -> cancelamento
+--            -> processamento atrasado):
+--     comissões=0, ajustes=0 -- o fato desaparecia por inteiro, sem
+--     pendência, fila ou reconciliação que o restaurasse.
+-- Usa PIX (forma não física) nos dois ramos para não interferir no GATE 8.
+-- ═══════════════════════════════════════════════════════════════════════════
+DO $g$
+DECLARE
+  v_loja uuid := current_setting('t.loja')::uuid;
+  v_prod uuid := current_setting('t.produto')::uuid;
+  v_op uuid := current_setting('t.operador')::uuid;
+  v_ger uuid := current_setting('t.gerente')::uuid;
+  v_caixa uuid := current_setting('t.caixa')::uuid;
+  v_preco numeric := current_setting('t.preco')::numeric;
+  v_va uuid := gen_random_uuid(); v_ia uuid := gen_random_uuid();
+  v_vb uuid := gen_random_uuid(); v_ib uuid := gen_random_uuid();
+  v_vc uuid := gen_random_uuid(); v_ic uuid := gen_random_uuid();
+  v_vd uuid := gen_random_uuid();
+  v_com_a numeric; v_aj_a numeric; v_n_com_a integer; v_n_aj_a integer;
+  v_com_b numeric; v_aj_b numeric; v_n_com_b integer; v_n_aj_b integer;
+  v_n integer; v_ok boolean;
+BEGIN
+  INSERT INTO public.configuracoes_gerais(chave, valor, tipo_dado)
+  VALUES ('comissao_padrao_percentual', '5', 'percent')
+  ON CONFLICT (chave) DO UPDATE SET valor = '5';
+
+  -- ---------------------------------------------------------- Ordem A
+  -- venda -> comissão (criada automaticamente pelo gatilho de itens,
+  -- "cancelamento depois do snapshot") -> cancelamento
+  PERFORM public.registrar_venda_com_itens(v_va, v_caixa, v_op, 'PIX',
+    v_preco, 0, v_preco,
+    jsonb_build_array(jsonb_build_object('item_id', v_ia, 'produto_id', v_prod,
+      'quantidade', 1, 'preco_original', v_preco, 'preco_unitario', v_preco)), NULL, NULL, NULL);
+
+  SELECT count(*) INTO v_n FROM public.comissoes_vendedores WHERE venda_id = v_va;
+  IF v_n <> 1 THEN RAISE EXCEPTION 'GATE22A_COMISSAO_NAO_NASCEU_AUTOMATICAMENTE'; END IF;
+
+  PERFORM public.cancelar_venda_transacional(v_va, 'gate22 ordem A', v_ger);
+
+  SELECT count(*), COALESCE(SUM(valor_comissao),0) INTO v_n_com_a, v_com_a
+    FROM public.comissoes_vendedores WHERE venda_id = v_va;
+  SELECT count(*), COALESCE(SUM(valor),0) INTO v_n_aj_a, v_aj_a
+    FROM public.comissoes_ajustes WHERE venda_id = v_va;
+  IF v_n_com_a <> 1 OR v_n_aj_a <> 1 OR v_com_a <> v_aj_a THEN
+    RAISE EXCEPTION 'GATE22A_ESTADO_INESPERADO comissoes=% (%) ajustes=% (%)',
+      v_n_com_a, v_com_a, v_n_aj_a, v_aj_a;
+  END IF;
+  -- o fato original nunca é alterado, mesmo depois do cancelamento
+  IF (SELECT valor_comissao FROM public.comissoes_vendedores WHERE venda_id = v_va) <> v_com_a THEN
+    RAISE EXCEPTION 'GATE22A_FATO_ORIGINAL_ALTERADO';
+  END IF;
+  -- nenhuma comissão positiva residual: líquido zero
+  IF (SELECT valor_liquido FROM public.comissoes_vendedores_liquidas WHERE venda_id = v_va) <> 0 THEN
+    RAISE EXCEPTION 'GATE22A_RESIDUAL_APOS_CANCELAMENTO';
+  END IF;
+
+  -- retry do cancelamento (segunda tentativa oficial) é rejeitado, e um
+  -- retry direto do ajuste não duplica
+  v_ok := false;
+  BEGIN
+    PERFORM public.cancelar_venda_transacional(v_va, 'gate22 ordem A retry', v_ger);
+  EXCEPTION WHEN OTHERS THEN v_ok := true; END;
+  IF NOT v_ok THEN RAISE EXCEPTION 'GATE22A_RECANCELAMENTO_ACEITO'; END IF;
+  PERFORM public.processar_ajuste_comissao_venda(v_va, 'CANCELAMENTO', v_va);
+  SELECT count(*) INTO v_n FROM public.comissoes_ajustes WHERE venda_id = v_va;
+  IF v_n <> 1 THEN RAISE EXCEPTION 'GATE22A_RETRY_AJUSTE_DUPLICOU n=%', v_n; END IF;
+
+  -- ---------------------------------------------------------- Ordem B
+  -- venda -> [apuração original ainda NÃO aconteceu: gatilho de itens
+  -- desabilitado para simular "cancelamento antes do snapshot" -- a mesma
+  -- janela em que uma falha silenciosa de cálculo ou loja/operador
+  -- irresolúvel deixaria a venda CONCLUIDA sem comissão] -> cancelamento
+  -- -> processamento atrasado (retry manual, simulando reconciliação)
+  ALTER TABLE public.itens_venda DISABLE TRIGGER trg_itens_venda_comissao;
+
+  INSERT INTO public.vendas(id, caixa_id, operador_id, total_bruto, total_desconto,
+    total_liquido, forma_pagamento, status)
+  VALUES (v_vb, v_caixa, v_op, v_preco, 0, v_preco, 'PIX', 'CONCLUIDA');
+  INSERT INTO public.itens_venda(id, venda_id, produto_id, quantidade,
+    preco_unitario_original, preco_unitario, desconto_unitario, tipo_preco)
+  VALUES (v_ib, v_vb, v_prod, 1, v_preco, v_preco, 0, 'VAREJO');
+
+  ALTER TABLE public.itens_venda ENABLE TRIGGER trg_itens_venda_comissao;
+
+  SELECT count(*) INTO v_n FROM public.comissoes_vendedores WHERE venda_id = v_vb;
+  IF v_n <> 0 THEN RAISE EXCEPTION 'GATE22B_FIXTURE_INVALIDA_COMISSAO_JA_EXISTIA'; END IF;
+
+  -- cancelamento ANTES de qualquer apuração original existir
+  PERFORM public.cancelar_venda_transacional(v_vb, 'gate22 ordem B', v_ger);
+
+  -- processamento atrasado: o cancelamento já deve ter fechado o fato; esta
+  -- chamada tem de ser um no-op (o guard de status='CONCLUIDA' bloqueia)
+  PERFORM public.processar_comissao_venda(v_vb);
+  -- segundo processamento atrasado, para provar que não há efeito cumulativo
+  PERFORM public.processar_comissao_venda(v_vb);
+
+  SELECT count(*), COALESCE(SUM(valor_comissao),0) INTO v_n_com_b, v_com_b
+    FROM public.comissoes_vendedores WHERE venda_id = v_vb;
+  SELECT count(*), COALESCE(SUM(valor),0) INTO v_n_aj_b, v_aj_b
+    FROM public.comissoes_ajustes WHERE venda_id = v_vb;
+
+  -- Ordem A e Ordem B convergem: mesma contagem, mesmo valor, mesma trilha
+  IF v_n_com_a <> v_n_com_b OR v_com_a <> v_com_b OR v_n_aj_a <> v_n_aj_b OR v_aj_a <> v_aj_b THEN
+    RAISE EXCEPTION 'GATE22B_ORDEM_DIVERGE_DA_ORDEM_A comA=%(%) comB=%(%) ajA=%(%) ajB=%(%)',
+      v_n_com_a, v_com_a, v_n_com_b, v_com_b, v_n_aj_a, v_aj_a, v_n_aj_b, v_aj_b;
+  END IF;
+  IF (SELECT valor_liquido FROM public.comissoes_vendedores_liquidas WHERE venda_id = v_vb) <> 0 THEN
+    RAISE EXCEPTION 'GATE22B_RESIDUAL_APOS_CANCELAMENTO';
+  END IF;
+  -- trilha de auditoria: ajuste aponta para a venda como origem do cancelamento
+  IF NOT EXISTS (
+    SELECT 1 FROM public.comissoes_ajustes a
+    WHERE a.venda_id = v_vb AND a.tipo = 'CANCELAMENTO' AND a.origem_id = v_vb
+      AND a.idempotency_key = 'CANCELAMENTO:' || v_vb::text
+  ) THEN
+    RAISE EXCEPTION 'GATE22B_TRILHA_DE_AUDITORIA_INCOMPLETA';
+  END IF;
+
+  -- segundo processamento direto de internal.apurar_comissao_original não duplica nada
+  PERFORM internal.apurar_comissao_original(v_vb);
+  SELECT count(*) INTO v_n FROM public.comissoes_itens WHERE venda_id = v_vb;
+  IF v_n <> 1 THEN RAISE EXCEPTION 'GATE22B_SEGUNDO_PROCESSAMENTO_DUPLICOU_ITEM n=%', v_n; END IF;
+
+  -- ---------------------------------------------------------- venda já cancelada, nunca elegível
+  -- Regressão a NÃO reintroduzir: GATE 15 prova que uma venda que nasce
+  -- CANCELADA (nunca foi CONCLUIDA) não gera comissão. Este gatilho de
+  -- cancelamento é AFTER UPDATE, então nunca dispara para este INSERT --
+  -- e um processamento atrasado direto também deve continuar bloqueado.
+  v_vc := gen_random_uuid();
+  INSERT INTO public.vendas(id, caixa_id, operador_id, total_bruto, total_desconto,
+    total_liquido, forma_pagamento, status)
+  VALUES (v_vc, v_caixa, v_op, v_preco, 0, v_preco, 'PIX', 'CANCELADA');
+  INSERT INTO public.itens_venda(id, venda_id, produto_id, quantidade,
+    preco_unitario_original, preco_unitario, desconto_unitario, tipo_preco)
+  VALUES (v_ic, v_vc, v_prod, 1, v_preco, v_preco, 0, 'VAREJO');
+
+  PERFORM public.processar_comissao_venda(v_vc);
+  SELECT count(*) INTO v_n FROM public.comissoes_vendedores WHERE venda_id = v_vc;
+  IF v_n <> 0 THEN RAISE EXCEPTION 'GATE22C_VENDA_NASCIDA_CANCELADA_GEROU_COMISSAO'; END IF;
+  SELECT count(*) INTO v_n FROM public.comissoes_ajustes WHERE venda_id = v_vc;
+  IF v_n <> 0 THEN RAISE EXCEPTION 'GATE22C_VENDA_NASCIDA_CANCELADA_GEROU_AJUSTE'; END IF;
+
+  -- ---------------------------------------------------------- venda sem comissão elegível
+  -- venda CONCLUIDA, operador válido, mas SEM nenhum item: nada para
+  -- congelar. Cancelamento não pode gerar comissão nem ajuste, e não pode
+  -- lançar erro.
+  v_vd := gen_random_uuid();
+  INSERT INTO public.vendas(id, caixa_id, operador_id, total_bruto, total_desconto,
+    total_liquido, forma_pagamento, status)
+  VALUES (v_vd, v_caixa, v_op, v_preco, 0, v_preco, 'PIX', 'CONCLUIDA');
+
+  PERFORM public.cancelar_venda_transacional(v_vd, 'gate22 sem itens', v_ger);
+  SELECT count(*) INTO v_n FROM public.comissoes_vendedores WHERE venda_id = v_vd;
+  IF v_n <> 0 THEN RAISE EXCEPTION 'GATE22D_VENDA_SEM_ITENS_GEROU_COMISSAO'; END IF;
+  SELECT count(*) INTO v_n FROM public.comissoes_ajustes WHERE venda_id = v_vd;
+  IF v_n <> 0 THEN RAISE EXCEPTION 'GATE22D_VENDA_SEM_ITENS_GEROU_AJUSTE'; END IF;
+END $g$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
 -- GATE 8 — reconciliação final: contador == E(c) ao fim de toda a bateria
 -- ═══════════════════════════════════════════════════════════════════════════
 DO $g$
