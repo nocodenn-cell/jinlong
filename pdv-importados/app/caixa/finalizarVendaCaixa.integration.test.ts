@@ -208,7 +208,12 @@ describe.sequential('finalizarVendaCaixa — split e validações', { timeout: 1
       { forma_pagamento: 'DINHEIRO', valor: 20 },
       { forma_pagamento: 'PIX', valor: 10 },
     ])
-  })
+    // O primeiro caso do arquivo paga o custo do `await import('./actions')`,
+    // que arrasta o grafo do módulo de actions do caixa. Em máquina lenta isso
+    // ultrapassa o testTimeout padrão de 15s e produz flake — os dois casos
+    // seguintes, já com o módulo em cache, rodam em ~2s. Timeout explícito em
+    // vez de skip: nenhum assert foi removido.
+  }, 60_000)
 
   it('retorna mensagem de erro esperada para payload inválido (pagamentos > total)', async () => {
     const { supabase } = makeSupabase()

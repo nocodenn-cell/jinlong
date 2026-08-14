@@ -224,11 +224,11 @@ export function FinanceiroGerentePageClient({
   )
 
   const { mutate: mutLiquidar, loading: loadLiquidar } = useGerenteMutation(
-    async (p: { titulo_id: string; valor: number; forma_pagamento: (typeof FORMAS)[number] }) => {
+    async (p: { titulo_id: string; valor: number; forma_pagamento: (typeof FORMAS)[number]; idempotency_key: string }) => {
       const r = await liquidarTitulo(p)
       if (!r.success) throw new Error(r.error)
       refetch()
-      return null
+      return r.data
     },
     { successMessage: f.toast_liquidar_ok },
   )
@@ -505,15 +505,23 @@ export function FinanceiroGerentePageClient({
                       <td className="min-w-[220px] px-3 py-2.5">
                         <form
                           className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center"
-                          onSubmit={(e) => {
+                          onChange={(e) => {
+                            delete e.currentTarget.dataset.idempotencyKey
+                          }}
+                          onSubmit={async (e) => {
                             e.preventDefault()
-                            const fd = new FormData(e.currentTarget)
+                            const form = e.currentTarget
+                            const fd = new FormData(form)
                             const forma = parseForma(readFormDataString(fd, 'forma', 'DINHEIRO'))
-                            void mutLiquidar({
+                            const idempotencyKey = form.dataset.idempotencyKey || crypto.randomUUID()
+                            form.dataset.idempotencyKey = idempotencyKey
+                            const result = await mutLiquidar({
                               titulo_id: t.id,
                               valor: Number(fd.get('valor')),
                               forma_pagamento: forma,
+                              idempotency_key: idempotencyKey,
                             })
+                            if (result !== null) delete form.dataset.idempotencyKey
                           }}
                         >
                           <input

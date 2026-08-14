@@ -67,6 +67,7 @@ function mapTitulo(t: Record<string, unknown>): ReceivableListRow {
     valorTotal: Number(t.valor_total),
     valorAberto: Number(t.valor_aberto),
     status: String(t.status),
+    lojaId: String(t.loja_id),
     descricao: t.descricao != null ? String(t.descricao) : null,
     vencimento: t.vencimento != null ? String(t.vencimento) : null,
     clienteNome: nomeCliente ?? null,
@@ -92,7 +93,7 @@ export function createReceivableReader(supabase: SupabaseClient): ReceivableRead
 
         let q = supabase
           .from('contas_receber')
-          .select('id, valor_total, valor_aberto, status, descricao, vencimento, cliente_id, clientes(nome)')
+          .select('id, valor_total, valor_aberto, status, descricao, vencimento, cliente_id, loja_id, clientes(nome)')
 
         if (query.opcao === 'ABERTO') q = q.eq('status', 'ABERTO')
         else if (query.opcao === 'PARCIAL') q = q.eq('status', 'PARCIAL')

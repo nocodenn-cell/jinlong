@@ -38,6 +38,7 @@ type Props = {
     locale: string
   }
   clientesOpts: ClienteOpt[]
+  caixasAbertos: Array<{ id: string; loja_id: string; operador: string }>
   contasPagar: {
     idioma: Idioma
     locale: string
@@ -100,6 +101,7 @@ export function FinanceiroContent({
   contasLabels,
   panelLabels,
   clientesOpts,
+  caixasAbertos,
   contasPagar,
   filterSection,
   kpiSection,
@@ -119,7 +121,7 @@ export function FinanceiroContent({
           <div className="admin-v2-grid-2">
             <SectionCard title={panelLabels.titulosEmAberto}>
               <ContasReceberTable contas={contas} labels={contasLabels} />
-              <FinanceiroReceberExtras contas={contas} clientesIniciais={clientesOpts} />
+              <FinanceiroReceberExtras contas={contas} clientesIniciais={clientesOpts} caixasAbertos={caixasAbertos} />
             </SectionCard>
             <SectionCard title={panelLabels.filaFiscal}>
               <FiscalList fiscal={fiscal} labels={panelLabels} onSelect={setFiscalDetalheId} />

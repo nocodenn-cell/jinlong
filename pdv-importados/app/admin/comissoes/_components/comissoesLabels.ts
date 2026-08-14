@@ -1,9 +1,10 @@
 export type ComissoesLabels = {
   colOperador: string
   colVendas: string
-  colTotal: string
-  colPago: string
-  colPendente: string
+  colBruto: string
+  colAjustes: string
+  colLiquidoPago: string
+  colSaldoResidual: string
   colAcoes: string
   verDetalhes: string
   operadoresTitulo: string
@@ -16,11 +17,12 @@ export type ComissoesLabels = {
   vazioComissoes: string
   vazioComissoesSub: string
   vazioCta: string
-  emPendenciaSuffix: string
+  saldoResidualSuffix: string
   fecharDetalhe: string
-  metricTotal: string
-  metricPago: string
-  metricPendente: string
+  metricBruto: string
+  metricAjustes: string
+  metricLiquidoPago: string
+  metricSaldoResidual: string
   carregando: string
   desselecionarTodas: string
   selecionarPendentes: string
@@ -31,4 +33,25 @@ export type ComissoesLabels = {
   semComissoes: string
   erroPagarFallback: string
   locale: string
+  detalheOriginal: string
+  detalheAjustado: string
+  detalheLiquidoApurado: string
+  detalhePago: string
+  detalheSaldo: string
+  ajustesTitulo: string
+  ajustesVazio: string
+  ajusteConsumido: string
+  ajustePendente: string
+  ajusteOrigemVenda: string
+  ajusteOrigemPosVenda: string
+  tipoCancelamento: string
+  tipoDevolucao: string
+  tipoTroca: string
+  liquidacaoTitulo: string
+  liquidacaoBruto: string
+  liquidacaoCompensado: string
+  liquidacaoLiquido: string
+  liquidacaoPagamentoId: string
+  liquidacaoReplay: string
+  liquidacaoFechar: string
 }

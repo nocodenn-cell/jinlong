@@ -319,6 +319,19 @@ allOk =
     }
   }) && allOk;
 
+allOk =
+  runCase("VENDA_REGISTRADA projeta o ledger gerencial", () => {
+    const vendaFn = syncSrc.slice(
+      syncSrc.indexOf("async function processVenda("),
+    );
+    if (!vendaFn.includes('rpc("registrar_venda_com_itens"')) {
+      throw new Error("processVendaRegistrada deve persistir a venda");
+    }
+    if (!vendaFn.includes('rpc("ensure_venda_evento_registrado"')) {
+      throw new Error("processVendaRegistrada deve projetar SALE_REGISTERED no ledger");
+    }
+  }) && allOk;
+
 if (!allOk) {
   process.exit(1);
 }

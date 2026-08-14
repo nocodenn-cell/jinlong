@@ -27,6 +27,7 @@ export type FinanceiroTituloListaRow = {
   vencimento: string | null
   cliente_id: string
   cliente_nome: string | null
+  loja_id: string
 }
 
 function pickParam(raw: Record<string, string | string[] | undefined>, key: string): string {
@@ -111,6 +112,7 @@ export async function fetchContasReceberListagem(
       vencimento: t.vencimento,
       cliente_id: t.clienteId,
       cliente_nome: t.clienteNome,
+      loja_id: t.lojaId,
     })),
     capped: result.capped,
   }

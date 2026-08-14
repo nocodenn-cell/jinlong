@@ -19,6 +19,7 @@ export { FINANCIAL_ERROR_CODES } from './errorCodes'
 
 export type {
   CancelPayableCommand,
+  CancelPayableResult,
   CreateReceivableCommand,
   CreateReceivableResult,
   LiquidateReceivableCommand,

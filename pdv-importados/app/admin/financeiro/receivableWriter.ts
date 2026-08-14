@@ -70,11 +70,14 @@ export function createReceivableLiquidationService(
       })
       if (!v.ok) return { ok: false, error: v.error, code: v.code }
       try {
-        const { error } = await supabase.rpc('registrar_liquidacao_receber', {
+        const { data, error } = await supabase.rpc('registrar_liquidacao_receber', {
           p_titulo_id: command.tituloId,
           p_valor: command.valor,
           p_forma_pagamento: command.formaPagamento,
           p_observacao: command.observacao ?? null,
+          p_idempotency_key: command.idempotencyKey,
+          p_caixa_id: command.caixaId ?? null,
+          p_origem: 'UI_FINANCEIRO',
         })
         if (error) {
           return {
@@ -83,7 +86,20 @@ export function createReceivableLiquidationService(
             code: FINANCIAL_ERROR_CODES.LIQUIDATE_FAILED,
           }
         }
-        return { ok: true }
+        const row = (Array.isArray(data) ? data[0] : data) as {
+          liquidacao_id?: unknown
+          idempotent_replay?: unknown
+          caixa_id?: unknown
+        } | null
+        if (!row?.liquidacao_id) {
+          return { ok: false, error: 'Liquidação não retornou identificador.', code: FINANCIAL_ERROR_CODES.LIQUIDATE_FAILED }
+        }
+        return {
+          ok: true,
+          liquidacaoId: String(row.liquidacao_id),
+          idempotentReplay: row.idempotent_replay === true,
+          caixaId: row.caixa_id ? String(row.caixa_id) : null,
+        }
       } catch (e) {
         return {
           ok: false,

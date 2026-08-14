@@ -95,6 +95,8 @@ export async function liquidarTitulo(input: {
   titulo_id: string
   valor: number
   forma_pagamento: 'DINHEIRO' | 'PIX' | 'CARTAO_DEBITO' | 'CARTAO_CREDITO' | 'OUTROS'
+  idempotency_key: string
+  caixa_id?: string | null
 }): Promise<R> {
   const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
@@ -111,6 +113,8 @@ export async function liquidarTitulo(input: {
     valor: input.valor,
     formaPagamento: input.forma_pagamento,
     observacao: null,
+    idempotencyKey: input.idempotency_key,
+    caixaId: input.caixa_id,
   })
   if (!result.ok) {
     return { success: false, error: mensagemErroComSecao('Liquidação', result.error) }

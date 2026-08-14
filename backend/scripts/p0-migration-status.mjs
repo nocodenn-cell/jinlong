@@ -20,8 +20,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const BACKEND_ROOT = path.resolve(__dirname, "..");
 const MIGRATIONS_DIR = path.join(BACKEND_ROOT, "supabase", "migrations");
 
-const PHASE_3_2_GIT_ONLY_VERSION = "20260808130200";
-
 function readArgs(argv) {
   return {
     json: argv.includes("--json"),
@@ -71,22 +69,12 @@ function isLegacyRemoteOnlyNumeric(version) {
   return n >= 205 && n <= 289;
 }
 
-function isPhase32GitOnlyDrift(entry) {
-  return (
-    entry.reason === "remote_ausente" &&
-    entry.version === PHASE_3_2_GIT_ONLY_VERSION
-  );
-}
-
-function classifyDriftEntries(drift) {
+export function classifyDriftEntries(drift) {
   const blocking = [];
-  const phase32GitOnly = [];
   const legacyNumericMirror = [];
   const greenfieldSsotReorder = [];
   for (const d of drift) {
-    if (isPhase32GitOnlyDrift(d)) {
-      phase32GitOnly.push(d);
-    } else if (isGreenfieldSsotReorderDrift(d)) {
+    if (isGreenfieldSsotReorderDrift(d)) {
       greenfieldSsotReorder.push(d);
     } else if (isLegacyNumericMirrorDrift(d)) {
       legacyNumericMirror.push(d);
@@ -94,7 +82,18 @@ function classifyDriftEntries(drift) {
       blocking.push(d);
     }
   }
-  return { blocking, phase32GitOnly, legacyNumericMirror, greenfieldSsotReorder };
+  return { blocking, legacyNumericMirror, greenfieldSsotReorder };
+}
+
+export function deriveOverallStatus({
+  blocking,
+  missingInList,
+  extraBlocking,
+}) {
+  if (blocking.length > 0 || missingInList.length > 0 || extraBlocking.length > 0) {
+    return "BLOCKING_DRIFT";
+  }
+  return "ALIGNED";
 }
 
 function listMigrationVersionsFromDisk() {
@@ -135,7 +134,7 @@ function stripBackticks(cell) {
   return cell.trim().replace(/^`|`$/g, "").trim();
 }
 
-function parseMigrationListTable(stdout) {
+export function parseMigrationListTable(stdout) {
   const rows = [];
   for (const rawLine of stdout.split(/\r?\n/)) {
     const trimmed = normalizeTableChars(rawLine.trim());
@@ -146,19 +145,72 @@ function parseMigrationListTable(stdout) {
     const cells = trimmed.split("|").map(stripBackticks);
     if (cells.length < 2) continue;
     const [localCell, remoteCell] = cells;
-    if (!/^\d+$/.test(localCell)) continue;
-    const local = localCell.padStart(3, "0");
-    const remoteRaw = remoteCell ?? "";
-    const remote = remoteRaw === "" ? null : remoteRaw.padStart(3, "0");
+    if (localCell !== "" && !/^\d+$/.test(localCell)) continue;
+    if (remoteCell !== "" && !/^\d+$/.test(remoteCell)) continue;
+    if (localCell === "" && remoteCell === "") continue;
+    const local = localCell === "" ? null : localCell.padStart(3, "0");
+    const remote = remoteCell === "" ? null : remoteCell.padStart(3, "0");
     rows.push({ local, remote });
   }
   return rows;
 }
 
-function analyze(rows, diskVersions) {
+function parseMigrationListJson(stdout) {
+  const jsonStart = stdout.indexOf("{");
+  if (jsonStart < 0) return null;
+
+  let payload;
+  try {
+    payload = JSON.parse(stdout.slice(jsonStart).trim());
+  } catch {
+    return null;
+  }
+  if (!payload || !Array.isArray(payload.migrations)) return null;
+
+  const rows = payload.migrations.map((migration, index) => {
+    if (!migration || typeof migration !== "object") {
+      throw new Error(`JSON inválido: migrations[${index}] não é objeto.`);
+    }
+    const localRaw = String(migration.local ?? "").trim();
+    const remoteRaw = String(migration.remote ?? "").trim();
+    if (localRaw !== "" && !/^\d+$/.test(localRaw)) {
+      throw new Error(`JSON inválido: migrations[${index}].local não é numérico.`);
+    }
+    if (remoteRaw !== "" && !/^\d+$/.test(remoteRaw)) {
+      throw new Error(`JSON inválido: migrations[${index}].remote não é numérico.`);
+    }
+    if (localRaw === "" && remoteRaw === "") {
+      throw new Error(`JSON inválido: migrations[${index}] não possui versão local nem remota.`);
+    }
+    return {
+      local: localRaw === "" ? null : localRaw.padStart(3, "0"),
+      remote: remoteRaw === "" ? null : remoteRaw.padStart(3, "0"),
+    };
+  });
+  return rows;
+}
+
+export function parseMigrationListOutput(stdout) {
+  const jsonRows = parseMigrationListJson(stdout);
+  if (jsonRows !== null) return { format: "json", rows: jsonRows };
+
+  const tableRows = parseMigrationListTable(stdout);
+  if (tableRows.length > 0) return { format: "legacy_table", rows: tableRows };
+
+  throw new Error(
+    "Nenhuma migration foi interpretada como JSON atual ou tabela legada do Supabase CLI.",
+  );
+}
+
+export function analyze(rows, diskVersions) {
   const drift = [];
   const fromCli = new Map();
+  const remoteOnly = new Set();
   for (const r of rows) {
+    if (r.local === null) {
+      remoteOnly.add(r.remote);
+      continue;
+    }
     fromCli.set(r.local, r.remote);
     if (r.remote === null || r.remote !== r.local) {
       drift.push({
@@ -173,7 +225,10 @@ function analyze(rows, diskVersions) {
   }
 
   const missingInList = diskVersions.filter((v) => !fromCli.has(v));
-  const extraInList = [...fromCli.keys()].filter((v) => !diskVersions.includes(v));
+  const extraInList = [
+    ...remoteOnly,
+    ...[...fromCli.keys()].filter((v) => !diskVersions.includes(v)),
+  ];
 
   const diskSet = new Set(diskVersions);
   const maxDisk = diskVersions.length ? diskVersions[diskVersions.length - 1] : null;
@@ -249,12 +304,13 @@ function main() {
   }
 
   const diskVersions = listMigrationVersionsFromDisk();
-  const rows = parseMigrationListTable(stdout);
-  if (rows.length === 0) {
-    const msg =
-      "Nenhuma linha de migration foi interpretada. Atualize o parser se o formato do CLI mudou.";
+  let parsed;
+  try {
+    parsed = parseMigrationListOutput(stdout);
+  } catch (error) {
+    const msg = String(error.message ?? error);
     if (opts.json) {
-      console.log(JSON.stringify({ ok: false, error: "parse_empty", message: msg, rawStdout: stdout }, null, 2));
+      console.log(JSON.stringify({ ok: false, error: "parse_failed", message: msg, rawStdout: stdout }, null, 2));
     } else {
       console.error(msg);
       console.error("\n--- stdout bruto de `npx supabase migration list` (para diagnóstico) ---");
@@ -263,22 +319,27 @@ function main() {
     }
     process.exit(2);
   }
+  const { format: cliOutputFormat, rows } = parsed;
 
   const { drift, missingInList, extraInList, maxDisk } = analyze(rows, diskVersions);
-  const { blocking, phase32GitOnly, legacyNumericMirror, greenfieldSsotReorder } =
+  const { blocking, legacyNumericMirror, greenfieldSsotReorder } =
     classifyDriftEntries(drift);
   const extraLegacyRemote = extraInList.filter(isLegacyRemoteOnlyNumeric);
   const extraBlocking = extraInList.filter((v) => !isLegacyRemoteOnlyNumeric(v));
-  const aligned =
-    blocking.length === 0 &&
-    missingInList.length === 0 &&
-    extraBlocking.length === 0;
+  const status = deriveOverallStatus({
+    blocking,
+    missingInList,
+    extraBlocking,
+  });
+  const aligned = status === "ALIGNED";
 
   const payload = {
     ok: aligned,
+    status,
     backendRoot: BACKEND_ROOT,
     maxOnDisk: maxDisk,
     rowCount: rows.length,
+    cliOutputFormat,
     diskSqlCount: diskVersions.length,
     drift: drift.map((d) => ({
       version: d.version,
@@ -289,11 +350,6 @@ function main() {
       version: d.version,
       reason: d.reason,
       remote: d.remote,
-    })),
-    driftPhase32GitOnly: phase32GitOnly.map((d) => ({
-      version: d.version,
-      reason: d.reason,
-      note: "Fase 3.2 / HUMAN GATE — esperado até apply no projeto do secret",
     })),
     driftLegacyNumericMirror: legacyNumericMirror.map((d) => ({
       version: d.version,
@@ -318,21 +374,10 @@ function main() {
     console.log(`Arquivos .sql (prefixo numérico): ${diskVersions.length}`);
     console.log(`Linhas parseadas do CLI: ${rows.length}`);
     console.log(`Maior versão no disco: ${maxDisk ?? "(nenhuma)"}\n`);
-    if (aligned) {
+    if (status === "ALIGNED") {
       console.log("Resultado: ALINHADO (Local = Remote para todas as linhas bloqueantes).");
-    } else if (blocking.length === 0) {
-      console.log(
-        "Resultado: DRIFT INFORMATIVO — apenas itens esperados (Fase 3.2 git-only e/ou espelhos numéricos 205–289).\n",
-      );
     } else {
       console.log("Resultado: DRIFT BLOQUEANTE — ação sugerida: revisar migrations / projeto linkado.\n");
-    }
-    if (phase32GitOnly.length) {
-      console.log("Fase 3.2 git-only (não bloqueia o gate):");
-      for (const d of phase32GitOnly) {
-        console.log(`  - ${d.version} (${d.reason})`);
-      }
-      console.log("");
     }
     if (legacyNumericMirror.length) {
       console.log("Espelhos numéricos 205–289 (reconciliação SSOT; não bloqueia o gate):");
@@ -366,4 +411,7 @@ function main() {
   process.exit(0);
 }
 
-main();
+const invokedPath = process.argv[1] ? path.resolve(process.argv[1]) : null;
+if (invokedPath === fileURLToPath(import.meta.url)) {
+  main();
+}

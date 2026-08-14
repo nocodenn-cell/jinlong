@@ -29,10 +29,12 @@ export type LiquidateReceivableCommand = {
   valor: number
   formaPagamento: FormaPagamentoReceber
   observacao?: string | null
+  idempotencyKey: string
+  caixaId?: string | null
 }
 
 export type LiquidateReceivableResult =
-  | { ok: true }
+  | { ok: true; liquidacaoId: string; idempotentReplay: boolean; caixaId?: string | null }
   | { ok: false; error: string; code?: FinancialErrorCode }
 
 export type ReceivableLiquidationService = {
@@ -62,20 +64,33 @@ export type PayPayableCommand = {
   /** ISO — espelho da action legada. */
   data: string
   observacao?: string | null
+  idempotencyKey: string
+  caixaId?: string | null
+  autorizacaoToken?: string | null
 }
 
 export type PayPayableResult =
+  | { ok: true; pagamentoId: string; idempotentReplay: boolean; caixaId: string | null; movimentacaoCaixaId: string | null }
+  | { ok: false; error: string; code?: FinancialErrorCode }
+
+export type CancelPayableResult =
   | { ok: true }
   | { ok: false; error: string; code?: FinancialErrorCode }
 
 export type CancelPayableCommand = {
   contaId: ContaPagarId
   motivo: string
+  /**
+   * P1-4: o cancelamento passou a ser transacional e estorna os pagamentos já
+   * realizados, então precisa de chave de idempotência como qualquer outro
+   * comando financeiro.
+   */
+  idempotencyKey: string
 }
 
 export type PayablePaymentService = {
   pay(command: PayPayableCommand): Promise<PayPayableResult>
-  cancel(command: CancelPayableCommand): Promise<PayPayableResult>
+  cancel(command: CancelPayableCommand): Promise<CancelPayableResult>
 }
 
 /** Tipagem de leitura AR — inclui nome do cliente para listagem UI. */

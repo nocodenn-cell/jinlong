@@ -56,7 +56,7 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
   const statusPagar = sp.status ?? 'todos'
   const periodoPagar = sp.periodo ?? ''
 
-  const [listaRes, kpisRes, fiscalRes, clientesRes, pagarRes, fornRes] = await Promise.all([
+  const [listaRes, kpisRes, fiscalRes, clientesRes, pagarRes, fornRes, caixasRes] = await Promise.all([
     fetchContasReceberListagem(supabase, filters, limite),
     fetchFinanceiroTitulosKpis(supabase),
     supabase
@@ -69,6 +69,7 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
     buscarClientesPaginadosAction(1),
     buscarContasPagarAction(1, { status: statusPagar, periodo: periodoPagar || undefined }),
     buscarFornecedoresPaginadosAction(1, { status: 'ativos' }),
+    supabase.from('caixas').select('id, loja_id, operador_id, usuarios!caixas_operador_id_fkey(nome)').eq('status', 'ABERTO'),
   ])
 
   const fiscal = (fiscalRes.data ?? []).map((row) => ({
@@ -90,6 +91,7 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
     status: t.status,
     vencimento: t.vencimento,
     descricao: t.descricao,
+    loja_id: t.loja_id,
   }))
 
   const clientesOpts = clientesRes.ok ? clientesRes.clientes.map((c) => ({ id: c.id, nome: c.nome })) : []
@@ -187,6 +189,11 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
           contas={contas}
           fiscal={fiscal}
           clientesOpts={clientesOpts}
+          caixasAbertos={(caixasRes.data ?? []).map((c) => ({
+            id: c.id,
+            loja_id: c.loja_id,
+            operador: (c.usuarios as { nome?: string } | null)?.nome ?? c.id.slice(0, 8),
+          }))}
           filterSection={filterSection}
           kpiSection={kpiSection}
           panelLabels={{

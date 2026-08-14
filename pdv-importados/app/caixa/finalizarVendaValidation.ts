@@ -1,8 +1,5 @@
 import { z } from 'zod'
-import {
-  EXCESSO_PAGAMENTO_EPS,
-  SALDO_PENDENTE_EPS,
-} from '@/app/caixa/caixaPagamentoSaldo'
+import { SALDO_PENDENTE_EPS } from '@/app/caixa/caixaPagamentoSaldo'
 import { roundMoney2 } from '@/shared/cart/totals'
 import { roundAbnt } from '@/core/money/roundAbnt'
 
@@ -104,7 +101,7 @@ export const finalizarVendaInputSchema = z.object({
 
   const somaPagamentos = roundMoney2(value.pagamentos.reduce((acc, p) => acc + p.valor, 0))
 
-  if (somaPagamentos > value.totalLiquido + EXCESSO_PAGAMENTO_EPS) {
+  if (somaPagamentos > roundMoney2(value.totalLiquido)) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['pagamentos'],
@@ -142,11 +139,10 @@ export function totaisFromItens(itens: ItemTotalizacaoServidor[]) {
 export function totalsMatchDeclared(
   computed: ReturnType<typeof totaisFromItens>,
   declared: Pick<FinalizarVendaInput, 'totalBruto' | 'totalDesconto' | 'totalLiquido'>,
-  epsilon = 0.02,
 ) {
   return (
-    Math.abs(computed.totalBruto - declared.totalBruto) <= epsilon &&
-    Math.abs(computed.totalLiquido - declared.totalLiquido) <= epsilon &&
-    Math.abs(computed.totalDesconto - declared.totalDesconto) <= epsilon
+    Math.round(computed.totalBruto * 100) === Math.round(declared.totalBruto * 100) &&
+    Math.round(computed.totalLiquido * 100) === Math.round(declared.totalLiquido * 100) &&
+    Math.round(computed.totalDesconto * 100) === Math.round(declared.totalDesconto * 100)
   )
 }
