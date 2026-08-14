@@ -776,6 +776,64 @@ BEGIN
 END $g$;
 
 -- ═══════════════════════════════════════════════════════════════════════════
+-- GATE 14 — F-1: faixa de preço resolvida pela QUANTIDADE REAL
+-- Regressão: a validação resolvia o catálogo com quantidade 1, então 10 un ao
+-- preço de varejo passavam quando a faixa de atacado já valia — cliente
+-- sobrecobrado em 43%.
+-- ═══════════════════════════════════════════════════════════════════════════
+DO $g$
+DECLARE
+  v_loja uuid := current_setting('t.loja')::uuid;
+  v_prod uuid := current_setting('t.produto')::uuid;
+  v_preco numeric := current_setting('t.preco')::numeric;
+  v_op uuid := current_setting('t.operador')::uuid;
+  v_caixa uuid := current_setting('t.caixa')::uuid;
+  v_atacado numeric := round(current_setting('t.preco')::numeric * 0.7, 2);
+  v_canon numeric;
+  v_ok boolean;
+BEGIN
+  INSERT INTO public.precos_atacado(id, produto_id, loja_id, quantidade_minima, preco_unitario, ativo)
+  VALUES (gen_random_uuid(), v_prod, v_loja, 10, v_atacado, true);
+
+  -- a faixa precisa de fato ser resolvida pela quantidade
+  v_canon := (public.calcular_preco_produto(v_prod, 10, v_loja)->>'preco')::numeric;
+  IF v_canon <> v_atacado THEN
+    RAISE EXCEPTION 'GATE14_FIXTURE_SEM_FAIXA canonico=% esperado=%', v_canon, v_atacado;
+  END IF;
+
+  -- ATAQUE: 10 unidades cobradas ao preço de varejo
+  v_ok := false;
+  BEGIN
+    PERFORM public.registrar_venda_com_itens(gen_random_uuid(), v_caixa, v_op, 'DINHEIRO',
+      round(v_preco * 10, 2), 0, round(v_preco * 10, 2),
+      jsonb_build_array(jsonb_build_object('item_id', gen_random_uuid(), 'produto_id', v_prod,
+        'quantidade', 10, 'preco_original', v_preco, 'preco_unitario', v_preco)), NULL, NULL, NULL);
+  EXCEPTION WHEN OTHERS THEN
+    v_ok := SQLERRM LIKE '%VENDA_PRECO_ACIMA_DA_FAIXA%';
+  END;
+  IF NOT v_ok THEN RAISE EXCEPTION 'GATE14_SOBREPRECO_NA_FAIXA_ACEITO'; END IF;
+
+  -- venda legítima na faixa continua passando e é rotulada ATACADO
+  DECLARE v_v uuid := gen_random_uuid(); v_tipo text;
+  BEGIN
+    PERFORM public.registrar_venda_com_itens(v_v, v_caixa, v_op, 'DINHEIRO',
+      round(v_preco * 10, 2), round((v_preco - v_atacado) * 10, 2), round(v_atacado * 10, 2),
+      jsonb_build_array(jsonb_build_object('item_id', gen_random_uuid(), 'produto_id', v_prod,
+        'quantidade', 10, 'preco_original', v_preco, 'preco_unitario', v_atacado)), NULL, NULL, NULL);
+    SELECT tipo_preco INTO v_tipo FROM public.itens_venda WHERE venda_id = v_v LIMIT 1;
+    IF v_tipo <> 'ATACADO' THEN
+      RAISE EXCEPTION 'GATE14_FAIXA_LEGITIMA_ROTULADA_% (esperado ATACADO)', v_tipo;
+    END IF;
+  END;
+
+  -- abaixo do mínimo a faixa não vale: varejo continua correto
+  PERFORM public.registrar_venda_com_itens(gen_random_uuid(), v_caixa, v_op, 'DINHEIRO',
+    round(v_preco * 9, 2), 0, round(v_preco * 9, 2),
+    jsonb_build_array(jsonb_build_object('item_id', gen_random_uuid(), 'produto_id', v_prod,
+      'quantidade', 9, 'preco_original', v_preco, 'preco_unitario', v_preco)), NULL, NULL, NULL);
+END $g$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
 -- GATE 8 — reconciliação final: contador == E(c) ao fim de toda a bateria
 -- ═══════════════════════════════════════════════════════════════════════════
 DO $g$
