@@ -35,8 +35,10 @@ Regra de leitura:
 | `RPC: decrementar_estoque_idempotente` | EXECUTE | não | não | não | não | **Legado** (`070` delega a `seguro`; `071` revoga `authenticated`). Apenas **`service_role`** no Postgres; não usar em novos fluxos |
 | `RPC: decrementar_estoque_seguro` | EXECUTE | sim | sim | sim | sim | **`SECURITY DEFINER`; caminho canónico** de baixa (FOR UPDATE + `version`); deriva loja pela venda/caixa; usado pela sync-outbox e pelas RPCs de finalizar venda |
 | `RPC: estornar_movimentacao` | EXECUTE | sim (escopo caixa) | sim | sim | sim | origem aprovada + regras de caixa na função |
-| `RPC: finalizar_venda_transacional` | EXECUTE | sim | sim | sim | sim | fluxo legado; preferir canônica v2 |
-| `RPC: finalizar_venda_transacional_canonica_v2` | EXECUTE | sim | sim | sim | sim | idempotente se venda já `CONCLUIDA` |
+| `RPC: finalizar_venda_transacional_canonica_v4` | EXECUTE | sim | sim | sim | sim | **CANÔNICA** — wrapper `SECURITY DEFINER` com scope-guard (loja/caixa/operador), 22 args, idempotente por `p_venda_id`. Contrato: [`rpc-finalizar-venda-canonica-v4.json`](./contracts/v1/rpc-finalizar-venda-canonica-v4.json) |
+| `RPC: finalizar_venda_transacional_canonica_v4_unscoped` | EXECUTE | **não** | **não** | **não** | **não** | `REVOKE ALL` para `authenticated`; alcançável só pelo wrapper acima |
+| `RPC: finalizar_venda_transacional` | EXECUTE | sim | sim | sim | sim | **Legado** — usar a canônica v4 |
+| `RPC: finalizar_venda_transacional_canonica_v2` | EXECUTE | sim | sim | sim | sim | **Legado** — bloqueada por stub; usar a canônica v4 |
 | `RPC: fiscal_enfileirar_documento_venda` | EXECUTE | sim (venda própria) | sim | sim | sim | ou visão gerencial na mesma base |
 | `RPC: fiscal_reprocessar_documento` | EXECUTE | não | sim | sim | sim | apenas `GERENTE`/`DONO`/`ADMIN` |
 | `RPC: obter_limite_sangria_sem_gerente` | EXECUTE | sim | sim | sim | sim | leitura de `pdv_config` |

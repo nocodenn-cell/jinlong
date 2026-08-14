@@ -27,7 +27,8 @@ Welcome to the fastproduct documentation hub. Find guides for development, opera
 |----------|---------|----------|
 | [CONTRIBUTING.md](../CONTRIBUTING.md) | Development standards, git workflow, code review | All engineers |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | System design, data flows, security model | Architects, senior engineers |
-| [DECISION-LOG.md](./DECISION-LOG.md) | Architectural decisions (ADRs), rationale | Architects, leads |
+| [adr/](./adr/) | **ADRs vigentes** (ADR-005…011 + ADR-PDV, ADR-CAIXA) | Architects, leads |
+| [contracts/v1/](./contracts/v1/) | Contratos de RPC versionados | Architects, backend |
 
 ### **🚀 For Operations & Deployment**
 
@@ -73,7 +74,7 @@ Each workspace has its own README:
 
 ### "What was the reasoning behind [decision]?"
 1. Read: `ARCHITECTURE.md` (high-level)
-2. Search: `DECISION-LOG.md` (detailed ADRs)
+2. Search: `docs/adr/` (ADRs vigentes)
 3. Check: Git commit messages (linked to issues)
 
 ### "How do I set up my dev environment?"
@@ -94,10 +95,10 @@ Each workspace has its own README:
 ### Docs Directory (`/docs`)
 - `INDEX.md` ← **You are here**
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md) — System design, data flows
-- [`DECISION-LOG.md`](./DECISION-LOG.md) — Architectural decisions (ADRs)
+- [`adr/`](./adr/) — Architectural decisions (ADRs) vigentes
 - [`GO-LIVE-RUNBOOK.md`](./GO-LIVE-RUNBOOK.md) — Deployment procedures
 - [`POST-DEPLOY-MONITORING.md`](./POST-DEPLOY-MONITORING.md) — Monitoring checklist
-- [`SECURITY.md`](./SECURITY.md) — Security model, threat model (planned)
+- [`AUTHORIZATION_MATRIX.md`](./AUTHORIZATION_MATRIX.md) — Modelo de autorização / RLS por recurso e RPC
 
 ### Workspace READMEs
 - [`pdv-importados/README.md`](../pdv-importados/README.md) — Next.js web app
@@ -128,7 +129,7 @@ Each workspace has its own README:
 ### Data & Database
 - `ARCHITECTURE.md` → "Core Data Flows"
 - `backend/README.md` → Database schema
-- `DECISION-LOG.md` → ADR-003 (Sync via HMAC + Outbox)
+- `adr/` → fronteiras de domínio; `ARCHITECTURE.md` → Sync via HMAC + Outbox
 
 ### Testing
 - `CONTRIBUTING.md` → "Testing Requirements"
@@ -151,7 +152,7 @@ Each workspace has its own README:
 **A**: Commits must follow format in `CONTRIBUTING.md`. `.github/CODEOWNERS` auto-assigns reviewers based on changed paths.
 
 ### Q: What's the sync architecture?
-**A**: See `ARCHITECTURE.md` → "Sync Mechanism (HMAC + Outbox)" and `DECISION-LOG.md` → ADR-003
+**A**: See `ARCHITECTURE.md` → "Sync Mechanism (HMAC + Outbox)"
 
 ### Q: What do I do if production is down?
 **A**: Follow `GO-LIVE-RUNBOOK.md` → "Rollback Procedure" (section on critical failures)
@@ -176,7 +177,7 @@ Each workspace has its own README:
 ### Update Schedule
 - **CONTRIBUTING.md**: Update when standards change
 - **ARCHITECTURE.md**: Update on major design changes
-- **DECISION-LOG.md**: Update on new ADRs
+- **docs/adr/**: Novo arquivo por decisão (numeração contínua)
 - **GO-LIVE-RUNBOOK.md**: Update before each deployment
 - **POST-DEPLOY-MONITORING.md**: Update based on lessons learned
 
@@ -205,7 +206,7 @@ Each workspace has its own README:
 | Question | Where to Go |
 |----------|-------------|
 | How do I [technical thing]? | Check CONTRIBUTING.md or workspace README |
-| Why was [decision] made? | Check DECISION-LOG.md (ADRs) |
+| Why was [decision] made? | Check `docs/adr/` (ADRs) |
 | How do I deploy? | GO-LIVE-RUNBOOK.md |
 | What do I monitor after deploy? | POST-DEPLOY-MONITORING.md |
 | Who reviews my PR? | .github/CODEOWNERS (auto-assigned) |
