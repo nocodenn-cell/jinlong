@@ -5186,12 +5186,19 @@ export type Database = {
           p_operador_id: string
         }
         Returns: {
+          ajustes: Json
           base_calculo: number
           comissao_id: string
           created_at: string
+          pagamento_id: string
           pago_em: string
+          saldo_final: number
           status: string
-          valor_comissao: number
+          valor_ajustado: number
+          valor_compensado: number
+          valor_liquido_apurado: number
+          valor_original: number
+          valor_pago: number
           venda_id: string
         }[]
       }
@@ -6054,9 +6061,10 @@ export type Database = {
         Returns: {
           operador_id: string
           operador_nome: string
-          total_comissao: number
-          total_pago: number
-          total_pendente: number
+          total_ajustes: number
+          total_comissao_bruta: number
+          total_liquido_pago: number
+          total_saldo_residual: number
           total_vendas: number
         }[]
       }
