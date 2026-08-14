@@ -710,6 +710,72 @@ END $g$;
 DROP TRIGGER gate12_fail_estorno ON public.contas_pagar_pagamentos;
 
 -- ═══════════════════════════════════════════════════════════════════════════
+-- GATE 13 — F-2: venda offline exige contexto de loja confiável
+-- Regressão: `caixa_id = NULL` desligava a âncora de catálogo e um produto de
+-- R$10,00 foi gravado a R$5.000,00. `calcular_preco_produto` não filtra loja,
+-- então produto de outra loja também passava.
+-- ═══════════════════════════════════════════════════════════════════════════
+DO $g$
+DECLARE
+  v_loja uuid := current_setting('t.loja')::uuid;
+  v_outra uuid := current_setting('t.outra_loja')::uuid;
+  v_prod uuid := current_setting('t.produto')::uuid;
+  v_preco numeric := current_setting('t.preco')::numeric;
+  v_op uuid := current_setting('t.operador')::uuid;
+  v_caixa uuid := current_setting('t.caixa')::uuid;
+  v_cx_outra uuid := gen_random_uuid();
+  v_vendas_antes bigint;
+  v_ok boolean;
+
+
+BEGIN
+  INSERT INTO public.caixas(id, operador_id, loja_id, status, valor_inicial)
+  VALUES (v_cx_outra, NULL, v_outra, 'ABERTO', 0);
+  SELECT count(*) INTO v_vendas_antes FROM public.vendas;
+
+  -- caixa_id NULL precisa ser recusado, não silenciosamente sem âncora
+  v_ok := false;
+  BEGIN
+    PERFORM public.registrar_venda_com_itens(gen_random_uuid(), NULL, v_op, 'DINHEIRO',
+      5000, 0, 5000,
+      jsonb_build_array(jsonb_build_object('item_id', gen_random_uuid(), 'produto_id', v_prod,
+        'quantidade', 1, 'preco_original', 5000, 'preco_unitario', 5000)), NULL, NULL, NULL);
+  EXCEPTION WHEN OTHERS THEN
+    v_ok := SQLERRM LIKE '%ERRO_RPC_VENDA_CAIXA_OBRIGATORIO%';
+  END;
+  IF NOT v_ok THEN RAISE EXCEPTION 'GATE13_CAIXA_NULL_ACEITO'; END IF;
+
+  -- caixa inexistente
+  v_ok := false;
+  BEGIN
+    PERFORM public.registrar_venda_com_itens(gen_random_uuid(), gen_random_uuid(), v_op, 'DINHEIRO',
+      v_preco, 0, v_preco,
+      jsonb_build_array(jsonb_build_object('item_id', gen_random_uuid(), 'produto_id', v_prod,
+        'quantidade', 1, 'preco_original', v_preco, 'preco_unitario', v_preco)), NULL, NULL, NULL);
+  EXCEPTION WHEN OTHERS THEN
+    v_ok := SQLERRM LIKE '%ERRO_RPC_VENDA_CAIXA_NAO_ENCONTRADO%';
+  END;
+  IF NOT v_ok THEN RAISE EXCEPTION 'GATE13_CAIXA_INEXISTENTE_ACEITO'; END IF;
+
+  -- produto de outra loja
+  v_ok := false;
+  BEGIN
+    PERFORM public.registrar_venda_com_itens(gen_random_uuid(), v_cx_outra, v_op, 'DINHEIRO',
+      v_preco, 0, v_preco,
+      jsonb_build_array(jsonb_build_object('item_id', gen_random_uuid(), 'produto_id', v_prod,
+        'quantidade', 1, 'preco_original', v_preco, 'preco_unitario', v_preco)), NULL, NULL, NULL);
+  EXCEPTION WHEN OTHERS THEN
+    v_ok := SQLERRM LIKE '%VENDA_PRODUTO_FORA_DA_LOJA%';
+  END;
+  IF NOT v_ok THEN RAISE EXCEPTION 'GATE13_PRODUTO_DE_OUTRA_LOJA_ACEITO'; END IF;
+
+  -- nenhuma das rejeições pode ter deixado venda gravada
+  IF (SELECT count(*) FROM public.vendas) <> v_vendas_antes THEN
+    RAISE EXCEPTION 'GATE13_EFEITO_PARCIAL_APOS_REJEICAO';
+  END IF;
+END $g$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
 -- GATE 8 — reconciliação final: contador == E(c) ao fim de toda a bateria
 -- ═══════════════════════════════════════════════════════════════════════════
 DO $g$
