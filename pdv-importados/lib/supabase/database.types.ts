@@ -387,6 +387,124 @@ export type Database = {
           },
         ]
       }
+      comissoes_itens: {
+        Row: {
+          apurado_em: string
+          base_elegivel: number
+          comissao_id: string
+          id: string
+          item_venda_id: string
+          origem_regra: string
+          percentual_aplicado: number | null
+          preco_unitario: number
+          produto_id: string
+          quantidade: number
+          regra_id: string | null
+          tipo_calculo: string
+          valor_comissao: number
+          valor_unitario_fixo: number | null
+          venda_id: string
+        }
+        Insert: {
+          apurado_em?: string
+          base_elegivel: number
+          comissao_id: string
+          id?: string
+          item_venda_id: string
+          origem_regra: string
+          percentual_aplicado?: number | null
+          preco_unitario: number
+          produto_id: string
+          quantidade: number
+          regra_id?: string | null
+          tipo_calculo: string
+          valor_comissao: number
+          valor_unitario_fixo?: number | null
+          venda_id: string
+        }
+        Update: {
+          apurado_em?: string
+          base_elegivel?: number
+          comissao_id?: string
+          id?: string
+          item_venda_id?: string
+          origem_regra?: string
+          percentual_aplicado?: number | null
+          preco_unitario?: number
+          produto_id?: string
+          quantidade?: number
+          regra_id?: string | null
+          tipo_calculo?: string
+          valor_comissao?: number
+          valor_unitario_fixo?: number | null
+          venda_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comissoes_itens_comissao_id_fkey"
+            columns: ["comissao_id"]
+            isOneToOne: false
+            referencedRelation: "comissoes_vendedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_itens_comissao_id_fkey"
+            columns: ["comissao_id"]
+            isOneToOne: false
+            referencedRelation: "comissoes_vendedores_liquidas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_itens_item_venda_id_fkey"
+            columns: ["item_venda_id"]
+            isOneToOne: false
+            referencedRelation: "itens_venda"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_itens_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_itens_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_itens_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_itens_regra_id_fkey"
+            columns: ["regra_id"]
+            isOneToOne: false
+            referencedRelation: "comissoes_regras_funcionario"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_itens_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "v_venda_consistencia_anomalias"
+            referencedColumns: ["venda_id"]
+          },
+          {
+            foreignKeyName: "comissoes_itens_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "vendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comissoes_pagamentos: {
         Row: {
           id: string

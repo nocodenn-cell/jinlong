@@ -1296,6 +1296,186 @@ BEGIN
 END $g$;
 
 -- ═══════════════════════════════════════════════════════════════════════════
+-- GATE 21 — DB-05C: snapshot histórico da comissão por item
+-- Regressão DB05-F4, falsificada empiricamente antes da correção: comissão
+-- original a 5% (R$44,95 sobre R$899,00); depois da venda, custo, regra de
+-- funcionário e percentual global mudam; devolução de 40%. O ajuste obtido
+-- era R$0,00 — a comissão "efetiva" era recalculada com dados ATUAIS e
+-- superava a original, zerando o alvo. O ajuste correto é R$17,98.
+--
+-- Três variações separadas, cada uma isolando UM vazamento possível:
+--   21a. custo do produto muda (afeta a margem, que escolhe a regra)
+--   21b. o percentual da própria regra vigente muda
+--   21c. o percentual global (fallback) muda
+-- ═══════════════════════════════════════════════════════════════════════════
+DO $g$
+DECLARE
+  v_loja uuid := current_setting('t.loja')::uuid;
+  v_prod uuid := current_setting('t.produto')::uuid;
+  v_op uuid := current_setting('t.operador')::uuid;
+  v_ger uuid := current_setting('t.gerente')::uuid;
+  v_caixa uuid := current_setting('t.caixa')::uuid;
+  v_preco numeric := current_setting('t.preco')::numeric;
+  v_func uuid;
+  v_regra uuid;
+  v_custo_original numeric;
+  v_v uuid; v_item uuid; v_oper uuid;
+  v_com numeric; v_aj numeric; v_esperado numeric;
+  v_origem_snapshot text;
+BEGIN
+  SELECT preco_custo INTO v_custo_original FROM public.produtos WHERE id = v_prod;
+
+  -- Vincula o OPERADOR a um funcionário com regra própria por_margem, para
+  -- que a mudança de custo (21a) tenha algo real para desviar.
+  v_func := gen_random_uuid();
+  INSERT INTO public.funcionarios(id, loja_id, nome, ativo)
+  VALUES (v_func, v_loja, 'Funcionario gate21', true);
+  UPDATE public.usuarios SET funcionario_id = v_func WHERE id = v_op;
+
+  -- Faixa estreita (50-100): a margem original do produto do gate cai dentro
+  -- dela; um aumento de custo que ainda respeite o preço de venda (guarda
+  -- PRODUTO_VAREJO_ABAIXO_CUSTO) derruba a margem para fora da faixa.
+  v_regra := gen_random_uuid();
+  INSERT INTO public.comissoes_regras_funcionario(
+    id, funcionario_id, loja_id, tipo_regra, margem_minima, margem_maxima,
+    percentual, created_by)
+  VALUES (v_regra, v_func, v_loja, 'por_margem', 50, 100, 5, v_ger);
+
+  -- ---------------------------------------------------------------- 21a: custo
+  v_v := gen_random_uuid(); v_item := gen_random_uuid(); v_oper := gen_random_uuid();
+  PERFORM public.registrar_venda_com_itens(v_v, v_caixa, v_op, 'DINHEIRO',
+    round(v_preco * 10, 2), 0, round(v_preco * 10, 2),
+    jsonb_build_array(jsonb_build_object('item_id', v_item, 'produto_id', v_prod,
+      'quantidade', 10, 'preco_original', v_preco, 'preco_unitario', v_preco)), NULL, NULL, NULL);
+  SELECT valor_comissao INTO v_com FROM public.comissoes_vendedores WHERE venda_id = v_v;
+  IF COALESCE(v_com, 0) <= 0 THEN RAISE EXCEPTION 'GATE21A_SEM_COMISSAO_ORIGINAL'; END IF;
+
+  SELECT origem_regra INTO v_origem_snapshot
+  FROM public.comissoes_itens WHERE venda_id = v_v;
+  IF v_origem_snapshot IS NULL THEN
+    RAISE EXCEPTION 'GATE21A_SEM_SNAPSHOT';
+  END IF;
+  IF v_origem_snapshot <> 'REGRA_MARGEM' THEN
+    RAISE EXCEPTION 'GATE21A_FIXTURE_NAO_USOU_REGRA_MARGEM origem=%', v_origem_snapshot;
+  END IF;
+
+  -- Custo sobe (ainda abaixo do preço de venda): a margem cai de ~57% para
+  -- ~11%. Se fosse recalculada agora, sairia da faixa 50-100 da regra e
+  -- cairia no fallback global.
+  UPDATE public.produtos SET preco_custo = round(v_preco * 0.89, 2) WHERE id = v_prod;
+
+  SET CONSTRAINTS ALL DEFERRED;
+  INSERT INTO public.venda_pos_venda_operacoes(id, idempotency_key, venda_id, tipo, motivo,
+    valor_estornado, valor_caixa_estornado, forma_estorno, operador_id, caixa_id)
+  VALUES (v_oper, 'g21a-' || v_oper::text, v_v, 'DEVOLUCAO', 'devolucao apos custo mudar',
+    round(v_preco * 4, 2), round(v_preco * 4, 2), 'DINHEIRO', v_op, v_caixa);
+  INSERT INTO public.venda_pos_venda_itens(operacao_id, item_venda_id, produto_id,
+    quantidade, preco_unitario, subtotal)
+  VALUES (v_oper, v_item, v_prod, 4, v_preco, round(v_preco * 4, 2));
+  SET CONSTRAINTS ALL IMMEDIATE;
+
+  SELECT COALESCE(SUM(valor), 0) INTO v_aj FROM public.comissoes_ajustes WHERE venda_id = v_v;
+  v_esperado := round(v_com * 0.4, 2);
+  IF v_aj <> v_esperado THEN
+    RAISE EXCEPTION 'GATE21A_CUSTO_VAZOU ajuste=% esperado=% (comissao original=%)', v_aj, v_esperado, v_com;
+  END IF;
+
+  UPDATE public.produtos SET preco_custo = v_custo_original WHERE id = v_prod;
+
+  -- ---------------------------------------------------------------- 21b: percentual da regra
+  v_v := gen_random_uuid(); v_item := gen_random_uuid(); v_oper := gen_random_uuid();
+  PERFORM public.registrar_venda_com_itens(v_v, v_caixa, v_op, 'DINHEIRO',
+    round(v_preco * 10, 2), 0, round(v_preco * 10, 2),
+    jsonb_build_array(jsonb_build_object('item_id', v_item, 'produto_id', v_prod,
+      'quantidade', 10, 'preco_original', v_preco, 'preco_unitario', v_preco)), NULL, NULL, NULL);
+  SELECT valor_comissao INTO v_com FROM public.comissoes_vendedores WHERE venda_id = v_v;
+  IF COALESCE(v_com, 0) <= 0 THEN RAISE EXCEPTION 'GATE21B_SEM_COMISSAO_ORIGINAL'; END IF;
+
+  -- A MESMA regra (mesmo id) muda de percentual depois da venda.
+  UPDATE public.comissoes_regras_funcionario SET percentual = 25 WHERE id = v_regra;
+
+  SET CONSTRAINTS ALL DEFERRED;
+  INSERT INTO public.venda_pos_venda_operacoes(id, idempotency_key, venda_id, tipo, motivo,
+    valor_estornado, valor_caixa_estornado, forma_estorno, operador_id, caixa_id)
+  VALUES (v_oper, 'g21b-' || v_oper::text, v_v, 'DEVOLUCAO', 'devolucao apos regra mudar',
+    round(v_preco * 4, 2), round(v_preco * 4, 2), 'DINHEIRO', v_op, v_caixa);
+  INSERT INTO public.venda_pos_venda_itens(operacao_id, item_venda_id, produto_id,
+    quantidade, preco_unitario, subtotal)
+  VALUES (v_oper, v_item, v_prod, 4, v_preco, round(v_preco * 4, 2));
+  SET CONSTRAINTS ALL IMMEDIATE;
+
+  SELECT COALESCE(SUM(valor), 0) INTO v_aj FROM public.comissoes_ajustes WHERE venda_id = v_v;
+  v_esperado := round(v_com * 0.4, 2);
+  IF v_aj <> v_esperado THEN
+    RAISE EXCEPTION 'GATE21B_REGRA_VAZOU ajuste=% esperado=% (comissao original=%)', v_aj, v_esperado, v_com;
+  END IF;
+
+  UPDATE public.comissoes_regras_funcionario SET percentual = 5 WHERE id = v_regra;
+
+  -- ---------------------------------------------------------------- 21c: percentual global
+  -- Desvincula o funcionário para cair no fallback global nesta venda.
+  UPDATE public.usuarios SET funcionario_id = NULL WHERE id = v_op;
+  INSERT INTO public.configuracoes_gerais(chave, valor, tipo_dado)
+  VALUES ('comissao_padrao_percentual', '5', 'percent')
+  ON CONFLICT (chave) DO UPDATE SET valor = '5';
+
+  v_v := gen_random_uuid(); v_item := gen_random_uuid(); v_oper := gen_random_uuid();
+  PERFORM public.registrar_venda_com_itens(v_v, v_caixa, v_op, 'DINHEIRO',
+    round(v_preco * 10, 2), 0, round(v_preco * 10, 2),
+    jsonb_build_array(jsonb_build_object('item_id', v_item, 'produto_id', v_prod,
+      'quantidade', 10, 'preco_original', v_preco, 'preco_unitario', v_preco)), NULL, NULL, NULL);
+  SELECT valor_comissao INTO v_com FROM public.comissoes_vendedores WHERE venda_id = v_v;
+  IF COALESCE(v_com, 0) <= 0 THEN RAISE EXCEPTION 'GATE21C_SEM_COMISSAO_ORIGINAL'; END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.comissoes_itens WHERE venda_id = v_v AND origem_regra = 'GLOBAL'
+  ) THEN
+    RAISE EXCEPTION 'GATE21C_FIXTURE_NAO_USOU_FALLBACK_GLOBAL';
+  END IF;
+
+  UPDATE public.configuracoes_gerais SET valor = '10' WHERE chave = 'comissao_padrao_percentual';
+
+  SET CONSTRAINTS ALL DEFERRED;
+  INSERT INTO public.venda_pos_venda_operacoes(id, idempotency_key, venda_id, tipo, motivo,
+    valor_estornado, valor_caixa_estornado, forma_estorno, operador_id, caixa_id)
+  VALUES (v_oper, 'g21c-' || v_oper::text, v_v, 'DEVOLUCAO', 'devolucao apos config global mudar',
+    round(v_preco * 4, 2), round(v_preco * 4, 2), 'DINHEIRO', v_op, v_caixa);
+  INSERT INTO public.venda_pos_venda_itens(operacao_id, item_venda_id, produto_id,
+    quantidade, preco_unitario, subtotal)
+  VALUES (v_oper, v_item, v_prod, 4, v_preco, round(v_preco * 4, 2));
+  SET CONSTRAINTS ALL IMMEDIATE;
+
+  SELECT COALESCE(SUM(valor), 0) INTO v_aj FROM public.comissoes_ajustes WHERE venda_id = v_v;
+  v_esperado := round(v_com * 0.4, 2);
+  IF v_aj <> v_esperado THEN
+    RAISE EXCEPTION 'GATE21C_CONFIG_GLOBAL_VAZOU ajuste=% esperado=% (comissao original=%)', v_aj, v_esperado, v_com;
+  END IF;
+
+  UPDATE public.configuracoes_gerais SET valor = '5' WHERE chave = 'comissao_padrao_percentual';
+  UPDATE public.usuarios SET funcionario_id = v_func WHERE id = v_op;
+
+  -- ---------------------------------------------------------------- integridade do snapshot
+  -- Toda linha de comissoes_itens tem um comissoes_vendedores correspondente,
+  -- e a soma dos itens bate com o cabeçalho para todas as vendas deste gate.
+  IF EXISTS (
+    SELECT 1 FROM public.comissoes_itens ci
+    WHERE NOT EXISTS (SELECT 1 FROM public.comissoes_vendedores cv WHERE cv.id = ci.comissao_id)
+  ) THEN
+    RAISE EXCEPTION 'GATE21_ITEM_ORFAO';
+  END IF;
+  IF EXISTS (
+    SELECT cv.id FROM public.comissoes_vendedores cv
+    JOIN public.comissoes_itens ci ON ci.comissao_id = cv.id
+    GROUP BY cv.id, cv.valor_comissao
+    HAVING cv.valor_comissao <> SUM(ci.valor_comissao)
+  ) THEN
+    RAISE EXCEPTION 'GATE21_CABECALHO_DIVERGE_DO_SNAPSHOT';
+  END IF;
+
+  -- desfaz o vínculo entre funcionário e usuário para não vazar nos gates seguintes
+  UPDATE public.usuarios SET funcionario_id = NULL WHERE id = v_op;
+END $g$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
 -- GATE 8 — reconciliação final: contador == E(c) ao fim de toda a bateria
 -- ═══════════════════════════════════════════════════════════════════════════
 DO $g$
