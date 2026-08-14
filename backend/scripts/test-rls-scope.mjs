@@ -468,8 +468,21 @@ async function main() {
     }
   });
 
-  await run("RPC recalcular_saldo_caixa", async () => {
-    await assertRpcOk(gerente, "recalcular_saldo_caixa", { p_caixa_id: IDS.caixaGerente });
+  // P0-2: `recalcular_saldo_caixa` foi removida (migration
+  // 20260814013015_drop_recalcular_saldo_caixa). Era SECURITY DEFINER exposta a
+  // `authenticated` sem validar ator/perfil/loja e sobrescrevia o contador com
+  // uma fórmula que omite vendas, AR e devoluções. Este bloco antes asseverava
+  // que um GERENTE PODIA executá-la; agora garante que ninguém pode.
+  await run("RPC recalcular_saldo_caixa (removida)", async () => {
+    const { error } = await gerente.rpc("recalcular_saldo_caixa", {
+      p_caixa_id: IDS.caixaGerente,
+    });
+    const msg = error?.message ?? "";
+    if (!/could not find the function|does not exist|permission denied/i.test(msg)) {
+      throw new Error(
+        `recalcular_saldo_caixa deveria estar inacessível; obtido: ${msg || "(sem erro — writer legado voltou)"}`,
+      );
+    }
   });
 
   await run("RPC registrar_movimentacao (suprimento)", async () => {
