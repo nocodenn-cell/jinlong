@@ -125,3 +125,40 @@ a required check, e a governança atual não foi alterada.
 
 **Classificação: `BLOCKED EXTERNALLY`** — artefato e credenciais inacessíveis. **Não** é
 "resolvido por ser pré-existente"; segue como pendência aberta do sistema.
+
+## 8. Fechamento — reprodução local (2026-08-14, branch `integration/jinlong-final-reconciliation`)
+
+O bloqueio §4(b) foi removido: esta integração dispõe de stack Supabase local via Docker e dos
+secrets necessários (`seed-dev-users.mjs` local). Reprodução executada exatamente como prescrito
+em §5(b):
+
+```bash
+cd pdv-importados
+export NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+export SUPABASE_SERVICE_ROLE_KEY=... SEED_DEV_PASSWORD=...
+node scripts/seed-dev-users.mjs
+export PLAYWRIGHT_TEST_EMAIL=e2e-gerente@localhost.test PLAYWRIGHT_TEST_PASSWORD=...
+export SYNC_ENDPOINT=http://127.0.0.1:54321/functions/v1/sync-outbox SYNC_KEY=...
+npx playwright test e2e/sync-fluxo-gerente.spec.ts --trace on
+```
+
+(A Edge Function `sync-outbox` precisou ser servida localmente via
+`supabase functions serve --env-file ...` — não estava no `supabase start` padrão deste ambiente.)
+
+**Resultado: 2/2 PASS** (29.7s + 18.7s). O gerente autenticado chega a `/gerente/vendas`, o heading
+`Vendas e caixa` é visível, a venda injetada via `sync-outbox` aparece na tabela, e o detalhe exibe
+a timeline fiscal com o evento de erro esperado. A hipótese §3 (rebaixamento silencioso para
+`/caixa`) **não se manifestou** nesta branch — o gerente nunca foi desviado do painel gerencial.
+
+Isso não invalida a investigação: as 7 hipóteses descartadas em §2 continuam corretas, e o
+mecanismo de risco em §3 (harness que mascara rebaixamento) continua real e vale a pena
+endurecer preventivamente. O que muda é o resultado observado: nesta branch integrada, com o
+estado atual de `middlewareAdminDecision`/`normalizeAdminSession` (reforçado pelos testes
+`a006ff35`/`0dbe3982` já incorporados), o fluxo crítico **não falha**.
+
+| Campo | Estado (atualizado) |
+|---|---|
+| **CAUSA RAIZ** | N/A — sintoma não reproduzido nesta branch |
+| **CORREÇÃO MÍNIMA** | Não aplicada — nenhum defeito comprovado para corrigir |
+| **TESTE** | ✅ 2/2 PASS, reprodução local com trace |
+| **Classificação** | 🟢 **PASSING** nesta branch — falha de CI anterior permanece não explicada retroativamente, mas não bloqueia este merge |
