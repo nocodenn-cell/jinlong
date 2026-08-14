@@ -1,5 +1,10 @@
 # CI backend Supabase — correções PR #267 (2026-08-08)
 
+> **Registro histórico.** A classificação especial de `20260808130200` e a
+> decisão de reaplicar `venda_finance_context` foram substituídas em 2026-08-10.
+> Não usar este documento como instrução operacional. A convergência atual é a
+> tombstone `20260810222702_retire_obsolete_venda_finance_context.sql`.
+
 ## Alterações
 
 1. **Backports Fase 1:** terminadores `;` normalizados (`normalize-backport-sql-terminators.mjs --write`, 25 arquivos).
@@ -24,7 +29,8 @@
 
 ## Fase 3.2
 
-Migration `20260808130200_*` **não alterada**. Drift desta versão permanece **informativo** até HUMAN GATE.
+Historicamente, `20260808130200_*` permaneceu informativa até HUMAN GATE. Ela
+foi posteriormente aposentada sem apply no Jinlong; não deve ser aplicada.
 
 ## E2E crítico
 

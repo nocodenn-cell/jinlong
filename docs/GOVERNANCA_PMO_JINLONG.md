@@ -150,7 +150,7 @@ Legenda: ✅ Implementado · 🟡 Parcial · 🔴 Não iniciado.
 
 **Financeiro**
 1. Verificação funcional do pós-remoção do FIADO (UI/actions de `contas_receber` × backend) — pendência da `AUDITORIA_DRIFT` §5.2.
-2. Aplicar `venda_finance_context` em produção **ou** descartar formalmente (hoje só tipos gerados).
+2. `venda_finance_context`: **decisão concluída — descartar formalmente** pela tombstone `20260810222702`; não aplicar a reaplicação aposentada `20260808130200`.
 3. Conciliação/TEF/PIX integrado: sem escopo definido — precisa de decisão de produto antes de virar backlog técnico.
 
 **Fiscal**
@@ -198,7 +198,7 @@ Legenda: ✅ Implementado · 🟡 Parcial · 🔴 Não iniciado.
 | **P2** | Consolidação `/admin` × `/gerente` + atualização do `ADMIN_PANEL_GUIDE.md` | Transversal |
 | **P2** | Arredondamento ABNT unificado fora do motor de preço (BACKLOG item 2) | PDV/Financeiro |
 | **P3+ — backlog** | Kardex avançado (export/materialized view) | Estoque |
-| **P3+** | `venda_finance_context` (aplicar ou descartar) | Financeiro |
+| **Resolvido em Git / apply futuro** | `venda_finance_context`: aposentadoria por tombstone `20260810222702` | Financeiro |
 | **P3+** | Auto-update Tauri; métricas/observabilidade desktop | PDV |
 | **P3+** | Multi-loja avançado (filiais além do modelo atual) | Transversal |
 | **P3+** | Fase 3.2 acessibilidade; F4 preço no caminho do bip | Transversal/PDV |

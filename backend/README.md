@@ -88,7 +88,12 @@ Com o projeto **linkado** ao ambiente alvo (`npx supabase link`):
 node scripts/p0-migration-status.mjs
 ```
 
-Saída **ALINHADO** e exit code `0` quando não há drift; caso contrário sugere `db push`. Opções: `--json`, `--warn-only` (sempre exit `0`). Checklist operacional só staging: [../docs/CHECKLIST_P0_STAGING.md](../docs/CHECKLIST_P0_STAGING.md).
+Saída `ALIGNED` e exit code `0` somente sem divergências. `BLOCKING_DRIFT`
+indica reconciliação técnica obrigatória. `HUMAN_GATE` exige decisão humana e
+sempre retorna exit code não-zero, inclusive com `--warn-only`. Gates humanos
+devem ser genéricos, documentados e versionados em
+`supabase/migration-human-gates.json`; o registro vazio não cria exceções.
+Checklist operacional só staging: [../docs/CHECKLIST_P0_STAGING.md](../docs/CHECKLIST_P0_STAGING.md).
 
 ## P0 — smoke RLS (policies + view + dois JWTs)
 

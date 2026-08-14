@@ -1,5 +1,10 @@
 # R-INFRA-03 — Classificação de Drift Migrations (repo × produção)
 
+> **FOTOGRAFIA HISTÓRICA / SUPERADA.** Contagens e decisões abaixo pertencem à
+> auditoria original. Em 2026-08-10, `venda_finance_context` foi formalmente
+> aposentada: `20260808130200` não deve ser aplicada e a convergência oficial
+> futura é `20260810222702_retire_obsolete_venda_finance_context.sql`.
+
 Evidência: `supabase_migrations.schema_migrations` (32 linhas rastreadas) + inventário
 real de objetos de produção (projeto `kbabmewnahysfvlybiak`, ACTIVE_HEALTHY),
 cruzado com os 216 arquivos locais em `backend/supabase/migrations/`.
