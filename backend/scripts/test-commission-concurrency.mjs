@@ -489,7 +489,20 @@ async function main() {
   await scenario('6: pagamento x nascimento de novo ajuste', async ({ open, log }) => {
     // Usa o OPERADOR seedado, enquanto os cenarios anteriores usam o DONO,
     // para que ajustes deliberadamente pendentes de outros cenarios nao
-    // contaminem o saldo economico deste interleaving.
+    // contaminem o saldo economico deste interleaving. Mesmo assim, uma
+    // execucao anterior deste MESMO script contra o mesmo banco local (sem
+    // reset) pode ter deixado debito nao compensado para esse operador --
+    // por isso a asserção é relativa ao saldo pré-existente, não a um valor
+    // absoluto. Isso prova a mesma propriedade (o pagamento consome só a
+    // dívida que já existia antes do lock, nunca a que nasceu depois)
+    // independente do histórico acumulado no banco local.
+    const debitoPreExistente = Number(
+      firstRow(
+        runOnce(
+          `SELECT COALESCE(ajuste_nao_compensado,0) FROM public.comissoes_saldo_operador WHERE loja_id='${fx.loja}' AND operador_id='${fx.operador}';`,
+        ),
+      ) || 0,
+    )
     const v = criarVendaComComissao(fx, 10, fx.operador)
     const oper = uuid()
     runOnce(`BEGIN; ALTER TABLE public.venda_pos_venda_operacoes DISABLE TRIGGER trg_pos_venda_ajusta_comissao_deferido; INSERT INTO public.venda_pos_venda_operacoes(id,idempotency_key,venda_id,tipo,motivo,valor_estornado,valor_caixa_estornado,forma_estorno,operador_id,caixa_id) VALUES('${oper}','conc6-${oper}','${v.venda}','DEVOLUCAO','conc6',round(${fx.preco}*4,2),round(${fx.preco}*4,2),'DINHEIRO','${fx.dono}','${fx.caixa}'); INSERT INTO public.venda_pos_venda_itens(operacao_id,item_venda_id,produto_id,quantidade,preco_unitario,subtotal) VALUES('${oper}','${v.item}','${fx.produto}',4,${fx.preco},round(${fx.preco}*4,2)); ALTER TABLE public.venda_pos_venda_operacoes ENABLE TRIGGER trg_pos_venda_ajusta_comissao_deferido; COMMIT;`)
@@ -500,13 +513,16 @@ async function main() {
     const adj = T2.exec(`SELECT public.processar_ajuste_comissao_venda('${v.venda}','DEVOLUCAO','${oper}');`)
     assert.equal((await Session.pending(adj, 900)).pending, true, 'novo ajuste deveria esperar o pagamento que serializou primeiro')
     const pay = await T1.exec(`SELECT * FROM public.liquidar_comissoes('${fx.loja}','${fx.operador}',ARRAY['${v.comissao}']::uuid[],'conc6-pay-${v.venda}');`)
-    assert.equal(Number(firstRow(pay).split('|')[3]), v.valor)
+    const liquidoPago = Number(firstRow(pay).split('|')[3])
+    const esperadoLiquido = Number((v.valor - Math.min(debitoPreExistente, v.valor)).toFixed(2))
+    assert.equal(liquidoPago, esperadoLiquido,
+      `pagamento deveria consumir so o debito PRE-EXISTENTE (${debitoPreExistente}), nunca o ajuste concorrente ainda bloqueado`)
     await T1.exec(`COMMIT;`)
     assert.ok(!hasError(await adj)); await T2.exec(`COMMIT;`)
     const audit = firstRow(runOnce(`SELECT valor,valor_consumido,valor_pendente FROM public.comissoes_ajustes_auditoria WHERE origem_id='${oper}';`)).split('|')
     assert.equal(Number(audit[0]), Number((v.valor * 0.4).toFixed(2)))
     assert.equal(Number(audit[1]), 0); assert.equal(Number(audit[2]), Number(audit[0]))
-    log(`  Pagamento serializado antes pagou ${v.valor.toFixed(2)}; ajuste posterior ${audit[0]} permanece integralmente pendente, sem consumo fantasma.`)
+    log(`  Debito pre-existente=${debitoPreExistente.toFixed(2)}; pagamento serializado antes pagou ${liquidoPago.toFixed(2)} (esperado ${esperadoLiquido.toFixed(2)}); ajuste posterior ${audit[0]} permanece integralmente pendente, sem consumo fantasma.`)
   })
 
   const summary = results.every((r) => r.ok)

@@ -219,7 +219,7 @@
 
 ## Sprint 6+ — Backlog governado (não planejado em tarefas)
 
-Devolução/troca com RPC única (kardex fechado); consolidação `/admin` × `/gerente` + atualização do `ADMIN_PANEL_GUIDE.md`; arredondamento ABNT unificado fora do motor de preço; kardex avançado (export/materialized view); `venda_finance_context` (aplicar ou descartar); Fase 3.2 acessibilidade; auto-update Tauri; F4; multi-loja avançado; TEF/PIX (requer decisão de produto).
+Devolução/troca com RPC única (kardex fechado); consolidação `/admin` × `/gerente` + atualização do `ADMIN_PANEL_GUIDE.md`; arredondamento ABNT unificado fora do motor de preço; kardex avançado (export/materialized view); Fase 3.2 acessibilidade; auto-update Tauri; F4; multi-loja avançado; TEF/PIX (requer decisão de produto). `venda_finance_context` saiu desta fila: aposentadoria formal definida pela tombstone `20260810222702`.
 
 ---
 
