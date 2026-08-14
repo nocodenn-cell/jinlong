@@ -981,6 +981,7 @@ BEGIN
   SELECT valor_comissao INTO v_com FROM public.comissoes_vendedores WHERE venda_id = v_v;
   IF COALESCE(v_com, 0) <= 0 THEN RAISE EXCEPTION 'GATE18_SEM_COMISSAO_ORIGINAL'; END IF;
 
+  SET CONSTRAINTS ALL DEFERRED;  -- cada operacao volta ao modo deferido
   INSERT INTO public.venda_pos_venda_operacoes(id, idempotency_key, venda_id, tipo, motivo,
     valor_estornado, valor_caixa_estornado, forma_estorno, operador_id, caixa_id)
   VALUES (v_oper, 'g18-dev-' || v_oper::text, v_v, 'DEVOLUCAO', 'devolucao parcial',
@@ -989,6 +990,7 @@ BEGIN
     quantidade, preco_unitario, subtotal)
   VALUES (v_oper, v_item, v_prod, 4, v_unit, round(v_unit * 4, 2));
 
+  SET CONSTRAINTS ALL IMMEDIATE;  -- DB-05B: ajuste e deferido ate o commit
   SELECT total_ajustes, valor_liquido INTO v_aj, v_liq
   FROM public.comissoes_vendedores_liquidas WHERE venda_id = v_v;
   -- 40% devolvido: o ajuste segue os ITENS, não uma proporção artificial
@@ -1004,6 +1006,7 @@ BEGIN
 
   -- segunda devolução leva o líquido a zero, de forma incremental
   v_oper := gen_random_uuid();
+  SET CONSTRAINTS ALL DEFERRED;  -- cada operacao volta ao modo deferido
   INSERT INTO public.venda_pos_venda_operacoes(id, idempotency_key, venda_id, tipo, motivo,
     valor_estornado, valor_caixa_estornado, forma_estorno, operador_id, caixa_id)
   VALUES (v_oper, 'g18-dev2-' || v_oper::text, v_v, 'DEVOLUCAO', 'devolucao do restante',
@@ -1012,6 +1015,7 @@ BEGIN
     quantidade, preco_unitario, subtotal)
   VALUES (v_oper, v_item, v_prod, 6, v_unit, round(v_unit * 6, 2));
 
+  SET CONSTRAINTS ALL IMMEDIATE;  -- DB-05B: ajuste e deferido ate o commit
   SELECT total_ajustes, valor_liquido INTO v_aj, v_liq
   FROM public.comissoes_vendedores_liquidas WHERE venda_id = v_v;
   IF v_aj <> v_com OR v_liq <> 0 THEN
@@ -1032,6 +1036,7 @@ BEGIN
   SELECT valor_comissao INTO v_com FROM public.comissoes_vendedores WHERE venda_id = v_v;
 
   UPDATE public.vendas SET status = 'CANCELADA' WHERE id = v_v;
+  SET CONSTRAINTS ALL IMMEDIATE;  -- DB-05B: ajuste e deferido ate o commit
   SELECT total_ajustes, valor_liquido INTO v_aj, v_liq
   FROM public.comissoes_vendedores_liquidas WHERE venda_id = v_v;
   IF v_aj <> v_com OR v_liq <> 0 THEN
@@ -1054,6 +1059,7 @@ BEGIN
   UPDATE public.comissoes_vendedores SET status = 'pago', pago_em = now(), pago_por = v_op
    WHERE venda_id = v_v;
 
+  SET CONSTRAINTS ALL DEFERRED;  -- cada operacao volta ao modo deferido
   INSERT INTO public.venda_pos_venda_operacoes(id, idempotency_key, venda_id, tipo, motivo,
     valor_estornado, valor_caixa_estornado, forma_estorno, operador_id, caixa_id)
   VALUES (v_oper, 'g18-paga-' || v_oper::text, v_v, 'DEVOLUCAO', 'devolucao apos pagamento',
@@ -1062,6 +1068,7 @@ BEGIN
     quantidade, preco_unitario, subtotal)
   VALUES (v_oper, v_item, v_prod, 4, v_unit, round(v_unit * 4, 2));
 
+  SET CONSTRAINTS ALL IMMEDIATE;
   SELECT total_ajustes, saldo_a_compensar INTO v_aj, v_saldo
   FROM public.comissoes_vendedores_liquidas WHERE venda_id = v_v;
   -- o pagamento nunca é reescrito
@@ -1136,6 +1143,7 @@ BEGIN
   END IF;
 
   -- devolução de 40% depois de pago -> ajuste
+  SET CONSTRAINTS ALL DEFERRED;  -- cada operacao volta ao modo deferido
   INSERT INTO public.venda_pos_venda_operacoes(id, idempotency_key, venda_id, tipo, motivo,
     valor_estornado, valor_caixa_estornado, forma_estorno, operador_id, caixa_id)
   VALUES (v_o, 'g19-dev-' || v_o::text, v_v1, 'DEVOLUCAO', 'devolucao apos pagamento',
@@ -1144,6 +1152,7 @@ BEGIN
     quantidade, preco_unitario, subtotal)
   VALUES (v_o, v_i1, v_prod, 4, v_unit, round(v_unit * 4, 2));
 
+  SET CONSTRAINTS ALL IMMEDIATE;
   SELECT COALESCE(SUM(valor), 0) INTO v_aj FROM public.comissoes_ajustes WHERE venda_id = v_v1;
   IF v_aj <= 0 THEN RAISE EXCEPTION 'GATE19_SEM_AJUSTE'; END IF;
 
@@ -1180,6 +1189,109 @@ BEGIN
      OR (SELECT pagamento_id FROM public.comissoes_vendedores WHERE id = v_c2) IS NULL
      OR NOT EXISTS (SELECT 1 FROM public.comissoes_pagamentos_ajustes) THEN
     RAISE EXCEPTION 'GATE19_TRILHA_INCOMPLETA';
+  END IF;
+END $g$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- GATE 20 — DB-05B: devolução multi-item processa TODOS os itens
+-- Regressão DB05-F2: `devolver_ou_trocar_venda` insere os itens num FOR LOOP,
+-- uma instrução por item. O gatilho por instrução disparava no primeiro item e
+-- criava a chave, e os demais caíam no retorno antecipado de idempotência.
+-- Provado: venda de 2 itens com base 200 e comissão 10,00 devolvida
+-- integralmente gerava ajuste de apenas 5,00 — metade da comissão ficava.
+-- ═══════════════════════════════════════════════════════════════════════════
+DO $g$
+DECLARE
+  v_loja uuid := current_setting('t.loja')::uuid;
+  v_op uuid := current_setting('t.operador')::uuid;
+  v_caixa uuid := current_setting('t.caixa')::uuid;
+  v_pa uuid; v_pb uuid;
+  v_v uuid := gen_random_uuid();
+  v_ia uuid := gen_random_uuid(); v_ib uuid := gen_random_uuid();
+  v_o uuid := gen_random_uuid(); v_o2 uuid := gen_random_uuid();
+  v_com numeric; v_aj numeric; v_liq numeric; v_n integer;
+  v_pa_preco numeric; v_pb_preco numeric; v_bruto numeric;
+BEGIN
+  INSERT INTO public.configuracoes_gerais(chave, valor, tipo_dado)
+  VALUES ('comissao_padrao_percentual', '5', 'percent')
+  ON CONFLICT (chave) DO UPDATE SET valor = '5';
+
+  -- dois produtos distintos, sem faixa de atacado, para isolar o multi-item
+  SELECT id INTO v_pa FROM public.produtos WHERE loja_id = v_loja AND preco_varejo > 0 ORDER BY id LIMIT 1;
+  SELECT id INTO v_pb FROM public.produtos
+   WHERE loja_id = v_loja AND preco_varejo > 0 AND id <> v_pa ORDER BY id LIMIT 1;
+  IF v_pb IS NULL THEN RAISE EXCEPTION 'GATE20_FIXTURE_PRECISA_DE_DOIS_PRODUTOS'; END IF;
+  DELETE FROM public.precos_atacado WHERE produto_id IN (v_pa, v_pb);
+  INSERT INTO public.estoque(produto_id, loja_id, quantidade_atual)
+  VALUES (v_pa, v_loja, 10000), (v_pb, v_loja, 10000)
+  ON CONFLICT (produto_id, loja_id) DO UPDATE SET quantidade_atual = 10000;
+  SELECT preco_varejo INTO v_pa_preco FROM public.produtos WHERE id = v_pa;
+  SELECT preco_varejo INTO v_pb_preco FROM public.produtos WHERE id = v_pb;
+  v_bruto := round(v_pa_preco * 2 + v_pb_preco * 3, 2);
+
+  PERFORM public.registrar_venda_com_itens(v_v, v_caixa, v_op, 'DINHEIRO',
+    v_bruto, 0, v_bruto,
+    jsonb_build_array(
+      jsonb_build_object('item_id', v_ia, 'produto_id', v_pa, 'quantidade', 2,
+        'preco_original', v_pa_preco, 'preco_unitario', v_pa_preco),
+      jsonb_build_object('item_id', v_ib, 'produto_id', v_pb, 'quantidade', 3,
+        'preco_original', v_pb_preco, 'preco_unitario', v_pb_preco)),
+    NULL, NULL, NULL);
+  SELECT valor_comissao INTO v_com FROM public.comissoes_vendedores WHERE venda_id = v_v;
+  IF COALESCE(v_com, 0) <= 0 THEN RAISE EXCEPTION 'GATE20_SEM_COMISSAO'; END IF;
+
+  -- UMA operação, os dois itens em instruções separadas (como a RPC real faz)
+  SET CONSTRAINTS ALL DEFERRED;
+  INSERT INTO public.venda_pos_venda_operacoes(id, idempotency_key, venda_id, tipo, motivo,
+    valor_estornado, valor_caixa_estornado, forma_estorno, operador_id, caixa_id)
+  VALUES (v_o, 'g20-' || v_o::text, v_v, 'DEVOLUCAO', 'devolucao integral multi-item',
+    v_bruto, v_bruto, 'DINHEIRO', v_op, v_caixa);
+  INSERT INTO public.venda_pos_venda_itens(operacao_id, item_venda_id, produto_id,
+    quantidade, preco_unitario, subtotal)
+  VALUES (v_o, v_ia, v_pa, 2, v_pa_preco, round(v_pa_preco * 2, 2));
+  -- nada pode ter sido processado ainda: a operação não está completa
+  IF EXISTS (SELECT 1 FROM public.comissoes_ajustes WHERE venda_id = v_v) THEN
+    RAISE EXCEPTION 'GATE20_PROCESSOU_ANTES_DA_OPERACAO_COMPLETA';
+  END IF;
+  INSERT INTO public.venda_pos_venda_itens(operacao_id, item_venda_id, produto_id,
+    quantidade, preco_unitario, subtotal)
+  VALUES (v_o, v_ib, v_pb, 3, v_pb_preco, round(v_pb_preco * 3, 2));
+
+  SET CONSTRAINTS ALL IMMEDIATE;
+  SELECT count(*), COALESCE(SUM(valor), 0) INTO v_n, v_aj
+  FROM public.comissoes_ajustes WHERE venda_id = v_v;
+  SELECT valor_liquido INTO v_liq FROM public.comissoes_vendedores_liquidas WHERE venda_id = v_v;
+
+  -- um único ajuste lógico, cobrindo os DOIS itens, líquido exatamente zero
+  IF v_n <> 1 THEN RAISE EXCEPTION 'GATE20_AJUSTES_ESPERADO_1 n=%', v_n; END IF;
+  IF v_aj <> v_com THEN
+    RAISE EXCEPTION 'GATE20_AJUSTE_PARCIAL ajuste=% (esperado %) — segundo item ignorado', v_aj, v_com;
+  END IF;
+  IF v_liq <> 0 THEN RAISE EXCEPTION 'GATE20_LIQUIDO_NAO_ZEROU liquido=%', v_liq; END IF;
+
+  -- fato original intacto
+  IF (SELECT valor_comissao FROM public.comissoes_vendedores WHERE venda_id = v_v) <> v_com THEN
+    RAISE EXCEPTION 'GATE20_FATO_ORIGINAL_ALTERADO';
+  END IF;
+
+  -- repetir a MESMA operação não altera contagem nem valores
+  PERFORM public.processar_ajuste_comissao_venda(v_v, 'DEVOLUCAO', v_o);
+  SELECT count(*), COALESCE(SUM(valor), 0) INTO v_n, v_aj
+  FROM public.comissoes_ajustes WHERE venda_id = v_v;
+  IF v_n <> 1 OR v_aj <> v_com THEN
+    RAISE EXCEPTION 'GATE20_RETRY_ALTEROU n=% total=%', v_n, v_aj;
+  END IF;
+
+  -- uma operação distinta posterior não colide, e nada além do original é devolvido
+  SET CONSTRAINTS ALL DEFERRED;
+  INSERT INTO public.venda_pos_venda_operacoes(id, idempotency_key, venda_id, tipo, motivo,
+    valor_estornado, valor_caixa_estornado, forma_estorno, operador_id, caixa_id)
+  VALUES (v_o2, 'g20b-' || v_o2::text, v_v, 'DEVOLUCAO', 'operacao distinta',
+    0, 0, 'DINHEIRO', v_op, v_caixa);
+  SET CONSTRAINTS ALL IMMEDIATE;
+  SELECT COALESCE(SUM(valor), 0) INTO v_aj FROM public.comissoes_ajustes WHERE venda_id = v_v;
+  IF v_aj > v_com THEN
+    RAISE EXCEPTION 'GATE20_AJUSTE_ULTRAPASSOU_ORIGINAL total=% original=%', v_aj, v_com;
   END IF;
 END $g$;
 
