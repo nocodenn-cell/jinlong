@@ -331,6 +331,77 @@ END $g$;
 DROP TRIGGER gate7_fail_ar ON public.liquidacoes_receber;
 
 -- ═══════════════════════════════════════════════════════════════════════════
+-- GATE 9 — diagnósticos SECURITY DEFINER não são executáveis por authenticated
+-- Regressão: GERENTE da loja B leu total_liquido de venda da loja A e a
+-- contagem agregada de todas as vendas alheias.
+-- ═══════════════════════════════════════════════════════════════════════════
+DO $g$
+DECLARE v_fn text; v_ok boolean;
+BEGIN
+  FOREACH v_fn IN ARRAY ARRAY['verificar_consistencia_venda', 'relatorio_consistencia_vendas'] LOOP
+    IF EXISTS (
+      SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public' AND p.proname = v_fn
+        AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+    ) THEN
+      RAISE EXCEPTION 'GATE9_DIAGNOSTICO_EXPOSTO: % executavel por authenticated', v_fn;
+    END IF;
+  END LOOP;
+END $g$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- GATE 10 — AP: chave física carrega o escopo da conta
+-- Regressão: duas contas distintas com a mesma chave legítima no mesmo caixa
+-- colidiam e a segunda era recusada com PAGAMENTO_SANGRIA_CORRELACAO_EXISTENTE.
+-- ═══════════════════════════════════════════════════════════════════════════
+DO $g$
+DECLARE
+  v_caixa uuid := current_setting('t.caixa')::uuid;
+  v_forn uuid := gen_random_uuid();
+  v_ap1 uuid := gen_random_uuid();
+  v_ap2 uuid := gen_random_uuid();
+  v_key text := 'gate10-mesma-chave';
+  v_antes numeric; v_sangrias integer;
+BEGIN
+  INSERT INTO public.fornecedores(id, cnpj, nome, loja_id)
+  VALUES (v_forn, 'G10-' || left(v_forn::text, 10), 'Fornecedor gate10', current_setting('t.loja')::uuid);
+  INSERT INTO public.contas_pagar(id, fornecedor_id, loja_id, vencimento, valor_total, valor_pago)
+  VALUES (v_ap1, v_forn, current_setting('t.loja')::uuid, current_date, 10, 0),
+         (v_ap2, v_forn, current_setting('t.loja')::uuid, current_date, 10, 0);
+
+  UPDATE public.usuarios SET perfil = 'DONO', loja_id = current_setting('t.loja')::uuid, ativo = true
+   WHERE id = current_setting('t.dono')::uuid;
+  PERFORM set_config('request.jwt.claim.sub', current_setting('t.dono'), true);
+
+  SELECT saldo_atual INTO v_antes FROM public.caixas WHERE id = v_caixa;
+
+  SET LOCAL ROLE authenticated;
+  PERFORM * FROM public.registrar_pagamento_contas_pagar(v_ap1, 1, 'DINHEIRO', now(), NULL, v_key, v_caixa, 'TESTE_DB', NULL);
+  PERFORM * FROM public.registrar_pagamento_contas_pagar(v_ap2, 1, 'DINHEIRO', now(), NULL, v_key, v_caixa, 'TESTE_DB', NULL);
+  RESET ROLE;
+
+  SELECT count(*) INTO v_sangrias FROM public.movimentacoes_caixa
+   WHERE caixa_id = v_caixa AND idempotency_key LIKE '%' || v_key;
+  IF v_sangrias <> 2 THEN
+    RAISE EXCEPTION 'GATE10_COLISAO_DE_CHAVE sangrias=% (esperado 2)', v_sangrias;
+  END IF;
+  IF (SELECT saldo_atual FROM public.caixas WHERE id = v_caixa) <> v_antes - 2 THEN
+    RAISE EXCEPTION 'GATE10_SAIDA_FISICA_INCORRETA';
+  END IF;
+
+  -- replay da mesma conta+chave não pode gerar uma terceira sangria
+  PERFORM set_config('request.jwt.claim.sub', current_setting('t.dono'), true);
+  SET LOCAL ROLE authenticated;
+  PERFORM * FROM public.registrar_pagamento_contas_pagar(v_ap1, 1, 'DINHEIRO', now(), NULL, v_key, v_caixa, 'TESTE_DB', NULL);
+  RESET ROLE;
+  SELECT count(*) INTO v_sangrias FROM public.movimentacoes_caixa
+   WHERE caixa_id = v_caixa AND idempotency_key LIKE '%' || v_key;
+  IF v_sangrias <> 2 THEN
+    RAISE EXCEPTION 'GATE10_REPLAY_DUPLICOU_SANGRIA sangrias=%', v_sangrias;
+  END IF;
+END $g$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
 -- GATE 8 — reconciliação final: contador == E(c) ao fim de toda a bateria
 -- ═══════════════════════════════════════════════════════════════════════════
 DO $g$

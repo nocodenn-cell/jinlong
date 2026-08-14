@@ -31,7 +31,9 @@ VALUES (:'permission_account', :'fornecedor', :'loja', current_date, 10, 0, 'Sem
 
 CREATE FUNCTION pg_temp.fail_ap_cash() RETURNS trigger LANGUAGE plpgsql AS $f$
 BEGIN
-  IF NEW.idempotency_key = 'ap:rollback-key' THEN
+  -- Sufixo, não igualdade: P1-3 passou a derivar `ap:<conta_id>:<key>`, e a
+  -- injeção de falha não deve depender do formato do escopo.
+  IF NEW.idempotency_key LIKE 'ap:%rollback-key' THEN
     RAISE EXCEPTION 'TEST_AP_INTERMEDIATE_FAILURE';
   END IF;
   RETURN NEW;
@@ -141,8 +143,12 @@ BEGIN
     RAISE EXCEPTION 'pix_box_accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE '%PAGAMENTO_CAIXA_APENAS_DINHEIRO%' THEN RAISE; END IF; END;
 
   -- Existing movement cannot be reused as AP correlation.
+  -- P1-3: a chave física passou a carregar o escopo da conta
+  -- (`ap:<conta_id>:<key>`), então a fixture semeia a chave derivada real. Sem
+  -- isso o teste passaria a semear uma chave que já não colide e deixaria de
+  -- exercitar a proteção.
   PERFORM * FROM public.registrar_movimentacao(current_setting('test.caixa')::uuid, 'sangria', 'dinheiro', 1,
-    'preexistente', 'OUTRO', NULL, NULL, 'ap:reuse-key', NULL, NULL, NULL, NULL, current_setting('request.jwt.claim.sub')::uuid, NULL);
+    'preexistente', 'OUTRO', NULL, NULL, 'ap:' || v_reuse::text || ':reuse-key', NULL, NULL, NULL, NULL, current_setting('request.jwt.claim.sub')::uuid, NULL);
   BEGIN
     PERFORM * FROM public.registrar_pagamento_contas_pagar(v_reuse, 1, 'DINHEIRO', now(), NULL, 'reuse-key', current_setting('test.caixa')::uuid, 'TESTE_DB', NULL);
     RAISE EXCEPTION 'movement_reused';
@@ -161,7 +167,7 @@ BEGIN
     PERFORM * FROM public.registrar_pagamento_contas_pagar(v_rollback, 1, 'DINHEIRO', now(), NULL, 'rollback-key', current_setting('test.caixa')::uuid, 'TESTE_DB', NULL);
   EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE '%TEST_AP_INTERMEDIATE_FAILURE%' THEN RAISE; END IF; END;
   IF EXISTS (SELECT 1 FROM public.contas_pagar_pagamentos WHERE conta_id = v_rollback)
-     OR EXISTS (SELECT 1 FROM public.movimentacoes_caixa WHERE idempotency_key = 'ap:rollback-key')
+     OR EXISTS (SELECT 1 FROM public.movimentacoes_caixa WHERE idempotency_key LIKE 'ap:%rollback-key')
      OR (SELECT valor_pago FROM public.contas_pagar WHERE id = v_rollback) <> 0
      OR (SELECT saldo_atual FROM public.caixas WHERE id = current_setting('test.caixa')::uuid) <> v_before THEN
     RAISE EXCEPTION 'rollback_failed';
