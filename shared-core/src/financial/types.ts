@@ -40,4 +40,5 @@ export type PayableTitle = {
   nfeNumero: string | null
   nfeImportacaoId: string | null
   criadoEm: string | null
+  lojaId: string
 }

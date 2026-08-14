@@ -6,6 +6,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type {
   CancelPayableCommand,
+  CancelPayableResult,
   PayPayableCommand,
   PayPayableResult,
   PayablePaymentService,
@@ -32,12 +33,16 @@ export function createPayablePaymentService(
         }
       }
       try {
-        const { error } = await supabase.rpc('registrar_pagamento_contas_pagar', {
+        const { data, error } = await supabase.rpc('registrar_pagamento_contas_pagar', {
           p_conta_id: command.contaId,
           p_valor: command.valor,
           p_forma: command.formaPagamento,
           p_data: command.data,
           p_observacao: command.observacao ?? null,
+          p_idempotency_key: command.idempotencyKey,
+          p_caixa_id: command.caixaId ?? null,
+          p_origem: 'UI_FINANCEIRO',
+          p_autorizacao_token: command.autorizacaoToken ?? null,
         })
         if (error) {
           return {
@@ -46,7 +51,17 @@ export function createPayablePaymentService(
             code: FINANCIAL_ERROR_CODES.PAY_FAILED,
           }
         }
-        return { ok: true }
+        const row = (Array.isArray(data) ? data[0] : data) as Record<string, unknown> | null
+        if (!row?.pagamento_id) {
+          return { ok: false, error: 'Pagamento não retornou identificador.', code: FINANCIAL_ERROR_CODES.PAY_FAILED }
+        }
+        return {
+          ok: true,
+          pagamentoId: String(row.pagamento_id),
+          idempotentReplay: row.idempotent_replay === true,
+          caixaId: row.caixa_id ? String(row.caixa_id) : null,
+          movimentacaoCaixaId: row.movimentacao_caixa_id ? String(row.movimentacao_caixa_id) : null,
+        }
       } catch (e) {
         return {
           ok: false,
@@ -56,7 +71,7 @@ export function createPayablePaymentService(
       }
     },
 
-    async cancel(command: CancelPayableCommand): Promise<PayPayableResult> {
+    async cancel(command: CancelPayableCommand): Promise<CancelPayableResult> {
       if (!command.contaId?.trim()) {
         return {
           ok: false,

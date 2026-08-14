@@ -22,13 +22,14 @@ export type ContaPagarRow = {
   nfe_numero: string | null
   nfe_importacao_id: string | null
   criado_em: string | null
+  loja_id: string
 }
 
 export type FormaPagamento = 'DINHEIRO' | 'PIX' | 'CARTAO' | 'BOLETO' | 'TRANSF'
 
 const COLUMNS = `
   id, fornecedor_id, descricao, valor_total, valor_pago, vencimento,
-  status, nfe_numero, nfe_importacao_id, criado_em,
+  status, nfe_numero, nfe_importacao_id, criado_em, loja_id,
   fornecedor:fornecedores!contas_pagar_fornecedor_id_fkey ( nome )
 `
 
@@ -48,6 +49,7 @@ function mapRow(raw: Record<string, unknown>): ContaPagarRow {
     nfe_numero: (raw.nfe_numero as string | null) ?? null,
     nfe_importacao_id: (raw.nfe_importacao_id as string | null) ?? null,
     criado_em: (raw.criado_em as string | null) ?? null,
+    loja_id: String(raw.loja_id),
   }
 }
 
@@ -64,6 +66,7 @@ function payableToRow(p: PayableTitle): ContaPagarRow {
     nfe_numero: p.nfeNumero,
     nfe_importacao_id: p.nfeImportacaoId,
     criado_em: p.criadoEm,
+    loja_id: p.lojaId,
   }
 }
 
@@ -107,6 +110,30 @@ export type RegistrarPagamentoInput = {
   forma: FormaPagamento
   data: string // ISO
   observacao?: string | null
+  idempotency_key: string
+  caixa_id?: string | null
+  autorizacao_token?: string | null
+}
+
+export async function buscarCaixasAbertosPagamentoAction(lojaId: string): Promise<
+  { ok: true; caixas: Array<{ id: string; operador: string }> } | { ok: false; error: string }
+> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { ok: false, error: auth.error }
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('caixas')
+    .select('id, usuarios!caixas_operador_id_fkey(nome)')
+    .eq('loja_id', lojaId)
+    .eq('status', 'ABERTO')
+  if (error) return { ok: false, error: error.message }
+  return {
+    ok: true,
+    caixas: (data ?? []).map((c) => ({
+      id: c.id,
+      operador: (c.usuarios as { nome?: string } | null)?.nome ?? c.id.slice(0, 8),
+    })),
+  }
 }
 
 export async function registrarPagamentoAction(
@@ -131,6 +158,9 @@ export async function registrarPagamentoAction(
       formaPagamento: input.forma,
       data: input.data,
       observacao: input.observacao ?? null,
+      idempotencyKey: input.idempotency_key,
+      caixaId: input.caixa_id,
+      autorizacaoToken: input.autorizacao_token,
     })
     if (!paid.ok) {
       return { ok: false, error: mensagemErroComSecao('Pagamento', paid.error) }

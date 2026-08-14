@@ -33,7 +33,7 @@ describe('financial — contracts', () => {
   it('PayablePaymentService tipa pay/cancel', () => {
     const svc: PayablePaymentService = {
       async pay() {
-        return { ok: true }
+        return { ok: true, pagamentoId: 'p1', idempotentReplay: false, caixaId: null, movimentacaoCaixaId: null }
       },
       async cancel() {
         return { ok: true }
