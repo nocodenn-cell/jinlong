@@ -12,14 +12,32 @@
 \set ON_ERROR_STOP on
 BEGIN;
 
-SELECT id AS gerente_id, loja_id AS loja FROM public.usuarios
-WHERE perfil = 'GERENTE' AND ativo = true LIMIT 1 \gset
+-- Loja determinística: a que tem produto precificado E os três perfis ativos.
+-- Escolher "o primeiro GERENTE" torna a suíte dependente da ordem do seed —
+-- `test:rls-scope` cria usuários numa loja sem produtos, e a suíte caía nela.
+SELECT p.loja_id AS loja FROM public.produtos p
+WHERE p.preco_varejo > 0
+  AND EXISTS (SELECT 1 FROM public.usuarios u WHERE u.loja_id = p.loja_id
+              AND u.ativo AND u.perfil = 'GERENTE')
+  AND EXISTS (SELECT 1 FROM public.usuarios u WHERE u.loja_id = p.loja_id
+              AND u.ativo AND u.perfil = 'OPERADOR')
+  AND EXISTS (SELECT 1 FROM public.usuarios u WHERE u.loja_id = p.loja_id
+              AND u.ativo AND u.perfil = 'DONO')
+ORDER BY p.loja_id, p.id LIMIT 1 \gset
+
+SELECT id AS gerente_id FROM public.usuarios
+WHERE perfil = 'GERENTE' AND ativo = true AND loja_id = :'loja'::uuid LIMIT 1 \gset
 SELECT id AS operador_id FROM public.usuarios
-WHERE perfil = 'OPERADOR' AND ativo = true LIMIT 1 \gset
+WHERE perfil = 'OPERADOR' AND ativo = true AND loja_id = :'loja'::uuid LIMIT 1 \gset
 SELECT id AS dono_id FROM public.usuarios
-WHERE perfil = 'DONO' AND ativo = true LIMIT 1 \gset
-SELECT id AS produto FROM public.produtos WHERE loja_id = :'loja'::uuid LIMIT 1 \gset
+WHERE perfil = 'DONO' AND ativo = true AND loja_id = :'loja'::uuid LIMIT 1 \gset
+SELECT id AS produto FROM public.produtos
+WHERE loja_id = :'loja'::uuid AND preco_varejo > 0 ORDER BY id LIMIT 1 \gset
 SELECT preco_varejo AS preco_tabela FROM public.produtos WHERE id = :'produto' \gset
+
+-- Exatamente um caixa aberto na loja durante a suíte. Rollback desfaz.
+UPDATE public.caixas SET status = 'FECHADO'
+WHERE loja_id = :'loja'::uuid AND status = 'ABERTO';
 
 SELECT gen_random_uuid() AS caixa, gen_random_uuid() AS outra_loja,
        gen_random_uuid() AS cliente, gen_random_uuid() AS titulo \gset

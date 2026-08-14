@@ -105,24 +105,6 @@ jobs:
           fi
           npm run test:rls-scope -w fastproduct-backend
 
-      # Gate financeiro: contrato de idempotência 1A, invariante de totais 1B,
-      # reconciliação AR 2A, reconciliação AP 2B e os gates adversariais dos P0
-      # (escrita direta do contador, writer legado, venda offline em dinheiro,
-      # contador x E(c), invariante de preço, matriz de perfis e fault injection).
-      # Estas suítes existiam no repositório sem nenhum invocador — as Fases
-      # 1A-2B foram declaradas PASS a partir de execuções manuais.
-      - name: Financial regression gate
-        run: |
-          set -euo pipefail
-          cd backend
-          eval "$(npx supabase status -o env | sed 's/^/export /')"
-          export DB_URL="${POSTGRES_URL:-${DB_URL:-}}"
-          if [ -z "${DB_URL:-}" ]; then
-            echo "::error::Sem URL do Postgres para o gate financeiro." >&2
-            exit 1
-          fi
-          npm run test:financial -w fastproduct-backend
-
       - name: Seed Auth + usuarios (gerente/operador E2E)
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         env:
@@ -151,6 +133,31 @@ jobs:
           export SEED_DEV_PASSWORD="${CI_RLS_SMOKE_SEED_PASSWORD}"
           eval "$(node scripts/fetch-rls-smoke-jwts.mjs | sed 's/^/export /')"
           node scripts/p0-rls-rest-smoke.mjs
+
+      # Gate financeiro: contrato de idempotência 1A, invariante de totais 1B,
+      # reconciliação AR 2A, reconciliação AP 2B e os gates adversariais dos
+      # P0/P1 (escrita direta do contador, writer legado, venda offline em
+      # dinheiro, contador x E(c), invariante de preço, matriz de perfis,
+      # colisão de chave AP, retry offline, estorno AR/AP e fault injection).
+      # Estas suítes existiam no repositório sem nenhum invocador — as Fases
+      # 1A-2B foram declaradas PASS a partir de execuções manuais.
+      #
+      # Roda DEPOIS do seed de usuários: as suítes exigem GERENTE/OPERADOR/DONO
+      # ativos na mesma loja que tem produtos precificados. `test:rls-scope`
+      # semeia usuários numa loja própria, sem catálogo, e não serve de base.
+      # Mesma condição do smoke REST: em PR de fork o seed não roda.
+      - name: Financial regression gate
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        run: |
+          set -euo pipefail
+          cd backend
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          export DB_URL="${POSTGRES_URL:-${DB_URL:-}}"
+          if [ -z "${DB_URL:-}" ]; then
+            echo "::error::Sem URL do Postgres para o gate financeiro." >&2
+            exit 1
+          fi
+          npm run test:financial -w fastproduct-backend
 
       - name: Diagnóstico em falha (logs + status)
         if: failure()

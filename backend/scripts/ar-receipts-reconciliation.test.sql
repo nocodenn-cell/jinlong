@@ -1,11 +1,28 @@
 \set ON_ERROR_STOP on
 BEGIN;
 
-SELECT id AS gerente_id, loja_id AS loja
-FROM public.usuarios WHERE perfil = 'GERENTE' AND ativo = true LIMIT 1
+-- Loja determinística: precisa ter produto precificado e GERENTE+OPERADOR
+-- ativos. Escolher "o primeiro GERENTE" fazia a suíte cair na loja criada por
+-- `test:rls-scope`, que não tem produtos, e o resultado dependia da ordem do seed.
+SELECT p.loja_id AS loja FROM public.produtos p
+WHERE p.preco_varejo > 0
+  AND EXISTS (SELECT 1 FROM public.usuarios u WHERE u.loja_id = p.loja_id
+              AND u.ativo AND u.perfil = 'GERENTE')
+  AND EXISTS (SELECT 1 FROM public.usuarios u WHERE u.loja_id = p.loja_id
+              AND u.ativo AND u.perfil = 'OPERADOR')
+ORDER BY p.loja_id, p.id LIMIT 1
 \gset
-SELECT id AS operador_id FROM public.usuarios WHERE perfil = 'OPERADOR' AND ativo = true LIMIT 1
+SELECT id AS gerente_id FROM public.usuarios
+WHERE perfil = 'GERENTE' AND ativo = true AND loja_id = :'loja'::uuid LIMIT 1
 \gset
+SELECT id AS operador_id FROM public.usuarios
+WHERE perfil = 'OPERADOR' AND ativo = true AND loja_id = :'loja'::uuid LIMIT 1
+\gset
+-- Exatamente um caixa aberto na loja durante a suíte. Rollback desfaz.
+UPDATE public.caixas SET status = 'FECHADO'
+WHERE loja_id = :'loja'::uuid AND status = 'ABERTO';
+INSERT INTO public.caixas(operador_id, loja_id, status, valor_inicial)
+VALUES (NULL, :'loja', 'ABERTO', 0);
 INSERT INTO public.clientes(nome, loja_id) VALUES ('Cliente teste AR 2A', :'loja') RETURNING id AS cliente_id
 \gset
 SELECT id AS caixa, saldo_atual AS saldo_inicial

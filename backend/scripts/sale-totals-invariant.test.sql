@@ -1,6 +1,24 @@
 \set ON_ERROR_STOP on
 BEGIN;
 
+-- Fixture determinística do caminho offline: garante um caixa ABERTO na loja
+-- que tem produto precificado. Sem isto a suíte dependia de já existir um caixa
+-- aberto na loja certa — `test:rls-scope` deixa caixas numa loja sem produtos e
+-- o bloco offline falhava com `offline_fixture_missing`. Rollback desfaz.
+INSERT INTO public.caixas(operador_id, loja_id, status, valor_inicial)
+SELECT (SELECT u.id FROM public.usuarios u
+        WHERE u.loja_id = p.loja_id AND u.ativo AND u.perfil = 'OPERADOR'
+          AND NOT EXISTS (SELECT 1 FROM public.caixas c2
+                          WHERE c2.operador_id = u.id AND c2.status = 'ABERTO')
+        LIMIT 1),
+       p.loja_id, 'ABERTO', 0
+FROM public.produtos p
+WHERE p.preco_varejo > 0
+  AND EXISTS (SELECT 1 FROM public.usuarios u WHERE u.loja_id = p.loja_id
+              AND u.ativo AND u.perfil = 'OPERADOR')
+ORDER BY p.loja_id, p.id
+LIMIT 1;
+
 DO $test$
 DECLARE
   v record;
@@ -68,9 +86,18 @@ BEGIN
     SELECT pr.id, pr.preco_varejo
     FROM public.produtos pr
     WHERE pr.loja_id = c.loja_id AND pr.preco_varejo > 0
+      -- O produto precisa ter saldo: a v4 baixa estoque e `test:rls-scope`
+      -- deixa produtos sem linha de estoque que ordenavam antes do seed.
+      AND EXISTS (SELECT 1 FROM public.estoque e
+                  WHERE e.produto_id = pr.id AND e.loja_id = pr.loja_id
+                    AND e.quantidade_atual > 0)
     ORDER BY pr.id
     LIMIT 1
   ) p
+  WHERE c.status = 'ABERTO'
+  -- Mesma ordenação da fixture criada no topo do arquivo, para que o bloco
+  -- online e o offline operem sobre o mesmo caixa.
+  ORDER BY c.loja_id, c.id
   LIMIT 1;
   IF v_caixa_id IS NULL THEN RAISE EXCEPTION 'offline_fixture_missing'; END IF;
 
@@ -118,6 +145,12 @@ FROM public.caixas c
 JOIN public.produtos p ON p.loja_id = c.loja_id AND p.ativo = true
 WHERE c.status = 'ABERTO'
   AND public.calcular_preco_produto(p.id, 1, c.loja_id)->>'preco' IS NOT NULL
+  -- A v4 baixa estoque: o produto precisa ter saldo na loja do caixa.
+  -- `test:rls-scope` cria produto sem linha de estoque cujo id ordena antes do
+  -- seed, e o bloco online falhava com PRODUTO_NAO_ENCONTRADO_NO_ESTOQUE.
+  AND EXISTS (SELECT 1 FROM public.estoque e
+              WHERE e.produto_id = p.id AND e.loja_id = c.loja_id
+                AND e.quantidade_atual > 0)
 ORDER BY c.data_abertura DESC, p.id
 LIMIT 1
 \gset

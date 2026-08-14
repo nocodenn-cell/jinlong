@@ -404,7 +404,11 @@ async function main() {
       p_operador_id: authByPerfil.OPERADOR,
       p_loja_id: IDS.loja,
       p_itens: [],
-    }, "FINALIZAR_VENDA_CANONICA_ITENS_INVALIDOS");
+      // Fase 1B moveu a totalização da v4 para `internal.calcular_totais_venda`,
+      // que rejeita array vazio com o próprio código. A asserção antiga
+      // (`FINALIZAR_VENDA_CANONICA_ITENS_INVALIDOS`) ficou desatualizada porque
+      // esta suíte não estava ligada a nenhum npm script nem ao CI.
+    }, "VENDA_TOTAIS_ITENS_INVALIDOS");
   });
 
   await run("RPC registrar_pricing_version_venda permite venda propria", async () => {
@@ -543,11 +547,15 @@ async function main() {
   });
 
   await run("RPC registrar_liquidacao_receber (GERENTE)", async () => {
+    // Fase 2A tornou `p_idempotency_key` obrigatória. A chamada sem chave ficou
+    // quebrada desde então porque esta suíte não rodava em lugar nenhum.
     await assertRpcOk(gerente, "registrar_liquidacao_receber", {
       p_titulo_id: IDS.tituloReceber,
       p_valor: 0.01,
       p_forma_pagamento: "PIX",
       p_observacao: "smoke rls",
+      p_idempotency_key: `rls-ar-${randomUUID()}`,
+      p_origem: "SMOKE_RLS",
     });
   });
 

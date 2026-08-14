@@ -33,13 +33,26 @@ const SQL_SUITES = [
   'financial-adversarial-gates.test.sql',
 ]
 
+/** `psql` está de fato instalado e executável neste host? */
+function hasPsql() {
+  const r = spawnSync('psql', ['--version'], { encoding: 'utf8' })
+  return r.status === 0
+}
+
 function resolvePsqlCommand() {
   if (process.env.FINANCIAL_TEST_PSQL) {
     const parts = process.env.FINANCIAL_TEST_PSQL.split(' ').filter(Boolean)
     return { bin: parts[0], baseArgs: parts.slice(1), label: process.env.FINANCIAL_TEST_PSQL }
   }
   const url = process.env.DB_URL || process.env.POSTGRES_URL || process.env.DATABASE_URL
-  if (url) return { bin: 'psql', baseArgs: [url], label: `psql <url>` }
+  // A URL só é utilizável se houver cliente `psql`. Em dev no Windows as
+  // variáveis costumam estar exportadas (`supabase status -o env`) sem que o
+  // binário exista — antes disso o runner falhava com "exit null" em vez de
+  // cair no contêiner.
+  if (url && hasPsql()) return { bin: 'psql', baseArgs: [url], label: 'psql <url>' }
+  if (url) {
+    console.warn('psql não encontrado no PATH; usando o contêiner local do Supabase.')
+  }
   return {
     bin: 'docker',
     baseArgs: ['exec', '-i', 'supabase_db_fastproduct', 'psql', '-U', 'postgres', '-d', 'postgres'],
