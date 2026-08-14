@@ -32,7 +32,14 @@ WHERE perfil = 'OPERADOR' AND ativo = true AND loja_id = :'loja'::uuid LIMIT 1 \
 SELECT id AS dono_id FROM public.usuarios
 WHERE perfil = 'DONO' AND ativo = true AND loja_id = :'loja'::uuid LIMIT 1 \gset
 SELECT id AS produto FROM public.produtos
-WHERE loja_id = :'loja'::uuid AND preco_varejo > 0 ORDER BY id LIMIT 1 \gset
+WHERE loja_id = :'loja'::uuid
+  AND preco_varejo > 0
+  AND preco_custo IS NOT NULL
+  -- Gate 21 cria deliberadamente uma regra por margem 50–100. Produtos
+  -- sintéticos do teste RLS podem ter custo NULL e não são fixtures válidas
+  -- para provar o congelamento histórico dessa regra.
+  AND ((preco_varejo - preco_custo) / preco_varejo * 100) BETWEEN 50 AND 100
+ORDER BY id LIMIT 1 \gset
 SELECT preco_varejo AS preco_tabela FROM public.produtos WHERE id = :'produto' \gset
 
 -- Exatamente um caixa aberto na loja durante a suíte. Rollback desfaz.

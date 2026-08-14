@@ -26,6 +26,8 @@ const HERE = dirname(fileURLToPath(import.meta.url))
 
 const NODE_SUITES = ['financial-idempotency-correlation-contract.test.mjs']
 
+const SCRIPT_SUITES = ['test-commission-concurrency.mjs']
+
 const SQL_SUITES = [
   'sale-totals-invariant.test.sql',
   'ar-receipts-reconciliation.test.sql',
@@ -70,6 +72,16 @@ function runNodeSuite(file) {
   return { file, ok: r.status === 0, detail: pass ? `${pass} casos` : '' }
 }
 
+function runScriptSuite(file) {
+  const path = join(HERE, file)
+  if (!existsSync(path)) return { file, ok: false, detail: 'arquivo não encontrado' }
+  const r = spawnSync(process.execPath, [path], { encoding: 'utf8' })
+  const out = `${r.stdout ?? ''}${r.stderr ?? ''}`
+  if (r.status !== 0) process.stderr.write(out)
+  const pass = [...out.matchAll(/^\s*PASS\s+/gm)].length
+  return { file, ok: r.status === 0, detail: r.status === 0 ? `${pass} cenários` : `exit ${r.status}` }
+}
+
 function runSqlSuite(file, psql) {
   const path = join(HERE, file)
   if (!existsSync(path)) return { file, ok: false, detail: 'arquivo não encontrado' }
@@ -92,6 +104,7 @@ function main() {
   const results = []
   for (const f of NODE_SUITES) results.push(runNodeSuite(f))
   for (const f of SQL_SUITES) results.push(runSqlSuite(f, psql))
+  for (const f of SCRIPT_SUITES) results.push(runScriptSuite(f))
 
   console.log('')
   for (const r of results) {
