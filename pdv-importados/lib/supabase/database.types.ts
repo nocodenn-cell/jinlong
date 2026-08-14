@@ -298,6 +298,95 @@ export type Database = {
           },
         ]
       }
+      comissoes_ajustes: {
+        Row: {
+          comissao_id: string
+          created_at: string
+          id: string
+          idempotency_key: string
+          loja_id: string
+          operador_id: string
+          origem_id: string | null
+          tipo: string
+          valor: number
+          venda_id: string
+        }
+        Insert: {
+          comissao_id: string
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          loja_id: string
+          operador_id: string
+          origem_id?: string | null
+          tipo: string
+          valor: number
+          venda_id: string
+        }
+        Update: {
+          comissao_id?: string
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          loja_id?: string
+          operador_id?: string
+          origem_id?: string | null
+          tipo?: string
+          valor?: number
+          venda_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comissoes_ajustes_comissao_id_fkey"
+            columns: ["comissao_id"]
+            isOneToOne: false
+            referencedRelation: "comissoes_vendedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_ajustes_comissao_id_fkey"
+            columns: ["comissao_id"]
+            isOneToOne: false
+            referencedRelation: "comissoes_vendedores_liquidas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_ajustes_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_ajustes_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["loja_id"]
+          },
+          {
+            foreignKeyName: "comissoes_ajustes_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_ajustes_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "v_venda_consistencia_anomalias"
+            referencedColumns: ["venda_id"]
+          },
+          {
+            foreignKeyName: "comissoes_ajustes_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "vendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comissoes_regras_funcionario: {
         Row: {
           ativo: boolean
@@ -4264,6 +4353,57 @@ export type Database = {
       }
     }
     Views: {
+      comissoes_vendedores_liquidas: {
+        Row: {
+          id: string | null
+          loja_id: string | null
+          operador_id: string | null
+          pago_em: string | null
+          saldo_a_compensar: number | null
+          status: string | null
+          total_ajustes: number | null
+          valor_comissao: number | null
+          valor_liquido: number | null
+          venda_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comissoes_vendedores_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_vendedores_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["loja_id"]
+          },
+          {
+            foreignKeyName: "comissoes_vendedores_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_vendedores_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "v_venda_consistencia_anomalias"
+            referencedColumns: ["venda_id"]
+          },
+          {
+            foreignKeyName: "comissoes_vendedores_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "vendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_clientes_gerente: {
         Row: {
           ativo: boolean | null
@@ -5174,6 +5314,10 @@ export type Database = {
       pdv_diagnostico_pre_producao: {
         Args: { p_produto_codigo?: string }
         Returns: Json
+      }
+      processar_ajuste_comissao_venda: {
+        Args: { p_origem_id: string; p_tipo: string; p_venda_id: string }
+        Returns: undefined
       }
       processar_comissao_venda: {
         Args: { p_venda_id: string }

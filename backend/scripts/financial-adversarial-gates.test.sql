@@ -947,6 +947,151 @@ BEGIN
 END $g$;
 
 -- ═══════════════════════════════════════════════════════════════════════════
+-- GATE 18 — DB-05: ajustes pós-venda de comissão
+-- Regressão: cancelamento e devolução não produziam nenhuma compensação, e a
+-- comissão continuava valendo o total da venda original.
+-- ═══════════════════════════════════════════════════════════════════════════
+DO $g$
+DECLARE
+  v_loja uuid := current_setting('t.loja')::uuid;
+  v_prod uuid := current_setting('t.produto')::uuid;
+  v_preco numeric := current_setting('t.preco')::numeric;
+  v_op uuid := current_setting('t.operador')::uuid;
+  v_caixa uuid := current_setting('t.caixa')::uuid;
+  v_v uuid; v_item uuid; v_oper uuid;
+  v_com numeric; v_aj numeric; v_liq numeric; v_saldo numeric; v_n integer;
+  v_bruto numeric := round(v_preco * 10, 2);
+  -- O GATE 14 cria faixa de atacado para este produto: 10 unidades tem preco
+  -- canonico proprio. Vender ao preco de tabela seria (corretamente) recusado
+  -- pelo F-1, entao a fixture usa o preco devido para a quantidade.
+  v_unit numeric := (public.calcular_preco_produto(
+    current_setting('t.produto')::uuid, 10, current_setting('t.loja')::uuid)->>'preco')::numeric;
+  v_liquido numeric := round(v_unit * 10, 2);
+BEGIN
+  INSERT INTO public.configuracoes_gerais(chave, valor, tipo_dado)
+  VALUES ('comissao_padrao_percentual', '5', 'percent')
+  ON CONFLICT (chave) DO UPDATE SET valor = '5';
+
+  -- ---------------------------------------------------------------- devolução parcial
+  v_v := gen_random_uuid(); v_item := gen_random_uuid(); v_oper := gen_random_uuid();
+  PERFORM public.registrar_venda_com_itens(v_v, v_caixa, v_op, 'DINHEIRO',
+    v_bruto, round(v_bruto - v_liquido, 2), v_liquido,
+    jsonb_build_array(jsonb_build_object('item_id', v_item, 'produto_id', v_prod,
+      'quantidade', 10, 'preco_original', v_preco, 'preco_unitario', v_unit)), NULL, NULL, NULL);
+  SELECT valor_comissao INTO v_com FROM public.comissoes_vendedores WHERE venda_id = v_v;
+  IF COALESCE(v_com, 0) <= 0 THEN RAISE EXCEPTION 'GATE18_SEM_COMISSAO_ORIGINAL'; END IF;
+
+  INSERT INTO public.venda_pos_venda_operacoes(id, idempotency_key, venda_id, tipo, motivo,
+    valor_estornado, valor_caixa_estornado, forma_estorno, operador_id, caixa_id)
+  VALUES (v_oper, 'g18-dev-' || v_oper::text, v_v, 'DEVOLUCAO', 'devolucao parcial',
+    round(v_unit * 4, 2), round(v_unit * 4, 2), 'DINHEIRO', v_op, v_caixa);
+  INSERT INTO public.venda_pos_venda_itens(operacao_id, item_venda_id, produto_id,
+    quantidade, preco_unitario, subtotal)
+  VALUES (v_oper, v_item, v_prod, 4, v_unit, round(v_unit * 4, 2));
+
+  SELECT total_ajustes, valor_liquido INTO v_aj, v_liq
+  FROM public.comissoes_vendedores_liquidas WHERE venda_id = v_v;
+  -- 40% devolvido: o ajuste segue os ITENS, não uma proporção artificial
+  IF v_aj <> round(v_com * 0.4, 2) OR v_liq <> round(v_com * 0.6, 2) THEN
+    RAISE EXCEPTION 'GATE18_DEVOLUCAO_PARCIAL ajuste=% liquido=% (esperado % e %)',
+      v_aj, v_liq, round(v_com * 0.4, 2), round(v_com * 0.6, 2);
+  END IF;
+
+  -- retry do MESMO fato não duplica
+  PERFORM public.processar_ajuste_comissao_venda(v_v, 'DEVOLUCAO', v_oper);
+  SELECT count(*) INTO v_n FROM public.comissoes_ajustes WHERE venda_id = v_v;
+  IF v_n <> 1 THEN RAISE EXCEPTION 'GATE18_RETRY_DEVOLUCAO_DUPLICOU n=%', v_n; END IF;
+
+  -- segunda devolução leva o líquido a zero, de forma incremental
+  v_oper := gen_random_uuid();
+  INSERT INTO public.venda_pos_venda_operacoes(id, idempotency_key, venda_id, tipo, motivo,
+    valor_estornado, valor_caixa_estornado, forma_estorno, operador_id, caixa_id)
+  VALUES (v_oper, 'g18-dev2-' || v_oper::text, v_v, 'DEVOLUCAO', 'devolucao do restante',
+    round(v_unit * 6, 2), round(v_unit * 6, 2), 'DINHEIRO', v_op, v_caixa);
+  INSERT INTO public.venda_pos_venda_itens(operacao_id, item_venda_id, produto_id,
+    quantidade, preco_unitario, subtotal)
+  VALUES (v_oper, v_item, v_prod, 6, v_unit, round(v_unit * 6, 2));
+
+  SELECT total_ajustes, valor_liquido INTO v_aj, v_liq
+  FROM public.comissoes_vendedores_liquidas WHERE venda_id = v_v;
+  IF v_aj <> v_com OR v_liq <> 0 THEN
+    RAISE EXCEPTION 'GATE18_DEVOLUCAO_TOTAL ajuste=% liquido=% (esperado % e 0)', v_aj, v_liq, v_com;
+  END IF;
+  -- o fato original nunca é alterado
+  IF (SELECT valor_comissao FROM public.comissoes_vendedores WHERE venda_id = v_v) <> v_com THEN
+    RAISE EXCEPTION 'GATE18_FATO_ORIGINAL_ALTERADO';
+  END IF;
+
+  -- ---------------------------------------------------------------- cancelamento
+  v_v := gen_random_uuid(); v_item := gen_random_uuid();
+  PERFORM public.registrar_venda_com_itens(v_v, v_caixa, v_op, 'PIX',  -- nao fisica: o UPDATE cru de status nao
+    -- estorna a gaveta como a RPC real faria, e o GATE 8 compara contador x E(c)
+    v_bruto, round(v_bruto - v_liquido, 2), v_liquido,
+    jsonb_build_array(jsonb_build_object('item_id', v_item, 'produto_id', v_prod,
+      'quantidade', 10, 'preco_original', v_preco, 'preco_unitario', v_unit)), NULL, NULL, NULL);
+  SELECT valor_comissao INTO v_com FROM public.comissoes_vendedores WHERE venda_id = v_v;
+
+  UPDATE public.vendas SET status = 'CANCELADA' WHERE id = v_v;
+  SELECT total_ajustes, valor_liquido INTO v_aj, v_liq
+  FROM public.comissoes_vendedores_liquidas WHERE venda_id = v_v;
+  IF v_aj <> v_com OR v_liq <> 0 THEN
+    RAISE EXCEPTION 'GATE18_CANCELAMENTO ajuste=% liquido=% (esperado % e 0)', v_aj, v_liq, v_com;
+  END IF;
+
+  -- retry e segundo cancelamento não duplicam
+  UPDATE public.vendas SET status = 'CANCELADA' WHERE id = v_v;
+  PERFORM public.processar_ajuste_comissao_venda(v_v, 'CANCELAMENTO', v_v);
+  SELECT count(*) INTO v_n FROM public.comissoes_ajustes WHERE venda_id = v_v;
+  IF v_n <> 1 THEN RAISE EXCEPTION 'GATE18_RETRY_CANCELAMENTO_DUPLICOU n=%', v_n; END IF;
+
+  -- ---------------------------------------------------------------- comissão já paga
+  v_v := gen_random_uuid(); v_item := gen_random_uuid(); v_oper := gen_random_uuid();
+  PERFORM public.registrar_venda_com_itens(v_v, v_caixa, v_op, 'DINHEIRO',
+    v_bruto, round(v_bruto - v_liquido, 2), v_liquido,
+    jsonb_build_array(jsonb_build_object('item_id', v_item, 'produto_id', v_prod,
+      'quantidade', 10, 'preco_original', v_preco, 'preco_unitario', v_unit)), NULL, NULL, NULL);
+  SELECT valor_comissao INTO v_com FROM public.comissoes_vendedores WHERE venda_id = v_v;
+  UPDATE public.comissoes_vendedores SET status = 'pago', pago_em = now(), pago_por = v_op
+   WHERE venda_id = v_v;
+
+  INSERT INTO public.venda_pos_venda_operacoes(id, idempotency_key, venda_id, tipo, motivo,
+    valor_estornado, valor_caixa_estornado, forma_estorno, operador_id, caixa_id)
+  VALUES (v_oper, 'g18-paga-' || v_oper::text, v_v, 'DEVOLUCAO', 'devolucao apos pagamento',
+    round(v_unit * 4, 2), round(v_unit * 4, 2), 'DINHEIRO', v_op, v_caixa);
+  INSERT INTO public.venda_pos_venda_itens(operacao_id, item_venda_id, produto_id,
+    quantidade, preco_unitario, subtotal)
+  VALUES (v_oper, v_item, v_prod, 4, v_unit, round(v_unit * 4, 2));
+
+  SELECT total_ajustes, saldo_a_compensar INTO v_aj, v_saldo
+  FROM public.comissoes_vendedores_liquidas WHERE venda_id = v_v;
+  -- o pagamento nunca é reescrito
+  IF (SELECT status FROM public.comissoes_vendedores WHERE venda_id = v_v) <> 'pago'
+     OR (SELECT pago_em FROM public.comissoes_vendedores WHERE venda_id = v_v) IS NULL
+     OR (SELECT valor_comissao FROM public.comissoes_vendedores WHERE venda_id = v_v) <> v_com THEN
+    RAISE EXCEPTION 'GATE18_PAGAMENTO_REESCRITO';
+  END IF;
+  IF v_saldo <> -v_aj THEN
+    RAISE EXCEPTION 'GATE18_SALDO_A_COMPENSAR saldo=% ajuste=%', v_saldo, v_aj;
+  END IF;
+
+  -- ---------------------------------------------------------------- auditoria
+  IF NOT EXISTS (
+    SELECT 1 FROM public.comissoes_ajustes a
+    JOIN public.comissoes_vendedores c ON c.id = a.comissao_id
+    WHERE a.venda_id = v_v AND a.origem_id = v_oper AND a.tipo = 'DEVOLUCAO'
+      AND a.idempotency_key = 'DEVOLUCAO:' || v_oper::text
+  ) THEN
+    RAISE EXCEPTION 'GATE18_TRILHA_DE_AUDITORIA_INCOMPLETA';
+  END IF;
+
+  -- nenhum ajuste pode existir sem comissão de origem
+  IF EXISTS (SELECT 1 FROM public.comissoes_ajustes a
+             WHERE NOT EXISTS (SELECT 1 FROM public.comissoes_vendedores c WHERE c.id = a.comissao_id)) THEN
+    RAISE EXCEPTION 'GATE18_AJUSTE_ORFAO';
+  END IF;
+END $g$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
 -- GATE 8 — reconciliação final: contador == E(c) ao fim de toda a bateria
 -- ═══════════════════════════════════════════════════════════════════════════
 DO $g$
