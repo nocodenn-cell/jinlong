@@ -8,7 +8,10 @@ WHERE perfil = 'OPERADOR' AND ativo = true AND loja_id = :'loja' LIMIT 1 \gset
 SELECT id AS caixa FROM public.caixas
 WHERE loja_id = :'loja' AND status = 'ABERTO' LIMIT 1 \gset
 
-UPDATE public.caixas SET saldo_atual = 1000 WHERE id = :'caixa';
+-- P0-1: o contador nasce de `valor_inicial` (trigger trg_caixas_saldo_inicial_bi)
+-- e não é mais gravável por `authenticated`. A fixture semeia os dois campos
+-- para que contador e E(c) partam reconciliados.
+UPDATE public.caixas SET valor_inicial = 1000, saldo_atual = 1000 WHERE id = :'caixa';
 UPDATE public.pdv_config SET limite_sangria_sem_gerente = 200 WHERE id = 1;
 
 SELECT gen_random_uuid() AS fornecedor, gen_random_uuid() AS other_store,
@@ -20,7 +23,7 @@ INSERT INTO public.lojas(id, nome, codigo)
 VALUES (:'other_store', 'Outra loja AP 2B', 'AP2B-' || left(:'other_store', 8));
 INSERT INTO public.fornecedores(id, cnpj, nome, loja_id)
 VALUES (:'other_supplier', 'T2O-' || left(:'other_supplier', 10), 'Fornecedor outra loja', :'other_store');
-INSERT INTO public.caixas(id, operador_id, loja_id, status, saldo_atual)
+INSERT INTO public.caixas(id, operador_id, loja_id, status, valor_inicial)
 VALUES (:'closed_cash', :'operador_id', :'loja', 'FECHADO', 1000),
        (:'other_cash', :'gerente_id', :'other_store', 'ABERTO', 1000);
 INSERT INTO public.contas_pagar(id, fornecedor_id, loja_id, vencimento, valor_total, valor_pago, descricao)
@@ -170,7 +173,7 @@ $test$;
 RESET ROLE;
 DELETE FROM public.caixas WHERE id = :'other_cash';
 SELECT gen_random_uuid() AS second_cash, gen_random_uuid() AS multi_cash_account \gset
-INSERT INTO public.caixas(id, operador_id, loja_id, status, saldo_atual)
+INSERT INTO public.caixas(id, operador_id, loja_id, status, valor_inicial)
 VALUES (:'second_cash', :'gerente_id', :'loja', 'ABERTO', 1000);
 INSERT INTO public.contas_pagar(id, fornecedor_id, loja_id, vencimento, valor_total, valor_pago, descricao)
 VALUES (:'multi_cash_account', :'fornecedor', :'loja', current_date, 2, 0, 'Seleção caixa');
