@@ -834,6 +834,79 @@ BEGIN
 END $g$;
 
 -- ═══════════════════════════════════════════════════════════════════════════
+-- GATE 15 — FIN-298-03: comissão nasce na venda concluída, exatamente uma vez
+-- Regressão: `trg_registrar_comissao` era `AFTER UPDATE OF status` e os dois
+-- escritores inserem a venda já CONCLUIDA — comissões geradas: 0 nos dois
+-- caminhos.
+-- ═══════════════════════════════════════════════════════════════════════════
+DO $g$
+DECLARE
+  v_loja uuid := current_setting('t.loja')::uuid;
+  v_prod uuid := current_setting('t.produto')::uuid;
+  v_preco numeric := current_setting('t.preco')::numeric;
+  v_op uuid := current_setting('t.operador')::uuid;
+  v_caixa uuid := current_setting('t.caixa')::uuid;
+  v_voff uuid := gen_random_uuid();
+  v_vtrans uuid := gen_random_uuid();
+  v_itens jsonb;
+  v_n integer;
+BEGIN
+  INSERT INTO public.configuracoes_gerais(chave, valor, tipo_dado)
+  VALUES ('comissao_padrao_percentual', '5', 'percent')
+  ON CONFLICT (chave) DO UPDATE SET valor = '5';
+
+  v_itens := jsonb_build_array(jsonb_build_object('item_id', gen_random_uuid(),
+    'produto_id', v_prod, 'quantidade', 1,
+    'preco_original', v_preco, 'preco_unitario', v_preco));
+
+  -- venda offline que entra já CONCLUIDA precisa gerar comissão
+  PERFORM public.registrar_venda_com_itens(v_voff, v_caixa, v_op, 'DINHEIRO',
+    v_preco, 0, v_preco, v_itens, NULL, NULL, NULL);
+  SELECT count(*) INTO v_n FROM public.comissoes_vendedores WHERE venda_id = v_voff;
+  IF v_n <> 1 THEN
+    RAISE EXCEPTION 'GATE15_OFFLINE_CONCLUIDA_SEM_COMISSAO comissoes=%', v_n;
+  END IF;
+
+  -- retry não pode duplicar
+  PERFORM public.registrar_venda_com_itens(v_voff, v_caixa, v_op, 'DINHEIRO',
+    v_preco, 0, v_preco, v_itens, NULL, NULL, NULL);
+  SELECT count(*) INTO v_n FROM public.comissoes_vendedores WHERE venda_id = v_voff;
+  IF v_n <> 1 THEN RAISE EXCEPTION 'GATE15_RETRY_DUPLICOU_COMISSAO comissoes=%', v_n; END IF;
+
+  -- venda que nasce em outro estado e só depois é concluída
+  INSERT INTO public.vendas(id, caixa_id, operador_id, total_bruto, total_desconto,
+    total_liquido, forma_pagamento, status)
+  -- PIX: uma venda inserida direto, sem linha em `vendas_pagamentos`, cairia no
+  -- ramo legado de E(c) e divergiria do contador. Forma nao fisica isola o gate.
+  VALUES (v_vtrans, v_caixa, v_op, v_preco, 0, v_preco, 'PIX', 'CANCELADA');
+  INSERT INTO public.itens_venda(id, venda_id, produto_id, quantidade,
+    preco_unitario_original, preco_unitario, desconto_unitario, tipo_preco)
+  VALUES (gen_random_uuid(), v_vtrans, v_prod, 1, v_preco, v_preco, 0, 'VAREJO');
+
+  SELECT count(*) INTO v_n FROM public.comissoes_vendedores WHERE venda_id = v_vtrans;
+  IF v_n <> 0 THEN RAISE EXCEPTION 'GATE15_COMISSAO_EM_VENDA_NAO_CONCLUIDA'; END IF;
+
+  UPDATE public.vendas SET status = 'CONCLUIDA' WHERE id = v_vtrans;
+  SELECT count(*) INTO v_n FROM public.comissoes_vendedores WHERE venda_id = v_vtrans;
+  IF v_n <> 1 THEN RAISE EXCEPTION 'GATE15_TRANSICAO_SEM_COMISSAO comissoes=%', v_n; END IF;
+
+  -- segundo UPDATE para CONCLUIDA não duplica
+  UPDATE public.vendas SET status = 'CONCLUIDA' WHERE id = v_vtrans;
+  SELECT count(*) INTO v_n FROM public.comissoes_vendedores WHERE venda_id = v_vtrans;
+  IF v_n <> 1 THEN RAISE EXCEPTION 'GATE15_SEGUNDO_UPDATE_DUPLICOU comissoes=%', v_n; END IF;
+
+  -- invariante global: 1 venda concluída com itens = 1 comissão
+  SELECT count(*) INTO v_n
+  FROM public.vendas v
+  WHERE v.status = 'CONCLUIDA'
+    AND EXISTS (SELECT 1 FROM public.itens_venda i WHERE i.venda_id = v.id)
+    AND NOT EXISTS (SELECT 1 FROM public.comissoes_vendedores c WHERE c.venda_id = v.id);
+  IF v_n <> 0 THEN
+    RAISE EXCEPTION 'GATE15_VENDAS_CONCLUIDAS_SEM_COMISSAO=%', v_n;
+  END IF;
+END $g$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
 -- GATE 8 — reconciliação final: contador == E(c) ao fim de toda a bateria
 -- ═══════════════════════════════════════════════════════════════════════════
 DO $g$
