@@ -402,6 +402,65 @@ BEGIN
 END $g$;
 
 -- ═══════════════════════════════════════════════════════════════════════════
+-- GATE 11 — retry offline compara a identidade do carrinho, não só os totais
+-- Regressão: payload B (produto/quantidade diferentes, mesmos totais) era
+-- aceito como replay; nada era persistido e o sync seguia baixando o estoque
+-- do payload descartado.
+-- ═══════════════════════════════════════════════════════════════════════════
+DO $g$
+DECLARE
+  v_caixa uuid := current_setting('t.caixa')::uuid;
+  v_prod uuid := current_setting('t.produto')::uuid;
+  v_preco numeric := current_setting('t.preco')::numeric;
+  v_op uuid := current_setting('t.operador')::uuid;
+  v_venda uuid := gen_random_uuid();
+  v_bruto numeric := v_preco * 2;
+  v_itens_a jsonb;
+  v_itens_ordem jsonb;
+  v_itens_qtd jsonb;
+  v_ok boolean;
+  v_linhas integer;
+BEGIN
+  -- carrinho original: duas linhas de 1 unidade a preço de tabela
+  v_itens_a := jsonb_build_array(
+    jsonb_build_object('item_id', gen_random_uuid(), 'produto_id', v_prod,
+      'quantidade', 1, 'preco_original', v_preco, 'preco_unitario', v_preco),
+    jsonb_build_object('item_id', gen_random_uuid(), 'produto_id', v_prod,
+      'quantidade', 1, 'preco_original', v_preco, 'preco_unitario', v_preco));
+
+  PERFORM public.registrar_venda_com_itens(v_venda, v_caixa, v_op, 'DINHEIRO',
+    v_bruto, 0, v_bruto, v_itens_a, NULL, NULL, NULL);
+
+  -- mesmo carrinho reenviado: replay silencioso
+  PERFORM public.registrar_venda_com_itens(v_venda, v_caixa, v_op, 'DINHEIRO',
+    v_bruto, 0, v_bruto, v_itens_a, NULL, NULL, NULL);
+
+  -- mesma composição em ordem diferente continua sendo replay (ordem não é semântica)
+  SELECT jsonb_agg(e ORDER BY e->>'item_id' DESC) INTO v_itens_ordem
+    FROM jsonb_array_elements(v_itens_a) e;
+  PERFORM public.registrar_venda_com_itens(v_venda, v_caixa, v_op, 'DINHEIRO',
+    v_bruto, 0, v_bruto, v_itens_ordem, NULL, NULL, NULL);
+
+  -- MESMOS totais, composição de quantidade diferente: precisa ser recusado
+  v_itens_qtd := jsonb_build_array(jsonb_build_object(
+    'item_id', gen_random_uuid(), 'produto_id', v_prod,
+    'quantidade', 2, 'preco_original', v_preco, 'preco_unitario', v_preco));
+  v_ok := false;
+  BEGIN
+    PERFORM public.registrar_venda_com_itens(v_venda, v_caixa, v_op, 'DINHEIRO',
+      v_bruto, 0, v_bruto, v_itens_qtd, NULL, NULL, NULL);
+  EXCEPTION WHEN OTHERS THEN
+    v_ok := SQLERRM LIKE '%ERRO_RPC_RETRY_PAYLOAD_DIVERGENTE%';
+  END;
+  IF NOT v_ok THEN RAISE EXCEPTION 'GATE11_CARRINHO_DIFERENTE_ACEITO_COMO_REPLAY'; END IF;
+
+  SELECT count(*) INTO v_linhas FROM public.itens_venda WHERE venda_id = v_venda;
+  IF v_linhas <> 2 THEN
+    RAISE EXCEPTION 'GATE11_ITENS_ORIGINAIS_ALTERADOS linhas=%', v_linhas;
+  END IF;
+END $g$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
 -- GATE 8 — reconciliação final: contador == E(c) ao fim de toda a bateria
 -- ═══════════════════════════════════════════════════════════════════════════
 DO $g$
