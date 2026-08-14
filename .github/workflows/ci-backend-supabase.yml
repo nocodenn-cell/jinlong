@@ -159,6 +159,16 @@ jobs:
           fi
           npm run test:financial -w fastproduct-backend
 
+      # F-5: o gate de tipos em `financialRpcContract.ts` afirma adapters x tipos.
+      # Uma migration que muda a assinatura de uma RPC sem regenerar os tipos
+      # passava silenciosamente, porque os dois lados seguiam consistentes entre
+      # si. Este passo compara o arquivo versionado com o schema do banco.
+      - name: Types drift gate (database x database.types.ts)
+        run: |
+          set -euo pipefail
+          cd backend
+          npm run check:types-drift -w fastproduct-backend
+
       - name: Diagnóstico em falha (logs + status)
         if: failure()
         run: |

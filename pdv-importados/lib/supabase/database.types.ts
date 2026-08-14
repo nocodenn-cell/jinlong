@@ -5175,6 +5175,10 @@ export type Database = {
         Args: { p_produto_codigo?: string }
         Returns: Json
       }
+      processar_comissao_venda: {
+        Args: { p_venda_id: string }
+        Returns: undefined
+      }
       proximo_numero_venda_em_espera: {
         Args: { p_operador_id: string }
         Returns: number
