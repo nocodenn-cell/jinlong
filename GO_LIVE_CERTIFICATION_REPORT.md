@@ -2,7 +2,8 @@
 
 **Atualizado:** 2026-08-14
 **Decisão histórica de implantação (2026-08-09):** 🟢 **GO** — preservada como evidência do fechamento anterior.
-**Estado atual do bloco financeiro (2026-08-14):** 🟡 **APTO PARA REAUDITORIA** — os 4 P0 e os 6 P1 da auditoria adversarial (§10.9) foram remediados na Fase 2C (§11), com gate de regressão automatizado no CI. Não autoriza Fase 3A nem nova certificação financeira enquanto a reauditoria independente não for executada.
+**Estado do bloco AR/AP (Fase 2C, §11):** 🟡 **APTO PARA REAUDITORIA** — os 4 P0 e os 6 P1 da auditoria adversarial (§10.9) foram remediados, com gate de regressão automatizado no CI. Reauditoria independente desse bloco específico ainda não foi executada.
+**Estado do bloco de comissões — DB-05 A→F (§12):** 🟢 **CERTIFICADO** (backend e frontend). Ver §12 para commits, gates, auditoria adversarial e dívidas residuais. **Fase 3A permanece NÃO LIBERADA** — a certificação de DB-05 fecha o bloco de comissões, não a liberação da próxima fase, que depende também da reauditoria pendente do bloco AR/AP (§11) e das dívidas de reconciliação global listadas em §12.8.
 **Produção canônica:** https://pdv-importados.vercel.app  
 **Projeto Vercel:** `pdv-importados` (team `jinlong`)  
 **Supabase:** projeto `jinlong` (dashboard do time Jinlong)
@@ -1154,3 +1155,110 @@ Antes desta unidade as quatro primeiras existiam sem nenhum invocador — o `PAS
 - **P1:** 6 de 6 endereçados — 4 corrigidos em código, 2 resolvidos por decisão documentada.
 - **P2:** avaliado; contrato mantido e documentado.
 - **Fase 3A — comissão:** continua **NÃO AUTORIZADA**. Depende de reauditoria independente desta remediação e de FIN-298-03, que não foi tocado.
+
+> **Atualização 2026-08-14 (posterior a esta seção):** FIN-298-03 e os demais achados de comissão (FIN-298-05, DB-04, DB-05) foram endereçados na unidade DB-05 A→F, documentada e certificada em **§12**. Isso fecha o bloco de comissões especificamente, mas não substitui a reauditoria independente do bloco AR/AP descrito nesta seção nem libera a Fase 3A por si só — ver §12.7 e §12.8.
+
+---
+
+## 12. DB-05 — Comissões: implementação, certificação backend e reconciliação frontend
+
+**Data de consolidação:** 2026-08-14
+**Branch:** `codex/ap-payments-reconciliation`
+**Status autoritativo:** `DB-05 CERTIFICADO` (backend e frontend). Fecha o bloco de comissões (FIN-298-03, FIN-298-05, DB-04, DB-05 de §9.1). **Não libera Fase 3A** — ver §12.7/§12.8.
+
+### 12.1 Commits
+
+| Unidade | Objetivo | Commit |
+|---|---|---|
+| DB-05A | Liquidação líquida: pagamento consome ajustes atomicamente (bruto/compensado/líquido) | `62515109` |
+| DB-05B | Ajuste processado só após a operação pós-venda completa (multi-item) | `78044c0d` |
+| DB-05C | Snapshot histórico por item — ajuste não recalcula com dados atuais | `b58386ec` |
+| DB-05D | Cancelamento independente da ordem entre apuração da comissão e o próprio cancelamento | `562fbe69` |
+| DB-05E | Ledger append-only, auditável, tipo real distinguível (CANCELAMENTO/DEVOLUCAO/TROCA) | `fd9bdfc0` |
+| DB-05F | Concorrência real — duas sessões PostgreSQL independentes, não `BEGIN/ROLLBACK` sequencial | `684882bb` |
+| Base | Compensação inicial pós-cancelamento/devolução (achado original) | `cb932494` |
+| Reconciliação frontend | UI de comissões consumindo o contrato líquido do backend | `3c2a6e90` |
+
+Todos os commits pertencem à branch `codex/ap-payments-reconciliation`, publicada em `origin/codex/ap-payments-reconciliation`.
+
+### 12.2 O que cada unidade prova
+
+**Pagamento bruto/compensado/líquido (DB-05A).** `liquidar_comissoes` consome `comissoes_ajustes` atomicamente sob `FOR UPDATE`, em ordem estável (`created_at, id`), e devolve `{pagamento_id, valor_bruto, valor_compensado, valor_liquido, comissoes_pagas, idempotent_replay}`. Provado com dados reais: comissão 44,95 → paga 44,95 (bruto=44,95, compensado=0) → devolução 40% → ajuste 17,98 → nova comissão 44,95 → segundo pagamento com **bruto=44,95, compensado=17,98 (exato), líquido=26,97**. Retry com a mesma `idempotency_key` devolve o mesmo pagamento (`idempotent_replay=true`), sem segunda linha.
+
+**Multi-item (DB-05B).** O gatilho de ajuste pós-venda é `CONSTRAINT TRIGGER ... DEFERRABLE INITIALLY DEFERRED` em `venda_pos_venda_operacoes` (não mais `FOR EACH STATEMENT` em `venda_pos_venda_itens`), disparando uma única vez por operação, depois que todos os itens já foram inseridos. Provado com uma operação real de dois itens diferentes: nenhum ajuste existe após o primeiro item; exatamente um ajuste, integral, nasce depois do segundo.
+
+**Snapshot histórico (DB-05C).** `comissoes_itens` congela por item, no momento da venda: quantidade, preço, regra resolvida, tipo de cálculo e percentual/valor fixo. `internal.calcular_comissao_venda(venda, efetivo=true)`, quando há snapshot, lê exclusivamente `comissoes_itens` — nenhuma consulta a `produtos.preco_custo`, regra ativa ou `configuracoes_gerais` atuais. Provado alterando custo do produto e a config global de comissão (5%→99%) **depois** da venda e **antes** da devolução: o ajuste resultante permaneceu idêntico à comissão original, ignorando os 99%.
+
+**Cancelamento independente de ordem (DB-05D).** Falsificado antes da correção: Ordem A (venda→comissão→cancelamento) fechava com comissão+ajuste+líquido zero; Ordem B (venda→cancelamento antes da apuração→processamento atrasado) perdia o fato inteiro (0 comissões, 0 ajustes, sem fila de recuperação). Corrigido extraindo o congelamento para `internal.apurar_comissao_original`, chamada pelo próprio gatilho de cancelamento antes de compensar. Provado que as duas ordens agora convergem para o mesmo estado econômico exato.
+
+**Ledger imutável e auditável (DB-05E).** `ON DELETE CASCADE` em `comissoes_ajustes` (que apagava o ledger junto com o fato pai) virou `RESTRICT`; gatilho `BEFORE UPDATE OR DELETE OR TRUNCATE` rejeita qualquer mutação, para qualquer role. `TROCA` deixou de ser gravada como `DEVOLUCAO` (defeito real, falsificado e corrigido). Duas views novas (`comissoes_ajustes_auditoria`, `comissoes_reconstrucao_auditoria`) reconstroem ator, origem e consumo por pagamento sem duplicar dado — reaproveitam o que DB-05A já calcula.
+
+**Concorrência real (DB-05F).** `backend/scripts/test-commission-concurrency.mjs` abre sessões `psql` independentes (processos separados, não `BEGIN/ROLLBACK` na mesma transação) e prova, com bloqueio real observado via timeout, 6 cenários: pagamento × devolução, dois pagamentos simultâneos, mesmo ajuste concorrente, cancelamento × geração da comissão, duas devoluções distintas concorrentes, pagamento × novo ajuste. Falsificado removendo o `FOR UPDATE` de `liquidar_comissoes`: produziu um **deadlock real** entre duas sessões — prova de que o lock é estrutural, não decorativo.
+
+### 12.3 Auditoria adversarial independente
+
+Uma auditoria adversarial foi conduzida como etapa separada, com a regra explícita "migration histórica não é prova do schema efetivo" — toda alegação foi verificada contra a definição **efetiva** no catálogo pós-migrations (`\sf`, `pg_get_triggerdef`, `pg_proc`), não contra o texto da migration.
+
+Uma primeira passada dessa auditoria citou incorretamente código superseded (`marcar_comissoes_pagas` de `103_comissoes.sql`, o trigger `FOR EACH STATEMENT` da migration base) e concluiu F1/F2 como ainda quebrados. Reexecutada contra o estado efetivo, com dados reais e falsificação de 3 proteções críticas (pagamento ignorando ajuste, processamento multi-item antecipado, concorrência permitindo pagamento duplicado — as três restauradas byte-a-byte após confirmar que o teste ficava vermelho), o veredito revisado foi:
+
+```
+F1 pagamento:                        FALSIFICADO (mecanismo correto)
+F2 multi-item:                       FALSIFICADO (trigger correto, não o legado citado)
+F3 ordem (D):                        FALSIFICADO (ordens convergem)
+F4 snapshot:                         FALSIFICADO (ajuste usa só o congelado)
+F5 concorrência pagamento/devolução: FALSIFICADO (lock serializa corretamente)
+```
+
+Validação do zero (`supabase db reset --local` → seed → RLS → `test:financial` → concorrência → `check:types-drift` → typecheck → vitest → lint → build): todos os passos `PASS`, incluindo os 6 cenários de concorrência real integrados ao `test:financial` (6/6 suítes).
+
+### 12.4 Certificação residual final — online×offline, isolamento loja A/B, TROCA
+
+Três dívidas deixadas explicitamente abertas pela auditoria de §12.3 foram fechadas numa rodada de certificação residual dedicada, com a mesma regra de falsificar antes de aceitar.
+
+**Online × offline.** Vendas economicamente idênticas por `finalizar_venda_transacional_canonica_v4` (online) e `registrar_venda_com_itens` (offline), comparadas ponta a ponta: comissão original, cancelamento, devolução parcial + pagamento, devolução total. **Convergente** nos 3 sub-cenários — mesmos valores exatos nos dois caminhos.
+
+**Isolamento loja A/B.** Primeira tentativa falsificou (pagamento da loja A pareceu consumir ajuste da loja B), mas a causa era débito pré-existente de uma fixture anterior no mesmo usuário, não vazamento — refeito com fixture limpa e confirmação prévia de saldo zero. Resultado: pagamento da loja A não toca ajuste da loja B; liquidação cross-loja é rejeitada (`COMISSOES_LIQUIDAR_PERMISSAO`); sob RLS real (`SET LOCAL ROLE authenticated`, não superusuário), gerente da loja A lê zero linhas do resumo da loja B. **PASS.**
+
+**TROCA real com `venda_substituta_id`.** Primeira tentativa falsificou (RPC de detalhe não rastreava `venda_substituta_id`), mas a causa era um erro de metodologia do teste: o gatilho de ajuste é `DEFERRABLE INITIALLY DEFERRED` e a leitura ocorreu antes de `SET CONSTRAINTS ALL IMMEDIATE`, então o ajuste ainda não existia no momento da leitura. Corrigido e refeito via `devolver_ou_trocar_venda` (RPC canônica real, não simulação por insert cru), com venda substituta já `CONCLUIDA`: `venda_substituta_id` gravado corretamente, ajuste com tipo real `TROCA` e valor exato, rastreável pela RPC de detalhe do frontend, comissão da venda substituta permanece intacta e independente, retry idempotente. **PASS.**
+
+Nenhum código de produto foi alterado durante essa rodada; apenas os dois erros de metodologia de teste acima foram corrigidos antes de aceitar qualquer resultado.
+
+### 12.5 Reconciliação frontend (commit `3c2a6e90`)
+
+**Achado:** as telas `/gerente/comissoes` e `/admin/comissoes` somavam `comissoes_vendedores.valor_comissao` bruto diretamente e exibiam esse número como "Pago"/"Pendente" — `comissoes_ajustes` e `comissoes_pagamentos` nunca eram lidos pelo frontend. O botão "marcar pago" chamava `marcar_comissoes_pagas` (`RETURNS integer`), descartando o detalhamento bruto/compensado/líquido/pagamento que `liquidar_comissoes` já calcula.
+
+**Correção:** duas RPCs de relatório pré-DB-05 (`resumo_comissoes_por_operador`, `detalhe_comissoes_operador` — anteriores ao bloco A→F, não certificadas por ele) foram redefinidas para projetar as views certificadas de DB-05E, sem fórmula nova (`JOIN`/`GROUP BY`/`jsonb_agg` sobre números já calculados). A ação de liquidação passou a chamar `liquidar_comissoes` diretamente, com chave de idempotência determinística por (loja, operador, conjunto de ids). Nenhuma função, gatilho, tabela ou view do conjunto certificado A→F foi tocada.
+
+**Resultado visível:** quatro KPIs com semântica explícita (bruto apurado / ajustes lançados / líquido pago / saldo a compensar) em vez de bruto disfarçado de líquido; detalhe por comissão mostra o histórico de ajustes com tipo real, ator e origem; após pagar, um modal mostra o resultado real da RPC (bruto/compensado/líquido/id do pagamento), não uma contagem.
+
+**Testes:** 29 testes automatizados (19 de comportamento de componente + 8 de contrato da action + 2 pré-existentes), cobrindo comissão sem ajuste, devolução parcial, comissão totalmente/parcialmente compensada, retry idempotente e os três tipos de ajuste. Verificação end-to-end feita contra um Supabase local real, autenticado como gerente, com os valores do resumo/detalhe/modal de liquidação batendo exatamente com o cálculo independente via SQL direto. Checagem adversarial: duas devoluções parciais sucessivas na mesma venda produzem duas entradas distintas no array de ajustes retornado pela RPC de detalhe, não uma colapsada.
+
+**Validação completa:** 6/6 gates financeiros do backend (incluindo concorrência DB-05F) re-verificados inalterados após reset limpo; `check:types-drift` limpo; `typecheck`/`lint`/`vitest` (923/923)/`build` — todos verdes.
+
+### 12.6 CI do zero
+
+A sequência `supabase db reset --local` → seed de usuários E2E → smoke RLS → `test:rls-scope` (42/42) → `test:financial` (6/6, incluindo concorrência real) → `check:types-drift` → `typecheck` → `vitest` (923/923) → `lint` → `build` → `check:edge` (3 Edge Functions) foi executada do zero, sem flake observado, tanto na certificação do backend (§12.3) quanto após a reconciliação do frontend (§12.5).
+
+### 12.7 Veredito
+
+```
+DB-05 BACKEND: PASS
+FRONTEND DB-05: PASS
+FINANCEIRO DB-05: CERTIFICADO
+FASE 3A: NÃO LIBERADA
+```
+
+`FASE 3A: NÃO LIBERADA` é uma decisão de escopo, não uma falha técnica de DB-05: a próxima fase depende também da reauditoria independente ainda pendente do bloco AR/AP (§11.10) e das dívidas de reconciliação global listadas em §12.8, que não pertencem ao bloco de comissões.
+
+### 12.8 Dívidas residuais conhecidas — escopo de certificação global, não FAIL de DB-05
+
+As dívidas abaixo foram identificadas durante o trabalho de DB-05 mas pertencem à certificação global do sistema, não ao bloco de comissões em si. Não rebaixam o veredito de §12.7.
+
+| Dívida | Natureza | Nota |
+|---|---|---|
+| Online × offline ponta a ponta em escopo global | Certificação global | §12.4 prova convergência **para comissões**. A equivalência online/offline de outros domínios (estoque, fiscal, AR/AP) já tem limites conhecidos documentados em §11.5 e continua fora deste fechamento. |
+| Isolamento loja A/B em escopo global | Certificação global | §12.4 prova isolamento **para comissões e para a RPC de resumo do frontend**. Outras telas/domínios não foram re-testados nesta rodada. |
+| TROCA com `venda_substituta_id` em outros fluxos | Certificação global | §12.4 prova a TROCA real de comissão ponta a ponta. Efeitos de TROCA em estoque/fiscal fora do escopo de comissão não foram re-verificados aqui. |
+| Outras telas do frontend ainda não reconciliadas com o contrato líquido do backend | Reconciliação frontend↔backend | §12.5 reconciliou especificamente `/gerente/comissoes` e `/admin/comissoes`. Nenhuma outra tela financeira (AR, AP, caixa, relatórios) foi auditada ou alterada nesta unidade. |
+
+---
