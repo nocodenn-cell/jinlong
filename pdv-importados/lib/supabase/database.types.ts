@@ -340,6 +340,13 @@ export type Database = {
             foreignKeyName: "comissoes_ajustes_comissao_id_fkey"
             columns: ["comissao_id"]
             isOneToOne: false
+            referencedRelation: "comissoes_reconstrucao_auditoria"
+            referencedColumns: ["comissao_id"]
+          },
+          {
+            foreignKeyName: "comissoes_ajustes_comissao_id_fkey"
+            columns: ["comissao_id"]
+            isOneToOne: false
             referencedRelation: "comissoes_vendedores"
             referencedColumns: ["id"]
           },
@@ -440,6 +447,13 @@ export type Database = {
           venda_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "comissoes_itens_comissao_id_fkey"
+            columns: ["comissao_id"]
+            isOneToOne: false
+            referencedRelation: "comissoes_reconstrucao_auditoria"
+            referencedColumns: ["comissao_id"]
+          },
           {
             foreignKeyName: "comissoes_itens_comissao_id_fkey"
             columns: ["comissao_id"]
@@ -593,6 +607,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "comissoes_ajustes"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_pagamentos_ajustes_ajuste_id_fkey"
+            columns: ["ajuste_id"]
+            isOneToOne: false
+            referencedRelation: "comissoes_ajustes_auditoria"
+            referencedColumns: ["ajuste_id"]
           },
           {
             foreignKeyName: "comissoes_pagamentos_ajustes_pagamento_id_fkey"
@@ -4579,6 +4600,169 @@ export type Database = {
       }
     }
     Views: {
+      comissoes_ajustes_auditoria: {
+        Row: {
+          ajuste_id: string | null
+          ator_id: string | null
+          beneficiario_id: string | null
+          comissao_id: string | null
+          created_at: string | null
+          idempotency_key: string | null
+          loja_id: string | null
+          origem_id: string | null
+          origem_ocorrida_em: string | null
+          origem_tipo: string | null
+          tipo: string | null
+          valor: number | null
+          valor_consumido: number | null
+          valor_pendente: number | null
+          venda_id: string | null
+          venda_substituta_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comissoes_ajustes_comissao_id_fkey"
+            columns: ["comissao_id"]
+            isOneToOne: false
+            referencedRelation: "comissoes_reconstrucao_auditoria"
+            referencedColumns: ["comissao_id"]
+          },
+          {
+            foreignKeyName: "comissoes_ajustes_comissao_id_fkey"
+            columns: ["comissao_id"]
+            isOneToOne: false
+            referencedRelation: "comissoes_vendedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_ajustes_comissao_id_fkey"
+            columns: ["comissao_id"]
+            isOneToOne: false
+            referencedRelation: "comissoes_vendedores_liquidas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_ajustes_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_ajustes_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["loja_id"]
+          },
+          {
+            foreignKeyName: "comissoes_ajustes_operador_id_fkey"
+            columns: ["beneficiario_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_ajustes_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "v_venda_consistencia_anomalias"
+            referencedColumns: ["venda_id"]
+          },
+          {
+            foreignKeyName: "comissoes_ajustes_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "vendas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venda_pos_venda_operacoes_venda_substituta_id_fkey"
+            columns: ["venda_substituta_id"]
+            isOneToOne: false
+            referencedRelation: "v_venda_consistencia_anomalias"
+            referencedColumns: ["venda_id"]
+          },
+          {
+            foreignKeyName: "venda_pos_venda_operacoes_venda_substituta_id_fkey"
+            columns: ["venda_substituta_id"]
+            isOneToOne: false
+            referencedRelation: "vendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comissoes_reconstrucao_auditoria: {
+        Row: {
+          comissao_id: string | null
+          loja_id: string | null
+          operador_id: string | null
+          pagamento_id: string | null
+          pagamento_valor_bruto: number | null
+          pagamento_valor_compensado: number | null
+          pago_em: string | null
+          pago_por: string | null
+          saldo_final: number | null
+          status: string | null
+          valor_ajustado: number | null
+          valor_compensado: number | null
+          valor_liquido_apurado: number | null
+          valor_original: number | null
+          valor_pago: number | null
+          venda_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comissoes_pagamentos_pago_por_fkey"
+            columns: ["pago_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_vendedores_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_vendedores_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["loja_id"]
+          },
+          {
+            foreignKeyName: "comissoes_vendedores_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_vendedores_pagamento_id_fkey"
+            columns: ["pagamento_id"]
+            isOneToOne: false
+            referencedRelation: "comissoes_pagamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_vendedores_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "v_venda_consistencia_anomalias"
+            referencedColumns: ["venda_id"]
+          },
+          {
+            foreignKeyName: "comissoes_vendedores_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "vendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comissoes_saldo_operador: {
         Row: {
           ajuste_nao_compensado: number | null

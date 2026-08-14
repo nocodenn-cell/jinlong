@@ -1640,6 +1640,242 @@ BEGIN
 END $g$;
 
 -- ═══════════════════════════════════════════════════════════════════════════
+-- GATE 23 — DB-05E: ledger imutável e auditoria completa.
+-- Regressões cobertas:
+--   DB05-F6: `ON DELETE CASCADE` em comissoes_ajustes (comissao_id, venda_id)
+--     apagava o ledger junto com o fato pai. Confirmado empiricamente antes
+--     da correção: 1 ajuste -> 0 ajustes depois de DELETE FROM
+--     comissoes_vendedores. Nenhuma proteção estrutural contra UPDATE/DELETE.
+--   DB05-F7: operação pós-venda tipo='TROCA' gerava ajuste tipo='DEVOLUCAO'
+--     (trg_comissao_pos_venda ignorava venda_pos_venda_operacoes.tipo).
+--   DB05-F8: trg_comissao_cancelamento / trg_comissao_apos_itens /
+--     fn_registrar_comissao tinham ACL padrão ou GRANT explícito sem
+--     nenhum caller legítimo (funções RETURNS trigger).
+-- ═══════════════════════════════════════════════════════════════════════════
+DO $g$
+DECLARE
+  v_loja uuid := current_setting('t.loja')::uuid;
+  v_prod uuid := current_setting('t.produto')::uuid;
+  v_op uuid := current_setting('t.operador')::uuid;
+  v_ger uuid := current_setting('t.gerente')::uuid;
+  v_dono uuid := current_setting('t.dono')::uuid;
+  v_caixa uuid := current_setting('t.caixa')::uuid;
+  v_preco numeric := current_setting('t.preco')::numeric;
+  v_v uuid; v_i uuid; v_com uuid; v_oper uuid;
+  v_v2 uuid; v_i2 uuid; v_c2 uuid;
+  v_n integer; v_ok boolean; v_tipo text; v_ator uuid; v_origem_id uuid;
+  v_valor numeric; v_consumido numeric; v_pendente numeric;
+  v_com_orig numeric; v_ajustado numeric; v_compensado numeric; v_pago numeric; v_saldo numeric;
+BEGIN
+  INSERT INTO public.configuracoes_gerais(chave, valor, tipo_dado)
+  VALUES ('comissao_padrao_percentual', '5', 'percent')
+  ON CONFLICT (chave) DO UPDATE SET valor = '5';
+
+  -- ---------------------------------------------------------- 1: DELETE de comissão com ajustes
+  v_v := gen_random_uuid(); v_i := gen_random_uuid();
+  PERFORM public.registrar_venda_com_itens(v_v, v_caixa, v_op, 'PIX',
+    v_preco, 0, v_preco,
+    jsonb_build_array(jsonb_build_object('item_id', v_i, 'produto_id', v_prod,
+      'quantidade', 1, 'preco_original', v_preco, 'preco_unitario', v_preco)), NULL, NULL, NULL);
+  SELECT id INTO v_com FROM public.comissoes_vendedores WHERE venda_id = v_v;
+  PERFORM public.cancelar_venda_transacional(v_v, 'gate23 delete comissao', v_ger);
+  IF (SELECT count(*) FROM public.comissoes_ajustes WHERE comissao_id = v_com) <> 1 THEN
+    RAISE EXCEPTION 'GATE23_FIXTURE_SEM_AJUSTE_1';
+  END IF;
+
+  -- Remove o snapshot por item (comissoes_itens, DB-05C) para isolar
+  -- especificamente o FK comissoes_ajustes.comissao_id -- simula uma
+  -- comissao sem snapshot e prova que o próprio ledger de ajustes bloqueia,
+  -- não apenas uma proteção incidental de outra tabela.
+  DELETE FROM public.comissoes_itens WHERE comissao_id = v_com;
+
+  v_ok := false;
+  BEGIN
+    DELETE FROM public.comissoes_vendedores WHERE id = v_com;
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM ILIKE '%comissoes_ajustes%' THEN v_ok := true; ELSE RAISE; END IF;
+  END;
+  IF NOT v_ok THEN RAISE EXCEPTION 'GATE23_1_DELETE_COMISSAO_COM_AJUSTES_ACEITO'; END IF;
+  IF (SELECT count(*) FROM public.comissoes_ajustes WHERE comissao_id = v_com) <> 1 THEN
+    RAISE EXCEPTION 'GATE23_1_LEDGER_ALTERADO_APOS_TENTATIVA';
+  END IF;
+
+  -- ---------------------------------------------------------- 2: DELETE de venda com ajustes
+  -- Remove toda proteção NÃO relacionada a comissão (itens_venda, kardex,
+  -- devoluções, auditoria de cancelamento) para isolar especificamente o FK
+  -- comissoes_ajustes.venda_id. comissoes_itens já foi removido acima.
+  DELETE FROM public.itens_venda WHERE venda_id = v_v;
+  DELETE FROM public.movimentos_estoque_log WHERE venda_id = v_v;
+  DELETE FROM public.devolucoes WHERE venda_id = v_v;
+  DELETE FROM public.vendas_canceladas_auditoria WHERE venda_id = v_v;
+  DELETE FROM public.estoque_reposicoes_cancelamento WHERE venda_id = v_v;
+  DELETE FROM public.estoque_baixas WHERE venda_id = v_v;
+
+  v_ok := false;
+  BEGIN
+    DELETE FROM public.vendas WHERE id = v_v;
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM ILIKE '%comissoes%' THEN v_ok := true; ELSE RAISE; END IF;
+  END;
+  IF NOT v_ok THEN RAISE EXCEPTION 'GATE23_2_DELETE_VENDA_COM_AJUSTES_ACEITO'; END IF;
+  IF (SELECT count(*) FROM public.comissoes_ajustes WHERE venda_id = v_v) <> 1 THEN
+    RAISE EXCEPTION 'GATE23_2_LEDGER_ALTERADO_APOS_TENTATIVA';
+  END IF;
+
+  -- ---------------------------------------------------------- 3: UPDATE em ajuste existente
+  v_ok := false;
+  BEGIN
+    UPDATE public.comissoes_ajustes SET valor = 999.99 WHERE comissao_id = v_com;
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM = 'COMISSOES_AJUSTES_IMUTAVEL' THEN v_ok := true; ELSE RAISE; END IF;
+  END;
+  IF NOT v_ok THEN RAISE EXCEPTION 'GATE23_3_UPDATE_AJUSTE_ACEITO'; END IF;
+
+  -- ---------------------------------------------------------- 4/7: cancelamento -- tipo e origem
+  SELECT tipo, origem_id INTO v_tipo, v_origem_id FROM public.comissoes_ajustes WHERE comissao_id = v_com;
+  IF v_tipo <> 'CANCELAMENTO' THEN RAISE EXCEPTION 'GATE23_4_TIPO_CANCELAMENTO_INCORRETO tipo=%', v_tipo; END IF;
+  IF (SELECT origem_id FROM public.comissoes_ajustes WHERE comissao_id = v_com) <> v_v THEN
+    RAISE EXCEPTION 'GATE23_7_ORIGEM_CANCELAMENTO_INCORRETA';
+  END IF;
+  -- ator do cancelamento é reconstruível por JOIN, sem coluna nova
+  SELECT ator_id INTO v_ator FROM public.comissoes_ajustes_auditoria WHERE ajuste_id =
+    (SELECT id FROM public.comissoes_ajustes WHERE comissao_id = v_com);
+  IF v_ator <> v_ger THEN RAISE EXCEPTION 'GATE23_ATOR_CANCELAMENTO_INCORRETO ator=% esperado=%', v_ator, v_ger; END IF;
+
+  -- ---------------------------------------------------------- 5: devolução -- tipo e origem
+  v_v2 := gen_random_uuid(); v_i2 := gen_random_uuid(); v_oper := gen_random_uuid();
+  PERFORM public.registrar_venda_com_itens(v_v2, v_caixa, v_op, 'PIX',
+    v_preco, 0, v_preco,
+    jsonb_build_array(jsonb_build_object('item_id', v_i2, 'produto_id', v_prod,
+      'quantidade', 1, 'preco_original', v_preco, 'preco_unitario', v_preco)), NULL, NULL, NULL);
+  SET CONSTRAINTS ALL DEFERRED;
+  INSERT INTO public.venda_pos_venda_operacoes(id, idempotency_key, venda_id, tipo, motivo,
+    valor_estornado, valor_caixa_estornado, forma_estorno, operador_id, caixa_id)
+  VALUES (v_oper, 'gate23-dev-' || v_oper::text, v_v2, 'DEVOLUCAO', 'gate23 devolucao tipo',
+    v_preco, v_preco, 'DINHEIRO', v_op, v_caixa);
+  INSERT INTO public.venda_pos_venda_itens(operacao_id, item_venda_id, produto_id,
+    quantidade, preco_unitario, subtotal)
+  VALUES (v_oper, v_i2, v_prod, 1, v_preco, v_preco);
+  SET CONSTRAINTS ALL IMMEDIATE;
+
+  SELECT tipo, origem_id INTO v_tipo, v_origem_id FROM public.comissoes_ajustes WHERE venda_id = v_v2;
+  IF v_tipo <> 'DEVOLUCAO' THEN RAISE EXCEPTION 'GATE23_5_TIPO_DEVOLUCAO_INCORRETO tipo=%', v_tipo; END IF;
+  IF (SELECT origem_id FROM public.comissoes_ajustes WHERE venda_id = v_v2) <> v_oper THEN
+    RAISE EXCEPTION 'GATE23_7_ORIGEM_DEVOLUCAO_INCORRETA';
+  END IF;
+  SELECT ator_id INTO v_ator FROM public.comissoes_ajustes_auditoria WHERE venda_id = v_v2;
+  IF v_ator <> v_op THEN RAISE EXCEPTION 'GATE23_ATOR_DEVOLUCAO_INCORRETO ator=% esperado=%', v_ator, v_op; END IF;
+
+  -- ---------------------------------------------------------- 6: troca -- tipo e origem
+  -- Regressão DB05-F7: antes desta correção, este ajuste nascia com
+  -- tipo='DEVOLUCAO', apagando a distinção com a devolução comum.
+  v_v2 := gen_random_uuid(); v_i2 := gen_random_uuid(); v_oper := gen_random_uuid();
+  PERFORM public.registrar_venda_com_itens(v_v2, v_caixa, v_op, 'PIX',
+    v_preco, 0, v_preco,
+    jsonb_build_array(jsonb_build_object('item_id', v_i2, 'produto_id', v_prod,
+      'quantidade', 1, 'preco_original', v_preco, 'preco_unitario', v_preco)), NULL, NULL, NULL);
+  SET CONSTRAINTS ALL DEFERRED;
+  INSERT INTO public.venda_pos_venda_operacoes(id, idempotency_key, venda_id, tipo, motivo,
+    valor_estornado, valor_caixa_estornado, forma_estorno, operador_id, caixa_id)
+  VALUES (v_oper, 'gate23-troca-' || v_oper::text, v_v2, 'TROCA', 'gate23 troca tipo',
+    v_preco, v_preco, 'DINHEIRO', v_op, v_caixa);
+  INSERT INTO public.venda_pos_venda_itens(operacao_id, item_venda_id, produto_id,
+    quantidade, preco_unitario, subtotal)
+  VALUES (v_oper, v_i2, v_prod, 1, v_preco, v_preco);
+  SET CONSTRAINTS ALL IMMEDIATE;
+
+  SELECT tipo INTO v_tipo FROM public.comissoes_ajustes WHERE venda_id = v_v2;
+  IF v_tipo <> 'TROCA' THEN RAISE EXCEPTION 'GATE23_6_TIPO_TROCA_INCORRETO tipo=%', v_tipo; END IF;
+  IF (SELECT origem_id FROM public.comissoes_ajustes WHERE venda_id = v_v2) <> v_oper THEN
+    RAISE EXCEPTION 'GATE23_7_ORIGEM_TROCA_INCORRETA';
+  END IF;
+  IF (SELECT origem_tipo FROM public.comissoes_ajustes_auditoria WHERE venda_id = v_v2) <> 'OPERACAO_POS_VENDA' THEN
+    RAISE EXCEPTION 'GATE23_ORIGEM_TIPO_TROCA_INCORRETA';
+  END IF;
+
+  -- retry do mesmo fato de troca não duplica
+  PERFORM public.processar_ajuste_comissao_venda(v_v2, 'TROCA', v_oper);
+  SELECT count(*) INTO v_n FROM public.comissoes_ajustes WHERE venda_id = v_v2;
+  IF v_n <> 1 THEN RAISE EXCEPTION 'GATE23_10_RETRY_TROCA_DUPLICOU n=%', v_n; END IF;
+
+  -- ---------------------------------------------------------- 8/9: compensação, pagamento e reconstrução completa
+  -- Mesmo formato do gate econômico crítico (comissão paga, devolução
+  -- posterior, nova comissão, próximo pagamento tem de compensar): comissão
+  -- original = 5% de 10 unidades ao preço canônico da loja, devolução de 4
+  -- unidades (40%) gera o ajuste, nova venda idêntica gera a segunda
+  -- comissão, e o segundo pagamento tem de compensar o ajuste da primeira.
+  v_v := gen_random_uuid(); v_i := gen_random_uuid();
+  PERFORM public.registrar_venda_com_itens(v_v, v_caixa, v_dono, 'PIX',
+    round(v_preco * 10, 2), 0, round(v_preco * 10, 2),
+    jsonb_build_array(jsonb_build_object('item_id', v_i, 'produto_id', v_prod,
+      'quantidade', 10, 'preco_original', v_preco, 'preco_unitario', v_preco)), NULL, NULL, NULL);
+  SELECT id, valor_comissao INTO v_com, v_com_orig FROM public.comissoes_vendedores WHERE venda_id = v_v;
+
+  PERFORM set_config('request.jwt.claim.sub', v_ger::text, true);
+  PERFORM public.liquidar_comissoes(v_loja, v_dono, ARRAY[v_com], 'gate23-lote1-' || v_v::text);
+
+  v_oper := gen_random_uuid();
+  SET CONSTRAINTS ALL DEFERRED;
+  INSERT INTO public.venda_pos_venda_operacoes(id, idempotency_key, venda_id, tipo, motivo,
+    valor_estornado, valor_caixa_estornado, forma_estorno, operador_id, caixa_id)
+  VALUES (v_oper, 'gate23-89-dev-' || v_oper::text, v_v, 'DEVOLUCAO', 'gate23 devolucao pos pagamento',
+    round(v_preco * 4, 2), round(v_preco * 4, 2), 'DINHEIRO', v_dono, v_caixa);
+  INSERT INTO public.venda_pos_venda_itens(operacao_id, item_venda_id, produto_id,
+    quantidade, preco_unitario, subtotal)
+  VALUES (v_oper, v_i, v_prod, 4, v_preco, round(v_preco * 4, 2));
+  SET CONSTRAINTS ALL IMMEDIATE;
+
+  v_v2 := gen_random_uuid(); v_i2 := gen_random_uuid();
+  PERFORM public.registrar_venda_com_itens(v_v2, v_caixa, v_dono, 'PIX',
+    round(v_preco * 10, 2), 0, round(v_preco * 10, 2),
+    jsonb_build_array(jsonb_build_object('item_id', v_i2, 'produto_id', v_prod,
+      'quantidade', 10, 'preco_original', v_preco, 'preco_unitario', v_preco)), NULL, NULL, NULL);
+  SELECT id INTO v_c2 FROM public.comissoes_vendedores WHERE venda_id = v_v2;
+
+  PERFORM public.liquidar_comissoes(v_loja, v_dono, ARRAY[v_c2], 'gate23-lote2-' || v_v2::text);
+
+  -- por ajuste: quanto foi consumido e quanto resta
+  SELECT valor, valor_consumido, valor_pendente INTO v_valor, v_consumido, v_pendente
+  FROM public.comissoes_ajustes_auditoria WHERE venda_id = v_v;
+  IF v_consumido <> v_valor OR v_pendente <> 0 THEN
+    RAISE EXCEPTION 'GATE23_8_CONSUMO_POR_AJUSTE_INCORRETO valor=% consumido=% pendente=%',
+      v_valor, v_consumido, v_pendente;
+  END IF;
+
+  -- por comissão original: reconstrução completa em uma única leitura
+  SELECT valor_original, valor_ajustado, valor_compensado, valor_pago, saldo_final
+  INTO v_com_orig, v_ajustado, v_compensado, v_pago, v_saldo
+  FROM public.comissoes_reconstrucao_auditoria WHERE comissao_id = v_com;
+  IF v_ajustado <> round(v_com_orig * 0.4, 2)
+     OR v_compensado <> v_ajustado
+     OR v_pago <> v_com_orig THEN
+    RAISE EXCEPTION 'GATE23_9_RECONSTRUCAO_INCORRETA original=% ajustado=% compensado=% pago=%',
+      v_com_orig, v_ajustado, v_compensado, v_pago;
+  END IF;
+
+  SELECT saldo_final INTO v_saldo FROM public.comissoes_reconstrucao_auditoria WHERE comissao_id = v_c2;
+  IF v_saldo <> 0 THEN RAISE EXCEPTION 'GATE23_9_SALDO_FINAL_INCORRETO saldo=%', v_saldo; END IF;
+
+  -- ---------------------------------------------------------- 10: retry do pagamento não cria novo fato
+  PERFORM public.liquidar_comissoes(v_loja, v_dono, ARRAY[v_c2], 'gate23-lote2-' || v_v2::text);
+  IF (SELECT count(*) FROM public.comissoes_pagamentos WHERE idempotency_key = 'gate23-lote2-' || v_v2::text) <> 1 THEN
+    RAISE EXCEPTION 'GATE23_10_RETRY_PAGAMENTO_DUPLICOU';
+  END IF;
+
+  -- ---------------------------------------------------------- ACL: sem caller legítimo
+  FOREACH v_tipo IN ARRAY ARRAY['trg_comissao_cancelamento', 'trg_comissao_apos_itens', 'fn_registrar_comissao'] LOOP
+    IF EXISTS (
+      SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public' AND p.proname = v_tipo
+        AND (has_function_privilege('authenticated', p.oid, 'EXECUTE')
+             OR has_function_privilege('anon', p.oid, 'EXECUTE'))
+    ) THEN
+      RAISE EXCEPTION 'GATE23_ACL_TRIGGER_EXPOSTO: % executavel por authenticated/anon', v_tipo;
+    END IF;
+  END LOOP;
+END $g$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
 -- GATE 8 — reconciliação final: contador == E(c) ao fim de toda a bateria
 -- ═══════════════════════════════════════════════════════════════════════════
 DO $g$
