@@ -907,6 +907,46 @@ BEGIN
 END $g$;
 
 -- ═══════════════════════════════════════════════════════════════════════════
+-- GATE 16 — F-3: `authenticated` não pode TRUNCATE (ignora RLS)
+-- GATE 17 — F-4: `caixas` não é apagável fisicamente por ator de aplicação
+-- Regressão: TRUNCATE caixas CASCADE apagou 24 tabelas, incluindo a auditoria
+-- de cancelamento; e DONO/GERENTE/ADMIN apagavam caixa aberto sem movimento.
+-- ═══════════════════════════════════════════════════════════════════════════
+DO $g$
+DECLARE
+  v_tab text;
+  v_n integer;
+BEGIN
+  -- GATE 16: nenhuma tabela do schema público pode conceder TRUNCATE aos
+  -- papéis de aplicação. Checagem por catálogo cobre tabelas futuras.
+  SELECT count(*) INTO v_n
+  FROM information_schema.role_table_grants
+  WHERE table_schema = 'public'
+    AND privilege_type = 'TRUNCATE'
+    AND grantee IN ('authenticated', 'anon');
+  IF v_n <> 0 THEN
+    RAISE EXCEPTION 'GATE16_TRUNCATE_CONCEDIDO em % grant(s)', v_n;
+  END IF;
+
+  -- GATE 17: DELETE em caixas fora do alcance dos papéis de aplicação.
+  SELECT count(*) INTO v_n
+  FROM information_schema.role_table_grants
+  WHERE table_schema = 'public' AND table_name = 'caixas'
+    AND privilege_type = 'DELETE'
+    AND grantee IN ('authenticated', 'anon');
+  IF v_n <> 0 THEN
+    RAISE EXCEPTION 'GATE17_DELETE_CAIXAS_CONCEDIDO em % grant(s)', v_n;
+  END IF;
+
+  -- os fluxos legítimos continuam: leitura e mudança de status
+  SELECT count(*) INTO v_n
+  FROM information_schema.role_table_grants
+  WHERE table_schema = 'public' AND table_name = 'caixas'
+    AND privilege_type = 'SELECT' AND grantee = 'authenticated';
+  IF v_n = 0 THEN RAISE EXCEPTION 'GATE17_LEITURA_DE_CAIXAS_QUEBRADA'; END IF;
+END $g$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
 -- GATE 8 — reconciliação final: contador == E(c) ao fim de toda a bateria
 -- ═══════════════════════════════════════════════════════════════════════════
 DO $g$
