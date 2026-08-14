@@ -675,6 +675,22 @@ async function processVenda(
     });
     throw new Error(`ERRO_RPC_REGISTRAR_VENDA: ${rpcVendaErr.message}`);
   }
+
+  const { error: ledgerErr } = await supabase.rpc("ensure_venda_evento_registrado", {
+    p_sale_id: payload.venda_id,
+    p_source: "sync_outbox",
+  });
+  if (ledgerErr) {
+    await captureEdgeException(new Error(ledgerErr.message), {
+      trace_id: payload.venda_id,
+      venda_id: payload.venda_id,
+      caixa_id: payload.caixa_id ?? undefined,
+      evento: "erro_rpc_venda_evento",
+      rpc: "ensure_venda_evento_registrado",
+      event_type: "VENDA_REGISTRADA",
+    });
+    throw new Error(`ERRO_RPC_REGISTRAR_VENDA_EVENTO: ${ledgerErr.message}`);
+  }
   const _t1 = Date.now();
 
   await aplicarBaixaEstoquePorItem(

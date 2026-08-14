@@ -319,6 +319,25 @@ allOk =
     }
   }) && allOk;
 
+allOk =
+  runCase("VENDA_REGISTRADA projeta o ledger gerencial", () => {
+    const vendaStart = syncSrc.indexOf("async function processVenda(");
+    const vendaEnd = syncSrc.indexOf("function parseLojaIdHeader(");
+    if (vendaStart < 0 || vendaEnd <= vendaStart) {
+      throw new Error("processVenda não encontrado");
+    }
+    const vendaFn = syncSrc.slice(vendaStart, vendaEnd);
+    if (!vendaFn.includes('rpc("registrar_venda_com_itens"')) {
+      throw new Error("processVendaRegistrada deve persistir a venda");
+    }
+    if (!vendaFn.includes('rpc("ensure_venda_evento_registrado"')) {
+      throw new Error("processVendaRegistrada deve projetar SALE_REGISTERED no ledger");
+    }
+    if (!vendaFn.includes("ERRO_RPC_REGISTRAR_VENDA_EVENTO")) {
+      throw new Error("falha no ledger deve impedir ACK do outbox");
+    }
+  }) && allOk;
+
 if (!allOk) {
   process.exit(1);
 }
