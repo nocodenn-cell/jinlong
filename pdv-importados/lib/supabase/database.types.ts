@@ -387,6 +387,104 @@ export type Database = {
           },
         ]
       }
+      comissoes_pagamentos: {
+        Row: {
+          id: string
+          idempotency_key: string
+          loja_id: string
+          operador_id: string
+          pago_em: string
+          pago_por: string | null
+          valor_bruto: number
+          valor_compensado: number
+          valor_liquido: number
+        }
+        Insert: {
+          id?: string
+          idempotency_key: string
+          loja_id: string
+          operador_id: string
+          pago_em?: string
+          pago_por?: string | null
+          valor_bruto: number
+          valor_compensado?: number
+          valor_liquido: number
+        }
+        Update: {
+          id?: string
+          idempotency_key?: string
+          loja_id?: string
+          operador_id?: string
+          pago_em?: string
+          pago_por?: string | null
+          valor_bruto?: number
+          valor_compensado?: number
+          valor_liquido?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comissoes_pagamentos_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_pagamentos_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["loja_id"]
+          },
+          {
+            foreignKeyName: "comissoes_pagamentos_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_pagamentos_pago_por_fkey"
+            columns: ["pago_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comissoes_pagamentos_ajustes: {
+        Row: {
+          ajuste_id: string
+          pagamento_id: string
+          valor_consumido: number
+        }
+        Insert: {
+          ajuste_id: string
+          pagamento_id: string
+          valor_consumido: number
+        }
+        Update: {
+          ajuste_id?: string
+          pagamento_id?: string
+          valor_consumido?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comissoes_pagamentos_ajustes_ajuste_id_fkey"
+            columns: ["ajuste_id"]
+            isOneToOne: false
+            referencedRelation: "comissoes_ajustes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_pagamentos_ajustes_pagamento_id_fkey"
+            columns: ["pagamento_id"]
+            isOneToOne: false
+            referencedRelation: "comissoes_pagamentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comissoes_regras_funcionario: {
         Row: {
           ativo: boolean
@@ -557,6 +655,7 @@ export type Database = {
           id: string
           loja_id: string
           operador_id: string
+          pagamento_id: string | null
           pago_em: string | null
           pago_por: string | null
           percentual_aplicado: number | null
@@ -571,6 +670,7 @@ export type Database = {
           id?: string
           loja_id: string
           operador_id: string
+          pagamento_id?: string | null
           pago_em?: string | null
           pago_por?: string | null
           percentual_aplicado?: number | null
@@ -585,6 +685,7 @@ export type Database = {
           id?: string
           loja_id?: string
           operador_id?: string
+          pagamento_id?: string | null
           pago_em?: string | null
           pago_por?: string | null
           percentual_aplicado?: number | null
@@ -613,6 +714,13 @@ export type Database = {
             columns: ["operador_id"]
             isOneToOne: false
             referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_vendedores_pagamento_id_fkey"
+            columns: ["pagamento_id"]
+            isOneToOne: false
+            referencedRelation: "comissoes_pagamentos"
             referencedColumns: ["id"]
           },
           {
@@ -4353,11 +4461,43 @@ export type Database = {
       }
     }
     Views: {
+      comissoes_saldo_operador: {
+        Row: {
+          ajuste_nao_compensado: number | null
+          comissao_pendente: number | null
+          loja_id: string | null
+          operador_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comissoes_vendedores_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_vendedores_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["loja_id"]
+          },
+          {
+            foreignKeyName: "comissoes_vendedores_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comissoes_vendedores_liquidas: {
         Row: {
           id: string | null
           loja_id: string | null
           operador_id: string | null
+          pagamento_id: string | null
           pago_em: string | null
           saldo_a_compensar: number | null
           status: string | null
@@ -4386,6 +4526,13 @@ export type Database = {
             columns: ["operador_id"]
             isOneToOne: false
             referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_vendedores_pagamento_id_fkey"
+            columns: ["pagamento_id"]
+            isOneToOne: false
+            referencedRelation: "comissoes_pagamentos"
             referencedColumns: ["id"]
           },
           {
@@ -5207,6 +5354,22 @@ export type Database = {
           qtd_concluidas: number
           ticket_medio: number
           valor_canceladas: number
+        }[]
+      }
+      liquidar_comissoes: {
+        Args: {
+          p_idempotency_key: string
+          p_ids: string[]
+          p_loja_id: string
+          p_operador_id: string
+        }
+        Returns: {
+          comissoes_pagas: number
+          idempotent_replay: boolean
+          pagamento_id: string
+          valor_bruto: number
+          valor_compensado: number
+          valor_liquido: number
         }[]
       }
       list_produtos_gerente_filtrados: {

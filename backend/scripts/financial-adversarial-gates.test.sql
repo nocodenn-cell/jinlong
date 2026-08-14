@@ -1092,6 +1092,98 @@ BEGIN
 END $g$;
 
 -- ═══════════════════════════════════════════════════════════════════════════
+-- GATE 19 — DB-05A: pagamento líquido consome o ajuste negativo
+-- Regressão DB05-F1: `marcar_comissoes_pagas` pagava a linha positiva
+-- integral e o `saldo_a_compensar` era só informativo. O cenário obrigatório
+-- do handoff é +5 / pago 5 / -2 / +5 -> próximo pagamento tem de ser 3.
+-- Usa o fluxo canônico real, nunca UPDATE status='pago'.
+-- ═══════════════════════════════════════════════════════════════════════════
+DO $g$
+DECLARE
+  v_loja uuid := current_setting('t.loja')::uuid;
+  v_prod uuid := current_setting('t.produto')::uuid;
+  v_preco numeric := current_setting('t.preco')::numeric;
+  -- Vendedor proprio: o OPERADOR ja acumula ajustes dos gates anteriores e a
+  -- liquidacao (corretamente) consumiria esse debito, mascarando o cenario.
+  v_op uuid := current_setting('t.dono')::uuid;
+  v_ger uuid := current_setting('t.gerente')::uuid;
+  v_caixa uuid := current_setting('t.caixa')::uuid;
+  v_unit numeric := (public.calcular_preco_produto(v_prod, 10, v_loja)->>'preco')::numeric;
+  v_v1 uuid := gen_random_uuid(); v_v2 uuid := gen_random_uuid();
+  v_i1 uuid := gen_random_uuid(); v_i2 uuid := gen_random_uuid();
+  v_o uuid := gen_random_uuid();
+  v_c1 uuid; v_c2 uuid; r record;
+  v_bruto numeric := round(v_preco * 10, 2);
+  v_liq numeric := round(v_unit * 10, 2);
+  v_com numeric; v_aj numeric; v_esperado numeric;
+BEGIN
+  INSERT INTO public.configuracoes_gerais(chave, valor, tipo_dado)
+  VALUES ('comissao_padrao_percentual', '5', 'percent')
+  ON CONFLICT (chave) DO UPDATE SET valor = '5';
+  PERFORM set_config('request.jwt.claim.sub', v_ger::text, true);
+
+  PERFORM public.registrar_venda_com_itens(v_v1, v_caixa, v_op, 'DINHEIRO',
+    v_bruto, round(v_bruto - v_liq, 2), v_liq,
+    jsonb_build_array(jsonb_build_object('item_id', v_i1, 'produto_id', v_prod,
+      'quantidade', 10, 'preco_original', v_preco, 'preco_unitario', v_unit)), NULL, NULL, NULL);
+  SELECT id, valor_comissao INTO v_c1, v_com FROM public.comissoes_vendedores WHERE venda_id = v_v1;
+  IF COALESCE(v_com, 0) <= 0 THEN RAISE EXCEPTION 'GATE19_SEM_COMISSAO'; END IF;
+
+  -- pagamento 1: nada a compensar
+  SELECT * INTO r FROM public.liquidar_comissoes(v_loja, v_op, ARRAY[v_c1], 'g19-lote1-' || v_v1::text);
+  IF r.valor_liquido <> v_com OR r.valor_compensado <> 0 THEN
+    RAISE EXCEPTION 'GATE19_PAGAMENTO1 bruto=% comp=% liq=%', r.valor_bruto, r.valor_compensado, r.valor_liquido;
+  END IF;
+
+  -- devolução de 40% depois de pago -> ajuste
+  INSERT INTO public.venda_pos_venda_operacoes(id, idempotency_key, venda_id, tipo, motivo,
+    valor_estornado, valor_caixa_estornado, forma_estorno, operador_id, caixa_id)
+  VALUES (v_o, 'g19-dev-' || v_o::text, v_v1, 'DEVOLUCAO', 'devolucao apos pagamento',
+    round(v_unit * 4, 2), round(v_unit * 4, 2), 'DINHEIRO', v_op, v_caixa);
+  INSERT INTO public.venda_pos_venda_itens(operacao_id, item_venda_id, produto_id,
+    quantidade, preco_unitario, subtotal)
+  VALUES (v_o, v_i1, v_prod, 4, v_unit, round(v_unit * 4, 2));
+
+  SELECT COALESCE(SUM(valor), 0) INTO v_aj FROM public.comissoes_ajustes WHERE venda_id = v_v1;
+  IF v_aj <= 0 THEN RAISE EXCEPTION 'GATE19_SEM_AJUSTE'; END IF;
+
+  -- nova comissão do mesmo valor
+  PERFORM public.registrar_venda_com_itens(v_v2, v_caixa, v_op, 'DINHEIRO',
+    v_bruto, round(v_bruto - v_liq, 2), v_liq,
+    jsonb_build_array(jsonb_build_object('item_id', v_i2, 'produto_id', v_prod,
+      'quantidade', 10, 'preco_original', v_preco, 'preco_unitario', v_unit)), NULL, NULL, NULL);
+  SELECT id INTO v_c2 FROM public.comissoes_vendedores WHERE venda_id = v_v2;
+
+  -- pagamento 2: TEM de compensar o ajuste
+  SELECT * INTO r FROM public.liquidar_comissoes(v_loja, v_op, ARRAY[v_c2], 'g19-lote2-' || v_v2::text);
+  v_esperado := round(v_com - v_aj, 2);
+  IF r.valor_compensado <> v_aj OR r.valor_liquido <> v_esperado THEN
+    RAISE EXCEPTION 'GATE19_PAGAMENTO_NAO_COMPENSOU bruto=% comp=% liq=% (esperado comp=% liq=%)',
+      r.valor_bruto, r.valor_compensado, r.valor_liquido, v_aj, v_esperado;
+  END IF;
+
+  -- o débito foi totalmente absorvido
+  IF (SELECT ajuste_nao_compensado FROM public.comissoes_saldo_operador
+      WHERE loja_id = v_loja AND operador_id = v_op) <> 0 THEN
+    RAISE EXCEPTION 'GATE19_SALDO_RESIDUAL';
+  END IF;
+
+  -- retry do lote não paga de novo
+  SELECT * INTO r FROM public.liquidar_comissoes(v_loja, v_op, ARRAY[v_c2], 'g19-lote2-' || v_v2::text);
+  IF NOT r.idempotent_replay THEN RAISE EXCEPTION 'GATE19_RETRY_NAO_E_REPLAY'; END IF;
+  IF (SELECT count(*) FROM public.comissoes_pagamentos) <> 2 THEN
+    RAISE EXCEPTION 'GATE19_RETRY_CRIOU_LOTE';
+  END IF;
+
+  -- trilha: cada comissão aponta o lote que a pagou e o consumo é explícito
+  IF (SELECT pagamento_id FROM public.comissoes_vendedores WHERE id = v_c1) IS NULL
+     OR (SELECT pagamento_id FROM public.comissoes_vendedores WHERE id = v_c2) IS NULL
+     OR NOT EXISTS (SELECT 1 FROM public.comissoes_pagamentos_ajustes) THEN
+    RAISE EXCEPTION 'GATE19_TRILHA_INCOMPLETA';
+  END IF;
+END $g$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
 -- GATE 8 — reconciliação final: contador == E(c) ao fim de toda a bateria
 -- ═══════════════════════════════════════════════════════════════════════════
 DO $g$
