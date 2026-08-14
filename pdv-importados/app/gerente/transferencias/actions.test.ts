@@ -18,9 +18,14 @@ vi.mock('next/cache', () => ({
 }))
 
 describe('gerente/transferencias actions', () => {
+  // O `import` arrasta o grafo do módulo de actions do gerente. Em máquina
+  // lenta isso ultrapassa o hookTimeout padrão de 10s e produz flake — os 4
+  // casos em si rodam em milissegundos. Timeout explícito no hook, nenhum
+  // assert alterado. Mesmo tratamento já aplicado em
+  // finalizarVendaCaixa.integration.test.ts.
   beforeAll(async () => {
     await import('./actions')
-  })
+  }, 60_000)
 
   beforeEach(() => {
     vi.clearAllMocks()
