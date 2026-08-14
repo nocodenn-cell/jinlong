@@ -4513,6 +4513,21 @@ export type Database = {
         Args: { p_caixa_id: string }
         Returns: number
       }
+      cancelar_conta_pagar: {
+        Args: {
+          p_conta_id: string
+          p_idempotency_key: string
+          p_motivo: string
+          p_origem?: string
+        }
+        Returns: {
+          conta_id: string
+          estornos_gerados: number
+          idempotent_replay: boolean
+          status: string
+          valor_pago: number
+        }[]
+      }
       cancelar_movimentacao: {
         Args: { p_motivo_cancelamento?: string; p_movimentacao_id: string }
         Returns: {
@@ -4617,6 +4632,24 @@ export type Database = {
         Args: { p_sale_id: string; p_source?: string }
         Returns: string
       }
+      estornar_liquidacao_receber: {
+        Args: {
+          p_idempotency_key: string
+          p_liquidacao_id: string
+          p_motivo: string
+          p_origem?: string
+        }
+        Returns: {
+          caixa_id: string
+          estorno_id: string
+          idempotent_replay: boolean
+          liquidacao_origem_id: string
+          status: string
+          titulo_id: string
+          valor: number
+          valor_aberto: number
+        }[]
+      }
       estornar_movimentacao: {
         Args: {
           p_device_id?: string
@@ -4632,6 +4665,24 @@ export type Database = {
           movimentacao_id: string
           saldo_atual: number
           status_movimentacao: string
+        }[]
+      }
+      estornar_pagamento_contas_pagar: {
+        Args: {
+          p_idempotency_key: string
+          p_motivo: string
+          p_origem?: string
+          p_pagamento_id: string
+        }
+        Returns: {
+          conta_id: string
+          estorno_id: string
+          idempotent_replay: boolean
+          movimentacao_estorno_id: string
+          pagamento_origem_id: string
+          status: string
+          valor: number
+          valor_pago: number
         }[]
       }
       fechar_caixa_atomico: {

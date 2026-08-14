@@ -461,6 +461,237 @@ BEGIN
 END $g$;
 
 -- ═══════════════════════════════════════════════════════════════════════════
+-- GATE 12 — estorno/cancelamento AR e AP (P1-4)
+-- Regressão: a Fase 1A provisionou ESTORNO/operacao_origem_id e nenhum fluxo
+-- usava; o cancelamento de AP era UPDATE direto de status, deixando pagamento
+-- registrado e sangria aplicada sem contrapartida.
+-- ═══════════════════════════════════════════════════════════════════════════
+DO $g$
+DECLARE
+  v_caixa uuid := current_setting('t.caixa')::uuid;
+  v_loja uuid := current_setting('t.loja')::uuid;
+  v_outra uuid := current_setting('t.outra_loja')::uuid;
+  v_uid uuid := current_setting('t.dono')::uuid;
+  v_forn uuid := gen_random_uuid();
+  v_cli uuid := gen_random_uuid();
+  v_ap_par uuid := gen_random_uuid();
+  v_ap_tot uuid := gen_random_uuid();
+  v_ap_pix uuid := gen_random_uuid();
+  v_tr_par uuid := gen_random_uuid();
+  v_tr_tot uuid := gen_random_uuid();
+  v_pag uuid; v_liq uuid; v_est uuid;
+  v_saldo0 numeric; v_saldo numeric; v_ec numeric;
+  v_status text; v_pago numeric; v_aberto numeric; v_n integer;
+  v_ok boolean;
+BEGIN
+  UPDATE public.usuarios SET perfil = 'DONO', loja_id = v_loja, ativo = true WHERE id = v_uid;
+  PERFORM set_config('request.jwt.claim.sub', v_uid::text, true);
+
+  INSERT INTO public.fornecedores(id, cnpj, nome, loja_id)
+  VALUES (v_forn, 'G12-' || left(v_forn::text, 10), 'Fornecedor gate12', v_loja);
+  INSERT INTO public.clientes(id, nome, loja_id) VALUES (v_cli, 'Cliente gate12', v_loja);
+  INSERT INTO public.contas_pagar(id, fornecedor_id, loja_id, vencimento, valor_total, valor_pago)
+  VALUES (v_ap_par, v_forn, v_loja, current_date, 100, 0),
+         (v_ap_tot, v_forn, v_loja, current_date, 100, 0),
+         (v_ap_pix, v_forn, v_loja, current_date, 100, 0);
+  INSERT INTO public.contas_receber(id, cliente_id, valor_total, valor_aberto, status, loja_id)
+  VALUES (v_tr_par, v_cli, 100, 100, 'ABERTO', v_loja),
+         (v_tr_tot, v_cli, 100, 100, 'ABERTO', v_loja);
+
+  SELECT saldo_atual INTO v_saldo0 FROM public.caixas WHERE id = v_caixa;
+
+  -- [1][3][13] AP parcialmente paga em DINHEIRO -> cancelamento
+  SELECT pagamento_id INTO v_pag FROM public.registrar_pagamento_contas_pagar(
+    v_ap_par, 40, 'DINHEIRO', now(), NULL, 'g12-par', v_caixa, 'TESTE_DB', NULL);
+  IF (SELECT saldo_atual FROM public.caixas WHERE id = v_caixa) <> v_saldo0 - 40 THEN
+    RAISE EXCEPTION 'GATE12_AP_PAGTO_NAO_DEBITOU';
+  END IF;
+
+  SELECT status, valor_pago, estornos_gerados INTO v_status, v_pago, v_n
+  FROM public.cancelar_conta_pagar(v_ap_par, 'fornecedor cancelou', 'g12-cancel-par', 'TESTE_DB');
+  IF v_status <> 'CANCELADO' OR v_pago <> 0 OR v_n <> 1 THEN
+    RAISE EXCEPTION 'GATE12_AP_CANCEL_PARCIAL status=% pago=% estornos=%', v_status, v_pago, v_n;
+  END IF;
+  -- [3] dinheiro recomposto exatamente uma vez
+  IF (SELECT saldo_atual FROM public.caixas WHERE id = v_caixa) <> v_saldo0 THEN
+    RAISE EXCEPTION 'GATE12_AP_ESTORNO_NAO_RECOMPOS_CAIXA';
+  END IF;
+  -- [13] auditoria liga fato original ao estorno, e o original é preservado
+  IF NOT EXISTS (SELECT 1 FROM public.contas_pagar_pagamentos
+                 WHERE conta_id = v_ap_par AND operacao_tipo = 'ESTORNO'
+                   AND operacao_origem_id = v_pag) THEN
+    RAISE EXCEPTION 'GATE12_AP_ESTORNO_SEM_VINCULO';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.contas_pagar_pagamentos
+                 WHERE id = v_pag AND operacao_tipo = 'PAGAMENTO' AND valor = 40) THEN
+    RAISE EXCEPTION 'GATE12_AP_FATO_ORIGINAL_ALTERADO';
+  END IF;
+
+  -- [8] retry do cancelamento é idempotente
+  SELECT estornos_gerados INTO v_n
+  FROM public.cancelar_conta_pagar(v_ap_par, 'fornecedor cancelou', 'g12-cancel-par', 'TESTE_DB');
+  IF v_n <> 0 THEN RAISE EXCEPTION 'GATE12_AP_CANCEL_RETRY_DUPLICOU'; END IF;
+  IF (SELECT saldo_atual FROM public.caixas WHERE id = v_caixa) <> v_saldo0 THEN
+    RAISE EXCEPTION 'GATE12_AP_CANCEL_RETRY_MEXEU_NO_CAIXA';
+  END IF;
+
+  -- [9] segundo estorno do mesmo pagamento é recusado
+  v_ok := false;
+  BEGIN
+    PERFORM * FROM public.estornar_pagamento_contas_pagar(v_pag, 'de novo', 'g12-2x', 'TESTE_DB');
+  EXCEPTION WHEN OTHERS THEN v_ok := SQLERRM LIKE '%ESTORNO_AP_JA_ESTORNADO%'; END;
+  IF NOT v_ok THEN RAISE EXCEPTION 'GATE12_AP_SEGUNDO_ESTORNO_ACEITO'; END IF;
+
+  -- [2] AP totalmente paga -> cancelamento
+  PERFORM * FROM public.registrar_pagamento_contas_pagar(
+    v_ap_tot, 100, 'DINHEIRO', now(), NULL, 'g12-tot', v_caixa, 'TESTE_DB', NULL);
+  SELECT status, valor_pago INTO v_status, v_pago
+  FROM public.cancelar_conta_pagar(v_ap_tot, 'erro de lancamento', 'g12-cancel-tot', 'TESTE_DB');
+  IF v_status <> 'CANCELADO' OR v_pago <> 0 THEN
+    RAISE EXCEPTION 'GATE12_AP_CANCEL_TOTAL status=% pago=%', v_status, v_pago;
+  END IF;
+  IF (SELECT saldo_atual FROM public.caixas WHERE id = v_caixa) <> v_saldo0 THEN
+    RAISE EXCEPTION 'GATE12_AP_CANCEL_TOTAL_CAIXA';
+  END IF;
+
+  -- [4] AP não físico: estorno não altera o contador
+  SELECT pagamento_id INTO v_pag FROM public.registrar_pagamento_contas_pagar(
+    v_ap_pix, 60, 'PIX', now(), NULL, 'g12-pix', NULL, 'TESTE_DB', NULL);
+  SELECT saldo_atual INTO v_saldo FROM public.caixas WHERE id = v_caixa;
+  PERFORM * FROM public.estornar_pagamento_contas_pagar(v_pag, 'estorno pix', 'g12-pix-est', 'TESTE_DB');
+  IF (SELECT saldo_atual FROM public.caixas WHERE id = v_caixa) <> v_saldo THEN
+    RAISE EXCEPTION 'GATE12_AP_NAO_FISICO_ALTEROU_GAVETA';
+  END IF;
+  IF (SELECT valor_pago FROM public.contas_pagar WHERE id = v_ap_pix) <> 0 THEN
+    RAISE EXCEPTION 'GATE12_AP_PIX_VALOR_PAGO_NAO_ZEROU';
+  END IF;
+
+  -- [5][7] AR parcialmente recebido em DINHEIRO -> estorno debita o contador 1x
+  SELECT saldo_atual INTO v_saldo0 FROM public.caixas WHERE id = v_caixa;
+  SELECT liquidacao_id INTO v_liq FROM public.registrar_liquidacao_receber(
+    v_tr_par, 30, 'DINHEIRO', NULL, 'g12-ar-par', v_caixa, 'TESTE_DB');
+  IF (SELECT saldo_atual FROM public.caixas WHERE id = v_caixa) <> v_saldo0 + 30 THEN
+    RAISE EXCEPTION 'GATE12_AR_RECEBIMENTO_NAO_CREDITOU';
+  END IF;
+  SELECT estorno_id, valor_aberto, status INTO v_est, v_aberto, v_status
+  FROM public.estornar_liquidacao_receber(v_liq, 'cliente devolveu', 'g12-ar-par-est', 'TESTE_DB');
+  IF v_aberto <> 100 OR v_status <> 'ABERTO' THEN
+    RAISE EXCEPTION 'GATE12_AR_ESTORNO_TITULO aberto=% status=%', v_aberto, v_status;
+  END IF;
+  IF (SELECT saldo_atual FROM public.caixas WHERE id = v_caixa) <> v_saldo0 THEN
+    RAISE EXCEPTION 'GATE12_AR_ESTORNO_NAO_DEBITOU_UMA_VEZ';
+  END IF;
+  -- [13] vínculo e preservação do fato original
+  IF NOT EXISTS (SELECT 1 FROM public.liquidacoes_receber
+                 WHERE id = v_est AND operacao_tipo = 'ESTORNO' AND operacao_origem_id = v_liq) THEN
+    RAISE EXCEPTION 'GATE12_AR_ESTORNO_SEM_VINCULO';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.liquidacoes_receber
+                 WHERE id = v_liq AND operacao_tipo = 'RECEBIMENTO' AND valor = 30) THEN
+    RAISE EXCEPTION 'GATE12_AR_FATO_ORIGINAL_ALTERADO';
+  END IF;
+
+  -- [8] retry do estorno AR pela mesma chave é replay
+  SELECT idempotent_replay INTO v_ok
+  FROM public.estornar_liquidacao_receber(v_liq, 'cliente devolveu', 'g12-ar-par-est', 'TESTE_DB');
+  IF NOT v_ok THEN RAISE EXCEPTION 'GATE12_AR_ESTORNO_RETRY_NAO_E_REPLAY'; END IF;
+  IF (SELECT saldo_atual FROM public.caixas WHERE id = v_caixa) <> v_saldo0 THEN
+    RAISE EXCEPTION 'GATE12_AR_ESTORNO_RETRY_MEXEU_NO_CAIXA';
+  END IF;
+
+  -- [9] segundo estorno do mesmo recebimento, chave nova -> recusado
+  v_ok := false;
+  BEGIN
+    PERFORM * FROM public.estornar_liquidacao_receber(v_liq, 'de novo', 'g12-ar-2x', 'TESTE_DB');
+  EXCEPTION WHEN OTHERS THEN v_ok := SQLERRM LIKE '%ESTORNO_AR_JA_ESTORNADO%'; END;
+  IF NOT v_ok THEN RAISE EXCEPTION 'GATE12_AR_SEGUNDO_ESTORNO_ACEITO'; END IF;
+
+  -- [6] AR totalmente recebido -> estorno devolve o título a ABERTO
+  SELECT liquidacao_id INTO v_liq FROM public.registrar_liquidacao_receber(
+    v_tr_tot, 100, 'PIX', NULL, 'g12-ar-tot', NULL, 'TESTE_DB');
+  IF (SELECT status FROM public.contas_receber WHERE id = v_tr_tot) <> 'QUITADO' THEN
+    RAISE EXCEPTION 'GATE12_AR_TOTAL_NAO_QUITOU';
+  END IF;
+  SELECT valor_aberto, status INTO v_aberto, v_status
+  FROM public.estornar_liquidacao_receber(v_liq, 'estorno total', 'g12-ar-tot-est', 'TESTE_DB');
+  IF v_aberto <> 100 OR v_status <> 'ABERTO' THEN
+    RAISE EXCEPTION 'GATE12_AR_ESTORNO_TOTAL aberto=% status=%', v_aberto, v_status;
+  END IF;
+
+  -- [11] outra loja -> rejeitado (AR e AP)
+  UPDATE public.usuarios SET loja_id = v_outra WHERE id = v_uid;
+  PERFORM set_config('request.jwt.claim.sub', v_uid::text, true);
+  v_ok := false;
+  BEGIN
+    PERFORM * FROM public.estornar_liquidacao_receber(v_liq, 'x', 'g12-cross-ar', 'TESTE_DB');
+  EXCEPTION WHEN OTHERS THEN v_ok := SQLERRM LIKE '%ESTORNO_AR_LOJA_DIVERGENTE%'; END;
+  IF NOT v_ok THEN RAISE EXCEPTION 'GATE12_AR_ESTORNO_CROSS_LOJA_ACEITO'; END IF;
+  v_ok := false;
+  BEGIN
+    -- motivo com >= 2 caracteres para que a checagem de loja seja de fato a
+    -- que rejeita, e não a validação de motivo obrigatório.
+    PERFORM * FROM public.cancelar_conta_pagar(v_ap_pix, 'tentativa cross-loja', 'g12-cross-ap', 'TESTE_DB');
+  EXCEPTION WHEN OTHERS THEN v_ok := SQLERRM LIKE '%CANCELAR_AP_LOJA%'; END;
+  IF NOT v_ok THEN RAISE EXCEPTION 'GATE12_AP_CANCEL_CROSS_LOJA_ACEITO'; END IF;
+
+  -- [12] usuário inativo -> rejeitado
+  UPDATE public.usuarios SET loja_id = v_loja, ativo = false WHERE id = v_uid;
+  PERFORM set_config('request.jwt.claim.sub', v_uid::text, true);
+  v_ok := false;
+  BEGIN
+    PERFORM * FROM public.estornar_liquidacao_receber(v_liq, 'x', 'g12-inativo', 'TESTE_DB');
+  EXCEPTION WHEN OTHERS THEN v_ok := SQLERRM LIKE '%ESTORNO_AR_PERFIL%'; END;
+  IF NOT v_ok THEN RAISE EXCEPTION 'GATE12_AR_ESTORNO_INATIVO_ACEITO'; END IF;
+  UPDATE public.usuarios SET ativo = true WHERE id = v_uid;
+END $g$;
+
+-- [10] fault injection: falha depois do efeito físico reverte o estorno inteiro
+CREATE FUNCTION pg_temp.fail_estorno_ap() RETURNS trigger LANGUAGE plpgsql AS $f$
+BEGIN RAISE EXCEPTION 'GATE12_FALHA_INJETADA'; END $f$;
+CREATE TRIGGER gate12_fail_estorno AFTER INSERT ON public.contas_pagar_pagamentos
+FOR EACH ROW WHEN (NEW.operacao_tipo = 'ESTORNO' AND NEW.observacao = 'gate12-fault')
+EXECUTE FUNCTION pg_temp.fail_estorno_ap();
+
+DO $g$
+DECLARE
+  v_caixa uuid := current_setting('t.caixa')::uuid;
+  v_loja uuid := current_setting('t.loja')::uuid;
+  v_uid uuid := current_setting('t.dono')::uuid;
+  v_forn uuid := gen_random_uuid();
+  v_ap uuid := gen_random_uuid();
+  v_pag uuid; v_saldo numeric; v_pago numeric; v_ok boolean := false;
+BEGIN
+  UPDATE public.usuarios SET perfil = 'DONO', loja_id = v_loja, ativo = true WHERE id = v_uid;
+  PERFORM set_config('request.jwt.claim.sub', v_uid::text, true);
+  INSERT INTO public.fornecedores(id, cnpj, nome, loja_id)
+  VALUES (v_forn, 'G12F-' || left(v_forn::text, 9), 'Fornecedor fault', v_loja);
+  INSERT INTO public.contas_pagar(id, fornecedor_id, loja_id, vencimento, valor_total, valor_pago)
+  VALUES (v_ap, v_forn, v_loja, current_date, 50, 0);
+
+  SELECT pagamento_id INTO v_pag FROM public.registrar_pagamento_contas_pagar(
+    v_ap, 20, 'DINHEIRO', now(), NULL, 'g12-fault', v_caixa, 'TESTE_DB', NULL);
+  SELECT saldo_atual INTO v_saldo FROM public.caixas WHERE id = v_caixa;
+  SELECT valor_pago INTO v_pago FROM public.contas_pagar WHERE id = v_ap;
+
+  BEGIN
+    PERFORM * FROM public.estornar_pagamento_contas_pagar(v_pag, 'gate12-fault', 'g12-fault-est', 'TESTE_DB');
+  EXCEPTION WHEN OTHERS THEN v_ok := SQLERRM LIKE '%GATE12_FALHA_INJETADA%'; END;
+  IF NOT v_ok THEN RAISE EXCEPTION 'GATE12_FAULT_NAO_PROPAGOU'; END IF;
+
+  IF (SELECT saldo_atual FROM public.caixas WHERE id = v_caixa) <> v_saldo THEN
+    RAISE EXCEPTION 'GATE12_FAULT_CAIXA_NAO_REVERTEU';
+  END IF;
+  IF (SELECT valor_pago FROM public.contas_pagar WHERE id = v_ap) <> v_pago THEN
+    RAISE EXCEPTION 'GATE12_FAULT_TITULO_NAO_REVERTEU';
+  END IF;
+  IF EXISTS (SELECT 1 FROM public.contas_pagar_pagamentos WHERE operacao_origem_id = v_pag) THEN
+    RAISE EXCEPTION 'GATE12_FAULT_ESTORNO_PERSISTIU';
+  END IF;
+END $g$;
+
+DROP TRIGGER gate12_fail_estorno ON public.contas_pagar_pagamentos;
+
+-- ═══════════════════════════════════════════════════════════════════════════
 -- GATE 8 — reconciliação final: contador == E(c) ao fim de toda a bateria
 -- ═══════════════════════════════════════════════════════════════════════════
 DO $g$

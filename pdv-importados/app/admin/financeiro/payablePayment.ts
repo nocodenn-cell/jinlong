@@ -86,16 +86,23 @@ export function createPayablePaymentService(
           code: FINANCIAL_ERROR_CODES.VALUE_INVALID,
         }
       }
+      if (!command.idempotencyKey?.trim()) {
+        return {
+          ok: false,
+          error: 'Chave de idempotência obrigatória.',
+          code: FINANCIAL_ERROR_CODES.VALUE_INVALID,
+        }
+      }
       try {
-        const { error } = await supabase
-          .from('contas_pagar')
-          .update({
-            status: 'CANCELADO',
-            cancelamento_motivo: command.motivo.trim(),
-            cancelamento_em: new Date().toISOString(),
-          })
-          .eq('id', command.contaId)
-          .in('status', ['PENDENTE', 'PARCIAL', 'ATRASADO'])
+        // P1-4: era um UPDATE direto de `status`, que deixava pagamento
+        // registrado e sangria aplicada sem contrapartida. A RPC estorna
+        // integralmente os pagamentos realizados na mesma transação.
+        const { error } = await supabase.rpc('cancelar_conta_pagar', {
+          p_conta_id: command.contaId,
+          p_motivo: command.motivo.trim(),
+          p_idempotency_key: command.idempotencyKey,
+          p_origem: 'UI_FINANCEIRO',
+        })
         if (error) {
           return {
             ok: false,

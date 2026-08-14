@@ -197,7 +197,14 @@ export async function cancelarContaPagarAction(
   try {
     const supabase = await createClient()
     const payment = createPayablePaymentService(supabase)
-    const cancelled = await payment.cancel({ contaId: conta_id, motivo })
+    // Cancelar uma conta é idempotente por natureza — só existe um cancelamento
+    // por título. A chave determinística faz retry de qualquer cliente convergir
+    // para o mesmo comando, e os estornos derivados herdam esse escopo.
+    const cancelled = await payment.cancel({
+      contaId: conta_id,
+      motivo,
+      idempotencyKey: `cancel:${conta_id}`,
+    })
     if (!cancelled.ok) {
       return { ok: false, error: mensagemErroComSecao('Conta a pagar', cancelled.error) }
     }
