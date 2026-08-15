@@ -46,6 +46,7 @@ export default async function AdminRelatoriosPage({ searchParams }: PageProps) {
     margemPorVenda: dados.margemPorVenda,
     curvaAbc: dados.curvaAbc,
     coberturaEstoque: dados.coberturaEstoque,
+    divergenciaEstoque: dados.divergenciaEstoque,
     rpcErro: dados.rpcErroAmigavel,
   }
 
@@ -101,6 +102,11 @@ export default async function AdminRelatoriosPage({ searchParams }: PageProps) {
         coberturaEstoqueColDias: ui.relatorios_cobertura_estoque_col_dias,
         coberturaEstoqueDiasCap: ui.relatorios_cobertura_estoque_dias_cap,
         vazioCoberturaEstoque: ui.relatorios_vazio_cobertura_estoque,
+        secDivergenciaEstoque: ui.relatorios_sec_divergencia_estoque,
+        divergenciaEstoqueHint: ui.relatorios_divergencia_estoque_hint,
+        divergenciaEstoqueColSaldo: ui.relatorios_divergencia_estoque_col_saldo,
+        divergenciaEstoqueColMovimentos: ui.relatorios_divergencia_estoque_col_movimentos,
+        vazioDivergenciaEstoque: ui.relatorios_vazio_divergencia_estoque,
         origemChina: ui.relatorios_origem_china,
         origemBrasil: ui.relatorios_origem_brasil,
         vazioProdutos: ui.relatorios_vazio_produtos,
