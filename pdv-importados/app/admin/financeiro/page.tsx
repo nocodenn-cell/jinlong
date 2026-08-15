@@ -188,6 +188,7 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
           activeTab={activeTab}
           contas={contas}
           fiscal={fiscal}
+          actorLojaId={session.lojaId}
           clientesOpts={clientesOpts}
           caixasAbertos={(caixasRes.data ?? []).map((c) => ({
             id: c.id,

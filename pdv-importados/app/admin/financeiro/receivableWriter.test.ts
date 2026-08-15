@@ -38,4 +38,31 @@ describe('receivable adapters', () => {
       }),
     )
   })
+
+  it('reverse chama RPC estornar_liquidacao_receber', async () => {
+    const rpc = vi.fn(async () => ({
+      data: [{ estorno_id: 'e1', idempotent_replay: false }],
+      error: null,
+    }))
+    const svc = createReceivableLiquidationService({ rpc } as never)
+    await expect(
+      svc.reverse({ liquidacaoId: 'l1', motivo: 'lançamento duplicado', idempotencyKey: 'key-estorno-1' }),
+    ).resolves.toEqual({ ok: true, estornoId: 'e1', idempotentReplay: false })
+    expect(rpc).toHaveBeenCalledWith(
+      'estornar_liquidacao_receber',
+      expect.objectContaining({
+        p_liquidacao_id: 'l1',
+        p_motivo: 'lançamento duplicado',
+        p_idempotency_key: 'key-estorno-1',
+      }),
+    )
+  })
+
+  it('reverse propaga erro do RPC (ex.: já estornada)', async () => {
+    const rpc = vi.fn(async () => ({ data: null, error: { message: 'ESTORNO_AR_JA_EXISTE' } }))
+    const svc = createReceivableLiquidationService({ rpc } as never)
+    await expect(
+      svc.reverse({ liquidacaoId: 'l1', motivo: 'x', idempotencyKey: 'key-2' }),
+    ).resolves.toMatchObject({ ok: false, error: 'ESTORNO_AR_JA_EXISTE' })
+  })
 })

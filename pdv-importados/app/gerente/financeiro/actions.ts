@@ -17,6 +17,8 @@ import {
   createReceivableLiquidationService,
   createReceivableWriter,
 } from '@/app/admin/financeiro/receivableWriter'
+import { createReceivableReader } from '@/app/admin/financeiro/receivableReader'
+import type { ReceivableLiquidacaoRow } from '@shared-core/src/financial'
 
 type R<T = null> = { success: true; data: T } | { success: false; error: string }
 
@@ -118,6 +120,46 @@ export async function liquidarTitulo(input: {
   })
   if (!result.ok) {
     return { success: false, error: mensagemErroComSecao('Liquidação', result.error) }
+  }
+  revalidatePath('/gerente/financeiro')
+  revalidatePath('/admin/financeiro')
+  return { success: true, data: null }
+}
+
+export async function listarLiquidacoesReceber(tituloId: string): Promise<R<ReceivableLiquidacaoRow[]>> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+  if (!tituloId?.trim()) return { success: false, error: 'Título obrigatório.' }
+
+  const supabase = await createClient()
+  const reader = createReceivableReader(supabase)
+  const result = await reader.listLiquidacoes({ tituloId })
+  if (!result.ok) {
+    return { success: false, error: mensagemErroComSecao('Liquidações', result.error) }
+  }
+  return { success: true, data: result.liquidacoes }
+}
+
+export async function estornarLiquidacaoReceber(input: {
+  liquidacao_id: string
+  motivo: string
+  idempotency_key: string
+}): Promise<R> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+  if (!input.liquidacao_id?.trim()) return { success: false, error: 'Liquidação obrigatória.' }
+  if (!input.motivo?.trim()) return { success: false, error: 'Informe o motivo do estorno.' }
+  if (!input.idempotency_key?.trim()) return { success: false, error: 'Chave de idempotência obrigatória.' }
+
+  const supabase = await createClient()
+  const liquidation = createReceivableLiquidationService(supabase)
+  const result = await liquidation.reverse({
+    liquidacaoId: input.liquidacao_id,
+    motivo: input.motivo,
+    idempotencyKey: input.idempotency_key,
+  })
+  if (!result.ok) {
+    return { success: false, error: mensagemErroComSecao('Estorno', result.error) }
   }
   revalidatePath('/gerente/financeiro')
   revalidatePath('/admin/financeiro')
