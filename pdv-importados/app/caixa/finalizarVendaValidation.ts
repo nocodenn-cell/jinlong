@@ -70,6 +70,8 @@ export const finalizarVendaInputSchema = z.object({
     .optional(),
   motivoDesconto: z.enum(MOTIVO_DESCONTO_ENUM).optional(),
   motivoDescontoDescricao: z.string().max(500).nullish(),
+  /** BR-01: token de autorização gerencial para venda que excede o limite de crédito do cliente (`p_limite_credito_gerente_token`). */
+  limiteCreditoGerenteToken: z.string().min(1).optional(),
   pagamentos: z.array(pagamentoParcelaSchema).min(1, 'Informe ao menos uma parcela de pagamento.'),
   itens: z.array(itemFinalizarVendaSchema).min(1, 'Inclua pelo menos um item na venda.'),
   clienteId: z.string().uuid('ID do cliente inválido.').optional(), // ✅ NOVO (Fase 5b)

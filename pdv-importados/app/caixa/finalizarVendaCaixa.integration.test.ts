@@ -215,6 +215,31 @@ describe.sequential('finalizarVendaCaixa — split e validações', { timeout: 1
     // vez de skip: nenhum assert foi removido.
   }, 60_000)
 
+  it('BR-01: envia p_limite_credito_gerente_token quando presente no payload', async () => {
+    const { supabase, rpcCalls } = makeSupabase()
+    createClientMock.mockResolvedValue(supabase)
+    const { finalizarVendaCaixa } = await import('./actions')
+
+    await finalizarVendaCaixa({
+      ...payloadBase(),
+      limiteCreditoGerenteToken: 'token-autorizacao-gerente-abc',
+    })
+
+    const txCall = rpcCalls.find((c) => c.name === 'finalizar_venda_transacional_canonica_v4')
+    expect(txCall?.params.p_limite_credito_gerente_token).toBe('token-autorizacao-gerente-abc')
+  })
+
+  it('BR-01: sem token no payload, envia p_limite_credito_gerente_token null (não omite o parâmetro)', async () => {
+    const { supabase, rpcCalls } = makeSupabase()
+    createClientMock.mockResolvedValue(supabase)
+    const { finalizarVendaCaixa } = await import('./actions')
+
+    await finalizarVendaCaixa(payloadBase())
+
+    const txCall = rpcCalls.find((c) => c.name === 'finalizar_venda_transacional_canonica_v4')
+    expect(txCall?.params.p_limite_credito_gerente_token).toBeNull()
+  })
+
   it('retorna mensagem de erro esperada para payload inválido (pagamentos > total)', async () => {
     const { supabase } = makeSupabase()
     createClientMock.mockResolvedValue(supabase)
