@@ -38,6 +38,9 @@ export type DocumentoFiscalDetalheEvento = {
   origem_acao: string
   payload: Record<string, unknown>
   created_at: string
+  actor_user_id: string | null
+  actor_role: string | null
+  actor_nome: string | null
 }
 
 type Props = Readonly<{
@@ -164,6 +167,12 @@ export function DocumentoFiscalDetalheClient({
                       : ''}
                   </div>
                   <div className="mt-0.5 text-caption text-jl-fg-3">Origem: {e.origem_acao}</div>
+                  {e.actor_nome || e.actor_role ? (
+                    <div className="mt-0.5 text-caption text-jl-fg-3">
+                      Ator: {e.actor_nome ?? '—'}
+                      {e.actor_role ? ` (${e.actor_role})` : ''}
+                    </div>
+                  ) : null}
                   {detalhes.length > 0 ? (
                     <ul className="mt-2 list-disc space-y-1 pl-4 text-caption text-jl-fg-2">
                       {detalhes.map((line, i) => (
