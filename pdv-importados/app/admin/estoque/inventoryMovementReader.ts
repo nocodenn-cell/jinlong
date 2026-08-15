@@ -1,6 +1,9 @@
 /**
  * Adapter InventoryMovementReader — kardex read-only.
- * SELECT `movimentos_estoque_log`; sem mutação.
+ * SELECT `v_kardex_unificado` — fonte canônica (migration 291), UNION de
+ * `movimentos_estoque_log` + `estoque_baixas` (legado) + reposições de
+ * devolução/cancelamento. Ler só `movimentos_estoque_log` diretamente omite
+ * devoluções de cliente e estornos de cancelamento do histórico do produto.
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -13,12 +16,12 @@ import type {
 } from '@shared-core/src/inventory'
 import { INVENTORY_ERROR_CODES } from '@shared-core/src/inventory'
 
-const KARDEX_COLS = 'id, created_at, tipo_codigo, quantidade_delta, observacao, produto_id'
+const KARDEX_COLS = 'evento_id, ocorrido_em, tipo_codigo, quantidade_delta, observacao, produto_id'
 const DEFAULT_LIMIT = 60
 
 type KardexRow = {
-  id: string
-  created_at: string
+  evento_id: string
+  ocorrido_em: string
   tipo_codigo: string
   quantidade_delta: number | string
   observacao: string | null
@@ -27,12 +30,12 @@ type KardexRow = {
 
 export function mapKardexRow(r: KardexRow): InventoryMovement {
   return {
-    movementId: String(r.id),
+    movementId: String(r.evento_id),
     productId: String(r.produto_id),
     type: String(r.tipo_codigo ?? ''),
     quantity: Number(r.quantidade_delta ?? 0),
     reason: r.observacao == null ? null : String(r.observacao),
-    createdAt: String(r.created_at),
+    createdAt: String(r.ocorrido_em),
   }
 }
 
@@ -47,11 +50,11 @@ export function createInventoryMovementReader(
       const limit = query.limit ?? DEFAULT_LIMIT
       try {
         const { data, error } = await supabase
-          .from('movimentos_estoque_log')
+          .from('v_kardex_unificado')
           .select(KARDEX_COLS)
           .eq('produto_id', query.productId)
           .eq('loja_id', lojaId)
-          .order('created_at', { ascending: false })
+          .order('ocorrido_em', { ascending: false })
           .limit(limit)
 
         if (error) {
