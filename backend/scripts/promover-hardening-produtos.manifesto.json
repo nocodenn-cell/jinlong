@@ -1,31 +1,37 @@
 {
   "projeto": "kbabmewnahysfvlybiak",
   "commit": "65736cdef7afc494421d68e929c0fee32c9aa48a",
+  "script_sha256": "a5f23b99d199c6ef4ffbac5c213ab561e1c95248326d6000c0916656f8e11609",
   "migrations": [
     {
       "arquivo": "20260816135000_reconcilia_produtos_codigo_interno.sql",
       "nome_remoto": "reconcilia_produtos_codigo_interno",
-      "sha256": "30f5fd5f7ed908bb0a8cc1f52bc3515225df134b76e7d4a25c36c8617d2449a5"
+      "sha256": "30f5fd5f7ed908bb0a8cc1f52bc3515225df134b76e7d4a25c36c8617d2449a5",
+      "git_blob": "bee75fff838ea5b70e6af77fb3f13acd81d40dc1"
     },
     {
       "arquivo": "20260816140000_rls_produtos_historico_isolamento_por_loja.sql",
       "nome_remoto": "rls_produtos_historico_isolamento_por_loja",
-      "sha256": "2ae9628720fe6a360e1c2105706dfa862a226c032469153149699c3a2f7c3a09"
+      "sha256": "2ae9628720fe6a360e1c2105706dfa862a226c032469153149699c3a2f7c3a09",
+      "git_blob": "0120a33fd4cf0f69ab4a14e592ce2170c0fc3c71"
     },
     {
       "arquivo": "20260816141000_criar_produto_autoria_atomica.sql",
       "nome_remoto": "criar_produto_autoria_atomica",
-      "sha256": "32cecf495d63177435bfc8f054ed6a5885179c373f64381f7493d0e3d54365b8"
+      "sha256": "32cecf495d63177435bfc8f054ed6a5885179c373f64381f7493d0e3d54365b8",
+      "git_blob": "ebda47c1f04011e1e51a3f3b2c59d66dc67f63a4"
     },
     {
       "arquivo": "20260816142000_indices_fks_autoria_produtos.sql",
       "nome_remoto": "indices_fks_autoria_produtos",
-      "sha256": "b97cb2968e0ab213622132bfae1dfcadbe37423e72abaf328c719e7b93eb2203"
+      "sha256": "b97cb2968e0ab213622132bfae1dfcadbe37423e72abaf328c719e7b93eb2203",
+      "git_blob": "ce12f3307237617188fae702ab1028af8668fef1"
     },
     {
       "arquivo": "20260816143000_atualizar_produto_com_faixa_atacado.sql",
       "nome_remoto": "atualizar_produto_com_faixa_atacado",
-      "sha256": "d0c64e1b784e3f33ac77667dc25a48f1ad1db5d357b247b6eee4f83a51c57d3c"
+      "sha256": "d0c64e1b784e3f33ac77667dc25a48f1ad1db5d357b247b6eee4f83a51c57d3c",
+      "git_blob": "e9f356820988541f386f41d5a6c3343a44cacef8"
     }
   ]
 }
