@@ -197,21 +197,6 @@ export function derivarFaixaAtacado(
 }
 
 /**
- * UPDATE de produto + sincronização da faixa de atacado em UMA transação, via
- * `atualizar_produto_com_faixa_atacado` (migration 20260816143000).
- *
- * Antes eram duas operações independentes: `UPDATE produtos` aqui e, depois, a
- * sincronização da faixa orquestrada pelo componente React. Se a segunda
- * falhasse, o fluxo reportava sucesso com `produtos.preco_atacado` novo e
- * `precos_atacado` antigo — preço de catálogo divergente do preço realmente
- * aplicado na venda. A RPC elimina esse estado parcial e ainda torna o upsert
- * da faixa atômico (antes era SELECT-então-INSERT/UPDATE, sujeito a corrida).
- *
- * `p_ator_id: null` de propósito: este client é o de sessão, então a RPC
- * resolve o ator por `auth.uid()`. O parâmetro só existe para chamadas
- * privilegiadas (service_role), onde não há sessão.
- */
-/**
  * A RPC não existe no banco (ainda não promovida, ou rollback da migration).
  * PostgREST devolve `PGRST202` quando não acha a função no schema cache;
  * o Postgres devolve `42883` (undefined_function) quando a chamada chega ao
@@ -228,139 +213,90 @@ function rpcAusente(error: { code?: string; message?: string } | null): boolean 
 }
 
 /**
- * UPDATE de produto + sincronização da faixa via RPC, com FALLBACK para o
- * UPDATE direto quando a RPC ainda não existe no banco.
+ * Atualização de produto com a faixa de atacado, via RPC transacional.
  *
- * SEQUENCIAMENTO APP ↔ BANCO: sem o fallback, esta versão da aplicação quebra
- * a edição de produto se for publicada antes da migration
- * `20260816143000_atualizar_produto_com_faixa_atacado` — o que força uma ordem
- * rígida de deploy e não tolera rollback do app. Com o fallback, as duas ordens
- * são seguras:
+ * BANCO SEM A RPC: NÃO existe fallback que escreva. A versão anterior tentava
+ * emular a RPC com `UPDATE produtos` seguido da sincronização da faixa e, se a
+ * segunda etapa falhasse, devolvia erro — mas a alteração do produto JÁ ESTAVA
+ * PERSISTIDA. Teste real contra o banco (não mock) mostrou o produto com
+ * gatilho 20 e a faixa ativa ainda em 10: exatamente o estado parcial que esta
+ * entrega existe para eliminar. Devolver erro não desfaz escrita.
  *
- *   - app novo + banco antigo → cai no UPDATE direto (comportamento anterior,
- *     sem transacionalidade da faixa, mas sem quebrar);
- *   - banco novo + app antigo → o app antigo faz UPDATE direto e sincroniza a
- *     faixa em duas etapas, como sempre fez; a RPC apenas não é usada;
- *   - app novo + banco novo → caminho transacional completo.
+ * Sem transação — e o PostgREST não oferece uma para múltiplas instruções — a
+ * única forma de garantir "ou tudo, ou nada" contra um banco antigo é NÃO
+ * ESCREVER. Então:
  *
- * O fallback é degradação consciente e temporária: assim que a migration
- * estiver promovida, ele deixa de ser exercitado. Ver
- * `docs/PROMOCAO_PRODUTOS_HARDENING.md` para a ordem recomendada.
+ *   - edição que NÃO altera o par de atacado → `UPDATE produtos` direto é uma
+ *     única instrução, atômica por si, e segue permitida;
+ *   - edição que ALTERA `preco_atacado` ou `quantidade_gatilho_atacado` →
+ *     recusada, com mensagem explícita, sem gravar nada.
+ *
+ * SEQUENCIAMENTO APP ↔ BANCO: isto refuta a afirmação anterior de que qualquer
+ * ordem serviria. A ordem correta é BANCO PRIMEIRO. Publicar o app antes não
+ * corrompe dado algum, mas bloqueia a edição de preço de atacado até a
+ * migration entrar. Ver `docs/PROMOCAO_PRODUTOS_HARDENING.md` §3.
  */
-/**
- * Sincronização da faixa SEM transação — só para o banco que ainda não tem a
- * RPC. Reproduz a semântica da RPC (upsert da faixa derivada + desativação da
- * anterior), mas em passos separados: é o melhor possível contra um schema
- * antigo, e é o que o app fazia antes desta entrega.
- *
- * Devolve erro em vez de engolir: sem isto, alterar preço/gatilho num banco
- * antigo retornaria sucesso deixando `produtos.preco_atacado` e
- * `precos_atacado` divergentes — exatamente o defeito que esta entrega
- * conserta. Preferimos falhar visivelmente a mentir sucesso.
- */
-async function sincronizarFaixaSemTransacao(
-  supabase: SupabaseClient,
-  produtoId: string,
-  gatilhoAnterior: number | null,
-  faixa: { quantidade_minima: number; preco_unitario: number } | null,
-): Promise<{ message: string; code?: string } | null> {
-  // Desativa a faixa derivada anterior quando ela deixou de valer.
-  if (
-    gatilhoAnterior != null &&
-    gatilhoAnterior > 0 &&
-    gatilhoAnterior !== faixa?.quantidade_minima
-  ) {
-    const { error } = await supabase
-      .from('precos_atacado')
-      .update({ ativo: false })
-      .eq('produto_id', produtoId)
-      .eq('quantidade_minima', gatilhoAnterior)
-      .eq('ativo', true)
-      .is('loja_id', null)
-    if (error) return error
+export const MSG_ATACADO_REQUER_MIGRATION =
+  'A edição de preço/quantidade de atacado está indisponível: o banco ainda não recebeu a atualização desta versão. ' +
+  'As demais alterações do produto continuam funcionando. Tente novamente após a migração do banco.'
+
+/** O par (preço, gatilho) do catálogo — a invariante que a RPC protege. */
+function parAtacado(p: {
+  preco_atacado?: number | null
+  quantidade_gatilho_atacado?: number | null
+}) {
+  return {
+    preco: p.preco_atacado ?? null,
+    gatilho: p.quantidade_gatilho_atacado ?? null,
   }
-
-  if (!faixa) return null
-
-  // Upsert manual: procura a faixa ativa naquela quantidade e atualiza, ou cria.
-  const { data: existente, error: erroBusca } = await supabase
-    .from('precos_atacado')
-    .select('id')
-    .eq('produto_id', produtoId)
-    .eq('quantidade_minima', faixa.quantidade_minima)
-    .eq('ativo', true)
-    .is('loja_id', null)
-    .maybeSingle()
-  if (erroBusca) return erroBusca
-
-  if (existente?.id) {
-    const { error } = await supabase
-      .from('precos_atacado')
-      .update({ preco_unitario: faixa.preco_unitario })
-      .eq('id', existente.id)
-    return error
-  }
-
-  const { error } = await supabase.from('precos_atacado').insert({
-    produto_id: produtoId,
-    quantidade_minima: faixa.quantidade_minima,
-    preco_unitario: faixa.preco_unitario,
-    loja_id: null,
-    ativo: true,
-  })
-  return error
 }
 
 function defaultUpdateRow(supabase: SupabaseClient): UpdateProdutoRowFn {
   return async ({ id, lojaId, payload }) => {
-    const faixa = derivarFaixaAtacado(payload)
-
     const { error } = await supabase.rpc('atualizar_produto_com_faixa_atacado', {
       p_produto_id: id,
       p_payload: payload,
-      p_ator_id: null,
-      p_faixa: faixa,
+      // `p_ator_id` NÃO é enviado: este é o client de sessão, então a RPC
+      // resolve o ator por `auth.uid()`. Enviar `null` explicitamente divergia
+      // do tipo gerado (que aceita ausente ou string) sem que o typecheck
+      // pudesse acusar, porque o client é genérico.
+      p_faixa: derivarFaixaAtacado(payload),
     })
 
     if (!rpcAusente(error)) return { error }
 
     // ── Banco ainda sem a RPC ────────────────────────────────────────────────
-    // O gatilho anterior precisa ser lido ANTES do UPDATE, senão não há como
-    // saber qual faixa derivada desativar.
-    const mexeuEmAtacado =
-      Object.prototype.hasOwnProperty.call(payload, 'preco_atacado') ||
-      Object.prototype.hasOwnProperty.call(payload, 'quantidade_gatilho_atacado')
+    // Só recusa se o par de atacado for REALMENTE mudar. Comparar com o valor
+    // atual (em vez de olhar só a presença das chaves) evita bloquear edições
+    // que apenas reenviam o mesmo atacado — o formulário sempre manda o estado
+    // completo, então as chaves estão sempre presentes.
+    const { data: atual, error: erroLeitura } = await supabase
+      .from('produtos')
+      .select('preco_atacado, quantidade_gatilho_atacado')
+      .eq('id', id)
+      .eq('loja_id', lojaId)
+      .maybeSingle()
+    if (erroLeitura) return { error: erroLeitura }
 
-    let gatilhoAnterior: number | null = null
-    if (mexeuEmAtacado) {
-      const { data: antes } = await supabase
-        .from('produtos')
-        .select('quantidade_gatilho_atacado')
-        .eq('id', id)
-        .eq('loja_id', lojaId)
-        .maybeSingle()
-      gatilhoAnterior = (antes?.quantidade_gatilho_atacado as number | null) ?? null
+    const antes = parAtacado((atual ?? {}) as Record<string, number | null>)
+    const depois = parAtacado(payload)
+    const mudaAtacado =
+      Number(antes.preco ?? 0) !== Number(depois.preco ?? 0) ||
+      Number(antes.gatilho ?? 0) !== Number(depois.gatilho ?? 0)
+
+    if (mudaAtacado) {
+      // Recusa ANTES de qualquer escrita: nada é persistido, logo não há
+      // estado parcial possível.
+      return { error: { message: MSG_ATACADO_REQUER_MIGRATION, code: 'ATACADO_REQUER_MIGRATION' } }
     }
 
+    // Instrução única — atômica por si.
     const { error: erroDireto } = await supabase
       .from('produtos')
       .update(payload)
       .eq('id', id)
       .eq('loja_id', lojaId)
-    if (erroDireto) return { error: erroDireto }
-
-    if (!mexeuEmAtacado) return { error: null }
-
-    const erroFaixa = await sincronizarFaixaSemTransacao(supabase, id, gatilhoAnterior, faixa)
-    if (erroFaixa) {
-      return {
-        error: {
-          ...erroFaixa,
-          message: `${erroFaixa.message} (o produto foi salvo, mas a faixa de atacado não pôde ser sincronizada — verifique o preço de atacado antes de vender)`,
-        },
-      }
-    }
-    return { error: null }
+    return { error: erroDireto }
   }
 }
 

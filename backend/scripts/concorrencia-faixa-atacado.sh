@@ -70,6 +70,50 @@ if [ -z "${BASH_VERSION:-}" ]; then
   exit 2
 fi
 
+# ── Preflight ────────────────────────────────────────────────────────────────
+# Sem isto, ambiente incompleto produzia erro obscuro no meio do cenário (ou
+# pior: um "passou" por vacuidade). Cada pré-condição falha cedo e explícita.
+preflight() {
+  command -v docker >/dev/null 2>&1 || {
+    echo "ABORTADO: docker não encontrado no PATH." >&2
+    exit 2
+  }
+  docker info >/dev/null 2>&1 || {
+    echo "ABORTADO: daemon do Docker não está respondendo." >&2
+    exit 2
+  }
+  docker inspect -f '{{.State.Running}}' "$CONTAINER" 2>/dev/null | grep -q true || {
+    echo "ABORTADO: container '$CONTAINER' não está rodando (suba o stack local)." >&2
+    exit 2
+  }
+  "${PSQL[@]}" <<< 'SELECT 1;' >/dev/null 2>&1 || {
+    echo "ABORTADO: não consigo consultar o Postgres em '$CONTAINER'." >&2
+    exit 2
+  }
+  # UUID do ator temporário precisa ser válido, senão o cenário aborta lá dentro
+  # com erro de cast — e a limpeza tentaria apagar um id inexistente.
+  "${PSQL[@]}" <<< "SELECT '$ATOR_TEMP'::uuid;" >/dev/null 2>&1 || {
+    echo "ABORTADO: ATOR_TEMP não é um UUID válido: $ATOR_TEMP" >&2
+    exit 2
+  }
+  # A função sob teste tem de existir — sem ela o teste passaria por vacuidade.
+  local existe
+  existe=$("${PSQL[@]}" <<< "SELECT count(*) FROM pg_proc WHERE proname='atualizar_produto_com_faixa_atacado';")
+  [ "$(echo "$existe" | tr -d '[:space:]')" = "1" ] || {
+    echo "ABORTADO: atualizar_produto_com_faixa_atacado não existe no banco local." >&2
+    exit 2
+  }
+  # A loja usada no cenário precisa existir.
+  local loja
+  loja=$("${PSQL[@]}" <<< "SELECT count(*) FROM public.lojas WHERE id='a0000001-0000-4000-8000-000000000001';")
+  [ "$(echo "$loja" | tr -d '[:space:]')" = "1" ] || {
+    echo "ABORTADO: loja Matriz ausente no banco local." >&2
+    exit 2
+  }
+}
+preflight
+echo "preflight: docker, container, psql, UUID, função e loja OK"
+
 echo "=== Corrida produto + faixa de atacado (entrelaçamento forçado) ==="
 
 # ── Cenário ───────────────────────────────────────────────────────────────────

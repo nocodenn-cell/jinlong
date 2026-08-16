@@ -33,19 +33,33 @@ Portanto a promoção é **seletiva**, via Management API
 A ordem importa: a #2 recria a RPC de listagem lendo `quantidade_gatilho_atacado`,
 coluna garantida pela #1; a #5 depende das colunas de autoria já existentes.
 
-## 3. Sequência app ↔ banco
+## 3. Sequência app ↔ banco — **banco primeiro**
 
-A aplicação foi feita para tolerar **as duas ordens**, então não há janela de
-quebra:
+> **Correção de uma afirmação anterior.** Este documento dizia que as duas
+> ordens eram seguras porque a aplicação tinha um fallback que emulava a RPC.
+> Um teste real contra o banco
+> (`backend/scripts/fallback-sem-rpc-real.mjs`) refutou isso: o fallback fazia
+> `UPDATE produtos` e depois sincronizava a faixa; quando a segunda etapa
+> falhava, a alteração do produto **já estava persistida** — produto com gatilho
+> 20 e faixa ativa ainda em 10. Devolver erro não desfaz escrita.
+>
+> O fallback que escreve foi **removido**. A ordem correta é banco primeiro.
 
 | Estado | Comportamento |
 |---|---|
-| App novo, banco antigo | `defaultUpdateRow` detecta a RPC ausente (`PGRST202`/`42883`) e cai no `UPDATE` direto — igual ao comportamento anterior, sem transacionalidade da faixa |
-| Banco novo, app antigo | App antigo faz `UPDATE` direto + sincroniza a faixa em duas etapas, como sempre fez; a RPC simplesmente não é chamada |
-| App novo, banco novo | Caminho transacional completo |
+| App novo, banco antigo | Edição que **não** altera o par de atacado: funciona (é uma instrução única, atômica). Edição que **altera** `preco_atacado`/`quantidade_gatilho_atacado`: **recusada antes de qualquer escrita**, com mensagem explícita. Nada é gravado, logo não há estado parcial. |
+| Banco novo, app antigo | App antigo faz `UPDATE` direto e sincroniza a faixa em duas etapas, como sempre fez. Continua sujeito ao estado parcial que ele sempre teve — mais um motivo para promover o app logo após o banco. |
+| App novo, banco novo | Caminho transacional completo. |
 
-Recomendado: **banco primeiro, app depois** — encurta o tempo em degradação.
-Mas publicar o app antes não quebra nada, e o rollback do app também não.
+**Ordem obrigatória: banco primeiro, app depois.** Publicar o app antes não
+corrompe dado algum, mas bloqueia a edição de preço de atacado até a migration
+entrar. O rollback do app é seguro em qualquer momento.
+
+Prova reproduzível:
+
+```bash
+node backend/scripts/fallback-sem-rpc-real.mjs
+```
 
 ### Follow-up de autoria (`registrarCriadoPor`)
 

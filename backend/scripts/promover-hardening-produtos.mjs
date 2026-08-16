@@ -176,17 +176,147 @@ function commitDasMigrations() {
   return git('log', '-1', '--format=%H', '--', ...MIGRATIONS.map((m) => `backend/supabase/migrations/${m}`))
 }
 
+/** O próprio script de promoção entra no manifesto: adulterá-lo é tão grave
+ *  quanto adulterar o SQL, e antes nada o cobria. */
+const ARQUIVO_PROPRIO = 'backend/scripts/promover-hardening-produtos.mjs'
+
+function sha256Proprio() {
+  return sha256(readFileSync(join(RAIZ, ARQUIVO_PROPRIO), 'utf8'))
+}
+
 function gerarManifesto() {
+  // Gerar manifesto com worktree sujo congelaria hashes de conteúdo não
+  // commitado — o manifesto passaria a atestar algo que não está no git.
+  const sujo = git('status', '--porcelain')
+  if (sujo && !args.has('--permitir-worktree-sujo')) {
+    console.error('RECUSADO: worktree sujo. Commite antes de gerar o manifesto:')
+    console.error(sujo.split('\n').slice(0, 10).join('\n'))
+    process.exitCode = 2
+    return
+  }
+
   const commit = commitDasMigrations()
   const migrations = MIGRATIONS.map((nome) => ({
     arquivo: nome,
     nome_remoto: nomeRemoto(nome),
     sha256: sha256(lerMigration(nome)),
+    // Hash do OBJETO GIT, não só do arquivo em disco: amarra o manifesto ao
+    // conteúdo versionado, não a uma cópia local qualquer.
+    git_blob: git('rev-parse', `HEAD:backend/supabase/migrations/${nome}`),
   }))
-  const manifesto = { projeto: PROJETO_ESPERADO, commit, migrations }
+  const manifesto = {
+    projeto: PROJETO_ESPERADO,
+    commit,
+    script_sha256: sha256Proprio(),
+    migrations,
+  }
   writeFileSync(MANIFESTO_PATH, JSON.stringify(manifesto, null, 2) + '\n')
   console.log(`manifesto gravado para o commit ${commit}:`)
-  for (const m of migrations) console.log(`  ${m.arquivo}\n    sha256=${m.sha256}`)
+  console.log(`  script: ${manifesto.script_sha256.slice(0, 16)}`)
+  for (const m of migrations) console.log(`  ${m.arquivo}\n    sha256=${m.sha256}  blob=${m.git_blob.slice(0, 12)}`)
+}
+
+/**
+ * Validação ESTRUTURAL do backup, com restauração real opcional.
+ *
+ * A versão anterior só checava "existe, > 100 KB, recente" — um arquivo
+ * aleatório grande passava. Aqui o arquivo tem de ser reconhecidamente um dump
+ * de ESTE schema: cabeçalho do pg_dump, marcador de término (pega dump
+ * truncado) e presença das tabelas que este projeto tem (pega dump de outro
+ * projeto). Com `BACKUP_RESTORE_TEST=1`, ainda restaura num banco descartável
+ * e confere que as tabelas nasceram — a única prova de que o dump presta.
+ */
+const TABELAS_ESPERADAS = ['produtos', 'usuarios', 'precos_atacado', 'historico_precos_produto', 'lojas']
+
+function validarBackup() {
+  if (!BACKUP) {
+    checar('BACKUP_SCHEMA_PATH definido (projeto free não tem backup automático)', false, 'variável ausente')
+    return
+  }
+  if (!existsSync(BACKUP)) {
+    checar('backup existe', false, `não encontrado: ${BACKUP}`)
+    return
+  }
+  const st = statSync(BACKUP)
+  const horas = (Date.now() - st.mtimeMs) / 3_600_000
+  checar('backup é recente', horas < BACKUP_MAX_HORAS, `${horas.toFixed(1)}h (máx ${BACKUP_MAX_HORAS}h)`)
+
+  const conteudo = readFileSync(BACKUP, 'utf8')
+
+  // Os padrões abaixo foram calibrados contra o artefato REAL de
+  // `supabase db dump`, não contra o formato do `pg_dump` puro: a saída da CLI
+  // começa com linhas em branco e `SET statement_timeout`, NÃO traz o cabeçalho
+  // "PostgreSQL database dump" nem o marcador "... dump complete" do pg_dump, e
+  // usa identificadores entre aspas (`"public"."produtos"`). Uma primeira
+  // versão desta validação foi escrita para o pg_dump puro e reprovava o backup
+  // legítimo — teste com o dump de produção real expôs isso.
+  checar(
+    'backup é um dump SQL do PostgreSQL',
+    /^\s*SET\s+statement_timeout/m.test(conteudo) || /PostgreSQL database dump\b/.test(conteudo),
+    conteudo.slice(0, 60).replace(/\s+/g, ' ').trim(),
+  )
+
+  // Dump de outro projeto (ou de outro schema): não teria estas tabelas.
+  // Aceita identificador com ou sem aspas, com ou sem schema.
+  const temTabela = (t) =>
+    new RegExp(`CREATE TABLE (IF NOT EXISTS )?("?public"?\\.)?"?${t}"?\\s*\\(`, 'i').test(conteudo)
+  const faltando = TABELAS_ESPERADAS.filter((t) => !temTabela(t))
+  checar(
+    'backup contém as tabelas deste projeto',
+    faltando.length === 0,
+    faltando.length ? `ausentes: ${faltando.join(', ')}` : TABELAS_ESPERADAS.join(', '),
+  )
+
+  // Truncamento: sem marcador de fim no artefato da CLI, a evidência é o
+  // arquivo terminar no meio de uma instrução. Um dump íntegro termina com
+  // `;` (ou comentário) na última linha não vazia.
+  const ultimaLinha = conteudo
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .pop()
+  checar(
+    'backup não está truncado (última instrução fechada)',
+    !!ultimaLinha && (ultimaLinha.endsWith(';') || ultimaLinha.startsWith('--')),
+    ultimaLinha ? `última linha: ${ultimaLinha.slice(0, 70)}` : 'arquivo vazio',
+  )
+
+  if (process.env.BACKUP_RESTORE_TEST !== '1') return
+
+  // Restauração REAL num banco descartável.
+  const container = process.env.CONTAINER ?? 'supabase_db_fastproduct'
+  const dbTeste = 'backup_restore_test'
+  const psql = (sqlTexto, db) =>
+    execFileSync('docker', ['exec', '-i', container, 'psql', '-U', 'postgres', '-d', db, '-q', '-t', '-A'], {
+      input: sqlTexto,
+      encoding: 'utf8',
+    })
+  try {
+    psql(`DROP DATABASE IF EXISTS ${dbTeste};`, 'postgres')
+    psql(`CREATE DATABASE ${dbTeste};`, 'postgres')
+    execFileSync(
+      'docker',
+      ['exec', '-i', container, 'psql', '-U', 'postgres', '-d', dbTeste, '-q', '-v', 'ON_ERROR_STOP=0'],
+      { input: conteudo, encoding: 'utf8', stdio: ['pipe', 'ignore', 'ignore'] },
+    )
+    const presentes = psql(
+      `SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name IN (${TABELAS_ESPERADAS.map((t) => `'${t}'`).join(',')});`,
+      dbTeste,
+    ).trim()
+    checar(
+      'backup RESTAURA de fato (tabelas recriadas em banco limpo)',
+      Number(presentes) === TABELAS_ESPERADAS.length,
+      `${presentes}/${TABELAS_ESPERADAS.length} tabelas`,
+    )
+  } catch (e) {
+    checar('backup RESTAURA de fato', false, String(e.message).slice(0, 150))
+  } finally {
+    try {
+      psql(`DROP DATABASE IF EXISTS ${dbTeste};`, 'postgres')
+    } catch {
+      /* best-effort */
+    }
+  }
 }
 
 function verificarIntegridadeLocal(manifesto) {
@@ -225,13 +355,28 @@ function verificarIntegridadeLocal(manifesto) {
     ancestral ? '' : 'HEAD não descende do commit do manifesto',
   )
 
+  // Worktree INTEIRO, não só as 5 migrations: uma alteração não commitada em
+  // qualquer outro arquivo (inclusive nos scripts de validação) significa que o
+  // que está em disco não é o artefato auditado.
   let sujos = ''
   try {
-    sujos = git('status', '--porcelain', '--', ...MIGRATIONS.map((m) => `backend/supabase/migrations/${m}`))
+    sujos = git('status', '--porcelain')
   } catch {
     /* idem */
   }
-  checar('worktree limpo para as 5 migrations', sujos === '', sujos || 'sem modificações')
+  checar(
+    'worktree limpo (repositório inteiro)',
+    sujos === '',
+    sujos ? sujos.split('\n').slice(0, 4).join(' | ') : 'sem modificações',
+  )
+
+  checar(
+    'o próprio script de promoção não foi adulterado',
+    !manifesto.script_sha256 || sha256Proprio() === manifesto.script_sha256,
+    manifesto.script_sha256
+      ? `manifesto=${String(manifesto.script_sha256).slice(0, 16)} atual=${sha256Proprio().slice(0, 16)}`
+      : 'manifesto antigo sem script_sha256 — regere com --manifesto',
+  )
 
   for (const m of manifesto.migrations) {
     const atual = sha256(lerMigration(m.arquivo))
@@ -240,20 +385,22 @@ function verificarIntegridadeLocal(manifesto) {
       atual === m.sha256,
       atual === m.sha256 ? atual.slice(0, 16) : `esperado=${m.sha256.slice(0, 16)} atual=${atual.slice(0, 16)}`,
     )
+    if (m.git_blob) {
+      let blob = ''
+      try {
+        blob = git('rev-parse', `HEAD:backend/supabase/migrations/${m.arquivo}`)
+      } catch {
+        /* arquivo não versionado no HEAD */
+      }
+      checar(
+        `blob git confere: ${m.arquivo}`,
+        blob === m.git_blob,
+        blob === m.git_blob ? blob.slice(0, 12) : `esperado=${String(m.git_blob).slice(0, 12)} atual=${blob.slice(0, 12) || '(ausente)'}`,
+      )
+    }
   }
 
-  if (BACKUP) {
-    const existe = existsSync(BACKUP)
-    const st = existe ? statSync(BACKUP) : null
-    const horas = st ? (Date.now() - st.mtimeMs) / 3_600_000 : Infinity
-    checar(
-      'backup existe, não é vazio e é recente',
-      existe && st.size > 100_000 && horas < BACKUP_MAX_HORAS,
-      existe ? `${st.size} bytes, ${horas.toFixed(1)}h` : 'arquivo não encontrado',
-    )
-  } else {
-    checar('BACKUP_SCHEMA_PATH definido (projeto free não tem backup automático)', false, 'variável ausente')
-  }
+  validarBackup()
 }
 
 async function check() {
@@ -391,12 +538,20 @@ async function verify() {
       checar(`SQL remoto de ${m.nome_remoto} recuperável`, false, 'não encontrado')
       continue
     }
-    // O servidor pode normalizar espaços/quebra; compara o texto sem espaços.
+    // Comparação INTEGRAL por hash, não por prefixo. A versão anterior conferia
+    // só os 200 primeiros caracteres normalizados: uma migration homônima com
+    // corpo diferente a partir do caractere 201 passaria como equivalente.
+    // O servidor pode normalizar espaços em branco, então o hash é do texto sem
+    // espaços — mas de TODO o texto.
     const norm = (s) => s.replace(/\s+/g, '')
+    const hashLocal = sha256(norm(lerMigration(m.arquivo)))
+    const hashRemoto = sha256(norm(remoto.sql))
     checar(
-      `SQL remoto de ${m.nome_remoto} corresponde ao arquivo local`,
-      norm(remoto.sql).includes(norm(lerMigration(m.arquivo)).slice(0, 200)),
-      `remoto=${remoto.sql.length} chars`,
+      `SQL remoto de ${m.nome_remoto} é byte-a-byte o do arquivo local`,
+      hashLocal === hashRemoto,
+      hashLocal === hashRemoto
+        ? `sha256(norm)=${hashLocal.slice(0, 16)}`
+        : `local=${hashLocal.slice(0, 16)} remoto=${hashRemoto.slice(0, 16)} (${remoto.sql.length} chars)`,
     )
   }
 

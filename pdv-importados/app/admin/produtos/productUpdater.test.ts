@@ -474,151 +474,53 @@ describe('mapeamento dos erros da RPC transacional', () => {
  * edição de produto quando publicada ANTES da migration que cria a RPC
  * transacional. Ver docs/PROMOCAO_PRODUTOS_HARDENING.md §3.
  */
-describe('fallback quando a RPC transacional ainda não existe no banco', () => {
-  const catalogPayload = mapUpdateProductInputToRow({ nome: 'Produto A', precoVarejo: 10 })
-
-  /**
-   * O fallback lê o gatilho anterior antes do UPDATE (para saber qual faixa
-   * derivada desativar), então o fake precisa da cadeia de `select` também.
-   * Aqui o produto não tem gatilho anterior e o input não traz atacado, logo
-   * nenhuma operação em `precos_atacado` deve acontecer.
-   */
-  function fakeSupabaseSemRpc(codigo: string, mensagem: string) {
-    const updateSpy = vi.fn(async () => ({ error: null }))
-    const faixaSpy = vi.fn()
+/**
+ * Banco SEM a RPC transacional. A prova de que nada é gravado está em
+ * `backend/scripts/fallback-sem-rpc-real.mjs`, contra o Postgres de verdade —
+ * aqui cobre-se a DECISÃO: quando recusa, quando deixa passar, e que um erro
+ * real da RPC não é confundido com "RPC ausente".
+ */
+describe('banco sem a RPC transacional: recusa em vez de estado parcial', () => {
+  function fakeSemRpc(
+    codigo: string,
+    mensagem: string,
+    atacadoAtual: { preco_atacado: number | null; quantidade_gatilho_atacado: number | null },
+  ) {
+    const escritas: string[] = []
     const supabase = {
       rpc: vi.fn(async () => ({ error: { code: codigo, message: mensagem } })),
       from: (tabela: string) => {
         if (tabela === 'precos_atacado') {
-          faixaSpy()
-          throw new Error('não deveria tocar precos_atacado sem atacado no payload')
+          escritas.push('precos_atacado')
+          throw new Error('não deve tocar precos_atacado')
         }
         return {
           select: () => ({
-            eq: () => ({
-              eq: () => ({ maybeSingle: async () => ({ data: { quantidade_gatilho_atacado: null }, error: null }) }),
-            }),
+            eq: () => ({ eq: () => ({ maybeSingle: async () => ({ data: atacadoAtual, error: null }) }) }),
           }),
-          update: (payload: unknown) => ({
-            eq: (_c1: string, _v1: string) => ({
-              eq: (_c2: string, _v2: string) => updateSpy(payload),
-            }),
-          }),
-        }
-      },
-    }
-    return { supabase, updateSpy, faixaSpy }
-  }
-
-  it('fallback SINCRONIZA a faixa: upsert do par novo e desativação do anterior', async () => {
-    const ops: string[] = []
-    const supabase = {
-      rpc: vi.fn(async () => ({ code: 'PGRST202', message: 'Could not find the function' })).mockResolvedValue({
-        error: { code: 'PGRST202', message: 'Could not find the function' },
-      }),
-      from: (tabela: string) => {
-        if (tabela === 'produtos') {
-          return {
-            select: () => ({
-              eq: () => ({
-                eq: () => ({
-                  maybeSingle: async () => {
-                    ops.push('produtos.select(gatilho_anterior)')
-                    return { data: { quantidade_gatilho_atacado: 10 }, error: null }
-                  },
-                }),
-              }),
-            }),
-            update: () => ({
-              eq: () => ({
-                eq: async () => {
-                  ops.push('produtos.update')
-                  return { error: null }
-                },
-              }),
-            }),
-          }
-        }
-        // precos_atacado
-        return {
-          update: (v: Record<string, unknown>) => ({
+          update: () => ({
             eq: () => ({
-              eq: () => ({
-                eq: () => ({
-                  is: async () => {
-                    ops.push(`faixa.desativa(${JSON.stringify(v)})`)
-                    return { error: null }
-                  },
-                }),
-              }),
-              is: async () => {
-                ops.push('faixa.update_preco')
+              eq: async () => {
+                escritas.push('produtos')
                 return { error: null }
               },
             }),
           }),
-          select: () => ({
-            eq: () => ({
-              eq: () => ({
-                eq: () => ({
-                  is: () => ({
-                    maybeSingle: async () => {
-                      ops.push('faixa.busca')
-                      return { data: null, error: null }
-                    },
-                  }),
-                }),
-              }),
-            }),
-          }),
-          insert: async () => {
-            ops.push('faixa.insert')
-            return { error: null }
-          },
         }
       },
     }
-    const { createProductUpdater: criar } = await import('./productUpdater')
-    const getById = vi.fn(async () => ({ ok: true as const, product: catalogRow }))
-    const updater = criar(supabase as never, { reader: { getById } })
+    return { supabase, escritas }
+  }
 
-    const r = await updater.update({
-      id: 'prod-1',
-      lojaId: 'loja-1',
-      input: { nome: 'Produto A', precoVarejo: 50, precoAtacado: 25, quantidadeGatilhoAtacado: 20 },
+  const AUSENTE_COD = 'PGRST202'
+  const AUSENTE_MSG = 'Could not find the function public.atualizar_produto_com_faixa_atacado'
+
+  it('mudar o par de atacado é RECUSADO e NENHUMA escrita é emitida', async () => {
+    const { supabase, escritas } = fakeSemRpc(AUSENTE_COD, AUSENTE_MSG, {
+      preco_atacado: 30,
+      quantidade_gatilho_atacado: 10,
     })
-
-    expect(r.ok).toBe(true)
-    // Lê o gatilho ANTES de atualizar, senão não saberia qual faixa desativar.
-    expect(ops[0]).toBe('produtos.select(gatilho_anterior)')
-    expect(ops).toContain('produtos.update')
-    // Desativa a faixa derivada anterior (gatilho 10) e cria a nova (20).
-    expect(ops.some((o) => o.startsWith('faixa.desativa'))).toBe(true)
-    expect(ops).toContain('faixa.insert')
-  })
-
-  it('fallback: erro ao sincronizar a faixa NÃO reporta sucesso (nada de divergência silenciosa)', async () => {
-    const supabase = {
-      rpc: vi.fn().mockResolvedValue({ error: { code: 'PGRST202', message: 'Could not find the function' } }),
-      from: (tabela: string) => {
-        if (tabela === 'produtos') {
-          return {
-            select: () => ({
-              eq: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { quantidade_gatilho_atacado: 10 }, error: null }) }) }),
-            }),
-            update: () => ({ eq: () => ({ eq: async () => ({ error: null }) }) }),
-          }
-        }
-        return {
-          update: () => ({
-            eq: () => ({
-              eq: () => ({ eq: () => ({ is: async () => ({ error: { message: 'RLS negou a faixa' } }) }) }),
-            }),
-          }),
-        }
-      },
-    }
-    const { createProductUpdater: criar } = await import('./productUpdater')
+    const { createProductUpdater: criar, MSG_ATACADO_REQUER_MIGRATION } = await import('./productUpdater')
     const getById = vi.fn(async () => ({ ok: true as const, product: catalogRow }))
     const updater = criar(supabase as never, { reader: { getById } })
 
@@ -630,14 +532,18 @@ describe('fallback quando a RPC transacional ainda não existe no banco', () => 
 
     expect(r.ok).toBe(false)
     if (r.ok) return
-    expect(r.error).toContain('faixa de atacado não pôde ser sincronizada')
+    // `mapUpdateDbError` prefixa a seção ("Produto: ..."), então compara-se por
+    // conteúdo em vez de igualdade exata.
+    expect(r.error).toContain(MSG_ATACADO_REQUER_MIGRATION)
+    // O ponto central: zero escritas. Sem escrita, não há estado parcial.
+    expect(escritas).toEqual([])
   })
 
-  it('PGRST202 (função fora do schema cache) → cai no UPDATE direto', async () => {
-    const { supabase, updateSpy } = fakeSupabaseSemRpc(
-      'PGRST202',
-      'Could not find the function public.atualizar_produto_com_faixa_atacado',
-    )
+  it('edição que NÃO muda o par de atacado passa (instrução única, atômica)', async () => {
+    const { supabase, escritas } = fakeSemRpc(AUSENTE_COD, AUSENTE_MSG, {
+      preco_atacado: 25,
+      quantidade_gatilho_atacado: 20,
+    })
     const { createProductUpdater: criar } = await import('./productUpdater')
     const getById = vi.fn(async () => ({ ok: true as const, product: catalogRow }))
     const updater = criar(supabase as never, { reader: { getById } })
@@ -645,19 +551,18 @@ describe('fallback quando a RPC transacional ainda não existe no banco', () => 
     const r = await updater.update({
       id: 'prod-1',
       lojaId: 'loja-1',
-      input: { nome: 'Produto A', precoVarejo: 10 },
+      input: { nome: 'Renomeado', precoVarejo: 50, precoAtacado: 25, quantidadeGatilhoAtacado: 20 },
     })
 
     expect(r.ok).toBe(true)
-    expect(supabase.rpc).toHaveBeenCalledTimes(1)
-    expect(updateSpy).toHaveBeenCalledTimes(1)
-    expect(updateSpy).toHaveBeenCalledWith(expect.objectContaining({ nome: 'Produto A' }))
+    expect(escritas).toEqual(['produtos'])
   })
 
-  it('42883 (undefined_function no Postgres) → cai no UPDATE direto', async () => {
-    const { supabase, updateSpy } = fakeSupabaseSemRpc(
+  it('42883 (undefined_function) também é tratado como banco antigo', async () => {
+    const { supabase, escritas } = fakeSemRpc(
       '42883',
       'function public.atualizar_produto_com_faixa_atacado(...) does not exist',
+      { preco_atacado: 30, quantidade_gatilho_atacado: 10 },
     )
     const { createProductUpdater: criar } = await import('./productUpdater')
     const getById = vi.fn(async () => ({ ok: true as const, product: catalogRow }))
@@ -666,22 +571,18 @@ describe('fallback quando a RPC transacional ainda não existe no banco', () => 
     const r = await updater.update({
       id: 'prod-1',
       lojaId: 'loja-1',
-      input: { nome: 'Produto A', precoVarejo: 10 },
+      input: { nome: 'Produto A', precoVarejo: 50, precoAtacado: 99, quantidadeGatilhoAtacado: 5 },
     })
-
-    expect(r.ok).toBe(true)
-    expect(updateSpy).toHaveBeenCalledTimes(1)
+    expect(r.ok).toBe(false)
+    expect(escritas).toEqual([])
   })
 
-  it('erro REAL da RPC (não "ausente") NÃO cai no fallback — não mascara falha', async () => {
-    const updateSpy = vi.fn(async () => ({ error: null }))
+  it('erro REAL da RPC não vira caminho sem-RPC — não mascara falha', async () => {
     const supabase = {
-      rpc: vi.fn(async () => ({
-        error: { code: 'P0001', message: 'ATUALIZAR_PRODUTO_NAO_ENCONTRADO' },
-      })),
-      from: () => ({
-        update: () => ({ eq: () => ({ eq: () => updateSpy() }) }),
-      }),
+      rpc: vi.fn(async () => ({ error: { code: 'P0001', message: 'ATUALIZAR_PRODUTO_NAO_ENCONTRADO' } })),
+      from: () => {
+        throw new Error('não deveria cair no caminho sem-RPC')
+      },
     }
     const { createProductUpdater: criar } = await import('./productUpdater')
     const getById = vi.fn(async () => ({ ok: true as const, product: catalogRow }))
@@ -690,18 +591,16 @@ describe('fallback quando a RPC transacional ainda não existe no banco', () => 
     const r = await updater.update({
       id: 'prod-1',
       lojaId: 'loja-1',
-      input: { nome: 'Produto A', precoVarejo: 10 },
+      input: { nome: 'Produto A', precoVarejo: 50 },
     })
-
     expect(r.ok).toBe(false)
     if (r.ok) return
     expect(r.code).toBe(PRODUCT_ERROR_CODES.NOT_FOUND)
-    expect(updateSpy).not.toHaveBeenCalled()
   })
 
-  it('o payload enviado à RPC carrega a faixa derivada', async () => {
+  it('a RPC é chamada SEM p_ator_id (o ator vem de auth.uid())', async () => {
     const rpcSpy = vi.fn(async () => ({ error: null }))
-    const supabase = { rpc: rpcSpy, from: () => ({ update: () => ({ eq: () => ({ eq: async () => ({ error: null }) }) }) }) }
+    const supabase = { rpc: rpcSpy, from: () => ({}) }
     const { createProductUpdater: criar } = await import('./productUpdater')
     const getById = vi.fn(async () => ({ ok: true as const, product: catalogRow }))
     const updater = criar(supabase as never, { reader: { getById } })
@@ -712,13 +611,10 @@ describe('fallback quando a RPC transacional ainda não existe no banco', () => 
       input: { nome: 'Produto A', precoVarejo: 50, precoAtacado: 30, quantidadeGatilhoAtacado: 10 },
     })
 
-    expect(rpcSpy).toHaveBeenCalledWith(
-      'atualizar_produto_com_faixa_atacado',
-      expect.objectContaining({
-        p_produto_id: 'prod-1',
-        p_faixa: { quantidade_minima: 10, preco_unitario: 30 },
-      }),
-    )
-    expect(catalogPayload.nome).toBe('Produto A')
+    const args = rpcSpy.mock.calls[0]![1] as Record<string, unknown>
+    // Enviar `p_ator_id: null` divergia do tipo gerado (ausente | string) sem
+    // que o typecheck pudesse acusar, porque o client é genérico.
+    expect(Object.prototype.hasOwnProperty.call(args, 'p_ator_id')).toBe(false)
+    expect(args.p_faixa).toEqual({ quantidade_minima: 10, preco_unitario: 30 })
   })
 })

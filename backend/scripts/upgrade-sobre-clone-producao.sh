@@ -28,6 +28,13 @@ DB="clone_prod_upgrade_test"
 # teste (o modo normal deve passar; este deve abortar com código 2).
 SABOTAR=0
 [ "${2:-}" = "--sabotar" ] && SABOTAR=1
+
+# --remover-objetos: depois de aplicar as migrations, apaga uma policy e uma
+# função e reexecuta as asserções. Prova que a ausência vira FALHA visível em
+# vez de a verificação desaparecer da saída (a forma antiga usava
+# `FROM pg_policies`, que não emitia linha nenhuma quando o objeto sumia).
+REMOVER_OBJETOS=0
+[ "${2:-}" = "--remover-objetos" ] && REMOVER_OBJETOS=1
 MIG_DIR="$(cd "$(dirname "$0")/../supabase/migrations" && pwd)"
 
 # Só as migrations desta entrega — as anteriores já constam no tracking de produção.
@@ -177,6 +184,14 @@ for m in "${MIGRATIONS[@]}"; do
   fi
 done
 
+if [ "$REMOVER_OBJETOS" = "1" ]; then
+  echo "!!! modo --remover-objetos: apagando produtos_leitura e auth_usuario_eh_admin !!!"
+  docker exec -i "$CONTAINER" psql -U postgres -d "$DB" -q <<'SQL'
+DROP POLICY IF EXISTS "produtos_leitura" ON public.produtos;
+DROP FUNCTION IF EXISTS public.auth_pode_ver_produto_gerencial(uuid) CASCADE;
+SQL
+fi
+
 echo "--- asserções rigorosas sobre o clone pós-upgrade ---"
 # Cada linha do bloco abaixo devolve PASS/FALHA. Antes isto imprimia dados soltos
 # para leitura humana; agora é verificação com veredito, incluindo ORDEM exata
@@ -230,26 +245,33 @@ UNION ALL SELECT 'trigger functions SEM EXECUTE p/ authenticated|' || (trg_auth 
 -- ── Predicados RLS COMPLETOS ────────────────────────────────────────────────
 -- Antes só se contava policies e papéis; o TEXTO do predicado não era conferido,
 -- então uma policy com o nome certo e a condição errada passaria batido.
+-- Subqueries ESCALARES em vez de `FROM pg_policies`: se a policy estiver
+-- ausente, a forma com FROM não devolve linha nenhuma e a asserção SOME da
+-- saída — sem contar como falha. Com `coalesce((SELECT ...), false)` a linha
+-- sempre existe e vira `false` quando o objeto não está lá.
 UNION ALL
 SELECT 'produtos_leitura: cmd/roles/qual exatos|'
-  || (cmd = 'SELECT' AND roles::text = '{authenticated}'
+  || coalesce((SELECT cmd = 'SELECT' AND roles::text = '{authenticated}'
       AND qual = '(auth_usuario_eh_admin() OR (loja_id = auth_usuario_loja_id()))'
-      AND with_check IS NULL)::text
-  || '|cmd=' || cmd || ' roles=' || roles::text || ' qual=' || coalesce(qual,'(nulo)')
-FROM pg_policies WHERE tablename='produtos' AND policyname='produtos_leitura'
+      AND with_check IS NULL
+      FROM pg_policies WHERE tablename='produtos' AND policyname='produtos_leitura'), false)::text
+  || '|' || coalesce((SELECT 'cmd=' || cmd || ' roles=' || roles::text || ' qual=' || coalesce(qual,'(nulo)')
+      FROM pg_policies WHERE tablename='produtos' AND policyname='produtos_leitura'), 'POLICY AUSENTE')
 UNION ALL
 SELECT 'produtos_escrita: USING e WITH CHECK idênticos e por loja|'
-  || (cmd = 'ALL' AND roles::text = '{authenticated}'
+  || coalesce((SELECT cmd = 'ALL' AND roles::text = '{authenticated}'
       AND qual = 'auth_usuario_gerencial_loja(loja_id)'
-      AND with_check = 'auth_usuario_gerencial_loja(loja_id)')::text
-  || '|qual=' || coalesce(qual,'(nulo)') || ' check=' || coalesce(with_check,'(nulo)')
-FROM pg_policies WHERE tablename='produtos' AND policyname='produtos_escrita'
+      AND with_check = 'auth_usuario_gerencial_loja(loja_id)'
+      FROM pg_policies WHERE tablename='produtos' AND policyname='produtos_escrita'), false)::text
+  || '|' || coalesce((SELECT 'qual=' || coalesce(qual,'(nulo)') || ' check=' || coalesce(with_check,'(nulo)')
+      FROM pg_policies WHERE tablename='produtos' AND policyname='produtos_escrita'), 'POLICY AUSENTE')
 UNION ALL
 SELECT 'historico_precos_produto_leitura: predicado por produto|'
-  || (cmd = 'SELECT' AND roles::text = '{authenticated}'
-      AND qual = 'auth_pode_ver_produto_gerencial(produto_id)')::text
-  || '|qual=' || coalesce(qual,'(nulo)')
-FROM pg_policies WHERE tablename='historico_precos_produto' AND policyname='historico_precos_produto_leitura'
+  || coalesce((SELECT cmd = 'SELECT' AND roles::text = '{authenticated}'
+      AND qual = 'auth_pode_ver_produto_gerencial(produto_id)'
+      FROM pg_policies WHERE tablename='historico_precos_produto' AND policyname='historico_precos_produto_leitura'), false)::text
+  || '|' || coalesce((SELECT 'qual=' || coalesce(qual,'(nulo)')
+      FROM pg_policies WHERE tablename='historico_precos_produto' AND policyname='historico_precos_produto_leitura'), 'POLICY AUSENTE')
 UNION ALL
 SELECT 'produtos tem EXATAMENTE 2 policies (nenhuma permissiva extra)|'
   || (count(*) = 2)::text || '|=' || count(*) || ' [' || string_agg(policyname, ',' ORDER BY policyname) || ']'
@@ -263,16 +285,15 @@ WHERE n.nspname='public' AND c.relname IN ('produtos','historico_precos_produto'
 -- ── Assinaturas e search_path das funções novas ─────────────────────────────
 UNION ALL
 SELECT 'atualizar_produto_com_faixa_atacado: assinatura e SECURITY DEFINER|'
-  || (pg_get_function_identity_arguments(oid) = 'p_produto_id uuid, p_payload jsonb, p_ator_id uuid, p_faixa jsonb'
-      AND prosecdef
-      AND array_to_string(proconfig, ',') LIKE '%search_path=public%')::text
-  || '|args=' || pg_get_function_identity_arguments(oid)
-  || ' secdef=' || prosecdef || ' cfg=' || coalesce(array_to_string(proconfig, ','), '(nenhum)')
-FROM pg_proc WHERE proname='atualizar_produto_com_faixa_atacado'
+  || coalesce((SELECT pg_get_function_identity_arguments(oid) = 'p_produto_id uuid, p_payload jsonb, p_ator_id uuid, p_faixa jsonb'
+      AND prosecdef AND array_to_string(proconfig, ',') LIKE '%search_path=public%'
+      FROM pg_proc WHERE proname='atualizar_produto_com_faixa_atacado'), false)::text
+  || '|' || coalesce((SELECT 'args=' || pg_get_function_identity_arguments(oid) || ' secdef=' || prosecdef
+      FROM pg_proc WHERE proname='atualizar_produto_com_faixa_atacado'), 'FUNCAO AUSENTE')
 UNION ALL
 SELECT 'p_ator_id e p_faixa têm DEFAULT (2 args opcionais)|'
-  || (pronargdefaults = 2)::text || '|defaults=' || pronargdefaults
-FROM pg_proc WHERE proname='atualizar_produto_com_faixa_atacado'
+  || coalesce((SELECT pronargdefaults = 2 FROM pg_proc WHERE proname='atualizar_produto_com_faixa_atacado'), false)::text
+  || '|' || coalesce((SELECT 'defaults=' || pronargdefaults FROM pg_proc WHERE proname='atualizar_produto_com_faixa_atacado'), 'FUNCAO AUSENTE')
 UNION ALL
 SELECT 'helpers de RLS: STABLE + SECURITY DEFINER + search_path|'
   || (count(*) = 3)::text || '|conformes=' || count(*)
@@ -282,20 +303,16 @@ WHERE p.proname IN ('auth_usuario_eh_admin','auth_usuario_loja_id','auth_pode_ve
   AND array_to_string(p.proconfig, ',') LIKE '%search_path=public%'
 UNION ALL
 SELECT 'RPC transacional faz FOR UPDATE na linha do produto|'
-  || (prosrc LIKE '%FOR UPDATE%')::text || '|=' || (prosrc LIKE '%FOR UPDATE%')::text
-FROM pg_proc WHERE proname='atualizar_produto_com_faixa_atacado'
+  || coalesce((SELECT prosrc LIKE '%FOR UPDATE%' FROM pg_proc WHERE proname='atualizar_produto_com_faixa_atacado'), false)::text || '|'
 UNION ALL
 SELECT 'RPC de criação usa advisory lock por request|'
-  || (prosrc LIKE '%pg_advisory_xact_lock%')::text || '|=' || (prosrc LIKE '%pg_advisory_xact_lock%')::text
-FROM pg_proc WHERE proname='criar_produto_com_estoque_inicial'
+  || coalesce((SELECT prosrc LIKE '%pg_advisory_xact_lock%' FROM pg_proc WHERE proname='criar_produto_com_estoque_inicial'), false)::text || '|'
 UNION ALL
 SELECT 'RPC de criação valida a loja do request no replay|'
-  || (prosrc LIKE '%CRIAR_PRODUTO_REQUEST_OUTRA_LOJA%')::text || '|=' || (prosrc LIKE '%CRIAR_PRODUTO_REQUEST_OUTRA_LOJA%')::text
-FROM pg_proc WHERE proname='criar_produto_com_estoque_inicial'
+  || coalesce((SELECT prosrc LIKE '%CRIAR_PRODUTO_REQUEST_OUTRA_LOJA%' FROM pg_proc WHERE proname='criar_produto_com_estoque_inicial'), false)::text || '|'
 UNION ALL
 SELECT 'trigger de histórico aceita ator explícito (app.ator_id)|'
-  || (prosrc LIKE '%app.ator_id%')::text || '|=' || (prosrc LIKE '%app.ator_id%')::text
-FROM pg_proc WHERE proname='registrar_historico_preco_produto'
+  || coalesce((SELECT prosrc LIKE '%app.ator_id%' FROM pg_proc WHERE proname='registrar_historico_preco_produto'), false)::text || '|'
 SQL
 )
 if [ -z "$ASSERT_OUT" ]; then
@@ -304,9 +321,18 @@ if [ -z "$ASSERT_OUT" ]; then
   exit 2
 fi
 
+# Número EXATO de asserções que este bloco tem de produzir. Se uma sumir
+# (objeto ausente fazendo a subquery não retornar linha, erro de SQL numa
+# ramificação, edição descuidada), a contagem denuncia — antes, uma asserção
+# perdida simplesmente não aparecia e o script dava tudo-certo com menos
+# verificações do que declara.
+ASSERCOES_ESPERADAS=27
+
 ASSERT_FALHAS=0
+IDS_VISTOS=$(mktemp)
 while IFS='|' read -r nome ok detalhe; do
   [ -z "$nome" ] && continue
+  echo "$nome" >> "$IDS_VISTOS"
   # `(expr)::text` de boolean no Postgres devolve 'true'/'false' — não 't'/'f'.
   if [ "$ok" = "true" ] || [ "$ok" = "t" ]; then
     echo "PASS  $nome"
@@ -315,6 +341,15 @@ while IFS='|' read -r nome ok detalhe; do
     ASSERT_FALHAS=$((ASSERT_FALHAS + 1))
   fi
 done <<< "$ASSERT_OUT"
+
+N_TOTAL=$(wc -l < "$IDS_VISTOS" | tr -d ' ')
+N_UNICOS=$(sort -u "$IDS_VISTOS" | wc -l | tr -d ' ')
+rm -f "$IDS_VISTOS"
+echo "asserções: $N_TOTAL emitidas, $N_UNICOS únicas (esperado: $ASSERCOES_ESPERADAS)"
+if [ "$N_UNICOS" != "$ASSERCOES_ESPERADAS" ] || [ "$N_TOTAL" != "$ASSERCOES_ESPERADAS" ]; then
+  echo "FALHA contagem de asserções divergente — alguma verificação sumiu ou duplicou"
+  ASSERT_FALHAS=$((ASSERT_FALHAS + 1))
+fi
 
 echo "--- limpando ---"
 docker exec "$CONTAINER" psql -U postgres -d postgres -q -c "DROP DATABASE IF EXISTS $DB;"
