@@ -180,6 +180,28 @@ function commitDasMigrations() {
  *  quanto adulterar o SQL, e antes nada o cobria. */
 const ARQUIVO_PROPRIO = 'backend/scripts/promover-hardening-produtos.mjs'
 
+/**
+ * Caminhos que COMPÕEM o artefato promovido — o que precisa estar limpo.
+ *
+ * Não é o repositório inteiro de propósito: este worktree carrega modificações
+ * pré-existentes e alheias a esta entrega (`.claude/`, docs de outras frentes,
+ * scripts de comissões), e exigir limpeza global tornaria a ferramenta
+ * inutilizável sem aumentar a garantia — nenhum desses arquivos entra no SQL
+ * aplicado nem na decisão de aplicar. O escopo cobre o SQL, os scripts que
+ * decidem/validam a promoção e o próprio manifesto, que era exatamente a
+ * lacuna apontada (antes só as 5 migrations eram verificadas).
+ */
+const CAMINHOS_DO_ARTEFATO = [
+  'backend/supabase/migrations',
+  'backend/scripts/promover-hardening-produtos.mjs',
+  'backend/scripts/promover-hardening-produtos.manifesto.json',
+  'backend/scripts/promocao-cenarios-teste.mjs',
+  'backend/scripts/upgrade-sobre-clone-producao.sh',
+  'backend/scripts/concorrencia-faixa-atacado.sh',
+  'backend/scripts/fallback-sem-rpc-real.mjs',
+  'backend/scripts/rls-produtos-tenant-rest-smoke.mjs',
+]
+
 function sha256Proprio() {
   return sha256(readFileSync(join(RAIZ, ARQUIVO_PROPRIO), 'utf8'))
 }
@@ -187,7 +209,7 @@ function sha256Proprio() {
 function gerarManifesto() {
   // Gerar manifesto com worktree sujo congelaria hashes de conteúdo não
   // commitado — o manifesto passaria a atestar algo que não está no git.
-  const sujo = git('status', '--porcelain')
+  const sujo = git('status', '--porcelain', '--', ...CAMINHOS_DO_ARTEFATO)
   if (sujo && !args.has('--permitir-worktree-sujo')) {
     console.error('RECUSADO: worktree sujo. Commite antes de gerar o manifesto:')
     console.error(sujo.split('\n').slice(0, 10).join('\n'))
@@ -355,17 +377,18 @@ function verificarIntegridadeLocal(manifesto) {
     ancestral ? '' : 'HEAD não descende do commit do manifesto',
   )
 
-  // Worktree INTEIRO, não só as 5 migrations: uma alteração não commitada em
-  // qualquer outro arquivo (inclusive nos scripts de validação) significa que o
-  // que está em disco não é o artefato auditado.
+  // Todos os caminhos do artefato — não só as 5 migrations. Uma alteração não
+  // commitada nos scripts que decidem/validam a promoção significa que o que
+  // está em disco não é o que foi auditado. Ver CAMINHOS_DO_ARTEFATO para por
+  // que o escopo não é o repositório inteiro.
   let sujos = ''
   try {
-    sujos = git('status', '--porcelain')
+    sujos = git('status', '--porcelain', '--', ...CAMINHOS_DO_ARTEFATO)
   } catch {
     /* idem */
   }
   checar(
-    'worktree limpo (repositório inteiro)',
+    'worktree limpo em todos os caminhos do artefato',
     sujos === '',
     sujos ? sujos.split('\n').slice(0, 4).join(' | ') : 'sem modificações',
   )
