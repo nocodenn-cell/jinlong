@@ -468,3 +468,116 @@ describe('mapeamento dos erros da RPC transacional', () => {
     expect(r.code).toBe(PRODUCT_ERROR_CODES.BARCODE_DUPLICATE)
   })
 })
+
+/**
+ * Sequenciamento app ↔ banco: esta versão da aplicação não pode quebrar a
+ * edição de produto quando publicada ANTES da migration que cria a RPC
+ * transacional. Ver docs/PROMOCAO_PRODUTOS_HARDENING.md §3.
+ */
+describe('fallback quando a RPC transacional ainda não existe no banco', () => {
+  const catalogPayload = mapUpdateProductInputToRow({ nome: 'Produto A', precoVarejo: 10 })
+
+  function fakeSupabaseSemRpc(codigo: string, mensagem: string) {
+    const updateSpy = vi.fn(async () => ({ error: null }))
+    const supabase = {
+      rpc: vi.fn(async () => ({ error: { code: codigo, message: mensagem } })),
+      from: () => ({
+        update: (payload: unknown) => ({
+          eq: (_c1: string, _v1: string) => ({
+            eq: (_c2: string, _v2: string) => updateSpy(payload),
+          }),
+        }),
+      }),
+    }
+    return { supabase, updateSpy }
+  }
+
+  it('PGRST202 (função fora do schema cache) → cai no UPDATE direto', async () => {
+    const { supabase, updateSpy } = fakeSupabaseSemRpc(
+      'PGRST202',
+      'Could not find the function public.atualizar_produto_com_faixa_atacado',
+    )
+    const { createProductUpdater: criar } = await import('./productUpdater')
+    const getById = vi.fn(async () => ({ ok: true as const, product: catalogRow }))
+    const updater = criar(supabase as never, { reader: { getById } })
+
+    const r = await updater.update({
+      id: 'prod-1',
+      lojaId: 'loja-1',
+      input: { nome: 'Produto A', precoVarejo: 10 },
+    })
+
+    expect(r.ok).toBe(true)
+    expect(supabase.rpc).toHaveBeenCalledTimes(1)
+    expect(updateSpy).toHaveBeenCalledTimes(1)
+    expect(updateSpy).toHaveBeenCalledWith(expect.objectContaining({ nome: 'Produto A' }))
+  })
+
+  it('42883 (undefined_function no Postgres) → cai no UPDATE direto', async () => {
+    const { supabase, updateSpy } = fakeSupabaseSemRpc(
+      '42883',
+      'function public.atualizar_produto_com_faixa_atacado(...) does not exist',
+    )
+    const { createProductUpdater: criar } = await import('./productUpdater')
+    const getById = vi.fn(async () => ({ ok: true as const, product: catalogRow }))
+    const updater = criar(supabase as never, { reader: { getById } })
+
+    const r = await updater.update({
+      id: 'prod-1',
+      lojaId: 'loja-1',
+      input: { nome: 'Produto A', precoVarejo: 10 },
+    })
+
+    expect(r.ok).toBe(true)
+    expect(updateSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('erro REAL da RPC (não "ausente") NÃO cai no fallback — não mascara falha', async () => {
+    const updateSpy = vi.fn(async () => ({ error: null }))
+    const supabase = {
+      rpc: vi.fn(async () => ({
+        error: { code: 'P0001', message: 'ATUALIZAR_PRODUTO_NAO_ENCONTRADO' },
+      })),
+      from: () => ({
+        update: () => ({ eq: () => ({ eq: () => updateSpy() }) }),
+      }),
+    }
+    const { createProductUpdater: criar } = await import('./productUpdater')
+    const getById = vi.fn(async () => ({ ok: true as const, product: catalogRow }))
+    const updater = criar(supabase as never, { reader: { getById } })
+
+    const r = await updater.update({
+      id: 'prod-1',
+      lojaId: 'loja-1',
+      input: { nome: 'Produto A', precoVarejo: 10 },
+    })
+
+    expect(r.ok).toBe(false)
+    if (r.ok) return
+    expect(r.code).toBe(PRODUCT_ERROR_CODES.NOT_FOUND)
+    expect(updateSpy).not.toHaveBeenCalled()
+  })
+
+  it('o payload enviado à RPC carrega a faixa derivada', async () => {
+    const rpcSpy = vi.fn(async () => ({ error: null }))
+    const supabase = { rpc: rpcSpy, from: () => ({ update: () => ({ eq: () => ({ eq: async () => ({ error: null }) }) }) }) }
+    const { createProductUpdater: criar } = await import('./productUpdater')
+    const getById = vi.fn(async () => ({ ok: true as const, product: catalogRow }))
+    const updater = criar(supabase as never, { reader: { getById } })
+
+    await updater.update({
+      id: 'prod-1',
+      lojaId: 'loja-1',
+      input: { nome: 'Produto A', precoVarejo: 50, precoAtacado: 30, quantidadeGatilhoAtacado: 10 },
+    })
+
+    expect(rpcSpy).toHaveBeenCalledWith(
+      'atualizar_produto_com_faixa_atacado',
+      expect.objectContaining({
+        p_produto_id: 'prod-1',
+        p_faixa: { quantidade_minima: 10, preco_unitario: 30 },
+      }),
+    )
+    expect(catalogPayload.nome).toBe('Produto A')
+  })
+})

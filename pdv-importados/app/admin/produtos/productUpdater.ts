@@ -211,15 +211,60 @@ export function derivarFaixaAtacado(
  * resolve o ator por `auth.uid()`. O parâmetro só existe para chamadas
  * privilegiadas (service_role), onde não há sessão.
  */
+/**
+ * A RPC não existe no banco (ainda não promovida, ou rollback da migration).
+ * PostgREST devolve `PGRST202` quando não acha a função no schema cache;
+ * o Postgres devolve `42883` (undefined_function) quando a chamada chega ao
+ * banco. Qualquer um dos dois significa "banco antigo", não "erro de dados".
+ */
+function rpcAusente(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false
+  if (error.code === 'PGRST202' || error.code === '42883') return true
+  const msg = error.message ?? ''
+  return (
+    msg.includes('atualizar_produto_com_faixa_atacado') &&
+    (msg.includes('does not exist') || msg.includes('Could not find the function'))
+  )
+}
+
+/**
+ * UPDATE de produto + sincronização da faixa via RPC, com FALLBACK para o
+ * UPDATE direto quando a RPC ainda não existe no banco.
+ *
+ * SEQUENCIAMENTO APP ↔ BANCO: sem o fallback, esta versão da aplicação quebra
+ * a edição de produto se for publicada antes da migration
+ * `20260816143000_atualizar_produto_com_faixa_atacado` — o que força uma ordem
+ * rígida de deploy e não tolera rollback do app. Com o fallback, as duas ordens
+ * são seguras:
+ *
+ *   - app novo + banco antigo → cai no UPDATE direto (comportamento anterior,
+ *     sem transacionalidade da faixa, mas sem quebrar);
+ *   - banco novo + app antigo → o app antigo faz UPDATE direto e sincroniza a
+ *     faixa em duas etapas, como sempre fez; a RPC apenas não é usada;
+ *   - app novo + banco novo → caminho transacional completo.
+ *
+ * O fallback é degradação consciente e temporária: assim que a migration
+ * estiver promovida, ele deixa de ser exercitado. Ver
+ * `docs/PROMOCAO_PRODUTOS_HARDENING.md` para a ordem recomendada.
+ */
 function defaultUpdateRow(supabase: SupabaseClient): UpdateProdutoRowFn {
-  return async ({ id, payload }) => {
+  return async ({ id, lojaId, payload }) => {
     const { error } = await supabase.rpc('atualizar_produto_com_faixa_atacado', {
       p_produto_id: id,
       p_payload: payload,
       p_ator_id: null,
       p_faixa: derivarFaixaAtacado(payload),
     })
-    return { error }
+
+    if (!rpcAusente(error)) return { error }
+
+    // Banco ainda sem a RPC: caminho legado, escopado por loja como antes.
+    const { error: erroDireto } = await supabase
+      .from('produtos')
+      .update(payload)
+      .eq('id', id)
+      .eq('loja_id', lojaId)
+    return { error: erroDireto }
   }
 }
 

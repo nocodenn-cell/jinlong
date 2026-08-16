@@ -5075,7 +5075,22 @@ export type Database = {
           status_movimentacao: string
         }[]
       }
+      atualizar_produto_com_faixa_atacado: {
+        Args: {
+          p_ator_id: string | null
+          p_faixa?: Json
+          p_payload: Json
+          p_produto_id: string
+        }
+        Returns: Json
+      }
+      auth_pode_ver_produto_gerencial: {
+        Args: { p_produto_id: string }
+        Returns: boolean
+      }
+      auth_usuario_eh_admin: { Args: never; Returns: boolean }
       auth_usuario_eh_dono: { Args: never; Returns: boolean }
+      auth_usuario_loja_id: { Args: never; Returns: string }
       auth_usuario_gerencial_loja: {
         Args: { p_loja_id: string }
         Returns: boolean
@@ -5706,11 +5721,15 @@ export type Database = {
           imagem_url: string
           marca_id: string
           nome: string
+          observacao: string
           origem: string
+          preco_atacado: number
           preco_varejo: number
+          quantidade_gatilho_atacado: number
           tags: string[]
           tem_nf: boolean
           total_count: number
+          unidade_medida: string
         }[]
       }
       listar_venda_eventos_gerente: {

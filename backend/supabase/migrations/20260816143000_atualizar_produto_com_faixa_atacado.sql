@@ -114,9 +114,20 @@ BEGIN
   -- Gatilho ANTES do update: identifica qual faixa ativa é a derivada do
   -- catálogo, para poder trocá-la/removê-la depois. Precisa ser lido aqui,
   -- antes do UPDATE sobrescrever o valor.
+  --
+  -- FOR UPDATE é obrigatório, não otimização: sem o lock, duas edições
+  -- simultâneas do MESMO produto leem ambas o gatilho antigo (ex.: 10), cada
+  -- uma faz upsert do seu par novo (20 e 30) e cada uma desativa apenas a
+  -- faixa 10 — resultado: o produto fica com um gatilho só, mas DUAS faixas
+  -- derivadas ativas, exatamente a divergência que esta RPC existe para
+  -- impedir. Com o lock, a segunda transação espera a primeira commitar e
+  -- então lê o gatilho JÁ atualizado, desativando a faixa correta.
+  -- Achado em auditoria de 2026-08-16; coberto por teste concorrente real em
+  -- `backend/scripts/rls-produtos-tenant-rest-smoke.mjs`.
   SELECT p.loja_id, p.quantidade_gatilho_atacado
     INTO v_loja_produto, v_gatilho_anterior
-  FROM public.produtos p WHERE p.id = p_produto_id;
+  FROM public.produtos p WHERE p.id = p_produto_id
+  FOR UPDATE;
 
   IF v_loja_produto IS NULL THEN
     RAISE EXCEPTION 'ATUALIZAR_PRODUTO_NAO_ENCONTRADO';

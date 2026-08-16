@@ -514,6 +514,82 @@ async function main() {
       `ativas=[${ativasNome}]`,
     )
 
+    console.log('--- CONCORRÊNCIA real na atualização produto + faixa ---')
+
+    // Estado conhecido: gatilho 10, faixa 10 ativa, mais uma manual em 100.
+    await admin
+      .from('precos_atacado')
+      .delete()
+      .eq('produto_id', novoId)
+      .neq('quantidade_minima', 100)
+    await gerenteA.client.rpc('atualizar_produto_com_faixa_atacado', {
+      p_produto_id: novoId,
+      p_payload: { preco_atacado: 30, quantidade_gatilho_atacado: 10 },
+      p_ator_id: gerenteA.id,
+      p_faixa: { quantidade_minima: 10, preco_unitario: 30 },
+    })
+
+    // Duas edições SIMULTÂNEAS do mesmo produto, cada uma com gatilho diferente.
+    // Sem o FOR UPDATE na leitura do gatilho anterior, ambas leem 10, cada uma
+    // insere a sua faixa e cada uma desativa a 10 — sobrando DUAS faixas
+    // derivadas ativas (20 e 30) para um único gatilho no produto.
+    const [ca, cb] = await Promise.all([
+      gerenteA.client.rpc('atualizar_produto_com_faixa_atacado', {
+        p_produto_id: novoId,
+        p_payload: { preco_atacado: 25, quantidade_gatilho_atacado: 20 },
+        p_ator_id: gerenteA.id,
+        p_faixa: { quantidade_minima: 20, preco_unitario: 25 },
+      }),
+      gerenteA.client.rpc('atualizar_produto_com_faixa_atacado', {
+        p_produto_id: novoId,
+        p_payload: { preco_atacado: 22, quantidade_gatilho_atacado: 30 },
+        p_ator_id: gerenteA.id,
+        p_faixa: { quantidade_minima: 30, preco_unitario: 22 },
+      }),
+    ])
+    checar(
+      'as duas atualizações concorrentes concluíram sem erro',
+      !ca.error && !cb.error,
+      `${ca.error?.message ?? 'ok'} / ${cb.error?.message ?? 'ok'}`,
+    )
+
+    const { data: prodFinal } = await admin
+      .from('produtos')
+      .select('preco_atacado, quantidade_gatilho_atacado')
+      .eq('id', novoId)
+      .single()
+    const { data: faixasFinal } = await admin
+      .from('precos_atacado')
+      .select('quantidade_minima, preco_unitario, ativo')
+      .eq('produto_id', novoId)
+      .order('quantidade_minima')
+    const ativasFinal = (faixasFinal ?? []).filter((f) => f.ativo)
+    // Derivadas = todas as ativas menos a manual em 100.
+    const derivadasAtivas = ativasFinal.filter((f) => f.quantidade_minima !== 100)
+
+    checar(
+      'após concorrência, existe UMA só faixa derivada ativa',
+      derivadasAtivas.length === 1,
+      `derivadas ativas=[${derivadasAtivas.map((f) => f.quantidade_minima)}]`,
+    )
+    checar(
+      'a faixa derivada ativa corresponde ao gatilho final do produto',
+      derivadasAtivas.length === 1 &&
+        derivadasAtivas[0].quantidade_minima === prodFinal.quantidade_gatilho_atacado,
+      `gatilho=${prodFinal.quantidade_gatilho_atacado} faixa=${derivadasAtivas[0]?.quantidade_minima}`,
+    )
+    checar(
+      'o preço da faixa derivada bate com produtos.preco_atacado',
+      derivadasAtivas.length === 1 &&
+        Number(derivadasAtivas[0].preco_unitario) === Number(prodFinal.preco_atacado),
+      `produto=${prodFinal.preco_atacado} faixa=${derivadasAtivas[0]?.preco_unitario}`,
+    )
+    checar(
+      'a faixa manual sobreviveu à concorrência',
+      ativasFinal.some((f) => f.quantidade_minima === 100),
+      `ativas=[${ativasFinal.map((f) => f.quantidade_minima)}]`,
+    )
+
     console.log('--- IDEMPOTÊNCIA da criação (escopo e concorrência) ---')
 
     const reqId = '99999999-9999-4999-8999-999999999999'

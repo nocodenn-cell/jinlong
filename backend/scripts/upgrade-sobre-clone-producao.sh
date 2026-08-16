@@ -77,8 +77,41 @@ END $do$;
 SQL
 
 echo "--- carregando schema de produção ---"
-LOAD_ERR=$(docker exec -i "$CONTAINER" psql -U postgres -d "$DB" -q -v ON_ERROR_STOP=0 < "$DUMP" 2>&1 | grep -c '^ERROR' || true)
-echo "erros ignorados no carregamento do dump: $LOAD_ERR (objetos gerenciados pelo Supabase ausentes no stub)"
+# Carregar com tolerância cega mascarava clone incompleto: bastava um objeto de
+# `public` falhar para o teste seguir validando um schema que não é o de
+# produção. Agora todo erro é capturado e CLASSIFICADO — só erros que se
+# explicam pela ausência de objetos gerenciados pelo Supabase (schemas
+# auth/storage/realtime, extensões, roles do serviço) são tolerados. Qualquer
+# erro tocando `public` aborta.
+LOAD_LOG=$(mktemp)
+docker exec -i "$CONTAINER" psql -U postgres -d "$DB" -q -v ON_ERROR_STOP=0 < "$DUMP" > "$LOAD_LOG" 2>&1 || true
+
+TOTAL_ERR=$(grep -c '^ERROR' "$LOAD_LOG" || true)
+# Erros aceitáveis: infraestrutura gerenciada pelo Supabase que não existe num
+# banco descartável. Nenhum deles toca objetos de `public` — que é o que precisa
+# ser fiel para o teste valer. A lista é explícita de propósito: qualquer erro
+# novo aborta em vez de passar despercebido.
+#   - schemas auth/storage/realtime/... : não vêm no `db dump`
+#   - roles supabase_* / authenticator  : criados pelo provisionamento do projeto
+#   - extension "..."                    : já instaladas na imagem, ou restritas
+#   - "can only create extension in database postgres": o clone não é o banco
+#     `postgres`, e algumas extensões do Supabase só podem ser criadas lá
+#   - publication "supabase_realtime"    : replicação do Realtime, fora de escopo
+TOLERAVEIS=$(grep '^ERROR' "$LOAD_LOG" \
+  | grep -Ec 'schema "(auth|storage|realtime|extensions|graphql|vault|supabase_migrations|pgbouncer|net|cron)"|role "(supabase_admin|supabase_auth_admin|supabase_storage_admin|dashboard_user|authenticator|pgbouncer)"|extension "[^"]+"|must be owner|permission denied|can only create extension in database postgres|publication "supabase_realtime" does not exist' \
+  || true)
+INESPERADOS=$((TOTAL_ERR - TOLERAVEIS))
+
+echo "carregamento: $TOTAL_ERR erro(s), $TOLERAVEIS tolerável(is), $INESPERADOS inesperado(s)"
+if [ "$INESPERADOS" -gt 0 ]; then
+  echo "ABORTADO: erros não classificáveis no carregamento — o clone não é fiel:"
+  grep '^ERROR' "$LOAD_LOG" \
+    | grep -Ev 'schema "(auth|storage|realtime|extensions|graphql|vault|supabase_migrations|pgbouncer|net|cron)"|role "(supabase_admin|supabase_auth_admin|supabase_storage_admin|dashboard_user|authenticator|pgbouncer)"|extension "[^"]+"|must be owner|permission denied|can only create extension in database postgres|publication "supabase_realtime" does not exist' \
+    | head -20
+  rm -f "$LOAD_LOG"
+  exit 2
+fi
+rm -f "$LOAD_LOG"
 
 # Confirma que o clone é mesmo o de produção, e não um replay local.
 COLS=$(docker exec "$CONTAINER" psql -U postgres -d "$DB" -t -A -c \
@@ -117,17 +150,66 @@ for m in "${MIGRATIONS[@]}"; do
   fi
 done
 
-echo "--- estado pós-upgrade no clone ---"
-docker exec "$CONTAINER" psql -U postgres -d "$DB" -c \
-  "SELECT policyname, cmd, roles::text FROM pg_policies WHERE tablename IN ('produtos','historico_precos_produto') ORDER BY tablename, policyname;"
-docker exec "$CONTAINER" psql -U postgres -d "$DB" -c \
-  "SELECT numeric_precision, numeric_scale FROM information_schema.columns WHERE table_name='produtos' AND column_name='preco_custo_medio';"
-docker exec "$CONTAINER" psql -U postgres -d "$DB" -t -A -c \
-  "SELECT 'list RPC retorna ' || (length(pg_get_function_result(oid)) - length(replace(pg_get_function_result(oid), ',', '')) + 1) || ' colunas, secdef=' || prosecdef FROM pg_proc WHERE proname='list_produtos_gerente_filtrados';"
-docker exec "$CONTAINER" psql -U postgres -d "$DB" -t -A -c \
-  "SELECT 'indices de autoria: ' || count(*) FROM pg_indexes WHERE indexname IN ('idx_produtos_criado_por','idx_produtos_atualizado_por','idx_historico_precos_produto_alterado_por');"
-docker exec "$CONTAINER" psql -U postgres -d "$DB" -t -A -c \
-  "SELECT 'policies orfas restantes: ' || count(*) FROM pg_policies WHERE tablename='produtos' AND policyname IN ('caixa_policy','painel_policy');"
+echo "--- asserções rigorosas sobre o clone pós-upgrade ---"
+# Cada linha do bloco abaixo devolve PASS/FALHA. Antes isto imprimia dados soltos
+# para leitura humana; agora é verificação com veredito, incluindo ORDEM exata
+# do contrato de retorno, grants, revogações e predicados dos índices.
+ASSERT_OUT=$(docker exec -i "$CONTAINER" psql -U postgres -d "$DB" -t -A <<'SQL'
+WITH t AS (
+  SELECT
+    -- Contrato COMPLETO e ORDENADO da RPC de listagem (17 colunas)
+    (SELECT pg_get_function_result(oid) FROM pg_proc WHERE proname='list_produtos_gerente_filtrados' LIMIT 1) AS ret,
+    (SELECT prosecdef FROM pg_proc WHERE proname='list_produtos_gerente_filtrados' LIMIT 1) AS secdef,
+    (SELECT numeric_precision FROM information_schema.columns WHERE table_name='produtos' AND column_name='preco_custo_medio') AS prec,
+    (SELECT numeric_scale FROM information_schema.columns WHERE table_name='produtos' AND column_name='preco_custo_medio') AS esc,
+    (SELECT count(*) FROM pg_policies WHERE tablename='produtos' AND policyname IN ('caixa_policy','painel_policy')) AS orfas,
+    (SELECT count(*) FROM pg_policies WHERE tablename IN ('produtos','historico_precos_produto') AND roles::text = '{authenticated}') AS pol_auth,
+    (SELECT count(*) FROM pg_policies WHERE tablename='produtos' AND cmd='ALL' AND with_check IS NOT NULL) AS com_check,
+    (SELECT count(*) FROM pg_indexes WHERE indexname='idx_produtos_criado_por' AND indexdef ILIKE '%WHERE (criado_por IS NOT NULL)%') AS ix1,
+    (SELECT count(*) FROM pg_indexes WHERE indexname='idx_produtos_atualizado_por' AND indexdef ILIKE '%WHERE (atualizado_por IS NOT NULL)%') AS ix2,
+    (SELECT count(*) FROM pg_indexes WHERE indexname='idx_historico_precos_produto_alterado_por' AND indexdef ILIKE '%WHERE (alterado_por IS NOT NULL)%') AS ix3,
+    (SELECT count(*) FROM pg_proc WHERE proname='atualizar_produto_com_faixa_atacado') AS rpc_faixa,
+    -- grants: helpers precisam de EXECUTE para authenticated e NÃO para anon
+    (SELECT count(*) FROM pg_proc p WHERE p.proname IN ('auth_usuario_eh_admin','auth_usuario_loja_id','auth_pode_ver_produto_gerencial')
+       AND has_function_privilege('authenticated', p.oid, 'EXECUTE')) AS helpers_auth,
+    (SELECT count(*) FROM pg_proc p WHERE p.proname IN ('auth_usuario_eh_admin','auth_usuario_loja_id','auth_pode_ver_produto_gerencial')
+       AND has_function_privilege('anon', p.oid, 'EXECUTE')) AS helpers_anon,
+    (SELECT has_function_privilege('authenticated', p.oid, 'EXECUTE') FROM pg_proc p WHERE p.proname='list_produtos_gerente_filtrados' LIMIT 1) AS list_auth,
+    (SELECT has_function_privilege('anon', p.oid, 'EXECUTE') FROM pg_proc p WHERE p.proname='list_produtos_gerente_filtrados' LIMIT 1) AS list_anon,
+    (SELECT count(*) FROM pg_proc p WHERE p.proname IN ('registrar_criado_por_produto','registrar_atualizado_por_produto')
+       AND has_function_privilege('authenticated', p.oid, 'EXECUTE')) AS trg_auth
+)
+SELECT 'contrato da RPC (17 colunas, ordem exata)|' || (ret =
+  'TABLE(id uuid, nome text, codigo_barras text, preco_varejo numeric, preco_atacado numeric, quantidade_gatilho_atacado integer, origem text, tem_nf boolean, ativo boolean, categoria_id uuid, fornecedor_id uuid, marca_id uuid, unidade_medida text, observacao text, imagem_url text, tags text[], total_count bigint)')::text
+  || '|' || coalesce(ret,'(ausente)') FROM t
+UNION ALL SELECT 'RPC de listagem é SECURITY INVOKER|' || (secdef = false)::text || '|secdef=' || secdef FROM t
+UNION ALL SELECT 'preco_custo_medio numeric(10,2)|' || (prec = 10 AND esc = 2)::text || '|' || prec || ',' || esc FROM t
+UNION ALL SELECT 'policies orfas removidas|' || (orfas = 0)::text || '|orfas=' || orfas FROM t
+UNION ALL SELECT 'as 3 policies estao TO authenticated|' || (pol_auth = 3)::text || '|=' || pol_auth FROM t
+UNION ALL SELECT 'produtos_escrita tem WITH CHECK|' || (com_check >= 1)::text || '|=' || com_check FROM t
+UNION ALL SELECT 'indice criado_por parcial|' || (ix1 = 1)::text || '|=' || ix1 FROM t
+UNION ALL SELECT 'indice atualizado_por parcial|' || (ix2 = 1)::text || '|=' || ix2 FROM t
+UNION ALL SELECT 'indice alterado_por parcial|' || (ix3 = 1)::text || '|=' || ix3 FROM t
+UNION ALL SELECT 'RPC transacional presente|' || (rpc_faixa = 1)::text || '|=' || rpc_faixa FROM t
+UNION ALL SELECT 'helpers com EXECUTE p/ authenticated|' || (helpers_auth = 3)::text || '|=' || helpers_auth FROM t
+UNION ALL SELECT 'helpers SEM EXECUTE p/ anon|' || (helpers_anon = 0)::text || '|=' || helpers_anon FROM t
+UNION ALL SELECT 'list RPC com EXECUTE p/ authenticated|' || (list_auth)::text || '|=' || list_auth FROM t
+UNION ALL SELECT 'list RPC SEM EXECUTE p/ anon|' || (NOT list_anon)::text || '|=' || list_anon FROM t
+UNION ALL SELECT 'trigger functions SEM EXECUTE p/ authenticated|' || (trg_auth = 0)::text || '|=' || trg_auth FROM t
+SQL
+)
+
+ASSERT_FALHAS=0
+while IFS='|' read -r nome ok detalhe; do
+  [ -z "$nome" ] && continue
+  # `(expr)::text` de boolean no Postgres devolve 'true'/'false' — não 't'/'f'.
+  if [ "$ok" = "true" ] || [ "$ok" = "t" ]; then
+    echo "PASS  $nome"
+  else
+    echo "FALHA $nome — ${detalhe:0:160}"
+    ASSERT_FALHAS=$((ASSERT_FALHAS + 1))
+  fi
+done <<< "$ASSERT_OUT"
 
 echo "--- limpando ---"
 docker exec "$CONTAINER" psql -U postgres -d postgres -q -c "DROP DATABASE IF EXISTS $DB;"
@@ -136,4 +218,8 @@ if [ "$FALHAS" -gt 0 ]; then
   echo "=== $FALHAS migration(s) FALHARAM sobre o schema de produção ==="
   exit 1
 fi
-echo "=== todas as migrations aplicaram sobre o schema de produção ==="
+if [ "$ASSERT_FALHAS" -gt 0 ]; then
+  echo "=== migrations aplicaram, mas $ASSERT_FALHAS asserção(ões) de estado falharam ==="
+  exit 1
+fi
+echo "=== todas as migrations aplicaram e todas as asserções passaram sobre o schema de produção ==="
