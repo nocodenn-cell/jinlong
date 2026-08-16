@@ -188,6 +188,9 @@ export function CatalogoTable({
     {
       key: 'produto',
       header: labels.produto,
+      // Fixa durante o scroll horizontal em telas estreitas — sem isso, ver
+      // Status/Ações (mais à direita) rola o nome do produto pra fora da tela.
+      sticky: true,
       sortValue: (r) => r.nome,
       cell: (row) => (
         <div className="flex items-center gap-2.5">

@@ -255,6 +255,109 @@ describe('createProductUpdater', () => {
     })
   })
 
+  it('unique de código de barras SEM supabase funcional cai no fallback genérico (consulta complementar falhando)', async () => {
+    // supabase = {} força buscarProdutoPorCodigoBarrasLoja a estourar (sem .from) —
+    // prova que a falha da consulta de enriquecimento não derruba a resposta do
+    // update nem propaga um erro cru pro chamador; cai na mensagem genérica.
+    const getById = vi.fn(async () => ({ ok: true as const, product: catalogRow }))
+    const updateRow = vi.fn(async () => ({
+      error: {
+        code: '23505',
+        message: 'duplicate key value violates unique constraint "produtos_codigo_barras_loja_unique"',
+      },
+    }))
+    const updater = createProductUpdater({} as never, { reader: { getById }, updateRow })
+
+    const r = await updater.update({
+      id: 'prod-1',
+      lojaId: 'loja-1',
+      input: { nome: 'Ok', precoVarejo: 1, codigoBarras: '111' },
+    })
+
+    expect(r.ok).toBe(false)
+    expect(r).toMatchObject({ code: PRODUCT_ERROR_CODES.BARCODE_DUPLICATE })
+    // Mensagem genérica (sem nome) — não crasha, não vaza o erro interno da consulta.
+    expect(r.error).toBe(formatMensagemCodigoBarrasDuplicado(null))
+  })
+
+  it('unique de código de barras COM supabase funcional enriquece a mensagem com o nome do produto conflitante', async () => {
+    const calls: { table?: string; eq: Array<[string, string]>; neq?: [string, string] } = { eq: [] }
+    const fakeSupabase = {
+      from: (table: string) => {
+        calls.table = table
+        return {
+          select: () => ({
+            eq: (col: string, val: string) => {
+              calls.eq.push([col, val])
+              return {
+                eq: (col2: string, val2: string) => {
+                  calls.eq.push([col2, val2])
+                  return {
+                    limit: () => ({
+                      neq: (col3: string, val3: string) => {
+                        calls.neq = [col3, val3]
+                        return { maybeSingle: async () => ({ data: { id: 'outro-produto-id', nome: 'Caixa Amarela' } }) }
+                      },
+                      maybeSingle: async () => ({ data: { id: 'outro-produto-id', nome: 'Caixa Amarela' } }),
+                    }),
+                  }
+                },
+              }
+            },
+          }),
+        }
+      },
+    }
+    const getById = vi.fn(async () => ({ ok: true as const, product: catalogRow }))
+    const updateRow = vi.fn(async () => ({
+      error: {
+        code: '23505',
+        message: 'duplicate key value violates unique constraint "produtos_codigo_barras_loja_unique"',
+      },
+    }))
+    const updater = createProductUpdater(fakeSupabase as never, { reader: { getById }, updateRow })
+
+    const r = await updater.update({
+      id: 'prod-1',
+      lojaId: 'loja-1',
+      input: { nome: 'Ok', precoVarejo: 1, codigoBarras: '0012366665' },
+    })
+
+    expect(r.ok).toBe(false)
+    expect(r).toMatchObject({ error: expect.stringContaining('Caixa Amarela') })
+    // Isolamento por loja: a busca do conflito usa a loja do comando (do usuário
+    // que está editando), não algum outro valor.
+    expect(calls.table).toBe('produtos')
+    expect(calls.eq).toContainEqual(['loja_id', 'loja-1'])
+    expect(calls.eq).toContainEqual(['codigo_barras', '0012366665'])
+    // Exclui o próprio produto sendo editado — "manter o próprio código" nunca
+    // se autodenuncia (mesmo que este teste force um 23505, em uso real isso só
+    // dispara se OUTRO produto já tiver esse código).
+    expect(calls.neq).toEqual(['id', 'prod-1'])
+  })
+
+  it('não chama a busca de duplicidade quando o update tem sucesso (manter o próprio código não gera I/O extra)', async () => {
+    const fromSpy = vi.fn()
+    const fakeSupabase = { from: fromSpy }
+    const after: ProductCatalogBasics = { ...catalogRow, nome: 'Ok' }
+    const getById = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true as const, product: catalogRow })
+      .mockResolvedValueOnce({ ok: true as const, product: after })
+    const updateRow = vi.fn(async () => ({ error: null }))
+    const updater = createProductUpdater(fakeSupabase as never, { reader: { getById }, updateRow })
+
+    const r = await updater.update({
+      id: 'prod-1',
+      lojaId: 'loja-1',
+      // mesmo código de barras que o produto já tinha (catalogRow.codigoBarras = '789')
+      input: { nome: 'Ok', precoVarejo: 1, codigoBarras: '789' },
+    })
+
+    expect(r.ok).toBe(true)
+    expect(fromSpy).not.toHaveBeenCalled()
+  })
+
   it('retorno pós-update inclui identidade + preços de cadastro', async () => {
     const after: ProductCatalogBasics = {
       ...catalogRow,

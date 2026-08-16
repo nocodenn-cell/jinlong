@@ -14,9 +14,10 @@ import type { OrigemCode } from '../produtoForm.types'
 
 type Props = Readonly<{
   faixasSlot: ReactNode
+  historicoSlot?: ReactNode
 }>
 
-export function ComercialSection({ faixasSlot }: Props) {
+export function ComercialSection({ faixasSlot, historicoSlot }: Props) {
   const ctx = useProdutoFormContext()
   const p = ctx.m.produtos
   const c = ctx.m.comum
@@ -125,6 +126,8 @@ export function ComercialSection({ faixasSlot }: Props) {
           <p className="mb-2 text-caption text-jl-fg-3">{p.hint_faixas_atacado}</p>
           {faixasSlot}
         </div>
+
+        {historicoSlot}
       </div>
     </section>
   )

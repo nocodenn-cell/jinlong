@@ -21,6 +21,7 @@ import {
 import { dualWriteFromStatus } from '@/core/catalog/statusPublicacao'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 import {
+  buscarProdutoPorCodigoBarrasLoja,
   formatMensagemCodigoBarrasDuplicado,
   isProdutosCodigoBarrasLojaUniqueViolation,
 } from '@/lib/gerente/produtoCodigoBarrasDuplicado'
@@ -132,14 +133,34 @@ export function mapUpdateProductInputToRow(input: UpdateProductInput): ProdutoUp
   return row
 }
 
-function mapUpdateDbError(error: {
-  message: string
-  code?: string
-  details?: string
-}): { error: string; code?: (typeof PRODUCT_ERROR_CODES)[keyof typeof PRODUCT_ERROR_CODES] } {
+async function mapUpdateDbError(
+  error: {
+    message: string
+    code?: string
+    details?: string
+  },
+  ctx: { supabase: SupabaseClient; codigoBarras: string | null; lojaId: string; produtoId: string },
+): Promise<{ error: string; code?: (typeof PRODUCT_ERROR_CODES)[keyof typeof PRODUCT_ERROR_CODES] }> {
   if (isProdutosCodigoBarrasLojaUniqueViolation(error)) {
+    // Best-effort: achar o nome do produto conflitante só enriquece a
+    // mensagem. Se a busca falhar por qualquer motivo, cai na mensagem
+    // genérica em vez de derrubar a resposta inteira do update.
+    let nomeExistente: string | null = null
+    if (ctx.codigoBarras) {
+      try {
+        const existente = await buscarProdutoPorCodigoBarrasLoja(
+          ctx.supabase,
+          ctx.codigoBarras,
+          ctx.lojaId,
+          ctx.produtoId,
+        )
+        nomeExistente = existente?.nome ?? null
+      } catch {
+        nomeExistente = null
+      }
+    }
     return {
-      error: formatMensagemCodigoBarrasDuplicado(null),
+      error: formatMensagemCodigoBarrasDuplicado(nomeExistente),
       code: PRODUCT_ERROR_CODES.BARCODE_DUPLICATE,
     }
   }
@@ -167,6 +188,7 @@ function defaultDeps(supabase: SupabaseClient): ProductUpdaterDeps {
 async function updateCatalog(
   command: UpdateProductCommand,
   deps: ProductUpdaterDeps,
+  supabase: SupabaseClient,
 ): Promise<UpdateProductResult> {
   const existing = await deps.reader.getById(command.id)
   if (!existing.ok) {
@@ -194,7 +216,12 @@ async function updateCatalog(
     payload: mapUpdateProductInputToRow(command.input),
   })
   if (error) {
-    const mapped = mapUpdateDbError(error)
+    const mapped = await mapUpdateDbError(error, {
+      supabase,
+      codigoBarras: command.input.codigoBarras ?? null,
+      lojaId: command.lojaId,
+      produtoId: command.id,
+    })
     return { ok: false, error: mapped.error, code: mapped.code }
   }
 
@@ -244,7 +271,7 @@ export function createProductUpdater(
         }
       }
       try {
-        return await updateCatalog(command, resolved)
+        return await updateCatalog(command, resolved, supabase)
       } catch (e) {
         return {
           ok: false,

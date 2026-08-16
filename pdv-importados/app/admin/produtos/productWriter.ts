@@ -6,6 +6,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import * as Sentry from '@sentry/nextjs'
 import type {
   CreateProductCommand,
   CreateProductInput,
@@ -100,15 +101,68 @@ function mapCreateCatchError(e: unknown): string {
   return resolveProductMessage('pt-BR', PRODUCT_ERROR_CODES.SAVE_FAILED)
 }
 
+/**
+ * `criado_por` fica NULL na própria RPC 270/289 — ela roda como service_role,
+ * sem `auth.uid()` no contexto. Preenchida aqui com um UPDATE de
+ * acompanhamento pelo client de sessão (tem `auth.uid()`), usando o
+ * `atorId` que a RPC já recebe. Best-effort no sentido de "não falha o
+ * create por causa de um campo de auditoria" — mas a falha em si NUNCA é
+ * engolida em silêncio: o Supabase JS client não lança em erro de UPDATE
+ * (resolve com `{ error }` no corpo), então só o try/catch original não
+ * pegava nada — uma RLS negando ou um erro de constraint sumia sem rastro.
+ * Cast pontual — `criado_por` ainda não está no Database tipado gerado
+ * (mesmo motivo do cast em `criarProdutoComEstoqueInicialRpc.ts`).
+ */
+async function registrarCriadoPor(
+  supabase: SupabaseClient,
+  produtoId: string,
+  atorId: string,
+): Promise<void> {
+  try {
+    const { error } = await (
+      supabase as unknown as {
+        from: (table: string) => {
+          update: (values: Record<string, unknown>) => {
+            eq: (
+              col: string,
+              value: string,
+            ) => Promise<{ error: { message: string; code?: string } | null }>
+          }
+        }
+      }
+    )
+      .from('produtos')
+      .update({ criado_por: atorId })
+      .eq('id', produtoId)
+
+    if (error) {
+      Sentry.captureMessage('produto.criado_por: UPDATE de acompanhamento falhou', {
+        level: 'warning',
+        tags: { modulo: 'produtos-autoria', produto_id: produtoId },
+        extra: { atorId, dbErrorMessage: error.message, dbErrorCode: error.code ?? null },
+      })
+    }
+  } catch (e) {
+    Sentry.captureException(e, {
+      level: 'warning',
+      tags: { modulo: 'produtos-autoria', produto_id: produtoId },
+      extra: { atorId, contexto: 'registrarCriadoPor lançou exceção' },
+    })
+  }
+}
+
 async function createViaRpc(
   command: CreateProductCommand,
   deps: ProductWriterDeps,
+  supabase: SupabaseClient,
 ): Promise<CreateProductResult> {
   const created = await deps.createRpc({
     input: mapCreateProductInputToRpc(command.input),
     atorId: command.atorId,
   })
   if (!created.ok) return { ok: false, error: created.message }
+
+  await registrarCriadoPor(supabase, created.id, command.atorId)
 
   const reload = await deps.reader.getById(created.id)
   if (!reload.ok) {
@@ -141,7 +195,7 @@ export function createProductWriter(
         }
       }
       try {
-        return await createViaRpc(command, resolved)
+        return await createViaRpc(command, resolved, supabase)
       } catch (e) {
         return { ok: false, error: mapCreateCatchError(e) }
       }

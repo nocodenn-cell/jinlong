@@ -3,6 +3,11 @@ import type { NovoProdutoInput } from '@/core/ports/produto'
 import { defaultStatusNovoProduto } from '@/core/catalog/statusPublicacao'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 import { mensagemErroAjusteEstoqueManual } from '@/lib/gerente/estoqueInicialCadastro'
+import { getLojaIdUsuario } from '@/lib/auth/lojaUsuario'
+import {
+  buscarProdutoPorCodigoBarrasLoja,
+  formatMensagemCodigoBarrasDuplicado,
+} from '@/lib/gerente/produtoCodigoBarrasDuplicado'
 
 export type CriarProdutoEstoqueInput = NovoProdutoInput & {
   estoque_inicial_quantidade?: number
@@ -34,6 +39,35 @@ export function mensagemErroCriarProdutoRpc(detalhe: string): string {
     return mensagemErroAjusteEstoqueManual(raw)
   }
   return mensagemErroComSecao('Cadastro de produto', raw)
+}
+
+/**
+ * Como `mensagemErroCriarProdutoRpc`, mas para o caso específico de código de
+ * barras duplicado busca o produto conflitante e nomeia ele na mensagem — em
+ * vez do texto genérico "busque o produto existente". Isolada da função
+ * síncrona acima para não quebrar os testes/consumidores que esperam
+ * `mensagemErroCriarProdutoRpc` sem I/O.
+ */
+export async function mensagemErroCriarProdutoRpcEnriquecida(
+  detalhe: string,
+  ctx: { admin: ReturnType<typeof createAdminClient>; atorId: string; codigoBarras: string | null },
+): Promise<string> {
+  const raw = (detalhe ?? '').trim()
+  if (!raw.includes('CRIAR_PRODUTO_CODIGO_BARRAS_DUPLICADO')) {
+    return mensagemErroCriarProdutoRpc(detalhe)
+  }
+  // Best-effort: se a busca do nome falhar por qualquer motivo, cai na
+  // mensagem genérica em vez de mascarar o erro real de duplicidade.
+  try {
+    const lojaId = ctx.codigoBarras ? await getLojaIdUsuario(ctx.admin, ctx.atorId) : null
+    const existente =
+      lojaId && ctx.codigoBarras
+        ? await buscarProdutoPorCodigoBarrasLoja(ctx.admin, ctx.codigoBarras, lojaId)
+        : null
+    return formatMensagemCodigoBarrasDuplicado(existente?.nome ?? null)
+  } catch {
+    return formatMensagemCodigoBarrasDuplicado(null)
+  }
 }
 
 function buildPayload(input: CriarProdutoEstoqueInput): Record<string, unknown> {
@@ -108,7 +142,12 @@ export async function executarCriarProdutoComEstoqueInicial(opts: {
   })
 
   if (error) {
-    return { ok: false, message: mensagemErroCriarProdutoRpc(error.message) }
+    const message = await mensagemErroCriarProdutoRpcEnriquecida(error.message, {
+      admin,
+      atorId: opts.atorId,
+      codigoBarras: opts.input.codigo_barras?.trim() || null,
+    })
+    return { ok: false, message }
   }
 
   const row = data as {

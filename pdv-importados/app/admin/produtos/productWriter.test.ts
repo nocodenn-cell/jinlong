@@ -1,5 +1,14 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mensagemErroCriarProdutoRpc } from '@/lib/adapters/supabase/criarProdutoComEstoqueInicialRpc'
+
+const { captureExceptionMock, captureMessageMock } = vi.hoisted(() => ({
+  captureExceptionMock: vi.fn(),
+  captureMessageMock: vi.fn(),
+}))
+vi.mock('@sentry/nextjs', () => ({
+  captureException: captureExceptionMock,
+  captureMessage: captureMessageMock,
+}))
 import {
   PRODUCT_ERROR_CODES,
   validateCreateProductCommand,
@@ -88,6 +97,11 @@ describe('productWriter — validação (codes shared-core)', () => {
 })
 
 describe('createProductWriter', () => {
+  beforeEach(() => {
+    captureExceptionMock.mockClear()
+    captureMessageMock.mockClear()
+  })
+
   it('criação válida: RPC + reload → ProductCatalogBasics', async () => {
     const createRpc = vi.fn(async () => ({
       ok: true as const,
@@ -114,6 +128,74 @@ describe('createProductWriter', () => {
       atorId: 'user-1',
     })
     expect(getById).toHaveBeenCalledWith('prod-1')
+  })
+
+  it('criação válida grava criado_por via UPDATE de acompanhamento, sem reportar ao Sentry', async () => {
+    const updateEqMock = vi.fn(async () => ({ error: null }))
+    const fromSpy = vi.fn((table: string) => {
+      expect(table).toBe('produtos')
+      return { update: (values: Record<string, unknown>) => ({ eq: (col: string, val: string) => updateEqMock(values, col, val) }) }
+    })
+    const fakeSupabase = { from: fromSpy }
+    const createRpc = vi.fn(async () => ({ ok: true as const, id: 'prod-1', replayed: false, estoqueAplicado: true }))
+    const getById = vi.fn(async () => ({ ok: true as const, product: catalogRow }))
+    const writer = createProductWriter(fakeSupabase as never, { createRpc, reader: { getById } })
+
+    const r = await writer.create({
+      input: { nome: 'Produto A', precoVarejo: 10 },
+      lojaId: 'loja-1',
+      atorId: 'user-1',
+    })
+
+    expect(r.ok).toBe(true)
+    expect(updateEqMock).toHaveBeenCalledWith({ criado_por: 'user-1' }, 'id', 'prod-1')
+    expect(captureExceptionMock).not.toHaveBeenCalled()
+    expect(captureMessageMock).not.toHaveBeenCalled()
+  })
+
+  it('UPDATE de acompanhamento falha (erro de banco, ex.: RLS) → cadastro segue ok, mas reporta ao Sentry (não é perda silenciosa)', async () => {
+    const fakeSupabase = {
+      from: () => ({
+        update: () => ({ eq: async () => ({ error: { message: 'permission denied', code: '42501' } }) }),
+      }),
+    }
+    const createRpc = vi.fn(async () => ({ ok: true as const, id: 'prod-1', replayed: false, estoqueAplicado: true }))
+    const getById = vi.fn(async () => ({ ok: true as const, product: catalogRow }))
+    const writer = createProductWriter(fakeSupabase as never, { createRpc, reader: { getById } })
+
+    const r = await writer.create({
+      input: { nome: 'Produto A', precoVarejo: 10 },
+      lojaId: 'loja-1',
+      atorId: 'user-1',
+    })
+
+    expect(r.ok).toBe(true) // create não falha por causa da auditoria
+    expect(captureMessageMock).toHaveBeenCalledTimes(1)
+    expect(captureMessageMock.mock.calls[0]![0]).toContain('criado_por')
+    expect(captureMessageMock.mock.calls[0]![1]).toMatchObject({
+      level: 'warning',
+      tags: expect.objectContaining({ modulo: 'produtos-autoria', produto_id: 'prod-1' }),
+    })
+  })
+
+  it('UPDATE de acompanhamento lança exceção (ex.: rede) → cadastro segue ok, mas reporta ao Sentry', async () => {
+    const fakeSupabase = {
+      from: () => {
+        throw new Error('fetch failed')
+      },
+    }
+    const createRpc = vi.fn(async () => ({ ok: true as const, id: 'prod-1', replayed: false, estoqueAplicado: true }))
+    const getById = vi.fn(async () => ({ ok: true as const, product: catalogRow }))
+    const writer = createProductWriter(fakeSupabase as never, { createRpc, reader: { getById } })
+
+    const r = await writer.create({
+      input: { nome: 'Produto A', precoVarejo: 10 },
+      lojaId: 'loja-1',
+      atorId: 'user-1',
+    })
+
+    expect(r.ok).toBe(true)
+    expect(captureExceptionMock).toHaveBeenCalledTimes(1)
   })
 
   it('erro de validação não chama RPC e emite code', async () => {
