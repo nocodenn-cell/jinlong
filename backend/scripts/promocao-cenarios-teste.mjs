@@ -318,9 +318,15 @@ async function main() {
        WHERE name = 'indices_fks_autoria_produtos';
     `)
     r = await rodar('--apply --confirmo-producao', { BACKUP_SCHEMA_PATH: backupFake, BACKUP_DADOS_PATH: backupDados })
+    // A divergência pode ser barrada em dois pontos: no `--check` (mensagem
+    // "SQL remoto ... divergente") ou, se o fluxo chegar lá, no `--apply`
+    // ("DIVERGE do arquivo local"). Qualquer um dos dois é o comportamento
+    // correto — o que não pode acontecer é seguir aplicando por cima.
     checar(
       '9. migration homônima com SQL divergente ABORTA a promoção',
-      r.code !== 0 && /DIVERGE do arquivo local/.test(r.saida),
+      r.code !== 0 &&
+        (/DIVERGE do arquivo local/.test(r.saida) ||
+          /SQL remoto de .* confere com o arquivo local — divergente/.test(r.saida)),
       `exit=${r.code}`,
     )
     checar(
