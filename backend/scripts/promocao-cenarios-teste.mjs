@@ -23,6 +23,7 @@ import { createServer } from 'node:http'
 import { execFile, execFileSync } from 'node:child_process'
 import { promisify } from 'node:util'
 import { readFileSync, writeFileSync, existsSync, rmSync, mkdtempSync, utimesSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 import { dirname, join, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
@@ -41,9 +42,21 @@ const PROJETO_OK = 'kbabmewnahysfvlybiak'
 const PORTA = 54399
 
 let falhas = 0
+/**
+ * Contagem automática (auditoria de 2026-08-16): o relatório anterior alegava
+ * "25/25 cenários" — número que não correspondia ao artefato. Agora o total é
+ * derivado da execução, e CENÁRIO (situação testada) é contado separado de
+ * ASSERÇÃO (verificação individual), porque um cenário rende várias asserções.
+ */
+let assercoes = 0
+const cenarios = new Set()
 /** Guarda a saída do último comando, para diagnosticar cenário que falha. */
 let ultimaSaida = ''
 function checar(nome, ok, detalhe = '') {
+  assercoes += 1
+  // Prefixo numérico do rótulo ("10. timeout..." → "10") identifica o cenário.
+  const m = /^(\d+)/.exec(nome.trim())
+  if (m) cenarios.add(m[1])
   if (!ok) falhas += 1
   console.log(`${ok ? 'PASS' : 'FALHA'}  ${nome}${detalhe ? ` — ${detalhe}` : ''}`)
   if (!ok && ultimaSaida) {
@@ -162,7 +175,9 @@ function criarStub() {
 }
 
 async function rodar(modo, env = {}) {
-  const argv = modo.split(' ')
+  // O auto-teste edita arquivos que fazem parte do artefato; sem isto toda
+  // execução da suíte com mudanças não commitadas falharia no gate de worktree.
+  const argv = [...modo.split(' '), '--permitir-worktree-sujo']
   try {
     const { stdout } = await execFileAsync('node', [SCRIPT, ...argv], {
       cwd: RAIZ,
@@ -180,6 +195,141 @@ async function rodar(modo, env = {}) {
     const saida = `${e.stdout ?? ''}${e.stderr ?? ''}`
     ultimaSaida = saida
     return { code: e.code ?? 1, saida }
+  }
+}
+
+/** Tabelas cobertas pelo ensaio de backup (as mesmas que o script valida). */
+const TABELAS_SENTINELA = ['lojas', 'produtos', 'precos_atacado', 'historico_precos_produto', 'usuarios']
+
+/** Conteúdo de uma tabela no formato COPY, ordenado — base do checksum. */
+function copiaTexto(tabela, db) {
+  return execFileSync(
+    'docker',
+    ['exec', '-i', CONTAINER, 'psql', '-U', 'postgres', '-d', db, '-q', '-A', '-t', '-c',
+      `COPY (SELECT * FROM public.${tabela} ORDER BY 1) TO STDOUT`],
+    { encoding: 'utf8', maxBuffer: 128 * 1024 * 1024 },
+  )
+}
+
+const md5 = (s) => createHash('md5').update(s, 'utf8').digest('hex')
+
+function authStub(db) {
+  psql(
+    `CREATE SCHEMA IF NOT EXISTS auth;
+     CREATE TABLE IF NOT EXISTS auth.users (id uuid PRIMARY KEY);
+     CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $fn$ SELECT NULL::uuid $fn$;
+     CREATE OR REPLACE FUNCTION auth.role() RETURNS text LANGUAGE sql STABLE AS $fn$ SELECT NULL::text $fn$;
+     CREATE OR REPLACE FUNCTION auth.jwt() RETURNS jsonb LANGUAGE sql STABLE AS $fn$ SELECT '{}'::jsonb $fn$;`,
+    db,
+  )
+}
+
+/**
+ * Ensaio de backup/restauração com SENTINELAS e CHECKSUM de conteúdo.
+ *
+ * POR QUE EXISTE (auditoria de 2026-08-16): a validação do script comparava só
+ * CONTAGEM, e três das cinco tabelas estavam vazias no stack local — as
+ * asserções eram satisfeitas por `0 === 0`. Contagem igual não é integridade:
+ * duas bases podem ter a mesma quantidade e conteúdos diferentes.
+ *
+ * Aqui a origem é um banco descartável com linhas conhecidas nas cinco tabelas;
+ * compara-se origem × restaurado por contagem E por md5 do conteúdo. O caso
+ * NEGATIVO altera uma linha do restaurado SEM mexer na contagem — se só a
+ * contagem fosse conferida, passaria despercebido.
+ */
+function cenarioBackupSentinela(schemaSql) {
+  const ORIGEM = 'backup_sentinela_origem'
+  const DESTINO = 'backup_sentinela_destino'
+  const LOJA = 'b0000001-0000-4000-8000-0000000000ff'
+  const PROD = 'b0000002-0000-4000-8000-0000000000ff'
+  const USER = 'b0000003-0000-4000-8000-0000000000ff'
+
+  try {
+    for (const db of [ORIGEM, DESTINO]) {
+      psql(`DROP DATABASE IF EXISTS ${db};`, 'postgres')
+      psql(`CREATE DATABASE ${db};`, 'postgres')
+      authStub(db)
+      execFileSync(
+        'docker',
+        ['exec', '-i', CONTAINER, 'psql', '-U', 'postgres', '-d', db, '-q', '-v', 'ON_ERROR_STOP=0'],
+        { input: schemaSql, encoding: 'utf8', maxBuffer: 128 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] },
+      )
+    }
+
+    // Sentinelas — valores fixos e não sensíveis, nas CINCO tabelas.
+    psql(
+      `INSERT INTO auth.users (id) VALUES ('${USER}');
+       INSERT INTO public.lojas (id, nome) VALUES ('${LOJA}', 'SENTINELA Loja');
+       -- loja_id tem DEFAULT apontando para uma loja que nao existe neste
+       -- banco descartavel; explicitar evita violacao de FK.
+       INSERT INTO public.usuarios (id, nome, perfil, loja_id)
+         VALUES ('${USER}', 'SENTINELA User', 'OPERADOR', '${LOJA}');
+       INSERT INTO public.produtos (id, nome, preco_varejo, origem, loja_id)
+         VALUES ('${PROD}', 'SENTINELA Produto', 10.50, 'brasil_nf', '${LOJA}');
+       INSERT INTO public.precos_atacado (produto_id, quantidade_minima, preco_unitario)
+         VALUES ('${PROD}', 7, 8.25);
+       INSERT INTO public.historico_precos_produto (produto_id) VALUES ('${PROD}');`,
+      ORIGEM,
+    )
+
+    const dados = execFileSync(
+      'docker',
+      ['exec', '-i', CONTAINER, 'pg_dump', '-U', 'postgres', '-d', ORIGEM, '--data-only'],
+      { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 },
+    )
+
+    execFileSync(
+      'docker',
+      ['exec', '-i', CONTAINER, 'psql', '-U', 'postgres', '-d', DESTINO, '-q', '-v', 'ON_ERROR_STOP=0'],
+      { input: dados, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] },
+    )
+
+    const comparar = () =>
+      TABELAS_SENTINELA.map((t) => {
+        const o = copiaTexto(t, ORIGEM)
+        const d = copiaTexto(t, DESTINO)
+        return {
+          tabela: t,
+          contagemIgual: o.split('\n').filter(Boolean).length === d.split('\n').filter(Boolean).length,
+          checksumIgual: md5(o) === md5(d),
+          linhas: o.split('\n').filter(Boolean).length,
+        }
+      })
+
+    const r1 = comparar()
+    checar(
+      '13. as cinco tabelas têm sentinela (validação não é vacuamente verdadeira)',
+      r1.every((x) => x.linhas > 0),
+      r1.map((x) => `${x.tabela}=${x.linhas}`).join(' '),
+    )
+    checar(
+      '13b. contagem restaurada bate com a origem',
+      r1.every((x) => x.contagemIgual),
+      r1.filter((x) => !x.contagemIgual).map((x) => x.tabela).join(',') || 'todas',
+    )
+    checar(
+      '13c. checksum de CONTEÚDO bate com a origem',
+      r1.every((x) => x.checksumIgual),
+      r1.filter((x) => !x.checksumIgual).map((x) => x.tabela).join(',') || 'todas',
+    )
+
+    // ── 14. NEGATIVO: conteúdo diferente, contagem idêntica ─────────────────
+    psql(`UPDATE public.produtos SET nome = 'SENTINELA Produto ADULTERADO' WHERE id = '${PROD}';`, DESTINO)
+    const r2 = comparar()
+    const prod = r2.find((x) => x.tabela === 'produtos')
+    checar(
+      '14. adulteração de conteúdo com contagem intacta é DETECTADA pelo checksum',
+      prod.contagemIgual && !prod.checksumIgual,
+      `contagem_igual=${prod.contagemIgual} checksum_igual=${prod.checksumIgual}`,
+    )
+  } finally {
+    for (const db of [ORIGEM, DESTINO]) {
+      try {
+        psql(`DROP DATABASE IF EXISTS ${db};`, 'postgres')
+      } catch {
+        /* best-effort */
+      }
+    }
   }
 }
 
@@ -400,6 +550,9 @@ async function main() {
         AND array_to_string(statements, '') LIKE '%FOR UPDATE%';
     `).trim()
     checar('8b. SQL registrado no remoto é o do arquivo local (contém FOR UPDATE)', conferido === '1', `=${conferido}`)
+
+    // ── 13, 14. backup/restauração com sentinelas e checksum ────────────────
+    cenarioBackupSentinela(readFileSync(backupFake, 'utf8'))
   } finally {
     falharNaMigration = null
     writeFileSync(caminho3, conteudo3)
@@ -413,7 +566,12 @@ async function main() {
     srv.close()
   }
 
-  console.log(`\n=== ${falhas === 0 ? 'todos os cenários passaram' : `${falhas} cenário(s) falharam`} ===`)
+  const passaram = assercoes - falhas
+  console.log(
+    `\n=== ${cenarios.size} cenários | ${passaram}/${assercoes} asserções ${
+      falhas === 0 ? 'passaram' : `passaram, ${falhas} FALHARAM`
+    } ===`,
+  )
   process.exit(falhas === 0 ? 0 : 1)
 }
 

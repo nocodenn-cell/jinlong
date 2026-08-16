@@ -7,9 +7,14 @@
  * aplicação. Os testes de unidade exercitam o código, mas com supabase mockado.
  * Faltava o cruzamento: código real + banco real. É o que este arquivo faz.
  *
- * Requer o stack local em pé. É PULADO automaticamente quando não há stack
- * (`SUPABASE_URL` inacessível), para não quebrar a suíte de quem roda sem
- * Docker — a ausência é reportada como skip, não como falso verde.
+ * Requer o stack local em pé.
+ *
+ * Perfil de execução (P2b da auditoria de 2026-08-16): antes o teste fazia
+ * `return` quando o stack estava fora, e o Vitest contava isso como PASSOU —
+ * uma suíte verde não provava que a integração tinha rodado. Agora:
+ *   - com `INTEGRACAO_OBRIGATORIA=1` (CI): stack ausente FALHA o teste;
+ *   - sem a variável (dev local sem Docker): `describe.skip`, visível como
+ *     SKIPPED no relatório, nunca como verde.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
@@ -55,9 +60,20 @@ async function stackDisponivel(): Promise<boolean> {
   }
 }
 
+/** Em CI o stack É pré-requisito: ausência é falha, não dispensa. */
+const OBRIGATORIA = process.env.INTEGRACAO_OBRIGATORIA === '1'
+
 beforeAll(async () => {
   disponivel = await stackDisponivel()
-  if (!disponivel) return
+  if (!disponivel) {
+    if (OBRIGATORIA) {
+      throw new Error(
+        `stack local indisponível em ${API_URL} e INTEGRACAO_OBRIGATORIA=1 — ` +
+          'suba o Supabase local (`supabase start`) antes de rodar a suíte.',
+      )
+    }
+    return
+  }
 
   admin = createClient(API_URL, SERVICE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -121,11 +137,9 @@ afterAll(async () => {
 }, 60_000)
 
 describe('updater REAL contra banco sem a RPC transacional', () => {
-  it('mudar o par de atacado é recusado e NADA é gravado no banco', async () => {
-    if (!disponivel) {
-      console.warn('stack local indisponível — teste de integração pulado')
-      return
-    }
+  it('mudar o par de atacado é recusado e NADA é gravado no banco', async (ctx) => {
+    // `ctx.skip()` marca SKIPPED no relatório; `return` marcava PASSOU.
+    if (!disponivel) return ctx.skip()
 
     // O updater REAL, com o client REAL. Nada de mock aqui.
     const updater = createProductUpdater(admin)
@@ -170,11 +184,8 @@ describe('updater REAL contra banco sem a RPC transacional', () => {
     expect(Number(faixas.data![0]!.preco_unitario)).toBe(30)
   }, 60_000)
 
-  it('edição que NÃO altera o par de atacado é gravada normalmente', async () => {
-    if (!disponivel) {
-      console.warn('stack local indisponível — teste de integração pulado')
-      return
-    }
+  it('edição que NÃO altera o par de atacado é gravada normalmente', async (ctx) => {
+    if (!disponivel) return ctx.skip()
 
     const updater = createProductUpdater(admin)
     const novoNome = `Produto ${SUF} renomeado`
