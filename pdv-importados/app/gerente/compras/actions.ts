@@ -5,6 +5,10 @@ import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { getGerenteLojaId, getGerenteUserId } from '@/lib/gerente/auth/sessionContext'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
+import {
+  executarRecebimentoOrdemCompra,
+  type ItemRecebimentoOc,
+} from './receberOrdemCompraContrato'
 
 type R<T = null> = { success: true; data: T } | { success: false; error: string }
 
@@ -412,7 +416,7 @@ export async function atualizarStatusOC(id: string, novoStatus: StatusOC): Promi
 
 export async function registrarRecebimentoOC(
   ocId: string,
-  itensRecebidos: Array<{ item_id: string; quantidade_recebida: number }>,
+  itensRecebidos: ItemRecebimentoOc[],
 ): Promise<R<null>> {
   const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
@@ -421,13 +425,18 @@ export async function registrarRecebimentoOC(
   if (!lojaId) return { success: false, error: 'Loja não identificada.' }
 
   const supabase = await createClient()
-
-  const { error } = await supabase.rpc('receber_ordem_compra', {
-    p_oc_id: ocId,
-    p_itens: itensRecebidos,
-  })
-
-  if (error) return { success: false, error: mensagemErroComSecao('Recebimento', error.message) }
+  const resultado = await executarRecebimentoOrdemCompra(
+    async (fn, args) => {
+      const { error } = await supabase.rpc(fn as never, args as never)
+      return { error }
+    },
+    ocId,
+    itensRecebidos,
+  )
+  if (!resultado.ok) {
+    const secao = resultado.etapa === 'conferencia' ? 'Conferência' : 'Recebimento'
+    return { success: false, error: mensagemErroComSecao(secao, resultado.error) }
+  }
 
   revalidatePath('/gerente/compras')
   revalidatePath('/gerente/estoque')
