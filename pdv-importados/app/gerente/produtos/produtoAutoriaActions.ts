@@ -2,8 +2,9 @@
 
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
+import { assertProdutoDaLojaSessao } from '@/lib/gerente/assertProdutoDaLojaSessao'
+import { resolverNomesAutores } from '@/lib/gerente/resolverNomesAutores'
 import { mensagemErroComSecao, mensagemErroValidacaoZod } from '@/lib/errors/mensagemErroUsuario'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 
@@ -19,8 +20,11 @@ type ActionResult<T> = { success: true; data: T } | { success: false; error: str
 export type ProdutoAutoria = {
   criadoPorNome: string | null
   criadoEm: string | null
+  /** true quando há autor registrado mas o nome não pôde ser lido (≠ removido). */
+  criadoPorIndisponivel: boolean
   atualizadoPorNome: string | null
   atualizadoEm: string | null
+  atualizadoPorIndisponivel: boolean
 }
 
 const SECAO = 'Autoria do produto'
@@ -43,6 +47,16 @@ export async function obterAutoriaProduto(produtoId: string): Promise<ActionResu
   }
 
   const supabase = await createClient()
+
+  // Tenant gate ANTES de qualquer leitura: a RLS de `produtos` não tem
+  // predicado de loja (gap conhecido — ver assertProdutoDaLojaSessao), então
+  // sem isto um UUID de produto de outra loja retornaria autoria válida.
+  const tenant = await assertProdutoDaLojaSessao(supabase, produtoId, {
+    lojaId: auth.session.lojaId,
+    perfil: auth.session.perfil,
+  })
+  if (!tenant.ok) return { success: false, error: tenant.error }
+
   const { data, error } = await (
     supabase as unknown as {
       from: (table: string) => {
@@ -64,38 +78,36 @@ export async function obterAutoriaProduto(produtoId: string): Promise<ActionResu
     return { success: false, error: mensagemErroComSecao(SECAO, error.message, idioma) }
   }
   if (!data) {
-    return { success: true, data: { criadoPorNome: null, criadoEm: null, atualizadoPorNome: null, atualizadoEm: null } }
-  }
-
-  const ids = Array.from(
-    new Set([data.criado_por, data.atualizado_por].filter((id): id is string => id != null)),
-  )
-  const nome = new Map<string, string>()
-  if (ids.length > 0) {
-    // Client admin só para este lookup: a RLS de `usuarios` restringe leitura
-    // a "mesma loja" (GERENTE) — um produto pode ter sido criado/editado por
-    // alguém de outra loja (a escrita em `produtos` não é RLS-scoped por
-    // loja) ou por alguém depois REALOCADO de loja. Com o client de sessão,
-    // esses casos silenciosamente caem no fallback "usuário removido" — o
-    // que é enganoso (o usuário existe, só não está visível pra este
-    // observador). Nome de usuário aqui é baixo-sensibilidade e a tela já é
-    // GERENTE/DONO/ADMIN-only (assertGerenteSession acima), então o
-    // bypass é seguro. Achado em teste multi-loja no ambiente isolado
-    // (2026-08-16).
-    const admin = createAdminClient()
-    const { data: usuarios } = await admin.from('usuarios').select('id, nome').in('id', ids)
-    for (const u of usuarios ?? []) {
-      if (u.nome != null) nome.set(String(u.id), String(u.nome))
+    return {
+      success: true,
+      data: {
+        criadoPorNome: null,
+        criadoEm: null,
+        criadoPorIndisponivel: false,
+        atualizadoPorNome: null,
+        atualizadoEm: null,
+        atualizadoPorIndisponivel: false,
+      },
     }
   }
+
+  // Client de sessão (RLS respeitada). `indisponivel` separa "a consulta
+  // falhou" de "não há autor" — sem isso a UI afirma "usuário removido" para
+  // uma indisponibilidade momentânea.
+  const { nomes, indisponivel } = await resolverNomesAutores(supabase, [
+    data.criado_por,
+    data.atualizado_por,
+  ])
 
   return {
     success: true,
     data: {
-      criadoPorNome: data.criado_por ? (nome.get(data.criado_por) ?? null) : null,
+      criadoPorNome: data.criado_por ? (nomes.get(data.criado_por) ?? null) : null,
       criadoEm: data.created_at,
-      atualizadoPorNome: data.atualizado_por ? (nome.get(data.atualizado_por) ?? null) : null,
+      criadoPorIndisponivel: data.criado_por != null && indisponivel,
+      atualizadoPorNome: data.atualizado_por ? (nomes.get(data.atualizado_por) ?? null) : null,
       atualizadoEm: data.updated_at,
+      atualizadoPorIndisponivel: data.atualizado_por != null && indisponivel,
     },
   }
 }

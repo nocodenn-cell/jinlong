@@ -2,8 +2,9 @@
 
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
+import { assertProdutoDaLojaSessao } from '@/lib/gerente/assertProdutoDaLojaSessao'
+import { resolverNomesAutores } from '@/lib/gerente/resolverNomesAutores'
 import { mensagemErroComSecao, mensagemErroValidacaoZod } from '@/lib/errors/mensagemErroUsuario'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 
@@ -25,6 +26,8 @@ export type HistoricoPrecoEntry = {
   precoCustoAnterior: number | null
   precoCustoNovo: number | null
   alteradoPorNome: string | null
+  /** true quando há autor registrado mas o nome não pôde ser lido (≠ removido). */
+  alteradoPorIndisponivel: boolean
   alteradoEm: string
 }
 
@@ -44,6 +47,17 @@ export async function listarHistoricoPrecos(
   }
 
   const supabase = await createClient()
+
+  // Tenant gate ANTES de qualquer leitura: a policy
+  // `historico_precos_produto_leitura` só checa perfil (GERENTE/DONO), sem
+  // predicado de loja — sem isto, um UUID de produto de outra loja devolveria
+  // o histórico de preços dela. Ver assertProdutoDaLojaSessao.
+  const tenant = await assertProdutoDaLojaSessao(supabase, produtoId, {
+    lojaId: auth.session.lojaId,
+    perfil: auth.session.perfil,
+  })
+  if (!tenant.ok) return { success: false, error: tenant.error }
+
   const { data, error } = await supabase
     .from('historico_precos_produto')
     .select(
@@ -59,21 +73,12 @@ export async function listarHistoricoPrecos(
   }
 
   const rows = data ?? []
-  const autorIds = Array.from(
-    new Set(rows.map((r) => r.alterado_por).filter((id): id is string => id != null)),
+  // Client de sessão (RLS respeitada). `indisponivel` separa falha de consulta
+  // de ausência real de autor — ver resolverNomesAutores.
+  const { nomes: nomeAutor, indisponivel } = await resolverNomesAutores(
+    supabase,
+    rows.map((r) => r.alterado_por),
   )
-
-  const nomeAutor = new Map<string, string>()
-  if (autorIds.length > 0) {
-    // Client admin só para este lookup — mesma razão de produtoAutoriaActions.ts:
-    // RLS de `usuarios` restringe leitura a mesma loja (GERENTE), e um evento de
-    // histórico pode referenciar um autor de outra loja ou já realocado.
-    const admin = createAdminClient()
-    const { data: usuarios } = await admin.from('usuarios').select('id, nome').in('id', autorIds)
-    for (const u of usuarios ?? []) {
-      if (u.nome != null) nomeAutor.set(String(u.id), String(u.nome))
-    }
-  }
 
   return {
     success: true,
@@ -86,6 +91,7 @@ export async function listarHistoricoPrecos(
       precoCustoAnterior: r.preco_custo_anterior,
       precoCustoNovo: r.preco_custo_novo,
       alteradoPorNome: r.alterado_por ? (nomeAutor.get(String(r.alterado_por)) ?? null) : null,
+      alteradoPorIndisponivel: r.alterado_por != null && indisponivel,
       alteradoEm: String(r.alterado_em),
     })),
   }

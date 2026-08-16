@@ -134,7 +134,14 @@ describe('createProductWriter', () => {
     const updateEqMock = vi.fn(async () => ({ error: null }))
     const fromSpy = vi.fn((table: string) => {
       expect(table).toBe('produtos')
-      return { update: (values: Record<string, unknown>) => ({ eq: (col: string, val: string) => updateEqMock(values, col, val) }) }
+      return {
+        update: (values: Record<string, unknown>) => ({
+          eq: (col: string, val: string) => ({
+            is: (guardCol: string, guardVal: null) =>
+              updateEqMock(values, col, val, guardCol, guardVal),
+          }),
+        }),
+      }
     })
     const fakeSupabase = { from: fromSpy }
     const createRpc = vi.fn(async () => ({ ok: true as const, id: 'prod-1', replayed: false, estoqueAplicado: true }))
@@ -148,7 +155,41 @@ describe('createProductWriter', () => {
     })
 
     expect(r.ok).toBe(true)
-    expect(updateEqMock).toHaveBeenCalledWith({ criado_por: 'user-1' }, 'id', 'prod-1')
+    // A guarda `.is('criado_por', null)` faz parte do contrato: sem ela, um
+    // replay reescreveria a autoria original.
+    expect(updateEqMock).toHaveBeenCalledWith(
+      { criado_por: 'user-1' },
+      'id',
+      'prod-1',
+      'criado_por',
+      null,
+    )
+    expect(captureExceptionMock).not.toHaveBeenCalled()
+    expect(captureMessageMock).not.toHaveBeenCalled()
+  })
+
+  it('replay (replayed=true) NÃO reescreve criado_por — nenhum UPDATE é emitido', async () => {
+    const fromSpy = vi.fn()
+    const fakeSupabase = { from: fromSpy }
+    // Mesmo client_request_id reenviado, agora por um ator DIFERENTE.
+    const createRpc = vi.fn(async () => ({
+      ok: true as const,
+      id: 'prod-1',
+      replayed: true,
+      estoqueAplicado: false,
+    }))
+    const getById = vi.fn(async () => ({ ok: true as const, product: catalogRow }))
+    const writer = createProductWriter(fakeSupabase as never, { createRpc, reader: { getById } })
+
+    const r = await writer.create({
+      input: { nome: 'Produto A', precoVarejo: 10, clientRequestId: 'req-1' },
+      lojaId: 'loja-1',
+      atorId: 'outro-usuario',
+    })
+
+    expect(r.ok).toBe(true)
+    // Nenhuma tentativa de tocar em `produtos`: a autoria original é preservada.
+    expect(fromSpy).not.toHaveBeenCalled()
     expect(captureExceptionMock).not.toHaveBeenCalled()
     expect(captureMessageMock).not.toHaveBeenCalled()
   })
@@ -156,7 +197,11 @@ describe('createProductWriter', () => {
   it('UPDATE de acompanhamento falha (erro de banco, ex.: RLS) → cadastro segue ok, mas reporta ao Sentry (não é perda silenciosa)', async () => {
     const fakeSupabase = {
       from: () => ({
-        update: () => ({ eq: async () => ({ error: { message: 'permission denied', code: '42501' } }) }),
+        update: () => ({
+          eq: () => ({
+            is: async () => ({ error: { message: 'permission denied', code: '42501' } }),
+          }),
+        }),
       }),
     }
     const createRpc = vi.fn(async () => ({ ok: true as const, id: 'prod-1', replayed: false, estoqueAplicado: true }))

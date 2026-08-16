@@ -92,7 +92,10 @@ export function HistoricoPrecosSection({ produtoId, p }: Props) {
               >
                 <p className="font-medium text-jl-fg-2">
                   {dtFmt.format(new Date(entry.alteradoEm))} ·{' '}
-                  {entry.alteradoPorNome ?? p.historico_precos_autor_desconhecido}
+                  {entry.alteradoPorNome ??
+                    (entry.alteradoPorIndisponivel
+                      ? p.historico_precos_autor_indisponivel
+                      : p.historico_precos_autor_desconhecido)}
                 </p>
                 {linhas.map((l) => (
                   <p key={l} className="mt-0.5 font-mono text-jl-fg-3">

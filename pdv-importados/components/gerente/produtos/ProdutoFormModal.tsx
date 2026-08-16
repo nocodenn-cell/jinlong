@@ -635,9 +635,16 @@ export function ProdutoFormModal({
       ? p.editar_modal_salvar
       : p.publicar_no_pdv
 
+  // "removido" só quando a consulta de nomes teve sucesso e o autor não voltou.
+  // Se a consulta falhou (`*Indisponivel`), a UI não afirma remoção.
   const linhaCriadoPor =
     editando && autoria
-      ? formatAutoriaLine(p.autoria_criado_por, autoria.criadoPorNome, autoria.criadoEm, p.autoria_desconhecido)
+      ? formatAutoriaLine(
+          p.autoria_criado_por,
+          autoria.criadoPorNome,
+          autoria.criadoEm,
+          autoria.criadoPorIndisponivel ? p.autoria_indisponivel : p.autoria_desconhecido,
+        )
       : null
   const linhaEditadoPor =
     editando && autoria
@@ -645,7 +652,7 @@ export function ProdutoFormModal({
           p.autoria_editado_por,
           autoria.atualizadoPorNome,
           autoria.atualizadoEm,
-          p.autoria_desconhecido,
+          autoria.atualizadoPorIndisponivel ? p.autoria_indisponivel : p.autoria_desconhecido,
         )
       : null
 

@@ -126,7 +126,12 @@ async function registrarCriadoPor(
             eq: (
               col: string,
               value: string,
-            ) => Promise<{ error: { message: string; code?: string } | null }>
+            ) => {
+              is: (
+                col: string,
+                value: null,
+              ) => Promise<{ error: { message: string; code?: string } | null }>
+            }
           }
         }
       }
@@ -134,6 +139,13 @@ async function registrarCriadoPor(
       .from('produtos')
       .update({ criado_por: atorId })
       .eq('id', produtoId)
+      // Guarda de idempotência: só grava se ainda não houver autor. Sem isto,
+      // um replay (mesmo `client_request_id`) — potencialmente disparado por
+      // OUTRO ator — reescreveria `criado_por` e falsificaria a trilha. O
+      // caminho normal de create sempre cai aqui com a coluna NULL, porque a
+      // RPC 270/289 roda como service_role (sem `auth.uid()`), então a guarda
+      // não custa nada no fluxo feliz.
+      .is('criado_por', null)
 
     if (error) {
       Sentry.captureMessage('produto.criado_por: UPDATE de acompanhamento falhou', {
@@ -162,7 +174,12 @@ async function createViaRpc(
   })
   if (!created.ok) return { ok: false, error: created.message }
 
-  await registrarCriadoPor(supabase, created.id, command.atorId)
+  // Replay (mesmo `client_request_id`) não é uma criação: o produto já existe
+  // e já tem seu autor original. Reexecutar o follow-up aqui só criaria ruído
+  // — e, com um ator diferente, tentaria reescrever a autoria.
+  if (!created.replayed) {
+    await registrarCriadoPor(supabase, created.id, command.atorId)
+  }
 
   const reload = await deps.reader.getById(created.id)
   if (!reload.ok) {
