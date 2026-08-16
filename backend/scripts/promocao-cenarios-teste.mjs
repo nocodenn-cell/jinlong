@@ -41,9 +41,20 @@ const PROJETO_OK = 'kbabmewnahysfvlybiak'
 const PORTA = 54399
 
 let falhas = 0
+/** Guarda a saída do último comando, para diagnosticar cenário que falha. */
+let ultimaSaida = ''
 function checar(nome, ok, detalhe = '') {
   if (!ok) falhas += 1
   console.log(`${ok ? 'PASS' : 'FALHA'}  ${nome}${detalhe ? ` — ${detalhe}` : ''}`)
+  if (!ok && ultimaSaida) {
+    // Sem isto, um cenário que falhava por pré-condição nova aparecia só como
+    // "exit=1" e era preciso reinstrumentar o script para descobrir por quê.
+    const linhas = ultimaSaida
+      .split('\n')
+      .filter((l) => /FALHA|RECUSADO|Parou em|ERRO/.test(l))
+      .slice(0, 6)
+    for (const l of linhas) console.log(`        ↳ ${l.trim()}`)
+  }
 }
 
 function psql(sqlTexto, db = DB) {
@@ -130,9 +141,12 @@ async function rodar(modo, env = {}) {
         ...env,
       },
     })
+    ultimaSaida = stdout
     return { code: 0, saida: stdout }
   } catch (e) {
-    return { code: e.code ?? 1, saida: `${e.stdout ?? ''}${e.stderr ?? ''}` }
+    const saida = `${e.stdout ?? ''}${e.stderr ?? ''}`
+    ultimaSaida = saida
+    return { code: e.code ?? 1, saida }
   }
 }
 
@@ -161,8 +175,18 @@ function prepararBanco() {
 
 async function main() {
   console.log('=== Cenários de promoção (stub da Management API sobre Postgres local) ===\n')
+  // Backup REAL (dump de schema do Postgres local). Um arquivo de bytes
+  // repetidos servia enquanto a validação só olhava tamanho e idade; com a
+  // validação estrita (cabeçalho, tabelas do projeto, não-truncado) ele passou
+  // a ser corretamente recusado — e o cenário precisa de um backup que preste.
   const backupFake = join(mkdtempSync(join(tmpdir(), 'promo-')), 'schema.sql')
-  writeFileSync(backupFake, 'x'.repeat(200_000))
+  writeFileSync(
+    backupFake,
+    execFileSync('docker', ['exec', '-i', CONTAINER, 'pg_dump', '-U', 'postgres', '-d', 'postgres', '--schema-only'], {
+      encoding: 'utf8',
+      maxBuffer: 64 * 1024 * 1024,
+    }),
+  )
 
   const srv = criarStub()
   await new Promise((r) => srv.listen(PORTA, '127.0.0.1', r))
