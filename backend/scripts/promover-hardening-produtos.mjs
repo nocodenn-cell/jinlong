@@ -75,6 +75,8 @@ const TOKEN = process.env.SUPABASE_ACCESS_TOKEN ?? ''
 const PROJECT = process.env.SUPABASE_PROJECT_REF ?? ''
 const API_BASE = process.env.SUPABASE_API_BASE ?? 'https://api.supabase.com'
 const BACKUP = process.env.BACKUP_SCHEMA_PATH ?? ''
+/** Dump de DADOS — obrigatório: schema sozinho restaura um banco vazio. */
+const BACKUP_DADOS = process.env.BACKUP_DADOS_PATH ?? ''
 
 let falhas = 0
 function checar(nome, ok, detalhe = '') {
@@ -161,6 +163,54 @@ async function migrationsRemotas() {
 }
 
 const nomeRemoto = (arquivo) => arquivo.replace(/^\d+_/, '').replace(/\.sql$/, '')
+
+/** Normalização usada nas comparações de SQL: o servidor pode reformatar
+ *  espaços em branco, mas nunca o conteúdo. */
+const normSql = (s) => String(s ?? '').replace(/\s+/g, '')
+
+/**
+ * SQL efetivamente registrado no remoto para um nome de migration.
+ * `statements` é um array de texto; junta-se tudo para comparar por inteiro.
+ */
+async function sqlRemotoDe(nome) {
+  const linhas = await sql(
+    `SELECT array_to_string(statements, E'\\n') AS sql
+       FROM supabase_migrations.schema_migrations
+      WHERE name = '${nome.replace(/'/g, "''")}'
+      LIMIT 1`,
+  )
+  return linhas?.[0]?.sql ?? null
+}
+
+/**
+ * Confirma que a migration JÁ REGISTRADA no remoto tem exatamente o SQL do
+ * arquivo local, antes de pular.
+ *
+ * POR QUE: pular só porque o NOME existe no tracking é inseguro. O nome pode
+ * ter chegado lá por caminhos que não garantem nada sobre o conteúdo — alguém
+ * aplicou à mão uma migration homônima, um timeout ocorreu depois do commit,
+ * a conexão caiu, a resposta veio malformada, houve 429 e re-execução. Em
+ * qualquer desses casos a base sobre a qual as migrations SEGUINTES seriam
+ * aplicadas é desconhecida, e o `--verify` no fim já seria tarde: o dano já
+ * estaria feito.
+ *
+ * Três desfechos:
+ *   'igual'      → seguro pular;
+ *   'divergente' → ABORTA a promoção (não aplica nada por cima);
+ *   'ausente'    → registrada sem SQL recuperável; também aborta, por não ser
+ *                  possível afirmar equivalência.
+ */
+async function confirmarSqlRemoto(m) {
+  const remoto = await sqlRemotoDe(m.nome_remoto)
+  if (remoto == null) return { estado: 'ausente', detalhe: 'sem SQL registrado' }
+  const hLocal = sha256(normSql(lerMigration(m.arquivo)))
+  const hRemoto = sha256(normSql(remoto))
+  if (hLocal === hRemoto) return { estado: 'igual', detalhe: hLocal.slice(0, 16) }
+  return {
+    estado: 'divergente',
+    detalhe: `local=${hLocal.slice(0, 16)} remoto=${hRemoto.slice(0, 16)} (${remoto.length} chars)`,
+  }
+}
 
 /**
  * Commit que tocou as migrations pela última vez — NÃO o HEAD.
@@ -312,35 +362,112 @@ function validarBackup() {
     ultimaLinha ? `última linha: ${ultimaLinha.slice(0, 70)}` : 'arquivo vazio',
   )
 
-  if (process.env.BACKUP_RESTORE_TEST !== '1') return
+  // ── Backup de DADOS ────────────────────────────────────────────────────
+  // Schema sozinho não recupera nada: restaurar só a estrutura devolve um banco
+  // vazio. O projeto está no plano free, sem backup automático, então o dump de
+  // dados é a única cópia existente e passa a ser OBRIGATÓRIO.
+  if (!BACKUP_DADOS) {
+    checar('BACKUP_DADOS_PATH definido (schema sozinho não recupera dados)', false, 'variável ausente')
+    return
+  }
+  if (!existsSync(BACKUP_DADOS)) {
+    checar('backup de dados existe', false, `não encontrado: ${BACKUP_DADOS}`)
+    return
+  }
+  const stDados = statSync(BACKUP_DADOS)
+  const horasDados = (Date.now() - stDados.mtimeMs) / 3_600_000
+  checar('backup de dados é recente', horasDados < BACKUP_MAX_HORAS, `${horasDados.toFixed(1)}h`)
 
-  // Restauração REAL num banco descartável.
+  const dados = readFileSync(BACKUP_DADOS, 'utf8')
+  const temCopyOuInsert = TABELAS_ESPERADAS.filter(
+    (t) =>
+      new RegExp(`COPY ("?public"?\\.)?"?${t}"?\\s`, 'i').test(dados) ||
+      new RegExp(`INSERT INTO ("?public"?\\.)?"?${t}"?\\s`, 'i').test(dados),
+  )
+  checar(
+    'backup de dados contém as tabelas afetadas',
+    temCopyOuInsert.length === TABELAS_ESPERADAS.length,
+    `com dados: ${temCopyOuInsert.join(', ') || '(nenhuma)'}`,
+  )
+
+  // ── Restauração OBRIGATÓRIA ────────────────────────────────────────────
+  // Antes era opt-in (BACKUP_RESTORE_TEST=1), tolerava erros e descartava os
+  // logs — ou seja, podia "passar" sem restaurar coisa alguma. Agora sempre
+  // roda, os erros são capturados e classificados, e o resultado é conferido
+  // por CONTAGEM de linhas, não pela mera existência das tabelas.
   const container = process.env.CONTAINER ?? 'supabase_db_fastproduct'
   const dbTeste = 'backup_restore_test'
   const psql = (sqlTexto, db) =>
     execFileSync('docker', ['exec', '-i', container, 'psql', '-U', 'postgres', '-d', db, '-q', '-t', '-A'], {
       input: sqlTexto,
       encoding: 'utf8',
+      maxBuffer: 128 * 1024 * 1024,
     })
-  try {
-    psql(`DROP DATABASE IF EXISTS ${dbTeste};`, 'postgres')
-    psql(`CREATE DATABASE ${dbTeste};`, 'postgres')
+  const carregar = (texto) =>
     execFileSync(
       'docker',
       ['exec', '-i', container, 'psql', '-U', 'postgres', '-d', dbTeste, '-q', '-v', 'ON_ERROR_STOP=0'],
-      { input: conteudo, encoding: 'utf8', stdio: ['pipe', 'ignore', 'ignore'] },
+      { input: texto, encoding: 'utf8', maxBuffer: 128 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] },
     )
-    const presentes = psql(
-      `SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name IN (${TABELAS_ESPERADAS.map((t) => `'${t}'`).join(',')});`,
+
+  try {
+    psql(`DROP DATABASE IF EXISTS ${dbTeste};`, 'postgres')
+    psql(`CREATE DATABASE ${dbTeste};`, 'postgres')
+    // Stub mínimo de auth: o dump referencia auth.users em FKs.
+    psql(
+      `CREATE SCHEMA IF NOT EXISTS auth;
+       CREATE TABLE IF NOT EXISTS auth.users (id uuid PRIMARY KEY);
+       CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $fn$ SELECT NULL::uuid $fn$;
+       CREATE OR REPLACE FUNCTION auth.role() RETURNS text LANGUAGE sql STABLE AS $fn$ SELECT NULL::text $fn$;
+       CREATE OR REPLACE FUNCTION auth.jwt() RETURNS jsonb LANGUAGE sql STABLE AS $fn$ SELECT '{}'::jsonb $fn$;`,
+      dbTeste,
+    )
+
+    const logSchema = carregar(conteudo)
+    const logDados = carregar(dados)
+    // Erros de RESTAURAÇÃO em `public` não podem ser tolerados em silêncio.
+    const errosPublic = `${logSchema}\n${logDados}`
+      .split('\n')
+      .filter((l) => l.startsWith('ERROR'))
+      .filter(
+        (l) =>
+          !/schema "(auth|storage|realtime|extensions|graphql|graphql_public|vault|supabase_migrations|supabase_functions|pgbouncer|net|cron|pgsodium)"/.test(l) &&
+          !/role "(supabase_\w+|dashboard_user|authenticator|pgbouncer)"/.test(l) &&
+          !/extension "[^"]+"/.test(l) &&
+          !/can only create extension in database postgres/.test(l) &&
+          !/publication "supabase_realtime"/.test(l) &&
+          !/permission denied for function pg_read_file/.test(l),
+      )
+    checar(
+      'restauração sem erros em `public`',
+      errosPublic.length === 0,
+      errosPublic.length ? errosPublic.slice(0, 2).join(' | ').slice(0, 200) : 'nenhum',
+    )
+
+    // CONTAGENS: a prova de que os dados voltaram, não só as tabelas.
+    const linhas = psql(
+      TABELAS_ESPERADAS.map((t) => `SELECT '${t}=' || count(*) FROM public.${t}`).join(' UNION ALL '),
+      dbTeste,
+    )
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean)
+    const contagens = Object.fromEntries(linhas.map((l) => l.split('=')))
+    const vazias = TABELAS_ESPERADAS.filter((t) => Number(contagens[t] ?? 0) === 0)
+    checar(
+      'tabelas afetadas restauradas COM DADOS (contagem > 0)',
+      vazias.length === 0,
+      linhas.join(' '),
+    )
+
+    // Amostra real de `produtos` — prova que o conteúdo veio, não só a contagem.
+    const amostra = psql(
+      `SELECT coalesce(string_agg(nome, ' | '), '(vazio)') FROM (SELECT nome FROM public.produtos ORDER BY nome LIMIT 3) s;`,
       dbTeste,
     ).trim()
-    checar(
-      'backup RESTAURA de fato (tabelas recriadas em banco limpo)',
-      Number(presentes) === TABELAS_ESPERADAS.length,
-      `${presentes}/${TABELAS_ESPERADAS.length} tabelas`,
-    )
+    checar('amostra de `produtos` legível após restauração', amostra !== '(vazio)' && amostra.length > 0, amostra.slice(0, 120))
   } catch (e) {
-    checar('backup RESTAURA de fato', false, String(e.message).slice(0, 150))
+    checar('backup RESTAURA de fato', false, String(e.stderr ?? e.message).slice(0, 200))
   } finally {
     try {
       psql(`DROP DATABASE IF EXISTS ${dbTeste};`, 'postgres')
@@ -402,6 +529,28 @@ function verificarIntegridadeLocal(manifesto) {
     sujos ? sujos.split('\n').slice(0, 4).join(' | ') : 'sem modificações',
   )
 
+  // O manifesto ficou fora do clean-check para não criar laço (gravá-lo sujava
+  // o worktree e invalidava a si mesmo). Mas isso abria a brecha de um
+  // manifesto local modificado participar da promoção. A saída é comparar o
+  // arquivo em disco com a versão COMMITADA: quebra o laço (gerar+commitar é o
+  // fluxo normal) e ainda assim recusa manifesto alterado localmente.
+  let manifestoCommitado = ''
+  try {
+    manifestoCommitado = git('show', 'HEAD:backend/scripts/promover-hardening-produtos.manifesto.json')
+  } catch {
+    /* não versionado */
+  }
+  const manifestoEmDisco = readFileSync(MANIFESTO_PATH, 'utf8')
+  checar(
+    'manifesto em disco é idêntico ao commitado',
+    manifestoCommitado !== '' && normSql(manifestoCommitado) === normSql(manifestoEmDisco),
+    manifestoCommitado === ''
+      ? 'manifesto não está versionado no HEAD'
+      : normSql(manifestoCommitado) === normSql(manifestoEmDisco)
+        ? `sha256=${sha256(manifestoEmDisco).slice(0, 16)}`
+        : 'DIVERGENTE — há modificação local não commitada no manifesto',
+  )
+
   checar(
     'o próprio script de promoção não foi adulterado',
     !manifesto.script_sha256 || sha256Proprio() === manifesto.script_sha256,
@@ -448,6 +597,17 @@ async function check() {
       !ja,
       ja ? `já registrada como versão ${remotas.get(m.nome_remoto)}` : '',
     )
+    // Quando já está lá, o que importa é se é a MESMA coisa. Reportado já no
+    // --check para que a divergência apareça antes de qualquer aplicação, e não
+    // só quando o --apply tropeçar nela.
+    if (ja) {
+      const conf = await confirmarSqlRemoto(m)
+      checar(
+        `SQL remoto de ${m.nome_remoto} confere com o arquivo local`,
+        conf.estado === 'igual',
+        `${conf.estado}: ${conf.detalhe}`,
+      )
+    }
   }
 
   const r = await sql(`
@@ -512,7 +672,23 @@ async function apply() {
 
   for (const m of manifesto.migrations) {
     if (remotas.has(m.nome_remoto)) {
-      console.log(`pulando ${m.arquivo} (já aplicada como ${remotas.get(m.nome_remoto)})`)
+      // NÃO basta o nome existir: confirma o SQL integral antes de pular.
+      const conf = await confirmarSqlRemoto(m)
+      if (conf.estado !== 'igual') {
+        console.log(
+          `ABORTADO em ${m.arquivo}: o remoto tem uma migration com este nome, mas ` +
+            `o SQL ${conf.estado === 'ausente' ? 'não é recuperável' : 'DIVERGE do arquivo local'} — ${conf.detalhe}`,
+        )
+        console.log(
+          'Não é seguro aplicar as seguintes sobre uma base desconhecida. ' +
+            'Investigue o registro remoto antes de continuar.',
+        )
+        estado.aplicadas[m.nome_remoto] = { status: 'divergente', detalhe: conf.detalhe }
+        gravarEstado(estado)
+        process.exitCode = 1
+        return
+      }
+      console.log(`pulando ${m.arquivo} (já aplicada como ${remotas.get(m.nome_remoto)}, SQL confere: ${conf.detalhe})`)
       continue
     }
     const corpo = lerMigration(m.arquivo)

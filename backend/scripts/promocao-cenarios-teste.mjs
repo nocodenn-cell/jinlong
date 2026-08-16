@@ -66,6 +66,14 @@ function psql(sqlTexto, db = DB) {
 
 /** Falha injetada: quando setado, o stub recusa esta migration pelo nome. */
 let falharNaMigration = null
+/**
+ * Modo de falha de REDE injetado, por nome de migration:
+ *   'timeout'  → aplica e registra, mas NÃO responde (cliente estoura)
+ *   '429'      → responde 429 sem aplicar
+ *   'ambiguo'  → aplica e registra, mas responde corpo malformado
+ * Cobrem as situações em que o cliente não sabe se a migration entrou.
+ */
+let falhaDeRede = null
 /** Contador para desempatar versões geradas no mesmo milissegundo. */
 let seqVersao = 0
 
@@ -105,6 +113,31 @@ function criarStub() {
         if (req.url.endsWith('/database/migrations')) {
           if (falharNaMigration && name === falharNaMigration) {
             return responder(400, { message: `falha injetada em ${name}` })
+          }
+          if (falhaDeRede && name === falhaDeRede.nome) {
+            if (falhaDeRede.modo === '429') {
+              // Rate limit ANTES de aplicar: nada entra no banco.
+              res.writeHead(429, { 'Content-Type': 'application/json', 'Retry-After': '30' })
+              return res.end(JSON.stringify({ message: 'rate limit exceeded' }))
+            }
+            // 'timeout' e 'ambiguo': a migration É aplicada e registrada; o que
+            // falha é a RESPOSTA. É o caso perigoso — o cliente não sabe se
+            // entrou, e uma re-execução ingênua reaplicaria por cima.
+            psql(`BEGIN;\n${q}\nCOMMIT;`)
+            seqVersao += 1
+            const v =
+              new Date().toISOString().replace(/\D/g, '').slice(0, 17) + String(seqVersao).padStart(2, '0')
+            psql(
+              `INSERT INTO supabase_migrations.schema_migrations (version, name, statements)
+               VALUES ('${v}', '${name}', ARRAY[$mig$${q}$mig$]);`,
+            )
+            if (falhaDeRede.modo === 'timeout') {
+              // Não responde: derruba a conexão como um timeout de gateway.
+              return req.socket.destroy()
+            }
+            // Corpo malformado: HTTP 200 com JSON quebrado.
+            res.writeHead(200, { 'Content-Type': 'application/json' })
+            return res.end('{"version": ')
           }
           psql(`BEGIN;\n${q}\nCOMMIT;`)
           // Versão com o timestamp do MOMENTO — como a API real faz.
@@ -179,13 +212,25 @@ async function main() {
   // repetidos servia enquanto a validação só olhava tamanho e idade; com a
   // validação estrita (cabeçalho, tabelas do projeto, não-truncado) ele passou
   // a ser corretamente recusado — e o cenário precisa de um backup que preste.
-  const backupFake = join(mkdtempSync(join(tmpdir(), 'promo-')), 'schema.sql')
+  const dirBk = mkdtempSync(join(tmpdir(), 'promo-'))
+  const backupFake = join(dirBk, 'schema.sql')
+  const backupDados = join(dirBk, 'dados.sql')
   writeFileSync(
     backupFake,
     execFileSync('docker', ['exec', '-i', CONTAINER, 'pg_dump', '-U', 'postgres', '-d', 'postgres', '--schema-only'], {
       encoding: 'utf8',
       maxBuffer: 64 * 1024 * 1024,
     }),
+  )
+  // Backup de DADOS — agora obrigatório no procedimento: schema sozinho
+  // restaura um banco vazio, o que não é recuperação.
+  writeFileSync(
+    backupDados,
+    execFileSync(
+      'docker',
+      ['exec', '-i', CONTAINER, 'pg_dump', '-U', 'postgres', '-d', 'postgres', '--data-only'],
+      { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 },
+    ),
   )
 
   const srv = criarStub()
@@ -211,7 +256,7 @@ async function main() {
     // ── 2. commit incorreto ─────────────────────────────────────────────────
     const man = JSON.parse(readFileSync(MANIFESTO, 'utf8'))
     writeFileSync(MANIFESTO, JSON.stringify({ ...man, commit: '0'.repeat(40) }, null, 2))
-    r = await rodar('--check', { BACKUP_SCHEMA_PATH: backupFake })
+    r = await rodar('--check', { BACKUP_SCHEMA_PATH: backupFake, BACKUP_DADOS_PATH: backupDados })
     checar(
       '2. commit diferente do auditado é recusado',
       r.code !== 0 && /commit auditado está na história do HEAD/.test(r.saida),
@@ -221,7 +266,7 @@ async function main() {
 
     // ── 3. SQL adulterado ───────────────────────────────────────────────────
     writeFileSync(caminho3, conteudo3 + '\n-- adulteração\n')
-    r = await rodar('--check', { BACKUP_SCHEMA_PATH: backupFake })
+    r = await rodar('--check', { BACKUP_SCHEMA_PATH: backupFake, BACKUP_DADOS_PATH: backupDados })
     checar(
       '3. SQL adulterado (sha256 diverge) é recusado',
       r.code !== 0 && /sha256 confere: 20260816141000/.test(r.saida) && /FALHA\s+sha256/.test(r.saida),
@@ -235,7 +280,7 @@ async function main() {
 
     // ── 5. falha intermediária ──────────────────────────────────────────────
     falharNaMigration = 'criar_produto_autoria_atomica'
-    r = await rodar('--apply --confirmo-producao', { BACKUP_SCHEMA_PATH: backupFake })
+    r = await rodar('--apply --confirmo-producao', { BACKUP_SCHEMA_PATH: backupFake, BACKUP_DADOS_PATH: backupDados })
     const aplicadasAposFalha = Number(
       psql(`SELECT count(*) FROM supabase_migrations.schema_migrations;`).trim(),
     )
@@ -252,7 +297,7 @@ async function main() {
 
     // ── 6. retomada ─────────────────────────────────────────────────────────
     falharNaMigration = null
-    r = await rodar('--apply --confirmo-producao', { BACKUP_SCHEMA_PATH: backupFake })
+    r = await rodar('--apply --confirmo-producao', { BACKUP_SCHEMA_PATH: backupFake, BACKUP_DADOS_PATH: backupDados })
     const total = Number(psql(`SELECT count(*) FROM supabase_migrations.schema_migrations;`).trim())
     checar(
       '6. retomada pula as já aplicadas e conclui as restantes',
@@ -261,8 +306,78 @@ async function main() {
     )
 
     // ── 7. verificação pós-deploy ───────────────────────────────────────────
-    r = await rodar('--verify', { BACKUP_SCHEMA_PATH: backupFake })
+    r = await rodar('--verify', { BACKUP_SCHEMA_PATH: backupFake, BACKUP_DADOS_PATH: backupDados })
     checar('7. --verify aprova o estado final', r.code === 0, `exit=${r.code}`)
+
+    // ── 9. migration homônima com SQL DIFERENTE ─────────────────────────────
+    // O caso central do P1: o nome está no tracking, mas o corpo é outro.
+    // Pular por nome aplicaria as seguintes sobre uma base desconhecida.
+    psql(`
+      UPDATE supabase_migrations.schema_migrations
+         SET statements = ARRAY['-- corpo COMPLETAMENTE diferente\nSELECT 1;']
+       WHERE name = 'indices_fks_autoria_produtos';
+    `)
+    r = await rodar('--apply --confirmo-producao', { BACKUP_SCHEMA_PATH: backupFake, BACKUP_DADOS_PATH: backupDados })
+    checar(
+      '9. migration homônima com SQL divergente ABORTA a promoção',
+      r.code !== 0 && /DIVERGE do arquivo local/.test(r.saida),
+      `exit=${r.code}`,
+    )
+    checar(
+      '9b. --check acusa a divergência antes de qualquer aplicação',
+      /FALHA\s+SQL remoto de indices_fks_autoria_produtos/.test(r.saida),
+      '',
+    )
+
+    // ── 10, 11, 12. falhas de REDE depois/durante a aplicação ───────────────
+    for (const [rotulo, modo, aplicaMesmo] of [
+      ['10. timeout DEPOIS de aplicar', 'timeout', true],
+      ['11. HTTP 429 (rate limit)', '429', false],
+      ['12. resposta ambígua (corpo malformado)', 'ambiguo', true],
+    ]) {
+      prepararBanco()
+      if (existsSync(ESTADO)) rmSync(ESTADO)
+      falhaDeRede = { nome: 'criar_produto_autoria_atomica', modo }
+      r = await rodar('--apply --confirmo-producao', { BACKUP_SCHEMA_PATH: backupFake, BACKUP_DADOS_PATH: backupDados })
+      const registradas = Number(
+        psql(`SELECT count(*) FROM supabase_migrations.schema_migrations;`).trim(),
+      )
+      checar(
+        `${rotulo}: a promoção para`,
+        r.code !== 0,
+        `exit=${r.code} registradas=${registradas}`,
+      )
+      checar(
+        `${rotulo}: estado remoto coerente (${aplicaMesmo ? 'aplicada' : 'não aplicada'})`,
+        registradas === (aplicaMesmo ? 3 : 2),
+        `registradas=${registradas}`,
+      )
+
+      // RETOMADA depois da falha de rede: o script tem de reconhecer o que já
+      // entrou (confirmando o SQL) e concluir sem reaplicar.
+      falhaDeRede = null
+      r = await rodar('--apply --confirmo-producao', { BACKUP_SCHEMA_PATH: backupFake, BACKUP_DADOS_PATH: backupDados })
+      const total = Number(psql(`SELECT count(*) FROM supabase_migrations.schema_migrations;`).trim())
+      checar(
+        `${rotulo}: retomada conclui as 5 sem duplicar`,
+        r.code === 0 && total === 5,
+        `exit=${r.code} registradas=${total}`,
+      )
+      if (aplicaMesmo) {
+        checar(
+          `${rotulo}: a que entrou às cegas foi CONFIRMADA por SQL, não pelo nome`,
+          /SQL confere/.test(r.saida),
+          '',
+        )
+      }
+    }
+
+    // Restaura o estado feliz para o cenário 8.
+    prepararBanco()
+    if (existsSync(ESTADO)) rmSync(ESTADO)
+    falharNaMigration = null
+    falhaDeRede = null
+    await rodar('--apply --confirmo-producao', { BACKUP_SCHEMA_PATH: backupFake, BACKUP_DADOS_PATH: backupDados })
 
     // ── 8. correspondência remoto × local ───────────────────────────────────
     const versoes = psql(

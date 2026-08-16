@@ -113,6 +113,48 @@ function mapCreateCatchError(e: unknown): string {
  * Cast pontual — `criado_por` ainda não está no Database tipado gerado
  * (mesmo motivo do cast em `criarProdutoComEstoqueInicialRpc.ts`).
  */
+/**
+ * Referência anônima e estável de um identificador, para telemetria.
+ *
+ * O Sentry recebia `produto_id` e `atorId` crus. Nenhum dos dois é necessário
+ * para diagnosticar: o que se precisa é correlacionar eventos do MESMO produto
+ * ou do MESMO ator, e um prefixo de hash faz isso sem exportar o identificador
+ * real para um fornecedor terceiro. Não é reversível e não colide na prática
+ * para o volume desta base.
+ */
+export function refAnonima(id: string | null | undefined): string {
+  if (!id) return 'nulo'
+  let h = 0
+  for (let i = 0; i < id.length; i += 1) {
+    h = (Math.imul(31, h) + id.charCodeAt(i)) | 0
+  }
+  return `r${(h >>> 0).toString(36)}`
+}
+
+/**
+ * Só códigos de erro conhecidos do Postgres/PostgREST passam. A mensagem crua
+ * do banco ia inteira para o Sentry e pode carregar nome de constraint, trecho
+ * de linha e detalhe de schema — informação interna que não ajuda no
+ * diagnóstico além do que o código já diz.
+ */
+const CODIGOS_ERRO_PERMITIDOS = new Set([
+  '23505', // unique_violation
+  '23503', // foreign_key_violation
+  '23502', // not_null_violation
+  '23514', // check_violation
+  '42501', // insufficient_privilege (RLS)
+  '42P01', // undefined_table
+  '42883', // undefined_function
+  'PGRST202', // função ausente no schema cache
+  '57014', // query_canceled
+  '08006', // connection_failure
+])
+
+export function codigoErroPermitido(codigo: string | null | undefined): string {
+  if (!codigo) return 'desconhecido'
+  return CODIGOS_ERRO_PERMITIDOS.has(codigo) ? codigo : 'nao_catalogado'
+}
+
 async function registrarCriadoPor(
   supabase: SupabaseClient,
   produtoId: string,
@@ -150,15 +192,15 @@ async function registrarCriadoPor(
     if (error) {
       Sentry.captureMessage('produto.criado_por: UPDATE de acompanhamento falhou', {
         level: 'warning',
-        tags: { modulo: 'produtos-autoria', produto_id: produtoId },
-        extra: { atorId, dbErrorMessage: error.message, dbErrorCode: error.code ?? null },
+        tags: { modulo: 'produtos-autoria', produto_ref: refAnonima(produtoId) },
+        extra: { ator_ref: refAnonima(atorId), dbErrorCode: codigoErroPermitido(error.code) },
       })
     }
   } catch (e) {
     Sentry.captureException(e, {
       level: 'warning',
-      tags: { modulo: 'produtos-autoria', produto_id: produtoId },
-      extra: { atorId, contexto: 'registrarCriadoPor lançou exceção' },
+      tags: { modulo: 'produtos-autoria', produto_ref: refAnonima(produtoId) },
+      extra: { ator_ref: refAnonima(atorId), contexto: 'registrarCriadoPor lançou exceção' },
     })
   }
 }

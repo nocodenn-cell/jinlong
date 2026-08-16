@@ -17,8 +17,10 @@ import {
 import { resolveProductMessage } from './productMessages'
 import {
   MSG_RELOAD_POS_CREATE,
+  codigoErroPermitido,
   createProductWriter,
   mapCreateProductInputToRpc,
+  refAnonima,
 } from './productWriter'
 
 const catalogRow: ProductCatalogBasics = {
@@ -217,10 +219,45 @@ describe('createProductWriter', () => {
     expect(r.ok).toBe(true) // create não falha por causa da auditoria
     expect(captureMessageMock).toHaveBeenCalledTimes(1)
     expect(captureMessageMock.mock.calls[0]![0]).toContain('criado_por')
-    expect(captureMessageMock.mock.calls[0]![1]).toMatchObject({
-      level: 'warning',
-      tags: expect.objectContaining({ modulo: 'produtos-autoria', produto_id: 'prod-1' }),
-    })
+
+    // ── Payload REDIGIDO ────────────────────────────────────────────────────
+    // O evento não pode levar identificadores crus nem a mensagem do banco.
+    const payload = captureMessageMock.mock.calls[0]![1] as {
+      level: string
+      tags: Record<string, unknown>
+      extra: Record<string, unknown>
+    }
+    const serializado = JSON.stringify(payload)
+
+    expect(payload.level).toBe('warning')
+    expect(payload.tags.modulo).toBe('produtos-autoria')
+
+    // Identificadores reais NÃO aparecem em lugar nenhum do payload.
+    expect(serializado).not.toContain('prod-1')
+    expect(serializado).not.toContain('user-1')
+    // A mensagem crua do Postgres também não.
+    expect(serializado).not.toContain('permission denied')
+
+    // O que aparece é a referência anônima — estável, para correlacionar.
+    expect(payload.tags.produto_ref).toBe(refAnonima('prod-1'))
+    expect(payload.extra.ator_ref).toBe(refAnonima('user-1'))
+    // Código de erro conhecido passa como está; desconhecido vira rótulo.
+    expect(payload.extra.dbErrorCode).toBe('42501')
+    expect(payload.extra).not.toHaveProperty('dbErrorMessage')
+    expect(payload.extra).not.toHaveProperty('atorId')
+  })
+
+  it('refAnonima é estável e não vaza o identificador', () => {
+    expect(refAnonima('prod-1')).toBe(refAnonima('prod-1'))
+    expect(refAnonima('prod-1')).not.toBe(refAnonima('prod-2'))
+    expect(refAnonima('prod-1')).not.toContain('prod-1')
+    expect(refAnonima(null)).toBe('nulo')
+  })
+
+  it('código de erro fora do catálogo não é propagado', () => {
+    expect(codigoErroPermitido('23505')).toBe('23505')
+    expect(codigoErroPermitido('XX999')).toBe('nao_catalogado')
+    expect(codigoErroPermitido(undefined)).toBe('desconhecido')
   })
 
   it('UPDATE de acompanhamento lança exceção (ex.: rede) → cadastro segue ok, mas reporta ao Sentry', async () => {
