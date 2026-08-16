@@ -32,6 +32,17 @@ COMMENT ON COLUMN public.produtos.criado_por IS
 COMMENT ON COLUMN public.produtos.atualizado_por IS
   'Quem fez a última edição do produto — preenchido pela trigger trg_produtos_atualizado_por a cada UPDATE.';
 
+-- Decisão: sem índice em criado_por/atualizado_por por ora. `produtos` tem
+-- ~130 linhas em produção (2026-08); nenhum código consulta WHERE/JOIN por
+-- estas colunas — só point-lookup por produtos.id e resolução em lote por
+-- usuarios.id (índice já existe, é a PK). O único uso que se beneficiaria
+-- (o cascade ON DELETE SET NULL varrendo produtos ao excluir um usuário) é
+-- evento raro (LGPD) sobre tabela pequena — seq scan é da ordem de
+-- microssegundos aqui. Mesmo padrão já aceito para
+-- historico_precos_produto.alterado_por (migração 259, também sem índice).
+-- Revisitar se produtos crescer para milhares de linhas ou se surgir uma
+-- consulta real por autor.
+
 CREATE OR REPLACE FUNCTION public.registrar_criado_por_produto()
 RETURNS trigger
 LANGUAGE plpgsql
