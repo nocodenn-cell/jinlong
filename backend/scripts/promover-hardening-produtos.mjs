@@ -586,12 +586,14 @@ function verificarIntegridadeLocal(manifesto) {
     /* não versionado */
   }
   const manifestoEmDisco = readFileSync(MANIFESTO_PATH, 'utf8')
-  // Mesma concessão de auto-teste do gate de worktree: durante a suíte de
-  // cenários o manifesto acabou de ser regravado e ainda não foi commitado.
-  // Na promoção real a flag não é passada e a comparação vale integralmente.
+  // Este gate é INCONDICIONAL — nenhuma flag o dispensa, nem no auto-teste.
+  // Ele é a única amarra entre o SQL promovido e a revisão auditada; um bypass
+  // disponível no fluxo real valeria mais que o gate. O harness de cenários
+  // resolve o próprio caso commitando o manifesto antes de rodar (é o fluxo
+  // normal: regravar com --manifesto e commitar, como nos commits `chore`).
   checar(
-    `manifesto em disco é idêntico ao commitado${ignorarSujo ? ' (ignorado: --permitir-worktree-sujo)' : ''}`,
-    ignorarSujo || (manifestoCommitado !== '' && normSql(manifestoCommitado) === normSql(manifestoEmDisco)),
+    'manifesto em disco é idêntico ao commitado',
+    manifestoCommitado !== '' && normSql(manifestoCommitado) === normSql(manifestoEmDisco),
     manifestoCommitado === ''
       ? 'manifesto não está versionado no HEAD'
       : normSql(manifestoCommitado) === normSql(manifestoEmDisco)

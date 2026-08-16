@@ -356,8 +356,41 @@ function prepararBanco() {
   `)
 }
 
+/**
+ * O gate manifesto-vs-commitado é INCONDICIONAL no script de promoção — nenhuma
+ * flag o dispensa, porque um bypass disponível no fluxo real valeria mais que o
+ * próprio gate. Consequência para o harness: o manifesto precisa estar
+ * commitado antes de rodar a suíte.
+ *
+ * Sem este preflight, esquecer de commitar produzia 16 falhas espalhadas com a
+ * causa real escondida no diagnóstico de cada uma.
+ */
+function exigirManifestoCommitado() {
+  let commitado = ''
+  try {
+    commitado = execFileSync('git', ['show', 'HEAD:backend/scripts/promover-hardening-produtos.manifesto.json'], {
+      cwd: RAIZ,
+      encoding: 'utf8',
+    })
+  } catch {
+    /* não versionado */
+  }
+  const norm = (s) => String(s ?? '').replace(/\s+/g, '')
+  if (commitado === '' || norm(commitado) !== norm(readFileSync(MANIFESTO, 'utf8'))) {
+    console.error(
+      'PRÉ-REQUISITO: o manifesto em disco difere do commitado.\n' +
+        '  O gate manifesto-vs-commitado é incondicional (por desenho).\n' +
+        '  Regrave e commite antes de rodar a suíte:\n' +
+        '    node backend/scripts/promover-hardening-produtos.mjs --manifesto --permitir-worktree-sujo\n' +
+        '    git add backend/scripts/promover-hardening-produtos.manifesto.json && git commit',
+    )
+    process.exit(2)
+  }
+}
+
 async function main() {
   console.log('=== Cenários de promoção (stub da Management API sobre Postgres local) ===\n')
+  exigirManifestoCommitado()
   // Backup REAL (dump de schema do Postgres local). Um arquivo de bytes
   // repetidos servia enquanto a validação só olhava tamanho e idade; com a
   // validação estrita (cabeçalho, tabelas do projeto, não-truncado) ele passou

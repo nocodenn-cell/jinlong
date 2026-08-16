@@ -1,7 +1,7 @@
 {
   "projeto": "kbabmewnahysfvlybiak",
   "commit": "65736cdef7afc494421d68e929c0fee32c9aa48a",
-  "script_sha256": "28fa84c92f92928f0d6005134499c646499d0d95b3d9ec085816dd604f3e12ac",
+  "script_sha256": "5c1c3c6287434147a969132827e3d2e105551a2deaede6f596bde455b7b04336",
   "migrations": [
     {
       "arquivo": "20260816135000_reconcilia_produtos_codigo_interno.sql",
