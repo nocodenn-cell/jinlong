@@ -13,6 +13,7 @@ import {
   MSG_PRECO_VAREJO,
   MSG_UPDATE_SEM_ID,
   createProductUpdater,
+  derivarFaixaAtacado,
   mapUpdateProductInputToRow,
 } from './productUpdater'
 
@@ -389,5 +390,81 @@ describe('createProductUpdater', () => {
     expect(r.product.precoVarejo).toBe(22)
     expect(r.product.precoAtacado).toBe(18)
     expect(r.product.statusPublicacao).toBe('PUBLICADO')
+  })
+})
+
+/**
+ * Transacionalidade produto + faixa de atacado (migration
+ * `atualizar_produto_com_faixa_atacado`). O que é provado no banco de verdade
+ * — atomicidade e rollback — está em
+ * `backend/scripts/rls-produtos-tenant-rest-smoke.mjs`, contra o PostgREST
+ * real. Aqui cobre-se o contrato do lado da aplicação: o que é derivado do
+ * payload e como os erros da RPC viram mensagem de usuário.
+ */
+describe('derivarFaixaAtacado', () => {
+  const base = mapUpdateProductInputToRow({ nome: 'X', precoVarejo: 10 })
+
+  it('deriva a faixa quando preço de atacado e gatilho vêm juntos', () => {
+    expect(
+      derivarFaixaAtacado({ ...base, preco_atacado: 30, quantidade_gatilho_atacado: 10 }),
+    ).toEqual({ quantidade_minima: 10, preco_unitario: 30 })
+  })
+
+  it('sem gatilho não há faixa a sincronizar (preço de atacado sozinho não define faixa)', () => {
+    expect(
+      derivarFaixaAtacado({ ...base, preco_atacado: 30, quantidade_gatilho_atacado: null }),
+    ).toBeNull()
+  })
+
+  it('sem preço de atacado não há faixa', () => {
+    expect(
+      derivarFaixaAtacado({ ...base, preco_atacado: null, quantidade_gatilho_atacado: 10 }),
+    ).toBeNull()
+  })
+
+  it('valores não positivos não geram faixa (a RPC rejeitaria)', () => {
+    expect(
+      derivarFaixaAtacado({ ...base, preco_atacado: 0, quantidade_gatilho_atacado: 10 }),
+    ).toBeNull()
+    expect(
+      derivarFaixaAtacado({ ...base, preco_atacado: 30, quantidade_gatilho_atacado: 0 }),
+    ).toBeNull()
+    expect(
+      derivarFaixaAtacado({ ...base, preco_atacado: 30, quantidade_gatilho_atacado: -5 }),
+    ).toBeNull()
+  })
+})
+
+describe('mapeamento dos erros da RPC transacional', () => {
+  const getById = vi.fn(async () => ({ ok: true as const, product: catalogRow }))
+
+  it('ATUALIZAR_PRODUTO_NAO_ENCONTRADO (produto de outra loja) → NOT_FOUND', async () => {
+    const updateRow = vi.fn(async () => ({
+      error: { message: 'ATUALIZAR_PRODUTO_NAO_ENCONTRADO' },
+    }))
+    const updater = createProductUpdater({} as never, { reader: { getById }, updateRow })
+    const r = await updater.update({
+      id: 'prod-1',
+      lojaId: 'loja-1',
+      input: { nome: 'Produto Valido', precoVarejo: 10 },
+    })
+    expect(r.ok).toBe(false)
+    if (r.ok) return
+    expect(r.code).toBe(PRODUCT_ERROR_CODES.NOT_FOUND)
+  })
+
+  it('ATUALIZAR_PRODUTO_CODIGO_BARRAS_DUPLICADO → mensagem amigável de duplicidade', async () => {
+    const updateRow = vi.fn(async () => ({
+      error: { message: 'ATUALIZAR_PRODUTO_CODIGO_BARRAS_DUPLICADO' },
+    }))
+    const updater = createProductUpdater({} as never, { reader: { getById }, updateRow })
+    const r = await updater.update({
+      id: 'prod-1',
+      lojaId: 'loja-1',
+      input: { nome: 'Produto Valido', precoVarejo: 10, codigoBarras: '789' },
+    })
+    expect(r.ok).toBe(false)
+    if (r.ok) return
+    expect(r.code).toBe(PRODUCT_ERROR_CODES.BARCODE_DUPLICATE)
   })
 })

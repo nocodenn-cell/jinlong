@@ -141,7 +141,19 @@ async function mapUpdateDbError(
   },
   ctx: { supabase: SupabaseClient; codigoBarras: string | null; lojaId: string; produtoId: string },
 ): Promise<{ error: string; code?: (typeof PRODUCT_ERROR_CODES)[keyof typeof PRODUCT_ERROR_CODES] }> {
-  if (isProdutosCodigoBarrasLojaUniqueViolation(error)) {
+  // A RPC transacional normaliza a unique violation em um token próprio antes
+  // de propagar, então o 23505 cru não chega mais aqui no caminho de edição —
+  // ambas as formas são aceitas (a crua ainda ocorre em escritas diretas).
+  const rpcDuplicado = error.message?.includes('ATUALIZAR_PRODUTO_CODIGO_BARRAS_DUPLICADO')
+  // Produto de outra loja (ou inexistente): a RPC devolve a MESMA mensagem nos
+  // dois casos, de propósito — não confirma existência fora do escopo.
+  if (error.message?.includes('ATUALIZAR_PRODUTO_NAO_ENCONTRADO')) {
+    return {
+      error: resolveProductMessage('pt-BR', PRODUCT_ERROR_CODES.NOT_FOUND),
+      code: PRODUCT_ERROR_CODES.NOT_FOUND,
+    }
+  }
+  if (rpcDuplicado || isProdutosCodigoBarrasLojaUniqueViolation(error)) {
     // Best-effort: achar o nome do produto conflitante só enriquece a
     // mensagem. Se a busca falhar por qualquer motivo, cai na mensagem
     // genérica em vez de derrubar a resposta inteira do update.
@@ -167,13 +179,46 @@ async function mapUpdateDbError(
   return { error: mensagemErroComSecao('Produto', error.message) }
 }
 
+/**
+ * Faixa de atacado implícita no payload do produto: quando preço de atacado e
+ * quantidade-gatilho vêm preenchidos juntos, `precos_atacado` precisa refletir
+ * exatamente esse par — é ele que a RPC `calcular_preco_produto` consulta na
+ * venda. Derivar aqui (em vez de receber como parâmetro separado) mantém a
+ * assinatura de `UpdateProductCommand` intacta.
+ */
+export function derivarFaixaAtacado(
+  payload: ProdutoUpdatePayload,
+): { quantidade_minima: number; preco_unitario: number } | null {
+  const preco = payload.preco_atacado
+  const gatilho = payload.quantidade_gatilho_atacado
+  if (preco == null || preco <= 0) return null
+  if (gatilho == null || gatilho <= 0) return null
+  return { quantidade_minima: gatilho, preco_unitario: preco }
+}
+
+/**
+ * UPDATE de produto + sincronização da faixa de atacado em UMA transação, via
+ * `atualizar_produto_com_faixa_atacado` (migration 20260816143000).
+ *
+ * Antes eram duas operações independentes: `UPDATE produtos` aqui e, depois, a
+ * sincronização da faixa orquestrada pelo componente React. Se a segunda
+ * falhasse, o fluxo reportava sucesso com `produtos.preco_atacado` novo e
+ * `precos_atacado` antigo — preço de catálogo divergente do preço realmente
+ * aplicado na venda. A RPC elimina esse estado parcial e ainda torna o upsert
+ * da faixa atômico (antes era SELECT-então-INSERT/UPDATE, sujeito a corrida).
+ *
+ * `p_ator_id: null` de propósito: este client é o de sessão, então a RPC
+ * resolve o ator por `auth.uid()`. O parâmetro só existe para chamadas
+ * privilegiadas (service_role), onde não há sessão.
+ */
 function defaultUpdateRow(supabase: SupabaseClient): UpdateProdutoRowFn {
-  return async ({ id, lojaId, payload }) => {
-    const { error } = await supabase
-      .from('produtos')
-      .update(payload)
-      .eq('id', id)
-      .eq('loja_id', lojaId)
+  return async ({ id, payload }) => {
+    const { error } = await supabase.rpc('atualizar_produto_com_faixa_atacado', {
+      p_produto_id: id,
+      p_payload: payload,
+      p_ator_id: null,
+      p_faixa: derivarFaixaAtacado(payload),
+    })
     return { error }
   }
 }

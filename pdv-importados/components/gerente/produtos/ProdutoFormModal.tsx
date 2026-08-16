@@ -440,9 +440,14 @@ export function ProdutoFormModal({
         let faixaOk = true
         let faixaErro: string | null = null
         const createdId = !editando && r.data && 'id' in r.data ? r.data.id : null
-        // Estoque inicial só se aplica no create (createdId); a sincronização de
-        // faixa de atacado roda no create E na edição — produto.id já existe ali.
-        const produtoIdParaFaixa = createdId ?? (editando ? produto?.id ?? null : null)
+        // Estoque inicial só se aplica no create (createdId).
+        //
+        // Faixa de atacado: na EDIÇÃO ela já foi sincronizada dentro da mesma
+        // transação do produto, pela RPC `atualizar_produto_com_faixa_atacado`
+        // (ver `productUpdater.ts`) — repetir aqui reintroduziria justamente o
+        // estado parcial que a RPC eliminou. Resta só o create, onde o produto
+        // nasce em outra transação (RPC 270) e a faixa é aditiva.
+        const produtoIdParaFaixa = createdId
         if (produtoIdParaFaixa) {
           const faixaRes = await sincronizarFaixaAtacado(
             produtoIdParaFaixa,
