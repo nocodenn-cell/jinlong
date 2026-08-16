@@ -304,6 +304,31 @@ function gerarManifesto() {
  */
 const TABELAS_ESPERADAS = ['produtos', 'usuarios', 'precos_atacado', 'historico_precos_produto', 'lojas']
 
+/**
+ * Conta as linhas de dados de uma tabela dentro de um dump `--data-only`.
+ *
+ * `pg_dump` escreve `COPY public."t" (...) FROM stdin;`, depois as linhas, e
+ * fecha com `\.` sozinho. Contar aqui permite comparar com o que foi
+ * efetivamente restaurado — a prova de que nenhuma linha se perdeu no caminho.
+ * Também cobre o formato `INSERT INTO`, usado quando o dump é gerado com
+ * `--inserts`.
+ */
+function linhasNoDump(dump, tabela) {
+  const inicio = new RegExp(`^COPY ("?public"?\\.)?"?${tabela}"?\\s*\\(`, 'im')
+  const linhas = dump.split('\n')
+  const idx = linhas.findIndex((l) => inicio.test(l))
+  if (idx >= 0) {
+    let n = 0
+    for (let i = idx + 1; i < linhas.length; i += 1) {
+      if (linhas[i] === '\\.') break
+      n += 1
+    }
+    return n
+  }
+  const insert = new RegExp(`^INSERT INTO ("?public"?\\.)?"?${tabela}"?\\s`, 'i')
+  return linhas.filter((l) => insert.test(l)).length
+}
+
 function validarBackup() {
   if (!BACKUP) {
     checar('BACKUP_SCHEMA_PATH definido (projeto free não tem backup automático)', false, 'variável ausente')
@@ -444,7 +469,10 @@ function validarBackup() {
       errosPublic.length ? errosPublic.slice(0, 2).join(' | ').slice(0, 200) : 'nenhum',
     )
 
-    // CONTAGENS: a prova de que os dados voltaram, não só as tabelas.
+    // CONTAGENS: o critério certo não é "> 0" e sim "igual ao que está no
+    // dump". Exigir sempre não-zero reprovaria um backup fiel de uma tabela
+    // legitimamente vazia; comparar com o dump prova que a restauração não
+    // perdeu linhas — que é o que interessa para recuperação.
     const linhas = psql(
       TABELAS_ESPERADAS.map((t) => `SELECT '${t}=' || count(*) FROM public.${t}`).join(' UNION ALL '),
       dbTeste,
@@ -452,15 +480,25 @@ function validarBackup() {
       .split('\n')
       .map((l) => l.trim())
       .filter(Boolean)
-    const contagens = Object.fromEntries(linhas.map((l) => l.split('=')))
-    const vazias = TABELAS_ESPERADAS.filter((t) => Number(contagens[t] ?? 0) === 0)
+    const restaurado = Object.fromEntries(linhas.map((l) => l.split('=')).map(([k, v]) => [k, Number(v)]))
+    const noDump = Object.fromEntries(TABELAS_ESPERADAS.map((t) => [t, linhasNoDump(dados, t)]))
+
+    const divergentes = TABELAS_ESPERADAS.filter((t) => restaurado[t] !== noDump[t])
     checar(
-      'tabelas afetadas restauradas COM DADOS (contagem > 0)',
-      vazias.length === 0,
-      linhas.join(' '),
+      'contagens restauradas batem com o dump (nenhuma linha perdida)',
+      divergentes.length === 0,
+      TABELAS_ESPERADAS.map((t) => `${t}: dump=${noDump[t]} restaurado=${restaurado[t]}`).join(' | '),
     )
 
-    // Amostra real de `produtos` — prova que o conteúdo veio, não só a contagem.
+    // Pelo menos `produtos` tem de ter vindo com conteúdo — é a tabela que as
+    // migrations alteram, e um backup dela vazio não serviria de recuperação.
+    checar(
+      '`produtos` restaurada com linhas',
+      restaurado.produtos > 0,
+      `${restaurado.produtos} linhas`,
+    )
+
+    // Amostra real — prova que o conteúdo veio, não só a contagem.
     const amostra = psql(
       `SELECT coalesce(string_agg(nome, ' | '), '(vazio)') FROM (SELECT nome FROM public.produtos ORDER BY nome LIMIT 3) s;`,
       dbTeste,
