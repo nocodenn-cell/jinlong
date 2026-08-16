@@ -88,9 +88,13 @@ COMMENT ON FUNCTION public.auth_pode_ver_produto_gerencial(uuid) IS
 
 -- Leitura: qualquer perfil autenticado da MESMA loja (OPERADOR lê catálogo no
 -- PDV). ADMIN global. Substitui `auth.role() = 'authenticated'`.
+-- `TO authenticated` explícito: os predicados já retornariam falso sem sessão,
+-- mas declarar o papel deixa a intenção no próprio objeto em vez de depender
+-- do comportamento dos helpers — se algum deles mudar, `anon` continua fora.
 DROP POLICY IF EXISTS "produtos_leitura" ON public.produtos;
 CREATE POLICY "produtos_leitura"
   ON public.produtos FOR SELECT
+  TO authenticated
   USING (
     public.auth_usuario_eh_admin()
     OR loja_id = public.auth_usuario_loja_id()
@@ -103,6 +107,7 @@ CREATE POLICY "produtos_leitura"
 DROP POLICY IF EXISTS "produtos_escrita" ON public.produtos;
 CREATE POLICY "produtos_escrita"
   ON public.produtos FOR ALL
+  TO authenticated
   USING (public.auth_usuario_gerencial_loja(loja_id))
   WITH CHECK (public.auth_usuario_gerencial_loja(loja_id));
 
@@ -115,6 +120,7 @@ CREATE POLICY "produtos_escrita"
 DROP POLICY IF EXISTS "historico_precos_produto_leitura" ON public.historico_precos_produto;
 CREATE POLICY "historico_precos_produto_leitura"
   ON public.historico_precos_produto FOR SELECT
+  TO authenticated
   USING (public.auth_pode_ver_produto_gerencial(produto_id));
 
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -134,8 +140,26 @@ CREATE POLICY "historico_precos_produto_leitura"
 --      do chamador (ou que ele é ADMIN). Sendo função SQL, a checagem entra
 --      como predicado: chamador não autorizado recebe zero linhas em vez de
 --      erro — sem oráculo de existência.
+--
+-- ASSINATURA (corrigido após auditoria de 2026-08-16): produção retorna 17
+-- colunas — inclui `preco_atacado`, `quantidade_gatilho_atacado`,
+-- `unidade_medida` e `observacao`, que a versão do schema local (13 colunas)
+-- não tem. `RpcProdutoFilteredRow` em `app/admin/produtos/productReader.ts`
+-- consome as 17, ou seja: o contrato correto é o de produção e o local é que
+-- está defasado (mais um drift). A primeira versão desta migration codificou
+-- as 13 colunas locais, o que teria feito o `CREATE OR REPLACE` falhar em
+-- produção com "cannot change return type of existing function" — e, como a
+-- CLI aplica cada migration em transação, derrubaria junto todo o hardening
+-- de RLS acima.
+--
+-- Por isso: DROP + CREATE com a assinatura de argumentos completa, e os grants
+-- recriados logo abaixo (DROP descarta os grants existentes).
 
-CREATE OR REPLACE FUNCTION public.list_produtos_gerente_filtrados(
+DROP FUNCTION IF EXISTS public.list_produtos_gerente_filtrados(
+  uuid, text, text, text, text, text, text[], uuid, uuid, uuid, text, integer, integer
+);
+
+CREATE FUNCTION public.list_produtos_gerente_filtrados(
   p_loja_id uuid,
   p_situacao text,
   p_origem_filtro text,
@@ -151,9 +175,11 @@ CREATE OR REPLACE FUNCTION public.list_produtos_gerente_filtrados(
   p_page_size integer
 )
 RETURNS TABLE(
-  id uuid, nome text, codigo_barras text, preco_varejo numeric, origem text,
+  id uuid, nome text, codigo_barras text, preco_varejo numeric,
+  preco_atacado numeric, quantidade_gatilho_atacado integer, origem text,
   tem_nf boolean, ativo boolean, categoria_id uuid, fornecedor_id uuid,
-  marca_id uuid, imagem_url text, tags text[], total_count bigint
+  marca_id uuid, unidade_medida text, observacao text, imagem_url text,
+  tags text[], total_count bigint
 )
 LANGUAGE sql
 STABLE
@@ -166,12 +192,16 @@ AS $function$
       pr.nome,
       pr.codigo_barras,
       pr.preco_varejo,
+      pr.preco_atacado,
+      pr.quantidade_gatilho_atacado,
       pr.origem::text AS origem,
       pr.tem_nf,
       pr.ativo,
       pr.categoria_id,
       pr.fornecedor_id,
       pr.marca_id,
+      pr.unidade_medida,
+      pr.observacao,
       pr.imagem_url,
       pr.tags
     FROM public.produtos pr
@@ -252,12 +282,16 @@ AS $function$
     n.nome,
     n.codigo_barras,
     n.preco_varejo,
+    n.preco_atacado,
+    n.quantidade_gatilho_atacado,
     n.origem,
     n.tem_nf,
     n.ativo,
     n.categoria_id,
     n.fornecedor_id,
     n.marca_id,
+    n.unidade_medida,
+    n.observacao,
     n.imagem_url,
     n.tags,
     n.total_count
@@ -286,3 +320,42 @@ REVOKE EXECUTE ON FUNCTION public.auth_pode_ver_produto_gerencial(uuid) FROM PUB
 GRANT EXECUTE ON FUNCTION public.auth_usuario_eh_admin() TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.auth_usuario_loja_id() TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.auth_pode_ver_produto_gerencial(uuid) TO authenticated, service_role;
+
+-- O DROP FUNCTION acima descartou os grants da RPC de listagem; recriados aqui
+-- com o mesmo conjunto que produção tinha ({authenticated} + PUBLIC implícito,
+-- normalizado para authenticated/service_role sem PUBLIC).
+REVOKE EXECUTE ON FUNCTION public.list_produtos_gerente_filtrados(
+  uuid, text, text, text, text, text, text[], uuid, uuid, uuid, text, integer, integer
+) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.list_produtos_gerente_filtrados(
+  uuid, text, text, text, text, text, text[], uuid, uuid, uuid, text, integer, integer
+) TO authenticated, service_role;
+
+COMMENT ON FUNCTION public.list_produtos_gerente_filtrados(
+  uuid, text, text, text, text, text, text[], uuid, uuid, uuid, text, integer, integer
+) IS
+  'Listagem paginada do catálogo por loja. SECURITY INVOKER: a RLS de `produtos` é quem isola o tenant; '
+  'o predicado de loja e a validação de p_loja_id são defesa em profundidade.';
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Policies órfãs de bypass (`caixa_policy` / `painel_policy`)
+-- ─────────────────────────────────────────────────────────────────────────────
+--
+-- Presentes só em produção (drift; não existem no schema local): PERMISSIVE,
+-- SELECT, atribuídas ao papel `public`, com predicado
+-- `auth.jwt() ->> 'role' = 'caixa'` (idem 'painel'). Policies permissivas são
+-- combinadas por OR — se alguma delas passasse, o isolamento por loja criado
+-- acima seria contornado para leitura de TODOS os produtos de TODAS as lojas.
+--
+-- Verificado em 2026-08-16: não existe role Postgres `caixa` nem `painel`
+-- (`SELECT rolname FROM pg_roles` retornou vazio), e o claim `role` de um token
+-- Supabase comum é `authenticated`. Portanto elas não neutralizam o isolamento
+-- hoje. Mas continuam sendo um bypass latente: bastaria um emissor de JWT
+-- integrado, um auth hook ou qualquer entidade capaz de assinar tokens válidos
+-- emitir `role: 'caixa'` para liberar o catálogo inteiro.
+--
+-- Como nenhum caminho de aplicação depende delas (o PDV usa sessão
+-- `authenticated` normal, coberta por `produtos_leitura`), a decisão é remover
+-- em vez de manter desarmadas. `IF EXISTS` torna isto no-op no schema local.
+DROP POLICY IF EXISTS "caixa_policy" ON public.produtos;
+DROP POLICY IF EXISTS "painel_policy" ON public.produtos;

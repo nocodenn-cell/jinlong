@@ -41,9 +41,35 @@ ALTER TABLE public.produtos
 
 -- NOT NULL com default: a coluna é preenchida para as linhas existentes pelo
 -- próprio default no momento do ADD COLUMN, então o SET NOT NULL não falha.
+--
+-- `numeric(10,2)` (e não `numeric` sem precisão): produção usa precisão/escala
+-- explícitas, e `ADD COLUMN IF NOT EXISTS` NÃO ajusta o tipo de uma coluna que
+-- já existe. Declarar `numeric` puro aqui deixaria produção com (10,2) e todo
+-- banco novo com numeric ilimitado — arredondamento e valores aceitos
+-- divergentes entre ambientes, exatamente o drift que esta migration existe
+-- para eliminar. Achado em auditoria de 2026-08-16.
 ALTER TABLE public.produtos
   ADD COLUMN IF NOT EXISTS estoque_minimo integer NOT NULL DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS preco_custo_medio numeric NOT NULL DEFAULT 0.00;
+  ADD COLUMN IF NOT EXISTS preco_custo_medio numeric(10,2) NOT NULL DEFAULT 0.00;
+
+-- Convergência de tipo quando a coluna JÁ existia com precisão diferente
+-- (o ADD COLUMN acima vira no-op nesse caso e não corrigiria nada).
+DO $$
+DECLARE
+  v_precisao integer;
+  v_escala integer;
+BEGIN
+  SELECT numeric_precision, numeric_scale INTO v_precisao, v_escala
+  FROM information_schema.columns
+  WHERE table_schema = 'public' AND table_name = 'produtos'
+    AND column_name = 'preco_custo_medio';
+
+  IF v_precisao IS DISTINCT FROM 10 OR v_escala IS DISTINCT FROM 2 THEN
+    RAISE NOTICE 'preco_custo_medio: convergindo de numeric(%,%) para numeric(10,2)', v_precisao, v_escala;
+    ALTER TABLE public.produtos
+      ALTER COLUMN preco_custo_medio TYPE numeric(10,2);
+  END IF;
+END $$;
 
 COMMENT ON COLUMN public.produtos.codigo_interno IS
   'Código interno/SKU próprio da loja. Reconciliada em 2026-08-16 — existia em produção sem migration canônica.';

@@ -47,6 +47,7 @@ DECLARE
   v_qty numeric;
   v_min numeric;
   v_existing uuid;
+  v_req_loja uuid;
 BEGIN
   IF v_uid IS NULL THEN
     RAISE EXCEPTION 'CRIAR_PRODUTO_AUTH';
@@ -68,11 +69,29 @@ BEGIN
   END IF;
 
   IF p_request_id IS NOT NULL THEN
-    SELECT r.produto_id INTO v_existing
+    -- Serializa chamadas concorrentes com o MESMO request_id. Sem isto, duas
+    -- requisições simultâneas passam as duas pelo SELECT abaixo (nenhuma vê a
+    -- linha da outra, ainda não commitada), criam DOIS produtos, e só uma vence
+    -- o ON CONFLICT DO NOTHING do registro do request — deixando um produto
+    -- órfão, duplicado e fora da idempotência. O lock é de transação: a
+    -- segunda chamada espera a primeira commitar e então enxerga o request já
+    -- registrado, retornando replayed=true como deveria.
+    -- Achado em auditoria de 2026-08-16.
+    PERFORM pg_advisory_xact_lock(hashtextextended(p_request_id::text, 0));
+
+    SELECT r.produto_id, r.loja_id INTO v_existing, v_req_loja
     FROM public.produto_create_requests r
     WHERE r.request_id = p_request_id;
 
     IF v_existing IS NOT NULL THEN
+      -- Escopo de tenant no replay: um request_id é um identificador que o
+      -- cliente escolhe. Reutilizado (por acidente ou de propósito) por alguém
+      -- de OUTRA loja, a versão anterior devolvia o produto_id alheio — um
+      -- oráculo cross-tenant. ADMIN é global, como nas demais regras.
+      IF v_perfil <> 'ADMIN' AND v_req_loja IS DISTINCT FROM v_loja_id THEN
+        RAISE EXCEPTION 'CRIAR_PRODUTO_REQUEST_OUTRA_LOJA';
+      END IF;
+
       RETURN jsonb_build_object(
         'produto_id', v_existing,
         'replayed', true,

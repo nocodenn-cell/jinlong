@@ -97,6 +97,8 @@ DECLARE
   v_qtd_min integer;
   v_preco_faixa numeric;
   v_faixa_id uuid;
+  v_gatilho_anterior integer;
+  v_desativadas integer := 0;
 BEGIN
   IF v_uid IS NULL THEN
     RAISE EXCEPTION 'ATUALIZAR_PRODUTO_AUTH';
@@ -109,7 +111,11 @@ BEGIN
     RAISE EXCEPTION 'ATUALIZAR_PRODUTO_PERFIL';
   END IF;
 
-  SELECT p.loja_id INTO v_loja_produto
+  -- Gatilho ANTES do update: identifica qual faixa ativa é a derivada do
+  -- catálogo, para poder trocá-la/removê-la depois. Precisa ser lido aqui,
+  -- antes do UPDATE sobrescrever o valor.
+  SELECT p.loja_id, p.quantidade_gatilho_atacado
+    INTO v_loja_produto, v_gatilho_anterior
   FROM public.produtos p WHERE p.id = p_produto_id;
 
   IF v_loja_produto IS NULL THEN
@@ -165,7 +171,24 @@ BEGIN
       RAISE;
   END;
 
-  -- Faixa de atacado, na MESMA transação. Ausente/NULL = nada a sincronizar.
+  -- ───────────────────────────────────────────────────────────────────────
+  -- Faixa de atacado, na MESMA transação.
+  -- ───────────────────────────────────────────────────────────────────────
+  --
+  -- QUAL FAIXA É "DO CATÁLOGO" (definição formal, adotada em 2026-08-16):
+  -- o par (`produtos.quantidade_gatilho_atacado`, `produtos.preco_atacado`)
+  -- corresponde a EXATAMENTE UMA faixa global ativa — aquela cuja
+  -- `quantidade_minima` é igual ao gatilho do catálogo. Qualquer outra faixa
+  -- ativa é considerada manual e NÃO é tocada aqui.
+  --
+  -- Sem essa definição, a versão anterior desta RPC gravava o par novo mas
+  -- deixava o antigo ativo: mudar o gatilho de 10 para 20 criava a faixa 20 e
+  -- mantinha a 10 valendo, e remover preço/gatilho não desativava nada. Como
+  -- `calcular_preco_produto` escolhe a faixa aplicável pela quantidade da
+  -- venda, a faixa órfã continuava podendo prevalecer — ou seja, o catálogo e
+  -- o preço efetivo seguiam sem fonte única de verdade, que é justamente o que
+  -- esta RPC existe para garantir. Achado em auditoria de 2026-08-16.
+
   IF p_faixa IS NOT NULL AND p_faixa <> 'null'::jsonb THEN
     v_qtd_min := NULLIF(p_faixa->>'quantidade_minima','')::integer;
     v_preco_faixa := NULLIF(p_faixa->>'preco_unitario','')::numeric;
@@ -188,13 +211,49 @@ BEGIN
       ON CONFLICT (produto_id, quantidade_minima) WHERE loja_id IS NULL AND ativo = true
       DO UPDATE SET preco_unitario = EXCLUDED.preco_unitario
       RETURNING id INTO v_faixa_id;
+
+      -- Troca de gatilho (ex.: 10 → 20): desativa a faixa derivada anterior.
+      -- Só a que casava com o gatilho antigo — faixas manuais em outras
+      -- quantidades permanecem ativas.
+      IF v_gatilho_anterior IS NOT NULL
+         AND v_gatilho_anterior > 0
+         AND v_gatilho_anterior <> v_qtd_min THEN
+        UPDATE public.precos_atacado
+           SET ativo = false
+         WHERE produto_id = p_produto_id
+           AND loja_id IS NULL
+           AND ativo = true
+           AND quantidade_minima = v_gatilho_anterior;
+        GET DIAGNOSTICS v_desativadas = ROW_COUNT;
+      END IF;
+    END IF;
+
+  ELSIF p_payload ? 'preco_atacado' OR p_payload ? 'quantidade_gatilho_atacado' THEN
+    -- Remoção: o catálogo mexeu em preço/gatilho de atacado e o resultado é
+    -- "sem faixa" (a aplicação manda p_faixa = null). A faixa derivada
+    -- anterior precisa ser desativada, senão o produto continua vendendo com
+    -- preço de atacado que o catálogo já não declara.
+    --
+    -- O `ELSIF` é deliberado: um update que NÃO toca em atacado (mudar só o
+    -- nome, p.ex.) manda p_faixa = null também, e nesse caso nada deve ser
+    -- desativado. Por isso a condição exige que uma das duas chaves de atacado
+    -- esteja presente no payload.
+    IF v_gatilho_anterior IS NOT NULL AND v_gatilho_anterior > 0 THEN
+      UPDATE public.precos_atacado
+         SET ativo = false
+       WHERE produto_id = p_produto_id
+         AND loja_id IS NULL
+         AND ativo = true
+         AND quantidade_minima = v_gatilho_anterior;
+      GET DIAGNOSTICS v_desativadas = ROW_COUNT;
     END IF;
   END IF;
 
   RETURN jsonb_build_object(
     'produto_id', p_produto_id,
     'faixa_id', v_faixa_id,
-    'faixa_sincronizada', (v_faixa_id IS NOT NULL)
+    'faixa_sincronizada', (v_faixa_id IS NOT NULL),
+    'faixas_desativadas', v_desativadas
   );
 END;
 $$;

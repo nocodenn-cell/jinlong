@@ -53,17 +53,40 @@ function checar(nome, condicao, detalhe = '') {
   console.log(`${ok ? 'PASS' : 'FALHA'}  ${nome}${detalhe ? ` — ${detalhe}` : ''}`)
 }
 
+/** Varre TODAS as páginas — `listUsers` pagina, e um resíduo fora da 1ª página
+ *  fazia a limpeza falhar silenciosamente e o createUser seguinte estourar. */
+async function acharUsuarioPorEmail(email) {
+  for (let page = 1; page <= 20; page += 1) {
+    const { data } = await admin.auth.admin.listUsers({ page, perPage: 200 })
+    const users = data?.users ?? []
+    const achado = users.find((u) => u.email === email)
+    if (achado) return achado
+    if (users.length < 200) return null
+  }
+  return null
+}
+
 async function criarAtor({ email, nome, perfil, lojaId }) {
   // Limpa execução anterior, se houver.
-  const { data: lista } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
-  const previo = lista?.users?.find((u) => u.email === email)
-  if (previo) await admin.auth.admin.deleteUser(previo.id)
+  const previo = await acharUsuarioPorEmail(email)
+  if (previo) {
+    await admin.from('usuarios').delete().eq('id', previo.id)
+    await admin.auth.admin.deleteUser(previo.id)
+  }
 
-  const { data, error } = await admin.auth.admin.createUser({
+  let { data, error } = await admin.auth.admin.createUser({
     email,
     password: SENHA,
     email_confirm: true,
   })
+  // Corrida/resíduo: reaproveita o usuário existente em vez de abortar a suíte.
+  if (error && /already been registered/i.test(error.message)) {
+    const existente = await acharUsuarioPorEmail(email)
+    if (!existente) throw new Error(`createUser ${email}: ${error.message}`)
+    await admin.auth.admin.updateUserById(existente.id, { password: SENHA })
+    data = { user: existente }
+    error = null
+  }
   if (error) throw new Error(`createUser ${email}: ${error.message}`)
   const id = data.user.id
 
@@ -82,13 +105,25 @@ async function criarAtor({ email, nome, perfil, lojaId }) {
 }
 
 async function limpar() {
-  await admin.from('produtos').delete().like('nome', `%${SUFIXO}%`)
-  const { data: lista } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
-  for (const u of lista?.users ?? []) {
-    if (u.email?.includes(SUFIXO)) {
-      await admin.from('usuarios').delete().eq('id', u.id)
-      await admin.auth.admin.deleteUser(u.id)
+  const { data: alvos } = await admin.from('produtos').select('id').like('nome', `%${SUFIXO}%`)
+  const ids = (alvos ?? []).map((p) => p.id)
+  if (ids.length > 0) {
+    // Dependências primeiro: as FKs para produtos não são todas ON DELETE CASCADE.
+    await admin.from('precos_atacado').delete().in('produto_id', ids)
+    await admin.from('produto_create_requests').delete().in('produto_id', ids)
+    await admin.from('estoque').delete().in('produto_id', ids)
+    await admin.from('produtos').delete().in('id', ids)
+  }
+  for (let page = 1; page <= 20; page += 1) {
+    const { data } = await admin.auth.admin.listUsers({ page, perPage: 200 })
+    const users = data?.users ?? []
+    for (const u of users) {
+      if (u.email?.includes(SUFIXO)) {
+        await admin.from('usuarios').delete().eq('id', u.id)
+        await admin.auth.admin.deleteUser(u.id)
+      }
     }
+    if (users.length < 200) break
   }
 }
 
@@ -400,17 +435,156 @@ async function main() {
       txCross.error?.message ?? 'sem erro (inesperado)',
     )
 
+    console.log('--- TROCA e REMOÇÃO da faixa derivada do catálogo ---')
+
+    // Faixa manual adicional, em outra quantidade — deve sobreviver a tudo.
+    await admin
+      .from('precos_atacado')
+      .insert({ produto_id: novoId, quantidade_minima: 100, preco_unitario: 20, loja_id: null, ativo: true })
+
+    // Gatilho 10 → 20: a faixa 10 (derivada do catálogo) deve ser desativada.
+    const troca = await gerenteA.client.rpc('atualizar_produto_com_faixa_atacado', {
+      p_produto_id: novoId,
+      p_payload: { preco_atacado: 28, quantidade_gatilho_atacado: 20 },
+      p_ator_id: gerenteA.id,
+      p_faixa: { quantidade_minima: 20, preco_unitario: 28 },
+    })
+    const { data: aposTroca } = await admin
+      .from('precos_atacado')
+      .select('quantidade_minima, preco_unitario, ativo')
+      .eq('produto_id', novoId)
+      .order('quantidade_minima')
+    const ativasTroca = (aposTroca ?? []).filter((f) => f.ativo).map((f) => f.quantidade_minima)
+    checar(
+      'gatilho 10→20 desativa a faixa 10 (não fica faixa órfã ativa)',
+      !ativasTroca.includes(10) && ativasTroca.includes(20),
+      `ativas=[${ativasTroca}] desativadas=${troca.data?.faixas_desativadas}`,
+    )
+    checar(
+      'faixa manual em outra quantidade (100) é preservada',
+      ativasTroca.includes(100),
+      `ativas=[${ativasTroca}]`,
+    )
+
+    // Remoção: catálogo deixa de ter atacado → a faixa derivada sai de cena.
+    await gerenteA.client.rpc('atualizar_produto_com_faixa_atacado', {
+      p_produto_id: novoId,
+      p_payload: { preco_atacado: null, quantidade_gatilho_atacado: null },
+      p_ator_id: gerenteA.id,
+      p_faixa: null,
+    })
+    const { data: aposRemocao } = await admin
+      .from('precos_atacado')
+      .select('quantidade_minima, ativo')
+      .eq('produto_id', novoId)
+    const ativasRemocao = (aposRemocao ?? []).filter((f) => f.ativo).map((f) => f.quantidade_minima)
+    checar(
+      'remover preço/gatilho desativa a faixa derivada',
+      !ativasRemocao.includes(20),
+      `ativas=[${ativasRemocao}]`,
+    )
+    checar(
+      'faixa manual continua ativa após a remoção do atacado do catálogo',
+      ativasRemocao.includes(100),
+      `ativas=[${ativasRemocao}]`,
+    )
+
+    // Update que NÃO toca em atacado não pode desativar nada.
+    await admin
+      .from('produtos')
+      .update({ preco_atacado: 15, quantidade_gatilho_atacado: 5 })
+      .eq('id', novoId)
+    await admin
+      .from('precos_atacado')
+      .insert({ produto_id: novoId, quantidade_minima: 5, preco_unitario: 15, loja_id: null, ativo: true })
+    await gerenteA.client.rpc('atualizar_produto_com_faixa_atacado', {
+      p_produto_id: novoId,
+      p_payload: { nome: `Só o nome mudou ${SUFIXO}` },
+      p_ator_id: gerenteA.id,
+      p_faixa: null,
+    })
+    const { data: aposNome } = await admin
+      .from('precos_atacado')
+      .select('quantidade_minima, ativo')
+      .eq('produto_id', novoId)
+    const ativasNome = (aposNome ?? []).filter((f) => f.ativo).map((f) => f.quantidade_minima)
+    checar(
+      'update que não mexe em atacado NÃO desativa faixa alguma',
+      ativasNome.includes(5) && ativasNome.includes(100),
+      `ativas=[${ativasNome}]`,
+    )
+
+    console.log('--- IDEMPOTÊNCIA da criação (escopo e concorrência) ---')
+
+    const reqId = '99999999-9999-4999-8999-999999999999'
+    const primeira = await admin.rpc('criar_produto_com_estoque_inicial', {
+      p_payload: { nome: `Idempotente ${SUFIXO}`, preco_varejo: 7, origem: 'brasil_nf' },
+      p_ator_id: gerenteA.id,
+      p_request_id: reqId,
+    })
+    const replay = await admin.rpc('criar_produto_com_estoque_inicial', {
+      p_payload: { nome: `Idempotente ${SUFIXO}`, preco_varejo: 7, origem: 'brasil_nf' },
+      p_ator_id: gerenteA.id,
+      p_request_id: reqId,
+    })
+    checar(
+      'replay do mesmo request devolve o MESMO produto',
+      replay.data?.replayed === true && replay.data?.produto_id === primeira.data?.produto_id,
+      `replayed=${replay.data?.replayed}`,
+    )
+
+    // Mesmo request_id reutilizado por gerente de OUTRA loja: não pode virar
+    // oráculo do produto alheio.
+    const replayOutraLoja = await admin.rpc('criar_produto_com_estoque_inicial', {
+      p_payload: { nome: `Intruso ${SUFIXO}`, preco_varejo: 7, origem: 'brasil_nf' },
+      p_ator_id: gerenteB.id,
+      p_request_id: reqId,
+    })
+    checar(
+      'replay do request por ator de OUTRA loja é recusado (sem vazar produto_id)',
+      !!replayOutraLoja.error &&
+        String(replayOutraLoja.error.message).includes('CRIAR_PRODUTO_REQUEST_OUTRA_LOJA'),
+      replayOutraLoja.error?.message ?? `retornou produto_id=${replayOutraLoja.data?.produto_id}`,
+    )
+
+    // Concorrência: duas chamadas simultâneas com o mesmo request novo.
+    const reqConc = '88888888-8888-4888-8888-888888888888'
+    const [c1, c2] = await Promise.all([
+      admin.rpc('criar_produto_com_estoque_inicial', {
+        p_payload: { nome: `Concorrente ${SUFIXO}`, preco_varejo: 9, origem: 'brasil_nf' },
+        p_ator_id: gerenteA.id,
+        p_request_id: reqConc,
+      }),
+      admin.rpc('criar_produto_com_estoque_inicial', {
+        p_payload: { nome: `Concorrente ${SUFIXO}`, preco_varejo: 9, origem: 'brasil_nf' },
+        p_ator_id: gerenteA.id,
+        p_request_id: reqConc,
+      }),
+    ])
+    const { count: qtdConcorrentes } = await admin
+      .from('produtos')
+      .select('id', { count: 'exact', head: true })
+      .eq('nome', `Concorrente ${SUFIXO}`)
+    checar(
+      'duas criações simultâneas com o mesmo request criam UM só produto',
+      qtdConcorrentes === 1 && c1.data?.produto_id === c2.data?.produto_id,
+      `produtos=${qtdConcorrentes} ids_iguais=${c1.data?.produto_id === c2.data?.produto_id}`,
+    )
+
     // Autor explícito no histórico mesmo em contexto privilegiado.
+    // Procura por QUALQUER evento com o ator — e não pelo mais recente: os
+    // passos acima incluem updates feitos direto com service_role (sem sessão
+    // e sem app.ator_id), que legitimamente gravam alterado_por = NULL. O que
+    // se prova aqui é que as alterações feitas PELA RPC carregam o autor.
     const { data: histAtor } = await admin
       .from('historico_precos_produto')
       .select('alterado_por')
       .eq('produto_id', novoId)
-      .order('alterado_em', { ascending: false })
-      .limit(1)
+      .eq('alterado_por', gerenteA.id)
     checar(
-      'histórico de preço registrou o ator mesmo via RPC privilegiada',
-      histAtor?.[0]?.alterado_por === gerenteA.id,
-      `alterado_por=${histAtor?.[0]?.alterado_por}`,
+      'histórico de preço registrou o ator nas alterações via RPC privilegiada',
+      (histAtor ?? []).length >= 1,
+      `eventos com ator=${(histAtor ?? []).length}`,
     )
   }
 
