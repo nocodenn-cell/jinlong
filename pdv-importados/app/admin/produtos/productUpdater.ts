@@ -247,24 +247,120 @@ function rpcAusente(error: { code?: string; message?: string } | null): boolean 
  * estiver promovida, ele deixa de ser exercitado. Ver
  * `docs/PROMOCAO_PRODUTOS_HARDENING.md` para a ordem recomendada.
  */
+/**
+ * Sincronização da faixa SEM transação — só para o banco que ainda não tem a
+ * RPC. Reproduz a semântica da RPC (upsert da faixa derivada + desativação da
+ * anterior), mas em passos separados: é o melhor possível contra um schema
+ * antigo, e é o que o app fazia antes desta entrega.
+ *
+ * Devolve erro em vez de engolir: sem isto, alterar preço/gatilho num banco
+ * antigo retornaria sucesso deixando `produtos.preco_atacado` e
+ * `precos_atacado` divergentes — exatamente o defeito que esta entrega
+ * conserta. Preferimos falhar visivelmente a mentir sucesso.
+ */
+async function sincronizarFaixaSemTransacao(
+  supabase: SupabaseClient,
+  produtoId: string,
+  gatilhoAnterior: number | null,
+  faixa: { quantidade_minima: number; preco_unitario: number } | null,
+): Promise<{ message: string; code?: string } | null> {
+  // Desativa a faixa derivada anterior quando ela deixou de valer.
+  if (
+    gatilhoAnterior != null &&
+    gatilhoAnterior > 0 &&
+    gatilhoAnterior !== faixa?.quantidade_minima
+  ) {
+    const { error } = await supabase
+      .from('precos_atacado')
+      .update({ ativo: false })
+      .eq('produto_id', produtoId)
+      .eq('quantidade_minima', gatilhoAnterior)
+      .eq('ativo', true)
+      .is('loja_id', null)
+    if (error) return error
+  }
+
+  if (!faixa) return null
+
+  // Upsert manual: procura a faixa ativa naquela quantidade e atualiza, ou cria.
+  const { data: existente, error: erroBusca } = await supabase
+    .from('precos_atacado')
+    .select('id')
+    .eq('produto_id', produtoId)
+    .eq('quantidade_minima', faixa.quantidade_minima)
+    .eq('ativo', true)
+    .is('loja_id', null)
+    .maybeSingle()
+  if (erroBusca) return erroBusca
+
+  if (existente?.id) {
+    const { error } = await supabase
+      .from('precos_atacado')
+      .update({ preco_unitario: faixa.preco_unitario })
+      .eq('id', existente.id)
+    return error
+  }
+
+  const { error } = await supabase.from('precos_atacado').insert({
+    produto_id: produtoId,
+    quantidade_minima: faixa.quantidade_minima,
+    preco_unitario: faixa.preco_unitario,
+    loja_id: null,
+    ativo: true,
+  })
+  return error
+}
+
 function defaultUpdateRow(supabase: SupabaseClient): UpdateProdutoRowFn {
   return async ({ id, lojaId, payload }) => {
+    const faixa = derivarFaixaAtacado(payload)
+
     const { error } = await supabase.rpc('atualizar_produto_com_faixa_atacado', {
       p_produto_id: id,
       p_payload: payload,
       p_ator_id: null,
-      p_faixa: derivarFaixaAtacado(payload),
+      p_faixa: faixa,
     })
 
     if (!rpcAusente(error)) return { error }
 
-    // Banco ainda sem a RPC: caminho legado, escopado por loja como antes.
+    // ── Banco ainda sem a RPC ────────────────────────────────────────────────
+    // O gatilho anterior precisa ser lido ANTES do UPDATE, senão não há como
+    // saber qual faixa derivada desativar.
+    const mexeuEmAtacado =
+      Object.prototype.hasOwnProperty.call(payload, 'preco_atacado') ||
+      Object.prototype.hasOwnProperty.call(payload, 'quantidade_gatilho_atacado')
+
+    let gatilhoAnterior: number | null = null
+    if (mexeuEmAtacado) {
+      const { data: antes } = await supabase
+        .from('produtos')
+        .select('quantidade_gatilho_atacado')
+        .eq('id', id)
+        .eq('loja_id', lojaId)
+        .maybeSingle()
+      gatilhoAnterior = (antes?.quantidade_gatilho_atacado as number | null) ?? null
+    }
+
     const { error: erroDireto } = await supabase
       .from('produtos')
       .update(payload)
       .eq('id', id)
       .eq('loja_id', lojaId)
-    return { error: erroDireto }
+    if (erroDireto) return { error: erroDireto }
+
+    if (!mexeuEmAtacado) return { error: null }
+
+    const erroFaixa = await sincronizarFaixaSemTransacao(supabase, id, gatilhoAnterior, faixa)
+    if (erroFaixa) {
+      return {
+        error: {
+          ...erroFaixa,
+          message: `${erroFaixa.message} (o produto foi salvo, mas a faixa de atacado não pôde ser sincronizada — verifique o preço de atacado antes de vender)`,
+        },
+      }
+    }
+    return { error: null }
   }
 }
 

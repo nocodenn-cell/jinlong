@@ -78,10 +78,15 @@ $$;
 -- Autorização: a própria RPC revalida perfil e loja. Não confia em `p_loja_id`
 -- vindo do chamador — compara com a loja do ator e com a loja do produto.
 
+-- `p_ator_id` tem DEFAULT NULL de propósito: o chamador normal é o client de
+-- SESSÃO, que já carrega `auth.uid()` — informar o ator é redundante ali. O
+-- parâmetro existe só para chamadas privilegiadas (service_role), onde não há
+-- sessão. Sem o default, o gerador de tipos do Supabase o marca como
+-- obrigatório e não-nulo, divergindo do uso real (a aplicação passa null).
 CREATE OR REPLACE FUNCTION public.atualizar_produto_com_faixa_atacado(
   p_produto_id uuid,
   p_payload jsonb,
-  p_ator_id uuid,
+  p_ator_id uuid DEFAULT NULL,
   p_faixa jsonb DEFAULT NULL
 )
 RETURNS jsonb

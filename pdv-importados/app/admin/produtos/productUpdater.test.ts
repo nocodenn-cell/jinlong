@@ -477,20 +477,161 @@ describe('mapeamento dos erros da RPC transacional', () => {
 describe('fallback quando a RPC transacional ainda não existe no banco', () => {
   const catalogPayload = mapUpdateProductInputToRow({ nome: 'Produto A', precoVarejo: 10 })
 
+  /**
+   * O fallback lê o gatilho anterior antes do UPDATE (para saber qual faixa
+   * derivada desativar), então o fake precisa da cadeia de `select` também.
+   * Aqui o produto não tem gatilho anterior e o input não traz atacado, logo
+   * nenhuma operação em `precos_atacado` deve acontecer.
+   */
   function fakeSupabaseSemRpc(codigo: string, mensagem: string) {
     const updateSpy = vi.fn(async () => ({ error: null }))
+    const faixaSpy = vi.fn()
     const supabase = {
       rpc: vi.fn(async () => ({ error: { code: codigo, message: mensagem } })),
-      from: () => ({
-        update: (payload: unknown) => ({
-          eq: (_c1: string, _v1: string) => ({
-            eq: (_c2: string, _v2: string) => updateSpy(payload),
+      from: (tabela: string) => {
+        if (tabela === 'precos_atacado') {
+          faixaSpy()
+          throw new Error('não deveria tocar precos_atacado sem atacado no payload')
+        }
+        return {
+          select: () => ({
+            eq: () => ({
+              eq: () => ({ maybeSingle: async () => ({ data: { quantidade_gatilho_atacado: null }, error: null }) }),
+            }),
           }),
-        }),
-      }),
+          update: (payload: unknown) => ({
+            eq: (_c1: string, _v1: string) => ({
+              eq: (_c2: string, _v2: string) => updateSpy(payload),
+            }),
+          }),
+        }
+      },
     }
-    return { supabase, updateSpy }
+    return { supabase, updateSpy, faixaSpy }
   }
+
+  it('fallback SINCRONIZA a faixa: upsert do par novo e desativação do anterior', async () => {
+    const ops: string[] = []
+    const supabase = {
+      rpc: vi.fn(async () => ({ code: 'PGRST202', message: 'Could not find the function' })).mockResolvedValue({
+        error: { code: 'PGRST202', message: 'Could not find the function' },
+      }),
+      from: (tabela: string) => {
+        if (tabela === 'produtos') {
+          return {
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  maybeSingle: async () => {
+                    ops.push('produtos.select(gatilho_anterior)')
+                    return { data: { quantidade_gatilho_atacado: 10 }, error: null }
+                  },
+                }),
+              }),
+            }),
+            update: () => ({
+              eq: () => ({
+                eq: async () => {
+                  ops.push('produtos.update')
+                  return { error: null }
+                },
+              }),
+            }),
+          }
+        }
+        // precos_atacado
+        return {
+          update: (v: Record<string, unknown>) => ({
+            eq: () => ({
+              eq: () => ({
+                eq: () => ({
+                  is: async () => {
+                    ops.push(`faixa.desativa(${JSON.stringify(v)})`)
+                    return { error: null }
+                  },
+                }),
+              }),
+              is: async () => {
+                ops.push('faixa.update_preco')
+                return { error: null }
+              },
+            }),
+          }),
+          select: () => ({
+            eq: () => ({
+              eq: () => ({
+                eq: () => ({
+                  is: () => ({
+                    maybeSingle: async () => {
+                      ops.push('faixa.busca')
+                      return { data: null, error: null }
+                    },
+                  }),
+                }),
+              }),
+            }),
+          }),
+          insert: async () => {
+            ops.push('faixa.insert')
+            return { error: null }
+          },
+        }
+      },
+    }
+    const { createProductUpdater: criar } = await import('./productUpdater')
+    const getById = vi.fn(async () => ({ ok: true as const, product: catalogRow }))
+    const updater = criar(supabase as never, { reader: { getById } })
+
+    const r = await updater.update({
+      id: 'prod-1',
+      lojaId: 'loja-1',
+      input: { nome: 'Produto A', precoVarejo: 50, precoAtacado: 25, quantidadeGatilhoAtacado: 20 },
+    })
+
+    expect(r.ok).toBe(true)
+    // Lê o gatilho ANTES de atualizar, senão não saberia qual faixa desativar.
+    expect(ops[0]).toBe('produtos.select(gatilho_anterior)')
+    expect(ops).toContain('produtos.update')
+    // Desativa a faixa derivada anterior (gatilho 10) e cria a nova (20).
+    expect(ops.some((o) => o.startsWith('faixa.desativa'))).toBe(true)
+    expect(ops).toContain('faixa.insert')
+  })
+
+  it('fallback: erro ao sincronizar a faixa NÃO reporta sucesso (nada de divergência silenciosa)', async () => {
+    const supabase = {
+      rpc: vi.fn().mockResolvedValue({ error: { code: 'PGRST202', message: 'Could not find the function' } }),
+      from: (tabela: string) => {
+        if (tabela === 'produtos') {
+          return {
+            select: () => ({
+              eq: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { quantidade_gatilho_atacado: 10 }, error: null }) }) }),
+            }),
+            update: () => ({ eq: () => ({ eq: async () => ({ error: null }) }) }),
+          }
+        }
+        return {
+          update: () => ({
+            eq: () => ({
+              eq: () => ({ eq: () => ({ is: async () => ({ error: { message: 'RLS negou a faixa' } }) }) }),
+            }),
+          }),
+        }
+      },
+    }
+    const { createProductUpdater: criar } = await import('./productUpdater')
+    const getById = vi.fn(async () => ({ ok: true as const, product: catalogRow }))
+    const updater = criar(supabase as never, { reader: { getById } })
+
+    const r = await updater.update({
+      id: 'prod-1',
+      lojaId: 'loja-1',
+      input: { nome: 'Produto A', precoVarejo: 50, precoAtacado: 25, quantidadeGatilhoAtacado: 20 },
+    })
+
+    expect(r.ok).toBe(false)
+    if (r.ok) return
+    expect(r.error).toContain('faixa de atacado não pôde ser sincronizada')
+  })
 
   it('PGRST202 (função fora do schema cache) → cai no UPDATE direto', async () => {
     const { supabase, updateSpy } = fakeSupabaseSemRpc(

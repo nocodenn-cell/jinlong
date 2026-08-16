@@ -32,6 +32,44 @@ ESPERAR_FALHA=0
 
 PSQL=(docker exec -i "$CONTAINER" psql -U postgres -d postgres -q -t -A)
 
+# Identidades fixas do cenário — declaradas aqui para que a limpeza possa
+# removê-las sem depender de nada que o corpo do script tenha conseguido criar.
+ATOR_TEMP='00000000-0000-4000-8000-00000000c0c0'
+PID_A=""
+
+# Limpeza GARANTIDA: roda em saída normal, erro (set -e/-u), Ctrl-C ou TERM.
+# Antes a limpeza estava só no fim do caminho feliz — uma interrupção no meio
+# deixava produto, faixas e o usuário temporário no banco.
+limpar() {
+  local rc=$?
+  # Não deixa a sessão A pendurada segurando lock se a saída foi abrupta.
+  if [ -n "$PID_A" ] && kill -0 "$PID_A" 2>/dev/null; then
+    wait "$PID_A" 2>/dev/null || true
+  fi
+  "${PSQL[@]}" >/dev/null 2>&1 <<SQL || true
+DELETE FROM public.precos_atacado WHERE produto_id IN
+  (SELECT id FROM public.produtos WHERE nome LIKE '__CONC_FAIXA__%');
+DELETE FROM public.historico_precos_produto WHERE produto_id IN
+  (SELECT id FROM public.produtos WHERE nome LIKE '__CONC_FAIXA__%');
+DELETE FROM public.estoque WHERE produto_id IN
+  (SELECT id FROM public.produtos WHERE nome LIKE '__CONC_FAIXA__%');
+DELETE FROM public.produtos WHERE nome LIKE '__CONC_FAIXA__%';
+DELETE FROM public.usuarios WHERE id = '$ATOR_TEMP';
+DELETE FROM auth.users WHERE id = '$ATOR_TEMP';
+SQL
+  trap - EXIT INT TERM
+  exit $rc
+}
+trap limpar EXIT INT TERM
+
+# `bash` explícito: o script usa arrays, process substitution e `trap`, que não
+# existem em sh/dash. O shebang já é bash, mas quem invoca com `sh script.sh`
+# passaria por cima dele — este guard recusa em vez de falhar de formas obscuras.
+if [ -z "${BASH_VERSION:-}" ]; then
+  echo "ABORTADO: execute com bash (este script usa arrays e trap)." >&2
+  exit 2
+fi
+
 echo "=== Corrida produto + faixa de atacado (entrelaçamento forçado) ==="
 
 # ── Cenário ───────────────────────────────────────────────────────────────────
@@ -55,6 +93,7 @@ BEGIN
   LIMIT 1;
 
   IF v_ator IS NULL THEN
+    -- Mesmo UUID que a rotina de limpeza (`ATOR_TEMP`) remove ao sair.
     v_ator := '00000000-0000-4000-8000-00000000c0c0'::uuid;
     INSERT INTO auth.users (id, instance_id, aud, role, email, encrypted_password,
                             email_confirmed_at, created_at, updated_at)
@@ -166,13 +205,7 @@ else
   echo "PASS  faixa manual preservada"
 fi
 
-# ── Limpeza ───────────────────────────────────────────────────────────────────
-"${PSQL[@]}" <<SQL > /dev/null 2>&1
-DELETE FROM public.precos_atacado WHERE produto_id = '$PROD';
-DELETE FROM public.estoque WHERE produto_id = '$PROD';
-DELETE FROM public.produtos WHERE id = '$PROD';
-SQL
-echo "dados de teste removidos."
+# A limpeza é feita pelo trap (roda também em erro/interrupção).
 
 if [ "$ESPERAR_FALHA" = "1" ]; then
   if [ "$FALHAS" -gt 0 ]; then

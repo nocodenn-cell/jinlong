@@ -21,6 +21,13 @@ set -euo pipefail
 DUMP="${1:?informe o caminho do dump estrutural de produção}"
 CONTAINER="${CONTAINER:-supabase_db_fastproduct}"
 DB="clone_prod_upgrade_test"
+
+# --sabotar: injeta um erro estrutural em `public` no dump antes de carregar,
+# para provar que o classificador REJEITA um clone infiel em vez de seguir
+# validando um schema que não é o de produção. Controle negativo do próprio
+# teste (o modo normal deve passar; este deve abortar com código 2).
+SABOTAR=0
+[ "${2:-}" = "--sabotar" ] && SABOTAR=1
 MIG_DIR="$(cd "$(dirname "$0")/../supabase/migrations" && pwd)"
 
 # Só as migrations desta entrega — as anteriores já constam no tracking de produção.
@@ -84,21 +91,36 @@ echo "--- carregando schema de produção ---"
 # auth/storage/realtime, extensões, roles do serviço) são tolerados. Qualquer
 # erro tocando `public` aborta.
 LOAD_LOG=$(mktemp)
-docker exec -i "$CONTAINER" psql -U postgres -d "$DB" -q -v ON_ERROR_STOP=0 < "$DUMP" > "$LOAD_LOG" 2>&1 || true
+DUMP_EFETIVO="$DUMP"
+if [ "$SABOTAR" = "1" ]; then
+  echo "!!! modo --sabotar: injetando erro estrutural em public !!!"
+  DUMP_EFETIVO=$(mktemp)
+  cat "$DUMP" > "$DUMP_EFETIVO"
+  # Referência a tabela inexistente: gera ERROR em `public`, que NÃO pode ser
+  # classificado como tolerável. Se o script seguir, o classificador é frouxo.
+  echo 'ALTER TABLE public.tabela_que_nao_existe ADD COLUMN x int;' >> "$DUMP_EFETIVO"
+fi
+docker exec -i "$CONTAINER" psql -U postgres -d "$DB" -q -v ON_ERROR_STOP=0 < "$DUMP_EFETIVO" > "$LOAD_LOG" 2>&1 || true
+[ "$SABOTAR" = "1" ] && rm -f "$DUMP_EFETIVO"
 
 TOTAL_ERR=$(grep -c '^ERROR' "$LOAD_LOG" || true)
 # Erros aceitáveis: infraestrutura gerenciada pelo Supabase que não existe num
-# banco descartável. Nenhum deles toca objetos de `public` — que é o que precisa
-# ser fiel para o teste valer. A lista é explícita de propósito: qualquer erro
-# novo aborta em vez de passar despercebido.
-#   - schemas auth/storage/realtime/... : não vêm no `db dump`
-#   - roles supabase_* / authenticator  : criados pelo provisionamento do projeto
-#   - extension "..."                    : já instaladas na imagem, ou restritas
-#   - "can only create extension in database postgres": o clone não é o banco
-#     `postgres`, e algumas extensões do Supabase só podem ser criadas lá
-#   - publication "supabase_realtime"    : replicação do Realtime, fora de escopo
+# banco descartável. A lista é ESTRITA — cada padrão nomeia o objeto específico
+# em vez de casar por categoria.
+#
+# Padrões genéricos foram removidos após a auditoria de 2026-08-16: um
+# `permission denied` ou `must be owner` solto casaria também com falhas
+# estruturais em `public` (uma tabela que não pôde ser criada, um GRANT que não
+# passou), deixando o clone infiel sem que o teste percebesse. `extension "..."`
+# genérico tinha o mesmo problema. Agora só passam mensagens em que o objeto
+# citado é comprovadamente de schema gerenciado pelo Supabase.
+TOLERAVEIS_RE='schema "(auth|storage|realtime|extensions|graphql|graphql_public|vault|supabase_migrations|supabase_functions|pgbouncer|net|cron|pgsodium|pgsodium_masks)" does not exist'
+TOLERAVEIS_RE+='|role "(supabase_admin|supabase_auth_admin|supabase_storage_admin|supabase_functions_admin|supabase_realtime_admin|dashboard_user|authenticator|pgbouncer|pgsodium_keyholder|pgsodium_keyiduser|pgsodium_keymaker)" does not exist'
+TOLERAVEIS_RE+='|extension "(pg_graphql|pg_stat_statements|pgcrypto|pgjwt|pgsodium|supabase_vault|uuid-ossp|pg_net|pg_cron|pg_trgm|plpgsql|http|wrappers|hypopg|index_advisor)" (already exists|does not exist|is not available)'
+TOLERAVEIS_RE+='|can only create extension in database postgres'
+TOLERAVEIS_RE+='|publication "supabase_realtime" does not exist'
 TOLERAVEIS=$(grep '^ERROR' "$LOAD_LOG" \
-  | grep -Ec 'schema "(auth|storage|realtime|extensions|graphql|vault|supabase_migrations|pgbouncer|net|cron)"|role "(supabase_admin|supabase_auth_admin|supabase_storage_admin|dashboard_user|authenticator|pgbouncer)"|extension "[^"]+"|must be owner|permission denied|can only create extension in database postgres|publication "supabase_realtime" does not exist' \
+  | grep -Ec "$TOLERAVEIS_RE" \
   || true)
 INESPERADOS=$((TOTAL_ERR - TOLERAVEIS))
 
@@ -106,7 +128,7 @@ echo "carregamento: $TOTAL_ERR erro(s), $TOLERAVEIS tolerável(is), $INESPERADOS
 if [ "$INESPERADOS" -gt 0 ]; then
   echo "ABORTADO: erros não classificáveis no carregamento — o clone não é fiel:"
   grep '^ERROR' "$LOAD_LOG" \
-    | grep -Ev 'schema "(auth|storage|realtime|extensions|graphql|vault|supabase_migrations|pgbouncer|net|cron)"|role "(supabase_admin|supabase_auth_admin|supabase_storage_admin|dashboard_user|authenticator|pgbouncer)"|extension "[^"]+"|must be owner|permission denied|can only create extension in database postgres|publication "supabase_realtime" does not exist' \
+    | grep -Ev "$TOLERAVEIS_RE" \
     | head -20
   rm -f "$LOAD_LOG"
   exit 2
@@ -154,7 +176,10 @@ echo "--- asserções rigorosas sobre o clone pós-upgrade ---"
 # Cada linha do bloco abaixo devolve PASS/FALHA. Antes isto imprimia dados soltos
 # para leitura humana; agora é verificação com veredito, incluindo ORDEM exata
 # do contrato de retorno, grants, revogações e predicados dos índices.
-ASSERT_OUT=$(docker exec -i "$CONTAINER" psql -U postgres -d "$DB" -t -A <<'SQL'
+# -v ON_ERROR_STOP=1: um erro de SQL no próprio bloco de asserções antes
+# resultava em saída vazia e ZERO falhas contadas — o script dava "tudo certo"
+# sem ter verificado nada. Agora aborta.
+ASSERT_OUT=$(docker exec -i "$CONTAINER" psql -U postgres -d "$DB" -t -A -v ON_ERROR_STOP=1 <<'SQL'
 WITH t AS (
   SELECT
     -- Contrato COMPLETO e ORDENADO da RPC de listagem (17 colunas)
@@ -196,8 +221,83 @@ UNION ALL SELECT 'helpers SEM EXECUTE p/ anon|' || (helpers_anon = 0)::text || '
 UNION ALL SELECT 'list RPC com EXECUTE p/ authenticated|' || (list_auth)::text || '|=' || list_auth FROM t
 UNION ALL SELECT 'list RPC SEM EXECUTE p/ anon|' || (NOT list_anon)::text || '|=' || list_anon FROM t
 UNION ALL SELECT 'trigger functions SEM EXECUTE p/ authenticated|' || (trg_auth = 0)::text || '|=' || trg_auth FROM t
+
+-- ── Predicados RLS COMPLETOS ────────────────────────────────────────────────
+-- Antes só se contava policies e papéis; o TEXTO do predicado não era conferido,
+-- então uma policy com o nome certo e a condição errada passaria batido.
+UNION ALL
+SELECT 'produtos_leitura: cmd/roles/qual exatos|'
+  || (cmd = 'SELECT' AND roles::text = '{authenticated}'
+      AND qual = '(auth_usuario_eh_admin() OR (loja_id = auth_usuario_loja_id()))'
+      AND with_check IS NULL)::text
+  || '|cmd=' || cmd || ' roles=' || roles::text || ' qual=' || coalesce(qual,'(nulo)')
+FROM pg_policies WHERE tablename='produtos' AND policyname='produtos_leitura'
+UNION ALL
+SELECT 'produtos_escrita: USING e WITH CHECK idênticos e por loja|'
+  || (cmd = 'ALL' AND roles::text = '{authenticated}'
+      AND qual = 'auth_usuario_gerencial_loja(loja_id)'
+      AND with_check = 'auth_usuario_gerencial_loja(loja_id)')::text
+  || '|qual=' || coalesce(qual,'(nulo)') || ' check=' || coalesce(with_check,'(nulo)')
+FROM pg_policies WHERE tablename='produtos' AND policyname='produtos_escrita'
+UNION ALL
+SELECT 'historico_precos_produto_leitura: predicado por produto|'
+  || (cmd = 'SELECT' AND roles::text = '{authenticated}'
+      AND qual = 'auth_pode_ver_produto_gerencial(produto_id)')::text
+  || '|qual=' || coalesce(qual,'(nulo)')
+FROM pg_policies WHERE tablename='historico_precos_produto' AND policyname='historico_precos_produto_leitura'
+UNION ALL
+SELECT 'produtos tem EXATAMENTE 2 policies (nenhuma permissiva extra)|'
+  || (count(*) = 2)::text || '|=' || count(*) || ' [' || string_agg(policyname, ',' ORDER BY policyname) || ']'
+FROM pg_policies WHERE tablename='produtos'
+UNION ALL
+SELECT 'RLS habilitada em produtos e historico_precos_produto|'
+  || (bool_and(c.relrowsecurity))::text || '|=' || bool_and(c.relrowsecurity)::text
+FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+WHERE n.nspname='public' AND c.relname IN ('produtos','historico_precos_produto')
+
+-- ── Assinaturas e search_path das funções novas ─────────────────────────────
+UNION ALL
+SELECT 'atualizar_produto_com_faixa_atacado: assinatura e SECURITY DEFINER|'
+  || (pg_get_function_identity_arguments(oid) = 'p_produto_id uuid, p_payload jsonb, p_ator_id uuid, p_faixa jsonb'
+      AND prosecdef
+      AND array_to_string(proconfig, ',') LIKE '%search_path=public%')::text
+  || '|args=' || pg_get_function_identity_arguments(oid)
+  || ' secdef=' || prosecdef || ' cfg=' || coalesce(array_to_string(proconfig, ','), '(nenhum)')
+FROM pg_proc WHERE proname='atualizar_produto_com_faixa_atacado'
+UNION ALL
+SELECT 'p_ator_id e p_faixa têm DEFAULT (2 args opcionais)|'
+  || (pronargdefaults = 2)::text || '|defaults=' || pronargdefaults
+FROM pg_proc WHERE proname='atualizar_produto_com_faixa_atacado'
+UNION ALL
+SELECT 'helpers de RLS: STABLE + SECURITY DEFINER + search_path|'
+  || (count(*) = 3)::text || '|conformes=' || count(*)
+FROM pg_proc p
+WHERE p.proname IN ('auth_usuario_eh_admin','auth_usuario_loja_id','auth_pode_ver_produto_gerencial')
+  AND p.provolatile = 's' AND p.prosecdef
+  AND array_to_string(p.proconfig, ',') LIKE '%search_path=public%'
+UNION ALL
+SELECT 'RPC transacional faz FOR UPDATE na linha do produto|'
+  || (prosrc LIKE '%FOR UPDATE%')::text || '|=' || (prosrc LIKE '%FOR UPDATE%')::text
+FROM pg_proc WHERE proname='atualizar_produto_com_faixa_atacado'
+UNION ALL
+SELECT 'RPC de criação usa advisory lock por request|'
+  || (prosrc LIKE '%pg_advisory_xact_lock%')::text || '|=' || (prosrc LIKE '%pg_advisory_xact_lock%')::text
+FROM pg_proc WHERE proname='criar_produto_com_estoque_inicial'
+UNION ALL
+SELECT 'RPC de criação valida a loja do request no replay|'
+  || (prosrc LIKE '%CRIAR_PRODUTO_REQUEST_OUTRA_LOJA%')::text || '|=' || (prosrc LIKE '%CRIAR_PRODUTO_REQUEST_OUTRA_LOJA%')::text
+FROM pg_proc WHERE proname='criar_produto_com_estoque_inicial'
+UNION ALL
+SELECT 'trigger de histórico aceita ator explícito (app.ator_id)|'
+  || (prosrc LIKE '%app.ator_id%')::text || '|=' || (prosrc LIKE '%app.ator_id%')::text
+FROM pg_proc WHERE proname='registrar_historico_preco_produto'
 SQL
 )
+if [ -z "$ASSERT_OUT" ]; then
+  echo "ABORTADO: bloco de asserções não produziu saída (erro de SQL) — nada foi verificado."
+  docker exec "$CONTAINER" psql -U postgres -d postgres -q -c "DROP DATABASE IF EXISTS $DB;" >/dev/null 2>&1
+  exit 2
+fi
 
 ASSERT_FALHAS=0
 while IFS='|' read -r nome ok detalhe; do
