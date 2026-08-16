@@ -188,13 +188,17 @@ const ARQUIVO_PROPRIO = 'backend/scripts/promover-hardening-produtos.mjs'
  * scripts de comissões), e exigir limpeza global tornaria a ferramenta
  * inutilizável sem aumentar a garantia — nenhum desses arquivos entra no SQL
  * aplicado nem na decisão de aplicar. O escopo cobre o SQL, os scripts que
- * decidem/validam a promoção e o próprio manifesto, que era exatamente a
- * lacuna apontada (antes só as 5 migrations eram verificadas).
+ * decidem/validam a promoção — que era exatamente a lacuna apontada (antes só
+ * as 5 migrations eram verificadas).
+ *
+ * O MANIFESTO fica fora da lista: ele é a REFERÊNCIA da comparação, não o
+ * referente. Incluí-lo criava um laço — gravar o manifesto sujava o worktree e
+ * invalidava o manifesto recém-gravado. A integridade dele vem de estar
+ * commitado no git, o que qualquer auditor inspeciona diretamente.
  */
 const CAMINHOS_DO_ARTEFATO = [
   'backend/supabase/migrations',
   'backend/scripts/promover-hardening-produtos.mjs',
-  'backend/scripts/promover-hardening-produtos.manifesto.json',
   'backend/scripts/promocao-cenarios-teste.mjs',
   'backend/scripts/upgrade-sobre-clone-producao.sh',
   'backend/scripts/concorrencia-faixa-atacado.sh',
@@ -299,7 +303,12 @@ function validarBackup() {
     .pop()
   checar(
     'backup não está truncado (última instrução fechada)',
-    !!ultimaLinha && (ultimaLinha.endsWith(';') || ultimaLinha.startsWith('--')),
+    // `\unrestrict`/`\restrict` são meta-comandos do psql que o pg_dump recente
+    // emite no fim do arquivo — um dump íntegro pode terminar neles. O padrão
+    // exige a CONTRABARRA literal: `/^\w+/` (sem escape) casaria qualquer linha
+    // começando por letra, inclusive uma instrução cortada no meio.
+    !!ultimaLinha &&
+      (ultimaLinha.endsWith(';') || ultimaLinha.startsWith('--') || /^\\[a-z]+/i.test(ultimaLinha)),
     ultimaLinha ? `última linha: ${ultimaLinha.slice(0, 70)}` : 'arquivo vazio',
   )
 
