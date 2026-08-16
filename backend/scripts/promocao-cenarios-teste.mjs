@@ -55,6 +55,8 @@ function psql(sqlTexto, db = DB) {
 
 /** Falha injetada: quando setado, o stub recusa esta migration pelo nome. */
 let falharNaMigration = null
+/** Contador para desempatar versões geradas no mesmo milissegundo. */
+let seqVersao = 0
 
 function criarStub() {
   return createServer((req, res) => {
@@ -79,8 +81,14 @@ function criarStub() {
           const saida = psql(
             `SELECT coalesce(json_agg(t)::text, '[]') FROM (${query}) t;`,
           )
-          const linha = saida.split('\n').map((l) => l.trim()).filter(Boolean).pop()
-          return responder(200, linha ? JSON.parse(linha) : [])
+          // psql pode quebrar a linha em saídas longas; juntar tudo antes de
+          // parsear (pegar só a última linha truncava o JSON e o parse falhava).
+          const json = saida
+            .split('\n')
+            .map((l) => l.trim())
+            .filter(Boolean)
+            .join('')
+          return responder(200, json ? JSON.parse(json) : [])
         }
 
         if (req.url.endsWith('/database/migrations')) {
@@ -89,7 +97,12 @@ function criarStub() {
           }
           psql(`BEGIN;\n${q}\nCOMMIT;`)
           // Versão com o timestamp do MOMENTO — como a API real faz.
-          const versao = new Date().toISOString().replace(/\D/g, '').slice(0, 14)
+          // Milissegundos + contador: duas migrations aplicadas dentro do mesmo
+          // segundo colidiriam na PK de `version`, e o teste ficava não
+          // determinístico (ora 1, ora 4, ora 5 registradas).
+          seqVersao += 1
+          const versao =
+            new Date().toISOString().replace(/\D/g, '').slice(0, 17) + String(seqVersao).padStart(2, '0')
           psql(
             `INSERT INTO supabase_migrations.schema_migrations (version, name, statements)
              VALUES ('${versao}', '${name}', ARRAY[$mig$${q}$mig$]);`,
@@ -177,7 +190,7 @@ async function main() {
     r = await rodar('--check', { BACKUP_SCHEMA_PATH: backupFake })
     checar(
       '2. commit diferente do auditado é recusado',
-      r.code !== 0 && /HEAD é o commit auditado/.test(r.saida),
+      r.code !== 0 && /commit auditado está na história do HEAD/.test(r.saida),
       `exit=${r.code}`,
     )
     writeFileSync(MANIFESTO, JSON.stringify(man, null, 2))

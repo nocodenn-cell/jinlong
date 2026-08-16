@@ -119,6 +119,11 @@ TOLERAVEIS_RE+='|role "(supabase_admin|supabase_auth_admin|supabase_storage_admi
 TOLERAVEIS_RE+='|extension "(pg_graphql|pg_stat_statements|pgcrypto|pgjwt|pgsodium|supabase_vault|uuid-ossp|pg_net|pg_cron|pg_trgm|plpgsql|http|wrappers|hypopg|index_advisor)" (already exists|does not exist|is not available)'
 TOLERAVEIS_RE+='|can only create extension in database postgres'
 TOLERAVEIS_RE+='|publication "supabase_realtime" does not exist'
+# Hook de instalação de extensão do Supabase: lê
+# /etc/postgresql-custom/extension-custom-scripts/*.sql, que só o superusuário
+# da imagem alcança. Nomeado especificamente — não é o `permission denied`
+# genérico que foi removido por mascarar falhas em `public`.
+TOLERAVEIS_RE+='|permission denied for function pg_read_file'
 TOLERAVEIS=$(grep '^ERROR' "$LOAD_LOG" \
   | grep -Ec "$TOLERAVEIS_RE" \
   || true)

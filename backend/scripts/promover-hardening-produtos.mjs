@@ -33,7 +33,7 @@
 
 import { readFileSync, writeFileSync, existsSync, statSync } from 'node:fs'
 import { createHash } from 'node:crypto'
-import { execFileSync } from 'node:child_process'
+import { execFile, execFileSync } from 'node:child_process'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -162,8 +162,22 @@ async function migrationsRemotas() {
 
 const nomeRemoto = (arquivo) => arquivo.replace(/^\d+_/, '').replace(/\.sql$/, '')
 
+/**
+ * Commit que tocou as migrations pela última vez — NÃO o HEAD.
+ *
+ * Travar HEAD é auto-referencial: gravar o manifesto muda o HEAD e invalida o
+ * próprio manifesto que acabou de ser gravado. E HEAD avança a cada commit que
+ * não tem nada a ver com estas migrations. O que precisa ser imutável é a
+ * PROCEDÊNCIA do SQL, e isso é exatamente o último commit que mexeu nestes
+ * cinco arquivos — estável enquanto ninguém os alterar, e mudando na hora em
+ * que alguém alterar.
+ */
+function commitDasMigrations() {
+  return git('log', '-1', '--format=%H', '--', ...MIGRATIONS.map((m) => `backend/supabase/migrations/${m}`))
+}
+
 function gerarManifesto() {
-  const commit = git('rev-parse', 'HEAD')
+  const commit = commitDasMigrations()
   const migrations = MIGRATIONS.map((nome) => ({
     arquivo: nome,
     nome_remoto: nomeRemoto(nome),
@@ -187,16 +201,28 @@ function verificarIntegridadeLocal(manifesto) {
     `manifesto.projeto=${manifesto.projeto}`,
   )
 
-  let head = ''
+  // O commit auditado tem de (a) ser o que de fato produziu estes arquivos e
+  // (b) estar na história do HEAD atual. (a) pega arquivo alterado depois do
+  // manifesto; (b) pega checkout de outro branch/commit onde este SQL não vem
+  // da revisão auditada.
+  let atual = ''
+  let ancestral = false
   try {
-    head = git('rev-parse', 'HEAD')
+    atual = commitDasMigrations()
+    execFileSync('git', ['merge-base', '--is-ancestor', manifesto.commit, 'HEAD'], { cwd: RAIZ })
+    ancestral = true
   } catch {
-    /* fora de repo git */
+    /* não-ancestral, ou fora de repo git */
   }
   checar(
-    'HEAD é o commit auditado do manifesto',
-    head === manifesto.commit,
-    `HEAD=${head.slice(0, 8)} manifesto=${String(manifesto.commit).slice(0, 8)}`,
+    'migrations vêm do commit auditado',
+    atual === manifesto.commit,
+    `commit dos arquivos=${atual.slice(0, 8)} manifesto=${String(manifesto.commit).slice(0, 8)}`,
+  )
+  checar(
+    'commit auditado está na história do HEAD',
+    ancestral,
+    ancestral ? '' : 'HEAD não descende do commit do manifesto',
   )
 
   let sujos = ''
@@ -279,7 +305,8 @@ function plan() {
 async function apply() {
   if (!args.has('--confirmo-producao')) {
     console.error('RECUSADO: --apply exige também --confirmo-producao')
-    process.exit(2)
+    process.exitCode = 2
+    return
   }
   const manifesto = lerManifesto()
   if (!(await check())) {
@@ -290,9 +317,14 @@ async function apply() {
     const soPorJaAplicadas = falhas === manifesto.migrations.length - pendentes.length
     if (!soPorJaAplicadas) {
       console.error('RECUSADO: falhas de integridade nas pré-condições.')
-      process.exit(1)
+      process.exitCode = 1
+      return
     }
     console.log('\n(retomada: algumas migrations já constam no remoto e serão puladas)')
+    // As "falhas" contadas acima são apenas os avisos de já-aplicada — que numa
+    // retomada são o estado ESPERADO, não erro. Sem zerar, uma retomada
+    // bem-sucedida terminaria com código de saída 1.
+    falhas = 0
   }
 
   const remotas = await migrationsRemotas()
@@ -307,7 +339,8 @@ async function apply() {
     const corpo = lerMigration(m.arquivo)
     if (sha256(corpo) !== m.sha256) {
       console.error(`ABORTADO: ${m.arquivo} divergiu do manifesto no meio da aplicação.`)
-      process.exit(1)
+      process.exitCode = 1
+      return
     }
     process.stdout.write(`aplicando ${m.arquivo} ... `)
     try {
@@ -394,9 +427,17 @@ async function verify() {
 }
 
 const acoes = { check, plan, apply, verify, manifesto: gerarManifesto }
+// `process.exitCode` em vez de `process.exit()`: sair de imediato com sockets
+// de fetch ainda em fechamento derruba o Node no Windows com
+// `Assertion failed: !(handle->flags & UV_HANDLE_CLOSING)`. Deixar o loop de
+// eventos drenar entrega o código de saída correto em qualquer plataforma.
 Promise.resolve(acoes[MODO]())
-  .then((ok) => process.exit(ok === false || falhas > 0 ? 1 : 0))
+  .then((ok) => {
+    if (process.exitCode === undefined) {
+      process.exitCode = ok === false || falhas > 0 ? 1 : 0
+    }
+  })
   .catch((e) => {
     console.error('ERRO:', e.message)
-    process.exit(1)
+    process.exitCode = 1
   })
