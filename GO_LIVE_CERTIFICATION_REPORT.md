@@ -75,7 +75,7 @@ A versão anterior deste relatório concluiu **NO-GO** por SYNC_KEY / evidência
 | Item | Classificação | Nota |
 |---|---|---|
 | E2E crítico (Playwright sync-fluxo) | Sistema de risco | Não é gate SSRA; monitorar pós-piloto |
-| P1-01 `venda_finance_context` | P1 | Reaplicação `20260808130200` aposentada; convergência oficial futura é a tombstone `20260810222702_retire_obsolete_venda_finance_context.sql` |
+| P1-01 `venda_finance_context` | P1 | Reaplicação `20260808130200` aposentada; convergência oficial é a tombstone `20260810222702_retire_obsolete_venda_finance_context.sql`. ⚠️ Instrução de reaplicação humana superseded em 2026-08-13 — não aplicar. |
 | `GL-DENO-LOCK` | Go-Live separado | `fiscal-worker --frozen` PASS; `sync-outbox` e `validar-gerente --frozen` FAIL; todas passam com `--no-lock`. Corrigir em tarefa separada antes do Go-Live. |
 | Branches/PRs legados | Higiene P2 | Passo 8 do plano de fechamento |
 
