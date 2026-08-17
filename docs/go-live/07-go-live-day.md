@@ -52,8 +52,10 @@ Ninguém executa sozinho: todo passo de mutação em produção tem **quem execu
 | 2 | **Backup do banco** | painel Supabase | backup falhar |
 | 3 | Registrar SHA e `deploymentId` atuais | `curl .../api/health` | — |
 | 4 | Conferir gates humanos | `cat backend/supabase/migration-human-gates.json` → `{"gates": []}` | houver qualquer gate |
-| 5 | **Aplicar migrations** | `npx supabase db push --linked` | qualquer erro |
-| 6 | Conferir ledger | `npx supabase migration list --linked` — as 30 versões | faltar alguma |
+| 5a | **Reconciliar ledger** | `migration repair` reverted×73 + applied×77 — [03](03-deploy-backend.md) §6.2 | qualquer erro |
+| 5b | **Conferir alvo** | `npx supabase db push --linked --dry-run` | listar ≠ 30 versões |
+| 5c | **Aplicar migrations** | `npx supabase db push --linked --include-all` | qualquer erro |
+| 6 | Conferir ledger | `migration list --linked` (304) + `verificacao-pos-apply.sql` | faltar alguma / falha ≠ 0 |
 | 7 | **Publicar Edge Functions** | [03](03-deploy-backend.md) §7 | `check:edge` falhar |
 | 8 | **Publicar app na Vercel** | [04](04-deploy-frontend.md) | build falhar |
 | 9 | Promover a produção | painel Vercel | — |
@@ -61,7 +63,7 @@ Ninguém executa sozinho: todo passo de mutação em produção tem **quem execu
 | 11 | Conferir `gitSha` | bate com o commit publicado | divergir |
 | 12 | Smokes | `smoke:http`, `test:e2e:post-deploy-smoke`, `smoke:rls-rest` | qualquer falha |
 
-> **Passos 5 a 9 são a janela crítica.** Do início do 5 ao fim do 9, AR e AP estão indisponíveis.
+> **Passos 5a a 9 são a janela crítica.** Do início do 5a ao fim do 9, AR e AP estão indisponíveis.
 > Manter a janela curta e não interrompê-la no meio.
 
 ### D0 — aceitação no balcão (ainda com a loja fechada)
@@ -114,8 +116,26 @@ deploy era exatamente esse.
 
 ### 4.3 Rollback do banco
 
-Cada migration do bloco tem **bloco `ROLLBACK` documentado no cabeçalho** (§11.6 do relatório).
 Rollback financeiro **compensa, nunca deleta**: históricos criados não são apagados.
+
+> 🟠 **Correção (2026-08-17).** A afirmação de que *cada* migration do bloco tem `ROLLBACK`
+> documentado no cabeçalho **não se confirma**. Auditoria arquivo a arquivo das 30 pendentes:
+> **20 têm** bloco `-- ROLLBACK`, **10 não têm**.
+>
+> Sem `ROLLBACK` documentado:
+>
+> | Migration | Grupo | Observação |
+> |---|---|---|
+> | `20260810222702_retire_obsolete_venda_finance_context` | A | no-op em produção; aceitável |
+> | `20260813231034_financial_idempotency_correlation_expand` | B | EXPAND aditivo |
+> | `20260813232133_sale_totals_invariant` | B | 🔴 invariante monetária |
+> | `20260813234233_ar_receipts_reconciliation` | B | 🔴 **FIN-298-01** |
+> | `20260814000154_ap_payments_reconciliation` | B | 🔴 **FIN-298-02** |
+> | `20260816135000` … `20260816143000` (5 arquivos) | C | catálogo de produtos |
+>
+> As quatro do Grupo B são exatamente o **núcleo AR/AP** — a parte de maior risco da janela é a que
+> está sem receita de reversão escrita. Antes do go-live: escrever o `ROLLBACK` dessas quatro, ou
+> registrar por escrito que a reversão dependerá do **backup do passo 2** e não de rollback lógico.
 
 ### 4.4 Contatos
 
