@@ -73,6 +73,103 @@ npm run check:golive -w pdv-importados
 npm run check:caixa-pre-producao -w pdv-importados
 ```
 
+### 3.1 Smoke tests manuais pós-deploy — os 7 testes
+
+Roteiro manual executado **depois** do deploy, no navegador, contra produção. Portado do
+`GO-LIVE-RUNBOOK.md` (depreciado) com as correções de URL, health check e rollback já aplicadas.
+
+**Tempo total: ~24 minutos.** Correspondem aos passos 13–22 de
+[07-go-live-day.md](07-go-live-day.md) §3 — este é o detalhamento; aquele é a cronologia.
+
+> ⚠️ **Não existe staging.** Estes testes rodam contra **produção**. Use os usuários de teste e
+> desfaça o que criar (a venda de teste vira dado real).
+
+#### Teste 1 — Login do operador (3 min) · 🔴 crítico
+
+1. Abrir **https://pdv-importados.vercel.app**
+2. Ir para `/login`
+3. Entrar com `PLAYWRIGHT_CAIXA_TEST_EMAIL` / `PLAYWRIGHT_CAIXA_TEST_PASSWORD`
+4. Verificar que chega em `/caixa` e o painel carrega
+
+**Esperado:** painel do operador visível, console do navegador sem erro.
+**Se falhar:** 🔴 parar → [07](07-go-live-day.md) §4.
+
+#### Teste 2 — Busca e adição de produto (5 min) · 🔴 crítico
+
+1. No campo de busca/scanner, digitar o código de barras (`PLAYWRIGHT_E2E_PRODUTO_CODIGO`)
+2. Enter · aguardar 2–5 s
+3. Verificar mensagem de sucesso (não "não encontrado")
+4. Verificar item no carrinho **com o preço correto**
+
+**Se falhar:** 🔴 busca de produto quebrada → parar.
+
+#### Teste 3 — Finalização de venda (5 min) · 🔴 crítico
+
+1. "Finalizar venda"
+2. Forma de pagamento **DINHEIRO**
+3. Confirmar · aguardar 10–20 s
+4. Verificar "Venda registrada/concluída" e o cupom com total e itens
+
+**Se falhar:** 🔴 registro de venda quebrado → parar.
+
+#### Teste 4 — Visibilidade no painel do gerente (3 min) · 🟡
+
+1. Sair do operador · entrar com `PLAYWRIGHT_TEST_EMAIL` / `PLAYWRIGHT_TEST_PASSWORD`
+2. Ir para `/gerente`
+3. Localizar a venda do Teste 3 em "Últimas vendas"
+4. Conferir que o timestamp é de 1–2 minutos atrás
+
+**Se falhar:** 🟡 sync atrasado — aguardar 5 min e repetir. Persistindo, tratar como 🔴.
+
+> Lembrar que **admin lê `vendas` e gerente/auditoria leem `venda_eventos`** (FIN-298-07, aberto).
+> Divergência entre as duas telas é o defeito conhecido, não necessariamente falha do deploy.
+
+#### Teste 5 — Abertura de caixa (5 min) · 🟡
+
+1. Voltar como operador · `/caixa`
+2. "Operações" → "Abrir caixa"
+3. Valor inicial **R$ 100,00** · confirmar
+4. Verificar "Caixa aberto" e o saldo exibido igual ao informado
+
+**Se falhar:** 🟡 verificar o Sentry ([08](08-pos-go-live.md) §2.6).
+
+#### Teste 6 — Sentry (2 min) · 🟡
+
+Detalhado em [08-pos-go-live.md](08-pos-go-live.md) §2.6. Em resumo: nenhum *issue* crítico novo, e
+uma stack trace amostrada deve aparecer **legível** (`arquivo:linha`), não minificada.
+
+**Decisão:** mais de ~10 issues novos → investigar antes de prosseguir.
+
+#### Teste 7 — Vercel Analytics (1 min) · 🟡
+
+1. Projeto `pdv-importados` → aba **Analytics**
+2. Pageload (LCP) **< 3 s**
+3. Sem erros 5xx no gráfico de taxa de erro
+
+**Decisão:** erro > 1% → investigar.
+
+#### Tabela de resultados
+
+| # | Teste | Severidade | Status | Nota |
+|---|---|---|---|---|
+| 1 | Login do operador | 🔴 | ☐ ✅ / ☐ 🔴 | |
+| 2 | Busca e adição de produto | 🔴 | ☐ ✅ / ☐ 🔴 | |
+| 3 | Finalização de venda | 🔴 | ☐ ✅ / ☐ 🔴 | |
+| 4 | Visibilidade no gerente | 🟡 | ☐ ✅ / ☐ 🟡 | |
+| 5 | Abertura de caixa | 🟡 | ☐ ✅ / ☐ 🟡 | |
+| 6 | Sentry | 🟡 | ☐ ✅ / ☐ 🟡 | |
+| 7 | Vercel Analytics | 🟡 | ☐ ✅ / ☐ 🟡 | |
+
+**Decisão:**
+
+- Todos ✅ → seguir para a aceitação financeira ([07](07-go-live-day.md) §3, passos 17–20)
+- Qualquer 🔴 → **parar**; rollback conforme [07](07-go-live-day.md) §4 — ⚠️ **nunca reverter só a aplicação**
+- Vários 🟡 → observar 5 min e decidir explicitamente
+
+> Estes 7 testes cobrem **venda e sessão**. Eles **não** provam a cadeia financeira — recebimento,
+> pagamento AP, comissão e estorno são os passos 17–20 de [07](07-go-live-day.md) §3, e são o motivo
+> real deste deploy.
+
 ## 4. Validação de dados
 
 ### 4.1 Ledger de vendas

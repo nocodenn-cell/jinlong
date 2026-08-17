@@ -38,7 +38,7 @@ Welcome to the fastproduct documentation hub. Find guides for development, opera
 |----------|---------|----------|
 | [go-live/](./go-live/00-README.md) | **CANÔNICO** — plano completo de Go-Live: pré-requisitos, deploy, validação, dia do GO, pós, onboarding, troubleshooting | Ops, release manager |
 | [go-live/CHECKLIST-FINAL.md](./go-live/CHECKLIST-FINAL.md) | Checklist para imprimir, com assinaturas | Ops, dono |
-| ~~[GO-LIVE-RUNBOOK.md](./GO-LIVE-RUNBOOK.md)~~ | ⛔ **DEPRECIADO em 2026-08-17** — rollback perigoso, URL e health check errados. Mantido só pelas seções ainda não portadas (7 smoke tests, Sentry, alert thresholds, escalonamento) | — |
+| ~~[GO-LIVE-RUNBOOK.md](./GO-LIVE-RUNBOOK.md)~~ | ⛔ **DEPRECIADO em 2026-08-17 — depreciação COMPLETA.** Todo o conteúdo útil foi portado para `go-live/` com as correções. Mantido apenas como registro histórico; **não consultar** | — |
 | [GO_LIVE_CERTIFICATION_REPORT.md](../GO_LIVE_CERTIFICATION_REPORT.md) | **Canônico** — certificação GO 2026-08-09 + evidências | Release manager, CTO |
 | [GO_LIVE_EXECUTIVO_RESUMO.md](../GO_LIVE_EXECUTIVO_RESUMO.md) | **Canônico** — decisão executiva PRONTO PARA GO-LIVE | Dono, CTO |
 | [GO_LIVE_STATUS_ATUAL.md](./GO_LIVE_STATUS_ATUAL.md) | Snapshot curto do status (aponta aos canônicos) | Todos |
@@ -138,15 +138,13 @@ Each workspace has its own README:
 
 ### Testing
 - `CONTRIBUTING.md` → "Testing Requirements"
-- [`go-live/06-validacao-pre-go-live.md`](./go-live/06-validacao-pre-go-live.md) → sequência completa de validação
-- `GO-LIVE-RUNBOOK.md` → "7 Smoke Tests" (⛔ depreciado, mas **ainda a única fonte** deste roteiro)
+- [`go-live/06-validacao-pre-go-live.md`](./go-live/06-validacao-pre-go-live.md) → sequência completa de validação e os **7 smoke tests** (§3.1)
 - `pdv-importados/e2e/README.md` → E2E setup
 
 ### Performance & Monitoring
 - `POST-DEPLOY-MONITORING.md` → Metrics & thresholds
 - `ARCHITECTURE.md` → "Observability"
-- [`go-live/08-pos-go-live.md`](./go-live/08-pos-go-live.md) → o que monitorar após o GO
-- `GO-LIVE-RUNBOOK.md` → "Alert Thresholds" (⛔ depreciado, mas **ainda a única fonte** dos limiares)
+- [`go-live/08-pos-go-live.md`](./go-live/08-pos-go-live.md) → monitoramento, **Sentry** (§2.6), **limiares de alerta** (§2.7), escalonamento (§6), post-mortem (§7)
 
 ---
 
@@ -241,7 +239,7 @@ AR/AP para toda a base.
 - [ ] Have on-call engineer available
 
 ### After Deploying
-- [ ] Execute os smokes de [`go-live/04-deploy-frontend.md`](./go-live/04-deploy-frontend.md) §6 (os "7 smoke tests" do runbook depreciado ainda não foram portados)
+- [ ] Execute os **7 smoke tests** de [`go-live/06-validacao-pre-go-live.md`](./go-live/06-validacao-pre-go-live.md) §3.1
 - [ ] Monitor using `POST-DEPLOY-MONITORING.md` (24h)
 - [ ] Check Sentry for unexpected errors
 - [ ] Gather team feedback

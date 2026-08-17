@@ -66,6 +66,9 @@ Ninguém executa sozinho: todo passo de mutação em produção tem **quem execu
 
 ### D0 — aceitação no balcão (ainda com a loja fechada)
 
+> Roteiro detalhado dos passos de venda e sessão (com tempos e critérios de falha) em
+> [06-validacao-pre-go-live.md](06-validacao-pre-go-live.md) §3.1 — os 7 smoke tests.
+
 | # | Passo |
 |---|---|
 | 13 | Abrir caixa de teste |

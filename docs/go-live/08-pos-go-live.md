@@ -12,6 +12,16 @@ Voltar ao [plano](00-README.md). Template base: [`monitoramento.md`](../../monit
 | **D+1 a D+7** | diário, no fechamento | caixa esperado × contado; comissões do dia |
 | **D+8 a D+30** | semanal | tendência, outbox, fila fiscal |
 
+### 1.1 Cadência das primeiras 24 horas
+
+| Frequência | Verificar |
+|---|---|
+| **A cada 30 min** | taxa de erro no Sentry (§2.6) · pageload na Vercel · repetir 1–2 dos smokes de [06](06-validacao-pre-go-live.md) §3.1 |
+| **A cada hora** | exceções do Sentry (agrupamento e frequência) · lag de sync — o gerente deve ver a venda em menos de 2 min |
+| **No fim do dia** | fechamento de caixa conferido em conjunto · feedback do operador · métricas de desempenho |
+
+Automatizar o que der; o que não der, alguém precisa olhar de fato.
+
 ## 2. O que monitorar
 
 ### 2.1 Reconciliação financeira — a prioridade
@@ -52,7 +62,63 @@ emissão real certificada.
 curl -s https://pdv-importados.vercel.app/api/health
 ```
 
+Resposta real de `app/api/health/route.ts`:
+
+```json
+{ "deploymentId": "...", "gitSha": "...", "timestamp": 1234567890 }
+```
+
 `gitSha` deve continuar correspondendo ao commit publicado. Mudança inesperada = deploy não previsto.
+
+### 2.6 Sentry — observabilidade de erros
+
+O projeto usa **`@sentry/nextjs`** (`instrumentation.ts` e `instrumentation-client.ts`).
+Configuração relevante, lida do código:
+
+| Item | Valor real | Fonte |
+|---|---|---|
+| DSN do browser | `NEXT_PUBLIC_SENTRY_DSN` | `instrumentation-client.ts` |
+| Ambiente | derivado de **`VERCEL_ENV`** (não de `NODE_ENV`) | `resolveSentryEnvironment()` |
+| **Release** | **`VERCEL_GIT_COMMIT_SHA`** | `next.config.js` → `withSentryConfig` |
+| Amostragem de traces | 10% em produção, 100% fora | `tracesSampleRate` |
+| Session Replay | só em sessões **com erro**; `maskAllText`, `blockAllMedia` | `replayIntegration` |
+| Source maps | ocultos no bundle público (`hideSourceMaps: true`) | `next.config.js` |
+| Upload de source maps | exige `SENTRY_ORG` e `SENTRY_PROJECT` no build | `next.config.js` |
+
+#### Verificação pós-deploy
+
+1. **Release correlacionada.** No Sentry, a release do deploy deve ser **exatamente o `gitSha`
+   retornado por `/api/health`**. Se não bater, os source maps não são correlacionados e a stack de
+   produção aparece minificada.
+2. **Stack trace legível.** Amostre uma exceção: deve mostrar `arquivo:linha`, não bundle minificado.
+3. **Sem pico de erro.** Logo após o deploy, a taxa deve estar próxima de zero.
+4. **Redação de payload ativa** — a PR #305 (`fix(observability): redact sensitive Sentry payloads`)
+   introduziu `lib/observability/redact.ts`. Confirmar em um evento real que dados sensíveis não
+   aparecem no payload enviado.
+
+> ⚠️ **Lacuna conhecida.** Nenhuma variável do Sentry consta em
+> [`pdv-importados/.env.example`](../../pdv-importados/.env.example) — nem `NEXT_PUBLIC_SENTRY_DSN`,
+> nem `SENTRY_ORG`/`SENTRY_PROJECT`. Sem elas configuradas na Vercel, o Sentry **fica silenciosamente
+> desligado** (`enabled` depende do ambiente e do DSN) e o upload de source maps não acontece.
+> **Conferir no painel da Vercel antes do GO** — o `.env.example` não vai lembrar você disso.
+
+### 2.7 Limiares de alerta
+
+| Métrica | 🟡 Amarelo | 🔴 Vermelho |
+|---|---|---|
+| Taxa de erro no Sentry | > 0,5% | > 2% |
+| Pageload na Vercel (LCP) | > 2 s | > 4 s |
+| Lag de sync | > 3 min | > 5 min |
+| Falhas de autenticação | > 10/h | > 50/h |
+| Timeouts de RPC | > 5/h | > 20/h |
+
+**Ação:**
+
+- 🟡 → avisar o time e investigar
+- 🔴 → acionar o on-call (§6) e **preparar** decisão de rollback — ler [07](07-go-live-day.md) §4 antes de agir
+
+> Estes limiares vieram do runbook depreciado e **nunca foram calibrados com tráfego real**. Trate-os
+> como ponto de partida e ajuste após a primeira semana do cliente.
 
 ## 3. Riscos residuais em produção
 
@@ -115,5 +181,51 @@ Depois de **30 dias** com todos verdadeiros:
 - [ ] Outbox sem acúmulo (se desktop)
 - [ ] Reauditoria independente do bloco AR/AP concluída (L2)
 - [ ] Riscos teóricos §3.2 sem ocorrência real
+
+---
+
+## 6. Escalonamento e on-call
+
+> **Preencher antes do GO.** Os campos abaixo estavam como placeholders no runbook depreciado e
+> **continuam sem preencher**. Um plano de escalonamento com `[Nome]` não escala nada.
+
+| Papel | Nome | Contato | Telefone |
+|---|---|---|---|
+| **Responsável técnico** | `________` | `________` | `________` |
+| **Responsável de negócio / dono** | `________` | `________` | `________` |
+| **Contato no cliente** (gerente da loja) | `________` | `________` | `________` |
+
+### Caminho de escalonamento
+
+```
+Problema detectado
+    ↓ (5 min)
+Responsável técnico investiga
+    ├→ Menor            → registrar, planejar correção
+    ├→ Relevante mas contornável → hotfix + redeploy coordenado
+    └→ Crítico / dinheiro ou dado inconsistente
+           → PARAR  →  [07] §4  →  avisar dono e cliente
+```
+
+**O que é crítico aqui** (ver [10-troubleshooting.md](10-troubleshooting.md) §8): dinheiro recebido
+sem contrapartida, caixa fechando com divergência inexplicada, venda sumida ou duplicada, estoque
+divergente sem lançamento, qualquer sinal de dupla contabilização.
+
+> ⚠️ Escalonar **não** é sinônimo de reverter. Com o bloco financeiro aplicado, reverter só a
+> aplicação derruba AR/AP para toda a base. A decisão de rollback é de [07](07-go-live-day.md) §4.
+
+## 7. Post-mortem
+
+Obrigatório após qualquer rollback ou incidente que afete dinheiro, estoque ou dado do cliente.
+
+1. Abrir issue no GitHub com a tag `rollback` (ou `incident`)
+2. Registrar **o que falhou, quando e por quê**, com evidência — logs, IDs de venda, prints
+3. Registrar o que foi feito, na ordem em que foi feito
+4. Classificar: defeito de código · defeito de dado · defeito de processo · lacuna de documentação
+5. Planejar a correção e **validar no banco local** (`supabase db reset --local`) — não há staging
+6. Só então planejar o redeploy, novamente coordenado banco↔app
+
+> Se o incidente expôs uma lacuna deste plano, **corrigir os arquivos de `docs/go-live/` no mesmo
+> post-mortem**. Documento que não aprende com incidente vira o próximo `GO-LIVE-RUNBOOK.md`.
 
 → Próximo: [09-primeiro-cliente.md](09-primeiro-cliente.md)

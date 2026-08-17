@@ -17,18 +17,23 @@
 > | 4 | ❌ **Pressupõe staging** ("E2E Critical Path (Staging)") | **Não existe staging** — um único projeto Supabase serve produção, Preview e E2E |
 > | 5 | ⚠️ **Não conhece as 30 migrations pendentes** nem a coordenação obrigatória banco↔app | Ver [03-deploy-backend.md](./go-live/03-deploy-backend.md) |
 >
-> ## Seções deste arquivo que ainda NÃO têm equivalente em `docs/go-live/`
+> ## ✅ Depreciação COMPLETA — todo o conteúdo útil foi portado
 >
-> Preservadas aqui por serem, hoje, a única fonte. Precisam ser revisadas e portadas:
+> Em 2026-08-17 as seções que ainda não tinham equivalente foram migradas para `docs/go-live/`,
+> **com os 5 problemas acima corrigidos**. Este arquivo não é mais fonte de nada.
 >
-> - **Smoke Tests 1–7** (login, busca de produto, finalização de venda, dashboard do gerente,
->   abertura de caixa, Sentry, Vercel Analytics) — roteiro detalhado com tempos
-> - **Verificação do Sentry** — source maps carregados e taxa de erro pós-deploy
-> - **Alert Thresholds** — tabela de limiares 🟡/🔴 para erro, pageload, lag de sync, falhas de auth e timeouts de RPC
-> - **Escalation & Contacts** — rotação de on-call e caminho de escalonamento (com placeholders a preencher)
-> - **Post-Mortem** e **Post-Launch Monitoring (24h)**
+> | Seção original | Onde está agora |
+> |---|---|
+> | Smoke Tests 1–7 | [`06-validacao-pre-go-live.md`](./go-live/06-validacao-pre-go-live.md) §3.1 |
+> | Verificação do Sentry | [`08-pos-go-live.md`](./go-live/08-pos-go-live.md) §2.6 |
+> | Alert Thresholds | [`08-pos-go-live.md`](./go-live/08-pos-go-live.md) §2.7 |
+> | Post-Launch Monitoring (24h) | [`08-pos-go-live.md`](./go-live/08-pos-go-live.md) §1.1 |
+> | Escalation & Contacts | [`08-pos-go-live.md`](./go-live/08-pos-go-live.md) §6 |
+> | Post-Mortem | [`08-pos-go-live.md`](./go-live/08-pos-go-live.md) §7 |
+> | Pre-Deployment / Deployment / Health Check | [`03`](./go-live/03-deploy-backend.md) · [`04`](./go-live/04-deploy-frontend.md) · [`07`](./go-live/07-go-live-day.md) |
+> | Rollback Procedure | [`07-go-live-day.md`](./go-live/07-go-live-day.md) §4 — ⚠️ **reescrito**, o original era perigoso |
 >
-> Ao portar, corrigir os 5 problemas da tabela acima — não copiar como está.
+> **Mantido apenas como registro histórico.** Não consultar para execução.
 
 **Version**: 1.0 · **Last Updated**: Jul 23, 2026 · **Status**: ⛔ **DEPRECIADO em 2026-08-17**
 
