@@ -3,9 +3,12 @@ import test from "node:test";
 
 import {
   analyze,
+  applyHumanGateRegistry,
+  deriveExitCode,
   deriveOverallStatus,
   parseMigrationListOutput,
   parseMigrationListTable,
+  parseHumanGateRegistry,
 } from "./p0-migration-status.mjs";
 
 test("interpreta JSON atual do Supabase CLI, inclusive linhas remote-only", () => {
@@ -53,7 +56,7 @@ test("falha explicitamente em saída desconhecida ou JSON malformado", () => {
   );
 });
 
-test("tombstone local ainda não aplicada é drift bloqueante", () => {
+test("migration obrigatória git-only é drift bloqueante", () => {
   assert.equal(
     deriveOverallStatus({
       blocking: [{ version: "20260810222702" }],
@@ -64,21 +67,68 @@ test("tombstone local ainda não aplicada é drift bloqueante", () => {
   );
 });
 
-test("BLOCKING_DRIFT tem precedência e ALIGNED exige ausência total de pendências", () => {
+test("migration remote-only inesperada é drift bloqueante", () => {
+  assert.equal(
+    deriveOverallStatus({
+      blocking: [],
+      humanGate: [],
+      missingInList: [],
+      extraBlocking: ["999"],
+    }),
+    "BLOCKING_DRIFT",
+  );
+});
+
+test("divergência explicitamente registrada exige HUMAN_GATE", () => {
+  const gates = parseHumanGateRegistry(JSON.stringify({
+    gates: [{
+      version: "777",
+      direction: "git_only",
+      reason: "Decisão operacional pendente",
+      decisionDoc: "docs/DEC-777.md",
+    }],
+  }));
+  const classified = applyHumanGateRegistry({
+    blocking: [{ version: "777", reason: "remote_ausente", remote: null }],
+    missingInList: [],
+    extraBlocking: [],
+  }, gates);
+  assert.equal(classified.blocking.length, 0);
+  assert.equal(classified.humanGate.length, 1);
+  assert.equal(deriveOverallStatus(classified), "HUMAN_GATE");
+  assert.equal(deriveExitCode("HUMAN_GATE", false), 1);
+  assert.equal(deriveExitCode("HUMAN_GATE", true), 1);
+});
+
+test("BLOCKING_DRIFT tem precedência sobre HUMAN_GATE", () => {
   assert.equal(
     deriveOverallStatus({
       blocking: [{ version: "999" }],
+      humanGate: [{ version: "777" }],
       missingInList: [],
       extraBlocking: [],
     }),
     "BLOCKING_DRIFT",
   );
+});
+
+test("estado sem divergência é ALIGNED", () => {
   assert.equal(
     deriveOverallStatus({
       blocking: [],
+      humanGate: [],
       missingInList: [],
       extraBlocking: [],
     }),
     "ALIGNED",
+  );
+});
+
+test("registro HUMAN_GATE inválido falha explicitamente", () => {
+  assert.throws(() => parseHumanGateRegistry("não-json"), /JSON malformado/);
+  assert.throws(() => parseHumanGateRegistry('{"gates":{}}'), /deve ser uma lista/);
+  assert.throws(
+    () => parseHumanGateRegistry('{"gates":[{"version":"abc","direction":"git_only","reason":"x","decisionDoc":"x"}]}'),
+    /version deve ser numérica/,
   );
 });

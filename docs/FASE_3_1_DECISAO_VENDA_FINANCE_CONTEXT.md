@@ -1,5 +1,10 @@
 # Fase 3.1 — Decisão: `venda_finance_context`
 
+> **HISTÓRICO / SUPERADO em 2026-08-10.** A decisão abaixo de manter e
+> idempotentizar foi substituída pela aposentadoria formal do espelho. Não
+> reativar a feature. A convergência atual é a tombstone
+> `20260810222702_retire_obsolete_venda_finance_context.sql`.
+
 **Data:** 2026-08-08 (UTC)  
 **Branch / PR:** `cursor/reconciliacao-supabase-audit-633a` · [#267](https://github.com/nocodenn-cell/fastproduct/pull/267)  
 **Projeto Supabase prod:** FastProduct produção (identificador omitido — ver dashboard)  
