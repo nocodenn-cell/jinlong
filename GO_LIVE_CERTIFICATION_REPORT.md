@@ -1,6 +1,6 @@
 # Go-Live Certification Report — Jinlong PDV
 
-**Atualizado:** 2026-08-14
+**Atualizado:** 2026-08-17
 **Decisão histórica de implantação (2026-08-09):** 🟢 **GO** — preservada como evidência do fechamento anterior.
 **Estado do bloco AR/AP (Fase 2C, §11):** 🟡 **APTO PARA REAUDITORIA** — os 4 P0 e os 6 P1 da auditoria adversarial (§10.9) foram remediados, com gate de regressão automatizado no CI. Reauditoria independente desse bloco específico ainda não foi executada.
 **Estado do bloco de comissões — DB-05 A→F (§12):** 🟢 **CERTIFICADO** (backend e frontend). Ver §12 para commits, gates, auditoria adversarial e dívidas residuais. **Fase 3A permanece NÃO LIBERADA** — a certificação de DB-05 fecha o bloco de comissões, não a liberação da próxima fase, que depende também da reauditoria pendente do bloco AR/AP (§11) e das dívidas de reconciliação global listadas em §12.8.
@@ -75,7 +75,7 @@ A versão anterior deste relatório concluiu **NO-GO** por SYNC_KEY / evidência
 | Item | Classificação | Nota |
 |---|---|---|
 | E2E crítico (Playwright sync-fluxo) | Sistema de risco | Não é gate SSRA; monitorar pós-piloto |
-| P1-01 `venda_finance_context` | P1 | Reaplicação `20260808130200` aposentada; convergência oficial é a tombstone `20260810222702_retire_obsolete_venda_finance_context.sql`. ⚠️ Instrução de reaplicação humana superseded em 2026-08-13 — não aplicar. |
+| P1-01 `venda_finance_context` | P1 → ✅ **encerrado** | Reaplicação `20260808130200` aposentada e **removida do repositório**; convergência oficial é a tombstone `20260810222702_retire_obsolete_venda_finance_context.sql`. ⚠️ Instrução de reaplicação humana superseded em 2026-08-13 — **não aplicar**. Autorização: [ADR-012](./docs/adr/ADR-012-aposentadoria-venda-finance-context.md) · fonte única: [reconciliação 2026-08-13](./docs/RECONCILIACAO_venda_finance_context_2026-08-13.md). Convergência de branches confirmada em 2026-08-17 (§7 da reconciliação). |
 | `GL-DENO-LOCK` | Go-Live separado | `fiscal-worker --frozen` PASS; `sync-outbox` e `validar-gerente --frozen` FAIL; todas passam com `--no-lock`. Corrigir em tarefa separada antes do Go-Live. |
 | Branches/PRs legados | Higiene P2 | Passo 8 do plano de fechamento |
 

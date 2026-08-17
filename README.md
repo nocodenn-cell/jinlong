@@ -4,6 +4,34 @@ PDV para lojas de importados no Brasil, com interface em **português** e **普�
 
 **Produção (go/no-go):** [docs/PRODUCAO_GO_NO_GO.md](docs/PRODUCAO_GO_NO_GO.md) — o que o CI cobre vs o que é manual (Supabase, Vercel, Edge).
 
+## Status do projeto
+
+> 🟢 **Go-Live autorizado em 2026-08-09** — piloto em produção na loja **Matriz**.
+> Produção canônica: **https://pdv-importados.vercel.app** · Supabase: projeto `jinlong`.
+
+O `go_autorizado = true` foi registrado em `/admin/implantacao` com SSRA verde e produção alinhada à
+`main` (SHA `2afa14ca`). A certificação técnica completa, com evidências, está em
+[`GO_LIVE_CERTIFICATION_REPORT.md`](GO_LIVE_CERTIFICATION_REPORT.md).
+
+Mudanças com impacto em produção, schema ou governança são registradas no
+[**CHANGELOG**](CHANGELOG.md).
+
+### Riscos residuais monitorados
+
+O Go-Live de 2026-08-09 foi autorizado **com riscos residuais conhecidos** — nenhum deles bloqueava
+aquela decisão, e todos seguem sob acompanhamento:
+
+| Item | Classificação | Estado |
+|---|---|---|
+| Cadeia financeira AR/AP (Issue #298) | **P0 — em remediação** | Auditoria de 2026-08-13 concluiu **NÃO CERTIFICADO**: recebimentos e pagamentos não fecham com caixa/fluxo. Bloco AR/AP remediado e **apto para reauditoria** (§11), que ainda não foi executada. |
+| Comissões — bloco DB-05 A→F | ✅ **Certificado** | Backend e frontend certificados (§12). **Fase 3A permanece não liberada**, pois depende também da reauditoria do bloco AR/AP. |
+| E2E crítico (Playwright `sync-fluxo`) | Sistema de risco | Não é gate SSRA; monitorar pós-piloto. |
+| `GL-DENO-LOCK` | Go-Live separado | `sync-outbox` e `validar-gerente --frozen` falham; passam com `--no-lock`. Corrigir em tarefa separada. |
+| `venda_finance_context` (P1-01) | ✅ **Encerrado** | Reaplicação aposentada; tombstone `20260810222702` é a convergência oficial. **Não reaplicar manualmente.** Ver [ADR-012](docs/adr/ADR-012-aposentadoria-venda-finance-context.md) e a [reconciliação](docs/RECONCILIACAO_venda_finance_context_2026-08-13.md). |
+| Branches/PRs legados | Higiene P2 | Passo 8 do plano de fechamento. |
+
+As seções §§ referenciadas são do `GO_LIVE_CERTIFICATION_REPORT.md`.
+
 ## Estrutura
 
 | Pasta | Descrição |
@@ -73,6 +101,10 @@ O hook executa `scripts/git-pre-commit-check.mjs` (resolve o `git` em caminhos p
 
 ## Documentação
 
+- [**Índice da documentação**](docs/INDEX.md) — mapa completo de `docs/`
+- [**CHANGELOG**](CHANGELOG.md) — decisões e mudanças com impacto em produção, schema ou governança
+- [**Certificação de Go-Live**](GO_LIVE_CERTIFICATION_REPORT.md) — evidências, auditoria #298 e plano de remediação
+- [**ADRs**](docs/adr/) — decisões de arquitetura ([ADR-011](docs/adr/ADR-011-ssot-unico-migrations.md) SSOT de migrations · [ADR-012](docs/adr/ADR-012-aposentadoria-venda-finance-context.md) aposentadoria do espelho financeiro)
 - [**Produção — go / no-go**](docs/PRODUCAO_GO_NO_GO.md) — CI pós-deploy + checklist manual (P0 / segurança)
 - [**P0 checklist** — migrations, deploy Edge, secrets, teste ponta a ponta](docs/P0_CHECKLIST_OPERACIONAL.md)
 - [**P0 staging** — checklist com data/responsável + comando de status de migrations](docs/CHECKLIST_P0_STAGING.md)

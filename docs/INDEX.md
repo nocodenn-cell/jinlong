@@ -48,7 +48,7 @@ Each workspace has its own README:
 - **pdv-importados** (Next.js): [`pdv-importados/README.md`](../pdv-importados/README.md)
 - **pdv-local** (Tauri): [`pdv-local/README.md`](../pdv-local/README.md)
 - **backend** (Supabase): [`backend/README.md`](../backend/README.md)
-- **shared-core** (Business logic): [`shared-core/README.md`](../shared-core/README.md)
+- **shared-core** (Business logic): `shared-core/` — sem README próprio; ver `shared-core/src/`
 
 ---
 
@@ -104,7 +104,7 @@ Each workspace has its own README:
 - [`pdv-importados/README.md`](../pdv-importados/README.md) — Next.js web app
 - [`pdv-local/README.md`](../pdv-local/README.md) — Tauri desktop app
 - [`backend/README.md`](../backend/README.md) — Supabase setup
-- [`shared-core/README.md`](../shared-core/README.md) — Business logic library
+- `shared-core/src/` — Business logic library (sem README próprio)
 
 ### Configuration
 - [`next.config.js`](../pdv-importados/next.config.js) — Next.js build config
