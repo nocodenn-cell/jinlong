@@ -120,6 +120,11 @@ O hook executa `scripts/git-pre-commit-check.mjs` (resolve o `git` em caminhos p
 - [Backend Supabase — visão geral](backend/README.md) — na pasta `backend`, `npm run check` / `npm run check:edge` valida as três Edge Functions (Deno) como no CI: `sync-outbox`, `validar-gerente`, `fiscal-worker`
 - [Supabase CLI / migrations](backend/supabase/README.md)
 
+### Go-Live — Primeiro Cliente Pagante
+
+- **[Plano completo de Go-Live](./docs/go-live/00-README.md)** — 12 documentos com passo a passo, checklists e troubleshooting
+- **CHECKLIST FINAL** — [versão para imprimir](./docs/go-live/CHECKLIST-FINAL.md)
+
 ## Prompts / IA no repositório
 
 - **Sessão autônoma (única fonte):** [`docs/CURSOR_PROMPT_SESSAO_AUTONOMA_CANONICO.md`](docs/CURSOR_PROMPT_SESSAO_AUTONOMA_CANONICO.md)

@@ -21,6 +21,8 @@ Welcome to the fastproduct documentation hub. Find guides for development, opera
 
 ## 📚 Documentation Map
 
+- [**Go-Live — Primeiro Cliente Pagante**](./go-live/00-README.md) — plano completo com 12 documentos, checklists e troubleshooting
+
 ### **👨‍💻 For Developers**
 
 | Document | Purpose | Audience |
