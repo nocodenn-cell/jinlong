@@ -96,11 +96,24 @@ Configuração relevante, lida do código:
    introduziu `lib/observability/redact.ts`. Confirmar em um evento real que dados sensíveis não
    aparecem no payload enviado.
 
-> ⚠️ **Lacuna conhecida.** Nenhuma variável do Sentry consta em
-> [`pdv-importados/.env.example`](../../pdv-importados/.env.example) — nem `NEXT_PUBLIC_SENTRY_DSN`,
-> nem `SENTRY_ORG`/`SENTRY_PROJECT`. Sem elas configuradas na Vercel, o Sentry **fica silenciosamente
-> desligado** (`enabled` depende do ambiente e do DSN) e o upload de source maps não acontece.
-> **Conferir no painel da Vercel antes do GO** — o `.env.example` não vai lembrar você disso.
+> ⚠️ **As variáveis do Sentry existem em [`.env.example`](../../.env.example) (raiz), mas estão
+> comentadas.** Para produção, descomente e preencha **`SENTRY_ORG`**, **`SENTRY_PROJECT`** e
+> **`NEXT_PUBLIC_SENTRY_DSN`** na Vercel. Sem elas configuradas, o Sentry fica **desligado
+> silenciosamente** e os source maps não são enviados.
+>
+> **Dois detalhes que impedem um "descomentar e preencher" direto:**
+>
+> | No `.env.example` da raiz | O que o código realmente lê | Efeito |
+> |---|---|---|
+> | `# SENTRY_DSN=...` | **`NEXT_PUBLIC_SENTRY_DSN`** (`instrumentation-client.ts:21`) | descomentar `SENTRY_DSN` **não liga nada** — o nome precisa ser trocado |
+> | `# SENTRY_RELEASE=auto-generated` | **`VERCEL_GIT_COMMIT_SHA`** (`next.config.js` → `release.name`) | `SENTRY_RELEASE` é inerte; a release já vem do SHA da Vercel |
+>
+> `SENTRY_ORG` e `SENTRY_PROJECT` estão com o nome correto — nesses dois, descomentar e preencher basta.
+>
+> O `.env.example` de [`pdv-importados/`](../../pdv-importados/.env.example) **não** menciona Sentry;
+> o bloco está apenas no da raiz. Como o build da Vercel roda sobre o workspace web, é fácil procurar
+> no arquivo errado e concluir que a configuração não existe. **Conferir direto no painel da Vercel
+> antes do GO.**
 
 ### 2.7 Limiares de alerta
 
