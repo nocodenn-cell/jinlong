@@ -24,6 +24,8 @@ export type {
   CreateReceivableResult,
   LiquidateReceivableCommand,
   LiquidateReceivableResult,
+  ListLiquidacoesQuery,
+  ListLiquidacoesResult,
   ListPayablesQuery,
   ListPayablesResult,
   ListReceivablesQuery,
@@ -32,10 +34,13 @@ export type {
   PayPayableResult,
   PayablePaymentService,
   PayableReader,
+  ReceivableLiquidacaoRow,
   ReceivableLiquidationService,
   ReceivableListRow,
   ReceivableReader,
   ReceivableWriter,
+  ReverseReceivableCommand,
+  ReverseReceivableResult,
 } from './contracts'
 
 export type { ValidateFinancialResult } from './policies/validateReceivable'

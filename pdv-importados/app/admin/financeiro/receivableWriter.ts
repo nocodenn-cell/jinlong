@@ -10,6 +10,8 @@ import type {
   LiquidateReceivableResult,
   ReceivableLiquidationService,
   ReceivableWriter,
+  ReverseReceivableCommand,
+  ReverseReceivableResult,
 } from '@shared-core/src/financial'
 import {
   FINANCIAL_ERROR_CODES,
@@ -104,6 +106,42 @@ export function createReceivableLiquidationService(
         return {
           ok: false,
           error: e instanceof Error ? e.message : 'Falha na liquidação.',
+          code: FINANCIAL_ERROR_CODES.LIQUIDATE_FAILED,
+        }
+      }
+    },
+
+    async reverse(command: ReverseReceivableCommand): Promise<ReverseReceivableResult> {
+      try {
+        const { data, error } = await supabase.rpc('estornar_liquidacao_receber', {
+          p_liquidacao_id: command.liquidacaoId,
+          p_motivo: command.motivo,
+          p_idempotency_key: command.idempotencyKey,
+          p_origem: 'UI_FINANCEIRO',
+        })
+        if (error) {
+          return {
+            ok: false,
+            error: error.message,
+            code: FINANCIAL_ERROR_CODES.LIQUIDATE_FAILED,
+          }
+        }
+        const row = (Array.isArray(data) ? data[0] : data) as {
+          estorno_id?: unknown
+          idempotent_replay?: unknown
+        } | null
+        if (!row?.estorno_id) {
+          return { ok: false, error: 'Estorno não retornou identificador.', code: FINANCIAL_ERROR_CODES.LIQUIDATE_FAILED }
+        }
+        return {
+          ok: true,
+          estornoId: String(row.estorno_id),
+          idempotentReplay: row.idempotent_replay === true,
+        }
+      } catch (e) {
+        return {
+          ok: false,
+          error: e instanceof Error ? e.message : 'Falha no estorno.',
           code: FINANCIAL_ERROR_CODES.LIQUIDATE_FAILED,
         }
       }

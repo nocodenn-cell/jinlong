@@ -32,7 +32,9 @@ export default async function AdminDocumentoFiscalPage({ params }: PageProps) {
       .maybeSingle(),
     supabase
       .from('documentos_fiscais_eventos')
-      .select('id, evento_tipo, status_antes, status_depois, origem_acao, payload, created_at')
+      .select(
+        'id, evento_tipo, status_antes, status_depois, origem_acao, payload, created_at, actor_user_id, actor_role, usuarios(nome)',
+      )
       .eq('documento_id', id)
       .order('created_at', { ascending: true }),
   ])
@@ -40,15 +42,22 @@ export default async function AdminDocumentoFiscalPage({ params }: PageProps) {
   if (!docRaw) notFound()
 
   const doc: DocumentoFiscalDetalheDoc = docRaw
-  const eventos: DocumentoFiscalDetalheEvento[] = (eventosRaw ?? []).map((e) => ({
-    id: e.id,
-    evento_tipo: e.evento_tipo,
-    status_antes: e.status_antes,
-    status_depois: e.status_depois,
-    origem_acao: e.origem_acao,
-    payload: (e.payload ?? {}) as Record<string, unknown>,
-    created_at: e.created_at,
-  }))
+  const eventos: DocumentoFiscalDetalheEvento[] = (eventosRaw ?? []).map((e) => {
+    const usuario = e.usuarios as { nome?: string } | { nome?: string }[] | null
+    const actorNome = Array.isArray(usuario) ? usuario[0]?.nome : usuario?.nome
+    return {
+      id: e.id,
+      evento_tipo: e.evento_tipo,
+      status_antes: e.status_antes,
+      status_depois: e.status_depois,
+      origem_acao: e.origem_acao,
+      payload: (e.payload ?? {}) as Record<string, unknown>,
+      created_at: e.created_at,
+      actor_user_id: e.actor_user_id ?? null,
+      actor_role: e.actor_role ?? null,
+      actor_nome: actorNome ?? null,
+    }
+  })
 
   return (
     <div className="admin-v2-page">

@@ -1262,3 +1262,93 @@ As dívidas abaixo foram identificadas durante o trabalho de DB-05 mas pertencem
 | Outras telas do frontend ainda não reconciliadas com o contrato líquido do backend | Reconciliação frontend↔backend | §12.5 reconciliou especificamente `/gerente/comissoes` e `/admin/comissoes`. Nenhuma outra tela financeira (AR, AP, caixa, relatórios) foi auditada ou alterada nesta unidade. |
 
 ---
+
+## 13. Sprint Reconciliação Global Backend↔Frontend
+
+Fecha explicitamente a última linha de §12.8 (AR, AP, caixa, estoque, relatórios não auditados). Branch `claude/backend-frontend-global-reconciliation`, a partir de `origin/main` (SHA `d65aabd3673903a2fb917a78256e3a7a5b1e5e55`, confirmado idêntico ao PR #302 antes de iniciar).
+
+### 13.1 Metodologia
+
+Nove domínios auditados em paralelo (PDV/vendas, caixa, contas a pagar/receber, estoque, catálogo/preço/atacado, auditoria, sync/offline, RBAC/RLS, dashboard/relatórios) comparando o contrato SSOT do backend (migrations, RLS, RPCs) contra o consumo real do frontend. Comissões (DB-05) verificado apenas quanto a regressão, sem reauditar — nenhuma divergência.
+
+Regra seguida em toda a correção: **backend é SSOT**; nenhuma fórmula/regra é duplicada em React; nenhuma migration nova sem prova de insuficiência do contrato existente; nenhum P1 corrigido sem antes revalidar contra o SSOT atual (dois achados de P0/P1 caíram nessa revalidação — ver §13.3).
+
+### 13.2 P0 — 4 encontrados, 3 corrigidos, 1 falso positivo
+
+| # | Domínio | Achado | Veredito | Correção |
+|---|---|---|---|---|
+| 1 | Estoque | `registrarRecebimentoOC` chamava `receber_ordem_compra(uuid,jsonb)` — assinatura dropada pela migration 295. Recebimento de OC 100% quebrado (`PGRST202`). | CONFIRMADO | Restaura o fluxo de dois passos exigido: `registrar_conferencia_ordem_compra` → `receber_ordem_compra(uuid)`. |
+| 2 | Dashboard/relatórios | `/admin/dashboard`: início do período calculado com hora local do processo Node (UTC em produção), não o dia civil em `America/Sao_Paulo`. KPIs de "hoje" deslocados até 3h. | CONFIRMADO | Novo helper isolado e testado (`inicioDoDiaCivilEmUtc`/`ymdEmFuso`), só corrige o cálculo de fronteira. |
+| 3 | Dashboard/relatórios | `/gerente/relatorios/vendas` (Relatório Avançado): mesmo bug de fuso, bounds locais em vez de RPC/timezone-aware. | CONFIRMADO | Mesmo helper aplicado à query direta (`.gte`/`.lt` com bounds corretos). |
+| 4 | Catálogo/preço/atacado | Gatilho de atacado por produto supostamente nunca lido pelo motor de preço. | **FALSO POSITIVO** | Investigação encontrou que `sincronizarFaixaAtacado`→`criarFaixaAtacado` já grava a faixa em `precos_atacado` corretamente no fluxo de criação. Única lacuna real é mais estreita (edição não re-sincroniza) e vira P2 sem correção — forçar o caminho existente causaria erro de duplicata (`criarFaixaAtacado` não faz upsert). |
+
+### 13.3 P1 — 13 encontrados, 10 corrigidos, 2 já resolvidos (dead code / cobertos por outra correção), 1 falso positivo
+
+| # | Domínio | Achado | Veredito | Correção |
+|---|---|---|---|---|
+| A | PDV/vendas | BR-01 (limite de crédito): override gerencial existe no backend (`p_limite_credito_gerente_token`) mas nunca é coletado/enviado pelo caixa web. | CONFIRMADO | Fluxo reativo: captura `FINALIZAR_VENDA_CANONICA_LIMITE_CREDITO_*`, abre modal mínimo reaproveitando a validação de senha gerencial existente (mesma tabela `tokens_desconto_gerente`), reenvia com o token. |
+| B1 | Contas a receber | `registrar_liquidacao_receber` rejeita liquidação cross-loja para todos os perfis; admin listava e oferecia "Liquidar" para títulos de qualquer loja. | CONFIRMADO | Substitui o botão por aviso "Outra loja" quando `título.loja_id ≠ ator.loja_id`; listagem em si (visão macro RLS-legítima) preservada. |
+| B2 | Contas a pagar | Mesmo padrão em `registrar_pagamento_contas_pagar`/`cancelar_conta_pagar` (ambos confirmados loja-scoped por leitura direta da migration). | CONFIRMADO | Mesmo tratamento em `ContasPagarListClient`. |
+| B3 | Contas a receber | `estornar_liquidacao_receber` (Fase 1A) nunca tinha consumidor no frontend — nem ação, nem trilha visível. | CONFIRMADO | `reverse()`/`listLiquidacoes()` novos em `ReceivableLiquidationService`/`Reader`; painel de histórico + estorno em `FinanceiroReceberExtras`. |
+| B4 | Contas a receber (gerente) | Seletor de caixa ausente na liquidação do gerente (`FinanceiroGerentePageClient.tsx`). | **JÁ RESOLVIDO** | Componente é código morto (`@legacy`, "NÃO reutilizar", zero rotas apontando para ele). A superfície ativa (`/admin/financeiro`) já tem o seletor correto. |
+| C | Estoque | Kardex lia só `movimentos_estoque_log`, omitindo devoluções de cliente e estornos de cancelamento (gravados em tabelas de reposição separadas). | CONFIRMADO | Fonte trocada para a view canônica `v_kardex_unificado` (migration 291). Confirmado com dados reais em verificação visual: eventos `ENTRADA_DEVOLUCAO_CLIENTE`/`ENTRADA_CANCELAMENTO_VENDA` agora aparecem. |
+| D1 | Auditoria | `documentos_fiscais_eventos.actor_user_id`/`actor_role` gravados pelo backend mas nunca selecionados/exibidos. | CONFIRMADO | Join com `usuarios(nome)` nos dois pontos que carregam a timeline (page.tsx + action de refresh); exibe ator no evento. |
+| D2 | Auditoria | Trilha de estorno AR/AP sem UI. | **JÁ RESOLVIDO** | Mesma correção de B3 cobre a exibição (histórico mostra linhas `ESTORNO`). Estorno pontual de AP permanece P2 (não corrigido, fora do escopo P0/P1). |
+| E1 | Sync/offline | Schema do evento (`sync-outbox-event-v1.schema.json`) e validador local (`outboxEventValidate.ts`) ainda modelavam `caixa_id` como opcional/nulo, embora o RPC exija desde a migration 20260814105031. | CONFIRMADO | `caixa_id` passa a `required`/`uuid` no schema; validador local rejeita antes do envio. |
+| E2 | Sync/offline | Suspeita de baixa de estoque no Edge Function usar o payload em vez do fato persistido em retries divergentes. | **FALSO POSITIVO** | Migration `20260814090345` já garante, por construção (`RETURN` antecipado em divergência), que payload e `itens_venda` persistido são idênticos no momento da baixa. Nenhuma mudança. |
+| E3 | Sync/offline (Rust) | `RegistrarVendaInput.caixa_id: Option<String>` — Tauri aceitava e persistia venda local sem caixa. | CONFIRMADO | `validar_caixa_id_obrigatorio` rejeita na fronteira do comando, antes de qualquer escrita SQLite/enfileiramento. |
+| E4 | Sync/offline (Rust) | `reqwest::blocking::Client::new()` sem timeout em 4 pontos — rede instável trava o comando indefinidamente. | CONFIRMADO | `http_client_with_timeout()` (30s) compartilhado, substitui os 4 call sites. |
+| F | Dashboard/relatórios | `v_estoque_ledger_divergencia` (migration 291) existe mas não é consumida por nenhuma tela. | CONFIRMADO | Nova seção "Divergência de estoque" em `/admin/relatorios` (aba Estoque), mesmo padrão read-only de `Cobertura de Estoque`. Confirmado com dados reais em verificação visual. |
+
+### 13.4 Contratos reconciliados (frontend passou a consumir o que já existia — zero migrations novas)
+
+`receber_ordem_compra`/`registrar_conferencia_ordem_compra` · `relatorio_*_periodo` (via novo helper de fuso, não RPC nova) · `registrar_liquidacao_receber`/`registrar_pagamento_contas_pagar`/`cancelar_conta_pagar` (escopo de loja) · `estornar_liquidacao_receber` · `v_kardex_unificado` · `documentos_fiscais_eventos.actor_user_id/actor_role` · `sync-outbox-event-v1.schema.json` (`caixa_id` obrigatório) · `v_estoque_ledger_divergencia` · `p_limite_credito_gerente_token` (BR-01).
+
+Nenhuma função, tabela, view, trigger ou policy do backend foi criada, alterada ou removida nesta sprint.
+
+### 13.5 Verificação
+
+```
+TESTES AFETADOS:      PASS (por domínio, incremental)
+TYPECHECK:             PASS (pdv-importados, pdv-local)
+LINT:                  PASS (eslint --max-warnings 0, arquivos tocados)
+VITEST:                PASS — 181/181 arquivos, 955/955 testes (pdv-importados)
+                        PASS — 11/11 arquivos, 58/58 testes (pdv-local)
+CARGO CHECK/TEST/CLIPPY: PASS — 5/5 testes Rust, 0 warnings
+BUILD:                 PASS (next build, produção)
+CHECK:EDGE:             PASS (sync-outbox, validar-gerente, fiscal-worker — deno check)
+CHECK:TYPES-DRIFT:      PASS (6287 linhas em dia — sem migration nesta sprint)
+RLS (test:rls-scope):   PASS — 42/42 regras
+FINANCIAL GATES:        PASS — 6/6 suítes (incluindo concorrência DB-05F), reconfirmado após
+                        reset limpo — uma falha inicial (GATE19) era dado residual de sessão
+                        de teste anterior no Postgres local compartilhado, não regressão
+VERIFICAÇÃO VISUAL:     PASS — dashboard (KPIs "hoje" corretos), /admin/relatorios (divergência
+                        de estoque visível com dados reais), /admin/financeiro (AR e AP sem
+                        crash), /admin/estoque (kardex mostra devolução/cancelamento com dados
+                        reais), /caixa (renderiza; aviso de hidratação dev-only não bloqueante,
+                        do painel de debug client-only, sem relação com as correções)
+```
+
+### 13.6 Riscos residuais
+
+| Item | Nota |
+|---|---|
+| OC (item C-1) e Relatório Avançado de Vendas (item F-2) sem teste automatizado dedicado pré-existente | Validados por leitura direta do contrato SQL + typecheck + build + verificação visual; sem suíte de regressão prévia para estender. |
+| Estorno pontual de pagamento AP (`estornar_pagamento_contas_pagar`) | Classificado P2 desde a auditoria original — backend expõe, frontend não consome. Fora do escopo desta sprint (só P0/P1). |
+| Edição de produto não re-sincroniza faixa de atacado | P2, ver §13.2 item 4. Fluxo de criação (majoritário) funciona corretamente. |
+| RBAC: `pricing_config_versions_escrita`/`historico_precos_produto_leitura` sem ADMIN na policy | P2 — nenhuma tela hoje escreve/lê essas tabelas como ADMIN; drift latente, não explorável no momento. |
+
+### 13.7 Veredito
+
+```
+SPRINT BACKEND↔FRONTEND: FECHADA
+P0 ABERTOS: 0
+P1 ABERTOS: 0
+APTA PARA PR: SIM
+CADASTRO DE PRODUTO UX: NÃO INICIADO
+FASE 3A: NÃO LIBERADA
+```
+
+`FASE 3A: NÃO LIBERADA` permanece — decisão de escopo (§12.7), não afetada por este fechamento. Esta sprint fecha a última linha pendente de §12.8; os riscos residuais de §13.6 são P2, documentados, e não bloqueiam PR.
+
+---

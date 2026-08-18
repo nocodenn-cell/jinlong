@@ -38,6 +38,8 @@ type Props = {
     locale: string
   }
   clientesOpts: ClienteOpt[]
+  /** Loja do ator autenticado — `registrar_liquidacao_receber` rejeita liquidação cross-loja para todos os perfis. */
+  actorLojaId: string | null
   caixasAbertos: Array<{ id: string; loja_id: string; operador: string }>
   contasPagar: {
     idioma: Idioma
@@ -101,6 +103,7 @@ export function FinanceiroContent({
   contasLabels,
   panelLabels,
   clientesOpts,
+  actorLojaId,
   caixasAbertos,
   contasPagar,
   filterSection,
@@ -121,7 +124,12 @@ export function FinanceiroContent({
           <div className="admin-v2-grid-2">
             <SectionCard title={panelLabels.titulosEmAberto}>
               <ContasReceberTable contas={contas} labels={contasLabels} />
-              <FinanceiroReceberExtras contas={contas} clientesIniciais={clientesOpts} caixasAbertos={caixasAbertos} />
+              <FinanceiroReceberExtras
+                contas={contas}
+                clientesIniciais={clientesOpts}
+                caixasAbertos={caixasAbertos}
+                actorLojaId={actorLojaId}
+              />
             </SectionCard>
             <SectionCard title={panelLabels.filaFiscal}>
               <FiscalList fiscal={fiscal} labels={panelLabels} onSelect={setFiscalDetalheId} />
@@ -139,6 +147,7 @@ export function FinanceiroContent({
           fornecedoresOpts={contasPagar.fornecedoresOpts}
           statusInicial={contasPagar.statusInicial}
           periodoInicial={contasPagar.periodoInicial}
+          actorLojaId={actorLojaId}
         />
       ) : null}
 
