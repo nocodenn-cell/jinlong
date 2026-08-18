@@ -27,10 +27,14 @@ import { createProductUpdater } from './productUpdater'
 // era "No suitable key or wrong key type") e, pior, abriria a porta para este
 // teste — que CRIA E APAGA DADOS — falar com produção. Estas são as chaves
 // públicas e fixas do `supabase start`.
+//
+// Em CI, use as variáveis de ambiente SUPABASE_SERVICE_ROLE_KEY.
+// O valor abaixo é um placeholder para desenvolvimento local.
 const API_URL = 'http://127.0.0.1:54321'
 const CONTAINER = process.env.CONTAINER ?? 'supabase_db_fastproduct'
 const SERVICE_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU'
+  process.env.SUPABASE_SERVICE_ROLE_KEY ??
+  'MOCK_SERVICE_ROLE_KEY_DO_NOT_COMMIT'
 
 const LOJA = 'a0000001-0000-4000-8000-000000000001'
 const SUF = '__INTEG_SEM_RPC__'
