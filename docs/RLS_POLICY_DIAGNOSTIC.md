@@ -19,9 +19,41 @@ Este documento resume o estado atual de RLS no backend Supabase e os riscos iden
    - Insert autorizado quando a venda pertence ao operador ou perfil gerencial.
    - Risco: inconsistências se houver venda previamente criada por fluxo alternativo.
 
-3. **`produtos` e `categorias` com leitura global para autenticados**
+3. **`produtos` e `categorias` com leitura global para autenticados** — *confirmado por teste real em 2026-08-16, com escrita também exposta*
    - `produtos_leitura` e `categorias_leitura` usam `auth.role() = 'authenticated'`.
+   - `produtos_escrita` (cmd `ALL`) e `historico_precos_produto_leitura` verificam **apenas perfil**, sem predicado de loja.
    - Risco: em cenário multi-loja estrito, exposição de catálogo fora do escopo desejado.
+
+   **Evidência empírica** (transação revertida no projeto de produção, gerente da
+   loja Matriz contra produto da loja Filial):
+
+   | Operação | Resultado |
+   |---|---|
+   | `SELECT` produto de outra loja | **1 linha** — nome, preço e `criado_por` retornados |
+   | `SELECT` `historico_precos_produto` de outra loja | **1 linha** — preço anterior/novo e autor |
+   | `UPDATE preco_varejo` em produto de outra loja | **permitido** |
+
+   Ou seja: não é só leitura de catálogo — um perfil gerencial de uma loja pode
+   **alterar preço** de produto de outra. Hoje o impacto prático é nulo porque há
+   uma única loja em operação (todos os 11 usuários ativos nela), mas a lacuna é
+   estrutural e cresce junto com o roadmap de multi-loja.
+
+   **Mitigação parcial já aplicada (2026-08-16)**: as actions de autoria e de
+   histórico de preços (`obterAutoriaProduto`, `listarHistoricoPrecos`) passaram a
+   validar produto→loja na camada de aplicação, via
+   `lib/gerente/assertProdutoDaLojaSessao.ts` — falha fechada, mesma mensagem para
+   "não existe" e "outra loja" (sem oráculo de enumeração), ADMIN global espelhando
+   `auth_usuario_gerencial_loja`. Isso fecha as superfícies novas, **mas não
+   substitui o hardening de RLS**: quem falar direto com o PostgREST continua
+   alcançando as tabelas.
+
+   **Pendente (exige decisão de produto)**: alterar a cardinalidade das policies de
+   `produtos`/`historico_precos_produto` para escopo por loja. Está registrado como
+   backlog em `AUTHORIZATION_MATRIX.md` (linha `produtos`: "avaliar hardening
+   multi-loja futuro") e em `PLANO_EXECUTIVO_EXECUCAO_JINLONG.md` ("hardening
+   multi-loja de `produtos.SELECT` — backlog, exige decisão de produto"). Ao
+   executar, reteste PDV/caixa, catálogo, relatórios e transferências: a mudança
+   afeta todos de uma vez.
 
 4. **Views dependentes de RLS de base + `security_invoker`**
    - `v_estoque_baixo` está protegida por tabela base, mas qualquer regressão no invoker/policies vaza dados.

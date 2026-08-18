@@ -3408,16 +3408,20 @@ export type Database = {
       produtos: {
         Row: {
           ativo: boolean
+          atualizado_por: string | null
           categoria_id: string | null
           cest: string | null
           cfop_produto: string | null
           codigo_barras: string | null
+          codigo_interno: string | null
           comissao_tipo: string | null
           comissao_valor: number | null
           created_at: string
+          criado_por: string | null
           csosn: string | null
           cst_cofins: string | null
           cst_pis: string | null
+          estoque_minimo: number
           fornecedor_id: string | null
           id: string
           imagem_url: string | null
@@ -3433,7 +3437,9 @@ export type Database = {
           permitir_abaixo_custo: boolean
           preco_atacado: number | null
           preco_custo: number | null
+          preco_custo_medio: number
           preco_varejo: number
+          quantidade_gatilho_atacado: number | null
           referencia_fornecedor: string | null
           status_publicacao: string
           tags: string[]
@@ -3443,16 +3449,20 @@ export type Database = {
         }
         Insert: {
           ativo?: boolean
+          atualizado_por?: string | null
           categoria_id?: string | null
           cest?: string | null
           cfop_produto?: string | null
           codigo_barras?: string | null
+          codigo_interno?: string | null
           comissao_tipo?: string | null
           comissao_valor?: number | null
           created_at?: string
+          criado_por?: string | null
           csosn?: string | null
           cst_cofins?: string | null
           cst_pis?: string | null
+          estoque_minimo?: number
           fornecedor_id?: string | null
           id?: string
           imagem_url?: string | null
@@ -3468,7 +3478,9 @@ export type Database = {
           permitir_abaixo_custo?: boolean
           preco_atacado?: number | null
           preco_custo?: number | null
+          preco_custo_medio?: number
           preco_varejo: number
+          quantidade_gatilho_atacado?: number | null
           referencia_fornecedor?: string | null
           status_publicacao?: string
           tags?: string[]
@@ -3478,16 +3490,20 @@ export type Database = {
         }
         Update: {
           ativo?: boolean
+          atualizado_por?: string | null
           categoria_id?: string | null
           cest?: string | null
           cfop_produto?: string | null
           codigo_barras?: string | null
+          codigo_interno?: string | null
           comissao_tipo?: string | null
           comissao_valor?: number | null
           created_at?: string
+          criado_por?: string | null
           csosn?: string | null
           cst_cofins?: string | null
           cst_pis?: string | null
+          estoque_minimo?: number
           fornecedor_id?: string | null
           id?: string
           imagem_url?: string | null
@@ -3503,7 +3519,9 @@ export type Database = {
           permitir_abaixo_custo?: boolean
           preco_atacado?: number | null
           preco_custo?: number | null
+          preco_custo_medio?: number
           preco_varejo?: number
+          quantidade_gatilho_atacado?: number | null
           referencia_fornecedor?: string | null
           status_publicacao?: string
           tags?: string[]
@@ -5075,11 +5093,26 @@ export type Database = {
           status_movimentacao: string
         }[]
       }
+      atualizar_produto_com_faixa_atacado: {
+        Args: {
+          p_ator_id?: string
+          p_faixa?: Json
+          p_payload: Json
+          p_produto_id: string
+        }
+        Returns: Json
+      }
+      auth_pode_ver_produto_gerencial: {
+        Args: { p_produto_id: string }
+        Returns: boolean
+      }
+      auth_usuario_eh_admin: { Args: never; Returns: boolean }
       auth_usuario_eh_dono: { Args: never; Returns: boolean }
       auth_usuario_gerencial_loja: {
         Args: { p_loja_id: string }
         Returns: boolean
       }
+      auth_usuario_loja_id: { Args: never; Returns: string }
       calcular_preco_produto: {
         Args: { p_loja_id?: string; p_produto_id: string; p_quantidade: number }
         Returns: Json
@@ -5706,11 +5739,15 @@ export type Database = {
           imagem_url: string
           marca_id: string
           nome: string
+          observacao: string
           origem: string
+          preco_atacado: number
           preco_varejo: number
+          quantidade_gatilho_atacado: number
           tags: string[]
           tem_nf: boolean
           total_count: number
+          unidade_medida: string
         }[]
       }
       listar_venda_eventos_gerente: {

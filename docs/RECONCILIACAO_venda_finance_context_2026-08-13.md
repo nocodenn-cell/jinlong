@@ -1,8 +1,28 @@
 # Reconciliação — `venda_finance_context`: MANTER vs RETIRAR
 
-**Data:** 2026-08-13 · **Classificação:** 🟢 **NO PROD ACTION REQUIRED** *(atualizada — ver §6)*
+**Data da decisão:** 2026-08-13 · **Última revisão:** 2026-08-17 (pós-merge PR #305)
+**Classificação:** 🟢 **NO PROD ACTION REQUIRED** *(consolidada — ver §6)*
 **Fonte única de verdade** para este item. Supersede a seção de status de
-`READY_FOR_HUMAN_APPLY_venda_finance_context.md`, que está **rebaixado a NÃO EXECUTAR**.
+[`READY_FOR_HUMAN_APPLY_venda_finance_context.md`](./READY_FOR_HUMAN_APPLY_venda_finance_context.md),
+que está **rebaixado a NÃO EXECUTAR**.
+
+> ## ⛔ NÃO REAPLICAR MANUALMENTE
+>
+> | Item | Estado vigente |
+> |---|---|
+> | `20260808130200_24704_reapply_venda_finance_context_idempotent.sql` | **APOSENTADA** — removida do repositório |
+> | `20260810222702_retire_obsolete_venda_finance_context.sql` | **TOMBSTONE OFICIAL** — única convergência válida |
+> | Ação em produção | **NENHUMA** — os objetos já não existem no catálogo |
+> | Ledger `252` | **NÃO REPARAR** (`FASE_3_1` §4.1) |
+> | Autorização formal | [ADR-012](./adr/ADR-012-aposentadoria-venda-finance-context.md) |
+>
+> Qualquer instrução de reaplicação humana encontrada em documento anterior está **superseded desde
+> 2026-08-13**. Não executar.
+
+> **Nota de leitura (2026-08-17).** As §§1–5 preservam a investigação **como estava em 2026-08-13**,
+> incluindo o que era indeterminável naquele momento — é registro forense e não deve ser reescrito.
+> O estado vigente está em **§6** (classificação) e **§7** (convergência pós-merge). Onde uma
+> afirmação das §§1–5 foi superada por fato posterior, há marcação explícita no local.
 
 ---
 
@@ -26,6 +46,9 @@ Isso inverte a decisão sobre a qual o pacote de apply foi construído.
 git cat-file -e HEAD:backend/.../20260808130200_...sql                 → PRESENTE
 git cat-file -e origin/main:backend/.../20260808130200_...sql          → PRESENTE
 ```
+
+> ⚠️ **Superado em 2026-08-17.** A convergência das branches removeu a migration de ambas as refs.
+> Estado atual verificado: **AUSENTE em `HEAD` e em `origin/main`**. Ver [§7](#7-convergência-pós-merge--2026-08-17).
 
 Última migration de `origin/main`: `20260809120837_finalize_v4_scope_guard_22args.sql`.
 
@@ -84,7 +107,7 @@ condição da FASE_3_1 não foi cumprida.
 | `FASE_3_RECONCILIACAO_SUPABASE_PLANO.md` | 3.1/3.2 concluídas; 3.3 (descarte) condicionado a 3.1 | ⚠️ Idem |
 | `GO_LIVE_CERTIFICATION_REPORT.md` §5 | "Fase 3.2 `20260808130200` (git-only) — P2 — HUMAN GATE" | ⚠️ Idem |
 | `READY_FOR_HUMAN_APPLY_venda_finance_context.md` | Pacote de apply | 🔴 **Rebaixado a NÃO EXECUTAR** |
-| `migration-human-gates.json` | — | ❌ **Nunca existiu neste repo** (`git log --all --diff-filter=A` → vazio) |
+| `migration-human-gates.json` | — | ❌ **Não existia em 2026-08-13** (`git log --all --diff-filter=A` → vazio) — ⚠️ passou a existir no merge de 2026-08-17 como `{"gates": []}` (lista vazia: nenhum gate pendente). Ver [§7](#7-convergência-pós-merge--2026-08-17) |
 
 ### 2.5 Estado atual: produção × repo × catálogo
 
@@ -226,13 +249,49 @@ A decisão é do dono e é **autoritativa** — o que faltava era o registro exi
 
 **Item encerrado.** Classificação final inalterada: **`NO PROD ACTION REQUIRED`**.
 
-### Único resíduo — a resolver no merge, não avulso
+### ~~Único resíduo — a resolver no merge, não avulso~~ → ✅ **RESOLVIDO em 2026-08-17**
 
-`20260808130200` foi removida em `codex/reconcile-db-final` mas **ainda existe em `origin/main`**.
-Enquanto as branches não convergirem, `main` carrega uma migration que o ADR-012 declara obsoleta.
-Não removê-la isoladamente: isso é trabalho de merge entre as duas branches.
+`20260808130200` foi removida em `codex/reconcile-db-final` mas **ainda existia em `origin/main`**
+quando esta seção foi escrita. A convergência prevista aconteceu no merge de 2026-08-17 — pela via
+correta (merge entre branches), não por remoção avulsa. Ver [§7](#7-convergência-pós-merge--2026-08-17).
 
-## 5. Lição estrutural
+---
+
+## 7. Convergência pós-merge — 2026-08-17
+
+O merge de resolução de conflitos da **PR #305** (`fix(observability): redact sensitive Sentry
+payloads`) fechou o resíduo que esta reconciliação havia deixado em aberto.
+
+| Verificação | Comando | Resultado (2026-08-17) |
+|---|---|---|
+| Reapply presente em `HEAD`? | `git ls-files backend/supabase/migrations/*20260808130200*` | **vazio — ausente** |
+| Reapply presente em `origin/main`? | `git cat-file -e origin/main:…20260808130200…` | **ausente** |
+| Tombstone presente em `HEAD`? | `git ls-files backend/supabase/migrations/*20260810222702*` | **presente** |
+
+As duas branches convergiram: a **tombstone `20260810222702_retire_obsolete_venda_finance_context.sql`
+é a única representação do item no repositório**, exatamente como o [ADR-012](./adr/ADR-012-aposentadoria-venda-finance-context.md)
+determinou. A dívida registrada no ADR-012 §Consequências ("Dívida remanescente") está quitada.
+
+### 7.1 Efeitos colaterais documentais do merge
+
+O merge reintroduziu dois artefatos que esta reconciliação havia registrado como ausentes. Nenhum
+altera a classificação, mas ambos mudam o que é verdade no repositório:
+
+| Artefato | Estado em 2026-08-13 | Estado em 2026-08-17 | Leitura |
+|---|---|---|---|
+| [`docs/READY_FOR_HUMAN_APPLY_venda_finance_context.md`](./READY_FOR_HUMAN_APPLY_venda_finance_context.md) | ausente nesta branch | **presente**, já com cabeçalho `⛔ NÃO APLICAR` | Chegou arquivado, apontando para este documento como fonte única. Não reabre a decisão. |
+| `backend/supabase/migration-human-gates.json` | nunca existiu | **presente**, conteúdo `{"gates": []}` | Lista vazia — **nenhum gate humano pendente**. Não é gate do `venda_finance_context`. |
+
+### 7.2 O que continua valendo sem alteração
+
+- **Produção não foi tocada** em nenhum momento desta cadeia — nem em 08-13, nem no merge de 08-17.
+- A classificação segue **`NO PROD ACTION REQUIRED`**.
+- A linha `252` do ledger **continua proibida de reparo** (`FASE_3_1` §4.1).
+- **Nenhuma reaplicação manual deve ser executada**, por nenhum operador, em nenhum ambiente.
+
+---
+
+## 8. Lição estrutural
 
 Este episódio é a mesma classe de falha que o ADR-011 fechou: **duas fontes de verdade para
 schema**. Lá eram dois diretórios de migrations no mesmo repo; aqui são dois repositórios — o

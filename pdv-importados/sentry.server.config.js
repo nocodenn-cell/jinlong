@@ -1,5 +1,6 @@
 import * as Sentry from '@sentry/nextjs'
 import { resolveSentryEnvironment, resolveSentryRelease } from './lib/observability/sentryEnvironment'
+import { redigir } from './lib/observability/redact'
 
 // environment vinha de NODE_ENV, que na Vercel vale 'production' também em
 // Preview — Preview e Production ficavam indistinguíveis no Sentry (P1-5).
@@ -26,6 +27,7 @@ Sentry.init({
         }
       }
     }
-    return event
+    // Redação por último: o filtro acima precisa ler `ex.value` ainda íntegro.
+    return redigir(event)
   },
 })
