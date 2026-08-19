@@ -4,7 +4,8 @@
 **Branch:** `claude/fase-6-validacao-fechamento-6e9af7`
 **PR:** [#307](https://github.com/nocodenn-cell/fastproduct/pull/307)
 **Commits:** `ef79bd33` (merge de `main`) · `ee36bfd4` (correções)
-**Estado:** 🟢 **Lacunas (a) e (b) fechadas.** ⚠️ **Janela crítica NÃO recomendada** — ver §7.
+**Estado:** 🟢 **Lacunas (a) e (b) fechadas.** ⚠️ **Janela crítica NÃO recomendada** — ver §9.
+**Revisado em 2026-08-19 (pós PR [#309](https://github.com/nocodenn-cell/fastproduct/pull/309)):** §4 continha uma **premissa falsa**, corrigida no local; §5 ganhou o estado real de produção (§5.1); §8.3 foi **encerrada** pela auditoria de catálogo; §9 ganhou a atualização §9.1.
 
 > **Nota de nomenclatura.** Este documento trata da *Fase 6 do bloco financeiro / go-live*.
 > Não confundir com `FASE_6_DESIGN_SYSTEM_AUDIT.md`, `FASE_6_1_EXECUTION_PLAN.md` e
@@ -159,8 +160,34 @@ caminho determinístico.
 
 ## 4. Migration `20260814015032` reabilitada
 
+> ## ⛔ Correção — 2026-08-19 (pós PR [#309](https://github.com/nocodenn-cell/fastproduct/pull/309))
+>
+> **A premissa desta seção era FALSA.** A migration `20260814015032` **nunca esteve no ledger
+> de produção.** Não foi "aplicada manualmente": não foi aplicada de forma alguma.
+>
+> A prova é o diff de catálogo da Fase 0
+> ([`AUDITORIA_CATALOGO_PROD_VS_REPO_2026-08.md`](./AUDITORIA_CATALOGO_PROD_VS_REPO_2026-08.md) §3.1):
+> produção tinha **305** entradas em `supabase_migrations.schema_migrations` contra **307**
+> arquivos no repositório, e as duas ausentes eram exatamente `20260814015032` e
+> `20260819000000`. Se tivesse sido aplicada à mão pelo caminho normal, estaria registrada.
+>
+> **O que isso muda.** O diagnóstico de "aplicação manual em produção" — repetido no adendo de
+> [`AUDITORIA_DRIFT_PRODUCAO_REPOSITORIO.md`](../AUDITORIA_DRIFT_PRODUCAO_REPOSITORIO.md), no
+> item 7 do backlog e em §8.3 abaixo — descrevia um mecanismo que não ocorreu. A justificativa
+> registrada nos commits `c3f58df3` e `35eb7e8d` era **incorreta na origem**: alguém desabilitou
+> uma migration por acreditar que já estava aplicada, sem verificar o ledger.
+>
+> **O que NÃO muda.** A consequência estrutural continua exatamente a mesma, e por um caminho
+> pior: com a migration desabilitada, o fix P1-3 de AP **não existia em lugar nenhum** — nem no
+> banco local reconstruído, nem em produção. A conclusão de que produção não era reproduzível a
+> partir do repositório permanece válida; só a direção do erro estava trocada.
+>
+> **Estado atual:** aplicada em produção pela PR #309. Ledger em **307**, paridade de chaves com
+> o repositório. Ver [`GO_LIVE_CERTIFICATION_REPORT.md`](../GO_LIVE_CERTIFICATION_REPORT.md) §14.1.
+
 Estava versionada como `_disabled_20260814015032_harden_diagnostics_and_ap_idempotency.sql`.
-Motivo registrado nos commits `c3f58df3` e `35eb7e8d`: *"já aplicada manualmente em produção"*.
+Motivo registrado nos commits `c3f58df3` e `35eb7e8d`: *"já aplicada manualmente em produção"* —
+**premissa refutada, ver o bloco acima**.
 
 **Efeito colateral não previsto na época:** o banco local reconstruído do zero ficava com a
 versão **pré-fix** de `registrar_pagamento_contas_pagar`, sem o P1-3 (chave física da
@@ -170,9 +197,9 @@ sangria de AP carregando o escopo da conta). Origem real dos erros:
 - `PAGAMENTO_SANGRIA_CORRELACAO_EXISTENTE`
 - e do `GATE10_COLISAO_DE_CHAVE`, que existe exatamente para provar esse fix.
 
-**Consequência estrutural:** enquanto a migration esteve desabilitada, **produção não era
-reproduzível a partir do repositório**. Qualquer disaster-recovery a partir do Git
-reconstruiria um banco diferente do real. Ver §8.
+**Consequência estrutural:** enquanto a migration esteve desabilitada, o fix P1-3 **não existia
+em lugar nenhum** — nem no banco local reconstruído, nem em produção, que nunca a recebeu.
+Produção e repositório divergiam nos dois sentidos. Ver §8.
 
 Reabilitada sob o nome original. É segura de reaplicar em produção: só faz
 `CREATE OR REPLACE FUNCTION` + `REVOKE`/`GRANT`, todos idempotentes.
@@ -218,6 +245,46 @@ privilégio ausente é no-op). O mesmo defeito foi corrigido no bloco de limpeza
 para que ela se baste no CI mesmo sem a migration.
 
 **Detectado pelo GATE 9**, que só voltou a rodar depois da restauração descrita em §2.
+
+### 5.1 Estado real de produção — medido pós PR #309
+
+O texto acima descreve o **banco local reconstruído do repositório**, que tem as duas
+sobrecargas. Produção nunca teve esse formato. Medição somente-leitura em produção,
+após a aplicação de #309:
+
+| Objeto | Produção | `proacl` | Estado |
+|---|---|---|---|
+| `relatorio_consistencia_vendas(p_caixa_id, p_loja_id, p_from, p_to)` — **4 args** | ✅ existe | `postgres=X/postgres`, `service_role=X/postgres` | 🟢 **fechado** |
+| `relatorio_consistencia_vendas(p_caixa_id, p_from, p_to)` — **3 args** | ❌ **ausente** | — | 🟡 drift — ver abaixo |
+| `verificar_consistencia_venda(p_venda_id)` | ✅ existe | `postgres=X/postgres`, `service_role=X/postgres` | 🟢 **fechado** |
+
+Três consequências, todas relevantes:
+
+1. **O vazamento está fechado em produção.** Nem `authenticated`, nem `anon`, nem `PUBLIC`
+   constam da ACL das duas funções. O GERENTE da loja B não alcança mais os agregados da loja A.
+
+2. **A sobrecarga de 3 args foi removida à mão.** Ela é criada por `20260621004000` e
+   `20260707020000`, **ambas no ledger de produção**, e **nenhuma migration do repositório a
+   remove**. Produção executou aquelas versões e mesmo assim não tem o objeto. É drift manual
+   real, catalogado em
+   [`AUDITORIA_CATALOGO_PROD_VS_REPO_2026-08.md`](./AUDITORIA_CATALOGO_PROD_VS_REPO_2026-08.md) §3.3,
+   e endereçado como item **1B-4** da Fase 1B.
+
+3. **Essa ausência quase custou o fix de AP.** `REVOKE EXECUTE ON FUNCTION` não aceita
+   `IF EXISTS`. Tanto a `20260819000000` quanto a `20260814015032` faziam `REVOKE` sobre a
+   sobrecarga de 3 args: as duas **abortariam inteiras** em produção, e o bloco P1-3 da segunda
+   — o fix da chave de idempotência de AP — **nunca teria rodado**. A PR #309 passou a guardar
+   cada alvo com `to_regprocedure`, e testou nos dois cenários: banco completo (3 alvos) e
+   banco em formato de produção (2 alvos, 1 ignorado com `NOTICE`).
+
+> **Correção ao registro desta fase.** §5 afirma que o achado foi *"detectado pelo GATE 9"*.
+> O GATE 9, como estava escrito, **não era capaz de detectá-lo**: a suíte executava um `REVOKE`
+> das funções de diagnóstico imediatamente antes de o gate asseverar que estavam revogadas —
+> consertava o que ia testar. Conceder `EXECUTE` a `PUBLIC` e rodar a suíte **não** produzia
+> falha. O gate não estava falsificado; estava **vazio**. Corrigido na PR #309: o bloco de
+> limpeza foi removido, o gate passou a cobrir `anon` e a inspecionar a ACL para pegar a
+> concessão a `PUBLIC`, e a falsificação foi verificada — `GRANT ... TO PUBLIC` agora produz
+> `GATE9_DIAGNOSTICO_EXPOSTO`.
 
 ---
 
@@ -343,24 +410,66 @@ as mudanças foram em `backend/` e `lib/`).
 v8. Enquanto não for feito, o guard de UI legada **não está protegendo nada** — falha
 sempre, então ninguém lê o resultado.
 
-### 8.3 🔴 Auditoria do ledger de produção contra `schema_migrations`
+### 8.3 ✅ Auditoria do ledger de produção — EXECUTADA (veredito: sistêmico)
 
-A `20260814015032` (§4) prova que **migrations já foram aplicadas à mão em produção**. Não
-há garantia de que seja a única.
+> **Status: encerrada em 2026-08-19.** Executada como Fase 0 do plano de fechamento. Resultado
+> integral em
+> [`AUDITORIA_CATALOGO_PROD_VS_REPO_2026-08.md`](./AUDITORIA_CATALOGO_PROD_VS_REPO_2026-08.md).
+>
+> **O veredito é 🔴 SISTÊMICO** — e é pior do que esta seção previa.
 
-**Antes de qualquer janela crítica**, auditar:
+**A premissa desta seção estava errada.** A `20260814015032` não prova que migrations foram
+aplicadas à mão: ela **nunca foi aplicada** (§4). O que a auditoria encontrou foi drift de
+natureza diferente e maior alcance.
 
-```sql
--- em produção, somente leitura
-SELECT count(*) FROM supabase_migrations.schema_migrations;
-```
+#### Resultado — paridade de chaves, divergência de objetos
 
-...e comparar com `ls backend/supabase/migrations/*.sql | wc -l`, além de conferir a lista
-versão a versão. A asserção `ledger: total = 307` de `verificacao-pos-apply.sql` existe
-exatamente para isso, e agora está correta e documentada.
+O ledger foi comparado versão a versão, e depois o **catálogo inteiro** dos dois lados
+(`backend/scripts/catalog-snapshot.sql`, o mesmo SQL byte a byte contra um `db reset` local e
+contra produção):
 
-Procurar também por outros arquivos `_disabled_*` em `backend/supabase/migrations/` — cada
-um é potencialmente um objeto que existe em produção e não no repositório.
+| Seção | Repositório | Produção | Δ |
+|---|---:|---:|---:|
+| policies | 129 | 144 | **+15** |
+| indexes | 269 | 279 | **+10** |
+| columns | 851 | 866 | **+15** |
+| functions | 140 | 144 | **+4** |
+| tables | 84 | 87 | **+3** |
+| constraints | 401 | 403 | **+2** |
+| enums / triggers / views | — | — | ✅ **idênticos** |
+
+**8 das 11 seções divergem**, e a direção é consistente: **produção tem objetos que o
+repositório não cria.** O ledger, hoje, bate em **307/307** — e os objetos não. É a lição
+central da auditoria: *paridade de chaves não implica paridade de catálogo.* A verificação que
+esta seção propunha — `count(*)` do ledger contra `ls | wc -l` — teria dado **verde** sobre um
+banco divergente em 10 funções, 3 tabelas e 15 políticas RLS.
+
+#### Os dois achados que mudam a postura
+
+- **🔴 15 políticas RLS a mais em produção.** Um `db reset` a partir do Git entrega
+  `tokens_desconto_gerente`, `pdv_config` e `perfis` **sem nenhuma política RLS** — inclusive a
+  tabela dos tokens de autorização gerencial. Duas consequências independentes: recuperação de
+  desastre produz um banco **menos protegido**, e as 42 regras verdes de `npm run test:rls-scope`
+  descrevem um sistema de autorização **que não é o de produção**.
+
+- **🟠 `fiscal_enfileirar_documento_venda` com assinatura divergente.** A Edge `sync-outbox`
+  chama a RPC com 4 argumentos (`p_loja_id`); produção só tem a sobrecarga de 3. O PostgREST
+  devolve `PGRST202` — e **o erro não falha o batch** (*"erro só em log"*, cabeçalho do
+  `index.ts`). Toda venda sincronizada do `pdv-local` deixaria de enfileirar seu documento
+  fiscal, **em silêncio**. Confirmado ainda aberto em produção após #309.
+  **Dano até hoje: zero** — `venda_eventos` mostra 25 vendas `backfill` e 29 `web_caixa`,
+  nenhuma do sync offline. O caminho quebrado nunca executou com venda real; ele arma no dia em
+  que o `pdv-local` entrar. O caminho web chama com 3 argumentos e funciona.
+
+#### O que fica no lugar desta seção
+
+A verificação de ledger (`count(*)` + versão a versão) **continua valendo como higiene** e está
+automatizada em `backend/scripts/p0-migration-status.mjs`, com registro de exceções via
+`HUMAN_GATE`. Mas ela **não é mais o gate**. O gate passa a ser o diff de catálogo, e a
+pendência que o sucede é a **Fase 1B — reconciliação de catálogo** (§9 e item 7 do backlog).
+
+Procurar por arquivos `_disabled_*` em `backend/supabase/migrations/` continua sendo prática
+recomendada — nenhum restante foi encontrado nesta rodada.
 
 ---
 
@@ -387,6 +496,39 @@ ambiente de ensaio com o schema de produção. Enquanto o item 2 persistir, qual
 crítica é executada sem rede de segurança — o rollback documentado em
 [`ROLLBACK_HOTLINE_PLAYBOOK.md`](../ROLLBACK_HOTLINE_PLAYBOOK.md) seria testado pela
 primeira vez em produção.
+
+### 9.1 Atualização — 2026-08-19, pós auditoria de catálogo e PR #309
+
+> ⚠️ **A recomendação se mantém: não agendar a janela crítica.** O que mudou foi o *motivo*.
+
+| Condição de §9 | Estado |
+|---|---|
+| 1. Auditoria do ledger (§8.3) | ✅ **executada** — ledger em paridade 307/307; veredito do catálogo **🔴 sistêmico** |
+| 2. Ambiente de ensaio | ❌ **continua ausente** — `create_branch` recusado (branching exige plano Pro; organização no Free) |
+| 3. Ensaio local ≠ réplica de produção | ❌ inalterado, e agora **quantificado**: 10 funções, 3 tabelas e 15 políticas RLS de diferença |
+
+**O item 1 fechou e piorou o quadro.** A auditoria não confirmou "produção equivale ao
+repositório"; provou o contrário, com número. A propriedade que §8.3 punha como condição mínima
+para a janela — *produção é reproduzível a partir do repositório* — **é falsa por margem larga**.
+
+**Nova condição mínima para agendar a janela crítica:**
+
+1. **Fase 1B — reconciliação de catálogo** concluída. O caminho é o que a auditoria de junho já
+   havia proposto e nunca foi executado: `supabase db pull` para baseline a partir do estado real
+   de produção, baseline adotada como ponto zero (com os `.sql` antigos preservados), deltas
+   legítimos reautorados sobre ela.
+2. **Ambiente de ensaio** onde essa baseline possa ser testada. A Fase 5 (staging) **deixa de ser
+   opcional**: uma reconciliação de baseline sem ambiente de ensaio não tem onde ser validada.
+
+**O que foi liberado por #309 — e o que não foi.** O gate financeiro é 6/6 reproduzível, o
+vazamento entre lojas está fechado, o fix de AP está no ar e o E2E saiu de produção. Isso é
+suficiente para o **treinamento e o piloto de loja única** — decisão do dono, 2026-08-19 —
+porque nenhuma pendência restante é alcançável pelo operador nesse cenário. **Não** é suficiente
+para a janela crítica nem para a segunda loja, que dependem da Fase 1B.
+
+**Correção de nomenclatura.** A *Fase 1B* aqui é a **reconciliação de catálogo**. Não confundir
+com a *Fase 1B — invariantes de totais e centavos* do bloco financeiro
+([`GO_LIVE_CERTIFICATION_REPORT.md`](../GO_LIVE_CERTIFICATION_REPORT.md) §10.4), já concluída.
 
 ---
 
