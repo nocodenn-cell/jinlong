@@ -24,7 +24,10 @@ import { fileURLToPath } from 'node:url'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 
-const NODE_SUITES = ['financial-idempotency-correlation-contract.test.mjs']
+const NODE_SUITES = [
+  'financial-idempotency-correlation-contract.test.mjs',
+  'assert-consistencia-vendas-lockdown.test.mjs',
+]
 
 const SCRIPT_SUITES = ['test-commission-concurrency.mjs']
 

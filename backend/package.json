@@ -15,6 +15,7 @@
     "check:venda-finance-context-retirement": "node supabase/scripts/validate-venda-finance-context-retirement.mjs",
     "check:types-drift": "node scripts/check-types-drift.mjs",
     "test:financial": "node scripts/run-financial-tests.mjs",
+    "test:consistencia-lockdown": "node --test scripts/assert-consistencia-vendas-lockdown.test.mjs",
     "test:financial-concurrency": "node scripts/test-commission-concurrency.mjs",
     "test:migration-status": "node --test scripts/p0-migration-status.test.mjs",
     "test:venda-finance-context-retirement": "node --test supabase/scripts/verify-venda-finance-context-catalog.test.mjs"

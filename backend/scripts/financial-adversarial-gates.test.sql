@@ -73,26 +73,6 @@ SELECT set_config('t.caixa', :'caixa', true),
        set_config('t.preco', :'preco_tabela', true);
 
 -- ═══════════════════════════════════════════════════════════════════════════
--- GARANTIR AMBIENTE LIMPO PARA O GATE9
--- ═══════════════════════════════════════════════════════════════════════════
--- O CI pode não ter aplicado a migration 20260818000001. Este bloco garante
--- que as funções de consistência NÃO estejam executáveis por authenticated
--- antes do GATE9 ser executado.
--- ═══════════════════════════════════════════════════════════════════════════
-
-DO $cleanup$
-BEGIN
-  -- Revoga relatorio_consistencia_vendas
-  REVOKE EXECUTE ON FUNCTION public.relatorio_consistencia_vendas(uuid, uuid, timestamptz, timestamptz) FROM authenticated;
-  -- Revoga verificar_consistencia_venda
-  REVOKE EXECUTE ON FUNCTION public.verificar_consistencia_venda(uuid) FROM authenticated;
-EXCEPTION
-  WHEN undefined_function THEN
-    -- Funções não existem? Ignora.
-    NULL;
-END $cleanup$;
-
--- ═══════════════════════════════════════════════════════════════════════════
 -- GATE 1 — `caixas.saldo_atual` não é gravável por clientes autenticados
 -- Regressão: OPERADOR gravou 999999.00 e GERENTE gravou 0.00 via PostgREST.
 -- ═══════════════════════════════════════════════════════════════════════════
@@ -381,15 +361,25 @@ DROP TRIGGER gate7_fail_ar ON public.liquidacoes_receber;
 -- contagem agregada de todas as vendas alheias.
 -- ═══════════════════════════════════════════════════════════════════════════
 DO $g$
-DECLARE v_fn text; v_ok boolean;
+DECLARE r record;
 BEGIN
-  FOREACH v_fn IN ARRAY ARRAY['verificar_consistencia_venda', 'relatorio_consistencia_vendas'] LOOP
-    IF EXISTS (
-      SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-      WHERE n.nspname = 'public' AND p.proname = v_fn
-        AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
-    ) THEN
-      RAISE EXCEPTION 'GATE9_DIAGNOSTICO_EXPOSTO: % executavel por authenticated', v_fn;
+  -- Overload de 3 args: o furo comprovado (sem p_loja_id, GRANT authenticated).
+  IF to_regprocedure('public.relatorio_consistencia_vendas(uuid, timestamptz, timestamptz)') IS NOT NULL THEN
+    RAISE EXCEPTION 'GATE9_OVERLOAD_3ARGS_AINDA_EXISTE';
+  END IF;
+
+  FOR r IN
+    SELECT p.oid, p.proname, pg_get_function_identity_arguments(p.oid) AS args
+    FROM pg_proc p
+    JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public'
+      AND p.proname IN ('verificar_consistencia_venda', 'relatorio_consistencia_vendas')
+  LOOP
+    IF has_function_privilege('authenticated', r.oid, 'EXECUTE') THEN
+      RAISE EXCEPTION 'GATE9_DIAGNOSTICO_EXPOSTO: %(%) executavel por authenticated', r.proname, r.args;
+    END IF;
+    IF has_function_privilege('anon', r.oid, 'EXECUTE') THEN
+      RAISE EXCEPTION 'GATE9_DIAGNOSTICO_EXPOSTO: %(%) executavel por anon', r.proname, r.args;
     END IF;
   END LOOP;
 END $g$;
