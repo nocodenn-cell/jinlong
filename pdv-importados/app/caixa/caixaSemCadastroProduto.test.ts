@@ -47,7 +47,9 @@ describe('PDV não cadastra produto', () => {
     // Varre os arquivos do caixa que poderiam reintroduzir a superfície.
     for (const arquivo of [
       'app/caixa/CaixaPageClient.tsx',
-      'app/caixa/CaixaFooter.tsx',
+      // 'app/caixa/CaixaFooter.tsx' saiu da lista: o arquivo foi removido em
+      // 2026-08-19 (órfão, nenhuma rota o importava). Arquivo inexistente não
+      // pode reintroduzir a superfície, então o guard segue íntegro sem ele.
       'app/caixa/scan-pipeline/webCaixaScanProcess.ts',
     ]) {
       expect(ler(arquivo), arquivo).not.toContain('CadastroProdutoRelampagoModal')

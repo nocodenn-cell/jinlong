@@ -5195,10 +5195,6 @@ export type Database = {
         Args: { p_loja_id: string; p_tz?: string }
         Returns: Json
       }
-      decrementar_estoque_idempotente: {
-        Args: { p_produto_id: string; p_quantidade: number; p_venda_id: string }
-        Returns: undefined
-      }
       decrementar_estoque_seguro: {
         Args: { p_produto_id: string; p_quantidade: number; p_venda_id: string }
         Returns: {
@@ -5595,61 +5591,6 @@ export type Database = {
         Args: { p_documento_id: string }
         Returns: undefined
       }
-      fn_atualizar_funcionario: {
-        Args: {
-          p_cargo?: string
-          p_comissao_percentual?: number
-          p_comissao_tipo?: string
-          p_comissao_valor?: number
-          p_funcionario_id: string
-          p_nome_exibicao?: string
-        }
-        Returns: {
-          message: string
-          ok: boolean
-        }[]
-      }
-      fn_criar_funcionario: {
-        Args: {
-          p_cargo: string
-          p_comissao_percentual?: number
-          p_comissao_tipo?: string
-          p_comissao_valor?: number
-          p_email: string
-          p_loja_id: string
-          p_nome_exibicao: string
-          p_usuario_id: string
-        }
-        Returns: {
-          funcionario_id: string
-          message: string
-          ok: boolean
-        }[]
-      }
-      fn_desativar_funcionario: {
-        Args: { p_funcionario_id: string }
-        Returns: {
-          message: string
-          ok: boolean
-        }[]
-      }
-      fn_listar_funcionarios_gerente: {
-        Args: { p_loja_id: string; p_status?: string; p_termo?: string }
-        Returns: {
-          ativo: boolean
-          cargo: string
-          comissao_percentual: number
-          comissao_tipo: string
-          comissao_valor: number
-          criado_em: string
-          criado_por_nome: string
-          data_admissao: string
-          email: string
-          id: string
-          nome_exibicao: string
-          usuario_id: string
-        }[]
-      }
       gerente_estoque_list_page: {
         Args: {
           p_busca?: string
@@ -5836,25 +5777,9 @@ export type Database = {
         Returns: number
       }
       receber_ordem_compra: { Args: { p_oc_id: string }; Returns: undefined }
-      registrar_conferencia_nfe: {
-        Args: { p_importacao_id: string; p_itens: Json }
-        Returns: Json
-      }
       registrar_conferencia_ordem_compra: {
         Args: { p_itens: Json; p_oc_id: string }
         Returns: Json
-      }
-      registrar_conferencia_remessa: {
-        Args: {
-          p_divergencia_motivo?: string
-          p_itens: Json
-          p_remessa_id: string
-        }
-        Returns: {
-          o_itens_conferidos: number
-          o_itens_divergentes: number
-          o_status: string
-        }[]
       }
       registrar_liquidacao_receber: {
         Args: {
@@ -6075,19 +6000,6 @@ export type Database = {
           total_liquido: number
         }[]
       }
-      resumo_comissoes_por_funcionario: {
-        Args: { p_ate?: string; p_de?: string; p_loja_id: string }
-        Returns: {
-          cargo: string
-          data_admissao: string
-          funcionario_id: string
-          nome: string
-          total_comissao: number
-          total_pago: number
-          total_pendente: number
-          total_vendas: number
-        }[]
-      }
       resumo_comissoes_por_operador: {
         Args: {
           p_ate?: string
@@ -6109,16 +6021,6 @@ export type Database = {
       round_abnt: {
         Args: { p_scale?: number; p_value: number }
         Returns: number
-      }
-      total_vendas_por_funcionario: {
-        Args: { p_ate?: string; p_de?: string; p_loja_id: string }
-        Returns: {
-          funcionario_id: string
-          nome: string
-          total_vendas: number
-          valor_medio: number
-          valor_total: number
-        }[]
       }
       transferir_estoque_entre_lojas: {
         Args: {
@@ -6145,10 +6047,6 @@ export type Database = {
       venda_evento_idempotency_key: {
         Args: { p_cancelled?: boolean; p_sale_id: string; p_source: string }
         Returns: string
-      }
-      venda_eventos_items_from_payload: {
-        Args: { p_itens: Json }
-        Returns: Json
       }
       venda_eventos_items_from_sale: {
         Args: { p_sale_id: string }

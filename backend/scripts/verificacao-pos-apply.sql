@@ -73,7 +73,7 @@ asserts AS (
     NOT EXISTS (SELECT 1 FROM ledger WHERE version = '20260808130200'),
     ''
 
-  -- 2.4 total do ledger bate com os 310 arquivos do repositorio
+  -- 2.4 total do ledger bate com os 311 arquivos do repositorio
   --
   -- Era 304 quando este script foi escrito. A constante e um retrato do
   -- repositorio, e o repositorio ganhou 3 migrations desde entao (Fase 6):
@@ -102,10 +102,17 @@ asserts AS (
   --        sobrecarga de 3 args existe no repositorio e nao em producao;
   --        e a ausencia dela que fazia as migrations de REVOKE abortarem.
   --
+  -- Remocao de codigo morto (autorizada pelo dono em 2026-08-19) somou +1:
+  --
+  --   +1 20260819230000_remove_funcoes_sem_consumidor
+  --        DROP guardado de 10 funcoes sem consumidor (grupo A da auditoria
+  --        de codigo morto). Guardado por to_regprocedure porque parte delas
+  --        existe no repositorio e nao em producao.
+  --
   -- Ao adicionar migrations, atualize este numero JUNTO e diga o porque.
   UNION ALL SELECT
-    'ledger: total = 310',
-    (SELECT count(*) FROM ledger) = 310,
+    'ledger: total = 311',
+    (SELECT count(*) FROM ledger) = 311,
     (SELECT count(*)::text FROM ledger)
 
   -- 2.5 nenhuma versão legada numérica remanescente (prova do repair)
