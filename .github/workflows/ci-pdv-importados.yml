@@ -90,6 +90,42 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
+      # ─────────────────────────────────────────────────────────────────────
+      # Guard: o E2E NUNCA pode rodar contra o projeto de produção.
+      #
+      # Em 2026-08-19 descobrimos que rodava. Os secrets PLAYWRIGHT_* apontavam
+      # para `kbabmewnahysfvlybiak` (produção), e cada PR gravava vendas reais
+      # na loja do cliente: 11 vendas de R$ 68,00 nos runs de #307 e #308, além
+      # das lojas `Probe …` / `Smoke Homolog …` e de caixas abandonados que
+      # precisaram ser removidos à mão.
+      #
+      # Pior: `seed-dev-users.mjs` roda com `upsert ... ativo: true`, então
+      # qualquer desativação manual dessas contas era desfeita no PR seguinte.
+      #
+      # Este passo falha ALTO em vez de poluir em silêncio. Ele não depende de
+      # qual staging for adotado — vale para branch Supabase, projeto separado
+      # ou stack local.
+      - name: Guard — E2E não pode apontar para produção
+        env:
+          PW_URL: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL }}
+          SYNC_EP: ${{ secrets.SYNC_ENDPOINT }}
+          PROD_REF: kbabmewnahysfvlybiak
+        run: |
+          set -euo pipefail
+          alvos_proibidos=()
+          case "${PW_URL:-}" in
+            *"$PROD_REF"*) alvos_proibidos+=("PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL") ;;
+          esac
+          case "${SYNC_EP:-}" in
+            *"$PROD_REF"*) alvos_proibidos+=("SYNC_ENDPOINT") ;;
+          esac
+          if [ "${#alvos_proibidos[@]}" -gt 0 ]; then
+            echo "::error::E2E abortado: ${alvos_proibidos[*]} aponta(m) para o projeto de PRODUCAO ($PROD_REF)."
+            echo "::error::O E2E grava vendas, lojas e caixas reais. Aponte estes secrets para o ambiente de homologacao antes de reabilitar."
+            exit 1
+          fi
+          echo "OK — nenhum secret do E2E aponta para producao."
+
       - name: Verificar secrets e gravar .env (pipeline crítico)
         env:
           PW_URL: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL }}
