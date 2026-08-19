@@ -297,16 +297,93 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
+      # Mesma stack local e efêmera do `e2e-critical`. Este job foi esquecido na
+      # primeira correção e, por isso, continuou logando em PRODUÇÃO com as
+      # contas de robô às 20:59 e 21:03 de 2026-08-19 — não escreveu venda
+      # naquele run, mas a sessão foi criada e o caminho estava aberto.
+      #
+      # A lição virou regra: existem DOIS jobs de E2E neste workflow. Qualquer
+      # mudança de alvo tem de cobrir os dois.
+      - name: Subir Supabase local
+        run: bash backend/scripts/ci-supabase-local-start.sh
+
+      - name: Reset + seed (migrations do repositório)
+        run: |
+          set -euo pipefail
+          cd backend
+          npx supabase db reset --local --yes
+
+      - name: Gerar credenciais efêmeras
+        run: |
+          set -euo pipefail
+          cd backend
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          cd ..
+
+          SB_URL="${API_URL:-http://127.0.0.1:54321}"
+          SB_ANON="${ANON_KEY:-${PUBLISHABLE_KEY:-}}"
+          SB_SR="${SERVICE_ROLE_KEY:-}"
+          if [ -z "$SB_ANON" ] || [ -z "$SB_SR" ]; then
+            echo "::error::supabase status nao devolveu ANON_KEY/SERVICE_ROLE_KEY." >&2
+            exit 1
+          fi
+          E2E_PASS="$(openssl rand -base64 24)"
+
+          cat > pdv-importados/.env.local <<EOF
+          NEXT_PUBLIC_SUPABASE_URL=${SB_URL}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY=${SB_ANON}
+          USE_UNIFIED_SALES_FLOW=true
+          EOF
+
+          for v in "$SB_ANON" "$SB_SR" "$E2E_PASS"; do
+            echo "::add-mask::$v"
+          done
+
+          {
+            echo "SB_URL=$SB_URL"
+            echo "SB_ANON=$SB_ANON"
+            echo "SB_SR=$SB_SR"
+            echo "E2E_PASS=$E2E_PASS"
+          } >> "$GITHUB_ENV"
+
+      - name: Guard — alvo do E2E não pode ser produção
+        env:
+          PROD_REF: kbabmewnahysfvlybiak
+        run: |
+          set -euo pipefail
+          case "${SB_URL:-}" in
+            http://127.0.0.1:*|http://localhost:*) ;;
+            *)
+              echo "::error::E2E abortado: alvo nao e local (${SB_URL:-<vazio>})."
+              exit 1
+              ;;
+          esac
+          if grep -q "$PROD_REF" pdv-importados/.env.local 2>/dev/null; then
+            echo "::error::E2E abortado: .env.local referencia o ref de producao."
+            exit 1
+          fi
+          echo "OK — alvo do E2E e a stack local ($SB_URL)."
+
+      - name: Seed usuários E2E (banco local)
+        env:
+          SUPABASE_URL: ${{ env.SB_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ env.SB_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ env.SB_SR }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ env.SB_ANON }}
+          SEED_DEV_PASSWORD: ${{ env.E2E_PASS }}
+          SEED_GERENTE_EMAIL: e2e-gerente@localhost.test
+          SEED_OPERADOR_EMAIL: e2e-operador@localhost.test
+        run: node pdv-importados/scripts/seed-dev-users.mjs
+
       - name: E2E
         env:
           CI: true
-          PLAYWRIGHT_E2E_WITH_DEV: ${{ secrets.PLAYWRIGHT_BASE_URL != '' && '0' || '1' }}
-          PLAYWRIGHT_BASE_URL: ${{ secrets.PLAYWRIGHT_BASE_URL }}
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          PLAYWRIGHT_TEST_EMAIL: ${{ secrets.PLAYWRIGHT_TEST_EMAIL }}
-          PLAYWRIGHT_TEST_PASSWORD: ${{ secrets.PLAYWRIGHT_TEST_PASSWORD }}
-          PLAYWRIGHT_CAIXA_TEST_EMAIL: ${{ secrets.PLAYWRIGHT_CAIXA_TEST_EMAIL }}
-          PLAYWRIGHT_CAIXA_TEST_PASSWORD: ${{ secrets.PLAYWRIGHT_CAIXA_TEST_PASSWORD }}
-          PLAYWRIGHT_E2E_PRODUTO_CODIGO: ${{ secrets.PLAYWRIGHT_E2E_PRODUTO_CODIGO }}
+          PLAYWRIGHT_E2E_WITH_DEV: '1'
+          NEXT_PUBLIC_SUPABASE_URL: ${{ env.SB_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ env.SB_ANON }}
+          PLAYWRIGHT_TEST_EMAIL: e2e-gerente@localhost.test
+          PLAYWRIGHT_TEST_PASSWORD: ${{ env.E2E_PASS }}
+          PLAYWRIGHT_CAIXA_TEST_EMAIL: e2e-operador@localhost.test
+          PLAYWRIGHT_CAIXA_TEST_PASSWORD: ${{ env.E2E_PASS }}
+          PLAYWRIGHT_E2E_PRODUTO_CODIGO: ${{ vars.PLAYWRIGHT_E2E_PRODUTO_CODIGO || '7898512340004' }}
         run: npm run test:e2e -w pdv-importados
