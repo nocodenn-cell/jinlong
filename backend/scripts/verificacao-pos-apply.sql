@@ -73,10 +73,25 @@ asserts AS (
     NOT EXISTS (SELECT 1 FROM ledger WHERE version = '20260808130200'),
     ''
 
-  -- 2.4 total do ledger bate com os 304 arquivos do repositório
+  -- 2.4 total do ledger bate com os 307 arquivos do repositorio
+  --
+  -- Era 304 quando este script foi escrito. A constante e um retrato do
+  -- repositorio, e o repositorio ganhou 3 migrations desde entao (Fase 6):
+  --
+  --   +1 20260809163502_relatorio_periodo_tz_bounds_sargable
+  --        reconciliacao do relatorio de producao (commit e154f47b).
+  --   +1 20260814015032_harden_diagnostics_and_ap_idempotency
+  --        REABILITADA. Estava como _disabled_ por ter sido aplicada a mao em
+  --        producao, o que tornava o banco local irreprodutivel a partir do
+  --        repositorio e deixava a idempotencia de AP sem o fix P1-3.
+  --   +1 20260819000000_revoke_relatorio_consistencia_vendas_de_public
+  --        completa o REVOKE que a 20260818000001 fez so de authenticated,
+  --        deixando a concessao default de PUBLIC intacta (GATE 9).
+  --
+  -- Ao adicionar migrations, atualize este numero JUNTO e diga o porque.
   UNION ALL SELECT
-    'ledger: total = 304',
-    (SELECT count(*) FROM ledger) = 304,
+    'ledger: total = 307',
+    (SELECT count(*) FROM ledger) = 307,
     (SELECT count(*)::text FROM ledger)
 
   -- 2.5 nenhuma versão legada numérica remanescente (prova do repair)
