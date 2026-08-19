@@ -3,7 +3,7 @@
 **Data:** 2026-08-19
 **Base:** `origin/main` em `54b84851` (pós PR [#309](https://github.com/nocodenn-cell/fastproduct/pull/309)) + Fase 1B deste branch
 **Produção:** projeto `jinlong`, consultas **somente leitura**
-**Status:** ✅ **EXECUTADO em 2026-08-19** — 10 funções SQL + **48** módulos frontend removidos.
+**Status:** ✅ **EXECUTADO em 2026-08-19** — 10 funções SQL + **53** módulos frontend removidos (lista integral).
 
 > ## ⚠️ Duas correções a esta auditoria, feitas na hora de executar
 >
@@ -21,7 +21,7 @@
 > decisão humana versionada que **esta lista não mencionava** quando foi enviada para
 > aprovação — ou seja, a autorização foi dada sem esse dado. Ver §E.
 
-Total removido: **48 de 53**. Os 5 restantes aguardam decisão explícita.
+Total removido: **53 de 53**. Os 5 arquivos `@legacy` foram liberados pelo dono em seguida — ver §E.
 
 ---
 
@@ -255,10 +255,10 @@ Para o item C, abrir tarefa de agendamento em vez de remoção.
 
 ---
 
-## E. Os 5 arquivos segurados
+## E. Os 5 arquivos `@legacy` — segurados, depois liberados
 
-`tests/consolidacao-post-audit.test.ts` marca estes cinco como `@legacy` e o nome do
-teste diz **"não apagar até validação"**:
+`tests/consolidacao-post-audit.test.ts` marcava estes cinco como `@legacy`, num teste cujo
+nome dizia **"não apagar até validação"**:
 
 ```
 app/gerente/compras/ComprasGerentePageClient.tsx
@@ -268,18 +268,16 @@ app/gerente/relatorios/RelatoriosGerentePageClient.tsx
 app/gerente/vendas/VendasGerenteListClient.tsx
 ```
 
-**A validação que o guard esperava provavelmente já aconteceu:** `app/gerente/` tem 4
-`page.tsx` contra 28 em `app/admin/`, e `app/gerente/[...path]/page.tsx` redireciona
-tudo via `legacyGerenteRedirect`. As rotas não existem, e nada importa estes arquivos.
+**A validação que o guard esperava já tinha acontecido:** `app/gerente/` tem 4 `page.tsx`
+contra 28 em `app/admin/`, e `app/gerente/[...path]/page.tsx` redireciona tudo via
+`legacyGerenteRedirect`. As rotas não existem, e nada importava estes arquivos.
 
-Mesmo assim não foram removidos. Sobrescrever um "não apagar" escrito por uma pessoa
-merece o "sim" de uma pessoa — ainda mais na véspera do treinamento do cliente #1.
+Na primeira passada foram **segurados** mesmo assim — sobrescrever um "não apagar" escrito
+por uma pessoa merece o sim de uma pessoa. **Liberados pelo dono em 2026-08-19** e removidos.
 
-**Para removê-los**, além dos 5 arquivos é preciso apagar o bloco de teste que os
-protege (`tests/consolidacao-post-audit.test.ts`, describe *"consolidação pós-audit —
-guarda SSoT"*), senão a suíte quebra.
-
----
+**As Server Actions vizinhas continuam vivas** e são consumidas pelas telas de `/admin`:
+`app/gerente/produtos/` mantém 15 arquivos, `app/gerente/vendas/` mantém 11. Só os clientes
+de página saíram.
 
 ## F. Guards atualizados, não enfraquecidos
 
@@ -290,6 +288,7 @@ apagado:
 |---|---|
 | `tests/p0-venda-homologacao.matrix.test.ts` | Apontava para `FinanceiroTabNav.tsx`. Verificado que a nav **viva** é `components/ui/admin-v2/FinanceiroHubNavShell.tsx` (o `page.tsx` importa `parseFinanceiroTab` de `financeiroTabs.ts`; o shell renderiza). O guard passou a apontar para o arquivo que de fato implementa a feature — **deixou de ser vácuo**. |
 | `app/caixa/caixaSemCadastroProduto.test.ts` | Varre superfícies do caixa que não podem reintroduzir o modal de cadastro relâmpago. `CaixaFooter.tsx` saiu da lista porque o arquivo deixou de existir; as demais seguem varridas. |
+| `tests/consolidacao-post-audit.test.ts` | Exigia que os 5 arquivos existissem e carregassem `@legacy`. Foi **invertido**, não apagado: protegia contra remoção prematura, agora protege contra **reintrodução** — assevera que os 5 não voltaram e que o catch-all com `legacyGerenteRedirect` continua no lugar. |
 
 ---
 
@@ -302,7 +301,8 @@ Em banco reconstruído do zero (`db reset`):
 - `FINANCIAL ADVERSARIAL GATES: OK`
 - `verificacao-pos-apply.sql` — **0 falhas**, ledger **311** (constante atualizada junto)
 - `check:types-drift` — **OK**, 6222 linhas
-- **nenhum import pendurado** após as 48 remoções; nenhum dos 5 barris era importado como diretório
+- **nenhum import pendurado** após as 53 remoções; nenhum dos 5 barris era importado como diretório
+- `build-and-test` **verde no CI** da PR [#310](https://github.com/nocodenn-cell/fastproduct/pull/310)
 
 **Não verificado localmente:** `build` e `typecheck` do frontend — `node_modules` não está
 instalado neste worktree. Fica para o CI.
