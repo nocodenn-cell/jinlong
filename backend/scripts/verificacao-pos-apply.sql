@@ -73,7 +73,7 @@ asserts AS (
     NOT EXISTS (SELECT 1 FROM ledger WHERE version = '20260808130200'),
     ''
 
-  -- 2.4 total do ledger bate com os 307 arquivos do repositorio
+  -- 2.4 total do ledger bate com os 311 arquivos do repositorio
   --
   -- Era 304 quando este script foi escrito. A constante e um retrato do
   -- repositorio, e o repositorio ganhou 3 migrations desde entao (Fase 6):
@@ -88,10 +88,31 @@ asserts AS (
   --        completa o REVOKE que a 20260818000001 fez so de authenticated,
   --        deixando a concessao default de PUBLIC intacta (GATE 9).
   --
+  -- Fase 1B (reconciliacao de catalogo) somou mais 3, todas convergindo o
+  -- repositorio com o estado medido em producao:
+  --
+  --   +1 20260819220000_fase1b_remove_loja_filial_demo
+  --        `Filial demo` foi removida a mao de producao; um db reset a
+  --        recriava. Guard dinamico aborta se a loja tiver dado real.
+  --   +1 20260819220100_fase1b_fiscal_enfileirar_assinatura_unica
+  --        producao so tinha a sobrecarga de 3 args (Edge chama com 4);
+  --        o repositorio tinha AS DUAS, o que tornava a chamada de 3 args
+  --        por nome ambigua. Converge para a assinatura unica de 4 args.
+  --   +1 20260819220200_fase1b_remove_relatorio_consistencia_vendas_3args
+  --        sobrecarga de 3 args existe no repositorio e nao em producao;
+  --        e a ausencia dela que fazia as migrations de REVOKE abortarem.
+  --
+  -- Remocao de codigo morto (autorizada pelo dono em 2026-08-19) somou +1:
+  --
+  --   +1 20260819230000_remove_funcoes_sem_consumidor
+  --        DROP guardado de 10 funcoes sem consumidor (grupo A da auditoria
+  --        de codigo morto). Guardado por to_regprocedure porque parte delas
+  --        existe no repositorio e nao em producao.
+  --
   -- Ao adicionar migrations, atualize este numero JUNTO e diga o porque.
   UNION ALL SELECT
-    'ledger: total = 307',
-    (SELECT count(*) FROM ledger) = 307,
+    'ledger: total = 311',
+    (SELECT count(*) FROM ledger) = 311,
     (SELECT count(*)::text FROM ledger)
 
   -- 2.5 nenhuma versão legada numérica remanescente (prova do repair)

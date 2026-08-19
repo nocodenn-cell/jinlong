@@ -126,15 +126,32 @@ describe('consolidação pós-audit — guarda SSoT', () => {
     expect(fs.existsSync(rulePath)).toBe(true)
   })
 
-  it('componentes gerente órfãos marcados @legacy (não apagar até validação)', () => {
-    const legacyFiles = [
+  // O guard anterior exigia que estes arquivos existissem e carregassem `@legacy`
+  // ("não apagar até validação"). A validação foi feita em 2026-08-19: as rotas
+  // `/gerente` deixaram de existir — sobraram 4 `page.tsx` contra 28 em `/admin`,
+  // e `app/gerente/[...path]/page.tsx` redireciona tudo via `legacyGerenteRedirect`.
+  // Nada importava os clientes de página. Removidos com autorização do dono.
+  //
+  // O guard foi INVERTIDO em vez de apagado: protegia contra remoção prematura,
+  // agora protege contra reintrodução. As Server Actions vizinhas seguem vivas e
+  // são consumidas pelas telas de `/admin` — por isso o teste mira os arquivos,
+  // não os diretórios.
+  it('clientes de página do gerente não voltaram (rotas migraram para /admin)', () => {
+    const removidos = [
+      'app/gerente/compras/ComprasGerentePageClient.tsx',
       'app/gerente/financeiro/FinanceiroGerentePageClient.tsx',
       'app/gerente/produtos/ProdutosGerentePageClient.tsx',
+      'app/gerente/relatorios/RelatoriosGerentePageClient.tsx',
       'app/gerente/vendas/VendasGerenteListClient.tsx',
     ]
-    for (const rel of legacyFiles) {
-      expect(read(rel)).toContain('@legacy')
+    for (const rel of removidos) {
+      expect(exists(rel), `${rel} voltou — as rotas do gerente vivem em /admin`).toBe(false)
     }
+  })
+
+  it('o catch-all que substitui as rotas do gerente continua no lugar', () => {
+    expect(exists('app/gerente/[...path]/page.tsx')).toBe(true)
+    expect(read('app/gerente/[...path]/page.tsx')).toContain('legacyGerenteRedirect')
   })
 
   it('estoque inicial no create é TX atômica (RPC 270), não 2º round-trip no modal', () => {

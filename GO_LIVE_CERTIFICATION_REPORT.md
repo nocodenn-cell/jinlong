@@ -4,8 +4,8 @@
 **Decisão histórica de implantação (2026-08-09):** 🟢 **GO** — preservada como evidência do fechamento anterior.
 **Estado do bloco AR/AP (Fase 2C, §11):** 🟡 **APTO PARA REAUDITORIA** — os 4 P0 e os 6 P1 da auditoria adversarial (§10.9) foram remediados, com gate de regressão automatizado no CI. Reauditoria independente desse bloco específico ainda não foi executada.
 **Estado do bloco de comissões — DB-05 A→F (§12):** 🟢 **CERTIFICADO** (backend e frontend). Ver §12 para commits, gates, auditoria adversarial e dívidas residuais. **Fase 3A permanece NÃO LIBERADA** — a certificação de DB-05 fecha o bloco de comissões, não a liberação da próxima fase, que depende também da reauditoria pendente do bloco AR/AP (§11) e das dívidas de reconciliação global listadas em §12.8.
-**Estado do gate financeiro (Fase 6, 2026-08-19):** 🟢 **6/6 REPRODUZÍVEL DO ZERO** — antes passava **1/6** num banco reconstruído; o `4/6` observado localmente era resíduo de execuções manuais. Fechadas as lacunas (a) GATES 12–23 + `ROLLBACK` e (b) `seed.sql`. **⚠️ Janela crítica NÃO recomendada** enquanto não houver auditoria do ledger de produção e ambiente de ensaio com schema equivalente ao de produção. Ver [docs/FASE_6_GATE_FINANCEIRO_VALIDACAO.md](docs/FASE_6_GATE_FINANCEIRO_VALIDACAO.md).
-**🔒 Correção de RLS em produção (2026-08-19):** `relatorio_consistencia_vendas` (4 args) permanecia executável por `authenticated` **via herança de PUBLIC** — a `20260818000001` revogou só `FROM authenticated`. Função `SECURITY DEFINER` sem guarda de loja ⇒ GERENTE da loja B lia agregados da loja A. Corrigido em `20260819000000` (PR [#307](https://github.com/nocodenn-cell/fastproduct/pull/307)).
+**Estado do gate financeiro (Fase 6 + PR [#309](https://github.com/nocodenn-cell/fastproduct/pull/309), 2026-08-19):** 🟢 **6/6 REPRODUZÍVEL DO ZERO** — antes passava **1/6** num banco reconstruído; o `4/6` observado localmente era resíduo de execuções manuais. Fechadas as lacunas (a) GATES 12–23 + `ROLLBACK` e (b) `seed.sql`. **O E2E saiu de produção** — os dois jobs (`e2e-critical` e `e2e-playwright`) sobem stack Supabase local e efêmera; **baseline provada** no run de 2026-08-19T21:08: 0 vendas, 0 caixas, 0 lojas novas e **0 logins** em produção, contra 2 logins no run anterior. O GATE 9 deixou de ser infalsificável (revogava o que ia testar) e agora cobre `anon` e a ACL de `PUBLIC`. **⚠️ Janela crítica ainda NÃO recomendada** — não por falta de auditoria do ledger (feita: §14.1, paridade 307/307), mas porque a reconciliação de catálogo (Fase 1B) segue aberta e não há ambiente de ensaio com schema equivalente ao de produção. Ver §14, [docs/FASE_6_GATE_FINANCEIRO_VALIDACAO.md](docs/FASE_6_GATE_FINANCEIRO_VALIDACAO.md) e [docs/AUDITORIA_CATALOGO_PROD_VS_REPO_2026-08.md](docs/AUDITORIA_CATALOGO_PROD_VS_REPO_2026-08.md).
+**🔒 Correção de RLS em produção (2026-08-19):** `relatorio_consistencia_vendas` (4 args) permanecia executável por `authenticated` **via herança de PUBLIC** — a `20260818000001` revogou só `FROM authenticated`. Função `SECURITY DEFINER` sem guarda de loja ⇒ GERENTE da loja B lia agregados da loja A. Corrigido em `20260819000000` (PR [#307](https://github.com/nocodenn-cell/fastproduct/pull/307)) e **aplicado em produção** na PR [#309](https://github.com/nocodenn-cell/fastproduct/pull/309) — verificado: `proacl` de `relatorio_consistencia_vendas` e de `verificar_consistencia_venda` restrito a `postgres`/`service_role`. Ver §14.2.
 **Produção canônica:** https://pdv-importados.vercel.app  
 **Projeto Vercel:** `pdv-importados` (team `jinlong`)  
 **Supabase:** projeto `jinlong` (dashboard do time Jinlong)
@@ -101,6 +101,9 @@ A versão anterior deste relatório concluiu **NO-GO** por SYNC_KEY / evidência
 |---|---|
 | **Este arquivo** | Certificação técnica + evidências |
 | [`GO_LIVE_EXECUTIVO_RESUMO.md`](./GO_LIVE_EXECUTIVO_RESUMO.md) | Decisão executiva PRONTO PARA GO-LIVE |
+| [`docs/FASE_6_GATE_FINANCEIRO_VALIDACAO.md`](./docs/FASE_6_GATE_FINANCEIRO_VALIDACAO.md) | Gate financeiro 6/6 e pendências da Fase 6 |
+| [`docs/AUDITORIA_CATALOGO_PROD_VS_REPO_2026-08.md`](./docs/AUDITORIA_CATALOGO_PROD_VS_REPO_2026-08.md) | Diff de catálogo produção × repositório — base da Fase 1B |
+| [`docs/BACKLOG_TECNICO.md`](./docs/BACKLOG_TECNICO.md) | Pendências técnicas abertas |
 | [`docs/archive/go-live-pre-2026-08-09/`](./docs/archive/go-live-pre-2026-08-09/) | Status/NO-GO anteriores (arquivados) |
 
 ---
@@ -1352,5 +1355,79 @@ FASE 3A: NÃO LIBERADA
 ```
 
 `FASE 3A: NÃO LIBERADA` permanece — decisão de escopo (§12.7), não afetada por este fechamento. Esta sprint fecha a última linha pendente de §12.8; os riscos residuais de §13.6 são P2, documentados, e não bloqueiam PR.
+
+---
+
+## 14. Fechamento pré-treinamento do cliente #1 — PR #309 (2026-08-19)
+
+**PR:** [#309](https://github.com/nocodenn-cell/fastproduct/pull/309) — *tira o E2E de produção, fecha vazamento entre lojas e corrige material de treinamento*
+**Natureza:** Fases 1 e 2 do plano de fechamento de pendências. Escrita em produção **autorizada e executada**; retratos de rollback versionados em `backend/scripts/rollback/`.
+
+> **Nota de nomenclatura.** A *Fase 1B* citada aqui e em §14.4 é a **reconciliação de catálogo**
+> derivada de [`docs/AUDITORIA_CATALOGO_PROD_VS_REPO_2026-08.md`](docs/AUDITORIA_CATALOGO_PROD_VS_REPO_2026-08.md).
+> **Não confundir** com a *Fase 1B — invariantes de totais e centavos* do bloco financeiro (§10.4),
+> já concluída. São trilhas distintas que coincidiram no rótulo.
+
+### 14.1 Auditoria do ledger — encerrada, com paridade
+
+O item 7 do backlog exigia comparar o ledger de produção com a contagem de arquivos do repositório antes de qualquer janela crítica. **Executado e fechado.**
+
+| Medida | Antes de #309 | Depois de #309 | Repositório |
+|---|---:|---:|---:|
+| `supabase_migrations.schema_migrations` | 305 | **307** | 307 |
+
+As duas migrations que faltavam — `20260814015032` e `20260819000000` — entraram na aplicação de #309. Verificado em produção, somente leitura: ambas presentes no ledger, `count(*) = 307`, **paridade de chaves com o repositório**.
+
+> ⚠️ **Paridade de chaves não é paridade de catálogo.** Este é o achado central de §14.4: o ledger bate e os objetos não. A auditoria do ledger fecha; a reconciliação de catálogo não.
+
+### 14.2 Correções aplicadas em produção
+
+| # | Correção | Evidência |
+|---|---|---|
+| 1 | **RLS / vazamento entre lojas.** `verificar_consistencia_venda` era `SECURITY DEFINER` sem guarda de ator, perfil ou loja, e executável por `authenticated`/`anon`/`PUBLIC`. Fechada. | `proacl` = `postgres=X/postgres, service_role=X/postgres` — verificado pós-merge |
+| 2 | **`relatorio_consistencia_vendas` (4 args).** Mesma classe: `EXECUTE` herdado de `PUBLIC` sobrevivia ao `REVOKE ... FROM authenticated` da `20260818000001`. Fechada. | `proacl` = `postgres=X/postgres, service_role=X/postgres` — verificado pós-merge |
+| 3 | **Idempotência de AP (fix P1-3).** A chave física da sangria de AP passou a carregar o escopo da conta. Estava fora do ar porque a `20260814015032` nunca chegou a produção. | ledger contém `20260814015032`; `GATE10_COLISAO_DE_CHAVE` cobre a regressão |
+| 4 | **Migrations guardadas por `to_regprocedure`.** `20260819000000` e `20260814015032` faziam `REVOKE` sobre uma sobrecarga inexistente em produção; `REVOKE` não aceita `IF EXISTS`, então **abortavam inteiras** — e o bloco P1-3 da segunda nunca rodava. Cada alvo passou a ser guardado. | testadas nos dois cenários: banco completo (3 alvos) e formato de produção (2 alvos, 1 ignorado com `NOTICE`) |
+| 5 | **Usuários e dados de robô removidos.** 8 caixas abandonados fechados, 6 lojas de teste removidas (`Probe …`, `Smoke Homolog …`), todas originadas dos runs de E2E contra produção. | `backend/scripts/rollback/lojas-teste.pre-2026-08-19.sql` (round-trip verificado) |
+| 6 | **GATE 9 deixou de ser infalsificável.** A suíte executava um `REVOKE` das funções de diagnóstico imediatamente antes de o gate asseverar que estavam revogadas — consertava o que ia testar. Bloco removido; o gate agora cobre `anon` e inspeciona a ACL para pegar a concessão a `PUBLIC`. | falsificação verificada: `GRANT ... TO PUBLIC` produz `GATE9_DIAGNOSTICO_EXPOSTO` |
+
+> **Correção ao registro da Fase 6.** A Fase 6 (§5) registrou o GATE 9 como *falsificado*. **Ele não era** — o gate se auto-consertava. A asserção era vazia, não falsa.
+
+### 14.3 E2E fora de produção — baseline provada
+
+Causa raiz: os dois jobs de E2E rodavam contra o projeto de produção. Cada PR gravava dado real na loja do cliente — 11 vendas de R$ 68,00 nos runs de #307 e #308, além das lojas de sonda e dos caixas abandonados.
+
+Desativar as contas de robô à mão não resolvia: `seed-dev-users.mjs` faz `upsert ... ativo: true`, então o PR seguinte as reativava. **Enquanto o pipeline apontasse para produção, qualquer limpeza se desfazia sozinha.**
+
+Ambos os jobs passaram a subir stack Supabase local e efêmera (`ci-supabase-local-start.sh` + `db reset`), com credenciais geradas no runner e guard sobre o **alvo efetivo** (`SB_URL` resolvido e conteúdo dos `.env`), não sobre os secrets — checar secrets reprovaria sempre, por um motivo que já não se aplica.
+
+**Baseline medida no run de 2026-08-19T21:08:** 0 vendas, 0 caixas, 0 lojas novas e **0 logins** em produção — contra 2 logins no run anterior, quando só o `e2e-critical` havia sido corrigido.
+
+**Exposição residual, registrada e não tratada:** o job `anti-replay-diagnostic-gate` (`ci-backend-supabase.yml`) ainda usa `SYNC_ENDPOINT`/`SYNC_KEY` de produção e escreve em `sync_request_nonces` (22 linhas). É tabela interna de anti-replay, não dado de negócio — decisão separada, ver item 12 do backlog.
+
+### 14.4 Pendências — Fase 1B é o próximo passo
+
+O que **fechou** com #309 e com a auditoria de catálogo:
+
+- ✅ item 7 do backlog — auditoria do ledger (§14.1)
+- ✅ vazamento em `verificar_consistencia_venda` e em `relatorio_consistencia_vendas`
+- ✅ fix P1-3 da idempotência de AP no ar
+- ✅ E2E fora de produção, com baseline provada
+- ✅ material de treinamento corrigido contra a UI atual (manual do operador 1.0 → 1.1; checklist de implantação com provisionamento real de usuário)
+
+O que **continua aberto** — agrupado como **Fase 1B (reconciliação de catálogo)**:
+
+| # | Pendência | Classificação |
+|---|---|---|
+| 1B-1 | `fiscal_enfileirar_documento_venda` — produção só tem a sobrecarga de **3 args**; a Edge `sync-outbox` chama com **4** (`p_loja_id`). `PGRST202`, e o erro **não falha o batch**. | 🟠 latente hoje (0 vendas do sync em produção), 🔴 no dia em que o `pdv-local` entrar |
+| 1B-2 | Produção tem **15 políticas RLS a mais** que o repositório; `perfis`, `pdv_config` e `tokens_desconto_gerente` nascem **sem policy** num `db reset`. | 🔴 bloqueia janela crítica e segunda loja |
+| 1B-3 | `Filial demo` existe no repositório (`036_loja_filial_demo.sql`) e **não existe em produção** — removida à mão. `db reset` a recria. | 🟡 divergência de dado semente |
+| 1B-4 | Sobrecarga `relatorio_consistencia_vendas(3 args)` removida à mão em produção; nenhuma migration do repositório a remove. | 🟡 catalogar na baseline |
+| 1B-5 | 7 funções e 2 tabelas de domínio (`perfis`, `venda_engine_shadow_runs`) só em produção. | 🟠 |
+| 1B-6 | Deltas de colunas/índices/constraints não auditados objeto a objeto. | 🟠 |
+
+**A Fase 1B não bloqueia o treinamento do cliente #1** — decisão do dono, 2026-08-19. Nenhum dos itens acima é alcançável pelo operador na loja única do piloto: 1B-1 é latente até o `pdv-local` entrar, 1B-2 afeta disaster-recovery e a segunda loja, e os demais são higiene de catálogo. O que a Fase 1B bloqueia é a **janela crítica** e a **segunda loja**.
+
+**Pré-requisito não resolvido:** a reconciliação de baseline (`supabase db pull`) não tem onde ser ensaiada. `create_branch` foi tentado e recusado — branching exige plano Pro e a organização está no Free. Ver [docs/AMBIENTES_E_RELEASE.md](docs/AMBIENTES_E_RELEASE.md) §1.
 
 ---

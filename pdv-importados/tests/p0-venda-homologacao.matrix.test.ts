@@ -51,9 +51,13 @@ describe('P0 venda — caminhos canônicos (matriz)', () => {
 describe('P0 Financeiro + Fiscal Stub — telas canônicas', () => {
   it('financeiro unificado tem abas receber/pagar/fiscal', () => {
     expect(exists('app/admin/financeiro/page.tsx')).toBe(true)
-    expect(exists('app/admin/financeiro/_components/FinanceiroTabNav.tsx')).toBe(true)
+    // A nav das abas é renderizada por FinanceiroHubNavShell (admin-v2).
+    // `FinanceiroTabNav.tsx` foi o componente original e ficou órfão quando o
+    // hub passou a usar o shell; removido em 2026-08-19 (auditoria de código
+    // morto). Este guard passou a apontar para a nav que de fato existe.
+    expect(exists('components/ui/admin-v2/FinanceiroHubNavShell.tsx')).toBe(true)
     // Fonte de verdade das abas vive em financeiroTabs.ts (módulo neutro),
-    // não em FinanceiroTabNav.tsx ('use client') — ver comentário no arquivo.
+    // consumido tanto pelo page.tsx (Server Component) quanto pelo shell.
     const tabs = read('app/admin/financeiro/_components/financeiroTabs.ts')
     expect(tabs).toContain("'receber'")
     expect(tabs).toContain("'pagar'")
