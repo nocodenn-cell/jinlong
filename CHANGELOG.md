@@ -13,6 +13,58 @@ Ordem: mais recente primeiro. Datas em `AAAA-MM-DD`.
 
 ---
 
+## 2026-08-19 — Fase 6: gate financeiro reproduzível do zero (6/6)
+
+**PR:** [#307](https://github.com/nocodenn-cell/fastproduct/pull/307) · **Commits:** `ef79bd33` (merge de `main`), `ee36bfd4` (correções)
+**Relatório completo:** [docs/FASE_6_GATE_FINANCEIRO_VALIDACAO.md](docs/FASE_6_GATE_FINANCEIRO_VALIDACAO.md)
+
+O gate financeiro não era reproduzível a partir do repositório: num banco reconstruído do zero
+passava **1/6**. O `4/6` observado localmente vinha de dados residuais de execuções manuais antigas,
+que nenhum arquivo versionado sabia recriar.
+
+### Corrigido
+
+- **GATES 12–23 restaurados** em `backend/scripts/financial-adversarial-gates.test.sql`. O commit
+  `ddce245a` pretendia inserir 22 linhas e removeu 1412 (1900 → 509 linhas), apagando 12 gates
+  — incluindo o **GATE 20** —, o `ROLLBACK;` final e o SELECT de sucesso. Sem o `ROLLBACK` a suíte
+  commitava estado e envenenava `ap-payments-reconciliation` na execução seguinte.
+- **`backend/supabase/seed.sql` criado.** `config.toml` apontava para ele desde sempre, mas o arquivo
+  nunca existiu em branch algum. Idempotente (UUIDs fixos + `ON CONFLICT`), verificado com 3 aplicações.
+
+### Schema
+
+- **`20260814015032_harden_diagnostics_and_ap_idempotency` reabilitada.** Estava `_disabled_` por ter
+  sido **aplicada à mão em produção** (`c3f58df3`, `35eb7e8d`) — o que tornava produção irreproduzível
+  a partir do Git e deixava o banco local com a versão pré-fix de `registrar_pagamento_contas_pagar`.
+- **🔒 `20260819000000_revoke_relatorio_consistencia_vendas_de_public` (nova) — furo de RLS em produção.**
+  A `20260818000001` revogou a função apenas `FROM authenticated`; no PostgreSQL toda função nasce com
+  `EXECUTE` para **PUBLIC**, então `authenticated` seguia executando por herança (`proacl` = `=X/postgres`).
+  Função `SECURITY DEFINER` sem guarda de loja ⇒ GERENTE da loja B lia agregados da loja A.
+  Detectado pelo GATE 9, que só voltou a rodar após a restauração acima.
+- `verificacao-pos-apply.sql`: constante do ledger **304 → 307** (3 migrations novas, cada `+1` justificado).
+- `database.types.ts` regenerado contra o schema corrigido.
+
+### Validação — ensaio real, a partir do tree commitado
+
+| Verificação | Antes | Depois |
+|---|---|---|
+| `test:financial` | 1/6 | **6/6** |
+| `test:rls-scope` | 42/42 | **42/42** |
+| `check:types-drift` | DRIFT | **OK** |
+| `verificacao-pos-apply.sql` | 15/17 | **17/17**, 0 falhas |
+
+### Pendente — não fechado nesta fase
+
+- Lojas novas nascem **sem formas de pagamento** (confirmado: `Loja Teste RLS` tem `(NENHUMA)`).
+- Hook `pre-commit` quebrado para **qualquer** commit do repo (eslint v10 × `.eslintrc.json`).
+- **Auditoria do ledger de produção** contra `schema_migrations` — a `20260814015032` prova que já
+  houve aplicação manual; não há garantia de que seja a única.
+
+> ⚠️ **Janela crítica não recomendada** enquanto §8.3 e o staging separado não estiverem resolvidos.
+> Ver [§9 do relatório](docs/FASE_6_GATE_FINANCEIRO_VALIDACAO.md).
+
+---
+
 ## 2026-08-17 — Resolução de conflitos da PR #305 e convergência de branches
 
 **Merge:** `82b03ace` — *"merge: resolve conflitos PR #305 — mantém versão sem link no GO_LIVE_CERTIFICATION_REPORT"*
