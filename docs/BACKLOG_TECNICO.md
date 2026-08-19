@@ -27,11 +27,11 @@ Itens ainda em aberto apontados na análise de stress ou homologação, para pri
 
 11. **🔴 Produção tem 15 políticas RLS a mais que o repositório:** `perfis` (0→4), `transferencias_idempotencia` (1→4), `pdv_config` (0→2), `tokens_desconto_gerente` (0→1), e +1 em `clientes`, `contas_receber`, `documentos_fiscais_pendentes`, `itens_venda`, `liquidacoes_receber`. **Total 129 no repo × 144 em produção** (contagem em produção reconfirmada pós-#309). Duas consequências independentes: (a) disaster-recovery a partir do Git entrega `tokens_desconto_gerente` — a tabela dos tokens de autorização gerencial — **sem nenhuma policy**; (b) `npm run test:rls-scope` passa 42/42 contra o banco local, validando **uma postura de autorização que não é a de produção**.
 
-12. **🟠 `fiscal_enfileirar_documento_venda` — assinatura divergente, falha silenciosa:** a Edge `sync-outbox` chama a RPC com **4 argumentos** (`p_loja_id`, migration 114); produção só tem a sobrecarga de **3** — reconfirmado por consulta direta pós-#309. PostgREST devolve `PGRST202`, e **o erro não falha o batch** (*"erro só em log"*). Toda venda sincronizada do `pdv-local` deixaria de enfileirar documento fiscal, sem aviso. **Dano até hoje: zero** — `venda_eventos` mostra 25 vendas `backfill` e 29 `web_caixa`, nenhuma do sync offline; o caminho nunca executou com venda real. **Arma no dia em que o `pdv-local` entrar em operação.** Deve ser corrigido antes de qualquer loja usar o `pdv-local`. Raiz: colisão de conteúdo nas migrations `113`/`114` já identificada na auditoria de junho.
+12. **🟠 ⚙️ MIGRATION PRONTA, NÃO APLICADA — `fiscal_enfileirar_documento_venda`, assinatura divergente:** a Edge `sync-outbox` chama a RPC com **4 argumentos** (`p_loja_id`, migration 114); produção só tem a sobrecarga de **3** — reconfirmado por consulta direta pós-#309. PostgREST devolve `PGRST202`, e **o erro não falha o batch** (*"erro só em log"*). Toda venda sincronizada do `pdv-local` deixaria de enfileirar documento fiscal, sem aviso. **Dano até hoje: zero** — `venda_eventos` mostra 25 vendas `backfill` e 29 `web_caixa`, nenhuma do sync offline; o caminho nunca executou com venda real. **Arma no dia em que o `pdv-local` entrar em operação.** Deve ser corrigido antes de qualquer loja usar o `pdv-local`. Raiz: colisão de conteúdo nas migrations `113`/`114` já identificada na auditoria de junho.
 
-13. **🟡 `Filial demo` diverge entre Git e produção:** criada por `backend/supabase/migrations/036_loja_filial_demo.sql`, foi **removida à mão em produção** (decisão do dono, 2026-08-19; retrato em `backend/scripts/rollback/lojas-teste.pre-2026-08-19.sql`). Produção hoje tem **apenas `Matriz`** — verificado. Um `db reset` a partir do Git a recria. Ação: migration que remove a loja demo do caminho do repositório.
+13. **🟡 ⚙️ MIGRATION PRONTA, NÃO APLICADA — `Filial demo` diverge entre Git e produção:** criada por `backend/supabase/migrations/036_loja_filial_demo.sql`, foi **removida à mão em produção** (decisão do dono, 2026-08-19; retrato em `backend/scripts/rollback/lojas-teste.pre-2026-08-19.sql`). Produção hoje tem **apenas `Matriz`** — verificado. Um `db reset` a partir do Git a recria. Ação: migration que remove a loja demo do caminho do repositório.
 
-14. **🟡 Sobrecarga `relatorio_consistencia_vendas(3 args)` removida à mão:** criada por `20260621004000` e `20260707020000`, **ambas no ledger de produção**, e nenhuma migration do repositório a remove — mesmo assim o objeto não existe em produção. Já mitigada operacionalmente (as migrations de REVOKE passaram a guardar cada alvo com `to_regprocedure`), mas segue como divergência de catálogo a catalogar na baseline.
+14. **🟡 ⚙️ MIGRATION PRONTA, NÃO APLICADA — sobrecarga `relatorio_consistencia_vendas(3 args)` removida à mão:** criada por `20260621004000` e `20260707020000`, **ambas no ledger de produção**, e nenhuma migration do repositório a remove — mesmo assim o objeto não existe em produção. Já mitigada operacionalmente (as migrations de REVOKE passaram a guardar cada alvo com `to_regprocedure`), mas segue como divergência de catálogo a catalogar na baseline.
 
 15. **🟠 7 funções e 2 tabelas de domínio só em produção:** `caixa_integridade_gate_check()`, `finalizar_venda_transacional(7 args)`, `finalizar_venda_transacional_canonica_v2(12 args)`, `fiscal_marcar_erro(6 args)`, `fiscal_marcar_erro_normalizado(6 args)`, `listar_valores_sistema_dinheiro_caixas(uuid[])`, `shadow_validar_venda_engine_v4(jsonb)`; tabelas `perfis` (3 linhas, 4 policies) e `venda_engine_shadow_runs` (11 linhas). Nenhuma migration do repositório as cria.
 
@@ -43,4 +43,23 @@ Itens ainda em aberto apontados na análise de stress ou homologação, para pri
 
 17. **🟡 `anti-replay-diagnostic-gate` ainda escreve em produção:** o job em `ci-backend-supabase.yml` usa `SYNC_ENDPOINT`/`SYNC_KEY` apontando para a Edge de produção e grava em `sync_request_nonces` (22 linhas registradas). Ordens de grandeza menor que o E2E — tabela interna de anti-replay, não dado de negócio — e o job passa, então não foi movido junto na PR #309 para não misturar escopo. Registrado para decisão separada. Ver [GO_LIVE_CERTIFICATION_REPORT.md §14.3](../GO_LIVE_CERTIFICATION_REPORT.md).
 
+> **⚙️ Migrations da Fase 1B (2026-08-19) — versionadas, validadas, NÃO APLICADAS em produção.**
+> `20260819220000_fase1b_remove_loja_filial_demo`,
+> `20260819220100_fase1b_fiscal_enfileirar_assinatura_unica` e
+> `20260819220200_fase1b_remove_relatorio_consistencia_vendas_3args`.
+> Aplicam limpas num `db reset` do zero; RLS 42/42, gates financeiros OK, ledger 310,
+> `check:types-drift` OK após regenerar `database.types.ts`. **Aguardam OK do dono para a
+> janela de DDL** — a aplicação em produção é decisão humana, não automática.
+>
+> **Achado novo, medido durante a Fase 1B:** o repositório tem **as duas** sobrecargas de
+> `fiscal_enfileirar_documento_venda`, e por isso a chamada de 3 args por nome — a do caminho
+> web — é **ambígua e falha** (`function ... is not unique`) em qualquer banco reconstruído do
+> Git. O defeito quebra os dois ambientes em direções opostas: produção derruba o caminho do
+> sync, o repositório derruba o caminho web. Latente nos dois casos (o web está atrás de
+> `AUTO_ENQUEUE_FISCAL_ON_SALE`, hoje em `fiscal.stub`).
+
 18. **🟡 Custo de CI dos jobs de E2E:** com a stack local, `e2e-critical` e `e2e-playwright` subiram para 45 min e 60 min de timeout. Os dois sobem em paralelo e disputam pull de imagem e banda (`Install Playwright Chromium` foi de ~1 min para 29 min num run). Caminhos de redução registrados: cache dos browsers do Playwright, ou reaproveitar uma única stack entre os dois jobs.
+
+19. **🟡 Código morto mapeado, aguardando autorização de remoção:** 10 funções SQL sem consumidor (CRUD de `funcionarios_meta`, conferência de recebimento, helpers órfãos) e **54 módulos frontend nunca importados** — dos quais **24 são sobras da migração `/gerente` → `/admin`**: as rotas viraram um catch-all de redirect e os clientes de página ficaram para trás. Lista completa, método, ressalvas e ordem de remoção em [AUDITORIA_CODIGO_MORTO_2026-08.md](./AUDITORIA_CODIGO_MORTO_2026-08.md). **Nada foi removido.**
+
+20. **🟠 `fiscal_reaper_documentos` nunca foi agendada:** criada pela `20260806135429_307_d3_reaper_fiscal_em_processamento.sql` para recuperar documentos fiscais presos em `EM_PROCESSAMENTO`, mas **nada a chama** — sem `.rpc()` no código, sem workflow no `.github/`, e `cron.job` em produção está **vazio** (verificado). Não é código morto: é uma salvaguarda operacional inerte. Documento preso em `EM_PROCESSAMENTO` fica preso indefinidamente, sem aviso. Dano hoje nulo porque o fiscal está em `stub`; **arma junto com o fiscal real**. Ação: agendar (pg_cron ou workflow), não remover.
