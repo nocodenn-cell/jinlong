@@ -13,6 +13,7 @@ import type { MetricCardIconKey } from '@/components/ui/admin-v2/MetricCard'
 import type { SparkTone } from '@/components/ui/admin-v2/sparkline'
 import { EmptyState, ErrorState } from '@/components/ui/feedback'
 import { createClient } from '@/lib/supabase/server'
+import { getRelatorioTimezone } from '@/lib/relatorios/getRelatorioTimezone'
 import { SalesTrendChartLazy } from './SalesTrendChartLazy'
 import { PaymentDonutChartLazy } from './PaymentDonutChartLazy'
 import { DashboardChart } from './_components/DashboardChart'
@@ -126,7 +127,8 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   const statusDb = status === 'ALL' ? null : status
   const supabase = await createClient()
   const now = new Date()
-  const { start, end, previousStart, previousEnd } = getPeriodRange(period, now)
+  const relatorioTz = await getRelatorioTimezone(supabase)
+  const { start, end, previousStart, previousEnd } = getPeriodRange(period, relatorioTz, now)
 
   // Observabilidade visual: algum caixa aberto agora? Best-effort — falha mantém "fechado".
   let algumCaixaAberto = false

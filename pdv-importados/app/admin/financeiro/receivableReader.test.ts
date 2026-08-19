@@ -74,4 +74,25 @@ describe('receivableReader', () => {
       valorTotal: 50,
     })
   })
+
+  it('listLiquidacoes mapeia linhas incluindo estornos', async () => {
+    const linhas = [
+      { id: 'l2', titulo_id: 't1', valor: 30, forma_pagamento: 'PIX', created_at: '2026-08-15T10:00:00Z', operacao_tipo: 'ESTORNO', operacao_origem_id: 'l1' },
+      { id: 'l1', titulo_id: 't1', valor: 30, forma_pagamento: 'PIX', created_at: '2026-08-14T10:00:00Z', operacao_tipo: 'RECEBIMENTO', operacao_origem_id: null },
+    ]
+    const supabase = {
+      from: vi.fn((table: string) => {
+        if (table === 'liquidacoes_receber') return thenableQuery({ data: linhas, error: null })
+        return thenableQuery({ data: [], error: null })
+      }),
+    } as never
+    const result = await createReceivableReader(supabase).listLiquidacoes({ tituloId: 't1' })
+    expect(result).toEqual({
+      ok: true,
+      liquidacoes: [
+        { id: 'l2', tituloId: 't1', valor: 30, formaPagamento: 'PIX', createdAt: '2026-08-15T10:00:00Z', operacaoTipo: 'ESTORNO', operacaoOrigemId: 'l1' },
+        { id: 'l1', tituloId: 't1', valor: 30, formaPagamento: 'PIX', createdAt: '2026-08-14T10:00:00Z', operacaoTipo: 'RECEBIMENTO', operacaoOrigemId: null },
+      ],
+    })
+  })
 })

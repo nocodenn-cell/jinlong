@@ -233,7 +233,7 @@ See `docs/GO-LIVE-RUNBOOK.md` for detailed deployment procedures.
 
 ### When to Write Docs
 - New features or APIs
-- Architecture decisions (add to DECISION-LOG.md)
+- Architecture decisions (novo arquivo em `docs/adr/`)
 - Runbooks for operational procedures
 - Setup/onboarding guides
 
@@ -276,7 +276,7 @@ See `docs/GO-LIVE-RUNBOOK.md` for incident response procedures.
 ## ❓ Questions?
 
 - **Technical architecture**: Check `/docs/ARCHITECTURE.md`
-- **Decision rationale**: Check `/docs/DECISION-LOG.md`
+- **Decision rationale**: Check `/docs/adr/`
 - **Deployment**: Check `/docs/GO-LIVE-RUNBOOK.md`
 - **Team comms**: Slack #fastproduct or #engineering
 

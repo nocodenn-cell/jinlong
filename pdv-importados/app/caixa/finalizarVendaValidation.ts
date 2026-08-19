@@ -1,8 +1,5 @@
 import { z } from 'zod'
-import {
-  EXCESSO_PAGAMENTO_EPS,
-  SALDO_PENDENTE_EPS,
-} from '@/app/caixa/caixaPagamentoSaldo'
+import { SALDO_PENDENTE_EPS } from '@/app/caixa/caixaPagamentoSaldo'
 import { roundMoney2 } from '@/shared/cart/totals'
 import { roundAbnt } from '@/core/money/roundAbnt'
 
@@ -73,6 +70,8 @@ export const finalizarVendaInputSchema = z.object({
     .optional(),
   motivoDesconto: z.enum(MOTIVO_DESCONTO_ENUM).optional(),
   motivoDescontoDescricao: z.string().max(500).nullish(),
+  /** BR-01: token de autorização gerencial para venda que excede o limite de crédito do cliente (`p_limite_credito_gerente_token`). */
+  limiteCreditoGerenteToken: z.string().min(1).optional(),
   pagamentos: z.array(pagamentoParcelaSchema).min(1, 'Informe ao menos uma parcela de pagamento.'),
   itens: z.array(itemFinalizarVendaSchema).min(1, 'Inclua pelo menos um item na venda.'),
   clienteId: z.string().uuid('ID do cliente inválido.').optional(), // ✅ NOVO (Fase 5b)
@@ -104,7 +103,7 @@ export const finalizarVendaInputSchema = z.object({
 
   const somaPagamentos = roundMoney2(value.pagamentos.reduce((acc, p) => acc + p.valor, 0))
 
-  if (somaPagamentos > value.totalLiquido + EXCESSO_PAGAMENTO_EPS) {
+  if (somaPagamentos > roundMoney2(value.totalLiquido)) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['pagamentos'],
@@ -142,11 +141,10 @@ export function totaisFromItens(itens: ItemTotalizacaoServidor[]) {
 export function totalsMatchDeclared(
   computed: ReturnType<typeof totaisFromItens>,
   declared: Pick<FinalizarVendaInput, 'totalBruto' | 'totalDesconto' | 'totalLiquido'>,
-  epsilon = 0.02,
 ) {
   return (
-    Math.abs(computed.totalBruto - declared.totalBruto) <= epsilon &&
-    Math.abs(computed.totalLiquido - declared.totalLiquido) <= epsilon &&
-    Math.abs(computed.totalDesconto - declared.totalDesconto) <= epsilon
+    Math.round(computed.totalBruto * 100) === Math.round(declared.totalBruto * 100) &&
+    Math.round(computed.totalLiquido * 100) === Math.round(declared.totalLiquido * 100) &&
+    Math.round(computed.totalDesconto * 100) === Math.round(declared.totalDesconto * 100)
   )
 }

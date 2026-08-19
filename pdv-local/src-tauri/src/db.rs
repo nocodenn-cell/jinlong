@@ -346,10 +346,22 @@ fn operador_id_efetivo(input: &RegistrarVendaInput) -> Option<String> {
         .filter(|s| Uuid::parse_str(s).is_ok())
 }
 
+/// registrar_venda_com_itens (backend) exige p_caixa_id desde a migration
+/// 20260814105031 — rejeitar aqui, antes de qualquer escrita local, em vez de
+/// gravar e enfileirar uma venda que só vai falhar no sync (Edge/RPC).
+fn validar_caixa_id_obrigatorio(caixa_id: &Option<String>) -> Result<(), String> {
+    match caixa_id.as_deref().map(str::trim) {
+        Some(cid) if !cid.is_empty() => Ok(()),
+        _ => Err("caixa_id é obrigatório para registrar uma venda.".to_string()),
+    }
+}
+
 pub fn registrar_venda_local(
     app: &tauri::AppHandle,
     input: RegistrarVendaInput,
 ) -> Result<String, String> {
+    validar_caixa_id_obrigatorio(&input.caixa_id)?;
+
     // Garantir schema sempre (seguro e evita falha caso init não rode por qualquer motivo).
     init_db(app)?;
 
@@ -966,10 +978,21 @@ fn signed_headers_for_request(
     Ok(headers)
 }
 
+/// `reqwest::blocking::Client::new()` não tem timeout — numa rede de loja
+/// instável isso trava o comando Tauri indefinidamente (e o intervalo de 15s
+/// do sync da outbox nunca se recupera) em vez de falhar rápido para o
+/// backoff/DLQ existente.
+fn http_client_with_timeout() -> Result<reqwest::blocking::Client, String> {
+    reqwest::blocking::Client::builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .build()
+        .map_err(|e| e.to_string())
+}
+
 pub fn sync_catalogo_real(app: &tauri::AppHandle) -> Result<SyncCatalogoResultDto, String> {
     init_db(app)?;
     let (endpoint, sync_key) = sync_endpoint_and_key()?;
-    let client = reqwest::blocking::Client::new();
+    let client = http_client_with_timeout()?;
     let catalogo_url = endpoint_with_op(&endpoint, "catalogo");
     let headers = signed_headers_for_request(&sync_key, "", &device_fingerprint_local())?;
 
@@ -1112,7 +1135,7 @@ pub fn validar_gerente_sync(senha: String) -> Result<ValidarGerentePdvDto, Strin
         return Err("Senha inválida (máx. 128 caracteres).".to_string());
     }
 
-    let client = reqwest::blocking::Client::new();
+    let client = http_client_with_timeout()?;
     let url = endpoint_with_op(&endpoint, "validar_gerente");
     let body = serde_json::json!({ "senha": trimmed }).to_string();
     let headers = signed_headers_for_request(&sync_key, &body, &device_fingerprint_local())?;
@@ -1167,7 +1190,7 @@ pub fn validar_gerente_sync(senha: String) -> Result<ValidarGerentePdvDto, Strin
 pub fn sync_pdv_config_real(app: &tauri::AppHandle) -> Result<Option<PdvConfigCacheDto>, String> {
     init_db(app)?;
     let (endpoint, sync_key) = sync_endpoint_and_key()?;
-    let client = reqwest::blocking::Client::new();
+    let client = http_client_with_timeout()?;
     let config_url = endpoint_with_op(&endpoint, "pdv_config");
     let headers = signed_headers_for_request(&sync_key, "", &device_fingerprint_local())?;
 
@@ -1509,7 +1532,7 @@ pub fn sync_outbox_real(app: &tauri::AppHandle, limite: i64) -> Result<i64, Stri
         return Ok(0);
     }
 
-    let client = reqwest::blocking::Client::new();
+    let client = http_client_with_timeout()?;
     let device_fingerprint = device_fingerprint_local();
     let body = serde_json::to_string(&SyncRequest { events })
         .map_err(|e| format!("Falha ao serializar payload de sync: {e}"))?;
@@ -1552,8 +1575,16 @@ pub fn sync_outbox_real(app: &tauri::AppHandle, limite: i64) -> Result<i64, Stri
 mod tests {
     use super::{
         backoff_segundos_apos_falha, build_request_signature, canonical_path_with_query,
-        endpoint_with_op,
+        endpoint_with_op, validar_caixa_id_obrigatorio,
     };
+
+    #[test]
+    fn validar_caixa_id_obrigatorio_rejeita_none_e_vazio_aceita_uuid() {
+        assert!(validar_caixa_id_obrigatorio(&None).is_err());
+        assert!(validar_caixa_id_obrigatorio(&Some("".to_string())).is_err());
+        assert!(validar_caixa_id_obrigatorio(&Some("   ".to_string())).is_err());
+        assert!(validar_caixa_id_obrigatorio(&Some("11111111-1111-1111-1111-111111111111".to_string())).is_ok());
+    }
 
     #[test]
     fn backoff_cresce_exponencialmente_e_respeita_teto() {

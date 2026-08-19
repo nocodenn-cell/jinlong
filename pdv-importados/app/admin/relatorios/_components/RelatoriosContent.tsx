@@ -22,6 +22,7 @@ import type {
   RelatorioMargemVendaDTO,
   RelatorioCurvaAbcDTO,
   RelatorioCoberturaEstoqueDTO,
+  RelatorioDivergenciaEstoqueDTO,
 } from '@/app/gerente/relatorios/actions'
 import type { PeriodoRelatorioResolvido } from '@/lib/relatorios/periodoRelatorio'
 import { RelatoriosBarChart } from './RelatoriosBarChart'
@@ -51,6 +52,7 @@ export type RelatoriosDados = {
   margemPorVenda: RelatorioMargemVendaDTO[]
   curvaAbc: RelatorioCurvaAbcDTO[]
   coberturaEstoque: RelatorioCoberturaEstoqueDTO[]
+  divergenciaEstoque: RelatorioDivergenciaEstoqueDTO[]
   rpcErro: string | null
 }
 
@@ -102,6 +104,11 @@ export type RelatoriosLabels = {
   coberturaEstoqueColDias: string
   coberturaEstoqueDiasCap: string
   vazioCoberturaEstoque: string
+  secDivergenciaEstoque: string
+  divergenciaEstoqueHint: string
+  divergenciaEstoqueColSaldo: string
+  divergenciaEstoqueColMovimentos: string
+  vazioDivergenciaEstoque: string
   origemChina: string
   origemBrasil: string
   vazioProdutos: string
@@ -353,6 +360,43 @@ function CoberturaEstoqueList({
   )
 }
 
+function DivergenciaEstoqueList({
+  itens,
+  labels,
+}: {
+  itens: RelatorioDivergenciaEstoqueDTO[]
+  labels: RelatoriosLabels
+}) {
+  // A view já ordena por |divergência|; aqui só filtramos ruído de arredondamento.
+  const comDivergencia = itens.filter((i) => Math.abs(i.divergencia) > 0.001).slice(0, 15)
+  if (comDivergencia.length === 0) {
+    return <EmptyState title={labels.vazioDivergenciaEstoque} className="py-8" />
+  }
+  return (
+    <div className="space-y-2">
+      <p className="text-caption italic text-jl-fg-3">{labels.divergenciaEstoqueHint}</p>
+      {comDivergencia.map((i) => (
+        <div
+          key={`${i.produtoId}-${i.lojaId}`}
+          className="flex items-center justify-between rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-background-secondary)] px-3 py-2"
+        >
+          <div className="min-w-0">
+            <p className="truncate text-small font-medium text-jl-fg-1">{i.nome}</p>
+            <p className="text-caption text-jl-fg-3">
+              {labels.divergenciaEstoqueColSaldo}: {i.saldoEstoque} ·{' '}
+              {labels.divergenciaEstoqueColMovimentos}: {i.somaMovimentos}
+            </p>
+          </div>
+          <span className="admin-v2-badge-muted shrink-0 rounded-full px-2 py-1 text-caption font-semibold tabular-nums">
+            {i.divergencia > 0 ? '+' : ''}
+            {i.divergencia}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function RelatoriosTabs({
   active,
   labels,
@@ -562,6 +606,9 @@ export function RelatoriosContent({
             </SectionCard>
             <SectionCard title={labels.secCoberturaEstoque}>
               <CoberturaEstoqueList itens={dados.coberturaEstoque} labels={labels} />
+            </SectionCard>
+            <SectionCard title={labels.secDivergenciaEstoque}>
+              <DivergenciaEstoqueList itens={dados.divergenciaEstoque} labels={labels} />
             </SectionCard>
           </div>
         ) : null}

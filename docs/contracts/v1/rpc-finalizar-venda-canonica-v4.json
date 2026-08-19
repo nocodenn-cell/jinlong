@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RPC finalizar_venda_transacional_canonica_v4 v1",
+  "description": "Contrato CANÔNICO de finalização de venda. Derivado de backend/supabase/migrations/20260809120837_finalize_v4_scope_guard_22args.sql (wrapper com scope-guard, 22 args). Substitui rpc-finalizar-venda-canonica-v3.json, que é histórico. O wrapper é SECURITY DEFINER e valida loja/caixa/operador antes de delegar a _unscoped, que não tem EXECUTE para authenticated.",
+  "type": "object",
+  "required": [
+    "p_venda_id",
+    "p_caixa_id",
+    "p_operador_id",
+    "p_loja_id"
+  ],
+  "properties": {
+    "p_venda_id": { "type": "string", "format": "uuid", "description": "Chave de idempotência: a v4 é idempotente por venda_id." },
+    "p_caixa_id": { "type": "string", "format": "uuid" },
+    "p_operador_id": { "type": "string", "format": "uuid", "description": "Deve coincidir com auth.uid() quando houver sessão — senão FINALIZAR_VENDA_CANONICA_OPERADOR_INVALIDO." },
+    "p_loja_id": { "type": "string", "format": "uuid", "description": "Deve coincidir com usuarios.loja_id — senão FINALIZAR_VENDA_CANONICA_LOJA_INVALIDA." },
+    "p_forma_pagamento": { "type": "string", "default": "DINHEIRO" },
+    "p_total_bruto": { "type": ["number", "null"], "minimum": 0 },
+    "p_total_desconto": { "type": ["number", "null"], "minimum": 0 },
+    "p_total_liquido": { "type": ["number", "null"], "minimum": 0 },
+    "p_pagamentos": {
+      "type": ["array", "null"],
+      "description": "Split de pagamento. jsonb; null quando pagamento único.",
+      "items": {
+        "type": "object",
+        "required": ["forma_pagamento", "valor"],
+        "properties": {
+          "forma_pagamento": { "type": "string" },
+          "valor": { "type": "number", "minimum": 0 }
+        },
+        "additionalProperties": true
+      }
+    },
+    "p_itens": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "object",
+        "required": ["produto_id", "quantidade"],
+        "properties": {
+          "item_id": { "type": "string", "format": "uuid" },
+          "produto_id": { "type": "string", "format": "uuid" },
+          "quantidade": { "type": "number", "exclusiveMinimum": 0 },
+          "preco_original": { "type": ["number", "null"], "minimum": 0 },
+          "preco_unitario": { "type": ["number", "null"], "minimum": 0 },
+          "desconto_unitario": { "type": ["number", "null"], "minimum": 0 },
+          "tipo_preco": { "type": ["string", "null"] },
+          "custo_unitario_snap": { "type": ["number", "null"] },
+          "tipo_preco_fonte": { "type": ["string", "null"] },
+          "regra_aplicada_id": { "type": ["string", "null"] }
+        },
+        "additionalProperties": true
+      }
+    },
+    "p_desconto_gerente_token": { "type": ["string", "null"] },
+    "p_desconto_gerente_percentual": { "type": ["number", "null"] },
+    "p_strict_manager_discount_auth": { "type": "boolean", "default": false },
+    "p_fiscal_auto_enqueue": { "type": "boolean", "default": false },
+    "p_ip_address": { "type": ["string", "null"] },
+    "p_user_agent": { "type": ["string", "null"] },
+    "p_device_id": { "type": ["string", "null"] },
+    "p_terminal_id": { "type": ["string", "null"] },
+    "p_cliente_id": { "type": ["string", "null"], "format": "uuid" },
+    "p_motivo_desconto": {
+      "type": "string",
+      "default": "NAO_ESPECIFICADO",
+      "description": "enum public.motivo_desconto_enum_tipo"
+    },
+    "p_motivo_descricao": { "type": ["string", "null"] },
+    "p_limite_credito_gerente_token": { "type": ["string", "null"] }
+  },
+  "additionalProperties": false,
+  "x-returns": {
+    "type": "object",
+    "description": "RETURNS TABLE — uma linha.",
+    "required": ["venda_id", "status"],
+    "properties": {
+      "venda_id": { "type": "string", "format": "uuid" },
+      "status": { "type": "string" },
+      "mensagem": { "type": ["string", "null"] },
+      "dados_fiscais": { "type": ["object", "null"] },
+      "itens_atualizados": { "type": ["array", "null"] },
+      "estoque_baixado": { "type": ["array", "null"] },
+      "event_id": { "type": ["string", "null"], "format": "uuid" },
+      "contas_receber_id": { "type": ["string", "null"], "format": "uuid" }
+    }
+  },
+  "x-errors": [
+    "FINALIZAR_VENDA_CANONICA_AUTH",
+    "FINALIZAR_VENDA_CANONICA_OPERADOR_INVALIDO",
+    "FINALIZAR_VENDA_CANONICA_USUARIO_INVALIDO",
+    "FINALIZAR_VENDA_CANONICA_LOJA_INVALIDA",
+    "FINALIZAR_VENDA_CANONICA_CAIXA_NAO_ENCONTRADO",
+    "FINALIZAR_VENDA_CANONICA_CAIXA_LOJA_INVALIDA",
+    "FINALIZAR_VENDA_CANONICA_CAIXA_OPERADOR_INVALIDO",
+    "FINALIZAR_VENDA_CANONICA_CAIXA_FECHADO"
+  ],
+  "x-source": {
+    "migration": "backend/supabase/migrations/20260809120837_finalize_v4_scope_guard_22args.sql",
+    "caller": "pdv-importados/app/caixa/server/caixaVendas.impl.ts",
+    "pronargs": 22,
+    "security": "SECURITY DEFINER; search_path=public; _unscoped sem EXECUTE para authenticated"
+  }
+}

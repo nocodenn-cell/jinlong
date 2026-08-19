@@ -46,7 +46,7 @@ export function ComissoesPageClient({ idioma }: Props) {
     setDetalheLoading(true)
     setSelecionados(new Set())
     try {
-      const r = await carregarDetalheComissoes(row.operador_id, filtro)
+      const r = await carregarDetalheComissoes(row.operadorId, filtro)
       if (!r.success) {
         emitGerenteToast({ kind: 'error', message: r.error })
         return
@@ -61,7 +61,7 @@ export function ComissoesPageClient({ idioma }: Props) {
     async () => {
       if (!operadorDetalhe || selecionados.size === 0) return null
       const r = await marcarComissoesPagas({
-        operador_id: operadorDetalhe.operador_id,
+        operador_id: operadorDetalhe.operadorId,
         ids: Array.from(selecionados),
       })
       if (!r.success) throw new Error(r.error)
@@ -83,15 +83,15 @@ export function ComissoesPageClient({ idioma }: Props) {
   }
 
   const toggleTodos = () => {
-    const pendentes = detalheRows.filter((r) => r.status === 'pendente').map((r) => r.comissao_id)
+    const pendentes = detalheRows.filter((r) => r.status === 'pendente').map((r) => r.comissaoId)
     setSelecionados((prev) =>
       prev.size === pendentes.length ? new Set() : new Set(pendentes),
     )
   }
 
   const totalPendente = detalheRows
-    .filter((r) => r.status === 'pendente' && selecionados.has(r.comissao_id))
-    .reduce((s, r) => s + r.valor_comissao, 0)
+    .filter((r) => r.status === 'pendente' && selecionados.has(r.comissaoId))
+    .reduce((s, r) => s + r.valorOriginal, 0)
 
   return (
     <>
@@ -157,15 +157,15 @@ export function ComissoesPageClient({ idioma }: Props) {
             ]}
           >
             {resumo.map((row) => (
-              <tr key={row.operador_id} className="gerente-fin-row-hover transition-colors">
-                <td className="gerente-fin-cell px-4 py-2 font-medium">{row.operador_nome}</td>
-                <td className="gerente-fin-cell px-4 py-2 text-right tabular-nums">{row.total_vendas}</td>
-                <td className="gerente-fin-cell px-4 py-2 text-right tabular-nums">{formatBRL(row.total_comissao, locale)}</td>
+              <tr key={row.operadorId} className="gerente-fin-row-hover transition-colors">
+                <td className="gerente-fin-cell px-4 py-2 font-medium">{row.operadorNome}</td>
+                <td className="gerente-fin-cell px-4 py-2 text-right tabular-nums">{row.totalVendas}</td>
+                <td className="gerente-fin-cell px-4 py-2 text-right tabular-nums">{formatBRL(row.totalComissaoBruta, locale)}</td>
                 <td className="px-4 py-2 text-right tabular-nums text-emerald-400">
-                  {formatBRL(row.total_pago, locale)}
+                  {formatBRL(row.totalLiquidoPago, locale)}
                 </td>
                 <td className="px-4 py-2 text-right tabular-nums text-amber-400 font-semibold">
-                  {formatBRL(row.total_pendente, locale)}
+                  {formatBRL(row.totalSaldoResidual, locale)}
                 </td>
                 <td className="px-4 py-2 text-right">
                   <div className="gerente-row-actions flex justify-end">
@@ -197,10 +197,10 @@ export function ComissoesPageClient({ idioma }: Props) {
             <div className="flex items-center justify-between border-b border-jl-border-1 px-5 py-4">
               <div>
                 <h2 className="text-base font-semibold text-jl-fg-1">
-                  {operadorDetalhe.operador_nome}
+                  {operadorDetalhe.operadorNome}
                 </h2>
                 <p className="text-xs app-muted">
-                  Pendente: {formatBRL(operadorDetalhe.total_pendente, locale)}
+                  Pendente: {formatBRL(operadorDetalhe.totalSaldoResidual, locale)}
                 </p>
               </div>
               <button
@@ -243,24 +243,24 @@ export function ComissoesPageClient({ idioma }: Props) {
                       </thead>
                       <tbody className="divide-y divide-jl-border-1">
                         {detalheRows.map((r) => (
-                          <tr key={r.comissao_id} className="gerente-fin-row-hover">
+                          <tr key={r.comissaoId} className="gerente-fin-row-hover">
                             <td className="px-3 py-2 text-center">
                               {r.status === 'pendente' && (
                                 <input
                                   type="checkbox"
-                                  checked={selecionados.has(r.comissao_id)}
-                                  onChange={() => toggleSelecionado(r.comissao_id)}
+                                  checked={selecionados.has(r.comissaoId)}
+                                  onChange={() => toggleSelecionado(r.comissaoId)}
                                 />
                               )}
                             </td>
                             <td className="gerente-fin-cell px-3 py-2 tabular-nums">
-                              {new Date(r.created_at).toLocaleDateString(locale)}
+                              {new Date(r.createdAt).toLocaleDateString(locale)}
                             </td>
                             <td className="gerente-fin-cell px-3 py-2 text-right tabular-nums">
-                              {formatBRL(r.base_calculo, locale)}
+                              {formatBRL(r.baseCalculo, locale)}
                             </td>
                             <td className="gerente-fin-cell px-3 py-2 text-right tabular-nums font-semibold">
-                              {formatBRL(r.valor_comissao, locale)}
+                              {formatBRL(r.valorOriginal, locale)}
                             </td>
                             <td className="px-3 py-2">
                               {r.status === 'pago' ? (

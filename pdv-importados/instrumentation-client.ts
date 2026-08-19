@@ -13,6 +13,7 @@
 
 import * as Sentry from '@sentry/nextjs'
 import { resolveSentryEnvironment, resolveSentryRelease } from './lib/observability/sentryEnvironment'
+import { redigir } from './lib/observability/redact'
 
 const environment = resolveSentryEnvironment()
 
@@ -46,7 +47,8 @@ Sentry.init({
         }
       }
     }
-    return event
+    // Redação por último: o filtro acima precisa ler `ex.value` ainda íntegro.
+    return redigir(event)
   },
 })
 

@@ -3,8 +3,13 @@
 /**
  * FastProduct Admin — ComissoesContent
  *
- * Resumo por operador + sheet de detalhe + marcar como pago.
- * Reutiliza actions de /gerente/comissoes (sem alterar contratos).
+ * Resumo por operador + sheet de detalhe + liquidação. Reutiliza actions de
+ * /gerente/comissoes (sem alterar contratos).
+ *
+ * Semântica líquida (DB-05 A→F, reconciliação frontend↔backend): os totais e
+ * o detalhe vêm de `resumo_comissoes_por_operador` / `detalhe_comissoes_operador`,
+ * que projetam as views certificadas `comissoes_reconstrucao_auditoria` e
+ * `comissoes_ajustes_auditoria` — nada aqui recalcula fato financeiro.
  */
 
 import { useCallback, useMemo, useState } from 'react'
@@ -15,12 +20,18 @@ import { DataTable, type Column } from '@/components/ui/DataTable'
 import { EmptyState } from '@/components/ui/feedback'
 import { formatBRL } from '@/lib/format/money'
 import { emitGerenteToast } from '@/lib/gerente/toast'
-import type { ComissaoResumoRow, ComissaoDetalheRow, FiltroComissoes } from '@/app/gerente/comissoes/actions'
+import type {
+  ComissaoResumoRow,
+  ComissaoDetalheRow,
+  FiltroComissoes,
+  LiquidacaoResultado,
+} from '@/app/gerente/comissoes/actions'
 import {
   carregarDetalheComissoes,
   marcarComissoesPagas,
 } from '@/app/gerente/comissoes/actions'
 import { ComissoesDetailSheet } from './ComissoesDetailSheet'
+import { LiquidacaoResultModal } from './LiquidacaoResultModal'
 import type { ComissoesLabels } from './comissoesLabels'
 
 export type { ComissoesLabels } from './comissoesLabels'
@@ -39,9 +50,10 @@ function focusFiltros() {
   first?.focus()
 }
 
-function moneyStatusClass(kind: 'pago' | 'pendente'): string {
-  if (kind === 'pago') return 'text-[12px] text-[var(--color-success-strong)]'
-  return 'text-[12px] font-medium text-[var(--color-warning-strong)]'
+function saldoToneClass(valor: number): string {
+  if (valor > 0) return 'text-[12px] font-medium text-[var(--color-warning-strong)]'
+  if (valor < 0) return 'text-[12px] font-medium text-[var(--color-danger-strong)]'
+  return 'text-[12px] text-jl-fg-3'
 }
 
 export function ComissoesContent({ dados, filtroInicial, labels }: Props) {
@@ -52,16 +64,19 @@ export function ComissoesContent({ dados, filtroInicial, labels }: Props) {
   const [detalheLoading, setDetalheLoading] = useState(false)
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
   const [error, setError] = useState<string | null>(null)
+  const [liquidacaoResultado, setLiquidacaoResultado] = useState<LiquidacaoResultado | null>(null)
+  const [marcandoPagas, setMarcandoPagas] = useState(false)
 
   const kpis = useMemo(() => {
     return rows.reduce(
       (acc, r) => {
-        acc.total += r.total_comissao
-        acc.pago += r.total_pago
-        acc.pendente += r.total_pendente
+        acc.bruto += r.totalComissaoBruta
+        acc.ajustes += r.totalAjustes
+        acc.liquidoPago += r.totalLiquidoPago
+        acc.saldoResidual += r.totalSaldoResidual
         return acc
       },
-      { total: 0, pago: 0, pendente: 0 },
+      { bruto: 0, ajustes: 0, liquidoPago: 0, saldoResidual: 0 },
     )
   }, [rows])
 
@@ -79,7 +94,7 @@ export function ComissoesContent({ dados, filtroInicial, labels }: Props) {
       setError(null)
 
       try {
-        const res = await carregarDetalheComissoes(row.operador_id, filtroInicial)
+        const res = await carregarDetalheComissoes(row.operadorId, filtroInicial)
         if (!res.success) {
           setError(res.error)
           emitGerenteToast({ kind: 'error', message: res.error })
@@ -102,10 +117,11 @@ export function ComissoesContent({ dados, filtroInicial, labels }: Props) {
   const marcarPagas = async () => {
     if (!detalheOperador || selecionados.size === 0) return
     setError(null)
+    setMarcandoPagas(true)
 
     try {
       const res = await marcarComissoesPagas({
-        operador_id: detalheOperador.operador_id,
+        operador_id: detalheOperador.operadorId,
         ids: Array.from(selecionados),
       })
       if (!res.success) {
@@ -115,6 +131,7 @@ export function ComissoesContent({ dados, filtroInicial, labels }: Props) {
       }
 
       setSelecionados(new Set())
+      setLiquidacaoResultado(res.data)
       emitGerenteToast({ kind: 'success', message: labels.marcadoSucesso })
       await abrirDetalhe(detalheOperador)
       router.refresh()
@@ -122,6 +139,8 @@ export function ComissoesContent({ dados, filtroInicial, labels }: Props) {
       const msg = err instanceof Error ? err.message : labels.erroPagarFallback
       setError(msg)
       emitGerenteToast({ kind: 'error', message: msg })
+    } finally {
+      setMarcandoPagas(false)
     }
   }
 
@@ -137,22 +156,22 @@ export function ComissoesContent({ dados, filtroInicial, labels }: Props) {
   const toggleTodos = () => {
     const pendentes = detalheRows
       .filter((r) => r.status === 'pendente')
-      .map((r) => r.comissao_id)
+      .map((r) => r.comissaoId)
     setSelecionados((prev) =>
       prev.size === pendentes.length ? new Set() : new Set(pendentes),
     )
   }
 
-  const totalPendenteSelecionado = detalheRows
-    .filter((r) => r.status === 'pendente' && selecionados.has(r.comissao_id))
-    .reduce((s, r) => s + r.valor_comissao, 0)
+  const totalBrutoSelecionado = detalheRows
+    .filter((r) => r.status === 'pendente' && selecionados.has(r.comissaoId))
+    .reduce((s, r) => s + r.valorOriginal, 0)
 
   const columns: Column<ComissaoResumoRow>[] = [
     {
       key: 'operador',
       header: labels.colOperador,
       priority: 'primary',
-      sortValue: (r) => r.operador_nome,
+      sortValue: (r) => r.operadorNome,
       cell: (r) => (
         <button
           type="button"
@@ -162,7 +181,7 @@ export function ComissoesContent({ dados, filtroInicial, labels }: Props) {
           }}
           className="font-medium text-jl-accent underline-offset-2 transition-colors hover:underline"
         >
-          {r.operador_nome}
+          {r.operadorNome}
         </button>
       ),
     },
@@ -170,38 +189,49 @@ export function ComissoesContent({ dados, filtroInicial, labels }: Props) {
       key: 'vendas',
       header: labels.colVendas,
       align: 'right',
-      sortValue: (r) => r.total_vendas,
-      cell: (r) => <span className="text-[12px] text-jl-fg-2">{r.total_vendas}</span>,
+      sortValue: (r) => r.totalVendas,
+      cell: (r) => <span className="text-[12px] text-jl-fg-2">{r.totalVendas}</span>,
     },
     {
-      key: 'comissao_total',
-      header: labels.colTotal,
+      key: 'bruto',
+      header: labels.colBruto,
       align: 'right',
-      sortValue: (r) => r.total_comissao,
+      sortValue: (r) => r.totalComissaoBruta,
       cell: (r) => (
         <span className="text-[12px] font-medium text-jl-fg-1">
-          {formatBRL(r.total_comissao)}
+          {formatBRL(r.totalComissaoBruta)}
         </span>
       ),
     },
     {
-      key: 'comissao_pago',
-      header: labels.colPago,
+      key: 'ajustes',
+      header: labels.colAjustes,
       align: 'right',
-      sortValue: (r) => r.total_pago,
+      sortValue: (r) => r.totalAjustes,
       cell: (r) => (
-        <span className={moneyStatusClass('pago')}>{formatBRL(r.total_pago)}</span>
+        <span className="text-[12px] text-jl-fg-3">
+          {r.totalAjustes > 0 ? `−${formatBRL(r.totalAjustes)}` : formatBRL(0)}
+        </span>
       ),
     },
     {
-      key: 'comissao_pendente',
-      header: labels.colPendente,
+      key: 'liquido_pago',
+      header: labels.colLiquidoPago,
+      align: 'right',
+      sortValue: (r) => r.totalLiquidoPago,
+      cell: (r) => (
+        <span className="text-[12px] text-[var(--color-success-strong)]">
+          {formatBRL(r.totalLiquidoPago)}
+        </span>
+      ),
+    },
+    {
+      key: 'saldo_residual',
+      header: labels.colSaldoResidual,
       align: 'right',
       priority: 'primary',
-      sortValue: (r) => r.total_pendente,
-      cell: (r) => (
-        <span className={moneyStatusClass('pendente')}>{formatBRL(r.total_pendente)}</span>
-      ),
+      sortValue: (r) => r.totalSaldoResidual,
+      cell: (r) => <span className={saldoToneClass(r.totalSaldoResidual)}>{formatBRL(r.totalSaldoResidual)}</span>,
     },
     {
       key: 'acoes',
@@ -236,20 +266,26 @@ export function ComissoesContent({ dados, filtroInicial, labels }: Props) {
 
       <div className="admin-v2-grid-kpi">
         <MetricCard
-          label={labels.metricTotal}
-          value={formatBRL(kpis.total)}
+          label={labels.metricBruto}
+          value={formatBRL(kpis.bruto)}
           icon="dollar-sign"
           tone="gold"
         />
         <MetricCard
-          label={labels.metricPago}
-          value={formatBRL(kpis.pago)}
+          label={labels.metricAjustes}
+          value={kpis.ajustes > 0 ? `−${formatBRL(kpis.ajustes)}` : formatBRL(0)}
+          icon="alert-circle"
+          tone="danger"
+        />
+        <MetricCard
+          label={labels.metricLiquidoPago}
+          value={formatBRL(kpis.liquidoPago)}
           icon="file-check-2"
           tone="success"
         />
         <MetricCard
-          label={labels.metricPendente}
-          value={formatBRL(kpis.pendente)}
+          label={labels.metricSaldoResidual}
+          value={formatBRL(kpis.saldoResidual)}
           icon="alert-circle"
           tone="warning"
         />
@@ -262,7 +298,7 @@ export function ComissoesContent({ dados, filtroInicial, labels }: Props) {
         <DataTable
           data={rows}
           columns={columns}
-          rowKey={(r) => r.operador_id}
+          rowKey={(r) => r.operadorId}
           onRowClick={(r) => void abrirDetalhe(r)}
           emptyState={
             <EmptyState
@@ -284,12 +320,21 @@ export function ComissoesContent({ dados, filtroInicial, labels }: Props) {
           loading={detalheLoading}
           error={error}
           selecionados={selecionados}
-          totalPendenteSelecionado={totalPendenteSelecionado}
+          totalBrutoSelecionado={totalBrutoSelecionado}
+          marcandoPagas={marcandoPagas}
           labels={labels}
           onClose={fecharDetalhe}
           onToggle={toggleSelecionado}
           onToggleTodos={toggleTodos}
           onMarcarPagas={() => void marcarPagas()}
+        />
+      ) : null}
+
+      {liquidacaoResultado ? (
+        <LiquidacaoResultModal
+          resultado={liquidacaoResultado}
+          labels={labels}
+          onClose={() => setLiquidacaoResultado(null)}
         />
       ) : null}
     </div>

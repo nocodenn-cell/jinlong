@@ -29,6 +29,14 @@ export type Column<T> = {
   headerClassName?: string
   /** Peso visual do cabeçalho (compat GerenteTable). */
   priority?: 'primary' | 'secondary' | 'contextual'
+  /**
+   * Fixa a coluna à esquerda durante o scroll horizontal (`overflow-x-auto`
+   * do wrapper) — pensado para telas estreitas onde a tabela é mais larga
+   * que a viewport e o operador perderia a coluna de identificação (ex.:
+   * nome do produto) ao rolar até as colunas de ação. Opt-in por coluna;
+   * sem uso, nenhuma tabela existente muda de comportamento.
+   */
+  sticky?: boolean
 }
 
 type DataTableProps<T> = {
@@ -163,6 +171,8 @@ export function DataTable<T>({
                     headerPriorityCn(col.priority),
                     alignClass,
                     sortable && 'cursor-pointer select-none',
+                    col.sticky &&
+                      'sticky left-0 z-20 border-r border-[var(--color-border)] bg-[var(--color-surface-soft)]',
                     col.headerClassName,
                   )}
                   onClick={sortable ? () => handleHeaderClick(col) : undefined}
@@ -239,6 +249,8 @@ export function DataTable<T>({
                       cellPy,
                       ALIGN_CLASS[col.align ?? 'left'],
                       col.align === 'right' && 'tabular-nums',
+                      col.sticky &&
+                        'sticky left-0 z-10 border-r border-[var(--color-border)] bg-[var(--color-surface)]',
                       col.className,
                     )}
                   >

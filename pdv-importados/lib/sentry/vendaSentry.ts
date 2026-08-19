@@ -12,6 +12,7 @@
 import * as Sentry from '@sentry/nextjs'
 import type { VendaTraceContext, VendaBreadcrumb } from '@shared-core/src/observability/vendaTrace'
 import { VENDA_EVENTS } from '@shared-core/src/observability/vendaTrace'
+import { redigir } from '@/lib/observability/redact'
 
 export { VENDA_EVENTS }
 export type { VendaTraceContext, VendaBreadcrumb }
@@ -31,8 +32,11 @@ export function setSentryVendaScope(ctx: VendaTraceContext): void {
       ...(ctx.loja_id ? { loja_id: ctx.loja_id } : {}),
       ...(ctx.caixa_id ? { caixa_id: ctx.caixa_id } : {}),
     })
+    // `Sentry.setUser` associava o issue a uma PESSOA (o operador). Para
+    // depurar basta saber QUE houve um operador e correlacionar pelo
+    // `trace_id`; a identidade não acrescenta nada e é dado pessoal.
     if (ctx.operador_id) {
-      Sentry.setUser({ id: ctx.operador_id })
+      Sentry.setTags({ tem_operador: 'sim' })
     }
   } catch {
     // Observabilidade não lança
@@ -50,11 +54,12 @@ export function addVendaBreadcrumb(breadcrumb: VendaBreadcrumb): void {
       category: 'venda',
       message: breadcrumb.message ?? breadcrumb.event,
       level: breadcrumb.level ?? 'info',
-      data: {
+      // `...breadcrumb.data` é aberto: quem chama pode pôr qualquer coisa.
+      data: redigir({
         event: breadcrumb.event,
         trace_id: breadcrumb.trace_id,
         ...breadcrumb.data,
-      },
+      }) as Record<string, unknown>,
       timestamp: Date.now() / 1000,
     })
   } catch {
@@ -79,15 +84,18 @@ export function captureVendaError(
       if (ctx.caixa_id) scope.setTag('caixa_id', ctx.caixa_id)
       if (ctx.evento) scope.setTag('evento', ctx.evento)
       if (ctx.loja_id) scope.setTag('loja_id', ctx.loja_id)
-      scope.setContext('venda', {
-        trace_id: ctx.trace_id,
-        venda_id: ctx.venda_id ?? null,
-        caixa_id: ctx.caixa_id ?? null,
-        operador_id: ctx.operador_id ?? null,
-        total_liquido: ctx.total_liquido ?? null,
-        itens_count: ctx.itens_count ?? null,
-        ...ctx.extra,
-      })
+      // `...ctx.extra` é aberto — mesma razão do breadcrumb.
+      scope.setContext(
+        'venda',
+        redigir({
+          trace_id: ctx.trace_id,
+          venda_id: ctx.venda_id ?? null,
+          caixa_id: ctx.caixa_id ?? null,
+          total_liquido: ctx.total_liquido ?? null,
+          itens_count: ctx.itens_count ?? null,
+          ...ctx.extra,
+        }) as Record<string, unknown>,
+      )
       Sentry.captureException(error instanceof Error ? error : new Error(String(error)))
     })
   } catch {

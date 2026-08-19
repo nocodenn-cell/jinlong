@@ -1,4 +1,5 @@
--- Minimal FK stubs for isolated Fase 3.2 idempotency smoke (NOT full FastProduct schema).
+-- Schema mínimo para testar isoladamente a migration histórica 252 e a tombstone.
+-- Não representa um reset completo do FastProduct.
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 CREATE TABLE IF NOT EXISTS public.lojas (id uuid PRIMARY KEY DEFAULT gen_random_uuid());
@@ -31,7 +32,6 @@ CREATE TABLE IF NOT EXISTS public.usuarios (
   perfil text
 );
 
--- Stub Supabase roles for RLS/grants (Neon smoke only).
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
@@ -40,14 +40,14 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN
     CREATE ROLE service_role NOLOGIN;
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
-    CREATE ROLE anon NOLOGIN;
-  END IF;
 END
 $$;
 
--- Stub auth.uid() for RLS policy creation (Neon smoke only).
 CREATE SCHEMA IF NOT EXISTS auth;
-CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid
-LANGUAGE sql STABLE
-AS $$ SELECT NULL::uuid $$;
+DO $$
+BEGIN
+  IF to_regprocedure('auth.uid()') IS NULL THEN
+    EXECUTE 'CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS ''SELECT NULL::uuid''';
+  END IF;
+END
+$$;

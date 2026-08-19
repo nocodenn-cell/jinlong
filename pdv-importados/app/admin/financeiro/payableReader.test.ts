@@ -31,6 +31,7 @@ describe('payableReader', () => {
       nfe_numero: '123',
       nfe_importacao_id: null,
       criado_em: '2026-06-01',
+      loja_id: 'l1',
       fornecedor: { nome: 'Fornecedor X' },
     }
     const supabase = {
@@ -44,6 +45,7 @@ describe('payableReader', () => {
       fornecedorNome: 'Fornecedor X',
       nfeNumero: '123',
       status: 'PENDENTE',
+      lojaId: 'l1',
     })
   })
 

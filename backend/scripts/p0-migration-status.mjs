@@ -19,8 +19,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const BACKEND_ROOT = path.resolve(__dirname, "..");
 const MIGRATIONS_DIR = path.join(BACKEND_ROOT, "supabase", "migrations");
-
-const PHASE_3_2_GIT_ONLY_VERSION = "20260808130200";
+const HUMAN_GATES_FILE = path.join(BACKEND_ROOT, "supabase", "migration-human-gates.json");
 
 function readArgs(argv) {
   return {
@@ -71,22 +70,12 @@ function isLegacyRemoteOnlyNumeric(version) {
   return n >= 205 && n <= 289;
 }
 
-function isPhase32GitOnlyDrift(entry) {
-  return (
-    entry.reason === "remote_ausente" &&
-    entry.version === PHASE_3_2_GIT_ONLY_VERSION
-  );
-}
-
-function classifyDriftEntries(drift) {
+export function classifyDriftEntries(drift) {
   const blocking = [];
-  const phase32GitOnly = [];
   const legacyNumericMirror = [];
   const greenfieldSsotReorder = [];
   for (const d of drift) {
-    if (isPhase32GitOnlyDrift(d)) {
-      phase32GitOnly.push(d);
-    } else if (isGreenfieldSsotReorderDrift(d)) {
+    if (isGreenfieldSsotReorderDrift(d)) {
       greenfieldSsotReorder.push(d);
     } else if (isLegacyNumericMirrorDrift(d)) {
       legacyNumericMirror.push(d);
@@ -94,7 +83,99 @@ function classifyDriftEntries(drift) {
       blocking.push(d);
     }
   }
-  return { blocking, phase32GitOnly, legacyNumericMirror, greenfieldSsotReorder };
+  return { blocking, legacyNumericMirror, greenfieldSsotReorder };
+}
+
+export function parseHumanGateRegistry(raw) {
+  let payload;
+  try {
+    payload = JSON.parse(raw);
+  } catch {
+    throw new Error("Registro HUMAN_GATE inválido: JSON malformado.");
+  }
+  if (!payload || !Array.isArray(payload.gates)) {
+    throw new Error("Registro HUMAN_GATE inválido: campo gates deve ser uma lista.");
+  }
+  const seen = new Set();
+  return payload.gates.map((gate, index) => {
+    if (!gate || typeof gate !== "object") {
+      throw new Error(`Registro HUMAN_GATE inválido: gates[${index}] não é objeto.`);
+    }
+    const version = String(gate.version ?? "").trim();
+    const direction = String(gate.direction ?? "").trim();
+    const reason = String(gate.reason ?? "").trim();
+    const decisionDoc = String(gate.decisionDoc ?? "").trim();
+    if (!/^\d+$/.test(version)) {
+      throw new Error(`Registro HUMAN_GATE inválido: gates[${index}].version deve ser numérica.`);
+    }
+    if (!['git_only', 'remote_only'].includes(direction)) {
+      throw new Error(`Registro HUMAN_GATE inválido: gates[${index}].direction deve ser git_only ou remote_only.`);
+    }
+    if (!reason || !decisionDoc) {
+      throw new Error(`Registro HUMAN_GATE inválido: gates[${index}] exige reason e decisionDoc.`);
+    }
+    const key = `${direction}:${version}`;
+    if (seen.has(key)) {
+      throw new Error(`Registro HUMAN_GATE inválido: gate duplicado ${key}.`);
+    }
+    seen.add(key);
+    return { version, direction, reason, decisionDoc };
+  });
+}
+
+function loadHumanGateRegistry() {
+  if (!fs.existsSync(HUMAN_GATES_FILE)) {
+    throw new Error(`Registro HUMAN_GATE obrigatório ausente: ${HUMAN_GATES_FILE}`);
+  }
+  return parseHumanGateRegistry(fs.readFileSync(HUMAN_GATES_FILE, "utf8"));
+}
+
+export function applyHumanGateRegistry({ blocking, missingInList, extraBlocking }, gates) {
+  const gateByKey = new Map(gates.map((gate) => [`${gate.direction}:${gate.version}`, gate]));
+  const humanGate = [];
+  const blockingRemaining = blocking.filter((entry) => {
+    const gate = gateByKey.get(`git_only:${entry.version}`);
+    if (!gate) return true;
+    humanGate.push({ ...gate, divergence: entry.reason });
+    return false;
+  });
+  const missingRemaining = missingInList.filter((version) => {
+    const gate = gateByKey.get(`git_only:${version}`);
+    if (!gate) return true;
+    humanGate.push({ ...gate, divergence: "ausente_na_lista_cli" });
+    return false;
+  });
+  const extraRemaining = extraBlocking.filter((version) => {
+    const gate = gateByKey.get(`remote_only:${version}`);
+    if (!gate) return true;
+    humanGate.push({ ...gate, divergence: "remote_only" });
+    return false;
+  });
+  return {
+    blocking: blockingRemaining,
+    missingInList: missingRemaining,
+    extraBlocking: extraRemaining,
+    humanGate,
+  };
+}
+
+export function deriveOverallStatus({
+  blocking,
+  humanGate = [],
+  missingInList,
+  extraBlocking,
+}) {
+  if (blocking.length > 0 || missingInList.length > 0 || extraBlocking.length > 0) {
+    return "BLOCKING_DRIFT";
+  }
+  if (humanGate.length > 0) return "HUMAN_GATE";
+  return "ALIGNED";
+}
+
+export function deriveExitCode(status, warnOnly = false) {
+  if (status === "HUMAN_GATE") return 1;
+  if (status === "BLOCKING_DRIFT" && !warnOnly) return 1;
+  return 0;
 }
 
 function listMigrationVersionsFromDisk() {
@@ -323,17 +404,39 @@ function main() {
   const { format: cliOutputFormat, rows } = parsed;
 
   const { drift, missingInList, extraInList, maxDisk } = analyze(rows, diskVersions);
-  const { blocking, phase32GitOnly, legacyNumericMirror, greenfieldSsotReorder } =
+  const { blocking: initiallyBlocking, legacyNumericMirror, greenfieldSsotReorder } =
     classifyDriftEntries(drift);
   const extraLegacyRemote = extraInList.filter(isLegacyRemoteOnlyNumeric);
-  const extraBlocking = extraInList.filter((v) => !isLegacyRemoteOnlyNumeric(v));
-  const aligned =
-    blocking.length === 0 &&
-    missingInList.length === 0 &&
-    extraBlocking.length === 0;
+  const initiallyExtraBlocking = extraInList.filter((v) => !isLegacyRemoteOnlyNumeric(v));
+  let gates;
+  try {
+    gates = loadHumanGateRegistry();
+  } catch (error) {
+    const message = String(error.message ?? error);
+    if (opts.json) console.log(JSON.stringify({ ok: false, error: "human_gate_registry_invalid", message }, null, 2));
+    else console.error(message);
+    process.exit(2);
+  }
+  const {
+    blocking,
+    missingInList: blockingMissingInList,
+    extraBlocking,
+    humanGate,
+  } = applyHumanGateRegistry(
+    { blocking: initiallyBlocking, missingInList, extraBlocking: initiallyExtraBlocking },
+    gates,
+  );
+  const status = deriveOverallStatus({
+    blocking,
+    humanGate,
+    missingInList: blockingMissingInList,
+    extraBlocking,
+  });
+  const aligned = status === "ALIGNED";
 
   const payload = {
     ok: aligned,
+    status,
     backendRoot: BACKEND_ROOT,
     maxOnDisk: maxDisk,
     rowCount: rows.length,
@@ -349,11 +452,7 @@ function main() {
       reason: d.reason,
       remote: d.remote,
     })),
-    driftPhase32GitOnly: phase32GitOnly.map((d) => ({
-      version: d.version,
-      reason: d.reason,
-      note: "Fase 3.2 / HUMAN GATE — esperado até apply no projeto do secret",
-    })),
+    humanGates: humanGate,
     driftLegacyNumericMirror: legacyNumericMirror.map((d) => ({
       version: d.version,
       reason: d.reason,
@@ -366,6 +465,7 @@ function main() {
     })),
     extraLegacyRemoteOnlyNumeric: extraLegacyRemote,
     missingInCliTable: missingInList,
+    blockingMissingInCliTable: blockingMissingInList,
     extraInCliTableNotOnDisk: extraInList,
   };
 
@@ -377,19 +477,17 @@ function main() {
     console.log(`Arquivos .sql (prefixo numérico): ${diskVersions.length}`);
     console.log(`Linhas parseadas do CLI: ${rows.length}`);
     console.log(`Maior versão no disco: ${maxDisk ?? "(nenhuma)"}\n`);
-    if (aligned) {
+    if (status === "ALIGNED") {
       console.log("Resultado: ALINHADO (Local = Remote para todas as linhas bloqueantes).");
-    } else if (blocking.length === 0) {
-      console.log(
-        "Resultado: DRIFT INFORMATIVO — apenas itens esperados (Fase 3.2 git-only e/ou espelhos numéricos 205–289).\n",
-      );
+    } else if (status === "HUMAN_GATE") {
+      console.log("Resultado: HUMAN GATE — divergência intencional exige decisão humana explícita.\n");
     } else {
       console.log("Resultado: DRIFT BLOQUEANTE — ação sugerida: revisar migrations / projeto linkado.\n");
     }
-    if (phase32GitOnly.length) {
-      console.log("Fase 3.2 git-only (não bloqueia o gate):");
-      for (const d of phase32GitOnly) {
-        console.log(`  - ${d.version} (${d.reason})`);
+    if (humanGate.length) {
+      console.log("Divergências sob decisão humana:");
+      for (const gate of humanGate) {
+        console.log(`  - ${gate.version} (${gate.direction}; ${gate.reason}; doc=${gate.decisionDoc})`);
       }
       console.log("");
     }
@@ -419,10 +517,7 @@ function main() {
     }
   }
 
-  if (!aligned && !opts.warnOnly) {
-    process.exit(1);
-  }
-  process.exit(0);
+  process.exit(deriveExitCode(status, opts.warnOnly));
 }
 
 const invokedPath = process.argv[1] ? path.resolve(process.argv[1]) : null;

@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import { X } from 'lucide-react'
 import { MetricCard } from '@/components/ui/admin-v2'
 import { formatBRL } from '@/lib/format/money'
-import type { ComissaoDetalheRow, ComissaoResumoRow } from '@/app/gerente/comissoes/actions'
+import type { AjusteComissao, ComissaoDetalheRow, ComissaoResumoRow } from '@/app/gerente/comissoes/actions'
 import type { ComissoesLabels } from './comissoesLabels'
 
 type Props = {
@@ -13,7 +13,8 @@ type Props = {
   loading: boolean
   error: string | null
   selecionados: Set<string>
-  totalPendenteSelecionado: number
+  totalBrutoSelecionado: number
+  marcandoPagas: boolean
   labels: ComissoesLabels
   onClose: () => void
   onToggle: (id: string) => void
@@ -25,9 +26,58 @@ function statusBadgeClass(isPendente: boolean): string {
   return isPendente ? 'admin-v2-badge-warning' : 'admin-v2-badge-success'
 }
 
-function moneyToneClass(kind: 'pago' | 'pendente'): string {
-  if (kind === 'pago') return 'text-[var(--color-success-strong)]'
-  return 'text-[var(--color-warning-strong)]'
+function saldoToneClass(valor: number): string {
+  if (valor > 0) return 'text-[var(--color-warning-strong)]'
+  if (valor < 0) return 'text-[var(--color-danger-strong)]'
+  return 'text-jl-fg-3'
+}
+
+function tipoLabel(tipo: AjusteComissao['tipo'], labels: ComissoesLabels): string {
+  if (tipo === 'CANCELAMENTO') return labels.tipoCancelamento
+  if (tipo === 'DEVOLUCAO') return labels.tipoDevolucao
+  return labels.tipoTroca
+}
+
+function tipoBadgeClass(tipo: AjusteComissao['tipo']): string {
+  if (tipo === 'CANCELAMENTO') return 'admin-v2-badge-danger'
+  if (tipo === 'TROCA') return 'admin-v2-badge-gold'
+  return 'admin-v2-badge-warning'
+}
+
+function origemLabel(origemTipo: AjusteComissao['origemTipo'], labels: ComissoesLabels): string {
+  return origemTipo === 'VENDA' ? labels.ajusteOrigemVenda : labels.ajusteOrigemPosVenda
+}
+
+/** Lista compacta dos ajustes de uma comissão — tipo real distinguível, ator, consumo. */
+function AjustesList({ ajustes, labels }: { ajustes: AjusteComissao[]; labels: ComissoesLabels }) {
+  if (ajustes.length === 0) {
+    return <p className="mt-2 text-[11px] text-jl-fg-3">{labels.ajustesVazio}</p>
+  }
+  return (
+    <div className="mt-2 flex flex-col gap-1.5 border-t border-[var(--color-border-secondary)] pt-2">
+      <p className="text-[10px] font-medium uppercase tracking-wide text-jl-fg-3">
+        {labels.ajustesTitulo}
+      </p>
+      {ajustes.map((a) => (
+        <div key={a.ajusteId} className="flex items-center justify-between gap-2 text-[11px]">
+          <div className="flex items-center gap-1.5">
+            <span
+              className={`inline-flex items-center rounded-full px-2 py-[1px] text-[10px] font-medium leading-none ${tipoBadgeClass(a.tipo)}`}
+            >
+              {tipoLabel(a.tipo, labels)}
+            </span>
+            <span className="text-jl-fg-3">{origemLabel(a.origemTipo, labels)}</span>
+          </div>
+          <div className="text-right text-jl-fg-2">
+            <span className="tabular-nums">−{formatBRL(a.valor)}</span>
+            <span className="ml-1 text-jl-fg-3">
+              ({a.valorPendente > 0 ? labels.ajustePendente : labels.ajusteConsumido})
+            </span>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
 }
 
 /** Sheet de detalhe — padrão visual alinhado a VendaDetailSheet, escopo local. */
@@ -37,7 +87,8 @@ export function ComissoesDetailSheet({
   loading,
   error,
   selecionados,
-  totalPendenteSelecionado,
+  totalBrutoSelecionado,
+  marcandoPagas,
   labels,
   onClose,
   onToggle,
@@ -75,10 +126,10 @@ export function ComissoesDetailSheet({
               id="comissoes-detalhe-titulo"
               className="truncate text-[15px] font-semibold text-jl-fg-1"
             >
-              {operador.operador_nome}
+              {operador.operadorNome}
             </h2>
-            <p className="mt-0.5 text-[11px] text-jl-fg-3">
-              {formatBRL(operador.total_pendente)} {labels.emPendenciaSuffix}
+            <p className={`mt-0.5 text-[11px] ${saldoToneClass(operador.totalSaldoResidual)}`}>
+              {formatBRL(operador.totalSaldoResidual)} {labels.saldoResidualSuffix}
             </p>
           </div>
           <button
@@ -97,22 +148,28 @@ export function ComissoesDetailSheet({
               {error}
             </div>
           ) : null}
-          <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="mb-4 grid grid-cols-2 gap-3">
             <MetricCard
-              label={labels.metricTotal}
-              value={formatBRL(operador.total_comissao)}
+              label={labels.metricBruto}
+              value={formatBRL(operador.totalComissaoBruta)}
               tone="gold"
               icon="dollar-sign"
             />
             <MetricCard
-              label={labels.metricPago}
-              value={formatBRL(operador.total_pago)}
+              label={labels.metricAjustes}
+              value={operador.totalAjustes > 0 ? `−${formatBRL(operador.totalAjustes)}` : formatBRL(0)}
+              tone="danger"
+              icon="alert-circle"
+            />
+            <MetricCard
+              label={labels.metricLiquidoPago}
+              value={formatBRL(operador.totalLiquidoPago)}
               tone="success"
               icon="file-check-2"
             />
             <MetricCard
-              label={labels.metricPendente}
-              value={formatBRL(operador.total_pendente)}
+              label={labels.metricSaldoResidual}
+              value={formatBRL(operador.totalSaldoResidual)}
               tone="warning"
               icon="alert-circle"
             />
@@ -134,41 +191,72 @@ export function ComissoesDetailSheet({
             <div className="rounded-lg border border-[var(--color-border-secondary)]">
               {rows.map((row) => {
                 const isPendente = row.status === 'pendente'
-                const checkboxId = `comissao-${row.comissao_id}`
+                const checkboxId = `comissao-${row.comissaoId}`
                 return (
                   <div
-                    key={row.comissao_id}
-                    className="flex items-center gap-3 border-b border-[var(--color-border-secondary)] px-4 py-3 last:border-b-0"
+                    key={row.comissaoId}
+                    className="flex items-start gap-3 border-b border-[var(--color-border-secondary)] px-4 py-3 last:border-b-0"
                   >
                     {isPendente ? (
                       <input
                         id={checkboxId}
                         type="checkbox"
-                        checked={selecionados.has(row.comissao_id)}
-                        onChange={() => onToggle(row.comissao_id)}
-                        className="h-4 w-4 rounded border-[var(--color-border-secondary)] bg-transparent accent-jl-accent"
-                        aria-label={`${labels.selecionarItem} ${row.venda_id.slice(0, 8)}`}
+                        checked={selecionados.has(row.comissaoId)}
+                        onChange={() => onToggle(row.comissaoId)}
+                        className="mt-0.5 h-4 w-4 rounded border-[var(--color-border-secondary)] bg-transparent accent-jl-accent"
+                        aria-label={`${labels.selecionarItem} ${row.vendaId.slice(0, 8)}`}
                       />
                     ) : (
-                      <span className="h-4 w-4" aria-hidden />
+                      <span className="mt-0.5 h-4 w-4" aria-hidden />
                     )}
                     <div className="min-w-0 flex-1">
-                      <p className="text-[12px] text-jl-fg-1">
-                        {labels.vendaPrefix} {row.venda_id.slice(0, 8)}…
-                      </p>
-                      <p className="text-[11px] text-jl-fg-3">
-                        {new Date(row.created_at).toLocaleDateString(labels.locale)}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[12px] font-medium text-jl-fg-1">
-                        {formatBRL(row.valor_comissao)}
-                      </p>
-                      <span
-                        className={`mt-1 inline-flex items-center rounded-full px-2 py-[2px] text-[11px] font-medium leading-none ${statusBadgeClass(isPendente)}`}
-                      >
-                        {isPendente ? labels.statusPendente : labels.statusPago}
-                      </span>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-[12px] text-jl-fg-1">
+                            {labels.vendaPrefix} {row.vendaId.slice(0, 8)}…
+                          </p>
+                          <p className="text-[11px] text-jl-fg-3">
+                            {new Date(row.createdAt).toLocaleDateString(labels.locale)}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[12px] font-medium text-jl-fg-1">
+                            {formatBRL(row.valorOriginal)}
+                          </p>
+                          <span
+                            className={`mt-1 inline-flex items-center rounded-full px-2 py-[2px] text-[11px] font-medium leading-none ${statusBadgeClass(isPendente)}`}
+                          >
+                            {isPendente ? labels.statusPendente : labels.statusPago}
+                          </span>
+                        </div>
+                      </div>
+
+                      <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] text-jl-fg-3 sm:grid-cols-4">
+                        <div className="flex justify-between gap-1">
+                          <dt>{labels.detalheAjustado}</dt>
+                          <dd className="tabular-nums text-jl-fg-2">
+                            {row.valorAjustado > 0 ? `−${formatBRL(row.valorAjustado)}` : formatBRL(0)}
+                          </dd>
+                        </div>
+                        <div className="flex justify-between gap-1">
+                          <dt>{labels.detalheLiquidoApurado}</dt>
+                          <dd className="tabular-nums text-jl-fg-2">{formatBRL(row.valorLiquidoApurado)}</dd>
+                        </div>
+                        <div className="flex justify-between gap-1">
+                          <dt>{labels.detalhePago}</dt>
+                          <dd className="tabular-nums text-jl-fg-2">
+                            {row.valorPago == null ? '—' : formatBRL(row.valorPago)}
+                          </dd>
+                        </div>
+                        <div className="flex justify-between gap-1">
+                          <dt>{labels.detalheSaldo}</dt>
+                          <dd className={`tabular-nums font-medium ${saldoToneClass(row.saldoFinal)}`}>
+                            {formatBRL(row.saldoFinal)}
+                          </dd>
+                        </div>
+                      </dl>
+
+                      <AjustesList ajustes={row.ajustes} labels={labels} />
                     </div>
                   </div>
                 )
@@ -190,15 +278,18 @@ export function ComissoesDetailSheet({
               <button
                 type="button"
                 onClick={onMarcarPagas}
-                className="admin-v2-btn-primary ml-auto"
+                disabled={marcandoPagas}
+                className="admin-v2-btn-primary ml-auto disabled:opacity-60"
               >
-                {labels.marcarComoPagoBtn
-                  .replace('{{n}}', String(selecionados.size))
-                  .replace('{{valor}}', formatBRL(totalPendenteSelecionado))}
+                {marcandoPagas
+                  ? '…'
+                  : labels.marcarComoPagoBtn
+                      .replace('{{n}}', String(selecionados.size))
+                      .replace('{{valor}}', formatBRL(totalBrutoSelecionado))}
               </button>
             ) : (
-              <p className={`ml-auto text-[11px] ${moneyToneClass('pendente')}`}>
-                {formatBRL(operador.total_pendente)} {labels.emPendenciaSuffix}
+              <p className={`ml-auto text-[11px] ${saldoToneClass(operador.totalSaldoResidual)}`}>
+                {formatBRL(operador.totalSaldoResidual)} {labels.saldoResidualSuffix}
               </p>
             )}
           </div>

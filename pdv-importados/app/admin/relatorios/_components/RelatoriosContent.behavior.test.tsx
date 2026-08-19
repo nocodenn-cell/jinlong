@@ -90,6 +90,11 @@ const labels = {
   coberturaEstoqueColDias: 'dias de cobertura',
   coberturaEstoqueDiasCap: '>{{n}} dias de cobertura',
   vazioCoberturaEstoque: 'Sem cobertura',
+  secDivergenciaEstoque: 'Divergência',
+  divergenciaEstoqueHint: 'hint divergência',
+  divergenciaEstoqueColSaldo: 'Saldo',
+  divergenciaEstoqueColMovimentos: 'Soma dos movimentos',
+  vazioDivergenciaEstoque: 'Sem divergência',
   origemChina: 'China',
   origemBrasil: 'Brasil',
   vazioProdutos: 'Sem produtos',
@@ -153,6 +158,18 @@ function baseDados(overrides: Partial<RelatoriosDados> = {}): RelatoriosDados {
         diasCobertura: 7470,
       },
     ],
+    divergenciaEstoque: [
+      {
+        produtoId: 'g1',
+        nome: 'geladeira',
+        lojaId: 'l1',
+        saldoEstoque: 10,
+        somaMovimentos: 8,
+        divergencia: 2,
+        qtdMovimentos: 5,
+        ultimoMovimentoEm: '2026-08-07T10:00:00.000Z',
+      },
+    ],
     rpcErro: null,
     ...overrides,
   }
@@ -213,5 +230,29 @@ describe('RelatoriosContent presentation', () => {
     expect(container.textContent).toContain('>365 dias de cobertura')
     const link = container.querySelector('a[href="/admin/estoque"]')
     expect(link?.textContent).toContain('Abrir Estoque')
+    // Divergência de estoque (v_estoque_ledger_divergencia) — item F da reconciliação.
+    expect(container.textContent).toContain('Divergência')
+    expect(container.textContent).toContain('geladeira')
+    expect(container.textContent).toContain('+2')
+  })
+
+  it('esconde divergência de estoque quando não há nenhuma acima do ruído de arredondamento', () => {
+    flushSync(() => {
+      root.render(
+        renderRelatorios(
+          <RelatoriosContent
+            dados={baseDados({ divergenciaEstoque: [] })}
+            labels={labels}
+          />,
+        ),
+      )
+    })
+    const estoqueTab = Array.from(container.querySelectorAll('[role="tab"]')).find(
+      (el) => el.textContent === 'Estoque',
+    ) as HTMLButtonElement
+    flushSync(() => {
+      estoqueTab.click()
+    })
+    expect(container.textContent).toContain('Sem divergência')
   })
 })
