@@ -72,7 +72,10 @@ jobs:
   e2e-critical:
     name: E2E crítico (sistema de risco)
     needs: build-and-test
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    # A exclusão de forks existia porque o job dependia de secrets, que o
+    # GitHub não injeta em PR de fork. Com a stack local o job não consome
+    # secret nenhum — então passa a rodar em fork também, que é onde uma
+    # regressão funcional tem mais chance de entrar sem ninguém ver.
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -91,115 +94,161 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       # ─────────────────────────────────────────────────────────────────────
-      # Guard: o E2E NUNCA pode rodar contra o projeto de produção.
+      # Stack Supabase LOCAL e efêmera — substitui o alvo remoto.
       #
-      # Em 2026-08-19 descobrimos que rodava. Os secrets PLAYWRIGHT_* apontavam
-      # para `kbabmewnahysfvlybiak` (produção), e cada PR gravava vendas reais
-      # na loja do cliente: 11 vendas de R$ 68,00 nos runs de #307 e #308, além
-      # das lojas `Probe …` / `Smoke Homolog …` e de caixas abandonados que
+      # Antes, este job apontava para um Supabase remoto via secrets
+      # PLAYWRIGHT_*. Como não existia homologação, apontava para PRODUÇÃO.
+      #
+      # A stack local resolve a classe inteira do problema, não só o sintoma:
+      #   - impossível poluir produção: o banco nasce e morre dentro do job;
+      #   - reproduzível a partir do repositório — `db reset` aplica as
+      #     migrations e o seed, então o E2E testa o que está no Git;
+      #   - sem `service_role` remota em secret de CI;
+      #   - roda em PR de fork, que não recebe secrets.
+      #
+      # Mesmo script usado pelo job `supabase-local-gates` de
+      # `ci-backend-supabase.yml`, onde já roda estável.
+      # ─────────────────────────────────────────────────────────────────────
+      - name: Subir Supabase local
+        run: bash backend/scripts/ci-supabase-local-start.sh
+
+      - name: Reset + seed (migrations do repositório)
+        run: |
+          set -euo pipefail
+          cd backend
+          npx supabase db reset --local --yes
+
+      - name: Gerar credenciais efêmeras e gravar .env
+        id: localenv
+        run: |
+          set -euo pipefail
+          cd backend
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          cd ..
+
+          SB_URL="${API_URL:-http://127.0.0.1:54321}"
+          SB_ANON="${ANON_KEY:-${PUBLISHABLE_KEY:-}}"
+          SB_SR="${SERVICE_ROLE_KEY:-}"
+          if [ -z "$SB_ANON" ] || [ -z "$SB_SR" ]; then
+            echo "::error::supabase status nao devolveu ANON_KEY/SERVICE_ROLE_KEY." >&2
+            exit 1
+          fi
+
+          # Segredos de vida curta: existem só enquanto este job existe. Nada
+          # aqui pode ser reaproveitado fora da máquina do runner, então não
+          # há valor em guardá-los como secret do repositório.
+          E2E_PASS="$(openssl rand -base64 24)"
+          SYNC_K="$(openssl rand -hex 32)"
+          FISCAL_KEY="$(openssl rand -hex 32)"
+
+          cat > pdv-importados/.env.local <<EOF
+          NEXT_PUBLIC_SUPABASE_URL=${SB_URL}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY=${SB_ANON}
+          USE_UNIFIED_SALES_FLOW=true
+          STRICT_MANAGER_DISCOUNT_AUTH=true
+          AUTO_ENQUEUE_FISCAL_ON_SALE=true
+          FISCAL_WORKER_ENDPOINT=${SB_URL}/functions/v1/fiscal-worker
+          FISCAL_WORKER_KEY=${FISCAL_KEY}
+          EOF
+
+          cat > pdv-local/.env <<EOF
+          SYNC_ENDPOINT=${SB_URL}/functions/v1/sync-outbox
+          SYNC_KEY=${SYNC_K}
+          SUPABASE_ANON_KEY=${SB_ANON}
+          NEXT_PUBLIC_SUPABASE_URL=${SB_URL}
+          EOF
+
+          # Mascarar antes de exportar: sem isto o log do runner imprime as
+          # chaves em claro em qualquer `set -x` ou echo acidental.
+          for v in "$SB_ANON" "$SB_SR" "$E2E_PASS" "$SYNC_K" "$FISCAL_KEY"; do
+            echo "::add-mask::$v"
+          done
+
+          {
+            echo "SB_URL=$SB_URL"
+            echo "SB_ANON=$SB_ANON"
+            echo "SB_SR=$SB_SR"
+            echo "E2E_PASS=$E2E_PASS"
+            echo "SYNC_K=$SYNC_K"
+            echo "FISCAL_KEY=$FISCAL_KEY"
+          } >> "$GITHUB_ENV"
+
+      # ─────────────────────────────────────────────────────────────────────
+      # Guard: o E2E NUNCA pode tocar o projeto de produção.
+      #
+      # Em 2026-08-19 descobrimos que tocava. Os secrets PLAYWRIGHT_* apontavam
+      # para `kbabmewnahysfvlybiak`, e cada PR gravava dado real na loja do
+      # cliente: 11 vendas de R$ 68,00 só nos runs de #307 e #308, além das
+      # lojas `Probe …` / `Smoke Homolog …` e de caixas abandonados que
       # precisaram ser removidos à mão.
       #
-      # Pior: `seed-dev-users.mjs` roda com `upsert ... ativo: true`, então
-      # qualquer desativação manual dessas contas era desfeita no PR seguinte.
+      # Agravante: `seed-dev-users.mjs` faz `upsert ... ativo: true`. Desativar
+      # as contas de robô à mão não resolvia — o PR seguinte as reativava.
       #
-      # Este passo falha ALTO em vez de poluir em silêncio. Ele não depende de
-      # qual staging for adotado — vale para branch Supabase, projeto separado
-      # ou stack local.
-      - name: Guard — E2E não pode apontar para produção
+      # Este passo checa o alvo EFETIVO (o que foi resolvido da stack local e
+      # escrito nos .env), não os secrets. Checar secrets seria pior que inútil
+      # aqui: eles continuam existindo e apontando para produção, então o job
+      # reprovaria sempre, por um motivo que já não se aplica.
+      #
+      # Roda ANTES do seed, que é a primeira escrita de dado do pipeline.
+      # ─────────────────────────────────────────────────────────────────────
+      - name: Guard — alvo do E2E não pode ser produção
         env:
-          PW_URL: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL }}
-          SYNC_EP: ${{ secrets.SYNC_ENDPOINT }}
           PROD_REF: kbabmewnahysfvlybiak
         run: |
           set -euo pipefail
-          alvos_proibidos=()
-          case "${PW_URL:-}" in
-            *"$PROD_REF"*) alvos_proibidos+=("PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL") ;;
+          falhas=()
+
+          case "${SB_URL:-}" in
+            *"$PROD_REF"*) falhas+=("SB_URL=$SB_URL") ;;
+            http://127.0.0.1:*|http://localhost:*) ;;
+            *) falhas+=("SB_URL nao e local: ${SB_URL:-<vazio>}") ;;
           esac
-          case "${SYNC_EP:-}" in
-            *"$PROD_REF"*) alvos_proibidos+=("SYNC_ENDPOINT") ;;
-          esac
-          if [ "${#alvos_proibidos[@]}" -gt 0 ]; then
-            echo "::error::E2E abortado: ${alvos_proibidos[*]} aponta(m) para o projeto de PRODUCAO ($PROD_REF)."
-            echo "::error::O E2E grava vendas, lojas e caixas reais. Aponte estes secrets para o ambiente de homologacao antes de reabilitar."
+
+          for arquivo in pdv-importados/.env.local pdv-local/.env; do
+            if grep -q "$PROD_REF" "$arquivo" 2>/dev/null; then
+              falhas+=("$arquivo referencia o ref de producao")
+            fi
+          done
+
+          if [ "${#falhas[@]}" -gt 0 ]; then
+            for f in "${falhas[@]}"; do
+              echo "::error::E2E abortado — alvo invalido: $f"
+            done
+            echo "::error::O E2E grava vendas, lojas e caixas. Ele so pode rodar contra a stack local efemera."
             exit 1
           fi
-          echo "OK — nenhum secret do E2E aponta para producao."
+          echo "OK — alvo do E2E e a stack local ($SB_URL); nenhuma referencia a producao."
 
-      - name: Verificar secrets e gravar .env (pipeline crítico)
+      - name: Seed usuários E2E (banco local)
         env:
-          PW_URL: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL }}
-          PW_ANON: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          PW_GER_EMAIL: ${{ secrets.PLAYWRIGHT_TEST_EMAIL }}
-          PW_GER_PASS: ${{ secrets.PLAYWRIGHT_TEST_PASSWORD }}
-          PW_CX_EMAIL: ${{ secrets.PLAYWRIGHT_CAIXA_TEST_EMAIL }}
-          PW_CX_PASS: ${{ secrets.PLAYWRIGHT_CAIXA_TEST_PASSWORD }}
-          SR_KEY: ${{ secrets.PLAYWRIGHT_SUPABASE_SERVICE_ROLE_KEY }}
-          SYNC_EP: ${{ secrets.SYNC_ENDPOINT }}
-          SYNC_K: ${{ secrets.SYNC_KEY }}
-          FISCAL_KEY: ${{ secrets.FISCAL_WORKER_KEY }}
-        run: |
-          set -euo pipefail
-          missing=()
-          [ -z "${PW_URL:-}" ] && missing+=(PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL)
-          [ -z "${PW_ANON:-}" ] && missing+=(PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY)
-          [ -z "${PW_GER_EMAIL:-}" ] && missing+=(PLAYWRIGHT_TEST_EMAIL)
-          [ -z "${PW_GER_PASS:-}" ] && missing+=(PLAYWRIGHT_TEST_PASSWORD)
-          [ -z "${PW_CX_EMAIL:-}" ] && missing+=(PLAYWRIGHT_CAIXA_TEST_EMAIL)
-          [ -z "${PW_CX_PASS:-}" ] && missing+=(PLAYWRIGHT_CAIXA_TEST_PASSWORD)
-          [ -z "${SR_KEY:-}" ] && missing+=(PLAYWRIGHT_SUPABASE_SERVICE_ROLE_KEY)
-          [ -z "${SYNC_EP:-}" ] && missing+=(SYNC_ENDPOINT)
-          [ -z "${SYNC_K:-}" ] && missing+=(SYNC_KEY)
-          [ -z "${FISCAL_KEY:-}" ] && missing+=(FISCAL_WORKER_KEY)
-          if [ "${#missing[@]}" -gt 0 ]; then
-            echo "::error::E2E crítico: defina os secrets ${missing[*]} (ver docs/E2E.md e docs/SSRA_RELEASE.md)."
-            exit 1
-          fi
-          FISCAL_EP="${PW_URL%/}/functions/v1/fiscal-worker"
-          {
-            printf 'NEXT_PUBLIC_SUPABASE_URL=%s\n' "$PW_URL"
-            printf 'NEXT_PUBLIC_SUPABASE_ANON_KEY=%s\n' "$PW_ANON"
-            printf '%s\n' 'USE_UNIFIED_SALES_FLOW=true'
-            printf '%s\n' 'STRICT_MANAGER_DISCOUNT_AUTH=true'
-            printf '%s\n' 'AUTO_ENQUEUE_FISCAL_ON_SALE=true'
-            printf 'FISCAL_WORKER_ENDPOINT=%s\n' "$FISCAL_EP"
-            printf 'FISCAL_WORKER_KEY=%s\n' "$FISCAL_KEY"
-          } > pdv-importados/.env.local
-          {
-            printf 'SYNC_ENDPOINT=%s\n' "$SYNC_EP"
-            printf 'SYNC_KEY=%s\n' "$SYNC_K"
-            printf 'SUPABASE_ANON_KEY=%s\n' "$PW_ANON"
-            printf 'NEXT_PUBLIC_SUPABASE_URL=%s\n' "$PW_URL"
-          } > pdv-local/.env
-
-      - name: Seed usuários E2E no Supabase de staging
-        env:
-          SUPABASE_URL: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.PLAYWRIGHT_SUPABASE_SERVICE_ROLE_KEY }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          SEED_DEV_PASSWORD: ${{ secrets.PLAYWRIGHT_TEST_PASSWORD }}
-          PLAYWRIGHT_TEST_PASSWORD: ${{ secrets.PLAYWRIGHT_TEST_PASSWORD }}
-          PLAYWRIGHT_CAIXA_TEST_PASSWORD: ${{ secrets.PLAYWRIGHT_CAIXA_TEST_PASSWORD }}
-          SEED_GERENTE_EMAIL: ${{ secrets.PLAYWRIGHT_TEST_EMAIL }}
-          SEED_OPERADOR_EMAIL: ${{ secrets.PLAYWRIGHT_CAIXA_TEST_EMAIL }}
+          SUPABASE_URL: ${{ env.SB_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ env.SB_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ env.SB_SR }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ env.SB_ANON }}
+          SEED_DEV_PASSWORD: ${{ env.E2E_PASS }}
+          PLAYWRIGHT_TEST_PASSWORD: ${{ env.E2E_PASS }}
+          PLAYWRIGHT_CAIXA_TEST_PASSWORD: ${{ env.E2E_PASS }}
+          SEED_GERENTE_EMAIL: e2e-gerente@localhost.test
+          SEED_OPERADOR_EMAIL: e2e-operador@localhost.test
         run: node pdv-importados/scripts/seed-dev-users.mjs
 
       - name: Pipeline E2E crítico
         env:
           CI: true
-          PLAYWRIGHT_E2E_WITH_DEV: ${{ secrets.PLAYWRIGHT_BASE_URL != '' && '0' || '1' }}
-          PLAYWRIGHT_BASE_URL: ${{ secrets.PLAYWRIGHT_BASE_URL }}
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          PLAYWRIGHT_TEST_EMAIL: ${{ secrets.PLAYWRIGHT_TEST_EMAIL }}
-          PLAYWRIGHT_TEST_PASSWORD: ${{ secrets.PLAYWRIGHT_TEST_PASSWORD }}
-          PLAYWRIGHT_CAIXA_TEST_EMAIL: ${{ secrets.PLAYWRIGHT_CAIXA_TEST_EMAIL }}
-          PLAYWRIGHT_CAIXA_TEST_PASSWORD: ${{ secrets.PLAYWRIGHT_CAIXA_TEST_PASSWORD }}
-          PLAYWRIGHT_E2E_PRODUTO_CODIGO: ${{ secrets.PLAYWRIGHT_E2E_PRODUTO_CODIGO }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.PLAYWRIGHT_SUPABASE_SERVICE_ROLE_KEY }}
-          SYNC_ENDPOINT: ${{ secrets.SYNC_ENDPOINT }}
-          SYNC_KEY: ${{ secrets.SYNC_KEY }}
+          PLAYWRIGHT_E2E_WITH_DEV: '1'
+          NEXT_PUBLIC_SUPABASE_URL: ${{ env.SB_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ env.SB_ANON }}
+          PLAYWRIGHT_TEST_EMAIL: e2e-gerente@localhost.test
+          PLAYWRIGHT_TEST_PASSWORD: ${{ env.E2E_PASS }}
+          PLAYWRIGHT_CAIXA_TEST_EMAIL: e2e-operador@localhost.test
+          PLAYWRIGHT_CAIXA_TEST_PASSWORD: ${{ env.E2E_PASS }}
+          # Produto do catálogo criado pelas migrations (umidificador, R$ 68,00).
+          # É o mesmo item que o E2E vinha comprando — em produção, até hoje.
+          PLAYWRIGHT_E2E_PRODUTO_CODIGO: ${{ vars.PLAYWRIGHT_E2E_PRODUTO_CODIGO || '7898512340004' }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ env.SB_SR }}
+          SYNC_ENDPOINT: ${{ env.SB_URL }}/functions/v1/sync-outbox
+          SYNC_KEY: ${{ env.SYNC_K }}
           USE_UNIFIED_SALES_FLOW: 'true'
           STRICT_MANAGER_DISCOUNT_AUTH: 'true'
           AUTO_ENQUEUE_FISCAL_ON_SALE: 'true'
