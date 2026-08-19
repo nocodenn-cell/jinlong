@@ -5985,22 +5985,44 @@ export type Database = {
           quantidade_atual: number
         }[]
       }
-      relatorio_consistencia_vendas: {
-        Args: { p_caixa_id?: string; p_from?: string; p_to?: string }
-        Returns: {
-          evento_duplicado: number
-          pagamentos_divergentes: number
-          periodo_fim: string
-          periodo_inicio: string
-          sem_evento_ledger: number
-          sem_itens: number
-          sem_pagamento: number
-          taxa_consistencia_pct: number
-          total_vendas: number
-          vendas_com_anomalia: number
-          vendas_consistentes: number
-        }[]
-      }
+      relatorio_consistencia_vendas:
+        | {
+            Args: { p_caixa_id?: string; p_from?: string; p_to?: string }
+            Returns: {
+              evento_duplicado: number
+              pagamentos_divergentes: number
+              periodo_fim: string
+              periodo_inicio: string
+              sem_evento_ledger: number
+              sem_itens: number
+              sem_pagamento: number
+              taxa_consistencia_pct: number
+              total_vendas: number
+              vendas_com_anomalia: number
+              vendas_consistentes: number
+            }[]
+          }
+        | {
+            Args: {
+              p_caixa_id?: string
+              p_from?: string
+              p_loja_id?: string
+              p_to?: string
+            }
+            Returns: {
+              evento_duplicado: number
+              pagamentos_divergentes: number
+              periodo_fim: string
+              periodo_inicio: string
+              sem_evento_ledger: number
+              sem_itens: number
+              sem_pagamento: number
+              taxa_consistencia_pct: number
+              total_vendas: number
+              vendas_com_anomalia: number
+              vendas_consistentes: number
+            }[]
+          }
       relatorio_curva_abc_periodo: {
         Args: { p_ate: string; p_de: string; p_limite?: number; p_tz?: string }
         Returns: {
