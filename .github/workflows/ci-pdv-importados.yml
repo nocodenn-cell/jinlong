@@ -77,7 +77,12 @@ jobs:
     # secret nenhum — então passa a rodar em fork também, que é onde uma
     # regressão funcional tem mais chance de entrar sem ninguém ver.
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # 30 min nao cabia mais. Com a stack local o job ganhou ~8 min de setup
+    # (`supabase start` + `db reset`), e no run de 2026-08-19T21:08 os dois
+    # jobs de E2E passaram a rodar em paralelo, disputando pull de imagem: o
+    # `Install Playwright Chromium`, que normalmente leva ~1 min, ficou 29 min
+    # e o job morreu no timeout antes de chegar a testar qualquer coisa.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
@@ -291,7 +296,10 @@ jobs:
     needs: build-and-test
     if: ${{ vars.ENABLE_PLAYWRIGHT_E2E == 'true' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Esta suite ja levava 30m22s quando rodava contra producao (PR #307) — ou
+    # seja, vivia raspando o proprio teto. Somando o setup da stack local, o run
+    # de 2026-08-19T21:08 estourou com os testes ainda em andamento.
+    timeout-minutes: 60
 
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
