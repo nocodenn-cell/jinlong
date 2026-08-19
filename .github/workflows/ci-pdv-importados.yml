@@ -109,7 +109,20 @@ jobs:
       # Mesmo script usado pelo job `supabase-local-gates` de
       # `ci-backend-supabase.yml`, onde já roda estável.
       # ─────────────────────────────────────────────────────────────────────
+      # `SYNC_KEY` precisa existir ANTES do `supabase start`: o runtime das Edge
+      # Functions resolve `[edge_runtime.secrets]` do config.toml no momento em
+      # que sobe. Gerar depois nao adianta — foi o que fez `smoke:sync-edge`
+      # responder 500 MISSING_SUPABASE_ENV no primeiro run deste PR.
+      - name: Gerar SYNC_KEY efêmera (antes do start)
+        run: |
+          set -euo pipefail
+          SYNC_K="$(openssl rand -hex 32)"
+          echo "::add-mask::$SYNC_K"
+          echo "SYNC_K=$SYNC_K" >> "$GITHUB_ENV"
+
       - name: Subir Supabase local
+        env:
+          SYNC_KEY: ${{ env.SYNC_K }}
         run: bash backend/scripts/ci-supabase-local-start.sh
 
       - name: Reset + seed (migrations do repositório)
@@ -138,7 +151,6 @@ jobs:
           # aqui pode ser reaproveitado fora da máquina do runner, então não
           # há valor em guardá-los como secret do repositório.
           E2E_PASS="$(openssl rand -base64 24)"
-          SYNC_K="$(openssl rand -hex 32)"
           FISCAL_KEY="$(openssl rand -hex 32)"
 
           cat > pdv-importados/.env.local <<EOF
@@ -160,7 +172,7 @@ jobs:
 
           # Mascarar antes de exportar: sem isto o log do runner imprime as
           # chaves em claro em qualquer `set -x` ou echo acidental.
-          for v in "$SB_ANON" "$SB_SR" "$E2E_PASS" "$SYNC_K" "$FISCAL_KEY"; do
+          for v in "$SB_ANON" "$SB_SR" "$E2E_PASS" "$FISCAL_KEY"; do
             echo "::add-mask::$v"
           done
 
@@ -169,7 +181,6 @@ jobs:
             echo "SB_ANON=$SB_ANON"
             echo "SB_SR=$SB_SR"
             echo "E2E_PASS=$E2E_PASS"
-            echo "SYNC_K=$SYNC_K"
             echo "FISCAL_KEY=$FISCAL_KEY"
           } >> "$GITHUB_ENV"
 
@@ -304,7 +315,20 @@ jobs:
       #
       # A lição virou regra: existem DOIS jobs de E2E neste workflow. Qualquer
       # mudança de alvo tem de cobrir os dois.
+      # `SYNC_KEY` precisa existir ANTES do `supabase start`: o runtime das Edge
+      # Functions resolve `[edge_runtime.secrets]` do config.toml no momento em
+      # que sobe. Gerar depois nao adianta — foi o que fez `smoke:sync-edge`
+      # responder 500 MISSING_SUPABASE_ENV no primeiro run deste PR.
+      - name: Gerar SYNC_KEY efêmera (antes do start)
+        run: |
+          set -euo pipefail
+          SYNC_K="$(openssl rand -hex 32)"
+          echo "::add-mask::$SYNC_K"
+          echo "SYNC_K=$SYNC_K" >> "$GITHUB_ENV"
+
       - name: Subir Supabase local
+        env:
+          SYNC_KEY: ${{ env.SYNC_K }}
         run: bash backend/scripts/ci-supabase-local-start.sh
 
       - name: Reset + seed (migrations do repositório)
