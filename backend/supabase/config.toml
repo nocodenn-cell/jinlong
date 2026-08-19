@@ -370,8 +370,21 @@ inspector_port = 8083
 # The Deno major version to use.
 deno_version = 2
 
-# [edge_runtime.secrets]
-# secret_key = "env(SECRET_VALUE)"
+# Segredos entregues às Edge Functions na stack local.
+#
+# `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` o runtime injeta sozinho; o
+# `SYNC_KEY` não — e sem ele `sync-outbox` responde 500 `MISSING_SUPABASE_ENV`,
+# porque a guarda de entrada exige `syncKey` ou `SYNC_DEVICE_KEYS`.
+#
+# Foi assim que o E2E falhou no primeiro run contra a stack local (PR #309):
+# `smoke:sync-edge` bateu na função sem chave. Em produção não aparecia porque
+# lá o segredo está configurado na Edge.
+#
+# `env(...)` lê do ambiente do processo que roda `supabase start`. No CI a chave
+# é gerada por run; em dev local, defina `SYNC_KEY` no shell (ou deixe vazio, e
+# só o fluxo de sync fica indisponível).
+[edge_runtime.secrets]
+SYNC_KEY = "env(SYNC_KEY)"
 
 [analytics]
 enabled = false

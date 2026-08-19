@@ -53,18 +53,41 @@ BEGIN;
 -- P1-2
 -- ═══════════════════════════════════════════════════════════════════════════
 
-REVOKE EXECUTE ON FUNCTION public.verificar_consistencia_venda(uuid)
-  FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.verificar_consistencia_venda(uuid) TO service_role;
+-- Os alvos são guardados por `to_regprocedure` porque
+-- `relatorio_consistencia_vendas(uuid, timestamptz, timestamptz)` NÃO EXISTE
+-- em produção, e `REVOKE EXECUTE ON FUNCTION` não aceita `IF EXISTS`: sem o
+-- guard, o REVOKE dessa sobrecarga aborta a migration inteira e o bloco P1-3
+-- abaixo (fix da chave de idempotência de AP) nunca chega a rodar.
+--
+-- A ausência da sobrecarga em produção é drift catalogado em
+-- `docs/AUDITORIA_CATALOGO_PROD_VS_REPO_2026-08.md` §3.3 — ela é criada por
+-- migrations que estão no ledger de produção e não é removida por nenhuma.
+-- O guard não mascara o drift; impede que ele bloqueie esta correção.
+DO $$
+DECLARE
+  alvo   text;
+  alvos  text[] := ARRAY[
+    'public.verificar_consistencia_venda(uuid)',
+    'public.relatorio_consistencia_vendas(uuid, timestamptz, timestamptz)'
+  ];
+BEGIN
+  FOREACH alvo IN ARRAY alvos LOOP
+    IF to_regprocedure(alvo) IS NULL THEN
+      RAISE NOTICE 'alvo ausente neste banco, ignorado: %', alvo;
+      CONTINUE;
+    END IF;
+    EXECUTE format(
+      'REVOKE EXECUTE ON FUNCTION %s FROM PUBLIC, anon, authenticated', alvo);
+    EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO service_role', alvo);
+  END LOOP;
 
-REVOKE EXECUTE ON FUNCTION public.relatorio_consistencia_vendas(uuid, timestamptz, timestamptz)
-  FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.relatorio_consistencia_vendas(uuid, timestamptz, timestamptz)
-  TO service_role;
-
-COMMENT ON FUNCTION public.verificar_consistencia_venda(uuid) IS
-  'Diagnostico administrativo (service_role): cabecalho x itens e pagamentos + saldo a receber. '
-  'Sem guarda interna de loja — por isso NAO e exposta a authenticated.';
+  IF to_regprocedure('public.verificar_consistencia_venda(uuid)') IS NOT NULL THEN
+    COMMENT ON FUNCTION public.verificar_consistencia_venda(uuid) IS
+      'Diagnostico administrativo (service_role): cabecalho x itens e pagamentos + saldo a receber. '
+      'Sem guarda interna de loja — por isso NAO e exposta a authenticated.';
+  END IF;
+END
+$$;
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- P1-3
