@@ -1,6 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "RPC finalizar_venda_transacional_canonica_v3 v1",
+  "title": "RPC finalizar_venda_transacional_canonica_v3 v1 (HISTÓRICO)",
+  "deprecated": true,
+  "description": "HISTÓRICO — não usar. A RPC canônica de finalização de venda é finalizar_venda_transacional_canonica_v4 (22 args, com scope-guard de loja/caixa): ver rpc-finalizar-venda-canonica-v4.json. Este contrato descreve a v3, que não corresponde à função em produção. Mantido apenas como registro do contrato publicado em 2026-05-07.",
   "type": "object",
   "required": [
     "p_caixa_id",

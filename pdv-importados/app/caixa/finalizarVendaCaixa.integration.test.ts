@@ -208,6 +208,36 @@ describe.sequential('finalizarVendaCaixa — split e validações', { timeout: 1
       { forma_pagamento: 'DINHEIRO', valor: 20 },
       { forma_pagamento: 'PIX', valor: 10 },
     ])
+    // O primeiro caso do arquivo paga o custo do `await import('./actions')`,
+    // que arrasta o grafo do módulo de actions do caixa. Em máquina lenta isso
+    // ultrapassa o testTimeout padrão de 15s e produz flake — os dois casos
+    // seguintes, já com o módulo em cache, rodam em ~2s. Timeout explícito em
+    // vez de skip: nenhum assert foi removido.
+  }, 60_000)
+
+  it('BR-01: envia p_limite_credito_gerente_token quando presente no payload', async () => {
+    const { supabase, rpcCalls } = makeSupabase()
+    createClientMock.mockResolvedValue(supabase)
+    const { finalizarVendaCaixa } = await import('./actions')
+
+    await finalizarVendaCaixa({
+      ...payloadBase(),
+      limiteCreditoGerenteToken: 'token-autorizacao-gerente-abc',
+    })
+
+    const txCall = rpcCalls.find((c) => c.name === 'finalizar_venda_transacional_canonica_v4')
+    expect(txCall?.params.p_limite_credito_gerente_token).toBe('token-autorizacao-gerente-abc')
+  })
+
+  it('BR-01: sem token no payload, envia p_limite_credito_gerente_token null (não omite o parâmetro)', async () => {
+    const { supabase, rpcCalls } = makeSupabase()
+    createClientMock.mockResolvedValue(supabase)
+    const { finalizarVendaCaixa } = await import('./actions')
+
+    await finalizarVendaCaixa(payloadBase())
+
+    const txCall = rpcCalls.find((c) => c.name === 'finalizar_venda_transacional_canonica_v4')
+    expect(txCall?.params.p_limite_credito_gerente_token).toBeNull()
   })
 
   it('retorna mensagem de erro esperada para payload inválido (pagamentos > total)', async () => {

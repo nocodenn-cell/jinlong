@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest'
 import {
   RELATORIO_MAX_DIAS_INCLUSIVOS,
   diasNoIntervaloInclusive,
+  inicioDoDiaCivilEmUtc,
   isYmd,
   resolverPeriodoRelatorio,
   subtrairDiasCivis,
+  ymdEmFuso,
 } from './periodoRelatorio'
 
 describe('periodoRelatorio', () => {
@@ -35,5 +37,20 @@ describe('periodoRelatorio', () => {
     expect(r.ate).toBe('2026-01-01')
     expect(diasNoIntervaloInclusive(r.de, r.ate)).toBe(RELATORIO_MAX_DIAS_INCLUSIVOS)
     expect(r.aviso).toBe('periodo_limitado')
+  })
+
+  it('inicioDoDiaCivilEmUtc ancora meia-noite de São Paulo (UTC-3), não meia-noite UTC', () => {
+    expect(inicioDoDiaCivilEmUtc('2026-04-07', 'America/Sao_Paulo').toISOString()).toBe(
+      '2026-04-07T03:00:00.000Z',
+    )
+    expect(inicioDoDiaCivilEmUtc('2026-04-07', 'UTC').toISOString()).toBe(
+      '2026-04-07T00:00:00.000Z',
+    )
+  })
+
+  it('ymdEmFuso: mesmo instante cai em dias civis diferentes conforme o fuso', () => {
+    const instante = new Date('2026-04-07T02:00:00.000Z') // 23:00 de 06/04 em São Paulo
+    expect(ymdEmFuso(instante, 'America/Sao_Paulo')).toBe('2026-04-06')
+    expect(ymdEmFuso(instante, 'UTC')).toBe('2026-04-07')
   })
 })

@@ -7,6 +7,7 @@ const MSG_ESTOQUE = 'Estoque insuficiente para um ou mais itens. Ajuste o carrin
 const MSG_PRECO = 'Os preços do carrinho mudaram. Atualize as quantidades e finalize novamente.'
 const MSG_PAGAMENTO = 'Pagamento inválido ou divergente do total. Revise as formas de pagamento.'
 const MSG_CLIENTE_SALDO = 'Pagamento parcial exige um cliente válido da loja.'
+const MSG_LIMITE_CREDITO = 'Venda excede o limite de crédito do cliente — autorização do gerente necessária.'
 
 function lower(raw: string): string {
   return raw.toLowerCase()
@@ -53,6 +54,11 @@ export function caixaErroOperador(detalheTecnico: string | undefined | null): st
     l.includes('cliente_loja_invalido')
   ) {
     return MSG_CLIENTE_SALDO
+  }
+  // BR-01: cobre _excedido, _token_obrigatorio, _token_invalido e _token_ja_usado —
+  // em todos os casos o cliente deve reabrir o modal e obter um token novo.
+  if (l.includes('limite_credito')) {
+    return MSG_LIMITE_CREDITO
   }
   if (l.includes('migration') || (l.includes('function') && l.includes('does not exist'))) {
     return MSG_CAIXA_INDISPONIVEL

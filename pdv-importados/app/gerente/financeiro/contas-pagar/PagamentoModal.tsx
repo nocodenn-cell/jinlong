@@ -12,10 +12,12 @@ import { roundMoney2 } from '@/shared/cart/totals'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { cn } from '@/lib/utils'
 import {
+  buscarCaixasAbertosPagamentoAction,
   registrarPagamentoAction,
   type ContaPagarRow,
   type FormaPagamento,
 } from './actions'
+import { obterLimiteSangriaSemGerente, validarGerenteDesconto } from '@/app/caixa/actions'
 
 type Props = Readonly<{
   idioma: Idioma
@@ -43,14 +45,38 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
   const [observacao, setObservacao] = useState('')
   const [erros, setErros] = useState<Record<string, string | null>>({})
   const [salvando, setSalvando] = useState(false)
+  const [caixas, setCaixas] = useState<Array<{ id: string; operador: string }>>([])
+  const [caixaId, setCaixaId] = useState('')
+  const [limiteSangria, setLimiteSangria] = useState(200)
+  const [senhaGerente, setSenhaGerente] = useState('')
 
   const valorRef = useRef<HTMLInputElement>(null)
+  const idempotencyKeyRef = useRef(crypto.randomUUID())
+  const autorizacaoTokenRef = useRef<string | null>(null)
 
   // DragonModal cuida de Escape, scroll-lock e foco-trap; aqui só o foco inicial.
   useEffect(() => {
     const t = setTimeout(() => valorRef.current?.focus(), 30)
     return () => clearTimeout(t)
   }, [])
+
+  useEffect(() => {
+    void Promise.all([
+      buscarCaixasAbertosPagamentoAction(conta.loja_id),
+      obterLimiteSangriaSemGerente(),
+    ]).then(([cx, limite]) => {
+      if (cx.ok) {
+        setCaixas(cx.caixas)
+        if (cx.caixas.length === 1) setCaixaId(cx.caixas[0].id)
+      }
+      if (limite.ok) setLimiteSangria(limite.limite)
+    })
+  }, [conta.loja_id])
+
+  function renovarIntencao() {
+    idempotencyKeyRef.current = crypto.randomUUID()
+    autorizacaoTokenRef.current = null
+  }
 
   const valorNum = parseBRL(valor) ?? 0
   const novoAberto = Math.max(0, aberto - valorNum)
@@ -71,6 +97,7 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
     const parts = v.split(',')
     if (parts.length > 2) v = parts[0] + ',' + parts.slice(1).join('')
     setValor(v)
+    renovarIntencao()
     if (erros.valor) setErros((x) => ({ ...x, valor: null }))
   }
 
@@ -82,6 +109,11 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
     if (!dataPag) e.data = m.contas_pagar.err_data_obrigatoria
     else if (new Date(dataPag).getTime() > Date.now() + 86400000)
       e.data = m.contas_pagar.err_data_futura
+    if (forma === 'DINHEIRO' && caixas.length === 0) e.caixa = 'Não existe caixa aberto elegível nesta loja.'
+    if (forma === 'DINHEIRO' && caixas.length > 1 && !caixaId) e.caixa = 'Selecione o caixa da sangria.'
+    if (forma === 'DINHEIRO' && valorNum > limiteSangria && !senhaGerente.trim()) {
+      e.autorizacao = 'Informe a senha de autorização da sangria.'
+    }
     setErros(e)
     return Object.keys(e).length === 0
   }
@@ -91,18 +123,30 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
     if (!validar()) return
     setSalvando(true)
     try {
+      if (forma === 'DINHEIRO' && valorNum > limiteSangria && !autorizacaoTokenRef.current) {
+        const autorizacao = await validarGerenteDesconto({ senha: senhaGerente, lojaId: conta.loja_id })
+        if (!autorizacao.ok || !autorizacao.token) {
+          emitGerenteToast({ kind: 'error', message: autorizacao.ok ? 'Token de autorização não retornado.' : autorizacao.error })
+          return
+        }
+        autorizacaoTokenRef.current = autorizacao.token
+      }
       const r = await registrarPagamentoAction({
         conta_id: conta.id,
         valor: valorNum,
         forma,
         data: new Date(dataPag).toISOString(),
         observacao: observacao.trim() || null,
+        idempotency_key: idempotencyKeyRef.current,
+        caixa_id: forma === 'DINHEIRO' ? caixaId || null : null,
+        autorizacao_token: autorizacaoTokenRef.current,
       })
       if (!r.ok) {
         emitGerenteToast({ kind: 'error', message: r.error })
         return
       }
       emitGerenteToast({ kind: 'success', message: m.comum.sucesso })
+      renovarIntencao()
       onPagamentoRegistrado(r.conta)
     } finally {
       setSalvando(false)
@@ -244,7 +288,7 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
                     type="button"
                     role="radio"
                     aria-checked={forma === f.id}
-                    onClick={() => setForma(f.id)}
+                    onClick={() => { setForma(f.id); renovarIntencao() }}
                     disabled={salvando}
                     className={cn(
                       'flex flex-col items-center gap-1 rounded-lg app-border border bg-jl-surface-soft px-2 py-2.5 text-xs font-semibold transition-colors',
@@ -260,6 +304,28 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
               </div>
             </div>
 
+            {forma === 'DINHEIRO' ? (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {caixas.length > 1 ? (
+                  <label className="block text-xs font-medium text-jl-fg-3">
+                    Caixa da sangria
+                    <select value={caixaId} onChange={(e) => { setCaixaId(e.target.value); renovarIntencao() }} className="app-input mt-1 h-10 w-full rounded-md px-3 text-sm">
+                      <option value="">Selecione</option>
+                      {caixas.map((caixa) => <option key={caixa.id} value={caixa.id}>{caixa.operador}</option>)}
+                    </select>
+                    {erros.caixa && <span className="mt-1 block text-xs text-[var(--color-danger-strong)]">{erros.caixa}</span>}
+                  </label>
+                ) : null}
+                {valorNum > limiteSangria ? (
+                  <label className="block text-xs font-medium text-jl-fg-3">
+                    Senha para autorizar sangria
+                    <input type="password" value={senhaGerente} onChange={(e) => { setSenhaGerente(e.target.value); renovarIntencao() }} className="app-input mt-1 h-10 w-full rounded-md px-3 text-sm" autoComplete="current-password" />
+                    {erros.autorizacao && <span className="mt-1 block text-xs text-[var(--color-danger-strong)]">{erros.autorizacao}</span>}
+                  </label>
+                ) : null}
+              </div>
+            ) : null}
+
             {/* Data + observação */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="block text-xs font-medium text-jl-fg-3">
@@ -269,6 +335,7 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
                   value={dataPag}
                   onChange={(e) => {
                     setDataPag(e.target.value)
+                    renovarIntencao()
                     if (erros.data) setErros((x) => ({ ...x, data: null }))
                   }}
                   disabled={salvando}
@@ -282,7 +349,7 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
                 {m.contas_pagar.modal_observacao}
                 <input
                   value={observacao}
-                  onChange={(e) => setObservacao(e.target.value)}
+                  onChange={(e) => { setObservacao(e.target.value); renovarIntencao() }}
                   disabled={salvando}
                   maxLength={200}
                   placeholder={m.contas_pagar.placeholder_observacao}

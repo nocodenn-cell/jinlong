@@ -2,6 +2,8 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
+import { getRelatorioTimezone } from '@/lib/relatorios/getRelatorioTimezone'
+import { inicioDoDiaCivilEmUtc, subtrairDiasCivis } from '@/lib/relatorios/periodoRelatorio'
 
 export type VendaReportRow = {
   id: string
@@ -74,8 +76,11 @@ export async function buscarRelatorioVendasAvancadoAction(
 > {
   try {
     const supabase = await createClient()
-    const ateFim = new Date(filters.ate)
-    ateFim.setHours(23, 59, 59, 999)
+    const tz = await getRelatorioTimezone(supabase)
+    // Dia civil no fuso do relatório, não hora local do processo (Node roda em UTC
+    // em produção) — ver mesmo fix em app/admin/dashboard/dashboardUtils.ts.
+    const inicio = inicioDoDiaCivilEmUtc(filters.de, tz)
+    const fimExclusivo = inicioDoDiaCivilEmUtc(subtrairDiasCivis(filters.ate, -1), tz)
 
     let query = supabase
       .from('vendas')
@@ -86,8 +91,8 @@ export async function buscarRelatorioVendasAvancadoAction(
         vendedor:usuarios!vendas_operador_id_fkey ( nome )
       `,
       )
-      .gte('data', new Date(filters.de).toISOString())
-      .lte('data', ateFim.toISOString())
+      .gte('data', inicio.toISOString())
+      .lt('data', fimExclusivo.toISOString())
       .order('data', { ascending: false })
       .limit(1000)
 

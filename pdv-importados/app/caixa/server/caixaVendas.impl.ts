@@ -306,6 +306,7 @@ export async function finalizarVendaCaixaImpl(
       p_cliente_id: input.clienteId ?? null,  // ✅ NOVO (Fase 5b)
       p_motivo_desconto: input.motivoDesconto ?? 'NAO_ESPECIFICADO',  // ✅ NOVO (BL-1)
       p_motivo_descricao: input.motivoDescontoDescricao ?? null,  // ✅ NOVO (BL-1)
+      p_limite_credito_gerente_token: input.limiteCreditoGerenteToken ?? null,  // BR-01
     })
 
     if (txErr) {

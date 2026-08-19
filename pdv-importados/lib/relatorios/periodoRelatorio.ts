@@ -17,18 +17,59 @@ export function isYmd(s: string): boolean {
   )
 }
 
-/** Hoje (data civil) no fuso do relatório. */
-export function ymdHojeNoFusoRelatorio(timeZone = RELATORIO_TZ_PADRAO): string {
+/** Data civil (YYYY-MM-DD) de um instante, no fuso informado. */
+export function ymdEmFuso(instante: Date, timeZone: string = RELATORIO_TZ_PADRAO): string {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  }).formatToParts(new Date())
+  }).formatToParts(instante)
   const y = parts.find((p) => p.type === 'year')!.value
   const m = parts.find((p) => p.type === 'month')!.value
   const d = parts.find((p) => p.type === 'day')!.value
   return `${y}-${m}-${d}`
+}
+
+/** Hoje (data civil) no fuso do relatório. */
+export function ymdHojeNoFusoRelatorio(timeZone = RELATORIO_TZ_PADRAO): string {
+  return ymdEmFuso(new Date(), timeZone)
+}
+
+/** Offset (minutos, local menos UTC) do fuso `timeZone` no instante dado. */
+function offsetMinutosEm(instante: Date, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).formatToParts(instante)
+  const map: Record<string, string> = {}
+  for (const p of parts) map[p.type] = p.value
+  const comoUtc = Date.UTC(
+    Number(map.year),
+    Number(map.month) - 1,
+    Number(map.day),
+    Number(map.hour),
+    Number(map.minute),
+    Number(map.second),
+  )
+  return (comoUtc - instante.getTime()) / 60_000
+}
+
+/**
+ * Início do dia civil (00:00:00) de `ymd` no fuso informado, como instante UTC.
+ * Ex.: `inicioDoDiaCivilEmUtc('2026-04-07', 'America/Sao_Paulo')` → `2026-04-07T03:00:00.000Z`.
+ */
+export function inicioDoDiaCivilEmUtc(ymd: string, timeZone: string = RELATORIO_TZ_PADRAO): Date {
+  const [y, mo, d] = ymd.split('-').map(Number)
+  const palpite = new Date(Date.UTC(y, mo - 1, d, 0, 0, 0))
+  const offsetMin = offsetMinutosEm(palpite, timeZone)
+  return new Date(palpite.getTime() - offsetMin * 60_000)
 }
 
 /** Subtrai N dias do calendário gregoriano (independente de DST). */

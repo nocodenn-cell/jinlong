@@ -39,22 +39,57 @@ Acesse https://pdv-importados.vercel.app
 ### 2. Configurar login operador
 
 **Dados necessários:**
-- Email operador: `operador@loja.com.br`
+- Email operador: **um endereço real, que receba e-mail**
 - Senha: [gerar aleatória 12+ caracteres]
 - Nome da loja: [nome exato do cliente]
 
-**No painel Supabase (Vercel):**
+> ### ⚠️ Não use domínios `.test`, `.local` ou `example.com`
+>
+> São TLDs reservados: **nunca entregam e-mail**. Uma conta assim não consegue
+> recuperar senha, e o cliente fica trancado para fora sem um administrador
+> por perto. Use o domínio real do cliente ou um Gmail que ele controle.
 
-```sql
--- Admin Supabase faz isso uma vez:
-INSERT INTO auth.users (email, encrypted_password, email_confirmed_at)
-VALUES ('operador@loja.com.br', <hash>, now());
+> ### ⚠️ Criar usuário são **duas** escritas, não uma
+>
+> A versão anterior deste checklist mandava fazer `INSERT INTO auth.users` com
+> hash de senha na mão. **Isso não funciona:** a inserção direta pula o que o
+> GoTrue exige (`aud`, `role`, linha em `auth.identities`), então o login falha
+> ou nasce quebrado — e, pior, **não cria a linha em `public.usuarios`**, onde
+> vivem `perfil` e `loja_id`. Sem ela, o login até passa e **toda venda é
+> recusada** com `FINALIZAR_VENDA_CANONICA_USUARIO_INVALIDO`.
 
--- Depois habilitar login via email+senha em Auth → Providers
+**Passo A — identidade de autenticação.** Painel Supabase → *Authentication* →
+*Add user* → *Create new user*, com **Auto Confirm User** ligado. Anote o `id`
+(UUID) gerado.
+
+Alternativa por API (mesma coisa, com `service_role`):
+
+```js
+await supabase.auth.admin.createUser({ email, password, email_confirm: true })
 ```
 
+**Passo B — perfil da aplicação.** Com o UUID do passo A:
+
+```sql
+INSERT INTO public.usuarios (id, nome, perfil, loja_id, ativo, idioma_preferido)
+VALUES (
+  '<uuid-do-passo-A>',
+  'Nome da pessoa',
+  'OPERADOR',                                    -- ou GERENTE / DONO
+  'a0000001-0000-4000-8000-000000000001',        -- Matriz
+  true,
+  'pt'
+);
+```
+
+Referência viva dos dois passos: `pdv-importados/scripts/seed-dev-users.mjs`
+(`ensureAuthUser` + `upsertUsuario`).
+
+- [ ] Passo A concluído — UUID anotado
+- [ ] Passo B concluído — `perfil` e `loja_id` corretos
 - [ ] Login consegue criar nova sessão
 - [ ] Operador consegue fazer logout e login novamente
+- [ ] **Operador consegue concluir uma venda** (prova que o passo B ficou certo)
 
 ### 3. Verificar dados iniciais
 

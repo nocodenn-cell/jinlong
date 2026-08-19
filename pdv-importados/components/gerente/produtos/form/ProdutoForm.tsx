@@ -4,6 +4,7 @@ import type { RefObject } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { FaixasAtacadoEditor } from '../produtoFormSections/FaixasAtacadoEditor'
+import { HistoricoPrecosSection } from '../produtoFormSections/HistoricoPrecosSection'
 import { ProdutoImagemCell } from '../ProdutoImagemCell'
 import {
   defaultFieldClasses,
@@ -106,10 +107,18 @@ export function ProdutoForm(props: Props) {
   const p = props.m.produtos
   const faixasSlot =
     props.readOnly.produtoId !== null ? (
-      <FaixasAtacadoEditor produtoId={props.readOnly.produtoId} p={p} />
+      <FaixasAtacadoEditor
+        produtoId={props.readOnly.produtoId}
+        p={p}
+        precoAtacadoCatalogo={props.precoAtacadoInput.parse()}
+      />
     ) : (
       <p className="text-caption text-jl-fg-3">{p.hint_faixas_apos_salvar}</p>
     )
+  const historicoSlot =
+    props.readOnly.produtoId !== null ? (
+      <HistoricoPrecosSection produtoId={props.readOnly.produtoId} p={p} />
+    ) : null
 
   return (
     <ProdutoFormProvider value={ctx}>
@@ -182,7 +191,7 @@ export function ProdutoForm(props: Props) {
 
         {props.modoCompleto ? (
           <>
-            <ComercialSection faixasSlot={faixasSlot} />
+            <ComercialSection faixasSlot={faixasSlot} historicoSlot={historicoSlot} />
             <CompraSection />
             <FiscalSection />
           </>

@@ -10,6 +10,8 @@ import type {
   LiquidateReceivableResult,
   ReceivableLiquidationService,
   ReceivableWriter,
+  ReverseReceivableCommand,
+  ReverseReceivableResult,
 } from '@shared-core/src/financial'
 import {
   FINANCIAL_ERROR_CODES,
@@ -70,11 +72,14 @@ export function createReceivableLiquidationService(
       })
       if (!v.ok) return { ok: false, error: v.error, code: v.code }
       try {
-        const { error } = await supabase.rpc('registrar_liquidacao_receber', {
+        const { data, error } = await supabase.rpc('registrar_liquidacao_receber', {
           p_titulo_id: command.tituloId,
           p_valor: command.valor,
           p_forma_pagamento: command.formaPagamento,
           p_observacao: command.observacao ?? null,
+          p_idempotency_key: command.idempotencyKey,
+          p_caixa_id: command.caixaId ?? null,
+          p_origem: 'UI_FINANCEIRO',
         })
         if (error) {
           return {
@@ -83,11 +88,60 @@ export function createReceivableLiquidationService(
             code: FINANCIAL_ERROR_CODES.LIQUIDATE_FAILED,
           }
         }
-        return { ok: true }
+        const row = (Array.isArray(data) ? data[0] : data) as {
+          liquidacao_id?: unknown
+          idempotent_replay?: unknown
+          caixa_id?: unknown
+        } | null
+        if (!row?.liquidacao_id) {
+          return { ok: false, error: 'Liquidação não retornou identificador.', code: FINANCIAL_ERROR_CODES.LIQUIDATE_FAILED }
+        }
+        return {
+          ok: true,
+          liquidacaoId: String(row.liquidacao_id),
+          idempotentReplay: row.idempotent_replay === true,
+          caixaId: row.caixa_id ? String(row.caixa_id) : null,
+        }
       } catch (e) {
         return {
           ok: false,
           error: e instanceof Error ? e.message : 'Falha na liquidação.',
+          code: FINANCIAL_ERROR_CODES.LIQUIDATE_FAILED,
+        }
+      }
+    },
+
+    async reverse(command: ReverseReceivableCommand): Promise<ReverseReceivableResult> {
+      try {
+        const { data, error } = await supabase.rpc('estornar_liquidacao_receber', {
+          p_liquidacao_id: command.liquidacaoId,
+          p_motivo: command.motivo,
+          p_idempotency_key: command.idempotencyKey,
+          p_origem: 'UI_FINANCEIRO',
+        })
+        if (error) {
+          return {
+            ok: false,
+            error: error.message,
+            code: FINANCIAL_ERROR_CODES.LIQUIDATE_FAILED,
+          }
+        }
+        const row = (Array.isArray(data) ? data[0] : data) as {
+          estorno_id?: unknown
+          idempotent_replay?: unknown
+        } | null
+        if (!row?.estorno_id) {
+          return { ok: false, error: 'Estorno não retornou identificador.', code: FINANCIAL_ERROR_CODES.LIQUIDATE_FAILED }
+        }
+        return {
+          ok: true,
+          estornoId: String(row.estorno_id),
+          idempotentReplay: row.idempotent_replay === true,
+        }
+      } catch (e) {
+        return {
+          ok: false,
+          error: e instanceof Error ? e.message : 'Falha no estorno.',
           code: FINANCIAL_ERROR_CODES.LIQUIDATE_FAILED,
         }
       }

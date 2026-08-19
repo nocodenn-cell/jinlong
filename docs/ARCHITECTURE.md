@@ -1,8 +1,14 @@
 # Architecture Overview — FastProduct PDV System
 
-**Version**: 1.0 (Post Go-Live P0)  
-**Last Updated**: Jul 23, 2026  
-**Scope**: Complete system architecture for offline-first retail PDV with sync
+**Version**: 1.1  
+**Last Updated**: Aug 13, 2026 (correções de divergência doc × código)  
+**Scope**: Arquitetura do PDV de varejo — **caixa web (online)** + caixa desktop (offline-first) com sync
+
+> **Correções de 2026-08-13.** Esta página afirmava que `/app/caixa` era *"Not accessible on web
+> (desktop only)"*, o que é **falso**: `pdv-importados/app/caixa/` é o caixa web em produção e chama
+> a RPC canônica v4 (`app/caixa/server/caixaVendas.impl.ts:282`). Também apontava para
+> `DECISION-LOG.md` e `SECURITY.md`, **que não existem**, e numerava ADRs em conflito com
+> `docs/adr/`. Corrigido abaixo. Para decisões arquiteturais vigentes, a fonte é **`docs/adr/`**.
 
 ---
 
@@ -83,10 +89,14 @@
 - Playwright (E2E tests)
 
 **Key Paths**:
-- `/app/caixa` — **Not accessible** on web (desktop only)
-- `/app/gerente` — Manager dashboard
-- `/app/admin` — Admin functions
-- `/auth` — Authentication flows
+- `/app/caixa` — **Caixa web (PDV online)** — em produção. Scan pipeline, carrinho, split de
+  pagamento, abertura/fechamento de caixa. Finaliza pela RPC canônica **v4**
+  (`app/caixa/server/caixaVendas.impl.ts` é o **caller único**; o arquivo é marcado
+  `FREEZE: CORE TRANSACIONAL`)
+- `/app/admin` — Painel administrativo (Admin V2) — superfície gerencial vigente
+- `/app/gerente` — **Legado.** Rotas redirecionam para `/admin`, mas a árvore ainda é SSOT de
+  *dados* (actions) para várias telas admin. Dívida registrada
+- `/auth` — Fluxos de autenticação
 
 ---
 
@@ -296,32 +306,32 @@ LOCAL (desktop):
 
 ---
 
-## 🎯 Design Decisions (ADRs)
+## 🎯 Design Decisions
 
-### ADR-001: Monorepo with Turbo
-**Status**: Accepted  
-**Rationale**: Shared business logic, coordinated releases  
-**Tradeoff**: Complex dependency management, but better code reuse
+> **Numeração:** os "ADR-001…005" que esta página listava eram **informais** e **colidiam** com os
+> ADRs reais de `docs/adr/` (que começam em ADR-005). Foram rebaixados a *decisões fundacionais*
+> sem número, para eliminar a ambiguidade. **A fonte de ADRs é `docs/adr/`.**
 
-### ADR-002: Offline-First Desktop App
-**Status**: Accepted  
-**Rationale**: Retail environments have spotty connectivity  
-**Tradeoff**: Complex sync protocol, eventual consistency model
+### Decisões fundacionais (históricas, sem número)
 
-### ADR-003: Sync via HMAC + Outbox
-**Status**: Accepted  
-**Rationale**: Stateless, replay-resistant, survives failures  
-**Tradeoff**: No ordering guarantees (handled by deduplication)
+| Decisão | Racional | Trade-off |
+|---|---|---|
+| Monorepo com Turbo | Lógica de negócio compartilhada, releases coordenados | Gestão de dependências mais complexa |
+| Desktop offline-first | Varejo tem conectividade instável | Protocolo de sync complexo, consistência eventual |
+| Sync via HMAC + Outbox | Stateless, resistente a replay, sobrevive a falhas | Sem garantia de ordem (tratada por deduplicação) |
+| RLS + service role | Defesa em profundidade | Complexidade de policies, custo de teste |
+| Next.js App Router + RSC | Menos JS no cliente, first load mais rápido | Curva de aprendizado, estado no cliente limitado |
 
-### ADR-004: RLS + Service Role
-**Status**: Accepted  
-**Rationale**: Defense-in-depth, compliance-ready  
-**Tradeoff**: Complexity in policy definitions, testing burden
+### ADRs vigentes — `docs/adr/`
 
-### ADR-005: Next.js App Router + Server Components
-**Status**: Accepted  
-**Rationale**: Better SEO, reduced client-side JS, faster first load  
-**Tradeoff**: Learning curve, limited client state patterns
+| ADR | Assunto |
+|---|---|
+| ADR-005 | Fronteiras de domínio e `shared-core` (núcleo único; arquitetura paralela proibida) |
+| ADR-006 | Fronteiras de domínio no frontend |
+| ADR-007 / 008 / 009 / 010 | Fronteiras de `products` / `inventory` / `cash` / `financial` |
+| ADR-011 | SSOT único de migrations; timestamp vigente, sequencial congelado |
+| ADR-PDV | Centro de gravidade do PDV — **Status: Proposto** (implementação já em produção; sign-off pendente) |
+| ADR-CAIXA | Contrato financeiro pós-cancelamento |
 
 ---
 
@@ -418,7 +428,9 @@ See `docs/GO-LIVE-RUNBOOK.md` for detailed deployment procedures.
 
 ## 📚 Related Documents
 - `CONTRIBUTING.md` — Development standards
-- `docs/DECISION-LOG.md` — Detailed ADRs
+- `docs/adr/` — **ADRs vigentes** (substitui o `DECISION-LOG.md`, que nunca existiu)
+- `docs/contracts/v1/` — Contratos de RPC versionados
+- `docs/AUTHORIZATION_MATRIX.md` — Matriz de autorização / RLS (substitui o `SECURITY.md` planejado)
 - `docs/GO-LIVE-RUNBOOK.md` — Deployment procedures
 - `docs/POST-DEPLOY-MONITORING.md` — Monitoring checklist
 

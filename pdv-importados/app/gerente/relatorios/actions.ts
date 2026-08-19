@@ -79,6 +79,22 @@ export type RelatorioCoberturaEstoqueDTO = {
   diasCobertura: number | null
 }
 
+/**
+ * Linhas de `v_estoque_ledger_divergencia` (migration 291): produtos cujo
+ * `estoque.quantidade_atual` não bate com a soma de `movimentos_estoque_log`.
+ * Detector de auditoria — não é ajustado automaticamente.
+ */
+export type RelatorioDivergenciaEstoqueDTO = {
+  produtoId: string
+  nome: string
+  lojaId: string
+  saldoEstoque: number
+  somaMovimentos: number
+  divergencia: number
+  qtdMovimentos: number
+  ultimoMovimentoEm: string | null
+}
+
 export type RelatoriosGerentePayload = {
   periodo: PeriodoRelatorioResolvido
   tzRelatorio: string
@@ -89,6 +105,7 @@ export type RelatoriosGerentePayload = {
   margemPorVenda: RelatorioMargemVendaDTO[]
   curvaAbc: RelatorioCurvaAbcDTO[]
   coberturaEstoque: RelatorioCoberturaEstoqueDTO[]
+  divergenciaEstoque: RelatorioDivergenciaEstoqueDTO[]
   rpcErro: string | null
   rpcErroAmigavel: string | null
 }
@@ -149,6 +166,14 @@ export async function carregarDadosRelatoriosGerente(input: {
     'relatorio_cobertura_estoque',
     { p_dias_janela: 30, p_limite: 200 },
   )
+
+  const { data: divergenciaEstoqueRaw } = await supabase
+    .from('v_estoque_ledger_divergencia')
+    .select(
+      'produto_id, produto_nome, loja_id, saldo_estoque, soma_movimentos, divergencia, qtd_movimentos, ultimo_movimento_em',
+    )
+    .order('divergencia', { ascending: false })
+    .limit(50)
 
   const rpcErro =
     errPorDia?.message ??
@@ -233,6 +258,25 @@ export async function carregarDadosRelatoriosGerente(input: {
       quantidadeAtual: Number(r.quantidade_atual),
       mediaDiariaVendida: Number(r.media_diaria_vendida),
       diasCobertura: r.dias_cobertura == null ? null : Number(r.dias_cobertura),
+    })),
+    divergenciaEstoque: ((divergenciaEstoqueRaw ?? []) as Array<{
+      produto_id: string
+      produto_nome: string
+      loja_id: string
+      saldo_estoque: number | string
+      soma_movimentos: number | string
+      divergencia: number | string
+      qtd_movimentos: number | string
+      ultimo_movimento_em: string | null
+    }>).map((r) => ({
+      produtoId: String(r.produto_id),
+      nome: String(r.produto_nome),
+      lojaId: String(r.loja_id),
+      saldoEstoque: Number(r.saldo_estoque),
+      somaMovimentos: Number(r.soma_movimentos),
+      divergencia: Number(r.divergencia),
+      qtdMovimentos: Number(r.qtd_movimentos),
+      ultimoMovimentoEm: r.ultimo_movimento_em,
     })),
     rpcErro,
     rpcErroAmigavel,

@@ -25,6 +25,7 @@ export type ReceivableTitle = {
   descricao: string | null
   vencimento: string | null
   status: string
+  lojaId: string
 }
 
 export type PayableTitle = {
@@ -39,4 +40,5 @@ export type PayableTitle = {
   nfeNumero: string | null
   nfeImportacaoId: string | null
   criadoEm: string | null
+  lojaId: string
 }

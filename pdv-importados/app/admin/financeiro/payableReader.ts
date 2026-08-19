@@ -16,7 +16,7 @@ export const PAYABLES_PAGE_SIZE = 20
 
 const COLUMNS = `
   id, fornecedor_id, descricao, valor_total, valor_pago, vencimento,
-  status, nfe_numero, nfe_importacao_id, criado_em,
+  status, nfe_numero, nfe_importacao_id, criado_em, loja_id,
   fornecedor:fornecedores!contas_pagar_fornecedor_id_fkey ( nome )
 `
 
@@ -38,6 +38,7 @@ function mapPayable(raw: Record<string, unknown>): PayableTitle {
     nfeNumero: (raw.nfe_numero as string | null) ?? null,
     nfeImportacaoId: (raw.nfe_importacao_id as string | null) ?? null,
     criadoEm: (raw.criado_em as string | null) ?? null,
+    lojaId: String(raw.loja_id),
   }
 }
 

@@ -1,3 +1,10 @@
+import {
+  RELATORIO_TZ_PADRAO,
+  inicioDoDiaCivilEmUtc,
+  subtrairDiasCivis,
+  ymdEmFuso,
+} from '@/lib/relatorios/periodoRelatorio'
+
 export type DashboardPeriod = 'TODAY' | '7D' | '30D'
 export type DashboardStatus = 'ALL' | 'CONCLUIDA' | 'CANCELADA'
 
@@ -15,19 +22,22 @@ export function normalizeStatus(raw?: string): DashboardStatus {
   return 'ALL'
 }
 
-export function getPeriodRange(period: DashboardPeriod, now = new Date()) {
+/**
+ * `start` é o início do dia civil (não a hora local do processo Node, que em
+ * produção roda em UTC) — sem isso, KPIs de "hoje" ficam deslocados em até 3h
+ * ao redor da meia-noite em `timeZone`. `end` já é um instante absoluto (`now`),
+ * correto independente de fuso.
+ */
+export function getPeriodRange(
+  period: DashboardPeriod,
+  timeZone: string = RELATORIO_TZ_PADRAO,
+  now = new Date(),
+) {
   const end = new Date(now)
-  const start = new Date(now)
-
-  if (period === 'TODAY') {
-    start.setHours(0, 0, 0, 0)
-  } else if (period === '30D') {
-    start.setDate(start.getDate() - 29)
-    start.setHours(0, 0, 0, 0)
-  } else {
-    start.setDate(start.getDate() - 6)
-    start.setHours(0, 0, 0, 0)
-  }
+  const hojeYmd = ymdEmFuso(now, timeZone)
+  const diasAtras = period === 'TODAY' ? 0 : period === '30D' ? 29 : 6
+  const deYmd = subtrairDiasCivis(hojeYmd, diasAtras)
+  const start = inicioDoDiaCivilEmUtc(deYmd, timeZone)
 
   const previousEnd = new Date(start)
   const previousStart = new Date(start)

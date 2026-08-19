@@ -152,3 +152,61 @@ Com este diagnóstico, decidir:
 - **(b)** seguir com o próximo item da Fase 2 e tratar o drift em paralelo, sabendo que features que dependem de `113/235/236` ficam parcialmente inertes até a reconciliação.
 
 A Auditoria Visual já está em produção e **não é bloqueada** por nenhum destes drifts.
+
+---
+
+## Adendo — 2026-08-19: recorrência do P0 por aplicação manual em produção
+
+> Acrescentado após a **Fase 6 do bloco financeiro**. O corpo acima permanece como o
+> diagnóstico original de 2026-06-20 e não foi alterado.
+
+O P0 da §3 — *"versionamento de migrations divergente entre produção e repositório"* —
+**voltou a ocorrer, por um mecanismo novo**: uma migration foi **aplicada à mão em
+produção** e, em seguida, **desabilitada no repositório** para que o pipeline não
+tentasse reaplicá-la.
+
+**Caso concreto:** `20260814015032_harden_diagnostics_and_ap_idempotency.sql`, renomeada
+para `_disabled_20260814015032_…` nos commits `c3f58df3` e `35eb7e8d`, com a justificativa
+*"já aplicada manualmente em produção"*.
+
+### Por que isso é mais grave que o drift de numeração
+
+O drift original era **visível**: números colidentes apareciam ao comparar os catálogos. Este
+é **invisível pelas mesmas ferramentas** — o repositório fica internamente consistente e o
+ledger de produção também. A divergência só existe *entre* os dois, e nada a sinaliza.
+
+Consequências observadas na Fase 6:
+
+1. **Produção deixou de ser reproduzível a partir do Git.** `supabase db reset` reconstruía
+   um banco **sem** o fix P1-3, com a versão pré-fix de `registrar_pagamento_contas_pagar`.
+   Qualquer disaster-recovery a partir do repositório produziria um banco diferente do real.
+2. **O sintoma apareceu longe da causa.** As suítes de AP falhavam com `movement_reused` e
+   `PAGAMENTO_SANGRIA_CORRELACAO_EXISTENTE` — erros que parecem de idempotência de
+   aplicação, não de migration ausente.
+3. **Mascarou um furo de RLS.** A migration desabilitada também revogava
+   `relatorio_consistencia_vendas` de `PUBLIC`. Sem ela, e com a `20260818000001` revogando
+   apenas `FROM authenticated`, a função seguiu executável por `authenticated` **via herança
+   de PUBLIC** em produção. Ver [FASE_6_GATE_FINANCEIRO_VALIDACAO.md §5](docs/FASE_6_GATE_FINANCEIRO_VALIDACAO.md).
+
+### Estado atual
+
+A `20260814015032` foi **reabilitada** sob o nome original (PR
+[#307](https://github.com/nocodenn-cell/fastproduct/pull/307)). É segura de reaplicar: só faz
+`CREATE OR REPLACE FUNCTION` + `REVOKE`/`GRANT`, todos idempotentes.
+
+### Pendente
+
+**Não há garantia de que tenha sido a única.** A auditoria do ledger de produção contra
+`supabase_migrations.schema_migrations` está registrada como item **7** do
+[BACKLOG_TECNICO.md](docs/BACKLOG_TECNICO.md) e é **pré-requisito para agendar a janela
+crítica**. Procurar também por outros arquivos `_disabled_*` em
+`backend/supabase/migrations/` — cada um é potencialmente um objeto que existe em produção e
+não no repositório.
+
+### Regra a adotar
+
+Migration aplicada à mão em produção **não deve ser desabilitada no repositório**. A
+migration deve permanecer versionada e ativa, escrita de forma idempotente
+(`CREATE OR REPLACE`, `IF NOT EXISTS`, `REVOKE`/`GRANT`), de modo que reaplicá-la onde já foi
+aplicada seja no-op. Desabilitar troca uma falha ruidosa e reversível por uma divergência
+silenciosa e permanente.

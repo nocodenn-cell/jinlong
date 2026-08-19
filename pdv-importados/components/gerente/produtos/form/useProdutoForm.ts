@@ -1,8 +1,9 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ProdutoGerenteRow } from '@/app/gerente/produtos/produtoGerenteTypes'
 import { useMoneyInput } from '@/hooks/useMoneyInput'
+import { formatDecimalBRL } from '@/lib/format/money'
 import type { OrigemCode, UnidadeCode } from './produtoForm.types'
 import { mapOrigemFromRow, parseGatilhoDisplay, readOnlyFromProduto } from './produtoForm.mappers'
 
@@ -11,6 +12,99 @@ const FISCAL_DEFAULTS = {
   cstPis: '07',
   cstCofins: '07',
 } as const
+
+/** Snapshot comparável dos campos editáveis — usado para detectar alterações não salvas (dirty-check). */
+type FormSnapshot = {
+  nome: string
+  codigoInterno: string
+  codigoBarras: string
+  origem: OrigemCode
+  unidadeMedida: UnidadeCode
+  referenciaFornecedor: string
+  nomeReduzidoPdv: string
+  localizacaoPrateleira: string
+  categoriaId: string
+  marcaId: string
+  fornecedorId: string
+  observacao: string
+  quantidadeGatilho: string
+  permitirAbaixoCusto: boolean
+  ncm: string
+  cfopProduto: string
+  csosn: string
+  cest: string
+  cstPis: string
+  cstCofins: string
+  precoVarejo: string
+  precoAtacado: string
+  precoCusto: string
+  estoqueInicialQty: string
+  estoqueInicialMin: string
+}
+
+function moneyDisplay(value: number | null | undefined): string {
+  return value != null && Number.isFinite(value) && value !== 0 ? formatDecimalBRL(value) : ''
+}
+
+function buildSnapshot(produto: ProdutoGerenteRow | null): FormSnapshot {
+  if (!produto) {
+    return {
+      nome: '',
+      codigoInterno: '',
+      codigoBarras: '',
+      origem: 'china_manual',
+      unidadeMedida: 'UN',
+      referenciaFornecedor: '',
+      nomeReduzidoPdv: '',
+      localizacaoPrateleira: '',
+      categoriaId: '',
+      marcaId: '',
+      fornecedorId: '',
+      observacao: '',
+      quantidadeGatilho: '',
+      permitirAbaixoCusto: false,
+      ncm: '',
+      cfopProduto: '',
+      csosn: FISCAL_DEFAULTS.csosn,
+      cest: '',
+      cstPis: FISCAL_DEFAULTS.cstPis,
+      cstCofins: FISCAL_DEFAULTS.cstCofins,
+      precoVarejo: '',
+      precoAtacado: '',
+      precoCusto: '',
+      estoqueInicialQty: '',
+      estoqueInicialMin: '',
+    }
+  }
+
+  return {
+    nome: produto.nome,
+    codigoInterno: produto.codigo_interno ?? '',
+    codigoBarras: produto.codigo_barras ?? '',
+    origem: mapOrigemFromRow(produto.origem),
+    unidadeMedida: (produto.unidade_medida as UnidadeCode) || 'UN',
+    referenciaFornecedor: produto.referencia_fornecedor ?? '',
+    nomeReduzidoPdv: produto.nome_reduzido_pdv ?? '',
+    localizacaoPrateleira: produto.localizacao_prateleira ?? '',
+    categoriaId: produto.categoria_id ?? '',
+    marcaId: produto.marca_id ?? '',
+    fornecedorId: produto.fornecedor_id ?? '',
+    observacao: produto.observacao ?? '',
+    quantidadeGatilho: parseGatilhoDisplay(produto.quantidade_gatilho_atacado),
+    permitirAbaixoCusto: produto.permitir_abaixo_custo,
+    ncm: produto.ncm ?? '',
+    cfopProduto: produto.cfop_produto ?? '',
+    csosn: produto.csosn ?? FISCAL_DEFAULTS.csosn,
+    cest: produto.cest ?? '',
+    cstPis: produto.cst_pis ?? FISCAL_DEFAULTS.cstPis,
+    cstCofins: produto.cst_cofins ?? FISCAL_DEFAULTS.cstCofins,
+    precoVarejo: moneyDisplay(produto.preco_varejo),
+    precoAtacado: moneyDisplay(produto.preco_atacado ?? undefined),
+    precoCusto: moneyDisplay(produto.preco_custo ?? undefined),
+    estoqueInicialQty: '',
+    estoqueInicialMin: '',
+  }
+}
 
 function resetFormState(
   produto: ProdutoGerenteRow | null,
@@ -41,61 +135,34 @@ function resetFormState(
     setEstoqueInicialQty: (v: string) => void
     setEstoqueInicialMin: (v: string) => void
   },
-) {
-  if (!produto) {
-    setters.setNome('')
-    setters.setCodigoInterno('')
-    setters.setCodigoBarras('')
-    setters.setOrigem('china_manual')
-    setters.setUnidadeMedida('UN')
-    setters.setReferenciaFornecedor('')
-    setters.setNomeReduzidoPdv('')
-    setters.setLocalizacaoPrateleira('')
-    setters.setCategoriaId('')
-    setters.setMarcaId('')
-    setters.setFornecedorId('')
-    setters.setObservacao('')
-    setters.setQuantidadeGatilho('')
-    setters.setPermitirAbaixoCusto(false)
-    setters.setNcm('')
-    setters.setCfopProduto('')
-    setters.setCsosn(FISCAL_DEFAULTS.csosn)
-    setters.setCest('')
-    setters.setCstPis(FISCAL_DEFAULTS.cstPis)
-    setters.setCstCofins(FISCAL_DEFAULTS.cstCofins)
-    setters.precoVarejoInput.reset()
-    setters.precoAtacadoInput.reset()
-    setters.precoCustoInput.reset()
-    setters.setEstoqueInicialQty('')
-    setters.setEstoqueInicialMin('')
-    return
-  }
-
-  setters.setNome(produto.nome)
-  setters.setCodigoInterno(produto.codigo_interno ?? '')
-  setters.setCodigoBarras(produto.codigo_barras ?? '')
-  setters.setOrigem(mapOrigemFromRow(produto.origem))
-  setters.setUnidadeMedida((produto.unidade_medida as UnidadeCode) || 'UN')
-  setters.setReferenciaFornecedor(produto.referencia_fornecedor ?? '')
-  setters.setNomeReduzidoPdv(produto.nome_reduzido_pdv ?? '')
-  setters.setLocalizacaoPrateleira(produto.localizacao_prateleira ?? '')
-  setters.setCategoriaId(produto.categoria_id ?? '')
-  setters.setMarcaId(produto.marca_id ?? '')
-  setters.setFornecedorId(produto.fornecedor_id ?? '')
-  setters.setObservacao(produto.observacao ?? '')
-  setters.setQuantidadeGatilho(parseGatilhoDisplay(produto.quantidade_gatilho_atacado))
-  setters.setPermitirAbaixoCusto(produto.permitir_abaixo_custo)
-  setters.setNcm(produto.ncm ?? '')
-  setters.setCfopProduto(produto.cfop_produto ?? '')
-  setters.setCsosn(produto.csosn ?? FISCAL_DEFAULTS.csosn)
-  setters.setCest(produto.cest ?? '')
-  setters.setCstPis(produto.cst_pis ?? FISCAL_DEFAULTS.cstPis)
-  setters.setCstCofins(produto.cst_cofins ?? FISCAL_DEFAULTS.cstCofins)
-  setters.precoVarejoInput.reset(produto.preco_varejo)
-  setters.precoAtacadoInput.reset(produto.preco_atacado ?? undefined)
-  setters.precoCustoInput.reset(produto.preco_custo ?? undefined)
-  setters.setEstoqueInicialQty('')
-  setters.setEstoqueInicialMin('')
+): FormSnapshot {
+  const snap = buildSnapshot(produto)
+  setters.setNome(snap.nome)
+  setters.setCodigoInterno(snap.codigoInterno)
+  setters.setCodigoBarras(snap.codigoBarras)
+  setters.setOrigem(snap.origem)
+  setters.setUnidadeMedida(snap.unidadeMedida)
+  setters.setReferenciaFornecedor(snap.referenciaFornecedor)
+  setters.setNomeReduzidoPdv(snap.nomeReduzidoPdv)
+  setters.setLocalizacaoPrateleira(snap.localizacaoPrateleira)
+  setters.setCategoriaId(snap.categoriaId)
+  setters.setMarcaId(snap.marcaId)
+  setters.setFornecedorId(snap.fornecedorId)
+  setters.setObservacao(snap.observacao)
+  setters.setQuantidadeGatilho(snap.quantidadeGatilho)
+  setters.setPermitirAbaixoCusto(snap.permitirAbaixoCusto)
+  setters.setNcm(snap.ncm)
+  setters.setCfopProduto(snap.cfopProduto)
+  setters.setCsosn(snap.csosn)
+  setters.setCest(snap.cest)
+  setters.setCstPis(snap.cstPis)
+  setters.setCstCofins(snap.cstCofins)
+  setters.precoVarejoInput.reset(produto?.preco_varejo)
+  setters.precoAtacadoInput.reset(produto?.preco_atacado ?? undefined)
+  setters.precoCustoInput.reset(produto?.preco_custo ?? undefined)
+  setters.setEstoqueInicialQty(snap.estoqueInicialQty)
+  setters.setEstoqueInicialMin(snap.estoqueInicialMin)
+  return snap
 }
 
 export function useProdutoForm(
@@ -132,6 +199,17 @@ export function useProdutoForm(
   const precoAtacadoInput = useMoneyInput()
   const precoCustoInput = useMoneyInput()
 
+  /**
+   * Snapshot dos valores logo após o reset — comparado ao estado atual pra
+   * saber se o formulário está "sujo" (dirty), sem depender de reler o
+   * estado do React em outro effect (haveria uma corrida: o commit do reset
+   * só fica visível no próximo render, e um segundo effect com as mesmas
+   * deps rodaria no mesmo flush, vendo o valor antigo). Por isso o snapshot
+   * é calculado a partir do dado de origem (`produto`/`duplicarDe`), não
+   * relido do estado — a mesma fonte que os setters usam.
+   */
+  const baselineRef = useRef<FormSnapshot | null>(null)
+
   useEffect(() => {
     if (!open) return
     const setters = {
@@ -163,18 +241,23 @@ export function useProdutoForm(
     }
     if (produto) {
       // Edição: hidrata do produto existente.
-      resetFormState(produto, setters)
+      const snap = resetFormState(produto, setters)
+      baselineRef.current = snap
     } else if (duplicarDe) {
       // Duplicar para criar: hidrata do produto base como um NOVO cadastro
       // (editando=false) e limpa só o que precisa ser único por item.
-      resetFormState(duplicarDe, setters)
+      const snap = resetFormState(duplicarDe, setters)
       setCodigoBarras('')
       setCodigoInterno('')
+      baselineRef.current = { ...snap, codigoBarras: '', codigoInterno: '' }
     } else {
       // Cadastro em branco.
-      resetFormState(null, setters)
+      const snap = resetFormState(null, setters)
       if (codigoBarrasInicial) {
         setCodigoBarras(codigoBarrasInicial)
+        baselineRef.current = { ...snap, codigoBarras: codigoBarrasInicial }
+      } else {
+        baselineRef.current = snap
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -188,7 +271,7 @@ export function useProdutoForm(
     // limpa só o que é específico do item. Antes resetava tudo, forçando o
     // operador a re-selecionar a categoria a cada produto.
     const contexto = { categoriaId, marcaId, fornecedorId, origem }
-    resetFormState(null, {
+    const snap = resetFormState(null, {
       setNome,
       setCodigoInterno,
       setCodigoBarras,
@@ -220,6 +303,7 @@ export function useProdutoForm(
     setMarcaId(contexto.marcaId)
     setFornecedorId(contexto.fornecedorId)
     setOrigem(contexto.origem)
+    baselineRef.current = { ...snap, ...contexto }
   }, [
     categoriaId,
     marcaId,
@@ -228,6 +312,67 @@ export function useProdutoForm(
     precoAtacadoInput,
     precoCustoInput,
     precoVarejoInput,
+  ])
+
+  const isDirty = useCallback((): boolean => {
+    const baseline = baselineRef.current
+    if (!baseline) return false
+    const current: FormSnapshot = {
+      nome,
+      codigoInterno,
+      codigoBarras,
+      origem,
+      unidadeMedida,
+      referenciaFornecedor,
+      nomeReduzidoPdv,
+      localizacaoPrateleira,
+      categoriaId,
+      marcaId,
+      fornecedorId,
+      observacao,
+      quantidadeGatilho,
+      permitirAbaixoCusto,
+      ncm,
+      cfopProduto,
+      csosn,
+      cest,
+      cstPis,
+      cstCofins,
+      precoVarejo: precoVarejoInput.display,
+      precoAtacado: precoAtacadoInput.display,
+      precoCusto: precoCustoInput.display,
+      estoqueInicialQty,
+      estoqueInicialMin,
+    }
+    return (Object.keys(current) as (keyof FormSnapshot)[]).some(
+      (key) => current[key] !== baseline[key],
+    )
+  }, [
+    nome,
+    codigoInterno,
+    codigoBarras,
+    origem,
+    unidadeMedida,
+    referenciaFornecedor,
+    nomeReduzidoPdv,
+    localizacaoPrateleira,
+    categoriaId,
+    marcaId,
+    fornecedorId,
+    observacao,
+    quantidadeGatilho,
+    permitirAbaixoCusto,
+    ncm,
+    cfopProduto,
+    csosn,
+    cest,
+    cstPis,
+    cstCofins,
+    precoVarejoInput.display,
+    precoAtacadoInput.display,
+    precoCustoInput.display,
+    estoqueInicialQty,
+    estoqueInicialMin,
   ])
 
   return {
@@ -280,6 +425,7 @@ export function useProdutoForm(
     setEstoqueInicialMin,
     readOnly,
     limparParaNovoCadastro,
+    isDirty,
   }
 }
 

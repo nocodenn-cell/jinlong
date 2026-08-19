@@ -21,6 +21,7 @@ import {
 import { dualWriteFromStatus } from '@/core/catalog/statusPublicacao'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 import {
+  buscarProdutoPorCodigoBarrasLoja,
   formatMensagemCodigoBarrasDuplicado,
   isProdutosCodigoBarrasLojaUniqueViolation,
 } from '@/lib/gerente/produtoCodigoBarrasDuplicado'
@@ -132,28 +133,170 @@ export function mapUpdateProductInputToRow(input: UpdateProductInput): ProdutoUp
   return row
 }
 
-function mapUpdateDbError(error: {
-  message: string
-  code?: string
-  details?: string
-}): { error: string; code?: (typeof PRODUCT_ERROR_CODES)[keyof typeof PRODUCT_ERROR_CODES] } {
-  if (isProdutosCodigoBarrasLojaUniqueViolation(error)) {
+async function mapUpdateDbError(
+  error: {
+    message: string
+    code?: string
+    details?: string
+  },
+  ctx: { supabase: SupabaseClient; codigoBarras: string | null; lojaId: string; produtoId: string },
+): Promise<{ error: string; code?: (typeof PRODUCT_ERROR_CODES)[keyof typeof PRODUCT_ERROR_CODES] }> {
+  // A RPC transacional normaliza a unique violation em um token próprio antes
+  // de propagar, então o 23505 cru não chega mais aqui no caminho de edição —
+  // ambas as formas são aceitas (a crua ainda ocorre em escritas diretas).
+  const rpcDuplicado = error.message?.includes('ATUALIZAR_PRODUTO_CODIGO_BARRAS_DUPLICADO')
+  // Produto de outra loja (ou inexistente): a RPC devolve a MESMA mensagem nos
+  // dois casos, de propósito — não confirma existência fora do escopo.
+  if (error.message?.includes('ATUALIZAR_PRODUTO_NAO_ENCONTRADO')) {
     return {
-      error: formatMensagemCodigoBarrasDuplicado(null),
+      error: resolveProductMessage('pt-BR', PRODUCT_ERROR_CODES.NOT_FOUND),
+      code: PRODUCT_ERROR_CODES.NOT_FOUND,
+    }
+  }
+  if (rpcDuplicado || isProdutosCodigoBarrasLojaUniqueViolation(error)) {
+    // Best-effort: achar o nome do produto conflitante só enriquece a
+    // mensagem. Se a busca falhar por qualquer motivo, cai na mensagem
+    // genérica em vez de derrubar a resposta inteira do update.
+    let nomeExistente: string | null = null
+    if (ctx.codigoBarras) {
+      try {
+        const existente = await buscarProdutoPorCodigoBarrasLoja(
+          ctx.supabase,
+          ctx.codigoBarras,
+          ctx.lojaId,
+          ctx.produtoId,
+        )
+        nomeExistente = existente?.nome ?? null
+      } catch {
+        nomeExistente = null
+      }
+    }
+    return {
+      error: formatMensagemCodigoBarrasDuplicado(nomeExistente),
       code: PRODUCT_ERROR_CODES.BARCODE_DUPLICATE,
     }
   }
   return { error: mensagemErroComSecao('Produto', error.message) }
 }
 
+/**
+ * Faixa de atacado implícita no payload do produto: quando preço de atacado e
+ * quantidade-gatilho vêm preenchidos juntos, `precos_atacado` precisa refletir
+ * exatamente esse par — é ele que a RPC `calcular_preco_produto` consulta na
+ * venda. Derivar aqui (em vez de receber como parâmetro separado) mantém a
+ * assinatura de `UpdateProductCommand` intacta.
+ */
+export function derivarFaixaAtacado(
+  payload: ProdutoUpdatePayload,
+): { quantidade_minima: number; preco_unitario: number } | null {
+  const preco = payload.preco_atacado
+  const gatilho = payload.quantidade_gatilho_atacado
+  if (preco == null || preco <= 0) return null
+  if (gatilho == null || gatilho <= 0) return null
+  return { quantidade_minima: gatilho, preco_unitario: preco }
+}
+
+/**
+ * A RPC não existe no banco (ainda não promovida, ou rollback da migration).
+ * PostgREST devolve `PGRST202` quando não acha a função no schema cache;
+ * o Postgres devolve `42883` (undefined_function) quando a chamada chega ao
+ * banco. Qualquer um dos dois significa "banco antigo", não "erro de dados".
+ */
+function rpcAusente(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false
+  if (error.code === 'PGRST202' || error.code === '42883') return true
+  const msg = error.message ?? ''
+  return (
+    msg.includes('atualizar_produto_com_faixa_atacado') &&
+    (msg.includes('does not exist') || msg.includes('Could not find the function'))
+  )
+}
+
+/**
+ * Atualização de produto com a faixa de atacado, via RPC transacional.
+ *
+ * BANCO SEM A RPC: NÃO existe fallback que escreva. A versão anterior tentava
+ * emular a RPC com `UPDATE produtos` seguido da sincronização da faixa e, se a
+ * segunda etapa falhasse, devolvia erro — mas a alteração do produto JÁ ESTAVA
+ * PERSISTIDA. Teste real contra o banco (não mock) mostrou o produto com
+ * gatilho 20 e a faixa ativa ainda em 10: exatamente o estado parcial que esta
+ * entrega existe para eliminar. Devolver erro não desfaz escrita.
+ *
+ * Sem transação — e o PostgREST não oferece uma para múltiplas instruções — a
+ * única forma de garantir "ou tudo, ou nada" contra um banco antigo é NÃO
+ * ESCREVER. Então:
+ *
+ *   - edição que NÃO altera o par de atacado → `UPDATE produtos` direto é uma
+ *     única instrução, atômica por si, e segue permitida;
+ *   - edição que ALTERA `preco_atacado` ou `quantidade_gatilho_atacado` →
+ *     recusada, com mensagem explícita, sem gravar nada.
+ *
+ * SEQUENCIAMENTO APP ↔ BANCO: isto refuta a afirmação anterior de que qualquer
+ * ordem serviria. A ordem correta é BANCO PRIMEIRO. Publicar o app antes não
+ * corrompe dado algum, mas bloqueia a edição de preço de atacado até a
+ * migration entrar. Ver `docs/PROMOCAO_PRODUTOS_HARDENING.md` §3.
+ */
+export const MSG_ATACADO_REQUER_MIGRATION =
+  'A edição de preço/quantidade de atacado está indisponível: o banco ainda não recebeu a atualização desta versão. ' +
+  'As demais alterações do produto continuam funcionando. Tente novamente após a migração do banco.'
+
+/** O par (preço, gatilho) do catálogo — a invariante que a RPC protege. */
+function parAtacado(p: {
+  preco_atacado?: number | null
+  quantidade_gatilho_atacado?: number | null
+}) {
+  return {
+    preco: p.preco_atacado ?? null,
+    gatilho: p.quantidade_gatilho_atacado ?? null,
+  }
+}
+
 function defaultUpdateRow(supabase: SupabaseClient): UpdateProdutoRowFn {
   return async ({ id, lojaId, payload }) => {
-    const { error } = await supabase
+    const { error } = await supabase.rpc('atualizar_produto_com_faixa_atacado', {
+      p_produto_id: id,
+      p_payload: payload,
+      // `p_ator_id` NÃO é enviado: este é o client de sessão, então a RPC
+      // resolve o ator por `auth.uid()`. Enviar `null` explicitamente divergia
+      // do tipo gerado (que aceita ausente ou string) sem que o typecheck
+      // pudesse acusar, porque o client é genérico.
+      p_faixa: derivarFaixaAtacado(payload),
+    })
+
+    if (!rpcAusente(error)) return { error }
+
+    // ── Banco ainda sem a RPC ────────────────────────────────────────────────
+    // Só recusa se o par de atacado for REALMENTE mudar. Comparar com o valor
+    // atual (em vez de olhar só a presença das chaves) evita bloquear edições
+    // que apenas reenviam o mesmo atacado — o formulário sempre manda o estado
+    // completo, então as chaves estão sempre presentes.
+    const { data: atual, error: erroLeitura } = await supabase
+      .from('produtos')
+      .select('preco_atacado, quantidade_gatilho_atacado')
+      .eq('id', id)
+      .eq('loja_id', lojaId)
+      .maybeSingle()
+    if (erroLeitura) return { error: erroLeitura }
+
+    const antes = parAtacado((atual ?? {}) as Record<string, number | null>)
+    const depois = parAtacado(payload)
+    const mudaAtacado =
+      Number(antes.preco ?? 0) !== Number(depois.preco ?? 0) ||
+      Number(antes.gatilho ?? 0) !== Number(depois.gatilho ?? 0)
+
+    if (mudaAtacado) {
+      // Recusa ANTES de qualquer escrita: nada é persistido, logo não há
+      // estado parcial possível.
+      return { error: { message: MSG_ATACADO_REQUER_MIGRATION, code: 'ATACADO_REQUER_MIGRATION' } }
+    }
+
+    // Instrução única — atômica por si.
+    const { error: erroDireto } = await supabase
       .from('produtos')
       .update(payload)
       .eq('id', id)
       .eq('loja_id', lojaId)
-    return { error }
+    return { error: erroDireto }
   }
 }
 
@@ -167,6 +310,7 @@ function defaultDeps(supabase: SupabaseClient): ProductUpdaterDeps {
 async function updateCatalog(
   command: UpdateProductCommand,
   deps: ProductUpdaterDeps,
+  supabase: SupabaseClient,
 ): Promise<UpdateProductResult> {
   const existing = await deps.reader.getById(command.id)
   if (!existing.ok) {
@@ -194,7 +338,12 @@ async function updateCatalog(
     payload: mapUpdateProductInputToRow(command.input),
   })
   if (error) {
-    const mapped = mapUpdateDbError(error)
+    const mapped = await mapUpdateDbError(error, {
+      supabase,
+      codigoBarras: command.input.codigoBarras ?? null,
+      lojaId: command.lojaId,
+      produtoId: command.id,
+    })
     return { ok: false, error: mapped.error, code: mapped.code }
   }
 
@@ -244,7 +393,7 @@ export function createProductUpdater(
         }
       }
       try {
-        return await updateCatalog(command, resolved)
+        return await updateCatalog(command, resolved, supabase)
       } catch (e) {
         return {
           ok: false,
