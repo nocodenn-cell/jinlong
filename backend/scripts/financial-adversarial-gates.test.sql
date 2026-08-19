@@ -73,24 +73,30 @@ SELECT set_config('t.caixa', :'caixa', true),
        set_config('t.preco', :'preco_tabela', true);
 
 -- ═══════════════════════════════════════════════════════════════════════════
--- GARANTIR AMBIENTE LIMPO PARA O GATE9
+-- (REMOVIDO) bloco de limpeza que precedia o GATE 9
 -- ═══════════════════════════════════════════════════════════════════════════
--- O CI pode não ter aplicado a migration 20260818000001. Este bloco garante
--- que as funções de consistência NÃO estejam executáveis por authenticated
--- antes do GATE9 ser executado.
+-- Existia aqui um `DO` que executava, imediatamente antes do GATE 9:
+--
+--   REVOKE EXECUTE ON FUNCTION public.relatorio_consistencia_vendas(...)
+--     FROM PUBLIC, anon, authenticated;
+--   REVOKE EXECUTE ON FUNCTION public.verificar_consistencia_venda(uuid)
+--     FROM PUBLIC, anon, authenticated;
+--
+-- A justificativa era "o CI pode não ter aplicado a migration 20260818000001".
+--
+-- O efeito real era outro: o bloco **consertava exatamente a condição que o
+-- GATE 9 asserta em seguida**, tornando o gate incapaz de falhar. Conceder
+-- `EXECUTE` a PUBLIC antes de rodar a suíte não a quebrava — o cleanup
+-- revogava, e o GATE 9 passava. Um gate que se auto-repara não é regressão,
+-- é decoração: ele passaria mesmo com o vazamento aberto em produção.
+--
+-- Verificado em 2026-08-19: com o bloco presente, `GRANT EXECUTE ... TO PUBLIC`
+-- seguido de `npm run test:financial` NÃO produzia `GATE9_DIAGNOSTICO_EXPOSTO`.
+--
+-- A justificativa também caducou: `20260819000000` está aplicada em produção
+-- (ledger 307) e no banco local reconstruído do repositório. Se um ambiente
+-- não tiver a migration, o GATE 9 **deve** falhar — é essa a informação.
 -- ═══════════════════════════════════════════════════════════════════════════
-
-DO $cleanup$
-BEGIN
-  -- Revoga relatorio_consistencia_vendas
-  REVOKE EXECUTE ON FUNCTION public.relatorio_consistencia_vendas(uuid, uuid, timestamptz, timestamptz) FROM PUBLIC, anon, authenticated;
-  -- Revoga verificar_consistencia_venda
-  REVOKE EXECUTE ON FUNCTION public.verificar_consistencia_venda(uuid) FROM PUBLIC, anon, authenticated;
-EXCEPTION
-  WHEN undefined_function THEN
-    -- Funções não existem? Ignora.
-    NULL;
-END $cleanup$;
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- GATE 1 — `caixas.saldo_atual` não é gravável por clientes autenticados
@@ -381,16 +387,39 @@ DROP TRIGGER gate7_fail_ar ON public.liquidacoes_receber;
 -- contagem agregada de todas as vendas alheias.
 -- ═══════════════════════════════════════════════════════════════════════════
 DO $g$
-DECLARE v_fn text; v_ok boolean;
+DECLARE v_fn text; v_papel text; v_acl text;
 BEGIN
   FOREACH v_fn IN ARRAY ARRAY['verificar_consistencia_venda', 'relatorio_consistencia_vendas'] LOOP
-    IF EXISTS (
-      SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    -- Papéis alcancaveis pelo cliente. `anon` entra junto de `authenticated`:
+    -- uma funcao SECURITY DEFINER sem guarda exposta a `anon` e pior, nao
+    -- melhor, e o REVOKE de 20260819000000 fecha os dois.
+    FOREACH v_papel IN ARRAY ARRAY['authenticated', 'anon'] LOOP
+      IF EXISTS (
+        SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+        WHERE n.nspname = 'public' AND p.proname = v_fn
+          AND has_function_privilege(v_papel, p.oid, 'EXECUTE')
+      ) THEN
+        RAISE EXCEPTION 'GATE9_DIAGNOSTICO_EXPOSTO: % executavel por %', v_fn, v_papel;
+      END IF;
+    END LOOP;
+
+    -- A concessao a PUBLIC e a causa raiz que a 20260818000001 nao removeu:
+    -- toda funcao nasce com EXECUTE para PUBLIC, e revogar so de
+    -- `authenticated` deixa o acesso vivo POR HERANCA. Checar os papeis acima
+    -- ja pega o sintoma, mas so olhar a ACL prova que a concessao sumiu — e e
+    -- isso que impede a regressao de voltar por uma funcao recem-criada, cuja
+    -- ACL default (`proacl IS NULL`) tambem concede a PUBLIC.
+    FOR v_acl IN
+      SELECT coalesce(p.proacl::text, '<default: PUBLIC>')
+      FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
       WHERE n.nspname = 'public' AND p.proname = v_fn
-        AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
-    ) THEN
-      RAISE EXCEPTION 'GATE9_DIAGNOSTICO_EXPOSTO: % executavel por authenticated', v_fn;
-    END IF;
+        AND (p.proacl IS NULL OR EXISTS (
+          SELECT 1 FROM unnest(p.proacl) a WHERE a::text LIKE '=%'
+        ))
+    LOOP
+      RAISE EXCEPTION
+        'GATE9_DIAGNOSTICO_EXPOSTO: % ainda concede EXECUTE a PUBLIC (acl=%)', v_fn, v_acl;
+    END LOOP;
   END LOOP;
 END $g$;
 
