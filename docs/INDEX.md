@@ -44,6 +44,7 @@ Welcome to the fastproduct documentation hub. Find guides for development, opera
 | [GO_LIVE_STATUS_ATUAL.md](./GO_LIVE_STATUS_ATUAL.md) | Snapshot curto do status (aponta aos canônicos) | Todos |
 | [GO_LIVE_STATUS_FINAL.md](./GO_LIVE_STATUS_FINAL.md) | **Passo 7** — snapshot final READY FOR GO-LIVE + gates | Release manager, CTO |
 | [POST-DEPLOY-MONITORING.md](./POST-DEPLOY-MONITORING.md) | Monitoring checklist, alert thresholds, 24h post-launch | Ops, on-call engineer |
+| [FASE_6_GATE_FINANCEIRO_VALIDACAO.md](./FASE_6_GATE_FINANCEIRO_VALIDACAO.md) | **Fase 6 (bloco financeiro)** — gate 6/6 reproduzível do zero, achado de RLS, pendências e recomendação sobre a janela crítica | Release manager, backend, CTO |
 
 ### **🏗️ For Workspace Setup**
 

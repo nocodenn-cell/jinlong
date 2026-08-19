@@ -1,9 +1,11 @@
 # Go-Live Certification Report — Jinlong PDV
 
-**Atualizado:** 2026-08-17
+**Atualizado:** 2026-08-19
 **Decisão histórica de implantação (2026-08-09):** 🟢 **GO** — preservada como evidência do fechamento anterior.
 **Estado do bloco AR/AP (Fase 2C, §11):** 🟡 **APTO PARA REAUDITORIA** — os 4 P0 e os 6 P1 da auditoria adversarial (§10.9) foram remediados, com gate de regressão automatizado no CI. Reauditoria independente desse bloco específico ainda não foi executada.
 **Estado do bloco de comissões — DB-05 A→F (§12):** 🟢 **CERTIFICADO** (backend e frontend). Ver §12 para commits, gates, auditoria adversarial e dívidas residuais. **Fase 3A permanece NÃO LIBERADA** — a certificação de DB-05 fecha o bloco de comissões, não a liberação da próxima fase, que depende também da reauditoria pendente do bloco AR/AP (§11) e das dívidas de reconciliação global listadas em §12.8.
+**Estado do gate financeiro (Fase 6, 2026-08-19):** 🟢 **6/6 REPRODUZÍVEL DO ZERO** — antes passava **1/6** num banco reconstruído; o `4/6` observado localmente era resíduo de execuções manuais. Fechadas as lacunas (a) GATES 12–23 + `ROLLBACK` e (b) `seed.sql`. **⚠️ Janela crítica NÃO recomendada** enquanto não houver auditoria do ledger de produção e ambiente de ensaio com schema equivalente ao de produção. Ver [docs/FASE_6_GATE_FINANCEIRO_VALIDACAO.md](docs/FASE_6_GATE_FINANCEIRO_VALIDACAO.md).
+**🔒 Correção de RLS em produção (2026-08-19):** `relatorio_consistencia_vendas` (4 args) permanecia executável por `authenticated` **via herança de PUBLIC** — a `20260818000001` revogou só `FROM authenticated`. Função `SECURITY DEFINER` sem guarda de loja ⇒ GERENTE da loja B lia agregados da loja A. Corrigido em `20260819000000` (PR [#307](https://github.com/nocodenn-cell/fastproduct/pull/307)).
 **Produção canônica:** https://pdv-importados.vercel.app  
 **Projeto Vercel:** `pdv-importados` (team `jinlong`)  
 **Supabase:** projeto `jinlong` (dashboard do time Jinlong)
