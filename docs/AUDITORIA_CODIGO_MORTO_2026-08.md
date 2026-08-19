@@ -3,9 +3,25 @@
 **Data:** 2026-08-19
 **Base:** `origin/main` em `54b84851` (pós PR [#309](https://github.com/nocodenn-cell/fastproduct/pull/309)) + Fase 1B deste branch
 **Produção:** projeto `jinlong`, consultas **somente leitura**
-**Status:** 🟡 **LISTA PARA APROVAÇÃO — NADA FOI REMOVIDO**
+**Status:** ✅ **EXECUTADO em 2026-08-19** — 10 funções SQL + **48** módulos frontend removidos.
 
-> Nenhum objeto foi apagado. Este documento é o pedido de autorização.
+> ## ⚠️ Duas correções a esta auditoria, feitas na hora de executar
+>
+> **1. Eram 53 candidatos frontend, não 54.** A varredura original cruzou os imports
+> de apenas `app/`, `components/`, `lib/` e `hooks/`. O pacote tem **mais 13 diretórios**
+> (`core/`, `e2e/`, `scripts/`, `src/`, `stores/`, `stories/`, `tests/`, `types/`, …) e
+> **8 arquivos `.ts` na raiz**. Refeita com a superfície completa — 3.687 specifiers
+> contra 3.326 —, **`lib/admin/auth/middlewareSupabase.ts` saiu da lista**: é importado
+> por `middleware.ts`, na raiz do pacote. **Não era código morto**, e teria sido removido
+> por um furo do método original.
+>
+> **2. Cinco arquivos foram SEGURADOS**, apesar da autorização ter sido "todos".
+> `tests/consolidacao-post-audit.test.ts` contém um teste chamado, literalmente,
+> *"componentes gerente órfãos marcados @legacy (não apagar até validação)"*. É uma
+> decisão humana versionada que **esta lista não mencionava** quando foi enviada para
+> aprovação — ou seja, a autorização foi dada sem esse dado. Ver §E.
+
+Total removido: **48 de 53**. Os 5 restantes aguardam decisão explícita.
 
 ---
 
@@ -235,3 +251,58 @@ deixou os clientes de página para trás.
 4. **A.3** — só depois de confirmar que não há `pdv-local` desatualizado em campo.
 
 Para o item C, abrir tarefa de agendamento em vez de remoção.
+
+
+---
+
+## E. Os 5 arquivos segurados
+
+`tests/consolidacao-post-audit.test.ts` marca estes cinco como `@legacy` e o nome do
+teste diz **"não apagar até validação"**:
+
+```
+app/gerente/compras/ComprasGerentePageClient.tsx
+app/gerente/financeiro/FinanceiroGerentePageClient.tsx
+app/gerente/produtos/ProdutosGerentePageClient.tsx
+app/gerente/relatorios/RelatoriosGerentePageClient.tsx
+app/gerente/vendas/VendasGerenteListClient.tsx
+```
+
+**A validação que o guard esperava provavelmente já aconteceu:** `app/gerente/` tem 4
+`page.tsx` contra 28 em `app/admin/`, e `app/gerente/[...path]/page.tsx` redireciona
+tudo via `legacyGerenteRedirect`. As rotas não existem, e nada importa estes arquivos.
+
+Mesmo assim não foram removidos. Sobrescrever um "não apagar" escrito por uma pessoa
+merece o "sim" de uma pessoa — ainda mais na véspera do treinamento do cliente #1.
+
+**Para removê-los**, além dos 5 arquivos é preciso apagar o bloco de teste que os
+protege (`tests/consolidacao-post-audit.test.ts`, describe *"consolidação pós-audit —
+guarda SSoT"*), senão a suíte quebra.
+
+---
+
+## F. Guards atualizados, não enfraquecidos
+
+Dois testes asseveravam a existência de arquivos removidos. Nenhum foi simplesmente
+apagado:
+
+| Teste | O que mudou |
+|---|---|
+| `tests/p0-venda-homologacao.matrix.test.ts` | Apontava para `FinanceiroTabNav.tsx`. Verificado que a nav **viva** é `components/ui/admin-v2/FinanceiroHubNavShell.tsx` (o `page.tsx` importa `parseFinanceiroTab` de `financeiroTabs.ts`; o shell renderiza). O guard passou a apontar para o arquivo que de fato implementa a feature — **deixou de ser vácuo**. |
+| `app/caixa/caixaSemCadastroProduto.test.ts` | Varre superfícies do caixa que não podem reintroduzir o modal de cadastro relâmpago. `CaixaFooter.tsx` saiu da lista porque o arquivo deixou de existir; as demais seguem varridas. |
+
+---
+
+## G. Validação da remoção
+
+Em banco reconstruído do zero (`db reset`):
+
+- **10 removidas, 0 já ausentes** (a migration reporta cada uma por `NOTICE`)
+- `test:rls-scope` — **42/42**
+- `FINANCIAL ADVERSARIAL GATES: OK`
+- `verificacao-pos-apply.sql` — **0 falhas**, ledger **311** (constante atualizada junto)
+- `check:types-drift` — **OK**, 6222 linhas
+- **nenhum import pendurado** após as 48 remoções; nenhum dos 5 barris era importado como diretório
+
+**Não verificado localmente:** `build` e `typecheck` do frontend — `node_modules` não está
+instalado neste worktree. Fica para o CI.
