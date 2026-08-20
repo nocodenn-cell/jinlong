@@ -7,7 +7,12 @@ import { fmtGerenteBRL, fmtGerenteDateTime, fmtGerenteIdCurto } from '@/lib/form
 import { labelFormaPagamentoVenda } from '@/lib/format/vendaLabels'
 import type { Mensagens } from '@/i18n/getMessages'
 import { emitGerenteToast } from '@/lib/gerente/toast'
-import { cancelarVendaGerenteAction, type VendaListRow } from './actions'
+import {
+  cancelarVendaGerenteAction,
+  obterDadosComprovanteCancelamento,
+  type VendaListRow,
+} from './actions'
+import type { ComprovanteCancelamento } from './VendaCancelamentoReciboModal'
 
 type Props = Readonly<{
   venda: VendaListRow | null
@@ -15,9 +20,19 @@ type Props = Readonly<{
   m: Mensagens
   onClose: () => void
   onCancelado: () => void
+  /** Chamado com os dados do comprovante assim que o cancelamento é confirmado
+   * com sucesso — o dono da tela decide onde/como exibir o modal de impressão. */
+  onComprovante?: (comprovante: ComprovanteCancelamento) => void
 }>
 
-export function VendaCancelarModal({ venda, locale, m, onClose, onCancelado }: Props) {
+export function VendaCancelarModal({
+  venda,
+  locale,
+  m,
+  onClose,
+  onCancelado,
+  onComprovante,
+}: Props) {
   const [motivo, setMotivo] = useState('')
   const [isPending, startTransition] = useTransition()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -44,8 +59,27 @@ export function VendaCancelarModal({ venda, locale, m, onClose, onCancelado }: P
     fd.set('motivo', motivoTrim)
     startTransition(async () => {
       try {
-        await cancelarVendaGerenteAction(fd)
+        const res = await cancelarVendaGerenteAction(fd)
+        if (!res.ok) {
+          emitGerenteToast({ kind: 'error', message: res.error })
+          return
+        }
         emitGerenteToast({ kind: 'success', message: m.comum.sucesso })
+
+        if (onComprovante) {
+          const dados = await obterDadosComprovanteCancelamento(vendaAtiva.id)
+          onComprovante({
+            vendaId: vendaAtiva.id,
+            dataOriginal: vendaAtiva.data,
+            dataCancelamento: new Date(),
+            itens: dados.itens,
+            totalLiquido: Number(vendaAtiva.total_liquido ?? 0),
+            formaPagamentoLabel: labelFormaPagamentoVenda(vendaAtiva.forma_pagamento, m),
+            motivo: motivoTrim,
+            operadorNome: dados.operadorNome,
+          })
+        }
+
         onCancelado()
         onClose()
       } catch (err) {

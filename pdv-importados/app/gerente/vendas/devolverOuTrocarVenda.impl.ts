@@ -5,6 +5,13 @@ import { createClient } from '@/lib/supabase/server'
 import { mensagemErroDevolverVenda } from '@/app/gerente/vendas/devolverVendaErro'
 import type { DevolverVendaInput } from '@/app/gerente/vendas/parseDevolverVendaForm'
 
+type RpcDevolverItem = {
+  nome?: unknown
+  quantidade?: unknown
+  preco_unitario?: unknown
+  subtotal?: unknown
+}
+
 type RpcDevolverRow = {
   operacao_id?: unknown
   venda_id?: unknown
@@ -12,11 +19,32 @@ type RpcDevolverRow = {
   valor_estornado?: unknown
   valor_caixa_estornado?: unknown
   status_venda?: unknown
+  itens?: unknown
 }
 
 function firstRpcRow<T>(data: unknown): T | undefined {
   if (data == null) return undefined
   return (Array.isArray(data) ? data[0] : data) as T
+}
+
+export type DevolverVendaItemResult = {
+  nome: string
+  quantidade: number
+  precoUnitario: number
+  subtotal: number
+}
+
+function mapRpcItens(raw: unknown): DevolverVendaItemResult[] {
+  if (!Array.isArray(raw)) return []
+  return raw.map((r) => {
+    const item = r as RpcDevolverItem
+    return {
+      nome: typeof item.nome === 'string' ? item.nome : 'Produto',
+      quantidade: Number(item.quantidade ?? 0),
+      precoUnitario: Number(item.preco_unitario ?? 0),
+      subtotal: Number(item.subtotal ?? 0),
+    }
+  })
 }
 
 export type DevolverVendaResult =
@@ -27,6 +55,8 @@ export type DevolverVendaResult =
       tipo: string
       valorEstornado: number
       valorCaixaEstornado: number
+      itens: DevolverVendaItemResult[]
+      operadorNome: string
     }
   | { ok: false; error: string }
 
@@ -72,6 +102,12 @@ export async function devolverOuTrocarVendaImpl(
     revalidatePath('/admin/financeiro')
     revalidatePath('/admin/estoque')
 
+    const { data: usuarioRow } = await supabase
+      .from('usuarios')
+      .select('nome')
+      .eq('id', user.id)
+      .maybeSingle()
+
     return {
       ok: true,
       operacaoId: String(row.operacao_id),
@@ -79,6 +115,8 @@ export async function devolverOuTrocarVendaImpl(
       tipo: String(row.tipo ?? input.tipo),
       valorEstornado: Number(row.valor_estornado ?? input.valorEstorno),
       valorCaixaEstornado: Number(row.valor_caixa_estornado ?? 0),
+      itens: mapRpcItens(row.itens),
+      operadorNome: usuarioRow?.nome ?? '—',
     }
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Erro inesperado.'

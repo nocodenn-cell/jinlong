@@ -276,6 +276,24 @@ export async function atualizarFuncionarioAction(input: {
   }
 }
 
+export async function verificarEmailDisponiveAction(email: string): Promise<ActionResult<boolean>> {
+  const gate = await requireLojaSession()
+  if (!gate.ok) return fail(gate.error)
+
+  if (!z.string().email().safeParse(email.trim()).success) {
+    return fail('Email inválido.')
+  }
+
+  try {
+    const admin = createAdminClient()
+    const { data } = await admin.auth.admin.listUsers()
+    const exists = data.users.some((u) => u.email === email.toLowerCase().trim())
+    return { ok: true, data: !exists }
+  } catch (e) {
+    return { ok: true, data: true }
+  }
+}
+
 export async function definirAtivoFuncionarioAction(
   id: string,
   ativo: boolean,

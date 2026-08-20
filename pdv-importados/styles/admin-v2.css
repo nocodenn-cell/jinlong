@@ -356,3 +356,22 @@
   background: color-mix(in srgb, var(--color-success-500) 10%, transparent);
   color: var(--color-success-500);
 }
+
+/* Impressão de relatórios: some sidebar/nav e controles interativos, mantém
+   apenas o conteúdo do relatório. `.admin-v2-print-hide` marca elementos que
+   não fazem sentido no papel (filtros, abas, botões). */
+@media print {
+  [data-admin-v2] .admin-v2-sidebar,
+  [data-admin-v2] .admin-v2-print-hide {
+    display: none !important;
+  }
+
+  [data-admin-v2] .admin-v2-main {
+    width: 100% !important;
+  }
+
+  [data-admin-v2] {
+    background: #fff !important;
+    color: #000 !important;
+  }
+}

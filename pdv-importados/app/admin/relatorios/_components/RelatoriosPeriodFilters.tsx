@@ -16,6 +16,7 @@ export type RelatoriosFiltrosLabels = {
   preset15: string
   preset30: string
   presetsAria: string
+  imprimir: string
 }
 
 type RelatoriosPeriodFiltersProps = {
@@ -80,7 +81,7 @@ export function RelatoriosPeriodFilters({
   return (
     <form
       method="get"
-      className="sticky top-0 z-10 flex flex-col gap-3 rounded-lg border border-[var(--color-border-secondary)] bg-jl-surface-soft p-3"
+      className="admin-v2-print-hide sticky top-0 z-10 flex flex-col gap-3 rounded-lg border border-[var(--color-border-secondary)] bg-jl-surface-soft p-3"
     >
       {tab && tab !== 'visao' ? <input type="hidden" name="tab" value={tab} /> : null}
 

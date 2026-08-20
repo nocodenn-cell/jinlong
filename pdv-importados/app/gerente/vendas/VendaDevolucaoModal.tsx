@@ -14,6 +14,7 @@ import {
   type DevolverVendaInput,
 } from './parseDevolverVendaForm'
 import type { VendaDetalhe } from '@/app/admin/vendas/actions'
+import type { ComprovanteDevolucao } from './VendaDevolucaoReciboModal'
 
 type Props = Readonly<{
   venda: VendaDetalhe | null
@@ -21,6 +22,9 @@ type Props = Readonly<{
   m: Mensagens
   onClose: () => void
   onConcluido: () => void
+  /** Chamado com os dados do comprovante assim que a devolução/troca é concluída
+   * com sucesso — o dono da tela decide onde/como exibir o modal de impressão. */
+  onComprovante?: (comprovante: ComprovanteDevolucao) => void
 }>
 
 type SelecaoItem = Readonly<{ itemVendaId: string; quantidade: number }>
@@ -57,7 +61,14 @@ function labelFormaEstorno(forma: string): string {
   return mapa[forma] ?? forma
 }
 
-export function VendaDevolucaoModal({ venda, locale, m, onClose, onConcluido }: Props) {
+export function VendaDevolucaoModal({
+  venda,
+  locale,
+  m,
+  onClose,
+  onConcluido,
+  onComprovante,
+}: Props) {
   const [motivo, setMotivo] = useState('')
   const [tipo, setTipo] = useState<(typeof TIPOS_POS_VENDA)[number]>('DEVOLUCAO')
   const [formaEstorno, setFormaEstorno] = useState<(typeof FORMAS_ESTORNO_DEVOLUCAO)[number]>('PIX')
@@ -114,8 +125,23 @@ export function VendaDevolucaoModal({ venda, locale, m, onClose, onConcluido }: 
 
     startTransition(async () => {
       try {
-        await devolverOuTrocarVendaAction(fd)
+        const res = await devolverOuTrocarVendaAction(fd)
         emitGerenteToast({ kind: 'success', message: m.comum.sucesso })
+
+        if (onComprovante && res.ok) {
+          onComprovante({
+            operacaoId: res.operacaoId,
+            vendaId: res.vendaId,
+            tipo: res.tipo,
+            dataOperacao: new Date(),
+            itens: res.itens,
+            valorEstornado: res.valorEstornado,
+            formaEstornoLabel: labelFormaEstorno(formaEstorno),
+            motivo: motivoTrim,
+            operadorNome: res.operadorNome,
+          })
+        }
+
         onConcluido()
         onClose()
       } catch (err) {

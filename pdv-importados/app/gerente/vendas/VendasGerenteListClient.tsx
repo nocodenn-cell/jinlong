@@ -26,6 +26,10 @@ import {
 } from './actions'
 import { VendaActionsMenu } from './VendaActionsMenu'
 import { VendaCancelarModal } from './VendaCancelarModal'
+import {
+  VendaCancelamentoReciboModal,
+  type ComprovanteCancelamento,
+} from './VendaCancelamentoReciboModal'
 
 type PeriodoPreset = 'hoje' | 'ontem' | '7d' | 'mes' | 'tudo'
 
@@ -254,6 +258,8 @@ export function VendasGerenteListClient({ idioma, locale }: Props) {
   const [hasMore, setHasMore] = useState(false)
   const [loading, setLoading] = useState(true)
   const [vendaCancelar, setVendaCancelar] = useState<VendaListRow | null>(null)
+  const [comprovanteCancelamento, setComprovanteCancelamento] =
+    useState<ComprovanteCancelamento | null>(null)
   const [exporting, setExporting] = useState(false)
   const pageRef = useRef(1)
   const sentinelRef = useRef<HTMLDivElement>(null)
@@ -567,6 +573,7 @@ export function VendasGerenteListClient({ idioma, locale }: Props) {
         locale={locale}
         m={m}
         onClose={() => setVendaCancelar(null)}
+        onComprovante={setComprovanteCancelamento}
         onCancelado={() => {
           // Atualiza a linha localmente sem refetch completo da página
           setVendas((prev) =>
@@ -577,6 +584,14 @@ export function VendasGerenteListClient({ idioma, locale }: Props) {
           void refetchKpis()
         }}
       />
+
+      {comprovanteCancelamento && (
+        <VendaCancelamentoReciboModal
+          comprovante={comprovanteCancelamento}
+          locale={locale}
+          onClose={() => setComprovanteCancelamento(null)}
+        />
+      )}
     </>
   )
 }

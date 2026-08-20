@@ -47,6 +47,10 @@ import {
 } from '@/app/caixa/server/caixaGerenteDesconto.impl'
 import { obterConfiguracoesParaCaixaWebImpl } from '@/app/caixa/server/caixaConfiguracoes.impl'
 import {
+  obterNomeLojaAtualImpl,
+  type NomeLojaAtualResult,
+} from '@/app/caixa/server/caixaLojaInfo.impl'
+import {
   autorizarMovimentacaoGerenteImpl,
   cancelarMovimentacaoCaixaImpl,
   estornarMovimentacaoCaixaImpl,
@@ -175,6 +179,11 @@ export async function obterLimiteSangriaSemGerente(): Promise<LimiteSangriaResul
 /** Subconjunto de `configuracoes_gerais` exposto ao caixa (RPC). */
 export async function obterConfiguracoesParaCaixaWeb(): Promise<ConfiguracoesCaixaWebResult> {
   return obterConfiguracoesParaCaixaWebImpl()
+}
+
+/** Nome da loja do operador logado — usado no comprovante de fechamento de caixa. */
+export async function obterNomeLojaAtual(): Promise<NomeLojaAtualResult> {
+  return obterNomeLojaAtualImpl()
 }
 
 export async function registrarMovimentacao(
