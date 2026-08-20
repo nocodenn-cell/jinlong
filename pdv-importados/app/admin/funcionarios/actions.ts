@@ -289,7 +289,7 @@ export async function verificarEmailDisponiveAction(email: string): Promise<Acti
     const { data } = await admin.auth.admin.listUsers()
     const exists = data.users.some((u) => u.email === email.toLowerCase().trim())
     return { ok: true, data: !exists }
-  } catch (e) {
+  } catch {
     return { ok: true, data: true }
   }
 }
