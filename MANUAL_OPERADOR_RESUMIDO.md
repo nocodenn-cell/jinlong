@@ -173,12 +173,62 @@ Opções:
 
 ## Teclas de Atalho
 
+### 🎯 **Venda**
 | Atalho | O que faz |
 |--------|-----------|
-| `Enter` no campo de busca | Adiciona produto |
-| `Enter` no campo de valor | Confirma desconto |
-| `Enter` no modal de pagamento | Finaliza venda (se valor OK) |
-| `Esc` | Fecha modal / Cancela ação |
+| **F4 / F9** | Finalizar venda (sempre disponível) |
+| **F8** | Novo cupom / Limpar carrinho (caixa aberto) |
+
+### 🔍 **Navegação**
+| Atalho | O que faz |
+|--------|-----------|
+| **F1** | Abrir ajuda (lista completa de atalhos) |
+| **F2 / Ctrl+B** | Buscar produto |
+| **Alt+Z** | Ir para aba de produtos |
+| **Alt+B / Alt+C** | Ir para método de pagamento |
+| **F3** | Consulta rápida / Operações |
+| **F6** | Fechar caixa (fim do dia) |
+
+### ⚙️ **Operações**
+| Atalho | O que faz |
+|--------|-----------|
+| **Ctrl+Shift+S** | Suprimento (caixa aberto) |
+| **Ctrl+Shift+R** | Sangria (caixa aberto) |
+| **F12** | Reimprimir recibo (após finalizar venda) |
+
+### ✏️ **Edição**
+| Atalho | O que faz |
+|--------|-----------|
+| **Ctrl+Z** | Desfazer remoção (item removido do carrinho) |
+| **Enter** no campo de busca | Adiciona produto |
+| **Enter** no campo de valor | Confirma desconto / movimento |
+| **Enter** no modal de pagamento | Finaliza venda (se valor OK) |
+| **Esc** | Fecha modal / Cancela ação |
+
+**💡 Dica:** Pressione **F1** no PDV para ver a lista completa atualizada com seus atalhos!
+
+---
+
+## Movimentações de Caixa (Sangria e Suprimento)
+
+### 💰 **Sangria** (tirar dinheiro do caixa)
+- **Quando:** retirada para depósito, pagamento de fornecedor, etc.
+- **Atalho:** `Ctrl+Shift+R` ou Menu → Operações → Sangria
+- **Processo:**
+  1. Seleciona motivo (Troco Inicial, Pagamento, Retirada, Outro)
+  2. Digita valor
+  3. Se acima do limite (varia por loja), pede **senha do gerente**
+  4. Confirma
+  5. ✅ Recibo impresso automaticamente
+
+### 📥 **Suprimento** (colocar dinheiro no caixa)
+- **Quando:** reposição de troco, retorno de depósito, etc.
+- **Atalho:** `Ctrl+Shift+S` ou Menu → Operações → Suprimento
+- **Processo:**
+  1. Seleciona motivo
+  2. Digita valor
+  3. Confirma
+  4. ✅ Recibo impresso automaticamente
 
 ---
 
@@ -187,12 +237,14 @@ Opções:
 **Ao fim do expediente:**
 
 1. ✅ Termina últimas vendas (antes das 18:00)
-2. ✅ Menu "Operações" → "Fechar caixa"
+2. ✅ Menu "Operações" → "Fechar caixa" (ou **F6**)
 3. ✅ Insere saldo físico do caixa (conta dinheiro)
 4. ✅ Confirma encerramento
 5. ✅ Faz logout
 
 **Resultado:** Sistema salva tudo; você pode ir embora.
+
+**⚠️ IMPORTANTE:** Não feche o caixa sem contar o dinheiro físico e conferir com o sistema!
 
 ---
 
