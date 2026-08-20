@@ -1,4 +1,13 @@
 -- ============================================================
+-- ⚠️ NÃO APLICAR EM PRODUÇÃO - migration aposentada por 20260810222702
+-- (retire_obsolete_venda_finance_context, já aplicada e rastreada em prod).
+-- venda_finance_context foi deliberadamente removida depois desta migration
+-- ter sido escrita; reaplicá-la agora ressuscitaria uma tabela/triggers
+-- retirados de propósito. Mantida apenas por histórico — ver
+-- MIGRATIONS_DRIFT_CLASSIFICATION.md e docs/VALIDACAO_COMPROVANTES_IMPRESSAO_2026-08.md
+-- (seção sobre o achado que bloqueou um `supabase db push` em 20/08/2026).
+-- ============================================================
+--
 -- Fase 3.2 — Reaplicação idempotente: venda_finance_context
 --
 -- Contexto: produção registra migration 252 como applied, porém objetos
