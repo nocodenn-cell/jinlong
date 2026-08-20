@@ -14,6 +14,64 @@ As migrations e Edge Functions do projeto ficam em `**backend/supabase/**` (past
 - **`npx supabase start`:** sobe **uma** stack local (portas fixas no `config.toml`; `project_id` = `fastproduct`). Não rode dois stacks no mesmo mapa de portas — pare com `npx supabase stop --project-id fastproduct` antes de subir outro projeto, ou altere portas em **um** dos `config.toml` (incomum).
 - Detalhes, tabela de portas e troubleshooting de conflito: [../README.md](../README.md) (seção *Fluxo único: stack local × projeto linkado × portas*).
 
+## `seed.sql` — fixture local determinística
+
+`supabase/seed.sql` é carregado automaticamente a cada `npx supabase db reset`, via
+`config.toml`:
+
+```toml
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+```
+
+**É só para o stack local. Nunca roda em produção.**
+
+### Por que ele existe
+
+As 6 suítes de `npm run test:financial` escolhem a loja de trabalho com a mesma consulta de
+elegibilidade: uma loja que tenha simultaneamente produto com `preco_varejo > 0` **e**
+usuários ativos nos perfis GERENTE, OPERADOR e DONO. Nenhuma loja criada por migration
+satisfaz isso — `Matriz` tem 16 produtos e zero usuários; `Loja Teste RLS` (criada pelo
+`test:rls-scope`, não por migration) tem os perfis e zero produtos.
+
+Sem o seed, 5 das 6 suítes abortam com:
+
+```
+fixture: nenhuma loja elegível encontrada (rode o seed local antes)
+```
+
+O seed cria os perfis **dentro da Matriz** (`a0000001-0000-4000-8000-000000000001`, que é o
+`DEFAULT` de `usuarios.loja_id` / `produtos.loja_id` / `estoque.loja_id` no schema).
+
+### Idempotência
+
+UUIDs fixos + `ON CONFLICT` em tudo. Pode ser reaplicado sobre um banco já semeado sem
+duplicar linha:
+
+```powershell
+docker exec -i supabase_db_fastproduct psql -U postgres -d postgres -v ON_ERROR_STOP=1 -q < supabase/seed.sql
+```
+
+### ⚠️ Duas invariantes que parecem bug e não são
+
+**1. `operador_id` do caixa é preenchido no seed e `NULL` na suíte.** As duas pontas são
+necessárias e opostas. `uq_caixas_operador_aberto` é UNIQUE **parcial** em
+`(operador_id) WHERE status='ABERTO'`; como no PostgreSQL NULLs são distintos entre si, o
+caixa anônimo da suíte convive com o do seed. Preencher `operador_id` no caixa **da suíte**
+quebra o gate por colisão de índice.
+
+**2. O segundo OPERADOR (`44444444-…`) não pode ganhar caixa.**
+`sale-totals-invariant.test.sql` abre o próprio caixa escolhendo um OPERADOR que ainda não
+tenha caixa aberto. Se o único OPERADOR já estiver ocupado, a suíte insere um caixa com
+`operador_id` NULL, esse caixa vence o `ORDER BY data_abertura DESC` do `\gset` seguinte, e
+`test_user` vem NULL — **e o psql desdefine a variável quando o valor é NULL**. O literal
+`:'test_user'` chega ao servidor e o erro aparece como `syntax error at or near ":"`, longe
+da causa. Manter um OPERADOR livre é o que mantém esse caminho determinístico.
+
+Contexto completo: [`../../docs/FASE_6_GATE_FINANCEIRO_VALIDACAO.md`](../../docs/FASE_6_GATE_FINANCEIRO_VALIDACAO.md).
+
+
 ## `db push` (aplicar migrations no projeto remoto)
 
 1. Abra o terminal na pasta `**backend**` (raiz do repositório: `fastproduct/backend`).

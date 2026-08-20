@@ -56,6 +56,7 @@ import {
   type ValidarSenhaGerenteResult,
   type MotivoDescontoEnum,
 } from "@/app/caixa/CaixaGerenteModal"
+import { CaixaLimiteCreditoModal } from "@/app/caixa/CaixaLimiteCreditoModal"
 import { CaixaMovimentacaoModal } from "@/app/caixa/CaixaMovimentacaoModal"
 import { CaixaMovimentacaoReciboModal } from "@/app/caixa/CaixaMovimentacaoReciboModal"
 import { CaixaFechamentoReciboModal, type ComprovanteFechamento } from "@/app/caixa/CaixaFechamentoReciboModal"
@@ -146,6 +147,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const [processandoCaixa, setProcessandoCaixa] = useState(false)
   const [validandoGerente, setValidandoGerente] = useState(false)
   const [gerenteModalAberto, setGerenteModalAberto] = useState(false)
+  const [limiteCreditoModalAberto, setLimiteCreditoModalAberto] = useState(false)
   const [movimentacaoModalTipo, setMovimentacaoModalTipo] =
     useState<TipoMovimentacaoUi | null>(null)
   const [acaoMovimentacao, setAcaoMovimentacao] = useState<{
@@ -646,6 +648,13 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     return e.includes("exige motivo") || (e.includes("diferença") && e.includes("motivo"))
   }, [])
 
+  // BR-01: mesmo texto humanizado que caixaErroOperador() devolve para todos os
+  // códigos FINALIZAR_VENDA_CANONICA_LIMITE_CREDITO_* (ver server/caixaErroOperador.ts).
+  const erroExigeAutorizacaoLimiteCredito = useCallback((error: string) => {
+    const e = error.toLowerCase()
+    return e.includes("limite de crédito") && e.includes("autorização")
+  }, [])
+
   const executarFecharCaixa = useCallback(
     async (valorContado: number, motivo?: string) => {
       setProcessandoCaixa(true)
@@ -824,7 +833,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     [motivoFecharModal, executarFecharCaixa],
   )
 
-  const handleFinalizar = useCallback(async () => {
+  const handleFinalizar = useCallback(async (limiteCreditoGerenteToken?: string) => {
     if (itens.length === 0 || finalizando) return
     if (
       configCaixaWeb.vendas_suspensas === 'true' &&
@@ -953,6 +962,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           tipoPreco: i.tipoPreco,
         })),
         clienteId: clienteId ?? undefined,  // ✅ NOVO (Fase 5b)
+        limiteCreditoGerenteToken, // BR-01: presente só no reenvio pós-autorização
       }
       const timeoutResult: { ok: false; error: string } = {
         ok: false,
@@ -1022,6 +1032,14 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         // Erro devolvido pelo servidor: a resposta chegou, logo a transação não
         // foi confirmada. Libera o fluxo mantendo a chave para o próximo envio.
         resolverFinalizacaoPendente()
+        // BR-01: sem token ainda (1ª tentativa) e o backend pede autorização de
+        // limite de crédito — reabre o modal gerencial em vez de só reportar o
+        // erro. Se JÁ havia token (reenvio) e falhou de novo, cai no caminho
+        // normal abaixo (evita loop silencioso de retry).
+        if (!limiteCreditoGerenteToken && erroExigeAutorizacaoLimiteCredito(res.error)) {
+          setLimiteCreditoModalAberto(true)
+          return
+        }
         const hint = inferirHintCheckout(res.error, {
           padrao: m.caixa.msg_checkout_hint_padrao,
           cupom: m.caixa.msg_checkout_hint_cupom,
@@ -1092,6 +1110,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     marcarFinalizacaoPendente,
     resolverFinalizacaoPendente,
     concluirVendaIdempotencyKey,
+    erroExigeAutorizacaoLimiteCredito,
   ])
 
   /**
@@ -1314,6 +1333,16 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const handleFecharCaixaClick = useCallback(() => void handleFecharCaixa(), [handleFecharCaixa])
   const handleFinalizarClick = useCallback(() => void handleFinalizar(), [handleFinalizar])
   const abrirGerenteModal = useCallback(() => setGerenteModalAberto(true), [])
+  // BR-01: gerente autoriza → reenvia a MESMA finalização com o token, revalidando
+  // o carrinho atual (não reaproveita um payload antigo).
+  const handleAutorizarLimiteCredito = useCallback(
+    (token: string) => {
+      setLimiteCreditoModalAberto(false)
+      setCaixaMensagem(m.caixa.msg_limite_credito_autorizado, { kind: "success" })
+      void handleFinalizar(token)
+    },
+    [handleFinalizar, m, setCaixaMensagem],
+  )
   return (
     <>
       <div className="caixa-oriental-root h-[100dvh] overflow-hidden flex flex-col text-[14px] leading-5 bg-background text-foreground">
@@ -1532,6 +1561,14 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         validando={validandoGerente}
         onValidateSenha={handleValidateSenhaGerente}
         onApply={handleAplicarDescontoGerente}
+      />
+      <CaixaLimiteCreditoModal
+        open={limiteCreditoModalAberto}
+        onOpenChange={setLimiteCreditoModalAberto}
+        m={m}
+        validando={validandoGerente}
+        onValidateSenha={handleValidateSenhaGerente}
+        onAutorizado={handleAutorizarLimiteCredito}
       />
       {movimentacaoModalTipo && (
         <CaixaMovimentacaoModal

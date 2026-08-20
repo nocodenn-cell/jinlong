@@ -12,7 +12,8 @@ Este diretório define contratos de integração que não podem quebrar sem vers
 ## Escopo inicial
 
 - RPCs críticas:
-  - `finalizar_venda_transacional_canonica_v3`
+  - `finalizar_venda_transacional_canonica_v4` — **canônica** (22 args, scope-guard)
+  - `finalizar_venda_transacional_canonica_v3` — histórico, `deprecated`
   - `decrementar_estoque_seguro`
   - `transferir_estoque_seguro`
 - Payload de sincronização:

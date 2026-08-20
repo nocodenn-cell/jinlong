@@ -51,11 +51,10 @@ describe('Contrato RPC cancelar_venda_transacional', () => {
     if (ce || !caixa?.id) throw new Error(ce?.message ?? 'Falha ao criar caixa de teste')
     caixaId = caixa.id
 
-    const { error: saldoErr } = await supabase
-      .from('caixas')
-      .update({ saldo_atual: SALDO_CAIXA_ANTES_VENDA })
-      .eq('id', caixaId)
-    if (saldoErr) throw new Error(saldoErr.message)
+    // `saldo_atual` não é mais gravável por `authenticated` (migration
+    // 20260814012644_protect_cash_balance_authority). A abertura acima já
+    // deixa o contador em `valor_inicial` via trigger, que é exatamente o
+    // SALDO_CAIXA_ANTES_VENDA esperado por este contrato.
 
     const { data: produto, error: pe } = await supabase
       .from('produtos')

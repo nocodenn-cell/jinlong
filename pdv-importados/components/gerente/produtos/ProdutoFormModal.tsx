@@ -12,8 +12,13 @@ import {
   criarProduto,
   type OpcoesFiltrosProdutos,
 } from '@/app/gerente/produtos/actions'
-import { criarFaixaAtacado } from '@/app/gerente/produtos/precosAtacadoActions'
+import {
+  atualizarFaixaAtacado,
+  criarFaixaAtacado,
+  listarFaixasAtacado,
+} from '@/app/gerente/produtos/precosAtacadoActions'
 import type { ProdutoGerenteRow } from '@/app/gerente/produtos/produtoGerenteTypes'
+import { obterAutoriaProduto, type ProdutoAutoria } from '@/app/gerente/produtos/produtoAutoriaActions'
 import { Button } from '@/components/ui/button'
 import { DragonModal } from '@/components/ui/DragonModal'
 import type { Mensagens } from '@/i18n/getMessages'
@@ -85,6 +90,35 @@ type PosSalvarState = Readonly<{
  * `criar_produto_com_estoque_inicial` (mesma TX). Pós-criação → `/admin/estoque`.
  */
 
+const autoriaDtFmt = new Intl.DateTimeFormat('pt-BR', {
+  day: '2-digit',
+  month: '2-digit',
+  year: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+})
+
+function formatAutoriaLine(
+  template: string,
+  nome: string | null,
+  dataIso: string | null,
+  fallbackNome: string,
+): string | null {
+  if (!dataIso) return null
+  return template
+    .replace('{{nome}}', nome ?? fallbackNome)
+    .replace('{{data}}', autoriaDtFmt.format(new Date(dataIso)))
+}
+
+/**
+ * Cria a 1ª faixa de atacado ao salvar (preço + qtd. mínima preenchidos
+ * juntos) — tanto no cadastro quanto na edição. Antes só rodava no create;
+ * editar um produto existente preenchendo os dois campos nunca sincronizava
+ * a faixa, deixando `produtos.preco_atacado` e `precos_atacado` divergentes.
+ * Faz upsert por `quantidade_minima`: se já existe faixa ativa com essa
+ * quantidade, atualiza o preço dela em vez de tentar criar duplicata
+ * (`criarFaixaAtacado` rejeita quantidade_minima repetida).
+ */
 async function sincronizarFaixaAtacado(
   produtoId: string,
   precoAtacado: number | null,
@@ -93,6 +127,23 @@ async function sincronizarFaixaAtacado(
   if (precoAtacado == null || precoAtacado <= 0) return { ok: true }
   const gatilho = parseGatilhoSubmit(gatilhoRaw)
   if (gatilho == null) return { ok: true }
+
+  const existentes = await listarFaixasAtacado(produtoId)
+  if (!existentes.success) return { ok: false, error: existentes.error }
+
+  const faixaExistente = existentes.data.find((f) => f.quantidade_minima === gatilho)
+  if (faixaExistente) {
+    if (faixaExistente.preco_unitario === precoAtacado) return { ok: true }
+    const r = await atualizarFaixaAtacado({
+      id: faixaExistente.id,
+      produto_id: produtoId,
+      quantidade_minima: gatilho,
+      preco_unitario: precoAtacado,
+    })
+    if (r.success) return { ok: true }
+    return { ok: false, error: r.error }
+  }
+
   const r = await criarFaixaAtacado({
     produto_id: produtoId,
     quantidade_minima: gatilho,
@@ -130,6 +181,8 @@ export function ProdutoFormModal({
   const formWrapRef = useRef<HTMLDivElement>(null)
   const [erroCampo, setErroCampo] = useState<ProdutoFormErro | null>(null)
   const [saving, setSaving] = useState(false)
+  const [confirmDescartarOpen, setConfirmDescartarOpen] = useState(false)
+  const [autoria, setAutoria] = useState<ProdutoAutoria | null>(null)
   const [opcoes, setOpcoes] = useState(opcoesIniciais)
   const [posSalvar, setPosSalvar] = useState<PosSalvarState | null>(null)
   const [modoCompleto, setModoCompleto] = useState(editando)
@@ -157,6 +210,27 @@ export function ProdutoFormModal({
     }
   }, [open, opcoesIniciais, editando, produto?.imagem_url])
 
+  useEffect(() => {
+    if (!open || !editando || !produto) {
+      setAutoria(null)
+      return
+    }
+    let cancelado = false
+    // Best-effort e não-bloqueante — é só uma informação extra no cabeçalho;
+    // falhar aqui (rede, ambiente sem sessão de request) não pode quebrar o
+    // resto do formulário nem virar unhandled rejection.
+    obterAutoriaProduto(produto.id)
+      .then((r) => {
+        if (!cancelado && r.success) setAutoria(r.data)
+      })
+      .catch(() => {
+        // silencioso — autoria fica null, as linhas correspondentes somem.
+      })
+    return () => {
+      cancelado = true
+    }
+  }, [open, editando, produto])
+
   const aplicarSugestaoBarcode = useCallback(
     async (codigoOverride?: string) => {
       if (editando) return
@@ -168,9 +242,7 @@ export function ProdutoFormModal({
       setSugestaoHint(p.sugestao_buscando)
       const s = await fetchSugestaoCadastro(codigo)
       if (!s || s.jaCadastrado) {
-        setSugestaoHint(
-          s?.jaCadastrado ? m.caixa.cadastro_rapido_ja_cadastrado : null,
-        )
+        setSugestaoHint(s?.jaCadastrado ? p.err_codigo_barras_duplicado : null)
         return
       }
       const fonte = fontesLabel(s.fontes)
@@ -191,7 +263,7 @@ export function ProdutoFormModal({
           : p.sugestao_aplicada.replace('{{fonte}}', fonte),
       )
     },
-    [editando, form, p.sugestao_buscando, p.sugestao_aplicada, m.caixa.cadastro_rapido_ja_cadastrado],
+    [editando, form, p.sugestao_buscando, p.sugestao_aplicada, p.err_codigo_barras_duplicado],
   )
 
   useEffect(() => {
@@ -240,12 +312,27 @@ export function ProdutoFormModal({
     form.precoAtacadoInput.display,
   ])
 
-  const fechar = useCallback(() => {
-    if (saving) return
+  const fecharDeVerdade = useCallback(() => {
     setPosSalvar(null)
     setErroCampo(null)
+    setConfirmDescartarOpen(false)
     onOpenChange(false)
-  }, [saving, onOpenChange])
+  }, [onOpenChange])
+
+  /**
+   * Sem posSalvar (formulário ainda em edição) e com alterações não salvas,
+   * pede confirmação antes de descartar — cobre X, Esc, clique no backdrop e
+   * o botão "Cancelar" do footer, que passam todos por aqui via `onClose`.
+   * A tela pós-salvar nunca passa por aqui suja: já foi persistida.
+   */
+  const fechar = useCallback(() => {
+    if (saving) return
+    if (!posSalvar && form.isDirty()) {
+      setConfirmDescartarOpen(true)
+      return
+    }
+    fecharDeVerdade()
+  }, [saving, posSalvar, form, fecharDeVerdade])
 
   const salvar = useCallback(
     async (opts?: { continuar?: boolean; rascunho?: boolean }) => {
@@ -353,9 +440,17 @@ export function ProdutoFormModal({
         let faixaOk = true
         let faixaErro: string | null = null
         const createdId = !editando && r.data && 'id' in r.data ? r.data.id : null
-        if (createdId) {
+        // Estoque inicial só se aplica no create (createdId).
+        //
+        // Faixa de atacado: na EDIÇÃO ela já foi sincronizada dentro da mesma
+        // transação do produto, pela RPC `atualizar_produto_com_faixa_atacado`
+        // (ver `productUpdater.ts`) — repetir aqui reintroduziria justamente o
+        // estado parcial que a RPC eliminou. Resta só o create, onde o produto
+        // nasce em outra transação (RPC 270) e a faixa é aditiva.
+        const produtoIdParaFaixa = createdId
+        if (produtoIdParaFaixa) {
           const faixaRes = await sincronizarFaixaAtacado(
-            createdId,
+            produtoIdParaFaixa,
             precoAtacado,
             form.quantidadeGatilho,
           )
@@ -545,7 +640,29 @@ export function ProdutoFormModal({
       ? p.editar_modal_salvar
       : p.publicar_no_pdv
 
+  // "removido" só quando a consulta de nomes teve sucesso e o autor não voltou.
+  // Se a consulta falhou (`*Indisponivel`), a UI não afirma remoção.
+  const linhaCriadoPor =
+    editando && autoria
+      ? formatAutoriaLine(
+          p.autoria_criado_por,
+          autoria.criadoPorNome,
+          autoria.criadoEm,
+          autoria.criadoPorIndisponivel ? p.autoria_indisponivel : p.autoria_desconhecido,
+        )
+      : null
+  const linhaEditadoPor =
+    editando && autoria
+      ? formatAutoriaLine(
+          p.autoria_editado_por,
+          autoria.atualizadoPorNome,
+          autoria.atualizadoEm,
+          autoria.atualizadoPorIndisponivel ? p.autoria_indisponivel : p.autoria_desconhecido,
+        )
+      : null
+
   return (
+    <>
     <DragonModal
       open
       onClose={fechar}
@@ -561,6 +678,12 @@ export function ProdutoFormModal({
             {statusChip.label}
           </span>
           <span className="text-caption font-normal text-fg-subtle">{statusChip.hint}</span>
+          {linhaCriadoPor || linhaEditadoPor ? (
+            <span className="flex flex-col text-caption font-normal text-fg-subtle">
+              {linhaCriadoPor ? <span>{linhaCriadoPor}</span> : null}
+              {linhaEditadoPor ? <span>{linhaEditadoPor}</span> : null}
+            </span>
+          ) : null}
         </span>
       }
       dismissable={!saving}
@@ -652,5 +775,32 @@ export function ProdutoFormModal({
         />
       </div>
     </DragonModal>
+
+    <DragonModal
+      open={confirmDescartarOpen}
+      onClose={() => setConfirmDescartarOpen(false)}
+      variant="danger"
+      size="sm"
+      title={p.confirm_descartar_titulo}
+      dismissable
+      closeLabel={m.comum.fechar}
+      footer={
+        <>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => setConfirmDescartarOpen(false)}
+          >
+            {p.confirm_descartar_continuar}
+          </Button>
+          <Button type="button" variant="danger" onClick={fecharDeVerdade}>
+            {p.confirm_descartar_confirmar}
+          </Button>
+        </>
+      }
+    >
+      <p className="text-sm text-jl-fg-2">{p.confirm_descartar_texto}</p>
+    </DragonModal>
+    </>
   )
 }

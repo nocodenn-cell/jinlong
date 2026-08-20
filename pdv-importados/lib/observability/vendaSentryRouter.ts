@@ -1,4 +1,5 @@
 import * as Sentry from '@sentry/nextjs'
+import { redigir } from './redact'
 
 export type VendaErrorCtx = {
   trace_id?: string
@@ -84,7 +85,12 @@ export function addVendaBreadcrumb(
   data?: Record<string, unknown>,
 ): void {
   try {
-    Sentry.addBreadcrumb({ category, message, data, level: 'info' })
+    Sentry.addBreadcrumb({
+      category,
+      message: redigir(message) as string,
+      data: redigir(data) as Record<string, unknown> | undefined,
+      level: 'info',
+    })
   } catch {
     // fail-safe
   }

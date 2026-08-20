@@ -5,6 +5,8 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type {
+  ListLiquidacoesQuery,
+  ListLiquidacoesResult,
   ListReceivablesQuery,
   ListReceivablesResult,
   ReceivableListRow,
@@ -67,6 +69,7 @@ function mapTitulo(t: Record<string, unknown>): ReceivableListRow {
     valorTotal: Number(t.valor_total),
     valorAberto: Number(t.valor_aberto),
     status: String(t.status),
+    lojaId: String(t.loja_id),
     descricao: t.descricao != null ? String(t.descricao) : null,
     vencimento: t.vencimento != null ? String(t.vencimento) : null,
     clienteNome: nomeCliente ?? null,
@@ -92,7 +95,7 @@ export function createReceivableReader(supabase: SupabaseClient): ReceivableRead
 
         let q = supabase
           .from('contas_receber')
-          .select('id, valor_total, valor_aberto, status, descricao, vencimento, cliente_id, clientes(nome)')
+          .select('id, valor_total, valor_aberto, status, descricao, vencimento, cliente_id, loja_id, clientes(nome)')
 
         if (query.opcao === 'ABERTO') q = q.eq('status', 'ABERTO')
         else if (query.opcao === 'PARCIAL') q = q.eq('status', 'PARCIAL')
@@ -127,6 +130,38 @@ export function createReceivableReader(supabase: SupabaseClient): ReceivableRead
         return {
           ok: false,
           error: e instanceof Error ? e.message : 'Erro ao listar contas a receber.',
+          code: FINANCIAL_ERROR_CODES.LIST_FAILED,
+        }
+      }
+    },
+
+    async listLiquidacoes(query: ListLiquidacoesQuery): Promise<ListLiquidacoesResult> {
+      try {
+        const { data, error } = await supabase
+          .from('liquidacoes_receber')
+          .select('id, titulo_id, valor, forma_pagamento, created_at, operacao_tipo, operacao_origem_id')
+          .eq('titulo_id', query.tituloId)
+          .order('created_at', { ascending: false })
+          .limit(50)
+        if (error) {
+          return { ok: false, error: error.message, code: FINANCIAL_ERROR_CODES.LIST_FAILED }
+        }
+        return {
+          ok: true,
+          liquidacoes: (data ?? []).map((r) => ({
+            id: String(r.id),
+            tituloId: String(r.titulo_id),
+            valor: Number(r.valor),
+            formaPagamento: String(r.forma_pagamento),
+            createdAt: String(r.created_at),
+            operacaoTipo: (r.operacao_tipo as 'RECEBIMENTO' | 'ESTORNO' | null) ?? null,
+            operacaoOrigemId: r.operacao_origem_id != null ? String(r.operacao_origem_id) : null,
+          })),
+        }
+      } catch (e) {
+        return {
+          ok: false,
+          error: e instanceof Error ? e.message : 'Erro ao listar liquidações.',
           code: FINANCIAL_ERROR_CODES.LIST_FAILED,
         }
       }

@@ -149,6 +149,7 @@
       "additionalProperties": false,
       "required": [
         "venda_id",
+        "caixa_id",
         "forma_pagamento",
         "total_bruto",
         "total_desconto",
@@ -161,7 +162,8 @@
           "format": "uuid"
         },
         "caixa_id": {
-          "$ref": "#/$defs/uuidOrNull"
+          "type": "string",
+          "format": "uuid"
         },
         "operador_id": {
           "$ref": "#/$defs/uuidOrNull"

@@ -9,11 +9,16 @@
     "check": "npm run check:edge",
     "typecheck": "npm run check:edge",
     "check:edge": "deno check supabase/functions/sync-outbox/index.ts && deno check supabase/functions/validar-gerente/index.ts && deno check --config supabase/functions/fiscal-worker/deno.json supabase/functions/fiscal-worker/index.ts",
+    "check:venda-finance-context-retirement": "node supabase/scripts/validate-venda-finance-context-retirement.mjs",
+    "check:types-drift": "node scripts/check-types-drift.mjs",
     "smoke:rls-rest": "node scripts/p0-rls-rest-smoke.mjs",
     "test:rls-policies": "node scripts/test-rls-policies.mjs",
     "test:rls-scope": "node scripts/test-rls-scope.mjs",
     "check:phase3-2": "node supabase/scripts/validate-phase3-2.mjs",
-    "test:migration-status": "node --test scripts/p0-migration-status.test.mjs"
+    "test:financial": "node scripts/run-financial-tests.mjs",
+    "test:financial-concurrency": "node scripts/test-commission-concurrency.mjs",
+    "test:migration-status": "node --test scripts/p0-migration-status.test.mjs",
+    "test:venda-finance-context-retirement": "node --test supabase/scripts/verify-venda-finance-context-catalog.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.104.0",

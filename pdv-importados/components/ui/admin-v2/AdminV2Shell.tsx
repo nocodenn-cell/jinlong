@@ -6,6 +6,7 @@ import { ROUTES } from '@shared-core/navigation/routes'
 import { getMessages, type Mensagens } from '@/i18n/getMessages'
 import type { AdminSession } from '@/lib/admin/auth/types'
 import { AdminV2SessionProvider } from './AdminV2SessionContext'
+import { AdminV2MobileNavDrawer } from './AdminV2MobileNavDrawer'
 import { SidebarNav } from './SidebarNav'
 import { SidebarUserFooter } from './SidebarUserFooter'
 
@@ -25,12 +26,37 @@ export function AdminV2Shell({ session, children, stockAlertCount }: AdminV2Shel
   return (
     <div data-admin-v2 className="isolate min-h-dvh min-h-screen bg-[var(--color-background-primary)] text-jl-fg-1">
       <SessionIdleLogout />
+
+      {/* Top bar só < lg: marca compacta + hamburger, já que o <aside> fica oculto nesse breakpoint. */}
+      <div className="flex items-center justify-between border-b border-[var(--admin-v2-border)] px-4 py-2.5 lg:hidden">
+        <Link
+          href={ROUTES.admin.dashboard}
+          aria-label={m.login.nav_marca}
+          className="rounded-lg outline-none ring-offset-2 ring-offset-slate-950 focus-visible:ring-2 focus-visible:ring-amber-400/70"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element -- brand logo estático; dimensões fixas no CSS */}
+          <img
+            src="/branding/brand-double-dragon.png"
+            alt="Jīn Lóng"
+            className="h-10 w-auto"
+            draggable={false}
+          />
+        </Link>
+        <AdminV2MobileNavDrawer
+          session={session}
+          m={m}
+          chineseLanguage={chineseLanguage}
+          stockAlertCount={stockAlertCount}
+          showAdminOnlyItems={session.perfil === 'ADMIN'}
+        />
+      </div>
+
       <div className="mx-auto flex min-h-dvh max-w-[1600px] flex-col lg:flex-row">
-        {/* ARIA landmark: complementary (sidebar navigation) */}
+        {/* ARIA landmark: complementary (sidebar navigation) — só >= lg; < lg usa AdminV2MobileNavDrawer */}
         <aside
           role="complementary"
           aria-label="Navegação"
-          className="admin-v2-sidebar flex w-full shrink-0 flex-col border-b border-[var(--admin-v2-border)] lg:w-72 lg:border-b-0 lg:border-r"
+          className="admin-v2-sidebar hidden shrink-0 flex-col border-[var(--admin-v2-border)] lg:flex lg:w-72 lg:border-r"
         >
           <div className="flex items-center justify-center border-b border-[var(--admin-v2-border)] py-6 px-4">
             <Link

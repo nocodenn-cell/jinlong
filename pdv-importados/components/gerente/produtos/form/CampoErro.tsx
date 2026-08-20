@@ -10,8 +10,14 @@ export function erroDoCampo(
   return erro && erro.campo === campo ? erro.mensagem : null
 }
 
-/** Borda de reprovação — some assim que o operador corrige o valor. */
-export const CAMPO_INVALIDO_CLASS = '!border-[var(--color-danger-border)] ring-1 ring-[var(--color-danger-border)]'
+/**
+ * Borda de reprovação — some assim que o operador corrige o valor.
+ * Usa `--color-danger-strong` (não o `--color-danger-border` a 35% alfa que
+ * banners/badges usam sobre `--color-danger-bg`): aqui a borda fica sobre o
+ * fundo neutro do input, sem o fundo tênue por trás, e a 35% ficava fraca
+ * demais pra servir de sinal visual por si só.
+ */
+export const CAMPO_INVALIDO_CLASS = '!border-[var(--color-danger-strong)] ring-1 ring-[var(--color-danger-border)]'
 
 /** Mensagem inline sob o campo. Vazia não renderiza nada. */
 export function CampoErroMsg({ mensagem }: Readonly<{ mensagem: string | null }>) {

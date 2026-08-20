@@ -24,6 +24,14 @@
  *
  * Saída: além de PASS/FAIL, sempre imprime um RELATÓRIO de ordem e gaps da
  * sequência (informativo — gaps NÃO falham; só colisões falham).
+ *
+ *   3. FALHA se existir um SEGUNDO diretório de migrations fora do SSOT canônico.
+ *      Motivo (2026-08-13): `pdv-importados/supabase/migrations/` existia como SSOT
+ *      paralelo, aplicado por scripts `EXECUTAR_MIGRATIONS*.sh` via `psql $DATABASE_URL`.
+ *      Um deles recriava `finalizar_venda_transacional_canonica_v3` (18 args) e dropava
+ *      a v2, enquanto produção roda a v4 (22 args) com scope-guard — regressão silenciosa
+ *      do núcleo transacional a um comando de distância. Arquivado em
+ *      `docs/archive/legacy-pdv-importados-supabase/` (ver README de lá e ADR-011).
  */
 import fs from 'node:fs'
 import path from 'node:path'
@@ -31,6 +39,46 @@ import { fileURLToPath } from 'node:url'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const MIGRATIONS_DIR = path.join(root, 'backend/supabase/migrations')
+
+// SSOT único de schema. Qualquer outro diretório de migrations no monorepo é proibido.
+const CANONICAL_REL = 'backend/supabase/migrations'
+// Caminhos onde SQL histórico pode residir sem ser um SSOT (inerte: nenhum tooling lê).
+const ARCHIVE_PREFIXES = ['docs/archive/']
+// Diretórios que nunca são varridos.
+const SKIP_DIRS = new Set(['node_modules', '.git', '.next', 'dist', 'build', 'target', 'coverage'])
+
+/** Procura diretórios chamados `migrations` fora do SSOT canônico. */
+function findRogueMigrationDirs(dir, acc = []) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (!entry.isDirectory() || SKIP_DIRS.has(entry.name)) continue
+    const abs = path.join(dir, entry.name)
+    const rel = path.relative(root, abs).split(path.sep).join('/')
+    if (rel === CANONICAL_REL) continue
+    if (ARCHIVE_PREFIXES.some((p) => rel.startsWith(p))) continue
+    if (entry.name === 'migrations') {
+      // Só conta como SSOT rival se realmente contiver .sql.
+      const hasSql = fs
+        .readdirSync(abs, { withFileTypes: true })
+        .some((f) => f.isFile() && f.name.endsWith('.sql'))
+      if (hasSql) acc.push(rel)
+      continue
+    }
+    findRogueMigrationDirs(abs, acc)
+  }
+  return acc
+}
+
+const rogueDirs = findRogueMigrationDirs(root)
+if (rogueDirs.length > 0) {
+  console.error('\n[migration-sequence-guard] FAIL — SSOT paralelo de migrations detectado:\n')
+  for (const d of rogueDirs) console.error(`  • ${d}`)
+  console.error(
+    `\n  → O único SSOT de schema é ${CANONICAL_REL}/.` +
+    '\n  → Migrations aplicáveis vivem lá; SQL histórico vai para docs/archive/.' +
+    '\n  → Ver docs/adr/ADR-011-ssot-unico-migrations.md',
+  )
+  process.exit(1)
+}
 
 // Colisões herdadas — já aplicadas em produção, não renumeráveis. Dívida explícita.
 // Qualquer colisão NOVA (fora desta lista) falha o guard.
