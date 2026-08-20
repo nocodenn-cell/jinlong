@@ -255,7 +255,7 @@ Opções:
 - Venda não finaliza depois de 3 tentativas
 - Qualquer mensagem de erro que não some
 
-**Número:** `[NÚMERO CTO]`  
+**Número:** `(81) 98865-9993`  
 **Horário:** 9h-20h (seg-sábado), 10h-18h (domingo)
 
 ---

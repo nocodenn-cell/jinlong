@@ -1431,3 +1431,43 @@ O que **continua aberto** — agrupado como **Fase 1B (reconciliação de catál
 **Pré-requisito não resolvido:** a reconciliação de baseline (`supabase db pull`) não tem onde ser ensaiada. `create_branch` foi tentado e recusado — branching exige plano Pro e a organização está no Free. Ver [docs/AMBIENTES_E_RELEASE.md](docs/AMBIENTES_E_RELEASE.md) §1.
 
 ---
+
+## 15. Testes de Impressão — 2026-08-20
+
+Os 5 recibos implementados em PR #311/#312 (fechamento de caixa, cancelamento, devolução/troca, sangria/suprimento, além do cupom de venda já existente) foram executados de ponta a ponta com dados reais, num Supabase local isolado (Docker, zero contato com produção) — não apenas revisados por código. Detalhe completo em [docs/ROTEIRO_TESTE_IMPRESSAO_2026-08-20.md](docs/ROTEIRO_TESTE_IMPRESSAO_2026-08-20.md).
+
+| Recibo | Resultado |
+|---|---|
+| Cupom de venda | ✅ Validado — item, total, pagamento corretos; mecanismo anti-venda-duplicada (P0-1) disparou e foi resolvido sem duplicar a venda |
+| Suprimento | ✅ Validado — saldo antes/depois, motivo, valor corretos |
+| Sangria | ✅ Validado — matemática confere |
+| Fechamento de caixa | ✅ Validado — nome da loja resolve corretamente (sem cair em fallback) |
+| Devolução | ✅ Validado — **lista de itens aparece completa**, confirmando que a migration `20260820120000_devolver_ou_trocar_venda_retorna_itens.sql` funciona corretamente quando aplicada |
+| Cancelamento | ⚠️ Validado tecnicamente (dados corretos no recibo isolado), **mas revelou um risco real ao combinar com devolução prévia** — ver §15.1 |
+
+Não validado neste ciclo: `/admin/relatorios` (impressão de relatório) travou em "Carregando…" no ambiente de teste local, de forma reproduzível; causa não confirmada — pode ser flakiness do servidor de desenvolvimento (mesmo padrão observado e resolvido em outras telas durante os mesmos testes) ou um problema real. Recomenda-se checagem manual antes do treinamento.
+
+### 15.1 ✅ Corrigido — reembolso e reposição de estoque duplicados no cancelamento pós-devolução
+
+Ao testar deliberadamente o caso adversário "devolver parte de uma venda, depois cancelar a mesma venda", `cancelar_venda_transacional` **não descontava o que já havia sido devolvido**: o recibo de cancelamento mostrava o valor total original como estornado (de novo), e a leitura do código-fonte confirmou que o mesmo problema afetava a reposição de estoque (repunha a quantidade original do item, não a quantidade líquida ainda não devolvida).
+
+**Corrigido e testado no mesmo dia** — migration [`20260820150000_fix_cancelar_venda_desconta_devolucoes_previas.sql`](backend/supabase/migrations/20260820150000_fix_cancelar_venda_desconta_devolucoes_previas.sql), `CREATE OR REPLACE` sem mudança de assinatura. A função passa a descontar, tanto no estoque quanto no estorno de caixa, o que já foi devolvido via `venda_pos_venda_operacoes`/`estoque_reposicoes_devolucao`. Testado no Supabase local (zero contato com produção): cenário de venda R$4.000 → devolve R$2.000 → cancela → `valor_estornado` correto de R$2.000 (antes retornava R$4.000), estoque e saldo de caixa batendo exatamente com o esperado; teste de regressão (cancelamento sem devolução prévia) preserva o comportamento original. Detalhe completo em [docs/DECISAO_CANCELAMENTO_REEMBOLSO_DUPLICADO.md](docs/DECISAO_CANCELAMENTO_REEMBOLSO_DUPLICADO.md).
+
+**⚠️ Pendente: aplicação em produção.** A migration está commitada e testada localmente, mas **não foi aplicada automaticamente em produção** — isso exige uma decisão explícita separada (é uma função financeira `SECURITY DEFINER`), não deve ser feita silenciosamente como parte de um commit de documentação. Enquanto não for aplicada em produção, o comportamento antigo continua valendo lá, e a recomendação de não demonstrar o fluxo combinado devolução+cancelamento amanhã permanece válida.
+
+---
+
+## 16. Testes de Atacado/Varejo — 2026-08-20
+
+A engine de preço automático (`calcular_preco_produto`, usada online e espelhada offline) foi validada com 8 cenários via chamada direta à RPC (varejo, faixa única, múltiplas faixas, limite exato, produto sem atacado). Detalhe completo em [docs/TESTE_ATACADO_VAREJO_2026-08-20.md](docs/TESTE_ATACADO_VAREJO_2026-08-20.md).
+
+- ✅ **Resolução de faixa correta em todos os cenários**, incluindo o caso de borda mais arriscado (múltiplas faixas — 3+ e 10+ — resolvendo sempre para a maior faixa aplicável) e o limite exato (inclusivo).
+- ✅ **Online e offline são idênticos** para quantidade fracionada — comparação linha a linha do código confirma que `quantidadeParaRpcPreco` (online) e `quantidadeParaCadeiaPreco` (offline) implementam exatamente a mesma regra (`Math.max(1, Math.floor(n))`), com comentário no código-fonte declarando explicitamente que uma espelha a outra. Não há divergência conhecida.
+- ⚠️ **Promoções automáticas não estão implementadas** — nem online, nem offline. A tabela `regras_preco` existe no schema mas `calcular_preco_produto` nunca a lê; uma migration recente (`hardening_tipo_preco_remove_promocao_residual`) removeu explicitamente `'PROMOCAO'` como tipo de preço válido. Isso é diferente do risco originalmente suspeitado ("validação de promoção só existe online") — o quadro real é que a funcionalidade simplesmente não existe ainda em nenhum dos dois lados (item BL-2 do backlog). Ver [docs/COMUNICADO_PROMOCOES_AUTOMATICAS.md](docs/COMUNICADO_PROMOCOES_AUTOMATICAS.md) para alinhamento de expectativa com o cliente.
+- Não validado ao vivo pela UI neste ciclo (tentativa esbarrou no mesmo travamento de ambiente de dev mencionado em §15): venda de atacado completa até o recibo/estoque com um produto de múltiplas faixas. A validação foi feita por chamada direta à RPC (mesmo código que a UI usa) e por comparação de código-fonte — não por execução de UI. Uma venda varejo real *foi* validada por UI em §15 (produto diferente).
+
+### Veredito consolidado (§15 + §16)
+
+**Permanece 🟢 GO para o treinamento do cliente #1 amanhã (2026-08-21).** O núcleo financeiro e de precificação está validado com evidência real de execução — o gate de 6/6 (§14), os 5 recibos de impressão e os 8 cenários de preço atacado/varejo todos passaram. O achado de cancelamento pós-devolução (§15.1) foi corrigido e testado no mesmo dia — só falta a decisão explícita de aplicar a migration em produção. O item de promoções automáticas (§16) não é um bug, é uma expectativa a alinhar com o cliente ([docs/COMUNICADO_PROMOCOES_AUTOMATICAS.md](docs/COMUNICADO_PROMOCOES_AUTOMATICAS.md)) — não bloqueia um piloto de loja única com supervisão próxima.
+
+---

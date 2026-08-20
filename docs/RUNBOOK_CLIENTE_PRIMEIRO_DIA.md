@@ -2,8 +2,8 @@
 
 Para operador e gerente na loja piloto. Suporte Jinlong: preencher contato abaixo.
 
-**Contato suporte:** _______________  
-**URL do sistema:** _______________
+**Contato suporte:** (81) 98865-9993  
+**URL do sistema:** https://pdv-importados.vercel.app
 
 ## Antes de abrir a loja
 

@@ -11,7 +11,7 @@
 - [ ] Laptop/tablet do cliente recebido e testado (conexão, tela, teclado/mouse)
 - [ ] Conexão de internet confirmada (mínimo 10 Mbps download)
 - [ ] Acesso à conta Supabase de produção (chaves em `.env.local`)
-- [ ] Suporte 24h ativado (telefone do CTO anotado)
+- [ ] Suporte 24h ativado (telefone do CTO: (81) 98865-9993)
 
 ---
 

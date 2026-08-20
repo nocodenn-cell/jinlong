@@ -197,7 +197,7 @@ Vamos tentar workaround:
 
 | Nível | Contato | Tempo resposta |
 |-------|---------|----------------|
-| **CTO (primeiro line)** | +55 11 XXXXX | Imediato |
+| **CTO (primeiro line)** | (81) 98865-9993 | Imediato |
 | **Supabase (se DB down)** | status.supabase.com → chat | 30 min |
 | **Vercel (se build fail)** | vercelstatus.com | 30 min |
 

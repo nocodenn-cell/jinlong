@@ -45,6 +45,11 @@ Welcome to the fastproduct documentation hub. Find guides for development, opera
 | [GO_LIVE_STATUS_FINAL.md](./GO_LIVE_STATUS_FINAL.md) | **Passo 7** — snapshot final READY FOR GO-LIVE + gates | Release manager, CTO |
 | [POST-DEPLOY-MONITORING.md](./POST-DEPLOY-MONITORING.md) | Monitoring checklist, alert thresholds, 24h post-launch | Ops, on-call engineer |
 | [FASE_6_GATE_FINANCEIRO_VALIDACAO.md](./FASE_6_GATE_FINANCEIRO_VALIDACAO.md) | **Fase 6 (bloco financeiro)** — gate 6/6 reproduzível do zero, achado de RLS, pendências e recomendação sobre a janela crítica | Release manager, backend, CTO |
+| [STATUS_PROJETO_PRE_TREINAMENTO.md](./STATUS_PROJETO_PRE_TREINAMENTO.md) | **Consolidado pré-treinamento cliente #1** — status geral, pendências priorizadas, riscos, recomendação final | Dono, CTO, release manager |
+| [ROTEIRO_TESTE_IMPRESSAO_2026-08-20.md](./ROTEIRO_TESTE_IMPRESSAO_2026-08-20.md) | Teste ao vivo dos 5 recibos de impressão (venda, suprimento, sangria, fechamento, devolução) | QA, backend |
+| [TESTE_ATACADO_VAREJO_2026-08-20.md](./TESTE_ATACADO_VAREJO_2026-08-20.md) | Teste de preço atacado/varejo, múltiplas faixas, paridade online×offline | QA, backend |
+| [DECISAO_CANCELAMENTO_REEMBOLSO_DUPLICADO.md](./DECISAO_CANCELAMENTO_REEMBOLSO_DUPLICADO.md) | Bug de reembolso/estoque duplicados no cancelamento pós-devolução — achado, correção e evidência de teste | Backend, release manager |
+| [COMUNICADO_PROMOCOES_AUTOMATICAS.md](./COMUNICADO_PROMOCOES_AUTOMATICAS.md) | Alinhamento de expectativa: promoções automáticas ainda não existem | Comercial, implantação |
 
 ### **🏗️ For Workspace Setup**
 

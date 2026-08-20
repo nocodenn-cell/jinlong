@@ -80,7 +80,7 @@ Somar totais e comparar com caixa físico (opcional)
 
 1. Anote o erro **exatamente como aparece** (screenshot se possível)
 2. Anote a hora
-3. Ligar para [NÚMERO CTO]
+3. Ligar para (81) 98865-9993
 4. Descrever: "Operador não conseguiu fazer venda porque…"
 
 **CTO vai:**
@@ -190,5 +190,5 @@ Desconto total (gerente): R$ 0
 
 ---
 
-**Contato suporte:** [NÚMERO] / [EMAIL]  
+**Contato suporte:** (81) 98865-9993 / [EMAIL]  
 **Escalação:** CTO on-call 24h
