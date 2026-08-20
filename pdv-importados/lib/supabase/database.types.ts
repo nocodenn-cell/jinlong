@@ -5244,6 +5244,7 @@ export type Database = {
           p_venda_substituta_id?: string
         }
         Returns: {
+          itens: Json
           operacao_id: string
           status_venda: string
           tipo: string
