@@ -6,6 +6,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import * as Sentry from '@sentry/nextjs'
 import type {
   CreateProductCommand,
   CreateProductInput,
@@ -100,15 +101,127 @@ function mapCreateCatchError(e: unknown): string {
   return resolveProductMessage('pt-BR', PRODUCT_ERROR_CODES.SAVE_FAILED)
 }
 
+/**
+ * `criado_por` fica NULL na própria RPC 270/289 — ela roda como service_role,
+ * sem `auth.uid()` no contexto. Preenchida aqui com um UPDATE de
+ * acompanhamento pelo client de sessão (tem `auth.uid()`), usando o
+ * `atorId` que a RPC já recebe. Best-effort no sentido de "não falha o
+ * create por causa de um campo de auditoria" — mas a falha em si NUNCA é
+ * engolida em silêncio: o Supabase JS client não lança em erro de UPDATE
+ * (resolve com `{ error }` no corpo), então só o try/catch original não
+ * pegava nada — uma RLS negando ou um erro de constraint sumia sem rastro.
+ * Cast pontual — `criado_por` ainda não está no Database tipado gerado
+ * (mesmo motivo do cast em `criarProdutoComEstoqueInicialRpc.ts`).
+ */
+/**
+ * Referência anônima e estável de um identificador, para telemetria.
+ *
+ * O Sentry recebia `produto_id` e `atorId` crus. Nenhum dos dois é necessário
+ * para diagnosticar: o que se precisa é correlacionar eventos do MESMO produto
+ * ou do MESMO ator, e um prefixo de hash faz isso sem exportar o identificador
+ * real para um fornecedor terceiro. Não é reversível e não colide na prática
+ * para o volume desta base.
+ */
+export function refAnonima(id: string | null | undefined): string {
+  if (!id) return 'nulo'
+  let h = 0
+  for (let i = 0; i < id.length; i += 1) {
+    h = (Math.imul(31, h) + id.charCodeAt(i)) | 0
+  }
+  return `r${(h >>> 0).toString(36)}`
+}
+
+/**
+ * Só códigos de erro conhecidos do Postgres/PostgREST passam. A mensagem crua
+ * do banco ia inteira para o Sentry e pode carregar nome de constraint, trecho
+ * de linha e detalhe de schema — informação interna que não ajuda no
+ * diagnóstico além do que o código já diz.
+ */
+const CODIGOS_ERRO_PERMITIDOS = new Set([
+  '23505', // unique_violation
+  '23503', // foreign_key_violation
+  '23502', // not_null_violation
+  '23514', // check_violation
+  '42501', // insufficient_privilege (RLS)
+  '42P01', // undefined_table
+  '42883', // undefined_function
+  'PGRST202', // função ausente no schema cache
+  '57014', // query_canceled
+  '08006', // connection_failure
+])
+
+export function codigoErroPermitido(codigo: string | null | undefined): string {
+  if (!codigo) return 'desconhecido'
+  return CODIGOS_ERRO_PERMITIDOS.has(codigo) ? codigo : 'nao_catalogado'
+}
+
+async function registrarCriadoPor(
+  supabase: SupabaseClient,
+  produtoId: string,
+  atorId: string,
+): Promise<void> {
+  try {
+    const { error } = await (
+      supabase as unknown as {
+        from: (table: string) => {
+          update: (values: Record<string, unknown>) => {
+            eq: (
+              col: string,
+              value: string,
+            ) => {
+              is: (
+                col: string,
+                value: null,
+              ) => Promise<{ error: { message: string; code?: string } | null }>
+            }
+          }
+        }
+      }
+    )
+      .from('produtos')
+      .update({ criado_por: atorId })
+      .eq('id', produtoId)
+      // Guarda de idempotência: só grava se ainda não houver autor. Sem isto,
+      // um replay (mesmo `client_request_id`) — potencialmente disparado por
+      // OUTRO ator — reescreveria `criado_por` e falsificaria a trilha. O
+      // caminho normal de create sempre cai aqui com a coluna NULL, porque a
+      // RPC 270/289 roda como service_role (sem `auth.uid()`), então a guarda
+      // não custa nada no fluxo feliz.
+      .is('criado_por', null)
+
+    if (error) {
+      Sentry.captureMessage('produto.criado_por: UPDATE de acompanhamento falhou', {
+        level: 'warning',
+        tags: { modulo: 'produtos-autoria', produto_ref: refAnonima(produtoId) },
+        extra: { ator_ref: refAnonima(atorId), dbErrorCode: codigoErroPermitido(error.code) },
+      })
+    }
+  } catch (e) {
+    Sentry.captureException(e, {
+      level: 'warning',
+      tags: { modulo: 'produtos-autoria', produto_ref: refAnonima(produtoId) },
+      extra: { ator_ref: refAnonima(atorId), contexto: 'registrarCriadoPor lançou exceção' },
+    })
+  }
+}
+
 async function createViaRpc(
   command: CreateProductCommand,
   deps: ProductWriterDeps,
+  supabase: SupabaseClient,
 ): Promise<CreateProductResult> {
   const created = await deps.createRpc({
     input: mapCreateProductInputToRpc(command.input),
     atorId: command.atorId,
   })
   if (!created.ok) return { ok: false, error: created.message }
+
+  // Replay (mesmo `client_request_id`) não é uma criação: o produto já existe
+  // e já tem seu autor original. Reexecutar o follow-up aqui só criaria ruído
+  // — e, com um ator diferente, tentaria reescrever a autoria.
+  if (!created.replayed) {
+    await registrarCriadoPor(supabase, created.id, command.atorId)
+  }
 
   const reload = await deps.reader.getById(created.id)
   if (!reload.ok) {
@@ -141,7 +254,7 @@ export function createProductWriter(
         }
       }
       try {
-        return await createViaRpc(command, resolved)
+        return await createViaRpc(command, resolved, supabase)
       } catch (e) {
         return { ok: false, error: mapCreateCatchError(e) }
       }

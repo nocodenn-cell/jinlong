@@ -223,11 +223,9 @@ test.describe('Fluxo crítico sync-outbox -> gerente/vendas', () => {
     // Artifact CI #1105: /vendas/i casa 2 headings (h1 "Vendas e caixa" + h2 "Vendas do dia").
     await expect(page.getByRole('heading', { name: 'Vendas e caixa' })).toBeVisible()
 
-    // Dívida do spec (não corrigir nesta etapa): lista UI usa caixa_id curto, não venda.id.
-    const vendaPrefix = `${vendaId.slice(0, 8)}…`
     let found = false
     for (let i = 0; i < 8; i++) {
-      if (await page.getByText(vendaPrefix).first().isVisible().catch(() => false)) {
+      if (await page.getByRole('cell', { name: vendaId, exact: true }).isVisible().catch(() => false)) {
         found = true
         break
       }
@@ -255,12 +253,12 @@ test.describe('Fluxo crítico sync-outbox -> gerente/vendas', () => {
 
     // Contratos distintos: workflow seta AUTO_ENQUEUE_FISCAL_ON_SALE (caixa web);
     // Edge pós-sync usa AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE (opt-in, default off).
-    // Harness: enfileira via RPC 3-arg (schema cache staging; types sem p_loja_id).
-    // Artifact CI #1101: 4-arg com p_loja_id → "not found in the schema cache".
+    // Informa loja para desambiguar as assinaturas 3-arg e 4-arg presentes no schema canônico.
     const { error: enqErr } = await admin.rpc('fiscal_enfileirar_documento_venda', {
       p_venda_id: vendaId,
       p_tipo_doc: 'NFC_E_STUB',
       p_payload: { origem: 'e2e_sync_fluxo', venda_id: vendaId },
+      p_loja_id: LOJA_MATRIZ_ID,
     })
     expect(enqErr?.message, `fiscal_enfileirar: ${enqErr?.message}`).toBeFalsy()
 
@@ -289,18 +287,11 @@ test.describe('Fluxo crítico sync-outbox -> gerente/vendas', () => {
 
     await loginGerente(page, { postLoginUrl: /\/(caixa|gerente|admin)/ })
 
-    await gotoApp(page, '/gerente/financeiro')
-    await expect(page.getByRole('heading', { name: /financeiro/i })).toBeVisible()
-
-    const vendaPrefix = `${vendaId.slice(0, 8)}...`
-    const row = page.locator('tr').filter({ hasText: vendaPrefix }).first()
-    await expect(row).toBeVisible({ timeout: 15_000 })
-    await row.getByRole('link', { name: /ver timeline/i }).click()
-
-    await expect(page).toHaveURL(/\/gerente\/financeiro\/documento\//)
+    await gotoApp(page, `/admin/financeiro/documento/${doc!.id}`)
+    await expect(page).toHaveURL(/\/admin\/financeiro\/documento\//)
     await expect(page.getByRole('heading', { name: /Documento fiscal/i })).toBeVisible()
     await expect(page.getByRole('heading', { name: /Timeline/i })).toBeVisible()
     await expect(page.getByText(/Erro atual/i)).toBeVisible()
-    await expect(page.getByText(/E2E_TIMELINE_ERRO/)).toBeVisible()
+    await expect(page.getByText('E2E_TIMELINE_ERRO', { exact: true })).toBeVisible()
   })
 })

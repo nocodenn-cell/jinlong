@@ -22,6 +22,7 @@ export type ContaLinha = {
   status: string
   vencimento: string | null
   descricao: string | null
+  loja_id: string
 }
 
 export type ContasLabels = {

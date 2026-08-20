@@ -422,9 +422,24 @@ export async function registrarRecebimentoOC(
 
   const supabase = await createClient()
 
+  // FLX-04 (migration 295): receber_ordem_compra(uuid,jsonb) foi substituída por um fluxo
+  // de dois passos — conferência física primeiro (grava quantidade_conferida por item),
+  // depois recebimento (credita estoque só com base no que já foi conferido).
+  const itensConferencia = itensRecebidos.map((i) => ({
+    item_id: i.item_id,
+    quantidade_conferida: i.quantidade_recebida,
+  }))
+
+  const { error: erroConferencia } = await supabase.rpc('registrar_conferencia_ordem_compra', {
+    p_oc_id: ocId,
+    p_itens: itensConferencia,
+  })
+  if (erroConferencia) {
+    return { success: false, error: mensagemErroComSecao('Conferência', erroConferencia.message) }
+  }
+
   const { error } = await supabase.rpc('receber_ordem_compra', {
     p_oc_id: ocId,
-    p_itens: itensRecebidos,
   })
 
   if (error) return { success: false, error: mensagemErroComSecao('Recebimento', error.message) }

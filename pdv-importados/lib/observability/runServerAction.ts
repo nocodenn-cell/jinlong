@@ -3,6 +3,7 @@ import { logJson } from '@/shared/unified-logger'
 import { runActionWithObservability } from '../../../shared-core/src/observability/runAction'
 import type { LogFailureSink } from '../../../shared-core/src/observability/types'
 import { addVendaBreadcrumb, reportVendaError } from './vendaSentryRouter'
+import { redigir } from './redact'
 
 function createServerLogSink(): LogFailureSink {
   return (level, payload) => {
@@ -18,8 +19,10 @@ function createServerLogSink(): LogFailureSink {
         caixa_id: payload.ctx?.caixa_id as string | undefined,
       })
     } else {
-      logJson('server-action-warn', { ...payload } as Record<string, unknown>)
-      addVendaBreadcrumb(payload.stage, payload.event, payload.ctx as Record<string, unknown>)
+      // O payload inteiro ia para o log e o `ctx` para o breadcrumb, ambos sem
+      // filtro — era a via mais direta de vazamento de dado de cliente.
+      logJson('server-action-warn', redigir({ ...payload }) as Record<string, unknown>)
+      addVendaBreadcrumb(payload.stage, payload.event, redigir(payload.ctx) as Record<string, unknown>)
     }
   }
 }

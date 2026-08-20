@@ -1,10 +1,43 @@
-# 🚀 GO-LIVE RUNBOOK — P0 Production Deployment
+# ⛔ DESATUALIZADO — GO-LIVE RUNBOOK (P0 Production Deployment)
 
-**Mission**: Deploy fastproduct to production with zero data loss, verified operations, and rollback capability.
+> # ⛔ DESATUALIZADO — Consulte [`docs/go-live/00-README.md`](./go-live/00-README.md) para o plano atual
+>
+> **Depreciado em 2026-08-17.** A fonte canônica do plano de Go-Live passa a ser
+> **[`docs/go-live/`](./go-live/00-README.md)**. Este arquivo é preservado como registro histórico e
+> pelas seções que ainda não foram portadas (ver abaixo). **Não executar os procedimentos deste
+> documento.**
+>
+> ## Por que foi depreciado — não é só idade
+>
+> | # | Problema | Correto hoje |
+> |---|---|---|
+> | 1 | 🔴 **O procedimento de rollback é perigoso.** Manda reverter/`--force-with-lease` a `main`, ou seja, **reverter só a aplicação** | Com as migrations do bloco financeiro, reverter só a app recria "banco novo + app antiga" — **falha fechada de AR/AP para toda a base** (§11.6 da certificação). Ver [07-go-live-day.md](./go-live/07-go-live-day.md) §4 |
+> | 2 | ❌ **URL de produção errada** — usa `https://fastproduct.vercel.app` | A produção canônica é **`https://pdv-importados.vercel.app`** |
+> | 3 | ❌ **Resposta do health check errada** — espera `{"ok": true}` | `app/api/health/route.ts` retorna `{ deploymentId, gitSha, timestamp }`; o gate SSRA é a **igualdade do `deploymentId`** com o da plataforma |
+> | 4 | ❌ **Pressupõe staging** ("E2E Critical Path (Staging)") | **Não existe staging** — um único projeto Supabase serve produção, Preview e E2E |
+> | 5 | ⚠️ **Não conhece as 30 migrations pendentes** nem a coordenação obrigatória banco↔app | Ver [03-deploy-backend.md](./go-live/03-deploy-backend.md) |
+>
+> ## ✅ Depreciação COMPLETA — todo o conteúdo útil foi portado
+>
+> Em 2026-08-17 as seções que ainda não tinham equivalente foram migradas para `docs/go-live/`,
+> **com os 5 problemas acima corrigidos**. Este arquivo não é mais fonte de nada.
+>
+> | Seção original | Onde está agora |
+> |---|---|
+> | Smoke Tests 1–7 | [`06-validacao-pre-go-live.md`](./go-live/06-validacao-pre-go-live.md) §3.1 |
+> | Verificação do Sentry | [`08-pos-go-live.md`](./go-live/08-pos-go-live.md) §2.6 |
+> | Alert Thresholds | [`08-pos-go-live.md`](./go-live/08-pos-go-live.md) §2.7 |
+> | Post-Launch Monitoring (24h) | [`08-pos-go-live.md`](./go-live/08-pos-go-live.md) §1.1 |
+> | Escalation & Contacts | [`08-pos-go-live.md`](./go-live/08-pos-go-live.md) §6 |
+> | Post-Mortem | [`08-pos-go-live.md`](./go-live/08-pos-go-live.md) §7 |
+> | Pre-Deployment / Deployment / Health Check | [`03`](./go-live/03-deploy-backend.md) · [`04`](./go-live/04-deploy-frontend.md) · [`07`](./go-live/07-go-live-day.md) |
+> | Rollback Procedure | [`07-go-live-day.md`](./go-live/07-go-live-day.md) §4 — ⚠️ **reescrito**, o original era perigoso |
+>
+> **Mantido apenas como registro histórico.** Não consultar para execução.
 
-**Version**: 1.0  
-**Last Updated**: Jul 23, 2026  
-**Status**: Ready for execution
+**Version**: 1.0 · **Last Updated**: Jul 23, 2026 · **Status**: ⛔ **DEPRECIADO em 2026-08-17**
+
+**Mission** (histórico): Deploy fastproduct to production with zero data loss, verified operations, and rollback capability.
 
 ---
 

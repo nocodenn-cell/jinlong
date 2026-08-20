@@ -33,6 +33,8 @@ type Props = Readonly<{
   fornecedoresOpts: Array<{ id: string; nome: string }>
   statusInicial: string
   periodoInicial: string
+  /** Loja do ator autenticado — `registrar_pagamento_contas_pagar` rejeita pagamento cross-loja para todos os perfis. */
+  actorLojaId?: string | null
 }>
 
 const STATUS_LIST = ['todos', 'pendente', 'parcial', 'atrasado', 'pago', 'cancelado'] as const
@@ -81,6 +83,7 @@ export function ContasPagarListClient({
   fornecedoresOpts,
   statusInicial,
   periodoInicial,
+  actorLojaId = null,
 }: Props) {
   const m = getMessages(idioma)
   const [contas, setContas] = useState<ContaPagarRow[]>(contasIniciais)
@@ -506,8 +509,18 @@ export function ContasPagarListClient({
           emptyState={emptyState}
           className="rounded-none border-x-0 border-b-0"
           rowActions={(c) => {
-            const podePagar = c.status !== 'PAGO' && c.status !== 'CANCELADO'
-            if (!podePagar) return null
+            const statusPagavel = c.status !== 'PAGO' && c.status !== 'CANCELADO'
+            const foraDaLoja = actorLojaId != null && c.loja_id !== actorLojaId
+            if (!statusPagavel) return null
+            if (foraDaLoja) {
+              // registrar_pagamento_contas_pagar rejeita pagamento cross-loja para
+              // todos os perfis — sem botão de pagar em vez de deixar o clique falhar.
+              return (
+                <span className="text-caption text-fg-subtle" title="Conta de outra loja — pagamento deve ser feito por um ator daquela loja.">
+                  Outra loja
+                </span>
+              )
+            }
             return (
               <div className="flex items-center justify-end gap-1">
                 <Button

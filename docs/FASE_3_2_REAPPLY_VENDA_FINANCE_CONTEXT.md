@@ -1,5 +1,12 @@
 # Fase 3.2 — Migration timestamp `venda_finance_context`
 
+> **HISTÓRICO / OBSOLETO desde 2026-08-10.** Este documento registra a decisão
+> anterior de reativar o espelho. **Não executar os comandos de apply abaixo.**
+> A migration `20260808130200` foi aposentada sem ter sido aplicada no projeto
+> Jinlong. A convergência oficial futura é
+> `20260810222702_retire_obsolete_venda_finance_context.sql`, ainda sujeita ao
+> fluxo remoto e à autorização humana normais.
+
 **Data:** 2026-08-08 (UTC)  
 **Branch / PR:** `cursor/reconciliacao-supabase-audit-633a` · [#267](https://github.com/nocodenn-cell/fastproduct/pull/267)  
 **Decisão 3.1:** `docs/FASE_3_1_DECISAO_VENDA_FINANCE_CONTEXT.md` (**MANTER + idempotentizar**)
@@ -54,36 +61,20 @@ Idempotência: **segunda aplicação** da mesma migration completou sem erro (NO
 
 ---
 
-## 4. HUMAN GATE — apply em produção
+## 4. HUMAN GATE histórico — NÃO aplicar esta migration
 
-**STOP:** nenhum `apply_migration`, `db push`, SQL manual ou repair em **produção** sem:
-
-1. **`supabase db reset --local`** (ou CI equivalente) verde com esta migration na ponta.
-2. Review humano do diff SQL (PR #267).
-3. Janela operacional acordada (backfill `vendas CONCLUIDA` pode ser custoso).
-4. Apply **somente** da versão **`20260808130200`** — **nunca** reexecutar chave **`252`**.
-5. Pós-apply: rodar `verify-venda-finance-context-catalog.sql` em prod read-only e arquivar JSON.
-
-Ferramentas MCP/CLI de apply devem usar **nome** `24704_reapply_venda_finance_context_idempotent` (ou equivalente) e o **conteúdo do arquivo timestamp**, não o arquivo `252_*.sql`.
+**STOP:** `20260808130200` não deve ser aplicada por `apply_migration`, `db push`,
+SQL manual ou repair. A decisão foi substituída pela aposentadoria forward. Não
+reexecutar a chave histórica `252`. O próximo artefato oficial, quando houver
+autorização remota, é a tombstone `20260810222702`.
 
 ---
 
 ## 5. Comandos úteis (dev/staging)
 
-```bash
-# Gate Fase 3.2 (repo)
-node backend/supabase/scripts/validate-phase3-2.mjs
-
-# Reset local (requer Docker + supabase start)
-cd backend && npx supabase db reset --local --yes
-psql "$(npx supabase status -o env | grep DATABASE_URL)" -f backend/supabase/scripts/verify-venda-finance-context-catalog.sql
-
-# Smoke isolado opcional (Postgres efêmero + stubs)
-export RUN_PHASE32_SMOKE=1 DATABASE_URL='...'
-node backend/supabase/scripts/validate-phase3-2.mjs
-```
-
-Scripts: `verify-venda-finance-context-catalog.mjs`, `phase3-2-smoke-stubs.sql` (somente teste — **não** migration).
+Os comandos e scripts da reaplicação foram aposentados. Para validar a
+convergência atual, use `npm run check:venda-finance-context-retirement
+--workspace backend` e o verificador de catálogo atual.
 
 ---
 

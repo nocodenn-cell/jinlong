@@ -4,7 +4,7 @@
  * FastProduct Admin — Estoque · actions
  *
  * LISTAGEM / AJUSTE: facades em `gerente/estoque/actions` (QueryService / AdjustmentService).
- * KARDEX: InventoryMovementReader (SELECT `movimentos_estoque_log`).
+ * KARDEX: InventoryMovementReader (SELECT `v_kardex_unificado` — fonte canônica).
  */
 
 import { createClient } from '@/lib/supabase/server'

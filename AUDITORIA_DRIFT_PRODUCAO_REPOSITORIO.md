@@ -152,3 +152,184 @@ Com este diagnóstico, decidir:
 - **(b)** seguir com o próximo item da Fase 2 e tratar o drift em paralelo, sabendo que features que dependem de `113/235/236` ficam parcialmente inertes até a reconciliação.
 
 A Auditoria Visual já está em produção e **não é bloqueada** por nenhum destes drifts.
+
+---
+
+## Adendo 1 — 2026-08-19: recorrência do P0 por aplicação manual em produção
+
+> ⚠️ **Superado pelo Adendo 2, no fim deste documento.** A premissa de "aplicação manual em
+> produção" foi **refutada**: a migration nunca esteve no ledger. Mantido como registro histórico.
+
+> Acrescentado após a **Fase 6 do bloco financeiro**. O corpo acima permanece como o
+> diagnóstico original de 2026-06-20 e não foi alterado.
+
+O P0 da §3 — *"versionamento de migrations divergente entre produção e repositório"* —
+**voltou a ocorrer, por um mecanismo novo**: uma migration foi **aplicada à mão em
+produção** e, em seguida, **desabilitada no repositório** para que o pipeline não
+tentasse reaplicá-la.
+
+**Caso concreto:** `20260814015032_harden_diagnostics_and_ap_idempotency.sql`, renomeada
+para `_disabled_20260814015032_…` nos commits `c3f58df3` e `35eb7e8d`, com a justificativa
+*"já aplicada manualmente em produção"*.
+
+### Por que isso é mais grave que o drift de numeração
+
+O drift original era **visível**: números colidentes apareciam ao comparar os catálogos. Este
+é **invisível pelas mesmas ferramentas** — o repositório fica internamente consistente e o
+ledger de produção também. A divergência só existe *entre* os dois, e nada a sinaliza.
+
+Consequências observadas na Fase 6:
+
+1. **Produção deixou de ser reproduzível a partir do Git.** `supabase db reset` reconstruía
+   um banco **sem** o fix P1-3, com a versão pré-fix de `registrar_pagamento_contas_pagar`.
+   Qualquer disaster-recovery a partir do repositório produziria um banco diferente do real.
+2. **O sintoma apareceu longe da causa.** As suítes de AP falhavam com `movement_reused` e
+   `PAGAMENTO_SANGRIA_CORRELACAO_EXISTENTE` — erros que parecem de idempotência de
+   aplicação, não de migration ausente.
+3. **Mascarou um furo de RLS.** A migration desabilitada também revogava
+   `relatorio_consistencia_vendas` de `PUBLIC`. Sem ela, e com a `20260818000001` revogando
+   apenas `FROM authenticated`, a função seguiu executável por `authenticated` **via herança
+   de PUBLIC** em produção. Ver [FASE_6_GATE_FINANCEIRO_VALIDACAO.md §5](docs/FASE_6_GATE_FINANCEIRO_VALIDACAO.md).
+
+### Estado atual
+
+A `20260814015032` foi **reabilitada** sob o nome original (PR
+[#307](https://github.com/nocodenn-cell/fastproduct/pull/307)). É segura de reaplicar: só faz
+`CREATE OR REPLACE FUNCTION` + `REVOKE`/`GRANT`, todos idempotentes.
+
+### Pendente
+
+**Não há garantia de que tenha sido a única.** A auditoria do ledger de produção contra
+`supabase_migrations.schema_migrations` está registrada como item **7** do
+[BACKLOG_TECNICO.md](docs/BACKLOG_TECNICO.md) e é **pré-requisito para agendar a janela
+crítica**. Procurar também por outros arquivos `_disabled_*` em
+`backend/supabase/migrations/` — cada um é potencialmente um objeto que existe em produção e
+não no repositório.
+
+### Regra a adotar
+
+Migration aplicada à mão em produção **não deve ser desabilitada no repositório**. A
+migration deve permanecer versionada e ativa, escrita de forma idempotente
+(`CREATE OR REPLACE`, `IF NOT EXISTS`, `REVOKE`/`GRANT`), de modo que reaplicá-la onde já foi
+aplicada seja no-op. Desabilitar troca uma falha ruidosa e reversível por uma divergência
+silenciosa e permanente.
+
+---
+
+## Adendo 2 — 2026-08-19: a Fase 0 mediu o drift, e ele é sistêmico
+
+> **Este adendo corrige o Adendo 1 acima e é a versão vigente do diagnóstico.**
+
+### O que mudou em relação ao Adendo 1
+
+O Adendo 1 afirma que a `20260814015032` foi **aplicada à mão em produção** e depois desabilitada
+no repositório. **A premissa é falsa.** A migration **nunca esteve no ledger de produção** — não
+foi aplicada de forma alguma. A justificativa registrada nos commits `c3f58df3` e `35eb7e8d`
+(*"já aplicada manualmente em produção"*) estava **incorreta na origem**: alguém desabilitou uma
+migration por acreditar que já estava aplicada, sem conferir `supabase_migrations.schema_migrations`.
+
+A conclusão estrutural do Adendo 1 **permanece válida**, e por um caminho pior: com a migration
+desabilitada, o fix P1-3 de AP não existia **em lugar nenhum** — nem no banco local reconstruído,
+nem em produção. A "regra a adotar" do Adendo 1 continua correta e ganha um corolário:
+
+> **Antes de desabilitar uma migration porque "já foi aplicada", consultar o ledger.** A crença de
+> que foi aplicada não é evidência de que foi.
+
+### Fase 0 — como o drift foi finalmente medido
+
+O Adendo 1 registrava a auditoria do ledger como pendente. Ela foi executada em 2026-08-19 como
+**Fase 0** do plano de fechamento, e foi além do ledger: comparou o **catálogo inteiro** dos dois
+lados.
+
+O instrumento é `backend/scripts/catalog-snapshot.sql` — um `SELECT` único que devolve
+`(section, obj_key, digest)` para funções, tabelas, colunas, índices, constraints, triggers,
+políticas RLS, views, enums, extensões e o ledger. O digest é md5 do conteúdo comparável; para
+funções inclui `prosrc`, `proacl`, `prosecdef`, `provolatile`, `proconfig` e o tipo de retorno.
+Objetos de extensão são excluídos via `pg_depend.deptype = 'e'` — sem isso, `pgcrypto` e `pg_trgm`
+produziriam centenas de divergências falsas.
+
+O mesmo SQL, byte a byte, rodou contra um `npx supabase db reset --local` (307 migrations + seed)
+e contra produção, somente leitura.
+
+**Validação do método:** o retrato do local foi tirado **antes e depois** de um `db reset` completo,
+e os 11 digests de seção vieram **idênticos**. Isso prova que o script não tem falso-positivo
+dependente de estado, e que o banco local já era reconstrução fiel do repositório — a divergência
+medida **não é sujeira de ambiente**.
+
+### O resultado
+
+| Seção | Repositório | Produção | Δ |
+|---|---:|---:|---:|
+| policies | 129 | 144 | **+15** |
+| columns | 851 | 866 | **+15** |
+| indexes | 269 | 279 | **+10** |
+| functions | 140 | 144 | **+4** |
+| tables | 84 | 87 | **+3** |
+| constraints | 401 | 403 | **+2** |
+| migrations | 307 | 305 → **307** | paridade após PR #309 |
+| extensions | 8 | 10 | +2 *(ruído de plataforma)* |
+| enums | 2 | 2 | ✅ idêntico |
+| triggers | 35 | 35 | ✅ idêntico |
+| views | 12 | 12 | ✅ idêntico |
+
+**8 das 11 seções divergem**, e a direção é consistente: **produção tem objetos que o repositório
+não cria.** Três seções batem perfeitamente — não é caos generalizado, é divergência estruturada,
+concentrada em funções, tabelas e autorização.
+
+### A lição central
+
+> **Paridade de chaves não implica paridade de catálogo.**
+
+O ledger hoje bate em **307/307** — e os objetos não. A verificação que este documento e o item 7
+do backlog propunham (`count(*)` do ledger contra `ls | wc -l`) teria dado **verde** sobre um banco
+divergente em 10 funções, 3 tabelas e 15 políticas RLS. A conclusão do Adendo 1 de que "o P0 da
+auditoria de junho está resolvido" valia **para a numeração, e só para ela**.
+
+### Os achados que §4 previu
+
+A §4 deste documento identificou colisão de numeração com conteúdo diferente nas migrations
+`113`/`114`. **A Fase 0 encontrou a consequência viva dessa colisão:**
+
+- **`fiscal_enfileirar_documento_venda`** — a Edge `sync-outbox` chama a RPC com **4 argumentos**
+  (`p_loja_id`, com o comentário `// valida que a venda pertence à loja deste worker (migration 114)`);
+  produção só tem a sobrecarga de **3**. O comentário é a evidência direta: produção executou uma
+  `114` diferente da que está no repositório. PostgREST devolve `PGRST202`, e **o erro não falha o
+  batch** — toda venda sincronizada do `pdv-local` deixaria de enfileirar documento fiscal, em
+  silêncio. Dano até hoje **zero** (nenhuma venda do sync offline chegou a produção); arma no dia em
+  que o `pdv-local` entrar.
+
+- **`relatorio_consistencia_vendas(3 args)`** e outras funções criadas por migrations que **estão no
+  ledger de produção** e cujos objetos não existem lá. Ou foram removidas à mão depois, ou o conteúdo
+  daquela chave no repositório não é o que produção executou — e a segunda hipótese reencontra
+  exatamente a §4.
+
+### Consequência: a estratégia da §8 deixa de ser proposta e vira pré-requisito
+
+A §8 deste documento propôs, em junho, uma reconciliação de baseline — e ela **nunca foi executada**.
+A Fase 0 confirma que era o caminho certo, e que continua sendo o único:
+
+1. `supabase db pull` — baseline a partir do estado real de produção;
+2. baseline adotada como ponto zero do repositório, com os `.sql` antigos preservados;
+3. deltas legítimos que hoje só existem no repositório reautorados sobre a baseline;
+4. só então as correções de segurança e o gate de CI passam a significar alguma coisa.
+
+Isso é a **Fase 1B** (itens 10–16 do [BACKLOG_TECNICO.md](docs/BACKLOG_TECNICO.md)).
+**Pré-requisito não resolvido:** não há ambiente de ensaio — `create_branch` foi recusado
+(branching exige plano Pro; a organização está no Free). Ver
+[docs/AMBIENTES_E_RELEASE.md](docs/AMBIENTES_E_RELEASE.md) §1.
+
+### O que já foi fechado
+
+A PR [#309](https://github.com/nocodenn-cell/fastproduct/pull/309) aplicou em produção o que não
+dependia da reconciliação completa: vazamento entre lojas fechado
+(`verificar_consistencia_venda` e `relatorio_consistencia_vendas` restritas a
+`postgres`/`service_role`), fix P1-3 da idempotência de AP no ar, ledger em paridade 307/307, e o
+E2E fora de produção. **A Fase 1B não bloqueia o treinamento do cliente #1** (decisão do dono,
+2026-08-19); bloqueia a **janela crítica** e a **segunda loja**.
+
+### Referências
+
+- [`docs/AUDITORIA_CATALOGO_PROD_VS_REPO_2026-08.md`](docs/AUDITORIA_CATALOGO_PROD_VS_REPO_2026-08.md) — auditoria completa da Fase 0
+- [`docs/FASE_6_GATE_FINANCEIRO_VALIDACAO.md`](docs/FASE_6_GATE_FINANCEIRO_VALIDACAO.md) §4, §5.1, §8.3, §9.1
+- [`GO_LIVE_CERTIFICATION_REPORT.md`](GO_LIVE_CERTIFICATION_REPORT.md) §14
+- `backend/scripts/catalog-snapshot.sql` — instrumento de medição

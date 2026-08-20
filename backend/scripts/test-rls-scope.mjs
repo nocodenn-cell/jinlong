@@ -404,7 +404,11 @@ async function main() {
       p_operador_id: authByPerfil.OPERADOR,
       p_loja_id: IDS.loja,
       p_itens: [],
-    }, "FINALIZAR_VENDA_CANONICA_ITENS_INVALIDOS");
+      // Fase 1B moveu a totalização da v4 para `internal.calcular_totais_venda`,
+      // que rejeita array vazio com o próprio código. A asserção antiga
+      // (`FINALIZAR_VENDA_CANONICA_ITENS_INVALIDOS`) ficou desatualizada porque
+      // esta suíte não estava ligada a nenhum npm script nem ao CI.
+    }, "VENDA_TOTAIS_ITENS_INVALIDOS");
   });
 
   await run("RPC registrar_pricing_version_venda permite venda propria", async () => {
@@ -468,8 +472,21 @@ async function main() {
     }
   });
 
-  await run("RPC recalcular_saldo_caixa", async () => {
-    await assertRpcOk(gerente, "recalcular_saldo_caixa", { p_caixa_id: IDS.caixaGerente });
+  // P0-2: `recalcular_saldo_caixa` foi removida (migration
+  // 20260814013015_drop_recalcular_saldo_caixa). Era SECURITY DEFINER exposta a
+  // `authenticated` sem validar ator/perfil/loja e sobrescrevia o contador com
+  // uma fórmula que omite vendas, AR e devoluções. Este bloco antes asseverava
+  // que um GERENTE PODIA executá-la; agora garante que ninguém pode.
+  await run("RPC recalcular_saldo_caixa (removida)", async () => {
+    const { error } = await gerente.rpc("recalcular_saldo_caixa", {
+      p_caixa_id: IDS.caixaGerente,
+    });
+    const msg = error?.message ?? "";
+    if (!/could not find the function|does not exist|permission denied/i.test(msg)) {
+      throw new Error(
+        `recalcular_saldo_caixa deveria estar inacessível; obtido: ${msg || "(sem erro — writer legado voltou)"}`,
+      );
+    }
   });
 
   await run("RPC registrar_movimentacao (suprimento)", async () => {
@@ -530,11 +547,15 @@ async function main() {
   });
 
   await run("RPC registrar_liquidacao_receber (GERENTE)", async () => {
+    // Fase 2A tornou `p_idempotency_key` obrigatória. A chamada sem chave ficou
+    // quebrada desde então porque esta suíte não rodava em lugar nenhum.
     await assertRpcOk(gerente, "registrar_liquidacao_receber", {
       p_titulo_id: IDS.tituloReceber,
       p_valor: 0.01,
       p_forma_pagamento: "PIX",
       p_observacao: "smoke rls",
+      p_idempotency_key: `rls-ar-${randomUUID()}`,
+      p_origem: "SMOKE_RLS",
     });
   });
 

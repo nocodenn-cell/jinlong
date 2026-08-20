@@ -13,6 +13,7 @@ import {
   MSG_PRECO_VAREJO,
   MSG_UPDATE_SEM_ID,
   createProductUpdater,
+  derivarFaixaAtacado,
   mapUpdateProductInputToRow,
 } from './productUpdater'
 
@@ -255,6 +256,109 @@ describe('createProductUpdater', () => {
     })
   })
 
+  it('unique de código de barras SEM supabase funcional cai no fallback genérico (consulta complementar falhando)', async () => {
+    // supabase = {} força buscarProdutoPorCodigoBarrasLoja a estourar (sem .from) —
+    // prova que a falha da consulta de enriquecimento não derruba a resposta do
+    // update nem propaga um erro cru pro chamador; cai na mensagem genérica.
+    const getById = vi.fn(async () => ({ ok: true as const, product: catalogRow }))
+    const updateRow = vi.fn(async () => ({
+      error: {
+        code: '23505',
+        message: 'duplicate key value violates unique constraint "produtos_codigo_barras_loja_unique"',
+      },
+    }))
+    const updater = createProductUpdater({} as never, { reader: { getById }, updateRow })
+
+    const r = await updater.update({
+      id: 'prod-1',
+      lojaId: 'loja-1',
+      input: { nome: 'Ok', precoVarejo: 1, codigoBarras: '111' },
+    })
+
+    expect(r.ok).toBe(false)
+    expect(r).toMatchObject({ code: PRODUCT_ERROR_CODES.BARCODE_DUPLICATE })
+    // Mensagem genérica (sem nome) — não crasha, não vaza o erro interno da consulta.
+    expect(r.error).toBe(formatMensagemCodigoBarrasDuplicado(null))
+  })
+
+  it('unique de código de barras COM supabase funcional enriquece a mensagem com o nome do produto conflitante', async () => {
+    const calls: { table?: string; eq: Array<[string, string]>; neq?: [string, string] } = { eq: [] }
+    const fakeSupabase = {
+      from: (table: string) => {
+        calls.table = table
+        return {
+          select: () => ({
+            eq: (col: string, val: string) => {
+              calls.eq.push([col, val])
+              return {
+                eq: (col2: string, val2: string) => {
+                  calls.eq.push([col2, val2])
+                  return {
+                    limit: () => ({
+                      neq: (col3: string, val3: string) => {
+                        calls.neq = [col3, val3]
+                        return { maybeSingle: async () => ({ data: { id: 'outro-produto-id', nome: 'Caixa Amarela' } }) }
+                      },
+                      maybeSingle: async () => ({ data: { id: 'outro-produto-id', nome: 'Caixa Amarela' } }),
+                    }),
+                  }
+                },
+              }
+            },
+          }),
+        }
+      },
+    }
+    const getById = vi.fn(async () => ({ ok: true as const, product: catalogRow }))
+    const updateRow = vi.fn(async () => ({
+      error: {
+        code: '23505',
+        message: 'duplicate key value violates unique constraint "produtos_codigo_barras_loja_unique"',
+      },
+    }))
+    const updater = createProductUpdater(fakeSupabase as never, { reader: { getById }, updateRow })
+
+    const r = await updater.update({
+      id: 'prod-1',
+      lojaId: 'loja-1',
+      input: { nome: 'Ok', precoVarejo: 1, codigoBarras: '0012366665' },
+    })
+
+    expect(r.ok).toBe(false)
+    expect(r).toMatchObject({ error: expect.stringContaining('Caixa Amarela') })
+    // Isolamento por loja: a busca do conflito usa a loja do comando (do usuário
+    // que está editando), não algum outro valor.
+    expect(calls.table).toBe('produtos')
+    expect(calls.eq).toContainEqual(['loja_id', 'loja-1'])
+    expect(calls.eq).toContainEqual(['codigo_barras', '0012366665'])
+    // Exclui o próprio produto sendo editado — "manter o próprio código" nunca
+    // se autodenuncia (mesmo que este teste force um 23505, em uso real isso só
+    // dispara se OUTRO produto já tiver esse código).
+    expect(calls.neq).toEqual(['id', 'prod-1'])
+  })
+
+  it('não chama a busca de duplicidade quando o update tem sucesso (manter o próprio código não gera I/O extra)', async () => {
+    const fromSpy = vi.fn()
+    const fakeSupabase = { from: fromSpy }
+    const after: ProductCatalogBasics = { ...catalogRow, nome: 'Ok' }
+    const getById = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true as const, product: catalogRow })
+      .mockResolvedValueOnce({ ok: true as const, product: after })
+    const updateRow = vi.fn(async () => ({ error: null }))
+    const updater = createProductUpdater(fakeSupabase as never, { reader: { getById }, updateRow })
+
+    const r = await updater.update({
+      id: 'prod-1',
+      lojaId: 'loja-1',
+      // mesmo código de barras que o produto já tinha (catalogRow.codigoBarras = '789')
+      input: { nome: 'Ok', precoVarejo: 1, codigoBarras: '789' },
+    })
+
+    expect(r.ok).toBe(true)
+    expect(fromSpy).not.toHaveBeenCalled()
+  })
+
   it('retorno pós-update inclui identidade + preços de cadastro', async () => {
     const after: ProductCatalogBasics = {
       ...catalogRow,
@@ -286,5 +390,231 @@ describe('createProductUpdater', () => {
     expect(r.product.precoVarejo).toBe(22)
     expect(r.product.precoAtacado).toBe(18)
     expect(r.product.statusPublicacao).toBe('PUBLICADO')
+  })
+})
+
+/**
+ * Transacionalidade produto + faixa de atacado (migration
+ * `atualizar_produto_com_faixa_atacado`). O que é provado no banco de verdade
+ * — atomicidade e rollback — está em
+ * `backend/scripts/rls-produtos-tenant-rest-smoke.mjs`, contra o PostgREST
+ * real. Aqui cobre-se o contrato do lado da aplicação: o que é derivado do
+ * payload e como os erros da RPC viram mensagem de usuário.
+ */
+describe('derivarFaixaAtacado', () => {
+  const base = mapUpdateProductInputToRow({ nome: 'X', precoVarejo: 10 })
+
+  it('deriva a faixa quando preço de atacado e gatilho vêm juntos', () => {
+    expect(
+      derivarFaixaAtacado({ ...base, preco_atacado: 30, quantidade_gatilho_atacado: 10 }),
+    ).toEqual({ quantidade_minima: 10, preco_unitario: 30 })
+  })
+
+  it('sem gatilho não há faixa a sincronizar (preço de atacado sozinho não define faixa)', () => {
+    expect(
+      derivarFaixaAtacado({ ...base, preco_atacado: 30, quantidade_gatilho_atacado: null }),
+    ).toBeNull()
+  })
+
+  it('sem preço de atacado não há faixa', () => {
+    expect(
+      derivarFaixaAtacado({ ...base, preco_atacado: null, quantidade_gatilho_atacado: 10 }),
+    ).toBeNull()
+  })
+
+  it('valores não positivos não geram faixa (a RPC rejeitaria)', () => {
+    expect(
+      derivarFaixaAtacado({ ...base, preco_atacado: 0, quantidade_gatilho_atacado: 10 }),
+    ).toBeNull()
+    expect(
+      derivarFaixaAtacado({ ...base, preco_atacado: 30, quantidade_gatilho_atacado: 0 }),
+    ).toBeNull()
+    expect(
+      derivarFaixaAtacado({ ...base, preco_atacado: 30, quantidade_gatilho_atacado: -5 }),
+    ).toBeNull()
+  })
+})
+
+describe('mapeamento dos erros da RPC transacional', () => {
+  const getById = vi.fn(async () => ({ ok: true as const, product: catalogRow }))
+
+  it('ATUALIZAR_PRODUTO_NAO_ENCONTRADO (produto de outra loja) → NOT_FOUND', async () => {
+    const updateRow = vi.fn(async () => ({
+      error: { message: 'ATUALIZAR_PRODUTO_NAO_ENCONTRADO' },
+    }))
+    const updater = createProductUpdater({} as never, { reader: { getById }, updateRow })
+    const r = await updater.update({
+      id: 'prod-1',
+      lojaId: 'loja-1',
+      input: { nome: 'Produto Valido', precoVarejo: 10 },
+    })
+    expect(r.ok).toBe(false)
+    if (r.ok) return
+    expect(r.code).toBe(PRODUCT_ERROR_CODES.NOT_FOUND)
+  })
+
+  it('ATUALIZAR_PRODUTO_CODIGO_BARRAS_DUPLICADO → mensagem amigável de duplicidade', async () => {
+    const updateRow = vi.fn(async () => ({
+      error: { message: 'ATUALIZAR_PRODUTO_CODIGO_BARRAS_DUPLICADO' },
+    }))
+    const updater = createProductUpdater({} as never, { reader: { getById }, updateRow })
+    const r = await updater.update({
+      id: 'prod-1',
+      lojaId: 'loja-1',
+      input: { nome: 'Produto Valido', precoVarejo: 10, codigoBarras: '789' },
+    })
+    expect(r.ok).toBe(false)
+    if (r.ok) return
+    expect(r.code).toBe(PRODUCT_ERROR_CODES.BARCODE_DUPLICATE)
+  })
+})
+
+/**
+ * Sequenciamento app ↔ banco: esta versão da aplicação não pode quebrar a
+ * edição de produto quando publicada ANTES da migration que cria a RPC
+ * transacional. Ver docs/PROMOCAO_PRODUTOS_HARDENING.md §3.
+ */
+/**
+ * Banco SEM a RPC transacional. A prova de que nada é gravado está em
+ * `backend/scripts/fallback-sem-rpc-real.mjs`, contra o Postgres de verdade —
+ * aqui cobre-se a DECISÃO: quando recusa, quando deixa passar, e que um erro
+ * real da RPC não é confundido com "RPC ausente".
+ */
+describe('banco sem a RPC transacional: recusa em vez de estado parcial', () => {
+  function fakeSemRpc(
+    codigo: string,
+    mensagem: string,
+    atacadoAtual: { preco_atacado: number | null; quantidade_gatilho_atacado: number | null },
+  ) {
+    const escritas: string[] = []
+    const supabase = {
+      rpc: vi.fn(async () => ({ error: { code: codigo, message: mensagem } })),
+      from: (tabela: string) => {
+        if (tabela === 'precos_atacado') {
+          escritas.push('precos_atacado')
+          throw new Error('não deve tocar precos_atacado')
+        }
+        return {
+          select: () => ({
+            eq: () => ({ eq: () => ({ maybeSingle: async () => ({ data: atacadoAtual, error: null }) }) }),
+          }),
+          update: () => ({
+            eq: () => ({
+              eq: async () => {
+                escritas.push('produtos')
+                return { error: null }
+              },
+            }),
+          }),
+        }
+      },
+    }
+    return { supabase, escritas }
+  }
+
+  const AUSENTE_COD = 'PGRST202'
+  const AUSENTE_MSG = 'Could not find the function public.atualizar_produto_com_faixa_atacado'
+
+  it('mudar o par de atacado é RECUSADO e NENHUMA escrita é emitida', async () => {
+    const { supabase, escritas } = fakeSemRpc(AUSENTE_COD, AUSENTE_MSG, {
+      preco_atacado: 30,
+      quantidade_gatilho_atacado: 10,
+    })
+    const { createProductUpdater: criar, MSG_ATACADO_REQUER_MIGRATION } = await import('./productUpdater')
+    const getById = vi.fn(async () => ({ ok: true as const, product: catalogRow }))
+    const updater = criar(supabase as never, { reader: { getById } })
+
+    const r = await updater.update({
+      id: 'prod-1',
+      lojaId: 'loja-1',
+      input: { nome: 'Produto A', precoVarejo: 50, precoAtacado: 25, quantidadeGatilhoAtacado: 20 },
+    })
+
+    expect(r.ok).toBe(false)
+    if (r.ok) return
+    // `mapUpdateDbError` prefixa a seção ("Produto: ..."), então compara-se por
+    // conteúdo em vez de igualdade exata.
+    expect(r.error).toContain(MSG_ATACADO_REQUER_MIGRATION)
+    // O ponto central: zero escritas. Sem escrita, não há estado parcial.
+    expect(escritas).toEqual([])
+  })
+
+  it('edição que NÃO muda o par de atacado passa (instrução única, atômica)', async () => {
+    const { supabase, escritas } = fakeSemRpc(AUSENTE_COD, AUSENTE_MSG, {
+      preco_atacado: 25,
+      quantidade_gatilho_atacado: 20,
+    })
+    const { createProductUpdater: criar } = await import('./productUpdater')
+    const getById = vi.fn(async () => ({ ok: true as const, product: catalogRow }))
+    const updater = criar(supabase as never, { reader: { getById } })
+
+    const r = await updater.update({
+      id: 'prod-1',
+      lojaId: 'loja-1',
+      input: { nome: 'Renomeado', precoVarejo: 50, precoAtacado: 25, quantidadeGatilhoAtacado: 20 },
+    })
+
+    expect(r.ok).toBe(true)
+    expect(escritas).toEqual(['produtos'])
+  })
+
+  it('42883 (undefined_function) também é tratado como banco antigo', async () => {
+    const { supabase, escritas } = fakeSemRpc(
+      '42883',
+      'function public.atualizar_produto_com_faixa_atacado(...) does not exist',
+      { preco_atacado: 30, quantidade_gatilho_atacado: 10 },
+    )
+    const { createProductUpdater: criar } = await import('./productUpdater')
+    const getById = vi.fn(async () => ({ ok: true as const, product: catalogRow }))
+    const updater = criar(supabase as never, { reader: { getById } })
+
+    const r = await updater.update({
+      id: 'prod-1',
+      lojaId: 'loja-1',
+      input: { nome: 'Produto A', precoVarejo: 50, precoAtacado: 99, quantidadeGatilhoAtacado: 5 },
+    })
+    expect(r.ok).toBe(false)
+    expect(escritas).toEqual([])
+  })
+
+  it('erro REAL da RPC não vira caminho sem-RPC — não mascara falha', async () => {
+    const supabase = {
+      rpc: vi.fn(async () => ({ error: { code: 'P0001', message: 'ATUALIZAR_PRODUTO_NAO_ENCONTRADO' } })),
+      from: () => {
+        throw new Error('não deveria cair no caminho sem-RPC')
+      },
+    }
+    const { createProductUpdater: criar } = await import('./productUpdater')
+    const getById = vi.fn(async () => ({ ok: true as const, product: catalogRow }))
+    const updater = criar(supabase as never, { reader: { getById } })
+
+    const r = await updater.update({
+      id: 'prod-1',
+      lojaId: 'loja-1',
+      input: { nome: 'Produto A', precoVarejo: 50 },
+    })
+    expect(r.ok).toBe(false)
+    if (r.ok) return
+    expect(r.code).toBe(PRODUCT_ERROR_CODES.NOT_FOUND)
+  })
+
+  it('a RPC é chamada SEM p_ator_id (o ator vem de auth.uid())', async () => {
+    const rpcSpy = vi.fn(async () => ({ error: null }))
+    const supabase = { rpc: rpcSpy, from: () => ({}) }
+    const { createProductUpdater: criar } = await import('./productUpdater')
+    const getById = vi.fn(async () => ({ ok: true as const, product: catalogRow }))
+    const updater = criar(supabase as never, { reader: { getById } })
+
+    await updater.update({
+      id: 'prod-1',
+      lojaId: 'loja-1',
+      input: { nome: 'Produto A', precoVarejo: 50, precoAtacado: 30, quantidadeGatilhoAtacado: 10 },
+    })
+
+    const args = rpcSpy.mock.calls[0]![1] as Record<string, unknown>
+    // Enviar `p_ator_id: null` divergia do tipo gerado (ausente | string) sem
+    // que o typecheck pudesse acusar, porque o client é genérico.
+    expect(Object.prototype.hasOwnProperty.call(args, 'p_ator_id')).toBe(false)
+    expect(args.p_faixa).toEqual({ quantidade_minima: 10, preco_unitario: 30 })
   })
 })

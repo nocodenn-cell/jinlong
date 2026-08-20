@@ -16,6 +16,77 @@ Referências: [P0_CHECKLIST_OPERACIONAL.md](./P0_CHECKLIST_OPERACIONAL.md), [CIR
 
 **Regra:** não apontar `pdv-local` de loja física para o mesmo `ref` que você usa para testes destrutivos, a menos que seja consciente do risco.
 
+> ⚠️ **Estado real (2026-08-19): `staging` não existe.** A tabela acima é arquitetura-alvo. Hoje há
+> **um único projeto Supabase** (`jinlong`), que serve produção e serviu também de alvo do E2E até a
+> PR [#309](https://github.com/nocodenn-cell/fastproduct/pull/309). O `staging` marcado como
+> *"recomendado"* nunca foi provisionado. Consequência em aberto: não há onde ensaiar a
+> reconciliação de baseline da Fase 1B nem o rollback do
+> [`ROLLBACK_HOTLINE_PLAYBOOK.md`](../ROLLBACK_HOTLINE_PLAYBOOK.md), que seria testado pela primeira
+> vez em produção.
+
+### 1.1 E2E — decisão: stack local efêmera, não produção
+
+**Decisão tomada em 2026-08-19 (PR #309). O E2E não roda mais contra nenhum ambiente remoto.**
+
+#### O problema
+
+Os dois jobs de E2E (`e2e-critical` e `e2e-playwright`) rodavam contra o **projeto de produção**:
+os secrets `PLAYWRIGHT_*` apontavam para `kbabmewnahysfvlybiak`, e `SYNC_ENDPOINT` para a Edge de
+produção. Cada PR gravava dado real na loja do cliente:
+
+- 11 vendas de R$ 68,00 em 19/08, entre 15:39 e 16:37, exatamente nos horários dos runs de #307 e #308;
+- as lojas `Probe …` e `Smoke Homolog …`, um caixa com 176 vendas e 8 caixas abandonados — todos
+  removidos à mão depois.
+
+**Limpar produção não resolvia.** `seed-dev-users.mjs` faz `upsert ... ativo: true`: desativar as
+contas de robô à mão durava até o próximo PR. Enquanto o pipeline apontasse para lá, qualquer
+limpeza se desfazia sozinha.
+
+#### As três opções, e por que a escolhida ganhou
+
+| Opção | Veredito |
+|---|---|
+| **Branch Supabase** | ❌ **indisponível** — `create_branch` foi tentado e recusado: branching exige plano **Pro**, e a organização está no **Free**. |
+| **Projeto de homologação separado** | ➖ viável, mas continua sendo um ambiente remoto para manter, com chaves em secret que precisariam ser rotacionadas e um schema que derivaria com o tempo — o mesmo problema, mudado de endereço. |
+| **Stack Supabase local e efêmera** | ✅ **adotada** |
+
+#### O que a stack local entrega
+
+- **Impossível poluir produção:** o banco nasce e morre dentro do job.
+- **Reproduzível a partir do repositório:** `db reset` aplica migrations + `seed.sql`, então o E2E
+  passa a testar **o que está no Git**, não um remoto que derivou.
+- **Nenhuma `service_role` remota em secret de CI.** Credenciais efêmeras geradas no runner
+  (`openssl rand`) e mascaradas com `::add-mask::` antes de irem para `GITHUB_ENV`.
+- **Roda em PR de fork** — o job deixou de consumir secret algum, e é justamente em fork que uma
+  regressão tem mais chance de entrar sem ninguém ver.
+
+Sobe pelo `ci-supabase-local-start.sh`, o mesmo script já usado por `supabase-local-gates`.
+`PLAYWRIGHT_E2E_PRODUTO_CODIGO` passou a `7898512340004` — umidificador de R$ 68,00, criado pelas
+migrations; é o mesmo item que o E2E vinha comprando em produção.
+
+#### O guard
+
+Um passo aborta o pipeline se o alvo for produção. Checa o **alvo efetivo** — `SB_URL` resolvido e o
+conteúdo dos `.env` gravados — e **não os secrets**: checar secrets seria pior que inútil, porque eles
+continuam existindo e apontando para produção, então o job reprovaria sempre por um motivo que já
+não se aplica. Roda **antes do seed**, que é a primeira escrita. Vale contra regressão futura de
+secret, em qualquer cenário de homologação que venha a ser adotado.
+
+#### Baseline provada
+
+Run de 2026-08-19T21:08, após a correção dos **dois** jobs: **0 vendas, 0 caixas, 0 lojas novas e
+0 logins** em produção — contra 2 logins no run anterior, quando apenas o `e2e-critical` havia sido
+corrigido.
+
+#### Custo e exposição residual
+
+- **Custo:** timeouts subiram para **45 min** (`e2e-critical`) e **60 min** (`e2e-playwright`). Os dois
+  sobem em paralelo e disputam pull de imagem e banda. Redução possível via cache dos browsers do
+  Playwright ou stack única compartilhada — item 18 do [BACKLOG_TECNICO.md](./BACKLOG_TECNICO.md).
+- **Exposição residual:** o job `anti-replay-diagnostic-gate` (`ci-backend-supabase.yml`) **ainda**
+  usa `SYNC_ENDPOINT`/`SYNC_KEY` de produção e escreve em `sync_request_nonces`. Tabela interna de
+  anti-replay, não dado de negócio — decisão separada, item 17 do backlog.
+
 ---
 
 ## 2. PDV local — estratégia de credenciais

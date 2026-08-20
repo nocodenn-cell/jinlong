@@ -44,7 +44,7 @@
 - **Total:** 237 arquivos `.sql`
 - **Faixa numérica:** `001_schema_inicial.sql` … `288_pdv_certificacao_operacional_caixa_e_espera.sql`
 - **Timestamps no repo (exemplos):** `20260419013345_*`, `20260620222629_245_remover_venda_fiado.sql`, `20260710163032_255_vendas_em_espera_e_consulta_rapida.sql`, … (16+ recuperadas de prod — ver `MIGRATIONS_DRIFT_CLASSIFICATION.md`)
-- **Legado / não-canônico:** `pdv-importados/supabase/migrations/` (pacote paralelo antigo) — **fora do SSOT** desta reconciliação.
+- **Legado / não-canônico:** `pdv-importados/supabase/migrations/` (pacote paralelo antigo) — **fora do SSOT** desta reconciliação. **Arquivado em 2026-08-13** para `docs/archive/legacy-pdv-importados-supabase/`; SSOT único formalizado em [ADR-011](./adr/ADR-011-ssot-unico-migrations.md) e protegido por `scripts/migration-sequence-guard.mjs`.
 
 ---
 
