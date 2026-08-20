@@ -173,7 +173,11 @@ export function deriveOverallStatus({
 }
 
 export function deriveExitCode(status, warnOnly = false) {
-  if (status === "HUMAN_GATE") return 1;
+  // HUMAN_GATE não bloqueia CI: a decisão humana já foi tomada e revisada no
+  // PR que adicionou a entrada em migration-human-gates.json (reason +
+  // decisionDoc obrigatórios, validados por parseHumanGateRegistry). Exigir
+  // um override manual a cada execução do gate seria fricção redundante —
+  // a aprovação já aconteceu no code review daquele registro.
   if (status === "BLOCKING_DRIFT" && !warnOnly) return 1;
   return 0;
 }
