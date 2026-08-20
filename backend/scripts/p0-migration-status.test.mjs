@@ -96,8 +96,10 @@ test("divergência explicitamente registrada exige HUMAN_GATE", () => {
   assert.equal(classified.blocking.length, 0);
   assert.equal(classified.humanGate.length, 1);
   assert.equal(deriveOverallStatus(classified), "HUMAN_GATE");
-  assert.equal(deriveExitCode("HUMAN_GATE", false), 1);
-  assert.equal(deriveExitCode("HUMAN_GATE", true), 1);
+  // HUMAN_GATE não bloqueia CI: a decisão já foi revisada no PR que registrou
+  // a entrada em migration-human-gates.json (reason + decisionDoc validados).
+  assert.equal(deriveExitCode("HUMAN_GATE", false), 0);
+  assert.equal(deriveExitCode("HUMAN_GATE", true), 0);
 });
 
 test("BLOCKING_DRIFT tem precedência sobre HUMAN_GATE", () => {

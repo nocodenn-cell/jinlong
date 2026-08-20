@@ -1,1 +1,28 @@
-{"gates": []}
+{
+  "gates": [
+    {
+      "version": "20260820120000",
+      "direction": "git_only",
+      "reason": "Aplicada via MCP apply_migration (não CLI): schema_migrations.version gravado foi o timestamp real de aplicação (20260820102925), não o timestamp do nome do arquivo. Migration em si é idempotente (DROP FUNCTION IF EXISTS + CREATE) — seguro reaplicar se um futuro db push tentar.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "version": "20260820102925",
+      "direction": "remote_only",
+      "reason": "Version real em schema_migrations para o arquivo local 20260820120000_devolver_ou_trocar_venda_retorna_itens.sql, aplicado via MCP apply_migration em 20/08/2026 (nome bate, version não — ver par git_only acima).",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "version": "20260820120100",
+      "direction": "git_only",
+      "reason": "Aplicada via MCP apply_migration (não CLI): schema_migrations.version gravado foi o timestamp real de aplicação (20260820103048), não o timestamp do nome do arquivo. Migration é um REVOKE puro — seguro reaplicar se um futuro db push tentar.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "version": "20260820103048",
+      "direction": "remote_only",
+      "reason": "Version real em schema_migrations para o arquivo local 20260820120100_fix_anon_grant_drift_devolver_ou_trocar_venda.sql, aplicado via MCP apply_migration em 20/08/2026 (nome bate, version não — ver par git_only acima).",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    }
+  ]
+}

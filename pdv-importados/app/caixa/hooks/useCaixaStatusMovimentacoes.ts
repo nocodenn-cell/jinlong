@@ -10,6 +10,7 @@ import {
   estornarMovimentacaoCaixa,
 } from "@/app/caixa/actions"
 import type { MovimentacaoCaixaDTO } from "@/app/caixa/caixaMovimentacaoTypes"
+import type { ComprovanteMovimentacao } from "@/app/caixa/CaixaMovimentacaoReciboModal"
 import { getDeviceFingerprint } from "@/lib/security/deviceFingerprint"
 import type { Mensagens } from "@/i18n/getMessages"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
@@ -82,6 +83,7 @@ export function useCaixaStatusMovimentacoes({
   const [carregandoMovimentacoes, setCarregandoMovimentacoes] = useState(false)
   const [movimentandoCaixa, setMovimentandoCaixa] = useState(false)
   const [processandoAcaoMovimentacao, setProcessandoAcaoMovimentacao] = useState(false)
+  const [comprovanteMovimentacao, setComprovanteMovimentacao] = useState<ComprovanteMovimentacao | null>(null)
 
   const recarregarMovimentacoes = useCallback(
     async (caixaId?: string) => {
@@ -172,6 +174,8 @@ export function useCaixaStatusMovimentacoes({
 
         if (!registro.ok) return { ok: false, error: registro.error }
 
+        let saldoFinal = registro.saldoAtual
+
         if (registro.status === "pendente") {
           if (!payload.gerenteSenha?.trim()) {
             setCaixaMensagem(m.caixa.msg_movimentacao_pendente_gerente)
@@ -190,6 +194,7 @@ export function useCaixaStatusMovimentacoes({
               }),
             }
           }
+          saldoFinal = aprovacao.saldoAtual
         }
 
         const label = movimentacaoModalTipo === "sangria" ? m.caixa.sangria : m.caixa.suprimento
@@ -199,6 +204,18 @@ export function useCaixaStatusMovimentacoes({
             valor: formatDecimalBRL(payload.valor),
           }),
         )
+        // Comprovante para impressão — saldo antes derivado do saldo final +/- valor,
+        // já que a API não retorna o saldo pré-movimentação diretamente.
+        const saldoAntes =
+          movimentacaoModalTipo === "sangria" ? saldoFinal + payload.valor : saldoFinal - payload.valor
+        setComprovanteMovimentacao({
+          tipo: movimentacaoModalTipo,
+          valor: payload.valor,
+          motivo: payload.motivo,
+          saldoAntes,
+          saldoDepois: saldoFinal,
+          data: new Date(),
+        })
         await recarregarStatusCaixa()
         await recarregarMovimentacoes(caixaStatus.caixaId)
         return { ok: true }
@@ -256,6 +273,8 @@ export function useCaixaStatusMovimentacoes({
     carregandoMovimentacoes,
     movimentandoCaixa,
     processandoAcaoMovimentacao,
+    comprovanteMovimentacao,
+    limparComprovanteMovimentacao: useCallback(() => setComprovanteMovimentacao(null), []),
     recarregarStatusCaixa,
     handleSalvarMovimentacao,
     handleConfirmarAcaoMovimentacao,

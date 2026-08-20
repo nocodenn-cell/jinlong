@@ -235,12 +235,76 @@ export async function obterVendasCompletaParaExport(
   return acc
 }
 
-export async function cancelarVendaGerenteAction(formData: FormData) {
+export async function cancelarVendaGerenteAction(
+  formData: FormData,
+): Promise<{ ok: true; vendaId: string } | { ok: false; error: string }> {
   const authCheck = await assertGerenteSession()
-  if (!authCheck.ok) return
+  if (!authCheck.ok) return { ok: false, error: authCheck.error }
   const parsed = parseCancelarVendaGerenteForm(formData)
-  if (!parsed) return
-  await cancelarVenda(parsed.vendaId, parsed.motivo)
+  if (!parsed) return { ok: false, error: 'Dados inválidos para cancelamento.' }
+  const res = await cancelarVenda(parsed.vendaId, parsed.motivo)
+  if (!res.ok) return { ok: false, error: res.error }
+  return { ok: true, vendaId: res.vendaId }
+}
+
+export type ComprovanteCancelamentoItem = Readonly<{
+  nome: string
+  quantidade: number
+  precoUnitario: number
+}>
+
+export type ComprovanteCancelamentoDados = Readonly<{
+  itens: ComprovanteCancelamentoItem[]
+  operadorNome: string
+}>
+
+/**
+ * Dados complementares do comprovante de cancelamento (itens + nome do operador que
+ * cancelou) — buscados à parte porque `cancelar_venda_transacional` não os retorna.
+ * Read-only; chamar sempre APÓS o cancelamento ter sido confirmado com sucesso.
+ */
+export async function obterDadosComprovanteCancelamento(
+  vendaId: string,
+): Promise<ComprovanteCancelamentoDados> {
+  const vazio: ComprovanteCancelamentoDados = { itens: [], operadorNome: '—' }
+  const authCheck = await assertGerenteSession()
+  if (!authCheck.ok) return vazio
+
+  try {
+    const supabase = await createClient()
+
+    const [itensRes, usuarioRes] = await Promise.all([
+      supabase
+        .from('itens_venda')
+        .select(
+          'quantidade, preco_unitario, produto:produtos!itens_venda_produto_id_fkey ( nome )',
+        )
+        .eq('venda_id', vendaId)
+        .order('id'),
+      supabase
+        .from('usuarios')
+        .select('nome')
+        .eq('id', authCheck.session.userId)
+        .maybeSingle(),
+    ])
+
+    const itens: ComprovanteCancelamentoItem[] = (itensRes.data ?? []).map((row) => {
+      const produto = row.produto as { nome?: string | null } | { nome?: string | null }[] | null
+      const nome = Array.isArray(produto) ? produto[0]?.nome : produto?.nome
+      return {
+        nome: nome ?? 'Produto',
+        quantidade: Number(row.quantidade ?? 0),
+        precoUnitario: Number(row.preco_unitario ?? 0),
+      }
+    })
+
+    return {
+      itens,
+      operadorNome: usuarioRes.data?.nome ?? '—',
+    }
+  } catch {
+    return vazio
+  }
 }
 
 export async function devolverOuTrocarVendaAction(formData: FormData) {

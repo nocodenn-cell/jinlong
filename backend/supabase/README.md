@@ -97,6 +97,27 @@ npx supabase db push
 - Você está na pasta errada → use `**backend**`, ou  
 - Ainda não rodou `supabase link` → passo 2 acima.
 
+## Migrations aplicadas via MCP (`apply_migration`) — versão ≠ nome do arquivo
+
+Quando uma migration é aplicada via ferramenta MCP do Supabase (`apply_migration`, usado por agentes/Claude
+em vez do CLI), o `schema_migrations.version` gravado é o **timestamp real da aplicação**, não o timestamp
+que está no nome do arquivo local. O nome do arquivo passado na chamada vai para `schema_migrations.name`,
+então dá pra saber qual arquivo corresponde — mas o `version` não bate.
+
+Exemplo real (20/08/2026): os arquivos `20260820120000_devolver_ou_trocar_venda_retorna_itens.sql` e
+`20260820120100_fix_anon_grant_drift_devolver_ou_trocar_venda.sql` foram aplicados via MCP e ficaram
+rastreados como `20260820102925` e `20260820103048` respectivamente (`name` bate, `version` não).
+
+**Consequência prática:** um `supabase db push` futuro pode não reconhecer esses arquivos como já
+aplicados (porque o CLI casa por `version` = timestamp do nome do arquivo) e tentar reaplicá-los. Isso só é
+seguro se a migration em questão for idempotente (`DROP ... IF EXISTS` + `CREATE`, `REVOKE`, `ON CONFLICT`
+etc. — nunca `INSERT` sem guarda ou `ALTER` destrutivo). Antes de aplicar uma migration em produção via MCP,
+confirme que ela é idempotente por esse motivo, além dos motivos já óbvios de não quebrar em reexecução.
+
+Se isso causar confusão futura, o caminho de correção é `supabase migration repair --status applied
+<version-do-arquivo>` — **não fazer isso sem entender o estado atual do tracking**, ver
+`MIGRATIONS_DRIFT_CLASSIFICATION.md` para o histórico de drift já mapeado neste projeto.
+
 ## Edge Function `sync-outbox`
 
 ```powershell

@@ -12,6 +12,8 @@ import {
   obterDetalheHistoricoVendaCaixa,
   converterVendaEmEsperaCaixa,
   devolverVendaEmEsperaCaixa,
+  obterResumoVendasTurno,
+  obterNomeLojaAtual,
 } from "@/app/caixa/actions"
 import { historicoDetalheParaRecibo } from "@/app/caixa/caixaHistoricoRecibo"
 import type { MovimentacaoCaixaDTO } from "@/app/caixa/caixaMovimentacaoTypes"
@@ -56,6 +58,8 @@ import {
 } from "@/app/caixa/CaixaGerenteModal"
 import { CaixaLimiteCreditoModal } from "@/app/caixa/CaixaLimiteCreditoModal"
 import { CaixaMovimentacaoModal } from "@/app/caixa/CaixaMovimentacaoModal"
+import { CaixaMovimentacaoReciboModal } from "@/app/caixa/CaixaMovimentacaoReciboModal"
+import { CaixaFechamentoReciboModal, type ComprovanteFechamento } from "@/app/caixa/CaixaFechamentoReciboModal"
 import type { TipoMovimentacaoUi } from "@/app/caixa/caixaMovimentacaoTypes"
 import { CaixaMovimentacaoAcaoModal } from "@/app/caixa/CaixaMovimentacaoAcaoModal"
 import type { AcaoMovimentacaoTipo } from "@/app/caixa/caixaMovimentacaoTypes"
@@ -185,12 +189,16 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const {
     caixaStatus,
     carregandoStatus,
+    movimentacoes,
     movimentandoCaixa,
     processandoAcaoMovimentacao,
+    comprovanteMovimentacao,
+    limparComprovanteMovimentacao,
     recarregarStatusCaixa,
     handleSalvarMovimentacao,
     handleConfirmarAcaoMovimentacao,
   } = useCaixaStatusMovimentacoes({ m, setCaixaMensagem, movimentacaoModalTipo, acaoMovimentacao, currentUserId: userId })
+  const [comprovanteFechamento, setComprovanteFechamento] = useState<ComprovanteFechamento | null>(null)
 
   // Selectors atômicos: a página só re-renderiza quando itens/totais mudam — não a
   // cada `set` do store (ex.: setCartOwnerForSession/setRegras, disparados em todo bip).
@@ -652,6 +660,14 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       setProcessandoCaixa(true)
       setCaixaMensagem(null)
       try {
+        // Snapshot pré-fechamento — caixaStatus ainda reflete o turno ABERTO aqui.
+        // obterResumoVendasTurno() também precisa rodar antes: filtra por caixa ABERTO.
+        const aberto = isCaixaAberto(caixaStatus) ? caixaStatus : null
+        const [resumoTurno, nomeLoja] = await Promise.all([
+          aberto ? obterResumoVendasTurno() : null,
+          obterNomeLojaAtual(),
+        ])
+
         const res = await fecharCaixaOperador({ valorContado, motivo })
         const blind = isCaixaAberto(caixaStatus) && caixaStatus.blindClosureEnabled
         if (!res.ok && blind && erroExigeMotivoFechamento(res.error) && motivo == null) {
@@ -677,11 +693,44 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           { kind: "success" },
         )
         tocarFeedback("ok")
+
+        if (!res.alreadyClosed && aberto) {
+          const movsAprovadas = movimentacoes.filter((mv) => mv.status === "aprovado")
+          const totalSangrias = movsAprovadas
+            .filter((mv) => mv.tipo === "sangria")
+            .reduce((acc, mv) => acc + mv.valor, 0)
+          const totalSuprimentos = movsAprovadas
+            .filter((mv) => mv.tipo === "suprimento")
+            .reduce((acc, mv) => acc + mv.valor, 0)
+          setComprovanteFechamento({
+            lojaNome: nomeLoja.ok ? nomeLoja.nome : "—",
+            operadorNome: operadorLabel,
+            dataAbertura: new Date(aberto.dataAbertura),
+            dataFechamento: new Date(),
+            valorInicial: aberto.valorInicial,
+            quantidadeVendas: resumoTurno?.ok ? resumoTurno.quantidadeVendas : 0,
+            totalVendasRecebido: resumoTurno?.ok ? resumoTurno.totalRecebido : 0,
+            totalSangrias,
+            totalSuprimentos,
+            valorSistemaDinheiro: res.valorSistemaDinheiro,
+            valorContado: res.valorContado,
+            diferenca: res.diferenca,
+          })
+        }
       } finally {
         setProcessandoCaixa(false)
       }
     },
-    [caixaStatus, erroExigeMotivoFechamento, recarregarStatusCaixa, setCaixaMensagem, tocarFeedback, m],
+    [
+      caixaStatus,
+      erroExigeMotivoFechamento,
+      recarregarStatusCaixa,
+      setCaixaMensagem,
+      tocarFeedback,
+      m,
+      movimentacoes,
+      operadorLabel,
+    ],
   )
 
   const handleAbrirCaixa = useCallback(() => {
@@ -1533,6 +1582,20 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
             if (!open) setMovimentacaoModalTipo(null)
           }}
           onSubmit={handleSalvarMovimentacao}
+        />
+      )}
+      {comprovanteMovimentacao && (
+        <CaixaMovimentacaoReciboModal
+          comprovante={comprovanteMovimentacao}
+          m={m}
+          onClose={limparComprovanteMovimentacao}
+        />
+      )}
+      {comprovanteFechamento && (
+        <CaixaFechamentoReciboModal
+          comprovante={comprovanteFechamento}
+          m={m}
+          onClose={() => setComprovanteFechamento(null)}
         />
       )}
       {acaoMovimentacao && (

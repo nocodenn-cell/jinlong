@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DragonModal } from '@/components/ui/DragonModal'
 import { Field, Input, Select } from '@/components/ui/forms'
@@ -9,12 +10,21 @@ import { PASSWORD_MIN_LENGTH } from '@/lib/auth/passwordPolicy'
 import {
   atualizarFuncionarioAction,
   criarFuncionarioAction,
+  verificarEmailDisponiveAction,
   type FuncionarioListRow,
 } from './actions'
 import {
   perfisAtribuiveisPorAtor,
   type PerfilFuncionarioUi,
 } from './funcionarioPolicies'
+
+function validarSenha(senha: string): { ok: boolean; mensagem: string } {
+  if (!senha) return { ok: false, mensagem: '' }
+  if (senha.length < PASSWORD_MIN_LENGTH) {
+    return { ok: false, mensagem: `Mínimo ${PASSWORD_MIN_LENGTH} caracteres` }
+  }
+  return { ok: true, mensagem: 'Senha aceita' }
+}
 
 export type FuncionarioModalLabels = {
   novo: string
@@ -64,6 +74,11 @@ export function FuncionarioEditarModal({
     funcionario?.idioma_preferido === 'zh' ? 'zh' : 'pt',
   )
   const [senha, setSenha] = useState('')
+  const [senhaValidacao, setSenhaValidacao] = useState(validarSenha(''))
+  const [emailValidacao, setEmailValidacao] = useState<{ validando: boolean; erro: string | null }>({
+    validando: false,
+    erro: null,
+  })
   const [salvando, setSalvando] = useState(false)
 
   useEffect(() => {
@@ -71,8 +86,51 @@ export function FuncionarioEditarModal({
     return () => clearTimeout(t)
   }, [])
 
+  async function verificarEmailDisponivel() {
+    if (editando || !email.trim()) {
+      setEmailValidacao({ validando: false, erro: null })
+      return
+    }
+    setEmailValidacao({ validando: true, erro: null })
+    const r = await verificarEmailDisponiveAction(email.trim())
+    if (!r.ok || r.data) {
+      setEmailValidacao({ validando: false, erro: null })
+    } else {
+      setEmailValidacao({
+        validando: false,
+        erro: 'Já existe uma conta com este e-mail.',
+      })
+    }
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
+
+    // Validar email se houver erro pendente de validação
+    if (!editando && emailValidacao.erro) {
+      emitGerenteToast({
+        kind: 'error',
+        message: emailValidacao.erro,
+      })
+      return
+    }
+
+    // Validar email se não foi validado ainda
+    if (!editando && !emailValidacao.erro && email.trim()) {
+      const r = await verificarEmailDisponiveAction(email.trim())
+      if (!r.ok || !r.data) {
+        setEmailValidacao({
+          validando: false,
+          erro: 'Já existe uma conta com este e-mail.',
+        })
+        emitGerenteToast({
+          kind: 'error',
+          message: 'Já existe uma conta com este e-mail.',
+        })
+        return
+      }
+    }
+
     setSalvando(true)
     try {
       if (editando && funcionario) {
@@ -101,7 +159,7 @@ export function FuncionarioEditarModal({
       })
       if (!r.ok) {
         emitGerenteToast({ kind: 'error', message: r.error })
-        return
+        return // Modal fica aberto para correção do erro
       }
       onSalvo(r.data)
       onClose()
@@ -122,7 +180,8 @@ export function FuncionarioEditarModal({
           <Button type="button" variant="secondary" onClick={onClose} disabled={salvando}>
             {L.cancelar}
           </Button>
-          <Button type="submit" form="funcionario-form" variant="primary" disabled={salvando}>
+          <Button type="submit" form="funcionario-form" variant="primary" disabled={salvando} className="gap-1.5">
+            {salvando && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
             {salvando ? L.salvando : L.salvar}
           </Button>
         </>
@@ -146,22 +205,35 @@ export function FuncionarioEditarModal({
           />
         </Field>
 
-        <Field
-          id="func-email"
-          label={L.email}
-          required={!editando}
-          hint={editando ? L.emailHint : undefined}
-        >
-          <Input
-            type="email"
-            value={email}
-            onChange={(ev) => setEmail(ev.target.value)}
+        <div className="space-y-1.5">
+          <Field
+            id="func-email"
+            label={L.email}
             required={!editando}
-            disabled={editando || salvando}
-            readOnly={editando}
-            autoComplete="off"
-          />
-        </Field>
+            hint={
+              editando
+                ? L.emailHint
+                : 'O email não poderá ser alterado depois. Verifique antes de salvar.'
+            }
+          >
+            <Input
+              type="email"
+              value={email}
+              onChange={(ev) => setEmail(ev.target.value)}
+              onBlur={verificarEmailDisponivel}
+              required={!editando}
+              disabled={editando || salvando || emailValidacao.validando}
+              readOnly={editando}
+              autoComplete="off"
+              aria-describedby={emailValidacao.erro ? 'func-email-error' : undefined}
+            />
+          </Field>
+          {emailValidacao.erro && (
+            <p id="func-email-error" className="text-caption text-[var(--color-danger-strong)]">
+              {emailValidacao.erro}
+            </p>
+          )}
+        </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field id="func-perfil" label={L.perfil} required>
@@ -194,12 +266,19 @@ export function FuncionarioEditarModal({
           id="func-senha"
           label={editando ? L.senhaNovaOpcional : L.senha}
           required={!editando}
-          hint={L.senhaHint.replace('{n}', String(PASSWORD_MIN_LENGTH))}
+          hint={
+            senha
+              ? senhaValidacao.mensagem
+              : L.senhaHint.replace('{n}', String(PASSWORD_MIN_LENGTH))
+          }
         >
           <Input
             type="password"
             value={senha}
-            onChange={(ev) => setSenha(ev.target.value)}
+            onChange={(ev) => {
+              setSenha(ev.target.value)
+              setSenhaValidacao(validarSenha(ev.target.value))
+            }}
             required={!editando}
             minLength={editando && !senha ? undefined : PASSWORD_MIN_LENGTH}
             autoComplete="new-password"

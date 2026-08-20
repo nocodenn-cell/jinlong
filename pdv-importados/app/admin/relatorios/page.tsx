@@ -126,6 +126,7 @@ export default async function AdminRelatoriosPage({ searchParams }: PageProps) {
           preset15: ui.relatorios_filtro_preset_15,
           preset30: ui.relatorios_filtro_preset_30,
           presetsAria: ui.relatorios_filtro_presets_aria,
+          imprimir: ui.relatorios_filtro_imprimir,
         },
         locale,
       }}

@@ -413,7 +413,11 @@ function RelatoriosTabs({
     margem: labels.tabMargem,
   }
   return (
-    <div className="admin-v2-segmented flex flex-wrap gap-1" role="tablist" aria-label={labels.tabsAria}>
+    <div
+      className="admin-v2-segmented admin-v2-print-hide flex flex-wrap gap-1"
+      role="tablist"
+      aria-label={labels.tabsAria}
+    >
       {RELATORIOS_TAB_IDS.map((tab) => (
         <button
           key={tab}
@@ -493,7 +497,19 @@ export function RelatoriosContent({
 
   return (
     <div className="admin-v2-page">
-      <PageHeader title={labels.titulo} subtitle={periodoSubtitle} />
+      <PageHeader
+        title={labels.titulo}
+        subtitle={periodoSubtitle}
+        actions={
+          <button
+            type="button"
+            className="admin-v2-btn-secondary admin-v2-print-hide"
+            onClick={() => window.print()}
+          >
+            {labels.filtros.imprimir}
+          </button>
+        }
+      />
 
       {dados.rpcErro ? (
         <ErrorState title={labels.erroTitulo} description={dados.rpcErro} dense className="mb-6" />

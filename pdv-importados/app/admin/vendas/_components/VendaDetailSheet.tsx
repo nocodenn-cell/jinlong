@@ -11,7 +11,12 @@ import { cn } from '@/lib/utils'
 import { obterDetalheVenda, type VendaDetalhe } from '../actions'
 import { toPayment, toVendaStatus, toFiscal } from './vendaMaps'
 import { VendaCancelarModal } from '@/app/gerente/vendas/VendaCancelarModal'
+import type { ComprovanteCancelamento } from '@/app/gerente/vendas/VendaCancelamentoReciboModal'
 import { VendaDevolucaoModal } from '@/app/gerente/vendas/VendaDevolucaoModal'
+import {
+  VendaDevolucaoReciboModal,
+  type ComprovanteDevolucao,
+} from '@/app/gerente/vendas/VendaDevolucaoReciboModal'
 import type { VendaListRow } from '@/app/gerente/vendas/actions'
 import type { Mensagens } from '@/i18n/getMessages'
 import { useRouter } from 'next/navigation'
@@ -57,12 +62,19 @@ export function VendaDetailSheet({
   labels,
   m,
   locale,
+  onComprovanteCancelamento,
 }: {
   alvo: VendaAlvo | null
   onClose: () => void
   labels: DetalheLabels
   m?: Mensagens
   locale?: string
+  /**
+   * Repassa o comprovante de cancelamento para o dono da tela exibir — este
+   * componente fecha (`onClose`) assim que a venda é cancelada, então não pode
+   * guardar esse estado localmente (seria destruído junto com o unmount).
+   */
+  onComprovanteCancelamento?: (comprovante: ComprovanteCancelamento) => void
 }) {
   const router = useRouter()
   const [venda, setVenda] = useState<VendaDetalhe | null>(null)
@@ -70,6 +82,8 @@ export function VendaDetailSheet({
   const [erro, setErro] = useState(false)
   const [cancelarAberto, setCancelarAberto] = useState(false)
   const [devolverAberto, setDevolverAberto] = useState(false)
+  const [comprovanteDevolucao, setComprovanteDevolucao] =
+    useState<ComprovanteDevolucao | null>(null)
 
   useEffect(() => {
     if (!alvo) return
@@ -257,6 +271,7 @@ export function VendaDetailSheet({
           locale={locale}
           m={m}
           onClose={() => setDevolverAberto(false)}
+          onComprovante={setComprovanteDevolucao}
           onConcluido={() => {
             setDevolverAberto(false)
             obterDetalheVenda(venda.id).then((d) => {
@@ -267,12 +282,21 @@ export function VendaDetailSheet({
         />
       ) : null}
 
+      {locale && comprovanteDevolucao ? (
+        <VendaDevolucaoReciboModal
+          comprovante={comprovanteDevolucao}
+          locale={locale}
+          onClose={() => setComprovanteDevolucao(null)}
+        />
+      ) : null}
+
       {m && locale && venda && cancelarAberto ? (
         <VendaCancelarModal
           venda={toVendaListRow(venda)}
           locale={locale}
           m={m}
           onClose={() => setCancelarAberto(false)}
+          onComprovante={onComprovanteCancelamento}
           onCancelado={() => {
             setCancelarAberto(false)
             onClose()

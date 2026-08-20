@@ -14,6 +14,7 @@
     "smoke:rls-rest": "node scripts/p0-rls-rest-smoke.mjs",
     "test:rls-policies": "node scripts/test-rls-policies.mjs",
     "test:rls-scope": "node scripts/test-rls-scope.mjs",
+    "check:phase3-2": "node supabase/scripts/validate-phase3-2.mjs",
     "test:financial": "node scripts/run-financial-tests.mjs",
     "test:financial-concurrency": "node scripts/test-commission-concurrency.mjs",
     "test:migration-status": "node --test scripts/p0-migration-status.test.mjs",

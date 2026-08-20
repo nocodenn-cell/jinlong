@@ -7,6 +7,10 @@ import { DataTable, type Column } from '@/components/ui/DataTable'
 import { formatBRL } from '@/lib/format/money'
 import type { Mensagens } from '@/i18n/getMessages'
 import { VendaCancelarModal } from '@/app/gerente/vendas/VendaCancelarModal'
+import {
+  VendaCancelamentoReciboModal,
+  type ComprovanteCancelamento,
+} from '@/app/gerente/vendas/VendaCancelamentoReciboModal'
 import type { VendaListRow } from '@/app/gerente/vendas/actions'
 import { VendaDetailSheet, type VendaAlvo } from './VendaDetailSheet'
 import { toPayment, toVendaStatus } from './vendaMaps'
@@ -195,6 +199,8 @@ export function VendasTable({
   const router = useRouter()
   const [alvo, setAlvo] = useState<VendaAlvo | null>(null)
   const [cancelarAlvo, setCancelarAlvo] = useState<VendaLinha | null>(null)
+  const [comprovanteCancelamento, setComprovanteCancelamento] =
+    useState<ComprovanteCancelamento | null>(null)
 
   const columns: Column<VendaLinha>[] = [
     {
@@ -282,14 +288,24 @@ export function VendasTable({
         locale={locale}
         m={m}
         onClose={() => setCancelarAlvo(null)}
+        onComprovante={setComprovanteCancelamento}
         onCancelado={() => router.refresh()}
       />
+
+      {comprovanteCancelamento && (
+        <VendaCancelamentoReciboModal
+          comprovante={comprovanteCancelamento}
+          locale={locale}
+          onClose={() => setComprovanteCancelamento(null)}
+        />
+      )}
 
       <VendaDetailSheet
         alvo={alvo}
         onClose={() => setAlvo(null)}
         m={m}
         locale={locale}
+        onComprovanteCancelamento={setComprovanteCancelamento}
         labels={{
           titulo: labels.detalheTitulo,
           erroTitulo: labels.detalheErroTitulo,
