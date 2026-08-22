@@ -21,7 +21,9 @@ test.describe('Painel do gerente', () => {
       )
       return
     }
-    await loginGerente(page, { postLoginUrl: /\/(caixa|gerente)/ })
+    // Sem override: GERENTE sempre cai em /admin/dashboard
+    // (`destinoPosLoginPorPerfil`), nunca /gerente — usa o padrão do helper.
+    await loginGerente(page)
   })
 
   test('painel inicial /gerente carrega', async ({ page }) => {
