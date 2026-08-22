@@ -108,6 +108,18 @@ Exemplo real (20/08/2026): os arquivos `20260820120000_devolver_ou_trocar_venda_
 `20260820120100_fix_anon_grant_drift_devolver_ou_trocar_venda.sql` foram aplicados via MCP e ficaram
 rastreados como `20260820102925` e `20260820103048` respectivamente (`name` bate, `version` não).
 
+Terceiro par (20/08/2026): `20260820150000_fix_cancelar_venda_desconta_devolucoes_previas.sql`
+(corrige `cancelar_venda_transacional` para descontar devoluções/trocas já registradas antes de
+estornar caixa e repor estoque — achado em `docs/DECISAO_CANCELAMENTO_REEMBOLSO_DUPLICADO.md`) foi
+aplicado via MCP `apply_migration` diretamente em produção durante a investigação da PR #314 e ficou
+rastreado como `20260820233832` (`name` bate — confirmado via `mcp__supabase__list_migrations` —,
+`version` não). Equivalência semântica comprovada por diff byte-a-byte (`diff -u`, saída vazia) entre
+o corpo local (`sed -n '38,154p'` do arquivo) e `pg_get_functiondef` do `cancelar_venda_transacional`
+implantado (`md5` do `pg_get_functiondef`: `a1b5297599bb1372dd75677232d6afdb`), além do `COMMENT ON
+FUNCTION` idêntico. Checksum do arquivo local (sha256):
+`3d0d8e0299ca0f5d5b2131a7cce83e5cc5e069dce3d483bbc7b428ae62581fe9`. Evidência coletada por leitura
+apenas (`list_migrations` + `execute_sql` com `SELECT`) — nenhuma alteração no histórico remoto.
+
 **Consequência prática:** um `supabase db push` futuro pode não reconhecer esses arquivos como já
 aplicados (porque o CLI casa por `version` = timestamp do nome do arquivo) e tentar reaplicá-los. Isso só é
 seguro se a migration em questão for idempotente (`DROP ... IF EXISTS` + `CREATE`, `REVOKE`, `ON CONFLICT`

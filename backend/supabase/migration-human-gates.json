@@ -23,6 +23,18 @@
       "direction": "remote_only",
       "reason": "Version real em schema_migrations para o arquivo local 20260820120100_fix_anon_grant_drift_devolver_ou_trocar_venda.sql, aplicado via MCP apply_migration em 20/08/2026 (nome bate, version não — ver par git_only acima).",
       "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "version": "20260820150000",
+      "direction": "git_only",
+      "reason": "Aplicada via MCP apply_migration (não CLI) em produção durante a investigação da PR #314: schema_migrations.version gravado foi o timestamp real de aplicação (20260820233832), não o timestamp do nome do arquivo. Equivalência semântica comprovada por diff byte-a-byte (saída vazia) entre o corpo local e pg_get_functiondef do cancelar_venda_transacional implantado (md5 a1b5297599bb1372dd75677232d6afdb), mais COMMENT ON FUNCTION idêntico. Checksum sha256 do arquivo local: 3d0d8e0299ca0f5d5b2131a7cce83e5cc5e069dce3d483bbc7b428ae62581fe9. Migration substitui a função inteira (CREATE OR REPLACE) — seguro reaplicar se um futuro db push tentar.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "version": "20260820233832",
+      "direction": "remote_only",
+      "reason": "Version real em schema_migrations para o arquivo local 20260820150000_fix_cancelar_venda_desconta_devolucoes_previas.sql, aplicado via MCP apply_migration em produção em 20/08/2026 durante a investigação da PR #314 (nome bate — confirmado via mcp__supabase__list_migrations —, version não — ver par git_only acima).",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
     }
   ]
 }
