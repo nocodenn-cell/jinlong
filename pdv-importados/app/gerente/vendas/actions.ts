@@ -237,14 +237,17 @@ export async function obterVendasCompletaParaExport(
 
 export async function cancelarVendaGerenteAction(
   formData: FormData,
-): Promise<{ ok: true; vendaId: string } | { ok: false; error: string }> {
+): Promise<
+  | { ok: true; vendaId: string; valorEstornado: number }
+  | { ok: false; error: string }
+> {
   const authCheck = await assertGerenteSession()
   if (!authCheck.ok) return { ok: false, error: authCheck.error }
   const parsed = parseCancelarVendaGerenteForm(formData)
   if (!parsed) return { ok: false, error: 'Dados inválidos para cancelamento.' }
   const res = await cancelarVenda(parsed.vendaId, parsed.motivo)
   if (!res.ok) return { ok: false, error: res.error }
-  return { ok: true, vendaId: res.vendaId }
+  return { ok: true, vendaId: res.vendaId, valorEstornado: res.valorEstornado }
 }
 
 export type ComprovanteCancelamentoItem = Readonly<{

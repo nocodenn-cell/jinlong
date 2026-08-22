@@ -46,7 +46,7 @@ type PagamentoParcelaRpc = {
   valor: number
 }
 
-type RpcCancelarVendaRow = { venda_id?: unknown }
+type RpcCancelarVendaRow = { venda_id?: unknown; valor_estornado?: unknown }
 
 type RpcFinalizarVendaRow = {
   venda_id?: unknown
@@ -68,7 +68,7 @@ export async function cancelarVendaImpl(
   vendaId: string,
   motivo: string,
 ): Promise<
-  | { ok: true; vendaId: string; status: 'CANCELADA' }
+  | { ok: true; vendaId: string; status: 'CANCELADA'; valorEstornado: number }
   | { ok: false; error: string }
 > {
   const vendaIdTrim = vendaId.trim()
@@ -119,6 +119,7 @@ export async function cancelarVendaImpl(
       ok: true,
       vendaId: String(row.venda_id),
       status: 'CANCELADA',
+      valorEstornado: Number(row.valor_estornado ?? 0),
     }
   } catch (e) {
     captureVendaError(e, {
