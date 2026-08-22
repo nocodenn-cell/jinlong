@@ -82,7 +82,12 @@ jobs:
     # jobs de E2E passaram a rodar em paralelo, disputando pull de imagem: o
     # `Install Playwright Chromium`, que normalmente leva ~1 min, ficou 29 min
     # e o job morreu no timeout antes de chegar a testar qualquer coisa.
-    timeout-minutes: 45
+    #
+    # 60, não 45: soma dos `timeout-minutes` de cada step agora chega a ~58min
+    # no pior caso (cada um no seu próprio limite). O timeout do JOB só existe
+    # para não cortar um step no meio do seu próprio orçamento — quem detecta
+    # e explica uma etapa lenta/travada é o timeout DO STEP, não este.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
@@ -93,9 +98,11 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install (workspaces na raiz)
+        timeout-minutes: 5
         run: npm ci
 
       - name: Install Playwright Chromium
+        timeout-minutes: 5
         run: npx playwright install --with-deps chromium
 
       # ─────────────────────────────────────────────────────────────────────
@@ -126,11 +133,13 @@ jobs:
           echo "SYNC_K=$SYNC_K" >> "$GITHUB_ENV"
 
       - name: Subir Supabase local
+        timeout-minutes: 8
         env:
           SYNC_KEY: ${{ env.SYNC_K }}
         run: bash backend/scripts/ci-supabase-local-start.sh
 
       - name: Reset + seed (migrations do repositório)
+        timeout-minutes: 8
         run: |
           set -euo pipefail
           cd backend
@@ -138,6 +147,7 @@ jobs:
 
       - name: Gerar credenciais efêmeras e gravar .env
         id: localenv
+        timeout-minutes: 2
         run: |
           set -euo pipefail
           cd backend
@@ -209,6 +219,7 @@ jobs:
       # Roda ANTES do seed, que é a primeira escrita de dado do pipeline.
       # ─────────────────────────────────────────────────────────────────────
       - name: Guard — alvo do E2E não pode ser produção
+        timeout-minutes: 1
         env:
           PROD_REF: kbabmewnahysfvlybiak
         run: |
@@ -236,7 +247,24 @@ jobs:
           fi
           echo "OK — alvo do E2E e a stack local ($SB_URL); nenhuma referencia a producao."
 
+      # Readiness real — não confia em "supabase start" ter retornado sucesso (isso só
+      # garante healthcheck do Docker Compose, não que GoTrue/PostgREST já aceitam as
+      # chamadas que os testes fazem). Valida Postgres, GoTrue e PostgREST isoladamente,
+      # com a MESMA chamada (`admin.auth.admin.listUsers()`) que falhava dentro da suíte —
+      # se algum serviço não está saudável, este step falha em segundos com diagnóstico
+      # (docker ps/logs/stats), em vez de o job inteiro descobrir isso só depois de vários
+      # minutos de setup, no meio de um teste Playwright.
+      - name: Readiness — Auth/PostgREST/Postgres antes do E2E
+        timeout-minutes: 2
+        env:
+          SB_URL: ${{ env.SB_URL }}
+          SB_ANON: ${{ env.SB_ANON }}
+          SB_SR: ${{ env.SB_SR }}
+        run: node scripts/ci-e2e-readiness-check.mjs
+        working-directory: backend
+
       - name: Seed usuários E2E (banco local)
+        timeout-minutes: 2
         env:
           SUPABASE_URL: ${{ env.SB_URL }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ env.SB_URL }}
@@ -250,6 +278,7 @@ jobs:
         run: node pdv-importados/scripts/seed-dev-users.mjs
 
       - name: Pipeline E2E crítico
+        timeout-minutes: 20
         env:
           CI: true
           PLAYWRIGHT_E2E_WITH_DEV: '1'
@@ -273,6 +302,7 @@ jobs:
       # Harness: preservar trace.zip / error-context.md quando o E2E crítico falha.
       - name: Upload Playwright test-results (E2E crítico)
         if: always()
+        timeout-minutes: 3
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: e2e-critical-test-results
@@ -280,6 +310,15 @@ jobs:
             pdv-importados/test-results/**
           if-no-files-found: ignore
           retention-days: 7
+
+      # Cleanup garantido — a VM do runner é destruída ao final de qualquer forma, mas
+      # sem isto um `supabase stop` nunca roda quando o job falha (só o passo de upload
+      # tinha `if: always()`); isolar isto explicitamente documenta a intenção e evita
+      # depender de "a VM some mesmo" como única rede de segurança.
+      - name: Encerrar Supabase local
+        if: always()
+        timeout-minutes: 2
+        run: cd backend && npx supabase stop --no-backup || true
 
   # Deploy de produção: responsabilidade exclusiva da integração nativa da Vercel
   # (GitHub App). O job `deploy` com amondnet/vercel-action foi removido — ver
@@ -299,7 +338,10 @@ jobs:
     # Esta suite ja levava 30m22s quando rodava contra producao (PR #307) — ou
     # seja, vivia raspando o proprio teto. Somando o setup da stack local, o run
     # de 2026-08-19T21:08 estourou com os testes ainda em andamento.
-    timeout-minutes: 60
+    #
+    # 80, não 60: soma dos `timeout-minutes` de cada step agora chega a ~73min
+    # no pior caso — mesmo raciocínio do comentário equivalente em `e2e-critical`.
+    timeout-minutes: 80
 
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
@@ -311,9 +353,11 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install (workspaces na raiz)
+        timeout-minutes: 5
         run: npm ci
 
       - name: Install Playwright Chromium
+        timeout-minutes: 5
         run: npx playwright install --with-deps chromium
 
       # Mesma stack local e efêmera do `e2e-critical`. Este job foi esquecido na
@@ -335,17 +379,20 @@ jobs:
           echo "SYNC_K=$SYNC_K" >> "$GITHUB_ENV"
 
       - name: Subir Supabase local
+        timeout-minutes: 8
         env:
           SYNC_KEY: ${{ env.SYNC_K }}
         run: bash backend/scripts/ci-supabase-local-start.sh
 
       - name: Reset + seed (migrations do repositório)
+        timeout-minutes: 8
         run: |
           set -euo pipefail
           cd backend
           npx supabase db reset --local --yes
 
       - name: Gerar credenciais efêmeras
+        timeout-minutes: 2
         run: |
           set -euo pipefail
           cd backend
@@ -379,6 +426,7 @@ jobs:
           } >> "$GITHUB_ENV"
 
       - name: Guard — alvo do E2E não pode ser produção
+        timeout-minutes: 1
         env:
           PROD_REF: kbabmewnahysfvlybiak
         run: |
@@ -396,7 +444,18 @@ jobs:
           fi
           echo "OK — alvo do E2E e a stack local ($SB_URL)."
 
+      # Ver comentário equivalente no job `e2e-critical` acima.
+      - name: Readiness — Auth/PostgREST/Postgres antes do E2E
+        timeout-minutes: 2
+        env:
+          SB_URL: ${{ env.SB_URL }}
+          SB_ANON: ${{ env.SB_ANON }}
+          SB_SR: ${{ env.SB_SR }}
+        run: node scripts/ci-e2e-readiness-check.mjs
+        working-directory: backend
+
       - name: Seed usuários E2E (banco local)
+        timeout-minutes: 2
         env:
           SUPABASE_URL: ${{ env.SB_URL }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ env.SB_URL }}
@@ -408,6 +467,7 @@ jobs:
         run: node pdv-importados/scripts/seed-dev-users.mjs
 
       - name: E2E
+        timeout-minutes: 35
         env:
           CI: true
           PLAYWRIGHT_E2E_WITH_DEV: '1'
@@ -419,3 +479,21 @@ jobs:
           PLAYWRIGHT_CAIXA_TEST_PASSWORD: ${{ env.E2E_PASS }}
           PLAYWRIGHT_E2E_PRODUTO_CODIGO: ${{ vars.PLAYWRIGHT_E2E_PRODUTO_CODIGO || '7898512340004' }}
         run: npm run test:e2e -w pdv-importados
+
+      # Harness: preservar trace.zip / error-context.md quando esta suíte falha —
+      # o job `e2e-critical` já fazia upload; este ficava sem, dificultando o diagnóstico.
+      - name: Upload Playwright test-results (e2e-playwright)
+        if: always()
+        timeout-minutes: 3
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: e2e-playwright-test-results
+          path: |
+            pdv-importados/test-results/**
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Encerrar Supabase local
+        if: always()
+        timeout-minutes: 2
+        run: cd backend && npx supabase stop --no-backup || true
