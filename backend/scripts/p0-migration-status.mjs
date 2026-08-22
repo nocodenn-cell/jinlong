@@ -86,6 +86,19 @@ export function classifyDriftEntries(drift) {
   return { blocking, legacyNumericMirror, greenfieldSsotReorder };
 }
 
+/**
+ * Schema por PAR (não por entrada solta git_only/remote_only): cada
+ * reconciliação de "aplicado via MCP apply_migration" é um único par
+ * {gitOnlyVersion, remoteOnlyVersion}. Isso é o que permite aceitação
+ * ATÔMICA — ver `applyHumanGateRegistry` — em vez de cada lado ser
+ * silenciado independentemente. Uma entrada solta git_only aceitando o
+ * drift sozinha (schema antigo) escondia o caso real reportado em review:
+ * se um ambiente (ex.: staging) nunca recebeu a migration em NENHUM
+ * formato, só o lado git_only aparece como drift ali, e o schema antigo
+ * aceitava mesmo assim — mascarando uma correção financeira genuinamente
+ * ausente naquele ambiente como se fosse a mesma reconciliação já
+ * conhecida da produção.
+ */
 export function parseHumanGateRegistry(raw) {
   let payload;
   try {
@@ -93,33 +106,33 @@ export function parseHumanGateRegistry(raw) {
   } catch {
     throw new Error("Registro HUMAN_GATE inválido: JSON malformado.");
   }
-  if (!payload || !Array.isArray(payload.gates)) {
-    throw new Error("Registro HUMAN_GATE inválido: campo gates deve ser uma lista.");
+  if (!payload || !Array.isArray(payload.pairs)) {
+    throw new Error("Registro HUMAN_GATE inválido: campo pairs deve ser uma lista.");
   }
   const seen = new Set();
-  return payload.gates.map((gate, index) => {
-    if (!gate || typeof gate !== "object") {
-      throw new Error(`Registro HUMAN_GATE inválido: gates[${index}] não é objeto.`);
+  return payload.pairs.map((pair, index) => {
+    if (!pair || typeof pair !== "object") {
+      throw new Error(`Registro HUMAN_GATE inválido: pairs[${index}] não é objeto.`);
     }
-    const version = String(gate.version ?? "").trim();
-    const direction = String(gate.direction ?? "").trim();
-    const reason = String(gate.reason ?? "").trim();
-    const decisionDoc = String(gate.decisionDoc ?? "").trim();
-    if (!/^\d+$/.test(version)) {
-      throw new Error(`Registro HUMAN_GATE inválido: gates[${index}].version deve ser numérica.`);
+    const gitOnlyVersion = String(pair.gitOnlyVersion ?? "").trim();
+    const remoteOnlyVersion = String(pair.remoteOnlyVersion ?? "").trim();
+    const reason = String(pair.reason ?? "").trim();
+    const decisionDoc = String(pair.decisionDoc ?? "").trim();
+    if (!/^\d+$/.test(gitOnlyVersion)) {
+      throw new Error(`Registro HUMAN_GATE inválido: pairs[${index}].gitOnlyVersion deve ser numérica.`);
     }
-    if (!['git_only', 'remote_only'].includes(direction)) {
-      throw new Error(`Registro HUMAN_GATE inválido: gates[${index}].direction deve ser git_only ou remote_only.`);
+    if (!/^\d+$/.test(remoteOnlyVersion)) {
+      throw new Error(`Registro HUMAN_GATE inválido: pairs[${index}].remoteOnlyVersion deve ser numérica.`);
     }
     if (!reason || !decisionDoc) {
-      throw new Error(`Registro HUMAN_GATE inválido: gates[${index}] exige reason e decisionDoc.`);
+      throw new Error(`Registro HUMAN_GATE inválido: pairs[${index}] exige reason e decisionDoc.`);
     }
-    const key = `${direction}:${version}`;
+    const key = `${gitOnlyVersion}<->${remoteOnlyVersion}`;
     if (seen.has(key)) {
-      throw new Error(`Registro HUMAN_GATE inválido: gate duplicado ${key}.`);
+      throw new Error(`Registro HUMAN_GATE inválido: par duplicado ${key}.`);
     }
     seen.add(key);
-    return { version, direction, reason, decisionDoc };
+    return { gitOnlyVersion, remoteOnlyVersion, reason, decisionDoc };
   });
 }
 
@@ -130,27 +143,51 @@ function loadHumanGateRegistry() {
   return parseHumanGateRegistry(fs.readFileSync(HUMAN_GATES_FILE, "utf8"));
 }
 
-export function applyHumanGateRegistry({ blocking, missingInList, extraBlocking }, gates) {
-  const gateByKey = new Map(gates.map((gate) => [`${gate.direction}:${gate.version}`, gate]));
+export function applyHumanGateRegistry({ blocking, missingInList, extraBlocking }, pairs) {
+  const blockingByVersion = new Map(blocking.map((entry) => [entry.version, entry]));
+  const missingSet = new Set(missingInList);
+  const extraSet = new Set(extraBlocking);
+
+  const acceptedGitOnly = new Set();
+  const acceptedRemoteOnly = new Set();
   const humanGate = [];
-  const blockingRemaining = blocking.filter((entry) => {
-    const gate = gateByKey.get(`git_only:${entry.version}`);
-    if (!gate) return true;
-    humanGate.push({ ...gate, divergence: entry.reason });
-    return false;
-  });
-  const missingRemaining = missingInList.filter((version) => {
-    const gate = gateByKey.get(`git_only:${version}`);
-    if (!gate) return true;
-    humanGate.push({ ...gate, divergence: "ausente_na_lista_cli" });
-    return false;
-  });
-  const extraRemaining = extraBlocking.filter((version) => {
-    const gate = gateByKey.get(`remote_only:${version}`);
-    if (!gate) return true;
-    humanGate.push({ ...gate, divergence: "remote_only" });
-    return false;
-  });
+
+  for (const pair of pairs) {
+    const gitEntry = blockingByVersion.get(pair.gitOnlyVersion);
+    const gitPresent = Boolean(gitEntry) || missingSet.has(pair.gitOnlyVersion);
+    const remotePresent = extraSet.has(pair.remoteOnlyVersion);
+
+    // ATÔMICO: só aceita o par quando os DOIS lados aparecem como
+    // divergência no ambiente atual sendo avaliado. Um ambiente onde a
+    // migration nunca foi aplicada em nenhum formato só mostra o lado
+    // git_only (arquivo local sem correspondente remoto) — sem o lado
+    // remote_only confirmando que a versão MCP existe ali, aceitar mesmo
+    // assim equivaleria a dizer "aplicado" sobre um ambiente onde não foi.
+    if (!gitPresent || !remotePresent) continue;
+
+    acceptedGitOnly.add(pair.gitOnlyVersion);
+    acceptedRemoteOnly.add(pair.remoteOnlyVersion);
+    const gitDivergence = gitEntry ? gitEntry.reason : "ausente_na_lista_cli";
+    humanGate.push({
+      version: pair.gitOnlyVersion,
+      direction: "git_only",
+      reason: pair.reason,
+      decisionDoc: pair.decisionDoc,
+      divergence: gitDivergence,
+    });
+    humanGate.push({
+      version: pair.remoteOnlyVersion,
+      direction: "remote_only",
+      reason: pair.reason,
+      decisionDoc: pair.decisionDoc,
+      divergence: "remote_only",
+    });
+  }
+
+  const blockingRemaining = blocking.filter((entry) => !acceptedGitOnly.has(entry.version));
+  const missingRemaining = missingInList.filter((version) => !acceptedGitOnly.has(version));
+  const extraRemaining = extraBlocking.filter((version) => !acceptedRemoteOnly.has(version));
+
   return {
     blocking: blockingRemaining,
     missingInList: missingRemaining,

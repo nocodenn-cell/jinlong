@@ -113,12 +113,18 @@ Terceiro par (20/08/2026): `20260820150000_fix_cancelar_venda_desconta_devolucoe
 estornar caixa e repor estoque — achado em `docs/DECISAO_CANCELAMENTO_REEMBOLSO_DUPLICADO.md`) foi
 aplicado via MCP `apply_migration` diretamente em produção durante a investigação da PR #314 e ficou
 rastreado como `20260820233832` (`name` bate — confirmado via `mcp__supabase__list_migrations` —,
-`version` não). Equivalência semântica comprovada por diff byte-a-byte (`diff -u`, saída vazia) entre
-o corpo local (`sed -n '38,154p'` do arquivo) e `pg_get_functiondef` do `cancelar_venda_transacional`
-implantado (`md5` do `pg_get_functiondef`: `a1b5297599bb1372dd75677232d6afdb`), além do `COMMENT ON
-FUNCTION` idêntico. Checksum do arquivo local (sha256):
-`3d0d8e0299ca0f5d5b2131a7cce83e5cc5e069dce3d483bbc7b428ae62581fe9`. Evidência coletada por leitura
-apenas (`list_migrations` + `execute_sql` com `SELECT`) — nenhuma alteração no histórico remoto.
+`version` não). Equivalência semântica verificada de forma **reproduzível** por
+`backend/scripts/verify-cancelar-venda-equivalencia.mjs`: o script extrai o corpo local por âncora de
+texto (não número de linha), normaliza explicitamente os dois lados (CRLF→LF, remove o `;` terminador
+de instrução SQL que `pg_get_functiondef` nunca inclui, garante 1 newline final) e calcula SHA-256 de
+cada lado — os dois batem em `d4f4f7a76d1492079b159bb46e5f22b48a72e23da7ad880568220dbbd549e27e`. A
+captura exata do `pg_get_functiondef` remoto está versionada em
+`backend/scripts/cancelar-venda-remote-def.json` (sem retranscrição manual). Rode
+`node backend/scripts/verify-cancelar-venda-equivalencia.mjs` para reproduzir. Evidência coletada por
+leitura apenas (`list_migrations` + `execute_sql` com `SELECT`) — nenhuma alteração no histórico
+remoto. A entrada correspondente em `migration-human-gates.json` só é aceita quando **ambos** os lados
+do par (`git_only` e `remote_only`) aparecem como divergência no mesmo ambiente avaliado — um ambiente
+que nunca recebeu esta migration em nenhum formato continua bloqueado pelo gate.
 
 **Consequência prática:** um `supabase db push` futuro pode não reconhecer esses arquivos como já
 aplicados (porque o CLI casa por `version` = timestamp do nome do arquivo) e tentar reaplicá-los. Isso só é

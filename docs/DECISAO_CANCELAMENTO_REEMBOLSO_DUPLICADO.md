@@ -2,7 +2,7 @@
 
 **Data do achado:** 2026-08-20
 **Data da correção:** 2026-08-20 (mesmo dia)
-**Status:** ✅ **Corrigido e testado** — migration `20260820150000_fix_cancelar_venda_desconta_devolucoes_previas.sql`
+**Status:** ✅ **Corrigido, testado e aplicado em produção** — migration `20260820150000_fix_cancelar_venda_desconta_devolucoes_previas.sql` (rastreada remotamente como `20260820233832`; reconciliação de drift na PR #316)
 **Achado em:** teste ao vivo de impressão de recibos (ver `docs/ROTEIRO_TESTE_IMPRESSAO_2026-08-20.md`)
 
 ---
@@ -42,22 +42,20 @@ Aplicada a migration e executados dois cenários via chamada direta às RPCs (me
 
 Os três pontos de verificação (`valor_estornado` retornado pela RPC, `estoque.quantidade_atual`, `estoque_reposicoes_cancelamento.quantidade`) bateram exatamente com o esperado nos dois cenários.
 
-## ⚠️ Pendência real — aplicação em produção
+## ✅ Aplicada em produção
 
-**A correção está commitada no repositório (arquivo de migration) e testada localmente, mas isso não significa que já está em vigor no banco de produção.** Aplicar uma migration que substitui uma função financeira `SECURITY DEFINER` diretamente em produção, fora do processo normal de deploy, é uma decisão que não deve ser tomada silenciosamente — precisa de autorização explícita e, idealmente, passar pelo mesmo tipo de checklist que outras mudanças nessa família de funções já passaram (ver `docs/BACKLOG_PRIORIZADO_PROXIMA_SPRINT.md`, item BL-1, "Risco: Alto").
+**A migration foi aplicada em produção via MCP `apply_migration`** durante a investigação da PR #314 (mesmo dia do achado). Como toda aplicação via MCP (em vez de CLI), `schema_migrations.version` gravou o timestamp real da aplicação — `20260820233832` — em vez do timestamp do nome do arquivo (`20260820150000`); o `name` gravado bate exatamente com o arquivo (confirmado via `mcp__supabase__list_migrations`).
 
-**Enquanto a migration não for aplicada em produção, o comportamento antigo (reembolso e reposição duplicados) continua valendo lá.** A recomendação abaixo sobre não demonstrar o fluxo combinado amanhã continua de pé até que alguém confirme a aplicação em produção.
+Essa diferença de timestamp fazia o gate `migration-remote-drift` da CI classificar o par como drift bloqueante — reconciliado na PR #316 (`backend/supabase/migration-human-gates.json`), com equivalência semântica comprovada de forma reproduzível (`backend/scripts/verify-cancelar-venda-equivalencia.mjs`): SHA-256 do corpo local normalizado e do `pg_get_functiondef` remoto normalizado batem em `d4f4f7a76d1492079b159bb46e5f22b48a72e23da7ad880568220dbbd549e27e`.
 
-## Recomendação para amanhã
+**O comportamento antigo (reembolso e reposição duplicados) não está mais em vigor em produção.** O fluxo combinado "devolver parte de uma venda e depois cancelar a mesma venda" já pode ser demonstrado com segurança.
 
-Mesmo com a correção pronta e testada, **recomenda-se não demonstrar deliberadamente, no treinamento de amanhã, o fluxo combinado "devolver parte de uma venda e depois cancelar a mesma venda"** — a menos que a aplicação da migration em produção seja confirmada antes do treinamento. Cada operação isoladamente (devolução completa OU cancelamento sem devolução prévia) sempre funcionou corretamente.
+## Verificação pós-apply
 
-## Como aplicar em produção
-
-1. Revisar a migration (`backend/supabase/migrations/20260820150000_fix_cancelar_venda_desconta_devolucoes_previas.sql`) — já commitada.
-2. Aplicar via `supabase db push` (ou `apply_migration` via MCP) no projeto de produção.
-3. Rodar a verificação pós-apply padrão do projeto (`verificacao-pos-apply.sql`, se aplicável).
-4. Repetir manualmente o cenário de teste (venda → devolução parcial → cancelamento) em produção com um valor simbólico, confirmando que o comprovante de cancelamento mostra o valor descontado corretamente.
+1. Migration revisada e aplicada (`backend/supabase/migrations/20260820150000_fix_cancelar_venda_desconta_devolucoes_previas.sql`).
+2. Equivalência entre o arquivo local e a função implantada reverificada de forma reproduzível e documentada — ver PR #316.
+3. Reconciliação de drift registrada em `backend/supabase/migration-human-gates.json`, atômica por par (só é aceita se ambos os lados — `git_only` e `remote_only` — aparecerem juntos como divergência no ambiente avaliado; um ambiente que nunca recebeu esta migration continua bloqueando corretamente).
+4. Pendência restante: repetir manualmente o cenário de teste (venda → devolução parcial → cancelamento) em produção com um valor simbólico, confirmando visualmente que o comprovante de cancelamento mostra o valor descontado corretamente.
 
 ---
 
