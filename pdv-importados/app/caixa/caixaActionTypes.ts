@@ -94,7 +94,7 @@ export type FinalizarVendaCaixaResult =
   | { ok: false; error: string }
 
 export type CancelarVendaResult =
-  | { ok: true; vendaId: string; status: 'CANCELADA' }
+  | { ok: true; vendaId: string; status: 'CANCELADA'; valorEstornado: number }
   | { ok: false; error: string }
 
 export type {
