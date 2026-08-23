@@ -727,7 +727,7 @@
       "btn_confirmar": "确认入库",
       "btn_confirmando": "正在确认…",
       "toast_ok": "到货单 {{id}} 已确认，库存已更新。",
-      "toast_dados_invalidos": "请检查商品与数量（有效数字且 ≥ 0）。",
+      "toast_dados_invalidos": "数量必须大于 0。",
       "sem_produtos_titulo": "没有启用的商品",
       "sem_produtos_texto": "请先在「商品」中建档后再登记收货。",
       "link_produtos": "前往商品",

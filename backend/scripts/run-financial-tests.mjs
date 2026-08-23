@@ -33,6 +33,8 @@ const SQL_SUITES = [
   'ar-receipts-reconciliation.test.sql',
   'ap-payments-reconciliation.test.sql',
   'financial-adversarial-gates.test.sql',
+  'd0-pricing-tiers-ssot.test.sql',
+  'd0-remessa-positive-and-inventory-zero.test.sql',
 ]
 
 /** `psql` está de fato instalado e executável neste host? */
