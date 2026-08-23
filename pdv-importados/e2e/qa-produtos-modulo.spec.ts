@@ -9,7 +9,12 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 
 const LOGIN = '/login'
-const PRODUTOS = '/gerente/produtos'
+// `/gerente/produtos` é rota legada — `LEGACY_GERENTE_REDIRECTS.produtos`
+// (`shared-core/navigation/routes.ts`) resolve para `/admin/catalogo`
+// desde a consolidação admin-v2 (mesma migração documentada em
+// `gerente.spec.ts`). Navega direto pra rota atual em vez de confiar no
+// redirect.
+const PRODUTOS = '/admin/catalogo'
 
 function loadEnvLocal(): void {
   const p = path.join(process.cwd(), '.env.local')
@@ -61,7 +66,12 @@ async function loginGerente(page: import('@playwright/test').Page): Promise<void
   await page.getByPlaceholder('Email').fill(email)
   await page.getByPlaceholder('Senha').fill(pwd)
   await page.getByRole('button', { name: /^Entrar$/ }).click()
-  await page.waitForURL(/\/(caixa|gerente)/, { timeout: 90_000, waitUntil: 'domcontentloaded' })
+  // GERENTE/DONO/ADMIN caem em `/admin/dashboard` pós-login
+  // (`destinoPosLoginPorPerfil`, `lib/auth/painelGerencial.ts`) desde a
+  // consolidação admin-v2 — `/gerente` nunca foi o destino real do login,
+  // só de navegação legada pós-login. Mesmo contrato usado em
+  // `helpers/login.ts` (`loginGerente`) e comprovado em `gerente.spec.ts`.
+  await page.waitForURL(/\/(caixa|admin)/, { timeout: 90_000, waitUntil: 'domcontentloaded' })
 }
 
 test.describe.configure({ mode: 'serial', timeout: 120_000 })
@@ -70,7 +80,9 @@ test.describe('QA módulo produtos (gerente)', () => {
     test.skip(!hasGerenteCreds(), 'Defina PLAYWRIGHT_TEST_EMAIL e PLAYWRIGHT_TEST_PASSWORD')
     await loginGerente(page)
     await gotoApp(page, PRODUTOS)
-    await expect(page.getByRole('heading', { name: 'Produtos', exact: true })).toBeVisible({ timeout: 60_000 })
+    // h1 real pós-consolidação é "Catálogo" (`gerente.spec.ts`), não
+    // "Produtos" — página antiga não existe mais sob este caminho.
+    await expect(page.getByRole('heading', { level: 1, name: 'Catálogo', exact: true })).toBeVisible({ timeout: 60_000 })
   })
 
   test('1 — Bulk Import (grade, CSV, validação em tempo real, bloqueio, correção, commit)', async ({ page }) => {

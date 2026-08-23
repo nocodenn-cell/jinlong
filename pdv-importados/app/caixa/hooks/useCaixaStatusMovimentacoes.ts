@@ -18,6 +18,7 @@ import { formatDecimalBRL } from "@/lib/format/money"
 import type { TipoMovimentacaoUi } from "@/app/caixa/caixaMovimentacaoTypes"
 import type { AcaoMovimentacaoTipo } from "@/app/caixa/caixaMovimentacaoTypes"
 import { useMovimentacoesRealtime } from "@/app/caixa/hooks/useMovimentacoesRealtime"
+import type { CaixaToastKind } from "@/app/caixa/hooks/useCaixaMensagens"
 
 export type CaixaStatusUi =
   | {
@@ -38,7 +39,7 @@ type AcaoState = {
 
 type Params = {
   m: Mensagens
-  setCaixaMensagem: (text: string | null) => void
+  setCaixaMensagem: (text: string | null, options?: { kind?: CaixaToastKind }) => void
   movimentacaoModalTipo: TipoMovimentacaoUi | null
   acaoMovimentacao: AcaoState
   currentUserId: string | null
@@ -198,11 +199,18 @@ export function useCaixaStatusMovimentacoes({
         }
 
         const label = movimentacaoModalTipo === "sangria" ? m.caixa.sangria : m.caixa.suprimento
+        // `{ kind: "success" }` explícito: sem isso, `setCaixaMensagem` cai no
+        // default genérico "warning" (usado de propósito no caso "pendente"
+        // acima, que É um aviso) — o toast de sucesso saía com role="alert"
+        // (assertivo) e ícone de alerta, apesar do texto dizer "registrada
+        // com sucesso". Comprovado em E2E: `getByRole('status')` nunca casava
+        // esse toast porque ele renderizava como `role="alert"`.
         setCaixaMensagem(
           caixaFmt(m.caixa.msg_movimentacao_registrada_ok, {
             tipo: label,
             valor: formatDecimalBRL(payload.valor),
           }),
+          { kind: "success" },
         )
         // Comprovante para impressão — saldo antes derivado do saldo final +/- valor,
         // já que a API não retorna o saldo pré-movimentação diretamente.

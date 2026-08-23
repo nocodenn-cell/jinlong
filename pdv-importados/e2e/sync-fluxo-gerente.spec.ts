@@ -156,6 +156,18 @@ async function enviarVendaViaSync(params: { produtoId: string; preco: number }) 
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      // A função só confia no HMAC (X-SYNC-*) — `verify_jwt = false` está
+      // declarado em `backend/supabase/functions/sync-outbox/config.toml` para
+      // isso mesmo (dispositivo offline não tem sessão Supabase). Mas o
+      // `supabase start` local (CI incluído) não honra esse config.toml por
+      // função ao servir edge functions — comprovado com curl direto: sem
+      // Authorization, Kong responde 401 "Missing authorization header" ANTES
+      // de chegar no código da função (que nem referencia esse header).
+      // Reproduzido localmente com o mesmo erro exato da CI. Enviar um
+      // Authorization válido aqui é inofensivo em produção (onde o gateway já
+      // ignora o header por causa do verify_jwt=false real) e fecha a lacuna
+      // do stack local/CI sem tocar na função nem no seu esquema de auth.
+      Authorization: `Bearer ${serviceRole}`,
       'X-SYNC-KEY': process.env.SYNC_KEY!.trim(),
       'X-SYNC-TS': ts,
       'X-SYNC-NONCE': nonce,

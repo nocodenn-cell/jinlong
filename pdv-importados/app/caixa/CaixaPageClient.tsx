@@ -281,6 +281,17 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const [vendaPendenteModalAberto, setVendaPendenteModalAberto] = useState(false)
   const [verificandoVendaPendente, setVerificandoVendaPendente] = useState(false)
   const cupomSessionIdRef = useRef<string>(newCupomSessionId())
+  // Exibição do painel DEV precisa ficar "invisível" no primeiro paint do
+  // cliente (igual ao server, que não roda efeitos): `cupomSessionIdRef` é
+  // gerado via `crypto.randomUUID()` de forma independente em cada passe de
+  // render (server e cliente), então mostrar seu valor antes da hidratação
+  // terminar causa "Hydration failed" (texto SSR ≠ texto do cliente). Sem
+  // tocar a lógica operacional do ref (guard de scan stale) — só atrasa a
+  // exibição no painel de debug até depois do mount.
+  const [pipelineDebugMounted, setPipelineDebugMounted] = useState(false)
+  useEffect(() => {
+    setPipelineDebugMounted(true)
+  }, [])
   const lastScanItemRef = useRef<{ codigo: string; itemId: string; produtoId: string; ts: number } | null>(null)
   const lastReciboRef = useRef<ReciboVenda | null>(null)
   const [reimprimirModalAberto, setReimprimirModalAberto] = useState(false)
@@ -1015,6 +1026,14 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           void converterVendaEmEsperaCaixa(origemConvertida).catch(() => {})
         }
         setTurnoRefreshToken((t) => t + 1)
+        // Fecha o modal de "venda pendente" se por acaso ainda estiver aberto
+        // (ex.: reaberto pelo efeito de remontagem com `vendaFinalizacaoPendente`
+        // persistido de uma tentativa anterior). Sem isso, o backdrop dele fica
+        // por cima do recibo de sucesso e bloqueia clique em qualquer botão —
+        // comprovado em E2E (park → refresh → resume → finalizar). Mesma
+        // garantia que `handleVerificarVendaPendente` já faz antes do seu
+        // próprio toast de sucesso.
+        setVendaPendenteModalAberto(false)
         setCaixaMensagemVendaOk(
           caixaFmt(m.caixa.msg_venda_ok, { id: res.vendaId.slice(0, 8) }),
           { kind: "success" },
@@ -1551,7 +1570,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           buscandoPipeline={buscandoPipeline}
           snapshot={pipelineDebug.snapshot}
           telemetryTail={pipelineDebug.telemetryTail}
-          activeCupomSessionId={cupomSessionIdRef.current}
+          activeCupomSessionId={pipelineDebugMounted ? cupomSessionIdRef.current : undefined}
         />
       )}
       <CaixaGerenteModal

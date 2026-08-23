@@ -30,23 +30,27 @@ test.describe('Caixa — modais abertura e fechamento (sem prompt)', () => {
     await expectCaixaShellVisible(page)
     await ensureCaixaAberto(page, '77,25')
 
-    await page.getByRole('button', { name: /Novo cupom|新小票|新單/i }).click()
+    // "Novo cupom" não existe mais — o botão atual é "Nova venda (+)"
+    // (mesmo contrato já corrigido/validado em caixa-fluxos-criticos.spec.ts).
+    await page.getByRole('button', { name: /Nova venda \(\+\)|新销售|新銷售/i }).click()
 
+    // "Saldo estimado" nunca existiu na UI atual — o cabeçalho mostra
+    // "Fundo: {{valor}}" (`CaixaPdvTopBar.tsx`), já refletindo fundo −
+    // sangrias + vendas. Mesmo contrato e mesmo motivo já comprovados em
+    // caixa-fluxos-criticos.spec.ts: falha explícita, não skip — com blind
+    // closure desligado (`pdv_config.blind_closure = false` no ambiente
+    // local) "Fundo:" é uma precondição obrigatória do fluxo, não um
+    // caminho alternativo.
     const headerText = await page.locator('header').innerText()
-    if (!headerText.includes('Saldo estimado')) {
-      test.skip(
-        true,
-        'Ambiente com blind closure ou UI sem «Saldo estimado»; fluxo de motivo por diferença não aplicável.',
-      )
-      return
-    }
-    const m = headerText.match(/Saldo estimado[^\dR]*R\$\s*([\d.,]+)/i)
-    const saldoStr = m?.[1]?.replace(',', '.').trim()
+    expect(headerText, 'cabeçalho do caixa deveria exibir "Fundo:" com blind closure desligado').toContain(
+      'Fundo:',
+    )
+    const m = headerText.match(/Fundo:\s*R\$\s*([\d.,]+)/i)
+    const saldoStr = m?.[1]?.replace(/\./g, '').replace(',', '.').trim()
     const saldo = saldoStr ? Number.parseFloat(saldoStr) : Number.NaN
-    if (!Number.isFinite(saldo)) {
-      test.skip(true, 'Não foi possível ler o saldo estimado do cabeçalho.')
-      return
-    }
+    expect(Number.isFinite(saldo), `não foi possível ler o valor de "Fundo:" no cabeçalho (texto: "${headerText}")`).toBe(
+      true,
+    )
 
     const contado = saldo + 18.5
     const contadoFmt = contado.toFixed(2).replace('.', ',')

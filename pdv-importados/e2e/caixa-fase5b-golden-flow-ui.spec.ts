@@ -93,7 +93,17 @@ async function assertContasReceber(
   esperadoAberto: number,
 ): Promise<void> {
   const admin = adminClient()
-  const snapshot = await expect
+  // `expect.poll(fn, opts).not.toBeNull()` é uma ASSERÇÃO — devolve
+  // `Promise<void>`, nunca o valor testado. Atribuir o `await` disso a
+  // `snapshot` sempre resultava em `undefined`, façam ou não as tentativas
+  // encontrar a linha — bug determinístico (não flakiness/ambiente), falhava
+  // nas 3 tentativas com o MESMO erro ("received value must be a non-null
+  // object") assim que o SUPABASE_SERVICE_ROLE_KEY passou a existir e o
+  // teste conseguiu rodar de verdade. O valor real precisa vir de uma
+  // variável de closure atualizada a cada poll, lida DEPOIS da asserção
+  // passar.
+  let snapshot: { valorAberto: number; status: string; vendaId: string } | null = null
+  await expect
     .poll(
       async () => {
         const { data, error } = await admin
@@ -104,12 +114,16 @@ async function assertContasReceber(
           .limit(1)
         if (error) throw new Error(error.message)
         const cr = data?.[0]
-        if (!cr?.venda_id) return null
-        return {
+        if (!cr?.venda_id) {
+          snapshot = null
+          return null
+        }
+        snapshot = {
           valorAberto: round2(Number(cr.valor_aberto)),
           status: String(cr.status ?? ''),
           vendaId: String(cr.venda_id),
         }
+        return snapshot
       },
       { timeout: 20_000 },
     )
