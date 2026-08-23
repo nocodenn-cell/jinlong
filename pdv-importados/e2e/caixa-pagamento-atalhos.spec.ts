@@ -31,6 +31,14 @@ test.describe('Caixa — atalhos de teclado e clique do mouse para método de pa
     await ensureCaixaAberto(page, '300')
     await adicionarProdutoDemo(page, e2eProdutoCodigoBarras())
     await irParaAbaPgto(page)
+    // Os atalhos de teclado (1-4) são ignorados de propósito quando o foco
+    // está num campo de texto (`alvoEhCampoTexto`,
+    // useCaixaKeyboardShortcuts.ts) — proteção real contra digitar "2" no
+    // código de barras e sem querer trocar a forma de pagamento. O foco
+    // permanece no campo de busca depois de `adicionarProdutoDemo` (UX de
+    // bipagem contínua); sem tirar o foco de lá, `page.keyboard.press()`
+    // nunca alcança o handler do atalho.
+    await page.getByRole('textbox', { name: /código de barras|nome do produto|条码|商品名称/i }).blur()
   }
 
   test('tecla 1 seleciona Dinheiro e reflete no RadioGroup', async ({ page }) => {
@@ -49,7 +57,13 @@ test.describe('Caixa — atalhos de teclado e clique do mouse para método de pa
     await expect(primeiroRadio).toHaveAttribute('aria-checked', 'true')
     await expect(primeiroRadio).toHaveAccessibleName(/Dinheiro/i)
 
-    const atalhoDisplay = primeiroRadio.locator('[aria-hidden="true"]').first()
+    // Dois elementos `aria-hidden` existem dentro do botão
+    // (CaixaPdvMetodoPagamentoSelector.tsx): o ícone decorativo (primeiro no
+    // DOM, sem texto) e o span do dígito do atalho (depois, com "1".."4").
+    // `.first()` pegava sempre o ícone — texto vazio, nunca o dígito.
+    // Filtrar por conteúdo (um único dígito) identifica o span certo pelo que
+    // ele É, não pela posição no DOM; sem alterar o produto.
+    const atalhoDisplay = primeiroRadio.locator('[aria-hidden="true"]').filter({ hasText: /^\d$/ })
     const atalhoNumero = await atalhoDisplay.textContent()
     expect(atalhoNumero?.trim()).toBe('1')
   })
@@ -62,7 +76,7 @@ test.describe('Caixa — atalhos de teclado e clique do mouse para método de pa
     const metodoAtivo = page.locator('[role="radio"][aria-checked="true"]').first()
     await expect(metodoAtivo).toHaveAccessibleName(/PIX/i)
 
-    const atalhoDisplay = metodoAtivo.locator('[aria-hidden="true"]').first()
+    const atalhoDisplay = metodoAtivo.locator('[aria-hidden="true"]').filter({ hasText: /^\d$/ })
     const atalhoNumero = await atalhoDisplay.textContent()
     expect(atalhoNumero?.trim()).toBe('2')
   })
@@ -78,7 +92,7 @@ test.describe('Caixa — atalhos de teclado e clique do mouse para método de pa
     await expect(botaoCredito).toHaveAttribute('aria-checked', 'true')
     await expect(botaoCredito).toHaveAccessibleName(/Crédito/i)
 
-    const atalhoDisplay = botaoCredito.locator('[aria-hidden="true"]').first()
+    const atalhoDisplay = botaoCredito.locator('[aria-hidden="true"]').filter({ hasText: /^\d$/ })
     const atalhoNumero = await atalhoDisplay.textContent()
     expect(atalhoNumero?.trim()).toBe('3')
   })
@@ -91,7 +105,7 @@ test.describe('Caixa — atalhos de teclado e clique do mouse para método de pa
     const metodoAtivo = page.locator('[role="radio"][aria-checked="true"]').first()
     await expect(metodoAtivo).toHaveAccessibleName(/Crédito/i)
 
-    const atalhoDisplay = metodoAtivo.locator('[aria-hidden="true"]').first()
+    const atalhoDisplay = metodoAtivo.locator('[aria-hidden="true"]').filter({ hasText: /^\d$/ })
     const atalhoNumero = await atalhoDisplay.textContent()
     expect(atalhoNumero?.trim()).toBe('3')
   })
@@ -107,7 +121,7 @@ test.describe('Caixa — atalhos de teclado e clique do mouse para método de pa
     await expect(botaoDebito).toHaveAttribute('aria-checked', 'true')
     await expect(botaoDebito).toHaveAccessibleName(/Débito/i)
 
-    const atalhoDisplay = botaoDebito.locator('[aria-hidden="true"]').first()
+    const atalhoDisplay = botaoDebito.locator('[aria-hidden="true"]').filter({ hasText: /^\d$/ })
     const atalhoNumero = await atalhoDisplay.textContent()
     expect(atalhoNumero?.trim()).toBe('4')
   })
@@ -120,7 +134,7 @@ test.describe('Caixa — atalhos de teclado e clique do mouse para método de pa
     const metodoAtivo = page.locator('[role="radio"][aria-checked="true"]').first()
     await expect(metodoAtivo).toHaveAccessibleName(/Débito/i)
 
-    const atalhoDisplay = metodoAtivo.locator('[aria-hidden="true"]').first()
+    const atalhoDisplay = metodoAtivo.locator('[aria-hidden="true"]').filter({ hasText: /^\d$/ })
     const atalhoNumero = await atalhoDisplay.textContent()
     expect(atalhoNumero?.trim()).toBe('4')
   })

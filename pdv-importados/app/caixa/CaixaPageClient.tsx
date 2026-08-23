@@ -281,6 +281,17 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const [vendaPendenteModalAberto, setVendaPendenteModalAberto] = useState(false)
   const [verificandoVendaPendente, setVerificandoVendaPendente] = useState(false)
   const cupomSessionIdRef = useRef<string>(newCupomSessionId())
+  // Exibição do painel DEV precisa ficar "invisível" no primeiro paint do
+  // cliente (igual ao server, que não roda efeitos): `cupomSessionIdRef` é
+  // gerado via `crypto.randomUUID()` de forma independente em cada passe de
+  // render (server e cliente), então mostrar seu valor antes da hidratação
+  // terminar causa "Hydration failed" (texto SSR ≠ texto do cliente). Sem
+  // tocar a lógica operacional do ref (guard de scan stale) — só atrasa a
+  // exibição no painel de debug até depois do mount.
+  const [pipelineDebugMounted, setPipelineDebugMounted] = useState(false)
+  useEffect(() => {
+    setPipelineDebugMounted(true)
+  }, [])
   const lastScanItemRef = useRef<{ codigo: string; itemId: string; produtoId: string; ts: number } | null>(null)
   const lastReciboRef = useRef<ReciboVenda | null>(null)
   const [reimprimirModalAberto, setReimprimirModalAberto] = useState(false)
@@ -1559,7 +1570,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           buscandoPipeline={buscandoPipeline}
           snapshot={pipelineDebug.snapshot}
           telemetryTail={pipelineDebug.telemetryTail}
-          activeCupomSessionId={cupomSessionIdRef.current}
+          activeCupomSessionId={pipelineDebugMounted ? cupomSessionIdRef.current : undefined}
         />
       )}
       <CaixaGerenteModal
