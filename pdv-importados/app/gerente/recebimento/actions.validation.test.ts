@@ -28,6 +28,20 @@ describe('recebimento/actions validações', () => {
         itens: [{ produto_id: 'p1', quantidade_esperada: 1, quantidade_conferida: -1 }],
       }),
     ).toBe('Quantidade conferida inválida.')
+
+    expect(
+      validarRemessaInput({
+        origem: 'Container',
+        itens: [{ produto_id: 'p1', quantidade_esperada: 0, quantidade_conferida: 1 }],
+      }),
+    ).toBe('Quantidade esperada deve ser maior que zero.')
+
+    expect(
+      validarRemessaInput({
+        origem: 'Container',
+        itens: [{ produto_id: 'p1', quantidade_esperada: 1, quantidade_conferida: 0 }],
+      }),
+    ).toBe('Quantidade conferida deve ser maior que zero para confirmar a entrada.')
   })
 
   it('aceita payload válido', () => {
