@@ -8,6 +8,7 @@ import {
   adicionarProdutoDemo,
   finalizarVenda,
   irParaAbaPgto,
+  painelPgto,
   parcelasNoPainel,
   readTotalLiquidoFooter,
   round2,
@@ -75,18 +76,29 @@ test.describe('Caixa — venda multi-pagamento (painel Pgto clássico)', () => {
 
     await finalizarVenda(page)
 
-    await expect(selects).toHaveCount(1, { timeout: 10_000 })
+    // Uma única parcela (não dividido) não usa mais `<select>` — o painel
+    // troca para o RadioGroup de forma de pagamento nesse estado
+    // (`dividido = pagamentos.length > 1`, CaixaPdvOperadorTabs.tsx:73/121).
+    // `<select>` só existe quando dividido (linha 128 do mesmo arquivo).
+    // Preservando a intenção do teste (nenhuma parcela do cupom anterior
+    // vaza para o novo): 0 selects comprova que voltou ao modo não dividido,
+    // e o radio marcado comprova que o método resetou para o padrão
+    // (Dinheiro), sem herdar a forma da parcela anterior.
+    await expect(selects).toHaveCount(0, { timeout: 10_000 })
     await expect(inputs).toHaveCount(1)
-    await expect(selects.nth(0)).toHaveValue('DINHEIRO')
+    await expect(painelPgto(page).getByRole('radio', { checked: true })).toHaveAccessibleName(/Dinheiro/i)
 
     await adicionarProdutoDemo(page, codigo)
     await adicionarParcela(page)
     await expect(selects).toHaveCount(2, { timeout: 10_000 })
 
-    await page.getByRole('button', { name: /Novo cupom|Nova venda|新单|新單/i }).click()
-    await expect(selects).toHaveCount(1, { timeout: 10_000 })
+    // "Novo cupom" nunca existiu na UI atual — o botão real é "Nova venda (+)"
+    // (`m.caixa.nova_venda_espera`, `CaixaPageClient.tsx:1459`). zh correto é
+    // "新单 (+)" (confirmado no i18n; não "新销售"/"新銷售").
+    await page.getByRole('button', { name: /Nova venda \(\+\)|新单/i }).click()
+    await expect(selects).toHaveCount(0, { timeout: 10_000 })
     await expect(inputs).toHaveCount(1)
-    await expect(selects.nth(0)).toHaveValue('DINHEIRO')
+    await expect(painelPgto(page).getByRole('radio', { checked: true })).toHaveAccessibleName(/Dinheiro/i)
   })
 
   test('tres parcelas (DINHEIRO + PIX + CARTAO_DEBITO) somam ao total e finaliza', async ({ page }) => {

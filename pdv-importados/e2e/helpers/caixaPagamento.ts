@@ -29,7 +29,7 @@ export async function irParaAbaPgto(page: Page): Promise<void> {
   await expect(painelPgto(page)).toBeVisible({ timeout: 10_000 })
 }
 
-function painelPgto(page: Page) {
+export function painelPgto(page: Page) {
   const byId = page.locator('#caixa-pdv-panel-pgto')
   // Layout clássico: painel sempre visível como region (sem tab).
   return byId.or(page.getByRole('region', { name: /Pagamento|Parcelas do cupom|付款/i }))

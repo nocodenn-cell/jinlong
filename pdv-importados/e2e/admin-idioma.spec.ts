@@ -47,9 +47,14 @@ test.describe('Admin - i18n idioma', () => {
   test('alterna para zh e persiste após refresh', async ({ page }) => {
     await expect(page.getByText('Dashboard comercial')).toBeVisible()
     await page.getByRole('button', { name: '普通话' }).click()
-    await expect(page.getByText('主控台')).toBeVisible({ timeout: 10_000 })
+    // Não `getByText('主控台')`: esse é o rótulo do item de menu na sidebar,
+    // que em `mobile-chrome-pixel`/`mobile-safari-iphone` fica dentro do
+    // drawer de navegação (`AdminV2MobileNavDrawer`, fechado por padrão) —
+    // `hidden`, não ausente. O h1 do dashboard é visível em qualquer
+    // viewport e prova o mesmo contrato (idioma trocou/persistiu).
+    await expect(page.getByText('生意看板')).toBeVisible({ timeout: 10_000 })
     await page.reload()
-    await expect(page.getByText('主控台')).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText('生意看板')).toBeVisible({ timeout: 10_000 })
   })
 
   // `idioma_preferido` é persistido no perfil do usuário GERENTE (comprovado

@@ -31,6 +31,14 @@ test.describe('Caixa — atalhos de teclado e clique do mouse para método de pa
     await ensureCaixaAberto(page, '300')
     await adicionarProdutoDemo(page, e2eProdutoCodigoBarras())
     await irParaAbaPgto(page)
+    // Os atalhos de teclado (1-4) são ignorados de propósito quando o foco
+    // está num campo de texto (`alvoEhCampoTexto`,
+    // useCaixaKeyboardShortcuts.ts) — proteção real contra digitar "2" no
+    // código de barras e sem querer trocar a forma de pagamento. O foco
+    // permanece no campo de busca depois de `adicionarProdutoDemo` (UX de
+    // bipagem contínua); sem tirar o foco de lá, `page.keyboard.press()`
+    // nunca alcança o handler do atalho.
+    await page.getByRole('textbox', { name: /código de barras|nome do produto|条码|商品名称/i }).blur()
   }
 
   test('tecla 1 seleciona Dinheiro e reflete no RadioGroup', async ({ page }) => {
@@ -38,12 +46,24 @@ test.describe('Caixa — atalhos de teclado e clique do mouse para método de pa
 
     await page.keyboard.press('1')
 
+    // `value` não é atributo DOM real — `RadioGroupItem` (components/ui/radio-group.tsx)
+    // é um `<button role="radio">`, e `value` é destructured para fora do
+    // spread de props (só usado internamente via contexto React para decidir
+    // `aria-checked`), nunca chega ao DOM. O nome acessível real é o texto
+    // visível do botão ("Dinheiro"/"PIX"/"Crédito"/"Débito"); o dígito do
+    // atalho fica num span `aria-hidden`, por isso não entra no nome.
     const metodosRadio = page.locator('[role="radio"]')
     const primeiroRadio = metodosRadio.first()
     await expect(primeiroRadio).toHaveAttribute('aria-checked', 'true')
-    await expect(primeiroRadio).toHaveAttribute('value', 'dinheiro')
+    await expect(primeiroRadio).toHaveAccessibleName(/Dinheiro/i)
 
-    const atalhoDisplay = primeiroRadio.locator('[aria-hidden="true"]').first()
+    // Dois elementos `aria-hidden` existem dentro do botão
+    // (CaixaPdvMetodoPagamentoSelector.tsx): o ícone decorativo (primeiro no
+    // DOM, sem texto) e o span do dígito do atalho (depois, com "1".."4").
+    // `.first()` pegava sempre o ícone — texto vazio, nunca o dígito.
+    // Filtrar por conteúdo (um único dígito) identifica o span certo pelo que
+    // ele É, não pela posição no DOM; sem alterar o produto.
+    const atalhoDisplay = primeiroRadio.locator('[aria-hidden="true"]').filter({ hasText: /^\d$/ })
     const atalhoNumero = await atalhoDisplay.textContent()
     expect(atalhoNumero?.trim()).toBe('1')
   })
@@ -54,9 +74,9 @@ test.describe('Caixa — atalhos de teclado e clique do mouse para método de pa
     await page.keyboard.press('2')
 
     const metodoAtivo = page.locator('[role="radio"][aria-checked="true"]').first()
-    await expect(metodoAtivo).toHaveAttribute('value', 'pix')
+    await expect(metodoAtivo).toHaveAccessibleName(/PIX/i)
 
-    const atalhoDisplay = metodoAtivo.locator('[aria-hidden="true"]').first()
+    const atalhoDisplay = metodoAtivo.locator('[aria-hidden="true"]').filter({ hasText: /^\d$/ })
     const atalhoNumero = await atalhoDisplay.textContent()
     expect(atalhoNumero?.trim()).toBe('2')
   })
@@ -70,9 +90,9 @@ test.describe('Caixa — atalhos de teclado e clique do mouse para método de pa
     await botaoCredito.click()
 
     await expect(botaoCredito).toHaveAttribute('aria-checked', 'true')
-    await expect(botaoCredito).toHaveAttribute('value', 'credito')
+    await expect(botaoCredito).toHaveAccessibleName(/Crédito/i)
 
-    const atalhoDisplay = botaoCredito.locator('[aria-hidden="true"]').first()
+    const atalhoDisplay = botaoCredito.locator('[aria-hidden="true"]').filter({ hasText: /^\d$/ })
     const atalhoNumero = await atalhoDisplay.textContent()
     expect(atalhoNumero?.trim()).toBe('3')
   })
@@ -83,9 +103,9 @@ test.describe('Caixa — atalhos de teclado e clique do mouse para método de pa
     await page.keyboard.press('3')
 
     const metodoAtivo = page.locator('[role="radio"][aria-checked="true"]').first()
-    await expect(metodoAtivo).toHaveAttribute('value', 'credito')
+    await expect(metodoAtivo).toHaveAccessibleName(/Crédito/i)
 
-    const atalhoDisplay = metodoAtivo.locator('[aria-hidden="true"]').first()
+    const atalhoDisplay = metodoAtivo.locator('[aria-hidden="true"]').filter({ hasText: /^\d$/ })
     const atalhoNumero = await atalhoDisplay.textContent()
     expect(atalhoNumero?.trim()).toBe('3')
   })
@@ -99,9 +119,9 @@ test.describe('Caixa — atalhos de teclado e clique do mouse para método de pa
     await botaoDebito.click()
 
     await expect(botaoDebito).toHaveAttribute('aria-checked', 'true')
-    await expect(botaoDebito).toHaveAttribute('value', 'debito')
+    await expect(botaoDebito).toHaveAccessibleName(/Débito/i)
 
-    const atalhoDisplay = botaoDebito.locator('[aria-hidden="true"]').first()
+    const atalhoDisplay = botaoDebito.locator('[aria-hidden="true"]').filter({ hasText: /^\d$/ })
     const atalhoNumero = await atalhoDisplay.textContent()
     expect(atalhoNumero?.trim()).toBe('4')
   })
@@ -112,9 +132,9 @@ test.describe('Caixa — atalhos de teclado e clique do mouse para método de pa
     await page.keyboard.press('4')
 
     const metodoAtivo = page.locator('[role="radio"][aria-checked="true"]').first()
-    await expect(metodoAtivo).toHaveAttribute('value', 'debito')
+    await expect(metodoAtivo).toHaveAccessibleName(/Débito/i)
 
-    const atalhoDisplay = metodoAtivo.locator('[aria-hidden="true"]').first()
+    const atalhoDisplay = metodoAtivo.locator('[aria-hidden="true"]').filter({ hasText: /^\d$/ })
     const atalhoNumero = await atalhoDisplay.textContent()
     expect(atalhoNumero?.trim()).toBe('4')
   })
@@ -127,12 +147,12 @@ test.describe('Caixa — atalhos de teclado e clique do mouse para método de pa
 
     await botaoCredito.click()
     await expect(botaoCredito).toHaveAttribute('aria-checked', 'true')
-    await expect(botaoCredito).toHaveAttribute('value', 'credito')
+    await expect(botaoCredito).toHaveAccessibleName(/Crédito/i)
 
     await page.keyboard.press('4')
 
     const metodoAtivo = page.locator('[role="radio"][aria-checked="true"]').first()
-    await expect(metodoAtivo).toHaveAttribute('value', 'debito')
+    await expect(metodoAtivo).toHaveAccessibleName(/Débito/i)
   })
 
   test('alternância entre teclado e clique do mouse: Débito (tecla) → Crédito (clique)', async ({ page }) => {
@@ -141,7 +161,7 @@ test.describe('Caixa — atalhos de teclado e clique do mouse para método de pa
     await page.keyboard.press('4')
 
     let metodoAtivo = page.locator('[role="radio"][aria-checked="true"]').first()
-    await expect(metodoAtivo).toHaveAttribute('value', 'debito')
+    await expect(metodoAtivo).toHaveAccessibleName(/Débito/i)
 
     const radios = page.locator('[role="radio"]')
     const botaoCredito = radios.nth(2)
@@ -149,7 +169,7 @@ test.describe('Caixa — atalhos de teclado e clique do mouse para método de pa
     await botaoCredito.click()
 
     metodoAtivo = page.locator('[role="radio"][aria-checked="true"]').first()
-    await expect(metodoAtivo).toHaveAttribute('value', 'credito')
+    await expect(metodoAtivo).toHaveAccessibleName(/Crédito/i)
   })
 
   test('método visual selecionado corresponde ao valor da forma na primeira parcela', async ({ page }) => {
@@ -162,22 +182,20 @@ test.describe('Caixa — atalhos de teclado e clique do mouse para método de pa
     await inputValor.fill(String(total))
 
     const metodoNoRadio = page.locator('[role="radio"][aria-checked="true"]').first()
-    const valor = await metodoNoRadio.getAttribute('value')
-    expect(valor?.toLowerCase()).toBe('pix')
+    await expect(metodoNoRadio).toHaveAccessibleName(/PIX/i)
   })
 
   test('sequência de atalhos: 1→2→3→4→1 muda corretamente', async ({ page }) => {
     await setupPagamento(page)
 
     const keys = ['1', '2', '3', '4', '1']
-    const esperados = ['dinheiro', 'pix', 'credito', 'debito', 'dinheiro']
+    const esperados = [/Dinheiro/i, /PIX/i, /Crédito/i, /Débito/i, /Dinheiro/i]
 
     for (let i = 0; i < keys.length; i++) {
       await page.keyboard.press(keys[i])
 
       const metodoAtivo = page.locator('[role="radio"][aria-checked="true"]').first()
-      const valorAtivo = await metodoAtivo.getAttribute('value')
-      expect(valorAtivo?.toLowerCase()).toBe(esperados[i])
+      await expect(metodoAtivo).toHaveAccessibleName(esperados[i])
     }
   })
 })

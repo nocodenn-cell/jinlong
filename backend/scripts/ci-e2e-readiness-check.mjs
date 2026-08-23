@@ -42,20 +42,6 @@ requireEnv('SB_URL', SB_URL)
 requireEnv('SB_ANON', SB_ANON)
 requireEnv('SB_SR', SB_SR)
 
-async function withTimeout(promise, ms, label) {
-  let timer
-  try {
-    return await Promise.race([
-      promise,
-      new Promise((_, reject) => {
-        timer = setTimeout(() => reject(new Error(`timeout ${ms}ms aguardando ${label}`)), ms)
-      }),
-    ])
-  } finally {
-    clearTimeout(timer)
-  }
-}
-
 /** checagem HTTP crua (sem SDK) — isola erro de rede de erro de sessão/parsing do client. */
 async function probeHttp(label, url, headers) {
   const controller = new AbortController()
@@ -65,7 +51,14 @@ async function probeHttp(label, url, headers) {
     clearTimeout(t)
     // Não exigimos 200: PostgREST/GoTrue respondem 401/404 sem apikey certa em algumas
     // rotas, e isso já prova que o serviço está de pé e aceitando conexão TCP+HTTP.
-    // O que importa aqui é "respondeu", não "autorizou".
+    // O que importa aqui é "respondeu de forma válida", não "autorizou" — mas 5xx É um
+    // sinal real de serviço quebrado (PostgREST/GoTrue erraram ao processar), não apenas
+    // "não autorizado"; `fetch` resolve normalmente para respostas HTTP de erro, então sem
+    // este corte um 500/503 (Postgres/schema inutilizável por trás) passava como "pronto"
+    // (apontado no code review do PR #315).
+    if (res.status >= 500) {
+      return { ok: false, status: res.status, error: `${label}: HTTP ${res.status}` }
+    }
     return { ok: true, status: res.status }
   } catch (err) {
     clearTimeout(t)
@@ -81,19 +74,35 @@ async function probeGoTrueHealth() {
   return probeHttp('GoTrue health', `${SB_URL}/auth/v1/health`, { apikey: SB_ANON })
 }
 
-/** A checagem que importa de verdade: a MESMA chamada que os specs de E2E fazem. */
+/**
+ * A checagem que importa de verdade: a MESMA chamada que os specs de E2E fazem.
+ *
+ * `AbortController` real (não `withTimeout`/`Promise.race`): `Promise.race` só rejeita o
+ * WRAPPER quando o timer dispara — a chamada HTTP de `listUsers()` continua em voo por
+ * baixo. Numa tentativa que trava e um retry seguinte que dá certo, essa chamada antiga
+ * ainda pendente pode manter o processo vivo até o timeout do step do CI (apontado no code
+ * review do PR #315). `global.fetch` do client aceita `AbortSignal` — repassar o mesmo
+ * signal do timer cancela a requisição de verdade, não só a espera por ela.
+ */
 async function probeAuthAdminListUsers() {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), ATTEMPT_TIMEOUT_MS)
   try {
-    const admin = createClient(SB_URL, SB_SR, { auth: { persistSession: false } })
-    const { error } = await withTimeout(
-      admin.auth.admin.listUsers({ page: 1, perPage: 1 }),
-      ATTEMPT_TIMEOUT_MS,
-      'admin.auth.admin.listUsers()',
-    )
+    const admin = createClient(SB_URL, SB_SR, {
+      auth: { persistSession: false },
+      global: {
+        fetch: (url, options) => fetch(url, { ...options, signal: controller.signal }),
+      },
+    })
+    const { error } = await admin.auth.admin.listUsers({ page: 1, perPage: 1 })
     if (error) return { ok: false, error: error.message }
     return { ok: true }
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : String(err) }
+    const aborted = controller.signal.aborted
+    const msg = err instanceof Error ? err.message : String(err)
+    return { ok: false, error: aborted ? `timeout ${ATTEMPT_TIMEOUT_MS}ms aguardando admin.auth.admin.listUsers() (abortado)` : msg }
+  } finally {
+    clearTimeout(timer)
   }
 }
 

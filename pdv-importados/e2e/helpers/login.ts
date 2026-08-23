@@ -39,11 +39,30 @@ const POST_LOGIN_URL_OPERADOR = /\/caixa(\/|$|\?)/
  */
 const POST_LOGIN_REDIRECT_TIMEOUT_MS = 45_000
 
-async function fillLogin(page: Page, email: string, password: string): Promise<void> {
-  await page.getByTestId('login-form').waitFor({ state: 'visible', timeout: 30_000 })
+/**
+ * `formTimeout`/`hydratedTimeout` são capados pelo orçamento restante do
+ * chamador (`orcamentoRestante()` em `loginWithRetry`), não fixos em 30s
+ * cada. Sem isso, os até 60s destas duas esperas nunca eram descontados do
+ * orçamento rastreado da função — `loginWithRetry(timeout=90_000)` podia,
+ * na prática, consumir ~90s só na 1ª tentativa E AINDA tentar um retry com
+ * outros até ~60s de `fillLogin` não orçados, estourando bem além dos 90s
+ * documentados e do timeout de teste do Playwright (que mata a página no
+ * meio do login) — apontado no code review do PR #315. Passar o orçamento
+ * real aqui torna `loginWithRetry` um deadline único e verdadeiramente
+ * limitado por `timeout`, em vez de dois relógios independentes.
+ */
+async function fillLogin(
+  page: Page,
+  email: string,
+  password: string,
+  opts?: { formTimeout?: number; hydratedTimeout?: number },
+): Promise<void> {
+  const formTimeout = opts?.formTimeout ?? 30_000
+  const hydratedTimeout = opts?.hydratedTimeout ?? 30_000
+  await page.getByTestId('login-form').waitFor({ state: 'visible', timeout: formTimeout })
   await page.locator('[data-testid="login-form"][data-login-hydrated="1"]').waitFor({
     state: 'attached',
-    timeout: 30_000,
+    timeout: hydratedTimeout,
   })
   await page.locator('#login-email').fill(email)
   await page.locator('#login-senha').fill(password)
@@ -98,9 +117,17 @@ export async function loginWithRetry(
   // "ainda dá tempo" por acidente em nenhuma comparação abaixo.
   const orcamentoRestante = () => Math.max(0, timeout - (Date.now() - startedAt))
   const timeoutRedirect = () => Math.min(POST_LOGIN_REDIRECT_TIMEOUT_MS, orcamentoRestante())
+  // Nunca 0: `.waitFor({ timeout: 0 })` do Playwright significa "sem timeout"
+  // (espera para sempre), o oposto de "orçamento esgotado". `1_000` é só um
+  // piso de segurança — na prática nunca é atingido, porque os pontos de
+  // chamada já garantem orçamento suficiente antes de chegar aqui.
+  const timeoutFillLogin = () => Math.max(1_000, Math.min(30_000, orcamentoRestante()))
 
   await gotoApp(page, LOGIN_PATH, E2E_GOTO_DOMCONTENTLOADED)
-  await fillLogin(page, email, password)
+  await fillLogin(page, email, password, {
+    formTimeout: timeoutFillLogin(),
+    hydratedTimeout: timeoutFillLogin(),
+  })
   await page.getByRole('button', { name: /^Entrar$/ }).click()
 
   try {
@@ -146,7 +173,10 @@ export async function loginWithRetry(
     try {
       await gotoApp(page, LOGIN_PATH, E2E_GOTO_DOMCONTENTLOADED)
       if (page.isClosed()) throw new Error('página fechou após navegar para o login')
-      await fillLogin(page, email, password)
+      await fillLogin(page, email, password, {
+        formTimeout: timeoutFillLogin(),
+        hydratedTimeout: timeoutFillLogin(),
+      })
       if (page.isClosed()) throw new Error('página fechou após preencher o formulário')
       await page.getByRole('button', { name: /^Entrar$/ }).click()
       await waitPostLogin(page, postLoginUrl, timeoutRedirect())
@@ -164,6 +194,39 @@ export async function loginWithRetry(
   }
 }
 
+/** Breakpoint `lg` do Tailwind — mesmo valor de `hidden lg:flex` em `AdminV2Shell.tsx`. */
+const ADMIN_V2_DESKTOP_BREAKPOINT_PX = 1024
+
+/**
+ * Prova de RBAC pós-login do GERENTE: a URL sozinha não prova que o RBAC
+ * autorizou o perfil certo, só a navegação do painel prova.
+ *
+ * Abaixo de `lg` (1024px) o `<aside>` que contém o `<nav>` fica `hidden`
+ * (`AdminV2Shell.tsx`) — a navegação real só existe dentro do
+ * `AdminV2MobileNavDrawer`, atrás do botão "Navegação", e só depois de
+ * clicado. `getByRole('navigation')` direto sem abrir o drawer nunca
+ * encontra nada em viewport mobile — não é falha de RBAC nem de login, é o
+ * layout responsivo funcionando como desenhado. Comprovado ao vivo: as duas
+ * projects mobile (`mobile-chrome-pixel`, `mobile-safari-iphone`) falhavam
+ * 100% das vezes nesse ponto enquanto `chromium` passava.
+ */
+export async function assertGerenteNavVisible(page: Page): Promise<void> {
+  const viewportWidth = page.viewportSize()?.width ?? 0
+  if (viewportWidth === 0 || viewportWidth >= ADMIN_V2_DESKTOP_BREAKPOINT_PX) {
+    await expect(page.getByRole('navigation')).toBeVisible({ timeout: 10_000 })
+    return
+  }
+  const menuButton = page.getByRole('button', { name: 'Navegação' })
+  await expect(menuButton).toBeVisible({ timeout: 10_000 })
+  await menuButton.click()
+  await expect(page.getByRole('dialog', { name: 'Navegação' })).toBeVisible({ timeout: 10_000 })
+  await expect(page.getByRole('navigation')).toBeVisible({ timeout: 10_000 })
+  // Fecha de novo para não vazar o drawer aberto (backdrop cobrindo a tela
+  // inteira) para o corpo do teste que chamou `loginGerente`.
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog', { name: 'Navegação' })).not.toBeVisible({ timeout: 10_000 })
+}
+
 export async function loginGerente(
   page: Page,
   options: LoginWaitOptions = {},
@@ -177,10 +240,7 @@ export async function loginGerente(
     postLoginUrl,
     timeout,
   )
-  // A URL sozinha não prova que o RBAC autorizou o perfil certo — a navegação
-  // do painel (`role="navigation"`) só renderiza para sessão GERENTE/DONO/
-  // ADMIN de verdade; OPERADOR nunca chega a este ponto.
-  await expect(page.getByRole('navigation')).toBeVisible({ timeout: 10_000 })
+  await assertGerenteNavVisible(page)
 }
 
 export async function loginCaixaOperador(
