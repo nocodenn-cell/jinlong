@@ -7,7 +7,8 @@ import {
   hasCaixaOperadorUser,
   hasGerenteTestUser,
 } from './helpers/env'
-import { loginGerente, loginWithRetry } from './helpers/login'
+import { garantirIdiomaPt } from './helpers/idioma'
+import { assertGerenteNavVisible, loginGerente, loginWithRetry } from './helpers/login'
 
 /**
  * Contrato de destino pós-login por perfil (`destinoPosLoginPorPerfil` em
@@ -24,13 +25,68 @@ test.describe('Contrato de login por perfil', () => {
     assertGerenteCredentialsInCi()
   })
 
+  test.afterEach(async ({ page }) => {
+    // Defesa adicional: nenhum teste deste arquivo troca de idioma
+    // intencionalmente, mas a conta GERENTE é compartilhada com outros
+    // specs (`gerente.spec.ts`, `gerente-transferencias.spec.ts`) — não
+    // deixar "zh" vazar daqui para eles, nem herdar o inverso deles.
+    // No-op para o teste OPERADOR (o botão PT não existe fora de /admin/*).
+    await garantirIdiomaPt(page)
+  })
+
   test('GERENTE: login cai em /admin/dashboard e a navegação do painel confirma autorização', async ({
     page,
   }) => {
     test.skip(!hasGerenteTestUser(), 'PLAYWRIGHT_TEST_EMAIL/PASSWORD ausentes (local).')
     await loginGerente(page)
+    await garantirIdiomaPt(page)
     await expect(page).toHaveURL(/^http:\/\/[^/]+\/admin\/dashboard/)
-    await expect(page.getByRole('navigation')).toBeVisible()
+    // `assertGerenteNavVisible` (não um `getByRole('navigation')` cru) porque
+    // a prova de RBAC é responsiva — ver o teste de contrato abaixo.
+    await assertGerenteNavVisible(page)
+  })
+
+  test('GERENTE: contrato de navegação responsiva — desktop mostra <nav> direto, mobile exige abrir o drawer', async ({
+    page,
+  }, testInfo) => {
+    test.skip(!hasGerenteTestUser(), 'PLAYWRIGHT_TEST_EMAIL/PASSWORD ausentes (local).')
+    // `loginGerente` já abre e fecha o drawer internamente (via
+    // `assertGerenteNavVisible`) só para provar RBAC — aqui a asserção é
+    // sobre o ESTADO inicial pós-login, então usamos `loginWithRetry` puro
+    // (sem a prova de nav) para não confundir "drawer que loginGerente abriu
+    // e fechou" com "drawer nunca aberto".
+    await loginWithRetry(
+      page,
+      process.env.PLAYWRIGHT_TEST_EMAIL!,
+      process.env.PLAYWRIGHT_TEST_PASSWORD!,
+      /\/admin\/dashboard(\/|$|\?)/,
+      90_000,
+    )
+    // Baseline determinística antes de ler o estado do drawer/nav — no-op
+    // nesta página se o toggle PT/普通话 não estiver presente aqui.
+    await garantirIdiomaPt(page)
+
+    const isMobileProject = testInfo.project.name.startsWith('mobile-')
+    const nav = page.getByRole('navigation')
+    const menuButton = page.getByRole('button', { name: 'Navegação' })
+
+    if (isMobileProject) {
+      // < lg: `<aside>` (com o `<nav>`) fica `hidden`; só o hamburger existe.
+      await expect(menuButton).toBeVisible()
+      await expect(nav).toBeHidden()
+
+      await menuButton.click()
+      await expect(page.getByRole('dialog', { name: 'Navegação' })).toBeVisible()
+      await expect(nav).toBeVisible()
+
+      await page.keyboard.press('Escape')
+      await expect(page.getByRole('dialog', { name: 'Navegação' })).not.toBeVisible()
+    } else {
+      // >= lg: `<nav>` sempre visível; o hamburger nem renderiza (`lg:hidden`
+      // na barra que o contém).
+      await expect(nav).toBeVisible()
+      await expect(menuButton).not.toBeVisible()
+    }
   })
 
   test('OPERADOR: nunca alcança /admin/dashboard — contrato do caixa não pode aceitar admin', async ({

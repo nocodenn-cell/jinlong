@@ -1015,6 +1015,14 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           void converterVendaEmEsperaCaixa(origemConvertida).catch(() => {})
         }
         setTurnoRefreshToken((t) => t + 1)
+        // Fecha o modal de "venda pendente" se por acaso ainda estiver aberto
+        // (ex.: reaberto pelo efeito de remontagem com `vendaFinalizacaoPendente`
+        // persistido de uma tentativa anterior). Sem isso, o backdrop dele fica
+        // por cima do recibo de sucesso e bloqueia clique em qualquer botão —
+        // comprovado em E2E (park → refresh → resume → finalizar). Mesma
+        // garantia que `handleVerificarVendaPendente` já faz antes do seu
+        // próprio toast de sucesso.
+        setVendaPendenteModalAberto(false)
         setCaixaMensagemVendaOk(
           caixaFmt(m.caixa.msg_venda_ok, { id: res.vendaId.slice(0, 8) }),
           { kind: "success" },

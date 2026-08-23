@@ -28,6 +28,13 @@ on:
     paths:
       - 'pdv-importados/**'
       - 'shared-core/**'
+      # Scripts consumidos diretamente pelos jobs de E2E deste workflow
+      # (`ci-e2e-readiness-check.mjs`, `ci-supabase-local-start.sh`) — sem
+      # este path, um PR que só mudasse um desses arquivos nunca rodaria o
+      # E2E, apontado no code review do PR #315: `backend/**` fica de fora do
+      # filtro geral (workflow de backend é outro), então um gate de
+      # readiness quebrado podia entrar sem ser testado por nenhum workflow.
+      - 'backend/scripts/**'
       - 'package.json'
       - 'package-lock.json'
       - 'turbo.json'
@@ -83,11 +90,15 @@ jobs:
     # `Install Playwright Chromium`, que normalmente leva ~1 min, ficou 29 min
     # e o job morreu no timeout antes de chegar a testar qualquer coisa.
     #
-    # 60, não 45: soma dos `timeout-minutes` de cada step agora chega a ~58min
-    # no pior caso (cada um no seu próprio limite). O timeout do JOB só existe
-    # para não cortar um step no meio do seu próprio orçamento — quem detecta
-    # e explica uma etapa lenta/travada é o timeout DO STEP, não este.
-    timeout-minutes: 60
+    # 95, não 60: soma dos `timeout-minutes` de cada step agora chega a ~89min
+    # no pior caso (cada um no seu próprio limite) — subiu de ~58min porque
+    # "Install Playwright Chromium" (5→35min) e "Readiness" (2→3min) foram
+    # corrigidos no code review do PR #315 para cobrir de verdade os piores
+    # casos JÁ DOCUMENTADOS acima e no próprio script, em vez de cortar o job
+    # bem no meio deles. O timeout do JOB só existe para não cortar um step no
+    # meio do seu próprio orçamento — quem detecta e explica uma etapa
+    # lenta/travada é o timeout DO STEP, não este.
+    timeout-minutes: 95
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
@@ -101,8 +112,14 @@ jobs:
         timeout-minutes: 5
         run: npm ci
 
+      # 35, não 5: o comentário acima do job documenta este MESMO passo levando
+      # 29min sob disputa de pull de imagem entre os dois jobs de E2E rodando
+      # em paralelo (run de 2026-08-19T21:08) — 5min cortava o job antes de
+      # qualquer teste rodar exatamente nesse cenário já observado, o que o
+      # code review do PR #315 apontou (P1: o timeout não cobria a duração já
+      # documentada acima dele).
       - name: Install Playwright Chromium
-        timeout-minutes: 5
+        timeout-minutes: 35
         run: npx playwright install --with-deps chromium
 
       # ─────────────────────────────────────────────────────────────────────
@@ -254,8 +271,14 @@ jobs:
       # se algum serviço não está saudável, este step falha em segundos com diagnóstico
       # (docker ps/logs/stats), em vez de o job inteiro descobrir isso só depois de vários
       # minutos de setup, no meio de um teste Playwright.
+      # 3, não 2: no pior caso, as 6 tentativas (5s cada) + 5 esperas de 2s entre
+      # elas já somam ~40s antes de `dumpDiagnostics` sequer começar; os 6
+      # comandos de diagnóstico rodando em série a 15s cada somam mais até 90s
+      # — ~130s de pior caso contra um limite de 120s cortava a coleta de
+      # diagnóstico bem no meio, exatamente o caminho que este script existe
+      # para explicar (apontado no code review do PR #315).
       - name: Readiness — Auth/PostgREST/Postgres antes do E2E
-        timeout-minutes: 2
+        timeout-minutes: 3
         env:
           SB_URL: ${{ env.SB_URL }}
           SB_ANON: ${{ env.SB_ANON }}
@@ -339,9 +362,11 @@ jobs:
     # seja, vivia raspando o proprio teto. Somando o setup da stack local, o run
     # de 2026-08-19T21:08 estourou com os testes ainda em andamento.
     #
-    # 80, não 60: soma dos `timeout-minutes` de cada step agora chega a ~73min
-    # no pior caso — mesmo raciocínio do comentário equivalente em `e2e-critical`.
-    timeout-minutes: 80
+    # 110, não 80: soma dos `timeout-minutes` de cada step agora chega a ~104min
+    # no pior caso — mesmo raciocínio do comentário equivalente em `e2e-critical`
+    # (subiu de ~73min pela mesma correção de "Install Playwright Chromium" e
+    # "Readiness" no code review do PR #315).
+    timeout-minutes: 110
 
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
@@ -356,8 +381,14 @@ jobs:
         timeout-minutes: 5
         run: npm ci
 
+      # 35, não 5: o comentário acima do job documenta este MESMO passo levando
+      # 29min sob disputa de pull de imagem entre os dois jobs de E2E rodando
+      # em paralelo (run de 2026-08-19T21:08) — 5min cortava o job antes de
+      # qualquer teste rodar exatamente nesse cenário já observado, o que o
+      # code review do PR #315 apontou (P1: o timeout não cobria a duração já
+      # documentada acima dele).
       - name: Install Playwright Chromium
-        timeout-minutes: 5
+        timeout-minutes: 35
         run: npx playwright install --with-deps chromium
 
       # Mesma stack local e efêmera do `e2e-critical`. Este job foi esquecido na
@@ -444,9 +475,10 @@ jobs:
           fi
           echo "OK — alvo do E2E e a stack local ($SB_URL)."
 
-      # Ver comentário equivalente no job `e2e-critical` acima.
+      # Ver comentário equivalente no job `e2e-critical` acima (mesmo motivo
+      # do timeout de 3min: pior caso de retries + diagnóstico chega a ~130s).
       - name: Readiness — Auth/PostgREST/Postgres antes do E2E
-        timeout-minutes: 2
+        timeout-minutes: 3
         env:
           SB_URL: ${{ env.SB_URL }}
           SB_ANON: ${{ env.SB_ANON }}
