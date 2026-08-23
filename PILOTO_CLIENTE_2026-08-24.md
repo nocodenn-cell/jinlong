@@ -1,9 +1,9 @@
 # Piloto Cliente — Jinlong (segunda-feira, 25/08/2026)
 
-**Sprint:** noturna autônoma, 2026-08-22/23  
+**Sprint:** noturna autônoma, 2026-08-22/23 (com acompanhamento e correção de conflito de merge em 2026-08-23)  
 **Branch:** `claude/jinlong-pilot-prep-7tjrbs`  
 **Base SHA:** `fba6d8e657f0ce42b921582c934bb2f02fb538c1` (= `origin/main` no início da sprint)  
-**HEAD final:** `677b8892e41fd758be6c235732e80114f504d76b`  
+**HEAD final:** `c6954a34c396c0994ae30bc36b32eb87d16b2adf` (merge de reconciliação com `main`; ver nota abaixo)  
 **Recomendação final:** 🟡 **APTO COM RESTRIÇÕES** (ver §11 e §19)
 
 ---
@@ -14,10 +14,19 @@
 |---|---|
 | Branch | `claude/jinlong-pilot-prep-7tjrbs` |
 | Base (`origin/main` no início) | `fba6d8e` — `fix(migrations): reconcilia drift do par 20260820150000/20260820233832 (#316)` |
-| HEAD final | `677b889` — `fix(supabase): isola descontos_venda por loja no RLS` |
-| Commits nesta sprint | 7 (2 merges de PRs abertas + 4 commits trazidos por elas + 1 cherry-pick) — ver §6 |
+| HEAD final | `c6954a3` — merge de `origin/main` para reconciliar conflito (ver nota) |
+| Commits nesta sprint | 8 (2 merges de PRs abertas + 4 commits trazidos por elas + 1 cherry-pick + 1 doc) + 1 merge de reconciliação pós-CI — ver §6 |
 | Push | `git push -u origin claude/jinlong-pilot-prep-7tjrbs` executado (ver §5) |
-| PR | draft, base `main` ← `claude/jinlong-pilot-prep-7tjrbs` (ver resumo final da sessão para o link) |
+| PR | draft #317, base `main` ← `claude/jinlong-pilot-prep-7tjrbs` — https://github.com/nocodenn-cell/fastproduct/pull/317 |
+
+**Nota (2026-08-23, pós-abertura da PR):** enquanto a PR ficava em observação, as PRs #314 e #315
+— já incorporadas nesta branch por merge direto das branches de origem — foram mescladas em `main`
+por outro caminho (merge do GitHub), e #315 recebeu correções adicionais de code review nesse
+meio-tempo. Isso gerou um conflito de merge real (`mergeable_state: dirty`) em 6 arquivos de
+CI/E2E. Resolvido tomando a versão de `main` para esses 6 arquivos (comprovadamente mais completa —
+continha as correções do code review que a cópia desta branch não tinha); a migration RLS e os dois
+documentos do piloto não foram afetados. Todos os gates foram revalidados após a resolução (ver
+comentário na PR #317 com o detalhamento) — sem regressão. HEAD passou de `677b889` para `c6954a3`.
 
 ---
 
