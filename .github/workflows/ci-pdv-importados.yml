@@ -304,6 +304,7 @@ jobs:
       - name: Pipeline E2E crítico
         timeout-minutes: 20
         env:
+          NODE_OPTIONS: --max-old-space-size=4096
           CI: true
           PLAYWRIGHT_E2E_WITH_DEV: '1'
           NEXT_PUBLIC_SUPABASE_URL: ${{ env.SB_URL }}
@@ -535,6 +536,7 @@ jobs:
       - name: E2E
         timeout-minutes: 35
         env:
+          NODE_OPTIONS: --max-old-space-size=4096
           CI: true
           PLAYWRIGHT_E2E_WITH_DEV: '1'
           NEXT_PUBLIC_SUPABASE_URL: ${{ env.SB_URL }}
