@@ -55,10 +55,13 @@ describe('recebimento/actions validações', () => {
     ).toBeNull()
   })
 
-  it('informa em português e chinês que a quantidade deve ser positiva', () => {
+  it('informa em português e chinês que é preciso selecionar produto e quantidade positiva', () => {
+    // RecebimentoGerentePageClient dispara este mesmo toast tanto quando
+    // produto_id está vazio quanto quando a quantidade é inválida — a
+    // mensagem precisa cobrir os dois casos, não só quantidade.
     expect(pt.gerente.recebimento_page.toast_dados_invalidos).toBe(
-      'A quantidade deve ser maior que zero.',
+      'Selecione um produto e informe quantidades maiores que zero.',
     )
-    expect(zh.gerente.recebimento_page.toast_dados_invalidos).toBe('数量必须大于 0。')
+    expect(zh.gerente.recebimento_page.toast_dados_invalidos).toBe('请选择商品并输入大于 0 的数量。')
   })
 })
