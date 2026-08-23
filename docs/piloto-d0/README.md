@@ -42,6 +42,7 @@ O trecho da especificação que adota o Bling como referência ampla de experiê
 5. [PLANO_DE_PROVAS_D0.md](./PLANO_DE_PROVAS_D0.md)
 6. [HANDOFF_CLAUDE_CODE.md](./HANDOFF_CLAUDE_CODE.md)
 7. [CHANGELOG_AUDITORIA.md](./CHANGELOG_AUDITORIA.md)
+8. [PREFLIGHT_ROLLOUT_PRICING_D0.md](./PREFLIGHT_ROLLOUT_PRICING_D0.md)
 
 ## Estado geral
 

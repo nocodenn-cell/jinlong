@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import pt from '../../../src/lib/i18n/pt.json'
+import zh from '../../../src/lib/i18n/zh.json'
 import { validarRemessaInput } from './actions.validation'
 
 describe('recebimento/actions validações', () => {
@@ -51,5 +53,12 @@ describe('recebimento/actions validações', () => {
         itens: [{ produto_id: 'p1', quantidade_esperada: 10, quantidade_conferida: 9.5 }],
       }),
     ).toBeNull()
+  })
+
+  it('informa em português e chinês que a quantidade deve ser positiva', () => {
+    expect(pt.gerente.recebimento_page.toast_dados_invalidos).toBe(
+      'A quantidade deve ser maior que zero.',
+    )
+    expect(zh.gerente.recebimento_page.toast_dados_invalidos).toBe('数量必须大于 0。')
   })
 })
