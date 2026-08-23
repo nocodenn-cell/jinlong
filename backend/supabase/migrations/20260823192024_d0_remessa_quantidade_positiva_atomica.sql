@@ -11,15 +11,19 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_remessas_loja_idempotency_key
   ON public.remessas(loja_id, idempotency_key)
   WHERE idempotency_key IS NOT NULL;
 
+-- NOT VALID e sem VALIDATE de propósito: o schema anterior permitia
+-- quantidade_esperada = 0 (linha 41 de 034_remessas_movimentos_transferencias.sql)
+-- e remessa_itens pode ter linhas históricas nesse estado. VALIDATE
+-- escanearia a tabela inteira e abortaria esta migration inteira se
+-- qualquer uma existir. NOT VALID já é suficiente para o objetivo: toda
+-- linha nova ou atualizada passa a exigir > 0; linhas antigas ficam como
+-- estão, sem reescrita de dado histórico.
 ALTER TABLE public.remessa_itens
   DROP CONSTRAINT IF EXISTS remessa_itens_quantidade_esperada_check;
 
 ALTER TABLE public.remessa_itens
   ADD CONSTRAINT remessa_itens_quantidade_esperada_check
   CHECK (quantidade_esperada > 0) NOT VALID;
-
-ALTER TABLE public.remessa_itens
-  VALIDATE CONSTRAINT remessa_itens_quantidade_esperada_check;
 
 CREATE OR REPLACE FUNCTION public.criar_confirmar_remessa_entrada(
   p_origem text,
@@ -80,7 +84,16 @@ BEGIN
     ) THEN
       RAISE EXCEPTION 'REMESSA_ITEM_INVALIDO';
     END IF;
-    IF v_esperada IS NULL OR v_conferida IS NULL OR v_esperada <= 0 OR v_conferida <= 0 THEN
+    -- Postgres numeric aceita o cast de 'NaN'/'Infinity' e os trata como
+    -- maiores que qualquer valor finito (NaN > 0 é verdadeiro), então
+    -- `<= 0` sozinho não barra esses valores especiais. Sem este checque
+    -- explícito, NaN persiste em remessa_itens, estoque e no log de
+    -- movimento, corrompendo os três.
+    IF v_esperada IS NULL OR v_conferida IS NULL
+       OR v_esperada <= 0 OR v_conferida <= 0
+       OR v_esperada = 'NaN'::numeric OR v_conferida = 'NaN'::numeric
+       OR v_esperada = 'Infinity'::numeric OR v_conferida = 'Infinity'::numeric
+    THEN
       RAISE EXCEPTION 'REMESSA_QTD_POSITIVA';
     END IF;
   END LOOP;
@@ -119,8 +132,14 @@ BEGIN
     );
   END LOOP;
 
+  -- conferido_por/conferido_em: o fluxo antigo em duas etapas gravava estes
+  -- campos em registrar_conferencia_remessa antes de confirmar. Esta RPC
+  -- funde criação+conferência+confirmação numa chamada só; sem gravar os
+  -- campos aqui, toda remessa concluída por este caminho fica sem registro
+  -- de quem/quando conferiu fisicamente.
   UPDATE public.remessas
-  SET status = 'CONCLUIDA', finalized_at = now()
+  SET status = 'CONCLUIDA', finalized_at = now(),
+      conferido_por = v_uid, conferido_em = now()
   WHERE id = v_remessa;
 
   RETURN v_remessa;

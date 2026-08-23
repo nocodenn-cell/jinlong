@@ -84,6 +84,44 @@ BEGIN
     RAISE EXCEPTION 'D0_REMESSA_REPLAY_DUPLICOU';
   END IF;
 
+  -- Auditoria: a RPC atômica funde criação+conferência+confirmação numa
+  -- chamada só e precisa gravar quem/quando conferiu, igual ao fluxo antigo.
+  IF NOT EXISTS (
+    SELECT 1 FROM public.remessas
+    WHERE id = v_id1
+      AND conferido_por = current_setting('request.jwt.claim.sub')::uuid
+      AND conferido_em IS NOT NULL
+  ) THEN
+    RAISE EXCEPTION 'D0_REMESSA_SEM_AUDITORIA_CONFERENCIA';
+  END IF;
+
+  -- NaN/Infinity: numeric aceita o cast e os trata como > 0 (maior que
+  -- qualquer valor finito), então um checque ingênuo de `<= 0` os deixa
+  -- passar. Isso corromperia remessa_itens/estoque/movimentos_estoque_log.
+  BEGIN
+    PERFORM public.criar_confirmar_remessa_entrada(
+      'D0 nan', NULL,
+      jsonb_build_array(jsonb_build_object('produto_id', current_setting('d0.produto'), 'quantidade_esperada', 'NaN', 'quantidade_conferida', 1)),
+      'd0-remessa-nan');
+    RAISE EXCEPTION 'D0_REMESSA_NAN_ACEITO';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT LIKE '%REMESSA_QTD_POSITIVA%' THEN RAISE; END IF;
+  END;
+
+  BEGIN
+    PERFORM public.criar_confirmar_remessa_entrada(
+      'D0 infinity', NULL,
+      jsonb_build_array(jsonb_build_object('produto_id', current_setting('d0.produto'), 'quantidade_esperada', 1, 'quantidade_conferida', 'Infinity')),
+      'd0-remessa-infinity');
+    RAISE EXCEPTION 'D0_REMESSA_INFINITY_ACEITO';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT LIKE '%REMESSA_QTD_POSITIVA%' THEN RAISE; END IF;
+  END;
+
+  IF EXISTS (SELECT 1 FROM public.remessas WHERE idempotency_key IN ('d0-remessa-nan', 'd0-remessa-infinity')) THEN
+    RAISE EXCEPTION 'D0_REMESSA_NAO_FINITO_PERSISTIU';
+  END IF;
+
   -- Inventário/contagem física zero continua legítimo no fluxo próprio.
   SELECT quantidade_atual INTO v_saldo_antes
   FROM public.estoque
