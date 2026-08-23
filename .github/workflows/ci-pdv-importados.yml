@@ -409,9 +409,19 @@ jobs:
       # qualquer teste rodar exatamente nesse cenário já observado, o que o
       # code review do PR #315 apontou (P1: o timeout não cobria a duração já
       # documentada acima dele).
-      - name: Install Playwright Chromium
+      #
+      # `chromium webkit`, não só `chromium`: `npm run test:e2e` (abaixo) roda
+      # `playwright test` sem `--project`, ou seja, os 3 projetos declarados em
+      # `playwright.config.ts` — incluindo `mobile-safari-iphone`, que usa o
+      # engine webkit. Sem instalar o binário, todo teste desse projeto falha
+      # com "browserType.launch: Executable doesn't exist" — não é flakiness
+      # nem regressão de produto, é o passo de instalação nunca ter coberto o
+      # que o próprio projeto do Playwright já declarava precisar. Só este job
+      # precisa: `e2e-critical` roda `test:e2e:critical` (pipeline próprio,
+      # restrito a chromium) e nunca aciona o projeto webkit.
+      - name: Install Playwright Chromium + WebKit
         timeout-minutes: 35
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium webkit
 
       # Mesma stack local e efêmera do `e2e-critical`. Este job foi esquecido na
       # primeira correção e, por isso, continuou logando em PRODUÇÃO com as
