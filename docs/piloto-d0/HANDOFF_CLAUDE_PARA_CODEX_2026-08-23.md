@@ -24,9 +24,9 @@ commits desta continuação.
   do próprio cenário; assim, saldos persistentes da base local compartilhada
   não produzem falso negativo. O arquivo termina em `ROLLBACK;` e contém 48
   delimitadores `$g$`.
-- **D0-02 resolvido:** `exceljs` foi preservado como dependência direta porque
-  `pdv-importados/lib/xlsx.ts` e o exportador de relatórios continuam ativos.
-  Manifesto e lockfile registram `exceljs@4.4.0`.
+- **D0-02 resolvido sem mudança de dependências:** o SHA-base autorizado já
+  registra `exceljs@4.4.0` no manifesto e lockfile; a candidata apenas preserva
+  esse estado porque `pdv-importados/lib/xlsx.ts` e o exportador continuam ativos.
 - **D0-03 resolvido sem drift:** as cinco migrations aplicadas voltaram ao
   conteúdo exato do `HEAD`. A orientação operacional foi movida para
   `docs/runbooks/rollback-financeiro-20260813-18.md`.

@@ -188,10 +188,11 @@ arquivo. **Este encerramento não commitou o arquivo.**
 
 ### D0-02 — P0 — remoção de `exceljs` quebra `pdv-importados/lib/xlsx.ts`
 
-**Estado em 2026-08-23 (continuação Codex): RESOLVIDO.** `exceljs@^4.4.0` foi
-restaurado como dependência direta e o lockfile foi regenerado. O typecheck do
-PDV passou, `npm ls` resolveu `exceljs@4.4.0` e uma instância de `Workbook` foi
-criada em teste de runtime.
+**Estado em 2026-08-23 (recomposição Codex): RESOLVIDO NO UPSTREAM, SEM MUDANÇA
+DE DEPENDÊNCIAS.** O SHA-base autorizado já contém `exceljs@^4.4.0` como
+dependência direta e sua entrada no lockfile. A candidata preserva ambos os
+arquivos sem alterações. O typecheck do PDV passou, `npm ls` resolveu
+`exceljs@4.4.0` e uma instância de `Workbook` foi criada em teste de runtime.
 
 **Classificação:** COMPROVADO por typecheck direto.
 
