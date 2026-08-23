@@ -5194,7 +5194,7 @@ export type Database = {
         Args: {
           p_idempotency_key: string
           p_itens: Json
-          p_observacao: string | null
+          p_observacao: string
           p_origem: string
         }
         Returns: string
