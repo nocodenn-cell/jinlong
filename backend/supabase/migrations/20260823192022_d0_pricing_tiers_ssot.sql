@@ -76,4 +76,3 @@ REVOKE ALL ON FUNCTION public.calcular_preco_produto(uuid, integer, uuid) FROM P
 GRANT EXECUTE ON FUNCTION public.calcular_preco_produto(uuid, integer, uuid) TO authenticated, service_role;
 
 COMMIT;
-

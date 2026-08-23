@@ -140,4 +140,3 @@ REVOKE ALL ON FUNCTION public.criar_confirmar_remessa_entrada(text, text, jsonb,
 GRANT EXECUTE ON FUNCTION public.criar_confirmar_remessa_entrada(text, text, jsonb, text) TO authenticated, service_role;
 
 COMMIT;
-

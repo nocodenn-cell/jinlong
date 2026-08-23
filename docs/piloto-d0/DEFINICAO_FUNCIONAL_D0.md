@@ -99,4 +99,3 @@
 - Pagamentos: dinheiro, PIX, débito e crédito.
 - Não transformar toda função do Bling em obrigação.
 - Fora do D0: venda em espera, WhatsApp, multiempresa, inventário formal, Focus NFe real e CEP automático como bloqueador.
-

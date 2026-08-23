@@ -80,4 +80,3 @@ END $test$;
 
 SELECT 'D0 PRICING TIERS SSOT: OK' AS resultado;
 ROLLBACK;
-

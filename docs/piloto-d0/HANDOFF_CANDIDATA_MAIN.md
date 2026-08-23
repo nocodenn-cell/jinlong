@@ -20,7 +20,17 @@
 
 - homologação das duas migrations no ambiente autorizado;
 - fechamento comercial dos 27 produtos legados sem tier ativo;
+- correção separada dos mocks financeiros preexistentes que bloqueiam o
+  typecheck integral do `shared-core`;
 - aceite humano dos gates operacionais e do GO.
 
-O runbook financeiro histórico foi deliberadamente omitido por conter
-procedimentos de rollback vinculados a um estado antigo do schema.
+## Provas locais
+
+- vermelho em `main`: pricing `D0_PRICING_Q4`; RPC atômica de remessa ausente;
+- verde na candidata: pricing 9/9, offline 9/9, consumidores web 12/12,
+  validações de remessa 8/8 e duas suítes SQL transacionais;
+- gate financeiro canônico: 8/8 suítes, incluindo 6 cenários concorrentes;
+- TypeScript: backend, web e PDV local verdes; `shared-core` mantém duas falhas
+  preexistentes fora do diff;
+- build web, lint focado, guard de migrations, traduções e hook equivalentes
+  verdes.

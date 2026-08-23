@@ -7,13 +7,14 @@ seed e as migrations históricas canônicas dessa base.
 
 ## Estado
 
-- pricing por tiers e remessa positiva: em correção/validação local nesta
-  candidata;
+- pricing por tiers e remessa positiva: corrigidos e validados localmente;
 - homologação e aplicação remota: não executadas;
 - 27 produtos legados sem tier ativo: bloqueio de rollout, pendente validação
   comercial;
 - lint do PDV local: não executável por limitação preexistente, sujeito aos
   controles compensatórios documentados no preflight;
+- typecheck do `shared-core`: bloqueado por dois mocks financeiros já
+  incompatíveis na `main`; os demais três alvos passaram;
 - GO do piloto: não autorizado.
 
 O runbook financeiro histórico foi deliberadamente omitido por conter

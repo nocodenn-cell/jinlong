@@ -40,4 +40,3 @@ Controles compensatórios desta candidata:
 
 A correção da infraestrutura de lint fica para trabalho separado, posterior ao
 D0, sem ampliar o escopo desta PR.
-

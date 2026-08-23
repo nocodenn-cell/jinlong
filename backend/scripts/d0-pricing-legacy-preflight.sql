@@ -48,4 +48,3 @@ SELECT
   COUNT(*) FILTER (WHERE ativo = true) AS ativos_dependentes_legado,
   COUNT(*) FILTER (WHERE ativo = false) AS inativos_dependentes_legado
 FROM produtos_sem_tier_ativo;
-

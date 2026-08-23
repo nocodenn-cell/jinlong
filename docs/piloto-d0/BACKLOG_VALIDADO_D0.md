@@ -53,4 +53,3 @@ Somente itens sustentados por evidência entram aqui. Estados: `ABERTO`, `EM_EXE
 ## Regra de encerramento
 
 `RESOLVIDO` exige alteração integrada, teste relevante e prova associada quando operacional. Código alterado isoladamente permanece `ABERTO` ou, no máximo, `VALIDADO` tecnicamente.
-

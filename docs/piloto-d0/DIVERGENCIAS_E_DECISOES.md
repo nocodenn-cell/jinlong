@@ -30,4 +30,3 @@ Estados: `ABERTA`, `DECIDIDA`, `AGUARDA_PROVA`, `RESOLVIDA`.
 - Divergência `DECIDIDA` ainda pode exigir correção ou prova; significa apenas que a regra de negócio está definida.
 - Não alterar migrations históricas. Correção de schema deve ser aditiva e separada desta missão documental.
 - Nenhum documento histórico será apagado; avisos devem apontar para esta pasta.
-

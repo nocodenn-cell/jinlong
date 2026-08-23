@@ -36,4 +36,3 @@
 ## Critério de saída
 
 O D0 só recebe GO quando PV-001, PV-003, PV-005 a PV-017 e PV-019 a PV-023 estiverem aprovadas; PV-018 é condicional à habilitação de AP/AR. Falha gera item de backlog ligado à prova, sem apagar a evidência.
-

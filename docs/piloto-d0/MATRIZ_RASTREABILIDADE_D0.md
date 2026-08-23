@@ -85,4 +85,3 @@ Nenhuma linha operacional foi marcada `COMPROVADO` nesta consolidação: não ho
 - Não existem seções numeradas 6, 7 e 11 nas nove páginas fornecidas.
 - “Semelhante ao Bling”, “todas as ações” e “demais módulos” são expressões abertas; não constituem critério objetivo isolado.
 - A matriz aplica as decisões D0 sem apagar o fato de que a especificação original contém requisitos pós-piloto.
-

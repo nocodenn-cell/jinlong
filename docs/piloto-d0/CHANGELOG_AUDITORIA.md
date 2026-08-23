@@ -8,8 +8,6 @@
   gate truncado da branch histórica não foi portado.
 - `exceljs` já pertence à base de `main`; nenhuma restauração ou alteração de
   dependência foi realizada nesta candidata.
-- O runbook financeiro histórico foi deliberadamente omitido por conter
-  procedimentos de rollback vinculados a um estado antigo do schema.
 - Duas correções D0 são preparadas: tiers como autoridade única do atacado e
   remessa/recebimento com quantidades estritamente positivas.
 - Nenhuma migration foi aplicada remotamente e nenhuma homologação foi
