@@ -91,7 +91,8 @@ test.describe('Gerente transferências - feedback visual crítico', () => {
 
     const { origem, destino, produto } = await prepararDadosTransferenciaE2E()
 
-    await loginGerente(page, { postLoginUrl: /\/(caixa|gerente)/ })
+    // Sem override: GERENTE sempre cai em /admin/dashboard, nunca /gerente.
+    await loginGerente(page)
 
     // Atraso artificial da action para estabilizar verificação do estado "Processando...".
     await page.route('**/gerente/transferencias**', async (route) => {

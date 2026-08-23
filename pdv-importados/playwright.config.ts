@@ -27,7 +27,15 @@ const reuseExistingServer =
 
 export default defineConfig({
   testDir: './e2e',
-  timeout: 30_000,
+  // 90s, não 30s: `loginGerente`/`loginCaixaOperador` (e2e/helpers/login.ts) documentam
+  // precisar de até 90s para cobrir compile frio do `next dev` + 1 retry de PGRST303/JWT
+  // skew. Com timeout de teste menor que o orçamento do próprio login, o Playwright
+  // matava a página em qualquer teste que não reconfigurasse describe.configure({timeout})
+  // manualmente (só sync-fluxo-gerente.spec.ts fazia isso) — o teste estourava o timeout
+  // global ANTES do login helper terminar seu retry, e o teardown fechava a página
+  // enquanto o catch de diagnóstico do login ainda tentava lê-la, produzindo o erro
+  // secundário "Target page, context or browser has been closed" mascarando a causa real.
+  timeout: 90_000,
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? 'github' : 'list',
   use: {

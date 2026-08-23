@@ -192,7 +192,17 @@ anonymous_users = 30
 # Number of sessions that can be refreshed in a 5 minute interval per IP address.
 token_refresh = 150
 # Number of sign up and sign-in requests that can be made in a 5 minute interval per IP address (excludes anonymous users).
-sign_in_sign_ups = 30
+#
+# 1000, não o default 30: a suíte E2E (`pdv-importados/e2e`) tem 78 casos de
+# teste, a maioria com login próprio via `beforeEach` (`loginGerente`/
+# `loginCaixaOperador`), todos vindo do mesmo IP local (127.0.0.1). Com 30,
+# o limite estoura bem antes do fim da suíte — o GoTrue passa a responder
+# limitado/travado em `/login`, isso bate no regex "retryable" de
+# `loginWithRetry` (`login\?`), e o retry (mesmo corrigido) não tem como
+# recuperar de um rate limit real. Local-only: este arquivo nunca é
+# propagado a um projeto hospedado (`supabase config push` não é usado em
+# lugar nenhum deste repo) — não afeta produção.
+sign_in_sign_ups = 1000
 # Number of OTP / Magic link verifications that can be made in a 5 minute interval per IP address.
 token_verifications = 30
 # Number of Web3 logins that can be made in a 5 minute interval per IP address.

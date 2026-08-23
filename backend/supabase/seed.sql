@@ -58,13 +58,29 @@ ON CONFLICT (id) DO NOTHING;
 -- linha em `auth` o perfil não pode existir. Só `id` é NOT NULL sem default;
 -- email/role/aud vão junto para que as contas também sirvam a testes manuais
 -- de login no Studio local.
+--
+-- `confirmation_token`, `recovery_token`, `email_change_token_new` e
+-- `email_change` são NULLABLE e SEM DEFAULT no schema do GoTrue — sem setá-los
+-- aqui, ficam NULL, e o driver Go do GoTrue não sabe fazer scan de NULL nessas
+-- colunas: QUALQUER chamada a `admin.listUsers()`/`GET /admin/users` (usada
+-- pelo readiness check e por `seed-dev-users.mjs`) quebra com
+--   error_code: unexpected_failure, status 500,
+--   "unable to fetch records: sql: Scan error on column index 3,
+--    name \"confirmation_token\": converting NULL to string is unsupported"
+-- de forma 100% determinística (não é flakiness) em TODO `db reset` que rode
+-- este seed. As demais colunas de token (`phone_change_token`,
+-- `email_change_token_current`, `reauthentication_token`) já têm default
+-- `''` no schema do GoTrue e por isso nunca quebraram.
 -- ---------------------------------------------------------------------------
-INSERT INTO auth.users (id, instance_id, aud, role, email, email_confirmed_at, created_at, updated_at)
+INSERT INTO auth.users (
+  id, instance_id, aud, role, email, email_confirmed_at, created_at, updated_at,
+  confirmation_token, recovery_token, email_change_token_new, email_change
+)
 VALUES
-  ('11111111-1111-4111-8111-111111111111', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'dono.seed@local.test',     now(), now(), now()),
-  ('22222222-2222-4222-8222-222222222222', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'gerente.seed@local.test',  now(), now(), now()),
-  ('33333333-3333-4333-8333-333333333333', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'operador.seed@local.test', now(), now(), now()),
-  ('44444444-4444-4444-8444-444444444444', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'operador2.seed@local.test', now(), now(), now())
+  ('11111111-1111-4111-8111-111111111111', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'dono.seed@local.test',     now(), now(), now(), '', '', '', ''),
+  ('22222222-2222-4222-8222-222222222222', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'gerente.seed@local.test',  now(), now(), now(), '', '', '', ''),
+  ('33333333-3333-4333-8333-333333333333', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'operador.seed@local.test', now(), now(), now(), '', '', '', ''),
+  ('44444444-4444-4444-8444-444444444444', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'operador2.seed@local.test', now(), now(), now(), '', '', '', '')
 ON CONFLICT (id) DO NOTHING;
 
 -- ---------------------------------------------------------------------------
