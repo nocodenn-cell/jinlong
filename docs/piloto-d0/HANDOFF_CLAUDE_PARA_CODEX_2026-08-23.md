@@ -10,6 +10,46 @@ superado pela certificação já commitada).
 Convenções: **FATO** / **INFERÊNCIA** / **RECOMENDAÇÃO** / **PENDÊNCIA** — como
 em `ESCOPO_E_ACHADOS_PILOTO_D0.md`.
 
+## Atualização Codex — continuação de 2026-08-23
+
+Partida confirmada em `ccd9d41245a3ca46be967b575b2597ff59ec795f`,
+branch `codex/ap-payments-reconciliation`, alinhada ao upstream (0/0). Os dez
+arquivos modificados do handoff foram auditados antes de qualquer correção.
+Os dois arquivos `.claude/*` permanecem como estado local e não integram os
+commits desta continuação.
+
+- **D0-01 resolvido:** a cauda perdida dos GATE 13–23 foi recuperada da última
+  versão ancestral certificada. GATE19 e GATE23 passaram a criar vendedores
+  descartáveis dentro da transação e suas asserções foram escopadas aos fatos
+  do próprio cenário; assim, saldos persistentes da base local compartilhada
+  não produzem falso negativo. O arquivo termina em `ROLLBACK;` e contém 48
+  delimitadores `$g$`.
+- **D0-02 resolvido:** `exceljs` foi preservado como dependência direta porque
+  `pdv-importados/lib/xlsx.ts` e o exportador de relatórios continuam ativos.
+  Manifesto e lockfile registram `exceljs@4.4.0`.
+- **D0-03 resolvido sem drift:** as cinco migrations aplicadas voltaram ao
+  conteúdo exato do `HEAD`. A orientação operacional foi movida para
+  `docs/runbooks/rollback-financeiro-20260813-18.md`.
+- **Seed validado:** `backend/supabase/seed.sql` está limpo no Git e contém
+  apenas fixture local sintética (`local.test`, IDs determinísticos e nomes de
+  fixture), sem senha, token, chave ou URL.
+
+Evidência desta continuação, sem reset, migration ou deploy:
+
+```text
+pdv-importados typecheck: PASS
+backend Edge Functions typecheck: PASS
+test:financial: PASS 6/6 (concorrência: 6 cenários)
+test:migration-status: PASS 9/9
+exceljs runtime: 4.4.0 / Workbook instanciado
+```
+
+`guard:migrations` foi executado e falhou exclusivamente porque o checkout
+principal contém worktrees de outras tarefas sob `.claude/worktrees/`, que o
+guard varre como SSOTs paralelos. Esses worktrees não foram alterados nem
+removidos, conforme a restrição de não tocar outras PRs. Isso é impedimento
+ambiental registrado, não aprovação silenciosa do gate.
+
 ## 1. Identificação
 
 | Campo | Valor |

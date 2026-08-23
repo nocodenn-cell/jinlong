@@ -152,6 +152,12 @@ de cada linha — não duplicados aqui para evitar divergência entre cópias.
 
 ### D0-01 — P0 — `financial-adversarial-gates.test.sql` truncado no working tree
 
+**Estado em 2026-08-23 (continuação Codex): RESOLVIDO.** A cauda foi recuperada
+da versão ancestral certificada, o isolamento de GATE19/GATE23 foi corrigido
+para bases locais compartilhadas e `npm run test:financial -w
+fastproduct-backend` passou 6/6, incluindo 6 cenários concorrentes. A execução
+foi feita sem reset do banco.
+
 **Classificação:** COMPROVADO por execução direta.
 
 **Evidência:**
@@ -182,6 +188,11 @@ arquivo. **Este encerramento não commitou o arquivo.**
 
 ### D0-02 — P0 — remoção de `exceljs` quebra `pdv-importados/lib/xlsx.ts`
 
+**Estado em 2026-08-23 (continuação Codex): RESOLVIDO.** `exceljs@^4.4.0` foi
+restaurado como dependência direta e o lockfile foi regenerado. O typecheck do
+PDV passou, `npm ls` resolveu `exceljs@4.4.0` e uma instância de `Workbook` foi
+criada em teste de runtime.
+
 **Classificação:** COMPROVADO por typecheck direto.
 
 **Evidência:**
@@ -209,6 +220,11 @@ e então remover `exceljs`. **Este encerramento não commitou nenhum dos dois
 arquivos de dependências.**
 
 ### D0-03 — P1 (risco de drift) — 5 migrations financeiras já aplicadas em produção foram editadas (comentário-only)
+
+**Estado em 2026-08-23 (continuação Codex): RESOLVIDO SEM REESCREVER
+HISTÓRICO.** As cinco migrations voltaram ao blob do `HEAD` e não aparecem no
+diff. O conteúdo operacional foi preservado em
+`docs/runbooks/rollback-financeiro-20260813-18.md`.
 
 **Classificação:** COMPROVADO — comparação de diff + `mcp__supabase__list_migrations`.
 
