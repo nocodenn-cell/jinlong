@@ -1,5 +1,7 @@
 # Feature Freeze — Piloto 1º Cliente Pagante
 
+> **Fonte funcional atual:** para decisões autoritativas e rastreabilidade do D0, consulte [`docs/piloto-d0/README.md`](./piloto-d0/README.md). Este freeze continua válido quando não conflitar com aquelas decisões.
+
 **Vigência:** até encerramento da Fase 4 (primeiro cliente em produção estável).  
 **Responsável:** sponsor comercial + CTO.
 

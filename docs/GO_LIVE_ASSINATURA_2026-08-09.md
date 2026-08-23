@@ -1,5 +1,7 @@
 # Assinatura GO-LIVE — 09/08/2026
 
+> **Aviso histórico:** este documento registra a decisão tomada em 09/08/2026 e não comprova, por si só, o estado atual do piloto. Para a autoridade funcional e as provas exigidas no D0, consulte [`docs/piloto-d0/README.md`](./piloto-d0/README.md).
+
 | Campo | Valor |
 |---|---|
 | Decisão | **GO** / PRONTO PARA GO-LIVE |

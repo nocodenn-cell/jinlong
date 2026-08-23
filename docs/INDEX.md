@@ -2,6 +2,8 @@
 
 Welcome to the fastproduct documentation hub. Find guides for development, operations, and system architecture.
 
+> **Piloto D0:** a fonte canônica de definição funcional, rastreabilidade, backlog, provas e handoff está em [`docs/piloto-d0/README.md`](./piloto-d0/README.md).
+
 ---
 
 ## 🚀 Quick Start

@@ -1,5 +1,7 @@
 # Done Definition — Piloto (FastProduct)
 
+> **Atualização de governança:** a definição funcional e o plano atual de evidências do D0 estão em [`docs/piloto-d0/README.md`](./piloto-d0/README.md). Este checklist permanece preservado como fonte histórica e operacional complementar.
+
 Checklist de fechamento objetivo para encerrar ciclo técnico com baixo risco. **Processo + evidência:** tudo abaixo deve estar marcado e **rastreável** (PR, ticket ou cópia do [CHECKLIST_P0_STAGING.md](./CHECKLIST_P0_STAGING.md) com anexos).
 
 **Relação com o P0 geral:** a [trilha T1–T12](./P0_CHECKLIST_OPERACIONAL.md#trilha-unificada-ordem-de-execução) cobre link, migrations, `sync-outbox`, web e testes §4/§4b. Este documento acrescenta **pacote mínimo de dados/loja**, **fila fiscal**, **smoke SQL longo** e **governança de release**.
