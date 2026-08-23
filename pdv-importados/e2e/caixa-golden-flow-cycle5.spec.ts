@@ -36,19 +36,43 @@ test.describe('Caixa — Golden Flow Cycle 5 (browser)', () => {
     const codigo = e2eProdutoCodigoBarras()
     await adicionarProdutoDemo(page, codigo)
 
+    const totalAntes = await readTotalLiquidoFooter(page)
+
     const qty = page.getByRole('spinbutton', { name: /Quantidade —/i }).first()
     if (await qty.isVisible().catch(() => false)) {
       await qty.fill('2')
       await qty.blur()
+
+      // O footer recalcula de forma assíncrona após o blur — sem esperar a
+      // atualização, `readTotalLiquidoFooter` abaixo pode ler o total ainda
+      // da quantidade antiga (1), fazendo a parcela subsequente cobrir só
+      // parte do total real e travar o finalize num "Falta R$X" silencioso
+      // (era exatamente esse o timeout comprovado em `caixa-msg-venda-ok`).
+      await expect
+        .poll(
+          async () =>
+            Number(await page.getByTestId('caixa-total-liquido').getAttribute('data-total-liquido')),
+          { timeout: 15_000 },
+        )
+        .toBeGreaterThan(totalAntes)
     }
 
     const total = await readTotalLiquidoFooter(page)
     expect(total).toBeGreaterThan(0)
 
-    // Parcela de pagamento deve acompanhar o total (evita "Falta" bloquear finalize)
-    const parcela = page.getByRole('spinbutton', { name: /Valor \(R\$\) da parcela/i }).first()
-    if (await parcela.isVisible().catch(() => false)) {
-      await parcela.fill(String(total))
+    // Pagamento único em DINHEIRO usa o campo "Recebido" (`#caixa-valor-
+    // recebido`, `CaixaPdvOperadorTabs.tsx`), não "Valor (R$) da parcela" —
+    // esse rótulo só existe no modo dividido (`Adicionar parcela de
+    // pagamento`), que este fluxo nunca aciona. Com o seletor antigo,
+    // `parcela.isVisible()` sempre resolvia `false` e o fill era pulado em
+    // silêncio: "Recebido" ficava travado no valor do snapshot de quando o
+    // produto foi adicionado (qty=1), sempre menor que o total após
+    // aumentar a quantidade — daí o "Falta R$X" que bloqueava o finalize e
+    // estourava o timeout em `caixa-msg-venda-ok`.
+    const recebido = page.locator('#caixa-valor-recebido')
+    if (await recebido.isVisible().catch(() => false)) {
+      await recebido.fill(String(total))
+      await recebido.blur()
     }
 
     await finalizarVenda(page)
@@ -83,9 +107,12 @@ test.describe('Caixa — Golden Flow Cycle 5 (browser)', () => {
       .toBeGreaterThan(0)
 
     const totalFrac = await readTotalLiquidoFooter(page)
-    const parcela = page.getByRole('spinbutton', { name: /Valor \(R\$\) da parcela/i }).first()
-    if (await parcela.isVisible().catch(() => false)) {
-      await parcela.fill(String(totalFrac))
+    // Mesmo motivo documentado no teste anterior: campo real é "Recebido"
+    // (#caixa-valor-recebido), não "Valor (R$) da parcela".
+    const recebido = page.locator('#caixa-valor-recebido')
+    if (await recebido.isVisible().catch(() => false)) {
+      await recebido.fill(String(totalFrac))
+      await recebido.blur()
     }
 
     await finalizarVenda(page)

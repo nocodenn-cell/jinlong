@@ -54,6 +54,14 @@ test.describe('Painel do gerente (/admin/*)', () => {
 
   test('painel inicial /admin/dashboard carrega', async ({ page }) => {
     await expect(page).toHaveURL(/\/admin\/dashboard/)
+    // Abaixo de `lg` o `<nav>` da sidebar fica oculto por padrão — a
+    // navegação real mora no drawer mobile (`AdminV2MobileNavDrawer`),
+    // atrás do botão "Navegação". Sem abrir o drawer aqui, o `nav` abaixo
+    // nunca fica visível em `mobile-chrome-pixel`/`mobile-safari-iphone`.
+    const mobileToggle = page.getByRole('button', { name: 'Navegação' })
+    if (await mobileToggle.isVisible().catch(() => false)) {
+      await mobileToggle.click()
+    }
     const nav = page.getByRole('navigation')
     await expect(nav).toBeVisible()
     // Rótulos reais de `lib/navigation/adminV2SidebarNav.ts` — "Produtos"/
@@ -183,7 +191,12 @@ test.describe('Painel do gerente (/admin/*)', () => {
     ).toBeVisible({ timeout: 10_000 })
 
     await gotoApp(page, '/admin/dashboard')
-    await expect(page.getByText('主控台')).toBeVisible({ timeout: 10_000 })
+    // Não `getByText('主控台')` — mesmo motivo documentado em
+    // admin-idioma.spec.ts: é o rótulo da sidebar, que em mobile-chrome-
+    // pixel/mobile-safari-iphone só existe dentro do drawer de navegação
+    // fechado por padrão. O h1 do dashboard prova o mesmo contrato em
+    // qualquer viewport.
+    await expect(page.getByText('生意看板')).toBeVisible({ timeout: 10_000 })
 
     await garantirIdiomaPt(page)
   })
