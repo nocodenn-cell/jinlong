@@ -83,3 +83,8 @@ docs/quarantine/
 # Probes locais de auditoria
 pdv-importados/scripts/_audit_*_probe.mjs
 pdv-importados/scripts/_audit_f1_probe.mjs
+
+# Segredos, dumps e configuração local da ferramenta — nunca versionar.
+/conexao.txt
+/backups/
+/.codex/
