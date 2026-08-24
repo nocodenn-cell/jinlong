@@ -194,9 +194,12 @@ valor real, ou credencial foi tocado (verificado por `git diff` completo antes d
 "revisão final").
 
 **Migration nova (única migration desta sprint):**
-- `backend/supabase/migrations/20260811110000_descontos_venda_rls_loja_scope.sql` — aditiva,
-  não aplicada em nenhum banco remoto por esta sessão (proibido pela missão); só existe no
-  repositório, pronta para `supabase db reset`/`db push` local ou pipeline de deploy padrão.
+- `backend/supabase/migrations/20260811110000_descontos_venda_rls_loja_scope.sql` — aditiva.
+  **Atualização 24/08/2026 (fora desta sessão, autorização explícita):** aplicada em produção
+  (`kbabmewnahysfvlybiak`) via MCP `apply_migration`, registrada como `20260824092128`. Verificado
+  por `SELECT` em `pg_policies` que as 4 policies exigem `u.loja_id = c.loja_id` para GERENTE.
+  Ver `backend/supabase/README.md` (seção "Migrations aplicadas via MCP") e
+  `backend/supabase/migration-human-gates.json` para o par git/remoto reconciliado.
 
 Lista completa por área:
 
@@ -528,8 +531,13 @@ venda é recusada).
       em homologação — **item pendente desta sprint, §7.5**
 - [ ] Confirmar com o CTO qual domínio/deploy Vercel vai receber esta branch antes do piloto
       (esta sprint não fez deploy)
-- [ ] Rodar `backend/scripts/assert-descontos-venda-rls-loja.mjs` contra o banco que vai atender
-      o piloto, para confirmar a policy de §4.3 na prática, não só na migration
+- [ ] **Correção (achado de review, 24/08/2026):** `backend/scripts/assert-descontos-venda-rls-loja.mjs`
+      é um assert **estático** (só lê o arquivo `.sql`, nunca conecta no banco — ver docstring do
+      próprio script). Ele NÃO confirma que a policy está de fato aplicada no ambiente do piloto.
+      A confirmação real, contra o banco de produção, foi feita fora desta sprint via
+      `SELECT policyname, qual FROM pg_policies WHERE tablename='descontos_venda'` (ver §5) — repita
+      essa query contra o banco que vai atender o piloto antes de liberar o operador, não confie só
+      no script estático
 - [ ] Confirmar `loja_id` da loja do piloto criado em `public.lojas` antes de cadastrar o operador
 - [ ] Seguir `CHECKLIST_IMPLANTACAO_CLIENTE.md` (Dia 0) e `CHECKLIST_PRIMEIRO_DIA.md` (Dia 1) já
       existentes no repositório — não foram reescritos, continuam válidos
