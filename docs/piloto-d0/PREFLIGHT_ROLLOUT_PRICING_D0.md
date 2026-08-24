@@ -44,13 +44,25 @@ Ele contém apenas consultas e retorna a listagem técnica e uma contagem agrega
 O resultado real (lista de 34 produtos, preços) não é versionado aqui por conter
 dado comercial — foi entregue ao responsável fora deste repositório.
 
-## Decisão comercial: Alternativa A (23/08/2026)
+## Decisão comercial: Alternativa A (23/08/2026) — EXECUTADA
 
 Decisão tomada: cadastrar tiers equivalentes ao `preco_atacado` legado para os
 34 produtos, preservando o comportamento comercial existente em vez de deixá-los
 cair para varejo.
 
-Script preparado e **não executado**:
+**Executada em produção em 24/08/2026 00:05:39 UTC**, sob autorização explícita
+e condicional do responsável. 34 faixas criadas em uma única transação
+(mesmo `created_at` nas 34 linhas). Gate de preço (matriz antes/depois em
+34 produtos × qty 1–20 = 680 comparações) rodou primeiro em simulação
+somente-leitura (`ROLLBACK`) com 0 divergências, depois na execução real com
+o mesmo gate dentro da transação — teria abortado o `COMMIT` se qualquer uma
+das 680 comparações divergisse. Idempotência comprovada por reexecução do
+mesmo INSERT logo em seguida (`RETURNING id` vazio — nada criado de novo).
+Preflight corrigido re-executado após o commit: 0 produtos restantes sem
+cobertura (era 34 antes).
+
+Script usado, mantido no repositório para reprodução/auditoria (não versiona
+nome nem preço — só os 34 `produto_id`):
 [`backend/scripts/d0-pricing-legacy-tier-backfill.sql`](../../backend/scripts/d0-pricing-legacy-tier-backfill.sql)
 — transacional, idempotente (chave única `(produto_id, quantidade_minima)` com
 `loja_id NULL` e `ativo=true`) e reversível (só insere; nunca edita, desativa
@@ -69,7 +81,10 @@ aplicou de fato. Preservar comportamento comercial atual significa usar 6
 para os 34, mas esse descompasso catálogo-declarado × preço-efetivamente-
 aplicado fica sinalizado para decisão manual futura (fora desta operação).
 
-Autorização de execução em produção: **pendente**.
+Autorização de execução em produção: **concedida e executada em 24/08/2026**.
+Pendência remanescente, não bloqueante: os 14 produtos do "achado colateral"
+acima (gatilho de catálogo divergente do limiar aplicado) seguem sem decisão —
+ver [DIVERGENCIAS_E_DECISOES.md](DIVERGENCIAS_E_DECISOES.md).
 
 ## Waiver do lint do PDV local
 
