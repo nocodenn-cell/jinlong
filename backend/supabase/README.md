@@ -126,6 +126,15 @@ remoto. A entrada correspondente em `migration-human-gates.json` só é aceita q
 do par (`git_only` e `remote_only`) aparecem como divergência no mesmo ambiente avaliado — um ambiente
 que nunca recebeu esta migration em nenhum formato continua bloqueado pelo gate.
 
+Quarto par (24/08/2026): `20260811110000_descontos_venda_rls_loja_scope.sql` (corrige vazamento
+cross-loja real em `descontos_venda` — policies checavam só o perfil GERENTE/DONO/ADMIN, nunca
+`loja_id`, achado durante a preparação do piloto Jinlong, PR #317) foi aplicado via MCP
+`apply_migration` e ficou rastreado como `20260824092128` (`name` bate, `version` não). Verificado
+por leitura direta (`SELECT` em `pg_policies`) que as 4 policies (select/insert/update/delete) agora
+exigem `u.loja_id = c.loja_id` para GERENTE (DONO/ADMIN continuam vendo todas as lojas) — nenhuma
+alteração no histórico remoto além da própria migration. Mesma regra do par anterior: só aceito
+quando ambos os lados do par aparecem como divergência no ambiente avaliado.
+
 **Consequência prática:** um `supabase db push` futuro pode não reconhecer esses arquivos como já
 aplicados (porque o CLI casa por `version` = timestamp do nome do arquivo) e tentar reaplicá-los. Isso só é
 seguro se a migration em questão for idempotente (`DROP ... IF EXISTS` + `CREATE`, `REVOKE`, `ON CONFLICT`

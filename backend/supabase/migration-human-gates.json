@@ -17,6 +17,12 @@
       "remoteOnlyVersion": "20260820233832",
       "reason": "Aplicada via MCP apply_migration (não CLI) em produção durante a investigação da PR #314: schema_migrations.version gravado foi o timestamp real de aplicação (20260820233832), não o timestamp do nome do arquivo (20260820150000_fix_cancelar_venda_desconta_devolucoes_previas.sql). Equivalência semântica reverificada de forma reproduzível (backend/scripts/verify-cancelar-venda-equivalencia.mjs): SHA-256 do corpo local normalizado e do pg_get_functiondef remoto normalizado batem em d4f4f7a76d1492079b159bb46e5f22b48a72e23da7ad880568220dbbd549e27e. Migration substitui a função inteira (CREATE OR REPLACE) — seguro reaplicar se um futuro db push tentar. Aceito apenas quando AMBOS os lados (git_only E remote_only) aparecem como divergência no ambiente avaliado — se um ambiente (ex.: staging) nunca recebeu esta migration em nenhum formato, o gate continua bloqueando ali.",
       "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20260811110000",
+      "remoteOnlyVersion": "20260824092128",
+      "reason": "Aplicada via MCP apply_migration (não CLI) na preparação do piloto Jinlong (PR #317): schema_migrations.version gravado foi o timestamp real de aplicação (20260824092128), não o timestamp do nome do arquivo (20260811110000_descontos_venda_rls_loja_scope.sql). Verificado após aplicação via SELECT em pg_policies que as 4 policies de descontos_venda (select/insert/update/delete) passaram a checar u.loja_id = c.loja_id para GERENTE, corrigindo o vazamento cross-loja. Migration é idempotente (DROP POLICY IF EXISTS + CREATE POLICY) — seguro reaplicar se um futuro db push tentar.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
     }
   ]
 }
