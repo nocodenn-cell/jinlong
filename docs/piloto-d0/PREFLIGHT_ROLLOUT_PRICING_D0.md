@@ -1,5 +1,15 @@
 # Preflight de rollout do pricing D0
 
+## Status final (24/08/2026)
+
+Migrations D0-01 (`20260823192022_d0_pricing_tiers_ssot.sql`, remoto
+`20260824001940`) e D0-03 (`20260823192024_d0_remessa_quantidade_positiva_atomica.sql`,
+remoto `20260824002027`) aplicadas em produção sob autorização explícita e
+validadas. A aplicação da D0-03 revelou e exigiu uma migration corretiva de
+drift pré-existente — ver [DIV-D0-023](DIVERGENCIAS_E_DECISOES.md) e
+`backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo`.
+Bloqueio operacional original (abaixo) fechado pelo backfill dos 34 produtos.
+
 ## Bloqueio operacional
 
 **Atualizado em 23/08/2026 (segunda leitura, preflight corrigido).** A primeira
