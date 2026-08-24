@@ -135,6 +135,25 @@ exigem `u.loja_id = c.loja_id` para GERENTE (DONO/ADMIN continuam vendo todas as
 alteração no histórico remoto além da própria migration. Mesma regra do par anterior: só aceito
 quando ambos os lados do par aparecem como divergência no ambiente avaliado.
 
+Quinto e sexto par, e uma migration corretiva (24/08/2026, piloto D0, autorização explícita):
+`20260823192022_d0_pricing_tiers_ssot.sql` e `20260823192024_d0_remessa_quantidade_positiva_atomica.sql`
+foram aplicados via MCP `apply_migration` em produção e ficaram rastreados como `20260824001940` e
+`20260824002027` respectivamente. A aplicação da segunda revelou um drift pré-existente e não
+relacionado: `remessas.conferido_por`/`conferido_em` (e `origem_tipo`/`origem_ref`/`divergencia_motivo`)
+constavam como criados por `20260801120000_recebimento_conferencia_explicita` em
+`schema_migrations`, mas nunca existiram fisicamente — o mesmo drift já documentado em
+`296_nfe_conferencia.sql` desde 05/08/2026. `criar_confirmar_remessa_entrada` falhava em toda chamada
+real com `column "conferido_por" of relation "remessas" does not exist`. Uma migration corretiva mínima
+e aditiva, `20260824010000_fix_remessas_conferencia_columns_drift.sql`, restaurou só as colunas e
+constraints de schema ausentes (sem recriar `registrar_conferencia_remessa`, deliberadamente removida
+em `20260819230000` — recriá-la reabriria a aceitação de `quantidade_conferida = 0` que a D0-03 existe
+para fechar) e ficou rastreada como `20260824003815`. Regressão coberta por
+`backend/scripts/d0-remessa-conferencia-columns-drift.test.sql` (remove as colunas dentro de uma
+transação não commitada, prova que a RPC falha, reaplica a correção, prova que funciona). Validado em
+produção pós-correção, dentro de transações com `ROLLBACK`: rejeição de zero/negativo/NaN/Infinity/vazio,
+atomicidade, idempotência de replay e gravação de `conferido_por`/`conferido_em` — nenhum dado de teste
+persistiu.
+
 **Consequência prática:** um `supabase db push` futuro pode não reconhecer esses arquivos como já
 aplicados (porque o CLI casa por `version` = timestamp do nome do arquivo) e tentar reaplicá-los. Isso só é
 seguro se a migration em questão for idempotente (`DROP ... IF EXISTS` + `CREATE`, `REVOKE`, `ON CONFLICT`

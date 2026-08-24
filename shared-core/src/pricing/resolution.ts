@@ -6,24 +6,18 @@
  * Este arquivo documenta a mesma lógica em TypeScript para que a regra seja
  * encontrável, testável e resistente a refatorações.
  *
- * ORDEM DE PRECEDÊNCIA (maior índice = menor prioridade):
+ * ORDEM DE PRECEDÊNCIA D0 (maior índice = menor prioridade):
  *
  *   1. precos_atacado (tabela de tiers, por produto + loja)
  *      Condição: ativo=true AND quantidade_minima <= quantidade_carrinho
  *      Critério de desempate: maior quantidade_minima vence (tier mais específico)
  *      Resultado: ATACADO com fonte='tier'
  *
- *   2. produtos.preco_atacado + pdv_config.quantidade_minima_atacado_padrao
- *      Condição: preco_atacado IS NOT NULL AND quantidade >= min_padrao_sistema
- *      Resultado: ATACADO com fonte='catalogo'
- *
- *   3. produtos.preco_varejo (fallback incondicional)
+ *   2. produtos.preco_varejo (fallback incondicional)
  *      Resultado: VAREJO com fonte='varejo'
  *
- * REGRA DE CONFLITO:
- *   Quando uma entrada em precos_atacado existe para o produto, ela SEMPRE vence
- *   sobre produtos.preco_atacado, independente de qual valor é menor.
- *   A precedência é por fonte, não por valor.
+ * `produtos.preco_atacado` e `pdv_config.quantidade_minima_atacado_padrao` são
+ * legados/sugestão de cadastro e não participam do cálculo de venda D0.
  *
  * ADICIONANDO UMA NOVA FONTE DE PREÇO:
  *   1. Adicione um novo item a PriceSourceKind abaixo com índice maior que os existentes
@@ -35,8 +29,8 @@
 /** Identifica de onde veio o preço retornado pelo PDV. */
 export type PriceSourceKind =
   | 'tier'      // precos_atacado (priority 1 — highest)
-  | 'catalogo'  // produtos.preco_atacado (priority 2)
-  | 'varejo'    // produtos.preco_varejo  (priority 3 — lowest / default)
+  | 'catalogo'  // compatibilidade de leitura com respostas anteriores ao D0
+  | 'varejo'    // produtos.preco_varejo (fallback)
 
 /** Resultado de resolução de preço com rastreabilidade de fonte. */
 export interface PriceResolutionResult {
@@ -53,6 +47,7 @@ export interface PriceResolutionResult {
  */
 export const PRICE_RESOLUTION_CHAIN: readonly PriceSourceKind[] = [
   'tier',
+  // Somente para normalizar respostas históricas; resolvers D0 não a produzem.
   'catalogo',
   'varejo',
 ] as const

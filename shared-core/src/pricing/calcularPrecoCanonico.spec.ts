@@ -74,11 +74,11 @@ describe('calcularPrecoCanonico ≡ RPC 250', () => {
     expect(r.result.regraId).toBe('t50')
   })
 
-  it('fallback catálogo sem tiers aplicáveis', () => {
+  it('sem tier aplicável ignora legado/global e retorna varejo', () => {
     const r = base({ quantidade: 12, tiers: [] })
     expect(r).toEqual({
       ok: true,
-      result: { preco: 85, tipo: 'ATACADO', fonte: 'catalogo' },
+      result: { preco: 100, tipo: 'VAREJO', fonte: 'varejo' },
     })
   })
 

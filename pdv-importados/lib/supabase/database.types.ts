@@ -3735,6 +3735,7 @@ export type Database = {
           divergencia_motivo: string | null
           finalized_at: string | null
           id: string
+          idempotency_key: string | null
           loja_id: string
           observacao: string | null
           origem_descricao: string
@@ -3751,6 +3752,7 @@ export type Database = {
           divergencia_motivo?: string | null
           finalized_at?: string | null
           id?: string
+          idempotency_key?: string | null
           loja_id: string
           observacao?: string | null
           origem_descricao: string
@@ -3767,6 +3769,7 @@ export type Database = {
           divergencia_motivo?: string | null
           finalized_at?: string | null
           id?: string
+          idempotency_key?: string | null
           loja_id?: string
           observacao?: string | null
           origem_descricao?: string
@@ -5187,6 +5190,15 @@ export type Database = {
         Returns: undefined
       }
       converter_venda_em_espera: { Args: { p_id: string }; Returns: Json }
+      criar_confirmar_remessa_entrada: {
+        Args: {
+          p_idempotency_key: string
+          p_itens: Json
+          p_observacao: string
+          p_origem: string
+        }
+        Returns: string
+      }
       criar_produto_com_estoque_inicial: {
         Args: { p_ator_id: string; p_payload: Json; p_request_id?: string }
         Returns: Json

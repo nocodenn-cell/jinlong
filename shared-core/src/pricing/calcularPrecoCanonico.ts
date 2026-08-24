@@ -22,10 +22,12 @@ export type CalcularPrecoCanonicoInput = {
   produtoId: string
   ativo: boolean
   precoVarejo: number
+  /** @deprecated Dado legado/sugestão de cadastro; não participa do runtime D0. */
   precoAtacado: number | null
   /** Quantidade do carrinho (pode ser fracionada); FLOOR igual à RPC. */
   quantidade: number
   lojaId: string | null
+  /** @deprecated Sugestão de cadastro; não participa do runtime D0. */
   quantidadeMinimaAtacadoPadrao: number | null
   tiers: readonly PrecoAtacadoTierInput[]
 }
@@ -82,8 +84,8 @@ function ok(
 }
 
 /**
- * Resolve preço unitário com a mesma precedência da RPC 250:
- * tier (`precos_atacado`) → catálogo (`preco_atacado` + min padrao) → varejo.
+ * Resolve preço unitário com a mesma regra D0 da RPC:
+ * tier ativo (`precos_atacado`) → varejo.
  */
 export function calcularPrecoCanonico(
   input: CalcularPrecoCanonicoInput,
@@ -109,15 +111,6 @@ export function calcularPrecoCanonico(
       'tier',
       tier.id,
     )
-  }
-
-  const minPadrao = input.quantidadeMinimaAtacadoPadrao
-  if (
-    input.precoAtacado != null &&
-    minPadrao != null &&
-    qRpc >= Number(minPadrao)
-  ) {
-    return ok(Number(input.precoAtacado), 'ATACADO', 'catalogo')
   }
 
   return ok(Number(input.precoVarejo), 'VAREJO', 'varejo')
