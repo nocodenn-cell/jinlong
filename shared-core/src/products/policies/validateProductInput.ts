@@ -36,6 +36,14 @@ export function validateCreateProductCommand(
     return { ok: false, code: PRODUCT_ERROR_CODES.PRICE_INVALID }
   }
 
+  const atacado = command.input.precoAtacado
+  if (atacado !== undefined && atacado !== null) {
+    const a = Number(atacado)
+    if (Number.isFinite(a) && a >= preco) {
+      return { ok: false, code: PRODUCT_ERROR_CODES.ATACADO_INVALID }
+    }
+  }
+
   const estoque = command.input.estoqueInicial
   if (estoque !== undefined && estoque !== null) {
     const q = Number(estoque)

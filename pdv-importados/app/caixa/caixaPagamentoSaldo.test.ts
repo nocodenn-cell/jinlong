@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   EXCESSO_PAGAMENTO_EPS,
   SALDO_PENDENTE_EPS,
+  avaliarExcessoParcelas,
   calcularResumoParcelas,
   calcularTroco,
   pagamentoParcialExigeCliente,
@@ -70,6 +71,60 @@ describe('caixaPagamentoSaldo', () => {
       const r = calcularTroco(0.1 + 0.2, 0.3)
       expect(r.saldoPendente).toBe(0)
       expect(r.suficiente).toBe(true)
+    })
+  })
+
+  describe('avaliarExcessoParcelas', () => {
+    it('sem parcela DINHEIRO: excesso nunca é troco válido (regressão — cartão/PIX não pode ser subtraído)', () => {
+      const r = avaliarExcessoParcelas(
+        [
+          { formaPagamento: 'CARTAO_DEBITO', valor: 60 },
+          { formaPagamento: 'CARTAO_CREDITO', valor: 50 },
+        ],
+        10,
+      )
+      expect(r.idxDinheiro).toBe(-1)
+      expect(r.dinheiroDisponivel).toBe(0)
+      expect(r.trocoValido).toBe(false)
+    })
+
+    it('com DINHEIRO suficiente para cobrir o excesso: troco válido', () => {
+      const r = avaliarExcessoParcelas(
+        [
+          { formaPagamento: 'CARTAO_DEBITO', valor: 40 },
+          { formaPagamento: 'DINHEIRO', valor: 70 },
+        ],
+        10,
+      )
+      expect(r.idxDinheiro).toBe(1)
+      expect(r.dinheiroDisponivel).toBe(70)
+      expect(r.trocoValido).toBe(true)
+    })
+
+    it('com DINHEIRO insuficiente para cobrir o excesso inteiro: troco inválido', () => {
+      const r = avaliarExcessoParcelas(
+        [
+          { formaPagamento: 'DINHEIRO', valor: 5 },
+          { formaPagamento: 'CARTAO_CREDITO', valor: 100 },
+        ],
+        10,
+      )
+      expect(r.idxDinheiro).toBe(0)
+      expect(r.dinheiroDisponivel).toBe(5)
+      expect(r.trocoValido).toBe(false)
+    })
+
+    it('usa a última parcela DINHEIRO quando há mais de uma', () => {
+      const r = avaliarExcessoParcelas(
+        [
+          { formaPagamento: 'DINHEIRO', valor: 3 },
+          { formaPagamento: 'DINHEIRO', valor: 20 },
+        ],
+        10,
+      )
+      expect(r.idxDinheiro).toBe(1)
+      expect(r.dinheiroDisponivel).toBe(20)
+      expect(r.trocoValido).toBe(true)
     })
   })
 })

@@ -18,7 +18,11 @@ import {
 import { historicoDetalheParaRecibo } from "@/app/caixa/caixaHistoricoRecibo"
 import type { MovimentacaoCaixaDTO } from "@/app/caixa/caixaMovimentacaoTypes"
 import { roundMoney2, type FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
-import { pagamentoParcialExigeCliente, EXCESSO_PAGAMENTO_EPS } from "@/app/caixa/caixaPagamentoSaldo"
+import {
+  pagamentoParcialExigeCliente,
+  EXCESSO_PAGAMENTO_EPS,
+  avaliarExcessoParcelas,
+} from "@/app/caixa/caixaPagamentoSaldo"
 import {
   buildCheckoutSnapshot,
   validateCheckoutSnapshot,
@@ -882,28 +886,20 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     }))
     const excesso = roundMoney2(totalPagamentos - totalLiquidoComGerente)
     if (excesso > EXCESSO_PAGAMENTO_EPS) {
-      let idxDinheiro = -1
-      for (let i = parcelasNormalizadas.length - 1; i >= 0; i--) {
-        if (parcelasNormalizadas[i].formaPagamento === "DINHEIRO") {
-          idxDinheiro = i
-          break
-        }
+      // Troco só existe em dinheiro: nunca abater o excesso de uma parcela
+      // cartão/PIX — isso subregistraria em silêncio o valor realmente
+      // cobrado na maquininha. Se não há dinheiro suficiente para cobrir o
+      // excesso inteiro, é erro de digitação do operador: bloqueia e pede
+      // correção em vez de redistribuir.
+      const { idxDinheiro, dinheiroDisponivel, trocoValido } = avaliarExcessoParcelas(
+        parcelasNormalizadas,
+        excesso,
+      )
+      if (!trocoValido) {
+        setCaixaMensagem(m.caixa.msg_pagamento_excesso_sem_dinheiro, { kind: "error" })
+        return
       }
-      // Always distribute from back to front; prioritise DINHEIRO parcel first
-      let remaining = excesso
-      if (idxDinheiro >= 0 && remaining > 0.001) {
-        const deduct = Math.min(parcelasNormalizadas[idxDinheiro].valor, remaining)
-        parcelasNormalizadas[idxDinheiro].valor = roundMoney2(
-          parcelasNormalizadas[idxDinheiro].valor - deduct,
-        )
-        remaining = roundMoney2(remaining - deduct)
-      }
-      for (let i = parcelasNormalizadas.length - 1; i >= 0 && remaining > 0.001; i--) {
-        if (i === idxDinheiro) continue
-        const deduct = Math.min(parcelasNormalizadas[i].valor, remaining)
-        parcelasNormalizadas[i].valor = roundMoney2(parcelasNormalizadas[i].valor - deduct)
-        remaining = roundMoney2(remaining - deduct)
-      }
+      parcelasNormalizadas[idxDinheiro].valor = roundMoney2(dinheiroDisponivel - excesso)
     }
     const parcelasFiltradas = parcelasNormalizadas.filter((p) => p.valor > 0)
     const parcelasParaEnviar =
