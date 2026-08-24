@@ -19,6 +19,12 @@
       "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
     },
     {
+      "gitOnlyVersion": "20260811110000",
+      "remoteOnlyVersion": "20260824092128",
+      "reason": "Aplicada via MCP apply_migration (não CLI) na preparação do piloto Jinlong (PR #317): schema_migrations.version gravado foi o timestamp real de aplicação (20260824092128), não o timestamp do nome do arquivo (20260811110000_descontos_venda_rls_loja_scope.sql). Verificado após aplicação via SELECT em pg_policies que as 4 policies de descontos_venda (select/insert/update/delete) passaram a checar u.loja_id = c.loja_id para GERENTE, corrigindo o vazamento cross-loja. Migration é idempotente (DROP POLICY IF EXISTS + CREATE POLICY) — seguro reaplicar se um futuro db push tentar.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
       "gitOnlyVersion": "20260823192022",
       "remoteOnlyVersion": "20260824001940",
       "reason": "Aplicada via MCP apply_migration (não CLI) em produção sob autorização explícita do piloto D0, 24/08/2026: schema_migrations.version gravado foi o timestamp real de aplicação (20260824001940), não o timestamp do nome do arquivo (20260823192022_d0_pricing_tiers_ssot.sql). Migration substitui a função inteira (CREATE OR REPLACE) — seguro reaplicar se um futuro db push tentar. Validada pós-aplicação: assinatura/corpo conferidos via pg_get_functiondef, grants corretos, 34 produtos do backfill de pricing continuam cobertos, preflight = 0.",

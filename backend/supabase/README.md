@@ -126,7 +126,16 @@ remoto. A entrada correspondente em `migration-human-gates.json` só é aceita q
 do par (`git_only` e `remote_only`) aparecem como divergência no mesmo ambiente avaliado — um ambiente
 que nunca recebeu esta migration em nenhum formato continua bloqueado pelo gate.
 
-Quarto e quinto par, e uma migration corretiva (24/08/2026, piloto D0, autorização explícita):
+Quarto par (24/08/2026): `20260811110000_descontos_venda_rls_loja_scope.sql` (corrige vazamento
+cross-loja real em `descontos_venda` — policies checavam só o perfil GERENTE/DONO/ADMIN, nunca
+`loja_id`, achado durante a preparação do piloto Jinlong, PR #317) foi aplicado via MCP
+`apply_migration` e ficou rastreado como `20260824092128` (`name` bate, `version` não). Verificado
+por leitura direta (`SELECT` em `pg_policies`) que as 4 policies (select/insert/update/delete) agora
+exigem `u.loja_id = c.loja_id` para GERENTE (DONO/ADMIN continuam vendo todas as lojas) — nenhuma
+alteração no histórico remoto além da própria migration. Mesma regra do par anterior: só aceito
+quando ambos os lados do par aparecem como divergência no ambiente avaliado.
+
+Quinto e sexto par, e uma migration corretiva (24/08/2026, piloto D0, autorização explícita):
 `20260823192022_d0_pricing_tiers_ssot.sql` e `20260823192024_d0_remessa_quantidade_positiva_atomica.sql`
 foram aplicados via MCP `apply_migration` em produção e ficaram rastreados como `20260824001940` e
 `20260824002027` respectivamente. A aplicação da segunda revelou um drift pré-existente e não
