@@ -12,8 +12,14 @@ export function validarRemessaInput(input: {
     if (!Number.isFinite(it.quantidade_esperada) || it.quantidade_esperada < 0) {
       return 'Quantidade esperada inválida.'
     }
+    if (it.quantidade_esperada === 0) {
+      return 'Quantidade esperada deve ser maior que zero.'
+    }
     if (!Number.isFinite(it.quantidade_conferida) || it.quantidade_conferida < 0) {
       return 'Quantidade conferida inválida.'
+    }
+    if (it.quantidade_conferida === 0) {
+      return 'Quantidade conferida deve ser maior que zero para confirmar a entrada.'
     }
   }
   return null

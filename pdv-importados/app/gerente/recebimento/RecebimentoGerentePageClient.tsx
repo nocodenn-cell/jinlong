@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { CadastroRapidoBlock } from '@/components/gerente/cadastro'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { readFormDataString } from '@/lib/forms/readFormDataString'
@@ -58,6 +58,7 @@ export function RecebimentoGerentePageClient({
 
   const [qtdEspStr, setQtdEspStr] = useState('')
   const [qtdConfStr, setQtdConfStr] = useState('')
+  const idempotencyKeyRef = useRef(crypto.randomUUID())
 
   const divergenciaDetalhe = useMemo(() => {
     const esp = Number(qtdEspStr.replace(',', '.'))
@@ -81,10 +82,12 @@ export function RecebimentoGerentePageClient({
       produto_id: string
       qtd_esperada: number
       qtd_conferida: number
+      idempotency_key: string
     }) => {
       const res = await criarRemessaConferencia({
         origem: p.origem,
         observacao: p.observacao || undefined,
+        idempotency_key: p.idempotency_key,
         itens: [
           {
             produto_id: p.produto_id,
@@ -100,6 +103,7 @@ export function RecebimentoGerentePageClient({
     {
       onSuccess: (id) => {
         if (id) {
+          idempotencyKeyRef.current = crypto.randomUUID()
           emitGerenteToast({ kind: 'success', message: interRecebimento(r.toast_ok, { id }) })
         }
       },
@@ -197,7 +201,7 @@ export function RecebimentoGerentePageClient({
             const pid = readFormDataString(fd, 'produto_id')
             const qEsp = Number(fd.get('qtd_esperada'))
             const qConf = Number(fd.get('qtd_conferida'))
-            if (!pid || Number.isNaN(qEsp) || Number.isNaN(qConf) || qEsp < 0 || qConf < 0) {
+            if (!pid || !Number.isFinite(qEsp) || !Number.isFinite(qConf) || qEsp <= 0 || qConf <= 0) {
               emitGerenteToast({ kind: 'error', message: r.toast_dados_invalidos })
               return
             }
@@ -207,6 +211,7 @@ export function RecebimentoGerentePageClient({
               produto_id: pid,
               qtd_esperada: qEsp,
               qtd_conferida: qConf,
+              idempotency_key: idempotencyKeyRef.current,
             })
           }}
         >
@@ -241,7 +246,7 @@ export function RecebimentoGerentePageClient({
               <Input
                 name="qtd_esperada"
                 type="number"
-                min={0}
+                min="0.001"
                 step="0.001"
                 required
                 disabled={semProdutos}
@@ -253,7 +258,7 @@ export function RecebimentoGerentePageClient({
               <Input
                 name="qtd_conferida"
                 type="number"
-                min={0}
+                min="0.001"
                 step="0.001"
                 required
                 disabled={semProdutos}

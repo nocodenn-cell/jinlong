@@ -10,12 +10,12 @@ import type { PrecoAtacadoTierInput } from '@core/pricing/calcularPrecoCanonico'
 type Tier = { id: string; quantidade_minima: number; preco_unitario: number; loja_id?: string | null }
 type ProdutoRpc = { preco_varejo: number; preco_atacado: number | null }
 
-/** Referência bit-a-bit do algoritmo da RPC (migration 250). */
+/** Referência bit-a-bit do algoritmo D0 da RPC. */
 function rpcCalcularPreco(
   produto: ProdutoRpc,
   tiers: Tier[],
   quantidade: number,
-  minPadraoCatalogo: number | null,
+  _minPadraoCatalogo: number | null,
   lojaId: string | null,
 ): { preco: number | null; tipo: 'VAREJO' | 'ATACADO'; erro?: string } {
   const q = !Number.isFinite(quantidade) || quantidade <= 0
@@ -28,10 +28,6 @@ function rpcCalcularPreco(
     .sort((a, b) => b.quantidade_minima - a.quantidade_minima)
   if (aplicaveis.length > 0) {
     return { preco: aplicaveis[0].preco_unitario, tipo: 'ATACADO' }
-  }
-
-  if (produto.preco_atacado != null && minPadraoCatalogo != null && q >= minPadraoCatalogo) {
-    return { preco: produto.preco_atacado, tipo: 'ATACADO' }
   }
 
   return { preco: produto.preco_varejo, tipo: 'VAREJO' }
@@ -61,12 +57,12 @@ const CASOS: Array<{ qty: number; preco: number; tipo: 'VAREJO' | 'ATACADO'; lab
   { qty: 49, preco: 80, tipo: 'ATACADO', label: 'ainda tier min10' },
   { qty: 50, preco: 70, tipo: 'ATACADO', label: 'tier min50' },
   { qty: 100, preco: 70, tipo: 'ATACADO', label: 'multiplo tiers' },
-  { qty: 12, preco: 85, tipo: 'ATACADO', label: 'catalogo sem tier (tiers vazios)' },
+  { qty: 12, preco: 100, tipo: 'VAREJO', label: 'legado/global ignorados sem tier' },
   { qty: 1.9, preco: 100, tipo: 'VAREJO', label: 'fracao floor' },
 ]
 
 describe('Golden — Web ≡ Local (PRICE_RESOLUTION_CHAIN)', () => {
-  for (const caso of CASOS.filter((c) => c.label !== 'catalogo sem tier (tiers vazios)')) {
+  for (const caso of CASOS.filter((c) => c.label !== 'legado/global ignorados sem tier')) {
     it(`${caso.label} qty=${caso.qty}: diff=0 → R$${caso.preco}`, () => {
       const rpc = rpcCalcularPreco(PRODUTO, TIERS, caso.qty, MIN_PADRAO, LOJA)
       expect(rpc.preco).toBe(caso.preco)
@@ -119,15 +115,15 @@ describe('Golden — Web ≡ Local (PRICE_RESOLUTION_CHAIN)', () => {
     expect(local.tipoPreco).toBe('VAREJO')
   })
 
-  it('fallback catálogo quando não há tiers', () => {
+  it('sem tiers ignora preço legado e mínimo global', () => {
     const rpc = rpcCalcularPreco(PRODUTO, [], 12, MIN_PADRAO, null)
-    expect(rpc.preco).toBe(85)
+    expect(rpc.preco).toBe(100)
     const local = resolverPrecoCanonicoLocal(
       { id: 'p1', ativo: true, preco_varejo: VAREJO, preco_atacado: 85 },
       12,
       { lojaId: null, quantidadeMinimaAtacadoPadrao: MIN_PADRAO, tiers: [] },
     )
-    expect(local.precoUnitario).toBe(85)
-    expect(local.tipoPreco).toBe('ATACADO')
+    expect(local.precoUnitario).toBe(100)
+    expect(local.tipoPreco).toBe('VAREJO')
   })
 })
