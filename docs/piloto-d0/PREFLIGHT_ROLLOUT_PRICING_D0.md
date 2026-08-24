@@ -44,6 +44,33 @@ Ele contém apenas consultas e retorna a listagem técnica e uma contagem agrega
 O resultado real (lista de 34 produtos, preços) não é versionado aqui por conter
 dado comercial — foi entregue ao responsável fora deste repositório.
 
+## Decisão comercial: Alternativa A (23/08/2026)
+
+Decisão tomada: cadastrar tiers equivalentes ao `preco_atacado` legado para os
+34 produtos, preservando o comportamento comercial existente em vez de deixá-los
+cair para varejo.
+
+Script preparado e **não executado**:
+[`backend/scripts/d0-pricing-legacy-tier-backfill.sql`](../../backend/scripts/d0-pricing-legacy-tier-backfill.sql)
+— transacional, idempotente (chave única `(produto_id, quantidade_minima)` com
+`loja_id NULL` e `ativo=true`) e reversível (só insere; nunca edita, desativa
+ou apaga faixa existente). Insere faixa global em `quantidade_minima=6` — o
+único limiar que `calcular_preco_produto` hoje realmente lê em produção
+(`pdv_config.id=1`; confirmado via `pg_get_functiondef`, que também confirma
+que a função ignora `produtos.quantidade_gatilho_atacado` e `pdv_config.id=2`).
+
+Achado colateral, não corrigido por este script (fora do escopo desta
+decisão): 21 dos 34 produtos têm `quantidade_gatilho_atacado` preenchido e
+diferente de 6. Para 7 deles já existe uma faixa sincronizada nesse gatilho
+com o mesmo preço do legado — a inserção em 6 só preenche a lacuna
+`[6, gatilho)`, sem tocar nessa faixa. Os outros 14 nunca tiveram essa faixa
+sincronizada; o catálogo declara um limiar que a resolução de preço nunca
+aplicou de fato. Preservar comportamento comercial atual significa usar 6
+para os 34, mas esse descompasso catálogo-declarado × preço-efetivamente-
+aplicado fica sinalizado para decisão manual futura (fora desta operação).
+
+Autorização de execução em produção: **pendente**.
+
 ## Waiver do lint do PDV local
 
 O lint de `pdv-importados` é **não executável**, e não “aprovado”: ele falha antes
