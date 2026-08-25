@@ -122,6 +122,48 @@ BEGIN
     RAISE EXCEPTION 'D0_REMESSA_NAO_FINITO_PERSISTIU';
   END IF;
 
+  -- Produto DRAFT precisa ser receptível: produto novo nasce DRAFT
+  -- (defaultStatusNovoProduto) e a busca do fluxo já o retorna. A RPC D0-03
+  -- checava `p.ativo` (só true em PUBLICADO) e bloqueava todo DRAFT.
+  DECLARE
+    v_produto_draft uuid;
+    v_produto_inativo uuid;
+  BEGIN
+    INSERT INTO public.produtos (loja_id, nome, preco_varejo, origem, ativo, status_publicacao)
+    VALUES (current_setting('d0.loja')::uuid, 'D0 draft recebimento', 10.00, 'china_manual', false, 'DRAFT')
+    RETURNING id INTO v_produto_draft;
+
+    INSERT INTO public.produtos (loja_id, nome, preco_varejo, origem, ativo, status_publicacao)
+    VALUES (current_setting('d0.loja')::uuid, 'D0 inativo recebimento', 10.00, 'china_manual', false, 'INATIVO')
+    RETURNING id INTO v_produto_inativo;
+
+    PERFORM public.criar_confirmar_remessa_entrada(
+      'D0 draft', NULL,
+      jsonb_build_array(jsonb_build_object('produto_id', v_produto_draft, 'quantidade_esperada', 3, 'quantidade_conferida', 3)),
+      'd0-remessa-draft');
+
+    IF NOT EXISTS (
+      SELECT 1 FROM public.remessas WHERE idempotency_key = 'd0-remessa-draft'
+    ) OR NOT EXISTS (
+      SELECT 1 FROM public.estoque
+      WHERE produto_id = v_produto_draft
+        AND loja_id = current_setting('d0.loja')::uuid
+        AND quantidade_atual = 3
+    ) THEN
+      RAISE EXCEPTION 'D0_REMESSA_DRAFT_REJEITADA';
+    END IF;
+
+    BEGIN
+      PERFORM public.criar_confirmar_remessa_entrada(
+        'D0 inativo', NULL,
+        jsonb_build_array(jsonb_build_object('produto_id', v_produto_inativo, 'quantidade_esperada', 3, 'quantidade_conferida', 3)),
+        'd0-remessa-inativo');
+      RAISE EXCEPTION 'D0_REMESSA_INATIVO_ACEITO';
+    EXCEPTION WHEN OTHERS THEN
+      IF SQLERRM NOT LIKE '%REMESSA_ITEM_INVALIDO%' THEN RAISE; END IF;
+    END;
+  END;
+
   -- Inventário/contagem física zero continua legítimo no fluxo próprio.
   SELECT quantidade_atual INTO v_saldo_antes
   FROM public.estoque
