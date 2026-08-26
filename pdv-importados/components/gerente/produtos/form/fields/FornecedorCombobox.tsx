@@ -39,7 +39,9 @@ export function FornecedorCombobox({
   }, [fornecedores, filtro])
 
   const onFornecedorCriado = (f: FornecedorListRow) => {
-    const next = [...fornecedores, { id: f.id, nome: f.nome }]
+    const next = fornecedores.some((x) => x.id === f.id)
+      ? fornecedores.map((x) => (x.id === f.id ? { id: f.id, nome: f.nome } : x))
+      : [...fornecedores, { id: f.id, nome: f.nome }]
     onFornecedoresChange?.(next)
     onChange(f.id)
     setModalNovo(false)
