@@ -14,7 +14,7 @@ export default async function AdminFornecedoresPage() {
   })
   const m = getMessages(session.idioma)
 
-  const inicial = await buscarFornecedoresPaginadosAction(1, { status: 'todos' })
+  const inicial = await buscarFornecedoresPaginadosAction(1)
   const fornecedoresIniciais = inicial.ok ? inicial.fornecedores : []
   const hasMoreInicial = inicial.ok ? inicial.hasMore : false
   const erroInicial = inicial.ok ? null : inicial.error

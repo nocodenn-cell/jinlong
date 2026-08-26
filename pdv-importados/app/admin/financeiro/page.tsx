@@ -68,7 +68,7 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
       .limit(50),
     buscarClientesPaginadosAction(1),
     buscarContasPagarAction(1, { status: statusPagar, periodo: periodoPagar || undefined }),
-    buscarFornecedoresPaginadosAction(1, { status: 'ativos' }),
+    buscarFornecedoresPaginadosAction(1),
     supabase.from('caixas').select('id, loja_id, operador_id, usuarios!caixas_operador_id_fkey(nome)').eq('status', 'ABERTO'),
   ])
 
