@@ -17,7 +17,7 @@ export default async function AdminComprasPage() {
   const [kpisIniciais, inicial, { data: fornecedoresRaw }, { data: produtosRaw }] = await Promise.all([
     obterKpisCompras(),
     listarOrdensCompra({ limite: LIMITE_PAG, offset: 0 }),
-    supabase.from('fornecedores').select('id, nome').eq('ativo', true).order('nome').limit(500),
+    supabase.from('fornecedores').select('id, nome').order('nome').limit(500),
     supabase.from('produtos').select('id, nome, unidade_medida').eq('ativo', true).order('nome').limit(500),
   ])
 
