@@ -189,7 +189,10 @@ test.describe('Smoke Fase 1 — provisionamento → venda → dashboard', () => 
     await expect(page.getByText(lojaNome)).toBeVisible()
     await page.getByTestId('prov-submit').click()
 
-    const sucesso = page.getByText(/Loja pronta|门店就绪/i)
+    // `getByText(/Loja pronta/)` casa o `<li>` do wizard E o toast `role=status`
+    // ao mesmo tempo → strict mode violation (CI #1226). O sinal estável de
+    // sucesso é `prov-loja-id` (UUID renderizado só no step 3).
+    const sucesso = page.getByTestId('prov-loja-id')
     const toastErro = page.locator('[aria-live="polite"], [role="status"], [data-sonner-toast]').filter({
       hasText: /erro|falha|inválid|Could not|duplicate|violates/i,
     })
@@ -205,8 +208,7 @@ test.describe('Smoke Fase 1 — provisionamento → venda → dashboard', () => 
     ])
 
     await expect(sucesso).toBeVisible()
-    const lojaCode = page.getByTestId('prov-loja-id')
-    await expect(lojaCode).toBeVisible()
+    const lojaCode = sucesso
     lojaId = (await lojaCode.innerText()).trim()
     expect(lojaId).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,

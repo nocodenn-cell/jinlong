@@ -100,7 +100,11 @@ test.describe('QA módulo produtos (gerente)', () => {
     fs.mkdirSync(path.dirname(csvPath), { recursive: true })
     fs.writeFileSync(csvPath, csv, 'utf8')
 
-    await page.getByRole('button', { name: /Importar produtos a partir de CSV/i }).click()
+    // Catálogo usa `import_modal_titulo` ("Importar produtos" / "导入商品") no
+    // botão — não mais `toolbar_importar_aria` ("…a partir de CSV"). Snapshot
+    // CI #1226: botão visível como "Importar produtos" enquanto o seletor antigo
+    // esperava 120s em vão.
+    await page.getByRole('button', { name: /Importar produtos|导入商品/i }).click()
     await expect(page.getByRole('dialog', { name: /Importar produtos|导入商品/ })).toBeVisible()
 
     // Baixar modelo continua disponível e mantém o cabeçalho canónico.
