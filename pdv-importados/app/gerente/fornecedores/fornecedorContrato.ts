@@ -61,3 +61,17 @@ export function selectContemColunaFantasma(selectSql: string): string | null {
   }
   return null
 }
+
+export const MSG_FORNECEDOR_SEM_LOJA =
+  'Sua conta não está associada a uma loja. Contate o administrador.'
+
+export const MSG_FORNECEDOR_LOJA_INVALIDA =
+  'Fornecedor inválido para esta loja.'
+
+/** Fail-closed: escrita/leitura scoped nunca cai em Loja Matriz. */
+export function lojaIdDaSessao(
+  session: { lojaId: string | null },
+): { ok: true; lojaId: string } | { ok: false; error: string } {
+  if (!session.lojaId) return { ok: false, error: MSG_FORNECEDOR_SEM_LOJA }
+  return { ok: true, lojaId: session.lojaId }
+}

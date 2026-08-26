@@ -116,7 +116,12 @@ export async function previewImportacaoNfe(xml: string): Promise<
   const supabase = await createClient()
   const cnpj = onlyDigits(parsed.emitente.cnpj)
 
-  const { data: forn } = await supabase.from('fornecedores').select('id').eq('cnpj', cnpj).maybeSingle()
+  const { data: forn } = await supabase
+    .from('fornecedores')
+    .select('id')
+    .eq('loja_id', lojaId)
+    .eq('cnpj', cnpj)
+    .maybeSingle()
   const fornId = (forn?.id as string | undefined) ?? null
 
   const gtins = [

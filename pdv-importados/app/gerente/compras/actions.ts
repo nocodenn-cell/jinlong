@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { getGerenteLojaId, getGerenteUserId } from '@/lib/gerente/auth/sessionContext'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
+import { lojaIdDaSessao } from '@/app/gerente/fornecedores/fornecedorContrato'
+import { mensagemSeFornecedorForaDaLoja } from './fornecedorOcBoundary'
 
 type R<T = null> = { success: true; data: T } | { success: false; error: string }
 
@@ -79,6 +81,26 @@ export type AtualizarOcInput = CriarOcInput & { id: string }
 
 async function lojaDoUsuario(): Promise<string | null> {
   return getGerenteLojaId()
+}
+
+/** Confirma que fornecedor_id (se informado) existe e pertence à loja da OC. */
+async function assertFornecedorDaLojaOc(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  lojaId: string,
+  fornecedorId: string | null | undefined,
+): Promise<string | null> {
+  if (!fornecedorId) return null
+  const { data, error } = await supabase
+    .from('fornecedores')
+    .select('id, loja_id')
+    .eq('id', fornecedorId)
+    .maybeSingle()
+  if (error) return mensagemErroComSecao('Fornecedor', error.message)
+  return mensagemSeFornecedorForaDaLoja({
+    fornecedorId,
+    fornecedorLojaId: (data?.loja_id as string | undefined) ?? null,
+    lojaIdOc: lojaId,
+  })
 }
 
 type RawOcItem = { quantidade: number; preco_unitario: number }
@@ -278,13 +300,17 @@ export async function criarOrdemCompra(input: CriarOcInput): Promise<R<string>> 
 
   if (!input.itens.length) return { success: false, error: 'Adicione ao menos um item.' }
 
+  const tenant = lojaIdDaSessao(auth.session)
+  if (!tenant.ok) return { success: false, error: tenant.error }
+  const lojaId = tenant.lojaId
+
   const userId = await getGerenteUserId()
-  const lojaIdOc = auth.session.lojaId
-  if (!lojaIdOc && !userId) return { success: false, error: 'Faça login novamente.' }
-  const lojaId = lojaIdOc ?? (await lojaDoUsuario())
-  if (!lojaId) return { success: false, error: 'Loja não identificada.' }
+  if (!userId) return { success: false, error: 'Faça login novamente.' }
 
   const supabase = await createClient()
+  const fornErr = await assertFornecedorDaLojaOc(supabase, lojaId, input.fornecedor_id)
+  if (fornErr) return { success: false, error: fornErr }
+
   const { data: oc, error: e1 } = await supabase
     .from('ordens_compra')
     .insert({
@@ -326,8 +352,9 @@ export async function atualizarOrdemCompra(input: AtualizarOcInput): Promise<R<n
 
   if (!input.itens.length) return { success: false, error: 'Adicione ao menos um item.' }
 
-  const lojaId = await lojaDoUsuario()
-  if (!lojaId) return { success: false, error: 'Loja não identificada.' }
+  const tenant = lojaIdDaSessao(auth.session)
+  if (!tenant.ok) return { success: false, error: tenant.error }
+  const lojaId = tenant.lojaId
 
   const supabase = await createClient()
 
@@ -342,6 +369,9 @@ export async function atualizarOrdemCompra(input: AtualizarOcInput): Promise<R<n
   if (!['RASCUNHO', 'CONFIRMADA'].includes(existing.status)) {
     return { success: false, error: 'Só é possível editar ordens em rascunho ou confirmadas.' }
   }
+
+  const fornErr = await assertFornecedorDaLojaOc(supabase, lojaId, input.fornecedor_id)
+  if (fornErr) return { success: false, error: fornErr }
 
   const { error: e1 } = await supabase
     .from('ordens_compra')

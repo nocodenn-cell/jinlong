@@ -6,6 +6,7 @@ import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 import {
   FORNECEDOR_SELECT_COLUMNS,
+  lojaIdDaSessao,
   normalizarCnpj,
   validarFornecedorInput,
   type FornecedorInput,
@@ -13,18 +14,9 @@ import {
 } from './fornecedorContrato'
 
 export type { FornecedorInput, FornecedorListRow }
+export { lojaIdDaSessao } from './fornecedorContrato'
 
 const PAGE_SIZE = 20
-const MSG_SEM_LOJA =
-  'Sua conta não está associada a uma loja. Contate o administrador.'
-
-function lojaIdDaSessao(
-  session: { lojaId: string | null },
-): { ok: true; lojaId: string } | { ok: false; error: string } {
-  // Mesmo padrão de clientes/actions: fail-closed, sem LOJA_MATRIZ_ID em escrita.
-  if (!session.lojaId) return { ok: false, error: MSG_SEM_LOJA }
-  return { ok: true, lojaId: session.lojaId }
-}
 
 function asListRow(raw: unknown): FornecedorListRow {
   const r = raw as FornecedorListRow
@@ -68,6 +60,9 @@ export async function buscarFornecedoresPaginadosAction(
   const auth = await assertGerenteSession()
   if (!auth.ok) return { ok: false, error: auth.error }
 
+  const tenant = lojaIdDaSessao(auth.session)
+  if (!tenant.ok) return tenant
+
   try {
     const supabase = await createClient()
     const from = (page - 1) * PAGE_SIZE
@@ -76,8 +71,7 @@ export async function buscarFornecedoresPaginadosAction(
     let query = supabase
       .from('fornecedores')
       .select(FORNECEDOR_SELECT_COLUMNS)
-      .order('nome', { ascending: true })
-      .range(from, to)
+      .eq('loja_id', tenant.lojaId)
 
     if (opts?.termo && opts.termo.trim()) {
       const t = opts.termo.trim()
@@ -88,6 +82,8 @@ export async function buscarFornecedoresPaginadosAction(
     }
 
     const { data, error } = await query
+      .order('nome', { ascending: true })
+      .range(from, to)
     if (error) return { ok: false, error: error.message }
     const rows = (data ?? []).map(asListRow)
     const hasMore = rows.length > PAGE_SIZE
@@ -122,13 +118,14 @@ export async function salvarFornecedorAction(
         .eq('id', input.id)
         .eq('loja_id', tenant.lojaId)
         .select(FORNECEDOR_SELECT_COLUMNS)
-        .single()
+        .maybeSingle()
       if (error) {
         if (error.code === '23505') {
           return { ok: false, error: 'Já existe um fornecedor com este CNPJ nesta loja.' }
         }
         return { ok: false, error: mensagemErroComSecao('Fornecedor', error.message) }
       }
+      if (!data) return { ok: false, error: 'Fornecedor não encontrado.' }
       revalidarFornecedores()
       return { ok: true, fornecedor: asListRow(data) }
     }
@@ -141,7 +138,6 @@ export async function salvarFornecedorAction(
 
     if (error) {
       if (error.code === '23505') {
-        // Cadastro rápido: devolve o existente sem alterar nome/dados.
         const existente = await buscarPorLojaCnpj(supabase, tenant.lojaId, cnpj)
         if (existente) {
           revalidarFornecedores()
@@ -184,12 +180,14 @@ export async function excluirFornecedorAction(
       }
     }
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('fornecedores')
       .delete()
       .eq('id', id)
       .eq('loja_id', tenant.lojaId)
+      .select('id')
     if (error) return { ok: false, error: mensagemErroComSecao('Fornecedor', error.message) }
+    if (!data?.length) return { ok: false, error: 'Fornecedor não encontrado.' }
     revalidarFornecedores()
     return { ok: true }
   } catch (e) {
@@ -222,14 +220,15 @@ export async function bulkExcluirFornecedoresAction(
     if (liberados.length === 0) {
       return { ok: true, excluidos: 0, bloqueados: ids.length }
     }
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('fornecedores')
       .delete()
       .in('id', liberados)
       .eq('loja_id', tenant.lojaId)
+      .select('id')
     if (error) return { ok: false, error: mensagemErroComSecao('Fornecedor', error.message) }
     revalidarFornecedores()
-    return { ok: true, excluidos: liberados.length, bloqueados: bloqueadosIds.size }
+    return { ok: true, excluidos: data?.length ?? 0, bloqueados: bloqueadosIds.size }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Erro ao excluir fornecedores.' }
   }

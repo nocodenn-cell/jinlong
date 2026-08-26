@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { ROUTES } from '@shared-core/navigation/routes'
 import { obterKpisCompras, listarOrdensCompra } from '@/app/gerente/compras/actions'
+import { lojaIdDaSessao } from '@/app/gerente/fornecedores/fornecedorContrato'
 import { ComprasContent } from './_components/ComprasContent'
 
 const LIMITE_PAG = 20
@@ -12,13 +13,33 @@ export default async function AdminComprasPage() {
     resource: `route:${ROUTES.admin.compras}`,
   })
 
+  const tenant = lojaIdDaSessao(session)
   const supabase = await createClient()
+
+  const fornQuery = tenant.ok
+    ? supabase
+        .from('fornecedores')
+        .select('id, nome')
+        .eq('loja_id', tenant.lojaId)
+        .order('nome')
+        .limit(500)
+    : Promise.resolve({ data: [] as { id: string; nome: string }[] })
+
+  const prodQuery = tenant.ok
+    ? supabase
+        .from('produtos')
+        .select('id, nome, unidade_medida')
+        .eq('ativo', true)
+        .eq('loja_id', tenant.lojaId)
+        .order('nome')
+        .limit(500)
+    : Promise.resolve({ data: [] as { id: string; nome: string; unidade_medida: string | null }[] })
 
   const [kpisIniciais, inicial, { data: fornecedoresRaw }, { data: produtosRaw }] = await Promise.all([
     obterKpisCompras(),
     listarOrdensCompra({ limite: LIMITE_PAG, offset: 0 }),
-    supabase.from('fornecedores').select('id, nome').order('nome').limit(500),
-    supabase.from('produtos').select('id, nome, unidade_medida').eq('ativo', true).order('nome').limit(500),
+    fornQuery,
+    prodQuery,
   ])
 
   const fornecedores = (fornecedoresRaw ?? []).map((f) => ({ id: f.id, nome: f.nome }))
