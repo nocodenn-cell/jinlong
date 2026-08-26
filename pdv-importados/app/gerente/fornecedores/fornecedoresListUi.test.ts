@@ -1,16 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import {
   filtrosFornecedorAtivos,
-  fornecedorTemEndereco,
+  maskCnpj,
   montarTituloContagem,
 } from './fornecedoresListUi'
 
 describe('fornecedoresListUi', () => {
-  it('detecta filtros ativos por termo ou status', () => {
-    expect(filtrosFornecedorAtivos('', 'todos')).toBe(false)
-    expect(filtrosFornecedorAtivos('  ', 'todos')).toBe(false)
-    expect(filtrosFornecedorAtivos('acme', 'todos')).toBe(true)
-    expect(filtrosFornecedorAtivos('', 'ativos')).toBe(true)
+  it('detecta filtros ativos por termo', () => {
+    expect(filtrosFornecedorAtivos('')).toBe(false)
+    expect(filtrosFornecedorAtivos('  ')).toBe(false)
+    expect(filtrosFornecedorAtivos('acme')).toBe(true)
   })
 
   it('monta contagem honesta sem total de servidor', () => {
@@ -22,9 +21,8 @@ describe('fornecedoresListUi', () => {
     ).toBe('Mostrando 20 · há mais')
   })
 
-  it('detecta endereço preenchido', () => {
-    expect(fornecedorTemEndereco({})).toBe(false)
-    expect(fornecedorTemEndereco({ endereco_cidade: 'São Paulo' })).toBe(true)
-    expect(fornecedorTemEndereco({ endereco_cep: '01001000' })).toBe(true)
+  it('mascara CNPJ progressivamente', () => {
+    expect(maskCnpj('12345678000199')).toBe('12.345.678/0001-99')
+    expect(maskCnpj('12')).toBe('12')
   })
 })
