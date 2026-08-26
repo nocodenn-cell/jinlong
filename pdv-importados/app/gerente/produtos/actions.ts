@@ -897,12 +897,16 @@ export type OpcoesFiltrosProdutos = {
  * no supabase client aqui de forma segura porque os dados são públicos do catálogo).
  */
 const buscarOpcoesFiltrosCached = unstable_cache(
-  async (): Promise<OpcoesFiltrosProdutos> => {
+  async (lojaId: string): Promise<OpcoesFiltrosProdutos> => {
     const supabase = await createClient()
     const [cat, mar, forn] = await Promise.all([
       supabase.from('categorias').select('id, nome, ativo').order('nome', { ascending: true }),
       supabase.from('marcas').select('id, nome, ativo').order('nome', { ascending: true }),
-      supabase.from('fornecedores').select('id, nome').order('nome', { ascending: true }),
+      supabase
+        .from('fornecedores')
+        .select('id, nome')
+        .eq('loja_id', lojaId)
+        .order('nome', { ascending: true }),
     ])
     return {
       categorias: ((cat.data ?? []) as { id: string; nome: string; ativo?: boolean }[]),
@@ -910,7 +914,7 @@ const buscarOpcoesFiltrosCached = unstable_cache(
       fornecedores: ((forn.data ?? []) as { id: string; nome: string }[]),
     }
   },
-  ['catalogo-opcoes-filtro'],
+  ['catalogo-opcoes-filtro-por-loja'],
   { revalidate: 120, tags: ['catalogo-opcoes-filtro'] },
 )
 
@@ -918,8 +922,16 @@ export async function listarOpcoesFiltrosProdutos(): Promise<ActionResult<Opcoes
   const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
+  const lojaId = auth.session.lojaId
+  if (!lojaId) {
+    return {
+      success: false,
+      error: 'Sua conta não está associada a uma loja. Contate o administrador.',
+    }
+  }
+
   try {
-    const data = await buscarOpcoesFiltrosCached()
+    const data = await buscarOpcoesFiltrosCached(lojaId)
     return { success: true, data }
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Falha ao carregar opções de filtro.'
