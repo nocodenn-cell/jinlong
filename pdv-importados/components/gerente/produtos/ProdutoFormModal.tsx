@@ -41,6 +41,7 @@ import {
 import { campoExigeModoCompleto, localizarCampo } from './form/produtoForm.campoFoco'
 import { ProdutoForm } from './form/ProdutoForm'
 import { useProdutoForm } from './form/useProdutoForm'
+import { mergeOpcoesFiltrosPreservandoLocal } from './form/mergeOpcoesFiltros'
 import { acaoTecladoProduto } from './form/produtoFormKeyboard'
 import {
   resolveProdutoFormStatusChip,
@@ -192,6 +193,8 @@ export function ProdutoFormModal({
   const [fonteSugestao, setFonteSugestao] = useState<string | null>(null)
   const openedAtRef = useRef(0)
   const lastLookupGtinRef = useRef('')
+  /** Detecta abertura real do modal (false→true) para resetar opções às props. */
+  const estavaAbertoRef = useRef(false)
 
   const form = useProdutoForm(open, produto, duplicarDe, { codigoBarrasInicial })
 
@@ -214,10 +217,23 @@ export function ProdutoFormModal({
     openedAtRef.current = Date.now()
   }, [open, editando, produto?.id, produto?.imagem_url])
 
-  /** Opções auxiliares (categoria/marca/fornecedor) sincronizam sem resetar pós-save. */
+  /**
+   * Opções auxiliares: na abertura real, espelha as props.
+   * Enquanto o modal permanece aberto, merge por id — refresh RSC/cache stale
+   * não pode apagar categoria/marca/fornecedor criados localmente no formulário.
+   */
   useEffect(() => {
-    if (!open) return
-    setOpcoes(opcoesIniciais)
+    if (!open) {
+      estavaAbertoRef.current = false
+      return
+    }
+    const acabouDeAbrir = !estavaAbertoRef.current
+    estavaAbertoRef.current = true
+    if (acabouDeAbrir) {
+      setOpcoes(opcoesIniciais)
+      return
+    }
+    setOpcoes((prev) => mergeOpcoesFiltrosPreservandoLocal(prev, opcoesIniciais))
   }, [open, opcoesIniciais])
 
   useEffect(() => {
