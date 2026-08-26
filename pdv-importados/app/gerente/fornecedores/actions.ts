@@ -14,7 +14,6 @@ import {
 } from './fornecedorContrato'
 
 export type { FornecedorInput, FornecedorListRow }
-export { lojaIdDaSessao } from './fornecedorContrato'
 
 const PAGE_SIZE = 20
 
