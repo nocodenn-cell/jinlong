@@ -195,20 +195,30 @@ export function ProdutoFormModal({
 
   const form = useProdutoForm(open, produto, duplicarDe, { codigoBarrasInicial })
 
+  /**
+   * Reinicializa o "chrome" do modal só quando o formulário abre de verdade
+   * (ou troca o produto em edição). NÃO depende de `opcoesIniciais`: um
+   * `router.refresh()` pós-save muda as opções e, se limpar `posSalvar` aqui,
+   * o operador volta à tela de edição dirty e vê "Descartar alterações?".
+   */
   useEffect(() => {
-    if (open) {
-      setOpcoes(opcoesIniciais)
-      setPosSalvar(null)
-      setErroCampo(null)
-      setModoCompleto(editando)
-      setImagemUrl(produto?.imagem_url ?? null)
-      setSugestaoHint(null)
-      setKnownSuggestion(false)
-      setFonteSugestao(null)
-      lastLookupGtinRef.current = ''
-      openedAtRef.current = Date.now()
-    }
-  }, [open, opcoesIniciais, editando, produto?.imagem_url])
+    if (!open) return
+    setPosSalvar(null)
+    setErroCampo(null)
+    setModoCompleto(editando)
+    setImagemUrl(produto?.imagem_url ?? null)
+    setSugestaoHint(null)
+    setKnownSuggestion(false)
+    setFonteSugestao(null)
+    lastLookupGtinRef.current = ''
+    openedAtRef.current = Date.now()
+  }, [open, editando, produto?.id, produto?.imagem_url])
+
+  /** Opções auxiliares (categoria/marca/fornecedor) sincronizam sem resetar pós-save. */
+  useEffect(() => {
+    if (!open) return
+    setOpcoes(opcoesIniciais)
+  }, [open, opcoesIniciais])
 
   useEffect(() => {
     if (!open || !editando || !produto) {
@@ -323,7 +333,8 @@ export function ProdutoFormModal({
    * Sem posSalvar (formulário ainda em edição) e com alterações não salvas,
    * pede confirmação antes de descartar — cobre X, Esc, clique no backdrop e
    * o botão "Cancelar" do footer, que passam todos por aqui via `onClose`.
-   * A tela pós-salvar nunca passa por aqui suja: já foi persistida.
+   * Após save bem-sucedido, `commitBaseline()` deixa isDirty=false; a tela
+   * pós-salvar (`posSalvar`) também bypassa o guard.
    */
   const fechar = useCallback(() => {
     if (saving) return
@@ -497,11 +508,15 @@ export function ProdutoFormModal({
               : p.erro_faixa_inicial,
           })
         }
-        onSaved()
+
+        // Persistido: o estado atual vira o baseline limpo ANTES de refresh
+        // externo (onSaved → router.refresh) poder alterar opções auxiliares.
+        form.commitBaseline()
 
         const estoqueFalhou = feedbackEstoque.kind === 'produto_ok_estoque_falhou'
         if (opts?.continuar && !editando && !estoqueFalhou) {
           form.limparParaNovoCadastro()
+          onSaved()
           requestAnimationFrame(() => {
             codigoBarrasRef.current?.focus()
             codigoBarrasRef.current?.select()
@@ -518,9 +533,11 @@ export function ProdutoFormModal({
             estoqueInicialFalhou: estoqueFalhou,
             estoqueErroDetalhe: estoqueErro,
           })
+          onSaved()
           return
         }
 
+        onSaved()
         onOpenChange(false)
       } finally {
         setSaving(false)
