@@ -2,13 +2,8 @@
  * Helpers puros da listagem de Fornecedores (UI only — sem I/O).
  */
 
-export type StatusFiltroFornecedor = 'todos' | 'ativos' | 'inativos'
-
-export function filtrosFornecedorAtivos(
-  termo: string,
-  status: StatusFiltroFornecedor,
-): boolean {
-  return termo.trim().length > 0 || status !== 'todos'
+export function filtrosFornecedorAtivos(termo: string): boolean {
+  return termo.trim().length > 0
 }
 
 export function montarTituloContagem(
@@ -20,20 +15,10 @@ export function montarTituloContagem(
   return hasMore ? `${base} · ${labels.ha_mais}` : base
 }
 
-export function fornecedorTemEndereco(f: {
-  endereco_logradouro?: string | null
-  endereco_numero?: string | null
-  endereco_complemento?: string | null
-  endereco_bairro?: string | null
-  endereco_cidade?: string | null
-  endereco_cep?: string | null
-}): boolean {
-  return Boolean(
-    f.endereco_logradouro ||
-      f.endereco_numero ||
-      f.endereco_complemento ||
-      f.endereco_bairro ||
-      f.endereco_cidade ||
-      f.endereco_cep,
+export function maskCnpj(raw: string): string {
+  const x = (raw ?? '').replace(/\D/g, '').slice(0, 14)
+  if (x.length === 14) return x.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5')
+  return x.replace(/(\d{0,2})(\d{0,3})(\d{0,3})(\d{0,4})(\d{0,2})/, (_, a, b, c, d, e) =>
+    [a, b && `.${b}`, c && `.${c}`, d && `/${d}`, e && `-${e}`].filter(Boolean).join(''),
   )
 }

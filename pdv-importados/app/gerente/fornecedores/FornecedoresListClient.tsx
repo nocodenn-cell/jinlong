@@ -1,28 +1,24 @@
 'use client'
 
 /**
- * Fornecedores — listagem Admin (Catálogo Onda 5 + UX audit 2026-08).
- * Mesmo contrato CRUD: toolbar · bulk · DataTable · empty/loading/error · modal.
- * Lógica de busca/paginação/lote preservada; chrome visual no DS.
+ * Fornecedores — listagem Admin.
+ * Contrato canônico: nome + CNPJ (emitente NF-e).
  */
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useDebounce } from '@/lib/hooks/useDebounce'
-import { Pencil, Trash2, Plus, Mail } from 'lucide-react'
+import { Pencil, Trash2, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox, SearchInput } from '@/components/ui/forms'
 import { DataTable, type Column } from '@/components/ui/DataTable'
-import { Badge } from '@/components/ui/badge'
 import { EmptyState, ErrorState, Loading } from '@/components/ui/feedback'
 import { CrudListShell, PageActions } from '@/components/ui/admin-v2'
 import { ConfirmActionButton } from '@/components/gerente/ConfirmActionButton'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { getMessages } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
-import { cn } from '@/lib/utils'
 import {
   buscarFornecedoresPaginadosAction,
-  bulkAtivarFornecedoresAction,
   bulkExcluirFornecedoresAction,
   excluirFornecedorAction,
   type FornecedorListRow,
@@ -30,8 +26,8 @@ import {
 import { FornecedorEditarModal } from './FornecedorEditarModal'
 import {
   filtrosFornecedorAtivos,
+  maskCnpj,
   montarTituloContagem,
-  type StatusFiltroFornecedor,
 } from './fornecedoresListUi'
 
 type Props = Readonly<{
@@ -41,21 +37,6 @@ type Props = Readonly<{
   erroInicial?: string | null
 }>
 
-type StatusFiltro = StatusFiltroFornecedor
-
-function maskCNPJ(d: string): string {
-  const x = (d ?? '').replace(/\D/g, '')
-  if (x.length === 14) return x.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5')
-  if (x.length === 11) return x.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
-  return d
-}
-function maskTel(t: string | null): string {
-  if (!t) return '—'
-  const x = t.replace(/\D/g, '')
-  if (x.length === 11) return x.replace(/(\d{2})(\d{1})(\d{4})(\d{4})/, '($1) $2 $3-$4')
-  if (x.length === 10) return x.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3')
-  return t
-}
 function initials(n: string): string {
   return n.split(/\s+/).map((s) => s[0]).slice(0, 2).join('').toUpperCase()
 }
@@ -72,13 +53,11 @@ export function FornecedoresListClient({
   const [loading, setLoading] = useState(false)
   const [erroLista, setErroLista] = useState<string | null>(erroInicial)
   const [termo, setTermo] = useState('')
-  const [statusF, setStatusF] = useState<StatusFiltro>('todos')
   const [modalAberto, setModalAberto] = useState(false)
   const [emEdicao, setEmEdicao] = useState<FornecedorListRow | null>(null)
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
 
   const termoDebounced = useDebounce(termo, 280)
-  const statusFDebounced = useDebounce(statusF, 280)
 
   const pageRef = useRef(1)
   const sentinelRef = useRef<HTMLDivElement>(null)
@@ -95,7 +74,6 @@ export function FornecedoresListClient({
     try {
       const r = await buscarFornecedoresPaginadosAction(prox, {
         termo: termoDebounced || undefined,
-        status: statusFDebounced,
       })
       if (!r.ok) {
         emitGerenteToast({ kind: 'error', message: r.error })
@@ -107,7 +85,7 @@ export function FornecedoresListClient({
     } finally {
       setLoading(false)
     }
-  }, [termoDebounced, statusFDebounced])
+  }, [termoDebounced])
 
   useEffect(() => {
     const el = sentinelRef.current
@@ -153,7 +131,6 @@ export function FornecedoresListClient({
     pageRef.current = 1
     buscarFornecedoresPaginadosAction(1, {
       termo: termoDebounced || undefined,
-      status: statusFDebounced,
     }).then((r) => {
       if (cancelled) return
       aplicarResultadoPagina(r)
@@ -161,7 +138,7 @@ export function FornecedoresListClient({
     return () => {
       cancelled = true
     }
-  }, [termoDebounced, statusFDebounced, aplicarResultadoPagina])
+  }, [termoDebounced, aplicarResultadoPagina])
 
   async function recarregarPrimeiraPagina() {
     setLoading(true)
@@ -169,14 +146,12 @@ export function FornecedoresListClient({
     pageRef.current = 1
     const r = await buscarFornecedoresPaginadosAction(1, {
       termo: termoDebounced || undefined,
-      status: statusFDebounced,
     })
     aplicarResultadoPagina(r)
   }
 
   function limparFiltros() {
     setTermo('')
-    setStatusF('todos')
   }
 
   function abrirNovo() {
@@ -224,20 +199,6 @@ export function FornecedoresListClient({
       return next
     })
   }
-  async function onBulkAtivar(ativo: boolean) {
-    const ids = [...selecionados]
-    const r = await bulkAtivarFornecedoresAction(ids, ativo)
-    if (!r.ok) {
-      emitGerenteToast({ kind: 'error', message: r.error })
-      return
-    }
-    setFornecedores((cur) => cur.map((f) => (ids.includes(f.id) ? { ...f, ativo } : f)))
-    emitGerenteToast({
-      kind: 'success',
-      message: ativo ? m.fornecedores.toast_bulk_ativados : m.fornecedores.toast_bulk_inativados,
-    })
-    setSelecionados(new Set())
-  }
   async function onBulkExcluir() {
     const ids = [...selecionados]
     if (!confirm(m.fornecedores.confirmar_bulk_exclusao.replace('{n}', String(ids.length)))) return
@@ -263,7 +224,7 @@ export function FornecedoresListClient({
   const idsPagina = fornecedores.map((f) => f.id)
   const todosNaPag = idsPagina.length > 0 && idsPagina.every((id) => selecionados.has(id))
   const algumNaPag = idsPagina.some((id) => selecionados.has(id))
-  const filtrosAtivos = filtrosFornecedorAtivos(termo, statusF)
+  const filtrosAtivos = filtrosFornecedorAtivos(termo)
 
   const headerRef = useCallback(
     (el: HTMLInputElement | null) => {
@@ -271,8 +232,6 @@ export function FornecedoresListClient({
     },
     [algumNaPag, todosNaPag],
   )
-
-  const colHideMd = 'hidden md:table-cell'
 
   const columns: Column<FornecedorListRow>[] = [
     {
@@ -307,78 +266,20 @@ export function FornecedoresListClient({
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-info-bg)] text-caption font-bold text-brand">
             {initials(f.nome)}
           </span>
-          <div className="min-w-0">
-            <strong
-              className={cn(
-                'block truncate text-fg',
-                !f.ativo && 'line-through decoration-[var(--color-fg-subtle)]',
-              )}
-            >
-              {f.nome}
-            </strong>
-            {(f.contato_pessoa || f.categoria) && (
-              <div className="truncate text-caption text-fg-subtle">
-                {[f.contato_pessoa, f.categoria].filter(Boolean).join(' · ')}
-              </div>
-            )}
-          </div>
+          <strong className="block truncate text-fg">{f.nome}</strong>
         </div>
       ),
     },
     {
-      key: 'doc',
-      header: m.fornecedores.col_documento,
+      key: 'cnpj',
+      header: m.fornecedores.field_cnpj,
       priority: 'contextual',
       cell: (f) => (
-        <span className="font-mono text-caption text-fg-muted">{maskCNPJ(f.documento)}</span>
-      ),
-    },
-    {
-      key: 'tel',
-      header: m.fornecedores.col_telefone,
-      priority: 'contextual',
-      headerClassName: colHideMd,
-      className: colHideMd,
-      cell: (f) => <span className="tabular-nums text-caption">{maskTel(f.telefone)}</span>,
-    },
-    {
-      key: 'email',
-      header: m.fornecedores.col_email,
-      headerClassName: colHideMd,
-      className: colHideMd,
-      cell: (f) =>
-        f.email ? (
-          <a
-            href={`mailto:${f.email}`}
-            onClick={(e) => e.stopPropagation()}
-            className="inline-flex items-center gap-1.5 text-caption text-fg-muted hover:text-brand"
-          >
-            <Mail className="h-3 w-3" aria-hidden />
-            <span className="truncate">{f.email}</span>
-          </a>
-        ) : (
-          <span className="text-fg-subtle">—</span>
-        ),
-    },
-    {
-      key: 'status',
-      header: m.fornecedores.col_status,
-      width: '100px',
-      cell: (f) => (
-        <Badge
-          className={
-            f.ativo
-              ? 'border border-[var(--color-success-border)] bg-[var(--color-success-bg)] text-[var(--color-success-strong)]'
-              : 'border border-[var(--color-border)] bg-[var(--color-surface-muted)] text-fg-subtle'
-          }
-        >
-          {f.ativo ? m.fornecedores.status_ativo : m.fornecedores.status_inativo}
-        </Badge>
+        <span className="font-mono text-caption text-fg-muted">{maskCnpj(f.cnpj)}</span>
       ),
     },
   ]
 
-  const statusOptions: StatusFiltro[] = ['todos', 'ativos', 'inativos']
   const tituloLista = montarTituloContagem(fornecedores.length, hasMore, {
     mostrando: m.fornecedores.mostrando,
     ha_mais: m.fornecedores.ha_mais,
@@ -467,28 +368,6 @@ export function FornecedoresListClient({
                   controlSize="sm"
                 />
               </div>
-              <div
-                className="inline-flex items-center gap-0.5 rounded-control border border-[var(--color-border)] bg-[var(--color-surface-soft)] p-0.5"
-                role="group"
-                aria-label={m.fornecedores.col_status}
-              >
-                {statusOptions.map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => setStatusF(s)}
-                    aria-pressed={statusF === s}
-                    className={cn(
-                      'fp-focus-ring rounded-sm px-2.5 py-1 text-caption font-medium',
-                      statusF === s
-                        ? 'bg-[var(--color-info-bg)] text-brand'
-                        : 'text-fg-subtle hover:text-fg',
-                    )}
-                  >
-                    {m.fornecedores[`filtro_${s}` as const]}
-                  </button>
-                ))}
-              </div>
               {filtrosAtivos ? (
                 <Button type="button" size="sm" variant="ghost" onClick={limparFiltros}>
                   {m.comum.limpar_filtros}
@@ -511,12 +390,6 @@ export function FornecedoresListClient({
                 {m.fornecedores.bulk_selecionados}
               </span>
               <div className="ml-auto flex flex-wrap items-center gap-2">
-                <Button type="button" size="sm" variant="secondary" onClick={() => onBulkAtivar(true)}>
-                  {m.fornecedores.bulk_ativar}
-                </Button>
-                <Button type="button" size="sm" variant="secondary" onClick={() => onBulkAtivar(false)}>
-                  {m.fornecedores.bulk_inativar}
-                </Button>
                 <Button type="button" size="sm" variant="danger" onClick={() => void onBulkExcluir()}>
                   {m.fornecedores.bulk_excluir}
                 </Button>
