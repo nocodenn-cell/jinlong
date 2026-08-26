@@ -409,9 +409,12 @@ jobs:
       # qualquer teste rodar exatamente nesse cenário já observado, o que o
       # code review do PR #315 apontou (P1: o timeout não cobria a duração já
       # documentada acima dele).
-      - name: Install Playwright Chromium
+      # Chromium + WebKit: `playwright.config.ts` define `mobile-safari-iphone`
+      # (WebKit). Instalar só Chromium (CI #1226) fez 14 falhas determinísticas
+      # `browserType.launch: Executable doesn't exist .../webkit-*/pw_run.sh`.
+      - name: Install Playwright Chromium + WebKit
         timeout-minutes: 35
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium webkit
 
       # Mesma stack local e efêmera do `e2e-critical`. Este job foi esquecido na
       # primeira correção e, por isso, continuou logando em PRODUÇÃO com as
@@ -536,6 +539,7 @@ jobs:
         env:
           CI: true
           PLAYWRIGHT_E2E_WITH_DEV: '1'
+          NODE_OPTIONS: --max-old-space-size=8192
           NEXT_PUBLIC_SUPABASE_URL: ${{ env.SB_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ env.SB_ANON }}
           PLAYWRIGHT_TEST_EMAIL: e2e-gerente@localhost.test

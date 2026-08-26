@@ -60,11 +60,17 @@ test.describe('Hidratação — após login (gerente)', () => {
         await page.getByPlaceholder('Email').fill(email)
         await page.getByPlaceholder('Senha').fill(password)
         await page.getByRole('button', { name: /^Entrar$/ }).click()
-        await page.waitForURL(/\/(caixa|gerente)/, { timeout: 25_000 })
+        // Contrato canônico (`destinoPosLoginPorPerfil`): GERENTE/DONO/ADMIN →
+        // `/admin/dashboard`, OPERADOR → `/caixa`. Regex antigo `(caixa|gerente)`
+        // falhava com a página já em `/admin/dashboard` (CI #1226 / run 33014557184).
+        await page.waitForURL(/\/(caixa|gerente|admin)/, {
+          timeout: 45_000,
+          waitUntil: 'domcontentloaded',
+        })
 
         const path = new URL(page.url()).pathname
-        if (path.startsWith('/gerente')) {
-          await gotoApp(page, '/gerente/estoque', E2E_GOTO_DOMCONTENTLOADED)
+        if (path.startsWith('/admin') || path.startsWith('/gerente')) {
+          await gotoApp(page, '/admin/estoque', E2E_GOTO_DOMCONTENTLOADED)
           await gotoApp(page, '/admin/dashboard', E2E_GOTO_DOMCONTENTLOADED)
           await expect(page).toHaveURL(/\/admin\/dashboard/)
           return

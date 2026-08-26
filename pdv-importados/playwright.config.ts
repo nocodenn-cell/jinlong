@@ -100,6 +100,15 @@ export default defineConfig({
           url: defaultBase,
           reuseExistingServer,
           timeout: 120_000,
+          // CI #1226: `next dev` reiniciou 3× por "memory threshold" no meio da
+          // suíte (ECONNRESET / cupom vazio / ERR_CONNECTION_REFUSED). Heap
+          // maior reduz o thrash sem mudar o app.
+          env: {
+            ...process.env,
+            NODE_OPTIONS: [process.env.NODE_OPTIONS, '--max-old-space-size=8192']
+              .filter(Boolean)
+              .join(' '),
+          },
         }
       : undefined,
 })
