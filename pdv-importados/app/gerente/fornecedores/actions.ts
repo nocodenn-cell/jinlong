@@ -4,62 +4,67 @@ import { revalidatePath, revalidateTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
+import {
+  FORNECEDOR_SELECT_COLUMNS,
+  normalizarCnpj,
+  validarFornecedorInput,
+  type FornecedorInput,
+  type FornecedorListRow,
+} from './fornecedorContrato'
 
-export type FornecedorListRow = {
-  id: string
-  nome: string
-  tipo: 'PF' | 'PJ'
-  documento: string
-  email: string | null
-  telefone: string | null
-  contato_pessoa: string | null
-  categoria: string | null
-  endereco_logradouro: string | null
-  endereco_numero: string | null
-  endereco_complemento: string | null
-  endereco_bairro: string | null
-  endereco_cidade: string | null
-  endereco_uf: string | null
-  endereco_cep: string | null
-  ativo: boolean
-  criado_em: string | null
-}
-
-export type FornecedorInput = {
-  id?: string
-  nome: string
-  tipo: 'PF' | 'PJ'
-  documento: string
-  email: string | null
-  telefone: string | null
-  contato_pessoa: string | null
-  categoria: string | null
-  endereco_logradouro: string | null
-  endereco_numero: string | null
-  endereco_complemento: string | null
-  endereco_bairro: string | null
-  endereco_cidade: string | null
-  endereco_uf: string | null
-  endereco_cep: string | null
-}
+export type { FornecedorInput, FornecedorListRow }
 
 const PAGE_SIZE = 20
+const MSG_SEM_LOJA =
+  'Sua conta não está associada a uma loja. Contate o administrador.'
 
-const COLUMNS = `
-  id, nome, tipo, documento, email, telefone, contato_pessoa, categoria,
-  endereco_logradouro, endereco_numero, endereco_complemento,
-  endereco_bairro, endereco_cidade, endereco_uf, endereco_cep,
-  ativo, criado_em
-`
+function lojaIdDaSessao(
+  session: { lojaId: string | null },
+): { ok: true; lojaId: string } | { ok: false; error: string } {
+  // Mesmo padrão de clientes/actions: fail-closed, sem LOJA_MATRIZ_ID em escrita.
+  if (!session.lojaId) return { ok: false, error: MSG_SEM_LOJA }
+  return { ok: true, lojaId: session.lojaId }
+}
+
+function asListRow(raw: unknown): FornecedorListRow {
+  const r = raw as FornecedorListRow
+  return {
+    id: r.id,
+    cnpj: r.cnpj,
+    nome: r.nome,
+    loja_id: r.loja_id,
+    created_at: r.created_at,
+    updated_at: r.updated_at,
+  }
+}
+
+async function buscarPorLojaCnpj(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  lojaId: string,
+  cnpj: string,
+): Promise<FornecedorListRow | null> {
+  const { data, error } = await supabase
+    .from('fornecedores')
+    .select(FORNECEDOR_SELECT_COLUMNS)
+    .eq('loja_id', lojaId)
+    .eq('cnpj', cnpj)
+    .maybeSingle()
+  if (error || !data) return null
+  return asListRow(data)
+}
+
+function revalidarFornecedores(): void {
+  revalidatePath('/gerente/fornecedores')
+  revalidatePath('/admin/fornecedores')
+  revalidateTag('catalogo-opcoes-filtro')
+}
 
 export async function buscarFornecedoresPaginadosAction(
   page: number,
-  opts?: { termo?: string; status?: 'todos' | 'ativos' | 'inativos' },
+  opts?: { termo?: string },
 ): Promise<
   { ok: true; fornecedores: FornecedorListRow[]; hasMore: boolean } | { ok: false; error: string }
 > {
-  // Sem este guard a tela mostrava "nenhum fornecedor" para quem não tem
-  // permissão (o RLS devolve lista vazia) em vez de dizer que falta acesso.
   const auth = await assertGerenteSession()
   if (!auth.ok) return { ok: false, error: auth.error }
 
@@ -70,45 +75,26 @@ export async function buscarFornecedoresPaginadosAction(
 
     let query = supabase
       .from('fornecedores')
-      .select(COLUMNS)
+      .select(FORNECEDOR_SELECT_COLUMNS)
       .order('nome', { ascending: true })
       .range(from, to)
 
-    if (opts?.status === 'ativos') query = query.eq('ativo', true)
-    if (opts?.status === 'inativos') query = query.eq('ativo', false)
-
     if (opts?.termo && opts.termo.trim()) {
       const t = opts.termo.trim()
-      const onlyDigits = t.replace(/\D/g, '')
-      const ors = [
-        `nome.ilike.%${t}%`,
-        `email.ilike.%${t}%`,
-        `contato_pessoa.ilike.%${t}%`,
-        `categoria.ilike.%${t}%`,
-      ]
-      if (onlyDigits) ors.push(`documento.like.%${onlyDigits}%`, `telefone.like.%${onlyDigits}%`)
+      const onlyDigits = normalizarCnpj(t)
+      const ors = [`nome.ilike.%${t}%`]
+      if (onlyDigits) ors.push(`cnpj.like.%${onlyDigits}%`)
       query = query.or(ors.join(','))
     }
 
     const { data, error } = await query
     if (error) return { ok: false, error: error.message }
-    const rows = (data ?? []) as FornecedorListRow[]
+    const rows = (data ?? []).map(asListRow)
     const hasMore = rows.length > PAGE_SIZE
     return { ok: true, fornecedores: hasMore ? rows.slice(0, PAGE_SIZE) : rows, hasMore }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Erro ao buscar fornecedores.' }
   }
-}
-
-function validar(input: FornecedorInput): string | null {
-  if (!input.nome || input.nome.trim().length < 2) return 'Nome inválido.'
-  const docDigits = input.documento.replace(/\D/g, '')
-  if (input.tipo === 'PF' && docDigits.length !== 11) return 'CPF deve ter 11 dígitos.'
-  if (input.tipo === 'PJ' && docDigits.length !== 14) return 'CNPJ deve ter 14 dígitos.'
-  if (input.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email)) return 'E-mail inválido.'
-  if (input.endereco_cep && input.endereco_cep.replace(/\D/g, '').length !== 8)
-    return 'CEP deve ter 8 dígitos.'
-  return null
 }
 
 export async function salvarFornecedorAction(
@@ -117,55 +103,57 @@ export async function salvarFornecedorAction(
   const auth = await assertGerenteSession()
   if (!auth.ok) return { ok: false, error: auth.error }
 
-  const err = validar(input)
+  const tenant = lojaIdDaSessao(auth.session)
+  if (!tenant.ok) return tenant
+
+  const err = validarFornecedorInput(input)
   if (err) return { ok: false, error: err }
+
+  const nome = input.nome.trim()
+  const cnpj = normalizarCnpj(input.cnpj)
 
   try {
     const supabase = await createClient()
-    const payload = {
-      nome: input.nome.trim(),
-      tipo: input.tipo,
-      documento: input.documento.replace(/\D/g, ''),
-      email: input.email?.trim() || null,
-      telefone: input.telefone?.replace(/\D/g, '') || null,
-      contato_pessoa: input.contato_pessoa?.trim() || null,
-      categoria: input.categoria?.trim() || null,
-      endereco_logradouro: input.endereco_logradouro?.trim() || null,
-      endereco_numero: input.endereco_numero?.trim() || null,
-      endereco_complemento: input.endereco_complemento?.trim() || null,
-      endereco_bairro: input.endereco_bairro?.trim() || null,
-      endereco_cidade: input.endereco_cidade?.trim() || null,
-      endereco_uf: input.endereco_uf?.trim() || null,
-      endereco_cep: input.endereco_cep?.replace(/\D/g, '') || null,
+
+    if (input.id) {
+      const { data, error } = await supabase
+        .from('fornecedores')
+        .update({ nome, cnpj })
+        .eq('id', input.id)
+        .eq('loja_id', tenant.lojaId)
+        .select(FORNECEDOR_SELECT_COLUMNS)
+        .single()
+      if (error) {
+        if (error.code === '23505') {
+          return { ok: false, error: 'Já existe um fornecedor com este CNPJ nesta loja.' }
+        }
+        return { ok: false, error: mensagemErroComSecao('Fornecedor', error.message) }
+      }
+      revalidarFornecedores()
+      return { ok: true, fornecedor: asListRow(data) }
     }
 
-    let query
-    if (input.id) {
-      query = supabase
-        .from('fornecedores')
-        .update(payload)
-        .eq('id', input.id)
-        .select(COLUMNS)
-        .single()
-    } else {
-      query = supabase
-        .from('fornecedores')
-        .insert({ ...payload, ativo: true })
-        .select(COLUMNS)
-        .single()
-    }
-    const { data, error } = await query
+    const { data, error } = await supabase
+      .from('fornecedores')
+      .insert({ nome, cnpj, loja_id: tenant.lojaId })
+      .select(FORNECEDOR_SELECT_COLUMNS)
+      .single()
+
     if (error) {
-      // 23505 = unique violation (documento duplicado)
       if (error.code === '23505') {
-        return { ok: false, error: 'Já existe um fornecedor com este documento.' }
+        // Cadastro rápido: devolve o existente sem alterar nome/dados.
+        const existente = await buscarPorLojaCnpj(supabase, tenant.lojaId, cnpj)
+        if (existente) {
+          revalidarFornecedores()
+          return { ok: true, fornecedor: existente }
+        }
+        return { ok: false, error: 'Já existe um fornecedor com este CNPJ nesta loja.' }
       }
       return { ok: false, error: mensagemErroComSecao('Fornecedor', error.message) }
     }
-    revalidatePath('/gerente/fornecedores')
-    revalidatePath('/admin/fornecedores')
-    revalidateTag('catalogo-opcoes-filtro')
-    return { ok: true, fornecedor: data as FornecedorListRow }
+
+    revalidarFornecedores()
+    return { ok: true, fornecedor: asListRow(data) }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Erro ao salvar fornecedor.' }
   }
@@ -177,10 +165,12 @@ export async function excluirFornecedorAction(
   const auth = await assertGerenteSession()
   if (!auth.ok) return { ok: false, error: auth.error }
 
+  const tenant = lojaIdDaSessao(auth.session)
+  if (!tenant.ok) return tenant
+
   try {
     const supabase = await createClient()
 
-    // Bloqueia exclusão se houver contas a pagar abertas vinculadas.
     const { count, error: countErr } = await supabase
       .from('contas_pagar')
       .select('id', { count: 'exact', head: true })
@@ -194,49 +184,29 @@ export async function excluirFornecedorAction(
       }
     }
 
-    const { error } = await supabase.from('fornecedores').delete().eq('id', id)
+    const { error } = await supabase
+      .from('fornecedores')
+      .delete()
+      .eq('id', id)
+      .eq('loja_id', tenant.lojaId)
     if (error) return { ok: false, error: mensagemErroComSecao('Fornecedor', error.message) }
-    revalidatePath('/gerente/fornecedores')
-    revalidatePath('/admin/fornecedores')
-    revalidateTag('catalogo-opcoes-filtro')
+    revalidarFornecedores()
     return { ok: true }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Erro ao excluir fornecedor.' }
   }
 }
 
-/** Bulk: ativar / inativar várias linhas. */
-export async function bulkAtivarFornecedoresAction(
-  ids: string[],
-  ativo: boolean,
-): Promise<{ ok: true; afetados: number } | { ok: false; error: string }> {
-  const auth = await assertGerenteSession()
-  if (!auth.ok) return { ok: false, error: auth.error }
-  if (ids.length === 0) return { ok: false, error: 'Nenhum fornecedor selecionado.' }
-
-  try {
-    const supabase = await createClient()
-    const { data, error } = await supabase
-      .from('fornecedores')
-      .update({ ativo })
-      .in('id', ids)
-      .select('id')
-    if (error) return { ok: false, error: mensagemErroComSecao('Fornecedor', error.message) }
-    revalidatePath('/gerente/fornecedores')
-    revalidatePath('/admin/fornecedores')
-    revalidateTag('catalogo-opcoes-filtro')
-    return { ok: true, afetados: data?.length ?? 0 }
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : 'Erro ao atualizar fornecedores.' }
-  }
-}
-
-/** Bulk: excluir várias linhas. Mantém a regra de bloqueio por contas em aberto. */
+/** Bulk: excluir várias linhas. Mantém bloqueio por contas em aberto. */
 export async function bulkExcluirFornecedoresAction(
   ids: string[],
 ): Promise<{ ok: true; excluidos: number; bloqueados: number } | { ok: false; error: string }> {
   const auth = await assertGerenteSession()
   if (!auth.ok) return { ok: false, error: auth.error }
+
+  const tenant = lojaIdDaSessao(auth.session)
+  if (!tenant.ok) return tenant
+
   if (ids.length === 0) return { ok: false, error: 'Nenhum fornecedor selecionado.' }
 
   try {
@@ -252,11 +222,13 @@ export async function bulkExcluirFornecedoresAction(
     if (liberados.length === 0) {
       return { ok: true, excluidos: 0, bloqueados: ids.length }
     }
-    const { error } = await supabase.from('fornecedores').delete().in('id', liberados)
+    const { error } = await supabase
+      .from('fornecedores')
+      .delete()
+      .in('id', liberados)
+      .eq('loja_id', tenant.lojaId)
     if (error) return { ok: false, error: mensagemErroComSecao('Fornecedor', error.message) }
-    revalidatePath('/gerente/fornecedores')
-    revalidatePath('/admin/fornecedores')
-    revalidateTag('catalogo-opcoes-filtro')
+    revalidarFornecedores()
     return { ok: true, excluidos: liberados.length, bloqueados: bloqueadosIds.size }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Erro ao excluir fornecedores.' }
