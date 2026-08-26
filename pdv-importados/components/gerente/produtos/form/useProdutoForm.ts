@@ -265,6 +265,70 @@ export function useProdutoForm(
 
   const readOnly = useMemo(() => readOnlyFromProduto(produto), [produto])
 
+  const snapshotAtual = useCallback((): FormSnapshot => {
+    return {
+      nome,
+      codigoInterno,
+      codigoBarras,
+      origem,
+      unidadeMedida,
+      referenciaFornecedor,
+      nomeReduzidoPdv,
+      localizacaoPrateleira,
+      categoriaId,
+      marcaId,
+      fornecedorId,
+      observacao,
+      quantidadeGatilho,
+      permitirAbaixoCusto,
+      ncm,
+      cfopProduto,
+      csosn,
+      cest,
+      cstPis,
+      cstCofins,
+      precoVarejo: precoVarejoInput.display,
+      precoAtacado: precoAtacadoInput.display,
+      precoCusto: precoCustoInput.display,
+      estoqueInicialQty,
+      estoqueInicialMin,
+    }
+  }, [
+    nome,
+    codigoInterno,
+    codigoBarras,
+    origem,
+    unidadeMedida,
+    referenciaFornecedor,
+    nomeReduzidoPdv,
+    localizacaoPrateleira,
+    categoriaId,
+    marcaId,
+    fornecedorId,
+    observacao,
+    quantidadeGatilho,
+    permitirAbaixoCusto,
+    ncm,
+    cfopProduto,
+    csosn,
+    cest,
+    cstPis,
+    cstCofins,
+    precoVarejoInput.display,
+    precoAtacadoInput.display,
+    precoCustoInput.display,
+    estoqueInicialQty,
+    estoqueInicialMin,
+  ])
+
+  /**
+   * Após persistência bem-sucedida: o estado atual do formulário passa a ser
+   * o baseline limpo. Sem isso, fechar após save dispara "Descartar alterações?".
+   */
+  const commitBaseline = useCallback(() => {
+    baselineRef.current = snapshotAtual()
+  }, [snapshotAtual])
+
   const limparParaNovoCadastro = useCallback(() => {
     // Cadastro em volume: ao "Salvar e continuar", preserva o CONTEXTO que
     // costuma se repetir entre itens (categoria, marca, fornecedor, origem) e
@@ -317,63 +381,11 @@ export function useProdutoForm(
   const isDirty = useCallback((): boolean => {
     const baseline = baselineRef.current
     if (!baseline) return false
-    const current: FormSnapshot = {
-      nome,
-      codigoInterno,
-      codigoBarras,
-      origem,
-      unidadeMedida,
-      referenciaFornecedor,
-      nomeReduzidoPdv,
-      localizacaoPrateleira,
-      categoriaId,
-      marcaId,
-      fornecedorId,
-      observacao,
-      quantidadeGatilho,
-      permitirAbaixoCusto,
-      ncm,
-      cfopProduto,
-      csosn,
-      cest,
-      cstPis,
-      cstCofins,
-      precoVarejo: precoVarejoInput.display,
-      precoAtacado: precoAtacadoInput.display,
-      precoCusto: precoCustoInput.display,
-      estoqueInicialQty,
-      estoqueInicialMin,
-    }
+    const current = snapshotAtual()
     return (Object.keys(current) as (keyof FormSnapshot)[]).some(
       (key) => current[key] !== baseline[key],
     )
-  }, [
-    nome,
-    codigoInterno,
-    codigoBarras,
-    origem,
-    unidadeMedida,
-    referenciaFornecedor,
-    nomeReduzidoPdv,
-    localizacaoPrateleira,
-    categoriaId,
-    marcaId,
-    fornecedorId,
-    observacao,
-    quantidadeGatilho,
-    permitirAbaixoCusto,
-    ncm,
-    cfopProduto,
-    csosn,
-    cest,
-    cstPis,
-    cstCofins,
-    precoVarejoInput.display,
-    precoAtacadoInput.display,
-    precoCustoInput.display,
-    estoqueInicialQty,
-    estoqueInicialMin,
-  ])
+  }, [snapshotAtual])
 
   return {
     nome,
@@ -425,6 +437,7 @@ export function useProdutoForm(
     setEstoqueInicialMin,
     readOnly,
     limparParaNovoCadastro,
+    commitBaseline,
     isDirty,
   }
 }

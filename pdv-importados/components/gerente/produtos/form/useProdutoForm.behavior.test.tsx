@@ -54,3 +54,24 @@ describe('useProdutoForm — limparParaNovoCadastro (Salvar e continuar)', () =>
     expect(api!.codigoBarras).toBe('')
   })
 })
+
+describe('useProdutoForm — commitBaseline (dirty pós-save)', () => {
+  it('editar deixa dirty; commitBaseline limpa; editar de novo deixa dirty', () => {
+    expect(api!.isDirty()).toBe(false)
+
+    flushSync(() => {
+      api!.setNome('canela em pó')
+    })
+    expect(api!.isDirty()).toBe(true)
+
+    flushSync(() => {
+      api!.commitBaseline()
+    })
+    expect(api!.isDirty()).toBe(false)
+
+    flushSync(() => {
+      api!.setNome('canela em pó EXTRA')
+    })
+    expect(api!.isDirty()).toBe(true)
+  })
+})
