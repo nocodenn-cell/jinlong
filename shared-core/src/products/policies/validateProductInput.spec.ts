@@ -36,6 +36,23 @@ describe('validateCreateProductCommand', () => {
     ).toEqual({ ok: false, code: PRODUCT_ERROR_CODES.PRICE_INVALID })
   })
 
+  it('ATACADO_INVALID quando atacado >= varejo na criação (CSV/lote bypassam o Zod do formulário)', () => {
+    expect(
+      validateCreateProductCommand({
+        input: { nome: 'Ok', precoVarejo: 10, precoAtacado: 15 },
+        lojaId: 'l1',
+        atorId: 'u1',
+      }),
+    ).toEqual({ ok: false, code: PRODUCT_ERROR_CODES.ATACADO_INVALID })
+    expect(
+      validateCreateProductCommand({
+        input: { nome: 'Ok', precoVarejo: 10, precoAtacado: 10 },
+        lojaId: 'l1',
+        atorId: 'u1',
+      }),
+    ).toEqual({ ok: false, code: PRODUCT_ERROR_CODES.ATACADO_INVALID })
+  })
+
   it('AUTH_REQUIRED / LOJA_REQUIRED / ESTOQUE_INVALID', () => {
     expect(
       validateCreateProductCommand({

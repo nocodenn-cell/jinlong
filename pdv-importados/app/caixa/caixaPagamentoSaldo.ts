@@ -64,3 +64,39 @@ export function calcularTroco(total: number, recebido: number): ResultadoTroco {
     suficiente: roundMoney2(t - r) <= SALDO_PENDENTE_EPS,
   }
 }
+
+export type AvaliacaoExcessoParcelas = {
+  /** Índice da última parcela DINHEIRO em `pagamentos`, ou -1 se não há nenhuma. */
+  idxDinheiro: number
+  /** Valor disponível nessa parcela para virar troco (0 se não há parcela DINHEIRO). */
+  dinheiroDisponivel: number
+  /** true quando o excesso cabe inteiro no dinheiro recebido — pode virar troco. */
+  trocoValido: boolean
+}
+
+/**
+ * Troco só existe em dinheiro: o excesso de uma divisão de pagamento só pode
+ * ser abatido do valor realmente recebido em espécie, nunca de uma parcela
+ * cartão/PIX. Abater de cartão/PIX subregistraria em silêncio o valor
+ * cobrado na maquininha frente ao que o operador de fato passou — e, se o
+ * excesso for maior que o dinheiro recebido, o problema é o valor digitado
+ * em alguma parcela, não troco a devolver.
+ */
+export function avaliarExcessoParcelas(
+  pagamentos: ReadonlyArray<{ formaPagamento: string; valor: number }>,
+  excesso: number,
+): AvaliacaoExcessoParcelas {
+  let idxDinheiro = -1
+  for (let i = pagamentos.length - 1; i >= 0; i--) {
+    if (pagamentos[i].formaPagamento === 'DINHEIRO') {
+      idxDinheiro = i
+      break
+    }
+  }
+  const dinheiroDisponivel = idxDinheiro >= 0 ? roundMoney2(pagamentos[idxDinheiro].valor) : 0
+  return {
+    idxDinheiro,
+    dinheiroDisponivel,
+    trocoValido: excesso > 0 && roundMoney2(dinheiroDisponivel - excesso) >= -EXCESSO_PAGAMENTO_EPS,
+  }
+}

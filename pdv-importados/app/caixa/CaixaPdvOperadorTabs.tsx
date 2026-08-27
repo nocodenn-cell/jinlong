@@ -13,6 +13,7 @@ import { Select } from "@/components/ui/select"
 import {
   EXCESSO_PAGAMENTO_EPS,
   SALDO_PENDENTE_EPS,
+  avaliarExcessoParcelas,
   calcularTroco,
 } from "@/app/caixa/caixaPagamentoSaldo"
 
@@ -63,7 +64,14 @@ const PagamentoPanelImpl = forwardRef(function PagamentoPanelImpl(
   }: PagamentoPanelProps,
   ref: React.ForwardedRef<HTMLElement>,
 ) {
-  const temTroco = diferenca > EXCESSO_PAGAMENTO_EPS
+  const excedendo = diferenca > EXCESSO_PAGAMENTO_EPS
+  // Troco só existe em dinheiro (calcularTroco/avaliarExcessoParcelas): um
+  // excesso sem parcela DINHEIRO suficiente é erro de digitação do
+  // operador (ex.: cartão/PIX somando mais que o total), não troco a
+  // devolver — mostrar como diferença a corrigir, não como troco.
+  const { trocoValido } = avaliarExcessoParcelas(pagamentos, diferenca)
+  const temTroco = excedendo && trocoValido
+  const excessoInvalido = excedendo && !trocoValido
   const faltando = diferenca < -SALDO_PENDENTE_EPS
 
   // Pagamento único é o caso de 99% das vendas. Enquanto houver uma só parcela o
@@ -222,6 +230,17 @@ const PagamentoPanelImpl = forwardRef(function PagamentoPanelImpl(
           <span className="font-medium text-destructive">{m.caixa.pdv_pgto_diferenca}</span>
           <span className="tabular-nums font-bold text-destructive">
             {moedaPrefixo} {formatDecimalBRL(Math.abs(diferenca))}
+          </span>
+        </div>
+      ) : null}
+
+      {dividido && excessoInvalido ? (
+        <div className="flex justify-between gap-3 text-xs">
+          <span className="font-medium text-destructive">
+            {m.caixa.pdv_pgto_excesso_sem_dinheiro}
+          </span>
+          <span className="tabular-nums font-bold text-destructive">
+            {moedaPrefixo} {formatDecimalBRL(diferenca)}
           </span>
         </div>
       ) : null}
