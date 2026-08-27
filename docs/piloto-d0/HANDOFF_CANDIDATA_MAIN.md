@@ -1,5 +1,11 @@
 # Handoff da candidata D0 recomposta sobre main
 
+> **SUPERSEDED (2026-08-27).** Esta candidata (`ede1f459`, branch
+> `codex/piloto-d0-main-clean`) **não** é a linha de release. O go-live do
+> piloto é `e1327e62` em `origin/main`. Ver
+> [CERTIFICACAO_GO_LIVE_E1327E62.md](./CERTIFICACAO_GO_LIVE_E1327E62.md).
+> Preservado como evidência da recomposição de 23/08.
+
 ## Base e limites
 
 - Base: `main` em `ede1f459785f79ced4df0cd9a97a6ccdd3e26220`.

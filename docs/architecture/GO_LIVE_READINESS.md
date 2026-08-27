@@ -1,5 +1,7 @@
 # Go-Live Readiness — fechamento ERP (1º cliente)
 
+> **SUPERSEDED como status atual (2026-08-27).** Este arquivo é o War Room de **19/07** (PR #220, SHA de outra era). O baseline do piloto é `e1327e62` — [piloto-d0/CERTIFICACAO_GO_LIVE_E1327E62.md](../piloto-d0/CERTIFICACAO_GO_LIVE_E1327E62.md). Preservado como histórico. A matriz GO/NO-GO abaixo **não** descreve produção hoje.
+
 | Campo | Valor |
 |--------|--------|
 | **Data** | 2026-07-19 |

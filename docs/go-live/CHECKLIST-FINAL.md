@@ -12,11 +12,14 @@ Responsável de negócio: ______________________
 
 ---
 
-## 🔴 BLOQUEADORES — nenhum GO sem estes
+## 🔴 BLOQUEADORES — nenhum GO de *segundo cliente* sem revalidar
+
+O item “30 migrations” é o checklist de **17/08**. O piloto `e1327e62` já está em GO.
+Não imprimir esta folha como se o piloto estivesse NO-GO.
 
 | ✓ | Item | Ref. | Exec. | Confere |
 |---|---|---|---|---|
-| ☐ | **30 migrations aplicadas em produção** | [03](03-deploy-backend.md) §1 | | |
+| ☐ | Ledger de produção revalidado (não assumir o “30” de 17/08) | [03](03-deploy-backend.md) §1 | | |
 | ☐ | Deploy coordenado banco + app planejado, loja fechada | [07](07-go-live-day.md) §1 | | |
 | ☐ | Reauditoria independente do bloco AR/AP **ou** risco aceito por escrito | [06](06-validacao-pre-go-live.md) §6 | | |
 | ☐ | Issues #262, #261, #260, #259, #136, #66 lidas (GitHub estava em 503) | [06](06-validacao-pre-go-live.md) L12 | | |

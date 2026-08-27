@@ -3,6 +3,8 @@
 **Vigência:** até encerramento da Fase 4 (primeiro cliente em produção estável).  
 **Responsável:** sponsor comercial + CTO.
 
+**2026-08-27:** o GO de código (`e1327e62`) **não** encerra este freeze. Features novas (Fiscal real, WhatsApp, orçamentos, redesign) continuam OUT. A próxima sprint proposta é **estabilização operacional** ([piloto-d0/PROXIMA_SPRINT.md](./piloto-d0/PROXIMA_SPRINT.md)), não expansão de escopo.
+
 ## Perfil do piloto (contrato)
 
 | Item | Decisão |

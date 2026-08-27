@@ -1,5 +1,8 @@
 # Critérios de aceite — 1º cliente (War Room)
 
+> **SUPERSEDED como gate de merge (2026-08-27).** Aceite do War Room 19/07.
+> Baseline atual: [piloto-d0/CERTIFICACAO_GO_LIVE_E1327E62.md](../piloto-d0/CERTIFICACAO_GO_LIVE_E1327E62.md).
+
 | Campo | Valor |
 |--------|--------|
 | **Modo** | War Room — só correção de P0 da homologação |

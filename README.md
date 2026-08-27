@@ -6,33 +6,42 @@ PDV para lojas de importados no Brasil, com interface em **português** e **普�
 
 ## Status do projeto
 
-> 🟢 **Go-Live autorizado em 2026-08-09** — piloto em produção na loja **Matriz**.
-> Produção canônica: **https://pdv-importados.vercel.app** · Supabase: projeto `jinlong`.
+> 🟢 **GO em 2026-08-27** — piloto web. `main` = produção = **`e1327e62`**.
+> Produção: **https://pdv-importados.vercel.app** · Supabase: projeto `jinlong`.
 
-O `go_autorizado = true` foi registrado em `/admin/implantacao` com SSRA verde e produção alinhada à
-`main` (SHA `2afa14ca`). A certificação técnica completa, com evidências, está em
-[`GO_LIVE_CERTIFICATION_REPORT.md`](GO_LIVE_CERTIFICATION_REPORT.md).
+Certificação deste baseline: [`docs/piloto-d0/CERTIFICACAO_GO_LIVE_E1327E62.md`](docs/piloto-d0/CERTIFICACAO_GO_LIVE_E1327E62.md).
+Próxima sprint (proposta, não iniciada): [`docs/piloto-d0/PROXIMA_SPRINT.md`](docs/piloto-d0/PROXIMA_SPRINT.md).
 
-Mudanças com impacto em produção, schema ou governança são registradas no
-[**CHANGELOG**](CHANGELOG.md).
+O GO de **09/08/2026** (`2afa14ca`, loja Matriz) permanece histórico em
+[`GO_LIVE_CERTIFICATION_REPORT.md`](GO_LIVE_CERTIFICATION_REPORT.md). Não usar esse SHA como release atual.
+
+Mudanças com impacto em produção, schema ou governança: [**CHANGELOG**](CHANGELOG.md).
+
+### Gates (não escrever “todos os testes verdes”)
+
+| Gate | Estado |
+|---|---|
+| SSRA | verde em `e1327e62` |
+| E2E crítico | PASS |
+| Playwright completo | residual vermelho (flake/infra) |
+| shared-core / pdv-importados (promovidos) | 8 / 33 PASS |
 
 ### Riscos residuais monitorados
 
-O Go-Live de 2026-08-09 foi autorizado **com riscos residuais conhecidos** — nenhum deles bloqueava
-aquela decisão, e todos seguem sob acompanhamento:
+Nenhum bloqueia o GO de `e1327e62`. Detalhe e prioridade da próxima sprint no certificado.
 
 | Item | Classificação | Estado |
 |---|---|---|
-| Cadeia financeira AR/AP (Issue #298) | **P0 — em remediação** | Auditoria de 2026-08-13 concluiu **NÃO CERTIFICADO**: recebimentos e pagamentos não fecham com caixa/fluxo. Bloco AR/AP remediado e **apto para reauditoria** (§11), que ainda não foi executada. |
-| Comissões — bloco DB-05 A→F | ✅ **Certificado** | Backend e frontend certificados (§12). **Fase 3A permanece não liberada**, pois depende também da reauditoria do bloco AR/AP. |
-| E2E crítico (Playwright `sync-fluxo`) | Sistema de risco | Não é gate SSRA; monitorar pós-piloto. |
-| `GL-DENO-LOCK` | Go-Live separado | `sync-outbox` e `validar-gerente --frozen` falham; passam com `--no-lock`. Corrigir em tarefa separada. |
-| `venda_finance_context` (P1-01) | ✅ **Encerrado** | Reaplicação aposentada; tombstone `20260810222702` é a convergência oficial. **Não reaplicar manualmente.** Ver [ADR-012](docs/adr/ADR-012-aposentadoria-venda-finance-context.md) e a [reconciliação](docs/RECONCILIACAO_venda_finance_context_2026-08-13.md). |
-| Branches/PRs legados | Higiene P2 | Passo 8 do plano de fechamento. |
-| Cancelamento pós-devolução (reembolso/estoque duplicados) | ✅ **Corrigido e aplicado em produção** | Encontrado e corrigido em 2026-08-20 (migration `20260820150000`, aplicada em produção via MCP `apply_migration` durante a investigação da PR #314 — rastreada remotamente como `20260820233832`; reconciliação de drift na PR #316). Ver [docs/DECISAO_CANCELAMENTO_REEMBOLSO_DUPLICADO.md](docs/DECISAO_CANCELAMENTO_REEMBOLSO_DUPLICADO.md). |
-| Promoções automáticas | Funcionalidade futura (BL-2) | Não implementadas — nem online nem offline. Não é bug. Ver [docs/COMUNICADO_PROMOCOES_AUTOMATICAS.md](docs/COMUNICADO_PROMOCOES_AUTOMATICAS.md). |
+| Smoke na máquina da cliente / restore | P0 operacional pós-GO | Não executados — próxima sprint |
+| Cadeia financeira AR/AP (Issue #298) | residual | Remediada no código; reauditoria independente pendente |
+| Playwright suíte completa | sistema de risco | Fail classificado C/D/E; não patchar produto |
+| Drift catálogo Git ↔ prod | P1 DR | BACKLOG_TECNICO 10–16; não é hotfix D0 |
+| `GL-DENO-LOCK` | Go-Live separado | `sync-outbox` / `validar-gerente --frozen` |
+| Promoções automáticas | futuro (BL-2) | Não implementadas — não é bug |
+| Cancelamento pós-devolução | ✅ | `20260820150000` em produção |
+| `venda_finance_context` | ✅ Encerrado | ADR-012 |
 
-As seções §§ referenciadas são do `GO_LIVE_CERTIFICATION_REPORT.md`. Status consolidado pré-treinamento do cliente #1 (2026-08-21): [docs/STATUS_PROJETO_PRE_TREINAMENTO.md](docs/STATUS_PROJETO_PRE_TREINAMENTO.md).
+As seções §§ antigas referem-se ao relatório de 09/08. Status pré-treinamento 21/08: [docs/STATUS_PROJETO_PRE_TREINAMENTO.md](docs/STATUS_PROJETO_PRE_TREINAMENTO.md) (SHA `3ccd7741` — **histórico**).
 
 ## Estrutura
 

@@ -6,6 +6,17 @@
 
 ---
 
+## 2026-08-27 — Baseline GO `e1327e62` + próxima sprint documentada
+
+| Campo | Valor |
+|---|---|
+| **Mudança** | Documentação alinhada à certificação GO; backlog D0 reconciliado; proposta de sprint de estabilização |
+| **Motivo** | Docs ainda apontavam SHA `2afa14ca` / julho (`f2fca536`) como se fossem o estado atual |
+| **Arquivos** | `docs/piloto-d0/*`, `docs/GO_LIVE_STATUS_ATUAL.md`, `README.md`, `CHANGELOG.md`, `Jinlong/*` |
+| **Impacto** | `main` passa a ser a fonte documental da release do piloto; Fiscal/WhatsApp explicitamente fora da próxima sprint |
+
+---
+
 ## 2026-07-30 — Auditoria do Catálogo e cadastro de produto ✅ RODADAS 1 e 2
 
 | Campo | Valor |

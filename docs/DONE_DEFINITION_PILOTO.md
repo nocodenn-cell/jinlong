@@ -1,5 +1,10 @@
 # Done Definition — Piloto (FastProduct)
 
+> **2026-08-27:** as caixas `[ ]` abaixo são o critério de **fechamento operacional
+> longo** (loja/fiscal/smoke SQL). O GO de **release** `e1327e62` já ocorreu —
+> [piloto-d0/CERTIFICACAO_GO_LIVE_E1327E62.md](./piloto-d0/CERTIFICACAO_GO_LIVE_E1327E62.md).
+> Não interpretar este arquivo em branco como NO-GO da `main`.
+
 Checklist de fechamento objetivo para encerrar ciclo técnico com baixo risco. **Processo + evidência:** tudo abaixo deve estar marcado e **rastreável** (PR, ticket ou cópia do [CHECKLIST_P0_STAGING.md](./CHECKLIST_P0_STAGING.md) com anexos).
 
 **Relação com o P0 geral:** a [trilha T1–T12](./P0_CHECKLIST_OPERACIONAL.md#trilha-unificada-ordem-de-execução) cobre link, migrations, `sync-outbox`, web e testes §4/§4b. Este documento acrescenta **pacote mínimo de dados/loja**, **fila fiscal**, **smoke SQL longo** e **governança de release**.

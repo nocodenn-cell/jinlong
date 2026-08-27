@@ -1,6 +1,8 @@
 # 06 — Roadmap
 
 > Prioridades verificadas contra `docs/FEATURE_FREEZE_PILOTO.md` e código.
+> **2026-08-27:** sprint proposta = estabilização operacional (`docs/piloto-d0/PROXIMA_SPRINT.md`).
+> Fiscal Focus e WhatsApp **não** furam a fila.
 > [[00_DASHBOARD_PROJETO]] · [[02_ESTADO_ATUAL]] · [[09_OPERACAO_PRIMEIRO_CLIENTE]]
 
 ---
@@ -52,11 +54,11 @@
 
 | Item | Prioridade | Evidência | Bloqueador? |
 |---|---|---|---|
-| P0 Checklist T1–T12 em staging | P0 | `docs/P0_CHECKLIST_OPERACIONAL.md` | Sim |
-| Homologação com evidências | P0 | `docs/CHECKLIST_P0_STAGING.md` | Sim |
-| Onboarding 1º cliente | P0 | `docs/RUNBOOK_PRIMEIRO_CLIENTE.md` | Sim |
-| Smoke venda ambiente alvo | P0 | Operacional | Sim |
-| Reconciliar migration 255 duplicada | P0 | Dois arquivos `255_*` no repo | **Sim** |
+| Estabilização operacional (proposta) | P0 | `docs/piloto-d0/PROXIMA_SPRINT.md` | Não iniciada |
+| Smoke na máquina da cliente | P0 | EXT-D0-004 | Acesso loja |
+| Backup + restore ensaiado | P0 | D0-06 | Projeto temporário |
+| P0 Checklist T1–T12 como NO-GO | — | julho | **OBSOLETO** para `e1327e62` |
+| Reconciliar migration 255 duplicada | — | ADR-011 | **SUPERSEDED** como bloqueador de release |
 
 ---
 

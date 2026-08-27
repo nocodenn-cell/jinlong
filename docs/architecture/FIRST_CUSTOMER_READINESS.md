@@ -1,5 +1,8 @@
 # First Customer Readiness — FastProduct
 
+> **2026-08-27:** snapshot de 18/07. SHA atual do piloto: `e1327e62`.
+> [piloto-d0/CERTIFICACAO_GO_LIVE_E1327E62.md](../piloto-d0/CERTIFICACAO_GO_LIVE_E1327E62.md).
+
 | Campo | Valor |
 |--------|--------|
 | **Data** | 2026-07-18 |

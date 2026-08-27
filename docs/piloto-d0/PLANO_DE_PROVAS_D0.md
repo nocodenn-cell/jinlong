@@ -1,5 +1,10 @@
 # Plano de provas do piloto D0
 
+> **2026-08-27:** o GO de **código/release** (`e1327e62`) **não** substitui este
+> plano. As PV-* na loja, restore e permissões remotas continuam o critério de
+> *estabilização operacional* — ver [PROXIMA_SPRINT.md](./PROXIMA_SPRINT.md).
+> Não marcar o plano inteiro como concluído.
+
 ## Convenções
 
 - **Ambiente:** homologação idêntica ao alvo ou produção em janela controlada, nunca banco desconhecido.

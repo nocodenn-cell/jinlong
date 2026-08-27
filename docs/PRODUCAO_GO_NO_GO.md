@@ -32,6 +32,8 @@ Secrets mínimos **para o SSRA** (leitura na API da Vercel): `VERCEL_TOKEN`, `VE
 
 Falha em sistema de risco **não** reverte nem impede um release que passou `validate-production`.
 
+**2026-08-27:** E2E crítico PASS em `e1327e62`; Playwright completo residual — ver [piloto-d0/CERTIFICACAO_GO_LIVE_E1327E62.md](./piloto-d0/CERTIFICACAO_GO_LIVE_E1327E62.md). Não tratar a suíte completa vermelha como NO-GO.
+
 ## O que a equipa **tem** de fazer fora do Git (P0)
 
 Seguir na ordem [P0_CHECKLIST_OPERACIONAL.md](./P0_CHECKLIST_OPERACIONAL.md) e [SECURANCA_CHECKLIST_FECHAMENTO.md](./SECURANCA_CHECKLIST_FECHAMENTO.md):

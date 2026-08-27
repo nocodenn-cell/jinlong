@@ -1,5 +1,10 @@
 # Status do Projeto — Pré-Treinamento Cliente #1
 
+> **HISTÓRICO (2026-08-20, SHA `3ccd7741`).** Não é o status de `e1327e62`.
+> Baseline atual: [piloto-d0/CERTIFICACAO_GO_LIVE_E1327E62.md](./piloto-d0/CERTIFICACAO_GO_LIVE_E1327E62.md).
+> A pendência “aplicar migration de cancelamento em produção” deste relatório foi **resolvida**
+> (`20260820150000` / remoto `20260820233832`).
+
 **Data do relatório:** 2026-08-20
 **Treinamento do cliente #1:** 2026-08-21
 **Base analisada:** `origin/main` @ `3ccd7741` (2026-08-20, 08:34 -03) — ver nota metodológica abaixo

@@ -13,6 +13,27 @@ Ordem: mais recente primeiro. Datas em `AAAA-MM-DD`.
 
 ---
 
+## 2026-08-27 — Consolidação do go-live do piloto (`e1327e62`)
+
+**Decisão:** **GO**. `origin/main` = produção = `e1327e62312d53bb005e0614801b8725b485b2ee`.
+
+Snapshot: [docs/piloto-d0/CERTIFICACAO_GO_LIVE_E1327E62.md](docs/piloto-d0/CERTIFICACAO_GO_LIVE_E1327E62.md).
+Próxima sprint (proposta): [docs/piloto-d0/PROXIMA_SPRINT.md](docs/piloto-d0/PROXIMA_SPRINT.md).
+
+### Promovido nesta consolidação
+
+- **#313** — kardex SSOT-04 em `devolver_ou_trocar_venda` (`20260821110000`)
+- **#324** — recebimento aceita DRAFT; atacado ≥ varejo rejeitado no cadastro/CSV; troco só DINHEIRO (`20260824120000`)
+- **#330** — opções locais no modal de produto; Playwright Chromium+WebKit; E2E 50m / heap 4GB
+
+Já na linha (não desta fatia, mas no SHA): baseline dirty pós-save (`86743dac`), D0-01/D0-03 aplicados 24/08 (`9881c8c1`), fornecedor por loja.
+
+### Não promovido / não é regressão
+
+- Playwright completo vermelho (78 pass / 3 fail / 18 flaky) — flake/infra.
+- #290 Dependabot — permanece aberta, pós-piloto.
+- Fiscal real, WhatsApp, orçamentos — fora do D0.
+
 ## 2026-08-19 — Fase 6: gate financeiro reproduzível do zero (6/6)
 
 **PR:** [#307](https://github.com/nocodenn-cell/fastproduct/pull/307) · **Commits:** `ef79bd33` (merge de `main`), `ee36bfd4` (correções)
