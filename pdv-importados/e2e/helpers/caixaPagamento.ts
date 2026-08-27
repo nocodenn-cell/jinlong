@@ -19,6 +19,17 @@ export async function adicionarProdutoDemo(page: Page, codigo: string): Promise<
     throw new Error(`Produto «${codigo}» não encontrado (seed 027 ou PLAYWRIGHT_E2E_PRODUTO_CODIGO).`)
   }
   await expect(status).toContainText(/adicionad|added|已添加|加入/i, { timeout: 15_000 })
+  // Status sozinho é insuficiente: no CI #1226 o Golden Flow leu toast
+  // "Item adicionado" com cupom vazio e `data-total-liquido=0` (produto seed
+  // 7898512340004 tem preço 68,00 — não é zero). Exigir total > 0 fecha o
+  // falso positivo antes do assert do spec.
+  await expect
+    .poll(
+      async () =>
+        Number(await page.getByTestId('caixa-total-liquido').getAttribute('data-total-liquido')),
+      { timeout: 15_000 },
+    )
+    .toBeGreaterThan(0)
 }
 
 export async function irParaAbaPgto(page: Page): Promise<void> {

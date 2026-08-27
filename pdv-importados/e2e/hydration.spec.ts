@@ -4,6 +4,7 @@ import {
   assertSupabasePublicEnvInCi,
   hasGerenteTestUser,
 } from './helpers/env'
+import { loginGerente } from './helpers/login'
 import { E2E_GOTO_DOMCONTENTLOADED, gotoApp } from './helpers/url'
 
 /**
@@ -50,30 +51,15 @@ test.describe('Hidratação — após login (gerente)', () => {
       return
     }
 
-    const email = process.env.PLAYWRIGHT_TEST_EMAIL!
-    const password = process.env.PLAYWRIGHT_TEST_PASSWORD!
-
     const violations = await collectHydrationViolationsDuring(
       page,
       async () => {
-        await gotoApp(page, '/login', E2E_GOTO_DOMCONTENTLOADED)
-        await page.getByPlaceholder('Email').fill(email)
-        await page.getByPlaceholder('Senha').fill(password)
-        await page.getByRole('button', { name: /^Entrar$/ }).click()
-        await page.waitForURL(/\/(caixa|gerente)/, { timeout: 25_000 })
-
-        const path = new URL(page.url()).pathname
-        if (path.startsWith('/gerente')) {
-          await gotoApp(page, '/gerente/estoque', E2E_GOTO_DOMCONTENTLOADED)
-          await gotoApp(page, '/admin/dashboard', E2E_GOTO_DOMCONTENTLOADED)
-          await expect(page).toHaveURL(/\/admin\/dashboard/)
-          return
-        }
-
-        if (path.startsWith('/caixa')) {
-          await gotoApp(page, '/caixa', E2E_GOTO_DOMCONTENTLOADED)
-          await expect(page).toHaveURL(/\/caixa\/?$/)
-        }
+        // `loginGerente` já espera `/admin/dashboard` (contrato do perfil).
+        // CI #1228: login ad-hoc + desvio extra a `/admin/estoque` estourou
+        // 150s em compile fria do `next dev` — não é violação de hidratação.
+        await loginGerente(page)
+        await gotoApp(page, '/admin/dashboard', E2E_GOTO_DOMCONTENTLOADED)
+        await expect(page).toHaveURL(/\/admin\/dashboard/)
       },
       { settleMs: 800 },
     )

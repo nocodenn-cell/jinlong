@@ -100,7 +100,11 @@ test.describe('QA módulo produtos (gerente)', () => {
     fs.mkdirSync(path.dirname(csvPath), { recursive: true })
     fs.writeFileSync(csvPath, csv, 'utf8')
 
-    await page.getByRole('button', { name: /Importar produtos a partir de CSV/i }).click()
+    // Catálogo usa `import_modal_titulo` ("Importar produtos" / "导入商品") no
+    // botão — não mais `toolbar_importar_aria` ("…a partir de CSV"). Snapshot
+    // CI #1226: botão visível como "Importar produtos" enquanto o seletor antigo
+    // esperava 120s em vão.
+    await page.getByRole('button', { name: /Importar produtos|导入商品/i }).click()
     await expect(page.getByRole('dialog', { name: /Importar produtos|导入商品/ })).toBeVisible()
 
     // Baixar modelo continua disponível e mantém o cabeçalho canónico.
@@ -141,7 +145,11 @@ test.describe('QA módulo produtos (gerente)', () => {
     await expect(page.getByRole('dialog', { name: /Importar produtos|导入商品/ })).toHaveCount(0, { timeout: 10_000 })
 
     await page.reload({ waitUntil: 'domcontentloaded' })
-    await expect(page.getByRole('heading', { name: 'Produtos', exact: true })).toBeVisible({ timeout: 30_000 })
+    // Mesmo h1 do beforeEach / consolidação admin-v2. CI #1228: heading
+    // "Produtos" não existe — a página é "Catálogo".
+    await expect(page.getByRole('heading', { level: 1, name: 'Catálogo', exact: true })).toBeVisible({
+      timeout: 30_000,
+    })
 
     await page.locator('section').filter({ has: page.getByRole('heading', { name: /Lista de produtos|商品列表/ }) }).getByRole('textbox', { name: /Buscar|搜索/i }).fill(novoNome.slice(0, 16))
     await expect(page.getByText(novoNome, { exact: true })).toBeVisible({ timeout: 15_000 })
@@ -191,8 +199,8 @@ test.describe('QA módulo produtos (gerente)', () => {
     if (await remover.isVisible().catch(() => false)) {
       await remover.click({ force: true })
       await page.waitForTimeout(2000)
-      await page.reload()
-      await expect(page.getByRole('heading', { name: 'Produtos', exact: true })).toBeVisible()
+      await page.reload({ waitUntil: 'domcontentloaded' })
+      await expect(page.getByRole('heading', { level: 1, name: 'Catálogo', exact: true })).toBeVisible()
     }
 
     const row2 = page.getByRole('row').filter({ hasText: tag })
@@ -201,8 +209,8 @@ test.describe('QA módulo produtos (gerente)', () => {
     await fileInp.setInputFiles(imgA)
     await expect(page.locator('[aria-live="polite"]').first()).toBeVisible({ timeout: 25_000 })
     await page.waitForTimeout(1500)
-    await page.reload()
-    await expect(page.getByRole('heading', { name: 'Produtos', exact: true })).toBeVisible()
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.getByRole('heading', { level: 1, name: 'Catálogo', exact: true })).toBeVisible()
 
     const row3 = page.getByRole('row').filter({ hasText: tag })
     await expect(row3.locator('td').nth(2).locator('img')).toBeVisible({ timeout: 20_000 })
@@ -210,14 +218,14 @@ test.describe('QA módulo produtos (gerente)', () => {
     await row3.locator('td').nth(2).locator('button[type=button]').first().click()
     await row3.locator('input[type=file][accept*="image"]').setInputFiles(imgB)
     await page.waitForTimeout(2500)
-    await page.reload()
+    await page.reload({ waitUntil: 'domcontentloaded' })
     const row4 = page.getByRole('row').filter({ hasText: tag })
     await expect(row4.locator('td').nth(2).locator('img')).toBeVisible({ timeout: 20_000 })
 
     await row4.locator('td').nth(2).hover()
     await row4.getByRole('button', { name: /Remover foto deste produto|移除此商品照片/i }).click({ force: true })
     await page.waitForTimeout(2000)
-    await page.reload()
+    await page.reload({ waitUntil: 'domcontentloaded' })
     const row5 = page.getByRole('row').filter({ hasText: tag })
     await expect(row5.locator('td').nth(2).locator('svg')).toBeVisible()
   })
@@ -282,7 +290,7 @@ test.describe('QA módulo produtos (gerente)', () => {
     await expect(page.locator('[aria-live="polite"]').first()).toBeVisible({ timeout: 25_000 })
     await page.getByRole('button', { name: /^Fechar$/ }).click().catch(() => {})
     await page.reload({ waitUntil: 'domcontentloaded' })
-    await expect(page.getByRole('heading', { name: 'Produtos', exact: true })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: 'Catálogo', exact: true })).toBeVisible()
     await page
       .locator('section')
       .filter({ has: page.getByRole('heading', { name: /Lista de produtos|商品列表/ }) })

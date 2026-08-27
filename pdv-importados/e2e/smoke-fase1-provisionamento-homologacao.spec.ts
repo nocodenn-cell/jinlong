@@ -189,7 +189,10 @@ test.describe('Smoke Fase 1 — provisionamento → venda → dashboard', () => 
     await expect(page.getByText(lojaNome)).toBeVisible()
     await page.getByTestId('prov-submit').click()
 
-    const sucesso = page.getByText(/Loja pronta|门店就绪/i)
+    // `getByText(/Loja pronta/)` casa o `<li>` do wizard E o toast `role=status`
+    // ao mesmo tempo → strict mode violation (CI #1226). O sinal estável de
+    // sucesso é `prov-loja-id` (UUID renderizado só no step 3).
+    const sucesso = page.getByTestId('prov-loja-id')
     const toastErro = page.locator('[aria-live="polite"], [role="status"], [data-sonner-toast]').filter({
       hasText: /erro|falha|inválid|Could not|duplicate|violates/i,
     })
@@ -205,8 +208,7 @@ test.describe('Smoke Fase 1 — provisionamento → venda → dashboard', () => 
     ])
 
     await expect(sucesso).toBeVisible()
-    const lojaCode = page.getByTestId('prov-loja-id')
-    await expect(lojaCode).toBeVisible()
+    const lojaCode = sucesso
     lojaId = (await lojaCode.innerText()).trim()
     expect(lojaId).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
@@ -224,8 +226,11 @@ test.describe('Smoke Fase 1 — provisionamento → venda → dashboard', () => 
     await expect(page.getByRole('heading', { name: /Implantação|GO-LIVE|上线/i })).toBeVisible({
       timeout: 60_000,
     })
-    await expect(page.getByText(/Loja criada|门店已创建/i)).toBeVisible()
-    await expect(page.getByText(/DONO criado|店主已创建/i)).toBeVisible()
+    // CI #1228: `getByText(/Loja criada/)` casa o item da timeline E um
+    // segundo bloco na página → strict mode. Escopo: `implantacao-timeline`.
+    const timeline = page.getByTestId('implantacao-timeline')
+    await expect(timeline.getByText(/Loja criada|门店已创建/i)).toBeVisible()
+    await expect(timeline.getByText(/DONO criado|店主已创建/i)).toBeVisible()
     // Status concluído na linha da loja criada
     const rowLoja = page.getByRole('row').filter({ hasText: /Loja criada|门店已创建/i })
     await expect(rowLoja.getByText(/Concluído|已完成/i)).toBeVisible()

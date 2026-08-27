@@ -93,12 +93,9 @@ test.describe('Contrato de login por perfil', () => {
     page,
   }) => {
     test.skip(!hasCaixaOperadorUser(), 'PLAYWRIGHT_CAIXA_TEST_EMAIL/PASSWORD ausentes (local).')
-    // `fillLogin` tem dois waits fixos de 30s (compilação fria do form),
-    // independentes do `timeout` passado a `loginWithRetry` — somados aos 20s
-    // do redirect aqui, o pior caso chega perto de 90s. Este teste É a prova
-    // de que o contrato falha (deve mesmo esgotar seu orçamento e rejeitar),
-    // então precisa de folga própria no timeout do teste, não do helper.
-    test.setTimeout(120_000)
+    // Sem `setTimeout(120_000)`: o config global já é 150s (folga após login
+    // de até 90s). CI #1228: o teto de 120s matava o teste antes do reject
+    // esperado do contrato (`loginWithRetry` + compile fria do `next dev`).
 
     // Forçar a expectativa de destino do GERENTE contra um login de OPERADOR
     // tem que falhar: se "passasse", provaria que o regex de destino está
