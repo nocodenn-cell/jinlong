@@ -5,15 +5,10 @@
  */
 import { test, expect } from '@playwright/test'
 import { gotoApp } from './helpers/url'
+import { loginGerente } from './helpers/login'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 
-const LOGIN = '/login'
-// `/gerente/produtos` é rota legada — `LEGACY_GERENTE_REDIRECTS.produtos`
-// (`shared-core/navigation/routes.ts`) resolve para `/admin/catalogo`
-// desde a consolidação admin-v2 (mesma migração documentada em
-// `gerente.spec.ts`). Navega direto pra rota atual em vez de confiar no
-// redirect.
 const PRODUTOS = '/admin/catalogo'
 
 function loadEnvLocal(): void {
@@ -55,26 +50,23 @@ function resolveGerentePassword(): string | undefined {
   )
 }
 
+if (!process.env.PLAYWRIGHT_TEST_EMAIL?.trim() && resolveGerenteEmail() && resolveGerentePassword()) {
+  process.env.PLAYWRIGHT_TEST_EMAIL = resolveGerenteEmail()
+  process.env.PLAYWRIGHT_TEST_PASSWORD = resolveGerentePassword()
+}
+
 function hasGerenteCreds(): boolean {
   return Boolean(resolveGerenteEmail() && resolveGerentePassword())
 }
 
-async function loginGerente(page: import('@playwright/test').Page): Promise<void> {
-  const email = resolveGerenteEmail()!
-  const pwd = resolveGerentePassword()!
-  await gotoApp(page, LOGIN)
-  await page.getByPlaceholder('Email').fill(email)
-  await page.getByPlaceholder('Senha').fill(pwd)
-  await page.getByRole('button', { name: /^Entrar$/ }).click()
-  // GERENTE/DONO/ADMIN caem em `/admin/dashboard` pós-login
-  // (`destinoPosLoginPorPerfil`, `lib/auth/painelGerencial.ts`) desde a
-  // consolidação admin-v2 — `/gerente` nunca foi o destino real do login,
-  // só de navegação legada pós-login. Mesmo contrato usado em
-  // `helpers/login.ts` (`loginGerente`) e comprovado em `gerente.spec.ts`.
-  await page.waitForURL(/\/(caixa|admin)/, { timeout: 90_000, waitUntil: 'domcontentloaded' })
+function buscaCatalogo(page: import('@playwright/test').Page) {
+  // Filtro Admin V2: label `catalogo_filtro_busca`, fora do SectionCard
+  // "Lista de produtos". CI #1229: seletor antigo procurava textbox dentro
+  // da lista e estourava o timeout.
+  return page.getByRole('textbox', { name: /Buscar produtos|搜索商品/i })
 }
 
-test.describe.configure({ mode: 'serial', timeout: 120_000 })
+test.describe.configure({ mode: 'serial' })
 test.describe('QA módulo produtos (gerente)', () => {
   test.beforeEach(async ({ page }) => {
     test.skip(!hasGerenteCreds(), 'Defina PLAYWRIGHT_TEST_EMAIL e PLAYWRIGHT_TEST_PASSWORD')
@@ -151,9 +143,9 @@ test.describe('QA módulo produtos (gerente)', () => {
       timeout: 30_000,
     })
 
-    await page.locator('section').filter({ has: page.getByRole('heading', { name: /Lista de produtos|商品列表/ }) }).getByRole('textbox', { name: /Buscar|搜索/i }).fill(novoNome.slice(0, 16))
+    await buscaCatalogo(page).fill(novoNome.slice(0, 16))
     await expect(page.getByText(novoNome, { exact: true })).toBeVisible({ timeout: 15_000 })
-    await page.locator('section').filter({ has: page.getByRole('heading', { name: /Lista de produtos|商品列表/ }) }).getByRole('textbox', { name: /Buscar|搜索/i }).fill(segundoNome.slice(0, 16))
+    await buscaCatalogo(page).fill(segundoNome.slice(0, 16))
     await expect(page.getByText(segundoNome, { exact: true })).toBeVisible({ timeout: 20_000 })
   })
 

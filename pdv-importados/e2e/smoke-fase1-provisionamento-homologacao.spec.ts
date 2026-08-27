@@ -231,9 +231,8 @@ test.describe('Smoke Fase 1 — provisionamento → venda → dashboard', () => 
     const timeline = page.getByTestId('implantacao-timeline')
     await expect(timeline.getByText(/Loja criada|门店已创建/i)).toBeVisible()
     await expect(timeline.getByText(/DONO criado|店主已创建/i)).toBeVisible()
-    // Status concluído na linha da loja criada
-    const rowLoja = page.getByRole('row').filter({ hasText: /Loja criada|门店已创建/i })
-    await expect(rowLoja.getByText(/Concluído|已完成/i)).toBeVisible()
+    // Timeline é `<ol>/<li>` com timestamp — não há `role=row` nem rótulo
+    // "Concluído" (CI #1228). Presença do item com data prova o evento.
   })
 
   test('3 — Logout ADMIN → login DONO → cadastrar produto', async ({ page }) => {
