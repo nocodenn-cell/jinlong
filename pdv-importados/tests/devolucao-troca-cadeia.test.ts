@@ -19,8 +19,18 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const MIGRATIONS = path.resolve(ROOT, '../backend/supabase/migrations')
 const MIGRATION = '20260717031500_248_devolver_ou_trocar_venda.sql'
 const RPC = 'devolver_ou_trocar_venda'
+const CREATE_RPC_RE = /CREATE(?: OR REPLACE)? FUNCTION public\.devolver_ou_trocar_venda\s*\(/i
 
 const read = (rel: string) => fs.readFileSync(path.resolve(ROOT, rel), 'utf8')
+
+function latestDevolverRpcMigration(): string {
+  const files = fs.readdirSync(MIGRATIONS).filter((f) => f.endsWith('.sql')).sort()
+  const hits = files.filter((f) => CREATE_RPC_RE.test(fs.readFileSync(path.join(MIGRATIONS, f), 'utf8')))
+  if (hits.length === 0) {
+    throw new Error('nenhuma migration define devolver_ou_trocar_venda')
+  }
+  return hits[hits.length - 1]
+}
 
 describe('cadeia devolução/troca', () => {
   it('a migration que define a RPC única existe', () => {
@@ -58,5 +68,22 @@ describe('cadeia devolução/troca', () => {
 
   it('a superfície admin expõe a entrada de devolução', () => {
     expect(read('app/admin/vendas/_components/VendaDetailSheet.tsx')).toMatch(/devolver/i)
+  })
+
+  it('a definição vigente da RPC grava kardex em movimentos_estoque_log', () => {
+    const latest = latestDevolverRpcMigration()
+    expect(latest >= '20260821110000').toBe(true)
+    const sql = fs.readFileSync(path.join(MIGRATIONS, latest), 'utf8')
+    expect(sql).toMatch(/INSERT INTO public\.movimentos_estoque_log/)
+    expect(sql).toMatch(/'ENTRADA_DEVOLUCAO_CLIENTE'/)
+    expect(sql).toMatch(/itens jsonb/)
+    expect(sql).not.toMatch(/DROP FUNCTION IF EXISTS public\.devolver_ou_trocar_venda/)
+  })
+
+  it('a definição vigente preserva EXECUTE autenticado e revoga anon', () => {
+    const sql = fs.readFileSync(path.join(MIGRATIONS, latestDevolverRpcMigration()), 'utf8')
+    expect(sql).toMatch(/REVOKE ALL ON FUNCTION public\.devolver_ou_trocar_venda\([^)]*\)\s*FROM PUBLIC/)
+    expect(sql).toMatch(/GRANT EXECUTE ON FUNCTION public\.devolver_ou_trocar_venda\([^)]*\)\s*TO authenticated/)
+    expect(sql).toMatch(/REVOKE EXECUTE ON FUNCTION public\.devolver_ou_trocar_venda\([^)]*\)\s*FROM anon/)
   })
 })
