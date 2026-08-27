@@ -1,6 +1,9 @@
 # 09 — Operação Primeiro Cliente
 
 > Checklist, validações e riscos para o piloto D0.
+> **2026-08-27:** GO de código em `e1327e62`. Este checklist **humano** (T1–T12 / máquina)
+> continua útil para a sprint de estabilização — não como NO-GO de merge.
+> Canônico: `docs/piloto-d0/CERTIFICACAO_GO_LIVE_E1327E62.md`
 > Fonte: `docs/FEATURE_FREEZE_PILOTO.md`, `docs/RUNBOOK_PRIMEIRO_CLIENTE.md`, `docs/P0_CHECKLIST_OPERACIONAL.md`
 > [[00_DASHBOARD_PROJETO]] · [[06_ROADMAP]] · [[04_PDV]]
 

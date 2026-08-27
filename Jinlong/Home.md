@@ -1,7 +1,8 @@
 # 🏠 Jīn Lóng — Centro de Comando (Obsidian)
 
 > **Memória permanente do projeto FastProduct/Jinlong**
-> Última atualização: **2026-07-17** · Branch atual: `fix/estoque-admin-env-friendly-error` (HEAD `a98576cf`) · Main: `6636aab6`
+> Última atualização: **2026-08-27** · Baseline: `origin/main` = produção = **`e1327e62`** · decisão **GO**
+> Canônico: `docs/piloto-d0/CERTIFICACAO_GO_LIVE_E1327E62.md` · Próxima sprint: `docs/piloto-d0/PROXIMA_SPRINT.md`
 
 ---
 
@@ -25,26 +26,26 @@
 
 ## Status Rápido
 
-**Fase:** Pré-piloto (Feature Freeze ativo)
-**Veredito:** 🟡 Pronto para piloto controlado (web) — go-live depende de checklist no ambiente alvo
+**Fase:** Piloto web em produção — **GO** (`e1327e62`)
+**Veredito:** 🟢 Release consolidada alinhada à produção. Residual: smoke na loja, restore, Playwright completo flake (não D0).
 
 | Módulo | Status |
 |---|---|
-| PDV web | 🟢 Completo — série BA fechada, qty fracionada, cadeia de preços Web≡Local |
-| Cadastro produto | 🟢 SSoT `/admin/catalogo` — erro silencioso atacado surfacado (#185) |
-| Estoque | 🟢 SSoT `/admin/estoque` — actor de sessão corrigido; erro amigável sem env |
-| Devolução/Troca | 🟢 Sprint B mergeado — RPC corrigido após smoke local |
-| Financeiro | 🟡 Unificado `/admin/financeiro` |
-| Fiscal NFC-e | 🟡 Mock/stub |
-| Desktop Tauri | 🟢 Completo — fora do D0 |
+| PDV web | 🟢 GO — troco só dinheiro (#324) |
+| Cadastro produto | 🟢 SSoT `/admin/catalogo` — opções do modal (#330), baseline dirty (`86743dac`) |
+| Estoque | 🟢 Kardex devolução/troca restaurado (#313); DRAFT no recebimento (#324) |
+| Devolução/Troca | 🟢 SSOT-04 em `e1327e62` |
+| Financeiro | 🟡 Hub `/admin/financeiro` — reauditoria independente residual |
+| Fiscal NFC-e | 🟡 Stub — **não** é a próxima sprint |
+| Desktop Tauri | 🟢 Fora do D0 |
 
-**Próximo objetivo:** Pilotar 1º cliente — ver [[09_OPERACAO_PRIMEIRO_CLIENTE]]
+**Próximo objetivo:** estabilização operacional (smoke cliente + backup/restore) — **não** Fiscal, **não** WhatsApp. Ver `docs/piloto-d0/PROXIMA_SPRINT.md`.
 
-**Bloqueador crítico:** Nenhum bloqueador técnico ativo. PR `fix/estoque-admin-env-friendly-error` aguarda merge final.
+**Bloqueador crítico de código:** nenhum. PR aberta só #290 (Dependabot).
 
 ---
 
-## 📅 Trabalho da Semana — 2026-07-13 a 2026-07-17
+## 📅 Trabalho da Semana — 2026-07-13 a 2026-07-17 (histórico)
 
 > Sessão anterior (2026-07-13) resolveu o build Vercel e o merge admin-screen-consolidation. Esta semana entrou uma série de fixes de estabilização pós-merge, todos em `main`.
 

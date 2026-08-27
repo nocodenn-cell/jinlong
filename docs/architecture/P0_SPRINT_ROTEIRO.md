@@ -1,5 +1,9 @@
 # Sprint P0 — roteiro de execução (1º cliente)
 
+> **SUPERSEDED como status (2026-08-27).** War Room 19/07 / PR #220.
+> Baseline: [piloto-d0/CERTIFICACAO_GO_LIVE_E1327E62.md](../piloto-d0/CERTIFICACAO_GO_LIVE_E1327E62.md).
+> Próxima sprint: [piloto-d0/PROXIMA_SPRINT.md](../piloto-d0/PROXIMA_SPRINT.md).
+
 | Campo | Valor |
 |--------|--------|
 | **Status** | **War Room** — homologação; só correção P0 |

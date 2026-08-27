@@ -2,6 +2,18 @@
 
 Os testes ficam em `pdv-importados/e2e/` e usam `pdv-importados/playwright.config.ts`.
 
+**Princípio:** E2E = sistema de risco, não de decisão ([PRODUCAO_GO_NO_GO.md](./PRODUCAO_GO_NO_GO.md)).
+
+### Estado em `e1327e62` (2026-08-27)
+
+| Job | Resultado |
+|---|---|
+| E2E crítico | **PASS** (run [33073971889](https://github.com/nocodenn-cell/fastproduct/actions/runs/33073971889)) |
+| Playwright completo | **FAIL residual** — 78 passed, 18 flaky, 3 failed, 9 did not run. Classe C/D/E (harness/`next dev`/WebKit `goto`). **Não** é regressão D0. **Não** alterar produto para ficar verde. |
+| WebKit | Instalação **ok** no CI (`npx playwright install --with-deps chromium webkit`). Falha antiga CI #1226 (executável ausente) **encerrada**. |
+
+Detalhe: [piloto-d0/CERTIFICACAO_GO_LIVE_E1327E62.md](./piloto-d0/CERTIFICACAO_GO_LIVE_E1327E62.md).
+
 Projetos Playwright atuais:
 
 - `chromium` (desktop)

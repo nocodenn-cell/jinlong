@@ -1,7 +1,7 @@
 # 00 — Dashboard do Projeto
 
 > **Central de comando Obsidian** · [[Home]]
-> Última atualização: **2026-07-10**
+> Última atualização: **2026-08-27**
 
 ---
 
@@ -20,41 +20,35 @@
 
 ---
 
-## Status Atual (2026-07-10)
+## Status Atual (2026-08-27)
 
 | Dimensão | Status |
 |---|---|
-| **Fase** | Pré-piloto — Feature Freeze ativo ([[07_DECISOES_ARQUITETURAIS#DEC-010]]) |
-| **Evolução MVP** | ~83% do MVP comercial |
-| **Veredito** | 🟡 Pronto para piloto controlado (web) — go-live depende de checklist no ambiente alvo |
-| **Branch Git** | `feat/admin-screen-consolidation` |
-| **HEAD** | `f2fca536` — `fix(admin): resolve VendasTable merge, typecheck diagnóstico e docs Jinlong` |
+| **Fase** | Piloto web — **GO** (`e1327e62` = produção) |
+| **Veredito** | 🟢 Release consolidada. Feature freeze de **features novas** segue ativo |
+| **Branch Git** | `main` |
+| **HEAD** | `e1327e62` — `#330` opções do modal + WebKit E2E |
+| **Canônico** | `docs/piloto-d0/CERTIFICACAO_GO_LIVE_E1327E62.md` |
+
+O snapshot de 2026-07-10 (`feat/admin-screen-consolidation` / `f2fca536`) é **histórico**.
 
 ### Módulos (snapshot)
 
 | Módulo | Estado | Observação |
 |---|---|---|
-| **PDV web** | 🟢 | Fluxo normal auditado; diagnóstico pré-produção entregue |
-| **Cadastro produto** | 🟢 | SSoT em `/admin/catalogo` |
-| **Estoque** | 🟢 | SSoT em `/admin/estoque`; devolução pós-venda P1 |
-| **Financeiro** | 🟡 | Unificado em `/admin/financeiro` (receber + pagar + fiscal) |
-| **Admin v2** | 🟢 | Consolidação SSoT (`88f2e64a`) + `/admin/diagnostico-caixa` |
-| **PDV desktop** | 🟢 | Tauri 2 + SQLite + outbox — **fora do D0 do piloto** |
-| **Fiscal NFC-e real** | 🟡 | Mock/stub; Focus pendente |
-| **Venda em espera** | 🟡 | RPCs migration `255`; hardening pendente ([[04_PDV]]) |
+| **PDV web** | 🟢 | Troco só DINHEIRO; E2E crítico PASS |
+| **Cadastro produto** | 🟢 | SSoT `/admin/catalogo`; merge opções; atacado≥varejo no CSV |
+| **Estoque** | 🟢 | Kardex SSOT-04; remessa aceita DRAFT |
+| **Financeiro** | 🟡 | Hub unificado; reauditoria AR/AP residual |
+| **PDV desktop** | 🟢 | Fora do D0 |
+| **Fiscal NFC-e real** | 🟡 | Stub; **não** furar a fila da próxima sprint |
+| **Venda em espera** | 🟡 | Fora do D0 (D0-04) |
 
 ---
 
 ## Próximo Objetivo
 
-**Pilotar o 1º cliente pagante com segurança** — sem features novas.
-
-1. Executar P0 Checklist T1–T12 em staging
-2. Aplicar/validar migrations `255` + `256` no ambiente alvo
-3. Smoke de venda real (operador → `/caixa` → admin vendas)
-4. Homologação com evidências registradas
-
-Ver detalhes: [[09_OPERACAO_PRIMEIRO_CLIENTE]] · [[06_ROADMAP#P0]]
+**Estabilização operacional do piloto** — smoke na máquina da cliente, backup/restore, runbook. Ver `docs/piloto-d0/PROXIMA_SPRINT.md`. **Não** iniciar Fiscal/WhatsApp.
 
 ---
 
@@ -62,12 +56,13 @@ Ver detalhes: [[09_OPERACAO_PRIMEIRO_CLIENTE]] · [[06_ROADMAP#P0]]
 
 | Bloqueador | Impacto | Status |
 |---|---|---|
-| P0 Checklist T1–T12 incompleto | Não apto para produção real | 🔴 Pendente |
-| Validação Supabase no ambiente alvo | Migrations + GRANTs + RPC `256` | 🔴 Pendente |
-| Smoke de venda no ambiente alvo | Confirmação operacional | 🔴 Pendente |
-| **Conflito migration 255** (dois arquivos no repo) | Ambiente novo pode aplicar apenas um | 🔴 **Decisão humana** |
-| NFC-e Focus não configurado | Piloto sem NF-e real (aceitável no D0) | 🟡 Congelado |
-| ADR-PDV-001 sem sign-off | Governança informal do pipeline bip | 🟡 Pendente |
+| Código necessário fora de `main` | — | 🟢 Nenhum |
+| Restore nunca ensaiado | RPO/RTO desconhecidos | 🟡 Próxima sprint P0 |
+| Smoke na loja | Periféricos/rede | 🟡 Próxima sprint P0 |
+| Playwright completo vermelho | Ruído CI | 🟢 Classificado flake; não bloqueia GO |
+| NFC-e Focus | Piloto sem NF-e real | 🟡 Aceitável no D0 |
+
+O “conflito migration 255” e o checklist T1–T12 de julho são **históricos** — não reabrir como NO-GO de `e1327e62`.
 
 ---
 
@@ -88,6 +83,8 @@ Ver detalhes: [[09_OPERACAO_PRIMEIRO_CLIENTE]] · [[06_ROADMAP#P0]]
 - [[09_OPERACAO_PRIMEIRO_CLIENTE]] — Checklist go-live
 
 ### Documentação no repositório (`docs/`)
+- `docs/piloto-d0/CERTIFICACAO_GO_LIVE_E1327E62.md` — **baseline GO**
+- `docs/piloto-d0/PROXIMA_SPRINT.md`
 - `docs/FEATURE_FREEZE_PILOTO.md`
 - `docs/P0_CHECKLIST_OPERACIONAL.md`
 - `docs/RUNBOOK_PRIMEIRO_CLIENTE.md`
@@ -117,5 +114,4 @@ fastproduct/
 
 | Branch | Propósito |
 |---|---|
-| `main` | Produção / deploy Vercel |
-| `feat/admin-screen-consolidation` | **Atual** — consolidação admin + diagnóstico pré-produção |
+| `main` | Produção / `e1327e62` |

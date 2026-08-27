@@ -1,5 +1,7 @@
 # Backlog priorizado — pós-War Room / 1º cliente
 
+> **SUPERSEDED como fila atual (2026-08-27).** A ordem P1–P9 abaixo é de **19/07**. A sprint proposta após `e1327e62` é [piloto-d0/PROXIMA_SPRINT.md](../piloto-d0/PROXIMA_SPRINT.md) (estabilização operacional — **não** Fiscal, **não** WhatsApp). Preservado para não apagar a fila histórica.
+
 | Campo | Valor |
 |--------|--------|
 | **Data** | 2026-07-19 |

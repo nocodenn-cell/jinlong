@@ -8,8 +8,9 @@ Welcome to the fastproduct documentation hub. Find guides for development, opera
 
 **New to fastproduct?**
 - Start: [`README.md`](../README.md) (root level)
+- **Baseline piloto (2026-08-27):** [`piloto-d0/CERTIFICACAO_GO_LIVE_E1327E62.md`](./piloto-d0/CERTIFICACAO_GO_LIVE_E1327E62.md) — SHA `e1327e62`, decisão **GO**
 - Develop: [`CONTRIBUTING.md`](../CONTRIBUTING.md)
-- Deploy: [`go-live/00-README.md`](./go-live/00-README.md) — **fonte canônica**
+- Deploy 1º cliente pagante: [`go-live/00-README.md`](./go-live/00-README.md) (plano de 17/08; **não** substitui o baseline acima)
 
 **Key URLs**:
 - **Web App**: https://pdv-importados.vercel.app
@@ -21,7 +22,8 @@ Welcome to the fastproduct documentation hub. Find guides for development, opera
 
 ## 📚 Documentation Map
 
-- [**Go-Live — Primeiro Cliente Pagante**](./go-live/00-README.md) — plano completo com 12 documentos, checklists e troubleshooting
+- [**Piloto D0 — baseline `e1327e62`**](./piloto-d0/README.md) — certificação GO, backlog reconciliado, próxima sprint
+- [**Go-Live — Primeiro Cliente Pagante**](./go-live/00-README.md) — plano de 17/08 (evento *seguinte* ao piloto; ver banner nesse README)
 
 ### **👨‍💻 For Developers**
 
@@ -36,12 +38,13 @@ Welcome to the fastproduct documentation hub. Find guides for development, opera
 
 | Document | Purpose | Audience |
 |----------|---------|----------|
-| [go-live/](./go-live/00-README.md) | **CANÔNICO** — plano completo de Go-Live: pré-requisitos, deploy, validação, dia do GO, pós, onboarding, troubleshooting | Ops, release manager |
+| [go-live/](./go-live/00-README.md) | Plano 17/08 — 1º cliente pagante (histórico de bloqueadores; não é o SHA atual) | Ops, release manager |
+| [piloto-d0/CERTIFICACAO_GO_LIVE_E1327E62.md](./piloto-d0/CERTIFICACAO_GO_LIVE_E1327E62.md) | **Canônico 27/08** — GO `e1327e62` = produção | Release manager, CTO |
+| [GO_LIVE_STATUS_ATUAL.md](./GO_LIVE_STATUS_ATUAL.md) | Snapshot curto do status | Todos |
+| [GO_LIVE_CERTIFICATION_REPORT.md](../GO_LIVE_CERTIFICATION_REPORT.md) | Histórico GO 09/08 (`2afa14ca`) | Release manager |
 | [go-live/CHECKLIST-FINAL.md](./go-live/CHECKLIST-FINAL.md) | Checklist para imprimir, com assinaturas | Ops, dono |
 | ~~[GO-LIVE-RUNBOOK.md](./GO-LIVE-RUNBOOK.md)~~ | ⛔ **DEPRECIADO em 2026-08-17 — depreciação COMPLETA.** Todo o conteúdo útil foi portado para `go-live/` com as correções. Mantido apenas como registro histórico; **não consultar** | — |
-| [GO_LIVE_CERTIFICATION_REPORT.md](../GO_LIVE_CERTIFICATION_REPORT.md) | **Canônico** — certificação GO 2026-08-09 + evidências | Release manager, CTO |
-| [GO_LIVE_EXECUTIVO_RESUMO.md](../GO_LIVE_EXECUTIVO_RESUMO.md) | **Canônico** — decisão executiva PRONTO PARA GO-LIVE | Dono, CTO |
-| [GO_LIVE_STATUS_ATUAL.md](./GO_LIVE_STATUS_ATUAL.md) | Snapshot curto do status (aponta aos canônicos) | Todos |
+| [GO_LIVE_EXECUTIVO_RESUMO.md](../GO_LIVE_EXECUTIVO_RESUMO.md) | Histórico — decisão executiva 09/08 | Dono, CTO |
 | [GO_LIVE_STATUS_FINAL.md](./GO_LIVE_STATUS_FINAL.md) | **Passo 7** — snapshot final READY FOR GO-LIVE + gates | Release manager, CTO |
 | [POST-DEPLOY-MONITORING.md](./POST-DEPLOY-MONITORING.md) | Monitoring checklist, alert thresholds, 24h post-launch | Ops, on-call engineer |
 | [FASE_6_GATE_FINANCEIRO_VALIDACAO.md](./FASE_6_GATE_FINANCEIRO_VALIDACAO.md) | **Fase 6 (bloco financeiro)** — gate 6/6 reproduzível do zero, achado de RLS, pendências e recomendação sobre a janela crítica | Release manager, backend, CTO |

@@ -1,7 +1,12 @@
 # 02 — Estado Atual
 
-> Snapshot verificado contra repositório Git em **2026-07-10**.
-> Branch: `feat/admin-screen-consolidation` · HEAD: `f2fca536`
+> Snapshot **2026-08-27**. Baseline: `e1327e62` = produção = **GO**.
+> Detalhe: `docs/piloto-d0/CERTIFICACAO_GO_LIVE_E1327E62.md`.
+> O inventário de 2026-07-10 abaixo foi **reconciliado**: itens concluídos no SHA atual
+> não devem ser relidos como “incompleto”.
+
+> Snapshot original verificado contra Git em **2026-07-10**
+> (`feat/admin-screen-consolidation` · `f2fca536`) — **histórico**.
 > [[00_DASHBOARD_PROJETO]] · [[03_ARQUITETURA]]
 
 ---
@@ -46,22 +51,19 @@
 
 ---
 
-## O Que Está Incompleto
+## O Que Está Incompleto (reconciliado 2026-08-27)
 
-| Item | Evidência | Prioridade |
-|---|---|---|
-| P0 Checklist T1–T12 executado em staging/prod | `docs/P0_CHECKLIST_OPERACIONAL.md` — não verificado | P0 |
-| Smoke de venda no ambiente alvo | Pendente operacionalmente | P0 |
-| Migration `256` aplicada no Supabase alvo | Arquivo existe localmente | P0 |
-| Venda em espera — hardening RLS/auditoria | `TODO_auditoria_255.md` — 10+ itens abertos | P3 (congelado) |
-| Devolução/troca pós-venda (RPC única) | `048_devolucoes.sql` incompleto | P1 |
-| NFC-e Focus real | TODO em `fiscal-provider-adapter.ts` | P2 (congelado) |
-| Bling adapter fiscal | TODO explícito no código | P2 (congelado) |
-| Acessibilidade ARIA Fase 3.2 | `aria-live`, foco pós-modal | P1 (congelado) |
-| Kardex avançado com export | View `060` existe; painel completo pendente | P2 |
-| ADR-PDV-001 sign-off | Status "Proposto" no ADR | P1 |
-| `MATRIZ_OFFLINE_PDV.md` | Arquivo não existe no repo | P1 |
-| Observabilidade (Sentry/APM) | Não encontrado no código | P2 |
+| Item | Evidência | Prioridade | Estado 27/08 |
+|---|---|---|---|
+| Smoke na máquina da cliente | EXT-D0-004 | P0 pós-GO | Pendente — próxima sprint |
+| Restore de backup | BL-D0-009 | P0 pós-GO | Nunca ensaiado |
+| P0 Checklist T1–T12 como NO-GO | doc julho | — | **OBSOLETO** como bloqueador de `e1327e62` |
+| Migration `256` | arquivo local julho | — | **SUPERSEDED** — não tratar como ausente sem `migration list` atual |
+| Venda em espera hardening | `TODO_auditoria_255.md` | P3 | Congelado (D0-04) |
+| Devolução/troca RPC | #313 em `e1327e62` | — | **RESOLVIDO** (kardex SSOT-04) |
+| NFC-e Focus / Bling | D0-09 | P3 | Fora; não é a próxima sprint |
+| Drift Git ↔ prod | BACKLOG 10–16 | P1 DR | Aberto; não hotfix D0 |
+| Observabilidade alerta ponta a ponta | D0-OBS-001 | P1 | Parcial (Sentry existe) |
 
 ---
 
@@ -87,11 +89,15 @@ Conforme `docs/FEATURE_FREEZE_PILOTO.md` (vigência até Fase 4 estável):
 
 ### 🔴 Críticos (bloqueiam go-live)
 
+**Nenhum em 2026-08-27.** O conflito `255_*` e o checklist T1–T12 incompletos **não** bloqueiam `e1327e62`.
+
+Histórico 2026-07-10 (não reabrir como NO-GO):
+
 | Risco | Detalhe |
 |---|---|
-| **Conflito migration 255** | Dois arquivos com prefixo `255_` no repo: `255_grant_baseline_tabelas_authenticated.sql` e `255_vendas_em_espera_e_consulta_rapida.sql`. Ambiente novo pode aplicar apenas um. **Requer decisão humana.** |
-| P0 Checklist incompleto | Migrations, secrets, edge functions podem estar desatualizados no ambiente alvo |
-| Smoke de venda não executado | Fluxo operacional não validado com dados reais do cliente |
+| **Conflito migration 255** | Dois arquivos `255_*` — decisão de ledger histórica; ADR-011 |
+| P0 Checklist incompleto | Julho |
+| Smoke de venda não executado | Continua como P0 **pós-GO** (loja), não como ausência de código |
 
 ### 🟡 Importantes (degradam ou geram inconsistência)
 

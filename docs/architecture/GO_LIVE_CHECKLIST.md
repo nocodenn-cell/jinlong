@@ -1,5 +1,8 @@
 # GO-LIVE checklist — primeiro cliente FastProduct
 
+> **2026-08-27:** checklist de 18/07. Status de release: `e1327e62` GO —
+> [piloto-d0/CERTIFICACAO_GO_LIVE_E1327E62.md](../piloto-d0/CERTIFICACAO_GO_LIVE_E1327E62.md).
+
 | Campo | Valor |
 |--------|--------|
 | **Data** | 2026-07-18 |

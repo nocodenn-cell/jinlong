@@ -1,41 +1,56 @@
 # Piloto D0 — fonte canônica
 
 Esta pasta registra a definição funcional, divergências, backlog e provas do
-piloto D0. A implementação desta candidata parte de `main` no SHA
-`ede1f459785f79ced4df0cd9a97a6ccdd3e26220` e preserva o gate financeiro, o
-seed e as migrations históricas canônicas dessa base.
+piloto D0.
+
+## Baseline de go-live (2026-08-27)
+
+| Campo | Valor |
+|---|---|
+| **SHA** | `e1327e62312d53bb005e0614801b8725b485b2ee` |
+| **Decisão** | **GO** |
+| **Produção** | Mesmo SHA da `main` |
+| **Certificação** | [CERTIFICACAO_GO_LIVE_E1327E62.md](./CERTIFICACAO_GO_LIVE_E1327E62.md) |
+| **Próxima sprint (proposta)** | [PROXIMA_SPRINT.md](./PROXIMA_SPRINT.md) |
+
+`origin/main` é a fonte oficial da release do piloto. Não tratar candidatas
+históricas (`codex/piloto-d0-main-clean`, SHA `ede1f459`) como linha de release.
 
 ## Estado
 
-- pricing por tiers e remessa positiva: corrigidos e validados localmente;
-- homologação e aplicação remota: não executadas;
-- 27 produtos legados sem tier ativo: bloqueio de rollout, pendente validação
-  comercial;
-- lint do PDV local: não executável por limitação preexistente, sujeito aos
-  controles compensatórios documentados no preflight;
-- typecheck do `shared-core`: bloqueado por dois mocks financeiros já
-  incompatíveis na `main`; os demais três alvos passaram;
-- GO do piloto: não autorizado.
+- **GO autorizado** para o piloto web na linha `e1327e62`.
+- SSRA verde; E2E crítico PASS; testes promovidos: shared-core 8, pdv-importados 33.
+- Playwright completo: residual vermelho classificado como flake/infra — **não**
+  é regressão D0 comprovada e **não** autoriza patch de produto.
+- Homologação na **máquina da cliente**, restore de backup e matriz negativa
+  remota: **ainda pendentes** (não reabrem o GO de código; são a próxima sprint).
+- Feature freeze de **features novas** (Fiscal real, WhatsApp, orçamentos)
+  permanece: [FEATURE_FREEZE_PILOTO.md](../FEATURE_FREEZE_PILOTO.md).
 
-O runbook financeiro histórico foi deliberadamente omitido por conter
-procedimentos de rollback vinculados a um estado antigo do schema.
+O runbook financeiro histórico continua omitido desta pasta por conter
+procedimentos de rollback vinculados a um estado antigo do schema. Ver
+`docs/go-live/` para o plano do *primeiro cliente pagante* (evento distinto).
 
 ## Ordem de leitura
 
-1. [DEFINICAO_FUNCIONAL_D0.md](./DEFINICAO_FUNCIONAL_D0.md)
-2. [DIVERGENCIAS_E_DECISOES.md](./DIVERGENCIAS_E_DECISOES.md)
-3. [MATRIZ_RASTREABILIDADE_D0.md](./MATRIZ_RASTREABILIDADE_D0.md)
-4. [BACKLOG_VALIDADO_D0.md](./BACKLOG_VALIDADO_D0.md)
-5. [PLANO_DE_PROVAS_D0.md](./PLANO_DE_PROVAS_D0.md)
-6. [PREFLIGHT_ROLLOUT_PRICING_D0.md](./PREFLIGHT_ROLLOUT_PRICING_D0.md)
-7. [CHANGELOG_AUDITORIA.md](./CHANGELOG_AUDITORIA.md)
+1. [CERTIFICACAO_GO_LIVE_E1327E62.md](./CERTIFICACAO_GO_LIVE_E1327E62.md) — **começar aqui**
+2. [DEFINICAO_FUNCIONAL_D0.md](./DEFINICAO_FUNCIONAL_D0.md)
+3. [DIVERGENCIAS_E_DECISOES.md](./DIVERGENCIAS_E_DECISOES.md)
+4. [MATRIZ_RASTREABILIDADE_D0.md](./MATRIZ_RASTREABILIDADE_D0.md)
+5. [BACKLOG_VALIDADO_D0.md](./BACKLOG_VALIDADO_D0.md)
+6. [PLANO_DE_PROVAS_D0.md](./PLANO_DE_PROVAS_D0.md)
+7. [PREFLIGHT_ROLLOUT_PRICING_D0.md](./PREFLIGHT_ROLLOUT_PRICING_D0.md)
+8. [PROXIMA_SPRINT.md](./PROXIMA_SPRINT.md)
+9. [CHANGELOG_AUDITORIA.md](./CHANGELOG_AUDITORIA.md)
+10. [HANDOFF_CANDIDATA_MAIN.md](./HANDOFF_CANDIDATA_MAIN.md) — **superseded** (histórico `ede1f459`)
 
 ## Vocabulário de estado
 
-- **Corrigido:** código ou migration aditiva preparada na candidata.
+- **Corrigido:** código ou migration aditiva na `main`.
 - **Validado localmente:** prova reproduzida no ambiente local e registrada.
 - **Homologado:** prova executada no ambiente de homologação autorizado.
 - **Aplicado remotamente:** migration ou deploy efetivamente executado no alvo.
+- **GO:** release `e1327e62` alinhada à produção; não implica todas as PV-* na loja.
 
 Um estado não implica o seguinte. Em particular, validação local não equivale
-a homologação, aplicação remota ou autorização de GO.
+a homologação na máquina da cliente nem a restore ensaiado.
