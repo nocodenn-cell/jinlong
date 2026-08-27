@@ -1,8 +1,9 @@
 # Próxima sprint — após `e1327e62`
 
-**Status:** proposta. **Não iniciar implementação** até aceite humano desta recomendação.
+**Status:** **oficial** (aceite 2026-08-27). Plano de execução P0:
+[SPRINT_ESTABILIZACAO_P0.md](./SPRINT_ESTABILIZACAO_P0.md). P0 **ainda não executado**.
 
-Baseline: [CERTIFICACAO_GO_LIVE_E1327E62.md](./CERTIFICACAO_GO_LIVE_E1327E62.md) · decisão **GO**.
+Baseline de produto: `e1327e62`. `main` após a PR documental #331: `99e52de7`.
 
 Prioridade usada (missão 2026-08-27): (1) risco operacional do piloto → (2) integridade dos dados → (3) recuperação → (4) dinheiro/caixa → (5) estoque → (6) permissões → (7) observabilidade → (8) UX operacional → (9) features novas.
 

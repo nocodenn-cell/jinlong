@@ -41,8 +41,9 @@ procedimentos de rollback vinculados a um estado antigo do schema. Ver
 6. [PLANO_DE_PROVAS_D0.md](./PLANO_DE_PROVAS_D0.md)
 7. [PREFLIGHT_ROLLOUT_PRICING_D0.md](./PREFLIGHT_ROLLOUT_PRICING_D0.md)
 8. [PROXIMA_SPRINT.md](./PROXIMA_SPRINT.md)
-9. [CHANGELOG_AUDITORIA.md](./CHANGELOG_AUDITORIA.md)
-10. [HANDOFF_CANDIDATA_MAIN.md](./HANDOFF_CANDIDATA_MAIN.md) — **superseded** (histórico `ede1f459`)
+9. [SPRINT_ESTABILIZACAO_P0.md](./SPRINT_ESTABILIZACAO_P0.md) — execução P0 (oficial; ainda não corrida)
+10. [CHANGELOG_AUDITORIA.md](./CHANGELOG_AUDITORIA.md)
+11. [HANDOFF_CANDIDATA_MAIN.md](./HANDOFF_CANDIDATA_MAIN.md) — **superseded** (histórico `ede1f459`)
 
 ## Vocabulário de estado
 
