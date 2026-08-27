@@ -226,8 +226,11 @@ test.describe('Smoke Fase 1 — provisionamento → venda → dashboard', () => 
     await expect(page.getByRole('heading', { name: /Implantação|GO-LIVE|上线/i })).toBeVisible({
       timeout: 60_000,
     })
-    await expect(page.getByText(/Loja criada|门店已创建/i)).toBeVisible()
-    await expect(page.getByText(/DONO criado|店主已创建/i)).toBeVisible()
+    // CI #1228: `getByText(/Loja criada/)` casa o item da timeline E um
+    // segundo bloco na página → strict mode. Escopo: `implantacao-timeline`.
+    const timeline = page.getByTestId('implantacao-timeline')
+    await expect(timeline.getByText(/Loja criada|门店已创建/i)).toBeVisible()
+    await expect(timeline.getByText(/DONO criado|店主已创建/i)).toBeVisible()
     // Status concluído na linha da loja criada
     const rowLoja = page.getByRole('row').filter({ hasText: /Loja criada|门店已创建/i })
     await expect(rowLoja.getByText(/Concluído|已完成/i)).toBeVisible()

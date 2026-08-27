@@ -24,16 +24,20 @@ export function resolveE2eUrl(path: string): string {
   return new URL(normalized, getE2eBaseUrl()).href
 }
 
-/** Navegação com URL absoluta — não depende de `use.baseURL` no CI. */
+/** Navegação alinhada ao `next dev`: evita esperar `load` indefinidamente. */
+export const E2E_GOTO_DOMCONTENTLOADED = {
+  waitUntil: 'domcontentloaded' as const,
+}
+
+/**
+ * Navegação com URL absoluta — não depende de `use.baseURL` no CI.
+ * Default `domcontentloaded`: CI #1228 WebKit estourou 150s em `waitUntil=load`
+ * (`gerente.spec` imprimir-etiquetas) enquanto o `next dev` recompilava.
+ */
 export async function gotoApp(
   page: Page,
   path: string,
   options?: Parameters<Page['goto']>[1],
 ) {
-  return page.goto(resolveE2eUrl(path), options)
-}
-
-/** Navegação alinhada ao `next dev`: evita esperar `load` indefinidamente. */
-export const E2E_GOTO_DOMCONTENTLOADED = {
-  waitUntil: 'domcontentloaded' as const,
+  return page.goto(resolveE2eUrl(path), { ...E2E_GOTO_DOMCONTENTLOADED, ...options })
 }
