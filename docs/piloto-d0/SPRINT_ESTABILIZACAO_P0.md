@@ -1,6 +1,6 @@
 # Sprint — Estabilização Operacional do Piloto (P0)
 
-**Status:** plano oficial. **Nenhuma ação destrutiva foi executada neste documento.**
+**Status:** plano oficial. P0-2 **FAIL** — [P0-2_BACKUP_EVIDENCIA.md](./P0-2_BACKUP_EVIDENCIA.md). P0-3 **parado no human gate** — [P0-3_HUMAN_GATE.md](./P0-3_HUMAN_GATE.md). Nenhuma operação destrutiva executada.
 
 | Campo | Valor |
 |---|---|
