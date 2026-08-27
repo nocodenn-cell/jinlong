@@ -100,12 +100,12 @@ export default defineConfig({
           url: defaultBase,
           reuseExistingServer,
           timeout: 120_000,
-          // CI #1226: `next dev` reiniciou 3× por "memory threshold" no meio da
-          // suíte (ECONNRESET / cupom vazio / ERR_CONNECTION_REFUSED). Heap
-          // maior reduz o thrash sem mudar o app.
+          // CI #1226: `next dev` reiniciou 3× por "memory threshold". Heap
+          // maior reduz o thrash — mas NÃO 8192: runners github-hosted ~7GB;
+          // 8GB (CI #1227) matou o runner ("lost communication"). 4096 cabe.
           env: {
             ...process.env,
-            NODE_OPTIONS: [process.env.NODE_OPTIONS, '--max-old-space-size=8192']
+            NODE_OPTIONS: [process.env.NODE_OPTIONS, '--max-old-space-size=4096']
               .filter(Boolean)
               .join(' '),
           },

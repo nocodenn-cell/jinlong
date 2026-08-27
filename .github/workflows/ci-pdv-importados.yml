@@ -534,12 +534,17 @@ jobs:
       # sempre a credencial efêmera local gerada em "Gerar credenciais
       # efêmeras" (`supabase status -o env` da stack local do próprio job),
       # nunca a de produção nem de um projeto remoto.
+      # 50, não 35: com WebKit (`mobile-safari-iphone`) a suíte passa de ~29min
+      # de testes (#1226) e o step E2E do #1227 foi cancelado ~38min após start
+      # — teto curto + pressão de memória matam o job sem artefato.
       - name: E2E
-        timeout-minutes: 35
+        timeout-minutes: 50
         env:
           CI: true
           PLAYWRIGHT_E2E_WITH_DEV: '1'
-          NODE_OPTIONS: --max-old-space-size=8192
+          # 4096, não 8192: runner ubuntu-latest ~7GB RAM; 8GB (#1227) gerou
+          # "hosted runner lost communication" e cancelou o step sem logs.
+          NODE_OPTIONS: --max-old-space-size=4096
           NEXT_PUBLIC_SUPABASE_URL: ${{ env.SB_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ env.SB_ANON }}
           PLAYWRIGHT_TEST_EMAIL: e2e-gerente@localhost.test
