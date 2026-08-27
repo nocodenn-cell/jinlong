@@ -152,6 +152,14 @@ describe('Cadastro produto — entradas alinhadas ao CatalogoNovoButton', () => 
     render(<CatalogoTable produtos={[]} labels={labels} m={m} opcoes={opcoes} idioma="pt" />)
 
     await vi.waitFor(() => expect(modalAberto()).toBe(true))
+    // Abre via useEffect: o reset do form no mesmo commit apaga o nome se
+    // o helper preencher antes. Drenar até o input existir e o reset acabar.
+    await vi.waitFor(() => {
+      const nome = container.querySelector('input[data-field="nome"]') as HTMLInputElement | null
+      expect(nome).toBeTruthy()
+      expect(nome?.value).toBe('')
+    })
+    await new Promise((r) => setTimeout(r, 0))
     await preencherESalvarProdutoDemo(container, m, criarProdutoMock)
     await vi.waitFor(() => expect(modalAberto()).toBe(false))
     expect(routerRefreshMock).toHaveBeenCalled()

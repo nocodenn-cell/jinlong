@@ -33,6 +33,6 @@ export async function garantirIdiomaPt(page: Page): Promise<void> {
 
   await ptBtn.click()
   await expect(ptBtn).toBeDisabled({ timeout: 10_000 })
-  await page.reload()
+  await page.reload({ waitUntil: 'domcontentloaded' })
   await expect(page.getByRole('button', { name: /^PT$/ })).toBeDisabled({ timeout: 10_000 })
 }

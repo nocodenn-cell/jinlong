@@ -542,7 +542,6 @@ jobs:
       - name: E2E
         timeout-minutes: 50
         env:
-          NODE_OPTIONS: --max-old-space-size=4096
           CI: true
           PLAYWRIGHT_E2E_WITH_DEV: '1'
           # 4096, não 8192: runner ubuntu-latest ~7GB RAM; 8GB (#1227) gerou
