@@ -37,6 +37,7 @@ const SQL_SUITES = [
   'd0-remessa-positive-and-inventory-zero.test.sql',
   'd0-remessa-conferencia-columns-drift.test.sql',
   'fase1-hardening-grants-residuais.test.sql',
+  'fase3-tenant-isolation-transferencias-remessas.test.sql',
 ]
 
 /** `psql` está de fato instalado e executável neste host? */
