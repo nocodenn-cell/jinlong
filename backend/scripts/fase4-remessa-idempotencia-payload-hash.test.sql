@@ -95,5 +95,44 @@ BEGIN
 END
 $fase4_idempotencia$;
 
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Achado de code review (#339, P2): origem/observação livres podem conter o
+-- delimitador usado na concatenação antiga ('~'), produzindo o mesmo hash
+-- para payloads DIFERENTES — origem='a~b',observacao='c' e origem='a',
+-- observacao='b~c' colidiam. Prova que a serialização estruturada
+-- (jsonb_build_object) distingue os dois corretamente.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+DO $fase4_delimitador_ambiguo$
+DECLARE
+  v_gerente uuid := 'e0000002-0000-4000-8000-000000000001';
+  v_produto uuid := 'e0000004-0000-4000-8000-000000000001';
+  v_replay_id text := 'fase4-delimitador-' || gen_random_uuid()::text;
+BEGIN
+  PERFORM set_config('request.jwt.claim.sub', v_gerente::text, true);
+
+  PERFORM public.criar_confirmar_remessa_entrada(
+    'Fase4 delim a~b', 'Fase4 delim c',
+    jsonb_build_array(jsonb_build_object('produto_id', v_produto, 'quantidade_esperada', 5, 'quantidade_conferida', 5)),
+    v_replay_id
+  );
+
+  -- Mesma chave, origem/observação diferentes mas que colidiriam sob
+  -- concatenação com '~' ('a~b'+'~'+'c' == 'a'+'~'+'b~c').
+  BEGIN
+    PERFORM public.criar_confirmar_remessa_entrada(
+      'Fase4 delim a', 'Fase4 delim b~c',
+      jsonb_build_array(jsonb_build_object('produto_id', v_produto, 'quantidade_esperada', 5, 'quantidade_conferida', 5)),
+      v_replay_id
+    );
+    RAISE EXCEPTION 'FASE4_FALHOU: colisao de delimitador nao detectada — origem/observacao diferentes foram tratadas como o mesmo payload';
+  EXCEPTION
+    WHEN OTHERS THEN
+      IF SQLERRM NOT LIKE 'REMESSA_IDEMPOTENCY_PAYLOAD_DIVERGENTE%' THEN RAISE; END IF;
+      RAISE NOTICE 'Negativo OK (colisao de delimitador): origem/observacao que colidiriam sob concatenacao com til foram corretamente distinguidas (%).', SQLERRM;
+  END;
+END
+$fase4_delimitador_ambiguo$;
+
 SELECT 'FASE4 REMESSA IDEMPOTENCIA PAYLOAD HASH: OK' AS resultado;
 ROLLBACK;

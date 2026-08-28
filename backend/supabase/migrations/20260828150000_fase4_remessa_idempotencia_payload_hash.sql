@@ -62,7 +62,7 @@ DECLARE
   v_esperada numeric;
   v_conferida numeric;
   v_observacao_norm text;
-  v_itens_canon text;
+  v_itens_canon jsonb;
   v_payload_hash text;
 BEGIN
   IF v_uid IS NULL THEN RAISE EXCEPTION 'REMESSA_AUTH'; END IF;
@@ -81,18 +81,35 @@ BEGIN
 
   -- Canonicaliza os itens por produto_id (extração como texto — best-effort,
   -- não exige o payload já validado; itens malformados só produzem um hash
-  -- diferente, o que é o comportamento desejado).
-  SELECT string_agg(
-    COALESCE(elem->>'produto_id', '') || ':' ||
-    COALESCE(elem->>'quantidade_esperada', '') || ':' ||
-    COALESCE(elem->>'quantidade_conferida', ''),
-    '|' ORDER BY elem->>'produto_id'
-  )
-  INTO v_itens_canon
-  FROM jsonb_array_elements(COALESCE(p_itens, '[]'::jsonb)) elem;
+  -- diferente, o que é o comportamento desejado). Achado de code review
+  -- (#339, P2): guarda de tipo ANTES de expandir — `jsonb_array_elements`
+  -- lança erro nativo do Postgres (não a exceção limpa REMESSA_ITENS_VAZIOS)
+  -- se `p_itens` não for array; isso quebraria o contrato de erro estabelecido
+  -- da RPC antes mesmo de chegar no guard explícito mais abaixo.
+  IF p_itens IS NOT NULL AND jsonb_typeof(p_itens) = 'array' THEN
+    SELECT jsonb_agg(
+      jsonb_build_object(
+        'produto_id', COALESCE(elem->>'produto_id', ''),
+        'quantidade_esperada', COALESCE(elem->>'quantidade_esperada', ''),
+        'quantidade_conferida', COALESCE(elem->>'quantidade_conferida', '')
+      ) ORDER BY elem->>'produto_id'
+    )
+    INTO v_itens_canon
+    FROM jsonb_array_elements(p_itens) elem;
+  END IF;
 
+  -- Achado de code review (#339, P2): concatenação com delimitador '~' é
+  -- ambígua quando origem/observação (texto livre, sem restrição de forma)
+  -- contêm o próprio delimitador — origem='a~b', observacao='c' e origem='a',
+  -- observacao='b~c' produziam o mesmo hash. jsonb_build_object serializa
+  -- cada campo como string JSON propriamente escapada — o texto de um campo
+  -- não pode mais "vazar" para o campo vizinho na representação final.
   v_payload_hash := md5(
-    COALESCE(p_origem, '') || '~' || COALESCE(v_observacao_norm, '') || '~' || COALESCE(v_itens_canon, '')
+    jsonb_build_object(
+      'origem', COALESCE(p_origem, ''),
+      'observacao', COALESCE(v_observacao_norm, ''),
+      'itens', COALESCE(v_itens_canon, '[]'::jsonb)
+    )::text
   );
 
   SELECT r.id, r.payload_hash INTO v_existente, v_existente_hash
