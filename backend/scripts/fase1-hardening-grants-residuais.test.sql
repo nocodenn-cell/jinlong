@@ -116,14 +116,16 @@ $fase1_check$;
 DO $trigger_ainda_dispara$
 DECLARE
   v_produto_id uuid;
+  v_loja_id uuid;
   v_gerente uuid;
   v_preco_antes numeric;
+  v_linhas int;
 BEGIN
   IF to_regprocedure('public.trg_fn_produtos_margem()') IS NULL THEN
     RETURN;
   END IF;
 
-  SELECT p.id, p.preco_varejo INTO v_produto_id, v_preco_antes
+  SELECT p.id, p.loja_id, p.preco_varejo INTO v_produto_id, v_loja_id, v_preco_antes
   FROM public.produtos p
   WHERE p.preco_custo IS NOT NULL AND p.preco_varejo > p.preco_custo
   LIMIT 1;
@@ -133,9 +135,19 @@ BEGIN
     RETURN;
   END IF;
 
-  SELECT u.id INTO v_gerente FROM public.usuarios u WHERE u.ativo AND u.perfil IN ('GERENTE','DONO','ADMIN') LIMIT 1;
+  -- Achado de code review (#336, P2): selecionar gerente independente do
+  -- produto pode escolher lojas diferentes num banco multi-loja. A policy
+  -- `produtos_escrita` exige `auth_usuario_gerencial_loja(loja_id)` — um
+  -- gerente de outra loja faz o UPDATE afetar 0 linhas (RLS filtra, sem
+  -- erro), e o teste reportaria "trigger disparou" mesmo sem o UPDATE ter
+  -- rodado de verdade. Escopa o gerente à loja do produto e confere
+  -- ROW_COUNT em vez de assumir sucesso.
+  SELECT u.id INTO v_gerente
+  FROM public.usuarios u
+  WHERE u.ativo AND u.perfil IN ('GERENTE','DONO','ADMIN') AND u.loja_id = v_loja_id
+  LIMIT 1;
   IF v_gerente IS NULL THEN
-    RAISE NOTICE 'Sem usuário GERENTE/DONO/ADMIN elegível para prova empírica do trigger — pulando (não é falha).';
+    RAISE NOTICE 'Sem usuário GERENTE/DONO/ADMIN na loja do produto elegível — pulando (não é falha).';
     RETURN;
   END IF;
   PERFORM set_config('request.jwt.claim.sub', v_gerente::text, true);
@@ -145,9 +157,15 @@ BEGIN
   -- Update inócuo (mesmo valor) só para provar que o trigger dispara sem erro
   -- de permissão, mesmo com EXECUTE revogado de trg_fn_produtos_margem.
   UPDATE public.produtos SET preco_varejo = v_preco_antes WHERE id = v_produto_id;
+  GET DIAGNOSTICS v_linhas = ROW_COUNT;
 
   RESET ROLE;
-  RAISE NOTICE 'Trigger trg_fn_produtos_margem disparou sob authenticated após revoke — confirmado.';
+
+  IF v_linhas <> 1 THEN
+    RAISE EXCEPTION 'FASE1_TRIGGER_PROVA_FALHOU: UPDATE afetou % linha(s), esperado 1 — RLS bloqueou o gerente ou o produto sumiu.', v_linhas;
+  END IF;
+
+  RAISE NOTICE 'Trigger trg_fn_produtos_margem disparou sob authenticated após revoke — confirmado (% linha afetada).', v_linhas;
 END
 $trigger_ainda_dispara$;
 
