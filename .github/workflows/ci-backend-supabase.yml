@@ -94,6 +94,24 @@ jobs:
           fi
           psql "$PSQL_URL" -v ON_ERROR_STOP=1 -f supabase/scripts/smoke_rls_painel_gerente.sql
 
+      # Achado de code review (#337, P2): registrar este check só em
+      # `test:financial` o deixava restrito ao guard de fork PR (mesma
+      # condição do seed de usuários — ver "Financial regression gate"
+      # abaixo). Só introspecção de catálogo (pg_proc/has_function_privilege),
+      # sem seed nem secrets — roda sem guard, para que uma fork PR que
+      # reabra um GRANT a anon não passe silenciosamente.
+      - name: Security regression — anon grant em RPCs que confiam em p_operador_id
+        run: |
+          set -euo pipefail
+          cd backend
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          PSQL_URL="${POSTGRES_URL:-${DB_URL:-}}"
+          if [ -z "$PSQL_URL" ]; then
+            echo "::error::Sem URL do Postgres (POSTGRES_URL ou DB_URL)." >&2
+            exit 1
+          fi
+          psql "$PSQL_URL" -v ON_ERROR_STOP=1 -f scripts/fase2-coalesce-operador-id-regressao.test.sql
+
       - name: Test RLS scope by profile
         run: |
           set -euo pipefail
