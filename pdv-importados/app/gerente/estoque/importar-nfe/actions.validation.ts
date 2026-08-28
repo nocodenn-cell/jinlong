@@ -48,7 +48,12 @@ export type ImportNfePayloadInput = z.infer<typeof ImportNfePayloadSchema>
  */
 export const ConferenciaNfeItemSchema = z.object({
   item_id: z.string().uuid(),
-  quantidade_conferida: z.number().nonnegative(),
+  // .finite() é deliberado, não redundante com .nonnegative(): Postgres numeric
+  // trata NaN/Infinity como maiores que qualquer valor finito em comparação
+  // direta (NaN > 0 é verdadeiro), então um guard só de sinal não barra esses
+  // valores no banco — mesma classe de defeito que a migration D0-03 fechou
+  // para remessas. Barrado aqui, na borda, além do guard espelhado na RPC.
+  quantidade_conferida: z.number().nonnegative().finite(),
   divergencia_obs: z.string().trim().min(1).nullable(),
 })
 

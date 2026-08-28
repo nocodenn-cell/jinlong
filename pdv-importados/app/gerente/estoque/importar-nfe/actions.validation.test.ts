@@ -90,6 +90,16 @@ describe('RegistrarConferenciaNfePayloadSchema (FLX-05)', () => {
     expect(r.success).toBe(false)
   })
 
+  it('rejeita NaN e Infinity (mesma classe de defeito fechada pela D0-03 em remessas)', () => {
+    for (const valor of [NaN, Infinity, -Infinity]) {
+      const r = RegistrarConferenciaNfePayloadSchema.safeParse({
+        importacao_id: UUID,
+        itens: [{ item_id: UUID, quantidade_conferida: valor, divergencia_obs: null }],
+      })
+      expect(r.success).toBe(false)
+    }
+  })
+
   it('rejeita lista de itens vazia', () => {
     const r = RegistrarConferenciaNfePayloadSchema.safeParse({ importacao_id: UUID, itens: [] })
     expect(r.success).toBe(false)

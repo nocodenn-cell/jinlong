@@ -30,6 +30,29 @@
 -- RPC registrar_conferencia_nfe, alimentando a nova etapa de conferência da
 -- tela /admin/estoque/importar-nfe antes de confirmar_importacao_nfe.
 --
+-- ATUALIZADA contra o schema atual, não restaurada às cegas (gate do PR1):
+-- comparado o corpo da 296 com toda migration posterior que toca
+-- importacoes_nfe(_itens/_duplicatas), estoque, custo de produto,
+-- contas_pagar, kardex ou RLS relacionada. Uma diferença real foi
+-- encontrada e corrigida nesta migration (não na 296 original): o corpo de
+-- 296 validava só `v_qtd_conf IS NULL OR v_qtd_conf < 0`, o que não barra
+-- 'NaN'/'Infinity' (Postgres numeric os trata como maiores que qualquer
+-- valor finito em comparação direta) — a mesma classe de defeito que a
+-- migration D0-03 (20260823192024_d0_remessa_quantidade_positiva_atomica.sql)
+-- fechou para o par remessa/recebimento. Sem o guard adicionado abaixo,
+-- `confirmar_importacao_nfe` creditaria NaN/Infinity em
+-- `estoque.quantidade_atual` de forma permanente. Nenhuma outra migration
+-- posterior às tabelas/colunas tocadas por este fluxo exige mudança
+-- adicional no corpo restaurado (confirmado por leitura de
+-- `importacoes_nfe_itens`/`importacoes_nfe` em produção — colunas e
+-- constraints batem com a 296).
+--
+-- Deliberadamente NÃO restaurado: `registrar_conferencia_remessa` (função
+-- irmã, do fluxo de Recebimento manual) — essa continua removida por
+-- decisão do dono e por reabrir o defeito que a D0-03 fechou
+-- (`20260824010000_fix_remessas_conferencia_columns_drift.sql`, comentário
+-- explícito). Este PR não mexe no fluxo de Recebimento.
+--
 -- Idempotente: usa CREATE OR REPLACE (a função pode já não existir, ou já
 -- ter sido recriada por uma tentativa anterior desta mesma migration).
 -- ============================================================================
@@ -93,7 +116,21 @@ BEGIN
     v_qtd_conf := (el->>'quantidade_conferida')::numeric;
     v_div_obs  := NULLIF(trim(COALESCE(el->>'divergencia_obs', '')), '');
 
-    IF v_qtd_conf IS NULL OR v_qtd_conf < 0 THEN
+    -- Adaptação sobre o corpo original da 296 (menor correção necessária,
+    -- não uma reescrita): Postgres numeric aceita o cast de 'NaN'/'Infinity'
+    -- e os trata como maiores que qualquer valor finito em comparação direta
+    -- (NaN > 0 e Infinity > 0 são verdadeiros) — o mesmo defeito que a
+    -- migration D0-03 (20260823192024_d0_remessa_quantidade_positiva_atomica.sql)
+    -- fechou para remessas, com o comentário explícito: "NaN persiste em
+    -- remessa_itens, estoque e no log de movimento, corrompendo os três."
+    -- Sem este checque, `v_qtd_conf < 0` sozinho não barra esses valores, e
+    -- `confirmar_importacao_nfe` (`IF quantidade_conferida > 0`) creditaria
+    -- NaN/Infinity em estoque.quantidade_atual de forma permanente. A 296
+    -- original não tinha esta validação porque nunca chegou a ter consumidor
+    -- (ver cabeçalho desta migration) — corrigido aqui, na restauração.
+    IF v_qtd_conf IS NULL OR v_qtd_conf < 0
+       OR v_qtd_conf = 'NaN'::numeric OR v_qtd_conf = 'Infinity'::numeric
+    THEN
       RAISE EXCEPTION 'IMPORT_NFE_CONFERENCIA_QTD_INVALIDA';
     END IF;
 
@@ -138,9 +175,16 @@ GRANT EXECUTE ON FUNCTION public.registrar_conferencia_nfe(uuid, jsonb) TO servi
 -- ============================================================================
 
 DO $verify$
+DECLARE
+  v_def text;
 BEGIN
   IF to_regprocedure('public.registrar_conferencia_nfe(uuid,jsonb)') IS NULL THEN
     RAISE EXCEPTION 'RESTAURA_296_RPC_AUSENTE';
+  END IF;
+
+  v_def := pg_get_functiondef('public.registrar_conferencia_nfe(uuid,jsonb)'::regprocedure);
+  IF position('NaN' IN v_def) = 0 OR position('Infinity' IN v_def) = 0 THEN
+    RAISE EXCEPTION 'RESTAURA_296_GUARD_NAN_INFINITY_AUSENTE';
   END IF;
 
   IF has_function_privilege('anon', 'public.registrar_conferencia_nfe(uuid,jsonb)', 'EXECUTE') THEN
@@ -157,7 +201,7 @@ BEGIN
     RAISE EXCEPTION 'RESTAURA_296_CONFIRMAR_AUSENTE_PRE_REQUISITO_FALTANDO';
   END IF;
 
-  RAISE NOTICE 'restaura_registrar_conferencia_nfe OK — RPC recriada, grants corretos, confirmar_importacao_nfe presente.';
+  RAISE NOTICE 'restaura_registrar_conferencia_nfe OK — RPC recriada, guard NaN/Infinity presente, grants corretos, confirmar_importacao_nfe presente.';
 END
 $verify$;
 

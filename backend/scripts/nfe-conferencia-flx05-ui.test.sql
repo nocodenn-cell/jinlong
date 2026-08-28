@@ -354,6 +354,168 @@ BEGIN
 END
 $idempotencia$;
 
-RAISE NOTICE 'FLX05 UI (PR1) — todos os passos OK: quantidade, custo, estoque, idempotência, erro parcial e auditoria (kardex + contas_pagar) verificados.';
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 6) Adversarial: NaN/Infinity em quantidade_conferida — mesma classe de
+--    defeito fechada pela D0-03 para remessas (Postgres numeric trata NaN e
+--    Infinity como maiores que qualquer valor finito em comparação direta;
+--    um guard só de sinal (`< 0`) não barra esses valores).
+-- ═══════════════════════════════════════════════════════════════════════════
+
+DO $setup_adversarial$
+DECLARE
+  v_loja_a    uuid := 'f0000001-0000-4000-8000-000000000001';
+  v_gerente_b uuid := 'f0000006-0000-4000-8000-000000000001';
+  v_loja_b    uuid := 'f0000005-0000-4000-8000-000000000001';
+BEGIN
+  INSERT INTO auth.users (id) VALUES (v_gerente_b) ON CONFLICT (id) DO NOTHING;
+
+  INSERT INTO public.lojas (id, nome, codigo, ativo) VALUES (v_loja_b, 'FLX05 Loja B', 'FLX05-B', true)
+  ON CONFLICT (id) DO UPDATE SET ativo = true;
+
+  INSERT INTO public.usuarios (id, nome, perfil, ativo, loja_id)
+  VALUES (v_gerente_b, 'FLX05 Gerente B (outra loja)', 'GERENTE', true, v_loja_b)
+  ON CONFLICT (id) DO UPDATE SET perfil = EXCLUDED.perfil, ativo = true, loja_id = EXCLUDED.loja_id;
+
+  DELETE FROM public.importacoes_nfe WHERE chave_acesso = '35260800000000000000550010000000022000000028';
+END
+$setup_adversarial$;
+
+DO $nova_importacao$
+DECLARE
+  v_loja_a    uuid := 'f0000001-0000-4000-8000-000000000001';
+  v_gerente_a uuid := 'f0000002-0000-4000-8000-000000000001';
+  v_resultado jsonb;
+BEGIN
+  PERFORM set_config('request.jwt.claim.sub', v_gerente_a::text, true);
+
+  v_resultado := public.importar_nfe_transacao(
+    p_chave_acesso    => '35260800000000000000550010000000022000000028',
+    p_numero_nf       => 'FLX05-2',
+    p_fornecedor_cnpj => '11222333000181',
+    p_fornecedor_nome => 'FLX05 Fornecedor',
+    p_loja_id         => v_loja_a,
+    p_itens           => jsonb_build_array(
+      jsonb_build_object(
+        'nome_produto', 'FLX05 Produto Adversarial', 'gtin', null,
+        'ref_fornecedor', 'REF-ADV-001', 'ncm', null, 'u_com', 'UN',
+        'q_com', 5, 'v_un_com', 20.00, 'fator', 1,
+        'atualizar_custo', true, 'acao', 'CRIAR', 'produto_id_destino', null
+      )
+    ),
+    p_atualizar_custo => true,
+    p_duplicatas      => null
+  );
+
+  PERFORM set_config('flx05.imp_id_2', (v_resultado->>'importacao_id')::text, false);
+END
+$nova_importacao$;
+
+DO $nan_infinity$
+DECLARE
+  v_gerente_a uuid := 'f0000002-0000-4000-8000-000000000001';
+  v_imp_id_2  uuid := current_setting('flx05.imp_id_2')::uuid;
+  v_item_id_2 uuid;
+  v_falhou_nan boolean := false;
+  v_falhou_inf boolean := false;
+  v_qtd_apos  numeric;
+  v_status_apos text;
+BEGIN
+  PERFORM set_config('request.jwt.claim.sub', v_gerente_a::text, true);
+  SELECT id INTO v_item_id_2 FROM public.importacoes_nfe_itens WHERE importacao_nfe_id = v_imp_id_2;
+
+  BEGIN
+    PERFORM public.registrar_conferencia_nfe(
+      v_imp_id_2,
+      jsonb_build_array(jsonb_build_object('item_id', v_item_id_2, 'quantidade_conferida', 'NaN'::numeric, 'divergencia_obs', null))
+    );
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM = 'IMPORT_NFE_CONFERENCIA_QTD_INVALIDA' THEN v_falhou_nan := true;
+    ELSE RAISE EXCEPTION 'FLX05_FALHOU: NaN não foi rejeitado com o código esperado, veio: %', SQLERRM; END IF;
+  END;
+  IF NOT v_falhou_nan THEN
+    RAISE EXCEPTION 'FLX05_FALHOU (BLOCKER): registrar_conferencia_nfe aceitou quantidade_conferida = NaN sem erro — corromperia estoque.quantidade_atual em confirmar_importacao_nfe';
+  END IF;
+
+  BEGIN
+    PERFORM public.registrar_conferencia_nfe(
+      v_imp_id_2,
+      jsonb_build_array(jsonb_build_object('item_id', v_item_id_2, 'quantidade_conferida', 'Infinity'::numeric, 'divergencia_obs', null))
+    );
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM = 'IMPORT_NFE_CONFERENCIA_QTD_INVALIDA' THEN v_falhou_inf := true;
+    ELSE RAISE EXCEPTION 'FLX05_FALHOU: Infinity não foi rejeitado com o código esperado, veio: %', SQLERRM; END IF;
+  END;
+  IF NOT v_falhou_inf THEN
+    RAISE EXCEPTION 'FLX05_FALHOU (BLOCKER): registrar_conferencia_nfe aceitou quantidade_conferida = Infinity sem erro';
+  END IF;
+
+  SELECT quantidade_conferida, status_conferencia INTO v_qtd_apos, v_status_apos
+    FROM public.importacoes_nfe_itens WHERE id = v_item_id_2;
+  IF v_qtd_apos IS NOT NULL OR v_status_apos <> 'EM_CONFERENCIA' THEN
+    RAISE EXCEPTION 'FLX05_FALHOU: item foi alterado apesar de NaN/Infinity terem sido rejeitados (qtd=%, status=%)', v_qtd_apos, v_status_apos;
+  END IF;
+
+  RAISE NOTICE 'Passo 6 OK: NaN e Infinity rejeitados em quantidade_conferida (mesma classe de defeito da D0-03), item permanece intocado.';
+END
+$nan_infinity$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 7) Adversarial: GERENTE de outra loja não consegue mutar (conferir/
+--    confirmar) uma importação que não é da sua loja, manipulando
+--    importacao_id — teste no ponto de MUTAÇÃO, não só de listagem.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+DO $tenant_negative$
+DECLARE
+  v_gerente_b uuid := 'f0000006-0000-4000-8000-000000000001';
+  v_imp_id_2  uuid := current_setting('flx05.imp_id_2')::uuid;
+  v_item_id_2 uuid;
+  v_falhou_conferir  boolean := false;
+  v_falhou_confirmar boolean := false;
+  v_qtd_apos numeric;
+  v_status_apos text;
+  v_status_importacao_apos text;
+BEGIN
+  SELECT id INTO v_item_id_2 FROM public.importacoes_nfe_itens WHERE importacao_nfe_id = v_imp_id_2;
+
+  PERFORM set_config('request.jwt.claim.sub', v_gerente_b::text, true);
+
+  BEGIN
+    PERFORM public.registrar_conferencia_nfe(
+      v_imp_id_2,
+      jsonb_build_array(jsonb_build_object('item_id', v_item_id_2, 'quantidade_conferida', 5, 'divergencia_obs', null))
+    );
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM = 'IMPORT_NFE_LOJA' THEN v_falhou_conferir := true;
+    ELSE RAISE EXCEPTION 'FLX05_FALHOU (BLOCKER): GERENTE de outra loja recebeu erro inesperado (não IMPORT_NFE_LOJA) ao tentar conferir importação alheia: %', SQLERRM; END IF;
+  END;
+  IF NOT v_falhou_conferir THEN
+    RAISE EXCEPTION 'FLX05_FALHOU (BLOCKER DE SEGURANCA PARA PR1): GERENTE de outra loja conseguiu registrar conferência em importação que não é da sua loja, manipulando importacao_id.';
+  END IF;
+
+  BEGIN
+    PERFORM public.confirmar_importacao_nfe(v_imp_id_2);
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM = 'IMPORT_NFE_LOJA' THEN v_falhou_confirmar := true;
+    ELSE RAISE EXCEPTION 'FLX05_FALHOU (BLOCKER): GERENTE de outra loja recebeu erro inesperado (não IMPORT_NFE_LOJA) ao tentar confirmar importação alheia: %', SQLERRM; END IF;
+  END;
+  IF NOT v_falhou_confirmar THEN
+    RAISE EXCEPTION 'FLX05_FALHOU (BLOCKER DE SEGURANCA PARA PR1): GERENTE de outra loja conseguiu confirmar (creditar estoque de) importação que não é da sua loja, manipulando importacao_id.';
+  END IF;
+
+  -- Nada mudou: nem o item, nem o status da importação, apesar das duas tentativas.
+  SELECT quantidade_conferida, status_conferencia INTO v_qtd_apos, v_status_apos
+    FROM public.importacoes_nfe_itens WHERE id = v_item_id_2;
+  SELECT status INTO v_status_importacao_apos FROM public.importacoes_nfe WHERE id = v_imp_id_2;
+
+  IF v_qtd_apos IS NOT NULL OR v_status_apos <> 'EM_CONFERENCIA' OR v_status_importacao_apos <> 'EM_CONFERENCIA' THEN
+    RAISE EXCEPTION 'FLX05_FALHOU: estado mudou apesar de ambas as tentativas cross-loja terem sido recusadas (qtd=%, status_item=%, status_importacao=%)', v_qtd_apos, v_status_apos, v_status_importacao_apos;
+  END IF;
+
+  RAISE NOTICE 'Passo 7 OK: GERENTE de outra loja recusado em registrar_conferencia_nfe E confirmar_importacao_nfe (IMPORT_NFE_LOJA), sem alterar estado — autorização provada no ponto de mutação.';
+END
+$tenant_negative$;
+
+RAISE NOTICE 'FLX05 UI (PR1) — todos os passos OK: quantidade, custo, estoque, idempotência, erro parcial, auditoria (kardex + contas_pagar), NaN/Infinity e isolamento cross-loja no ponto de mutação verificados.';
 
 ROLLBACK;
