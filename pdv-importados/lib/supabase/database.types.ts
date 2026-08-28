@@ -3741,6 +3741,7 @@ export type Database = {
           origem_descricao: string
           origem_ref: string | null
           origem_tipo: string
+          payload_hash: string | null
           status: string
         }
         Insert: {
@@ -3758,6 +3759,7 @@ export type Database = {
           origem_descricao: string
           origem_ref?: string | null
           origem_tipo?: string
+          payload_hash?: string | null
           status?: string
         }
         Update: {
@@ -3775,6 +3777,7 @@ export type Database = {
           origem_descricao?: string
           origem_ref?: string | null
           origem_tipo?: string
+          payload_hash?: string | null
           status?: string
         }
         Relationships: [
