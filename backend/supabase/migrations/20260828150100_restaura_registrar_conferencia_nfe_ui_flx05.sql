@@ -53,6 +53,23 @@
 -- (`20260824010000_fix_remessas_conferencia_columns_drift.sql`, comentário
 -- explícito). Este PR não mexe no fluxo de Recebimento.
 --
+-- SEGUNDA CORREÇÃO — condição de corrida (achada em revisão antes do merge,
+-- não pela investigação original): `confirmar_importacao_nfe` nunca foi
+-- removida, mas ficou inalcançável desde 2026-08-19 — esta migration é o
+-- que a torna alcançável de novo pela primeira vez em produção. O corpo
+-- original da 296 lê `importacoes_nfe.status` com um SELECT simples (sem
+-- lock) antes de creditar estoque/custo/contas_pagar e só então marca
+-- CONCLUIDA. Duas chamadas concorrentes na mesma importação (dois gerentes,
+-- duas abas) podem ambas passar pelo checque de status antes de qualquer
+-- uma commitar, duplicando o crédito de estoque e a duplicata em
+-- contas_pagar. Corrigido abaixo com `FOR UPDATE` na leitura de
+-- `importacoes_nfe` em AMBAS as funções (registrar e confirmar) — mesmo
+-- padrão de lock de linha já usado em `decrementar_estoque_seguro` e
+-- `transferir_estoque_seguro` neste mesmo schema. A segunda chamada
+-- concorrente bloqueia até a primeira commitar, então relê `status` já
+-- `CONCLUIDA` e recusa com `IMPORT_NFE_STATUS_INVALIDO` — nunca credita
+-- duas vezes. Nenhuma outra parte do corpo original muda.
+--
 -- Idempotente: usa CREATE OR REPLACE (a função pode já não existir, ou já
 -- ter sido recriada por uma tentativa anterior desta mesma migration).
 -- ============================================================================
@@ -90,9 +107,12 @@ BEGIN
     RAISE EXCEPTION 'IMPORT_NFE_PERFIL';
   END IF;
 
+  -- FOR UPDATE: serializa com confirmar_importacao_nfe na mesma importação —
+  -- ver comentário de cabeçalho desta migration ("SEGUNDA CORREÇÃO").
   SELECT id, loja_id, status INTO v_imp
     FROM public.importacoes_nfe
-   WHERE id = p_importacao_id;
+   WHERE id = p_importacao_id
+     FOR UPDATE;
 
   IF NOT FOUND THEN
     RAISE EXCEPTION 'IMPORT_NFE_NAO_ENCONTRADA';
@@ -171,6 +191,133 @@ GRANT EXECUTE ON FUNCTION public.registrar_conferencia_nfe(uuid, jsonb) TO authe
 GRANT EXECUTE ON FUNCTION public.registrar_conferencia_nfe(uuid, jsonb) TO service_role;
 
 -- ============================================================================
+-- confirmar_importacao_nfe — mesmo corpo da 296, só com FOR UPDATE
+-- acrescentado na leitura de importacoes_nfe (ver "SEGUNDA CORREÇÃO" no
+-- cabeçalho desta migration). Esta função nunca foi removida; esta migration
+-- é o que a torna alcançável pela primeira vez, então o fechamento da
+-- condição de corrida precisa entrar junto, não depois.
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION public.confirmar_importacao_nfe(p_importacao_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+DECLARE
+  v_uid          uuid := auth.uid();
+  v_perfil       text;
+  v_loja_usuario uuid;
+  v_imp          record;
+  v_it           record;
+  v_dup          record;
+  v_pendentes    int;
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'IMPORT_NFE_AUTH';
+  END IF;
+
+  SELECT u.perfil, u.loja_id INTO v_perfil, v_loja_usuario
+    FROM public.usuarios u WHERE u.id = v_uid;
+
+  IF v_perfil IS NULL OR v_perfil NOT IN ('GERENTE', 'DONO', 'ADMIN') THEN
+    RAISE EXCEPTION 'IMPORT_NFE_PERFIL';
+  END IF;
+
+  -- FOR UPDATE: fecha a condição de corrida com chamadas concorrentes desta
+  -- mesma função (ou de registrar_conferencia_nfe) sobre a mesma importação.
+  -- Uma segunda chamada concorrente bloqueia aqui até a primeira commitar;
+  -- ao prosseguir, relê status já CONCLUIDA e recusa abaixo — nunca credita
+  -- estoque/custo/contas_pagar duas vezes para a mesma importação.
+  SELECT id, loja_id, fornecedor_id, numero_nf, status INTO v_imp
+    FROM public.importacoes_nfe
+   WHERE id = p_importacao_id
+     FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'IMPORT_NFE_NAO_ENCONTRADA';
+  END IF;
+
+  IF v_perfil = 'GERENTE' AND v_loja_usuario IS DISTINCT FROM v_imp.loja_id THEN
+    RAISE EXCEPTION 'IMPORT_NFE_LOJA';
+  END IF;
+
+  IF v_imp.status <> 'EM_CONFERENCIA' THEN
+    RAISE EXCEPTION 'IMPORT_NFE_STATUS_INVALIDO';
+  END IF;
+
+  -- FLX-05: nenhum crédito de estoque sem conferência. Se qualquer item ainda
+  -- está EM_CONFERENCIA, a operação inteira é recusada — tudo-ou-nada.
+  SELECT count(*) INTO v_pendentes
+    FROM public.importacoes_nfe_itens
+   WHERE importacao_nfe_id = p_importacao_id AND status_conferencia = 'EM_CONFERENCIA';
+
+  IF v_pendentes > 0 THEN
+    RAISE EXCEPTION 'IMPORT_NFE_CONFERENCIA_PENDENTE';
+  END IF;
+
+  FOR v_it IN
+    SELECT produto_id, quantidade_conferida, custo_unitario, atualizar_custo, status_conferencia
+      FROM public.importacoes_nfe_itens
+     WHERE importacao_nfe_id = p_importacao_id
+  LOOP
+    IF v_it.quantidade_conferida IS NOT NULL AND v_it.quantidade_conferida > 0 THEN
+      INSERT INTO public.estoque (produto_id, loja_id, quantidade_atual, estoque_minimo, version)
+      VALUES (v_it.produto_id, v_imp.loja_id, v_it.quantidade_conferida, 0, 1)
+      ON CONFLICT (loja_id, produto_id) DO UPDATE
+        SET quantidade_atual = public.estoque.quantidade_atual + EXCLUDED.quantidade_atual,
+            version          = public.estoque.version + 1,
+            updated_at       = now();
+
+      INSERT INTO public.movimentos_estoque_log (
+        loja_id, produto_id, tipo_codigo, quantidade_delta, usuario_id, observacao
+      ) VALUES (
+        v_imp.loja_id,
+        v_it.produto_id,
+        'ENTRADA_NFE',
+        v_it.quantidade_conferida,
+        v_uid,
+        format('Importação NF-e %s (conferido%s)', p_importacao_id::text,
+               CASE WHEN v_it.status_conferencia = 'DIVERGENTE' THEN ', divergente da nota' ELSE '' END)
+      );
+    END IF;
+
+    IF v_it.atualizar_custo AND v_it.custo_unitario > 0 THEN
+      UPDATE public.produtos
+         SET preco_custo = v_it.custo_unitario,
+             updated_at  = now()
+       WHERE id = v_it.produto_id;
+    END IF;
+  END LOOP;
+
+  FOR v_dup IN
+    SELECT numero_duplicata, data_vencimento, valor
+      FROM public.importacoes_nfe_duplicatas
+     WHERE importacao_nfe_id = p_importacao_id
+  LOOP
+    INSERT INTO public.contas_pagar (
+      nfe_importacao_id, fornecedor_id, loja_id, nfe_numero, vencimento, valor_total, status
+    ) VALUES (
+      p_importacao_id, v_imp.fornecedor_id, v_imp.loja_id, v_dup.numero_duplicata,
+      v_dup.data_vencimento, v_dup.valor, 'PENDENTE'
+    );
+  END LOOP;
+
+  UPDATE public.importacoes_nfe
+     SET status = 'CONCLUIDA'
+   WHERE id = p_importacao_id;
+END;
+$$;
+
+COMMENT ON FUNCTION public.confirmar_importacao_nfe(uuid) IS
+  'FLX-05 (2026-08-05, endurecida contra corrida em 2026-08-28 ao ficar alcançável de novo). Credita estoque e gera contas_pagar só com base em quantidade_conferida (gravada por registrar_conferencia_nfe) — nunca do XML. Exige todos os itens conferidos. FOR UPDATE na leitura de importacoes_nfe impede dupla confirmação concorrente.';
+
+REVOKE ALL ON FUNCTION public.confirmar_importacao_nfe(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.confirmar_importacao_nfe(uuid) FROM anon;
+GRANT EXECUTE ON FUNCTION public.confirmar_importacao_nfe(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.confirmar_importacao_nfe(uuid) TO service_role;
+
+-- ============================================================================
 -- VERIFICAÇÃO DE EFEITO — dentro da transação.
 -- ============================================================================
 
@@ -186,6 +333,9 @@ BEGIN
   IF position('NaN' IN v_def) = 0 OR position('Infinity' IN v_def) = 0 THEN
     RAISE EXCEPTION 'RESTAURA_296_GUARD_NAN_INFINITY_AUSENTE';
   END IF;
+  IF position('FOR UPDATE' IN v_def) = 0 THEN
+    RAISE EXCEPTION 'RESTAURA_296_LOCK_AUSENTE_REGISTRAR';
+  END IF;
 
   IF has_function_privilege('anon', 'public.registrar_conferencia_nfe(uuid,jsonb)', 'EXECUTE') THEN
     RAISE EXCEPTION 'RESTAURA_296_GRANT_ANON_INDEVIDO';
@@ -195,13 +345,21 @@ BEGIN
     RAISE EXCEPTION 'RESTAURA_296_GRANT_AUTHENTICATED_AUSENTE';
   END IF;
 
-  -- confirmar_importacao_nfe precisa continuar existindo e com o mesmo gate —
-  -- esta migration não deve ser aplicada isoladamente sem ela em produção.
+  -- confirmar_importacao_nfe precisa continuar existindo, com o mesmo gate
+  -- de conferência pendente E o lock de linha que fecha a corrida.
   IF to_regprocedure('public.confirmar_importacao_nfe(uuid)') IS NULL THEN
     RAISE EXCEPTION 'RESTAURA_296_CONFIRMAR_AUSENTE_PRE_REQUISITO_FALTANDO';
   END IF;
 
-  RAISE NOTICE 'restaura_registrar_conferencia_nfe OK — RPC recriada, guard NaN/Infinity presente, grants corretos, confirmar_importacao_nfe presente.';
+  v_def := pg_get_functiondef('public.confirmar_importacao_nfe(uuid)'::regprocedure);
+  IF position('IMPORT_NFE_CONFERENCIA_PENDENTE' IN v_def) = 0 THEN
+    RAISE EXCEPTION 'RESTAURA_296_GATE_CONFERENCIA_AUSENTE';
+  END IF;
+  IF position('FOR UPDATE' IN v_def) = 0 THEN
+    RAISE EXCEPTION 'RESTAURA_296_LOCK_AUSENTE_CONFIRMAR';
+  END IF;
+
+  RAISE NOTICE 'restaura_registrar_conferencia_nfe OK — RPCs recriadas, guard NaN/Infinity presente, locks FOR UPDATE presentes (registrar + confirmar), grants corretos.';
 END
 $verify$;
 

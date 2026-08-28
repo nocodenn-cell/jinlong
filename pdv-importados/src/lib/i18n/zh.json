@@ -912,6 +912,7 @@
       "btn_registrar_conferencia": "登记核对",
       "btn_confirmar_estoque": "确认并更新库存",
       "conferencia_registrada": "核对已登记。",
+      "conferencia_nenhum_item_preenchido": "请至少填写一项实收数量后再登记。",
       "confirmar_estoque_ok": "库存已更新。",
       "confirmar_estoque_pendente": "请先登记所有明细的核对，再确认库存。",
       "pendentes_titulo": "待核对的进货单",

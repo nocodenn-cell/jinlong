@@ -60,6 +60,41 @@ function linhaResolvida(l: LinhaEditavel): boolean {
   return l.acao === 'VINCULAR' && !!l.produto_id_destino
 }
 
+export type ItemConferenciaPreenchido = {
+  item_id: string
+  quantidade_conferida: number
+  divergencia_obs: string | null
+}
+
+/**
+ * Monta o payload de `registrar_conferencia_nfe` só com itens que o operador
+ * de fato preencheu. Um campo em branco/ausente significa "ainda não contei
+ * este item" — nunca vira silenciosamente a quantidade da nota (achado de
+ * revisão pré-merge da PR1: sem isto, limpar o campo produzia o mesmo efeito
+ * que confirmar a quantidade da nota, sem contagem física real). Extraída
+ * como função pura só para ser testável sem montar o componente.
+ */
+export function buildItensConferenciaPreenchidos(
+  itens: ReadonlyArray<ItemConferenciaNfe>,
+  qtdConferida: Readonly<Record<string, string>>,
+  obsDivergencia: Readonly<Record<string, string>>,
+): ItemConferenciaPreenchido[] {
+  return itens.flatMap((item) => {
+    const raw = qtdConferida[item.item_id]
+    if (raw === undefined || raw.trim() === '') return []
+    const qtd = Number(raw)
+    if (!Number.isFinite(qtd) || qtd < 0) return []
+    const obs = (obsDivergencia[item.item_id] ?? '').trim()
+    return [
+      {
+        item_id: item.item_id,
+        quantidade_conferida: qtd,
+        divergencia_obs: obs.length > 0 ? obs : null,
+      },
+    ]
+  })
+}
+
 export function ImportarNfePageClient({ idioma, embeddedInAdminHub = false }: Props) {
   const m = getMessages(idioma)
   const mi = m.estoque.import_nfe
@@ -102,6 +137,19 @@ export function ImportarNfePageClient({ idioma, embeddedInAdminHub = false }: Pr
       for (const item of c.itens) {
         if (next[item.item_id] === undefined) {
           next[item.item_id] = String(item.quantidade_conferida ?? item.quantidade_nfe)
+        }
+      }
+      return next
+    })
+    // Retomar uma conferência (após recarregar a página ou reabrir uma
+    // pendente) precisa devolver a observação de divergência já salva —
+    // sem isso, o próximo "Registrar conferência" sobrescreveria com null
+    // toda observação anterior, mesmo de itens que não mudaram.
+    setObsDivergencia((prev) => {
+      const next = { ...prev }
+      for (const item of c.itens) {
+        if (next[item.item_id] === undefined && item.divergencia_obs) {
+          next[item.item_id] = item.divergencia_obs
         }
       }
       return next
@@ -184,16 +232,10 @@ export function ImportarNfePageClient({ idioma, embeddedInAdminHub = false }: Pr
 
   const { mutate: registrarMut, loading: registrarLoading } = useGerenteMutation(
     async (c: ConferenciaImportacaoNfe) => {
-      const itens = c.itens.map((item) => {
-        const raw = qtdConferida[item.item_id]
-        const qtd = raw === undefined || raw === '' ? item.quantidade_nfe : Number(raw)
-        const obs = (obsDivergencia[item.item_id] ?? '').trim()
-        return {
-          item_id: item.item_id,
-          quantidade_conferida: Number.isFinite(qtd) ? qtd : 0,
-          divergencia_obs: obs.length > 0 ? obs : null,
-        }
-      })
+      const itens = buildItensConferenciaPreenchidos(c.itens, qtdConferida, obsDivergencia)
+      if (itens.length === 0) {
+        throw new Error(mi.conferencia_nenhum_item_preenchido)
+      }
       const r = await registrarConferenciaNfe({ importacao_id: c.importacao_id, itens })
       if (!r.success) throw new Error(r.error)
       return r.data
@@ -301,6 +343,7 @@ export function ImportarNfePageClient({ idioma, embeddedInAdminHub = false }: Pr
   }
 
   const limpar = () => {
+    const tinhaConferenciaEmAberto = !!conferencia && !estoqueAtualizadoOk
     setXmlText('')
     setParsed(null)
     setLinhas([])
@@ -309,6 +352,10 @@ export function ImportarNfePageClient({ idioma, embeddedInAdminHub = false }: Pr
     setQtdConferida({})
     setObsDivergencia({})
     setEstoqueAtualizadoOk(false)
+    // A lista de pendentes foi carregada antes desta importação existir —
+    // sem recarregar, "Limpar" para adiar a conferência esconde a NF-e que
+    // acabou de ser processada até a próxima navegação para a página.
+    if (tinhaConferenciaEmAberto) void carregarPendentes()
   }
 
   const itensPendentesConferencia = useMemo(

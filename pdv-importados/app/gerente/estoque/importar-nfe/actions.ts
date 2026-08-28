@@ -469,30 +469,45 @@ export async function listarImportacoesNfePendentes(): Promise<
     .eq('loja_id', lojaId)
     .eq('status', 'EM_CONFERENCIA')
     .order('created_at', { ascending: false })
-    .limit(20)
+    // Lista de pendências, não um catálogo — 100 é folgado para o volume
+    // real de NF-e aguardando conferência numa única loja. Se algum dia
+    // isso não bastar, o próximo passo é paginação de verdade, não subir
+    // este número de novo.
+    .limit(100)
 
   if (error) {
     return { success: false, error: mensagemErroComSecao('Importação NF-e', error.message) }
   }
 
-  const rows: ImportacaoNfePendente[] = (data ?? []).map((r) => {
-    const fornecedorRel = (r as { fornecedores: { nome: string } | { nome: string }[] | null })
-      .fornecedores
-    const fornecedorNome = Array.isArray(fornecedorRel)
-      ? (fornecedorRel[0]?.nome ?? '')
-      : (fornecedorRel?.nome ?? '')
-    const itensRel = (r as { importacoes_nfe_itens: { status_conferencia: string }[] | null })
-      .importacoes_nfe_itens
-    const itens = itensRel ?? []
-    return {
-      importacao_id: r.id as string,
-      numero_nf: (r.numero_nf as string | null) ?? null,
-      fornecedor_nome: fornecedorNome,
-      created_at: r.created_at as string,
-      itens_total: itens.length,
-      itens_conferidos: itens.filter((i) => i.status_conferencia !== 'EM_CONFERENCIA').length,
-    }
-  })
+  const rows: ImportacaoNfePendente[] = (data ?? [])
+    .map((r) => {
+      const fornecedorRel = (r as { fornecedores: { nome: string } | { nome: string }[] | null })
+        .fornecedores
+      const fornecedorNome = Array.isArray(fornecedorRel)
+        ? (fornecedorRel[0]?.nome ?? '')
+        : (fornecedorRel?.nome ?? '')
+      const itensRel = (r as { importacoes_nfe_itens: { status_conferencia: string }[] | null })
+        .importacoes_nfe_itens
+      const itens = itensRel ?? []
+      return {
+        importacao_id: r.id as string,
+        numero_nf: (r.numero_nf as string | null) ?? null,
+        fornecedor_nome: fornecedorNome,
+        created_at: r.created_at as string,
+        itens_total: itens.length,
+        itens_conferidos: itens.filter((i) => i.status_conferencia !== 'EM_CONFERENCIA').length,
+      }
+    })
+    // Defesa contra registro legado: a coluna `status` da 296 aplicou
+    // EM_CONFERENCIA por default a QUALQUER linha pré-existente de
+    // importacoes_nfe, mesmo uma sem nenhum item (a tabela
+    // importacoes_nfe_itens só passou a existir a partir dessa mesma
+    // migration). Sem este filtro, uma importação assim abriria uma
+    // conferência vazia que a UI nunca consegue confirmar. Não há hoje
+    // nenhuma linha nessa condição em produção (importacoes_nfe: 0 linhas,
+    // confirmado antes deste PR) — mantido mesmo assim por segurança para
+    // outras instalações.
+    .filter((row) => row.itens_total > 0)
 
   return { success: true, data: rows }
 }

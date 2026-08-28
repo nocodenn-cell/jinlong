@@ -520,9 +520,37 @@ BEGIN
 END
 $tenant_negative$;
 
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 8) Estático: prova que o lock FOR UPDATE (achado de revisão pré-merge —
+--    condição de corrida entre chamadas concorrentes de
+--    registrar_conferencia_nfe/confirmar_importacao_nfe sobre a mesma
+--    importação) está de fato no corpo das duas funções. Duas sessões
+--    Postgres simultâneas de verdade não cabem num script psql sequencial
+--    de uma conexão só — esta é a prova disponível neste harness; a garantia
+--    em si vem do bloqueio de linha padrão do Postgres em SELECT ... FOR
+--    UPDATE, mesmo padrão já usado em decrementar_estoque_seguro e
+--    transferir_estoque_seguro neste schema.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+DO $lock_presente$
+DECLARE
+  v_def_registrar text := pg_get_functiondef('public.registrar_conferencia_nfe(uuid,jsonb)'::regprocedure);
+  v_def_confirmar text := pg_get_functiondef('public.confirmar_importacao_nfe(uuid)'::regprocedure);
+BEGIN
+  IF position('FOR UPDATE' IN v_def_registrar) = 0 THEN
+    RAISE EXCEPTION 'FLX05_FALHOU (BLOCKER): registrar_conferencia_nfe sem FOR UPDATE — condição de corrida com confirmar_importacao_nfe reaberta.';
+  END IF;
+  IF position('FOR UPDATE' IN v_def_confirmar) = 0 THEN
+    RAISE EXCEPTION 'FLX05_FALHOU (BLOCKER): confirmar_importacao_nfe sem FOR UPDATE — duas confirmações concorrentes podem duplicar estoque/contas_pagar.';
+  END IF;
+
+  RAISE NOTICE 'Passo 8 OK: FOR UPDATE presente em registrar_conferencia_nfe e confirmar_importacao_nfe (prova estática — sem sessões concorrentes reais neste harness).';
+END
+$lock_presente$;
+
 DO $resumo$
 BEGIN
-  RAISE NOTICE 'FLX05 UI (PR1) — todos os passos OK: quantidade, custo, estoque, idempotência, erro parcial, auditoria (kardex + contas_pagar), NaN/Infinity e isolamento cross-loja no ponto de mutação verificados.';
+  RAISE NOTICE 'FLX05 UI (PR1) — todos os passos OK: quantidade, custo, estoque, idempotência, erro parcial, auditoria (kardex + contas_pagar), NaN/Infinity, isolamento cross-loja no ponto de mutação e lock FOR UPDATE contra corrida verificados.';
 END
 $resumo$;
 
