@@ -26,7 +26,7 @@ const HERE = dirname(fileURLToPath(import.meta.url))
 
 const NODE_SUITES = ['financial-idempotency-correlation-contract.test.mjs']
 
-const SCRIPT_SUITES = ['test-commission-concurrency.mjs']
+const SCRIPT_SUITES = ['test-commission-concurrency.mjs', 'test-nfe-conferencia-concurrency.mjs']
 
 const SQL_SUITES = [
   'sale-totals-invariant.test.sql',
