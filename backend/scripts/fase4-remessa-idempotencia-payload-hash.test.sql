@@ -48,7 +48,7 @@ DO $fase4_idempotencia$
 DECLARE
   v_gerente uuid := 'e0000002-0000-4000-8000-000000000001';
   v_produto uuid := 'e0000004-0000-4000-8000-000000000001';
-  v_key text := 'fase4-idempotencia-' || gen_random_uuid()::text;
+  v_replay_id text := 'fase4-idempotencia-' || gen_random_uuid()::text;
   v_id_original uuid;
   v_id_replay_igual uuid;
   v_hash_gravado text;
@@ -58,7 +58,7 @@ BEGIN
   v_id_original := public.criar_confirmar_remessa_entrada(
     'Fase4 origem', 'Fase4 observação original',
     jsonb_build_array(jsonb_build_object('produto_id', v_produto, 'quantidade_esperada', 5, 'quantidade_conferida', 5)),
-    v_key
+    v_replay_id
   );
 
   SELECT payload_hash INTO v_hash_gravado FROM public.remessas WHERE id = v_id_original;
@@ -71,7 +71,7 @@ BEGIN
   v_id_replay_igual := public.criar_confirmar_remessa_entrada(
     'Fase4 origem', 'Fase4 observação original',
     jsonb_build_array(jsonb_build_object('produto_id', v_produto, 'quantidade_esperada', 5, 'quantidade_conferida', 5)),
-    v_key
+    v_replay_id
   );
   IF v_id_replay_igual IS DISTINCT FROM v_id_original THEN
     RAISE EXCEPTION 'FASE4_FALHOU: replay com payload igual não devolveu o mesmo ID (% vs %)', v_id_original, v_id_replay_igual;
@@ -84,7 +84,7 @@ BEGIN
     PERFORM public.criar_confirmar_remessa_entrada(
       'Fase4 origem', 'Fase4 observação original',
       jsonb_build_array(jsonb_build_object('produto_id', v_produto, 'quantidade_esperada', 5, 'quantidade_conferida', 9)),
-      v_key
+      v_replay_id
     );
     RAISE EXCEPTION 'FASE4_FALHOU: replay com quantidade divergente devolveu sucesso silencioso (DIV-D0-021 reaberta)';
   EXCEPTION
