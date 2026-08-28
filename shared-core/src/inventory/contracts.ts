@@ -189,11 +189,45 @@ export type ImportNfeCommand = {
 export type ImportNfeResult =
   | {
       ok: true
+      /** `importacao_id` da RPC — chave para a etapa de conferência (FLX-05). */
+      importacaoId: string | null
       itensProcessados: number
       produtosNovos: number
       produtosVinculados: number
       raw: unknown
     }
+  | { ok: false; error: string; code?: InventoryErrorCode }
+
+/**
+ * Uma linha conferida da importação de NF-e — contagem física por item.
+ * Espelha o parâmetro `p_itens` de `registrar_conferencia_nfe`.
+ */
+export type ConferenciaNfeItemInput = {
+  itemId: string
+  quantidadeConferida: number
+  divergenciaObs?: string | null
+}
+
+export type RegistrarConferenciaNfeCommand = {
+  importacaoId: string
+  itens: ConferenciaNfeItemInput[]
+}
+
+export type RegistrarConferenciaNfeResult =
+  | { ok: true; importacaoId: string; itensConferidos: number; itensDivergentes: number }
+  | { ok: false; error: string; code?: InventoryErrorCode }
+
+/**
+ * Confirma a importação de NF-e: credita `quantidade_conferida` em `estoque`,
+ * atualiza custo e gera `contas_pagar`. Exige todos os itens já conferidos
+ * (gate tudo-ou-nada na própria RPC) — autoridade em `confirmar_importacao_nfe`.
+ */
+export type ConfirmarImportacaoNfeCommand = {
+  importacaoId: string
+}
+
+export type ConfirmarImportacaoNfeResult =
+  | { ok: true; importacaoId: string }
   | { ok: false; error: string; code?: InventoryErrorCode }
 
 /**
@@ -211,4 +245,12 @@ export type InventoryMovementWriter = {
   transfer(command: TransferStockCommand): Promise<TransferStockResult>
   confirmRemessaEntrada(command: ConfirmRemessaCommand): Promise<ConfirmRemessaResult>
   importNfe(command: ImportNfeCommand): Promise<ImportNfeResult>
+  /** FLX-05: grava contagem física por item — pré-requisito de `confirmarImportacaoNfe`. */
+  registrarConferenciaNfe(
+    command: RegistrarConferenciaNfeCommand,
+  ): Promise<RegistrarConferenciaNfeResult>
+  /** FLX-05: único ponto que credita estoque/custo/contas_pagar da NF-e. */
+  confirmarImportacaoNfe(
+    command: ConfirmarImportacaoNfeCommand,
+  ): Promise<ConfirmarImportacaoNfeResult>
 }

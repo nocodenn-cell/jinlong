@@ -41,3 +41,30 @@ export const ImportNfePayloadSchema = z.object({
 })
 
 export type ImportNfePayloadInput = z.infer<typeof ImportNfePayloadSchema>
+
+/**
+ * FLX-05 — conferência antes de creditar estoque/custo da NF-e.
+ * `item_id` é `importacoes_nfe_itens.id` (obtido via `obterConferenciaImportacaoNfe`).
+ */
+export const ConferenciaNfeItemSchema = z.object({
+  item_id: z.string().uuid(),
+  quantidade_conferida: z.number().nonnegative(),
+  divergencia_obs: z.string().trim().min(1).nullable(),
+})
+
+export const RegistrarConferenciaNfePayloadSchema = z.object({
+  importacao_id: z.string().uuid(),
+  itens: z.array(ConferenciaNfeItemSchema).min(1),
+})
+
+export type RegistrarConferenciaNfePayloadInput = z.infer<
+  typeof RegistrarConferenciaNfePayloadSchema
+>
+
+export const ConfirmarImportacaoNfePayloadSchema = z.object({
+  importacao_id: z.string().uuid(),
+})
+
+export type ConfirmarImportacaoNfePayloadInput = z.infer<
+  typeof ConfirmarImportacaoNfePayloadSchema
+>
