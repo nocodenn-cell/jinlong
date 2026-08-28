@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { roundMoney2 } from '@/app/caixa/finalizarVendaValidation'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
+import { idiomaOperadorParaErro } from '@/app/caixa/server/caixaErroOperador'
 import {
   filtrarSomenteProdutosVendaveis,
 } from '@/lib/catalog/aplicarFiltroProdutoVendavel'
@@ -166,7 +167,7 @@ export async function recalcularItensNoServidor(
     .select('id, preco_varejo, preco_custo, ativo, status_publicacao')
     .in('id', produtosIds)
 
-  if (prodErr) return { ok: false, error: mensagemErroComSecao('Produtos', prodErr.message) }
+  if (prodErr) return { ok: false, error: mensagemErroComSecao('Produtos', prodErr.message, await idiomaOperadorParaErro()) }
   const vendaveis = filtrarSomenteProdutosVendaveis(
     (produtosRows ?? []) as {
       id: string
@@ -264,7 +265,10 @@ export async function recalcularItensNoServidor(
           message: prefetch.error.message,
         },
       })
-      return { ok: false, error: mensagemErroComSecao('Preço do produto', prefetch.error.message) }
+      return {
+        ok: false,
+        error: mensagemErroComSecao('Preço do produto', prefetch.error.message, await idiomaOperadorParaErro()),
+      }
     }
 
     const esperado = parseCalcularPrecoProdutoRpc(prefetch.data)

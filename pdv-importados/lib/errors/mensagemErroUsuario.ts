@@ -10,7 +10,11 @@ export {
 import { mensagemErroDeExcecao as mensagemErroDeExcecaoShared } from '@/shared/mensagemErroUsuario'
 
 /** Erros em `catch`: registra no servidor e traduz para o usuário. */
-export function mensagemErroDeExcecao(e: unknown, fallbackEmPortugues: string): string {
+export function mensagemErroDeExcecao(
+  e: unknown,
+  fallbackEmPortugues: string,
+  idiomaInput?: string,
+): string {
   logCaughtServerError('mensagemErroDeExcecao', e)
-  return mensagemErroDeExcecaoShared(e, fallbackEmPortugues)
+  return mensagemErroDeExcecaoShared(e, fallbackEmPortugues, idiomaInput)
 }

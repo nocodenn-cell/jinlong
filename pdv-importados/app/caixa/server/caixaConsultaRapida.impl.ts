@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getUsuarioAtual } from '@/lib/auth/usuarioAtual'
 import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import { mensagemErroDeExcecao } from '@/lib/errors/mensagemErroUsuario'
+import { idiomaOperadorParaErro } from '@/app/caixa/server/caixaErroOperador'
 import { buscarProdutoComPrecoCaixaImpl } from '@/app/caixa/server/caixaCatalogo.impl'
 import { obterConfiguracoesParaCaixaWebImpl } from '@/app/caixa/server/caixaConfiguracoes.impl'
 import {
@@ -116,7 +117,7 @@ export async function consultarProdutoRapidoCaixaImpl(
   } catch (e) {
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível consultar o produto.'),
+      error: mensagemErroDeExcecao(e, 'Não foi possível consultar o produto.', await idiomaOperadorParaErro()),
     }
   }
 }

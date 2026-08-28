@@ -9,7 +9,7 @@ import type {
 import { LIMITE_DIVERGENCIA_FECHAMENTO, parseMoneyInput } from '@/app/caixa/server/caixaActionsInternals'
 import { PDVContext, runPdvEvaluation } from '@/lib/pdv'
 import { logJson } from '@/shared/unified-logger'
-import { CAIXA_MSG, caixaErroOperador } from '@/app/caixa/server/caixaErroOperador'
+import { caixaErroOperador, idiomaOperadorParaErro } from '@/app/caixa/server/caixaErroOperador'
 import {
   createCashSessionReader,
   createCashSessionWriter,
@@ -31,7 +31,7 @@ export async function obterStatusCaixaOperadorImpl(): Promise<CaixaStatusOperado
       return {
         ok: false,
         status: 'ERRO',
-        error: caixaErroOperador(result.error),
+        error: caixaErroOperador(result.error, await idiomaOperadorParaErro()),
       }
     }
     if (result.status === 'FECHADO') {
@@ -54,7 +54,7 @@ export async function obterStatusCaixaOperadorImpl(): Promise<CaixaStatusOperado
     return {
       ok: false,
       status: 'ERRO',
-      error: caixaErroOperador(e instanceof Error ? e.message : null),
+      error: caixaErroOperador(e instanceof Error ? e.message : null, await idiomaOperadorParaErro()),
     }
   }
 }
@@ -80,7 +80,7 @@ export async function abrirCaixaOperadorImpl(valorInicial: number): Promise<Abri
       valorInicial: valorInicialSanitizado,
     })
     if (!opened.ok) {
-      return { ok: false, error: caixaErroOperador(opened.error) }
+      return { ok: false, error: caixaErroOperador(opened.error, await idiomaOperadorParaErro()) }
     }
     revalidatePath('/caixa')
     revalidatePath('/gerente/caixas')
@@ -93,7 +93,7 @@ export async function abrirCaixaOperadorImpl(valorInicial: number): Promise<Abri
     })
     return {
       ok: false,
-      error: caixaErroOperador(e instanceof Error ? e.message : null),
+      error: caixaErroOperador(e instanceof Error ? e.message : null, await idiomaOperadorParaErro()),
     }
   }
 }
@@ -126,8 +126,9 @@ export async function fecharCaixaOperadorImpl(input: {
           error: `Diferença acima de R$ ${LIMITE_DIVERGENCIA_FECHAMENTO.toFixed(2)} exige motivo (mín. 5 caracteres).`,
         }
       }
+      const idiomaErro = await idiomaOperadorParaErro()
       if (closed.code === CASH_ERROR_CODES.PENDING_MOVEMENTS) {
-        return { ok: false, error: CAIXA_MSG.movimentacoesPendentes }
+        return { ok: false, error: caixaErroOperador('fechar_caixa_movimentacoes_pendentes', idiomaErro) }
       }
       if (closed.code === CASH_ERROR_CODES.SESSION_NOT_FOUND) {
         return { ok: false, error: 'Não há caixa aberto para fechar.' }
@@ -135,7 +136,7 @@ export async function fecharCaixaOperadorImpl(input: {
       if (closed.code === CASH_ERROR_CODES.MOTIVO_TOO_LONG) {
         return { ok: false, error: 'Motivo muito longo (máx. 500 caracteres).' }
       }
-      return { ok: false, error: caixaErroOperador(closed.error) }
+      return { ok: false, error: caixaErroOperador(closed.error, idiomaErro) }
     }
 
     const caixaIdFechado = closed.caixaId
@@ -173,7 +174,7 @@ export async function fecharCaixaOperadorImpl(input: {
   } catch (e) {
     return {
       ok: false,
-      error: caixaErroOperador(e instanceof Error ? e.message : null),
+      error: caixaErroOperador(e instanceof Error ? e.message : null, await idiomaOperadorParaErro()),
     }
   }
 }

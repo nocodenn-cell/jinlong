@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { mensagemErroComSecao, mensagemErroDeExcecao } from '@/lib/errors/mensagemErroUsuario'
+import { idiomaOperadorParaErro } from '@/app/caixa/server/caixaErroOperador'
 
 export type TurnoResumoResult =
   | {
@@ -18,6 +19,7 @@ export async function obterResumoVendasTurnoImpl(): Promise<TurnoResumoResult> {
       data: { user },
     } = await supabase.auth.getUser()
     if (!user) return { ok: false, error: 'Sessão expirada.' }
+    const idioma = await idiomaOperadorParaErro()
 
     const { data: caixa, error: caixaErr } = await supabase
       .from('caixas')
@@ -28,7 +30,7 @@ export async function obterResumoVendasTurnoImpl(): Promise<TurnoResumoResult> {
       .limit(1)
       .maybeSingle()
 
-    if (caixaErr) return { ok: false, error: mensagemErroComSecao('Caixa', caixaErr.message) }
+    if (caixaErr) return { ok: false, error: mensagemErroComSecao('Caixa', caixaErr.message, idioma) }
     if (!caixa) return { ok: true, quantidadeVendas: 0, totalRecebido: 0, totalAReceber: 0, caixaId: '' }
 
     // ✅ FASE 6: Reconciliação corrigida para pagamento parcial
@@ -39,7 +41,7 @@ export async function obterResumoVendasTurnoImpl(): Promise<TurnoResumoResult> {
       .eq('caixa_id', caixa.id)
       .eq('status', 'CONCLUIDA')
 
-    if (vendasErr) return { ok: false, error: mensagemErroComSecao('Vendas', vendasErr.message) }
+    if (vendasErr) return { ok: false, error: mensagemErroComSecao('Vendas', vendasErr.message, idioma) }
 
     if (!vendas || vendas.length === 0) {
       return { ok: true, quantidadeVendas: 0, totalRecebido: 0, totalAReceber: 0, caixaId: caixa.id }
@@ -53,7 +55,7 @@ export async function obterResumoVendasTurnoImpl(): Promise<TurnoResumoResult> {
       .select('valor')
       .in('venda_id', vendaIds)
 
-    if (pagErr) return { ok: false, error: mensagemErroComSecao('Pagamentos', pagErr.message) }
+    if (pagErr) return { ok: false, error: mensagemErroComSecao('Pagamentos', pagErr.message, idioma) }
 
     const totalRecebido = (pagamentos ?? []).reduce((sum, p) => sum + Number(p.valor ?? 0), 0)
 
@@ -64,7 +66,7 @@ export async function obterResumoVendasTurnoImpl(): Promise<TurnoResumoResult> {
       .in('venda_id', vendaIds)
       .eq('status', 'ABERTO')
 
-    if (crErr) return { ok: false, error: mensagemErroComSecao('Contas a Receber', crErr.message) }
+    if (crErr) return { ok: false, error: mensagemErroComSecao('Contas a Receber', crErr.message, idioma) }
 
     const totalAReceber = (contasReceber ?? []).reduce((sum, cr) => sum + Number(cr.valor_aberto ?? 0), 0)
 
@@ -76,6 +78,9 @@ export async function obterResumoVendasTurnoImpl(): Promise<TurnoResumoResult> {
       caixaId: caixa.id,
     }
   } catch (e) {
-    return { ok: false, error: mensagemErroDeExcecao(e, 'Não foi possível carregar o resumo do turno.') }
+    return {
+      ok: false,
+      error: mensagemErroDeExcecao(e, 'Não foi possível carregar o resumo do turno.', await idiomaOperadorParaErro()),
+    }
   }
 }

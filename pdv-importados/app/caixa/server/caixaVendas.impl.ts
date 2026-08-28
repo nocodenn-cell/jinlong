@@ -16,7 +16,7 @@ import type { FinalizarVendaInput } from '@/app/caixa/finalizarVendaValidation'
 import { pagamentoParcialExigeCliente } from '@/app/caixa/caixaPagamentoSaldo'
 import { getLojaIdUsuario, LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import { mensagemErroDeExcecao, mensagemErroValidacaoZod } from '@/lib/errors/mensagemErroUsuario'
-import { caixaErroOperador } from '@/app/caixa/server/caixaErroOperador'
+import { caixaErroOperador, idiomaOperadorParaErro } from '@/app/caixa/server/caixaErroOperador'
 import { resolveVendaIdForFinalize } from '@/lib/caixa/resolveVendaIdForFinalize'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 import {
@@ -103,7 +103,7 @@ export async function cancelarVendaImpl(
       p_operador_id: user.id,
     })
 
-    if (error) return { ok: false, error: caixaErroOperador(error.message) }
+    if (error) return { ok: false, error: caixaErroOperador(error.message, await idiomaOperadorParaErro()) }
 
     const row = firstRpcVendaRow<RpcCancelarVendaRow>(data)
     if (!row?.venda_id) return { ok: false, error: 'Cancelamento não retornou identificador da venda.' }
@@ -132,7 +132,7 @@ export async function cancelarVendaImpl(
 
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível cancelar a venda.'),
+      error: mensagemErroDeExcecao(e, 'Não foi possível cancelar a venda.', await idiomaOperadorParaErro()),
     }
   }
 }
@@ -237,7 +237,9 @@ export async function finalizarVendaCaixaImpl(
       .limit(1)
       .maybeSingle()
 
-    if (caixaAbertoErr) return { ok: false, error: caixaErroOperador(caixaAbertoErr.message) }
+    if (caixaAbertoErr) {
+      return { ok: false, error: caixaErroOperador(caixaAbertoErr.message, await idiomaOperadorParaErro()) }
+    }
     if (!caixaExistente) {
       return { ok: false, error: 'Caixa fechado. Abra o caixa antes de finalizar a venda.' }
     }
@@ -340,7 +342,7 @@ export async function finalizarVendaCaixaImpl(
         elapsed_ms: _elapsed,
       })
 
-      return { ok: false, error: caixaErroOperador(txErr.message) }
+      return { ok: false, error: caixaErroOperador(txErr.message, await idiomaOperadorParaErro()) }
     }
 
     const row = firstRpcVendaRow<RpcFinalizarVendaRow>(data)
@@ -350,7 +352,7 @@ export async function finalizarVendaCaixaImpl(
     }
 
     if (row.status !== 'CONCLUIDA') {
-      return { ok: false, error: caixaErroOperador(String(row.mensagem ?? '')) }
+      return { ok: false, error: caixaErroOperador(String(row.mensagem ?? ''), await idiomaOperadorParaErro()) }
     }
 
     const eventId = row.event_id ? String(row.event_id) : String(row.venda_id ?? vendaId)
@@ -430,7 +432,7 @@ export async function finalizarVendaCaixaImpl(
 
     return {
       ok: false,
-      error: caixaErroOperador(e instanceof Error ? e.message : null),
+      error: caixaErroOperador(e instanceof Error ? e.message : null, await idiomaOperadorParaErro()),
     }
   }
 }

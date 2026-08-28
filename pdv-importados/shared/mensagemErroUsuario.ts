@@ -395,9 +395,13 @@ export function mensagemErroValidacaoZod(issuesJuntas: string, idiomaInput?: str
 }
 
 /** Erros em `catch`: mensagem traduzida ou fallback (sem logging — use wrapper no Next se precisar). */
-export function mensagemErroDeExcecao(e: unknown, fallbackEmPortugues: string): string {
+export function mensagemErroDeExcecao(
+  e: unknown,
+  fallbackEmPortugues: string,
+  idiomaInput?: string,
+): string {
   if (e instanceof Error && e.message.trim()) {
-    return mensagemErroParaUsuario(e.message)
+    return mensagemErroParaUsuario(e.message, idiomaInput)
   }
   return fallbackEmPortugues
 }

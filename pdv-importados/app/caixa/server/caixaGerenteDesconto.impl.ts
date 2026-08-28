@@ -5,6 +5,7 @@ import {
   mensagemErroDeExcecao,
   mensagemErroParaUsuario,
 } from '@/lib/errors/mensagemErroUsuario'
+import { idiomaOperadorParaErro } from '@/app/caixa/server/caixaErroOperador'
 import type { LimiteSangriaResult, ValidarGerenteDescontoResult } from '@/app/caixa/caixaActionTypes'
 
 export async function validarGerenteDescontoImpl(input: {
@@ -44,17 +45,17 @@ export async function validarGerenteDescontoImpl(input: {
     const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>
     if (!response.ok || payload.ok !== true) {
       const code = typeof payload.error === 'string' ? payload.error : ''
-      const getErrorMessage = (code: string | null, status: number) => {
+      const getErrorMessage = (code: string | null, status: number, idioma?: string) => {
         if (code === 'ERRO_PERSISTENCIA_TOKEN') {
           return 'Não foi possível registrar o desconto no servidor. Tente novamente em instantes.'
         }
         if (code) {
-          return mensagemErroParaUsuario(code)
+          return mensagemErroParaUsuario(code, idioma)
         }
         return `Não foi possível validar o gerente (servidor respondeu com código ${status}). Verifique a internet e tente de novo.`
       }
 
-      const error = getErrorMessage(code, response.status)
+      const error = getErrorMessage(code, response.status, await idiomaOperadorParaErro())
       return {
         ok: false,
         error,
@@ -72,7 +73,7 @@ export async function validarGerenteDescontoImpl(input: {
   } catch (e) {
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível validar a senha do gerente.'),
+      error: mensagemErroDeExcecao(e, 'Não foi possível validar a senha do gerente.', await idiomaOperadorParaErro()),
     }
   }
 }
@@ -87,14 +88,14 @@ export async function obterLimiteSangriaSemGerenteImpl(): Promise<LimiteSangriaR
 
     const { data, error } = await supabase.rpc('obter_limite_sangria_sem_gerente')
     if (error) {
-      return { ok: false, error: mensagemErroComSecao('Limite de sangria', error.message) }
+      return { ok: false, error: mensagemErroComSecao('Limite de sangria', error.message, await idiomaOperadorParaErro()) }
     }
     const limite = Number(data ?? 200)
     return { ok: true, limite: Number.isFinite(limite) && limite > 0 ? limite : 200 }
   } catch (e) {
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível carregar o limite de sangria.'),
+      error: mensagemErroDeExcecao(e, 'Não foi possível carregar o limite de sangria.', await idiomaOperadorParaErro()),
     }
   }
 }

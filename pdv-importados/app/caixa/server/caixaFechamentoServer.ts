@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { roundMoney2 } from '@/app/caixa/finalizarVendaValidation'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
+import { idiomaOperadorParaErro } from '@/app/caixa/server/caixaErroOperador'
 
 export const LIMITE_DIVERGENCIA_FECHAMENTO = 5
 
@@ -19,12 +20,14 @@ export async function calcularValorSistemaDinheiroCaixa(
   })
 
   if (error) {
-    throw new Error(mensagemErroComSecao('Valor sistema (caixa)', error.message))
+    throw new Error(mensagemErroComSecao('Valor sistema (caixa)', error.message, await idiomaOperadorParaErro()))
   }
 
   const n = typeof data === 'string' ? Number.parseFloat(data) : Number(data)
   if (!Number.isFinite(n)) {
-    throw new Error(mensagemErroComSecao('Valor sistema (caixa)', 'Resposta inválida do servidor.'))
+    throw new Error(
+      mensagemErroComSecao('Valor sistema (caixa)', 'Resposta inválida do servidor.', await idiomaOperadorParaErro()),
+    )
   }
   return roundMoney2(n)
 }
