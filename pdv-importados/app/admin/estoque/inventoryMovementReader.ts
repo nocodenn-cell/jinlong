@@ -1,9 +1,10 @@
 /**
  * Adapter InventoryMovementReader — kardex read-only.
- * SELECT `v_kardex_unificado` — fonte canônica (migration 291), UNION de
- * `movimentos_estoque_log` + `estoque_baixas` (legado) + reposições de
- * devolução/cancelamento. Ler só `movimentos_estoque_log` diretamente omite
- * devoluções de cliente e estornos de cancelamento do histórico do produto.
+ * SELECT `v_kardex_unificado` — fonte canônica (291 + anti-join erd em
+ * 20260828110000). UNION de `movimentos_estoque_log` + `estoque_baixas`
+ * legado (anti-join SAIDA_VENDA) + devoluções só-erd (anti-join por
+ * operacao_id na observação) + cancelamento. Pós-#313 o log físico já
+ * cobre devolução nova; o ramo erd fica só para legado sem lançamento.
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'

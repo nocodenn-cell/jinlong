@@ -38,6 +38,27 @@ describe('inventoryMovementReader', () => {
     ).toMatchObject({ movementId: 'erd:op1:p1', type: 'ENTRADA_DEVOLUCAO_CLIENTE', quantity: 3 })
   })
 
+  it('não deduplica mel+erd no cliente — o anti-join tem de viver na view', () => {
+    const mel = mapKardexRow({
+      evento_id: 'mel:m-dev',
+      ocorrido_em: '2026-08-27T12:00:00.000Z',
+      tipo_codigo: 'ENTRADA_DEVOLUCAO_CLIENTE',
+      quantidade_delta: 2,
+      observacao: 'devolucao | motivo=troca | operacao=op-1',
+      produto_id: 'p1',
+    })
+    const erd = mapKardexRow({
+      evento_id: 'erd:op-1:p1',
+      ocorrido_em: '2026-08-27T12:00:00.000Z',
+      tipo_codigo: 'ENTRADA_DEVOLUCAO_CLIENTE',
+      quantidade_delta: 2,
+      observacao: 'troca',
+      produto_id: 'p1',
+    })
+    expect(mel.quantity + erd.quantity).toBe(4)
+    expect(mel.movementId).not.toBe(erd.movementId)
+  })
+
   it('listByProduct lê a view canônica v_kardex_unificado (não a tabela crua), filtrando por produto e loja', async () => {
     const chain: Record<string, unknown> = {}
     const self = () => chain
