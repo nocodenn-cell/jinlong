@@ -36,6 +36,7 @@ const SQL_SUITES = [
   'd0-pricing-tiers-ssot.test.sql',
   'd0-remessa-positive-and-inventory-zero.test.sql',
   'd0-remessa-conferencia-columns-drift.test.sql',
+  'fase1-hardening-grants-residuais.test.sql',
   'fase4-remessa-idempotencia-payload-hash.test.sql',
 ]
 
