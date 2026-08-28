@@ -107,6 +107,32 @@ class Session {
     return result === TIMEOUT ? { pending: true } : { pending: false, result }
   }
 
+  /**
+   * Achado da PRIMEIRA execução deste harness em CI: sem isto, um exec()
+   * aguardado diretamente (fora de Session.pending, ou seja, um comando que
+   * NÃO deveria bloquear) que por qualquer motivo nunca produz o marcador
+   * trava a Promise para sempre — e como spawnSync (runOnce/run-financial-
+   * tests.mjs) não tem timeout próprio, isso trava o job inteiro de CI até o
+   * timeout de 40min do workflow, sem nenhum diagnóstico. Todo await direto
+   * de exec() neste arquivo passa por aqui: falha rápido e nomeado.
+   */
+  static async execTimed(session, sql, label, ms = 8000) {
+    return Session.raceTimeout(session.exec(sql), ms, `[${session.name}] ${label} — SQL: ${sql.slice(0, 200)}`)
+  }
+
+  /** Envolve uma Promise (já em voo) com um prazo — usa quando o exec() já foi disparado antes. */
+  static async raceTimeout(promise, ms, label) {
+    let timer
+    const t = new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`TIMEOUT (${ms}ms) esperando: ${label}`)), ms)
+    })
+    try {
+      return await Promise.race([promise, t])
+    } finally {
+      clearTimeout(timer)
+    }
+  }
+
   close() {
     if (!this.exited) this.proc.stdin.end('\\q\n')
   }
@@ -136,10 +162,18 @@ function firstRow(text) {
 }
 
 function runOnce(sql) {
+  // timeout: sem isto, spawnSync não tem limite algum — uma query que trava
+  // no servidor (ou um psql que nunca fecha por algum motivo) trava o
+  // processo Node inteiro (e o job de CI) sem diagnóstico até o timeout de
+  // 40min do workflow. Achado na primeira execução deste harness em CI.
   const r = spawnSync(PSQL.bin, [...PSQL.args, '-A', '-t', '-q', '-v', 'ON_ERROR_STOP=1'], {
     input: sql,
     encoding: 'utf8',
+    timeout: 15_000,
   })
+  if (r.error?.code === 'ETIMEDOUT') {
+    throw new Error(`runOnce excedeu 15s (travado) — SQL: ${sql.slice(0, 300)}`)
+  }
   if (r.status !== 0) throw new Error(`setup falhou: ${r.stderr || r.stdout}`)
   return r.stdout
 }
@@ -206,10 +240,6 @@ function criarImportacaoComUmItem(fx, refSuffix, custo) {
   return { importacaoId, itemId, produtoId }
 }
 
-function asActor(session, userId) {
-  return session.exec(`SELECT set_config('request.jwt.claim.sub', '${userId}', false);`)
-}
-
 const results = []
 
 async function scenario(name, fn) {
@@ -228,6 +258,18 @@ async function scenario(name, fn) {
 }
 
 async function main() {
+  // Watchdog global: nenhum bug neste harness (dos dois cenários, cada um
+  // com prazo próprio de 8s por chamada) deveria levar mais que uma dúzia de
+  // segundos de verdade. Achado na primeira execução deste script em CI: sem
+  // um limite absoluto, um hang não-previsto trava o job inteiro até o
+  // timeout de 40min do workflow, sem log nenhum de progresso. force-exit
+  // aqui é aceitável — este processo só faz I/O de teste, nada para persistir.
+  const watchdog = setTimeout(() => {
+    console.error('\n##[error] WATCHDOG: test-nfe-conferencia-concurrency.mjs excedeu 45s — abortando para não travar o job de CI.')
+    process.exit(1)
+  }, 45_000)
+  watchdog.unref?.() // não impede o processo de terminar naturalmente antes disso
+
   console.log(`Concorrência NF-e (PR1/FLX-05) — conexão: ${PSQL.label}\n`)
   const fx = setupFixture()
   console.log(`fixture: loja=${fx.loja} gerente=${fx.gerente}`)
@@ -250,20 +292,22 @@ async function main() {
     const T1 = open('T1conf')
     const T2 = open('T2conf')
     for (const s of [T1, T2]) {
-      await s.exec(`SET statement_timeout = '6s'; SET lock_timeout = '5s';`)
-      await asActor(s, fx.gerente)
+      await Session.execTimed(s, `SET statement_timeout = '6s'; SET lock_timeout = '5s';`, `${s.name}: SET timeouts`)
+      await Session.execTimed(s, `SELECT set_config('request.jwt.claim.sub', '${fx.gerente}', false);`, `${s.name}: asActor`)
     }
 
-    await T1.exec(`BEGIN;`)
-    const r1Promise = T1.exec(`SELECT public.confirmar_importacao_nfe('${imp.importacaoId}');`)
+    await Session.execTimed(T1, `BEGIN;`, 'T1: BEGIN')
     // T1 roda a função inteira (credita estoque, custo, contas_pagar, marca
     // CONCLUIDA) mas ainda NÃO commitou — o lock FOR UPDATE da linha de
-    // importacoes_nfe segue retido até o COMMIT explícito abaixo.
-    const r1 = await r1Promise
+    // importacoes_nfe segue retido até o COMMIT explícito abaixo. Prazo de
+    // 8s: se o lock nunca resolver do lado do servidor por algum motivo,
+    // falha nomeando exatamente esta chamada, em vez de travar o job.
+    const r1Promise = T1.exec(`SELECT public.confirmar_importacao_nfe('${imp.importacaoId}');`)
+    const r1 = await Session.raceTimeout(r1Promise, 8000, 'T1: confirmar_importacao_nfe (1ª chamada)')
     assert.ok(!hasError(r1), `T1 confirmar_importacao_nfe deveria suceder: ${r1}`)
     log('  T1 executa confirmar_importacao_nfe até o fim (dentro de uma transação aberta, lock ainda retido).')
 
-    await T2.exec(`BEGIN;`)
+    await Session.execTimed(T2, `BEGIN;`, 'T2: BEGIN')
     const r2Promise = T2.exec(`SELECT public.confirmar_importacao_nfe('${imp.importacaoId}');`)
     const probe = await Session.pending(r2Promise, 900)
     assert.equal(
@@ -273,15 +317,15 @@ async function main() {
     )
     log('  T2 (segunda confirmação concorrente) BLOQUEIA, confirmado por timeout de 900ms — prova real de contenção de lock, não inspeção textual.')
 
-    await T1.exec(`COMMIT;`)
+    await Session.execTimed(T1, `COMMIT;`, 'T1: COMMIT')
     log('  T1 commita — libera o lock.')
-    const r2 = await r2Promise
+    const r2 = await Session.raceTimeout(r2Promise, 8000, 'T2 destravar após T1 commitar')
     assert.ok(hasError(r2), 'T2 deveria falhar após destravar (importação já CONCLUIDA)')
     assert.ok(
       errorsOf(r2).some((e) => e.includes('IMPORT_NFE_STATUS_INVALIDO')),
       `T2 deveria falhar com IMPORT_NFE_STATUS_INVALIDO, veio: ${r2}`,
     )
-    await T2.exec(`ROLLBACK;`)
+    await Session.execTimed(T2, `ROLLBACK;`, 'T2: ROLLBACK')
     log('  T2 destrava, relê status já CONCLUIDA, recusa com IMPORT_NFE_STATUS_INVALIDO — sem dupla confirmação.')
 
     // Estado final: prova de ausência de duplicação em CADA superfície citada
@@ -312,19 +356,19 @@ async function main() {
     const T1 = open('T1reg')
     const T2 = open('T2conf2')
     for (const s of [T1, T2]) {
-      await s.exec(`SET statement_timeout = '6s'; SET lock_timeout = '5s';`)
-      await asActor(s, fx.gerente)
+      await Session.execTimed(s, `SET statement_timeout = '6s'; SET lock_timeout = '5s';`, `${s.name}: SET timeouts`)
+      await Session.execTimed(s, `SELECT set_config('request.jwt.claim.sub', '${fx.gerente}', false);`, `${s.name}: asActor`)
     }
 
-    await T1.exec(`BEGIN;`)
+    await Session.execTimed(T1, `BEGIN;`, 'T1: BEGIN')
     const regPromise = T1.exec(
       `SELECT public.registrar_conferencia_nfe('${imp.importacaoId}', jsonb_build_array(jsonb_build_object('item_id','${imp.itemId}','quantidade_conferida',10,'divergencia_obs',null)));`,
     )
-    const reg = await regPromise
+    const reg = await Session.raceTimeout(regPromise, 8000, 'T1: registrar_conferencia_nfe')
     assert.ok(!hasError(reg), `T1 registrar_conferencia_nfe deveria suceder: ${reg}`)
     log('  T1 registra a conferência (item vira CONFERIDO) dentro de uma transação aberta, lock ainda retido.')
 
-    await T2.exec(`BEGIN;`)
+    await Session.execTimed(T2, `BEGIN;`, 'T2: BEGIN')
     const confPromise = T2.exec(`SELECT public.confirmar_importacao_nfe('${imp.importacaoId}');`)
     const probe = await Session.pending(confPromise, 900)
     assert.equal(
@@ -334,10 +378,10 @@ async function main() {
     )
     log('  T2 (confirmar) BLOQUEIA esperando T1 commitar a conferência — não pode ler um estado "meio conferido".')
 
-    await T1.exec(`COMMIT;`)
-    const conf = await confPromise
+    await Session.execTimed(T1, `COMMIT;`, 'T1: COMMIT')
+    const conf = await Session.raceTimeout(confPromise, 8000, 'T2 destravar após T1 commitar a conferência')
     assert.ok(!hasError(conf), `T2 deveria suceder após T1 commitar (item já CONFERIDO): ${conf}`)
-    await T2.exec(`COMMIT;`)
+    await Session.execTimed(T2, `COMMIT;`, 'T2: COMMIT')
     log('  T1 commita; T2 destrava, relê o item já CONFERIDO, confirma normalmente — nenhuma leitura de estado intermediário.')
 
     const saldo = Number(firstRow(runOnce(`SELECT quantidade_atual FROM public.estoque WHERE produto_id='${imp.produtoId}' AND loja_id='${fx.loja}';`)))
