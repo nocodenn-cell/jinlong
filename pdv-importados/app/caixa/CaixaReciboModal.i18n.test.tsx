@@ -110,3 +110,52 @@ describe('CaixaReciboModal — barra de ferramentas no idioma da sessão', () =>
     expect(printBtn.title).toBe(m.caixa.modal_recibo_venda_imprimir_janela_hint)
   })
 })
+
+/**
+ * Regressão: o botão de impressão térmica usa `loading` (do design system),
+ * que injeta um `<span className="sr-only">Carregando</span>` sempre em PT
+ * (componente compartilhado, fora do escopo deste hardening). Sem um
+ * `aria-label` explícito e traduzido, o nome acessível durante "conectando"/
+ * "imprimindo" ficava PT+中文 misturado para leitor de tela em 中文.
+ */
+describe('CaixaReciboModal — botão de impressão térmica (WebUSB)', () => {
+  const originalUsb = (globalThis.navigator as unknown as { usb?: unknown }).usb
+
+  beforeEach(() => {
+    Object.defineProperty(globalThis.navigator, 'usb', {
+      value: {},
+      configurable: true,
+    })
+  })
+
+  afterEach(() => {
+    Object.defineProperty(globalThis.navigator, 'usb', {
+      value: originalUsb,
+      configurable: true,
+    })
+  })
+
+  it('中文: aria-label do botão térmico é estável e traduzido mesmo durante "conectando" (loading)', () => {
+    const m = getMessages('zh')
+    const thermalConectando: UseThermalPrinterReturn = { ...thermal, status: 'connecting' }
+    act(() => {
+      root.render(
+        <CaixaReciboModal
+          venda={venda}
+          m={m}
+          onClose={() => {}}
+          onNovaVenda={() => {}}
+          onFinalizarCaixa={() => {}}
+          thermal={thermalConectando}
+        />,
+      )
+    })
+
+    const termicoBtn = Array.from(container.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes(m.caixa.modal_recibo_venda_conectando),
+    ) as HTMLButtonElement
+    expect(termicoBtn.getAttribute('aria-label')).toBe(m.caixa.modal_recibo_venda_imprimir_termica)
+    // nunca deve conter o "Carregando" em PT do design system como parte do nome acessível anunciado
+    expect(termicoBtn.getAttribute('aria-label')).not.toContain('Carregando')
+  })
+})

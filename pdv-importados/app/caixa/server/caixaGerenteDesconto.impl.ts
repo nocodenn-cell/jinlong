@@ -47,12 +47,16 @@ export async function validarGerenteDescontoImpl(input: {
       const code = typeof payload.error === 'string' ? payload.error : ''
       const getErrorMessage = (code: string | null, status: number, idioma?: string) => {
         if (code === 'ERRO_PERSISTENCIA_TOKEN') {
-          return 'Não foi possível registrar o desconto no servidor. Tente novamente em instantes.'
+          return idioma === 'zh'
+            ? '无法在服务器上登记折扣，请稍后再试。'
+            : 'Não foi possível registrar o desconto no servidor. Tente novamente em instantes.'
         }
         if (code) {
           return mensagemErroParaUsuario(code, idioma)
         }
-        return `Não foi possível validar o gerente (servidor respondeu com código ${status}). Verifique a internet e tente de novo.`
+        return idioma === 'zh'
+          ? `无法验证经理身份（服务器返回状态码 ${status}）。请检查网络后重试。`
+          : `Não foi possível validar o gerente (servidor respondeu com código ${status}). Verifique a internet e tente de novo.`
       }
 
       const error = getErrorMessage(code, response.status, await idiomaOperadorParaErro())

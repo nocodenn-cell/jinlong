@@ -191,6 +191,7 @@ export function CaixaReciboModal({
                 disabled={thermal.status === "connecting" || thermal.status === "printing"}
                 loading={thermal.status === "connecting" || thermal.status === "printing"}
                 title={m.caixa.modal_recibo_venda_imprimir_termica_hint}
+                aria-label={m.caixa.modal_recibo_venda_imprimir_termica}
               >
                 {thermal.status === "connecting" ? m.caixa.modal_recibo_venda_conectando :
                  thermal.status === "printing"   ? m.caixa.modal_recibo_venda_imprimindo :

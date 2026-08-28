@@ -241,7 +241,10 @@ export async function finalizarVendaCaixaImpl(
       return { ok: false, error: caixaErroOperador(caixaAbertoErr.message, await idiomaOperadorParaErro()) }
     }
     if (!caixaExistente) {
-      return { ok: false, error: 'Caixa fechado. Abra o caixa antes de finalizar a venda.' }
+      return {
+        ok: false,
+        error: caixaErroOperador('caixa fechado ao finalizar venda', await idiomaOperadorParaErro()),
+      }
     }
 
     const caixaId = caixaExistente.id
