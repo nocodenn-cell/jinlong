@@ -26,7 +26,7 @@ Regra de leitura:
 | `documentos_fiscais_eventos` | SELECT | não | todas da loja | todas da loja | todas da loja | `doc_fiscal_eventos_gerente_select` |
 | `contas_receber` | SELECT | não | todas da loja | todas da loja | todas da loja | `contas_receber_gerente` |
 | `v_estoque_baixo` | SELECT | mesma loja | mesma loja | mesma loja + macro | mesma loja | depende de `security_invoker` + RLS base |
-| `RPC: ajustar_estoque_manual` | EXECUTE | não | sim | sim | não | checagem explícita `GERENTE`/`DONO` na função |
+| `RPC: ajustar_estoque_manual` | EXECUTE | não | sim | sim | sim | checagem explícita `GERENTE`/`DONO`/`ADMIN` na função (migração 289, confirmado ao vivo em produção 2026-08-28 — coluna ADMIN corrigida de "não" para "sim"; se a intenção era mesmo excluir ADMIN, é **DECISÃO DO PRODUTO NECESSÁRIA**, não drift de doc) |
 | `RPC: aprovar_movimentacao` | EXECUTE | não | sim | sim | sim | sangria acima do limite, fluxo pendente |
 | `RPC: calcular_valor_sistema_dinheiro_caixa` | EXECUTE | sim (uso esperado: caixa do operador) | sim | sim | sim | `SECURITY DEFINER`; reforço de perfil recomendável no app |
 | `RPC: cancelar_movimentacao` | EXECUTE | sim (própria pendente) | sim | sim | sim | operador dono do lançamento ou perfil gerencial |
