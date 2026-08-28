@@ -12,6 +12,7 @@ import type { AppLocale } from '@shared-core/src/i18n'
 import { ROUTES } from '@shared-core/navigation/routes'
 import { destinoPosLoginPorPerfil } from '@/lib/auth/painelGerencial'
 import { isContaDesativada } from '@/core/auth/contaUsuario'
+import { fmtTemplate } from '@/i18n/fmtTemplate'
 
 /** Evita open redirect: só `/gerente...` ou `/caixa...`. */
 function destinoAposLogin(nextRaw: string | null, padraoPerfil: string): string {
@@ -54,10 +55,7 @@ export function LoginForm({ messages: m, locale }: Props) {
       try {
         supabase = createClient()
       } catch (cfgErr) {
-        const msg =
-          cfgErr instanceof Error
-            ? cfgErr.message
-            : 'Configure o Supabase no arquivo .env.local na pasta do projeto e reinicie o servidor (npm run dev).'
+        const msg = cfgErr instanceof Error ? cfgErr.message : L.esqueci_erro_config
         setErro(msg)
         return
       }
@@ -69,17 +67,13 @@ export function LoginForm({ messages: m, locale }: Props) {
           password: senha,
         })
         authError = res.error
-      } catch (netErr) {
-        const hint =
-          netErr instanceof TypeError && netErr.message === 'Failed to fetch'
-            ? ' Não foi possível contatar o Supabase (rede, URL em NEXT_PUBLIC_SUPABASE_URL ou extensão do navegador).'
-            : ''
-        setErro(`Falha de conexão com o servidor de autenticação.${hint}`)
+      } catch {
+        setErro(L.esqueci_erro_rede)
         return
       }
 
       if (authError) {
-        setErro('Email ou senha incorretos')
+        setErro(L.erro_credenciais)
         return
       }
 
@@ -88,7 +82,7 @@ export function LoginForm({ messages: m, locale }: Props) {
       } = await supabase.auth.getUser()
 
       if (!user) {
-        setErro('Não foi possível confirmar seu login. Atualize a página e tente novamente.')
+        setErro(L.erro_confirmacao)
         return
       }
 
@@ -112,32 +106,24 @@ export function LoginForm({ messages: m, locale }: Props) {
           process.env.NODE_ENV === 'development' && (perfilErr.message || code)
             ? ` Detalhe (dev): ${[perfilErr.message, code].filter(Boolean).join(' — ')}`
             : ''
-        setErro(
-          'Não foi possível carregar seu perfil no sistema. Se o problema continuar, avise o suporte (tabela de usuários).' +
-            ' Erro 500 costuma indicar falha no banco (migrações, RLS ou indisponibilidade) — veja os logs do projeto no Supabase.' +
-            hintDev,
-        )
+        setErro(L.erro_perfil + hintDev)
         return
       }
 
       if (!u) {
-        setErro(
-          'Sua conta de login existe, mas ainda não está vinculada ao cadastro da loja. Peça ao administrador para criar seu usuário no painel.',
-        )
+        setErro(L.erro_conta_nao_vinculada)
         return
       }
 
       if (isContaDesativada(u)) {
         await supabase.auth.signOut()
-        setErro('Sua conta está desativada. Fale com o administrador da loja para reativar o acesso.')
+        setErro(L.erro_conta_desativada)
         return
       }
 
       if (!u.loja_id) {
         await supabase.auth.signOut()
-        setErro(
-          'Sua conta ainda não está vinculada a uma loja. Peça ao administrador para concluir o cadastro antes de acessar.',
-        )
+        setErro(L.erro_sem_loja)
         return
       }
 
@@ -153,8 +139,8 @@ export function LoginForm({ messages: m, locale }: Props) {
       console.error('[login.form.excecao]', unexpected)
       setErro(
         unexpected instanceof Error
-          ? `Falha inesperada no login: ${unexpected.message}`
-          : 'Falha inesperada no login. Tente novamente.',
+          ? fmtTemplate(L.erro_inesperado_detalhe, { detalhe: unexpected.message })
+          : L.erro_inesperado,
       )
     } finally {
       setLoading(false)

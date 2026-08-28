@@ -168,7 +168,7 @@ export function CaixaReciboModal({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Recibo da venda"
+      aria-label={m.caixa.modal_recibo_venda_titulo}
       data-testid="caixa-recibo-modal"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
@@ -176,7 +176,7 @@ export function CaixaReciboModal({
       <div className="flex max-h-[90dvh] w-full max-w-sm flex-col overflow-hidden rounded-xl border border-border bg-card shadow-xl">
         {/* Toolbar */}
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <span className="text-body font-semibold text-fg">Recibo da venda</span>
+          <span className="text-body font-semibold text-fg">{m.caixa.modal_recibo_venda_titulo}</span>
           <div className="flex gap-2">
             {supportsWebUSB ? (
               <Button
@@ -190,12 +190,11 @@ export function CaixaReciboModal({
                 onClick={() => { void handleThermalPrint().catch(() => { }) }}
                 disabled={thermal.status === "connecting" || thermal.status === "printing"}
                 loading={thermal.status === "connecting" || thermal.status === "printing"}
-                aria-label="Imprimir (térmica direta)"
-                title="Imprime diretamente na impressora térmica (sem confirmação)"
+                title={m.caixa.modal_recibo_venda_imprimir_termica_hint}
               >
-                {thermal.status === "connecting" ? "Conectando…" :
-                 thermal.status === "printing"   ? "Imprimindo…" :
-                 "Imprimir (térmica)"}
+                {thermal.status === "connecting" ? m.caixa.modal_recibo_venda_conectando :
+                 thermal.status === "printing"   ? m.caixa.modal_recibo_venda_imprimindo :
+                 m.caixa.modal_recibo_venda_imprimir_termica}
               </Button>
             ) : (
               <Button
@@ -203,10 +202,9 @@ export function CaixaReciboModal({
                 size="sm"
                 variant="primary"
                 onClick={handlePrint}
-                aria-label="Imprimir (janela)"
-                title="Imprime usando a janela do navegador (clique em OK)"
+                title={m.caixa.modal_recibo_venda_imprimir_janela_hint}
               >
-                Imprimir
+                {m.caixa.btn_imprimir_comprovante}
               </Button>
             )}
             <Button
@@ -214,10 +212,9 @@ export function CaixaReciboModal({
               size="sm"
               variant="secondary"
               onClick={onClose}
-              aria-label="Fechar recibo"
               data-testid="caixa-recibo-fechar"
             >
-              Fechar
+              {m.caixa.btn_fechar_comprovante}
             </Button>
           </div>
         </div>

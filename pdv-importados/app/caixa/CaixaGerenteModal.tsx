@@ -116,15 +116,15 @@ export function CaixaGerenteModal({
     setErroLocal(null)
     // NAO_ESPECIFICADO é o placeholder ("Selecione um motivo...") — exige escolha real (auditabilidade).
     if (!motivo || motivo === 'NAO_ESPECIFICADO') {
-      setErroLocal("Motivo é obrigatório")
+      setErroLocal(m.caixa.modal_gerente_motivo_obrigatorio)
       return
     }
     if (motivo === 'OUTROS' && !motivoDescricao.trim()) {
-      setErroLocal("Descrição é obrigatória quando motivo é 'Outros'")
+      setErroLocal(m.caixa.modal_gerente_motivo_desc_obrigatoria)
       return
     }
     setPasso("percent")
-  }, [motivo, motivoDescricao])
+  }, [motivo, motivoDescricao, m.caixa.modal_gerente_motivo_obrigatorio, m.caixa.modal_gerente_motivo_desc_obrigatoria])
 
   const handleAplicarPercent = useCallback(() => {
     setErroLocal(null)
@@ -274,8 +274,12 @@ export function CaixaGerenteModal({
           <div className="space-y-4">
             <Field
               id="gerente-motivo"
-              label="Motivo do desconto"
-              error={!motivo || motivo === 'NAO_ESPECIFICADO' ? "Selecione um motivo para o desconto" : erroLocal || undefined}
+              label={m.caixa.modal_gerente_motivo_label}
+              error={
+                !motivo || motivo === 'NAO_ESPECIFICADO'
+                  ? m.caixa.modal_gerente_motivo_selecione_erro
+                  : erroLocal || undefined
+              }
               required
             >
               <select
@@ -286,27 +290,31 @@ export function CaixaGerenteModal({
                 disabled={validando}
                 className="fp-control"
               >
-                <option value="NAO_ESPECIFICADO">Selecione um motivo...</option>
-                <option value="ERRO_DIGITACAO">Erro de digitação</option>
-                <option value="NEGOCIACAO">Negociação com cliente</option>
-                <option value="CLIENTE_PREFERENCIAL">Cliente preferencial</option>
-                <option value="DANO_PRODUTO">Produto com dano</option>
-                <option value="AUTORIZACAO_COMERCIAL">Autorização comercial</option>
-                <option value="OUTROS">Outros (especificar)</option>
+                <option value="NAO_ESPECIFICADO">{m.caixa.modal_gerente_motivo_placeholder_select}</option>
+                <option value="ERRO_DIGITACAO">{m.caixa.modal_gerente_motivo_erro_digitacao}</option>
+                <option value="NEGOCIACAO">{m.caixa.modal_gerente_motivo_negociacao}</option>
+                <option value="CLIENTE_PREFERENCIAL">{m.caixa.modal_gerente_motivo_cliente_preferencial}</option>
+                <option value="DANO_PRODUTO">{m.caixa.modal_gerente_motivo_dano_produto}</option>
+                <option value="AUTORIZACAO_COMERCIAL">{m.caixa.modal_gerente_motivo_autorizacao_comercial}</option>
+                <option value="OUTROS">{m.caixa.modal_gerente_motivo_outros}</option>
               </select>
             </Field>
             {motivo === 'OUTROS' && (
               <Field
                 id="gerente-motivo-desc"
-                label="Descrição do motivo"
-                error={motivo === 'OUTROS' && !motivoDescricao.trim() ? "Descrição obrigatória quando motivo é 'Outros'" : undefined}
+                label={m.caixa.modal_gerente_motivo_desc_label}
+                error={
+                  motivo === 'OUTROS' && !motivoDescricao.trim()
+                    ? m.caixa.modal_gerente_motivo_desc_erro
+                    : undefined
+                }
                 required={motivo === 'OUTROS'}
               >
                 <textarea
                   data-testid="motivo-descricao"
                   value={motivoDescricao}
                   onChange={(e) => setMotivoDescricao(e.target.value)}
-                  placeholder="Descreva o motivo específico..."
+                  placeholder={m.caixa.modal_gerente_motivo_desc_placeholder}
                   disabled={validando}
                   maxLength={500}
                   rows={3}
