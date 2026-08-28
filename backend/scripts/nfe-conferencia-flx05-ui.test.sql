@@ -39,16 +39,20 @@ BEGIN
 
   -- Produto pré-existente com custo desatualizado — prova que
   -- confirmar_importacao_nfe atualiza preco_custo de item VINCULADO.
+  -- preco_varejo=300.00 é deliberadamente bem acima do custo inicial (99.99)
+  -- E do custo pós-confirmação (150.00, ver passo 4): trg_fn_produtos_margem
+  -- (migrations 124/125) rejeita qualquer UPDATE que deixe preco_varejo <
+  -- preco_custo, então o valor precisa sobreviver às DUAS fases.
   INSERT INTO public.produtos (
     id, codigo_barras, nome, categoria_id, preco_varejo, preco_custo,
     origem, tem_nf, ativo, status_publicacao, loja_id
   )
   VALUES (
     v_produto_ex, '7899999990099', 'FLX05 Produto Existente', v_categoria,
-    50.00, 99.99, 'brasil_nf', true, true, 'PUBLICADO', v_loja
+    300.00, 99.99, 'brasil_nf', true, true, 'PUBLICADO', v_loja
   )
   ON CONFLICT (id) DO UPDATE SET
-    preco_custo = 99.99, ativo = true, status_publicacao = 'PUBLICADO', loja_id = EXCLUDED.loja_id;
+    preco_varejo = 300.00, preco_custo = 99.99, ativo = true, status_publicacao = 'PUBLICADO', loja_id = EXCLUDED.loja_id;
 
   -- Zera saldo de estoque do produto existente para a asserção de crédito ser exata.
   DELETE FROM public.estoque WHERE produto_id = v_produto_ex AND loja_id = v_loja;
