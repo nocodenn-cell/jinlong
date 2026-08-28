@@ -303,21 +303,37 @@ $function$;
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- confirmar_remessa_entrada — GERENTE restrito à loja da própria remessa
+--
+-- CORREÇÃO DE BASE (achada pelo CI desta própria fase, não uma nova auditoria):
+-- a leitura ao vivo em produção usada para redigir a primeira versão desta
+-- migration refletia uma versão PRÉ-"Onda B" de confirmar_remessa_entrada
+-- (exigia status EM_CONFERENCIA, erro REMESSA_STATUS_INVALIDO para "não
+-- encontrada"). A versão autoritativa no repositório é
+-- 20260801120000_recebimento_conferencia_explicita.sql — "Onda B": exige
+-- status CONFERIDO/DIVERGENTE (conferência já registrada, sem itens
+-- pendentes), erro RECEBIMENTO_NAO_ENCONTRADO para remessa inexistente, dá
+-- entrada na quantidade CONTADA (sem COALESCE com a esperada). Produção
+-- está com essa função desatualizada em relação ao repositório — drift
+-- pré-existente, não introduzido nesta sessão (só descoberto por ela).
+-- Corrigido aqui para partir do corpo correto (Onda B) + a guarda de loja
+-- desta fase — não da versão stale que só existia ao vivo em produção.
 -- ═══════════════════════════════════════════════════════════════════════════
 
 CREATE OR REPLACE FUNCTION public.confirmar_remessa_entrada(p_remessa_id uuid)
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path TO 'public'
-AS $function$
+SET search_path = public
+AS $$
 DECLARE
   v_uid uuid := auth.uid();
   v_perfil text;
   v_loja_usuario uuid;
-  v_loja_remessa uuid;
   v_it record;
   v_qtd numeric;
+  v_status text;
+  v_loja_remessa uuid;
+  v_pendentes integer;
   v_tipo text := 'ENTRADA_REMessa_LOJA';
 BEGIN
   IF v_uid IS NULL THEN
@@ -332,12 +348,13 @@ BEGIN
     RAISE EXCEPTION 'REMESSA_PERFIL';
   END IF;
 
-  SELECT rm0.loja_id INTO v_loja_remessa
-    FROM public.remessas rm0
-   WHERE rm0.id = p_remessa_id AND rm0.status = 'EM_CONFERENCIA';
+  SELECT rm.status, rm.loja_id INTO v_status, v_loja_remessa
+  FROM public.remessas rm
+  WHERE rm.id = p_remessa_id
+  FOR UPDATE;
 
-  IF v_loja_remessa IS NULL THEN
-    RAISE EXCEPTION 'REMESSA_STATUS_INVALIDO';
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'RECEBIMENTO_NAO_ENCONTRADO';
   END IF;
 
   -- Fase 3 do plano de remediação: GERENTE só confirma remessa da própria
@@ -346,9 +363,24 @@ BEGIN
     RAISE EXCEPTION 'REMESSA_LOJA_INVALIDA';
   END IF;
 
+  -- Só entra estoque quem passou pela conferência. Confirmar direto de
+  -- EM_CONFERENCIA era o buraco que a Onda B fecha.
+  IF v_status NOT IN ('CONFERIDO', 'DIVERGENTE') THEN
+    RAISE EXCEPTION 'REMESSA_STATUS_INVALIDO';
+  END IF;
+
+  SELECT COUNT(*) INTO v_pendentes
+  FROM public.remessa_itens i
+  WHERE i.remessa_id = p_remessa_id
+    AND i.quantidade_conferida IS NULL;
+
+  IF v_pendentes > 0 THEN
+    RAISE EXCEPTION 'RECEBIMENTO_CONFERENCIA_PENDENTE';
+  END IF;
+
   FOR v_it IN
-    SELECT i.produto_id,
-           COALESCE(i.quantidade_conferida, i.quantidade_esperada) AS qtd
+    -- Sem COALESCE: entra no estoque a quantidade CONTADA, nunca a esperada.
+    SELECT i.produto_id, i.quantidade_conferida AS qtd
     FROM public.remessa_itens i
     WHERE i.remessa_id = p_remessa_id
   LOOP
@@ -384,7 +416,16 @@ BEGIN
   SET status = 'CONCLUIDA', finalized_at = now()
   WHERE id = p_remessa_id;
 END;
-$function$;
+$$;
+
+REVOKE ALL ON FUNCTION public.confirmar_remessa_entrada(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.confirmar_remessa_entrada(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.confirmar_remessa_entrada(uuid) TO service_role;
+
+COMMENT ON FUNCTION public.confirmar_remessa_entrada IS
+  'Onda B — único ponto que move saldo no recebimento. Exige status CONFERIDO ou DIVERGENTE e '
+  'todos os itens contados. Dá entrada na quantidade CONTADA (sem COALESCE com a esperada). '
+  'Fase 3 do plano de remediação: GERENTE restrito à loja da remessa; DONO/ADMIN sem restrição.';
 
 DO $verify$
 BEGIN

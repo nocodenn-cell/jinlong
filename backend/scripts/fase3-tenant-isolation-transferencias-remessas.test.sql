@@ -150,7 +150,10 @@ END
 $neg_entre_lojas_legado$;
 
 -- ═══════════════════════════════════════════════════════════════════════════
--- Remessa: cria 2 remessas EM_CONFERENCIA (loja B) para os testes de confirmar_remessa_entrada
+-- Remessa: cria 2 remessas CONFERIDO (loja B) para os testes de
+-- confirmar_remessa_entrada. Onda B (20260801120000_recebimento_
+-- conferencia_explicita.sql) exige status CONFERIDO/DIVERGENTE e todos os
+-- itens já contados — EM_CONFERENCIA não é mais aceito diretamente.
 -- ═══════════════════════════════════════════════════════════════════════════
 
 DO $setup_remessas$
@@ -162,9 +165,9 @@ DECLARE
   v_remessa_2 uuid := 'f0000005-0000-4000-8000-000000000002';
 BEGIN
   INSERT INTO public.remessas (id, loja_id, origem_descricao, status, created_by) VALUES
-    (v_remessa_1, v_loja_b, 'Fase3 remessa 1', 'EM_CONFERENCIA', v_gerente_b),
-    (v_remessa_2, v_loja_b, 'Fase3 remessa 2', 'EM_CONFERENCIA', v_gerente_b)
-  ON CONFLICT (id) DO UPDATE SET status = 'EM_CONFERENCIA';
+    (v_remessa_1, v_loja_b, 'Fase3 remessa 1', 'CONFERIDO', v_gerente_b),
+    (v_remessa_2, v_loja_b, 'Fase3 remessa 2', 'CONFERIDO', v_gerente_b)
+  ON CONFLICT (id) DO UPDATE SET status = 'CONFERIDO';
 
   INSERT INTO public.remessa_itens (remessa_id, produto_id, quantidade_esperada, quantidade_conferida) VALUES
     (v_remessa_1, v_produto, 5, 5),
