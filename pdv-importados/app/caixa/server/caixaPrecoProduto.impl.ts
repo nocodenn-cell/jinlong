@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getUsuarioAtual } from '@/lib/auth/usuarioAtual'
 import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import { mensagemErroDeExcecao, mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
+import { idiomaOperadorParaErro } from '@/app/caixa/server/caixaErroOperador'
 import type { CalcularPrecoProdutoCaixaResult } from '@/app/caixa/caixaActionTypes'
 import { quantidadeParaRpcPreco } from '@/lib/format/quantidadeCaixa'
 
@@ -17,7 +18,7 @@ export async function calcularPrecoProdutoCaixaImpl(input: {
   lojaId?: string | null
 }): Promise<CalcularPrecoProdutoCaixaResult> {
   try {
-    const { userId, lojaId: lojaUsuario } = await getUsuarioAtual()
+    const { userId, lojaId: lojaUsuario, idioma } = await getUsuarioAtual()
     if (!userId) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
     const supabase = await createClient()
 
@@ -38,7 +39,7 @@ export async function calcularPrecoProdutoCaixaImpl(input: {
     })
 
     if (error) {
-      return { ok: false, error: mensagemErroParaUsuario(error.message) }
+      return { ok: false, error: mensagemErroParaUsuario(error.message, idioma) }
     }
 
     const row = data as RpcRow | null
@@ -59,7 +60,7 @@ export async function calcularPrecoProdutoCaixaImpl(input: {
   } catch (e) {
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível calcular o preço do produto.'),
+      error: mensagemErroDeExcecao(e, 'Não foi possível calcular o preço do produto.', await idiomaOperadorParaErro()),
     }
   }
 }

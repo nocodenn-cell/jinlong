@@ -188,7 +188,40 @@ describe('helpers de mensagemErroUsuario', () => {
     ).toBe('零售价：零售价必须大于零。')
   })
 
+  // Regressão: as seções novas do hardening de i18n (caixaTurnoResumo,
+  // caixaMovimentacoes, caixaFechamentoServer, caixaGerenteDesconto,
+  // caixaPrecoAutoritativoServer) precisam de entrada em MAPA_SECAO_PT_ZH —
+  // sem isso o prefixo fica em PT mesmo com o corpo da mensagem em 中文.
+  it.each([
+    ['Caixa', '收银台'],
+    ['Vendas', '销售'],
+    ['Pagamentos', '付款'],
+    ['Contas a Receber', '应收账款'],
+    ['Movimentação de caixa', '收银流水'],
+    ['Aprovação de movimentação', '流水审批'],
+    ['Movimentações', '流水记录'],
+    ['Cancelamento de movimentação', '流水取消'],
+    ['Estorno de movimentação', '流水冲正'],
+    ['Limite de sangria', '取款限额'],
+    ['Preço do produto', '商品价格'],
+    ['Valor sistema (caixa)', '系统金额（收银台）'],
+  ])('mensagemErroComSecao traduz a seção "%s" quando idioma=zh (sem prefixo em PT)', (secaoPt, secaoZh) => {
+    const out = mensagemErroComSecao(secaoPt, 'timeout', 'zh')
+    expect(out.startsWith(`${secaoZh}：`)).toBe(true)
+    expect(out.startsWith(`${secaoPt}：`)).toBe(false)
+  })
+
   it('mensagemErroDeExcecao usa fallback quando não recebe Error', () => {
     expect(mensagemErroDeExcecao(null, 'Falha genérica.')).toBe('Falha genérica.')
+  })
+
+  it('mensagemErroDeExcecao preserva o fallback em PT quando idioma é omitido (compat)', () => {
+    expect(mensagemErroDeExcecao(null, 'Falha genérica.', undefined)).toBe('Falha genérica.')
+  })
+
+  it('mensagemErroDeExcecao não vaza PT no fallback quando idioma=zh e a exceção não é Error', () => {
+    const out = mensagemErroDeExcecao('string-nao-error', 'Falha genérica em PT.', 'zh')
+    expect(out).not.toBe('Falha genérica em PT.')
+    expect(out).toBe('当前无法完成该操作。请稍后再试。')
   })
 })

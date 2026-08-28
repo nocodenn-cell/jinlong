@@ -6,6 +6,7 @@ import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import { DEFAULT_PRICING_CONTEXT } from '@shared/pricing/types'
 import { variantesChaveLeitura } from '@/core/caixa/variantesChaveLeitura'
 import { mensagemErroDeExcecao, mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
+import { idiomaOperadorParaErro } from '@/app/caixa/server/caixaErroOperador'
 import {
   aplicarFiltroProdutoVendavel,
   filtrarSomenteProdutosVendaveis,
@@ -50,7 +51,7 @@ function rowVendavel(row: ProdutoRowCaixa): boolean {
 
 export async function carregarRegrasPrecoCaixaImpl(): Promise<CarregarRegrasResult> {
   try {
-    const { userId } = await getUsuarioAtual()
+    const { userId, idioma } = await getUsuarioAtual()
     if (!userId) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
     const supabase = await createClient()
 
@@ -66,7 +67,7 @@ export async function carregarRegrasPrecoCaixaImpl(): Promise<CarregarRegrasResu
     ])
 
     if (error) {
-      return { ok: false, error: mensagemErroParaUsuario(error.message) }
+      return { ok: false, error: mensagemErroParaUsuario(error.message, idioma) }
     }
 
     if (!cfgRes.ok) {
@@ -85,14 +86,14 @@ export async function carregarRegrasPrecoCaixaImpl(): Promise<CarregarRegrasResu
   } catch (e) {
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível carregar as regras de preço.'),
+      error: mensagemErroDeExcecao(e, 'Não foi possível carregar as regras de preço.', await idiomaOperadorParaErro()),
     }
   }
 }
 
 export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarProdutoResult> {
   try {
-    const { userId, lojaId: lojaUsuario } = await getUsuarioAtual()
+    const { userId, lojaId: lojaUsuario, idioma } = await getUsuarioAtual()
     if (!userId) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
     const supabase = await createClient()
 
@@ -109,7 +110,7 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
         .in('codigo_barras', variantes)
         .limit(10)
 
-      if (errCodigo) return { ok: false, error: mensagemErroParaUsuario(errCodigo.message) }
+      if (errCodigo) return { ok: false, error: mensagemErroParaUsuario(errCodigo.message, idioma) }
       const listaCod = filtrarSomenteProdutosVendaveis((porCodigoLista ?? []) as ProdutoRowCaixa[])
       if (listaCod.length > 0) {
         const ids = new Set(listaCod.map((r) => r.id))
@@ -145,7 +146,7 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
       .ilike('nome', `%${frag}%`)
       .limit(3)
 
-    if (errNome) return { ok: false, error: mensagemErroParaUsuario(errNome.message) }
+    if (errNome) return { ok: false, error: mensagemErroParaUsuario(errNome.message, idioma) }
     let lista = filtrarSomenteProdutosVendaveis((porNome ?? []) as ProdutoRowCaixa[])
 
     if (lista.length === 0) {
@@ -154,7 +155,7 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
         .select('id')
         .ilike('nome', `%${frag}%`)
         .limit(25)
-      if (errCat) return { ok: false, error: mensagemErroParaUsuario(errCat.message) }
+      if (errCat) return { ok: false, error: mensagemErroParaUsuario(errCat.message, idioma) }
       const catIds = (cats ?? []).map((c) => c.id)
       if (catIds.length > 0) {
         const { data: porCat, error: errPorCat } = await aplicarFiltroProdutoVendavel(
@@ -162,7 +163,7 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
         )
           .in('categoria_id', catIds)
           .limit(3)
-        if (errPorCat) return { ok: false, error: mensagemErroParaUsuario(errPorCat.message) }
+        if (errPorCat) return { ok: false, error: mensagemErroParaUsuario(errPorCat.message, idioma) }
         lista = filtrarSomenteProdutosVendaveis((porCat ?? []) as ProdutoRowCaixa[])
       }
     }
@@ -189,7 +190,7 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
   } catch (e) {
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível buscar o produto. Tente de novo.'),
+      error: mensagemErroDeExcecao(e, 'Não foi possível buscar o produto. Tente de novo.', await idiomaOperadorParaErro()),
     }
   }
 }
@@ -236,7 +237,7 @@ export async function buscarProdutoComPrecoCaixaImpl(
   } catch (e) {
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível buscar o produto. Tente de novo.'),
+      error: mensagemErroDeExcecao(e, 'Não foi possível buscar o produto. Tente de novo.', await idiomaOperadorParaErro()),
     }
   }
 }

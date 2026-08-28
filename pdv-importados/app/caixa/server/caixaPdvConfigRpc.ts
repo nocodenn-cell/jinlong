@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
+import { idiomaOperadorParaErro } from '@/app/caixa/server/caixaErroOperador'
 
 type PdvConfigCaixaWebRow = {
   quantidade_minima_atacado_padrao: number
@@ -13,7 +14,7 @@ export async function fetchPdvConfigParaCaixaWeb(
   { ok: true; row: PdvConfigCaixaWebRow | null } | { ok: false; error: string }
 > {
   const { data, error } = await supabase.rpc('pdv_config_para_caixa_web')
-  if (error) return { ok: false, error: mensagemErroParaUsuario(error.message) }
+  if (error) return { ok: false, error: mensagemErroParaUsuario(error.message, await idiomaOperadorParaErro()) }
   const rows = data as PdvConfigCaixaWebRow[] | null | undefined
   const row = rows?.[0] ?? null
   return { ok: true, row }

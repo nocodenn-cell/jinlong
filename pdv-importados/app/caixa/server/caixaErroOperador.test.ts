@@ -41,6 +41,19 @@ describe('caixaErroOperador', () => {
     )
   })
 
+  // Regressão: caixaVendas.impl.ts (guarda de caixa fechado ao finalizar
+  // venda, quando a query de "caixa aberto" não retorna linha, sem erro de
+  // banco) roteia por este texto para reaproveitar a tradução já existente
+  // em vez de manter um literal PT hardcoded fora do pipeline.
+  it('mapeia caixa fechado ao finalizar venda (PT e 中文)', () => {
+    expect(caixaErroOperador('caixa fechado ao finalizar venda')).toBe(
+      'Caixa fechado. Abra o caixa antes de finalizar a venda.',
+    )
+    expect(caixaErroOperador('caixa fechado ao finalizar venda', 'zh')).toBe(
+      '收银台已关闭。请先开启收银台再完成销售。',
+    )
+  })
+
   it('mapeia BR-01 limite de crédito (excedido, token obrigatório, inválido e já usado) para a mesma mensagem acionável', () => {
     const esperado = 'Venda excede o limite de crédito do cliente — autorização do gerente necessária.'
     expect(caixaErroOperador('FINALIZAR_VENDA_CANONICA_LIMITE_CREDITO_EXCEDIDO:100/50')).toBe(esperado)

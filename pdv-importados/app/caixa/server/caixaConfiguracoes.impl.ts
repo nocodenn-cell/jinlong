@@ -3,6 +3,7 @@ import {
   mensagemErroDeExcecao,
 } from '@/lib/errors/mensagemErroUsuario'
 import { obterMapaConfiguracoesParaCaixaWeb } from '@/lib/caixa/configuracoesGeraisCaixa'
+import { idiomaOperadorParaErro } from '@/app/caixa/server/caixaErroOperador'
 
 export type ObterConfiguracoesCaixaWebResult =
   | { ok: true; mapa: Record<string, string> }
@@ -21,7 +22,7 @@ export async function obterConfiguracoesParaCaixaWebImpl(): Promise<ObterConfigu
   } catch (e) {
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível carregar configurações do caixa.'),
+      error: mensagemErroDeExcecao(e, 'Não foi possível carregar configurações do caixa.', await idiomaOperadorParaErro()),
     }
   }
 }

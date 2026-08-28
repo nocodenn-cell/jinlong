@@ -54,6 +54,7 @@ const MAPA_NEGOCIO_PT_ZH = new Map<string, string>([
 const MAPA_SECAO_PT_ZH: Record<string, string> = {
   'preço varejo': '零售价',
   'preço de custo': '成本价',
+  'preço do produto': '商品价格',
   produto: '商品',
   produtos: '商品',
   'cadastro de produto': '商品登记',
@@ -62,6 +63,17 @@ const MAPA_SECAO_PT_ZH: Record<string, string> = {
   'alterar situação': '更改状态',
   'bulk ativo': '批量启用/停用',
   'bulk categoria': '批量分类',
+  caixa: '收银台',
+  vendas: '销售',
+  pagamentos: '付款',
+  'contas a receber': '应收账款',
+  'movimentação de caixa': '收银流水',
+  'aprovação de movimentação': '流水审批',
+  movimentações: '流水记录',
+  'cancelamento de movimentação': '流水取消',
+  'estorno de movimentação': '流水冲正',
+  'limite de sangria': '取款限额',
+  'valor sistema (caixa)': '系统金额（收银台）',
 }
 
 function t(idioma: IdiomaErro, pt: string, zh: string): string {
@@ -395,9 +407,15 @@ export function mensagemErroValidacaoZod(issuesJuntas: string, idiomaInput?: str
 }
 
 /** Erros em `catch`: mensagem traduzida ou fallback (sem logging — use wrapper no Next se precisar). */
-export function mensagemErroDeExcecao(e: unknown, fallbackEmPortugues: string): string {
+export function mensagemErroDeExcecao(
+  e: unknown,
+  fallbackEmPortugues: string,
+  idiomaInput?: string,
+): string {
   if (e instanceof Error && e.message.trim()) {
-    return mensagemErroParaUsuario(e.message)
+    return mensagemErroParaUsuario(e.message, idiomaInput)
   }
-  return fallbackEmPortugues
+  // `fallbackEmPortugues` é texto fixo por chamador (não há o que traduzir em
+  // runtime) — em 中文 cai no genérico já existente em vez de vazar PT.
+  return idiomaSeguro(idiomaInput) === 'zh' ? MSG_PADRAO.zh : fallbackEmPortugues
 }

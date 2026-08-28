@@ -2,6 +2,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { mensagemErroComSecao, mensagemErroDeExcecao } from '@/lib/errors/mensagemErroUsuario'
+import { idiomaOperadorParaErro } from '@/app/caixa/server/caixaErroOperador'
 import type {
   AcaoMovimentacaoCaixaResult,
   AutorizarMovimentacaoGerenteResult,
@@ -62,7 +63,7 @@ export async function registrarMovimentacaoImpl(
     if (!result.ok) {
       return {
         ok: false,
-        error: mensagemErroComSecao('Movimentação de caixa', result.error),
+        error: mensagemErroComSecao('Movimentação de caixa', result.error, await idiomaOperadorParaErro()),
       }
     }
 
@@ -77,7 +78,7 @@ export async function registrarMovimentacaoImpl(
   } catch (e) {
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível registrar a movimentação de caixa.'),
+      error: mensagemErroDeExcecao(e, 'Não foi possível registrar a movimentação de caixa.', await idiomaOperadorParaErro()),
     }
   }
 }
@@ -125,7 +126,9 @@ export async function autorizarMovimentacaoGerenteImpl(
       p_autorizacao_token: validacao.token,
     })
 
-    if (error) return { ok: false, error: mensagemErroComSecao('Aprovação de movimentação', error.message) }
+    if (error) {
+      return { ok: false, error: mensagemErroComSecao('Aprovação de movimentação', error.message, await idiomaOperadorParaErro()) }
+    }
     const row = firstRpcMovimentacaoRow(data)
     if (!row?.movimentacao_id) {
       return { ok: false, error: 'A aprovação não retornou identificador.' }
@@ -142,7 +145,7 @@ export async function autorizarMovimentacaoGerenteImpl(
   } catch (e) {
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível autorizar a movimentação.'),
+      error: mensagemErroDeExcecao(e, 'Não foi possível autorizar a movimentação.', await idiomaOperadorParaErro()),
     }
   }
 }
@@ -158,13 +161,13 @@ export async function obterMovimentacoesCaixaImpl(caixaId: string): Promise<Obte
 
     const listed = await listMovimentacoesCaixaDto(supabase, caixaId)
     if (!listed.ok) {
-      return { ok: false, error: mensagemErroComSecao('Movimentações', listed.error) }
+      return { ok: false, error: mensagemErroComSecao('Movimentações', listed.error, await idiomaOperadorParaErro()) }
     }
     return { ok: true, itens: listed.itens }
   } catch (e) {
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível carregar as movimentações de caixa.'),
+      error: mensagemErroDeExcecao(e, 'Não foi possível carregar as movimentações de caixa.', await idiomaOperadorParaErro()),
     }
   }
 }
@@ -185,7 +188,9 @@ export async function cancelarMovimentacaoCaixaImpl(
       p_movimentacao_id: movimentacaoId,
       p_motivo_cancelamento: motivoCancelamento?.trim() || null,
     })
-    if (error) return { ok: false, error: mensagemErroComSecao('Cancelamento de movimentação', error.message) }
+    if (error) {
+      return { ok: false, error: mensagemErroComSecao('Cancelamento de movimentação', error.message, await idiomaOperadorParaErro()) }
+    }
 
     const row = firstRpcMovimentacaoRow(data)
     if (!row?.movimentacao_id) return { ok: false, error: 'Cancelamento não retornou identificador.' }
@@ -200,7 +205,7 @@ export async function cancelarMovimentacaoCaixaImpl(
   } catch (e) {
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível cancelar a movimentação.'),
+      error: mensagemErroDeExcecao(e, 'Não foi possível cancelar a movimentação.', await idiomaOperadorParaErro()),
     }
   }
 }
@@ -231,7 +236,9 @@ export async function estornarMovimentacaoCaixaImpl(
       p_terminal_id: null,
       p_operador_id: user.id,
     })
-    if (error) return { ok: false, error: mensagemErroComSecao('Estorno de movimentação', error.message) }
+    if (error) {
+      return { ok: false, error: mensagemErroComSecao('Estorno de movimentação', error.message, await idiomaOperadorParaErro()) }
+    }
 
     const row = firstRpcMovimentacaoRow(data)
     if (!row?.movimentacao_id) return { ok: false, error: 'Estorno não retornou identificador.' }
@@ -247,7 +254,7 @@ export async function estornarMovimentacaoCaixaImpl(
   } catch (e) {
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível estornar a movimentação.'),
+      error: mensagemErroDeExcecao(e, 'Não foi possível estornar a movimentação.', await idiomaOperadorParaErro()),
     }
   }
 }
