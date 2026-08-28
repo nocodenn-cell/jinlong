@@ -520,6 +520,10 @@ BEGIN
 END
 $tenant_negative$;
 
-RAISE NOTICE 'FLX05 UI (PR1) — todos os passos OK: quantidade, custo, estoque, idempotência, erro parcial, auditoria (kardex + contas_pagar), NaN/Infinity e isolamento cross-loja no ponto de mutação verificados.';
+DO $resumo$
+BEGIN
+  RAISE NOTICE 'FLX05 UI (PR1) — todos os passos OK: quantidade, custo, estoque, idempotência, erro parcial, auditoria (kardex + contas_pagar), NaN/Infinity e isolamento cross-loja no ponto de mutação verificados.';
+END
+$resumo$;
 
 ROLLBACK;
