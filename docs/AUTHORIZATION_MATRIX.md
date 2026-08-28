@@ -31,7 +31,7 @@ Regra de leitura:
 | `RPC: calcular_valor_sistema_dinheiro_caixa` | EXECUTE | sim (uso esperado: caixa do operador) | sim | sim | sim | `SECURITY DEFINER`; reforço de perfil recomendável no app |
 | `RPC: cancelar_movimentacao` | EXECUTE | sim (própria pendente) | sim | sim | sim | operador dono do lançamento ou perfil gerencial |
 | `RPC: cancelar_venda_transacional` | EXECUTE | não | sim | sim | sim | apenas `GERENTE`/`DONO`/`ADMIN` na loja do caixa |
-| `RPC: confirmar_remessa_entrada` | EXECUTE | não | sim | sim | sim | `GERENTE`/`DONO`/`ADMIN` (migração 044) |
+| `RPC: confirmar_remessa_entrada` | EXECUTE | não | sim (só loja da remessa) | sim | sim | `GERENTE`/`DONO`/`ADMIN` (migração 044); tenant scope por loja desde a migração 20260828140000 (Fase 3 do plano de remediação) — DONO/ADMIN cross-loja |
 | `RPC: decrementar_estoque_idempotente` | EXECUTE | não | não | não | não | **Legado** (`070` delega a `seguro`; `071` revoga `authenticated`). Apenas **`service_role`** no Postgres; não usar em novos fluxos |
 | `RPC: decrementar_estoque_seguro` | EXECUTE | sim | sim | sim | sim | **`SECURITY DEFINER`; caminho canónico** de baixa (FOR UPDATE + `version`); deriva loja pela venda/caixa; usado pela sync-outbox e pelas RPCs de finalizar venda |
 | `RPC: estornar_movimentacao` | EXECUTE | sim (escopo caixa) | sim | sim | sim | origem aprovada + regras de caixa na função |
@@ -51,7 +51,8 @@ Regra de leitura:
 | `RPC: relatorio_top_produtos_periodo` | EXECUTE | sim (RLS) | sim | sim | sim | sobrecargas `(date,date,int[,tz])` e legado `timestamptz` |
 | `RPC: relatorio_tz_validado` | EXECUTE | sim | sim | sim | sim | normalização de fuso |
 | `RPC: relatorio_vendas_por_dia_periodo` | EXECUTE | sim (RLS) | sim | sim | sim | sobrecargas `(date,date[,tz])` e legado `timestamptz` |
-| `RPC: transferir_estoque_entre_lojas` | EXECUTE | não | sim | sim | sim | `GERENTE`/`DONO`/`ADMIN` (migração 044) |
+| `RPC: transferir_estoque_entre_lojas` | EXECUTE | não | sim (só se participar da loja origem/destino) | sim | sim | `GERENTE`/`DONO`/`ADMIN` (migração 044); tenant scope por loja desde a migração 20260828140000 (Fase 3 do plano de remediação) — DONO/ADMIN cross-loja |
+| `RPC: transferir_estoque_seguro` | EXECUTE | não | sim (só se participar da loja origem/destino) | sim | sim | `SECURITY DEFINER`; caminho canônico do app (`app/gerente/transferencias/actions.ts`) — idempotente, lock determinístico, `p_saldo_esperado`. Tenant scope por loja desde a migração 20260828140000 (Fase 3 do plano de remediação) — DONO/ADMIN cross-loja |
 
 Funções `public` com `GRANT EXECUTE` apenas para `service_role` (fora da matriz de sessão `authenticated` do app): `fiscal_claim_documentos`, `fiscal_marcar_emitido`, `fiscal_marcar_erro`, `fiscal_marcar_erro_normalizado`, `decrementar_estoque_idempotente` (legado; preferir `decrementar_estoque_seguro`). Triggers internos (`tg_*`) não são RPCs de API.
 
