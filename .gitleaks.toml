@@ -17,6 +17,7 @@ paths = [
   # .gitleaksignore, que quebram a cada rebase e deixavam o scan vermelho.
   '''pdv-importados/app/caixa/finalizarVendaValidation\.test\.ts''',
   '''pdv-importados/lib/caixa/resolveVendaIdForFinalize\.test\.ts''',
+  '''backend/scripts/fase4-remessa-idempotencia-payload-hash\.test\.sql''',
 ]
 commits = [
   "3f623524886a0d454d535e4f07a5243fe7f9e1a0",
