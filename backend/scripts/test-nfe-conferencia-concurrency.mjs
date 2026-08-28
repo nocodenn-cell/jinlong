@@ -100,6 +100,24 @@ class Session {
     return p
   }
 
+  /**
+   * Achado da SEGUNDA execução deste harness em CI: um `RAISE EXCEPTION` do
+   * lado do servidor aborta a transação inteira, e o `SELECT` do marcador
+   * (enviado no MESMO lote por exec()) também falha nesse estado — nunca
+   * imprime o texto esperado, e a Promise nunca resolve (hang silencioso,
+   * sem erro nenhum no log). `ROLLBACK TO SAVEPOINT` é uma das poucas
+   * instruções que o Postgres aceita mesmo com a transação já abortada —
+   * recupera o estado antes do marcador, então ele sempre chega. Só usar
+   * para chamadas cujo efeito NÃO precisa sobreviver além desta própria
+   * chamada (o savepoint desfaz qualquer efeito, inclusive de um sucesso
+   * inesperado — o que é o comportamento certo aqui: se a chamada deveria
+   * falhar e não falhou, o teste tem que acusar isso, não persistir o dado).
+   */
+  execAllowError(sql) {
+    const sp = `__sp_${this.name}_${this.seq}__`
+    return this.exec(`SAVEPOINT ${sp};\n${sql.trimEnd()}\nROLLBACK TO SAVEPOINT ${sp};`)
+  }
+
   static async pending(promise, ms) {
     const TIMEOUT = Symbol('timeout')
     const t = new Promise((resolve) => setTimeout(() => resolve(TIMEOUT), ms))
@@ -308,7 +326,11 @@ async function main() {
     log('  T1 executa confirmar_importacao_nfe até o fim (dentro de uma transação aberta, lock ainda retido).')
 
     await Session.execTimed(T2, `BEGIN;`, 'T2: BEGIN')
-    const r2Promise = T2.exec(`SELECT public.confirmar_importacao_nfe('${imp.importacaoId}');`)
+    // execAllowError: esta chamada, quando destravar, DEVE falhar
+    // (IMPORT_NFE_STATUS_INVALIDO) — sem o savepoint, o RAISE EXCEPTION
+    // aborta a transação e o marcador do próprio exec() nunca chega
+    // (achado da 2ª execução deste harness em CI, ver comentário no método).
+    const r2Promise = T2.execAllowError(`SELECT public.confirmar_importacao_nfe('${imp.importacaoId}');`)
     const probe = await Session.pending(r2Promise, 900)
     assert.equal(
       probe.pending,
