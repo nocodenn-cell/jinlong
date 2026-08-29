@@ -539,6 +539,28 @@ jobs:
       # 50, não 35: com WebKit (`mobile-safari-iphone`) a suíte passa de ~29min
       # de testes (#1226) e o step E2E do #1227 foi cancelado ~38min após start
       # — teto curto + pressão de memória matam o job sem artefato.
+      #
+      # Sharding do chromium (sprint de estabilização E2E, 2026-08-29): diagnóstico
+      # de 6 execuções completas mostrou o `next dev` reiniciando por "memory
+      # threshold" 3-4x em TODA execução desta suíte (independente do PR/feature),
+      # nunca uma vez sequer nos ~10-13min do job `e2e-critical`. Causa: esta suíte
+      # inteira (chromium + 2 projetos mobile, ~109 testes) rodava numa ÚNICA
+      # invocação `playwright test`, um único processo `next dev` vivo por 30-53min
+      # acumulando cache de HMR/webpack até estourar o teto — o restart mata
+      # requisições em voo (ECONNRESET/ERR_EMPTY_RESPONSE), derrubando o teste em
+      # andamento naquele instante (3-18 falhas por execução, spec diferente a cada
+      # vez — assinatura de disputa de infra, não de regressão de produto).
+      # `e2e-critical` nunca sofreu isso porque já roda 3 invocações curtas e
+      # sequenciais (scripts/e2e-critical-pipeline.mjs), cada uma com seu próprio
+      # `next dev` de vida curta (reuseExistingServer=false em CI —
+      # playwright.config.ts). Aplicamos o mesmo padrão aqui: shard do projeto
+      # chromium em 4 invocações sequenciais — cada uma sobe e derruba seu próprio
+      # `next dev`, limitando a vida de qualquer processo a ~1/4 da suíte, em vez de
+      # deixar um único processo acumular memória pelos ~45min inteiros. Mobile
+      # (Pixel + iPhone) já é pequeno (3 specs × 2 projetos) e mantém
+      # `dependencies` intacto numa invocação própria. Custo de CI inalterado: mesmo
+      # total de testes, mesma stack Supabase (montada uma vez acima), só
+      # reorganizado em chamadas sequenciais — nenhum job/stack duplicado.
       - name: E2E
         timeout-minutes: 50
         env:
@@ -583,7 +605,27 @@ jobs:
               ;;
           esac
           echo "OK — preflight de ambiente do E2E: variáveis obrigatórias presentes, alvo local confirmado."
-          npm run test:e2e -w pdv-importados
+
+          cd pdv-importados
+          # 4 shards sequenciais do projeto chromium — ver comentário acima do
+          # step. Cada `npx playwright test` é uma invocação isolada: sobe um
+          # `next dev` novo, roda ~1/4 dos specs, derruba o servidor ao final.
+          for shard in 1 2 3 4; do
+            echo "::group::E2E chromium — shard $shard/4"
+            npx playwright test --project=chromium --shard="$shard/4" \
+              --output="test-results/chromium-shard-$shard"
+            echo "::endgroup::"
+          done
+
+          # Mobile (Pixel + iPhone) continua numa única invocação: só 3 specs ×
+          # 2 projetos, e `dependencies: ['mobile-chrome-pixel']` (playwright.config.ts)
+          # exige que os dois projetos sejam resolvidos pelo mesmo agendador do
+          # Playwright — não faz sentido (nem é suportado de forma segura)
+          # fatiar isso em shards separados.
+          echo "::group::E2E mobile (Pixel + iPhone)"
+          npx playwright test --project=mobile-chrome-pixel --project=mobile-safari-iphone \
+            --output="test-results/mobile"
+          echo "::endgroup::"
 
       # Harness: preservar trace.zip / error-context.md quando esta suíte falha —
       # o job `e2e-critical` já fazia upload; este ficava sem, dificultando o diagnóstico.
