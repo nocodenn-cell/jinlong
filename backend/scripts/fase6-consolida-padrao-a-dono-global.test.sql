@@ -167,16 +167,30 @@ DECLARE
   v_visiveis  int;
   v_id_global uuid;
 BEGIN
+  -- RLS não se aplica à sessão de teste por padrão: este script conecta como
+  -- superuser (postgres via psql -U postgres), que tem BYPASSRLS embutido.
+  -- set_config('request.jwt.claim.sub', ...) sozinho (usado nos passos 1-2,
+  -- que testam guards DENTRO de funções SECURITY DEFINER) não basta para
+  -- policies de tabela crua — é preciso também assumir a ROLE authenticated
+  -- de verdade (SET LOCAL ROLE), mesmo padrão já usado em
+  -- fase1-hardening-grants-residuais.test.sql:153-162. Sem isto, TODO INSERT
+  -- abaixo teria sucesso independente da policy, e o teste provaria nada.
+
   -- DONO cria uma faixa GLOBAL (loja_id NULL) para o produto A.
   PERFORM set_config('request.jwt.claim.sub', v_dono::text, true);
+  PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
+  SET LOCAL ROLE authenticated;
   INSERT INTO public.precos_atacado (produto_id, quantidade_minima, preco_unitario, loja_id, ativo)
   VALUES (v_produto_a, 5, 180.00, NULL, true)
   RETURNING id INTO v_id_global;
+  RESET ROLE;
 
   -- GERENTE de A consegue ENXERGAR a faixa global (USING permite leitura).
   PERFORM set_config('request.jwt.claim.sub', v_gerente_a::text, true);
+  SET LOCAL ROLE authenticated;
   SELECT count(*) INTO v_visiveis FROM public.precos_atacado WHERE id = v_id_global;
   IF v_visiveis <> 1 THEN
+    RESET ROLE;
     RAISE EXCEPTION 'FASE6_FALHOU: GERENTE deveria conseguir ENXERGAR a faixa global (USING), viu % linha(s).', v_visiveis;
   END IF;
 
@@ -188,6 +202,7 @@ BEGIN
     v_falhou_cross := true;
   END;
   IF NOT v_falhou_cross THEN
+    RESET ROLE;
     RAISE EXCEPTION 'FASE6_FALHOU (BLOCKER): GERENTE conseguiu criar faixa de precos_atacado para OUTRA loja — RLS sem isolamento.';
   END IF;
 
@@ -200,12 +215,15 @@ BEGIN
     v_falhou_global := true;
   END;
   IF NOT v_falhou_global THEN
+    RESET ROLE;
     RAISE EXCEPTION 'FASE6_FALHOU (BLOCKER): GERENTE conseguiu criar faixa GLOBAL (loja_id NULL) de precos_atacado.';
   END IF;
 
   -- GERENTE de A consegue criar faixa da PRÓPRIA loja.
   INSERT INTO public.precos_atacado (produto_id, quantidade_minima, preco_unitario, loja_id, ativo)
   VALUES (v_produto_a, 20, 150.00, v_loja_a, true);
+
+  RESET ROLE;
 
   PERFORM 1 FROM public.precos_atacado WHERE produto_id = v_produto_a AND loja_id = v_loja_a AND quantidade_minima = 20;
   IF NOT FOUND THEN
