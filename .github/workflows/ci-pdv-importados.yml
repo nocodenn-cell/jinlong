@@ -525,6 +525,36 @@ jobs:
           SEED_OPERADOR_EMAIL: e2e-operador@localhost.test
         run: node pdv-importados/scripts/seed-dev-users.mjs
 
+      # Instrumentação (sprint de estabilização E2E, 2026-08-29): amostra RSS dos
+      # processos node/next, memória total/disponível e contagem de processos a
+      # cada 10s durante o E2E. Objetivo: se um restart por "memory threshold"
+      # acontecer de novo, dá pra responder "qual teste rodava e quanta memória
+      # havia imediatamente antes" sem precisar reconstruir isso a partir de log
+      # do Playwright (como foi feito no diagnóstico desta sprint). Custo
+      # desprezível (um loop leve em background); não altera o resultado do E2E.
+      - name: Iniciar monitor de memória/CPU (diagnóstico E2E)
+        run: |
+          mkdir -p pdv-importados/test-results
+          LOG=pdv-importados/test-results/mem-monitor.log
+          {
+            while true; do
+              ts="$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)"
+              free_line="$(free -m | awk '/^Mem:/ {print "total="$2"MB used="$3"MB free="$4"MB avail="$7"MB"}')"
+              node_count="$(pgrep -c -f 'node' || true)"
+              echo "[$ts] $free_line node_procs=$node_count"
+              # PID + RSS(MB) de cada processo node/next — uma nova PID de
+              # `next-server`/`next dev` entre amostras é evidência direta de restart.
+              ps -eo pid,rss,comm,args --sort=-rss \
+                | grep -E 'node|next-server|next dev' \
+                | grep -v grep \
+                | awk -v ts="$ts" '{rss_mb=$2/1024; printf "  [%s] pid=%s rss=%.0fMB cmd=%s\n", ts, $1, rss_mb, $3}' \
+                | head -6
+              sleep 10
+            done
+          } >> "$LOG" 2>&1 &
+          echo $! > /tmp/mem-monitor.pid
+          echo "Monitor de memória iniciado (PID $(cat /tmp/mem-monitor.pid)) — log em $LOG"
+
       # Contrato de ambiente completo (não copiado do job `e2e-critical`
       # corretamente antes): faltavam SUPABASE_SERVICE_ROLE_KEY, SYNC_ENDPOINT
       # e SYNC_KEY neste step. Sem `SUPABASE_SERVICE_ROLE_KEY`,
@@ -627,8 +657,18 @@ jobs:
             --output="test-results/mobile"
           echo "::endgroup::"
 
+      - name: Parar monitor de memória/CPU (diagnóstico E2E)
+        if: always()
+        run: |
+          if [ -f /tmp/mem-monitor.pid ]; then
+            kill "$(cat /tmp/mem-monitor.pid)" 2>/dev/null || true
+          fi
+
       # Harness: preservar trace.zip / error-context.md quando esta suíte falha —
       # o job `e2e-critical` já fazia upload; este ficava sem, dificultando o diagnóstico.
+      # mem-monitor.log (ver step "Iniciar monitor..." acima) vai junto: correlacionar
+      # timestamp de falha com a amostra de memória mais próxima é o objetivo da
+      # instrumentação da sprint de estabilização E2E.
       - name: Upload Playwright test-results (e2e-playwright)
         if: always()
         timeout-minutes: 3
