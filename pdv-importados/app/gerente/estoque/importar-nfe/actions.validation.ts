@@ -41,3 +41,35 @@ export const ImportNfePayloadSchema = z.object({
 })
 
 export type ImportNfePayloadInput = z.infer<typeof ImportNfePayloadSchema>
+
+/**
+ * FLX-05 — conferência antes de creditar estoque/custo da NF-e.
+ * `item_id` é `importacoes_nfe_itens.id` (obtido via `obterConferenciaImportacaoNfe`).
+ */
+export const ConferenciaNfeItemSchema = z.object({
+  item_id: z.string().uuid(),
+  // .finite() é deliberado, não redundante com .nonnegative(): Postgres numeric
+  // trata NaN/Infinity como maiores que qualquer valor finito em comparação
+  // direta (NaN > 0 é verdadeiro), então um guard só de sinal não barra esses
+  // valores no banco — mesma classe de defeito que a migration D0-03 fechou
+  // para remessas. Barrado aqui, na borda, além do guard espelhado na RPC.
+  quantidade_conferida: z.number().nonnegative().finite(),
+  divergencia_obs: z.string().trim().min(1).nullable(),
+})
+
+export const RegistrarConferenciaNfePayloadSchema = z.object({
+  importacao_id: z.string().uuid(),
+  itens: z.array(ConferenciaNfeItemSchema).min(1),
+})
+
+export type RegistrarConferenciaNfePayloadInput = z.infer<
+  typeof RegistrarConferenciaNfePayloadSchema
+>
+
+export const ConfirmarImportacaoNfePayloadSchema = z.object({
+  importacao_id: z.string().uuid(),
+})
+
+export type ConfirmarImportacaoNfePayloadInput = z.infer<
+  typeof ConfirmarImportacaoNfePayloadSchema
+>

@@ -32,6 +32,9 @@ export {
 export type {
   AdjustInventoryCommand,
   AdjustInventoryResult,
+  ConferenciaNfeItemInput,
+  ConfirmarImportacaoNfeCommand,
+  ConfirmarImportacaoNfeResult,
   ConfirmRemessaCommand,
   ConfirmRemessaResult,
   ImportNfeCommand,
@@ -49,6 +52,8 @@ export type {
   ListMovementsByProductResult,
   RegisterMovementCommand,
   RegisterMovementResult,
+  RegistrarConferenciaNfeCommand,
+  RegistrarConferenciaNfeResult,
   TransferStockCommand,
   TransferStockResult,
 } from './contracts'
