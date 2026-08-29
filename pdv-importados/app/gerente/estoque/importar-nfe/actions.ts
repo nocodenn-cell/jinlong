@@ -10,7 +10,11 @@ import {
 import { parseNfeXml, type NfeParsed } from '@/lib/nfe/nfeParser'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 import { getGerenteLojaId } from '@/lib/gerente/auth/sessionContext'
-import { ImportNfePayloadSchema } from './actions.validation'
+import {
+  ConfirmarImportacaoNfePayloadSchema,
+  ImportNfePayloadSchema,
+  RegistrarConferenciaNfePayloadSchema,
+} from './actions.validation'
 import { createInventoryMovementWriter } from '@/app/admin/estoque/inventoryMovementWriter'
 
 type ActionResult<T = null> =
@@ -67,6 +71,21 @@ function mapRpcImportNfe(message: string): string {
   }
   if (message.includes('IMPORT_NFE_CUSTO_INVALIDO')) {
     return 'Preço/custo inválido.'
+  }
+  if (message.includes('IMPORT_NFE_NAO_ENCONTRADA')) {
+    return 'Importação não encontrada.'
+  }
+  if (message.includes('IMPORT_NFE_CONFERENCIA_QTD_INVALIDA')) {
+    return 'Quantidade conferida inválida.'
+  }
+  if (message.includes('IMPORT_NFE_ITEM_NAO_ENCONTRADO')) {
+    return 'Item da conferência não pertence a esta importação.'
+  }
+  if (message.includes('IMPORT_NFE_CONFERENCIA_PENDENTE')) {
+    return 'Ainda há itens não conferidos. Registre a conferência de todos os itens antes de confirmar.'
+  }
+  if (message.includes('IMPORT_NFE_STATUS_INVALIDO')) {
+    return 'Esta importação já foi confirmada anteriormente.'
   }
   return mensagemErroComSecao('Importação NF-e', message)
 }
@@ -243,6 +262,8 @@ export async function executarImportacaoNfe(
   input: unknown,
 ): Promise<
   ActionResult<{
+    /** FLX-05: chave da etapa de conferência (`obterConferenciaImportacaoNfe`). Null só se a RPC não retornar (não deveria ocorrer). */
+    importacao_id: string | null
     itens_processados: number
     produtos_novos: number
     produtos_vinculados: number
@@ -304,12 +325,271 @@ export async function executarImportacaoNfe(
   revalidatePath('/gerente/estoque')
   revalidatePath('/gerente/produtos')
   revalidatePath('/admin/catalogo')
+  revalidatePath('/admin/estoque/importar-nfe')
   return {
     success: true,
     data: {
+      importacao_id: result.importacaoId,
       itens_processados: result.itensProcessados,
       produtos_novos: result.produtosNovos,
       produtos_vinculados: result.produtosVinculados,
     },
   }
+}
+
+// ============================================================================
+// FLX-05 — conferência antes de creditar estoque/custo. `importar_nfe_transacao`
+// (acima) só cadastra/vincula catálogo e grava `importacoes_nfe_itens` em
+// EM_CONFERENCIA. O crédito real de saldo/custo/contas_pagar só acontece depois
+// que o operador confere a quantidade recebida item a item.
+// ============================================================================
+
+export type ItemConferenciaNfe = {
+  item_id: string
+  produto_id: string
+  produto_nome: string
+  produto_codigo_barras: string | null
+  quantidade_nfe: number
+  custo_unitario: number
+  atualizar_custo: boolean
+  quantidade_conferida: number | null
+  divergencia_obs: string | null
+  status_conferencia: 'EM_CONFERENCIA' | 'CONFERIDO' | 'DIVERGENTE'
+}
+
+export type ConferenciaImportacaoNfe = {
+  importacao_id: string
+  status: 'EM_CONFERENCIA' | 'CONCLUIDA'
+  numero_nf: string | null
+  fornecedor_nome: string
+  created_at: string
+  itens: ItemConferenciaNfe[]
+}
+
+/** Lê uma importação (aberta ou já concluída) com seus itens para a tela de conferência. */
+export async function obterConferenciaImportacaoNfe(
+  importacaoId: string,
+): Promise<ActionResult<ConferenciaImportacaoNfe>> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const lojaId = await lojaIdDoUsuarioLogado()
+  if (!lojaId) return { success: false, error: 'Não foi possível identificar sua loja.' }
+
+  const supabase = await createClient()
+
+  const { data: imp, error: impError } = await supabase
+    .from('importacoes_nfe')
+    .select('id, status, numero_nf, created_at, fornecedores(nome)')
+    .eq('id', importacaoId)
+    .eq('loja_id', lojaId)
+    .maybeSingle()
+
+  if (impError) {
+    return { success: false, error: mensagemErroComSecao('Importação NF-e', impError.message) }
+  }
+  if (!imp) {
+    return { success: false, error: 'Importação não encontrada.' }
+  }
+
+  const { data: itens, error: itensError } = await supabase
+    .from('importacoes_nfe_itens')
+    .select(
+      'id, produto_id, quantidade_nfe, custo_unitario, atualizar_custo, quantidade_conferida, divergencia_obs, status_conferencia, produtos(nome, codigo_barras)',
+    )
+    .eq('importacao_nfe_id', importacaoId)
+    .order('created_at', { ascending: true })
+
+  if (itensError) {
+    return { success: false, error: mensagemErroComSecao('Importação NF-e', itensError.message) }
+  }
+
+  const fornecedorRel = (imp as { fornecedores: { nome: string } | { nome: string }[] | null })
+    .fornecedores
+  const fornecedorNome = Array.isArray(fornecedorRel)
+    ? (fornecedorRel[0]?.nome ?? '')
+    : (fornecedorRel?.nome ?? '')
+
+  const linhas: ItemConferenciaNfe[] = (itens ?? []).map((row) => {
+    const produtoRel = (row as { produtos: { nome: string; codigo_barras: string | null } | { nome: string; codigo_barras: string | null }[] | null }).produtos
+    const produto = Array.isArray(produtoRel) ? produtoRel[0] : produtoRel
+    return {
+      item_id: row.id as string,
+      produto_id: row.produto_id as string,
+      produto_nome: produto?.nome ?? '',
+      produto_codigo_barras: produto?.codigo_barras ?? null,
+      quantidade_nfe: Number(row.quantidade_nfe),
+      custo_unitario: Number(row.custo_unitario),
+      atualizar_custo: Boolean(row.atualizar_custo),
+      quantidade_conferida:
+        row.quantidade_conferida != null ? Number(row.quantidade_conferida) : null,
+      divergencia_obs: (row.divergencia_obs as string | null) ?? null,
+      status_conferencia: row.status_conferencia as ItemConferenciaNfe['status_conferencia'],
+    }
+  })
+
+  return {
+    success: true,
+    data: {
+      importacao_id: imp.id as string,
+      status: imp.status as 'EM_CONFERENCIA' | 'CONCLUIDA',
+      numero_nf: (imp.numero_nf as string | null) ?? null,
+      fornecedor_nome: fornecedorNome,
+      created_at: imp.created_at as string,
+      itens: linhas,
+    },
+  }
+}
+
+export type ImportacaoNfePendente = {
+  importacao_id: string
+  numero_nf: string | null
+  fornecedor_nome: string
+  created_at: string
+  itens_total: number
+  itens_conferidos: number
+}
+
+/** Importações já processadas (catálogo atualizado) que ainda aguardam conferência de quantidade. */
+export async function listarImportacoesNfePendentes(): Promise<
+  ActionResult<ImportacaoNfePendente[]>
+> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const lojaId = await lojaIdDoUsuarioLogado()
+  if (!lojaId) return { success: false, error: 'Não foi possível identificar sua loja.' }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('importacoes_nfe')
+    .select(
+      'id, numero_nf, created_at, fornecedores(nome), importacoes_nfe_itens(status_conferencia)',
+    )
+    .eq('loja_id', lojaId)
+    .eq('status', 'EM_CONFERENCIA')
+    .order('created_at', { ascending: false })
+    // Lista de pendências, não um catálogo — 100 é folgado para o volume
+    // real de NF-e aguardando conferência numa única loja. Se algum dia
+    // isso não bastar, o próximo passo é paginação de verdade, não subir
+    // este número de novo.
+    .limit(100)
+
+  if (error) {
+    return { success: false, error: mensagemErroComSecao('Importação NF-e', error.message) }
+  }
+
+  const rows: ImportacaoNfePendente[] = (data ?? [])
+    .map((r) => {
+      const fornecedorRel = (r as { fornecedores: { nome: string } | { nome: string }[] | null })
+        .fornecedores
+      const fornecedorNome = Array.isArray(fornecedorRel)
+        ? (fornecedorRel[0]?.nome ?? '')
+        : (fornecedorRel?.nome ?? '')
+      const itensRel = (r as { importacoes_nfe_itens: { status_conferencia: string }[] | null })
+        .importacoes_nfe_itens
+      const itens = itensRel ?? []
+      return {
+        importacao_id: r.id as string,
+        numero_nf: (r.numero_nf as string | null) ?? null,
+        fornecedor_nome: fornecedorNome,
+        created_at: r.created_at as string,
+        itens_total: itens.length,
+        itens_conferidos: itens.filter((i) => i.status_conferencia !== 'EM_CONFERENCIA').length,
+      }
+    })
+    // Defesa contra registro legado: a coluna `status` da 296 aplicou
+    // EM_CONFERENCIA por default a QUALQUER linha pré-existente de
+    // importacoes_nfe, mesmo uma sem nenhum item (a tabela
+    // importacoes_nfe_itens só passou a existir a partir dessa mesma
+    // migration). Sem este filtro, uma importação assim abriria uma
+    // conferência vazia que a UI nunca consegue confirmar. Não há hoje
+    // nenhuma linha nessa condição em produção (importacoes_nfe: 0 linhas,
+    // confirmado antes deste PR) — mantido mesmo assim por segurança para
+    // outras instalações.
+    .filter((row) => row.itens_total > 0)
+
+  return { success: true, data: rows }
+}
+
+/** Registra a contagem física por item (pré-requisito de `confirmarImportacaoNfe`). */
+export async function registrarConferenciaNfe(
+  input: unknown,
+): Promise<ActionResult<{ itens_conferidos: number; itens_divergentes: number }>> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const parsedPayload = RegistrarConferenciaNfePayloadSchema.safeParse(input)
+  if (!parsedPayload.success) {
+    const msg = parsedPayload.error.issues.map((i) => i.message).join('; ')
+    const { idioma } = await getUsuarioIdioma()
+    return { success: false, error: mensagemErroValidacaoZod(msg, idioma) }
+  }
+
+  const lojaId = await lojaIdDoUsuarioLogado()
+  if (!lojaId) return { success: false, error: 'Não foi possível identificar sua loja.' }
+
+  const supabase = await createClient()
+  const writer = createInventoryMovementWriter(supabase, lojaId)
+  const p = parsedPayload.data
+
+  const result = await writer.registrarConferenciaNfe({
+    importacaoId: p.importacao_id,
+    itens: p.itens.map((item) => ({
+      itemId: item.item_id,
+      quantidadeConferida: item.quantidade_conferida,
+      divergenciaObs: item.divergencia_obs,
+    })),
+  })
+
+  if (!result.ok) {
+    return { success: false, error: mapRpcImportNfe(result.error) }
+  }
+
+  revalidatePath('/admin/estoque/importar-nfe')
+  return {
+    success: true,
+    data: {
+      itens_conferidos: result.itensConferidos,
+      itens_divergentes: result.itensDivergentes,
+    },
+  }
+}
+
+/**
+ * Único ponto que credita estoque, atualiza custo e gera contas a pagar da NF-e.
+ * Recusa (`IMPORT_NFE_CONFERENCIA_PENDENTE`) se algum item ainda não foi conferido.
+ */
+export async function confirmarImportacaoNfe(input: unknown): Promise<ActionResult<null>> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const parsedPayload = ConfirmarImportacaoNfePayloadSchema.safeParse(input)
+  if (!parsedPayload.success) {
+    const msg = parsedPayload.error.issues.map((i) => i.message).join('; ')
+    const { idioma } = await getUsuarioIdioma()
+    return { success: false, error: mensagemErroValidacaoZod(msg, idioma) }
+  }
+
+  const lojaId = await lojaIdDoUsuarioLogado()
+  if (!lojaId) return { success: false, error: 'Não foi possível identificar sua loja.' }
+
+  const supabase = await createClient()
+  const writer = createInventoryMovementWriter(supabase, lojaId)
+
+  const result = await writer.confirmarImportacaoNfe({
+    importacaoId: parsedPayload.data.importacao_id,
+  })
+
+  if (!result.ok) {
+    return { success: false, error: mapRpcImportNfe(result.error) }
+  }
+
+  revalidatePath('/admin/estoque')
+  revalidatePath('/admin/estoque/importar-nfe')
+  revalidatePath('/admin/catalogo')
+  revalidatePath('/admin/auditoria')
+  revalidatePath('/gerente/estoque')
+  revalidatePath('/gerente/produtos')
+  return { success: true, data: null }
 }

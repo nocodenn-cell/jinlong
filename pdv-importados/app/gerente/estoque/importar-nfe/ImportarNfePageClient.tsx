@@ -15,11 +15,22 @@ import { getMessages } from '@/i18n/getMessages'
 import { Checkbox, Input, Textarea } from '@/components/ui/forms'
 import { ROUTES } from '@shared-core/navigation/routes'
 import type { NfeParsed } from '@/lib/nfe/nfeParser'
-import type { LinhaPreviewNfe, ProdutoVinculoOpcao, StatusItemNfe } from './actions'
+import type {
+  ConferenciaImportacaoNfe,
+  ImportacaoNfePendente,
+  ItemConferenciaNfe,
+  LinhaPreviewNfe,
+  ProdutoVinculoOpcao,
+  StatusItemNfe,
+} from './actions'
 import {
   buscarProdutosParaVinculo,
+  confirmarImportacaoNfe,
   executarImportacaoNfe,
+  listarImportacoesNfePendentes,
+  obterConferenciaImportacaoNfe,
   previewImportacaoNfe,
+  registrarConferenciaNfe,
 } from './actions'
 
 type Props = Readonly<{ idioma: Idioma; embeddedInAdminHub?: boolean }>
@@ -49,6 +60,41 @@ function linhaResolvida(l: LinhaEditavel): boolean {
   return l.acao === 'VINCULAR' && !!l.produto_id_destino
 }
 
+export type ItemConferenciaPreenchido = {
+  item_id: string
+  quantidade_conferida: number
+  divergencia_obs: string | null
+}
+
+/**
+ * Monta o payload de `registrar_conferencia_nfe` só com itens que o operador
+ * de fato preencheu. Um campo em branco/ausente significa "ainda não contei
+ * este item" — nunca vira silenciosamente a quantidade da nota (achado de
+ * revisão pré-merge da PR1: sem isto, limpar o campo produzia o mesmo efeito
+ * que confirmar a quantidade da nota, sem contagem física real). Extraída
+ * como função pura só para ser testável sem montar o componente.
+ */
+export function buildItensConferenciaPreenchidos(
+  itens: ReadonlyArray<ItemConferenciaNfe>,
+  qtdConferida: Readonly<Record<string, string>>,
+  obsDivergencia: Readonly<Record<string, string>>,
+): ItemConferenciaPreenchido[] {
+  return itens.flatMap((item) => {
+    const raw = qtdConferida[item.item_id]
+    if (raw === undefined || raw.trim() === '') return []
+    const qtd = Number(raw)
+    if (!Number.isFinite(qtd) || qtd < 0) return []
+    const obs = (obsDivergencia[item.item_id] ?? '').trim()
+    return [
+      {
+        item_id: item.item_id,
+        quantidade_conferida: qtd,
+        divergencia_obs: obs.length > 0 ? obs : null,
+      },
+    ]
+  })
+}
+
 export function ImportarNfePageClient({ idioma, embeddedInAdminHub = false }: Props) {
   const m = getMessages(idioma)
   const mi = m.estoque.import_nfe
@@ -64,11 +110,57 @@ export function ImportarNfePageClient({ idioma, embeddedInAdminHub = false }: Pr
   const [dragOver, setDragOver] = useState(false)
   const [draftNovos, setDraftNovos] = useState<number | null>(null)
 
+  // FLX-05: etapa de conferência — importar_nfe_transacao só cadastra/vincula
+  // catálogo; o crédito de estoque/custo só acontece depois que o operador
+  // confere a quantidade recebida item a item (registrar_conferencia_nfe) e
+  // confirma (confirmar_importacao_nfe).
+  const [conferencia, setConferencia] = useState<ConferenciaImportacaoNfe | null>(null)
+  const [qtdConferida, setQtdConferida] = useState<Record<string, string>>({})
+  const [obsDivergencia, setObsDivergencia] = useState<Record<string, string>>({})
+  const [pendentes, setPendentes] = useState<ImportacaoNfePendente[]>([])
+  const [estoqueAtualizadoOk, setEstoqueAtualizadoOk] = useState(false)
+
+  const carregarPendentes = useCallback(async () => {
+    const r = await listarImportacoesNfePendentes()
+    if (r.success) setPendentes(r.data)
+  }, [])
+
+  useEffect(() => {
+    void carregarPendentes()
+  }, [carregarPendentes])
+
+  const aplicarConferencia = useCallback((c: ConferenciaImportacaoNfe) => {
+    setConferencia(c)
+    setEstoqueAtualizadoOk(c.status === 'CONCLUIDA')
+    setQtdConferida((prev) => {
+      const next = { ...prev }
+      for (const item of c.itens) {
+        if (next[item.item_id] === undefined) {
+          next[item.item_id] = String(item.quantidade_conferida ?? item.quantidade_nfe)
+        }
+      }
+      return next
+    })
+    // Retomar uma conferência (após recarregar a página ou reabrir uma
+    // pendente) precisa devolver a observação de divergência já salva —
+    // sem isso, o próximo "Registrar conferência" sobrescreveria com null
+    // toda observação anterior, mesmo de itens que não mudaram.
+    setObsDivergencia((prev) => {
+      const next = { ...prev }
+      for (const item of c.itens) {
+        if (next[item.item_id] === undefined && item.divergencia_obs) {
+          next[item.item_id] = item.divergencia_obs
+        }
+      }
+      return next
+    })
+  }, [])
+
   const previewOpts = useMemo(() => ({}), [])
   const importOpts = useMemo(
     () => ({
       successMessage: mi.import_ok,
-      onSuccess: (data: { produtos_novos: number }) => {
+      onSuccess: (data: { importacao_id: string | null; produtos_novos: number }) => {
         setDraftNovos(data.produtos_novos > 0 ? data.produtos_novos : null)
         if (data.produtos_novos > 0) {
           emitGerenteToast({
@@ -76,9 +168,14 @@ export function ImportarNfePageClient({ idioma, embeddedInAdminHub = false }: Pr
             message: mi.import_draft_aviso.replace('{{n}}', String(data.produtos_novos)),
           })
         }
+        if (data.importacao_id) {
+          void obterConferenciaImportacaoNfe(data.importacao_id).then((r) => {
+            if (r.success) aplicarConferencia(r.data)
+          })
+        }
       },
     }),
-    [mi.import_ok, mi.import_draft_aviso],
+    [mi.import_ok, mi.import_draft_aviso, aplicarConferencia],
   )
 
   const { mutate: previewMut, loading: previewLoading } = useGerenteMutation(
@@ -108,6 +205,62 @@ export function ImportarNfePageClient({ idioma, embeddedInAdminHub = false }: Pr
       return r.data
     },
     importOpts,
+  )
+
+  const { mutate: retomarMut, loading: retomarLoading } = useGerenteMutation(
+    async (importacaoId: string) => {
+      const r = await obterConferenciaImportacaoNfe(importacaoId)
+      if (!r.success) throw new Error(r.error)
+      aplicarConferencia(r.data)
+      return null
+    },
+  )
+
+  const registrarOpts = useMemo(
+    () => ({
+      successMessage: mi.conferencia_registrada,
+      onSuccess: () => {
+        if (conferencia) {
+          void obterConferenciaImportacaoNfe(conferencia.importacao_id).then((r) => {
+            if (r.success) aplicarConferencia(r.data)
+          })
+        }
+      },
+    }),
+    [mi.conferencia_registrada, conferencia, aplicarConferencia],
+  )
+
+  const { mutate: registrarMut, loading: registrarLoading } = useGerenteMutation(
+    async (c: ConferenciaImportacaoNfe) => {
+      const itens = buildItensConferenciaPreenchidos(c.itens, qtdConferida, obsDivergencia)
+      if (itens.length === 0) {
+        throw new Error(mi.conferencia_nenhum_item_preenchido)
+      }
+      const r = await registrarConferenciaNfe({ importacao_id: c.importacao_id, itens })
+      if (!r.success) throw new Error(r.error)
+      return r.data
+    },
+    registrarOpts,
+  )
+
+  const confirmarOpts = useMemo(
+    () => ({
+      successMessage: mi.confirmar_estoque_ok,
+      onSuccess: () => {
+        setEstoqueAtualizadoOk(true)
+        void carregarPendentes()
+      },
+    }),
+    [mi.confirmar_estoque_ok, carregarPendentes],
+  )
+
+  const { mutate: confirmarMut, loading: confirmarLoading } = useGerenteMutation(
+    async (importacaoId: string) => {
+      const r = await confirmarImportacaoNfe({ importacao_id: importacaoId })
+      if (!r.success) throw new Error(r.error)
+      return null
+    },
+    confirmarOpts,
   )
 
   const onFile = useCallback(
@@ -190,10 +343,36 @@ export function ImportarNfePageClient({ idioma, embeddedInAdminHub = false }: Pr
   }
 
   const limpar = () => {
+    const tinhaConferenciaEmAberto = !!conferencia && !estoqueAtualizadoOk
     setXmlText('')
     setParsed(null)
     setLinhas([])
     setDraftNovos(null)
+    setConferencia(null)
+    setQtdConferida({})
+    setObsDivergencia({})
+    setEstoqueAtualizadoOk(false)
+    // A lista de pendentes foi carregada antes desta importação existir —
+    // sem recarregar, "Limpar" para adiar a conferência esconde a NF-e que
+    // acabou de ser processada até a próxima navegação para a página.
+    if (tinhaConferenciaEmAberto) void carregarPendentes()
+  }
+
+  const itensPendentesConferencia = useMemo(
+    () => (conferencia?.itens ?? []).filter((i) => i.status_conferencia === 'EM_CONFERENCIA'),
+    [conferencia],
+  )
+  const podeConfirmarEstoque =
+    !!conferencia &&
+    conferencia.status === 'EM_CONFERENCIA' &&
+    conferencia.itens.length > 0 &&
+    itensPendentesConferencia.length === 0
+
+  const divergeDaNota = (item: ItemConferenciaNfe): boolean => {
+    const raw = qtdConferida[item.item_id]
+    if (raw === undefined || raw === '') return false
+    const qtd = Number(raw)
+    return Number.isFinite(qtd) && qtd !== item.quantidade_nfe
   }
 
   const reconhecidosColumns: Column<LinhaComIndice>[] = useMemo(
@@ -411,6 +590,35 @@ export function ImportarNfePageClient({ idioma, embeddedInAdminHub = false }: Pr
         </Link>
       ) : null}
 
+      {pendentes.length > 0 && !conferencia ? (
+        <SectionCard title={mi.pendentes_titulo} subtitle={mi.pendentes_hint}>
+          <ul className="divide-y divide-[var(--color-border)]">
+            {pendentes.map((p) => (
+              <li key={p.importacao_id} className="flex items-center justify-between gap-3 py-2">
+                <div className="min-w-0">
+                  <p className="truncate text-body font-medium">
+                    {p.numero_nf ? `${mi.numero_nf} ${p.numero_nf}` : mi.pendentes_sem_numero} —{' '}
+                    <span className="text-fg-muted">{p.fornecedor_nome}</span>
+                  </p>
+                  <p className="text-caption text-fg-muted">
+                    {mi.pendentes_col_itens}: {p.itens_conferidos}/{p.itens_total}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  loading={retomarLoading}
+                  onClick={() => void retomarMut(p.importacao_id)}
+                >
+                  {mi.pendentes_btn_retomar}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </SectionCard>
+      ) : null}
+
       <section
         onDragOver={(e) => {
           e.preventDefault()
@@ -464,7 +672,7 @@ export function ImportarNfePageClient({ idioma, embeddedInAdminHub = false }: Pr
         />
       </section>
 
-      {parsed ? (
+      {parsed && !conferencia ? (
         <SectionCard title={mi.emitente}>
           <p className="text-body">
             <span className="text-fg-muted">{parsed.emitente.nome}</span>
@@ -497,7 +705,7 @@ export function ImportarNfePageClient({ idioma, embeddedInAdminHub = false }: Pr
         </SectionCard>
       ) : null}
 
-      {reconhecidos.length > 0 ? (
+      {reconhecidos.length > 0 && !conferencia ? (
         <SectionCard title={mi.secao_reconhecidos} subtitle={mi.secao_reconhecidos_hint}>
           <DataTable
             columns={reconhecidosColumns}
@@ -508,7 +716,7 @@ export function ImportarNfePageClient({ idioma, embeddedInAdminHub = false }: Pr
         </SectionCard>
       ) : null}
 
-      {desconhecidos.length > 0 ? (
+      {desconhecidos.length > 0 && !conferencia ? (
         <SectionCard title={mi.secao_desconhecidos} subtitle={mi.secao_desconhecidos_hint}>
           <DataTable
             columns={desconhecidosColumns}
@@ -519,23 +727,12 @@ export function ImportarNfePageClient({ idioma, embeddedInAdminHub = false }: Pr
         </SectionCard>
       ) : null}
 
-      {linhas.length > 0 ? (
+      {linhas.length > 0 && !conferencia ? (
         <div className="flex flex-col items-end gap-2">
           {!tudoResolvido ? (
             <p className="text-caption font-medium text-[var(--color-warning-strong)]">
               {mi.resolver_pendentes}
             </p>
-          ) : null}
-          {draftNovos != null && draftNovos > 0 ? (
-            <div className="w-full rounded-lg border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] px-4 py-3 text-body text-[var(--color-warning-strong)]">
-              <p>{mi.import_draft_aviso.replace('{{n}}', String(draftNovos))}</p>
-              <Link
-                href={`${ROUTES.admin.catalogo}?status=inativos`}
-                className="mt-1 inline-block font-medium underline hover:no-underline"
-              >
-                Ir ao catálogo →
-              </Link>
-            </div>
           ) : null}
           <Button
             type="button"
@@ -547,6 +744,147 @@ export function ImportarNfePageClient({ idioma, embeddedInAdminHub = false }: Pr
             {mi.btn_importar}
           </Button>
         </div>
+      ) : null}
+
+      {conferencia ? (
+        <SectionCard
+          title={mi.secao_conferencia}
+          subtitle={estoqueAtualizadoOk ? mi.secao_conferencia_concluida : mi.secao_conferencia_hint}
+        >
+          {draftNovos != null && draftNovos > 0 ? (
+            <div className="mb-3 w-full rounded-lg border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] px-4 py-3 text-body text-[var(--color-warning-strong)]">
+              <p>{mi.import_draft_aviso.replace('{{n}}', String(draftNovos))}</p>
+              <Link
+                href={`${ROUTES.admin.catalogo}?status=inativos`}
+                className="mt-1 inline-block font-medium underline hover:no-underline"
+              >
+                Ir ao catálogo →
+              </Link>
+            </div>
+          ) : null}
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-caption">
+              <thead>
+                <tr className="text-left text-fg-muted">
+                  <th className="py-1 pr-2">{mi.col_item}</th>
+                  <th className="py-1 pr-2 text-right">{mi.col_qtd_nfe}</th>
+                  <th className="py-1 pr-2 text-right">{mi.col_qtd_conferida}</th>
+                  <th className="py-1 pr-2">{mi.col_divergencia_obs}</th>
+                  <th className="py-1 pr-2">{mi.col_status}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {conferencia.itens.map((item) => {
+                  const diverge = divergeDaNota(item)
+                  return (
+                    <tr key={item.item_id} className="border-t border-[var(--color-border)]">
+                      <td className="max-w-[14rem] truncate py-1.5 pr-2 font-medium">
+                        {item.produto_nome}
+                        {item.produto_codigo_barras ? (
+                          <span className="ml-2 font-mono text-fg-muted">
+                            {item.produto_codigo_barras}
+                          </span>
+                        ) : null}
+                      </td>
+                      <td className="py-1.5 pr-2 text-right tabular-nums">{item.quantidade_nfe}</td>
+                      <td className="py-1.5 pr-2 text-right">
+                        <Input
+                          type="number"
+                          min={0}
+                          step={0.001}
+                          controlSize="sm"
+                          disabled={estoqueAtualizadoOk}
+                          value={qtdConferida[item.item_id] ?? String(item.quantidade_nfe)}
+                          onChange={(e) =>
+                            setQtdConferida((prev) => ({ ...prev, [item.item_id]: e.target.value }))
+                          }
+                          className="w-24 text-right"
+                        />
+                      </td>
+                      <td className="py-1.5 pr-2">
+                        {diverge ? (
+                          <Input
+                            type="text"
+                            controlSize="sm"
+                            disabled={estoqueAtualizadoOk}
+                            placeholder={mi.divergencia_obs_placeholder}
+                            value={obsDivergencia[item.item_id] ?? ''}
+                            onChange={(e) =>
+                              setObsDivergencia((prev) => ({
+                                ...prev,
+                                [item.item_id]: e.target.value,
+                              }))
+                            }
+                            className="w-full"
+                          />
+                        ) : (
+                          <span className="text-fg-muted">—</span>
+                        )}
+                      </td>
+                      <td className="py-1.5 pr-2">
+                        <StatusChip
+                          status={
+                            item.status_conferencia === 'CONFERIDO'
+                              ? 'ATIVO'
+                              : item.status_conferencia === 'DIVERGENTE'
+                                ? 'ALERTA'
+                                : 'INATIVO'
+                          }
+                          label={
+                            item.status_conferencia === 'CONFERIDO'
+                              ? mi.status_conferido
+                              : item.status_conferencia === 'DIVERGENTE'
+                                ? mi.status_divergente
+                                : mi.status_aguardando
+                          }
+                        />
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-4 flex flex-col items-end gap-2">
+            {estoqueAtualizadoOk ? (
+              <p className="text-body font-medium text-[var(--color-success-strong)]">
+                {mi.confirmar_estoque_ok}
+              </p>
+            ) : (
+              <>
+                {!podeConfirmarEstoque ? (
+                  <p className="text-caption font-medium text-[var(--color-warning-strong)]">
+                    {mi.confirmar_estoque_pendente}
+                  </p>
+                ) : null}
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    loading={registrarLoading}
+                    onClick={() => void registrarMut(conferencia)}
+                  >
+                    {mi.btn_registrar_conferencia}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    disabled={!podeConfirmarEstoque}
+                    loading={confirmarLoading}
+                    onClick={() => void confirmarMut(conferencia.importacao_id)}
+                  >
+                    {mi.btn_confirmar_estoque}
+                  </Button>
+                </div>
+              </>
+            )}
+            <Button type="button" variant="ghost" size="sm" onClick={limpar}>
+              {mi.limpar}
+            </Button>
+          </div>
+        </SectionCard>
       ) : null}
     </div>
   )

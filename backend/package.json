@@ -19,6 +19,7 @@
     "ci:e2e-readiness": "node scripts/ci-e2e-readiness-check.mjs",
     "test:financial": "node scripts/run-financial-tests.mjs",
     "test:financial-concurrency": "node scripts/test-commission-concurrency.mjs",
+    "test:financial-concurrency:nfe": "node scripts/test-nfe-conferencia-concurrency.mjs",
     "test:migration-status": "node --test scripts/p0-migration-status.test.mjs",
     "test:venda-finance-context-retirement": "node --test supabase/scripts/verify-venda-finance-context-catalog.test.mjs"
   },

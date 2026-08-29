@@ -5793,6 +5793,10 @@ export type Database = {
         Returns: number
       }
       receber_ordem_compra: { Args: { p_oc_id: string }; Returns: undefined }
+      registrar_conferencia_nfe: {
+        Args: { p_importacao_id: string; p_itens: Json }
+        Returns: Json
+      }
       registrar_conferencia_ordem_compra: {
         Args: { p_itens: Json; p_oc_id: string }
         Returns: Json
