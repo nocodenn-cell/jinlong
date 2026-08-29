@@ -418,6 +418,36 @@ jobs:
         timeout-minutes: 35
         run: npx playwright install --with-deps chromium webkit
 
+      # Achado secundário da sprint de estabilização E2E (2026-08-29): em 3 de 6
+      # execuções amostradas (25-26/08), o binário do WebKit ficou ausente/
+      # corrompido em algum momento da suíte — `browserType.launch: Executable
+      # doesn't exist at .../webkit-*/pw_run.sh` — mesmo com o install acima
+      # aparentemente OK (exit 0). O padrão sumiu nas 4 amostras mais recentes
+      # (27-28/08), sugerindo algo transitório (rede/CDN do runner) em vez de
+      # bug do repositório — mas quando acontece, hoje só aparece ~20-40min
+      # depois, disfarçado de dezenas de testes "flaky"/"failed" no WebKit, sem
+      # nenhum sinal de que a causa é instalação e não os testes em si. Este
+      # check falha em segundos, logo após o install, com diagnóstico direto —
+      # não espera o E2E inteiro rodar para descobrir que o binário nunca existiu.
+      - name: Verificar binários do Playwright pós-install
+        timeout-minutes: 1
+        run: |
+          node -e "
+            const fs = require('fs');
+            const { chromium, webkit } = require('playwright');
+            let ok = true;
+            for (const [nome, browserType] of [['chromium', chromium], ['webkit', webkit]]) {
+              const caminho = browserType.executablePath();
+              if (!fs.existsSync(caminho)) {
+                console.error('::error::Binário ' + nome + ' ausente após install: ' + caminho);
+                ok = false;
+              } else {
+                console.log('OK — ' + nome + ' presente em ' + caminho);
+              }
+            }
+            if (!ok) process.exit(1);
+          "
+
       # Mesma stack local e efêmera do `e2e-critical`. Este job foi esquecido na
       # primeira correção e, por isso, continuou logando em PRODUÇÃO com as
       # contas de robô às 20:59 e 21:03 de 2026-08-19 — não escreveu venda
