@@ -154,6 +154,78 @@ produção pós-correção, dentro de transações com `ROLLBACK`: rejeição de
 atomicidade, idempotência de replay e gravação de `conferido_por`/`conferido_em` — nenhum dado de teste
 persistiu.
 
+Sétimo par (documentado em 30/08/2026, reconciliação do plano de remediação Jīn Lóng —
+Engineering Loops 6A–7): `20260821110000_restore_devolver_ou_trocar_venda_kardex_ssot04.sql`
+(PR #313, `15c6bcc0` — restaura `INSERT INTO movimentos_estoque_log` em
+`devolver_ou_trocar_venda`, SSOT-04) consta no remoto sob a version `20260827130536`, name
+`restore_devolver_ou_trocar_venda_kardex_ssot04` (`name` bate com o identificador lógico do
+arquivo, `version` não). Já apontado, com hedge equivalente, em
+`docs/piloto-d0/CERTIFICACAO_GO_LIVE_E1327E62.md` ("Migrations desta consolidação"): "sim (RPC
+verificada: insert kardex)" — "versão remota pode ser timestamp de apply, não o filename".
+Postcondition reverificada nesta reconciliação (leitura apenas, `list_migrations` +
+`execute_sql` com `SELECT`): a função `public.devolver_ou_trocar_venda` existe no remoto. **Não
+há, nesta reconciliação, registro direto do método de aplicação** (MCP `apply_migration` vs.
+outro caminho) para este par — só a divergência de version e a postcondition confirmada. Não
+deve ser reaplicada sem antes confirmar se um `db push` a reconheceria como já presente.
+
+Oitavo par (documentado em 30/08/2026, mesma reconciliação):
+`20260824120000_fix_remessa_entrada_aceita_produto_draft.sql` (PR #324, `66a19c50` —
+recebimento aceita produto DRAFT via `status_publicacao IS DISTINCT FROM 'INATIVO'`) consta no
+remoto sob a version `20260827130449`, name `fix_remessa_entrada_aceita_produto_draft`. Mesma
+tabela em `CERTIFICACAO_GO_LIVE_E1327E62.md`: "sim (RPC: `status_publicacao`, não `p.ativo`)".
+Postcondition reverificada nesta reconciliação: `public.criar_confirmar_remessa_entrada` contém
+literalmente `status_publicacao IS DISTINCT FROM 'INATIVO'` no corpo remoto. Mesma ressalva do
+par anterior: método de aplicação não registrado diretamente nesta reconciliação, só a
+divergência de version e a postcondition.
+
+Nono par (documentado em 30/08/2026, mesma reconciliação):
+`20260828110000_fix_v_kardex_unificado_anti_join_devolucao.sql` consta no remoto sob a version
+`20260828120238`, name `fix_v_kardex_unificado_anti_join_devolucao`. Evidência de equivalência
+particularmente forte, mais forte que os dois pares anteriores: `obj_description` de
+`public.v_kardex_unificado` no remoto retorna texto **idêntico**, byte a byte, ao `COMMENT ON
+VIEW` do arquivo local — incluindo o próprio timestamp do arquivo (`20260828110000`) embutido
+dentro do texto do comentário ("... anti-join SSOT-04 por operacao_id na observação,
+20260828110000). DAT-01 (291): NULLIF(eb.quantidade,0)."). Essa correspondência textual exata,
+carregando o identificador do próprio arquivo, é evidência direta de que o corpo efetivamente
+aplicado é este. Mesma ressalva sobre método de aplicação não witnessed diretamente nesta
+reconciliação.
+
+Décimo par — M1 (Fase 1 do plano de remediação Jīn Lóng, hardening de grants residuais,
+aplicada via MCP `apply_migration` e verificada em produção antes desta reconciliação):
+`20260828120000_fase1_hardening_grants_residuais.sql` consta no remoto sob a version
+`20260830004614`, name `20260828120000_fase1_hardening_grants_residuais` (identificador do
+arquivo preservado integralmente em `name`, não só o filename base). Postcondition reverificada
+nesta reconciliação: `has_function_privilege('anon', 'public.converter_venda_em_espera(uuid)',
+'EXECUTE') = false` e `has_function_privilege('authenticated', 'public.converter_venda_em_espera(uuid)',
+'EXECUTE') = true` — exatamente o padrão do "Grupo A" descrito no cabeçalho do arquivo (revoga
+`anon`, preserva `authenticated`).
+
+Décimo primeiro par — M2 (Fase 3, tenant isolation de transferências/remessas — Padrão A,
+mesma reconciliação): `20260828140000_fase3_tenant_isolation_transferencias_remessas.sql`
+consta no remoto sob a version `20260830005351`, name preservado integralmente. Postcondition
+reverificada: `public.transferir_estoque_seguro` contém `TRANSFERENCIA_LOJA_INVALIDA` e
+`public.confirmar_remessa_entrada` contém `REMESSA_LOJA_INVALIDA` no corpo remoto — os dois
+guards de isolamento por loja descritos no arquivo.
+
+Décimo segundo par — M3 (Fase 4, idempotência de remessa por `payload_hash`, mesma
+reconciliação): `20260828150000_fase4_remessa_idempotencia_payload_hash.sql` consta no remoto
+sob a version `20260830005831`, name preservado integralmente. Postcondition reverificada: a
+coluna `public.remessas.payload_hash` existe no remoto, conforme o `ALTER TABLE ... ADD COLUMN
+IF NOT EXISTS payload_hash text` do arquivo.
+
+Décimo terceiro par — M4 (restaura o fluxo de conferência de NF-e da UI FLX-05, PR #341, mesma
+reconciliação): `20260828150100_restaura_registrar_conferencia_nfe_ui_flx05.sql` consta no
+remoto sob a version `20260830010624`, name preservado integralmente. Postcondition
+reverificada: as funções `public.registrar_conferencia_nfe` e `public.confirmar_importacao_nfe`
+existem no remoto.
+
+**Estas sete entradas (sétimo ao décimo terceiro par) reconciliam exclusivamente a divergência
+histórica de `version` identificada. Nenhuma delas constitui autorização para alterar ou
+reaplicar o SQL das migrations correspondentes** — a evidência acima só sustenta "já presente e
+correta no remoto sob outra version", nada além disso. Toda a coleta de evidência foi por
+leitura (`list_migrations` + `execute_sql` com `SELECT`/`has_function_privilege`/
+`obj_description`) — nenhuma escrita em produção.
+
 **Consequência prática:** um `supabase db push` futuro pode não reconhecer esses arquivos como já
 aplicados (porque o CLI casa por `version` = timestamp do nome do arquivo) e tentar reaplicá-los. Isso só é
 seguro se a migration em questão for idempotente (`DROP ... IF EXISTS` + `CREATE`, `REVOKE`, `ON CONFLICT`
