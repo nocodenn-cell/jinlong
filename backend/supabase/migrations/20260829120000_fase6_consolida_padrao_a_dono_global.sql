@@ -41,6 +41,23 @@
 --   decidir que só DONO/ADMIN devem poder editar taxonomia compartilhada,
 --   isso é uma decisão de produto separada, não uma correção de bug.
 --
+--   NÃO tocado (revertido durante a revisão desta PR) — RLS de
+--   precos_atacado. A versão inicial desta migration tentava fechar o
+--   Padrão C aqui, mas `precosAtacadoActions.ts:13` documenta, explícito:
+--   "Faixas são sempre globais (loja_id = NULL): este app opera com uma
+--   loja". `criarFaixaAtacado` SEMPRE grava loja_id=NULL — não existe hoje
+--   nenhum caminho de UI que crie uma faixa loja-escopada. Restringir
+--   GERENTE a não escrever linha global quebraria o único fluxo que existe
+--   (o campo simples de atacado no cadastro E o editor de múltiplas
+--   faixas, ambos usados por GERENTE hoje) sem nenhum substituto — não é
+--   fechar um gap, é quebrar a funcionalidade. Além disso,
+--   `atualizar_produto_com_faixa_atacado` (SECURITY DEFINER) grava
+--   precos_atacado por fora de qualquer RLS de tabela, então uma correção
+--   só de RLS nem fecharia o caminho principal. Se/quando o negócio
+--   precisar de preço de atacado por loja de verdade, isso é uma
+--   FUNCIONALIDADE nova (UI + RPC), não um endurecimento de RLS — decisão
+--   de produto separada, documentada aqui para não se perder.
+--
 -- Idempotente: ALTER POLICY e CREATE OR REPLACE FUNCTION.
 -- ============================================================================
 
@@ -70,6 +87,7 @@ DECLARE
   v_uid uuid := COALESCE(auth.uid(), p_ator_id);
   v_perfil text;
   v_loja_usuario uuid;
+  v_ativo boolean;
   v_atual numeric;
   v_delta numeric;
   v_tipo_codigo text;
@@ -79,8 +97,8 @@ BEGIN
     RAISE EXCEPTION 'AJUSTE_ESTOQUE_AUTH';
   END IF;
 
-  SELECT u.perfil, u.loja_id
-    INTO v_perfil, v_loja_usuario
+  SELECT u.perfil, u.loja_id, u.ativo
+    INTO v_perfil, v_loja_usuario, v_ativo
   FROM public.usuarios u
   WHERE u.id = v_uid;
 
@@ -95,7 +113,14 @@ BEGIN
   -- DONO e ADMIN ajustam estoque de qualquer loja, igual a transferências e
   -- remessas (Fase 3). Antes desta migration, o guard bloqueava os três
   -- perfis igualmente — mais restritivo que qualquer outra RPC de estoque.
-  IF v_perfil = 'GERENTE' AND v_loja_usuario IS DISTINCT FROM p_loja_id THEN
+  --
+  -- `OR NOT v_ativo`: achado de revisão — sem isto, um DONO/ADMIN
+  -- desativado (usuarios.ativo=false) mas com token ainda válido passaria
+  -- a ter alcance global em vez de continuar restrito à própria loja como
+  -- ficava antes desta migration. Uma conta desativada nunca deve GANHAR
+  -- alcance maior do que tinha.
+  IF (v_perfil = 'GERENTE' OR NOT COALESCE(v_ativo, false))
+     AND v_loja_usuario IS DISTINCT FROM p_loja_id THEN
     RAISE EXCEPTION 'AJUSTE_ESTOQUE_LOJA_INVALIDA';
   END IF;
 
@@ -206,6 +231,7 @@ DECLARE
   v_uid uuid := COALESCE(auth.uid(), p_ator_id);
   v_perfil text;
   v_loja_ator uuid;
+  v_ativo boolean;
   v_loja_produto uuid;
   v_qtd_min integer;
   v_preco_faixa numeric;
@@ -217,7 +243,7 @@ BEGIN
     RAISE EXCEPTION 'ATUALIZAR_PRODUTO_AUTH';
   END IF;
 
-  SELECT u.perfil, u.loja_id INTO v_perfil, v_loja_ator
+  SELECT u.perfil, u.loja_id, u.ativo INTO v_perfil, v_loja_ator, v_ativo
   FROM public.usuarios u WHERE u.id = v_uid;
 
   IF v_perfil IS NULL OR v_perfil NOT IN ('GERENTE', 'DONO', 'ADMIN') THEN
@@ -252,7 +278,14 @@ BEGIN
   -- agora superada pela consolidação de padrão em todo o sistema. Mesma
   -- mensagem de "não encontrado" para produto de outra loja — não confirma
   -- existência de produto fora do escopo do chamador.
-  IF v_perfil = 'GERENTE' AND (v_loja_ator IS NULL OR v_loja_ator <> v_loja_produto) THEN
+  --
+  -- `OR NOT v_ativo`: achado de revisão — sem isto, um DONO/ADMIN
+  -- desativado (usuarios.ativo=false) mas com token ainda válido passaria
+  -- a ter alcance global em vez de continuar restrito à própria loja como
+  -- ficava antes desta migration. Uma conta desativada nunca deve GANHAR
+  -- alcance maior do que tinha.
+  IF (v_perfil = 'GERENTE' OR NOT COALESCE(v_ativo, false))
+     AND (v_loja_ator IS NULL OR v_loja_ator <> v_loja_produto) THEN
     RAISE EXCEPTION 'ATUALIZAR_PRODUTO_NAO_ENCONTRADO';
   END IF;
 
@@ -380,71 +413,24 @@ REVOKE EXECUTE ON FUNCTION public.atualizar_produto_com_faixa_atacado(uuid, json
 GRANT EXECUTE ON FUNCTION public.atualizar_produto_com_faixa_atacado(uuid, jsonb, uuid, jsonb) TO authenticated, service_role;
 
 -- ============================================================================
--- 3. precos_atacado — fecha o Padrão C (nenhum isolamento de loja hoje,
---    apesar de a coluna loja_id existir para exatamente esse propósito).
---    loja_id NULL = faixa global do catálogo (aplica-se a todas as lojas) —
---    só DONO/ADMIN podem criar/alterar uma faixa global; GERENTE só mexe em
---    faixas da própria loja, mas pode ENXERGAR as globais (precisa saber o
---    preço vigente para atender o cliente, mesmo sem poder mudá-lo).
---    ALTER POLICY (não DROP/CREATE): sem janela em que a policy deixe de
---    existir — mesmo cuidado da migration 251 que criou esta policy.
--- ============================================================================
-
-ALTER POLICY precos_atacado_escrita ON public.precos_atacado
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.usuarios u
-      WHERE u.id = ( SELECT auth.uid() )
-        AND (
-          u.perfil = ANY (ARRAY['DONO'::text, 'ADMIN'::text])
-          OR (
-            u.perfil = 'GERENTE'::text
-            AND (precos_atacado.loja_id IS NULL OR u.loja_id = precos_atacado.loja_id)
-          )
-        )
-    )
-  )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.usuarios u
-      WHERE u.id = ( SELECT auth.uid() )
-        AND (
-          u.perfil = ANY (ARRAY['DONO'::text, 'ADMIN'::text])
-          OR (
-            u.perfil = 'GERENTE'::text
-            AND precos_atacado.loja_id IS NOT NULL
-            AND u.loja_id = precos_atacado.loja_id
-          )
-        )
-    )
-  );
-
--- ============================================================================
 -- VERIFICAÇÃO DE EFEITO — dentro da transação.
 -- ============================================================================
 
 DO $verify$
 DECLARE
   v_def text;
-  v_pol text;
 BEGIN
   v_def := pg_get_functiondef('public.ajustar_estoque_manual(uuid,uuid,numeric,numeric,text,text,uuid)'::regprocedure);
-  IF position('v_perfil = ''GERENTE'' AND v_loja_usuario IS DISTINCT FROM p_loja_id' IN v_def) = 0 THEN
+  IF position('v_perfil = ''GERENTE'' OR NOT COALESCE(v_ativo, false)' IN v_def) = 0 THEN
     RAISE EXCEPTION 'FASE6_AJUSTE_ESTOQUE_GUARD_AUSENTE';
   END IF;
 
   v_def := pg_get_functiondef('public.atualizar_produto_com_faixa_atacado(uuid,jsonb,uuid,jsonb)'::regprocedure);
-  IF position('v_perfil = ''GERENTE'' AND (v_loja_ator IS NULL OR v_loja_ator <> v_loja_produto)' IN v_def) = 0 THEN
+  IF position('v_perfil = ''GERENTE'' OR NOT COALESCE(v_ativo, false)' IN v_def) = 0 THEN
     RAISE EXCEPTION 'FASE6_ATUALIZAR_PRODUTO_GUARD_AUSENTE';
   END IF;
 
-  SELECT pg_get_expr(polqual, polrelid) INTO v_pol
-    FROM pg_policy WHERE polname = 'precos_atacado_escrita';
-  IF v_pol IS NULL OR position('loja_id' IN v_pol) = 0 THEN
-    RAISE EXCEPTION 'FASE6_PRECOS_ATACADO_POLICY_SEM_LOJA';
-  END IF;
-
-  RAISE NOTICE 'fase6_consolida_padrao_a_dono_global OK — ajustar_estoque_manual e atualizar_produto_com_faixa_atacado só restringem GERENTE; precos_atacado_escrita escopada por loja.';
+  RAISE NOTICE 'fase6_consolida_padrao_a_dono_global OK — ajustar_estoque_manual e atualizar_produto_com_faixa_atacado só restringem GERENTE (ou conta desativada); precos_atacado deliberadamente fora de escopo (ver cabeçalho).';
 END
 $verify$;
 

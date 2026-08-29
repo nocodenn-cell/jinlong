@@ -1,8 +1,11 @@
 -- Jīn Lóng — plano de remediação, PR2 (Fase 6): consolida DONO no mesmo
--- escopo de ADMIN (Padrão A) em ajustar_estoque_manual,
--- atualizar_produto_com_faixa_atacado e na policy de precos_atacado.
+-- escopo de ADMIN (Padrão A) em ajustar_estoque_manual e
+-- atualizar_produto_com_faixa_atacado. precos_atacado NÃO faz parte deste
+-- escopo — ver cabeçalho da migration 20260829120000 para o porquê (a
+-- feature de atacado do GERENTE sempre escreve loja_id NULL por design;
+-- restringi-la quebraria o fluxo existente sem substituto).
 --
--- Prova, para cada uma das 3 superfícies: GERENTE de uma loja continua
+-- Prova, para cada uma das 2 superfícies: GERENTE de uma loja continua
 -- bloqueado ao mexer em outra loja; DONO (e ADMIN, sanity check) agora
 -- consegue, onde antes não conseguia. Dados sintéticos, tudo dentro de uma
 -- transação com ROLLBACK — não persiste nada em produção.
@@ -149,94 +152,58 @@ END
 $produto$;
 
 -- ═══════════════════════════════════════════════════════════════════════════
--- 3) precos_atacado — RLS agora escopada por loja. GERENTE só mexe na
---    própria loja e não pode criar/editar faixa GLOBAL (loja_id NULL);
---    consegue ENXERGAR uma faixa global (USING), só não escrever nela
---    (WITH CHECK). DONO cria faixa global e faixa de outra loja.
+-- 3) ajustar_estoque_manual e atualizar_produto_com_faixa_atacado — conta
+--    desativada (usuarios.ativo = false) com JWT ainda válido continua
+--    tratada como restrita à própria loja, mesmo sendo DONO/ADMIN. Sem este
+--    guard, o Padrão A abriria escopo global para uma conta desativada.
 -- ═══════════════════════════════════════════════════════════════════════════
 
-DO $precos$
+DO $inativo$
 DECLARE
-  v_loja_a    uuid := 'a0000001-0000-4000-8000-000000000001';
-  v_loja_b    uuid := 'a0000001-0000-4000-8000-000000000002';
-  v_gerente_a uuid := 'a0000002-0000-4000-8000-000000000001';
-  v_dono      uuid := 'a0000002-0000-4000-8000-000000000002';
-  v_produto_a uuid := 'a0000004-0000-4000-8000-000000000001';
-  v_falhou_cross boolean := false;
-  v_falhou_global boolean := false;
-  v_visiveis  int;
-  v_id_global uuid;
+  v_loja_a      uuid := 'a0000001-0000-4000-8000-000000000001';
+  v_loja_b      uuid := 'a0000001-0000-4000-8000-000000000002';
+  v_dono_inativo uuid := 'a0000002-0000-4000-8000-000000000004';
+  v_produto_b   uuid := 'a0000004-0000-4000-8000-000000000002';
+  v_falhou      boolean := false;
 BEGIN
-  -- RLS não se aplica à sessão de teste por padrão: este script conecta como
-  -- superuser (postgres via psql -U postgres), que tem BYPASSRLS embutido.
-  -- set_config('request.jwt.claim.sub', ...) sozinho (usado nos passos 1-2,
-  -- que testam guards DENTRO de funções SECURITY DEFINER) não basta para
-  -- policies de tabela crua — é preciso também assumir a ROLE authenticated
-  -- de verdade (SET LOCAL ROLE), mesmo padrão já usado em
-  -- fase1-hardening-grants-residuais.test.sql:153-162. Sem isto, TODO INSERT
-  -- abaixo teria sucesso independente da policy, e o teste provaria nada.
+  INSERT INTO auth.users (id) VALUES (v_dono_inativo) ON CONFLICT (id) DO NOTHING;
+  INSERT INTO public.usuarios (id, nome, perfil, ativo, loja_id) VALUES
+    (v_dono_inativo, 'Fase6 Dono Inativo', 'DONO', false, v_loja_a)
+  ON CONFLICT (id) DO UPDATE SET perfil = 'DONO', ativo = false, loja_id = v_loja_a;
 
-  -- DONO cria uma faixa GLOBAL (loja_id NULL) para o produto A.
-  PERFORM set_config('request.jwt.claim.sub', v_dono::text, true);
-  PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
-  SET LOCAL ROLE authenticated;
-  INSERT INTO public.precos_atacado (produto_id, quantidade_minima, preco_unitario, loja_id, ativo)
-  VALUES (v_produto_a, 5, 180.00, NULL, true)
-  RETURNING id INTO v_id_global;
-  RESET ROLE;
-
-  -- GERENTE de A consegue ENXERGAR a faixa global (USING permite leitura).
-  PERFORM set_config('request.jwt.claim.sub', v_gerente_a::text, true);
-  SET LOCAL ROLE authenticated;
-  SELECT count(*) INTO v_visiveis FROM public.precos_atacado WHERE id = v_id_global;
-  IF v_visiveis <> 1 THEN
-    RESET ROLE;
-    RAISE EXCEPTION 'FASE6_FALHOU: GERENTE deveria conseguir ENXERGAR a faixa global (USING), viu % linha(s).', v_visiveis;
-  END IF;
-
-  -- GERENTE de A tentando criar faixa para a loja B (cross-loja): recusado pela RLS.
+  -- DONO desativado tentando ajustar estoque de outra loja: bloqueado.
+  PERFORM set_config('request.jwt.claim.sub', v_dono_inativo::text, true);
   BEGIN
-    INSERT INTO public.precos_atacado (produto_id, quantidade_minima, preco_unitario, loja_id, ativo)
-    VALUES (v_produto_a, 10, 170.00, v_loja_b, true);
+    PERFORM public.ajustar_estoque_manual(v_produto_b, v_loja_b, 40, 0, 'ACERTO_INVENTARIO', null, null);
   EXCEPTION WHEN OTHERS THEN
-    v_falhou_cross := true;
+    IF SQLERRM = 'AJUSTE_ESTOQUE_LOJA_INVALIDA' THEN v_falhou := true;
+    ELSE RAISE EXCEPTION 'FASE6_FALHOU: DONO desativado recebeu erro inesperado em ajustar_estoque_manual: %', SQLERRM; END IF;
   END;
-  IF NOT v_falhou_cross THEN
-    RESET ROLE;
-    RAISE EXCEPTION 'FASE6_FALHOU (BLOCKER): GERENTE conseguiu criar faixa de precos_atacado para OUTRA loja — RLS sem isolamento.';
+  IF NOT v_falhou THEN
+    RAISE EXCEPTION 'FASE6_FALHOU (BLOCKER): DONO desativado conseguiu ajustar estoque cross-loja — regressão de escopo.';
   END IF;
 
-  -- GERENTE de A tentando criar faixa GLOBAL (loja_id NULL): recusado — só
-  -- DONO/ADMIN podem afetar todas as lojas de uma vez.
+  -- DONO desativado tentando editar produto de outra loja: bloqueado.
+  v_falhou := false;
   BEGIN
-    INSERT INTO public.precos_atacado (produto_id, quantidade_minima, preco_unitario, loja_id, ativo)
-    VALUES (v_produto_a, 15, 160.00, NULL, true);
+    PERFORM public.atualizar_produto_com_faixa_atacado(
+      v_produto_b, jsonb_build_object('nome', 'Tentativa DONO inativo cross-loja'), null, null
+    );
   EXCEPTION WHEN OTHERS THEN
-    v_falhou_global := true;
+    IF SQLERRM = 'ATUALIZAR_PRODUTO_NAO_ENCONTRADO' THEN v_falhou := true;
+    ELSE RAISE EXCEPTION 'FASE6_FALHOU: DONO desativado recebeu erro inesperado em atualizar_produto_com_faixa_atacado: %', SQLERRM; END IF;
   END;
-  IF NOT v_falhou_global THEN
-    RESET ROLE;
-    RAISE EXCEPTION 'FASE6_FALHOU (BLOCKER): GERENTE conseguiu criar faixa GLOBAL (loja_id NULL) de precos_atacado.';
+  IF NOT v_falhou THEN
+    RAISE EXCEPTION 'FASE6_FALHOU (BLOCKER): DONO desativado conseguiu editar produto cross-loja — regressão de escopo.';
   END IF;
 
-  -- GERENTE de A consegue criar faixa da PRÓPRIA loja.
-  INSERT INTO public.precos_atacado (produto_id, quantidade_minima, preco_unitario, loja_id, ativo)
-  VALUES (v_produto_a, 20, 150.00, v_loja_a, true);
-
-  RESET ROLE;
-
-  PERFORM 1 FROM public.precos_atacado WHERE produto_id = v_produto_a AND loja_id = v_loja_a AND quantidade_minima = 20;
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'FASE6_FALHOU: GERENTE deveria ter conseguido criar faixa da própria loja.';
-  END IF;
-
-  RAISE NOTICE 'Passo 3 OK: precos_atacado — GERENTE vê global mas só escreve na própria loja; DONO cria faixa global.';
+  RAISE NOTICE 'Passo 3 OK: DONO/ADMIN desativado continua restrito à própria loja em ambas as funções.';
 END
-$precos$;
+$inativo$;
 
 DO $resumo$
 BEGIN
-  RAISE NOTICE 'FASE6 (PR2) — todos os passos OK: ajustar_estoque_manual, atualizar_produto_com_faixa_atacado e precos_atacado convergidos ao Padrão A (GERENTE restrito, DONO/ADMIN globais).';
+  RAISE NOTICE 'FASE6 (PR2) — todos os passos OK: ajustar_estoque_manual e atualizar_produto_com_faixa_atacado convergidos ao Padrão A (GERENTE restrito, DONO/ADMIN globais quando ativos; contas desativadas permanecem restritas).';
 END
 $resumo$;
 
