@@ -41,6 +41,48 @@
       "remoteOnlyVersion": "20260824003815",
       "reason": "Aplicada via MCP apply_migration (não CLI) em produção sob autorização explícita do piloto D0, 24/08/2026: schema_migrations.version gravado foi o timestamp real de aplicação (20260824003815), não o timestamp do nome do arquivo (20260824010000_fix_remessas_conferencia_columns_drift.sql). Migration corretiva, só ADD COLUMN IF NOT EXISTS e DROP/ADD CONSTRAINT — idempotente por natureza, seguro reaplicar se um futuro db push tentar. Restaura o efeito de schema de 20260801120000_recebimento_conferencia_explicita (drift documentado desde 05/08/2026 em 296_nfe_conferencia.sql) sem recriar registrar_conferencia_remessa, deliberadamente removida em 20260819230000 e cuja recriação reabriria um P1 já fechado pela D0-03.",
       "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20260821110000",
+      "remoteOnlyVersion": "20260827130536",
+      "reason": "Consta no remoto sob a version 20260827130536, name restore_devolver_ou_trocar_venda_kardex_ssot04 (name bate com o identificador lógico do arquivo 20260821110000_restore_devolver_ou_trocar_venda_kardex_ssot04.sql, version não). Já apontado, com hedge equivalente, em docs/piloto-d0/CERTIFICACAO_GO_LIVE_E1327E62.md ('Migrations desta consolidação'). Postcondition reverificada por leitura (30/08/2026): a função public.devolver_ou_trocar_venda existe no remoto. Método de aplicação (MCP apply_migration vs. outro caminho) não registrado diretamente nesta reconciliação — só a divergência de version e a postcondition confirmada.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20260824120000",
+      "remoteOnlyVersion": "20260827130449",
+      "reason": "Consta no remoto sob a version 20260827130449, name fix_remessa_entrada_aceita_produto_draft (name bate com o identificador lógico do arquivo 20260824120000_fix_remessa_entrada_aceita_produto_draft.sql, version não). Já apontado, com hedge equivalente, em docs/piloto-d0/CERTIFICACAO_GO_LIVE_E1327E62.md ('Migrations desta consolidação'). Postcondition reverificada por leitura (30/08/2026): public.criar_confirmar_remessa_entrada contém literalmente status_publicacao IS DISTINCT FROM 'INATIVO' no corpo remoto. Método de aplicação não registrado diretamente nesta reconciliação — só a divergência de version e a postcondition confirmada.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20260828110000",
+      "remoteOnlyVersion": "20260828120238",
+      "reason": "Consta no remoto sob a version 20260828120238, name fix_v_kardex_unificado_anti_join_devolucao (name bate com o identificador lógico do arquivo 20260828110000_fix_v_kardex_unificado_anti_join_devolucao.sql, version não). Evidência de equivalência particularmente forte: obj_description de public.v_kardex_unificado no remoto retorna texto idêntico, byte a byte, ao COMMENT ON VIEW do arquivo local, incluindo o próprio timestamp do arquivo (20260828110000) embutido no texto do comentário. Reverificado por leitura (30/08/2026). Método de aplicação não registrado diretamente nesta reconciliação.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20260828120000",
+      "remoteOnlyVersion": "20260830004614",
+      "reason": "Fase 1 do plano de remediação Jīn Lóng (hardening de grants residuais). Aplicada via MCP apply_migration (não CLI): schema_migrations.version gravado foi o timestamp real de aplicação (20260830004614), name preserva integralmente o identificador do arquivo (20260828120000_fase1_hardening_grants_residuais). Postcondition reverificada por leitura (30/08/2026): has_function_privilege('anon', converter_venda_em_espera, EXECUTE) = false e has_function_privilege('authenticated', ..., EXECUTE) = true, exatamente o padrão do Grupo A descrito no arquivo. Migration é só GRANT/REVOKE (nenhum corpo de função alterado) — seguro reaplicar se um futuro db push tentar.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20260828140000",
+      "remoteOnlyVersion": "20260830005351",
+      "reason": "Fase 3 do plano de remediação Jīn Lóng (tenant isolation de transferências/remessas, Padrão A). Aplicada via MCP apply_migration (não CLI): schema_migrations.version gravado foi o timestamp real de aplicação (20260830005351), name preserva integralmente o identificador do arquivo (20260828140000_fase3_tenant_isolation_transferencias_remessas). Postcondition reverificada por leitura (30/08/2026): public.transferir_estoque_seguro contém TRANSFERENCIA_LOJA_INVALIDA e public.confirmar_remessa_entrada contém REMESSA_LOJA_INVALIDA no corpo remoto. Migration substitui as funções inteiras (CREATE OR REPLACE) — seguro reaplicar se um futuro db push tentar.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20260828150000",
+      "remoteOnlyVersion": "20260830005831",
+      "reason": "Fase 4 do plano de remediação Jīn Lóng (idempotência de remessa por payload_hash). Aplicada via MCP apply_migration (não CLI): schema_migrations.version gravado foi o timestamp real de aplicação (20260830005831), name preserva integralmente o identificador do arquivo (20260828150000_fase4_remessa_idempotencia_payload_hash). Postcondition reverificada por leitura (30/08/2026): a coluna public.remessas.payload_hash existe no remoto. Migration é aditiva (ALTER TABLE ADD COLUMN IF NOT EXISTS + CREATE OR REPLACE FUNCTION) — seguro reaplicar se um futuro db push tentar.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20260828150100",
+      "remoteOnlyVersion": "20260830010624",
+      "reason": "Restaura o fluxo de conferência de NF-e da UI FLX-05 (PR #341). Aplicada via MCP apply_migration (não CLI): schema_migrations.version gravado foi o timestamp real de aplicação (20260830010624), name preserva integralmente o identificador do arquivo (20260828150100_restaura_registrar_conferencia_nfe_ui_flx05). Postcondition reverificada por leitura (30/08/2026): as funções public.registrar_conferencia_nfe e public.confirmar_importacao_nfe existem no remoto. Migration recria as funções inteiras (CREATE OR REPLACE) — seguro reaplicar se um futuro db push tentar.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
     }
   ]
 }
