@@ -1,7 +1,8 @@
 -- Regressão da migration 20260828160000_revoke_grants_residuais_tabelas_deny_all.sql.
 --
 -- Prova duas coisas na mesma transação (ROLLBACK no final — não persiste nada):
---   1. NEGATIVO: anon/authenticated não têm mais SELECT/INSERT nas 3 tabelas.
+--   1. NEGATIVO: anon/authenticated não têm mais SELECT/INSERT/UPDATE/DELETE
+--      nas 3 tabelas.
 --   2. POSITIVO: o mecanismo legítimo (RPC SECURITY DEFINER dono `postgres`)
 --      continua escrevendo em `produto_create_requests` normalmente mesmo
 --      chamado sob role `authenticated` — porque o acesso interno da RPC usa
@@ -22,7 +23,8 @@ DECLARE
   v_tbl text;
 BEGIN
   -- ═══════════════════════════════════════════════════════════════════════
-  -- 1. NEGATIVO — anon/authenticated sem SELECT/INSERT nas 3 tabelas
+  -- 1. NEGATIVO — anon/authenticated sem SELECT/INSERT/UPDATE/DELETE nas 3
+  --    tabelas
   -- ═══════════════════════════════════════════════════════════════════════
   FOREACH v_tbl IN ARRAY ARRAY[
     'public.gerente_auth_attempts',
@@ -38,11 +40,23 @@ BEGIN
     IF has_table_privilege('anon', v_tbl, 'INSERT') THEN
       v_fail := array_append(v_fail, v_tbl || ': anon INSERT deveria ser false');
     END IF;
+    IF has_table_privilege('anon', v_tbl, 'UPDATE') THEN
+      v_fail := array_append(v_fail, v_tbl || ': anon UPDATE deveria ser false');
+    END IF;
+    IF has_table_privilege('anon', v_tbl, 'DELETE') THEN
+      v_fail := array_append(v_fail, v_tbl || ': anon DELETE deveria ser false');
+    END IF;
     IF has_table_privilege('authenticated', v_tbl, 'SELECT') THEN
       v_fail := array_append(v_fail, v_tbl || ': authenticated SELECT deveria ser false');
     END IF;
     IF has_table_privilege('authenticated', v_tbl, 'INSERT') THEN
       v_fail := array_append(v_fail, v_tbl || ': authenticated INSERT deveria ser false');
+    END IF;
+    IF has_table_privilege('authenticated', v_tbl, 'UPDATE') THEN
+      v_fail := array_append(v_fail, v_tbl || ': authenticated UPDATE deveria ser false');
+    END IF;
+    IF has_table_privilege('authenticated', v_tbl, 'DELETE') THEN
+      v_fail := array_append(v_fail, v_tbl || ': authenticated DELETE deveria ser false');
     END IF;
 
     -- service_role é o único consumidor real de gerente_auth_* — precisa
@@ -60,7 +74,7 @@ BEGIN
     RAISE EXCEPTION 'RESIDUAL_GRANTS_NEGATIVO_FALHOU: %', array_to_string(v_fail, ' | ');
   END IF;
 
-  RAISE NOTICE 'RESIDUAL_GRANTS negativo OK — anon/authenticated sem SELECT/INSERT, service_role preservado';
+  RAISE NOTICE 'RESIDUAL_GRANTS negativo OK — anon/authenticated sem SELECT/INSERT/UPDATE/DELETE, service_role preservado';
 END
 $residual_grants_check$;
 
