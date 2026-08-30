@@ -42,7 +42,9 @@ const SQL_SUITES = [
   'fase1-hardening-grants-residuais.test.sql',
   'fase3-tenant-isolation-transferencias-remessas.test.sql',
   'fase4-remessa-idempotencia-payload-hash.test.sql',
+  'residual-grants-3-tabelas.test.sql',
   'nfe-conferencia-flx05-ui.test.sql',
+  'fase6-consolida-padrao-a-dono-global.test.sql',
   'nfe-conferencia-margem-nao-bloqueia-estoque.test.sql',
 ]
 
