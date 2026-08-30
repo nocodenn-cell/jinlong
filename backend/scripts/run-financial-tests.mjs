@@ -24,7 +24,10 @@ import { fileURLToPath } from 'node:url'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 
-const NODE_SUITES = ['financial-idempotency-correlation-contract.test.mjs']
+const NODE_SUITES = [
+  'financial-idempotency-correlation-contract.test.mjs',
+  'nfe-conferencia-margem-contract.test.mjs',
+]
 
 const SCRIPT_SUITES = ['test-commission-concurrency.mjs', 'test-nfe-conferencia-concurrency.mjs']
 
@@ -40,6 +43,7 @@ const SQL_SUITES = [
   'fase3-tenant-isolation-transferencias-remessas.test.sql',
   'fase4-remessa-idempotencia-payload-hash.test.sql',
   'nfe-conferencia-flx05-ui.test.sql',
+  'nfe-conferencia-margem-nao-bloqueia-estoque.test.sql',
 ]
 
 /** `psql` está de fato instalado e executável neste host? */
