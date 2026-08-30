@@ -41,6 +41,7 @@ const SQL_SUITES = [
   'fase4-remessa-idempotencia-payload-hash.test.sql',
   'residual-grants-3-tabelas.test.sql',
   'nfe-conferencia-flx05-ui.test.sql',
+  'fase6-consolida-padrao-a-dono-global.test.sql',
 ]
 
 /** `psql` está de fato instalado e executável neste host? */
