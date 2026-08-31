@@ -15,8 +15,15 @@ import {
 } from '../shared/actionHelpers'
 import type { CategoriaProdutoRow } from './categoriasProdutosTypes'
 
-const REVALIDATE_PATH = '/gerente/categorias-produtos'
+// '/gerente/categorias-produtos' é um redirect legado sem RSC próprio — revalidá-lo
+// não invalida o Router Cache da tela real. Ver app/gerente/[...path]/page.tsx.
+const REVALIDATE_PATHS = ['/gerente/produtos', '/admin/catalogo', '/admin/categorias-produtos'] as const
 const TABELA = 'categorias'
+
+function revalidateCategoriaPaths() {
+  for (const p of REVALIDATE_PATHS) revalidatePath(p)
+  revalidateTag('catalogo-opcoes-filtro')
+}
 
 type ActionResult<T> = CadastroActionResult<T>
 
@@ -78,8 +85,8 @@ export async function criarCategoriaProduto(
 ): Promise<ActionResult<{ id: string }>> {
   const parsed = NovaCategoriaSchema.safeParse(input)
   if (!parsed.success) return zodValidationError(parsed.error.issues)
-  const result = await criarCadastro(TABELA, { nome: parsed.data.nome.trim(), ativo: true }, 'Criar categoria', [REVALIDATE_PATH, '/gerente/produtos'])
-  if (result.success) revalidateTag('catalogo-opcoes-filtro')
+  const result = await criarCadastro(TABELA, { nome: parsed.data.nome.trim(), ativo: true }, 'Criar categoria', [...REVALIDATE_PATHS])
+  if (result.success) revalidateCategoriaPaths()
   return result
 }
 
@@ -88,10 +95,10 @@ export async function atualizarCategoriaProduto(
 ): Promise<ActionResult<null>> {
   const parsed = AtualizarCategoriaSchema.safeParse(input)
   if (!parsed.success) return zodValidationError(parsed.error.issues)
-  const result = await atualizarCadastro(TABELA, parsed.data.id, { nome: parsed.data.nome.trim() }, 'Atualizar categoria', [REVALIDATE_PATH, '/gerente/produtos'])
+  const result = await atualizarCadastro(TABELA, parsed.data.id, { nome: parsed.data.nome.trim() }, 'Atualizar categoria', [...REVALIDATE_PATHS])
   // Sem invalidar a tag, o nome antigo continuava nos seletores do cadastro de
   // produto e nos filtros do catálogo por até 120 s (TTL de `unstable_cache`).
-  if (result.success) revalidateTag('catalogo-opcoes-filtro')
+  if (result.success) revalidateCategoriaPaths()
   return result
 }
 
@@ -99,8 +106,8 @@ export async function alternarAtivoCategoriaProduto(
   id: string,
   ativo: boolean,
 ): Promise<ActionResult<null>> {
-  const result = await alternarAtivoCadastro(TABELA, id, ativo, [REVALIDATE_PATH, '/gerente/produtos'])
-  if (result.success) revalidateTag('catalogo-opcoes-filtro')
+  const result = await alternarAtivoCadastro(TABELA, id, ativo, [...REVALIDATE_PATHS])
+  if (result.success) revalidateCategoriaPaths()
   return result
 }
 
@@ -142,8 +149,6 @@ export async function excluirCategoriaProduto(
     }
   }
 
-  revalidatePath(REVALIDATE_PATH)
-  revalidatePath('/gerente/produtos')
-  revalidateTag('catalogo-opcoes-filtro')
+  revalidateCategoriaPaths()
   return { success: true, data: null }
 }
