@@ -13,11 +13,14 @@
 --           trigger da migration 125) continua bloqueando — a migration
 --           desta onda não afrouxou nenhuma validação existente.
 --
--- ⚠️ NÃO EXECUTADO neste sandbox (sem Postgres real disponível — Docker
--- indisponível no ambiente). Script pronto pra rodar via
--- `psql "$DATABASE_URL" -f backend/scripts/onda2-bloco4-rollback.test.sql`
--- (ou supabase db execute) contra um banco com as migrations desta onda já
--- aplicadas, ANTES de aplicar em produção. Tudo dentro de uma transação com
+-- ✅ EXECUTADO com Postgres real em 2026-08-31 (Docker/supabase local,
+-- `supabase db reset` aplicando todas as migrations do repo, incluindo esta
+-- e a correção de sobrecarga/grants que ela motivou — ver o rodapé de
+-- `20260831110000_criar_produto_faixa_atacado_atomica.sql`). Os 4 casos
+-- passaram (`Caso A/B/C/D OK`). Reexecutável via
+-- `docker exec -i supabase_db_fastproduct psql -U postgres -d postgres -f -
+-- < backend/scripts/onda2-bloco4-rollback.test.sql` contra qualquer banco com
+-- as migrations desta onda aplicadas. Tudo dentro de uma transação com
 -- ROLLBACK final — não persiste nada.
 
 \set ON_ERROR_STOP on

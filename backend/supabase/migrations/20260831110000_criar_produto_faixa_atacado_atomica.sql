@@ -312,3 +312,54 @@ COMMENT ON FUNCTION public.criar_produto_com_estoque_inicial(jsonb, uuid, uuid, 
   'única transação — sem estado parcial possível. Onda 2 · Bloco 4 estende a versão '
   'anterior (20260816141000) adicionando p_faixa, mesmo padrão de '
   'atualizar_produto_com_faixa_atacado (20260829120000) para o caminho de edição.';
+
+-- ─────────────────────────────────────────────────────────────────────────
+-- Achado em teste com Postgres real (não previsto na versão original desta
+-- migration): `CREATE OR REPLACE FUNCTION` com uma assinatura DIFERENTE
+-- (4 args em vez de 3) cria uma sobrecarga NOVA — não substitui a antiga.
+-- Isso quebra duas coisas ao mesmo tempo, ambas já resolvidas antes neste
+-- mesmo repositório para `fiscal_enfileirar_documento_venda`
+-- (20260819220100_fase1b_fiscal_enfileirar_assinatura_unica.sql — mesmo
+-- diagnóstico, mesmo fix, reaplicado aqui):
+--
+--   1. SUPERFÍCIE DE PERMISSÃO REABERTA: a sobrecarga de 3 args foi trancada
+--      em `20260805151822_289_hardening_autorizacao_rpcs_p0.sql` (REVOKE ALL
+--      FROM PUBLIC/anon/authenticated, GRANT só a service_role). A sobrecarga
+--      NOVA de 4 args é um objeto pg_proc distinto — nasce com EXECUTE aberto
+--      pra PUBLIC (comportamento padrão do Postgres), sem herdar nada da
+--      antiga. Sem o REVOKE/GRANT abaixo, este RPC — que só deve ser chamado
+--      via service_role (`createAdminClient()`, nunca client-side) — voltaria
+--      a ser executável por `anon`/`authenticated`, desfazendo silenciosamente
+--      o hardening P0 da migration 289.
+--
+--   2. AMBIGUIDADE DE CHAMADA: com as duas sobrecargas presentes, uma chamada
+--      com só 3 argumentos (posicional ou nomeada, sem `p_faixa`) fica
+--      ambígua — Postgres não sabe se é a de 3 args ou a de 4 usando o
+--      default. Confirmado com `psql` real:
+--      `ERROR: function ... is not unique`. O único chamador desta RPC no
+--      app (`criarProdutoComEstoqueInicialRpc.ts`) sempre passa `p_faixa`
+--      nomeado (mesmo que `null`), o que resolve sem ambiguidade — mas o
+--      fallback de 3 argumentos que o próprio app usa quando detecta banco
+--      sem esta migration (`rpcCriarProdutoFaixaAusente`) só é seguro
+--      enquanto SÓ a sobrecarga antiga existir. Uma vez esta migration
+--      aplicada, as duas overloads não podem coexistir sem ambiguidade real.
+--
+-- Fix: reafirma a superfície de permissão na sobrecarga nova (idêntica à que
+-- a 289 já aplicava) e remove a sobrecarga de 3 args — ela não tem mais
+-- nenhum consumidor (grep confirma: só `criarProdutoComEstoqueInicialRpc.ts`
+-- chama esta função, e sempre com `p_faixa`).
+REVOKE ALL ON FUNCTION public.criar_produto_com_estoque_inicial(jsonb, uuid, uuid, jsonb) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.criar_produto_com_estoque_inicial(jsonb, uuid, uuid, jsonb) FROM anon;
+REVOKE ALL ON FUNCTION public.criar_produto_com_estoque_inicial(jsonb, uuid, uuid, jsonb) FROM authenticated;
+GRANT EXECUTE ON FUNCTION public.criar_produto_com_estoque_inicial(jsonb, uuid, uuid, jsonb) TO service_role;
+
+DO $$
+BEGIN
+  IF to_regprocedure('public.criar_produto_com_estoque_inicial(jsonb, uuid, uuid)') IS NOT NULL THEN
+    EXECUTE 'DROP FUNCTION public.criar_produto_com_estoque_inicial(jsonb, uuid, uuid)';
+    RAISE NOTICE 'BLOCO4: sobrecarga legada de 3 args removida — ambiguidade fechada, permissão consolidada numa função só.';
+  ELSE
+    RAISE NOTICE 'BLOCO4: sobrecarga de 3 args ausente — nada a remover.';
+  END IF;
+END;
+$$;

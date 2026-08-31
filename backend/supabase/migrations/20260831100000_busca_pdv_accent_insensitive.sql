@@ -45,13 +45,13 @@
 -- CLASSIFICAÇÃO: SCHEMA/MIGRATION (extensão + função + coluna gerada + índice).
 -- NÃO É QUERY-ONLY nem QUERY+INDEX puro — ver justificativa acima.
 --
--- ⚠️ Esta migration foi preparada e testada na branch da Onda 2, mas NÃO foi
--- aplicada em nenhum ambiente (o sandbox de desenvolvimento não tinha acesso a
--- um Postgres real neste momento — Docker indisponível no ambiente de
--- execução). `EXPLAIN`/plano de execução real: NÃO EXECUTADO. Ver auditoria
--- para o raciocínio de por que o índice deve ser usado (mesmo padrão já
--- comprovado da migration 208), mas isso PRECISA ser confirmado com EXPLAIN
--- real antes de aplicar em produção.
+-- ✅ EXPLAIN real confirmado em 2026-08-31 (Docker/supabase local, 50k linhas
+-- sintéticas, seletividade realista ~0,02%) — ver
+-- `backend/scripts/onda2-bloco3-explain-real.test.sql`. `unaccent(nome) ILIKE`
+-- (a alternativa rejeitada) cai em Seq Scan (~140ms/50k linhas); `nome_sem_acento
+-- ILIKE` (a solução desta migration) usa `idx_produtos_nome_sem_acento_trgm`
+-- via Bitmap Index Scan (~2-7ms) — confirma a hipótese de degradação que
+-- motivou a coluna gerada em vez de envolver a query em unaccent().
 
 -- ---------------------------------------------------------------------------
 -- 1) Extensão unaccent (mesmo schema `extensions` usado por pg_trgm — migration 115)
