@@ -476,15 +476,17 @@ function MetaPdvBloco({
 function TipoPrecoBadge({
   m,
   tipo,
+  quantidadeMinima,
   compact,
 }: {
   m: Mensagens
   tipo: "VAREJO" | "ATACADO" | "MANUAL" | "PROMOCAO"
+  quantidadeMinima?: number
   compact?: boolean
 }) {
   const label =
     tipo === "ATACADO"
-      ? m.relatorios.atacado
+      ? `${m.relatorios.atacado}${quantidadeMinima ? ` (min ${quantidadeMinima})` : ''}`
       : tipo === "MANUAL"
         ? m.relatorios.manual
         : tipo === "PROMOCAO"
