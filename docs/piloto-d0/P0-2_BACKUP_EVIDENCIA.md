@@ -20,7 +20,7 @@
 
 **Conclusão:** o plano **continua Free** em 2026-08-31. Não há evidência nova de backup automático nem de restore. IDs 183–187 permanecem **FAIL**.
 
-**Próximo passo humano:** autorizar upgrade **Pro** (~$25/mês) **ou** autorizar dump manual com gate P0-3 — ver runbook canônico.
+**Próximo passo humano:** executar upgrade **Pro** no painel Supabase (instruções no runbook) e responder `UPGRADE PRO CONCLUÍDO` — ver runbook canônico.
 
 ---
 

@@ -25,7 +25,15 @@
 **Evidência histórica + atual:** [`docs/piloto-d0/P0-2_BACKUP_EVIDENCIA.md`](piloto-d0/P0-2_BACKUP_EVIDENCIA.md)  
 **Gate restore:** [`docs/piloto-d0/P0-3_HUMAN_GATE.md`](piloto-d0/P0-3_HUMAN_GATE.md)
 
-### Decisão recomendada (menor caminho para PASS)
+### Decisão operacional (2026-08-31)
+
+**Opção A — Supabase Pro (gerenciado)** — **APROVADA**.  
+`backup.sh` **não** será implementado. PITR **não** autorizado.  
+Upgrade Pro: **gate humano** (cobrança). **`GAP P0 BACKUP/RESTORE REMAINS OPEN`**.
+
+Aguardar confirmação: `UPGRADE PRO CONCLUÍDO` → reverificação somente leitura (IDs 183–184) → restore drill P0-3 (ID 185) → RPO/RTO (186–187).
+
+### Decisão recomendada (auditoria inicial)
 
 **Opção A — Supabase Pro (gerenciado):** ~$25/mês + compute; daily backup 7d; restore to new project; RPO ≤24h após primeiro backup.
 

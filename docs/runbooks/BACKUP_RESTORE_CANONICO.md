@@ -21,6 +21,21 @@
 
 ---
 
+## Decisão aprovada (2026-08-31)
+
+| Item | Decisão |
+|------|---------|
+| Caminho escolhido | **Opção A — Supabase Pro / backup gerenciado** |
+| `backup.sh` | **Não implementar** — permanece artefato legado; não criar mecanismo concorrente |
+| PITR | **Não autorizado** neste momento |
+| Metas | RPO ≤ 24h · RTO ≤ 8h |
+| Upgrade Pro | **Gate humano** — agente **não executa** cobrança |
+| Status gap | **`GAP P0 BACKUP/RESTORE REMAINS OPEN`** até IDs 183–187 validados |
+
+**Próximo gatilho:** confirmação explícita do humano: `UPGRADE PRO CONCLUÍDO`.
+
+---
+
 ## Decisão recomendada: A — Backup gerenciado Supabase (Pro)
 
 Para cliente pagante, **Opção A** é a menor solução adequada em risco operacional.
@@ -56,12 +71,15 @@ Para cliente pagante, **Opção A** é a menor solução adequada em risco opera
 
 ## Gate humano obrigatório (antes de qualquer ação paga ou com dados)
 
-1. **Upgrade Pro** — decisão de cobrança (~$25/mês). **Não executar sem autorização explícita.**
-2. **`SUPABASE_ACCESS_TOKEN`** — para listar backups via API e registrar evidência ID 184.
+> **Estado 2026-08-31:** Opção A **aprovada**. Upgrade **não executado** pelo agente. Aguardando humano.
+
+1. **Upgrade Pro** — decisão de cobrança (~$25/mês). **Somente o responsável pela conta Supabase confirma no painel.**
+2. **`SUPABASE_ACCESS_TOKEN`** — para listar backups via API e registrar evidência ID 184 (após upgrade).
 3. **Restore drill (P0-3)** — preencher [`../piloto-d0/P0-3_HUMAN_GATE.md`](../piloto-d0/P0-3_HUMAN_GATE.md):
    - ref **DESTINO** ≠ `PROJECT_REF_JINLONG`
    - frase de autorização datada
-4. **Dump manual (Opção B)** — autorização explícita para usar credenciais PG de produção; **não usar `service_role` nem `.env` sem gate.**
+4. **Dump manual (Opção B)** — **não autorizado** (Opção A escolhida).
+5. **PITR** — **não contratar** se aparecer como add-on no checkout.
 
 **Produção permanece somente leitura** durante investigação e drill.
 
