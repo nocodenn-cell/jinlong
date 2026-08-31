@@ -16,12 +16,20 @@ function asFormaPagamento(valor: string): FinalizarVendaInput['formaPagamento'] 
     : 'DINHEIRO'
 }
 
+/** Separa desconto de itens do desconto gerente (vendas.total_desconto agrega ambos). */
+export function totalDescontoItensHistorico(detalhe: HistoricoVendaDetalhe): number {
+  const valorGerente = Math.max(0, detalhe.valorDescontoGerente ?? 0)
+  return Math.max(0, detalhe.totalDesconto - valorGerente)
+}
+
 /** Monta ReciboVenda a partir do detalhe do histórico (reimpressão). */
 export function historicoDetalheParaRecibo(
   detalhe: HistoricoVendaDetalhe,
   moeda: string,
 ): ReciboVenda {
   const data = detalhe.data ? new Date(detalhe.data) : new Date()
+  const valorDescontoGerente = Math.max(0, detalhe.valorDescontoGerente ?? 0)
+  const descontoGerentePercentual = Math.max(0, detalhe.descontoGerentePercentual ?? 0)
   return {
     vendaId: detalhe.id,
     data: Number.isNaN(data.getTime()) ? new Date() : data,
@@ -29,18 +37,18 @@ export function historicoDetalheParaRecibo(
       nome: i.nome,
       quantidade: i.quantidade,
       precoUnitario: i.precoUnitario,
-      precoOriginal: i.precoUnitario,
-      tipoPreco: 'VAREJO',
+      precoOriginal: i.precoOriginal ?? i.precoUnitario,
+      tipoPreco: i.tipoPreco || 'VAREJO',
     })),
     pagamentos: detalhe.pagamentos.map((p) => ({
       formaPagamento: asFormaPagamento(p.formaPagamento),
       valor: p.valor,
     })),
     totalBruto: detalhe.totalBruto,
-    totalDesconto: detalhe.totalDesconto,
+    totalDesconto: totalDescontoItensHistorico(detalhe),
     totalLiquidoComGerente: detalhe.totalLiquido,
-    descontoGerentePercentual: 0,
-    valorDescontoGerente: 0,
+    descontoGerentePercentual,
+    valorDescontoGerente,
     moeda,
   }
 }

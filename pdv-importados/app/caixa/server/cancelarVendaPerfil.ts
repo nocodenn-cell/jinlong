@@ -5,6 +5,3 @@ export function perfilPodeCancelarVenda(perfil: string | null | undefined): bool
   if (!perfil) return false
   return PERFIS_CANCELAR_VENDA.has(perfil)
 }
-
-export const MSG_CANCELAR_VENDA_PERFIL =
-  'Cancelamento exige perfil GERENTE, DONO ou ADMIN.'

@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { mensagemErroComSecao, mensagemErroDeExcecao } from '@/lib/errors/mensagemErroUsuario'
 import { idiomaOperadorParaErro } from '@/app/caixa/server/caixaErroOperador'
+import { caixaMsgOperador, caixaMsgServidor } from '@/app/caixa/server/caixaMensagensServidor'
 import type {
   AcaoMovimentacaoCaixaResult,
   AutorizarMovimentacaoGerenteResult,
@@ -31,14 +32,14 @@ export async function registrarMovimentacaoImpl(
   dados: RegistrarMovimentacaoInput,
 ): Promise<RegistrarMovimentacaoResult> {
   const valor = parseMoneyInput(dados.valor)
-  if (valor === null || valor <= 0) return { ok: false, error: 'Valor inválido.' }
+  if (valor === null || valor <= 0) return { ok: false, error: await caixaMsgOperador( 'err_srv_valor_invalido') }
 
   try {
     const supabase = await createClient()
     const {
       data: { user },
     } = await supabase.auth.getUser()
-    if (!user) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+    if (!user) return { ok: false, error: await caixaMsgOperador( 'err_srv_sessao_expirada') }
 
     const { ipAddress, userAgent } = await coletarAuditoriaRequest()
     const writer = createCashMovementWriter(supabase)
@@ -78,7 +79,7 @@ export async function registrarMovimentacaoImpl(
   } catch (e) {
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível registrar a movimentação de caixa.', await idiomaOperadorParaErro()),
+      error: mensagemErroDeExcecao(e, caixaMsgServidor(await idiomaOperadorParaErro(), 'err_srv_registrar_movimentacao'), await idiomaOperadorParaErro()),
     }
   }
 }
@@ -88,15 +89,15 @@ export async function autorizarMovimentacaoGerenteImpl(
   gerenteSenha: string,
 ): Promise<AutorizarMovimentacaoGerenteResult> {
   const senha = gerenteSenha.trim()
-  if (!movimentacaoId.trim()) return { ok: false, error: 'Movimentação inválida.' }
-  if (!senha) return { ok: false, error: 'Senha do gerente é obrigatória.' }
+  if (!movimentacaoId.trim()) return { ok: false, error: await caixaMsgOperador( 'err_srv_movimentacao_invalida') }
+  if (!senha) return { ok: false, error: await caixaMsgOperador( 'msg_senha_obrigatoria') }
 
   try {
     const supabase = await createClient()
     const {
       data: { user },
     } = await supabase.auth.getUser()
-    if (!user) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+    if (!user) return { ok: false, error: await caixaMsgOperador( 'err_srv_sessao_expirada') }
 
     const validacao = await validarGerenteDescontoImpl({ senha })
     if (!validacao.ok) {
@@ -108,10 +109,10 @@ export async function autorizarMovimentacaoGerenteImpl(
       }
     }
     if (!validacao.token) {
-      return { ok: false, error: 'Não foi possível obter token de autorização do gerente.' }
+      return { ok: false, error: await caixaMsgOperador( 'err_srv_token_gerente') }
     }
     if (!validacao.gerenteId) {
-      return { ok: false, error: 'Não foi possível identificar o gerente aprovador.' }
+      return { ok: false, error: await caixaMsgOperador( 'err_srv_gerente_aprovador') }
     }
 
     const { ipAddress, userAgent } = await coletarAuditoriaRequest()
@@ -131,7 +132,7 @@ export async function autorizarMovimentacaoGerenteImpl(
     }
     const row = firstRpcMovimentacaoRow(data)
     if (!row?.movimentacao_id) {
-      return { ok: false, error: 'A aprovação não retornou identificador.' }
+      return { ok: false, error: await caixaMsgOperador( 'err_srv_aprovacao_sem_id') }
     }
 
     revalidatePath('/caixa')
@@ -145,19 +146,19 @@ export async function autorizarMovimentacaoGerenteImpl(
   } catch (e) {
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível autorizar a movimentação.', await idiomaOperadorParaErro()),
+      error: mensagemErroDeExcecao(e, caixaMsgServidor(await idiomaOperadorParaErro(), 'err_srv_autorizar_movimentacao'), await idiomaOperadorParaErro()),
     }
   }
 }
 
 export async function obterMovimentacoesCaixaImpl(caixaId: string): Promise<ObterMovimentacoesCaixaResult> {
-  if (!caixaId.trim()) return { ok: false, error: 'Caixa inválido.' }
+  if (!caixaId.trim()) return { ok: false, error: await caixaMsgOperador( 'err_srv_caixa_invalido') }
   try {
     const supabase = await createClient()
     const {
       data: { user },
     } = await supabase.auth.getUser()
-    if (!user) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+    if (!user) return { ok: false, error: await caixaMsgOperador( 'err_srv_sessao_expirada') }
 
     const listed = await listMovimentacoesCaixaDto(supabase, caixaId)
     if (!listed.ok) {
@@ -167,7 +168,7 @@ export async function obterMovimentacoesCaixaImpl(caixaId: string): Promise<Obte
   } catch (e) {
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível carregar as movimentações de caixa.', await idiomaOperadorParaErro()),
+      error: mensagemErroDeExcecao(e, caixaMsgServidor(await idiomaOperadorParaErro(), 'err_srv_carregar_movimentacoes'), await idiomaOperadorParaErro()),
     }
   }
 }
@@ -176,13 +177,13 @@ export async function cancelarMovimentacaoCaixaImpl(
   movimentacaoId: string,
   motivoCancelamento?: string,
 ): Promise<AcaoMovimentacaoCaixaResult> {
-  if (!movimentacaoId.trim()) return { ok: false, error: 'Movimentação inválida.' }
+  if (!movimentacaoId.trim()) return { ok: false, error: await caixaMsgOperador( 'err_srv_movimentacao_invalida') }
   try {
     const supabase = await createClient()
     const {
       data: { user },
     } = await supabase.auth.getUser()
-    if (!user) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+    if (!user) return { ok: false, error: await caixaMsgOperador( 'err_srv_sessao_expirada') }
 
     const { data, error } = await supabase.rpc('cancelar_movimentacao', {
       p_movimentacao_id: movimentacaoId,
@@ -193,7 +194,7 @@ export async function cancelarMovimentacaoCaixaImpl(
     }
 
     const row = firstRpcMovimentacaoRow(data)
-    if (!row?.movimentacao_id) return { ok: false, error: 'Cancelamento não retornou identificador.' }
+    if (!row?.movimentacao_id) return { ok: false, error: await caixaMsgOperador( 'err_srv_cancel_mov_sem_id') }
 
     revalidatePath('/caixa')
     revalidatePath('/gerente/caixas')
@@ -205,7 +206,7 @@ export async function cancelarMovimentacaoCaixaImpl(
   } catch (e) {
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível cancelar a movimentação.', await idiomaOperadorParaErro()),
+      error: mensagemErroDeExcecao(e, caixaMsgServidor(await idiomaOperadorParaErro(), 'err_srv_cancelar_movimentacao'), await idiomaOperadorParaErro()),
     }
   }
 }
@@ -215,15 +216,15 @@ export async function estornarMovimentacaoCaixaImpl(
   motivo: string,
 ): Promise<AcaoMovimentacaoCaixaResult> {
   const motivoSanitizado = motivo.trim()
-  if (!movimentacaoOrigemId.trim()) return { ok: false, error: 'Movimentação inválida.' }
-  if (motivoSanitizado.length < 2) return { ok: false, error: 'Motivo obrigatório (mín. 2 caracteres).' }
+  if (!movimentacaoOrigemId.trim()) return { ok: false, error: await caixaMsgOperador( 'err_srv_movimentacao_invalida') }
+  if (motivoSanitizado.length < 2) return { ok: false, error: await caixaMsgOperador( 'err_srv_motivo_obrigatorio') }
 
   try {
     const supabase = await createClient()
     const {
       data: { user },
     } = await supabase.auth.getUser()
-    if (!user) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+    if (!user) return { ok: false, error: await caixaMsgOperador( 'err_srv_sessao_expirada') }
 
     const { ipAddress, userAgent } = await coletarAuditoriaRequest()
     const { data, error } = await supabase.rpc('estornar_movimentacao', {
@@ -241,7 +242,7 @@ export async function estornarMovimentacaoCaixaImpl(
     }
 
     const row = firstRpcMovimentacaoRow(data)
-    if (!row?.movimentacao_id) return { ok: false, error: 'Estorno não retornou identificador.' }
+    if (!row?.movimentacao_id) return { ok: false, error: await caixaMsgOperador( 'err_srv_estorno_sem_id') }
 
     revalidatePath('/caixa')
     revalidatePath('/gerente/caixas')
@@ -254,7 +255,7 @@ export async function estornarMovimentacaoCaixaImpl(
   } catch (e) {
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível estornar a movimentação.', await idiomaOperadorParaErro()),
+      error: mensagemErroDeExcecao(e, caixaMsgServidor(await idiomaOperadorParaErro(), 'err_srv_estornar_movimentacao'), await idiomaOperadorParaErro()),
     }
   }
 }

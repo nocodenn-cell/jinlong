@@ -11,7 +11,7 @@
 |-------|-------|
 | **SHA auditada** | `9e6292838f708cd0e5b0404a09601dd7c4047591` |
 | **Data auditoria** | 2026-08-31 |
-| **Última atualização** | 2026-08-31 (Onda 1 Lote 1 — IDs 221, 222; Lote 2 — IDs 121, 122 fechados) |
+| **Última atualização** | 2026-08-31 (Onda 1 Lotes 1–4C — IDs 221, 222, 121, 122, 5, 6, 27, 28, 219, 220 fechados/parciais) |
 | **Ambiente** | Código + migrations/RPCs/tests/docs; produção somente leitura (evidência documental/API) |
 | **Total capacidades** | 250 (IDs 1–250 únicos, validados) |
 | **P0** | 117 |
@@ -108,6 +108,156 @@
 
 ---
 
+## Fechamentos — Onda 1 / Lote 3 (IDs 5, 6)
+
+**Data:** 2026-08-31 · Branch: `cursor/onda1-busca-autocomplete-5-6-0a79` · PR **#355**
+
+### Mapeamento matriz × GO operacional
+
+| Matriz | Rótulo oficial | Pergunta operacional do GO |
+|--------|----------------|----------------------------|
+| **ID 5** | Autocomplete incremental | Sugestões úteis enquanto digita + lista navegável |
+| **ID 6** | Pesquisa SKU/referência | Localizar por `codigo_interno` (e, com candidatos, localizar rápido entre similares) |
+
+### Comportamento antes (main)
+
+| Caso | Antes |
+|------|--------|
+| `cadeira v` (Enter) | `ambiguo` → toast; sem lista; limite 3 cortava candidatos |
+| Digitação parcial | Sem typeahead |
+| SKU `CAD-VERM-G` | Não buscava `codigo_interno` |
+| Barcode | Match direto (OK) |
+
+### ID 5 — Autocomplete incremental
+
+| Campo | Valor |
+|-------|-------|
+| Status anterior | IMPLEMENTADO PARCIALMENTE |
+| Status novo | **IMPLEMENTADO E VALIDADO** |
+| Causa raiz | Sem debounce/typeahead; ambiguidade só toast; limite 3 |
+| Solução | Port candidatos (lista + teclado) + `useCaixaBuscaSugestoes` (debounce 280ms, reusa `buscarProdutoParaCaixa`); skip se parece barcode |
+| Arquivos | `CaixaCandidatosProduto.tsx`, `CaixaSearchBar.tsx`, `CaixaPageClient.tsx`, `caixaBuscaSugestoes.ts`, `useCaixaBuscaSugestoes.ts`, `caixaCatalogo.impl.ts`, i18n |
+| Teclado | ↑↓ Enter Esc na lista |
+| Scanner | Typeahead não dispara em `^\d{6,}$`; Enter/wedge segue pipeline |
+| Testes | `caixaBuscaSugestoes.test.ts`, `CaixaSearchBar.behavior.test.tsx`, `caixaCatalogo.impl.test.ts`, `webCaixaScanProcess.test.ts` |
+| Evidência | `/opt/cursor/artifacts/onda1-5-6-vitest.log` |
+| Observação | Migration accent-insensitive existe em branch auxiliar — **não aplicada** neste lote (report only) |
+
+### ID 6 — Pesquisa SKU/referência
+
+| Campo | Valor |
+|-------|-------|
+| Status anterior | NÃO IMPLEMENTADO |
+| Status novo | **IMPLEMENTADO E VALIDADO** |
+| Causa raiz | Lookup do caixa não consultava `codigo_interno` |
+| Solução | Após barcode, antes do nome: ILIKE em `codigo_interno` (limite 8, order nome); ambíguo → candidatos |
+| Arquivos | `caixaCatalogo.impl.ts` (+ tests); DTO já expunha o campo no port de candidatos |
+| SSoT | Tabela `produtos` via `buscarProdutoParaCaixaImpl` — sem catálogo paralelo |
+| Testes | `caixaCatalogo.impl.test.ts` (SKU exato + parcial ambíguo) |
+| Evidência | `/opt/cursor/artifacts/onda1-5-6-vitest.log` |
+
+### Não alterado (regressão)
+
+Preço/atacado/estoque/desconto/pagamento/persistência da venda — seleção só localiza; preço via `calcularPrecoProdutoCaixa` / pipeline canônico.
+
+---
+
+## Fechamentos — Onda 1 / Lote 4A (ID 27)
+
+**Data:** 2026-08-31 · Branch: `cursor/onda1-historico-vendas-27-0a79` · PR **#356** · SHA `794841cd`
+
+### Reprogramação (sem implementação) — ID 40 → Onda 2
+
+| Campo | Valor |
+|-------|-------|
+| ID | **40** — Exibição faixa aplicada (atacado) |
+| Decisão | **Reprogramado de Onda 1 para Onda 2 — Atacado Runtime** |
+| Motivo | Depende do mesmo SSoT de pricing/faixas dos IDs 32–36; não propagar `regra_id`/threshold na UI antes de certificar o runtime do atacado |
+| Prioridade | **P1 mantida** |
+| Status | **IMPLEMENTADO PARCIALMENTE** (inalterado até implementação futura) |
+| Implementação neste lote | **Não** |
+
+### ID 27 — Histórico vendas do operador (lista + detalhe do dia)
+
+| Campo | Valor |
+|-------|-------|
+| Status anterior | IMPLEMENTADO PARCIALMENTE |
+| Status novo | **IMPLEMENTADO E VALIDADO** |
+| Evidência antes | `listarHistoricoOperadorImpl` / `obterDetalheHistoricoVendaImpl` com `clienteNome: null` hardcoded (TODO fase-7); UI `CaixaHistoricoSheet` exibia `—` mesmo com `vendas.cliente_id` preenchido |
+| Causa raiz | Join `vendas.cliente_id → clientes.nome` não implementado; mapper devolvia `clienteNome: null` fixo |
+| SSoT | `vendas.cliente_id` → `clientes.nome` via relação PostgREST na mesma query |
+| Solução | `.select(..., cliente_id, clientes(nome))` na lista e no detalhe; helper `extrairClienteNomeDeVenda` |
+| Arquivos | `app/caixa/server/caixaVendaEspera.impl.ts`, `app/caixa/server/caixaVendaEspera.test.ts` |
+| Dados adicionais | Somente `clientes.nome` (sem CPF/telefone/endereço) |
+| N+1 | **Ausente** — join embutido; 1 query vendas + 1 batch `venda_eventos` (lista) / paralelo evento+pagamentos (detalhe), sem lookup por linha |
+| Escopo operador | Preservado: `.eq('operador_id', userId)` inalterado em lista e detalhe |
+| Venda sem cliente | `clienteNome: null` → UI continua `historico_sem_cliente` (`—`) |
+| Legado sem `venda_eventos` | **Limitação residual documentada:** lista funciona (qtdItens=0); detalhe sem itens e impressão/export desabilitados — **não impede** exibir nome do cliente nem lista+detail do dia para vendas com `vendas` row; fora de escopo reconstruir ledger |
+| Testes | `caixaVendaEspera.test.ts` — casos A–E (14 asserts) |
+| Evidência | `/opt/cursor/artifacts/onda1-27-vitest.log` |
+
+**Pergunta de fechamento:** *O requisito “Histórico vendas do operador (lista + detalhe do dia)” está funcional e suficientemente validado?* → **Sim**, para o escopo atual (dia corrente, operador logado, nome do cliente propagado).
+
+---
+
+## Fechamentos — Onda 1 / Lote 4B (ID 28)
+
+**Data:** 2026-08-31 · Branch: `cursor/onda1-reimpressao-recibo-28-0a79` · PR **#357** · SHA `74fa200a`
+
+### ID 28 — Reimpressão fiel do recibo pelo histórico
+
+| Campo | Valor |
+|-------|-------|
+| Status anterior | IMPLEMENTADO PARCIALMENTE |
+| Status novo | **IMPLEMENTADO E VALIDADO** |
+| Evidência antes | `historicoDetalheParaRecibo` forçava `tipoPreco: 'VAREJO'`, `descontoGerentePercentual: 0`, `valorDescontoGerente: 0`; detalhe carregava itens só de `venda_eventos` (sem `tipo_preco` / preço original) |
+| Causa raiz | Mapper de reimpressão ignorava SSoT relacional; detalhe não consultava `itens_venda` nem `descontos_venda` |
+| SSoT | `vendas` (totais), `itens_venda` + `produtos(nome)` (itens/`tipo_preco`/`preco_unitario_original`), `descontos_venda` (desconto gerente), `vendas_pagamentos`, `venda_eventos` (fallback legado) |
+| Solução | `obterDetalheHistoricoVendaImpl` passa a buscar em paralelo `itens_venda` e `descontos_venda`; `historicoDetalheParaRecibo` propaga `tipoPreco`, `precoOriginal`, desconto gerente e separa desconto de itens vs gerente |
+| Fidelidade antes→depois | Antes: atacado/desconto gerente sumiam no cupom histórico; depois: paridade com recibo pós-venda (F12 usa caminho inline preservado) |
+| Legado | Sem `itens_venda` → fallback `venda_eventos` com defaults seguros (`VAREJO`, sem gerente inventado) |
+| N+1 | **Ausente** — 4 queries paralelas no detalhe (venda + evento + pagamentos + itens + desconto), sem lookup por linha |
+| Escopo operador | Preservado: `.eq('operador_id', userId)` inalterado |
+| Arquivos | `caixaVendaEspera.impl.ts`, `caixaHistoricoRecibo.ts`, testes |
+| Testes | `caixaHistoricoRecibo.test.ts` (varejo, atacado, gerente, pagamentos, totais, legado, F12), `caixaVendaEspera.test.ts` (itens_venda, descontos_venda, fallback) |
+| Evidência | `/opt/cursor/artifacts/onda1-28-vitest.log` (26/26) |
+
+**Pergunta de fechamento:** *Reimpressão histórica reproduz fielmente a venda original?* → **Sim**, quando dados existem em `itens_venda`/`descontos_venda`; legado sem metadado mantém comportamento seguro.
+
+---
+
+## Fechamentos — Onda 1 / Lote 4C (IDs 219 + 220)
+
+**Data:** 2026-08-31 · Branch: `cursor/onda1-i18n-219-220-0a79` · PR pendente
+
+### ID 219 — PT-BR consistente (fluxo operacional piloto)
+
+| Campo | Valor |
+|-------|-------|
+| Status anterior | IMPLEMENTADO PARCIALMENTE |
+| Status novo | **IMPLEMENTADO PARCIALMENTE** |
+| Escopo | `/caixa`, Server Actions do caixa, adapters cash (sessão/movimentação), scan pipeline |
+| Gaps antes | Dezenas de literais PT em `*.impl.ts` retornados sem checar `idioma`; `webCaixaScanProcess` com “Código vazio.” / “Código lido:”; `MSG_CANCELAR_VENDA_PERFIL` fixo |
+| Solução | SSOT `caixaMsgServidor` / `caixaMsgOperador` + chaves `err_srv_*` em `pt.json`/`zh.json`; migração dos impls operacionais listados |
+| Arquivos | `caixaMensagensServidor.ts`, `pt.json`, `zh.json`, `caixaVendas.impl.ts`, `caixaVendaEspera.impl.ts`, `caixaCatalogo.impl.ts`, `cashSession.ts`, `cashMovement*.ts`, demais `app/caixa/server/*.impl.ts`, `webCaixaScanProcess.ts` |
+| Testes | `caixaMensagensServidor.test.ts`, `caixa-i18n-parity.test.ts`, regressão `caixaErroOperador.test.ts` / `cashSession.test.ts` |
+| Resíduos | Mensagens Zod em `finalizarVendaValidation.ts` (PT nos schemas); `caixaErroOperador` mantém mapa bilíngue paralelo (fora de pt.json); erros brutos de RPC/PostgREST podem vazar PT; admin/gerente fora do escopo |
+
+### ID 220 — 简体中文 consistente (fluxo operacional piloto)
+
+| Campo | Valor |
+|-------|-------|
+| Status anterior | IMPLEMENTADO PARCIALMENTE |
+| Status novo | **IMPLEMENTADO PARCIALMENTE** |
+| Evidência | Com `idioma=zh`, chaves `err_srv_*` retornam CN (ex.: sessão expirada → `会话已过期…`; cancelar perfil → `取消销售需要经理…`) |
+| #355 autocomplete | `err_srv_busca_ambigua` / `err_srv_codigo_ambiguo` traduzidos e cobertos em teste |
+| Paridade | `caixa-i18n-parity.test.ts` garante paridade `err_srv_*` + `msg_codigo_lido` entre PT/ZH |
+| Resíduos | Mesmos de 219; UI client-side fora do lote pode ainda exibir PT em edge cases |
+
+**Pergunta de fechamento:** *ZH no piloto operacional sem PT indevido nos fluxos corrigidos?* → **Parcialmente sim** nos server actions/adapters migrados; não i18n total do monorepo.
+
+---
+
 ## 2. Score de prontidão
 
 ### P0 (117 capacidades)
@@ -124,10 +274,10 @@
 
 | Status | Qtd | % |
 |--------|-----|---|
-| IMPLEMENTADO E VALIDADO | 33 | 45.8% |
-| IMPLEMENTADO PARCIALMENTE | 35 | 48.6% |
+| IMPLEMENTADO E VALIDADO | 37 | 51.4% |
+| IMPLEMENTADO PARCIALMENTE | 32 | 44.4% |
 | EXISTE MAS NÃO VALIDADO | 1 | 1.4% |
-| NÃO IMPLEMENTADO | 3 | 4.2% |
+| NÃO IMPLEMENTADO | 2 | 2.8% |
 | NÃO SE APLICA AO PILOTO | 0 | 0.0% |
 
 ---
@@ -196,15 +346,15 @@ Não entram na tabela: `IMPLEMENTADO E VALIDADO`, `NÃO SE APLICA AO PILOTO`, `N
 | Ordem | Onda | ID | Gap | Prioridade | Status atual | Esforço estimado | Risco | Dependências | Motivo da ordem |
 | ----- | ---- | -: | --- | ---------- | ------------ | ---------------- | ----- | ------------ | --------------- |
 | 1 | 1 | 121 | Categoria imediata | P0 | IMPLEMENTADO E VALIDADO | S | Baixo | — | Fechado Onda1 Lote2 |
-| 2 | 1 | 5 | Autocomplete incremental | P1 | IMPLEMENTADO PARCIALMENTE | S | Baixo | — | Quick win: bug UX/cadastro/PDV com superfície pequena e ganho imediato |
-| 3 | 1 | 6 | Pesquisa SKU/referência | P1 | NÃO IMPLEMENTADO | S | Médio | caixaCatalogo.impl + ProdutoCacheLite | Quick win: bug UX/cadastro/PDV com superfície pequena e ganho imediato |
-| 4 | 1 | 27 | Histórico vendas | P1 | IMPLEMENTADO PARCIALMENTE | S | Baixo | — | Quick win: bug UX/cadastro/PDV com superfície pequena e ganho imediato |
-| 5 | 1 | 28 | Reimpressão cupom | P1 | IMPLEMENTADO PARCIALMENTE | S | Baixo | — | Quick win: bug UX/cadastro/PDV com superfície pequena e ganho imediato |
-| 6 | 1 | 40 | Exibição faixa aplicada | P1 | IMPLEMENTADO PARCIALMENTE | S | Baixo | — | Quick win: bug UX/cadastro/PDV com superfície pequena e ganho imediato |
+| 2 | 1 | 5 | Autocomplete incremental | P1 | IMPLEMENTADO E VALIDADO | S | Baixo | — | Fechado Onda1 Lote3 |
+| 3 | 1 | 6 | Pesquisa SKU/referência | P1 | IMPLEMENTADO E VALIDADO | S | Baixo | — | Fechado Onda1 Lote3 |
+| 4 | 1 | 27 | Histórico vendas | P1 | IMPLEMENTADO E VALIDADO | S | Baixo | — | Fechado Onda1 Lote4A |
+| 5 | 1 | 28 | Reimpressão cupom | P1 | IMPLEMENTADO E VALIDADO | S | Baixo | — | Fechado Onda1 Lote4B |
+| 6 | 2 | 40 | Exibição faixa aplicada | P1 | IMPLEMENTADO PARCIALMENTE | S | Baixo | SSoT precos_atacado + calcular_preco_produto (IDs 32–36) | **Reprogramado Onda 2** — atacado runtime antes da UI de faixa |
 | 7 | 1 | 122 | Marca imediata | P1 | IMPLEMENTADO E VALIDADO | S | Baixo | — | Fechado Onda1 Lote2 |
 | 8 | 1 | 214 | Cliques adequados | P1 | IMPLEMENTADO PARCIALMENTE | S | Baixo | — | Quick win: bug UX/cadastro/PDV com superfície pequena e ganho imediato |
-| 9 | 1 | 219 | PT-BR consistente | P1 | IMPLEMENTADO PARCIALMENTE | S | Baixo | — | Quick win: bug UX/cadastro/PDV com superfície pequena e ganho imediato |
-| 10 | 1 | 220 | Chinês consistente | P1 | IMPLEMENTADO PARCIALMENTE | M | Médio | — | Quick win: bug UX/cadastro/PDV com superfície pequena e ganho imediato |
+| 9 | 1 | 219 | PT-BR consistente | P1 | IMPLEMENTADO PARCIALMENTE | S | Baixo | Server actions caixa migrados | Fechado parcial Onda1 Lote4C — resíduos Zod/RPC |
+| 10 | 1 | 220 | Chinês consistente | P1 | IMPLEMENTADO PARCIALMENTE | M | Médio | Paridade err_srv_* testada | Fechado parcial Onda1 Lote4C — não i18n total |
 | 11 | 1 | 221 | Hover ícones visíveis | P2 | IMPLEMENTADO E VALIDADO | XS | Baixo | — | Fechado Onda1 Lote1 |
 | 12 | 1 | 222 | Seleção texto legível | P2 | IMPLEMENTADO E VALIDADO | XS | Baixo | — | Fechado Onda1 Lote1 |
 | 13 | 2 | 32 | Preço atacado runtime | P0 | IMPLEMENTADO PARCIALMENTE | S | Médio | SSoT precos_atacado + calcular_preco_produto (não criar paralelo) | Atacado runtime: SSoT já existe; validar E2E antes de corrigir |
@@ -295,15 +445,15 @@ Não entram na tabela: `IMPLEMENTADO E VALIDADO`, `NÃO SE APLICA AO PILOTO`, `N
 
 ### Onda 1
 
-**IDs (12):** ~~121~~, 5, 6, 27, 28, 40, ~~122~~, 214, 219, 220, ~~221~~, ~~222~~  
-**Fechados:** 221, 222 (Lote 1); 121, 122 (Lote 2). Restantes Onda 1: 5, 6, 27, 28, 40, 214, 219, 220.
+**IDs (12):** ~~121~~, ~~5~~, ~~6~~, ~~27~~, ~~28~~, ~~40~~→Onda2, ~~122~~, 214, 219, 220, ~~221~~, ~~222~~  
+**Fechados:** 221, 222 (Lote 1); 121, 122 (Lote 2); 5, 6 (Lote 3); 27 (Lote 4A); 28 (Lote 4B); 219, 220 (Lote 4C parcial). Restantes Onda 1: **214**. **ID 40 reprogramado para Onda 2** (status inalterado).
 
 Quick win: bug UX/cadastro/PDV com superfície pequena e ganho imediato
 ### Onda 2
 
-**IDs (6):** 32, 33, 36, 44, 50, 51
+**IDs (7):** 32, 33, 36, **40**, 44, 50, 51
 
-Atacado runtime: SSoT já existe; validar E2E antes de corrigir
+Atacado runtime: SSoT já existe; validar E2E antes de corrigir. **ID 40** (exibição faixa no carrinho) entrou nesta onda — depende de certificar runtime dos IDs 32–36.
 ### Onda 3
 
 **IDs (6):** 100, 92, 99, 206, 199, 205
@@ -354,8 +504,8 @@ Registro ao fechar ID: status anterior → novo · causa · solução · teste �
 | 2 | A.PDV | Fundo/troco inicial | P0 | IMPLEMENTADO E VALIDADO | CaixaAbrirTurnoModal | cashSession.open | caixas.valor_inicial | caixa-fluxos-criticos.spec.ts | Baixo | pdv-local prompt | — | Não |
 | 3 | A.PDV | Identificação operador | P0 | IMPLEMENTADO PARCIALMENTE | page.tsx operadorLabel | auth.uid()→operador_id | caixas/vendas.operador_id | login-contrato-perfil.spec.ts | Médio | Sem PIN/troca operador | Política terminal | Não |
 | 4 | A.PDV | Pesquisa por nome | P0 | IMPLEMENTADO E VALIDADO | CaixaSearchBar | caixaCatalogo ILIKE | produtos | webCaixaScanProcess.test.ts | Baixo | — | — | Não |
-| 5 | A.PDV | Autocomplete incremental | P1 | IMPLEMENTADO PARCIALMENTE | CaixaSearchBar debounce | buscarProdutoParaCaixa | produtos | — | Baixo | Não typeahead completo | Melhorar debounce/lista | Não |
-| 6 | A.PDV | Pesquisa SKU/referência | P1 | NÃO IMPLEMENTADO | — | codigo_interno ausente caixa | produtos.codigo_interno | productReader admin | Médio | SKU não no caixa | Incluir no lookup | Não |
+| 5 | A.PDV | Autocomplete incremental | P1 | IMPLEMENTADO E VALIDADO | useCaixaBuscaSugestoes + CaixaCandidatosProduto | buscarProdutoParaCaixa | produtos | caixaBuscaSugestoes + CaixaSearchBar.behavior | Baixo | — | — | Não |
+| 6 | A.PDV | Pesquisa SKU/referência | P1 | IMPLEMENTADO E VALIDADO | caixaCatalogo.impl | codigo_interno ILIKE | produtos.codigo_interno | caixaCatalogo.impl.test.ts | Baixo | — | — | Não |
 | 7 | A.PDV | Código de barras | P0 | IMPLEMENTADO E VALIDADO | useCaixaScanPipeline | webCaixaScanProcess | produtos.codigo_barras | caixa-golden-flow-cycle5.spec.ts | Baixo | Keyboard-wedge | — | Não |
 | 8 | A.PDV | Inclusão rápida produto | P3 | NÃO SE APLICA AO PILOTO | Removido | pdv_cadastro_removido.md | — | caixaSemCadastroProduto.test.ts | Baixo | SSoT /admin/catalogo | — | Não |
 | 9 | A.PDV | Scanner repete qty | P0 | IMPLEMENTADO E VALIDADO | webCaixaScanProcess | unifiedCartStore.adicionarItem | — | webCaixaScanProcess.test.ts | Baixo | — | — | Não |
@@ -376,8 +526,8 @@ Registro ao fechar ID: status anterior → novo · causa · solução · teste �
 | 24 | A.PDV | Recuperar espera | P2 | IMPLEMENTADO E VALIDADO | retomarVendaEmEspera | retomar_venda_em_espera | vendas_em_espera | caixa-venda-em-espera.spec.ts | Médio | Preço stale | Repricing | Não |
 | 25 | A.PDV | Múltiplas em espera | P2 | IMPLEMENTADO E VALIDADO | CaixaEmAbertoList | listar_vendas_em_espera | vendas_em_espera | caixa-venda-em-espera.spec.ts | Baixo | RLS amplo TODO255 | — | Não |
 | 26 | A.PDV | Cancelamento venda | P0 | IMPLEMENTADO PARCIALMENTE | VendaCancelarModal admin | cancelar_venda_transacional | vendas_canceladas_auditoria | cancelarVendaContrato.integration.test.ts | Médio | OPERADOR sem cancel caixa; sem e2e | E2E cancel | Não |
-| 27 | A.PDV | Histórico vendas | P1 | IMPLEMENTADO PARCIALMENTE | CaixaHistoricoSheet | listarHistoricoOperadorImpl | vendas | — | Baixo | clienteNome null | Join clientes | Não |
-| 28 | A.PDV | Reimpressão cupom | P1 | IMPLEMENTADO PARCIALMENTE | CaixaHistoricoSheet | historicoDetalheParaRecibo | vendas | — | Baixo | Perde desc gerente | Mapear desconto | Não |
+| 27 | A.PDV | Histórico vendas | P1 | IMPLEMENTADO E VALIDADO | CaixaHistoricoSheet | listarHistoricoOperadorImpl | vendas+clientes(nome) | caixaVendaEspera.test.ts | Baixo | Legado sem venda_eventos: itens vazios | — | Não |
+| 28 | A.PDV | Reimpressão cupom | P1 | IMPLEMENTADO E VALIDADO | CaixaHistoricoSheet | historicoDetalheParaRecibo | itens_venda+descontos_venda | caixaHistoricoRecibo.test.ts | Baixo | Legado sem itens_venda: fallback evento | — | Não |
 | 29 | A.PDV | Impressão/compartilhamento | P1 | IMPLEMENTADO PARCIALMENTE | CaixaReciboModal | buildReciboEscPos | — | CaixaReciboModal.i18n.test.tsx | Médio | Não-fiscal; WebUSB | Homolog física | Não |
 | 30 | A.PDV | Orçamento | P3 | NÃO IMPLEMENTADO | — | — | — | piloto-d0 freeze | Baixo | Fora D0 | — | Não |
 | 31 | B.ATACADO | Preço varejo | P0 | IMPLEMENTADO E VALIDADO | PrecosSection | calcular_preco_produto fallback | produtos.preco_varejo | d0-pricing-tiers-ssot.test.sql | Baixo | — | — | Não |
@@ -568,8 +718,8 @@ Registro ao fechar ID: status anterior → novo · causa · solução · teste �
 | 216 | L.UX | Anti duplo clique | P0 | IMPLEMENTADO E VALIDADO | loading states | finalize guard | — | caixa-golden-flow-cycle5.spec.ts | Baixo | — | — | Não |
 | 217 | L.UX | Confirma destrutivas | P1 | IMPLEMENTADO E VALIDADO | Modais confirm | AlertDialog | — | — | Baixo | — | — | Não |
 | 218 | L.UX | Monetário BR | P0 | IMPLEMENTADO E VALIDADO | formatDecimalBRL | money formatters | — | — | Baixo | — | — | Não |
-| 219 | L.UX | PT-BR consistente | P1 | IMPLEMENTADO PARCIALMENTE | i18n pt | getMessages | — | admin-idioma.spec.ts | Baixo | — | — | Não |
-| 220 | L.UX | Chinês consistente | P1 | IMPLEMENTADO PARCIALMENTE | i18n zh | getMessages zh | — | admin-idioma.spec.ts | Médio | CI mobile-safari falhas i18n | — | Não |
+| 219 | L.UX | PT-BR consistente | P1 | IMPLEMENTADO PARCIALMENTE | caixaMsgServidor | pt.json err_srv_* | Zod/RPC residuais | caixaMensagensServidor.test.ts | Baixo | — | Lote 4C | Não |
+| 220 | L.UX | Chinês consistente | P1 | IMPLEMENTADO PARCIALMENTE | caixaMsgServidor zh | paridade test | UI fora escopo | caixa-i18n-parity.test.ts | Médio | Zod PT em finalize | Lote 4C | Não |
 | 221 | L.UX | Hover ícones visíveis | P2 | IMPLEMENTADO E VALIDADO | Tabelas cadastro/admin | theme-oriental.css dragon-light | — | visual-hover-selection.ssot.test.ts | Baixo | — | — | Não |
 | 222 | L.UX | Seleção texto legível | P2 | IMPLEMENTADO E VALIDADO | layout body | globals.css ::selection | tokens brand/fg | visual-hover-selection.ssot.test.ts | Baixo | — | — | Não |
 | 223 | L.UX | Disabled/loading claro | P1 | IMPLEMENTADO E VALIDADO | Button disabled | loading props | — | — | Baixo | — | — | Não |

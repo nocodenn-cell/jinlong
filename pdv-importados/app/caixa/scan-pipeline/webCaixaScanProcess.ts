@@ -10,6 +10,7 @@ import { buscarProdutoComPrecoCaixa } from '@/app/caixa/actions'
 import { createClient } from '@/lib/supabase/client'
 import type { Mensagens } from '@/i18n/getMessages'
 import type { CaixaToastKind } from '@/app/caixa/hooks/useCaixaMensagens'
+import { caixaFmt } from '@/app/caixa/caixaI18n'
 import { useCarrinhoStore } from '@/stores/carrinhoStore'
 import { raceWithScanAbort } from './webCaixaScanAbort'
 
@@ -76,12 +77,12 @@ export async function runWebCaixaScanProcess(
   let linhaPendenteRollback: string | null = null
   const trimmed = ctx.scan.event.codigo.trim().replace(/[^\x20-\x7E]/g, '')
   if (!trimmed) {
-    return { ok: false, reason: 'validation', message: 'Código vazio.' }
+    return { ok: false, reason: 'validation', message: m.caixa.err_srv_codigo_vazio }
   }
 
   const source = ctx.scan.event.meta?.source
   if (source === 'scanner' && deps.setCaixaMensagemScannerInfo) {
-    deps.setCaixaMensagemScannerInfo(`Código lido: ${trimmed}`, { kind: 'info' })
+    deps.setCaixaMensagemScannerInfo(caixaFmt(m.caixa.msg_codigo_lido, { codigo: trimmed }), { kind: 'info' })
   }
   if (signal?.aborted) {
     return { ok: false, reason: 'aborted' }

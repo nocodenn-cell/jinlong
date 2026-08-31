@@ -7,6 +7,7 @@ import { DEFAULT_PRICING_CONTEXT } from '@shared/pricing/types'
 import { variantesChaveLeitura } from '@/core/caixa/variantesChaveLeitura'
 import { mensagemErroDeExcecao, mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 import { idiomaOperadorParaErro } from '@/app/caixa/server/caixaErroOperador'
+import { caixaMsgServidor } from '@/app/caixa/server/caixaMensagensServidor'
 import {
   aplicarFiltroProdutoVendavel,
   filtrarSomenteProdutosVendaveis,
@@ -52,7 +53,7 @@ function rowVendavel(row: ProdutoRowCaixa): boolean {
 export async function carregarRegrasPrecoCaixaImpl(): Promise<CarregarRegrasResult> {
   try {
     const { userId, idioma } = await getUsuarioAtual()
-    if (!userId) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+    if (!userId) return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_sessao_expirada') }
     const supabase = await createClient()
 
     const [{ data, error }, cfgRes] = await Promise.all([
@@ -86,7 +87,7 @@ export async function carregarRegrasPrecoCaixaImpl(): Promise<CarregarRegrasResu
   } catch (e) {
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível carregar as regras de preço.', await idiomaOperadorParaErro()),
+      error: mensagemErroDeExcecao(e, caixaMsgServidor(await idiomaOperadorParaErro(), 'err_srv_carregar_regras'), await idiomaOperadorParaErro()),
     }
   }
 }
@@ -94,7 +95,7 @@ export async function carregarRegrasPrecoCaixaImpl(): Promise<CarregarRegrasResu
 export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarProdutoResult> {
   try {
     const { userId, lojaId: lojaUsuario, idioma } = await getUsuarioAtual()
-    if (!userId) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+    if (!userId) return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_sessao_expirada') }
     const supabase = await createClient()
 
     const lojaId = lojaUsuario ?? LOJA_MATRIZ_ID
@@ -118,8 +119,7 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
           return {
             ok: true,
             status: 'ambiguo',
-            mensagem:
-              'Vários produtos batem com o código lido. Use o nome ou corrija códigos duplicados no cadastro.',
+            mensagem: caixaMsgServidor(idioma, 'err_srv_codigo_ambiguo'),
           }
         }
         const row = listaCod[0]
@@ -173,7 +173,7 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
       return {
         ok: true,
         status: 'ambiguo',
-        mensagem: `Vários produtos batem com “${frag}” (nome ou categoria). Use o código de barras ou refine a busca.`,
+        mensagem: caixaMsgServidor(idioma, 'err_srv_busca_ambigua', { frag }),
       }
     }
 
@@ -190,7 +190,7 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
   } catch (e) {
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível buscar o produto. Tente de novo.', await idiomaOperadorParaErro()),
+      error: mensagemErroDeExcecao(e, caixaMsgServidor(await idiomaOperadorParaErro(), 'err_srv_buscar_produto'), await idiomaOperadorParaErro()),
     }
   }
 }
@@ -205,8 +205,10 @@ export async function buscarProdutoComPrecoCaixaImpl(
   quantidade: number = 1,
 ): Promise<BuscarProdutoComPrecoResult> {
   try {
+    const { userId, idioma } = await getUsuarioAtual()
+    if (!userId) return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_sessao_expirada') }
     if (quantidadeParaRpcPreco(quantidade) < 1) {
-      return { ok: false, error: 'Quantidade inválida.' }
+      return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_qtd_invalida') }
     }
 
     const buscaRes = await buscarProdutoParaCaixaImpl(termo)
@@ -237,7 +239,7 @@ export async function buscarProdutoComPrecoCaixaImpl(
   } catch (e) {
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível buscar o produto. Tente de novo.', await idiomaOperadorParaErro()),
+      error: mensagemErroDeExcecao(e, caixaMsgServidor(await idiomaOperadorParaErro(), 'err_srv_buscar_produto'), await idiomaOperadorParaErro()),
     }
   }
 }

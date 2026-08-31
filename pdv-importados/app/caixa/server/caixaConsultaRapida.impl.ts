@@ -3,6 +3,7 @@ import { getUsuarioAtual } from '@/lib/auth/usuarioAtual'
 import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import { mensagemErroDeExcecao } from '@/lib/errors/mensagemErroUsuario'
 import { idiomaOperadorParaErro } from '@/app/caixa/server/caixaErroOperador'
+import { caixaMsgServidor } from '@/app/caixa/server/caixaMensagensServidor'
 import { buscarProdutoComPrecoCaixaImpl } from '@/app/caixa/server/caixaCatalogo.impl'
 import { obterConfiguracoesParaCaixaWebImpl } from '@/app/caixa/server/caixaConfiguracoes.impl'
 import {
@@ -19,8 +20,8 @@ export async function consultarProdutoRapidoCaixaImpl(
   termo: string,
 ): Promise<ConsultaRapidaResult> {
   try {
-    const { userId, lojaId: lojaUsuario } = await getUsuarioAtual()
-    if (!userId) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+    const { userId, lojaId: lojaUsuario, idioma } = await getUsuarioAtual()
+    if (!userId) return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_sessao_expirada') }
 
     const busca = await buscarProdutoComPrecoCaixaImpl(termo, 1)
     if (!busca.ok) return { ok: false, error: busca.error }
@@ -117,7 +118,7 @@ export async function consultarProdutoRapidoCaixaImpl(
   } catch (e) {
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível consultar o produto.', await idiomaOperadorParaErro()),
+      error: mensagemErroDeExcecao(e, caixaMsgServidor(await idiomaOperadorParaErro(), 'err_srv_consultar_produto'), await idiomaOperadorParaErro()),
     }
   }
 }
