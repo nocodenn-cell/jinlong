@@ -87,6 +87,12 @@ function mapRpcImportNfe(message: string): string {
   if (message.includes('IMPORT_NFE_STATUS_INVALIDO')) {
     return 'Esta importação já foi confirmada anteriormente.'
   }
+  if (
+    message.includes('PRODUTO_VAREJO_ABAIXO_CUSTO') ||
+    message.includes('PRODUTO_ATACADO_ABAIXO_CUSTO')
+  ) {
+    return 'O custo da nota ficaria acima do preço de varejo/atacado. Ajuste o preço no catálogo e tente confirmar de novo. O estoque ainda não foi creditado.'
+  }
   return mensagemErroComSecao('Importação NF-e', message)
 }
 
