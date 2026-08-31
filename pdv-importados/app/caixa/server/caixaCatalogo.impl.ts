@@ -33,6 +33,7 @@ type ProdutoRowCaixa = {
   id: string
   nome: string
   codigo_barras: string | null
+  codigo_interno: string | null
   preco_varejo: number | string
   preco_atacado?: number | string | null
   categoria_id: string | null
@@ -43,11 +44,79 @@ type ProdutoRowCaixa = {
   status_publicacao: string | null
 }
 
+/**
+ * Teto de candidatos mostrados numa ambiguidade por nome/categoria — pequeno o
+ * bastante pra caber numa lista escaneável (regra de densidade), grande o
+ * bastante pra não cortar silenciosamente um conjunto real pequeno (ex.: 4
+ * variações de "Cadeira Vermelha" já passariam do limite antigo de 3).
+ */
+const LIMITE_CANDIDATOS_AMBIGUOS = 8
+
+/** Resolve estoque de cada candidato em paralelo (N pequeno — mesmo custo do caminho de match único). */
+async function montarCandidatos(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  rows: ProdutoRowCaixa[],
+  lojaId: string,
+): Promise<ReturnType<typeof mapProdutoRow>[]> {
+  return Promise.all(
+    rows.map(async (row) => {
+      const est = await estoqueResumoParaCaixa(supabase, row.id, lojaId)
+      return mapProdutoRow(row, est.quantidade_atual, est.estoque_minimo)
+    }),
+  )
+}
+
 function rowVendavel(row: ProdutoRowCaixa): boolean {
   return isProdutoVendavel({
     ativo: row.ativo,
     status_publicacao: row.status_publicacao,
   })
+}
+
+type SupabaseCaixa = Awaited<ReturnType<typeof createClient>>
+
+async function buscarVendaveisPorColunaIlike(
+  supabase: SupabaseCaixa,
+  coluna: 'codigo_interno' | 'nome',
+  frag: string,
+  idioma: string,
+): Promise<{ ok: true; lista: ProdutoRowCaixa[] } | { ok: false; error: string }> {
+  const { data, error } = await aplicarFiltroProdutoVendavel(supabase.from('produtos').select('*'))
+    .ilike(coluna, `%${frag}%`)
+    .order('nome', { ascending: true })
+    .limit(LIMITE_CANDIDATOS_AMBIGUOS)
+  if (error) return { ok: false, error: mensagemErroParaUsuario(error.message, idioma) }
+  return {
+    ok: true,
+    lista: filtrarSomenteProdutosVendaveis((data ?? []) as ProdutoRowCaixa[]),
+  }
+}
+
+async function finalizarListaProdutos(
+  supabase: SupabaseCaixa,
+  lista: ProdutoRowCaixa[],
+  lojaId: string,
+  frag: string,
+  origem: 'sku' | 'nome',
+  idioma: string,
+): Promise<BuscarProdutoResult> {
+  if (lista.length === 0) return { ok: true, status: 'nao_encontrado' }
+  if (lista.length > 1) {
+    const candidatos = await montarCandidatos(supabase, lista, lojaId)
+    const mensagem =
+      origem === 'sku'
+        ? caixaMsgServidor(idioma, 'err_srv_busca_sku_ambigua', { frag })
+        : caixaMsgServidor(idioma, 'err_srv_busca_ambigua', { frag })
+    return { ok: true, status: 'ambiguo', mensagem, candidatos }
+  }
+  const row = primeiroProdutoVendavel(lista)
+  if (!row || !rowVendavel(row)) return { ok: true, status: 'nao_encontrado' }
+  const est = await estoqueResumoParaCaixa(supabase, row.id, lojaId)
+  return {
+    ok: true,
+    status: 'encontrado',
+    produto: mapProdutoRow(row, est.quantidade_atual, est.estoque_minimo),
+  }
 }
 
 export async function carregarRegrasPrecoCaixaImpl(): Promise<CarregarRegrasResult> {
@@ -116,10 +185,14 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
       if (listaCod.length > 0) {
         const ids = new Set(listaCod.map((r) => r.id))
         if (ids.size > 1) {
+          // Sem candidatos de propósito: colisão de código de barras não é uma
+          // ambiguidade de nome que o operador resolva visualmente — é sintoma
+          // do modelo produto↔loja/tenant (decisão de domínio ainda pendente).
           return {
             ok: true,
             status: 'ambiguo',
             mensagem: caixaMsgServidor(idioma, 'err_srv_codigo_ambiguo'),
+            candidatos: [],
           }
         }
         const row = listaCod[0]
@@ -140,11 +213,24 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
       return { ok: true, status: 'nao_encontrado' }
     }
 
+    // SKU / código interno — após barcode, antes do nome (ID 6).
+    const porSku = await buscarVendaveisPorColunaIlike(
+      supabase,
+      'codigo_interno',
+      frag,
+      idioma,
+    )
+    if (!porSku.ok) return porSku
+    if (porSku.lista.length > 0) {
+      return finalizarListaProdutos(supabase, porSku.lista, lojaId, frag, 'sku', idioma)
+    }
+
     const { data: porNome, error: errNome } = await aplicarFiltroProdutoVendavel(
       supabase.from('produtos').select('*'),
     )
       .ilike('nome', `%${frag}%`)
-      .limit(3)
+      .order('nome', { ascending: true })
+      .limit(LIMITE_CANDIDATOS_AMBIGUOS)
 
     if (errNome) return { ok: false, error: mensagemErroParaUsuario(errNome.message, idioma) }
     let lista = filtrarSomenteProdutosVendaveis((porNome ?? []) as ProdutoRowCaixa[])
@@ -162,31 +248,14 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
           supabase.from('produtos').select('*'),
         )
           .in('categoria_id', catIds)
-          .limit(3)
+          .order('nome', { ascending: true })
+          .limit(LIMITE_CANDIDATOS_AMBIGUOS)
         if (errPorCat) return { ok: false, error: mensagemErroParaUsuario(errPorCat.message, idioma) }
         lista = filtrarSomenteProdutosVendaveis((porCat ?? []) as ProdutoRowCaixa[])
       }
     }
 
-    if (lista.length === 0) return { ok: true, status: 'nao_encontrado' }
-    if (lista.length > 1) {
-      return {
-        ok: true,
-        status: 'ambiguo',
-        mensagem: caixaMsgServidor(idioma, 'err_srv_busca_ambigua', { frag }),
-      }
-    }
-
-    const row = primeiroProdutoVendavel(lista)
-    if (!row || !rowVendavel(row)) {
-      return { ok: true, status: 'nao_encontrado' }
-    }
-    const est = await estoqueResumoParaCaixa(supabase, row.id, lojaId)
-    return {
-      ok: true,
-      status: 'encontrado',
-      produto: mapProdutoRow(row, est.quantidade_atual, est.estoque_minimo),
-    }
+    return finalizarListaProdutos(supabase, lista, lojaId, frag, 'nome', idioma)
   } catch (e) {
     return {
       ok: false,

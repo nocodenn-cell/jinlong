@@ -48,6 +48,7 @@ export type CaixaServidorMsgKey =
   | 'err_srv_cancelar_perfil'
   | 'err_srv_preco_qtd_invalida'
   | 'err_srv_busca_ambigua'
+  | 'err_srv_busca_sku_ambigua'
   | 'err_srv_status_caixa_indisponivel'
   | 'err_srv_cancelar_venda'
   | 'err_srv_calcular_preco'

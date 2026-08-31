@@ -258,24 +258,6 @@ Preço/atacado/estoque/desconto/pagamento/persistência da venda — seleção s
 
 ---
 
-## 2. Score de prontidão
-
-### P0 (117 capacidades)
-
-| Status | Qtd | % |
-|--------|-----|---|
-| IMPLEMENTADO E VALIDADO | 102 | 87.2% |
-| IMPLEMENTADO PARCIALMENTE | 9 | 7.7% |
-| EXISTE MAS NÃO VALIDADO | 1 | 0.9% |
-| NÃO IMPLEMENTADO | 5 | 4.3% |
-| NÃO SE APLICA AO PILOTO | 0 | 0.0% |
-
-### P1 (72 capacidades)
-
-| Status | Qtd | % |
-|--------|-----|---|
-| IMPLEMENTADO E VALIDADO | 37 | 51.4% |
-| IMPLEMENTADO PARCIALMENTE | 32 | 44.4% |
 | EXISTE MAS NÃO VALIDADO | 1 | 1.4% |
 | NÃO IMPLEMENTADO | 2 | 2.8% |
 | NÃO SE APLICA AO PILOTO | 0 | 0.0% |

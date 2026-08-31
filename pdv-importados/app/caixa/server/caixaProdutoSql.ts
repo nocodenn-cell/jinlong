@@ -10,6 +10,7 @@ export function mapProdutoRow(
     id: string
     nome: string
     codigo_barras: string | null
+    codigo_interno?: string | null
     preco_varejo: number | string
     preco_atacado?: number | string | null
     categoria_id: string | null
@@ -29,6 +30,7 @@ export function mapProdutoRow(
     id: r.id,
     nome: r.nome,
     codigo_barras: r.codigo_barras,
+    codigo_interno: r.codigo_interno ?? null,
     preco_varejo: Number(r.preco_varejo),
     preco_atacado: pa === null || pa === undefined ? null : Number(pa),
     categoria_id: r.categoria_id,
@@ -41,4 +43,4 @@ export function mapProdutoRow(
 }
 
 export const PRODUTO_COLS =
-  'id, nome, codigo_barras, preco_varejo, preco_atacado, categoria_id, origem, tem_nf, observacao, ativo, status_publicacao' as const
+  'id, nome, codigo_barras, codigo_interno, preco_varejo, preco_atacado, categoria_id, origem, tem_nf, observacao, ativo, status_publicacao' as const

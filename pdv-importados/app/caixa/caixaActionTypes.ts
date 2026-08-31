@@ -7,6 +7,8 @@ export type ProdutoCaixaDTO = {
   id: string
   nome: string
   codigo_barras: string | null
+  /** Código interno (SKU) — segundo identificador para diferenciar candidatos sem código de barras. */
+  codigo_interno: string | null
   preco_varejo: number
   preco_atacado: number | null
   categoria_id: string | null
@@ -27,10 +29,17 @@ export type CarregarRegrasResult =
   | { ok: true; regras: RegraPreco[]; pricingContext: PricingContext }
   | { ok: false; error: string }
 
+/**
+ * `candidatos`: populado só na ambiguidade por nome/categoria — o operador escolhe
+ * entre eles sem precisar refinar a digitação. Ambiguidade por código de barras
+ * mantém `candidatos: []` de propósito (ver caixaCatalogo.impl.ts) — colisão de
+ * barcode é sintoma do modelo produto↔loja/tenant ainda em decisão de domínio,
+ * não uma ambiguidade de nome que o operador possa resolver visualmente.
+ */
 export type BuscarProdutoResult =
   | { ok: true; status: 'encontrado'; produto: ProdutoCaixaDTO }
   | { ok: true; status: 'nao_encontrado' }
-  | { ok: true; status: 'ambiguo'; mensagem: string }
+  | { ok: true; status: 'ambiguo'; mensagem: string; candidatos: ProdutoCaixaDTO[] }
   | { ok: false; error: string }
 
 export type BuscarProdutoComPrecoResult =
@@ -42,7 +51,7 @@ export type BuscarProdutoComPrecoResult =
       tipoPrecoCalculado: 'VAREJO' | 'ATACADO'
     }
   | { ok: true; status: 'nao_encontrado' }
-  | { ok: true; status: 'ambiguo'; mensagem: string }
+  | { ok: true; status: 'ambiguo'; mensagem: string; candidatos: ProdutoCaixaDTO[] }
   | { ok: false; error: string }
 
 export type CalcularPrecoProdutoCaixaResult =
