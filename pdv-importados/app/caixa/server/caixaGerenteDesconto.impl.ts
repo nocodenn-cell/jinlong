@@ -6,6 +6,7 @@ import {
   mensagemErroParaUsuario,
 } from '@/lib/errors/mensagemErroUsuario'
 import { idiomaOperadorParaErro } from '@/app/caixa/server/caixaErroOperador'
+import { caixaMsgServidor } from '@/app/caixa/server/caixaMensagensServidor'
 import type { LimiteSangriaResult, ValidarGerenteDescontoResult } from '@/app/caixa/caixaActionTypes'
 
 export async function validarGerenteDescontoImpl(input: {
@@ -13,9 +14,10 @@ export async function validarGerenteDescontoImpl(input: {
   lojaId?: string
   deviceFingerprint?: string
 }): Promise<ValidarGerenteDescontoResult> {
+  const idioma = await idiomaOperadorParaErro()
   const senha = input.senha.trim()
-  if (!senha) return { ok: false, error: 'Senha do gerente é obrigatória.' }
-  if (senha.length > 128) return { ok: false, error: 'Senha inválida (máx. 128 caracteres).' }
+  if (!senha) return { ok: false, error: caixaMsgServidor(idioma, 'msg_senha_obrigatoria') }
+  if (senha.length > 128) return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_senha_invalida') }
 
   try {
     const supabase = await createClient()
@@ -25,7 +27,7 @@ export async function validarGerenteDescontoImpl(input: {
     } = await supabase.auth.getSession()
 
     if (sessionErr || !session?.access_token) {
-      return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+      return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_sessao_expirada') }
     }
 
     const { url } = assertSupabasePublicEnv()
@@ -45,21 +47,17 @@ export async function validarGerenteDescontoImpl(input: {
     const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>
     if (!response.ok || payload.ok !== true) {
       const code = typeof payload.error === 'string' ? payload.error : ''
-      const getErrorMessage = (code: string | null, status: number, idioma?: string) => {
+      const getErrorMessage = (code: string | null, status: number, idiomaMsg?: string) => {
         if (code === 'ERRO_PERSISTENCIA_TOKEN') {
-          return idioma === 'zh'
-            ? '无法在服务器上登记折扣，请稍后再试。'
-            : 'Não foi possível registrar o desconto no servidor. Tente novamente em instantes.'
+          return caixaMsgServidor(idiomaMsg, 'err_srv_registrar_desconto')
         }
         if (code) {
-          return mensagemErroParaUsuario(code, idioma)
+          return mensagemErroParaUsuario(code, idiomaMsg)
         }
-        return idioma === 'zh'
-          ? `无法验证经理身份（服务器返回状态码 ${status}）。请检查网络后重试。`
-          : `Não foi possível validar o gerente (servidor respondeu com código ${status}). Verifique a internet e tente de novo.`
+        return caixaMsgServidor(idiomaMsg, 'err_srv_validar_gerente_http', { status })
       }
 
-      const error = getErrorMessage(code, response.status, await idiomaOperadorParaErro())
+      const error = getErrorMessage(code, response.status, idioma)
       return {
         ok: false,
         error,
@@ -77,18 +75,19 @@ export async function validarGerenteDescontoImpl(input: {
   } catch (e) {
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível validar a senha do gerente.', await idiomaOperadorParaErro()),
+      error: mensagemErroDeExcecao(e, caixaMsgServidor(await idiomaOperadorParaErro(), 'err_srv_validar_gerente'), await idiomaOperadorParaErro()),
     }
   }
 }
 
 export async function obterLimiteSangriaSemGerenteImpl(): Promise<LimiteSangriaResult> {
+  const idioma = await idiomaOperadorParaErro()
   try {
     const supabase = await createClient()
     const {
       data: { user },
     } = await supabase.auth.getUser()
-    if (!user) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+    if (!user) return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_sessao_expirada') }
 
     const { data, error } = await supabase.rpc('obter_limite_sangria_sem_gerente')
     if (error) {
@@ -99,7 +98,7 @@ export async function obterLimiteSangriaSemGerenteImpl(): Promise<LimiteSangriaR
   } catch (e) {
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível carregar o limite de sangria.', await idiomaOperadorParaErro()),
+      error: mensagemErroDeExcecao(e, caixaMsgServidor(await idiomaOperadorParaErro(), 'err_srv_limite_sangria'), await idiomaOperadorParaErro()),
     }
   }
 }

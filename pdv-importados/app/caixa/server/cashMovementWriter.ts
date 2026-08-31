@@ -10,6 +10,8 @@ import type {
   RegisterCashMovementResult,
 } from '@shared-core/src/cash'
 import { CASH_ERROR_CODES, validateMovementInput } from '@shared-core/src/cash'
+import { caixaMsgOperador, caixaMsgServidor } from '@/app/caixa/server/caixaMensagensServidor'
+import { idiomaOperadorParaErro } from '@/app/caixa/server/caixaErroOperador'
 
 type RpcMovimentacaoResultRow = {
   movimentacao_id?: unknown
@@ -27,6 +29,7 @@ export function createCashMovementWriter(supabase: SupabaseClient): CashMovement
     async register(
       command: RegisterCashMovementCommand,
     ): Promise<RegisterCashMovementResult> {
+      const idioma = await idiomaOperadorParaErro()
       const validated = validateMovementInput({
         valor: command.valor,
         motivo: command.motivo,
@@ -37,10 +40,10 @@ export function createCashMovementWriter(supabase: SupabaseClient): CashMovement
           ok: false,
           error:
             validated.code === CASH_ERROR_CODES.VALUE_INVALID
-              ? 'Valor inválido.'
+              ? caixaMsgServidor(idioma, 'err_srv_valor_invalido')
               : validated.code === CASH_ERROR_CODES.MOTIVO_REQUIRED
-                ? 'Motivo obrigatório (mín. 2 caracteres).'
-                : 'idempotencyKey é obrigatório.',
+                ? caixaMsgServidor(idioma, 'err_srv_motivo_obrigatorio')
+                : caixaMsgServidor(idioma, 'err_srv_idempotency_obrigatorio'),
           code: validated.code,
         }
       }
@@ -73,7 +76,7 @@ export function createCashMovementWriter(supabase: SupabaseClient): CashMovement
         if (!row?.movimentacao_id) {
           return {
             ok: false,
-            error: 'A movimentação não retornou identificador.',
+            error: await caixaMsgOperador('err_srv_registrar_movimentacao'),
             code: CASH_ERROR_CODES.MOVEMENT_FAILED,
           }
         }
@@ -86,7 +89,8 @@ export function createCashMovementWriter(supabase: SupabaseClient): CashMovement
       } catch (e) {
         return {
           ok: false,
-          error: e instanceof Error ? e.message : 'Falha ao registrar movimentação.',
+          error:
+            e instanceof Error ? e.message : await caixaMsgOperador('err_srv_registrar_movimentacao'),
           code: CASH_ERROR_CODES.MOVEMENT_FAILED,
         }
       }

@@ -11,7 +11,7 @@
 |-------|-------|
 | **SHA auditada** | `9e6292838f708cd0e5b0404a09601dd7c4047591` |
 | **Data auditoria** | 2026-08-31 |
-| **Última atualização** | 2026-08-31 (Onda 1 Lote 4B — ID 28 fechado) |
+| **Última atualização** | 2026-08-31 (Onda 1 Lote 4C — IDs 219/220) |
 | **Ambiente** | Código + migrations/RPCs/tests/docs; produção somente leitura (evidência documental/API) |
 | **Total capacidades** | 250 (IDs 1–250 únicos, validados) |
 | **P0** | 117 |
@@ -226,6 +226,38 @@ Preço/atacado/estoque/desconto/pagamento/persistência da venda — seleção s
 
 ---
 
+## Fechamentos — Onda 1 / Lote 4C (IDs 219 + 220)
+
+**Data:** 2026-08-31 · Branch: `cursor/onda1-i18n-219-220-0a79` · PR pendente
+
+### ID 219 — PT-BR consistente (fluxo operacional piloto)
+
+| Campo | Valor |
+|-------|-------|
+| Status anterior | IMPLEMENTADO PARCIALMENTE |
+| Status novo | **IMPLEMENTADO PARCIALMENTE** |
+| Escopo | `/caixa`, Server Actions do caixa, adapters cash (sessão/movimentação), scan pipeline |
+| Gaps antes | Dezenas de literais PT em `*.impl.ts` retornados sem checar `idioma`; `webCaixaScanProcess` com “Código vazio.” / “Código lido:”; `MSG_CANCELAR_VENDA_PERFIL` fixo |
+| Solução | SSOT `caixaMsgServidor` / `caixaMsgOperador` + chaves `err_srv_*` em `pt.json`/`zh.json`; migração dos impls operacionais listados |
+| Arquivos | `caixaMensagensServidor.ts`, `pt.json`, `zh.json`, `caixaVendas.impl.ts`, `caixaVendaEspera.impl.ts`, `caixaCatalogo.impl.ts`, `cashSession.ts`, `cashMovement*.ts`, demais `app/caixa/server/*.impl.ts`, `webCaixaScanProcess.ts` |
+| Testes | `caixaMensagensServidor.test.ts`, `caixa-i18n-parity.test.ts`, regressão `caixaErroOperador.test.ts` / `cashSession.test.ts` |
+| Resíduos | Mensagens Zod em `finalizarVendaValidation.ts` (PT nos schemas); `caixaErroOperador` mantém mapa bilíngue paralelo (fora de pt.json); erros brutos de RPC/PostgREST podem vazar PT; admin/gerente fora do escopo |
+
+### ID 220 — 简体中文 consistente (fluxo operacional piloto)
+
+| Campo | Valor |
+|-------|-------|
+| Status anterior | IMPLEMENTADO PARCIALMENTE |
+| Status novo | **IMPLEMENTADO PARCIALMENTE** |
+| Evidência | Com `idioma=zh`, chaves `err_srv_*` retornam CN (ex.: sessão expirada → `会话已过期…`; cancelar perfil → `取消销售需要经理…`) |
+| #355 autocomplete | `err_srv_busca_ambigua` / `err_srv_codigo_ambiguo` traduzidos e cobertos em teste |
+| Paridade | `caixa-i18n-parity.test.ts` garante paridade `err_srv_*` + `msg_codigo_lido` entre PT/ZH |
+| Resíduos | Mesmos de 219; UI client-side fora do lote pode ainda exibir PT em edge cases |
+
+**Pergunta de fechamento:** *ZH no piloto operacional sem PT indevido nos fluxos corrigidos?* → **Parcialmente sim** nos server actions/adapters migrados; não i18n total do monorepo.
+
+---
+
 ## 2. Score de prontidão
 
 ### P0 (117 capacidades)
@@ -321,8 +353,8 @@ Não entram na tabela: `IMPLEMENTADO E VALIDADO`, `NÃO SE APLICA AO PILOTO`, `N
 | 6 | 2 | 40 | Exibição faixa aplicada | P1 | IMPLEMENTADO PARCIALMENTE | S | Baixo | SSoT precos_atacado + calcular_preco_produto (IDs 32–36) | **Reprogramado Onda 2** — atacado runtime antes da UI de faixa |
 | 7 | 1 | 122 | Marca imediata | P1 | IMPLEMENTADO E VALIDADO | S | Baixo | — | Fechado Onda1 Lote2 |
 | 8 | 1 | 214 | Cliques adequados | P1 | IMPLEMENTADO PARCIALMENTE | S | Baixo | — | Quick win: bug UX/cadastro/PDV com superfície pequena e ganho imediato |
-| 9 | 1 | 219 | PT-BR consistente | P1 | IMPLEMENTADO PARCIALMENTE | S | Baixo | — | Quick win: bug UX/cadastro/PDV com superfície pequena e ganho imediato |
-| 10 | 1 | 220 | Chinês consistente | P1 | IMPLEMENTADO PARCIALMENTE | M | Médio | — | Quick win: bug UX/cadastro/PDV com superfície pequena e ganho imediato |
+| 9 | 1 | 219 | PT-BR consistente | P1 | IMPLEMENTADO PARCIALMENTE | S | Baixo | Server actions caixa migrados | Fechado parcial Onda1 Lote4C — resíduos Zod/RPC |
+| 10 | 1 | 220 | Chinês consistente | P1 | IMPLEMENTADO PARCIALMENTE | M | Médio | Paridade err_srv_* testada | Fechado parcial Onda1 Lote4C — não i18n total |
 | 11 | 1 | 221 | Hover ícones visíveis | P2 | IMPLEMENTADO E VALIDADO | XS | Baixo | — | Fechado Onda1 Lote1 |
 | 12 | 1 | 222 | Seleção texto legível | P2 | IMPLEMENTADO E VALIDADO | XS | Baixo | — | Fechado Onda1 Lote1 |
 | 13 | 2 | 32 | Preço atacado runtime | P0 | IMPLEMENTADO PARCIALMENTE | S | Médio | SSoT precos_atacado + calcular_preco_produto (não criar paralelo) | Atacado runtime: SSoT já existe; validar E2E antes de corrigir |
@@ -414,7 +446,7 @@ Não entram na tabela: `IMPLEMENTADO E VALIDADO`, `NÃO SE APLICA AO PILOTO`, `N
 ### Onda 1
 
 **IDs (12):** ~~121~~, ~~5~~, ~~6~~, ~~27~~, ~~28~~, ~~40~~→Onda2, ~~122~~, 214, 219, 220, ~~221~~, ~~222~~  
-**Fechados:** 221, 222 (Lote 1); 121, 122 (Lote 2); 5, 6 (Lote 3); 27 (Lote 4A); 28 (Lote 4B). Restantes Onda 1: 214, 219, 220. **ID 40 reprogramado para Onda 2** (status inalterado).
+**Fechados:** 221, 222 (Lote 1); 121, 122 (Lote 2); 5, 6 (Lote 3); 27 (Lote 4A); 28 (Lote 4B); 219, 220 (Lote 4C parcial). Restantes Onda 1: **214**. **ID 40 reprogramado para Onda 2** (status inalterado).
 
 Quick win: bug UX/cadastro/PDV com superfície pequena e ganho imediato
 ### Onda 2
@@ -686,8 +718,8 @@ Registro ao fechar ID: status anterior → novo · causa · solução · teste �
 | 216 | L.UX | Anti duplo clique | P0 | IMPLEMENTADO E VALIDADO | loading states | finalize guard | — | caixa-golden-flow-cycle5.spec.ts | Baixo | — | — | Não |
 | 217 | L.UX | Confirma destrutivas | P1 | IMPLEMENTADO E VALIDADO | Modais confirm | AlertDialog | — | — | Baixo | — | — | Não |
 | 218 | L.UX | Monetário BR | P0 | IMPLEMENTADO E VALIDADO | formatDecimalBRL | money formatters | — | — | Baixo | — | — | Não |
-| 219 | L.UX | PT-BR consistente | P1 | IMPLEMENTADO PARCIALMENTE | i18n pt | getMessages | — | admin-idioma.spec.ts | Baixo | — | — | Não |
-| 220 | L.UX | Chinês consistente | P1 | IMPLEMENTADO PARCIALMENTE | i18n zh | getMessages zh | — | admin-idioma.spec.ts | Médio | CI mobile-safari falhas i18n | — | Não |
+| 219 | L.UX | PT-BR consistente | P1 | IMPLEMENTADO PARCIALMENTE | caixaMsgServidor | pt.json err_srv_* | Zod/RPC residuais | caixaMensagensServidor.test.ts | Baixo | — | Lote 4C | Não |
+| 220 | L.UX | Chinês consistente | P1 | IMPLEMENTADO PARCIALMENTE | caixaMsgServidor zh | paridade test | UI fora escopo | caixa-i18n-parity.test.ts | Médio | Zod PT em finalize | Lote 4C | Não |
 | 221 | L.UX | Hover ícones visíveis | P2 | IMPLEMENTADO E VALIDADO | Tabelas cadastro/admin | theme-oriental.css dragon-light | — | visual-hover-selection.ssot.test.ts | Baixo | — | — | Não |
 | 222 | L.UX | Seleção texto legível | P2 | IMPLEMENTADO E VALIDADO | layout body | globals.css ::selection | tokens brand/fg | visual-hover-selection.ssot.test.ts | Baixo | — | — | Não |
 | 223 | L.UX | Disabled/loading claro | P1 | IMPLEMENTADO E VALIDADO | Button disabled | loading props | — | — | Baixo | — | — | Não |

@@ -19,6 +19,8 @@ import {
   validateCashMoneyValue,
   validateCloseMotivo,
 } from '@shared-core/src/cash'
+import { idiomaOperadorParaErro } from '@/app/caixa/server/caixaErroOperador'
+import { caixaMsgOperador, caixaMsgServidor } from '@/app/caixa/server/caixaMensagensServidor'
 
 type RpcStatusRow = {
   status: string
@@ -41,6 +43,7 @@ type RpcFecharRow = {
 export function createCashSessionReader(supabase: SupabaseClient): CashSessionReader {
   return {
     async getStatus(operadorId: OperadorId): Promise<CashSessionStatusResult> {
+      const idioma = await idiomaOperadorParaErro()
       try {
         const { data, error } = await supabase.rpc('obter_status_caixa_operador', {
           p_operador_id: operadorId,
@@ -58,7 +61,7 @@ export function createCashSessionReader(supabase: SupabaseClient): CashSessionRe
           return {
             ok: false,
             status: 'ERRO',
-            error: 'Status de caixa indisponível.',
+            error: caixaMsgServidor(idioma, 'err_srv_status_caixa_indisponivel'),
             code: CASH_ERROR_CODES.READ_FAILED,
           }
         }
@@ -66,7 +69,9 @@ export function createCashSessionReader(supabase: SupabaseClient): CashSessionRe
           return {
             ok: false,
             status: 'ERRO',
-            error: row.mensagem_operador?.trim() || 'Status de caixa indisponível.',
+            error:
+              row.mensagem_operador?.trim() ||
+              caixaMsgServidor(idioma, 'err_srv_status_caixa_indisponivel'),
             code: CASH_ERROR_CODES.READ_FAILED,
           }
         }
@@ -89,7 +94,7 @@ export function createCashSessionReader(supabase: SupabaseClient): CashSessionRe
         return {
           ok: false,
           status: 'ERRO',
-          error: e instanceof Error ? e.message : 'Erro ao ler status do caixa.',
+          error: e instanceof Error ? e.message : caixaMsgServidor(idioma, 'err_srv_status_caixa_indisponivel'),
           code: CASH_ERROR_CODES.READ_FAILED,
         }
       }
@@ -101,15 +106,16 @@ export function createCashSessionWriter(supabase: SupabaseClient): CashSessionWr
   const reader = createCashSessionReader(supabase)
   return {
     async open(command: OpenCashSessionCommand): Promise<OpenCashSessionResult> {
+      const idioma = await idiomaOperadorParaErro()
       const money = validateCashMoneyValue(command.valorInicial)
       if (!money.ok) {
-        return { ok: false, error: 'Valor inicial inválido.', code: money.code }
+        return { ok: false, error: caixaMsgServidor(idioma, 'msg_valor_inicial_invalido'), code: money.code }
       }
       const status = await reader.getStatus(command.operadorId)
       if (status.ok && status.status === 'ABERTO') {
         return {
           ok: false,
-          error: 'Já existe um caixa aberto para este operador.',
+          error: caixaMsgServidor(idioma, 'err_srv_caixa_ja_aberto'),
           code: CASH_ERROR_CODES.SESSION_ALREADY_OPEN,
         }
       }
@@ -126,20 +132,16 @@ export function createCashSessionWriter(supabase: SupabaseClient): CashSessionWr
           .select('id')
           .single()
         if (insertErr || !novo) {
-          // Índice parcial `uq_caixas_operador_aberto` (migration 288): a checagem
-          // acima é check-then-insert e não segura duas aberturas concorrentes
-          // (dois terminais, ou retry após resposta lenta). Quem perde a corrida
-          // recebe a mesma mensagem do caminho verificado, não um erro de banco.
           if (insertErr?.message?.includes('uq_caixas_operador_aberto')) {
             return {
               ok: false,
-              error: 'Já existe um caixa aberto para este operador.',
+              error: caixaMsgServidor(idioma, 'err_srv_caixa_ja_aberto'),
               code: CASH_ERROR_CODES.SESSION_ALREADY_OPEN,
             }
           }
           return {
             ok: false,
-            error: insertErr?.message ?? 'Falha ao abrir caixa.',
+            error: insertErr?.message ?? await caixaMsgOperador('err_srv_concluir'),
             code: CASH_ERROR_CODES.OPEN_FAILED,
           }
         }
@@ -147,21 +149,22 @@ export function createCashSessionWriter(supabase: SupabaseClient): CashSessionWr
       } catch (e) {
         return {
           ok: false,
-          error: e instanceof Error ? e.message : 'Falha ao abrir caixa.',
+          error: e instanceof Error ? e.message : await caixaMsgOperador('err_srv_concluir'),
           code: CASH_ERROR_CODES.OPEN_FAILED,
         }
       }
     },
 
     async close(command: CloseCashSessionCommand): Promise<CloseCashSessionResult> {
+      const idioma = await idiomaOperadorParaErro()
       const money = validateCashMoneyValue(command.valorContado)
       if (!money.ok) {
-        return { ok: false, error: 'Valor contado inválido.', code: money.code }
+        return { ok: false, error: caixaMsgServidor(idioma, 'msg_valor_contado_invalido'), code: money.code }
       }
       const motivo = (command.motivo ?? '').trim()
       const motivoOk = validateCloseMotivo(motivo)
       if (!motivoOk.ok) {
-        return { ok: false, error: 'Motivo muito longo (máx. 500 caracteres).', code: motivoOk.code }
+        return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_motivo_longo'), code: motivoOk.code }
       }
       try {
         const { data, error: rpcErr } = await supabase.rpc('fechar_caixa_atomico', {
@@ -188,7 +191,7 @@ export function createCashSessionWriter(supabase: SupabaseClient): CashSessionWr
           if (msg.includes('FECHAR_CAIXA_CAIXA_NAO_ENCONTRADO')) {
             return {
               ok: false,
-              error: 'Não há caixa aberto para fechar.',
+              error: caixaMsgServidor(idioma, 'err_srv_caixa_sem_aberto'),
               code: CASH_ERROR_CODES.SESSION_NOT_FOUND,
             }
           }
@@ -198,7 +201,7 @@ export function createCashSessionWriter(supabase: SupabaseClient): CashSessionWr
         if (!row) {
           return {
             ok: false,
-            error: 'Fechamento sem retorno.',
+            error: await caixaMsgOperador('err_srv_concluir'),
             code: CASH_ERROR_CODES.CLOSE_FAILED,
           }
         }
@@ -213,7 +216,7 @@ export function createCashSessionWriter(supabase: SupabaseClient): CashSessionWr
       } catch (e) {
         return {
           ok: false,
-          error: e instanceof Error ? e.message : 'Falha ao fechar caixa.',
+          error: e instanceof Error ? e.message : await caixaMsgOperador('err_srv_concluir'),
           code: CASH_ERROR_CODES.CLOSE_FAILED,
         }
       }

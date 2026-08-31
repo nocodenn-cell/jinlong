@@ -17,6 +17,7 @@ import { pagamentoParcialExigeCliente } from '@/app/caixa/caixaPagamentoSaldo'
 import { getLojaIdUsuario, LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import { mensagemErroDeExcecao, mensagemErroValidacaoZod } from '@/lib/errors/mensagemErroUsuario'
 import { caixaErroOperador, idiomaOperadorParaErro } from '@/app/caixa/server/caixaErroOperador'
+import { caixaMsgOperador, caixaMsgServidor } from '@/app/caixa/server/caixaMensagensServidor'
 import { resolveVendaIdForFinalize } from '@/lib/caixa/resolveVendaIdForFinalize'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 import {
@@ -30,10 +31,7 @@ import {
   parsePercentConfig,
 } from '@/lib/caixa/configuracoesGeraisCaixa'
 import { registrarAlertasLevesVenda } from '@/app/caixa/server/registrarAlertasLevesVenda'
-import {
-  MSG_CANCELAR_VENDA_PERFIL,
-  perfilPodeCancelarVenda,
-} from '@/app/caixa/server/cancelarVendaPerfil'
+import { perfilPodeCancelarVenda } from '@/app/caixa/server/cancelarVendaPerfil'
 import {
   captureVendaError,
   captureRpcVendaError,
@@ -71,12 +69,13 @@ export async function cancelarVendaImpl(
   | { ok: true; vendaId: string; status: 'CANCELADA'; valorEstornado: number }
   | { ok: false; error: string }
 > {
+  const idioma = await idiomaOperadorParaErro()
   const vendaIdTrim = vendaId.trim()
   const motivoTrim = motivo.trim()
 
-  if (!vendaIdTrim) return { ok: false, error: 'Venda inválida.' }
-  if (motivoTrim.length < 2) return { ok: false, error: 'Motivo obrigatório (mín. 2 caracteres).' }
-  if (motivoTrim.length > 500) return { ok: false, error: 'Motivo muito longo (máx. 500 caracteres).' }
+  if (!vendaIdTrim) return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_venda_invalida') }
+  if (motivoTrim.length < 2) return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_motivo_obrigatorio') }
+  if (motivoTrim.length > 500) return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_motivo_longo') }
 
   try {
     const supabase = await createClient()
@@ -84,7 +83,7 @@ export async function cancelarVendaImpl(
       data: { user },
     } = await supabase.auth.getUser()
 
-    if (!user) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+    if (!user) return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_sessao_expirada') }
 
     const { data: urow } = await supabase
       .from('usuarios')
@@ -94,7 +93,7 @@ export async function cancelarVendaImpl(
 
     if (!perfilPodeCancelarVenda(urow?.perfil)) {
       // BA-013: SSoT = RPC cancelar_venda_transacional (GERENTE/DONO/ADMIN).
-      return { ok: false, error: MSG_CANCELAR_VENDA_PERFIL }
+      return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_cancelar_perfil') }
     }
 
     const { data, error } = await supabase.rpc('cancelar_venda_transacional', {
@@ -106,7 +105,7 @@ export async function cancelarVendaImpl(
     if (error) return { ok: false, error: caixaErroOperador(error.message, await idiomaOperadorParaErro()) }
 
     const row = firstRpcVendaRow<RpcCancelarVendaRow>(data)
-    if (!row?.venda_id) return { ok: false, error: 'Cancelamento não retornou identificador da venda.' }
+    if (!row?.venda_id) return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_cancelamento_sem_id') }
 
     revalidatePath('/caixa')
     revalidatePath('/admin/vendas')
@@ -132,7 +131,7 @@ export async function cancelarVendaImpl(
 
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível cancelar a venda.', await idiomaOperadorParaErro()),
+      error: mensagemErroDeExcecao(e, caixaMsgServidor(await idiomaOperadorParaErro(), 'err_srv_cancelar_venda'), await idiomaOperadorParaErro()),
     }
   }
 }
@@ -149,6 +148,7 @@ export async function finalizarVendaCaixaImpl(
   }
 
   const input = parsed.data
+  const idioma = await idiomaOperadorParaErro()
 
   try {
     const runtimeCfg = getCaixaSalesRuntimeConfig()
@@ -164,8 +164,7 @@ export async function finalizarVendaCaixaImpl(
 
       return {
         ok: false,
-        error:
-          'Configuração de ambiente inválida para finalização de venda. Revise USE_UNIFIED_SALES_FLOW, STRICT_MANAGER_DISCOUNT_AUTH e AUTO_ENQUEUE_FISCAL_ON_SALE.',
+        error: caixaMsgServidor(idioma, 'err_srv_config_ambiente_invalida'),
       }
     }
 
@@ -174,7 +173,7 @@ export async function finalizarVendaCaixaImpl(
       data: { user },
     } = await supabase.auth.getUser()
 
-    if (!user) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+    if (!user) return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_sessao_expirada') }
 
     const lojaId = (await getLojaIdUsuario(supabase, user.id)) ?? LOJA_MATRIZ_ID
 
@@ -222,8 +221,7 @@ export async function finalizarVendaCaixaImpl(
     if (!totalsMatchDeclared(computedFinal, input)) {
       return {
         ok: false,
-        error:
-          'Os preços/regras do carrinho mudaram. Reabra o caixa e tente novamente para recalcular.',
+        error: caixaMsgServidor(idioma, 'err_srv_carrinho_precos_mudaram'),
       }
     }
 
@@ -256,7 +254,7 @@ export async function finalizarVendaCaixaImpl(
     if (pagamentoParcialExigeCliente(saldoPendente, input.clienteId)) {
       return {
         ok: false,
-        error: 'Pagamento parcial requer seleção de cliente para gerar crédito. Selecione o cliente antes de finalizar.',
+        error: caixaMsgServidor(idioma, 'err_srv_pagamento_parcial_cliente'),
       }
     }
 
@@ -351,7 +349,7 @@ export async function finalizarVendaCaixaImpl(
     const row = firstRpcVendaRow<RpcFinalizarVendaRow>(data)
 
     if (!row?.venda_id) {
-      return { ok: false, error: 'Não foi possível concluir. Tente novamente.' }
+      return { ok: false, error: caixaMsgServidor(await idiomaOperadorParaErro(), 'err_srv_concluir') }
     }
 
     if (row.status !== 'CONCLUIDA') {

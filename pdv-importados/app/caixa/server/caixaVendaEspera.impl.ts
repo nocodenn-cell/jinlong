@@ -3,6 +3,7 @@ import { getUsuarioAtual } from '@/lib/auth/usuarioAtual'
 import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import { mensagemErroDeExcecao, mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 import { idiomaOperadorParaErro } from '@/app/caixa/server/caixaErroOperador'
+import { caixaMsgServidor } from '@/app/caixa/server/caixaMensagensServidor'
 import type { ItemCarrinho } from '@/stores/unifiedCartStore'
 
 export type VendaEmEsperaCard = {
@@ -98,8 +99,8 @@ export async function colocarVendaEmEsperaImpl(input: {
 }): Promise<ColocarEmEsperaResult> {
   try {
     const { userId, idioma } = await getUsuarioAtual()
-    if (!userId) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
-    if (!input.itens.length) return { ok: false, error: 'Carrinho vazio.' }
+    if (!userId) return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_sessao_expirada') }
+    if (!input.itens.length) return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_carrinho_vazio') }
 
     const supabase = await createClient()
     // Não persiste token de gerente: ao retomar, desconto exige nova autorização
@@ -119,12 +120,12 @@ export async function colocarVendaEmEsperaImpl(input: {
 
     if (error) return { ok: false, error: mensagemErroParaUsuario(error.message, idioma) }
     const row = asRecord(data)
-    if (!row?.id) return { ok: false, error: 'Não foi possível colocar a venda em espera.' }
+    if (!row?.id) return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_colocar_espera') }
     return { ok: true, id: String(row.id), numeroLocal: Number(row.numero_local ?? 0) }
   } catch (e) {
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível colocar a venda em espera.', await idiomaOperadorParaErro()),
+      error: mensagemErroDeExcecao(e, caixaMsgServidor(await idiomaOperadorParaErro(), 'err_srv_colocar_espera'), await idiomaOperadorParaErro()),
     }
   }
 }
@@ -132,7 +133,7 @@ export async function colocarVendaEmEsperaImpl(input: {
 export async function listarVendasEmEsperaImpl(): Promise<ListarEmEsperaResult> {
   try {
     const { userId, idioma } = await getUsuarioAtual()
-    if (!userId) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+    if (!userId) return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_sessao_expirada') }
     const supabase = await createClient()
     const { data, error } = await supabase.rpc('listar_vendas_em_espera')
     if (error) return { ok: false, error: mensagemErroParaUsuario(error.message, idioma) }
@@ -143,7 +144,7 @@ export async function listarVendasEmEsperaImpl(): Promise<ListarEmEsperaResult> 
   } catch (e) {
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível listar vendas em espera.', await idiomaOperadorParaErro()),
+      error: mensagemErroDeExcecao(e, caixaMsgServidor(await idiomaOperadorParaErro(), 'err_srv_listar_espera'), await idiomaOperadorParaErro()),
     }
   }
 }
@@ -151,9 +152,7 @@ export async function listarVendasEmEsperaImpl(): Promise<ListarEmEsperaResult> 
 /** Traduz códigos de claim da RPC de retomada para mensagem de operador. */
 export function mensagemErroRetomarEmEspera(raw: string, idioma?: string): string {
   if (raw.includes('venda_em_espera_em_uso')) {
-    return idioma === 'zh'
-      ? '此挂单已在另一台终端使用中。'
-      : 'Este pedido em espera já está em uso em outro terminal.'
+    return caixaMsgServidor(idioma, 'err_srv_espera_em_uso')
   }
   return mensagemErroParaUsuario(raw, idioma)
 }
@@ -161,12 +160,12 @@ export function mensagemErroRetomarEmEspera(raw: string, idioma?: string): strin
 export async function retomarVendaEmEsperaImpl(id: string): Promise<RetomarEmEsperaResult> {
   try {
     const { userId, idioma } = await getUsuarioAtual()
-    if (!userId) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+    if (!userId) return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_sessao_expirada') }
     const supabase = await createClient()
     const { data, error } = await supabase.rpc('retomar_venda_em_espera', { p_id: id })
     if (error) return { ok: false, error: mensagemErroRetomarEmEspera(error.message, idioma) }
     const row = asRecord(data)
-    if (!row?.id) return { ok: false, error: 'Venda em espera não encontrada.' }
+    if (!row?.id) return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_espera_nao_encontrada') }
     return {
       ok: true,
       id: String(row.id),
@@ -177,7 +176,7 @@ export async function retomarVendaEmEsperaImpl(id: string): Promise<RetomarEmEsp
   } catch (e) {
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível retomar a venda em espera.', await idiomaOperadorParaErro()),
+      error: mensagemErroDeExcecao(e, caixaMsgServidor(await idiomaOperadorParaErro(), 'err_srv_retomar_espera'), await idiomaOperadorParaErro()),
     }
   }
 }
@@ -191,7 +190,7 @@ export async function converterVendaEmEsperaImpl(
 ): Promise<DescartarEmEsperaResult> {
   try {
     const { userId, idioma } = await getUsuarioAtual()
-    if (!userId) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+    if (!userId) return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_sessao_expirada') }
     const supabase = await createClient()
     const { error } = await supabase.rpc('converter_venda_em_espera', { p_id: id })
     if (error) return { ok: false, error: mensagemErroParaUsuario(error.message, idioma) }
@@ -199,7 +198,7 @@ export async function converterVendaEmEsperaImpl(
   } catch (e) {
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível baixar a venda em espera.', await idiomaOperadorParaErro()),
+      error: mensagemErroDeExcecao(e, caixaMsgServidor(await idiomaOperadorParaErro(), 'err_srv_converter_espera'), await idiomaOperadorParaErro()),
     }
   }
 }
@@ -213,7 +212,7 @@ export async function devolverVendaEmEsperaImpl(
 ): Promise<DescartarEmEsperaResult> {
   try {
     const { userId, idioma } = await getUsuarioAtual()
-    if (!userId) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+    if (!userId) return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_sessao_expirada') }
     const supabase = await createClient()
     const { error } = await supabase.rpc('devolver_venda_em_espera', { p_id: id })
     if (error) return { ok: false, error: mensagemErroParaUsuario(error.message, idioma) }
@@ -221,7 +220,7 @@ export async function devolverVendaEmEsperaImpl(
   } catch (e) {
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível devolver a venda em espera.', await idiomaOperadorParaErro()),
+      error: mensagemErroDeExcecao(e, caixaMsgServidor(await idiomaOperadorParaErro(), 'err_srv_devolver_espera'), await idiomaOperadorParaErro()),
     }
   }
 }
@@ -232,7 +231,7 @@ export async function descartarVendaEmEsperaImpl(
 ): Promise<DescartarEmEsperaResult> {
   try {
     const { userId, idioma } = await getUsuarioAtual()
-    if (!userId) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+    if (!userId) return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_sessao_expirada') }
     const supabase = await createClient()
     const { error } = await supabase.rpc('descartar_venda_em_espera', {
       p_id: id,
@@ -243,7 +242,7 @@ export async function descartarVendaEmEsperaImpl(
   } catch (e) {
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível descartar a venda em espera.', await idiomaOperadorParaErro()),
+      error: mensagemErroDeExcecao(e, caixaMsgServidor(await idiomaOperadorParaErro(), 'err_srv_descartar_espera'), await idiomaOperadorParaErro()),
     }
   }
 }
@@ -376,7 +375,7 @@ export async function listarHistoricoOperadorImpl(input?: {
 }): Promise<HistoricoOperadorResult> {
   try {
     const { userId, lojaId, idioma } = await getUsuarioAtual()
-    if (!userId) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+    if (!userId) return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_sessao_expirada') }
 
     const supabase = await createClient()
     const inicio =
@@ -434,7 +433,7 @@ export async function listarHistoricoOperadorImpl(input?: {
   } catch (e) {
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível carregar o histórico.', await idiomaOperadorParaErro()),
+      error: mensagemErroDeExcecao(e, caixaMsgServidor(await idiomaOperadorParaErro(), 'err_srv_carregar_historico'), await idiomaOperadorParaErro()),
     }
   }
 }
@@ -444,10 +443,10 @@ export async function obterDetalheHistoricoVendaImpl(
 ): Promise<HistoricoVendaDetalheResult> {
   try {
     const { userId, idioma } = await getUsuarioAtual()
-    if (!userId) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+    if (!userId) return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_sessao_expirada') }
 
     const id = vendaId.trim()
-    if (!id) return { ok: false, error: 'Venda inválida.' }
+    if (!id) return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_venda_invalida') }
 
     const supabase = await createClient()
     const { data: venda, error: vendaError } = await supabase
@@ -460,7 +459,7 @@ export async function obterDetalheHistoricoVendaImpl(
       .maybeSingle()
 
     if (vendaError) return { ok: false, error: mensagemErroParaUsuario(vendaError.message, idioma) }
-    if (!venda) return { ok: false, error: 'Venda não encontrada.', code: 'VENDA_NAO_ENCONTRADA' }
+    if (!venda) return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_venda_nao_encontrada'), code: 'VENDA_NAO_ENCONTRADA' }
 
     const [eventoRes, pagamentosRes, itensRes, descontoRes] = await Promise.all([
       supabase
@@ -530,7 +529,7 @@ export async function obterDetalheHistoricoVendaImpl(
   } catch (e) {
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível carregar o detalhe da venda.', await idiomaOperadorParaErro()),
+      error: mensagemErroDeExcecao(e, caixaMsgServidor(await idiomaOperadorParaErro(), 'err_srv_carregar_detalhe'), await idiomaOperadorParaErro()),
     }
   }
 }

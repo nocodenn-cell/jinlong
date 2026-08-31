@@ -1,5 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { getLojaIdUsuario, LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
+import { mensagemErroDeExcecao } from '@/lib/errors/mensagemErroUsuario'
+import { idiomaOperadorParaErro } from '@/app/caixa/server/caixaErroOperador'
+import { caixaMsgOperador } from '@/app/caixa/server/caixaMensagensServidor'
 
 export type ClienteCaixaRow = {
   id: string
@@ -19,7 +22,7 @@ export async function buscarClientesCaixaImpl(
 > {
   const q = termo.trim()
   if (q.length < 2) {
-    return { ok: false, error: 'Informe ao menos 2 caracteres para buscar.' }
+    return { ok: false, error: await caixaMsgOperador( 'err_srv_busca_cliente_min') }
   }
 
   try {
@@ -27,7 +30,7 @@ export async function buscarClientesCaixaImpl(
     const {
       data: { user },
     } = await supabase.auth.getUser()
-    if (!user) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+    if (!user) return { ok: false, error: await caixaMsgOperador( 'err_srv_sessao_expirada') }
 
     const lojaId = (await getLojaIdUsuario(supabase, user.id)) ?? LOJA_MATRIZ_ID
     const safe = q.replace(/[%_,]/g, ' ').trim()
@@ -53,7 +56,11 @@ export async function buscarClientesCaixaImpl(
   } catch (e) {
     return {
       ok: false,
-      error: e instanceof Error ? e.message : 'Falha ao buscar clientes.',
+      error: mensagemErroDeExcecao(
+        e,
+        await caixaMsgOperador('err_srv_concluir'),
+        await idiomaOperadorParaErro(),
+      ),
     }
   }
 }
@@ -74,7 +81,7 @@ export async function obterClienteCaixaImpl(
     const {
       data: { user },
     } = await supabase.auth.getUser()
-    if (!user) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+    if (!user) return { ok: false, error: await caixaMsgOperador( 'err_srv_sessao_expirada') }
 
     const lojaId = (await getLojaIdUsuario(supabase, user.id)) ?? LOJA_MATRIZ_ID
 

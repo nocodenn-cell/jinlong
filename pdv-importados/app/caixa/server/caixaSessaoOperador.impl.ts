@@ -10,6 +10,7 @@ import { LIMITE_DIVERGENCIA_FECHAMENTO, parseMoneyInput } from '@/app/caixa/serv
 import { PDVContext, runPdvEvaluation } from '@/lib/pdv'
 import { logJson } from '@/shared/unified-logger'
 import { caixaErroOperador, idiomaOperadorParaErro } from '@/app/caixa/server/caixaErroOperador'
+import { caixaMsgOperador, caixaMsgServidor } from '@/app/caixa/server/caixaMensagensServidor'
 import {
   createCashSessionReader,
   createCashSessionWriter,
@@ -22,7 +23,7 @@ export async function obterStatusCaixaOperadorImpl(): Promise<CaixaStatusOperado
     const {
       data: { user },
     } = await supabase.auth.getUser()
-    if (!user) return { ok: false, status: 'ERRO', error: 'Sessão expirada. Faça login novamente.' }
+    if (!user) return { ok: false, status: 'ERRO', error: await caixaMsgOperador( 'err_srv_sessao_expirada') }
 
     const reader = createCashSessionReader(supabase)
     const result = await reader.getStatus(user.id)
@@ -62,7 +63,7 @@ export async function obterStatusCaixaOperadorImpl(): Promise<CaixaStatusOperado
 export async function abrirCaixaOperadorImpl(valorInicial: number): Promise<AbrirCaixaOperadorResult> {
   const valorInicialSanitizado = parseMoneyInput(valorInicial)
   if (valorInicialSanitizado === null) {
-    return { ok: false, error: 'Valor inicial inválido.' }
+    return { ok: false, error: await caixaMsgOperador( 'msg_valor_inicial_invalido') }
   }
 
   try {
@@ -70,7 +71,7 @@ export async function abrirCaixaOperadorImpl(valorInicial: number): Promise<Abri
     const {
       data: { user },
     } = await supabase.auth.getUser()
-    if (!user) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+    if (!user) return { ok: false, error: await caixaMsgOperador( 'err_srv_sessao_expirada') }
 
     const lojaId = (await getLojaIdUsuario(supabase, user.id)) ?? LOJA_MATRIZ_ID
     const writer = createCashSessionWriter(supabase)
@@ -103,7 +104,7 @@ export async function fecharCaixaOperadorImpl(input: {
   motivo?: string
 }): Promise<FecharCaixaOperadorResult> {
   const valorContado = parseMoneyInput(input.valorContado)
-  if (valorContado === null) return { ok: false, error: 'Valor contado inválido.' }
+  if (valorContado === null) return { ok: false, error: await caixaMsgOperador( 'msg_valor_contado_invalido') }
   const motivo = (input.motivo ?? '').trim()
 
   try {
@@ -111,7 +112,7 @@ export async function fecharCaixaOperadorImpl(input: {
     const {
       data: { user },
     } = await supabase.auth.getUser()
-    if (!user) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+    if (!user) return { ok: false, error: await caixaMsgOperador( 'err_srv_sessao_expirada') }
 
     const writer = createCashSessionWriter(supabase)
     const closed = await writer.close({
@@ -121,9 +122,12 @@ export async function fecharCaixaOperadorImpl(input: {
     })
     if (!closed.ok) {
       if (closed.code === CASH_ERROR_CODES.DIVERGENCE_NEEDS_MOTIVO) {
+        const idiomaDiv = await idiomaOperadorParaErro()
         return {
           ok: false,
-          error: `Diferença acima de R$ ${LIMITE_DIVERGENCIA_FECHAMENTO.toFixed(2)} exige motivo (mín. 5 caracteres).`,
+          error: caixaMsgServidor(idiomaDiv, 'err_srv_divergencia_fechamento_motivo', {
+            limite: LIMITE_DIVERGENCIA_FECHAMENTO.toFixed(2),
+          }),
         }
       }
       const idiomaErro = await idiomaOperadorParaErro()
@@ -131,10 +135,10 @@ export async function fecharCaixaOperadorImpl(input: {
         return { ok: false, error: caixaErroOperador('fechar_caixa_movimentacoes_pendentes', idiomaErro) }
       }
       if (closed.code === CASH_ERROR_CODES.SESSION_NOT_FOUND) {
-        return { ok: false, error: 'Não há caixa aberto para fechar.' }
+        return { ok: false, error: await caixaMsgOperador( 'err_srv_caixa_sem_aberto') }
       }
       if (closed.code === CASH_ERROR_CODES.MOTIVO_TOO_LONG) {
-        return { ok: false, error: 'Motivo muito longo (máx. 500 caracteres).' }
+        return { ok: false, error: await caixaMsgOperador( 'err_srv_motivo_longo') }
       }
       return { ok: false, error: caixaErroOperador(closed.error, idiomaErro) }
     }
