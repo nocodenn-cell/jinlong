@@ -49,13 +49,15 @@ export type BuscarProdutoComPrecoResult =
       produto: ProdutoCaixaDTO
       precoCalculado: number
       tipoPrecoCalculado: 'VAREJO' | 'ATACADO'
+      /** Quantidade mínima do tier de atacado aplicado (ID 40); null fora de ATACADO. */
+      quantidadeMinima: number | null
     }
   | { ok: true; status: 'nao_encontrado' }
   | { ok: true; status: 'ambiguo'; mensagem: string; candidatos: ProdutoCaixaDTO[] }
   | { ok: false; error: string }
 
 export type CalcularPrecoProdutoCaixaResult =
-  | { ok: true; preco: number; tipo: 'VAREJO' | 'ATACADO' }
+  | { ok: true; preco: number; tipo: 'VAREJO' | 'ATACADO'; quantidadeMinima: number | null }
   | { ok: false; error: string }
 
 export type ConsultaRapidaProdutoDTO = {

@@ -65,7 +65,8 @@ function resultadoLinha(item: ItemCarrinhoComPreco) {
   const precoUnitario = r?.precoUnitario ?? item.precoUnitario ?? item.precoOriginal ?? 0
   const precoOriginal = r?.precoOriginal ?? item.precoOriginal ?? precoUnitario
   const tipoPreco = r?.tipoPreco ?? "VAREJO"
-  return { precoUnitario, precoOriginal, tipoPreco }
+  const quantidadeMinima = r?.quantidadeMinima ?? undefined
+  return { precoUnitario, precoOriginal, tipoPreco, quantidadeMinima }
 }
 
 type StepperSize = "sm" | "md"
@@ -237,7 +238,7 @@ const CartRowDesktop = memo(function CartRowDesktop({
           </div>
         ) : null}
       </div>
-      <TipoPrecoBadge m={m} tipo={res.tipoPreco} />
+      <TipoPrecoBadge m={m} tipo={res.tipoPreco} quantidadeMinima={res.quantidadeMinima} />
     </li>
   )
 })
@@ -273,7 +274,7 @@ const CartCardMobile = memo(function CartCardMobile({
             </div>
           ) : null}
         </div>
-        <TipoPrecoBadge m={m} tipo={res.tipoPreco} compact />
+        <TipoPrecoBadge m={m} tipo={res.tipoPreco} quantidadeMinima={res.quantidadeMinima} compact />
       </div>
       <div className="grid grid-cols-2 gap-2 text-xs">
         <div>

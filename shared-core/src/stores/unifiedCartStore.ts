@@ -27,6 +27,8 @@ export interface ItemCarrinho {
     precoOriginal: number
     descontoUnitario: number
     tipoPreco: 'VAREJO' | 'ATACADO' | 'MANUAL' | 'PROMOCAO'
+    /** Quantidade mínima do tier de atacado aplicado (ID 40) — null/undefined fora de ATACADO. */
+    quantidadeMinima?: number | null
   }
 }
 
@@ -80,7 +82,7 @@ export interface CarrinhoState {
   /** Atualiza preço unitário / tipo após RPC `calcular_preco_produto` (ignora linhas MANUAL / PROMOCAO). */
   sincronizarPrecoCalculadoRpc: (
     id: string,
-    patch: { precoUnitario: number; tipoPreco: 'VAREJO' | 'ATACADO' },
+    patch: { precoUnitario: number; tipoPreco: 'VAREJO' | 'ATACADO'; quantidadeMinima?: number | null },
   ) => void
   aplicarDescontoManual: (id: string, descontoValor: number, motivo?: string) => void
   aplicarDescontoGerente: (percentual: number, token?: string | null, maxClamp?: number | null) => void
@@ -132,6 +134,7 @@ function normalizarItemCarrinho(item: ItemCarrinho): ItemCarrinho {
   const resultadoPrecoOriginal = item.resultado?.precoOriginal ?? item.precoOriginal ?? precoBase
   const descontoUnitario = item.resultado?.descontoUnitario ?? roundMoney(resultadoPrecoOriginal - resultadoPrecoUnitario)
   const tipoPreco = item.resultado?.tipoPreco ?? 'VAREJO'
+  const quantidadeMinima = item.resultado?.quantidadeMinima ?? null
 
   return {
     ...item,
@@ -143,6 +146,7 @@ function normalizarItemCarrinho(item: ItemCarrinho): ItemCarrinho {
       precoOriginal: resultadoPrecoOriginal,
       descontoUnitario,
       tipoPreco,
+      quantidadeMinima,
     },
   }
 }
@@ -465,6 +469,7 @@ export const useCartStore = create<CarrinhoState>()(
                     precoUnitario: precoUnit,
                     descontoUnitario: roundMoney(precoOriginal - precoUnit),
                     tipoPreco: patch.tipoPreco,
+                    quantidadeMinima: patch.tipoPreco === 'ATACADO' ? (patch.quantidadeMinima ?? null) : null,
                   },
                 })
               : i,

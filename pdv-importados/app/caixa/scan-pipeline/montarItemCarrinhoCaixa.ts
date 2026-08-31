@@ -14,6 +14,7 @@ export function montarItemCarrinhoCaixa(
   precoCalculado: number,
   tipoPrecoCalculado: 'VAREJO' | 'ATACADO',
   quantidade: number = 1,
+  quantidadeMinima: number | null = null,
 ): ItemCarrinho {
   return {
     id: `${produto.id}-${Date.now()}`,
@@ -29,6 +30,7 @@ export function montarItemCarrinhoCaixa(
       precoOriginal: precoCalculado,
       descontoUnitario: 0,
       tipoPreco: tipoPrecoCalculado,
+      quantidadeMinima: tipoPrecoCalculado === 'ATACADO' ? quantidadeMinima : null,
     },
     metaPdv: {
       origem: produto.origem,
