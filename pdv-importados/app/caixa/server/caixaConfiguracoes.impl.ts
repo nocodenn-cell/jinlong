@@ -4,6 +4,7 @@ import {
 } from '@/lib/errors/mensagemErroUsuario'
 import { obterMapaConfiguracoesParaCaixaWeb } from '@/lib/caixa/configuracoesGeraisCaixa'
 import { idiomaOperadorParaErro } from '@/app/caixa/server/caixaErroOperador'
+import { caixaMsgOperador, caixaMsgServidor } from '@/app/caixa/server/caixaMensagensServidor'
 
 export type ObterConfiguracoesCaixaWebResult =
   | { ok: true; mapa: Record<string, string> }
@@ -15,14 +16,14 @@ export async function obterConfiguracoesParaCaixaWebImpl(): Promise<ObterConfigu
     const {
       data: { user },
     } = await supabase.auth.getUser()
-    if (!user) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+    if (!user) return { ok: false, error: await caixaMsgOperador( 'err_srv_sessao_expirada') }
 
     const mapa = await obterMapaConfiguracoesParaCaixaWeb(supabase)
     return { ok: true, mapa }
   } catch (e) {
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível carregar configurações do caixa.', await idiomaOperadorParaErro()),
+      error: mensagemErroDeExcecao(e, caixaMsgServidor(await idiomaOperadorParaErro(), 'err_srv_carregar_config'), await idiomaOperadorParaErro()),
     }
   }
 }

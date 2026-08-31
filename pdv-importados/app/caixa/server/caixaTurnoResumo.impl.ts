@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { mensagemErroComSecao, mensagemErroDeExcecao } from '@/lib/errors/mensagemErroUsuario'
 import { idiomaOperadorParaErro } from '@/app/caixa/server/caixaErroOperador'
+import { caixaMsgOperador, caixaMsgServidor } from '@/app/caixa/server/caixaMensagensServidor'
 
 export type TurnoResumoResult =
   | {
@@ -18,7 +19,7 @@ export async function obterResumoVendasTurnoImpl(): Promise<TurnoResumoResult> {
     const {
       data: { user },
     } = await supabase.auth.getUser()
-    if (!user) return { ok: false, error: 'Sessão expirada.' }
+    if (!user) return { ok: false, error: await caixaMsgOperador( 'err_srv_sessao_curta') }
     const idioma = await idiomaOperadorParaErro()
 
     const { data: caixa, error: caixaErr } = await supabase
@@ -80,7 +81,7 @@ export async function obterResumoVendasTurnoImpl(): Promise<TurnoResumoResult> {
   } catch (e) {
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível carregar o resumo do turno.', await idiomaOperadorParaErro()),
+      error: mensagemErroDeExcecao(e, caixaMsgServidor(await idiomaOperadorParaErro(), 'err_srv_resumo_turno'), await idiomaOperadorParaErro()),
     }
   }
 }

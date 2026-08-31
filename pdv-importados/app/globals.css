@@ -79,6 +79,16 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /*
+   * Seleção de texto (ID 222): SSOT em tokens.
+   * NÃO usar success-foreground (branco) sobre wash claro — contraste ~1.4:1 no tema light.
+   * Brand wash + foreground escuro mantém seleção legível (WCAG AA).
+   */
+  ::selection {
+    background-color: color-mix(in srgb, var(--color-brand) 28%, transparent);
+    color: var(--color-fg);
+  }
 }
 
 /*

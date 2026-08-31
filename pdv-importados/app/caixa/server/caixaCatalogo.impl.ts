@@ -7,6 +7,7 @@ import { DEFAULT_PRICING_CONTEXT } from '@shared/pricing/types'
 import { variantesChaveLeitura } from '@/core/caixa/variantesChaveLeitura'
 import { mensagemErroDeExcecao, mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 import { idiomaOperadorParaErro } from '@/app/caixa/server/caixaErroOperador'
+import { caixaMsgServidor } from '@/app/caixa/server/caixaMensagensServidor'
 import {
   aplicarFiltroProdutoVendavel,
   filtrarSomenteProdutosVendaveis,
@@ -26,12 +27,14 @@ import {
   fetchPdvConfigParaCaixaWeb,
   mapProdutoRow,
   sanitizeIlikeFragment,
+  semAcento,
 } from '@/app/caixa/server/caixaActionsInternals'
 
 type ProdutoRowCaixa = {
   id: string
   nome: string
   codigo_barras: string | null
+  codigo_interno: string | null
   preco_varejo: number | string
   preco_atacado?: number | string | null
   categoria_id: string | null
@@ -42,6 +45,28 @@ type ProdutoRowCaixa = {
   status_publicacao: string | null
 }
 
+/**
+ * Teto de candidatos mostrados numa ambiguidade por nome/categoria — pequeno o
+ * bastante pra caber numa lista escaneável (regra de densidade), grande o
+ * bastante pra não cortar silenciosamente um conjunto real pequeno (ex.: 4
+ * variações de "Cadeira Vermelha" já passariam do limite antigo de 3).
+ */
+const LIMITE_CANDIDATOS_AMBIGUOS = 8
+
+/** Resolve estoque de cada candidato em paralelo (N pequeno — mesmo custo do caminho de match único). */
+async function montarCandidatos(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  rows: ProdutoRowCaixa[],
+  lojaId: string,
+): Promise<ReturnType<typeof mapProdutoRow>[]> {
+  return Promise.all(
+    rows.map(async (row) => {
+      const est = await estoqueResumoParaCaixa(supabase, row.id, lojaId)
+      return mapProdutoRow(row, est.quantidade_atual, est.estoque_minimo)
+    }),
+  )
+}
+
 function rowVendavel(row: ProdutoRowCaixa): boolean {
   return isProdutoVendavel({
     ativo: row.ativo,
@@ -49,10 +74,56 @@ function rowVendavel(row: ProdutoRowCaixa): boolean {
   })
 }
 
+type SupabaseCaixa = Awaited<ReturnType<typeof createClient>>
+
+async function buscarVendaveisPorColunaIlike(
+  supabase: SupabaseCaixa,
+  coluna: 'codigo_interno' | 'nome',
+  frag: string,
+  idioma: string,
+): Promise<{ ok: true; lista: ProdutoRowCaixa[] } | { ok: false; error: string }> {
+  const { data, error } = await aplicarFiltroProdutoVendavel(supabase.from('produtos').select('*'))
+    .ilike(coluna, `%${frag}%`)
+    .order('nome', { ascending: true })
+    .limit(LIMITE_CANDIDATOS_AMBIGUOS)
+  if (error) return { ok: false, error: mensagemErroParaUsuario(error.message, idioma) }
+  return {
+    ok: true,
+    lista: filtrarSomenteProdutosVendaveis((data ?? []) as ProdutoRowCaixa[]),
+  }
+}
+
+async function finalizarListaProdutos(
+  supabase: SupabaseCaixa,
+  lista: ProdutoRowCaixa[],
+  lojaId: string,
+  frag: string,
+  origem: 'sku' | 'nome',
+  idioma: string,
+): Promise<BuscarProdutoResult> {
+  if (lista.length === 0) return { ok: true, status: 'nao_encontrado' }
+  if (lista.length > 1) {
+    const candidatos = await montarCandidatos(supabase, lista, lojaId)
+    const mensagem =
+      origem === 'sku'
+        ? caixaMsgServidor(idioma, 'err_srv_busca_sku_ambigua', { frag })
+        : caixaMsgServidor(idioma, 'err_srv_busca_ambigua', { frag })
+    return { ok: true, status: 'ambiguo', mensagem, candidatos }
+  }
+  const row = primeiroProdutoVendavel(lista)
+  if (!row || !rowVendavel(row)) return { ok: true, status: 'nao_encontrado' }
+  const est = await estoqueResumoParaCaixa(supabase, row.id, lojaId)
+  return {
+    ok: true,
+    status: 'encontrado',
+    produto: mapProdutoRow(row, est.quantidade_atual, est.estoque_minimo),
+  }
+}
+
 export async function carregarRegrasPrecoCaixaImpl(): Promise<CarregarRegrasResult> {
   try {
     const { userId, idioma } = await getUsuarioAtual()
-    if (!userId) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+    if (!userId) return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_sessao_expirada') }
     const supabase = await createClient()
 
     const [{ data, error }, cfgRes] = await Promise.all([
@@ -86,7 +157,7 @@ export async function carregarRegrasPrecoCaixaImpl(): Promise<CarregarRegrasResu
   } catch (e) {
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível carregar as regras de preço.', await idiomaOperadorParaErro()),
+      error: mensagemErroDeExcecao(e, caixaMsgServidor(await idiomaOperadorParaErro(), 'err_srv_carregar_regras'), await idiomaOperadorParaErro()),
     }
   }
 }
@@ -94,7 +165,7 @@ export async function carregarRegrasPrecoCaixaImpl(): Promise<CarregarRegrasResu
 export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarProdutoResult> {
   try {
     const { userId, lojaId: lojaUsuario, idioma } = await getUsuarioAtual()
-    if (!userId) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+    if (!userId) return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_sessao_expirada') }
     const supabase = await createClient()
 
     const lojaId = lojaUsuario ?? LOJA_MATRIZ_ID
@@ -115,11 +186,14 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
       if (listaCod.length > 0) {
         const ids = new Set(listaCod.map((r) => r.id))
         if (ids.size > 1) {
+          // Sem candidatos de propósito: colisão de código de barras não é uma
+          // ambiguidade de nome que o operador resolva visualmente — é sintoma
+          // do modelo produto↔loja/tenant (decisão de domínio ainda pendente).
           return {
             ok: true,
             status: 'ambiguo',
-            mensagem:
-              'Vários produtos batem com o código lido. Use o nome ou corrija códigos duplicados no cadastro.',
+            mensagem: caixaMsgServidor(idioma, 'err_srv_codigo_ambiguo'),
+            candidatos: [],
           }
         }
         const row = listaCod[0]
@@ -140,11 +214,29 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
       return { ok: true, status: 'nao_encontrado' }
     }
 
+    // SKU / código interno — após barcode, antes do nome (ID 6).
+    const porSku = await buscarVendaveisPorColunaIlike(
+      supabase,
+      'codigo_interno',
+      frag,
+      idioma,
+    )
+    if (!porSku.ok) return porSku
+    if (porSku.lista.length > 0) {
+      return finalizarListaProdutos(supabase, porSku.lista, lojaId, frag, 'sku', idioma)
+    }
+
+    // Accent-insensitive (Onda 2 · Bloco 3): compara contra a coluna gerada
+    // `nome_sem_acento` (migration 20260831100000) em vez de `nome` cru —
+    // "cafe" passa a encontrar "Café" sem cair para sequential scan (a coluna
+    // tem seu próprio índice trigram; ver migration para o porquê).
+    const fragSemAcento = semAcento(frag)
     const { data: porNome, error: errNome } = await aplicarFiltroProdutoVendavel(
       supabase.from('produtos').select('*'),
     )
-      .ilike('nome', `%${frag}%`)
-      .limit(3)
+      .ilike('nome_sem_acento', `%${fragSemAcento}%`)
+      .order('nome', { ascending: true })
+      .limit(LIMITE_CANDIDATOS_AMBIGUOS)
 
     if (errNome) return { ok: false, error: mensagemErroParaUsuario(errNome.message, idioma) }
     let lista = filtrarSomenteProdutosVendaveis((porNome ?? []) as ProdutoRowCaixa[])
@@ -153,7 +245,7 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
       const { data: cats, error: errCat } = await supabase
         .from('categorias')
         .select('id')
-        .ilike('nome', `%${frag}%`)
+        .ilike('nome_sem_acento', `%${fragSemAcento}%`)
         .limit(25)
       if (errCat) return { ok: false, error: mensagemErroParaUsuario(errCat.message, idioma) }
       const catIds = (cats ?? []).map((c) => c.id)
@@ -162,35 +254,18 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
           supabase.from('produtos').select('*'),
         )
           .in('categoria_id', catIds)
-          .limit(3)
+          .order('nome', { ascending: true })
+          .limit(LIMITE_CANDIDATOS_AMBIGUOS)
         if (errPorCat) return { ok: false, error: mensagemErroParaUsuario(errPorCat.message, idioma) }
         lista = filtrarSomenteProdutosVendaveis((porCat ?? []) as ProdutoRowCaixa[])
       }
     }
 
-    if (lista.length === 0) return { ok: true, status: 'nao_encontrado' }
-    if (lista.length > 1) {
-      return {
-        ok: true,
-        status: 'ambiguo',
-        mensagem: `Vários produtos batem com “${frag}” (nome ou categoria). Use o código de barras ou refine a busca.`,
-      }
-    }
-
-    const row = primeiroProdutoVendavel(lista)
-    if (!row || !rowVendavel(row)) {
-      return { ok: true, status: 'nao_encontrado' }
-    }
-    const est = await estoqueResumoParaCaixa(supabase, row.id, lojaId)
-    return {
-      ok: true,
-      status: 'encontrado',
-      produto: mapProdutoRow(row, est.quantidade_atual, est.estoque_minimo),
-    }
+    return finalizarListaProdutos(supabase, lista, lojaId, frag, 'nome', idioma)
   } catch (e) {
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível buscar o produto. Tente de novo.', await idiomaOperadorParaErro()),
+      error: mensagemErroDeExcecao(e, caixaMsgServidor(await idiomaOperadorParaErro(), 'err_srv_buscar_produto'), await idiomaOperadorParaErro()),
     }
   }
 }
@@ -205,8 +280,10 @@ export async function buscarProdutoComPrecoCaixaImpl(
   quantidade: number = 1,
 ): Promise<BuscarProdutoComPrecoResult> {
   try {
+    const { userId, idioma } = await getUsuarioAtual()
+    if (!userId) return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_sessao_expirada') }
     if (quantidadeParaRpcPreco(quantidade) < 1) {
-      return { ok: false, error: 'Quantidade inválida.' }
+      return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_qtd_invalida') }
     }
 
     const buscaRes = await buscarProdutoParaCaixaImpl(termo)
@@ -237,7 +314,7 @@ export async function buscarProdutoComPrecoCaixaImpl(
   } catch (e) {
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível buscar o produto. Tente de novo.', await idiomaOperadorParaErro()),
+      error: mensagemErroDeExcecao(e, caixaMsgServidor(await idiomaOperadorParaErro(), 'err_srv_buscar_produto'), await idiomaOperadorParaErro()),
     }
   }
 }

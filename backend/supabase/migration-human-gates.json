@@ -83,6 +83,48 @@
       "remoteOnlyVersion": "20260830010624",
       "reason": "Restaura o fluxo de conferência de NF-e da UI FLX-05 (PR #341). Aplicada via MCP apply_migration (não CLI): schema_migrations.version gravado foi o timestamp real de aplicação (20260830010624), name preserva integralmente o identificador do arquivo (20260828150100_restaura_registrar_conferencia_nfe_ui_flx05). Postcondition reverificada por leitura (30/08/2026): as funções public.registrar_conferencia_nfe e public.confirmar_importacao_nfe existem no remoto. Migration recria as funções inteiras (CREATE OR REPLACE) — seguro reaplicar se um futuro db push tentar.",
       "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20260828160000",
+      "remoteOnlyVersion": "20260830172212",
+      "reason": "Migration de grants residuais da PR #342 aplicada originalmente via MCP em 30/08/2026. A versão remota é o timestamp real 20260830172212 e o schema foi reverificado antes da convergência pré-cliente.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20260828160000",
+      "remoteOnlyVersion": "20260831140429",
+      "reason": "Reaplicação idempotente autorizada durante a convergência pré-cliente em 31/08/2026 porque o gate ainda reportava a versão Git como ausente. Nenhum histórico remoto foi removido ou reescrito; grants e pós-condições permaneceram corretos.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20260829120000",
+      "remoteOnlyVersion": "20260830173839",
+      "reason": "Consolidação do Padrão A/DONO da PR #343 aplicada originalmente via MCP em 30/08/2026. A versão remota é o timestamp real 20260830173839 e as pós-condições foram reverificadas antes da convergência pré-cliente.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20260829120000",
+      "remoteOnlyVersion": "20260831140500",
+      "reason": "Reaplicação idempotente autorizada durante a convergência pré-cliente em 31/08/2026 porque o gate ainda reportava a versão Git como ausente. Nenhum histórico remoto foi removido ou reescrito; policies e pós-condições permaneceram corretas.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20260830110000",
+      "remoteOnlyVersion": "20260831140530",
+      "reason": "Correção da confirmação de NF-e da PR #345 aplicada via MCP sob autorização explícita em 31/08/2026. O predicado de margem e a continuidade do crédito de estoque foram reverificados no remoto.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20260831100000",
+      "remoteOnlyVersion": "20260831140621",
+      "reason": "Busca accent-insensitive da PR #351 aplicada via MCP sob autorização explícita em 31/08/2026. Colunas geradas, função normalizadora e os dois índices trigram foram reverificados no remoto.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20260831110000",
+      "remoteOnlyVersion": "20260831140639",
+      "reason": "Criação atômica de produto com faixa de atacado da PR #351 aplicada via MCP sob autorização explícita em 31/08/2026. Assinatura única e grants exclusivos de service_role foram reverificados no remoto.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
     }
   ]
 }

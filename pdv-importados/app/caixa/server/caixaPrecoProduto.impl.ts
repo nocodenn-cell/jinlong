@@ -3,6 +3,7 @@ import { getUsuarioAtual } from '@/lib/auth/usuarioAtual'
 import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import { mensagemErroDeExcecao, mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 import { idiomaOperadorParaErro } from '@/app/caixa/server/caixaErroOperador'
+import { caixaMsgServidor } from '@/app/caixa/server/caixaMensagensServidor'
 import type { CalcularPrecoProdutoCaixaResult } from '@/app/caixa/caixaActionTypes'
 import { quantidadeParaRpcPreco } from '@/lib/format/quantidadeCaixa'
 
@@ -19,12 +20,12 @@ export async function calcularPrecoProdutoCaixaImpl(input: {
 }): Promise<CalcularPrecoProdutoCaixaResult> {
   try {
     const { userId, lojaId: lojaUsuario, idioma } = await getUsuarioAtual()
-    if (!userId) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+    if (!userId) return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_sessao_expirada') }
     const supabase = await createClient()
 
     const q = quantidadeParaRpcPreco(input.quantidade)
     if (q < 1) {
-      return { ok: false, error: 'Quantidade inválida.' }
+      return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_qtd_invalida') }
     }
 
     let lojaId = input.lojaId ?? null
@@ -44,15 +45,15 @@ export async function calcularPrecoProdutoCaixaImpl(input: {
 
     const row = data as RpcRow | null
     if (!row || row.erro === 'produto_nao_encontrado') {
-      return { ok: false, error: 'Produto não encontrado ou inativo.' }
+      return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_produto_inativo') }
     }
     if (row.erro === 'quantidade_invalida') {
-      return { ok: false, error: 'Quantidade inválida.' }
+      return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_qtd_invalida') }
     }
 
     const precoNum = typeof row.preco === 'string' ? Number(row.preco) : row.preco
     if (precoNum == null || !Number.isFinite(precoNum) || precoNum < 0) {
-      return { ok: false, error: 'Resposta de preço inválida do servidor.' }
+      return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_preco_resposta_invalida') }
     }
 
     const tipo = row.tipo === 'ATACADO' ? 'ATACADO' : 'VAREJO'
@@ -60,7 +61,7 @@ export async function calcularPrecoProdutoCaixaImpl(input: {
   } catch (e) {
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível calcular o preço do produto.', await idiomaOperadorParaErro()),
+      error: mensagemErroDeExcecao(e, caixaMsgServidor(await idiomaOperadorParaErro(), 'err_srv_calcular_preco'), await idiomaOperadorParaErro()),
     }
   }
 }

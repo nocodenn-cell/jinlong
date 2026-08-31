@@ -21,6 +21,15 @@ type Props = {
   hideNovoCupom?: boolean
   /** PDV clássico: reduz altura quando há texto na busca (prepara área de staging). */
   compact?: boolean
+  /**
+   * Navegação por teclado da lista de candidatos (Onda 2 · Bloco 1) — só ativa
+   * quando `temCandidatos` é true; do contrário ArrowDown/ArrowUp/Enter seguem
+   * o comportamento normal do campo (Enter submete a busca).
+   */
+  temCandidatos?: boolean
+  onNavegarCandidato?: (direcao: 1 | -1) => void
+  onSelecionarCandidatoAtivo?: () => void
+  onFecharCandidatos?: () => void
 }
 
 export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function CaixaSearchBar(
@@ -36,6 +45,10 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
     onToggleSom,
     hideNovoCupom = false,
     compact = false,
+    temCandidatos = false,
+    onNavegarCandidato,
+    onSelecionarCandidatoAtivo,
+    onFecharCandidatos,
   },
   forwardedRef,
 ) {
@@ -91,7 +104,32 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
               "w-full",
               compact ? "py-1.5 text-body" : "h-14 text-subtitle",
             )}
+            aria-expanded={temCandidatos}
+            aria-controls={temCandidatos ? "caixa-candidatos-listbox" : undefined}
             onKeyDown={(e) => {
+              if (temCandidatos) {
+                if (e.key === "ArrowDown") {
+                  e.preventDefault()
+                  onNavegarCandidato?.(1)
+                  return
+                }
+                if (e.key === "ArrowUp") {
+                  e.preventDefault()
+                  onNavegarCandidato?.(-1)
+                  return
+                }
+                if (e.key === "Enter") {
+                  e.preventDefault()
+                  onSelecionarCandidatoAtivo?.()
+                  return
+                }
+                if (e.key === "Escape") {
+                  e.preventDefault()
+                  onFecharCandidatos?.()
+                  onCodigoChange("")
+                  return
+                }
+              }
               if (e.key === "Escape") {
                 e.preventDefault()
                 onCodigoChange("")

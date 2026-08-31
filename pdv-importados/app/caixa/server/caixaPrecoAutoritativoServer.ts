@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { roundMoney2 } from '@/app/caixa/finalizarVendaValidation'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 import { idiomaOperadorParaErro } from '@/app/caixa/server/caixaErroOperador'
+import { caixaMsgServidor } from '@/app/caixa/server/caixaMensagensServidor'
 import {
   filtrarSomenteProdutosVendaveis,
 } from '@/lib/catalog/aplicarFiltroProdutoVendavel'
@@ -130,6 +131,7 @@ export async function recalcularItensNoServidor(
   | { ok: true; itens: ItemAutoritativo[]; pricingVersionId: string | null }
   | { ok: false; error: string }
 > {
+  const idioma = await idiomaOperadorParaErro()
   // ── Resolução de versão de pricing (snapshot único por chamada) ──────────
   // Se o sistema de versionamento não estiver ativo (tabela vazia), retorna
   // NULL — modo legado, sem impacto em comportamento.
@@ -154,7 +156,7 @@ export async function recalcularItensNoServidor(
     if (!isPricingVersionRpcAusente(versionErr)) {
       return {
         ok: false,
-        error: 'Não foi possível verificar a versão de configuração de preços. Tente novamente.',
+        error: caixaMsgServidor(idioma, 'err_srv_verificar_preco_versao'),
       }
     }
   } else if (resolvedVersion != null) {
@@ -179,7 +181,7 @@ export async function recalcularItensNoServidor(
   )
   const produtos = new Map(vendaveis.map((p) => [p.id as string, p]))
   if (produtos.size !== produtosIds.length) {
-    return { ok: false, error: 'Há itens inválidos/inativos no carrinho. Atualize e tente novamente.' }
+    return { ok: false, error: caixaMsgServidor(await idiomaOperadorParaErro(), 'err_srv_itens_carrinho_invalidos') }
   }
 
   /**
@@ -227,7 +229,7 @@ export async function recalcularItensNoServidor(
       if (precoUnitario > precoOriginal + EPS_PRECO) {
         return {
           ok: false,
-          error: 'Item com preço unitário acima do preço de referência. Atualize o cupom e tente novamente.',
+          error: caixaMsgServidor(idioma, 'err_srv_preco_acima_referencia'),
         }
       }
       itens.push({
@@ -247,13 +249,13 @@ export async function recalcularItensNoServidor(
 
     const prefetch = precoPrefetch[idx]
     if (prefetch.kind === 'qty_invalid') {
-      return { ok: false, error: 'Quantidade inválida para cálculo de preço.' }
+      return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_preco_qtd_invalida') }
     }
     // `snapshot` só ocorre para MANUAL/PROMOCAO (já tratados acima); guarda defensiva.
     if (prefetch.kind !== 'rpc') {
       return {
         ok: false,
-        error: 'Não foi possível validar o preço do produto no servidor. Tente novamente.',
+        error: caixaMsgServidor(idioma, 'err_srv_validar_preco'),
       }
     }
 
@@ -279,23 +281,21 @@ export async function recalcularItensNoServidor(
       })
       return {
         ok: false,
-        error: 'Não foi possível validar o preço do produto no servidor. Tente novamente.',
+        error: caixaMsgServidor(idioma, 'err_srv_validar_preco'),
       }
     }
 
     if (esperado.tipo !== i.tipoPreco) {
       return {
         ok: false,
-        error:
-          'O tipo de preço (varejo/atacado) mudou em relação ao cupom. Atualize as quantidades ou refaça a busca do produto.',
+        error: caixaMsgServidor(idioma, 'err_srv_tipo_preco_mudou'),
       }
     }
 
     if (Math.abs(esperado.preco - roundMoney2(i.precoUnitario)) > EPS_PRECO) {
       return {
         ok: false,
-        error:
-          'O preço unitário diverge do cadastro (possível alteração após o cupom). Recalcule o cupom e finalize novamente.',
+        error: caixaMsgServidor(idioma, 'err_srv_preco_diverge_cadastro'),
       }
     }
 
@@ -303,14 +303,14 @@ export async function recalcularItensNoServidor(
       if (Math.abs(varejo - roundMoney2(i.precoOriginal)) > EPS_PRECO) {
         return {
           ok: false,
-          error: 'Preço de referência (varejo) inconsistente. Atualize o cupom.',
+          error: caixaMsgServidor(idioma, 'err_srv_preco_ref_varejo_inconsistente'),
         }
       }
     } else if (i.tipoPreco === 'ATACADO') {
       if (Math.abs(varejo - roundMoney2(i.precoOriginal)) > EPS_PRECO) {
         return {
           ok: false,
-          error: 'Preço de referência para atacado inconsistente. Atualize o cupom.',
+          error: caixaMsgServidor(idioma, 'err_srv_preco_ref_atacado_inconsistente'),
         }
       }
     }
@@ -339,8 +339,7 @@ export async function recalcularItensNoServidor(
   if (versionesUnicas.size > 1) {
     return {
       ok: false,
-      error:
-        'Versão de configuração de preços inconsistente entre itens da venda. Recalcule o carrinho e tente novamente.',
+      error: caixaMsgServidor(idioma, 'err_srv_pricing_version_inconsistente'),
     }
   }
 

@@ -17,6 +17,7 @@ import type {
   StatusMovimentacaoCaixa,
   TipoMovimentacaoCaixa,
 } from '@/app/caixa/caixaMovimentacaoTypes'
+import { caixaMsgOperador } from '@/app/caixa/server/caixaMensagensServidor'
 
 const MOV_COLS =
   'id, numero_sequencial, caixa_id, operador_id, gerente_id, tipo, forma_pagamento, valor, motivo_codigo, motivo, status, movimentacao_origem_id, saldo_antes, saldo_depois, created_at'
@@ -93,7 +94,7 @@ export function createCashMovementReader(supabase: SupabaseClient): CashMovement
       if (!caixaId.trim()) {
         return {
           ok: false,
-          error: 'Caixa inválido.',
+          error: await caixaMsgOperador('err_srv_caixa_invalido'),
           code: CASH_ERROR_CODES.READ_FAILED,
         }
       }
@@ -110,7 +111,8 @@ export function createCashMovementReader(supabase: SupabaseClient): CashMovement
       } catch (e) {
         return {
           ok: false,
-          error: e instanceof Error ? e.message : 'Não foi possível carregar movimentações.',
+          error:
+            e instanceof Error ? e.message : await caixaMsgOperador('err_srv_carregar_movimentacoes'),
           code: CASH_ERROR_CODES.READ_FAILED,
         }
       }
@@ -123,7 +125,7 @@ export async function listMovimentacoesCaixaDto(
   supabase: SupabaseClient,
   caixaId: string,
 ): Promise<{ ok: true; itens: MovimentacaoCaixaDTO[] } | { ok: false; error: string }> {
-  if (!caixaId.trim()) return { ok: false, error: 'Caixa inválido.' }
+  if (!caixaId.trim()) return { ok: false, error: await caixaMsgOperador('err_srv_caixa_invalido') }
   try {
     const fetched = await fetchMovRows(supabase, caixaId)
     if (!fetched.ok) return { ok: false, error: fetched.error }
@@ -131,7 +133,8 @@ export async function listMovimentacoesCaixaDto(
   } catch (e) {
     return {
       ok: false,
-      error: e instanceof Error ? e.message : 'Não foi possível carregar as movimentações de caixa.',
+      error:
+        e instanceof Error ? e.message : await caixaMsgOperador('err_srv_carregar_movimentacoes'),
     }
   }
 }

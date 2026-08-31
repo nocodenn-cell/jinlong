@@ -1,7 +1,9 @@
 # P0-3 — Human gate (restore). **NÃO EXECUTAR.**
 
+> **Runbook canônico:** [`../runbooks/BACKUP_RESTORE_CANONICO.md`](../runbooks/BACKUP_RESTORE_CANONICO.md)
+
 **Estado:** aguardando autorização humana explícita para um **DESTINO temporário específico**.  
-**P0-2:** **FAIL** — não há backup de plataforma comprovado. Este gate descreve a operação **pretendida**, não autorizada.
+**P0-2:** **FAIL** (confirmado em 2026-08-27 e **reverificado 2026-08-31** — org ainda Free). Este gate descreve a operação **pretendida**, não autorizada.
 
 ## REGRA ABSOLUTA
 

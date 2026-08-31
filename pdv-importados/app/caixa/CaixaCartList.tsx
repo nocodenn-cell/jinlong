@@ -185,9 +185,11 @@ const CartRowDesktop = memo(function CartRowDesktop({
           ) : null}
         </div>
         <MetaPdvBloco item={item} m={m} compact={false} />
-        <span className="text-xs text-foreground/70 font-mono truncate opacity-90">
-          {m.caixa.id_label}: {item.produtoId.slice(0, 8)}…
-        </span>
+        {item.sku ? (
+          <span className="text-xs text-foreground/70 font-mono truncate opacity-90">
+            {m.caixa.sku_label}: {item.sku}
+          </span>
+        ) : null}
       </div>
       <div className="flex items-center justify-end gap-1">
         <QuantidadeStepper
@@ -265,9 +267,11 @@ const CartCardMobile = memo(function CartCardMobile({
             ) : null}
           </div>
           <MetaPdvBloco item={item} m={m} compact />
-          <div className="text-[9px] text-muted-foreground font-mono truncate opacity-60">
-            {m.caixa.id_label}: {item.produtoId.slice(0, 8)}…
-          </div>
+          {item.sku ? (
+            <div className="text-[9px] text-muted-foreground font-mono truncate opacity-60">
+              {m.caixa.sku_label}: {item.sku}
+            </div>
+          ) : null}
         </div>
         <TipoPrecoBadge m={m} tipo={res.tipoPreco} compact />
       </div>

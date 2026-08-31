@@ -99,6 +99,21 @@ npx supabase db push
 
 ## Migrations aplicadas via MCP (`apply_migration`) — versão ≠ nome do arquivo
 
+### Convergência pré-cliente de 31/08/2026
+
+Sob autorização explícita, as migrations `20260830110000`, `20260831100000` e
+`20260831110000` foram aplicadas via MCP e registradas respectivamente como
+`20260831140530`, `20260831140621` e `20260831140639`. As pós-condições foram
+verificadas por leitura no remoto: predicado de margem da confirmação de NF-e,
+colunas/índices de busca sem acento e assinatura/grants da criação atômica.
+
+As migrations idempotentes `20260828160000` e `20260829120000` já constavam no
+remoto como `20260830172212` e `20260830173839`, mas o gate ainda apresentava as
+versões Git como ausentes. Elas foram reaplicadas durante a mesma janela e
+receberam `20260831140429` e `20260831140500`. Nenhuma linha de histórico foi
+apagada ou reescrita. Os dois registros de cada migration são preservados e
+reconciliados como pares HUMAN_GATE auditáveis em `migration-human-gates.json`.
+
 Quando uma migration é aplicada via ferramenta MCP do Supabase (`apply_migration`, usado por agentes/Claude
 em vez do CLI), o `schema_migrations.version` gravado é o **timestamp real da aplicação**, não o timestamp
 que está no nome do arquivo local. O nome do arquivo passado na chamada vai para `schema_migrations.name`,

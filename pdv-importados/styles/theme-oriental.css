@@ -1061,6 +1061,23 @@ html:has(.login-premium-root) body {
   background: rgba(254 243 199, 0.25);
 }
 
+/*
+ * ID 221 — tema claro: ações de linha sempre visíveis (opacity:0 era legado dark/terminal).
+ * Hover da linha usa wash âmbar legível (não rgba branco 3.5% sobre fundo claro).
+ */
+[data-gerente-ui-theme='dragon-light'] .gerente-row-actions {
+  opacity: 1;
+}
+
+[data-gerente-ui-theme='dragon-light'] .gerente-table-dragon tbody tr:hover {
+  background: rgba(254 243 199, 0.35) !important;
+}
+
+[data-gerente-ui-theme='dragon-light'] tr:focus-within .gerente-row-actions,
+[data-gerente-ui-theme='dragon-light'] .gerente-fin-row-hover:focus-within .gerente-row-actions {
+  opacity: 1;
+}
+
 [data-gerente-ui-theme='dragon-light'] .gerente-caixa-row-alert {
   background: rgb(255 247 237);
 }

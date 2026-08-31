@@ -1,6 +1,7 @@
 /** Barrel: helpers do caixa web no servidor (importar daqui ou dos módulos específicos). */
 export {
   sanitizeIlikeFragment,
+  semAcento,
   mapProdutoRow,
   PRODUTO_COLS,
 } from '@/app/caixa/server/caixaProdutoSql'
