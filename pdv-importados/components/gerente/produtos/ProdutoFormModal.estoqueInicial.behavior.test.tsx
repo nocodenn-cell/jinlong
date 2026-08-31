@@ -19,10 +19,6 @@ vi.mock('@/app/gerente/estoque/actions', () => ({
   atualizarEstoqueProduto: (...args: unknown[]) => atualizarEstoqueMock(...args),
 }))
 
-vi.mock('@/app/gerente/produtos/precosAtacadoActions', () => ({
-  criarFaixaAtacado: vi.fn().mockResolvedValue({ success: true, data: null }),
-}))
-
 vi.mock('@/lib/gerente/toast', () => ({
   emitGerenteToast: (...args: unknown[]) => emitirToastMock(...args),
 }))

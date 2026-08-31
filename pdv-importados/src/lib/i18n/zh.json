@@ -125,7 +125,6 @@
     "aviso_estoque_zero": "库存为零。请先调整库存再在收银台销售。",
     "aviso_estoque_zero_publicado": "商品已上架但库存为 0。请调整库存以免收银失败。",
     "erro_estoque_inicial": "商品已保存，但初始库存未能写入。请到库存页调整。",
-    "erro_faixa_inicial": "商品已保存，但批发档未创建。请在“更多详情”中补录。",
     "hint_origem_tem_nf": "选择“巴西（有发票）”会自动标记有 NF。",
     "hint_atacado_faixa": "填写批发价 + 数量后，保存时创建第一条批发档。",
     "hint_foto_form": "点击缩略图添加或更换图片。",

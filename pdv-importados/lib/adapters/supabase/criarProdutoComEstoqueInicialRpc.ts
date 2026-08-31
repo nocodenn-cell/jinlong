@@ -8,6 +8,7 @@ import {
   buscarProdutoPorCodigoBarrasLoja,
   formatMensagemCodigoBarrasDuplicado,
 } from '@/lib/gerente/produtoCodigoBarrasDuplicado'
+import { derivarFaixaAtacado } from '@/app/admin/produtos/productUpdater'
 
 export type CriarProdutoEstoqueInput = NovoProdutoInput & {
   estoque_inicial_quantidade?: number
@@ -27,6 +28,16 @@ const CRIAR_MSGS: Record<string, string> = {
   CRIAR_PRODUTO_ESTOQUE_INVALIDO: 'Estoque inicial ou mínimo inválido.',
   CRIAR_PRODUTO_CODIGO_BARRAS_DUPLICADO:
     'Código de barras já cadastrado nesta loja. Busque o produto existente no catálogo.',
+  // Onda 2 · Bloco 4 — faixa de atacado agora validada dentro da mesma RPC
+  // (antes falhava numa 2ª chamada separada, `criarFaixaAtacado`, com suas
+  // próprias mensagens em precosAtacadoActions.ts). PRECO_ATACADO_ABAIXO_CUSTO
+  // (trigger de margem, migration 124) NÃO entra aqui de propósito — cai no
+  // fallback `mensagemErroComSecao` abaixo, que já resolve pro dicionário
+  // bilíngue central (`shared/mensagemErroUsuario.ts`, Onda 1). Duplicar a
+  // mensagem aqui, só em PT, era exatamente o tipo de fragmentação que
+  // aquele dicionário existe para evitar.
+  CRIAR_PRODUTO_FAIXA_QTD_INVALIDA: 'Quantidade mínima do atacado deve ser maior que zero.',
+  CRIAR_PRODUTO_FAIXA_PRECO_INVALIDO: 'Preço de atacado deve ser maior que zero.',
 }
 
 export function mensagemErroCriarProdutoRpc(detalhe: string): string {
@@ -113,13 +124,50 @@ function buildPayload(input: CriarProdutoEstoqueInput): Record<string, unknown> 
 }
 
 /**
- * Cria produto + estoque (+ kardex se qty/min > 0) via RPC atômica (service_role + p_ator_id).
+ * Onda 2 · Bloco 4 — mesmo par (preco_atacado, quantidade_gatilho_atacado) do
+ * payload do catálogo, reaproveitando `derivarFaixaAtacado` (já usado pelo
+ * UPDATE em `productUpdater.ts`) em vez de reimplementar a regra aqui.
+ */
+function derivarFaixaAtacadoCreate(
+  input: CriarProdutoEstoqueInput,
+): { quantidade_minima: number; preco_unitario: number } | null {
+  return derivarFaixaAtacado({
+    preco_atacado: input.preco_atacado ?? null,
+    quantidade_gatilho_atacado: input.quantidade_gatilho_atacado ?? null,
+  })
+}
+
+/**
+ * Banco ainda sem a migration desta onda (20260831110000): só existe a
+ * versão de 3 parâmetros da RPC (sem `p_faixa`), e chamar com 4 argumentos
+ * nomeados não acha overload — PostgREST devolve "function not found"
+ * (`PGRST202`/`42883`), o mesmo sintoma que `rpcAusente()` já trata em
+ * `productUpdater.ts` pro caminho de edição. Mesma disciplina "banco
+ * primeiro": sem fallback que grave a faixa sem o suporte do banco.
+ */
+function rpcCriarProdutoFaixaAusente(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false
+  if (error.code === 'PGRST202' || error.code === '42883') return true
+  const msg = error.message ?? ''
+  return (
+    msg.includes('criar_produto_com_estoque_inicial') &&
+    (msg.includes('does not exist') || msg.includes('Could not find the function'))
+  )
+}
+
+/**
+ * Cria produto + estoque (+ kardex se qty/min > 0) + faixa de atacado (se
+ * preço e gatilho vierem preenchidos) via RPC atômica (service_role +
+ * p_ator_id) — Onda 2 · Bloco 4. Antes, a faixa era uma 2ª chamada separada
+ * (`sincronizarFaixaAtacado` em ProdutoFormModal.tsx), fora da transação do
+ * produto; uma falha ali deixava o produto criado sem a faixa correspondente.
  */
 export async function executarCriarProdutoComEstoqueInicial(opts: {
   input: CriarProdutoEstoqueInput
   atorId: string
 }): Promise<
-  { ok: true; id: string; replayed: boolean; estoqueAplicado: boolean } | { ok: false; message: string }
+  | { ok: true; id: string; replayed: boolean; estoqueAplicado: boolean; faixaSincronizada: boolean }
+  | { ok: false; message: string }
 > {
   if (!opts.atorId) {
     return { ok: false, message: mensagemErroCriarProdutoRpc('CRIAR_PRODUTO_AUTH') }
@@ -127,19 +175,43 @@ export async function executarCriarProdutoComEstoqueInicial(opts: {
 
   const admin = createAdminClient()
   const requestId = opts.input.client_request_id?.trim() || null
+  const faixa = derivarFaixaAtacadoCreate(opts.input)
   // RPC 270 ainda não está no Database tipado gerado — cast pontual.
-  const { data, error } = await (
-    admin as unknown as {
-      rpc: (
-        fn: string,
-        args: Record<string, unknown>,
-      ) => Promise<{ data: unknown; error: { message: string } | null }>
-    }
-  ).rpc('criar_produto_com_estoque_inicial', {
-    p_payload: buildPayload(opts.input),
+  const rpcClient = admin as unknown as {
+    rpc: (
+      fn: string,
+      args: Record<string, unknown>,
+    ) => Promise<{ data: unknown; error: { message: string; code?: string } | null }>
+  }
+  const payload = buildPayload(opts.input)
+
+  let { data, error } = await rpcClient.rpc('criar_produto_com_estoque_inicial', {
+    p_payload: payload,
     p_ator_id: opts.atorId,
     p_request_id: requestId,
+    p_faixa: faixa,
   })
+
+  if (error && rpcCriarProdutoFaixaAusente(error)) {
+    if (faixa) {
+      // Recusa ANTES de qualquer escrita — nada foi persistido ainda (a
+      // chamada com p_faixa nem chegou a existir do lado do banco). Mesma
+      // política de MSG_ATACADO_REQUER_MIGRATION em productUpdater.ts.
+      return {
+        ok: false,
+        message:
+          'O cadastro de produto com preço de atacado precisa de uma atualização do banco ainda não aplicada. ' +
+          'Cadastre o produto sem atacado por enquanto, ou tente novamente após a atualização.',
+      }
+    }
+    // Sem faixa pedida — a chamada de 3 argumentos ainda existe no banco
+    // antigo e cobre o caso todo (nada relacionado a atacado foi perdido).
+    ;({ data, error } = await rpcClient.rpc('criar_produto_com_estoque_inicial', {
+      p_payload: payload,
+      p_ator_id: opts.atorId,
+      p_request_id: requestId,
+    }))
+  }
 
   if (error) {
     const message = await mensagemErroCriarProdutoRpcEnriquecida(error.message, {
@@ -154,6 +226,7 @@ export async function executarCriarProdutoComEstoqueInicial(opts: {
     produto_id?: string
     replayed?: boolean
     estoque_aplicado?: boolean
+    faixa_sincronizada?: boolean
   } | null
 
   const id = row?.produto_id
@@ -166,5 +239,6 @@ export async function executarCriarProdutoComEstoqueInicial(opts: {
     id: String(id),
     replayed: Boolean(row?.replayed),
     estoqueAplicado: Boolean(row?.estoque_aplicado),
+    faixaSincronizada: Boolean(row?.faixa_sincronizada),
   }
 }

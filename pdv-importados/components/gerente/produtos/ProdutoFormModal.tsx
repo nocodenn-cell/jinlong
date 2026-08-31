@@ -12,11 +12,6 @@ import {
   criarProduto,
   type OpcoesFiltrosProdutos,
 } from '@/app/gerente/produtos/actions'
-import {
-  atualizarFaixaAtacado,
-  criarFaixaAtacado,
-  listarFaixasAtacado,
-} from '@/app/gerente/produtos/precosAtacadoActions'
 import type { ProdutoGerenteRow } from '@/app/gerente/produtos/produtoGerenteTypes'
 import { obterAutoriaProduto, type ProdutoAutoria } from '@/app/gerente/produtos/produtoAutoriaActions'
 import { Button } from '@/components/ui/button'
@@ -33,7 +28,7 @@ import {
   payloadStatusRascunho,
   podeSalvarComoRascunho,
 } from '@/core/catalog/statusPublicacao'
-import { buildSubmitPayload, parseGatilhoSubmit } from './form/produtoForm.mappers'
+import { buildSubmitPayload } from './form/produtoForm.mappers'
 import {
   validarProdutoFormClient,
   type ProdutoFormErro,
@@ -109,49 +104,6 @@ function formatAutoriaLine(
   return template
     .replace('{{nome}}', nome ?? fallbackNome)
     .replace('{{data}}', autoriaDtFmt.format(new Date(dataIso)))
-}
-
-/**
- * Cria a 1ª faixa de atacado ao salvar (preço + qtd. mínima preenchidos
- * juntos) — tanto no cadastro quanto na edição. Antes só rodava no create;
- * editar um produto existente preenchendo os dois campos nunca sincronizava
- * a faixa, deixando `produtos.preco_atacado` e `precos_atacado` divergentes.
- * Faz upsert por `quantidade_minima`: se já existe faixa ativa com essa
- * quantidade, atualiza o preço dela em vez de tentar criar duplicata
- * (`criarFaixaAtacado` rejeita quantidade_minima repetida).
- */
-async function sincronizarFaixaAtacado(
-  produtoId: string,
-  precoAtacado: number | null,
-  gatilhoRaw: string,
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  if (precoAtacado == null || precoAtacado <= 0) return { ok: true }
-  const gatilho = parseGatilhoSubmit(gatilhoRaw)
-  if (gatilho == null) return { ok: true }
-
-  const existentes = await listarFaixasAtacado(produtoId)
-  if (!existentes.success) return { ok: false, error: existentes.error }
-
-  const faixaExistente = existentes.data.find((f) => f.quantidade_minima === gatilho)
-  if (faixaExistente) {
-    if (faixaExistente.preco_unitario === precoAtacado) return { ok: true }
-    const r = await atualizarFaixaAtacado({
-      id: faixaExistente.id,
-      produto_id: produtoId,
-      quantidade_minima: gatilho,
-      preco_unitario: precoAtacado,
-    })
-    if (r.success) return { ok: true }
-    return { ok: false, error: r.error }
-  }
-
-  const r = await criarFaixaAtacado({
-    produto_id: produtoId,
-    quantidade_minima: gatilho,
-    preco_unitario: precoAtacado,
-  })
-  if (r.success) return { ok: true }
-  return { ok: false, error: r.error }
 }
 
 export function ProdutoFormModal({
@@ -464,26 +416,17 @@ export function ProdutoFormModal({
 
         const estoqueOk = true
         const estoqueErro: string | null = null
-        let faixaOk = true
-        let faixaErro: string | null = null
         const createdId = !editando && r.data && 'id' in r.data ? r.data.id : null
         // Estoque inicial só se aplica no create (createdId).
         //
-        // Faixa de atacado: na EDIÇÃO ela já foi sincronizada dentro da mesma
-        // transação do produto, pela RPC `atualizar_produto_com_faixa_atacado`
-        // (ver `productUpdater.ts`) — repetir aqui reintroduziria justamente o
-        // estado parcial que a RPC eliminou. Resta só o create, onde o produto
-        // nasce em outra transação (RPC 270) e a faixa é aditiva.
-        const produtoIdParaFaixa = createdId
-        if (produtoIdParaFaixa) {
-          const faixaRes = await sincronizarFaixaAtacado(
-            produtoIdParaFaixa,
-            precoAtacado,
-            form.quantidadeGatilho,
-          )
-          faixaOk = faixaRes.ok
-          if (!faixaRes.ok) faixaErro = faixaRes.error
-        }
+        // Faixa de atacado: agora sincronizada DENTRO da mesma RPC do create
+        // (Onda 2 · Bloco 4, `criar_produto_com_estoque_inicial` com `p_faixa`)
+        // — mesmo padrão que a EDIÇÃO já usava desde `atualizar_produto_com_faixa_atacado`.
+        // Antes havia uma 2ª chamada aqui (`sincronizarFaixaAtacado`), fora da
+        // transação do produto; uma falha ali deixava o produto criado sem a
+        // faixa correspondente. Se a RPC falhar por causa da faixa (quantidade/
+        // preço inválido, ou margem negativa), isso já vem em `r.error` — mesmo
+        // caminho de erro do resto do formulário, sem toast separado.
 
         const feedbackEstoque = resolverFeedbackCadastroEstoque({
           estoquePedido: Boolean(createdId) && estoqueIntent.deveAplicar,
@@ -515,14 +458,6 @@ export function ProdutoFormModal({
             return m.comum.sucesso
           })()
           emitGerenteToast({ kind: 'success', message: msg })
-        }
-        if (!faixaOk) {
-          emitGerenteToast({
-            kind: 'error',
-            message: faixaErro
-              ? `${p.erro_faixa_inicial} (${faixaErro})`
-              : p.erro_faixa_inicial,
-          })
         }
 
         // Persistido: o estado atual vira o baseline limpo ANTES de refresh

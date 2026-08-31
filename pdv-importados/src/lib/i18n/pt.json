@@ -125,7 +125,6 @@
     "aviso_estoque_zero": "Saldo zerado. Ajuste o estoque antes de vender no PDV.",
     "aviso_estoque_zero_publicado": "Produto publicado com estoque 0. Ajuste o saldo para evitar falha no caixa.",
     "erro_estoque_inicial": "Produto salvo, mas o estoque inicial não pôde ser aplicado. Ajuste em Estoque.",
-    "erro_faixa_inicial": "Produto salvo, mas a faixa de atacado não foi criada. Cadastre em Mais detalhes.",
     "hint_origem_tem_nf": "Brasil com NF marca automaticamente “tem NF”.",
     "hint_atacado_faixa": "Com preço atacado + qtd., cria a 1ª faixa de atacado ao salvar.",
     "hint_foto_form": "Clique na miniatura para adicionar ou trocar a foto.",
