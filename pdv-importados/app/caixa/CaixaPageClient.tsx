@@ -14,7 +14,12 @@ import {
   devolverVendaEmEsperaCaixa,
   obterResumoVendasTurno,
   obterNomeLojaAtual,
+  calcularPrecoProdutoCaixa,
 } from "@/app/caixa/actions"
+import type { ProdutoCaixaDTO } from "@/app/caixa/caixaActionTypes"
+import { avisoEstoqueCaixa, montarItemCarrinhoCaixa } from "@/app/caixa/scan-pipeline/montarItemCarrinhoCaixa"
+import { CaixaCandidatosProduto } from "@/app/caixa/CaixaCandidatosProduto"
+import { createClient as createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { historicoDetalheParaRecibo } from "@/app/caixa/caixaHistoricoRecibo"
 import type { MovimentacaoCaixaDTO } from "@/app/caixa/caixaMovimentacaoTypes"
 import { roundMoney2, type FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
@@ -143,6 +148,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   } = useCaixaMensagens()
 
   const [codigo, setCodigo] = useState("")
+  /** Onda 2 · Bloco 1 — candidatos de uma busca ambígua por nome/categoria (null = nenhuma pendente). */
+  const [candidatos, setCandidatos] = useState<{ mensagem: string; itens: ProdutoCaixaDTO[] } | null>(null)
+  const [candidatoAtivoIndex, setCandidatoAtivoIndex] = useState(0)
   const [checkoutHint, setCheckoutHint] = useState<string | null>(null)
   const [carregandoRegras, setCarregandoRegras] = useState(true)
   const [limiteSangriaSemGerente, setLimiteSangriaSemGerente] = useState(200)
@@ -399,6 +407,72 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     [somFeedbackAtivo],
   )
 
+  /**
+   * Onda 2 · Bloco 1 — ambiguidade por nome/categoria expõe candidatos em vez
+   * de só bloquear com toast. `payload: null` limpa a lista (nova tentativa).
+   */
+  const setCandidatosAmbiguos = useCallback(
+    (payload: { mensagem: string; itens: ProdutoCaixaDTO[] } | null) => {
+      setCandidatos(payload)
+      setCandidatoAtivoIndex(0)
+    },
+    [],
+  )
+
+  const fecharCandidatos = useCallback(() => {
+    setCandidatos(null)
+    setCandidatoAtivoIndex(0)
+  }, [])
+
+  const totalCandidatos = candidatos?.itens.length ?? 0
+  const navegarCandidato = useCallback(
+    (direcao: 1 | -1) => {
+      if (totalCandidatos === 0) return
+      setCandidatoAtivoIndex((prev) => (prev + direcao + totalCandidatos) % totalCandidatos)
+    },
+    [totalCandidatos],
+  )
+
+  /**
+   * Mesma montagem de item usada no scan/Enter (`montarItemCarrinhoCaixa`) —
+   * sem duplicar regra. Também replica o mesmo cuidado de dono de sessão do
+   * carrinho que o scan já faz (`setCartOwnerForSession`): sem isso, se a
+   * primeira ação do operador na sessão fosse escolher um candidato (em vez
+   * de bipar), um carrinho de outro operador ainda em localStorage não seria
+   * limpo — ver `unifiedCartStore.setCartOwnerForSession`.
+   */
+  const selecionarCandidato = useCallback(
+    async (produto: ProdutoCaixaDTO) => {
+      fecharCandidatos()
+      const precoRes = await calcularPrecoProdutoCaixa({ produtoId: produto.id, quantidade: 1 })
+      const precoCalculado = precoRes.ok ? precoRes.preco : produto.preco_varejo
+      const tipoPrecoCalculado = precoRes.ok ? precoRes.tipo : 'VAREJO'
+
+      const supabase = createSupabaseBrowserClient()
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      const uid = session?.user?.id ?? null
+      if (uid) setCartOwnerForSession(uid)
+
+      const item = montarItemCarrinhoCaixa(produto, precoCalculado, tipoPrecoCalculado)
+      adicionarItem(item)
+      setCodigo('')
+      const avisoEstoqueMsg = avisoEstoqueCaixa(produto, m)
+      setCaixaMensagem(avisoEstoqueMsg ?? m.caixa.msg_item_adicionado_toast, {
+        kind: avisoEstoqueMsg ? 'warning' : 'success',
+      })
+      tocarFeedback('ok')
+      focarCampoBusca()
+    },
+    [adicionarItem, fecharCandidatos, focarCampoBusca, m, setCaixaMensagem, setCartOwnerForSession, tocarFeedback],
+  )
+
+  const selecionarCandidatoAtivo = useCallback(() => {
+    const produto = candidatos?.itens[candidatoAtivoIndex]
+    if (produto) void selecionarCandidato(produto)
+  }, [candidatos, candidatoAtivoIndex, selecionarCandidato])
+
   const { enqueueLeitura, buscandoPipeline, flushLeiturasPendentes, pipelineDebug } = useCaixaScanPipeline({
     m,
     setCaixaMensagem,
@@ -408,6 +482,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     focarCampoBusca,
     adicionarItem,
     setCartOwnerForSession,
+    setCandidatosAmbiguos,
     getActiveCupomSessionId: () => cupomSessionIdRef.current,
     onItemAdded: useCallback(
       (info: { codigo: string; itemId: string; produtoId: string }) => {
@@ -1417,7 +1492,22 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                         onToggleSom={() => setSomFeedbackAtivo((prev) => !prev)}
                         hideNovoCupom
                         compact={codigo.trim().length > 0}
+                        temCandidatos={totalCandidatos > 0}
+                        onNavegarCandidato={navegarCandidato}
+                        onSelecionarCandidatoAtivo={selecionarCandidatoAtivo}
+                        onFecharCandidatos={fecharCandidatos}
                       />
+                      {candidatos && candidatos.itens.length > 0 ? (
+                        <CaixaCandidatosProduto
+                          m={m}
+                          idioma={idioma}
+                          mensagem={candidatos.mensagem}
+                          itens={candidatos.itens}
+                          ativoIndex={candidatoAtivoIndex}
+                          onHoverIndex={setCandidatoAtivoIndex}
+                          onSelecionar={(produto) => void selecionarCandidato(produto)}
+                        />
+                      ) : null}
                     </div>
                     <div className="shrink-0">
                       <CaixaMessageBanner mensagem={mensagem} msgVendaOk={msgVendaOk} kind={checkoutHint ? 'error' : undefined} hint={checkoutHint} />
