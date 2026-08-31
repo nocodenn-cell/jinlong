@@ -355,6 +355,32 @@ export function mensagemErroParaUsuario(detalheTecnico: string, idiomaInput?: st
     )
   }
 
+  // Guarda de margem negativa (trg_fn_produtos_margem / trg_fn_precos_atacado_margem —
+  // migrations 124/125). O RAISE EXCEPTION manda só o código estável na mensagem; os
+  // valores reais (preço x custo) ficam em DETAIL, que não chega até aqui — por isso a
+  // mensagem é fixa, no mesmo padrão da guarda de estoque insuficiente acima.
+  if (lower.includes('produto_varejo_abaixo_custo')) {
+    return t(
+      idioma,
+      'O preço de varejo ficaria abaixo do custo cadastrado. Marque "Permitir salvar preço abaixo do custo" se isso for intencional (ex.: liquidação), ou ajuste o preço.',
+      '零售价会低于登记的成本价。如果是有意为之（例如清仓甩卖），请勾选「允许保存低于成本价的价格」，或调整价格。',
+    )
+  }
+  if (lower.includes('produto_atacado_abaixo_custo') || lower.includes('preco_atacado_abaixo_custo')) {
+    return t(
+      idioma,
+      'O preço de atacado ficaria abaixo do custo cadastrado. Marque "Permitir salvar preço abaixo do custo" se isso for intencional (ex.: liquidação), ou ajuste o preço.',
+      '批发价会低于登记的成本价。如果是有意为之（例如清仓甩卖），请勾选「允许保存低于成本价的价格」，或调整价格。',
+    )
+  }
+  if (lower.includes('regra_preco_abaixo_custo')) {
+    return t(
+      idioma,
+      'A regra de preço ficaria abaixo do custo cadastrado. Marque a opção de permitir preço abaixo do custo se isso for intencional (ex.: liquidação), ou ajuste o valor.',
+      '价格规则会低于登记的成本价。如果是有意为之（例如清仓甩卖），请勾选允许低于成本价的选项，或调整数值。',
+    )
+  }
+
   const parecePt =
     /(ção|ões|não|você|sessão|caixa|venda|dados|senha|permissão|gerente|operador|tente|inválido|erro|falha|salvar|carregar|abrir|fechar|obrigat)/i.test(
       raw,

@@ -182,6 +182,28 @@ describe('helpers de mensagemErroUsuario', () => {
     ).toContain('Estoque insuficiente')
   })
 
+  // Melhoria de mensagem de margem (Sprint UX Onda 1): antes desta correção,
+  // `mapUpdateDbError`/`precosAtacadoActions` caíam no fallback genérico e o
+  // operador via literalmente "Produto: PRODUTO_VAREJO_ABAIXO_CUSTO" na tela —
+  // o código estável do trigger (RAISE EXCEPTION), sem explicação nenhuma.
+  it.each([
+    ['PRODUTO_VAREJO_ABAIXO_CUSTO', 'preço de varejo', 'permitir salvar preço abaixo do custo'],
+    ['PRODUTO_ATACADO_ABAIXO_CUSTO', 'preço de atacado', 'permitir salvar preço abaixo do custo'],
+    ['PRECO_ATACADO_ABAIXO_CUSTO', 'preço de atacado', 'permitir salvar preço abaixo do custo'],
+    ['REGRA_PRECO_ABAIXO_CUSTO', 'regra de preço', 'permitir preço abaixo do custo'],
+  ])('traduz guarda de margem "%s" para mensagem de negócio (pt)', (codigo, trechoEsperado) => {
+    const msg = mensagemErroParaUsuario(codigo).toLowerCase()
+    expect(msg).toContain(trechoEsperado)
+    expect(msg).not.toContain(codigo.toLowerCase())
+  })
+
+  it('traduz guarda de margem de varejo para mandarim (não vaza PT nem o código cru)', () => {
+    const msg = mensagemErroParaUsuario('PRODUTO_VAREJO_ABAIXO_CUSTO', 'zh')
+    expect(msg).toBe(
+      '零售价会低于登记的成本价。如果是有意为之（例如清仓甩卖），请勾选「允许保存低于成本价的价格」，或调整价格。',
+    )
+  })
+
   it('mensagemErroComSecao traduz o rótulo de seção quando idioma=zh', () => {
     expect(
       mensagemErroComSecao('Preço varejo', 'O preço de varejo deve ser maior que zero.', 'zh'),
