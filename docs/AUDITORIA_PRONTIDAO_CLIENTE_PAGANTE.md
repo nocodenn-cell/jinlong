@@ -62,7 +62,7 @@
 
 ## Fechamentos — Onda 1 / Lote 2 (IDs 121, 122)
 
-**Data:** 2026-08-31 · Branch: `cursor/onda1-categoria-marca-121-122-0a79` · PR **#354** · HEAD `ec66a462`
+**Data:** 2026-08-31 · Branch: `cursor/onda1-categoria-marca-121-122-0a79` · PR **#354** · HEAD `bf817646`
 
 ### Reconciliação com trabalho prévio
 
