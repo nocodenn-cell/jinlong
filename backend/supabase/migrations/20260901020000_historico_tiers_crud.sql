@@ -20,6 +20,21 @@ CREATE INDEX IF NOT EXISTS idx_historico_tiers_produto ON public.historico_tiers
 CREATE INDEX IF NOT EXISTS idx_historico_tiers_tier ON public.historico_tiers_crud(tier_id);
 CREATE INDEX IF NOT EXISTS idx_historico_tiers_acao ON public.historico_tiers_crud(acao);
 
+-- RLS: mesmo padrão de historico_precos_produto (migration 259) — leitura
+-- restrita a GERENTE/DONO, sem policy de escrita direta (só a trigger
+-- SECURITY DEFINER grava linhas).
+ALTER TABLE public.historico_tiers_crud ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "historico_tiers_crud_leitura" ON public.historico_tiers_crud;
+CREATE POLICY "historico_tiers_crud_leitura"
+  ON public.historico_tiers_crud FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.usuarios u
+      WHERE u.id = auth.uid() AND u.perfil IN ('GERENTE', 'DONO')
+    )
+  );
+
 -- Função para audit
 CREATE OR REPLACE FUNCTION public.audit_tiers_crud()
 RETURNS TRIGGER AS $$
