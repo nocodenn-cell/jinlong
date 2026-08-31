@@ -109,6 +109,7 @@ export function CategoriasProdutosContent({
       }
       setRows((prev) => prev.map((r) => (r.id === id ? { ...r, nome: editingNome } : r)))
       setEditingId(null)
+      router.refresh()
     } finally {
       setLoading(false)
     }
@@ -123,6 +124,7 @@ export function CategoriasProdutosContent({
         return
       }
       setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ativo: !r.ativo } : r)))
+      router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao atualizar')
     }
