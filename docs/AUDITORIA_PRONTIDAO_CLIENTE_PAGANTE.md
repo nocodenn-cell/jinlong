@@ -202,7 +202,7 @@ Preço/atacado/estoque/desconto/pagamento/persistência da venda — seleção s
 
 ## Fechamentos — Onda 1 / Lote 4B (ID 28)
 
-**Data:** 2026-08-31 · Branch: `cursor/onda1-reimpressao-recibo-28-0a79`
+**Data:** 2026-08-31 · Branch: `cursor/onda1-reimpressao-recibo-28-0a79` · PR **#357** · SHA `74fa200a`
 
 ### ID 28 — Reimpressão fiel do recibo pelo histórico
 
