@@ -127,6 +127,147 @@ const createClient = vi.hoisted(() => vi.fn())
 vi.mock('@/lib/supabase/server', () => ({ createClient }))
 
 const { buscarProdutoParaCaixaImpl } = await import('./caixaCatalogo.impl')
+const { semAcento } = await import('./caixaProdutoSql')
+
+/**
+ * Mock "realista": em vez de devolver uma lista pré-filtrada fixa, avalia o
+ * `.ilike(coluna, padrao)` de verdade — inclusive simulando a coluna gerada
+ * `nome_sem_acento` (Onda 2 · Bloco 3) via `semAcento(nome)`, e o erro
+ * `42703` (coluna ausente) quando `colunaSemAcentoDisponivel: false`, pra
+ * provar o fallback gracioso "banco ainda sem a migration".
+ */
+function criarSupabaseMockRealista(opts: {
+  produtos: Row[]
+  colunaSemAcentoDisponivel: boolean
+  estoquePorProduto?: Record<string, { quantidade_atual: number | null; estoque_minimo: number | null }>
+}) {
+  const from = vi.fn((table: string) => {
+    if (table === 'estoque') {
+      let produtoId: string | undefined
+      const q: Record<string, unknown> = {}
+      q.select = () => q
+      q.eq = (col: string, val: string) => {
+        if (col === 'produto_id') produtoId = val
+        return q
+      }
+      q.maybeSingle = () =>
+        Promise.resolve({ data: produtoId ? opts.estoquePorProduto?.[produtoId] ?? null : null, error: null })
+      return q
+    }
+    if (table === 'categorias') {
+      const q: Record<string, unknown> = {}
+      q.select = () => q
+      q.ilike = () => q
+      q.limit = () => q
+      // @ts-expect-error thenable mock
+      q.then = (resolve: (v: unknown) => void) => resolve({ data: [], error: null })
+      return q
+    }
+    if (table === 'produtos') {
+      let mode: 'codigo_barras' | 'nome' | 'nome_sem_acento' | 'categoria_id' | null = null
+      let ilikeValor = ''
+      const q: Record<string, unknown> = {}
+      q.select = () => q
+      q.eq = () => q
+      q.in = (col: string) => {
+        mode = col === 'codigo_barras' ? 'codigo_barras' : 'categoria_id'
+        return q
+      }
+      q.ilike = (col: string, val: string) => {
+        mode = col === 'nome_sem_acento' ? 'nome_sem_acento' : 'nome'
+        ilikeValor = val
+        return q
+      }
+      q.order = () => q
+      q.limit = () => q
+      // @ts-expect-error thenable mock
+      q.then = (resolve: (v: unknown) => void) => {
+        if (mode === 'codigo_barras' || mode === 'categoria_id') {
+          resolve({ data: [], error: null })
+          return
+        }
+        if (mode === 'nome_sem_acento' && !opts.colunaSemAcentoDisponivel) {
+          resolve({
+            data: null,
+            error: { code: '42703', message: 'column produtos.nome_sem_acento does not exist' },
+          })
+          return
+        }
+        const frag = ilikeValor.replace(/%/g, '').toLowerCase()
+        const data = opts.produtos.filter((p) => {
+          const campo = mode === 'nome_sem_acento' ? semAcento(p.nome) : p.nome
+          return campo.toLowerCase().includes(frag)
+        })
+        resolve({ data, error: null })
+      }
+      return q
+    }
+    throw new Error(`tabela inesperada no mock: ${table}`)
+  })
+  return { from }
+}
+
+describe('buscarProdutoParaCaixaImpl — accent-insensitive (Onda 2 · Bloco 3)', () => {
+  const CAFE = produto({ id: 'p-cafe', nome: 'Café Especial', preco_varejo: 30 })
+  const PLASTICO = produto({ id: 'p-plast', nome: 'Copo Plástico 500ml', preco_varejo: 8 })
+
+  it('"cafe" (sem acento) encontra "Café Especial" quando a coluna gerada existe', async () => {
+    createClient.mockResolvedValue(
+      criarSupabaseMockRealista({ produtos: [CAFE, PLASTICO], colunaSemAcentoDisponivel: true }),
+    )
+    const r = await buscarProdutoParaCaixaImpl('cafe')
+    expect(r.ok).toBe(true)
+    if (!r.ok || r.status !== 'encontrado') throw new Error('esperado status encontrado')
+    expect(r.produto.nome).toBe('Café Especial')
+  })
+
+  it('"CAFE" maiúsculo (sem acento) também encontra — case + accent insensitive juntos', async () => {
+    createClient.mockResolvedValue(
+      criarSupabaseMockRealista({ produtos: [CAFE, PLASTICO], colunaSemAcentoDisponivel: true }),
+    )
+    const r = await buscarProdutoParaCaixaImpl('CAFE')
+    if (!r.ok || r.status !== 'encontrado') throw new Error('esperado status encontrado')
+    expect(r.produto.nome).toBe('Café Especial')
+  })
+
+  it('"plastico" (sem acento) encontra "Copo Plástico 500ml"', async () => {
+    createClient.mockResolvedValue(
+      criarSupabaseMockRealista({ produtos: [CAFE, PLASTICO], colunaSemAcentoDisponivel: true }),
+    )
+    const r = await buscarProdutoParaCaixaImpl('plastico')
+    if (!r.ok || r.status !== 'encontrado') throw new Error('esperado status encontrado')
+    expect(r.produto.nome).toBe('Copo Plástico 500ml')
+  })
+
+  it('busca com o acento certo continua funcionando (sem regressão)', async () => {
+    createClient.mockResolvedValue(
+      criarSupabaseMockRealista({ produtos: [CAFE, PLASTICO], colunaSemAcentoDisponivel: true }),
+    )
+    const r = await buscarProdutoParaCaixaImpl('café')
+    if (!r.ok || r.status !== 'encontrado') throw new Error('esperado status encontrado')
+    expect(r.produto.nome).toBe('Café Especial')
+  })
+
+  it('banco ainda sem a migration (coluna ausente): cai pro comportamento antigo sem quebrar a busca', async () => {
+    createClient.mockResolvedValue(
+      criarSupabaseMockRealista({ produtos: [CAFE, PLASTICO], colunaSemAcentoDisponivel: false }),
+    )
+    // "especial" não tem acento — o fallback accent-sensitive ainda encontra.
+    const r = await buscarProdutoParaCaixaImpl('especial')
+    expect(r.ok).toBe(true)
+    if (!r.ok || r.status !== 'encontrado') throw new Error('esperado status encontrado')
+    expect(r.produto.nome).toBe('Café Especial')
+  })
+
+  it('banco sem a migration: busca sem o acento correto degrada graciosamente pra "não encontrado" (não crasha)', async () => {
+    createClient.mockResolvedValue(
+      criarSupabaseMockRealista({ produtos: [CAFE, PLASTICO], colunaSemAcentoDisponivel: false }),
+    )
+    const r = await buscarProdutoParaCaixaImpl('cafe')
+    expect(r.ok).toBe(true)
+    expect(r.status).toBe('nao_encontrado')
+  })
+})
 
 beforeEach(() => {
   vi.clearAllMocks()

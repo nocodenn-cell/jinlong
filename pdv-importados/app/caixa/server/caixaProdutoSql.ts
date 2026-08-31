@@ -5,6 +5,33 @@ export function sanitizeIlikeFragment(s: string): string {
   return s.replace(/[%_\\]/g, '').trim()
 }
 
+/** Início/fim (inclusive) da faixa Unicode "Combining Diacritical Marks". */
+const COMBINING_DIACRITICS_START = 0x0300
+const COMBINING_DIACRITICS_END = 0x036f
+
+/**
+ * Onda 2 · Bloco 3 — remove acentos pro mesmo critério usado pela coluna
+ * gerada `nome_sem_acento` (migration 20260831100000, wrapper IMMUTABLE sobre
+ * `unaccent`). NFD decompõe cada caractere acentuado em base + marca
+ * combinante (ex.: "é" vira "e" + acento agudo combinante); o filtro abaixo
+ * descarta code points na faixa Unicode "Combining Diacritical Marks"
+ * (U+0300–U+036F), que cobre a família de acentos latinos usada em português
+ * (inclui cedilha: "ç" vira "c" + cedilha combinante U+0327). Filtra por
+ * code point em vez de regex com caractere literal — evita qualquer
+ * ambiguidade de transcrição/encoding do próprio caractere combinante no
+ * código-fonte.
+ */
+export function semAcento(s: string): string {
+  const normalized = s.normalize('NFD')
+  let out = ''
+  for (const ch of normalized) {
+    const code = ch.codePointAt(0) ?? 0
+    if (code >= COMBINING_DIACRITICS_START && code <= COMBINING_DIACRITICS_END) continue
+    out += ch
+  }
+  return out
+}
+
 export function mapProdutoRow(
   r: {
     id: string

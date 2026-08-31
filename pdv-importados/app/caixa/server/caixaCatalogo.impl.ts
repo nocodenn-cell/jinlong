@@ -26,6 +26,7 @@ import {
   fetchPdvConfigParaCaixaWeb,
   mapProdutoRow,
   sanitizeIlikeFragment,
+  semAcento,
 } from '@/app/caixa/server/caixaActionsInternals'
 
 type ProdutoRowCaixa = {
@@ -70,6 +71,22 @@ function rowVendavel(row: ProdutoRowCaixa): boolean {
     ativo: row.ativo,
     status_publicacao: row.status_publicacao,
   })
+}
+
+/**
+ * Onda 2 · Bloco 3 — banco ainda sem a migration `nome_sem_acento`
+ * (20260831100000, preparada nesta onda mas NÃO aplicada em produção).
+ * PostgREST devolve `42703` (undefined_column) se a coluna não existir; sem
+ * este fallback, TODA busca por nome no PDV quebraria até a migration rodar.
+ * Mesmo padrão já usado pra "RPC ainda não promovida" em productUpdater.ts
+ * (`rpcAusente`) — banco desatualizado nunca pode ser um crash, só uma
+ * degradação graciosa pro comportamento antigo (accent-sensitive).
+ */
+function colunaSemAcentoAusente(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false
+  if (error.code === '42703') return true
+  const msg = error.message ?? ''
+  return msg.includes('nome_sem_acento') && (msg.includes('does not exist') || msg.includes('column'))
 }
 
 export async function carregarRegrasPrecoCaixaImpl(): Promise<CarregarRegrasResult> {
@@ -166,23 +183,34 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
     if (frag.length < 2) {
       return { ok: true, status: 'nao_encontrado' }
     }
+    const fragSemAcento = semAcento(frag)
 
-    const { data: porNome, error: errNome } = await aplicarFiltroProdutoVendavel(
-      supabase.from('produtos').select('*'),
-    )
-      .ilike('nome', `%${frag}%`)
+    let porNomeRes = await aplicarFiltroProdutoVendavel(supabase.from('produtos').select('*'))
+      .ilike('nome_sem_acento', `%${fragSemAcento}%`)
       .order('nome', { ascending: true })
       .limit(LIMITE_CANDIDATOS_AMBIGUOS)
+
+    if (colunaSemAcentoAusente(porNomeRes.error)) {
+      porNomeRes = await aplicarFiltroProdutoVendavel(supabase.from('produtos').select('*'))
+        .ilike('nome', `%${frag}%`)
+        .order('nome', { ascending: true })
+        .limit(LIMITE_CANDIDATOS_AMBIGUOS)
+    }
+    const { data: porNome, error: errNome } = porNomeRes
 
     if (errNome) return { ok: false, error: mensagemErroParaUsuario(errNome.message, idioma) }
     let lista = filtrarSomenteProdutosVendaveis((porNome ?? []) as ProdutoRowCaixa[])
 
     if (lista.length === 0) {
-      const { data: cats, error: errCat } = await supabase
+      let catsRes = await supabase
         .from('categorias')
         .select('id')
-        .ilike('nome', `%${frag}%`)
+        .ilike('nome_sem_acento', `%${fragSemAcento}%`)
         .limit(25)
+      if (colunaSemAcentoAusente(catsRes.error)) {
+        catsRes = await supabase.from('categorias').select('id').ilike('nome', `%${frag}%`).limit(25)
+      }
+      const { data: cats, error: errCat } = catsRes
       if (errCat) return { ok: false, error: mensagemErroParaUsuario(errCat.message, idioma) }
       const catIds = (cats ?? []).map((c) => c.id)
       if (catIds.length > 0) {
