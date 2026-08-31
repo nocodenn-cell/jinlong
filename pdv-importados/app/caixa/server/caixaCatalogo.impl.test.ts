@@ -62,6 +62,7 @@ function filtraPorNome(frag: string): Row[] {
 function criarSupabaseMock(opts: {
   porNome: Row[]
   porCodigoBarras?: Row[]
+  porSku?: Row[]
   porCategoriaIds?: Row[]
   categorias?: { id: string }[]
   estoquePorProduto?: Record<string, { quantidade_atual: number | null; estoque_minimo: number | null }>
@@ -92,7 +93,7 @@ function criarSupabaseMock(opts: {
       return q
     }
     if (table === 'produtos') {
-      let mode: 'codigo_barras' | 'nome' | 'categoria_id' | null = null
+      let mode: 'codigo_barras' | 'nome' | 'sku' | 'categoria_id' | null = null
       const q: Record<string, unknown> = {}
       q.select = () => q
       q.eq = () => q // aplicarFiltroProdutoVendavel (.eq ativo / .eq status_publicacao)
@@ -100,8 +101,8 @@ function criarSupabaseMock(opts: {
         mode = col === 'codigo_barras' ? 'codigo_barras' : 'categoria_id'
         return q
       }
-      q.ilike = () => {
-        mode = 'nome'
+      q.ilike = (col: string) => {
+        mode = col === 'codigo_interno' ? 'sku' : 'nome'
         return q
       }
       q.order = () => q
@@ -111,9 +112,11 @@ function criarSupabaseMock(opts: {
         const data =
           mode === 'codigo_barras'
             ? opts.porCodigoBarras ?? []
-            : mode === 'categoria_id'
-              ? opts.porCategoriaIds ?? []
-              : opts.porNome
+            : mode === 'sku'
+              ? opts.porSku ?? []
+              : mode === 'categoria_id'
+                ? opts.porCategoriaIds ?? []
+                : opts.porNome
         resolve({ data, error: null })
       }
       return q
@@ -228,5 +231,36 @@ describe('buscarProdutoParaCaixaImpl — candidatos em ambiguidade por nome (Ond
     expect(r.ok).toBe(true)
     if (!r.ok || r.status !== 'ambiguo') throw new Error('esperado status ambiguo')
     expect(r.candidatos).toEqual([])
+  })
+})
+
+describe('buscarProdutoParaCaixaImpl — SKU / codigo_interno (ID 6)', () => {
+  it('SKU exato → encontrado (antes de buscar por nome)', async () => {
+    createClient.mockResolvedValue(
+      criarSupabaseMock({
+        porNome: [],
+        porSku: [CADEIRA_VERMELHA_GRANDE],
+        estoquePorProduto: { 'p-vg': { quantidade_atual: 4, estoque_minimo: 1 } },
+      }),
+    )
+    const r = await buscarProdutoParaCaixaImpl('CAD-VERM-G')
+    expect(r.ok).toBe(true)
+    if (!r.ok || r.status !== 'encontrado') throw new Error('esperado encontrado')
+    expect(r.produto.codigo_interno).toBe('CAD-VERM-G')
+    expect(r.produto.nome).toBe('Cadeira Vermelha Grande')
+  })
+
+  it('SKU parcial ambíguo → candidatos', async () => {
+    createClient.mockResolvedValue(
+      criarSupabaseMock({
+        porNome: [],
+        porSku: [CADEIRA_VERMELHA_GRANDE, CADEIRA_VERMELHA_INFANTIL],
+      }),
+    )
+    const r = await buscarProdutoParaCaixaImpl('CAD-VERM')
+    expect(r.ok).toBe(true)
+    if (!r.ok || r.status !== 'ambiguo') throw new Error('esperado ambiguo')
+    expect(r.candidatos).toHaveLength(2)
+    expect(r.mensagem).toMatch(/SKU/i)
   })
 })

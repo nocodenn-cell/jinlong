@@ -19,6 +19,8 @@ export function montarItemCarrinhoCaixa(
     id: `${produto.id}-${Date.now()}`,
     produtoId: produto.id,
     nome: produto.nome,
+    // Diferenciador no carrinho: barcode, senão SKU (mesmo critério da lista).
+    sku: produto.codigo_barras ?? produto.codigo_interno ?? undefined,
     quantidade,
     precoUnitario: precoCalculado,
     precoOriginal: precoCalculado,

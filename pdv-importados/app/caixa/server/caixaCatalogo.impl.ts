@@ -72,6 +72,51 @@ function rowVendavel(row: ProdutoRowCaixa): boolean {
   })
 }
 
+type SupabaseCaixa = Awaited<ReturnType<typeof createClient>>
+
+async function buscarVendaveisPorColunaIlike(
+  supabase: SupabaseCaixa,
+  coluna: 'codigo_interno' | 'nome',
+  frag: string,
+  idioma: string,
+): Promise<{ ok: true; lista: ProdutoRowCaixa[] } | { ok: false; error: string }> {
+  const { data, error } = await aplicarFiltroProdutoVendavel(supabase.from('produtos').select('*'))
+    .ilike(coluna, `%${frag}%`)
+    .order('nome', { ascending: true })
+    .limit(LIMITE_CANDIDATOS_AMBIGUOS)
+  if (error) return { ok: false, error: mensagemErroParaUsuario(error.message, idioma) }
+  return {
+    ok: true,
+    lista: filtrarSomenteProdutosVendaveis((data ?? []) as ProdutoRowCaixa[]),
+  }
+}
+
+async function finalizarListaProdutos(
+  supabase: SupabaseCaixa,
+  lista: ProdutoRowCaixa[],
+  lojaId: string,
+  frag: string,
+  origem: 'sku' | 'nome',
+): Promise<BuscarProdutoResult> {
+  if (lista.length === 0) return { ok: true, status: 'nao_encontrado' }
+  if (lista.length > 1) {
+    const candidatos = await montarCandidatos(supabase, lista, lojaId)
+    const mensagem =
+      origem === 'sku'
+        ? `Vários produtos batem com o SKU “${frag}”. Escolha um da lista ou refine a busca.`
+        : `Vários produtos batem com “${frag}” (nome ou categoria). Escolha um da lista ou refine a busca.`
+    return { ok: true, status: 'ambiguo', mensagem, candidatos }
+  }
+  const row = primeiroProdutoVendavel(lista)
+  if (!row || !rowVendavel(row)) return { ok: true, status: 'nao_encontrado' }
+  const est = await estoqueResumoParaCaixa(supabase, row.id, lojaId)
+  return {
+    ok: true,
+    status: 'encontrado',
+    produto: mapProdutoRow(row, est.quantidade_atual, est.estoque_minimo),
+  }
+}
+
 export async function carregarRegrasPrecoCaixaImpl(): Promise<CarregarRegrasResult> {
   try {
     const { userId, idioma } = await getUsuarioAtual()
@@ -167,6 +212,18 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
       return { ok: true, status: 'nao_encontrado' }
     }
 
+    // SKU / código interno — após barcode, antes do nome (ID 6).
+    const porSku = await buscarVendaveisPorColunaIlike(
+      supabase,
+      'codigo_interno',
+      frag,
+      idioma,
+    )
+    if (!porSku.ok) return porSku
+    if (porSku.lista.length > 0) {
+      return finalizarListaProdutos(supabase, porSku.lista, lojaId, frag, 'sku')
+    }
+
     const { data: porNome, error: errNome } = await aplicarFiltroProdutoVendavel(
       supabase.from('produtos').select('*'),
     )
@@ -197,27 +254,7 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
       }
     }
 
-    if (lista.length === 0) return { ok: true, status: 'nao_encontrado' }
-    if (lista.length > 1) {
-      const candidatos = await montarCandidatos(supabase, lista, lojaId)
-      return {
-        ok: true,
-        status: 'ambiguo',
-        mensagem: `Vários produtos batem com “${frag}” (nome ou categoria). Escolha um da lista ou refine a busca.`,
-        candidatos,
-      }
-    }
-
-    const row = primeiroProdutoVendavel(lista)
-    if (!row || !rowVendavel(row)) {
-      return { ok: true, status: 'nao_encontrado' }
-    }
-    const est = await estoqueResumoParaCaixa(supabase, row.id, lojaId)
-    return {
-      ok: true,
-      status: 'encontrado',
-      produto: mapProdutoRow(row, est.quantidade_atual, est.estoque_minimo),
-    }
+    return finalizarListaProdutos(supabase, lista, lojaId, frag, 'nome')
   } catch (e) {
     return {
       ok: false,
