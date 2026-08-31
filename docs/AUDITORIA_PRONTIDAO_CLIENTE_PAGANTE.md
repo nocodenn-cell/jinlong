@@ -11,7 +11,7 @@
 |-------|-------|
 | **SHA auditada** | `9e6292838f708cd0e5b0404a09601dd7c4047591` |
 | **Data auditoria** | 2026-08-31 |
-| **Última atualização** | 2026-08-31 (Etapa 0 saneamento + Plano de Fechamento) |
+| **Última atualização** | 2026-08-31 (Onda 1 Lote 1 — IDs 221, 222; Lote 2 — IDs 121, 122 fechados) |
 | **Ambiente** | Código + migrations/RPCs/tests/docs; produção somente leitura (evidência documental/API) |
 | **Total capacidades** | 250 (IDs 1–250 únicos, validados) |
 | **P0** | 117 |
@@ -60,14 +60,62 @@
 
 ---
 
+## Fechamentos — Onda 1 / Lote 2 (IDs 121, 122)
+
+**Data:** 2026-08-31 · Branch: `cursor/onda1-categoria-marca-121-122-0a79` · PR **#354** · HEAD `bf817646`
+
+### Reconciliação com trabalho prévio
+
+| Item | Situação |
+|------|----------|
+| Fluxo formulário produto (quick-create → lista) | Já corrigido em `e1327e62` / PR #330 (`mergeOpcoesFiltrosPreservandoLocal` + `onOpcaoCriada` → estado local). **Não duplicado.** |
+| Fix `revalidatePath` categorias admin (`9018490e`) | Existia só em branch `claude/sprint-ux-onda2-pdv-busca` — **não estava na main**. Portado neste lote. |
+| IDs 221/222 | Não reabertos. |
+
+### ID 121 — Categoria imediata
+
+| Campo | Valor |
+|-------|-------|
+| Status anterior | IMPLEMENTADO PARCIALMENTE |
+| Status novo | **IMPLEMENTADO E VALIDADO** |
+| Reprodução (formulário) | Quick-create → opção entra no `<select>` e fica selecionada; refresh stale de props não apaga (testes `ProdutoFormModal.categoriaOpcoes`) |
+| Reprodução (gestão `/admin/categorias-produtos`) | Após create/rename/toggle, lista podia ficar stale: `REVALIDATE_PATH` apontava para `/gerente/categorias-produtos` (redirect sem RSC) |
+| Causa raiz (form) | Já resolvida (#330): estado local + merge por id (SSoT = tabela `categorias`; UI só espelha) |
+| Causa raiz (gestão) | `revalidatePath` na rota legada errada; `router.refresh()` ausente em update/toggle |
+| Arquivos | `app/gerente/categorias-produtos/actions.ts`, `CategoriasProdutosContent.tsx` (+ tests); form já coberto por #330 |
+| Correção neste lote | Port do fix de paths admin + `router.refresh` em update/toggle (não reinventar lista paralela) |
+| Testes | `categorias-produtos/actions.test.ts`, `CategoriasProdutosContent.behavior.test.tsx`, `ProdutoFormModal.categoriaOpcoes.behavior.test.tsx`, `mergeOpcoesFiltros.test.ts` |
+| Evidência | `/opt/cursor/artifacts/onda1-121-122-vitest.log` |
+| Duplicidade | Sem UNIQUE em `categorias.nome` — criar de novo com mesmo nome **ainda é permitido** pelo banco; o fix evita a *indução* a duplicar por lista stale |
+| Permissões | Continua via `assertGerenteSession` + RLS; refresh não contorna auth |
+
+### ID 122 — Marca imediata
+
+| Campo | Valor |
+|-------|-------|
+| Status anterior | IMPLEMENTADO PARCIALMENTE |
+| Status novo | **IMPLEMENTADO E VALIDADO** |
+| Reprodução | Modo completo → quick-create marca → aparece/seleciona; merge preserva em refresh stale |
+| Causa raiz (form) | Mesmo mecanismo de #330 (`onMarcasChange` + merge); faltava teste de paridade |
+| Causa raiz (gestão `/admin/marcas-produtos`) | Já revalidava `/admin/marcas-produtos` + tag `catalogo-opcoes-filtro` — **sem gap de path** |
+| Arquivos | Sem mudança de produção necessária além da cobertura; `marcas-produtos/actions.test.ts` (novo), `ProdutoFormModal.marcaOpcoes.behavior.test.tsx` (novo) |
+| Correção neste lote | Validação + testes de regressão (código de form/actions já adequado na main) |
+| Testes | `ProdutoFormModal.marcaOpcoes.behavior.test.tsx`, `marcas-produtos/actions.test.ts`, `mergeOpcoesFiltros.test.ts` |
+| Evidência | `/opt/cursor/artifacts/onda1-121-122-vitest.log` |
+| Duplicidade | Sem UNIQUE em `marcas.nome` — mesmo comportamento documentado da categoria |
+| SSoT | Tabela `marcas`; sem cache paralelo permanente |
+| Nota | Campo marca permanece atrás de "Modo completo" (fora de escopo promover UI) |
+
+---
+
 ## 2. Score de prontidão
 
 ### P0 (117 capacidades)
 
 | Status | Qtd | % |
 |--------|-----|---|
-| IMPLEMENTADO E VALIDADO | 101 | 86.3% |
-| IMPLEMENTADO PARCIALMENTE | 10 | 8.5% |
+| IMPLEMENTADO E VALIDADO | 102 | 87.2% |
+| IMPLEMENTADO PARCIALMENTE | 9 | 7.7% |
 | EXISTE MAS NÃO VALIDADO | 1 | 0.9% |
 | NÃO IMPLEMENTADO | 5 | 4.3% |
 | NÃO SE APLICA AO PILOTO | 0 | 0.0% |
@@ -76,8 +124,8 @@
 
 | Status | Qtd | % |
 |--------|-----|---|
-| IMPLEMENTADO E VALIDADO | 32 | 44.4% |
-| IMPLEMENTADO PARCIALMENTE | 36 | 50.0% |
+| IMPLEMENTADO E VALIDADO | 33 | 45.8% |
+| IMPLEMENTADO PARCIALMENTE | 35 | 48.6% |
 | EXISTE MAS NÃO VALIDADO | 1 | 1.4% |
 | NÃO IMPLEMENTADO | 3 | 4.2% |
 | NÃO SE APLICA AO PILOTO | 0 | 0.0% |
@@ -147,13 +195,13 @@ Não entram na tabela: `IMPLEMENTADO E VALIDADO`, `NÃO SE APLICA AO PILOTO`, `N
 
 | Ordem | Onda | ID | Gap | Prioridade | Status atual | Esforço estimado | Risco | Dependências | Motivo da ordem |
 | ----- | ---- | -: | --- | ---------- | ------------ | ---------------- | ----- | ------------ | --------------- |
-| 1 | 1 | 121 | Categoria imediata | P0 | IMPLEMENTADO PARCIALMENTE | S | Médio | Lista/cache categorias/marcas no formulário | Bloqueia cadastro diário; fix cache/lista local |
+| 1 | 1 | 121 | Categoria imediata | P0 | IMPLEMENTADO E VALIDADO | S | Baixo | — | Fechado Onda1 Lote2 |
 | 2 | 1 | 5 | Autocomplete incremental | P1 | IMPLEMENTADO PARCIALMENTE | S | Baixo | — | Quick win: bug UX/cadastro/PDV com superfície pequena e ganho imediato |
 | 3 | 1 | 6 | Pesquisa SKU/referência | P1 | NÃO IMPLEMENTADO | S | Médio | caixaCatalogo.impl + ProdutoCacheLite | Quick win: bug UX/cadastro/PDV com superfície pequena e ganho imediato |
 | 4 | 1 | 27 | Histórico vendas | P1 | IMPLEMENTADO PARCIALMENTE | S | Baixo | — | Quick win: bug UX/cadastro/PDV com superfície pequena e ganho imediato |
 | 5 | 1 | 28 | Reimpressão cupom | P1 | IMPLEMENTADO PARCIALMENTE | S | Baixo | — | Quick win: bug UX/cadastro/PDV com superfície pequena e ganho imediato |
 | 6 | 1 | 40 | Exibição faixa aplicada | P1 | IMPLEMENTADO PARCIALMENTE | S | Baixo | — | Quick win: bug UX/cadastro/PDV com superfície pequena e ganho imediato |
-| 7 | 1 | 122 | Marca imediata | P1 | IMPLEMENTADO PARCIALMENTE | S | Médio | Lista/cache categorias/marcas no formulário | Bloqueia cadastro diário; fix cache/lista local |
+| 7 | 1 | 122 | Marca imediata | P1 | IMPLEMENTADO E VALIDADO | S | Baixo | — | Fechado Onda1 Lote2 |
 | 8 | 1 | 214 | Cliques adequados | P1 | IMPLEMENTADO PARCIALMENTE | S | Baixo | — | Quick win: bug UX/cadastro/PDV com superfície pequena e ganho imediato |
 | 9 | 1 | 219 | PT-BR consistente | P1 | IMPLEMENTADO PARCIALMENTE | S | Baixo | — | Quick win: bug UX/cadastro/PDV com superfície pequena e ganho imediato |
 | 10 | 1 | 220 | Chinês consistente | P1 | IMPLEMENTADO PARCIALMENTE | M | Médio | — | Quick win: bug UX/cadastro/PDV com superfície pequena e ganho imediato |
@@ -247,7 +295,8 @@ Não entram na tabela: `IMPLEMENTADO E VALIDADO`, `NÃO SE APLICA AO PILOTO`, `N
 
 ### Onda 1
 
-**IDs (12):** 121, 5, 6, 27, 28, 40, 122, 214, 219, 220, 221, 222
+**IDs (12):** ~~121~~, 5, 6, 27, 28, 40, ~~122~~, 214, 219, 220, ~~221~~, ~~222~~  
+**Fechados:** 221, 222 (Lote 1); 121, 122 (Lote 2). Restantes Onda 1: 5, 6, 27, 28, 40, 214, 219, 220.
 
 Quick win: bug UX/cadastro/PDV com superfície pequena e ganho imediato
 ### Onda 2
@@ -421,8 +470,8 @@ Registro ao fechar ID: status anterior → novo · causa · solução · teste �
 | 118 | F.CAD | Barcode duplicado | P0 | IMPLEMENTADO E VALIDADO | ProdutoFormModal | unique constraint | produtos | productUpdater.test.ts | Baixo | — | — | Não |
 | 119 | F.CAD | Cadastro rápido | P3 | NÃO SE APLICA AO PILOTO | Removido caixa | pdv_cadastro_removido | — | — | Baixo | — | — | Não |
 | 120 | F.CAD | Cadastro completo | P0 | IMPLEMENTADO E VALIDADO | /admin/catalogo | criar_produto_com_estoque_inicial | produtos | qa-produtos-modulo.spec.ts | Baixo | — | — | Não |
-| 121 | F.CAD | Categoria imediata | P0 | IMPLEMENTADO PARCIALMENTE | Modal categoria | INSERT categorias | categorias | Relato uso real | Médio | Recém-criada pode não listar | Invalidar cache/lista | Não |
-| 122 | F.CAD | Marca imediata | P1 | IMPLEMENTADO PARCIALMENTE | Modal marca | INSERT marcas | marcas | Relato uso real | Médio | Recém-criada pode não listar | Invalidar cache/lista | Não |
+| 121 | F.CAD | Categoria imediata | P0 | IMPLEMENTADO E VALIDADO | SelectComCadastroRapido + mergeOpcoes | criarCategoriaProduto | categorias | categoriaOpcoes + actions A3 | Baixo | — | — | Não |
+| 122 | F.CAD | Marca imediata | P1 | IMPLEMENTADO E VALIDADO | SelectComCadastroRapido + mergeOpcoes | criarMarcaProduto | marcas | marcaOpcoes + actions.test | Baixo | — | — | Não |
 | 123 | F.CAD | Persistência refresh | P0 | IMPLEMENTADO E VALIDADO | /admin/catalogo | productReader | produtos | qa-produtos-modulo.spec.ts | Baixo | — | — | Não |
 | 124 | F.CAD | Histórico alterações | P2 | IMPLEMENTADO PARCIALMENTE | HistoricoPrecosSection | historico_precos_produto | historico_precos_produto | — | Médio | Só preços produto | — | Não |
 | 125 | G.EST | Entrada | P0 | IMPLEMENTADO E VALIDADO | /admin/estoque/recebimento | confirmar_remessa_entrada | estoque | gerente-transferencias.spec.ts | Baixo | — | — | Não |
