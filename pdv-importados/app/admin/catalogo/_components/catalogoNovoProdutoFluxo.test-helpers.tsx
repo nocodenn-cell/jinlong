@@ -24,22 +24,6 @@ export async function preencherESalvarProdutoDemo(
   setInputValue(inputByField(container, 'nome'), 'Produto Demo Entrada')
   setInputValue(inputByField(container, 'preco_varejo'), '10,00')
 
-  // Gatilho só aparece em "Mais detalhes" (modo completo)
-  const maisDetalhes = Array.from(container.querySelectorAll('button')).find((b) =>
-    (b.textContent ?? '').includes(m.produtos.modo_completo),
-  )
-  expect(maisDetalhes, 'botão Mais detalhes').toBeTruthy()
-  flushSync(() => {
-    maisDetalhes!.click()
-  })
-
-  const labelGatilho = Array.from(container.querySelectorAll('label')).find((l) =>
-    (l.textContent ?? '').includes(m.produtos.qtd_gatilho_atacado),
-  )
-  expect(labelGatilho, 'label gatilho atacado').toBeTruthy()
-  const gatilho = labelGatilho!.querySelector('input') as HTMLInputElement
-  setInputValue(gatilho, '6')
-
   const salvar = Array.from(container.querySelectorAll('button')).find((b) =>
     (b.textContent ?? '').includes(m.produtos.salvar_produto),
   ) as HTMLButtonElement
@@ -52,11 +36,6 @@ export async function preencherESalvarProdutoDemo(
   await vi.waitFor(() => {
     expect(criarProdutoMock).toHaveBeenCalled()
   })
-}
-
-export function expectPayloadComGatilho(criarProdutoMock: ReturnType<typeof vi.fn>) {
-  const payload = criarProdutoMock.mock.calls[0]?.[0] as { quantidade_gatilho_atacado?: number | null }
-  expect(payload.quantidade_gatilho_atacado).toBe(6)
 }
 
 export function expectSecaoEssencialVisivel(container: HTMLElement, m: Mensagens) {

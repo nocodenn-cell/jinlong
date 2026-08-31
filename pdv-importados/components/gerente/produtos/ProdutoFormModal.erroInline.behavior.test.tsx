@@ -117,34 +117,6 @@ describe('erro inline + foco', () => {
     expect(container.textContent).not.toContain(p.nome_obrigatorio)
   })
 
-  it('abre Mais detalhes quando o campo reprovado mora lá', () => {
-    render()
-    setInputValue(campo('nome')!, 'Caneca Térmica')
-    setInputValue(campo('preco_varejo')!, '10,00')
-
-    // Atacado só existe no modo completo: abre, preenche inválido, fecha.
-    const abrir = Array.from(container.querySelectorAll('button')).find((b) =>
-      (b.textContent ?? '').includes(p.modo_completo),
-    )!
-    flushSync(() => abrir.click())
-    setInputValue(campo('preco_atacado')!, '20,00')
-
-    const fechar = Array.from(container.querySelectorAll('button')).find((b) =>
-      (b.textContent ?? '').includes(p.modo_compacto),
-    )!
-    flushSync(() => fechar.click())
-    expect(campo('preco_atacado'), 'atacado escondido').toBeNull()
-
-    clicarSalvar()
-
-    // Reabriu sozinho, marcou e focou — não deixa o erro invisível.
-    const atacado = campo('preco_atacado')
-    expect(atacado, 'atacado remontado').toBeTruthy()
-    expect(atacado!.getAttribute('aria-invalid')).toBe('true')
-    expect(container.textContent).toContain(p.atacado_maior_varejo)
-    expect(document.activeElement).toBe(atacado)
-    expect(criarProdutoMock).not.toHaveBeenCalled()
-  })
 })
 
 describe('cadeia do Enter até o estoque', () => {

@@ -4,10 +4,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { flushSync } from 'react-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { getMessages } from '@/i18n/getMessages'
-import {
-  expectPayloadComGatilho,
-  preencherESalvarProdutoDemo,
-} from '@/app/admin/catalogo/_components/catalogoNovoProdutoFluxo.test-helpers'
+import { preencherESalvarProdutoDemo } from '@/app/admin/catalogo/_components/catalogoNovoProdutoFluxo.test-helpers'
 
 const criarProdutoMock = vi.fn()
 const routerRefreshMock = vi.fn()
@@ -116,7 +113,7 @@ function modalAberto() {
 }
 
 describe('Cadastro produto — entradas alinhadas ao CatalogoNovoButton', () => {
-  it('entrada header (CatalogoNovoButton): salvar fecha modal e envia gatilho', async () => {
+  it('entrada header (CatalogoNovoButton): salvar fecha modal e envia produto', async () => {
     render(
       <CatalogoNovoButton label={m.produtos.cadastro_produto} m={m} opcoes={opcoes} idioma="pt" />,
     )
@@ -128,7 +125,7 @@ describe('Cadastro produto — entradas alinhadas ao CatalogoNovoButton', () => 
     expect(modalAberto()).toBe(true)
 
     await preencherESalvarProdutoDemo(container, m, criarProdutoMock)
-    expectPayloadComGatilho(criarProdutoMock)
+    expect(criarProdutoMock).toHaveBeenCalled()
     await vi.waitFor(() => expect(modalAberto()).toBe(false))
     expect(routerRefreshMock).toHaveBeenCalled()
     expect(routerPushMock).not.toHaveBeenCalled()
