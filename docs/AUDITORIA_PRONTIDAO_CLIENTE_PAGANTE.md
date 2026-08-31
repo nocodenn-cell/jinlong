@@ -164,7 +164,7 @@ Preço/atacado/estoque/desconto/pagamento/persistência da venda — seleção s
 
 ## Fechamentos — Onda 1 / Lote 4A (ID 27)
 
-**Data:** 2026-08-31 · Branch: `cursor/onda1-historico-vendas-27-0a79`
+**Data:** 2026-08-31 · Branch: `cursor/onda1-historico-vendas-27-0a79` · PR **#356** · SHA `794841cd`
 
 ### Reprogramação (sem implementação) — ID 40 → Onda 2
 
