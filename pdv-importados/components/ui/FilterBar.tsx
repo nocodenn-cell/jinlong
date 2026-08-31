@@ -255,6 +255,7 @@ function SearchControl({
 
   const flush = (next: string) => {
     if (timer.current) clearTimeout(timer.current)
+    setValue(next)
     committed.current = next
     onCommit(next)
   }
