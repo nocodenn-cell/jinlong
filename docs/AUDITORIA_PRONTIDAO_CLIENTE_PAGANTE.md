@@ -110,7 +110,7 @@
 
 ## Fechamentos — Onda 1 / Lote 3 (IDs 5, 6)
 
-**Data:** 2026-08-31 · Branch: `cursor/onda1-busca-autocomplete-5-6-0a79` · PR (a preencher)
+**Data:** 2026-08-31 · Branch: `cursor/onda1-busca-autocomplete-5-6-0a79` · PR **#355**
 
 ### Mapeamento matriz × GO operacional
 
