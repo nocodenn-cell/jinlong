@@ -264,35 +264,36 @@ Preço/atacado/estoque/desconto/pagamento/persistência da venda — seleção s
 
 ---
 
-## Fechamentos — Onda 2 (IDs 32, 33, 36, 40, 44, 50, 51)
+## Fechamentos — Onda 2 + Onda 2B (IDs 32, 33, 36, 40, 44, 50, 51)
 
-**Data:** 2026-08-31 · Branch: `claude/fastproduct-atacado-wave-2-cf14cd` · PR **#360** (pending merge)
+**Data:** 2026-08-31 (Onda 2) → 2026-09-01 (Onda 2B) · Branch: `claude/fastproduct-atacado-wave-2-cf14cd` · PR **#360** (pending merge)
 
 **Consolidação: Atacado Runtime Stabilization**
+
+A Onda 2 inicial marcou 5 IDs como prontos, mas uma revisão crítica linha-a-linha do diff (Onda 2B) encontrou **2 bugs reais** que teriam sido silenciosamente incompletos ou quebrados em produção — ambos corrigidos antes do merge.
 
 | ID | Requisito | Status | Evidência | Bloqueador? |
 |---|-----------|--------|-----------|------------|
 | 32 | Deprecar `preco_atacado` UI | ✅ IMPLEMENTADO E VALIDADO | Commit d5ff5d7d; campos removidos PrecosSection.tsx | Não |
 | 33 | Deprecar `quantidade_gatilho_atacado` UI | ✅ IMPLEMENTADO E VALIDADO | Commit d5ff5d7d; campos removidos PrecosSection.tsx | Não |
 | 36 | Runtime quantidade mínima encerrada | ✅ IMPLEMENTADO E VALIDADO | 13 unitários PASS (calcularPrecoCanonico.spec.ts); RPC SSOT | Não |
-| 40 | Badge exibição qty_min | ⚠️ IMPLEMENTADO PARCIALMENTE | Prop `quantidadeMinima` criada (1079cc7c); consumidor wiring PENDENTE | Não |
-| 44 | Validação tier < varejo | ✅ IMPLEMENTADO | Migration 20260901000000; CHECK constraint; staging ready | Não |
-| 50 | Motivo override auditoria | ✅ SCHEMA OK (UI PENDENTE) | Migration 20260901010000; coluna + índice; captura de dados PENDENTE | Não |
-| 51 | Histórico tiers CRUD | ✅ INFRA OK (UI PENDENTE) | Migration 20260901020000; tabela + função + trigger; leitura PENDENTE | Não |
+| 40 | Badge exibição qty_min | ✅ IMPLEMENTADO E VALIDADO | **Corrigido na 2B**: prop existia mas sem consumidor real; RPC estendida + fio completo até a UI (commit `feat(id-40)`) | Não |
+| 44 | Validação tier < varejo | ✅ IMPLEMENTADO (corrigido) | **Bug crítico corrigido na 2B**: migration original usava CHECK com subquery — inválido no Postgres, falharia ao aplicar. Reescrita como trigger | Não |
+| 50 | Motivo override auditoria | 🔴 **BLOQUEADO — decisão de negócio pendente** | Coluna existe (schema-only); não há UI/fluxo em produção que crie o dado que ela captura. Ver `ONDA2_RECONCILIACAO_POS_PR360.md` | **Sim — decisão de escopo** |
+| 51 | Histórico tiers CRUD | ✅ IMPLEMENTADO (corrigido) | **Bug corrigido na 2B**: tabela nova sem RLS (quebrava padrão da tabela irmã). RLS adicionada; escopo confirmado como trilha auditável (UI não é requisito) | Não |
 
-**Resumo:** 
-- ✅ 5 IDs completos (32, 33, 36, 44 + infra 50, 51)
-- ⚠️ 1 ID parcial (40 prop, consumidor falta)
-- ⏸️ 2 IDs schema-ready, UI-deferred (50, 51 — não bloqueadores)
+**Resumo:**
+- ✅ 6 IDs completos e corretos (32, 33, 36, 40, 44, 51)
+- 🔴 1 ID bloqueado por decisão de escopo (50) — schema inofensivo, mas não deve ser chamado de "implementado"
 
-**Risco Financeiro:** ZERO (validações apenas; sem modificação de precificação operacional)
+**Risco Financeiro:** ZERO (validações e auditoria apenas; sem modificação de precificação operacional)
 
-**GO/NO-GO:** ✅ **GO** para merge #360. Parciais não são bloqueadores (fallback seguro).
+**GO/NO-GO:** ✅ **GO** para merge #360 — os 6 IDs prontos não dependem do ID 50. ID 50 fica documentado como pendência de decisão, não como gap escondido.
 
-**Próxima Ação:** 
-1. Merge #360 após code review
-2. Aplicar migrations em staging (sem apply prod sem autorização)
-3. Onda 2B (se priorizada): Wiring ID 40 + UI IDs 50, 51
+**Próxima Ação:**
+1. Decisão do dono do produto sobre ID 50 (ver as duas opções em `ONDA2_RECONCILIACAO_POS_PR360.md`)
+2. Merge #360 após code review
+3. Aplicar as 4 migrations em staging (sem apply prod sem autorização)
 4. Onda 3 (fechamento por forma): IDs 100, 92, 99, 206, 199, 205
 
 **Referência Detalhada:** [`docs/ONDA2_RECONCILIACAO_POS_PR360.md`](ONDA2_RECONCILIACAO_POS_PR360.md)
@@ -367,7 +368,7 @@ Não entram na tabela: `IMPLEMENTADO E VALIDADO`, `NÃO SE APLICA AO PILOTO`, `N
 | 3 | 1 | 6 | Pesquisa SKU/referência | P1 | IMPLEMENTADO E VALIDADO | S | Baixo | — | Fechado Onda1 Lote3 |
 | 4 | 1 | 27 | Histórico vendas | P1 | IMPLEMENTADO E VALIDADO | S | Baixo | — | Fechado Onda1 Lote4A |
 | 5 | 1 | 28 | Reimpressão cupom | P1 | IMPLEMENTADO E VALIDADO | S | Baixo | — | Fechado Onda1 Lote4B |
-| 6 | 2 | 40 | Exibição faixa aplicada | P1 | **IMPLEMENTADO PARCIALMENTE** | S | Baixo | Lookup tier → passar quantidadeMinima | Onda 2 PR #360: prop estruturada (1079cc7c); consumidor wiring pendente |
+| 6 | 2 | 40 | Exibição faixa aplicada | P1 | **IMPLEMENTADO E VALIDADO** | S | Baixo | — | Fechado Onda2B: RPC estendida + fio completo RPC→UI (24 testes passam) |
 | 7 | 1 | 122 | Marca imediata | P1 | IMPLEMENTADO E VALIDADO | S | Baixo | — | Fechado Onda1 Lote2 |
 | 8 | 1 | 214 | Cliques adequados | P1 | IMPLEMENTADO PARCIALMENTE | S | Baixo | — | Quick win: bug UX/cadastro/PDV com superfície pequena e ganho imediato |
 | 9 | 1 | 219 | PT-BR consistente | P1 | IMPLEMENTADO PARCIALMENTE | S | Baixo | Server actions caixa migrados | Fechado parcial Onda1 Lote4C — resíduos Zod/RPC |
@@ -377,9 +378,9 @@ Não entram na tabela: `IMPLEMENTADO E VALIDADO`, `NÃO SE APLICA AO PILOTO`, `N
 | 13 | 2 | 32 | Preço atacado runtime | P0 | **IMPLEMENTADO E VALIDADO** | S | Baixo | — | Onda 2 PR #360: removidas UI campos legados (d5ff5d7d) |
 | 14 | 2 | 33 | Qtd mínima atacado | P0 | **IMPLEMENTADO E VALIDADO** | S | Baixo | — | Onda 2 PR #360: removidas UI campos legados (d5ff5d7d) |
 | 15 | 2 | 36 | Aplicação automática faixa | P0 | **IMPLEMENTADO E VALIDADO** | M | Baixo | — | Onda 2 PR #360: 13 unitários PASS; RPC SSOT autoridade |
-| 16 | 2 | 44 | Validação conflitos | P1 | **IMPLEMENTADO** | S | Baixo | — | Onda 2 PR #360: CHECK constraint (20260901000000); staging ready |
-| 17 | 2 | 50 | Auditoria sobrescrita | P1 | **IMPLEMENTADO PARCIALMENTE** | M | Baixo | — | Onda 2 PR #360: schema OK (20260901010000); UI captura pendente |
-| 18 | 2 | 51 | Histórico preços | P1 | **IMPLEMENTADO PARCIALMENTE** | M | Baixo | — | Onda 2 PR #360: auditoria infra OK (20260901020000); UI leitura pendente |
+| 16 | 2 | 44 | Validação conflitos | P1 | **IMPLEMENTADO E VALIDADO** | S | Baixo | — | Fechado Onda2B: CHECK original era inválido no Postgres (subquery); reescrito como trigger |
+| 17 | 2 | 50 | Auditoria sobrescrita | P1 | **BLOQUEADO — decisão de negócio** | M | Baixo | Decisão: escopo do override manual por item | Onda2B: não há UI/fluxo real que gere o dado; schema-only. Ver ONDA2_RECONCILIACAO_POS_PR360.md |
+| 18 | 2 | 51 | Histórico preços | P1 | **IMPLEMENTADO E VALIDADO** | M | Baixo | — | Fechado Onda2B: RLS ausente corrigida; escopo (trilha auditável, sem UI nova) confirmado |
 | 19 | 3 | 100 | Integridade vendas×fechamento | P0 | IMPLEMENTADO PARCIALMENTE | M | Médio | vendas_pagamentos; fechar_caixa_atomico; Onda 2 preferível | Fechamento por forma: risco financeiro diário; depende vendas_pagamentos |
 | 20 | 3 | 92 | Conferência por forma | P0 | IMPLEMENTADO PARCIALMENTE | L | Alto | vendas_pagamentos; fechar_caixa_atomico; Onda 2 preferível | P0 fechamento cego PIX/cartão; risco financeiro diário |
 | 21 | 3 | 99 | Relatório diferenças | P1 | IMPLEMENTADO PARCIALMENTE | S | Baixo | vendas_pagamentos; fechar_caixa_atomico; Onda 2 preferível | Fechamento por forma: risco financeiro diário; depende vendas_pagamentos |

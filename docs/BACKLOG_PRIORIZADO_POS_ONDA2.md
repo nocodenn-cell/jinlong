@@ -1,8 +1,8 @@
 # Backlog Priorizado Pós-Onda 2
 
-**Data:** 2026-08-31  
+**Data:** 2026-08-31 · **Atualizado:** 2026-09-01 (Onda 2B concluída)
 **Autoridade:** Reconciliação de prontidão + PR #360 em staging  
-**Próxima:** Decisão de Onda 2B vs Onda 3 vs aguardar feedback piloto
+**Próxima:** Onda 3 (fechamento por forma) — Onda 2B já concluída, ver abaixo
 
 ---
 
@@ -27,23 +27,18 @@
 
 ## P1 — Importante antes/logo após piloto
 
-### ID 40 (Onda 2B): Badge wiring — Lookup tier qty_min
-- **Status:** Prop criada, consumidor FALTA
-- **Trabalho:** 1–2 horas
-- **Requer:** Adicionar lookup tier no item carrinho → passar `quantidadeMinima` a `TipoPrecoBadge`
-- **Risco:** Nenhum (prop undefined = fallback sem min display)
-- **Prioridade:** Após merge #360, antes de UX polish
+### ✅ Onda 2B — CONCLUÍDA (2026-09-01)
 
-### IDs 50, 51 (Onda 2B): Auditoria — UI leitura/captura
-- **IDs 50:** Motivo override
-  - Schema ✅, UI para capturar motivo em override FALTA
-  - Trabalho: Input modal + RPC parameter + test
-  - Esforço: S (1–2 horas)
-- **ID 51:** Histórico tiers CRUD
-  - Infra ✅, UI para ler histórico FALTA
-  - Trabalho: Query histórico + timeline component + test
-  - Esforço: S (2–3 horas)
-- **Bloqueador?** Não (opcional; compliance nice-to-have)
+- **ID 40:** Fechado. RPC estendida para devolver `quantidade_minima`; fio completo até o badge. 24 testes unitários relevantes passam.
+- **ID 44:** Fechado + bug crítico corrigido. A migration original usava CHECK com subquery cross-table — inválida no Postgres, teria falhado ao aplicar. Reescrita como trigger.
+- **ID 51:** Fechado + bug corrigido. RLS estava ausente na tabela nova (`historico_tiers_crud`), quebrando o padrão da tabela irmã. Corrigido. Escopo confirmado como "trilha auditável" — UI de leitura não é requisito obrigatório, fica como P2 opcional.
+
+### 🔴 ID 50 — Bloqueado, requer decisão de negócio (não é mais "Onda 2B pendente")
+- **Status real:** Schema existe (`itens_venda.motivo_override`), mas **não há nenhum fluxo de produção que crie um item com `tipoPreco='MANUAL'`** — o tipo é aceito passivamente pelo backend, mas nenhuma tela do frontend o define hoje.
+- **O que já existe (e pode já ser a resposta):** Auditoria de motivo completa para desconto percentual do gerente (`descontos_venda.motivo_desconto` + `motivo_descricao_livre`, via `CaixaGerenteModal.tsx` → RPC v4).
+- **Decisão necessária:** (A) considerar ID 50 já coberto pela auditoria de desconto-gerente existente — fechar apontando para essa infra; ou (B) tratar como feature nova (override manual por item) — precisa de escopo próprio (UI, quando é permitido, quem autoriza), não cabe como conclusão de gap.
+- **Recomendação:** (A) é a leitura mais provável, mas é uma decisão do dono do produto.
+- **Detalhes completos:** [`docs/ONDA2_RECONCILIACAO_POS_PR360.md`](ONDA2_RECONCILIACAO_POS_PR360.md#-id-50-auditoria--motivo-de-override--bloqueado-decisão-de-negócio-necessária)
 
 ### Resíduos I18n (IDs 219, 220) — QUASE COMPLETO
 - **Status:** Implementado parcialmente (server actions caixa migrados, admin/gerente resíduos)
