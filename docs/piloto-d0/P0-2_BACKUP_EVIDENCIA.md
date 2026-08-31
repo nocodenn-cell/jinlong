@@ -20,7 +20,7 @@
 
 **Conclusão:** o plano **continua Free** em 2026-08-31. Não há evidência nova de backup automático nem de restore. IDs 183–187 permanecem **FAIL**.
 
-**Próximo passo humano:** executar upgrade **Pro** no painel Supabase (instruções no runbook) e responder `UPGRADE PRO CONCLUÍDO` — ver runbook canônico.
+**Próximo passo:** IDs 183–187 permanecem FAIL (decisão consciente sem Pro). Fechamento via **Onda 7** do plano em [`AUDITORIA_PRONTIDAO_CLIENTE_PAGANTE.md`](../AUDITORIA_PRONTIDAO_CLIENTE_PAGANTE.md). **Não** iniciar Onda 7 agora.
 
 ---
 

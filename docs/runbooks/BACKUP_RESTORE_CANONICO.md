@@ -72,15 +72,13 @@ Para cliente pagante, **Opção A** é a menor solução adequada em risco opera
 
 ## Gate humano obrigatório (antes de qualquer ação paga ou com dados)
 
-> **Estado 2026-08-31:** Opção A **aprovada**. Upgrade **não executado** pelo agente. Aguardando humano.
+> **Estado 2026-08-31 (atualizado):** Opção A avaliada; **não contratar Pro agora** (priorização consciente). Gap permanece ABERTO → Onda 7.
 
-1. **Upgrade Pro** — decisão de cobrança (~$25/mês). **Somente o responsável pela conta Supabase confirma no painel.**
-2. **`SUPABASE_ACCESS_TOKEN`** — para listar backups via API e registrar evidência ID 184 (após upgrade).
-3. **Restore drill (P0-3)** — preencher [`../piloto-d0/P0-3_HUMAN_GATE.md`](../piloto-d0/P0-3_HUMAN_GATE.md):
-   - ref **DESTINO** ≠ `PROJECT_REF_JINLONG`
-   - frase de autorização datada
-4. **Dump manual (Opção B)** — **não autorizado** (Opção A escolhida).
-5. **PITR** — **não contratar** se aparecer como add-on no checkout.
+1. **Upgrade Pro** — **não autorizado nesta priorização**.
+2. **`SUPABASE_ACCESS_TOKEN`** — opcional para evidência futura; não necessário até Onda 7.
+3. **Restore drill (P0-3)** — somente na Onda 7, com DESTINO isolado preenchido.
+4. **Dump / `backup.sh`** — avaliar na Onda 7; não implementar agora.
+5. **PITR** — **não contratar**.
 
 **Produção permanece somente leitura** durante investigação e drill.
 
