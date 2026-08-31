@@ -21,22 +21,23 @@
 
 ---
 
-## Decisão aprovada (2026-08-31)
+## Decisão aprovada (2026-08-31) — atualizada
 
 | Item | Decisão |
 |------|---------|
-| Caminho escolhido | **Opção A — Supabase Pro / backup gerenciado** |
-| `backup.sh` | **Não implementar** — permanece artefato legado; não criar mecanismo concorrente |
-| PITR | **Não autorizado** neste momento |
+| Avaliação técnica | **Opção A (Supabase Pro)** — menor risco operacional |
+| Priorização consciente | **Não contratar Pro/PITR/add-ons neste momento** |
+| `backup.sh` | **Não implementar** como solução até execução automática + restore |
+| PITR | **Não autorizado** |
 | Metas | RPO ≤ 24h · RTO ≤ 8h |
-| Upgrade Pro | **Gate humano** — agente **não executa** cobrança |
-| Status gap | **`GAP P0 BACKUP/RESTORE REMAINS OPEN`** até IDs 183–187 validados |
+| Tratamento | **Onda 7** do plano de fechamento (backup sem novo custo) |
+| Status gap | **`GAP P0 BACKUP/RESTORE REMAINS OPEN`** — **não** é PASS |
 
-**Próximo gatilho:** confirmação explícita do humano: `UPGRADE PRO CONCLUÍDO`.
+**Não aguardar** `UPGRADE PRO CONCLUÍDO`. Próxima ação de produto: plano de ondas (`GO — ONDA 1`).
 
 ---
 
-## Decisão recomendada: A — Backup gerenciado Supabase (Pro)
+## Opção A — Backup gerenciado Supabase (Pro) — referência
 
 Para cliente pagante, **Opção A** é a menor solução adequada em risco operacional.
 
