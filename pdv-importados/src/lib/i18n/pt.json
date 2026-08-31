@@ -1130,7 +1130,7 @@
     "col_total": "Total",
     "col_tipo": "Tipo",
     "remover": "remover",
-    "id_label": "ID",
+    "sku_label": "Código",
     "carrinho_vazio_linha1": "Nenhum item no carrinho. Escaneie um código cadastrado em",
     "carrinho_vazio_ref_catalogo": "produtos",
     "carrinho_vazio_linha2": "ou digite parte do nome (Enter).",

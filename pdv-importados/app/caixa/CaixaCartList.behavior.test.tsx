@@ -14,6 +14,7 @@ function buildItem(overrides: Partial<ItemCarrinhoComPreco> = {}): ItemCarrinhoC
     id: overrides.id ?? "linha-1",
     produtoId: overrides.produtoId ?? "11111111-1111-1111-1111-111111111111",
     nome: overrides.nome ?? "Pacote snacks picantes",
+    sku: overrides.sku,
     quantidade,
     precoUnitario,
     precoOriginal: overrides.precoOriginal ?? precoUnitario,
@@ -37,7 +38,7 @@ const mockMensagens = {
     aria_qtde_item: "Quantidade — {{nome}}",
     aria_qtde_aumentar: "Aumentar 1 unidade — {{nome}}",
     aria_qtde_diminuir: "Diminuir 1 unidade — {{nome}}",
-    id_label: "ID",
+    sku_label: "Código",
     empty_guardiao: "",
     empty_cta_scan: "",
     empty_cta_type_enter: "",
@@ -165,5 +166,51 @@ describe("CaixaCartList — stepper de quantidade", () => {
     expect(input!.getAttribute("step")).toBe("0.001")
     expect(input!.getAttribute("inputmode")).toBe("decimal")
     expect(input!.value).toBe("0.125")
+  })
+})
+
+// Onda 2 · Bloco 2 — a linha do carrinho precisa preservar identificação
+// suficiente pra distinguir produtos semelhantes (não só o ID truncado).
+describe("CaixaCartList — diferenciador do produto (Onda 2 · Bloco 2)", () => {
+  let container: HTMLDivElement
+  let root: Root
+
+  beforeEach(() => {
+    container = document.createElement("div")
+    document.body.appendChild(container)
+    root = createRoot(container)
+  })
+
+  afterEach(() => {
+    flushSync(() => {
+      root.unmount()
+    })
+    container.remove()
+  })
+
+  it("mostra o código (SKU/barcode) quando existir — não mais o ID truncado do produto", () => {
+    const item = buildItem({ nome: "Cadeira Vermelha Grande", sku: "CAD-VERM-G" })
+    renderList(root, [item], vi.fn(), vi.fn())
+
+    expect(container.textContent).toContain("CAD-VERM-G")
+    // Regressão: o ID interno do produto não deve mais vazar pra tela.
+    expect(container.textContent).not.toContain(item.produtoId.slice(0, 8))
+  })
+
+  it("sem código cadastrado, omite a linha em vez de mostrar um ID sem sentido operacional", () => {
+    const item = buildItem({ nome: "Produto sem código" })
+    renderList(root, [item], vi.fn(), vi.fn())
+
+    expect(container.textContent).not.toContain("Código:")
+    expect(container.textContent).not.toContain(item.produtoId.slice(0, 8))
+  })
+
+  it("dois produtos com nomes parecidos mostram códigos diferentes na lista", () => {
+    const a = buildItem({ id: "l1", produtoId: "p-verm", nome: "Cadeira Vermelha", sku: "CAD-VERM" })
+    const b = buildItem({ id: "l2", produtoId: "p-vg", nome: "Cadeira Vermelha Grande", sku: "CAD-VERM-G" })
+    renderList(root, [a, b], vi.fn(), vi.fn())
+
+    expect(container.textContent).toContain("CAD-VERM")
+    expect(container.textContent).toContain("CAD-VERM-G")
   })
 })

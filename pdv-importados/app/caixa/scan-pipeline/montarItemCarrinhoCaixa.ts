@@ -19,6 +19,10 @@ export function montarItemCarrinhoCaixa(
     id: `${produto.id}-${Date.now()}`,
     produtoId: produto.id,
     nome: produto.nome,
+    // Diferenciador visível na linha do carrinho (Onda 2 · Bloco 2) — o que
+    // existir primeiro: código de barras (o que o operador de fato bipou/leu)
+    // ou código interno (SKU). Sem os dois, a linha simplesmente omite o código.
+    sku: produto.codigo_barras ?? produto.codigo_interno ?? undefined,
     quantidade,
     precoUnitario: precoCalculado,
     precoOriginal: precoCalculado,

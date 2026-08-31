@@ -1130,7 +1130,7 @@
     "col_total": "小计",
     "col_tipo": "类型",
     "remover": "删除",
-    "id_label": "ID",
+    "sku_label": "编码",
     "carrinho_vazio_linha1": "购物车为空。请扫描已录入",
     "carrinho_vazio_ref_catalogo": "商品",
     "carrinho_vazio_linha2": "的条码，或输入名称后按回车。",
