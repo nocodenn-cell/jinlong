@@ -1114,6 +1114,7 @@
     "candidatos_selecionar_aria": "Selecionar {{nome}}",
     "candidatos_badge_sem_estoque": "Sem estoque",
     "candidatos_badge_estoque_baixo": "Estoque baixo",
+    "sugestoes_unico": "1 produto encontrado — Enter para adicionar",
     "som_feedback_ligado": "Som: ligado",
     "som_feedback_desligado": "Som: desligado",
     "bloco_operacao_atual": "Operação atual",

@@ -19,6 +19,7 @@ import {
 import type { ProdutoCaixaDTO } from "@/app/caixa/caixaActionTypes"
 import { avisoEstoqueCaixa, montarItemCarrinhoCaixa } from "@/app/caixa/scan-pipeline/montarItemCarrinhoCaixa"
 import { CaixaCandidatosProduto } from "@/app/caixa/CaixaCandidatosProduto"
+import { useCaixaBuscaSugestoes } from "@/app/caixa/hooks/useCaixaBuscaSugestoes"
 import { createClient as createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { historicoDetalheParaRecibo } from "@/app/caixa/caixaHistoricoRecibo"
 import type { MovimentacaoCaixaDTO } from "@/app/caixa/caixaMovimentacaoTypes"
@@ -494,6 +495,12 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     // informa e orienta (mensagem do próprio pipeline de leitura) — cadastrar
     // pertence ao módulo Produtos (gerente/admin). Por isso nenhum
     // `onProdutoNaoEncontrado` é passado aqui.
+  })
+
+  useCaixaBuscaSugestoes(codigo, {
+    enabled: !buscandoPipeline,
+    mensagemUnico: m.caixa.sugestoes_unico,
+    onSugestoes: setCandidatosAmbiguos,
   })
 
   const pagamentoControlesDesabilitados =

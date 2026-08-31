@@ -1114,6 +1114,7 @@
     "candidatos_selecionar_aria": "选择 {{nome}}",
     "candidatos_badge_sem_estoque": "无库存",
     "candidatos_badge_estoque_baixo": "库存偏低",
+    "sugestoes_unico": "找到 1 个商品 — 按 Enter 添加",
     "som_feedback_ligado": "声音：开",
     "som_feedback_desligado": "声音：关",
     "bloco_operacao_atual": "当前操作",
