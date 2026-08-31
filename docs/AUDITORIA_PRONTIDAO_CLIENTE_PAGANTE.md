@@ -11,7 +11,7 @@
 |-------|-------|
 | **SHA auditada** | `9e6292838f708cd0e5b0404a09601dd7c4047591` |
 | **Data auditoria** | 2026-08-31 |
-| **Última atualização** | 2026-08-31 (Onda 1 Lote 2 — IDs 121, 122 fechados) |
+| **Última atualização** | 2026-08-31 (Onda 1 Lote 3 — IDs 5, 6 fechados) |
 | **Ambiente** | Código + migrations/RPCs/tests/docs; produção somente leitura (evidência documental/API) |
 | **Total capacidades** | 250 (IDs 1–250 únicos, validados) |
 | **P0** | 117 |
@@ -108,6 +108,60 @@
 
 ---
 
+## Fechamentos — Onda 1 / Lote 3 (IDs 5, 6)
+
+**Data:** 2026-08-31 · Branch: `cursor/onda1-busca-autocomplete-5-6-0a79` · PR (a preencher)
+
+### Mapeamento matriz × GO operacional
+
+| Matriz | Rótulo oficial | Pergunta operacional do GO |
+|--------|----------------|----------------------------|
+| **ID 5** | Autocomplete incremental | Sugestões úteis enquanto digita + lista navegável |
+| **ID 6** | Pesquisa SKU/referência | Localizar por `codigo_interno` (e, com candidatos, localizar rápido entre similares) |
+
+### Comportamento antes (main)
+
+| Caso | Antes |
+|------|--------|
+| `cadeira v` (Enter) | `ambiguo` → toast; sem lista; limite 3 cortava candidatos |
+| Digitação parcial | Sem typeahead |
+| SKU `CAD-VERM-G` | Não buscava `codigo_interno` |
+| Barcode | Match direto (OK) |
+
+### ID 5 — Autocomplete incremental
+
+| Campo | Valor |
+|-------|-------|
+| Status anterior | IMPLEMENTADO PARCIALMENTE |
+| Status novo | **IMPLEMENTADO E VALIDADO** |
+| Causa raiz | Sem debounce/typeahead; ambiguidade só toast; limite 3 |
+| Solução | Port candidatos (lista + teclado) + `useCaixaBuscaSugestoes` (debounce 280ms, reusa `buscarProdutoParaCaixa`); skip se parece barcode |
+| Arquivos | `CaixaCandidatosProduto.tsx`, `CaixaSearchBar.tsx`, `CaixaPageClient.tsx`, `caixaBuscaSugestoes.ts`, `useCaixaBuscaSugestoes.ts`, `caixaCatalogo.impl.ts`, i18n |
+| Teclado | ↑↓ Enter Esc na lista |
+| Scanner | Typeahead não dispara em `^\d{6,}$`; Enter/wedge segue pipeline |
+| Testes | `caixaBuscaSugestoes.test.ts`, `CaixaSearchBar.behavior.test.tsx`, `caixaCatalogo.impl.test.ts`, `webCaixaScanProcess.test.ts` |
+| Evidência | `/opt/cursor/artifacts/onda1-5-6-vitest.log` |
+| Observação | Migration accent-insensitive existe em branch auxiliar — **não aplicada** neste lote (report only) |
+
+### ID 6 — Pesquisa SKU/referência
+
+| Campo | Valor |
+|-------|-------|
+| Status anterior | NÃO IMPLEMENTADO |
+| Status novo | **IMPLEMENTADO E VALIDADO** |
+| Causa raiz | Lookup do caixa não consultava `codigo_interno` |
+| Solução | Após barcode, antes do nome: ILIKE em `codigo_interno` (limite 8, order nome); ambíguo → candidatos |
+| Arquivos | `caixaCatalogo.impl.ts` (+ tests); DTO já expunha o campo no port de candidatos |
+| SSoT | Tabela `produtos` via `buscarProdutoParaCaixaImpl` — sem catálogo paralelo |
+| Testes | `caixaCatalogo.impl.test.ts` (SKU exato + parcial ambíguo) |
+| Evidência | `/opt/cursor/artifacts/onda1-5-6-vitest.log` |
+
+### Não alterado (regressão)
+
+Preço/atacado/estoque/desconto/pagamento/persistência da venda — seleção só localiza; preço via `calcularPrecoProdutoCaixa` / pipeline canônico.
+
+---
+
 ## 2. Score de prontidão
 
 ### P0 (117 capacidades)
@@ -124,10 +178,10 @@
 
 | Status | Qtd | % |
 |--------|-----|---|
-| IMPLEMENTADO E VALIDADO | 33 | 45.8% |
-| IMPLEMENTADO PARCIALMENTE | 35 | 48.6% |
+| IMPLEMENTADO E VALIDADO | 35 | 48.6% |
+| IMPLEMENTADO PARCIALMENTE | 34 | 47.2% |
 | EXISTE MAS NÃO VALIDADO | 1 | 1.4% |
-| NÃO IMPLEMENTADO | 3 | 4.2% |
+| NÃO IMPLEMENTADO | 2 | 2.8% |
 | NÃO SE APLICA AO PILOTO | 0 | 0.0% |
 
 ---
@@ -196,8 +250,8 @@ Não entram na tabela: `IMPLEMENTADO E VALIDADO`, `NÃO SE APLICA AO PILOTO`, `N
 | Ordem | Onda | ID | Gap | Prioridade | Status atual | Esforço estimado | Risco | Dependências | Motivo da ordem |
 | ----- | ---- | -: | --- | ---------- | ------------ | ---------------- | ----- | ------------ | --------------- |
 | 1 | 1 | 121 | Categoria imediata | P0 | IMPLEMENTADO E VALIDADO | S | Baixo | — | Fechado Onda1 Lote2 |
-| 2 | 1 | 5 | Autocomplete incremental | P1 | IMPLEMENTADO PARCIALMENTE | S | Baixo | — | Quick win: bug UX/cadastro/PDV com superfície pequena e ganho imediato |
-| 3 | 1 | 6 | Pesquisa SKU/referência | P1 | NÃO IMPLEMENTADO | S | Médio | caixaCatalogo.impl + ProdutoCacheLite | Quick win: bug UX/cadastro/PDV com superfície pequena e ganho imediato |
+| 2 | 1 | 5 | Autocomplete incremental | P1 | IMPLEMENTADO E VALIDADO | S | Baixo | — | Fechado Onda1 Lote3 |
+| 3 | 1 | 6 | Pesquisa SKU/referência | P1 | IMPLEMENTADO E VALIDADO | S | Baixo | — | Fechado Onda1 Lote3 |
 | 4 | 1 | 27 | Histórico vendas | P1 | IMPLEMENTADO PARCIALMENTE | S | Baixo | — | Quick win: bug UX/cadastro/PDV com superfície pequena e ganho imediato |
 | 5 | 1 | 28 | Reimpressão cupom | P1 | IMPLEMENTADO PARCIALMENTE | S | Baixo | — | Quick win: bug UX/cadastro/PDV com superfície pequena e ganho imediato |
 | 6 | 1 | 40 | Exibição faixa aplicada | P1 | IMPLEMENTADO PARCIALMENTE | S | Baixo | — | Quick win: bug UX/cadastro/PDV com superfície pequena e ganho imediato |
@@ -295,8 +349,8 @@ Não entram na tabela: `IMPLEMENTADO E VALIDADO`, `NÃO SE APLICA AO PILOTO`, `N
 
 ### Onda 1
 
-**IDs (12):** ~~121~~, 5, 6, 27, 28, 40, ~~122~~, 214, 219, 220, ~~221~~, ~~222~~  
-**Fechados:** 221, 222 (Lote 1); 121, 122 (Lote 2). Restantes Onda 1: 5, 6, 27, 28, 40, 214, 219, 220.
+**IDs (12):** ~~121~~, ~~5~~, ~~6~~, 27, 28, 40, ~~122~~, 214, 219, 220, ~~221~~, ~~222~~  
+**Fechados:** 221, 222 (Lote 1); 121, 122 (Lote 2); 5, 6 (Lote 3). Restantes Onda 1: 27, 28, 40, 214, 219, 220.
 
 Quick win: bug UX/cadastro/PDV com superfície pequena e ganho imediato
 ### Onda 2
@@ -354,8 +408,8 @@ Registro ao fechar ID: status anterior → novo · causa · solução · teste �
 | 2 | A.PDV | Fundo/troco inicial | P0 | IMPLEMENTADO E VALIDADO | CaixaAbrirTurnoModal | cashSession.open | caixas.valor_inicial | caixa-fluxos-criticos.spec.ts | Baixo | pdv-local prompt | — | Não |
 | 3 | A.PDV | Identificação operador | P0 | IMPLEMENTADO PARCIALMENTE | page.tsx operadorLabel | auth.uid()→operador_id | caixas/vendas.operador_id | login-contrato-perfil.spec.ts | Médio | Sem PIN/troca operador | Política terminal | Não |
 | 4 | A.PDV | Pesquisa por nome | P0 | IMPLEMENTADO E VALIDADO | CaixaSearchBar | caixaCatalogo ILIKE | produtos | webCaixaScanProcess.test.ts | Baixo | — | — | Não |
-| 5 | A.PDV | Autocomplete incremental | P1 | IMPLEMENTADO PARCIALMENTE | CaixaSearchBar debounce | buscarProdutoParaCaixa | produtos | — | Baixo | Não typeahead completo | Melhorar debounce/lista | Não |
-| 6 | A.PDV | Pesquisa SKU/referência | P1 | NÃO IMPLEMENTADO | — | codigo_interno ausente caixa | produtos.codigo_interno | productReader admin | Médio | SKU não no caixa | Incluir no lookup | Não |
+| 5 | A.PDV | Autocomplete incremental | P1 | IMPLEMENTADO E VALIDADO | useCaixaBuscaSugestoes + CaixaCandidatosProduto | buscarProdutoParaCaixa | produtos | caixaBuscaSugestoes + CaixaSearchBar.behavior | Baixo | — | — | Não |
+| 6 | A.PDV | Pesquisa SKU/referência | P1 | IMPLEMENTADO E VALIDADO | caixaCatalogo.impl | codigo_interno ILIKE | produtos.codigo_interno | caixaCatalogo.impl.test.ts | Baixo | — | — | Não |
 | 7 | A.PDV | Código de barras | P0 | IMPLEMENTADO E VALIDADO | useCaixaScanPipeline | webCaixaScanProcess | produtos.codigo_barras | caixa-golden-flow-cycle5.spec.ts | Baixo | Keyboard-wedge | — | Não |
 | 8 | A.PDV | Inclusão rápida produto | P3 | NÃO SE APLICA AO PILOTO | Removido | pdv_cadastro_removido.md | — | caixaSemCadastroProduto.test.ts | Baixo | SSoT /admin/catalogo | — | Não |
 | 9 | A.PDV | Scanner repete qty | P0 | IMPLEMENTADO E VALIDADO | webCaixaScanProcess | unifiedCartStore.adicionarItem | — | webCaixaScanProcess.test.ts | Baixo | — | — | Não |
