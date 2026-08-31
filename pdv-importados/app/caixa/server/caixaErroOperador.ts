@@ -1,5 +1,4 @@
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
-import { caixaMsgServidor } from '@/app/caixa/server/caixaMensagensServidor'
 
 type IdiomaErro = 'pt' | 'zh'
 
