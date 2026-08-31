@@ -186,6 +186,7 @@ export type Database = {
           created_at: string
           id: string
           nome: string
+          nome_sem_acento: string | null
         }
         Insert: {
           ativo?: boolean
@@ -193,6 +194,7 @@ export type Database = {
           created_at?: string
           id?: string
           nome: string
+          nome_sem_acento?: string | null
         }
         Update: {
           ativo?: boolean
@@ -200,6 +202,7 @@ export type Database = {
           created_at?: string
           id?: string
           nome?: string
+          nome_sem_acento?: string | null
         }
         Relationships: [
           {
@@ -3432,6 +3435,7 @@ export type Database = {
           ncm: string | null
           nome: string
           nome_reduzido_pdv: string | null
+          nome_sem_acento: string | null
           observacao: string | null
           origem: string
           permitir_abaixo_custo: boolean
@@ -3473,6 +3477,7 @@ export type Database = {
           ncm?: string | null
           nome: string
           nome_reduzido_pdv?: string | null
+          nome_sem_acento?: string | null
           observacao?: string | null
           origem: string
           permitir_abaixo_custo?: boolean
@@ -3514,6 +3519,7 @@ export type Database = {
           ncm?: string | null
           nome?: string
           nome_reduzido_pdv?: string | null
+          nome_sem_acento?: string | null
           observacao?: string | null
           origem?: string
           permitir_abaixo_custo?: boolean
@@ -5203,7 +5209,12 @@ export type Database = {
         Returns: string
       }
       criar_produto_com_estoque_inicial: {
-        Args: { p_ator_id: string; p_payload: Json; p_request_id?: string }
+        Args: {
+          p_ator_id: string
+          p_faixa?: Json
+          p_payload: Json
+          p_request_id?: string
+        }
         Returns: Json
       }
       dashboard_gerente_resumo: {
@@ -6042,6 +6053,7 @@ export type Database = {
         Args: { p_scale?: number; p_value: number }
         Returns: number
       }
+      texto_sem_acento: { Args: { texto: string }; Returns: string }
       transferir_estoque_entre_lojas: {
         Args: {
           p_loja_destino: string

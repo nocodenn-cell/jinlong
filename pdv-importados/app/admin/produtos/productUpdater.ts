@@ -185,9 +185,14 @@ async function mapUpdateDbError(
  * exatamente esse par — é ele que a RPC `calcular_preco_produto` consulta na
  * venda. Derivar aqui (em vez de receber como parâmetro separado) mantém a
  * assinatura de `UpdateProductCommand` intacta.
+ *
+ * Tipo do parâmetro é estrutural (só os 2 campos usados), de propósito —
+ * também reusado pelo CREATE (Onda 2 · Bloco 4, `criarProdutoComEstoqueInicialRpc.ts`)
+ * sem precisar satisfazer o resto de `ProdutoUpdatePayload`. Mesma regra,
+ * uma fonte só — SSOT do "o que conta como faixa derivada do catálogo".
  */
 export function derivarFaixaAtacado(
-  payload: ProdutoUpdatePayload,
+  payload: Pick<ProdutoUpdatePayload, 'preco_atacado' | 'quantidade_gatilho_atacado'>,
 ): { quantidade_minima: number; preco_unitario: number } | null {
   const preco = payload.preco_atacado
   const gatilho = payload.quantidade_gatilho_atacado

@@ -27,6 +27,7 @@ import {
   fetchPdvConfigParaCaixaWeb,
   mapProdutoRow,
   sanitizeIlikeFragment,
+  semAcento,
 } from '@/app/caixa/server/caixaActionsInternals'
 
 type ProdutoRowCaixa = {
@@ -225,10 +226,15 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
       return finalizarListaProdutos(supabase, porSku.lista, lojaId, frag, 'sku', idioma)
     }
 
+    // Accent-insensitive (Onda 2 · Bloco 3): compara contra a coluna gerada
+    // `nome_sem_acento` (migration 20260831100000) em vez de `nome` cru —
+    // "cafe" passa a encontrar "Café" sem cair para sequential scan (a coluna
+    // tem seu próprio índice trigram; ver migration para o porquê).
+    const fragSemAcento = semAcento(frag)
     const { data: porNome, error: errNome } = await aplicarFiltroProdutoVendavel(
       supabase.from('produtos').select('*'),
     )
-      .ilike('nome', `%${frag}%`)
+      .ilike('nome_sem_acento', `%${fragSemAcento}%`)
       .order('nome', { ascending: true })
       .limit(LIMITE_CANDIDATOS_AMBIGUOS)
 
@@ -239,7 +245,7 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
       const { data: cats, error: errCat } = await supabase
         .from('categorias')
         .select('id')
-        .ilike('nome', `%${frag}%`)
+        .ilike('nome_sem_acento', `%${fragSemAcento}%`)
         .limit(25)
       if (errCat) return { ok: false, error: mensagemErroParaUsuario(errCat.message, idioma) }
       const catIds = (cats ?? []).map((c) => c.id)

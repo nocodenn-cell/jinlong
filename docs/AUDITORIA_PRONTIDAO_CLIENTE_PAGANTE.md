@@ -478,6 +478,28 @@ Registro ao fechar ID: status anterior → novo · causa · solução · teste �
 
 ---
 
+## Convergência pré-cliente — branch `convergencia-pre-cliente-candidata` (2026-08-31)
+
+**Integrado, nesta ordem, em branch própria a partir de `origin/main` (SHA `9e629283`):** #353 (inclui #352), #354, #358 (inclui #356+#357, com fix de lint do import não usado `caixaMsgOperador`), #355. Documento de auditoria reconciliado cumulativamente a cada passo — nenhum fechamento de ID perdido.
+
+### Reconciliação #351 × #355 (arquitetura de busca do PDV)
+
+`#355` foi mantida como base autoritativa (autocomplete, lista de candidatos, busca por SKU — IDs 5/6). De `#351` foram extraídas apenas as capacidades compatíveis, sem criar um segundo mecanismo de busca:
+
+- **Busca accent-insensitive** (Onda 2 · Bloco 3): portada a função `semAcento()` para `caixaProdutoSql.ts`; a query "por nome" e o fallback por categoria em `caixaCatalogo.impl.ts` passaram a comparar contra a coluna gerada `nome_sem_acento` (já existente em produção) em vez de `nome` cru. O helper de fallback `colunaSemAcentoAusente` (para banco sem a migration) foi **descartado por obsolescência** — a migration já está confirmada aplicada em produção; reintroduzir esse fallback dentro da arquitetura de `#355` duplicaria complexidade sem necessidade real.
+- **Migrations idempotentes** `20260831100000_busca_pdv_accent_insensitive.sql` e `20260831110000_criar_produto_faixa_atacado_atomica.sql`: adicionadas ao Git (sem reaplicar no Supabase) para manter o histórico versionado coerente com o remoto.
+- **`database.types.ts`**: regenerado (patch de `#351`, aplica limpo) — `nome_sem_acento`, `texto_sem_acento`, `p_faixa` em `criar_produto_com_estoque_inicial`.
+- **Criação atômica de produto + faixa de atacado** (Onda 2 · Bloco 4): `criarProdutoComEstoqueInicialRpc.ts` passa a enviar `p_faixa` na mesma chamada RPC; `ProdutoFormModal.tsx` não faz mais uma 2ª chamada separada (`sincronizarFaixaAtacado`, removida). Fallback `rpcCriarProdutoFaixaAusente` (RPC de 3 args se a de 4 não existir) **mantido** — segue o mesmo padrão defensivo já estabelecido em `productUpdater.ts` (`rpcAusente`), não é código morto: protege contra cache de schema desatualizado do PostgREST.
+- **Independentes, sem conflito**: SKU exibido no carrinho (`CaixaCartList.tsx`, usa campo `sku` que `#355` já preenche), fix de sincronização de estado no "Limpar busca" do `FilterBar.tsx`, hint de texto em `CompraSection.tsx`.
+- **Descartado e documentado**: promoção do campo Marca para a área sempre-visível do formulário (`MarcaQuickField.tsx`, mudanças em `ProdutoForm.tsx`/`ComercialSection.tsx`) — contradiz a decisão explícita já registrada no fechamento do ID 122 ("Nota: Campo marca permanece atrás de 'Modo completo' — fora de escopo promover UI"). Revertido para o estado pós-Onda1.
+- **Não trazido (fora de escopo desta convergência)**: mudanças de infraestrutura de CI/E2E (sharding de chromium, monitor de memória, checagem de binário Playwright pós-install) presentes na mesma branch de `#351` — não são "busca" nem "atacado"; tratar como PR separado se necessário.
+
+### Resíduo i18n (219/220) fechado nesta convergência
+
+`finalizarListaProdutos` (função nova de `#355`) usava mensagens PT hardcoded para os casos de ambiguidade por SKU/nome. Migradas para o SSOT (`caixaMsgServidor`): chave existente `err_srv_busca_ambigua` teve o texto atualizado (agora reflete que há lista de candidatos) e nova chave `err_srv_busca_sku_ambigua` foi criada, ambas em PT e ZH.
+
+---
+
 ## 3. Matriz completa (250 IDs)
 
 | ID | Domínio | Capacidade | Prioridade | Status | Evidência UI | Evidência código | Evidência DB/RPC | Teste/evidência | Risco | Gap | Menor ação necessária | Bloqueia piloto? |
