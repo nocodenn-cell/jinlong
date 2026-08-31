@@ -18,6 +18,7 @@ import { EssencialSection } from './sections/EssencialSection'
 import { PrecosSection } from './sections/PrecosSection'
 import { CategoriaQuickField } from './sections/CategoriaQuickField'
 import { FornecedorQuickField } from './sections/FornecedorQuickField'
+import { MarcaQuickField } from './sections/MarcaQuickField'
 import { ComercialSection } from './sections/ComercialSection'
 import { CompraSection } from './sections/CompraSection'
 import { EstoqueSection } from './sections/EstoqueSection'
@@ -158,11 +159,11 @@ export function ProdutoForm(props: Props) {
           proximoAposVarejoRef={props.estoqueInicialRef}
           onEnterSubmit={props.onEnterSubmit}
         />
-        {/* Categoria e fornecedor sempre visíveis (modo simples e completo) —
-            campos primários: categoria organiza o catálogo, fornecedor mantém a
-            rastreabilidade da compra. */}
-        <div className="mt-1 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {/* Categoria, marca e fornecedor sempre visíveis (modo simples e
+            completo) — classificação básica não deve exigir "Modo completo". */}
+        <div className="mt-1 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <CategoriaQuickField />
+          <MarcaQuickField />
           <FornecedorQuickField idioma={props.idioma} />
         </div>
         <EstoqueSection

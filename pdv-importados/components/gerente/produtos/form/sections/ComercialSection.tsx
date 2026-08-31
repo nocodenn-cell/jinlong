@@ -1,12 +1,6 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { criarMarcaProduto } from '@/app/gerente/marcas-produtos/actions'
-import {
-  opcoesSelecionaveis,
-  selecionadaEstaInativa,
-} from '@/core/catalog/opcoesCadastro'
-import { SelectComCadastroRapido } from '../fields/SelectComCadastroRapido'
 import { ProdutoFormSectionHeading } from '../ProdutoFormSectionHeading'
 import { useProdutoFormContext } from '../ProdutoFormContext'
 import { FIN_TEXTAREA } from '../produtoFormStyles'
@@ -20,64 +14,29 @@ type Props = Readonly<{
 export function ComercialSection({ faixasSlot, historicoSlot }: Props) {
   const ctx = useProdutoFormContext()
   const p = ctx.m.produtos
-  const c = ctx.m.comum
-  const { disabled, inputClassName, inputMonoClassName, selectClassName, opcoes } = ctx
-
-  // Mesma regra da categoria: marca inativa sai das escolhas novas mas continua
-  // listada se for a do produto aberto — esconder faria o campo aparecer vazio
-  // para um produto que tem marca. Ver
-  // Jinlong/decisoes/CATALOGO_CATEGORIA_INATIVA_E_PUBLICAR.md.
-  const marcas = opcoesSelecionaveis(opcoes.marcas, ctx.marcaId)
-  const marcaAvisoInativa = selecionadaEstaInativa(opcoes.marcas, ctx.marcaId)
-    ? p.marca_inativa_aviso
-    : null
+  const { disabled, inputClassName, inputMonoClassName, selectClassName } = ctx
 
   return (
     <section aria-labelledby="produto-secao-comercial">
       <ProdutoFormSectionHeading title={p.secao_classificacao} />
       <p className="mt-1 text-caption text-jl-fg-3">{p.hint_classificacao_recomendados}</p>
       <div id="produto-secao-comercial" className="mt-3 space-y-3">
-        {/* Categoria e fornecedor saíram daqui para a área sempre visível
-            (CategoriaQuickField / FornecedorQuickField). Marca segue aqui. */}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <SelectComCadastroRapido
-            label={p.marca_label}
-            value={ctx.marcaId}
-            onChange={ctx.setMarcaId}
-            opcoes={marcas}
-            hint={marcaAvisoInativa}
-            vazioLabel={p.nenhuma_marca}
+        {/* Categoria, fornecedor e marca saíram daqui para a área sempre
+            visível (CategoriaQuickField / FornecedorQuickField / MarcaQuickField). */}
+        <label className="block text-xs font-medium text-jl-fg-3">
+          {p.origem_label}
+          <select
+            className={`${selectClassName} mt-1`}
+            value={ctx.origem}
+            onChange={(e) => ctx.setOrigem(e.target.value as OrigemCode)}
             disabled={disabled}
-            selectClassName={selectClassName}
-            modalTitulo={p.cadastro_rapido_marca}
-            modalNomeLabel={p.marca_label}
-            modalPlaceholder={p.marca_label}
-            cancelarLabel={c.cancelar}
-            salvarLabel={c.salvar}
-            salvandoLabel={c.carregando}
-            onCriar={async (nome) => {
-              const r = await criarMarcaProduto({ nome })
-              return r.success
-                ? { success: true, id: r.data.id }
-                : { success: false, error: r.error }
-            }}
-            onOpcaoCriada={(opcao) => ctx.onMarcasChange?.([...opcoes.marcas, opcao])}
-          />
-          <label className="block text-xs font-medium text-jl-fg-3">
-            {p.origem_label}
-            <select
-              className={`${selectClassName} mt-1`}
-              value={ctx.origem}
-              onChange={(e) => ctx.setOrigem(e.target.value as OrigemCode)}
-              disabled={disabled}
-            >
-              <option value="china_manual">{p.origem_china}</option>
-              <option value="brasil_nf">{p.origem_brasil_nf}</option>
-              <option value="brasil_sem_nf">{p.origem_brasil_sem_nf}</option>
-            </select>
-            <span className="mt-0.5 block text-caption text-jl-fg-3">{p.hint_origem_tem_nf}</span>
-          </label>
-        </div>
+          >
+            <option value="china_manual">{p.origem_china}</option>
+            <option value="brasil_nf">{p.origem_brasil_nf}</option>
+            <option value="brasil_sem_nf">{p.origem_brasil_sem_nf}</option>
+          </select>
+          <span className="mt-0.5 block text-caption text-jl-fg-3">{p.hint_origem_tem_nf}</span>
+        </label>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="block text-xs font-medium text-jl-fg-3">
