@@ -18,7 +18,7 @@ import {
 } from "@/app/caixa/actions"
 import type { ProdutoCaixaDTO } from "@/app/caixa/caixaActionTypes"
 import { avisoEstoqueCaixa, montarItemCarrinhoCaixa } from "@/app/caixa/scan-pipeline/montarItemCarrinhoCaixa"
-import { CaixaCandidatosProduto } from "@/app/caixa/CaixaCandidatosProduto"
+import { CaixaCandidatosProduto, candidatoOptionId } from "@/app/caixa/CaixaCandidatosProduto"
 import { createClient as createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { historicoDetalheParaRecibo } from "@/app/caixa/caixaHistoricoRecibo"
 import type { MovimentacaoCaixaDTO } from "@/app/caixa/caixaMovimentacaoTypes"
@@ -440,30 +440,45 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
    * primeira ação do operador na sessão fosse escolher um candidato (em vez
    * de bipar), um carrinho de outro operador ainda em localStorage não seria
    * limpo — ver `unifiedCartStore.setCartOwnerForSession`.
+   *
+   * Também replica a checagem de cupom obsoleto que o scan já faz
+   * (`staleCupomIfAny` em webCaixaScanProcess.ts): se o operador abrir um
+   * novo cupom (ou finalizar/excluir a venda) enquanto um destes `await`
+   * ainda está pendente, `cupomSessionIdRef.current` muda — sem essa
+   * checagem, `adicionarItem` escreveria o candidato escolhido no carrinho
+   * NOVO, não no que estava aberto quando o operador clicou.
    */
   const selecionarCandidato = useCallback(
     async (produto: ProdutoCaixaDTO) => {
       fecharCandidatos()
-      const precoRes = await calcularPrecoProdutoCaixa({ produtoId: produto.id, quantidade: 1 })
-      const precoCalculado = precoRes.ok ? precoRes.preco : produto.preco_varejo
-      const tipoPrecoCalculado = precoRes.ok ? precoRes.tipo : 'VAREJO'
+      const sidNoInicio = cupomSessionIdRef.current
+      try {
+        const precoRes = await calcularPrecoProdutoCaixa({ produtoId: produto.id, quantidade: 1 })
+        if (cupomSessionIdRef.current !== sidNoInicio) return
+        const precoCalculado = precoRes.ok ? precoRes.preco : produto.preco_varejo
+        const tipoPrecoCalculado = precoRes.ok ? precoRes.tipo : 'VAREJO'
 
-      const supabase = createSupabaseBrowserClient()
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      const uid = session?.user?.id ?? null
-      if (uid) setCartOwnerForSession(uid)
+        const supabase = createSupabaseBrowserClient()
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+        if (cupomSessionIdRef.current !== sidNoInicio) return
+        const uid = session?.user?.id ?? null
+        if (uid) setCartOwnerForSession(uid)
 
-      const item = montarItemCarrinhoCaixa(produto, precoCalculado, tipoPrecoCalculado)
-      adicionarItem(item)
-      setCodigo('')
-      const avisoEstoqueMsg = avisoEstoqueCaixa(produto, m)
-      setCaixaMensagem(avisoEstoqueMsg ?? m.caixa.msg_item_adicionado_toast, {
-        kind: avisoEstoqueMsg ? 'warning' : 'success',
-      })
-      tocarFeedback('ok')
-      focarCampoBusca()
+        const item = montarItemCarrinhoCaixa(produto, precoCalculado, tipoPrecoCalculado)
+        adicionarItem(item)
+        setCodigo('')
+        const avisoEstoqueMsg = avisoEstoqueCaixa(produto, m)
+        setCaixaMensagem(avisoEstoqueMsg ?? m.caixa.msg_item_adicionado_toast, {
+          kind: avisoEstoqueMsg ? 'warning' : 'success',
+        })
+        tocarFeedback('ok')
+        focarCampoBusca()
+      } catch {
+        setCaixaMensagem(m.caixa.falha_busca, { kind: 'error' })
+        tocarFeedback('erro')
+      }
     },
     [adicionarItem, fecharCandidatos, focarCampoBusca, m, setCaixaMensagem, setCartOwnerForSession, tocarFeedback],
   )
@@ -1496,12 +1511,16 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                         onNavegarCandidato={navegarCandidato}
                         onSelecionarCandidatoAtivo={selecionarCandidatoAtivo}
                         onFecharCandidatos={fecharCandidatos}
+                        candidatoAtivoId={
+                          candidatos?.itens[candidatoAtivoIndex]
+                            ? candidatoOptionId(candidatos.itens[candidatoAtivoIndex].id)
+                            : undefined
+                        }
                       />
                       {candidatos && candidatos.itens.length > 0 ? (
                         <CaixaCandidatosProduto
                           m={m}
                           idioma={idioma}
-                          mensagem={candidatos.mensagem}
                           itens={candidatos.itens}
                           ativoIndex={candidatoAtivoIndex}
                           onHoverIndex={setCandidatoAtivoIndex}

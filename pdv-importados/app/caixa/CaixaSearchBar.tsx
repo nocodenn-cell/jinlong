@@ -30,6 +30,8 @@ type Props = {
   onNavegarCandidato?: (direcao: 1 | -1) => void
   onSelecionarCandidatoAtivo?: () => void
   onFecharCandidatos?: () => void
+  /** ID da opção ativa na lista de candidatos — anuncia a seleção por teclado a leitores de tela. */
+  candidatoAtivoId?: string
 }
 
 export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function CaixaSearchBar(
@@ -49,6 +51,7 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
     onNavegarCandidato,
     onSelecionarCandidatoAtivo,
     onFecharCandidatos,
+    candidatoAtivoId,
   },
   forwardedRef,
 ) {
@@ -104,8 +107,10 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
               "w-full",
               compact ? "py-1.5 text-body" : "h-14 text-subtitle",
             )}
+            role={temCandidatos ? "combobox" : undefined}
             aria-expanded={temCandidatos}
             aria-controls={temCandidatos ? "caixa-candidatos-listbox" : undefined}
+            aria-activedescendant={temCandidatos ? candidatoAtivoId : undefined}
             onKeyDown={(e) => {
               if (temCandidatos) {
                 if (e.key === "ArrowDown") {

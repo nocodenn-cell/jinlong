@@ -152,6 +152,53 @@ describe('CaixaSearchBar — navegação por teclado dos candidatos (Onda 2 · B
     expect(onCodigoChange).toHaveBeenCalledWith('')
   })
 
+  it('com candidatos: expõe role=combobox e aria-activedescendant apontando pra opção ativa', () => {
+    flushSync(() => {
+      root.render(
+        <CaixaSearchBar
+          m={mockMensagens}
+          codigo="cadeira v"
+          onCodigoChange={() => {}}
+          onSubmit={(e) => e.preventDefault()}
+          onNovoCupom={() => {}}
+          buscando={false}
+          carregandoRegras={false}
+          somAtivo
+          onToggleSom={() => {}}
+          temCandidatos
+          candidatoAtivoId="caixa-candidato-opt-p-verm"
+        />,
+      )
+    })
+
+    const input = container.querySelector('input') as HTMLInputElement
+    expect(input.getAttribute('role')).toBe('combobox')
+    expect(input.getAttribute('aria-activedescendant')).toBe('caixa-candidato-opt-p-verm')
+  })
+
+  it('sem candidatos: não expõe role=combobox nem aria-activedescendant', () => {
+    flushSync(() => {
+      root.render(
+        <CaixaSearchBar
+          m={mockMensagens}
+          codigo="cadeira"
+          onCodigoChange={() => {}}
+          onSubmit={(e) => e.preventDefault()}
+          onNovoCupom={() => {}}
+          buscando={false}
+          carregandoRegras={false}
+          somAtivo
+          onToggleSom={() => {}}
+          temCandidatos={false}
+        />,
+      )
+    })
+
+    const input = container.querySelector('input') as HTMLInputElement
+    expect(input.getAttribute('role')).toBeNull()
+    expect(input.getAttribute('aria-activedescendant')).toBeNull()
+  })
+
   it('barcode exato (sem ambiguidade): Enter ainda submete a busca normalmente', () => {
     const onSubmit = vi.fn((e: React.FormEvent) => e.preventDefault())
 

@@ -19,7 +19,6 @@ import { cn } from "@/lib/utils"
 type Props = {
   m: Mensagens
   idioma: Idioma
-  mensagem: string
   itens: ProdutoCaixaDTO[]
   ativoIndex: number
   onHoverIndex: (i: number) => void
@@ -30,7 +29,12 @@ function diferenciador(p: ProdutoCaixaDTO): string | null {
   return p.codigo_barras ?? p.codigo_interno ?? null
 }
 
-export function CaixaCandidatosProduto({ m, idioma, mensagem, itens, ativoIndex, onHoverIndex, onSelecionar }: Props) {
+/** ID estável da opção — usado por `aria-activedescendant` no campo de busca (CaixaSearchBar). */
+export function candidatoOptionId(produtoId: string): string {
+  return `caixa-candidato-opt-${produtoId}`
+}
+
+export function CaixaCandidatosProduto({ m, idioma, itens, ativoIndex, onHoverIndex, onSelecionar }: Props) {
   const locale = moneyLocale(idioma)
   const ativoRef = useRef<HTMLButtonElement>(null)
 
@@ -47,7 +51,7 @@ export function CaixaCandidatosProduto({ m, idioma, mensagem, itens, ativoIndex,
       className="mt-2 overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] shadow-lg"
     >
       <div className="border-b border-[var(--color-border)] bg-[var(--color-surface-soft)] px-3 py-1.5">
-        <p className="text-body font-medium text-fg">{mensagem}</p>
+        <p className="text-body font-medium text-fg">{m.caixa.candidatos_titulo}</p>
         <p className="text-caption text-fg-subtle">{m.caixa.candidatos_hint_teclado}</p>
       </div>
       <ul className="max-h-72 overflow-y-auto">
@@ -64,6 +68,7 @@ export function CaixaCandidatosProduto({ m, idioma, mensagem, itens, ativoIndex,
             <li key={produto.id}>
               <button
                 ref={ativo ? ativoRef : undefined}
+                id={candidatoOptionId(produto.id)}
                 type="button"
                 role="option"
                 aria-selected={ativo}
