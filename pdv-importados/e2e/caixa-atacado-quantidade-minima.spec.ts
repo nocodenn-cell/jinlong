@@ -34,7 +34,7 @@ test.describe('ID 36 — Atacado runtime: transição qty → aplicação autom�
 
     // Scan 1 (qty=1) → VAREJO
     await adicionarProdutoDemo(page, codigo)
-    let precoAntes = await readTotalLiquidoFooter(page)
+    const precoAntes = await readTotalLiquidoFooter(page)
     expect(precoAntes).toBeGreaterThan(0)
 
     // Scan 9 vezes mais (qty=2...10) → Observe transição em qty=10
