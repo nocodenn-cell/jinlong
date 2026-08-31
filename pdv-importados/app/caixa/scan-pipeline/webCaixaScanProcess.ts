@@ -12,6 +12,8 @@ import type { Mensagens } from '@/i18n/getMessages'
 import type { CaixaToastKind } from '@/app/caixa/hooks/useCaixaMensagens'
 import { useCarrinhoStore } from '@/stores/carrinhoStore'
 import { raceWithScanAbort } from './webCaixaScanAbort'
+import { avisoEstoqueCaixa, montarItemCarrinhoCaixa } from './montarItemCarrinhoCaixa'
+import type { ProdutoCaixaDTO } from '@/app/caixa/caixaActionTypes'
 
 type SetCaixaMensagemFn = (
   text: string | null,
@@ -61,6 +63,14 @@ export type WebCaixaScanDeps = {
   /* Não existe gancho de "código sem match" aqui de propósito: o PDV não
    * cadastra produto. O ramo `nao_encontrado` abaixo informa e orienta via
    * `msg_produto_nao_encontrado_acao`, e para aí. */
+  /**
+   * Ambiguidade por nome/categoria com candidatos (Onda 2 · Bloco 1): em vez de
+   * só um toast bloqueando a busca, o operador escolhe entre os candidatos.
+   * `null` limpa a lista (nova tentativa de busca, sem ambiguidade anterior).
+   * Ambiguidade por código de barras nunca chega aqui com candidatos — ver
+   * `caixaCatalogo.impl.ts` (decisão de domínio produto↔loja/tenant pendente).
+   */
+  setCandidatosAmbiguos?: (payload: { mensagem: string; itens: ProdutoCaixaDTO[] } | null) => void
 }
 
 /**
@@ -95,6 +105,7 @@ export async function runWebCaixaScanProcess(
     }
 
     setCaixaMensagem(null)
+    deps.setCandidatosAmbiguos?.(null)
     const tBusca = Date.now()
     // Busca produto + calcula preço em 1 round-trip (elimina 2ª server action)
     const buscaR = await raceWithScanAbort(signal, () => buscarProdutoComPrecoCaixa(trimmed, 1))
@@ -133,7 +144,11 @@ export async function runWebCaixaScanProcess(
     }
 
     if (res.status === 'ambiguo') {
-      setCaixaMensagem(res.mensagem, { kind: 'warning' })
+      if (res.candidatos.length > 0 && deps.setCandidatosAmbiguos) {
+        deps.setCandidatosAmbiguos({ mensagem: res.mensagem, itens: res.candidatos })
+      } else {
+        setCaixaMensagem(res.mensagem, { kind: 'warning' })
+      }
       tocarFeedback('erro')
       return { ok: false, reason: 'ambiguous' }
     }
@@ -146,14 +161,7 @@ export async function runWebCaixaScanProcess(
     if (stale2) return stale2
 
     const p = res.produto
-    const q = p.quantidade_estoque
-    const min = p.estoque_minimo
-    let avisoEstoqueMsg: string | null = null
-    if (q !== null && q < 1) {
-      avisoEstoqueMsg = `${m.caixa.item_adicionado} ${m.caixa.estoque_baixo}`
-    } else if (q !== null && min !== null && q <= min) {
-      avisoEstoqueMsg = `${m.caixa.item_adicionado} ${m.caixa.estoque_abaixo_minimo}`
-    }
+    const avisoEstoqueMsg = avisoEstoqueCaixa(p, m)
 
     const sessionR = await raceWithScanAbort(signal, async () => {
       const supabase = createClient()
@@ -182,38 +190,16 @@ export async function runWebCaixaScanProcess(
      * Qualquer abort / stale_cupom / falha de pricing após `adicionarItem` faz rollback da linha
      * deste bip (evita divergência invisível scan failed vs carrinho mutado).
      */
-    const novaLinhaId = `${p.id}-${Date.now()}`
+    // Preço já é autoritativo (calculado na ação unificada)
+    const novoItem = montarItemCarrinhoCaixa(p, res.precoCalculado, res.tipoPrecoCalculado)
+    const novaLinhaId = novoItem.id
     const abandonarLinhaDoScan = () => {
       if (!linhaPendenteRollback) return
       useCarrinhoStore.getState().removerItem(linhaPendenteRollback)
       linhaPendenteRollback = null
     }
 
-    // Preço já é autoritativo (calculado na ação unificada)
-    deps.adicionarItem({
-      id: novaLinhaId,
-      produtoId: p.id,
-      nome: p.nome,
-      quantidade: 1,
-      precoUnitario: res.precoCalculado,
-      precoOriginal: res.precoCalculado,
-      resultado: {
-        precoUnitario: res.precoCalculado,
-        precoOriginal: res.precoCalculado,
-        descontoUnitario: 0,
-        tipoPreco: res.tipoPrecoCalculado,
-      },
-      metaPdv: {
-        origem: p.origem,
-        tem_nf: p.tem_nf,
-        observacao: p.observacao,
-        estoque_atual: p.quantidade_estoque,
-        estoque_minimo: p.estoque_minimo,
-        categoriaId: p.categoria_id,
-        precoAtacado: p.preco_atacado,
-        precoVarejoReferencia: p.preco_varejo,
-      },
-    })
+    deps.adicionarItem(novoItem)
     linhaPendenteRollback = novaLinhaId
 
     if (signal?.aborted) {

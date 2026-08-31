@@ -32,6 +32,7 @@ type ProdutoRowCaixa = {
   id: string
   nome: string
   codigo_barras: string | null
+  codigo_interno: string | null
   preco_varejo: number | string
   preco_atacado?: number | string | null
   categoria_id: string | null
@@ -40,6 +41,28 @@ type ProdutoRowCaixa = {
   observacao: string | null
   ativo: boolean
   status_publicacao: string | null
+}
+
+/**
+ * Teto de candidatos mostrados numa ambiguidade por nome/categoria — pequeno o
+ * bastante pra caber numa lista escaneável (regra de densidade), grande o
+ * bastante pra não cortar silenciosamente um conjunto real pequeno (ex.: 4
+ * variações de "Cadeira Vermelha" já passariam do limite antigo de 3).
+ */
+const LIMITE_CANDIDATOS_AMBIGUOS = 8
+
+/** Resolve estoque de cada candidato em paralelo (N pequeno — mesmo custo do caminho de match único). */
+async function montarCandidatos(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  rows: ProdutoRowCaixa[],
+  lojaId: string,
+): Promise<ReturnType<typeof mapProdutoRow>[]> {
+  return Promise.all(
+    rows.map(async (row) => {
+      const est = await estoqueResumoParaCaixa(supabase, row.id, lojaId)
+      return mapProdutoRow(row, est.quantidade_atual, est.estoque_minimo)
+    }),
+  )
 }
 
 function rowVendavel(row: ProdutoRowCaixa): boolean {
@@ -115,11 +138,15 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
       if (listaCod.length > 0) {
         const ids = new Set(listaCod.map((r) => r.id))
         if (ids.size > 1) {
+          // Sem candidatos de propósito: colisão de código de barras não é uma
+          // ambiguidade de nome que o operador resolva visualmente — é sintoma
+          // do modelo produto↔loja/tenant (decisão de domínio ainda pendente).
           return {
             ok: true,
             status: 'ambiguo',
             mensagem:
               'Vários produtos batem com o código lido. Use o nome ou corrija códigos duplicados no cadastro.',
+            candidatos: [],
           }
         }
         const row = listaCod[0]
@@ -144,7 +171,8 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
       supabase.from('produtos').select('*'),
     )
       .ilike('nome', `%${frag}%`)
-      .limit(3)
+      .order('nome', { ascending: true })
+      .limit(LIMITE_CANDIDATOS_AMBIGUOS)
 
     if (errNome) return { ok: false, error: mensagemErroParaUsuario(errNome.message, idioma) }
     let lista = filtrarSomenteProdutosVendaveis((porNome ?? []) as ProdutoRowCaixa[])
@@ -162,7 +190,8 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
           supabase.from('produtos').select('*'),
         )
           .in('categoria_id', catIds)
-          .limit(3)
+          .order('nome', { ascending: true })
+          .limit(LIMITE_CANDIDATOS_AMBIGUOS)
         if (errPorCat) return { ok: false, error: mensagemErroParaUsuario(errPorCat.message, idioma) }
         lista = filtrarSomenteProdutosVendaveis((porCat ?? []) as ProdutoRowCaixa[])
       }
@@ -170,10 +199,12 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
 
     if (lista.length === 0) return { ok: true, status: 'nao_encontrado' }
     if (lista.length > 1) {
+      const candidatos = await montarCandidatos(supabase, lista, lojaId)
       return {
         ok: true,
         status: 'ambiguo',
-        mensagem: `Vários produtos batem com “${frag}” (nome ou categoria). Use o código de barras ou refine a busca.`,
+        mensagem: `Vários produtos batem com “${frag}” (nome ou categoria). Escolha um da lista ou refine a busca.`,
+        candidatos,
       }
     }
 

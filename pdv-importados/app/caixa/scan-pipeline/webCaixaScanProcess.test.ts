@@ -234,4 +234,96 @@ describe('runWebCaixaScanProcess — golden / stale_cupom', () => {
     expect(deps.adicionarItem).not.toHaveBeenCalled()
     expect(scanStoreTest.itens).toHaveLength(0)
   })
+
+  // Onda 2 · Bloco 1 — ambiguidade por nome expõe candidatos em vez de só bloquear.
+  const CANDIDATOS_CADEIRA = [
+    {
+      id: 'p-verm',
+      nome: 'Cadeira Vermelha',
+      codigo_barras: null,
+      codigo_interno: null,
+      preco_varejo: 150,
+      preco_atacado: null,
+      categoria_id: null,
+      origem: 'brasil_nf' as const,
+      tem_nf: true,
+      observacao: null,
+      quantidade_estoque: 5,
+      estoque_minimo: 1,
+    },
+    {
+      id: 'p-vg',
+      nome: 'Cadeira Vermelha Grande',
+      codigo_barras: null,
+      codigo_interno: 'CAD-VERM-G',
+      preco_varejo: 220,
+      preco_atacado: null,
+      categoria_id: null,
+      origem: 'brasil_nf' as const,
+      tem_nf: true,
+      observacao: null,
+      quantidade_estoque: 2,
+      estoque_minimo: 1,
+    },
+  ]
+
+  it('ambiguo com candidatos: expõe a lista via setCandidatosAmbiguos, sem bloquear com toast', async () => {
+    vi.mocked(buscarProdutoComPrecoCaixa).mockResolvedValue({
+      ok: true,
+      status: 'ambiguo',
+      mensagem: 'Vários produtos batem com "cadeira verm".',
+      candidatos: CANDIDATOS_CADEIRA,
+    } as Awaited<ReturnType<typeof buscarProdutoComPrecoCaixa>>)
+    const setCandidatosAmbiguos = vi.fn()
+    const deps = minimalDeps({ setCandidatosAmbiguos })
+    const r = await runWebCaixaScanProcess(baseCtx(), deps)
+
+    expect(r).toEqual({ ok: false, reason: 'ambiguous' })
+    expect(setCandidatosAmbiguos).toHaveBeenCalledWith({
+      mensagem: 'Vários produtos batem com "cadeira verm".',
+      itens: CANDIDATOS_CADEIRA,
+    })
+    // Não usa o toast bloqueante quando há lista de candidatos pra escolher.
+    expect(deps.setCaixaMensagem).not.toHaveBeenCalledWith(
+      'Vários produtos batem com "cadeira verm".',
+      { kind: 'warning' },
+    )
+    expect(deps.adicionarItem).not.toHaveBeenCalled()
+  })
+
+  it('ambiguo sem candidatos (colisão de código de barras): mantém o toast bloqueante de sempre', async () => {
+    vi.mocked(buscarProdutoComPrecoCaixa).mockResolvedValue({
+      ok: true,
+      status: 'ambiguo',
+      mensagem: 'Vários produtos batem com o código lido.',
+      candidatos: [],
+    } as Awaited<ReturnType<typeof buscarProdutoComPrecoCaixa>>)
+    const setCandidatosAmbiguos = vi.fn()
+    const deps = minimalDeps({ setCandidatosAmbiguos })
+    const r = await runWebCaixaScanProcess(baseCtx(), deps)
+
+    expect(r).toEqual({ ok: false, reason: 'ambiguous' })
+    expect(setCandidatosAmbiguos).not.toHaveBeenCalledWith(
+      expect.objectContaining({ itens: expect.anything() }),
+    )
+    expect(deps.setCaixaMensagem).toHaveBeenCalledWith('Vários produtos batem com o código lido.', {
+      kind: 'warning',
+    })
+  })
+
+  it('ambiguo com candidatos mas sem dep setCandidatosAmbiguos: cai no toast (compat)', async () => {
+    vi.mocked(buscarProdutoComPrecoCaixa).mockResolvedValue({
+      ok: true,
+      status: 'ambiguo',
+      mensagem: 'Vários produtos batem com "cadeira".',
+      candidatos: CANDIDATOS_CADEIRA,
+    } as Awaited<ReturnType<typeof buscarProdutoComPrecoCaixa>>)
+    const deps = minimalDeps() // sem setCandidatosAmbiguos
+    const r = await runWebCaixaScanProcess(baseCtx(), deps)
+
+    expect(r).toEqual({ ok: false, reason: 'ambiguous' })
+    expect(deps.setCaixaMensagem).toHaveBeenCalledWith('Vários produtos batem com "cadeira".', {
+      kind: 'warning',
+    })
+  })
 })
