@@ -39,6 +39,8 @@
   --color-surface-soft: var(--palette-slate-50);
   --color-surface-muted: var(--palette-slate-100);
   --color-surface-inverse: var(--palette-slate-900);
+  /* Floating panels (popover/listbox/menu) — opaque, relies on shadow/border for elevation */
+  --color-surface-elevated: var(--palette-white);
   --color-overlay: rgb(15 23 42 / 0.45);
 
   /* ── Semantic text (contraste AA em superfície clara) ── */
