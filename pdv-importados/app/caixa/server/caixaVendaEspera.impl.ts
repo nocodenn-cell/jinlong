@@ -271,6 +271,8 @@ export type HistoricoVendaItemDetalhe = {
   nome: string
   quantidade: number
   precoUnitario: number
+  precoOriginal: number
+  tipoPreco: string
   total: number
 }
 
@@ -284,6 +286,8 @@ export type HistoricoVendaDetalhe = {
   formaPagamento: string | null
   status: string | null
   clienteNome: string | null
+  descontoGerentePercentual: number
+  valorDescontoGerente: number
   itens: HistoricoVendaItemDetalhe[]
   pagamentos: Array<{ formaPagamento: string; valor: number }>
 }
@@ -308,12 +312,40 @@ function mapEventoItens(raw: unknown): HistoricoVendaItemDetalhe[] {
     const r = row as Record<string, unknown>
     const qtd = Number(r.quantidade ?? 0)
     const pu = Number(r.precoUnitario ?? r.preco_unitario ?? 0)
+    const po = Number(r.precoOriginal ?? r.preco_original ?? r.precoUnitario ?? r.preco_unitario ?? 0)
     const total = Number(r.total ?? qtd * pu)
     return {
       produtoId: String(r.produtoId ?? r.produto_id ?? ''),
       nome: String(r.nome ?? '—'),
       quantidade: Number.isFinite(qtd) ? qtd : 0,
       precoUnitario: Number.isFinite(pu) ? pu : 0,
+      precoOriginal: Number.isFinite(po) ? po : 0,
+      tipoPreco: String(r.tipoPreco ?? r.tipo_preco ?? 'VAREJO'),
+      total: Number.isFinite(total) ? total : 0,
+    }
+  })
+}
+
+function extrairNomeProduto(row: Record<string, unknown>): string {
+  const rel = row.produtos as { nome?: string } | { nome?: string }[] | null | undefined
+  const nome = Array.isArray(rel) ? rel[0]?.nome : rel?.nome
+  return nome ? String(nome) : '—'
+}
+
+/** SSoT: `itens_venda` + `produtos(nome)` para reimpressão fiel. */
+export function mapItensVendaHistorico(rows: Record<string, unknown>[]): HistoricoVendaItemDetalhe[] {
+  return rows.map((r) => {
+    const qtd = Number(r.quantidade ?? 0)
+    const pu = Number(r.preco_unitario ?? 0)
+    const po = Number(r.preco_unitario_original ?? pu)
+    const total = qtd * pu
+    return {
+      produtoId: String(r.produto_id ?? ''),
+      nome: extrairNomeProduto(r),
+      quantidade: Number.isFinite(qtd) ? qtd : 0,
+      precoUnitario: Number.isFinite(pu) ? pu : 0,
+      precoOriginal: Number.isFinite(po) ? po : pu,
+      tipoPreco: String(r.tipo_preco ?? 'VAREJO'),
       total: Number.isFinite(total) ? total : 0,
     }
   })
@@ -430,7 +462,7 @@ export async function obterDetalheHistoricoVendaImpl(
     if (vendaError) return { ok: false, error: mensagemErroParaUsuario(vendaError.message, idioma) }
     if (!venda) return { ok: false, error: 'Venda não encontrada.', code: 'VENDA_NAO_ENCONTRADA' }
 
-    const [eventoRes, pagamentosRes] = await Promise.all([
+    const [eventoRes, pagamentosRes, itensRes, descontoRes] = await Promise.all([
       supabase
         .from('venda_eventos')
         .select('items, total, total_bruto, forma_pagamento, occurred_at')
@@ -443,9 +475,24 @@ export async function obterDetalheHistoricoVendaImpl(
         .from('vendas_pagamentos')
         .select('forma_pagamento, valor')
         .eq('venda_id', id),
+      supabase
+        .from('itens_venda')
+        .select(
+          'produto_id, quantidade, preco_unitario, preco_unitario_original, tipo_preco, produtos(nome)',
+        )
+        .eq('venda_id', id)
+        .order('id'),
+      supabase
+        .from('descontos_venda')
+        .select('desconto_percentual, desconto_valor')
+        .eq('venda_id', id)
+        .maybeSingle(),
     ])
 
-    const itens = mapEventoItens(eventoRes.data?.items)
+    const itensDb = mapItensVendaHistorico(asRecordArray(itensRes.data))
+    const itens = itensDb.length > 0 ? itensDb : mapEventoItens(eventoRes.data?.items)
+    const valorDescontoGerente = Number(descontoRes.data?.desconto_valor ?? 0)
+    const descontoGerentePercentual = Number(descontoRes.data?.desconto_percentual ?? 0)
     const pagamentosRaw = pagamentosRes.data ?? []
     const pagamentos =
       pagamentosRaw.length > 0
@@ -472,6 +519,10 @@ export async function obterDetalheHistoricoVendaImpl(
         formaPagamento: venda.forma_pagamento ? String(venda.forma_pagamento) : null,
         status: venda.status ? String(venda.status) : null,
         clienteNome: extrairClienteNomeDeVenda(venda as Record<string, unknown>),
+        descontoGerentePercentual: Number.isFinite(descontoGerentePercentual)
+          ? descontoGerentePercentual
+          : 0,
+        valorDescontoGerente: Number.isFinite(valorDescontoGerente) ? valorDescontoGerente : 0,
         itens,
         pagamentos,
       },

@@ -9,6 +9,7 @@ vi.mock('@/lib/supabase/server', () => ({ createClient }))
 const {
   formatNumeroVendaHistorico,
   extrairClienteNomeDeVenda,
+  mapItensVendaHistorico,
   listarHistoricoOperadorImpl,
   obterDetalheHistoricoVendaImpl,
 } = await import('./caixaVendaEspera.impl')
@@ -50,6 +51,8 @@ function criarSupabaseHistoricoMock(opts: {
   }
   pagamentos?: Array<{ forma_pagamento: string; valor: number }>
   eventoDetalhe?: { items: unknown[] } | null
+  itensVenda?: Array<Record<string, unknown>>
+  descontoVenda?: { desconto_percentual: number; desconto_valor: number } | null
 }) {
   const vendasSelects: string[] = []
   const vendasEq: Array<[string, string]> = []
@@ -109,6 +112,26 @@ function criarSupabaseHistoricoMock(opts: {
       // @ts-expect-error thenable mock
       q.then = (resolve: (v: unknown) => void) =>
         resolve({ data: opts.pagamentos ?? [], error: null })
+      return q
+    }
+
+    if (table === 'itens_venda') {
+      const q: Record<string, unknown> = {}
+      q.select = () => q
+      q.eq = () => q
+      q.order = () => q
+      // @ts-expect-error thenable mock
+      q.then = (resolve: (v: unknown) => void) =>
+        resolve({ data: opts.itensVenda ?? [], error: null })
+      return q
+    }
+
+    if (table === 'descontos_venda') {
+      const q: Record<string, unknown> = {}
+      q.select = () => q
+      q.eq = () => q
+      q.maybeSingle = () =>
+        Promise.resolve({ data: opts.descontoVenda ?? null, error: null })
       return q
     }
 
@@ -253,8 +276,18 @@ describe('obterDetalheHistoricoVendaImpl — ID 27 detalhe', () => {
         total_desconto: 50,
         total_liquido: 250,
       },
+      itensVenda: [
+        {
+          produto_id: 'p1',
+          quantidade: 3,
+          preco_unitario: 100,
+          preco_unitario_original: 100,
+          tipo_preco: 'VAREJO',
+          produtos: { nome: 'Item detalhe' },
+        },
+      ],
       eventoDetalhe: {
-        items: [{ nome: 'Item detalhe', quantidade: 3, precoUnitario: 100, total: 300 }],
+        items: [{ nome: 'Item evento legado', quantidade: 1, precoUnitario: 1, total: 1 }],
       },
       pagamentos: [{ forma_pagamento: 'CARTAO', valor: 250 }],
     })
@@ -269,6 +302,8 @@ describe('obterDetalheHistoricoVendaImpl — ID 27 detalhe', () => {
     expect(res.detalhe.totalDesconto).toBe(50)
     expect(res.detalhe.totalLiquido).toBe(250)
     expect(res.detalhe.itens).toHaveLength(1)
+    expect(res.detalhe.itens[0]?.nome).toBe('Item detalhe')
+    expect(res.detalhe.itens[0]?.tipoPreco).toBe('VAREJO')
     expect(res.detalhe.pagamentos[0].formaPagamento).toBe('CARTAO')
   })
 
@@ -310,5 +345,95 @@ describe('obterDetalheHistoricoVendaImpl — ID 27 detalhe', () => {
     expect(res.ok).toBe(false)
     if (res.ok) throw new Error('esperado falha')
     expect(res.code).toBe('VENDA_NAO_ENCONTRADA')
+  })
+})
+
+describe('obterDetalheHistoricoVendaImpl — ID 28 reimpressão fiel', () => {
+  it('prioriza itens_venda (tipo_preco ATACADO) sobre venda_eventos', async () => {
+    const mock = criarSupabaseHistoricoMock({
+      vendas: [],
+      detalheVenda: vendaRow({ id: VENDA_COM_CLIENTE }),
+      itensVenda: [
+        {
+          produto_id: 'p-at',
+          quantidade: 10,
+          preco_unitario: 9,
+          preco_unitario_original: 12,
+          tipo_preco: 'ATACADO',
+          produtos: { nome: 'Prod atacado' },
+        },
+      ],
+      eventoDetalhe: {
+        items: [{ nome: 'Legado evento', quantidade: 1, precoUnitario: 99, total: 99 }],
+      },
+    })
+    createClient.mockResolvedValue(mock)
+
+    const res = await obterDetalheHistoricoVendaImpl(VENDA_COM_CLIENTE)
+
+    expect(res.ok).toBe(true)
+    if (!res.ok) throw new Error('esperado ok')
+    expect(res.detalhe.itens[0]?.tipoPreco).toBe('ATACADO')
+    expect(res.detalhe.itens[0]?.precoOriginal).toBe(12)
+    expect(res.detalhe.itens[0]?.nome).toBe('Prod atacado')
+  })
+
+  it('carrega desconto gerente de descontos_venda', async () => {
+    const mock = criarSupabaseHistoricoMock({
+      vendas: [],
+      detalheVenda: {
+        ...vendaRow({ id: VENDA_COM_CLIENTE }),
+        total_desconto: 35,
+        total_liquido: 165,
+      },
+      itensVenda: [],
+      descontoVenda: { desconto_percentual: 10, desconto_valor: 20 },
+      eventoDetalhe: { items: [] },
+    })
+    createClient.mockResolvedValue(mock)
+
+    const res = await obterDetalheHistoricoVendaImpl(VENDA_COM_CLIENTE)
+
+    expect(res.ok).toBe(true)
+    if (!res.ok) throw new Error('esperado ok')
+    expect(res.detalhe.descontoGerentePercentual).toBe(10)
+    expect(res.detalhe.valorDescontoGerente).toBe(20)
+  })
+
+  it('legado sem itens_venda → fallback venda_eventos', async () => {
+    const mock = criarSupabaseHistoricoMock({
+      vendas: [],
+      detalheVenda: vendaRow({ id: VENDA_COM_CLIENTE }),
+      itensVenda: [],
+      eventoDetalhe: {
+        items: [{ nome: 'Só ledger', quantidade: 2, precoUnitario: 15, total: 30 }],
+      },
+    })
+    createClient.mockResolvedValue(mock)
+
+    const res = await obterDetalheHistoricoVendaImpl(VENDA_COM_CLIENTE)
+
+    expect(res.ok).toBe(true)
+    if (!res.ok) throw new Error('esperado ok')
+    expect(res.detalhe.itens[0]?.nome).toBe('Só ledger')
+    expect(res.detalhe.itens[0]?.tipoPreco).toBe('VAREJO')
+  })
+})
+
+describe('mapItensVendaHistorico', () => {
+  it('mapeia join produtos(nome) e campos de preço', () => {
+    const itens = mapItensVendaHistorico([
+      {
+        produto_id: 'p1',
+        quantidade: 2,
+        preco_unitario: 40,
+        preco_unitario_original: 50,
+        tipo_preco: 'ATACADO',
+        produtos: { nome: 'X' },
+      },
+    ])
+    expect(itens[0]?.nome).toBe('X')
+    expect(itens[0]?.tipoPreco).toBe('ATACADO')
+    expect(itens[0]?.precoOriginal).toBe(50)
   })
 })

@@ -11,7 +11,7 @@
 |-------|-------|
 | **SHA auditada** | `9e6292838f708cd0e5b0404a09601dd7c4047591` |
 | **Data auditoria** | 2026-08-31 |
-| **Última atualização** | 2026-08-31 (Onda 1 Lote 4A — ID 27 fechado; ID 40 reprogramado para Onda 2) |
+| **Última atualização** | 2026-08-31 (Onda 1 Lote 4B — ID 28 fechado) |
 | **Ambiente** | Código + migrations/RPCs/tests/docs; produção somente leitura (evidência documental/API) |
 | **Total capacidades** | 250 (IDs 1–250 únicos, validados) |
 | **P0** | 117 |
@@ -200,6 +200,32 @@ Preço/atacado/estoque/desconto/pagamento/persistência da venda — seleção s
 
 ---
 
+## Fechamentos — Onda 1 / Lote 4B (ID 28)
+
+**Data:** 2026-08-31 · Branch: `cursor/onda1-reimpressao-recibo-28-0a79`
+
+### ID 28 — Reimpressão fiel do recibo pelo histórico
+
+| Campo | Valor |
+|-------|-------|
+| Status anterior | IMPLEMENTADO PARCIALMENTE |
+| Status novo | **IMPLEMENTADO E VALIDADO** |
+| Evidência antes | `historicoDetalheParaRecibo` forçava `tipoPreco: 'VAREJO'`, `descontoGerentePercentual: 0`, `valorDescontoGerente: 0`; detalhe carregava itens só de `venda_eventos` (sem `tipo_preco` / preço original) |
+| Causa raiz | Mapper de reimpressão ignorava SSoT relacional; detalhe não consultava `itens_venda` nem `descontos_venda` |
+| SSoT | `vendas` (totais), `itens_venda` + `produtos(nome)` (itens/`tipo_preco`/`preco_unitario_original`), `descontos_venda` (desconto gerente), `vendas_pagamentos`, `venda_eventos` (fallback legado) |
+| Solução | `obterDetalheHistoricoVendaImpl` passa a buscar em paralelo `itens_venda` e `descontos_venda`; `historicoDetalheParaRecibo` propaga `tipoPreco`, `precoOriginal`, desconto gerente e separa desconto de itens vs gerente |
+| Fidelidade antes→depois | Antes: atacado/desconto gerente sumiam no cupom histórico; depois: paridade com recibo pós-venda (F12 usa caminho inline preservado) |
+| Legado | Sem `itens_venda` → fallback `venda_eventos` com defaults seguros (`VAREJO`, sem gerente inventado) |
+| N+1 | **Ausente** — 4 queries paralelas no detalhe (venda + evento + pagamentos + itens + desconto), sem lookup por linha |
+| Escopo operador | Preservado: `.eq('operador_id', userId)` inalterado |
+| Arquivos | `caixaVendaEspera.impl.ts`, `caixaHistoricoRecibo.ts`, testes |
+| Testes | `caixaHistoricoRecibo.test.ts` (varejo, atacado, gerente, pagamentos, totais, legado, F12), `caixaVendaEspera.test.ts` (itens_venda, descontos_venda, fallback) |
+| Evidência | `/opt/cursor/artifacts/onda1-28-vitest.log` (26/26) |
+
+**Pergunta de fechamento:** *Reimpressão histórica reproduz fielmente a venda original?* → **Sim**, quando dados existem em `itens_venda`/`descontos_venda`; legado sem metadado mantém comportamento seguro.
+
+---
+
 ## 2. Score de prontidão
 
 ### P0 (117 capacidades)
@@ -291,7 +317,7 @@ Não entram na tabela: `IMPLEMENTADO E VALIDADO`, `NÃO SE APLICA AO PILOTO`, `N
 | 2 | 1 | 5 | Autocomplete incremental | P1 | IMPLEMENTADO E VALIDADO | S | Baixo | — | Fechado Onda1 Lote3 |
 | 3 | 1 | 6 | Pesquisa SKU/referência | P1 | IMPLEMENTADO E VALIDADO | S | Baixo | — | Fechado Onda1 Lote3 |
 | 4 | 1 | 27 | Histórico vendas | P1 | IMPLEMENTADO E VALIDADO | S | Baixo | — | Fechado Onda1 Lote4A |
-| 5 | 1 | 28 | Reimpressão cupom | P1 | IMPLEMENTADO PARCIALMENTE | S | Baixo | — | Quick win: bug UX/cadastro/PDV com superfície pequena e ganho imediato |
+| 5 | 1 | 28 | Reimpressão cupom | P1 | IMPLEMENTADO E VALIDADO | S | Baixo | — | Fechado Onda1 Lote4B |
 | 6 | 2 | 40 | Exibição faixa aplicada | P1 | IMPLEMENTADO PARCIALMENTE | S | Baixo | SSoT precos_atacado + calcular_preco_produto (IDs 32–36) | **Reprogramado Onda 2** — atacado runtime antes da UI de faixa |
 | 7 | 1 | 122 | Marca imediata | P1 | IMPLEMENTADO E VALIDADO | S | Baixo | — | Fechado Onda1 Lote2 |
 | 8 | 1 | 214 | Cliques adequados | P1 | IMPLEMENTADO PARCIALMENTE | S | Baixo | — | Quick win: bug UX/cadastro/PDV com superfície pequena e ganho imediato |
@@ -387,8 +413,8 @@ Não entram na tabela: `IMPLEMENTADO E VALIDADO`, `NÃO SE APLICA AO PILOTO`, `N
 
 ### Onda 1
 
-**IDs (12):** ~~121~~, ~~5~~, ~~6~~, ~~27~~, 28, ~~40~~→Onda2, ~~122~~, 214, 219, 220, ~~221~~, ~~222~~  
-**Fechados:** 221, 222 (Lote 1); 121, 122 (Lote 2); 5, 6 (Lote 3); 27 (Lote 4A). Restantes Onda 1: 28, 214, 219, 220. **ID 40 reprogramado para Onda 2** (status inalterado).
+**IDs (12):** ~~121~~, ~~5~~, ~~6~~, ~~27~~, ~~28~~, ~~40~~→Onda2, ~~122~~, 214, 219, 220, ~~221~~, ~~222~~  
+**Fechados:** 221, 222 (Lote 1); 121, 122 (Lote 2); 5, 6 (Lote 3); 27 (Lote 4A); 28 (Lote 4B). Restantes Onda 1: 214, 219, 220. **ID 40 reprogramado para Onda 2** (status inalterado).
 
 Quick win: bug UX/cadastro/PDV com superfície pequena e ganho imediato
 ### Onda 2
@@ -469,7 +495,7 @@ Registro ao fechar ID: status anterior → novo · causa · solução · teste �
 | 25 | A.PDV | Múltiplas em espera | P2 | IMPLEMENTADO E VALIDADO | CaixaEmAbertoList | listar_vendas_em_espera | vendas_em_espera | caixa-venda-em-espera.spec.ts | Baixo | RLS amplo TODO255 | — | Não |
 | 26 | A.PDV | Cancelamento venda | P0 | IMPLEMENTADO PARCIALMENTE | VendaCancelarModal admin | cancelar_venda_transacional | vendas_canceladas_auditoria | cancelarVendaContrato.integration.test.ts | Médio | OPERADOR sem cancel caixa; sem e2e | E2E cancel | Não |
 | 27 | A.PDV | Histórico vendas | P1 | IMPLEMENTADO E VALIDADO | CaixaHistoricoSheet | listarHistoricoOperadorImpl | vendas+clientes(nome) | caixaVendaEspera.test.ts | Baixo | Legado sem venda_eventos: itens vazios | — | Não |
-| 28 | A.PDV | Reimpressão cupom | P1 | IMPLEMENTADO PARCIALMENTE | CaixaHistoricoSheet | historicoDetalheParaRecibo | vendas | — | Baixo | Perde desc gerente | Mapear desconto | Não |
+| 28 | A.PDV | Reimpressão cupom | P1 | IMPLEMENTADO E VALIDADO | CaixaHistoricoSheet | historicoDetalheParaRecibo | itens_venda+descontos_venda | caixaHistoricoRecibo.test.ts | Baixo | Legado sem itens_venda: fallback evento | — | Não |
 | 29 | A.PDV | Impressão/compartilhamento | P1 | IMPLEMENTADO PARCIALMENTE | CaixaReciboModal | buildReciboEscPos | — | CaixaReciboModal.i18n.test.tsx | Médio | Não-fiscal; WebUSB | Homolog física | Não |
 | 30 | A.PDV | Orçamento | P3 | NÃO IMPLEMENTADO | — | — | — | piloto-d0 freeze | Baixo | Fora D0 | — | Não |
 | 31 | B.ATACADO | Preço varejo | P0 | IMPLEMENTADO E VALIDADO | PrecosSection | calcular_preco_produto fallback | produtos.preco_varejo | d0-pricing-tiers-ssot.test.sql | Baixo | — | — | Não |
