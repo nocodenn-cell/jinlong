@@ -48,7 +48,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body
-        className={`${notoSansSC.variable} antialiased selection:bg-success/35 selection:text-success-foreground`}
+        className={`${notoSansSC.variable} antialiased`}
       >
         <HydrationFix />
         {/* Skip to main content link for keyboard navigation (WCAG 2.1 Level A) */}

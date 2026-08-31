@@ -23,6 +23,43 @@
 
 ---
 
+## Fechamentos — Onda 1 / Lote 1 (IDs 221, 222)
+
+**Data:** 2026-08-31 · Branch: `cursor/onda1-hover-selection-221-222-0a79`
+
+### ID 221 — Hover ícones / ações
+
+| Campo | Valor |
+|-------|-------|
+| Status anterior | IMPLEMENTADO PARCIALMENTE |
+| Status novo | **IMPLEMENTADO E VALIDADO** |
+| Reprodução | Em tema `dragon-light`, `.gerente-row-actions` com `opacity: 0` até `tr:hover` — ações/ícones invisíveis sem hover; hover de linha em `.gerente-table-dragon` usava `rgba(255,255,255,0.035)` (quase invisível no light) |
+| Causa raiz | Legado dark/terminal em `theme-oriental.css` (`opacity: 0` + hover branco 3.5%) sem override adequado no tema claro |
+| Arquivos | `pdv-importados/styles/theme-oriental.css`, `pdv-importados/VISUAL_PHILOSOPHY.md` |
+| Solução | Em `dragon-light`: `opacity: 1` em `.gerente-row-actions`; hover de linha âmbar legível; `focus-within` preserva ações no teclado |
+| Teste | `tests/visual-hover-selection.ssot.test.ts` (4 asserts) |
+| Evidência | `/opt/cursor/artifacts/onda1-221-actions-before.png`, `onda1-221-actions-after.png` |
+| Alcance | Tabelas que usam `gerente-row-actions` / `CadastroLinhaAcoesPadrao` / `CadastroRowActions` |
+| Compartilha causa com 222? | **Não** (mesmo tema light, regras CSS distintas) |
+
+### ID 222 — Seleção de texto
+
+| Campo | Valor |
+|-------|-------|
+| Status anterior | IMPLEMENTADO PARCIALMENTE |
+| Status novo | **IMPLEMENTADO E VALIDADO** |
+| Reprodução | `body` com `selection:bg-success/35 selection:text-success-foreground` → texto branco sobre wash verde claro (contraste ~1.4:1) |
+| Causa raiz | `success-foreground` = branco (`--color-fg-on-success`) inadequado para seleção em fundo claro |
+| Arquivos | `pdv-importados/app/layout.tsx`, `pdv-importados/app/globals.css` |
+| Solução | SSOT `::selection` em `globals.css`: brand 28% + `var(--color-fg)`; removidas classes Tailwind antigas do `body` |
+| Teste | `tests/visual-hover-selection.ssot.test.ts` |
+| Evidência | `/opt/cursor/artifacts/onda1-222-selection-before.png`, `onda1-222-selection-after.png` |
+| Alcance | Global (toda a app) — intencional |
+
+**Nota:** o conflito histórico `--accent` / `hsl(#hex)` (AUDITORIA_CONSISTENCIA_VISUAL P0-01) já estava mitigado em `tailwind.config.js` (`accent → var(--color-brand)`); Button canônico usa `.fp-btn--*` e não depende desse anti-padrão.
+
+---
+
 ## 2. Score de prontidão
 
 ### P0 (117 capacidades)
@@ -120,8 +157,8 @@ Não entram na tabela: `IMPLEMENTADO E VALIDADO`, `NÃO SE APLICA AO PILOTO`, `N
 | 8 | 1 | 214 | Cliques adequados | P1 | IMPLEMENTADO PARCIALMENTE | S | Baixo | — | Quick win: bug UX/cadastro/PDV com superfície pequena e ganho imediato |
 | 9 | 1 | 219 | PT-BR consistente | P1 | IMPLEMENTADO PARCIALMENTE | S | Baixo | — | Quick win: bug UX/cadastro/PDV com superfície pequena e ganho imediato |
 | 10 | 1 | 220 | Chinês consistente | P1 | IMPLEMENTADO PARCIALMENTE | M | Médio | — | Quick win: bug UX/cadastro/PDV com superfície pequena e ganho imediato |
-| 11 | 1 | 221 | Hover ícones visíveis | P2 | IMPLEMENTADO PARCIALMENTE | XS | Baixo | — | Bug UX observado em uso real; XS CSS |
-| 12 | 1 | 222 | Seleção texto legível | P2 | IMPLEMENTADO PARCIALMENTE | XS | Baixo | — | Bug UX observado em uso real; XS CSS |
+| 11 | 1 | 221 | Hover ícones visíveis | P2 | IMPLEMENTADO E VALIDADO | XS | Baixo | — | Fechado Onda1 Lote1 |
+| 12 | 1 | 222 | Seleção texto legível | P2 | IMPLEMENTADO E VALIDADO | XS | Baixo | — | Fechado Onda1 Lote1 |
 | 13 | 2 | 32 | Preço atacado runtime | P0 | IMPLEMENTADO PARCIALMENTE | S | Médio | SSoT precos_atacado + calcular_preco_produto (não criar paralelo) | Atacado runtime: SSoT já existe; validar E2E antes de corrigir |
 | 14 | 2 | 33 | Qtd mínima atacado | P0 | IMPLEMENTADO PARCIALMENTE | S | Médio | SSoT precos_atacado + calcular_preco_produto (não criar paralelo) | Atacado runtime: SSoT já existe; validar E2E antes de corrigir |
 | 15 | 2 | 36 | Aplicação automática faixa | P0 | EXISTE MAS NÃO VALIDADO | M | Alto | SSoT precos_atacado + calcular_preco_produto (não criar paralelo) | P0 bloqueador negócio atacado; validar antes de corrigir |
@@ -484,8 +521,8 @@ Registro ao fechar ID: status anterior → novo · causa · solução · teste �
 | 218 | L.UX | Monetário BR | P0 | IMPLEMENTADO E VALIDADO | formatDecimalBRL | money formatters | — | — | Baixo | — | — | Não |
 | 219 | L.UX | PT-BR consistente | P1 | IMPLEMENTADO PARCIALMENTE | i18n pt | getMessages | — | admin-idioma.spec.ts | Baixo | — | — | Não |
 | 220 | L.UX | Chinês consistente | P1 | IMPLEMENTADO PARCIALMENTE | i18n zh | getMessages zh | — | admin-idioma.spec.ts | Médio | CI mobile-safari falhas i18n | — | Não |
-| 221 | L.UX | Hover ícones visíveis | P2 | IMPLEMENTADO PARCIALMENTE | Design tokens | DESIGN_SYSTEM | — | AUDITORIA_CONSISTENCIA_VISUAL | Baixo | Hover ilegível/invisível | Fix CSS contraste | Não |
-| 222 | L.UX | Seleção texto legível | P2 | IMPLEMENTADO PARCIALMENTE | — | — | — | Relato uso real | Baixo | Seleção ilegível | Fix CSS selection | Não |
+| 221 | L.UX | Hover ícones visíveis | P2 | IMPLEMENTADO E VALIDADO | Tabelas cadastro/admin | theme-oriental.css dragon-light | — | visual-hover-selection.ssot.test.ts | Baixo | — | — | Não |
+| 222 | L.UX | Seleção texto legível | P2 | IMPLEMENTADO E VALIDADO | layout body | globals.css ::selection | tokens brand/fg | visual-hover-selection.ssot.test.ts | Baixo | — | — | Não |
 | 223 | L.UX | Disabled/loading claro | P1 | IMPLEMENTADO E VALIDADO | Button disabled | loading props | — | — | Baixo | — | — | Não |
 | 224 | L.UX | Ops sem nav extra | P0 | IMPLEMENTADO E VALIDADO | /caixa single page | — | — | caixa.spec.ts | Baixo | — | — | Não |
 | 225 | L.UX | Cadastro produto intuitivo | P1 | IMPLEMENTADO PARCIALMENTE | ProdutoFormModal | multi-step | — | qa-produtos-modulo.spec.ts | Médio | Legacy fields atacado confusos | — | Não |

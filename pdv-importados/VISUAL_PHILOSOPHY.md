@@ -84,7 +84,8 @@ Cada pixel serve a uma função. Cada elemento comunica estado, não decoração
   - **Primary** (`priority: 'primary'`): `text-jl-fg-1 font-medium` — valor, produto, cliente, nome
   - **Secondary** (`priority: 'secondary'`): `text-jl-fg-2` — datas, status, tipo (padrão)
   - **Contextual** (`priority: 'contextual'`): `text-jl-fg-3 text-[11px]` — IDs, caixa, operador, metadata
-- Ações: `gerente-row-actions` (opacity 0 → 1 on tr:hover)
+- Ações: `gerente-row-actions` — no tema claro (`dragon-light`) sempre visíveis;
+  no legado dark, opacity 0 → 1 on `tr:hover` (ver `theme-oriental.css`)
 - Colunas numéricas: sempre `text-right tabular-nums`
 
 ---
