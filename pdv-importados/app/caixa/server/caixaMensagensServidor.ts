@@ -1,7 +1,7 @@
 import { caixaFmt } from '@/app/caixa/caixaI18n'
 import { idiomaOperadorParaErro } from '@/app/caixa/server/caixaErroOperador'
 import { getMessages } from '@/i18n/getMessages'
-import type { Idioma } from '@/lib/idioma/normalizeIdioma'
+import type { Idioma } from '@/idioma/normalizeIdioma'
 
 /** Chaves planas de `caixa` usadas em Server Actions (PT/ZH via pt.json/zh.json). */
 export type CaixaServidorMsgKey =
