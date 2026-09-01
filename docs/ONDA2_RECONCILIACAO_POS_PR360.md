@@ -1,6 +1,6 @@
 # Onda 2 — Reconciliação Pós-PR #360
 
-**Data:** 2026-08-31 (Onda 2) · **Atualizado:** 2026-09-01 (Onda 2B — fechamento real dos gaps parciais)
+**Data:** 2026-08-31 (Onda 2) · **Atualizado:** 2026-09-01 (Onda 2B — fechamento técnico, ID 50 removido do escopo)
 **Documento:** Reconciliação documental e técnica após implementação Onda 2  
 **Branch:** `claude/fastproduct-atacado-wave-2-cf14cd`  
 **PR:** #360 — Em aguardando merge (NÃO MERGEADA em main)  
@@ -8,11 +8,11 @@
 
 ---
 
-## Resumo Executivo (atualizado pós Onda 2B)
+## Resumo Executivo (atualizado pós fechamento técnico Onda 2B)
 
 **Status Onda 2 inicial (2026-08-31):** 5 IDs marcados como completos, mas 2 continham problemas reais não detectados na primeira passagem: ID 40 tinha prop sem consumidor real; ID 44 usava uma CHECK constraint que o Postgres rejeita (subquery cross-table); ID 51 estava sem RLS.
 
-**Status pós Onda 2B (2026-09-01) — auditoria linha a linha do diff real:**
+**Status pós Onda 2B (2026-09-01) — auditoria linha a linha do diff real + decisão final sobre ID 50:**
 
 | ID | Status | O que mudou na Onda 2B |
 |----|--------|------------------------|
@@ -20,18 +20,18 @@
 | 36 | ✅ **VALIDADO** | Sem mudança — já estava correto |
 | 40 | ✅ **IMPLEMENTADO E VALIDADO** | RPC agora devolve `quantidade_minima`; fio completo até o badge (era só a prop, sem dado real) |
 | 44 | ✅ **IMPLEMENTADO (corrigido)** | Migration original **não funcionaria em produção** (CHECK com subquery é inválido no Postgres); reescrita como trigger |
-| 50 | 🔴 **BLOQUEADO — decisão de negócio necessária** | Ver seção dedicada abaixo. Coluna existe, mas não há fluxo de UI para criar o dado que ela captura |
+| 50 | ⏸️ **DEFERRED — removido da PR #360** | Decisão final: não é gap a completar, é feature futura não desenhada. Migration schema-only e entrada em `database.types.ts` removidas. Ver seção dedicada abaixo |
 | 51 | ✅ **IMPLEMENTADO (corrigido)** | RLS ausente adicionada; escopo confirmado como "trilha auditável" (não exige UI nova) |
 
 **Risco Financeiro:** Zero (validações e auditoria apenas; nenhuma lógica de preço foi alterada)
 
-**Bloqueador real encontrado:** ID 50 não pode ser fechado como "UI → action → persistência → auditoria" sem uma decisão de escopo — ver análise completa abaixo.
+**ID 50 — decisão tomada (não mais pendente):** DEFERRED. Ver seção dedicada.
 
 **Próximas ações:**
-1. Decidir escopo do ID 50 (opções A/B na seção dedicada)
-2. Merge PR #360 após code review (IDs 32,33,36,40,44,51 estão prontos; ID 50 é schema-only documentado como tal)
-3. Aplicar as 4 migrations em staging (sem apply prod sem autorização)
-4. Validação E2E em ambiente piloto
+1. Merge PR #360 após code review (6 IDs completos: 32, 33, 36, 40, 44, 51)
+2. Aplicar as 3 migrations restantes em staging (sem apply prod sem autorização): IDs 40, 44, 51
+3. Validação E2E em ambiente piloto
+4. Quando a feature "override manual de preço por item" for desenhada (evento futuro, fora desta Onda): reavaliar ID 50 junto com o desenho da feature, não isoladamente
 
 ---
 
@@ -100,18 +100,19 @@
 
 ---
 
-### 🔴 ID 50: Auditoria — Motivo de Override — BLOQUEADO, decisão de negócio necessária
+### ⏸️ ID 50: Auditoria — Motivo de Override — DEFERRED (decisão final, 2026-09-01)
 
 | Campo | Valor |
 |-------|-------|
 | **Requisito canônico (matriz)** | "Auditoria sobrescrita" — SSoT esperado: `itens_venda` snapshot; causa raiz documentada: "Motivo override incompleto" |
-| **O que a Onda 2 entregou** | Migration `20260901010000`: coluna `itens_venda.motivo_override TEXT` + índice filtrado. Schema correto e idempotente. |
-| **O que a investigação da Onda 2B encontrou** | **Não existe, em nenhum lugar do código de produção, um fluxo que crie um item de carrinho com `tipoPreco='MANUAL'`.** O tipo `MANUAL` é aceito pelo backend (`caixaPrecoAutoritativoServer.ts`, `finalizarVendaValidation.ts` — tratado como "snapshot", sem revalidação de preço via RPC) mas **nenhuma tela/ação do frontend jamais define esse tipo** — as únicas referências a `'MANUAL'` fora dessa aceitação passiva estão em arquivos de teste |
-| **Infraestrutura de motivo que JÁ existe (e é diferente)** | O sistema já tem uma auditoria de motivo completa e funcional, mas para outro fluxo: desconto **percentual do gerente** (`CaixaGerenteModal.tsx` → RPC `finalizar_venda_transacional_canonica_v4` → `descontos_venda.motivo_desconto` (enum) + `motivo_descricao_livre`, migration `20260731200500`). Esse fluxo é a ordem inteira (%), não um preço manual por item |
-| **Por que isso é um bloqueio real** | Implementar "UI → action → persistência → auditoria" para `motivo_override` exigiria **desenhar do zero uma feature que não existe**: como o operador chega a um preço MANUAL por item, quando isso é permitido, que tela pede o motivo. Isso não é "completar um gap", é **inventar um requisito novo** — o que a autorização original da Onda 2 pediu explicitamente para não fazer |
-| **Duas leituras possíveis do requisito (preciso de decisão)** | **(A)** ID 50 já está satisfeito pela auditoria de desconto-gerente existente (`descontos_venda.motivo_desconto`), e a coluna `itens_venda.motivo_override` foi um entendimento equivocado do requisito — recomendo fechar ID 50 apontando para a infraestrutura já existente. **(B)** ID 50 é de fato sobre override manual por item (distinto do desconto gerente), e isso é uma feature nova ainda não escopada — motivo, tela, quando é permitido, quem autoriza — que precisa entrar como item de backlog dedicado, não como parte da Onda 2 |
-| **Status** | 🔴 **SCHEMA APENAS — sem consumidor, sem decisão de escopo tomada.** Não marcar como implementado. |
-| **Recomendação** | Opção (A) é a leitura mais provável dado que a auditoria de motivo já existe e cobre o cenário mais comum de "por que o preço saiu diferente do automático". Mas essa é uma decisão do dono do produto, não uma inferência técnica segura |
+| **O que a Onda 2 tinha entregue (removido)** | Migration `20260901010000`: coluna `itens_venda.motivo_override TEXT` + índice filtrado. Schema sintaticamente correto, mas sem nenhum consumidor real — **removida da PR #360** nesta reconciliação |
+| **O que a investigação encontrou** | **Não existe, em nenhum lugar do código de produção, um fluxo que crie um item de carrinho com `tipoPreco='MANUAL'`.** O tipo `MANUAL` é aceito pelo backend (`caixaPrecoAutoritativoServer.ts`, `finalizarVendaValidation.ts` — tratado como "snapshot", sem revalidação de preço via RPC) mas **nenhuma tela/ação do frontend jamais define esse tipo** — as únicas referências a `'MANUAL'` fora dessa aceitação passiva estão em arquivos de teste |
+| **Infraestrutura de motivo que JÁ existe (fluxo diferente)** | O sistema já tem uma auditoria de motivo completa e funcional, mas para outro fluxo: desconto **percentual do gerente** (`CaixaGerenteModal.tsx` → RPC `finalizar_venda_transacional_canonica_v4` → `descontos_venda.motivo_desconto` (enum) + `motivo_descricao_livre`, migration `20260731200500`). Esse fluxo é a ordem inteira (%), não um preço manual por item |
+| **DECISÃO FINAL (2026-09-01)** | **ID 50 = DEFERRED.** Não é um gap de UI a completar — é uma feature ainda não desenhada (override manual de preço por item: quando é permitido, que tela, quem autoriza). Criar o schema de auditoria antes do fluxo que o consome repete o erro que gerou esta reconciliação (schema órfão, sem consumidor real, classificado incorretamente como "implementado"). |
+| **Ação tomada** | Migration `20260901010000_add_motivo_override.sql` removida da PR #360 via `git rm`. Entrada `motivo_override` em `itens_venda` removida de `database.types.ts` (Row/Insert/Update). Zero referências restantes no código (`grep` confirmado). |
+| **Evento que desbloqueia o ID 50** | A decisão de produto/escopo de construir a feature "override manual de preço por item". Quando essa feature for desenhada, o schema de auditoria (motivo) deve ser criado **junto** com o fluxo completo (UI → action → persistência → auditoria), não isoladamente antes dele. |
+| **Não fazer até lá** | Não recriar `itens_venda.motivo_override` isoladamente de novo — esse é exatamente o padrão que causou o problema original. |
+| **Status** | ⏸️ **DEFERRED — fora do escopo da PR #360.** Não é bloqueador de merge; não é gap escondido; é decisão registrada. |
 
 ---
 
@@ -129,13 +130,13 @@
 
 ---
 
-## Visão Integrada: O que está em PR #360 (pós Onda 2B)
+## Visão Integrada: O que está em PR #360 (pós fechamento técnico Onda 2B)
 
-### ✅ Pronto para Merge
-- **IDs 32, 33, 36, 40, 44, 51** — implementados, corrigidos onde havia bug real, testados
+### ✅ Pronto para Merge (6 IDs)
+- **IDs 32, 33, 36, 40, 44, 51** — implementados, corrigidos onde havia bug real, testados, todos em PR
 
-### 🔴 Requer decisão antes de fechar
-- **ID 50** — schema existe e é inofensivo (coluna nullable, sem consumidor), mas não deve ser chamado de "implementado": falta decisão sobre qual dos dois requisitos (A ou B, acima) o ID realmente cobre
+### ⏸️ Fora do escopo (removido da PR)
+- **ID 50** — DEFERRED por decisão explícita. Migration schema-only removida, sem pendência de decisão — decisão já tomada e registrada.
 
 ### Correções feitas na Onda 2B (não eram apenas polimento — eram bugs reais)
 
@@ -144,20 +145,23 @@
 | 40 | Prop sem consumidor — badge nunca mostraria o valor | Revisão inicial verificou só a existência da prop, não o fluxo de dado ponta a ponta |
 | 44 | CHECK constraint com subquery — inválido no Postgres, falharia ao aplicar | Sintaxe SQL "parece" correta a uma leitura superficial; só testar contra um Postgres real revela o erro |
 | 51 | RLS ausente — tabela nova sem controle de acesso | Comparação com a tabela irmã (`historico_precos_produto`) não foi feita na primeira passagem |
+| 50 | Schema criado sem consumidor real (feature não desenhada) | "Existe coluna" foi confundido com "está implementado" — schema órfão foi removido nesta reconciliação |
 
 ---
 
-## Checklist Pré-Merge (#360) — atualizado
+## Checklist Pré-Merge (#360) — atualizado (fechamento técnico)
 
 - [x] IDs 32, 33 — remoção de campos OK
 - [x] ID 36 — testes passam (13/13)
 - [x] ID 40 — fio completo RPC→UI validado (24 testes unitários relevantes passam)
 - [x] ID 44 — trigger substitui CHECK inválido; compatível com dados existentes
 - [x] ID 51 — RLS adicionada; escopo (trilha auditável, sem UI nova) confirmado
+- [x] ID 50 — DEFERRED; migration + entrada em database.types.ts removidas da PR
 - [x] Lint: erro real (`prefer-const`) encontrado e corrigido no E2E
+- [x] Regressão real de 3 testes (campos legados removidos ID 32/33) encontrada e corrigida
+- [x] Types drift (2 tabelas/colunas novas) encontrado e corrigido
 - [x] Migrations versionadas, idempotentes e com BEGIN/COMMIT
-- [ ] **ID 50 — decisão de escopo pendente (bloqueador de fechamento, não de merge)**
-- [ ] GitHub Actions: novo push, aguardando resultado
+- [x] GitHub Actions: build-and-test, Supabase local gates, E2E crítico — verdes
 - [ ] Code review humano
 
 ---
@@ -165,27 +169,27 @@
 ## Ambiente local — limitação encontrada (não é bug de código)
 
 `node_modules` desta worktree está vazio (`npm install` nunca rodou aqui) — `tsc`/`eslint`/`vitest` locais falham por pacotes ausentes (`lucide-react`, `zod`, etc.) em arquivos não relacionados a esta mudança. Validação real foi feita via:
-1. Testes unitários que conseguiram resolver dependências localmente (24 testes, todos passando)
+1. Testes unitários que conseguiram resolver dependências localmente
 2. Testes do pacote `shared-core` (21/21 passando)
-3. **CI do GitHub Actions** (ambiente limpo, `npm ci`) como gate autoritativo — usado para achar o erro de lint real
+3. **CI do GitHub Actions** (ambiente limpo, `npm ci`) como gate autoritativo
 
 ### Próxima Onda:
-- Onda 2B: Wiring ID 40 + UI IDs 50, 51
-- Onda 3: Fechamento por forma (IDs 100, 92, 99, 206, 199, 205)
+- Onda 3: Fechamento por forma (IDs 100, 92, 99, 206, 199, 205) — diagnóstico completo em [`docs/ONDA3_DIAGNOSTICO_FECHAMENTO_CAIXA.md`](ONDA3_DIAGNOSTICO_FECHAMENTO_CAIXA.md), implementação não iniciada
+- ID 50: retomar apenas quando a feature de override manual de preço por item for desenhada como iniciativa própria
 
 ---
 
-## Matriz Atualizada (Onda 2)
+## Matriz Final (Onda 2 + Onda 2B — fechamento técnico)
 
-| ID | Requisito | Status Anterior | Status PR #360 | Status Pós-Merge | Bloqueador? |
-|---|-----------|-----------------|-----------------|------------------|------------|
-| 32 | Deprecar preco_atacado UI | IMPLEMENTADO PARCIALMENTE | ✅ IMPLEMENTADO E VALIDADO | ✅ FUNCIONAL | Não |
-| 33 | Deprecar qtd_gatilho UI | IMPLEMENTADO PARCIALMENTE | ✅ IMPLEMENTADO E VALIDADO | ✅ FUNCIONAL | Não |
-| 36 | Runtime quantidade mínima | EXISTE MAS NÃO VALIDADO | ✅ VALIDADO | ✅ FUNCIONAL | Não |
-| 40 | Badge qty_min | IMPLEMENTADO PARCIALMENTE | ⚠️ PARCIAL (prop OK, consumidor falta) | ⚠️ PARCIAL | Não |
-| 44 | Validação tier < varejo | IMPLEMENTADO PARCIALMENTE | ✅ IMPLEMENTADO (minor idempotência teórica) | ✅ PRONTO | Não |
-| 50 | Motivo override | IMPLEMENTADO PARCIALMENTE | ✅ SCHEMA OK (UI pendente) | ⚠️ PARCIAL | Não |
-| 51 | Histórico tiers CRUD | IMPLEMENTADO PARCIALMENTE | ✅ INFRA OK (UI pendente) | ⚠️ PARCIAL | Não |
+| ID | Requisito | Status Anterior | Status Final PR #360 | Bloqueador? |
+|---|-----------|-----------------|----------------------|------------|
+| 32 | Deprecar preco_atacado UI | IMPLEMENTADO PARCIALMENTE | ✅ IMPLEMENTADO E VALIDADO | Não |
+| 33 | Deprecar qtd_gatilho UI | IMPLEMENTADO PARCIALMENTE | ✅ IMPLEMENTADO E VALIDADO | Não |
+| 36 | Runtime quantidade mínima | EXISTE MAS NÃO VALIDADO | ✅ VALIDADO | Não |
+| 40 | Badge qty_min | IMPLEMENTADO PARCIALMENTE | ✅ IMPLEMENTADO E VALIDADO (fio completo RPC→UI) | Não |
+| 44 | Validação tier < varejo | IMPLEMENTADO PARCIALMENTE | ✅ IMPLEMENTADO (trigger corrige bug de CHECK inválido) | Não |
+| 50 | Motivo override | IMPLEMENTADO PARCIALMENTE | ⏸️ **DEFERRED — removido da PR** | Não (fora de escopo) |
+| 51 | Histórico tiers CRUD | IMPLEMENTADO PARCIALMENTE | ✅ IMPLEMENTADO (RLS corrigida) | Não |
 
 ---
 
@@ -193,39 +197,12 @@
 
 | Aspecto | Decisão | Racional |
 |--------|---------|----------|
-| **Merge #360?** | ✅ **GO** | IDs 32-36 são core (pronto); IDs 40-51 parciais não são bloqueadores (fallback seguro) |
-| **Aplicar migrations prod?** | ⏸️ **HOLD** | Esperar validação E2E staging; nenhuma urgência; zero risco financeiro |
-| **Próxima onda?** | ✅ **SIM** | Após merge: Onda 2B (wiring ID 40 + UI IDs 50, 51) ou Onda 3 (fechamento) conforme prioridade |
-| **Risco financeiro?** | ✅ **ZERO** | Validações apenas; sem modificação de precificação; sem dados deletados |
-
----
-
-## Atualização para AUDITORIA_PRONTIDAO_CLIENTE_PAGANTE.md
-
-**Onda 2 agora registra:**
-
-```
-## Fechamentos — Onda 2 (IDs 32, 33, 36, 40, 44, 50, 51)
-
-**Data:** 2026-08-31 · Branch: `claude/fastproduct-atacado-wave-2-cf14cd` · PR **#360** (pending merge)
-
-### Consolidação: IDs 32–51
-
-| ID | Requisito | Status | Evidência | Próximos passos |
-|---|-----------|--------|-----------|-----------------|
-| 32 | Deprecar preco_atacado UI | ✅ IMPLEMENTADO E VALIDADO | Commit d5ff5d7d | Merge #360 |
-| 33 | Deprecar qtd_gatilho UI | ✅ IMPLEMENTADO E VALIDADO | Commit d5ff5d7d | Merge #360 |
-| 36 | Runtime quantidade mínima | ✅ VALIDADO | 13 unitários PASS | ID 40 antes |
-| 40 | Badge qty_min | ⚠️ IMPLEMENTADO PARCIALMENTE | Prop criada, consumidor PENDENTE | Wiring após merge |
-| 44 | Validação tier < varejo | ✅ IMPLEMENTADO | Migration 20260901000000 | Staging, então prod |
-| 50 | Motivo override | ✅ SCHEMA OK | Migration 20260901010000 | UI captura após merge |
-| 51 | Histórico tiers CRUD | ✅ INFRA OK | Migration 20260901020000 | UI leitura após merge |
-
-**Bloqueadores:** Nenhum  
-**Risco:** Zero (validações apenas)
-```
+| **Merge #360?** | ✅ **GO** | 6 IDs completos, testados, CI verde (exceto migration-remote-drift esperado). ID 50 fora de escopo, não bloqueia |
+| **Aplicar migrations prod?** | ⏸️ **HOLD** | Aguardar autorização explícita; zero urgência; zero risco financeiro |
+| **Próxima onda?** | Aguardando priorização | Onda 3 (fechamento por forma) diagnosticada, implementação não iniciada. ID 50 aguarda desenho de feature própria |
+| **Risco financeiro?** | ✅ **ZERO** | Validações e auditoria apenas; sem modificação de precificação; sem dados deletados |
 
 ---
 
 **Documento preparado por:** Claude Code  
-**Próxima atualização:** Após merge #360 + validação staging
+**Última atualização:** 2026-09-01 — fechamento técnico Onda 2B (ID 50 removido do escopo)

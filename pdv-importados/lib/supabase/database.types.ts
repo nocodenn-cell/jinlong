@@ -2520,7 +2520,6 @@ export type Database = {
           custo_unitario_snap: number | null
           desconto_unitario: number
           id: string
-          motivo_override: string | null
           preco_unitario: number
           preco_unitario_original: number
           pricing_version_id: string | null
@@ -2538,7 +2537,6 @@ export type Database = {
           custo_unitario_snap?: number | null
           desconto_unitario?: number
           id?: string
-          motivo_override?: string | null
           preco_unitario: number
           preco_unitario_original: number
           pricing_version_id?: string | null
@@ -2556,7 +2554,6 @@ export type Database = {
           custo_unitario_snap?: number | null
           desconto_unitario?: number
           id?: string
-          motivo_override?: string | null
           preco_unitario?: number
           preco_unitario_original?: number
           pricing_version_id?: string | null

@@ -22,24 +22,24 @@
 - **Risco:** Financeiro diário real — PIX/cartão nunca são reconciliados no fechamento; uma venda registrada como PIX mas nunca paga fecha o caixa sem detecção
 - **Esforço:** M-L (SSOT novo + extensão de RPC + UI + relatório; sequência de PRs pequenas e testáveis isoladamente — ver plano no diagnóstico)
 - **Primeira PR recomendada:** apenas a função `calcular_valor_sistema_por_forma_caixa` (só leitura, zero risco, testável isoladamente antes de tocar `fechar_caixa_atomico` ou UI)
-- **Recomendação:** Priorizar após decisão do ID 50 e merge #360
+- **Recomendação:** Priorizar após merge #360 (ID 50 não é mais bloqueador — foi resolvido como DEFERRED, fora do escopo)
 
 ---
 
 ## P1 — Importante antes/logo após piloto
 
-### ✅ Onda 2B — CONCLUÍDA (2026-09-01)
+### ✅ Onda 2B — CONCLUÍDA (2026-09-01, fechamento técnico)
 
-- **ID 40:** Fechado. RPC estendida para devolver `quantidade_minima`; fio completo até o badge. 24 testes unitários relevantes passam.
+- **ID 40:** Fechado. RPC estendida para devolver `quantidade_minima`; fio completo até o badge.
 - **ID 44:** Fechado + bug crítico corrigido. A migration original usava CHECK com subquery cross-table — inválida no Postgres, teria falhado ao aplicar. Reescrita como trigger.
 - **ID 51:** Fechado + bug corrigido. RLS estava ausente na tabela nova (`historico_tiers_crud`), quebrando o padrão da tabela irmã. Corrigido. Escopo confirmado como "trilha auditável" — UI de leitura não é requisito obrigatório, fica como P2 opcional.
 
-### 🔴 ID 50 — Bloqueado, requer decisão de negócio (não é mais "Onda 2B pendente")
-- **Status real:** Schema existe (`itens_venda.motivo_override`), mas **não há nenhum fluxo de produção que crie um item com `tipoPreco='MANUAL'`** — o tipo é aceito passivamente pelo backend, mas nenhuma tela do frontend o define hoje.
-- **O que já existe (e pode já ser a resposta):** Auditoria de motivo completa para desconto percentual do gerente (`descontos_venda.motivo_desconto` + `motivo_descricao_livre`, via `CaixaGerenteModal.tsx` → RPC v4).
-- **Decisão necessária:** (A) considerar ID 50 já coberto pela auditoria de desconto-gerente existente — fechar apontando para essa infra; ou (B) tratar como feature nova (override manual por item) — precisa de escopo próprio (UI, quando é permitido, quem autoriza), não cabe como conclusão de gap.
-- **Recomendação:** (A) é a leitura mais provável, mas é uma decisão do dono do produto.
-- **Detalhes completos:** [`docs/ONDA2_RECONCILIACAO_POS_PR360.md`](ONDA2_RECONCILIACAO_POS_PR360.md#-id-50-auditoria--motivo-de-override--bloqueado-decisão-de-negócio-necessária)
+### ⏸️ ID 50 — DEFERRED (decisão final, 2026-09-01)
+- **Decisão tomada:** ID 50 = DEFERRED, depende da implementação futura de um fluxo real de preço manual por item. Não é gap de UI a completar — é feature ainda não desenhada.
+- **Ação:** Migration `20260901010000_add_motivo_override.sql` (coluna `itens_venda.motivo_override`, schema-only) removida da PR #360. Entrada correspondente em `database.types.ts` também removida. Zero referências restantes no código.
+- **Evento que desbloqueia:** decisão de produto de construir a feature "override manual de preço por item" — o schema de auditoria deve nascer junto com o fluxo completo (UI → action → persistência → auditoria), não isolado.
+- **Não fazer:** recriar a coluna isoladamente de novo — é o padrão que gerou este problema.
+- **Detalhes completos:** [`docs/ONDA2_RECONCILIACAO_POS_PR360.md`](ONDA2_RECONCILIACAO_POS_PR360.md)
 
 ### Resíduos I18n (IDs 219, 220) — QUASE COMPLETO
 - **Status:** Implementado parcialmente (server actions caixa migrados, admin/gerente resíduos)

@@ -264,9 +264,9 @@ Preço/atacado/estoque/desconto/pagamento/persistência da venda — seleção s
 
 ---
 
-## Fechamentos — Onda 2 + Onda 2B (IDs 32, 33, 36, 40, 44, 50, 51)
+## Fechamentos — Onda 2 + Onda 2B (IDs 32, 33, 36, 40, 44, 51 — ID 50 DEFERRED)
 
-**Data:** 2026-08-31 (Onda 2) → 2026-09-01 (Onda 2B) · Branch: `claude/fastproduct-atacado-wave-2-cf14cd` · PR **#360** (pending merge)
+**Data:** 2026-08-31 (Onda 2) → 2026-09-01 (Onda 2B, fechamento técnico) · Branch: `claude/fastproduct-atacado-wave-2-cf14cd` · PR **#360** (pending merge)
 
 **Consolidação: Atacado Runtime Stabilization**
 
@@ -279,22 +279,31 @@ A Onda 2 inicial marcou 5 IDs como prontos, mas uma revisão crítica linha-a-li
 | 36 | Runtime quantidade mínima encerrada | ✅ IMPLEMENTADO E VALIDADO | 13 unitários PASS (calcularPrecoCanonico.spec.ts); RPC SSOT | Não |
 | 40 | Badge exibição qty_min | ✅ IMPLEMENTADO E VALIDADO | **Corrigido na 2B**: prop existia mas sem consumidor real; RPC estendida + fio completo até a UI (commit `feat(id-40)`) | Não |
 | 44 | Validação tier < varejo | ✅ IMPLEMENTADO (corrigido) | **Bug crítico corrigido na 2B**: migration original usava CHECK com subquery — inválido no Postgres, falharia ao aplicar. Reescrita como trigger | Não |
-| 50 | Motivo override auditoria | 🔴 **BLOQUEADO — decisão de negócio pendente** | Coluna existe (schema-only); não há UI/fluxo em produção que crie o dado que ela captura. Ver `ONDA2_RECONCILIACAO_POS_PR360.md` | **Sim — decisão de escopo** |
+| 50 | Motivo override auditoria | ⏸️ **DEFERRED** | Decisão explícita (2026-09-01): não é gap de UI a completar, é feature ainda não desenhada (override manual de preço por item). Migration schema-only removida da #360. Ver seção dedicada abaixo. | Não — fora do PR |
 | 51 | Histórico tiers CRUD | ✅ IMPLEMENTADO (corrigido) | **Bug corrigido na 2B**: tabela nova sem RLS (quebrava padrão da tabela irmã). RLS adicionada; escopo confirmado como trilha auditável (UI não é requisito) | Não |
 
 **Resumo:**
-- ✅ 6 IDs completos e corretos (32, 33, 36, 40, 44, 51)
-- 🔴 1 ID bloqueado por decisão de escopo (50) — schema inofensivo, mas não deve ser chamado de "implementado"
+- ✅ 6 IDs completos, corretos e em PR (32, 33, 36, 40, 44, 51)
+- ⏸️ 1 ID deferred, fora do PR (50) — não faz parte do escopo mergeado
 
 **Risco Financeiro:** ZERO (validações e auditoria apenas; sem modificação de precificação operacional)
 
-**GO/NO-GO:** ✅ **GO** para merge #360 — os 6 IDs prontos não dependem do ID 50. ID 50 fica documentado como pendência de decisão, não como gap escondido.
+**GO/NO-GO:** ✅ **GO** para merge #360 — 6 IDs completos, ID 50 explicitamente fora de escopo.
+
+### ID 50 — Decisão Final: DEFERRED (2026-09-01)
+
+**Decisão:** ID 50 ("Auditoria — motivo de override") **não está implementado nem parcialmente** — é **DEFERRED**, depende da implementação futura de um fluxo real de preço manual por item (`tipoPreco='MANUAL'`), que hoje não existe em nenhuma tela de produção.
+
+**Ação tomada:** a migration `20260901010000_add_motivo_override.sql` (coluna `itens_venda.motivo_override`, schema-only) foi **removida da PR #360**, junto com a entrada correspondente em `database.types.ts`. Não existe mais nenhuma referência a `motivo_override` no código.
+
+**Evento que desbloqueia o ID 50:** a decisão de produto/escopo de construir a feature "override manual de preço por item" — quando essa feature for desenhada (UI, quando é permitido, quem autoriza), o schema de auditoria do motivo deve ser criado *junto* com o fluxo, não antes dele.
+
+**Não fazer até lá:** não recriar `itens_venda.motivo_override` isoladamente novamente — schema sem consumidor real é o próprio erro que gerou esta reconciliação.
 
 **Próxima Ação:**
-1. Decisão do dono do produto sobre ID 50 (ver as duas opções em `ONDA2_RECONCILIACAO_POS_PR360.md`)
-2. Merge #360 após code review
-3. Aplicar as 4 migrations em staging (sem apply prod sem autorização)
-4. Onda 3 (fechamento por forma): IDs 100, 92, 99, 206, 199, 205
+1. Merge #360 após code review (6 IDs completos: 32, 33, 36, 40, 44, 51)
+2. Aplicar as 3 migrations restantes em staging (sem apply prod sem autorização): IDs 40, 44, 51
+3. Onda 3 (fechamento por forma): diagnóstico completo em [`docs/ONDA3_DIAGNOSTICO_FECHAMENTO_CAIXA.md`](ONDA3_DIAGNOSTICO_FECHAMENTO_CAIXA.md) — implementação não iniciada
 
 **Referência Detalhada:** [`docs/ONDA2_RECONCILIACAO_POS_PR360.md`](ONDA2_RECONCILIACAO_POS_PR360.md)
 
@@ -379,7 +388,7 @@ Não entram na tabela: `IMPLEMENTADO E VALIDADO`, `NÃO SE APLICA AO PILOTO`, `N
 | 14 | 2 | 33 | Qtd mínima atacado | P0 | **IMPLEMENTADO E VALIDADO** | S | Baixo | — | Onda 2 PR #360: removidas UI campos legados (d5ff5d7d) |
 | 15 | 2 | 36 | Aplicação automática faixa | P0 | **IMPLEMENTADO E VALIDADO** | M | Baixo | — | Onda 2 PR #360: 13 unitários PASS; RPC SSOT autoridade |
 | 16 | 2 | 44 | Validação conflitos | P1 | **IMPLEMENTADO E VALIDADO** | S | Baixo | — | Fechado Onda2B: CHECK original era inválido no Postgres (subquery); reescrito como trigger |
-| 17 | 2 | 50 | Auditoria sobrescrita | P1 | **BLOQUEADO — decisão de negócio** | M | Baixo | Decisão: escopo do override manual por item | Onda2B: não há UI/fluxo real que gere o dado; schema-only. Ver ONDA2_RECONCILIACAO_POS_PR360.md |
+| 17 | 2 | 50 | Auditoria sobrescrita | P1 | **DEFERRED** | M | Baixo | Implementação futura do fluxo real de preço manual por item | Onda2B (2026-09-01): decisão final — feature não desenhada, migration schema-only removida da #360. Ver ONDA2_RECONCILIACAO_POS_PR360.md |
 | 18 | 2 | 51 | Histórico preços | P1 | **IMPLEMENTADO E VALIDADO** | M | Baixo | — | Fechado Onda2B: RLS ausente corrigida; escopo (trilha auditável, sem UI nova) confirmado |
 | 19 | 3 | 100 | Integridade vendas×fechamento | P0 | IMPLEMENTADO PARCIALMENTE | M | Médio | vendas_pagamentos; fechar_caixa_atomico; Onda 2 preferível | Fechamento por forma: risco financeiro diário; depende vendas_pagamentos |
 | 20 | 3 | 92 | Conferência por forma | P0 | IMPLEMENTADO PARCIALMENTE | L | Alto | vendas_pagamentos; fechar_caixa_atomico; Onda 2 preferível | P0 fechamento cego PIX/cartão; risco financeiro diário |
@@ -469,11 +478,9 @@ Não entram na tabela: `IMPLEMENTADO E VALIDADO`, `NÃO SE APLICA AO PILOTO`, `N
 Quick win: bug UX/cadastro/PDV com superfície pequena e ganho imediato
 ### Onda 2
 
-**IDs (7):** 32, 33, 36, **40**, 44, 50, 51
+**IDs no PR (6):** 32, 33, 36, **40**, 44, 51 — **ID 50 DEFERRED, fora do PR** (ver seção "Fechamentos — Onda 2 + Onda 2B" acima)
 
-**Status em 2026-08-31:** 5 de 7 IDs implementados e em PR #360 (pendente merge); 1 validado (ID 36); 1 parcial (ID 40).
-
-Atacado runtime: SSoT já existe; validado E2E. **ID 40** (exibição faixa no carrinho) estruturada — consumidor de tier (lookup qty_min) pendente.
+**Status em 2026-09-01 (fechamento técnico):** 6 de 6 IDs em escopo completos, corretos e validados em PR #360 (pendente merge). ID 50 removido do escopo — depende de feature futura ainda não desenhada.
 
 **Detalhes:** Ref. [`docs/ONDA2_RECONCILIACAO_POS_PR360.md`](ONDA2_RECONCILIACAO_POS_PR360.md)
 
