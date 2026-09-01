@@ -15,13 +15,14 @@
 - **Runbook:** [`docs/runbooks/BACKUP_RESTORE_CANONICO.md`](runbooks/BACKUP_RESTORE_CANONICO.md)
 - **Ação:** Não iniciar agora; aguardar aprovação contratual Pro ou Onda 7
 
-### Fechamento por Forma (IDs 100, 92, 99, 206, 199, 205) — **Onda 3 PRIORIZADA**
-- **Status:** IMPLEMENTADO PARCIALMENTE (vendas_pagamentos parcial; fechar_caixa_atomico PENDENTE)
-- **Requisito:** Conferência PIX/cartão por forma; diferenças caixa; relatórios por forma
-- **Risco:** Financeiro diário (caixa) — operador não vê diferenças, risco de roubo/desvio
-- **Esforço:** L (6 IDs, 1–3 sprints)
-- **Dependência:** vendas_pagamentos consolidação (parcialmente feita)
-- **Recomendação:** Priorizar IMEDIATAMENTE após Onda 2 merge
+### Fechamento por Forma (IDs 100, 92, 99, 206, 199, 205) — **Onda 3 DIAGNOSTICADA (2026-09-01)**
+- **Status:** Diagnóstico completo via mapeamento de código real (não implementado). Ver [`docs/ONDA3_DIAGNOSTICO_FECHAMENTO_CAIXA.md`](ONDA3_DIAGNOSTICO_FECHAMENTO_CAIXA.md)
+- **Achado central:** dos 6 IDs, só existem 2 correções reais — (1) reconciliação/UI por forma no fechamento (92, 100, 199) e (2) relatório histórico agregado de diferenças (99, 205, 206)
+- **Causa raiz confirmada:** `calcular_valor_sistema_dinheiro_caixa` e `fechar_caixa_atomico` são **dinheiro-only por design intencional** (Gate 3 do teste adversarial garante isso para o saldo físico da gaveta) — nunca foi construído um SSOT irmão para PIX/cartão
+- **Risco:** Financeiro diário real — PIX/cartão nunca são reconciliados no fechamento; uma venda registrada como PIX mas nunca paga fecha o caixa sem detecção
+- **Esforço:** M-L (SSOT novo + extensão de RPC + UI + relatório; sequência de PRs pequenas e testáveis isoladamente — ver plano no diagnóstico)
+- **Primeira PR recomendada:** apenas a função `calcular_valor_sistema_por_forma_caixa` (só leitura, zero risco, testável isoladamente antes de tocar `fechar_caixa_atomico` ou UI)
+- **Recomendação:** Priorizar após decisão do ID 50 e merge #360
 
 ---
 
