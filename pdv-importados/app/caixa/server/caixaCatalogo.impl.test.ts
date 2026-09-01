@@ -263,4 +263,48 @@ describe('buscarProdutoParaCaixaImpl — SKU / codigo_interno (ID 6)', () => {
     expect(r.candidatos).toHaveLength(2)
     expect(r.mensagem).toMatch(/SKU/i)
   })
+
+  it('SKU parcial único NÃO aborta nome: "ca" não coloca Parafuso (CA-01) no lugar de Caneta', async () => {
+    const parafuso = produto({
+      id: 'p-par',
+      nome: 'Parafuso 8mm',
+      codigo_interno: 'CA-01',
+      preco_varejo: 2,
+    })
+    const caneta = produto({ id: 'p-can', nome: 'Caneta Azul', preco_varejo: 4 })
+    createClient.mockResolvedValue(
+      criarSupabaseMock({
+        porSku: [parafuso],
+        porNome: [caneta],
+        estoquePorProduto: {
+          'p-par': { quantidade_atual: 50, estoque_minimo: 1 },
+          'p-can': { quantidade_atual: 10, estoque_minimo: 1 },
+        },
+      }),
+    )
+    const r = await buscarProdutoParaCaixaImpl('ca')
+    expect(r.ok).toBe(true)
+    if (!r.ok || r.status !== 'ambiguo') throw new Error('esperado ambiguo, não auto-adicionar SKU parcial')
+    expect(r.candidatos.map((c) => c.nome).sort()).toEqual(['Caneta Azul', 'Parafuso 8mm'])
+  })
+
+  it('SKU parcial único sem match de nome continua encontrado (só o SKU bate)', async () => {
+    const parafuso = produto({
+      id: 'p-par',
+      nome: 'Parafuso 8mm',
+      codigo_interno: 'CA-01',
+      preco_varejo: 2,
+    })
+    createClient.mockResolvedValue(
+      criarSupabaseMock({
+        porSku: [parafuso],
+        porNome: [],
+        estoquePorProduto: { 'p-par': { quantidade_atual: 50, estoque_minimo: 1 } },
+      }),
+    )
+    const r = await buscarProdutoParaCaixaImpl('ca')
+    expect(r.ok).toBe(true)
+    if (!r.ok || r.status !== 'encontrado') throw new Error('esperado encontrado')
+    expect(r.produto.nome).toBe('Parafuso 8mm')
+  })
 })
