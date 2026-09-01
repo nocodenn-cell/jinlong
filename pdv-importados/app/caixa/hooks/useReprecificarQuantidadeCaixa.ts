@@ -50,7 +50,11 @@ export function useReprecificarQuantidadeCaixa() {
         return
       }
 
-      sincronizarPrecoCalculadoRpc(itemId, { precoUnitario: res.preco, tipoPreco: res.tipo })
+      sincronizarPrecoCalculadoRpc(itemId, {
+        precoUnitario: res.preco,
+        tipoPreco: res.tipo,
+        quantidadeMinima: res.quantidadeMinima,
+      })
     },
     [sincronizarPrecoCalculadoRpc],
   )

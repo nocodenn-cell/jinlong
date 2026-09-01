@@ -303,6 +303,7 @@ export async function buscarProdutoComPrecoCaixaImpl(
 
     const precoCalculado = precoRes.ok ? precoRes.preco : produto.preco_varejo
     const tipoPrecoCalculado = precoRes.ok ? precoRes.tipo : 'VAREJO'
+    const quantidadeMinima = precoRes.ok ? precoRes.quantidadeMinima : null
 
     return {
       ok: true,
@@ -310,6 +311,7 @@ export async function buscarProdutoComPrecoCaixaImpl(
       produto,
       precoCalculado,
       tipoPrecoCalculado,
+      quantidadeMinima,
     }
   } catch (e) {
     return {

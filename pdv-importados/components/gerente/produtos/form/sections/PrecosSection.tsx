@@ -34,7 +34,6 @@ export function PrecosSection({
   const { disabled, inputMonoClassName } = ctx
 
   const erroVarejo = erroDoCampo(ctx.erro, 'preco_varejo')
-  const erroAtacado = erroDoCampo(ctx.erro, 'preco_atacado')
 
   const varejo = ctx.precoVarejoInput.parse()
   const custo = ctx.precoCustoInput.parse()
@@ -104,23 +103,6 @@ export function PrecosSection({
             />
             <CampoErroMsg mensagem={erroVarejo} />
           </label>
-          {modoCompleto ? (
-            <label className="block text-xs font-medium text-jl-fg-3">
-              {p.preco_atacado}
-              <input
-                type="text"
-                inputMode="decimal"
-                className={`${inputMonoClassName} mt-1 ${erroAtacado ? CAMPO_INVALIDO_CLASS : ''}`}
-                value={ctx.precoAtacadoInput.display}
-                onChange={ctx.precoAtacadoInput.onChange}
-                disabled={disabled}
-                placeholder="—"
-                data-field="preco_atacado"
-                aria-invalid={erroAtacado ? true : undefined}
-              />
-              <CampoErroMsg mensagem={erroAtacado} />
-            </label>
-          ) : null}
         </div>
 
         {/* Leitura da margem — muda de tom quando o preço dá prejuízo. */}
@@ -147,21 +129,6 @@ export function PrecosSection({
           ) : null}
         </div>
 
-        {modoCompleto ? (
-          <label className="block text-xs font-medium text-jl-fg-3 sm:max-w-[12rem]">
-            {p.qtd_gatilho_atacado}
-            <input
-              type="text"
-              inputMode="numeric"
-              className={`${inputMonoClassName} mt-1`}
-              value={ctx.quantidadeGatilho}
-              onChange={(e) => ctx.setQuantidadeGatilho(e.target.value.replace(/\D/g, ''))}
-              disabled={disabled}
-              placeholder="—"
-            />
-            <span className="mt-0.5 block text-caption text-jl-fg-3">{p.hint_atacado_faixa}</span>
-          </label>
-        ) : null}
       </div>
     </section>
   )

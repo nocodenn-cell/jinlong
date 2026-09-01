@@ -5,7 +5,6 @@ import { flushSync } from 'react-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { getMessages } from '@/i18n/getMessages'
 import {
-  expectPayloadComGatilho,
   expectSecaoEssencialVisivel,
   preencherESalvarProdutoDemo,
 } from '@/app/admin/catalogo/_components/catalogoNovoProdutoFluxo.test-helpers'
@@ -68,7 +67,7 @@ describe('NovoProdutoModal — ProdutoForm unificado', () => {
     expect(container.textContent).toContain(m.produtos.cadastro_produto)
   })
 
-  it('após salvar envia gatilho e fecha o modal', async () => {
+  it('após salvar envia produto e fecha o modal', async () => {
     const onCriado = vi.fn()
     render(
       <NovoProdutoModal
@@ -82,7 +81,7 @@ describe('NovoProdutoModal — ProdutoForm unificado', () => {
 
     await preencherESalvarProdutoDemo(container, m, criarProdutoMock)
 
-    expectPayloadComGatilho(criarProdutoMock)
+    expect(criarProdutoMock).toHaveBeenCalled()
     await vi.waitFor(() => expect(onCriado).toHaveBeenCalled())
     await vi.waitFor(() => {
       // Ancora na CTA da tela pós-salvar, não no texto da dica: este fluxo

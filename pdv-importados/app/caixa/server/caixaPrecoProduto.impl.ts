@@ -10,6 +10,7 @@ import { quantidadeParaRpcPreco } from '@/lib/format/quantidadeCaixa'
 type RpcRow = {
   preco: number | string | null
   tipo: string | null
+  quantidade_minima?: number | string | null
   erro?: string | null
 }
 
@@ -57,7 +58,11 @@ export async function calcularPrecoProdutoCaixaImpl(input: {
     }
 
     const tipo = row.tipo === 'ATACADO' ? 'ATACADO' : 'VAREJO'
-    return { ok: true, preco: Math.round(precoNum * 100) / 100, tipo }
+    const qtdMinNum =
+      typeof row.quantidade_minima === 'string' ? Number(row.quantidade_minima) : row.quantidade_minima
+    const quantidadeMinima =
+      tipo === 'ATACADO' && qtdMinNum != null && Number.isFinite(qtdMinNum) ? qtdMinNum : null
+    return { ok: true, preco: Math.round(precoNum * 100) / 100, tipo, quantidadeMinima }
   } catch (e) {
     return {
       ok: false,

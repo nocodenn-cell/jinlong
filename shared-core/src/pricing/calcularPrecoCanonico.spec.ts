@@ -165,3 +165,100 @@ describe('calcularPrecoCanonico ≡ RPC 250', () => {
     expect(r.ok && r.result.fonte).toBe('varejo')
   })
 })
+
+describe('Regra quantidade mínima (P0 encerramento)', () => {
+  const tierMin10: PrecoAtacadoTierInput[] = [
+    {
+      id: 'tier-min-10',
+      produtoId: 'p1',
+      lojaId: null,
+      quantidadeMinima: 10,
+      precoUnitario: 80,
+    },
+  ]
+
+  it('9 unidades → VAREJO (abaixo do mínimo)', () => {
+    const r = calcularPrecoCanonico({
+      produtoId: 'p1',
+      ativo: true,
+      precoVarejo: 100,
+      precoAtacado: null,
+      quantidade: 9,
+      lojaId: null,
+      quantidadeMinimaAtacadoPadrao: null,
+      tiers: tierMin10,
+    })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.result.tipo).toBe('VAREJO')
+    expect(r.result.preco).toBe(100)
+    expect(r.result.fonte).toBe('varejo')
+    expect(r.result.regraId).toBeUndefined()
+  })
+
+  it('10 unidades → ATACADO (iguala o mínimo)', () => {
+    const r = calcularPrecoCanonico({
+      produtoId: 'p1',
+      ativo: true,
+      precoVarejo: 100,
+      precoAtacado: null,
+      quantidade: 10,
+      lojaId: null,
+      quantidadeMinimaAtacadoPadrao: null,
+      tiers: tierMin10,
+    })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.result.tipo).toBe('ATACADO')
+    expect(r.result.preco).toBe(80)
+    expect(r.result.fonte).toBe('tier')
+    expect(r.result.regraId).toBe('tier-min-10')
+  })
+
+  it('11 unidades → ATACADO (acima do mínimo)', () => {
+    const r = calcularPrecoCanonico({
+      produtoId: 'p1',
+      ativo: true,
+      precoVarejo: 100,
+      precoAtacado: null,
+      quantidade: 11,
+      lojaId: null,
+      quantidadeMinimaAtacadoPadrao: null,
+      tiers: tierMin10,
+    })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.result.tipo).toBe('ATACADO')
+    expect(r.result.preco).toBe(80)
+    expect(r.result.fonte).toBe('tier')
+    expect(r.result.regraId).toBe('tier-min-10')
+  })
+
+  it('transição 10 (ATACADO) → 9 (VAREJO) reverte preço', () => {
+    const r10 = calcularPrecoCanonico({
+      produtoId: 'p1',
+      ativo: true,
+      precoVarejo: 100,
+      precoAtacado: null,
+      quantidade: 10,
+      lojaId: null,
+      quantidadeMinimaAtacadoPadrao: null,
+      tiers: tierMin10,
+    })
+    expect(r10.ok && r10.result.tipo).toBe('ATACADO')
+    expect(r10.ok && r10.result.preco).toBe(80)
+
+    const r9 = calcularPrecoCanonico({
+      produtoId: 'p1',
+      ativo: true,
+      precoVarejo: 100,
+      precoAtacado: null,
+      quantidade: 9,
+      lojaId: null,
+      quantidadeMinimaAtacadoPadrao: null,
+      tiers: tierMin10,
+    })
+    expect(r9.ok && r9.result.tipo).toBe('VAREJO')
+    expect(r9.ok && r9.result.preco).toBe(100)
+  })
+})

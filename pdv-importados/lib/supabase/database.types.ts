@@ -2173,6 +2173,74 @@ export type Database = {
           },
         ]
       }
+      historico_tiers_crud: {
+        Row: {
+          acao: string
+          criado_em: string | null
+          criado_por: string | null
+          id: string
+          preco_unitario_antes: number | null
+          preco_unitario_depois: number | null
+          produto_id: string
+          quantidade_minima_antes: number | null
+          quantidade_minima_depois: number | null
+          tier_id: string | null
+        }
+        Insert: {
+          acao: string
+          criado_em?: string | null
+          criado_por?: string | null
+          id?: string
+          preco_unitario_antes?: number | null
+          preco_unitario_depois?: number | null
+          produto_id: string
+          quantidade_minima_antes?: number | null
+          quantidade_minima_depois?: number | null
+          tier_id?: string | null
+        }
+        Update: {
+          acao?: string
+          criado_em?: string | null
+          criado_por?: string | null
+          id?: string
+          preco_unitario_antes?: number | null
+          preco_unitario_depois?: number | null
+          produto_id?: string
+          quantidade_minima_antes?: number | null
+          quantidade_minima_depois?: number | null
+          tier_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "historico_tiers_crud_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "historico_tiers_crud_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "historico_tiers_crud_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "historico_tiers_crud_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       implantacao_checklist_itens: {
         Row: {
           concluido_em: string | null

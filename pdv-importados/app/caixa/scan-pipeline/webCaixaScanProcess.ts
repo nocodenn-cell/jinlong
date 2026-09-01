@@ -192,7 +192,7 @@ export async function runWebCaixaScanProcess(
      * deste bip (evita divergência invisível scan failed vs carrinho mutado).
      */
     // Preço já é autoritativo (calculado na ação unificada)
-    const novoItem = montarItemCarrinhoCaixa(p, res.precoCalculado, res.tipoPrecoCalculado)
+    const novoItem = montarItemCarrinhoCaixa(p, res.precoCalculado, res.tipoPrecoCalculado, 1, res.quantidadeMinima)
     const novaLinhaId = novoItem.id
     const abandonarLinhaDoScan = () => {
       if (!linhaPendenteRollback) return

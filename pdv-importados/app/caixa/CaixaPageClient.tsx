@@ -448,6 +448,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       const precoRes = await calcularPrecoProdutoCaixa({ produtoId: produto.id, quantidade: 1 })
       const precoCalculado = precoRes.ok ? precoRes.preco : produto.preco_varejo
       const tipoPrecoCalculado = precoRes.ok ? precoRes.tipo : 'VAREJO'
+      const quantidadeMinima = precoRes.ok ? precoRes.quantidadeMinima : null
 
       const supabase = createSupabaseBrowserClient()
       const {
@@ -456,7 +457,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       const uid = session?.user?.id ?? null
       if (uid) setCartOwnerForSession(uid)
 
-      const item = montarItemCarrinhoCaixa(produto, precoCalculado, tipoPrecoCalculado)
+      const item = montarItemCarrinhoCaixa(produto, precoCalculado, tipoPrecoCalculado, 1, quantidadeMinima)
       adicionarItem(item)
       setCodigo('')
       const avisoEstoqueMsg = avisoEstoqueCaixa(produto, m)
