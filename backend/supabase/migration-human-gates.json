@@ -143,6 +143,36 @@
       "remoteOnlyVersion": "20260901115338",
       "reason": "calcular_preco_produto_retorna_quantidade_minima aplicada via MCP apply_migration (não CLI): schema_migrations.version gravado foi o timestamp real de aplicação (20260901115338), não o timestamp do nome do arquivo (20260901030000_calcular_preco_produto_retorna_quantidade_minima.sql). name bate integralmente. Postcondition reverificada em 02/09/2026 (gate de convergência PR #363): public.calcular_preco_produto contém quantidade_minima no corpo remoto. Migration é CREATE OR REPLACE puro — seguro reaplicar se um futuro db push tentar.",
       "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20260902100000",
+      "remoteOnlyVersion": "20260902190428",
+      "reason": "finalizar_venda_retry_payload_divergente (Gate A01-1.1) aplicada via MCP apply_migration em produção sob autorização explícita de deploy controlado (02/09/2026, pós-merge do PR #363, merge SHA 4b5a8111dc9fe1262453de4d7c7cf029a0af1098): schema_migrations.version gravado foi o timestamp real de aplicação (20260902190428), não o timestamp do nome do arquivo (20260902100000_finalizar_venda_retry_payload_divergente.sql). name bate integralmente. Postcondition reverificada no mesmo deploy: public.finalizar_venda_transacional_canonica_v4 rejeita replay do mesmo venda_id com payload divergente (FINALIZAR_VENDA_CANONICA_RETRY_PAYLOAD_DIVERGENTE) e continua aceitando replay silencioso com payload idêntico, provado via BEGIN...ROLLBACK sem persistência. Migration é CREATE OR REPLACE puro (sem DROP FUNCTION) — seguro reaplicar se um futuro db push tentar.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20260902100100",
+      "remoteOnlyVersion": "20260902190512",
+      "reason": "guard_varejo_menor_que_tier_ativo (Gate A04-4.2) aplicada via MCP apply_migration em produção sob a mesma autorização de deploy controlado (02/09/2026, pós-merge do PR #363): schema_migrations.version gravado foi o timestamp real de aplicação (20260902190512), não o timestamp do nome do arquivo (20260902100100_guard_varejo_menor_que_tier_ativo.sql). name bate integralmente. Superada logo em seguida, na mesma sequência de deploy, por 20260902120000 (revisão pós-CI que corrige o NEW congelado e adiciona o lock compartilhado) — mantida no histórico porque o CREATE CONSTRAINT TRIGGER desta migration é a base que a seguinte redefine via CREATE OR REPLACE FUNCTION, sem recriar o trigger.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20260902100200",
+      "remoteOnlyVersion": "20260902190555",
+      "reason": "fechar_caixa_repeticao_valor_divergente (Gate A02-2.1) aplicada via MCP apply_migration em produção sob a mesma autorização de deploy controlado (02/09/2026, pós-merge do PR #363): schema_migrations.version gravado foi o timestamp real de aplicação (20260902190555), não o timestamp do nome do arquivo (20260902100200_fechar_caixa_repeticao_valor_divergente.sql). name bate integralmente. Postcondition reverificada no mesmo deploy: public.fechar_caixa_atomico rejeita replay com valor_contado divergente (FECHAR_CAIXA_REPETICAO_VALOR_DIVERGENTE) e continua aceitando replay silencioso com o mesmo valor, provado via BEGIN...ROLLBACK sem persistência; grants reconfirmados (anon=false, authenticated=true). Migration é CREATE OR REPLACE puro (sem DROP FUNCTION, por desenho — ver comentário no próprio arquivo sobre ALTER DEFAULT PRIVILEGES) — seguro reaplicar se um futuro db push tentar.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20260902100300",
+      "remoteOnlyVersion": "20260902190619",
+      "reason": "revoke_execute_trigger_functions_tiers aplicada via MCP apply_migration em produção sob a mesma autorização de deploy controlado (02/09/2026, pós-merge do PR #363): schema_migrations.version gravado foi o timestamp real de aplicação (20260902190619), não o timestamp do nome do arquivo (20260902100300_revoke_execute_trigger_functions_tiers.sql). name bate integralmente. Postcondition reverificada no mesmo deploy: has_function_privilege para anon/authenticated retorna false nas 3 trigger functions revogadas. Migration é REVOKE puro — seguro reaplicar se um futuro db push tentar.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20260902120000",
+      "remoteOnlyVersion": "20260902190718",
+      "reason": "serializa_invariante_varejo_tier_e_reativacao (revisão pós-CI do PR #363: fecha reativação de tier não revalidada, NEW.preco_varejo congelado e ausência de lock cross-table) aplicada via MCP apply_migration em produção sob a mesma autorização de deploy controlado (02/09/2026): schema_migrations.version gravado foi o timestamp real de aplicação (20260902190718), não o timestamp do nome do arquivo (20260902120000_serializa_invariante_varejo_tier_e_reativacao.sql). name bate integralmente. Postcondition reverificada no mesmo deploy: os 4 cenários de reativação (reativar inválido rejeitado, reativar válido aceito, criar tier novo inválido rejeitado, desativar continua funcionando), o cenário multi-step (varejo+tier editados juntos, writer real atualizar_produto_com_faixa_atacado) e a invariante tier<varejo nos dois sentidos passaram, todos via BEGIN...ROLLBACK sem persistência; internal.lock_invariante_varejo_tier confirmado sem grant a anon/authenticated. Migration é CREATE OR REPLACE puro nas duas trigger functions (o trigger de precos_atacado é recriado via DROP+CREATE CONSTRAINT TRIGGER para cobrir a coluna ativo; o de produtos não muda de forma) — seguro reaplicar se um futuro db push tentar.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
     }
   ]
 }

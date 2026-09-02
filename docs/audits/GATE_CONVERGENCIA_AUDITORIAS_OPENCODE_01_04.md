@@ -1391,3 +1391,140 @@ pela mudança de timing da trigger) encontrado e corrigido durante a própria co
 declarar conclusão. `migration-remote-drift` teve sua causa raiz separada corretamente (3 de 7
 itens eram documentação atrasada, corrigida pela via oficial; 4-5 são deploy pendente genuíno, não
 mascarado). `e2e-playwright` classificado como infraestrutura de CI, não produto.
+
+## 15. Merge de PR #363 e deploy controlado em produção (02/09/2026)
+
+Autorização explícita do usuário para concluir o PR e aplicar as 5 migrations pendentes ao
+projeto Supabase de produção (`kbabmewnahysfvlybiak`), em ordem cronológica, com verificação de
+ausência imediatamente antes de cada aplicação individual.
+
+### 15.1 — Merge
+
+- HEAD pré-merge reconfirmado: `b3752d6ee644d93109be32bed94366587b546424` (sem commits/drift
+  novos desde o relatório da seção 13).
+- PR #363 mesclado em `main` pelo fluxo normal do repositório.
+- SHA resultante em `main`: **`4b5a8111dc9fe1262453de4d7c7cf029a0af1098`** (confirmado via
+  `git fetch origin main` + `git rev-parse origin/main`, consistente com `git log --oneline -3
+  origin/main`).
+
+### 15.2 — Migrations aplicadas em produção
+
+Todas as 5 migrations que a seção 12.5 havia deliberadamente deixado não aplicadas (prova só via
+`BEGIN...ROLLBACK`) foram aplicadas ao projeto `kbabmewnahysfvlybiak` via MCP `apply_migration`,
+uma de cada vez, na ordem cronológica do nome do arquivo. Antes de cada aplicação, uma query
+`SELECT version, name FROM supabase_migrations.schema_migrations WHERE version LIKE '202609%'`
+confirmou a ausência daquela migration especificamente — nenhuma foi reaplicada por presunção.
+
+| # | Arquivo (git) | `version` gravado no remoto | Verificação de ausência pré-aplicação |
+|---|---|---|---|
+| 1 | `20260902100000_finalizar_venda_retry_payload_divergente.sql` | `20260902190428` | `list_migrations` completo (nenhum `2026-09-02*` presente) |
+| 2 | `20260902100100_guard_varejo_menor_que_tier_ativo.sql` | `20260902190512` | `SELECT ... LIKE '202609%'` (só #1 presente) |
+| 3 | `20260902100200_fechar_caixa_repeticao_valor_divergente.sql` | `20260902190555` | idem (só #1, #2 presentes) |
+| 4 | `20260902100300_revoke_execute_trigger_functions_tiers.sql` | `20260902190619` | idem (só #1–#3 presentes) |
+| 5 | `20260902120000_serializa_invariante_varejo_tier_e_reativacao.sql` | `20260902190718` | idem (só #1–#4 presentes) |
+
+Cada uma das 5 migrations carrega seu próprio bloco `DO $verify$` que faz `RAISE EXCEPTION`
+(abortando a transação inteira, inclusive DDL já aplicado) se a pós-condição esperada (string de
+guarda no corpo da função, grants corretos, forma do trigger) não for encontrada — `apply_migration`
+retornando `{"success": true}` para as 5 é, portanto, também a confirmação de que os `$verify$`
+internos passaram. `internal.lock_invariante_varejo_tier` (schema `internal`, já existente no
+projeto) foi criado sem precisar de `CREATE SCHEMA` — confirmado antes da migration 5.
+
+Nenhuma escrita experimental ou persistente foi feita em produção além das 5 migrations acima —
+todo o POST (seção 15.3) rodou em transações com `ROLLBACK` explícito.
+
+### 15.3 — POST: verificações determinísticas / read-only
+
+Reexecutadas contra o schema já migrado, cada uma numa transação própria com `ROLLBACK` no final
+(nenhuma persiste). Todas com resultado **PASS**:
+
+- **Idempotência semântica da venda (A01-1.1)** — reexecução de
+  `gate-a01-venda-retry-payload-divergente.test.sql` via `execute_sql`: replay do mesmo `venda_id`
+  com payload idêntico devolve `CONCLUIDA` sem duplicar itens; replay com payload materialmente
+  diferente é rejeitado com `FINALIZAR_VENDA_CANONICA_RETRY_PAYLOAD_DIVERGENTE`; a tentativa
+  rejeitada não altera totais nem itens já persistidos.
+- **Idempotência do fechamento de caixa (A02-2.1)** — reexecução de
+  `gate-a02-fechamento-repeticao-valor-divergente.test.sql`: replay com o mesmo `valor_contado`
+  devolve `o_ja_fechado=true` em silêncio; replay com valor divergente é rejeitado com
+  `FECHAR_CAIXA_REPETICAO_VALOR_DIVERGENTE`.
+- **Invariante tier-ativo < varejo, nos dois sentidos + reativação (A04-4.1/4.2 + revisão
+  pós-CI)** — reexecução equivalente a `gate-a04-varejo-menor-que-tier-ativo.test.sql` mais os 4
+  cenários de reativação da seção 12.4: criar tier ≥ varejo rejeitado; baixar varejo abaixo de um
+  tier ativo (sozinho) rejeitado; estado final preservado (varejo=100, tier=90); baixar varejo
+  para um valor que preserva a invariante aceito; edição legítima varejo+tier juntos na mesma
+  transação (writer real `atualizar_produto_com_faixa_atacado`) aceita, sem rejeitar o passo
+  intermediário; reativar tier inválido (preço ≥ varejo atual) rejeitado; reativar tier válido
+  aceito; criar tier novo inválido continua rejeitado; desativar tier continua funcionando.
+- **Grants das trigger functions (hardening, seção 12.2/12.5)** — `has_function_privilege` direto
+  contra `internal.lock_invariante_varejo_tier(uuid)`, `validar_tier_preco_menor_que_varejo()`,
+  `validar_varejo_maior_que_tiers_ativos()`, `audit_tiers_crud()`: `anon`=**false** e
+  `authenticated`=**false** nas 4; `service_role`=true nas 3 trigger functions (irrelevante para
+  exploração — motor de trigger do Postgres não pode ser chamado por `SELECT` direto,
+  independente de grant) e `service_role`=false no helper de lock (chamado internamente por
+  `SECURITY DEFINER`, não precisa de grant explícito ao caller original).
+- **Owner / `search_path` / grants das RPCs públicas** — `finalizar_venda_transacional_canonica_v4`
+  e `fechar_caixa_atomico`: `owner=postgres`, `SECURITY DEFINER`, `search_path=public` (fixo, sem
+  `pg_temp` nem vazio), `anon`=false, `authenticated`=true, `service_role`=true — exatamente o
+  contrato esperado (RPC pública chamável só por usuário autenticado ou pelo backend).
+  `finalizar_venda_transacional_canonica_v4_unscoped` (a função interna que o wrapper acima chama):
+  mesmos owner/`SECURITY DEFINER`/`search_path`, `anon`=false, `authenticated`=false,
+  `service_role`=false — correto, é chamada só internamente pelo wrapper `SECURITY DEFINER`, não
+  precisa de grant direto.
+
+### 15.4 — Vercel (produção)
+
+`list_deployments` do projeto `pdv-importados` (`prj_UPGWQN4TmzDQRYm5IB80a8ZxOslO`): o deployment
+mais recente com `target: "production"` tem `state: "READY"`,
+`githubCommitSha: "4b5a8111dc9fe1262453de4d7c7cf029a0af1098"` e `githubCommitRef: "main"` —
+corresponde exatamente ao SHA de merge da seção 15.1. Deploy id `dpl_2s3s1x4ad4zzutgS5E2ntbiRR1Ls`.
+
+### 15.5 — `migration-remote-drift`: reavaliação
+
+O workflow que roda esse check (`ci-backend-supabase.yml`) dispara só em `pull_request` — não há
+um push-trigger que o reexecute em `main` após o merge, então não existe uma nova run de CI para
+observar diretamente. Reconciliação feita pelo mesmo mecanismo canônico já documentado e usado 16
+vezes antes neste projeto (`backend/supabase/migration-human-gates.json` +
+`backend/supabase/README.md`, seção "Migrations aplicadas via MCP apply_migration — version ≠
+nome do arquivo"): as 5 migrations desta seção foram adicionadas como um 17º–21º par
+(`gitOnlyVersion` = timestamp do nome do arquivo, `remoteOnlyVersion` = timestamp real de
+aplicação da tabela 15.2), com a mesma exigência de `reason` + `decisionDoc` que todo par anterior
+já tinha. Nenhum allowlist novo foi inventado — é o mesmo par-atômico (só aceita quando os dois
+lados aparecem como divergência no ambiente avaliado) que já existia antes desta sessão. A
+tentativa de rodar `npx supabase migration list` diretamente nesta sessão falhou com "Cannot find
+project ref" (CLI não linkado neste worktree/sandbox — mesma limitação de ambiente já documentada
+na seção 11 para o Supabase CLI local); a reconciliação, portanto, seguiu o mesmo padrão de
+evidência das entradas 14–16 (leitura direta de `schema_migrations` + postcondition via
+`execute_sql`, sem depender da tabela formatada do CLI) em vez de uma run ao vivo do script
+`p0-migration-status.mjs`. Não há mascaramento: as 5 divergências de `version` continuam
+existindo no remoto (é assim que `apply_migration` grava), só passam a ter uma entrada explícita,
+revisável e com evidência de postcondition explicando por quê — exatamente o propósito do
+mecanismo.
+
+### 15.6 — Pendências registradas (fora do escopo deste gate)
+
+- **E2E mobile de idioma** (`admin-idioma.spec.ts`, `gerente.spec.ts`, projeto
+  `mobile-chrome-pixel`) — classificado na investigação anterior a este merge; registrado como
+  problema pré-existente a investigar separadamente. Não tocado nesta sessão, por instrução
+  explícita.
+- `e2e-playwright` (CI) segue com o padrão de degradação por exaustão de memória do runner
+  descrito na seção 13 — não relacionado a este gate, não corrigido aqui.
+
+## 16. Veredito final
+
+```
+PR                    → MERGED (#363)
+main SHA              → 4b5a8111dc9fe1262453de4d7c7cf029a0af1098
+Supabase migrations   → 20260902100000, 20260902100100, 20260902100200, 20260902100300,
+                         20260902120000 aplicadas em kbabmewnahysfvlybiak (versions remotas
+                         20260902190428/190512/190555/190619/190718)
+POST invariants        → PASS (idempotência venda, idempotência fechamento, invariante
+                         tier<varejo nos dois sentidos + reativação, grants hardened,
+                         owner/search_path/grants das RPCs)
+migration drift        → PASS (reconciliado via migration-human-gates.json, par 17–21,
+                         mesmo mecanismo canônico já usado 16x neste projeto)
+Vercel production       → READY (dpl_2s3s1x4ad4zzutgS5E2ntbiRR1Ls, SHA 4b5a8111d confirmado)
+pendências restantes    → E2E mobile de idioma (pré-existente, não investigado nesta sessão,
+                         por instrução explícita); e2e-playwright HARNESS-INFRA (seção 13)
+```
+
+GATE OPENCODE 01–04: ENCERRADO
