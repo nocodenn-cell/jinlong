@@ -270,6 +270,37 @@ varejo via chamada real contra produção (`BEGIN...ROLLBACK`, sem persistência
 entradas anteriores: esta reconciliação só sustenta "já presente e correta no remoto sob outra
 version" — não é autorização para alterar ou reaplicar o SQL correspondente.
 
+Décimo sétimo ao vigésimo primeiro par (deploy controlado em produção, 02/09/2026, autorizado
+explicitamente após o merge do PR #363 em `main` — SHA `4b5a8111dc9fe1262453de4d7c7cf029a0af1098`):
+`20260902100000_finalizar_venda_retry_payload_divergente.sql`,
+`20260902100100_guard_varejo_menor_que_tier_ativo.sql`,
+`20260902100200_fechar_caixa_repeticao_valor_divergente.sql`,
+`20260902100300_revoke_execute_trigger_functions_tiers.sql` e
+`20260902120000_serializa_invariante_varejo_tier_e_reativacao.sql` foram aplicadas via MCP
+`apply_migration` (não CLI, não `db push`) diretamente no projeto `kbabmewnahysfvlybiak`, uma de
+cada vez, cada uma com verificação de ausência no histórico remoto imediatamente antes da
+aplicação (`SELECT version, name FROM supabase_migrations.schema_migrations WHERE version LIKE
+'202609%'`). Constam no remoto sob as versions `20260902190428`, `20260902190512`,
+`20260902190555`, `20260902190619` e `20260902190718` respectivamente — mesmo padrão de todos os
+pares anteriores (`version` = timestamp real de aplicação, `name` preserva integralmente o
+identificador do arquivo). POST determinístico e não-persistente (`BEGIN...ROLLBACK`) reexecutado
+nesta mesma sessão de deploy, contra o schema já migrado: idempotência semântica de
+`finalizar_venda_transacional_canonica_v4` (replay com payload idêntico silencioso, replay com
+payload divergente rejeitado com `FINALIZAR_VENDA_CANONICA_RETRY_PAYLOAD_DIVERGENTE`, nenhuma
+mutação do estado persistido pela tentativa rejeitada); idempotência de `fechar_caixa_atomico`
+(mesmo padrão, `FECHAR_CAIXA_REPETICAO_VALOR_DIVERGENTE`); invariante tier-ativo-menor-que-varejo
+nos dois sentidos de escrita, inclusive o caso multi-step do writer real
+`atualizar_produto_com_faixa_atacado` e os 4 cenários de reativação de tier (reativar inválido
+rejeitado, reativar válido aceito, criar tier novo inválido rejeitado, desativar funcionando).
+Grants reconfirmados por introspecção (`has_function_privilege`): `anon`=false em todas as
+funções revisadas nesta convergência (incluindo `internal.lock_invariante_varejo_tier`),
+`authenticated`=true somente nas duas RPCs públicas (`finalizar_venda_transacional_canonica_v4`,
+`fechar_caixa_atomico`); owner=`postgres` e `search_path` fixo (`public`, ou `pg_catalog, public`
+no helper de lock) em todas. Mesma ressalva das entradas anteriores: esta reconciliação só
+sustenta "aplicada via MCP, `version` do arquivo diverge do `version` remoto por ser o timestamp
+real de aplicação" — não é autorização para alterar ou reaplicar o SQL correspondente sem nova
+revisão.
+
 ## Edge Function `sync-outbox`
 
 ```powershell
