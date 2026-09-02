@@ -75,7 +75,7 @@ describe('validarProdutoFormClient', () => {
     ).toEqual({ campo: 'preco_varejo', mensagem: messages.preco_invalido })
   })
 
-  it('bloqueia atacado >= varejo', () => {
+  it('não bloqueia atacado legado >= varejo (campo removido da UI)', () => {
     expect(
       validarProdutoFormClient({
         nome: 'Produto',
@@ -85,6 +85,6 @@ describe('validarProdutoFormClient', () => {
         comoRascunho: false,
         messages,
       }),
-    ).toEqual({ campo: 'preco_atacado', mensagem: messages.atacado_maior_varejo })
+    ).toBeNull()
   })
 })

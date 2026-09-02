@@ -129,6 +129,7 @@ export const NovoProdutoSchema = produtoFormBaseObject
   })
   .superRefine(precoAtacadoRefine)
 
+/** Edição: sem refine de atacado legado — o campo saiu da UI (Onda 2). */
 export const EditarProdutoRascunhoSchema = produtoFormBaseObject
   .extend({
     produto_id: z.string().uuid('ID do produto inválido.'),
@@ -138,12 +139,10 @@ export const EditarProdutoRascunhoSchema = produtoFormBaseObject
       .default(0),
     status_publicacao: z.literal('DRAFT').optional(),
   })
-  .superRefine(precoAtacadoRefine)
 
 export const EditarProdutoCatalogoSchema = produtoFormBaseObject
   .extend({
     produto_id: z.string().uuid('ID do produto inválido.'),
   })
-  .superRefine(precoAtacadoRefine)
 
 export type ProdutoFormBaseValues = z.infer<typeof ProdutoFormBaseSchema>

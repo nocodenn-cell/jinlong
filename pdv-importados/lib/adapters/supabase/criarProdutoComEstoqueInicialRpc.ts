@@ -195,8 +195,7 @@ export async function executarCriarProdutoComEstoqueInicial(opts: {
   if (error && rpcCriarProdutoFaixaAusente(error)) {
     if (faixa) {
       // Recusa ANTES de qualquer escrita — nada foi persistido ainda (a
-      // chamada com p_faixa nem chegou a existir do lado do banco). Mesma
-      // política de MSG_ATACADO_REQUER_MIGRATION em productUpdater.ts.
+      // chamada com p_faixa nem chegou a existir do lado do banco).
       return {
         ok: false,
         message:

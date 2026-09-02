@@ -217,88 +217,52 @@ function rpcAusente(error: { code?: string; message?: string } | null): boolean 
   )
 }
 
-/**
- * Atualização de produto com a faixa de atacado, via RPC transacional.
- *
- * BANCO SEM A RPC: NÃO existe fallback que escreva. A versão anterior tentava
- * emular a RPC com `UPDATE produtos` seguido da sincronização da faixa e, se a
- * segunda etapa falhasse, devolvia erro — mas a alteração do produto JÁ ESTAVA
- * PERSISTIDA. Teste real contra o banco (não mock) mostrou o produto com
- * gatilho 20 e a faixa ativa ainda em 10: exatamente o estado parcial que esta
- * entrega existe para eliminar. Devolver erro não desfaz escrita.
- *
- * Sem transação — e o PostgREST não oferece uma para múltiplas instruções — a
- * única forma de garantir "ou tudo, ou nada" contra um banco antigo é NÃO
- * ESCREVER. Então:
- *
- *   - edição que NÃO altera o par de atacado → `UPDATE produtos` direto é uma
- *     única instrução, atômica por si, e segue permitida;
- *   - edição que ALTERA `preco_atacado` ou `quantidade_gatilho_atacado` →
- *     recusada, com mensagem explícita, sem gravar nada.
- *
- * SEQUENCIAMENTO APP ↔ BANCO: isto refuta a afirmação anterior de que qualquer
- * ordem serviria. A ordem correta é BANCO PRIMEIRO. Publicar o app antes não
- * corrompe dado algum, mas bloqueia a edição de preço de atacado até a
- * migration entrar. Ver `docs/PROMOCAO_PRODUTOS_HARDENING.md` §3.
- */
-export const MSG_ATACADO_REQUER_MIGRATION =
-  'A edição de preço/quantidade de atacado está indisponível: o banco ainda não recebeu a atualização desta versão. ' +
-  'As demais alterações do produto continuam funcionando. Tente novamente após a migração do banco.'
+export type ProdutoUpdatePayloadSemAtacadoLegado = Omit<
+  ProdutoUpdatePayload,
+  'preco_atacado' | 'quantidade_gatilho_atacado'
+>
 
-/** O par (preço, gatilho) do catálogo — a invariante que a RPC protege. */
-function parAtacado(p: {
-  preco_atacado?: number | null
-  quantidade_gatilho_atacado?: number | null
-}) {
-  return {
-    preco: p.preco_atacado ?? null,
-    gatilho: p.quantidade_gatilho_atacado ?? null,
-  }
+/**
+ * Onda 2 removeu os inputs de `preco_atacado` / gatilho; a SSoT da venda é
+ * `precos_atacado` via FaixasAtacadoEditor. O form ainda reenvia o par legado
+ * oculto — se a RPC receber essas chaves + `p_faixa`, ela faz upsert (ou, com
+ * `p_faixa` null, desativa a faixa do gatilho). Omitir as chaves deixa as
+ * faixas intocadas.
+ */
+export function payloadUpdateSemAtacadoLegado(
+  payload: ProdutoUpdatePayload,
+): ProdutoUpdatePayloadSemAtacadoLegado {
+  const { preco_atacado, quantidade_gatilho_atacado, ...rest } = payload
+  void preco_atacado
+  void quantidade_gatilho_atacado
+  return rest
 }
 
+/**
+ * UPDATE de catálogo. Faixas de atacado não são derivadas do par legado:
+ * CREATE ainda usa `derivarFaixaAtacado`; edição passa `p_faixa` null.
+ *
+ * Banco sem a RPC: um único `UPDATE produtos` sem as colunas de atacado —
+ * atômico, sem estado parcial em `precos_atacado`.
+ */
 function defaultUpdateRow(supabase: SupabaseClient): UpdateProdutoRowFn {
   return async ({ id, lojaId, payload }) => {
+    const payloadRpc = payloadUpdateSemAtacadoLegado(payload)
     const { error } = await supabase.rpc('atualizar_produto_com_faixa_atacado', {
       p_produto_id: id,
-      p_payload: payload,
+      p_payload: payloadRpc,
       // `p_ator_id` NÃO é enviado: este é o client de sessão, então a RPC
       // resolve o ator por `auth.uid()`. Enviar `null` explicitamente divergia
       // do tipo gerado (que aceita ausente ou string) sem que o typecheck
       // pudesse acusar, porque o client é genérico.
-      p_faixa: derivarFaixaAtacado(payload),
+      p_faixa: null,
     })
 
     if (!rpcAusente(error)) return { error }
 
-    // ── Banco ainda sem a RPC ────────────────────────────────────────────────
-    // Só recusa se o par de atacado for REALMENTE mudar. Comparar com o valor
-    // atual (em vez de olhar só a presença das chaves) evita bloquear edições
-    // que apenas reenviam o mesmo atacado — o formulário sempre manda o estado
-    // completo, então as chaves estão sempre presentes.
-    const { data: atual, error: erroLeitura } = await supabase
-      .from('produtos')
-      .select('preco_atacado, quantidade_gatilho_atacado')
-      .eq('id', id)
-      .eq('loja_id', lojaId)
-      .maybeSingle()
-    if (erroLeitura) return { error: erroLeitura }
-
-    const antes = parAtacado((atual ?? {}) as Record<string, number | null>)
-    const depois = parAtacado(payload)
-    const mudaAtacado =
-      Number(antes.preco ?? 0) !== Number(depois.preco ?? 0) ||
-      Number(antes.gatilho ?? 0) !== Number(depois.gatilho ?? 0)
-
-    if (mudaAtacado) {
-      // Recusa ANTES de qualquer escrita: nada é persistido, logo não há
-      // estado parcial possível.
-      return { error: { message: MSG_ATACADO_REQUER_MIGRATION, code: 'ATACADO_REQUER_MIGRATION' } }
-    }
-
-    // Instrução única — atômica por si.
     const { error: erroDireto } = await supabase
       .from('produtos')
-      .update(payload)
+      .update(payloadRpc)
       .eq('id', id)
       .eq('loja_id', lojaId)
     return { error: erroDireto }

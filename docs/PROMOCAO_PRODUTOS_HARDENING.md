@@ -47,13 +47,13 @@ coluna garantida pela #1; a #5 depende das colunas de autoria já existentes.
 
 | Estado | Comportamento |
 |---|---|
-| App novo, banco antigo | Edição que **não** altera o par de atacado: funciona (é uma instrução única, atômica). Edição que **altera** `preco_atacado`/`quantidade_gatilho_atacado`: **recusada antes de qualquer escrita**, com mensagem explícita. Nada é gravado, logo não há estado parcial. |
+| App novo, banco antigo | Edição de catálogo **omite** `preco_atacado`/`quantidade_gatilho_atacado` e manda `p_faixa` null. Sem a RPC, um único `UPDATE produtos` das demais colunas — as faixas em `precos_atacado` não são tocadas. |
 | Banco novo, app antigo | App antigo faz `UPDATE` direto e sincroniza a faixa em duas etapas, como sempre fez. Continua sujeito ao estado parcial que ele sempre teve — mais um motivo para promover o app logo após o banco. |
 | App novo, banco novo | Caminho transacional completo. |
 
 **Ordem obrigatória: banco primeiro, app depois.** Publicar o app antes não
-corrompe dado algum, mas bloqueia a edição de preço de atacado até a migration
-entrar. O rollback do app é seguro em qualquer momento.
+corrompe faixas de atacado: o update de catálogo deixa `precos_atacado` em paz.
+O rollback do app é seguro em qualquer momento.
 
 Prova reproduzível:
 

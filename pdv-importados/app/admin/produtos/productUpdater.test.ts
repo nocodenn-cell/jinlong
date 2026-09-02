@@ -15,6 +15,7 @@ import {
   createProductUpdater,
   derivarFaixaAtacado,
   mapUpdateProductInputToRow,
+  payloadUpdateSemAtacadoLegado,
 } from './productUpdater'
 
 const catalogRow: ProductCatalogBasics = {
@@ -72,6 +73,20 @@ describe('productUpdater — mapping', () => {
     })
     expect(row).not.toHaveProperty('estoque_inicial_quantidade')
     expect(row).not.toHaveProperty('quantidade')
+  })
+
+  it('payloadUpdateSemAtacadoLegado omite o par legado que a RPC usa para upsert/desativar faixa', () => {
+    const row = mapUpdateProductInputToRow({
+      nome: 'X',
+      precoVarejo: 100,
+      precoAtacado: 80,
+      quantidadeGatilhoAtacado: 10,
+    })
+    const semLegado = payloadUpdateSemAtacadoLegado(row)
+    expect(semLegado).not.toHaveProperty('preco_atacado')
+    expect(semLegado).not.toHaveProperty('quantidade_gatilho_atacado')
+    expect(semLegado.nome).toBe('X')
+    expect(semLegado.preco_varejo).toBe(100)
   })
 
   it('omite lifecycle quando statusPublicacao não vem no input', () => {
@@ -470,42 +485,30 @@ describe('mapeamento dos erros da RPC transacional', () => {
 })
 
 /**
- * Sequenciamento app ↔ banco: esta versão da aplicação não pode quebrar a
- * edição de produto quando publicada ANTES da migration que cria a RPC
- * transacional. Ver docs/PROMOCAO_PRODUTOS_HARDENING.md §3.
+ * Edição de catálogo não sincroniza faixa a partir do par legado oculto
+ * (Onda 2). Banco sem RPC: UPDATE direto sem essas colunas.
  */
-/**
- * Banco SEM a RPC transacional. A prova de que nada é gravado está em
- * `backend/scripts/fallback-sem-rpc-real.mjs`, contra o Postgres de verdade —
- * aqui cobre-se a DECISÃO: quando recusa, quando deixa passar, e que um erro
- * real da RPC não é confundido com "RPC ausente".
- */
-describe('banco sem a RPC transacional: recusa em vez de estado parcial', () => {
-  function fakeSemRpc(
-    codigo: string,
-    mensagem: string,
-    atacadoAtual: { preco_atacado: number | null; quantidade_gatilho_atacado: number | null },
-  ) {
-    const escritas: string[] = []
+describe('edição de catálogo não regrava faixa a partir do atacado legado', () => {
+  type Escrita = { tabela: string; row?: Record<string, unknown> }
+
+  function fakeSemRpc(codigo: string, mensagem: string) {
+    const escritas: Escrita[] = []
     const supabase = {
       rpc: vi.fn(async () => ({ error: { code: codigo, message: mensagem } })),
       from: (tabela: string) => {
         if (tabela === 'precos_atacado') {
-          escritas.push('precos_atacado')
+          escritas.push({ tabela: 'precos_atacado' })
           throw new Error('não deve tocar precos_atacado')
         }
         return {
-          select: () => ({
-            eq: () => ({ eq: () => ({ maybeSingle: async () => ({ data: atacadoAtual, error: null }) }) }),
-          }),
-          update: () => ({
-            eq: () => ({
-              eq: async () => {
-                escritas.push('produtos')
-                return { error: null }
-              },
-            }),
-          }),
+          update: (row: Record<string, unknown>) => {
+            escritas.push({ tabela: 'produtos', row })
+            return {
+              eq: () => ({
+                eq: async () => ({ error: null }),
+              }),
+            }
+          },
         }
       },
     }
@@ -515,12 +518,9 @@ describe('banco sem a RPC transacional: recusa em vez de estado parcial', () => 
   const AUSENTE_COD = 'PGRST202'
   const AUSENTE_MSG = 'Could not find the function public.atualizar_produto_com_faixa_atacado'
 
-  it('mudar o par de atacado é RECUSADO e NENHUMA escrita é emitida', async () => {
-    const { supabase, escritas } = fakeSemRpc(AUSENTE_COD, AUSENTE_MSG, {
-      preco_atacado: 30,
-      quantidade_gatilho_atacado: 10,
-    })
-    const { createProductUpdater: criar, MSG_ATACADO_REQUER_MIGRATION } = await import('./productUpdater')
+  it('par legado divergente no input não recusa e não escreve colunas de atacado', async () => {
+    const { supabase, escritas } = fakeSemRpc(AUSENTE_COD, AUSENTE_MSG)
+    const { createProductUpdater: criar } = await import('./productUpdater')
     const getById = vi.fn(async () => ({ ok: true as const, product: catalogRow }))
     const updater = criar(supabase as never, { reader: { getById } })
 
@@ -530,20 +530,16 @@ describe('banco sem a RPC transacional: recusa em vez de estado parcial', () => 
       input: { nome: 'Produto A', precoVarejo: 50, precoAtacado: 25, quantidadeGatilhoAtacado: 20 },
     })
 
-    expect(r.ok).toBe(false)
-    if (r.ok) return
-    // `mapUpdateDbError` prefixa a seção ("Produto: ..."), então compara-se por
-    // conteúdo em vez de igualdade exata.
-    expect(r.error).toContain(MSG_ATACADO_REQUER_MIGRATION)
-    // O ponto central: zero escritas. Sem escrita, não há estado parcial.
-    expect(escritas).toEqual([])
+    expect(r.ok).toBe(true)
+    expect(escritas).toHaveLength(1)
+    expect(escritas[0]!.tabela).toBe('produtos')
+    expect(escritas[0]!.row).not.toHaveProperty('preco_atacado')
+    expect(escritas[0]!.row).not.toHaveProperty('quantidade_gatilho_atacado')
+    expect(escritas[0]!.row?.nome).toBe('Produto A')
   })
 
-  it('edição que NÃO muda o par de atacado passa (instrução única, atômica)', async () => {
-    const { supabase, escritas } = fakeSemRpc(AUSENTE_COD, AUSENTE_MSG, {
-      preco_atacado: 25,
-      quantidade_gatilho_atacado: 20,
-    })
+  it('edição de nome passa (instrução única, sem colunas de atacado)', async () => {
+    const { supabase, escritas } = fakeSemRpc(AUSENTE_COD, AUSENTE_MSG)
     const { createProductUpdater: criar } = await import('./productUpdater')
     const getById = vi.fn(async () => ({ ok: true as const, product: catalogRow }))
     const updater = criar(supabase as never, { reader: { getById } })
@@ -555,14 +551,13 @@ describe('banco sem a RPC transacional: recusa em vez de estado parcial', () => 
     })
 
     expect(r.ok).toBe(true)
-    expect(escritas).toEqual(['produtos'])
+    expect(escritas.map((e) => e.tabela)).toEqual(['produtos'])
   })
 
-  it('42883 (undefined_function) também é tratado como banco antigo', async () => {
+  it('42883 (undefined_function) também cai no UPDATE direto sem atacado', async () => {
     const { supabase, escritas } = fakeSemRpc(
       '42883',
       'function public.atualizar_produto_com_faixa_atacado(...) does not exist',
-      { preco_atacado: 30, quantidade_gatilho_atacado: 10 },
     )
     const { createProductUpdater: criar } = await import('./productUpdater')
     const getById = vi.fn(async () => ({ ok: true as const, product: catalogRow }))
@@ -573,8 +568,9 @@ describe('banco sem a RPC transacional: recusa em vez de estado parcial', () => 
       lojaId: 'loja-1',
       input: { nome: 'Produto A', precoVarejo: 50, precoAtacado: 99, quantidadeGatilhoAtacado: 5 },
     })
-    expect(r.ok).toBe(false)
-    expect(escritas).toEqual([])
+    expect(r.ok).toBe(true)
+    expect(escritas.map((e) => e.tabela)).toEqual(['produtos'])
+    expect(escritas[0]!.row).not.toHaveProperty('preco_atacado')
   })
 
   it('erro REAL da RPC não vira caminho sem-RPC — não mascara falha', async () => {
@@ -598,7 +594,7 @@ describe('banco sem a RPC transacional: recusa em vez de estado parcial', () => 
     expect(r.code).toBe(PRODUCT_ERROR_CODES.NOT_FOUND)
   })
 
-  it('a RPC é chamada SEM p_ator_id (o ator vem de auth.uid())', async () => {
+  it('RPC de update não deriva p_faixa nem reenvia o par legado', async () => {
     const rpcSpy = vi.fn(async () => ({ error: null }))
     const supabase = { rpc: rpcSpy, from: () => ({}) }
     const { createProductUpdater: criar } = await import('./productUpdater')
@@ -612,9 +608,12 @@ describe('banco sem a RPC transacional: recusa em vez de estado parcial', () => 
     })
 
     const args = rpcSpy.mock.calls[0]![1] as Record<string, unknown>
-    // Enviar `p_ator_id: null` divergia do tipo gerado (ausente | string) sem
-    // que o typecheck pudesse acusar, porque o client é genérico.
     expect(Object.prototype.hasOwnProperty.call(args, 'p_ator_id')).toBe(false)
-    expect(args.p_faixa).toEqual({ quantidade_minima: 10, preco_unitario: 30 })
+    expect(args.p_faixa).toBeNull()
+    const payload = args.p_payload as Record<string, unknown>
+    expect(payload).not.toHaveProperty('preco_atacado')
+    expect(payload).not.toHaveProperty('quantidade_gatilho_atacado')
+    expect(payload.nome).toBe('Produto A')
+    expect(payload.preco_varejo).toBe(50)
   })
 })

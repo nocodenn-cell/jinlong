@@ -141,18 +141,10 @@ afterAll(async () => {
 }, 60_000)
 
 describe('updater REAL contra banco sem a RPC transacional', () => {
-  it('mudar o par de atacado é recusado e NADA é gravado no banco', async (ctx) => {
-    // `ctx.skip()` marca SKIPPED no relatório; `return` marcava PASSOU.
+  it('par legado divergente no input NÃO regrava faixa nem colunas de atacado', async (ctx) => {
     if (!disponivel) return ctx.skip()
 
-    // O updater REAL, com o client REAL. Nada de mock aqui.
     const updater = createProductUpdater(admin)
-
-    const antes = await admin
-      .from('produtos')
-      .select('nome, preco_atacado, quantidade_gatilho_atacado')
-      .eq('id', produtoId)
-      .single()
 
     const r = await updater.update({
       id: produtoId,
@@ -165,18 +157,16 @@ describe('updater REAL contra banco sem a RPC transacional', () => {
       },
     })
 
-    expect(r.ok).toBe(false)
-    if (r.ok) return
-    expect(r.error).toContain('atacado')
+    expect(r.ok).toBe(true)
 
-    // A prova: o banco não mudou em NADA — nem o nome, que fazia parte do mesmo
-    // payload. Nenhuma escrita parcial.
     const depois = await admin
       .from('produtos')
       .select('nome, preco_atacado, quantidade_gatilho_atacado')
       .eq('id', produtoId)
       .single()
-    expect(depois.data).toEqual(antes.data)
+    expect(depois.data!.nome).toBe(`Produto ${SUF} tentativa`)
+    expect(Number(depois.data!.preco_atacado)).toBe(30)
+    expect(Number(depois.data!.quantidade_gatilho_atacado)).toBe(10)
 
     const faixas = await admin
       .from('precos_atacado')

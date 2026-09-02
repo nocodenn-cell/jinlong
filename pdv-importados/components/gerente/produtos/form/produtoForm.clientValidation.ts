@@ -50,13 +50,7 @@ export function validarProdutoFormClient(
     }
   }
 
-  if (
-    input.precoAtacado != null &&
-    input.precoVarejo != null &&
-    input.precoAtacado >= input.precoVarejo
-  ) {
-    return { campo: 'preco_atacado', mensagem: input.messages.atacado_maior_varejo }
-  }
-
+  // Onda 2 removeu o input de atacado legado. Não bloquear save por um
+  // valor oculto (ex.: baixar varejo abaixo do `preco_atacado` residual).
   return null
 }
