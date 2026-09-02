@@ -99,7 +99,7 @@ describe('validateUpdateProductCommand', () => {
     ).toEqual({ ok: false, code: PRODUCT_ERROR_CODES.PRICE_NOT_POSITIVE })
   })
 
-  it('BARCODE_TOO_SHORT / ATACADO_INVALID / UPDATE_WITHOUT_ID', () => {
+  it('BARCODE_TOO_SHORT / UPDATE_WITHOUT_ID', () => {
     expect(
       validateUpdateProductCommand({
         id: 'p1',
@@ -109,17 +109,20 @@ describe('validateUpdateProductCommand', () => {
     ).toEqual({ ok: false, code: PRODUCT_ERROR_CODES.BARCODE_TOO_SHORT })
     expect(
       validateUpdateProductCommand({
-        id: 'p1',
-        lojaId: 'l1',
-        input: { nome: 'Ok', precoVarejo: 10, precoAtacado: 10 },
-      }),
-    ).toEqual({ ok: false, code: PRODUCT_ERROR_CODES.ATACADO_INVALID })
-    expect(
-      validateUpdateProductCommand({
         id: '',
         lojaId: 'l1',
         input: { nome: 'Ok', precoVarejo: 1 },
       }),
     ).toEqual({ ok: false, code: PRODUCT_ERROR_CODES.UPDATE_WITHOUT_ID })
+  })
+
+  it('não rejeita precoAtacado residual >= varejo (campo legado fora da UI)', () => {
+    expect(
+      validateUpdateProductCommand({
+        id: 'p1',
+        lojaId: 'l1',
+        input: { nome: 'Ok', precoVarejo: 10, precoAtacado: 10 },
+      }),
+    ).toEqual({ ok: true })
   })
 })

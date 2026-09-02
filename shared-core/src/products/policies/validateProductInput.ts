@@ -14,6 +14,12 @@ function nomeInvalido(nome: string | undefined): boolean {
   return (nome ?? '').trim().length < 2
 }
 
+function atacadoInvalido(atacado: number | null | undefined, precoVarejo: number): boolean {
+  if (atacado === undefined || atacado === null) return false
+  const a = Number(atacado)
+  return Number.isFinite(a) && a >= precoVarejo
+}
+
 /**
  * Validação do comando de criação (RPC 270 na borda).
  * Preço: finito e >= 0 (espelho CRIAR_PRODUTO_PRECO).
@@ -36,12 +42,8 @@ export function validateCreateProductCommand(
     return { ok: false, code: PRODUCT_ERROR_CODES.PRICE_INVALID }
   }
 
-  const atacado = command.input.precoAtacado
-  if (atacado !== undefined && atacado !== null) {
-    const a = Number(atacado)
-    if (Number.isFinite(a) && a >= preco) {
-      return { ok: false, code: PRODUCT_ERROR_CODES.ATACADO_INVALID }
-    }
+  if (atacadoInvalido(command.input.precoAtacado, preco)) {
+    return { ok: false, code: PRODUCT_ERROR_CODES.ATACADO_INVALID }
   }
 
   const estoque = command.input.estoqueInicial
@@ -82,13 +84,6 @@ export function validateUpdateProductCommand(
     return { ok: false, code: PRODUCT_ERROR_CODES.BARCODE_TOO_SHORT }
   }
 
-  const atacado = command.input.precoAtacado
-  if (atacado !== undefined && atacado !== null) {
-    const a = Number(atacado)
-    if (Number.isFinite(a) && a >= preco) {
-      return { ok: false, code: PRODUCT_ERROR_CODES.ATACADO_INVALID }
-    }
-  }
-
+  // Onda 2: par legado oculto não valida contra varejo — faixas são SSoT.
   return { ok: true }
 }
