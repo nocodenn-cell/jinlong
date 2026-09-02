@@ -1,3 +1,8 @@
+// AUTO_ENQUEUE_FISCAL_ON_SALE tem default `false` (lib/config/caixaSalesRuntimeConfig.ts) —
+// precisa ser forçado a `true` ANTES do import de caixaVendas.impl.ts para que
+// finalizarVendaCaixaImpl enfileire documento fiscal nesta suíte.
+process.env.AUTO_ENQUEUE_FISCAL_ON_SALE = 'true'
+
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createClient } from '@/lib/supabase/server'
 import { finalizarVendaCaixaImpl } from './caixaVendas.impl'
@@ -97,12 +102,12 @@ describe('Consistência de Vendas - PDV', () => {
       expect(venda).toBeTruthy()
       expect(venda?.status).toBe('CONCLUIDA')
 
-      const { data: itens } = await supabase.from('venda_itens').select('*').eq('venda_id', vendaId)
+      const { data: itens } = await supabase.from('itens_venda').select('*').eq('venda_id', vendaId)
 
       expect(itens).toHaveLength(1)
 
       const { data: fiscal } = await supabase
-        .from('fiscal_fila')
+        .from('documentos_fiscais_pendentes')
         .select('*')
         .eq('venda_id', vendaId)
         .maybeSingle()
