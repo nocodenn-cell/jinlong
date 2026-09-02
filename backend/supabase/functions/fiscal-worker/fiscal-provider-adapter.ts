@@ -367,6 +367,13 @@ export class FocusProvider implements FiscalProvider {
     const { body: known, gaps } = buildFocusNfceEnvelope(doc.payload);
     return {
       ...known,
+      // Gate C2.5: `data_emissao` NUNCA vem do snapshot congelado
+      // (`payload.data_venda`) — a Focus exige data/hora próxima do momento
+      // real do envio HTTP, com timezone. Calculado aqui, no instante exato
+      // do POST, não em C1 (que corretamente continua congelando só
+      // `data_venda`, o fato de negócio — quando a venda aconteceu). Ver
+      // docs/audits/AUDITORIA_PRONTIDAO_FOCUS_NFE_FASE_C_GATE_C2_5.md.
+      data_emissao: new Date().toISOString(),
       ref,
       documento_id: doc.id,
       venda_id: doc.venda_id,

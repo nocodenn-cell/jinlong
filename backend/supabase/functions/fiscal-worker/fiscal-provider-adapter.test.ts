@@ -245,3 +245,89 @@ Deno.test("24. Authorization real nunca aparece no corpo enviado (só no header)
     restore();
   }
 });
+
+// ---------------------------------------------------------------------------
+// Gate C2.5 — evidência oficial adicional (modalidade_frete/local_destino/
+// presenca_comprador/natureza_operacao/data_emissao). Testes novos.
+// ---------------------------------------------------------------------------
+
+Deno.test("C2.5.1 — NFC-e presencial sem frete: corpo real do POST tem modalidade_frete=9 e presenca_comprador=1", async () => {
+  const { calls, restore } = installFakeFetch(() => ({ status: 200, body: { chave: "c", protocolo: "p" } }));
+  try {
+    const provider = new FocusProvider();
+    await provider.callProvider(doc(), CFG);
+    const sent = JSON.parse(calls[0].body!);
+    assertEquals(sent.modalidade_frete, "9");
+    assertEquals(sent.presenca_comprador, "1");
+    assertEquals(sent.local_destino, "1");
+  } finally {
+    restore();
+  }
+});
+
+Deno.test("C2.5.2 — NFC-e anônima: sem destinatario no snapshot, corpo não referencia destinatário e não quebra", async () => {
+  const { calls, restore } = installFakeFetch(() => ({ status: 200, body: { chave: "c", protocolo: "p" } }));
+  try {
+    const provider = new FocusProvider();
+    const anon = doc({ payload: { emitente: { cnpj: "12345678000199" } } }); // sem cliente_id/destinatario
+    const result = await provider.callProvider(anon, CFG);
+    assertEquals(result.ok, true);
+    const sent = JSON.parse(calls[0].body!);
+    assertEquals(sent.destinatario, undefined);
+  } finally {
+    restore();
+  }
+});
+
+Deno.test("C2.5.3 — NFC-e identificada: destinatario presente no snapshot não quebra a emissão (schema Focus continua gap, mas não impede o POST)", async () => {
+  const { calls, restore } = installFakeFetch(() => ({ status: 200, body: { chave: "c", protocolo: "p" } }));
+  try {
+    const provider = new FocusProvider();
+    const identificada = doc({
+      payload: {
+        emitente: { cnpj: "12345678000199" },
+        destinatario: { cliente_id: "cli-1", nome: "Cliente Teste", documento: "12345678901", tipo: "PF" },
+      },
+    });
+    const result = await provider.callProvider(identificada, CFG);
+    assertEquals(result.ok, true);
+    const sent = JSON.parse(calls[0].body!);
+    // Gap confirmado: o corpo real ainda não inclui um objeto "destinatario"
+    // formatado para a Focus, porque o schema não foi confirmado (Gate C2.5).
+    assertEquals(sent.destinatario, undefined);
+  } finally {
+    restore();
+  }
+});
+
+Deno.test("15. consulta retorna estado ambíguo (2xx sem chave) -> 'processando', não 'rejeitado' nem erro", async () => {
+  const { restore } = installFakeFetch(() => ({ status: 200, body: { status: "processando_autorizacao" } }));
+  try {
+    const provider = new FocusProvider();
+    const estado = await provider.consultarDocumento("ref-x", "NFE", CFG);
+    assertEquals(estado.kind, "processando");
+  } finally {
+    restore();
+  }
+});
+
+Deno.test("17. data_emissao é calculada no momento do envio (próxima de 'agora'), nunca lida do data_venda congelado", async () => {
+  const { calls, restore } = installFakeFetch(() => ({ status: 200, body: { chave: "c", protocolo: "p" } }));
+  try {
+    const provider = new FocusProvider();
+    // Venda "congelada" há muito tempo — não pode vazar para data_emissao.
+    const vendaAntiga = doc({ payload: { emitente: { cnpj: "12345678000199" }, data_venda: "2020-01-01T00:00:00.000Z" } });
+    const antes = Date.now();
+    await provider.callProvider(vendaAntiga, CFG);
+    const depois = Date.now();
+    const sent = JSON.parse(calls[0].body!);
+    assertExists(sent.data_emissao);
+    assertEquals(sent.data_emissao === "2020-01-01T00:00:00.000Z", false);
+    const emissaoMs = new Date(sent.data_emissao).getTime();
+    assertEquals(emissaoMs >= antes && emissaoMs <= depois, true, `data_emissao (${sent.data_emissao}) deveria estar entre ${new Date(antes).toISOString()} e ${new Date(depois).toISOString()}`);
+    // Timezone explícito (Z ou offset) — exigido pela documentação oficial.
+    assertEquals(/Z$|[+-]\d{2}:\d{2}$/.test(sent.data_emissao), true);
+  } finally {
+    restore();
+  }
+});
