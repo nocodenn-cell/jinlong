@@ -40,13 +40,29 @@ export type FiscalNormalizedError = {
  * do adapter para o domínio (index.ts, RPCs, timeline) — nomes/campos da Focus
  * ficam contidos aqui.
  *
- * Nota honesta (não inventada): a distinção entre `rejeitado` e `erro_definitivo`,
- * e entre `processando` (via consulta) e outras respostas ambíguas, usa heurística
- * best-effort (presença/ausência de chave+protocolo reconhecíveis) porque a
- * documentação fornecida a esta missão não incluiu o schema exato do corpo de
- * resposta da Focus (nem para emissão nem para consulta) — só a lista de
- * informações que a consulta "pode retornar". Validar contra resposta real de
- * homologação antes de confiar cegamente nesta distinção em produção.
+ * Nota honesta, atualizada no Gate C2.5 (2ª rodada): a documentação oficial
+ * confirma que a consulta NFC-e/NF-e retorna, entre outros, os estados
+ * "Processando autorização", "Autorizada", "Autorizada completa", "Cancelada"
+ * e "Erro autorização" (além de 404 = referência não encontrada — CONFIRMADO,
+ * mapeado 1:1 para `nao_encontrado`, não mais heurística). Isso confirma que
+ * HTTP 200 sozinho não determina o estado — o body precisa ser interpretado —
+ * mas o JSON exato de cada exemplo não foi obtido nesta sessão (WebFetch/
+ * WebSearch indisponíveis). Duas lacunas residuais, deliberadamente NÃO
+ * resolvidas por heurística nova:
+ *   1. Não há tipo `cancelado` neste union — "Cancelada" é um estado real de
+ *      consulta que hoje cairia em `processando` (2xx sem chave) ou
+ *      `erro_definitivo`, dependendo de como a Focus estrutura o body — não
+ *      adicionado sem saber detectar.
+ *   2. `classifyFocusConsultaResponse` trata QUALQUER 2xx sem chave/protocolo
+ *      como `processando` — mas agora sabemos que "Erro autorização" também
+ *      pode ser um 2xx sem chave. Isso significa que uma consulta rejeitada
+ *      pode hoje ser classificada incorretamente como "ainda processando" em
+ *      vez de erro. Mantido deliberadamente no lado conservador (nunca
+ *      declarar erro sem certeza) até termos o JSON real que distingue os
+ *      dois casos — mas é um risco residual real, não apenas teórico, e deve
+ *      ser resolvido antes de confiar em reconciliação automática real.
+ * Validar contra resposta real de homologação antes de confiar cegamente
+ * nesta distinção em produção.
  */
 export type FocusRemoteState =
   | {

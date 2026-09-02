@@ -1,132 +1,129 @@
-# Prontidão Focus NFe — Fase C / Gate C2.5: Contrato DTO Fiscal
+# Prontidão Focus NFe — Fase C / Gate C2.5: Contrato DTO Fiscal (fechamento)
 
 **Data:** 2026-09-02
-**Escopo:** fechar os gaps do DTO NFC-e com a evidência oficial adicional colada pelo usuário (`doc.focusnfe.com.br/reference/emitir_nfce`). C1/C2 preservados — nenhuma migration reaberta.
-
-**Limitação declarada logo de início**: `WebFetch`/`WebSearch` foram testados novamente nesta rodada (2 tentativas) e continuam falhando com o mesmo erro de infraestrutura já registrado na Fase B ("issue with the selected model"). Não consegui consultar `https://campos.focusnfe.com.br/nfe/NotaFiscalXML.html` nem obter exemplos de resposta reais. Isso bloqueia **parcialmente** este gate — os itens que dependiam exclusivamente dessa página (items[]/formas_pagamento[]/mapeamento de resposta sem heurística) continuam pendentes, reportados abaixo com precisão, não inventados.
+**Escopo:** fechar os gaps do DTO NFC-e com evidência oficial da Focus, colada pelo usuário em duas rodadas (rodada 1: `doc.focusnfe.com.br/reference/emitir_nfce`; rodada 2: `campos.focusnfe.com.br/nfe/{NotaFiscalXML,ItemNotaFiscalXML,FormaPagamentoXML}.html` + confirmação de 404/estados de consulta). `WebFetch`/`WebSearch` continuam indisponíveis nesta sessão (falha de infraestrutura, testada e confirmada 3x ao longo desta missão) — nada abaixo vem de acesso direto a essas páginas, só do que foi colado. C1/C2 preservados — nenhuma migration reaberta.
 
 ---
 
-## O que fechei com a evidência que o usuário colou nesta mensagem
+## ITEMS — READY (parcial) com gaps precisos
 
-### `natureza_operacao` — DECISÃO (não gap)
+Contrato oficial confirmado (`campos.focusnfe.com.br/nfe/ItemNotaFiscalXML.html`, colado pelo usuário) mapeado para o snapshot C1:
 
-A documentação oficial confirma: se omitido, a Focus aplica seu próprio padrão para venda ao consumidor. O Jinlong não tem hoje nenhuma regra de negócio própria para este campo (não existe em produto/loja/pdv_config — confirmado desde a Fase A). **Decisão: o campo fica deliberadamente ausente do envelope.** O comportamento default documentado passa a pertencer exclusivamente à Focus (infraestrutura), nunca ao domínio Jinlong. Implementado em `fiscal_focus_dto.ts` como `omittedByDesign`, distinto de `gaps` (que significa "falta e precisa ser resolvido") — este é "ausente por decisão correta". Testado (`fiscal_focus_dto.test.ts`, `fiscal-provider-adapter.test.ts`): o campo nunca aparece no corpo HTTP real, com nenhum valor.
-
-### `modalidade_frete` / `local_destino` / `presenca_comprador` — mapeados como constantes de negócio
-
-| Campo | Valor | Evidência do enum | Justificativa Jinlong |
+| FOCUS FIELD | REQUIRED | SNAPSHOT FIELD | STATUS |
 |---|---|---|---|
-| `modalidade_frete` | `"9"` (Sem frete) | Confirmado nesta mensagem | Jinlong é PDV de varejo presencial — em toda a auditoria desta missão (Fase A a C2), não existe nenhuma captura de frete/entrega no domínio |
-| `presenca_comprador` | `"1"` (presencial) | Confirmado nesta mensagem | Mesma razão — "venda no balcão", sem fluxo de entrega no sistema |
-| `local_destino` | `"1"` (operação interna) | Confirmado nesta mensagem | Único valor hoje **detectável**: o snapshot não captura UF do destinatário (nem quando `cliente_id` está presente — `clientes` só tem `nome`/`documento`/`tipo`, sem endereço). Registrado como gap residual (`local_destino_interestadual_exterior`) para o dia em que o Jinlong vender para cliente identificado de fora do estado |
+| `numero_item` | sim | — (computado: índice 1-based no array) | **CONFIRMADO** |
+| `codigo_produto` | sim | `itens[].produto_id` (UUID) | **CONFIRMADO** — nota: `produtos.codigo_interno` seria mais alinhado a "código interno do produto" mas não está no snapshot C1; `produto_id` já satisfaz o contrato formal (identificador interno único, ≤60 chars). Não bloqueante |
+| `codigo_barras_comercial` | não | `itens[].codigo_barras`, só quando formato GTIN-8/12/13/14 | **CONFIRMADO** (opcional) |
+| `codigo_barras_proprio_comercial` | não | — | **N/A** — Jinlong não distingue código GTIN de proprietário no cadastro; nunca preenchido (evita classificar errado) |
+| `descricao` | sim | `itens[].nome` | **CONFIRMADO** |
+| `codigo_ncm` | sim | `itens[].ncm` | **CONFIRMADO o mapeamento** / **PENDENTE REGRA FISCAL a nível de dado** — cadastro Jinlong permite produto sem NCM (Fase A); quando ausente, aquele item específico bloqueia (não inventa) |
+| `cest` | condicional | `itens[].cest` | **CONFIRMADO** (omitido corretamente quando ausente, igual ao "só quando aplicável" da Focus) |
+| `cfop` | sim | `itens[].cfop` | **CONFIRMADO** |
+| `unidade_comercial` | sim | `itens[].unidade_medida` | **CONFIRMADO** — já estava congelado no snapshot C1, não é gap |
+| `quantidade_comercial` | sim | `itens[].quantidade` | **CONFIRMADO** |
+| `valor_unitario_comercial` | sim | `itens[].preco_unitario_original` (valor de lista, pré-desconto) | **CONFIRMADO o campo origem** / ⚠️ escolha de `preco_unitario_original` (não `preco_unitario`) segue convenção padrão NFe (bruto separado de desconto) — **não confirmada campo a campo nesta rodada**, sinalizada para validação em homologação |
+| `valor_bruto` | não | — | **N/A** (omittedByDesign — Focus calcula automaticamente quando ausente, confirmado) |
+| `valor_desconto` | não | `quantidade × itens[].desconto_unitario` | **CONFIRMADO** (mesma ressalva de convenção acima) |
+| `unidade_tributavel`/`quantidade_tributavel`/`valor_unitario_tributavel` | não | — | **N/A** (omittedByDesign — fallback documentado para os campos comerciais) |
+| `inclui_no_total` | não | — | **N/A** (omittedByDesign — default=1 já é o que Jinlong sempre quer) |
+| Grupo ICMS (origem/CSOSN-CST) | sim | `itens[].csosn` | **PENDENTE REGRA FISCAL** — ver TRIBUTAÇÃO |
+| Grupo PIS | sim | `itens[].cst_pis` | **PENDENTE REGRA FISCAL** — ver TRIBUTAÇÃO |
+| Grupo COFINS | sim | `itens[].cst_cofins` | **PENDENTE REGRA FISCAL** — ver TRIBUTAÇÃO |
 
-**Isso não é "inventar CST/CSOSN/CFOP/NCM"** (dado fiscal que exigiria fonte tributária) — é aplicar um enum confirmado a um fato operacional já estabelecido e estável do negócio (PDV presencial, sem frete). Testado.
+**Implementado em `mapSnapshotItemToFocus`** (novo, `fiscal_focus_dto.ts`): mapeia todos os campos CONFIRMADO acima; bloqueia (retorna `item: null`, não um objeto incompleto) quando falta um campo obrigatório sem tributação (`codigo_produto`/`descricao`/`codigo_ncm`/`cfop`/`unidade_comercial`/`quantidade_comercial`/`valor_unitario_comercial`); sempre reporta o gap de tributação (bloqueante para emissão real, não para o resto do mapeamento). Nunca reconsulta `produtos` — só usa o que já está congelado no snapshot C1.
 
-### `data_emissao` — decisão arquitetural (não mudei C1)
+**Veredito ITEMS: READY estruturalmente, BLOCKED para emissão real** (por causa do grupo de tributação, ver abaixo).
 
-**Conclusão**: `data_venda` (congelada no snapshot C1) ≠ `data_emissao` (exigida pela Focus com timezone e janela temporal próxima do envio real). São coisas semanticamente diferentes por definição — a primeira é um fato de negócio imutável (quando a venda aconteceu); a segunda só pode ser calculada no instante em que a requisição HTTP realmente sai, porque uma venda pode ficar pendente (erro, retry, reprocesso manual, reconciliação) por tempo suficiente para que reusar `data_venda` violasse a janela aceita pela Focus — e nesse caso a venda ficaria **presa em erro para sempre**, já que a causa do erro (data fora da janela) nunca mudaria sozinha.
+## PAGAMENTOS — READY (parcial)
 
-**Decisão implementada** (correção ao C2.3, não ao C1): `data_emissao` deixou de ser mapeada a partir de `payload.data_venda` em `fiscal_focus_dto.ts` — passou a ser calculada em `fiscal-provider-adapter.ts`, no momento exato do `POST`/`emitirNfe` (`new Date().toISOString()`), nunca lida de um snapshot congelado. C1 continua intocado: `documentos_fiscais_pendentes.payload.data_venda` continua existindo e correto — é a data da venda, não a da emissão, e essas são responsabilidades diferentes que já estavam corretamente separadas em C1 (eu só as havia confundido no mapeamento de C2.3, agora corrigido). Testado: uma venda com `data_venda` de 2020 gera um `data_emissao` real, dentro da janela de execução do teste, com timezone explícito.
-
----
-
-## CONTRATO ITEMS
-
-**PENDENTE — não pôde ser fechado nesta sessão.**
-
-| FOCUS FIELD | TIPO | REQUIRED? | ORIGEM JINLONG | REGRA | STATUS |
-|---|---|---|---|---|---|
-| (nome de campo Focus para código do produto) | — | — | `payload.itens[].produto_id`/`codigo_barras` | — | **PENDENTE** |
-| (nome de campo Focus para descrição) | — | — | `payload.itens[].nome` | — | **PENDENTE** |
-| (nome de campo Focus para NCM) | — | — | `payload.itens[].ncm` | — | **PENDENTE** |
-| (nome de campo Focus para CEST) | — | — | `payload.itens[].cest` | — | **PENDENTE** |
-| (nome de campo Focus para CFOP) | — | — | `payload.itens[].cfop` | — | **PENDENTE** |
-| (nome de campo Focus para unidade comercial) | — | — | `payload.itens[].unidade_medida` | — | **PENDENTE** |
-| (nome de campo Focus para quantidade) | — | — | `payload.itens[].quantidade` | — | **PENDENTE** |
-| (nome de campo Focus para valor unitário) | — | — | `payload.itens[].preco_unitario` | — | **PENDENTE** |
-| (nome de campo Focus para valor bruto) | — | — | derivável (`quantidade × preco_unitario`) | — | **PENDENTE** |
-| (nome de campo Focus para desconto) | — | — | `payload.itens[].desconto_unitario` | — | **PENDENTE** |
-| (grupo/campos ICMS — origem, CSOSN/CST) | — | — | `payload.itens[].csosn` (Simples Nacional; sem CST para outros regimes — gap já registrado na Fase A) | — | **PENDENTE** |
-| (grupo/campos PIS) | — | — | `payload.itens[].cst_pis` | — | **PENDENTE** |
-| (grupo/campos COFINS) | — | — | `payload.itens[].cst_cofins` | — | **PENDENTE** |
-
-**Motivo:** `https://campos.focusnfe.com.br/nfe/NotaFiscalXML.html` (indicada pelo usuário como fonte oficial completa) não pôde ser consultada — `WebFetch`/`WebSearch` falharam. O Jinlong TEM todos os dados de origem (coluna à direita, já confirmados desde a Fase A/C1) — falta exclusivamente o nome exato de cada campo no JSON da Focus. Não inventei nenhum nome de campo (`codigo_produto`, `descricao`, `uCom`, `qCom` etc. seriam só suposições, ainda que plausíveis por eu conhecer o layout público da NFe brasileira em geral — a Focus pode usar nomes JSON diferentes da tag XML, e eu não tenho como confirmar isso nesta sessão).
-
-## CONTRATO PAGAMENTOS
-
-**PENDENTE — mesmo motivo.**
+Contrato oficial confirmado (`campos.focusnfe.com.br/nfe/FormaPagamentoXML.html` + lista de códigos colada pelo usuário):
 
 | JINLONG | FOCUS | REGRA | EVIDÊNCIA |
 |---|---|---|---|
-| DINHEIRO | — | — | **PENDENTE** — `payload.pagamentos[].forma_pagamento = 'DINHEIRO'` já existe (confirmado C1.5, exemplo real capturado) |
-| PIX | — | — | **PENDENTE** |
-| Cartão | — | — | **PENDENTE** — nem confirmei se o Jinlong distingue crédito/débito hoje (não verificado nesta sessão) |
-| Pagamento misto (split) | — | — | **PENDENTE** — o Jinlong já suporta split de verdade (`payload.pagamentos[]` é array real, múltiplas entradas — confirmado em C1), falta o código Focus para cada forma |
+| `DINHEIRO` | `01` | Direto | Código Jinlong confirmado via seed real (`20260806011719_302_...sql:43`) + código Focus confirmado nesta rodada |
+| `CARTAO_CREDITO` | `03` | Direto para o código; **dados transacionais não capturados** (`tipo_integracao`/`cnpj_credenciadora`/`bandeira_operadora`/`numero_autorizacao` ausentes de `vendas_pagamentos`) | Código Jinlong confirmado; gap de dados transacionais reportado, não inventado |
+| `CARTAO_DEBITO` | `04` | Idem | Idem |
+| `PIX` | — | **PENDENTE REGRA** — Jinlong só tem o enum genérico `PIX` (mesma migration), sem distinguir dinâmico (`17`)/estático (`20`)/automático (`23`). Não mapeado sem essa definição, exatamente como instruído | Confirmado que o Jinlong não guarda modalidade — decisão de produto pendente (qual modalidade a loja realmente usa, ou passar a registrar) |
+| `indicador_pagamento` | `"0"` (à vista) sempre | `payload.pagamentos[]` só contém pagamentos JÁ recebidos no ato da venda (`vendas_pagamentos`, C1) — saldo pendente vira `contas_receber`, documento separado, nunca uma entrada deste array | Derivação estrutural do próprio modelo de dados, não suposição |
+| Pagamento misto | Múltiplas entradas em `formas_pagamento[]` | Cada linha de `payload.pagamentos[]` (já suporta split desde C1) vira uma entrada — PIX no meio bloqueia só a própria entrada, não as demais | Testado |
 
-## CONTRATO RESPOSTAS
+**Implementado em `mapPagamentoToFocus`**. Cartão: código confirmado e enviado; campos transacionais adicionais ficam de fora (gap reportado por linha).
 
-**PENDENTE — mesmo motivo (exemplos oficiais de resposta não acessados).**
+**Veredito PAGAMENTOS: READY** para Dinheiro e Cartão (com gap de dados transacionais no cartão); **BLOCKED** para PIX (decisão de produto pendente, não dado técnico faltando).
 
-O que já está implementado (Gate C2, não heurística nova): classificação por HTTP status (200/201 com chave+protocolo → autorizado; 202 → processando; 404 em consulta → não_encontrado; 5xx/429/408 → erro_transitorio; demais 4xx → erro_definitivo). O que continua **heurística não confirmada** (registrado como tal no código desde C2, não escondido): distinguir "rejeitado" de "erro_definitivo" quando o HTTP é 2xx mas sem chave/protocolo reconhecível — sem os exemplos reais de corpo de resposta (rejeição, referência já utilizada, erro de validação), não consigo fechar isso "sem heurística" como o usuário pediu.
+## TRIBUTAÇÃO — BLOCKED
 
-**Teste "consulta NFC-e rejeitada" (item 5 da lista C2.10) permanece BLOQUEADO** — não resolvido nesta rodada, pelo mesmo motivo de acesso.
+O material colado nesta rodada confirmou os campos NÃO-tributários do item (seção 1) mas **não incluiu os nomes de campo dos grupos ICMS/PIS/COFINS** (a página `NotaFiscalXML.html`/`ItemNotaFiscalXML.html` colada não trouxe essa parte, ou eu não a recebi). Sei que:
+- Regime tributário confirmado no snapshot: `Simples Nacional` (default `pdv_config.regime_tributario`, presente em `emitente.regime_tributario`).
+- CSOSN confirmado no snapshot: `itens[].csosn` (default `'400'`, Simples Nacional).
+- PIS/COFINS confirmados no snapshot: `itens[].cst_pis`/`cst_cofins` (default `'07'` = isento).
 
-## GAPS (resumo)
+O que falta e não foi confirmado: os NOMES de campo JSON do grupo ICMS (provavelmente algo como um objeto `icms` com `origem`/`csosn` ou campos flat `icms_origem`/`icms_csosn` — **não inventado**, genuinamente desconhecido) e dos grupos PIS/COFINS (situação tributária, base de cálculo, alíquota, valor — se aplicável ao CST usado).
 
-| Campo/comportamento | Motivo | O que resolveria |
-|---|---|---|
-| Schema de `items[]` | `campos.focusnfe.com.br` não acessível nesta sessão | Colar o conteúdo da página, ou `WebFetch` voltar a funcionar |
-| Schema de `formas_pagamento[]` | idem | idem |
-| Mapeamento resposta→estado sem heurística | Exemplos oficiais de resposta não acessados | Colar exemplos reais de POST/GET NFC-e/NF-e (sucesso, rejeição, "em processamento", "referência já utilizada") |
-| `local_destino` interestadual/exterior | Snapshot não captura UF do destinatário | Decisão de produto: vale a pena capturar endereço do cliente identificado? (fora do escopo desta missão) |
-| Destinatário — schema Focus | Mesma limitação de `campos.focusnfe.com.br` | idem items[] |
+**Veredito TRIBUTAÇÃO: BLOCKED.** Gap exato: nomes de campo dos grupos ICMS/PIS/COFINS em `campos.focusnfe.com.br/nfe/ItemNotaFiscalXML.html` (seção de tributação, não recebida ainda).
+
+## RESPOSTAS — BLOCKED (com ganho real de precisão)
+
+Confirmado nesta rodada (sem JSON, só os rótulos e a regra geral):
+- **HTTP 200 sozinho não determina o estado** — o body precisa ser interpretado. Isso valida a arquitetura já implementada em C2 (que nunca decidiu só por status), mas não fecha a implementação sem heurística como pedido.
+- **404 = referência não encontrada no provider, não rejeição fiscal** — CONFIRMADO. Já implementado assim desde C2 (`classifyFocusConsultaResponse`, `res.status === 404 → nao_encontrado`) — deixa de ser suposição, vira fato confirmado.
+- **Estados reais de consulta**: "Processando autorização", "Autorizada", "Autorizada completa", "Cancelada", "Erro autorização" (+ 404). Isso é MAIS do que eu sabia antes — em particular, "Cancelada" é um estado que `FocusRemoteState` **não representa hoje** (não adicionei o tipo sem saber detectá-lo — documentado como lacuna explícita em `fiscal_types.ts`).
+- **Risco residual identificado e documentado** (não corrigido, porque corrigir exigiria adivinhar o campo): "Erro autorização" pode ser um 2xx sem chave/protocolo — exatamente o padrão que meu classificador de consulta hoje trata como `processando` (lado conservador). Ou seja, uma consulta genuinamente REJEITADA pode hoje ficar classificada como "ainda processando" em vez de erro. Mantive o comportamento conservador (nunca declarar erro sem certeza) em vez de adivinhar — mas registrei isso como risco real, não teórico, em `fiscal_types.ts`.
+
+**Teste "consulta NFC-e rejeitada" continua BLOQUEADO** — não virou PASS, porque isso exigiria inventar o JSON exato. O usuário já indicou que fornecerá os JSONs separadamente.
+
+**Veredito RESPOSTAS: BLOCKED.** Gap exato: corpo JSON real de cada um dos 5 exemplos de consulta/emissão (NFC-e e NF-e).
+
+## SNAPSHOT — READY
+
+| FOCUS FIELD | REQUIRED | SNAPSHOT FIELD | STATUS |
+|---|---|---|---|
+| `numero_item` | sim | computado | READY |
+| `codigo_produto` | sim | `produto_id` | READY (ver nota codigo_interno acima) |
+| `descricao` | sim | `nome` | READY |
+| `codigo_ncm` | sim | `ncm` | READY (mapeamento); dado pode faltar por produto |
+| `cest` | condicional | `cest` | READY |
+| `cfop` | sim | `cfop` | READY |
+| `unidade_comercial` | sim | `unidade_medida` | **READY — já estava no snapshot C1, não é gap** |
+| `quantidade_comercial` | sim | `quantidade` | READY |
+| `valor_unitario_comercial` | sim | `preco_unitario_original` | READY |
+| `valor_bruto` | não | (omitido) | READY |
+| `valor_desconto` | não | `desconto_unitario` | READY |
+
+**Nenhum campo obrigatório de item está ausente do snapshot C1.** Não precisei reabrir nenhuma migration — confirma que o design do snapshot em C1 já antecipou corretamente o que seria necessário. **Veredito SNAPSHOT: READY.**
+
+---
+
+## DATA EMISSÃO — decisão confirmada, documentando retry/reconciliação
+
+A correção já feita (`data_emissao` calculada no momento real do envio, nunca lida de `payload.data_venda`) está conceitualmente confirmada pelo usuário. `data_venda` (fato histórico imutável) não foi sobrescrita nem afetada — continua só em C1, intocada.
+
+**Como isso interage com o retry-seguro já certificado em C2 (não muda nada, só documentando a coerência):** o C2.7 garante que NUNCA se faz um novo POST sem antes consultar quando `tentativas > 0`. Isso significa que toda vez que um `data_emissao` novo é gerado para um POST, é porque: (a) é a primeira tentativa, ou (b) uma consulta prévia confirmou `nao_encontrado` (Focus genuinamente não processou a tentativa anterior). Em ambos os casos, gerar uma `data_emissao` fresca naquele exato momento é seguro e correto — a garantia de não-duplicação vem inteiramente da `ref` estável (nunca regenerada) e do consultar-antes-de-postar, não da data. `data_emissao` e a proteção contra duplicidade são preocupações ortogonais — uma não enfraquece a outra.
+
+---
+
+## DECISÕES DE NEGÓCIO AINDA NECESSÁRIAS
+
+1. **Modalidade de PIX** que a(s) loja(s) realmente usam (dinâmico/estático/automático) — ou decisão de passar a registrar isso por transação.
+2. **Regra de tributação completa** (grupos ICMS/PIS/COFINS) — depende de fechar o gap de TRIBUTAÇÃO acima primeiro; depois, confirmar que os defaults atuais (CSOSN 400, PIS/COFINS 07) realmente reflete a operação real da primeira loja piloto.
+3. **Dados transacionais de cartão** (se a Focus exigir `bandeira_operadora`/`numero_autorizacao` como obrigatórios para forma `03`/`04`) — decisão de produto: capturar esses dados no PDV, ou confirmar que são de fato opcionais.
+4. **UF do destinatário** — só relevante se/quando o Jinlong vender para cliente identificado fora do estado (hoje não detectável).
 
 ---
 
 ## DIFF
 
-| Arquivo | Mudança |
-|---|---|
-| `fiscal_focus_dto.ts` | `modalidade_frete`/`local_destino`/`presenca_comprador` passam de gap para campo mapeado (constante); `natureza_operacao` movido de gap para `omittedByDesign` (novo campo no tipo de retorno); `data_emissao` removido deste arquivo (não é mais responsabilidade do mapeador de snapshot) |
-| `fiscal-provider-adapter.ts` | `buildEmitBody` passa a calcular `data_emissao = new Date().toISOString()` no momento do envio, não lido do payload |
-| `fiscal_focus_dto.test.ts` | Testes atualizados/novos para os 4 campos fechados |
-| `fiscal-provider-adapter.test.ts` | +6 testes novos (frete/presença/local no corpo real, anônima, identificada, consulta ambígua, data_emissao fresca) |
-
-100% confinado a `backend/supabase/functions/fiscal-worker/` — confirmado por `git status`. C1 (migrations) intocado.
+100% confinado a `backend/supabase/functions/fiscal-worker/` (`fiscal_focus_dto.ts`, `fiscal_focus_dto.test.ts`, `fiscal_types.ts` — comentário). C1 intocado.
 
 ## TESTES
 
-| # | Cenário pedido | Resultado |
-|---|---|---|
-| 1 | NFC-e presencial sem frete | **PASS** |
-| 2 | NFC-e anônima | **PASS** |
-| 3 | NFC-e identificada | **PASS** |
-| 4 | Item fiscal completo do cenário mínimo | **NOT RUN — bloqueado** (schema de item não confirmado) |
-| 5 | Dinheiro | **NOT RUN — bloqueado** |
-| 6 | PIX | **NOT RUN — bloqueado** |
-| 7 | Cartão | **NOT RUN — bloqueado** (nem o suporte Jinlong foi verificado nesta sessão) |
-| 8 | Pagamento misto | **NOT RUN — bloqueado** |
-| 9 | `natureza_operacao` não vira string mágica | **PASS** |
-| 10 | `local_destino` correto | **PASS** |
-| 11 | `modalidade_frete` correto | **PASS** |
-| 12 | `presenca_comprador` correto | **PASS** |
-| 13 | Resposta autorizada | **PASS** (já coberto desde C2) |
-| 14 | Resposta rejeitada | **PASS** (heurística já existente desde C2, não nova) |
-| 15 | Referência em processamento (consulta ambígua) | **PASS** |
-| 16 | Resposta inválida | **PASS** (já coberto desde C2) |
-| 17 | Data de emissão dentro da regra correta | **PASS** |
-
-**13/17 PASS, 4/17 NOT RUN/BLOCKED** (todos os 4 do mesmo motivo: schema de item/pagamento Focus não confirmado). Gates adicionais: `deno check` PASS, `deno test` completo do diretório — **48/48 PASS** (40 anteriores + 8 novos/ajustados desta rodada). `tsc --noEmit` do `pdv-importados` — PASS, sem regressão (nenhum arquivo tocado).
-
----
+`deno check` PASS. `deno test`: **53/53 PASS** (48 anteriores + 5 novos/reescritos desta rodada: item completo, item sem NCM bloqueia, valor_desconto/valor_bruto, GTIN inválido não enviado, dinheiro, PIX pendente, cartão com gap, misto, forma desconhecida). Dos 17 cenários pedidos nesta rodada do gate: item 4 (item completo) agora **PASS**; 5 (dinheiro) **PASS**; 6 (PIX) **PASS** (prova que fica pendente, corretamente); 7 (cartão) **PASS** (prova o código + o gap); 8 (misto) **PASS**. Item "consulta NFC-e rejeitada" continua **NOT RUN**. `tsc --noEmit` do `pdv-importados` — PASS, sem regressão.
 
 ## C2.5 GATE: BLOCKED
 
-**Bloqueador real único, com a menor forma de resolver:**
+Bloqueadores reais restantes, únicos e precisos:
 
-`items[]`/`formas_pagamento[]`/mapeamento de resposta sem heurística dependem do conteúdo de `https://campos.focusnfe.com.br/nfe/NotaFiscalXML.html` e de exemplos reais de resposta da Focus — nenhum dos dois pôde ser acessado nesta sessão (`WebFetch`/`WebSearch` com falha de infraestrutura, mesma falha já registrada na Fase B).
+1. **TRIBUTAÇÃO** — nomes de campo dos grupos ICMS/PIS/COFINS em `ItemNotaFiscalXML.html` (seção de tributação não recebida).
+2. **RESPOSTAS** — corpo JSON real dos 5 exemplos de consulta/emissão (NFC-e e NF-e) — o usuário já indicou que vai fornecer separadamente.
 
-**Menor correção**: colar aqui o conteúdo relevante (mesmo mecanismo que já destravou a Fase B) — nomes de campo de `items[]`/`formas_pagamento[]` da página indicada, e/ou exemplos de resposta (sucesso, rejeição, referência já usada, erro de validação) de POST/GET NFC-e e NF-e. Com isso eu fecho C2.5.1/C2.5.2/C2.5.4 na mesma sessão, sem reabrir o que já foi fechado aqui (`natureza_operacao`, frete/local/presença, `data_emissao`).
-
-Parado. Não vou iniciar C3, não vou chamar a Focus, não vou aplicar produção, não vou fazer push/merge. Fazendo commit do que foi fechado nesta rodada (mudança real, testada, não especulativa) e aguardando.
+Nenhum valor foi inventado para transformar isso em PASS. Tudo que pôde ser fechado com o material recebido (ITEMS estrutural, PAGAMENTOS exceto PIX, SNAPSHOT, `natureza_operacao`, frete/local/presença, `data_emissao`) foi fechado e testado nesta rodada. Parado aqui — não vou iniciar C3, não vou chamar a Focus, não vou aplicar produção, não vou fazer push/merge. Fazendo commit do progresso real desta rodada.

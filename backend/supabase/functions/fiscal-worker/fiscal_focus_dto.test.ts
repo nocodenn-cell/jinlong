@@ -1,26 +1,36 @@
-// Onda C2.3, fechada parcialmente no Gate C2.5 com evidência oficial adicional
-// (modalidade_frete/local_destino/presenca_comprador/natureza_operacao). O
-// mapeador nunca inventa campo/valor não confirmado — natureza_operacao em
-// particular nunca aparece populado com "VENDA" nem qualquer outro default
-// mágico: fica AUSENTE por decisão documentada (Focus aplica o próprio
-// default quando omitido — confirmado pela documentação oficial).
+// Onda C2.3, fechada em 2 rodadas do Gate C2.5 com evidência oficial da Focus
+// (doc.focusnfe.com.br + campos.focusnfe.com.br). O mapeador nunca inventa
+// campo/valor não confirmado — natureza_operacao em particular nunca aparece
+// populado com "VENDA" nem qualquer default mágico.
 
 import { assertEquals, assertExists } from "https://deno.land/std@0.208.0/assert/mod.ts";
-import { buildFocusNfceEnvelope, gapsEstruturais, omittedByDesign } from "./fiscal_focus_dto.ts";
+import { buildFocusNfceEnvelope, mapPagamentoToFocus, mapSnapshotItemToFocus, omittedByDesign } from "./fiscal_focus_dto.ts";
+
+function itemCompleto(overrides: Record<string, unknown> = {}) {
+  return {
+    produto_id: "22222222-2222-4222-8222-222222222222",
+    nome: "Umidificador",
+    codigo_barras: "7898512340004",
+    quantidade: 2,
+    preco_unitario_original: 68,
+    preco_unitario: 68,
+    desconto_unitario: 0,
+    tipo_preco: "VAREJO",
+    unidade_medida: "UN",
+    ncm: "85094000",
+    cfop: "5102",
+    csosn: "102",
+    cest: "1234567",
+    cst_pis: "01",
+    cst_cofins: "01",
+    ...overrides,
+  };
+}
 
 Deno.test("mapeia cnpj_emitente quando o snapshot tem o dado", () => {
-  const payload = { emitente: { cnpj: "12345678000199" } };
+  const payload = { emitente: { cnpj: "12345678000199" }, itens: [itemCompleto()], pagamentos: [{ forma_pagamento: "DINHEIRO", valor: 136 }] };
   const { body } = buildFocusNfceEnvelope(payload);
   assertEquals(body.cnpj_emitente, "12345678000199");
-});
-
-Deno.test("payload nulo -> cnpj_emitente vira gap; constantes de negócio continuam presentes", () => {
-  const { body, gaps } = buildFocusNfceEnvelope(null);
-  assertEquals(body.cnpj_emitente, undefined);
-  assertEquals(gaps.some((g) => g.campo === "cnpj_emitente"), true);
-  assertEquals(body.modalidade_frete, "9");
-  assertEquals(body.local_destino, "1");
-  assertEquals(body.presenca_comprador, "1");
 });
 
 Deno.test("9. natureza_operacao NUNCA é populado — ausente por decisão, não 'VENDA' nem qualquer string mágica", () => {
@@ -33,53 +43,114 @@ Deno.test("9. natureza_operacao NUNCA é populado — ausente por decisão, não
   assertEquals(decisao!.motivo.includes("Focus aplica seu próprio padrão"), true);
 });
 
-Deno.test("11. local_destino confirmado — '1' (operação interna), único caso hoje detectável", () => {
-  const { body } = buildFocusNfceEnvelope({ emitente: { cnpj: "1" } });
-  assertEquals(body.local_destino, "1");
-});
-
-Deno.test("10. modalidade_frete confirmado — '9' (sem frete), consistente com PDV presencial", () => {
+Deno.test("10/11/12. modalidade_frete/local_destino/presenca_comprador confirmados", () => {
   const { body } = buildFocusNfceEnvelope({ emitente: { cnpj: "1" } });
   assertEquals(body.modalidade_frete, "9");
-});
-
-Deno.test("12. presenca_comprador confirmado — '1' (presencial)", () => {
-  const { body } = buildFocusNfceEnvelope({ emitente: { cnpj: "1" } });
+  assertEquals(body.local_destino, "1");
   assertEquals(body.presenca_comprador, "1");
 });
 
-Deno.test("gaps restantes (Gate C2.5): items[]/formas_pagamento[]/interestadual — pendentes de fonte, não inventados", () => {
-  const { gaps } = buildFocusNfceEnvelope({ emitente: { cnpj: "1" } });
-  const campos = gaps.map((g) => g.campo);
-  for (const esperado of ["items[]", "formas_pagamento[]", "local_destino_interestadual_exterior"]) {
-    assertEquals(campos.includes(esperado), true, `esperava gap "${esperado}"`);
-  }
-  // Os 3 campos fechados no Gate C2.5 NÃO devem mais aparecer como gap.
-  for (const fechado of ["modalidade_frete", "local_destino", "presenca_comprador", "natureza_operacao"]) {
-    assertEquals(campos.includes(fechado), false, `"${fechado}" não deveria mais ser gap`);
-  }
-});
-
-Deno.test("24. boundary — o envelope nunca inclui um objeto items[]/formas_pagamento[] inventado", () => {
-  const payload = {
-    emitente: { cnpj: "12345678000199" },
-    itens: [{ produto_id: "x", ncm: "12345678" }],
-    pagamentos: [{ forma_pagamento: "DINHEIRO", valor: 10 }],
-  };
+Deno.test("24. boundary — items[]/formas_pagamento[] usam nomes de campo Focus reais, não inventados", () => {
+  const payload = { emitente: { cnpj: "12345678000199" }, itens: [itemCompleto()], pagamentos: [{ forma_pagamento: "DINHEIRO", valor: 136 }] };
   const { body } = buildFocusNfceEnvelope(payload);
-  // deno-lint-ignore no-explicit-any
-  const asAny = body as any;
-  assertEquals(asAny.items, undefined);
-  assertEquals(asAny.formas_pagamento, undefined);
+  assertExists(body.items);
+  assertEquals(body.items![0].codigo_produto, "22222222-2222-4222-8222-222222222222");
+  assertEquals(body.items![0].descricao, "Umidificador");
+  assertEquals(body.items![0].codigo_ncm, "85094000");
+  assertEquals(body.items![0].cfop, "5102");
+  assertEquals(body.items![0].unidade_comercial, "UN");
+  assertEquals(body.items![0].quantidade_comercial, 2);
+  assertEquals(body.items![0].valor_unitario_comercial, 68);
+  assertEquals(body.items![0].numero_item, 1);
+  assertExists(body.formas_pagamento);
+  assertEquals(body.formas_pagamento![0].forma_pagamento, "01");
 });
 
-Deno.test("destinatario presente no snapshot vira gap explícito (schema Focus não confirmado)", () => {
-  const payload = { destinatario: { cliente_id: "x", nome: "y" } };
-  const { gaps } = buildFocusNfceEnvelope(payload);
-  assertEquals(gaps.some((g) => g.campo === "destinatario"), true);
+// ---------------------------------------------------------------------------
+// C2.5.1 — ITEM
+// ---------------------------------------------------------------------------
+
+Deno.test("4. item fiscal completo do cenário mínimo — mapeado sem bloqueio", () => {
+  const { item, gaps } = mapSnapshotItemToFocus(itemCompleto(), 1);
+  assertExists(item);
+  assertEquals(item!.numero_item, 1);
+  assertEquals(item!.codigo_ncm, "85094000");
+  assertEquals(item!.cest, "1234567");
+  assertEquals(item!.codigo_barras_comercial, "7898512340004");
+  // Tributação continua gap (grupo ICMS/PIS/COFINS não confirmado) — não bloqueia os outros campos.
+  assertEquals(gaps.some((g) => g.campo.includes("tributacao")), true);
 });
 
-Deno.test("gapsEstruturais()/omittedByDesign() são estáveis — mesma lista sempre", () => {
-  assertEquals(gapsEstruturais().map((g) => g.campo), gapsEstruturais().map((g) => g.campo));
+Deno.test("item sem NCM -> bloqueado (obrigatório ausente), não inventa valor", () => {
+  const { item, gaps } = mapSnapshotItemToFocus(itemCompleto({ ncm: null }), 1);
+  assertEquals(item, null);
+  assertEquals(gaps.some((g) => g.campo === "items[1].codigo_ncm"), true);
+});
+
+Deno.test("valor_desconto calculado como quantidade x desconto_unitario; valor_bruto omitido (Focus calcula)", () => {
+  const { item } = mapSnapshotItemToFocus(itemCompleto({ desconto_unitario: 5, quantidade: 3 }), 1);
+  assertEquals(item!.valor_desconto, 15);
+  assertEquals(item!.valor_bruto, undefined);
+});
+
+Deno.test("código de barras que não parece GTIN não é enviado como codigo_barras_comercial", () => {
+  const { item } = mapSnapshotItemToFocus(itemCompleto({ codigo_barras: "ABC123" }), 1);
+  assertEquals(item!.codigo_barras_comercial, undefined);
+});
+
+// ---------------------------------------------------------------------------
+// C2.5.2 — PAGAMENTOS
+// ---------------------------------------------------------------------------
+
+Deno.test("5. dinheiro -> forma_pagamento '01', indicador_pagamento '0' (à vista)", () => {
+  const { entrada, gap } = mapPagamentoToFocus({ forma_pagamento: "DINHEIRO", valor: 136 });
+  assertEquals(entrada, { forma_pagamento: "01", valor_pagamento: 136, indicador_pagamento: "0" });
+  assertEquals(gap, null);
+});
+
+Deno.test("6. PIX -> PENDENTE REGRA (enum genérico Jinlong sem modalidade), não mapeado para 17/20/23 por suposição", () => {
+  const { entrada, gap } = mapPagamentoToFocus({ forma_pagamento: "PIX", valor: 100 });
+  assertEquals(entrada, null);
+  assertExists(gap);
+  assertEquals(gap!.motivo.includes("PENDENTE REGRA"), true);
+});
+
+Deno.test("7. cartão (crédito/débito) -> código confirmado, mas gap de dados transacionais não capturados", () => {
+  const credito = mapPagamentoToFocus({ forma_pagamento: "CARTAO_CREDITO", valor: 50 });
+  assertEquals(credito.entrada?.forma_pagamento, "03");
+  assertExists(credito.gap); // dados transacionais (bandeira/autorização/etc.) não capturados
+
+  const debito = mapPagamentoToFocus({ forma_pagamento: "CARTAO_DEBITO", valor: 50 });
+  assertEquals(debito.entrada?.forma_pagamento, "04");
+});
+
+Deno.test("8. pagamento misto — dinheiro + cartão gera 2 entradas; PIX no meio bloqueia só a própria entrada", () => {
+  const payload = {
+    emitente: { cnpj: "1" },
+    itens: [itemCompleto()],
+    pagamentos: [
+      { forma_pagamento: "DINHEIRO", valor: 50 },
+      { forma_pagamento: "CARTAO_CREDITO", valor: 86 },
+      { forma_pagamento: "PIX", valor: 20 },
+    ],
+  };
+  const { body, gaps } = buildFocusNfceEnvelope(payload);
+  assertEquals(body.formas_pagamento?.length, 2);
+  assertEquals(body.formas_pagamento?.map((p) => p.forma_pagamento), ["01", "03"]);
+  assertEquals(gaps.some((g) => g.motivo.includes("PENDENTE REGRA")), true);
+});
+
+Deno.test("forma de pagamento Jinlong desconhecida -> gap explícito, não inventa código", () => {
+  const { entrada, gap } = mapPagamentoToFocus({ forma_pagamento: "VALE_REFEICAO", valor: 10 });
+  assertEquals(entrada, null);
+  assertExists(gap);
+});
+
+Deno.test("omittedByDesign() é estável — mesma lista sempre", () => {
   assertEquals(omittedByDesign().map((g) => g.campo), omittedByDesign().map((g) => g.campo));
+});
+
+Deno.test("destinatario presente -> gap de local_destino interestadual/exterior (sem UF no snapshot)", () => {
+  const { gaps } = buildFocusNfceEnvelope({ emitente: { cnpj: "1" }, destinatario: { cliente_id: "x", nome: "y" } });
+  assertEquals(gaps.some((g) => g.campo === "local_destino_interestadual_exterior"), true);
 });
