@@ -29,7 +29,11 @@ const NODE_SUITES = [
   'nfe-conferencia-margem-contract.test.mjs',
 ]
 
-const SCRIPT_SUITES = ['test-commission-concurrency.mjs', 'test-nfe-conferencia-concurrency.mjs']
+const SCRIPT_SUITES = [
+  'test-commission-concurrency.mjs',
+  'test-nfe-conferencia-concurrency.mjs',
+  'test-varejo-tier-concurrency.mjs',
+]
 
 const SQL_SUITES = [
   'sale-totals-invariant.test.sql',
@@ -46,6 +50,9 @@ const SQL_SUITES = [
   'nfe-conferencia-flx05-ui.test.sql',
   'fase6-consolida-padrao-a-dono-global.test.sql',
   'nfe-conferencia-margem-nao-bloqueia-estoque.test.sql',
+  'gate-a01-venda-retry-payload-divergente.test.sql',
+  'gate-a04-varejo-menor-que-tier-ativo.test.sql',
+  'gate-a02-fechamento-repeticao-valor-divergente.test.sql',
 ]
 
 /** `psql` está de fato instalado e executável neste host? */

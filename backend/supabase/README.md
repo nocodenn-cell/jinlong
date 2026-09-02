@@ -251,6 +251,25 @@ Se isso causar confusão futura, o caminho de correção é `supabase migration 
 <version-do-arquivo>` — **não fazer isso sem entender o estado atual do tracking**, ver
 `MIGRATIONS_DRIFT_CLASSIFICATION.md` para o histórico de drift já mapeado neste projeto.
 
+Décimo quarto, décimo quinto e décimo sexto par (investigados em 02/09/2026, gate de convergência
+das Auditorias OpenCode 01–04, PR #363, ao classificar a falha do check `migration-remote-drift`):
+`20260901000000_validar_tier_preco_menor_que_varejo.sql`,
+`20260901020000_historico_tiers_crud.sql` e
+`20260901030000_calcular_preco_produto_retorna_quantidade_minima.sql` constam no remoto sob as
+versions `20260901115307`, `20260901115323` e `20260901115338` respectivamente — `name` bate
+integralmente com o identificador de cada arquivo (`SELECT version, name FROM
+supabase_migrations.schema_migrations WHERE version IN (...)`), `version` não (mesmo padrão de
+aplicação via MCP `apply_migration` de todos os pares anteriores). Postcondition reverificada
+nesta investigação (leitura apenas): `to_regclass('public.historico_tiers_crud') IS NOT NULL` = true;
+`EXISTS(... pg_trigger WHERE tgname='trg_audit_tiers_crud')` = true;
+`EXISTS(... pg_trigger WHERE tgname='trg_validar_tier_preco_menor_que_varejo')` = true;
+`calcular_preco_produto` contém `quantidade_minima` no corpo remoto. As três migrations foram,
+adicionalmente, exercitadas em runtime nesta mesma investigação (não só inspecionadas): a trigger
+`trg_validar_tier_preco_menor_que_varejo` rejeitou corretamente a criação de um tier com preço ≥
+varejo via chamada real contra produção (`BEGIN...ROLLBACK`, sem persistência). Mesma ressalva das
+entradas anteriores: esta reconciliação só sustenta "já presente e correta no remoto sob outra
+version" — não é autorização para alterar ou reaplicar o SQL correspondente.
+
 ## Edge Function `sync-outbox`
 
 ```powershell
