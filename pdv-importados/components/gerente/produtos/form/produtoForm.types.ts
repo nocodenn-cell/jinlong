@@ -64,6 +64,9 @@ export type ProdutoFormState = Readonly<{
   setCstPis: (v: string) => void
   cstCofins: string
   setCstCofins: (v: string) => void
+  /** Código de origem ICMS (Focus, '0'..'8') — string vazia = não classificado. SEM default. */
+  icmsOrigem: string
+  setIcmsOrigem: (v: string) => void
   precoVarejoInput: MoneyInputBag
   precoAtacadoInput: MoneyInputBag
   precoCustoInput: MoneyInputBag

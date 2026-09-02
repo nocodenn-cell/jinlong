@@ -67,7 +67,7 @@ type ActionResult<T> =
   | { success: false; error: string }
 
 const IMPORT_MERGE_COLS =
-  'id, nome, codigo_barras, codigo_interno, referencia_fornecedor, nome_reduzido_pdv, localizacao_prateleira, preco_varejo, preco_atacado, preco_custo, permitir_abaixo_custo, quantidade_gatilho_atacado, origem, tem_nf, unidade_medida, observacao, categoria_id, marca_id, fornecedor_id, ncm, cfop_produto, csosn, cest, cst_pis, cst_cofins'
+  'id, nome, codigo_barras, codigo_interno, referencia_fornecedor, nome_reduzido_pdv, localizacao_prateleira, preco_varejo, preco_atacado, preco_custo, permitir_abaixo_custo, quantidade_gatilho_atacado, origem, tem_nf, unidade_medida, observacao, categoria_id, marca_id, fornecedor_id, ncm, cfop_produto, csosn, cest, cst_pis, cst_cofins, icms_origem'
 
 /** CSV/lote update → ProductUpdater (merge para não apagar campos omitidos). */
 async function atualizarProdutoViaImportRow(
@@ -126,6 +126,7 @@ async function atualizarProdutoViaImportRow(
         cest: (p.cest as string | null) ?? null,
         cst_pis: (p.cst_pis as string | null) ?? null,
         cst_cofins: (p.cst_cofins as string | null) ?? null,
+        icms_origem: (p.icms_origem as string | null) ?? null,
       },
       csvLifecycle,
     ),

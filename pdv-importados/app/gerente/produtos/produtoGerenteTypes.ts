@@ -51,4 +51,6 @@ export type ProdutoGerenteRow = {
   cst_pis: string | null
   /** CST COFINS (ex: '07' = isenta, '49' = outras saídas). */
   cst_cofins: string | null
+  /** Código de origem ICMS Focus ('0'..'8'). SEM default — NÃO confundir com `origem` (canal de aquisição). */
+  icms_origem: string | null
 }

@@ -74,6 +74,8 @@ export type ProductCatalogWriteFields = {
   cest?: string | null
   cstPis?: string | null
   cstCofins?: string | null
+  /** Código de origem ICMS Focus ('0'..'8'). SEM default — não deriva de `origem`. */
+  icmsOrigem?: string | null
   /**
    * Opcional — dual-write `status_publicacao` + `ativo`.
    * Omitido no update: não altera lifecycle.
@@ -141,4 +143,5 @@ export type ProductListFilteredRow = {
   cest: string | null
   cstPis: string | null
   cstCofins: string | null
+  icmsOrigem: string | null
 }

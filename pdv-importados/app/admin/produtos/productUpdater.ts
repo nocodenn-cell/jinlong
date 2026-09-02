@@ -73,6 +73,7 @@ export type ProdutoUpdatePayload = {
   cest: string | null
   cst_pis: string | null
   cst_cofins: string | null
+  icms_origem: string | null
   status_publicacao?: string
   ativo?: boolean
 }
@@ -119,6 +120,7 @@ export function mapUpdateProductInputToRow(input: UpdateProductInput): ProdutoUp
     cest: input.cest ?? null,
     cst_pis: input.cstPis ?? null,
     cst_cofins: input.cstCofins ?? null,
+    icms_origem: input.icmsOrigem ?? null,
   }
 
   if (input.origem) row.origem = input.origem

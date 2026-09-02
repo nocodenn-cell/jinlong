@@ -458,6 +458,8 @@
     "hint_cest": "7 dígitos. Preencher só para produtos sujeitos a substituição tributária.",
     "field_cst_pis": "CST PIS",
     "field_cst_cofins": "CST COFINS",
+    "field_icms_origem": "Origem ICMS",
+    "hint_icms_origem": "Código fiscal de origem da mercadoria (Focus NFe). Sem valor padrão — deixe em branco até classificar.",
     "ncm_invalido": "NCM deve ter exatamente 8 dígitos.",
     "cfop_invalido": "CFOP deve ter 4 dígitos.",
     "cest_invalido": "CEST deve ter 7 dígitos."

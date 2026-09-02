@@ -52,6 +52,8 @@ type ProdutoFiscalRow = {
   cst_pis: string | null;
   cst_cofins: string | null;
   unidade_medida: string | null;
+  /** Onda C2.6 (prontidão Focus NFe) — mesmo conjunto do caminho web (20260902140300). */
+  icms_origem: string | null;
 };
 
 type LojaFiscalRow = {
@@ -118,7 +120,7 @@ export async function maybeEnqueueFiscalDocumentAfterSyncedVenda(
   if (produtoIds.length > 0) {
     const { data, error } = await supabase
       .from("produtos")
-      .select("id, nome, codigo_barras, ncm, cfop_produto, csosn, cest, cst_pis, cst_cofins, unidade_medida")
+      .select("id, nome, codigo_barras, ncm, cfop_produto, csosn, cest, cst_pis, cst_cofins, unidade_medida, icms_origem")
       .in("id", produtoIds);
     if (error) {
       log({
@@ -213,6 +215,10 @@ export async function maybeEnqueueFiscalDocumentAfterSyncedVenda(
         cest: p?.cest ?? null,
         cst_pis: p?.cst_pis ?? null,
         cst_cofins: p?.cst_cofins ?? null,
+        // Onda C2.6: código de origem ICMS, capturado do produto no momento
+        // da venda — sem inferência/derivação, NULL quando ainda não
+        // classificado (mesmo caminho web, migration 20260902140300).
+        icms_origem: p?.icms_origem ?? null,
       };
     }),
     emitente: loja

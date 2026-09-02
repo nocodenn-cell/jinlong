@@ -91,6 +91,17 @@ const produtoFormBaseObject = z.object({
     .nullable(),
   cst_pis: z.string().nullable().optional().transform((v) => v?.trim() || null),
   cst_cofins: z.string().nullable().optional().transform((v) => v?.trim() || null),
+  // Onda C2.6 (prontidão Focus NFe): código de origem ICMS ('0'..'8'), SEM
+  // default (mesmo padrão de ncm/cfop/cest acima) — não deriva de `origem`.
+  icms_origem: z
+    .string()
+    .nullable()
+    .optional()
+    .transform((v) => v?.trim() || null)
+    .refine(
+      (s) => s === null || ['0', '1', '2', '3', '4', '5', '6', '7', '8'].includes(s),
+      'Origem ICMS inválida (deve ser um código de 0 a 8).',
+    ),
 })
 
 /** SSOT — campos compartilhados entre criar e editar produto. */

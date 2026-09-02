@@ -67,6 +67,7 @@ describe('productUpdater — mapping', () => {
       cest: null,
       cst_pis: null,
       cst_cofins: null,
+      icms_origem: null,
       status_publicacao: 'PUBLICADO',
       ativo: true,
     })

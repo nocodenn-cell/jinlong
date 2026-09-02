@@ -23,6 +23,7 @@ function itemCompleto(overrides: Record<string, unknown> = {}) {
     cest: "1234567",
     cst_pis: "01",
     cst_cofins: "01",
+    icms_origem: "1",
     ...overrides,
   };
 }
@@ -62,6 +63,7 @@ Deno.test("24. boundary — items[]/formas_pagamento[] usam nomes de campo Focus
   assertEquals(body.items![0].quantidade_comercial, 2);
   assertEquals(body.items![0].valor_unitario_comercial, 68);
   assertEquals(body.items![0].numero_item, 1);
+  assertEquals(body.items![0].icms_origem, "1");
   assertExists(body.formas_pagamento);
   assertEquals(body.formas_pagamento![0].forma_pagamento, "01");
 });
@@ -77,8 +79,42 @@ Deno.test("4. item fiscal completo do cenário mínimo — mapeado sem bloqueio"
   assertEquals(item!.codigo_ncm, "85094000");
   assertEquals(item!.cest, "1234567");
   assertEquals(item!.codigo_barras_comercial, "7898512340004");
-  // Tributação continua gap (grupo ICMS/PIS/COFINS não confirmado) — não bloqueia os outros campos.
+  assertEquals(item!.icms_origem, "1");
+  // Tributação (CST/CSOSN/PIS/COFINS) continua gap — não bloqueia os outros campos.
   assertEquals(gaps.some((g) => g.campo.includes("tributacao")), true);
+});
+
+// ---------------------------------------------------------------------------
+// Onda C2.6 — icms_origem: fail-closed no boundary, sem inferência/default.
+// ---------------------------------------------------------------------------
+
+Deno.test("icms_origem ausente -> item bloqueado (produto ainda não classificado), gap explícito", () => {
+  const { item, gaps } = mapSnapshotItemToFocus(itemCompleto({ icms_origem: null }), 1);
+  assertEquals(item, null);
+  assertEquals(gaps.some((g) => g.campo === "items[1].icms_origem"), true);
+});
+
+Deno.test("icms_origem fora de '0'..'8' -> item bloqueado, não propagado ao corpo Focus", () => {
+  const { item, gaps } = mapSnapshotItemToFocus(itemCompleto({ icms_origem: "9" }), 1);
+  assertEquals(item, null);
+  const gap = gaps.find((g) => g.campo === "items[1].icms_origem");
+  assertExists(gap);
+  assertEquals(gap!.motivo.includes("fora do domínio confirmado"), true);
+});
+
+Deno.test("icms_origem válido (cada código 0..8) -> mapeado sem bloqueio, valor propagado literalmente", () => {
+  for (const codigo of ["0", "1", "2", "3", "4", "5", "6", "7", "8"]) {
+    const { item } = mapSnapshotItemToFocus(itemCompleto({ icms_origem: codigo }), 1);
+    assertExists(item, `código ${codigo} não deveria bloquear`);
+    assertEquals(item!.icms_origem, codigo);
+  }
+});
+
+Deno.test("icms_origem nunca é derivado de produtos.origem — campo origem no snapshot é ignorado pelo mapeador", () => {
+  const { item } = mapSnapshotItemToFocus(itemCompleto({ icms_origem: null, origem: "china_manual" }), 1);
+  // Bloqueado (icms_origem ausente) mesmo com `origem` presente no snapshot —
+  // prova que o mapeador não lê `origem` como fallback.
+  assertEquals(item, null);
 });
 
 Deno.test("item sem NCM -> bloqueado (obrigatório ausente), não inventa valor", () => {

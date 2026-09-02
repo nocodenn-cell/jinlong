@@ -284,7 +284,17 @@ describe.skipIf(!SERVICE_ROLE_KEY)('Consistência de Vendas - PDV (RPC real, Pos
 
     await supabase
       .from('produtos')
-      .update({ ncm: '12345678', cfop_produto: '5102', csosn: '102', cest: '1234567', cst_pis: '01', cst_cofins: '01' })
+      .update({
+        ncm: '12345678',
+        cfop_produto: '5102',
+        csosn: '102',
+        cest: '1234567',
+        cst_pis: '01',
+        cst_cofins: '01',
+        // Onda C2.6 (prontidão Focus NFe): icms_origem — mesmo padrão dos
+        // demais campos fiscais acima, sem default, classificado explicitamente.
+        icms_origem: '1',
+      })
       .eq('id', produtoId)
 
     const vendaId = randomUUID()
@@ -312,11 +322,12 @@ describe.skipIf(!SERVICE_ROLE_KEY)('Consistência de Vendas - PDV (RPC real, Pos
     expect(itemAntes?.cest).toBe('1234567')
     expect(itemAntes?.cst_pis).toBe('01')
     expect(itemAntes?.cst_cofins).toBe('01')
+    expect(itemAntes?.icms_origem).toBe('1')
 
     // Alteração posterior no cadastro do produto — não pode retroagir ao documento já enfileirado.
     await supabase
       .from('produtos')
-      .update({ ncm: '99999999', cfop_produto: '6102', csosn: '900' })
+      .update({ ncm: '99999999', cfop_produto: '6102', csosn: '900', icms_origem: '2' })
       .eq('id', produtoId)
 
     const { data: docDepoisProduto } = await supabase
@@ -328,6 +339,7 @@ describe.skipIf(!SERVICE_ROLE_KEY)('Consistência de Vendas - PDV (RPC real, Pos
     expect(itemDepoisProduto?.ncm).toBe('12345678')
     expect(itemDepoisProduto?.cfop).toBe('5102')
     expect(itemDepoisProduto?.csosn).toBe('102')
+    expect(itemDepoisProduto?.icms_origem).toBe('1')
 
     // Gate 4 (Fase C, revisão adicional): os TRÊS SSOT mutáveis que
     // alimentaram o snapshot — produtos (acima), lojas e pdv_config (abaixo)

@@ -35,6 +35,7 @@ type FormSnapshot = {
   cest: string
   cstPis: string
   cstCofins: string
+  icmsOrigem: string
   precoVarejo: string
   precoAtacado: string
   precoCusto: string
@@ -69,6 +70,9 @@ function buildSnapshot(produto: ProdutoGerenteRow | null): FormSnapshot {
       cest: '',
       cstPis: FISCAL_DEFAULTS.cstPis,
       cstCofins: FISCAL_DEFAULTS.cstCofins,
+      // SEM default (ao contrário de csosn/cst_pis/cst_cofins acima) — não
+      // existe valor universal seguro para icms_origem. Onda C2.6.
+      icmsOrigem: '',
       precoVarejo: '',
       precoAtacado: '',
       precoCusto: '',
@@ -98,6 +102,7 @@ function buildSnapshot(produto: ProdutoGerenteRow | null): FormSnapshot {
     cest: produto.cest ?? '',
     cstPis: produto.cst_pis ?? FISCAL_DEFAULTS.cstPis,
     cstCofins: produto.cst_cofins ?? FISCAL_DEFAULTS.cstCofins,
+    icmsOrigem: produto.icms_origem ?? '',
     precoVarejo: moneyDisplay(produto.preco_varejo),
     precoAtacado: moneyDisplay(produto.preco_atacado ?? undefined),
     precoCusto: moneyDisplay(produto.preco_custo ?? undefined),
@@ -129,6 +134,7 @@ function resetFormState(
     setCest: (v: string) => void
     setCstPis: (v: string) => void
     setCstCofins: (v: string) => void
+    setIcmsOrigem: (v: string) => void
     precoVarejoInput: ReturnType<typeof useMoneyInput>
     precoAtacadoInput: ReturnType<typeof useMoneyInput>
     precoCustoInput: ReturnType<typeof useMoneyInput>
@@ -157,6 +163,7 @@ function resetFormState(
   setters.setCest(snap.cest)
   setters.setCstPis(snap.cstPis)
   setters.setCstCofins(snap.cstCofins)
+  setters.setIcmsOrigem(snap.icmsOrigem)
   setters.precoVarejoInput.reset(produto?.preco_varejo)
   setters.precoAtacadoInput.reset(produto?.preco_atacado ?? undefined)
   setters.precoCustoInput.reset(produto?.preco_custo ?? undefined)
@@ -192,6 +199,7 @@ export function useProdutoForm(
   const [cest, setCest] = useState('')
   const [cstPis, setCstPis] = useState<string>(FISCAL_DEFAULTS.cstPis)
   const [cstCofins, setCstCofins] = useState<string>(FISCAL_DEFAULTS.cstCofins)
+  const [icmsOrigem, setIcmsOrigem] = useState('')
   const [estoqueInicialQty, setEstoqueInicialQty] = useState('')
   const [estoqueInicialMin, setEstoqueInicialMin] = useState('')
 
@@ -233,6 +241,7 @@ export function useProdutoForm(
       setCest,
       setCstPis,
       setCstCofins,
+      setIcmsOrigem,
       precoVarejoInput,
       precoAtacadoInput,
       precoCustoInput,
@@ -287,6 +296,7 @@ export function useProdutoForm(
       cest,
       cstPis,
       cstCofins,
+      icmsOrigem,
       precoVarejo: precoVarejoInput.display,
       precoAtacado: precoAtacadoInput.display,
       precoCusto: precoCustoInput.display,
@@ -314,6 +324,7 @@ export function useProdutoForm(
     cest,
     cstPis,
     cstCofins,
+    icmsOrigem,
     precoVarejoInput.display,
     precoAtacadoInput.display,
     precoCustoInput.display,
@@ -356,6 +367,7 @@ export function useProdutoForm(
       setCest,
       setCstPis,
       setCstCofins,
+      setIcmsOrigem,
       precoVarejoInput,
       precoAtacadoInput,
       precoCustoInput,
@@ -428,6 +440,8 @@ export function useProdutoForm(
     setCstPis,
     cstCofins,
     setCstCofins,
+    icmsOrigem,
+    setIcmsOrigem,
     precoVarejoInput,
     precoAtacadoInput,
     precoCustoInput,

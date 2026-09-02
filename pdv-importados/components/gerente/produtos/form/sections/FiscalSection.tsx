@@ -97,6 +97,27 @@ export function FiscalSection() {
               disabled={disabled}
             />
           </label>
+          <label className="block text-xs font-medium text-jl-fg-3">
+            {p.field_icms_origem}
+            <select
+              className={`${selectClassName} mt-1 font-mono`}
+              value={ctx.icmsOrigem}
+              onChange={(e) => ctx.setIcmsOrigem(e.target.value)}
+              disabled={disabled}
+            >
+              <option value="">— não classificado —</option>
+              <option value="0">0 – Nacional</option>
+              <option value="1">1 – Estrangeira, importação direta</option>
+              <option value="2">2 – Estrangeira, adquirida no mercado interno</option>
+              <option value="3">3 – Nacional, conteúdo importado {'>'} 40%</option>
+              <option value="4">4 – Nacional, produção básica</option>
+              <option value="5">5 – Nacional, conteúdo importado ≤ 40%</option>
+              <option value="6">6 – Estrangeira, importação direta, sem similar nacional</option>
+              <option value="7">7 – Estrangeira, mercado interno, sem similar nacional</option>
+              <option value="8">8 – Nacional, conteúdo importado {'>'} 70%</option>
+            </select>
+            <span className="mt-0.5 block text-caption text-jl-fg-3">{p.hint_icms_origem}</span>
+          </label>
         </div>
       </details>
     </section>

@@ -110,6 +110,7 @@ Deno.test("ativo — payload inclui classificação fiscal do produto e emitente
         cst_pis: "01",
         cst_cofins: "01",
         unidade_medida: "UN",
+        icms_origem: "1",
       }],
       pdv_config: { cfop_padrao: "5405", regime_tributario: "SIMPLES_NACIONAL" },
       vendas: { data: "2026-09-02T12:00:00Z" },
@@ -161,6 +162,8 @@ Deno.test("ativo — payload inclui classificação fiscal do produto e emitente
     assertEquals(itens[0].cst_pis, "01");
     assertEquals(itens[0].cst_cofins, "01");
     assertEquals(itens[0].unidade_medida, "UN");
+    // Onda C2.6: icms_origem capturado do produto, sem inferência.
+    assertEquals(itens[0].icms_origem, "1");
 
     // Consistência de forma com o caminho web: pagamentos é sempre array,
     // nunca um campo escalar "forma_pagamento" solto no payload.

@@ -75,6 +75,7 @@ export function mapCreateProductInputToRpc(input: CreateProductInput): CriarProd
     cest: input.cest ?? null,
     cst_pis: input.cstPis ?? null,
     cst_cofins: input.cstCofins ?? null,
+    icms_origem: input.icmsOrigem ?? null,
     ...(input.statusPublicacao ? { status_publicacao: input.statusPublicacao } : {}),
     ...(input.ativo !== undefined ? { ativo: input.ativo } : {}),
     estoque_inicial_quantidade:

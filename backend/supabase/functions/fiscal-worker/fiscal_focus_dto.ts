@@ -74,7 +74,11 @@ const CAMPOS_ITEM_OBRIGATORIOS = [
   "unidade_comercial",
   "quantidade_comercial",
   "valor_unitario_comercial",
+  "icms_origem",
 ] as const;
+
+/** Onda C2.6 — códigos de origem ICMS confirmados pela Focus (tag `orig`), 0-8. */
+const ICMS_ORIGEM_VALIDOS = new Set(["0", "1", "2", "3", "4", "5", "6", "7", "8"]);
 
 function isPlausibleGtin(v: string): boolean {
   // GTIN-8/12/13/14 — só dígitos, tamanho padrão. Jinlong não distingue
@@ -154,12 +158,33 @@ export function mapSnapshotItemToFocus(item: Record<string, unknown>, numeroItem
   // formato GTIN de código proprietário no cadastro; sem essa distinção
   // confiável, preencher arriscaria classificar errado (não inventado).
 
-  // Tributação (grupos ICMS/PIS/COFINS): BLOQUEADO nesta rodada — o material
-  // confirmado não incluiu os nomes de campo desses grupos (só a lista geral
-  // de campos não-tributários do item). Ver TRIBUTAÇÃO no Gate C2.5.
+  // icms_origem (Onda C2.6, Gate C2.5 tributação): único subcampo do grupo
+  // ICMS confirmado E modelado no domínio até aqui (produtos.icms_origem,
+  // migration 20260902140000; congelado no snapshot desde 20260902140300).
+  // Fail-closed no boundary: ausente ou fora de '0'..'8' BLOQUEIA o item —
+  // nunca inventa/deriva um valor (produtos.origem é conceito diferente e
+  // não é lido aqui). Distinto do gap geral de tributação logo abaixo, que
+  // continua cobrindo CST/CSOSN/base/valor — esses seguem não confirmados.
+  const icmsOrigem = asString(item.icms_origem);
+  if (icmsOrigem && ICMS_ORIGEM_VALIDOS.has(icmsOrigem)) {
+    out.icms_origem = icmsOrigem;
+  } else {
+    gaps.push({
+      campo: prefix("icms_origem"),
+      motivo: icmsOrigem
+        ? `icms_origem '${icmsOrigem}' fora do domínio confirmado ('0'..'8') — produto precisa ser reclassificado.`
+        : "icms_origem ausente no item do snapshot — produto ainda não classificado (produtos.icms_origem NULL). " +
+          "Não derivado de produtos.origem (conceito diferente, proibido nesta missão).",
+    });
+  }
+
+  // Tributação (grupos ICMS-CST/CSOSN/PIS/COFINS restantes): BLOQUEADO nesta
+  // rodada — o material confirmado não incluiu os nomes de campo desses
+  // grupos (só a lista geral de campos não-tributários do item + icms_origem
+  // acima). Ver TRIBUTAÇÃO no Gate C2.5.
   gaps.push({
     campo: prefix("tributacao_icms_pis_cofins"),
-    motivo: "Grupo de campos ICMS (origem/CSOSN-CST)/PIS/COFINS não confirmado pela documentação recebida nesta sessão.",
+    motivo: "Grupo de campos ICMS (CST/CSOSN)/PIS/COFINS (além de icms_origem) não confirmado pela documentação recebida nesta sessão.",
   });
 
   const bloqueante = gaps.some((g) => CAMPOS_ITEM_OBRIGATORIOS.some((campo) => g.campo.endsWith(campo)));
