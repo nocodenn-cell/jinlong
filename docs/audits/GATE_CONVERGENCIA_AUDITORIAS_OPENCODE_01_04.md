@@ -1187,3 +1187,207 @@ RPC, teste que não prova o que afirma, ou alteração não relacionada foi
 encontrada.
 
 **PRÉ-COMMIT: GO**
+
+---
+
+## 12. Correções pós-CI (PR #363) — fechamento das classes de falha reveladas por review automatizado
+
+Depois do primeiro push, o CI e um review automatizado (Codex) revelaram 1 check falhando
+(`migration-remote-drift`) e 5 comentários em `20260902100100_guard_varejo_menor_que_tier_ativo.sql`
+e em `vendaConsistency.integration.test.ts`. Por instrução explícita, nenhum foi tratado como
+backlog — todas as 4 classes de falha de código + a investigação do drift foram fechadas neste
+mesmo PR, com prova, antes de declarar convergência técnica.
+
+### 12.1 — `vendaConsistency.integration.test.ts`: assertion incompatível com o contrato real da RPC
+
+**Causa raiz encontrada (mais profunda que o comentário original do Codex):** o arquivo, mesmo
+com nome/tabelas corrigidos (item A01-1.2 original), **não executa em nenhuma configuração de
+vitest** quando chama `finalizarVendaCaixaImpl` — essa função usa `createClient()` de
+`@/lib/supabase/server`, que chama `cookies()` do Next.js, uma API que só existe dentro de um
+request scope real do App Router. Comprovado ao instalar as dependências (`npm ci`, ausentes no
+worktree) e rodar o arquivo de verdade: as 4 suítes falhavam com `cookies was called outside a
+request scope` — nunca chegavam a executar as asserções que o Codex apontou como erradas.
+
+**Correção:** reescrito para chamar a RPC `finalizar_venda_transacional_canonica_v4` diretamente
+via `@supabase/supabase-js` (service_role), sem depender de `cookies()`/Next.js request scope.
+Preserva o propósito original do arquivo (provar consistência contra Postgres real) sem duplicar
+`finalizarVendaCaixa.integration.test.ts` (mocks, cobre a camada TS) nem os testes SQL deste gate
+(cobrem idempotência de retry) — cobre a terceira coisa que nenhum dos dois cobria: contrato de
+retorno e atomicidade da RPC contra dados reais. Assertions corrigidas: `documentoFiscal` usa a
+chave `documento_fiscal_id` (não `documento_id`); `itensAtualizados`/`estoqueBaixado` são
+afirmados `null` (contrato real da RPC — nenhum caminho de código os preenche), não
+truthy/`length`.
+
+**Prova:** executado de verdade nesta sessão (`npx vitest run --config
+vitest.integration.config.ts`, `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` do stack local) — **3/3
+testes PASS** contra Postgres real: consistência atômica de itens/estoque/pagamento, rollback
+completo (nem o cabeçalho da venda persiste) em falta de estoque, exatamente 1 vencedor em
+concorrência real (`Promise.all` de duas chamadas simultâneas). `npx tsc --noEmit` limpo. Coleta
+pelo runner correto confirmada: bate o glob `app/**/*.integration.test.ts` de
+`vitest.integration.config.ts` e está excluído de `vitest.config.ts` (`npm test` normal).
+
+**Resultado:** prova comportamento real (não mais bloqueado por `cookies()`); coletado pelo
+runner correto; não depende mais de campos deliberadamente `NULL`; não cria falsa confiança — se
+a RPC quebrar, o teste quebra.
+
+**Pendência que permanece, disclosed e não mascarada:** nenhum workflow de CI invoca
+`vitest.integration.config.ts` hoje (mesma lacuna já registrada na seção 10.6 para este arquivo e
+para `cancelarVendaContrato.integration.test.ts`) — o teste agora *pode* provar comportamento real
+quando executado, mas ainda não é executado automaticamente em nenhum push. Fechar essa lacuna de
+CI é uma mudança de infraestrutura separada (novo job com stack Supabase local + secrets de
+service_role em `ci-pdv-importados.yml`) — fora do escopo desta rodada de correções (que tratou
+das 5 classes de falha nomeadas, não de wiring de CI novo).
+
+### 12.2, 12.3, 12.4 — Trigger deferrable, reativação de tier e corrida real: correção unificada
+
+Os 3 achados restantes (comentários Codex #3 "usa NEW congelado", #4 "reativação sem
+revalidação", #5 "sem lock compartilhado") são a MESMA invariante cross-table
+(`precos_atacado.preco_unitario < produtos.preco_varejo` para tiers ativos) vista de 3 ângulos —
+corrigidos juntos em
+[20260902120000_serializa_invariante_varejo_tier_e_reativacao.sql](../../backend/supabase/migrations/20260902120000_serializa_invariante_varejo_tier_e_reativacao.sql).
+
+**Achado #5 (corrida real) — reproduzido primeiro, com 2 sessões reais, antes de qualquer
+correção**, em
+[test-varejo-tier-concurrency.mjs](../../backend/scripts/test-varejo-tier-concurrency.mjs)
+(`--reproduzir-bug`, harness idêntico ao de `test-nfe-conferencia-concurrency.mjs` — duas sessões
+`psql` interativas persistentes, não uma chamada sequencial): T1 baixa `produtos.preco_varejo`
+100→80 (trigger deferrable, ainda sem commit); T2 reativa (`ativo=false→true`) um tier a 90, sem
+commit; a checagem de T1 é forçada (`SET CONSTRAINTS ... IMMEDIATE`) enquanto T2 ainda está aberta
+— T1 não vê a reativação (MVCC), passa; T1 commita; T2 commita **sem nenhuma checagem** (achado
+#4: a trigger do tier não cobria `ativo`). Estado final persistido, provado por consulta direta
+pós-teste: `varejo=80, tier_ativo=true, tier_preco=90` — invariante violada, sem rejeição de
+nenhum dos dois lados.
+
+**Causa raiz:** as duas triggers da invariante (`validar_tier_preco_menor_que_varejo`,
+`validar_varejo_maior_que_tiers_ativos`) validavam cada uma só o próprio lado, sem lock
+compartilhado, e a do tier nunca cobria `ativo`; a do varejo (already deferrable) lia
+`NEW.preco_varejo` congelado do evento, não o estado final da linha.
+
+**Correção unificada:** as duas triggers passam a ser `CONSTRAINT TRIGGER ... DEFERRABLE
+INITIALLY DEFERRED` (checam o estado FINAL da linha no commit, não o NEW do evento — fecha #3) e
+as duas tomam o MESMO lock advisory por `produto_id`
+(`internal.lock_invariante_varejo_tier`, novo helper, `pg_advisory_xact_lock` namespaced) antes de
+ler/validar — serializa qualquer combinação de escritores (INSERT tier, UPDATE
+preco_unitario/produto_id/`ativo` — fecha #4 —, UPDATE de `produtos.preco_varejo`) sem risco de
+deadlock por ordem diferente de locks, porque é sempre UM lock por `produto_id`, adquirido pela
+mesma função nas duas direções.
+
+**Prova pós-fix, mesmo harness de 2 sessões reais (`--provar-fix`, sem `--reproduzir-bug`),
+determinística via `SET CONSTRAINTS ... IMMEDIATE` (não depende de timing de wall-clock):**
+1. Cenário 1 (mesmo achado #5): T2 agora é **rejeitada no COMMIT**
+   (`TIER_PRECO_MAIOR_OU_IGUAL_VAREJO`) — releu o varejo já em 80, já commitado por T1. Estado
+   final: `varejo=80, tier_ativo=false` — invariante preservada.
+2. Cenário 2 (o lock bloqueia de verdade, não é coincidência de timing): T1 segura o lock via
+   `UPDATE` de varejo + `SET CONSTRAINTS IMMEDIATE`; T2 (checagem de um `INSERT` de tier novo no
+   MESMO produto) **bloqueia de verdade**, provado por timeout de 900ms, não inspeção textual;
+   destrava só depois de T1 commitar, relê o varejo já atualizado, aceita corretamente.
+3. Cenário 3 (achado #3 isolado): dois `UPDATE`s de `preco_varejo` na mesma transação
+   (100→80→120, tier ativo em 90) — o `COMMIT` aceita o estado FINAL (120), não rejeita pelo passo
+   intermediário (80).
+
+Também confirmado que o writer real `atualizar_produto_com_faixa_atacado` (que já havia quebrado
+uma vez nesta convergência — ver seção 11.1(b) — e motivou a versão deferrable original) continua
+funcionando: `fase6-consolida-padrao-a-dono-global.test.sql` (suíte pré-existente, chama a RPC de
+verdade) permanece PASS.
+
+**Novo problema encontrado DURANTE esta correção, investigado e corrigido antes de declarar GO**
+(exatamente o cenário que a regra de encerramento pedia para não deixar passar): ao mudar a
+trigger do tier de `BEFORE` (imediata) para `DEFERRABLE`, o teste de regressão A04-4.1
+(`gate-a04-varejo-menor-que-tier-ativo.test.sql`, já existente deste gate) passou a **falhar** —
+criar um tier com preço ≥ varejo não gerava mais erro na hora do `INSERT` dentro do próprio bloco
+de teste, porque a checagem agora só dispara no commit/`SET CONSTRAINTS IMMEDIATE`. Causa raiz:
+mudança de timing da trigger, não regressão do guard em si (o guard em si funciona — só não na
+hora que o teste antigo assumia). Corrigido adicionando `SET CONSTRAINTS
+trg_validar_tier_preco_menor_que_varejo IMMEDIATE` no ponto certo do teste A04-4.1 e do cenário
+multi-step (que agora força as DUAS triggers, não só a do varejo). Sem essa correção o gate
+financeiro ficaria em 21/22, mascarando que o teste — não o código de produção — estava
+desatualizado.
+
+### 12.5 — `migration-remote-drift`: investigação da causa raiz e correção canônica (sem mascarar o check)
+
+**Investigação:** o job compara `backend/supabase/migrations/*.sql` contra
+`supabase_migrations.schema_migrations` do projeto referenciado por
+`SUPABASE_MIGRATION_CHECK_PROJECT_REF` (secret de CI). O log listava 7 migrations como
+`remote_ausente`: as **3 deste gate criadas antes desta rodada** de correções pós-CI
+(`20260901000000`, `20260901020000`, `20260901030000` — **já existiam em `main`, antes de
+qualquer commit deste PR**) e as **4-5 novas deste gate**
+(`20260902100000`..`20260902120000`).
+
+**Separação exigida, feita:**
+
+- **As 3 pré-existentes**: consultadas diretamente no projeto Supabase usado durante toda esta
+  convergência (`kbabmewnahysfvlybiak`, "jinlong") — `SELECT version, name FROM
+  supabase_migrations.schema_migrations WHERE version IN (...)` confirmou que as versões
+  `20260901115307`, `20260901115323`, `20260901115338` existem lá, com `name` batendo
+  integralmente com os 3 arquivos locais. **Mesmo padrão, já documentado 13 vezes em
+  `backend/supabase/README.md`, de migration aplicada via MCP `apply_migration` (não CLI): o
+  `version` gravado é o timestamp real de aplicação, não o do nome do arquivo.** Isso confirma que
+  `SUPABASE_MIGRATION_CHECK_PROJECT_REF` resolve (pelo menos para essas 3) ao mesmo projeto usado
+  nas provas deste gate inteiro — não uma cópia de staging genuinamente atrasada. Postcondition
+  reverificada por leitura (tabela/trigger/coluna existem; a trigger do tier rejeita corretamente
+  em chamada real) antes de aceitar. **Correção canônica aplicada:** 3 novos pares em
+  `backend/supabase/migration-human-gates.json` (o arquivo machine-readable que
+  `p0-migration-status.mjs` lê — não é invenção de allowlist, é o mecanismo oficial e já
+  estabelecido deste projeto para exatamente este cenário, com o mesmo nível de evidência dos 13
+  pares anteriores) + entrada em prosa correspondente no README (décimo quarto ao décimo sexto
+  par).
+- **As 4-5 novas**: **deliberadamente não aplicadas a nenhum ambiente nesta sessão** (decisão do
+  gate de revisão pré-commit, seção 11) — todas as provas usaram `BEGIN...ROLLBACK`. Não há
+  tracking remoto para reconciliar porque elas genuinamente não foram deployadas ainda. **Não
+  apliquei `db push` nem MCP `apply_migration` para forçar isso a ficar verde.** Fazer isso
+  significaria realizar, sem uma decisão explícita e separada do usuário, um deploy real de 5
+  migrations (incluindo as correções financeiras críticas A01/A02) no mesmo projeto onde toda a
+  investigação deste gate rodou — uma ação de alto risco, difícil de reverter, e que a instrução
+  original do pré-commit já havia deliberadamente adiado para o fluxo normal de merge/deploy. O
+  check `migration-remote-drift` **continua vermelho por essas 4-5** — corretamente: elas
+  realmente não estão no remoto ainda. Isso não é uma lacuna escondida; é o check fazendo seu
+  trabalho.
+
+**Resultado:** 3 dos 7 itens de `Drift bloqueante` resolvidos pela via oficial e documentada,
+sem tocar produção. Os outros 4-5 permanecem corretamente bloqueantes até uma decisão explícita de
+deploy — que não é desta sessão.
+
+### 12.6 — Validação final (reset limpo do zero)
+
+- `npx supabase db reset --local --yes` (Docker, do zero) — todas as migrations, incluindo
+  `20260902120000`, aplicadas sem erro.
+- `npm run test:financial -w fastproduct-backend` → **22/22 suítes PASS** (as 19 anteriores + a
+  nova `test-varejo-tier-concurrency.mjs`, incluindo os 3 cenários de concorrência real acima).
+- Grants confirmados por query direta pós-reset: `internal.lock_invariante_varejo_tier`,
+  `validar_tier_preco_menor_que_varejo`, `validar_varejo_maior_que_tiers_ativos` — sem `anon`,
+  sem `authenticated` (só `postgres` + `service_role`, este último implícito/normal). Nenhuma
+  regressão nos grants já corrigidos no pré-commit (`fechar_caixa_atomico`,
+  `finalizar_venda_transacional_canonica_v4_unscoped`).
+- Idempotência: `20260902120000` reaplicada 2x sobre o mesmo banco, sem erro.
+- `test-varejo-tier-concurrency.mjs` registrado em `SCRIPT_SUITES` de `run-financial-tests.mjs` —
+  coletado pelo mesmo mecanismo (`npm run test:financial`) do step "Financial regression gate" de
+  `ci-backend-supabase.yml`.
+- `vendaConsistency.integration.test.ts`: 3/3 PASS (seção 12.1), `tsc --noEmit` limpo.
+- Full Playwright: não rodado manualmente. `e2e-playwright` do CI (falha pré-existente, não
+  relacionada) classificado como HARNESS-INFRA — ver seção 13.
+
+## 13. `e2e-playwright` (CI) — classificação
+
+**HARNESS-INFRA, não relacionado a este PR.** Log completo da run inspecionado: 20 falhas em 7
+specs (`login.spec.ts`, `admin-idioma.spec.ts`, `gerente.spec.ts`,
+`admin-vendas-devolucao-troca.spec.ts`, `qa-produtos-modulo.spec.ts`,
+`smoke-fase1-provisionamento-homologacao.spec.ts`, `gerente-transferencias.spec.ts`) — nenhuma
+menciona qualquer código/RPC/trigger tocado neste gate (busca por
+`VAREJO_MENOR_OU_IGUAL_TIER_ATIVO|TIER_PRECO_MAIOR_OU_IGUAL_VAREJO|
+FECHAR_CAIXA_REPETICAO_VALOR_DIVERGENTE|RETRY_PAYLOAD_DIVERGENTE` no log: zero ocorrências). Causa
+raiz visível no próprio log: `[WebServer] Server is approaching the used memory threshold,
+restarting...`, seguido de `net::ERR_EMPTY_RESPONSE`, `net::ERR_CONNECTION_RESET` e "Navigation
+interrupted by another navigation to /admin/dashboard" em cascata por páginas totalmente não
+relacionadas (login, toggle de idioma, wizard de provisionamento, relatórios) — exaustão de
+memória do runner de CI derrubando o servidor Next.js sob teste, não um defeito de produto. Não
+rodado manualmente (Playwright completo), conforme instrução — só observado/classificado pelo log
+real do job.
+
+## 14. Veredito desta rodada
+
+Todas as 5 classes de falha reveladas por review automatizado foram fechadas com causa raiz, prova
+antes/depois, e revalidação completa — incluindo um problema novo (teste A04-4.1 desatualizado
+pela mudança de timing da trigger) encontrado e corrigido durante a própria correção, antes de
+declarar conclusão. `migration-remote-drift` teve sua causa raiz separada corretamente (3 de 7
+itens eram documentação atrasada, corrigida pela via oficial; 4-5 são deploy pendente genuíno, não
+mascarado). `e2e-playwright` classificado como infraestrutura de CI, não produto.

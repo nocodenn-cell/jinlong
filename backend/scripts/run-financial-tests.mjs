@@ -29,7 +29,11 @@ const NODE_SUITES = [
   'nfe-conferencia-margem-contract.test.mjs',
 ]
 
-const SCRIPT_SUITES = ['test-commission-concurrency.mjs', 'test-nfe-conferencia-concurrency.mjs']
+const SCRIPT_SUITES = [
+  'test-commission-concurrency.mjs',
+  'test-nfe-conferencia-concurrency.mjs',
+  'test-varejo-tier-concurrency.mjs',
+]
 
 const SQL_SUITES = [
   'sale-totals-invariant.test.sql',

@@ -56,17 +56,22 @@ DECLARE
   v_varejo_final numeric;
   v_tier_ativo boolean;
 BEGIN
-  -- A04-4.1 (regressão): criar tier com preço >= varejo é rejeitado (trigger
-  -- não-deferrable de 20260901000000, checagem é imediata de verdade).
+  -- A04-4.1 (regressão): criar tier com preço >= varejo é rejeitado. A
+  -- trigger de 20260901000000 foi revisada em 20260902120000 (achado do
+  -- gate de revisão pós-CI, PR #363) para CONSTRAINT TRIGGER ... DEFERRABLE
+  -- INITIALLY DEFERRED — a checagem roda no commit (ou em SET CONSTRAINTS
+  -- ... IMMEDIATE), não mais de imediato no INSERT.
   BEGIN
     INSERT INTO public.precos_atacado (produto_id, quantidade_minima, preco_unitario, ativo)
     VALUES (v_produto, 20, 110, true);
+    SET CONSTRAINTS trg_validar_tier_preco_menor_que_varejo IMMEDIATE;
     RAISE EXCEPTION 'GATE_A04_FALHOU: criar tier(110) >= varejo(100) foi aceito — A04-4.1 reaberto';
   EXCEPTION
     WHEN OTHERS THEN
       IF SQLERRM NOT LIKE 'TIER_PRECO_MAIOR_OU_IGUAL_VAREJO%' THEN RAISE; END IF;
-      RAISE NOTICE 'A04-4.1 OK: tier >= varejo continua rejeitado na criação (%).', SQLERRM;
+      RAISE NOTICE 'A04-4.1 OK: tier >= varejo continua rejeitado (checagem deferida forçada) (%).', SQLERRM;
   END;
+  SET CONSTRAINTS trg_validar_tier_preco_menor_que_varejo DEFERRED;
 
   -- Tier legítimo: qtd>=10 a 90 (< varejo 100).
   INSERT INTO public.precos_atacado (produto_id, quantidade_minima, preco_unitario, ativo)
@@ -134,17 +139,19 @@ BEGIN
   INSERT INTO public.precos_atacado (produto_id, quantidade_minima, preco_unitario, ativo)
   VALUES (v_produto, 10, 90, true);
 
-  -- Mesma ordem do caller real: 1) varejo, 2) tier, mesma transação.
+  -- Mesma ordem do caller real: 1) varejo, 2) tier, mesma transação. Força
+  -- as DUAS checagens deferidas (varejo→tiers e tier→varejo) — as duas
+  -- disparam pelas mudanças acima e as duas precisam aceitar o estado final.
   BEGIN
     UPDATE public.produtos SET preco_varejo = 80 WHERE id = v_produto;
     UPDATE public.precos_atacado SET preco_unitario = 70
       WHERE produto_id = v_produto AND quantidade_minima = 10;
-    SET CONSTRAINTS trg_validar_varejo_maior_que_tiers_ativos IMMEDIATE;
+    SET CONSTRAINTS trg_validar_varejo_maior_que_tiers_ativos, trg_validar_tier_preco_menor_que_varejo IMMEDIATE;
   EXCEPTION
     WHEN OTHERS THEN
       RAISE EXCEPTION 'GATE_A04_MULTI_STEP_FALHOU: edição legítima de varejo+tier juntos (caller real atualizar_produto_com_faixa_atacado) foi rejeitada — %', SQLERRM;
   END;
-  SET CONSTRAINTS trg_validar_varejo_maior_que_tiers_ativos DEFERRED;
+  SET CONSTRAINTS trg_validar_varejo_maior_que_tiers_ativos, trg_validar_tier_preco_menor_que_varejo DEFERRED;
 
   SELECT preco_varejo INTO v_varejo_final FROM public.produtos WHERE id = v_produto;
   SELECT preco_unitario INTO v_tier_final FROM public.precos_atacado

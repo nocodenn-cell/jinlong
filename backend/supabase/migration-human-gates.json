@@ -125,6 +125,24 @@
       "remoteOnlyVersion": "20260831140639",
       "reason": "Criação atômica de produto com faixa de atacado da PR #351 aplicada via MCP sob autorização explícita em 31/08/2026. Assinatura única e grants exclusivos de service_role foram reverificados no remoto.",
       "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20260901000000",
+      "remoteOnlyVersion": "20260901115307",
+      "reason": "validar_tier_preco_menor_que_varejo aplicada via MCP apply_migration (não CLI): schema_migrations.version gravado foi o timestamp real de aplicação (20260901115307), não o timestamp do nome do arquivo (20260901000000_validar_tier_preco_menor_que_varejo.sql). name bate integralmente. Postcondition reverificada em 02/09/2026 (gate de convergência PR #363): trigger trg_validar_tier_preco_menor_que_varejo existe no remoto e rejeita corretamente, em chamada real (BEGIN...ROLLBACK, sem persistência), a criação de um tier com preço >= varejo. Migration é idempotente (CREATE OR REPLACE + DROP TRIGGER IF EXISTS) — seguro reaplicar se um futuro db push tentar.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20260901020000",
+      "remoteOnlyVersion": "20260901115323",
+      "reason": "historico_tiers_crud aplicada via MCP apply_migration (não CLI): schema_migrations.version gravado foi o timestamp real de aplicação (20260901115323), não o timestamp do nome do arquivo (20260901020000_historico_tiers_crud.sql). name bate integralmente. Postcondition reverificada em 02/09/2026 (gate de convergência PR #363): tabela public.historico_tiers_crud e trigger trg_audit_tiers_crud existem no remoto. Migration é aditiva (CREATE TABLE IF NOT EXISTS + CREATE OR REPLACE FUNCTION + DROP TRIGGER IF EXISTS) — seguro reaplicar se um futuro db push tentar.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20260901030000",
+      "remoteOnlyVersion": "20260901115338",
+      "reason": "calcular_preco_produto_retorna_quantidade_minima aplicada via MCP apply_migration (não CLI): schema_migrations.version gravado foi o timestamp real de aplicação (20260901115338), não o timestamp do nome do arquivo (20260901030000_calcular_preco_produto_retorna_quantidade_minima.sql). name bate integralmente. Postcondition reverificada em 02/09/2026 (gate de convergência PR #363): public.calcular_preco_produto contém quantidade_minima no corpo remoto. Migration é CREATE OR REPLACE puro — seguro reaplicar se um futuro db push tentar.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
     }
   ]
 }
