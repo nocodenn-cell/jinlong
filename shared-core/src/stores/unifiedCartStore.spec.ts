@@ -123,6 +123,26 @@ describe('unifiedCartStore — idempotência da venda', () => {
     expect(useCartStore.getState().garantirVendaIdempotencyKey()).not.toBe(anterior)
   })
 
+  it('mutar o carrinho NÃO troca a chave — o PDV precisa bloquear finalize pendente', () => {
+    const chave = useCartStore.getState().garantirVendaIdempotencyKey()
+    useCartStore.getState().marcarFinalizacaoPendente()
+    useCartStore.getState().adicionarItem({
+      id: 'item-1',
+      produtoId: 'prod-1',
+      nome: 'Caneta',
+      quantidade: 1,
+      precoOriginal: 10,
+      precoUnitario: 10,
+    })
+
+    expect(useCartStore.getState().vendaIdempotencyKey).toBe(chave)
+    expect(useCartStore.getState().vendaFinalizacaoPendente).toBe(true)
+
+    useCartStore.getState().resolverFinalizacaoPendente()
+    useCartStore.getState().limparCarrinho()
+    expect(useCartStore.getState().vendaIdempotencyKey).toBeNull()
+  })
+
   it('persiste vendaEmEsperaOrigemId com o carrinho (anti double-sell pós-F5)', () => {
     const esperaId = '11111111-2222-4333-8444-555555555555'
     useCartStore.getState().setVendaEmEsperaOrigemId(esperaId)

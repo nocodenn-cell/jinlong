@@ -1,4 +1,8 @@
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
+import {
+  isVendaJaPersistidaMensagem,
+  MSG_VENDA_JA_PERSISTIDA,
+} from '@/lib/caixa/vendaJaPersistida'
 
 type IdiomaErro = 'pt' | 'zh'
 
@@ -93,6 +97,9 @@ export function caixaErroOperador(
   }
   if (l.includes('finalizar_venda_canonica_estoque') || l.includes('estoque insuficiente')) {
     return MSG_ESTOQUE[idioma]
+  }
+  if (isVendaJaPersistidaMensagem(raw)) {
+    return MSG_VENDA_JA_PERSISTIDA[idioma]
   }
   if (
     l.includes('preco_divergente') ||

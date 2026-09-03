@@ -35,6 +35,15 @@ describe('caixaErroOperador', () => {
     )
   })
 
+  it('não trata retry de venda já gravada como "tente novamente"', () => {
+    expect(
+      caixaErroOperador('FINALIZAR_VENDA_CANONICA_RETRY_PAYLOAD_DIVERGENTE'),
+    ).toBe('Esta venda já foi registrada. Verifique o desfecho antes de continuar.')
+    expect(
+      caixaErroOperador('FINALIZAR_VENDA_CANONICA_RETRY_PAYLOAD_DIVERGENTE', 'zh'),
+    ).toBe('该销售已登记。请先核对结果再继续。')
+  })
+
   it('mapeia saldo pendente sem cliente', () => {
     expect(caixaErroOperador('FINALIZAR_VENDA_CANONICA_SALDO_PENDENTE_EXIGE_CLIENTE')).toContain(
       'cliente',

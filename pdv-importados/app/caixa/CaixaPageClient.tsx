@@ -35,6 +35,10 @@ import {
 } from "@shared-core/src/caixa/checkoutSnapshot"
 import { aplicarDescontoGerenteSobreTotal } from "@/stores/managerDiscount"
 import { getDeviceFingerprint } from "@/lib/security/deviceFingerprint"
+import {
+  acaoPosFalhaFinalizar,
+  deveAbrirRecuperacaoAntesDeFinalizar,
+} from "@/lib/caixa/vendaJaPersistida"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
 import { useCaixaMensagens } from "@/app/caixa/hooks/useCaixaMensagens"
@@ -933,6 +937,15 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
 
   const handleFinalizar = useCallback(async (limiteCreditoGerenteToken?: string) => {
     if (itens.length === 0 || finalizando) return
+    // Mesma trava de handleNovoCupom: timeout/rede deixa a venda possivelmente
+    // gravada. Reenviar o cupom (ainda mais se o operador re-bipou) com a mesma
+    // chave e totais diferentes vira RETRY_PAYLOAD_DIVERGENTE — e tratar isso
+    // como falha apaga a chave e duplica a venda.
+    if (deveAbrirRecuperacaoAntesDeFinalizar(useCarrinhoStore.getState().vendaFinalizacaoPendente)) {
+      setVendaPendenteModalAberto(true)
+      setCaixaMensagem(m.caixa.msg_venda_pendente_bloqueio, { kind: "warning" })
+      return
+    }
     if (
       configCaixaWeb.vendas_suspensas === 'true' &&
       perfil !== null &&
@@ -1127,6 +1140,15 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         setVendaPendenteModalAberto(true)
         tocarFeedback("erro")
       } else {
+        // RETRY_PAYLOAD_DIVERGENTE: a venda JÁ está gravada. Manter pendente e
+        // forçar verificação — senão Novo cupom apaga a chave e duplica a venda.
+        if (acaoPosFalhaFinalizar(res.error) === 'manter_recuperacao') {
+          setCaixaMensagem(m.caixa.msg_venda_pendente_titulo, { kind: "warning" })
+          setCheckoutHint(m.caixa.msg_venda_pendente_descricao)
+          setVendaPendenteModalAberto(true)
+          tocarFeedback("erro")
+          return
+        }
         // Erro devolvido pelo servidor: a resposta chegou, logo a transação não
         // foi confirmada. Libera o fluxo mantendo a chave para o próximo envio.
         resolverFinalizacaoPendente()
