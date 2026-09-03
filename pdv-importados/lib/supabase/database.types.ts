@@ -5480,6 +5480,10 @@ export type Database = {
           valor_pago: number
         }[]
       }
+      excluir_linha_estoque_produto: {
+        Args: { p_ator_id?: string; p_produto_id: string }
+        Returns: undefined
+      }
       fechar_caixa_atomico: {
         Args: {
           p_motivo?: string
