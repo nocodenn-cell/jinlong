@@ -8,6 +8,28 @@
 // emissão". Misturar esta lógica com fiscal_worker_orchestration.ts
 // arriscaria um dia acoplar os dois fluxos sem querer; manter em módulos
 // separados torna esse acoplamento impossível de introduzir por acidente.
+//
+// Hotfix (achado da auditoria independente do Codex, missão final) —
+// concorrência entre workers podia sobrescrever um XML já ARMAZENADO e
+// regredir o estado para ERRO. Fechado em duas camadas independentes:
+//   1. Posse durável (lease) — `fiscal_claim_documentos_xml` (migration
+//      20260903170000) agora faz um UPDATE real com `xml_lease_token`; toda
+//      chamada de confirmação/erro/bloqueio EXIGE esse token e é ignorada
+//      (não aplicada) se ele não for mais o vigente.
+//   2. Storage create-only — upload sempre com `upsert:false` (o default do
+//      Storage do Supabase já falha com 409/"Duplicate" se o path existe,
+//      confirmado empiricamente contra o stack local). Conflito nunca vira
+//      overwrite: baixa o conteúdo existente, compara hash — igual reconcilia
+//      idempotentemente, diferente é fail-closed (nunca sobrescreve).
+//      Achado adicional (prova de concorrência real,
+//      `backend/scripts/test-fiscal-xml-concorrencia.ts`): o Storage local
+//      não demonstrou atomicidade perfeita de create-only sob concorrência
+//      GENUÍNA (duas requisições realmente simultâneas para um path novo
+//      podem ambas reportar sucesso) — por isso, `error === null` do
+//      `upload()` NUNCA é tratado como prova de posse exclusiva do blob;
+//      toda chamada, tenha o upload "sucedido" ou batido em conflito, lê de
+//      volta o que está de fato persistido e só confirma na RPC o hash
+//      REAL verificado.
 
 import type { FiscalXmlResult } from "./fiscal_types.ts";
 import type { FiscalProvider, ProviderConfig } from "./fiscal-provider-adapter.ts";
@@ -23,12 +45,20 @@ export type XmlDoc = {
   tipo_doc: string;
   provider: string | null;
   correlation_id?: string;
+  /** Token do lease de processamento (fiscal_claim_documentos_xml) — exigido
+   * por toda RPC de confirmação/erro/bloqueio; prova de posse vigente. */
+  lease_token: string;
 };
 
 export type XmlWorkerCounters = {
   armazenados: string[];
   bloqueados: string[];
   comErro: Array<{ id: string; erro: string }>;
+  /** Hotfix concorrência — chamadas cujo lease já estava obsoleto (outro
+   * worker resolveu o documento primeiro) ou que caíram sobre um estado já
+   * terminal. Nada foi corrompido; só não foi ESTA chamada que decidiu o
+   * resultado final. Contado separado para não confundir com falha real. */
+  ignoradosPorConcorrencia: string[];
 };
 
 /** SHA-256 em hex (minúsculo) — usa Web Crypto (disponível no runtime Deno
@@ -77,14 +107,26 @@ export function parseProviderIdentity(identity: string | null): ParsedProviderId
   return { type: "focus", ambiente: m[1] as "homologacao" | "producao", lojaId: m[2] };
 }
 
+/** Detecta o conflito "já existe" do Storage do Supabase (upload com
+ * `upsert:false` sobre um path ocupado) — confirmado empiricamente contra o
+ * stack local: `{statusCode:"409", error:"Duplicate", message:"The resource
+ * already exists"}`. Checa `statusCode` (mais estável) com fallback na
+ * mensagem, caso a forma exata do erro varie entre versões do client. */
+function isStorageDuplicateConflict(error: { message?: string; statusCode?: string | number } | null): boolean {
+  if (!error) return false;
+  if (String(error.statusCode) === "409") return true;
+  return /already exists|duplicate/i.test(error.message ?? "");
+}
+
 /**
  * Processa a obtenção/armazenamento do XML de UM documento já EMITIDO.
  * Nunca chama nenhuma RPC de emissão (`fiscal_marcar_emitido`/
  * `fiscal_marcar_erro*`) — só as 3 RPCs de XML, que por construção não têm
  * `status`/`provider`/`chave_fiscal`/`protocolo`/`tentativas` em seu SET
- * clause (ver migration 20260903150000). Read-only em relação à emissão:
- * `provider.obterXmlAutorizado` é a única chamada externa feita aqui, e seu
- * contrato (fiscal-provider-adapter.ts) é GET-only por construção.
+ * clause (ver migration 20260903150000/20260903170000). Read-only em
+ * relação à emissão: `provider.obterXmlAutorizado` é a única chamada
+ * externa feita aqui, e seu contrato (fiscal-provider-adapter.ts) é
+ * GET-only por construção.
  */
 export async function processXmlDocumento(
   supabase: SupabaseLike,
@@ -137,47 +179,107 @@ export async function processXmlDocumento(
       }
       const path = computeXmlStoragePath(doc, doc.provider);
       const hash = await sha256Hex(resultado.xml);
+
+      // Hotfix concorrência: create-only. NUNCA upsert — se o path já
+      // existe (upload anterior deste worker que não confirmou, ou outro
+      // worker que ganhou a corrida), a escrita é recusada pelo próprio
+      // Storage (409/"Duplicate") antes de qualquer byte ser sobrescrito.
       const { error: uploadErr } = await supabase.storage.from(FISCAL_XML_BUCKET).upload(path, resultado.xml, {
         contentType: "application/xml",
-        upsert: true,
+        upsert: false,
       });
-      if (uploadErr) {
+
+      if (uploadErr && !isStorageDuplicateConflict(uploadErr)) {
         await marcarXmlErro(supabase, doc, `UPLOAD_STORAGE_FALHOU:${uploadErr.message}`, counters);
         return;
       }
-      const { error: rpcErr } = await supabase.rpc("fiscal_marcar_xml_armazenado", {
+
+      // Hotfix concorrência — achado empírico desta própria auditoria: o
+      // Storage local do Supabase NÃO demonstrou atomicidade perfeita de
+      // create-only sob concorrência genuína (duas requisições realmente
+      // simultâneas para um path NOVO podem ambas reportar sucesso — não
+      // basta `error === null` como prova de posse exclusiva do blob).
+      // Por isso, seja o upload tendo "sucedido" ou tendo batido em
+      // conflito (409), a ÚNICA fonte confiável do que está de fato
+      // persistido é ler de volta e comparar hash — nunca confiar
+      // cegamente no retorno do `upload()`. Isso fecha o buraco onde um
+      // worker poderia confirmar (na RPC) um hash que não corresponde ao
+      // blob realmente armazenado.
+      const { data: existente, error: downloadErr } = await supabase.storage.from(FISCAL_XML_BUCKET).download(path);
+      if (downloadErr || !existente) {
+        await marcarXmlErro(supabase, doc, `VERIFICACAO_POS_UPLOAD_FALHOU:${downloadErr?.message ?? "sem dados"}`, counters);
+        return;
+      }
+      const conteudoReal = await existente.text();
+      const hashReal = await sha256Hex(conteudoReal);
+      if (hashReal !== hash) {
+        // O blob que está de fato no path não é o que esta chamada
+        // escreveu/esperava — outra escrita concorrente pousou por cima
+        // (conflito real) ou já havia um XML diferente ali. Nunca
+        // confirma um hash que não corresponde à realidade; fail-closed,
+        // nunca sobrescreve.
+        await marcarXmlErro(supabase, doc, "XML_DIVERGENTE_DE_BLOB_JA_EXISTENTE_NO_PATH", counters);
+        return;
+      }
+
+      const { data: aplicado, error: rpcErr } = await supabase.rpc("fiscal_marcar_xml_armazenado", {
         p_documento_id: doc.id,
         p_storage_path: path,
-        p_sha256: hash,
+        p_sha256: hashReal,
+        p_lease_token: doc.lease_token,
       });
       if (rpcErr) {
-        // Upload já aconteceu (path determinístico, upsert) — uma próxima
-        // tentativa reenvia para o MESMO path (idempotente) e tenta
-        // confirmar de novo. Nunca deixa em estado "armazenado sem
-        // confirmação": xml_status só some da fila quando a RPC confirma.
+        // Upload (ou reconciliação) já aconteceu com sucesso — uma próxima
+        // tentativa reencontra o MESMO path com o MESMO conteúdo
+        // (create-only não deixa isso divergir) e confirma de novo.
         await marcarXmlErro(supabase, doc, `CONFIRMAR_XML_ARMAZENADO_FALHOU:${rpcErr.message}`, counters);
         return;
       }
-      counters.armazenados.push(doc.id);
+      if (aplicado) {
+        counters.armazenados.push(doc.id);
+      } else {
+        // Lease obsoleto — outro worker já tinha resolvido este documento
+        // por outro caminho antes desta chamada confirmar. O blob que ESTA
+        // chamada escreveu (só se o path realmente era novo — se era um
+        // conflito reconciliado, nem chegou a escrever nada) fica órfão,
+        // mas nunca substitui o resultado real do dono do lease vigente.
+        counters.ignoradosPorConcorrencia.push(doc.id);
+      }
       return;
     }
   }
 }
 
 async function marcarXmlBloqueado(supabase: SupabaseLike, doc: XmlDoc, motivo: string, counters: XmlWorkerCounters): Promise<void> {
-  const { error } = await supabase.rpc("fiscal_marcar_xml_bloqueado", { p_documento_id: doc.id, p_motivo: motivo });
+  const { data: aplicado, error } = await supabase.rpc("fiscal_marcar_xml_bloqueado", {
+    p_documento_id: doc.id,
+    p_motivo: motivo,
+    p_lease_token: doc.lease_token,
+  });
   if (error) {
     counters.comErro.push({ id: doc.id, erro: `MARCAR_XML_BLOQUEADO_FALHOU:${error.message}` });
-  } else {
+  } else if (aplicado) {
     counters.bloqueados.push(doc.id);
+  } else {
+    counters.ignoradosPorConcorrencia.push(doc.id);
   }
 }
 
 async function marcarXmlErro(supabase: SupabaseLike, doc: XmlDoc, motivo: string, counters: XmlWorkerCounters): Promise<void> {
-  const { error } = await supabase.rpc("fiscal_marcar_xml_erro", { p_documento_id: doc.id, p_erro: motivo });
+  const { data: aplicado, error } = await supabase.rpc("fiscal_marcar_xml_erro", {
+    p_documento_id: doc.id,
+    p_erro: motivo,
+    p_lease_token: doc.lease_token,
+  });
   if (error) {
     counters.comErro.push({ id: doc.id, erro: `MARCAR_XML_ERRO_FALHOU:${error.message}` });
-  } else {
+  } else if (aplicado) {
     counters.comErro.push({ id: doc.id, erro: motivo });
+  } else {
+    // Hotfix concorrência (achado do Codex): esta é EXATAMENTE a chamada
+    // que antes regredia ARMAZENADO->ERRO quando feita por um worker
+    // atrasado. Agora a RPC ignora e devolve false — nunca marcada como
+    // erro real.
+    counters.ignoradosPorConcorrencia.push(doc.id);
   }
 }
