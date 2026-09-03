@@ -59,8 +59,9 @@ echo "🧪 Test Validation..."
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 TEST_OUTPUT=$(npm run test 2>&1 | grep "Tests")
-if echo "$TEST_OUTPUT" | grep -q "737 passed"; then
-  pass "Unit Tests: 737/737 passing"
+if echo "$TEST_OUTPUT" | grep -qE '[0-9]+ passed' && ! echo "$TEST_OUTPUT" | grep -qE '[0-9]+ failed'; then
+  PASS_COUNT=$(echo "$TEST_OUTPUT" | grep -oE '[0-9]+ passed' | head -1)
+  pass "Unit Tests: $PASS_COUNT (nenhuma falha)"
 else
   fail "Unit Tests: not all passing (run: npm run test)"
 fi
