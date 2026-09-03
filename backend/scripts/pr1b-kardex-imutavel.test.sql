@@ -3,15 +3,17 @@
 -- apagável via API apesar de descrito como imutável).
 --
 -- Prova, com dados sintéticos (1 loja, 1 GERENTE, 1 ADMIN, 1 produto), os
--- 5 cenários exigidos:
+-- cenários exigidos:
 --   1. GERENTE UPDATE no kardex -> NEGADO.
 --   2. GERENTE DELETE no kardex -> NEGADO.
 --   3. ADMIN UPDATE/DELETE no kardex -> NEGADO.
---   4. Fluxo legítimo (ajustar_estoque_manual, SECURITY DEFINER) continua
+--   4. service_role também não consegue UPDATE/DELETE (bloqueado pelo
+--      trigger, não pelo grant — grant não foi tocado para este papel).
+--   5. GERENTE INSERT direto (fora de RPC) -> NEGADO (nenhum caminho
+--      legítimo de app insere direto; só RPC SECURITY DEFINER).
+--   6. Fluxo legítimo (ajustar_estoque_manual, SECURITY DEFINER, chamado
+--      como service_role real — sem JWT — com p_ator_id explícito) continua
 --      gravando movimento novo normalmente.
---   5. service_role também não consegue UPDATE/DELETE (bloqueado pelo
---      trigger, não pelo grant — service_role mantém SELECT/INSERT, que é
---      o único necessário).
 -- E confirma que a linha semente não foi alterada por nenhuma tentativa.
 --
 -- Mesmo padrão de `PERFORM set_config(...); SET LOCAL ROLE ...;` usado em
@@ -182,6 +184,40 @@ END
 $neg_service_role$;
 
 -- ═══════════════════════════════════════════════════════════════════════════
+-- Negativo 5 — GERENTE tenta INSERT direto (fora de qualquer RPC): também
+-- passa a ser negado, já que nenhum caminho legítimo de app faz isso (todo
+-- INSERT real ocorre dentro de RPC SECURITY DEFINER, que roda como owner e
+-- não depende deste grant).
+-- ═══════════════════════════════════════════════════════════════════════════
+
+DO $neg_gerente_insert_direto$
+DECLARE
+  v_gerente uuid := 'f000000a-0000-4000-8000-00000000000b';
+  v_loja uuid := 'f000000a-0000-4000-8000-00000000000a';
+  v_produto uuid := 'f000000a-0000-4000-8000-000000000004';
+  v_tipo_codigo text;
+BEGIN
+  SELECT codigo INTO v_tipo_codigo FROM public.tipos_movimento_estoque LIMIT 1;
+
+  PERFORM set_config('request.jwt.claim.sub', v_gerente::text, true);
+  PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
+  SET LOCAL ROLE authenticated;
+
+  BEGIN
+    INSERT INTO public.movimentos_estoque_log
+      (loja_id, produto_id, tipo_codigo, quantidade_delta, usuario_id, observacao)
+    VALUES (v_loja, v_produto, v_tipo_codigo, 12345, v_gerente, 'PR1B tentativa de forjar kardex');
+    RAISE EXCEPTION 'PR1B_FALHOU: GERENTE conseguiu INSERT direto no kardex (forjando movimento sem passar por RPC)';
+  EXCEPTION
+    WHEN insufficient_privilege THEN
+      RAISE NOTICE 'Negativo 5 OK: GERENTE INSERT direto negado por grant (%).', SQLERRM;
+  END;
+
+  RESET ROLE;
+END
+$neg_gerente_insert_direto$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
 -- Positivo — fluxo legítimo (ajustar_estoque_manual, SECURITY DEFINER)
 -- continua gravando um movimento novo normalmente
 -- ═══════════════════════════════════════════════════════════════════════════
@@ -201,6 +237,15 @@ BEGIN
   -- app real chama via client admin (service_role) e passa p_ator_id
   -- explicitamente, já que não há JWT/auth.uid() nessa role. Named args
   -- também desambiguam da sobrecarga de 6 args (sem p_ator_id).
+  --
+  -- set_config(..., true) com is_local=true dura até o FIM DA TRANSAÇÃO, não
+  -- só do statement — RESET ROLE muda o papel, mas não limpa
+  -- request.jwt.claim.sub setado no bloco $neg_admin$ acima. Sem limpar
+  -- aqui, auth.uid() ainda resolveria para o ADMIN e COALESCE(auth.uid(),
+  -- p_ator_id) nunca chegaria a usar p_ator_id — o teste não estaria
+  -- exercitando o caminho real de produção (service_role sem JWT).
+  PERFORM set_config('request.jwt.claim.sub', '', true);
+  PERFORM set_config('request.jwt.claim.role', '', true);
   SET LOCAL ROLE service_role;
 
   PERFORM public.ajustar_estoque_manual(
