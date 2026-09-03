@@ -253,6 +253,44 @@ Deno.test("processXmlDocumento — 'obtido' sem doc.provider (documento legado p
   assertEquals(counters.bloqueados.length, 1);
 });
 
+Deno.test("processXmlDocumento — 'obtido' com xml vazio -> fail-closed (xml_erro), NUNCA armazena blob vazio", async () => {
+  const { client, rpcCalls, uploadCalls } = fakeSupabase();
+  const provider: FiscalProvider = {
+    async callProvider() {
+      throw new Error("não deveria ser chamado");
+    },
+    async obterXmlAutorizado(): Promise<FiscalXmlResult> {
+      return { kind: "obtido", xml: "   " };
+    },
+  };
+  const counters = freshCounters();
+  await processXmlDocumento(client, doc(), provider, "ref-1", { type: "focus" }, counters);
+
+  assertEquals(uploadCalls.length, 0);
+  assertEquals(rpcCalls.length, 1);
+  assertEquals(rpcCalls[0].fn, "fiscal_marcar_xml_erro");
+  assertEquals(counters.armazenados, []);
+});
+
+Deno.test("processXmlDocumento — 'obtido' com conteúdo claramente não-XML -> fail-closed, NUNCA armazena", async () => {
+  const { client, rpcCalls, uploadCalls } = fakeSupabase();
+  const provider: FiscalProvider = {
+    async callProvider() {
+      throw new Error("não deveria ser chamado");
+    },
+    async obterXmlAutorizado(): Promise<FiscalXmlResult> {
+      return { kind: "obtido", xml: '{"isso": "não é xml"}' };
+    },
+  };
+  const counters = freshCounters();
+  await processXmlDocumento(client, doc(), provider, "ref-1", { type: "focus" }, counters);
+
+  assertEquals(uploadCalls.length, 0);
+  assertEquals(rpcCalls.length, 1);
+  assertEquals(rpcCalls[0].fn, "fiscal_marcar_xml_erro");
+  assertEquals(counters.armazenados, []);
+});
+
 Deno.test("FISCAL_XML_BUCKET — id estável do bucket privado", () => {
   assertEquals(FISCAL_XML_BUCKET, "documentos-fiscais-xml");
   assertExists(FISCAL_XML_BUCKET);

@@ -117,6 +117,15 @@ export async function processXmlDocumento(
       await marcarXmlErro(supabase, doc, resultado.motivo, counters);
       return;
     case "obtido": {
+      // Validação interna mínima (não é contrato Focus — só sanidade do
+      // que ESTE sistema vai persistir como "XML autorizado"): um provider
+      // com bug ou uma resposta malformada não pode fazer um blob vazio ou
+      // claramente não-XML ser marcado ARMAZENADO como se fosse sucesso.
+      const conteudo = resultado.xml.trim();
+      if (!conteudo || !conteudo.startsWith("<")) {
+        await marcarXmlErro(supabase, doc, "XML_OBTIDO_VAZIO_OU_INVALIDO", counters);
+        return;
+      }
       if (!doc.provider) {
         // Documento EMITIDO sem identidade de provider congelada (só
         // possível para documentos legados, emitidos antes da Sprint
