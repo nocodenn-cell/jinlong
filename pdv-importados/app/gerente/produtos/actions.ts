@@ -405,7 +405,11 @@ export async function importarProdutosLote(
       await supabase.from('produtos').update(s.prev).eq('id', s.id)
     }
     if (criadosIds.length > 0) {
-      await supabase.from('estoque').delete().in('produto_id', criadosIds)
+      // RPC (não DELETE direto) — ver 20260904110000_estoque_fecha_bypass_
+      // delete_insert_e_nan.sql.
+      for (const produtoId of criadosIds) {
+        await supabase.rpc('excluir_linha_estoque_produto', { p_produto_id: produtoId })
+      }
       await supabase.from('produtos').delete().in('id', criadosIds)
     }
   }

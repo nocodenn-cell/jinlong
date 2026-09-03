@@ -8,12 +8,19 @@
 --   2. GERENTE INSERT direto com quantidade_atual <> 0 -> NEGADO (policy).
 --   3. GERENTE INSERT direto com quantidade_atual = 0 -> PERMITIDO
 --      (mesmo caminho de garantirLinhaEstoque).
---   4. GERENTE DELETE da própria loja -> PERMITIDO (exclusão de produto).
---   5. Fluxo legítimo (ajustar_estoque_manual, SECURITY DEFINER) continua
+--   4. GERENTE DELETE direto -> NEGADO (achado de review pós-merge:
+--      DELETE+INSERT(qtd=0) zerava saldo sem RPC/kardex — ver
+--      20260904110000_estoque_fecha_bypass_delete_insert_e_nan.sql).
+--   5. GERENTE consegue excluir a linha via RPC
+--      excluir_linha_estoque_produto -> PERMITIDO (mesmo resultado da
+--      exclusão de produto, agora só possível por esse caminho).
+--   6. Fluxo legítimo (ajustar_estoque_manual, SECURITY DEFINER) continua
 --      fazendo UPDATE de quantidade_atual normalmente.
---   6. CHECK constraint bloqueia quantidade negativa mesmo para quem
+--   7. CHECK constraint bloqueia quantidade negativa mesmo para quem
 --      bypassa RLS/grant (service_role/owner) — invariante vale para
 --      QUALQUER writer, não só authenticated.
+--   8. CHECK constraint bloqueia NaN (numeric NaN >= 0 é true no Postgres
+--      — achado de review pós-merge).
 -- Tudo dentro de uma transação com ROLLBACK final — nada persiste.
 
 \set ON_ERROR_STOP on
@@ -138,10 +145,35 @@ END
 $pos_insert_quantidade_zero$;
 
 -- ═══════════════════════════════════════════════════════════════════════════
--- Positivo 2 — GERENTE consegue DELETE (exclusão de produto)
+-- Negativo 4 — GERENTE tenta DELETE direto (fecha bypass DELETE+INSERT)
 -- ═══════════════════════════════════════════════════════════════════════════
 
-DO $pos_delete$
+DO $neg_delete_direto$
+DECLARE
+  v_gerente uuid := 'f000000b-0000-4000-8000-00000000000b';
+  v_produto uuid := 'f000000b-0000-4000-8000-000000000005';
+BEGIN
+  PERFORM set_config('request.jwt.claim.sub', v_gerente::text, true);
+  PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
+  SET LOCAL ROLE authenticated;
+
+  BEGIN
+    DELETE FROM public.estoque WHERE produto_id = v_produto;
+    RAISE EXCEPTION 'PR1C_FALHOU: GERENTE conseguiu DELETE direto em estoque';
+  EXCEPTION
+    WHEN insufficient_privilege THEN
+      RAISE NOTICE 'Negativo 4 OK: DELETE direto negado por grant (%).', SQLERRM;
+  END;
+
+  RESET ROLE;
+END
+$neg_delete_direto$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Positivo 2 — GERENTE consegue excluir a linha via RPC dedicada
+-- ═══════════════════════════════════════════════════════════════════════════
+
+DO $pos_delete_via_rpc$
 DECLARE
   v_gerente uuid := 'f000000b-0000-4000-8000-00000000000b';
   v_produto uuid := 'f000000b-0000-4000-8000-000000000005';
@@ -151,18 +183,52 @@ BEGIN
   PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
   SET LOCAL ROLE authenticated;
 
-  DELETE FROM public.estoque WHERE produto_id = v_produto;
-  GET DIAGNOSTICS v_linhas = ROW_COUNT;
+  PERFORM public.excluir_linha_estoque_produto(v_produto, NULL);
 
   RESET ROLE;
 
-  IF v_linhas <> 1 THEN
-    RAISE EXCEPTION 'PR1C_FALHOU: DELETE de exclusão de produto não afetou 1 linha (afetou %)', v_linhas;
+  SELECT count(*) INTO v_linhas FROM public.estoque WHERE produto_id = v_produto;
+  IF v_linhas <> 0 THEN
+    RAISE EXCEPTION 'PR1C_FALHOU: excluir_linha_estoque_produto não removeu a linha (restam=%)', v_linhas;
   END IF;
 
-  RAISE NOTICE 'Positivo 2 OK: DELETE direto (exclusão de produto) permitido normalmente.';
+  RAISE NOTICE 'Positivo 2 OK: excluir_linha_estoque_produto (RPC) remove a linha normalmente.';
 END
-$pos_delete$;
+$pos_delete_via_rpc$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Negativo 5 — GERENTE de OUTRA loja não consegue excluir via RPC
+-- ═══════════════════════════════════════════════════════════════════════════
+
+DO $neg_delete_rpc_outra_loja$
+DECLARE
+  v_gerente_outro uuid := 'f000000b-0000-4000-8000-0000000000ff';
+  v_loja_outra uuid := 'f000000b-0000-4000-8000-0000000000fe';
+  v_produto uuid := 'f000000b-0000-4000-8000-000000000004';
+BEGIN
+  INSERT INTO auth.users (id) VALUES (v_gerente_outro) ON CONFLICT (id) DO NOTHING;
+  INSERT INTO public.lojas (id, nome, codigo, ativo) VALUES (v_loja_outra, 'PR1C Loja Outra', 'PR1C-FE', true)
+    ON CONFLICT (id) DO UPDATE SET ativo = true;
+  INSERT INTO public.usuarios (id, nome, perfil, ativo, loja_id, idioma_preferido)
+    VALUES (v_gerente_outro, 'PR1C Gerente Outro', 'GERENTE', true, v_loja_outra, 'pt')
+    ON CONFLICT (id) DO UPDATE SET perfil = 'GERENTE', ativo = true, loja_id = v_loja_outra;
+
+  PERFORM set_config('request.jwt.claim.sub', v_gerente_outro::text, true);
+  PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
+  SET LOCAL ROLE authenticated;
+
+  BEGIN
+    PERFORM public.excluir_linha_estoque_produto(v_produto, NULL);
+    RAISE EXCEPTION 'PR1C_FALHOU: GERENTE de outra loja excluiu estoque via RPC';
+  EXCEPTION
+    WHEN OTHERS THEN
+      IF SQLERRM NOT LIKE 'EXCLUIR_ESTOQUE_LOJA_INVALIDA%' THEN RAISE; END IF;
+      RAISE NOTICE 'Negativo 5 OK: RPC nega exclusão cross-loja (%).', SQLERRM;
+  END;
+
+  RESET ROLE;
+END
+$neg_delete_rpc_outra_loja$;
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- Positivo 3 — fluxo legítimo (ajustar_estoque_manual, SECURITY DEFINER)
@@ -221,6 +287,26 @@ BEGIN
   END;
 END
 $neg_check_negativo$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Negativo 6 — CHECK constraint bloqueia NaN mesmo bypassando grant/RLS
+-- (numeric NaN >= 0 é true no Postgres — achado de review pós-merge)
+-- ═══════════════════════════════════════════════════════════════════════════
+
+DO $neg_check_nan$
+DECLARE
+  v_produto uuid := 'f000000b-0000-4000-8000-000000000004';
+  v_loja uuid := 'f000000b-0000-4000-8000-00000000000a';
+BEGIN
+  BEGIN
+    UPDATE public.estoque SET quantidade_atual = 'NaN'::numeric WHERE produto_id = v_produto AND loja_id = v_loja;
+    RAISE EXCEPTION 'PR1C_FALHOU: CHECK constraint não bloqueou quantidade_atual = NaN (rodando como owner)';
+  EXCEPTION
+    WHEN check_violation THEN
+      RAISE NOTICE 'Negativo 6 OK: CHECK constraint bloqueou NaN mesmo como owner (%).', SQLERRM;
+  END;
+END
+$neg_check_nan$;
 
 SELECT 'PR-1C ESTOQUE QUANTIDADE PROTECAO: OK' AS resultado;
 ROLLBACK;

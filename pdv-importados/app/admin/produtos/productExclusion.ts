@@ -157,7 +157,12 @@ export function createProductExclusionEffects(
         }
 
         // Cleanup de linha órfã — só no path de delete limpo (legado).
-        const { error: eEst } = await supabase.from('estoque').delete().eq('produto_id', id)
+        // RPC (não DELETE direto): fecha o bypass DELETE+INSERT(qtd=0) que
+        // zerava saldo sem RPC/kardex — ver 20260904110000_estoque_fecha_
+        // bypass_delete_insert_e_nan.sql.
+        const { error: eEst } = await supabase.rpc('excluir_linha_estoque_produto', {
+          p_produto_id: id,
+        })
         if (eEst) {
           return {
             ok: false,
