@@ -73,12 +73,20 @@ export async function criarTituloReceber(input: {
   })
   if (erro) return { success: false, error: erro }
 
+  // contas_receber.loja_id é NOT NULL (migration 112): preenche com a loja
+  // do gerente, mesmo padrão de criarCliente nesta mesma tela.
+  const lojaId = auth.session.lojaId
+  if (!lojaId) {
+    return { success: false, error: 'Sua conta não está associada a uma loja. Contate o administrador.' }
+  }
+
   const supabase = await createClient()
   return actionResultToLegacyData(
     await runServerActionWithObservability('gerente/financeiro/criar-titulo', async () => {
       const writer = createReceivableWriter(supabase)
       const created = await writer.create({
         clienteId: input.cliente_id,
+        lojaId,
         valorTotal: input.valor_total,
         descricao: input.descricao,
         vencimento: input.vencimento,

@@ -11,6 +11,7 @@ import type {
 
 export type CreateReceivableCommand = {
   clienteId: ClienteId
+  lojaId: string
   valorTotal: number
   descricao?: string | null
   vencimento?: string | null
