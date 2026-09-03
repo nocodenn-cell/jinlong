@@ -30,6 +30,109 @@ export function extractLojaId(payload: Record<string, unknown> | null): string |
   return typeof v === "string" && v.trim() !== "" ? v : null;
 }
 
+// ---------------------------------------------------------------------------
+// Sprint C2.10 (P0-1, achado Codex) — identidade do provider persistida por
+// documento. Reusa a coluna `provider text` já existente em
+// `documentos_fiscais_pendentes` (migration 037 — presente no schema desde
+// antes desta missão, nunca ativamente escrita por nenhuma RPC até agora),
+// em vez de introduzir tabela/coluna nova. Formato determinístico e
+// parseável, não um objeto — "não introduzir abstração excessiva":
+//   focus:  "focus:<homologacao|producao>:<loja_id>"
+//   demais: "<mock|http|bling>" (sem ambiente/loja — esses providers não têm
+//           esse conceito multiempresa).
+// ---------------------------------------------------------------------------
+
+const IDENTIDADES_LEGADAS_CONHECIDAS = new Set(["mock", "http", "bling"]);
+const FOCUS_IDENTITY_RE = /^focus:(homologacao|producao):.+$/;
+
+/** TRUE só para valores que este mecanismo (Sprint C2.10) realmente escreveu
+ * — um valor legado não reconhecido (ex.: `NFE_PROVIDER_HTTP`, gravado uma
+ * única vez por uma migration de 2026 muito anterior a esta missão, nunca
+ * mais escrito desde então) NÃO é tratado como identidade congelada válida
+ * — é tratado como "ainda não congelado", podendo ser sobrescrito pela
+ * primeira tentativa real sob este mecanismo. Isso evita falso-positivo de
+ * "provider mudou" contra dado histórico que nunca teve esse significado. */
+export function isRecognizedProviderIdentity(value: string): boolean {
+  return IDENTIDADES_LEGADAS_CONHECIDAS.has(value) || FOCUS_IDENTITY_RE.test(value);
+}
+
+/** Identidade determinística da tentativa de emissão — empresa (loja) +
+ * ambiente + provider, calculada a partir da configuração ATUAL do deploy.
+ * Chamada tanto para decidir o que congelar na 1ª tentativa quanto para
+ * validar contra o que já está congelado em tentativas seguintes. */
+export function computeProviderIdentity(
+  providerType: string,
+  deployAmbiente: "homologacao" | "producao" | null,
+  lojaId: string | null,
+): string {
+  if (providerType === "focus") {
+    return `focus:${deployAmbiente ?? "sem-ambiente"}:${lojaId ?? "sem-loja"}`;
+  }
+  return providerType;
+}
+
+export type ProviderIdentityCheck =
+  | { ok: true; shouldFreeze: boolean }
+  | { ok: false; frozen: string; current: string };
+
+/**
+ * Contrato (P0-1): se já existe uma identidade RECONHECIDA congelada neste
+ * documento, a identidade atual (config do deploy corrente) tem que bater
+ * EXATAMENTE — nenhum fallback, nenhuma tolerância. Se não bater
+ * (restart/deploy trocou FISCAL_PROVIDER_TYPE, FISCAL_ENVIRONMENT, ou a
+ * config multiempresa da loja mudou de ambiente), `ok: false` — o chamador
+ * deve fail-closed (zero HTTP) e marcar erro, nunca tentar reconciliar sob
+ * a identidade nova nem cair para outro provider.
+ */
+export function validateProviderIdentity(frozenRaw: string | null, current: string): ProviderIdentityCheck {
+  if (!frozenRaw || !isRecognizedProviderIdentity(frozenRaw)) {
+    return { ok: true, shouldFreeze: true };
+  }
+  if (frozenRaw !== current) {
+    return { ok: false, frozen: frozenRaw, current };
+  }
+  return { ok: true, shouldFreeze: false };
+}
+
+/** Fail-closed: identidade do provider divergiu da congelada. Zero HTTP —
+ * nem chega a resolver credencial sob a config atual (poderia
+ * "coincidentemente" funcionar para uma loja/ambiente errados). Não é
+ * transitório — precisa de intervenção humana (reverter o deploy/config, ou
+ * decidir conscientemente reprocessar sob a nova identidade), então segue o
+ * mesmo padrão não-retryable de `applyCredentialResolutionFailure`. */
+export async function applyProviderIdentityMismatch(
+  supabase: SupabaseLike,
+  doc: FiscalDoc,
+  check: { frozen: string; current: string },
+  counters: WorkerCounters,
+): Promise<void> {
+  const code = "FISCAL_PROVIDER_IDENTIDADE_DIVERGENTE";
+  const normalized = classifyFiscalError({
+    erro: code,
+    transitorio: false,
+    httpStatus: null,
+    providerCode: code,
+    providerMessage: `Identidade do provider mudou desde a tentativa anterior: congelado='${check.frozen}', atual='${check.current}'.`,
+    payload: null,
+  });
+  const { error } = await supabase.rpc("fiscal_marcar_erro_normalizado", {
+    p_documento_id: doc.id,
+    p_erro: code,
+    p_transitorio: false,
+    p_error_code: code,
+    p_error_category: "CONFIGURACAO_FISCAL_AUSENTE",
+    p_action_hint: `Config do provider divergiu da tentativa anterior (congelado='${check.frozen}', atual='${check.current}'). Reverter a config ou reprocessar conscientemente pelo painel.`,
+    p_retryable: false,
+    p_next_step_url: normalized.next_step_url,
+    p_error_payload: { frozen: check.frozen, current: check.current },
+  });
+  if (error) {
+    counters.failed.push({ id: doc.id, erro: `MARCAR_ERRO_NORMALIZADO_FAILED:${error.message}` });
+  } else {
+    counters.failed.push({ id: doc.id, erro: code });
+  }
+}
+
 /** C2.1 — falha fechada de resolução de credencial: zero HTTP já aconteceu (o
  * chamador nem chega a instanciar o provider); aqui só registramos o motivo na
  * mesma trilha de erro já existente, sem inventar RPC nova. Não-retryable —
@@ -167,6 +270,42 @@ export async function applyFocusRemoteState(
   }
 }
 
+/** P0-2 (Sprint C2.10, achado Codex) — fail-closed quando já existe
+ * tentativa anterior mas o provider corrente não sabe consultar. Mesmo
+ * padrão de `applyProviderIdentityMismatch`: não-transitório, precisa de
+ * intervenção humana (não vai se resolver sozinho com backoff). */
+async function applyProviderSemConsultaAposTentativa(
+  supabase: SupabaseLike,
+  doc: FiscalDoc,
+  counters: WorkerCounters,
+): Promise<void> {
+  const code = "FISCAL_PROVIDER_SEM_CONSULTA_APOS_TENTATIVA";
+  const normalized = classifyFiscalError({
+    erro: code,
+    transitorio: false,
+    httpStatus: null,
+    providerCode: code,
+    providerMessage: "Documento já teve tentativa anterior, mas o provider atual não tem capacidade de consulta — impossível confirmar com segurança se a tentativa anterior chegou a ser processada.",
+    payload: null,
+  });
+  const { error } = await supabase.rpc("fiscal_marcar_erro_normalizado", {
+    p_documento_id: doc.id,
+    p_erro: code,
+    p_transitorio: false,
+    p_error_code: code,
+    p_error_category: "CONFIGURACAO_FISCAL_AUSENTE",
+    p_action_hint: "Restaurar um provider com capacidade de consulta (ex.: focus) antes de reprocessar, ou reprocessar conscientemente sabendo do risco de duplicidade.",
+    p_retryable: false,
+    p_next_step_url: normalized.next_step_url,
+    p_error_payload: null,
+  });
+  if (error) {
+    counters.failed.push({ id: doc.id, erro: `MARCAR_ERRO_NORMALIZADO_FAILED:${error.message}` });
+  } else {
+    counters.failed.push({ id: doc.id, erro: code });
+  }
+}
+
 export type RetrySafeGateResult = { proceed: true } | { proceed: false };
 
 /**
@@ -197,6 +336,16 @@ export type RetrySafeGateResult = { proceed: true } | { proceed: false };
  * reconciliação) e devolve `proceed: false` — o chamador deve pular a
  * emissão para este documento nesta rodada (`continue`), nunca reemitir.
  *
+ * REVISÃO — Sprint C2.10 (P0-2, achado Codex): havia um bug real aqui —
+ * `!doc.ja_tentou_emissao_antes || !provider.consultarDocumento` combinava
+ * as duas condições no MESMO OR, então "provider sem capacidade de
+ * consulta" liberava `proceed: true` mesmo numa tentativa que NÃO é a
+ * primeira (ex.: identidade do provider mudou para mock/http/bling entre
+ * tentativas — ver P0-1). "Provider sem consulta" NUNCA pode significar
+ * "autorizado a emitir de novo" quando já existe tentativa anterior — as
+ * duas condições agora são checadas em separado: só a AUSÊNCIA de
+ * tentativa anterior libera sem checar a capacidade do provider.
+ *
  * REVISÃO — Sprint C2.9 (P0-2, achado Codex): "um único nao_encontrado
  * torna seguro emitir de novo" é a única semântica CONFIRMADA pela
  * documentação oficial da Focus (404 = referência não encontrada — não é
@@ -221,11 +370,21 @@ export async function enforceRetrySafeGate(
   cfg: ProviderConfig,
   counters: WorkerCounters,
 ): Promise<RetrySafeGateResult> {
-  if (!doc.ja_tentou_emissao_antes || !provider.consultarDocumento) {
-    // Nunca reclamado antes (ou provider sem capacidade de consulta, ex.:
-    // mock/http/bling legado): nada para reconciliar — segue para emissão
-    // normalmente, mesmo comportamento de sempre.
+  if (!doc.ja_tentou_emissao_antes) {
+    // Nunca reclamado antes: nada para reconciliar — segue para emissão
+    // normalmente, mesmo comportamento de sempre (independente do provider
+    // ter ou não capacidade de consulta).
     return { proceed: true };
+  }
+  if (!provider.consultarDocumento) {
+    // P0-2: já existe tentativa anterior, mas o provider ATUAL não sabe
+    // consultar — não dá pra confirmar se a tentativa anterior chegou a
+    // ser processada. Fail-closed: zero POST, erro recuperável (não
+    // transitório — precisa de intervenção: restaurar um provider com
+    // capacidade de consulta, ou reprocessar conscientemente sabendo do
+    // risco). Nunca silenciosamente "libera" só porque o provider mudou.
+    await applyProviderSemConsultaAposTentativa(supabase, doc, counters);
+    return { proceed: false };
   }
   const estadoRemoto = await provider.consultarDocumento(ref, doc.tipo_doc, cfg);
   if (estadoRemoto.kind !== "nao_encontrado") {

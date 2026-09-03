@@ -148,6 +148,46 @@ Deno.test("P0-3 — payload incompleto -> emitirNfe também NÃO chama fetch (me
   }
 });
 
+Deno.test("P0-4 (item 7) — destinatário incompleto (NFC-e identificada, sem UF) -> callProvider NÃO chama fetch", async () => {
+  const { calls, restore } = installFakeFetch(() => ({ status: 200, body: { chave: "x", protocolo: "y" } }));
+  try {
+    const provider = new FocusProvider();
+    const identificada = doc({
+      payload: {
+        emitente: { cnpj: "12345678000199" },
+        itens: [itemQuaseCompleto()],
+        pagamentos: [{ forma_pagamento: "DINHEIRO", valor: 10 }],
+        destinatario: { cliente_id: "cli-1", nome: "Cliente Teste", documento: "12345678901", tipo: "PF" },
+      },
+    });
+    const result = await provider.callProvider(identificada, CFG);
+    assertEquals(calls.length, 0);
+    assertEquals(result.ok, false);
+  } finally {
+    restore();
+  }
+});
+
+Deno.test("P0-4 (item 7) — NF-e sem destinatário -> emitirNfe NÃO chama fetch (destinatário é obrigatório)", async () => {
+  const { calls, restore } = installFakeFetch(() => ({ status: 201, body: { chave_nfe: "x", protocolo_nfe: "y" } }));
+  try {
+    const provider = new FocusProvider();
+    const semDestinatario = doc({
+      tipo_doc: "NFE",
+      payload: {
+        emitente: { cnpj: "12345678000199" },
+        itens: [itemQuaseCompleto()],
+        pagamentos: [{ forma_pagamento: "DINHEIRO", valor: 10 }],
+      },
+    });
+    const estado = await provider.emitirNfe!(semDestinatario, CFG);
+    assertEquals(calls.length, 0);
+    assertEquals(estado.kind, "erro_definitivo");
+  } finally {
+    restore();
+  }
+});
+
 Deno.test("P0-3 — payload sem itens/pagamentos nenhum (venda vazia) também bloqueia, zero POST", async () => {
   const { calls, restore } = installFakeFetch(() => ({ status: 200, body: { chave: "x", protocolo: "y" } }));
   try {
@@ -168,6 +208,44 @@ Deno.test("buildFocusEmitBody — _fastproduct_dto_gaps NUNCA aparece no corpo (
   const { body, gaps } = buildFocusEmitBody(doc({ payload: { emitente: { cnpj: "1" } } }), "ref-1");
   assertEquals(Object.prototype.hasOwnProperty.call(body, "_fastproduct_dto_gaps"), false);
   assertExists(gaps); // os gaps continuam disponíveis pro chamador, só não no wire
+});
+
+// ---------------------------------------------------------------------------
+// P0-3 (Sprint C2.10, achado Codex) — wire é ALLOWLIST, não "snapshot menos
+// alguns campos". Nenhum identificador interno do FastProduct chega ao JSON
+// serializado que seria enviado à Focus.
+// ---------------------------------------------------------------------------
+
+const CAMPOS_INTERNOS_PROIBIDOS_NO_WIRE = ["documento_id", "venda_id", "tipo_doc", "correlation_id", "ref", "_fastproduct_dto_gaps"];
+
+Deno.test("P0-3 — nenhum identificador interno (documento_id/venda_id/tipo_doc/correlation_id/ref) chega ao JSON serializado do corpo", () => {
+  const d = doc({
+    id: "doc-interno-123",
+    venda_id: "venda-interna-456",
+    correlation_id: "corr-interno-789",
+    payload: {
+      emitente: { cnpj: "12345678000199" },
+      itens: [itemQuaseCompleto()],
+      pagamentos: [{ forma_pagamento: "DINHEIRO", valor: 10 }],
+    },
+  });
+  const { body } = buildFocusEmitBody(d, "ref-que-so-vai-na-url");
+  const serializado = JSON.stringify(body);
+  for (const campo of CAMPOS_INTERNOS_PROIBIDOS_NO_WIRE) {
+    assertEquals(serializado.includes(`"${campo}"`), false, `campo interno '${campo}' vazou para o wire: ${serializado}`);
+  }
+  // `ref` continua transportado do jeito CONFIRMADO — na URL, não no corpo.
+  const url = buildFocusEmitUrl("https://homologacao.focusnfe.com.br", d.tipo_doc, "ref-que-so-vai-na-url");
+  assertEquals(url.includes("ref=ref-que-so-vai-na-url"), true);
+});
+
+Deno.test("P0-3 — internalMeta carrega os identificadores internos separadamente do body (uso só em log/erro do worker)", () => {
+  const d = doc({ id: "doc-x", venda_id: "venda-y", correlation_id: "corr-z" });
+  const { internalMeta } = buildFocusEmitBody(d, "ref-w");
+  assertEquals(internalMeta.documento_id, "doc-x");
+  assertEquals(internalMeta.venda_id, "venda-y");
+  assertEquals(internalMeta.correlation_id, "corr-z");
+  assertEquals(internalMeta.ref, "ref-w");
 });
 
 Deno.test("C2.5.1 — NFC-e presencial sem frete: corpo tem modalidade_frete=9, presenca_comprador=1, local_destino=1", () => {

@@ -372,7 +372,14 @@ export function resolveFocusRef(doc: FiscalDoc): string {
   return refField === "venda_id" ? doc.venda_id : doc.id;
 }
 
-export type BuildFocusEmitBodyResult = { body: Record<string, unknown>; bloqueante: boolean; gaps: string[] };
+export type BuildFocusEmitBodyResult = {
+  body: Record<string, unknown>;
+  bloqueante: boolean;
+  gaps: string[];
+  /** Sprint C2.10 (P0-3) — metadados internos do FastProduct (nunca vão no
+   * wire) para uso em logs/mensagens de erro do próprio worker. */
+  internalMeta: { ref: string; documento_id: string; venda_id: string; tipo_doc: string; correlation_id: string | null };
+};
 
 /**
  * Sprint C2.9 (P0-3, achado Codex): `buildFocusNfceEnvelope` já computava
@@ -394,6 +401,19 @@ export type BuildFocusEmitBodyResult = { body: Record<string, unknown>; bloquean
  * (P0-8): testável direto, sem precisar instanciar `FocusProvider` nem
  * simular fetch, para provar shape/frescor de `data_emissao` isoladamente
  * do gate de bloqueante.
+ *
+ * Sprint C2.10 (P0-3, achado Codex): o corpo (`body`) enviado à Focus era
+ * "snapshot menos alguns campos" — `ref`/`documento_id`/`venda_id`/
+ * `tipo_doc`/`correlation_id` (identificadores 100% internos do
+ * FastProduct, nunca documentados pela Focus) iam junto no JSON do POST.
+ * Corrigido para ALLOWLIST: `body` agora é só `{...known (campos do
+ * contrato Focus já confirmados por buildFocusNfceEnvelope), data_emissao}`
+ * — nada mais entra. `ref` continua transportado do jeito CONFIRMADO
+ * (query string da URL, ver `buildFocusEmitUrl`/`buildFocusConsultaUrl`) —
+ * só parou de ser DUPLICADO como campo do corpo, o que nunca foi
+ * confirmado como parte do contrato. Os identificadores internos
+ * continuam disponíveis via `internalMeta`, só não vão mais no wire —
+ * usados só para logging/mensagens de erro do próprio worker.
  */
 export function buildFocusEmitBody(doc: FiscalDoc, ref: string): BuildFocusEmitBodyResult {
   const { body: known, gaps, bloqueante } = buildFocusNfceEnvelope(doc.payload, doc.tipo_doc);
@@ -407,14 +427,10 @@ export function buildFocusEmitBody(doc: FiscalDoc, ref: string): BuildFocusEmitB
       // congelando só `data_venda`, o fato de negócio). Ver
       // docs/audits/AUDITORIA_PRONTIDAO_FOCUS_NFE_FASE_C_GATE_C2_5.md.
       data_emissao: new Date().toISOString(),
-      ref,
-      documento_id: doc.id,
-      venda_id: doc.venda_id,
-      tipo_doc: doc.tipo_doc,
-      correlation_id: doc.correlation_id ?? null,
     },
     bloqueante,
     gaps: gaps.map((g) => g.campo),
+    internalMeta: { ref, documento_id: doc.id, venda_id: doc.venda_id, tipo_doc: doc.tipo_doc, correlation_id: doc.correlation_id ?? null },
   };
 }
 

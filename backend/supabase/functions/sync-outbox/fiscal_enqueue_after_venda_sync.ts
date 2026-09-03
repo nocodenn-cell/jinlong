@@ -147,6 +147,38 @@ export async function maybeEnqueueFiscalDocumentAfterSyncedVenda(
     }
   }
 
+  // Sprint C2.10 (P0-5): lê `vendas_pagamentos` diretamente — a MESMA fonte
+  // (SSOT) que o caminho web já usa em `finalizar_venda_transacional_
+  // canonica_v4_unscoped` — em vez de reconstruir um array de 1 elemento a
+  // partir do campo escalar `payload.forma_pagamento`. `registrar_venda_
+  // com_itens` (Sprint C2.10) grava 1 linha por forma quando o chamador
+  // envia `p_pagamentos`, ou 1 única linha (comportamento de sempre) quando
+  // não envia — esta leitura reflete corretamente os dois casos sem
+  // precisar saber qual caminho a RPC tomou. Nunca deriva split a partir do
+  // total; lê o que foi de fato persistido.
+  let pagamentos: Array<{ forma_pagamento: string; valor: number }> = [];
+  {
+    const { data, error } = await supabase
+      .from("vendas_pagamentos")
+      .select("forma_pagamento, valor")
+      .eq("venda_id", payload.venda_id);
+    if (error) {
+      log({ level: "warn", stage: "fiscal_enqueue_sync", venda_id: payload.venda_id, detail: `vendas_pagamentos_lookup:${error.message}` });
+    } else if (data && data.length > 0) {
+      pagamentos = (data as Array<{ forma_pagamento: string; valor: number }>).map((p) => ({
+        forma_pagamento: p.forma_pagamento,
+        valor: roundMoney2(p.valor),
+      }));
+    }
+  }
+  // Fallback só se a leitura de vendas_pagamentos genuinamente não achou
+  // nada (ex.: corrida rara entre o INSERT da RPC e esta leitura, ou erro
+  // transitório) — mantém o payload fiscal não-vazio em vez de quebrar o
+  // enqueue por uma leitura auxiliar falhar.
+  if (pagamentos.length === 0) {
+    pagamentos = [{ forma_pagamento: payload.forma_pagamento, valor: roundMoney2(payload.total_liquido) }];
+  }
+
   let cfopPadrao: string | null = null;
   let regimeTributario: string | null = null;
   let loja: LojaFiscalRow | null = null;
@@ -186,12 +218,9 @@ export async function maybeEnqueueFiscalDocumentAfterSyncedVenda(
     // carrega cliente/crédito hoje; não inventado, reportado como gap upstream.
     cliente_id: null,
     destinatario: null,
-    // Mesmo formato do caminho web (array itemizado) — aqui só um elemento
-    // porque o payload de sync não carrega split de pagamento por forma.
-    pagamentos: [{
-      forma_pagamento: payload.forma_pagamento,
-      valor: roundMoney2(payload.total_liquido),
-    }],
+    // Sprint C2.10 (P0-5): lido de vendas_pagamentos (SSOT) acima — preserva
+    // split real quando existir, mesmo formato do caminho web.
+    pagamentos,
     totais: {
       bruto: roundMoney2(payload.total_bruto),
       desconto: roundMoney2(payload.total_desconto),

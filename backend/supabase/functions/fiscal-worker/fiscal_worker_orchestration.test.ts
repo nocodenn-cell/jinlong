@@ -3,7 +3,17 @@
 
 import { assertEquals } from "https://deno.land/std@0.208.0/assert/mod.ts";
 import type { FiscalDoc, FocusRemoteState } from "./fiscal_types.ts";
-import { applyCredentialResolutionFailure, applyFocusRemoteState, enforceRetrySafeGate, extractLojaId, type WorkerCounters } from "./fiscal_worker_orchestration.ts";
+import {
+  applyCredentialResolutionFailure,
+  applyFocusRemoteState,
+  applyProviderIdentityMismatch,
+  computeProviderIdentity,
+  enforceRetrySafeGate,
+  extractLojaId,
+  isRecognizedProviderIdentity,
+  validateProviderIdentity,
+  type WorkerCounters,
+} from "./fiscal_worker_orchestration.ts";
 
 function fakeSupabase() {
   const rpcCalls: Array<{ fn: string; args: Record<string, unknown> }> = [];
@@ -191,13 +201,108 @@ Deno.test("P0-1 (achado Codex) — bypass DLQ/reprocessamento: tentativas=0 (res
   assertEquals(supabase.rpcCalls[0].args.p_chave_fiscal, "recuperada-pos-dlq");
 });
 
-Deno.test("P0 query-before-reemit — provider sem capacidade de consulta (mock/http/bling legado) não bloqueia o laço", async () => {
+Deno.test("P0 query-before-reemit — 1ª tentativa (ja_tentou_emissao_antes=false) com provider sem consulta segue normalmente", async () => {
   const supabase = fakeSupabase();
   const c = counters();
   const providerSemConsulta = {}; // sem consultarDocumento — mesmo shape do provider legado
+  const primeiraTentativa: FiscalDoc = { ...doc(), tentativas: 0, ja_tentou_emissao_antes: false };
 
-  const gate = await enforceRetrySafeGate(supabase, doc(), providerSemConsulta, "ref-estavel-5", { type: 'focus' }, c);
+  const gate = await enforceRetrySafeGate(supabase, primeiraTentativa, providerSemConsulta, "ref-estavel-5", { type: 'focus' }, c);
 
   assertEquals(gate.proceed, true);
   assertEquals(supabase.rpcCalls.length, 0);
+});
+
+// ---------------------------------------------------------------------------
+// Sprint C2.10 (P0-2, achado Codex) — bug real corrigido: o gate original
+// combinava "1ª tentativa" e "provider sem consulta" no MESMO OR, então
+// "provider sem consulta" liberava proceed:true mesmo numa RETRY. Provider
+// sem capacidade de consulta NUNCA pode significar "autorizado a emitir de
+// novo" quando já existe tentativa anterior.
+// ---------------------------------------------------------------------------
+
+Deno.test("P0-2 (achado Codex) — tentativa anterior + provider SEM consulta -> fail-closed, ZERO POST (não mais proceed:true)", async () => {
+  const supabase = fakeSupabase();
+  const c = counters();
+  const providerSemConsulta = {}; // mock/http/bling, ou focus perdeu a capacidade por engano
+  const comTentativaAnterior: FiscalDoc = { ...doc(), tentativas: 0, ja_tentou_emissao_antes: true };
+
+  const gate = await enforceRetrySafeGate(supabase, comTentativaAnterior, providerSemConsulta, "ref-estavel-7", { type: 'mock' }, c);
+
+  assertEquals(gate.proceed, false); // NUNCA proceed:true aqui — este era o bug
+  assertEquals(supabase.rpcCalls.length, 1);
+  assertEquals(supabase.rpcCalls[0].fn, "fiscal_marcar_erro_normalizado");
+  assertEquals(supabase.rpcCalls[0].args.p_error_code, "FISCAL_PROVIDER_SEM_CONSULTA_APOS_TENTATIVA");
+  assertEquals(supabase.rpcCalls[0].args.p_retryable, false);
+});
+
+// ---------------------------------------------------------------------------
+// Sprint C2.10 (P0-1, achado Codex) — identidade do provider (empresa +
+// ambiente + provider) persistida por documento.
+// ---------------------------------------------------------------------------
+
+Deno.test("computeProviderIdentity — focus inclui ambiente+loja; demais providers só o tipo", () => {
+  assertEquals(computeProviderIdentity("focus", "homologacao", "loja-x"), "focus:homologacao:loja-x");
+  assertEquals(computeProviderIdentity("focus", "producao", "loja-y"), "focus:producao:loja-y");
+  assertEquals(computeProviderIdentity("mock", null, null), "mock");
+  assertEquals(computeProviderIdentity("http", null, null), "http");
+  assertEquals(computeProviderIdentity("bling", "producao", "loja-x"), "bling"); // ambiente irrelevante fora de focus
+});
+
+Deno.test("isRecognizedProviderIdentity — só reconhece formato deste mecanismo, não valor legado (ex.: NFE_PROVIDER_HTTP)", () => {
+  assertEquals(isRecognizedProviderIdentity("mock"), true);
+  assertEquals(isRecognizedProviderIdentity("focus:homologacao:loja-x"), true);
+  assertEquals(isRecognizedProviderIdentity("focus:producao:loja-x"), true);
+  assertEquals(isRecognizedProviderIdentity("NFE_PROVIDER_HTTP"), false); // legado, migration 037
+  assertEquals(isRecognizedProviderIdentity("focus:staging:loja-x"), false); // ambiente inventado, não confirmado
+  assertEquals(isRecognizedProviderIdentity(""), false);
+});
+
+Deno.test("validateProviderIdentity — nada congelado (null ou valor legado não reconhecido) -> libera e marca para congelar", () => {
+  assertEquals(validateProviderIdentity(null, "focus:homologacao:loja-x"), { ok: true, shouldFreeze: true });
+  assertEquals(validateProviderIdentity("NFE_PROVIDER_HTTP", "focus:homologacao:loja-x"), { ok: true, shouldFreeze: true });
+});
+
+Deno.test("validateProviderIdentity — congelado bate com o atual -> libera, não precisa recongelar", () => {
+  assertEquals(validateProviderIdentity("focus:homologacao:loja-x", "focus:homologacao:loja-x"), { ok: true, shouldFreeze: false });
+});
+
+Deno.test("P0-1 (achado Codex) — restart/deploy muda o provider: identidade congelada diverge da atual -> ok:false, fail-closed", () => {
+  // Reproduz o caminho do achado: documento tentou sob focus:producao,
+  // restart/deploy muda FISCAL_PROVIDER_TYPE para mock (ou FISCAL_ENVIRONMENT
+  // para homologacao) — a identidade atual não bate mais com a congelada.
+  const check = validateProviderIdentity("focus:producao:loja-x", "mock");
+  assertEquals(check.ok, false);
+  if (!check.ok) {
+    assertEquals(check.frozen, "focus:producao:loja-x");
+    assertEquals(check.current, "mock");
+  }
+
+  // Mesmo caso, mas trocando só o AMBIENTE (continua "focus", tem
+  // consultarDocumento normalmente — por isso P0-2 sozinho não pegaria
+  // este caso; precisa da checagem de identidade dedicada).
+  const checkAmbiente = validateProviderIdentity("focus:homologacao:loja-x", "focus:producao:loja-x");
+  assertEquals(checkAmbiente.ok, false);
+});
+
+Deno.test("P0-1 — 1ª tentativa Focus, config muda, retry: enforceRetrySafeGate nunca é alcançado (índex.ts bloqueia antes) — prova via applyProviderIdentityMismatch: zero POST, erro marcado", async () => {
+  const supabase = fakeSupabase();
+  const c = counters();
+  const check = validateProviderIdentity("focus:producao:loja-x", "mock");
+  if (check.ok) throw new Error("precondição do teste falhou: deveria ser mismatch");
+
+  await applyProviderIdentityMismatch(supabase, doc(), check, c);
+
+  assertEquals(supabase.rpcCalls.length, 1);
+  assertEquals(supabase.rpcCalls[0].fn, "fiscal_marcar_erro_normalizado");
+  assertEquals(supabase.rpcCalls[0].args.p_error_code, "FISCAL_PROVIDER_IDENTIDADE_DIVERGENTE");
+  assertEquals(supabase.rpcCalls[0].args.p_retryable, false);
+  assertEquals((supabase.rpcCalls[0].args.p_error_payload as Record<string, unknown>).frozen, "focus:producao:loja-x");
+  assertEquals((supabase.rpcCalls[0].args.p_error_payload as Record<string, unknown>).current, "mock");
+  // Nenhuma chamada HTTP possível a partir daqui — index.ts faz `continue`
+  // imediatamente após este ponto, antes de resolver credencial ou
+  // instanciar qualquer provider (inspeção de código, mesmo padrão de
+  // prova composicional já usado para P0-1/query-before-reemit na sprint
+  // anterior: aqui provamos que o erro é marcado corretamente; o `continue`
+  // em index.ts garante que zero HTTP acontece depois disso).
 });

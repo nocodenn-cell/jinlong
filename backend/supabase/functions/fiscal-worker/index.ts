@@ -5,7 +5,16 @@ import type { FiscalDoc } from "./fiscal_types.ts";
 import { isRecord, json } from "./fiscal_http.ts";
 import { callProvider, createFiscalProvider, resolveFocusRef, type ProviderConfig } from "./fiscal-provider-adapter.ts";
 import { resolveDeployAmbiente, resolveFocusBaseUrl, resolveFocusCredential } from "./fiscal_credential_resolver.ts";
-import { applyCredentialResolutionFailure, applyFocusRemoteState, enforceRetrySafeGate, extractLojaId, type WorkerCounters } from "./fiscal_worker_orchestration.ts";
+import {
+  applyCredentialResolutionFailure,
+  applyFocusRemoteState,
+  applyProviderIdentityMismatch,
+  computeProviderIdentity,
+  enforceRetrySafeGate,
+  extractLojaId,
+  validateProviderIdentity,
+  type WorkerCounters,
+} from "./fiscal_worker_orchestration.ts";
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") {
@@ -102,13 +111,28 @@ Deno.serve(async (req) => {
     };
     processed.push(doc.id);
 
+    // P0-1 (sprint C2.10, achado Codex) — identidade do provider (empresa +
+    // ambiente + provider) é persistida por documento e validada ANTES de
+    // qualquer resolução de credencial/HTTP. Um documento com tentativa
+    // anterior sob uma identidade diferente da config atual (restart/deploy
+    // trocou FISCAL_PROVIDER_TYPE, FISCAL_ENVIRONMENT, ou a config
+    // multiempresa da loja) é bloqueado aqui — nunca tenta "coincidentemente
+    // funcionar" sob a config nova, nunca cai para outro provider.
+    const lojaIdAtual = extractLojaId(doc.payload);
+    const identidadeAtual = computeProviderIdentity(providerType, deployAmbiente, lojaIdAtual);
+    const frozenProvider = typeof raw.provider === "string" ? raw.provider : null;
+    const idCheck = validateProviderIdentity(frozenProvider, identidadeAtual);
+    if (!idCheck.ok) {
+      await applyProviderIdentityMismatch(supabase, doc, idCheck, counters);
+      continue;
+    }
+
     // C2.1 — resolução de credencial multiempresa (só quando o worker está em
     // modo "focus"; mock/http/bling seguem 100% no mecanismo legado abaixo,
     // sem nenhuma mudança de comportamento).
     let cfg: ProviderConfig = legacyProviderConfig;
     if (providerType === "focus") {
-      const lojaId = extractLojaId(doc.payload);
-      const cred = await resolveFocusCredential(supabase, lojaId, deployAmbiente);
+      const cred = await resolveFocusCredential(supabase, lojaIdAtual, deployAmbiente);
       if (!cred.ok) {
         // Fail closed: zero HTTP para este documento. Nunca loga o token —
         // só o código de erro (nome, não valor).
@@ -119,6 +143,21 @@ Deno.serve(async (req) => {
     }
 
     const provider = createFiscalProvider(cfg);
+
+    // Congela a identidade ANTES de qualquer chamada externa (a checagem
+    // acima já confirmou que ou nunca houve congelamento reconhecido, ou o
+    // congelado bate com o atual). Só escreve na 1ª vez — a partir daqui o
+    // trigger `tg_documentos_fiscais_estado_bu` (migration 20260903120000)
+    // rejeita qualquer tentativa de mudar um valor já reconhecido.
+    if (idCheck.shouldFreeze) {
+      const { error: freezeErr } = await supabase
+        .from("documentos_fiscais_pendentes")
+        .update({ provider: identidadeAtual })
+        .eq("id", doc.id);
+      if (freezeErr) {
+        console.error(JSON.stringify({ scope: "fiscal-worker", event: "provider_freeze_failed", documento_id: doc.id, message: freezeErr.message }));
+      }
+    }
 
     // C2.7 — retry seguro: em qualquer tentativa que não seja a primeira,
     // consultar o estado remoto ANTES de reemitir. Só documentos NÃO
