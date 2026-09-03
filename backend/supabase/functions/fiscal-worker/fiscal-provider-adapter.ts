@@ -1,4 +1,4 @@
-import type { FiscalDoc, FocusRemoteState, ProviderResult } from "./fiscal_types.ts";
+import type { FiscalDoc, FiscalXmlResult, FocusRemoteState, ProviderResult } from "./fiscal_types.ts";
 import { asString, isRecord, randomHex } from "./fiscal_http.ts";
 import { buildFocusNfceEnvelope } from "./fiscal_focus_dto.ts";
 
@@ -230,6 +230,15 @@ export interface FiscalProvider {
   callProvider(doc: FiscalDoc, config: ProviderConfig): Promise<ProviderResult>;
   emitirNfe?(doc: FiscalDoc, config: ProviderConfig): Promise<FocusRemoteState>;
   consultarDocumento?(ref: string, tipoDoc: string, config: ProviderConfig): Promise<FocusRemoteState>;
+  /**
+   * Missão final (C3) — obtém o XML autorizado de um documento já EMITIDO.
+   * Contrato GET-only: nenhuma implementação pode chamar
+   * `postFocusEmit`/`buildFocusEmitUrl` ou qualquer outro caminho de POST —
+   * é usado por um passo de recovery completamente desacoplado da emissão
+   * (nunca reabre/reemite nada). Opcional (mesmo padrão de `emitirNfe`/
+   * `consultarDocumento`) — só implementado onde fizer sentido.
+   */
+  obterXmlAutorizado?(ref: string, tipoDoc: string, config: ProviderConfig): Promise<FiscalXmlResult>;
 }
 
 // Mock Provider - mantém comportamento existente
@@ -244,6 +253,16 @@ export class MockProvider implements FiscalProvider {
       protocolo,
       provider_ref: `mock:${doc.id}`,
       payload: { mocked: true, emitted_at: new Date().toISOString() },
+    };
+  }
+
+  /** Só para exercitar a infraestrutura de armazenamento/idempotência de
+   * XML nos testes (`fiscal_xml_orchestration.test.ts`) — não representa
+   * nenhum contrato real (mock não fala com nenhuma SEFAZ). */
+  async obterXmlAutorizado(ref: string, tipoDoc: string, _config: ProviderConfig): Promise<FiscalXmlResult> {
+    return {
+      kind: "obtido",
+      xml: `<?xml version="1.0"?><mockNFe ref="${ref}" tipo="${tipoDoc}"/>`,
     };
   }
 }
@@ -367,7 +386,11 @@ export class HttpProvider implements FiscalProvider {
 /** Mesma referência estável usada desde antes da C2 — nunca regenerada entre
  * tentativas. Exportada para que o worker (index.ts) use exatamente a mesma
  * lógica ao montar a consulta de retry-seguro (C2.7). */
-export function resolveFocusRef(doc: FiscalDoc): string {
+/** Tipo estrutural mínimo (não o `FiscalDoc` completo) — Missão final (C3):
+ * também usada pelo passo de XML (`XmlDoc`, fiscal_xml_orchestration.ts),
+ * que não carrega `payload`/`tentativas`. Qualquer `FiscalDoc` já satisfaz
+ * este tipo estruturalmente, então nenhum chamador existente muda. */
+export function resolveFocusRef(doc: { id: string; venda_id: string }): string {
   const refField = (Deno.env.get("FISCAL_FOCUS_REF_FIELD") ?? "documento_id").toLowerCase();
   return refField === "venda_id" ? doc.venda_id : doc.id;
 }
@@ -598,6 +621,30 @@ export class FocusProvider implements FiscalProvider {
     } finally {
       clearTimeout(t);
     }
+  }
+
+  /**
+   * Missão final (C3) — BLOCKED EXTERNAL por construção, ZERO chamada de
+   * rede. A documentação oficial da Focus colada nesta missão (Gate C2.5)
+   * nunca confirmou o nome do campo/endpoint que devolve o XML autorizado
+   * (mesma lacuna já registrada para o corpo de resposta de consulta —
+   * `RESPOSTAS FOCUS: BLOCKED` desde C2.5, `fiscal_types.ts`). Inventar um
+   * nome de campo (ex.: um "caminho_xml_nota_fiscal" plausível) violaria a
+   * regra explícita desta missão de nunca supor contrato Focus não
+   * confirmado. Quando o contrato for confirmado (documentação oficial
+   * colada pelo usuário, ou resposta real de homologação observada), só
+   * este método precisa mudar — toda a infraestrutura de armazenamento/
+   * idempotência/retenção ao redor (fiscal_xml_orchestration.ts, migration
+   * 20260903150000) já está pronta e não depende deste detalhe.
+   */
+  async obterXmlAutorizado(_ref: string, _tipoDoc: string, _config: ProviderConfig): Promise<FiscalXmlResult> {
+    return {
+      kind: "blocked_external",
+      motivo:
+        "FOCUS_XML_CONTRATO_NAO_CONFIRMADO: nome do campo/endpoint que devolve o XML autorizado nunca foi " +
+        "confirmado pela documentação oficial da Focus nesta missão — não inventado, ver fiscal_types.ts " +
+        "(mesma lacuna de RESPOSTAS FOCUS, Gate C2.5).",
+    };
   }
 }
 

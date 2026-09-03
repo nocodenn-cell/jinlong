@@ -17,6 +17,12 @@ import {
   validateProviderIdentity,
   type WorkerCounters,
 } from "./fiscal_worker_orchestration.ts";
+import {
+  parseProviderIdentity,
+  processXmlDocumento,
+  type XmlDoc,
+  type XmlWorkerCounters,
+} from "./fiscal_xml_orchestration.ts";
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") {
@@ -282,6 +288,63 @@ Deno.serve(async (req) => {
     }
   }
 
+  // C3 (missão final) — passo de persistência de XML, completamente
+  // desacoplado do laço de emissão acima: fila própria
+  // (`fiscal_claim_documentos_xml`, só EMITIDO+xml_status PENDENTE/ERRO),
+  // RPCs próprias que nunca tocam `status`/`provider`/`chave_fiscal`/
+  // `protocolo`/`tentativas`. Roda na mesma invocação por simplicidade
+  // operacional (mesmo cron/URL aciona os dois), mas uma falha aqui nunca
+  // influencia o resultado/contadores do laço de emissão acima (já
+  // retornado a esta altura só faltando incluir no JSON de resposta).
+  const xmlCounters: XmlWorkerCounters = { armazenados: [], bloqueados: [], comErro: [] };
+  const { data: xmlDocs, error: xmlClaimErr } = await supabase.rpc("fiscal_claim_documentos_xml", { p_limit: limit });
+  if (!xmlClaimErr) {
+    for (const raw of (xmlDocs ?? []) as Array<Record<string, unknown>>) {
+      const xmlDoc: XmlDoc = {
+        id: String(raw.id),
+        venda_id: String(raw.venda_id),
+        tipo_doc: String(raw.tipo_doc),
+        provider: typeof raw.provider === "string" ? raw.provider : null,
+        correlation_id: typeof raw.correlation_id === "string" ? raw.correlation_id : undefined,
+      };
+      const parsed = parseProviderIdentity(xmlDoc.provider);
+      if (!parsed) {
+        // Documento EMITIDO sem identidade de provider reconhecível — só
+        // possível para documentos legados anteriores à Sprint C2.10.
+        // `processXmlDocumento` também cobre isto (payload.provider null),
+        // mas aqui a identidade existe e não é reconhecida — mesma
+        // classificação fail-closed permanente.
+        const { error } = await supabase.rpc("fiscal_marcar_xml_bloqueado", {
+          p_documento_id: xmlDoc.id,
+          p_motivo: "PROVIDER_IDENTIDADE_NAO_RECONHECIDA_DOCUMENTO_LEGADO",
+        });
+        if (error) xmlCounters.comErro.push({ id: xmlDoc.id, erro: `MARCAR_XML_BLOQUEADO_FALHOU:${error.message}` });
+        else xmlCounters.bloqueados.push(xmlDoc.id);
+        continue;
+      }
+
+      let xmlCfg: ProviderConfig;
+      if (parsed.type === "focus") {
+        const cred = await resolveFocusCredential(supabase, parsed.lojaId, parsed.ambiente);
+        if (!cred.ok) {
+          const { error } = await supabase.rpc("fiscal_marcar_xml_erro", {
+            p_documento_id: xmlDoc.id,
+            p_erro: `CREDENCIAL_INDISPONIVEL:${cred.code}`,
+          });
+          if (error) xmlCounters.comErro.push({ id: xmlDoc.id, erro: `MARCAR_XML_ERRO_FALHOU:${error.message}` });
+          else xmlCounters.comErro.push({ id: xmlDoc.id, erro: `CREDENCIAL_INDISPONIVEL:${cred.code}` });
+          continue;
+        }
+        xmlCfg = { type: "focus", token: cred.token, url: resolveFocusBaseUrl(cred.ambiente), timeout: timeoutMs };
+      } else {
+        xmlCfg = { type: parsed.type, url: providerUrl || undefined, token: providerToken || undefined, timeout: timeoutMs };
+      }
+
+      const xmlProvider = createFiscalProvider(xmlCfg);
+      await processXmlDocumento(supabase, xmlDoc, xmlProvider, resolveFocusRef(xmlDoc), xmlCfg, xmlCounters);
+    }
+  }
+
   return json(200, {
     ok: true,
     provider_type: providerType,
@@ -290,6 +353,12 @@ Deno.serve(async (req) => {
     emitted: counters.emitted,
     failed: counters.failed,
     retried: counters.retried,
+    xml: {
+      claimed: (xmlDocs ?? []).length,
+      armazenados: xmlCounters.armazenados,
+      bloqueados: xmlCounters.bloqueados,
+      com_erro: xmlCounters.comErro,
+    },
   });
 });
 

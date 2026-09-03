@@ -18,6 +18,19 @@ export type FiscalDoc = {
   payload: Record<string, unknown> | null;
 };
 
+/**
+ * Missão final (C3) — resultado canônico de "obter o XML autorizado deste
+ * documento", devolvido por `FiscalProvider.obterXmlAutorizado` (método
+ * opcional, mesmo padrão de `consultarDocumento`/`emitirNfe`). Contrato
+ * GET-only por construção: nenhuma implementação deste método pode chamar
+ * POST /v2/nfce ou /v2/nfe — ver `fiscal-provider-adapter.ts`.
+ */
+export type FiscalXmlResult =
+  | { kind: "obtido"; xml: string }
+  | { kind: "blocked_external"; motivo: string }
+  | { kind: "erro_transitorio"; motivo: string }
+  | { kind: "erro_definitivo"; motivo: string };
+
 export type ProviderResult =
   | {
     ok: true;
