@@ -156,28 +156,45 @@ export async function maybeEnqueueFiscalDocumentAfterSyncedVenda(
   // não envia — esta leitura reflete corretamente os dois casos sem
   // precisar saber qual caminho a RPC tomou. Nunca deriva split a partir do
   // total; lê o que foi de fato persistido.
-  let pagamentos: Array<{ forma_pagamento: string; valor: number }> = [];
-  {
-    const { data, error } = await supabase
-      .from("vendas_pagamentos")
-      .select("forma_pagamento, valor")
-      .eq("venda_id", payload.venda_id);
-    if (error) {
-      log({ level: "warn", stage: "fiscal_enqueue_sync", venda_id: payload.venda_id, detail: `vendas_pagamentos_lookup:${error.message}` });
-    } else if (data && data.length > 0) {
-      pagamentos = (data as Array<{ forma_pagamento: string; valor: number }>).map((p) => ({
-        forma_pagamento: p.forma_pagamento,
-        valor: roundMoney2(p.valor),
-      }));
-    }
+  //
+  // Sprint C2.11 (P0-2, achado Codex): o fallback anterior ("leitura vazia
+  // ou com erro -> reconstrói 1 pagamento escalar a partir do payload de
+  // sync") era uma DEGRADAÇÃO SILENCIOSA — podia transformar uma venda
+  // mista real em pagamento único no documento fiscal, sem qualquer sinal
+  // de que isso aconteceu. `vendas_pagamentos` é a SSOT fiscal (mesma fonte
+  // que o caminho web usa sem fallback nenhum); `registrar_venda_com_itens`
+  // SEMPRE grava pelo menos 1 linha quando o total é positivo (branch
+  // escalar OU branch de split, nunca os dois ausentes) — então uma leitura
+  // vazia ou com erro aqui não é "venda sem pagamento", é sinal de que
+  // ALGO deu errado (corrida, permissão, rede) e não há como montar um
+  // snapshot fiscal confiável. Fail-closed: não enfileira documento fiscal
+  // nenhum nesta rodada (a venda em si não é afetada — só o auto-enqueue
+  // fiscal, que já é opcional/best-effort por design desta função) em vez
+  // de arriscar um pagamento fiscal incorreto.
+  const { data: pagamentosData, error: pagamentosErr } = await supabase
+    .from("vendas_pagamentos")
+    .select("forma_pagamento, valor")
+    .eq("venda_id", payload.venda_id);
+  if (pagamentosErr) {
+    log({
+      level: "error",
+      stage: "fiscal_enqueue_sync",
+      venda_id: payload.venda_id,
+      detail: `vendas_pagamentos_lookup_falhou_fail_closed:${pagamentosErr.message}`,
+    });
+    return;
   }
-  // Fallback só se a leitura de vendas_pagamentos genuinamente não achou
-  // nada (ex.: corrida rara entre o INSERT da RPC e esta leitura, ou erro
-  // transitório) — mantém o payload fiscal não-vazio em vez de quebrar o
-  // enqueue por uma leitura auxiliar falhar.
-  if (pagamentos.length === 0) {
-    pagamentos = [{ forma_pagamento: payload.forma_pagamento, valor: roundMoney2(payload.total_liquido) }];
+  if (!pagamentosData || pagamentosData.length === 0) {
+    log({
+      level: "error",
+      stage: "fiscal_enqueue_sync",
+      venda_id: payload.venda_id,
+      detail: "vendas_pagamentos_vazio_inesperado_fail_closed",
+    });
+    return;
   }
+  const pagamentos: Array<{ forma_pagamento: string; valor: number }> = (pagamentosData as Array<{ forma_pagamento: string; valor: number }>)
+    .map((p) => ({ forma_pagamento: p.forma_pagamento, valor: roundMoney2(p.valor) }));
 
   let cfopPadrao: string | null = null;
   let regimeTributario: string | null = null;
@@ -233,7 +250,18 @@ export async function maybeEnqueueFiscalDocumentAfterSyncedVenda(
         nome: p?.nome ?? i.nome ?? null,
         codigo_barras: p?.codigo_barras ?? null,
         quantidade: i.quantidade,
-        preco_original: roundMoney2(i.preco_original),
+        // Sprint C2.11 (P0-2, achado Codex): a chave do snapshot fiscal
+        // precisa ser `preco_unitario_original` — é o nome que o caminho
+        // web grava (20260902130000_fiscal_payload_snapshot_venda.sql,
+        // coluna `itens_venda.preco_unitario_original`) e que `fiscal_focus_
+        // dto.ts` (`mapSnapshotItemToFocus`) efetivamente lê para montar
+        // `valor_unitario_comercial`. A variável de entrada `i.preco_original`
+        // continua com esse nome porque é assim que o pdv-local (Tauri)
+        // já envia no payload de sync (`VendaPayloadFiscalSync.itens[].
+        // preco_original`) — só a CHAVE DE SAÍDA do snapshot muda, sem
+        // mapper/compensação, para que web e sync produzam o mesmo
+        // contrato semântico fiscal.
+        preco_unitario_original: roundMoney2(i.preco_original),
         preco_unitario: roundMoney2(i.preco_unitario),
         desconto_unitario: roundMoney2(Math.max(0, i.preco_original - i.preco_unitario)),
         tipo_preco: tipoPrecoItem(i),

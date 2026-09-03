@@ -27,6 +27,8 @@ function fakeSupabase(tables: {
   lojas?: Row | null;
   vendas?: Row | null;
   vendas_pagamentos?: Row[];
+  /** Sprint C2.11 (P0-2) — simula erro na leitura de vendas_pagamentos. */
+  vendas_pagamentos_error?: string;
 }) {
   const rpcCalls: Array<{ fn: string; args: Record<string, unknown> }> = [];
 
@@ -48,11 +50,16 @@ function fakeSupabase(tables: {
               if (table === "vendas") return { data: tables.vendas ?? null, error: null };
               return { data: null, error: null };
             },
-            then(resolve: (v: { data: unknown; error: null }) => void) {
+            then(resolve: (v: { data: unknown; error: { message: string } | null }) => void) {
               // usado por `produtos` (sem maybeSingle — retorna lista via `.in`) e
               // por `vendas_pagamentos` (Sprint C2.10 — lista via `.eq`).
               if (table === "produtos") return resolve({ data: tables.produtos ?? [], error: null });
-              if (table === "vendas_pagamentos") return resolve({ data: tables.vendas_pagamentos ?? [], error: null });
+              if (table === "vendas_pagamentos") {
+                if (tables.vendas_pagamentos_error) {
+                  return resolve({ data: null, error: { message: tables.vendas_pagamentos_error } });
+                }
+                return resolve({ data: tables.vendas_pagamentos ?? [], error: null });
+              }
               return resolve({ data: null, error: null });
             },
           };
@@ -117,6 +124,10 @@ Deno.test("ativo — payload inclui classificação fiscal do produto e emitente
       }],
       pdv_config: { cfop_padrao: "5405", regime_tributario: "SIMPLES_NACIONAL" },
       vendas: { data: "2026-09-02T12:00:00Z" },
+      // Sprint C2.11 (P0-2): vendas_pagamentos é a SSOT — sem fallback
+      // escalar, este teste precisa fornecer a linha real (pagamento único
+      // legítimo) para que o enqueue prossiga.
+      vendas_pagamentos: [{ forma_pagamento: "DINHEIRO", valor: 100 }],
       lojas: {
         id: lojaId,
         cnpj: "12345678000199",
@@ -167,6 +178,13 @@ Deno.test("ativo — payload inclui classificação fiscal do produto e emitente
     assertEquals(itens[0].unidade_medida, "UN");
     // Onda C2.6: icms_origem capturado do produto, sem inferência.
     assertEquals(itens[0].icms_origem, "1");
+    // Sprint C2.11 (P0-2): a chave do snapshot precisa ser
+    // `preco_unitario_original` — é o nome que `fiscal_focus_dto.ts`
+    // (`mapSnapshotItemToFocus`) lê para montar `valor_unitario_comercial`;
+    // o caminho web já grava com esse nome (itens_venda.preco_unitario_
+    // original). Não pode existir a chave antiga `preco_original` solta.
+    assertEquals(itens[0].preco_unitario_original, 100);
+    assertEquals(itens[0].preco_original, undefined);
 
     // Consistência de forma com o caminho web: pagamentos é sempre array,
     // nunca um campo escalar "forma_pagamento" solto no payload.
@@ -240,14 +258,22 @@ Deno.test("P0-5 — pagamento misto (dinheiro + PIX) no sync: pagamentos[] refle
   }
 });
 
-Deno.test("P0-5 — vendas_pagamentos vazio (corrida/erro transitório de leitura) cai no fallback escalar, não quebra o enqueue", async () => {
+// ---------------------------------------------------------------------------
+// Sprint C2.11 (P0-2, achado Codex) — o fallback escalar anterior era uma
+// degradação silenciosa: podia transformar uma venda mista real em
+// pagamento único no documento fiscal sem qualquer sinal do que aconteceu.
+// `vendas_pagamentos` é SSOT fiscal; leitura vazia ou com erro agora é
+// FAIL-CLOSED (zero enqueue), nunca reconstrução a partir do escalar.
+// ---------------------------------------------------------------------------
+
+Deno.test("P0-2 — vendas_pagamentos vazio inesperado -> FAIL-CLOSED, zero RPC (não reconstrói pagamento escalar)", async () => {
   const prevFlag = Deno.env.get("AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE");
   Deno.env.set("AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE", "true");
   try {
     const produtoId = "22222222-2222-4222-8222-222222222222";
     const { client, rpcCalls } = fakeSupabase({
       produtos: [{ id: produtoId, nome: "Produto", codigo_barras: null, ncm: null, cfop_produto: null, csosn: null, cest: null, cst_pis: null, cst_cofins: null, unidade_medida: "UN", icms_origem: null }],
-      vendas_pagamentos: [], // vazio de propósito
+      vendas_pagamentos: [], // vazio de propósito — leitura "funcionou" mas não achou nada
     });
 
     const payload: VendaPayloadFiscalSync = {
@@ -261,6 +287,65 @@ Deno.test("P0-5 — vendas_pagamentos vazio (corrida/erro transitório de leitur
 
     await maybeEnqueueFiscalDocumentAfterSyncedVenda(client, payload, noopLog);
 
+    // Fail-closed: nenhum documento fiscal enfileirado com um pagamento
+    // reconstruído a partir do escalar payload.forma_pagamento.
+    assertEquals(rpcCalls.length, 0);
+  } finally {
+    if (prevFlag !== undefined) Deno.env.set("AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE", prevFlag);
+    else Deno.env.delete("AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE");
+  }
+});
+
+Deno.test("P0-2 — erro ao ler vendas_pagamentos -> FAIL-CLOSED, zero RPC (não reconstrói pagamento escalar)", async () => {
+  const prevFlag = Deno.env.get("AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE");
+  Deno.env.set("AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE", "true");
+  try {
+    const produtoId = "22222222-2222-4222-8222-222222222222";
+    const { client, rpcCalls } = fakeSupabase({
+      produtos: [{ id: produtoId, nome: "Produto", codigo_barras: null, ncm: null, cfop_produto: null, csosn: null, cest: null, cst_pis: null, cst_cofins: null, unidade_medida: "UN", icms_origem: null }],
+      vendas_pagamentos_error: "connection reset (simulado)",
+    });
+
+    const payload: VendaPayloadFiscalSync = {
+      venda_id: "11111111-1111-4111-8111-111111111111",
+      forma_pagamento: "CARTAO_CREDITO",
+      total_bruto: 50,
+      total_desconto: 0,
+      total_liquido: 50,
+      itens: [{ produto_id: produtoId, quantidade: 1, preco_original: 50, preco_unitario: 50 }],
+    };
+
+    await maybeEnqueueFiscalDocumentAfterSyncedVenda(client, payload, noopLog);
+
+    assertEquals(rpcCalls.length, 0);
+  } finally {
+    if (prevFlag !== undefined) Deno.env.set("AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE", prevFlag);
+    else Deno.env.delete("AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE");
+  }
+});
+
+Deno.test("P0-2 — pagamento único legítimo (linha real em vendas_pagamentos) continua enfileirando normalmente", async () => {
+  const prevFlag = Deno.env.get("AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE");
+  Deno.env.set("AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE", "true");
+  try {
+    const produtoId = "22222222-2222-4222-8222-222222222222";
+    const { client, rpcCalls } = fakeSupabase({
+      produtos: [{ id: produtoId, nome: "Produto", codigo_barras: null, ncm: null, cfop_produto: null, csosn: null, cest: null, cst_pis: null, cst_cofins: null, unidade_medida: "UN", icms_origem: null }],
+      vendas_pagamentos: [{ forma_pagamento: "CARTAO_CREDITO", valor: 50 }],
+    });
+
+    const payload: VendaPayloadFiscalSync = {
+      venda_id: "11111111-1111-4111-8111-111111111111",
+      forma_pagamento: "CARTAO_CREDITO",
+      total_bruto: 50,
+      total_desconto: 0,
+      total_liquido: 50,
+      itens: [{ produto_id: produtoId, quantidade: 1, preco_original: 50, preco_unitario: 50 }],
+    };
+
+    await maybeEnqueueFiscalDocumentAfterSyncedVenda(client, payload, noopLog);
+
+    assertEquals(rpcCalls.length, 1);
     const sent = rpcCalls[0].args.p_payload as Record<string, unknown>;
     const pagamentos = sent.pagamentos as Array<Record<string, unknown>>;
     assertEquals(pagamentos.length, 1);

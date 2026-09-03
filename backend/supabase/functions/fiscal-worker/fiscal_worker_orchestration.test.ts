@@ -7,7 +7,9 @@ import {
   applyCredentialResolutionFailure,
   applyFocusRemoteState,
   applyProviderIdentityMismatch,
+  applyReconciliarIdentityMismatch,
   computeProviderIdentity,
+  confirmProviderFreezeOrFailClosed,
   enforceRetrySafeGate,
   extractLojaId,
   isRecognizedProviderIdentity,
@@ -305,4 +307,83 @@ Deno.test("P0-1 — 1ª tentativa Focus, config muda, retry: enforceRetrySafeGat
   // prova composicional já usado para P0-1/query-before-reemit na sprint
   // anterior: aqui provamos que o erro é marcado corretamente; o `continue`
   // em index.ts garante que zero HTTP acontece depois disso).
+});
+
+// ---------------------------------------------------------------------------
+// Sprint C2.11 (P0-1, achado Codex) — congelamento como PRÉ-CONDIÇÃO FATAL:
+// "claim -> resolve provider -> falha ao congelar -> apenas log -> POST"
+// não pode mais acontecer. `confirmProviderFreezeOrFailClosed` é o que
+// `index.ts` chama logo após o `UPDATE ... .select()` — prova aqui que
+// qualquer falha (erro de UPDATE, linha ausente, valor divergente) devolve
+// `podeProsseguir: false`.
+// ---------------------------------------------------------------------------
+
+Deno.test("P0-1 — congelamento confirmado (UPDATE devolveu o valor esperado) -> podeProsseguir:true, ZERO erro marcado", async () => {
+  const supabase = fakeSupabase();
+  const c = counters();
+  const resultado = await confirmProviderFreezeOrFailClosed(
+    supabase,
+    doc(),
+    "focus:homologacao:loja-x",
+    { data: { provider: "focus:homologacao:loja-x" }, error: null },
+    c,
+  );
+  assertEquals(resultado.podeProsseguir, true);
+  assertEquals(supabase.rpcCalls.length, 0); // nenhum erro marcado — não há o que confirmar de novo
+});
+
+Deno.test("P0-1 (achado Codex) — UPDATE de congelamento falhou (erro) -> fail-closed, POST NUNCA acontece depois disso", async () => {
+  const supabase = fakeSupabase();
+  const c = counters();
+  const resultado = await confirmProviderFreezeOrFailClosed(
+    supabase,
+    doc(),
+    "focus:homologacao:loja-x",
+    { data: null, error: { message: "connection reset" } },
+    c,
+  );
+  assertEquals(resultado.podeProsseguir, false); // este é o bug do achado: antes seguia para o POST mesmo assim
+  assertEquals(supabase.rpcCalls.length, 1);
+  assertEquals(supabase.rpcCalls[0].fn, "fiscal_marcar_erro");
+  assertEquals(supabase.rpcCalls[0].args.p_transitorio, true); // recuperável — próxima tentativa refaz o freeze
+});
+
+Deno.test("P0-1 — UPDATE não devolveu linha nenhuma (documento sumiu?) -> fail-closed", async () => {
+  const supabase = fakeSupabase();
+  const c = counters();
+  const resultado = await confirmProviderFreezeOrFailClosed(
+    supabase,
+    doc(),
+    "focus:homologacao:loja-x",
+    { data: null, error: null },
+    c,
+  );
+  assertEquals(resultado.podeProsseguir, false);
+  assertEquals(supabase.rpcCalls[0].fn, "fiscal_marcar_erro");
+});
+
+Deno.test("P0-1 — valor persistido diverge do pretendido (checagem paranoica) -> fail-closed", async () => {
+  const supabase = fakeSupabase();
+  const c = counters();
+  const resultado = await confirmProviderFreezeOrFailClosed(
+    supabase,
+    doc(),
+    "focus:homologacao:loja-x",
+    { data: { provider: "focus:producao:loja-y" }, error: null }, // valor diferente do pretendido
+    c,
+  );
+  assertEquals(resultado.podeProsseguir, false);
+});
+
+// ---------------------------------------------------------------------------
+// Sprint C2.11 (P0-1) — handleReconciliar também valida identidade.
+// ---------------------------------------------------------------------------
+
+Deno.test("P0-1 — reconciliação com identidade divergente marca erro, nenhuma consulta remota (prova composicional: index.ts retorna antes de instanciar provider)", async () => {
+  const supabase = fakeSupabase();
+  await applyReconciliarIdentityMismatch(supabase, doc(), { frozen: "focus:producao:loja-x", current: "mock" });
+  assertEquals(supabase.rpcCalls.length, 1);
+  assertEquals(supabase.rpcCalls[0].fn, "fiscal_marcar_erro_normalizado");
+  assertEquals(supabase.rpcCalls[0].args.p_error_code, "FISCAL_PROVIDER_IDENTIDADE_DIVERGENTE");
+  assertEquals(supabase.rpcCalls[0].args.p_retryable, false);
 });

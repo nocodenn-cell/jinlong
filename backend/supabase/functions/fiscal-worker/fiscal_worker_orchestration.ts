@@ -133,6 +133,92 @@ export async function applyProviderIdentityMismatch(
   }
 }
 
+/**
+ * Sprint C2.11 (P0-1, achado Codex) — o congelamento da identidade
+ * (Sprint C2.10) fazia UPDATE e só logava `console.error` se falhasse — o
+ * laço CONTINUAVA para o POST de qualquer forma. Isso quebra o invariante
+ * "identidade persistida e confirmada -> só então POST": um documento podia
+ * emitir sob uma identidade que nunca foi de fato gravada (crash logo após
+ * o UPDATE falhar silenciosamente, por exemplo), perdendo toda a proteção
+ * de P0-1/P0-2 na PRÓXIMA tentativa (retry veria `provider IS NULL` de
+ * novo, tratando como 1ª tentativa).
+ *
+ * Corrigido: `freeze-then-read-back`. O chamador faz `UPDATE ... RETURNING
+ * provider` (via `.update().select()`); esta função recebe o resultado e
+ * CONFIRMA que o valor persistido bate com o que se pretendia congelar.
+ * Só então o chamador pode prosseguir para qualquer HTTP. Qualquer
+ * divergência — erro de UPDATE, linha não encontrada, ou (não deveria
+ * acontecer, mas checado mesmo assim) valor persistido diferente do
+ * pretendido — é fail-closed: `podeProsseguir: false`, erro marcado,
+ * ZERO POST nesta rodada. O documento permanece elegível para retry (a
+ * mesma tentativa de congelamento roda de novo na próxima claim).
+ */
+export type ProviderFreezeConfirmResult = { podeProsseguir: boolean };
+
+export async function confirmProviderFreezeOrFailClosed(
+  supabase: SupabaseLike,
+  doc: FiscalDoc,
+  identidadePretendida: string,
+  freezeResult: { data: { provider?: string | null } | null; error: { message: string } | null },
+  counters: WorkerCounters,
+): Promise<ProviderFreezeConfirmResult> {
+  const persistido = freezeResult.data?.provider ?? null;
+  if (freezeResult.error || !freezeResult.data || persistido !== identidadePretendida) {
+    const code = "FISCAL_PROVIDER_CONGELAMENTO_NAO_CONFIRMADO";
+    const motivo = freezeResult.error
+      ? `UPDATE falhou: ${freezeResult.error.message}`
+      : !freezeResult.data
+      ? "UPDATE não retornou linha (documento não encontrado?)"
+      : `valor persistido ('${persistido}') diverge do pretendido ('${identidadePretendida}')`;
+    const { error } = await supabase.rpc("fiscal_marcar_erro", {
+      p_documento_id: doc.id,
+      p_erro: `${code}: ${motivo}`,
+      // Transitório: a causa mais provável é um problema de infra passageiro
+      // no UPDATE — o backoff normal tenta de novo, e o congelamento nunca
+      // tendo sido confirmado, a próxima tentativa refaz o mesmo
+      // freeze-then-confirm (não há estado parcial a limpar).
+      p_transitorio: true,
+    });
+    if (error) {
+      counters.failed.push({ id: doc.id, erro: `MARCAR_ERRO_FAILED:${error.message}` });
+    } else {
+      counters.failed.push({ id: doc.id, erro: code });
+    }
+    return { podeProsseguir: false };
+  }
+  return { podeProsseguir: true };
+}
+
+/**
+ * Sprint C2.11 (P0-1, achado Codex) — mesma checagem de identidade do laço
+ * principal (`validateProviderIdentity`), agora também exigida antes de
+ * `handleReconciliar` consultar a Focus. Reconciliação nunca pode consultar
+ * empresa/ambiente/provider diferentes da identidade já congelada do
+ * documento usando só a configuração atual — o risco é o mesmo do POST
+ * (consultar sob credencial errada pode devolver uma resposta enganosa
+ * para uma ref que na verdade pertence a outra loja/ambiente), mesmo a
+ * consulta em si nunca emitindo. Fail-closed: nenhuma consulta remota
+ * acontece quando a identidade diverge.
+ */
+export async function applyReconciliarIdentityMismatch(
+  supabase: SupabaseLike,
+  doc: FiscalDoc,
+  check: { frozen: string; current: string },
+): Promise<void> {
+  const code = "FISCAL_PROVIDER_IDENTIDADE_DIVERGENTE";
+  await supabase.rpc("fiscal_marcar_erro_normalizado", {
+    p_documento_id: doc.id,
+    p_erro: code,
+    p_transitorio: false,
+    p_error_code: code,
+    p_error_category: "CONFIGURACAO_FISCAL_AUSENTE",
+    p_action_hint: `Reconciliação recusada — identidade divergente (congelado='${check.frozen}', atual='${check.current}'). Reverter a config antes de reconciliar.`,
+    p_retryable: false,
+    p_next_step_url: "/gerente/financeiro?tab=fiscal",
+    p_error_payload: { frozen: check.frozen, current: check.current },
+  });
+}
+
 /** C2.1 — falha fechada de resolução de credencial: zero HTTP já aconteceu (o
  * chamador nem chega a instanciar o provider); aqui só registramos o motivo na
  * mesma trilha de erro já existente, sem inventar RPC nova. Não-retryable —

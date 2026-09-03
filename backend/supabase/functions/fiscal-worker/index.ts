@@ -9,7 +9,9 @@ import {
   applyCredentialResolutionFailure,
   applyFocusRemoteState,
   applyProviderIdentityMismatch,
+  applyReconciliarIdentityMismatch,
   computeProviderIdentity,
+  confirmProviderFreezeOrFailClosed,
   enforceRetrySafeGate,
   extractLojaId,
   validateProviderIdentity,
@@ -144,19 +146,26 @@ Deno.serve(async (req) => {
 
     const provider = createFiscalProvider(cfg);
 
-    // Congela a identidade ANTES de qualquer chamada externa (a checagem
-    // acima já confirmou que ou nunca houve congelamento reconhecido, ou o
-    // congelado bate com o atual). Só escreve na 1ª vez — a partir daqui o
-    // trigger `tg_documentos_fiscais_estado_bu` (migration 20260903120000)
-    // rejeita qualquer tentativa de mudar um valor já reconhecido.
+    // P0-1 (sprint C2.11, achado Codex): congelar a identidade não é
+    // suficiente só como "melhor esforço" — é PRÉ-CONDIÇÃO FATAL para o
+    // POST. `UPDATE ... .select()` devolve a linha realmente persistida;
+    // `confirmProviderFreezeOrFailClosed` LÊ essa confirmação e só libera
+    // prosseguir se o valor gravado bate com o pretendido. Antes, uma
+    // falha no UPDATE só virava `console.error` e o laço seguia para o
+    // POST mesmo assim — exatamente o bug relatado
+    // ("congela falha -> só log -> POST"). Só escreve na 1ª vez — a partir
+    // daqui o trigger `tg_documentos_fiscais_estado_bu` (migration
+    // 20260903120000) rejeita qualquer tentativa de mudar um valor já
+    // reconhecido.
     if (idCheck.shouldFreeze) {
-      const { error: freezeErr } = await supabase
+      const freezeResult = await supabase
         .from("documentos_fiscais_pendentes")
         .update({ provider: identidadeAtual })
-        .eq("id", doc.id);
-      if (freezeErr) {
-        console.error(JSON.stringify({ scope: "fiscal-worker", event: "provider_freeze_failed", documento_id: doc.id, message: freezeErr.message }));
-      }
+        .eq("id", doc.id)
+        .select("provider")
+        .maybeSingle();
+      const confirm = await confirmProviderFreezeOrFailClosed(supabase, doc, identidadeAtual, freezeResult, counters);
+      if (!confirm.podeProsseguir) continue;
     }
 
     // C2.7 — retry seguro: em qualquer tentativa que não seja a primeira,
@@ -318,7 +327,7 @@ async function handleReconciliar(
 ): Promise<Response> {
   const { data: raw, error: fetchErr } = await supabase
     .from("documentos_fiscais_pendentes")
-    .select("id, venda_id, tipo_doc, tentativas, correlation_id, payload, status")
+    .select("id, venda_id, tipo_doc, tentativas, correlation_id, payload, status, provider")
     .eq("id", documentoId)
     .maybeSingle();
   if (fetchErr || !raw) {
@@ -334,9 +343,22 @@ async function handleReconciliar(
     payload: raw.payload && isRecord(raw.payload) ? raw.payload : null,
   };
 
+  // P0-1 (sprint C2.11, achado Codex): reconciliação nunca pode consultar
+  // sob empresa/ambiente/provider diferentes da identidade já congelada do
+  // documento usando só a configuração atual — mesma checagem do laço
+  // principal (`validateProviderIdentity`), aplicada aqui antes de
+  // qualquer resolução de credencial/consulta remota.
+  const lojaId = extractLojaId(doc.payload);
+  const identidadeAtual = computeProviderIdentity(providerType, deployAmbiente, lojaId);
+  const frozenProvider = typeof raw.provider === "string" ? raw.provider : null;
+  const idCheck = validateProviderIdentity(frozenProvider, identidadeAtual);
+  if (!idCheck.ok) {
+    await applyReconciliarIdentityMismatch(supabase, doc, idCheck);
+    return json(200, { ok: true, documento_id: doc.id, resultado: "erro_identidade_divergente", detalhe: idCheck });
+  }
+
   let cfg: ProviderConfig = legacyProviderConfig;
   if (providerType === "focus") {
-    const lojaId = extractLojaId(doc.payload);
     const cred = await resolveFocusCredential(supabase, lojaId, deployAmbiente);
     if (!cred.ok) {
       const counters: WorkerCounters = { emitted: [], failed: [], retried: [] };
