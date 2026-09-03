@@ -458,6 +458,8 @@
     "hint_cest": "7位代码。仅限适用替代税的商品填写。",
     "field_cst_pis": "CST PIS",
     "field_cst_cofins": "CST COFINS",
+    "field_icms_origem": "ICMS 来源代码",
+    "hint_icms_origem": "商品的 ICMS 来源税务代码（Focus NFe）。无默认值——未分类前请留空。",
     "ncm_invalido": "NCM 必须为8位数字。",
     "cfop_invalido": "CFOP 必须为4位数字。",
     "cest_invalido": "CEST 必须为7位数字。"

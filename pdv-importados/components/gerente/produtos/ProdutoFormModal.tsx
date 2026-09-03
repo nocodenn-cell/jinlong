@@ -374,6 +374,7 @@ export function ProdutoFormModal({
           cest: form.cest,
           cstPis: form.cstPis,
           cstCofins: form.cstCofins,
+          icmsOrigem: form.icmsOrigem,
           precoVarejo: precoVarejo ?? 0,
           precoAtacado,
           precoCusto: form.precoCustoInput.parse(),

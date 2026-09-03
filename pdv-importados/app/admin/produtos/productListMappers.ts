@@ -40,5 +40,6 @@ export function mapListRowToGerente(row: ProductListFilteredRow): ProdutoGerente
     cest: row.cest,
     cst_pis: row.cstPis,
     cst_cofins: row.cstCofins,
+    icms_origem: row.icmsOrigem,
   }
 }

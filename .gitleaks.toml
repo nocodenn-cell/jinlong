@@ -18,6 +18,12 @@ paths = [
   '''pdv-importados/app/caixa/finalizarVendaValidation\.test\.ts''',
   '''pdv-importados/lib/caixa/resolveVendaIdForFinalize\.test\.ts''',
   '''backend/scripts/fase4-remessa-idempotencia-payload-hash\.test\.sql''',
+  # Arquivos deno.lock: hashes de integridade SHA-256 de dependências
+  # remotas/npm (formato nativo do lockfile do Deno) — alta entropia, não
+  # são segredos. Casam com generic-api-key sempre que uma dependência nova
+  # é resolvida; qualquer deno.lock deste repositório pode disparar o mesmo
+  # falso positivo estrutural, não é específico de um commit.
+  '''deno\.lock''',
 ]
 commits = [
   "3f623524886a0d454d535e4f07a5243fe7f9e1a0",

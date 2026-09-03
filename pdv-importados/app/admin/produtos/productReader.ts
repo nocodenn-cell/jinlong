@@ -76,6 +76,7 @@ type RpcProdutoFilteredRow = {
   cest: string | null
   cst_pis: string | null
   cst_cofins: string | null
+  icms_origem: string | null
 }
 
 type EstoqueSnap = { quantidade_atual: number; estoque_minimo: number }
@@ -265,6 +266,11 @@ function mapFilteredRow(
     cest: r.cest ?? null,
     cstPis: r.cst_pis ?? null,
     cstCofins: r.cst_cofins ?? null,
+    // Onda C2.6: mesmo padrão dos campos fiscais acima — o RPC
+    // list_produtos_gerente_filtrados hoje não devolve nenhum destes campos
+    // no RETURNS TABLE (gap pré-existente, não introduzido nem corrigido
+    // nesta onda; fora do escopo autorizado). Mantido para paridade de tipo.
+    icmsOrigem: r.icms_origem ?? null,
   }
 }
 

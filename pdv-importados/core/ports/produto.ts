@@ -49,6 +49,8 @@ export interface NovoProdutoInput {
   cest?: string | null
   cst_pis?: string | null
   cst_cofins?: string | null
+  /** Código de origem ICMS Focus ('0'..'8'). SEM default — não deriva de `origem`. */
+  icms_origem?: string | null
   /** Quantidade inicial (opcional) — aplicada na mesma TX do create (RPC 270). */
   estoque_inicial_quantidade?: number
   /** Estoque mínimo inicial (opcional) — mesma TX. */

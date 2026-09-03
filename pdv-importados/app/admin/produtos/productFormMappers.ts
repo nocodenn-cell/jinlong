@@ -37,6 +37,7 @@ export type ProdutoFormCreateRow = {
   cest?: string | null
   cst_pis?: string | null
   cst_cofins?: string | null
+  icms_origem?: string | null
   status_publicacao?: StatusPublicacao
   ativo?: boolean
   estoque_inicial_quantidade?: number
@@ -80,6 +81,7 @@ function catalogFieldsFromForm(
     cest: row.cest,
     cstPis: row.cst_pis,
     cstCofins: row.cst_cofins,
+    icmsOrigem: row.icms_origem,
   }
 }
 

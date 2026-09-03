@@ -179,6 +179,26 @@ describe.skipIf(!SERVICE_ROLE_KEY)('Consistência de Vendas - PDV (RPC real, Pos
     expect(fiscal).toBeTruthy()
     expect(fiscal?.status).toBe('PENDENTE')
 
+    // B-P0.1 (Onda C1, prontidão Focus NFe): payload deixa de ser NULL —
+    // snapshot fiscal do item (produto sem NCM/CFOP/CSOSN neste teste, então
+    // os campos vêm null/None, mas a estrutura precisa existir).
+    expect(fiscal?.payload).toBeTruthy()
+    expect(Array.isArray(fiscal?.payload?.itens)).toBe(true)
+    expect(fiscal?.payload?.itens).toHaveLength(1)
+    expect(fiscal?.payload?.itens?.[0]?.produto_id).toBe(produtoId)
+    expect(fiscal?.payload?.itens?.[0]?.nome).toBe('Produto venda atômica')
+    expect(fiscal?.payload?.emitente?.loja_id).toBe(LOJA_MATRIZ)
+
+    // Gate de completude: pagamentos é sempre array (nunca campo escalar
+    // "forma_pagamento" solto), venda_id/data_venda presentes, destinatário
+    // ausente quando a venda não tem cliente (não inventa objeto vazio).
+    expect(fiscal?.payload?.forma_pagamento).toBeUndefined()
+    expect(Array.isArray(fiscal?.payload?.pagamentos)).toBe(true)
+    expect(fiscal?.payload?.pagamentos?.[0]).toMatchObject({ forma_pagamento: 'DINHEIRO', valor: 1000 })
+    expect(fiscal?.payload?.venda_id).toBe(vendaId)
+    expect(fiscal?.payload?.data_venda).toBeTruthy()
+    expect(fiscal?.payload?.destinatario).toBeNull()
+
     // Contrato de retorno da RPC (achado Codex): dados_fiscais usa a chave
     // `documento_fiscal_id`, não `documento_id`; itens_atualizados e
     // estoque_baixado são sempre NULL — nenhum caminho de código no corpo
@@ -249,5 +269,123 @@ describe.skipIf(!SERVICE_ROLE_KEY)('Consistência de Vendas - PDV (RPC real, Pos
       .eq('loja_id', LOJA_MATRIZ)
       .single()
     expect(estoque?.quantidade_atual).toBe(0)
+  })
+
+  // B-P0.1 (Onda C1, prontidão Focus NFe): prova que o snapshot fiscal
+  // congelado no enqueue (documentos_fiscais_pendentes.payload) reflete a
+  // classificação fiscal do produto NO MOMENTO da venda, e que uma alteração
+  // posterior no cadastro do produto NÃO reescreve o documento já enfileirado
+  // — condição explícita do usuário para a Fase C ("falha de persistência
+  // documental ≠ falha de emissão fiscal" e "worker consome snapshot, não
+  // reconstrói a partir de cadastro mutável").
+  it('deve congelar snapshot fiscal do item e ignorar alteração posterior do produto', async () => {
+    const caixa = await abrirCaixa()
+    const produtoId = await criarProduto('Produto snapshot fiscal', 200, 10)
+
+    await supabase
+      .from('produtos')
+      .update({
+        ncm: '12345678',
+        cfop_produto: '5102',
+        csosn: '102',
+        cest: '1234567',
+        cst_pis: '01',
+        cst_cofins: '01',
+        // Onda C2.6 (prontidão Focus NFe): icms_origem — mesmo padrão dos
+        // demais campos fiscais acima, sem default, classificado explicitamente.
+        icms_origem: '1',
+      })
+      .eq('id', produtoId)
+
+    const vendaId = randomUUID()
+    const { error } = await finalizarVenda(supabase, {
+      vendaId,
+      caixaId: caixa,
+      operadorId,
+      lojaId: LOJA_MATRIZ,
+      totalBruto: 200,
+      totalDesconto: 0,
+      totalLiquido: 200,
+      itens: [{ produtoId, quantidade: 1, precoOriginal: 200, precoUnitario: 200, tipoPreco: 'VAREJO' }],
+    })
+    expect(error).toBeNull()
+
+    const { data: docAntes } = await supabase
+      .from('documentos_fiscais_pendentes')
+      .select('payload')
+      .eq('venda_id', vendaId)
+      .maybeSingle()
+    const itemAntes = docAntes?.payload?.itens?.[0]
+    expect(itemAntes?.ncm).toBe('12345678')
+    expect(itemAntes?.cfop).toBe('5102')
+    expect(itemAntes?.csosn).toBe('102')
+    expect(itemAntes?.cest).toBe('1234567')
+    expect(itemAntes?.cst_pis).toBe('01')
+    expect(itemAntes?.cst_cofins).toBe('01')
+    expect(itemAntes?.icms_origem).toBe('1')
+
+    // Alteração posterior no cadastro do produto — não pode retroagir ao documento já enfileirado.
+    await supabase
+      .from('produtos')
+      .update({ ncm: '99999999', cfop_produto: '6102', csosn: '900', icms_origem: '2' })
+      .eq('id', produtoId)
+
+    const { data: docDepoisProduto } = await supabase
+      .from('documentos_fiscais_pendentes')
+      .select('payload')
+      .eq('venda_id', vendaId)
+      .maybeSingle()
+    const itemDepoisProduto = docDepoisProduto?.payload?.itens?.[0]
+    expect(itemDepoisProduto?.ncm).toBe('12345678')
+    expect(itemDepoisProduto?.cfop).toBe('5102')
+    expect(itemDepoisProduto?.csosn).toBe('102')
+    expect(itemDepoisProduto?.icms_origem).toBe('1')
+
+    // Gate 4 (Fase C, revisão adicional): os TRÊS SSOT mutáveis que
+    // alimentaram o snapshot — produtos (acima), lojas e pdv_config (abaixo)
+    // — não podem retroagir ao documento já enfileirado. Salva/restaura os
+    // valores originais para não vazar efeito colateral para outros testes
+    // que reaproveitam a mesma LOJA_MATRIZ.
+    const { data: lojaOriginal } = await supabase
+      .from('lojas')
+      .select('razao_social, cnpj')
+      .eq('id', LOJA_MATRIZ)
+      .maybeSingle()
+    const { data: pdvConfigOriginal } = await supabase
+      .from('pdv_config')
+      .select('cfop_padrao, regime_tributario')
+      .eq('loja_id', LOJA_MATRIZ)
+      .maybeSingle()
+
+    try {
+      await supabase
+        .from('lojas')
+        .update({ razao_social: 'MUDOU DEPOIS DO ENQUEUE LTDA', cnpj: '99999999000199' })
+        .eq('id', LOJA_MATRIZ)
+      if (pdvConfigOriginal) {
+        await supabase
+          .from('pdv_config')
+          .update({ cfop_padrao: '9999', regime_tributario: 'LUCRO_REAL' })
+          .eq('loja_id', LOJA_MATRIZ)
+      }
+
+      const { data: docDepoisEmitente } = await supabase
+        .from('documentos_fiscais_pendentes')
+        .select('payload')
+        .eq('venda_id', vendaId)
+        .maybeSingle()
+      expect(docDepoisEmitente?.payload?.emitente?.razao_social).toBe(lojaOriginal?.razao_social)
+      expect(docDepoisEmitente?.payload?.emitente?.cnpj).toBe(lojaOriginal?.cnpj)
+      if (pdvConfigOriginal) {
+        expect(docDepoisEmitente?.payload?.emitente?.regime_tributario).toBe(pdvConfigOriginal.regime_tributario)
+      }
+    } finally {
+      if (lojaOriginal) {
+        await supabase.from('lojas').update(lojaOriginal).eq('id', LOJA_MATRIZ)
+      }
+      if (pdvConfigOriginal) {
+        await supabase.from('pdv_config').update(pdvConfigOriginal).eq('loja_id', LOJA_MATRIZ)
+      }
+    }
   })
 })

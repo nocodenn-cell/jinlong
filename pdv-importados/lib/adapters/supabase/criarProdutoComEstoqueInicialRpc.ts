@@ -116,6 +116,7 @@ function buildPayload(input: CriarProdutoEstoqueInput): Record<string, unknown> 
     cest: input.cest ?? null,
     cst_pis: input.cst_pis ?? null,
     cst_cofins: input.cst_cofins ?? null,
+    icms_origem: input.icms_origem ?? null,
     ativo: lifecycle.ativo,
     status_publicacao: lifecycle.status_publicacao,
     estoque_inicial_quantidade: Number.isFinite(qty) && qty > 0 ? qty : 0,

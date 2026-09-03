@@ -47,6 +47,7 @@ export function buildSubmitPayload(
     cest: string
     cstPis: string
     cstCofins: string
+    icmsOrigem: string
     precoVarejo: number
     precoAtacado: number | null
     precoCusto: number | null
@@ -77,6 +78,9 @@ export function buildSubmitPayload(
     cest: state.cest.trim() || null,
     cst_pis: state.cstPis.trim() || null,
     cst_cofins: state.cstCofins.trim() || null,
+    // Onda C2.6: SEM default, SEM inferência de origem/país/canal (mesmo
+    // padrão de cest acima) — vazio vira NULL, "não classificado ainda".
+    icms_origem: state.icmsOrigem.trim() || null,
   }
 }
 

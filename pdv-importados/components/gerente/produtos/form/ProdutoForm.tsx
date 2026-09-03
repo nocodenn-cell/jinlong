@@ -95,6 +95,8 @@ export function ProdutoForm(props: Props) {
     setCstPis: props.setCstPis,
     cstCofins: props.cstCofins,
     setCstCofins: props.setCstCofins,
+    icmsOrigem: props.icmsOrigem,
+    setIcmsOrigem: props.setIcmsOrigem,
     precoVarejoInput: props.precoVarejoInput,
     precoAtacadoInput: props.precoAtacadoInput,
     precoCustoInput: props.precoCustoInput,

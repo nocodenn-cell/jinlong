@@ -51,6 +51,7 @@ function estadoFormulario(over: Partial<Parameters<typeof buildSubmitPayload>[0]
     cest: '',
     cstPis: '07',
     cstCofins: '07',
+    icmsOrigem: '',
     precoVarejo: 25,
     precoAtacado: null,
     precoCusto: 10,

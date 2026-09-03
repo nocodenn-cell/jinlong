@@ -115,6 +115,8 @@ type VendaItemPayload = {
   preco_unitario: number;
 };
 
+type VendaPagamentoPayload = { forma_pagamento: string; valor: number };
+
 type VendaPayload = {
   venda_id: string;
   caixa_id?: string | null;
@@ -129,6 +131,18 @@ type VendaPayload = {
   desconto_gerente_token?: string | null;
   gerente_id?: string | null;
   itens: VendaItemPayload[];
+  /**
+   * Sprint C2.10 (P0-5) — split de pagamento opcional. `pdv-local`
+   * (cliente desktop Tauri) não captura pagamento misto hoje — sua tabela
+   * local `vendas` só tem `forma_pagamento TEXT` escalar
+   * (`pdv-local/src-tauri/src/db.rs`) — então este campo fica ausente em
+   * todo tráfego real atual, e `registrar_venda_com_itens` cai no
+   * comportamento escalar de sempre (1 pagamento = forma_pagamento/
+   * total_liquido). Quando o cliente desktop capturar split no futuro
+   * (fora desta sprint), basta enviar este campo — nenhuma outra mudança
+   * de backend é necessária.
+   */
+  pagamentos?: VendaPagamentoPayload[] | null;
 };
 
 function assertVendaMoneyTotals(raw: Record<string, unknown>): void {
@@ -248,6 +262,27 @@ function setDescontoTokenFromPayload(raw: Record<string, unknown>, payload: Vend
   throw new Error("PAYLOAD_DESCONTO_GERENTE_TOKEN_INVALIDO");
 }
 
+/** Sprint C2.10 (P0-5) — parse opcional e estrito: se `pagamentos` vier no
+ * payload, cada entrada precisa ter forma_pagamento+valor válidos (mesma
+ * validação de forma no RPC); malformado = rejeita a venda inteira, nunca
+ * ignora silenciosamente uma entrada. Ausente = comportamento escalar. */
+function setPagamentosFromPayload(raw: Record<string, unknown>, payload: VendaPayload): void {
+  if (!("pagamentos" in raw) || raw.pagamentos == null) return;
+  const arr = raw.pagamentos;
+  if (!Array.isArray(arr) || arr.length === 0) {
+    throw new Error("PAYLOAD_PAGAMENTOS_INVALIDO");
+  }
+  const pagamentos: VendaPagamentoPayload[] = arr.map((p) => {
+    if (!isRecord(p)) throw new Error("PAYLOAD_PAGAMENTOS_INVALIDO");
+    const forma = p.forma_pagamento;
+    const valor = p.valor;
+    if (typeof forma !== "string" || !forma.trim()) throw new Error("PAYLOAD_PAGAMENTOS_INVALIDO");
+    if (typeof valor !== "number" || !Number.isFinite(valor) || valor <= 0) throw new Error("PAYLOAD_PAGAMENTOS_INVALIDO");
+    return { forma_pagamento: forma.trim(), valor };
+  });
+  payload.pagamentos = pagamentos;
+}
+
 function applyVendaOptionalFields(raw: Record<string, unknown>, payload: VendaPayload): void {
   setCaixaIdFromPayload(raw, payload);
   setOperadorIdFromPayload(raw, payload);
@@ -255,6 +290,7 @@ function applyVendaOptionalFields(raw: Record<string, unknown>, payload: VendaPa
   setDescontoGerenteFromPayload(raw, payload);
   setGerenteIdFromPayload(raw, payload);
   setDescontoTokenFromPayload(raw, payload);
+  setPagamentosFromPayload(raw, payload);
 }
 
 function parseVendaPayload(raw: unknown): VendaPayload {
@@ -662,6 +698,9 @@ async function processVenda(
     p_desconto_gerente_percentual: payload.desconto_gerente_percentual ?? null,
     p_desconto_gerente_valor: payload.desconto_gerente_valor ?? null,
     p_gerente_id: payload.gerente_id ?? null,
+    // Sprint C2.10 (P0-5): null em todo tráfego real hoje (pdv-local não
+    // envia) -> RPC cai no comportamento escalar de sempre, sem mudança.
+    p_pagamentos: payload.pagamentos ?? null,
   });
 
   if (rpcVendaErr) {
