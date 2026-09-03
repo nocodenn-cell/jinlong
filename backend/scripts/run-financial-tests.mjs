@@ -54,6 +54,7 @@ const SQL_SUITES = [
   'gate-a04-varejo-menor-que-tier-ativo.test.sql',
   'gate-a02-fechamento-repeticao-valor-divergente.test.sql',
   'pr1b-kardex-imutavel.test.sql',
+  'item7-storage-produto-imagens-tenant.test.sql',
 ]
 
 /** `psql` está de fato instalado e executável neste host? */
