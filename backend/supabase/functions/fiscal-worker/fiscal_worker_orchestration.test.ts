@@ -3,7 +3,7 @@
 
 import { assertEquals } from "https://deno.land/std@0.208.0/assert/mod.ts";
 import type { FiscalDoc, FocusRemoteState } from "./fiscal_types.ts";
-import { applyCredentialResolutionFailure, applyFocusRemoteState, extractLojaId, type WorkerCounters } from "./fiscal_worker_orchestration.ts";
+import { applyCredentialResolutionFailure, applyFocusRemoteState, enforceRetrySafeGate, extractLojaId, type WorkerCounters } from "./fiscal_worker_orchestration.ts";
 
 function fakeSupabase() {
   const rpcCalls: Array<{ fn: string; args: Record<string, unknown> }> = [];
@@ -99,4 +99,86 @@ Deno.test("9/10. retry (tentativas>0) — consulta antes de reemitir é responsa
   // do resultado da consulta. O laço em index.ts só chama emitirNfce/emitirNfe
   // quando a consulta prévia retorna "nao_encontrado" (ver fiscal-provider-
   // adapter.test.ts para a prova de que o POST em si usa sempre a mesma ref).
+});
+
+// ---------------------------------------------------------------------------
+// Sprint de convergência (auditoria Codex) — P0 "query-before-reemit":
+// prova EXECUTÁVEL, não estática, de que `enforceRetrySafeGate` (agora
+// chamado por `index.ts` no lugar do bloco inline anterior) nunca libera
+// um novo POST sem antes consultar a referência quando a tentativa não é a
+// primeira. Cada teste conta chamadas reais (spy), não apenas lê o código.
+// ---------------------------------------------------------------------------
+
+/** Provider fake com contador de chamadas — prova quantas vezes `consultarDocumento` rodou. */
+function fakeProviderComConsulta(estado: FocusRemoteState) {
+  let chamadas = 0;
+  return {
+    get chamadas() { return chamadas; },
+    async consultarDocumento(_ref: string, _tipoDoc: string, _cfg: unknown): Promise<FocusRemoteState> {
+      chamadas += 1;
+      return estado;
+    },
+  };
+}
+
+Deno.test("P0 query-before-reemit — tentativas>0 e estado remoto CONHECIDO (não nao_encontrado) -> NÃO libera novo POST, aplica o estado consultado", async () => {
+  const supabase = fakeSupabase();
+  const c = counters();
+  const provider = fakeProviderComConsulta({ kind: "autorizado", chave_fiscal: "chave-recuperada-retry", protocolo: "proto-retry", provider_ref: null, payload: null });
+
+  const gate = await enforceRetrySafeGate(supabase, doc(), provider, "ref-estavel-1", { type: 'focus' }, c);
+
+  assertEquals(provider.chamadas, 1); // consulta realmente aconteceu
+  assertEquals(gate.proceed, false); // chamador NÃO deve prosseguir para um novo POST
+  assertEquals(supabase.rpcCalls.length, 1);
+  assertEquals(supabase.rpcCalls[0].fn, "fiscal_marcar_emitido"); // resultado da consulta aplicado, não uma 2ª emissão
+  assertEquals(supabase.rpcCalls[0].args.p_chave_fiscal, "chave-recuperada-retry");
+});
+
+Deno.test("P0 query-before-reemit — tentativas>0 e Focus devolve 'processando' -> NÃO libera novo POST (nenhuma RPC, mesma regra de 202)", async () => {
+  const supabase = fakeSupabase();
+  const c = counters();
+  const provider = fakeProviderComConsulta({ kind: "processando", payload: null });
+
+  const gate = await enforceRetrySafeGate(supabase, doc(), provider, "ref-estavel-2", { type: 'focus' }, c);
+
+  assertEquals(provider.chamadas, 1);
+  assertEquals(gate.proceed, false);
+  assertEquals(supabase.rpcCalls.length, 0); // "processando" não gera RPC — mas também não libera reemissão
+});
+
+Deno.test("P0 query-before-reemit — tentativas>0 e Focus confirma 'nao_encontrado' -> SÓ ENTÃO libera novo POST, sem aplicar nenhum estado", async () => {
+  const supabase = fakeSupabase();
+  const c = counters();
+  const provider = fakeProviderComConsulta({ kind: "nao_encontrado" });
+
+  const gate = await enforceRetrySafeGate(supabase, doc(), provider, "ref-estavel-3", { type: 'focus' }, c);
+
+  assertEquals(provider.chamadas, 1); // a consulta aconteceu ANTES de qualquer decisão de emitir
+  assertEquals(gate.proceed, true); // só agora o chamador pode prosseguir para POST
+  assertEquals(supabase.rpcCalls.length, 0); // nada foi escrito — a decisão de emitir é do chamador, não desta função
+});
+
+Deno.test("P0 query-before-reemit — primeira tentativa (tentativas=0) NÃO consulta antes de emitir (regra não se aplica à 1ª chamada)", async () => {
+  const supabase = fakeSupabase();
+  const c = counters();
+  const provider = fakeProviderComConsulta({ kind: "autorizado", chave_fiscal: "não deveria aparecer", protocolo: "x", provider_ref: null, payload: null });
+  const primeiraTentativa: FiscalDoc = { ...doc(), tentativas: 0 };
+
+  const gate = await enforceRetrySafeGate(supabase, primeiraTentativa, provider, "ref-estavel-4", { type: 'focus' }, c);
+
+  assertEquals(provider.chamadas, 0); // consulta NÃO acontece na 1ª tentativa
+  assertEquals(gate.proceed, true);
+  assertEquals(supabase.rpcCalls.length, 0);
+});
+
+Deno.test("P0 query-before-reemit — provider sem capacidade de consulta (mock/http/bling legado) não bloqueia o laço", async () => {
+  const supabase = fakeSupabase();
+  const c = counters();
+  const providerSemConsulta = {}; // sem consultarDocumento — mesmo shape do provider legado
+
+  const gate = await enforceRetrySafeGate(supabase, doc(), providerSemConsulta, "ref-estavel-5", { type: 'focus' }, c);
+
+  assertEquals(gate.proceed, true);
+  assertEquals(supabase.rpcCalls.length, 0);
 });

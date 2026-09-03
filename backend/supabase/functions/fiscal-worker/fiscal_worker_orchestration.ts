@@ -13,6 +13,7 @@ import type { FiscalDoc, FocusRemoteState } from "./fiscal_types.ts";
 import { classifyFiscalError } from "./fiscal_classify.ts";
 import { isRecord } from "./fiscal_http.ts";
 import type { FiscalCredentialErrorCode } from "./fiscal_credential_resolver.ts";
+import type { ProviderConfig } from "./fiscal-provider-adapter.ts";
 
 // deno-lint-ignore no-explicit-any
 type SupabaseLike = any;
@@ -147,8 +148,8 @@ export async function applyFocusRemoteState(
 
     case "nao_encontrado": {
       // Só relevante em contexto de consulta/retry-seguro — chamador decide
-      // (ver `fiscal_worker_orchestration.ts` `shouldProceedWithEmit`). Se
-      // chegar aqui de qualquer forma, trata como erro definitivo leve.
+      // (ver `enforceRetrySafeGate` abaixo). Se chegar aqui de qualquer
+      // forma, trata como erro definitivo leve.
       const { error } = await supabase.rpc("fiscal_marcar_erro_normalizado", {
         p_documento_id: doc.id,
         p_erro: "FOCUS_NAO_ENCONTRADO",
@@ -164,4 +165,47 @@ export async function applyFocusRemoteState(
       break;
     }
   }
+}
+
+export type RetrySafeGateResult = { proceed: true } | { proceed: false };
+
+/**
+ * Sprint de convergência (auditoria Codex, P0 "query-before-reemit") —
+ * extraído do laço inline de `index.ts` (linhas 120-131 antes desta
+ * mudança) para ser testável sem simular um `Deno.serve` inteiro, no mesmo
+ * padrão já usado para `applyFocusRemoteState`/`applyCredentialResolutionFailure`
+ * acima. Comportamento IDÊNTICO ao que já existia desde a Onda C2.7 — esta
+ * extração não muda nenhuma regra, só a torna verificável por teste.
+ *
+ * Contrato: numa tentativa que NÃO é a primeira (`tentativas > 0`), o
+ * chamador NUNCA pode emitir um novo POST antes de consultar o estado
+ * remoto pela mesma `ref`. Só um retorno `nao_encontrado` (Focus confirma
+ * que a tentativa anterior nunca chegou a existir do lado dela) libera
+ * `proceed: true`. Qualquer outro estado conhecido (autorizado/processando/
+ * rejeitado/erro) é aplicado imediatamente via `applyFocusRemoteState` (a
+ * MESMA função usada por emissão direta e por reconciliação) e devolve
+ * `proceed: false` — o chamador deve pular a emissão para este documento
+ * nesta rodada (`continue`), nunca reemitir.
+ */
+export async function enforceRetrySafeGate(
+  supabase: SupabaseLike,
+  doc: FiscalDoc,
+  provider: { consultarDocumento?: (ref: string, tipoDoc: string, cfg: ProviderConfig) => Promise<FocusRemoteState> },
+  ref: string,
+  cfg: ProviderConfig,
+  counters: WorkerCounters,
+): Promise<RetrySafeGateResult> {
+  if ((doc.tentativas ?? 0) <= 0 || !provider.consultarDocumento) {
+    // Primeira tentativa (ou provider sem capacidade de consulta, ex.: mock/
+    // http/bling legado): nada para reconciliar antes — segue para emissão
+    // normalmente, mesmo comportamento de sempre.
+    return { proceed: true };
+  }
+  const estadoRemoto = await provider.consultarDocumento(ref, doc.tipo_doc, cfg);
+  if (estadoRemoto.kind !== "nao_encontrado") {
+    await applyFocusRemoteState(supabase, doc, estadoRemoto, counters);
+    return { proceed: false };
+  }
+  // nao_encontrado: Focus confirma que não processou esta ref — seguro emitir.
+  return { proceed: true };
 }

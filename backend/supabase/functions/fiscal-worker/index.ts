@@ -5,7 +5,7 @@ import type { FiscalDoc } from "./fiscal_types.ts";
 import { isRecord, json } from "./fiscal_http.ts";
 import { callProvider, createFiscalProvider, resolveFocusRef, type ProviderConfig } from "./fiscal-provider-adapter.ts";
 import { resolveDeployAmbiente, resolveFocusBaseUrl, resolveFocusCredential } from "./fiscal_credential_resolver.ts";
-import { applyCredentialResolutionFailure, applyFocusRemoteState, extractLojaId, type WorkerCounters } from "./fiscal_worker_orchestration.ts";
+import { applyCredentialResolutionFailure, applyFocusRemoteState, enforceRetrySafeGate, extractLojaId, type WorkerCounters } from "./fiscal_worker_orchestration.ts";
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") {
@@ -119,16 +119,11 @@ Deno.serve(async (req) => {
 
     // C2.7 — retry seguro: em qualquer tentativa que não seja a primeira,
     // consultar o estado remoto ANTES de reemitir. Só documentos NÃO
-    // encontrados na Focus prosseguem para um novo POST.
-    if ((doc.tentativas ?? 0) > 0 && provider.consultarDocumento) {
-      const ref = resolveFocusRef(doc);
-      const estadoRemoto = await provider.consultarDocumento(ref, doc.tipo_doc, cfg);
-      if (estadoRemoto.kind !== "nao_encontrado") {
-        await applyFocusRemoteState(supabase, doc, estadoRemoto, counters);
-        continue;
-      }
-      // nao_encontrado: Focus confirma que não processou esta ref — seguro emitir.
-    }
+    // encontrados na Focus prosseguem para um novo POST. Extraído para
+    // `enforceRetrySafeGate` (sprint de convergência) para ser provado por
+    // teste executável, não só por inspeção — comportamento inalterado.
+    const gate = await enforceRetrySafeGate(supabase, doc, provider, resolveFocusRef(doc), cfg, counters);
+    if (!gate.proceed) continue;
 
     // C2.6 — NF-e: 3 estados possíveis (201 autorizado / 202 processando /
     // erro). Reaproveita EM_PROCESSAMENTO já existente para "processando" —
