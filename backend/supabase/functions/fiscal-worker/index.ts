@@ -42,14 +42,21 @@ Deno.serve(async (req) => {
   }
   const supabase = createClient(supabaseUrl, serviceRole, { auth: { persistSession: false } });
 
+  // Achado de revisão (Codex): o corpo de uma Request só pode ser lido uma
+  // vez — `req.clone()` lança `TypeError: Body is unusable` se chamado
+  // depois que o corpo original já foi consumido (confirmado empiricamente
+  // nesta sessão). O código anterior lia `req.json()` aqui para `limit` e
+  // só DEPOIS tentava `req.clone()` dentro de `readReconciliarDocumentoId`
+  // — o clone sempre lançava, sempre caía no catch, `mode: "reconciliar"`
+  // nunca funcionava de verdade (silenciosamente caía no laço normal de
+  // claim/emissão). Corrigido: o corpo é lido UMA vez aqui, e o objeto já
+  // parseado é reaproveitado tanto para `limit` quanto para a detecção de
+  // reconciliação — sem clone nenhum.
+  const parsedBody: unknown = await req.json().catch(() => ({}));
+
   let limit = 20;
-  try {
-    const body = await req.json().catch(() => ({}));
-    if (isRecord(body) && typeof body.limit === "number" && Number.isFinite(body.limit)) {
-      limit = Math.max(1, Math.min(100, Math.floor(body.limit)));
-    }
-  } catch {
-    // ignora e usa limit default
+  if (isRecord(parsedBody) && typeof parsedBody.limit === "number" && Number.isFinite(parsedBody.limit)) {
+    limit = Math.max(1, Math.min(100, Math.floor(parsedBody.limit)));
   }
 
   const providerType = (Deno.env.get("FISCAL_PROVIDER_TYPE") ?? "mock").toLowerCase() as ProviderConfig["type"];
@@ -90,7 +97,7 @@ Deno.serve(async (req) => {
   // claim/emissão abaixo. Não confundir com o reaper (recuperação de
   // processamento local preso, já existente) — aqui é descoberta do estado
   // REMOTO via consulta, aplicada às mesmas RPCs/máquina de estados de sempre.
-  const reconciliarId = await readReconciliarDocumentoId(req);
+  const reconciliarId = readReconciliarDocumentoId(parsedBody);
   if (reconciliarId) {
     return await handleReconciliar(supabase, reconciliarId, providerType, deployAmbiente, legacyProviderConfig, timeoutMs);
   }
@@ -196,12 +203,24 @@ Deno.serve(async (req) => {
     const result = await callProvider(doc, cfg);
 
     if (result.ok) {
+      // Achado de revisão (Codex): `fiscal_marcar_emitido` faz
+      // `payload = COALESCE(p_payload, payload)` (migration 065, anterior
+      // ao snapshot fiscal imutável de C1) — passar a resposta do provider
+      // aqui SOBRESCREVIA o snapshot congelado (loja_id, itens, pagamentos,
+      // emitente, classificação fiscal) com o JSON de resposta da Focus,
+      // destruindo justamente o artefato de auditoria que C1 existe para
+      // proteger, e quebrando reconciliação futura (que depende da
+      // identidade `focus:<ambiente>:<loja>` derivada do snapshot). A
+      // resposta do provider já não tem nenhum uso — `chave_fiscal`/
+      // `protocolo`/`provider_ref` (as únicas partes realmente relevantes)
+      // já têm colunas próprias. Nunca passa payload aqui — o COALESCE
+      // preserva o snapshot original.
       const { error } = await supabase.rpc("fiscal_marcar_emitido", {
         p_documento_id: doc.id,
         p_chave_fiscal: result.chave_fiscal,
         p_protocolo: result.protocolo,
         p_provider_ref: result.provider_ref ?? null,
-        p_payload: result.payload ?? null,
+        p_payload: null,
       });
       if (error) {
         counters.failed.push({ id: doc.id, erro: `MARCAR_EMITIDO_ERROR:${error.message}` });
@@ -368,20 +387,23 @@ Deno.serve(async (req) => {
       bloqueados: xmlCounters.bloqueados,
       com_erro: xmlCounters.comErro,
       ignorados_por_concorrencia: xmlCounters.ignoradosPorConcorrencia,
+      // Achado de revisão (Codex): antes, um erro na própria RPC de claim
+      // (permissão/schema-cache/transporte) era silenciosamente tratado
+      // como "fila vazia" — a resposta continuava `ok:true` com
+      // `xml.claimed:0`, indistinguível de "nada a processar". Um monitor
+      // externo via essa chamada nunca saberia que o passo de XML parou de
+      // funcionar. Superfície explícita do erro, sem afetar `ok`/status do
+      // laço de emissão acima (que já terminou e não é afetado por isto).
+      claim_error: xmlClaimErr?.message ?? null,
     },
   });
 });
 
-// deno-lint-ignore no-explicit-any
-async function readReconciliarDocumentoId(req: Request): Promise<string | null> {
-  try {
-    const clone = req.clone();
-    const body = await clone.json().catch(() => null);
-    if (isRecord(body) && body.mode === "reconciliar" && typeof body.documento_id === "string" && body.documento_id.trim() !== "") {
-      return body.documento_id;
-    }
-  } catch {
-    // corpo não é o de reconciliação — segue fluxo normal de claim/emissão.
+/** Recebe o corpo JÁ PARSEADO (uma Request só pode ter o corpo lido uma
+ * vez — ver comentário no chamador) — nunca lê a Request diretamente. */
+function readReconciliarDocumentoId(body: unknown): string | null {
+  if (isRecord(body) && body.mode === "reconciliar" && typeof body.documento_id === "string" && body.documento_id.trim() !== "") {
+    return body.documento_id;
   }
   return null;
 }

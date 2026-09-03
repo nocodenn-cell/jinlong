@@ -29,6 +29,8 @@ function fakeSupabase(tables: {
   vendas_pagamentos?: Row[];
   /** Sprint C2.11 (P0-2) — simula erro na leitura de vendas_pagamentos. */
   vendas_pagamentos_error?: string;
+  /** Hotfix (achado Codex) — simula erro na leitura de produtos. */
+  produtos_error?: string;
 }) {
   const rpcCalls: Array<{ fn: string; args: Record<string, unknown> }> = [];
 
@@ -53,7 +55,12 @@ function fakeSupabase(tables: {
             then(resolve: (v: { data: unknown; error: { message: string } | null }) => void) {
               // usado por `produtos` (sem maybeSingle — retorna lista via `.in`) e
               // por `vendas_pagamentos` (Sprint C2.10 — lista via `.eq`).
-              if (table === "produtos") return resolve({ data: tables.produtos ?? [], error: null });
+              if (table === "produtos") {
+                if (tables.produtos_error) {
+                  return resolve({ data: null, error: { message: tables.produtos_error } });
+                }
+                return resolve({ data: tables.produtos ?? [], error: null });
+              }
               if (table === "vendas_pagamentos") {
                 if (tables.vendas_pagamentos_error) {
                   return resolve({ data: null, error: { message: tables.vendas_pagamentos_error } });
@@ -351,6 +358,76 @@ Deno.test("P0-2 — pagamento único legítimo (linha real em vendas_pagamentos)
     assertEquals(pagamentos.length, 1);
     assertEquals(pagamentos[0].forma_pagamento, "CARTAO_CREDITO");
     assertEquals(pagamentos[0].valor, 50);
+  } finally {
+    if (prevFlag !== undefined) Deno.env.set("AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE", prevFlag);
+    else Deno.env.delete("AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE");
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Hotfix (achado Codex) — erro/leitura incompleta de `produtos` também
+// precisa ser fail-closed, mesma disciplina já aplicada a
+// `vendas_pagamentos` (P0-2, C2.11). Antes, um erro aqui só virava warning
+// e o snapshot congelava com NCM/CFOP/CSOSN/CEST/CST/icms_origem NULL para
+// todo item — permanentemente, já que o snapshot é imutável.
+// ---------------------------------------------------------------------------
+
+Deno.test("HOTFIX (achado Codex) — erro ao ler produtos -> FAIL-CLOSED, zero RPC (nunca congela snapshot com classificação fiscal NULL)", async () => {
+  const prevFlag = Deno.env.get("AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE");
+  Deno.env.set("AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE", "true");
+  try {
+    const produtoId = "22222222-2222-4222-8222-222222222222";
+    const { client, rpcCalls } = fakeSupabase({
+      produtos_error: "connection reset (simulado)",
+      vendas_pagamentos: [{ forma_pagamento: "DINHEIRO", valor: 50 }],
+    });
+
+    const payload: VendaPayloadFiscalSync = {
+      venda_id: "11111111-1111-4111-8111-111111111111",
+      forma_pagamento: "DINHEIRO",
+      total_bruto: 50,
+      total_desconto: 0,
+      total_liquido: 50,
+      itens: [{ produto_id: produtoId, quantidade: 1, preco_original: 50, preco_unitario: 50 }],
+    };
+
+    await maybeEnqueueFiscalDocumentAfterSyncedVenda(client, payload, noopLog);
+
+    assertEquals(rpcCalls.length, 0);
+  } finally {
+    if (prevFlag !== undefined) Deno.env.set("AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE", prevFlag);
+    else Deno.env.delete("AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE");
+  }
+});
+
+Deno.test("HOTFIX (achado Codex) — leitura de produtos incompleta (menos linhas que IDs pedidos) -> FAIL-CLOSED, zero RPC", async () => {
+  const prevFlag = Deno.env.get("AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE");
+  Deno.env.set("AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE", "true");
+  try {
+    const produtoId1 = "22222222-2222-4222-8222-222222222222";
+    const produtoId2 = "33333333-3333-4333-8333-333333333333";
+    const { client, rpcCalls } = fakeSupabase({
+      // Só devolve 1 dos 2 produtos pedidos — leitura genuinamente
+      // incompleta (não um erro explícito, mas igualmente perigosa).
+      produtos: [{ id: produtoId1, nome: "Produto 1", codigo_barras: null, ncm: "12345678", cfop_produto: "5405", csosn: "102", cest: null, cst_pis: "01", cst_cofins: "01", unidade_medida: "UN", icms_origem: "0" }],
+      vendas_pagamentos: [{ forma_pagamento: "DINHEIRO", valor: 100 }],
+    });
+
+    const payload: VendaPayloadFiscalSync = {
+      venda_id: "11111111-1111-4111-8111-111111111111",
+      forma_pagamento: "DINHEIRO",
+      total_bruto: 100,
+      total_desconto: 0,
+      total_liquido: 100,
+      itens: [
+        { produto_id: produtoId1, quantidade: 1, preco_original: 50, preco_unitario: 50 },
+        { produto_id: produtoId2, quantidade: 1, preco_original: 50, preco_unitario: 50 },
+      ],
+    };
+
+    await maybeEnqueueFiscalDocumentAfterSyncedVenda(client, payload, noopLog);
+
+    assertEquals(rpcCalls.length, 0);
   } finally {
     if (prevFlag !== undefined) Deno.env.set("AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE", prevFlag);
     else Deno.env.delete("AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE");

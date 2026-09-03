@@ -1472,6 +1472,15 @@ export type Database = {
           ultimo_erro: string | null
           updated_at: string
           venda_id: string
+          xml_armazenado_em: string | null
+          xml_lease_expires_em: string | null
+          xml_lease_token: string | null
+          xml_proxima_tentativa_em: string | null
+          xml_sha256: string | null
+          xml_status: string
+          xml_storage_path: string | null
+          xml_tentativas: number
+          xml_ultimo_erro: string | null
         }
         Insert: {
           chave_fiscal?: string | null
@@ -1500,6 +1509,15 @@ export type Database = {
           ultimo_erro?: string | null
           updated_at?: string
           venda_id: string
+          xml_armazenado_em?: string | null
+          xml_lease_expires_em?: string | null
+          xml_lease_token?: string | null
+          xml_proxima_tentativa_em?: string | null
+          xml_sha256?: string | null
+          xml_status?: string
+          xml_storage_path?: string | null
+          xml_tentativas?: number
+          xml_ultimo_erro?: string | null
         }
         Update: {
           chave_fiscal?: string | null
@@ -1528,6 +1546,15 @@ export type Database = {
           ultimo_erro?: string | null
           updated_at?: string
           venda_id?: string
+          xml_armazenado_em?: string | null
+          xml_lease_expires_em?: string | null
+          xml_lease_token?: string | null
+          xml_proxima_tentativa_em?: string | null
+          xml_sha256?: string | null
+          xml_status?: string
+          xml_storage_path?: string | null
+          xml_tentativas?: number
+          xml_ultimo_erro?: string | null
         }
         Relationships: [
           {
@@ -1796,6 +1823,51 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      fiscal_provider_config: {
+        Row: {
+          ambiente: string
+          created_at: string
+          habilitado: boolean
+          loja_id: string
+          provider_type: string
+          token_env_var: string | null
+          updated_at: string
+        }
+        Insert: {
+          ambiente: string
+          created_at?: string
+          habilitado?: boolean
+          loja_id: string
+          provider_type?: string
+          token_env_var?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ambiente?: string
+          created_at?: string
+          habilitado?: boolean
+          loja_id?: string
+          provider_type?: string
+          token_env_var?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fiscal_provider_config_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fiscal_provider_config_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["loja_id"]
+          },
+        ]
       }
       formas_pagamento: {
         Row: {
@@ -3494,6 +3566,7 @@ export type Database = {
           cst_pis: string | null
           estoque_minimo: number
           fornecedor_id: string | null
+          icms_origem: string | null
           id: string
           imagem_url: string | null
           limite_transferencia_sem_observacao: number | null
@@ -3536,6 +3609,7 @@ export type Database = {
           cst_pis?: string | null
           estoque_minimo?: number
           fornecedor_id?: string | null
+          icms_origem?: string | null
           id?: string
           imagem_url?: string | null
           limite_transferencia_sem_observacao?: number | null
@@ -3578,6 +3652,7 @@ export type Database = {
           cst_pis?: string | null
           estoque_minimo?: number
           fornecedor_id?: string | null
+          icms_origem?: string | null
           id?: string
           imagem_url?: string | null
           limite_transferencia_sem_observacao?: number | null
@@ -5591,39 +5666,48 @@ export type Database = {
       fiscal_claim_documentos: {
         Args: { p_limit?: number }
         Returns: {
-          chave_fiscal: string | null
+          chave_fiscal: string
           correlation_id: string
           created_at: string
-          deleted_at: string | null
-          fiscal_action_hint: string | null
-          fiscal_error_category: string | null
-          fiscal_error_code: string | null
-          fiscal_error_payload: Json | null
-          fiscal_next_step_url: string | null
-          fiscal_retryable: boolean | null
+          deleted_at: string
+          fiscal_action_hint: string
+          fiscal_error_category: string
+          fiscal_error_code: string
+          fiscal_error_payload: Json
+          fiscal_next_step_url: string
+          fiscal_retryable: boolean
           id: string
-          payload: Json | null
-          processado_em: string | null
-          protocolo: string | null
-          provider: string | null
-          provider_ref: string | null
-          proxima_tentativa_em: string | null
+          ja_tentou_emissao_antes: boolean
+          payload: Json
+          processado_em: string
+          protocolo: string
+          provider: string
+          provider_ref: string
+          proxima_tentativa_em: string
           status: string
           tentativas: number
           tipo_doc: string
-          transicao_origem: string | null
-          ultima_tentativa_em: string | null
-          ultima_transicao_em: string | null
-          ultimo_erro: string | null
+          transicao_origem: string
+          ultima_tentativa_em: string
+          ultima_transicao_em: string
+          ultimo_erro: string
           updated_at: string
           venda_id: string
         }[]
-        SetofOptions: {
-          from: "*"
-          to: "documentos_fiscais_pendentes"
-          isOneToOne: false
-          isSetofReturn: true
-        }
+      }
+      fiscal_claim_documentos_xml: {
+        Args: { p_lease_segundos?: number; p_limit?: number }
+        Returns: {
+          correlation_id: string
+          id: string
+          payload: Json
+          provider: string
+          tipo_doc: string
+          venda_id: string
+          xml_lease_token: string
+          xml_status: string
+          xml_tentativas: number
+        }[]
       }
       fiscal_enfileirar_documento_venda: {
         Args: {
@@ -5665,6 +5749,27 @@ export type Database = {
           p_transitorio?: boolean
         }
         Returns: undefined
+      }
+      fiscal_marcar_xml_armazenado: {
+        Args: {
+          p_documento_id: string
+          p_lease_token: string
+          p_sha256: string
+          p_storage_path: string
+        }
+        Returns: boolean
+      }
+      fiscal_marcar_xml_bloqueado: {
+        Args: {
+          p_documento_id: string
+          p_lease_token: string
+          p_motivo: string
+        }
+        Returns: boolean
+      }
+      fiscal_marcar_xml_erro: {
+        Args: { p_documento_id: string; p_erro: string; p_lease_token: string }
+        Returns: boolean
       }
       fiscal_reaper_documentos: {
         Args: { p_max_tentativas?: number; p_timeout_minutos?: number }
@@ -5764,11 +5869,18 @@ export type Database = {
         Returns: {
           ativo: boolean
           categoria_id: string
+          cest: string
+          cfop_produto: string
           codigo_barras: string
+          csosn: string
+          cst_cofins: string
+          cst_pis: string
           fornecedor_id: string
+          icms_origem: string
           id: string
           imagem_url: string
           marca_id: string
+          ncm: string
           nome: string
           observacao: string
           origem: string
@@ -5970,6 +6082,7 @@ export type Database = {
           p_gerente_id?: string
           p_itens: Json
           p_operador_id: string
+          p_pagamentos?: Json
           p_total_bruto: number
           p_total_desconto: number
           p_total_liquido: number

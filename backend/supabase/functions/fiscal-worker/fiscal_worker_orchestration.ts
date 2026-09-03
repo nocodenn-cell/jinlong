@@ -268,12 +268,17 @@ export async function applyFocusRemoteState(
 ): Promise<void> {
   switch (estado.kind) {
     case "autorizado": {
+      // Achado de revisão (Codex): ver comentário equivalente em
+      // index.ts. `fiscal_marcar_emitido` faz `payload = COALESCE(p_payload,
+      // payload)` — passar `estado.payload` (a resposta bruta do provider)
+      // sobrescreveria o snapshot fiscal imutável (C1) com o JSON de
+      // resposta da Focus. Nunca passa payload aqui.
       const { error } = await supabase.rpc("fiscal_marcar_emitido", {
         p_documento_id: doc.id,
         p_chave_fiscal: estado.chave_fiscal,
         p_protocolo: estado.protocolo,
         p_provider_ref: estado.provider_ref ?? null,
-        p_payload: estado.payload ?? null,
+        p_payload: null,
       });
       if (error) {
         counters.failed.push({ id: doc.id, erro: `MARCAR_EMITIDO_ERROR:${error.message}` });

@@ -238,9 +238,23 @@ async function cenarioXmlIgualConcorrente() {
     ]);
 
     const final = await estadoFinalConsistente(docId);
-    ok("estado final é ARMAZENADO", final.status === "ARMAZENADO", final);
-    ok("hash persistido no banco é o do conteúdo (idêntico dos dois lados)", final.hash === (await sha256Hex(conteudo)), final);
-    ok("CONSISTÊNCIA: blob real no path == hash persistido no banco == XML confirmado", final.blobHashReal === final.hash && final.hash !== null, final);
+    const ultimoErro = await psql(`SELECT COALESCE(xml_ultimo_erro,'') FROM public.documentos_fiscais_pendentes WHERE id = '${docId}';`);
+    info(`resultado bruto: status=${final.status} hash=${final.hash || "(nenhum)"} xml_ultimo_erro=${ultimoErro || "(nenhum)"}`);
+    info(`Worker A contadores: armazenados=${countersA.armazenados.length} ignorados=${countersA.ignoradosPorConcorrencia.length} comErro=${JSON.stringify(countersA.comErro)}`);
+    info(`Worker B contadores: armazenados=${countersB.armazenados.length} ignorados=${countersB.ignoradosPorConcorrencia.length} comErro=${JSON.stringify(countersB.comErro)}`);
+
+    // Mesmo raciocínio do Cenário D: sob colisão física verdadeiramente
+    // simultânea no MESMO path novo (Storage local não é perfeitamente
+    // atômico — ver "[Storage bruto]"), o desfecho seguro pode ser (a) um
+    // dos dois confirma (aqui, como o conteúdo é idêntico, qualquer um dos
+    // dois hashes serve) ou (b) os dois se recusam a confirmar sob
+    // incerteza — nunca uma confirmação de valor incorreto.
+    if (final.status === "ARMAZENADO") {
+      ok("hash persistido no banco é o do conteúdo (idêntico dos dois lados)", final.hash === (await sha256Hex(conteudo)), final);
+      ok("CONSISTÊNCIA: blob real no path == hash persistido no banco == XML confirmado", final.blobHashReal === final.hash && final.hash !== null, final);
+    } else {
+      ok("(desfecho: colisão dupla, ambos fail-closed) status é ERRO — nunca confirma valor incorreto", final.status === "ERRO", final);
+    }
   } finally {
     await limpar(vendaId, docId);
   }

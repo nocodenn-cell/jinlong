@@ -55,6 +55,23 @@ Deno.test("autorizado -> chama fiscal_marcar_emitido, nenhuma outra RPC", async 
   assertEquals(c.emitted, ["doc-1"]);
 });
 
+Deno.test("HOTFIX (achado Codex) — autorizado NUNCA repassa a resposta do provider como p_payload, mesmo quando estado.payload tem conteúdo — protege o snapshot fiscal imutável de C1", async () => {
+  const supabase = fakeSupabase();
+  const c = counters();
+  // Resposta "rica" do provider, exatamente o tipo de coisa que antes
+  // sobrescrevia o snapshot congelado via `payload = COALESCE(p_payload,
+  // payload)` em fiscal_marcar_emitido.
+  const estado: FocusRemoteState = {
+    kind: "autorizado",
+    chave_fiscal: "chave-x",
+    protocolo: "proto-x",
+    provider_ref: "ref-1",
+    payload: { status: "autorizado", mensagem_sefaz: "Autorizado o uso da NF-e", numero_recibo: "999" },
+  };
+  await applyFocusRemoteState(supabase, doc(), estado, c);
+  assertEquals(supabase.rpcCalls[0].args.p_payload, null);
+});
+
 Deno.test("processando -> ZERO chamadas de RPC (7. 202 não é erro; reaproveita EM_PROCESSAMENTO já setado pelo claim)", async () => {
   const supabase = fakeSupabase();
   const c = counters();

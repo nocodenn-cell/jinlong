@@ -116,6 +116,16 @@ export async function maybeEnqueueFiscalDocumentAfterSyncedVenda(
     new Set((payload.itens ?? []).map((i) => i.produto_id).filter((id): id is string => isUuid(id))),
   );
 
+  // Achado de revisão (Codex): erro nesta consulta só era logado como
+  // warning e o enqueue continuava com `produtosFiscal` vazio — todo item
+  // congelava no snapshot com NCM/CFOP/CSOSN/CEST/CST/`icms_origem` NULL.
+  // Como o snapshot é imutável por design (C1), essa incompletude nunca
+  // pode ser corrigida depois — o documento fica bloqueado
+  // (`FOCUS_DTO_INCOMPLETO`) permanentemente por causa de uma falha
+  // TRANSITÓRIA de leitura, exatamente o mesmo padrão já corrigido para
+  // `vendas_pagamentos` (P0-2, C2.11). Mesma disciplina aqui: erro ou
+  // resultado incompleto (menos produtos do que IDs pedidos) -> fail
+  // closed, não enfileira documento fiscal algum nesta rodada.
   const produtosFiscal = new Map<string, ProdutoFiscalRow>();
   if (produtoIds.length > 0) {
     const { data, error } = await supabase
@@ -124,19 +134,29 @@ export async function maybeEnqueueFiscalDocumentAfterSyncedVenda(
       .in("id", produtoIds);
     if (error) {
       log({
-        level: "warn",
+        level: "error",
         stage: "fiscal_enqueue_sync",
         venda_id: payload.venda_id,
-        detail: `produtos_fiscal_lookup:${error.message}`,
+        detail: `produtos_fiscal_lookup_falhou_fail_closed:${error.message}`,
       });
-    } else {
-      for (const row of (data ?? []) as ProdutoFiscalRow[]) produtosFiscal.set(row.id, row);
+      return;
+    }
+    for (const row of (data ?? []) as ProdutoFiscalRow[]) produtosFiscal.set(row.id, row);
+    if (produtosFiscal.size < produtoIds.length) {
+      log({
+        level: "error",
+        stage: "fiscal_enqueue_sync",
+        venda_id: payload.venda_id,
+        detail: `produtos_fiscal_lookup_incompleto_fail_closed:esperado=${produtoIds.length},obtido=${produtosFiscal.size}`,
+      });
+      return;
     }
   }
 
-  // B-P0.1 (gate de completude): data_venda persistida pela RPC de sync
-  // (`registrar_venda_com_itens`) — buscada aqui, não recomputada com
-  // `new Date()`, para refletir o instante real da venda.
+  // B-P0.1 (gate de completude): data_venda persistida pela RPC de registro
+  // de venda do caminho sync (ver o único chamador autorizado, sync-outbox/
+  // index.ts) — buscada aqui, não recomputada com `new Date()`, para
+  // refletir o instante real da venda.
   let dataVenda: string | null = null;
   {
     const { data, error } = await supabase.from("vendas").select("data").eq("id", payload.venda_id).maybeSingle();
@@ -162,8 +182,9 @@ export async function maybeEnqueueFiscalDocumentAfterSyncedVenda(
   // sync") era uma DEGRADAÇÃO SILENCIOSA — podia transformar uma venda
   // mista real em pagamento único no documento fiscal, sem qualquer sinal
   // de que isso aconteceu. `vendas_pagamentos` é a SSOT fiscal (mesma fonte
-  // que o caminho web usa sem fallback nenhum); `registrar_venda_com_itens`
-  // SEMPRE grava pelo menos 1 linha quando o total é positivo (branch
+  // que o caminho web usa sem fallback nenhum); a RPC de registro de venda
+  // do caminho sync (sync-outbox/index.ts) SEMPRE grava pelo menos 1 linha
+  // quando o total é positivo (branch
   // escalar OU branch de split, nunca os dois ausentes) — então uma leitura
   // vazia ou com erro aqui não é "venda sem pagamento", é sinal de que
   // ALGO deu errado (corrida, permissão, rede) e não há como montar um
