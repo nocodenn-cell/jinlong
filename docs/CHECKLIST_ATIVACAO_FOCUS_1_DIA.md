@@ -38,7 +38,7 @@ Se qualquer item acima falhar, status = **NO-GO**.
 - [ ] Confirmar variaveis no host Next (`FISCAL_WORKER_ENDPOINT`, `FISCAL_WORKER_KEY`, `AUTO_ENQUEUE_FISCAL_ON_SALE`, `FISCAL_DEFAULT_DOC_TYPE`).
 - [ ] Confirmar secrets da Edge `fiscal-worker`:
   - `FISCAL_WORKER_KEY`
-  - `FISCAL_PROVIDER_MODE`
+  - `FISCAL_PROVIDER_TYPE`
   - `FISCAL_PROVIDER_URL`
   - `FISCAL_PROVIDER_TOKEN`
   - `FISCAL_PROVIDER_TIMEOUT_MS`
@@ -48,7 +48,7 @@ Se qualquer item acima falhar, status = **NO-GO**.
 Executar exatamente nesta ordem:
 
 1. [ ] Publicar secrets Focus no Supabase (`FISCAL_PROVIDER_URL`, `FISCAL_PROVIDER_TOKEN`) e manter sigilo fora do Git.
-2. [ ] Alterar `FISCAL_PROVIDER_MODE=http` na Edge `fiscal-worker`.
+2. [ ] Alterar `FISCAL_PROVIDER_TYPE=focus` na Edge `fiscal-worker` (não `http` — esse seleciona o `HttpProvider` genérico, que usa DTO e Bearer auth diferentes dos exigidos pela Focus NFe; só `focus` seleciona o `FocusProvider`, com Basic Auth e o DTO/tratamento de NF-e 202/reconciliação corretos — ver `backend/supabase/functions/fiscal-worker/fiscal-provider-adapter.ts`).
 3. [ ] Publicar/redeploy da Edge Function `fiscal-worker`.
 4. [ ] No `pdv-importados`, manter `AUTO_ENQUEUE_FISCAL_ON_SALE=true`.
 5. [ ] Trocar `FISCAL_DEFAULT_DOC_TYPE` de `NFC_E_STUB` para `NFCE` (ou `NFE`, conforme operacao).
@@ -68,7 +68,7 @@ Executar exatamente nesta ordem:
 
 ## Edge Function `fiscal-worker`
 
-- `FISCAL_PROVIDER_MODE=http`
+- `FISCAL_PROVIDER_TYPE=focus`
 - `FISCAL_PROVIDER_URL=<endpoint Focus definido>`
 - `FISCAL_PROVIDER_TOKEN=<token Focus valido>`
 - `FISCAL_PROVIDER_TIMEOUT_MS=10000` (ajustar conforme SLA)
@@ -113,7 +113,7 @@ Objetivo: voltar para operacao sem emissao real, sem parar vendas.
 
 Ordem de rollback:
 
-1. [ ] Alterar Edge `FISCAL_PROVIDER_MODE=mock`.
+1. [ ] Alterar Edge `FISCAL_PROVIDER_TYPE=mock`.
 2. [ ] Redeploy da Edge `fiscal-worker`.
 3. [ ] No `pdv-importados`, definir `FISCAL_DEFAULT_DOC_TYPE=NFC_E_STUB`.
 4. [ ] Se necessario, manter `AUTO_ENQUEUE_FISCAL_ON_SALE=true` (fila segue ativa em stub).

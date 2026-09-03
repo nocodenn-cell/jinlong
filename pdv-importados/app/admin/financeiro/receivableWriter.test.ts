@@ -9,12 +9,32 @@ describe('receivable adapters', () => {
   it('create rejeita cliente vazio sem INSERT', async () => {
     const from = vi.fn()
     const writer = createReceivableWriter({ from, rpc: vi.fn() } as never)
-    const result = await writer.create({ clienteId: '', valorTotal: 10 })
+    const result = await writer.create({ clienteId: '', lojaId: 'loja-1', valorTotal: 10 })
     expect(result).toMatchObject({
       ok: false,
       code: FINANCIAL_ERROR_CODES.CLIENT_REQUIRED,
     })
     expect(from).not.toHaveBeenCalled()
+  })
+
+  it('create envia loja_id no INSERT (contas_receber.loja_id é NOT NULL — migration 112)', async () => {
+    const single = vi.fn(async () => ({ data: { id: 'titulo-1' }, error: null }))
+    const select = vi.fn(() => ({ single }))
+    const insert = vi.fn(() => ({ select }))
+    const from = vi.fn(() => ({ insert }))
+    const writer = createReceivableWriter({ from, rpc: vi.fn() } as never)
+
+    const result = await writer.create({
+      clienteId: 'c1',
+      lojaId: 'loja-1',
+      valorTotal: 10,
+    })
+
+    expect(result).toEqual({ ok: true, tituloId: 'titulo-1' })
+    expect(from).toHaveBeenCalledWith('contas_receber')
+    expect(insert).toHaveBeenCalledWith(
+      expect.objectContaining({ cliente_id: 'c1', loja_id: 'loja-1', valor_total: 10 }),
+    )
   })
 
   it('liquidate chama RPC registrar_liquidacao_receber', async () => {

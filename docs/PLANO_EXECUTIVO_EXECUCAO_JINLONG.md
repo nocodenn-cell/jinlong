@@ -116,7 +116,7 @@
 
 **Entregáveis:** checklist `CHECKLIST_ATIVACAO_FOCUS_1_DIA.md` integral (Go/No-Go inicial, D-1, H-0, H+2); decisão `mock` vs `http` registrada (`DONE_DEFINITION` §4); plano de fallback validado por ensaio.
 
-**Critérios de aceite:** NFC-e emitida e **autorizada** em homologação e em produção; fila fiscal sem itens presos e DLQ vazia após a janela H+2; rollback ensaiado com evidência (voltar `FISCAL_PROVIDER_MODE=mock` + redeploy em < 15 min); erros normalizados visíveis na timeline do documento (`066`, `092`).
+**Critérios de aceite:** NFC-e emitida e **autorizada** em homologação e em produção; fila fiscal sem itens presos e DLQ vazia após a janela H+2; rollback ensaiado com evidência (voltar `FISCAL_PROVIDER_TYPE=mock` + redeploy em < 15 min); erros normalizados visíveis na timeline do documento (`066`, `092`).
 
 **Dependências:** Sprints 1–2; **pré-requisitos comerciais externos** — contrato Focus aprovado, token entregue, cadastro fiscal do emitente (CNPJ, regime, série, CSC). **Disparar a trilha comercial no primeiro dia do programa** (tarefa S3.1), pois é o maior lead time e não é comprimível por engenharia.
 
