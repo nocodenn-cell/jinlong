@@ -24,11 +24,13 @@ function stripTrailingSlash(url: string): string {
   return url.replace(/\/+$/, "");
 }
 
-function buildFocusEmitUrl(baseUrl: string, tipoDoc: string, ref: string): string {
+/** Exportada (Sprint C2.9/P0-8) para teste direto de shape de URL. */
+export function buildFocusEmitUrl(baseUrl: string, tipoDoc: string, ref: string): string {
   return `${stripTrailingSlash(baseUrl)}${focusEndpointPath(tipoDoc)}?ref=${encodeURIComponent(ref)}`;
 }
 
-function buildFocusConsultaUrl(baseUrl: string, tipoDoc: string, ref: string): string {
+/** Exportada (Sprint C2.9/P0-8) para teste direto de shape de URL. */
+export function buildFocusConsultaUrl(baseUrl: string, tipoDoc: string, ref: string): string {
   return `${stripTrailingSlash(baseUrl)}${focusEndpointPath(tipoDoc)}/${encodeURIComponent(ref)}`;
 }
 
@@ -95,7 +97,19 @@ function extractErrorCodeMessage(record: Record<string, unknown>): { code: strin
  * `FocusRemoteState` canônico. Reaproveitada por `emitirNfce`/`emitirNfe` — única
  * fonte de verdade para "o que uma resposta de emissão significa".
  */
-function classifyFocusEmitResponse(res: Response, record: Record<string, unknown>): FocusRemoteState {
+/**
+ * Sprint C2.9 (P0-8) — exportado para teste direto. A cobertura de
+ * "resposta HTTP -> estado canônico" (status 2xx/4xx/5xx/timeout) não
+ * precisa mais passar pelo `callProvider`/`emitirNfe` inteiros: desde o
+ * fix de P0-3 (fail-closed no DTO), qualquer item real tem sempre o gap
+ * incondicional de tributação (grupo ICMS-CST/PIS/COFINS ainda não
+ * confirmado pela Focus), então `bloqueante` nunca é `false` para um
+ * payload com itens — testar via `callProvider` bloquearia ANTES do POST,
+ * o que é o comportamento correto, mas deixaria de exercitar o
+ * classificador em si. Testar a função pura diretamente resolve os dois
+ * sem inventar um DTO "completo" que não existe de verdade hoje.
+ */
+export function classifyFocusEmitResponse(res: Response, record: Record<string, unknown>): FocusRemoteState {
   if (res.status === 202) {
     return { kind: "processando", payload: record };
   }
@@ -132,7 +146,7 @@ function classifyFocusEmitResponse(res: Response, record: Record<string, unknown
  * existe justamente para resolver incerteza, então o lado seguro de um caso
  * ambíguo é "ainda não sei", não "presumir rejeitado".
  */
-function classifyFocusConsultaResponse(res: Response, record: Record<string, unknown>): FocusRemoteState {
+export function classifyFocusConsultaResponse(res: Response, record: Record<string, unknown>): FocusRemoteState {
   if (res.status === 404) return { kind: "nao_encontrado" };
 
   if (!res.ok) {
@@ -358,20 +372,39 @@ export function resolveFocusRef(doc: FiscalDoc): string {
   return refField === "venda_id" ? doc.venda_id : doc.id;
 }
 
-export class FocusProvider implements FiscalProvider {
-  private resolveRef(doc: FiscalDoc): string {
-    return resolveFocusRef(doc);
-  }
+export type BuildFocusEmitBodyResult = { body: Record<string, unknown>; bloqueante: boolean; gaps: string[] };
 
-  private buildEmitBody(doc: FiscalDoc, ref: string): Record<string, unknown> {
-    const { body: known, gaps } = buildFocusNfceEnvelope(doc.payload);
-    return {
+/**
+ * Sprint C2.9 (P0-3, achado Codex): `buildFocusNfceEnvelope` já computava
+ * `bloqueante`, mas nada olhava para esse campo — o POST acontecia de
+ * qualquer forma, com um payload conhecidamente incompleto. Corrigido: o
+ * corpo retornado agora vem junto com `bloqueante`/`gaps`, e os dois
+ * chamadores (`FocusProvider.callProvider`/`emitirNfe`) verificam antes de
+ * montar a URL e disparar `postFocusEmit` — gap bloqueante = ZERO chamada
+ * HTTP de emissão.
+ *
+ * Também removido `_fastproduct_dto_gaps` do corpo (`body`) — um campo
+ * interno do FastProduct nunca deveria ter sido enviado no payload real
+ * para a Focus (contrato externo só aceita os campos que a própria Focus
+ * documenta). Os gaps continuam disponíveis para quem chama esta função
+ * (usados no motivo do erro fail-closed pelo chamador), só não vão mais
+ * no wire.
+ *
+ * Exportada como função de módulo (não método privado) — Sprint C2.9
+ * (P0-8): testável direto, sem precisar instanciar `FocusProvider` nem
+ * simular fetch, para provar shape/frescor de `data_emissao` isoladamente
+ * do gate de bloqueante.
+ */
+export function buildFocusEmitBody(doc: FiscalDoc, ref: string): BuildFocusEmitBodyResult {
+  const { body: known, gaps, bloqueante } = buildFocusNfceEnvelope(doc.payload, doc.tipo_doc);
+  return {
+    body: {
       ...known,
       // Gate C2.5: `data_emissao` NUNCA vem do snapshot congelado
-      // (`payload.data_venda`) — a Focus exige data/hora próxima do momento
-      // real do envio HTTP, com timezone. Calculado aqui, no instante exato
-      // do POST, não em C1 (que corretamente continua congelando só
-      // `data_venda`, o fato de negócio — quando a venda aconteceu). Ver
+      // (`payload.data_venda`) — a Focus exige data/hora próxima do
+      // momento real do envio HTTP, com timezone. Calculado aqui, no
+      // instante exato do POST, não em C1 (que corretamente continua
+      // congelando só `data_venda`, o fato de negócio). Ver
       // docs/audits/AUDITORIA_PRONTIDAO_FOCUS_NFE_FASE_C_GATE_C2_5.md.
       data_emissao: new Date().toISOString(),
       ref,
@@ -379,50 +412,58 @@ export class FocusProvider implements FiscalProvider {
       venda_id: doc.venda_id,
       tipo_doc: doc.tipo_doc,
       correlation_id: doc.correlation_id ?? null,
-      // Diagnóstico interno — nunca confundir com dado que a Focus espera.
-      // Ajuda a rastrear, num payload de teste/homologação, quais campos
-      // ainda não têm mapeamento confirmado (ver fiscal_focus_dto.ts).
-      _fastproduct_dto_gaps: gaps.map((g) => g.campo),
-    };
-  }
+    },
+    bloqueante,
+    gaps: gaps.map((g) => g.campo),
+  };
+}
 
-  private async postEmit(url: string, token: string, body: Record<string, unknown>, timeout: number): Promise<FocusRemoteState> {
-    const controller = new AbortController();
-    const t = setTimeout(() => controller.abort(), timeout);
+/** Sprint C2.9 (P0-8) — extraída de método privado para função de módulo
+ * testável direto (auth header, timeout/abort, corpo enviado), sem depender
+ * de um DTO "completo" que hoje não existe de verdade (ver nota em
+ * `buildFocusEmitBody`/`classifyFocusEmitResponse`). */
+export async function postFocusEmit(url: string, token: string, body: Record<string, unknown>, timeout: number): Promise<FocusRemoteState> {
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), timeout);
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Basic ${encodeFocusBasicAuth(token)}`,
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+
+    let parsed: unknown = null;
     try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          Authorization: `Basic ${encodeFocusBasicAuth(token)}`,
-        },
-        body: JSON.stringify(body),
-        signal: controller.signal,
-      });
-
-      let parsed: unknown = null;
-      try {
-        parsed = await res.json();
-      } catch {
-        // corpo não JSON
-      }
-      const record = isRecord(parsed) ? parsed : {};
-      return classifyFocusEmitResponse(res, record);
-    } catch (e) {
-      const isAbort = e instanceof Error && e.name === "AbortError";
-      const msg = e instanceof Error ? e.message : String(e);
-      return {
-        kind: "erro_transitorio",
-        erro: isAbort ? "FOCUS_PROVIDER_TIMEOUT" : `FOCUS_PROVIDER_ERROR:${msg}`,
-        http_status: null,
-        provider_code: isAbort ? "FOCUS_PROVIDER_TIMEOUT" : "FOCUS_PROVIDER_ERROR",
-        provider_message: msg,
-        payload: null,
-      };
-    } finally {
-      clearTimeout(t);
+      parsed = await res.json();
+    } catch {
+      // corpo não JSON
     }
+    const record = isRecord(parsed) ? parsed : {};
+    return classifyFocusEmitResponse(res, record);
+  } catch (e) {
+    const isAbort = e instanceof Error && e.name === "AbortError";
+    const msg = e instanceof Error ? e.message : String(e);
+    return {
+      kind: "erro_transitorio",
+      erro: isAbort ? "FOCUS_PROVIDER_TIMEOUT" : `FOCUS_PROVIDER_ERROR:${msg}`,
+      http_status: null,
+      provider_code: isAbort ? "FOCUS_PROVIDER_TIMEOUT" : "FOCUS_PROVIDER_ERROR",
+      provider_message: msg,
+      payload: null,
+    };
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+export class FocusProvider implements FiscalProvider {
+  private resolveRef(doc: FiscalDoc): string {
+    return resolveFocusRef(doc);
   }
 
   /** C2.4 — emissão NFC-e (sempre síncrona). Mantém o contrato `ProviderResult`
@@ -442,9 +483,19 @@ export class FocusProvider implements FiscalProvider {
     }
 
     const ref = this.resolveRef(doc);
+    const { body, bloqueante, gaps } = buildFocusEmitBody(doc, ref);
+    if (bloqueante) {
+      return {
+        ok: false,
+        erro: "FOCUS_DTO_INCOMPLETO",
+        transitorio: false,
+        provider_code: "FOCUS_DTO_INCOMPLETO",
+        provider_message: `Payload fiscal incompleto — bloqueado antes do POST (zero chamada HTTP). Campos: ${gaps.join(", ")}`,
+        payload: { gaps },
+      };
+    }
     const requestUrl = buildFocusEmitUrl(url, doc.tipo_doc, ref);
-    const body = this.buildEmitBody(doc, ref);
-    const state = await this.postEmit(requestUrl, token, body, timeout);
+    const state = await postFocusEmit(requestUrl, token, body, timeout);
     return focusStateToProviderResult(state);
   }
 
@@ -465,9 +516,19 @@ export class FocusProvider implements FiscalProvider {
       };
     }
     const ref = this.resolveRef(doc);
+    const { body, bloqueante, gaps } = buildFocusEmitBody(doc, ref);
+    if (bloqueante) {
+      return {
+        kind: "erro_definitivo",
+        erro: "FOCUS_DTO_INCOMPLETO",
+        http_status: null,
+        provider_code: "FOCUS_DTO_INCOMPLETO",
+        provider_message: `Payload fiscal incompleto — bloqueado antes do POST (zero chamada HTTP). Campos: ${gaps.join(", ")}`,
+        payload: { gaps },
+      };
+    }
     const requestUrl = buildFocusEmitUrl(url, doc.tipo_doc, ref);
-    const body = this.buildEmitBody(doc, ref);
-    return await this.postEmit(requestUrl, token, body, timeout);
+    return await postFocusEmit(requestUrl, token, body, timeout);
   }
 
   /** C2.5/C2.8 — consulta por referência (GET). Nunca emite; só lê. Usada tanto

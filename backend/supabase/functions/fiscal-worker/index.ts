@@ -94,6 +94,9 @@ Deno.serve(async (req) => {
       venda_id: String(raw.venda_id),
       tipo_doc: String(raw.tipo_doc),
       tentativas: typeof raw.tentativas === "number" ? raw.tentativas : 0,
+      // P0-1 (sprint C2.9): sinal durável de "já reclamado antes", nunca
+      // resetado por reaper/DLQ/reprocessamento — ver fiscal_types.ts.
+      ja_tentou_emissao_antes: raw.ja_tentou_emissao_antes === true,
       correlation_id: typeof raw.correlation_id === "string" ? raw.correlation_id : undefined,
       payload: raw.payload && isRecord(raw.payload) ? raw.payload : null,
     };

@@ -242,7 +242,55 @@ export function mapPagamentoToFocus(pagamento: { forma_pagamento: string; valor:
   };
 }
 
-export function buildFocusNfceEnvelope(payload: Record<string, unknown> | null | undefined): FocusNfceMapResult {
+/**
+ * Sprint C2.9 (P0-5, achado Codex) — fecha os 3 cenários de destinatário:
+ *   - NFC-e anônima (sem `payload.destinatario`): sempre READY, nada exigido.
+ *   - NFC-e identificada (`payload.destinatario` presente): BLOQUEADA — sem
+ *     UF no snapshot (clientes só tem nome/documento/tipo), não é possível
+ *     determinar `local_destino` (interno/interestadual/exterior) com
+ *     segurança; enviar "1" (interno) por padrão seria adivinhar.
+ *   - NF-e: destinatário é OBRIGATÓRIO pelo próprio contrato Focus (não é
+ *     nota ao consumidor anônimo) — ausência ou identificação incompleta
+ *     (nome/documento) bloqueia.
+ * Nenhum dos três cenários é resolvido inventando UF ou dado de cliente —
+ * cada um vira gap explícito, reportado, não mascarado.
+ */
+function validarDestinatario(payload: Record<string, unknown> | null | undefined, tipoDoc: string | undefined, gaps: FocusNfceGap[]): void {
+  const destinatario = isRecord(payload?.destinatario) ? (payload!.destinatario as Record<string, unknown>) : null;
+  const ehNfe = (tipoDoc ?? "").trim().toUpperCase() === "NFE";
+
+  if (ehNfe) {
+    if (!destinatario) {
+      gaps.push({
+        campo: "destinatario",
+        motivo: "NF-e exige destinatário identificado (não é nota ao consumidor anônimo) — payload.destinatario ausente.",
+      });
+      return;
+    }
+    const nome = asString(destinatario.nome);
+    const documento = asString(destinatario.documento);
+    if (!nome || !documento) {
+      gaps.push({
+        campo: "destinatario.identificacao",
+        motivo: `NF-e exige nome+documento do destinatário — ausente(s): ${[!nome && "nome", !documento && "documento"].filter(Boolean).join(", ")}.`,
+      });
+    }
+    // UF ainda ausente do snapshot mesmo para NF-e — mesma limitação abaixo.
+  }
+
+  if (destinatario) {
+    // Não há hoje UF do destinatário no snapshot (clientes só tem nome/
+    // documento/tipo) — não é possível detectar interestadual/exterior.
+    // Bloqueante (não apenas reportado): enviar local_destino="1" (interno)
+    // sem saber a UF real seria adivinhar um campo fiscal.
+    gaps.push({
+      campo: "local_destino_interestadual_exterior",
+      motivo: "Sem UF do destinatário no snapshot — não detectável quando a venda é para cliente identificado fora do estado.",
+    });
+  }
+}
+
+export function buildFocusNfceEnvelope(payload: Record<string, unknown> | null | undefined, tipoDoc?: string): FocusNfceMapResult {
   const gaps: FocusNfceGap[] = [];
   const body: FocusNfceEnvelopeKnownFields = {};
 
@@ -257,14 +305,9 @@ export function buildFocusNfceEnvelope(payload: Record<string, unknown> | null |
   body.modalidade_frete = "9";
   body.presenca_comprador = "1";
   body.local_destino = "1";
-  if (isRecord(payload?.destinatario)) {
-    // Não há hoje UF do destinatário no snapshot (clientes só tem nome/
-    // documento/tipo) — não é possível detectar interestadual/exterior.
-    gaps.push({
-      campo: "local_destino_interestadual_exterior",
-      motivo: "Sem UF do destinatário no snapshot — não detectável quando a venda é para cliente identificado fora do estado.",
-    });
-  }
+  const gapsAntesDestinatario = gaps.length;
+  validarDestinatario(payload, tipoDoc, gaps);
+  const bloqueanteDestinatario = gaps.length > gapsAntesDestinatario;
 
   const itensRaw = Array.isArray(payload?.itens) ? (payload!.itens as unknown[]) : [];
   const items: Record<string, unknown>[] = [];
@@ -300,8 +343,15 @@ export function buildFocusNfceEnvelope(payload: Record<string, unknown> | null |
   // reportam o motivo exato, não silenciado.
 
   const bloqueanteItens = itensRaw.length === 0 || items.length < itensRaw.filter((r) => isRecord(r)).length;
-  const bloqueantePagamentos = pagamentosRaw.length === 0 || formasPagamento.length === 0;
-  const bloqueante = !cnpj || bloqueanteItens || bloqueantePagamentos ||
+  // Sprint C2.9 (P0-4, achado Codex): antes só bloqueava se TODOS os
+  // pagamentos falhassem o mapeamento — uma venda mista (ex.: dinheiro +
+  // PIX) com PIX bloqueado (PENDENTE REGRA) passava com formas_pagamento
+  // contendo só o dinheiro, um total DIFERENTE do total_liquido real da
+  // venda. Corrigido para exigir mapeamento COMPLETO — mesmo padrão de
+  // bloqueanteItens acima — nunca reduz venda mista a uma única forma.
+  const bloqueantePagamentos = pagamentosRaw.length === 0 ||
+    formasPagamento.length < pagamentosRaw.filter((r) => isRecord(r)).length;
+  const bloqueante = !cnpj || bloqueanteItens || bloqueantePagamentos || bloqueanteDestinatario ||
     gaps.some((g) => g.campo.includes("tributacao"));
 
   return { body, gaps, omittedByDesign: [...OMITTED_BY_DESIGN], bloqueante };

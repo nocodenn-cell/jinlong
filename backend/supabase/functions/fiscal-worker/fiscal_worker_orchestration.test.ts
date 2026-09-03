@@ -18,7 +18,7 @@ function fakeSupabase() {
 }
 
 function doc(): FiscalDoc {
-  return { id: "doc-1", venda_id: "venda-1", tipo_doc: "NFE", tentativas: 1, correlation_id: "corr-1", payload: { loja_id: "loja-1" } };
+  return { id: "doc-1", venda_id: "venda-1", tipo_doc: "NFE", tentativas: 1, ja_tentou_emissao_antes: true, correlation_id: "corr-1", payload: { loja_id: "loja-1" } };
 }
 
 function counters(): WorkerCounters {
@@ -159,17 +159,36 @@ Deno.test("P0 query-before-reemit — tentativas>0 e Focus confirma 'nao_encontr
   assertEquals(supabase.rpcCalls.length, 0); // nada foi escrito — a decisão de emitir é do chamador, não desta função
 });
 
-Deno.test("P0 query-before-reemit — primeira tentativa (tentativas=0) NÃO consulta antes de emitir (regra não se aplica à 1ª chamada)", async () => {
+Deno.test("P0 query-before-reemit — nunca reclamado antes (ja_tentou_emissao_antes=false) NÃO consulta antes de emitir (nada a reconciliar)", async () => {
   const supabase = fakeSupabase();
   const c = counters();
   const provider = fakeProviderComConsulta({ kind: "autorizado", chave_fiscal: "não deveria aparecer", protocolo: "x", provider_ref: null, payload: null });
-  const primeiraTentativa: FiscalDoc = { ...doc(), tentativas: 0 };
+  const nuncaReclamado: FiscalDoc = { ...doc(), tentativas: 0, ja_tentou_emissao_antes: false };
 
-  const gate = await enforceRetrySafeGate(supabase, primeiraTentativa, provider, "ref-estavel-4", { type: 'focus' }, c);
+  const gate = await enforceRetrySafeGate(supabase, nuncaReclamado, provider, "ref-estavel-4", { type: 'focus' }, c);
 
-  assertEquals(provider.chamadas, 0); // consulta NÃO acontece na 1ª tentativa
+  assertEquals(provider.chamadas, 0); // consulta NÃO acontece quando nunca houve claim anterior
   assertEquals(gate.proceed, true);
   assertEquals(supabase.rpcCalls.length, 0);
+});
+
+Deno.test("P0-1 (achado Codex) — bypass DLQ/reprocessamento: tentativas=0 (resetada) MAS ja_tentou_emissao_antes=true -> AINDA consulta, POST continua bloqueado", async () => {
+  // Reproduz exatamente o cenário do achado: fiscal_reprocessar_documento
+  // zera `tentativas` ao resgatar da DLQ, mas `ja_tentou_emissao_antes`
+  // (derivado de ultima_tentativa_em, nunca resetado) continua TRUE. Se o
+  // gate ainda lesse `tentativas`, este caso passaria como "1ª tentativa" e
+  // pularia a consulta — exatamente o bug que este teste prova fechado.
+  const supabase = fakeSupabase();
+  const c = counters();
+  const provider = fakeProviderComConsulta({ kind: "autorizado", chave_fiscal: "recuperada-pos-dlq", protocolo: "proto-pos-dlq", provider_ref: null, payload: null });
+  const posReprocessamento: FiscalDoc = { ...doc(), tentativas: 0, ja_tentou_emissao_antes: true };
+
+  const gate = await enforceRetrySafeGate(supabase, posReprocessamento, provider, "ref-estavel-6", { type: 'focus' }, c);
+
+  assertEquals(provider.chamadas, 1); // consulta aconteceu apesar de tentativas=0
+  assertEquals(gate.proceed, false); // POST máximo = 1: novo POST continua bloqueado
+  assertEquals(supabase.rpcCalls[0].fn, "fiscal_marcar_emitido");
+  assertEquals(supabase.rpcCalls[0].args.p_chave_fiscal, "recuperada-pos-dlq");
 });
 
 Deno.test("P0 query-before-reemit — provider sem capacidade de consulta (mock/http/bling legado) não bloqueia o laço", async () => {

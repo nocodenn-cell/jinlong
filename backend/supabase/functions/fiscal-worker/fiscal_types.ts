@@ -3,6 +3,17 @@ export type FiscalDoc = {
   venda_id: string;
   tipo_doc: string;
   tentativas?: number;
+  /**
+   * Sprint C2.9 (P0-1, auditoria Codex) — TRUE se este documento já foi
+   * reclamado (EM_PROCESSAMENTO) em algum momento ANTES da chamada atual de
+   * `fiscal_claim_documentos`, independente de `tentativas` ter sido
+   * resetada por DLQ/reprocessamento manual. É o sinal que sobrevive a
+   * retry/restart/reaper/DLQ/reprocessamento/crash — `tentativas` NÃO
+   * sobrevive (fiscal_reprocessar_documento zera ao resgatar da DLQ) e por
+   * isso nunca deve ser usada para decidir se é seguro pular a consulta
+   * antes de reemitir (ver `enforceRetrySafeGate`).
+   */
+  ja_tentou_emissao_antes?: boolean;
   correlation_id?: string;
   payload: Record<string, unknown> | null;
 };
@@ -63,6 +74,23 @@ export type FiscalNormalizedError = {
  *      ser resolvido antes de confiar em reconciliação automática real.
  * Validar contra resposta real de homologação antes de confiar cegamente
  * nesta distinção em produção.
+ *
+ * REVISÃO — Sprint C2.9 (P0-6, achado Codex): risco residual mais grave que
+ * o item 1 sugere isoladamente. Um documento "Cancelada" provavelmente
+ * carrega a MESMA chave/protocolo que tinha quando foi autorizado (ele foi
+ * autorizado antes de ser cancelado) — se o corpo real da Focus incluir
+ * esses campos mesmo cancelado, `classifyFocusConsultaResponse` bateria no
+ * primeiro branch (`chave && protocolo`) e classificaria como `autorizado`,
+ * NÃO `processando`. Isso é pior que o item 2 (rejeição confundida com
+ * "ainda processando"): uma consulta de reconciliação chamaria
+ * `fiscal_marcar_emitido` para um documento que a Focus já cancelou,
+ * persistindo EMITIDO permanentemente sobre um cancelamento real. Não
+ * corrigido nesta sprint — não há campo confirmado que distinga os dois
+ * casos sem adivinhar, e "Cancelamento fiscal" está fora de escopo desta
+ * sprint (C2.9) por instrução explícita. BLOQUEADOR EXTERNO: precisa do
+ * JSON real de uma consulta a documento cancelado antes de confiar em
+ * reconciliação automática para qualquer documento que já tenha sido
+ * autorizado alguma vez.
  */
 export type FocusRemoteState =
   | {

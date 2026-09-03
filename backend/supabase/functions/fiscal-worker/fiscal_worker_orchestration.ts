@@ -174,18 +174,44 @@ export type RetrySafeGateResult = { proceed: true } | { proceed: false };
  * extraído do laço inline de `index.ts` (linhas 120-131 antes desta
  * mudança) para ser testável sem simular um `Deno.serve` inteiro, no mesmo
  * padrão já usado para `applyFocusRemoteState`/`applyCredentialResolutionFailure`
- * acima. Comportamento IDÊNTICO ao que já existia desde a Onda C2.7 — esta
- * extração não muda nenhuma regra, só a torna verificável por teste.
+ * acima.
  *
- * Contrato: numa tentativa que NÃO é a primeira (`tentativas > 0`), o
- * chamador NUNCA pode emitir um novo POST antes de consultar o estado
- * remoto pela mesma `ref`. Só um retorno `nao_encontrado` (Focus confirma
- * que a tentativa anterior nunca chegou a existir do lado dela) libera
- * `proceed: true`. Qualquer outro estado conhecido (autorizado/processando/
- * rejeitado/erro) é aplicado imediatamente via `applyFocusRemoteState` (a
- * MESMA função usada por emissão direta e por reconciliação) e devolve
- * `proceed: false` — o chamador deve pular a emissão para este documento
- * nesta rodada (`continue`), nunca reemitir.
+ * Sprint C2.9 (P0-1, achado adicional do Codex): o gate original usava
+ * `tentativas > 0` como sinal de "já existe tentativa anterior". Isso é um
+ * bypass real — `fiscal_reprocessar_documento` zera `tentativas` ao resgatar
+ * um documento da DLQ, então POST -> resultado desconhecido (crash/timeout)
+ * -> reaper -> DLQ -> reprocessamento manual fazia o gate enxergar
+ * `tentativas=0` e pular a consulta, permitindo um SEGUNDO POST para uma
+ * emissão cujo resultado remoto real nunca foi confirmado. Trocado para
+ * `doc.ja_tentou_emissao_antes` (`fiscal_claim_documentos`, migration
+ * 20260903100000) — sinal derivado de `ultima_tentativa_em`, que nenhuma
+ * operação da máquina de estados (reaper, DLQ, reprocessamento) reseta.
+ *
+ * Contrato: se este documento já foi reclamado antes (`ja_tentou_emissao_antes
+ * === true`), o chamador NUNCA pode emitir um novo POST antes de consultar o
+ * estado remoto pela mesma `ref`. Só um retorno `nao_encontrado` (Focus
+ * confirma que a tentativa anterior nunca chegou a existir do lado dela)
+ * libera `proceed: true`. Qualquer outro estado conhecido (autorizado/
+ * processando/rejeitado/erro) é aplicado imediatamente via
+ * `applyFocusRemoteState` (a MESMA função usada por emissão direta e por
+ * reconciliação) e devolve `proceed: false` — o chamador deve pular a
+ * emissão para este documento nesta rodada (`continue`), nunca reemitir.
+ *
+ * REVISÃO — Sprint C2.9 (P0-2, achado Codex): "um único nao_encontrado
+ * torna seguro emitir de novo" é a única semântica CONFIRMADA pela
+ * documentação oficial da Focus (404 = referência não encontrada — não é
+ * rejeição fiscal, é ausência de registro). Não foi alterado para
+ * fail-closed adicional porque isso exigiria inventar uma regra que a Focus
+ * nunca documentou (ex.: "esperar N segundos antes de confiar num 404" —
+ * nenhuma janela de propagação POST->GET foi confirmada). BLOQUEADOR
+ * EXTERNO, registrado para o gate de homologação: confirmar com a Focus se
+ * existe uma janela de inconsistência entre um POST aceito e um GET
+ * imediatamente posterior pela mesma ref retornando 404 antes do
+ * documento ser indexado do lado dela. Mitigação factual hoje (não uma
+ * garantia): o backoff mínimo entre tentativas (`fiscal_marcar_erro`,
+ * `power(2, tentativas)` segundos) e o timeout do reaper (padrão 15min)
+ * tornam essa janela, se existir, muito menor que o intervalo real entre
+ * duas tentativas — mas isso não substitui confirmação oficial.
  */
 export async function enforceRetrySafeGate(
   supabase: SupabaseLike,
@@ -195,9 +221,9 @@ export async function enforceRetrySafeGate(
   cfg: ProviderConfig,
   counters: WorkerCounters,
 ): Promise<RetrySafeGateResult> {
-  if ((doc.tentativas ?? 0) <= 0 || !provider.consultarDocumento) {
-    // Primeira tentativa (ou provider sem capacidade de consulta, ex.: mock/
-    // http/bling legado): nada para reconciliar antes — segue para emissão
+  if (!doc.ja_tentou_emissao_antes || !provider.consultarDocumento) {
+    // Nunca reclamado antes (ou provider sem capacidade de consulta, ex.:
+    // mock/http/bling legado): nada para reconciliar — segue para emissão
     // normalmente, mesmo comportamento de sempre.
     return { proceed: true };
   }
