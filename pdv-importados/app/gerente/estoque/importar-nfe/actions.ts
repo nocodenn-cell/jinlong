@@ -30,6 +30,9 @@ function onlyDigits(s: string): string {
 }
 
 function mapRpcImportNfe(message: string): string {
+  if (message.includes('IMPORT_NFE_DUPLICATA_INVALIDA')) {
+    return 'Uma das duplicatas (parcelas a pagar) desta NF-e está com data de vencimento ou valor inválido. Corrija a duplicata e importe novamente — nada foi gravado.'
+  }
   if (message.includes('IMPORT_NFE_DUPLICADA')) {
     return 'Esta NF-e já foi importada (chave duplicada).'
   }
