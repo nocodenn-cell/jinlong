@@ -58,6 +58,7 @@ const SQL_SUITES = [
   'pr1c-estoque-quantidade-protecao.test.sql',
   'item7-storage-produto-imagens-tenant.test.sql',
   'nfe-duplicata-invalida-aborta.test.sql',
+  'retomar-caixa-atomico.test.sql',
 ]
 
 /** `psql` está de fato instalado e executável neste host? */
