@@ -45,12 +45,12 @@ npx supabase functions deploy fiscal-worker
 ```bash
 npx supabase secrets set \
 FISCAL_WORKER_KEY="<CHAVE_FORTE>" \
-FISCAL_PROVIDER_MODE="mock" \
+FISCAL_PROVIDER_TYPE="mock" \
 FISCAL_PROVIDER_TIMEOUT_MS="10000"
 ```
 
 Notas:
-- Para piloto controlado, `FISCAL_PROVIDER_MODE="mock"` e aceitavel.
+- Para piloto controlado, `FISCAL_PROVIDER_TYPE="mock"` e aceitavel.
 - Para emissao real, trocar para `http` e configurar `FISCAL_PROVIDER_URL` e `FISCAL_PROVIDER_TOKEN`.
 
 ## 5) Smoke e gate final

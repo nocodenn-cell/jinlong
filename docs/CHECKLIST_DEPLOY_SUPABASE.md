@@ -103,8 +103,8 @@ Defina no Dashboard (**Edge Functions → Secrets**) ou via CLI (`npx supabase s
 | Secret | Nota |
 |--------|------|
 | `FISCAL_WORKER_KEY` | Mesmo valor que `FISCAL_WORKER_KEY` no servidor Next (`pdv-importados/.env` / Vercel), header `X-FISCAL-WORKER-KEY` |
-| `FISCAL_PROVIDER_MODE` | `mock` ou `http` |
-| `FISCAL_PROVIDER_URL` / `FISCAL_PROVIDER_TOKEN` / `FISCAL_PROVIDER_TIMEOUT_MS` | Obrigatórios quando `FISCAL_PROVIDER_MODE=http` |
+| `FISCAL_PROVIDER_TYPE` | `mock` ou `http` |
+| `FISCAL_PROVIDER_URL` / `FISCAL_PROVIDER_TOKEN` / `FISCAL_PROVIDER_TIMEOUT_MS` | Obrigatórios quando `FISCAL_PROVIDER_TYPE=http` |
 
 ---
 

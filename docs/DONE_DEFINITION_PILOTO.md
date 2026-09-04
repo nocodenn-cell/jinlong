@@ -56,7 +56,7 @@ Checklist de fechamento objetivo para encerrar ciclo técnico com baixo risco. *
 | # | Critério | OK? | Evidência |
 |---|-----------|-----|-----------|
 | 4.1 | Modo fiscal da demo **decidido e registrado:** `mock` controlado **ou** `http` real com provedor homologado. | [ ] | |
-| 4.2 | Plano de **fallback** para demo documentado (ex.: voltar `FISCAL_PROVIDER_MODE=mock`, `FISCAL_DEFAULT_DOC_TYPE=NFC_E_STUB`, redeploy `fiscal-worker`, rollback do Next). | [ ] | |
+| 4.2 | Plano de **fallback** para demo documentado (ex.: voltar `FISCAL_PROVIDER_TYPE=mock`, `FISCAL_DEFAULT_DOC_TYPE=NFC_E_STUB`, redeploy `fiscal-worker`, rollback do Next). | [ ] | |
 | 4.3 | Se a decisão for **NFC-e/NFe real (Focus):** seguir ordem e gates de [CHECKLIST_ATIVACAO_FOCUS_1_DIA.md](./CHECKLIST_ATIVACAO_FOCUS_1_DIA.md) (Go/No-Go, H-0, testes A/B/C, evidências mínimas). | [ ] | |
 
 ---
