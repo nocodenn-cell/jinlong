@@ -1,0 +1,179 @@
+# Item 19 do Plano Mestre de Fechamento dos Gaps — backup lógico automatizado
+# de produção (roles + schema + data), sem senha permanente de banco e sem
+# role nova/BYPASSRLS permanente.
+#
+# Mecanismo (arquitetura aprovada, ver histórico do Plano Mestre):
+#   Temporary Access/JIT (Supabase) → autoriza, por execução, uma janela curta
+#   (10 min) para o role `postgres` assumido pelo usuário dono do
+#   SUPABASE_BACKUP_JIT_PAT (um Personal Access Token com escopo único
+#   "Database JIT: Read", restrito ao projeto kbabmewnahysfvlybiak).
+#   O mesmo token funciona como senha da conexão Postgres nessa janela
+#   (mecanismo oficial de Temporary Access do Supabase).
+#
+#   `supabase db dump --db-url "..."` (conexão explícita, não `--linked`)
+#   inclui public + auth.users + roles + RLS policies + functions + triggers
+#   — confirmado pela doc oficial "Restore a Platform Project to
+#   Self-Hosted". `--linked` excluiria auth/storage; por isso usamos sempre
+#   `--db-url` com a connection string construída nesta execução.
+#
+#   Storage (arquivos, não metadata) NÃO está coberto por este backup —
+#   confirmado zero objetos reais em produção hoje (bucket produto-imagens
+#   vazio); revisão obrigatória da estratégia de Storage no dia em que o
+#   primeiro objeto for criado.
+#
+#   O dump nunca é persistido em texto puro: cada arquivo é cifrado com
+#   `age` (chave pública não-secreta, BACKUP_AGE_PUBLIC_KEY) antes do
+#   upload como artifact. A chave privada de decifragem só existe no
+#   workflow de restore-drill, nunca neste.
+name: Backup automatico (item 19)
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup-scheduled
+  cancel-in-progress: false
+
+on:
+  schedule:
+    # 06:00 UTC ~ 03:00 America/Sao_Paulo — fora do horario comercial.
+    - cron: '0 6 * * *'
+  workflow_dispatch: {}
+
+env:
+  SUPABASE_PROJECT_REF: kbabmewnahysfvlybiak
+  SUPABASE_PROJECT_REGION: sa-east-1
+
+jobs:
+  backup:
+    name: Backup real (roles + schema + data, cifrado)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      # NOTA: as demais actions deste repo sao fixadas por SHA (convencao
+      # estabelecida). Nao foi possivel confirmar o SHA exato desta acao
+      # oficial da Supabase sem acesso a internet nesta sessao; usando a
+      # tag major documentada pela propria Supabase. Pinar por SHA e um
+      # follow-up de hardening, nao um bloqueador de seguranca (namespace
+      # oficial supabase/*).
+      - name: Instalar Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Instalar age (cifragem) e cliente postgres (pg_isready/psql)
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y age postgresql-client
+
+      - name: Autorizar janela Temporary Access/JIT (10 min, role postgres)
+        env:
+          JIT_PAT: ${{ secrets.SUPABASE_BACKUP_JIT_PAT }}
+          BACKUP_USER_ID: ${{ vars.SUPABASE_BACKUP_USER_ID }}
+        run: |
+          set -euo pipefail
+          expires_at_ms=$(( ($(date -u +%s) + 600) * 1000 ))
+          http_code=$(curl -sS -o /tmp/jit-response.json -w '%{http_code}' \
+            -X PUT "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/jit" \
+            -H "Authorization: Bearer ${JIT_PAT}" \
+            -H "Content-Type: application/json" \
+            -d "{\"user_id\":\"${BACKUP_USER_ID}\",\"user_roles\":[{\"role\":\"postgres\",\"expires_at\":${expires_at_ms}}]}")
+          if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
+            echo "::error::Falha ao autorizar Temporary Access (HTTP ${http_code}). Corpo da resposta (sem segredo) salvo em /tmp/jit-response.json."
+            cat /tmp/jit-response.json
+            exit 1
+          fi
+          echo "JIT autorizado ate $(date -u -d "@$((expires_at_ms/1000))" '+%Y-%m-%dT%H:%M:%SZ')."
+
+      - name: Descobrir host do pooler e produzir dump (roles/schema/data)
+        env:
+          JIT_PAT: ${{ secrets.SUPABASE_BACKUP_JIT_PAT }}
+        run: |
+          set -euo pipefail
+          set +x
+          host=""
+          for idx in 0 1 2; do
+            candidate="aws-${idx}-${SUPABASE_PROJECT_REGION}.pooler.supabase.com"
+            if PGCONNECT_TIMEOUT=5 pg_isready -h "$candidate" -p 5432 >/dev/null 2>&1; then
+              host="$candidate"
+              break
+            fi
+          done
+          if [ -z "$host" ]; then
+            echo "::error::Nenhum host de pooler respondeu (aws-0/1/2-${SUPABASE_PROJECT_REGION})."
+            exit 1
+          fi
+          conn="postgres://postgres.${SUPABASE_PROJECT_REF}:${JIT_PAT}@${host}:5432/postgres?options=-c%20jit%3don"
+
+          mkdir -p /tmp/backup
+          supabase db dump --db-url "$conn" -f /tmp/backup/roles.sql --role-only
+          supabase db dump --db-url "$conn" -f /tmp/backup/schema.sql
+          supabase db dump --db-url "$conn" -f /tmp/backup/data.sql --use-copy --data-only
+
+          for f in roles.sql schema.sql data.sql; do
+            size=$(stat -c%s "/tmp/backup/$f")
+            echo "  $f: ${size} bytes"
+            if [ "$size" -lt 32 ]; then
+              echo "::error::/tmp/backup/$f suspeito de vazio (${size} bytes)."
+              exit 1
+            fi
+          done
+
+      - name: Manifesto de sanidade (contagens, sem dado sensivel)
+        env:
+          JIT_PAT: ${{ secrets.SUPABASE_BACKUP_JIT_PAT }}
+        run: |
+          set -euo pipefail
+          set +x
+          host=""
+          for idx in 0 1 2; do
+            candidate="aws-${idx}-${SUPABASE_PROJECT_REGION}.pooler.supabase.com"
+            if PGCONNECT_TIMEOUT=5 pg_isready -h "$candidate" -p 5432 >/dev/null 2>&1; then
+              host="$candidate"
+              break
+            fi
+          done
+          conn="postgres://postgres.${SUPABASE_PROJECT_REF}:${JIT_PAT}@${host}:5432/postgres?options=-c%20jit%3don"
+          psql "$conn" -Atq -c "
+            SELECT json_build_object(
+              'generated_at', now(),
+              'vendas', (SELECT count(*) FROM public.vendas),
+              'caixas', (SELECT count(*) FROM public.caixas),
+              'produtos', (SELECT count(*) FROM public.produtos),
+              'usuarios', (SELECT count(*) FROM public.usuarios),
+              'auth_users', (SELECT count(*) FROM auth.users),
+              'storage_objetos_produto_imagens', (SELECT count(*) FROM storage.objects WHERE bucket_id = 'produto-imagens')
+            )::text
+          " > /tmp/backup/manifest.json
+          cat /tmp/backup/manifest.json
+
+      - name: Cifrar com age e remover texto puro
+        run: |
+          set -euo pipefail
+          pub="${{ vars.BACKUP_AGE_PUBLIC_KEY }}"
+          mkdir -p /tmp/backup-encrypted
+          for f in roles.sql schema.sql data.sql; do
+            age -r "$pub" -o "/tmp/backup-encrypted/${f}.age" "/tmp/backup/${f}"
+          done
+          cp /tmp/backup/manifest.json /tmp/backup-encrypted/manifest.json
+          shred -u /tmp/backup/roles.sql /tmp/backup/schema.sql /tmp/backup/data.sql 2>/dev/null || rm -f /tmp/backup/*.sql
+
+      - name: Checksum SHA-256 dos artefatos cifrados
+        run: |
+          set -euo pipefail
+          cd /tmp/backup-encrypted
+          sha256sum roles.sql.age schema.sql.age data.sql.age > checksums.sha256
+          cat checksums.sha256
+
+      - name: Publicar artifact (somente arquivos cifrados + checksum + manifesto)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: jinlong-backup-${{ github.run_id }}
+          path: |
+            /tmp/backup-encrypted/roles.sql.age
+            /tmp/backup-encrypted/schema.sql.age
+            /tmp/backup-encrypted/data.sql.age
+            /tmp/backup-encrypted/checksums.sha256
+            /tmp/backup-encrypted/manifest.json
+          retention-days: 30
+          if-no-files-found: error

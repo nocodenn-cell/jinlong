@@ -1,0 +1,188 @@
+# Item 20 do Plano Mestre de Fechamento dos Gaps — restore drill real, em
+# ambiente isolado e descartavel (Postgres 17 efemero neste runner do
+# GitHub Actions), nunca em producao.
+#
+# Baixa o artifact mais recente produzido por backup-scheduled.yml
+# (roles/schema/data cifrados com age + checksums.sha256 + manifest.json),
+# verifica o checksum, decifra SOMENTE neste runner efemero (nunca em
+# producao, nunca fora deste job), restaura na ordem oficial
+# (roles -> schema -> data com session_replication_role=replica) e valida
+# contagens contra o manifesto de sanidade tirado no momento do backup.
+# O runner inteiro (incluindo qualquer arquivo em disco) e destruido pelo
+# GitHub ao fim do job; mesmo assim o texto puro e apagado explicitamente
+# antes do fim, por defesa em profundidade.
+name: Restore drill (item 20)
+
+permissions:
+  contents: read
+  actions: read
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  restore-drill:
+    name: Restaura backup mais recente em Postgres 17 efemero
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: restore-drill-local-only
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Instalar age e cliente postgres
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y age postgresql-client jq
+
+      - name: Localizar run mais recente com sucesso de backup-scheduled.yml
+        id: find_run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          run_id=$(gh run list --repo "${{ github.repository }}" \
+            --workflow=backup-scheduled.yml --status=success --limit=1 \
+            --json databaseId -q '.[0].databaseId')
+          if [ -z "$run_id" ] || [ "$run_id" = "null" ]; then
+            echo "::error::Nenhum run com sucesso de backup-scheduled.yml encontrado. Rode o backup primeiro."
+            exit 1
+          fi
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          echo "Backup a restaurar: run $run_id"
+
+      - name: Baixar artifact do backup
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ steps.find_run.outputs.run_id }}
+          pattern: 'jinlong-backup-*'
+          path: /tmp/restore
+          merge-multiple: true
+
+      - name: Verificar checksum SHA-256 antes de qualquer decifragem
+        run: |
+          set -euo pipefail
+          cd /tmp/restore
+          ls -la
+          sha256sum -c checksums.sha256
+          echo "Checksum OK — todos os 3 arquivos cifrados batem com o checksum publicado no momento do backup."
+
+      - name: Decifrar (somente neste runner efemero)
+        env:
+          AGE_PRIVATE_KEY: ${{ secrets.BACKUP_AGE_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          set +x
+          mkdir -p /tmp/restore-plain
+          echo "$AGE_PRIVATE_KEY" > /tmp/age-key.txt
+          chmod 600 /tmp/age-key.txt
+          for f in roles schema data; do
+            age -d -i /tmp/age-key.txt -o "/tmp/restore-plain/${f}.sql" "/tmp/restore/${f}.sql.age"
+          done
+          shred -u /tmp/age-key.txt 2>/dev/null || rm -f /tmp/age-key.txt
+
+      - name: Aguardar Postgres efemero ficar pronto
+        run: |
+          for i in $(seq 1 30); do
+            pg_isready -h 127.0.0.1 -p 5432 -U postgres && break
+            sleep 1
+          done
+
+      - name: Restaurar roles -> schema -> data (ordem oficial Supabase)
+        id: restore
+        env:
+          PGPASSWORD: restore-drill-local-only
+        run: |
+          set -euo pipefail
+          start_ts=$(date -u +%s)
+          echo "restore_start_iso=$(date -u -d "@$start_ts" '+%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
+
+          psql -h 127.0.0.1 -U postgres -d postgres \
+            --single-transaction \
+            --variable ON_ERROR_STOP=1 \
+            --file /tmp/restore-plain/roles.sql \
+            --file /tmp/restore-plain/schema.sql \
+            --command 'SET session_replication_role = replica' \
+            --file /tmp/restore-plain/data.sql
+
+          end_ts=$(date -u +%s)
+          echo "restore_end_iso=$(date -u -d "@$end_ts" '+%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
+          echo "restore_duration_seconds=$((end_ts - start_ts))" >> "$GITHUB_OUTPUT"
+          echo "Restore concluido em $((end_ts - start_ts))s."
+
+      - name: Validar estrutura e contagens contra o manifesto do backup
+        env:
+          PGPASSWORD: restore-drill-local-only
+        run: |
+          set -euo pipefail
+          echo "=== Manifesto do backup (contagens no momento do dump) ==="
+          cat /tmp/restore/manifest.json
+          echo
+
+          echo "=== Objetos criticos presentes apos restore ==="
+          psql -h 127.0.0.1 -U postgres -d postgres -Atq -c "
+            SELECT json_build_object(
+              'vendas', (SELECT count(*) FROM public.vendas),
+              'caixas', (SELECT count(*) FROM public.caixas),
+              'produtos', (SELECT count(*) FROM public.produtos),
+              'usuarios', (SELECT count(*) FROM public.usuarios),
+              'auth_users', (SELECT count(*) FROM auth.users),
+              'rls_policies', (SELECT count(*) FROM pg_policies WHERE schemaname='public'),
+              'functions_public', (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public'),
+              'triggers_public', (SELECT count(*) FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND NOT t.tgisinternal)
+            )::text
+          " | tee /tmp/restore-plain/post-restore-counts.json
+
+          echo
+          echo "=== Comparacao automatica vendas/caixas/produtos/usuarios/auth_users ==="
+          python3 - <<'PYEOF'
+          import json
+          manifest = json.load(open('/tmp/restore/manifest.json'))
+          restored = json.load(open('/tmp/restore-plain/post-restore-counts.json'))
+          keys = ['vendas', 'caixas', 'produtos', 'usuarios', 'auth_users']
+          mismatches = []
+          for k in keys:
+              m, r = int(manifest[k]), int(restored[k])
+              status = 'OK' if m == r else 'MISMATCH'
+              if m != r:
+                  mismatches.append(k)
+              print(f'  {k}: backup={m} restaurado={r}  [{status}]')
+          if restored['rls_policies'] == '0' or int(restored['rls_policies']) == 0:
+              mismatches.append('rls_policies_zero')
+              print('  ALERTA: 0 RLS policies restauradas')
+          if int(restored['functions_public']) == 0:
+              mismatches.append('functions_zero')
+              print('  ALERTA: 0 functions restauradas em public')
+          if mismatches:
+              print(f'FALHA: divergencias em {mismatches}')
+              raise SystemExit(1)
+          print('Todas as contagens batem; RLS e functions presentes.')
+          PYEOF
+
+      - name: Limpar material em texto puro
+        if: always()
+        run: |
+          shred -u /tmp/restore-plain/*.sql /tmp/restore-plain/*.json 2>/dev/null || rm -f /tmp/restore-plain/* || true
+          rm -f /tmp/age-key.txt || true
+
+      - name: Resumo (job summary)
+        if: always()
+        run: |
+          {
+            echo "## Restore drill — item 20"
+            echo ""
+            echo "- Run de backup usado: ${{ steps.find_run.outputs.run_id }}"
+            echo "- Inicio do restore: ${{ steps.restore.outputs.restore_start_iso }}"
+            echo "- Fim do restore: ${{ steps.restore.outputs.restore_end_iso }}"
+            echo "- **Duracao (RTO medido): ${{ steps.restore.outputs.restore_duration_seconds }}s**"
+          } >> "$GITHUB_STEP_SUMMARY"
