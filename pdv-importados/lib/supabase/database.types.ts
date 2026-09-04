@@ -1,3 +1,6 @@
+npm notice run npx
+npm notice run supabase gen types typescript --local
+Connecting to db 5432
 export type Json =
   | string
   | number
@@ -6165,6 +6168,22 @@ export type Database = {
           vendas_consistentes: number
         }[]
       }
+      relatorio_consistencia_vendas_gerente: {
+        Args: { p_caixa_id?: string; p_from?: string; p_to?: string }
+        Returns: {
+          evento_duplicado: number
+          pagamentos_divergentes: number
+          periodo_fim: string
+          periodo_inicio: string
+          sem_evento_ledger: number
+          sem_itens: number
+          sem_pagamento: number
+          taxa_consistencia_pct: number
+          total_vendas: number
+          vendas_com_anomalia: number
+          vendas_consistentes: number
+        }[]
+      }
       relatorio_curva_abc_periodo: {
         Args: { p_ate: string; p_de: string; p_limite?: number; p_tz?: string }
         Returns: {
@@ -6473,3 +6492,5 @@ export const Constants = {
   },
 } as const
 
+A new version of Supabase CLI is available: v2.116.0 (currently installed v2.104.0)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
