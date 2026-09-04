@@ -1761,7 +1761,17 @@ BEGIN
   -- devoluções, auditoria de cancelamento) para isolar especificamente o FK
   -- comissoes_ajustes.venda_id. comissoes_itens já foi removido acima.
   DELETE FROM public.itens_venda WHERE venda_id = v_v;
+
+  -- movimentos_estoque_log é append-only desde
+  -- 20260903190000_kardex_estoque_log_imutavel.sql (PR-1B) — o trigger de
+  -- linha bloqueia este DELETE mesmo rodando como owner. Desabilita só ao
+  -- redor desta limpeza pontual do fixture (nunca persiste: toda a suíte
+  -- roda dentro de BEGIN...ROLLBACK) e reabilita logo em seguida, para não
+  -- deixar nenhuma janela maior que o necessário.
+  ALTER TABLE public.movimentos_estoque_log DISABLE TRIGGER trg_movimentos_estoque_log_bloqueia_mutacao;
   DELETE FROM public.movimentos_estoque_log WHERE venda_id = v_v;
+  ALTER TABLE public.movimentos_estoque_log ENABLE TRIGGER trg_movimentos_estoque_log_bloqueia_mutacao;
+
   DELETE FROM public.devolucoes WHERE venda_id = v_v;
   DELETE FROM public.vendas_canceladas_auditoria WHERE venda_id = v_v;
   DELETE FROM public.estoque_reposicoes_cancelamento WHERE venda_id = v_v;
