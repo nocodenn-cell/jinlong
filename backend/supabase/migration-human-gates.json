@@ -203,6 +203,24 @@
       "remoteOnlyVersion": "20260904100614",
       "reason": "Follow-up urgente ao item 3 (achado de review pós-merge do PR-1C, #369): estoque_fecha_bypass_delete_insert_e_nan aplicada via MCP apply_migration (não CLI): schema_migrations.version gravado foi o timestamp real de aplicação (20260904100614), não o timestamp do nome do arquivo. name bate integralmente. Postcondition reverificada pós-deploy: DELETE direto em estoque negado para authenticated/anon (só via RPC excluir_linha_estoque_produto, com checagem de perfil/loja); CHECK rejeita NaN além de negativo. Migration é REVOKE + RPC nova (SECURITY DEFINER) + DROP/ADD CONSTRAINT — seguro reaplicar se um futuro db push tentar.",
       "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20260904120000",
+      "remoteOnlyVersion": "20260904163553",
+      "reason": "Item 14 do Plano Mestre de Fechamento dos Gaps (#383): importar_nfe_duplicata_invalida_aborta aplicada via MCP apply_migration (não CLI) na convergência final, 04/09/2026: schema_migrations.version gravado foi o timestamp real de aplicação (20260904163553), não o timestamp do nome do arquivo. name bate integralmente. Preflight confirmou o bug presente em produção (EXCEPTION WHEN OTHERS THEN NULL ainda ativo) antes da aplicação. Postcondition reverificada pós-deploy: pg_get_functiondef de public.importar_nfe_transacao contém RAISE EXCEPTION 'IMPORT_NFE_DUPLICATA_INVALIDA'. Migration é CREATE OR REPLACE puro (função inteira) — seguro reaplicar se um futuro db push tentar.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20260904130000",
+      "remoteOnlyVersion": "20260904163641",
+      "reason": "Item 23 do Plano Mestre de Fechamento dos Gaps (#386): relatorio_consistencia_vendas_gerente aplicada via MCP apply_migration (não CLI) na convergência final, 04/09/2026: schema_migrations.version gravado foi o timestamp real de aplicação (20260904163641), não o timestamp do nome do arquivo. name bate integralmente. Preflight confirmou GATE 9 intacto (authenticated=false na função original) e wrapper ainda inexistente antes da aplicação. Postcondition reverificada pós-deploy pelo próprio bloco $verify$ da migration mais checagem independente: authenticated=true no wrapper, anon=false, GATE 9 (financial-adversarial-gates.test.sql) continua intacto (authenticated=false na função original). Migration cria função nova (wrapper SECURITY DEFINER) — não altera grants da função original — seguro reaplicar se um futuro db push tentar.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20260904140000",
+      "remoteOnlyVersion": "20260904163803",
+      "reason": "Item 22 do Plano Mestre de Fechamento dos Gaps (#387): retomar_caixa_atomico aplicada via MCP apply_migration (não CLI) na convergência final, 04/09/2026: schema_migrations.version gravado foi o timestamp real de aplicação (20260904163803), não o timestamp do nome do arquivo. name bate integralmente. Preflight confirmou 50 caixas existentes, todos FECHADO (nenhum turno ABERTO ativo que o trigger de imutabilidade pudesse afetar), coluna/RPC/trigger ainda inexistentes antes da aplicação. Postcondition reverificada pós-deploy: contagem de caixas inalterada (50/50 FECHADO), 0 retomadas, has_column_privilege(authenticated, caixas, turno_anterior_id, INSERT)=false (coluna de auditoria protegida) e has_column_privilege(authenticated, caixas, operador_id, INSERT)=true (colunas legítimas preservadas), trigger trg_caixas_fechado_imutavel bloqueou em teste real (BEGIN...ROLLBACK, sem persistência) uma tentativa de UPDATE direto de status FECHADO→ABERTO. Migration é aditiva (ADD COLUMN IF NOT EXISTS, CREATE UNIQUE INDEX IF NOT EXISTS) + hardening de grants + trigger novo + RPC nova — seguro reaplicar se um futuro db push tentar.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
     }
   ]
 }
