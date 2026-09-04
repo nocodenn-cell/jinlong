@@ -1,0 +1,93 @@
+# Item 11 do Plano Mestre de Fechamento dos Gaps: gap operacional descoberto
+# na própria implantação de branch protection.
+#
+# `ci-pdv-importados.yml` e `ci-backend-supabase.yml` só disparam quando o PR
+# toca paths específicos (`pdv-importados/**`, `backend/**`, etc — ver os
+# blocos `on.pull_request.paths` de cada um). Tornar os jobs desses workflows
+# "required" em branch protection sem este fallback bloqueia PERMANENTEMENTE
+# qualquer PR que não toque esses paths (docs-only, `.claude/**`, etc): o
+# GitHub trava o merge esperando um status que nunca chega, porque o
+# workflow nunca disparou para aquele commit.
+#
+# Este workflow dispara em TODO pull_request (sem filtro de path) e só posta
+# um status para cada context abaixo quando o workflow real correspondente
+# NÃO teria disparado — nunca os dois ao mesmo tempo, porque a condição
+# aqui é exatamente o negado da condição de path do workflow real.
+name: Required checks fallback
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  detect-paths:
+    runs-on: ubuntu-latest
+    outputs:
+      pdv: ${{ steps.filter.outputs.pdv }}
+      backend: ${{ steps.filter.outputs.backend }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - id: filter
+        # Mesma action/SHA já usada em ci-backend-supabase.yml (anti-replay-diagnostic-gate).
+        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36
+        with:
+          filters: |
+            pdv:
+              - 'pdv-importados/**'
+              - 'shared-core/**'
+              - 'backend/scripts/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'turbo.json'
+              - '.github/workflows/ci-pdv-importados.yml'
+            backend:
+              - 'backend/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'turbo.json'
+              - '.github/workflows/ci-backend-supabase.yml'
+
+  # Context: "build-and-test" (real job em ci-pdv-importados.yml)
+  build-and-test:
+    needs: detect-paths
+    if: needs.detect-paths.outputs.pdv != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "PR não toca paths de pdv-importados/shared-core — ci-pdv-importados.yml não dispara. Fallback satisfaz o required check."
+
+  # Context: "Supabase local gates (RLS smoke + scope + REST)" (real job em ci-backend-supabase.yml)
+  supabase-local-gates-fallback:
+    name: Supabase local gates (RLS smoke + scope + REST)
+    needs: detect-paths
+    if: needs.detect-paths.outputs.backend != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "PR não toca paths de backend/** — ci-backend-supabase.yml não dispara. Fallback satisfaz o required check."
+
+  # Context: "edge-functions-typecheck" (real job em ci-backend-supabase.yml)
+  edge-functions-typecheck:
+    needs: detect-paths
+    if: needs.detect-paths.outputs.backend != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "PR não toca paths de backend/** — ci-backend-supabase.yml não dispara. Fallback satisfaz o required check."
+
+  # Context: "outbox-contract" (real job em ci-backend-supabase.yml)
+  outbox-contract:
+    needs: detect-paths
+    if: needs.detect-paths.outputs.backend != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "PR não toca paths de backend/** — ci-backend-supabase.yml não dispara. Fallback satisfaz o required check."
+
+  # Context: "anti-replay-diagnostic-gate" (real job em ci-backend-supabase.yml)
+  anti-replay-diagnostic-gate:
+    needs: detect-paths
+    if: needs.detect-paths.outputs.backend != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "PR não toca paths de backend/** — ci-backend-supabase.yml não dispara. Fallback satisfaz o required check."
