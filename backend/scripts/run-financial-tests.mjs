@@ -57,6 +57,7 @@ const SQL_SUITES = [
   'pr1b-kardex-imutavel.test.sql',
   'pr1c-estoque-quantidade-protecao.test.sql',
   'item7-storage-produto-imagens-tenant.test.sql',
+  'retomar-caixa-atomico.test.sql',
 ]
 
 /** `psql` está de fato instalado e executável neste host? */

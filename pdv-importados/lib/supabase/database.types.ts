@@ -117,45 +117,61 @@ export type Database = {
       }
       caixas: {
         Row: {
+          autorizado_por: string | null
           data_abertura: string
           data_fechamento: string | null
           fechamento_diferenca: number | null
           fechamento_observacao: string | null
           id: string
           loja_id: string
+          motivo_retomada: string | null
           operador_id: string | null
           saldo_atual: number
           status: string
+          turno_anterior_id: string | null
           valor_fechamento: number | null
           valor_inicial: number
         }
         Insert: {
+          autorizado_por?: string | null
           data_abertura?: string
           data_fechamento?: string | null
           fechamento_diferenca?: number | null
           fechamento_observacao?: string | null
           id?: string
           loja_id?: string
+          motivo_retomada?: string | null
           operador_id?: string | null
           saldo_atual?: number
           status?: string
+          turno_anterior_id?: string | null
           valor_fechamento?: number | null
           valor_inicial?: number
         }
         Update: {
+          autorizado_por?: string | null
           data_abertura?: string
           data_fechamento?: string | null
           fechamento_diferenca?: number | null
           fechamento_observacao?: string | null
           id?: string
           loja_id?: string
+          motivo_retomada?: string | null
           operador_id?: string | null
           saldo_atual?: number
           status?: string
+          turno_anterior_id?: string | null
           valor_fechamento?: number | null
           valor_inicial?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "caixas_autorizado_por_fkey"
+            columns: ["autorizado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "caixas_loja_id_fkey"
             columns: ["loja_id"]
@@ -175,6 +191,13 @@ export type Database = {
             columns: ["operador_id"]
             isOneToOne: false
             referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "caixas_turno_anterior_id_fkey"
+            columns: ["turno_anterior_id"]
+            isOneToOne: false
+            referencedRelation: "caixas"
             referencedColumns: ["id"]
           },
         ]
@@ -6231,6 +6254,18 @@ export type Database = {
           total_liquido_pago: number
           total_saldo_residual: number
           total_vendas: number
+        }[]
+      }
+      retomar_caixa_atomico: {
+        Args: {
+          p_caixa_fechado_id: string
+          p_gerente_token: string
+          p_motivo: string
+        }
+        Returns: {
+          o_loja_id: string
+          o_novo_caixa_id: string
+          o_turno_anterior_id: string
         }[]
       }
       retomar_venda_em_espera: { Args: { p_id: string }; Returns: Json }
