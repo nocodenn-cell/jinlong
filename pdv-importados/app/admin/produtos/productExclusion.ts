@@ -45,17 +45,19 @@ async function countByProdutoId(
   return { ok: true, count: count ?? 0 }
 }
 
+type EstoqueSaldoRow = { quantidade_atual?: number }
+
 async function loadSaldoEstoque(
   supabase: SupabaseClient,
   produtoId: string,
 ): Promise<CountResult & { temSaldo?: boolean }> {
   const { data, error } = await supabase
     .from('estoque')
-    .select('quantidade')
+    .select('quantidade_atual')
     .eq('produto_id', produtoId)
     .maybeSingle()
   if (error) return { ok: false, error: `estoque: ${error.message}` }
-  const q = Number((data as { quantidade?: number } | null)?.quantidade ?? 0)
+  const q = Number((data as EstoqueSaldoRow | null)?.quantidade_atual ?? 0)
   return { ok: true, count: 0, temSaldo: Number.isFinite(q) && q > 0 }
 }
 

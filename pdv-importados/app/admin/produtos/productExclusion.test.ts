@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { ProductExclusionEffects } from '@shared-core/src/products'
 import { PRODUCT_ERROR_CODES } from '@shared-core/src/products'
 import {
   MSG_PRODUTO_NAO_ENCONTRADO,
+  createProductExclusionEffects,
   createProductExclusionService,
 } from './productExclusion'
 
@@ -135,5 +137,77 @@ describe('createProductExclusionService', () => {
       outcome: 'inactivated',
     })
     expect(effects.inactivate).toHaveBeenCalledWith('p6')
+  })
+})
+
+type SelectCall = { table: string; columns: string }
+
+function thenableCount() {
+  return Promise.resolve({ data: [], error: null, count: 0 })
+}
+
+function mockSupabaseForExclusionFacts(opts: {
+  selects: SelectCall[]
+  estoqueRow?: { quantidade_atual: number } | null
+  estoqueError?: { message: string } | null
+}): SupabaseClient {
+  return {
+    from(table: string) {
+      const builder = {
+        select(columns: string) {
+          opts.selects.push({ table, columns })
+          return builder
+        },
+        eq() {
+          return builder
+        },
+        maybeSingle() {
+          if (table === 'produtos') {
+            return Promise.resolve({ data: { id: 'p1', ativo: true }, error: null })
+          }
+          if (table === 'estoque') {
+            if (opts.estoqueError) {
+              return Promise.resolve({ data: null, error: opts.estoqueError })
+            }
+            return Promise.resolve({ data: opts.estoqueRow ?? null, error: null })
+          }
+          return Promise.resolve({ data: null, error: null })
+        },
+        then(onFulfilled: (v: unknown) => unknown) {
+          return thenableCount().then(onFulfilled)
+        },
+      }
+      return builder
+    },
+  } as unknown as SupabaseClient
+}
+
+describe('createProductExclusionEffects.loadExclusionFacts', () => {
+  it('lê estoque.quantidade_atual (não a coluna inexistente quantidade)', async () => {
+    const selects: SelectCall[] = []
+    const supabase = mockSupabaseForExclusionFacts({
+      selects,
+      estoqueRow: { quantidade_atual: 3 },
+    })
+    const effects = createProductExclusionEffects(supabase)
+    const loaded = await effects.loadExclusionFacts('p1')
+
+    expect(loaded.ok).toBe(true)
+    if (loaded.ok) expect(loaded.facts.temSaldoEstoque).toBe(true)
+    expect(selects).toContainEqual({ table: 'estoque', columns: 'quantidade_atual' })
+    expect(selects.some((c) => c.table === 'estoque' && c.columns === 'quantidade')).toBe(false)
+  })
+
+  it('aborta a exclusão quando a leitura de estoque falha (PostgREST)', async () => {
+    const selects: SelectCall[] = []
+    const supabase = mockSupabaseForExclusionFacts({
+      selects,
+      estoqueError: { message: "column estoque.quantidade does not exist" },
+    })
+    const effects = createProductExclusionEffects(supabase)
+    const loaded = await effects.loadExclusionFacts('p1')
+
+    expect(loaded.ok).toBe(false)
+    if (!loaded.ok) expect(loaded.error).toMatch(/estoque: column estoque.quantidade does not exist/)
   })
 })
