@@ -13,18 +13,37 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatBRL } from '@/lib/format/money'
+import { formatDateTimeOrDash } from '@/lib/format/datetime'
 import type { AuditoriaEvento, AuditoriaTipo } from '../actions'
 
-const dtFmt = new Intl.DateTimeFormat('pt-BR', {
-  day: '2-digit',
-  month: '2-digit',
-  year: '2-digit',
-  hour: '2-digit',
-  minute: '2-digit',
-})
+/**
+ * Item 16 do Plano Mestre: todo texto vem de `labels` (resolvido em
+ * `page.tsx` via `getMessages(session.idioma)`) — nada hardcoded em PT
+ * aqui. `resumoTemplates`/`ajusteLabels`/`alertaLabels`/`formaLabels`
+ * resolvem os códigos estáveis gravados por `listarEventosAuditoria`
+ * (`resumoCodigo`/`resumoParams`) no idioma da sessão.
+ */
+export type AuditoriaTimelineLabels = {
+  locale: string
+  chipVenda: string
+  chipCancelamento: string
+  chipEstoque: string
+  chipAlerta: string
+  chipDesconto: string
+  chipDevolucao: string
+  detalheLabels: Record<string, string>
+  vazioTitulo: string
+  vazioSub: string
+  fecharAria: string
+  valorLabel: string
+  semDetalhes: string
+  resumoTemplates: Record<string, string>
+  ajusteLabels: Record<string, string>
+  alertaLabels: Record<string, string>
+  formaLabels: Record<string, string>
+}
 
 type TipoVisual = {
-  label: string
   icon: LucideIcon
   /** Classe do badge/ícone (reusa tokens admin-v2 / tailwind já presentes). */
   chipClass: string
@@ -32,67 +51,64 @@ type TipoVisual = {
 }
 
 const TIPO_VISUAL: Record<AuditoriaTipo, TipoVisual> = {
-  VENDA: {
-    label: 'Venda',
-    icon: ShoppingCart,
-    chipClass: 'admin-v2-badge-success',
-    iconClass: 'admin-v2-alert-success',
-  },
-  CANCELAMENTO: {
-    label: 'Cancelamento',
-    icon: XCircle,
-    chipClass: 'admin-v2-badge-danger',
-    iconClass: 'admin-v2-alert-danger',
-  },
-  AJUSTE_ESTOQUE: {
-    label: 'Estoque',
-    icon: Package,
-    chipClass: 'admin-v2-badge-muted',
-    iconClass: 'bg-white/[0.06] text-jl-fg-2',
-  },
-  ALERTA: {
-    label: 'Alerta',
-    icon: AlertTriangle,
-    chipClass: 'admin-v2-badge-warning',
-    iconClass: 'admin-v2-alert-warning',
-  },
-  DESCONTO: {
-    label: 'Desconto',
-    icon: Percent,
-    chipClass: 'admin-v2-badge-gold',
-    iconClass: 'admin-v2-alert-warning',
-  },
-  DEVOLUCAO: {
-    label: 'Devolução/Troca',
-    icon: RotateCcw,
-    chipClass: 'admin-v2-badge-warning',
-    iconClass: 'admin-v2-alert-warning',
-  },
+  VENDA: { icon: ShoppingCart, chipClass: 'admin-v2-badge-success', iconClass: 'admin-v2-alert-success' },
+  CANCELAMENTO: { icon: XCircle, chipClass: 'admin-v2-badge-danger', iconClass: 'admin-v2-alert-danger' },
+  AJUSTE_ESTOQUE: { icon: Package, chipClass: 'admin-v2-badge-muted', iconClass: 'bg-white/[0.06] text-jl-fg-2' },
+  ALERTA: { icon: AlertTriangle, chipClass: 'admin-v2-badge-warning', iconClass: 'admin-v2-alert-warning' },
+  DESCONTO: { icon: Percent, chipClass: 'admin-v2-badge-gold', iconClass: 'admin-v2-alert-warning' },
+  DEVOLUCAO: { icon: RotateCcw, chipClass: 'admin-v2-badge-warning', iconClass: 'admin-v2-alert-warning' },
 }
 
-const DETALHE_LABELS: Record<string, string> = {
-  forma_pagamento: 'Forma de pagamento',
-  total_bruto: 'Total bruto',
-  total_liquido: 'Total líquido',
-  itens: 'Itens',
-  venda_id: 'Venda',
-  motivo: 'Motivo',
-  valor_estornado: 'Valor estornado',
-  produto_id: 'Produto (ID)',
-  produto_nome: 'Produto',
-  tipo_codigo: 'Tipo de movimento',
-  quantidade_delta: 'Quantidade',
-  observacao: 'Observação',
-  tipo: 'Tipo de alerta',
-  gerente_id: 'Gerente',
-  desconto_percentual: 'Desconto (%)',
-  desconto_valor: 'Desconto (R$)',
-  tipo_operacao: 'Tipo de operação',
-  forma_estorno: 'Forma de estorno',
-  valor_caixa_estornado: 'Valor estornado em caixa',
+function tipoChipLabel(tipo: AuditoriaTipo, labels: AuditoriaTimelineLabels): string {
+  switch (tipo) {
+    case 'VENDA':
+      return labels.chipVenda
+    case 'CANCELAMENTO':
+      return labels.chipCancelamento
+    case 'AJUSTE_ESTOQUE':
+      return labels.chipEstoque
+    case 'ALERTA':
+      return labels.chipAlerta
+    case 'DESCONTO':
+      return labels.chipDesconto
+    case 'DEVOLUCAO':
+      return labels.chipDevolucao
+  }
 }
 
-function detalheValor(chave: string, valor: string | number | null): string {
+function interpolate(template: string, params: Record<string, string | number>): string {
+  return Object.entries(params).reduce(
+    (acc, [k, v]) => acc.replaceAll(`{{${k}}}`, String(v)),
+    template,
+  )
+}
+
+/** Resolve `resumoCodigo`/`resumoParams` (dado estruturado) para texto no idioma da sessão. */
+function resumoTexto(evento: AuditoriaEvento, labels: AuditoriaTimelineLabels): string {
+  const { resumoCodigo, resumoParams } = evento
+  const params = { ...resumoParams }
+  if (resumoCodigo === 'ajuste_estoque') {
+    const codigo = String(resumoParams.codigo ?? '')
+    params.tipo = labels.ajusteLabels[codigo] ?? codigo
+  }
+  if (resumoCodigo === 'alerta') {
+    const tipo = String(resumoParams.tipo ?? '')
+    return labels.alertaLabels[tipo] ?? tipo
+  }
+  if (resumoCodigo === 'troca' || resumoCodigo === 'devolucao') {
+    const forma = String(resumoParams.forma ?? '')
+    params.forma = labels.formaLabels[forma] ?? forma
+  }
+  const template = labels.resumoTemplates[resumoCodigo]
+  if (!template) return resumoCodigo
+  return interpolate(template, params)
+}
+
+function detalheValor(
+  chave: string,
+  valor: string | number | null,
+  labels: AuditoriaTimelineLabels,
+): string {
   if (valor == null || valor === '') return '—'
   if (
     chave === 'total_bruto' ||
@@ -103,10 +119,19 @@ function detalheValor(chave: string, valor: string | number | null): string {
   ) {
     return formatBRL(Number(valor))
   }
+  if (chave === 'tipo_codigo') return labels.ajusteLabels[String(valor)] ?? String(valor)
+  if (chave === 'tipo') return labels.alertaLabels[String(valor)] ?? String(valor)
+  if (chave === 'forma_estorno') return labels.formaLabels[String(valor)] ?? String(valor)
   return String(valor)
 }
 
-export function AuditoriaTimeline({ eventos }: { eventos: AuditoriaEvento[] }) {
+export function AuditoriaTimeline({
+  eventos,
+  labels,
+}: {
+  eventos: AuditoriaEvento[]
+  labels: AuditoriaTimelineLabels
+}) {
   const [aberto, setAberto] = useState<AuditoriaEvento | null>(null)
 
   if (eventos.length === 0) {
@@ -115,10 +140,8 @@ export function AuditoriaTimeline({ eventos }: { eventos: AuditoriaEvento[] }) {
         <span className="text-3xl text-jl-fg-3" aria-hidden>
           🗒️
         </span>
-        <p className="text-[13px] font-medium text-jl-fg-2">Nenhum evento no período</p>
-        <p className="text-[11px] text-jl-fg-3">
-          Ajuste o período ou o tipo de evento para ver a trilha de auditoria.
-        </p>
+        <p className="text-[13px] font-medium text-jl-fg-2">{labels.vazioTitulo}</p>
+        <p className="text-[11px] text-jl-fg-3">{labels.vazioSub}</p>
       </div>
     )
   }
@@ -146,7 +169,9 @@ export function AuditoriaTimeline({ eventos }: { eventos: AuditoriaEvento[] }) {
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline justify-between gap-2">
-                    <span className="truncate text-[12px] font-medium text-jl-fg-1">{e.resumo}</span>
+                    <span className="truncate text-[12px] font-medium text-jl-fg-1">
+                      {resumoTexto(e, labels)}
+                    </span>
                     {e.valor != null ? (
                       <span className="shrink-0 text-[12px] font-semibold tabular-nums text-jl-fg-1">
                         {formatBRL(e.valor)}
@@ -160,9 +185,11 @@ export function AuditoriaTimeline({ eventos }: { eventos: AuditoriaEvento[] }) {
                         visual.chipClass,
                       )}
                     >
-                      {visual.label}
+                      {tipoChipLabel(e.tipo, labels)}
                     </span>
-                    <span className="text-[10px] text-jl-fg-3">{dtFmt.format(new Date(e.ocorridoEm))}</span>
+                    <span className="text-[10px] text-jl-fg-3">
+                      {formatDateTimeOrDash(e.ocorridoEm, labels.locale, 'short')}
+                    </span>
                     {e.operadorNome ? (
                       <span className="text-[10px] text-jl-fg-3">· {e.operadorNome}</span>
                     ) : null}
@@ -174,16 +201,20 @@ export function AuditoriaTimeline({ eventos }: { eventos: AuditoriaEvento[] }) {
         })}
       </ul>
 
-      {aberto ? <AuditoriaDetailSheet evento={aberto} onClose={() => setAberto(null)} /> : null}
+      {aberto ? (
+        <AuditoriaDetailSheet evento={aberto} labels={labels} onClose={() => setAberto(null)} />
+      ) : null}
     </>
   )
 }
 
 function AuditoriaDetailSheet({
   evento,
+  labels,
   onClose,
 }: {
   evento: AuditoriaEvento
+  labels: AuditoriaTimelineLabels
   onClose: () => void
 }) {
   useEffect(() => {
@@ -209,7 +240,7 @@ function AuditoriaDetailSheet({
         <div className="flex items-start justify-between gap-3 border-b border-[var(--color-border-secondary)] px-5 py-4">
           <div className="min-w-0">
             <h2 id="auditoria-detalhe-titulo" className="text-[15px] font-semibold text-jl-fg-1">
-              {evento.resumo}
+              {resumoTexto(evento, labels)}
             </h2>
             <p className="mt-0.5 flex flex-wrap items-center gap-2 text-[12px] text-jl-fg-2">
               <span
@@ -218,16 +249,16 @@ function AuditoriaDetailSheet({
                   visual.chipClass,
                 )}
               >
-                {visual.label}
+                {tipoChipLabel(evento.tipo, labels)}
               </span>
-              <span>{dtFmt.format(new Date(evento.ocorridoEm))}</span>
+              <span>{formatDateTimeOrDash(evento.ocorridoEm, labels.locale, 'short')}</span>
               {evento.operadorNome ? <span>· {evento.operadorNome}</span> : null}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Fechar"
+            aria-label={labels.fecharAria}
             className="-mr-1 -mt-1 rounded-lg p-1.5 text-jl-fg-3 transition-colors hover:bg-white/[0.06]"
           >
             <X size={16} aria-hidden />
@@ -237,7 +268,7 @@ function AuditoriaDetailSheet({
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-3">
           {evento.valor != null ? (
             <div className="admin-v2-panel mb-3 rounded-[10px] p-3">
-              <div className="text-[11px] text-jl-fg-3">Valor</div>
+              <div className="text-[11px] text-jl-fg-3">{labels.valorLabel}</div>
               <div className="text-[18px] font-semibold tabular-nums text-jl-fg-1">
                 {formatBRL(evento.valor)}
               </div>
@@ -246,16 +277,16 @@ function AuditoriaDetailSheet({
 
           <dl className="flex flex-col">
             {entradas.length === 0 ? (
-              <p className="py-4 text-center text-[12px] text-jl-fg-3">Sem detalhes adicionais.</p>
+              <p className="py-4 text-center text-[12px] text-jl-fg-3">{labels.semDetalhes}</p>
             ) : (
               entradas.map(([chave, valor]) => (
                 <div
                   key={chave}
                   className="flex items-start justify-between gap-3 border-t border-[var(--color-border-secondary)] py-2 first:border-t-0"
                 >
-                  <dt className="text-[11px] text-jl-fg-3">{DETALHE_LABELS[chave] ?? chave}</dt>
+                  <dt className="text-[11px] text-jl-fg-3">{labels.detalheLabels[chave] ?? chave}</dt>
                   <dd className="max-w-[60%] break-words text-right text-[12px] text-jl-fg-1">
-                    {detalheValor(chave, valor)}
+                    {detalheValor(chave, valor, labels)}
                   </dd>
                 </div>
               ))

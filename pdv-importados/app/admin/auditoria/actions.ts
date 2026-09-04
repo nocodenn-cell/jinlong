@@ -48,6 +48,14 @@ export type AuditoriaTipo =
   | 'DESCONTO'
   | 'DEVOLUCAO'
 
+/**
+ * Item 16 do Plano Mestre: `resumo` deixou de ser uma frase pronta em PT.
+ * `resumoCodigo` é uma chave estável resolvida para i18n no client
+ * (`AuditoriaTimeline`); `resumoParams` traz só os valores de interpolação
+ * (incluindo, quando aplicável, texto livre do operador como `motivo` —
+ * texto livre digitado pelo usuário não é traduzível por chave de i18n,
+ * mesma limitação de qualquer campo de observação no sistema).
+ */
 export type AuditoriaEvento = Readonly<{
   /** Chave única (prefixada pela fonte para evitar colisão entre tabelas). */
   id: string
@@ -56,8 +64,10 @@ export type AuditoriaEvento = Readonly<{
   ocorridoEm: string
   operadorId: string | null
   operadorNome: string | null
-  /** Texto curto humano para a linha da timeline. */
-  resumo: string
+  /** Chave i18n do resumo — ver AUDITORIA_RESUMO_LABELS em AuditoriaTimeline.tsx. */
+  resumoCodigo: string
+  /** Valores de interpolação do template de resumo (nunca prosa pronta). */
+  resumoParams: Record<string, string | number>
   /** Valor monetário associado (quando aplicável). */
   valor: number | null
   /** Payload normalizado para o painel de detalhe (read-only). */
@@ -74,32 +84,6 @@ export type AuditoriaFiltro = Readonly<{
 export type ListarEventosResult =
   | { ok: true; eventos: AuditoriaEvento[]; truncado: boolean }
   | { ok: false; error: string }
-
-const TIPO_AJUSTE_LABEL: Record<string, string> = {
-  ENTRADA_VENDA: 'Entrada (estorno de venda)',
-  SAIDA_VENDA: 'Saída por venda',
-  SAIDA_AJUSTE: 'Ajuste manual (saída)',
-  ENTRADA_AJUSTE: 'Ajuste manual (entrada)',
-  COMPRA: 'Entrada por compra',
-  PERDA: 'Perda',
-  QUEBRA: 'Quebra',
-  ACERTO_INVENTARIO: 'Acerto de inventário',
-  OUTRO: 'Outro',
-}
-
-const TIPO_ALERTA_LABEL: Record<string, string> = {
-  margem_negativa: 'Margem negativa',
-  preco_fora_padrao: 'Preço fora do padrão',
-  estoque_inconsistente: 'Estoque inconsistente',
-}
-
-const FORMA_ESTORNO_LABEL: Record<string, string> = {
-  DINHEIRO: 'Dinheiro',
-  PIX: 'PIX',
-  CARTAO_DEBITO: 'Cartão de débito',
-  CARTAO_CREDITO: 'Cartão de crédito',
-  CREDITO_CLIENTE: 'Crédito do cliente',
-}
 
 function wantsTipo(filtro: AuditoriaFiltro, tipo: AuditoriaTipo): boolean {
   return filtro.tipos.length === 0 || filtro.tipos.includes(tipo)
@@ -163,7 +147,8 @@ export async function listarEventosAuditoria(
         ocorridoEm: String(r.occurred_at),
         operadorId: opId,
         operadorNome: null,
-        resumo: `Venda registrada • ${itensCount} ${itensCount === 1 ? 'item' : 'itens'}`,
+        resumoCodigo: itensCount === 1 ? 'venda_1' : 'venda_n',
+        resumoParams: { n: itensCount },
         valor: num(r.total),
         detalhe: {
           forma_pagamento: str(r.forma_pagamento),
@@ -223,7 +208,8 @@ export async function listarEventosAuditoria(
         ocorridoEm: String(r.occurred_at),
         operadorId: opId,
         operadorNome: null,
-        resumo: motivo ? `Venda cancelada • ${motivo}` : 'Venda cancelada',
+        resumoCodigo: motivo ? 'cancelada_motivo' : 'cancelada',
+        resumoParams: motivo ? { motivo } : {},
         valor: valorEstornado,
         detalhe: {
           venda_id: saleId,
@@ -263,7 +249,8 @@ export async function listarEventosAuditoria(
         ocorridoEm: String(r.created_at),
         operadorId: opId && UUID_RE.test(opId) ? opId : null,
         operadorNome: null,
-        resumo: `${TIPO_AJUSTE_LABEL[codigo] ?? codigo} • ${delta >= 0 ? '+' : ''}${delta}`,
+        resumoCodigo: 'ajuste_estoque',
+        resumoParams: { codigo, delta: `${delta >= 0 ? '+' : ''}${delta}` },
         valor: null,
         detalhe: {
           produto_id: prodId,
@@ -298,7 +285,8 @@ export async function listarEventosAuditoria(
         ocorridoEm: String(r.criado_em),
         operadorId: null,
         operadorNome: null,
-        resumo: TIPO_ALERTA_LABEL[tipo] ?? tipo,
+        resumoCodigo: 'alerta',
+        resumoParams: { tipo },
         valor: null,
         detalhe: {
           tipo,
@@ -332,7 +320,8 @@ export async function listarEventosAuditoria(
         ocorridoEm: String(r.aplicado_em),
         operadorId: opId,
         operadorNome: null,
-        resumo: `Desconto de gerente • ${pct}%`,
+        resumoCodigo: 'desconto',
+        resumoParams: { pct },
         valor: num(r.desconto_valor),
         detalhe: {
           venda_id: str(r.venda_id),
@@ -368,20 +357,20 @@ export async function listarEventosAuditoria(
       if (opId) operadorIds.add(opId)
       const tipoOperacao = String(r.tipo ?? '')
       const forma = String(r.forma_estorno ?? '')
-      const formaLabel = FORMA_ESTORNO_LABEL[forma] ?? forma
       eventos.push({
         id: `devolucao:${r.id}`,
         tipo: 'DEVOLUCAO',
         ocorridoEm: String(r.created_at),
         operadorId: opId,
         operadorNome: null,
-        resumo: `${tipoOperacao === 'TROCA' ? 'Troca' : 'Devolução'} • ${formaLabel}`,
+        resumoCodigo: tipoOperacao === 'TROCA' ? 'troca' : 'devolucao',
+        resumoParams: { forma },
         valor: num(r.valor_estornado),
         detalhe: {
           venda_id: str(r.venda_id),
           tipo_operacao: tipoOperacao,
           motivo: str(r.motivo),
-          forma_estorno: formaLabel,
+          forma_estorno: forma,
           valor_estornado: num(r.valor_estornado),
           valor_caixa_estornado: num(r.valor_caixa_estornado),
         },
