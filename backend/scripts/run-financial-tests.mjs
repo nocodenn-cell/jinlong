@@ -33,6 +33,7 @@ const SCRIPT_SUITES = [
   'test-commission-concurrency.mjs',
   'test-nfe-conferencia-concurrency.mjs',
   'test-varejo-tier-concurrency.mjs',
+  'test-estoque-decremento-concurrency.mjs',
 ]
 
 const SQL_SUITES = [
