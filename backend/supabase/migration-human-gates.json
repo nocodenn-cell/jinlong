@@ -173,6 +173,36 @@
       "remoteOnlyVersion": "20260902190718",
       "reason": "serializa_invariante_varejo_tier_e_reativacao (revisão pós-CI do PR #363: fecha reativação de tier não revalidada, NEW.preco_varejo congelado e ausência de lock cross-table) aplicada via MCP apply_migration em produção sob a mesma autorização de deploy controlado (02/09/2026): schema_migrations.version gravado foi o timestamp real de aplicação (20260902190718), não o timestamp do nome do arquivo (20260902120000_serializa_invariante_varejo_tier_e_reativacao.sql). name bate integralmente. Postcondition reverificada no mesmo deploy: os 4 cenários de reativação (reativar inválido rejeitado, reativar válido aceito, criar tier novo inválido rejeitado, desativar continua funcionando), o cenário multi-step (varejo+tier editados juntos, writer real atualizar_produto_com_faixa_atacado) e a invariante tier<varejo nos dois sentidos passaram, todos via BEGIN...ROLLBACK sem persistência; internal.lock_invariante_varejo_tier confirmado sem grant a anon/authenticated. Migration é CREATE OR REPLACE puro nas duas trigger functions (o trigger de precos_atacado é recriado via DROP+CREATE CONSTRAINT TRIGGER para cobrir a coluna ativo; o de produtos não muda de forma) — seguro reaplicar se um futuro db push tentar.",
       "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20260903090000",
+      "remoteOnlyVersion": "20260903230328",
+      "reason": "Item 1 do Plano Mestre de Fechamento dos Gaps (PR-1A, #367): restringe_update_usuarios_grant_coluna_idioma aplicada via MCP apply_migration (não CLI): schema_migrations.version gravado foi o timestamp real de aplicação (20260903230328), não o timestamp do nome do arquivo. name bate integralmente. Postcondition reverificada pós-deploy: UPDATE de usuarios.perfil por authenticated é negado (grant de coluna restrito a idioma_preferido); troca de idioma continua funcionando; service_role preservado. Migration é REVOKE/GRANT puro — seguro reaplicar se um futuro db push tentar.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20260903190000",
+      "remoteOnlyVersion": "20260904010850",
+      "reason": "Item 2 do Plano Mestre de Fechamento dos Gaps (PR-1B, #368): kardex_estoque_log_imutavel aplicada via MCP apply_migration (não CLI): schema_migrations.version gravado foi o timestamp real de aplicação (20260904010850), não o timestamp do nome do arquivo. name bate integralmente. Postcondition reverificada pós-deploy: UPDATE/DELETE/TRUNCATE em movimentos_estoque_log negados para authenticated/anon e para service_role via trigger; INSERT legítimo via RPC preservado. Migration é REVOKE + trigger novo, aditiva — seguro reaplicar se um futuro db push tentar.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20260904090000",
+      "remoteOnlyVersion": "20260904020457",
+      "reason": "Item 3 do Plano Mestre de Fechamento dos Gaps (PR-1C, #369): estoque_quantidade_protecao aplicada via MCP apply_migration (não CLI): schema_migrations.version gravado foi o timestamp real de aplicação (20260904020457), não o timestamp do nome do arquivo. name bate integralmente. Postcondition reverificada pós-deploy: CHECK quantidade_atual>=0 ativo, UPDATE direto negado para authenticated/anon, INSERT direto só aceito com quantidade=0. Superada em seguida por 20260904110000 (fecha bypass DELETE+INSERT e CHECK contra NaN) — mantida no histórico porque a constraint original é a base que a seguinte substitui via DROP+ADD CONSTRAINT.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20260904100000",
+      "remoteOnlyVersion": "20260904100522",
+      "reason": "Item 7 do Plano Mestre de Fechamento dos Gaps (#372): storage_produto_imagens_tenant_isolation aplicada via MCP apply_migration (não CLI): schema_migrations.version gravado foi o timestamp real de aplicação (20260904100522), não o timestamp do nome do arquivo. name bate integralmente. Postcondition reverificada pós-deploy: GERENTE de loja A não consegue INSERT/UPDATE/DELETE em imagem de produto de loja B; policy FOR SELECT ausente (gap pré-existente, não relacionado) corrigida na mesma migration. Migration é CREATE/ALTER POLICY puro — seguro reaplicar se um futuro db push tentar.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20260904110000",
+      "remoteOnlyVersion": "20260904100614",
+      "reason": "Follow-up urgente ao item 3 (achado de review pós-merge do PR-1C, #369): estoque_fecha_bypass_delete_insert_e_nan aplicada via MCP apply_migration (não CLI): schema_migrations.version gravado foi o timestamp real de aplicação (20260904100614), não o timestamp do nome do arquivo. name bate integralmente. Postcondition reverificada pós-deploy: DELETE direto em estoque negado para authenticated/anon (só via RPC excluir_linha_estoque_produto, com checagem de perfil/loja); CHECK rejeita NaN além de negativo. Migration é REVOKE + RPC nova (SECURITY DEFINER) + DROP/ADD CONSTRAINT — seguro reaplicar se um futuro db push tentar.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
     }
   ]
 }
