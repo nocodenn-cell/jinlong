@@ -32,6 +32,7 @@ export function createReceivableWriter(supabase: SupabaseClient): ReceivableWrit
           .from('contas_receber')
           .insert({
             cliente_id: command.clienteId,
+            loja_id: command.lojaId,
             valor_total: command.valorTotal,
             valor_aberto: command.valorTotal,
             descricao: command.descricao?.trim() || null,

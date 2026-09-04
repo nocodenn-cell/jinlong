@@ -74,11 +74,33 @@ export async function criarTituloReceber(input: {
   if (erro) return { success: false, error: erro }
 
   const supabase = await createClient()
+
+  // contas_receber.loja_id é NOT NULL (migration 112). Achado de review:
+  // usar sempre a loja da SESSÃO (auth.session.lojaId) quebra para ADMIN —
+  // buscarClientesPaginadosAction(1) não filtra por loja para esse perfil,
+  // então um ADMIN pode selecionar cliente de outra loja e o INSERT
+  // anterior sempre gravava a loja do ATOR, criando um título financeiro
+  // atribuído à loja errada (a policy de INSERT valida cliente_id e
+  // loja_id de forma independente, então isso passava sem erro). Deriva
+  // a loja do PRÓPRIO cliente selecionado — correto tanto para GERENTE
+  // (só vê clientes da própria loja, resultado é o mesmo de antes) quanto
+  // para ADMIN (título fica na loja real do cliente, não na do ator).
+  const { data: clienteRow, error: clienteErr } = await supabase
+    .from('clientes')
+    .select('loja_id')
+    .eq('id', input.cliente_id)
+    .maybeSingle()
+  if (clienteErr || !clienteRow?.loja_id) {
+    return { success: false, error: 'Cliente não encontrado ou sem loja associada.' }
+  }
+  const lojaId = clienteRow.loja_id as string
+
   return actionResultToLegacyData(
     await runServerActionWithObservability('gerente/financeiro/criar-titulo', async () => {
       const writer = createReceivableWriter(supabase)
       const created = await writer.create({
         clienteId: input.cliente_id,
+        lojaId,
         valorTotal: input.valor_total,
         descricao: input.descricao,
         vencimento: input.vencimento,
