@@ -7,6 +7,7 @@ import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 import { createPayablePaymentService } from '@/app/admin/financeiro/payablePayment'
 import { createPayableReader } from '@/app/admin/financeiro/payableReader'
 import type { PayableTitle } from '@shared-core/src/financial'
+import { hojeYmd, isTituloVencido } from '@shared-core/src/financial'
 
 export type ContaPagarStatus = 'PENDENTE' | 'PARCIAL' | 'PAGO' | 'ATRASADO' | 'CANCELADO'
 
@@ -23,6 +24,8 @@ export type ContaPagarRow = {
   nfe_importacao_id: string | null
   criado_em: string | null
   loja_id: string
+  /** Computado na leitura (vencimento < hoje, status em aberto) — ver item 13 do Plano Mestre. */
+  atrasado: boolean
 }
 
 export type FormaPagamento = 'DINHEIRO' | 'PIX' | 'CARTAO' | 'BOLETO' | 'TRANSF'
@@ -37,6 +40,8 @@ function mapRow(raw: Record<string, unknown>): ContaPagarRow {
   const forn = raw.fornecedor
   const fornecedor_nome =
     forn && typeof forn === 'object' && 'nome' in forn ? String((forn as { nome: string }).nome) : null
+  const vencimento = (raw.vencimento as string | null) ?? null
+  const status = String(raw.status ?? 'PENDENTE').toUpperCase() as ContaPagarStatus
   return {
     id: String(raw.id),
     fornecedor_id: String(raw.fornecedor_id),
@@ -44,12 +49,13 @@ function mapRow(raw: Record<string, unknown>): ContaPagarRow {
     descricao: String(raw.descricao ?? ''),
     valor_total: Number(raw.valor_total ?? 0),
     valor_pago: Number(raw.valor_pago ?? 0),
-    vencimento: (raw.vencimento as string | null) ?? null,
-    status: String(raw.status ?? 'PENDENTE').toUpperCase() as ContaPagarStatus,
+    vencimento,
+    status,
     nfe_numero: (raw.nfe_numero as string | null) ?? null,
     nfe_importacao_id: (raw.nfe_importacao_id as string | null) ?? null,
     criado_em: (raw.criado_em as string | null) ?? null,
     loja_id: String(raw.loja_id),
+    atrasado: isTituloVencido(vencimento, status, hojeYmd()),
   }
 }
 
@@ -67,6 +73,7 @@ function payableToRow(p: PayableTitle): ContaPagarRow {
     nfe_importacao_id: p.nfeImportacaoId,
     criado_em: p.criadoEm,
     loja_id: p.lojaId,
+    atrasado: p.atrasado,
   }
 }
 

@@ -249,7 +249,7 @@ export function ContasPagarListClient({
         totalAbertos += aberto
         qtdAbertos++
       }
-      if (c.status === 'ATRASADO') {
+      if (c.atrasado) {
         totalAtrasados += aberto
         qtdAtrasados++
       }

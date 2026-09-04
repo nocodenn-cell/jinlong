@@ -26,6 +26,8 @@ export type ReceivableTitle = {
   vencimento: string | null
   status: string
   lojaId: string
+  /** Computado na leitura (vencimento < hoje, status em aberto) — nunca persistido. */
+  atrasado: boolean
 }
 
 export type PayableTitle = {
@@ -41,4 +43,6 @@ export type PayableTitle = {
   nfeImportacaoId: string | null
   criadoEm: string | null
   lojaId: string
+  /** Computado na leitura (vencimento < hoje, status em aberto) — nunca persistido. */
+  atrasado: boolean
 }

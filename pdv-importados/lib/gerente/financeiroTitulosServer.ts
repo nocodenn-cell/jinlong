@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createReceivableReader } from '@/app/admin/financeiro/receivableReader'
+import { hojeYmd } from '@shared-core/src/financial'
 
 /** Filtros da listagem de contas a receber (sincronizados com a URL). */
 export type FinanceiroTituloFilters = {
@@ -28,6 +29,8 @@ export type FinanceiroTituloListaRow = {
   cliente_id: string
   cliente_nome: string | null
   loja_id: string
+  /** Computado na leitura (vencimento < hoje, status em aberto) — item 13 do Plano Mestre. */
+  atrasado: boolean
 }
 
 function pickParam(raw: Record<string, string | string[] | undefined>, key: string): string {
@@ -113,6 +116,7 @@ export async function fetchContasReceberListagem(
       cliente_id: t.clienteId,
       cliente_nome: t.clienteNome,
       loja_id: t.lojaId,
+      atrasado: t.atrasado,
     })),
     capped: result.capped,
   }
@@ -127,6 +131,8 @@ export async function fetchFinanceiroTitulosKpis(supabase: SupabaseClient): Prom
   titulosAbertosCount: number
   valorAbertoTotal: number
   kpiValorTruncado: boolean
+  titulosVencidosCount: number
+  valorVencidoTotal: number
 }> {
   const { count } = await supabase
     .from('contas_receber')
@@ -143,9 +149,34 @@ export async function fetchFinanceiroTitulosKpis(supabase: SupabaseClient): Prom
   const kpiValorTruncado = rows.length > KPI_SUM_CAP
   const slice = kpiValorTruncado ? rows.slice(0, KPI_SUM_CAP) : rows
   const valorAbertoTotal = slice.reduce((s, r) => s + Number(r.valor_aberto ?? 0), 0)
+
+  // "Vencido" é sempre computado (vencimento < hoje), nunca um status
+  // persistido (item 13 do Plano Mestre) — ver shared-core/isTituloVencido.
+  const hoje = hojeYmd()
+  const { count: vencidosCount } = await supabase
+    .from('contas_receber')
+    .select('*', { count: 'exact', head: true })
+    .in('status', ['ABERTO', 'PARCIAL'])
+    .not('vencimento', 'is', null)
+    .lt('vencimento', hoje)
+
+  const { data: vencidosVals } = await supabase
+    .from('contas_receber')
+    .select('valor_aberto')
+    .in('status', ['ABERTO', 'PARCIAL'])
+    .not('vencimento', 'is', null)
+    .lt('vencimento', hoje)
+    .limit(KPI_SUM_CAP + 1)
+
+  const valorVencidoTotal = (vencidosVals ?? [])
+    .slice(0, KPI_SUM_CAP)
+    .reduce((s, r) => s + Number(r.valor_aberto ?? 0), 0)
+
   return {
     titulosAbertosCount: count ?? 0,
     valorAbertoTotal,
     kpiValorTruncado,
+    titulosVencidosCount: vencidosCount ?? 0,
+    valorVencidoTotal,
   }
 }

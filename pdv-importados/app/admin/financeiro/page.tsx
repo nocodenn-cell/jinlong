@@ -155,6 +155,17 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
         tone="gold"
         hint={listaRes.capped ? ui.financeiro_kpi_truncado : undefined}
       />
+      <MetricCard
+        label={ui.financeiro_kpi_vencidos}
+        value={formatBRL(kpisRes.valorVencidoTotal)}
+        icon="alert-circle"
+        tone="danger"
+        hint={
+          kpisRes.titulosVencidosCount > 0
+            ? ui.financeiro_kpi_hint_vencidos.replace('{{n}}', String(kpisRes.titulosVencidosCount))
+            : undefined
+        }
+      />
       <MetricCard label={ui.financeiro_kpi_docs_fiscais} value={String(fiscal.length)} icon="file-check-2" tone="warning" />
     </div>
   )
