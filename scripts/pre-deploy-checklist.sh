@@ -59,9 +59,12 @@ echo "🧪 Test Validation..."
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 TEST_OUTPUT=$(npm run test 2>&1 | grep "Tests")
+# TEST_RESULT_LABEL é string ("N passed") — nunca reusar PASS_COUNT aqui,
+# que é o contador numérico incrementado por pass() via ((PASS_COUNT++));
+# sobrescrevê-lo com texto quebra esse incremento no próximo pass().
 if echo "$TEST_OUTPUT" | grep -qE '[0-9]+ passed' && ! echo "$TEST_OUTPUT" | grep -qE '[0-9]+ failed'; then
-  PASS_COUNT=$(echo "$TEST_OUTPUT" | grep -oE '[0-9]+ passed' | head -1)
-  pass "Unit Tests: $PASS_COUNT (nenhuma falha)"
+  TEST_RESULT_LABEL=$(echo "$TEST_OUTPUT" | grep -oE '[0-9]+ passed' | head -1)
+  pass "Unit Tests: $TEST_RESULT_LABEL (nenhuma falha)"
 else
   fail "Unit Tests: not all passing (run: npm run test)"
 fi
