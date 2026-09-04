@@ -24,6 +24,8 @@ import type {
   RelatorioCoberturaEstoqueDTO,
   RelatorioDivergenciaEstoqueDTO,
 } from '@/app/gerente/relatorios/actions'
+import type { RelatorioSemGiroDTO } from '@/app/gerente/relatorios/sem-giro/actions'
+import type { VendaReportRow } from '@/app/gerente/relatorios/vendas/actions'
 import type { PeriodoRelatorioResolvido } from '@/lib/relatorios/periodoRelatorio'
 import { RelatoriosBarChart } from './RelatoriosBarChart'
 import { RelatoriosPeriodFilters } from './RelatoriosPeriodFilters'
@@ -53,6 +55,8 @@ export type RelatoriosDados = {
   curvaAbc: RelatorioCurvaAbcDTO[]
   coberturaEstoque: RelatorioCoberturaEstoqueDTO[]
   divergenciaEstoque: RelatorioDivergenciaEstoqueDTO[]
+  semGiro: RelatorioSemGiroDTO[]
+  vendasDetalhe: VendaReportRow[]
   rpcErro: string | null
 }
 
@@ -79,6 +83,7 @@ export type RelatoriosLabels = {
   tabProdutos: string
   tabEstoque: string
   tabMargem: string
+  tabVendas: string
   tabsAria: string
   secTopProdutos: string
   secEstoqueReposicao: string
@@ -109,6 +114,22 @@ export type RelatoriosLabels = {
   divergenciaEstoqueColSaldo: string
   divergenciaEstoqueColMovimentos: string
   vazioDivergenciaEstoque: string
+  secSemGiro: string
+  semGiroHint: string
+  semGiroColSaldo: string
+  semGiroColValor: string
+  semGiroColUltimaVenda: string
+  semGiroNuncaVendeu: string
+  vazioSemGiro: string
+  secVendasDetalhe: string
+  vendasColData: string
+  vendasColCliente: string
+  vendasColVendedor: string
+  vendasColForma: string
+  vendasColValor: string
+  vendasColStatus: string
+  vendasSemCliente: string
+  vazioVendasDetalhe: string
   origemChina: string
   origemBrasil: string
   vazioProdutos: string
@@ -397,6 +418,97 @@ function DivergenciaEstoqueList({
   )
 }
 
+function SemGiroList({
+  itens,
+  labels,
+}: {
+  itens: RelatorioSemGiroDTO[]
+  labels: RelatoriosLabels
+}) {
+  if (itens.length === 0) return <EmptyState title={labels.vazioSemGiro} className="py-8" />
+  return (
+    <div className="space-y-2">
+      <p className="text-caption italic text-jl-fg-3">{labels.semGiroHint}</p>
+      <div className="overflow-x-auto">
+        <table className="w-full text-small">
+          <thead>
+            <tr className="border-b border-[var(--color-border-secondary)] text-left text-caption text-jl-fg-3">
+              <th className="py-1.5 pr-3 font-medium">{labels.curvaAbcColNome}</th>
+              <th className="py-1.5 pr-3 text-right font-medium">{labels.semGiroColSaldo}</th>
+              <th className="py-1.5 pr-3 text-right font-medium">{labels.semGiroColValor}</th>
+              <th className="py-1.5 pr-3 font-medium">{labels.semGiroColUltimaVenda}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {itens.slice(0, 30).map((p) => (
+              <tr key={p.produto_id} className="border-b border-[var(--color-background-tertiary)]">
+                <td className="max-w-[220px] truncate py-1.5 pr-3 text-jl-fg-1">{p.nome}</td>
+                <td className="py-1.5 pr-3 text-right tabular-nums text-jl-fg-2">{p.quantidade_atual}</td>
+                <td className="py-1.5 pr-3 text-right tabular-nums text-jl-fg-1">
+                  {formatBRL(p.valor_imobilizado)}
+                </td>
+                <td className="py-1.5 pr-3 text-jl-fg-3">
+                  {p.ultima_venda ? formatDateTimeOrDash(p.ultima_venda, labels.locale, 'short') : labels.semGiroNuncaVendeu}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+function VendasDetalheList({
+  vendas,
+  labels,
+}: {
+  vendas: VendaReportRow[]
+  labels: RelatoriosLabels
+}) {
+  if (vendas.length === 0) return <EmptyState title={labels.vazioVendasDetalhe} className="py-8" />
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-small">
+        <thead>
+          <tr className="border-b border-[var(--color-border-secondary)] text-left text-caption text-jl-fg-3">
+            <th className="py-1.5 pr-3 font-medium">{labels.vendasColData}</th>
+            <th className="py-1.5 pr-3 font-medium">{labels.vendasColCliente}</th>
+            <th className="py-1.5 pr-3 font-medium">{labels.vendasColVendedor}</th>
+            <th className="py-1.5 pr-3 font-medium">{labels.vendasColForma}</th>
+            <th className="py-1.5 pr-3 text-right font-medium">{labels.vendasColValor}</th>
+            <th className="py-1.5 pr-3 font-medium">{labels.vendasColStatus}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {vendas.slice(0, 100).map((v) => (
+            <tr key={v.id} className="border-b border-[var(--color-background-tertiary)]">
+              <td className="py-1.5 pr-3 text-jl-fg-2">
+                {v.data ? formatDateTimeOrDash(v.data, labels.locale, 'short') : '—'}
+              </td>
+              <td className="max-w-[180px] truncate py-1.5 pr-3 text-jl-fg-1">
+                {v.cliente_nome ?? labels.vendasSemCliente}
+              </td>
+              <td className="max-w-[160px] truncate py-1.5 pr-3 text-jl-fg-2">{v.vendedor_nome ?? '—'}</td>
+              <td className="py-1.5 pr-3 text-jl-fg-2">{v.forma_pagamento ?? '—'}</td>
+              <td className="py-1.5 pr-3 text-right tabular-nums text-jl-fg-1">{formatBRL(v.total_liquido)}</td>
+              <td className="py-1.5 pr-3">
+                <span
+                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-caption font-medium leading-none ${
+                    v.status === 'CANCELADA' ? 'admin-v2-badge-muted' : 'admin-v2-badge-gold'
+                  }`}
+                >
+                  {v.status}
+                </span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 function RelatoriosTabs({
   active,
   labels,
@@ -411,6 +523,7 @@ function RelatoriosTabs({
     produtos: labels.tabProdutos,
     estoque: labels.tabEstoque,
     margem: labels.tabMargem,
+    vendas: labels.tabVendas,
   }
   return (
     <div
@@ -625,6 +738,17 @@ export function RelatoriosContent({
             </SectionCard>
             <SectionCard title={labels.secDivergenciaEstoque}>
               <DivergenciaEstoqueList itens={dados.divergenciaEstoque} labels={labels} />
+            </SectionCard>
+            <SectionCard title={labels.secSemGiro}>
+              <SemGiroList itens={dados.semGiro} labels={labels} />
+            </SectionCard>
+          </div>
+        ) : null}
+
+        {tab === 'vendas' ? (
+          <div id="relatorios-panel-vendas" role="tabpanel" aria-labelledby="relatorios-tab-vendas">
+            <SectionCard title={labels.secVendasDetalhe}>
+              <VendasDetalheList vendas={dados.vendasDetalhe} labels={labels} />
             </SectionCard>
           </div>
         ) : null}

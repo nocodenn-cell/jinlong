@@ -5,14 +5,22 @@
 
 export type AvisoPeriodo = 'nenhum' | 'datas_invalidas' | 'periodo_invertido' | 'periodo_limitado'
 
-export type RelatoriosTabId = 'visao' | 'produtos' | 'estoque' | 'margem'
+export type RelatoriosTabId = 'visao' | 'produtos' | 'estoque' | 'margem' | 'vendas'
 
-export const RELATORIOS_TAB_IDS: RelatoriosTabId[] = ['visao', 'produtos', 'estoque', 'margem']
+export const RELATORIOS_TAB_IDS: RelatoriosTabId[] = [
+  'visao',
+  'produtos',
+  'estoque',
+  'margem',
+  'vendas',
+]
 
 export const COBERTURA_DIAS_CAP = 365
 
 export function parseRelatoriosTab(raw: string | null | undefined): RelatoriosTabId {
-  if (raw === 'produtos' || raw === 'estoque' || raw === 'margem' || raw === 'visao') return raw
+  if (raw === 'produtos' || raw === 'estoque' || raw === 'margem' || raw === 'vendas' || raw === 'visao') {
+    return raw
+  }
   return 'visao'
 }
 

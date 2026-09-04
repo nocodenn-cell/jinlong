@@ -7,6 +7,8 @@
  */
 
 import { carregarDadosRelatoriosGerente } from '@/app/gerente/relatorios/actions'
+import { buscarRelatorioVendasAvancadoAction } from '@/app/gerente/relatorios/vendas/actions'
+import { carregarProdutosSemGiro } from '@/app/gerente/relatorios/sem-giro/actions'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
@@ -36,6 +38,11 @@ export default async function AdminRelatoriosPage({ searchParams }: PageProps) {
     ate: sp.ate,
   })
 
+  const [semGiro, vendasAvancado] = await Promise.all([
+    carregarProdutosSemGiro({ de: dados.periodo.de, ate: dados.periodo.ate }),
+    buscarRelatorioVendasAvancadoAction({ de: dados.periodo.de, ate: dados.periodo.ate }),
+  ])
+
   const relDados: RelatoriosDados = {
     periodo: dados.periodo,
     tzRelatorio: dados.tzRelatorio,
@@ -47,6 +54,8 @@ export default async function AdminRelatoriosPage({ searchParams }: PageProps) {
     curvaAbc: dados.curvaAbc,
     coberturaEstoque: dados.coberturaEstoque,
     divergenciaEstoque: dados.divergenciaEstoque,
+    semGiro: semGiro.itens,
+    vendasDetalhe: vendasAvancado.ok ? vendasAvancado.vendas : [],
     rpcErro: dados.rpcErroAmigavel,
   }
 
@@ -77,6 +86,7 @@ export default async function AdminRelatoriosPage({ searchParams }: PageProps) {
         tabProdutos: ui.relatorios_tab_produtos,
         tabEstoque: ui.relatorios_tab_estoque,
         tabMargem: ui.relatorios_tab_margem,
+        tabVendas: ui.relatorios_tab_vendas,
         tabsAria: ui.relatorios_tabs_aria,
         secTopProdutos: ui.relatorios_sec_top_produtos,
         secEstoqueReposicao: ui.relatorios_sec_estoque_reposicao,
@@ -107,6 +117,22 @@ export default async function AdminRelatoriosPage({ searchParams }: PageProps) {
         divergenciaEstoqueColSaldo: ui.relatorios_divergencia_estoque_col_saldo,
         divergenciaEstoqueColMovimentos: ui.relatorios_divergencia_estoque_col_movimentos,
         vazioDivergenciaEstoque: ui.relatorios_vazio_divergencia_estoque,
+        secSemGiro: ui.relatorios_sec_sem_giro,
+        semGiroHint: ui.relatorios_sem_giro_hint,
+        semGiroColSaldo: ui.relatorios_sem_giro_col_saldo,
+        semGiroColValor: ui.relatorios_sem_giro_col_valor,
+        semGiroColUltimaVenda: ui.relatorios_sem_giro_col_ultima_venda,
+        semGiroNuncaVendeu: ui.relatorios_sem_giro_nunca_vendeu,
+        vazioSemGiro: ui.relatorios_vazio_sem_giro,
+        secVendasDetalhe: ui.relatorios_sec_vendas_detalhe,
+        vendasColData: ui.relatorios_vendas_col_data,
+        vendasColCliente: ui.relatorios_vendas_col_cliente,
+        vendasColVendedor: ui.relatorios_vendas_col_vendedor,
+        vendasColForma: ui.relatorios_vendas_col_forma,
+        vendasColValor: ui.relatorios_vendas_col_valor,
+        vendasColStatus: ui.relatorios_vendas_col_status,
+        vendasSemCliente: ui.relatorios_vendas_sem_cliente,
+        vazioVendasDetalhe: ui.relatorios_vazio_vendas_detalhe,
         origemChina: ui.relatorios_origem_china,
         origemBrasil: ui.relatorios_origem_brasil,
         vazioProdutos: ui.relatorios_vazio_produtos,
