@@ -2,7 +2,10 @@ import { describe, expect, it, vi } from 'vitest'
 import { FINANCIAL_ERROR_CODES } from '@shared-core/src/financial'
 import { createPayableReader } from './payableReader'
 
-function thenableQuery(result: { data: unknown; error: { message: string } | null }) {
+function thenableQuery(
+  result: { data: unknown; error: { message: string } | null },
+  spy?: { in?: unknown[]; lt?: unknown[] },
+) {
   const qb: Record<string, unknown> = {}
   const api = {
     select: () => api,
@@ -10,7 +13,14 @@ function thenableQuery(result: { data: unknown; error: { message: string } | nul
     range: () => api,
     eq: () => api,
     gte: () => api,
-    lt: () => api,
+    lt: (...args: unknown[]) => {
+      spy?.lt?.push(args)
+      return api
+    },
+    in: (...args: unknown[]) => {
+      spy?.in?.push(args)
+      return api
+    },
     or: () => api,
     then: (onFulfilled: (v: unknown) => unknown) => Promise.resolve(result).then(onFulfilled),
   }
@@ -47,6 +57,41 @@ describe('payableReader', () => {
       status: 'PENDENTE',
       lojaId: 'l1',
     })
+  })
+
+  it('computa atrasado por vencimento < hoje, não por igualdade de status (item 13)', async () => {
+    const row = {
+      id: 'c2',
+      fornecedor_id: 'f1',
+      descricao: 'NF vencida',
+      valor_total: 50,
+      valor_pago: 0,
+      vencimento: '2000-01-01',
+      status: 'pendente',
+      nfe_numero: null,
+      nfe_importacao_id: null,
+      criado_em: '2026-06-01',
+      loja_id: 'l1',
+      fornecedor: null,
+    }
+    const supabase = {
+      from: vi.fn(() => thenableQuery({ data: [row], error: null })),
+    } as never
+    const result = await createPayableReader(supabase).list({ page: 1, status: 'todos' })
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.contas[0].atrasado).toBe(true)
+  })
+
+  it("filtro status='atrasado' consulta por status em aberto + vencimento < hoje (não por status='ATRASADO')", async () => {
+    const spy: { in: unknown[]; lt: unknown[] } = { in: [], lt: [] }
+    const supabase = {
+      from: vi.fn(() => thenableQuery({ data: [], error: null }, spy)),
+    } as never
+    await createPayableReader(supabase).list({ page: 1, status: 'atrasado' })
+    expect(spy.in[0]?.[0]).toBe('status')
+    expect(spy.in[0]?.[1]).toEqual(expect.arrayContaining(['PENDENTE', 'PARCIAL']))
+    expect(spy.lt[0]?.[0]).toBe('vencimento')
   })
 
   it('propaga erro de listagem', async () => {

@@ -12,7 +12,7 @@ import type {
   ReceivableListRow,
   ReceivableReader,
 } from '@shared-core/src/financial'
-import { FINANCIAL_ERROR_CODES } from '@shared-core/src/financial'
+import { FINANCIAL_ERROR_CODES, hojeYmd, isTituloVencido } from '@shared-core/src/financial'
 
 /** Neutraliza os curingas de LIKE (`%`, `_`) num termo digitado pelo usuário. */
 export function escapeIlike(s: string): string {
@@ -60,19 +60,22 @@ async function resolveIdsByBusca(
   return ids.length > MAX_IDS_BUSCA ? ids.slice(0, MAX_IDS_BUSCA) : ids
 }
 
-function mapTitulo(t: Record<string, unknown>): ReceivableListRow {
+function mapTitulo(t: Record<string, unknown>, hoje: string): ReceivableListRow {
   const cn = t.clientes as { nome?: string } | { nome?: string }[] | null
   const nomeCliente = Array.isArray(cn) ? cn[0]?.nome : cn?.nome
+  const status = String(t.status)
+  const vencimento = t.vencimento != null ? String(t.vencimento) : null
   return {
     tituloId: String(t.id),
     clienteId: String(t.cliente_id),
     valorTotal: Number(t.valor_total),
     valorAberto: Number(t.valor_aberto),
-    status: String(t.status),
+    status,
     lojaId: String(t.loja_id),
     descricao: t.descricao != null ? String(t.descricao) : null,
-    vencimento: t.vencimento != null ? String(t.vencimento) : null,
+    vencimento,
     clienteNome: nomeCliente ?? null,
+    atrasado: isTituloVencido(vencimento, status, hoje),
   }
 }
 
@@ -121,9 +124,10 @@ export function createReceivableReader(supabase: SupabaseClient): ReceivableRead
         const rows = raw ?? []
         const capped = rows.length > limite
         const sliced = capped ? rows.slice(0, limite) : rows
+        const hoje = hojeYmd()
         return {
           ok: true,
-          titulos: sliced.map((t) => mapTitulo(t as Record<string, unknown>)),
+          titulos: sliced.map((t) => mapTitulo(t as Record<string, unknown>, hoje)),
           capped,
         }
       } catch (e) {

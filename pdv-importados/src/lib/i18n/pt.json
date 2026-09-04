@@ -2453,6 +2453,8 @@
     "financeiro_kpi_titulos": "Títulos em aberto",
     "financeiro_kpi_valor_aberto": "Valor aberto",
     "financeiro_kpi_hint_capped": "aprox.; capped em {{n}} itens",
+    "financeiro_kpi_vencidos": "Vencidos",
+    "financeiro_kpi_hint_vencidos": "{{n}} título(s) com vencimento no passado",
     "financeiro_kpi_registros": "Registros filtrados",
     "financeiro_kpi_truncado": "(resultado truncado)",
     "financeiro_kpi_docs_fiscais": "Documentos fiscais",

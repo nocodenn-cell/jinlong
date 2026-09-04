@@ -2636,6 +2636,8 @@
     "financeiro_kpi_titulos": "未结应收单",
     "financeiro_kpi_valor_aberto": "未结金额",
     "financeiro_kpi_hint_capped": "约；上限 {{n}} 条",
+    "financeiro_kpi_vencidos": "已逾期",
+    "financeiro_kpi_hint_vencidos": "{{n}} 笔逾期单据",
     "financeiro_kpi_registros": "已筛选记录",
     "financeiro_kpi_truncado": "（结果已截断）",
     "financeiro_kpi_docs_fiscais": "税务文件",

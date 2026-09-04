@@ -48,3 +48,5 @@ export {
   validateCreateReceivableInput,
   validateLiquidateReceivableInput,
 } from './policies/validateReceivable'
+
+export { hojeYmd, isTituloVencido } from './policies/tituloVencido'
