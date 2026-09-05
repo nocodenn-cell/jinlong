@@ -138,7 +138,7 @@ export async function previewImportacaoNfe(xml: string): Promise<
     parsed = parseNfeXml(xml)
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Falha ao ler XML.'
-    return { success: false, error: msg }
+    return { success: false, error: mapRpcImportNfe(msg) }
   }
 
   const supabase = await createClient()
