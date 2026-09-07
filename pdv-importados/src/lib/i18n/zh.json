@@ -1804,6 +1804,10 @@
   "login": {
     "subtitulo": "请登录以继续",
     "tagline": "进口贸易 · 安全运营",
+    "consentimento_pre": "登录本平台即表示您同意我们的",
+    "consentimento_termos": "服务条款",
+    "consentimento_e": "和",
+    "consentimento_privacidade": "隐私政策",
     "email_placeholder": "邮箱",
     "senha_placeholder": "密码",
     "entrar": "登录",

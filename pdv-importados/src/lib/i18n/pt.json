@@ -1621,6 +1621,10 @@
   "login": {
     "subtitulo": "Faça login para continuar",
     "tagline": "Importados · operações seguras",
+    "consentimento_pre": "Ao acessar a plataforma, você concorda com nossos",
+    "consentimento_termos": "Termos de Serviço",
+    "consentimento_e": "e",
+    "consentimento_privacidade": "Política de Privacidade",
     "email_placeholder": "Email",
     "senha_placeholder": "Senha",
     "entrar": "Entrar",
