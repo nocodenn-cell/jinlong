@@ -121,6 +121,17 @@ jobs:
           cat /tmp/jit-get.json || true
           echo
 
+          # Hipotese ainda nao testada: a API de Management (plano de
+          # controle) confirma o grant instantaneamente, mas o Supavisor
+          # (plano de dados, quem realmente faz PAM auth na conexao) pode
+          # sincronizar/cachear grants JIT periodicamente, nao em tempo
+          # real. Toda tentativa anterior conectou 1-2s apos o PUT/GET -
+          # tempo insuficiente se houver propagacao. Espera curta e barata
+          # (15s, insignificante frente aos 10 min da janela) antes da
+          # primeira tentativa real de conexao.
+          echo "Aguardando 15s para eventual propagacao do grant ao Supavisor..."
+          sleep 15
+
       - name: Descobrir host do pooler (teste real de tenant, nao pg_isready)
         id: discover-pooler
         env:
