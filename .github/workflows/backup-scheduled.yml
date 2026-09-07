@@ -61,7 +61,7 @@ jobs:
         with:
           version: latest
 
-      - name: Instalar age (cifragem) e cliente postgres (pg_isready/psql)
+      - name: Instalar age (cifragem) e cliente postgres (psql)
         run: |
           sudo apt-get update -y
           sudo apt-get install -y age postgresql-client
@@ -110,24 +110,53 @@ jobs:
           cat /tmp/jit-get.json || true
           echo
 
-      - name: Descobrir host do pooler e produzir dump (roles/schema/data)
+      - name: Descobrir host do pooler (teste real de tenant, nao pg_isready)
+        id: discover-pooler
         env:
           JIT_PAT: ${{ secrets.SUPABASE_BACKUP_JIT_PAT }}
         run: |
           set -euo pipefail
           set +x
+          # `pg_isready` so confirma que ALGUM processo Supavisor esta
+          # escutando naquele host - nao que ele conhece o tenant deste
+          # projeto. Achado ao vivo (nslookup, sem credenciais): aws-0 e
+          # aws-1-sa-east-1.pooler.supabase.com resolvem para ELBs
+          # DIFERENTES (IPs completamente distintos) - clusters realmente
+          # separados, nao copias redundantes do mesmo pool regional; aws-2+
+          # nem existe em DNS nesta regiao hoje. O host anterior (aws-0,
+          # escolhido so por responder pg_isready) causava "tenant/user ...
+          # not found" em toda tentativa, mesmo com JIT/roles/allowed_networks
+          # corretos e confirmados via GET - consistente com o projeto estar
+          # atribuido a um cluster diferente. Correcao: descobrir o host
+          # tentando a MESMA autenticacao real (JIT) que o dump vai usar,
+          # nao um ping sem autenticacao.
           host=""
-          for idx in 0 1 2; do
+          for idx in 0 1 2 3; do
             candidate="aws-${idx}-${SUPABASE_PROJECT_REGION}.pooler.supabase.com"
-            if PGCONNECT_TIMEOUT=5 pg_isready -h "$candidate" -p 5432 >/dev/null 2>&1; then
-              host="$candidate"
-              break
+            conn_probe="postgres://postgres.${SUPABASE_PROJECT_REF}:${JIT_PAT}@${candidate}:5432/postgres?options=-c%20jit%3dtrue"
+            if PGCONNECT_TIMEOUT=5 psql "$conn_probe" -Atq -v ON_ERROR_STOP=1 -c "SELECT 1" >/tmp/probe-out.txt 2>/tmp/probe-err.txt; then
+              if [ "$(cat /tmp/probe-out.txt)" = "1" ]; then
+                host="$candidate"
+                echo "Host correto encontrado: $candidate (idx=$idx)."
+                break
+              fi
             fi
+            echo "idx=$idx ($candidate): sem sucesso de tenant (detalhe sem segredo abaixo)."
+            sed -E "s#${JIT_PAT}#\*\*\*#g" /tmp/probe-err.txt || true
           done
           if [ -z "$host" ]; then
-            echo "::error::Nenhum host de pooler respondeu (aws-0/1/2-${SUPABASE_PROJECT_REGION})."
+            echo "::error::Nenhum host de pooler resolveu o tenant deste projeto (aws-0..3-${SUPABASE_PROJECT_REGION}). Ver detalhes acima (sem segredo)."
             exit 1
           fi
+          echo "pooler_host=${host}" >> "$GITHUB_OUTPUT"
+
+      - name: Produzir dump (roles/schema/data)
+        env:
+          JIT_PAT: ${{ secrets.SUPABASE_BACKUP_JIT_PAT }}
+          POOLER_HOST: ${{ steps.discover-pooler.outputs.pooler_host }}
+        run: |
+          set -euo pipefail
+          set +x
           # options=-c jit=true (nao "on"): valor exato do exemplo oficial em
           # https://supabase.com/docs/guides/platform/temporary-access. E o
           # sinal que o Supavisor usa para reconhecer a conexao como uma
@@ -136,7 +165,7 @@ jobs:
           # no roteamento normal de tenant e devolver "tenant/user ... not
           # found", pois postgres.{ref} nao e um tenant valido fora do fluxo
           # de Temporary Access.
-          conn="postgres://postgres.${SUPABASE_PROJECT_REF}:${JIT_PAT}@${host}:5432/postgres?options=-c%20jit%3dtrue"
+          conn="postgres://postgres.${SUPABASE_PROJECT_REF}:${JIT_PAT}@${POOLER_HOST}:5432/postgres?options=-c%20jit%3dtrue"
 
           mkdir -p /tmp/backup
           supabase db dump --db-url "$conn" -f /tmp/backup/roles.sql --role-only
@@ -155,26 +184,11 @@ jobs:
       - name: Manifesto de sanidade (contagens, sem dado sensivel)
         env:
           JIT_PAT: ${{ secrets.SUPABASE_BACKUP_JIT_PAT }}
+          POOLER_HOST: ${{ steps.discover-pooler.outputs.pooler_host }}
         run: |
           set -euo pipefail
           set +x
-          host=""
-          for idx in 0 1 2; do
-            candidate="aws-${idx}-${SUPABASE_PROJECT_REGION}.pooler.supabase.com"
-            if PGCONNECT_TIMEOUT=5 pg_isready -h "$candidate" -p 5432 >/dev/null 2>&1; then
-              host="$candidate"
-              break
-            fi
-          done
-          # options=-c jit=true (nao "on"): valor exato do exemplo oficial em
-          # https://supabase.com/docs/guides/platform/temporary-access. E o
-          # sinal que o Supavisor usa para reconhecer a conexao como uma
-          # sessao de Temporary Access; "on" (sinonimo booleano valido em
-          # Postgres, mas nao o literal esperado aqui) faz o Supavisor cair
-          # no roteamento normal de tenant e devolver "tenant/user ... not
-          # found", pois postgres.{ref} nao e um tenant valido fora do fluxo
-          # de Temporary Access.
-          conn="postgres://postgres.${SUPABASE_PROJECT_REF}:${JIT_PAT}@${host}:5432/postgres?options=-c%20jit%3dtrue"
+          conn="postgres://postgres.${SUPABASE_PROJECT_REF}:${JIT_PAT}@${POOLER_HOST}:5432/postgres?options=-c%20jit%3dtrue"
           psql "$conn" -Atq -c "
             SELECT json_build_object(
               'generated_at', now(),
