@@ -107,7 +107,15 @@ jobs:
             echo "::error::Nenhum host de pooler respondeu (aws-0/1/2-${SUPABASE_PROJECT_REGION})."
             exit 1
           fi
-          conn="postgres://postgres.${SUPABASE_PROJECT_REF}:${JIT_PAT}@${host}:5432/postgres?options=-c%20jit%3don"
+          # options=-c jit=true (nao "on"): valor exato do exemplo oficial em
+          # https://supabase.com/docs/guides/platform/temporary-access. E o
+          # sinal que o Supavisor usa para reconhecer a conexao como uma
+          # sessao de Temporary Access; "on" (sinonimo booleano valido em
+          # Postgres, mas nao o literal esperado aqui) faz o Supavisor cair
+          # no roteamento normal de tenant e devolver "tenant/user ... not
+          # found", pois postgres.{ref} nao e um tenant valido fora do fluxo
+          # de Temporary Access.
+          conn="postgres://postgres.${SUPABASE_PROJECT_REF}:${JIT_PAT}@${host}:5432/postgres?options=-c%20jit%3dtrue"
 
           mkdir -p /tmp/backup
           supabase db dump --db-url "$conn" -f /tmp/backup/roles.sql --role-only
@@ -137,7 +145,15 @@ jobs:
               break
             fi
           done
-          conn="postgres://postgres.${SUPABASE_PROJECT_REF}:${JIT_PAT}@${host}:5432/postgres?options=-c%20jit%3don"
+          # options=-c jit=true (nao "on"): valor exato do exemplo oficial em
+          # https://supabase.com/docs/guides/platform/temporary-access. E o
+          # sinal que o Supavisor usa para reconhecer a conexao como uma
+          # sessao de Temporary Access; "on" (sinonimo booleano valido em
+          # Postgres, mas nao o literal esperado aqui) faz o Supavisor cair
+          # no roteamento normal de tenant e devolver "tenant/user ... not
+          # found", pois postgres.{ref} nao e um tenant valido fora do fluxo
+          # de Temporary Access.
+          conn="postgres://postgres.${SUPABASE_PROJECT_REF}:${JIT_PAT}@${host}:5432/postgres?options=-c%20jit%3dtrue"
           psql "$conn" -Atq -c "
             SELECT json_build_object(
               'generated_at', now(),
