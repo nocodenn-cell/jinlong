@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { AlertTriangle, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { StatusChip } from '@/components/ui/StatusChip'
 import { SearchInput } from '@/components/ui/forms'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { EmptyState } from '@/components/ui/feedback'
@@ -98,10 +99,8 @@ function perfilBadgeClass(perfil: string): string {
   return 'border border-[var(--color-border)] bg-[var(--color-surface-muted)] text-fg-subtle'
 }
 
-function statusBadgeClass(ativo: boolean): string {
-  return ativo
-    ? 'border border-[var(--color-success-border)] bg-[var(--color-success-bg)] text-[var(--color-success-strong)]'
-    : 'border border-[var(--color-border)] bg-[var(--color-surface-muted)] text-fg-subtle'
+function renderStatusChip(ativo: boolean, L: { ativo: string; inativo: string }) {
+  return <StatusChip status={ativo ? 'ATIVO' : 'INATIVO'} label={ativo ? L.ativo : L.inativo} />
 }
 
 function grupoTitulo(id: FuncionarioGrupoId, L: FuncionariosListLabels): string {
@@ -249,9 +248,7 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
       header: L.colStatus,
       width: '100px',
       sortValue: (row) => (row.ativo ? 1 : 0),
-      cell: (row) => (
-        <Badge className={statusBadgeClass(row.ativo)}>{row.ativo ? L.ativo : L.inativo}</Badge>
-      ),
+      cell: (row) => renderStatusChip(row.ativo, L),
     },
   ]
 
@@ -438,9 +435,7 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
                                   <Badge className={perfilBadgeClass(row.perfil)}>
                                     {labelPerfil(row.perfil, L)}
                                   </Badge>
-                                  <Badge className={statusBadgeClass(row.ativo)}>
-                                    {row.ativo ? L.ativo : L.inativo}
-                                  </Badge>
+                                  {renderStatusChip(row.ativo, L)}
                                 </div>
                               </div>
                               <FuncionarioRowActions

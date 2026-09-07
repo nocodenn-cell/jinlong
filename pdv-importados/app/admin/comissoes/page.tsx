@@ -92,6 +92,7 @@ export default async function AdminComissoesPage({ searchParams }: PageProps) {
           ate: ui.comissoes_filtro_ate,
           status: ui.comissoes_status_label,
           aplicar: ui.comissoes_aplicar,
+          limpar: m.comum.limpar_filtros,
           statusTodos: ui.comissoes_status_todos,
           statusPendente: ui.comissoes_status_pendente,
           statusPago: ui.comissoes_status_pago,

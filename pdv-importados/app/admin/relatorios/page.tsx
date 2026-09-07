@@ -146,6 +146,7 @@ export default async function AdminRelatoriosPage({ searchParams }: PageProps) {
           de: ui.relatorios_filtro_de,
           ate: ui.relatorios_filtro_ate,
           aplicar: ui.relatorios_filtro_aplicar,
+          limpar: m.comum.limpar_filtros,
           exportarCsv: ui.relatorios_filtro_exportar_csv_vendas_dia,
           csvFilename: ui.relatorios_csv_filename,
           preset7: ui.relatorios_filtro_preset_7,

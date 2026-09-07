@@ -7,6 +7,7 @@ export type ComissoesFiltersLabels = {
   ate: string
   status: string
   aplicar: string
+  limpar: string
   statusTodos: string
   statusPendente: string
   statusPago: string
@@ -38,9 +39,10 @@ function hrefFor(filtro: FiltroComissoes, patch: Partial<FiltroComissoes>): stri
 
 /** Filtros URL-driven locais da tela de comissões (não altera FilterBar global). */
 export function ComissoesFilters({ filtro, presets, activePresetId, labels }: Props) {
+  const isDefault = activePresetId === '30d' && filtro.status === 'todos'
   return (
     <div id="comissoes-filtros" className="flex w-full flex-col gap-2">
-      <div className="admin-v2-segmented flex flex-wrap">
+      <div className="admin-v2-segmented flex flex-wrap items-center gap-2">
         {presets.map((preset) => (
           <Link
             key={preset.id}
@@ -51,6 +53,14 @@ export function ComissoesFilters({ filtro, presets, activePresetId, labels }: Pr
             {preset.label}
           </Link>
         ))}
+        {!isDefault ? (
+          <Link
+            href={ROUTES.admin.comissoes}
+            className="text-xs font-medium text-jl-fg-3 underline-offset-2 hover:text-jl-fg-1 hover:underline"
+          >
+            {labels.limpar}
+          </Link>
+        ) : null}
       </div>
 
       <form
