@@ -77,17 +77,38 @@ jobs:
           # atual da Supabase). "user_roles" e o nome do campo no RESPONSE
           # (JitAccessResponse), nao no request - nomes diferentes entre os
           # dois lados do mesmo endpoint.
+          #
+          # allowed_networks explicito (0.0.0.0/0): runners hospedados do
+          # GitHub nao tem IP de saida estatico - cada execucao usa um IP
+          # publico diferente (confirmado nos logs do Supavisor: 3 execucoes,
+          # 3 peer_ip diferentes). Sem essa lista, a conexao real falhava com
+          # "tenant/user ... not found" mesmo com a autorizacao JIT confirmada
+          # via GET - consistente com o campo, quando omitido, resultar em
+          # nenhuma rede permitida (nao em "todas as redes permitidas"). Nao
+          # amplia a superficie de exposicao real do projeto: o Postgres ja
+          # aceita conexoes de qualquer IP publico para os demais roles
+          # (anon/authenticated/service_role); o papel `postgres` via JIT
+          # continua restrito por tempo (10 min), role especifico e posse da
+          # PAT escopada.
           http_code=$(curl -sS -o /tmp/jit-response.json -w '%{http_code}' \
             -X PUT "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/jit" \
             -H "Authorization: Bearer ${JIT_PAT}" \
             -H "Content-Type: application/json" \
-            -d "{\"user_id\":\"${BACKUP_USER_ID}\",\"roles\":[{\"role\":\"postgres\",\"expires_at\":${expires_at_ms}}]}")
+            -d "{\"user_id\":\"${BACKUP_USER_ID}\",\"roles\":[{\"role\":\"postgres\",\"expires_at\":${expires_at_ms},\"allowed_networks\":{\"allowed_cidrs\":[{\"cidr\":\"0.0.0.0/0\"}]}}]}")
           if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
             echo "::error::Falha ao autorizar Temporary Access (HTTP ${http_code}). Corpo da resposta (sem segredo) salvo em /tmp/jit-response.json."
             cat /tmp/jit-response.json
             exit 1
           fi
           echo "JIT autorizado ate $(date -u -d "@$((expires_at_ms/1000))" '+%Y-%m-%dT%H:%M:%SZ')."
+
+          # Confirma via GET (sem PAT no output) o que foi de fato gravado -
+          # diagnostico direto, sem depender de leitura manual fora do CI.
+          curl -sS -o /tmp/jit-get.json -w 'GET jit-access: HTTP %{http_code}\n' \
+            -X GET "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/jit" \
+            -H "Authorization: Bearer ${JIT_PAT}" || true
+          cat /tmp/jit-get.json || true
+          echo
 
       - name: Descobrir host do pooler e produzir dump (roles/schema/data)
         env:
