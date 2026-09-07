@@ -73,11 +73,15 @@ jobs:
         run: |
           set -euo pipefail
           expires_at_ms=$(( ($(date -u +%s) + 600) * 1000 ))
+          # Corpo do PUT usa "roles" (UpdateJitAccessBody, confirmado no OpenAPI
+          # atual da Supabase). "user_roles" e o nome do campo no RESPONSE
+          # (JitAccessResponse), nao no request - nomes diferentes entre os
+          # dois lados do mesmo endpoint.
           http_code=$(curl -sS -o /tmp/jit-response.json -w '%{http_code}' \
             -X PUT "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/jit" \
             -H "Authorization: Bearer ${JIT_PAT}" \
             -H "Content-Type: application/json" \
-            -d "{\"user_id\":\"${BACKUP_USER_ID}\",\"user_roles\":[{\"role\":\"postgres\",\"expires_at\":${expires_at_ms}}]}")
+            -d "{\"user_id\":\"${BACKUP_USER_ID}\",\"roles\":[{\"role\":\"postgres\",\"expires_at\":${expires_at_ms}}]}")
           if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
             echo "::error::Falha ao autorizar Temporary Access (HTTP ${http_code}). Corpo da resposta (sem segredo) salvo em /tmp/jit-response.json."
             cat /tmp/jit-response.json
