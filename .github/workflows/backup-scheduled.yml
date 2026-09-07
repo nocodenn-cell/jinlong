@@ -72,6 +72,17 @@ jobs:
           BACKUP_USER_ID: ${{ vars.SUPABASE_BACKUP_USER_ID }}
         run: |
           set -euo pipefail
+          # Diagnostico seguro (nunca imprime o valor): confirma que o secret
+          # nao carrega espaco/nova linha acidental - a API de Management
+          # (Authorization: Bearer) costuma tolerar isso, mas uma senha bruta
+          # embutida numa connection string (URI/libpq) nao tolera, e o
+          # sintoma seria um "PAM authentication failed" identico ao de uma
+          # senha genuinamente errada.
+          if printf '%s' "$JIT_PAT" | grep -q '[[:space:]]'; then
+            echo "::warning::SUPABASE_BACKUP_JIT_PAT contem espaco em branco/nova linha - pode corromper a senha bruta usada na connection string do pooler."
+          fi
+          echo "Diagnostico seguro (sem expor valor): comprimento do PAT = $(printf '%s' "$JIT_PAT" | wc -c) caracteres."
+
           expires_at_ms=$(( ($(date -u +%s) + 600) * 1000 ))
           # Corpo do PUT usa "roles" (UpdateJitAccessBody, confirmado no OpenAPI
           # atual da Supabase). "user_roles" e o nome do campo no RESPONSE
@@ -130,10 +141,18 @@ jobs:
           # atribuido a um cluster diferente. Correcao: descobrir o host
           # tentando a MESMA autenticacao real (JIT) que o dump vai usar,
           # nao um ping sem autenticacao.
+          # Percent-encode a senha antes de embuti-la na URI: a API de
+          # Management (Authorization: Bearer) nao passa pelo parser de URI,
+          # mas aqui o valor vai dentro de postgres://user:SENHA@host/... -
+          # qualquer caractere reservado (:, /, @, %, ?, #, etc.) no PAT
+          # quebraria o parsing da URI e mandaria uma senha diferente (ou
+          # trunca) para o servidor, produzindo o MESMO sintoma de uma senha
+          # genuinamente errada ("PAM authentication failed").
+          JIT_PAT_ENC=$(jq -rn --arg v "$JIT_PAT" '$v|@uri')
           host=""
           for idx in 0 1 2 3; do
             candidate="aws-${idx}-${SUPABASE_PROJECT_REGION}.pooler.supabase.com"
-            conn_probe="postgres://postgres.${SUPABASE_PROJECT_REF}:${JIT_PAT}@${candidate}:5432/postgres?options=-c%20jit%3dtrue"
+            conn_probe="postgres://postgres.${SUPABASE_PROJECT_REF}:${JIT_PAT_ENC}@${candidate}:5432/postgres?options=-c%20jit%3dtrue"
             if PGCONNECT_TIMEOUT=5 psql "$conn_probe" -Atq -v ON_ERROR_STOP=1 -c "SELECT 1" >/tmp/probe-out.txt 2>/tmp/probe-err.txt; then
               if [ "$(cat /tmp/probe-out.txt)" = "1" ]; then
                 host="$candidate"
@@ -142,7 +161,7 @@ jobs:
               fi
             fi
             echo "idx=$idx ($candidate): sem sucesso de tenant (detalhe sem segredo abaixo)."
-            sed -E "s#${JIT_PAT}#\*\*\*#g" /tmp/probe-err.txt || true
+            sed -E "s#${JIT_PAT}#***#g; s#${JIT_PAT_ENC}#***#g" /tmp/probe-err.txt || true
           done
           if [ -z "$host" ]; then
             echo "::error::Nenhum host de pooler resolveu o tenant deste projeto (aws-0..3-${SUPABASE_PROJECT_REGION}). Ver detalhes acima (sem segredo)."
@@ -165,7 +184,12 @@ jobs:
           # no roteamento normal de tenant e devolver "tenant/user ... not
           # found", pois postgres.{ref} nao e um tenant valido fora do fluxo
           # de Temporary Access.
-          conn="postgres://postgres.${SUPABASE_PROJECT_REF}:${JIT_PAT}@${POOLER_HOST}:5432/postgres?options=-c%20jit%3dtrue"
+          #
+          # Senha percent-encoded (jq @uri) antes de embutir na URI - mesmo
+          # motivo do step de descoberta: um caractere reservado no PAT bruto
+          # quebraria o parsing e mandaria a senha errada ao servidor.
+          JIT_PAT_ENC=$(jq -rn --arg v "$JIT_PAT" '$v|@uri')
+          conn="postgres://postgres.${SUPABASE_PROJECT_REF}:${JIT_PAT_ENC}@${POOLER_HOST}:5432/postgres?options=-c%20jit%3dtrue"
 
           mkdir -p /tmp/backup
           supabase db dump --db-url "$conn" -f /tmp/backup/roles.sql --role-only
@@ -188,7 +212,8 @@ jobs:
         run: |
           set -euo pipefail
           set +x
-          conn="postgres://postgres.${SUPABASE_PROJECT_REF}:${JIT_PAT}@${POOLER_HOST}:5432/postgres?options=-c%20jit%3dtrue"
+          JIT_PAT_ENC=$(jq -rn --arg v "$JIT_PAT" '$v|@uri')
+          conn="postgres://postgres.${SUPABASE_PROJECT_REF}:${JIT_PAT_ENC}@${POOLER_HOST}:5432/postgres?options=-c%20jit%3dtrue"
           psql "$conn" -Atq -c "
             SELECT json_build_object(
               'generated_at', now(),
