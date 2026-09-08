@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Badge } from '@/components/ui/badge'
+import { StatusChip } from '@/components/ui/StatusChip'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { EmptyState, ErrorState } from '@/components/ui/feedback'
 import { ROUTES } from '@shared-core/navigation/routes'
@@ -43,11 +43,7 @@ function statusBadge(
   labels: Pick<Labels, 'statusDone' | 'statusCancelled'>,
 ) {
   const label = status === 'CONCLUIDA' ? labels.statusDone : labels.statusCancelled
-  const className =
-    status === 'CONCLUIDA'
-      ? 'border border-[var(--color-success-border)] bg-[var(--color-success-bg)] text-[var(--color-success-strong)]'
-      : 'border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger-strong)]'
-  return <Badge className={className}>{label}</Badge>
+  return <StatusChip status={status} label={label} />
 }
 
 /**

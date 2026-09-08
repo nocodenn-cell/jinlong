@@ -13,12 +13,14 @@
  */
 
 import Link from 'next/link'
+import { Suspense } from 'react'
 import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
 import { createClient } from '@/lib/supabase/server'
 import { MetricCard, PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import type { MetricCardIconKey } from '@/components/ui/admin-v2/MetricCard'
+import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
 import { buscarVendasPaginadasAction, type VendasFiltro } from '@/app/gerente/vendas/actions'
 import { formatBRL, formatNumberLocale } from '@/lib/format/money'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
@@ -199,6 +201,37 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
   if (status !== 'all') chips.push({ key: 'status', label: STATUS_LABEL_I18N[status] })
   if (pagamento !== 'all') chips.push({ key: 'pagamento', label: `${m.gerente.col_forma}: ${PAGAMENTO_LABEL_I18N[pagamento]}` })
 
+  // Controles de status/pagamento: as chips acima já permitem remover, mas
+  // faltava UI para ATIVAR esses dois filtros (só davam pra setar editando a
+  // URL na mão). O período continua nos pills do PageHeader (já funcionava).
+  const statusPagamentoFilters: FilterDef[] = [
+    {
+      type: 'select',
+      key: 'status',
+      label: m.gerente.col_status,
+      defaultValue: 'all',
+      options: [
+        { value: 'all', label: ui.filtro_todos },
+        { value: 'CONCLUIDA', label: STATUS_LABEL_I18N.CONCLUIDA },
+        { value: 'CANCELADA', label: STATUS_LABEL_I18N.CANCELADA },
+      ],
+    },
+    {
+      type: 'select',
+      key: 'pagamento',
+      label: m.gerente.col_forma,
+      defaultValue: 'all',
+      options: [
+        { value: 'all', label: ui.filtro_todos },
+        { value: 'DINHEIRO', label: PAGAMENTO_LABEL_I18N.DINHEIRO },
+        { value: 'PIX', label: PAGAMENTO_LABEL_I18N.PIX },
+        { value: 'CARTAO_CREDITO', label: PAGAMENTO_LABEL_I18N.CARTAO_CREDITO },
+        { value: 'CARTAO_DEBITO', label: PAGAMENTO_LABEL_I18N.CARTAO_DEBITO },
+        { value: 'CARTAO', label: PAGAMENTO_LABEL_I18N.CARTAO },
+      ],
+    },
+  ]
+
   const periodOptions: Array<{ id: Periodo; label: string }> = [
     { id: 'hoje', label: ui.vendas_periodo_label_hoje },
     { id: 'ontem', label: ui.vendas_periodo_label_ontem },
@@ -291,6 +324,12 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
           </span>
         }
       >
+        <div className="mb-3">
+          <Suspense fallback={<div className="h-8" />}>
+            <FilterBar filters={statusPagamentoFilters} clearable={false} resetPageOnChange />
+          </Suspense>
+        </div>
+
         {chips.length > 0 ? (
           <div className="mb-3 flex flex-wrap items-center gap-1.5">
             {chips.map((chip) => (

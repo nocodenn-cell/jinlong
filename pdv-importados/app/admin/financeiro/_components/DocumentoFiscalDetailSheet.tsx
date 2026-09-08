@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react'
 import { X } from 'lucide-react'
-import { GerenteStatusBadge } from '@/components/gerente/GerenteStatusBadge'
+import { StatusChip } from '@/components/ui/StatusChip'
 import { ConfirmActionButton } from '@/components/gerente/ConfirmActionButton'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { reprocessarDocumentoFiscal } from '@/app/gerente/financeiro/actions'
@@ -97,7 +97,7 @@ export function DocumentoFiscalDetailSheet({ documentoId, onClose, locale }: Pro
           ) : (
             <>
               <div className="mb-4 flex flex-wrap items-center gap-2">
-                <GerenteStatusBadge status={doc.status} />
+                <StatusChip status={doc.status} />
                 <span className="text-sm text-jl-fg-2">{doc.tipo_doc}</span>
               </div>
               <dl className="space-y-2 text-sm text-jl-fg-2">

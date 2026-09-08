@@ -230,9 +230,9 @@ export function LoginForm({ messages: m, locale }: Props) {
           </form>
 
           <p className="login-legal mt-6 text-center">
-            Ao acessar a plataforma, você concorda com nossos{' '}
-            <a href="/termos">Termos de Serviço</a> e{' '}
-            <a href="/privacidade">Política de Privacidade</a>.
+            {L.consentimento_pre}{' '}
+            <a href="/termos">{L.consentimento_termos}</a> {L.consentimento_e}{' '}
+            <a href="/privacidade">{L.consentimento_privacidade}</a>.
           </p>
         </div>
       </div>

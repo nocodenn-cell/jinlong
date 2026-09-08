@@ -10,6 +10,7 @@ export type RelatoriosFiltrosLabels = {
   de: string
   ate: string
   aplicar: string
+  limpar: string
   exportarCsv: string
   csvFilename: string
   preset7: string
@@ -63,6 +64,13 @@ function isPresetActive(dias: number, de?: string, ate?: string): boolean {
   return de === preset.de && ate === preset.ate
 }
 
+function limparHref(tab?: string): string {
+  const q = new URLSearchParams()
+  if (tab && tab !== 'visao') q.set('tab', tab)
+  const qs = q.toString()
+  return qs ? `${ROUTES.admin.relatorios}?${qs}` : ROUTES.admin.relatorios
+}
+
 export function RelatoriosPeriodFilters({
   de,
   ate,
@@ -85,21 +93,31 @@ export function RelatoriosPeriodFilters({
     >
       {tab && tab !== 'visao' ? <input type="hidden" name="tab" value={tab} /> : null}
 
-      <div
-        className="admin-v2-segmented flex flex-wrap gap-1"
-        role="group"
-        aria-label={labels.presetsAria}
-      >
-        {presets.map((preset) => (
+      <div className="flex flex-wrap items-center gap-2">
+        <div
+          className="admin-v2-segmented flex flex-wrap gap-1"
+          role="group"
+          aria-label={labels.presetsAria}
+        >
+          {presets.map((preset) => (
+            <Link
+              key={preset.dias}
+              href={presetHref(preset.dias, tab)}
+              data-active={isPresetActive(preset.dias, de, ate)}
+              className="admin-v2-filter-pill rounded-full px-3 py-1.5 text-caption font-medium transition-colors"
+            >
+              {preset.label}
+            </Link>
+          ))}
+        </div>
+        {!isPresetActive(30, de, ate) ? (
           <Link
-            key={preset.dias}
-            href={presetHref(preset.dias, tab)}
-            data-active={isPresetActive(preset.dias, de, ate)}
-            className="admin-v2-filter-pill rounded-full px-3 py-1.5 text-caption font-medium transition-colors"
+            href={limparHref(tab)}
+            className="text-caption font-medium text-jl-fg-3 underline-offset-2 hover:text-jl-fg-1 hover:underline"
           >
-            {preset.label}
+            {labels.limpar}
           </Link>
-        ))}
+        ) : null}
       </div>
 
       <div className="flex flex-wrap items-end gap-2">
