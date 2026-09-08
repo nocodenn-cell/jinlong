@@ -224,6 +224,17 @@ jobs:
           deno check --config backend/supabase/functions/validar-gerente/deno.json backend/supabase/functions/validar-gerente/index.ts
           deno check --config backend/supabase/functions/fiscal-worker/deno.json backend/supabase/functions/fiscal-worker/index.ts
 
+      # `deno check` sozinho nao pega quebra de runtime: 680984c7 trocou o import
+      # de bcryptjs, passou no type-check e derrubou toda autorizacao de gerente
+      # por ~3 meses. Este passo executa os testes Deno do _shared (ate entao
+      # existiam testes no repo sem nenhum invocador em CI).
+      - name: Test Edge Functions (_shared)
+        # `--no-lock`: executar o modulo resolve submodulos que o `deno check`
+        # nunca tocou, e o lockfile versionado esta no formato v4 (o backend
+        # fixa `deno@2.2.2`, que nao le v5). Sem isto, o passo reescreveria o
+        # lock e criaria churn/quebra por efeito colateral.
+        run: deno test --no-lock --allow-net backend/supabase/functions/_shared/
+
   outbox-contract:
     runs-on: ubuntu-latest
     timeout-minutes: 10
