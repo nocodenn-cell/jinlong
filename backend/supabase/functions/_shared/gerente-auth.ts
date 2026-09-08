@@ -1,7 +1,30 @@
-// @types/bcryptjs usa `export =` (sem default export), entao import default falha
-// no type-check (TS1192). Namespace import e a forma canonica e mantem o runtime
-// identico (esm.sh expoe compareSync como named export do modulo CJS).
+// @types/bcryptjs usa `export =` (sem default export), entao import default
+// falha no type-check (TS1192). Porem, em runtime (Deno/esm.sh) o modulo CJS
+// chega como `{ default: { compareSync, ... } }` — os metodos NAO ficam no topo
+// do namespace. Ou seja: `import * as bcrypt` type-checa, mas
+// `bcrypt.compareSync` e `undefined` quando executa.
+//
+// Foi esse o efeito de 680984c7 ("Runtime identico" na mensagem do commit era
+// incorreto): `bcrypt.compareSync is not a function` derrubou toda autorizacao
+// de gerente que passa por este helper. Falha fechada — negava sempre, nunca
+// autorizou indevidamente.
+//
+// Import namespace (satisfaz o type-check) + acesso via `.default` (shape real
+// do runtime) resolve os dois lados.
 import * as bcrypt from "https://esm.sh/bcryptjs@2.4.3";
+
+const bcryptImpl = (bcrypt as unknown as { default: typeof bcrypt }).default;
+
+/**
+ * Compara a senha em claro com o hash bcrypt do gerente.
+ *
+ * Isolada e exportada para que o teste de regressao exercite exatamente o
+ * caminho usado em producao — o bug de 680984c7 passou porque nao havia
+ * nenhum teste tocando esta linha.
+ */
+export function verificarSenhaGerenteBcrypt(senha: string, hash: string): boolean {
+  return bcryptImpl.compareSync(senha, hash);
+}
 
 const RATE_WINDOW_MS = 15 * 60 * 1000;
 const LOCK_MS = 15 * 60 * 1000;
@@ -391,7 +414,7 @@ export async function validateGerenteAndIssueToken(
     let senhaValida = false;
     const bcryptHash = typeof config.gerente_senha_bcrypt === "string" ? config.gerente_senha_bcrypt : "";
     if (isBcryptHash(bcryptHash)) {
-      senhaValida = bcrypt.compareSync(senha, bcryptHash);
+      senhaValida = verificarSenhaGerenteBcrypt(senha, bcryptHash);
     } else {
       log({
         level: "error",
