@@ -14,6 +14,7 @@ import {
 import type { UseProdutoFormReturn } from './useProdutoForm'
 import type { ProdutoFormShellProps } from './produtoForm.types'
 import type { ProdutoFormErro } from './produtoForm.clientValidation'
+import { CAMPO_INVALIDO_CLASS, CampoErroMsg, erroDoCampo } from './CampoErro'
 import { EssencialSection } from './sections/EssencialSection'
 import { PrecosSection } from './sections/PrecosSection'
 import { CategoriaQuickField } from './sections/CategoriaQuickField'
@@ -107,6 +108,7 @@ export function ProdutoForm(props: Props) {
   }
 
   const p = props.m.produtos
+  const erroAtacado = erroDoCampo(props.erro, 'preco_atacado')
   const faixasSlot =
     props.readOnly.produtoId !== null ? (
       <FaixasAtacadoEditor
@@ -115,7 +117,44 @@ export function ProdutoForm(props: Props) {
         precoAtacadoCatalogo={props.precoAtacadoInput.parse()}
       />
     ) : (
-      <p className="text-caption text-jl-fg-3">{p.hint_faixas_apos_salvar}</p>
+      // Cadastro rápido: sem produtoId ainda, a tabela precos_atacado não tem
+      // como ser editada (FaixasAtacadoEditor exige um produto existente).
+      // Estes 2 campos alimentam `p_faixa` na RPC de criação
+      // (criar_produto_com_estoque_inicial, Onda 2 · Bloco 4): a 1ª faixa é
+      // criada ATOMICAMENTE junto com o produto, sem precisar salvar/reabrir/
+      // editar depois. Faixas extras exigem o produto já existir (acima).
+      <div className="space-y-2">
+        <div className="grid grid-cols-2 gap-3">
+          <label className="block text-xs font-medium text-jl-fg-3">
+            {p.preco_atacado}
+            <input
+              type="text"
+              inputMode="decimal"
+              className={`${fields.inputMonoClassName} mt-1 ${erroAtacado ? CAMPO_INVALIDO_CLASS : ''}`}
+              value={props.precoAtacadoInput.display}
+              onChange={props.precoAtacadoInput.onChange}
+              disabled={props.disabled}
+              placeholder="0,00"
+              data-field="preco_atacado"
+              aria-invalid={erroAtacado ? true : undefined}
+            />
+            <CampoErroMsg mensagem={erroAtacado} />
+          </label>
+          <label className="block text-xs font-medium text-jl-fg-3">
+            {p.qtd_gatilho_atacado}
+            <input
+              type="text"
+              inputMode="numeric"
+              className={`${fields.inputMonoClassName} mt-1`}
+              value={props.quantidadeGatilho}
+              onChange={(e) => props.setQuantidadeGatilho(e.target.value.replace(/\D/g, ''))}
+              disabled={props.disabled}
+              placeholder="0"
+            />
+          </label>
+        </div>
+        <p className="text-caption text-jl-fg-3">{p.hint_faixas_apos_salvar}</p>
+      </div>
     )
   const historicoSlot =
     props.readOnly.produtoId !== null ? (
