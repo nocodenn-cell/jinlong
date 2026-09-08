@@ -229,11 +229,15 @@ jobs:
       # por ~3 meses. Este passo executa os testes Deno do _shared (ate entao
       # existiam testes no repo sem nenhum invocador em CI).
       - name: Test Edge Functions (_shared)
+        # `--no-check`: o job nao roda `npm ci`, entao o type-check do teste nao
+        # resolve `npm:@types/node` (dependencia transitiva de @types/bcryptjs).
+        # O type-check de producao ja e feito no passo anterior; aqui o que
+        # importa e a execucao real.
         # `--no-lock`: executar o modulo resolve submodulos que o `deno check`
         # nunca tocou, e o lockfile versionado esta no formato v4 (o backend
         # fixa `deno@2.2.2`, que nao le v5). Sem isto, o passo reescreveria o
         # lock e criaria churn/quebra por efeito colateral.
-        run: deno test --no-lock --allow-net backend/supabase/functions/_shared/
+        run: deno test --no-lock --no-check --allow-net backend/supabase/functions/_shared/
 
   outbox-contract:
     runs-on: ubuntu-latest
