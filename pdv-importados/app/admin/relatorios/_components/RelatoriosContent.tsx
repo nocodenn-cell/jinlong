@@ -57,6 +57,7 @@ export type RelatoriosDados = {
   divergenciaEstoque: RelatorioDivergenciaEstoqueDTO[]
   semGiro: RelatorioSemGiroDTO[]
   vendasDetalhe: VendaReportRow[]
+  vendasDetalheErro: string | null
   rpcErro: string | null
 }
 
@@ -748,7 +749,15 @@ export function RelatoriosContent({
         {tab === 'vendas' ? (
           <div id="relatorios-panel-vendas" role="tabpanel" aria-labelledby="relatorios-tab-vendas">
             <SectionCard title={labels.secVendasDetalhe}>
-              <VendasDetalheList vendas={dados.vendasDetalhe} labels={labels} />
+              {dados.vendasDetalheErro ? (
+                <ErrorState
+                  title={labels.erroTitulo}
+                  description={dados.vendasDetalheErro}
+                  dense
+                />
+              ) : (
+                <VendasDetalheList vendas={dados.vendasDetalhe} labels={labels} />
+              )}
             </SectionCard>
           </div>
         ) : null}
