@@ -4111,6 +4111,74 @@ export type Database = {
         }
         Relationships: []
       }
+      tokens_autorizacao_operacao: {
+        Row: {
+          alvo_id: string
+          created_at: string
+          expira_em: string
+          finalidade: string
+          gerente_id: string
+          loja_id: string
+          solicitante_id: string | null
+          token: string
+          usado: boolean
+          usado_em: string | null
+        }
+        Insert: {
+          alvo_id: string
+          created_at?: string
+          expira_em: string
+          finalidade: string
+          gerente_id: string
+          loja_id: string
+          solicitante_id?: string | null
+          token: string
+          usado?: boolean
+          usado_em?: string | null
+        }
+        Update: {
+          alvo_id?: string
+          created_at?: string
+          expira_em?: string
+          finalidade?: string
+          gerente_id?: string
+          loja_id?: string
+          solicitante_id?: string | null
+          token?: string
+          usado?: boolean
+          usado_em?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tokens_autorizacao_operacao_gerente_id_fkey"
+            columns: ["gerente_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tokens_autorizacao_operacao_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tokens_autorizacao_operacao_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["loja_id"]
+          },
+          {
+            foreignKeyName: "tokens_autorizacao_operacao_solicitante_id_fkey"
+            columns: ["solicitante_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tokens_desconto_gerente: {
         Row: {
           created_at: string
@@ -5363,6 +5431,15 @@ export type Database = {
       confirmar_remessa_entrada: {
         Args: { p_remessa_id: string }
         Returns: undefined
+      }
+      consumir_token_autorizacao_operacao: {
+        Args: {
+          p_alvo_id: string
+          p_finalidade: string
+          p_loja_id: string
+          p_token: string
+        }
+        Returns: string
       }
       converter_venda_em_espera: { Args: { p_id: string }; Returns: Json }
       criar_confirmar_remessa_entrada: {
