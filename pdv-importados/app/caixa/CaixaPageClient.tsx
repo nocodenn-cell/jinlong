@@ -862,6 +862,13 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     [m.caixa.msg_caixa_aberto, recarregarStatusCaixa, setCaixaMensagem, tocarFeedback],
   )
 
+  // `movimentacoes` ja chegava ao cliente, mas so alimentava o resumo de
+  // fechamento -- nenhuma superficie mostrava as pendentes ao operador.
+  const movimentacoesPendentes = useMemo(
+    () => movimentacoes.filter((mv) => mv.status === "pendente"),
+    [movimentacoes],
+  )
+
   const handleFecharCaixa = useCallback(() => {
     if (processandoCaixa) return
     if (itens.length > 0) {
@@ -873,6 +880,16 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
 
   const handleAbrirSuprimento = useCallback(() => {
     setMovimentacaoModalTipo("suprimento")
+  }, [])
+
+  /**
+   * Movimentacao `pendente` -> confirmacao -> `CaixaMovimentacaoAcaoModal`.
+   * `handleConfirmarAcaoSensivel` ja tratava `tipo: "cancelar"`, mas nada nunca
+   * chamava `setConfirmacaoPendente` com esse tipo: o ramo era inalcancavel e a
+   * pendencia so saia do caminho por acesso direto ao banco.
+   */
+  const handleResolverPendencia = useCallback((item: MovimentacaoCaixaDTO) => {
+    setConfirmacaoPendente({ tipo: "cancelar", item })
   }, [])
 
   const handleAbrirSangria = useCallback(() => {
@@ -1587,6 +1604,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 onAbrirCaixa={handleAbrirCaixaClick}
                 onConsultaRapida={() => setConsultaRapidaAberta(true)}
                 onSelecionarCliente={abrirSelecionarCliente}
+                movimentacoesPendentes={movimentacoesPendentes}
+                onResolverPendencia={handleResolverPendencia}
               />
               <div className="border-t pt-2 text-xs font-semibold uppercase tracking-wide border-border text-muted-foreground">
                 {m.caixa.rail_titulo_em_aberto}
@@ -1634,6 +1653,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 onAbrirCaixa={handleAbrirCaixaClick}
                 onConsultaRapida={() => setConsultaRapidaAberta(true)}
                 onSelecionarCliente={abrirSelecionarCliente}
+                movimentacoesPendentes={movimentacoesPendentes}
+                onResolverPendencia={handleResolverPendencia}
               />
             </div>
           </div>
