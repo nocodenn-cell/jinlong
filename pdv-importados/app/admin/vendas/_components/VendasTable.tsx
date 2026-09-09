@@ -259,7 +259,12 @@ export function VendasTable({
       <DataTable
         data={vendas}
         columns={columns}
-        rowKey={(r) => r.id}
+        // A listagem vem de `listar_venda_eventos_gerente`: uma linha por EVENTO
+        // (SALE_REGISTERED / SALE_CANCELLED), nao por venda. `r.id` e o sale_id,
+        // entao uma venda cancelada rendia duas linhas com a MESMA key e o React
+        // avisava "two children with the same key" -- com risco de associar a
+        // linha errada em re-render. A identidade da linha e o evento.
+        rowKey={(r) => `${r.id}:${r.data ?? ''}:${r.status ?? ''}`}
         emptyState={
           <div className="flex flex-col items-center gap-2 py-16 text-center">
             <span className="text-4xl text-jl-fg-3" aria-hidden>🧾</span>
