@@ -1,6 +1,5 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 import { mensagemErroComSecao, mensagemErroDeExcecao } from '@/lib/errors/mensagemErroUsuario'
 import { idiomaOperadorParaErro } from '@/app/caixa/server/caixaErroOperador'
 import { caixaMsgOperador, caixaMsgServidor } from '@/app/caixa/server/caixaMensagensServidor'
@@ -122,8 +121,13 @@ export async function autorizarMovimentacaoGerenteImpl(
     }
 
     const { ipAddress, userAgent } = await coletarAuditoriaRequest()
-    const admin = createAdminClient()
-    const { data, error } = await admin.rpc('aprovar_movimentacao', {
+    // Client de SESSAO, nao service role: `aprovar_movimentacao` deriva o
+    // solicitante de `auth.uid()` e exige que ele seja o operador da
+    // movimentacao ou gestor da loja. A chave de service role nao carrega
+    // `sub`, entao `auth.uid()` vinha NULL e o guard `MOV_CAIXA_APROVACAO_AUTH`
+    // recusava TODA aprovacao. A autoridade da operacao continua sendo o token
+    // tipado consumido dentro da RPC, nao o chamador.
+    const { data, error } = await supabase.rpc('aprovar_movimentacao', {
       p_movimentacao_id: movimentacaoId,
       p_ip_address: ipAddress ?? undefined,
       p_user_agent: userAgent ?? undefined,
