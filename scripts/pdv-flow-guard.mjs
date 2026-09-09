@@ -30,6 +30,20 @@ const checks = [
       { token: 'try {', why: 'try/catch na finalização' },
       { token: 'catch', why: 'tratamento de erro na finalização (motivo claro)' },
     ],
+    mustInside: [
+      {
+        scope: 'const handleFinalizar = useCallback(',
+        token: 'useCarrinhoStore.getState().vendaFinalizacaoPendente',
+        within: 1500,
+        why:
+          'trava de venda pendente DENTRO de handleFinalizar. Sem ela, o ' +
+          'operador reenvia a finalização de uma venda que pode já ter sido ' +
+          'gravada; o banco recusa o retry sob a mesma chave de idempotência, ' +
+          'mas a recusa libera a pendência no cliente e a tentativa seguinte ' +
+          'grava uma venda NOVA — estoque e dinheiro em dobro. (handleNovoCupom ' +
+          'já tinha a trava; este era o caminho descoberto.)',
+      },
+    ],
   },
   {
     file: path.join(shared, 'src', 'stores', 'unifiedCartStore.ts'),
@@ -46,7 +60,7 @@ const checks = [
 ]
 
 const violations = []
-for (const { file, must } of checks) {
+for (const { file, must, mustInside } of checks) {
   if (!fs.existsSync(file)) {
     violations.push(`${path.relative(root, file)}: arquivo essencial do fluxo PDV ausente`)
     continue
@@ -55,6 +69,21 @@ for (const { file, must } of checks) {
   for (const { token, why } of must) {
     if (!text.includes(token)) {
       violations.push(`${path.relative(root, file)}: faltou "${token}" — ${why}`)
+    }
+  }
+  // Presença dentro de um escopo: o token tem que estar logo no início do bloco
+  // indicado, não em qualquer lugar do arquivo (o mesmo token existe em outros
+  // handlers, então uma busca global não provaria nada).
+  for (const { scope, token, within, why } of mustInside ?? []) {
+    const at = text.indexOf(scope)
+    if (at === -1) {
+      violations.push(`${path.relative(root, file)}: escopo "${scope}" não encontrado — ${why}`)
+      continue
+    }
+    if (!text.slice(at, at + within).includes(token)) {
+      violations.push(
+        `${path.relative(root, file)}: "${token}" ausente no início de "${scope}" — ${why}`,
+      )
     }
   }
 }
