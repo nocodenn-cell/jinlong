@@ -34,6 +34,28 @@ const catalogRow: ProductCatalogBasics = {
   imagemUrl: null,
 }
 
+describe('salvar catálogo preserva as faixas administradas pelo editor', () => {
+  it('par inalterado não envia sincronização nem remoção de faixas à RPC', async () => {
+    const rpc = vi.fn(async (_nome: string, _args: Record<string, unknown>) => ({ error: null }))
+    const supabase = {
+      rpc,
+      from: () => ({ select: () => ({ eq: () => ({ eq: () => ({
+        maybeSingle: async () => ({ data: { preco_atacado: 80, quantidade_gatilho_atacado: 5 }, error: null }),
+      }) }) }) }),
+    }
+    const getById = vi.fn(async () => ({ ok: true as const, product: catalogRow }))
+    const updater = createProductUpdater(supabase as never, { reader: { getById } })
+    const result = await updater.update({ id: 'prod-1', lojaId: 'loja-1', input: {
+      nome: 'Produto editado', precoVarejo: 100, precoAtacado: 80, quantidadeGatilhoAtacado: 5,
+    } })
+    expect(result.ok).toBe(true)
+    const args = rpc.mock.calls[0]![1]
+    expect(args.p_faixa).toBeNull()
+    expect(args.p_payload).not.toHaveProperty('preco_atacado')
+    expect(args.p_payload).not.toHaveProperty('quantidade_gatilho_atacado')
+  })
+})
+
 describe('productUpdater — mapping', () => {
   it('mapUpdateProductInputToRow mapeia catálogo sem colunas de estoque', () => {
     const row = mapUpdateProductInputToRow({
@@ -581,9 +603,9 @@ describe('banco sem a RPC transacional: recusa em vez de estado parcial', () => 
   it('erro REAL da RPC não vira caminho sem-RPC — não mascara falha', async () => {
     const supabase = {
       rpc: vi.fn(async () => ({ error: { code: 'P0001', message: 'ATUALIZAR_PRODUTO_NAO_ENCONTRADO' } })),
-      from: () => {
-        throw new Error('não deveria cair no caminho sem-RPC')
-      },
+      from: () => ({ select: () => ({ eq: () => ({ eq: () => ({
+        maybeSingle: async () => ({ data: { preco_atacado: null, quantidade_gatilho_atacado: null }, error: null }),
+      }) }) }) }),
     }
     const { createProductUpdater: criar } = await import('./productUpdater')
     const getById = vi.fn(async () => ({ ok: true as const, product: catalogRow }))
@@ -601,7 +623,9 @@ describe('banco sem a RPC transacional: recusa em vez de estado parcial', () => 
 
   it('a RPC é chamada SEM p_ator_id (o ator vem de auth.uid())', async () => {
     const rpcSpy = vi.fn(async () => ({ error: null }))
-    const supabase = { rpc: rpcSpy, from: () => ({}) }
+    const supabase = { rpc: rpcSpy, from: () => ({ select: () => ({ eq: () => ({ eq: () => ({
+      maybeSingle: async () => ({ data: { preco_atacado: null, quantidade_gatilho_atacado: null }, error: null }),
+    }) }) }) }) }
     const { createProductUpdater: criar } = await import('./productUpdater')
     const getById = vi.fn(async () => ({ ok: true as const, product: catalogRow }))
     const updater = criar(supabase as never, { reader: { getById } })
