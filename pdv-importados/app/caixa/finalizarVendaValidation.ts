@@ -127,6 +127,38 @@ export type ItemTotalizacaoServidor = {
   quantidade: number
 }
 
+/**
+ * Tipos de preco que representam decisao DISCRICIONARIA do operador sobre uma
+ * linha. VAREJO e ATACADO nao entram: em ambos o servidor exige
+ * `precoUnitario === calcular_preco_produto(...)` dentro de EPS_PRECO
+ * (ver `recalcularItensNoServidor`), entao a linha nao carrega desconto
+ * concedido pelo operador - ela carrega o preco de tabela vigente.
+ */
+const TIPOS_PRECO_DISCRICIONARIO = new Set(['MANUAL', 'PROMOCAO'])
+
+/**
+ * Parcela do desconto da venda que consome a alcada do operador.
+ *
+ * A faixa de atacado e regra comercial previamente cadastrada e revalidada no
+ * servidor - nao e desconto concedido no balcao. Contar a diferenca
+ * varejo->atacado aqui fazia toda venda de atacado acima do teto
+ * (`desconto_maximo_operador_percentual`) exigir autorizacao gerencial, mesmo
+ * sem o operador ter concedido nada.
+ *
+ * Desconto manual continua contando integralmente, entao o teto segue valendo
+ * e nao da para usar uma linha de atacado para abrir espaco de desconto.
+ */
+export function descontoDiscricionarioFromItens(
+  itens: ReadonlyArray<ItemTotalizacaoServidor & { tipoPreco?: string | null }>,
+): number {
+  const total = itens.reduce((acc, i) => {
+    if (!TIPOS_PRECO_DISCRICIONARIO.has(String(i.tipoPreco ?? ''))) return acc
+    const delta = i.precoOriginal - i.precoUnitario
+    return delta > 0 ? acc + delta * i.quantidade : acc
+  }, 0)
+  return roundMoney2(total)
+}
+
 export function totaisFromItens(itens: ItemTotalizacaoServidor[]) {
   const bruto = itens.reduce((acc, i) => acc + i.precoOriginal * i.quantidade, 0)
   const liquido = itens.reduce((acc, i) => acc + i.precoUnitario * i.quantidade, 0)
