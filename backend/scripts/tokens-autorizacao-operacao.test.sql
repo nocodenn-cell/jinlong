@@ -10,16 +10,29 @@
 \set ON_ERROR_STOP on
 BEGIN;
 
--- Fixtures reais do seed (evita mexer em auth.users).
---   loja A = Matriz            gerente A = GERENTE ativo da Matriz
---   loja B = NFE-CONC Loja     gerente B = GERENTE ativo da loja B
---   operador A = OPERADOR da Matriz (solicitante)
+-- Fixtures derivadas do banco, nunca UUIDs fixos: a suíte precisa rodar sobre
+-- uma base recém-resetada, sem depender de usuários de sessões anteriores.
+--   loja A  = loja que tem GERENTE e OPERADOR ativos
+--   loja B  = loja criada aqui, só para provar isolamento de tenant
+-- Para o caso "gerente de outra loja" basta um token com loja_id = loja B e
+-- aprovador da loja A: no consumo o gerente não pertence à loja da operação.
+SELECT l.id AS loja_a FROM public.lojas l
+WHERE EXISTS (SELECT 1 FROM public.usuarios u WHERE u.loja_id=l.id AND u.ativo AND u.perfil='GERENTE')
+  AND EXISTS (SELECT 1 FROM public.usuarios u WHERE u.loja_id=l.id AND u.ativo AND u.perfil='OPERADOR')
+ORDER BY l.id LIMIT 1 \gset
+SELECT id AS gerente_a FROM public.usuarios
+WHERE perfil='GERENTE' AND ativo AND loja_id=:'loja_a' ORDER BY id LIMIT 1 \gset
+SELECT id AS operador_a FROM public.usuarios
+WHERE perfil='OPERADOR' AND ativo AND loja_id=:'loja_a' ORDER BY id LIMIT 1 \gset
+SELECT gen_random_uuid() AS loja_b \gset
+INSERT INTO public.lojas(id, nome, codigo)
+VALUES (:'loja_b', 'Loja B (teste tokens)', 'TKB-' || left(:'loja_b', 8));
+
 CREATE TEMP TABLE fx AS SELECT
-  'a0000001-0000-4000-8000-000000000001'::uuid AS loja_a,
-  'ae92d3f5-7dc0-471d-adca-5515600ddfc6'::uuid AS loja_b,
-  'f3b06852-e6a0-4b9c-ab25-c8f47bb9b3a9'::uuid AS gerente_a,
-  '210c5697-a850-4b0f-aea6-b479102101ee'::uuid AS gerente_b,
-  '33333333-3333-4333-8333-333333333333'::uuid AS operador_a;
+  :'loja_a'::uuid    AS loja_a,
+  :'loja_b'::uuid    AS loja_b,
+  :'gerente_a'::uuid AS gerente_a,
+  :'operador_a'::uuid AS operador_a;
 
 -- Helper: consumir esperando NEGAÇÃO. Falha o teste se for aceito.
 CREATE OR REPLACE FUNCTION pg_temp.deny(
@@ -60,7 +73,7 @@ SELECT * FROM (
   UNION ALL SELECT 'tk_expirado', 'SANGRIA', 'mov-exp',       loja_a, gerente_a, operador_a, now() - interval '1 min' FROM fx
   UNION ALL SELECT 'tk_usado', 'SANGRIA', 'mov-usado',        loja_a, gerente_a, operador_a, now() + interval '5 min' FROM fx
   UNION ALL SELECT 'tk_replay', 'SANGRIA', 'mov-replay',      loja_a, gerente_a, operador_a, now() + interval '5 min' FROM fx
-  UNION ALL SELECT 'tk_gerente_outra_loja', 'SANGRIA', 'mov-x', loja_a, gerente_b, operador_a, now() + interval '5 min' FROM fx
+  UNION ALL SELECT 'tk_gerente_outra_loja', 'SANGRIA', 'mov-x', loja_b, gerente_a, operador_a, now() + interval '5 min' FROM fx
   UNION ALL SELECT 'tk_atomicidade', 'SANGRIA', 'mov-atom',   loja_a, gerente_a, operador_a, now() + interval '5 min' FROM fx
 ) t;
 
@@ -123,7 +136,7 @@ BEGIN
   -- Loja errada = DENY (mesmo token, mesma finalidade, mesmo alvo)
   PERFORM pg_temp.deny('outra loja', 'tk_sangria_2', 'SANGRIA', 'mov-2', f.loja_b);
   -- Gerente que não pertence à loja da operação = DENY
-  PERFORM pg_temp.deny('gerente de outra loja', 'tk_gerente_outra_loja', 'SANGRIA', 'mov-x', f.loja_a);
+  PERFORM pg_temp.deny('gerente de outra loja', 'tk_gerente_outra_loja', 'SANGRIA', 'mov-x', f.loja_b);
 
   -- Gerente desativado APÓS a emissão = DENY (revalidação no consumo)
   UPDATE public.usuarios SET ativo = false WHERE id = f.gerente_a;

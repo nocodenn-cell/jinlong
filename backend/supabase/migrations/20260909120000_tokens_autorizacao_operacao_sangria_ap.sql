@@ -208,8 +208,13 @@ BEGIN
     -- existir, então é vinculado à identidade estável da operação de pagamento
     -- ('ap:<conta_id>:<idempotency_key>') — exatamente a chave de idempotência
     -- que `registrar_pagamento_contas_pagar` grava na movimentação.
+    -- O valor entra na identidade: sem isso o gerente aprovava "R$ 2" e o
+    -- cliente efetivava qualquer quantia na mesma conta/chave, porque o alvo
+    -- não amarrava o efeito financeiro. `valor` é numeric(10,2) e vem da linha
+    -- da movimentação, que `authenticated` não consegue alterar (RLS).
     v_finalidade := 'PAGAMENTO_AP';
-    v_alvo_id := v_mov.idempotency_key;
+    v_alvo_id := v_mov.idempotency_key || ':' ||
+                 trim(to_char(v_mov.valor, 'FM999999999990.00'));
   ELSE
     v_finalidade := 'SANGRIA';
     v_alvo_id := v_mov.id::text;
@@ -400,7 +405,8 @@ BEGIN
       FROM public.tokens_autorizacao_operacao t
       WHERE t.token = btrim(p_autorizacao_token)
         AND t.finalidade = 'PAGAMENTO_AP'
-        AND t.alvo_id = v_mov_key
+        AND t.alvo_id = v_mov_key || ':' ||
+            trim(to_char(p_valor::numeric(10,2), 'FM999999999990.00'))
         AND t.loja_id = v_conta.loja_id
         AND t.usado = false
         AND t.expira_em > now();

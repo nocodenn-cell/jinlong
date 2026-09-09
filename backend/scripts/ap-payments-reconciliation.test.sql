@@ -243,7 +243,7 @@ VALUES (:'auth_account', :'fornecedor', :'loja', current_date, 2, 0, 'Autorizada
 -- mais aqui, e este não serve para nenhuma outra operação.
 INSERT INTO public.tokens_autorizacao_operacao(
   token, finalidade, alvo_id, loja_id, gerente_id, solicitante_id, expira_em)
-VALUES ('token-ap-2b', 'PAGAMENTO_AP', 'ap:' || :'auth_account' || ':authorized-cash',
+VALUES ('token-ap-2b', 'PAGAMENTO_AP', 'ap:' || :'auth_account' || ':authorized-cash:2.00',
         :'loja', :'gerente_id', :'gerente_id', now() + interval '10 minutes');
 SELECT set_config('request.jwt.claim.sub', :'gerente_id', true);
 SELECT set_config('test.auth_account', :'auth_account', true);

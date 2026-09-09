@@ -132,7 +132,9 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
           senha: senhaGerente,
           lojaId: conta.loja_id,
           finalidade: 'PAGAMENTO_AP',
-          alvoId: `ap:${conta.id}:${idempotencyKeyRef.current}`,
+          // O valor faz parte da identidade: a autorização do gerente vale para
+          // ESTE valor. Trocar a quantia depois invalida o token.
+          alvoId: `ap:${conta.id}:${idempotencyKeyRef.current}:${valorNum.toFixed(2)}`,
         })
         if (!autorizacao.ok || !autorizacao.token) {
           emitGerenteToast({ kind: 'error', message: autorizacao.ok ? 'Token de autorização não retornado.' : autorizacao.error })
