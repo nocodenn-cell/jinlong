@@ -44,6 +44,7 @@ import {
 import {
   obterLimiteSangriaSemGerenteImpl,
   validarGerenteDescontoImpl,
+  type TokenFinalidadeOperacao,
 } from '@/app/caixa/server/caixaGerenteDesconto.impl'
 import { obterConfiguracoesParaCaixaWebImpl } from '@/app/caixa/server/caixaConfiguracoes.impl'
 import {
@@ -168,6 +169,9 @@ export async function validarGerenteDesconto(input: {
   senha: string
   lojaId?: string
   deviceFingerprint?: string
+  /** Emite token tipado (sangria / pagamento AP) preso ao `alvoId`. */
+  finalidade?: TokenFinalidadeOperacao
+  alvoId?: string
 }): Promise<ValidarGerenteDescontoResult> {
   return validarGerenteDescontoImpl(input)
 }

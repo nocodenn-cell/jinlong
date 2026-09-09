@@ -463,6 +463,11 @@ async function handleValidarGerentePdvSync(
       global: GERENTE_PDV_GLOBAL_LIMIT,
     },
     tokenCreatedBy: null,
+    // Emissor legado (PDV desktop): nunca emite token tipado. Sangria e
+    // pagamento AP passam pelo `validar-gerente`, que exige solicitante
+    // autenticado para amarrar solicitante/aprovador/loja.
+    finalidade: null,
+    alvoId: null,
     persistAuthAttemptsByUser: false,
   });
   return jsonResponse(req, result.status, result.body);

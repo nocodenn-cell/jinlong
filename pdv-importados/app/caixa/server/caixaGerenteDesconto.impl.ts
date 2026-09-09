@@ -9,10 +9,26 @@ import { idiomaOperadorParaErro } from '@/app/caixa/server/caixaErroOperador'
 import { caixaMsgServidor } from '@/app/caixa/server/caixaMensagensServidor'
 import type { LimiteSangriaResult, ValidarGerenteDescontoResult } from '@/app/caixa/caixaActionTypes'
 
+/**
+ * Finalidades tipadas de autorização gerencial.
+ *
+ * Um token emitido com finalidade vai para `tokens_autorizacao_operacao` e só
+ * serve para aquela finalidade, naquele alvo e naquela loja. Sem finalidade, o
+ * token é o legado (desconto de venda, limite de crédito, retomada de caixa).
+ */
+export type TokenFinalidadeOperacao = 'SANGRIA' | 'PAGAMENTO_AP'
+
 export async function validarGerenteDescontoImpl(input: {
   senha: string
   lojaId?: string
   deviceFingerprint?: string
+  /** Quando informada, exige `alvoId` e emite token tipado. */
+  finalidade?: TokenFinalidadeOperacao
+  /**
+   * Identidade da operação autorizada. Sangria: id da movimentação.
+   * Pagamento AP: `ap:<conta_id>:<idempotency_key>`.
+   */
+  alvoId?: string
 }): Promise<ValidarGerenteDescontoResult> {
   const idioma = await idiomaOperadorParaErro()
   const senha = input.senha.trim()
@@ -41,6 +57,8 @@ export async function validarGerenteDescontoImpl(input: {
       body: JSON.stringify({
         senha,
         loja_id: input.lojaId?.trim() || undefined,
+        finalidade: input.finalidade,
+        alvo_id: input.finalidade ? input.alvoId?.trim() : undefined,
       }),
     })
 

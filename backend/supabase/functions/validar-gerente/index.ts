@@ -5,7 +5,7 @@
 // Contrato:
 // POST /functions/v1/validar-gerente
 // Header: Authorization: Bearer <jwt> (usuário autenticado)
-// Body: { senha: string, loja_id?: string }
+// Body: { senha: string, loja_id?: string, finalidade?: "SANGRIA"|"PAGAMENTO_AP", alvo_id?: string }
 // Response: { ok: true, token: string, expira_em: string } | { ok: false, error: string }
 //
 // CORS:
@@ -17,7 +17,7 @@
 // - Sem STRICT e sem lista: legado Access-Control-Allow-Origin: * (só dev/homolog consciente).
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-import { validateGerenteAndIssueToken } from "../_shared/gerente-auth.ts";
+import { isTokenFinalidade, validateGerenteAndIssueToken } from "../_shared/gerente-auth.ts";
 import { logJson } from "../../../../shared/logger.ts";
 
 const USER_LIMIT = 5;
@@ -170,7 +170,23 @@ Deno.serve(async (req) => {
     return jsonResponse(400, { ok: false, error: "INVALID_BODY" }, req, corsMode);
   }
 
-  const { senha, loja_id } = body as { senha?: unknown; loja_id?: unknown };
+  const { senha, loja_id, finalidade, alvo_id } = body as {
+    senha?: unknown;
+    loja_id?: unknown;
+    finalidade?: unknown;
+    alvo_id?: unknown;
+  };
+
+  // Finalidade tipada é opcional (ausente = token legado), mas se vier tem de
+  // ser uma das conhecidas e acompanhada do alvo. Valor desconhecido = recusa.
+  if (finalidade !== undefined && finalidade !== null && !isTokenFinalidade(finalidade)) {
+    return jsonResponse(400, { ok: false, error: "FINALIDADE_DESCONHECIDA" }, req, corsMode);
+  }
+  const finalidadeTipada = isTokenFinalidade(finalidade) ? finalidade : null;
+  const alvoIdTexto = typeof alvo_id === "string" ? alvo_id.trim() : "";
+  if (finalidadeTipada && !alvoIdTexto) {
+    return jsonResponse(400, { ok: false, error: "ALVO_OBRIGATORIO" }, req, corsMode);
+  }
 
   if (typeof senha !== "string" || !senha) {
     return jsonResponse(400, { ok: false, error: "SENHA_OBRIGATORIA" }, req, corsMode);
@@ -231,6 +247,8 @@ Deno.serve(async (req) => {
       },
       tokenCreatedBy: authData.user.id,
       persistAuthAttemptsByUser: true,
+      finalidade: finalidadeTipada,
+      alvoId: finalidadeTipada ? alvoIdTexto : null,
     });
     return jsonResponse(result.status, result.body, req, corsMode);
   } catch (e) {

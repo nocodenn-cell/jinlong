@@ -124,7 +124,16 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
     setSalvando(true)
     try {
       if (forma === 'DINHEIRO' && valorNum > limiteSangria && !autorizacaoTokenRef.current) {
-        const autorizacao = await validarGerenteDesconto({ senha: senhaGerente, lojaId: conta.loja_id })
+        // Alvo = identidade estável da operação de pagamento, a mesma que o
+        // banco deriva (`ap:<conta_id>:<idempotency_key>`) e grava como chave
+        // de idempotência da movimentação. Autorizar este pagamento não
+        // autoriza outro, nem uma sangria avulsa.
+        const autorizacao = await validarGerenteDesconto({
+          senha: senhaGerente,
+          lojaId: conta.loja_id,
+          finalidade: 'PAGAMENTO_AP',
+          alvoId: `ap:${conta.id}:${idempotencyKeyRef.current}`,
+        })
         if (!autorizacao.ok || !autorizacao.token) {
           emitGerenteToast({ kind: 'error', message: autorizacao.ok ? 'Token de autorização não retornado.' : autorizacao.error })
           return
