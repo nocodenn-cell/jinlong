@@ -56,6 +56,10 @@ export default async function AdminRelatoriosPage({ searchParams }: PageProps) {
     divergenciaEstoque: dados.divergenciaEstoque,
     semGiro: semGiro.itens,
     vendasDetalhe: vendasAvancado.ok ? vendasAvancado.vendas : [],
+    // Falha na listagem NÃO pode virar "nenhuma venda": os KPIs desta mesma tela
+    // vêm de outra consulta e continuariam mostrando faturamento, produzindo um
+    // relatório que se contradiz. Propaga o erro para a aba renderizar ErrorState.
+    vendasDetalheErro: vendasAvancado.ok ? null : vendasAvancado.error,
     rpcErro: dados.rpcErroAmigavel,
   }
 

@@ -98,7 +98,7 @@ export function VendaCancelarModal({
       variant="danger"
       size="lg"
       icon={AlertTriangle}
-      title="Cancelar venda"
+      title={m.gerente.venda_cancelar_titulo}
       dismissable={!isPending}
       footer={
         <>
@@ -108,7 +108,7 @@ export function VendaCancelarModal({
             disabled={isPending}
             className="rounded-lg px-4 py-2 text-sm font-medium app-muted transition hover:text-jl-fg-1 disabled:opacity-40"
           >
-            Voltar
+            {m.gerente.venda_cancelar_voltar}
           </button>
           <button
             type="submit"
@@ -116,7 +116,7 @@ export function VendaCancelarModal({
             disabled={!motivoValido || isPending}
             className="inline-flex min-w-[180px] items-center justify-center rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isPending ? 'Cancelando…' : 'Confirmar cancelamento'}
+            {isPending ? m.gerente.venda_cancelar_processando : m.gerente.venda_cancelar_confirmar}
           </button>
         </>
       }
@@ -125,23 +125,23 @@ export function VendaCancelarModal({
           {/* Resumo da venda */}
           <div className="rounded-xl border border-jl-border-1 bg-jl-surface-base/60 px-4 py-3 text-sm">
             <div className="mb-2 flex items-center justify-between gap-3">
-              <span className="text-xs uppercase tracking-wide text-jl-fg-3">Venda</span>
+              <span className="text-xs uppercase tracking-wide text-jl-fg-3">{m.gerente.venda_cancelar_rot_venda}</span>
               <span className="font-mono text-xs text-jl-fg-3">{fmtGerenteIdCurto(venda.id)}</span>
             </div>
             <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-              <dt className="text-xs text-jl-fg-3">Data</dt>
+              <dt className="text-xs text-jl-fg-3">{m.gerente.venda_cancelar_rot_data}</dt>
               <dd className="text-right text-sm tabular-nums text-jl-fg-1">
                 {fmtGerenteDateTime(venda.data, locale)}
               </dd>
-              <dt className="text-xs text-jl-fg-3">Total</dt>
+              <dt className="text-xs text-jl-fg-3">{m.gerente.venda_cancelar_rot_total}</dt>
               <dd className="text-right text-sm font-semibold tabular-nums text-jl-fg-1">
                 {fmtGerenteBRL(Number(venda.total_liquido), locale)}
               </dd>
-              <dt className="text-xs text-jl-fg-3">Pagamento</dt>
+              <dt className="text-xs text-jl-fg-3">{m.gerente.venda_cancelar_rot_pagamento}</dt>
               <dd className="text-right text-sm text-jl-fg-1">
                 {labelFormaPagamentoVenda(venda.forma_pagamento, m)}
               </dd>
-              <dt className="text-xs text-jl-fg-3">Caixa</dt>
+              <dt className="text-xs text-jl-fg-3">{m.gerente.venda_cancelar_rot_caixa}</dt>
               <dd className="text-right font-mono text-xs text-jl-fg-3">
                 {fmtGerenteIdCurto(venda.caixa_id ?? undefined)}
               </dd>
@@ -150,27 +150,24 @@ export function VendaCancelarModal({
 
           {/* Aviso de impacto */}
           <div className="flex gap-2.5 rounded-xl border border-amber-500/30 bg-amber-500/[0.08] px-4 py-3">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" aria-hidden />
-            <div className="space-y-1 text-xs text-amber-100/90">
-              <p className="font-semibold text-amber-200">Esta ação não pode ser desfeita.</p>
-              <p className="opacity-90">
-                O estoque dos itens vendidos será revertido. Se houver NF-e emitida, o cancelamento
-                fiscal deve ser feito separadamente dentro do prazo legal.
-              </p>
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-warning-strong)]" aria-hidden />
+            <div className="space-y-1 text-xs text-[var(--color-warning-strong)]">
+              <p className="font-semibold text-[var(--color-warning-strong)]">{m.gerente.venda_cancelar_aviso_titulo}</p>
+              <p>{m.gerente.venda_cancelar_aviso_corpo}</p>
             </div>
           </div>
 
           {/* Motivo */}
           <div>
             <label htmlFor="motivo-cancelamento" className="mb-1.5 block text-xs font-medium text-jl-fg-3">
-              Motivo do cancelamento <span className="text-red-400">*</span>
+              {m.gerente.venda_cancelar_motivo_label} <span className="text-[var(--color-danger-strong)]">*</span>
             </label>
             <textarea
               id="motivo-cancelamento"
               ref={textareaRef}
               value={motivo}
               onChange={(e) => setMotivo(e.target.value)}
-              placeholder="Ex.: cliente desistiu, erro de digitação, troca por outro produto…"
+              placeholder={m.gerente.venda_cancelar_motivo_placeholder}
               required
               minLength={2}
               maxLength={500}
@@ -179,7 +176,7 @@ export function VendaCancelarModal({
               className="w-full resize-y rounded-lg border border-jl-border-1 bg-jl-surface-base px-3 py-2 text-sm text-jl-fg-1 outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50 disabled:opacity-60"
             />
             <div className="mt-1 flex items-center justify-between text-[10px] text-jl-fg-3">
-              <span>Mínimo 2, máximo 500 caracteres. Fica registrado para auditoria.</span>
+              <span>{m.gerente.venda_cancelar_motivo_ajuda}</span>
               <span className={motivoTrim.length > 500 ? 'text-red-400' : ''}>
                 {motivoTrim.length}/500
               </span>

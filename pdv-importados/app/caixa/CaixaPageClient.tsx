@@ -243,6 +243,29 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const adicionarItem = useCarrinhoStore((s) => s.adicionarItem)
   const alterarQuantidade = useCarrinhoStore((s) => s.alterarQuantidade)
   const { reprecificar } = useReprecificarQuantidadeCaixa()
+
+  /**
+   * `adicionarItem` mescla por produto (`mergeItemByProdutoId`), mas o preco da
+   * linha veio calculado para QUANTIDADE 1 - tanto em `selecionarCandidato`
+   * quanto no pipeline de scan, que monta a linha com quantidade 1
+   * (`webCaixaScanProcess`). Sem reconferir, bipar o mesmo produto 3x acumulava
+   * a quantidade e mantinha o preco de VAREJO: a faixa de atacado so entrava se
+   * o operador digitasse a quantidade a mao. O ramo de re-bip <500ms ja fazia
+   * essa reconferencia; isto fecha os demais caminhos de adicao.
+   */
+  const reprecificarLinhaMesclada = useCallback(
+    (produtoId: string) => {
+      const linha = useCarrinhoStore.getState().itens.find((i) => i.produtoId === produtoId)
+      if (!linha || linha.quantidade <= 1) return
+      reprecificar({
+        itemId: linha.id,
+        produtoId,
+        quantidade: linha.quantidade,
+        tipoPrecoAtual: linha.resultado?.tipoPreco ?? "VAREJO",
+      })
+    },
+    [reprecificar],
+  )
   const removerItem = useCarrinhoStore((s) => s.removerItem)
   const restaurarUltimoRemovido = useCarrinhoStore((s) => s.restaurarUltimoRemovido)
   const limparCarrinho = useCarrinhoStore((s) => s.limparCarrinho)
@@ -459,6 +482,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
 
       const item = montarItemCarrinhoCaixa(produto, precoCalculado, tipoPrecoCalculado, 1, quantidadeMinima)
       adicionarItem(item)
+      reprecificarLinhaMesclada(produto.id)
       setCodigo('')
       const avisoEstoqueMsg = avisoEstoqueCaixa(produto, m)
       setCaixaMensagem(avisoEstoqueMsg ?? m.caixa.msg_item_adicionado_toast, {
@@ -467,7 +491,16 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       tocarFeedback('ok')
       focarCampoBusca()
     },
-    [adicionarItem, fecharCandidatos, focarCampoBusca, m, setCaixaMensagem, setCartOwnerForSession, tocarFeedback],
+    [
+      adicionarItem,
+      fecharCandidatos,
+      focarCampoBusca,
+      m,
+      reprecificarLinhaMesclada,
+      setCaixaMensagem,
+      setCartOwnerForSession,
+      tocarFeedback,
+    ],
   )
 
   const selecionarCandidatoAtivo = useCallback(() => {
@@ -489,8 +522,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     onItemAdded: useCallback(
       (info: { codigo: string; itemId: string; produtoId: string }) => {
         lastScanItemRef.current = { ...info, ts: Date.now() }
+        reprecificarLinhaMesclada(info.produtoId)
       },
-      [],
+      [reprecificarLinhaMesclada],
     ),
     // Decisão de produto: o PDV não cadastra produto. Código inexistente só
     // informa e orienta (mensagem do próprio pipeline de leitura) — cadastrar
@@ -862,6 +896,13 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     [m.caixa.msg_caixa_aberto, recarregarStatusCaixa, setCaixaMensagem, tocarFeedback],
   )
 
+  // `movimentacoes` ja chegava ao cliente, mas so alimentava o resumo de
+  // fechamento -- nenhuma superficie mostrava as pendentes ao operador.
+  const movimentacoesPendentes = useMemo(
+    () => movimentacoes.filter((mv) => mv.status === "pendente"),
+    [movimentacoes],
+  )
+
   const handleFecharCaixa = useCallback(() => {
     if (processandoCaixa) return
     if (itens.length > 0) {
@@ -873,6 +914,16 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
 
   const handleAbrirSuprimento = useCallback(() => {
     setMovimentacaoModalTipo("suprimento")
+  }, [])
+
+  /**
+   * Movimentacao `pendente` -> confirmacao -> `CaixaMovimentacaoAcaoModal`.
+   * `handleConfirmarAcaoSensivel` ja tratava `tipo: "cancelar"`, mas nada nunca
+   * chamava `setConfirmacaoPendente` com esse tipo: o ramo era inalcancavel e a
+   * pendencia so saia do caminho por acesso direto ao banco.
+   */
+  const handleResolverPendencia = useCallback((item: MovimentacaoCaixaDTO) => {
+    setConfirmacaoPendente({ tipo: "cancelar", item })
   }, [])
 
   const handleAbrirSangria = useCallback(() => {
@@ -1587,6 +1638,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 onAbrirCaixa={handleAbrirCaixaClick}
                 onConsultaRapida={() => setConsultaRapidaAberta(true)}
                 onSelecionarCliente={abrirSelecionarCliente}
+                movimentacoesPendentes={movimentacoesPendentes}
+                onResolverPendencia={handleResolverPendencia}
               />
               <div className="border-t pt-2 text-xs font-semibold uppercase tracking-wide border-border text-muted-foreground">
                 {m.caixa.rail_titulo_em_aberto}
@@ -1634,6 +1687,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 onAbrirCaixa={handleAbrirCaixaClick}
                 onConsultaRapida={() => setConsultaRapidaAberta(true)}
                 onSelecionarCliente={abrirSelecionarCliente}
+                movimentacoesPendentes={movimentacoesPendentes}
+                onResolverPendencia={handleResolverPendencia}
               />
             </div>
           </div>

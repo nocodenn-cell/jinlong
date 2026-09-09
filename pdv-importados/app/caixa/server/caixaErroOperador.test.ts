@@ -17,6 +17,15 @@ describe('caixaErroOperador', () => {
     )
   })
 
+  // A versão zh ficou de fora quando o texto pt foi corrigido e passou meses
+  // dizendo «有待完成的销售。» ("há vendas pendentes") para um bloqueio que é de
+  // fluxo de caixa — mandando o operador chinês procurar uma venda inexistente.
+  it('mapeia movimentações pendentes em zh — fluxo de caixa, não venda', () => {
+    const zh = caixaErroOperador('FECHAR_CAIXA_MOVIMENTACOES_PENDENTES', 'zh')
+    expect(zh).toContain('流水')
+    expect(zh).not.toContain('销售')
+  })
+
   it('oculta mensagens de migration', () => {
     expect(
       caixaErroOperador('function calcular_valor does not exist — Aplique migrations 048'),

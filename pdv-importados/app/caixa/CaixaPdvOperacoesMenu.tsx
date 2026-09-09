@@ -8,6 +8,7 @@ import { ImperialSealIcon } from "@/components/icons/ImperialSealIcon"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import type { CaixaStatusUi } from "@/app/caixa/hooks/useCaixaStatusMovimentacoes"
 import { isCaixaAberto } from "@/app/caixa/hooks/useCaixaStatusMovimentacoes"
+import type { MovimentacaoCaixaDTO } from "@/app/caixa/caixaMovimentacaoTypes"
 import { cn } from "@/lib/utils"
 import { formatDecimalBRL } from "@/lib/format/money"
 
@@ -31,6 +32,15 @@ type Props = {
   onAbrirCaixa: () => void
   onConsultaRapida: () => void
   onSelecionarCliente: () => void
+  /**
+   * Movimentacoes `pendente` do turno. Elas nao movem dinheiro, mas
+   * `fechar_caixa_atomico` recusa fechar enquanto existirem - e ate aqui nao
+   * havia nenhuma tela, de operador ou de gerente, que as mostrasse ou as
+   * resolvesse. Uma autorizacao gerencial que falha (senha errada, Edge fora
+   * do ar) deixava o turno impossivel de fechar sem acesso ao banco.
+   */
+  movimentacoesPendentes: MovimentacaoCaixaDTO[]
+  onResolverPendencia: (item: MovimentacaoCaixaDTO) => void
   variant?: "default" | "classic"
 }
 
@@ -63,6 +73,8 @@ function CaixaPdvOperacoesMenuImpl({
   onAbrirCaixa,
   onConsultaRapida,
   onSelecionarCliente,
+  movimentacoesPendentes,
+  onResolverPendencia,
   variant = "default",
 }: Props) {
   const classic = variant === "classic"
@@ -254,6 +266,50 @@ function CaixaPdvOperacoesMenuImpl({
                 {m.caixa.topbar_turno_fechado}
               </p>
             )}
+            {movimentacoesPendentes.length > 0 ? (
+              <div
+                className={cn(
+                  "mb-2 rounded-md border px-2 py-2",
+                  classic
+                    ? "border-destructive/40 bg-destructive/5"
+                    : "border-[var(--color-warning-border)] bg-[var(--color-warning-bg)]",
+                )}
+              >
+                <p className="text-small font-semibold uppercase tracking-wide text-[var(--color-warning-strong)]">
+                  {m.caixa.pendencias_titulo}
+                </p>
+                <p className="mt-0.5 text-xs leading-snug text-[var(--color-warning-strong)]">
+                  {m.caixa.pendencias_ajuda}
+                </p>
+                <ul className="mt-1.5 flex flex-col gap-1">
+                  {movimentacoesPendentes.map((mov) => (
+                    <li key={mov.id}>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        disabled={busy}
+                        data-testid="caixa-pendencia-resolver"
+                        className={cn(
+                          "flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-sm font-medium",
+                          "text-[var(--color-warning-strong)] hover:bg-[var(--color-warning)]/20",
+                          "disabled:cursor-not-allowed disabled:opacity-40",
+                        )}
+                        onClick={() => runAndClose(() => onResolverPendencia(mov))}
+                      >
+                        <span className="truncate">
+                          {mov.tipo === "sangria" ? m.caixa.sangria : m.caixa.suprimento}
+                          {" \u00b7 "}
+                          {m.caixa.moeda_prefixo} {formatDecimalBRL(mov.valor)}
+                        </span>
+                        <span className="shrink-0 text-caption font-normal">
+                          {m.caixa.pendencias_acao}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
             {carregandoRegras ? (
               <p className={cn("mb-2 px-2 text-xs", classic ? "text-muted-foreground" : "text-jl-fg-3")}>
                 {m.caixa.regras_carregando}

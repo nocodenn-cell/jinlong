@@ -5,6 +5,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database } from '@/lib/supabase/database.types'
 import {
   PRODUCT_ERROR_CODES,
   decideProductExclusion,
@@ -45,17 +46,25 @@ async function countByProdutoId(
   return { ok: true, count: count ?? 0 }
 }
 
+/**
+ * O client aqui é o `SupabaseClient` genérico (sem `Database`), então o tsc NÃO
+ * valida a string passada a `.select()`. Ancorar o nome da coluna no schema
+ * gerado devolve essa verificação: se `estoque` for renomeada, isto quebra no
+ * build em vez de virar um 42703 silencioso em runtime.
+ */
+const COL_ESTOQUE_QTD = 'quantidade_atual' satisfies keyof Database['public']['Tables']['estoque']['Row']
+
 async function loadSaldoEstoque(
   supabase: SupabaseClient,
   produtoId: string,
 ): Promise<CountResult & { temSaldo?: boolean }> {
   const { data, error } = await supabase
     .from('estoque')
-    .select('quantidade')
+    .select(COL_ESTOQUE_QTD)
     .eq('produto_id', produtoId)
     .maybeSingle()
   if (error) return { ok: false, error: `estoque: ${error.message}` }
-  const q = Number((data as { quantidade?: number } | null)?.quantidade ?? 0)
+  const q = Number((data as { quantidade_atual?: number } | null)?.quantidade_atual ?? 0)
   return { ok: true, count: 0, temSaldo: Number.isFinite(q) && q > 0 }
 }
 

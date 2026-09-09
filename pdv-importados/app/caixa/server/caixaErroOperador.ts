@@ -32,7 +32,12 @@ const MSG_CAIXA_INDISPONIVEL: Record<IdiomaErro, string> = {
 }
 const MSG_MOVIMENTACOES_PENDENTES: Record<IdiomaErro, string> = {
   pt: 'Há movimentações de caixa pendentes. Resolva as pendências antes de fechar.',
-  zh: '有待完成的销售。',
+  // O bloqueio é `FECHAR_CAIXA_MOVIMENTACOES_PENDENTES` — flux de caixa, não
+  // venda. O texto anterior ('有待完成的销售。') dizia "há vendas pendentes" e
+  // ainda omitia a instrução que a versão pt traz, mandando o operador chinês
+  // procurar uma venda que não existe. `资金流水` é o termo já usado no resto
+  // do zh.json para movimentação de caixa (ver `sec_movimentos_caixa`).
+  zh: '有待处理的收银台资金流水。请先处理这些流水，再结算收银台。',
 }
 const MSG_CAIXA_FECHADO: Record<IdiomaErro, string> = {
   pt: 'Caixa fechado. Abra o caixa antes de finalizar a venda.',

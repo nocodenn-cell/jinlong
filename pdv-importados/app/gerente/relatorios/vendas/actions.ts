@@ -4,13 +4,13 @@ import { createClient } from '@/lib/supabase/server'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 import { getRelatorioTimezone } from '@/lib/relatorios/getRelatorioTimezone'
 import { inicioDoDiaCivilEmUtc, subtrairDiasCivis } from '@/lib/relatorios/periodoRelatorio'
+import type { Database } from '@/lib/supabase/database.types'
 
 export type VendaReportRow = {
   id: string
   data: string | null
   cliente_nome: string | null
   vendedor_nome: string | null
-  categoria_principal: string | null
   total_liquido: number
   forma_pagamento: string | null
   status: string
@@ -22,7 +22,6 @@ export type RelatorioVendasAvancadoFilters = {
   de: string // YYYY-MM-DD
   ate: string
   vendedor_id?: string
-  categoria_id?: string
   produto_id?: string
   forma_pagamento?: string
 }
@@ -50,7 +49,6 @@ type VendaQueryRow = {
   total_liquido: number | null
   forma_pagamento: string | null
   status: string | null
-  categoria_principal: string | null
   cliente: { nome: string } | { nome: string }[] | null
   vendedor: { nome: string } | { nome: string }[] | null
 }
@@ -61,13 +59,27 @@ type VendaQueryRow = {
  * - `serie_por_dia` é a agregação diária para o gráfico.
  *
  * Espera tabelas:
- *   - vendas (com data, status, total_liquido, forma_pagamento, vendedor_id, cliente_id, categoria_principal)
+ *   - vendas (com data, status, total_liquido, forma_pagamento, operador_id, cliente_id)
  *   - usuarios (vendedor.nome)
  *   - clientes (cliente.nome)
  *
  * Para datasets grandes considere usar a RPC `relatorio_vendas_avancado(p_de, p_ate, ...)`
  * (análoga à `relatorio_vendas_por_dia_periodo` já em produção).
  */
+/**
+ * Colunas escalares lidas de `vendas`. Ancoradas no schema gerado porque a
+ * string do `.select()` (template com embeds) não é validada pelo tsc — foi
+ * exatamente assim que `categoria_principal`, uma coluna que nunca existiu,
+ * ficou no select e transformava o relatório inteiro em 42703.
+ */
+const COLS_VENDA = [
+  'id',
+  'data',
+  'total_liquido',
+  'forma_pagamento',
+  'status',
+] satisfies ReadonlyArray<keyof Database['public']['Tables']['vendas']['Row']>
+
 export async function buscarRelatorioVendasAvancadoAction(
   filters: RelatorioVendasAvancadoFilters,
 ): Promise<
@@ -86,7 +98,7 @@ export async function buscarRelatorioVendasAvancadoAction(
       .from('vendas')
       .select(
         `
-        id, data, total_liquido, forma_pagamento, status, categoria_principal,
+        ${COLS_VENDA.join(', ')},
         cliente:clientes!vendas_cliente_id_fkey ( nome ),
         vendedor:usuarios!vendas_operador_id_fkey ( nome )
       `,
@@ -97,7 +109,6 @@ export async function buscarRelatorioVendasAvancadoAction(
       .limit(1000)
 
     if (filters.vendedor_id) query = query.eq('operador_id', filters.vendedor_id)
-    if (filters.categoria_id) query = query.eq('categoria_id', filters.categoria_id)
     if (filters.forma_pagamento) query = query.eq('forma_pagamento', filters.forma_pagamento)
 
     const { data, error } = await query
@@ -113,7 +124,6 @@ export async function buscarRelatorioVendasAvancadoAction(
         data: r.data,
         cliente_nome: cli?.nome ?? null,
         vendedor_nome: vd?.nome ?? null,
-        categoria_principal: r.categoria_principal,
         total_liquido: r.total_liquido ?? 0,
         forma_pagamento: r.forma_pagamento,
         status: (r.status ?? 'CONCLUIDA').toUpperCase(),
