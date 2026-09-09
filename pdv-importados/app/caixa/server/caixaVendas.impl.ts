@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/server'
 import {
   finalizarVendaInputSchema,
   roundMoney2,
+  descontoDiscricionarioFromItens,
   totaisFromItens,
   totalsMatchDeclared,
 } from '@/app/caixa/finalizarVendaValidation'
@@ -198,7 +199,11 @@ export async function finalizarVendaCaixaImpl(
     if (!hasDescontoGerente && computedBase.totalBruto > 0.009) {
       const cfgMap = await obterMapaConfiguracoesParaCaixaWeb(supabase)
       const maxPctOp = parsePercentConfig(cfgMap.desconto_maximo_operador_percentual, 10)
-      const pctLinhas = (computedBase.totalDesconto / computedBase.totalBruto) * 100
+      // So o desconto discricionario (linhas MANUAL/PROMOCAO) consome a alcada
+      // do operador. Preco de atacado e regra comercial cadastrada, ja
+      // revalidada contra `calcular_preco_produto` em `recalcularItensNoServidor`.
+      const descontoDiscricionario = descontoDiscricionarioFromItens(itensAut)
+      const pctLinhas = (descontoDiscricionario / computedBase.totalBruto) * 100
 
       if (pctLinhas > maxPctOp + 0.05) {
         return {

@@ -841,7 +841,11 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
             dataFechamento: new Date(),
             valorInicial: aberto.valorInicial,
             quantidadeVendas: resumoTurno?.ok ? resumoTurno.quantidadeVendas : 0,
-            totalVendasRecebido: resumoTurno?.ok ? resumoTurno.totalRecebido : 0,
+            // Bloco de conferencia de gaveta: so ESPECIE. Com `totalRecebido`
+            // (todas as formas) a conta impressa nao fechava -- inicial +
+            // vendas - sangrias dava um numero diferente do "Saldo sistema",
+            // exatamente pelo valor de PIX/cartao.
+            totalVendasRecebido: resumoTurno?.ok ? resumoTurno.totalRecebidoDinheiro : 0,
             totalSangrias,
             totalSuprimentos,
             valorSistemaDinheiro: res.valorSistemaDinheiro,

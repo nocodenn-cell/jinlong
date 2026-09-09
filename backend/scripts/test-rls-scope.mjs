@@ -507,10 +507,23 @@ async function main() {
     }, "NAO_ENCONTRADA");
   });
 
-  // aprovar_movimentacao e service_role-only: o server action caixaMovimentacoes.impl.ts
-  // a chama via admin client. Chamada direta por authenticated deve ser negada.
-  await run("RPC aprovar_movimentacao negada a authenticated (service_role-only)", async () => {
-    await assertRpcDenied(gerente, "aprovar_movimentacao", {
+  // `aprovar_movimentacao` deixou de ser service_role-only: ela deriva o
+  // solicitante de `auth.uid()`, entao chamar via service role (sem `sub`)
+  // fazia o guard `MOV_CAIXA_APROVACAO_AUTH` recusar TODA aprovacao e nenhuma
+  // sangria acima do limite gerencial fechava. Agora `authenticated` executa e
+  // a autoridade continua sendo o TOKEN tipado consumido dentro da RPC.
+  await run("RPC aprovar_movimentacao alcancavel por authenticated (movimentacao inexistente)", async () => {
+    await assertRpcErrorContains(gerente, "aprovar_movimentacao", {
+      p_movimentacao_id: randomUUID(),
+    }, "NAO_ENCONTRADA");
+  });
+
+  // Guarda que importa depois da mudanca de grant: anon continua sem alcance.
+  await run("RPC aprovar_movimentacao negada a anon", async () => {
+    const anon = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    await assertRpcDenied(anon, "aprovar_movimentacao", {
       p_movimentacao_id: randomUUID(),
     });
   });

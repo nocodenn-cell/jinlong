@@ -1318,7 +1318,7 @@
     "comprovante_fechamento_titulo": "收银台结账凭证",
     "comprovante_fechamento_abertura": "开班时间",
     "comprovante_fechamento_saldo_inicial": "初始余额",
-    "comprovante_fechamento_vendas": "已收销售款",
+    "comprovante_fechamento_vendas": "现金销售收款",
     "comprovante_fechamento_suprimentos": "补款",
     "comprovante_fechamento_sangrias": "取款",
     "comprovante_fechamento_saldo_sistema": "系统余额",

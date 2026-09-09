@@ -161,6 +161,16 @@ jobs:
           # genuinamente errada ("PAM authentication failed").
           JIT_PAT_ENC=$(jq -rn --arg v "$JIT_PAT" '$v|@uri')
           host=""
+          # Host ERRADO e CREDENCIAL errada tem sintomas diferentes e exigem
+          # acoes diferentes:
+          #   - "tenant/user ... not found" -> este host nao atende este projeto;
+          #     continuar procurando faz sentido.
+          #   - "PAM authentication failed" -> o host ACERTOU o tenant e recusou
+          #     a senha. Continuar procurando so gera ruido, e o erro final
+          #     ("nenhum host resolveu o tenant") aponta para o lugar errado.
+          # Guardar o host que autenticou-mal permite dizer exatamente o que
+          # precisa ser rotacionado.
+          auth_host=""
           for idx in 0 1 2 3; do
             candidate="aws-${idx}-${SUPABASE_PROJECT_REGION}.pooler.supabase.com"
             conn_probe="postgres://postgres.${SUPABASE_PROJECT_REF}:${JIT_PAT_ENC}@${candidate}:5432/postgres?options=-c%20jit%3dtrue"
@@ -171,11 +181,20 @@ jobs:
                 break
               fi
             fi
-            echo "idx=$idx ($candidate): sem sucesso de tenant (detalhe sem segredo abaixo)."
+            if grep -qiE "PAM authentication failed|password authentication failed" /tmp/probe-err.txt; then
+              auth_host="$candidate"
+              echo "idx=$idx ($candidate): tenant RESOLVIDO, mas a autenticacao foi recusada."
+            else
+              echo "idx=$idx ($candidate): sem sucesso de tenant (detalhe sem segredo abaixo)."
+            fi
             sed -E "s#${JIT_PAT}#***#g; s#${JIT_PAT_ENC}#***#g" /tmp/probe-err.txt || true
           done
+          if [ -z "$host" ] && [ -n "$auth_host" ]; then
+            echo "::error::Credencial de banco recusada em ${auth_host} (o tenant do projeto foi resolvido, a senha nao foi aceita). Isto NAO e host errado nem indisponibilidade: rotacione o secret do GitHub usado por este workflow (senha do banco do projeto ${SUPABASE_PROJECT_REF}) e rode novamente."
+            exit 1
+          fi
           if [ -z "$host" ]; then
-            echo "::error::Nenhum host de pooler resolveu o tenant deste projeto (aws-0..3-${SUPABASE_PROJECT_REGION}). Ver detalhes acima (sem segredo)."
+            echo "::error::Nenhum host de pooler resolveu o tenant deste projeto (aws-0..3-${SUPABASE_PROJECT_REGION}) e nenhum recusou credencial. Ver detalhes acima (sem segredo)."
             exit 1
           fi
           echo "pooler_host=${host}" >> "$GITHUB_OUTPUT"

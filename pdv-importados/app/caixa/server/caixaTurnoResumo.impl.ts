@@ -8,10 +8,34 @@ export type TurnoResumoResult =
       ok: true
       quantidadeVendas: number
       totalRecebido: number  // ✅ NOVO (Fase 6): Valor efetivamente recebido em caixa
+      /**
+       * Parte de `totalRecebido` que entrou em ESPECIE. E o unico valor que
+       * pertence a conferencia de gaveta: PIX e cartao nao passam pelo caixa
+       * fisico. `totalRecebido` (todas as formas) continua servindo o resumo do
+       * turno, que mede a venda, nao a gaveta.
+       */
+      totalRecebidoDinheiro: number
       totalAReceber: number  // ✅ NOVO (Fase 6): Valor em crédito (contas_receber)
       caixaId: string
     }
   | { ok: false; error: string }
+
+/**
+ * Soma apenas o que entrou em ESPECIE. Extraido para ser testavel: o bloco de
+ * conferencia de gaveta do comprovante de fechamento depende disso fechar
+ * (inicial + dinheiro + suprimentos - sangrias = saldo sistema).
+ */
+export function somarRecebidoDinheiro(
+  pagamentos: ReadonlyArray<{ valor?: unknown; forma_pagamento?: unknown }>,
+): number {
+  return pagamentos.reduce(
+    (sum, p) =>
+      String(p.forma_pagamento ?? '').toUpperCase() === 'DINHEIRO'
+        ? sum + Number(p.valor ?? 0)
+        : sum,
+    0,
+  )
+}
 
 export async function obterResumoVendasTurnoImpl(): Promise<TurnoResumoResult> {
   try {
@@ -32,7 +56,7 @@ export async function obterResumoVendasTurnoImpl(): Promise<TurnoResumoResult> {
       .maybeSingle()
 
     if (caixaErr) return { ok: false, error: mensagemErroComSecao('Caixa', caixaErr.message, idioma) }
-    if (!caixa) return { ok: true, quantidadeVendas: 0, totalRecebido: 0, totalAReceber: 0, caixaId: '' }
+    if (!caixa) return { ok: true, quantidadeVendas: 0, totalRecebido: 0, totalRecebidoDinheiro: 0, totalAReceber: 0, caixaId: '' }
 
     // ✅ FASE 6: Reconciliação corrigida para pagamento parcial
     // 1. Obter vendas concluídas
@@ -45,7 +69,7 @@ export async function obterResumoVendasTurnoImpl(): Promise<TurnoResumoResult> {
     if (vendasErr) return { ok: false, error: mensagemErroComSecao('Vendas', vendasErr.message, idioma) }
 
     if (!vendas || vendas.length === 0) {
-      return { ok: true, quantidadeVendas: 0, totalRecebido: 0, totalAReceber: 0, caixaId: caixa.id }
+      return { ok: true, quantidadeVendas: 0, totalRecebido: 0, totalRecebidoDinheiro: 0, totalAReceber: 0, caixaId: caixa.id }
     }
 
     const vendaIds = vendas.map((v) => v.id)
@@ -53,12 +77,13 @@ export async function obterResumoVendasTurnoImpl(): Promise<TurnoResumoResult> {
     // 2. Somar pagamentos recebidos (verdadeiro valor em caixa)
     const { data: pagamentos, error: pagErr } = await supabase
       .from('vendas_pagamentos')
-      .select('valor')
+      .select('valor, forma_pagamento')
       .in('venda_id', vendaIds)
 
     if (pagErr) return { ok: false, error: mensagemErroComSecao('Pagamentos', pagErr.message, idioma) }
 
     const totalRecebido = (pagamentos ?? []).reduce((sum, p) => sum + Number(p.valor ?? 0), 0)
+    const totalRecebidoDinheiro = somarRecebidoDinheiro(pagamentos ?? [])
 
     // 3. Somar títulos em aberto (contas_receber)
     const { data: contasReceber, error: crErr } = await supabase
@@ -75,6 +100,7 @@ export async function obterResumoVendasTurnoImpl(): Promise<TurnoResumoResult> {
       ok: true,
       quantidadeVendas: vendas.length,
       totalRecebido,
+      totalRecebidoDinheiro,
       totalAReceber,
       caixaId: caixa.id,
     }

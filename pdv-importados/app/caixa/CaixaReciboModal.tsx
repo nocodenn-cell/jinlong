@@ -163,6 +163,15 @@ export function CaixaReciboModal({
   }, [onClose])
 
   const temDesconto = venda.totalBruto > venda.totalLiquidoComGerente
+  /**
+   * Parte do desconto que veio das LINHAS (faixa de atacado / preco manual).
+   * `venda.totalDesconto` ja embute o desconto do gerente, entao subtrai-lo
+   * evita listar o mesmo valor duas vezes no cupom.
+   */
+  const descontoProdutosLiquido = Math.max(
+    0,
+    Number((venda.totalDesconto - venda.valorDescontoGerente).toFixed(2)),
+  )
 
   return (
     <div
@@ -261,6 +270,11 @@ export function CaixaReciboModal({
             </div>
 
             {/* Totais */}
+            {/* `totalDesconto` do carrinho ja inclui o desconto do gerente
+                (`calcularTotaisComGerente` faz bruto - liquidoComGerente). Sem
+                descontar, o recibo listava o MESMO valor duas vezes -- como
+                "Desconto produtos" e como "Desconto gerente" -- e a conta do
+                cupom nao fechava para o cliente, embora o TOTAL estivesse certo. */}
             <div className="recibo-totais border-b border-dashed border-border pb-3 flex flex-col gap-1">
               {temDesconto && (
                 <>
@@ -268,10 +282,10 @@ export function CaixaReciboModal({
                     <span className="text-muted-foreground">{labels.subtotal}</span>
                     <span>{fmtBRL(venda.totalBruto, venda.moeda)}</span>
                   </div>
-                  {venda.totalDesconto > 0 && (
+                  {descontoProdutosLiquido > 0 && (
                     <div className="recibo-linha flex justify-between text-muted-foreground">
                       <span>{labels.descontoProdutos}</span>
-                      <span>− {fmtBRL(venda.totalDesconto, venda.moeda)}</span>
+                      <span>− {fmtBRL(descontoProdutosLiquido, venda.moeda)}</span>
                     </div>
                   )}
                   {venda.descontoGerentePercentual > 0 && (
