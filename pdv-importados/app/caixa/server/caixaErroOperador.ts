@@ -31,7 +31,7 @@ const MSG_CAIXA_INDISPONIVEL: Record<IdiomaErro, string> = {
   zh: '收银台暂时不可用。',
 }
 const MSG_MOVIMENTACOES_PENDENTES: Record<IdiomaErro, string> = {
-  pt: 'Há vendas pendentes para finalizar.',
+  pt: 'Há movimentações de caixa pendentes. Resolva as pendências antes de fechar.',
   zh: '有待完成的销售。',
 }
 const MSG_CAIXA_FECHADO: Record<IdiomaErro, string> = {

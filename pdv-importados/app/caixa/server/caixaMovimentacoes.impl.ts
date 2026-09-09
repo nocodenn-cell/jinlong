@@ -99,7 +99,13 @@ export async function autorizarMovimentacaoGerenteImpl(
     } = await supabase.auth.getUser()
     if (!user) return { ok: false, error: await caixaMsgOperador( 'err_srv_sessao_expirada') }
 
-    const validacao = await validarGerenteDescontoImpl({ senha })
+    // Token preso a ESTA movimentação: autorizar uma sangria não autoriza
+    // outra, nem um desconto, nem um pagamento AP.
+    const validacao = await validarGerenteDescontoImpl({
+      senha,
+      finalidade: 'SANGRIA',
+      alvoId: movimentacaoId.trim(),
+    })
     if (!validacao.ok) {
       return {
         ok: false,

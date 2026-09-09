@@ -64,7 +64,29 @@ type ValidateOptions = {
   };
   tokenCreatedBy: string | null;
   persistAuthAttemptsByUser: boolean;
+  /**
+   * Finalidade tipada da autorização. Quando informada, o token é gravado em
+   * `tokens_autorizacao_operacao` (tabela separada) preso a finalidade + alvo +
+   * loja + gerente aprovador. Ausente = token legado, sem finalidade, gravado em
+   * `tokens_desconto_gerente` (desconto de venda, limite de crédito, retomada).
+   */
+  finalidade?: TokenFinalidade | null;
+  /**
+   * Identidade da operação autorizada. Obrigatória quando `finalidade` é
+   * informada. Sangria: id da movimentação. Pagamento AP:
+   * `ap:<conta_id>:<idempotency_key>` — a mesma chave de idempotência que o
+   * banco deriva e grava na movimentação.
+   */
+  alvoId?: string | null;
 };
+
+export type TokenFinalidade = "SANGRIA" | "PAGAMENTO_AP";
+
+const FINALIDADES_VALIDAS: readonly string[] = ["SANGRIA", "PAGAMENTO_AP"];
+
+export function isTokenFinalidade(valor: unknown): valor is TokenFinalidade {
+  return typeof valor === "string" && FINALIDADES_VALIDAS.includes(valor);
+}
 
 type ValidateResult =
   | {
@@ -80,7 +102,8 @@ type ValidateResult =
   }
   | {
     ok: false;
-    status: 401 | 429 | 500 | 503;
+    // 400/403: recusas do contrato tipado (alvo ausente, solicitante inválido).
+    status: 400 | 401 | 403 | 429 | 500 | 503;
     body: Record<string, unknown>;
   };
 
@@ -344,14 +367,40 @@ async function persistTokenAndResetLimits(
   userId: string | null | undefined,
   logStage: string,
   log: LoggerFn,
+  finalidade: TokenFinalidade | null,
+  alvoId: string | null,
+  gerenteAprovadorId: string,
+  lojaOperacaoId: string | null,
 ): Promise<ValidateResult | null> {
-  const { error: insertError } = await supabase.from("tokens_desconto_gerente").insert({
-    token,
-    expira_em: expiraEm,
-    usado: false,
-    loja_id: lojaId,
-    criado_por: tokenCreatedBy,
-  });
+  // Token TIPADO (sangria / pagamento AP): vai para a tabela separada, preso a
+  // finalidade + alvo + loja + gerente aprovador.
+  //
+  // `gerenteAprovadorId` vem de `pdv_config.gerente_id`, já validado (ativo e com
+  // perfil aprovador) — é quem de fato teve a senha conferida. NÃO usar
+  // `tokenCreatedBy`: aquele é o usuário autenticado que PEDIU a autorização, ou
+  // seja, o operador solicitante. Confundir os dois registrava o solicitante como
+  // aprovador da própria operação.
+  //
+  // A loja é derivada do servidor (`lojaOperacaoId`), não do corpo da requisição.
+  const insertResult = finalidade
+    ? await supabase.from("tokens_autorizacao_operacao").insert({
+      token,
+      finalidade,
+      alvo_id: alvoId,
+      loja_id: lojaOperacaoId,
+      gerente_id: gerenteAprovadorId,
+      solicitante_id: tokenCreatedBy,
+      expira_em: expiraEm,
+      usado: false,
+    })
+    : await supabase.from("tokens_desconto_gerente").insert({
+      token,
+      expira_em: expiraEm,
+      usado: false,
+      loja_id: lojaId,
+      criado_por: tokenCreatedBy,
+    });
+  const { error: insertError } = insertResult;
   if (insertError) {
     log({ level: "error", stage: logStage, error: insertError.message });
     return { ok: false, status: 503, body: { ok: false, error: "ERRO_PERSISTENCIA_TOKEN" } };
@@ -385,6 +434,8 @@ export async function validateGerenteAndIssueToken(
     limits,
     tokenCreatedBy,
     persistAuthAttemptsByUser,
+    finalidade,
+    alvoId,
   } = options;
 
   const now = new Date();
@@ -442,6 +493,30 @@ export async function validateGerenteAndIssueToken(
     const token = generateToken();
     const expiraEm = new Date(Date.now() + TOKEN_TTL_MS).toISOString();
 
+    // Token tipado exige alvo e loja. A loja NÃO vem do corpo da requisição: é
+    // lida do cadastro do solicitante, para que o cliente não escolha o tenant.
+    let lojaOperacaoId: string | null = null;
+    if (finalidade) {
+      if (!alvoId || !alvoId.trim()) {
+        log({ level: "error", stage: logStage, error: "ALVO_OBRIGATORIO" });
+        return { ok: false, status: 400, body: { ok: false, error: "ALVO_OBRIGATORIO" } };
+      }
+      if (!userId) {
+        log({ level: "error", stage: logStage, error: "SOLICITANTE_OBRIGATORIO" });
+        return { ok: false, status: 401, body: { ok: false, error: "SOLICITANTE_OBRIGATORIO" } };
+      }
+      const { data: solicitante, error: solicitanteErr } = await supabase
+        .from("usuarios")
+        .select("loja_id, ativo")
+        .eq("id", userId)
+        .maybeSingle();
+      if (solicitanteErr || !solicitante?.ativo || !solicitante?.loja_id) {
+        log({ level: "error", stage: logStage, error: "SOLICITANTE_INVALIDO" });
+        return { ok: false, status: 403, body: { ok: false, error: "SOLICITANTE_INVALIDO" } };
+      }
+      lojaOperacaoId = solicitante.loja_id as string;
+    }
+
     const persistErr = await persistTokenAndResetLimits(
       supabase,
       token,
@@ -454,6 +529,10 @@ export async function validateGerenteAndIssueToken(
       userId,
       logStage,
       log,
+      finalidade ?? null,
+      alvoId?.trim() ?? null,
+      gerenteIdRaw,
+      lojaOperacaoId,
     );
     if (persistErr) return persistErr;
 

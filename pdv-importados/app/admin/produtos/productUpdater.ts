@@ -56,10 +56,10 @@ export type ProdutoUpdatePayload = {
   nome_reduzido_pdv: string | null
   localizacao_prateleira: string | null
   preco_varejo: number
-  preco_atacado: number | null
+  preco_atacado?: number | null
   preco_custo: number | null
   permitir_abaixo_custo: boolean
-  quantidade_gatilho_atacado: number | null
+  quantidade_gatilho_atacado?: number | null
   origem?: string
   tem_nf?: boolean
   unidade_medida: string
@@ -260,14 +260,31 @@ function parAtacado(p: {
 
 function defaultUpdateRow(supabase: SupabaseClient): UpdateProdutoRowFn {
   return async ({ id, lojaId, payload }) => {
+    const { data: atual, error: erroLeitura } = await supabase
+      .from('produtos')
+      .select('preco_atacado, quantidade_gatilho_atacado')
+      .eq('id', id)
+      .eq('loja_id', lojaId)
+      .maybeSingle()
+    if (erroLeitura) return { error: erroLeitura }
+
+    const antes = parAtacado(atual ?? {})
+    const depois = parAtacado(payload)
+    const mudaAtacado = antes.preco !== depois.preco || antes.gatilho !== depois.gatilho
+    const payloadRpc = { ...payload }
+    if (!mudaAtacado) {
+      // Reenvio do catálogo não deve recriar nem inativar faixas do editor.
+      delete payloadRpc.preco_atacado
+      delete payloadRpc.quantidade_gatilho_atacado
+    }
     const { error } = await supabase.rpc('atualizar_produto_com_faixa_atacado', {
       p_produto_id: id,
-      p_payload: payload,
+      p_payload: payloadRpc,
       // `p_ator_id` NÃO é enviado: este é o client de sessão, então a RPC
       // resolve o ator por `auth.uid()`. Enviar `null` explicitamente divergia
       // do tipo gerado (que aceita ausente ou string) sem que o typecheck
       // pudesse acusar, porque o client é genérico.
-      p_faixa: derivarFaixaAtacado(payload),
+      p_faixa: derivarFaixaAtacado(payloadRpc),
     })
 
     if (!rpcAusente(error)) return { error }
@@ -277,20 +294,6 @@ function defaultUpdateRow(supabase: SupabaseClient): UpdateProdutoRowFn {
     // atual (em vez de olhar só a presença das chaves) evita bloquear edições
     // que apenas reenviam o mesmo atacado — o formulário sempre manda o estado
     // completo, então as chaves estão sempre presentes.
-    const { data: atual, error: erroLeitura } = await supabase
-      .from('produtos')
-      .select('preco_atacado, quantidade_gatilho_atacado')
-      .eq('id', id)
-      .eq('loja_id', lojaId)
-      .maybeSingle()
-    if (erroLeitura) return { error: erroLeitura }
-
-    const antes = parAtacado((atual ?? {}) as Record<string, number | null>)
-    const depois = parAtacado(payload)
-    const mudaAtacado =
-      Number(antes.preco ?? 0) !== Number(depois.preco ?? 0) ||
-      Number(antes.gatilho ?? 0) !== Number(depois.gatilho ?? 0)
-
     if (mudaAtacado) {
       // Recusa ANTES de qualquer escrita: nada é persistido, logo não há
       // estado parcial possível.
@@ -300,7 +303,7 @@ function defaultUpdateRow(supabase: SupabaseClient): UpdateProdutoRowFn {
     // Instrução única — atômica por si.
     const { error: erroDireto } = await supabase
       .from('produtos')
-      .update(payload)
+      .update(payloadRpc)
       .eq('id', id)
       .eq('loja_id', lojaId)
     return { error: erroDireto }

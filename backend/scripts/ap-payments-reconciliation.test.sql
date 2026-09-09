@@ -237,8 +237,14 @@ UPDATE public.pdv_config SET limite_sangria_sem_gerente = 1 WHERE id = 1;
 SELECT gen_random_uuid() AS auth_account \gset
 INSERT INTO public.contas_pagar(id, fornecedor_id, loja_id, vencimento, valor_total, valor_pago, descricao)
 VALUES (:'auth_account', :'fornecedor', :'loja', current_date, 2, 0, 'Autorizada');
-INSERT INTO public.tokens_desconto_gerente(token, expira_em, usado, loja_id, criado_por)
-VALUES ('token-ap-2b', now() + interval '10 minutes', false, :'loja', :'gerente_id');
+-- Contrato tipado: o token de pagamento AP vive em `tokens_autorizacao_operacao`
+-- e fica preso à identidade estável da operação ('ap:<conta_id>:<idempotency_key>'),
+-- à loja e ao gerente aprovador. Um token de desconto (tabela legada) não serve
+-- mais aqui, e este não serve para nenhuma outra operação.
+INSERT INTO public.tokens_autorizacao_operacao(
+  token, finalidade, alvo_id, loja_id, gerente_id, solicitante_id, expira_em)
+VALUES ('token-ap-2b', 'PAGAMENTO_AP', 'ap:' || :'auth_account' || ':authorized-cash:2.00',
+        :'loja', :'gerente_id', :'gerente_id', now() + interval '10 minutes');
 SELECT set_config('request.jwt.claim.sub', :'gerente_id', true);
 SELECT set_config('test.auth_account', :'auth_account', true);
 SELECT set_config('test.gerente_id', :'gerente_id', true);
@@ -246,10 +252,18 @@ SET LOCAL ROLE authenticated;
 DO $test$ DECLARE v_r record; BEGIN
   SELECT * INTO v_r FROM public.registrar_pagamento_contas_pagar(
     current_setting('test.auth_account')::uuid, 2, 'DINHEIRO', '2026-08-13T13:00:00Z', NULL, 'authorized-cash', current_setting('test.caixa')::uuid, 'TESTE_DB', 'token-ap-2b');
-  IF NOT (SELECT usado FROM public.tokens_desconto_gerente WHERE token = 'token-ap-2b')
-     OR (SELECT status FROM public.movimentacoes_caixa WHERE id = v_r.movimentacao_caixa_id) <> 'aprovado'
+  IF (SELECT status FROM public.movimentacoes_caixa WHERE id = v_r.movimentacao_caixa_id) <> 'aprovado'
      OR (SELECT gerente_id FROM public.movimentacoes_caixa WHERE id = v_r.movimentacao_caixa_id) <> current_setting('test.gerente_id')::uuid THEN
     RAISE EXCEPTION 'authorization_not_proven';
+  END IF;
+END $test$;
+
+-- O consumo do token é verificado FORA do papel `authenticated`: a tabela de
+-- tokens é fechada para ele por desenho (só service_role / SECURITY DEFINER).
+RESET ROLE;
+DO $test$ BEGIN
+  IF NOT (SELECT usado FROM public.tokens_autorizacao_operacao WHERE token = 'token-ap-2b') THEN
+    RAISE EXCEPTION 'authorization_token_not_consumed';
   END IF;
 END $test$;
 

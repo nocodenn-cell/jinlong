@@ -13,7 +13,7 @@ describe('caixaErroOperador', () => {
 
   it('mapeia movimentações pendentes', () => {
     expect(caixaErroOperador('FECHAR_CAIXA_MOVIMENTACOES_PENDENTES')).toBe(
-      'Há vendas pendentes para finalizar.',
+      'Há movimentações de caixa pendentes. Resolva as pendências antes de fechar.',
     )
   })
 
