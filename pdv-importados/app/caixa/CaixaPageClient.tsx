@@ -988,6 +988,19 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
 
   const handleFinalizar = useCallback(async (limiteCreditoGerenteToken?: string) => {
     if (itens.length === 0 || finalizando) return
+    // Mesmo estrangulamento de `handleNovoCupom`: enquanto a venda anterior
+    // puder ter sido gravada (timeout/rede), finalizar de novo permite cobrar
+    // duas vezes. O banco recusa o retry sob a MESMA chave de idempotência
+    // (`FINALIZAR_VENDA_CANONICA_RETRY_PAYLOAD_DIVERGENTE`), mas a recusa
+    // libera a pendência no cliente — e daí "Novo cupom" zera a chave e a
+    // segunda tentativa grava uma venda NOVA, com estoque e dinheiro em
+    // dobro. Bloquear aqui corta o caminho antes de ele começar; a saída é a
+    // mesma já existente: consultar o desfecho no modal de venda pendente.
+    if (useCarrinhoStore.getState().vendaFinalizacaoPendente) {
+      setVendaPendenteModalAberto(true)
+      setCaixaMensagem(m.caixa.msg_venda_pendente_bloqueio, { kind: "warning" })
+      return
+    }
     if (
       configCaixaWeb.vendas_suspensas === 'true' &&
       perfil !== null &&

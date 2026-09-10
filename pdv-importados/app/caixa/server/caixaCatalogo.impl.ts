@@ -74,6 +74,27 @@ function rowVendavel(row: ProdutoRowCaixa): boolean {
   })
 }
 
+function codigoInternoIgual(codigo: string | null, termo: string): boolean {
+  return (codigo ?? '').trim().toLowerCase() === termo.trim().toLowerCase()
+}
+
+function skuExato(lista: ProdutoRowCaixa[], termo: string): ProdutoRowCaixa[] {
+  return lista.filter((row) => codigoInternoIgual(row.codigo_interno, termo))
+}
+
+/** União por id, ordem de nome, teto de candidatos — SKU parcial não esconde match de nome. */
+function mesclarCandidatos(
+  primaria: ProdutoRowCaixa[],
+  extra: ProdutoRowCaixa[],
+): ProdutoRowCaixa[] {
+  const byId = new Map<string, ProdutoRowCaixa>()
+  for (const row of primaria) byId.set(row.id, row)
+  for (const row of extra) byId.set(row.id, row)
+  return [...byId.values()]
+    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt'))
+    .slice(0, LIMITE_CANDIDATOS_AMBIGUOS)
+}
+
 type SupabaseCaixa = Awaited<ReturnType<typeof createClient>>
 
 async function buscarVendaveisPorColunaIlike(
@@ -215,6 +236,9 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
     }
 
     // SKU / código interno — após barcode, antes do nome (ID 6).
+    // Match EXATO do SKU continua no caminho rápido. ILIKE parcial NÃO pode
+    // abortar a busca por nome: "ca" batendo só em SKU "CA-01" (Parafuso)
+    // colocava o item errado no carrinho e escondia "Caneta Azul".
     const porSku = await buscarVendaveisPorColunaIlike(
       supabase,
       'codigo_interno',
@@ -222,8 +246,9 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
       idioma,
     )
     if (!porSku.ok) return porSku
-    if (porSku.lista.length > 0) {
-      return finalizarListaProdutos(supabase, porSku.lista, lojaId, frag, 'sku', idioma)
+    const skuExatos = skuExato(porSku.lista, t)
+    if (skuExatos.length > 0) {
+      return finalizarListaProdutos(supabase, skuExatos, lojaId, frag, 'sku', idioma)
     }
 
     // Accent-insensitive (Onda 2 · Bloco 3): compara contra a coluna gerada
@@ -261,7 +286,16 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
       }
     }
 
-    return finalizarListaProdutos(supabase, lista, lojaId, frag, 'nome', idioma)
+    const soSkuParcial = lista.length === 0 && porSku.lista.length > 0
+    lista = mesclarCandidatos(lista, porSku.lista)
+    return finalizarListaProdutos(
+      supabase,
+      lista,
+      lojaId,
+      frag,
+      soSkuParcial ? 'sku' : 'nome',
+      idioma,
+    )
   } catch (e) {
     return {
       ok: false,
