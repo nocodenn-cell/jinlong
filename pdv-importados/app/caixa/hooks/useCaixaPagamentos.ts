@@ -115,9 +115,26 @@ export function useCaixaPagamentos(
     })
   }, [totalLiquidoComGerente])
 
+  /**
+   * Encerra/abandona o cupom: volta a UMA parcela ZERADA.
+   *
+   * Zerar é o contrato — não "reiniciar com o total". Os três chamadores
+   * (venda concluída, novo cupom, recuperação de venda pendente) limpam o
+   * carrinho na mesma passagem, mas `totalLiquidoComGerente` ainda é o do
+   * cupom ANTERIOR nesta closure (o state do carrinho só reflete no próximo
+   * render). Reiniciar com esse total deixava o "Recebido" preso no valor da
+   * venda anterior: o efeito de reajuste abaixo só repõe a parcela única
+   * quando ela está <= 0.009, então um valor herdado nunca era corrigido e
+   * o cupom SEGUINTE abria com "Recebido" e "Troco" fantasmas (ex.: venda de
+   * R$ 22,50 exibindo troco de R$ 30,30 sem o cliente ter entregue nada).
+   *
+   * Com a parcela zerada, esse mesmo efeito volta a preenchê-la com o total
+   * assim que o primeiro item do próximo cupom entra — que é o comportamento
+   * que o operador já vê hoje na primeira leitura.
+   */
   const resetPagamentos = useCallback(() => {
-    setParcelas(parcelaInicial(formaPagamento ?? "DINHEIRO", totalLiquidoComGerente))
-  }, [totalLiquidoComGerente, formaPagamento])
+    setParcelas(parcelaInicial(formaPagamento ?? "DINHEIRO", 0))
+  }, [formaPagamento])
 
   const { somaParcelas, diferenca, saldoPendente } = calcularResumoParcelas(
     totalLiquidoComGerente,

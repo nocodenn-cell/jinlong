@@ -29,10 +29,25 @@
   --color-text-disabled: var(--color-fg-disabled);
   --color-border-primary: var(--color-border);
   --color-border-secondary: var(--color-border);
-  --color-border-disabled: var(--color-border-disabled);
+  /* `--color-border-disabled` também não é aliasado: mesmo caso auto-referente
+     descrito abaixo — apagava o `--palette-slate-100` de colors.css e a borda
+     de controle desabilitado caía para `currentColor` (quase preta). */
   --color-brand-primary: var(--color-brand);
   --color-brand-secondary: var(--color-brand-soft);
-  --color-brand-strong: var(--color-brand-strong);
+  /*
+   * `--color-brand-strong` NÃO é aliasado aqui: este arquivo é carregado
+   * DEPOIS de colors.css, e o nome já é o do SSOT. A linha
+   * `--color-brand-strong: var(--color-brand-strong)` que existia aqui era
+   * auto-referente — pela especificação, uma custom property que referencia
+   * a si mesma é *guaranteed-invalid*, e por ser a última declaração no
+   * cascade ela apagava o valor válido de colors.css em TODO o app.
+   * Consequência medida no navegador: `var(--color-brand-strong)` resolvia
+   * vazio, então `.fp-btn--primary:hover { background: var(...) }` virava
+   * inválido-em-tempo-de-valor-computado e o fundo caía para `transparent` —
+   * o botão azul com rótulo branco ficava invisível ao passar o mouse
+   * ("quebrado/desabilitado"), e `border-color: var(...)` caía para
+   * `currentColor`, desenhando um halo branco/claro. Não reintroduzir.
+   */
   --color-brand-contrast: var(--color-fg-on-brand);
   --color-success-50: var(--palette-jade-50);
   --color-success-500: var(--color-success);
