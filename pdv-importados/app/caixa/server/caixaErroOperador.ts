@@ -67,6 +67,18 @@ const MSG_CLIENTE_SALDO: Record<IdiomaErro, string> = {
   pt: 'Pagamento parcial exige um cliente válido da loja.',
   zh: '部分付款（挂账）需要绑定有效的门店客户。',
 }
+/**
+ * `CANCELAR_VENDA_SALDO_CAIXA_INSUFICIENTE` (migration 2026-09-09): o caixa
+ * aberto não tem, em dinheiro, o valor a estornar — tipicamente porque uma
+ * sangria já levou o valor para o cofre. A mensagem precisa dizer a saída
+ * operacional (suprimento), senão o operador só vê "tente novamente" e repete
+ * uma ação que nunca vai passar. Espelha a mensagem irmã da devolução
+ * (`DEVOLVER_VENDA_SALDO_CAIXA_INSUFICIENTE`).
+ */
+const MSG_CANCELAR_SALDO_CAIXA: Record<IdiomaErro, string> = {
+  pt: 'Dinheiro em caixa insuficiente para estornar esta venda. Registre um suprimento com o valor e cancele novamente.',
+  zh: '收银台现金不足以退还本笔销售。请先登记等额的现金补充，再重新取消。',
+}
 const MSG_LIMITE_CREDITO: Record<IdiomaErro, string> = {
   pt: 'Venda excede o limite de crédito do cliente — autorização do gerente necessária.',
   zh: '销售超过客户信用额度 — 需要经理授权。',
@@ -95,6 +107,11 @@ export function caixaErroOperador(
   }
   if (l.includes('caixa fechado') || l.includes('não há caixa aberto') || l.includes('nao ha caixa aberto')) {
     return l.includes('finalizar') ? MSG_CAIXA_FECHADO[idioma] : MSG_NAO_HA_CAIXA_ABERTO[idioma]
+  }
+  // Antes do teste genérico de estoque: a string contém "insuficiente", mas o
+  // que falta é dinheiro na gaveta, não produto.
+  if (l.includes('cancelar_venda_saldo_caixa_insuficiente')) {
+    return MSG_CANCELAR_SALDO_CAIXA[idioma]
   }
   if (l.includes('finalizar_venda_canonica_estoque') || l.includes('estoque insuficiente')) {
     return MSG_ESTOQUE[idioma]

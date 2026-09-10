@@ -54,6 +54,7 @@ const SQL_SUITES = [
   'gate-a01-venda-retry-payload-divergente.test.sql',
   'gate-a04-varejo-menor-que-tier-ativo.test.sql',
   'gate-a02-fechamento-repeticao-valor-divergente.test.sql',
+  'gate-a05-cancelamento-saldo-caixa-insuficiente.test.sql',
   'pr1b-kardex-imutavel.test.sql',
   'pr1c-estoque-quantidade-protecao.test.sql',
   'item7-storage-produto-imagens-tenant.test.sql',
