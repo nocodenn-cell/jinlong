@@ -38,6 +38,20 @@ describe('caixaErroOperador', () => {
     )
   })
 
+  it('mapeia saldo de caixa insuficiente no cancelamento — dinheiro, não estoque (PT e 中文)', () => {
+    // A string contém "INSUFICIENTE"; sem a regra própria cairia na mensagem de
+    // estoque e mandaria o operador "ajustar o carrinho" de uma venda que ele
+    // está tentando cancelar.
+    const pt = caixaErroOperador('CANCELAR_VENDA_SALDO_CAIXA_INSUFICIENTE')
+    expect(pt).toContain('Dinheiro em caixa insuficiente')
+    expect(pt).toContain('suprimento')
+    expect(pt).not.toContain('carrinho')
+
+    const zh = caixaErroOperador('CANCELAR_VENDA_SALDO_CAIXA_INSUFICIENTE', 'zh')
+    expect(zh).toContain('现金不足')
+    expect(zh).not.toMatch(/[a-zA-Z]/)
+  })
+
   it('mapeia divergência de preço', () => {
     expect(caixaErroOperador('FINALIZAR_VENDA_CANONICA_PRECO_DIVERGENTE:abc')).toContain(
       'preços do carrinho mudaram',
