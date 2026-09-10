@@ -647,12 +647,6 @@ export function ProdutoFormModal({
             {statusChip.label}
           </span>
           <span className="text-caption font-normal text-fg-subtle">{statusChip.hint}</span>
-          {linhaCriadoPor || linhaEditadoPor ? (
-            <span className="flex flex-col text-caption font-normal text-fg-subtle">
-              {linhaCriadoPor ? <span>{linhaCriadoPor}</span> : null}
-              {linhaEditadoPor ? <span>{linhaEditadoPor}</span> : null}
-            </span>
-          ) : null}
         </span>
       }
       dismissable={!saving}
@@ -742,6 +736,12 @@ export function ProdutoFormModal({
           sugestaoHint={sugestaoHint}
           {...form}
         />
+        {linhaCriadoPor || linhaEditadoPor ? (
+          <p className="mt-4 flex flex-col border-t border-[var(--color-border-secondary)] pt-3 text-caption text-fg-subtle">
+            {linhaCriadoPor ? <span>{linhaCriadoPor}</span> : null}
+            {linhaEditadoPor ? <span>{linhaEditadoPor}</span> : null}
+          </p>
+        ) : null}
       </div>
     </DragonModal>
 

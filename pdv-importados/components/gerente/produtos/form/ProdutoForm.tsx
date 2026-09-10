@@ -194,6 +194,7 @@ export function ProdutoForm(props: Props) {
         {/* Cadeia do Enter no cadastro rápido, na mesma ordem visual:
             código → nome → custo → venda → estoque inicial → salvar. */}
         <EssencialSection
+          modoCompleto={props.modoCompleto}
           nomeRef={props.nomeRef}
           codigoBarrasRef={props.codigoBarrasRef}
           proximoAposNomeRef={props.precoCustoRef}

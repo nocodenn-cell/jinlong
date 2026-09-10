@@ -162,9 +162,20 @@ describe('cadeia do Enter até o estoque', () => {
 describe('unidade no estoque inicial', () => {
   it('mostra a unidade escolhida junto da quantidade', () => {
     render()
+    // Unidade tem default (UN) e saiu do cadastro simples: vive em
+    // "Mais detalhes". O rótulo do estoque continua espelhando a escolha.
+    const maisDetalhes = Array.from(container.querySelectorAll('button')).find((b) =>
+      (b.textContent ?? '').includes(p.modo_completo),
+    ) as HTMLButtonElement
+    expect(maisDetalhes, 'botão Mais detalhes').toBeTruthy()
+    flushSync(() => {
+      maisDetalhes.click()
+    })
+
     const select = container.querySelector(
       'select[data-field="unidade_medida"]',
     ) as HTMLSelectElement
+    expect(select, 'select de unidade em Mais detalhes').toBeTruthy()
     flushSync(() => {
       select.value = 'CX'
       select.dispatchEvent(new Event('change', { bubbles: true }))

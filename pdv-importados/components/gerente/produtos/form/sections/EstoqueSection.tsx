@@ -38,7 +38,9 @@ export function EstoqueSection({
     <section aria-labelledby="produto-secao-estoque">
       <ProdutoFormSectionHeading title={p.secao_estoque} />
       <div id="produto-secao-estoque" className="mt-3 space-y-3">
-        {modoCompleto || !isCreate ? (
+        {/* Prateleira é metadado de organização: não decide se o produto
+            vende. Fica em "Mais detalhes" nos dois fluxos. */}
+        {modoCompleto ? (
           <label className="block text-xs font-medium text-jl-fg-3">
             {p.localizacao_prateleira_label}
             <input

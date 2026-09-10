@@ -8,6 +8,7 @@ import { CAMPO_INVALIDO_CLASS, CampoErroMsg, erroDoCampo } from '../CampoErro'
 import type { UnidadeCode } from '../produtoForm.types'
 
 type Props = Readonly<{
+  modoCompleto?: boolean
   nomeRef?: RefObject<HTMLInputElement | null>
   codigoBarrasRef?: RefObject<HTMLInputElement | null>
   /** Próximo campo da cadeia do Enter depois do nome (preço de custo). */
@@ -17,6 +18,7 @@ type Props = Readonly<{
 }>
 
 export function EssencialSection({
+  modoCompleto = false,
   nomeRef,
   codigoBarrasRef,
   proximoAposNomeRef,
@@ -73,6 +75,10 @@ export function EssencialSection({
           <CampoErroMsg mensagem={erroNome} />
         </label>
 
+        {/* Unidade tem default (UN) e código interno é SKU opcional: nenhum dos
+            dois bloqueia a venda, então saem do caminho de quem só quer
+            cadastrar e vender. Reaparecem em "Mais detalhes". */}
+        {modoCompleto ? (
         <div className="grid grid-cols-2 gap-3">
           <label className="block text-xs font-medium text-jl-fg-3">
             {p.unidade_medida}
@@ -102,6 +108,7 @@ export function EssencialSection({
             />
           </label>
         </div>
+        ) : null}
       </div>
     </section>
   )
