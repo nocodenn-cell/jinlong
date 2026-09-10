@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, type RefObject } from 'react'
+import { useMemo, type ReactNode, type RefObject } from 'react'
 import { AlertTriangle } from 'lucide-react'
 import { formatBRL } from '@/lib/format/money'
 import { ProdutoFormSectionHeading } from '../ProdutoFormSectionHeading'
@@ -15,6 +15,8 @@ import {
 
 type Props = Readonly<{
   modoCompleto?: boolean
+  /** Bloco de atacado — mora aqui, junto de custo e varejo. */
+  atacadoSlot?: ReactNode
   precoCustoRef?: RefObject<HTMLInputElement | null>
   precoVarejoRef?: RefObject<HTMLInputElement | null>
   /** Próximo campo da cadeia do Enter depois do varejo (estoque inicial). */
@@ -24,6 +26,7 @@ type Props = Readonly<{
 
 export function PrecosSection({
   modoCompleto = false,
+  atacadoSlot,
   precoCustoRef,
   precoVarejoRef,
   proximoAposVarejoRef,
@@ -49,7 +52,6 @@ export function PrecosSection({
   return (
     <section aria-labelledby="produto-secao-precos">
       <ProdutoFormSectionHeading title={p.secao_precificacao} />
-      <p className="mt-1 text-caption text-jl-fg-3">{p.hint_precos_publicar}</p>
       <div id="produto-secao-precos" className="mt-3 space-y-3">
         {/* Custo e venda SEMPRE lado a lado — a margem precisa estar visível no
             momento em que o preço é digitado, não atrás de "Mais detalhes". */}
@@ -129,6 +131,7 @@ export function PrecosSection({
           ) : null}
         </div>
 
+        {atacadoSlot}
       </div>
     </section>
   )

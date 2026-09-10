@@ -224,8 +224,15 @@ export function FaixasAtacadoEditor({ produtoId, p, precoAtacadoCatalogo }: Prop
               key={f.id}
               className="grid grid-cols-[1fr_1fr_auto] items-center gap-2 rounded-md border border-[var(--color-border-secondary)] p-2"
             >
-              <span className="text-xs font-mono text-jl-fg-1">{f.quantidade_minima}+ {p.faixa_unidades}</span>
-              <span className="text-xs font-mono text-jl-fg-1">{formatBRL(f.preco_unitario)}</span>
+              <span className="text-xs font-mono text-jl-fg-1">
+                {f.quantidade_minima}+ {p.faixa_unidades}
+              </span>
+              <span className="text-xs font-mono font-semibold text-jl-fg-1">
+                <span className="mr-1 text-jl-fg-3" aria-hidden>
+                  →
+                </span>
+                {formatBRL(f.preco_unitario)}
+              </span>
               <div className="flex gap-1">
                 <button
                   type="button"

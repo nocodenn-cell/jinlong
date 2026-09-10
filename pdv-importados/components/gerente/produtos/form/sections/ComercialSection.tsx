@@ -13,11 +13,17 @@ import { FIN_TEXTAREA } from '../produtoFormStyles'
 import type { OrigemCode } from '../produtoForm.types'
 
 type Props = Readonly<{
-  faixasSlot: ReactNode
   historicoSlot?: ReactNode
 }>
 
-export function ComercialSection({ faixasSlot, historicoSlot }: Props) {
+/**
+ * "Mais detalhes" — metadados que não bloqueiam a venda.
+ *
+ * O bloco de atacado saiu daqui para PrecosSection: preço não é
+ * classificação, e escondê-lo atrás de dois níveis de disclosure fazia o
+ * comerciante não achar "a partir de quantas unidades".
+ */
+export function ComercialSection({ historicoSlot }: Props) {
   const ctx = useProdutoFormContext()
   const p = ctx.m.produtos
   const c = ctx.m.comum
@@ -40,7 +46,6 @@ export function ComercialSection({ faixasSlot, historicoSlot }: Props) {
           {p.secao_classificacao_resumo}
         </summary>
         <div id="produto-secao-comercial" className="mt-3 space-y-3">
-          <p className="text-caption text-jl-fg-3">{p.hint_classificacao_recomendados}</p>
           {/* Categoria e fornecedor saíram daqui para a área sempre visível
               (CategoriaQuickField / FornecedorQuickField). Marca segue aqui. */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -79,7 +84,6 @@ export function ComercialSection({ faixasSlot, historicoSlot }: Props) {
                 <option value="brasil_nf">{p.origem_brasil_nf}</option>
                 <option value="brasil_sem_nf">{p.origem_brasil_sem_nf}</option>
               </select>
-              <span className="mt-0.5 block text-caption text-jl-fg-3">{p.hint_origem_tem_nf}</span>
             </label>
           </div>
 
@@ -122,14 +126,6 @@ export function ComercialSection({ faixasSlot, historicoSlot }: Props) {
               placeholder="—"
             />
           </label>
-
-          <div className="rounded-md border border-[var(--color-border-secondary)] bg-white/[.03] p-3">
-            <p className="mb-1 text-caption font-semibold uppercase tracking-wider text-jl-fg-3">
-              {p.titulo_faixas_atacado}
-            </p>
-            <p className="mb-2 text-caption text-jl-fg-3">{p.hint_faixas_atacado}</p>
-            {faixasSlot}
-          </div>
 
           {historicoSlot}
         </div>

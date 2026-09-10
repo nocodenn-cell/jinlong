@@ -5,13 +5,15 @@
  * está dentro de "Mais detalhes" e a seção está fechada: o operador lê um erro
  * sobre um campo que não existe na tela. O modal usa isto para abrir a seção
  * antes de focar.
+ *
+ * Hoje o conjunto está VAZIO: `preco_atacado` saiu de "Mais detalhes" para a
+ * seção Preços (AtacadoSection). O gancho permanece porque qualquer campo
+ * validável que volte a morar atrás de um disclosure precisa dele.
  */
 import type { ProdutoFormCampoErro } from './produtoForm.clientValidation'
 
 /** Campos que só renderizam no modo completo. */
-const SO_NO_MODO_COMPLETO: ReadonlySet<ProdutoFormCampoErro> = new Set<ProdutoFormCampoErro>([
-  'preco_atacado',
-])
+const SO_NO_MODO_COMPLETO: ReadonlySet<ProdutoFormCampoErro> = new Set<ProdutoFormCampoErro>()
 
 export function campoExigeModoCompleto(campo: ProdutoFormCampoErro): boolean {
   return SO_NO_MODO_COMPLETO.has(campo)

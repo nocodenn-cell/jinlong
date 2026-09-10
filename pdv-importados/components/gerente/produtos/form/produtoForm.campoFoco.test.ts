@@ -3,14 +3,14 @@ import { describe, expect, it } from 'vitest'
 import { campoExigeModoCompleto, localizarCampo } from './produtoForm.campoFoco'
 
 describe('campoExigeModoCompleto', () => {
-  it('exige abrir Mais detalhes para o preço de atacado', () => {
-    expect(campoExigeModoCompleto('preco_atacado')).toBe(true)
-  })
-
-  it('não exige para os campos do cadastro simples', () => {
+  // O preço de atacado saiu de "Mais detalhes" para a seção Preços
+  // (AtacadoSection): nenhum campo validável mora mais atrás de um disclosure,
+  // então o erro sempre cai num campo que está na tela.
+  it('não exige abrir Mais detalhes para nenhum campo validável', () => {
     expect(campoExigeModoCompleto('nome')).toBe(false)
     expect(campoExigeModoCompleto('codigo_barras')).toBe(false)
     expect(campoExigeModoCompleto('preco_varejo')).toBe(false)
+    expect(campoExigeModoCompleto('preco_atacado')).toBe(false)
   })
 })
 

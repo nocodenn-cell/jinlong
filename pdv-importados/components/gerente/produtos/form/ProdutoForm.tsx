@@ -19,6 +19,7 @@ import { EssencialSection } from './sections/EssencialSection'
 import { PrecosSection } from './sections/PrecosSection'
 import { CategoriaQuickField } from './sections/CategoriaQuickField'
 import { FornecedorQuickField } from './sections/FornecedorQuickField'
+import { AtacadoSection } from './sections/AtacadoSection'
 import { ComercialSection } from './sections/ComercialSection'
 import { CompraSection } from './sections/CompraSection'
 import { EstoqueSection } from './sections/EstoqueSection'
@@ -109,6 +110,14 @@ export function ProdutoForm(props: Props) {
 
   const p = props.m.produtos
   const erroAtacado = erroDoCampo(props.erro, 'preco_atacado')
+  // Na EDIÇÃO nasce sempre aberto: as faixas vivem em `precos_atacado` e só o
+  // FaixasAtacadoEditor sabe se existem (carrega async). Fechar por padrão
+  // esconderia faixas ativas de um produto que já vende no atacado.
+  // Na CRIAÇÃO abre só se já houver valor semeado (duplicar produto).
+  const temAtacado =
+    props.readOnly.produtoId !== null ||
+    (props.precoAtacadoInput.parse() ?? 0) > 0 ||
+    props.quantidadeGatilho.trim() !== ''
   const faixasSlot =
     props.readOnly.produtoId !== null ? (
       <FaixasAtacadoEditor
@@ -124,9 +133,21 @@ export function ProdutoForm(props: Props) {
       // criada ATOMICAMENTE junto com o produto, sem precisar salvar/reabrir/
       // editar depois. Faixas extras exigem o produto já existir (acima).
       <div className="space-y-2">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-[1fr_1fr] gap-3">
           <label className="block text-xs font-medium text-jl-fg-3">
-            {p.preco_atacado}
+            {p.faixa_col_quantidade}
+            <input
+              type="text"
+              inputMode="numeric"
+              className={`${fields.inputMonoClassName} mt-1`}
+              value={props.quantidadeGatilho}
+              onChange={(e) => props.setQuantidadeGatilho(e.target.value.replace(/\D/g, ''))}
+              disabled={props.disabled}
+              placeholder="0"
+            />
+          </label>
+          <label className="block text-xs font-medium text-jl-fg-3">
+            {p.faixa_col_preco}
             <input
               type="text"
               inputMode="decimal"
@@ -140,20 +161,7 @@ export function ProdutoForm(props: Props) {
             />
             <CampoErroMsg mensagem={erroAtacado} />
           </label>
-          <label className="block text-xs font-medium text-jl-fg-3">
-            {p.qtd_gatilho_atacado}
-            <input
-              type="text"
-              inputMode="numeric"
-              className={`${fields.inputMonoClassName} mt-1`}
-              value={props.quantidadeGatilho}
-              onChange={(e) => props.setQuantidadeGatilho(e.target.value.replace(/\D/g, ''))}
-              disabled={props.disabled}
-              placeholder="0"
-            />
-          </label>
         </div>
-        <p className="text-caption text-jl-fg-3">{p.hint_faixas_apos_salvar}</p>
       </div>
     )
   const historicoSlot =
@@ -194,6 +202,7 @@ export function ProdutoForm(props: Props) {
         />
         <PrecosSection
           modoCompleto={props.modoCompleto}
+          atacadoSlot={<AtacadoSection faixasSlot={faixasSlot} temAtacado={temAtacado} />}
           precoCustoRef={props.precoCustoRef}
           precoVarejoRef={props.precoVarejoRef}
           proximoAposVarejoRef={props.estoqueInicialRef}
@@ -232,7 +241,7 @@ export function ProdutoForm(props: Props) {
 
         {props.modoCompleto ? (
           <>
-            <ComercialSection faixasSlot={faixasSlot} historicoSlot={historicoSlot} />
+            <ComercialSection historicoSlot={historicoSlot} />
             <CompraSection />
             <FiscalSection />
           </>
