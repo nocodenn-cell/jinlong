@@ -1,12 +1,12 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { HandCoins } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DragonModal } from '@/components/ui/DragonModal'
 import { getMessages } from '@/i18n/getMessages'
 import { listarFormasPagamento } from '../formasPagamentoReader'
-import type { FormaPagamentoCatalogo, FormaPagamentoReceber } from '@shared-core/src/financial'
+import { isFormaPagamentoReceber, type FormaPagamentoCatalogo } from '@shared-core/src/financial'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { fmtGerenteBRL } from '@/lib/format/gerenteValues'
 import { formatDecimalBRL, parseBRL } from '@/lib/format/money'
@@ -38,7 +38,7 @@ import type { ContaLinha } from './ContasReceberTable'
  * array literal. Antes esta tela e o Contas a Pagar declaravam conjuntos
  * diferentes e incompatíveis do mesmo conceito.
  */
-type FormaReceber = string
+type FormaReceber = import('@shared-core/src/financial').FormaPagamentoReceber
 
 const GLYPH: Readonly<Record<string, string>> = {
   DINHEIRO: '¥',
@@ -72,6 +72,23 @@ export function ReceberTituloModal({
   const aberto = roundMoney2(titulo.valor_aberto)
 
   const [formas, setFormas] = useState<FormaPagamentoCatalogo[]>([])
+
+  /**
+   * Só chega à tela o que a RPC aceita.
+   *
+   * Antes da Onda 2 isto era um array literal fechado, que não tinha como
+   * divergir do contrato. Ao passar a ler o catálogo — que é mutável — a lista
+   * ficou dependendo de um `as`, e foi exatamente esse buraco que, no Contas a
+   * Pagar, fez a tela oferecer formas que a RPC recusa. `isFormaPagamentoReceber`
+   * estreita de verdade: nenhum cast mascarando incompatibilidade.
+   */
+  const formasValidas = useMemo(
+    () =>
+      // `flatMap` e não `filter().map()`: dentro do ternário o TypeScript
+      // estreita `f.codigo` pelo type guard, sem precisar de `as`.
+      formas.flatMap((f) => (isFormaPagamentoReceber(f.codigo) ? [f.codigo] : [])),
+    [formas],
+  )
 
   useEffect(() => {
     let vivo = true
@@ -148,11 +165,7 @@ export function ReceberTituloModal({
       const r = await liquidarTitulo({
         titulo_id: titulo.id,
         valor: valorNum,
-        // O catálogo é dinâmico (`formas_pagamento`) e o contrato da RPC é uma
-        // união fechada. A autoridade sobre o que entra continua sendo o CHECK
-        // de `liquidacoes_receber`: uma forma cadastrada fora da união é
-        // recusada pelo banco com erro claro, não gravada torta.
-        forma_pagamento: forma as FormaPagamentoReceber,
+        forma_pagamento: forma,
         // Caixa só existe para dinheiro — a RPC recusa `caixa_id` nas demais.
         caixa_id: forma === 'DINHEIRO' ? caixaId || null : null,
         idempotency_key: idempotencyKeyRef.current,
@@ -254,8 +267,7 @@ export function ReceberTituloModal({
             {t.receber_forma}
           </legend>
           <div className="flex flex-wrap gap-1.5">
-            {formas.map((fp) => {
-              const f = fp.codigo
+            {formasValidas.map((f) => {
               return (
               <button
                 key={f}

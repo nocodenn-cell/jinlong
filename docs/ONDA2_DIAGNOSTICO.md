@@ -479,6 +479,20 @@ blocos por um `select` financeiro é mudança pequena e contida, se você quiser
 `MOV_CAIXA_SALDO_INSUFICIENTE` — regra de caixa funcionando. O teste afirma o que importa aqui:
 **nenhuma forma oferecida pela tela é recusada por ser a forma**.
 
-### 10.9 Pendente da auditoria do Codex
+### 10.9 Fechamento — a mesma guarda no Contas a Receber
+
+Ao revalidar o P1 apareceu a **irmã do mesmo defeito**, e ela foi introduzida pela Onda 2:
+
+- **antes:** o AR tinha `const FORMAS = [...] as const` — lista fechada, incapaz de divergir da RPC;
+- **depois:** passou a ler o catálogo (mutável) e a confiar num `as FormaPagamentoReceber`.
+
+Hoje o catálogo casa com a RPC, então nada quebrava — mas era exatamente o buraco que no AP virou
+o P1. Fechado com a guarda simétrica (`isFormaPagamentoReceber` + `flatMap`). **Não há mais
+nenhum cast de forma de pagamento no financeiro**, dos dois lados.
+
+Verificado que a propagação do clique não regrediu nas listas convertidas: `RowActionsMenu` já
+para o evento no gatilho e no menu, e nenhuma linha abre por engano ao usar o kebab.
+
+### 10.10 Pendente da auditoria do Codex
 
 Os **P2** não foram tocados, conforme instruído. Seguem para uma próxima passagem.

@@ -3,7 +3,12 @@
  * ADR-010
  */
 
-export { FORMAS_PAGAMENTO_PAGAR, isFormaPagamentoPagar } from './types'
+export {
+  FORMAS_PAGAMENTO_PAGAR,
+  FORMAS_PAGAMENTO_RECEBER,
+  isFormaPagamentoPagar,
+  isFormaPagamentoReceber,
+} from './types'
 
 export type {
   ClienteId,

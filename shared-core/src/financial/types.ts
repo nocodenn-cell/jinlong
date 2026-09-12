@@ -8,12 +8,32 @@ export type ContaPagarId = string
 export type ClienteId = string
 export type FornecedorId = string
 
+/**
+ * Formas aceitas ao receber um titulo.
+ *
+ * Espelha o que a RPC `registrar_liquidacao_receber` valida — ela recusa
+ * qualquer outra com `LIQUIDACAO_FORMA_PAGAMENTO`.
+ */
 export type FormaPagamentoReceber =
   | 'DINHEIRO'
   | 'PIX'
   | 'CARTAO_DEBITO'
   | 'CARTAO_CREDITO'
   | 'OUTROS'
+
+/** As mesmas, em runtime — para validar o que vem do catalogo. */
+export const FORMAS_PAGAMENTO_RECEBER: readonly FormaPagamentoReceber[] = [
+  'DINHEIRO',
+  'PIX',
+  'CARTAO_DEBITO',
+  'CARTAO_CREDITO',
+  'OUTROS',
+] as const
+
+/** Estreita um codigo do catalogo ao contrato do AR, sem cast. */
+export function isFormaPagamentoReceber(codigo: string): codigo is FormaPagamentoReceber {
+  return (FORMAS_PAGAMENTO_RECEBER as readonly string[]).includes(codigo)
+}
 
 /**
  * Formas aceitas ao pagar um fornecedor.
