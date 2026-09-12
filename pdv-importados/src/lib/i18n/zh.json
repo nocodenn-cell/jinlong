@@ -2185,7 +2185,8 @@
     "salvando": "保存中…",
     "cancelar": "取消",
     "idioma_pt": "葡萄牙语",
-    "idioma_zh": "中文"
+    "idioma_zh": "中文",
+    "acoes_aria": "员工操作"
   },
   "fornecedores": {
     "titulo": "供应商",
@@ -2263,7 +2264,8 @@
     "err_cpf_invalido": "CPF 须为 11 位数字。",
     "err_cnpj_invalido": "CNPJ 须为 14 位数字。",
     "err_email": "邮箱无效。",
-    "err_cep": "邮编须为 8 位数字。"
+    "err_cep": "邮编须为 8 位数字。",
+    "acoes_aria": "供应商操作"
   },
   "contas_pagar": {
     "titulo": "应付账款",
@@ -2380,7 +2382,9 @@
     "cancelar_placeholder": "例如：货物已退回供应商",
     "cancelar_confirmar": "取消账款",
     "motivo_min": "请至少填写 2 个字符说明原因。",
-    "enviando": "提交中…"
+    "enviando": "提交中…",
+    "forma_cartao_debito": "借记卡",
+    "forma_cartao_credito": "信用卡"
   },
   "contas_receber": {
     "titulo": "应收账款",
@@ -3304,6 +3308,20 @@
     "configuracoes_enum_tema_noturno": "夜间模式",
     "configuracoes_enum_tema_novem": "十一月",
     "configuracoes_enum_formato_termica": "热敏纸",
-    "configuracoes_enum_formato_a4": "A4"
+    "configuracoes_enum_formato_a4": "A4",
+    "cupom_titulo": "销售小票",
+    "cupom_imprimir": "打印",
+    "cupom_erro": "无法加载该笔销售。",
+    "cupom_segunda_via": "*** 第二联 — 重新打印 ***",
+    "cupom_cancelada": "*** 销售已取消 ***",
+    "cupom_bruto": "小计",
+    "cupom_desconto": "折扣",
+    "cupom_total": "合计",
+    "cupom_pagamento": "支付方式",
+    "cupom_rodape": "非税务凭证",
+    "vendas_acoes_aria": "销售操作",
+    "vendas_acao_detalhes": "查看明细",
+    "vendas_acao_reimprimir": "重新打印小票",
+    "estoque_acoes_aria": "产品操作"
   }
 }

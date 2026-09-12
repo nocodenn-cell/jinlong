@@ -10,10 +10,10 @@ import { useDebounce } from '@/lib/hooks/useDebounce'
 import { Pencil, Trash2, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox, SearchInput } from '@/components/ui/forms'
+import { RowActionsMenu } from '@/components/ui/admin-v2'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { EmptyState, ErrorState, Loading } from '@/components/ui/feedback'
 import { CrudListShell, PageActions } from '@/components/ui/admin-v2'
-import { ConfirmActionButton } from '@/components/gerente/ConfirmActionButton'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { getMessages } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
@@ -324,28 +324,31 @@ export function FornecedoresListClient({
         onRowClick={abrirEditar}
         emptyState={emptyState}
         rowActions={(f) => (
-          <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              onClick={() => abrirEditar(f)}
-              aria-label={`${m.fornecedores.editar} — ${f.nome}`}
-              title={m.fornecedores.editar}
-            >
-              <Pencil className="h-3.5 w-3.5" aria-hidden />
-            </Button>
-            <ConfirmActionButton
-              type="button"
-              confirmMessage={`${m.fornecedores.confirmar_exclusao} "${f.nome}"?`}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-control text-[var(--color-danger-strong)] hover:bg-[var(--color-danger-bg)]"
-              onClick={() => void onExcluir(f)}
-              aria-label={`${m.fornecedores.excluir} — ${f.nome}`}
-              title={m.fornecedores.excluir}
-            >
-              <Trash2 className="h-3.5 w-3.5" aria-hidden />
-            </ConfirmActionButton>
-          </div>
+          <RowActionsMenu
+            ariaLabel={`${m.fornecedores.acoes_aria} ${f.nome}`}
+            actions={[
+              {
+                id: 'editar',
+                label: m.fornecedores.editar,
+                icon: Pencil,
+                onSelect: () => abrirEditar(f),
+              },
+              {
+                id: 'excluir',
+                label: m.fornecedores.excluir,
+                icon: Trash2,
+                destructive: true,
+                // Mesmo mecanismo de confirmação de antes (`ConfirmActionButton`).
+                // Trocar o `confirm` nativo por modal com consequência declarada
+                // é dívida registrada, não desta frente.
+                onSelect: () => {
+                  if (globalThis.confirm(`${m.fornecedores.confirmar_exclusao} "${f.nome}"?`)) {
+                    void onExcluir(f)
+                  }
+                },
+              },
+            ]}
+          />
         )}
         className="rounded-none border-x-0 border-b-0"
       />

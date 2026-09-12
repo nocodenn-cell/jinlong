@@ -1910,6 +1910,7 @@ export type Database = {
           ativo: boolean
           codigo: string
           created_at: string
+          escopo: string
           id: string
           loja_id: string
           nome: string
@@ -1921,6 +1922,7 @@ export type Database = {
           ativo?: boolean
           codigo: string
           created_at?: string
+          escopo?: string
           id?: string
           loja_id: string
           nome: string
@@ -1932,6 +1934,7 @@ export type Database = {
           ativo?: boolean
           codigo?: string
           created_at?: string
+          escopo?: string
           id?: string
           loja_id?: string
           nome?: string

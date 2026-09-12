@@ -5,6 +5,8 @@ import { HandCoins } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DragonModal } from '@/components/ui/DragonModal'
 import { getMessages } from '@/i18n/getMessages'
+import { listarFormasPagamento } from '../formasPagamentoReader'
+import type { FormaPagamentoCatalogo, FormaPagamentoReceber } from '@shared-core/src/financial'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { fmtGerenteBRL } from '@/lib/format/gerenteValues'
 import { formatDecimalBRL, parseBRL } from '@/lib/format/money'
@@ -31,14 +33,20 @@ import type { ContaLinha } from './ContasReceberTable'
  *   aceita data; oferecer o campo prometeria algo que o banco não cumpre.
  */
 
-const FORMAS = ['DINHEIRO', 'PIX', 'CARTAO_DEBITO', 'CARTAO_CREDITO', 'OUTROS'] as const
-type FormaReceber = (typeof FORMAS)[number]
+/**
+ * As formas vêm de `formas_pagamento` (ver `formasPagamentoReader`), não de um
+ * array literal. Antes esta tela e o Contas a Pagar declaravam conjuntos
+ * diferentes e incompatíveis do mesmo conceito.
+ */
+type FormaReceber = string
 
-const GLYPH: Readonly<Record<FormaReceber, string>> = {
+const GLYPH: Readonly<Record<string, string>> = {
   DINHEIRO: '¥',
   PIX: '⟁',
   CARTAO_DEBITO: '▭',
   CARTAO_CREDITO: '▤',
+  BOLETO: '⫶',
+  TRANSF: '↔',
   OUTROS: '⋯',
 }
 
@@ -62,6 +70,18 @@ export function ReceberTituloModal({
   const m = getMessages(idioma)
   const t = m.contas_receber
   const aberto = roundMoney2(titulo.valor_aberto)
+
+  const [formas, setFormas] = useState<FormaPagamentoCatalogo[]>([])
+
+  useEffect(() => {
+    let vivo = true
+    listarFormasPagamento('RECEBER').then((f) => {
+      if (vivo) setFormas(f)
+    })
+    return () => {
+      vivo = false
+    }
+  }, [])
 
   const [valor, setValor] = useState(formatDecimalBRL(aberto))
   const [forma, setForma] = useState<FormaReceber>('PIX')
@@ -128,7 +148,11 @@ export function ReceberTituloModal({
       const r = await liquidarTitulo({
         titulo_id: titulo.id,
         valor: valorNum,
-        forma_pagamento: forma,
+        // O catálogo é dinâmico (`formas_pagamento`) e o contrato da RPC é uma
+        // união fechada. A autoridade sobre o que entra continua sendo o CHECK
+        // de `liquidacoes_receber`: uma forma cadastrada fora da união é
+        // recusada pelo banco com erro claro, não gravada torta.
+        forma_pagamento: forma as FormaPagamentoReceber,
         // Caixa só existe para dinheiro — a RPC recusa `caixa_id` nas demais.
         caixa_id: forma === 'DINHEIRO' ? caixaId || null : null,
         idempotency_key: idempotencyKeyRef.current,
@@ -230,7 +254,9 @@ export function ReceberTituloModal({
             {t.receber_forma}
           </legend>
           <div className="flex flex-wrap gap-1.5">
-            {FORMAS.map((f) => (
+            {formas.map((fp) => {
+              const f = fp.codigo
+              return (
               <button
                 key={f}
                 type="button"
@@ -247,10 +273,11 @@ export function ReceberTituloModal({
                     : 'border-[var(--color-border)] bg-[var(--color-surface-soft)] text-fg-muted hover:bg-[var(--color-surface)]',
                 )}
               >
-                <span aria-hidden>{GLYPH[f]}</span>
+                <span aria-hidden>{GLYPH[f] ?? '•'}</span>
                 {formaLabel(f, t)}
               </button>
-            ))}
+              )
+            })}
           </div>
         </fieldset>
 

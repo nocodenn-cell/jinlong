@@ -2,10 +2,12 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Eye, Ban } from 'lucide-react'
+import { Eye, Ban, Printer } from 'lucide-react'
 import { DataTable, type Column } from '@/components/ui/DataTable'
+import { RowActionsMenu, type RowAction } from '@/components/ui/admin-v2'
 import { formatBRL } from '@/lib/format/money'
 import type { Mensagens } from '@/i18n/getMessages'
+import type { Idioma } from '@/idioma/normalizeIdioma'
 import { VendaCancelarModal } from '@/app/gerente/vendas/VendaCancelarModal'
 import {
   VendaCancelamentoReciboModal,
@@ -13,6 +15,7 @@ import {
 } from '@/app/gerente/vendas/VendaCancelamentoReciboModal'
 import type { VendaListRow } from '@/app/gerente/vendas/actions'
 import { VendaDetailSheet, type VendaAlvo } from './VendaDetailSheet'
+import { CupomVendaModal } from './CupomVendaModal'
 import { toPayment, toVendaStatus } from './vendaMaps'
 
 export type VendaLinha = {
@@ -160,41 +163,18 @@ function HoraCell({ data }: { data: string | null }) {
   )
 }
 
-function ActionBtn({
-  label,
-  onClick,
-  children,
-}: {
-  label: string
-  onClick: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      onClick={(e) => {
-        e.stopPropagation()
-        onClick()
-      }}
-      className="flex h-7 w-7 items-center justify-center rounded-lg text-jl-fg-3 transition-colors hover:bg-jl-surface-elev hover:text-jl-fg-1"
-    >
-      {children}
-    </button>
-  )
-}
-
 export function VendasTable({
   vendas,
   labels,
   m,
+  idioma,
   locale,
   vendaInicial = null,
 }: {
   vendas: VendaLinha[]
   labels: VendasLabels
   m: Mensagens
+  idioma: Idioma
   locale: string
   /**
    * Venda a abrir já no carregamento (`?venda=<id>`). Existe para que a venda
@@ -209,6 +189,7 @@ export function VendasTable({
   const [cancelarAlvo, setCancelarAlvo] = useState<VendaLinha | null>(null)
   const [comprovanteCancelamento, setComprovanteCancelamento] =
     useState<ComprovanteCancelamento | null>(null)
+  const [cupomAlvo, setCupomAlvo] = useState<string | null>(null)
 
   const columns: Column<VendaLinha>[] = [
     {
@@ -282,18 +263,40 @@ export function VendasTable({
         }
         className="rounded-none border-x-0 border-b-0"
         onRowClick={(r) => setAlvo({ id: r.id })}
-        rowActions={(row) => (
-          <div className="flex items-center justify-end gap-1">
-            <ActionBtn label={`${labels.detalheTitulo} ${row.id.slice(0, 8)}`} onClick={() => setAlvo({ id: row.id })}>
-              <Eye size={13} aria-hidden />
-            </ActionBtn>
-            {row.status === 'CONCLUIDA' ? (
-              <ActionBtn label={`${labels.cancelarAcao} ${row.id.slice(0, 8)}`} onClick={() => setCancelarAlvo(row)}>
-                <Ban size={13} aria-hidden />
-              </ActionBtn>
-            ) : null}
-          </div>
-        )}
+        rowActions={(row) => {
+          const curto = row.id.slice(0, 8).toUpperCase()
+          const acoes: RowAction[] = [
+            {
+              id: 'detalhes',
+              label: m.admin_ui.vendas_acao_detalhes,
+              icon: Eye,
+              onSelect: () => setAlvo({ id: row.id }),
+            },
+            {
+              id: 'reimprimir',
+              label: m.admin_ui.vendas_acao_reimprimir,
+              icon: Printer,
+              onSelect: () => setCupomAlvo(row.id),
+            },
+          ]
+          if (row.status === 'CONCLUIDA') {
+            acoes.push({
+              id: 'cancelar',
+              label: labels.cancelarAcao,
+              icon: Ban,
+              destructive: true,
+              onSelect: () => setCancelarAlvo(row),
+            })
+          }
+          return <RowActionsMenu actions={acoes} ariaLabel={`${m.admin_ui.vendas_acoes_aria} ${curto}`} />
+        }}
+      />
+
+      <CupomVendaModal
+        vendaId={cupomAlvo}
+        idioma={idioma}
+        locale={locale}
+        onClose={() => setCupomAlvo(null)}
       />
 
       <VendaCancelarModal

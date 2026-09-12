@@ -355,7 +355,7 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
           </div>
         ) : null}
 
-        <VendasTable vendas={vendas} m={m} locale={locale} vendaInicial={vendaInicial} labels={{
+        <VendasTable vendas={vendas} m={m} idioma={session.idioma} locale={locale} vendaInicial={vendaInicial} labels={{
           colVenda: ui.vendas_col_venda,
           colHora: ui.vendas_col_hora,
           colItens: ui.vendas_col_itens,

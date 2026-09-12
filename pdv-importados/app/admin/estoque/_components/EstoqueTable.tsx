@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { History, SlidersHorizontal } from 'lucide-react'
 import { DataTable, type Column } from '@/components/ui/DataTable'
-import { Button } from '@/components/ui/button'
+import { RowActionsMenu } from '@/components/ui/admin-v2'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/ui/feedback'
 import { QuantityCell } from '@/components/ui/QuantityCell'
@@ -34,6 +34,7 @@ export type EstoqueLabels = {
   origemBrasil: string
   vazioTitulo: string
   vazioSub: string
+  acoesAria: string
   ajusteTitulo: string
   saldoAtual: string
   estoqueMinimo: string
@@ -167,39 +168,29 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
         emptyState={<EmptyState title={labels.vazioTitulo} description={labels.vazioSub} />}
         className="rounded-none border-x-0 border-b-0"
         rowActions={(row) => (
-          <div className="flex items-center justify-end gap-1">
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              aria-label={`${labels.ajusteTitulo} ${row.nome}`}
-              title={labels.ajusteTitulo}
-              onClick={(e) => {
-                e.stopPropagation()
-                setAjusteAlvo({
-                  produtoId: row.id,
-                  produtoNome: row.nome,
-                  quantidadeAtual: row.quantidade_atual ?? 0,
-                  estoqueMinimo: row.estoque_minimo ?? 0,
-                })
-              }}
-            >
-              <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden />
-            </Button>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              aria-label={`${labels.kardexTitulo} ${row.nome}`}
-              title={labels.kardexTitulo}
-              onClick={(e) => {
-                e.stopPropagation()
-                setKardexAlvo({ produtoId: row.id, produtoNome: row.nome })
-              }}
-            >
-              <History className="h-3.5 w-3.5" aria-hidden />
-            </Button>
-          </div>
+          <RowActionsMenu
+            ariaLabel={`${labels.acoesAria} ${row.nome}`}
+            actions={[
+              {
+                id: 'ajuste',
+                label: labels.ajusteTitulo,
+                icon: SlidersHorizontal,
+                onSelect: () =>
+                  setAjusteAlvo({
+                    produtoId: row.id,
+                    produtoNome: row.nome,
+                    quantidadeAtual: row.quantidade_atual ?? 0,
+                    estoqueMinimo: row.estoque_minimo ?? 0,
+                  }),
+              },
+              {
+                id: 'kardex',
+                label: labels.kardexTitulo,
+                icon: History,
+                onSelect: () => setKardexAlvo({ produtoId: row.id, produtoNome: row.nome }),
+              },
+            ]}
+          />
         )}
       />
 

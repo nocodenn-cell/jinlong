@@ -1,10 +1,24 @@
 'use client'
 
-import { Pencil } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
+import { Pencil, UserCheck, UserX } from 'lucide-react'
+import { RowActionsMenu, type RowAction } from '@/components/ui/admin-v2'
 import type { FuncionarioListRow } from './actions'
 import { motivoBloqueioEditar, motivoBloqueioToggle } from './funcionarioUi'
+
+/**
+ * Ações de linha do funcionário.
+ *
+ * Passou a usar o `RowActionsMenu` — o gesto de três pontos que já vale em
+ * Compras, Contas a Pagar, Contas a Receber, Vendas e Estoque. Antes esta tela
+ * era o quarto padrão paralelo de ação de linha do sistema (dois botões com
+ * rótulo), e quem vinha do Bling tinha de aprender um gesto por tela.
+ *
+ * **A autorização não mudou.** `motivoBloqueioEditar` e `motivoBloqueioToggle`
+ * continuam sendo a única fonte do que pode ou não — só a apresentação mudou.
+ * E mudou para melhor: antes, um usuário sem permissão para nada via apenas o
+ * texto "somente leitura", sem saber por quê; agora a ação aparece
+ * desabilitada **com o motivo**, que é a convenção do componente.
+ */
 
 type Labels = {
   editar: string
@@ -14,6 +28,7 @@ type Labels = {
   bloqueioDonoAdmin: string
   bloqueioSemPermissao: string
   bloqueioSiMesmo: string
+  acoesAria: string
 }
 
 type Props = {
@@ -21,7 +36,6 @@ type Props = {
   ator: { id: string; perfil: string }
   labels: Labels
   busy: boolean
-  compactLabels?: boolean
   onEditar: (row: FuncionarioListRow) => void
   onToggle: (row: FuncionarioListRow) => void
 }
@@ -31,61 +45,32 @@ export function FuncionarioRowActions({
   ator,
   labels: L,
   busy,
-  compactLabels = false,
   onEditar,
   onToggle,
 }: Props) {
   const bloqueioEditar = motivoBloqueioEditar(ator, row, L)
   const bloqueioToggle = motivoBloqueioToggle(ator, row, L)
-  const podeEditar = !bloqueioEditar
-  const podeToggle = !bloqueioToggle
   const toggleLabel = row.ativo ? L.desativar : L.ativar
 
-  if (!podeEditar && !podeToggle) {
-    return (
-      <span
-        className="text-caption text-fg-subtle"
-        title={bloqueioEditar ?? L.somenteLeitura}
-        aria-label={bloqueioEditar ?? L.somenteLeitura}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {L.somenteLeitura}
-      </span>
-    )
-  }
+  const actions: RowAction[] = [
+    {
+      id: 'editar',
+      label: L.editar,
+      icon: Pencil,
+      disabled: !!bloqueioEditar,
+      disabledHint: bloqueioEditar ?? undefined,
+      onSelect: () => onEditar(row),
+    },
+    {
+      id: 'toggle',
+      label: toggleLabel,
+      icon: row.ativo ? UserX : UserCheck,
+      destructive: row.ativo,
+      disabled: !!bloqueioToggle || busy,
+      disabledHint: bloqueioToggle ?? undefined,
+      onSelect: () => onToggle(row),
+    },
+  ]
 
-  return (
-    <div
-      className="flex flex-wrap items-center justify-end gap-1"
-      onClick={(e) => e.stopPropagation()}
-    >
-      <Button
-        type="button"
-        size="sm"
-        variant="ghost"
-        disabled={!podeEditar}
-        title={bloqueioEditar ?? L.editar}
-        aria-label={bloqueioEditar ? `${L.editar}: ${bloqueioEditar}` : `${L.editar} — ${row.nome}`}
-        onClick={() => onEditar(row)}
-        className="gap-1"
-      >
-        <Pencil className="h-3.5 w-3.5" aria-hidden />
-        <span className={cn(compactLabels && 'hidden sm:inline')}>{L.editar}</span>
-      </Button>
-      <Button
-        type="button"
-        size="sm"
-        variant="ghost"
-        disabled={!podeToggle || busy}
-        title={bloqueioToggle ?? toggleLabel}
-        aria-label={
-          bloqueioToggle ? `${toggleLabel}: ${bloqueioToggle}` : `${toggleLabel} — ${row.nome}`
-        }
-        onClick={() => onToggle(row)}
-        className={cn('gap-1', row.ativo && podeToggle && 'text-[var(--color-danger-strong)]')}
-      >
-        {toggleLabel}
-      </Button>
-    </div>
-  )
+  return <RowActionsMenu actions={actions} ariaLabel={`${L.acoesAria} ${row.nome}`} />
 }

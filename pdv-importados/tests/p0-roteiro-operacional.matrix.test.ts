@@ -72,7 +72,9 @@ describe('Onda 2 — Financeiro', () => {
   it('AR liquidação via RPC canônica', () => {
     const w = read('app/admin/financeiro/receivableWriter.ts')
     expect(w).toContain('registrar_liquidacao_receber')
-    const ui = read('app/admin/financeiro/_components/FinanceiroReceberExtras.tsx')
+    // Ver nota em consolidacao-post-audit: a liquidação mudou de arquivo na
+    // Onda 1, não de contrato.
+    const ui = read('app/admin/financeiro/_components/ReceberTituloModal.tsx')
     expect(ui).toContain('liquidarTitulo')
   })
 

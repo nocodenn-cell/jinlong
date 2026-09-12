@@ -107,9 +107,13 @@ describe('consolidação pós-audit — jornadas críticas (contrato estático)'
   })
 
   it('J4 Financeiro: receber e pagar no admin financeiro', () => {
-    const extras = read('app/admin/financeiro/_components/FinanceiroReceberExtras.tsx')
-    expect(extras).toContain('criarTituloReceber')
-    expect(extras).toContain('liquidarTitulo')
+    // A Onda 1 dividiu `FinanceiroReceberExtras.tsx` em dois modais dedicados
+    // (o antigo limitava a liquidação aos 8 primeiros títulos). O contrato é o
+    // mesmo: criar título e liquidar continuam existindo na UI de A Receber.
+    const novo = read('app/admin/financeiro/_components/NovoTituloReceberModal.tsx')
+    expect(novo).toContain('criarTituloReceber')
+    const receber = read('app/admin/financeiro/_components/ReceberTituloModal.tsx')
+    expect(receber).toContain('liquidarTitulo')
     const content = read('app/admin/financeiro/_components/FinanceiroContent.tsx')
     expect(content).toContain('ContasPagarListClient')
   })

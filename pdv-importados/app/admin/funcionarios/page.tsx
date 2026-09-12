@@ -61,6 +61,7 @@ export default async function AdminFuncionariosPage() {
           confirmarTituloReativar: f.confirmar_titulo_reativar,
           confirmarAcao: f.confirmar_acao,
           somenteLeitura: f.somente_leitura,
+          acoesAria: f.acoes_aria,
           bloqueioDonoAdmin: f.bloqueio_dono_admin,
           bloqueioSemPermissao: f.bloqueio_sem_permissao,
           bloqueioSiMesmo: f.bloqueio_si_mesmo,

@@ -154,7 +154,10 @@ export function DragonModal({
   return (
     <div
       className={cn(
-        'fixed inset-0 z-50 flex justify-center',
+        // `--z-modal` é o token do design system para esta camada; `z-50` era
+        // um número solto que não participava da escala e ficava abaixo de
+        // qualquer elemento que usasse os tokens (ver DataTable).
+        'fixed inset-0 z-[var(--z-modal)] flex justify-center',
         sheet ? 'items-end p-0 sm:items-center sm:p-4' : 'items-center p-4',
       )}
       role="dialog"

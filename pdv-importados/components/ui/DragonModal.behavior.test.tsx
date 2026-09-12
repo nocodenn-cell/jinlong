@@ -193,3 +193,21 @@ describe('DragonModal', () => {
     expect(document.body.style.overflow).toBe('')
   })
 })
+
+describe('DragonModal — camada', () => {
+  /**
+   * O overlay precisa participar da escala do design system. Com `z-50` solto
+   * ele perdia para qualquer elemento que usasse os tokens — foi assim que o
+   * cabeçalho de tabela passou por cima do modal.
+   */
+  it('usa o token --z-modal no overlay', () => {
+    render(
+      <DragonModal open onClose={() => {}} title="T">
+        <p>corpo</p>
+      </DragonModal>,
+    )
+    const overlay = container.querySelector('[role="dialog"]')!
+    expect(overlay.className).toContain('--z-modal')
+    expect(overlay.className).not.toMatch(/(^|\s)z-50(\s|$)/)
+  })
+})

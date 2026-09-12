@@ -60,6 +60,7 @@ export type FuncionariosListLabels = {
   confirmarTituloReativar: string
   confirmarAcao: string
   somenteLeitura: string
+  acoesAria: string
   bloqueioDonoAdmin: string
   bloqueioSemPermissao: string
   bloqueioSiMesmo: string
@@ -374,7 +375,6 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
                       <FuncionarioRowActions
                         row={row}
                         busy={busyId === row.id}
-                        compactLabels
                         {...actionsProps}
                       />
                     )}

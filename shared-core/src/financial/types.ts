@@ -15,7 +15,35 @@ export type FormaPagamentoReceber =
   | 'CARTAO_CREDITO'
   | 'OUTROS'
 
-export type FormaPagamentoPagar = 'DINHEIRO' | 'PIX' | 'CARTAO' | 'BOLETO' | 'TRANSF'
+/**
+ * Formas aceitas ao pagar um fornecedor.
+ *
+ * `CARTAO_DEBITO` e `CARTAO_CREDITO` entraram na Onda 2 para alinhar o Contas a
+ * Pagar ao vocabulario canonico do resto do sistema (`vendas`,
+ * `vendas_pagamentos`, `devolucoes`, `liquidacoes_receber`). `CARTAO` continua
+ * no tipo porque continua valido no banco: ha historico gravado com ele e
+ * remover seria estreitar, nao unificar.
+ */
+export type FormaPagamentoPagar =
+  | 'DINHEIRO'
+  | 'PIX'
+  | 'CARTAO'
+  | 'CARTAO_DEBITO'
+  | 'CARTAO_CREDITO'
+  | 'BOLETO'
+  | 'TRANSF'
+
+/** Escopo de uma forma no catalogo `formas_pagamento`. */
+export type EscopoFormaPagamento = 'RECEBER' | 'PAGAR' | 'AMBOS'
+
+/** Uma forma do cadastro, como as telas a consomem. */
+export type FormaPagamentoCatalogo = {
+  codigo: string
+  nome: string
+  escopo: EscopoFormaPagamento
+  taxaPercentual: number
+  prazoCompensacaoDias: number
+}
 
 export type ReceivableTitle = {
   tituloId: TituloId

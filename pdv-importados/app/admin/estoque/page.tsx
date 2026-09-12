@@ -291,6 +291,7 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
               origemBrasil: ui.estoque_origem_brasil,
               vazioTitulo: ui.estoque_vazio_titulo,
               vazioSub: ui.estoque_vazio_sub,
+              acoesAria: ui.estoque_acoes_aria,
               ajusteTitulo: ui.estoque_ajuste_titulo,
               saldoAtual: ui.estoque_saldo_atual,
               estoqueMinimo: m.estoque.col_estoque_minimo,

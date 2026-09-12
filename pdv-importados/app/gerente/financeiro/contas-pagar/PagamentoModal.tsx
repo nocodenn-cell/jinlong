@@ -11,6 +11,8 @@ import { formatDecimalBRL, parseBRL } from '@/lib/format/money'
 import { roundMoney2 } from '@/shared/cart/totals'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { cn } from '@/lib/utils'
+import { listarFormasPagamento } from '@/app/admin/financeiro/formasPagamentoReader'
+import type { FormaPagamentoCatalogo } from '@shared-core/src/financial'
 import {
   buscarCaixasAbertosPagamentoAction,
   registrarPagamentoAction,
@@ -27,13 +29,24 @@ type Props = Readonly<{
   onPagamentoRegistrado: (c: ContaPagarRow) => void
 }>
 
-const FORMAS: Array<{ id: FormaPagamento; glyph: string }> = [
-  { id: 'DINHEIRO', glyph: '¥' },
-  { id: 'PIX', glyph: '⟁' },
-  { id: 'CARTAO', glyph: '▭' },
-  { id: 'BOLETO', glyph: '⫶' },
-  { id: 'TRANSF', glyph: '↔' },
-]
+/**
+ * As formas vêm de `formas_pagamento` com escopo PAGAR (ver
+ * `formasPagamentoReader`). Antes eram este array literal, que divergia do
+ * Contas a Receber — `CARTAO` aqui, `CARTAO_DEBITO`/`CARTAO_CREDITO` lá — para
+ * o mesmo conceito, e nenhum dos dois vinha de cadastro.
+ *
+ * `BOLETO` e `TRANSF` continuam: são formas reais de pagar fornecedor, com
+ * histórico gravado. Unificar a fonte não é achatar a oferta.
+ */
+const GLYPH: Readonly<Record<string, string>> = {
+  DINHEIRO: '¥',
+  PIX: '⟁',
+  CARTAO: '▭',
+  CARTAO_DEBITO: '▭',
+  CARTAO_CREDITO: '▤',
+  BOLETO: '⫶',
+  TRANSF: '↔',
+}
 
 export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegistrado }: Props) {
   const m = getMessages(idioma)
@@ -41,6 +54,7 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
 
   const [valor, setValor] = useState(formatDecimalBRL(aberto))
   const [forma, setForma] = useState<FormaPagamento>('PIX')
+  const [formas, setFormas] = useState<FormaPagamentoCatalogo[]>([])
   const [dataPag, setDataPag] = useState(new Date().toISOString().slice(0, 10))
   const [observacao, setObservacao] = useState('')
   const [erros, setErros] = useState<Record<string, string | null>>({})
@@ -55,6 +69,16 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
   const autorizacaoTokenRef = useRef<string | null>(null)
 
   // DragonModal cuida de Escape, scroll-lock e foco-trap; aqui só o foco inicial.
+  useEffect(() => {
+    let vivo = true
+    listarFormasPagamento('PAGAR').then((f) => {
+      if (vivo) setFormas(f)
+    })
+    return () => {
+      vivo = false
+    }
+  }, [])
+
   useEffect(() => {
     const t = setTimeout(() => valorRef.current?.focus(), 30)
     return () => clearTimeout(t)
@@ -293,7 +317,9 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
                 {m.contas_pagar.modal_forma}<span className="ml-0.5 text-[color:var(--accent)]">*</span>
               </span>
               <div role="radiogroup" aria-label={m.contas_pagar.modal_forma} className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-                {FORMAS.map((f) => (
+                {formas.map((fp) => {
+                  const f = { id: fp.codigo as FormaPagamento, glyph: GLYPH[fp.codigo] ?? '•' }
+                  return (
                   <button
                     key={f.id}
                     type="button"
@@ -309,9 +335,10 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
                     )}
                   >
                     <span className="text-base">{f.glyph}</span>
-                    {m.contas_pagar[`forma_${f.id.toLowerCase()}` as keyof typeof m.contas_pagar] as string}
+                    {(m.contas_pagar[`forma_${f.id.toLowerCase()}` as keyof typeof m.contas_pagar] as string) ?? fp.nome}
                   </button>
-                ))}
+                  )
+                })}
               </div>
             </div>
 

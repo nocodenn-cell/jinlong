@@ -144,7 +144,15 @@ export function DataTable<T>({
         aria-colcount={colSpan}
         aria-busy={loading || undefined}
       >
-        <thead className={cn(stickyHeader && 'sticky top-0 z-[var(--z-sticky)] bg-[var(--color-surface-soft)]')}>
+        {/*
+         * `--z-raised` (10), não `--z-sticky` (1020): este cabeçalho só precisa
+         * cobrir as linhas da própria tabela enquanto elas rolam por baixo dele.
+         * Com 1020 ele vencia toda superfície sobreposta do sistema — modal,
+         * drawer e dropdown vivem em `z-50` — e aparecia como uma barra
+         * atravessando o formulário aberto por cima da lista (Funcionários).
+         * `--z-sticky` é para barra fixa de página, não para `thead`.
+         */}
+        <thead className={cn(stickyHeader && 'sticky top-0 z-[var(--z-raised)] bg-[var(--color-surface-soft)]')}>
           <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface-soft)]">
             {columns.map((col) => {
               const sortable = !!col.sortValue

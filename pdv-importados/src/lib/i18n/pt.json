@@ -2185,7 +2185,8 @@
     "salvando": "Salvando…",
     "cancelar": "Cancelar",
     "idioma_pt": "Português",
-    "idioma_zh": "中文"
+    "idioma_zh": "中文",
+    "acoes_aria": "Ações do funcionário"
   },
   "fornecedores": {
     "titulo": "Fornecedores",
@@ -2263,7 +2264,8 @@
     "err_cpf_invalido": "CPF deve ter 11 dígitos.",
     "err_cnpj_invalido": "CNPJ deve ter 14 dígitos.",
     "err_email": "E-mail inválido.",
-    "err_cep": "CEP deve ter 8 dígitos."
+    "err_cep": "CEP deve ter 8 dígitos.",
+    "acoes_aria": "Ações do fornecedor"
   },
   "contas_pagar": {
     "titulo": "Contas a pagar",
@@ -2380,7 +2382,9 @@
     "cancelar_placeholder": "Ex.: nota devolvida ao fornecedor",
     "cancelar_confirmar": "Cancelar conta",
     "motivo_min": "Descreva o motivo em pelo menos 2 caracteres.",
-    "enviando": "Enviando…"
+    "enviando": "Enviando…",
+    "forma_cartao_debito": "Cartão de débito",
+    "forma_cartao_credito": "Cartão de crédito"
   },
   "contas_receber": {
     "titulo": "Contas a receber",
@@ -3304,6 +3308,20 @@
     "configuracoes_enum_tema_noturno": "Noturno",
     "configuracoes_enum_tema_novem": "Novembro",
     "configuracoes_enum_formato_termica": "Térmica",
-    "configuracoes_enum_formato_a4": "A4"
+    "configuracoes_enum_formato_a4": "A4",
+    "cupom_titulo": "Cupom da venda",
+    "cupom_imprimir": "Imprimir",
+    "cupom_erro": "Não foi possível carregar esta venda.",
+    "cupom_segunda_via": "*** 2ª VIA — REIMPRESSÃO ***",
+    "cupom_cancelada": "*** VENDA CANCELADA ***",
+    "cupom_bruto": "Subtotal",
+    "cupom_desconto": "Desconto",
+    "cupom_total": "Total",
+    "cupom_pagamento": "Pagamento",
+    "cupom_rodape": "Documento sem valor fiscal",
+    "vendas_acoes_aria": "Ações da venda",
+    "vendas_acao_detalhes": "Abrir detalhes",
+    "vendas_acao_reimprimir": "Reimprimir cupom",
+    "estoque_acoes_aria": "Ações do produto"
   }
 }

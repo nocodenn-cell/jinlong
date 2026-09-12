@@ -133,3 +133,35 @@ describe('DataTable — coluna sticky', () => {
     expect(nomeTh!.className).toContain('sticky')
   })
 })
+
+describe('DataTable — cabeçalho fixo não pode atravessar superfície sobreposta', () => {
+  /**
+   * Regressão real: o `thead` sticky usava `--z-sticky` (1020) e vencia modal,
+   * drawer e dropdown — que vivem em `z-50`. Na tela de Funcionários o
+   * cabeçalho da lista aparecia como uma barra cortando o formulário "Novo
+   * funcionário". Um `thead` só precisa cobrir as linhas da própria tabela.
+   */
+  it('usa --z-raised, não --z-sticky, quando stickyHeader está ligado', () => {
+    act(() => {
+      root.render(
+        React.createElement(DataTable<Row>, {
+          columns,
+          data: rows,
+          rowKey: (r: Row) => r.id,
+          stickyHeader: true,
+        }),
+      )
+    })
+    const thead = container.querySelector('thead')!
+    expect(thead.className).toContain('sticky')
+    expect(thead.className).toContain('--z-raised')
+    expect(thead.className).not.toContain('--z-sticky')
+  })
+
+  it('sem stickyHeader o cabeçalho não recebe camada nenhuma', () => {
+    render()
+    const thead = container.querySelector('thead')!
+    expect(thead.className).not.toContain('--z-raised')
+    expect(thead.className).not.toContain('sticky')
+  })
+})

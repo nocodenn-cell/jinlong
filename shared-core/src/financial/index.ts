@@ -7,6 +7,8 @@ export type {
   ClienteId,
   ContaPagarId,
   FormaPagamentoPagar,
+  EscopoFormaPagamento,
+  FormaPagamentoCatalogo,
   FormaPagamentoReceber,
   FornecedorId,
   PayableTitle,
