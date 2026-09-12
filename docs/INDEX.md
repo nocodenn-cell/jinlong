@@ -24,6 +24,8 @@ Welcome to the fastproduct documentation hub. Find guides for development, opera
 
 - [**Piloto D0 — baseline `e1327e62`**](./piloto-d0/README.md) — certificação GO, backlog reconciliado, próxima sprint
 - [**Go-Live — Primeiro Cliente Pagante**](./go-live/00-README.md) — plano de 17/08 (evento *seguinte* ao piloto; ver banner nesse README)
+- [**Fechamento — Entrada → Compra → Recebimento → Estoque → Financeiro**](./FECHAMENTO_FLUXO_ENTRADA_COMPRA_ESTOQUE_FINANCEIRO.md) — estado canônico da frente, bloqueadores de go-live e plano de validação pré go-live
+- [**Validação do pipeline de migrations (2026-09-11)**](./PIPELINE_MIGRATIONS_VALIDACAO_2026-09-11.md) — pipeline oficial provado, origem do registro remoto `20260910114603`, 17 migrations pendentes no alvo e risco de drift via Studio
 
 ### **👨‍💻 For Developers**
 

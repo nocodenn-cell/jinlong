@@ -45,6 +45,7 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
   })
   const m = getMessages(session.idioma)
   const ui = m.admin_ui
+  const mr = m.contas_receber
   const locale = localeFromIdioma(session.idioma)
 
   const sp = (searchParams ? await searchParams : {}) ?? {}
@@ -92,6 +93,7 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
     vencimento: t.vencimento,
     descricao: t.descricao,
     loja_id: t.loja_id,
+    venda_id: t.venda_id,
   }))
 
   const clientesOpts = clientesRes.ok ? clientesRes.clientes.map((c) => ({ id: c.id, nome: c.nome })) : []
@@ -99,13 +101,20 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
   const filterDefs: FilterDef[] = [
     { type: 'search', key: 'q', placeholder: ui.financeiro_filtro_placeholder },
     {
+      // Antes eram três opções e nenhuma alcançava título quitado ou cancelado:
+      // recebimento integral simplesmente sumia da tela. Os chips agora espelham
+      // os de Contas a Pagar. `mix` (o que ainda pede ação) segue como padrão.
       type: 'pills',
       key: 'opcao',
       defaultValue: 'mix',
       options: [
-        { value: 'mix', label: ui.financeiro_filtro_mix },
-        { value: 'ABERTO', label: ui.financeiro_filtro_so_aberto },
-        { value: 'PARCIAL', label: ui.financeiro_filtro_so_parcial },
+        { value: 'mix', label: mr.filtro_mix },
+        { value: 'ABERTO', label: mr.filtro_aberto },
+        { value: 'PARCIAL', label: mr.filtro_parcial },
+        { value: 'atrasado', label: mr.filtro_atrasado },
+        { value: 'QUITADO', label: mr.filtro_quitado },
+        { value: 'CANCELADO', label: mr.filtro_cancelado },
+        { value: 'todos', label: mr.filtro_todos },
       ],
     },
   ]
@@ -124,8 +133,12 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
   }
 
   const statusChipLabel: Record<string, string> = {
-    ABERTO: ui.financeiro_filtro_so_aberto,
-    PARCIAL: ui.financeiro_filtro_so_parcial,
+    ABERTO: mr.filtro_aberto,
+    PARCIAL: mr.filtro_parcial,
+    atrasado: mr.filtro_atrasado,
+    QUITADO: mr.filtro_quitado,
+    CANCELADO: mr.filtro_cancelado,
+    todos: mr.filtro_todos,
   }
 
   const chips: Array<{ key: string; label: string }> = []
@@ -197,6 +210,7 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
       <div className="admin-v2-stack">
         <FinanceiroContent
           activeTab={activeTab}
+          idioma={session.idioma}
           contas={contas}
           fiscal={fiscal}
           actorLojaId={session.lojaId}
@@ -218,17 +232,8 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
             locale,
           }}
           contasLabels={{
-            colCliente: ui.financeiro_col_cliente,
-            colVencimento: ui.financeiro_col_vencimento,
-            colTotal: m.gerente.col_total,
-            colPago: ui.financeiro_col_pago,
-            colAberto: ui.financeiro_col_aberto,
-            colStatus: m.gerente.col_status,
-            statusAberto: ui.financeiro_status_aberto,
-            statusParcial: ui.financeiro_status_parcial,
-            statusQuitado: ui.financeiro_status_quitado,
-            vazioTitulo: ui.financeiro_vazio_titulo,
-            vazioSub: ui.financeiro_vazio_sub,
+            vazioTitulo: mr.vazio_titulo,
+            vazioSub: mr.vazio_sub,
             locale,
           }}
           contasPagar={{

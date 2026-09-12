@@ -26,19 +26,25 @@ export type {
   LiquidateReceivableResult,
   ListLiquidacoesQuery,
   ListLiquidacoesResult,
+  ListPagamentosPagarQuery,
+  ListPagamentosPagarResult,
   ListPayablesQuery,
   ListPayablesResult,
   ListReceivablesQuery,
   ListReceivablesResult,
   PayPayableCommand,
   PayPayableResult,
+  PayablePagamentoRow,
   PayablePaymentService,
   PayableReader,
   ReceivableLiquidacaoRow,
   ReceivableLiquidationService,
   ReceivableListRow,
+  ReceivableOpcao,
   ReceivableReader,
   ReceivableWriter,
+  ReversePayableCommand,
+  ReversePayableResult,
   ReverseReceivableCommand,
   ReverseReceivableResult,
 } from './contracts'
@@ -50,3 +56,11 @@ export {
 } from './policies/validateReceivable'
 
 export { hojeYmd, isTituloVencido } from './policies/tituloVencido'
+
+export type { SituacaoTitulo, SituacaoTituloInput } from './policies/situacaoTitulo'
+export {
+  saldoTitulo,
+  situacaoAtrasada,
+  situacaoEmAberto,
+  situacaoTitulo,
+} from './policies/situacaoTitulo'

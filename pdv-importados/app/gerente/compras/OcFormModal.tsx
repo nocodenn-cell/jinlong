@@ -68,6 +68,7 @@ export function OcFormModal({ idioma, ocInicial, fornecedores, produtos, onClose
     ocInicial?.data_emissao ?? new Date().toISOString().slice(0, 10),
   )
   const [dataPrevista, setDataPrevista] = useState(ocInicial?.data_prevista_chegada ?? '')
+  const [dataVencimento, setDataVencimento] = useState(ocInicial?.data_vencimento ?? '')
   const [observacao, setObservacao] = useState(ocInicial?.observacao ?? '')
   const [itens, setItens] = useState<ItemLocal[]>(() => {
     if (ocInicial?.itens.length) {
@@ -134,6 +135,7 @@ export function OcFormModal({ idioma, ocInicial, fornecedores, produtos, onClose
       fornecedor_nome: useFornecedorLivre ? fornecedorNome.trim() || null : null,
       data_emissao: dataEmissao,
       data_prevista_chegada: dataPrevista || null,
+      data_vencimento: dataVencimento || null,
       observacao: observacao.trim() || null,
       itens: itensValidos.map((i) => ({
         produto_id: i.produto_id || null,
@@ -252,6 +254,21 @@ export function OcFormModal({ idioma, ocInicial, fornecedores, produtos, onClose
                 disabled={isPending}
                 className="app-input w-full rounded-lg px-3 py-2 text-sm disabled:opacity-60"
               />
+            </div>
+
+            {/* Prazo de pagamento — é o que faz o recebimento gerar o título */}
+            <div className="col-span-2">
+              <label className="mb-1.5 block text-xs font-medium text-jl-fg-3">
+                {c.field_data_vencimento}
+              </label>
+              <input
+                type="date"
+                value={dataVencimento}
+                onChange={(e) => setDataVencimento(e.target.value)}
+                disabled={isPending}
+                className="app-input w-full rounded-lg px-3 py-2 text-sm disabled:opacity-60"
+              />
+              <p className="mt-1 text-[11px] text-jl-fg-3">{c.hint_data_vencimento}</p>
             </div>
 
             {/* Observação */}

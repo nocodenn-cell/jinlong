@@ -84,6 +84,8 @@ type SearchParams = {
   status?: string
   pagamento?: string
   page?: string
+  /** Abre o detalhe de uma venda específica — ver `vendaInicial`. */
+  venda?: string
 }
 
 type PageProps = { searchParams?: Promise<SearchParams> }
@@ -107,6 +109,10 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
     'all'
   )
   const page = clampPage(sp.page)
+  // `?venda=<id>` abre o detalhe direto — é o destino do atalho "abrir venda de
+  // origem" em Contas a receber. Validado como UUID para não repassar lixo da
+  // URL ao componente.
+  const vendaInicial = /^[0-9a-f-]{36}$/i.test(sp.venda ?? '') ? (sp.venda as string) : null
 
   const filtros: VendasFiltro = {
     inicio: periodoInicio(periodo),
@@ -349,7 +355,7 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
           </div>
         ) : null}
 
-        <VendasTable vendas={vendas} m={m} locale={locale} labels={{
+        <VendasTable vendas={vendas} m={m} locale={locale} vendaInicial={vendaInicial} labels={{
           colVenda: ui.vendas_col_venda,
           colHora: ui.vendas_col_hora,
           colItens: ui.vendas_col_itens,

@@ -6,7 +6,7 @@ import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 import { createPayablePaymentService } from '@/app/admin/financeiro/payablePayment'
 import { createPayableReader } from '@/app/admin/financeiro/payableReader'
-import type { PayableTitle } from '@shared-core/src/financial'
+import type { PayablePagamentoRow, PayableTitle } from '@shared-core/src/financial'
 import { hojeYmd, isTituloVencido } from '@shared-core/src/financial'
 
 export type ContaPagarStatus = 'PENDENTE' | 'PARCIAL' | 'PAGO' | 'ATRASADO' | 'CANCELADO'
@@ -20,7 +20,13 @@ export type ContaPagarRow = {
   valor_pago: number
   vencimento: string | null
   status: ContaPagarStatus
+  /**
+   * Número da NF-e de origem (`contas_pagar.nfe_numero`), canônico desde a
+   * migration 20260911120000.
+   */
   nfe_numero: string | null
+  /** Número da parcela/duplicata dentro da nota (`contas_pagar.parcela_numero`). */
+  nfe_parcela: string | null
   nfe_importacao_id: string | null
   criado_em: string | null
   loja_id: string
@@ -32,7 +38,7 @@ export type FormaPagamento = 'DINHEIRO' | 'PIX' | 'CARTAO' | 'BOLETO' | 'TRANSF'
 
 const COLUMNS = `
   id, fornecedor_id, descricao, valor_total, valor_pago, vencimento,
-  status, nfe_numero, nfe_importacao_id, criado_em, loja_id,
+  status, nfe_numero, parcela_numero, nfe_importacao_id, criado_em, loja_id,
   fornecedor:fornecedores!contas_pagar_fornecedor_id_fkey ( nome )
 `
 
@@ -52,6 +58,7 @@ function mapRow(raw: Record<string, unknown>): ContaPagarRow {
     vencimento,
     status,
     nfe_numero: (raw.nfe_numero as string | null) ?? null,
+    nfe_parcela: (raw.parcela_numero as string | null) ?? null,
     nfe_importacao_id: (raw.nfe_importacao_id as string | null) ?? null,
     criado_em: (raw.criado_em as string | null) ?? null,
     loja_id: String(raw.loja_id),
@@ -70,6 +77,7 @@ function payableToRow(p: PayableTitle): ContaPagarRow {
     vencimento: p.vencimento,
     status: p.status.toUpperCase() as ContaPagarStatus,
     nfe_numero: p.nfeNumero,
+    nfe_parcela: p.nfeParcela ?? null,
     nfe_importacao_id: p.nfeImportacaoId,
     criado_em: p.criadoEm,
     loja_id: p.lojaId,
@@ -220,6 +228,69 @@ export async function cancelarContaPagarAction(
     return { ok: true }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Erro ao cancelar.' }
+  }
+}
+
+/**
+ * Histórico de um título — pagamentos e estornos, mais recente primeiro.
+ * A tabela `contas_pagar_pagamentos` já existia; só faltava caminho de leitura.
+ */
+export async function listarPagamentosContaPagarAction(
+  contaId: string,
+): Promise<{ ok: true; pagamentos: PayablePagamentoRow[] } | { ok: false; error: string }> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { ok: false, error: auth.error }
+  if (!contaId?.trim()) return { ok: false, error: 'Conta obrigatória.' }
+
+  const supabase = await createClient()
+  const reader = createPayableReader(supabase)
+  const result = await reader.listPagamentos({ contaId })
+  if (!result.ok) {
+    return { ok: false, error: mensagemErroComSecao('Pagamentos', result.error) }
+  }
+  return { ok: true, pagamentos: result.pagamentos }
+}
+
+export type EstornarPagamentoInput = {
+  pagamento_id: string
+  motivo: string
+  idempotency_key: string
+}
+
+/**
+ * Estorno de um pagamento já registrado. Espelha `estornarLiquidacaoReceber`
+ * do lado a receber — mesma forma de comando, mesma exigência de motivo e de
+ * chave de idempotência.
+ */
+export async function estornarPagamentoContaPagarAction(
+  input: EstornarPagamentoInput,
+): Promise<{ ok: true; status: string; valor_pago: number } | { ok: false; error: string }> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { ok: false, error: auth.error }
+  if (!input.pagamento_id?.trim()) return { ok: false, error: 'Pagamento obrigatório.' }
+  if (!input.motivo?.trim() || input.motivo.trim().length < 2) {
+    return { ok: false, error: 'Motivo do estorno é obrigatório.' }
+  }
+  if (!input.idempotency_key?.trim()) {
+    return { ok: false, error: 'Chave de idempotência obrigatória.' }
+  }
+
+  try {
+    const supabase = await createClient()
+    const payment = createPayablePaymentService(supabase)
+    const reversed = await payment.reverse({
+      pagamentoId: input.pagamento_id,
+      motivo: input.motivo,
+      idempotencyKey: input.idempotency_key,
+    })
+    if (!reversed.ok) {
+      return { ok: false, error: mensagemErroComSecao('Estorno', reversed.error) }
+    }
+    revalidatePath('/gerente/financeiro/contas-pagar')
+    revalidatePath('/admin/financeiro')
+    return { ok: true, status: reversed.status, valor_pago: reversed.valorPago }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Erro ao estornar pagamento.' }
   }
 }
 

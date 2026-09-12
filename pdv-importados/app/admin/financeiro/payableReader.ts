@@ -5,6 +5,8 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type {
+  ListPagamentosPagarQuery,
+  ListPagamentosPagarResult,
   ListPayablesQuery,
   ListPayablesResult,
   PayableReader,
@@ -16,7 +18,7 @@ export const PAYABLES_PAGE_SIZE = 20
 
 const COLUMNS = `
   id, fornecedor_id, descricao, valor_total, valor_pago, vencimento,
-  status, nfe_numero, nfe_importacao_id, criado_em, loja_id,
+  status, nfe_numero, parcela_numero, nfe_importacao_id, criado_em, loja_id,
   fornecedor:fornecedores!contas_pagar_fornecedor_id_fkey ( nome )
 `
 
@@ -38,6 +40,7 @@ function mapPayable(raw: Record<string, unknown>, hoje: string): PayableTitle {
     vencimento,
     status,
     nfeNumero: (raw.nfe_numero as string | null) ?? null,
+    nfeParcela: (raw.parcela_numero as string | null) ?? null,
     nfeImportacaoId: (raw.nfe_importacao_id as string | null) ?? null,
     criadoEm: (raw.criado_em as string | null) ?? null,
     lojaId: String(raw.loja_id),
@@ -103,6 +106,48 @@ export function createPayableReader(supabase: SupabaseClient): PayableReader {
         return {
           ok: false,
           error: e instanceof Error ? e.message : 'Erro ao buscar contas a pagar.',
+          code: FINANCIAL_ERROR_CODES.LIST_FAILED,
+        }
+      }
+    },
+
+    /**
+     * Histórico de um título. Espelha `ReceivableReader.listLiquidacoes`:
+     * mesma ordenação (mais recente primeiro), mesmo teto de 50 linhas, mesma
+     * projeção de `operacao_tipo`/`operacao_origem_id` — que é o que permite à
+     * UI riscar o pagamento estornado em vez de sumir com ele.
+     */
+    async listPagamentos(query: ListPagamentosPagarQuery): Promise<ListPagamentosPagarResult> {
+      try {
+        const { data, error } = await supabase
+          .from('contas_pagar_pagamentos')
+          .select(
+            'id, conta_id, valor, forma_pagamento, data_pagamento, created_at, observacao, operacao_tipo, operacao_origem_id',
+          )
+          .eq('conta_id', query.contaId)
+          .order('created_at', { ascending: false })
+          .limit(50)
+        if (error) {
+          return { ok: false, error: error.message, code: FINANCIAL_ERROR_CODES.LIST_FAILED }
+        }
+        return {
+          ok: true,
+          pagamentos: (data ?? []).map((r) => ({
+            id: String(r.id),
+            contaId: String(r.conta_id),
+            valor: Number(r.valor),
+            formaPagamento: String(r.forma_pagamento),
+            dataPagamento: String(r.data_pagamento),
+            createdAt: String(r.created_at),
+            observacao: (r.observacao as string | null) ?? null,
+            operacaoTipo: (r.operacao_tipo as 'PAGAMENTO' | 'ESTORNO' | null) ?? null,
+            operacaoOrigemId: r.operacao_origem_id != null ? String(r.operacao_origem_id) : null,
+          })),
+        }
+      } catch (e) {
+        return {
+          ok: false,
+          error: e instanceof Error ? e.message : 'Erro ao listar pagamentos.',
           code: FINANCIAL_ERROR_CODES.LIST_FAILED,
         }
       }

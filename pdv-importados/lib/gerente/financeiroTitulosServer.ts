@@ -1,10 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createReceivableReader } from '@/app/admin/financeiro/receivableReader'
-import { hojeYmd } from '@shared-core/src/financial'
+import { hojeYmd, type ReceivableOpcao } from '@shared-core/src/financial'
 
 /** Filtros da listagem de contas a receber (sincronizados com a URL). */
 export type FinanceiroTituloFilters = {
-  opcao: 'mix' | 'ABERTO' | 'PARCIAL'
+  opcao: ReceivableOpcao
   nomeCliente: string
   q: string
   de: string
@@ -29,6 +29,8 @@ export type FinanceiroTituloListaRow = {
   cliente_id: string
   cliente_nome: string | null
   loja_id: string
+  /** Venda que originou o título; `null` para lançamento manual. */
+  venda_id: string | null
   /** Computado na leitura (vencimento < hoje, status em aberto) — item 13 do Plano Mestre. */
   atrasado: boolean
 }
@@ -43,15 +45,24 @@ function pickParam(raw: Record<string, string | string[] | undefined>, key: stri
 export function parseTituloFiltersFromSearchParams(
   raw: Record<string, string | string[] | undefined>,
 ): FinanceiroTituloFilters & { limite: number } {
-  let opcao = pickParam(raw, 'opcao')
-  if (opcao !== 'mix' && opcao !== 'ABERTO' && opcao !== 'PARCIAL') opcao = 'mix'
+  const opcoesValidas: readonly ReceivableOpcao[] = [
+    'mix',
+    'ABERTO',
+    'PARCIAL',
+    'atrasado',
+    'QUITADO',
+    'CANCELADO',
+    'todos',
+  ]
+  let opcao = pickParam(raw, 'opcao') as ReceivableOpcao
+  if (!opcoesValidas.includes(opcao)) opcao = 'mix'
 
   let limite = Number.parseInt(pickParam(raw, 'limite'), 10)
   if (!Number.isFinite(limite)) limite = 200
   limite = Math.min(500, Math.max(50, limite))
 
   return {
-    opcao: opcao as FinanceiroTituloFilters['opcao'],
+    opcao,
     nomeCliente: pickParam(raw, 'cliente').slice(0, 200),
     q: pickParam(raw, 'q').slice(0, 200),
     de: pickParam(raw, 'de').slice(0, 12),
@@ -116,6 +127,7 @@ export async function fetchContasReceberListagem(
       cliente_id: t.clienteId,
       cliente_nome: t.clienteNome,
       loja_id: t.lojaId,
+      venda_id: t.vendaId,
       atrasado: t.atrasado,
     })),
     capped: result.capped,

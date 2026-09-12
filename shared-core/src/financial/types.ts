@@ -26,6 +26,11 @@ export type ReceivableTitle = {
   vencimento: string | null
   status: string
   lojaId: string
+  /**
+   * Venda que originou o título, quando houve uma (`contas_receber.venda_id`).
+   * Título lançado à mão não tem origem — daí ser anulável.
+   */
+  vendaId: string | null
   /** Computado na leitura (vencimento < hoje, status em aberto) — nunca persistido. */
   atrasado: boolean
 }
@@ -39,7 +44,10 @@ export type PayableTitle = {
   valorPago: number
   vencimento: string | null
   status: string
+  /** Número da NF-e de origem, lido da importação vinculada. */
   nfeNumero: string | null
+  /** Número da parcela/duplicata dentro da nota, quando informado. */
+  nfeParcela?: string | null
   nfeImportacaoId: string | null
   criadoEm: string | null
   lojaId: string

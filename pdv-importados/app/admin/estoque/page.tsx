@@ -195,10 +195,13 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
         subtitle={m.estoque.subtitulo}
         actions={
           <PageActions>
+            {/* Ação primária do estoque é dar entrada em mercadoria. O destino
+                é o hub de entrada, que pergunta a origem (NF-e, ordem de compra
+                ou remessa) em vez de assumir que sempre há XML. */}
             <Button asChild variant="secondary" size="sm" className="gap-1.5">
-              <Link href={ROUTES.admin.importNfe}>
+              <Link href={ROUTES.admin.estoqueEntrada}>
                 <Upload className="h-4 w-4" aria-hidden />
-                {ui.catalogo_importar_nfe}
+                {m.estoque.entrada.titulo}
               </Link>
             </Button>
           </PageActions>

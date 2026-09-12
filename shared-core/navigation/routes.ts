@@ -46,6 +46,8 @@ export const ROUTES = {
     funcionarios: '/admin/funcionarios',
     fornecedores: '/admin/fornecedores',
     estoque: '/admin/estoque',
+    /** Ponto de partida único de entrada de mercadoria (NF-e · OC · remessa). */
+    estoqueEntrada: '/admin/estoque/entrada',
     estoqueRecebimento: '/admin/estoque/recebimento',
     estoqueTransferencias: '/admin/estoque/transferencias',
     estoqueImprimirEtiquetas: '/admin/estoque/imprimir-etiquetas',
@@ -81,6 +83,42 @@ export const ROUTES = {
 
 export function adminCatalogoProdutoQuery(id: string): string {
   return `${ROUTES.admin.catalogo}?produto=${id}`
+}
+
+/**
+ * Abre a tela de entrada de NF-e já na conferência de uma importação.
+ * É o caminho de volta de Contas a pagar → nota que originou o título.
+ */
+export function hrefImportacaoNfe(importacaoId: string): string {
+  const q = new URLSearchParams({ id: importacaoId })
+  return pathWithQuery(ROUTES.admin.importNfe, q)
+}
+
+/**
+ * Aba "A pagar" do financeiro unificado.
+ *
+ * `ROUTES.admin.financeiroContasPagar` é rota legada: ela apenas redireciona
+ * para cá. Os atalhos do fluxo de entrada apontam direto para o destino, sem
+ * o salto extra de servidor a cada clique.
+ */
+export function hrefFinanceiroPagar(): string {
+  const q = new URLSearchParams({ tab: 'pagar' })
+  return pathWithQuery(ROUTES.admin.financeiro, q)
+}
+
+/** Lista de ordens de compra já filtrada por situação (atalhos do hub de Entrada). */
+export function hrefComprasPorStatus(status: string): string {
+  const q = new URLSearchParams({ status })
+  return pathWithQuery(ROUTES.admin.compras, q)
+}
+
+/**
+ * Abre a lista de vendas já com o detalhe de UMA venda aberto.
+ * É o caminho de volta de Contas a receber → venda que originou o título.
+ */
+export function hrefVendaDetalhe(vendaId: string): string {
+  const q = new URLSearchParams({ periodo: 'tudo', venda: vendaId })
+  return pathWithQuery(ROUTES.admin.vendas, q)
 }
 
 export function adminFinanceiroDocumentoHref(id: string): string {

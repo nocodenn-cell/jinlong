@@ -38,8 +38,11 @@ describe('payableReader', () => {
       valor_pago: 0,
       vencimento: '2026-07-01',
       status: 'pendente',
+      // Desde 20260911120000: `nfe_numero` é o número da NOTA e
+      // `parcela_numero` o da duplicata — sem derivação no leitor.
       nfe_numero: '123',
-      nfe_importacao_id: null,
+      parcela_numero: '1',
+      nfe_importacao_id: 'imp-1',
       criado_em: '2026-06-01',
       loja_id: 'l1',
       fornecedor: { nome: 'Fornecedor X' },
@@ -54,9 +57,36 @@ describe('payableReader', () => {
       contaId: 'c1',
       fornecedorNome: 'Fornecedor X',
       nfeNumero: '123',
+      nfeParcela: '1',
       status: 'PENDENTE',
       lojaId: 'l1',
     })
+  })
+
+  it('título sem parcela declarada não inventa número de parcela', async () => {
+    const row = {
+      id: 'c3',
+      fornecedor_id: 'f1',
+      descricao: 'Título avulso',
+      valor_total: 10,
+      valor_pago: 0,
+      vencimento: '2026-07-01',
+      status: 'pendente',
+      nfe_numero: '7',
+      parcela_numero: null,
+      nfe_importacao_id: null,
+      criado_em: '2026-06-01',
+      loja_id: 'l1',
+      fornecedor: null,
+    }
+    const supabase = {
+      from: vi.fn(() => thenableQuery({ data: [row], error: null })),
+    } as never
+    const result = await createPayableReader(supabase).list({ page: 1, status: 'todos' })
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.contas[0].nfeNumero).toBe('7')
+    expect(result.contas[0].nfeParcela).toBeNull()
   })
 
   it('computa atrasado por vencimento < hoje, não por igualdade de status (item 13)', async () => {

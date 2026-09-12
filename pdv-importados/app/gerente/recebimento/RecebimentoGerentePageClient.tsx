@@ -13,7 +13,7 @@ import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages } from '@/i18n/getMessages'
-import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
+import { ConsequenciaOperacao, PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/feedback'
 import { StatusChip } from '@/components/ui/StatusChip'
@@ -301,10 +301,19 @@ export function RecebimentoGerentePageClient({
               </div>
             ) : null}
           </div>
-          <div className="mt-6 flex justify-end border-t border-[var(--color-border)] pt-5">
-            <Button type="submit" variant="primary" loading={loading} disabled={semProdutos}>
-              {loading ? r.btn_confirmando : r.btn_confirmar}
-            </Button>
+          <div className="mt-6 border-t border-[var(--color-border)] pt-5">
+            <ConsequenciaOperacao
+              titulo={r.consequencia_titulo}
+              efeitos={[
+                { tom: 'estoque', texto: r.consequencia_estoque },
+                { tom: 'documento', texto: r.consequencia_sem_financeiro },
+              ]}
+            />
+            <div className="mt-4 flex justify-end">
+              <Button type="submit" variant="primary" loading={loading} disabled={semProdutos}>
+                {loading ? r.btn_confirmando : r.btn_confirmar}
+              </Button>
+            </div>
           </div>
         </form>
       </CadastroRapidoBlock>
@@ -318,7 +327,7 @@ export function RecebimentoGerentePageClient({
           emptyState={
             <EmptyState
               title={r.empty_recentes}
-              actionLabel={r.btn_confirmar}
+              actionLabel={r.ir_ao_formulario}
               onAction={() => {
                 document.getElementById('recebimento-form')?.scrollIntoView({ behavior: 'smooth' })
               }}

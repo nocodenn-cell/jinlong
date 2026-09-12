@@ -1,10 +1,13 @@
 'use client'
 
 import { Suspense, useState } from 'react'
-import { SectionCard } from '@/components/ui/admin-v2'
+import { Plus } from 'lucide-react'
+import { PageActions, SectionCard } from '@/components/ui/admin-v2'
+import { Button } from '@/components/ui/button'
+import { getMessages } from '@/i18n/getMessages'
 import { formatDateTimeOrDash } from '@/lib/format/datetime'
 import { ContasReceberTable, type ContaLinha, type ContasLabels } from './ContasReceberTable'
-import { FinanceiroReceberExtras } from './FinanceiroReceberExtras'
+import { NovoTituloReceberModal } from './NovoTituloReceberModal'
 import { FinanceiroHubNavShell } from '@/components/ui/admin-v2/FinanceiroHubNavShell'
 import type { FinanceiroTabId } from './financeiroTabs'
 import { DocumentoFiscalDetailSheet } from './DocumentoFiscalDetailSheet'
@@ -25,6 +28,7 @@ type ClienteOpt = { id: string; nome: string }
 
 type Props = {
   activeTab: FinanceiroTabId
+  idioma: Idioma
   contas: ContaLinha[]
   fiscal: DocumentoFiscalPendenteRow[]
   contasLabels: ContasLabels
@@ -98,6 +102,7 @@ function FiscalList({
 
 export function FinanceiroContent({
   activeTab,
+  idioma,
   contas,
   fiscal,
   contasLabels,
@@ -110,6 +115,8 @@ export function FinanceiroContent({
   kpiSection,
 }: Props) {
   const [fiscalDetalheId, setFiscalDetalheId] = useState<string | null>(null)
+  const [novoTituloAberto, setNovoTituloAberto] = useState(false)
+  const tReceber = getMessages(idioma).contas_receber
 
   return (
     <>
@@ -122,11 +129,27 @@ export function FinanceiroContent({
           {kpiSection}
           {filterSection}
           <div className="admin-v2-grid-2">
-            <SectionCard title={panelLabels.titulosEmAberto}>
-              <ContasReceberTable contas={contas} labels={contasLabels} />
-              <FinanceiroReceberExtras
+            <SectionCard
+              title={panelLabels.titulosEmAberto}
+              action={
+                <PageActions>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => setNovoTituloAberto(true)}
+                  >
+                    <Plus className="h-4 w-4" aria-hidden />
+                    {tReceber.novo_titulo}
+                  </Button>
+                </PageActions>
+              }
+            >
+              <ContasReceberTable
                 contas={contas}
-                clientesIniciais={clientesOpts}
+                labels={contasLabels}
+                idioma={idioma}
                 caixasAbertos={caixasAbertos}
                 actorLojaId={actorLojaId}
               />
@@ -135,6 +158,14 @@ export function FinanceiroContent({
               <FiscalList fiscal={fiscal} labels={panelLabels} onSelect={setFiscalDetalheId} />
             </SectionCard>
           </div>
+
+          {novoTituloAberto ? (
+            <NovoTituloReceberModal
+              idioma={idioma}
+              clientes={clientesOpts}
+              onClose={() => setNovoTituloAberto(false)}
+            />
+          ) : null}
         </>
       ) : null}
 

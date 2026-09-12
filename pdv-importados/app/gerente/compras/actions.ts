@@ -7,6 +7,7 @@ import { getGerenteLojaId, getGerenteUserId } from '@/lib/gerente/auth/sessionCo
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 import { lojaIdDaSessao } from '@/app/gerente/fornecedores/fornecedorContrato'
 import { mensagemSeFornecedorForaDaLoja } from './fornecedorOcBoundary'
+import { ROUTES } from '@shared-core/navigation/routes'
 
 type R<T = null> = { success: true; data: T } | { success: false; error: string }
 
@@ -38,10 +39,29 @@ export type OcListaDTO = {
   status: StatusOC
   data_emissao: string
   data_prevista_chegada: string | null
+  /** Prazo acordado; sem ele o recebimento não gera conta a pagar. */
+  data_vencimento: string | null
   observacao: string | null
   total_itens: number
   valor_total: number
   created_at: string
+  /**
+   * NF-e vinculada a esta ordem (`importacoes_nfe.ordem_compra_id`), se houver.
+   * O vínculo e as guardas de dupla entrada já existiam no banco desde
+   * `20260911140000`; o que faltava era a operação ENXERGAR isso. Sem exibir,
+   * o operador só descobria a nota ao clicar em Receber e tomar
+   * `OC_NFE_JA_CREDITADA` como erro cru.
+   */
+  nfe_id: string | null
+  nfe_numero: string | null
+  nfe_status: string | null
+  /**
+   * Título gerado em `contas_pagar` pelo recebimento (`ordem_compra_id`).
+   * É a consequência financeira da compra, e ela também não aparecia.
+   */
+  titulo_id: string | null
+  titulo_status: string | null
+  titulo_valor: number | null
 }
 
 export type OcDetalheDTO = OcListaDTO & {
@@ -73,6 +93,7 @@ export type CriarOcInput = {
   fornecedor_nome?: string | null
   data_emissao?: string
   data_prevista_chegada?: string | null
+  data_vencimento?: string | null
   observacao?: string | null
   itens: OcItemInput[]
 }
@@ -104,6 +125,8 @@ async function assertFornecedorDaLojaOc(
 }
 
 type RawOcItem = { quantidade: number; preco_unitario: number }
+type RawVinculoNfe = { id: string; numero_nf: string | null; status: string | null }
+type RawTituloAp = { id: string; status: string | null; valor_total: number | null }
 type RawOcRow = {
   id: string
   fornecedor_id: string | null
@@ -111,10 +134,20 @@ type RawOcRow = {
   status: string
   data_emissao: string
   data_prevista_chegada: string | null
+  /** Prazo acordado; sem ele o recebimento não gera conta a pagar. */
+  data_vencimento: string | null
   observacao: string | null
   created_at: string
   fornecedor: { nome: string } | null
   itens: RawOcItem[]
+  /** PostgREST devolve o embed 1-N como array, mesmo com índice único. */
+  nfe?: RawVinculoNfe[] | RawVinculoNfe | null
+  titulo?: RawTituloAp[] | RawTituloAp | null
+}
+
+function primeiro<T>(v: T[] | T | null | undefined): T | null {
+  if (Array.isArray(v)) return v[0] ?? null
+  return v ?? null
 }
 
 function mapOcListaRow(row: RawOcRow): OcListaDTO {
@@ -126,24 +159,35 @@ function mapOcListaRow(row: RawOcRow): OcListaDTO {
     status: row.status as StatusOC,
     data_emissao: row.data_emissao,
     data_prevista_chegada: row.data_prevista_chegada,
+    data_vencimento: row.data_vencimento,
     observacao: row.observacao,
     total_itens: itens.length,
     valor_total: itens.reduce((sum, i) => sum + i.quantidade * i.preco_unitario, 0),
     created_at: row.created_at,
+    nfe_id: primeiro(row.nfe)?.id ?? null,
+    nfe_numero: primeiro(row.nfe)?.numero_nf ?? null,
+    nfe_status: primeiro(row.nfe)?.status ?? null,
+    titulo_id: primeiro(row.titulo)?.id ?? null,
+    titulo_status: primeiro(row.titulo)?.status ?? null,
+    titulo_valor: primeiro(row.titulo)?.valor_total ?? null,
   }
 }
 
 const OC_SELECT = `
   id, fornecedor_id, fornecedor_nome, status,
-  data_emissao, data_prevista_chegada, observacao, created_at,
+  data_emissao, data_prevista_chegada, data_vencimento, observacao, created_at,
   fornecedor:fornecedores!fornecedor_id(nome),
+  nfe:importacoes_nfe!importacoes_nfe_ordem_compra_id_fkey(id, numero_nf, status),
+  titulo:contas_pagar!contas_pagar_ordem_compra_id_fkey(id, status, valor_total),
   itens:ordens_compra_itens(quantidade, preco_unitario)
 `
 
 const OC_DETALHE_SELECT = `
   id, fornecedor_id, fornecedor_nome, status,
-  data_emissao, data_prevista_chegada, observacao, created_at,
+  data_emissao, data_prevista_chegada, data_vencimento, observacao, created_at,
   fornecedor:fornecedores!fornecedor_id(nome),
+  nfe:importacoes_nfe!importacoes_nfe_ordem_compra_id_fkey(id, numero_nf, status),
+  titulo:contas_pagar!contas_pagar_ordem_compra_id_fkey(id, status, valor_total),
   itens:ordens_compra_itens(
     id, produto_id, descricao, quantidade, preco_unitario,
     quantidade_recebida, unidade_medida,
@@ -260,10 +304,13 @@ export async function obterOrdemCompraDetalhe(id: string): Promise<R<OcDetalheDT
     status: string
     data_emissao: string
     data_prevista_chegada: string | null
+    data_vencimento: string | null
     observacao: string | null
     created_at: string
     fornecedor: { nome: string } | null
     itens: RawDetalheItem[]
+    nfe?: RawVinculoNfe[] | RawVinculoNfe | null
+    titulo?: RawTituloAp[] | RawTituloAp | null
   }
 
   const itens: OcItemDTO[] = (raw.itens ?? []).map((i) => ({
@@ -284,9 +331,16 @@ export async function obterOrdemCompraDetalhe(id: string): Promise<R<OcDetalheDT
     status: raw.status as StatusOC,
     data_emissao: raw.data_emissao,
     data_prevista_chegada: raw.data_prevista_chegada,
+    data_vencimento: raw.data_vencimento,
     observacao: raw.observacao,
     total_itens: itens.length,
     valor_total: itens.reduce((s, i) => s + i.quantidade * i.preco_unitario, 0),
+    nfe_id: primeiro(raw.nfe)?.id ?? null,
+    nfe_numero: primeiro(raw.nfe)?.numero_nf ?? null,
+    nfe_status: primeiro(raw.nfe)?.status ?? null,
+    titulo_id: primeiro(raw.titulo)?.id ?? null,
+    titulo_status: primeiro(raw.titulo)?.status ?? null,
+    titulo_valor: primeiro(raw.titulo)?.valor_total ?? null,
     created_at: raw.created_at,
     itens,
   }
@@ -319,6 +373,7 @@ export async function criarOrdemCompra(input: CriarOcInput): Promise<R<string>> 
       fornecedor_nome: input.fornecedor_nome?.trim() || null,
       data_emissao: input.data_emissao ?? new Date().toISOString().slice(0, 10),
       data_prevista_chegada: input.data_prevista_chegada ?? null,
+      data_vencimento: input.data_vencimento ?? null,
       observacao: input.observacao?.trim() || null,
       status: 'RASCUNHO',
       created_by: userId ?? '',
@@ -343,6 +398,7 @@ export async function criarOrdemCompra(input: CriarOcInput): Promise<R<string>> 
   if (e2) return { success: false, error: mensagemErroComSecao('Itens da ordem', e2.message) }
 
   revalidatePath('/gerente/compras')
+  revalidatePath(ROUTES.admin.compras)
   return { success: true, data: oc.id }
 }
 
@@ -380,6 +436,7 @@ export async function atualizarOrdemCompra(input: AtualizarOcInput): Promise<R<n
       fornecedor_nome: input.fornecedor_nome?.trim() || null,
       data_emissao: input.data_emissao ?? new Date().toISOString().slice(0, 10),
       data_prevista_chegada: input.data_prevista_chegada ?? null,
+      data_vencimento: input.data_vencimento ?? null,
       observacao: input.observacao?.trim() || null,
     })
     .eq('id', input.id)
@@ -402,6 +459,7 @@ export async function atualizarOrdemCompra(input: AtualizarOcInput): Promise<R<n
   if (e2) return { success: false, error: mensagemErroComSecao('Itens da ordem', e2.message) }
 
   revalidatePath('/gerente/compras')
+  revalidatePath(ROUTES.admin.compras)
   return { success: true, data: null }
 }
 
@@ -437,6 +495,7 @@ export async function atualizarStatusOC(id: string, novoStatus: StatusOC): Promi
   if (error) return { success: false, error: mensagemErroComSecao('Status', error.message) }
 
   revalidatePath('/gerente/compras')
+  revalidatePath(ROUTES.admin.compras)
   return { success: true, data: null }
 }
 
@@ -475,6 +534,9 @@ export async function registrarRecebimentoOC(
   if (error) return { success: false, error: mensagemErroComSecao('Recebimento', error.message) }
 
   revalidatePath('/gerente/compras')
+  revalidatePath(ROUTES.admin.compras)
   revalidatePath('/gerente/estoque')
+  revalidatePath(ROUTES.admin.estoque)
+  revalidatePath(ROUTES.admin.financeiro)
   return { success: true, data: null }
 }

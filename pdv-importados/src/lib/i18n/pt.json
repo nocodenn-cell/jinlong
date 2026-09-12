@@ -346,7 +346,6 @@
     "filtro_situacao_somente_ativos": "Só ativos",
     "filtro_situacao_somente_inativos": "Só inativos",
     "preco_atacado": "Preço atacado",
-    "preco_custo": "Preço de custo",
     "permitir_abaixo_custo": "Permitir salvar preço abaixo do custo",
     "permitir_abaixo_custo_hint": "Por padrão, o sistema bloqueia salvar um preço de varejo ou atacado menor que o custo cadastrado (evita erro de digitação). Marque esta opção só se for intencional — por exemplo, uma liquidação.",
     "qtd_gatilho_atacado": "Qtd. mínima atacado",
@@ -725,7 +724,7 @@
     "recebimento_page": {
       "titulo": "Recebimento e remessa",
       "badge": "Entrada sem NF",
-      "subtitulo": "Registre origem da mercadoria, conferência de quantidade e confirmação em uma etapa. O estoque da sua loja é atualizado pela RPC após a confirmação.",
+      "subtitulo": "Registre a origem da mercadoria, confira a quantidade e confirme — tudo em uma etapa. O estoque só é creditado depois da confirmação.",
       "label_origem": "Origem",
       "ph_origem": "Ex.: fornecedor X, container 42, loja parceira",
       "label_observacao": "Observação",
@@ -738,13 +737,17 @@
       "produto_limpar": "Trocar",
       "label_qtd_esperada": "Quantidade esperada",
       "label_qtd_conferida": "Quantidade conferida",
-      "divergencia_alerta": "Conferida difere da esperada. A regra de negócio na base aplica a entrada; confira o estoque após confirmar.",
+      "divergencia_alerta": "A quantidade conferida difere da esperada. O estoque entra pela quantidade conferida — confira antes de confirmar.",
       "divergencia_calculo": "{{esperada}} − {{conferida}} = {{delta}}",
       "divergencia_moderada": "Divergência moderada",
       "divergencia_grave": "Divergência alta",
       "divergencia_legenda_pct": "≈ {{pct}}% em relação à esperada",
       "btn_confirmar": "Confirmar entrada",
       "btn_confirmando": "Confirmando entrada…",
+      "ir_ao_formulario": "Registrar a primeira",
+      "consequencia_titulo": "O que acontece ao confirmar",
+      "consequencia_estoque": "A quantidade conferida entra no estoque, com origem nesta remessa.",
+      "consequencia_sem_financeiro": "Nenhuma conta a pagar nasce daqui: entrada sem nota não declara valor nem prazo.",
       "toast_ok": "Remessa {{id}} confirmada; estoque atualizado.",
       "toast_dados_invalidos": "Selecione um produto e informe quantidades maiores que zero.",
       "sem_produtos_titulo": "Nenhum produto ativo",
@@ -873,6 +876,37 @@
       "maximo": "Máximo",
       "layout": "Layout"
     },
+    "entrada": {
+      "titulo": "Entrada de mercadoria",
+      "subtitulo": "Escolha por onde a mercadoria está chegando. Cada caminho atualiza o estoque de um jeito diferente.",
+      "escolha_titulo": "Por onde a mercadoria chegou?",
+      "efeito_label": "Afeta",
+      "efeito_estoque": "Estoque",
+      "efeito_financeiro": "Contas a pagar",
+      "nfe_titulo": "Chegou com NF-e",
+      "nfe_desc": "Importe o XML do fornecedor. Vincula os produtos ao catálogo, confere a quantidade recebida e lança as parcelas da nota.",
+      "nfe_cta": "Importar XML",
+      "oc_titulo": "Chegou de uma ordem de compra",
+      "oc_desc": "Receba um pedido já registrado com o fornecedor. A quantidade conferida é a que entra no estoque.",
+      "oc_cta": "Ver ordens em trânsito",
+      "remessa_titulo": "Chegou sem nota",
+      "remessa_desc": "Remessa de importação ou reposição sem documento fiscal. Registre a origem e confira o que chegou.",
+      "remessa_cta": "Registrar remessa",
+      "pendencias_titulo": "Em andamento",
+      "em_andamento_badge": "em andamento",
+      "pendencias_sub": "Entradas já iniciadas que ainda não creditaram estoque.",
+      "pendencias_vazio": "Nada em andamento — toda entrada iniciada já foi concluída.",
+      "pendencias_erro": "Não foi possível consultar o que está em andamento agora.",
+      "pend_nfe": "NF-e aguardando conferência",
+      "pend_oc": "Ordens de compra em trânsito",
+      "pend_remessa": "Remessas aguardando conferência",
+      "pend_retomar": "Retomar",
+      "depois_titulo": "Depois da entrada",
+      "depois_estoque": "O saldo aparece no kardex do produto, com a origem do movimento registrada.",
+      "depois_financeiro": "As parcelas declaradas na NF-e viram contas a pagar, com fornecedor e vencimento.",
+      "ver_estoque": "Ver estoque",
+      "ver_contas": "Ver contas a pagar"
+    },
     "import_nfe": {
       "titulo": "Importar NF-e de compra",
       "subtitulo": "Envie o XML da nota para pré-visualizar itens, ajustar fator de conversão e dar entrada no estoque.",
@@ -917,6 +951,10 @@
       "import_itens": "{{n}} itens processados.",
       "erro_preview": "Não foi possível ler o XML.",
       "sem_preview": "Carregue um XML para conferir os itens.",
+      "passos_titulo": "Como funciona a entrada por NF-e",
+      "passo_1": "1. Envie o XML: os itens são casados com o catálogo e as parcelas são lidas da nota.",
+      "passo_2": "2. Confira item a item: o estoque entra pela quantidade que você contou, não pela da nota.",
+      "passo_3": "3. Confirme: só aí o estoque é creditado e as parcelas viram contas a pagar.",
       "limpar": "Limpar",
       "secao_conferencia": "Conferência da entrada",
       "secao_conferencia_hint": "Confira a quantidade que realmente chegou. O estoque só é atualizado depois de confirmar a conferência.",
@@ -938,7 +976,31 @@
       "pendentes_hint": "XML já processado e catálogo atualizado — falta conferir a quantidade recebida para creditar o estoque.",
       "pendentes_sem_numero": "NF-e sem número",
       "pendentes_col_itens": "Itens conferidos",
-      "pendentes_btn_retomar": "Retomar conferência"
+      "pendentes_btn_retomar": "Retomar conferência",
+      "vinculo_oc_titulo": "Esta nota é de alguma ordem de compra?",
+      "vinculo_oc_hint": "Declarar o vínculo impede que a mesma mercadoria entre duas vezes — pela ordem e pela nota.",
+      "vinculo_oc_placeholder": "Selecione a ordem de compra…",
+      "vinculo_oc_btn": "Vincular",
+      "vinculo_oc_vinculado": "Vinculada à ordem de compra {{id}}. O recebimento da ordem não vai creditar estoque de novo.",
+      "vinculo_oc_sem_ordens": "Nenhuma ordem de compra em aberto nesta loja.",
+      "vinculo_oc_sucesso": "Nota vinculada à ordem de compra.",
+      "parcelas_titulo": "Parcelas a pagar desta nota",
+      "parcelas_hint": "Lidas da própria NF-e. Viram contas a pagar quando você confirmar a entrada.",
+      "parcelas_col_numero": "Parcela",
+      "parcelas_col_vencimento": "Vencimento",
+      "parcelas_col_valor": "Valor",
+      "parcelas_total": "Total a pagar",
+      "parcelas_vazio": "Esta nota não declara parcelas — nenhuma conta a pagar será gerada.",
+      "consequencia_titulo": "O que acontece ao confirmar",
+      "consequencia_estoque": "{{n}} item(ns) entram no estoque pela quantidade conferida, com origem nesta nota.",
+      "consequencia_custo": "O preço de custo dos itens marcados é atualizado.",
+      "consequencia_financeiro": "{{n}} parcela(s), somando {{total}}, entram em Contas a pagar.",
+      "consequencia_financeiro_zero": "Nenhuma conta a pagar será gerada — a nota não declara parcelas.",
+      "consequencia_irreversivel": "A confirmação não pode ser desfeita por esta tela.",
+      "concluido_titulo": "Entrada concluída",
+      "concluido_sub": "Estoque creditado e parcelas lançadas. Próximos passos:",
+      "ir_contas_pagar": "Ver contas a pagar",
+      "ir_estoque": "Ver estoque"
     }
   },
   "compras": {
@@ -994,7 +1056,53 @@
     "busca_placeholder": "Fornecedor, produto ou ID…",
     "filtro_todos_status": "Todos os status",
     "pag_prev": "← Anterior",
-    "pag_next": "Próxima →"
+    "pag_next": "Próxima →",
+    "consequencia_titulo": "O que acontece ao registrar o recebimento",
+    "consequencia_titulo_concluida": "O que aconteceu",
+    "field_data_vencimento_curto": "Vencimento",
+    "consequencia_estoque": "A quantidade conferida entra no estoque, com origem “Recebimento OC”.",
+    "consequencia_status": "A ordem é encerrada como Recebida.",
+    "consequencia_sem_financeiro": "Nenhuma conta a pagar nasce daqui. Se esta compra tem NF-e, importe o XML para lançar as parcelas.",
+    "ir_estoque": "Ver no estoque",
+    "field_data_vencimento": "Vencimento do pagamento",
+    "hint_data_vencimento": "Sem prazo informado, o recebimento não gera conta a pagar.",
+    "consequencia_financeiro": "Um título de {{total}} entra em Contas a pagar, vencendo em {{data}}.",
+    "consequencia_sem_vencimento": "Nenhuma conta a pagar será gerada: esta ordem não tem vencimento informado.",
+    "consequencia_sem_fornecedor": "Nenhuma conta a pagar será gerada: o fornecedor desta ordem não está cadastrado.",
+    "consequencia_recebida_com_titulo": "Estoque creditado e título lançado em Contas a pagar.",
+    "consequencia_recebida_sem_titulo": "Estoque creditado. Nenhum título foi gerado — se esta compra tem NF-e, importe o XML para lançar as parcelas.",
+    "ir_contas_pagar": "Ver contas a pagar",
+    "ir_importar_nfe": "Importar a NF-e desta compra",
+    "col_vencimento": "Vencimento",
+    "col_origem": "Vínculo",
+    "sem_vencimento": "sem prazo",
+    "acoes_aria": "Ações da ordem {id}",
+    "acao_detalhe": "Abrir detalhe",
+    "acao_confirmar": "Confirmar ordem",
+    "acao_em_transito": "Marcar em trânsito",
+    "acao_receber": "Conferir e receber",
+    "acao_editar": "Editar ordem",
+    "acao_cancelar": "Cancelar ordem",
+    "acao_ver_nfe": "Abrir NF-e vinculada",
+    "acao_ver_titulo": "Abrir conta a pagar gerada",
+    "vinculo_nfe": "NF-e {numero}",
+    "vinculo_nfe_sem_numero": "NF-e vinculada",
+    "vinculo_titulo": "Conta a pagar",
+    "vinculo_nenhum": "—",
+    "nfe_ja_creditou_titulo": "O estoque desta compra já entrou pela NF-e",
+    "nfe_ja_creditou_texto": "Esta ordem está vinculada à NF-e {numero}, que já foi confirmada e creditou o estoque. Receber a ordem de novo lançaria a mesma mercadoria duas vezes — por isso o recebimento está bloqueado.",
+    "nfe_vinculada_titulo": "Esta compra tem uma NF-e vinculada",
+    "nfe_vinculada_texto": "Quando a nota for confirmada, é ela que credita o estoque e lança as parcelas. A ordem se encerra junto, sem gerar título próprio.",
+    "titulo_gerado_label": "Conta a pagar gerada",
+    "filtro_status_aria": "Filtrar por situação",
+    "limpar_filtros": "Limpar filtros",
+    "cancelar_titulo": "Cancelar ordem de compra",
+    "cancelar_consequencia": "O que vai acontecer",
+    "cancelar_efeito_ordem": "A ordem passa a Cancelada e deixa de aparecer como compra em andamento.",
+    "cancelar_efeito_estoque": "Nada é retirado do estoque: o que já foi recebido continua lá.",
+    "cancelar_efeito_irreversivel": "Não dá para reabrir a ordem depois: se a compra voltar, será preciso criar uma nova.",
+    "cancelar_confirmar": "Cancelar ordem",
+    "enviando": "Enviando…"
   },
   "caixa": {
     "titulo": "Caixa",
@@ -1095,10 +1203,9 @@
     "pdv_pgto_um_meio_dinheiro": "Uma parcela no método selecionado cobre o total líquido do cupom (split manual desativado nesta versão).",
     "pdv_pgto_adicionar_forma": "Adicionar forma",
     "pdv_pgto_dividir": "Dividir pagamento",
-    "pdv_pgto_valor_recebido": "Valor recebido",
+    "pdv_pgto_valor_recebido": "Recebido",
     "pdv_pgto_remover": "Remover",
     "pdv_pgto_auto_completar": "Auto-completar",
-    "pdv_pgto_valor_recebido": "Recebido",
     "pdv_pgto_troco_cliente": "Troco p/ cliente",
     "pdv_pgto_diferenca": "Falta",
     "pdv_pgto_excesso_sem_dinheiro": "Excesso sem troco — ajuste os valores",
@@ -1502,27 +1609,84 @@
   },
   "admin": {
     "header": {
-      "brand": { "cn": "金龍", "pt": "Jīn Lóng" },
-      "tagline": { "cn": "管理层 · 销售 · 库存 · 财务", "pt": "Painel administrativo" }
+      "brand": {
+        "cn": "金龍",
+        "pt": "Jīn Lóng"
+      },
+      "tagline": {
+        "cn": "管理层 · 销售 · 库存 · 财务",
+        "pt": "Painel administrativo"
+      }
     },
     "nav": {
-      "dashboard": { "cn": "主控台", "pt": "Dashboard" },
-      "gerente": { "cn": "经理面板", "pt": "Gerente" },
-      "produtos": { "cn": "商品", "pt": "Produtos" },
-      "clientes": { "cn": "客户", "pt": "Clientes" },
-      "funcionarios": { "cn": "员工", "pt": "Funcionários" },
-      "vendas": { "cn": "销售", "pt": "Vendas" },
-      "estoque": { "cn": "库存", "pt": "Estoque" },
-      "recebimento": { "cn": "收货", "pt": "Recebimento" },
-      "transferencias": { "cn": "调拨", "pt": "Transferências" },
-      "relatorios": { "cn": "报告", "pt": "Relatórios" },
-      "caixas": { "cn": "钱箱", "pt": "Caixas" },
-      "financeiro": { "cn": "财务", "pt": "Financeiro" },
-      "configuracoes": { "cn": "设置", "pt": "Configurações" },
-      "implantacao": { "cn": "上线清单", "pt": "Implantação" },
-      "provisionamento": { "cn": "开通店铺", "pt": "Provisionamento" },
-      "comissoes": { "cn": "佣金", "pt": "Comissões" },
-      "suspensao": { "cn": "暂停销售", "pt": "Suspensão" }
+      "dashboard": {
+        "cn": "主控台",
+        "pt": "Dashboard"
+      },
+      "gerente": {
+        "cn": "经理面板",
+        "pt": "Gerente"
+      },
+      "produtos": {
+        "cn": "商品",
+        "pt": "Produtos"
+      },
+      "clientes": {
+        "cn": "客户",
+        "pt": "Clientes"
+      },
+      "funcionarios": {
+        "cn": "员工",
+        "pt": "Funcionários"
+      },
+      "vendas": {
+        "cn": "销售",
+        "pt": "Vendas"
+      },
+      "estoque": {
+        "cn": "库存",
+        "pt": "Estoque"
+      },
+      "recebimento": {
+        "cn": "收货",
+        "pt": "Recebimento"
+      },
+      "transferencias": {
+        "cn": "调拨",
+        "pt": "Transferências"
+      },
+      "relatorios": {
+        "cn": "报告",
+        "pt": "Relatórios"
+      },
+      "caixas": {
+        "cn": "钱箱",
+        "pt": "Caixas"
+      },
+      "financeiro": {
+        "cn": "财务",
+        "pt": "Financeiro"
+      },
+      "configuracoes": {
+        "cn": "设置",
+        "pt": "Configurações"
+      },
+      "implantacao": {
+        "cn": "上线清单",
+        "pt": "Implantação"
+      },
+      "provisionamento": {
+        "cn": "开通店铺",
+        "pt": "Provisionamento"
+      },
+      "comissoes": {
+        "cn": "佣金",
+        "pt": "Comissões"
+      },
+      "suspensao": {
+        "cn": "暂停销售",
+        "pt": "Suspensão"
+      }
     },
     "navHints": {
       "dashboard": "Métricas, gráfico de vendas e últimos pedidos do período.",
@@ -1544,37 +1708,118 @@
       "suspensao": "Suspender ou liberar vendas no PDV."
     },
     "dashboard": {
-      "pageTitle": { "cn": "生意看板", "pt": "Dashboard comercial" },
-      "pageSubtitle": { "cn": "实时数据", "pt": "Dados do período selecionado" },
-      "newUsers": { "cn": "新客户", "pt": "Novos usuários no período" },
-      "periodToday": { "cn": "今天", "pt": "Hoje" },
-      "period7d": { "cn": "7天", "pt": "7 dias" },
-      "period30d": { "cn": "30天", "pt": "30 dias" },
-      "statusAll": { "cn": "全部", "pt": "Todos" },
-      "statusDone": { "cn": "完成", "pt": "Concluída" },
-      "statusCancelled": { "cn": "取消", "pt": "Cancelada" },
-      "chartTitle": { "cn": "销售趋势", "pt": "Tendência de vendas" },
-      "tableTitle": { "cn": "最近订单", "pt": "Últimos pedidos" },
-      "tableEmpty": { "cn": "此筛选条件下没有订单。", "pt": "Nenhum pedido encontrado para este filtro." },
+      "pageTitle": {
+        "cn": "生意看板",
+        "pt": "Dashboard comercial"
+      },
+      "pageSubtitle": {
+        "cn": "实时数据",
+        "pt": "Dados do período selecionado"
+      },
+      "newUsers": {
+        "cn": "新客户",
+        "pt": "Novos usuários no período"
+      },
+      "periodToday": {
+        "cn": "今天",
+        "pt": "Hoje"
+      },
+      "period7d": {
+        "cn": "7天",
+        "pt": "7 dias"
+      },
+      "period30d": {
+        "cn": "30天",
+        "pt": "30 dias"
+      },
+      "statusAll": {
+        "cn": "全部",
+        "pt": "Todos"
+      },
+      "statusDone": {
+        "cn": "完成",
+        "pt": "Concluída"
+      },
+      "statusCancelled": {
+        "cn": "取消",
+        "pt": "Cancelada"
+      },
+      "chartTitle": {
+        "cn": "销售趋势",
+        "pt": "Tendência de vendas"
+      },
+      "tableTitle": {
+        "cn": "最近订单",
+        "pt": "Últimos pedidos"
+      },
+      "tableEmpty": {
+        "cn": "此筛选条件下没有订单。",
+        "pt": "Nenhum pedido encontrado para este filtro."
+      },
       "tableEmptyDescription": {
         "cn": "调整时间范围，或前往销售页查看完整历史。",
         "pt": "Ajuste o período ou abra Vendas para ver o histórico completo."
       },
-      "openOrdersAria": { "cn": "打开销售页", "pt": "Abrir página de vendas" },
-      "footer": { "cn": "生意兴隆 · 财源广进", "pt": "Prosperidade nos negócios" },
-      "metricTotalSales": { "cn": "总销售额", "pt": "Vendas totais no período" },
-      "metricOrders": { "cn": "订单量", "pt": "Pedidos registrados" },
-      "metricTicket": { "cn": "客单价", "pt": "Ticket médio" },
-      "metricStock": { "cn": "库存预警", "pt": "Estoque baixo" },
-      "metricStockHint": { "cn": "点击查看库存", "pt": "Clique para abrir Estoque" },
-      "trendNew": { "cn": "新增", "pt": "novo" },
-      "trendStockOk": { "cn": "正常", "pt": "OK" },
-      "trendStockWarn": { "cn": "注意", "pt": "Atenção" },
-      "sparkTrendAria": { "cn": "期间趋势图", "pt": "Sparkline de tendência no período" },
-      "chartEmpty": { "cn": "本期暂无销售数据。", "pt": "Sem vendas no período selecionado." },
-      "hourlyChartEmpty": { "cn": "本期暂无按小时数据。", "pt": "Sem faturamento por hora no período." },
-      "lowStockEmpty": { "cn": "当前没有低于最低库存的商品。", "pt": "Nenhum item abaixo do mínimo recomendado." },
-      "lowStockCta": { "cn": "查看库存", "pt": "Ver estoque" },
+      "openOrdersAria": {
+        "cn": "打开销售页",
+        "pt": "Abrir página de vendas"
+      },
+      "footer": {
+        "cn": "生意兴隆 · 财源广进",
+        "pt": "Prosperidade nos negócios"
+      },
+      "metricTotalSales": {
+        "cn": "总销售额",
+        "pt": "Vendas totais no período"
+      },
+      "metricOrders": {
+        "cn": "订单量",
+        "pt": "Pedidos registrados"
+      },
+      "metricTicket": {
+        "cn": "客单价",
+        "pt": "Ticket médio"
+      },
+      "metricStock": {
+        "cn": "库存预警",
+        "pt": "Estoque baixo"
+      },
+      "metricStockHint": {
+        "cn": "点击查看库存",
+        "pt": "Clique para abrir Estoque"
+      },
+      "trendNew": {
+        "cn": "新增",
+        "pt": "novo"
+      },
+      "trendStockOk": {
+        "cn": "正常",
+        "pt": "OK"
+      },
+      "trendStockWarn": {
+        "cn": "注意",
+        "pt": "Atenção"
+      },
+      "sparkTrendAria": {
+        "cn": "期间趋势图",
+        "pt": "Sparkline de tendência no período"
+      },
+      "chartEmpty": {
+        "cn": "本期暂无销售数据。",
+        "pt": "Sem vendas no período selecionado."
+      },
+      "hourlyChartEmpty": {
+        "cn": "本期暂无按小时数据。",
+        "pt": "Sem faturamento por hora no período."
+      },
+      "lowStockEmpty": {
+        "cn": "当前没有低于最低库存的商品。",
+        "pt": "Nenhum item abaixo do mínimo recomendado."
+      },
+      "lowStockCta": {
+        "cn": "查看库存",
+        "pt": "Ver estoque"
+      },
       "salesTrendSummary": {
         "cn": "销售趋势：{{points}}",
         "pt": "Tendência de vendas: {{points}}"
@@ -1587,49 +1832,157 @@
         "cn": "{{label}}: {{parts}}",
         "pt": "{{label}}: {{parts}}"
       },
-      "tableColId": { "cn": "编号", "pt": "ID" },
-      "tableColOperador": { "cn": "操作员", "pt": "Operador" },
-      "tableColData": { "cn": "日期", "pt": "Data" },
-      "tableColValor": { "cn": "金额", "pt": "Valor" },
-      "tableColPagamento": { "cn": "支付", "pt": "Pagamento" },
-      "tableColStatus": { "cn": "状态", "pt": "Status" },
-      "errorSourceSalesPeriod": { "cn": "销售（本期）", "pt": "Vendas (período)" },
-      "errorSourceSalesPreviousPeriod": { "cn": "销售（上期）", "pt": "Vendas (período anterior)" },
-      "errorSourceRecentOrders": { "cn": "最近订单", "pt": "Pedidos recentes" },
-      "errorSourceLowStock": { "cn": "低库存预警", "pt": "Alertas de estoque (v_estoque_baixo)" },
-      "errorSourceNewUsersPeriod": { "cn": "新用户（本期）", "pt": "Novos usuários (período)" },
-      "errorSourceNewUsersPreviousPeriod": { "cn": "新用户（上期）", "pt": "Novos usuários (período anterior)" },
-      "errorSourceOperators": { "cn": "操作员（姓名）", "pt": "Operadores (nomes)" },
-      "hourlyChartTitle": { "pt": "Faturamento por hora", "cn": "每小时营业额" },
-      "hourlyChartSubtitle": { "pt": "Total líquido acumulado no período", "cn": "期间净额累计" },
-      "hourlyChartPeak": { "pt": "Pico na hora", "cn": "高峰时段" },
-      "paymentsTitle": { "pt": "Pagamentos", "cn": "支付方式" },
-      "caixaShortcutTitle": { "pt": "Frente de caixa (PDV)", "cn": "收银台（PDV）" },
-      "caixaShortcutStatusAberto": { "pt": "Caixa aberto", "cn": "收银台已开启" },
-      "caixaShortcutStatusFechado": { "pt": "Nenhum caixa aberto", "cn": "没有已开启的收银台" },
-      "caixaShortcutBtn": { "pt": "Abrir PDV", "cn": "打开 PDV" },
-      "lowStockTitle": { "pt": "Estoque baixo", "cn": "低库存预警" },
-      "lowStockSubtitle": { "pt": "Itens abaixo do mínimo recomendado", "cn": "低于最低库存的商品数" },
-      "recentActivitiesTitle": { "pt": "Atividades recentes", "cn": "最近动态" },
-      "paymentNoData": { "pt": "Sem dados de pagamento no período.", "cn": "本期暂无支付数据。" },
-      "paymentDistribution": { "pt": "Distribuição por forma de pagamento", "cn": "按支付方式分布" }
+      "tableColId": {
+        "cn": "编号",
+        "pt": "ID"
+      },
+      "tableColOperador": {
+        "cn": "操作员",
+        "pt": "Operador"
+      },
+      "tableColData": {
+        "cn": "日期",
+        "pt": "Data"
+      },
+      "tableColValor": {
+        "cn": "金额",
+        "pt": "Valor"
+      },
+      "tableColPagamento": {
+        "cn": "支付",
+        "pt": "Pagamento"
+      },
+      "tableColStatus": {
+        "cn": "状态",
+        "pt": "Status"
+      },
+      "errorSourceSalesPeriod": {
+        "cn": "销售（本期）",
+        "pt": "Vendas (período)"
+      },
+      "errorSourceSalesPreviousPeriod": {
+        "cn": "销售（上期）",
+        "pt": "Vendas (período anterior)"
+      },
+      "errorSourceRecentOrders": {
+        "cn": "最近订单",
+        "pt": "Pedidos recentes"
+      },
+      "errorSourceLowStock": {
+        "cn": "低库存预警",
+        "pt": "Alertas de estoque (v_estoque_baixo)"
+      },
+      "errorSourceNewUsersPeriod": {
+        "cn": "新用户（本期）",
+        "pt": "Novos usuários (período)"
+      },
+      "errorSourceNewUsersPreviousPeriod": {
+        "cn": "新用户（上期）",
+        "pt": "Novos usuários (período anterior)"
+      },
+      "errorSourceOperators": {
+        "cn": "操作员（姓名）",
+        "pt": "Operadores (nomes)"
+      },
+      "hourlyChartTitle": {
+        "pt": "Faturamento por hora",
+        "cn": "每小时营业额"
+      },
+      "hourlyChartSubtitle": {
+        "pt": "Total líquido acumulado no período",
+        "cn": "期间净额累计"
+      },
+      "hourlyChartPeak": {
+        "pt": "Pico na hora",
+        "cn": "高峰时段"
+      },
+      "paymentsTitle": {
+        "pt": "Pagamentos",
+        "cn": "支付方式"
+      },
+      "caixaShortcutTitle": {
+        "pt": "Frente de caixa (PDV)",
+        "cn": "收银台（PDV）"
+      },
+      "caixaShortcutStatusAberto": {
+        "pt": "Caixa aberto",
+        "cn": "收银台已开启"
+      },
+      "caixaShortcutStatusFechado": {
+        "pt": "Nenhum caixa aberto",
+        "cn": "没有已开启的收银台"
+      },
+      "caixaShortcutBtn": {
+        "pt": "Abrir PDV",
+        "cn": "打开 PDV"
+      },
+      "lowStockTitle": {
+        "pt": "Estoque baixo",
+        "cn": "低库存预警"
+      },
+      "lowStockSubtitle": {
+        "pt": "Itens abaixo do mínimo recomendado",
+        "cn": "低于最低库存的商品数"
+      },
+      "recentActivitiesTitle": {
+        "pt": "Atividades recentes",
+        "cn": "最近动态"
+      },
+      "paymentNoData": {
+        "pt": "Sem dados de pagamento no período.",
+        "cn": "本期暂无支付数据。"
+      },
+      "paymentDistribution": {
+        "pt": "Distribuição por forma de pagamento",
+        "cn": "按支付方式分布"
+      }
     },
     "common": {
-      "signOut": { "cn": "退出登录", "pt": "Sair" },
-      "trendError": { "cn": "错误", "pt": "Erro" },
-      "unavailable": { "cn": "不可用", "pt": "Indisponível" },
+      "signOut": {
+        "cn": "退出登录",
+        "pt": "Sair"
+      },
+      "trendError": {
+        "cn": "错误",
+        "pt": "Erro"
+      },
+      "unavailable": {
+        "cn": "不可用",
+        "pt": "Indisponível"
+      },
       "emDash": "—"
     },
     "errors": {
-      "partialTitle": { "cn": "部分数据加载失败", "pt": "Falha ao carregar alguns dados" },
-      "criticalSalesTitle": { "cn": "无法加载本期销售数据", "pt": "Não foi possível carregar as vendas do período" },
-      "criticalSalesBody": { "cn": "下方数字可能为零或不完整，请勿用于决策。请检查网络、Supabase 与权限 (RLS)。", "pt": "Os números abaixo podem aparecer como zero ou incompletos — não use para decisões. Verifique rede, Supabase e permissões (RLS)." },
-      "chartUnavailable": { "cn": "图表暂不可用（销售数据加载失败）。", "pt": "Gráfico indisponível: falha ao carregar vendas do período." },
-      "tableLoadFailed": { "cn": "无法加载订单列表。", "pt": "Não foi possível carregar a lista de pedidos." }
+      "partialTitle": {
+        "cn": "部分数据加载失败",
+        "pt": "Falha ao carregar alguns dados"
+      },
+      "criticalSalesTitle": {
+        "cn": "无法加载本期销售数据",
+        "pt": "Não foi possível carregar as vendas do período"
+      },
+      "criticalSalesBody": {
+        "cn": "下方数字可能为零或不完整，请勿用于决策。请检查网络、Supabase 与权限 (RLS)。",
+        "pt": "Os números abaixo podem aparecer como zero ou incompletos — não use para decisões. Verifique rede, Supabase e permissões (RLS)."
+      },
+      "chartUnavailable": {
+        "cn": "图表暂不可用（销售数据加载失败）。",
+        "pt": "Gráfico indisponível: falha ao carregar vendas do período."
+      },
+      "tableLoadFailed": {
+        "cn": "无法加载订单列表。",
+        "pt": "Não foi possível carregar a lista de pedidos."
+      }
     },
     "statusBadge": {
-      "concluida": { "cn": "已完成", "pt": "Concluída" },
-      "cancelada": { "cn": "已取消", "pt": "Cancelada" }
+      "concluida": {
+        "cn": "已完成",
+        "pt": "Concluída"
+      },
+      "cancelada": {
+        "cn": "已取消",
+        "pt": "Cancelada"
+      }
     }
   },
   "brand": {
@@ -1920,7 +2273,7 @@
     "atrasadas": "vencidas",
     "contas_carregadas": "contas carregadas",
     "lancar": "Importar NF-e",
-    "origem_nfe_hint": "Contas a pagar vêm só da importação de NF-e — sem lançamento manual.",
+    "origem_nfe_hint": "Contas a pagar nascem da importação de NF-e ou do recebimento de uma ordem de compra com prazo — sem lançamento manual.",
     "acoes_rapidas": "Ações",
     "kpi_em_aberto": "Em aberto",
     "kpi_atrasadas": "Atrasadas",
@@ -1945,6 +2298,7 @@
     "col_status": "Status",
     "col_acoes": "Ações",
     "col_nfe": "NF-e",
+    "parcela_label": "parcela",
     "lancado_em": "Lançado em",
     "pago_label": "pago",
     "aberto_label": "aberto",
@@ -1981,7 +2335,143 @@
     "err_valor_positivo": "Informe um valor maior que zero.",
     "err_valor_excede": "Valor maior que o saldo em aberto ({aberto}).",
     "err_data_obrigatoria": "Informe a data do pagamento.",
-    "err_data_futura": "A data não pode ser futura."
+    "err_data_futura": "A data não pode ser futura.",
+    "situacao_em_aberto": "Em aberto",
+    "situacao_vence_hoje": "Vence hoje",
+    "situacao_atrasado": "Atrasada",
+    "situacao_quitado": "Paga",
+    "situacao_parcial_em_dia": "Paga em parte",
+    "situacao_parcial_atrasado": "Parcial · atrasada",
+    "situacao_cancelado": "Cancelada",
+    "saldo_pendente": "pendente",
+    "saldo_de": "de",
+    "saldo_quitado": "Quitada",
+    "acoes_aria": "Ações da conta {descricao}",
+    "acao_pagar": "Registrar pagamento",
+    "acao_historico": "Histórico de pagamentos",
+    "acao_ver_nfe": "Abrir NF-e de origem",
+    "acao_ver_oc": "Abrir ordem de compra",
+    "origem_oc": "Ordem de compra",
+    "outra_loja": "Outra loja",
+    "outra_loja_hint": "Conta de outra loja — o pagamento deve ser feito por um operador daquela loja.",
+    "historico_titulo": "Histórico de pagamentos",
+    "historico_vazio": "Nenhum pagamento registrado nesta conta.",
+    "historico_carregando": "Carregando histórico…",
+    "historico_estornar": "Estornar",
+    "historico_estorno": "Estorno",
+    "historico_ja_estornado": "Pagamento já estornado.",
+    "historico_sem_observacao": "Sem observação",
+    "estorno_titulo": "Estornar pagamento",
+    "estorno_subtitulo": "O pagamento continua no histórico, marcado como estornado.",
+    "estorno_consequencia": "O que vai acontecer",
+    "estorno_efeito_saldo": "O valor volta para o saldo pendente da conta.",
+    "estorno_efeito_caixa": "Se o pagamento saiu de um caixa, a movimentação é revertida lá.",
+    "estorno_efeito_auditoria": "O estorno fica registrado com o seu usuário e o motivo informado.",
+    "estorno_campo": "Motivo do estorno",
+    "estorno_placeholder": "Ex.: pagamento lançado na conta errada",
+    "estorno_confirmar": "Estornar pagamento",
+    "toast_estornado": "Pagamento estornado.",
+    "cancelar_titulo": "Cancelar conta a pagar",
+    "cancelar_consequencia": "O que vai acontecer",
+    "cancelar_efeito_titulo": "A conta deixa de constar como obrigação em aberto.",
+    "cancelar_efeito_estorno": "Pagamentos já registrados nesta conta são estornados na mesma operação.",
+    "cancelar_efeito_auditoria": "O cancelamento fica registrado com o seu usuário e o motivo informado.",
+    "cancelar_campo": "Motivo do cancelamento",
+    "cancelar_placeholder": "Ex.: nota devolvida ao fornecedor",
+    "cancelar_confirmar": "Cancelar conta",
+    "motivo_min": "Descreva o motivo em pelo menos 2 caracteres.",
+    "enviando": "Enviando…"
+  },
+  "contas_receber": {
+    "titulo": "Contas a receber",
+    "situacao_em_aberto": "Em aberto",
+    "situacao_vence_hoje": "Vence hoje",
+    "situacao_atrasado": "Vencida",
+    "situacao_quitado": "Recebida",
+    "situacao_parcial_em_dia": "Recebida em parte",
+    "situacao_parcial_atrasado": "Parcial · vencida",
+    "situacao_cancelado": "Cancelada",
+    "filtro_mix": "Em aberto",
+    "filtro_aberto": "Sem recebimento",
+    "filtro_parcial": "Parciais",
+    "filtro_atrasado": "Vencidas",
+    "filtro_quitado": "Recebidas",
+    "filtro_cancelado": "Canceladas",
+    "filtro_todos": "Todas",
+    "col_cliente": "Cliente",
+    "col_vencimento": "Vencimento",
+    "col_em_aberto": "Em aberto",
+    "col_situacao": "Situação",
+    "saldo_pendente": "a receber",
+    "saldo_de": "de",
+    "saldo_quitado": "Recebida",
+    "pago_label": "recebido",
+    "origem_venda": "Venda",
+    "origem_manual": "Lançamento manual",
+    "acoes_aria": "Ações do título de {cliente}",
+    "acao_receber": "Registrar recebimento",
+    "acao_historico": "Histórico de recebimentos",
+    "acao_ver_venda": "Abrir venda de origem",
+    "outra_loja": "Outra loja",
+    "outra_loja_hint": "Título de outra loja — o recebimento deve ser registrado por um operador daquela loja.",
+    "novo_titulo": "Novo título",
+    "novo_titulo_subtitulo": "Cobrança avulsa, fora de uma venda.",
+    "novo_cliente": "Cliente",
+    "novo_cliente_placeholder": "Selecione o cliente",
+    "novo_valor": "Valor total",
+    "novo_vencimento": "Vencimento",
+    "novo_descricao": "Descrição",
+    "novo_descricao_placeholder": "Opcional — ex.: acerto de fevereiro",
+    "novo_salvar": "Criar título",
+    "toast_criado": "Título criado.",
+    "gerenciar_clientes": "Gerenciar clientes",
+    "sem_clientes": "Cadastre um cliente antes de lançar um título.",
+    "receber_titulo": "Registrar recebimento",
+    "receber_total": "Total",
+    "receber_recebido": "Já recebido",
+    "receber_aberto": "Em aberto",
+    "receber_valor": "Valor recebido",
+    "receber_forma": "Forma de recebimento",
+    "receber_caixa": "Caixa que recebe o dinheiro",
+    "receber_caixa_placeholder": "Selecione o caixa",
+    "receber_observacao": "Observação",
+    "receber_observacao_placeholder": "Ex.: comprovante PIX · ref 99221",
+    "receber_quitar": "Receber tudo",
+    "receber_metade": "Metade",
+    "receber_sera_quitado": "✓ Este título será quitado.",
+    "receber_restara": "Restará",
+    "receber_confirmar": "Registrar",
+    "toast_recebido": "Recebimento registrado.",
+    "err_valor_positivo": "Informe um valor maior que zero.",
+    "err_valor_excede": "Valor maior que o saldo em aberto ({aberto}).",
+    "err_caixa_obrigatorio": "Selecione o caixa que recebeu o dinheiro.",
+    "err_caixa_nenhum": "Nenhum caixa aberto nesta loja — abra um caixa para receber em dinheiro.",
+    "forma_dinheiro": "Dinheiro",
+    "forma_pix": "PIX",
+    "forma_cartao_debito": "Cartão de débito",
+    "forma_cartao_credito": "Cartão de crédito",
+    "forma_outros": "Outros",
+    "historico_titulo": "Histórico de recebimentos",
+    "historico_vazio": "Nenhum recebimento registrado neste título.",
+    "historico_carregando": "Carregando histórico…",
+    "historico_estornar": "Estornar",
+    "historico_estorno": "Estorno",
+    "historico_ja_estornado": "Recebimento já estornado.",
+    "historico_sem_observacao": "Sem observação",
+    "estorno_titulo": "Estornar recebimento",
+    "estorno_subtitulo": "O recebimento continua no histórico, marcado como estornado.",
+    "estorno_consequencia": "O que vai acontecer",
+    "estorno_efeito_saldo": "O valor volta para o saldo em aberto do cliente.",
+    "estorno_efeito_caixa": "Se o recebimento entrou num caixa, a movimentação é revertida lá.",
+    "estorno_efeito_auditoria": "O estorno fica registrado com o seu usuário e o motivo informado.",
+    "estorno_campo": "Motivo do estorno",
+    "estorno_placeholder": "Ex.: recebimento lançado no cliente errado",
+    "estorno_confirmar": "Estornar recebimento",
+    "toast_estornado": "Recebimento estornado.",
+    "motivo_min": "Descreva o motivo em pelo menos 2 caracteres.",
+    "enviando": "Enviando…",
+    "vazio_titulo": "Nenhum título encontrado",
+    "vazio_sub": "Ajuste a situação, o período ou a busca."
   },
   "relatorios_estoque": {
     "titulo": "Relatório de estoque",
@@ -2333,6 +2823,8 @@
     "hub_estoque_transferencias": "Transferências",
     "hub_estoque_importar_nfe": "Importar NF-e",
     "hub_estoque_etiquetas": "Etiquetas",
+    "hub_estoque_entrada": "Entrada",
+    "hub_estoque_compras": "Compras",
     "hub_financeiro_receber": "A receber",
     "hub_financeiro_pagar": "A pagar",
     "hub_financeiro_fiscal": "Fila fiscal",
@@ -2488,7 +2980,7 @@
     "financeiro_chip_cliente": "Cliente: {{nome}}",
     "financeiro_chip_de": "De: {{data}}",
     "financeiro_chip_ate": "Até: {{data}}",
-    "financeiro_section_titulos": "Histórico de títulos (somente leitura)",
+    "financeiro_section_titulos": "Títulos a receber",
     "financeiro_section_fila": "Fila fiscal",
     "financeiro_col_cliente": "Cliente",
     "financeiro_col_vencimento": "Vencimento",

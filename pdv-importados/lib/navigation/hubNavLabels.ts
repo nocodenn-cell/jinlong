@@ -5,8 +5,10 @@ export type HubNavLabelSet = {
   catalogoProdutos: string
   catalogoCategorias: string
   catalogoMarcas: string
+  estoqueEntrada: string
   estoqueSaldos: string
   estoqueRecebimento: string
+  estoqueCompras: string
   estoqueTransferencias: string
   estoqueImportarNfe: string
   estoqueEtiquetas: string
@@ -31,7 +33,19 @@ export function buildCatalogoHubTabs(labels: HubNavLabelSet): readonly HubTabDef
 
 export function buildEstoqueHubTabs(labels: HubNavLabelSet): readonly HubTabDef[] {
   return [
+    {
+      id: 'entrada',
+      label: labels.estoqueEntrada,
+      href: ROUTES.admin.estoqueEntrada,
+      match: 'prefix',
+    },
     { id: 'saldos', label: labels.estoqueSaldos, href: ROUTES.admin.estoque, match: 'exact' },
+    {
+      id: 'compras',
+      label: labels.estoqueCompras,
+      href: ROUTES.admin.compras,
+      match: 'prefix',
+    },
     {
       id: 'recebimento',
       label: labels.estoqueRecebimento,
@@ -63,8 +77,10 @@ export function hubLabelsFromAdminUi(ui: {
   hub_catalogo_produtos: string
   hub_catalogo_categorias: string
   hub_catalogo_marcas: string
+  hub_estoque_entrada: string
   hub_estoque_saldos: string
   hub_estoque_recebimento: string
+  hub_estoque_compras: string
   hub_estoque_transferencias: string
   hub_estoque_importar_nfe: string
   hub_estoque_etiquetas: string
@@ -77,8 +93,10 @@ export function hubLabelsFromAdminUi(ui: {
     catalogoProdutos: ui.hub_catalogo_produtos,
     catalogoCategorias: ui.hub_catalogo_categorias,
     catalogoMarcas: ui.hub_catalogo_marcas,
+    estoqueEntrada: ui.hub_estoque_entrada,
     estoqueSaldos: ui.hub_estoque_saldos,
     estoqueRecebimento: ui.hub_estoque_recebimento,
+    estoqueCompras: ui.hub_estoque_compras,
     estoqueTransferencias: ui.hub_estoque_transferencias,
     estoqueImportarNfe: ui.hub_estoque_importar_nfe,
     estoqueEtiquetas: ui.hub_estoque_etiquetas,

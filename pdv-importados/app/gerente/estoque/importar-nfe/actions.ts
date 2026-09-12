@@ -99,6 +99,22 @@ function mapRpcImportNfe(message: string): string {
   return mensagemErroComSecao('Importação NF-e', message)
 }
 
+function mapRpcVinculoOc(message: string): string {
+  if (message.includes('VINCULO_OC_NFE_IMPORTACAO_JA_CONCLUIDA')) {
+    return 'Esta importação já foi confirmada — o vínculo precisa ser declarado antes de creditar o estoque.'
+  }
+  if (message.includes('VINCULO_OC_NFE_ORDEM_ENCERRADA')) {
+    return 'Esta ordem de compra já foi recebida ou cancelada.'
+  }
+  if (message.includes('VINCULO_OC_NFE_LOJA_DIVERGENTE')) {
+    return 'A ordem de compra é de outra loja.'
+  }
+  if (message.includes('duplicate key') || message.includes('importacoes_nfe_ordem_compra_unico')) {
+    return 'Esta ordem de compra já tem outra NF-e vinculada.'
+  }
+  return mensagemErroComSecao('Vínculo com ordem de compra', message)
+}
+
 /** Estado de reconhecimento de cada item na conferência. */
 export type StatusItemNfe = 'RECONHECIDO_DEPARA' | 'RECONHECIDO_EAN' | 'DESCONHECIDO'
 
@@ -366,6 +382,18 @@ export type ItemConferenciaNfe = {
   status_conferencia: 'EM_CONFERENCIA' | 'CONFERIDO' | 'DIVERGENTE'
 }
 
+/**
+ * Parcela declarada na própria NF-e (tag `cobr/dup`). É o que vira conta a
+ * pagar quando a importação é confirmada — por isso precisa estar na tela
+ * ANTES da confirmação, não só no banco.
+ */
+export type ParcelaImportacaoNfe = {
+  id: string
+  numero: string | null
+  data_vencimento: string
+  valor: number
+}
+
 export type ConferenciaImportacaoNfe = {
   importacao_id: string
   status: 'EM_CONFERENCIA' | 'CONCLUIDA'
@@ -373,6 +401,30 @@ export type ConferenciaImportacaoNfe = {
   fornecedor_nome: string
   created_at: string
   itens: ItemConferenciaNfe[]
+  parcelas: ParcelaImportacaoNfe[]
+  /** Ordem de compra da qual esta nota é o documento fiscal, quando declarada. */
+  ordem_compra_id: string | null
+}
+
+type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>
+
+/** Parcelas staged da importação, em ordem de vencimento. */
+async function lerParcelasImportacaoNfe(
+  supabase: SupabaseServerClient,
+  importacaoId: string,
+): Promise<ParcelaImportacaoNfe[]> {
+  const { data } = await supabase
+    .from('importacoes_nfe_duplicatas')
+    .select('id, numero_duplicata, data_vencimento, valor')
+    .eq('importacao_nfe_id', importacaoId)
+    .order('data_vencimento', { ascending: true })
+
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    numero: row.numero_duplicata,
+    data_vencimento: row.data_vencimento,
+    valor: Number(row.valor),
+  }))
 }
 
 /** Lê uma importação (aberta ou já concluída) com seus itens para a tela de conferência. */
@@ -389,7 +441,7 @@ export async function obterConferenciaImportacaoNfe(
 
   const { data: imp, error: impError } = await supabase
     .from('importacoes_nfe')
-    .select('id, status, numero_nf, created_at, fornecedores(nome)')
+    .select('id, status, numero_nf, created_at, ordem_compra_id, fornecedores(nome)')
     .eq('id', importacaoId)
     .eq('loja_id', lojaId)
     .maybeSingle()
@@ -401,13 +453,16 @@ export async function obterConferenciaImportacaoNfe(
     return { success: false, error: 'Importação não encontrada.' }
   }
 
-  const { data: itens, error: itensError } = await supabase
-    .from('importacoes_nfe_itens')
-    .select(
-      'id, produto_id, quantidade_nfe, custo_unitario, atualizar_custo, quantidade_conferida, divergencia_obs, status_conferencia, produtos(nome, codigo_barras)',
-    )
-    .eq('importacao_nfe_id', importacaoId)
-    .order('created_at', { ascending: true })
+  const [{ data: itens, error: itensError }, parcelas] = await Promise.all([
+    supabase
+      .from('importacoes_nfe_itens')
+      .select(
+        'id, produto_id, quantidade_nfe, custo_unitario, atualizar_custo, quantidade_conferida, divergencia_obs, status_conferencia, produtos(nome, codigo_barras)',
+      )
+      .eq('importacao_nfe_id', importacaoId)
+      .order('created_at', { ascending: true }),
+    lerParcelasImportacaoNfe(supabase, importacaoId),
+  ])
 
   if (itensError) {
     return { success: false, error: mensagemErroComSecao('Importação NF-e', itensError.message) }
@@ -446,8 +501,78 @@ export async function obterConferenciaImportacaoNfe(
       fornecedor_nome: fornecedorNome,
       created_at: imp.created_at as string,
       itens: linhas,
+      parcelas,
+      ordem_compra_id: (imp.ordem_compra_id as string | null) ?? null,
     },
   }
+}
+
+export type OrdemCompraVinculavel = {
+  id: string
+  fornecedor_nome: string | null
+  data_emissao: string
+  total_itens: number
+}
+
+/**
+ * Ordens ainda abertas da loja — candidatas a receber o vínculo com a nota.
+ * Vincular é o que impede que a mesma mercadoria entre duas vezes (pela ordem
+ * e pela NF-e); a guarda real está em `vincular_importacao_nfe_ordem_compra`.
+ */
+export async function listarOrdensCompraVinculaveis(): Promise<
+  ActionResult<OrdemCompraVinculavel[]>
+> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const lojaId = await lojaIdDoUsuarioLogado()
+  if (!lojaId) return { success: false, error: 'Não foi possível identificar sua loja.' }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('ordens_compra')
+    .select('id, data_emissao, fornecedor_nome, fornecedor:fornecedores!fornecedor_id(nome), itens:ordens_compra_itens(id)')
+    .eq('loja_id', lojaId)
+    .in('status', ['RASCUNHO', 'CONFIRMADA', 'EM_TRANSITO'])
+    .order('data_emissao', { ascending: false })
+    .limit(50)
+
+  if (error) {
+    return { success: false, error: mensagemErroComSecao('Ordens de compra', error.message) }
+  }
+
+  const rows = (data ?? []).map((row) => {
+    const rel = (row as { fornecedor: { nome: string } | { nome: string }[] | null }).fornecedor
+    const forn = Array.isArray(rel) ? rel[0] : rel
+    return {
+      id: row.id as string,
+      fornecedor_nome: forn?.nome ?? ((row.fornecedor_nome as string | null) ?? null),
+      data_emissao: row.data_emissao as string,
+      total_itens: ((row.itens as unknown[]) ?? []).length,
+    }
+  })
+  return { success: true, data: rows }
+}
+
+/** Declara que esta importação é o documento fiscal de uma ordem de compra. */
+export async function vincularOrdemCompraNfe(
+  importacaoId: string,
+  ordemCompraId: string,
+): Promise<ActionResult<null>> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const supabase = await createClient()
+  const { error } = await supabase.rpc('vincular_importacao_nfe_ordem_compra', {
+    p_importacao_id: importacaoId,
+    p_oc_id: ordemCompraId,
+  })
+
+  if (error) return { success: false, error: mapRpcVinculoOc(error.message) }
+
+  revalidatePath('/admin/estoque/importar-nfe')
+  revalidatePath('/admin/compras')
+  return { success: true, data: null }
 }
 
 export type ImportacaoNfePendente = {

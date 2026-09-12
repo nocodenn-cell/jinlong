@@ -10,6 +10,8 @@ import type {
   PayPayableCommand,
   PayPayableResult,
   PayablePaymentService,
+  ReversePayableCommand,
+  ReversePayableResult,
 } from '@shared-core/src/financial'
 import { FINANCIAL_ERROR_CODES } from '@shared-core/src/financial'
 
@@ -115,6 +117,71 @@ export function createPayablePaymentService(
         return {
           ok: false,
           error: e instanceof Error ? e.message : 'Falha ao cancelar.',
+          code: FINANCIAL_ERROR_CODES.PAY_FAILED,
+        }
+      }
+    },
+
+    /**
+     * Estorno de um pagamento. A RPC `estornar_pagamento_contas_pagar` já existia
+     * no banco desde o P1-4 e nunca teve caminho de UI — corrigir um pagamento
+     * errado exigia SQL. Aqui ela só ganha adapter; nenhuma regra muda.
+     *
+     * Devolve `status` e `valorPago` do título porque a própria RPC os retorna:
+     * um re-fetch depois do estorno seria uma segunda ida ao banco para
+     * descobrir algo que a transação já sabe.
+     */
+    async reverse(command: ReversePayableCommand): Promise<ReversePayableResult> {
+      if (!command.pagamentoId?.trim()) {
+        return {
+          ok: false,
+          error: 'Pagamento obrigatório.',
+          code: FINANCIAL_ERROR_CODES.TITLE_REQUIRED,
+        }
+      }
+      if (!(command.motivo ?? '').trim() || command.motivo.trim().length < 2) {
+        return {
+          ok: false,
+          error: 'Motivo do estorno é obrigatório.',
+          code: FINANCIAL_ERROR_CODES.VALUE_INVALID,
+        }
+      }
+      if (!command.idempotencyKey?.trim()) {
+        return {
+          ok: false,
+          error: 'Chave de idempotência obrigatória.',
+          code: FINANCIAL_ERROR_CODES.VALUE_INVALID,
+        }
+      }
+      try {
+        const { data, error } = await supabase.rpc('estornar_pagamento_contas_pagar', {
+          p_pagamento_id: command.pagamentoId,
+          p_motivo: command.motivo.trim(),
+          p_idempotency_key: command.idempotencyKey,
+          p_origem: 'UI_FINANCEIRO',
+        })
+        if (error) {
+          return { ok: false, error: error.message, code: FINANCIAL_ERROR_CODES.PAY_FAILED }
+        }
+        const row = (Array.isArray(data) ? data[0] : data) as Record<string, unknown> | null
+        if (!row?.estorno_id) {
+          return {
+            ok: false,
+            error: 'Estorno não retornou identificador.',
+            code: FINANCIAL_ERROR_CODES.PAY_FAILED,
+          }
+        }
+        return {
+          ok: true,
+          estornoId: String(row.estorno_id),
+          idempotentReplay: row.idempotent_replay === true,
+          status: String(row.status ?? ''),
+          valorPago: Number(row.valor_pago ?? 0),
+        }
+      } catch (e) {
+        return {
+          ok: false,
+          error: e instanceof Error ? e.message : 'Falha ao estornar.',
           code: FINANCIAL_ERROR_CODES.PAY_FAILED,
         }
       }

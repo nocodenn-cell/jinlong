@@ -2,7 +2,12 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
+import {
+  ConsequenciaOperacao,
+  PageHeader,
+  SectionCard,
+  type EfeitoOperacao,
+} from '@/components/ui/admin-v2'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { Button } from '@/components/ui/button'
@@ -13,7 +18,7 @@ import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages } from '@/i18n/getMessages'
 import { Checkbox, Input, Textarea } from '@/components/ui/forms'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES, hrefFinanceiroPagar } from '@shared-core/navigation/routes'
 import type { NfeParsed } from '@/lib/nfe/nfeParser'
 import type {
   ConferenciaImportacaoNfe,
@@ -32,8 +37,18 @@ import {
   previewImportacaoNfe,
   registrarConferenciaNfe,
 } from './actions'
+import { ParcelasNfeSection, somaParcelas } from './ParcelasNfeSection'
+import { VinculoOrdemCompra } from './VinculoOrdemCompra'
 
-type Props = Readonly<{ idioma: Idioma; embeddedInAdminHub?: boolean }>
+type Props = Readonly<{
+  idioma: Idioma
+  embeddedInAdminHub?: boolean
+  /**
+   * Importação a abrir já na conferência. Vem de `?id=` — é o que faz o link
+   * "NF-e #123" de Contas a pagar voltar para a nota que originou o título.
+   */
+  importacaoIdInicial?: string | null
+}>
 
 type LinhaEditavel = LinhaPreviewNfe & {
   fator: number
@@ -53,6 +68,39 @@ function statusBadgeKey(status: StatusItemNfe): string {
   if (status === 'RECONHECIDO_DEPARA') return 'ATIVO'
   if (status === 'RECONHECIDO_EAN') return 'TEM_NF'
   return 'ALERTA'
+}
+
+type EfeitosNfeLabels = Readonly<{
+  estoque: string
+  custo: string
+  financeiro: string
+  financeiroZero: string
+  irreversivel: string
+}>
+
+type EfeitosNfeArgs = Readonly<{
+  itens: number
+  parcelas: number
+  totalParcelas: string
+  atualizaCusto: boolean
+  labels: EfeitosNfeLabels
+}>
+
+/** Efeitos declarados ao operador antes de confirmar a entrada da NF-e. */
+export function efeitosConfirmacaoNfe(args: EfeitosNfeArgs): EfeitoOperacao[] {
+  const { itens, parcelas, totalParcelas, atualizaCusto, labels } = args
+  const financeiro =
+    parcelas > 0
+      ? labels.financeiro.replace('{{n}}', String(parcelas)).replace('{{total}}', totalParcelas)
+      : labels.financeiroZero
+
+  const efeitos: EfeitoOperacao[] = [
+    { tom: 'estoque', texto: labels.estoque.replace('{{n}}', String(itens)) },
+  ]
+  if (atualizaCusto) efeitos.push({ tom: 'estoque', texto: labels.custo })
+  efeitos.push({ tom: 'financeiro', texto: financeiro })
+  efeitos.push({ tom: 'alerta', texto: labels.irreversivel })
+  return efeitos
 }
 
 function linhaResolvida(l: LinhaEditavel): boolean {
@@ -95,7 +143,11 @@ export function buildItensConferenciaPreenchidos(
   })
 }
 
-export function ImportarNfePageClient({ idioma, embeddedInAdminHub = false }: Props) {
+export function ImportarNfePageClient({
+  idioma,
+  embeddedInAdminHub = false,
+  importacaoIdInicial = null,
+}: Props) {
   const m = getMessages(idioma)
   const mi = m.estoque.import_nfe
   const locale = localeFromIdioma(idioma)
@@ -155,6 +207,17 @@ export function ImportarNfePageClient({ idioma, embeddedInAdminHub = false }: Pr
       return next
     })
   }, [])
+
+  // Abre direto a importação pedida na URL (link "NF-e #123" de Contas a
+  // pagar). Roda uma vez: depois disso quem manda é a navegação do operador.
+  const importacaoAbertaRef = useRef(false)
+  useEffect(() => {
+    if (!importacaoIdInicial || importacaoAbertaRef.current) return
+    importacaoAbertaRef.current = true
+    void obterConferenciaImportacaoNfe(importacaoIdInicial).then((r) => {
+      if (r.success) aplicarConferencia(r.data)
+    })
+  }, [importacaoIdInicial, aplicarConferencia])
 
   const previewOpts = useMemo(() => ({}), [])
   const importOpts = useMemo(
@@ -367,6 +430,36 @@ export function ImportarNfePageClient({ idioma, embeddedInAdminHub = false }: Pr
     conferencia.status === 'EM_CONFERENCIA' &&
     conferencia.itens.length > 0 &&
     itensPendentesConferencia.length === 0
+
+  const parcelasLabels = useMemo(
+    () => ({
+      titulo: mi.parcelas_titulo,
+      hint: mi.parcelas_hint,
+      colNumero: mi.parcelas_col_numero,
+      colVencimento: mi.parcelas_col_vencimento,
+      colValor: mi.parcelas_col_valor,
+      total: mi.parcelas_total,
+      vazio: mi.parcelas_vazio,
+    }),
+    [mi],
+  )
+
+  const efeitosConfirmacao = useMemo<readonly EfeitoOperacao[]>(() => {
+    if (!conferencia) return []
+    return efeitosConfirmacaoNfe({
+      itens: conferencia.itens.length,
+      parcelas: conferencia.parcelas.length,
+      totalParcelas: formatBRL(somaParcelas(conferencia.parcelas)),
+      atualizaCusto: conferencia.itens.some((i) => i.atualizar_custo),
+      labels: {
+        estoque: mi.consequencia_estoque,
+        custo: mi.consequencia_custo,
+        financeiro: mi.consequencia_financeiro,
+        financeiroZero: mi.consequencia_financeiro_zero,
+        irreversivel: mi.consequencia_irreversivel,
+      },
+    })
+  }, [conferencia, mi])
 
   const divergeDaNota = (item: ItemConferenciaNfe): boolean => {
     const raw = qtdConferida[item.item_id]
@@ -619,6 +712,10 @@ export function ImportarNfePageClient({ idioma, embeddedInAdminHub = false }: Pr
         </SectionCard>
       ) : null}
 
+      {/* Entrada concluída: a área de upload sai de cena. Deixá-la no topo,
+          ainda com o XML colado e o botão de pré-visualização ativo, sugeria
+          que a mesma nota podia ser importada de novo. */}
+      {estoqueAtualizadoOk ? null : (
       <section
         onDragOver={(e) => {
           e.preventDefault()
@@ -671,6 +768,20 @@ export function ImportarNfePageClient({ idioma, embeddedInAdminHub = false }: Pr
           spellCheck={false}
         />
       </section>
+      )}
+
+      {/* Em repouso a tela não dizia nada sobre o que vem depois do XML. O
+          operador só descobria a etapa de conferência depois de importar. */}
+      {!parsed && !conferencia ? (
+        <ConsequenciaOperacao
+          titulo={mi.passos_titulo}
+          efeitos={[
+            { tom: 'documento', texto: mi.passo_1 },
+            { tom: 'estoque', texto: mi.passo_2 },
+            { tom: 'financeiro', texto: mi.passo_3 },
+          ]}
+        />
+      ) : null}
 
       {parsed && !conferencia ? (
         <SectionCard title={mi.emitente}>
@@ -702,6 +813,14 @@ export function ImportarNfePageClient({ idioma, embeddedInAdminHub = false }: Pr
             />
             {mi.atualizar_custo_global}
           </label>
+
+          {/* As parcelas são conhecidas desde a leitura do XML — mostrar já aqui
+              evita que o operador descubra o compromisso financeiro só no fim. */}
+          <ParcelasNfeSection
+            parcelas={parsed.duplicatas}
+            locale={locale}
+            labels={parcelasLabels}
+          />
         </SectionCard>
       ) : null}
 
@@ -846,6 +965,56 @@ export function ImportarNfePageClient({ idioma, embeddedInAdminHub = false }: Pr
               </tbody>
             </table>
           </div>
+
+          <VinculoOrdemCompra
+            importacaoId={conferencia.importacao_id}
+            ordemCompraId={conferencia.ordem_compra_id}
+            disabled={estoqueAtualizadoOk}
+            onVinculado={() => {
+              void obterConferenciaImportacaoNfe(conferencia.importacao_id).then((r) => {
+                if (r.success) aplicarConferencia(r.data)
+              })
+            }}
+            labels={{
+              titulo: mi.vinculo_oc_titulo,
+              hint: mi.vinculo_oc_hint,
+              placeholder: mi.vinculo_oc_placeholder,
+              vincular: mi.vinculo_oc_btn,
+              vinculado: mi.vinculo_oc_vinculado,
+              semOrdens: mi.vinculo_oc_sem_ordens,
+              sucesso: mi.vinculo_oc_sucesso,
+            }}
+          />
+
+          <ParcelasNfeSection
+            parcelas={conferencia.parcelas}
+            locale={locale}
+            labels={parcelasLabels}
+          />
+
+          {estoqueAtualizadoOk ? (
+            <ConsequenciaOperacao
+              className="mt-4"
+              titulo={mi.concluido_titulo}
+              efeitos={[{ tom: 'documento', texto: mi.concluido_sub }]}
+              acoes={
+                <>
+                  <Button asChild variant="secondary" size="sm">
+                    <Link href={hrefFinanceiroPagar()}>{mi.ir_contas_pagar}</Link>
+                  </Button>
+                  <Button asChild variant="outline" size="sm">
+                    <Link href={ROUTES.admin.estoque}>{mi.ir_estoque}</Link>
+                  </Button>
+                </>
+              }
+            />
+          ) : (
+            <ConsequenciaOperacao
+              className="mt-4"
+              titulo={mi.consequencia_titulo}
+              efeitos={efeitosConfirmacao}
+            />
+          )}
 
           <div className="mt-4 flex flex-col items-end gap-2">
             {estoqueAtualizadoOk ? (

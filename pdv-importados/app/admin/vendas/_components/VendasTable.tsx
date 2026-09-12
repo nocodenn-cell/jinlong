@@ -190,14 +190,22 @@ export function VendasTable({
   labels,
   m,
   locale,
+  vendaInicial = null,
 }: {
   vendas: VendaLinha[]
   labels: VendasLabels
   m: Mensagens
   locale: string
+  /**
+   * Venda a abrir já no carregamento (`?venda=<id>`). Existe para que a venda
+   * seja ENDEREÇÁVEL: sem isso, um atalho vindo de outro módulo — por exemplo
+   * "abrir venda de origem", no título a receber — só conseguia levar à lista,
+   * deixando o operador procurar a linha à mão.
+   */
+  vendaInicial?: string | null
 }) {
   const router = useRouter()
-  const [alvo, setAlvo] = useState<VendaAlvo | null>(null)
+  const [alvo, setAlvo] = useState<VendaAlvo | null>(vendaInicial ? { id: vendaInicial } : null)
   const [cancelarAlvo, setCancelarAlvo] = useState<VendaLinha | null>(null)
   const [comprovanteCancelamento, setComprovanteCancelamento] =
     useState<ComprovanteCancelamento | null>(null)

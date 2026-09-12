@@ -121,6 +121,12 @@ export async function liquidarTitulo(input: {
   forma_pagamento: 'DINHEIRO' | 'PIX' | 'CARTAO_DEBITO' | 'CARTAO_CREDITO' | 'OUTROS'
   idempotency_key: string
   caixa_id?: string | null
+  /**
+   * Observação do recebimento. A RPC já aceitava `p_observacao` e a UI nunca
+   * mandava nada — o histórico ficava sem a referência do comprovante, enquanto
+   * o lado a pagar sempre teve o campo.
+   */
+  observacao?: string | null
 }): Promise<R> {
   const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
@@ -136,7 +142,7 @@ export async function liquidarTitulo(input: {
     tituloId: input.titulo_id,
     valor: input.valor,
     formaPagamento: input.forma_pagamento,
-    observacao: null,
+    observacao: input.observacao?.trim() || null,
     idempotencyKey: input.idempotency_key,
     caixaId: input.caixa_id,
   })

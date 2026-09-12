@@ -971,6 +971,8 @@ export type Database = {
           nfe_importacao_id: string | null
           nfe_numero: string | null
           observacao: string | null
+          ordem_compra_id: string | null
+          parcela_numero: string | null
           status: string
           valor_pago: number
           valor_total: number
@@ -987,6 +989,8 @@ export type Database = {
           nfe_importacao_id?: string | null
           nfe_numero?: string | null
           observacao?: string | null
+          ordem_compra_id?: string | null
+          parcela_numero?: string | null
           status?: string
           valor_pago?: number
           valor_total: number
@@ -1003,6 +1007,8 @@ export type Database = {
           nfe_importacao_id?: string | null
           nfe_numero?: string | null
           observacao?: string | null
+          ordem_compra_id?: string | null
+          parcela_numero?: string | null
           status?: string
           valor_pago?: number
           valor_total?: number
@@ -1036,6 +1042,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_estoque_baixo"
             referencedColumns: ["loja_id"]
+          },
+          {
+            foreignKeyName: "contas_pagar_ordem_compra_id_fkey"
+            columns: ["ordem_compra_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_compra"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2440,6 +2453,7 @@ export type Database = {
           id: string
           loja_id: string
           numero_nf: string | null
+          ordem_compra_id: string | null
           status: string
           usuario_id: string
         }
@@ -2450,6 +2464,7 @@ export type Database = {
           id?: string
           loja_id: string
           numero_nf?: string | null
+          ordem_compra_id?: string | null
           status?: string
           usuario_id: string
         }
@@ -2460,6 +2475,7 @@ export type Database = {
           id?: string
           loja_id?: string
           numero_nf?: string | null
+          ordem_compra_id?: string | null
           status?: string
           usuario_id?: string
         }
@@ -2484,6 +2500,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_estoque_baixo"
             referencedColumns: ["loja_id"]
+          },
+          {
+            foreignKeyName: "importacoes_nfe_ordem_compra_id_fkey"
+            columns: ["ordem_compra_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_compra"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "importacoes_nfe_usuario_id_fkey"
@@ -3158,6 +3181,7 @@ export type Database = {
           created_by: string | null
           data_emissao: string
           data_prevista_chegada: string | null
+          data_vencimento: string | null
           fornecedor_id: string | null
           fornecedor_nome: string | null
           id: string
@@ -3171,6 +3195,7 @@ export type Database = {
           created_by?: string | null
           data_emissao?: string
           data_prevista_chegada?: string | null
+          data_vencimento?: string | null
           fornecedor_id?: string | null
           fornecedor_nome?: string | null
           id?: string
@@ -3184,6 +3209,7 @@ export type Database = {
           created_by?: string | null
           data_emissao?: string
           data_prevista_chegada?: string | null
+          data_vencimento?: string | null
           fornecedor_id?: string | null
           fornecedor_nome?: string | null
           id?: string
@@ -6410,6 +6436,10 @@ export type Database = {
           total_liquido: number
           venda_id: string
         }[]
+      }
+      vincular_importacao_nfe_ordem_compra: {
+        Args: { p_importacao_id: string; p_oc_id: string }
+        Returns: undefined
       }
     }
     Enums: {

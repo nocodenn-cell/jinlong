@@ -79,10 +79,13 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
     {
       key: 'produto',
       header: labels.produto,
+      // Em 390px a tabela é mais larga que a viewport; sem fixar, o operador
+      // perdia o nome do produto ao rolar até saldo e ações.
+      sticky: true,
       sortValue: (r) => r.nome,
       cell: (r) => (
         <div className="min-w-0">
-          <p className="max-w-[240px] truncate text-body font-medium text-fg">{r.nome}</p>
+          <p className="max-w-[150px] truncate text-body font-medium text-fg sm:max-w-[240px]">{r.nome}</p>
           <p className="font-mono text-caption text-fg-subtle">{r.codigo_barras ?? '—'}</p>
         </div>
       ),
@@ -99,6 +102,8 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
     {
       key: 'minimo',
       header: labels.minimo,
+      className: 'hidden sm:table-cell',
+      headerClassName: 'hidden sm:table-cell',
       align: 'right',
       sortValue: (r) => r.estoque_minimo ?? Number.NEGATIVE_INFINITY,
       cell: (r) =>
@@ -111,6 +116,8 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
     {
       key: 'deficit',
       header: labels.deficit,
+      className: 'hidden sm:table-cell',
+      headerClassName: 'hidden sm:table-cell',
       align: 'right',
       sortValue: (r) => r.deficit ?? 0,
       cell: (r) =>
@@ -125,6 +132,8 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
     {
       key: 'unidade',
       header: labels.unidade,
+      className: 'hidden sm:table-cell',
+      headerClassName: 'hidden sm:table-cell',
       align: 'center',
       cell: (r) => (
         <span className="text-caption uppercase text-fg-subtle">{r.unidade_medida}</span>
@@ -133,6 +142,8 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
     {
       key: 'origem',
       header: labels.origem,
+      className: 'hidden sm:table-cell',
+      headerClassName: 'hidden sm:table-cell',
       cell: (r) => {
         const badgeClass = ORIGEM_BADGE[r.origem]
         if (!badgeClass) return <span className="text-fg-subtle">—</span>

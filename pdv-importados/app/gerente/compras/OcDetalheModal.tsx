@@ -1,7 +1,10 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useState, useTransition } from 'react'
-import { X, Edit2, AlertTriangle } from 'lucide-react'
+import { X, Edit2, AlertTriangle, FileText } from 'lucide-react'
+import { ROUTES, hrefFinanceiroPagar, hrefImportacaoNfe } from '@shared-core/navigation/routes'
+import { ConsequenciaOperacao, type EfeitoOperacao } from '@/components/ui/admin-v2'
 import { getMessages } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { emitGerenteToast } from '@/lib/gerente/toast'
@@ -38,6 +41,53 @@ function fmtData(d: string | null): string {
 
 function idCurto(id: string): string {
   return id.slice(0, 8).toUpperCase()
+}
+
+type ComprasLabels = ReturnType<typeof getMessages>['compras']
+
+/**
+ * O que o recebimento desta ordem vai fazer — incluindo, quando for o caso,
+ * por que o título financeiro NÃO vai nascer. A regra é a do backend
+ * (`receber_ordem_compra`): só gera conta a pagar com fornecedor cadastrado
+ * e prazo acordado na ordem.
+ */
+function efeitosRecebimentoOc(
+  c: ComprasLabels,
+  oc: OcDetalheDTO,
+  totalConferido: string,
+): readonly EfeitoOperacao[] {
+  const efeitos: EfeitoOperacao[] = [
+    { tom: 'estoque', texto: c.consequencia_estoque },
+    { tom: 'documento', texto: c.consequencia_status },
+  ]
+
+  if (!oc.fornecedor_id) {
+    efeitos.push({ tom: 'alerta', texto: c.consequencia_sem_fornecedor })
+  } else if (!oc.data_vencimento) {
+    efeitos.push({ tom: 'alerta', texto: c.consequencia_sem_vencimento })
+  } else {
+    efeitos.push({
+      tom: 'financeiro',
+      texto: c.consequencia_financeiro
+        .replace('{{total}}', totalConferido)
+        .replace('{{data}}', fmtData(oc.data_vencimento)),
+    })
+  }
+
+  return efeitos
+}
+
+/**
+ * Valor que virará título: quantidade conferida × preço — a mesma conta que
+ * `receber_ordem_compra` faz. Enquanto a ordem está em trânsito, a quantidade
+ * é a que o operador está digitando agora.
+ */
+function totalConferidoOc(oc: OcDetalheDTO, qtds: Record<string, string>): number {
+  return oc.itens.reduce((soma, item) => {
+    const digitado = Number(qtds[item.id])
+    const qtd = Number.isFinite(digitado) ? digitado : item.quantidade_recebida
+    return soma + qtd * item.preco_unitario
+  }, 0)
 }
 
 export function OcDetalheModal({ idioma, ocId, onClose, onEditar, onStatusChanged }: Props) {
@@ -127,6 +177,12 @@ export function OcDetalheModal({ idioma, ocId, onClose, onEditar, onStatusChange
     })
   }
 
+  /**
+   * A nota vinculada, uma vez CONCLUIDA, já creditou o estoque desta compra.
+   * `receber_ordem_compra` recusa com `OC_NFE_JA_CREDITADA` — a tela deixa de
+   * oferecer a ação em vez de deixar o operador esbarrar no erro.
+   */
+  const nfeJaCreditou = Boolean(oc?.nfe_id) && String(oc?.nfe_status ?? '').toUpperCase() === 'CONCLUIDA'
   const podeEditar = oc && ['RASCUNHO', 'CONFIRMADA'].includes(oc.status)
   const podeCancelar = oc && ['RASCUNHO', 'CONFIRMADA', 'EM_TRANSITO'].includes(oc.status)
 
@@ -195,6 +251,8 @@ export function OcDetalheModal({ idioma, ocId, onClose, onEditar, onStatusChange
                   <dd className="text-right text-sm tabular-nums text-jl-fg-1">{fmtData(oc.data_emissao)}</dd>
                   <dt className="text-xs text-jl-fg-3">{c.col_previsto}</dt>
                   <dd className="text-right text-sm tabular-nums text-jl-fg-1">{fmtData(oc.data_prevista_chegada)}</dd>
+                  <dt className="text-xs text-jl-fg-3">{c.field_data_vencimento_curto}</dt>
+                  <dd className="text-right text-sm tabular-nums text-jl-fg-1">{fmtData(oc.data_vencimento)}</dd>
                   <dt className="text-xs text-jl-fg-3">{c.col_total}</dt>
                   <dd className="text-right text-sm font-semibold tabular-nums text-jl-fg-1">{formatBRL(oc.valor_total)}</dd>
                   {oc.observacao && (
@@ -248,6 +306,7 @@ export function OcDetalheModal({ idioma, ocId, onClose, onEditar, onStatusChange
                               setQtdsRecebidas((prev) => ({ ...prev, [item.id]: e.target.value }))
                             }
                             disabled={isPending}
+                            aria-label={`${c.field_qtd_recebida} — ${item.produto_nome ?? item.descricao ?? ''}`}
                             className="app-input w-24 rounded-md px-2 py-1 text-right text-sm tabular-nums disabled:opacity-60"
                           />
                           <span className="text-[10px] text-jl-fg-3">/ {item.quantidade.toLocaleString('pt-BR', { maximumFractionDigits: 3 })}</span>
@@ -264,6 +323,85 @@ export function OcDetalheModal({ idioma, ocId, onClose, onEditar, onStatusChange
                   ))}
                 </div>
               </div>
+
+              {/* Vínculo com NF-e: o banco já barra o duplo crédito
+                  (`OC_NFE_JA_CREDITADA`), mas o operador só descobria isso ao
+                  clicar em Receber e tomar o erro. Agora a tela diz ANTES. */}
+              {oc.nfe_id ? (
+                <div
+                  className={cn(
+                    'flex gap-2.5 rounded-xl border px-4 py-3',
+                    nfeJaCreditou
+                      ? 'border-[var(--color-warning-border)] bg-[var(--color-warning-bg)]'
+                      : 'border-[var(--color-border)] bg-[var(--color-surface-soft)]',
+                  )}
+                  role="note"
+                >
+                  <FileText className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-warning-strong)]" aria-hidden />
+                  <div className="flex-1 space-y-1.5 text-xs">
+                    <p className="font-semibold text-jl-fg-1">
+                      {nfeJaCreditou ? c.nfe_ja_creditou_titulo : c.nfe_vinculada_titulo}
+                    </p>
+                    <p className="text-jl-fg-2">
+                      {nfeJaCreditou
+                        ? c.nfe_ja_creditou_texto.replace(
+                            '{numero}',
+                            oc.nfe_numero ? `#${oc.nfe_numero}` : '',
+                          )
+                        : c.nfe_vinculada_texto}
+                    </p>
+                    <Link
+                      href={hrefImportacaoNfe(oc.nfe_id)}
+                      className="inline-block font-medium text-[var(--color-warning-strong)] hover:underline"
+                    >
+                      {c.acao_ver_nfe}
+                    </Link>
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Consequência declarada antes de executar — inclusive quando o
+                  título NÃO vai nascer (sem fornecedor cadastrado ou sem prazo
+                  na ordem), que é exatamente a regra de `receber_ordem_compra`. */}
+              {/* Com a nota já confirmada não existe recebimento a fazer; descrever
+                  "o que acontece ao registrar o recebimento" logo abaixo do aviso
+                  de bloqueio contradizia a própria tela. */}
+              {oc.status === 'EM_TRANSITO' && !nfeJaCreditou ? (
+                <ConsequenciaOperacao
+                  titulo={c.consequencia_titulo}
+                  efeitos={efeitosRecebimentoOc(c, oc, formatBRL(totalConferidoOc(oc, qtdsRecebidas)))}
+                />
+              ) : null}
+
+              {oc.status === 'RECEBIDA' ? (
+                <ConsequenciaOperacao
+                  titulo={c.consequencia_titulo_concluida}
+                  efeitos={[
+                    {
+                      tom: 'documento',
+                      texto: oc.data_vencimento && oc.fornecedor_id
+                        ? c.consequencia_recebida_com_titulo
+                        : c.consequencia_recebida_sem_titulo,
+                    },
+                  ]}
+                  acoes={
+                    <>
+                      <Link
+                        href={ROUTES.admin.estoque}
+                        className="rounded-lg border border-jl-border-1 px-3 py-1.5 text-xs font-medium text-jl-fg-2 transition hover:bg-white/[0.06]"
+                      >
+                        {c.ir_estoque}
+                      </Link>
+                      <Link
+                        href={hrefFinanceiroPagar()}
+                        className="rounded-lg border border-jl-border-1 px-3 py-1.5 text-xs font-medium text-jl-fg-2 transition hover:bg-white/[0.06]"
+                      >
+                        {c.ir_contas_pagar}
+                      </Link>
+                    </>
+                  }
+                />
+              ) : null}
 
               {/* Confirmação de cancelamento */}
               {confirmandoCancelamento && (
@@ -315,7 +453,7 @@ export function OcDetalheModal({ idioma, ocId, onClose, onEditar, onStatusChange
                     {isPending ? m.comum.salvando : c.btn_em_transito}
                   </button>
                 )}
-                {oc.status === 'EM_TRANSITO' && (
+                {oc.status === 'EM_TRANSITO' && !nfeJaCreditou && (
                   <button
                     type="button"
                     onClick={handleRecebimento}

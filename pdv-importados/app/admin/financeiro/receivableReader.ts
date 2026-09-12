@@ -74,6 +74,7 @@ function mapTitulo(t: Record<string, unknown>, hoje: string): ReceivableListRow 
     lojaId: String(t.loja_id),
     descricao: t.descricao != null ? String(t.descricao) : null,
     vencimento,
+    vendaId: t.venda_id != null ? String(t.venda_id) : null,
     clienteNome: nomeCliente ?? null,
     atrasado: isTituloVencido(vencimento, status, hoje),
   }
@@ -98,11 +99,24 @@ export function createReceivableReader(supabase: SupabaseClient): ReceivableRead
 
         let q = supabase
           .from('contas_receber')
-          .select('id, valor_total, valor_aberto, status, descricao, vencimento, cliente_id, loja_id, clientes(nome)')
+          .select(
+            'id, valor_total, valor_aberto, status, descricao, vencimento, cliente_id, loja_id, venda_id, clientes(nome)',
+          )
 
+        // `mix` continua sendo o padrão (o que ainda pede ação). As demais
+        // opções existem porque a lista não tinha NENHUMA forma de mostrar um
+        // título quitado ou cancelado — pagamento integral sumia da tela.
+        const hojeFiltro = hojeYmd()
         if (query.opcao === 'ABERTO') q = q.eq('status', 'ABERTO')
         else if (query.opcao === 'PARCIAL') q = q.eq('status', 'PARCIAL')
-        else q = q.in('status', ['ABERTO', 'PARCIAL'])
+        else if (query.opcao === 'QUITADO') q = q.eq('status', 'QUITADO')
+        else if (query.opcao === 'CANCELADO') q = q.eq('status', 'CANCELADO')
+        else if (query.opcao === 'atrasado') {
+          // Vencido é computado, nunca um status gravado — mesma regra do AP.
+          q = q.in('status', ['ABERTO', 'PARCIAL']).not('vencimento', 'is', null).lt('vencimento', hojeFiltro)
+        } else if (query.opcao === 'todos') {
+          q = q.in('status', ['ABERTO', 'PARCIAL', 'QUITADO', 'CANCELADO'])
+        } else q = q.in('status', ['ABERTO', 'PARCIAL'])
 
         if (query.de.trim() && isYmd(query.de)) {
           q = q.not('vencimento', 'is', null).gte('vencimento', query.de.trim())
@@ -113,7 +127,14 @@ export function createReceivableReader(supabase: SupabaseClient): ReceivableRead
         if (idsPorClienteNarrow) q = q.in('cliente_id', idsPorClienteNarrow)
         if (idsPorBusca) q = q.in('id', idsPorBusca)
 
-        const { data: raw, error } = await q.order('created_at', { ascending: false }).limit(take)
+        // Ordem por VENCIMENTO, como em Contas a Pagar. Ordenar por data de
+        // criação misturava o que vence amanhã com o que vence em dois meses —
+        // numa lista de cobrança, o que decide a ordem é o prazo, não quando o
+        // título foi lançado. `nullsFirst: false` joga para o fim os títulos
+        // sem vencimento, que não têm prazo a cobrar.
+        const { data: raw, error } = await q
+          .order('vencimento', { ascending: true, nullsFirst: false })
+          .limit(take)
         if (error) {
           return {
             ok: false,
