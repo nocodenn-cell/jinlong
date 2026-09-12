@@ -2382,9 +2382,7 @@
     "cancelar_placeholder": "例如：货物已退回供应商",
     "cancelar_confirmar": "取消账款",
     "motivo_min": "请至少填写 2 个字符说明原因。",
-    "enviando": "提交中…",
-    "forma_cartao_debito": "借记卡",
-    "forma_cartao_credito": "信用卡"
+    "enviando": "提交中…"
   },
   "contas_receber": {
     "titulo": "应收账款",

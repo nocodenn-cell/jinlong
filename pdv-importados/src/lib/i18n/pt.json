@@ -2382,9 +2382,7 @@
     "cancelar_placeholder": "Ex.: nota devolvida ao fornecedor",
     "cancelar_confirmar": "Cancelar conta",
     "motivo_min": "Descreva o motivo em pelo menos 2 caracteres.",
-    "enviando": "Enviando…",
-    "forma_cartao_debito": "Cartão de débito",
-    "forma_cartao_credito": "Cartão de crédito"
+    "enviando": "Enviando…"
   },
   "contas_receber": {
     "titulo": "Contas a receber",

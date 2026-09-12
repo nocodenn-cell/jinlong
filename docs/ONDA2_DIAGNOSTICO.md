@@ -288,6 +288,10 @@ impressora térmica, e não se mexe no caixa de passagem. Registrado em §9.6.
 
 ### 9.3 Formas de pagamento — fonte única
 
+> **CORRIGIDO NA §10.** A premissa desta seção — de que o `CARTAO` do Contas a Pagar era
+> divergência a alinhar — estava **errada**. Era diferença legítima de domínio, e a tentativa de
+> alinhamento fez a tela oferecer formas que a RPC do AP recusa. Leia a §10 antes desta.
+
 A divergência era **do banco**, não só da tela. O vocabulário canônico já era
 `DINHEIRO | PIX | CARTAO_DEBITO | CARTAO_CREDITO` (`vendas`, `vendas_pagamentos`, `devolucoes`,
 `liquidacoes_receber`); quem destoava era `contas_pagar_pagamentos`, com `CARTAO | BOLETO | TRANSF`.
@@ -372,4 +376,109 @@ Verificado na tela, desktop e 375 px: `elementFromPoint` na área de sobreposiç
 **Não iniciado** (fora da autorização): itens 4 a 10 do TOP 10 — imprimir OC e recibos financeiros,
 exportar nas listas que faltam, filtro padrão útil, contexto na URL em Clientes/Fornecedores,
 enriquecer o cadastro de fornecedor, atalho no rótulo do PDV, "alterado em/por".
+---
 
+## 10. Correção — o AP não era divergência, era domínio (2026-09-12)
+
+Auditoria independente do Codex sobre `b6aca9ce` encontrou um **P1** que eu introduzi. Está certo,
+e a causa é um erro de julgamento meu, não um detalhe de implementação.
+
+### 10.1 O que eu errei
+
+A §9.3 acima diz que `CARTAO`, no Contas a Pagar, "destoava" do vocabulário canônico. **Está
+errado.** Não era divergência: é diferença legítima de domínio.
+
+- Em **venda**, débito × crédito importa: define taxa de adquirente e prazo de compensação do
+  dinheiro que **entra**.
+- Em **pagamento a fornecedor**, o dinheiro **sai**. Não há adquirente nem compensação a receber.
+  `CARTAO` basta — e é o que a operação usa.
+
+Procurei regra documentada autorizando débito/crédito para quitar obrigação de fornecedor: **não
+existe nenhuma**, em código ou documentação. A única origem da ideia era o meu próprio diagnóstico.
+Uniformizar catálogo não é uniformizar domínio.
+
+### 10.2 O estrago, em duas direções
+
+| # | Efeito |
+|---|---|
+| 1 | A tela passou a oferecer `CARTAO_DEBITO`/`CARTAO_CREDITO`, que a RPC `registrar_pagamento_contas_pagar` **recusa** com `PAGAMENTO_FORMA_INVALIDA` — ela valida o próprio conjunto, independente do CHECK da tabela |
+| 2 | **`CARTAO` sumiu da oferta** — forma legítima e anterior — porque o catálogo nunca teve essa linha |
+
+### 10.3 Por que os testes não pegaram
+
+O teste SQL que escrevi fazia `INSERT` direto em `contas_pagar_pagamentos` e passava **enquanto a
+tela quebrava**. Testei a camada errada: alarguei o CHECK da tabela e tratei isso como prova, sem
+exercitar a RPC — que é o caminho real de escrita e tem guarda própria. A falha é de método, e é a
+mesma classe do que aconteceu ao fechar a Onda 1 (rodar só o escopo, não a suíte inteira).
+
+O teste agora passa **pela RPC**.
+
+### 10.4 O que foi corrigido
+
+**Migration `20260912140000`**, corretiva:
+
+1. **Desfaz o alargamento** do CHECK de `contas_pagar_pagamentos`, de volta a
+   `DINHEIRO · PIX · CARTAO · BOLETO · TRANSF`. Estreitar é seguro aqui e só aqui: verificado que
+   **zero linhas** usam os dois valores abertos, e a migration **aborta com mensagem** se isso
+   deixar de ser verdade, em vez de destruir histórico.
+2. **Devolve `CARTAO`** ao catálogo, escopo `PAGAR`.
+3. Move débito e crédito de `AMBOS` para **`RECEBER`**, onde a RPC de fato os aceita.
+
+**Código:** `FormaPagamentoPagar` volta às 5 formas; o `as FormaPagamento` que mascarava a
+incompatibilidade saiu, trocado por `isFormaPagamentoPagar` + `flatMap` (o `filter().map()` não
+propaga o estreitamento); o fallback do leitor volta ao conjunto do AP; as duas chaves de i18n que
+ficaram órfãs foram removidas.
+
+**A RPC não foi tocada.** Ela estava certa desde o começo — quem estava errada era a UI.
+
+### 10.5 `escopo` fica ou vai embora?
+
+**Fica**, e agora faz o trabalho certo. Sem ele, um catálogo compartilhado não serve dois contratos
+legitimamente diferentes: ou o AP passa a oferecer `OUTROS`, ou o AR passa a oferecer `BOLETO`. A
+coluna não ficou sem uso depois da correção — ela é justamente o que mantém cada tela dentro do seu
+próprio contrato. O catálogo hoje espelha as duas RPCs, e o teste falha se deixar de espelhar.
+
+| Escopo | Formas | Contrato espelhado |
+|---|---|---|
+| `AMBOS` | DINHEIRO · PIX | ambas |
+| `PAGAR` | CARTAO · BOLETO · TRANSF | `registrar_pagamento_contas_pagar` |
+| `RECEBER` | CARTAO_DEBITO · CARTAO_CREDITO · OUTROS | `registrar_liquidacao_receber` |
+
+### 10.6 O que o AP oferece agora
+
+**Dinheiro · PIX · Cartão · Boleto · Transferência** — exatamente o de antes da Onda 2, conferido
+na tela.
+
+### 10.7 Sobre o visual "parecido com PDV"
+
+Apurado antes de mexer: a grade de blocos com glifo (`grid-cols-5`, ícone acima do rótulo) e o
+ícone `CreditCard` do modal **são anteriores à Onda 2** — idênticos em `27f35cdb`. Esta frente não
+criou nenhum elemento visual de PDV, nem campo algum para acomodar débito/crédito.
+
+O que a Onda 2 de fato acrescentou de "cara de maquininha" foi ter **duas bandeiras de cartão** na
+fileira. Isso saiu com a correção: voltou a ser um bloco só, `Cartão`.
+
+Redesenhar a grade pré-existente seria mudança de UX fora do que esta correção pede — e na direção
+oposta à instrução de não refatorar. **Fica como decisão sua**, com o custo declarado: trocar os
+blocos por um `select` financeiro é mudança pequena e contida, se você quiser.
+
+### 10.8 Validação
+
+| Verificação | Resultado |
+|---|---|
+| Teste SQL **pela RPC do AP** | `DINHEIRO`* · `PIX` · `CARTAO` · `BOLETO` · `TRANSF` aceitos; `CARTAO_DEBITO` e `CARTAO_CREDITO` **recusados** com `PAGAMENTO_FORMA_INVALIDA` |
+| Histórico | `BOLETO`, `PIX`, `TRANSF` gravados continuam válidos sob o CHECK restaurado |
+| Catálogo × RPCs | espelho exato, asserção no teste |
+| Cast mascarando tipo | **nenhum** no caminho do AP |
+| `tsc --noEmit` · ESLint | **0 erros** |
+| Suíte completa | **1.396 passando**, 3 skips, 0 falhas |
+| i18n pt × zh | **0 assimetrias**, 3.059 chaves |
+| PDV | intacto — nenhum arquivo de `app/caixa` tocado; `vendas`/`vendas_pagamentos` sem alteração |
+
+\* `DINHEIRO` é sangria: o dinheiro sai do caixa físico. No seed ele para em
+`MOV_CAIXA_SALDO_INSUFICIENTE` — regra de caixa funcionando. O teste afirma o que importa aqui:
+**nenhuma forma oferecida pela tela é recusada por ser a forma**.
+
+### 10.9 Pendente da auditoria do Codex
+
+Os **P2** não foram tocados, conforme instruído. Seguem para uma próxima passagem.

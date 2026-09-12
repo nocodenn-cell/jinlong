@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CreditCard } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DragonModal } from '@/components/ui/DragonModal'
@@ -12,7 +12,7 @@ import { roundMoney2 } from '@/shared/cart/totals'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { cn } from '@/lib/utils'
 import { listarFormasPagamento } from '@/app/admin/financeiro/formasPagamentoReader'
-import type { FormaPagamentoCatalogo } from '@shared-core/src/financial'
+import { isFormaPagamentoPagar, type FormaPagamentoCatalogo } from '@shared-core/src/financial'
 import {
   buscarCaixasAbertosPagamentoAction,
   registrarPagamentoAction,
@@ -30,20 +30,21 @@ type Props = Readonly<{
 }>
 
 /**
- * As formas vêm de `formas_pagamento` com escopo PAGAR (ver
- * `formasPagamentoReader`). Antes eram este array literal, que divergia do
- * Contas a Receber — `CARTAO` aqui, `CARTAO_DEBITO`/`CARTAO_CREDITO` lá — para
- * o mesmo conceito, e nenhum dos dois vinha de cadastro.
+ * Glifos das formas que o Contas a Pagar aceita.
  *
- * `BOLETO` e `TRANSF` continuam: são formas reais de pagar fornecedor, com
- * histórico gravado. Unificar a fonte não é achatar a oferta.
+ * O conjunto é o da RPC `registrar_pagamento_contas_pagar` — ela recusa
+ * qualquer outro valor com `PAGAMENTO_FORMA_INVALIDA`. A lista em si vem do
+ * catálogo `formas_pagamento` (escopo PAGAR), não daqui; aqui fica só a
+ * representação visual.
+ *
+ * `CARTAO` é genérico de propósito: débito x crédito é distinção de quem
+ * RECEBE (taxa de adquirente, prazo de compensação). Pagando fornecedor o
+ * dinheiro sai, e essa distinção não tem consumidor.
  */
 const GLYPH: Readonly<Record<string, string>> = {
   DINHEIRO: '¥',
   PIX: '⟁',
   CARTAO: '▭',
-  CARTAO_DEBITO: '▭',
-  CARTAO_CREDITO: '▤',
   BOLETO: '⫶',
   TRANSF: '↔',
 }
@@ -55,6 +56,25 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
   const [valor, setValor] = useState(formatDecimalBRL(aberto))
   const [forma, setForma] = useState<FormaPagamento>('PIX')
   const [formas, setFormas] = useState<FormaPagamentoCatalogo[]>([])
+
+  /**
+   * Só chega à tela o que a RPC aceita.
+   *
+   * Sem esta guarda, uma forma cadastrada fora do contrato do AP apareceria
+   * como opção e o operador só descobriria o problema ao submeter, com
+   * `PAGAMENTO_FORMA_INVALIDA` — foi exatamente o que a Onda 2 provocou ao
+   * oferecer cartão de débito/crédito aqui. `isFormaPagamentoPagar` estreita
+   * de verdade: nenhum `as` mascarando incompatibilidade.
+   */
+  const formasValidas = useMemo(
+    () =>
+      // `flatMap` e não `filter().map()`: dentro do ternário o TypeScript
+      // estreita `f.codigo` de verdade pelo type guard, sem precisar de `as`.
+      formas.flatMap((f) =>
+        isFormaPagamentoPagar(f.codigo) ? [{ id: f.codigo, nome: f.nome }] : [],
+      ),
+    [formas],
+  )
   const [dataPag, setDataPag] = useState(new Date().toISOString().slice(0, 10))
   const [observacao, setObservacao] = useState('')
   const [erros, setErros] = useState<Record<string, string | null>>({})
@@ -317,8 +337,8 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
                 {m.contas_pagar.modal_forma}<span className="ml-0.5 text-[color:var(--accent)]">*</span>
               </span>
               <div role="radiogroup" aria-label={m.contas_pagar.modal_forma} className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-                {formas.map((fp) => {
-                  const f = { id: fp.codigo as FormaPagamento, glyph: GLYPH[fp.codigo] ?? '•' }
+                {formasValidas.map((fp) => {
+                  const f = { id: fp.id, glyph: GLYPH[fp.id] ?? '•' }
                   return (
                   <button
                     key={f.id}

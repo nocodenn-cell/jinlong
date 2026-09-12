@@ -18,20 +18,30 @@ export type FormaPagamentoReceber =
 /**
  * Formas aceitas ao pagar um fornecedor.
  *
- * `CARTAO_DEBITO` e `CARTAO_CREDITO` entraram na Onda 2 para alinhar o Contas a
- * Pagar ao vocabulario canonico do resto do sistema (`vendas`,
- * `vendas_pagamentos`, `devolucoes`, `liquidacoes_receber`). `CARTAO` continua
- * no tipo porque continua valido no banco: ha historico gravado com ele e
- * remover seria estreitar, nao unificar.
+ * Espelha, literalmente, o que a RPC `registrar_pagamento_contas_pagar` valida
+ * — ela recusa qualquer outra com `PAGAMENTO_FORMA_INVALIDA`.
+ *
+ * **Por que `CARTAO` e nao `CARTAO_DEBITO`/`CARTAO_CREDITO`:** a distincao
+ * debito x credito e do lado de quem RECEBE — define taxa de adquirente e prazo
+ * de compensacao. Ao pagar fornecedor o dinheiro sai, nao ha adquirente nem
+ * compensacao a receber. A Onda 2 tentou alinhar este tipo ao vocabulario de
+ * vendas achando que era divergencia; era diferenca de dominio, e a RPC recusou.
  */
-export type FormaPagamentoPagar =
-  | 'DINHEIRO'
-  | 'PIX'
-  | 'CARTAO'
-  | 'CARTAO_DEBITO'
-  | 'CARTAO_CREDITO'
-  | 'BOLETO'
-  | 'TRANSF'
+export type FormaPagamentoPagar = 'DINHEIRO' | 'PIX' | 'CARTAO' | 'BOLETO' | 'TRANSF'
+
+/** As mesmas, em runtime — para validar o que vem do catalogo. */
+export const FORMAS_PAGAMENTO_PAGAR: readonly FormaPagamentoPagar[] = [
+  'DINHEIRO',
+  'PIX',
+  'CARTAO',
+  'BOLETO',
+  'TRANSF',
+] as const
+
+/** Estreita um codigo do catalogo ao contrato do AP, sem cast. */
+export function isFormaPagamentoPagar(codigo: string): codigo is FormaPagamentoPagar {
+  return (FORMAS_PAGAMENTO_PAGAR as readonly string[]).includes(codigo)
+}
 
 /** Escopo de uma forma no catalogo `formas_pagamento`. */
 export type EscopoFormaPagamento = 'RECEBER' | 'PAGAR' | 'AMBOS'

@@ -34,11 +34,13 @@ const CANONICO: Readonly<Record<EscopoFormaPagamento, FormaPagamentoCatalogo[]>>
     { codigo: 'CARTAO_CREDITO', nome: 'Cartão de Crédito', escopo: 'AMBOS', taxaPercentual: 0, prazoCompensacaoDias: 0 },
     { codigo: 'OUTROS', nome: 'Outros', escopo: 'RECEBER', taxaPercentual: 0, prazoCompensacaoDias: 0 },
   ],
+  // Espelha a RPC `registrar_pagamento_contas_pagar`. `CARTAO` é genérico de
+  // propósito: débito x crédito é distinção de quem recebe, não de quem paga
+  // fornecedor. A Onda 2 chegou a oferecer as duas aqui e a RPC as recusava.
   PAGAR: [
     { codigo: 'DINHEIRO', nome: 'Dinheiro', escopo: 'AMBOS', taxaPercentual: 0, prazoCompensacaoDias: 0 },
     { codigo: 'PIX', nome: 'Pix', escopo: 'AMBOS', taxaPercentual: 0, prazoCompensacaoDias: 0 },
-    { codigo: 'CARTAO_DEBITO', nome: 'Cartão de Débito', escopo: 'AMBOS', taxaPercentual: 0, prazoCompensacaoDias: 0 },
-    { codigo: 'CARTAO_CREDITO', nome: 'Cartão de Crédito', escopo: 'AMBOS', taxaPercentual: 0, prazoCompensacaoDias: 0 },
+    { codigo: 'CARTAO', nome: 'Cartão', escopo: 'PAGAR', taxaPercentual: 0, prazoCompensacaoDias: 0 },
     { codigo: 'BOLETO', nome: 'Boleto', escopo: 'PAGAR', taxaPercentual: 0, prazoCompensacaoDias: 0 },
     { codigo: 'TRANSF', nome: 'Transferência', escopo: 'PAGAR', taxaPercentual: 0, prazoCompensacaoDias: 0 },
   ],
@@ -49,6 +51,7 @@ const CANONICO: Readonly<Record<EscopoFormaPagamento, FormaPagamentoCatalogo[]>>
 const PESO: Readonly<Record<string, number>> = {
   DINHEIRO: 0,
   PIX: 1,
+  CARTAO: 2,
   CARTAO_DEBITO: 2,
   CARTAO_CREDITO: 3,
 }
