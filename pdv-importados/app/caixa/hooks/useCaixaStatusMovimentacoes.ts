@@ -92,13 +92,13 @@ export function useCaixaStatusMovimentacoes({
   currentUserId,
   inicial,
 }: Params) {
-  // Estado inicial idêntico ao de antes da pré-carga (status nulo, carregando): o HTML
-  // do servidor não pode exibir "Abrir/Fechar caixa" habilitado antes da hidratação —
-  // um clique nesse intervalo não tem handler e se perde. O valor pré-carregado é
-  // aplicado no efeito de montagem, que só roda depois de hidratar (sem rede).
-  const [caixaStatus, setCaixaStatus] = useState<CaixaStatusUi | null>(null)
-  const [carregandoStatus, setCarregandoStatus] = useState(true)
-  const [movimentacoes, setMovimentacoes] = useState<MovimentacaoCaixaDTO[]>([])
+  const [caixaStatus, setCaixaStatus] = useState<CaixaStatusUi | null>(() =>
+    inicial ? mapStatusToUi(inicial.status) : null,
+  )
+  const [carregandoStatus, setCarregandoStatus] = useState(!inicial)
+  const [movimentacoes, setMovimentacoes] = useState<MovimentacaoCaixaDTO[]>(() =>
+    movimentacoesIniciais(inicial),
+  )
   const statusInicialRef = useRef(inicial ?? null)
   const [carregandoMovimentacoes, setCarregandoMovimentacoes] = useState(false)
   const [movimentandoCaixa, setMovimentandoCaixa] = useState(false)
@@ -151,16 +151,12 @@ export function useCaixaStatusMovimentacoes({
     const preCarregado = statusInicialRef.current
     statusInicialRef.current = null
     if (preCarregado) {
-      // Mesmos estados e mensagens que `recarregarStatusCaixa` produziria para esse
-      // resultado — só que sem a ida ao servidor.
+      // Mesmas mensagens que `recarregarStatusCaixa` emitiria para esse resultado.
       const ui = mapStatusToUi(preCarregado.status)
-      setCaixaStatus(ui)
-      setMovimentacoes(ui?.status === "ABERTO" ? movimentacoesIniciais(preCarregado) : [])
       if (ui?.status === "ERRO") setCaixaMensagem(ui.error)
       else if (preCarregado.movimentacoes && !preCarregado.movimentacoes.ok) {
         setCaixaMensagem(preCarregado.movimentacoes.error)
       }
-      setCarregandoStatus(false)
       return
     }
     void recarregarStatusCaixa()
