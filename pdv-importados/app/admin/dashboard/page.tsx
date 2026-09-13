@@ -14,6 +14,7 @@ import type { SparkTone } from '@/components/ui/admin-v2/sparkline'
 import { EmptyState, ErrorState } from '@/components/ui/feedback'
 import { createClient } from '@/lib/supabase/server'
 import { getRelatorioTimezone } from '@/lib/relatorios/getRelatorioTimezone'
+import { contarEstoqueBaixo, lerFlagsVisuaisPdv } from '@/lib/admin/sinaisVisuaisAdmin'
 import { SalesTrendChartLazy } from './SalesTrendChartLazy'
 import { PaymentDonutChartLazy } from './PaymentDonutChartLazy'
 import { DashboardChart } from './_components/DashboardChart'
@@ -127,20 +128,31 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   const statusDb = status === 'ALL' ? null : status
   const supabase = await createClient()
   const now = new Date()
-  const relatorioTz = await getRelatorioTimezone(supabase)
-  const { start, end, previousStart, previousEnd } = getPeriodRange(period, relatorioTz, now)
 
-  // Observabilidade visual: algum caixa aberto agora? Best-effort — falha mantém "fechado".
-  let algumCaixaAberto = false
-  try {
-    const { count } = await supabase
-      .from('caixas')
-      .select('id', { count: 'exact', head: true })
-      .eq('status', 'ABERTO')
-    algumCaixaAberto = (count ?? 0) > 0
-  } catch {
-    algumCaixaAberto = false
-  }
+  const recentOrdersQuery = supabase
+    .from('vendas')
+    .select('id,data,total_liquido,status,forma_pagamento,operador_id')
+    .order('data', { ascending: false })
+    .limit(15)
+
+  // Etapa 1 — tudo que NÃO depende do fuso do relatório, em paralelo com a leitura
+  // do fuso. Antes: fuso → caixas → lote → estoque baixo → operadores, em série.
+  // Flags e contagem de estoque baixo vêm do cache por request (o layout já leu).
+  const [relatorioTz, algumCaixaAberto, recentOrdersRes, estoqueBaixoRes, flagsVisuaisRes] =
+    await Promise.all([
+      getRelatorioTimezone(supabase),
+      // Observabilidade visual: algum caixa aberto agora? Best-effort — falha mantém "fechado".
+      Promise.resolve(
+        supabase.from('caixas').select('id', { count: 'exact', head: true }).eq('status', 'ABERTO'),
+      ).then(
+        ({ count }) => (count ?? 0) > 0,
+        () => false,
+      ),
+      statusDb ? recentOrdersQuery.eq('status', statusDb) : recentOrdersQuery,
+      contarEstoqueBaixo(),
+      lerFlagsVisuaisPdv(),
+    ])
+  const { start, end, previousStart, previousEnd } = getPeriodRange(period, relatorioTz, now)
 
   let vendasRange: Array<{
     id: string
@@ -177,18 +189,6 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     .gte('data', previousStart.toISOString())
     .lt('data', previousEnd.toISOString())
 
-  const recentOrdersQuery = supabase
-    .from('vendas')
-    .select('id,data,total_liquido,status,forma_pagamento,operador_id')
-    .order('data', { ascending: false })
-    .limit(15)
-
-  const estoqueBaixoQuery = supabase
-    .from('v_estoque_baixo')
-    .select('id', { count: 'exact', head: true })
-
-  const flagsVisuaisQuery = supabase.rpc('pdv_config_flags_visuais')
-
   const novosUsuariosAtualQuery = supabase
     .from('usuarios')
     .select('id', { count: 'exact', head: true })
@@ -201,38 +201,52 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     .gte('created_at', previousStart.toISOString())
     .lt('created_at', previousEnd.toISOString())
 
-  const [
-    vendasRangeRes,
-    vendasPrevRes,
-    recentOrdersRes,
-    estoqueBaixoRes,
-    novosUsuariosAtualRes,
-    novosUsuariosPrevRes,
-    flagsVisuaisRes,
-  ] = await Promise.all([
-    statusDb ? vendasRangeQuery.eq('status', statusDb) : vendasRangeQuery,
-    statusDb ? vendasPrevQuery.eq('status', statusDb) : vendasPrevQuery,
-    statusDb ? recentOrdersQuery.eq('status', statusDb) : recentOrdersQuery,
-    estoqueBaixoQuery,
-    novosUsuariosAtualQuery,
-    novosUsuariosPrevQuery,
-    flagsVisuaisQuery,
-  ])
-
   const flagsVisuaisRow = Array.isArray(flagsVisuaisRes.data)
     ? flagsVisuaisRes.data[0]
     : flagsVisuaisRes.data
   const showStockAlerts = !flagsVisuaisRes.error && !!flagsVisuaisRow?.show_stock_alerts
 
-  let estoqueBaixoLista: Array<{ nome: string; quantidade_atual: number; estoque_minimo: number }> = []
-  if (showStockAlerts) {
-    const { data: listaRows } = await supabase
-      .from('v_estoque_baixo')
-      .select('nome, quantidade_atual, estoque_minimo')
-      .order('deficit', { ascending: false })
-      .limit(5)
-    estoqueBaixoLista = (listaRows ?? []) as typeof estoqueBaixoLista
+  if (!recentOrdersRes.error) {
+    recentOrdersRaw = (recentOrdersRes.data ?? []) as typeof recentOrdersRaw
   }
+  const operatorIds = Array.from(
+    new Set(
+      recentOrdersRaw
+        .map((r) => r.operador_id)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0)
+    )
+  )
+
+  // Etapa 2 — o que depende do período (fuso) ou dos pedidos recentes, em paralelo.
+  const [
+    vendasRangeRes,
+    vendasPrevRes,
+    novosUsuariosAtualRes,
+    novosUsuariosPrevRes,
+    estoqueBaixoListaRes,
+    usersRes,
+  ] = await Promise.all([
+    statusDb ? vendasRangeQuery.eq('status', statusDb) : vendasRangeQuery,
+    statusDb ? vendasPrevQuery.eq('status', statusDb) : vendasPrevQuery,
+    novosUsuariosAtualQuery,
+    novosUsuariosPrevQuery,
+    showStockAlerts
+      ? supabase
+          .from('v_estoque_baixo')
+          .select('nome, quantidade_atual, estoque_minimo')
+          .order('deficit', { ascending: false })
+          .limit(5)
+      : Promise.resolve(null),
+    operatorIds.length > 0
+      ? supabase.from('usuarios').select('id,nome').in('id', operatorIds)
+      : Promise.resolve(null),
+  ])
+
+  const estoqueBaixoLista = (estoqueBaixoListaRes?.data ?? []) as Array<{
+    nome: string
+    quantidade_atual: number
+    estoque_minimo: number
+  }>
 
   const dashboardErrors = collectSupabaseErrors([
     {
@@ -263,9 +277,6 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
 
   if (!vendasRangeRes.error) vendasRange = (vendasRangeRes.data ?? []) as typeof vendasRange
   if (!vendasPrevRes.error) vendasPrevRange = (vendasPrevRes.data ?? []) as typeof vendasPrevRange
-  if (!recentOrdersRes.error) {
-    recentOrdersRaw = (recentOrdersRes.data ?? []) as typeof recentOrdersRaw
-  }
   if (!estoqueBaixoRes.error) estoqueBaixoCount = estoqueBaixoRes.count ?? 0
   if (!novosUsuariosAtualRes.error) novosUsuariosAtual = novosUsuariosAtualRes.count ?? 0
   if (!novosUsuariosPrevRes.error) novosUsuariosPrev = novosUsuariosPrevRes.count ?? 0
@@ -273,18 +284,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   const periodSalesFailed = !!vendasRangeRes.error
   const tableLoadFailed = !!recentOrdersRes.error
 
-  const operatorIds = Array.from(
-    new Set(
-      recentOrdersRaw
-        .map((r) => r.operador_id)
-        .filter((id): id is string => typeof id === 'string' && id.length > 0)
-    )
-  )
-  if (operatorIds.length > 0) {
-    const usersRes = await supabase
-      .from('usuarios')
-      .select('id,nome')
-      .in('id', operatorIds)
+  if (usersRes) {
     if (usersRes.error) {
       dashboardErrors.push(
         `${L.errorSourceOperators[lk]}: ${mensagemErroParaUsuario(usersRes.error.message, idioma)}`,
