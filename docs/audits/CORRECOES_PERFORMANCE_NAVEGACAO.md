@@ -3,6 +3,8 @@
 - **Base:** [`RELATORIO_MEDICAO_NAVEGACAO_AUTENTICADA.md`](./RELATORIO_MEDICAO_NAVEGACAO_AUTENTICADA.md) e [`AUDITORIA_AUTH_PERFORMANCE.md`](./AUDITORIA_AUTH_PERFORMANCE.md).
 - **Branch:** `perf/auth-navegacao-autenticada`, a partir de `main` `8bc56764`.
 
+> **Atualização de 2026-09-13:** C3 e C4 foram retiradas pelos reverts `8209c321` e `3a2572d5`. O diretório `app/caixa` voltou integralmente ao estado anterior a `998dacbc`. As demais otimizações permanecem. As descrições históricas de C3/C4 abaixo não representam o código atual; veja [a validação da reversão](./REVERSAO_PRE_CARGA_CAIXA_PR411.md).
+
 **Classificação da evidência:**
 
 | Rótulo | Significado |
@@ -61,7 +63,7 @@
 | Rota | Antes (MEDIDO, relatório-base) | Depois |
 |---|---|---|
 | Relatórios | mediana 4,8 s; pior 12,4 s | **NÃO MEDIDO**, aguarda deploy. INFERIDO: pior caso limitado pela RPC mais lenta em paralelo (≈2,1 s no pior dado medido) em vez da soma (≈10,9 s) |
-| Caixa (operacional) | 2,7–3,0 s | **NÃO MEDIDO**. INFERIDO: ≈ tempo do RSC + a carga paralela mais lenta (sem as 5 actions em série) |
+| Caixa (operacional) | 2,7–3,0 s | **NÃO MEDIDO**. Pré-carga retirada: a montagem voltou às actions anteriores; a estimativa de ganho da pré-carga não se aplica. |
 | Dashboard | 0,7–1,4 s por clique; 12,4 s no F5 frio | **NÃO MEDIDO** |
 | Categorias/Marcas | ~4 s por request na rajada N+1 | **NÃO MEDIDO** |
 | 1ª navegação fria (auth) | até 7,9 s só de auth (4 idas em série) | **NÃO MEDIDO**. INFERIDO: profundidade 4 → 2. O custo de abrir conexão no Supabase permanece (§3) |
@@ -84,7 +86,7 @@ A migration também foi aplicada numa transação com `ROLLBACK` no Postgres loc
 
 1. **Custo de abrir conexão no Supabase após ociosidade** (AUDITORIA_AUTH_PERFORMANCE §4.3). É infraestrutura, não código. As correções reduzem quantas chamadas pagam esse custo e colocam em paralelo as que restam, mas não o eliminam. A investigação de pool e compute segue recomendada (O7).
 2. **Duas idas de auth por request** (middleware + RSC) continuam, por segurança. Eliminar uma exigiria `getClaims()` com revisão de segurança (O1).
-3. **Impls do Caixa que chamam `auth.getUser()` diretamente** (status, limite, configurações, movimentações), agora executadas no mesmo render RSC. INFERIDO/PROVÁVEL: o Next deduplica GETs idênticos no render (observado em produção na página do Caixa), mas isso não foi verificado nesta branch.
+3. **Impls do Caixa que chamam `auth.getUser()` diretamente** (status, limite, configurações, movimentações) voltaram às actions pós-hidratação. A hipótese de deduplicação dessas cargas no mesmo render RSC deixou de se aplicar com a reversão de C3/C4.
 4. **Relatório de sem-giro e vendas detalhadas** releem o fuso (`relatorio_settings`) cada um. Mesma observação de deduplicação.
 5. **A migration C7 precisa ser aplicada em produção** pelo fluxo normal do projeto. Enquanto não for, C6 já paraleliza, mas cada RPC ainda pode pagar a validação antiga.
 
