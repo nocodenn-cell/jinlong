@@ -119,61 +119,60 @@ export async function carregarDadosRelatoriosGerente(input: {
   const tzRelatorio = await getRelatorioTimezone(supabase)
   const periodo = resolverPeriodoRelatorio(input.de, input.ate, tzRelatorio)
 
-  const { data: porDiaRaw, error: errPorDia } = await supabase.rpc('relatorio_vendas_por_dia_periodo', {
-    p_de: periodo.de,
-    p_ate: periodo.ate,
-    p_tz: tzRelatorio,
-  })
-
-  const { data: topRaw, error: errTop } = await supabase.rpc('relatorio_top_produtos_periodo', {
-    p_de: periodo.de,
-    p_ate: periodo.ate,
-    p_limite: 50,
-    p_tz: tzRelatorio,
-  })
-  const { data: resumoRaw, error: errResumo } = await supabase.rpc(
-    'relatorio_resumo_executivo_periodo',
-    {
+  // As 8 leituras são independentes entre si (só dependem de período/fuso, já
+  // resolvidos): em paralelo. Antes eram 8 awaits em série — o tempo da tela era a
+  // SOMA de todas (medido: até 12,4 s). A precedência de `rpcErro` abaixo não muda.
+  const [
+    { data: porDiaRaw, error: errPorDia },
+    { data: topRaw, error: errTop },
+    { data: resumoRaw, error: errResumo },
+    { data: baixo },
+    { data: margemPorVendaRaw, error: errMargemVenda },
+    { data: curvaAbcRaw, error: errCurvaAbc },
+    { data: coberturaEstoqueRaw, error: errCoberturaEstoque },
+    { data: divergenciaEstoqueRaw },
+  ] = await Promise.all([
+    supabase.rpc('relatorio_vendas_por_dia_periodo', {
       p_de: periodo.de,
       p_ate: periodo.ate,
       p_tz: tzRelatorio,
-    },
-  )
-
-  const { data: baixo } = await supabase
-    .from('v_estoque_baixo')
-    .select('id, nome, codigo_barras, quantidade_atual, estoque_minimo, deficit')
-    .limit(40)
-
-  const { data: margemPorVendaRaw, error: errMargemVenda } = await supabase.rpc(
-    'relatorio_margem_por_venda_periodo',
-    {
+    }),
+    supabase.rpc('relatorio_top_produtos_periodo', {
+      p_de: periodo.de,
+      p_ate: periodo.ate,
+      p_limite: 50,
+      p_tz: tzRelatorio,
+    }),
+    supabase.rpc('relatorio_resumo_executivo_periodo', {
+      p_de: periodo.de,
+      p_ate: periodo.ate,
+      p_tz: tzRelatorio,
+    }),
+    supabase
+      .from('v_estoque_baixo')
+      .select('id, nome, codigo_barras, quantidade_atual, estoque_minimo, deficit')
+      .limit(40),
+    supabase.rpc('relatorio_margem_por_venda_periodo', {
       p_de: periodo.de,
       p_ate: periodo.ate,
       p_tz: tzRelatorio,
       p_limite: 200,
-    },
-  )
-
-  const { data: curvaAbcRaw, error: errCurvaAbc } = await supabase.rpc('relatorio_curva_abc_periodo', {
-    p_de: periodo.de,
-    p_ate: periodo.ate,
-    p_tz: tzRelatorio,
-    p_limite: 500,
-  })
-
-  const { data: coberturaEstoqueRaw, error: errCoberturaEstoque } = await supabase.rpc(
-    'relatorio_cobertura_estoque',
-    { p_dias_janela: 30, p_limite: 200 },
-  )
-
-  const { data: divergenciaEstoqueRaw } = await supabase
-    .from('v_estoque_ledger_divergencia')
-    .select(
-      'produto_id, produto_nome, loja_id, saldo_estoque, soma_movimentos, divergencia, qtd_movimentos, ultimo_movimento_em',
-    )
-    .order('divergencia', { ascending: false })
-    .limit(50)
+    }),
+    supabase.rpc('relatorio_curva_abc_periodo', {
+      p_de: periodo.de,
+      p_ate: periodo.ate,
+      p_tz: tzRelatorio,
+      p_limite: 500,
+    }),
+    supabase.rpc('relatorio_cobertura_estoque', { p_dias_janela: 30, p_limite: 200 }),
+    supabase
+      .from('v_estoque_ledger_divergencia')
+      .select(
+        'produto_id, produto_nome, loja_id, saldo_estoque, soma_movimentos, divergencia, qtd_movimentos, ultimo_movimento_em',
+      )
+      .order('divergencia', { ascending: false })
+      .limit(50),
+  ])
 
   const rpcErro =
     errPorDia?.message ??

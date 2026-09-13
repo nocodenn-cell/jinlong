@@ -10,6 +10,9 @@ import { carregarDadosRelatoriosGerente } from '@/app/gerente/relatorios/actions
 import { buscarRelatorioVendasAvancadoAction } from '@/app/gerente/relatorios/vendas/actions'
 import { carregarProdutosSemGiro } from '@/app/gerente/relatorios/sem-giro/actions'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
+import { getRelatorioTimezone } from '@/lib/relatorios/getRelatorioTimezone'
+import { resolverPeriodoRelatorio } from '@/lib/relatorios/periodoRelatorio'
+import { createClient } from '@/lib/supabase/server'
 import { getMessages } from '@/i18n/getMessages'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import { ROUTES } from '@shared-core/navigation/routes'
@@ -33,14 +36,21 @@ export default async function AdminRelatoriosPage({ searchParams }: PageProps) {
   const locale = localeFromIdioma(session.idioma)
 
   const sp = (searchParams ? await searchParams : {}) ?? {}
-  const dados = await carregarDadosRelatoriosGerente({
-    de: sp.de,
-    ate: sp.ate,
-  })
 
-  const [semGiro, vendasAvancado] = await Promise.all([
-    carregarProdutosSemGiro({ de: dados.periodo.de, ate: dados.periodo.ate }),
-    buscarRelatorioVendasAvancadoAction({ de: dados.periodo.de, ate: dados.periodo.ate }),
+  // Sem-giro e vendas detalhadas só precisam do período resolvido — o mesmo que
+  // `carregarDadosRelatoriosGerente` resolve (mesma entrada, mesmo fuso). Resolvê-lo
+  // aqui permite carregar os três blocos em paralelo, em vez de esperar o pacote
+  // principal terminar para só então buscar os outros dois.
+  const tzRelatorio = await getRelatorioTimezone(await createClient())
+  const periodo = resolverPeriodoRelatorio(sp.de, sp.ate, tzRelatorio)
+
+  const [dados, semGiro, vendasAvancado] = await Promise.all([
+    carregarDadosRelatoriosGerente({
+      de: sp.de,
+      ate: sp.ate,
+    }),
+    carregarProdutosSemGiro({ de: periodo.de, ate: periodo.ate }),
+    buscarRelatorioVendasAvancadoAction({ de: periodo.de, ate: periodo.ate }),
   ])
 
   const relDados: RelatoriosDados = {
