@@ -70,6 +70,8 @@ import {
   obterDetalheHistoricoVendaImpl,
   retomarVendaEmEsperaImpl,
 } from '@/app/caixa/server/caixaVendaEspera.impl'
+import { carregarBootstrapCaixaImpl } from '@/app/caixa/server/caixaBootstrap'
+import type { CaixaBootstrapInicial } from '@/app/caixa/caixaBootstrapTypes'
 import type { ItemCarrinho } from '@/stores/unifiedCartStore'
 import type { ConsultaRapidaResult } from '@/app/caixa/caixaActionTypes'
 
@@ -114,6 +116,16 @@ export type {
  */
 export async function carregarRegrasPrecoCaixa(): Promise<CarregarRegrasResult> {
   return carregarRegrasPrecoCaixaImpl()
+}
+
+/**
+ * Abertura do PDV em uma chamada: regras, limite de sangria, configurações, status do
+ * turno (+ movimentações se aberto) e vendas em espera, carregados em paralelo. Usado
+ * pelo Server Component `app/caixa/page.tsx`; cada item reaproveita a impl (e a
+ * checagem de sessão) da action individual correspondente.
+ */
+export async function carregarBootstrapCaixa(): Promise<CaixaBootstrapInicial> {
+  return carregarBootstrapCaixaImpl()
 }
 
 /**

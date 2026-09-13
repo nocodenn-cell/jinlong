@@ -1,6 +1,7 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
+import type { CaixaBootstrapInicial } from "@/app/caixa/caixaBootstrapTypes"
 import {
   obterMovimentacoesCaixa,
   obterStatusCaixaOperador,
@@ -43,6 +44,18 @@ type Params = {
   movimentacaoModalTipo: TipoMovimentacaoUi | null
   acaoMovimentacao: AcaoState
   currentUserId: string | null
+  /**
+   * Status do turno (e movimentações, se aberto) já carregados no Server Component.
+   * Consumido só na montagem; recargas seguintes seguem pela Server Action.
+   */
+  inicial?: Pick<CaixaBootstrapInicial, "status" | "movimentacoes"> | null
+}
+
+function movimentacoesIniciais(
+  inicial: Pick<CaixaBootstrapInicial, "status" | "movimentacoes"> | null | undefined,
+): MovimentacaoCaixaDTO[] {
+  const res = inicial?.movimentacoes
+  return res && res.ok ? res.itens : []
 }
 
 function mapStatusToUi(
@@ -77,10 +90,16 @@ export function useCaixaStatusMovimentacoes({
   movimentacaoModalTipo,
   acaoMovimentacao,
   currentUserId,
+  inicial,
 }: Params) {
-  const [caixaStatus, setCaixaStatus] = useState<CaixaStatusUi | null>(null)
-  const [carregandoStatus, setCarregandoStatus] = useState(true)
-  const [movimentacoes, setMovimentacoes] = useState<MovimentacaoCaixaDTO[]>([])
+  const [caixaStatus, setCaixaStatus] = useState<CaixaStatusUi | null>(() =>
+    inicial ? mapStatusToUi(inicial.status) : null,
+  )
+  const [carregandoStatus, setCarregandoStatus] = useState(!inicial)
+  const [movimentacoes, setMovimentacoes] = useState<MovimentacaoCaixaDTO[]>(() =>
+    movimentacoesIniciais(inicial),
+  )
+  const statusInicialRef = useRef(inicial ?? null)
   const [carregandoMovimentacoes, setCarregandoMovimentacoes] = useState(false)
   const [movimentandoCaixa, setMovimentandoCaixa] = useState(false)
   const [processandoAcaoMovimentacao, setProcessandoAcaoMovimentacao] = useState(false)
@@ -129,8 +148,19 @@ export function useCaixaStatusMovimentacoes({
   }, [recarregarMovimentacoes, setCaixaMensagem])
 
   useEffect(() => {
+    const preCarregado = statusInicialRef.current
+    statusInicialRef.current = null
+    if (preCarregado) {
+      // Mesmas mensagens que `recarregarStatusCaixa` emitiria para esse resultado.
+      const ui = mapStatusToUi(preCarregado.status)
+      if (ui?.status === "ERRO") setCaixaMensagem(ui.error)
+      else if (preCarregado.movimentacoes && !preCarregado.movimentacoes.ok) {
+        setCaixaMensagem(preCarregado.movimentacoes.error)
+      }
+      return
+    }
     void recarregarStatusCaixa()
-  }, [recarregarStatusCaixa])
+  }, [recarregarStatusCaixa, setCaixaMensagem])
 
   const handleExternalMovimentacao = useCallback(() => {
     void recarregarStatusCaixa()

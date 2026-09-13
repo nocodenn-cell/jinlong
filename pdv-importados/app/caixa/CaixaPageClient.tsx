@@ -44,6 +44,7 @@ import {
   useCaixaStatusMovimentacoes,
 } from "@/app/caixa/hooks/useCaixaStatusMovimentacoes"
 import { useCaixaBootstrapData } from "@/app/caixa/hooks/useCaixaBootstrapData"
+import type { CaixaBootstrapInicial } from "@/app/caixa/caixaBootstrapTypes"
 import { useCaixaKeyboardShortcuts } from "@/app/caixa/hooks/useCaixaKeyboardShortcuts"
 import { useCaixaGerenteTokenExpiry } from "@/app/caixa/hooks/useCaixaGerenteTokenExpiry"
 import { useCaixaVendasEmEspera } from "@/app/caixa/hooks/useCaixaVendasEmEspera"
@@ -136,9 +137,11 @@ type Props = {
   operadorLabel: string
   perfil: string | null
   userId: string | null
+  /** Dados de abertura carregados no Server Component (ver `carregarBootstrapCaixa`). */
+  bootstrap?: CaixaBootstrapInicial | null
 }
 
-export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, userId }: Props) {
+export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, userId, bootstrap }: Props) {
   const {
     mensagem,
     msgVendaOk,
@@ -210,7 +213,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     recarregarStatusCaixa,
     handleSalvarMovimentacao,
     handleConfirmarAcaoMovimentacao,
-  } = useCaixaStatusMovimentacoes({ m, setCaixaMensagem, movimentacaoModalTipo, acaoMovimentacao, currentUserId: userId })
+  } = useCaixaStatusMovimentacoes({ m, setCaixaMensagem, movimentacaoModalTipo, acaoMovimentacao, currentUserId: userId, inicial: bootstrap })
   const [comprovanteFechamento, setComprovanteFechamento] = useState<ComprovanteFechamento | null>(null)
 
   // Selectors atômicos: a página só re-renderiza quando itens/totais mudam — não a
@@ -569,6 +572,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     setCaixaMensagem,
     setLimiteSangriaSemGerente,
     setConfigCaixaWeb,
+    inicial: bootstrap,
   })
 
   const handleAdicionar = useCallback(
@@ -764,6 +768,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     setClienteNome,
     vendaEmEsperaOrigemId,
     setVendaEmEsperaOrigemId,
+    vendasEmEsperaInicial: bootstrap?.vendasEmEspera ?? null,
   })
 
   const parseValorMonetario = useCallback((raw: string | null): number | null => {
