@@ -102,9 +102,8 @@ export function useCaixaVendasEmEspera(deps: UseCaixaVendasEmEsperaDeps) {
     setVendaEmEsperaOrigemId(null)
   }, [vendaEmEsperaOrigemId, setVendaEmEsperaOrigemId])
 
-  const [vendasEmEspera, setVendasEmEspera] = useState<VendaEmEsperaCard[]>(() =>
-    vendasEmEsperaInicial && vendasEmEsperaInicial.ok ? vendasEmEsperaInicial.vendas : [],
-  )
+  // Lista vazia no primeiro render (como antes); a pré-carga entra no efeito de montagem.
+  const [vendasEmEspera, setVendasEmEspera] = useState<VendaEmEsperaCard[]>([])
   const [carregandoEmEspera, setCarregandoEmEspera] = useState(false)
   const esperaInicialRef = useRef(vendasEmEsperaInicial ?? null)
 
@@ -119,8 +118,10 @@ export function useCaixaVendasEmEspera(deps: UseCaixaVendasEmEsperaDeps) {
   }, [])
 
   useEffect(() => {
-    if (esperaInicialRef.current) {
+    const preCarregado = esperaInicialRef.current
+    if (preCarregado) {
       esperaInicialRef.current = null
+      if (preCarregado.ok) setVendasEmEspera(preCarregado.vendas)
       return
     }
     void recarregarEmEspera()
