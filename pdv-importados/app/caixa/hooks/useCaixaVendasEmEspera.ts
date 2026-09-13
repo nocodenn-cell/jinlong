@@ -1,7 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
-import type { CaixaBootstrapInicial } from "@/app/caixa/caixaBootstrapTypes"
+import { useCallback, useEffect, useState } from "react"
 import {
   colocarVendaEmEsperaCaixa,
   descartarVendaEmEsperaCaixa,
@@ -49,11 +48,6 @@ export type UseCaixaVendasEmEsperaDeps = Readonly<{
    */
   vendaEmEsperaOrigemId: string | null
   setVendaEmEsperaOrigemId: (id: string | null) => void
-  /**
-   * Lista já carregada no Server Component. Substitui só a carga da montagem;
-   * mudanças de turno (`turnoRefreshToken`) recarregam pela Server Action.
-   */
-  vendasEmEsperaInicial?: CaixaBootstrapInicial["vendasEmEspera"] | null
 }>
 
 /**
@@ -85,7 +79,6 @@ export function useCaixaVendasEmEspera(deps: UseCaixaVendasEmEsperaDeps) {
     setClienteNome,
     vendaEmEsperaOrigemId,
     setVendaEmEsperaOrigemId,
-    vendasEmEsperaInicial,
   } = deps
 
   /**
@@ -102,11 +95,8 @@ export function useCaixaVendasEmEspera(deps: UseCaixaVendasEmEsperaDeps) {
     setVendaEmEsperaOrigemId(null)
   }, [vendaEmEsperaOrigemId, setVendaEmEsperaOrigemId])
 
-  const [vendasEmEspera, setVendasEmEspera] = useState<VendaEmEsperaCard[]>(() =>
-    vendasEmEsperaInicial && vendasEmEsperaInicial.ok ? vendasEmEsperaInicial.vendas : [],
-  )
+  const [vendasEmEspera, setVendasEmEspera] = useState<VendaEmEsperaCard[]>([])
   const [carregandoEmEspera, setCarregandoEmEspera] = useState(false)
-  const esperaInicialRef = useRef(vendasEmEsperaInicial ?? null)
 
   const recarregarEmEspera = useCallback(async () => {
     setCarregandoEmEspera(true)
@@ -119,10 +109,6 @@ export function useCaixaVendasEmEspera(deps: UseCaixaVendasEmEsperaDeps) {
   }, [])
 
   useEffect(() => {
-    if (esperaInicialRef.current) {
-      esperaInicialRef.current = null
-      return
-    }
     void recarregarEmEspera()
   }, [recarregarEmEspera, turnoRefreshToken])
 
