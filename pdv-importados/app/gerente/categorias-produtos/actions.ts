@@ -13,6 +13,7 @@ import {
   atualizarCadastro,
   listarCadastro,
 } from '../shared/actionHelpers'
+import { mapaContagemProdutos } from '../shared/contagemProdutosEmbutida'
 import type { CategoriaProdutoRow } from './categoriasProdutosTypes'
 
 // '/gerente/categorias-produtos' é um redirect legado sem RSC próprio — revalidá-lo
@@ -67,14 +68,10 @@ export async function listarCategoriasProdutos(
     postProcess: async (rows, supabase) => {
       const ids = rows.map((r) => r.id)
       if (ids.length === 0) return rows
-      const counts = await Promise.all(
-        ids.map((catId) =>
-          supabase.from('produtos').select('id', { count: 'exact', head: true }).eq('categoria_id', catId)
-            .then(({ count }) => [catId, count ?? 0] as const),
-        ),
-      )
-      const qtdMap: Record<string, number> = {}
-      for (const [catId, qtd] of counts) qtdMap[catId] = qtd
+      // Uma leitura com contagem embutida (FK produtos.categoria_id) no lugar de um
+      // HEAD count por categoria da página — mesma RLS, mesmo número.
+      const { data } = await supabase.from('categorias').select('id, produtos(count)').in('id', ids)
+      const qtdMap = mapaContagemProdutos(data)
       return rows.map((r) => ({ ...r, qtd_produtos: qtdMap[r.id] ?? 0 }))
     },
   })
