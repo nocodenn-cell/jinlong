@@ -1,7 +1,6 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { clearStaleSessionIfNeeded } from '@/lib/auth/staleSession'
 import { cancelarVenda } from '@/app/caixa/actions'
 import { parseCancelarVendaGerenteForm } from '@/app/gerente/vendas/parseCancelarVendaGerenteForm'
 import { parseDevolverVendaForm } from '@/app/gerente/vendas/parseDevolverVendaForm'
@@ -72,14 +71,13 @@ type RpcKpiRow = {
   valor_canceladas: number
 }
 
+/**
+ * Toda action que usa este client chama `assertGerenteSession()` antes: a sessão já
+ * foi validada (getUser + perfil, com cache por request). Repetir `auth.getUser()`
+ * aqui somava uma ida extra ao Supabase Auth por chamada, sem nenhuma checagem nova.
+ */
 async function createVendasSupabaseClient() {
-  const supabase = await createClient()
-  const { error: authError } = await supabase.auth.getUser()
-  if (authError) {
-    if (await clearStaleSessionIfNeeded(supabase, authError)) return null
-    throw authError
-  }
-  return supabase
+  return createClient()
 }
 
 function eventTypesFromFiltro(status: ReadonlyArray<string>): string[] {

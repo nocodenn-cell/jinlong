@@ -90,10 +90,52 @@ function buildContract(session: AdminSession, source: SessionSource): AdminSessi
 }
 
 /**
+ * `sub` do access token guardado nos cookies, lido SEM verificar a assinatura.
+ *
+ * Serve apenas como dica para iniciar a leitura do perfil em paralelo com
+ * `auth.getUser()`. Nunca é base de decisão: o resultado antecipado só é usado
+ * quando `getUser()` (verificação no servidor de Auth) confirma o MESMO id, e a
+ * própria leitura roda com esse JWT — validado pelo PostgREST e sujeito a RLS.
+ * Qualquer falha devolve `null` e o fluxo segue sequencial, como antes.
+ */
+async function lerDicaUserIdNaoVerificada(supabase: SupabaseClient): Promise<string | null> {
+  try {
+    const { data } = await supabase.auth.getSession()
+    const token = data?.session?.access_token
+    if (typeof token !== 'string') return null
+    const payload = token.split('.')[1]
+    if (!payload) return null
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/')
+    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=')
+    const sub = (JSON.parse(atob(padded)) as { sub?: unknown }).sub
+    return typeof sub === 'string' && sub.length > 0 ? sub : null
+  } catch {
+    return null
+  }
+}
+
+function lerPerfilUsuario(supabase: SupabaseClient, userId: string) {
+  return supabase.from('usuarios').select(USUARIO_SELECT).eq('id', userId).single()
+}
+
+/**
  * Única leitura Supabase de auth + perfil (cookies já vinculados ao client).
  * Retorna apenas dados brutos — sem interpretação de role/permissão.
+ *
+ * Perf (docs/audits/AUDITORIA_AUTH_PERFORMANCE.md): o perfil é lido em paralelo
+ * com `getUser()` em vez de depois dele, tirando uma ida sequencial ao Supabase de
+ * cada request (middleware e RSC). A regra de acesso não muda — sem `getUser()`
+ * válido não há sessão, e perfil lido para outro id é descartado e relido.
  */
 export async function fetchRawSession(supabase: SupabaseClient): Promise<RawSession> {
+  const dicaUserId = await lerDicaUserIdNaoVerificada(supabase)
+  const perfilAntecipado = dicaUserId
+    ? Promise.resolve(lerPerfilUsuario(supabase, dicaUserId)).then(
+        (res) => res,
+        () => null,
+      )
+    : null
+
   const {
     data: { user },
     error: authError,
@@ -108,11 +150,9 @@ export async function fetchRawSession(supabase: SupabaseClient): Promise<RawSess
 
   if (!user) return { status: 'anonymous' }
 
-  const { data: usuario, error: dbError } = await supabase
-    .from('usuarios')
-    .select(USUARIO_SELECT)
-    .eq('id', user.id)
-    .single()
+  const antecipado = perfilAntecipado && dicaUserId === user.id ? await perfilAntecipado : null
+  const { data: usuario, error: dbError } =
+    antecipado && !antecipado.error ? antecipado : await lerPerfilUsuario(supabase, user.id)
 
   if (dbError) {
     return { status: 'db_error', user, error: dbError }

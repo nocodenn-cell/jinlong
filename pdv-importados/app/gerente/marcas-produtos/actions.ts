@@ -11,6 +11,7 @@ import {
   criarCadastro,
   listarCadastro,
 } from '../shared/actionHelpers'
+import { mapaContagemProdutos } from '../shared/contagemProdutosEmbutida'
 
 const REVALIDATE_PATHS = ['/gerente/produtos', '/admin/catalogo', '/admin/marcas-produtos'] as const
 const TABELA = 'marcas'
@@ -85,16 +86,13 @@ export async function listarMarcasProdutos(
     toRow,
     postProcess: async (rows, supabase) => {
       if (rows.length === 0) return rows
-      const counts = await Promise.all(
-        rows.map((r) =>
-          supabase
-            .from('produtos')
-            .select('id', { count: 'exact', head: true })
-            .eq('marca_id', r.id)
-            .then(({ count }) => [r.id, count ?? 0] as const),
-        ),
-      )
-      const qtd = Object.fromEntries(counts)
+      // Uma leitura com contagem embutida (FK produtos.marca_id) no lugar de um
+      // HEAD count por marca da página — mesma RLS, mesmo número.
+      const { data } = await supabase
+        .from('marcas')
+        .select('id, produtos(count)')
+        .in('id', rows.map((r) => r.id))
+      const qtd = mapaContagemProdutos(data)
       return rows.map((r) => ({ ...r, qtd_produtos: qtd[r.id] ?? 0 }))
     },
   })

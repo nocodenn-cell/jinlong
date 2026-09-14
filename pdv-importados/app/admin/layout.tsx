@@ -4,7 +4,7 @@ import { getAdminContext } from '@/lib/admin/context/adminContext'
 import { resolveAdminSession } from '@/lib/admin/auth/resolveAdminSession'
 import type { AdminSession } from '@/lib/admin/auth/types'
 import { AdminToastViewport, AdminV2Shell } from '@/components/ui/admin-v2'
-import { createClient } from '@/lib/supabase/server'
+import { contarEstoqueBaixo, lerFlagsVisuaisPdv } from '@/lib/admin/sinaisVisuaisAdmin'
 
 export const dynamic = 'force-dynamic'
 export const fetchCache = 'force-no-store'
@@ -31,14 +31,12 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   // Observabilidade visual (flag `pdv_config.show_stock_alerts`): badge na sidebar.
   // Best-effort — qualquer falha mantém o shell idêntico ao comportamento atual (sem badge).
   let stockAlertCount: number | undefined
+  // Leituras com cache por request: o Dashboard reaproveita o mesmo resultado.
   try {
-    const supabase = await createClient()
-    const { data: cfgRows } = await supabase.rpc('pdv_config_flags_visuais')
+    const { data: cfgRows } = await lerFlagsVisuaisPdv()
     const cfg = Array.isArray(cfgRows) ? cfgRows[0] : cfgRows
     if (cfg?.show_stock_alerts) {
-      const { count } = await supabase
-        .from('v_estoque_baixo')
-        .select('id', { count: 'exact', head: true })
+      const { count } = await contarEstoqueBaixo()
       stockAlertCount = count ?? 0
     }
   } catch {

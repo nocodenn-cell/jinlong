@@ -1,7 +1,5 @@
 import 'server-only'
-import { cache } from 'react'
-import { createClient } from '@/lib/supabase/server'
-import { clearStaleSessionIfNeeded } from '@/lib/auth/staleSession'
+import { getRawSession } from '@/lib/admin/auth/sessionConsistency'
 import { normalizeIdioma, type Idioma } from '@/idioma/normalizeIdioma'
 import { normalizePerfilUsuario, type PerfilUsuario } from '@/idioma/normalizePerfilUsuario'
 
@@ -14,48 +12,35 @@ export type UsuarioAtual = {
   lojaId: string | null
 }
 
+const ANONIMO: UsuarioAtual = { userId: null, perfil: 'OPERADOR', idioma: 'pt', lojaId: null }
+
 /**
  * Resolve usuário, perfil e idioma uma única vez por requisição.
  *
- * `cache()` do React memoiza o resultado dentro do escopo da requisição (RSC render
- * + Server Actions invocadas durante o render). Assim, layout, page e todas as actions
- * compartilham UMA chamada a `auth.getUser()` (round-trip de rede ao Auth do Supabase)
- * e UM SELECT de perfil, em vez de repeti-los a cada chamada.
+ * Deriva de `getRawSession()` (`cache()` do React por request). Assim o layout
+ * admin, a página, `getUsuarioAtual` e as Server Actions do mesmo request
+ * compartilham UMA chamada a `auth.getUser()` e UMA leitura de `usuarios` — antes
+ * eram dois caches independentes lendo o mesmo perfil com colunas diferentes.
+ * Semântica preservada: sessão stale ou ausente → anônimo; erro de auth ou de
+ * leitura do perfil → exceção.
  */
-export const getUsuarioAtual = cache(async (): Promise<UsuarioAtual> => {
-  const supabase = await createClient()
+export async function getUsuarioAtual(): Promise<UsuarioAtual> {
+  const raw = await getRawSession()
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError) {
-    if (await clearStaleSessionIfNeeded(supabase, authError)) {
-      return { userId: null, perfil: 'OPERADOR', idioma: 'pt', lojaId: null }
-    }
-    throw authError
+  switch (raw.status) {
+    case 'authenticated':
+      return {
+        userId: raw.user.id,
+        perfil: normalizePerfilUsuario(raw.usuario?.perfil),
+        idioma: normalizeIdioma(raw.usuario?.idioma_preferido),
+        lojaId: (raw.usuario?.loja_id as string | null | undefined) ?? null,
+      }
+    case 'auth_error':
+      throw raw.error
+    case 'db_error':
+      console.error('Erro ao buscar usuário:', raw.error)
+      throw raw.error
+    default:
+      return { ...ANONIMO }
   }
-
-  if (!user) {
-    return { userId: null, perfil: 'OPERADOR', idioma: 'pt', lojaId: null }
-  }
-
-  const { data: usuario, error: dbError } = await supabase
-    .from('usuarios')
-    .select('perfil, idioma_preferido, loja_id')
-    .eq('id', user.id)
-    .single()
-
-  if (dbError) {
-    console.error('Erro ao buscar usuário:', dbError)
-    throw dbError
-  }
-
-  return {
-    userId: user.id,
-    perfil: normalizePerfilUsuario(usuario?.perfil),
-    idioma: normalizeIdioma(usuario?.idioma_preferido),
-    lojaId: (usuario?.loja_id as string | null | undefined) ?? null,
-  }
-})
+}
