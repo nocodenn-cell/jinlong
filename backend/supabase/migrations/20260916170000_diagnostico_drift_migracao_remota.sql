@@ -1,0 +1,32 @@
+-- Diagnóstico: migration-remote-drift
+--
+-- Data: 2026-09-16 17:00:00 UTC
+-- Causa: Produção aplicou 21 migrations (20260902130000…20260913090000)
+--        que não estão no repositório. Registra fato sem alterar estado.
+--
+-- Histórico:
+-- - 20260902* (snapshot fiscal v4, 6 migrations + dependências)
+-- - 20260903* (ajustes fiscal, 10 migrations)
+-- - 20260909200000 (venda saldo caixa)
+-- - 20260913090000 (relatório TZ)
+-- - 20260910114603 (órfã no CLI — sem arquivo no repo)
+--
+-- Impacto em SEC-04/05/06:
+-- - NENHUM. As 3 migrations de segurança (20260916120000/120100/120200)
+--   são independentes do gap anterior.
+-- - Não há consumidor de tokens_desconto_gerente/transferir_estoque_*
+--   nas migrations faltantes.
+--
+-- Recomendação:
+-- - Este é um drift preexistente, não causado por este PR.
+-- - Reconciliação requer decisão de deploy (rebase, cherry-pick, ou reconcile).
+-- - NÃO alterar DDL nem tentar repair sem validação do estado de produção.
+--
+-- Próximo passo:
+-- - Consultar equipe DevOps/Supabase sobre a decisão de alinhamento.
+-- - Possibilidade: as 21 migrations foram snapshot de outro ambiente
+--   ou aplicadas via dashboard sem integração ao repo.
+
+BEGIN;
+-- Sem DDL. Comentário apenas.
+COMMIT;
