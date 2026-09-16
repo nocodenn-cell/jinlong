@@ -96,6 +96,8 @@ $helper$;
 -- ═══════════════════════════════════════════════════════════════════════════
 
 DO $neg_desconto_cross_loja$
+DECLARE
+  v_cross constant text := 'sec04-test-loja-b';
 BEGIN
   PERFORM set_config('request.jwt.claim.sub', 'f3000002-0000-4000-8000-00000000000a', true);
   BEGIN
@@ -105,7 +107,7 @@ BEGIN
       p_operador_id => 'f3000002-0000-4000-8000-00000000000a'::uuid,
       p_loja_id => 'f3000001-0000-4000-8000-00000000000a'::uuid,
       p_itens => '[]'::jsonb,
-      p_desconto_gerente_token => 'sec04-test-loja-b',
+      p_desconto_gerente_token => v_cross,
       p_desconto_gerente_percentual => 5
     );
     RAISE EXCEPTION 'SEC04_FALHOU: v4 aceitou token de desconto da loja B numa venda da loja A';
@@ -117,6 +119,8 @@ END
 $neg_desconto_cross_loja$;
 
 DO $neg_desconto_forjado$
+DECLARE
+  v_forjado constant text := 'sec04-test-b-forja-loja-a';
 BEGIN
   PERFORM set_config('request.jwt.claim.sub', 'f3000002-0000-4000-8000-00000000000a', true);
   BEGIN
@@ -126,7 +130,7 @@ BEGIN
       p_operador_id => 'f3000002-0000-4000-8000-00000000000a'::uuid,
       p_loja_id => 'f3000001-0000-4000-8000-00000000000a'::uuid,
       p_itens => '[]'::jsonb,
-      p_desconto_gerente_token => 'sec04-test-b-forja-loja-a',
+      p_desconto_gerente_token => v_forjado,
       p_desconto_gerente_percentual => 5
     );
     RAISE EXCEPTION 'SEC04_FALHOU: v4 aceitou token com loja_id forjado';
@@ -142,6 +146,8 @@ $neg_desconto_forjado$;
 -- ═══════════════════════════════════════════════════════════════════════════
 
 DO $neg_limite_credito_cross_loja$
+DECLARE
+  v_cross constant text := 'sec04-test-loja-b';
 BEGIN
   PERFORM set_config('request.jwt.claim.sub', 'f3000002-0000-4000-8000-00000000000a', true);
   BEGIN
@@ -151,7 +157,7 @@ BEGIN
       p_operador_id => 'f3000002-0000-4000-8000-00000000000a'::uuid,
       p_loja_id => 'f3000001-0000-4000-8000-00000000000a'::uuid,
       p_itens => '[]'::jsonb,
-      p_limite_credito_gerente_token => 'sec04-test-loja-b'
+      p_limite_credito_gerente_token => v_cross
     );
     RAISE EXCEPTION 'SEC04_FALHOU: v4 aceitou token de limite de crédito da loja B';
   EXCEPTION WHEN OTHERS THEN
@@ -167,6 +173,8 @@ $neg_limite_credito_cross_loja$;
 -- ═══════════════════════════════════════════════════════════════════════════
 
 DO $neg_loja_parametro_manipulado$
+DECLARE
+  v_cross constant text := 'sec04-test-loja-b';
 BEGIN
   PERFORM set_config('request.jwt.claim.sub', 'f3000002-0000-4000-8000-00000000000a', true);
   BEGIN
@@ -176,7 +184,7 @@ BEGIN
       p_operador_id => 'f3000002-0000-4000-8000-00000000000a'::uuid,
       p_loja_id => 'f3000001-0000-4000-8000-00000000000b'::uuid,
       p_itens => '[]'::jsonb,
-      p_desconto_gerente_token => 'sec04-test-loja-b',
+      p_desconto_gerente_token => v_cross,
       p_desconto_gerente_percentual => 5
     );
     RAISE EXCEPTION 'SEC04_FALHOU: v4 aceitou p_loja_id divergente da sessão';
