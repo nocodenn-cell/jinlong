@@ -17,3 +17,5 @@ b45b84a9aa88d3c944457146a935527059aa96f0:pdv-local/.env.example:jwt:9
 # CI workflow hardcoded anon key in old commits (before secret migration) — rotated
 53ecb5dbdf61d4a8570d81cb184c55424945d244:.github/workflows/ci-pdv-importados.yml:jwt:46
 30f7bf5624b35f461724bcd4fb9507bc70157407:.github/workflows/ci-pdv-importados.yml:jwt:44
+# SEC-04 (PR #413): literal sintetico de teste (sec04-test-b-forja-loja-a) passado como p_desconto_gerente_token; ja substituido por constante em 69bf93eb
+e3bd5d2b0a98f85afb11fa201c56a78b8877ca51:backend/scripts/sec04-token-gerente-tenant.test.sql:generic-api-key:129
