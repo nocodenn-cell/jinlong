@@ -61,6 +61,7 @@ const SQL_SUITES = [
   'nfe-duplicata-invalida-aborta.test.sql',
   'relatorio-consistencia-vendas-gerente.test.sql',
   'retomar-caixa-atomico.test.sql',
+  'sec04-token-gerente-tenant.test.sql',
 ]
 
 /** `psql` está de fato instalado e executável neste host? */
