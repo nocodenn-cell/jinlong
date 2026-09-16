@@ -653,25 +653,30 @@ async function main() {
     }
   });
 
-  await run("RPC transferir_estoque_entre_lojas (lojas iguais)", async () => {
-    await assertRpcErrorContains(admin, "transferir_estoque_entre_lojas", {
+  // SEC-06: o legado `transferir_estoque_entre_lojas` perdeu EXECUTE para a
+  // API (20260916120200). As 3 regras que o exercitavam agora cobrem a função
+  // canônica usada pelo app; a regra final prova que o legado ficou fechado.
+  await run("RPC transferir_estoque_seguro (lojas iguais)", async () => {
+    await assertRpcErrorContains(admin, "transferir_estoque_seguro", {
       p_loja_origem: IDS.loja,
       p_loja_destino: IDS.loja,
       p_produto_id: IDS.produto,
       p_quantidade: 1,
+      p_idempotency_key: `rls-scope-lojas-iguais-${randomUUID()}`,
     }, "LOJA_IGUAL");
   });
 
-  await run("RPC transferir_estoque_entre_lojas negado a OPERADOR", async () => {
-    await assertRpcErrorContains(operador, "transferir_estoque_entre_lojas", {
+  await run("RPC transferir_estoque_seguro negado a OPERADOR", async () => {
+    await assertRpcErrorContains(operador, "transferir_estoque_seguro", {
       p_loja_origem: IDS.loja,
       p_loja_destino: IDS.loja2,
       p_produto_id: IDS.produto,
       p_quantidade: 1,
+      p_idempotency_key: `rls-scope-operador-${randomUUID()}`,
     }, "TRANSFERENCIA_PERFIL");
   });
 
-  await run("RPC transferir_estoque_entre_lojas (sucesso)", async () => {
+  await run("RPC transferir_estoque_seguro (sucesso)", async () => {
     const readQtd = async (lojaId) => {
       const { data, error } = await dono
         .from("estoque")
@@ -684,12 +689,13 @@ async function main() {
     };
     const origAntes = await readQtd(IDS.loja);
     const dstAntes = await readQtd(IDS.loja2);
-    await assertRpcOk(gerente, "transferir_estoque_entre_lojas", {
+    await assertRpcOk(gerente, "transferir_estoque_seguro", {
       p_loja_origem: IDS.loja,
       p_loja_destino: IDS.loja2,
       p_produto_id: IDS.produto,
       p_quantidade: 1,
       p_observacao: "smoke rls transferência",
+      p_idempotency_key: `rls-scope-sucesso-${randomUUID()}`,
     });
     const origDepois = await readQtd(IDS.loja);
     const dstDepois = await readQtd(IDS.loja2);
@@ -699,6 +705,15 @@ async function main() {
     if (Math.abs(dstDepois - dstAntes - 1) > 0.0001) {
       throw new Error(`destino esperado +1 unidade (${dstAntes} -> ${dstDepois})`);
     }
+  });
+
+  await run("RPC transferir_estoque_entre_lojas (legado) negada a authenticated", async () => {
+    await assertRpcDenied(gerente, "transferir_estoque_entre_lojas", {
+      p_loja_origem: IDS.loja,
+      p_loja_destino: IDS.loja2,
+      p_produto_id: IDS.produto,
+      p_quantidade: 1,
+    });
   });
 
   await run("RPC fiscal_reprocessar_documento (documento inexistente)", async () => {

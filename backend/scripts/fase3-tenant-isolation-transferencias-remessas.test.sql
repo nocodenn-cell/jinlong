@@ -127,27 +127,23 @@ END
 $pos_transferencia_dono_cross_loja$;
 
 -- ═══════════════════════════════════════════════════════════════════════════
--- Negativo — mesma guarda em transferir_estoque_entre_lojas (legado)
+-- Legado transferir_estoque_entre_lojas — sem EXECUTE para a API (SEC-06,
+-- 20260916120200). A guarda de tenant é provada acima na função canônica.
 -- ═══════════════════════════════════════════════════════════════════════════
 
-DO $neg_entre_lojas_legado$
+DO $legado_sem_execute$
+DECLARE
+  v_legado regprocedure := to_regprocedure('public.transferir_estoque_entre_lojas(uuid,uuid,uuid,numeric,text)');
 BEGIN
-  PERFORM set_config('request.jwt.claim.sub', 'f0000002-0000-4000-8000-00000000000a', true);
-  BEGIN
-    PERFORM public.transferir_estoque_entre_lojas(
-      'f0000001-0000-4000-8000-00000000000b'::uuid,
-      'f0000001-0000-4000-8000-00000000000c'::uuid,
-      'f0000004-0000-4000-8000-000000000001'::uuid,
-      1, NULL
-    );
-    RAISE EXCEPTION 'FASE3_FALHOU: transferir_estoque_entre_lojas (legado) permitiu GERENTE fora das lojas';
-  EXCEPTION
-    WHEN OTHERS THEN
-      IF SQLERRM NOT LIKE 'TRANSFERENCIA_LOJA_INVALIDA%' THEN RAISE; END IF;
-      RAISE NOTICE 'Negativo OK (legado): GERENTE fora das lojas envolvidas foi negado (%).', SQLERRM;
-  END;
+  IF v_legado IS NOT NULL AND (
+       has_function_privilege('authenticated', v_legado, 'EXECUTE')
+    OR has_function_privilege('anon', v_legado, 'EXECUTE')
+    OR has_function_privilege('service_role', v_legado, 'EXECUTE')) THEN
+    RAISE EXCEPTION 'FASE3_FALHOU: transferir_estoque_entre_lojas (legado) ainda executável pela API';
+  END IF;
+  RAISE NOTICE 'Legado OK: transferir_estoque_entre_lojas sem EXECUTE para anon/authenticated/service_role.';
 END
-$neg_entre_lojas_legado$;
+$legado_sem_execute$;
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- Remessa: cria 2 remessas CONFERIDO (loja B) para os testes de
