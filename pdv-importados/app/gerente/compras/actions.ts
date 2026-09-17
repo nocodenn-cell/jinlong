@@ -224,6 +224,23 @@ export async function listarOrdensCompra(input: {
   }
 }
 
+/**
+ * S8/RM-14 — OCs elegíveis para o vínculo opcional do recebimento manual.
+ * Elegível = CONFIRMADA ou EM_TRANSITO (RASCUNHO ainda não foi confirmada
+ * pelo fornecedor; CANCELADA/RECEBIDA não fazem sentido como vínculo novo —
+ * RECEBIDA em particular é recusada de novo, defensivamente, no momento do
+ * submit por `validarVinculoOrdemCompra`). Reaproveita `listarOrdensCompra`
+ * duas vezes (uma por status) em vez de uma query nova — mesma RLS, mesmo
+ * escopo de loja, mesma busca, já testados; nenhum modelo de dado novo.
+ */
+export async function listarOrdensCompraElegiveisParaVinculo(busca?: string): Promise<OcListaDTO[]> {
+  const [confirmadas, emTransito] = await Promise.all([
+    listarOrdensCompra({ status: 'CONFIRMADA', busca, limite: 10, offset: 0 }),
+    listarOrdensCompra({ status: 'EM_TRANSITO', busca, limite: 10, offset: 0 }),
+  ])
+  return [...confirmadas.rows, ...emTransito.rows]
+}
+
 export async function obterOrdemCompraDetalhe(id: string): Promise<R<OcDetalheDTO>> {
   const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
