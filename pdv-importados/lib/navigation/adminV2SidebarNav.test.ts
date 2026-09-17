@@ -1,16 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import { ROUTES } from '@shared-core/navigation/routes'
 import {
-  ADMIN_V2_CORE_ITEMS,
-  ADMIN_V2_EXPANDED_ITEMS,
-  ADMIN_V2_SISTEMA_ITEMS,
+  ADMIN_V2_OPERACAO_ITEMS,
+  ADMIN_V2_CADASTROS_ITEMS,
+  ADMIN_V2_ANALISE_ITEMS,
+  ADMIN_V2_ADMINISTRACAO_ITEMS,
   type AdminV2NavItem,
 } from './adminV2SidebarNav'
 
 const TODOS: readonly AdminV2NavItem[] = [
-  ...ADMIN_V2_CORE_ITEMS,
-  ...ADMIN_V2_EXPANDED_ITEMS,
-  ...ADMIN_V2_SISTEMA_ITEMS,
+  ...ADMIN_V2_OPERACAO_ITEMS,
+  ...ADMIN_V2_CADASTROS_ITEMS,
+  ...ADMIN_V2_ANALISE_ITEMS,
+  ...ADMIN_V2_ADMINISTRACAO_ITEMS,
 ]
 
 /** Espelha o filtro de `SidebarNav`: itens `adminOnly` só para perfil ADMIN. */
@@ -23,7 +25,7 @@ function hrefs(itens: readonly AdminV2NavItem[]): string[] {
 }
 
 describe('menu admin — sanidade estrutural', () => {
-  it('ids são únicos entre os três grupos', () => {
+  it('ids são únicos entre os quatro grupos', () => {
     const ids = TODOS.map((i) => i.id)
     expect(new Set(ids).size).toBe(ids.length)
   })
@@ -34,8 +36,8 @@ describe('menu admin — sanidade estrutural', () => {
     }
   })
 
-  it('CORE tem no máximo 10 itens (Sprint 6 — redução de carga cognitiva)', () => {
-    expect(ADMIN_V2_CORE_ITEMS.length).toBeLessThanOrEqual(10)
+  it('Operação tem no máximo 10 itens (Sprint 6 — redução de carga cognitiva)', () => {
+    expect(ADMIN_V2_OPERACAO_ITEMS.length).toBeLessThanOrEqual(10)
   })
 })
 
@@ -54,8 +56,8 @@ describe('menu admin — hubs (Sprint 6)', () => {
     expect(visiveis).toContain(ROUTES.admin.estoque)
   })
 
-  it('categorias financeiras não aparecem em "Mais"', () => {
-    expect(hrefs(ADMIN_V2_EXPANDED_ITEMS)).not.toContain(ROUTES.admin.categoriasFinanceiras)
+  it('categorias financeiras não aparecem como entrada separada em Cadastros', () => {
+    expect(hrefs(ADMIN_V2_CADASTROS_ITEMS)).not.toContain(ROUTES.admin.categoriasFinanceiras)
   })
 })
 
@@ -97,8 +99,8 @@ describe('menu admin — nomenclatura', () => {
 })
 
 describe('menu admin — tarefas diárias não ficam escondidas', () => {
-  it('relatórios permanecem no CORE', () => {
-    expect(hrefs(ADMIN_V2_CORE_ITEMS)).toContain(ROUTES.admin.relatorios)
+  it('relatórios permanecem visíveis em Análise', () => {
+    expect(hrefs(ADMIN_V2_ANALISE_ITEMS)).toContain(ROUTES.admin.relatorios)
   })
 
   it('atalho para o PDV permanece disponível a todos os perfis gerenciais', () => {

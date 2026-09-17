@@ -35,9 +35,31 @@ export type AdminV2NavItem = {
   adminOnly?: boolean
 }
 
-export const ADMIN_V2_CORE_ITEMS: readonly AdminV2NavItem[] = [
+export const ADMIN_V2_OPERACAO_ITEMS: readonly AdminV2NavItem[] = [
   { id: 'dashboard', href: ROUTES.admin.dashboard, icon: LayoutDashboard, labelOverridePt: 'Visão geral', dictKey: 'dashboard' },
+  {
+    id: 'pdv',
+    href: ROUTES.caixa.home,
+    icon: Monitor,
+    labelPt: 'Ir para PDV',
+    labelCn: '前往收银',
+    hint: 'Abrir o terminal de caixa.',
+  },
   { id: 'vendas', href: ROUTES.admin.vendas, icon: ShoppingCart, labelOverridePt: 'Vendas e caixa', dictKey: 'vendas' },
+  {
+    id: 'estoque',
+    href: ROUTES.admin.estoque,
+    icon: Package,
+    labelOverridePt: 'Estoque',
+    dictKey: 'estoque',
+    hint: 'Saldos, recebimento, transferências e NF-e (abas no hub).',
+  },
+  { id: 'compras', href: ROUTES.admin.compras, icon: ClipboardList, labelOverridePt: 'Compras', labelCn: '采购' },
+  { id: 'financeiro', href: ROUTES.admin.financeiro, icon: Banknote, labelOverridePt: 'Financeiro e fiscal', dictKey: 'financeiro' },
+  { id: 'comissoes', href: ROUTES.admin.comissoes, icon: Percent, labelOverridePt: 'Comissões', dictKey: 'comissoes' },
+] as const
+
+export const ADMIN_V2_CADASTROS_ITEMS: readonly AdminV2NavItem[] = [
   {
     id: 'produtos',
     href: ROUTES.admin.catalogo,
@@ -47,6 +69,14 @@ export const ADMIN_V2_CORE_ITEMS: readonly AdminV2NavItem[] = [
     hint: 'Produtos, categorias e marcas (abas no hub).',
   },
   { id: 'clientes', href: ROUTES.admin.clientes, icon: Users, labelOverridePt: 'Clientes', dictKey: 'clientes' },
+  { id: 'fornecedores', href: ROUTES.admin.fornecedores, icon: Truck, labelOverridePt: 'Fornecedores', labelCn: '供应商' },
+] as const
+
+export const ADMIN_V2_ANALISE_ITEMS: readonly AdminV2NavItem[] = [
+  { id: 'relatorios', href: ROUTES.admin.relatorios, icon: FileBarChart2, labelOverridePt: 'Relatórios', dictKey: 'relatorios' },
+] as const
+
+export const ADMIN_V2_ADMINISTRACAO_ITEMS: readonly AdminV2NavItem[] = [
   {
     id: 'funcionarios',
     href: ROUTES.admin.funcionarios,
@@ -57,14 +87,6 @@ export const ADMIN_V2_CORE_ITEMS: readonly AdminV2NavItem[] = [
     hint: 'Cadastro de operadores e gerentes da loja.',
   },
   {
-    id: 'estoque',
-    href: ROUTES.admin.estoque,
-    icon: Package,
-    labelOverridePt: 'Estoque',
-    dictKey: 'estoque',
-    hint: 'Saldos, recebimento, transferências e NF-e (abas no hub).',
-  },
-  {
     id: 'auditoria',
     href: ROUTES.admin.auditoria,
     icon: ScrollText,
@@ -72,17 +94,6 @@ export const ADMIN_V2_CORE_ITEMS: readonly AdminV2NavItem[] = [
     labelCn: '审计',
     hint: 'Linha do tempo de eventos operacionais.',
   },
-  { id: 'financeiro', href: ROUTES.admin.financeiro, icon: Banknote, labelOverridePt: 'Financeiro e fiscal', dictKey: 'financeiro' },
-  { id: 'relatorios', href: ROUTES.admin.relatorios, icon: FileBarChart2, labelOverridePt: 'Relatórios', dictKey: 'relatorios' },
-] as const
-
-export const ADMIN_V2_EXPANDED_ITEMS: readonly AdminV2NavItem[] = [
-  { id: 'fornecedores', href: ROUTES.admin.fornecedores, icon: Truck, labelOverridePt: 'Fornecedores', labelCn: '供应商' },
-  { id: 'compras', href: ROUTES.admin.compras, icon: ClipboardList, labelOverridePt: 'Compras', labelCn: '采购' },
-  { id: 'comissoes', href: ROUTES.admin.comissoes, icon: Percent, labelOverridePt: 'Comissões', dictKey: 'comissoes' },
-] as const
-
-export const ADMIN_V2_SISTEMA_ITEMS: readonly AdminV2NavItem[] = [
   { id: 'configuracoes', href: ROUTES.admin.configuracoes, icon: Settings, labelOverridePt: 'Configurações', dictKey: 'configuracoes' },
   {
     id: 'provisionamento',
@@ -113,12 +124,4 @@ export const ADMIN_V2_SISTEMA_ITEMS: readonly AdminV2NavItem[] = [
     adminOnly: true,
   },
   { id: 'suspensao', href: ROUTES.admin.suspensao, icon: ShieldOff, labelOverridePt: 'Suspensão de vendas', dictKey: 'suspensao' },
-  {
-    id: 'pdv',
-    href: ROUTES.caixa.home,
-    icon: Monitor,
-    labelPt: 'Ir para PDV',
-    labelCn: '前往收银',
-    hint: 'Abrir o terminal de caixa.',
-  },
 ] as const

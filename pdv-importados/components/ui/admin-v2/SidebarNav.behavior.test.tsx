@@ -60,24 +60,15 @@ function renderMenu(perfilAdmin: boolean): string[] {
   return Array.from(container.querySelectorAll('a')).map((a) => a.getAttribute('href') ?? '')
 }
 
-/** Abre a gaveta "Mais" e devolve os hrefs visíveis depois disso. */
-function renderMenuComMaisAberto(perfilAdmin: boolean): string[] {
-  renderMenu(perfilAdmin)
-  const toggle = container.querySelector<HTMLButtonElement>('button[aria-expanded]')
-  expect(toggle).not.toBeNull()
-  flushSync(() => toggle?.click())
-  return Array.from(container.querySelectorAll('a')).map((a) => a.getAttribute('href') ?? '')
-}
-
 describe('SidebarNav — perfil DONO/GERENTE (cliente)', () => {
   it('não expõe nenhuma ferramenta interna de implantação/diagnóstico', () => {
-    const hrefs = renderMenuComMaisAberto(false)
+    const hrefs = renderMenu(false)
     expect(hrefs).not.toContain(ROUTES.admin.implantacao)
     expect(hrefs).not.toContain(ROUTES.admin.diagnosticoCaixa)
     expect(hrefs).not.toContain(ROUTES.admin.provisionamento)
   })
 
-  it('alcança catálogo e estoque no CORE (taxonomias via hub, não sidebar)', () => {
+  it('alcança catálogo e estoque em Cadastros/Operação (taxonomias via hub, não sidebar)', () => {
     const hrefs = renderMenu(false)
     expect(hrefs).toContain(ROUTES.admin.catalogo)
     expect(hrefs).not.toContain(ROUTES.admin.categoriasProdutos)
@@ -86,11 +77,11 @@ describe('SidebarNav — perfil DONO/GERENTE (cliente)', () => {
     expect(hrefs).not.toContain(ROUTES.admin.estoqueRecebimento)
   })
 
-  it('categorias financeiras não aparecem em "Mais" (aba do hub financeiro)', () => {
-    expect(renderMenuComMaisAberto(false)).not.toContain(ROUTES.admin.categoriasFinanceiras)
+  it('categorias financeiras não aparecem como entrada separada (aba do hub financeiro)', () => {
+    expect(renderMenu(false)).not.toContain(ROUTES.admin.categoriasFinanceiras)
   })
 
-  it('vê relatórios no CORE sem abrir a gaveta "Mais"', () => {
+  it('vê relatórios sempre visíveis, sem precisar abrir nenhuma gaveta', () => {
     const hrefs = renderMenu(false)
     expect(hrefs).toContain(ROUTES.admin.relatorios)
   })

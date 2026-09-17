@@ -2,12 +2,11 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState } from 'react'
-import { ChevronDown } from 'lucide-react'
 import {
-  ADMIN_V2_CORE_ITEMS,
-  ADMIN_V2_EXPANDED_ITEMS,
-  ADMIN_V2_SISTEMA_ITEMS,
+  ADMIN_V2_OPERACAO_ITEMS,
+  ADMIN_V2_CADASTROS_ITEMS,
+  ADMIN_V2_ANALISE_ITEMS,
+  ADMIN_V2_ADMINISTRACAO_ITEMS,
   type AdminV2NavItem,
 } from '@/lib/navigation/adminV2SidebarNav'
 import { ROUTES } from '@shared-core/navigation/routes'
@@ -41,8 +40,7 @@ export function SidebarNav({
   showAdminOnlyItems = false,
 }: SidebarNavProps) {
   const pathname = usePathname()
-  const [showMore, setShowMore] = useState(false)
-  const sistemaItems = ADMIN_V2_SISTEMA_ITEMS.filter(
+  const administracaoItems = ADMIN_V2_ADMINISTRACAO_ITEMS.filter(
     (item) => !item.adminOnly || showAdminOnlyItems,
   )
 
@@ -87,36 +85,24 @@ export function SidebarNav({
   return (
     <nav className="flex flex-col gap-6 p-3 lg:p-4">
       <div>
-        <div className="admin-v2-nav-group-label mb-2 px-3">CORE</div>
-        <ul className="flex flex-col gap-1">{ADMIN_V2_CORE_ITEMS.map((item) => renderItem(item))}</ul>
+        <div className="admin-v2-nav-group-label mb-2 px-3">Operação</div>
+        <ul className="flex flex-col gap-1">{ADMIN_V2_OPERACAO_ITEMS.map((item) => renderItem(item))}</ul>
       </div>
 
       <div>
-        <button
-          type="button"
-          onClick={() => setShowMore((current) => !current)}
-          aria-expanded={showMore}
-          aria-label={`Menu adicional ${showMore ? 'expandido' : 'recolhido'}`}
-          aria-controls="nav-expanded-items"
-          className="admin-v2-nav-group-label mb-2 flex w-full items-center justify-between px-3 text-left transition-colors hover:text-jl-fg-2"
-        >
-          <span>Mais</span>
-          <ChevronDown
-            className={cn('h-4 w-4 transition-transform', showMore ? 'rotate-180' : 'rotate-0')}
-            aria-hidden
-          />
-        </button>
-        {showMore ? (
-          <ul id="nav-expanded-items" className="flex flex-col gap-1">
-            {ADMIN_V2_EXPANDED_ITEMS.map((item) => renderItem(item))}
-          </ul>
-        ) : null}
+        <div className="admin-v2-nav-group-label mb-2 px-3">Cadastros</div>
+        <ul className="flex flex-col gap-1">{ADMIN_V2_CADASTROS_ITEMS.map((item) => renderItem(item))}</ul>
       </div>
 
       <div>
-        <div className="admin-v2-nav-group-label mb-2 px-3">SISTEMA</div>
+        <div className="admin-v2-nav-group-label mb-2 px-3">Análise</div>
+        <ul className="flex flex-col gap-1">{ADMIN_V2_ANALISE_ITEMS.map((item) => renderItem(item))}</ul>
+      </div>
+
+      <div>
+        <div className="admin-v2-nav-group-label mb-2 px-3">Administração</div>
         <ul className="flex flex-col gap-1">
-          {sistemaItems.map((item) => renderItem(item))}
+          {administracaoItems.map((item) => renderItem(item))}
         </ul>
       </div>
     </nav>
