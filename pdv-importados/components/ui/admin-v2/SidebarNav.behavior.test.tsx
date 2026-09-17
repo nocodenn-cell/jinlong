@@ -95,14 +95,14 @@ describe('SidebarNav — perfil DONO/GERENTE (cliente)', () => {
 })
 
 describe('SidebarNav — perfil ADMIN (equipe FastProduct)', () => {
-  it('mantém acesso às três ferramentas internas', () => {
+  it('mantém acesso a provisionamento, mas não a implantação nem diagnóstico do caixa', () => {
     const hrefs = renderMenu(true)
-    expect(hrefs).toContain(ROUTES.admin.implantacao)
-    expect(hrefs).toContain(ROUTES.admin.diagnosticoCaixa)
     expect(hrefs).toContain(ROUTES.admin.provisionamento)
+    expect(hrefs).not.toContain(ROUTES.admin.implantacao)
+    expect(hrefs).not.toContain(ROUTES.admin.diagnosticoCaixa)
   })
 
-  it('enxerga exatamente 3 itens a mais que DONO/GERENTE', () => {
-    expect(renderMenu(true).length - renderMenu(false).length).toBe(3)
+  it('enxerga exatamente 1 item a mais que DONO/GERENTE (provisionamento)', () => {
+    expect(renderMenu(true).length - renderMenu(false).length).toBe(1)
   })
 })

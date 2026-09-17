@@ -61,21 +61,29 @@ describe('menu admin — hubs (Sprint 6)', () => {
   })
 })
 
-describe('menu admin — ferramentas internas fora da visão do cliente', () => {
-  const INTERNOS = [
-    ROUTES.admin.implantacao,
-    ROUTES.admin.diagnosticoCaixa,
-    ROUTES.admin.provisionamento,
-  ]
+describe('menu admin — implantação e diagnóstico do caixa nunca aparecem na navegação', () => {
+  const OCULTOS = [ROUTES.admin.implantacao, ROUTES.admin.diagnosticoCaixa]
 
-  it('DONO/GERENTE não enxergam implantação, diagnóstico nem provisionamento', () => {
+  it('não existem como item de menu para nenhum perfil (nem DONO/GERENTE, nem ADMIN)', () => {
+    for (const href of OCULTOS) {
+      expect(hrefs(itensVisiveis(false))).not.toContain(href)
+      expect(hrefs(itensVisiveis(true))).not.toContain(href)
+      expect(hrefs(TODOS)).not.toContain(href)
+    }
+  })
+})
+
+describe('menu admin — ferramentas internas fora da visão do cliente', () => {
+  const INTERNOS = [ROUTES.admin.provisionamento]
+
+  it('DONO/GERENTE não enxergam provisionamento', () => {
     const visiveis = hrefs(itensVisiveis(false))
     for (const href of INTERNOS) {
       expect(visiveis).not.toContain(href)
     }
   })
 
-  it('ADMIN continua enxergando as ferramentas internas', () => {
+  it('ADMIN continua enxergando provisionamento', () => {
     const visiveis = hrefs(itensVisiveis(true))
     for (const href of INTERNOS) {
       expect(visiveis).toContain(href)
