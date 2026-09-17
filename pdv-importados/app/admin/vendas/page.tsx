@@ -84,6 +84,8 @@ type SearchParams = {
   status?: string
   pagamento?: string
   page?: string
+  /** Deep-link (ex.: Relatórios) — abre o detalhe desta venda ao carregar. */
+  venda?: string
 }
 
 type PageProps = { searchParams?: Promise<SearchParams> }
@@ -349,7 +351,7 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
           </div>
         ) : null}
 
-        <VendasTable vendas={vendas} m={m} locale={locale} labels={{
+        <VendasTable vendas={vendas} m={m} locale={locale} vendaInicial={sp.venda ?? null} labels={{
           colVenda: ui.vendas_col_venda,
           colHora: ui.vendas_col_hora,
           colItens: ui.vendas_col_itens,

@@ -13,7 +13,7 @@ import { EmptyState, ErrorState } from '@/components/ui/feedback'
 import { formatBRL } from '@/lib/format/money'
 import { formatDayMonthInLocale, formatDateTimeOrDash } from '@/lib/format/datetime'
 import { CHART_COLORS } from '@/lib/tokens/chartColors'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES, adminCatalogoProdutoQuery, adminVendaDetalheQuery } from '@shared-core/navigation/routes'
 import type {
   RelatorioVendaDiaDTO,
   RelatorioTopProdDTO,
@@ -183,7 +183,11 @@ function TopProdutosList({ top, labels }: { top: RelatorioTopProdDTO[]; labels: 
       {top.slice(0, 8).map((item) => {
         const width = Math.max(6, Math.round((item.total_valor / max) * 100))
         return (
-          <div key={item.id} className="space-y-1">
+          <Link
+            key={item.id}
+            href={adminCatalogoProdutoQuery(item.id)}
+            className="-m-1 block space-y-1 rounded-lg p-1 transition-colors hover:bg-[var(--color-background-secondary)]"
+          >
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <p className="truncate text-small font-medium text-jl-fg-1">{item.nome}</p>
@@ -205,7 +209,7 @@ function TopProdutosList({ top, labels }: { top: RelatorioTopProdDTO[]; labels: 
                 style={{ width: `${width}%` }}
               />
             </div>
-          </div>
+          </Link>
         )
       })}
     </div>
@@ -231,9 +235,10 @@ function EstoqueReposicaoList({
       {ordenado.map((item) => {
         const minZero = Number(item.estoque_minimo) <= 0
         return (
-          <div
+          <Link
             key={item.id}
-            className="flex items-center justify-between rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-background-secondary)] px-3 py-2"
+            href={adminCatalogoProdutoQuery(item.id)}
+            className="flex items-center justify-between rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-background-secondary)] px-3 py-2 transition-colors hover:border-[var(--color-border)]"
           >
             <div className="min-w-0">
               <p className="truncate text-small font-medium text-jl-fg-1">{item.nome}</p>
@@ -247,7 +252,7 @@ function EstoqueReposicaoList({
             <span className="admin-v2-badge-warning shrink-0 rounded-full px-2 py-1 text-caption">
               {labels.reporTemplate.replace('{{n}}', String(item.deficit))}
             </span>
-          </div>
+          </Link>
         )
       })}
     </div>
@@ -277,7 +282,9 @@ function MargemPorVendaList({
           {vendas.slice(0, 20).map((v) => (
             <tr key={v.venda_id} className="border-b border-[var(--color-background-tertiary)]">
               <td className="py-1.5 pr-3 text-jl-fg-2">
-                {formatDateTimeOrDash(v.data, labels.locale, 'short')}
+                <Link href={adminVendaDetalheQuery(v.venda_id)} className="hover:underline">
+                  {formatDateTimeOrDash(v.data, labels.locale, 'short')}
+                </Link>
               </td>
               <td className="py-1.5 pr-3 text-right text-jl-fg-1">{formatBRL(v.total_liquido)}</td>
               <td className="py-1.5 pr-3 text-right text-jl-fg-2">
@@ -326,7 +333,11 @@ function CurvaAbcList({
         <tbody>
           {produtos.slice(0, 30).map((p) => (
             <tr key={p.produtoId} className="border-b border-[var(--color-background-tertiary)]">
-              <td className="max-w-[220px] truncate py-1.5 pr-3 text-jl-fg-1">{p.nome}</td>
+              <td className="max-w-[220px] truncate py-1.5 pr-3 text-jl-fg-1">
+                <Link href={adminCatalogoProdutoQuery(p.produtoId)} className="hover:underline">
+                  {p.nome}
+                </Link>
+              </td>
               <td className="py-1.5 pr-3 text-right text-jl-fg-2">{formatBRL(p.totalValor)}</td>
               <td className="py-1.5 pr-3 text-right text-jl-fg-3">{p.percentualAcumulado.toFixed(1)}%</td>
               <td className="py-1.5 pr-3 text-right">
@@ -359,9 +370,10 @@ function CoberturaEstoqueList({
     <div className="space-y-2">
       <p className="text-caption italic text-jl-fg-3">{labels.coberturaEstoqueHint}</p>
       {comCobertura.map((i) => (
-        <div
+        <Link
           key={`${i.produtoId}-${i.lojaId}`}
-          className="flex items-center justify-between rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-background-secondary)] px-3 py-2"
+          href={adminCatalogoProdutoQuery(i.produtoId)}
+          className="flex items-center justify-between rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-background-secondary)] px-3 py-2 transition-colors hover:border-[var(--color-border)]"
         >
           <div className="min-w-0">
             <p className="truncate text-small font-medium text-jl-fg-1">{i.nome}</p>
@@ -376,7 +388,7 @@ function CoberturaEstoqueList({
               diasCap: labels.coberturaEstoqueDiasCap,
             })}
           </span>
-        </div>
+        </Link>
       ))}
     </div>
   )
@@ -398,9 +410,10 @@ function DivergenciaEstoqueList({
     <div className="space-y-2">
       <p className="text-caption italic text-jl-fg-3">{labels.divergenciaEstoqueHint}</p>
       {comDivergencia.map((i) => (
-        <div
+        <Link
           key={`${i.produtoId}-${i.lojaId}`}
-          className="flex items-center justify-between rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-background-secondary)] px-3 py-2"
+          href={adminCatalogoProdutoQuery(i.produtoId)}
+          className="flex items-center justify-between rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-background-secondary)] px-3 py-2 transition-colors hover:border-[var(--color-border)]"
         >
           <div className="min-w-0">
             <p className="truncate text-small font-medium text-jl-fg-1">{i.nome}</p>
@@ -413,7 +426,7 @@ function DivergenciaEstoqueList({
             {i.divergencia > 0 ? '+' : ''}
             {i.divergencia}
           </span>
-        </div>
+        </Link>
       ))}
     </div>
   )
@@ -443,7 +456,11 @@ function SemGiroList({
           <tbody>
             {itens.slice(0, 30).map((p) => (
               <tr key={p.produto_id} className="border-b border-[var(--color-background-tertiary)]">
-                <td className="max-w-[220px] truncate py-1.5 pr-3 text-jl-fg-1">{p.nome}</td>
+                <td className="max-w-[220px] truncate py-1.5 pr-3 text-jl-fg-1">
+                  <Link href={adminCatalogoProdutoQuery(p.produto_id)} className="hover:underline">
+                    {p.nome}
+                  </Link>
+                </td>
                 <td className="py-1.5 pr-3 text-right tabular-nums text-jl-fg-2">{p.quantidade_atual}</td>
                 <td className="py-1.5 pr-3 text-right tabular-nums text-jl-fg-1">
                   {formatBRL(p.valor_imobilizado)}
@@ -485,7 +502,9 @@ function VendasDetalheList({
           {vendas.slice(0, 100).map((v) => (
             <tr key={v.id} className="border-b border-[var(--color-background-tertiary)]">
               <td className="py-1.5 pr-3 text-jl-fg-2">
-                {v.data ? formatDateTimeOrDash(v.data, labels.locale, 'short') : '—'}
+                <Link href={adminVendaDetalheQuery(v.id)} className="hover:underline">
+                  {v.data ? formatDateTimeOrDash(v.data, labels.locale, 'short') : '—'}
+                </Link>
               </td>
               <td className="max-w-[180px] truncate py-1.5 pr-3 text-jl-fg-1">
                 {v.cliente_nome ?? labels.vendasSemCliente}

@@ -190,14 +190,17 @@ export function VendasTable({
   labels,
   m,
   locale,
+  vendaInicial = null,
 }: {
   vendas: VendaLinha[]
   labels: VendasLabels
   m: Mensagens
   locale: string
+  /** Deep-link (ex.: Relatórios) — abre o detalhe desta venda ao montar, mesmo fora da página/filtro atual. */
+  vendaInicial?: string | null
 }) {
   const router = useRouter()
-  const [alvo, setAlvo] = useState<VendaAlvo | null>(null)
+  const [alvo, setAlvo] = useState<VendaAlvo | null>(() => (vendaInicial ? { id: vendaInicial } : null))
   const [cancelarAlvo, setCancelarAlvo] = useState<VendaLinha | null>(null)
   const [comprovanteCancelamento, setComprovanteCancelamento] =
     useState<ComprovanteCancelamento | null>(null)

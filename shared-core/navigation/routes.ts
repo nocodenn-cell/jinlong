@@ -100,6 +100,13 @@ export function adminEstoqueRecebimentoProdutoQuery(produtoId: string): string {
   return pathWithQuery(ROUTES.admin.estoqueRecebimento, q)
 }
 
+/** Abre o detalhe de uma venda específica (ex.: a partir de uma linha de Relatórios). */
+export function adminVendaDetalheQuery(vendaId: string): string {
+  const q = new URLSearchParams()
+  if (vendaId.trim()) q.set('venda', vendaId.trim())
+  return pathWithQuery(ROUTES.admin.vendas, q)
+}
+
 export function adminEtiquetasProdutoQuery(opts: {
   codigo?: string | null
   produtoId?: string | null

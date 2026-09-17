@@ -255,6 +255,44 @@ describe('RelatoriosContent presentation', () => {
     expect(container.textContent).toContain('+2')
   })
 
+  it('RM-03: linhas de produto/venda linkam para o registro correspondente', () => {
+    flushSync(() => {
+      root.render(
+        renderRelatorios(
+          <RelatoriosContent
+            dados={baseDados({
+              top: [
+                {
+                  id: 'prod-top-1',
+                  nome: 'Produto Top',
+                  origem: 'brasil',
+                  total_quantidade: 5,
+                  total_valor: 100,
+                  num_vendas: 3,
+                },
+              ],
+            })}
+            labels={labels}
+          />,
+        ),
+      )
+    })
+    // Aba Produtos: top produtos linka para o catálogo.
+    const produtosTab = Array.from(container.querySelectorAll('[role="tab"]')).find(
+      (el) => el.textContent === 'Produtos',
+    ) as HTMLButtonElement
+    flushSync(() => produtosTab.click())
+    expect(container.querySelector('a[href="/admin/catalogo?produto=prod-top-1"]')).toBeTruthy()
+
+    // Aba Estoque: reposição e cobertura/divergência linkam para o catálogo.
+    const estoqueTab = Array.from(container.querySelectorAll('[role="tab"]')).find(
+      (el) => el.textContent === 'Estoque',
+    ) as HTMLButtonElement
+    flushSync(() => estoqueTab.click())
+    expect(container.querySelector('a[href="/admin/catalogo?produto=p1"]')).toBeTruthy()
+    expect(container.querySelector('a[href="/admin/catalogo?produto=g1"]')).toBeTruthy()
+  })
+
   it('esconde divergência de estoque quando não há nenhuma acima do ruído de arredondamento', () => {
     flushSync(() => {
       root.render(
