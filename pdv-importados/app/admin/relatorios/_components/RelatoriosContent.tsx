@@ -31,6 +31,7 @@ import { RelatoriosBarChart } from './RelatoriosBarChart'
 import { RelatoriosPeriodFilters } from './RelatoriosPeriodFilters'
 import type { RelatoriosFiltrosLabels } from './RelatoriosPeriodFilters'
 import { PaymentDonutChart } from '@/app/admin/dashboard/_components/PaymentDonutChart'
+import { KardexSheet, type KardexAlvo, type KardexLabels } from '@/app/admin/estoque/_components/KardexSheet'
 import {
   avisoPeriodoVisivel,
   formatDiasCobertura,
@@ -142,6 +143,7 @@ export type RelatoriosLabels = {
   erroTitulo: string
   filtros: RelatoriosFiltrosLabels
   locale: string
+  kardex: KardexLabels
 }
 
 function avisoCopy(aviso: ReturnType<typeof avisoPeriodoVisivel>, labels: RelatoriosLabels): string | null {
@@ -397,9 +399,11 @@ function CoberturaEstoqueList({
 function DivergenciaEstoqueList({
   itens,
   labels,
+  onAbrirKardex,
 }: {
   itens: RelatorioDivergenciaEstoqueDTO[]
   labels: RelatoriosLabels
+  onAbrirKardex: (alvo: KardexAlvo) => void
 }) {
   // A view já ordena por |divergência|; aqui só filtramos ruído de arredondamento.
   const comDivergencia = itens.filter((i) => Math.abs(i.divergencia) > 0.001).slice(0, 15)
@@ -410,10 +414,11 @@ function DivergenciaEstoqueList({
     <div className="space-y-2">
       <p className="text-caption italic text-jl-fg-3">{labels.divergenciaEstoqueHint}</p>
       {comDivergencia.map((i) => (
-        <Link
+        <button
           key={`${i.produtoId}-${i.lojaId}`}
-          href={adminCatalogoProdutoQuery(i.produtoId)}
-          className="flex items-center justify-between rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-background-secondary)] px-3 py-2 transition-colors hover:border-[var(--color-border)]"
+          type="button"
+          onClick={() => onAbrirKardex({ produtoId: i.produtoId, produtoNome: i.nome })}
+          className="flex w-full items-center justify-between rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-background-secondary)] px-3 py-2 text-left transition-colors hover:border-[var(--color-border)]"
         >
           <div className="min-w-0">
             <p className="truncate text-small font-medium text-jl-fg-1">{i.nome}</p>
@@ -426,7 +431,7 @@ function DivergenciaEstoqueList({
             {i.divergencia > 0 ? '+' : ''}
             {i.divergencia}
           </span>
-        </Link>
+        </button>
       ))}
     </div>
   )
@@ -587,6 +592,7 @@ export function RelatoriosContent({
 }) {
   const router = useRouter()
   const [tab, setTab] = useState<RelatoriosTabId>(() => parseRelatoriosTab(initialTab))
+  const [kardexAlvo, setKardexAlvo] = useState<KardexAlvo | null>(null)
 
   useEffect(() => {
     setTab(parseRelatoriosTab(initialTab))
@@ -757,7 +763,11 @@ export function RelatoriosContent({
               <CoberturaEstoqueList itens={dados.coberturaEstoque} labels={labels} />
             </SectionCard>
             <SectionCard title={labels.secDivergenciaEstoque}>
-              <DivergenciaEstoqueList itens={dados.divergenciaEstoque} labels={labels} />
+              <DivergenciaEstoqueList
+                itens={dados.divergenciaEstoque}
+                labels={labels}
+                onAbrirKardex={setKardexAlvo}
+              />
             </SectionCard>
             <SectionCard title={labels.secSemGiro}>
               <SemGiroList itens={dados.semGiro} labels={labels} />
@@ -797,6 +807,8 @@ export function RelatoriosContent({
           </div>
         ) : null}
       </div>
+
+      <KardexSheet alvo={kardexAlvo} onClose={() => setKardexAlvo(null)} labels={labels.kardex} />
     </div>
   )
 }

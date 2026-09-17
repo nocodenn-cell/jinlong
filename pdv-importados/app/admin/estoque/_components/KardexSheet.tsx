@@ -11,7 +11,7 @@ import { StatusChip } from '@/components/ui/StatusChip'
 
 export type KardexAlvo = Readonly<{ produtoId: string; produtoNome: string }>
 
-type KardexLabels = {
+export type KardexLabels = {
   titulo: string
   semMovimentos: string
   semMovimentosSub: string

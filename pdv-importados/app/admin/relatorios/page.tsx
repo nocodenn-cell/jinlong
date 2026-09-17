@@ -170,6 +170,25 @@ export default async function AdminRelatoriosPage({ searchParams }: PageProps) {
           imprimir: ui.relatorios_filtro_imprimir,
         },
         locale,
+        kardex: {
+          titulo: ui.estoque_kardex_titulo,
+          semMovimentos: ui.estoque_sem_movimentos,
+          semMovimentosSub: ui.estoque_sem_movimentos_sub,
+          tipoMap: {
+            VENDA: ui.estoque_tipo_venda,
+            COMPRA: ui.estoque_tipo_compra,
+            ENTRADA_NF: ui.estoque_tipo_entrada_nf,
+            ENTRADA: ui.estoque_tipo_entrada,
+            SAIDA: ui.estoque_tipo_saida,
+            AJUSTE: ui.estoque_tipo_ajuste,
+            ACERTO_INVENTARIO: m.estoque.motivo_acerto_inventario,
+            PERDA: m.estoque.motivo_perda,
+            QUEBRA: m.estoque.motivo_quebra_avaria,
+            DEVOLUCAO: ui.estoque_tipo_devolucao,
+            TRANSFERENCIA: ui.estoque_tipo_transferencia,
+            OUTRO: m.estoque.motivo_outro,
+          },
+        },
       }}
     />
   )
