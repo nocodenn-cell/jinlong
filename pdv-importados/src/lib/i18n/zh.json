@@ -1474,6 +1474,7 @@
     "err_srv_divergencia_fechamento_motivo": "差额超过 R$ {{limite}} 时必须填写原因（至少 5 个字符）。",
     "recibo": {
       "titulo": "非正式收据",
+      "cliente": "客户",
       "subtotal": "小计",
       "desconto_produtos": "商品折扣",
       "desconto_gerente": "经理折扣",

@@ -1474,6 +1474,7 @@
     "err_srv_divergencia_fechamento_motivo": "Diferença acima de R$ {{limite}} exige motivo (mín. 5 caracteres).",
     "recibo": {
       "titulo": "CUPOM NÃO FISCAL",
+      "cliente": "Cliente",
       "subtotal": "Subtotal",
       "desconto_produtos": "Desconto produtos",
       "desconto_gerente": "Desconto gerente",

@@ -35,6 +35,7 @@ afterEach(() => {
 const venda: ReciboVenda = {
   vendaId: 'venda-teste-0001',
   data: new Date('2026-08-27T12:00:00Z'),
+  clienteNome: null,
   itens: [
     { nome: 'Produto teste', quantidade: 2, precoUnitario: 10, precoOriginal: 10, tipoPreco: 'VAREJO' },
   ],

@@ -1139,6 +1139,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         lastReciboRef.current = {
           vendaId: res.vendaId,
           data: new Date(),
+          clienteNome,
           itens: itens.map((i) => ({
             nome: i.nome,
             quantidade: i.quantidade,
@@ -1271,6 +1272,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     tocarFeedback,
     perfil,
     clienteId,
+    clienteNome,
     saldoPendente,
     garantirVendaIdempotencyKey,
     marcarFinalizacaoPendente,
@@ -1553,6 +1555,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                       configCaixaWeb={configCaixaWeb}
                       clienteNome={clienteNome}
                       onRemoverCliente={handleRemoverCliente}
+                      onSelecionarCliente={abrirSelecionarCliente}
                     />
                     <div className="shrink-0">
                       <CaixaSearchBar
