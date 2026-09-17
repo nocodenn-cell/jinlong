@@ -1,9 +1,21 @@
 /** @vitest-environment jsdom */
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import React from 'react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createRoot, type Root } from 'react-dom/client'
 import { flushSync } from 'react-dom'
-import { AuditoriaTimeline, type AuditoriaTimelineLabels } from './AuditoriaTimeline'
 import type { AuditoriaEvento } from '../actions'
+import type { AuditoriaTimelineLabels } from './AuditoriaTimeline'
+
+// KardexSheet tem sua própria busca de dados (obterKardexProduto) e não é o
+// alvo deste teste — só a passagem do alvo certo (RM-10) importa aqui.
+vi.mock('@/app/admin/estoque/_components/KardexSheet', () => ({
+  KardexSheet: ({ alvo }: { alvo: { produtoId: string; produtoNome: string } | null }) =>
+    alvo
+      ? React.createElement('div', { 'data-testid': 'kardex-sheet' }, alvo.produtoNome)
+      : null,
+}))
+
+const { AuditoriaTimeline } = await import('./AuditoriaTimeline')
 
 // Item 16 do Plano Mestre: resumo/labels 100% vindos de `labels` (nenhuma
 // string PT hardcoded no componente) — este teste usa um dicionário zh
@@ -45,6 +57,14 @@ const labelsZh: AuditoriaTimelineLabels = {
   ajusteLabels: { COMPRA: '采购入库' },
   alertaLabels: { margem_negativa: '负毛利' },
   formaLabels: { PIX: 'PIX' },
+  verKardex: '查看库存卡',
+  kardex: {
+    titulo: '库存卡',
+    semMovimentos: '没有记录的移动',
+    semMovimentosSub: '该产品的进出将显示在这里。',
+    verAuditoria: '在审计中查看',
+    tipoMap: {},
+  },
 }
 
 function evento(overrides: Partial<AuditoriaEvento>): AuditoriaEvento {
@@ -130,5 +150,47 @@ describe('AuditoriaTimeline — i18n (item 16)', () => {
     })
     expect(container.textContent).toContain('本期没有事件')
     expect(container.textContent).toContain('调整时间范围或事件类型以查看审计轨迹。')
+  })
+
+  it('RM-10: abrir o detalhe de um ajuste de estoque com produto oferece "Ver Kardex", que abre o Kardex certo', () => {
+    flushSync(() => {
+      root.render(
+        <AuditoriaTimeline
+          eventos={[
+            evento({
+              id: 'e-ajuste',
+              tipo: 'AJUSTE_ESTOQUE',
+              resumoCodigo: 'ajuste_estoque',
+              resumoParams: { codigo: 'COMPRA', delta: '+5' },
+              valor: null,
+              detalhe: { produto_id: 'produto-77', produto_nome: 'Cabo USB-C', tipo_codigo: 'COMPRA' },
+            }),
+          ]}
+          labels={labelsZh}
+        />,
+      )
+    })
+
+    const linha = container.querySelector('li button') as HTMLButtonElement
+    flushSync(() => linha.click())
+
+    expect(container.querySelector('[data-testid="kardex-sheet"]')).toBeNull()
+    const btnKardex = Array.from(container.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Cabo USB-C'),
+    ) as HTMLButtonElement
+    expect(btnKardex).toBeTruthy()
+    flushSync(() => btnKardex.click())
+
+    const sheet = container.querySelector('[data-testid="kardex-sheet"]')
+    expect(sheet?.textContent).toBe('Cabo USB-C')
+  })
+
+  it('RM-10: evento sem produto associado não oferece "Ver Kardex"', () => {
+    flushSync(() => {
+      root.render(<AuditoriaTimeline eventos={[evento({})]} labels={labelsZh} />)
+    })
+    const linha = container.querySelector('li button') as HTMLButtonElement
+    flushSync(() => linha.click())
+    expect(container.textContent).not.toContain(labelsZh.verKardex)
   })
 })

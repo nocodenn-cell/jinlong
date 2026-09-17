@@ -303,6 +303,7 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
               motivoQuebra: m.estoque.motivo_quebra_avaria,
               motivoOutro: m.estoque.motivo_outro,
               kardexTitulo: ui.estoque_kardex_titulo,
+              kardexVerAuditoria: ui.estoque_kardex_ver_auditoria,
               semMovimentos: ui.estoque_sem_movimentos,
               semMovimentosSub: ui.estoque_sem_movimentos_sub,
               tipoVenda: ui.estoque_tipo_venda,

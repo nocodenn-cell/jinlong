@@ -164,6 +164,27 @@ export default async function AdminAuditoriaPage({ searchParams }: PageProps) {
       CARTAO_CREDITO: ui.auditoria_forma_cartao_credito,
       CREDITO_CLIENTE: ui.auditoria_forma_credito_cliente,
     },
+    verKardex: ui.auditoria_ver_kardex,
+    kardex: {
+      titulo: ui.estoque_kardex_titulo,
+      semMovimentos: ui.estoque_sem_movimentos,
+      semMovimentosSub: ui.estoque_sem_movimentos_sub,
+      verAuditoria: ui.estoque_kardex_ver_auditoria,
+      tipoMap: {
+        VENDA: ui.estoque_tipo_venda,
+        COMPRA: ui.estoque_tipo_compra,
+        ENTRADA_NF: ui.estoque_tipo_entrada_nf,
+        ENTRADA: ui.estoque_tipo_entrada,
+        SAIDA: ui.estoque_tipo_saida,
+        AJUSTE: ui.estoque_tipo_ajuste,
+        ACERTO_INVENTARIO: m.estoque.motivo_acerto_inventario,
+        PERDA: m.estoque.motivo_perda,
+        QUEBRA: m.estoque.motivo_quebra_avaria,
+        DEVOLUCAO: ui.estoque_tipo_devolucao,
+        TRANSFERENCIA: ui.estoque_tipo_transferencia,
+        OUTRO: m.estoque.motivo_outro,
+      },
+    },
   }
 
   const periodo = oneOf<Periodo>(sp.periodo, ['tudo', 'hoje', 'ontem', '7d', 'mes'], '7d')

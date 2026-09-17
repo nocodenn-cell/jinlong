@@ -51,6 +51,7 @@ export type EstoqueLabels = {
   motivoQuebra: string
   motivoOutro: string
   kardexTitulo: string
+  kardexVerAuditoria: string
   semMovimentos: string
   semMovimentosSub: string
   tipoVenda: string
@@ -240,6 +241,7 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
           titulo: labels.kardexTitulo,
           semMovimentos: labels.semMovimentos,
           semMovimentosSub: labels.semMovimentosSub,
+          verAuditoria: labels.kardexVerAuditoria,
           tipoMap: {
             VENDA: labels.tipoVenda,
             COMPRA: labels.tipoCompra,

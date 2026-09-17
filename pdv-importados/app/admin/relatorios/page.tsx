@@ -174,6 +174,7 @@ export default async function AdminRelatoriosPage({ searchParams }: PageProps) {
           titulo: ui.estoque_kardex_titulo,
           semMovimentos: ui.estoque_sem_movimentos,
           semMovimentosSub: ui.estoque_sem_movimentos_sub,
+          verAuditoria: ui.estoque_kardex_ver_auditoria,
           tipoMap: {
             VENDA: ui.estoque_tipo_venda,
             COMPRA: ui.estoque_tipo_compra,

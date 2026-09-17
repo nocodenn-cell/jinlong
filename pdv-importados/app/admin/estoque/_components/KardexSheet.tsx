@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { History } from 'lucide-react'
+import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
 import { obterKardexProduto, type KardexMovimento } from '../actions'
 import { DragonModal } from '@/components/ui/DragonModal'
 import { DataTable, type Column } from '@/components/ui/DataTable'
@@ -16,7 +18,21 @@ export type KardexLabels = {
   semMovimentos: string
   semMovimentosSub: string
   tipoMap: Record<string, string>
+  /** RM-10: link de volta para a trilha de auditoria (filtro geral de ajustes de estoque). */
+  verAuditoria: string
 }
+
+/**
+ * Kardex e Auditoria leem os mesmos dados (`movimentos_estoque_log`), mas até aqui
+ * eram becos sem saída um em relação ao outro. Sem filtro por produto na Auditoria
+ * ainda (RM-10 fica com esse follow-up), este link abre a trilha já filtrada por
+ * tipo — o operador continua tendo que localizar a linha do produto, mas não parte
+ * mais do zero.
+ */
+const AUDITORIA_AJUSTES_HREF = pathWithQuery(
+  ROUTES.admin.auditoria,
+  new URLSearchParams({ tipo: 'AJUSTE_ESTOQUE' }),
+)
 
 const dtFmt = new Intl.DateTimeFormat('pt-BR', {
   day: '2-digit',
@@ -121,6 +137,14 @@ export function KardexSheet({
       title={labels.titulo}
       subtitle={alvo.produtoNome}
       closeLabel="Fechar"
+      footer={
+        <Link
+          href={AUDITORIA_AJUSTES_HREF}
+          className="text-caption font-medium text-[var(--color-info)] hover:underline"
+        >
+          {labels.verAuditoria}
+        </Link>
+      }
     >
       {carregando ? (
         <Loading label="…" className="min-h-0 py-12" size="sm" />
