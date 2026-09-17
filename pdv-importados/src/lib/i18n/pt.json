@@ -2395,6 +2395,7 @@
     "estoque_vazio_titulo": "Nenhum produto encontrado",
     "estoque_vazio_sub": "Tente ajustar os filtros de busca, origem ou visão.",
     "estoque_ajuste_titulo": "Ajustar saldo",
+    "estoque_repor_titulo": "Repor estoque",
     "estoque_saldo_atual": "Saldo atual",
     "estoque_salvar_ajuste": "Salvar ajuste",
     "estoque_kardex_titulo": "Kardex",

@@ -87,6 +87,44 @@ export async function buscarProdutosRecebimento(
   }
 }
 
+/**
+ * Busca um produto específico por id para pré-selecionar o recebimento
+ * (ex.: deep-link "Repor" a partir de um item crítico em `/admin/estoque`).
+ * Mesmo escopo/filtro de `buscarProdutosRecebimento`: produto de outra loja
+ * ou INATIVO retorna `null` em vez de erro — o formulário só degrada para a
+ * busca manual, sem quebrar a página.
+ */
+export async function buscarProdutoRecebimentoPorId(
+  id: string,
+): Promise<R<RecebimentoProdutoBusca | null>> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const lojaId = await lojaDoUsuario()
+  if (!lojaId) {
+    return { success: false, error: 'Não foi possível identificar sua loja. Faça login novamente.' }
+  }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('produtos')
+    .select('id, nome, codigo_barras, status_publicacao')
+    .eq('loja_id', lojaId)
+    .eq('id', id)
+    .maybeSingle()
+
+  if (error) {
+    return { success: false, error: mensagemErroComSecao('Produtos', error.message) }
+  }
+  if (!data || isInativo(data.status_publicacao as StatusPublicacao | null)) {
+    return { success: true, data: null }
+  }
+  return {
+    success: true,
+    data: { id: data.id, nome: data.nome, codigo_barras: data.codigo_barras },
+  }
+}
+
 export async function criarRemessaConferencia(input: {
   origem: string
   observacao?: string

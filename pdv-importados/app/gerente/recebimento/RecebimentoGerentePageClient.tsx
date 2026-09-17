@@ -41,6 +41,8 @@ type Props = Readonly<{
   remessasRecentes: RemessaRecenteRow[]
   /** Admin hub S6: oculta link “voltar” redundante com abas de estoque. */
   embeddedInAdminHub?: boolean
+  /** Deep-link "Repor" a partir de um item crítico em `/admin/estoque`. */
+  produtoPreSelecionado?: RecebimentoProdutoOpt | null
 }>
 
 export function RecebimentoGerentePageClient({
@@ -48,6 +50,7 @@ export function RecebimentoGerentePageClient({
   produtos,
   remessasRecentes,
   embeddedInAdminHub = false,
+  produtoPreSelecionado = null,
 }: Props) {
   const m = getMessages(idioma)
   const r = m.gerente.recebimento_page
@@ -233,6 +236,7 @@ export function RecebimentoGerentePageClient({
                 semResultadosLabel={r.produto_sem_resultados}
                 minimoLabel={r.produto_busca_minimo}
                 limparLabel={r.produto_limpar}
+                valorInicial={produtoPreSelecionado}
               />
             </Field>
             <Field id="rec-obs" label={r.label_observacao} className="md:col-span-2">

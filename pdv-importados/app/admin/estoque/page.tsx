@@ -289,6 +289,7 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
               vazioTitulo: ui.estoque_vazio_titulo,
               vazioSub: ui.estoque_vazio_sub,
               ajusteTitulo: ui.estoque_ajuste_titulo,
+              reporTitulo: ui.estoque_repor_titulo,
               saldoAtual: ui.estoque_saldo_atual,
               estoqueMinimo: m.estoque.col_estoque_minimo,
               motivo: m.estoque.ajuste_motivo_label,

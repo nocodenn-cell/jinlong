@@ -2578,6 +2578,7 @@
     "estoque_vazio_titulo": "未找到商品",
     "estoque_vazio_sub": "请调整搜索、来源或视图筛选。",
     "estoque_ajuste_titulo": "调整库存",
+    "estoque_repor_titulo": "补货",
     "estoque_saldo_atual": "当前库存",
     "estoque_salvar_ajuste": "保存调整",
     "estoque_kardex_titulo": "库存卡",

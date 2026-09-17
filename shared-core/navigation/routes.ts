@@ -93,6 +93,13 @@ export function adminEstoqueProdutoQuery(busca: string): string {
   return pathWithQuery(ROUTES.admin.estoque, q)
 }
 
+/** Abre o recebimento manual com o produto já selecionado (ex.: a partir de um item crítico). */
+export function adminEstoqueRecebimentoProdutoQuery(produtoId: string): string {
+  const q = new URLSearchParams()
+  if (produtoId.trim()) q.set('produto', produtoId.trim())
+  return pathWithQuery(ROUTES.admin.estoqueRecebimento, q)
+}
+
 export function adminEtiquetasProdutoQuery(opts: {
   codigo?: string | null
   produtoId?: string | null
