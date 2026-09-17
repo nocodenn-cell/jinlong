@@ -4,9 +4,10 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { getGerenteLojaId } from '@/lib/gerente/auth/sessionContext'
-import { validarRemessaInput } from './actions.validation'
+import { validarRemessaInput, validarVinculoOrdemCompra } from './actions.validation'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 import { isInativo, type StatusPublicacao } from '@/core/catalog/statusPublicacao'
+import type { StatusOC } from '@/app/gerente/compras/actions'
 
 type R<T = null> = { success: true; data: T } | { success: false; error: string }
 
@@ -130,6 +131,8 @@ export async function criarRemessaConferencia(input: {
   observacao?: string
   idempotency_key: string
   itens: Array<{ produto_id: string; quantidade_esperada: number; quantidade_conferida: number }>
+  /** S8/RM-14 — vínculo opcional com uma Ordem de Compra (id de `ordens_compra`). */
+  ordemCompraId?: string | null
 }): Promise<R<string>> {
   const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
@@ -147,6 +150,33 @@ export async function criarRemessaConferencia(input: {
   const idempotencyKey = input.idempotency_key?.trim()
   if (!idempotencyKey) {
     return { success: false, error: 'Não foi possível identificar esta tentativa. Tente novamente.' }
+  }
+
+  // S8/RM-14 — validação de aplicação do vínculo com OC (Opção 1: não é trava
+  // de RPC nem de schema). Fail-closed: qualquer erro de consulta, OC não
+  // encontrada ou fora da loja recusa o recebimento inteiro — não é seguro
+  // assumir vínculo válido quando não confirmamos o status real da OC. Não é
+  // uma garantia transacional: entre esta leitura e a chamada da RPC abaixo
+  // não há lock — se o status da OC mudar nesse intervalo estreito, a
+  // corrida não é impedida. Aceitável para um fluxo humano de baixa
+  // frequência; não usar este padrão onde a invariante precisa ser atômica.
+  const ordemCompraId = input.ordemCompraId?.trim() || null
+  if (ordemCompraId) {
+    const { data: oc, error: ocError } = await supabase
+      .from('ordens_compra')
+      .select('status')
+      .eq('id', ordemCompraId)
+      .eq('loja_id', lojaId)
+      .maybeSingle()
+
+    if (ocError) {
+      return { success: false, error: 'Não foi possível confirmar a ordem de compra vinculada. Tente novamente.' }
+    }
+    if (!oc) {
+      return { success: false, error: 'Ordem de compra não encontrada.' }
+    }
+    const erroVinculo = validarVinculoOrdemCompra(oc.status as StatusOC)
+    if (erroVinculo) return { success: false, error: erroVinculo }
   }
 
   const { data: remessaId, error } = await supabase.rpc('criar_confirmar_remessa_entrada', {
