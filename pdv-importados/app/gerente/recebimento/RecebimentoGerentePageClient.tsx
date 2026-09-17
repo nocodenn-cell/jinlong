@@ -21,6 +21,7 @@ import { Field, Input } from '@/components/ui/forms'
 import { ROUTES } from '@shared-core/navigation/routes'
 import { criarRemessaConferencia } from './actions'
 import { ProdutoRecebimentoAutocomplete } from './ProdutoRecebimentoAutocomplete'
+import { OrdemCompraVinculoAutocomplete } from './OrdemCompraVinculoAutocomplete'
 
 export type RecebimentoProdutoOpt = { id: string; nome: string; codigo_barras: string | null }
 
@@ -86,11 +87,13 @@ export function RecebimentoGerentePageClient({
       qtd_esperada: number
       qtd_conferida: number
       idempotency_key: string
+      ordem_compra_id: string
     }) => {
       const res = await criarRemessaConferencia({
         origem: p.origem,
         observacao: p.observacao || undefined,
         idempotency_key: p.idempotency_key,
+        ordemCompraId: p.ordem_compra_id || undefined,
         itens: [
           {
             produto_id: p.produto_id,
@@ -215,6 +218,7 @@ export function RecebimentoGerentePageClient({
               qtd_esperada: qEsp,
               qtd_conferida: qConf,
               idempotency_key: idempotencyKeyRef.current,
+              ordem_compra_id: readFormDataString(fd, 'ordem_compra_id'),
             })
           }}
         >
@@ -237,6 +241,21 @@ export function RecebimentoGerentePageClient({
                 minimoLabel={r.produto_busca_minimo}
                 limparLabel={r.produto_limpar}
                 valorInicial={produtoPreSelecionado}
+              />
+            </Field>
+            <Field id="rec-oc" label={r.label_ordem_compra} className="md:col-span-2">
+              {/* S8/RM-14 — opcional; recebimento sem vínculo continua exatamente
+                  como hoje. A OC "já recebida" é recusada no servidor no submit. */}
+              <OrdemCompraVinculoAutocomplete
+                disabled={semProdutos}
+                placeholder={r.ph_ordem_compra_busca}
+                semResultadosLabel={r.ordem_compra_sem_resultados}
+                minimoLabel={r.produto_busca_minimo}
+                limparLabel={r.produto_limpar}
+                statusLabels={{
+                  CONFIRMADA: m.compras.status_CONFIRMADA,
+                  EM_TRANSITO: m.compras.status_EM_TRANSITO,
+                }}
               />
             </Field>
             <Field id="rec-obs" label={r.label_observacao} className="md:col-span-2">
