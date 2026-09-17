@@ -45,6 +45,7 @@ export type VendaDetalhe = Readonly<{
   status: string | null
   numero_nf: string | null
   operador_nome: string | null
+  cliente_nome: string | null
   tem_conta_receber: boolean
   valor_aberto_cr: number
   itens: VendaItemDetalhe[]
@@ -85,7 +86,8 @@ export async function obterDetalheVenda(vendaId: string): Promise<VendaDetalhe |
       `
       id, data, total_bruto, total_desconto, total_liquido,
       forma_pagamento, tipo_venda, status, numero_nf,
-      operador:usuarios!vendas_operador_id_fkey ( nome )
+      operador:usuarios!vendas_operador_id_fkey ( nome ),
+      cliente:clientes!vendas_cliente_id_fkey ( nome )
     `
     )
     .eq('id', vendaId)
@@ -165,6 +167,7 @@ export async function obterDetalheVenda(vendaId: string): Promise<VendaDetalhe |
     status: venda.status == null ? null : String(venda.status),
     numero_nf: venda.numero_nf == null ? null : String(venda.numero_nf),
     operador_nome: nomeRelacao(venda.operador, 'nome'),
+    cliente_nome: nomeRelacao(venda.cliente, 'nome'),
     tem_conta_receber: temContaReceber,
     valor_aberto_cr: valorAbertoCr,
     itens,

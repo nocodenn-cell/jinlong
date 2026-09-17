@@ -31,6 +31,8 @@ export type FinanceiroTituloListaRow = {
   loja_id: string
   /** Computado na leitura (vencimento < hoje, status em aberto) — item 13 do Plano Mestre. */
   atrasado: boolean
+  /** Venda de origem (fiado gerado na finalização), quando houver. */
+  venda_id: string | null
 }
 
 function pickParam(raw: Record<string, string | string[] | undefined>, key: string): string {
@@ -117,6 +119,7 @@ export async function fetchContasReceberListagem(
       cliente_nome: t.clienteNome,
       loja_id: t.lojaId,
       atrasado: t.atrasado,
+      venda_id: t.vendaId,
     })),
     capped: result.capped,
   }

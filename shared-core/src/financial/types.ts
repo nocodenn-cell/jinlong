@@ -28,6 +28,8 @@ export type ReceivableTitle = {
   lojaId: string
   /** Computado na leitura (vencimento < hoje, status em aberto) — nunca persistido. */
   atrasado: boolean
+  /** Venda de origem (fiado gerado na finalização), quando houver. */
+  vendaId: string | null
 }
 
 export type PayableTitle = {

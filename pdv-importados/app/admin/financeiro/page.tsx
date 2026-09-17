@@ -92,6 +92,7 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
     vencimento: t.vencimento,
     descricao: t.descricao,
     loja_id: t.loja_id,
+    venda_id: t.venda_id,
   }))
 
   const clientesOpts = clientesRes.ok ? clientesRes.clientes.map((c) => ({ id: c.id, nome: c.nome })) : []
@@ -229,6 +230,7 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
             statusQuitado: ui.financeiro_status_quitado,
             vazioTitulo: ui.financeiro_vazio_titulo,
             vazioSub: ui.financeiro_vazio_sub,
+            verVenda: ui.financeiro_ver_venda,
             locale,
           }}
           contasPagar={{

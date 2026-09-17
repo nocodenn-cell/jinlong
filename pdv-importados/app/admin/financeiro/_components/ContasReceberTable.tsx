@@ -8,6 +8,9 @@
  * chegam, e o sort dos headers ordena localmente (client-side).
  */
 
+import Link from 'next/link'
+import { Receipt } from 'lucide-react'
+import { adminVendaDetalheQuery } from '@shared-core/navigation/routes'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { formatBRL } from '@/lib/format/money'
 import { formatDateTimeOrDash } from '@/lib/format/datetime'
@@ -23,6 +26,8 @@ export type ContaLinha = {
   vencimento: string | null
   descricao: string | null
   loja_id: string
+  /** Venda de origem (fiado gerado na finalização), quando houver. */
+  venda_id: string | null
 }
 
 export type ContasLabels = {
@@ -37,6 +42,7 @@ export type ContasLabels = {
   statusQuitado: string
   vazioTitulo: string
   vazioSub: string
+  verVenda: string
   locale: string
 }
 
@@ -64,6 +70,16 @@ export function ContasReceberTable({ contas, labels }: { contas: ContaLinha[]; l
         <div className="min-w-0">
           <p className="max-w-[240px] truncate text-small font-medium text-jl-fg-1">{r.cliente_nome}</p>
           {r.descricao ? <p className="max-w-[240px] truncate text-caption text-jl-fg-3">{r.descricao}</p> : null}
+          {r.venda_id ? (
+            <Link
+              href={adminVendaDetalheQuery(r.venda_id)}
+              onClick={(e) => e.stopPropagation()}
+              className="mt-0.5 inline-flex items-center gap-1 text-caption text-[var(--color-info)] hover:underline"
+            >
+              <Receipt size={11} aria-hidden />
+              {labels.verVenda}
+            </Link>
+          ) : null}
         </div>
       ),
     },

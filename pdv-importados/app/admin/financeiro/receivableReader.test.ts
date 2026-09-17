@@ -75,6 +75,72 @@ describe('receivableReader', () => {
     })
   })
 
+  it('RM-07: mapeia vendaId quando o título nasceu de uma venda fiado', async () => {
+    const titulo = {
+      id: 't1',
+      valor_total: 50,
+      valor_aberto: 50,
+      status: 'ABERTO',
+      descricao: null,
+      vencimento: null,
+      cliente_id: 'cli1',
+      clientes: { nome: 'Maria' },
+      venda_id: 'venda-99',
+    }
+    const supabase = {
+      from: vi.fn((table: string) => {
+        if (table === 'contas_receber') {
+          return thenableQuery({ data: [titulo], error: null })
+        }
+        return thenableQuery({ data: [], error: null })
+      }),
+    } as never
+    const result = await createReceivableReader(supabase).list({
+      opcao: 'mix',
+      nomeCliente: '',
+      q: '',
+      de: '',
+      ate: '',
+      limite: 50,
+    })
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.titulos[0].vendaId).toBe('venda-99')
+  })
+
+  it('RM-07: título sem venda de origem mapeia vendaId nulo', async () => {
+    const titulo = {
+      id: 't2',
+      valor_total: 10,
+      valor_aberto: 10,
+      status: 'ABERTO',
+      descricao: null,
+      vencimento: null,
+      cliente_id: 'cli1',
+      clientes: { nome: 'Maria' },
+      venda_id: null,
+    }
+    const supabase = {
+      from: vi.fn((table: string) => {
+        if (table === 'contas_receber') {
+          return thenableQuery({ data: [titulo], error: null })
+        }
+        return thenableQuery({ data: [], error: null })
+      }),
+    } as never
+    const result = await createReceivableReader(supabase).list({
+      opcao: 'mix',
+      nomeCliente: '',
+      q: '',
+      de: '',
+      ate: '',
+      limite: 50,
+    })
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.titulos[0].vendaId).toBeNull()
+  })
+
   it('listLiquidacoes mapeia linhas incluindo estornos', async () => {
     const linhas = [
       { id: 'l2', titulo_id: 't1', valor: 30, forma_pagamento: 'PIX', created_at: '2026-08-15T10:00:00Z', operacao_tipo: 'ESTORNO', operacao_origem_id: 'l1' },

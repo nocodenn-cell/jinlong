@@ -59,6 +59,9 @@ export type VendasLabels = {
   detalheTipo: string
   detalheOperador: string
   detalheNfe: string
+  detalheCliente: string
+  detalheSaldoAberto: string
+  detalheVerFinanceiro: string
   detalheBruto: string
   detalheDesconto: string
   detalheLiquido: string
@@ -322,6 +325,9 @@ export function VendasTable({
           tipo: labels.detalheTipo,
           operador: labels.detalheOperador,
           nfe: labels.detalheNfe,
+          cliente: labels.detalheCliente,
+          saldoAberto: labels.detalheSaldoAberto,
+          verFinanceiro: labels.detalheVerFinanceiro,
           bruto: labels.detalheBruto,
           desconto: labels.detalheDesconto,
           liquido: labels.detalheLiquido,

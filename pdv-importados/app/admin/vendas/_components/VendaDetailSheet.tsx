@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { X } from 'lucide-react'
+import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
 import { StatusBadge, PaymentBadge, FiscalBadge } from '@/components/ui/badges'
 import { MargemCell } from '@/components/ui/MargemCell'
 import { PriceTooltip } from '@/components/ui/PriceTooltip'
@@ -31,6 +33,9 @@ type DetalheLabels = {
   tipo: string
   operador: string
   nfe: string
+  cliente: string
+  saldoAberto: string
+  verFinanceiro: string
   bruto: string
   desconto: string
   liquido: string
@@ -184,6 +189,7 @@ export function VendaDetailSheet({
                 <Info label={labels.tipo}>{venda.tipo_venda ?? '—'}</Info>
                 <Info label={labels.operador}>{venda.operador_nome ?? '—'}</Info>
                 <Info label={labels.nfe}>{venda.numero_nf ?? '—'}</Info>
+                {venda.cliente_nome ? <Info label={labels.cliente}>{venda.cliente_nome}</Info> : null}
               </dl>
 
               <div className="admin-v2-panel mt-4 rounded-[10px] p-3">
@@ -192,6 +198,23 @@ export function VendaDetailSheet({
                 <div className="my-1.5 h-px bg-jl-surface-soft" />
                 <Linha label={labels.liquido} valor={formatBRL(venda.total_liquido)} strong />
               </div>
+
+              {venda.tem_conta_receber ? (
+                <div className="mt-3 flex items-center justify-between gap-3 rounded-[10px] border border-destructive/30 bg-destructive/10 p-3">
+                  <div className="min-w-0">
+                    <p className="text-caption font-medium text-destructive">{labels.saldoAberto}</p>
+                    <p className="text-small font-semibold text-destructive">
+                      {formatBRL(venda.valor_aberto_cr)}
+                    </p>
+                  </div>
+                  <Link
+                    href={pathWithQuery(ROUTES.admin.financeiro, new URLSearchParams({ tab: 'receber' }))}
+                    className="shrink-0 text-caption font-medium text-destructive underline-offset-2 hover:underline"
+                  >
+                    {labels.verFinanceiro}
+                  </Link>
+                </div>
+              ) : null}
 
               <h3 className="mb-2 mt-5 text-caption font-semibold uppercase tracking-[0.06em] text-jl-fg-3">
                 {labels.itens} ({venda.itens.length})
