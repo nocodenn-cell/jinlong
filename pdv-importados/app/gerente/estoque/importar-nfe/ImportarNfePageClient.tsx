@@ -67,6 +67,20 @@ export type ItemConferenciaPreenchido = {
 }
 
 /**
+ * Valor inicial do campo de conferência ao carregar/retomar uma importação.
+ * Só usa uma contagem já salva no servidor (retomada) — nunca a quantidade
+ * da nota. `null` significa "campo começa vazio": o operador ainda não
+ * contou este item, e mostrar a quantidade da nota aqui seria indistinguível
+ * de uma contagem física real. Extraída como função pura para ser testável
+ * sem montar o componente, no mesmo espírito de `buildItensConferenciaPreenchidos`.
+ */
+export function valorInicialQtdConferida(
+  item: Pick<ItemConferenciaNfe, 'quantidade_conferida'>,
+): string | null {
+  return item.quantidade_conferida !== null ? String(item.quantidade_conferida) : null
+}
+
+/**
  * Monta o payload de `registrar_conferencia_nfe` só com itens que o operador
  * de fato preencheu. Um campo em branco/ausente significa "ainda não contei
  * este item" — nunca vira silenciosamente a quantidade da nota (achado de
@@ -136,7 +150,8 @@ export function ImportarNfePageClient({ idioma, embeddedInAdminHub = false }: Pr
       const next = { ...prev }
       for (const item of c.itens) {
         if (next[item.item_id] === undefined) {
-          next[item.item_id] = String(item.quantidade_conferida ?? item.quantidade_nfe)
+          const valor = valorInicialQtdConferida(item)
+          if (valor !== null) next[item.item_id] = valor
         }
       }
       return next
@@ -795,7 +810,7 @@ export function ImportarNfePageClient({ idioma, embeddedInAdminHub = false }: Pr
                           step={0.001}
                           controlSize="sm"
                           disabled={estoqueAtualizadoOk}
-                          value={qtdConferida[item.item_id] ?? String(item.quantidade_nfe)}
+                          value={qtdConferida[item.item_id] ?? ''}
                           onChange={(e) =>
                             setQtdConferida((prev) => ({ ...prev, [item.item_id]: e.target.value }))
                           }
