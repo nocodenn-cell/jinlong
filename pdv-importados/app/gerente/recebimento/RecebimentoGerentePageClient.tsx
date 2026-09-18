@@ -243,7 +243,12 @@ export function RecebimentoGerentePageClient({
                 valorInicial={produtoPreSelecionado}
               />
             </Field>
-            <Field id="rec-oc" label={r.label_ordem_compra} className="md:col-span-2">
+            <Field
+              id="rec-oc"
+              label={r.label_ordem_compra}
+              hint={r.ordem_compra_ajuda}
+              className="md:col-span-2"
+            >
               {/* S8/RM-14 — opcional; recebimento sem vínculo continua exatamente
                   como hoje. A OC "já recebida" é recusada no servidor no submit. */}
               <OrdemCompraVinculoAutocomplete

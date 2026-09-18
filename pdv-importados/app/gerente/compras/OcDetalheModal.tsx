@@ -293,6 +293,18 @@ export function OcDetalheModal({ idioma, ocId, onClose, onEditar, onStatusChange
                 </div>
               )}
 
+              {/* O recebimento pelo pedido, a Entrada sem nota e a NF-e creditam estoque
+                  de forma independente: nada os liga, então a duplicidade é do operador evitar. */}
+              {oc.status === 'EM_TRANSITO' && (
+                <p
+                  className="flex items-start gap-1.5 text-xs text-jl-fg-3"
+                  data-testid="oc-aviso-recebimento-duplicidade"
+                >
+                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+                  <span>{c.aviso_recebimento_duplicidade}</span>
+                </p>
+              )}
+
               {/* Ações */}
               <div className="flex flex-wrap items-center gap-2 border-t border-jl-border-1 pt-4">
                 {oc.status === 'RASCUNHO' && (
