@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { DragonModal } from '@/components/ui/DragonModal'
 import { getMessages } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
-import { fmtGerenteBRL } from '@/lib/format/gerenteValues'
+import { fmtGerenteBRL, fmtGerenteIdCurto } from '@/lib/format/gerenteValues'
 import { formatDecimalBRL, parseBRL } from '@/lib/format/money'
 import { roundMoney2 } from '@/shared/cart/totals'
 import { emitGerenteToast } from '@/lib/gerente/toast'
@@ -156,7 +156,18 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
         emitGerenteToast({ kind: 'error', message: r.error })
         return
       }
-      emitGerenteToast({ kind: 'success', message: m.comum.sucesso })
+      // G-09: quando o pagamento é em dinheiro, o backend já calcula e cria a
+      // movimentação de caixa (sangria) correspondente — antes esse dado era
+      // descartado aqui e o operador nunca via qual movimentação foi gerada.
+      emitGerenteToast({
+        kind: 'success',
+        message: r.movimentacaoCaixaId
+          ? m.contas_pagar.pagamento_registrado_com_sangria.replace(
+              '{{id}}',
+              fmtGerenteIdCurto(r.movimentacaoCaixaId),
+            )
+          : m.comum.sucesso,
+      })
       renovarIntencao()
       onPagamentoRegistrado(r.conta)
     } finally {

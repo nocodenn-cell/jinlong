@@ -145,7 +145,10 @@ export async function buscarCaixasAbertosPagamentoAction(lojaId: string): Promis
 
 export async function registrarPagamentoAction(
   input: RegistrarPagamentoInput,
-): Promise<{ ok: true; conta: ContaPagarRow } | { ok: false; error: string }> {
+): Promise<
+  | { ok: true; conta: ContaPagarRow; movimentacaoCaixaId: string | null }
+  | { ok: false; error: string }
+> {
   const auth = await assertGerenteSession()
   if (!auth.ok) return { ok: false, error: auth.error }
 
@@ -184,7 +187,14 @@ export async function registrarPagamentoAction(
 
     revalidatePath('/gerente/financeiro/contas-pagar')
     revalidatePath('/admin/financeiro')
-    return { ok: true, conta: mapRow(data as Record<string, unknown>) }
+    return {
+      ok: true,
+      conta: mapRow(data as Record<string, unknown>),
+      // G-09: já calculado pelo backend (RPC registrar_pagamento_contas_pagar
+      // via payablePayment.ts) mas antes descartado aqui — nulo para
+      // pagamento não-DINHEIRO (não mexe na gaveta).
+      movimentacaoCaixaId: paid.movimentacaoCaixaId,
+    }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Erro ao registrar pagamento.' }
   }

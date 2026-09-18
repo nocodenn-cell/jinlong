@@ -2109,6 +2109,7 @@
     "atrasadas": "已逾期",
     "contas_carregadas": "已加载账款",
     "lancar": "导入 NF-e",
+    "pagamento_registrado_com_sangria": "付款已登记。收银台提现单：{{id}}。",
     "origem_nfe_hint": "应付账款仅来自 NF-e 导入 — 不支持手工录入。",
     "acoes_rapidas": "操作",
     "kpi_em_aberto": "未结",
