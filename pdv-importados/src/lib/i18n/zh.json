@@ -2441,6 +2441,7 @@
     "col_acoes": "操作",
     "saldo_em_aberto_label": "欠款",
     "limite_label": "额度",
+    "ver_financeiro": "在财务中查看",
     "saldo_sem_aberto": "无欠款",
     "saldo_progresso_aria": "已用额度 {{pct}}%",
     "vazio_titulo": "无搜索结果",

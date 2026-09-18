@@ -2258,6 +2258,7 @@
     "col_acoes": "Ações",
     "saldo_em_aberto_label": "Em aberto",
     "limite_label": "Limite",
+    "ver_financeiro": "Ver no financeiro",
     "saldo_sem_aberto": "Sem aberto",
     "saldo_progresso_aria": "{{pct}}% do limite usado",
     "vazio_titulo": "Nenhum resultado",

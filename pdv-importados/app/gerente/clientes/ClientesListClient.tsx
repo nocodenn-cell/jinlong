@@ -7,8 +7,10 @@
  */
 
 import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react'
+import Link from 'next/link'
 import { useDebounce } from '@/lib/hooks/useDebounce'
-import { AlertTriangle, Pencil, Trash2, Plus } from 'lucide-react'
+import { AlertTriangle, Pencil, Receipt, Trash2, Plus } from 'lucide-react'
+import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
 import { Button } from '@/components/ui/button'
 import { SearchInput } from '@/components/ui/forms'
 import { DataTable, type Column } from '@/components/ui/DataTable'
@@ -279,6 +281,19 @@ export function ClientesListClient({
                 <span className="sr-only">{m.clientes.limite_label}: </span>
                 {m.clientes.limite_label} {fmtGerenteBRL(lim, locale)}
               </span>
+              {used > 0 ? (
+                <Link
+                  href={pathWithQuery(
+                    ROUTES.admin.financeiro,
+                    new URLSearchParams({ tab: 'receber', cliente: c.nome }),
+                  )}
+                  onClick={(e) => stopRowAction(e)}
+                  className="inline-flex items-center gap-1 text-caption text-[var(--color-info)] hover:underline"
+                >
+                  <Receipt size={11} aria-hidden />
+                  {m.clientes.ver_financeiro}
+                </Link>
+              ) : null}
             </div>
             {lim > 0 ? (
               <div
