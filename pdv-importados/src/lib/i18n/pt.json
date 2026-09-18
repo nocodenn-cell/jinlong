@@ -1963,7 +1963,7 @@
     "btn_pagar": "Pagar",
     "cancelar": "Cancelar conta",
     "vazio_titulo": "Nenhuma conta encontrada",
-    "vazio_sub": "Ajuste os filtros, ou lance uma nova conta a pagar.",
+    "vazio_sub": "Ajuste os filtros. As contas a pagar são geradas ao importar uma NF-e de compra.",
     "toast_cancelada": "Conta cancelada.",
     "modal_eyebrow": "Registrar pagamento",
     "modal_total": "Total",

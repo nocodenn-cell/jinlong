@@ -2146,7 +2146,7 @@
     "btn_pagar": "付款",
     "cancelar": "取消账款",
     "vazio_titulo": "未找到账款",
-    "vazio_sub": "调整筛选条件，或新增一笔应付账款。",
+    "vazio_sub": "请调整筛选条件。应付账款在导入采购 NF-e 时自动生成。",
     "toast_cancelada": "账款已取消。",
     "modal_eyebrow": "登记付款",
     "modal_total": "总额",
