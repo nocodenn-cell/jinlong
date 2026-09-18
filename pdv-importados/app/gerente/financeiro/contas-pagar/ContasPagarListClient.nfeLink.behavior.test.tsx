@@ -106,7 +106,10 @@ describe('ContasPagarListClient — link de NF-e (G-08)', () => {
       a.textContent?.includes('NF-e #12345'),
     ) as HTMLAnchorElement | undefined
     expect(link).toBeTruthy()
-    expect(link!.getAttribute('href')).toBe('/gerente/estoque/importar-nfe?id=nfe-1')
+    // BP-A3: rota canônica do admin + parâmetro que a página de destino lê.
+    // `/gerente/...` cai no catch-all de redirect legado, que descarta a query.
+    expect(link!.getAttribute('href')).toBe('/admin/estoque/importar-nfe?importacao=nfe-1')
+    expect(link!.getAttribute('href')).not.toContain('/gerente')
     expect(link!.getAttribute('href')).not.toBe('#')
   })
 })

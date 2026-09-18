@@ -115,6 +115,13 @@ export function adminVendaDetalheQuery(vendaId: string): string {
   return pathWithQuery(ROUTES.admin.vendas, q)
 }
 
+/** Abre uma importação de NF-e específica (aberta ou já concluída), ex.: a partir de um título em Contas a pagar. */
+export function adminImportNfeImportacaoQuery(importacaoId: string): string {
+  const q = new URLSearchParams()
+  if (importacaoId.trim()) q.set('importacao', importacaoId.trim())
+  return pathWithQuery(ROUTES.admin.importNfe, q)
+}
+
 export function adminEtiquetasProdutoQuery(opts: {
   codigo?: string | null
   produtoId?: string | null

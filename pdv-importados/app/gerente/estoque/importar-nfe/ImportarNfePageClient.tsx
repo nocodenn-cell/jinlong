@@ -33,7 +33,12 @@ import {
   registrarConferenciaNfe,
 } from './actions'
 
-type Props = Readonly<{ idioma: Idioma; embeddedInAdminHub?: boolean }>
+type Props = Readonly<{
+  idioma: Idioma
+  embeddedInAdminHub?: boolean
+  /** Deep-link `?importacao=<id>`: abre essa importação (aberta ou concluída) ao montar. */
+  importacaoInicialId?: string | null
+}>
 
 type LinhaEditavel = LinhaPreviewNfe & {
   fator: number
@@ -109,7 +114,11 @@ export function buildItensConferenciaPreenchidos(
   })
 }
 
-export function ImportarNfePageClient({ idioma, embeddedInAdminHub = false }: Props) {
+export function ImportarNfePageClient({
+  idioma,
+  embeddedInAdminHub = false,
+  importacaoInicialId = null,
+}: Props) {
   const m = getMessages(idioma)
   const mi = m.estoque.import_nfe
   const locale = localeFromIdioma(idioma)
@@ -230,6 +239,13 @@ export function ImportarNfePageClient({ idioma, embeddedInAdminHub = false }: Pr
       return null
     },
   )
+
+  const importacaoInicialAbertaRef = useRef(false)
+  useEffect(() => {
+    if (!importacaoInicialId || importacaoInicialAbertaRef.current) return
+    importacaoInicialAbertaRef.current = true
+    void retomarMut(importacaoInicialId)
+  }, [importacaoInicialId, retomarMut])
 
   const registrarOpts = useMemo(
     () => ({

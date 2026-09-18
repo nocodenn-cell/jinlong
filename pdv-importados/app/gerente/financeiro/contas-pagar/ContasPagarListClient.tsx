@@ -24,7 +24,7 @@ import {
   type ContasPagarFilters,
 } from './actions'
 import { PagamentoModal } from './PagamentoModal'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES, adminImportNfeImportacaoQuery } from '@shared-core/navigation/routes'
 
 type Props = Readonly<{
   idioma: Idioma
@@ -309,7 +309,7 @@ export function ContasPagarListClient({
             </div>
             {c.nfe_numero && c.nfe_importacao_id ? (
               <Link
-                href={`/gerente/estoque/importar-nfe?id=${c.nfe_importacao_id}`}
+                href={adminImportNfeImportacaoQuery(c.nfe_importacao_id)}
                 className="mt-1 inline-flex items-center gap-1 font-mono text-caption text-[var(--color-warning-strong)] hover:underline"
               >
                 <FileText className="h-3 w-3" aria-hidden />
