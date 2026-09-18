@@ -225,7 +225,12 @@ export function OcDetalheModal({ idioma, ocId, onClose, onEditar, onStatusChange
 
   function textoResumo(o: OcDetalheDTO): string {
     if (o.encerrada_com_falta) return fmtTemplate(c.resumo_encerrado_falta, { n: fmtQtd(o.pendente_total) })
-    if (o.status === 'RECEBIDA') return c.resumo_completo
+    // Pedido legado encerrado por um único recebimento que ficou abaixo do pedido: não é "completo".
+    if (o.status === 'RECEBIDA') {
+      return o.pendente_total > 0
+        ? fmtTemplate(c.resumo_encerrado_incompleto, { n: fmtQtd(o.pendente_total) })
+        : c.resumo_completo
+    }
     if (o.recebido_total <= 0) return c.resumo_nada
     return fmtTemplate(c.resumo_faltam, { n: fmtQtd(o.pendente_total) })
   }

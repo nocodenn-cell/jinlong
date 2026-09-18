@@ -158,6 +158,16 @@ describe('OcDetalheModal — pedido / recebido / pendente (UX-04)', () => {
     expect(container.querySelector('[data-testid="oc-aviso-recebimento-duplicidade"]')).toBeNull()
   })
 
+  it('pedido legado encerrado por um recebimento único abaixo do pedido: NÃO diz "totalmente recebido"', async () => {
+    await abrir({ status: 'RECEBIDA', recebida: 70, encerrada_com_falta: false })
+
+    const saldo = container.querySelector('[data-testid="oc-resumo-saldo"]')?.textContent
+    expect(saldo).toContain('recebimento incompleto')
+    expect(saldo).toContain('faltaram 30 unidades')
+    expect(saldo).not.toContain('totalmente')
+    expect(btnReceber()).toBeNull()
+  })
+
   it('lista as entradas ligadas ao pedido (origem + itens), reconstruídas do razão', async () => {
     await abrir({
       recebida: 100,

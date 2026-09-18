@@ -1022,6 +1022,7 @@
     "resumo_completo": "Pedido totalmente recebido.",
     "resumo_encerrado_falta": "Pedido encerrado com falta de {{n}} unidades.",
     "resumo_nada": "Nada recebido ainda.",
+    "resumo_encerrado_incompleto": "Pedido encerrado com recebimento incompleto: faltaram {{n}} unidades (encerrado antes do controle de saldo).",
     "item_pedido": "Pedido",
     "item_recebido": "Recebido",
     "item_pendente": "Pendente",
