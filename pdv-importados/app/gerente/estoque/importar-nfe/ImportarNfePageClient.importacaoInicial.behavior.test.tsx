@@ -16,13 +16,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const obterConferenciaMock = vi.fn()
 const listarPendentesMock = vi.fn()
 const emitToastMock = vi.fn()
+const resumoContasMock = vi.fn()
+const confirmarMock = vi.fn()
 
 vi.mock('./actions', () => ({
   buscarProdutosParaVinculo: vi.fn(),
-  confirmarImportacaoNfe: vi.fn(),
+  confirmarImportacaoNfe: (p: unknown) => confirmarMock(p),
   executarImportacaoNfe: vi.fn(),
   listarImportacoesNfePendentes: () => listarPendentesMock(),
   obterConferenciaImportacaoNfe: (id: string) => obterConferenciaMock(id),
+  obterResumoContasPagarImportacaoNfe: (id: string) => resumoContasMock(id),
   previewImportacaoNfe: vi.fn(),
   registrarConferenciaNfe: vi.fn(),
 }))
@@ -79,6 +82,12 @@ beforeEach(() => {
   obterConferenciaMock.mockReset()
   listarPendentesMock.mockReset()
   emitToastMock.mockReset()
+  resumoContasMock.mockReset()
+  confirmarMock.mockReset()
+  resumoContasMock.mockResolvedValue({
+    success: true,
+    data: { quantidade: 0, valor_total: 0, primeiro_vencimento: null, fornecedor_id: null },
+  })
   listarPendentesMock.mockResolvedValue({ success: true, data: [] })
   container = document.createElement('div')
   document.body.appendChild(container)
@@ -128,5 +137,90 @@ describe('ImportarNfePageClient — deep-link ?importacao= (BP-A3)', () => {
     await renderar({ importacaoInicialId: 'imp-42' })
 
     expect(obterConferenciaMock).toHaveBeenCalledTimes(1)
+  })
+})
+
+function linkPorTexto(texto: string): HTMLAnchorElement | undefined {
+  return Array.from(container.querySelectorAll('a')).find((a) => a.textContent?.includes(texto))
+}
+
+describe('ImportarNfePageClient — o que a entrada gerou no financeiro (BP-E1)', () => {
+  it('importação concluída: informa as contas a pagar geradas e leva ao Financeiro filtrado por fornecedor', async () => {
+    obterConferenciaMock.mockResolvedValue({ success: true, data: conferenciaConcluida })
+    resumoContasMock.mockResolvedValue({
+      success: true,
+      data: {
+        quantidade: 2,
+        valor_total: 250.5,
+        primeiro_vencimento: '2026-09-30',
+        fornecedor_id: 'forn-1',
+      },
+    })
+
+    await renderar({ importacaoInicialId: 'imp-42' })
+
+    expect(resumoContasMock).toHaveBeenCalledWith('imp-42')
+    const resumo = container.querySelector('[data-testid="nfe-contas-pagar-resumo"]')
+    expect(resumo?.textContent).toContain('2 conta(s) a pagar gerada(s)')
+    expect(resumo?.textContent).toMatch(/R\$\s*250,50/)
+    expect(resumo?.textContent).toContain('30/09/2026')
+    expect(linkPorTexto('Ver contas a pagar')?.getAttribute('href')).toBe(
+      '/admin/financeiro?tab=pagar&fornecedor_id=forn-1',
+    )
+    expect(linkPorTexto('Ver estoque')?.getAttribute('href')).toBe('/admin/estoque')
+  })
+
+  it('nota sem duplicatas: avisa que não há conta a pagar e não oferece link para o Financeiro', async () => {
+    obterConferenciaMock.mockResolvedValue({ success: true, data: conferenciaConcluida })
+
+    await renderar({ importacaoInicialId: 'imp-42' })
+
+    const resumo = container.querySelector('[data-testid="nfe-contas-pagar-resumo"]')
+    expect(resumo?.textContent).toContain('Nenhuma conta a pagar está registrada para esta nota.')
+    expect(linkPorTexto('Ver contas a pagar')).toBeUndefined()
+    expect(linkPorTexto('Ver estoque')).toBeTruthy()
+  })
+
+  it('conferência ainda aberta: não mostra resumo nem links de próximo passo', async () => {
+    obterConferenciaMock.mockResolvedValue({
+      success: true,
+      data: { ...conferenciaConcluida, status: 'EM_CONFERENCIA' },
+    })
+
+    await renderar({ importacaoInicialId: 'imp-42' })
+
+    expect(resumoContasMock).not.toHaveBeenCalled()
+    expect(container.querySelector('[data-testid="nfe-contas-pagar-resumo"]')).toBeNull()
+  })
+
+  it('ao "Confirmar e atualizar estoque", o resumo aparece com o que foi gerado', async () => {
+    const aberta = {
+      ...conferenciaConcluida,
+      status: 'EM_CONFERENCIA' as const,
+    }
+    obterConferenciaMock.mockResolvedValue({ success: true, data: aberta })
+    confirmarMock.mockResolvedValue({ success: true, data: null })
+    resumoContasMock.mockResolvedValue({
+      success: true,
+      data: { quantidade: 1, valor_total: 80, primeiro_vencimento: '2026-10-15', fornecedor_id: 'forn-9' },
+    })
+
+    await renderar({ importacaoInicialId: 'imp-42' })
+    expect(resumoContasMock).not.toHaveBeenCalled()
+
+    const botao = Array.from(container.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Confirmar e atualizar estoque'),
+    ) as HTMLButtonElement
+    expect(botao).toBeTruthy()
+    expect(botao.disabled).toBe(false)
+    await act(async () => {
+      botao.click()
+    })
+
+    expect(confirmarMock).toHaveBeenCalledWith({ importacao_id: 'imp-42' })
+    expect(resumoContasMock).toHaveBeenCalledWith('imp-42')
+    expect(container.querySelector('[data-testid="nfe-contas-pagar-resumo"]')?.textContent).toContain(
+      '1 conta(s) a pagar gerada(s)',
+    )
   })
 })

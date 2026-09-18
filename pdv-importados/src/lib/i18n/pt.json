@@ -942,7 +942,11 @@
       "pendentes_hint": "XML já processado e catálogo atualizado — falta conferir a quantidade recebida para creditar o estoque.",
       "pendentes_sem_numero": "NF-e sem número",
       "pendentes_col_itens": "Itens conferidos",
-      "pendentes_btn_retomar": "Retomar conferência"
+      "pendentes_btn_retomar": "Retomar conferência",
+      "contas_pagar_geradas": "{{n}} conta(s) a pagar gerada(s) por esta nota — {{valor}} no total, 1º vencimento em {{data}}.",
+      "contas_pagar_nenhuma": "Nenhuma conta a pagar está registrada para esta nota.",
+      "btn_ver_contas_pagar": "Ver contas a pagar",
+      "btn_ver_estoque": "Ver estoque"
     }
   },
   "compras": {

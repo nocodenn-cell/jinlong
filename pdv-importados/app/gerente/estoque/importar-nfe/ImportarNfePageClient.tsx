@@ -13,7 +13,7 @@ import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages } from '@/i18n/getMessages'
 import { Checkbox, Input, Textarea } from '@/components/ui/forms'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES, adminFinanceiroContasPagarFornecedorQuery } from '@shared-core/navigation/routes'
 import type { NfeParsed } from '@/lib/nfe/nfeParser'
 import type {
   ConferenciaImportacaoNfe,
@@ -21,6 +21,7 @@ import type {
   ItemConferenciaNfe,
   LinhaPreviewNfe,
   ProdutoVinculoOpcao,
+  ResumoContasPagarImportacaoNfe,
   StatusItemNfe,
 } from './actions'
 import {
@@ -29,6 +30,7 @@ import {
   executarImportacaoNfe,
   listarImportacoesNfePendentes,
   obterConferenciaImportacaoNfe,
+  obterResumoContasPagarImportacaoNfe,
   previewImportacaoNfe,
   registrarConferenciaNfe,
 } from './actions'
@@ -52,6 +54,13 @@ type LinhaComIndice = { linha: LinhaEditavel; idx: number }
 
 function onlyDigits(s: string): string {
   return s.replace(/\D/g, '')
+}
+
+/** `YYYY-MM-DD` → data local (evita o recuo de 1 dia de `new Date('YYYY-MM-DD')` em fusos negativos). */
+function fmtVencimento(ymd: string, locale: string): string {
+  const [y, m, d] = ymd.split('-').map(Number)
+  if (!y || !m || !d) return ymd
+  return new Date(y, m - 1, d).toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
 function statusBadgeKey(status: StatusItemNfe): string {
@@ -142,6 +151,7 @@ export function ImportarNfePageClient({
   const [obsDivergencia, setObsDivergencia] = useState<Record<string, string>>({})
   const [pendentes, setPendentes] = useState<ImportacaoNfePendente[]>([])
   const [estoqueAtualizadoOk, setEstoqueAtualizadoOk] = useState(false)
+  const [resumoContasPagar, setResumoContasPagar] = useState<ResumoContasPagarImportacaoNfe | null>(null)
 
   const carregarPendentes = useCallback(async () => {
     const r = await listarImportacoesNfePendentes()
@@ -239,6 +249,24 @@ export function ImportarNfePageClient({
       return null
     },
   )
+
+  // Depois de "dar entrada" (ou ao abrir uma importação já concluída) mostra o que
+  // a confirmação gerou no financeiro: `confirmar_importacao_nfe` cria as contas
+  // a pagar a partir das duplicatas do XML, mas a tela nunca dizia isso.
+  const importacaoConcluidaId = estoqueAtualizadoOk ? (conferencia?.importacao_id ?? null) : null
+  useEffect(() => {
+    if (!importacaoConcluidaId) {
+      setResumoContasPagar(null)
+      return
+    }
+    let cancelado = false
+    void obterResumoContasPagarImportacaoNfe(importacaoConcluidaId).then((r) => {
+      if (!cancelado && r.success) setResumoContasPagar(r.data)
+    })
+    return () => {
+      cancelado = true
+    }
+  }, [importacaoConcluidaId])
 
   const importacaoInicialAbertaRef = useRef(false)
   useEffect(() => {
@@ -880,9 +908,38 @@ export function ImportarNfePageClient({
 
           <div className="mt-4 flex flex-col items-end gap-2">
             {estoqueAtualizadoOk ? (
-              <p className="text-body font-medium text-[var(--color-success-strong)]">
-                {mi.confirmar_estoque_ok}
-              </p>
+              <>
+                <p className="text-body font-medium text-[var(--color-success-strong)]">
+                  {mi.confirmar_estoque_ok}
+                </p>
+                {resumoContasPagar ? (
+                  <p className="text-body text-fg-muted" data-testid="nfe-contas-pagar-resumo">
+                    {resumoContasPagar.quantidade > 0
+                      ? mi.contas_pagar_geradas
+                          .replace('{{n}}', String(resumoContasPagar.quantidade))
+                          .replace('{{valor}}', formatBRL(resumoContasPagar.valor_total))
+                          .replace(
+                            '{{data}}',
+                            resumoContasPagar.primeiro_vencimento
+                              ? fmtVencimento(resumoContasPagar.primeiro_vencimento, locale)
+                              : '—',
+                          )
+                      : mi.contas_pagar_nenhuma}
+                  </p>
+                ) : null}
+                <div className="flex flex-wrap justify-end gap-2">
+                  {resumoContasPagar && resumoContasPagar.quantidade > 0 && resumoContasPagar.fornecedor_id ? (
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={adminFinanceiroContasPagarFornecedorQuery(resumoContasPagar.fornecedor_id)}>
+                        {mi.btn_ver_contas_pagar}
+                      </Link>
+                    </Button>
+                  ) : null}
+                  <Button asChild variant="outline" size="sm">
+                    <Link href={ROUTES.admin.estoque}>{mi.btn_ver_estoque}</Link>
+                  </Button>
+                </div>
+              </>
             ) : (
               <>
                 {!podeConfirmarEstoque ? (

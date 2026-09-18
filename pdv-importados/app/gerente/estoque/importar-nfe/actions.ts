@@ -450,6 +450,58 @@ export async function obterConferenciaImportacaoNfe(
   }
 }
 
+export type ResumoContasPagarImportacaoNfe = {
+  quantidade: number
+  valor_total: number
+  /** `YYYY-MM-DD` do menor vencimento entre as contas geradas; `null` se não houver. */
+  primeiro_vencimento: string | null
+  fornecedor_id: string | null
+}
+
+/**
+ * Contas a pagar já registradas para uma importação de NF-e (uma por duplicata
+ * do XML, criadas por `confirmar_importacao_nfe`). Somente leitura: existe para
+ * a tela dizer ao operador o que a confirmação gerou no financeiro — a
+ * consequência já existia, só não aparecia. Contas canceladas não entram.
+ */
+export async function obterResumoContasPagarImportacaoNfe(
+  importacaoId: string,
+): Promise<ActionResult<ResumoContasPagarImportacaoNfe>> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const lojaId = await lojaIdDoUsuarioLogado()
+  if (!lojaId) return { success: false, error: 'Não foi possível identificar sua loja.' }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('contas_pagar')
+    .select('valor_total, vencimento, fornecedor_id')
+    .eq('nfe_importacao_id', importacaoId)
+    .eq('loja_id', lojaId)
+    .neq('status', 'CANCELADO')
+
+  if (error) {
+    return { success: false, error: mensagemErroComSecao('Contas a pagar', error.message) }
+  }
+
+  const linhas = data ?? []
+  const vencimentos = linhas
+    .map((l) => (l.vencimento as string | null) ?? null)
+    .filter((v): v is string => !!v)
+    .sort()
+
+  return {
+    success: true,
+    data: {
+      quantidade: linhas.length,
+      valor_total: linhas.reduce((acc, l) => acc + Number(l.valor_total ?? 0), 0),
+      primeiro_vencimento: vencimentos[0] ?? null,
+      fornecedor_id: (linhas[0]?.fornecedor_id as string | null | undefined) ?? null,
+    },
+  }
+}
+
 export type ImportacaoNfePendente = {
   importacao_id: string
   numero_nf: string | null

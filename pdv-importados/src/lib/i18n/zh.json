@@ -942,7 +942,11 @@
       "pendentes_hint": "XML 已处理，目录已更新 — 还需核对实收数量才能计入库存。",
       "pendentes_sem_numero": "无发票号",
       "pendentes_col_itens": "已核对明细",
-      "pendentes_btn_retomar": "继续核对"
+      "pendentes_btn_retomar": "继续核对",
+      "contas_pagar_geradas": "本发票已生成 {{n}} 笔应付账款——合计 {{valor}}，首笔到期日 {{data}}。",
+      "contas_pagar_nenhuma": "本发票暂无应付账款记录。",
+      "btn_ver_contas_pagar": "查看应付账款",
+      "btn_ver_estoque": "查看库存"
     }
   },
   "compras": {
