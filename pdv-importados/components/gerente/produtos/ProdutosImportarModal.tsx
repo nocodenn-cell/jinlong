@@ -1,6 +1,7 @@
 'use client'
 
 import {
+  Fragment,
   useCallback,
   useEffect,
   useMemo,
@@ -139,11 +140,22 @@ export function ProdutosImportarModal({
     })
   }, [])
 
+  const [confirmLimparOpen, setConfirmLimparOpen] = useState(false)
+
   const limparTudo = useCallback(() => {
-    if (resumo.total > 0 && !window.confirm(p.bulk_limpar_confirmar)) return
+    if (resumo.total > 0) {
+      setConfirmLimparOpen(true)
+      return
+    }
     setRows([makeRow()])
     setServerFalhas({})
-  }, [resumo.total, p.bulk_limpar_confirmar])
+  }, [resumo.total])
+
+  const confirmarLimparTudo = useCallback(() => {
+    setConfirmLimparOpen(false)
+    setRows([makeRow()])
+    setServerFalhas({})
+  }, [])
 
   // Colar do Excel/Sheets (TSV) ou conteúdo CSV → substitui linhas vazias e anexa.
   const onPaste = useCallback((e: ClipboardEvent<HTMLDivElement>) => {
@@ -239,6 +251,7 @@ export function ProdutosImportarModal({
         : p.bulk_commit_zero
 
   return (
+    <Fragment>
     <DragonModal
       open
       onClose={fechar}
@@ -420,6 +433,29 @@ export function ProdutosImportarModal({
         ) : null}
       </div>
     </DragonModal>
+
+    <DragonModal
+      open={confirmLimparOpen}
+      onClose={() => setConfirmLimparOpen(false)}
+      variant="danger"
+      size="sm"
+      title={p.bulk_limpar}
+      dismissable
+      closeLabel={m.comum.fechar}
+      footer={
+        <>
+          <Button type="button" variant="secondary" onClick={() => setConfirmLimparOpen(false)}>
+            {m.comum.nao}
+          </Button>
+          <Button type="button" variant="danger" onClick={confirmarLimparTudo}>
+            {m.comum.sim}
+          </Button>
+        </>
+      }
+    >
+      <p className="text-sm text-jl-fg-2">{p.bulk_limpar_confirmar}</p>
+    </DragonModal>
+    </Fragment>
   )
 }
 

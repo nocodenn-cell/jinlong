@@ -151,3 +151,58 @@ describe('ProdutosImportarModal — grade de importação em lote', () => {
     expect(container.textContent).toContain(m.produtos.import_row_barcode_exists)
   })
 })
+
+describe('ProdutosImportarModal — confirmação de "limpar tudo" (N-01)', () => {
+  let confirmSpy: ReturnType<typeof vi.spyOn>
+
+  beforeEach(() => {
+    // Se o código voltar a usar window.confirm, este spy denuncia.
+    confirmSpy = vi.spyOn(window, 'confirm')
+  })
+
+  afterEach(() => {
+    confirmSpy.mockRestore()
+  })
+
+  function botaoLimpar(): HTMLButtonElement {
+    return Array.from(container.querySelectorAll('button')).find((b) =>
+      (b.textContent ?? '').includes(m.produtos.bulk_limpar),
+    ) as HTMLButtonElement
+  }
+
+  it('clicar em "limpar tudo" com dados abre modal do app, nunca window.confirm', () => {
+    render(<ProdutosImportarModal open onOpenChange={vi.fn()} m={m} />)
+    preencherLinhaValida()
+
+    act(() => botaoLimpar().click())
+
+    expect(confirmSpy).not.toHaveBeenCalled()
+    expect(container.textContent).toContain(m.produtos.bulk_limpar_confirmar)
+  })
+
+  it('"Não" mantém os dados preenchidos', () => {
+    render(<ProdutosImportarModal open onOpenChange={vi.fn()} m={m} />)
+    preencherLinhaValida()
+
+    act(() => botaoLimpar().click())
+    const btnNao = Array.from(container.querySelectorAll('button')).find(
+      (b) => b.textContent === m.comum.nao,
+    ) as HTMLButtonElement
+    act(() => btnNao.click())
+
+    expect(textInputs()[COL.nome].value).toBe('Arroz')
+  })
+
+  it('"Sim" limpa a grade de volta pra uma linha vazia', () => {
+    render(<ProdutosImportarModal open onOpenChange={vi.fn()} m={m} />)
+    preencherLinhaValida()
+
+    act(() => botaoLimpar().click())
+    const btnSim = Array.from(container.querySelectorAll('button')).find(
+      (b) => b.textContent === m.comum.sim,
+    ) as HTMLButtonElement
+    act(() => btnSim.click())
+
+    expect(textInputs()[COL.nome].value).toBe('')
+  })
+})
