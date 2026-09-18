@@ -6,6 +6,7 @@ import { useDebounce } from '@/lib/hooks/useDebounce'
 import { Download, Plus, FileText, XCircle, DollarSign, FilterX } from 'lucide-react'
 import { CrudListShell, MetricCard, PageActions } from '@/components/ui/admin-v2'
 import { DataTable, type Column } from '@/components/ui/DataTable'
+import { DragonModal } from '@/components/ui/DragonModal'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input, SearchInput, Select } from '@/components/ui/forms'
@@ -98,6 +99,12 @@ export function ContasPagarListClient({
 
   const [emPagamento, setEmPagamento] = useState<ContaPagarRow | null>(null)
 
+  // G-10: modal do app em vez de window.prompt() nativo pro motivo de cancelamento.
+  const [cancelandoAlvo, setCancelandoAlvo] = useState<ContaPagarRow | null>(null)
+  const [motivoCancelamento, setMotivoCancelamento] = useState('')
+  const [erroMotivoCancelamento, setErroMotivoCancelamento] = useState<string | null>(null)
+  const [cancelando, setCancelando] = useState(false)
+
   const pageRef = useRef(1)
   const sentinelRef = useRef<HTMLDivElement>(null)
 
@@ -179,20 +186,34 @@ export function ContasPagarListClient({
     setContas((cur) => cur.map((x) => (x.id === c.id ? c : x)))
   }
 
-  async function onCancelar(c: ContaPagarRow) {
-    const motivo = window.prompt(`Motivo do cancelamento de "${c.descricao}":`, '')
-    if (motivo == null) return
-    if (motivo.trim().length < 2) {
-      emitGerenteToast({ kind: 'error', message: 'Motivo deve ter ao menos 2 caracteres.' })
+  function abrirCancelar(c: ContaPagarRow) {
+    setCancelandoAlvo(c)
+    setMotivoCancelamento('')
+    setErroMotivoCancelamento(null)
+  }
+
+  async function confirmarCancelamento() {
+    if (!cancelandoAlvo) return
+    const motivo = motivoCancelamento.trim()
+    if (motivo.length < 2) {
+      setErroMotivoCancelamento('Motivo deve ter ao menos 2 caracteres.')
       return
     }
-    const r = await cancelarContaPagarAction(c.id, motivo)
-    if (!r.ok) {
-      emitGerenteToast({ kind: 'error', message: r.error })
-      return
+    setCancelando(true)
+    try {
+      const r = await cancelarContaPagarAction(cancelandoAlvo.id, motivo)
+      if (!r.ok) {
+        emitGerenteToast({ kind: 'error', message: r.error })
+        return
+      }
+      setContas((cur) =>
+        cur.map((x) => (x.id === cancelandoAlvo.id ? { ...x, status: 'CANCELADO' } : x)),
+      )
+      emitGerenteToast({ kind: 'success', message: m.contas_pagar.toast_cancelada })
+      setCancelandoAlvo(null)
+    } finally {
+      setCancelando(false)
     }
-    setContas((cur) => cur.map((x) => (x.id === c.id ? { ...x, status: 'CANCELADO' } : x)))
-    emitGerenteToast({ kind: 'success', message: m.contas_pagar.toast_cancelada })
   }
 
   async function onExportar() {
@@ -546,7 +567,7 @@ export function ContasPagarListClient({
                   type="button"
                   size="icon"
                   variant="ghost"
-                  onClick={() => void onCancelar(c)}
+                  onClick={() => abrirCancelar(c)}
                   aria-label={`${m.contas_pagar.cancelar} — ${c.descricao}`}
                   title={m.contas_pagar.cancelar}
                   className="text-[var(--color-danger-strong)] hover:bg-[var(--color-danger-bg)]"
@@ -571,6 +592,58 @@ export function ContasPagarListClient({
             setEmPagamento(null)
           }}
         />
+      ) : null}
+
+      {cancelandoAlvo ? (
+        <DragonModal
+          open
+          onClose={() => setCancelandoAlvo(null)}
+          variant="danger"
+          size="sm"
+          title={`${m.contas_pagar.cancelar} — ${cancelandoAlvo.descricao}`}
+          dismissable={!cancelando}
+          closeLabel={m.comum.fechar}
+          footer={
+            <>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setCancelandoAlvo(null)}
+                disabled={cancelando}
+              >
+                {m.comum.cancelar}
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                onClick={() => void confirmarCancelamento()}
+                disabled={cancelando}
+              >
+                {cancelando ? '…' : m.contas_pagar.cancelar}
+              </Button>
+            </>
+          }
+        >
+          <label htmlFor="motivo-cancelamento" className="mb-1 block text-xs font-medium text-jl-fg-3">
+            Motivo do cancelamento<span className="ml-0.5 text-[color:var(--accent)]">*</span>
+          </label>
+          <Input
+            id="motivo-cancelamento"
+            value={motivoCancelamento}
+            onChange={(e) => {
+              setMotivoCancelamento(e.target.value)
+              if (erroMotivoCancelamento) setErroMotivoCancelamento(null)
+            }}
+            aria-invalid={!!erroMotivoCancelamento}
+            disabled={cancelando}
+            autoFocus
+          />
+          {erroMotivoCancelamento ? (
+            <span className="mt-1 block text-xs text-[var(--color-danger-strong)]">
+              {erroMotivoCancelamento}
+            </span>
+          ) : null}
+        </DragonModal>
       ) : null}
     </>
   )
