@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { EmptyState, ErrorState } from '@/components/ui/feedback'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { adminVendaDetalheQuery } from '@shared-core/navigation/routes'
 import { shortOrderId } from '../dashboardUtils'
 
 export type DashboardOrderRow = {
@@ -63,7 +63,7 @@ export function DashboardOrdersTable({ orders, labels, loadFailed }: Props) {
       priority: 'contextual',
       cell: (row) => (
         <Link
-          href={ROUTES.admin.vendas}
+          href={adminVendaDetalheQuery(row.id)}
           className="max-w-[120px] truncate font-medium text-brand underline-offset-2 hover:underline focus-visible:outline-none focus-visible:shadow-focus"
           title={row.id}
           aria-label={`${labels.openOrdersAria}: ${row.id}`}
@@ -120,7 +120,7 @@ export function DashboardOrdersTable({ orders, labels, loadFailed }: Props) {
       columns={columns}
       data={orders}
       rowKey={(row) => row.id}
-      onRowClick={() => router.push(ROUTES.admin.vendas)}
+      onRowClick={(row) => router.push(adminVendaDetalheQuery(row.id))}
       emptyState={
         <EmptyState title={labels.empty} description={labels.emptyDescription} />
       }
