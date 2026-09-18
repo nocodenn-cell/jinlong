@@ -60,6 +60,7 @@ export const ROUTES = {
     implantacao: '/admin/implantacao',
     provisionamento: '/admin/provisionamento',
     suspensao: '/admin/suspensao',
+    caixas: '/admin/caixas',
     diagnosticoCaixa: '/admin/diagnostico-caixa',
     categoriasProdutos: '/admin/categorias-produtos',
     marcasProdutos: '/admin/marcas-produtos',
@@ -151,7 +152,7 @@ export const LEGACY_GERENTE_REDIRECTS: Record<string, string> = {
   compras: ROUTES.admin.compras,
   clientes: ROUTES.admin.clientes,
   fornecedores: ROUTES.admin.fornecedores,
-  caixas: ROUTES.admin.vendas,
+  caixas: ROUTES.admin.caixas,
   atividades: ROUTES.admin.dashboard,
 }
 
