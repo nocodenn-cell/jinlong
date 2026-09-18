@@ -963,7 +963,16 @@
       "contas_pagar_geradas": "{{n}} conta(s) a pagar gerada(s) por esta nota — {{valor}} no total, 1º vencimento em {{data}}.",
       "contas_pagar_nenhuma": "Nenhuma conta a pagar está registrada para esta nota.",
       "btn_ver_contas_pagar": "Ver contas a pagar",
-      "btn_ver_estoque": "Ver estoque"
+      "btn_ver_estoque": "Ver estoque",
+      "oc_titulo": "Pedido de compra (opcional)",
+      "oc_ajuda": "Se esta nota corresponde a um pedido, relacione-o: ao confirmar, a quantidade conferida abate o saldo do pedido, item a item. O sistema nunca faz esse vínculo sozinho.",
+      "oc_vinculada": "Nota relacionada ao pedido {{oc}} ({{fornecedor}}): recebido {{recebido}} de {{pedido}}. Faltam {{faltam}} unidades.",
+      "oc_desvincular": "Desvincular",
+      "oc_fora_do_pedido": "Itens desta nota que não constam no pedido (entram no estoque, mas não abatem o pedido): {{itens}}.",
+      "oc_vinculo_ok": "Pedido relacionado à nota.",
+      "oc_desvinculo_ok": "Vínculo com o pedido removido.",
+      "oc_resultado_parcial": "Pedido {{oc}}: {{abatido}} unidades desta nota abateram o pedido — recebido {{recebido}} de {{pedido}}. Faltam {{faltam}} unidades.",
+      "oc_resultado_completo": "Pedido {{oc}}: {{abatido}} unidades desta nota abateram o pedido. Pedido totalmente recebido."
     }
   },
   "compras": {

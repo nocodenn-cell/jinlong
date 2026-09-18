@@ -963,7 +963,16 @@
       "contas_pagar_geradas": "本发票已生成 {{n}} 笔应付账款——合计 {{valor}}，首笔到期日 {{data}}。",
       "contas_pagar_nenhuma": "本发票暂无应付账款记录。",
       "btn_ver_contas_pagar": "查看应付账款",
-      "btn_ver_estoque": "查看库存"
+      "btn_ver_estoque": "查看库存",
+      "oc_titulo": "采购订单（可选）",
+      "oc_ajuda": "如果本发票对应某个采购订单，请关联：确认时，核对数量将按明细冲减订单待收数量。系统不会自动关联。",
+      "oc_vinculada": "本发票已关联订单 {{oc}}（{{fornecedor}}）：已收 {{recebido}} / 订购 {{pedido}}，尚缺 {{faltam}} 件。",
+      "oc_desvincular": "取消关联",
+      "oc_fora_do_pedido": "本发票中不在订单内的商品（会入库，但不冲减订单）：{{itens}}。",
+      "oc_vinculo_ok": "已将订单关联到本发票。",
+      "oc_desvinculo_ok": "已取消与订单的关联。",
+      "oc_resultado_parcial": "订单 {{oc}}：本发票有 {{abatido}} 件冲减了订单——已收 {{recebido}} / 订购 {{pedido}}，尚缺 {{faltam}} 件。",
+      "oc_resultado_completo": "订单 {{oc}}：本发票有 {{abatido}} 件冲减了订单，订单已全部收货。"
     }
   },
   "compras": {
