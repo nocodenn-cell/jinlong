@@ -285,7 +285,7 @@ export function ClientesListClient({
                 <Link
                   href={pathWithQuery(
                     ROUTES.admin.financeiro,
-                    new URLSearchParams({ tab: 'receber', cliente: c.nome }),
+                    new URLSearchParams({ tab: 'receber', cliente_id: c.id, cliente: c.nome }),
                   )}
                   onClick={(e) => stopRowAction(e)}
                   className="inline-flex items-center gap-1 text-caption text-[var(--color-info)] hover:underline"

@@ -129,6 +129,9 @@ export type ReceivableListRow = ReceivableTitle & {
 
 export type ListReceivablesQuery = {
   opcao: 'mix' | 'ABERTO' | 'PARCIAL'
+  /** UUID exato do cliente (G-07) — quando presente, filtra por `cliente_id` direto, nunca por nome. */
+  clienteId: string
+  /** Só exibição (ex.: rótulo de chip removível) — nunca usado para filtrar. */
   nomeCliente: string
   q: string
   de: string

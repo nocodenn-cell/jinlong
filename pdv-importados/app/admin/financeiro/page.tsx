@@ -27,6 +27,7 @@ import { parseFinanceiroTab } from './_components/financeiroTabs'
 type SearchParams = {
   tab?: string
   opcao?: string
+  cliente_id?: string
   cliente?: string
   q?: string
   de?: string
@@ -114,6 +115,7 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
   const activeParams: Record<string, string> = { tab: activeTab }
   if (filters.q) activeParams.q = filters.q
   if (filters.opcao !== 'mix') activeParams.opcao = filters.opcao
+  if (filters.clienteId) activeParams.cliente_id = filters.clienteId
   if (filters.nomeCliente) activeParams.cliente = filters.nomeCliente
   if (filters.de) activeParams.de = filters.de
   if (filters.ate) activeParams.ate = filters.ate
@@ -121,6 +123,8 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
   const hrefWithout = (key: string) => {
     const p = new URLSearchParams(activeParams)
     p.delete(key)
+    // cliente_id/cliente sempre andam juntos (id filtra, nome só rotula o chip).
+    if (key === 'cliente_id') p.delete('cliente')
     return pathWithQuery(ROUTES.admin.financeiro, p)
   }
 
@@ -130,7 +134,12 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
   }
 
   const chips: Array<{ key: string; label: string }> = []
-  if (filters.nomeCliente) chips.push({ key: 'cliente', label: ui.financeiro_chip_cliente.replace('{{nome}}', filters.nomeCliente) })
+  if (filters.clienteId) {
+    chips.push({
+      key: 'cliente_id',
+      label: ui.financeiro_chip_cliente.replace('{{nome}}', filters.nomeCliente || '—'),
+    })
+  }
   if (filters.de) chips.push({ key: 'de', label: ui.financeiro_chip_de.replace('{{data}}', filters.de) })
   if (filters.ate) chips.push({ key: 'ate', label: ui.financeiro_chip_ate.replace('{{data}}', filters.ate) })
   if (filters.opcao !== 'mix') chips.push({ key: 'opcao', label: statusChipLabel[filters.opcao] ?? filters.opcao })

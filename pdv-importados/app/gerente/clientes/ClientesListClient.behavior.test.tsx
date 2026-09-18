@@ -142,7 +142,7 @@ describe('ClientesListClient Fase A', () => {
       ) as HTMLAnchorElement | undefined
       expect(link).toBeTruthy()
       const href = link!.getAttribute('href')!
-      const esperado = `/admin/financeiro?${new URLSearchParams({ tab: 'receber', cliente: row.nome }).toString()}`
+      const esperado = `/admin/financeiro?${new URLSearchParams({ tab: 'receber', cliente_id: row.id, cliente: row.nome }).toString()}`
       expect(href).toBe(esperado)
     })
 
