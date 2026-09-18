@@ -6,16 +6,18 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
  * builder encadeável e thenable por tabela.
  */
 
-const assertAdminSession = vi.hoisted(() => vi.fn())
+const assertGerenteSession = vi.hoisted(() => vi.fn())
 const createClient = vi.hoisted(() => vi.fn())
 
-vi.mock('@/lib/admin/auth/assertAdminSession', () => ({ assertAdminSession }))
+vi.mock('@/lib/gerente/auth/assertGerenteSession', () => ({ assertGerenteSession }))
 vi.mock('@/lib/supabase/server', () => ({ createClient }))
 
 import { listarHistoricoCaixas, listarMovimentacoesCaixa } from './actions'
 
-function sessionOk(lojaId: string | null = 'loja-a') {
-  return { ok: true, session: { lojaId, idioma: 'pt', userId: 'u1' } } as const
+type Perfil = 'GERENTE' | 'DONO' | 'ADMIN'
+
+function sessionOk(perfil: Perfil = 'GERENTE', lojaId: string | null = 'loja-a') {
+  return { ok: true, session: { perfil, lojaId, idioma: 'pt', userId: 'u1' } } as const
 }
 
 type CaixasQueryBuilder = {
@@ -28,13 +30,15 @@ type CaixasQueryBuilder = {
   then: (resolve: (v: { data: unknown; error: unknown }) => void) => void
 }
 
-function buildFromMock(resultsByTable: Record<string, { data: unknown; error: unknown }>) {
+function buildFromMock(
+  resultsByTable: Record<string, { data: unknown; error: unknown }>,
+  onLojaFiltrada?: (table: string, lojaId: string) => void,
+) {
   return (table: string) => {
-    let lojaFiltrada: string | null = null
     const builder: CaixasQueryBuilder = {
       select: () => builder,
       eq: (col, val) => {
-        if (col === 'loja_id') lojaFiltrada = val
+        if (col === 'loja_id') onLojaFiltrada?.(table, val)
         return builder
       },
       order: () => builder,
@@ -45,7 +49,6 @@ function buildFromMock(resultsByTable: Record<string, { data: unknown; error: un
         resolve(resultsByTable[table] ?? { data: [], error: null })
       },
     }
-    void lojaFiltrada
     return builder
   }
 }
@@ -53,7 +56,7 @@ function buildFromMock(resultsByTable: Record<string, { data: unknown; error: un
 describe('listarHistoricoCaixas (S9/G-01)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    assertAdminSession.mockResolvedValue(sessionOk())
+    assertGerenteSession.mockResolvedValue(sessionOk())
   })
 
   it('mapeia as linhas retornadas pela query (caixas FECHADO da loja)', async () => {
@@ -88,11 +91,24 @@ describe('listarHistoricoCaixas (S9/G-01)', () => {
   })
 
   it('sem sessão válida, recusa (fail closed)', async () => {
-    assertAdminSession.mockResolvedValue({ ok: false, error: 'Não autorizado.' })
+    assertGerenteSession.mockResolvedValue({ ok: false, error: 'Não autorizado.' })
     createClient.mockResolvedValue({ from: buildFromMock({}) })
 
     const res = await listarHistoricoCaixas()
     expect(res.ok).toBe(false)
+  })
+
+  it('perfil não autorizado (ex.: OPERADOR) → assertGerenteSession recusa, ação não executa query', async () => {
+    assertGerenteSession.mockResolvedValue({
+      ok: false,
+      error: 'Esta área é só para gerente, dono ou administrador. Use uma conta com permissão.',
+    })
+    const fromSpy = vi.fn()
+    createClient.mockResolvedValue({ from: fromSpy })
+
+    const res = await listarHistoricoCaixas()
+    expect(res.ok).toBe(false)
+    expect(fromSpy).not.toHaveBeenCalled()
   })
 
   it('erro de consulta retorna falha, não lista vazia disfarçada de sucesso', async () => {
@@ -103,12 +119,70 @@ describe('listarHistoricoCaixas (S9/G-01)', () => {
     const res = await listarHistoricoCaixas()
     expect(res.ok).toBe(false)
   })
+
+  describe('escopo de loja por perfil (achado da certificação pré-go-live)', () => {
+    it('GERENTE: filtra por loja_id = loja da própria sessão', async () => {
+      assertGerenteSession.mockResolvedValue(sessionOk('GERENTE', 'loja-gerente'))
+      const lojasFiltradas: string[] = []
+      createClient.mockResolvedValue({
+        from: buildFromMock({ caixas: { data: [], error: null } }, (_table, lojaId) => {
+          lojasFiltradas.push(lojaId)
+        }),
+      })
+
+      const res = await listarHistoricoCaixas()
+      expect(res.ok).toBe(true)
+      expect(lojasFiltradas).toEqual(['loja-gerente'])
+    })
+
+    it('ADMIN: filtra por loja_id = loja da própria sessão (mesma regra do GERENTE, RLS 057)', async () => {
+      assertGerenteSession.mockResolvedValue(sessionOk('ADMIN', 'loja-admin'))
+      const lojasFiltradas: string[] = []
+      createClient.mockResolvedValue({
+        from: buildFromMock({ caixas: { data: [], error: null } }, (_table, lojaId) => {
+          lojasFiltradas.push(lojaId)
+        }),
+      })
+
+      const res = await listarHistoricoCaixas()
+      expect(res.ok).toBe(true)
+      expect(lojasFiltradas).toEqual(['loja-admin'])
+    })
+
+    it('DONO: NÃO filtra por loja_id — vê todas as lojas (RLS 057 permite; app não deve sub-restringir)', async () => {
+      assertGerenteSession.mockResolvedValue(sessionOk('DONO', 'loja-do-dono'))
+      const lojasFiltradas: string[] = []
+      createClient.mockResolvedValue({
+        from: buildFromMock({ caixas: { data: [], error: null } }, (_table, lojaId) => {
+          lojasFiltradas.push(lojaId)
+        }),
+      })
+
+      const res = await listarHistoricoCaixas()
+      expect(res.ok).toBe(true)
+      expect(lojasFiltradas).toEqual([])
+    })
+
+    it('DONO sem loja_id na sessão: também não filtra (continua global, não cai no fallback da matriz)', async () => {
+      assertGerenteSession.mockResolvedValue(sessionOk('DONO', null))
+      const lojasFiltradas: string[] = []
+      createClient.mockResolvedValue({
+        from: buildFromMock({ caixas: { data: [], error: null } }, (_table, lojaId) => {
+          lojasFiltradas.push(lojaId)
+        }),
+      })
+
+      const res = await listarHistoricoCaixas()
+      expect(res.ok).toBe(true)
+      expect(lojasFiltradas).toEqual([])
+    })
+  })
 })
 
 describe('listarMovimentacoesCaixa (S9/G-01)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    assertAdminSession.mockResolvedValue(sessionOk())
+    assertGerenteSession.mockResolvedValue(sessionOk())
   })
 
   it('confirma o caixa na loja antes de listar movimentações', async () => {
@@ -148,5 +222,25 @@ describe('listarMovimentacoesCaixa (S9/G-01)', () => {
 
     const res = await listarMovimentacoesCaixa('c-de-outra-loja')
     expect(res.ok).toBe(false)
+  })
+
+  it('DONO: confirma o caixa sem filtrar por loja_id (vê movimentações de qualquer loja)', async () => {
+    assertGerenteSession.mockResolvedValue(sessionOk('DONO', 'loja-do-dono'))
+    const lojasFiltradas: string[] = []
+    createClient.mockResolvedValue({
+      from: buildFromMock(
+        {
+          'caixas:maybeSingle': { data: { id: 'c1' }, error: null },
+          movimentacoes_caixa: { data: [], error: null },
+        },
+        (_table, lojaId) => {
+          lojasFiltradas.push(lojaId)
+        },
+      ),
+    })
+
+    const res = await listarMovimentacoesCaixa('c1')
+    expect(res.ok).toBe(true)
+    expect(lojasFiltradas).toEqual([])
   })
 })

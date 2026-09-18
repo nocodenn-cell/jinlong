@@ -6,7 +6,12 @@
  * NÃO cria tabela/RPC nova. Lê `caixas` (já filtrada por `status = 'FECHADO'`)
  * e, sob demanda, `movimentacoes_caixa` do turno selecionado — ambas já
  * existentes, com RLS por loja já vigente (057_caixas_rls_consolidate_
- * permissive.sql permite GERENTE/ADMIN da mesma loja e DONO de todas).
+ * permissive.sql: GERENTE/ADMIN restritos à mesma loja, DONO vê todas).
+ *
+ * Auth guard e escopo de loja seguem exatamente essa mesma regra (achado da
+ * certificação pré-go-live: este arquivo usava assertAdminSession com uma
+ * action não registrada, e restringia DONO à loja da sessão — RLS já
+ * corrigia o vazamento, mas a app sub-restringia DONO indevidamente).
  *
  * `valor_sistema` nunca é recalculado aqui — vem derivado dos campos
  * persistidos no fechamento (`caixasHistorico.ts`), nunca de
@@ -14,9 +19,8 @@
  */
 
 import { createClient } from '@/lib/supabase/server'
-import { assertAdminSession } from '@/lib/admin/auth/assertAdminSession'
+import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
-import { ROUTES } from '@shared-core/navigation/routes'
 import {
   mapCaixaHistoricoLinha,
   mapCaixaMovimentacaoLinha,
@@ -37,20 +41,21 @@ const CAIXA_HISTORICO_SELECT = `
 const LIMITE = 100
 
 export async function listarHistoricoCaixas(): Promise<R<CaixaHistoricoLinha[]>> {
-  const auth = await assertAdminSession('caixas:listar', {
-    pathname: ROUTES.admin.caixas,
-    resource: `route:${ROUTES.admin.caixas}`,
-  })
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { ok: false, error: auth.error }
 
-  const loja = auth.session.lojaId ?? LOJA_MATRIZ_ID
+  // Mesma regra de 057_caixas_rls_consolidate_permissive.sql: DONO vê todas
+  // as lojas (sem filtro); GERENTE/ADMIN ficam restritos à própria loja.
+  const loja = auth.session.perfil === 'DONO' ? null : (auth.session.lojaId ?? LOJA_MATRIZ_ID)
   const supabase = await createClient()
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('caixas')
     .select(CAIXA_HISTORICO_SELECT)
-    .eq('loja_id', loja)
     .eq('status', 'FECHADO')
+  if (loja !== null) query = query.eq('loja_id', loja)
+
+  const { data, error } = await query
     .order('data_fechamento', { ascending: false })
     .limit(LIMITE)
 
@@ -64,24 +69,20 @@ export async function listarHistoricoCaixas(): Promise<R<CaixaHistoricoLinha[]>>
 }
 
 export async function listarMovimentacoesCaixa(caixaId: string): Promise<R<CaixaMovimentacaoLinha[]>> {
-  const auth = await assertAdminSession('caixas:listar', {
-    pathname: ROUTES.admin.caixas,
-    resource: `route:${ROUTES.admin.caixas}`,
-  })
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { ok: false, error: auth.error }
 
-  const loja = auth.session.lojaId ?? LOJA_MATRIZ_ID
+  // Mesma regra de 057_caixas_rls_consolidate_permissive.sql: DONO vê todas
+  // as lojas (sem filtro); GERENTE/ADMIN ficam restritos à própria loja.
+  const loja = auth.session.perfil === 'DONO' ? null : (auth.session.lojaId ?? LOJA_MATRIZ_ID)
   const supabase = await createClient()
 
-  // Confirma que o caixa pertence à loja do ator antes de listar suas
-  // movimentações — RLS já barra, este é o mesmo padrão defensivo (checar
-  // tenant na app) usado em todo o resto do produto.
-  const { data: caixa, error: caixaError } = await supabase
-    .from('caixas')
-    .select('id')
-    .eq('id', caixaId)
-    .eq('loja_id', loja)
-    .maybeSingle()
+  // Confirma que o caixa pertence à loja do ator (quando restrito) antes de
+  // listar suas movimentações — RLS já barra, este é o mesmo padrão
+  // defensivo (checar tenant na app) usado em todo o resto do produto.
+  let caixaQuery = supabase.from('caixas').select('id').eq('id', caixaId)
+  if (loja !== null) caixaQuery = caixaQuery.eq('loja_id', loja)
+  const { data: caixa, error: caixaError } = await caixaQuery.maybeSingle()
   if (caixaError) return { ok: false, error: 'Não foi possível confirmar o caixa selecionado.' }
   if (!caixa) return { ok: false, error: 'Caixa não encontrado.' }
 
