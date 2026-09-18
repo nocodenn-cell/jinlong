@@ -51,6 +51,7 @@ import { useReprecificarQuantidadeCaixa } from "@/app/caixa/hooks/useReprecifica
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { formatDecimalBRL } from "@/lib/format/money"
 import { mensagemVendaOk } from "@/app/caixa/caixaMensagemVendaOk"
+import { painelGestaoHrefParaPerfil } from "@/app/caixa/caixaPainelGestao"
 import { CaixaHeader } from "@/app/caixa/CaixaHeader"
 import { CaixaSearchBar } from "@/app/caixa/CaixaSearchBar"
 import { CaixaOperadorContextBar } from "@/app/caixa/CaixaOperadorContextBar"
@@ -1666,6 +1667,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 onSelecionarCliente={abrirSelecionarCliente}
                 movimentacoesPendentes={movimentacoesPendentes}
                 onResolverPendencia={handleResolverPendencia}
+                painelGestaoHref={painelGestaoHrefParaPerfil(perfil)}
               />
               <div className="border-t pt-2 text-xs font-semibold uppercase tracking-wide border-border text-muted-foreground">
                 {m.caixa.rail_titulo_em_aberto}
@@ -1715,6 +1717,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 onSelecionarCliente={abrirSelecionarCliente}
                 movimentacoesPendentes={movimentacoesPendentes}
                 onResolverPendencia={handleResolverPendencia}
+                painelGestaoHref={painelGestaoHrefParaPerfil(perfil)}
               />
             </div>
           </div>

@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { memo, useCallback, useEffect, useId, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import type { Mensagens } from "@/i18n/getMessages"
@@ -41,6 +42,12 @@ type Props = {
    */
   movimentacoesPendentes: MovimentacaoCaixaDTO[]
   onResolverPendencia: (item: MovimentacaoCaixaDTO) => void
+  /**
+   * Atalho para o painel de gestão — só é passado para perfis com acesso ao
+   * painel (ver `painelGestaoHrefParaPerfil`). Abre em nova aba para não
+   * interromper venda em andamento nem o turno aberto.
+   */
+  painelGestaoHref?: string | null
   variant?: "default" | "classic"
 }
 
@@ -75,6 +82,7 @@ function CaixaPdvOperacoesMenuImpl({
   onSelecionarCliente,
   movimentacoesPendentes,
   onResolverPendencia,
+  painelGestaoHref = null,
   variant = "default",
 }: Props) {
   const classic = variant === "classic"
@@ -339,6 +347,26 @@ function CaixaPdvOperacoesMenuImpl({
                   </button>
                 </li>
               ))}
+              {painelGestaoHref ? (
+                <li
+                  className={cn(
+                    "mt-1 border-t pt-1",
+                    classic ? "border-border" : "border-jl-border-1",
+                  )}
+                >
+                  <Link
+                    href={painelGestaoHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    role="menuitem"
+                    data-testid="caixa-menu-painel-gestao"
+                    className={itemClass({ id: "painel-gestao", label: "", onClick: fecharMenu })}
+                    onClick={() => setMenuAberto(false)}
+                  >
+                    <span>{m.caixa.operacoes_painel_gestao}</span>
+                  </Link>
+                </li>
+              ) : null}
             </ul>
           </div>
         ) : null}
