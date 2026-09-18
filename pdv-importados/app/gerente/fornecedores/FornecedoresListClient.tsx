@@ -8,8 +8,11 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { useDebounce } from '@/lib/hooks/useDebounce'
-import { ClipboardList, Pencil, Trash2, Plus } from 'lucide-react'
-import { adminComprasFornecedorQuery } from '@shared-core/navigation/routes'
+import { Banknote, ClipboardList, Pencil, Trash2, Plus } from 'lucide-react'
+import {
+  adminComprasFornecedorQuery,
+  adminFinanceiroContasPagarFornecedorQuery,
+} from '@shared-core/navigation/routes'
 import { Button } from '@/components/ui/button'
 import { Checkbox, SearchInput } from '@/components/ui/forms'
 import { DataTable, type Column } from '@/components/ui/DataTable'
@@ -337,6 +340,21 @@ export function FornecedoresListClient({
             >
               <Link href={adminComprasFornecedorQuery(f.id)} onClick={(e) => e.stopPropagation()}>
                 <ClipboardList className="h-3.5 w-3.5" aria-hidden />
+              </Link>
+            </Button>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              aria-label={`${m.fornecedores.contas_pagar} — ${f.nome}`}
+              title={m.fornecedores.contas_pagar}
+              asChild
+            >
+              <Link
+                href={adminFinanceiroContasPagarFornecedorQuery(f.id)}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Banknote className="h-3.5 w-3.5" aria-hidden />
               </Link>
             </Button>
             <Button
