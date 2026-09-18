@@ -286,15 +286,23 @@ export function ContasPagarListClient({
             <div className="mt-0.5 text-caption text-fg-subtle">
               {m.contas_pagar.lancado_em} {fmtGerenteDateTime(c.criado_em, locale)}
             </div>
-            {c.nfe_numero ? (
+            {c.nfe_numero && c.nfe_importacao_id ? (
               <Link
-                href={c.nfe_importacao_id ? `/gerente/estoque/importar-nfe?id=${c.nfe_importacao_id}` : '#'}
-                onClick={(e) => !c.nfe_importacao_id && e.preventDefault()}
+                href={`/gerente/estoque/importar-nfe?id=${c.nfe_importacao_id}`}
                 className="mt-1 inline-flex items-center gap-1 font-mono text-caption text-[var(--color-warning-strong)] hover:underline"
               >
                 <FileText className="h-3 w-3" aria-hidden />
                 NF-e #{c.nfe_numero}
               </Link>
+            ) : c.nfe_numero ? (
+              // G-08: sem nfe_importacao_id não há pra onde navegar — antes
+              // isto renderizava um <Link href="#"> com preventDefault, um
+              // link clicável que não fazia nada. Mesmo texto, sem promessa
+              // de clique.
+              <span className="mt-1 inline-flex items-center gap-1 font-mono text-caption text-fg-subtle">
+                <FileText className="h-3 w-3" aria-hidden />
+                NF-e #{c.nfe_numero}
+              </span>
             ) : null}
           </div>
         ),
