@@ -91,6 +91,7 @@
     "status_chip_hint_inativo": "Inativo — não vende no PDV até republicar.",
     "hint_cadastro_scanner": "Escaneie o código — sugerimos nome/preço quando conhecermos o GTIN.",
     "sugestao_aplicada": "Dados sugeridos aplicados ({{fonte}}). Confira e salve.",
+    "sugestao_marca_detectada": "Marca sugerida: {{marca}} — selecione em Marca, se aplicável.",
     "sugestao_buscando": "Buscando sugestão do código…",
     "criado_publicado_sem_estoque": "Produto publicado. Falta o estoque para vender no caixa.",
     "pos_salvar_hint_estoque_obrigatorio": "O caixa recusa a venda com saldo 0. Ajuste o estoque para liberar este produto.",

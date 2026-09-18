@@ -48,6 +48,7 @@ import {
   fontesLabel,
 } from '@/lib/gerente/cadastroSugestaoClient'
 import { isGtinLookupCandidate, normalizeGtinDigits } from '@/core/catalog/sugestaoCadastro'
+import { combinarSugestaoHint } from './form/sugestaoHint'
 
 export type ProdutoFormModalProps = Readonly<{
   open: boolean
@@ -235,13 +236,17 @@ export function ProdutoFormModal({
       if (form.precoCustoInput.parse() == null && s.precoCusto != null) {
         form.precoCustoInput.reset(s.precoCusto)
       }
-      setSugestaoHint(
-        s.fontes[0] === 'nenhuma'
-          ? null
-          : p.sugestao_aplicada.replace('{{fonte}}', fonte),
-      )
+      const baseHint = s.fontes[0] === 'nenhuma' ? null : p.sugestao_aplicada.replace('{{fonte}}', fonte)
+      setSugestaoHint(combinarSugestaoHint(baseHint, s.marca, p.sugestao_marca_detectada))
     },
-    [editando, form, p.sugestao_buscando, p.sugestao_aplicada, p.err_codigo_barras_duplicado],
+    [
+      editando,
+      form,
+      p.sugestao_buscando,
+      p.sugestao_aplicada,
+      p.sugestao_marca_detectada,
+      p.err_codigo_barras_duplicado,
+    ],
   )
 
   useEffect(() => {
