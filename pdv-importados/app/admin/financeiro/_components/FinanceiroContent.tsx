@@ -49,6 +49,8 @@ type Props = {
     fornecedoresOpts: Array<{ id: string; nome: string }>
     statusInicial: string
     periodoInicial: string
+    /** Deep-link `?fornecedor_id=`: fornecedor já filtrado ao abrir a aba "A pagar". */
+    fornecedorInicial?: string
   }
   filterSection: ReactNode
   kpiSection: ReactNode
@@ -147,6 +149,7 @@ export function FinanceiroContent({
           fornecedoresOpts={contasPagar.fornecedoresOpts}
           statusInicial={contasPagar.statusInicial}
           periodoInicial={contasPagar.periodoInicial}
+          fornecedorInicial={contasPagar.fornecedorInicial}
           actorLojaId={actorLojaId}
         />
       ) : null}

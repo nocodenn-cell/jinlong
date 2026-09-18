@@ -35,7 +35,10 @@ type SearchParams = {
   limite?: string
   status?: string
   periodo?: string
+  fornecedor_id?: string
 }
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 type PageProps = { searchParams?: Promise<SearchParams> }
 
@@ -56,6 +59,10 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
   const supabase = await createClient()
   const statusPagar = sp.status ?? 'todos'
   const periodoPagar = sp.periodo ?? ''
+  // Deep-link `?fornecedor_id=` (ex.: NF-e concluída, ficha de Fornecedores):
+  // id que não é UUID é ignorado em vez de virar erro de query.
+  const fornecedorIdPagar =
+    sp.fornecedor_id && UUID_RE.test(sp.fornecedor_id.trim()) ? sp.fornecedor_id.trim() : ''
 
   const [listaRes, kpisRes, fiscalRes, clientesRes, pagarRes, fornRes, caixasRes] = await Promise.all([
     fetchContasReceberListagem(supabase, filters, limite),
@@ -68,7 +75,11 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
       .order('created_at', { ascending: false })
       .limit(50),
     buscarClientesPaginadosAction(1),
-    buscarContasPagarAction(1, { status: statusPagar, periodo: periodoPagar || undefined }),
+    buscarContasPagarAction(1, {
+      status: statusPagar,
+      periodo: periodoPagar || undefined,
+      fornecedor_id: fornecedorIdPagar || undefined,
+    }),
     buscarFornecedoresPaginadosAction(1),
     supabase.from('caixas').select('id, loja_id, operador_id, usuarios!caixas_operador_id_fkey(nome)').eq('status', 'ABERTO'),
   ])
@@ -97,6 +108,23 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
   }))
 
   const clientesOpts = clientesRes.ok ? clientesRes.clientes.map((c) => ({ id: c.id, nome: c.nome })) : []
+
+  // `buscarFornecedoresPaginadosAction(1)` traz só a 1ª página: o fornecedor do
+  // deep-link pode não estar nela, e sem a opção o filtro ficaria ativo com o
+  // <select> em branco.
+  let fornecedoresOptsPagar = fornRes.ok
+    ? fornRes.fornecedores.map((f) => ({ id: f.id, nome: f.nome }))
+    : []
+  if (fornecedorIdPagar && !fornecedoresOptsPagar.some((f) => f.id === fornecedorIdPagar)) {
+    const nomeDosTitulos = pagarRes.ok
+      ? pagarRes.contas.find((c) => c.fornecedor_id === fornecedorIdPagar)?.fornecedor_nome
+      : null
+    const nome =
+      nomeDosTitulos ??
+      (await supabase.from('fornecedores').select('nome').eq('id', fornecedorIdPagar).maybeSingle())
+        .data?.nome
+    if (nome) fornecedoresOptsPagar = [{ id: fornecedorIdPagar, nome }, ...fornecedoresOptsPagar]
+  }
 
   const filterDefs: FilterDef[] = [
     { type: 'search', key: 'q', placeholder: ui.financeiro_filtro_placeholder },
@@ -247,9 +275,10 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
             locale,
             contasIniciais: pagarRes.ok ? pagarRes.contas : [],
             hasMoreInicial: pagarRes.ok ? pagarRes.hasMore : false,
-            fornecedoresOpts: fornRes.ok ? fornRes.fornecedores.map((f) => ({ id: f.id, nome: f.nome })) : [],
+            fornecedoresOpts: fornecedoresOptsPagar,
             statusInicial: statusPagar,
             periodoInicial: periodoPagar,
+            fornecedorInicial: fornecedorIdPagar,
           }}
         />
       </div>

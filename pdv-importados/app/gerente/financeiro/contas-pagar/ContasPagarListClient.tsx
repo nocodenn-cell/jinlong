@@ -34,6 +34,8 @@ type Props = Readonly<{
   fornecedoresOpts: Array<{ id: string; nome: string }>
   statusInicial: string
   periodoInicial: string
+  /** Fornecedor já filtrado ao abrir (deep-link `?fornecedor_id=`). */
+  fornecedorInicial?: string
   /** Loja do ator autenticado — `registrar_pagamento_contas_pagar` rejeita pagamento cross-loja para todos os perfis. */
   actorLojaId?: string | null
 }>
@@ -84,6 +86,7 @@ export function ContasPagarListClient({
   fornecedoresOpts,
   statusInicial,
   periodoInicial,
+  fornecedorInicial = '',
   actorLojaId = null,
 }: Props) {
   const m = getMessages(idioma)
@@ -94,7 +97,7 @@ export function ContasPagarListClient({
 
   const [termo, setTermo] = useState('')
   const [status, setStatus] = useState<string>(statusInicial)
-  const [fornecedorId, setFornecedorId] = useState('')
+  const [fornecedorId, setFornecedorId] = useState(fornecedorInicial)
   const [periodo, setPeriodo] = useState(periodoInicial)
 
   const [emPagamento, setEmPagamento] = useState<ContaPagarRow | null>(null)

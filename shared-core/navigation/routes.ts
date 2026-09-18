@@ -122,6 +122,14 @@ export function adminImportNfeImportacaoQuery(importacaoId: string): string {
   return pathWithQuery(ROUTES.admin.importNfe, q)
 }
 
+/** Abre a aba "A pagar" do Financeiro já filtrada por fornecedor (ex.: após dar entrada numa NF-e, ou a partir de Fornecedores). */
+export function adminFinanceiroContasPagarFornecedorQuery(fornecedorId: string): string {
+  const q = new URLSearchParams()
+  q.set('tab', 'pagar')
+  if (fornecedorId.trim()) q.set('fornecedor_id', fornecedorId.trim())
+  return pathWithQuery(ROUTES.admin.financeiro, q)
+}
+
 export function adminEtiquetasProdutoQuery(opts: {
   codigo?: string | null
   produtoId?: string | null
