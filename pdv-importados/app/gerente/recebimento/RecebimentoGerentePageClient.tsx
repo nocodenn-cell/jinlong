@@ -63,6 +63,11 @@ export function RecebimentoGerentePageClient({
   const [qtdEspStr, setQtdEspStr] = useState('')
   const [qtdConfStr, setQtdConfStr] = useState('')
   const idempotencyKeyRef = useRef(crypto.randomUUID())
+  // Depois de confirmar a entrada o formulário volta ao estado inicial: com os
+  // campos preenchidos e uma nova chave de idempotência, um segundo clique
+  // criaria outra entrada (e outro crédito de estoque) com os mesmos dados.
+  const [formKey, setFormKey] = useState(0)
+  const [usarProdutoPreSelecionado, setUsarProdutoPreSelecionado] = useState(true)
 
   const divergenciaDetalhe = useMemo(() => {
     const esp = Number(qtdEspStr.replace(',', '.'))
@@ -110,6 +115,10 @@ export function RecebimentoGerentePageClient({
       onSuccess: (id) => {
         if (id) {
           idempotencyKeyRef.current = crypto.randomUUID()
+          setQtdEspStr('')
+          setQtdConfStr('')
+          setUsarProdutoPreSelecionado(false)
+          setFormKey((k) => k + 1)
           emitGerenteToast({ kind: 'success', message: interRecebimento(r.toast_ok, { id }) })
         }
       },
@@ -198,6 +207,7 @@ export function RecebimentoGerentePageClient({
 
       <CadastroRapidoBlock title={r.sec_formulario} defaultOpen className="mt-8">
         <form
+          key={formKey}
           id="recebimento-form"
           className="space-y-0"
           onSubmit={(e) => {
@@ -240,7 +250,7 @@ export function RecebimentoGerentePageClient({
                 semResultadosLabel={r.produto_sem_resultados}
                 minimoLabel={r.produto_busca_minimo}
                 limparLabel={r.produto_limpar}
-                valorInicial={produtoPreSelecionado}
+                valorInicial={usarProdutoPreSelecionado ? produtoPreSelecionado : null}
               />
             </Field>
             <Field
