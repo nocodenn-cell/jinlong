@@ -1243,6 +1243,7 @@
     "msg_venda_pendente_bloqueio": "Existe uma venda pendente de confirmação. Verifique o resultado antes de abrir um cupom novo.",
     "msg_venda_pendente_nao_gravada": "A venda não foi registrada. Pode finalizar novamente.",
     "msg_venda_ok": "Venda registrada (id {{id}}…). Estoque atualizado.",
+    "msg_venda_ok_com_titulo": "Venda registrada (id {{id}}…). Estoque atualizado. Conta a receber gerada: R$ {{valor}} — {{cliente}}.",
     "modal_gerente_titulo": "Autorização do gerente",
     "modal_gerente_passo_senha": "Senha",
     "modal_gerente_senha_placeholder": "Senha do gerente",

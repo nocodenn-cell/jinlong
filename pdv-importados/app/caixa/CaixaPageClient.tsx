@@ -50,6 +50,7 @@ import { useCaixaVendasEmEspera } from "@/app/caixa/hooks/useCaixaVendasEmEspera
 import { useReprecificarQuantidadeCaixa } from "@/app/caixa/hooks/useReprecificarQuantidadeCaixa"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { formatDecimalBRL } from "@/lib/format/money"
+import { mensagemVendaOk } from "@/app/caixa/caixaMensagemVendaOk"
 import { CaixaHeader } from "@/app/caixa/CaixaHeader"
 import { CaixaSearchBar } from "@/app/caixa/CaixaSearchBar"
 import { CaixaOperadorContextBar } from "@/app/caixa/CaixaOperadorContextBar"
@@ -1183,7 +1184,12 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         // próprio toast de sucesso.
         setVendaPendenteModalAberto(false)
         setCaixaMensagemVendaOk(
-          caixaFmt(m.caixa.msg_venda_ok, { id: res.vendaId.slice(0, 8) }),
+          mensagemVendaOk(m.caixa, {
+            vendaId: res.vendaId,
+            contasRecebeId: res.contasRecebeId,
+            saldoAReceber: formatDecimalBRL(saldoPendente),
+            clienteNome,
+          }),
           { kind: "success" },
         )
         tocarFeedback("ok")
