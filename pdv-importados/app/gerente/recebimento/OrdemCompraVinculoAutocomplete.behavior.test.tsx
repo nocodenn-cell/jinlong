@@ -34,6 +34,11 @@ const ocConfirmada: OcListaDTO = {
   total_itens: 3,
   valor_total: 100,
   created_at: '2026-09-01T00:00:00Z',
+  pedido_total: 10,
+  recebido_total: 4,
+  pendente_total: 6,
+  encerrada_com_falta: false,
+  encerramento_motivo: null,
 }
 
 const statusLabels = { CONFIRMADA: 'Confirmada', EM_TRANSITO: 'Em trânsito' }

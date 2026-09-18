@@ -1,9 +1,8 @@
 /** @vitest-environment jsdom */
 /**
- * BP-F1 — o recebimento pelo pedido, a "Entrada sem nota" e a NF-e creditam
- * estoque de forma independente e nada os liga. Enquanto a decisão de produto
- * sobre o vínculo não sai, o modal do pedido em trânsito avisa que lançar a mesma
- * mercadoria por outro caminho credita o estoque duas vezes.
+ * BP-F1 / UX-04 — lançar a mesma mercadoria por outro caminho SEM escolher este pedido credita o
+ * estoque duas vezes (o pedido só sabe do que foi vinculado a ele). O modal do pedido em trânsito
+ * com saldo a receber avisa isso; pedido sem saldo ou fora de trânsito não tem o que avisar.
  */
 import React from 'react'
 import { createRoot, type Root } from 'react-dom/client'
@@ -18,6 +17,7 @@ vi.mock('./actions', () => ({
   obterOrdemCompraDetalhe: (id: string) => obterDetalheMock(id),
   atualizarStatusOC: vi.fn(),
   registrarRecebimentoOC: vi.fn(),
+  encerrarOrdemCompraComFalta: vi.fn(),
 }))
 vi.mock('@/lib/gerente/toast', () => ({ emitGerenteToast: vi.fn() }))
 
@@ -33,6 +33,14 @@ function ocComStatus(status: string) {
     data_prevista_chegada: null,
     observacao: null,
     created_at: '2026-09-01T00:00:00Z',
+    total_itens: 1,
+    valor_total: 50,
+    pedido_total: 10,
+    recebido_total: status === 'RECEBIDA' ? 10 : 0,
+    pendente_total: status === 'RECEBIDA' ? 0 : 10,
+    encerrada_com_falta: false,
+    encerramento_motivo: null,
+    entradas: [],
     itens: [
       {
         id: 'it-1',
@@ -41,7 +49,8 @@ function ocComStatus(status: string) {
         descricao: null,
         quantidade: 10,
         preco_unitario: 5,
-        quantidade_recebida: 0,
+        quantidade_recebida: status === 'RECEBIDA' ? 10 : 0,
+        saldo_pendente: status === 'RECEBIDA' ? 0 : 10,
         unidade_medida: 'UN',
       },
     ],

@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Plus, FilterX } from 'lucide-react'
 import { MetricCard, PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import { DataTable, type Column } from '@/components/ui/DataTable'
@@ -11,6 +12,8 @@ import { getMessages } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { cn } from '@/lib/utils'
 import { formatBRL } from '@/lib/format/money'
+import { fmtTemplate } from '@/i18n/fmtTemplate'
+import { fmtQtd } from '@/app/gerente/compras/ocRecebimento'
 import {
   listarOrdensCompra,
   type OcDetalheDTO,
@@ -67,6 +70,7 @@ export function ComprasContent({
 }: Props) {
   const m = getMessages(idioma)
   const c = m.compras
+  const router = useRouter()
 
   const [statusFiltro, setStatusFiltro] = useState<StatusOC | ''>('')
   const [busca, setBusca] = useState('')
@@ -140,9 +144,13 @@ export function ComprasContent({
     void carregar(pagina)
   }
 
+  /**
+   * O modal decide se fecha (mudança de status fecha; recebimento parcial mantém aberto para o
+   * operador ver o novo saldo). Aqui só atualiza a lista e os KPIs (valor em trânsito).
+   */
   function aoAtualizarStatus() {
-    setDetalheId(null)
     void carregar(pagina)
+    router.refresh()
   }
 
   const chipBase =
@@ -204,6 +212,29 @@ export function ComprasContent({
         cell: (row) => <span className="tabular-nums">{row.total_itens}</span>,
       },
       {
+        key: 'recebimento',
+        header: c.col_recebimento,
+        align: 'right',
+        cell: (row) =>
+          row.status === 'RASCUNHO' || row.status === 'CANCELADA' ? (
+            <span className="text-caption text-fg-muted">—</span>
+          ) : (
+            <span className="tabular-nums" data-testid={`oc-recebimento-${row.id}`}>
+              <span className="text-caption">
+                {fmtQtd(row.recebido_total)} / {fmtQtd(row.pedido_total)}
+              </span>
+              {row.status === 'EM_TRANSITO' && row.recebido_total > 0 && row.pendente_total > 0 ? (
+                <span className="block text-caption text-amber-300">
+                  {fmtTemplate(c.resumo_faltam, { n: fmtQtd(row.pendente_total) })}
+                </span>
+              ) : null}
+              {row.encerrada_com_falta ? (
+                <span className="block text-caption text-fg-muted">{c.situacao_ENCERRADO_COM_FALTA}</span>
+              ) : null}
+            </span>
+          ),
+      },
+      {
         key: 'total',
         header: c.col_total,
         align: 'right',
@@ -244,6 +275,7 @@ export function ComprasContent({
         <MetricCard
           label={c.kpi_valor_transito}
           value={formatBRL(kpisIniciais.valor_em_transito)}
+          hint={c.kpi_valor_transito_hint}
           icon="dollar-sign"
           tone={kpisIniciais.valor_em_transito > 0 ? 'warning' : 'gold'}
         />
