@@ -55,12 +55,12 @@ describe('recebimento/actions validações', () => {
     ).toBeNull()
   })
 
-  it('S8/RM-14 — validarVinculoOrdemCompra: recusa apenas quando a OC já foi RECEBIDA', () => {
+  it('UX-04 — validarVinculoOrdemCompra: só CONFIRMADA/EM_TRANSITO recebem entrada; encerrada, cancelada e rascunho são recusadas', () => {
     expect(validarVinculoOrdemCompra('CONFIRMADA')).toBeNull()
     expect(validarVinculoOrdemCompra('EM_TRANSITO')).toBeNull()
-    expect(validarVinculoOrdemCompra('RECEBIDA')).toBe(
-      'Esta ordem de compra já foi recebida. Prossiga sem vínculo se este for um recebimento diferente.',
-    )
+    expect(validarVinculoOrdemCompra('RECEBIDA')).toContain('já está encerrada')
+    expect(validarVinculoOrdemCompra('CANCELADA')).toContain('foi cancelada')
+    expect(validarVinculoOrdemCompra('RASCUNHO')).toContain('Confirme a ordem de compra')
   })
 
   it('informa em português e chinês que é preciso selecionar produto e quantidade positiva', () => {

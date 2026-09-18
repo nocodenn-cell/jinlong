@@ -8,6 +8,8 @@ import { validarRemessaInput, validarVinculoOrdemCompra } from './actions.valida
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 import { isInativo, type StatusPublicacao } from '@/core/catalog/statusPublicacao'
 import type { StatusOC } from '@/app/gerente/compras/actions'
+import { mensagemErroOc, mensagemPosEntradaOc, type OcResumoRecebimento } from '@/app/gerente/compras/ocRecebimento'
+import { carregarResumoOc } from '@/app/gerente/compras/ocResumoQuery'
 
 type R<T = null> = { success: true; data: T } | { success: false; error: string }
 
@@ -126,6 +128,14 @@ export async function buscarProdutoRecebimentoPorId(
   }
 }
 
+export type RemessaConferenciaResultado = {
+  remessaId: string
+  /** Estado do pedido depois da entrada (só quando a entrada foi vinculada a um pedido). */
+  oc: OcResumoRecebimento | null
+  /** Texto operacional: o que entrou, quanto falta no pedido, se o pedido fechou. */
+  mensagemOc: string | null
+}
+
 export async function criarRemessaConferencia(input: {
   origem: string
   observacao?: string
@@ -133,7 +143,7 @@ export async function criarRemessaConferencia(input: {
   itens: Array<{ produto_id: string; quantidade_esperada: number; quantidade_conferida: number }>
   /** S8/RM-14 — vínculo opcional com uma Ordem de Compra (id de `ordens_compra`). */
   ordemCompraId?: string | null
-}): Promise<R<string>> {
+}): Promise<R<RemessaConferenciaResultado>> {
   const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
@@ -152,14 +162,9 @@ export async function criarRemessaConferencia(input: {
     return { success: false, error: 'Não foi possível identificar esta tentativa. Tente novamente.' }
   }
 
-  // S8/RM-14 — validação de aplicação do vínculo com OC (Opção 1: não é trava
-  // de RPC nem de schema). Fail-closed: qualquer erro de consulta, OC não
-  // encontrada ou fora da loja recusa o recebimento inteiro — não é seguro
-  // assumir vínculo válido quando não confirmamos o status real da OC. Não é
-  // uma garantia transacional: entre esta leitura e a chamada da RPC abaixo
-  // não há lock — se o status da OC mudar nesse intervalo estreito, a
-  // corrida não é impedida. Aceitável para um fluxo humano de baixa
-  // frequência; não usar este padrão onde a invariante precisa ser atômica.
+  // Checagem amigável do vínculo com a OC (fail-closed: erro de consulta, OC inexistente ou de
+  // outra loja recusa a entrada inteira). NÃO é a garantia: a RPC abaixo trava o pedido e valida
+  // status/saldo de forma atômica (UX-04) — uma corrida entre esta leitura e a RPC é recusada lá.
   const ordemCompraId = input.ordemCompraId?.trim() || null
   if (ordemCompraId) {
     const { data: oc, error: ocError } = await supabase
@@ -184,18 +189,35 @@ export async function criarRemessaConferencia(input: {
     p_observacao: input.observacao?.trim() || null,
     p_itens: input.itens,
     p_idempotency_key: idempotencyKey,
+    // Só envia o vínculo quando há pedido: entrada sem pedido segue com os 4 argumentos de sempre.
+    ...(ordemCompraId ? { p_ordem_compra_id: ordemCompraId } : {}),
   })
 
   if (error || !remessaId) {
     return {
       success: false,
       error: error
-        ? mensagemErroComSecao('Remessa', error.message)
+        ? (mensagemErroOc(error.message) ?? mensagemErroComSecao('Remessa', error.message))
         : 'Não foi possível criar a remessa. Tente de novo.',
+    }
+  }
+
+  // Depois da entrada, mostra o estado real do pedido (o que falta, se fechou), lido do banco.
+  let oc: OcResumoRecebimento | null = null
+  let mensagemOc: string | null = null
+  if (ordemCompraId) {
+    oc = await carregarResumoOc(supabase, lojaId, ordemCompraId)
+    if (oc) {
+      const creditado = input.itens.reduce((s, i) => s + i.quantidade_conferida, 0)
+      mensagemOc = mensagemPosEntradaOc(oc, creditado)
     }
   }
 
   revalidatePath('/gerente/recebimento')
   revalidatePath('/gerente/estoque')
-  return { success: true, data: remessaId }
+  if (ordemCompraId) {
+    revalidatePath('/gerente/compras')
+    revalidatePath('/admin/compras')
+  }
+  return { success: true, data: { remessaId: String(remessaId), oc, mensagemOc } }
 }

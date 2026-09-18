@@ -1,10 +1,10 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 /**
- * S8/RM-14 — vínculo opcional do recebimento manual com uma Ordem de Compra
- * (Opção 1: validação de aplicação, não trava de RPC). Mesmo padrão de mock
- * de `gerente/transferencias/actions.test.ts`, com `.from()` encadeável
- * adicionado para a consulta de status da OC.
+ * Vínculo opcional do recebimento manual com uma Ordem de Compra (S8/RM-14; UX-04).
+ * A action faz a checagem amigável de status; o abatimento do saldo é do banco
+ * (`criar_confirmar_remessa_entrada`, testado em SQL). Mesmo padrão de mock de
+ * `gerente/transferencias/actions.test.ts`, com `.from()` encadeável para a consulta da OC.
  */
 
 const assertGerenteSessionMock = vi.fn()
@@ -121,8 +121,27 @@ describe('gerente/recebimento — criarRemessaConferencia: vínculo com OC (S8/R
 
     expect(res.success).toBe(false)
     if (!res.success) {
-      expect(res.error).toContain('já foi recebida')
+      expect(res.error).toContain('já está encerrada')
     }
+    expect(rpcMock).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['CANCELADA', 'foi cancelada'],
+    ['RASCUNHO', 'Confirme a ordem de compra'],
+  ])('4b. OC %s → recusada antes da RPC', async (status, trecho) => {
+    ocQueryMock.mockResolvedValue({ data: { status }, error: null })
+
+    const { criarRemessaConferencia } = await import('./actions')
+    const res = await criarRemessaConferencia({
+      origem: 'OC-4b',
+      idempotency_key: 'k-4b',
+      itens: [itemValido],
+      ordemCompraId: 'oc-4b',
+    })
+
+    expect(res.success).toBe(false)
+    if (!res.success) expect(res.error).toContain(trecho)
     expect(rpcMock).not.toHaveBeenCalled()
   })
 

@@ -2,13 +2,12 @@
 /**
  * Recebimento manual ("Entrada sem nota") — comportamento do formulário.
  *
- * (1) BP-F1: o campo "Vincular a uma Ordem de Compra" só VALIDA (recusa pedido
- *     já recebido); a RPC não recebe o id do pedido e o pedido não muda de
- *     estado. O texto de ajuda precisa dizer isso, senão o operador acredita
- *     ter dado baixa no pedido.
- * (2) A1: depois de confirmar a entrada o formulário volta ao estado inicial.
- *     Com os campos preenchidos e uma nova chave de idempotência, um segundo
- *     clique criava outra entrada (e outro crédito de estoque).
+ * (1) UX-04: "Como chegou?" — NF-e (link), Ordem de Compra ou Sem documento. Só com "Ordem de
+ *     Compra" o campo do pedido aparece e vira obrigatório; a entrada abate o saldo do pedido
+ *     (o banco decide) e a tela mostra o que mudou: estoque, quanto falta, se o pedido fechou.
+ * (2) A1: depois de confirmar a entrada o formulário volta ao estado inicial. Com os campos
+ *     preenchidos e uma nova chave de idempotência, um segundo clique criava outra entrada
+ *     (e outro crédito de estoque).
  */
 import React from 'react'
 import { createRoot, type Root } from 'react-dom/client'
@@ -18,15 +17,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 ;(globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
 const criarRemessaMock = vi.fn()
+const listarOcMock = vi.fn()
+const detalheOcMock = vi.fn()
+const toastMock = vi.fn()
 
 vi.mock('./actions', () => ({
   criarRemessaConferencia: (...a: unknown[]) => criarRemessaMock(...a),
   buscarProdutosRecebimento: vi.fn(async () => ({ success: true, data: [] })),
 }))
 vi.mock('../compras/actions', () => ({
-  listarOrdensCompraElegiveisParaVinculo: vi.fn(async () => []),
+  listarOrdensCompraElegiveisParaVinculo: (...a: unknown[]) => listarOcMock(...a),
+  obterOrdemCompraDetalhe: (...a: unknown[]) => detalheOcMock(...a),
 }))
-vi.mock('@/lib/gerente/toast', () => ({ emitGerenteToast: vi.fn() }))
+vi.mock('@/lib/gerente/toast', () => ({ emitGerenteToast: (...a: unknown[]) => toastMock(...a) }))
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), replace: vi.fn() }),
   usePathname: () => '/admin/estoque/recebimento',
@@ -37,12 +40,55 @@ const { RecebimentoGerentePageClient } = await import('./RecebimentoGerentePageC
 const { AdminV2SessionProvider } = await import('@/components/ui/admin-v2/AdminV2SessionContext')
 
 const PRODUTO = { id: 'p1', nome: 'Produto A', codigo_barras: null }
+const OC_ID = 'oc-11112222-3333-4444-5555-666677778888'
+
+const OC_LISTA = {
+  id: OC_ID,
+  fornecedor_id: 'f1',
+  fornecedor_nome: 'Fornecedor Alfa',
+  status: 'EM_TRANSITO',
+  data_emissao: '2026-09-01',
+  data_prevista_chegada: null,
+  observacao: null,
+  total_itens: 1,
+  valor_total: 300,
+  created_at: '2026-09-01T00:00:00Z',
+  pedido_total: 100,
+  recebido_total: 0,
+  pendente_total: 100,
+  encerrada_com_falta: false,
+  encerramento_motivo: null,
+}
+
+const OC_DETALHE = {
+  ...OC_LISTA,
+  itens: [
+    {
+      id: 'it-1',
+      produto_id: 'p1',
+      produto_nome: 'Produto A',
+      descricao: null,
+      quantidade: 100,
+      preco_unitario: 3,
+      quantidade_recebida: 0,
+      saldo_pendente: 100,
+      unidade_medida: 'UN',
+    },
+  ],
+  entradas: [],
+}
 
 let container: HTMLDivElement
 let root: Root
 
 beforeEach(() => {
+  vi.useFakeTimers()
   criarRemessaMock.mockReset()
+  listarOcMock.mockReset()
+  detalheOcMock.mockReset()
+  toastMock.mockReset()
+  listarOcMock.mockResolvedValue([OC_LISTA])
+  detalheOcMock.mockResolvedValue({ success: true, data: OC_DETALHE })
   container = document.createElement('div')
   document.body.appendChild(container)
   root = createRoot(container)
@@ -51,6 +97,7 @@ beforeEach(() => {
 afterEach(() => {
   act(() => root.unmount())
   container.remove()
+  vi.useRealTimers()
 })
 
 async function renderizar(opts: { idioma?: 'pt' | 'zh'; preSelecionado?: boolean } = {}) {
@@ -84,29 +131,206 @@ function campo(nome: string): HTMLInputElement {
   return form().querySelector(`input[name="${nome}"]`) as HTMLInputElement
 }
 
-describe('RecebimentoGerentePageClient — ajuda do vínculo com a Ordem de Compra (BP-F1)', () => {
-  it('pt: explica que o vínculo não dá baixa no pedido e que ele pode ser recebido de novo', async () => {
+function botaoVia(rotulo: string): HTMLButtonElement {
+  return Array.from(container.querySelectorAll('[data-testid="rec-como-chegou"] button')).find(
+    (b) => b.textContent?.trim() === rotulo,
+  ) as HTMLButtonElement
+}
+
+async function escolherPedidoNaLista() {
+  // o combobox do pedido vem depois do de produto
+  const busca = Array.from(container.querySelectorAll('input[role="combobox"]')).at(-1) as HTMLInputElement
+  act(() => {
+    busca.dispatchEvent(new Event('focus', { bubbles: true }))
+    definirValor(busca, 'Alfa')
+  })
+  await act(async () => {
+    vi.advanceTimersByTime(300)
+    await Promise.resolve()
+    await Promise.resolve()
+  })
+  const opcao = container.querySelector('button[role="option"]') as HTMLButtonElement
+  expect(opcao).toBeTruthy()
+  // a opção mostra quanto falta do pedido
+  expect(opcao.textContent).toContain('Faltam 100')
+  await act(async () => {
+    opcao.click()
+    await Promise.resolve()
+    await Promise.resolve()
+  })
+}
+
+describe('RecebimentoGerentePageClient — "Como chegou?" (UX-04)', () => {
+  it('pt: oferece NF-e (link para a importação), Ordem de Compra e Sem documento; começa em Sem documento, sem campo de pedido', async () => {
     await renderizar({ idioma: 'pt' })
 
-    const hint = container.querySelector('#rec-oc-hint')
-    expect(hint).toBeTruthy()
-    expect(hint?.textContent).toContain('Ele não dá baixa no pedido')
-    expect(hint?.textContent).toContain('duplicaria o estoque')
+    const faixa = container.querySelector('[data-testid="rec-como-chegou"]')
+    expect(faixa?.textContent).toContain('Como chegou?')
+    const nfe = Array.from(faixa!.querySelectorAll('a')).find((a) => a.textContent?.trim() === 'NF-e')
+    expect(nfe?.getAttribute('href')).toContain('importar-nfe')
+    expect(botaoVia('Ordem de Compra')).toBeTruthy()
+    expect(botaoVia('Sem documento').getAttribute('aria-pressed')).toBe('true')
+
+    // Sem documento: nenhum vínculo é enviado — entrada avulsa como sempre foi
+    expect(form().querySelector('#rec-oc')).toBeNull()
+    expect(form().querySelector('input[name="ordem_compra_id"]')).toBeNull()
   })
 
-  it('zh: a mesma ajuda existe (sem chave faltando)', async () => {
-    await renderizar({ idioma: 'zh' })
+  it('pt: escolher "Ordem de Compra" mostra o campo do pedido com a ajuda nova (abate o saldo, item a item)', async () => {
+    await renderizar({ idioma: 'pt' })
+    await act(async () => botaoVia('Ordem de Compra').click())
 
     const hint = container.querySelector('#rec-oc-hint')
-    expect(hint).toBeTruthy()
+    expect(hint?.textContent).toContain('abate o saldo do pedido, item a item')
+    // o texto antigo ("não dá baixa", "duplicaria o estoque") não pode mais aparecer
+    expect(container.textContent).not.toContain('Ele não dá baixa no pedido')
+    expect(container.textContent).not.toContain('duplicaria o estoque')
+    expect(botaoVia('Ordem de Compra').getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('zh: a faixa e a ajuda existem sem chave faltando', async () => {
+    await renderizar({ idioma: 'zh' })
+    const faixa = container.querySelector('[data-testid="rec-como-chegou"]')
+    expect(faixa?.textContent).not.toContain('undefined')
+    expect((faixa?.textContent ?? '').length).toBeGreaterThan(8)
+
+    const viaPedido = faixa!.querySelectorAll('button')[0] as HTMLButtonElement
+    await act(async () => viaPedido.click())
+    const hint = container.querySelector('#rec-oc-hint')
     expect((hint?.textContent ?? '').length).toBeGreaterThan(10)
     expect(hint?.textContent).not.toContain('undefined')
+  })
+
+  it('modo Ordem de Compra sem escolher o pedido: recusa no cliente, nada é enviado', async () => {
+    await renderizar({ preSelecionado: true })
+    await act(async () => botaoVia('Ordem de Compra').click())
+    await act(async () => {
+      definirValor(campo('origem'), 'Entrega')
+      definirValor(campo('qtd_esperada'), '60')
+      definirValor(campo('qtd_conferida'), '60')
+    })
+    await act(async () => {
+      form().requestSubmit()
+    })
+
+    expect(criarRemessaMock).not.toHaveBeenCalled()
+    expect(toastMock).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'error', message: 'Escolha o pedido ao qual esta entrada pertence.' }),
+    )
+  })
+
+  it('com pedido: mostra o saldo por item, envia o vínculo e informa o que mudou (100 pedidas → +60, faltam 40)', async () => {
+    criarRemessaMock.mockResolvedValue({
+      success: true,
+      data: {
+        remessaId: 'rem-12345678',
+        mensagemOc: null,
+        oc: {
+          oc_id: OC_ID,
+          status: 'EM_TRANSITO',
+          pedido_total: 100,
+          recebido_total: 60,
+          pendente_total: 40,
+          itens_pendentes: 1,
+          encerrada: false,
+          encerrada_com_falta: false,
+        },
+      },
+    })
+    await renderizar({ preSelecionado: true })
+    await act(async () => botaoVia('Ordem de Compra').click())
+    await escolherPedidoNaLista()
+
+    const saldo = container.querySelector('[data-testid="rec-oc-saldo"]')
+    expect(saldo?.textContent).toContain('Produto A: pedido 100 · recebido 0 · faltam 100')
+
+    await act(async () => {
+      definirValor(campo('origem'), 'Primeira entrega')
+      definirValor(campo('qtd_esperada'), '60')
+      definirValor(campo('qtd_conferida'), '60')
+    })
+    await act(async () => {
+      form().requestSubmit()
+    })
+
+    expect(criarRemessaMock).toHaveBeenCalledTimes(1)
+    expect(criarRemessaMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ordemCompraId: OC_ID,
+        itens: [{ produto_id: 'p1', quantidade_esperada: 60, quantidade_conferida: 60 }],
+      }),
+    )
+    const resultado = container.querySelector('[data-testid="rec-resultado"]')
+    expect(resultado?.textContent).toContain('Estoque atualizado: +60.')
+    expect(resultado?.textContent).toContain('Pedido: 60 de 100 recebidas.')
+    expect(resultado?.textContent).toContain('Faltam 40 unidades.')
+    // depois da entrada o formulário volta ao início, sem pedido escolhido (evita reenvio)
+    expect(campo('qtd_conferida').value).toBe('')
+    expect(container.querySelector('[data-testid="rec-oc-saldo"]')).toBeNull()
+  })
+
+  it('entrada que fecha o pedido: diz "Pedido totalmente recebido."', async () => {
+    criarRemessaMock.mockResolvedValue({
+      success: true,
+      data: {
+        remessaId: 'rem-87654321',
+        mensagemOc: null,
+        oc: {
+          oc_id: OC_ID,
+          status: 'RECEBIDA',
+          pedido_total: 100,
+          recebido_total: 100,
+          pendente_total: 0,
+          itens_pendentes: 0,
+          encerrada: true,
+          encerrada_com_falta: false,
+        },
+      },
+    })
+    await renderizar({ preSelecionado: true })
+    await act(async () => botaoVia('Ordem de Compra').click())
+    await escolherPedidoNaLista()
+    await act(async () => {
+      definirValor(campo('origem'), 'Última entrega')
+      definirValor(campo('qtd_esperada'), '100')
+      definirValor(campo('qtd_conferida'), '100')
+    })
+    await act(async () => {
+      form().requestSubmit()
+    })
+
+    const resultado = container.querySelector('[data-testid="rec-resultado"]')
+    expect(resultado?.textContent).toContain('Pedido totalmente recebido.')
+    expect(resultado?.textContent).not.toContain('Faltam')
+  })
+
+  it('sem pedido: a confirmação diz que nenhum pedido foi alterado', async () => {
+    criarRemessaMock.mockResolvedValue({
+      success: true,
+      data: { remessaId: 'rem-00000001', oc: null, mensagemOc: null },
+    })
+    await renderizar({ preSelecionado: true })
+    await act(async () => {
+      definirValor(campo('origem'), 'Avulsa')
+      definirValor(campo('qtd_esperada'), '5')
+      definirValor(campo('qtd_conferida'), '5')
+    })
+    await act(async () => {
+      form().requestSubmit()
+    })
+
+    expect(criarRemessaMock).toHaveBeenCalledWith(expect.objectContaining({ ordemCompraId: undefined }))
+    const resultado = container.querySelector('[data-testid="rec-resultado"]')
+    expect(resultado?.textContent).toContain('nenhum pedido foi alterado')
   })
 })
 
 describe('RecebimentoGerentePageClient — formulário limpo após confirmar a entrada (A1)', () => {
   it('confirma, limpa todos os campos (inclusive o produto) e um novo envio imediato não cria outra entrada', async () => {
-    criarRemessaMock.mockResolvedValue({ success: true, data: 'rem-12345678' })
+    criarRemessaMock.mockResolvedValue({
+      success: true,
+      data: { remessaId: 'rem-12345678', oc: null, mensagemOc: null },
+    })
     await renderizar({ preSelecionado: true })
 
     expect(campo('produto_id').value).toBe('p1')

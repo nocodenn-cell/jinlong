@@ -8,10 +8,10 @@
  * pré-seleção. Campo opcional — recebimento sem vínculo não passa por aqui
  * (o hidden input fica vazio e o submit segue exatamente como hoje).
  *
- * A validação de "OC já recebida" NÃO mora aqui — é feita no servidor
- * (`validarVinculoOrdemCompra`, aplicada em `criarRemessaConferencia`) no
- * momento do submit. Este componente só lista o que já é elegível
- * (CONFIRMADA/EM_TRANSITO, via `listarOrdensCompraElegiveisParaVinculo`).
+ * A validação de status/saldo NÃO mora aqui — é do banco (`criar_confirmar_remessa_entrada`
+ * trava o pedido e abate por item; a action faz só a checagem amigável antes). Este componente
+ * só lista o que já é elegível (CONFIRMADA/EM_TRANSITO, via `listarOrdensCompraElegiveisParaVinculo`)
+ * e mostra quanto falta de cada pedido (UX-04).
  */
 
 import { useEffect, useId, useRef, useState } from 'react'
@@ -20,6 +20,7 @@ import { useDebounce } from '@/lib/hooks/useDebounce'
 import { Input } from '@/components/ui/forms'
 import { fmtGerenteIdCurto } from '@/lib/format/gerenteValues'
 import { listarOrdensCompraElegiveisParaVinculo, type OcListaDTO } from '../compras/actions'
+import { fmtQtd } from '../compras/ocRecebimento'
 
 type Props = Readonly<{
   disabled?: boolean
@@ -29,6 +30,10 @@ type Props = Readonly<{
   limparLabel: string
   /** `status_CONFIRMADA`/`status_EM_TRANSITO` já resolvidos no idioma da sessão. */
   statusLabels: Readonly<Record<string, string>>
+  /** Template "Faltam {{n}}" no idioma da sessão; sem ele o saldo não é exibido. */
+  faltamLabel?: (n: string) => string
+  /** Avisa o formulário quando um pedido é escolhido/limpo (para mostrar o saldo por item). */
+  onChange?: (oc: OcListaDTO | null) => void
 }>
 
 export function OrdemCompraVinculoAutocomplete({
@@ -38,6 +43,8 @@ export function OrdemCompraVinculoAutocomplete({
   minimoLabel,
   limparLabel,
   statusLabels,
+  faltamLabel,
+  onChange,
 }: Props) {
   const listId = useId()
   const [termo, setTermo] = useState('')
@@ -85,6 +92,7 @@ export function OrdemCompraVinculoAutocomplete({
     setSelecionado(oc)
     setTermo(rotulo(oc))
     setAberto(false)
+    onChange?.(oc)
   }
 
   const limpar = () => {
@@ -92,6 +100,7 @@ export function OrdemCompraVinculoAutocomplete({
     setTermo('')
     setOpcoes([])
     setAberto(false)
+    onChange?.(null)
   }
 
   return (
@@ -115,6 +124,7 @@ export function OrdemCompraVinculoAutocomplete({
           aria-autocomplete="list"
           className="pl-8"
           onChange={(e) => {
+            if (selecionado) onChange?.(null)
             setSelecionado(null)
             setTermo(e.target.value)
             setAberto(true)
@@ -174,6 +184,7 @@ export function OrdemCompraVinculoAutocomplete({
                   <span className="text-body text-fg">{oc.fornecedor_nome ?? fmtGerenteIdCurto(oc.id)}</span>
                   <span className="font-mono text-caption text-fg-subtle">
                     {fmtGerenteIdCurto(oc.id)} · {statusLabels[oc.status] ?? oc.status}
+                    {faltamLabel && oc.pendente_total > 0 ? ` · ${faltamLabel(fmtQtd(oc.pendente_total))}` : ''}
                   </span>
                 </button>
               </li>
