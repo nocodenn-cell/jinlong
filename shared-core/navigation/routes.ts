@@ -101,6 +101,13 @@ export function adminEstoqueRecebimentoProdutoQuery(produtoId: string): string {
   return pathWithQuery(ROUTES.admin.estoqueRecebimento, q)
 }
 
+/** Abre "Nova OC" a partir de um fornecedor específico (ex.: lista de Fornecedores). */
+export function adminComprasFornecedorQuery(fornecedorId: string): string {
+  const q = new URLSearchParams()
+  if (fornecedorId.trim()) q.set('fornecedor', fornecedorId.trim())
+  return pathWithQuery(ROUTES.admin.compras, q)
+}
+
 /** Abre o detalhe de uma venda específica (ex.: a partir de uma linha de Relatórios). */
 export function adminVendaDetalheQuery(vendaId: string): string {
   const q = new URLSearchParams()

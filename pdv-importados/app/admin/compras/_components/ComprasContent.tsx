@@ -30,6 +30,8 @@ type Props = Readonly<{
   inicial: OcListaResult
   fornecedores: Array<{ id: string; nome: string }>
   produtos: Array<{ id: string; nome: string; unidade_medida: string }>
+  /** G-03 — deep-link "Nova OC" a partir de um fornecedor específico. */
+  fornecedorPreSelecionado?: string | null
 }>
 
 const STATUS_CORES: Record<StatusOC, string> = {
@@ -55,7 +57,14 @@ function statusLabel(c: ReturnType<typeof getMessages>['compras'], status: Statu
   return typeof v === 'string' ? v : status
 }
 
-export function ComprasContent({ idioma, kpisIniciais, inicial, fornecedores, produtos }: Props) {
+export function ComprasContent({
+  idioma,
+  kpisIniciais,
+  inicial,
+  fornecedores,
+  produtos,
+  fornecedorPreSelecionado = null,
+}: Props) {
   const m = getMessages(idioma)
   const c = m.compras
 
@@ -65,7 +74,9 @@ export function ComprasContent({ idioma, kpisIniciais, inicial, fornecedores, pr
   const [dados, setDados] = useState<OcListaResult>(inicial)
   const [loading, setLoading] = useState(false)
 
-  const [formAberto, setFormAberto] = useState(false)
+  // G-03: deep-link a partir de um fornecedor específico já abre "Nova OC"
+  // com ele pré-selecionado — 1 clique da tela de Fornecedores até aqui.
+  const [formAberto, setFormAberto] = useState(() => Boolean(fornecedorPreSelecionado))
   const [ocParaEditar, setOcParaEditar] = useState<OcDetalheDTO | null>(null)
   const [detalheId, setDetalheId] = useState<string | null>(null)
 
@@ -317,6 +328,7 @@ export function ComprasContent({ idioma, kpisIniciais, inicial, fornecedores, pr
           produtos={produtos}
           onClose={fecharForm}
           onSaved={aoSalvar}
+          fornecedorPreSelecionado={ocParaEditar ? null : fornecedorPreSelecionado}
         />
       ) : null}
 

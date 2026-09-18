@@ -29,6 +29,8 @@ type Props = Readonly<{
   produtos: Array<{ id: string; nome: string; unidade_medida: string }>
   onClose: () => void
   onSaved: () => void
+  /** G-03 — deep-link "Nova OC" a partir de um fornecedor específico. Ignorado ao editar (ocInicial vence). */
+  fornecedorPreSelecionado?: string | null
 }>
 
 function filterMoney(raw: string): string {
@@ -52,12 +54,22 @@ function fmtTotal(itens: ItemLocal[]): string {
   return formatBRL(total)
 }
 
-export function OcFormModal({ idioma, ocInicial, fornecedores, produtos, onClose, onSaved }: Props) {
+export function OcFormModal({
+  idioma,
+  ocInicial,
+  fornecedores,
+  produtos,
+  onClose,
+  onSaved,
+  fornecedorPreSelecionado = null,
+}: Props) {
   const m = getMessages(idioma)
   const c = m.compras
   const editando = ocInicial !== null
 
-  const [fornecedorId, setFornecedorId] = useState(ocInicial?.fornecedor_id ?? '')
+  const [fornecedorId, setFornecedorId] = useState(
+    ocInicial?.fornecedor_id ?? fornecedorPreSelecionado ?? '',
+  )
   const [useFornecedorLivre, setUseFornecedorLivre] = useState(
     !!(ocInicial && !ocInicial.fornecedor_id && ocInicial.fornecedor_nome),
   )

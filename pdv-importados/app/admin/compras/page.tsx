@@ -7,11 +7,15 @@ import { ComprasContent } from './_components/ComprasContent'
 
 const LIMITE_PAG = 20
 
-export default async function AdminComprasPage() {
+type PageProps = { searchParams?: Promise<{ fornecedor?: string }> }
+
+export default async function AdminComprasPage({ searchParams }: PageProps) {
   const { session } = await loadAdminContext({
     pathname: ROUTES.admin.compras,
     resource: `route:${ROUTES.admin.compras}`,
   })
+
+  const sp = (searchParams ? await searchParams : {}) ?? {}
 
   const tenant = lojaIdDaSessao(session)
   const supabase = await createClient()
@@ -57,6 +61,7 @@ export default async function AdminComprasPage() {
         inicial={inicial}
         fornecedores={fornecedores}
         produtos={produtos}
+        fornecedorPreSelecionado={sp.fornecedor ?? null}
       />
     </div>
   )
