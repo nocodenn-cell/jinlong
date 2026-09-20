@@ -150,6 +150,15 @@ export function ProdutoFormModal({
   const estavaAbertoRef = useRef(false)
 
   const form = useProdutoForm(open, produto, duplicarDe, { codigoBarrasInicial })
+  /**
+   * `form` é um objeto novo a cada render. A sugestão de GTIN é assíncrona
+   * (rede) — sem este ref, o guard "só preenche se o campo está vazio" reavalia
+   * o `form.nome` fechado no momento do blur, não o valor atual: se o operador
+   * digitar o nome enquanto a busca ainda está em voo, a resposta chega depois
+   * e sobrescreve o texto já digitado, porque o closure antigo ainda vê nome vazio.
+   */
+  const formRef = useRef(form)
+  formRef.current = form
 
   /**
    * Reinicializa o "chrome" do modal só quando o formulário abre de verdade
@@ -227,14 +236,18 @@ export function ProdutoFormModal({
       const fonte = fontesLabel(s.fontes)
       setFonteSugestao(fonte)
       setKnownSuggestion(s.knownSuggestion)
-      if (!form.nome.trim() && s.nome) form.setNome(s.nome)
-      if (form.precoVarejoInput.parse() == null && s.precoVarejo != null) {
-        form.precoVarejoInput.reset(s.precoVarejo)
+      // Reavalia contra o valor MAIS RECENTE dos campos (não o `form` fechado
+      // no início desta função) — a busca é assíncrona e o operador pode ter
+      // digitado enquanto ela estava em voo.
+      const atual = formRef.current
+      if (!atual.nome.trim() && s.nome) atual.setNome(s.nome)
+      if (atual.precoVarejoInput.parse() == null && s.precoVarejo != null) {
+        atual.precoVarejoInput.reset(s.precoVarejo)
       }
-      if (!form.categoriaId && s.categoriaId) form.setCategoriaId(s.categoriaId)
-      if (!form.ncm.trim() && s.ncm) form.setNcm(s.ncm)
-      if (form.precoCustoInput.parse() == null && s.precoCusto != null) {
-        form.precoCustoInput.reset(s.precoCusto)
+      if (!atual.categoriaId && s.categoriaId) atual.setCategoriaId(s.categoriaId)
+      if (!atual.ncm.trim() && s.ncm) atual.setNcm(s.ncm)
+      if (atual.precoCustoInput.parse() == null && s.precoCusto != null) {
+        atual.precoCustoInput.reset(s.precoCusto)
       }
       const baseHint = s.fontes[0] === 'nenhuma' ? null : p.sugestao_aplicada.replace('{{fonte}}', fonte)
       setSugestaoHint(combinarSugestaoHint(baseHint, s.marca, p.sugestao_marca_detectada))

@@ -1621,7 +1621,7 @@
     "dashboard": {
       "pageTitle": { "cn": "生意看板", "pt": "Dashboard comercial" },
       "pageSubtitle": { "cn": "实时数据", "pt": "Dados do período selecionado" },
-      "newUsers": { "cn": "新客户", "pt": "Novos usuários no período" },
+      "newUsers": { "cn": "新用户", "pt": "Novos usuários no período" },
       "periodToday": { "cn": "今天", "pt": "Hoje" },
       "period7d": { "cn": "7天", "pt": "7 dias" },
       "period30d": { "cn": "30天", "pt": "30 dias" },
