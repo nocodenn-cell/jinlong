@@ -17,16 +17,11 @@ function LeituraCampo({ label, value, hint }: { label: string; value: string; hi
 }
 
 type Props = Readonly<{
-  modoCompleto?: boolean
   estoqueInicialRef?: RefObject<HTMLInputElement | null>
   onEnterSubmit?: () => void
 }>
 
-export function EstoqueSection({
-  modoCompleto = false,
-  estoqueInicialRef,
-  onEnterSubmit,
-}: Props) {
+export function EstoqueSection({ estoqueInicialRef, onEnterSubmit }: Props) {
   const ctx = useProdutoFormContext()
   const p = ctx.m.produtos
   const { disabled, inputClassName, inputMonoClassName, readOnly } = ctx
@@ -38,22 +33,20 @@ export function EstoqueSection({
     <section aria-labelledby="produto-secao-estoque">
       <ProdutoFormSectionHeading title={p.secao_estoque} />
       <div id="produto-secao-estoque" className="mt-3 space-y-3">
-        {modoCompleto || !isCreate ? (
-          <label className="block text-xs font-medium text-jl-fg-3">
-            {p.localizacao_prateleira_label}
-            <input
-              className={`${inputClassName} mt-1`}
-              value={ctx.localizacaoPrateleira}
-              onChange={(e) => ctx.setLocalizacaoPrateleira(e.target.value)}
-              disabled={disabled}
-              placeholder={p.localizacao_prateleira_placeholder}
-              autoComplete="off"
-            />
-          </label>
-        ) : null}
+        <label className="block text-xs font-medium text-jl-fg-3">
+          {p.localizacao_prateleira_label}
+          <input
+            className={`${inputClassName} mt-1`}
+            value={ctx.localizacaoPrateleira}
+            onChange={(e) => ctx.setLocalizacaoPrateleira(e.target.value)}
+            disabled={disabled}
+            placeholder={p.localizacao_prateleira_placeholder}
+            autoComplete="off"
+          />
+        </label>
 
         {isCreate ? (
-          <div className={modoCompleto ? 'grid grid-cols-2 gap-3' : 'grid grid-cols-1 gap-3 sm:max-w-xs'}>
+          <div className="grid grid-cols-2 gap-3">
             <label className="block text-xs font-medium text-jl-fg-3">
               {/* Unidade no rótulo: sem ela o operador digita "10" sem saber se
                   são 10 unidades, 10 caixas ou 10 quilos. */}
@@ -87,22 +80,20 @@ export function EstoqueSection({
                 {p.hint_estoque_inicial}
               </span>
             </label>
-            {modoCompleto ? (
-              <label className="block text-xs font-medium text-jl-fg-3">
-                {p.estoque_minimo_label}
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  className={`${inputMonoClassName} mt-1`}
-                  value={ctx.estoqueInicialMin}
-                  onChange={(e) =>
-                    ctx.setEstoqueInicialMin(e.target.value.replace(/\D/g, ''))
-                  }
-                  disabled={disabled}
-                  placeholder="0"
-                />
-              </label>
-            ) : null}
+            <label className="block text-xs font-medium text-jl-fg-3">
+              {p.estoque_minimo_label}
+              <input
+                type="text"
+                inputMode="numeric"
+                className={`${inputMonoClassName} mt-1`}
+                value={ctx.estoqueInicialMin}
+                onChange={(e) =>
+                  ctx.setEstoqueInicialMin(e.target.value.replace(/\D/g, ''))
+                }
+                disabled={disabled}
+                placeholder="0"
+              />
+            </label>
           </div>
         ) : (
           <>

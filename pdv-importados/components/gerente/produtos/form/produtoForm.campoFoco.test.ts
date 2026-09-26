@@ -1,18 +1,6 @@
 /** @vitest-environment jsdom */
 import { describe, expect, it } from 'vitest'
-import { campoExigeModoCompleto, localizarCampo } from './produtoForm.campoFoco'
-
-describe('campoExigeModoCompleto', () => {
-  it('exige abrir Mais detalhes para o preço de atacado', () => {
-    expect(campoExigeModoCompleto('preco_atacado')).toBe(true)
-  })
-
-  it('não exige para os campos do cadastro simples', () => {
-    expect(campoExigeModoCompleto('nome')).toBe(false)
-    expect(campoExigeModoCompleto('codigo_barras')).toBe(false)
-    expect(campoExigeModoCompleto('preco_varejo')).toBe(false)
-  })
-})
+import { localizarCampo } from './produtoForm.campoFoco'
 
 describe('localizarCampo', () => {
   it('encontra o input pelo data-field', () => {
