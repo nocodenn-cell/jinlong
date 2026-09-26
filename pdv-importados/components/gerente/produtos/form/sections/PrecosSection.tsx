@@ -12,28 +12,32 @@ import {
   formatMargemPercentual,
   margemToneClassName,
 } from '../produtoForm.margem'
+import { FaixasAtacadoEditor } from '../../produtoFormSections/FaixasAtacadoEditor'
+import { HistoricoPrecosSection } from '../../produtoFormSections/HistoricoPrecosSection'
 
 type Props = Readonly<{
-  modoCompleto?: boolean
   precoCustoRef?: RefObject<HTMLInputElement | null>
   precoVarejoRef?: RefObject<HTMLInputElement | null>
   /** Próximo campo da cadeia do Enter depois do varejo (estoque inicial). */
   proximoAposVarejoRef?: RefObject<HTMLInputElement | null>
   onEnterSubmit?: () => void
+  /** Cadastro Completo mostra o histórico de preços; Rápido não (produto novo não tem histórico). */
+  mostrarHistorico?: boolean
 }>
 
 export function PrecosSection({
-  modoCompleto = false,
   precoCustoRef,
   precoVarejoRef,
   proximoAposVarejoRef,
   onEnterSubmit,
+  mostrarHistorico = false,
 }: Props) {
   const ctx = useProdutoFormContext()
   const p = ctx.m.produtos
-  const { disabled, inputMonoClassName } = ctx
+  const { disabled, inputMonoClassName, readOnly } = ctx
 
   const erroVarejo = erroDoCampo(ctx.erro, 'preco_varejo')
+  const erroAtacado = erroDoCampo(ctx.erro, 'preco_atacado')
 
   const varejo = ctx.precoVarejoInput.parse()
   const custo = ctx.precoCustoInput.parse()
@@ -51,15 +55,7 @@ export function PrecosSection({
       <ProdutoFormSectionHeading title={p.secao_precificacao} />
       <p className="mt-1 text-caption text-jl-fg-3">{p.hint_precos_publicar}</p>
       <div id="produto-secao-precos" className="mt-3 space-y-3">
-        {/* Custo e venda SEMPRE lado a lado — a margem precisa estar visível no
-            momento em que o preço é digitado, não atrás de "Mais detalhes". */}
-        <div
-          className={
-            modoCompleto
-              ? 'grid grid-cols-2 gap-3 sm:grid-cols-3'
-              : 'grid grid-cols-2 gap-3'
-          }
-        >
+        <div className="grid grid-cols-2 gap-3">
           <label className="block text-xs font-medium text-jl-fg-3">
             {p.preco_custo}
             <input
@@ -129,6 +125,63 @@ export function PrecosSection({
           ) : null}
         </div>
 
+        {/* Faixa 1 do atacado (preço + qtd. mínima) é a fonte que a RPC de
+            criação usa (`p_faixa`) para gravar atomicamente a 1ª linha de
+            `precos_atacado` junto com o produto. Com produto já existente,
+            a faixa 1 já está persistida e o editor completo assume — por
+            isso o campo inline só aparece ANTES do primeiro save. */}
+        <div className="rounded-md border border-[var(--color-border-secondary)] bg-white/[.03] p-3">
+          <p className="mb-1 text-caption font-semibold uppercase tracking-wider text-jl-fg-3">
+            {p.titulo_faixas_atacado}
+          </p>
+          {readOnly.produtoId !== null ? (
+            <>
+              <p className="mb-2 text-caption text-jl-fg-3">{p.hint_faixas_atacado}</p>
+              <FaixasAtacadoEditor
+                produtoId={readOnly.produtoId}
+                p={p}
+                precoAtacadoCatalogo={ctx.precoAtacadoInput.parse()}
+              />
+            </>
+          ) : (
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block text-xs font-medium text-jl-fg-3">
+                  {p.preco_atacado}
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    className={`${inputMonoClassName} mt-1 ${erroAtacado ? CAMPO_INVALIDO_CLASS : ''}`}
+                    value={ctx.precoAtacadoInput.display}
+                    onChange={ctx.precoAtacadoInput.onChange}
+                    disabled={disabled}
+                    placeholder="0,00"
+                    data-field="preco_atacado"
+                    aria-invalid={erroAtacado ? true : undefined}
+                  />
+                  <CampoErroMsg mensagem={erroAtacado} />
+                </label>
+                <label className="block text-xs font-medium text-jl-fg-3">
+                  {p.qtd_gatilho_atacado}
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    className={`${inputMonoClassName} mt-1`}
+                    value={ctx.quantidadeGatilho}
+                    onChange={(e) => ctx.setQuantidadeGatilho(e.target.value.replace(/\D/g, ''))}
+                    disabled={disabled}
+                    placeholder="0"
+                  />
+                </label>
+              </div>
+              <p className="text-caption text-jl-fg-3">{p.hint_faixas_apos_salvar}</p>
+            </div>
+          )}
+        </div>
+
+        {mostrarHistorico && readOnly.produtoId !== null ? (
+          <HistoricoPrecosSection produtoId={readOnly.produtoId} p={p} />
+        ) : null}
       </div>
     </section>
   )

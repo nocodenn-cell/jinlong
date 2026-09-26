@@ -100,8 +100,9 @@ describe('critério de aceite — cadastro completo sem sair do modo simples', (
       ),
     )
 
-    // 1. Modo simples é o padrão — "Mais detalhes" nunca é clicado neste teste.
-    expect(container.textContent).toContain(m.produtos.modo_completo)
+    // 1. Cadastro Rápido não tem disclosure — não existe toggle "Mais
+    // detalhes" para não clicar; os campos essenciais já estão todos na tela.
+    expect(container.querySelectorAll('details').length).toBe(0)
 
     // 2-3. Código escaneado; Enter cai no nome.
     const codigo = campo('codigo_barras')

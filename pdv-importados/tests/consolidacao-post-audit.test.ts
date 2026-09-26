@@ -155,7 +155,11 @@ describe('consolidação pós-audit — guarda SSoT', () => {
   })
 
   it('estoque inicial no create é TX atômica (RPC 270), não 2º round-trip no modal', () => {
-    const modal = read('components/gerente/produtos/ProdutoFormModal.tsx')
+    // Reforma Rápido/Completo (v2, ver docs/PLANO_CADASTRO_PRODUTO_UX.md):
+    // a orquestração de salvar (antes dentro de ProdutoFormModal) foi extraída
+    // para useProdutoFormOrchestration, compartilhada com o Cadastro Completo —
+    // é lá que este trecho e seus comentários agora vivem.
+    const modal = read('components/gerente/produtos/form/useProdutoFormOrchestration.ts')
     expect(modal).toContain('EXCEÇÃO SSoT')
     expect(modal).toContain('criar_produto_com_estoque_inicial')
     expect(modal).toContain('estoque_inicial_quantidade')

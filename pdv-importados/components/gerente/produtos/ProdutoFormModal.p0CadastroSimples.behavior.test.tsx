@@ -1,9 +1,9 @@
 /** @vitest-environment jsdom */
 /**
- * P0 do cadastro: no modo SIMPLES (padrão da criação), o operador precisa ver
- * custo, margem e fornecedor sem abrir "Mais detalhes". Custo escondido virava
- * produto sem custo (prejuízo silencioso); fornecedor escondido virava compra
- * sem rastreabilidade.
+ * P0 do cadastro: no Cadastro Rápido (sem disclosure — não existe mais toggle
+ * "Mais detalhes"), o operador precisa ver custo, margem e fornecedor direto
+ * na tela. Custo escondido virava produto sem custo (prejuízo silencioso);
+ * fornecedor escondido virava compra sem rastreabilidade.
  */
 import React from 'react'
 import { createRoot, type Root } from 'react-dom/client'
@@ -73,9 +73,9 @@ function caixaMargem(): HTMLElement {
   return el!
 }
 
-/** O modo simples é o padrão: "Mais detalhes" ainda não foi clicado. */
+/** Cadastro Rápido não tem disclosure — sem toggle "Mais detalhes" para abrir. */
 function expectModoSimples() {
-  expect(container.textContent).toContain(p.modo_completo)
+  expect(container.querySelectorAll('details').length).toBe(0)
 }
 
 describe('cadastro simples — custo e margem visíveis', () => {
@@ -156,14 +156,9 @@ describe('cadastro simples — fornecedor visível', () => {
     expect(select.value).toBe('forn-1')
   })
 
-  it('mantém um único ponto de edição do fornecedor após abrir Mais detalhes', () => {
-    renderSimples()
-    const maisDetalhes = Array.from(container.querySelectorAll('button')).find((b) =>
-      (b.textContent ?? '').includes(p.modo_completo),
-    )
-    flushSync(() => maisDetalhes!.click())
-
-    const rotulos = (container.textContent ?? '').split(p.fornecedor_principal_label).length - 1
-    expect(rotulos, 'fornecedor não deve aparecer duplicado').toBe(1)
-  })
+  // O teste de "único ponto de edição após abrir Mais detalhes" não se aplica
+  // mais: o Cadastro Rápido não renderiza mais nenhuma seção condicionalmente
+  // (não há Classificação/Detalhes/Compra/Fiscal aqui) — fornecedor só existe
+  // em `FornecedorQuickField`, usado uma única vez, garantia estrutural em
+  // vez de comportamento em runtime.
 })

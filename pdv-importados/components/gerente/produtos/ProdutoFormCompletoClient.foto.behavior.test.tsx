@@ -3,9 +3,9 @@
  * Regressão: trocar a foto NÃO pode ser tratado como "produto salvo".
  *
  * `onImagemChange` era ligado direto em `onSaved`. No catálogo, `onSaved` faz
- * `setEditando(null)` — ou seja, subir uma foto no meio da edição fechava o
- * modal e jogava fora tudo o que o operador tinha digitado e ainda não gravado
- * (preço, categoria, dados fiscais…). A foto tem callback próprio.
+ * `router.refresh()` — subir uma foto no meio da edição não pode navegar nem
+ * fechar a página, senão joga fora tudo o que o operador digitou e ainda não
+ * gravou (preço, categoria, dados fiscais…). A foto tem callback próprio.
  */
 import React from 'react'
 import { createRoot, type Root } from 'react-dom/client'
@@ -30,6 +30,10 @@ vi.mock('@/app/gerente/produtos/precosAtacadoActions', () => ({
   inativarFaixaAtacado: vi.fn().mockResolvedValue({ success: true, data: null }),
 }))
 
+vi.mock('@/app/gerente/produtos/historicoPrecosActions', () => ({
+  listarHistoricoPrecos: vi.fn().mockResolvedValue({ success: true, data: [] }),
+}))
+
 vi.mock('@/lib/gerente/toast', () => ({ emitGerenteToast: vi.fn() }))
 
 vi.mock('@/app/gerente/produtos/sugestaoCadastroActions', () => ({
@@ -37,7 +41,13 @@ vi.mock('@/app/gerente/produtos/sugestaoCadastroActions', () => ({
   registrarCadastroProdutoTelemetry: vi.fn().mockResolvedValue({ ok: true }),
 }))
 
-import { ProdutosEditarCatalogoModal } from '@/components/gerente/produtos/ProdutosEditarCatalogoModal'
+const routerMock = { push: vi.fn(), replace: vi.fn(), refresh: vi.fn(), back: vi.fn() }
+vi.mock('next/navigation', () => ({
+  useRouter: () => routerMock,
+}))
+
+import { ProdutoFormCompletoClient } from '@/components/gerente/produtos/ProdutoFormCompletoClient'
+import { AdminV2SessionProvider } from '@/components/ui/admin-v2/AdminV2SessionContext'
 
 const m = getMessages('pt')
 const opcoes = { categorias: [], marcas: [], fornecedores: [] }
@@ -86,6 +96,9 @@ beforeEach(() => {
     success: true,
     data: { imagem_url: 'https://cdn.exemplo/nova.png' },
   })
+  routerMock.push.mockReset()
+  routerMock.replace.mockReset()
+  routerMock.refresh.mockReset()
   container = document.createElement('div')
   document.body.appendChild(container)
   root = createRoot(container)
@@ -108,53 +121,50 @@ function subirFoto() {
   flushSync(() => input.dispatchEvent(new Event('change', { bubbles: true })))
 }
 
-describe('ProdutoFormModal — troca de foto durante a edição', () => {
-  it('avisa quem lista sem disparar onSalvo (que fecharia o modal)', async () => {
-    const onSalvo = vi.fn()
-    const onImagemAtualizada = vi.fn()
-
+describe('ProdutoFormCompletoClient — troca de foto durante a edição', () => {
+  it('atualiza a foto sem navegar/refresh (que descartaria campos não salvos)', async () => {
     flushSync(() =>
       root.render(
-        <ProdutosEditarCatalogoModal
-          open
-          onOpenChange={vi.fn()}
-          produto={produto}
-          m={m}
-          opcoes={opcoes}
-          onSalvo={onSalvo}
-          onImagemAtualizada={onImagemAtualizada}
-        />,
+        <AdminV2SessionProvider idioma="pt">
+          <ProdutoFormCompletoClient
+            produtoInicial={produto}
+            opcoes={opcoes}
+            m={m}
+            idioma="pt"
+          />
+        </AdminV2SessionProvider>,
       ),
     )
 
     subirFoto()
 
     await vi.waitFor(() => expect(uploadImagemProdutoMock).toHaveBeenCalled())
-    await vi.waitFor(() => expect(onImagemAtualizada).toHaveBeenCalledTimes(1))
 
-    // O contrato que quebrava a edição: foto NÃO é "salvo".
-    expect(onSalvo).not.toHaveBeenCalled()
+    // O contrato que quebrava a edição: foto NÃO é "salvo" — não navega, não
+    // faz refresh do router.
+    expect(routerMock.refresh).not.toHaveBeenCalled()
+    expect(routerMock.push).not.toHaveBeenCalled()
+    expect(routerMock.replace).not.toHaveBeenCalled()
   })
 
   it('mantém o formulário montado e mostra a foto nova sem reabrir', async () => {
     flushSync(() =>
       root.render(
-        <ProdutosEditarCatalogoModal
-          open
-          onOpenChange={vi.fn()}
-          produto={produto}
-          m={m}
-          opcoes={opcoes}
-          onSalvo={vi.fn()}
-          onImagemAtualizada={vi.fn()}
-        />,
+        <AdminV2SessionProvider idioma="pt">
+          <ProdutoFormCompletoClient
+            produtoInicial={produto}
+            opcoes={opcoes}
+            m={m}
+            idioma="pt"
+          />
+        </AdminV2SessionProvider>,
       ),
     )
 
     subirFoto()
     await vi.waitFor(() => expect(uploadImagemProdutoMock).toHaveBeenCalled())
 
-    // Campos continuam lá (o modal não desmontou) e a miniatura já é a nova.
+    // Campos continuam lá (a página não desmontou) e a miniatura já é a nova.
     await vi.waitFor(() => {
       const img = container.querySelector('img') as HTMLImageElement | null
       expect(img?.getAttribute('src') ?? '').toContain('nova.png')

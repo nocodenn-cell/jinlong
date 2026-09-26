@@ -82,7 +82,6 @@ export type ProdutoFormShellProps = Readonly<{
   produto: ProdutoGerenteRow | null
   readOnly: ProdutoFormReadOnly
   disabled: boolean
-  modoCompleto?: boolean
   onFornecedoresChange?: (fornecedores: OpcoesFiltrosProdutos['fornecedores']) => void
   onCategoriasChange?: (categorias: OpcoesFiltrosProdutos['categorias']) => void
   onMarcasChange?: (marcas: OpcoesFiltrosProdutos['marcas']) => void

@@ -91,7 +91,6 @@ function renderCom(opcoes: Opcoes, open = true) {
         onOpenChange={vi.fn()}
         m={m}
         opcoes={opcoes}
-        produto={null}
         onSaved={vi.fn()}
       />,
     ),
@@ -149,7 +148,6 @@ describe('ProdutoFormModal — categoria quick-create vs refresh de opções', (
           onOpenChange={vi.fn()}
           m={m}
           opcoes={{ categorias: [], marcas: [], fornecedores: [] }}
-          produto={null}
           onSaved={vi.fn()}
         />,
       ),
@@ -178,7 +176,6 @@ describe('ProdutoFormModal — categoria quick-create vs refresh de opções', (
             marcas: [],
             fornecedores: [],
           }}
-          produto={null}
           onSaved={vi.fn()}
         />,
       ),
@@ -239,7 +236,6 @@ describe('ProdutoFormModal — fornecedor inline após merge de opções', () =>
             marcas: [],
             fornecedores: [{ id: FORN_ID, nome: 'Fornecedor Novo' }],
           }}
-          produto={null}
           onSaved={vi.fn()}
         />,
       ),
@@ -271,7 +267,6 @@ describe('ProdutoFormModal — fornecedor inline após merge de opções', () =>
           onOpenChange={vi.fn()}
           m={m}
           opcoes={{ categorias: [], marcas: [], fornecedores: [] }}
-          produto={null}
           onSaved={vi.fn()}
         />,
       ),
