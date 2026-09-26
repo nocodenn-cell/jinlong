@@ -69,7 +69,6 @@ function renderModal(opcoes = opcoesBase) {
         onOpenChange={onOpenChange}
         m={m}
         opcoes={opcoes}
-        produto={null}
         onSaved={onSaved}
       />,
     ),
@@ -134,6 +133,9 @@ describe('ProdutoFormModal — dirty pós-save', () => {
     await vi.waitFor(() => expect(criarProdutoMock).toHaveBeenCalled())
     await vi.waitFor(() => expect(campo('nome').value).toBe(''))
     expect(temConfirmDescartar()).toBe(false)
+    // Foco volta pro código de barras entre um item e o próximo — sem isso o
+    // operador perde o ritmo do cadastro em volume via scanner.
+    await vi.waitFor(() => expect(document.activeElement).toBe(campo('codigo_barras')))
 
     setInputValue(campo('nome'), 'próximo item sujo')
     flushSync(() => botaoPorTexto(m.comum.cancelar).click())
@@ -178,7 +180,6 @@ describe('ProdutoFormModal — dirty pós-save', () => {
           onOpenChange={onOpenChange}
           m={m}
           opcoes={opcoesRefresh}
-          produto={null}
           onSaved={onSaved}
         />,
       ),

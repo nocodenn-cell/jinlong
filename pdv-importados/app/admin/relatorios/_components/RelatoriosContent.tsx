@@ -13,7 +13,7 @@ import { EmptyState, ErrorState } from '@/components/ui/feedback'
 import { formatBRL } from '@/lib/format/money'
 import { formatDayMonthInLocale, formatDateTimeOrDash } from '@/lib/format/datetime'
 import { CHART_COLORS } from '@/lib/tokens/chartColors'
-import { ROUTES, adminCatalogoProdutoQuery, adminVendaDetalheQuery } from '@shared-core/navigation/routes'
+import { ROUTES, adminCatalogoCompletoEditarHref, adminVendaDetalheQuery } from '@shared-core/navigation/routes'
 import type {
   RelatorioVendaDiaDTO,
   RelatorioTopProdDTO,
@@ -187,7 +187,7 @@ function TopProdutosList({ top, labels }: { top: RelatorioTopProdDTO[]; labels: 
         return (
           <Link
             key={item.id}
-            href={adminCatalogoProdutoQuery(item.id)}
+            href={adminCatalogoCompletoEditarHref(item.id)}
             className="-m-1 block space-y-1 rounded-lg p-1 transition-colors hover:bg-[var(--color-background-secondary)]"
           >
             <div className="flex items-center justify-between gap-2">
@@ -239,7 +239,7 @@ function EstoqueReposicaoList({
         return (
           <Link
             key={item.id}
-            href={adminCatalogoProdutoQuery(item.id)}
+            href={adminCatalogoCompletoEditarHref(item.id)}
             className="flex items-center justify-between rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-background-secondary)] px-3 py-2 transition-colors hover:border-[var(--color-border)]"
           >
             <div className="min-w-0">
@@ -336,7 +336,7 @@ function CurvaAbcList({
           {produtos.slice(0, 30).map((p) => (
             <tr key={p.produtoId} className="border-b border-[var(--color-background-tertiary)]">
               <td className="max-w-[220px] truncate py-1.5 pr-3 text-jl-fg-1">
-                <Link href={adminCatalogoProdutoQuery(p.produtoId)} className="hover:underline">
+                <Link href={adminCatalogoCompletoEditarHref(p.produtoId)} className="hover:underline">
                   {p.nome}
                 </Link>
               </td>
@@ -374,7 +374,7 @@ function CoberturaEstoqueList({
       {comCobertura.map((i) => (
         <Link
           key={`${i.produtoId}-${i.lojaId}`}
-          href={adminCatalogoProdutoQuery(i.produtoId)}
+          href={adminCatalogoCompletoEditarHref(i.produtoId)}
           className="flex items-center justify-between rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-background-secondary)] px-3 py-2 transition-colors hover:border-[var(--color-border)]"
         >
           <div className="min-w-0">
@@ -462,7 +462,7 @@ function SemGiroList({
             {itens.slice(0, 30).map((p) => (
               <tr key={p.produto_id} className="border-b border-[var(--color-background-tertiary)]">
                 <td className="max-w-[220px] truncate py-1.5 pr-3 text-jl-fg-1">
-                  <Link href={adminCatalogoProdutoQuery(p.produto_id)} className="hover:underline">
+                  <Link href={adminCatalogoCompletoEditarHref(p.produto_id)} className="hover:underline">
                     {p.nome}
                   </Link>
                 </td>

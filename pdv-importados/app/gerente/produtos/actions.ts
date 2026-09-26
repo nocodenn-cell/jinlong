@@ -15,6 +15,7 @@ import {
   setProductStatusLoteAction,
   updateCategoriaLoteAction,
 } from '@/app/admin/produtos/actions'
+import { buscarProdutoFiltradoPorId } from '@/app/admin/produtos/productReader'
 import {
   mapFormToCreateProductInput,
   mapFormToUpdateProductInput,
@@ -1158,4 +1159,41 @@ export async function buscarProdutoDetalhe(produtoId: string): Promise<ActionRes
       status_publicacao: p.statusPublicacao,
     },
   }
+}
+
+/**
+ * Produto completo (mesmo formato de `buscarProdutosComFiltros`) para
+ * hidratar o formulário do Cadastro Completo (`/admin/catalogo/[id]/completo`).
+ * Diferente de `buscarProdutoDetalhe` (tela read-only, campos reduzidos),
+ * este devolve `ProdutoGerenteRow` inteiro — o mesmo contrato que
+ * `useProdutoForm` já consome hoje vindo da lista.
+ */
+export async function buscarProdutoGerentePorId(
+  produtoId: string,
+): Promise<ActionResult<ProdutoGerenteRow>> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const idValido = z.string().uuid().safeParse(produtoId)
+  if (!idValido.success) {
+    const { idioma } = await getUsuarioIdioma()
+    return { success: false, error: mensagemErroValidacaoZod('ID do produto inválido.', idioma) }
+  }
+
+  const lojaId = auth.session.lojaId
+  if (!lojaId) {
+    return {
+      success: false,
+      error: 'Sua conta não está associada a uma loja. Contate o administrador.',
+    }
+  }
+
+  const supabase = await createClient()
+  const row = await buscarProdutoFiltradoPorId(supabase, produtoId, lojaId)
+  if (!row) {
+    const { idioma } = await getUsuarioIdioma()
+    return { success: false, error: mensagemErroValidacaoZod('Produto não encontrado.', idioma) }
+  }
+
+  return { success: true, data: mapListRowToGerente(row) }
 }

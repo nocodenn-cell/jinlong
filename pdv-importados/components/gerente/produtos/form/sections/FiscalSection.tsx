@@ -11,11 +11,7 @@ export function FiscalSection() {
   return (
     <section aria-labelledby="produto-secao-fiscal">
       <ProdutoFormSectionHeading title={p.secao_fiscal} />
-      <details className="mt-3 rounded-md border border-[var(--color-border-secondary)] p-3">
-        <summary className="cursor-pointer text-xs font-medium text-jl-fg-2">
-          {p.secao_fiscal_resumo}
-        </summary>
-        <div id="produto-secao-fiscal" className="mt-3 space-y-3">
+      <div id="produto-secao-fiscal" className="mt-3 space-y-3">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_100px]">
             <label className="block text-xs font-medium text-jl-fg-3">
               {p.field_ncm}
@@ -118,8 +114,7 @@ export function FiscalSection() {
             </select>
             <span className="mt-0.5 block text-caption text-jl-fg-3">{p.hint_icms_origem}</span>
           </label>
-        </div>
-      </details>
+      </div>
     </section>
   )
 }

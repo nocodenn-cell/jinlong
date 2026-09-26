@@ -266,10 +266,8 @@ function mapFilteredRow(
     cest: r.cest ?? null,
     cstPis: r.cst_pis ?? null,
     cstCofins: r.cst_cofins ?? null,
-    // Onda C2.6: mesmo padrão dos campos fiscais acima — o RPC
-    // list_produtos_gerente_filtrados hoje não devolve nenhum destes campos
-    // no RETURNS TABLE (gap pré-existente, não introduzido nem corrigido
-    // nesta onda; fora do escopo autorizado). Mantido para paridade de tipo.
+    // Onda C2.6 / Hotfix C2.8 (20260902150000): a RPC list_produtos_gerente_filtrados
+    // já devolve os 7 campos fiscais no RETURNS TABLE — gap antigo fechado.
     icmsOrigem: r.icms_origem ?? null,
   }
 }
@@ -337,6 +335,40 @@ async function listComFiltrosImpl(
   } catch (e) {
     return filteredListFailed(e instanceof Error ? e.message : undefined)
   }
+}
+
+const PRODUTO_FILTRADO_COLS =
+  'id, nome, codigo_barras, preco_varejo, preco_atacado, quantidade_gatilho_atacado, origem, tem_nf, ativo, categoria_id, fornecedor_id, marca_id, unidade_medida, observacao, imagem_url, tags, ncm, cfop_produto, csosn, cest, cst_pis, cst_cofins, icms_origem'
+
+/**
+ * Busca um produto por id no MESMO formato que `listComFiltros` devolve
+ * (`ProductListFilteredRow`) — reaproveita `mapFilteredRow`/
+ * `loadFilteredSupplements` em vez de duplicar o mapeamento.
+ *
+ * `list_produtos_gerente_filtrados` (a RPC por trás de `listComFiltros`) não
+ * aceita busca por id — só paginação/filtro. Sem alterar a RPC, o caminho
+ * correto para "1 produto completo" é ler `produtos` direto com as MESMAS
+ * colunas que a RPC devolve e reaproveitar o mapeador existente, não recriar
+ * um segundo mapeamento de campo a campo. Usada pela página de Cadastro
+ * Completo (`/admin/catalogo/[id]/completo`) para hidratar o formulário.
+ */
+export async function buscarProdutoFiltradoPorId(
+  supabase: SupabaseClient,
+  id: string,
+  lojaId: string,
+): Promise<ProductListFilteredRow | null> {
+  const { data, error } = await supabase
+    .from('produtos')
+    .select(PRODUTO_FILTRADO_COLS)
+    .eq('id', id)
+    .eq('loja_id', lojaId)
+    .maybeSingle()
+
+  if (error || !data) return null
+
+  const row = data as unknown as Omit<RpcProdutoFilteredRow, 'total_count'>
+  const { estoqueMap, extraMap } = await loadFilteredSupplements(supabase, [id])
+  return mapFilteredRow({ ...row, total_count: 0 }, extraMap.get(id), estoqueMap.get(id))
 }
 
 /**
