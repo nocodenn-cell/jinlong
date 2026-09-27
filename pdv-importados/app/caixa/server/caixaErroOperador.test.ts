@@ -58,9 +58,18 @@ describe('caixaErroOperador', () => {
     )
   })
 
-  it('mapeia saldo pendente sem cliente', () => {
+  it('mapeia saldo pendente sem cliente (código legado)', () => {
     expect(caixaErroOperador('FINALIZAR_VENDA_CANONICA_SALDO_PENDENTE_EXIGE_CLIENTE')).toContain(
       'cliente',
+    )
+  })
+
+  it('T4: mapeia pagamento insuficiente (fiado removido — rejeita com ou sem cliente)', () => {
+    expect(caixaErroOperador('FINALIZAR_VENDA_CANONICA_PAGAMENTOS_INSUFICIENTES')).toBe(
+      'O total pago é menor que o total da venda. Ajuste o valor recebido ou a forma de pagamento.',
+    )
+    expect(caixaErroOperador('FINALIZAR_VENDA_CANONICA_PAGAMENTOS_INSUFICIENTES', 'zh')).toBe(
+      '实付金额小于订单总额。请调整收款金额或付款方式。',
     )
   })
 

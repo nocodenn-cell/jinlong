@@ -68,6 +68,17 @@ const MSG_CLIENTE_SALDO: Record<IdiomaErro, string> = {
   zh: '部分付款（挂账）需要绑定有效的门店客户。',
 }
 /**
+ * T4 (auditoria 2026-09-27): a RPC agora rejeita qualquer venda com soma de
+ * pagamentos menor que o total, com ou sem cliente vinculado — fiado foi
+ * removido do PDV (ver Jinlong/decisoes/REMOVER_MODULO_FIADO.md). Substitui
+ * `MSG_CLIENTE_SALDO` para este código; a mensagem antiga permanece mapeada
+ * (código legado, nunca mais emitido pela função atual) só por segurança.
+ */
+const MSG_PAGAMENTO_INSUFICIENTE: Record<IdiomaErro, string> = {
+  pt: 'O total pago é menor que o total da venda. Ajuste o valor recebido ou a forma de pagamento.',
+  zh: '实付金额小于订单总额。请调整收款金额或付款方式。',
+}
+/**
  * `CANCELAR_VENDA_SALDO_CAIXA_INSUFICIENTE` (migration 2026-09-09): o caixa
  * aberto não tem, em dinheiro, o valor a estornar — tipicamente porque uma
  * sangria já levou o valor para o cofre. A mensagem precisa dizer a saída
@@ -132,6 +143,9 @@ export function caixaErroOperador(
     l.includes('valor_pagamento_invalido')
   ) {
     return MSG_PAGAMENTO[idioma]
+  }
+  if (l.includes('pagamentos_insuficientes')) {
+    return MSG_PAGAMENTO_INSUFICIENTE[idioma]
   }
   if (
     l.includes('saldo_pendente_exige_cliente') ||

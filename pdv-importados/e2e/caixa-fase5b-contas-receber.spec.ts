@@ -3,25 +3,34 @@ import { test, expect } from '@playwright/test'
 import { assertFase5bGoldenFlowEnvInCi, caixaOperadorEmail, hasFase5bGoldenFlowEnv } from './helpers/env'
 import { round2 } from './helpers/caixaPagamento'
 
-// Teste E2E (API, sem browser) para Fase 5b: Criação automática de contas_receber
-// via `finalizar_venda_transacional_canonica_v4`, com validações ACID V7/V8.
-// Cenários: saldo pendente sem cliente, cliente de outra loja (RLS), retry
-// idempotente, saldo divergente (placeholder), happy path, pagamento 100%.
+// Teste E2E (API, sem browser) para `finalizar_venda_transacional_canonica_v4`:
+// validações de saldo pendente (pagamentos < total).
 //
-// Este arquivo nunca rodou de fato: `supabase`/`vendaId`/`clienteId`/etc. eram
-// declarados e nunca inicializados (TypeError: Cannot read properties of
-// undefined (reading 'rpc')), e os itens usavam `produto_id: 'prod-1'` — não é
-// um uuid válido, então mesmo com o client corrigido os cenários de sucesso
-// (03/05/06) quebrariam no cast de `finalizar_venda_transacional_canonica_v4`
-// antes de chegar em qualquer validação de negócio. `clienteId` também era
-// compartilhado entre o teste 02 (que exige cliente de OUTRA loja, ver
-// `FINALIZAR_VENDA_CANONICA_CLIENTE_LOJA_INVALIDO`) e os testes 03/05 (que
-// exigem cliente da MESMA loja) — os dois usos são incompatíveis com uma única
-// variável. Corrigido com fixtures reais via service_role (mesmo padrão de
+// T4 (auditoria Jinlong 2026-09-27): este arquivo testava a criação
+// automática de `contas_receber` quando a venda tinha `cliente_id` e saldo
+// pendente > 0 — um fiado informal que sobrevivia mesmo com o módulo fiado
+// formalmente removido do PDV (migration 246). Era possível finalizar uma
+// venda com pagamento menor que o total sempre que houvesse um cliente
+// vinculado (por qualquer motivo, não necessariamente crédito), e um bug no
+// caixa (Recebido desatualizado, corrigido em `useCaixaPagamentos.ts`) fazia
+// isso acontecer por engano, sem o operador perceber. A migration
+// `20260927120000_t4_bloqueia_pagamento_parcial_finalizar_venda.sql` fechou
+// essa porta: saldo pendente > 0 agora rejeita SEMPRE, com ou sem
+// cliente_id — `FINALIZAR_VENDA_CANONICA_PAGAMENTOS_INSUFICIENTES`. Os testes
+// abaixo foram reescritos para validar o novo contrato. O subsistema de
+// contas_receber em si (tabelas, telas, RPC de baixa) não foi tocado — a
+// remoção completa é a Fase 5 de `Jinlong/decisoes/REMOVER_MODULO_FIADO.md`,
+// fora do escopo desta correção.
+//
+// Histórico: este arquivo nunca rodou de fato antes de 2026-09 — `supabase`/
+// `vendaId`/`clienteId`/etc. eram declarados e nunca inicializados
+// (TypeError: Cannot read properties of undefined (reading 'rpc')), e os
+// itens usavam `produto_id: 'prod-1'` — não é um uuid válido. Corrigido com
+// fixtures reais via service_role (mesmo padrão de
 // `caixa-fase5b-golden-flow-ui.spec.ts`), preço real do produto (para não
 // colidir com a âncora de preço de catálogo) e dois clientes distintos.
 
-test.describe('Fase 5b: Contas Receber Automático (RPC)', () => {
+test.describe('finalizar_venda_transacional_canonica_v4: saldo pendente sempre rejeita (RPC)', () => {
   test.skip(
     !hasFase5bGoldenFlowEnv(),
     'Requer PLAYWRIGHT_CAIXA_TEST_EMAIL/PASSWORD + SUPABASE_SERVICE_ROLE_KEY (ver docs/SEED_DEV_E2E.md).',
@@ -213,81 +222,87 @@ test.describe('Fase 5b: Contas Receber Automático (RPC)', () => {
     })
   }
 
-  test('01. Validação Pré-Transação V7: Saldo pendente exige cliente_id', async () => {
-    // Pagamento parcial (50%) sem cliente → RPC deve rejeitar em V7.
+  test('01. Pagamento parcial sem cliente_id é rejeitado', async () => {
+    const vendaId = crypto.randomUUID()
     const { data, error } = await chamarRpc({
-      p_venda_id: crypto.randomUUID(),
+      p_venda_id: vendaId,
       p_pagamentos: [{ forma_pagamento: 'DINHEIRO', valor: round2(precoUnitario * 0.5) }],
       p_cliente_id: null,
     })
 
-    expect(error?.message).toContain('SALDO_PENDENTE_EXIGE_CLIENTE')
+    expect(error?.message).toContain('PAGAMENTOS_INSUFICIENTES')
     expect(data).toBeNull()
+
+    const { data: venda } = await supabase.from('vendas').select('id').eq('id', vendaId).maybeSingle()
+    expect(venda).toBeNull()
   })
 
-  test('02. Validação Pré-Transação V8: Cliente RLS check', async () => {
-    // Cliente existe mas pertence a OUTRA loja → RPC deve rejeitar em V8.
-    const { error } = await chamarRpc({
+  test('02. Pagamento parcial COM cliente_id também é rejeitado (fiado removido — T4)', async () => {
+    // Antes de T4: cliente válido (mesma loja) bastava para a RPC aceitar o
+    // pagamento parcial e criar contas_receber — era o "fiado informal" que
+    // o bug do caixa disparava sem o operador perceber. Agora rejeita antes
+    // de sequer olhar para cliente_id, então o caminho de RLS
+    // (CLIENTE_LOJA_INVALIDO, cliente de outra loja) fica inalcançável por
+    // aqui: qualquer pagamento parcial já rejeita primeiro.
+    const vendaId = crypto.randomUUID()
+    const { data, error } = await chamarRpc({
+      p_venda_id: vendaId,
+      p_pagamentos: [{ forma_pagamento: 'DINHEIRO', valor: round2(precoUnitario * 0.6) }],
+      p_cliente_id: clienteId,
+    })
+
+    expect(error?.message).toContain('PAGAMENTOS_INSUFICIENTES')
+    expect(data).toBeNull()
+
+    const { data: venda } = await supabase.from('vendas').select('id').eq('id', vendaId).maybeSingle()
+    expect(venda).toBeNull()
+    const { data: crs } = await supabase.from('contas_receber').select('id').eq('venda_id', vendaId)
+    expect(crs?.length ?? 0).toBe(0)
+  })
+
+  test('02b. Pagamento parcial com cliente de outra loja também é rejeitado', async () => {
+    // clienteOutraLojaId existe só para este cenário (era o teste "V8 RLS"):
+    // com o pagamento parcial já bloqueado por si só, o resultado é o mesmo
+    // erro de saldo insuficiente, não mais um erro de RLS/loja.
+    const { data, error } = await chamarRpc({
       p_venda_id: crypto.randomUUID(),
       p_pagamentos: [{ forma_pagamento: 'DINHEIRO', valor: round2(precoUnitario * 0.5) }],
       p_cliente_id: clienteOutraLojaId,
     })
 
-    expect(error?.message).toMatch(/RLS|permission|cliente|loja/i)
+    expect(error?.message).toContain('PAGAMENTOS_INSUFICIENTES')
+    expect(data).toBeNull()
   })
 
-  test('03. Idempotência: Retry com mesma venda_id não duplica contas_receber', async () => {
-    // ACHADO (não é o comportamento que o teste originalmente assumia): o
-    // upsert de `contas_receber` em si É idempotente (`ON CONFLICT (venda_id)
-    // DO UPDATE`), mas o razão de pagamentos que alimenta o cálculo de saldo
-    // NÃO é, no caminho de `p_pagamentos` explícito — a live
-    // `finalizar_venda_transacional_canonica_v4_unscoped` insere em
-    // `vendas_pagamentos` com
-    //   ON CONFLICT (venda_id, forma_pagamento) DO UPDATE SET valor = valor + EXCLUDED.valor
-    // (aditivo), então repetir a MESMA chamada com o MESMO venda_id soma o
-    // pagamento de novo — não é "no-op". Com 50% pago na 1ª chamada, a 2ª
-    // chamada idêntica leva o total pago a 100%, o saldo pendente recalculado
-    // zera, e a função corretamente NÃO cria/atualiza contas_receber nessa
-    // 2ª chamada (retorna contas_receber_id NULL) — a linha da 1ª chamada
-    // permanece, mas com `valor_aberto` desatualizado em relação ao que foi
-    // de fato pago. Isto é uma preocupação real de correção financeira em
-    // cenários de retry de rede (o mesmo tipo de retry que motivou
-    // `FINALIZACAO_TIMEOUT_MS` em `CaixaPageClient.tsx`), registrada aqui
-    // como achado separado — não é escopo desta PR de infraestrutura de CI
-    // corrigir a RPC.
+  test('03. Retry de venda rejeitada não persiste nada e permanece rejeitando', async () => {
+    // Idempotência do caminho de ERRO: como a exceção acontece antes de
+    // qualquer INSERT (vendas/itens_venda/estoque/contas_receber), repetir a
+    // mesma venda_id depois de uma rejeição não "destrava" nada nem deixa
+    // resíduo — cada tentativa é avaliada do zero.
     const vendaId = crypto.randomUUID()
     const pagamentos = [{ forma_pagamento: 'DINHEIRO', valor: round2(precoUnitario * 0.5) }]
     const itens = [itemPadrao()]
 
-    const { data: data1, error: error1 } = await chamarRpc({
+    const { error: error1 } = await chamarRpc({
       p_venda_id: vendaId,
       p_pagamentos: pagamentos,
       p_cliente_id: clienteId,
       p_itens: itens,
     })
-    expect(error1).toBeNull()
-    expect(data1?.[0]?.contas_receber_id).toEqual(expect.any(String))
-    const crId1 = data1?.[0]?.contas_receber_id
+    expect(error1?.message).toContain('PAGAMENTOS_INSUFICIENTES')
 
-    const { data: data2, error: error2 } = await chamarRpc({
+    const { error: error2 } = await chamarRpc({
       p_venda_id: vendaId,
       p_pagamentos: pagamentos,
       p_cliente_id: clienteId,
       p_itens: itens,
     })
-    expect(error2).toBeNull()
-    // Não é um crId2 igual a crId1: o saldo recalculado (pagamento dobrado)
-    // zera, então a 2ª chamada não toca contas_receber — id vem NULL.
-    expect(data2?.[0]?.contas_receber_id).toBeNull()
+    expect(error2?.message).toContain('PAGAMENTOS_INSUFICIENTES')
 
-    const { data: crs, error: crErr } = await supabase
-      .from('contas_receber')
-      .select('id')
-      .eq('venda_id', vendaId)
-
-    expect(crErr).toBeNull()
-    expect(crs?.length).toBe(1)
-    expect(crs?.[0]?.id).toBe(crId1)
+    const { data: venda } = await supabase.from('vendas').select('id').eq('id', vendaId).maybeSingle()
+    expect(venda).toBeNull()
+    const { data: crs } = await supabase.from('contas_receber').select('id').eq('venda_id', vendaId)
+    expect(crs?.length ?? 0).toBe(0)
   })
 
   test('04. Validação 2ª Linha: Saldo divergente rejeita', async () => {
@@ -298,41 +313,27 @@ test.describe('Fase 5b: Contas Receber Automático (RPC)', () => {
     test.skip(true, 'Requer simulação de corrida com 2 conexões concorrentes — não implementado ainda.')
   })
 
-  test('05. Happy Path: Pagamento parcial + cliente válido = contas_receber criado', async () => {
+  test('05. Happy path: pagamento dividido somando exatamente o total é aceito e não cria contas_receber', async () => {
     const vendaId = crypto.randomUUID()
-    const valorPago = round2(precoUnitario * 0.6)
-    const saldoEsperado = round2(precoUnitario - valorPago)
+    const metade = round2(precoUnitario / 2)
+    const resto = round2(precoUnitario - metade)
 
     const { data, error } = await chamarRpc({
       p_venda_id: vendaId,
-      p_pagamentos: [{ forma_pagamento: 'DINHEIRO', valor: valorPago }],
-      p_cliente_id: clienteId,
+      p_pagamentos: [
+        { forma_pagamento: 'DINHEIRO', valor: metade },
+        { forma_pagamento: 'PIX', valor: resto },
+      ],
+      p_cliente_id: null,
     })
 
     expect(error).toBeNull()
-    expect(data?.length).toBeGreaterThan(0)
     expect(data?.[0]?.status).toBe('CONCLUIDA')
-    expect(data?.[0]?.contas_receber_id).toBeDefined()
-
-    const contasRecebeId = data?.[0]?.contas_receber_id
-
-    const { data: cr, error: crErr } = await supabase
-      .from('contas_receber')
-      .select('*')
-      .eq('id', contasRecebeId)
-      .single()
-
-    expect(crErr).toBeNull()
-    expect(cr).toBeDefined()
-    expect(cr?.cliente_id).toBe(clienteId)
-    expect(cr?.venda_id).toBe(vendaId)
-    expect(round2(Number(cr?.valor_total))).toBe(precoUnitario)
-    expect(round2(Number(cr?.valor_aberto))).toBe(saldoEsperado)
-    expect(cr?.status).toBe('ABERTO')
+    expect(data?.[0]?.contas_receber_id).toBeNull()
 
     const { data: venda, error: vendaErr } = await supabase
       .from('vendas')
-      .select('*')
+      .select('status, total_liquido')
       .eq('id', vendaId)
       .single()
 
@@ -346,9 +347,11 @@ test.describe('Fase 5b: Contas Receber Automático (RPC)', () => {
       .eq('venda_id', vendaId)
 
     expect(pagErr).toBeNull()
-    expect(pagamentos?.length).toBeGreaterThan(0)
     const totalPago = pagamentos?.reduce((s: number, p: { valor: number }) => s + Number(p.valor), 0) ?? 0
-    expect(round2(totalPago)).toBe(valorPago)
+    expect(round2(totalPago)).toBe(precoUnitario)
+
+    const { data: crs } = await supabase.from('contas_receber').select('id').eq('venda_id', vendaId)
+    expect(crs?.length ?? 0).toBe(0)
   })
 
   test('06. Validação: Pagamento 100% NÃO cria contas_receber', async () => {
