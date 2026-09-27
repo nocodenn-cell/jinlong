@@ -42,7 +42,7 @@ export const GERENTE_NAV_HREF: Record<PainelGerencialNavKey, string> = {
   contas_pagar: ROUTES.admin.financeiroContasPagar,
   configuracoes: ROUTES.admin.configuracoes,
   suspensao: ROUTES.admin.suspensao,
-  caixas: ROUTES.admin.vendas,
+  caixas: ROUTES.admin.caixas,
   relatorios: ROUTES.admin.relatorios,
   relatorios_vendas: ROUTES.admin.relatorios,
   /** SSoT: compras ≠ recebimento; recebimento tem chave própria. */

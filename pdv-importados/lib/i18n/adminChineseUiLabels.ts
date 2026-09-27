@@ -68,7 +68,7 @@ const legacyAdminUi = {
   dashboard: {
     pageTitle: { cn: '生意看板', pt: 'Dashboard comercial' } satisfies BilingualLine,
     pageSubtitle: { cn: '实时数据', pt: 'Dados do período selecionado' } satisfies BilingualLine,
-    newUsers: { cn: '新客户', pt: 'Novos usuários no período' } satisfies BilingualLine,
+    newUsers: { cn: '新用户', pt: 'Novos usuários no período' } satisfies BilingualLine,
     periodToday: { cn: '今天', pt: 'Hoje' } satisfies BilingualLine,
     period7d: { cn: '7天', pt: '7 dias' } satisfies BilingualLine,
     period30d: { cn: '30天', pt: '30 dias' } satisfies BilingualLine,
