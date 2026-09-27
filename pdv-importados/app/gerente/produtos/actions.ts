@@ -2,7 +2,7 @@
 
 import crypto from 'crypto'
 import { z } from 'zod'
-import { revalidatePath, unstable_cache } from 'next/cache'
+import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import {
@@ -894,35 +894,35 @@ export type OpcoesFiltrosProdutos = {
 }
 
 /**
- * Busca as opções de filtro do lado servidor, cacheada com TTL de 120 s.
- * Categorias/marcas/fornecedores raramente mudam — não faz sentido buscá-los
- * a cada clique de navegação. A tag `catalogo-opcoes-filtro` é revalidada
- * sempre que uma categoria, marca ou fornecedor é criado/editado/excluído.
+ * Busca as opções de filtro (categorias, marcas, fornecedores da loja) do
+ * lado servidor.
  *
- * `unstable_cache` exige que a função não use cookies/headers (são injetados
- * no supabase client aqui de forma segura porque os dados são públicos do catálogo).
+ * Não usa `unstable_cache`: essa função depende do cliente Supabase
+ * autenticado por cookies (`createClient()`), e o Next.js 15 lança erro ao
+ * acessar `cookies()` dentro do escopo de `unstable_cache` — o erro era
+ * engolido pelo catch abaixo e as telas caíam silenciosamente em listas
+ * vazias, sem indicar falha (T2, auditoria 2026-09-27).
  */
-const buscarOpcoesFiltrosCached = unstable_cache(
-  async (lojaId: string): Promise<OpcoesFiltrosProdutos> => {
-    const supabase = await createClient()
-    const [cat, mar, forn] = await Promise.all([
-      supabase.from('categorias').select('id, nome, ativo').order('nome', { ascending: true }),
-      supabase.from('marcas').select('id, nome, ativo').order('nome', { ascending: true }),
-      supabase
-        .from('fornecedores')
-        .select('id, nome')
-        .eq('loja_id', lojaId)
-        .order('nome', { ascending: true }),
-    ])
-    return {
-      categorias: ((cat.data ?? []) as { id: string; nome: string; ativo?: boolean }[]),
-      marcas: ((mar.data ?? []) as { id: string; nome: string; ativo?: boolean }[]),
-      fornecedores: ((forn.data ?? []) as { id: string; nome: string }[]),
-    }
-  },
-  ['catalogo-opcoes-filtro-por-loja'],
-  { revalidate: 120, tags: ['catalogo-opcoes-filtro'] },
-)
+async function buscarOpcoesFiltros(lojaId: string): Promise<OpcoesFiltrosProdutos> {
+  const supabase = await createClient()
+  const [cat, mar, forn] = await Promise.all([
+    supabase.from('categorias').select('id, nome, ativo').order('nome', { ascending: true }),
+    supabase.from('marcas').select('id, nome, ativo').order('nome', { ascending: true }),
+    supabase
+      .from('fornecedores')
+      .select('id, nome')
+      .eq('loja_id', lojaId)
+      .order('nome', { ascending: true }),
+  ])
+  if (cat.error) throw new Error(cat.error.message)
+  if (mar.error) throw new Error(mar.error.message)
+  if (forn.error) throw new Error(forn.error.message)
+  return {
+    categorias: (cat.data ?? []) as { id: string; nome: string; ativo?: boolean }[],
+    marcas: (mar.data ?? []) as { id: string; nome: string; ativo?: boolean }[],
+    fornecedores: (forn.data ?? []) as { id: string; nome: string }[],
+  }
+}
 
 export async function listarOpcoesFiltrosProdutos(): Promise<ActionResult<OpcoesFiltrosProdutos>> {
   const auth = await assertGerenteSession()
@@ -937,7 +937,7 @@ export async function listarOpcoesFiltrosProdutos(): Promise<ActionResult<Opcoes
   }
 
   try {
-    const data = await buscarOpcoesFiltrosCached(lojaId)
+    const data = await buscarOpcoesFiltros(lojaId)
     return { success: true, data }
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Falha ao carregar opções de filtro.'

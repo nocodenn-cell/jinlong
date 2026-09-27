@@ -95,7 +95,11 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
     ? opcoesRes.data
     : { categorias: [], marcas: [], fornecedores: [] }
   const lista = listaRes.ok ? listaRes.data : { total: 0, rows: [] }
-  const loadError = listaRes.ok ? null : listaRes.error
+  const loadError = !listaRes.ok
+    ? listaRes.error
+    : !opcoesRes.success
+      ? opcoesRes.error
+      : null
 
   const linhas: EstoqueLinha[] = lista.rows.map((r) => ({
     id: r.id,

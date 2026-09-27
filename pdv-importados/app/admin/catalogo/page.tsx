@@ -129,7 +129,9 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
   const loadError = !produtosRes.success
     ? mensagemErroParaUsuario(produtosRes.error, idioma) || ui.catalogo_erro_carregar
-    : null
+    : !opcoesRes.success
+      ? mensagemErroParaUsuario(opcoesRes.error, idioma) || ui.catalogo_erro_carregar
+      : null
 
   const catOptions = [
     { value: '', label: m.estoque.filtro_todas_categorias },
