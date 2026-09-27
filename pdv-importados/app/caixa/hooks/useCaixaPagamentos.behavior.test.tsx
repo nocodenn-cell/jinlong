@@ -82,6 +82,30 @@ describe("useCaixaPagamentos — reajuste ao mudar o total", () => {
   })
 })
 
+describe("useCaixaPagamentos — T4 (auditoria 2026-09-27): Recebido não pode ficar preso", () => {
+  it("escanear o mesmo item de novo dobra o total e o Recebido (nunca digitado) acompanha", () => {
+    render(25.9) // 1º item: parcela única auto-preenchida com o total
+    expect(valores()).toEqual([25.9])
+
+    render(51.8) // escaneia o mesmo item de novo — Recebido tinha ficado em 25,90
+    expect(valores()).toEqual([51.8])
+  })
+
+  it("trocar a forma de pagamento sem ter digitado nada também recalcula para o total", () => {
+    act(() => {
+      root.render(<Harness total={25.9} forma="DINHEIRO" />)
+    })
+    act(() => {
+      root.render(<Harness total={51.8} forma="DINHEIRO" />)
+    })
+    act(() => {
+      root.render(<Harness total={51.8} forma="PIX" />)
+    })
+    expect(valores()).toEqual([51.8])
+    expect(api?.pagamentos[0]?.formaPagamento).toBe("PIX")
+  })
+})
+
 describe("useCaixaPagamentos — resetPagamentos encerra o cupom", () => {
   /**
    * Reproduz a sequência real do caixa: os chamadores de `resetPagamentos`

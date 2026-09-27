@@ -31,18 +31,30 @@ export function useCaixaPagamentos(
 
   const prevTotalRef = useRef(totalLiquidoComGerente)
   const prevFormaRef = useRef(formaPagamento)
+  // T4 (auditoria 2026-09-27): "Recebido" da parcela única é estado
+  // DERIVADO do total até o operador digitar um valor manualmente. O código
+  // anterior inferia "foi editado" pelo valor estar perto de zero — então um
+  // valor AUTO-preenchido (não digitado) na leitura anterior do carrinho
+  // (ex.: escanear o mesmo item de novo, dobrando o total) parecia "editado"
+  // e ficava parado no valor antigo. A venda podia ser finalizada com o
+  // "Recebido" cobrindo só uma fração do total. Rastreamos a edição manual
+  // explicitamente para não recomputar por cima do que o operador digitou de
+  // propósito (troco em dinheiro), mas sempre recomputar o que é só herança
+  // de um total anterior.
+  const editadoManualmenteRef = useRef(false)
 
   useEffect(() => {
     if (formaPagamento && formaPagamento !== prevFormaRef.current) {
       prevFormaRef.current = formaPagamento
+      editadoManualmenteRef.current = false
       setParcelas((old) => {
         if (old.length === 1) {
-          return [{ ...old[0], formaPagamento }]
+          return [{ formaPagamento, valor: roundMoney2(Math.max(0, totalLiquidoComGerente)) }]
         }
         return old
       })
     }
-  }, [formaPagamento])
+  }, [formaPagamento, totalLiquidoComGerente])
 
   useEffect(() => {
     const prev = prevTotalRef.current
@@ -50,13 +62,10 @@ export function useCaixaPagamentos(
     if (Math.abs(prev - totalLiquidoComGerente) < 0.005) return
 
     setParcelas((old) => {
-      // Parcela única: atualizar valor se for vazio/zerado
+      // Parcela única: acompanha o total enquanto o operador não digitou nada.
       if (old.length === 1) {
-        const currentValor = old[0].valor
-        if (currentValor <= 0.009) {
-          return [{ ...old[0], valor: roundMoney2(Math.max(0, totalLiquidoComGerente)) }]
-        }
-        return old
+        if (editadoManualmenteRef.current) return old
+        return [{ ...old[0], valor: roundMoney2(Math.max(0, totalLiquidoComGerente)) }]
       }
       // Múltiplas parcelas: ajustar a última quando o total mudar
       // (ex: desconto gerente aplicado/removido, carrinho alterado)
@@ -92,6 +101,7 @@ export function useCaixaPagamentos(
   }, [])
 
   const atualizarValor = useCallback((index: number, valor: number) => {
+    editadoManualmenteRef.current = true
     setParcelas((old) =>
       old.map((p, i) =>
         i === index ? { ...p, valor: roundMoney2(Math.max(0, valor)) } : p,
@@ -133,6 +143,7 @@ export function useCaixaPagamentos(
    * que o operador já vê hoje na primeira leitura.
    */
   const resetPagamentos = useCallback(() => {
+    editadoManualmenteRef.current = false
     setParcelas(parcelaInicial(formaPagamento ?? "DINHEIRO", 0))
   }, [formaPagamento])
 
