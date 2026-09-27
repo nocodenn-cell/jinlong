@@ -31,6 +31,7 @@ import {
 } from './dashboardUtils'
 import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 import { formatDateTimeLocaleDefault, formatDayMonthInLocale } from '@/lib/format/datetime'
+import { horaEmFuso } from '@/lib/relatorios/periodoRelatorio'
 import { formatBRL, formatNumberLocale } from '@/lib/format/money'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { ROUTES } from '@shared-core/navigation/routes'
@@ -327,7 +328,10 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
 
   const hourlyBucket = new Array<number>(24).fill(0)
   for (const row of vendasRange) {
-    const hour = new Date(row.data).getHours()
+    // T9 (auditoria 2026-09-27): nunca `.getHours()` — lê o fuso do processo
+    // Node (UTC em produção), deslocando o gráfico em até 3h do horário real
+    // da loja (uma venda às 21:23 aparecia às 00:23).
+    const hour = horaEmFuso(new Date(row.data), relatorioTz)
     hourlyBucket[hour] = (hourlyBucket[hour] ?? 0) + Number(row.total_liquido ?? 0)
   }
   const hourlyLabels = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}h`)

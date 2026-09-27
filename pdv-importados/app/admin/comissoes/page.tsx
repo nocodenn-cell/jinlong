@@ -12,6 +12,7 @@ import { getMessages } from '@/i18n/getMessages'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import { carregarResumoComissoes } from '@/app/gerente/comissoes/actions'
 import { ROUTES } from '@shared-core/navigation/routes'
+import { subtrairDiasCivis, ymdHojeNoFusoRelatorio } from '@/lib/relatorios/periodoRelatorio'
 import { ComissoesContent } from './_components/ComissoesContent'
 import {
   ComissoesFilters,
@@ -26,19 +27,21 @@ type SearchParams = {
 
 type PageProps = { searchParams?: Promise<SearchParams> }
 
-function isoDay(ms: number): string {
-  return new Date(ms).toISOString().slice(0, 10)
-}
-
-const TODAY = isoDay(Date.now())
-const DIA_MS = 24 * 60 * 60 * 1000
-const DE_7D = isoDay(Date.now() - 7 * DIA_MS)
-const DE_30D = isoDay(Date.now() - 30 * DIA_MS)
+/**
+ * T9 (auditoria 2026-09-27): antes usava `Date.now() - N*DIA_MS` fatiado em UTC
+ * (`toISOString().slice(0,10)`) — "hoje"/"30 dias" ficavam presos ao dia civil
+ * em UTC, não no fuso da loja, e "30 dias" subtraía 30 dias inteiros da hora
+ * atual (não do início do dia civil), um dia a mais do que os últimos 30 dias
+ * civis. Resultado: "30 dias" em Comissões (28/08→27/09) não batia com
+ * Relatórios (29/08→27/09), que já usa `subtrairDiasCivis(hoje, 29)`. Mesmo
+ * helper agora nos dois lugares.
+ */
+export const TODAY = ymdHojeNoFusoRelatorio()
+export const DE_7D = subtrairDiasCivis(TODAY, 6)
+export const DE_30D = subtrairDiasCivis(TODAY, 29)
 
 function mesInicioIso(): string {
-  const now = new Date()
-  const y = now.getUTCFullYear()
-  const m = String(now.getUTCMonth() + 1).padStart(2, '0')
+  const [y, m] = TODAY.split('-')
   return `${y}-${m}-01`
 }
 

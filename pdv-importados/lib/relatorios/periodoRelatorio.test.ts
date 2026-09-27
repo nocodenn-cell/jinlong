@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   RELATORIO_MAX_DIAS_INCLUSIVOS,
   diasNoIntervaloInclusive,
+  horaEmFuso,
   inicioDoDiaCivilEmUtc,
   isYmd,
   resolverPeriodoRelatorio,
@@ -17,6 +18,13 @@ describe('periodoRelatorio', () => {
 
   it('subtrairDiasCivis atravessa mês', () => {
     expect(subtrairDiasCivis('2026-03-15', 20)).toBe('2026-02-23')
+  })
+
+  it('horaEmFuso: T9 — 21:23 em America/Sao_Paulo não é 00:23 (getHours() do processo em UTC)', () => {
+    // 2026-04-08T00:23:00Z == 2026-04-07T21:23:00 em America/Sao_Paulo (UTC-3)
+    const instante = new Date('2026-04-08T00:23:00.000Z')
+    expect(horaEmFuso(instante, 'America/Sao_Paulo')).toBe(21)
+    expect(horaEmFuso(instante, 'UTC')).toBe(0)
   })
 
   it('resolverPeriodoRelatorio usa 30 dias civis inclusivos sem query', () => {

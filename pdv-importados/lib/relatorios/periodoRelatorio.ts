@@ -36,6 +36,19 @@ export function ymdHojeNoFusoRelatorio(timeZone = RELATORIO_TZ_PADRAO): string {
   return ymdEmFuso(new Date(), timeZone)
 }
 
+/**
+ * Hora do dia (0–23) de um instante, no fuso informado — nunca `Date.getHours()`
+ * (lê o fuso do processo Node, UTC em produção; T9, auditoria 2026-09-27).
+ */
+export function horaEmFuso(instante: Date, timeZone: string = RELATORIO_TZ_PADRAO): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hourCycle: 'h23',
+    hour: '2-digit',
+  }).formatToParts(instante)
+  return Number(parts.find((p) => p.type === 'hour')!.value) % 24
+}
+
 /** Offset (minutos, local menos UTC) do fuso `timeZone` no instante dado. */
 function offsetMinutosEm(instante: Date, timeZone: string): number {
   const parts = new Intl.DateTimeFormat('en-US', {
