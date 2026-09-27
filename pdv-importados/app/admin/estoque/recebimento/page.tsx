@@ -4,6 +4,7 @@ import { ROUTES } from '@shared-core/navigation/routes'
 import { EstoqueHubNav } from '@/components/ui/admin-v2/EstoqueHubNav'
 import {
   RecebimentoGerentePageClient,
+  type RecebimentoFornecedorOpt,
   type RecebimentoProdutoOpt,
   type RemessaRecenteRow,
 } from '@/app/gerente/recebimento/RecebimentoGerentePageClient'
@@ -16,7 +17,7 @@ export default async function AdminEstoqueRecebimentoPage() {
   const { idioma, lojaId } = session
   const supabase = await createClient()
 
-  const [{ data: produtosRaw }, { data: remessasRaw }] = await Promise.all([
+  const [{ data: produtosRaw }, { data: remessasRaw }, { data: fornecedoresRaw }] = await Promise.all([
     // Só precisamos saber SE existe produto — a escolha agora é por busca
     // server-side (ProdutoRecebimentoAutocomplete). Antes vinham 500 linhas
     // para popular um `<select>` que escondia todo o resto do catálogo.
@@ -40,6 +41,11 @@ export default async function AdminEstoqueRecebimentoPage() {
           .order('created_at', { ascending: false })
           .limit(20)
       : Promise.resolve({ data: [] }),
+    // T11 (auditoria 2026-09-27): fornecedores do cadastro para o select que
+    // substitui o campo Origem em texto livre.
+    lojaId
+      ? supabase.from('fornecedores').select('id, nome').eq('loja_id', lojaId).order('nome').limit(200)
+      : Promise.resolve({ data: [] }),
   ])
 
   const produtos: RecebimentoProdutoOpt[] = (produtosRaw ?? []).map((p) => ({
@@ -55,12 +61,18 @@ export default async function AdminEstoqueRecebimentoPage() {
     created_at: r.created_at,
   }))
 
+  const fornecedores: RecebimentoFornecedorOpt[] = (fornecedoresRaw ?? []).map((f) => ({
+    id: f.id,
+    nome: f.nome,
+  }))
+
   return (
     <div className="admin-v2-page">
       <EstoqueHubNav />
       <RecebimentoGerentePageClient
         idioma={idioma}
         produtos={produtos}
+        fornecedores={fornecedores}
         remessasRecentes={remessasRecentes}
         embeddedInAdminHub
       />

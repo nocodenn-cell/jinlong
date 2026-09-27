@@ -88,10 +88,16 @@ export async function buscarProdutosRecebimento(
 }
 
 export async function criarRemessaConferencia(input: {
-  origem: string
+  fornecedor_id: string
+  documento?: string
   observacao?: string
   idempotency_key: string
-  itens: Array<{ produto_id: string; quantidade_esperada: number; quantidade_conferida: number }>
+  itens: Array<{
+    produto_id: string
+    quantidade_esperada: number
+    quantidade_conferida: number
+    custo_unitario: number
+  }>
 }): Promise<R<string>> {
   const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
@@ -102,7 +108,7 @@ export async function criarRemessaConferencia(input: {
   const supabase = await createClient()
 
   const erro = validarRemessaInput({
-    origem: input.origem,
+    fornecedor_id: input.fornecedor_id,
     itens: input.itens,
   })
   if (erro) return { success: false, error: erro }
@@ -112,10 +118,12 @@ export async function criarRemessaConferencia(input: {
   }
 
   const { data: remessaId, error } = await supabase.rpc('criar_confirmar_remessa_entrada', {
-    p_origem: input.origem.trim(),
+    p_origem: null,
     p_observacao: input.observacao?.trim() || null,
     p_itens: input.itens,
     p_idempotency_key: idempotencyKey,
+    p_fornecedor_id: input.fornecedor_id,
+    p_documento: input.documento?.trim() || null,
   })
 
   if (error || !remessaId) {

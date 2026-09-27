@@ -5444,10 +5444,12 @@ export type Database = {
       converter_venda_em_espera: { Args: { p_id: string }; Returns: Json }
       criar_confirmar_remessa_entrada: {
         Args: {
+          p_documento?: string | null
+          p_fornecedor_id?: string | null
           p_idempotency_key: string
           p_itens: Json
-          p_observacao: string
-          p_origem: string
+          p_observacao: string | null
+          p_origem: string | null
         }
         Returns: string
       }

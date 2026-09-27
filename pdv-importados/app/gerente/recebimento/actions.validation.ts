@@ -1,11 +1,16 @@
 /** Validações puras de remessa — fora de `'use server'` para compatibilidade com Next (Server Actions só async). */
 
 export function validarRemessaInput(input: {
-  origem: string
-  itens: Array<{ produto_id: string; quantidade_esperada: number; quantidade_conferida: number }>
+  fornecedor_id: string
+  itens: Array<{
+    produto_id: string
+    quantidade_esperada: number
+    quantidade_conferida: number
+    custo_unitario: number
+  }>
 }): string | null {
-  const origem = input.origem.trim()
-  if (!origem) return 'Informe a origem da remessa.'
+  const fornecedorId = input.fornecedor_id?.trim()
+  if (!fornecedorId) return 'Selecione o fornecedor.'
   if (!input.itens?.length) return 'Inclua ao menos um item.'
   for (const it of input.itens) {
     if (!it.produto_id?.trim()) return 'Produto inválido na remessa.'
@@ -20,6 +25,9 @@ export function validarRemessaInput(input: {
     }
     if (it.quantidade_conferida === 0) {
       return 'Quantidade conferida deve ser maior que zero para confirmar a entrada.'
+    }
+    if (!Number.isFinite(it.custo_unitario) || it.custo_unitario <= 0) {
+      return 'Custo unitário deve ser maior que zero.'
     }
   }
   return null

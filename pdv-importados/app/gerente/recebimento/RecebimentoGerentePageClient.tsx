@@ -17,12 +17,13 @@ import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/feedback'
 import { StatusChip } from '@/components/ui/StatusChip'
-import { Field, Input } from '@/components/ui/forms'
+import { Field, Input, Select } from '@/components/ui/forms'
 import { ROUTES } from '@shared-core/navigation/routes'
 import { criarRemessaConferencia } from './actions'
 import { ProdutoRecebimentoAutocomplete } from './ProdutoRecebimentoAutocomplete'
 
 export type RecebimentoProdutoOpt = { id: string; nome: string; codigo_barras: string | null }
+export type RecebimentoFornecedorOpt = { id: string; nome: string }
 
 export type RemessaRecenteRow = {
   id: string
@@ -38,6 +39,7 @@ function interRecebimento(template: string, vars: Record<string, string>): strin
 type Props = Readonly<{
   idioma: Idioma
   produtos: RecebimentoProdutoOpt[]
+  fornecedores: RecebimentoFornecedorOpt[]
   remessasRecentes: RemessaRecenteRow[]
   /** Admin hub S6: oculta link “voltar” redundante com abas de estoque. */
   embeddedInAdminHub?: boolean
@@ -46,6 +48,7 @@ type Props = Readonly<{
 export function RecebimentoGerentePageClient({
   idioma,
   produtos,
+  fornecedores,
   remessasRecentes,
   embeddedInAdminHub = false,
 }: Props) {
@@ -55,9 +58,12 @@ export function RecebimentoGerentePageClient({
   const router = useRouter()
   const refetch = useCallback(() => router.refresh(), [router])
   const semProdutos = produtos.length === 0
+  const semFornecedores = fornecedores.length === 0
+  const desabilitado = semProdutos || semFornecedores
 
   const [qtdEspStr, setQtdEspStr] = useState('')
   const [qtdConfStr, setQtdConfStr] = useState('')
+  const [custoUnitarioStr, setCustoUnitarioStr] = useState('')
   const idempotencyKeyRef = useRef(crypto.randomUUID())
 
   const divergenciaDetalhe = useMemo(() => {
@@ -77,15 +83,18 @@ export function RecebimentoGerentePageClient({
 
   const { mutate, loading } = useGerenteMutation(
     async (p: {
-      origem: string
+      fornecedor_id: string
+      documento: string
       observacao: string
       produto_id: string
       qtd_esperada: number
       qtd_conferida: number
+      custo_unitario: number
       idempotency_key: string
     }) => {
       const res = await criarRemessaConferencia({
-        origem: p.origem,
+        fornecedor_id: p.fornecedor_id,
+        documento: p.documento || undefined,
         observacao: p.observacao || undefined,
         idempotency_key: p.idempotency_key,
         itens: [
@@ -93,6 +102,7 @@ export function RecebimentoGerentePageClient({
             produto_id: p.produto_id,
             quantidade_esperada: p.qtd_esperada,
             quantidade_conferida: p.qtd_conferida,
+            custo_unitario: p.custo_unitario,
           },
         ],
       })
@@ -190,45 +200,81 @@ export function RecebimentoGerentePageClient({
         </div>
       ) : null}
 
+      {!semProdutos && semFornecedores ? (
+        <div
+          className="mt-8 rounded-xl border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] p-5 text-[var(--color-warning-strong)] shadow-sm"
+          role="status"
+        >
+          <p className="font-semibold">{r.sem_fornecedores_titulo}</p>
+          <p className="mt-2 text-body">{r.sem_fornecedores_texto}</p>
+          <Link
+            href={ROUTES.admin.fornecedores}
+            className="mt-4 inline-flex text-body font-semibold underline decoration-current/60 underline-offset-2"
+          >
+            {r.link_fornecedores}
+          </Link>
+        </div>
+      ) : null}
+
       <CadastroRapidoBlock title={r.sec_formulario} defaultOpen className="mt-8">
         <form
           id="recebimento-form"
           className="space-y-0"
           onSubmit={(e) => {
             e.preventDefault()
-            if (semProdutos) return
+            if (desabilitado) return
             const fd = new FormData(e.currentTarget)
+            const fornecedorId = readFormDataString(fd, 'fornecedor_id')
             const pid = readFormDataString(fd, 'produto_id')
             const qEsp = Number(fd.get('qtd_esperada'))
             const qConf = Number(fd.get('qtd_conferida'))
-            if (!pid || !Number.isFinite(qEsp) || !Number.isFinite(qConf) || qEsp <= 0 || qConf <= 0) {
+            const custo = Number(fd.get('custo_unitario'))
+            if (
+              !fornecedorId ||
+              !pid ||
+              !Number.isFinite(qEsp) ||
+              !Number.isFinite(qConf) ||
+              qEsp <= 0 ||
+              qConf <= 0 ||
+              !Number.isFinite(custo) ||
+              custo <= 0
+            ) {
               emitGerenteToast({ kind: 'error', message: r.toast_dados_invalidos })
               return
             }
             void mutate({
-              origem: readFormDataString(fd, 'origem'),
+              fornecedor_id: fornecedorId,
+              documento: readFormDataString(fd, 'documento'),
               observacao: readFormDataString(fd, 'observacao'),
               produto_id: pid,
               qtd_esperada: qEsp,
               qtd_conferida: qConf,
+              custo_unitario: custo,
               idempotency_key: idempotencyKeyRef.current,
             })
           }}
         >
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <Field id="rec-origem" label={r.label_origem} required>
-              <Input
-                name="origem"
-                required
-                disabled={semProdutos}
-                placeholder={r.ph_origem}
-              />
+            <Field id="rec-fornecedor" label={r.label_fornecedor} required>
+              <Select name="fornecedor_id" required disabled={desabilitado} defaultValue="">
+                <option value="" disabled>
+                  {r.opt_fornecedor_placeholder}
+                </option>
+                {fornecedores.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.nome}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field id="rec-documento" label={r.label_documento}>
+              <Input name="documento" disabled={desabilitado} placeholder={r.ph_documento} />
             </Field>
             <Field id="rec-prod" label={r.label_produto} required>
               {/* Busca server-side: o `<select>` anterior carregava só os 500
                   primeiros produtos e o resto ficava inalcançável, sem aviso. */}
               <ProdutoRecebimentoAutocomplete
-                disabled={semProdutos}
+                disabled={desabilitado}
                 placeholder={r.ph_produto_busca}
                 semResultadosLabel={r.produto_sem_resultados}
                 minimoLabel={r.produto_busca_minimo}
@@ -238,7 +284,7 @@ export function RecebimentoGerentePageClient({
             <Field id="rec-obs" label={r.label_observacao} className="md:col-span-2">
               <Input
                 name="observacao"
-                disabled={semProdutos}
+                disabled={desabilitado}
                 placeholder={r.ph_observacao}
               />
             </Field>
@@ -249,7 +295,7 @@ export function RecebimentoGerentePageClient({
                 min="0.001"
                 step="0.001"
                 required
-                disabled={semProdutos}
+                disabled={desabilitado}
                 value={qtdEspStr}
                 onChange={(e) => setQtdEspStr(e.target.value)}
               />
@@ -261,9 +307,22 @@ export function RecebimentoGerentePageClient({
                 min="0.001"
                 step="0.001"
                 required
-                disabled={semProdutos}
+                disabled={desabilitado}
                 value={qtdConfStr}
                 onChange={(e) => setQtdConfStr(e.target.value)}
+              />
+            </Field>
+            <Field id="rec-custo" label={r.label_custo_unitario} required>
+              <Input
+                name="custo_unitario"
+                type="number"
+                min="0.01"
+                step="0.01"
+                required
+                disabled={desabilitado}
+                placeholder={r.ph_custo_unitario}
+                value={custoUnitarioStr}
+                onChange={(e) => setCustoUnitarioStr(e.target.value)}
               />
             </Field>
             {divergenciaDetalhe ? (
@@ -302,7 +361,7 @@ export function RecebimentoGerentePageClient({
             ) : null}
           </div>
           <div className="mt-6 flex justify-end border-t border-[var(--color-border)] pt-5">
-            <Button type="submit" variant="primary" loading={loading} disabled={semProdutos}>
+            <Button type="submit" variant="primary" loading={loading} disabled={desabilitado}>
               {loading ? r.btn_confirmando : r.btn_confirmar}
             </Button>
           </div>
