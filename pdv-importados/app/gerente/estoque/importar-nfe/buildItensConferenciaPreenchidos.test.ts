@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildItensConferenciaPreenchidos } from './ImportarNfePageClient'
+import { buildItensConferenciaPreenchidos, valorInicialQtdConferida } from './ImportarNfePageClient'
 import type { ItemConferenciaNfe } from './actions'
 
 function item(overrides: Partial<ItemConferenciaNfe> = {}): ItemConferenciaNfe {
@@ -71,5 +71,22 @@ describe('buildItensConferenciaPreenchidos (achado de revisão pré-merge — P1
     const itens = [item({ item_id: 'a' }), item({ item_id: 'b' }), item({ item_id: 'c' })]
     const r = buildItensConferenciaPreenchidos(itens, { a: '5', c: '' }, {})
     expect(r).toEqual([{ item_id: 'a', quantidade_conferida: 5, divergencia_obs: null }])
+  })
+})
+
+describe('valorInicialQtdConferida (RM-01 — campo de conferência não pode nascer com a qtd. da nota)', () => {
+  it('retorna null (campo vazio) quando o servidor ainda não tem contagem', () => {
+    expect(valorInicialQtdConferida({ quantidade_conferida: null })).toBeNull()
+  })
+
+  it('retorna a contagem salva ao retomar uma conferência já iniciada, mesmo que seja zero', () => {
+    expect(valorInicialQtdConferida({ quantidade_conferida: 7 })).toBe('7')
+    expect(valorInicialQtdConferida({ quantidade_conferida: 0 })).toBe('0')
+  })
+
+  it('nunca deriva o valor inicial da quantidade da nota', () => {
+    const semContagem = { quantidade_conferida: null }
+    expect(valorInicialQtdConferida(semContagem)).not.toBe('10')
+    expect(valorInicialQtdConferida(semContagem)).toBeNull()
   })
 })

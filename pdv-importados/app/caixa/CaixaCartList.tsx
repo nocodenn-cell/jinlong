@@ -171,7 +171,7 @@ const CartRowDesktop = memo(function CartRowDesktop({
   const res = resultadoLinha(item)
   return (
     <li
-      className="grid grid-cols-[minmax(0,2.55fr)_8.5rem_5rem_5.5rem_5.5rem] gap-2 px-3 py-3 items-center hover:bg-accent/50 transition-colors"
+      className="grid grid-cols-[minmax(6rem,2.55fr)_8.5rem_5rem_5.5rem_5.5rem] gap-2 px-3 py-3 items-center hover:bg-accent/50 transition-colors"
     >
       <div className="flex flex-col min-w-0 gap-1">
         <div className="flex items-center gap-2 min-w-0">
@@ -398,7 +398,7 @@ function CaixaCartListInner({
     <>
       {/* Desktop: tabela */}
       <div className="hidden md:block">
-        <header className="grid grid-cols-[minmax(0,2.55fr)_8.5rem_5rem_5.5rem_5.5rem] gap-2 px-3 py-2 text-sm text-foreground/85 border-b border-border">
+        <header className="grid grid-cols-[minmax(6rem,2.55fr)_8.5rem_5rem_5.5rem_5.5rem] gap-2 px-3 py-2 text-sm text-foreground/85 border-b border-border">
           <span>{m.caixa.col_produto}</span>
           <span className="text-right">{m.caixa.col_qtde}</span>
           <span className="text-right">{m.caixa.col_unit}</span>

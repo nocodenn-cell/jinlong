@@ -9,6 +9,7 @@ import {
   Monitor,
   Package,
   Percent,
+  Receipt,
   ScrollText,
   Settings,
   ShieldOff,
@@ -38,6 +39,14 @@ export type AdminV2NavItem = {
 export const ADMIN_V2_CORE_ITEMS: readonly AdminV2NavItem[] = [
   { id: 'dashboard', href: ROUTES.admin.dashboard, icon: LayoutDashboard, labelOverridePt: 'Visão geral', dictKey: 'dashboard' },
   { id: 'vendas', href: ROUTES.admin.vendas, icon: ShoppingCart, labelOverridePt: 'Vendas e caixa', dictKey: 'vendas' },
+  {
+    id: 'caixas',
+    href: ROUTES.admin.caixas,
+    icon: Receipt,
+    labelOverridePt: 'Caixas',
+    labelCn: '收银历史',
+    hint: 'Histórico de abertura, fechamento e divergência de turnos.',
+  },
   {
     id: 'produtos',
     href: ROUTES.admin.catalogo,
