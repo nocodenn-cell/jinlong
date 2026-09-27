@@ -44,12 +44,17 @@ describe('v_kardex_unificado anti-join devolução', () => {
     expect(files.indexOf(FIX)).toBeGreaterThan(files.indexOf(WRITE_SIDE))
   })
 
-  it('a definição vigente da view é a migration corretiva', () => {
-    expect(latestKardexViewMigration()).toBe(FIX)
+  it('a definição vigente da view não está antes da migration corretiva', () => {
+    // Não trava na definição literal do arquivo FIX: uma migration posterior
+    // (ex.: T5, 20260927130000) pode redefinir a view de novo, desde que
+    // preserve as garantias abaixo — verificadas contra o arquivo vigente,
+    // não contra este hardcoded.
+    const files = fs.readdirSync(MIGRATIONS).filter((f) => f.endsWith('.sql')).sort()
+    expect(files.indexOf(latestKardexViewMigration())).toBeGreaterThanOrEqual(files.indexOf(FIX))
   })
 
   it('ramo erd omite linhas já lançadas em movimentos_estoque_log', () => {
-    const src = fs.readFileSync(path.join(MIGRATIONS, FIX), 'utf8')
+    const src = fs.readFileSync(path.join(MIGRATIONS, latestKardexViewMigration()), 'utf8')
     const erd = erdUnionBranch(src)
     expect(erd).toMatch(/NOT EXISTS/i)
     expect(erd).toContain("mel.tipo_codigo = 'ENTRADA_DEVOLUCAO_CLIENTE'")
@@ -59,7 +64,7 @@ describe('v_kardex_unificado anti-join devolução', () => {
   })
 
   it('preserva anti-join de baixas (DAT-01) e o fallback erd para legado', () => {
-    const src = fs.readFileSync(path.join(MIGRATIONS, FIX), 'utf8')
+    const src = fs.readFileSync(path.join(MIGRATIONS, latestKardexViewMigration()), 'utf8')
     expect(src).toContain('NULLIF(eb.quantidade, 0)')
     expect(src).toContain("mel.tipo_codigo = 'SAIDA_VENDA'")
     expect(src).toContain('estoque_reposicoes_devolucao')
