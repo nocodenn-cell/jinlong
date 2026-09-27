@@ -130,3 +130,131 @@ describe('criarOrdemCompra — fornecedor scoped à loja', () => {
     if (r.success) expect(r.data).toBe('oc-1')
   })
 })
+
+describe('criarOrdemCompra — produto_id dos itens scoped à loja', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    assertGerenteSession.mockResolvedValue({
+      ok: true,
+      session: { lojaId: 'loja-a', idioma: 'pt', userId: 'u1' },
+    })
+    getGerenteUserId.mockResolvedValue('u1')
+  })
+
+  function mockSupabase(opts: {
+    produtosEncontrados: Array<{ id: string; loja_id: string }>
+    insertOc?: ReturnType<typeof vi.fn>
+    insertItens?: ReturnType<typeof vi.fn>
+  }) {
+    const insertOc =
+      opts.insertOc ??
+      vi.fn(() => ({
+        select: vi.fn(() => ({
+          single: vi.fn().mockResolvedValue({ data: { id: 'oc-1' }, error: null }),
+        })),
+      }))
+    const insertItens = opts.insertItens ?? vi.fn().mockResolvedValue({ error: null })
+
+    createClient.mockResolvedValue({
+      from: vi.fn((table: string) => {
+        if (table === 'produtos') {
+          return {
+            select: vi.fn(() => ({
+              in: vi.fn().mockResolvedValue({ data: opts.produtosEncontrados, error: null }),
+            })),
+          }
+        }
+        if (table === 'ordens_compra_itens') {
+          return { insert: insertItens }
+        }
+        return { insert: insertOc }
+      }),
+    })
+    return { insertOc, insertItens }
+  }
+
+  it('rejeita produto_id de outra loja antes de criar a OC (Cenário A)', async () => {
+    const { insertOc, insertItens } = mockSupabase({
+      produtosEncontrados: [{ id: 'produto-loja-b', loja_id: 'loja-b' }],
+    })
+
+    const r = await criarOrdemCompra({
+      itens: [{ produto_id: 'produto-loja-b', quantidade: 1, preco_unitario: 10, unidade_medida: 'UN' }],
+    })
+
+    expect(r.success).toBe(false)
+    if (!r.success) expect(r.error).toMatch(/inválido/i)
+    expect(insertOc).not.toHaveBeenCalled()
+    expect(insertItens).not.toHaveBeenCalled()
+  })
+
+  it('rejeita produto_id inexistente', async () => {
+    const { insertOc } = mockSupabase({ produtosEncontrados: [] })
+
+    const r = await criarOrdemCompra({
+      itens: [{ produto_id: 'produto-fantasma', quantidade: 1, preco_unitario: 10, unidade_medida: 'UN' }],
+    })
+
+    expect(r.success).toBe(false)
+    if (!r.success) expect(r.error).toMatch(/inválido/i)
+    expect(insertOc).not.toHaveBeenCalled()
+  })
+
+  it('rejeita payload misto: um produto próprio + um de outra loja', async () => {
+    const { insertOc } = mockSupabase({
+      produtosEncontrados: [
+        { id: 'produto-loja-a', loja_id: 'loja-a' },
+        { id: 'produto-loja-b', loja_id: 'loja-b' },
+      ],
+    })
+
+    const r = await criarOrdemCompra({
+      itens: [
+        { produto_id: 'produto-loja-a', quantidade: 1, preco_unitario: 10, unidade_medida: 'UN' },
+        { produto_id: 'produto-loja-b', quantidade: 1, preco_unitario: 10, unidade_medida: 'UN' },
+      ],
+    })
+
+    expect(r.success).toBe(false)
+    expect(insertOc).not.toHaveBeenCalled()
+  })
+
+  it('aceita produto_id da própria loja (Cenário C)', async () => {
+    const { insertItens } = mockSupabase({
+      produtosEncontrados: [{ id: 'produto-loja-a', loja_id: 'loja-a' }],
+    })
+
+    const r = await criarOrdemCompra({
+      itens: [{ produto_id: 'produto-loja-a', quantidade: 1, preco_unitario: 10, unidade_medida: 'UN' }],
+    })
+
+    expect(r.success).toBe(true)
+    expect(insertItens).toHaveBeenCalled()
+  })
+
+  it('itens sem produto_id (descrição livre) não disparam consulta a produtos', async () => {
+    const produtosQuery = vi.fn()
+    const insertItens = vi.fn().mockResolvedValue({ error: null })
+    createClient.mockResolvedValue({
+      from: vi.fn((table: string) => {
+        if (table === 'produtos') {
+          produtosQuery()
+          return { select: vi.fn(() => ({ in: vi.fn() })) }
+        }
+        if (table === 'ordens_compra_itens') return { insert: insertItens }
+        return {
+          insert: vi.fn(() => ({
+            select: vi.fn(() => ({
+              single: vi.fn().mockResolvedValue({ data: { id: 'oc-1' }, error: null }),
+            })),
+          })),
+        }
+      }),
+    })
+
+    const r = await criarOrdemCompra({ itens: [itemOk] })
+
+    expect(r.success).toBe(true)
+    expect(produtosQuery).not.toHaveBeenCalled()
+  })
+})
