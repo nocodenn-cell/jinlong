@@ -6,7 +6,7 @@ import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { getGerenteLojaId, getGerenteUserId } from '@/lib/gerente/auth/sessionContext'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 import { lojaIdDaSessao } from '@/app/gerente/fornecedores/fornecedorContrato'
-import { mensagemSeFornecedorForaDaLoja } from './fornecedorOcBoundary'
+import { mensagemSeFornecedorForaDaLoja, mensagemSeProdutosForaDaLoja } from './fornecedorOcBoundary'
 
 type R<T = null> = { success: true; data: T } | { success: false; error: string }
 
@@ -99,6 +99,28 @@ async function assertFornecedorDaLojaOc(
   return mensagemSeFornecedorForaDaLoja({
     fornecedorId,
     fornecedorLojaId: (data?.loja_id as string | undefined) ?? null,
+    lojaIdOc: lojaId,
+  })
+}
+
+/**
+ * Confirma que todo produto_id referenciado pelos itens pertence à loja da
+ * OC. Uma única query (`in`) para toda a lista de itens, não uma por item.
+ */
+async function assertProdutosDaLojaOc(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  lojaId: string,
+  itens: OcItemInput[],
+): Promise<string | null> {
+  const produtoIds = [...new Set(itens.map((i) => i.produto_id).filter((id): id is string => !!id))]
+  if (produtoIds.length === 0) return null
+
+  const { data, error } = await supabase.from('produtos').select('id, loja_id').in('id', produtoIds)
+  if (error) return mensagemErroComSecao('Produto', error.message)
+
+  return mensagemSeProdutosForaDaLoja({
+    produtoIds,
+    produtosEncontrados: (data ?? []) as Array<{ id: string; loja_id: string | null }>,
     lojaIdOc: lojaId,
   })
 }
@@ -311,6 +333,9 @@ export async function criarOrdemCompra(input: CriarOcInput): Promise<R<string>> 
   const fornErr = await assertFornecedorDaLojaOc(supabase, lojaId, input.fornecedor_id)
   if (fornErr) return { success: false, error: fornErr }
 
+  const produtoErr = await assertProdutosDaLojaOc(supabase, lojaId, input.itens)
+  if (produtoErr) return { success: false, error: produtoErr }
+
   const { data: oc, error: e1 } = await supabase
     .from('ordens_compra')
     .insert({
@@ -372,6 +397,9 @@ export async function atualizarOrdemCompra(input: AtualizarOcInput): Promise<R<n
 
   const fornErr = await assertFornecedorDaLojaOc(supabase, lojaId, input.fornecedor_id)
   if (fornErr) return { success: false, error: fornErr }
+
+  const produtoErr = await assertProdutosDaLojaOc(supabase, lojaId, input.itens)
+  if (produtoErr) return { success: false, error: produtoErr }
 
   const { error: e1 } = await supabase
     .from('ordens_compra')
