@@ -3843,6 +3843,7 @@ export type Database = {
       }
       remessa_itens: {
         Row: {
+          custo_unitario: number | null
           divergencia_obs: string | null
           id: string
           produto_id: string
@@ -3851,6 +3852,7 @@ export type Database = {
           remessa_id: string
         }
         Insert: {
+          custo_unitario?: number | null
           divergencia_obs?: string | null
           id?: string
           produto_id: string
@@ -3859,6 +3861,7 @@ export type Database = {
           remessa_id: string
         }
         Update: {
+          custo_unitario?: number | null
           divergencia_obs?: string | null
           id?: string
           produto_id?: string
@@ -3905,7 +3908,9 @@ export type Database = {
           created_at: string
           created_by: string
           divergencia_motivo: string | null
+          documento: string | null
           finalized_at: string | null
+          fornecedor_id: string | null
           id: string
           idempotency_key: string | null
           loja_id: string
@@ -3923,7 +3928,9 @@ export type Database = {
           created_at?: string
           created_by: string
           divergencia_motivo?: string | null
+          documento?: string | null
           finalized_at?: string | null
+          fornecedor_id?: string | null
           id?: string
           idempotency_key?: string | null
           loja_id: string
@@ -3941,7 +3948,9 @@ export type Database = {
           created_at?: string
           created_by?: string
           divergencia_motivo?: string | null
+          documento?: string | null
           finalized_at?: string | null
+          fornecedor_id?: string | null
           id?: string
           idempotency_key?: string | null
           loja_id?: string
@@ -3965,6 +3974,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remessas_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
             referencedColumns: ["id"]
           },
           {
