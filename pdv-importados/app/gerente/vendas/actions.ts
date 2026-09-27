@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { roundMoney2 } from '@/shared/cart/totals'
 import { cancelarVenda } from '@/app/caixa/actions'
 import { parseCancelarVendaGerenteForm } from '@/app/gerente/vendas/parseCancelarVendaGerenteForm'
 import { parseDevolverVendaForm } from '@/app/gerente/vendas/parseDevolverVendaForm'
@@ -257,6 +258,19 @@ export type ComprovanteCancelamentoItem = Readonly<{
 export type ComprovanteCancelamentoDados = Readonly<{
   itens: ComprovanteCancelamentoItem[]
   operadorNome: string
+  /**
+   * O que este cancelamento efetivamente estornou, em qualquer forma de
+   * pagamento — `max(0, total_liquido - soma já devolvida antes por
+   * devolver_ou_trocar_venda)`, mesmo cálculo que `cancelar_venda_transacional`
+   * usa internamente para `v_pendente_total`. `valor_estornado` da RPC só
+   * cobre a parcela em DINHEIRO (é o débito no caixa físico) — para
+   * PIX/cartão ele vem 0 mesmo com a venda totalmente paga, porque esse
+   * estorno não passa pela gaveta (T7, auditoria 2026-09-27). Usar a soma
+   * bruta de `vendas_pagamentos` também seria errado no sentido oposto:
+   * superestimaria o estorno quando já havia devolução parcial antes deste
+   * cancelamento.
+   */
+  totalEstornado: number
 }>
 
 /**
@@ -267,14 +281,14 @@ export type ComprovanteCancelamentoDados = Readonly<{
 export async function obterDadosComprovanteCancelamento(
   vendaId: string,
 ): Promise<ComprovanteCancelamentoDados> {
-  const vazio: ComprovanteCancelamentoDados = { itens: [], operadorNome: '—' }
+  const vazio: ComprovanteCancelamentoDados = { itens: [], operadorNome: '—', totalEstornado: 0 }
   const authCheck = await assertGerenteSession()
   if (!authCheck.ok) return vazio
 
   try {
     const supabase = await createClient()
 
-    const [itensRes, usuarioRes] = await Promise.all([
+    const [itensRes, usuarioRes, vendaRes, operacoesRes] = await Promise.all([
       supabase
         .from('itens_venda')
         .select(
@@ -287,6 +301,8 @@ export async function obterDadosComprovanteCancelamento(
         .select('nome')
         .eq('id', authCheck.session.userId)
         .maybeSingle(),
+      supabase.from('vendas').select('total_liquido').eq('id', vendaId).maybeSingle(),
+      supabase.from('venda_pos_venda_operacoes').select('valor_estornado').eq('venda_id', vendaId),
     ])
 
     const itens: ComprovanteCancelamentoItem[] = (itensRes.data ?? []).map((row) => {
@@ -299,9 +315,17 @@ export async function obterDadosComprovanteCancelamento(
       }
     })
 
+    const totalLiquido = Number(vendaRes.data?.total_liquido ?? 0)
+    const jaDevolvidoAntes = (operacoesRes.data ?? []).reduce(
+      (s, o) => s + Number(o.valor_estornado ?? 0),
+      0,
+    )
+    const totalEstornado = Math.max(0, roundMoney2(totalLiquido - jaDevolvidoAntes))
+
     return {
       itens,
       operadorNome: usuarioRes.data?.nome ?? '—',
+      totalEstornado,
     }
   } catch {
     return vazio

@@ -73,7 +73,7 @@ export function VendaCancelarModal({
             dataOriginal: vendaAtiva.data,
             dataCancelamento: new Date(),
             itens: dados.itens,
-            totalLiquido: res.valorEstornado,
+            totalLiquido: dados.totalEstornado,
             formaPagamentoLabel: labelFormaPagamentoVenda(vendaAtiva.forma_pagamento, m),
             motivo: motivoTrim,
             operadorNome: dados.operadorNome,
