@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { subtrairDiasCivis, ymdHojeNoFusoRelatorio } from '@/lib/relatorios/periodoRelatorio'
-import { DE_30D, DE_7D, TODAY } from './page'
+import { DE_30D, DE_7D, TODAY } from './periodo'
 
 /**
  * T9 (auditoria 2026-09-27): "30 dias" em Comissões calculava

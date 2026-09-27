@@ -24,16 +24,11 @@ import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
 import { buscarVendasPaginadasAction, type VendasFiltro } from '@/app/gerente/vendas/actions'
 import { formatBRL, formatNumberLocale } from '@/lib/format/money'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
-import {
-  inicioDoDiaCivilEmUtc,
-  subtrairDiasCivis,
-  ymdHojeNoFusoRelatorio,
-} from '@/lib/relatorios/periodoRelatorio'
+import { periodoFim, periodoInicio, type Periodo } from './periodo'
 import { VendasTable, type VendaLinha } from './_components/VendasTable'
 
 // ─── Normalizadores de searchParams ─────────────────────────────────────────
 
-export type Periodo = 'tudo' | 'hoje' | 'ontem' | '7d' | 'mes'
 type StatusFiltro = 'all' | 'CONCLUIDA' | 'CANCELADA'
 type PagamentoFiltro = 'all' | 'DINHEIRO' | 'PIX' | 'CARTAO_CREDITO' | 'CARTAO_DEBITO' | 'CARTAO'
 
@@ -45,38 +40,6 @@ function clampPage(raw: string | undefined): number {
   const n = Number.parseInt(raw ?? '1', 10)
   return Number.isFinite(n) && n >= 1 ? n : 1
 }
-
-const DIA_MS = 86_400_000
-
-/**
- * T9 (auditoria 2026-09-27): antes usava `new Date()` + `.setHours()`/`.setDate()`,
- * que operam no fuso do processo Node (UTC em produção) — a "meia-noite" ficava
- * até 3h deslocada da meia-noite real da loja. E o preset "mes" (rotulado "30
- * dias") calculava o início do MÊS CIVIL atual, não uma janela de 30 dias — por
- * isso "30 dias" em Vendas não batia com "30 dias" em Relatórios/Comissões.
- * Agora os três (`hoje`, `ontem`, `mes`→30 dias) usam os mesmos limites de dia
- * civil, no mesmo fuso, que `lib/relatorios/periodoRelatorio.ts` já usa em
- * Relatórios — `mes` deixa de ser mês civil e passa a ser os últimos 30 dias
- * civis, igual ao rótulo sempre disse.
- */
-export function periodoInicio(periodo: Periodo): string | null {
-  const hojeYmd = ymdHojeNoFusoRelatorio()
-  if (periodo === 'hoje') return inicioDoDiaCivilEmUtc(hojeYmd).toISOString()
-  if (periodo === 'ontem') return inicioDoDiaCivilEmUtc(subtrairDiasCivis(hojeYmd, 1)).toISOString()
-  if (periodo === '7d') return new Date(Date.now() - 7 * DIA_MS).toISOString()
-  if (periodo === 'mes') return inicioDoDiaCivilEmUtc(subtrairDiasCivis(hojeYmd, 29)).toISOString()
-  return null
-}
-
-function periodoFim(periodo: Periodo): string | null {
-  if (periodo !== 'ontem') return null
-  const hojeYmd = ymdHojeNoFusoRelatorio()
-  // Fim inclusivo do dia civil de ontem = 1ms antes do início do dia civil de hoje.
-  return new Date(inicioDoDiaCivilEmUtc(hojeYmd).getTime() - 1).toISOString()
-}
-
-
-
 
 
 type SearchParams = {

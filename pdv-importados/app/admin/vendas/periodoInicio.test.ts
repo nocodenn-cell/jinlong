@@ -4,7 +4,7 @@ import {
   subtrairDiasCivis,
   ymdHojeNoFusoRelatorio,
 } from '@/lib/relatorios/periodoRelatorio'
-import { periodoInicio } from './page'
+import { periodoInicio } from './periodo'
 
 /**
  * T9 (auditoria 2026-09-27): o preset "mes" da tela Vendas é rotulado "30
