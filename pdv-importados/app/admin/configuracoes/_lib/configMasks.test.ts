@@ -17,4 +17,24 @@ describe('configMasks', () => {
   it('digitsOnly limita tamanho', () => {
     expect(digitsOnly('ab12cd345', 4)).toBe('1234')
   })
+
+  it('digitsOnly trata null como vazio (loja.cnpj pode vir null do banco)', () => {
+    expect(digitsOnly(null)).toBe('')
+  })
+
+  it('digitsOnly trata undefined como vazio', () => {
+    expect(digitsOnly(undefined)).toBe('')
+  })
+
+  it('maskCnpj não quebra quando o CNPJ da loja é null', () => {
+    expect(maskCnpj(null)).toBe('')
+  })
+
+  it('maskTel não quebra quando o telefone é undefined', () => {
+    expect(maskTel(undefined)).toBe('')
+  })
+
+  it('maskCep não quebra quando o CEP é null', () => {
+    expect(maskCep(null)).toBe('')
+  })
 })
