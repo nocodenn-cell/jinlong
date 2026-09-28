@@ -170,6 +170,32 @@ const AtualizarPrecoSchema = z.object({
   preco_varejo: z.coerce.number().positive('O preço de varejo deve ser maior que zero.'),
 })
 
+/**
+ * Traduz o erro da RPC `atualizar_preco_varejo_produto`. Retorna `null` quando a
+ * mensagem não é dela (o chamador cai no tradutor genérico).
+ */
+function mensagemErroPreco(raw: string): string | null {
+  const m = raw ?? ''
+  if (!/PRECO_[A-Z_]+/.test(m)) return null
+
+  if (m.includes('PRECO_LOJA')) {
+    return 'Este produto pertence a outra loja — você não pode alterar o preço dele.'
+  }
+  if (m.includes('PRECO_PRODUTO_NAO_ENCONTRADO')) {
+    return 'Produto não encontrado. Atualize a tela e tente de novo.'
+  }
+  if (m.includes('PRECO_PERFIL')) {
+    return 'Esta ação é só para gerente, dono ou administrador.'
+  }
+  if (m.includes('PRECO_INVALIDO')) {
+    return 'O preço de varejo deve ser maior que zero.'
+  }
+  if (m.includes('PRECO_AUTH')) {
+    return 'Sua sessão expirou. Faça login novamente.'
+  }
+  return null
+}
+
 export async function atualizarPrecoVarejoProduto(
   input: unknown,
 ): Promise<ActionResult<null>> {
@@ -184,15 +210,15 @@ export async function atualizarPrecoVarejoProduto(
   }
 
   const supabase = await createClient()
-  const { error } = await supabase
-    .from('produtos')
-    .update({ preco_varejo: parsed.data.preco_varejo })
-    .eq('id', parsed.data.produto_id)
+  const { error } = await supabase.rpc('atualizar_preco_varejo_produto', {
+    p_produto_id: parsed.data.produto_id,
+    p_preco: parsed.data.preco_varejo,
+  })
 
   if (error) {
     return {
       success: false,
-      error: mensagemErroComSecao('Preço varejo', error.message),
+      error: mensagemErroPreco(error.message) ?? mensagemErroComSecao('Preço varejo', error.message),
     }
   }
 
