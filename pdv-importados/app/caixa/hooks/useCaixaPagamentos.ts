@@ -32,16 +32,30 @@ export function useCaixaPagamentos(
   const prevTotalRef = useRef(totalLiquidoComGerente)
   const prevFormaRef = useRef(formaPagamento)
 
+  // Parcela única: só passa a "congelar" o valor (parar de acompanhar o
+  // total) depois de uma edição REAL do operador em `atualizarValor`. Antes
+  // disso, `valor > 0` podia ser só o próprio auto-preenchimento do sistema
+  // (efeito abaixo), e sem essa distinção o hook confundia as duas origens:
+  // ao adicionar um 2º item ao carrinho, o total mudava mas o "Recebido"
+  // ficava preso no valor auto-preenchido pelo 1º item.
+  const editadoPeloOperadorRef = useRef(false)
+
   useEffect(() => {
     if (formaPagamento && formaPagamento !== prevFormaRef.current) {
       prevFormaRef.current = formaPagamento
       setParcelas((old) => {
         if (old.length === 1) {
-          return [{ ...old[0], formaPagamento }]
+          // Troca de forma reabre o acompanhamento do total: PIX/cartão não
+          // têm campo editável (o valor cobrado É o total), e mesmo para
+          // DINHEIRO um valor digitado antes da troca não deveria sobreviver
+          // à mudança de forma sem confirmação do operador.
+          editadoPeloOperadorRef.current = false
+          return [{ formaPagamento, valor: roundMoney2(Math.max(0, totalLiquidoComGerente)) }]
         }
         return old
       })
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formaPagamento])
 
   useEffect(() => {
@@ -50,13 +64,10 @@ export function useCaixaPagamentos(
     if (Math.abs(prev - totalLiquidoComGerente) < 0.005) return
 
     setParcelas((old) => {
-      // Parcela única: atualizar valor se for vazio/zerado
+      // Parcela única: acompanha o total até o operador editar de verdade.
       if (old.length === 1) {
-        const currentValor = old[0].valor
-        if (currentValor <= 0.009) {
-          return [{ ...old[0], valor: roundMoney2(Math.max(0, totalLiquidoComGerente)) }]
-        }
-        return old
+        if (editadoPeloOperadorRef.current) return old
+        return [{ ...old[0], valor: roundMoney2(Math.max(0, totalLiquidoComGerente)) }]
       }
       // Múltiplas parcelas: ajustar a última quando o total mudar
       // (ex: desconto gerente aplicado/removido, carrinho alterado)
@@ -92,11 +103,14 @@ export function useCaixaPagamentos(
   }, [])
 
   const atualizarValor = useCallback((index: number, valor: number) => {
-    setParcelas((old) =>
-      old.map((p, i) =>
+    setParcelas((old) => {
+      if (old.length === 1 && index === 0) {
+        editadoPeloOperadorRef.current = true
+      }
+      return old.map((p, i) =>
         i === index ? { ...p, valor: roundMoney2(Math.max(0, valor)) } : p,
-      ),
-    )
+      )
+    })
   }, [])
 
   const autoCompletarUltima = useCallback(() => {
@@ -133,6 +147,7 @@ export function useCaixaPagamentos(
    * que o operador já vê hoje na primeira leitura.
    */
   const resetPagamentos = useCallback(() => {
+    editadoPeloOperadorRef.current = false
     setParcelas(parcelaInicial(formaPagamento ?? "DINHEIRO", 0))
   }, [formaPagamento])
 

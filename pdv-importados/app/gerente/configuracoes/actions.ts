@@ -33,7 +33,7 @@ export async function atualizarConfiguracao(
 export type LojaConfig = {
   id?: string
   nome: string
-  cnpj: string
+  cnpj: string | null
   inscricao_estadual: string | null
   telefone: string | null
   email: string | null
@@ -96,7 +96,7 @@ export async function atualizarDadosLojaAction(
     const supabase = await createClient()
     const payload = {
       nome: input.nome.trim(),
-      cnpj: input.cnpj.replace(/\D/g, ''),
+      cnpj: (input.cnpj ?? '').replace(/\D/g, ''),
       inscricao_estadual: input.inscricao_estadual?.trim() || null,
       telefone: input.telefone?.replace(/\D/g, '') || null,
       email: input.email?.trim() || null,

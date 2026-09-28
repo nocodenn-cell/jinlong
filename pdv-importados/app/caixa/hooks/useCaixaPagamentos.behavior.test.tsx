@@ -82,6 +82,34 @@ describe("useCaixaPagamentos — reajuste ao mudar o total", () => {
   })
 })
 
+describe("useCaixaPagamentos — recebido acompanha o total sem edição manual", () => {
+  it("2º item adicionado ao carrinho atualiza o recebido auto-preenchido pelo 1º", () => {
+    // Bug relatado por browser audit: total 25,90 -> 51,80 ao somar um 2º
+    // item, mas "Recebido" ficava preso em 25,90 (valor que o próprio hook
+    // tinha auto-preenchido para o 1º item, nunca digitado pelo operador).
+    render(0)
+    render(25.9)
+    expect(valores()).toEqual([25.9])
+
+    render(51.8)
+    expect(valores()).toEqual([51.8])
+  })
+
+  it("troca de forma de pagamento não deixa valor obsoleto (ex.: PIX herdando valor digitado em DINHEIRO)", () => {
+    act(() => {
+      root.render(<Harness total={51.8} forma="DINHEIRO" />)
+    })
+    act(() => api?.atualizarValor(0, 25.9))
+    expect(valores()).toEqual([25.9])
+
+    act(() => {
+      root.render(<Harness total={51.8} forma="PIX" />)
+    })
+    expect(valores()).toEqual([51.8])
+    expect(api?.pagamentos.map((p: ParcelaPagamento) => p.formaPagamento)).toEqual(["PIX"])
+  })
+})
+
 describe("useCaixaPagamentos — resetPagamentos encerra o cupom", () => {
   /**
    * Reproduz a sequência real do caixa: os chamadores de `resetPagamentos`

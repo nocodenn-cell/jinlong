@@ -401,7 +401,7 @@ export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; la
                 </Field>
                 <Field id="loja-cnpj" label={labels.loja.cnpj} required>
                   <Input
-                    value={maskCnpj(loja.cnpj)}
+                    value={maskCnpj(loja.cnpj ?? '')}
                     inputMode="numeric"
                     autoComplete="off"
                     placeholder={labels.loja.phCnpj}

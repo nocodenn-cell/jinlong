@@ -390,7 +390,7 @@
     "fornecedor_principal_label": "主要供应商",
     "custo_compra_label": "采购成本",
     "custo_medio_label": "平均成本",
-    "custo_medio_hint": "根据采购入库自动计算。",
+    "custo_medio_hint": "尚未根据采购入库自动重新计算——显示的是最后在产品资料中录入的成本。",
     "faixas_disponivel_apos_salvar": "保存后可在本窗口继续添加批发价阶梯。",
     "faixas_apos_criar_titulo": "产品已保存。请在下方添加批发价阶梯，或点击完成。",
     "atacado_legado_titulo": "自动批发价（高级）",

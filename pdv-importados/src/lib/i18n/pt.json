@@ -390,7 +390,7 @@
     "fornecedor_principal_label": "Fornecedor principal",
     "custo_compra_label": "Custo de compra",
     "custo_medio_label": "Custo médio",
-    "custo_medio_hint": "Calculado automaticamente pelas entradas de compra.",
+    "custo_medio_hint": "Ainda não é recalculado automaticamente pelas entradas de compra — reflete o último custo informado no cadastro.",
     "faixas_disponivel_apos_salvar": "Ao salvar, você poderá cadastrar as faixas de atacado nesta mesma tela.",
     "faixas_apos_criar_titulo": "Produto salvo. Cadastre as faixas de atacado abaixo ou clique em Concluir.",
     "atacado_legado_titulo": "Atacado automático (avançado)",

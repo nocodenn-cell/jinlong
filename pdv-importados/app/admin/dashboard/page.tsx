@@ -162,7 +162,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     forma_pagamento: string
     operador_id: string | null
   }> = []
-  let vendasPrevRange: Array<{ total_liquido: number }> = []
+  let vendasPrevRange: Array<{ total_liquido: number; status: VendaStatus }> = []
   let recentOrdersRaw: Array<{
     id: string
     data: string
@@ -185,7 +185,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
 
   const vendasPrevQuery = supabase
     .from('vendas')
-    .select('total_liquido')
+    .select('total_liquido,status')
     .gte('data', previousStart.toISOString())
     .lt('data', previousEnd.toISOString())
 
@@ -296,9 +296,19 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
 
   const userById = new Map(usuariosRows.map((u) => [u.id, u.nome]))
 
+  // KPIs e gráficos de faturamento nunca contam venda CANCELADA como venda
+  // faturada, independente do filtro de status escolhido — só quando o
+  // operador filtra explicitamente por CANCELADA é que ele deve ver os
+  // valores dela (para conferência, não como faturamento). Sem essa
+  // exclusão, o card "Faturamento" no filtro padrão ("Todas") somava vendas
+  // canceladas junto das concluídas.
+  const contarComoFaturamento = (s: VendaStatus) => statusDb === 'CANCELADA' || s !== 'CANCELADA'
+  const vendasRangeFaturamento = vendasRange.filter((v) => contarComoFaturamento(v.status))
+  const vendasPrevRangeFaturamento = vendasPrevRange.filter((v) => contarComoFaturamento(v.status))
+
   const chartBucket = new Map<string, number>()
   const ordersBucket = new Map<string, number>()
-  for (const row of vendasRange) {
+  for (const row of vendasRangeFaturamento) {
     const d = new Date(row.data)
     const key = dateKey(d)
     chartBucket.set(key, (chartBucket.get(key) ?? 0) + Number(row.total_liquido ?? 0))
@@ -326,7 +336,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   }
 
   const hourlyBucket = new Array<number>(24).fill(0)
-  for (const row of vendasRange) {
+  for (const row of vendasRangeFaturamento) {
     const hour = new Date(row.data).getHours()
     hourlyBucket[hour] = (hourlyBucket[hour] ?? 0) + Number(row.total_liquido ?? 0)
   }
@@ -345,7 +355,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   }
 
   const paymentMap = new Map<string, number>()
-  for (const row of vendasRange) {
+  for (const row of vendasRangeFaturamento) {
     const key = (row.forma_pagamento?.trim() || 'OUTRO').toUpperCase()
     paymentMap.set(key, (paymentMap.get(key) ?? 0) + Number(row.total_liquido ?? 0))
   }
@@ -354,10 +364,10 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     .sort((a, b) => b.value - a.value)
     .slice(0, 6)
 
-  const totalAtual = vendasRange.reduce((acc, row) => acc + Number(row.total_liquido ?? 0), 0)
-  const totalPrev = vendasPrevRange.reduce((acc, row) => acc + Number(row.total_liquido ?? 0), 0)
-  const pedidosAtual = vendasRange.length
-  const pedidosPrev = vendasPrevRange.length
+  const totalAtual = vendasRangeFaturamento.reduce((acc, row) => acc + Number(row.total_liquido ?? 0), 0)
+  const totalPrev = vendasPrevRangeFaturamento.reduce((acc, row) => acc + Number(row.total_liquido ?? 0), 0)
+  const pedidosAtual = vendasRangeFaturamento.length
+  const pedidosPrev = vendasPrevRangeFaturamento.length
   const ticketAtual = pedidosAtual > 0 ? totalAtual / pedidosAtual : 0
   const ticketPrev = pedidosPrev > 0 ? totalPrev / pedidosPrev : 0
 

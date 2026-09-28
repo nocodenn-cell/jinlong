@@ -1,9 +1,13 @@
 /**
- * Contrato estático: v_kardex_unificado não duplica devolução pós-#313.
+ * Contrato estático: v_kardex_unificado não duplica devolução pós-#313 nem
+ * cancelamento (browser audit, sprint P0-P2 2026-09-28).
  *
  * 20260821110000 restaurou INSERT em movimentos_estoque_log; a view 291
- * ainda fazia UNION ALL com estoque_reposicoes_devolucao sem anti-join.
- * Canônico: 20260828110000.
+ * ainda fazia UNION ALL com estoque_reposicoes_devolucao sem anti-join no
+ * ramo erd. 20260828110000 corrigiu o erd mas deixou o ramo erc
+ * (estoque_reposicoes_cancelamento) sem o mesmo anti-join — cancelar uma
+ * venda aparecia duplicado no kardex ("devolução cliente" + "cancelamento
+ * venda"). Canônico: 20260928100100.
  */
 import fs from 'node:fs'
 import path from 'node:path'
@@ -14,7 +18,8 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const MIGRATIONS = path.resolve(ROOT, '../backend/supabase/migrations')
 const LEGACY = '20260805185445_291_estoque_baixas_integridade.sql'
 const WRITE_SIDE = '20260821110000_restore_devolver_ou_trocar_venda_kardex_ssot04.sql'
-const FIX = '20260828110000_fix_v_kardex_unificado_anti_join_devolucao.sql'
+const FIX_ERD = '20260828110000_fix_v_kardex_unificado_anti_join_devolucao.sql'
+const FIX = '20260928100100_fix_v_kardex_unificado_anti_join_cancelamento.sql'
 const CREATE_VIEW_RE = /CREATE(?: OR REPLACE)? VIEW public\.v_kardex_unificado/i
 
 function latestKardexViewMigration(): string {
@@ -35,13 +40,24 @@ function erdUnionBranch(sql: string): string {
   return erd
 }
 
+function ercUnionBranch(sql: string): string {
+  const parts = sql.split(/UNION ALL/i)
+  const erc = parts.find((p) => /FROM\s+estoque_reposicoes_cancelamento\b/i.test(p))
+  if (!erc) {
+    throw new Error('ramo estoque_reposicoes_cancelamento ausente na view')
+  }
+  return erc
+}
+
 describe('v_kardex_unificado anti-join devolução', () => {
-  it('migration corretiva existe e ordena depois do restore SSOT-04', () => {
+  it('migration corretiva existe e ordena depois do restore SSOT-04 e do fix erd', () => {
     const files = fs.readdirSync(MIGRATIONS).filter((f) => f.endsWith('.sql')).sort()
     expect(files).toContain(LEGACY)
     expect(files).toContain(WRITE_SIDE)
+    expect(files).toContain(FIX_ERD)
     expect(files).toContain(FIX)
     expect(files.indexOf(FIX)).toBeGreaterThan(files.indexOf(WRITE_SIDE))
+    expect(files.indexOf(FIX)).toBeGreaterThan(files.indexOf(FIX_ERD))
   })
 
   it('a definição vigente da view é a migration corretiva', () => {
@@ -64,6 +80,15 @@ describe('v_kardex_unificado anti-join devolução', () => {
     expect(src).toContain("mel.tipo_codigo = 'SAIDA_VENDA'")
     expect(src).toContain('estoque_reposicoes_devolucao')
     expect(src).toContain('CREATE OR REPLACE VIEW public.v_kardex_unificado')
+  })
+
+  it('ramo erc (cancelamento) omite linhas já lançadas em movimentos_estoque_log', () => {
+    const src = fs.readFileSync(path.join(MIGRATIONS, FIX), 'utf8')
+    const erc = ercUnionBranch(src)
+    expect(erc).toMatch(/NOT EXISTS/i)
+    expect(erc).toContain("mel.tipo_codigo = 'ENTRADA_DEVOLUCAO_CLIENTE'")
+    expect(erc).toContain('mel.venda_id = erc.venda_id')
+    expect(erc).toContain('mel.produto_id = erc.produto_id')
   })
 
   it('reader do admin continua na view canônica, não no log cru', () => {

@@ -24,11 +24,18 @@ import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
 import { buscarVendasPaginadasAction, type VendasFiltro } from '@/app/gerente/vendas/actions'
 import { formatBRL, formatNumberLocale } from '@/lib/format/money'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
+import { getRelatorioTimezone } from '@/lib/relatorios/getRelatorioTimezone'
+import { defaultUltimosDiasNoFuso, inicioDoDiaCivilEmUtc } from '@/lib/relatorios/periodoRelatorio'
 import { VendasTable, type VendaLinha } from './_components/VendasTable'
 
 // ─── Normalizadores de searchParams ─────────────────────────────────────────
+//
+// "30 dias" usa a MESMA definição de período que Reports (`lib/relatorios/
+// periodoRelatorio.ts`, timezone-aware): antes, o pill rotulado "30 dias"
+// aplicava `periodo=mes` (mês corrente, sem fuso explícito), um conjunto de
+// vendas diferente do que Reports mostra para o mesmo rótulo nominal.
 
-type Periodo = 'tudo' | 'hoje' | 'ontem' | '7d' | 'mes'
+type Periodo = 'tudo' | 'hoje' | 'ontem' | '7d' | '30d'
 type StatusFiltro = 'all' | 'CONCLUIDA' | 'CANCELADA'
 type PagamentoFiltro = 'all' | 'DINHEIRO' | 'PIX' | 'CARTAO_CREDITO' | 'CARTAO_DEBITO' | 'CARTAO'
 
@@ -43,7 +50,7 @@ function clampPage(raw: string | undefined): number {
 
 const DIA_MS = 86_400_000
 
-function periodoInicio(periodo: Periodo): string | null {
+function periodoInicio(periodo: Periodo, inicio30dUtc: Date | null): string | null {
   const now = new Date()
   if (periodo === 'hoje') {
     const d = new Date(now)
@@ -57,12 +64,7 @@ function periodoInicio(periodo: Periodo): string | null {
     return d.toISOString()
   }
   if (periodo === '7d') return new Date(now.getTime() - 7 * DIA_MS).toISOString()
-  if (periodo === 'mes') {
-    const d = new Date(now)
-    d.setDate(1)
-    d.setHours(0, 0, 0, 0)
-    return d.toISOString()
-  }
+  if (periodo === '30d') return inicio30dUtc ? inicio30dUtc.toISOString() : null
   return null
 }
 
@@ -99,7 +101,7 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
   const locale = localeFromIdioma(session.idioma)
   const sp = (searchParams ? await searchParams : {}) ?? {}
 
-  const periodo = oneOf<Periodo>(sp.periodo, ['tudo', 'hoje', 'ontem', '7d', 'mes'], 'hoje')
+  const periodo = oneOf<Periodo>(sp.periodo, ['tudo', 'hoje', 'ontem', '7d', '30d'], 'hoje')
   const status = oneOf<StatusFiltro>(sp.status, ['all', 'CONCLUIDA', 'CANCELADA'], 'all')
   const pagamento = oneOf<PagamentoFiltro>(
     sp.pagamento,
@@ -108,8 +110,18 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
   )
   const page = clampPage(sp.page)
 
+  // Mesma definição de "30 dias" que Reports (lib/relatorios/periodoRelatorio),
+  // só calculada quando o filtro está ativo — evita a leitura de fuso à toa.
+  let inicio30dUtc: Date | null = null
+  if (periodo === '30d') {
+    const supabaseTz = await createClient()
+    const tzRelatorio = await getRelatorioTimezone(supabaseTz)
+    const { de } = defaultUltimosDiasNoFuso(30, tzRelatorio)
+    inicio30dUtc = inicioDoDiaCivilEmUtc(de, tzRelatorio)
+  }
+
   const filtros: VendasFiltro = {
-    inicio: periodoInicio(periodo),
+    inicio: periodoInicio(periodo, inicio30dUtc),
     fim: periodoFim(periodo),
     status: status === 'all' ? [] : [status],
     formaPagamento: pagamento === 'all' ? [] : [pagamento],
@@ -183,7 +195,7 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
     hoje: ui.vendas_periodo_label_hoje,
     ontem: ui.vendas_periodo_label_ontem,
     '7d': ui.vendas_periodo_label_7d,
-    mes: ui.vendas_periodo_label_mes,
+    '30d': m.admin.dashboard.period30d[lk],
   }
   const STATUS_LABEL_I18N: Record<Exclude<StatusFiltro, 'all'>, string> = {
     CONCLUIDA: ui.vendas_concluidas,
@@ -236,7 +248,7 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
     { id: 'hoje', label: ui.vendas_periodo_label_hoje },
     { id: 'ontem', label: ui.vendas_periodo_label_ontem },
     { id: '7d', label: '7d' },
-    { id: 'mes', label: m.admin.dashboard.period30d[lk] },
+    { id: '30d', label: m.admin.dashboard.period30d[lk] },
     { id: 'tudo', label: ui.filtro_todos },
   ]
 

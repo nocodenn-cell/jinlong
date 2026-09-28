@@ -11,6 +11,9 @@ import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import { carregarResumoComissoes } from '@/app/gerente/comissoes/actions'
+import { createClient } from '@/lib/supabase/server'
+import { getRelatorioTimezone } from '@/lib/relatorios/getRelatorioTimezone'
+import { defaultUltimosDiasNoFuso, ymdHojeNoFusoRelatorio } from '@/lib/relatorios/periodoRelatorio'
 import { ROUTES } from '@shared-core/navigation/routes'
 import { ComissoesContent } from './_components/ComissoesContent'
 import {
@@ -26,21 +29,12 @@ type SearchParams = {
 
 type PageProps = { searchParams?: Promise<SearchParams> }
 
-function isoDay(ms: number): string {
-  return new Date(ms).toISOString().slice(0, 10)
-}
-
-const TODAY = isoDay(Date.now())
-const DIA_MS = 24 * 60 * 60 * 1000
-const DE_7D = isoDay(Date.now() - 7 * DIA_MS)
-const DE_30D = isoDay(Date.now() - 30 * DIA_MS)
-
-function mesInicioIso(): string {
-  const now = new Date()
-  const y = now.getUTCFullYear()
-  const m = String(now.getUTCMonth() + 1).padStart(2, '0')
-  return `${y}-${m}-01`
-}
+// Mesma definição de período que Reports (`lib/relatorios/periodoRelatorio`,
+// timezone-aware). Antes: constantes calculadas uma vez no escopo do módulo
+// com `Date.now()`/`toISOString()` (UTC puro) — além de não acompanhar o
+// fuso da loja, ficavam CONGELADAS pela vida do processo Node (o "hoje" só
+// mudava num novo cold start), e "30 dias" tinha off-by-one (31 dias
+// inclusive) frente aos 30 dias inclusive de Reports.
 
 function resolveActivePreset(
   de: string,
@@ -60,9 +54,15 @@ export default async function AdminComissoesPage({ searchParams }: PageProps) {
   const ui = m.admin_ui
   const locale = localeFromIdioma(session.idioma)
 
+  const tzRelatorio = await getRelatorioTimezone(await createClient())
+  const hoje = ymdHojeNoFusoRelatorio(tzRelatorio)
+  const { de: de7d } = defaultUltimosDiasNoFuso(7, tzRelatorio)
+  const { de: de30d } = defaultUltimosDiasNoFuso(30, tzRelatorio)
+  const mesInicio = `${hoje.slice(0, 7)}-01`
+
   const sp = (await searchParams) ?? {}
-  const de = sp.de ?? DE_30D
-  const ate = sp.ate ?? TODAY
+  const de = sp.de ?? de30d
+  const ate = sp.ate ?? hoje
   const status = (sp.status as 'todos' | 'pendente' | 'pago' | undefined) ?? 'todos'
   const filtro = { de, ate, status }
 
@@ -70,9 +70,9 @@ export default async function AdminComissoesPage({ searchParams }: PageProps) {
   const dados = res.success ? res.data : []
 
   const presets: PeriodoPreset[] = [
-    { id: '7d', label: ui.comissoes_periodo_7d, de: DE_7D, ate: TODAY },
-    { id: '30d', label: ui.comissoes_periodo_30d, de: DE_30D, ate: TODAY },
-    { id: 'mes', label: ui.comissoes_periodo_mes, de: mesInicioIso(), ate: TODAY },
+    { id: '7d', label: ui.comissoes_periodo_7d, de: de7d, ate: hoje },
+    { id: '30d', label: ui.comissoes_periodo_30d, de: de30d, ate: hoje },
+    { id: 'mes', label: ui.comissoes_periodo_mes, de: mesInicio, ate: hoje },
   ]
   const activePresetId = resolveActivePreset(de, ate, presets)
 
