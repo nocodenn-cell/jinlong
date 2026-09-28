@@ -42,6 +42,7 @@ export const ROUTES = {
     dashboard: '/admin/dashboard',
     catalogo: '/admin/catalogo',
     catalogoNovo: '/admin/catalogo/novo',
+    catalogoCompletoNovo: '/admin/catalogo/novo/completo',
     clientes: '/admin/clientes',
     funcionarios: '/admin/funcionarios',
     fornecedores: '/admin/fornecedores',
@@ -80,8 +81,15 @@ export const ROUTES = {
   },
 } as const
 
-export function adminCatalogoProdutoQuery(id: string): string {
-  return `${ROUTES.admin.catalogo}?produto=${id}`
+/**
+ * Abre o Cadastro Completo (página) de um produto existente — usado por
+ * Relatórios e por qualquer outra tela que precise linkar direto para "editar
+ * este produto". Antes apontava para `/admin/catalogo?produto={id}`, um
+ * parâmetro que a tela de catálogo nunca leu (link morto pré-existente);
+ * corrigido para a rota real assim que ela passou a existir.
+ */
+export function adminCatalogoCompletoEditarHref(id: string): string {
+  return `${ROUTES.admin.catalogo}/${id}/completo`
 }
 
 export function adminFinanceiroDocumentoHref(id: string): string {

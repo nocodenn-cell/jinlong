@@ -38,10 +38,6 @@ vi.mock('next/link', () => ({
     React.createElement('a', { href, ...rest }, children),
 }))
 
-vi.mock('@/components/gerente/produtos/ProdutosEditarCatalogoModal', () => ({
-  ProdutosEditarCatalogoModal: () => null,
-}))
-
 vi.mock('@/app/admin/catalogo/_components/CatalogoPublicacaoActions', () => ({
   CatalogoPublicacaoActions: () => null,
 }))
@@ -161,5 +157,61 @@ describe('Cadastro produto — entradas alinhadas ao CatalogoNovoButton', () => 
     await vi.waitFor(() => expect(modalAberto()).toBe(false))
     expect(routerRefreshMock).toHaveBeenCalled()
     expect(routerPushMock).not.toHaveBeenCalled()
+  })
+
+  it('Editar navega para o Cadastro Completo; Duplicar navega pré-preenchendo por query', () => {
+    const produto = {
+      id: 'prod-editar-1',
+      sku: 'SKU-1',
+      nome: 'Produto de teste',
+      codigo_barras: '789',
+      codigo_interno: null,
+      referencia_fornecedor: null,
+      nome_reduzido_pdv: null,
+      localizacao_prateleira: null,
+      preco_varejo: 10,
+      preco_atacado: null,
+      preco_custo: null,
+      preco_custo_medio: 0,
+      estoque_minimo: null,
+      permitir_abaixo_custo: false,
+      quantidade_gatilho_atacado: null,
+      quantidade_atual: 3,
+      origem: 'china_manual',
+      tem_nf: false,
+      ativo: true,
+      status_publicacao: 'PUBLICADO',
+      imagem_url: null,
+      categoria_id: null,
+      marca_id: null,
+      fornecedor_id: null,
+      unidade_medida: 'UN',
+      observacao: null,
+      tags: null,
+      ncm: null,
+      cfop_produto: null,
+      csosn: null,
+      cest: null,
+      cst_pis: null,
+      cst_cofins: null,
+      icms_origem: null,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any
+
+    render(<CatalogoTable produtos={[produto]} labels={labels} m={m} opcoes={opcoes} idioma="pt" />)
+
+    const editarLink = container.querySelector(
+      `a[aria-label="${labels.acaoEditar.replace('{{nome}}', produto.nome)}"]`,
+    ) as HTMLAnchorElement
+    expect(editarLink, 'link de editar').toBeTruthy()
+    expect(editarLink.getAttribute('href')).toBe(`/admin/catalogo/${produto.id}/completo`)
+
+    const duplicarLink = container.querySelector(
+      `a[aria-label="${labels.acaoDuplicar.replace('{{nome}}', produto.nome)}"]`,
+    ) as HTMLAnchorElement
+    expect(duplicarLink, 'link de duplicar').toBeTruthy()
+    expect(duplicarLink.getAttribute('href')).toBe(
+      `/admin/catalogo/novo/completo?duplicarDe=${produto.id}`,
+    )
   })
 })

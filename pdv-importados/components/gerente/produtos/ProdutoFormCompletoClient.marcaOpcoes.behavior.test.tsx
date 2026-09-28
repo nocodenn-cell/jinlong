@@ -1,8 +1,11 @@
 /** @vitest-environment jsdom */
 /**
- * Quick-create de marca (modo completo) vs refresh de `opcoesIniciais` enquanto
- * o modal permanece aberto — merge por id preserva a opção local e a seleção.
- * Paridade com ProdutoFormModal.categoriaOpcoes.behavior.test.tsx (IDs 121/122).
+ * Quick-create de marca (Cadastro Completo) vs refresh de `opcoes` enquanto a
+ * página permanece montada — merge por id preserva a opção local e a seleção.
+ * Marca só existe no Completo desde a reforma Rápido/Completo — ver
+ * `docs/PLANO_CADASTRO_PRODUTO_UX.md` (v2). Paridade com
+ * ProdutoFormModal.categoriaOpcoes.behavior.test.tsx (categoria, que continua
+ * no Rápido).
  */
 import React from 'react'
 import { createRoot, type Root } from 'react-dom/client'
@@ -25,6 +28,11 @@ vi.mock('@/app/gerente/produtos/sugestaoCadastroActions', () => ({
   registrarCadastroProdutoTelemetry: vi.fn().mockResolvedValue({ ok: true }),
 }))
 
+const routerMock = { push: vi.fn(), replace: vi.fn(), refresh: vi.fn(), back: vi.fn() }
+vi.mock('next/navigation', () => ({
+  useRouter: () => routerMock,
+}))
+
 const criarMarcaMock = vi.fn()
 
 vi.mock('@/app/gerente/marcas-produtos/actions', () => ({
@@ -43,7 +51,8 @@ vi.mock('@/app/gerente/fornecedores/actions', () => ({
   }),
 }))
 
-import { ProdutoFormModal } from '@/components/gerente/produtos/ProdutoFormModal'
+import { ProdutoFormCompletoClient } from '@/components/gerente/produtos/ProdutoFormCompletoClient'
+import { AdminV2SessionProvider } from '@/components/ui/admin-v2/AdminV2SessionContext'
 
 const m = getMessages('pt')
 const p = m.produtos
@@ -63,6 +72,9 @@ let root: Root
 beforeEach(() => {
   criarMarcaMock.mockReset()
   criarMarcaMock.mockResolvedValue({ success: true, data: { id: MARCA_ID } })
+  routerMock.push.mockReset()
+  routerMock.replace.mockReset()
+  routerMock.refresh.mockReset()
   container = document.createElement('div')
   document.body.appendChild(container)
   root = createRoot(container)
@@ -74,40 +86,19 @@ afterEach(() => {
   container.remove()
 })
 
-function renderCom(opcoes: Opcoes, open = true) {
+function renderCom(opcoes: Opcoes) {
   flushSync(() =>
     root.render(
-      <ProdutoFormModal
-        open={open}
-        onOpenChange={vi.fn()}
-        m={m}
-        opcoes={opcoes}
-        produto={null}
-        onSaved={vi.fn()}
-      />,
+      <AdminV2SessionProvider idioma="pt">
+        <ProdutoFormCompletoClient
+          produtoInicial={null}
+          opcoes={opcoes}
+          m={m}
+          idioma="pt"
+        />
+      </AdminV2SessionProvider>,
     ),
   )
-}
-
-async function abrirModoCompleto() {
-  const marcaJaVisivel = () =>
-    Array.from(container.querySelectorAll('select')).some((sel) =>
-      Array.from(sel.options).some((o) => (o.textContent ?? '') === p.nenhuma_marca),
-    )
-  if (marcaJaVisivel()) return
-
-  await vi.waitFor(() => {
-    if (marcaJaVisivel()) return
-    const toggle = Array.from(container.querySelectorAll('button')).find((b) =>
-      (b.textContent ?? '').includes(p.modo_completo),
-    )
-    expect(toggle).toBeTruthy()
-  })
-  if (marcaJaVisivel()) return
-  const toggle = Array.from(container.querySelectorAll('button')).find((b) =>
-    (b.textContent ?? '').includes(p.modo_completo),
-  ) as HTMLButtonElement
-  flushSync(() => toggle.click())
 }
 
 function selectMarca(): HTMLSelectElement {
@@ -120,11 +111,10 @@ function selectMarca(): HTMLSelectElement {
 }
 
 async function criarMarcaRapida(nome: string) {
-  await abrirModoCompleto()
   const plus = Array.from(container.querySelectorAll('button')).find(
     (b) => b.getAttribute('aria-label') === p.cadastro_rapido_marca,
   ) as HTMLButtonElement
-  expect(plus).toBeTruthy()
+  expect(plus, 'botão de cadastro rápido de marca').toBeTruthy()
   flushSync(() => plus.click())
 
   const nomeInput = container.querySelector('#cadastro-rapido-nome') as HTMLInputElement
@@ -139,7 +129,7 @@ async function criarMarcaRapida(nome: string) {
   await vi.waitFor(() => expect(criarMarcaMock).toHaveBeenCalled())
 }
 
-describe('ProdutoFormModal — marca quick-create vs refresh de opções', () => {
+describe('ProdutoFormCompletoClient — marca quick-create vs refresh de opções', () => {
   it('criar marca → aparece imediatamente e fica selecionada', async () => {
     renderCom(opcoesVazias)
     await criarMarcaRapida('Jinlong Tools')
@@ -157,14 +147,14 @@ describe('ProdutoFormModal — marca quick-create vs refresh de opções', () =>
 
     flushSync(() =>
       root.render(
-        <ProdutoFormModal
-          open
-          onOpenChange={vi.fn()}
-          m={m}
-          opcoes={{ categorias: [], marcas: [], fornecedores: [] }}
-          produto={null}
-          onSaved={vi.fn()}
-        />,
+        <AdminV2SessionProvider idioma="pt">
+          <ProdutoFormCompletoClient
+            produtoInicial={null}
+            opcoes={{ categorias: [], marcas: [], fornecedores: [] }}
+            m={m}
+            idioma="pt"
+          />
+        </AdminV2SessionProvider>,
       ),
     )
 
@@ -182,18 +172,18 @@ describe('ProdutoFormModal — marca quick-create vs refresh de opções', () =>
 
     flushSync(() =>
       root.render(
-        <ProdutoFormModal
-          open
-          onOpenChange={vi.fn()}
-          m={m}
-          opcoes={{
-            categorias: [],
-            marcas: [{ id: MARCA_ID, nome: 'Jinlong Tools', ativo: true }],
-            fornecedores: [],
-          }}
-          produto={null}
-          onSaved={vi.fn()}
-        />,
+        <AdminV2SessionProvider idioma="pt">
+          <ProdutoFormCompletoClient
+            produtoInicial={null}
+            opcoes={{
+              categorias: [],
+              marcas: [{ id: MARCA_ID, nome: 'Jinlong Tools', ativo: true }],
+              fornecedores: [],
+            }}
+            m={m}
+            idioma="pt"
+          />
+        </AdminV2SessionProvider>,
       ),
     )
 
@@ -206,34 +196,19 @@ describe('ProdutoFormModal — marca quick-create vs refresh de opções', () =>
     })
   })
 
-  it('fechar/reabrir modal → reconstrói opções a partir das props (sem fantasma local)', async () => {
+  it('nova montagem da página (navegação) → reconstrói opções a partir das props (sem fantasma local)', async () => {
     renderCom(opcoesVazias)
     await criarMarcaRapida('Jinlong Tools')
     await vi.waitFor(() => expect(selectMarca().value).toBe(MARCA_ID))
 
-    renderCom(opcoesVazias, false)
-    renderCom(
-      {
-        categorias: [],
-        marcas: [{ id: 'marca-servidor', nome: 'Só servidor', ativo: true }],
-        fornecedores: [],
-      },
-      true,
-    )
-
-    // Aguarda o reset de abertura (modoCompleto=false) — paint stale pode
-    // ainda mostrar ComercialSection por um tick.
-    await vi.waitFor(() => {
-      const toggle = Array.from(container.querySelectorAll('button')).find((b) =>
-        (b.textContent ?? '').includes(p.modo_completo),
-      )
-      expect(toggle).toBeTruthy()
-    })
-    flushSync(() => {
-      const toggle = Array.from(container.querySelectorAll('button')).find((b) =>
-        (b.textContent ?? '').includes(p.modo_completo),
-      ) as HTMLButtonElement
-      toggle.click()
+    // Simula sair da página e entrar de novo (unmount + mount), equivalente
+    // a uma navegação real entre `/admin/catalogo/novo/completo` em duas idas.
+    flushSync(() => root.unmount())
+    root = createRoot(container)
+    renderCom({
+      categorias: [],
+      marcas: [{ id: 'marca-servidor', nome: 'Só servidor', ativo: true }],
+      fornecedores: [],
     })
 
     await vi.waitFor(() => {
