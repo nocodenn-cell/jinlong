@@ -3,8 +3,8 @@
   "private": true,
   "description": "Supabase (migrations + Edge). Scripts npm facilitam o mesmo type-check do CI sem instalar Deno globalmente.",
   "devDependencies": {
-    "deno": "2.2.2",
-    "supabase": "2.116.0"
+    "deno": "2.9.6",
+    "supabase": "2.117.0"
   },
   "scripts": {
     "check": "npm run check:edge",
