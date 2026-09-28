@@ -297,15 +297,15 @@ describe('RelatoriosContent presentation', () => {
       (el) => el.textContent === 'Produtos',
     ) as HTMLButtonElement
     flushSync(() => produtosTab.click())
-    expect(container.querySelector('a[href="/admin/catalogo?produto=prod-top-1"]')).toBeTruthy()
+    expect(container.querySelector('a[href="/admin/catalogo/prod-top-1/completo"]')).toBeTruthy()
 
     // Aba Estoque: reposição e cobertura/divergência linkam para o catálogo.
     const estoqueTab = Array.from(container.querySelectorAll('[role="tab"]')).find(
       (el) => el.textContent === 'Estoque',
     ) as HTMLButtonElement
     flushSync(() => estoqueTab.click())
-    expect(container.querySelector('a[href="/admin/catalogo?produto=p1"]')).toBeTruthy()
-    expect(container.querySelector('a[href="/admin/catalogo?produto=g1"]')).toBeTruthy()
+    expect(container.querySelector('a[href="/admin/catalogo/p1/completo"]')).toBeTruthy()
+    expect(container.querySelector('a[href="/admin/catalogo/g1/completo"]')).toBeTruthy()
   })
 
   it('RM-04: clicar numa linha de divergência abre o Kardex do produto, sem navegar', () => {
