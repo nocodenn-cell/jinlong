@@ -67,6 +67,9 @@ export default async function AdminConfiguracoes() {
         tabLoja: ui.configuracoes_tab_loja,
         tabImpostos: ui.configuracoes_tab_impostos,
         tabPreferencias: ui.configuracoes_tab_preferencias,
+        sim: m.comum.sim,
+        nao: m.comum.nao,
+        fechar: m.comum.fechar,
         loja: {
           secDados: ui.configuracoes_loja_sec_dados,
           secIdentidade: ui.configuracoes_loja_sec_identidade,

@@ -35,6 +35,15 @@ vi.mock('@/app/admin/dashboard/_components/PaymentDonutChart', () => ({
     ),
 }))
 
+// KardexSheet tem sua própria busca de dados (obterKardexProduto) e não é o
+// alvo deste teste — só a passagem do alvo certo (RM-04) importa aqui.
+vi.mock('@/app/admin/estoque/_components/KardexSheet', () => ({
+  KardexSheet: ({ alvo }: { alvo: { produtoId: string; produtoNome: string } | null }) =>
+    alvo
+      ? React.createElement('div', { 'data-testid': 'kardex-sheet' }, alvo.produtoNome)
+      : null,
+}))
+
 const { RelatoriosContent } = await import('./RelatoriosContent')
 const { AdminV2SessionProvider } = await import('@/components/ui/admin-v2/AdminV2SessionContext')
 
@@ -133,6 +142,12 @@ const labels = {
     presetsAria: 'Presets',
   },
   locale: 'pt-BR',
+  kardex: {
+    titulo: 'Kardex',
+    semMovimentos: 'Sem movimentações',
+    semMovimentosSub: 'As entradas e saídas aparecerão aqui.',
+    tipoMap: {},
+  },
 } satisfies RelatoriosLabels
 
 function baseDados(overrides: Partial<RelatoriosDados> = {}): RelatoriosDados {
@@ -253,6 +268,64 @@ describe('RelatoriosContent presentation', () => {
     expect(container.textContent).toContain('Divergência')
     expect(container.textContent).toContain('geladeira')
     expect(container.textContent).toContain('+2')
+  })
+
+  it('RM-03: linhas de produto/venda linkam para o registro correspondente', () => {
+    flushSync(() => {
+      root.render(
+        renderRelatorios(
+          <RelatoriosContent
+            dados={baseDados({
+              top: [
+                {
+                  id: 'prod-top-1',
+                  nome: 'Produto Top',
+                  origem: 'brasil',
+                  total_quantidade: 5,
+                  total_valor: 100,
+                  num_vendas: 3,
+                },
+              ],
+            })}
+            labels={labels}
+          />,
+        ),
+      )
+    })
+    // Aba Produtos: top produtos linka para o catálogo.
+    const produtosTab = Array.from(container.querySelectorAll('[role="tab"]')).find(
+      (el) => el.textContent === 'Produtos',
+    ) as HTMLButtonElement
+    flushSync(() => produtosTab.click())
+    expect(container.querySelector('a[href="/admin/catalogo/prod-top-1/completo"]')).toBeTruthy()
+
+    // Aba Estoque: reposição e cobertura/divergência linkam para o catálogo.
+    const estoqueTab = Array.from(container.querySelectorAll('[role="tab"]')).find(
+      (el) => el.textContent === 'Estoque',
+    ) as HTMLButtonElement
+    flushSync(() => estoqueTab.click())
+    expect(container.querySelector('a[href="/admin/catalogo/p1/completo"]')).toBeTruthy()
+    expect(container.querySelector('a[href="/admin/catalogo/g1/completo"]')).toBeTruthy()
+  })
+
+  it('RM-04: clicar numa linha de divergência abre o Kardex do produto, sem navegar', () => {
+    flushSync(() => {
+      root.render(renderRelatorios(<RelatoriosContent dados={baseDados()} labels={labels} />))
+    })
+    const estoqueTab = Array.from(container.querySelectorAll('[role="tab"]')).find(
+      (el) => el.textContent === 'Estoque',
+    ) as HTMLButtonElement
+    flushSync(() => estoqueTab.click())
+
+    expect(container.querySelector('[data-testid="kardex-sheet"]')).toBeNull()
+    const linhaDivergencia = Array.from(container.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('geladeira'),
+    ) as HTMLButtonElement
+    expect(linhaDivergencia).toBeTruthy()
+    flushSync(() => linhaDivergencia.click())
+
+    const sheet = container.querySelector('[data-testid="kardex-sheet"]')
+    expect(sheet?.textContent).toBe('geladeira')
   })
 
   it('esconde divergência de estoque quando não há nenhuma acima do ruído de arredondamento', () => {

@@ -7,11 +7,12 @@
  * UI local com primitivos DS; actions existentes de /gerente/configuracoes.
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Upload, X } from 'lucide-react'
 import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import { Button } from '@/components/ui/button'
+import { DragonModal } from '@/components/ui/DragonModal'
 import { Field, Input, Select, Switch } from '@/components/ui/forms'
 import { ErrorState } from '@/components/ui/feedback'
 import { cn } from '@/lib/utils'
@@ -109,6 +110,9 @@ export type ConfiguracoesLabels = {
   tabLoja: string
   tabImpostos: string
   tabPreferencias: string
+  sim: string
+  nao: string
+  fechar: string
   loja: ConfiguracoesLojaLabels
   fiscal: ConfiguracoesFiscalLabels
   prefs: ConfiguracoesPrefsLabels
@@ -208,15 +212,34 @@ export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; la
     preferencias: labels.tabPreferencias,
   }
 
-  const selectAba = (next: Aba): boolean => {
-    if (next === abaAtiva) return false
-    if (dirty && typeof window !== 'undefined' && !window.confirm(labels.unsavedWarn)) return false
+  const [pendingAba, setPendingAba] = useState<Aba | null>(null)
+
+  const aplicarTrocaAba = (next: Aba) => {
     setLojaErro(null)
     setPdvErro(null)
     setLojaSucesso(false)
     setPdvSucesso(false)
     setAbaAtiva(next)
+  }
+
+  const selectAba = (next: Aba): boolean => {
+    if (next === abaAtiva) return false
+    if (dirty) {
+      setPendingAba(next)
+      return false
+    }
+    aplicarTrocaAba(next)
     return true
+  }
+
+  const confirmarTrocaAba = () => {
+    if (!pendingAba) return
+    const next = pendingAba
+    setPendingAba(null)
+    aplicarTrocaAba(next)
+    requestAnimationFrame(() => {
+      document.getElementById(`config-tab-${next}`)?.focus()
+    })
   }
 
   const salvarLoja = async () => {
@@ -282,6 +305,7 @@ export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; la
   }
 
   return (
+    <Fragment>
     <div className="admin-v2-page mx-auto max-w-4xl">
       <PageHeader title={labels.titulo} subtitle={subtitulo} />
 
@@ -744,5 +768,27 @@ export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; la
         </SectionCard>
       )}
     </div>
+
+    <DragonModal
+      open={pendingAba !== null}
+      onClose={() => setPendingAba(null)}
+      variant="danger"
+      size="sm"
+      title={labels.unsavedWarn}
+      closeLabel={labels.fechar}
+      footer={
+        <>
+          <Button type="button" variant="secondary" onClick={() => setPendingAba(null)}>
+            {labels.nao}
+          </Button>
+          <Button type="button" variant="danger" onClick={confirmarTrocaAba}>
+            {labels.sim}
+          </Button>
+        </>
+      }
+    >
+      <p className="text-sm text-jl-fg-2">{labels.unsavedWarn}</p>
+    </DragonModal>
+    </Fragment>
   )
 }

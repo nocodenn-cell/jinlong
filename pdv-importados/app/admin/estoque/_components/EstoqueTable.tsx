@@ -1,7 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { History, SlidersHorizontal } from 'lucide-react'
+import Link from 'next/link'
+import { History, PackagePlus, SlidersHorizontal } from 'lucide-react'
+import { adminEstoqueRecebimentoProdutoQuery } from '@shared-core/navigation/routes'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -35,6 +37,7 @@ export type EstoqueLabels = {
   vazioTitulo: string
   vazioSub: string
   ajusteTitulo: string
+  reporTitulo: string
   saldoAtual: string
   estoqueMinimo: string
   motivo: string
@@ -48,6 +51,7 @@ export type EstoqueLabels = {
   motivoQuebra: string
   motivoOutro: string
   kardexTitulo: string
+  kardexVerAuditoria: string
   semMovimentos: string
   semMovimentosSub: string
   tipoVenda: string
@@ -157,6 +161,23 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
         className="rounded-none border-x-0 border-b-0"
         rowActions={(row) => (
           <div className="flex items-center justify-end gap-1">
+            {row.deficit != null && row.deficit > 0 ? (
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                aria-label={`${labels.reporTitulo} ${row.nome}`}
+                title={labels.reporTitulo}
+                asChild
+              >
+                <Link
+                  href={adminEstoqueRecebimentoProdutoQuery(row.id)}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <PackagePlus className="h-3.5 w-3.5" aria-hidden />
+                </Link>
+              </Button>
+            ) : null}
             <Button
               type="button"
               size="icon"
@@ -220,6 +241,7 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
           titulo: labels.kardexTitulo,
           semMovimentos: labels.semMovimentos,
           semMovimentosSub: labels.semMovimentosSub,
+          verAuditoria: labels.kardexVerAuditoria,
           tipoMap: {
             VENDA: labels.tipoVenda,
             COMPRA: labels.tipoCompra,

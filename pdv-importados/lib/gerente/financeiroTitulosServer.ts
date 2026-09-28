@@ -5,6 +5,9 @@ import { hojeYmd } from '@shared-core/src/financial'
 /** Filtros da listagem de contas a receber (sincronizados com a URL). */
 export type FinanceiroTituloFilters = {
   opcao: 'mix' | 'ABERTO' | 'PARCIAL'
+  /** UUID exato (G-07) — único identificador usado para filtrar por cliente. */
+  clienteId: string
+  /** Só para exibição (rótulo do chip); nunca usado para filtrar. */
   nomeCliente: string
   q: string
   de: string
@@ -13,6 +16,7 @@ export type FinanceiroTituloFilters = {
 
 export const DEFAULT_FIN_TITULO_FILTERS: FinanceiroTituloFilters = {
   opcao: 'mix',
+  clienteId: '',
   nomeCliente: '',
   q: '',
   de: '',
@@ -31,6 +35,8 @@ export type FinanceiroTituloListaRow = {
   loja_id: string
   /** Computado na leitura (vencimento < hoje, status em aberto) — item 13 do Plano Mestre. */
   atrasado: boolean
+  /** Venda de origem (fiado gerado na finalização), quando houver. */
+  venda_id: string | null
 }
 
 function pickParam(raw: Record<string, string | string[] | undefined>, key: string): string {
@@ -52,6 +58,7 @@ export function parseTituloFiltersFromSearchParams(
 
   return {
     opcao: opcao as FinanceiroTituloFilters['opcao'],
+    clienteId: pickParam(raw, 'cliente_id').slice(0, 100),
     nomeCliente: pickParam(raw, 'cliente').slice(0, 200),
     q: pickParam(raw, 'q').slice(0, 200),
     de: pickParam(raw, 'de').slice(0, 12),
@@ -66,6 +73,7 @@ export function serializeTituloFiltersToSearchParams(
 ): URLSearchParams {
   const sp = new URLSearchParams()
   if (f.opcao !== 'mix') sp.set('opcao', f.opcao)
+  if (f.clienteId.trim()) sp.set('cliente_id', f.clienteId.trim())
   if (f.nomeCliente.trim()) sp.set('cliente', f.nomeCliente.trim())
   if (f.q.trim()) sp.set('q', f.q.trim())
   if (f.de.trim()) sp.set('de', f.de.trim())
@@ -77,6 +85,7 @@ export function serializeTituloFiltersToSearchParams(
 export function isDefaultTituloFilters(f: FinanceiroTituloFilters): boolean {
   return (
     f.opcao === 'mix' &&
+    !f.clienteId.trim() &&
     !f.nomeCliente.trim() &&
     !f.q.trim() &&
     !f.de.trim() &&
@@ -96,6 +105,7 @@ export async function fetchContasReceberListagem(
   const reader = createReceivableReader(supabase)
   const result = await reader.list({
     opcao: filters.opcao,
+    clienteId: filters.clienteId,
     nomeCliente: filters.nomeCliente,
     q: filters.q,
     de: filters.de,
@@ -117,6 +127,7 @@ export async function fetchContasReceberListagem(
       cliente_nome: t.clienteNome,
       loja_id: t.lojaId,
       atrasado: t.atrasado,
+      venda_id: t.vendaId,
     })),
     capped: result.capped,
   }

@@ -125,4 +125,38 @@ describe('ClientesListClient Fase A', () => {
     expect(container.textContent).toContain(m.clientes.carregar_mais)
     expect(container.textContent).toContain('Mostrando 1+ cliente')
   })
+
+  describe('G-07 — deep-link do saldo pro financeiro', () => {
+    it('com saldo em aberto, mostra link "Ver no financeiro" pro título do cliente', () => {
+      render(
+        <ClientesListClient
+          idioma="pt"
+          locale="pt-BR"
+          messages={m}
+          clientesIniciais={[row]}
+          hasMoreInicial={false}
+        />,
+      )
+      const link = Array.from(container.querySelectorAll('a')).find((a) =>
+        a.textContent?.includes(m.clientes.ver_financeiro),
+      ) as HTMLAnchorElement | undefined
+      expect(link).toBeTruthy()
+      const href = link!.getAttribute('href')!
+      const esperado = `/admin/financeiro?${new URLSearchParams({ tab: 'receber', cliente_id: row.id, cliente: row.nome }).toString()}`
+      expect(href).toBe(esperado)
+    })
+
+    it('sem saldo em aberto, não mostra o link (nada pra investigar)', () => {
+      render(
+        <ClientesListClient
+          idioma="pt"
+          locale="pt-BR"
+          messages={m}
+          clientesIniciais={[{ ...row, saldo_crediario: 0, limite_crediario: 0 }]}
+          hasMoreInicial={false}
+        />,
+      )
+      expect(container.textContent).not.toContain(m.clientes.ver_financeiro)
+    })
+  })
 })

@@ -33,6 +33,7 @@ export function historicoDetalheParaRecibo(
   return {
     vendaId: detalhe.id,
     data: Number.isNaN(data.getTime()) ? new Date() : data,
+    clienteNome: detalhe.clienteNome,
     itens: detalhe.itens.map((i) => ({
       nome: i.nome,
       quantidade: i.quantidade,

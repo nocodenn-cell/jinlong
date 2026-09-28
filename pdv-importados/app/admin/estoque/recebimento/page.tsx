@@ -7,14 +7,18 @@ import {
   type RecebimentoProdutoOpt,
   type RemessaRecenteRow,
 } from '@/app/gerente/recebimento/RecebimentoGerentePageClient'
+import { buscarProdutoRecebimentoPorId } from '@/app/gerente/recebimento/actions'
 
-export default async function AdminEstoqueRecebimentoPage() {
+type PageProps = { searchParams?: Promise<{ produto?: string }> }
+
+export default async function AdminEstoqueRecebimentoPage({ searchParams }: PageProps) {
   const { session } = await loadAdminContext({
     pathname: ROUTES.admin.estoqueRecebimento,
     resource: `route:${ROUTES.admin.estoqueRecebimento}`,
   })
   const { idioma, lojaId } = session
   const supabase = await createClient()
+  const produtoIdPreSelecionado = (await searchParams)?.produto
 
   const [{ data: produtosRaw }, { data: remessasRaw }] = await Promise.all([
     // Só precisamos saber SE existe produto — a escolha agora é por busca
@@ -55,6 +59,15 @@ export default async function AdminEstoqueRecebimentoPage() {
     created_at: r.created_at,
   }))
 
+  // Deep-link "Repor" a partir do estoque crítico (`/admin/estoque`): produto
+  // inválido, de outra loja ou inativo cai de volta para a busca manual, sem
+  // quebrar a página.
+  let produtoPreSelecionado: RecebimentoProdutoOpt | null = null
+  if (produtoIdPreSelecionado) {
+    const r = await buscarProdutoRecebimentoPorId(produtoIdPreSelecionado)
+    if (r.success) produtoPreSelecionado = r.data
+  }
+
   return (
     <div className="admin-v2-page">
       <EstoqueHubNav />
@@ -62,6 +75,7 @@ export default async function AdminEstoqueRecebimentoPage() {
         idioma={idioma}
         produtos={produtos}
         remessasRecentes={remessasRecentes}
+        produtoPreSelecionado={produtoPreSelecionado}
         embeddedInAdminHub
       />
     </div>

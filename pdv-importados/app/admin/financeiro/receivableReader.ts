@@ -23,15 +23,10 @@ function isYmd(s: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(s)
 }
 
-async function resolveClienteIdsByNome(
-  supabase: SupabaseClient,
-  nome: string,
-): Promise<string[] | null> {
-  const needle = nome.trim()
-  if (!needle) return null
-  const patternNome = `%${escapeIlike(needle)}%`
-  const { data: cli } = await supabase.from('clientes').select('id').ilike('nome', patternNome).limit(500)
-  return cli?.map((c) => c.id as string) ?? []
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+function isUuid(s: string): boolean {
+  return UUID_RE.test(s)
 }
 
 async function resolveIdsByBusca(
@@ -76,6 +71,7 @@ function mapTitulo(t: Record<string, unknown>, hoje: string): ReceivableListRow 
     vencimento,
     clienteNome: nomeCliente ?? null,
     atrasado: isTituloVencido(vencimento, status, hoje),
+    vendaId: t.venda_id != null ? String(t.venda_id) : null,
   }
 }
 
@@ -86,8 +82,8 @@ export function createReceivableReader(supabase: SupabaseClient): ReceivableRead
         const limite = Math.min(500, Math.max(50, query.limite))
         const take = limite + 1
 
-        const idsPorClienteNarrow = await resolveClienteIdsByNome(supabase, query.nomeCliente)
-        if (idsPorClienteNarrow && idsPorClienteNarrow.length === 0) {
+        const clienteId = query.clienteId.trim()
+        if (clienteId && !isUuid(clienteId)) {
           return { ok: true, titulos: [], capped: false }
         }
 
@@ -98,7 +94,7 @@ export function createReceivableReader(supabase: SupabaseClient): ReceivableRead
 
         let q = supabase
           .from('contas_receber')
-          .select('id, valor_total, valor_aberto, status, descricao, vencimento, cliente_id, loja_id, clientes(nome)')
+          .select('id, valor_total, valor_aberto, status, descricao, vencimento, cliente_id, loja_id, venda_id, clientes(nome)')
 
         if (query.opcao === 'ABERTO') q = q.eq('status', 'ABERTO')
         else if (query.opcao === 'PARCIAL') q = q.eq('status', 'PARCIAL')
@@ -110,7 +106,7 @@ export function createReceivableReader(supabase: SupabaseClient): ReceivableRead
         if (query.ate.trim() && isYmd(query.ate)) {
           q = q.not('vencimento', 'is', null).lte('vencimento', query.ate.trim())
         }
-        if (idsPorClienteNarrow) q = q.in('cliente_id', idsPorClienteNarrow)
+        if (clienteId) q = q.eq('cliente_id', clienteId)
         if (idsPorBusca) q = q.in('id', idsPorBusca)
 
         const { data: raw, error } = await q.order('created_at', { ascending: false }).limit(take)

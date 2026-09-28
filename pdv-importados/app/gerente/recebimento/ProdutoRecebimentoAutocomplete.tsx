@@ -26,6 +26,8 @@ type Props = Readonly<{
   semResultadosLabel: string
   minimoLabel: string
   limparLabel: string
+  /** Pré-seleciona o produto (ex.: deep-link "Repor" a partir do estoque crítico). */
+  valorInicial?: RecebimentoProdutoBusca | null
 }>
 
 export function ProdutoRecebimentoAutocomplete({
@@ -34,13 +36,20 @@ export function ProdutoRecebimentoAutocomplete({
   semResultadosLabel,
   minimoLabel,
   limparLabel,
+  valorInicial = null,
 }: Props) {
   const listId = useId()
-  const [termo, setTermo] = useState('')
+  const [termo, setTermo] = useState(() =>
+    valorInicial
+      ? valorInicial.codigo_barras
+        ? `${valorInicial.nome} · ${valorInicial.codigo_barras}`
+        : valorInicial.nome
+      : '',
+  )
   const [opcoes, setOpcoes] = useState<RecebimentoProdutoBusca[]>([])
   const [carregando, setCarregando] = useState(false)
   const [aberto, setAberto] = useState(false)
-  const [selecionado, setSelecionado] = useState<RecebimentoProdutoBusca | null>(null)
+  const [selecionado, setSelecionado] = useState<RecebimentoProdutoBusca | null>(valorInicial)
   const wrapRef = useRef<HTMLDivElement>(null)
 
   const termoDebounced = useDebounce(termo, 260)

@@ -27,6 +27,7 @@ import { parseFinanceiroTab } from './_components/financeiroTabs'
 type SearchParams = {
   tab?: string
   opcao?: string
+  cliente_id?: string
   cliente?: string
   q?: string
   de?: string
@@ -34,7 +35,10 @@ type SearchParams = {
   limite?: string
   status?: string
   periodo?: string
+  fornecedor_id?: string
 }
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 type PageProps = { searchParams?: Promise<SearchParams> }
 
@@ -55,6 +59,10 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
   const supabase = await createClient()
   const statusPagar = sp.status ?? 'todos'
   const periodoPagar = sp.periodo ?? ''
+  // Deep-link `?fornecedor_id=` (ex.: NF-e concluída, ficha de Fornecedores):
+  // id que não é UUID é ignorado em vez de virar erro de query.
+  const fornecedorIdPagar =
+    sp.fornecedor_id && UUID_RE.test(sp.fornecedor_id.trim()) ? sp.fornecedor_id.trim() : ''
 
   const [listaRes, kpisRes, fiscalRes, clientesRes, pagarRes, fornRes, caixasRes] = await Promise.all([
     fetchContasReceberListagem(supabase, filters, limite),
@@ -67,7 +75,11 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
       .order('created_at', { ascending: false })
       .limit(50),
     buscarClientesPaginadosAction(1),
-    buscarContasPagarAction(1, { status: statusPagar, periodo: periodoPagar || undefined }),
+    buscarContasPagarAction(1, {
+      status: statusPagar,
+      periodo: periodoPagar || undefined,
+      fornecedor_id: fornecedorIdPagar || undefined,
+    }),
     buscarFornecedoresPaginadosAction(1),
     supabase.from('caixas').select('id, loja_id, operador_id, usuarios!caixas_operador_id_fkey(nome)').eq('status', 'ABERTO'),
   ])
@@ -92,9 +104,27 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
     vencimento: t.vencimento,
     descricao: t.descricao,
     loja_id: t.loja_id,
+    venda_id: t.venda_id,
   }))
 
   const clientesOpts = clientesRes.ok ? clientesRes.clientes.map((c) => ({ id: c.id, nome: c.nome })) : []
+
+  // `buscarFornecedoresPaginadosAction(1)` traz só a 1ª página: o fornecedor do
+  // deep-link pode não estar nela, e sem a opção o filtro ficaria ativo com o
+  // <select> em branco.
+  let fornecedoresOptsPagar = fornRes.ok
+    ? fornRes.fornecedores.map((f) => ({ id: f.id, nome: f.nome }))
+    : []
+  if (fornecedorIdPagar && !fornecedoresOptsPagar.some((f) => f.id === fornecedorIdPagar)) {
+    const nomeDosTitulos = pagarRes.ok
+      ? pagarRes.contas.find((c) => c.fornecedor_id === fornecedorIdPagar)?.fornecedor_nome
+      : null
+    const nome =
+      nomeDosTitulos ??
+      (await supabase.from('fornecedores').select('nome').eq('id', fornecedorIdPagar).maybeSingle())
+        .data?.nome
+    if (nome) fornecedoresOptsPagar = [{ id: fornecedorIdPagar, nome }, ...fornecedoresOptsPagar]
+  }
 
   const filterDefs: FilterDef[] = [
     { type: 'search', key: 'q', placeholder: ui.financeiro_filtro_placeholder },
@@ -113,6 +143,7 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
   const activeParams: Record<string, string> = { tab: activeTab }
   if (filters.q) activeParams.q = filters.q
   if (filters.opcao !== 'mix') activeParams.opcao = filters.opcao
+  if (filters.clienteId) activeParams.cliente_id = filters.clienteId
   if (filters.nomeCliente) activeParams.cliente = filters.nomeCliente
   if (filters.de) activeParams.de = filters.de
   if (filters.ate) activeParams.ate = filters.ate
@@ -120,6 +151,8 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
   const hrefWithout = (key: string) => {
     const p = new URLSearchParams(activeParams)
     p.delete(key)
+    // cliente_id/cliente sempre andam juntos (id filtra, nome só rotula o chip).
+    if (key === 'cliente_id') p.delete('cliente')
     return pathWithQuery(ROUTES.admin.financeiro, p)
   }
 
@@ -129,7 +162,12 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
   }
 
   const chips: Array<{ key: string; label: string }> = []
-  if (filters.nomeCliente) chips.push({ key: 'cliente', label: ui.financeiro_chip_cliente.replace('{{nome}}', filters.nomeCliente) })
+  if (filters.clienteId) {
+    chips.push({
+      key: 'cliente_id',
+      label: ui.financeiro_chip_cliente.replace('{{nome}}', filters.nomeCliente || '—'),
+    })
+  }
   if (filters.de) chips.push({ key: 'de', label: ui.financeiro_chip_de.replace('{{data}}', filters.de) })
   if (filters.ate) chips.push({ key: 'ate', label: ui.financeiro_chip_ate.replace('{{data}}', filters.ate) })
   if (filters.opcao !== 'mix') chips.push({ key: 'opcao', label: statusChipLabel[filters.opcao] ?? filters.opcao })
@@ -229,6 +267,7 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
             statusQuitado: ui.financeiro_status_quitado,
             vazioTitulo: ui.financeiro_vazio_titulo,
             vazioSub: ui.financeiro_vazio_sub,
+            verVenda: ui.financeiro_ver_venda,
             locale,
           }}
           contasPagar={{
@@ -236,9 +275,10 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
             locale,
             contasIniciais: pagarRes.ok ? pagarRes.contas : [],
             hasMoreInicial: pagarRes.ok ? pagarRes.hasMore : false,
-            fornecedoresOpts: fornRes.ok ? fornRes.fornecedores.map((f) => ({ id: f.id, nome: f.nome })) : [],
+            fornecedoresOpts: fornecedoresOptsPagar,
             statusInicial: statusPagar,
             periodoInicial: periodoPagar,
+            fornecedorInicial: fornecedorIdPagar,
           }}
         />
       </div>

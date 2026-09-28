@@ -13,7 +13,7 @@ import { EmptyState, ErrorState } from '@/components/ui/feedback'
 import { formatBRL } from '@/lib/format/money'
 import { formatDayMonthInLocale, formatDateTimeOrDash } from '@/lib/format/datetime'
 import { CHART_COLORS } from '@/lib/tokens/chartColors'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES, adminCatalogoCompletoEditarHref, adminVendaDetalheQuery } from '@shared-core/navigation/routes'
 import type {
   RelatorioVendaDiaDTO,
   RelatorioTopProdDTO,
@@ -31,6 +31,7 @@ import { RelatoriosBarChart } from './RelatoriosBarChart'
 import { RelatoriosPeriodFilters } from './RelatoriosPeriodFilters'
 import type { RelatoriosFiltrosLabels } from './RelatoriosPeriodFilters'
 import { PaymentDonutChart } from '@/app/admin/dashboard/_components/PaymentDonutChart'
+import { KardexSheet, type KardexAlvo, type KardexLabels } from '@/app/admin/estoque/_components/KardexSheet'
 import {
   avisoPeriodoVisivel,
   formatDiasCobertura,
@@ -142,6 +143,7 @@ export type RelatoriosLabels = {
   erroTitulo: string
   filtros: RelatoriosFiltrosLabels
   locale: string
+  kardex: KardexLabels
 }
 
 function avisoCopy(aviso: ReturnType<typeof avisoPeriodoVisivel>, labels: RelatoriosLabels): string | null {
@@ -183,7 +185,11 @@ function TopProdutosList({ top, labels }: { top: RelatorioTopProdDTO[]; labels: 
       {top.slice(0, 8).map((item) => {
         const width = Math.max(6, Math.round((item.total_valor / max) * 100))
         return (
-          <div key={item.id} className="space-y-1">
+          <Link
+            key={item.id}
+            href={adminCatalogoCompletoEditarHref(item.id)}
+            className="-m-1 block space-y-1 rounded-lg p-1 transition-colors hover:bg-[var(--color-background-secondary)]"
+          >
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <p className="truncate text-small font-medium text-jl-fg-1">{item.nome}</p>
@@ -205,7 +211,7 @@ function TopProdutosList({ top, labels }: { top: RelatorioTopProdDTO[]; labels: 
                 style={{ width: `${width}%` }}
               />
             </div>
-          </div>
+          </Link>
         )
       })}
     </div>
@@ -231,9 +237,10 @@ function EstoqueReposicaoList({
       {ordenado.map((item) => {
         const minZero = Number(item.estoque_minimo) <= 0
         return (
-          <div
+          <Link
             key={item.id}
-            className="flex items-center justify-between rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-background-secondary)] px-3 py-2"
+            href={adminCatalogoCompletoEditarHref(item.id)}
+            className="flex items-center justify-between rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-background-secondary)] px-3 py-2 transition-colors hover:border-[var(--color-border)]"
           >
             <div className="min-w-0">
               <p className="truncate text-small font-medium text-jl-fg-1">{item.nome}</p>
@@ -247,7 +254,7 @@ function EstoqueReposicaoList({
             <span className="admin-v2-badge-warning shrink-0 rounded-full px-2 py-1 text-caption">
               {labels.reporTemplate.replace('{{n}}', String(item.deficit))}
             </span>
-          </div>
+          </Link>
         )
       })}
     </div>
@@ -277,7 +284,9 @@ function MargemPorVendaList({
           {vendas.slice(0, 20).map((v) => (
             <tr key={v.venda_id} className="border-b border-[var(--color-background-tertiary)]">
               <td className="py-1.5 pr-3 text-jl-fg-2">
-                {formatDateTimeOrDash(v.data, labels.locale, 'short')}
+                <Link href={adminVendaDetalheQuery(v.venda_id)} className="hover:underline">
+                  {formatDateTimeOrDash(v.data, labels.locale, 'short')}
+                </Link>
               </td>
               <td className="py-1.5 pr-3 text-right text-jl-fg-1">{formatBRL(v.total_liquido)}</td>
               <td className="py-1.5 pr-3 text-right text-jl-fg-2">
@@ -326,7 +335,11 @@ function CurvaAbcList({
         <tbody>
           {produtos.slice(0, 30).map((p) => (
             <tr key={p.produtoId} className="border-b border-[var(--color-background-tertiary)]">
-              <td className="max-w-[220px] truncate py-1.5 pr-3 text-jl-fg-1">{p.nome}</td>
+              <td className="max-w-[220px] truncate py-1.5 pr-3 text-jl-fg-1">
+                <Link href={adminCatalogoCompletoEditarHref(p.produtoId)} className="hover:underline">
+                  {p.nome}
+                </Link>
+              </td>
               <td className="py-1.5 pr-3 text-right text-jl-fg-2">{formatBRL(p.totalValor)}</td>
               <td className="py-1.5 pr-3 text-right text-jl-fg-3">{p.percentualAcumulado.toFixed(1)}%</td>
               <td className="py-1.5 pr-3 text-right">
@@ -359,9 +372,10 @@ function CoberturaEstoqueList({
     <div className="space-y-2">
       <p className="text-caption italic text-jl-fg-3">{labels.coberturaEstoqueHint}</p>
       {comCobertura.map((i) => (
-        <div
+        <Link
           key={`${i.produtoId}-${i.lojaId}`}
-          className="flex items-center justify-between rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-background-secondary)] px-3 py-2"
+          href={adminCatalogoCompletoEditarHref(i.produtoId)}
+          className="flex items-center justify-between rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-background-secondary)] px-3 py-2 transition-colors hover:border-[var(--color-border)]"
         >
           <div className="min-w-0">
             <p className="truncate text-small font-medium text-jl-fg-1">{i.nome}</p>
@@ -376,7 +390,7 @@ function CoberturaEstoqueList({
               diasCap: labels.coberturaEstoqueDiasCap,
             })}
           </span>
-        </div>
+        </Link>
       ))}
     </div>
   )
@@ -385,9 +399,11 @@ function CoberturaEstoqueList({
 function DivergenciaEstoqueList({
   itens,
   labels,
+  onAbrirKardex,
 }: {
   itens: RelatorioDivergenciaEstoqueDTO[]
   labels: RelatoriosLabels
+  onAbrirKardex: (alvo: KardexAlvo) => void
 }) {
   // A view já ordena por |divergência|; aqui só filtramos ruído de arredondamento.
   const comDivergencia = itens.filter((i) => Math.abs(i.divergencia) > 0.001).slice(0, 15)
@@ -398,9 +414,11 @@ function DivergenciaEstoqueList({
     <div className="space-y-2">
       <p className="text-caption italic text-jl-fg-3">{labels.divergenciaEstoqueHint}</p>
       {comDivergencia.map((i) => (
-        <div
+        <button
           key={`${i.produtoId}-${i.lojaId}`}
-          className="flex items-center justify-between rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-background-secondary)] px-3 py-2"
+          type="button"
+          onClick={() => onAbrirKardex({ produtoId: i.produtoId, produtoNome: i.nome })}
+          className="flex w-full items-center justify-between rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-background-secondary)] px-3 py-2 text-left transition-colors hover:border-[var(--color-border)]"
         >
           <div className="min-w-0">
             <p className="truncate text-small font-medium text-jl-fg-1">{i.nome}</p>
@@ -413,7 +431,7 @@ function DivergenciaEstoqueList({
             {i.divergencia > 0 ? '+' : ''}
             {i.divergencia}
           </span>
-        </div>
+        </button>
       ))}
     </div>
   )
@@ -443,7 +461,11 @@ function SemGiroList({
           <tbody>
             {itens.slice(0, 30).map((p) => (
               <tr key={p.produto_id} className="border-b border-[var(--color-background-tertiary)]">
-                <td className="max-w-[220px] truncate py-1.5 pr-3 text-jl-fg-1">{p.nome}</td>
+                <td className="max-w-[220px] truncate py-1.5 pr-3 text-jl-fg-1">
+                  <Link href={adminCatalogoCompletoEditarHref(p.produto_id)} className="hover:underline">
+                    {p.nome}
+                  </Link>
+                </td>
                 <td className="py-1.5 pr-3 text-right tabular-nums text-jl-fg-2">{p.quantidade_atual}</td>
                 <td className="py-1.5 pr-3 text-right tabular-nums text-jl-fg-1">
                   {formatBRL(p.valor_imobilizado)}
@@ -485,7 +507,9 @@ function VendasDetalheList({
           {vendas.slice(0, 100).map((v) => (
             <tr key={v.id} className="border-b border-[var(--color-background-tertiary)]">
               <td className="py-1.5 pr-3 text-jl-fg-2">
-                {v.data ? formatDateTimeOrDash(v.data, labels.locale, 'short') : '—'}
+                <Link href={adminVendaDetalheQuery(v.id)} className="hover:underline">
+                  {v.data ? formatDateTimeOrDash(v.data, labels.locale, 'short') : '—'}
+                </Link>
               </td>
               <td className="max-w-[180px] truncate py-1.5 pr-3 text-jl-fg-1">
                 {v.cliente_nome ?? labels.vendasSemCliente}
@@ -568,6 +592,7 @@ export function RelatoriosContent({
 }) {
   const router = useRouter()
   const [tab, setTab] = useState<RelatoriosTabId>(() => parseRelatoriosTab(initialTab))
+  const [kardexAlvo, setKardexAlvo] = useState<KardexAlvo | null>(null)
 
   useEffect(() => {
     setTab(parseRelatoriosTab(initialTab))
@@ -738,7 +763,11 @@ export function RelatoriosContent({
               <CoberturaEstoqueList itens={dados.coberturaEstoque} labels={labels} />
             </SectionCard>
             <SectionCard title={labels.secDivergenciaEstoque}>
-              <DivergenciaEstoqueList itens={dados.divergenciaEstoque} labels={labels} />
+              <DivergenciaEstoqueList
+                itens={dados.divergenciaEstoque}
+                labels={labels}
+                onAbrirKardex={setKardexAlvo}
+              />
             </SectionCard>
             <SectionCard title={labels.secSemGiro}>
               <SemGiroList itens={dados.semGiro} labels={labels} />
@@ -778,6 +807,8 @@ export function RelatoriosContent({
           </div>
         ) : null}
       </div>
+
+      <KardexSheet alvo={kardexAlvo} onClose={() => setKardexAlvo(null)} labels={labels.kardex} />
     </div>
   )
 }

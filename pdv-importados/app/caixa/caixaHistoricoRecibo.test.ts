@@ -149,6 +149,16 @@ describe('historicoDetalheParaRecibo — ID 28 reimpressão fiel', () => {
     )
     expect(recibo.pagamentos[0]?.formaPagamento).toBe('DINHEIRO')
   })
+
+  it('RM-08: repassa o cliente vinculado à venda para o recibo reimpresso', () => {
+    const recibo = historicoDetalheParaRecibo(detalhe({ clienteNome: 'Mercado São Jorge' }), 'R$')
+    expect(recibo.clienteNome).toBe('Mercado São Jorge')
+  })
+
+  it('RM-08: venda anônima reimpressa não inventa cliente', () => {
+    const recibo = historicoDetalheParaRecibo(detalhe({ clienteNome: null }), 'R$')
+    expect(recibo.clienteNome).toBeNull()
+  })
 })
 
 describe('F12 — caminho direto não usa historicoDetalheParaRecibo', () => {

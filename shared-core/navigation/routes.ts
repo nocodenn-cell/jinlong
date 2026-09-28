@@ -102,6 +102,42 @@ export function adminEstoqueProdutoQuery(busca: string): string {
   return pathWithQuery(ROUTES.admin.estoque, q)
 }
 
+/** Abre o recebimento manual com o produto já selecionado (ex.: a partir de um item crítico). */
+export function adminEstoqueRecebimentoProdutoQuery(produtoId: string): string {
+  const q = new URLSearchParams()
+  if (produtoId.trim()) q.set('produto', produtoId.trim())
+  return pathWithQuery(ROUTES.admin.estoqueRecebimento, q)
+}
+
+/** Abre "Nova OC" a partir de um fornecedor específico (ex.: lista de Fornecedores). */
+export function adminComprasFornecedorQuery(fornecedorId: string): string {
+  const q = new URLSearchParams()
+  if (fornecedorId.trim()) q.set('fornecedor', fornecedorId.trim())
+  return pathWithQuery(ROUTES.admin.compras, q)
+}
+
+/** Abre o detalhe de uma venda específica (ex.: a partir de uma linha de Relatórios). */
+export function adminVendaDetalheQuery(vendaId: string): string {
+  const q = new URLSearchParams()
+  if (vendaId.trim()) q.set('venda', vendaId.trim())
+  return pathWithQuery(ROUTES.admin.vendas, q)
+}
+
+/** Abre uma importação de NF-e específica (aberta ou já concluída), ex.: a partir de um título em Contas a pagar. */
+export function adminImportNfeImportacaoQuery(importacaoId: string): string {
+  const q = new URLSearchParams()
+  if (importacaoId.trim()) q.set('importacao', importacaoId.trim())
+  return pathWithQuery(ROUTES.admin.importNfe, q)
+}
+
+/** Abre a aba "A pagar" do Financeiro já filtrada por fornecedor (ex.: após dar entrada numa NF-e, ou a partir de Fornecedores). */
+export function adminFinanceiroContasPagarFornecedorQuery(fornecedorId: string): string {
+  const q = new URLSearchParams()
+  q.set('tab', 'pagar')
+  if (fornecedorId.trim()) q.set('fornecedor_id', fornecedorId.trim())
+  return pathWithQuery(ROUTES.admin.financeiro, q)
+}
+
 export function adminEtiquetasProdutoQuery(opts: {
   codigo?: string | null
   produtoId?: string | null

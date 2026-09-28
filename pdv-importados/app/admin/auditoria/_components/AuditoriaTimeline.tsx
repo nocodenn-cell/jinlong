@@ -14,6 +14,7 @@ import {
 import { cn } from '@/lib/utils'
 import { formatBRL } from '@/lib/format/money'
 import { formatDateTimeOrDash } from '@/lib/format/datetime'
+import { KardexSheet, type KardexAlvo, type KardexLabels } from '@/app/admin/estoque/_components/KardexSheet'
 import type { AuditoriaEvento, AuditoriaTipo } from '../actions'
 
 /**
@@ -41,6 +42,8 @@ export type AuditoriaTimelineLabels = {
   ajusteLabels: Record<string, string>
   alertaLabels: Record<string, string>
   formaLabels: Record<string, string>
+  verKardex: string
+  kardex: KardexLabels
 }
 
 type TipoVisual = {
@@ -133,6 +136,7 @@ export function AuditoriaTimeline({
   labels: AuditoriaTimelineLabels
 }) {
   const [aberto, setAberto] = useState<AuditoriaEvento | null>(null)
+  const [kardexAlvo, setKardexAlvo] = useState<KardexAlvo | null>(null)
 
   if (eventos.length === 0) {
     return (
@@ -202,8 +206,15 @@ export function AuditoriaTimeline({
       </ul>
 
       {aberto ? (
-        <AuditoriaDetailSheet evento={aberto} labels={labels} onClose={() => setAberto(null)} />
+        <AuditoriaDetailSheet
+          evento={aberto}
+          labels={labels}
+          onClose={() => setAberto(null)}
+          onAbrirKardex={setKardexAlvo}
+        />
       ) : null}
+
+      <KardexSheet alvo={kardexAlvo} onClose={() => setKardexAlvo(null)} labels={labels.kardex} />
     </>
   )
 }
@@ -212,10 +223,12 @@ function AuditoriaDetailSheet({
   evento,
   labels,
   onClose,
+  onAbrirKardex,
 }: {
   evento: AuditoriaEvento
   labels: AuditoriaTimelineLabels
   onClose: () => void
+  onAbrirKardex: (alvo: KardexAlvo) => void
 }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -232,6 +245,14 @@ function AuditoriaDetailSheet({
 
   const visual = TIPO_VISUAL[evento.tipo]
   const entradas = Object.entries(evento.detalhe).filter(([, v]) => v != null && v !== '')
+  const produtoId =
+    typeof evento.detalhe.produto_id === 'string' && evento.detalhe.produto_id
+      ? evento.detalhe.produto_id
+      : null
+  const produtoNome =
+    typeof evento.detalhe.produto_nome === 'string' && evento.detalhe.produto_nome
+      ? evento.detalhe.produto_nome
+      : produtoId
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-labelledby="auditoria-detalhe-titulo">
@@ -266,6 +287,21 @@ function AuditoriaDetailSheet({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-3">
+          {produtoId ? (
+            <button
+              type="button"
+              onClick={() => onAbrirKardex({ produtoId, produtoNome: produtoNome ?? produtoId })}
+              className="admin-v2-panel mb-3 flex w-full items-center justify-between gap-3 rounded-[10px] p-3 text-left transition-colors hover:border-[var(--color-border)]"
+            >
+              <span className="min-w-0 truncate text-[12px] font-medium text-jl-fg-1">
+                {produtoNome}
+              </span>
+              <span className="shrink-0 text-[11px] font-medium text-[var(--color-info)]">
+                {labels.verKardex}
+              </span>
+            </button>
+          ) : null}
+
           {evento.valor != null ? (
             <div className="admin-v2-panel mb-3 rounded-[10px] p-3">
               <div className="text-[11px] text-jl-fg-3">{labels.valorLabel}</div>

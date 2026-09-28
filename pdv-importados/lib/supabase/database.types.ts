@@ -2440,6 +2440,7 @@ export type Database = {
           id: string
           loja_id: string
           numero_nf: string | null
+          ordem_compra_id: string | null
           status: string
           usuario_id: string
         }
@@ -2450,6 +2451,7 @@ export type Database = {
           id?: string
           loja_id: string
           numero_nf?: string | null
+          ordem_compra_id?: string | null
           status?: string
           usuario_id: string
         }
@@ -2460,6 +2462,7 @@ export type Database = {
           id?: string
           loja_id?: string
           numero_nf?: string | null
+          ordem_compra_id?: string | null
           status?: string
           usuario_id?: string
         }
@@ -2484,6 +2487,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_estoque_baixo"
             referencedColumns: ["loja_id"]
+          },
+          {
+            foreignKeyName: "importacoes_nfe_ordem_compra_id_fkey"
+            columns: ["ordem_compra_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_compra"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "importacoes_nfe_usuario_id_fkey"
@@ -3158,6 +3168,9 @@ export type Database = {
           created_by: string | null
           data_emissao: string
           data_prevista_chegada: string | null
+          encerrada_com_falta_em: string | null
+          encerrada_com_falta_por: string | null
+          encerramento_motivo: string | null
           fornecedor_id: string | null
           fornecedor_nome: string | null
           id: string
@@ -3171,6 +3184,9 @@ export type Database = {
           created_by?: string | null
           data_emissao?: string
           data_prevista_chegada?: string | null
+          encerrada_com_falta_em?: string | null
+          encerrada_com_falta_por?: string | null
+          encerramento_motivo?: string | null
           fornecedor_id?: string | null
           fornecedor_nome?: string | null
           id?: string
@@ -3184,6 +3200,9 @@ export type Database = {
           created_by?: string | null
           data_emissao?: string
           data_prevista_chegada?: string | null
+          encerrada_com_falta_em?: string | null
+          encerrada_com_falta_por?: string | null
+          encerramento_motivo?: string | null
           fornecedor_id?: string | null
           fornecedor_nome?: string | null
           id?: string
@@ -3193,6 +3212,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "ordens_compra_encerrada_com_falta_por_fkey"
+            columns: ["encerrada_com_falta_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ordens_compra_fornecedor_id_fkey"
             columns: ["fornecedor_id"]
@@ -3299,6 +3325,147 @@ export type Database = {
             columns: ["produto_id"]
             isOneToOne: false
             referencedRelation: "v_top_produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ordens_compra_recebimentos: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          divergencia_obs: string | null
+          entrada_id: string
+          id: string
+          idempotency_key: string | null
+          importacao_nfe_id: string | null
+          legado: boolean
+          loja_id: string
+          movimento_estoque_id: string | null
+          ordem_id: string
+          ordem_item_id: string
+          origem: string
+          payload_hash: string | null
+          produto_id: string | null
+          quantidade: number
+          quantidade_esperada: number
+          remessa_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          divergencia_obs?: string | null
+          entrada_id: string
+          id?: string
+          idempotency_key?: string | null
+          importacao_nfe_id?: string | null
+          legado?: boolean
+          loja_id: string
+          movimento_estoque_id?: string | null
+          ordem_id: string
+          ordem_item_id: string
+          origem: string
+          payload_hash?: string | null
+          produto_id?: string | null
+          quantidade: number
+          quantidade_esperada: number
+          remessa_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          divergencia_obs?: string | null
+          entrada_id?: string
+          id?: string
+          idempotency_key?: string | null
+          importacao_nfe_id?: string | null
+          legado?: boolean
+          loja_id?: string
+          movimento_estoque_id?: string | null
+          ordem_id?: string
+          ordem_item_id?: string
+          origem?: string
+          payload_hash?: string | null
+          produto_id?: string | null
+          quantidade?: number
+          quantidade_esperada?: number
+          remessa_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ordens_compra_recebimentos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordens_compra_recebimentos_importacao_nfe_id_fkey"
+            columns: ["importacao_nfe_id"]
+            isOneToOne: false
+            referencedRelation: "importacoes_nfe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordens_compra_recebimentos_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordens_compra_recebimentos_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["loja_id"]
+          },
+          {
+            foreignKeyName: "ordens_compra_recebimentos_movimento_estoque_id_fkey"
+            columns: ["movimento_estoque_id"]
+            isOneToOne: false
+            referencedRelation: "movimentos_estoque_log"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordens_compra_recebimentos_ordem_id_fkey"
+            columns: ["ordem_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_compra"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordens_compra_recebimentos_ordem_item_id_fkey"
+            columns: ["ordem_item_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_compra_itens"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordens_compra_recebimentos_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordens_compra_recebimentos_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordens_compra_recebimentos_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordens_compra_recebimentos_remessa_id_fkey"
+            columns: ["remessa_id"]
+            isOneToOne: false
+            referencedRelation: "remessas"
             referencedColumns: ["id"]
           },
         ]
@@ -5299,6 +5466,45 @@ export type Database = {
       }
     }
     Functions: {
+      _oc_abater_por_produto: {
+        Args: {
+          p_entrada_id: string
+          p_esperada: number
+          p_estrito: boolean
+          p_importacao: string
+          p_loja: string
+          p_mov_id: string
+          p_obs: string
+          p_ordem_id: string
+          p_origem: string
+          p_produto_id: string
+          p_qtd: number
+          p_remessa_id: string
+          p_uid: string
+        }
+        Returns: number
+      }
+      _oc_atualizar_estado: { Args: { p_ordem_id: string }; Returns: undefined }
+      _oc_creditar_item: {
+        Args: {
+          p_entrada_id: string
+          p_esperada: number
+          p_hash: string
+          p_idem: string
+          p_importacao: string
+          p_item_id: string
+          p_loja: string
+          p_mov_id: string
+          p_obs: string
+          p_ordem_id: string
+          p_origem: string
+          p_qtd: number
+          p_remessa_id: string
+          p_uid: string
+        }
+        Returns: undefined
+      }
+      _oc_resumo_json: { Args: { p_ordem_id: string }; Returns: Json }
       ajustar_estoque_manual:
         | {
             Args: {
@@ -5447,6 +5653,7 @@ export type Database = {
           p_idempotency_key: string
           p_itens: Json
           p_observacao: string
+          p_ordem_compra_id?: string
           p_origem: string
         }
         Returns: string
@@ -5523,6 +5730,10 @@ export type Database = {
         }[]
       }
       devolver_venda_em_espera: { Args: { p_id: string }; Returns: Json }
+      encerrar_ordem_compra_com_falta: {
+        Args: { p_motivo: string; p_oc_id: string }
+        Returns: Json
+      }
       ensure_venda_evento_registrado: {
         Args: { p_sale_id: string; p_source?: string }
         Returns: string
@@ -6087,7 +6298,15 @@ export type Database = {
         Args: { p_item_venda_id: string }
         Returns: number
       }
-      receber_ordem_compra: { Args: { p_oc_id: string }; Returns: undefined }
+      receber_ordem_compra: {
+        Args: {
+          p_idempotency_key: string
+          p_itens: Json
+          p_observacao?: string
+          p_oc_id: string
+        }
+        Returns: Json
+      }
       registrar_conferencia_nfe: {
         Args: { p_importacao_id: string; p_itens: Json }
         Returns: Json
@@ -6410,6 +6629,10 @@ export type Database = {
           total_liquido: number
           venda_id: string
         }[]
+      }
+      vincular_importacao_nfe_ordem_compra: {
+        Args: { p_importacao_id: string; p_oc_id?: string }
+        Returns: undefined
       }
     }
     Enums: {

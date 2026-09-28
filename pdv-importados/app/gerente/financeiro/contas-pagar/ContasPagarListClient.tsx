@@ -6,6 +6,7 @@ import { useDebounce } from '@/lib/hooks/useDebounce'
 import { Download, Plus, FileText, XCircle, DollarSign, FilterX } from 'lucide-react'
 import { CrudListShell, MetricCard, PageActions } from '@/components/ui/admin-v2'
 import { DataTable, type Column } from '@/components/ui/DataTable'
+import { DragonModal } from '@/components/ui/DragonModal'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input, SearchInput, Select } from '@/components/ui/forms'
@@ -23,7 +24,7 @@ import {
   type ContasPagarFilters,
 } from './actions'
 import { PagamentoModal } from './PagamentoModal'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES, adminImportNfeImportacaoQuery } from '@shared-core/navigation/routes'
 
 type Props = Readonly<{
   idioma: Idioma
@@ -33,6 +34,8 @@ type Props = Readonly<{
   fornecedoresOpts: Array<{ id: string; nome: string }>
   statusInicial: string
   periodoInicial: string
+  /** Fornecedor já filtrado ao abrir (deep-link `?fornecedor_id=`). */
+  fornecedorInicial?: string
   /** Loja do ator autenticado — `registrar_pagamento_contas_pagar` rejeita pagamento cross-loja para todos os perfis. */
   actorLojaId?: string | null
 }>
@@ -83,6 +86,7 @@ export function ContasPagarListClient({
   fornecedoresOpts,
   statusInicial,
   periodoInicial,
+  fornecedorInicial = '',
   actorLojaId = null,
 }: Props) {
   const m = getMessages(idioma)
@@ -93,10 +97,16 @@ export function ContasPagarListClient({
 
   const [termo, setTermo] = useState('')
   const [status, setStatus] = useState<string>(statusInicial)
-  const [fornecedorId, setFornecedorId] = useState('')
+  const [fornecedorId, setFornecedorId] = useState(fornecedorInicial)
   const [periodo, setPeriodo] = useState(periodoInicial)
 
   const [emPagamento, setEmPagamento] = useState<ContaPagarRow | null>(null)
+
+  // G-10: modal do app em vez de window.prompt() nativo pro motivo de cancelamento.
+  const [cancelandoAlvo, setCancelandoAlvo] = useState<ContaPagarRow | null>(null)
+  const [motivoCancelamento, setMotivoCancelamento] = useState('')
+  const [erroMotivoCancelamento, setErroMotivoCancelamento] = useState<string | null>(null)
+  const [cancelando, setCancelando] = useState(false)
 
   const pageRef = useRef(1)
   const sentinelRef = useRef<HTMLDivElement>(null)
@@ -179,20 +189,34 @@ export function ContasPagarListClient({
     setContas((cur) => cur.map((x) => (x.id === c.id ? c : x)))
   }
 
-  async function onCancelar(c: ContaPagarRow) {
-    const motivo = window.prompt(`Motivo do cancelamento de "${c.descricao}":`, '')
-    if (motivo == null) return
-    if (motivo.trim().length < 2) {
-      emitGerenteToast({ kind: 'error', message: 'Motivo deve ter ao menos 2 caracteres.' })
+  function abrirCancelar(c: ContaPagarRow) {
+    setCancelandoAlvo(c)
+    setMotivoCancelamento('')
+    setErroMotivoCancelamento(null)
+  }
+
+  async function confirmarCancelamento() {
+    if (!cancelandoAlvo) return
+    const motivo = motivoCancelamento.trim()
+    if (motivo.length < 2) {
+      setErroMotivoCancelamento('Motivo deve ter ao menos 2 caracteres.')
       return
     }
-    const r = await cancelarContaPagarAction(c.id, motivo)
-    if (!r.ok) {
-      emitGerenteToast({ kind: 'error', message: r.error })
-      return
+    setCancelando(true)
+    try {
+      const r = await cancelarContaPagarAction(cancelandoAlvo.id, motivo)
+      if (!r.ok) {
+        emitGerenteToast({ kind: 'error', message: r.error })
+        return
+      }
+      setContas((cur) =>
+        cur.map((x) => (x.id === cancelandoAlvo.id ? { ...x, status: 'CANCELADO' } : x)),
+      )
+      emitGerenteToast({ kind: 'success', message: m.contas_pagar.toast_cancelada })
+      setCancelandoAlvo(null)
+    } finally {
+      setCancelando(false)
     }
-    setContas((cur) => cur.map((x) => (x.id === c.id ? { ...x, status: 'CANCELADO' } : x)))
-    emitGerenteToast({ kind: 'success', message: m.contas_pagar.toast_cancelada })
   }
 
   async function onExportar() {
@@ -286,15 +310,23 @@ export function ContasPagarListClient({
             <div className="mt-0.5 text-caption text-fg-subtle">
               {m.contas_pagar.lancado_em} {fmtGerenteDateTime(c.criado_em, locale)}
             </div>
-            {c.nfe_numero ? (
+            {c.nfe_numero && c.nfe_importacao_id ? (
               <Link
-                href={c.nfe_importacao_id ? `/gerente/estoque/importar-nfe?id=${c.nfe_importacao_id}` : '#'}
-                onClick={(e) => !c.nfe_importacao_id && e.preventDefault()}
+                href={adminImportNfeImportacaoQuery(c.nfe_importacao_id)}
                 className="mt-1 inline-flex items-center gap-1 font-mono text-caption text-[var(--color-warning-strong)] hover:underline"
               >
                 <FileText className="h-3 w-3" aria-hidden />
                 NF-e #{c.nfe_numero}
               </Link>
+            ) : c.nfe_numero ? (
+              // G-08: sem nfe_importacao_id não há pra onde navegar — antes
+              // isto renderizava um <Link href="#"> com preventDefault, um
+              // link clicável que não fazia nada. Mesmo texto, sem promessa
+              // de clique.
+              <span className="mt-1 inline-flex items-center gap-1 font-mono text-caption text-fg-subtle">
+                <FileText className="h-3 w-3" aria-hidden />
+                NF-e #{c.nfe_numero}
+              </span>
             ) : null}
           </div>
         ),
@@ -538,7 +570,7 @@ export function ContasPagarListClient({
                   type="button"
                   size="icon"
                   variant="ghost"
-                  onClick={() => void onCancelar(c)}
+                  onClick={() => abrirCancelar(c)}
                   aria-label={`${m.contas_pagar.cancelar} — ${c.descricao}`}
                   title={m.contas_pagar.cancelar}
                   className="text-[var(--color-danger-strong)] hover:bg-[var(--color-danger-bg)]"
@@ -563,6 +595,58 @@ export function ContasPagarListClient({
             setEmPagamento(null)
           }}
         />
+      ) : null}
+
+      {cancelandoAlvo ? (
+        <DragonModal
+          open
+          onClose={() => setCancelandoAlvo(null)}
+          variant="danger"
+          size="sm"
+          title={`${m.contas_pagar.cancelar} — ${cancelandoAlvo.descricao}`}
+          dismissable={!cancelando}
+          closeLabel={m.comum.fechar}
+          footer={
+            <>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setCancelandoAlvo(null)}
+                disabled={cancelando}
+              >
+                {m.comum.cancelar}
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                onClick={() => void confirmarCancelamento()}
+                disabled={cancelando}
+              >
+                {cancelando ? '…' : m.contas_pagar.cancelar}
+              </Button>
+            </>
+          }
+        >
+          <label htmlFor="motivo-cancelamento" className="mb-1 block text-xs font-medium text-jl-fg-3">
+            Motivo do cancelamento<span className="ml-0.5 text-[color:var(--accent)]">*</span>
+          </label>
+          <Input
+            id="motivo-cancelamento"
+            value={motivoCancelamento}
+            onChange={(e) => {
+              setMotivoCancelamento(e.target.value)
+              if (erroMotivoCancelamento) setErroMotivoCancelamento(null)
+            }}
+            aria-invalid={!!erroMotivoCancelamento}
+            disabled={cancelando}
+            autoFocus
+          />
+          {erroMotivoCancelamento ? (
+            <span className="mt-1 block text-xs text-[var(--color-danger-strong)]">
+              {erroMotivoCancelamento}
+            </span>
+          ) : null}
+        </DragonModal>
       ) : null}
     </>
   )

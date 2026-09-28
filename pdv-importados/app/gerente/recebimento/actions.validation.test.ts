@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import pt from '../../../src/lib/i18n/pt.json'
 import zh from '../../../src/lib/i18n/zh.json'
-import { validarRemessaInput } from './actions.validation'
+import { validarRemessaInput, validarVinculoOrdemCompra } from './actions.validation'
 
 describe('recebimento/actions validações', () => {
   it('exige origem e item', () => {
@@ -53,6 +53,14 @@ describe('recebimento/actions validações', () => {
         itens: [{ produto_id: 'p1', quantidade_esperada: 10, quantidade_conferida: 9.5 }],
       }),
     ).toBeNull()
+  })
+
+  it('UX-04 — validarVinculoOrdemCompra: só CONFIRMADA/EM_TRANSITO recebem entrada; encerrada, cancelada e rascunho são recusadas', () => {
+    expect(validarVinculoOrdemCompra('CONFIRMADA')).toBeNull()
+    expect(validarVinculoOrdemCompra('EM_TRANSITO')).toBeNull()
+    expect(validarVinculoOrdemCompra('RECEBIDA')).toContain('já está encerrada')
+    expect(validarVinculoOrdemCompra('CANCELADA')).toContain('foi cancelada')
+    expect(validarVinculoOrdemCompra('RASCUNHO')).toContain('Confirme a ordem de compra')
   })
 
   it('informa em português e chinês que é preciso selecionar produto e quantidade positiva', () => {

@@ -16,6 +16,12 @@ import {
   RegistrarConferenciaNfePayloadSchema,
 } from './actions.validation'
 import { createInventoryMovementWriter } from '@/app/admin/estoque/inventoryMovementWriter'
+import { mensagemErroOc, type OcResumoRecebimento } from '@/app/gerente/compras/ocRecebimento'
+import {
+  carregarResumoOc,
+  carregarSaldoOcItens,
+  somaAtribuidaImportacao,
+} from '@/app/gerente/compras/ocResumoQuery'
 
 type ActionResult<T = null> =
   | { success: true; data: T }
@@ -30,6 +36,12 @@ function onlyDigits(s: string): string {
 }
 
 function mapRpcImportNfe(message: string): string {
+  // UX-04 — pedido vinculado à NF-e: excesso sobre o saldo aborta a confirmação inteira.
+  if (message.includes('OC_QTD_ACIMA_SALDO')) {
+    return 'A quantidade conferida de um item é maior do que ainda falta receber do pedido vinculado. Nada foi lançado no estoque. Ajuste a quantidade conferida, escolha outro pedido ou desvincule o pedido.'
+  }
+  const erroOc = mensagemErroOc(message)
+  if (erroOc) return erroOc
   if (message.includes('IMPORT_NFE_DUPLICATA_INVALIDA')) {
     return 'Uma das duplicatas (parcelas a pagar) desta NF-e está com data de vencimento ou valor inválido. Corrija a duplicata e importe novamente — nada foi gravado.'
   }
@@ -366,6 +378,18 @@ export type ItemConferenciaNfe = {
   status_conferencia: 'EM_CONFERENCIA' | 'CONFERIDO' | 'DIVERGENTE'
 }
 
+/** Pedido que o OPERADOR escolheu relacionar à NF-e (nunca presumido). */
+export type OrdemCompraVinculadaNfe = {
+  oc_id: string
+  fornecedor_nome: string | null
+  status: string
+  pedido_total: number
+  recebido_total: number
+  pendente_total: number
+  /** Produtos da nota que não constam no pedido: entram no estoque, mas não abatem o pedido. */
+  itens_fora_do_pedido: string[]
+}
+
 export type ConferenciaImportacaoNfe = {
   importacao_id: string
   status: 'EM_CONFERENCIA' | 'CONCLUIDA'
@@ -373,6 +397,7 @@ export type ConferenciaImportacaoNfe = {
   fornecedor_nome: string
   created_at: string
   itens: ItemConferenciaNfe[]
+  ordem_compra: OrdemCompraVinculadaNfe | null
 }
 
 /** Lê uma importação (aberta ou já concluída) com seus itens para a tela de conferência. */
@@ -389,7 +414,7 @@ export async function obterConferenciaImportacaoNfe(
 
   const { data: imp, error: impError } = await supabase
     .from('importacoes_nfe')
-    .select('id, status, numero_nf, created_at, fornecedores(nome)')
+    .select('id, status, numero_nf, created_at, ordem_compra_id, fornecedores(nome)')
     .eq('id', importacaoId)
     .eq('loja_id', lojaId)
     .maybeSingle()
@@ -437,6 +462,24 @@ export async function obterConferenciaImportacaoNfe(
     }
   })
 
+  let ordemCompra: OrdemCompraVinculadaNfe | null = null
+  const ocId = (imp as { ordem_compra_id?: string | null }).ordem_compra_id ?? null
+  if (ocId) {
+    const oc = await carregarSaldoOcItens(supabase, lojaId, ocId)
+    if (oc) {
+      const produtosDoPedido = new Set(oc.itens.map((i) => i.produto_id).filter((p): p is string => !!p))
+      ordemCompra = {
+        oc_id: ocId,
+        fornecedor_nome: oc.fornecedor_nome,
+        status: oc.resumo.status,
+        pedido_total: oc.resumo.pedido_total,
+        recebido_total: oc.resumo.recebido_total,
+        pendente_total: oc.resumo.pendente_total,
+        itens_fora_do_pedido: linhas.filter((l) => !produtosDoPedido.has(l.produto_id)).map((l) => l.produto_nome),
+      }
+    }
+  }
+
   return {
     success: true,
     data: {
@@ -446,6 +489,91 @@ export async function obterConferenciaImportacaoNfe(
       fornecedor_nome: fornecedorNome,
       created_at: imp.created_at as string,
       itens: linhas,
+      ordem_compra: ordemCompra,
+    },
+  }
+}
+
+/**
+ * UX-04 — o operador relaciona (ou, com `ordem_compra_id` nulo, desfaz) a NF-e a um pedido.
+ * O sistema nunca presume o vínculo. O abatimento do saldo só acontece em `confirmarImportacaoNfe`,
+ * item a item, dentro da mesma transação que credita estoque/custo/contas a pagar (que seguem
+ * exatamente como antes). Não toca em nada fiscal.
+ */
+export async function vincularImportacaoNfeOrdemCompra(input: {
+  importacao_id: string
+  ordem_compra_id: string | null
+}): Promise<ActionResult<null>> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const lojaId = await lojaIdDoUsuarioLogado()
+  if (!lojaId) return { success: false, error: 'Não foi possível identificar sua loja.' }
+
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  if (!uuid.test(input.importacao_id) || (input.ordem_compra_id !== null && !uuid.test(input.ordem_compra_id))) {
+    return { success: false, error: 'Identificador inválido.' }
+  }
+
+  const supabase = await createClient()
+  const { error } = await supabase.rpc('vincular_importacao_nfe_ordem_compra', {
+    p_importacao_id: input.importacao_id,
+    ...(input.ordem_compra_id ? { p_oc_id: input.ordem_compra_id } : {}),
+  })
+  if (error) return { success: false, error: mapRpcImportNfe(error.message) }
+
+  revalidatePath('/admin/estoque/importar-nfe')
+  return { success: true, data: null }
+}
+
+export type ResumoContasPagarImportacaoNfe = {
+  quantidade: number
+  valor_total: number
+  /** `YYYY-MM-DD` do menor vencimento entre as contas geradas; `null` se não houver. */
+  primeiro_vencimento: string | null
+  fornecedor_id: string | null
+}
+
+/**
+ * Contas a pagar já registradas para uma importação de NF-e (uma por duplicata
+ * do XML, criadas por `confirmar_importacao_nfe`). Somente leitura: existe para
+ * a tela dizer ao operador o que a confirmação gerou no financeiro — a
+ * consequência já existia, só não aparecia. Contas canceladas não entram.
+ */
+export async function obterResumoContasPagarImportacaoNfe(
+  importacaoId: string,
+): Promise<ActionResult<ResumoContasPagarImportacaoNfe>> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const lojaId = await lojaIdDoUsuarioLogado()
+  if (!lojaId) return { success: false, error: 'Não foi possível identificar sua loja.' }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('contas_pagar')
+    .select('valor_total, vencimento, fornecedor_id')
+    .eq('nfe_importacao_id', importacaoId)
+    .eq('loja_id', lojaId)
+    .neq('status', 'CANCELADO')
+
+  if (error) {
+    return { success: false, error: mensagemErroComSecao('Contas a pagar', error.message) }
+  }
+
+  const linhas = data ?? []
+  const vencimentos = linhas
+    .map((l) => (l.vencimento as string | null) ?? null)
+    .filter((v): v is string => !!v)
+    .sort()
+
+  return {
+    success: true,
+    data: {
+      quantidade: linhas.length,
+      valor_total: linhas.reduce((acc, l) => acc + Number(l.valor_total ?? 0), 0),
+      primeiro_vencimento: vencimentos[0] ?? null,
+      fornecedor_id: (linhas[0]?.fornecedor_id as string | null | undefined) ?? null,
     },
   }
 }
@@ -569,7 +697,16 @@ export async function registrarConferenciaNfe(
  * Único ponto que credita estoque, atualiza custo e gera contas a pagar da NF-e.
  * Recusa (`IMPORT_NFE_CONFERENCIA_PENDENTE`) se algum item ainda não foi conferido.
  */
-export async function confirmarImportacaoNfe(input: unknown): Promise<ActionResult<null>> {
+export type ConfirmarImportacaoNfeResultado = {
+  /** Estado do pedido relacionado à NF-e depois da confirmação; `null` se não houve pedido. */
+  oc: OcResumoRecebimento | null
+  /** Quanto a NF-e abateu do pedido (itens da nota que fazem parte do pedido). */
+  abatido: number
+}
+
+export async function confirmarImportacaoNfe(
+  input: unknown,
+): Promise<ActionResult<ConfirmarImportacaoNfeResultado>> {
   const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
@@ -586,6 +723,15 @@ export async function confirmarImportacaoNfe(input: unknown): Promise<ActionResu
   const supabase = await createClient()
   const writer = createInventoryMovementWriter(supabase, lojaId)
 
+  // Antes de confirmar: qual pedido (se algum) o operador relacionou a esta NF-e.
+  const { data: impAntes } = await supabase
+    .from('importacoes_nfe')
+    .select('ordem_compra_id')
+    .eq('id', parsedPayload.data.importacao_id)
+    .eq('loja_id', lojaId)
+    .maybeSingle()
+  const ocId = (impAntes as { ordem_compra_id?: string | null } | null)?.ordem_compra_id ?? null
+
   const result = await writer.confirmarImportacaoNfe({
     importacaoId: parsedPayload.data.importacao_id,
   })
@@ -594,11 +740,20 @@ export async function confirmarImportacaoNfe(input: unknown): Promise<ActionResu
     return { success: false, error: mapRpcImportNfe(result.error) }
   }
 
+  let oc: OcResumoRecebimento | null = null
+  let abatido = 0
+  if (ocId) {
+    oc = await carregarResumoOc(supabase, lojaId, ocId)
+    abatido = await somaAtribuidaImportacao(supabase, lojaId, parsedPayload.data.importacao_id)
+    revalidatePath('/admin/compras')
+    revalidatePath('/gerente/compras')
+  }
+
   revalidatePath('/admin/estoque')
   revalidatePath('/admin/estoque/importar-nfe')
   revalidatePath('/admin/catalogo')
   revalidatePath('/admin/auditoria')
   revalidatePath('/gerente/estoque')
   revalidatePath('/gerente/produtos')
-  return { success: true, data: null }
+  return { success: true, data: { oc, abatido } }
 }

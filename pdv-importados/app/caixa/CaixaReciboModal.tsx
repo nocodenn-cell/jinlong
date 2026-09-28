@@ -20,6 +20,8 @@ export type ReciboItem = {
 export type ReciboVenda = {
   vendaId: string
   data: Date
+  /** Cliente vinculado à venda (ex.: venda fiado) — `null` quando anônima ou indisponível (reimpressão). */
+  clienteNome: string | null
   itens: ReciboItem[]
   pagamentos: Array<{ formaPagamento: FinalizarVendaInput["formaPagamento"]; valor: number }>
   totalBruto: number
@@ -33,6 +35,7 @@ export type ReciboVenda = {
 /** Rótulos do cupom já resolvidos no idioma do operador — compartilhados entre a tela e o ESC/POS. */
 export type ReciboLabels = {
   titulo: string
+  cliente: string
   subtotal: string
   descontoProdutos: string
   descontoGerente: string
@@ -59,6 +62,7 @@ export function buildReciboLabels(m: Mensagens): ReciboLabels {
   const r = m.caixa.recibo
   return {
     titulo: r.titulo,
+    cliente: r.cliente,
     subtotal: r.subtotal,
     descontoProdutos: r.desconto_produtos,
     descontoGerente: r.desconto_gerente,
@@ -247,6 +251,11 @@ export function CaixaReciboModal({
               <p className="recibo-id text-muted-foreground/70 text-caption">
                 #{venda.vendaId.slice(0, 8).toUpperCase()}
               </p>
+              {venda.clienteNome ? (
+                <p className="recibo-cliente text-caption font-medium text-foreground">
+                  {labels.cliente}: {venda.clienteNome}
+                </p>
+              ) : null}
             </div>
 
             {/* Itens */}

@@ -4,9 +4,12 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { getGerenteLojaId } from '@/lib/gerente/auth/sessionContext'
-import { validarRemessaInput } from './actions.validation'
+import { validarRemessaInput, validarVinculoOrdemCompra } from './actions.validation'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 import { isInativo, type StatusPublicacao } from '@/core/catalog/statusPublicacao'
+import type { StatusOC } from '@/app/gerente/compras/actions'
+import { mensagemErroOc, mensagemPosEntradaOc, type OcResumoRecebimento } from '@/app/gerente/compras/ocRecebimento'
+import { carregarResumoOc } from '@/app/gerente/compras/ocResumoQuery'
 
 type R<T = null> = { success: true; data: T } | { success: false; error: string }
 
@@ -87,12 +90,60 @@ export async function buscarProdutosRecebimento(
   }
 }
 
+/**
+ * Busca um produto específico por id para pré-selecionar o recebimento
+ * (ex.: deep-link "Repor" a partir de um item crítico em `/admin/estoque`).
+ * Mesmo escopo/filtro de `buscarProdutosRecebimento`: produto de outra loja
+ * ou INATIVO retorna `null` em vez de erro — o formulário só degrada para a
+ * busca manual, sem quebrar a página.
+ */
+export async function buscarProdutoRecebimentoPorId(
+  id: string,
+): Promise<R<RecebimentoProdutoBusca | null>> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const lojaId = await lojaDoUsuario()
+  if (!lojaId) {
+    return { success: false, error: 'Não foi possível identificar sua loja. Faça login novamente.' }
+  }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('produtos')
+    .select('id, nome, codigo_barras, status_publicacao')
+    .eq('loja_id', lojaId)
+    .eq('id', id)
+    .maybeSingle()
+
+  if (error) {
+    return { success: false, error: mensagemErroComSecao('Produtos', error.message) }
+  }
+  if (!data || isInativo(data.status_publicacao as StatusPublicacao | null)) {
+    return { success: true, data: null }
+  }
+  return {
+    success: true,
+    data: { id: data.id, nome: data.nome, codigo_barras: data.codigo_barras },
+  }
+}
+
+export type RemessaConferenciaResultado = {
+  remessaId: string
+  /** Estado do pedido depois da entrada (só quando a entrada foi vinculada a um pedido). */
+  oc: OcResumoRecebimento | null
+  /** Texto operacional: o que entrou, quanto falta no pedido, se o pedido fechou. */
+  mensagemOc: string | null
+}
+
 export async function criarRemessaConferencia(input: {
   origem: string
   observacao?: string
   idempotency_key: string
   itens: Array<{ produto_id: string; quantidade_esperada: number; quantidade_conferida: number }>
-}): Promise<R<string>> {
+  /** S8/RM-14 — vínculo opcional com uma Ordem de Compra (id de `ordens_compra`). */
+  ordemCompraId?: string | null
+}): Promise<R<RemessaConferenciaResultado>> {
   const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
@@ -111,23 +162,62 @@ export async function criarRemessaConferencia(input: {
     return { success: false, error: 'Não foi possível identificar esta tentativa. Tente novamente.' }
   }
 
+  // Checagem amigável do vínculo com a OC (fail-closed: erro de consulta, OC inexistente ou de
+  // outra loja recusa a entrada inteira). NÃO é a garantia: a RPC abaixo trava o pedido e valida
+  // status/saldo de forma atômica (UX-04) — uma corrida entre esta leitura e a RPC é recusada lá.
+  const ordemCompraId = input.ordemCompraId?.trim() || null
+  if (ordemCompraId) {
+    const { data: oc, error: ocError } = await supabase
+      .from('ordens_compra')
+      .select('status')
+      .eq('id', ordemCompraId)
+      .eq('loja_id', lojaId)
+      .maybeSingle()
+
+    if (ocError) {
+      return { success: false, error: 'Não foi possível confirmar a ordem de compra vinculada. Tente novamente.' }
+    }
+    if (!oc) {
+      return { success: false, error: 'Ordem de compra não encontrada.' }
+    }
+    const erroVinculo = validarVinculoOrdemCompra(oc.status as StatusOC)
+    if (erroVinculo) return { success: false, error: erroVinculo }
+  }
+
   const { data: remessaId, error } = await supabase.rpc('criar_confirmar_remessa_entrada', {
     p_origem: input.origem.trim(),
     p_observacao: input.observacao?.trim() || null,
     p_itens: input.itens,
     p_idempotency_key: idempotencyKey,
+    // Só envia o vínculo quando há pedido: entrada sem pedido segue com os 4 argumentos de sempre.
+    ...(ordemCompraId ? { p_ordem_compra_id: ordemCompraId } : {}),
   })
 
   if (error || !remessaId) {
     return {
       success: false,
       error: error
-        ? mensagemErroComSecao('Remessa', error.message)
+        ? (mensagemErroOc(error.message) ?? mensagemErroComSecao('Remessa', error.message))
         : 'Não foi possível criar a remessa. Tente de novo.',
+    }
+  }
+
+  // Depois da entrada, mostra o estado real do pedido (o que falta, se fechou), lido do banco.
+  let oc: OcResumoRecebimento | null = null
+  let mensagemOc: string | null = null
+  if (ordemCompraId) {
+    oc = await carregarResumoOc(supabase, lojaId, ordemCompraId)
+    if (oc) {
+      const creditado = input.itens.reduce((s, i) => s + i.quantidade_conferida, 0)
+      mensagemOc = mensagemPosEntradaOc(oc, creditado)
     }
   }
 
   revalidatePath('/gerente/recebimento')
   revalidatePath('/gerente/estoque')
-  return { success: true, data: remessaId }
+  if (ordemCompraId) {
+    revalidatePath('/gerente/compras')
+    revalidatePath('/admin/compras')
+  }
+  return { success: true, data: { remessaId: String(remessaId), oc, mensagemOc } }
 }

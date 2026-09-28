@@ -50,6 +50,8 @@ import { useCaixaVendasEmEspera } from "@/app/caixa/hooks/useCaixaVendasEmEspera
 import { useReprecificarQuantidadeCaixa } from "@/app/caixa/hooks/useReprecificarQuantidadeCaixa"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { formatDecimalBRL } from "@/lib/format/money"
+import { mensagemVendaOk } from "@/app/caixa/caixaMensagemVendaOk"
+import { painelGestaoHrefParaPerfil } from "@/app/caixa/caixaPainelGestao"
 import { CaixaHeader } from "@/app/caixa/CaixaHeader"
 import { CaixaSearchBar } from "@/app/caixa/CaixaSearchBar"
 import { CaixaOperadorContextBar } from "@/app/caixa/CaixaOperadorContextBar"
@@ -1139,6 +1141,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         lastReciboRef.current = {
           vendaId: res.vendaId,
           data: new Date(),
+          clienteNome,
           itens: itens.map((i) => ({
             nome: i.nome,
             quantidade: i.quantidade,
@@ -1182,7 +1185,12 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         // próprio toast de sucesso.
         setVendaPendenteModalAberto(false)
         setCaixaMensagemVendaOk(
-          caixaFmt(m.caixa.msg_venda_ok, { id: res.vendaId.slice(0, 8) }),
+          mensagemVendaOk(m.caixa, {
+            vendaId: res.vendaId,
+            contasRecebeId: res.contasRecebeId,
+            saldoAReceber: formatDecimalBRL(saldoPendente),
+            clienteNome,
+          }),
           { kind: "success" },
         )
         tocarFeedback("ok")
@@ -1271,6 +1279,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     tocarFeedback,
     perfil,
     clienteId,
+    clienteNome,
     saldoPendente,
     garantirVendaIdempotencyKey,
     marcarFinalizacaoPendente,
@@ -1553,6 +1562,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                       configCaixaWeb={configCaixaWeb}
                       clienteNome={clienteNome}
                       onRemoverCliente={handleRemoverCliente}
+                      onSelecionarCliente={abrirSelecionarCliente}
                     />
                     <div className="shrink-0">
                       <CaixaSearchBar
@@ -1657,6 +1667,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 onSelecionarCliente={abrirSelecionarCliente}
                 movimentacoesPendentes={movimentacoesPendentes}
                 onResolverPendencia={handleResolverPendencia}
+                painelGestaoHref={painelGestaoHrefParaPerfil(perfil)}
               />
               <div className="border-t pt-2 text-xs font-semibold uppercase tracking-wide border-border text-muted-foreground">
                 {m.caixa.rail_titulo_em_aberto}
@@ -1706,6 +1717,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 onSelecionarCliente={abrirSelecionarCliente}
                 movimentacoesPendentes={movimentacoesPendentes}
                 onResolverPendencia={handleResolverPendencia}
+                painelGestaoHref={painelGestaoHrefParaPerfil(perfil)}
               />
             </div>
           </div>

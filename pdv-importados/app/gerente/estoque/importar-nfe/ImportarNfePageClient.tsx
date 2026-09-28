@@ -12,15 +12,18 @@ import { emitGerenteToast } from '@/lib/gerente/toast'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages } from '@/i18n/getMessages'
+import { fmtTemplate } from '@/i18n/fmtTemplate'
 import { Checkbox, Input, Textarea } from '@/components/ui/forms'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES, adminFinanceiroContasPagarFornecedorQuery } from '@shared-core/navigation/routes'
 import type { NfeParsed } from '@/lib/nfe/nfeParser'
 import type {
   ConferenciaImportacaoNfe,
+  ConfirmarImportacaoNfeResultado,
   ImportacaoNfePendente,
   ItemConferenciaNfe,
   LinhaPreviewNfe,
   ProdutoVinculoOpcao,
+  ResumoContasPagarImportacaoNfe,
   StatusItemNfe,
 } from './actions'
 import {
@@ -29,11 +32,21 @@ import {
   executarImportacaoNfe,
   listarImportacoesNfePendentes,
   obterConferenciaImportacaoNfe,
+  obterResumoContasPagarImportacaoNfe,
   previewImportacaoNfe,
   registrarConferenciaNfe,
+  vincularImportacaoNfeOrdemCompra,
 } from './actions'
+import { OrdemCompraVinculoAutocomplete } from '@/app/gerente/recebimento/OrdemCompraVinculoAutocomplete'
+import { fmtQtd } from '@/app/gerente/compras/ocRecebimento'
+import { fmtGerenteIdCurto } from '@/lib/format/gerenteValues'
 
-type Props = Readonly<{ idioma: Idioma; embeddedInAdminHub?: boolean }>
+type Props = Readonly<{
+  idioma: Idioma
+  embeddedInAdminHub?: boolean
+  /** Deep-link `?importacao=<id>`: abre essa importação (aberta ou concluída) ao montar. */
+  importacaoInicialId?: string | null
+}>
 
 type LinhaEditavel = LinhaPreviewNfe & {
   fator: number
@@ -47,6 +60,13 @@ type LinhaComIndice = { linha: LinhaEditavel; idx: number }
 
 function onlyDigits(s: string): string {
   return s.replace(/\D/g, '')
+}
+
+/** `YYYY-MM-DD` → data local (evita o recuo de 1 dia de `new Date('YYYY-MM-DD')` em fusos negativos). */
+function fmtVencimento(ymd: string, locale: string): string {
+  const [y, m, d] = ymd.split('-').map(Number)
+  if (!y || !m || !d) return ymd
+  return new Date(y, m - 1, d).toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
 function statusBadgeKey(status: StatusItemNfe): string {
@@ -109,7 +129,11 @@ export function buildItensConferenciaPreenchidos(
   })
 }
 
-export function ImportarNfePageClient({ idioma, embeddedInAdminHub = false }: Props) {
+export function ImportarNfePageClient({
+  idioma,
+  embeddedInAdminHub = false,
+  importacaoInicialId = null,
+}: Props) {
   const m = getMessages(idioma)
   const mi = m.estoque.import_nfe
   const locale = localeFromIdioma(idioma)
@@ -133,6 +157,9 @@ export function ImportarNfePageClient({ idioma, embeddedInAdminHub = false }: Pr
   const [obsDivergencia, setObsDivergencia] = useState<Record<string, string>>({})
   const [pendentes, setPendentes] = useState<ImportacaoNfePendente[]>([])
   const [estoqueAtualizadoOk, setEstoqueAtualizadoOk] = useState(false)
+  const [resumoContasPagar, setResumoContasPagar] = useState<ResumoContasPagarImportacaoNfe | null>(null)
+  // UX-04: o que a confirmação fez no pedido relacionado (saldo, se fechou). `null` = sem pedido.
+  const [resultadoOc, setResultadoOc] = useState<string | null>(null)
 
   const carregarPendentes = useCallback(async () => {
     const r = await listarImportacoesNfePendentes()
@@ -231,6 +258,31 @@ export function ImportarNfePageClient({ idioma, embeddedInAdminHub = false }: Pr
     },
   )
 
+  // Depois de "dar entrada" (ou ao abrir uma importação já concluída) mostra o que
+  // a confirmação gerou no financeiro: `confirmar_importacao_nfe` cria as contas
+  // a pagar a partir das duplicatas do XML, mas a tela nunca dizia isso.
+  const importacaoConcluidaId = estoqueAtualizadoOk ? (conferencia?.importacao_id ?? null) : null
+  useEffect(() => {
+    if (!importacaoConcluidaId) {
+      setResumoContasPagar(null)
+      return
+    }
+    let cancelado = false
+    void obterResumoContasPagarImportacaoNfe(importacaoConcluidaId).then((r) => {
+      if (!cancelado && r.success) setResumoContasPagar(r.data)
+    })
+    return () => {
+      cancelado = true
+    }
+  }, [importacaoConcluidaId])
+
+  const importacaoInicialAbertaRef = useRef(false)
+  useEffect(() => {
+    if (!importacaoInicialId || importacaoInicialAbertaRef.current) return
+    importacaoInicialAbertaRef.current = true
+    void retomarMut(importacaoInicialId)
+  }, [importacaoInicialId, retomarMut])
+
   const registrarOpts = useMemo(
     () => ({
       successMessage: mi.conferencia_registrada,
@@ -261,21 +313,53 @@ export function ImportarNfePageClient({ idioma, embeddedInAdminHub = false }: Pr
   const confirmarOpts = useMemo(
     () => ({
       successMessage: mi.confirmar_estoque_ok,
-      onSuccess: () => {
+      onSuccess: (res: ConfirmarImportacaoNfeResultado) => {
         setEstoqueAtualizadoOk(true)
         void carregarPendentes()
+        const oc = res?.oc
+        if (oc) {
+          const vars = {
+            oc: fmtGerenteIdCurto(oc.oc_id),
+            abatido: fmtQtd(res.abatido),
+            recebido: fmtQtd(oc.recebido_total),
+            pedido: fmtQtd(oc.pedido_total),
+            faltam: fmtQtd(oc.pendente_total),
+          }
+          setResultadoOc(fmtTemplate(oc.encerrada ? mi.oc_resultado_completo : mi.oc_resultado_parcial, vars))
+        } else {
+          setResultadoOc(null)
+        }
       },
     }),
-    [mi.confirmar_estoque_ok, carregarPendentes],
+    [mi.confirmar_estoque_ok, mi.oc_resultado_completo, mi.oc_resultado_parcial, carregarPendentes],
   )
 
   const { mutate: confirmarMut, loading: confirmarLoading } = useGerenteMutation(
     async (importacaoId: string) => {
       const r = await confirmarImportacaoNfe({ importacao_id: importacaoId })
       if (!r.success) throw new Error(r.error)
-      return null
+      return r.data
     },
     confirmarOpts,
+  )
+
+  // Relaciona (ou desfaz) a NF-e a um pedido — sempre escolha do operador, nunca presumido.
+  const { mutate: vincularOcMut, loading: vincularOcLoading } = useGerenteMutation(
+    async (p: { importacaoId: string; ocId: string | null }) => {
+      const r = await vincularImportacaoNfeOrdemCompra({
+        importacao_id: p.importacaoId,
+        ordem_compra_id: p.ocId,
+      })
+      if (!r.success) throw new Error(r.error)
+      const atual = await obterConferenciaImportacaoNfe(p.importacaoId)
+      if (atual.success) aplicarConferencia(atual.data)
+      return p.ocId
+    },
+    {
+      onSuccess: (ocId) => {
+        emitGerenteToast({ kind: 'success', message: ocId ? mi.oc_vinculo_ok : mi.oc_desvinculo_ok })
+      },
+    },
   )
 
   const onFile = useCallback(
@@ -367,6 +451,7 @@ export function ImportarNfePageClient({ idioma, embeddedInAdminHub = false }: Pr
     setQtdConferida({})
     setObsDivergencia({})
     setEstoqueAtualizadoOk(false)
+    setResultadoOc(null)
     // A lista de pendentes foi carregada antes desta importação existir —
     // sem recarregar, "Limpar" para adiar a conferência esconde a NF-e que
     // acabou de ser processada até a próxima navegação para a página.
@@ -778,6 +863,69 @@ export function ImportarNfePageClient({ idioma, embeddedInAdminHub = false }: Pr
             </div>
           ) : null}
 
+          {/* UX-04 — a NF-e pode ser relacionada a um pedido (escolha do operador). */}
+          {(conferencia.status === 'EM_CONFERENCIA' && !estoqueAtualizadoOk) || conferencia.ordem_compra ? (
+            <div
+              className="mb-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-soft)] px-3 py-2"
+              data-testid="nfe-oc-vinculo"
+            >
+              <p className="text-caption font-semibold text-fg-muted">{mi.oc_titulo}</p>
+              {conferencia.ordem_compra ? (
+                <>
+                  <p className="mt-1 text-body" data-testid="nfe-oc-vinculada">
+                    {fmtTemplate(mi.oc_vinculada, {
+                      oc: fmtGerenteIdCurto(conferencia.ordem_compra.oc_id),
+                      fornecedor: conferencia.ordem_compra.fornecedor_nome ?? '—',
+                      recebido: fmtQtd(conferencia.ordem_compra.recebido_total),
+                      pedido: fmtQtd(conferencia.ordem_compra.pedido_total),
+                      faltam: fmtQtd(conferencia.ordem_compra.pendente_total),
+                    })}
+                  </p>
+                  {conferencia.ordem_compra.itens_fora_do_pedido.length > 0 ? (
+                    <p className="mt-1 text-caption text-[var(--color-warning-strong)]" data-testid="nfe-oc-fora">
+                      {fmtTemplate(mi.oc_fora_do_pedido, {
+                        itens: conferencia.ordem_compra.itens_fora_do_pedido.join(', '),
+                      })}
+                    </p>
+                  ) : null}
+                  {conferencia.status === 'EM_CONFERENCIA' && !estoqueAtualizadoOk ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="mt-1"
+                      loading={vincularOcLoading}
+                      onClick={() =>
+                        void vincularOcMut({ importacaoId: conferencia.importacao_id, ocId: null })
+                      }
+                    >
+                      {mi.oc_desvincular}
+                    </Button>
+                  ) : null}
+                </>
+              ) : (
+                <>
+                  <p className="mb-1.5 text-caption text-fg-subtle">{mi.oc_ajuda}</p>
+                  <OrdemCompraVinculoAutocomplete
+                    disabled={vincularOcLoading}
+                    placeholder={m.gerente.recebimento_page.ph_ordem_compra_busca}
+                    semResultadosLabel={m.gerente.recebimento_page.ordem_compra_sem_resultados}
+                    minimoLabel={m.gerente.recebimento_page.produto_busca_minimo}
+                    limparLabel={m.gerente.recebimento_page.produto_limpar}
+                    statusLabels={{
+                      CONFIRMADA: m.compras.status_CONFIRMADA,
+                      EM_TRANSITO: m.compras.status_EM_TRANSITO,
+                    }}
+                    faltamLabel={(n) => fmtTemplate(m.gerente.recebimento_page.oc_faltam_opcao, { n })}
+                    onChange={(oc) => {
+                      if (oc) void vincularOcMut({ importacaoId: conferencia.importacao_id, ocId: oc.id })
+                    }}
+                  />
+                </>
+              )}
+            </div>
+          ) : null}
+
           <div className="overflow-x-auto">
             <table className="w-full text-caption">
               <thead>
@@ -864,9 +1012,43 @@ export function ImportarNfePageClient({ idioma, embeddedInAdminHub = false }: Pr
 
           <div className="mt-4 flex flex-col items-end gap-2">
             {estoqueAtualizadoOk ? (
-              <p className="text-body font-medium text-[var(--color-success-strong)]">
-                {mi.confirmar_estoque_ok}
-              </p>
+              <>
+                <p className="text-body font-medium text-[var(--color-success-strong)]">
+                  {mi.confirmar_estoque_ok}
+                </p>
+                {resultadoOc ? (
+                  <p className="text-body" role="status" data-testid="nfe-oc-resultado">
+                    {resultadoOc}
+                  </p>
+                ) : null}
+                {resumoContasPagar ? (
+                  <p className="text-body text-fg-muted" data-testid="nfe-contas-pagar-resumo">
+                    {resumoContasPagar.quantidade > 0
+                      ? mi.contas_pagar_geradas
+                          .replace('{{n}}', String(resumoContasPagar.quantidade))
+                          .replace('{{valor}}', formatBRL(resumoContasPagar.valor_total))
+                          .replace(
+                            '{{data}}',
+                            resumoContasPagar.primeiro_vencimento
+                              ? fmtVencimento(resumoContasPagar.primeiro_vencimento, locale)
+                              : '—',
+                          )
+                      : mi.contas_pagar_nenhuma}
+                  </p>
+                ) : null}
+                <div className="flex flex-wrap justify-end gap-2">
+                  {resumoContasPagar && resumoContasPagar.quantidade > 0 && resumoContasPagar.fornecedor_id ? (
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={adminFinanceiroContasPagarFornecedorQuery(resumoContasPagar.fornecedor_id)}>
+                        {mi.btn_ver_contas_pagar}
+                      </Link>
+                    </Button>
+                  ) : null}
+                  <Button asChild variant="outline" size="sm">
+                    <Link href={ROUTES.admin.estoque}>{mi.btn_ver_estoque}</Link>
+                  </Button>
+                </div>
+              </>
             ) : (
               <>
                 {!podeConfirmarEstoque ? (

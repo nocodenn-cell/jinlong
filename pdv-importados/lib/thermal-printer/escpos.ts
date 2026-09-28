@@ -100,7 +100,12 @@ export function buildReciboEscPos(venda: ReciboVenda, labels: ReciboLabels, cols
    .boldOff()
    .line(venda.data.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }))
    .line("#" + venda.vendaId.slice(0, 8).toUpperCase())
-   .rule()
+
+  if (venda.clienteNome) {
+    b.line(`${labels.cliente}: ${venda.clienteNome}`.slice(0, cols))
+  }
+
+  b.rule()
    .left()
 
   // ── Items ──

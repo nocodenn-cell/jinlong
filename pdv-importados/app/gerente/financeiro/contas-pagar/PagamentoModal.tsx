@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { DragonModal } from '@/components/ui/DragonModal'
 import { getMessages } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
-import { fmtGerenteBRL } from '@/lib/format/gerenteValues'
+import { fmtGerenteBRL, fmtGerenteIdCurto } from '@/lib/format/gerenteValues'
 import { formatDecimalBRL, parseBRL } from '@/lib/format/money'
 import { roundMoney2 } from '@/shared/cart/totals'
 import { emitGerenteToast } from '@/lib/gerente/toast'
@@ -49,6 +49,8 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
   const [caixaId, setCaixaId] = useState('')
   const [limiteSangria, setLimiteSangria] = useState(200)
   const [senhaGerente, setSenhaGerente] = useState('')
+  // G-10: modal do app em vez de confirm() nativo ao fechar com valor digitado.
+  const [confirmDescartarOpen, setConfirmDescartarOpen] = useState(false)
 
   const valorRef = useRef<HTMLInputElement>(null)
   const idempotencyKeyRef = useRef(crypto.randomUUID())
@@ -87,10 +89,13 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
   }
 
   const fechar = useCallback(() => {
-    if (sujo() && !confirm(m.contas_pagar.confirmar_descartar)) return
+    if (sujo()) {
+      setConfirmDescartarOpen(true)
+      return
+    }
     onClose()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [valor, onClose, m])
+  }, [valor, onClose])
 
   function handleValor(e: React.ChangeEvent<HTMLInputElement>) {
     let v = e.target.value.replace(/[^\d,]/g, '')
@@ -156,7 +161,18 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
         emitGerenteToast({ kind: 'error', message: r.error })
         return
       }
-      emitGerenteToast({ kind: 'success', message: m.comum.sucesso })
+      // G-09: quando o pagamento é em dinheiro, o backend já calcula e cria a
+      // movimentação de caixa (sangria) correspondente — antes esse dado era
+      // descartado aqui e o operador nunca via qual movimentação foi gerada.
+      emitGerenteToast({
+        kind: 'success',
+        message: r.movimentacaoCaixaId
+          ? m.contas_pagar.pagamento_registrado_com_sangria.replace(
+              '{{id}}',
+              fmtGerenteIdCurto(r.movimentacaoCaixaId),
+            )
+          : m.comum.sucesso,
+      })
       renovarIntencao()
       onPagamentoRegistrado(r.conta)
     } finally {
@@ -165,6 +181,7 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
   }
 
   return (
+    <>
     <DragonModal
       open
       onClose={fechar}
@@ -370,5 +387,35 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
             </div>
         </form>
     </DragonModal>
+
+    <DragonModal
+      open={confirmDescartarOpen}
+      onClose={() => setConfirmDescartarOpen(false)}
+      variant="danger"
+      size="sm"
+      title={m.contas_pagar.confirmar_descartar}
+      dismissable
+      closeLabel={m.comum.fechar}
+      footer={
+        <>
+          <Button type="button" variant="secondary" onClick={() => setConfirmDescartarOpen(false)}>
+            {m.comum.nao}
+          </Button>
+          <Button
+            type="button"
+            variant="danger"
+            onClick={() => {
+              setConfirmDescartarOpen(false)
+              onClose()
+            }}
+          >
+            {m.comum.sim}
+          </Button>
+        </>
+      }
+    >
+      <p className="text-sm text-jl-fg-2">{m.contas_pagar.confirmar_descartar}</p>
+    </DragonModal>
+    </>
   )
 }

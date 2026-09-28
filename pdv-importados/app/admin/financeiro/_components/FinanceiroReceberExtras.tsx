@@ -6,6 +6,9 @@ import { Fragment, useState, useTransition } from 'react'
 import { ROUTES } from '@shared-core/navigation/routes'
 import { formatBRL } from '@/lib/format/money'
 import { emitGerenteToast } from '@/lib/gerente/toast'
+import { DragonModal } from '@/components/ui/DragonModal'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/forms'
 import {
   criarTituloReceber,
   estornarLiquidacaoReceber,
@@ -37,6 +40,9 @@ export function FinanceiroReceberExtras({ contas, clientesIniciais, caixasAberto
   const [historicoAbertoId, setHistoricoAbertoId] = useState<string | null>(null)
   const [historicoPorTitulo, setHistoricoPorTitulo] = useState<Record<string, ReceivableLiquidacaoRow[]>>({})
   const [carregandoHistoricoId, setCarregandoHistoricoId] = useState<string | null>(null)
+  const [estornoAlvo, setEstornoAlvo] = useState<{ tituloId: string; liquidacaoId: string } | null>(null)
+  const [motivoEstorno, setMotivoEstorno] = useState('')
+  const [erroMotivoEstorno, setErroMotivoEstorno] = useState<string | null>(null)
 
   function refresh() {
     router.refresh()
@@ -62,12 +68,23 @@ export function FinanceiroReceberExtras({ contas, clientesIniciais, caixasAberto
   }
 
   function handleEstornar(tituloId: string, liquidacaoId: string) {
-    const motivo = window.prompt('Motivo do estorno (obrigatório):')
-    if (!motivo?.trim()) return
+    setEstornoAlvo({ tituloId, liquidacaoId })
+    setMotivoEstorno('')
+    setErroMotivoEstorno(null)
+  }
+
+  function confirmarEstornar() {
+    if (!estornoAlvo) return
+    const motivo = motivoEstorno.trim()
+    if (motivo.length < 2) {
+      setErroMotivoEstorno('Motivo deve ter ao menos 2 caracteres.')
+      return
+    }
+    const { tituloId, liquidacaoId } = estornoAlvo
     startTransition(async () => {
       const r = await estornarLiquidacaoReceber({
         liquidacao_id: liquidacaoId,
-        motivo: motivo.trim(),
+        motivo,
         idempotency_key: crypto.randomUUID(),
       })
       if (!r.success) {
@@ -79,6 +96,7 @@ export function FinanceiroReceberExtras({ contas, clientesIniciais, caixasAberto
       if (atualizado.success) {
         setHistoricoPorTitulo((atual) => ({ ...atual, [tituloId]: atualizado.data }))
       }
+      setEstornoAlvo(null)
       refresh()
     })
   }
@@ -136,6 +154,7 @@ export function FinanceiroReceberExtras({ contas, clientesIniciais, caixasAberto
   const abertas = contas.filter((c) => c.valor_aberto > 0)
 
   return (
+    <Fragment>
     <div className="admin-v2-stack mt-4">
       {abertas.length > 0 ? (
         <div className="rounded-lg border border-[var(--color-border-secondary)] bg-jl-surface-soft p-3">
@@ -310,5 +329,46 @@ export function FinanceiroReceberExtras({ contas, clientesIniciais, caixasAberto
         ) : null}
       </div>
     </div>
+
+    {estornoAlvo ? (
+      <DragonModal
+        open
+        onClose={() => setEstornoAlvo(null)}
+        variant="danger"
+        size="sm"
+        title="Estornar liquidação"
+        dismissable={!pending}
+        closeLabel="Fechar"
+        footer={
+          <>
+            <Button type="button" variant="secondary" onClick={() => setEstornoAlvo(null)} disabled={pending}>
+              Cancelar
+            </Button>
+            <Button type="button" variant="danger" onClick={confirmarEstornar} disabled={pending}>
+              {pending ? '…' : 'Estornar'}
+            </Button>
+          </>
+        }
+      >
+        <label htmlFor="motivo-estorno" className="mb-1 block text-xs font-medium text-jl-fg-3">
+          Motivo do estorno<span className="ml-0.5 text-[color:var(--accent)]">*</span>
+        </label>
+        <Input
+          id="motivo-estorno"
+          value={motivoEstorno}
+          onChange={(e) => {
+            setMotivoEstorno(e.target.value)
+            if (erroMotivoEstorno) setErroMotivoEstorno(null)
+          }}
+          aria-invalid={!!erroMotivoEstorno}
+          disabled={pending}
+          autoFocus
+        />
+        {erroMotivoEstorno ? (
+          <span className="mt-1 block text-xs text-[var(--color-danger-strong)]">{erroMotivoEstorno}</span>
+        ) : null}
+      </DragonModal>
+    ) : null}
+    </Fragment>
   )
 }
