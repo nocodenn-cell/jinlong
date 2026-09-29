@@ -57,6 +57,26 @@ function onlyDigits(s: string): string {
   return s.replace(/\D/g, '')
 }
 
+const YMD_RE = /^\d{4}-\d{2}-\d{2}$/
+
+/** Item 14: `<dup>` presente e malformada aborta — não pode ser descartada. */
+function parseDuplicata(d: unknown): NfeDuplicataParsed {
+  const dupRec = asRecord(d)
+  if (!dupRec) {
+    throw new Error('IMPORT_NFE_DUPLICATA_INVALIDA')
+  }
+  const rawData = str(dupRec.dVenc)
+  const valor = num(dupRec.vDup)
+  if (!YMD_RE.test(rawData) || valor <= 0) {
+    throw new Error('IMPORT_NFE_DUPLICATA_INVALIDA')
+  }
+  return {
+    numero: str(dupRec.nDup) || null,
+    data_vencimento: rawData,
+    valor,
+  }
+}
+
 /**
  * Parser tolerante a namespaces e estrutura nfeProc / NFe.
  */
@@ -141,23 +161,13 @@ export function parseNfeXml(xmlString: string): NfeParsed {
     throw new Error('Nenhum item (<det>/<prod>) encontrado na NF-e.')
   }
 
-  // Duplicatas (contas a pagar) — seção <cobr>/<dup>
-  const duplicatas: NfeDuplicataParsed[] = []
+  // Duplicatas (contas a pagar) — seção <cobr>/<dup>.
+  // `<cobr>/<fat>` sem `<dup>` (NF-e à vista) continua válido.
+  // `<dup>` presente e malformada aborta: o continue silencioso deixava
+  // confirmar_importacao_nfe creditar estoque sem a obrigação em contas_pagar
+  // (#383 só cobria o swallow da RPC, depois do parser).
   const cobr = asRecord(infNFe.cobr)
-  if (cobr) {
-    for (const d of asArray(cobr.dup)) {
-      const dupRec = asRecord(d)
-      if (!dupRec) continue
-      const rawData = str(dupRec.dVenc)
-      const valor = num(dupRec.vDup)
-      if (!rawData || valor <= 0) continue
-      duplicatas.push({
-        numero: str(dupRec.nDup) || null,
-        data_vencimento: rawData,
-        valor,
-      })
-    }
-  }
+  const duplicatas: NfeDuplicataParsed[] = cobr ? asArray(cobr.dup).map(parseDuplicata) : []
 
   return {
     chave_acesso: chave,

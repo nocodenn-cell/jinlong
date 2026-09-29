@@ -38,6 +38,10 @@ const xmlMinimal = `<?xml version="1.0" encoding="UTF-8"?>
   </NFe>
 </nfeProc>`
 
+function xmlWithCobr(cobrInner: string): string {
+  return xmlMinimal.replace('    </infNFe>', `      <cobr>\n${cobrInner}      </cobr>\n    </infNFe>`)
+}
+
 describe('parseNfeXml', () => {
   it('extrai chave, emitente e itens', () => {
     const r = parseNfeXml(xmlMinimal)
@@ -51,5 +55,81 @@ describe('parseNfeXml', () => {
     expect(r.itens[1].ref_fornecedor).toBe('SKU-2')
     expect(r.itens[0].q_com).toBe(10)
     expect(r.itens[0].v_un_com).toBe(5.5)
+    expect(r.duplicatas).toEqual([])
+  })
+
+  it('aceita <cobr>/<fat> sem <dup> (NF-e à vista)', () => {
+    const r = parseNfeXml(xmlWithCobr('        <fat><nFat>001</nFat><vLiq>175.00</vLiq></fat>\n'))
+    expect(r.duplicatas).toEqual([])
+  })
+
+  it('extrai duplicata válida', () => {
+    const r = parseNfeXml(
+      xmlWithCobr(`        <dup>
+          <nDup>DUP-001</nDup>
+          <dVenc>2026-10-05</dVenc>
+          <vDup>175.00</vDup>
+        </dup>\n`),
+    )
+    expect(r.duplicatas).toEqual([
+      { numero: 'DUP-001', data_vencimento: '2026-10-05', valor: 175 },
+    ])
+  })
+
+  it('aborta quando <dup> tem vencimento vazio (não descarta em silêncio)', () => {
+    expect(() =>
+      parseNfeXml(
+        xmlWithCobr(`        <dup>
+          <nDup>001</nDup>
+          <dVenc></dVenc>
+          <vDup>175.00</vDup>
+        </dup>\n`),
+      ),
+    ).toThrow('IMPORT_NFE_DUPLICATA_INVALIDA')
+  })
+
+  it('aborta quando <dup> tem valor <= 0', () => {
+    expect(() =>
+      parseNfeXml(
+        xmlWithCobr(`        <dup>
+          <nDup>001</nDup>
+          <dVenc>2026-10-05</dVenc>
+          <vDup>0</vDup>
+        </dup>\n`),
+      ),
+    ).toThrow('IMPORT_NFE_DUPLICATA_INVALIDA')
+  })
+
+  it.each([
+    ['vencimento fora de AAAA-MM-DD', '<dVenc>05/10/2026</dVenc><vDup>175.00</vDup>'],
+    ['valor não numérico', '<dVenc>2026-10-05</dVenc><vDup>abc</vDup>'],
+    ['valor negativo', '<dVenc>2026-10-05</dVenc><vDup>-10.00</vDup>'],
+    ['valor ausente', '<dVenc>2026-10-05</dVenc>'],
+  ])('aborta quando <dup> tem %s', (_caso, corpo) => {
+    expect(() =>
+      parseNfeXml(xmlWithCobr(`        <dup><nDup>001</nDup>${corpo}</dup>\n`)),
+    ).toThrow('IMPORT_NFE_DUPLICATA_INVALIDA')
+  })
+
+  it('aborta quando <dup/> vem vazia (sem conteúdo)', () => {
+    expect(() => parseNfeXml(xmlWithCobr('        <dup/>\n'))).toThrow(
+      'IMPORT_NFE_DUPLICATA_INVALIDA',
+    )
+  })
+
+  it('aborta quando uma de duas duplicatas é malformada (não segue só com a válida)', () => {
+    expect(() =>
+      parseNfeXml(
+        xmlWithCobr(`        <dup>
+          <nDup>001</nDup>
+          <dVenc>2026-10-05</dVenc>
+          <vDup>100.00</vDup>
+        </dup>
+        <dup>
+          <nDup>002</nDup>
+          <vDup>75.00</vDup>
+        </dup>\n`),
+      ),
+    ).toThrow('IMPORT_NFE_DUPLICATA_INVALIDA')
   })
 })
