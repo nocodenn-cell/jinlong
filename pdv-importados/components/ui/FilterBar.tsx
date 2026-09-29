@@ -25,6 +25,8 @@ export type FilterDef =
       type: 'select'
       key: string
       label?: string
+      /** Opt-in: exibe `label` como texto visível ao lado do select (default: só aria-label). */
+      showLabel?: boolean
       options: FilterOption[]
       defaultValue?: string
     }
@@ -200,7 +202,7 @@ function SelectControl({
   current: string
   onChange: (value: string) => void
 }) {
-  return (
+  const select = (
     <Select
       aria-label={filter.label}
       value={current}
@@ -214,6 +216,13 @@ function SelectControl({
         </option>
       ))}
     </Select>
+  )
+  if (!filter.showLabel || !filter.label) return select
+  return (
+    <label className="inline-flex items-center gap-2 text-caption font-medium text-fg-subtle">
+      <span>{filter.label}</span>
+      {select}
+    </label>
   )
 }
 

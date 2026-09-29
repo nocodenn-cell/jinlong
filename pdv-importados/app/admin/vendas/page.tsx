@@ -21,14 +21,15 @@ import { createClient } from '@/lib/supabase/server'
 import { MetricCard, PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import type { MetricCardIconKey } from '@/components/ui/admin-v2/MetricCard'
 import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
-import { buscarVendasPaginadasAction, type VendasFiltro } from '@/app/gerente/vendas/actions'
+import { buscarVendasPaginadasAction, obterKpisVendas, type VendasFiltro } from '@/app/gerente/vendas/actions'
 import { formatBRL, formatNumberLocale } from '@/lib/format/money'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import { VendasTable, type VendaLinha } from './_components/VendasTable'
+import { ExportVendasButton } from './_components/ExportVendasButton'
+import { PERIODOS, periodoFim, periodoInicio, periodoMultiDia, type Periodo } from './periodo'
 
 // ─── Normalizadores de searchParams ─────────────────────────────────────────
 
-type Periodo = 'tudo' | 'hoje' | 'ontem' | '7d' | 'mes'
 type StatusFiltro = 'all' | 'CONCLUIDA' | 'CANCELADA'
 type PagamentoFiltro = 'all' | 'DINHEIRO' | 'PIX' | 'CARTAO_CREDITO' | 'CARTAO_DEBITO' | 'CARTAO'
 
@@ -40,44 +41,6 @@ function clampPage(raw: string | undefined): number {
   const n = Number.parseInt(raw ?? '1', 10)
   return Number.isFinite(n) && n >= 1 ? n : 1
 }
-
-const DIA_MS = 86_400_000
-
-function periodoInicio(periodo: Periodo): string | null {
-  const now = new Date()
-  if (periodo === 'hoje') {
-    const d = new Date(now)
-    d.setHours(0, 0, 0, 0)
-    return d.toISOString()
-  }
-  if (periodo === 'ontem') {
-    const d = new Date(now)
-    d.setDate(d.getDate() - 1)
-    d.setHours(0, 0, 0, 0)
-    return d.toISOString()
-  }
-  if (periodo === '7d') return new Date(now.getTime() - 7 * DIA_MS).toISOString()
-  if (periodo === 'mes') {
-    const d = new Date(now)
-    d.setDate(1)
-    d.setHours(0, 0, 0, 0)
-    return d.toISOString()
-  }
-  return null
-}
-
-function periodoFim(periodo: Periodo): string | null {
-  const now = new Date()
-  if (periodo !== 'ontem') return null
-  const d = new Date(now)
-  d.setDate(d.getDate() - 1)
-  d.setHours(23, 59, 59, 999)
-  return d.toISOString()
-}
-
-
-
-
 
 type SearchParams = {
   periodo?: string
@@ -97,11 +60,10 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
   })
   const m = getMessages(session.idioma)
   const ui = m.admin_ui
-  const lk = session.idioma === 'zh' ? 'cn' : 'pt'
   const locale = localeFromIdioma(session.idioma)
   const sp = (searchParams ? await searchParams : {}) ?? {}
 
-  const periodo = oneOf<Periodo>(sp.periodo, ['tudo', 'hoje', 'ontem', '7d', 'mes'], 'hoje')
+  const periodo = oneOf<Periodo>(sp.periodo, PERIODOS, 'hoje')
   const status = oneOf<StatusFiltro>(sp.status, ['all', 'CONCLUIDA', 'CANCELADA'], 'all')
   const pagamento = oneOf<PagamentoFiltro>(
     sp.pagamento,
@@ -117,7 +79,11 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
     formaPagamento: pagamento === 'all' ? [] : [pagamento],
   }
 
-  const res = await buscarVendasPaginadasAction(page, filtros)
+  // KPIs vêm de agregação no servidor (todo o período), não da página listada.
+  const [res, kpis] = await Promise.all([
+    buscarVendasPaginadasAction(page, filtros),
+    obterKpisVendas(filtros),
+  ])
   const vendasRes = res.ok ? res.vendas : []
 
   const operadorIds = Array.from(
@@ -147,23 +113,6 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
   const hasMore = res.ok ? res.hasMore : false
   const loadError = res.ok ? null : res.error
 
-  const kpis = vendas.reduce(
-    (acc, row) => {
-      const valor = Number(row.total_liquido ?? 0)
-      const statusRow = String(row.status ?? '').toUpperCase()
-      if (statusRow === 'CONCLUIDA') {
-        acc.faturado += valor
-        acc.qtdConcluidas += 1
-      } else if (statusRow === 'CANCELADA') {
-        acc.qtdCanceladas += 1
-        acc.valorCanceladas += valor
-      }
-      return acc
-    },
-    { faturado: 0, qtdConcluidas: 0, qtdCanceladas: 0, valorCanceladas: 0 }
-  )
-  const ticketMedio = kpis.qtdConcluidas > 0 ? kpis.faturado / kpis.qtdConcluidas : 0
-
   const activeParams: Record<string, string> = {}
   if (periodo !== 'hoje') activeParams.periodo = periodo
   if (status !== 'all') activeParams.status = status
@@ -185,6 +134,7 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
     hoje: ui.vendas_periodo_label_hoje,
     ontem: ui.vendas_periodo_label_ontem,
     '7d': ui.vendas_periodo_label_7d,
+    '30d': ui.vendas_periodo_label_30d,
     mes: ui.vendas_periodo_label_mes,
   }
   const STATUS_LABEL_I18N: Record<Exclude<StatusFiltro, 'all'>, string> = {
@@ -199,7 +149,7 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
     CARTAO: m.gerente.pagamento_cartao,
   }
   const chips: Array<{ key: string; label: string }> = []
-  if (periodo !== 'tudo') chips.push({ key: 'periodo', label: PERIODO_LABEL_I18N[periodo] })
+  if (periodo !== 'hoje' && periodo !== 'tudo') chips.push({ key: 'periodo', label: PERIODO_LABEL_I18N[periodo] })
   if (status !== 'all') chips.push({ key: 'status', label: STATUS_LABEL_I18N[status] })
   if (pagamento !== 'all') chips.push({ key: 'pagamento', label: `${m.gerente.col_forma}: ${PAGAMENTO_LABEL_I18N[pagamento]}` })
 
@@ -211,6 +161,7 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
       type: 'select',
       key: 'status',
       label: m.gerente.col_status,
+      showLabel: true,
       defaultValue: 'all',
       options: [
         { value: 'all', label: ui.filtro_todos },
@@ -222,6 +173,7 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
       type: 'select',
       key: 'pagamento',
       label: m.gerente.col_forma,
+      showLabel: true,
       defaultValue: 'all',
       options: [
         { value: 'all', label: ui.filtro_todos },
@@ -238,7 +190,7 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
     { id: 'hoje', label: ui.vendas_periodo_label_hoje },
     { id: 'ontem', label: ui.vendas_periodo_label_ontem },
     { id: '7d', label: '7d' },
-    { id: 'mes', label: m.admin.dashboard.period30d[lk] },
+    { id: '30d', label: ui.vendas_periodo_label_30d },
     { id: 'tudo', label: ui.filtro_todos },
   ]
 
@@ -249,6 +201,21 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
     p.delete('page')
     return pathWithQuery(ROUTES.admin.vendas, p)
   }
+
+  const emptyActions = (
+    <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+      {chips.length > 0 || periodo !== 'hoje' ? (
+        <PageLink href={pathWithQuery(ROUTES.admin.vendas, new URLSearchParams())} disabled={false}>
+          {ui.vendas_limpar_filtros}
+        </PageLink>
+      ) : null}
+      {periodo !== '7d' ? (
+        <PageLink href={periodHref('7d')} disabled={false}>
+          {ui.vendas_ver_7d}
+        </PageLink>
+      ) : null}
+    </div>
+  )
 
   const metricCards: Array<{
     label: string
@@ -271,7 +238,7 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
     },
     {
       label: m.gerente.ticket_medio,
-      value: formatBRL(ticketMedio),
+      value: formatBRL(kpis.ticketMedio),
       icon: 'package',
       tone: 'gold',
     },
@@ -280,7 +247,7 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
       value: formatNumberLocale(kpis.qtdCanceladas, locale),
       icon: 'x-circle',
       tone: 'warning',
-      hint: formatBRL(kpis.valorCanceladas),
+      hint: kpis.qtdCanceladas > 0 ? formatBRL(kpis.valorCanceladas) : undefined,
     },
   ]
 
@@ -319,11 +286,18 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
       </div>
 
       <SectionCard
-        title={m.dashboard.vendas_hoje}
+        title={periodo === 'hoje' ? m.dashboard.vendas_hoje : ui.vendas_titulo_periodo}
         action={
+          <div className="flex items-center gap-2">
+          <ExportVendasButton
+            filtros={filtros}
+            disabled={vendas.length === 0}
+            labels={{ exportar: ui.vendas_exportar_csv, exportando: ui.vendas_exportando, erro: ui.vendas_exportar_erro }}
+          />
           <span className="rounded-full border border-[var(--color-border-secondary)] bg-jl-surface-soft px-2.5 py-0.5 text-caption text-jl-fg-3">
             {vendas.length} {vendas.length === 1 ? ui.vendas_nesta_pag_sg : ui.vendas_nesta_pag_pl}
           </span>
+          </div>
         }
       >
         <div className="mb-3">
@@ -351,7 +325,7 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
           </div>
         ) : null}
 
-        <VendasTable vendas={vendas} m={m} locale={locale} vendaInicial={sp.venda ?? null} labels={{
+        <VendasTable vendas={vendas} m={m} locale={locale} vendaInicial={sp.venda ?? null} mostrarData={periodoMultiDia(periodo)} emptyActions={emptyActions} labels={{
           colVenda: ui.vendas_col_venda,
           colHora: ui.vendas_col_hora,
           colItens: ui.vendas_col_itens,
@@ -394,7 +368,7 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
 
         {page > 1 || hasMore ? (
           <div className="mt-4 flex items-center justify-between gap-3">
-            <span className="text-caption text-jl-fg-3">{m.produtos.pag_info.replace('{{atual}}', String(page)).replace('{{total}}', '…')}</span>
+            <span className="text-caption text-jl-fg-3">{ui.vendas_pag_pagina.replace('{{atual}}', String(page))}</span>
             <div className="flex items-center gap-1">
               <PageLink href={pageHref(page - 1)} disabled={page <= 1}>
                 {ui.paginacao_anterior}
