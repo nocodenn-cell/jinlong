@@ -7,6 +7,7 @@ import { getGerenteLojaId, getGerenteUserId } from '@/lib/gerente/auth/sessionCo
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 import { lojaIdDaSessao } from '@/app/gerente/fornecedores/fornecedorContrato'
 import { mensagemSeFornecedorForaDaLoja } from './fornecedorOcBoundary'
+import { montarFiltroBuscaOc } from './ocBusca'
 import {
   mensagemErroOc,
   mensagemPosEntradaOc,
@@ -249,10 +250,8 @@ export async function listarOrdensCompra(input: {
 
   if (input.status) q = q.eq('status', input.status)
 
-  if (input.busca?.trim()) {
-    const b = `%${input.busca.trim()}%`
-    q = q.or(`fornecedor_nome.ilike.${b},id.ilike.${b}`)
-  }
+  const filtroBusca = montarFiltroBuscaOc(input.busca)
+  if (filtroBusca) q = q.or(filtroBusca)
 
   const { data, error, count } = await q
 
