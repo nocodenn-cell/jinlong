@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Eye, Ban } from 'lucide-react'
+import { Eye, Ban, Receipt } from 'lucide-react'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { formatBRL } from '@/lib/format/money'
 import type { Mensagens } from '@/i18n/getMessages'
@@ -152,13 +152,17 @@ function ItensCell({ row, labels }: { row: VendaLinha; labels: VendasLabels }) {
   )
 }
 
-function HoraCell({ data }: { data: string | null }) {
+const TZ = 'America/Sao_Paulo'
+
+function HoraCell({ data, mostrarData }: { data: string | null; mostrarData: boolean }) {
   if (!data) return <span className="text-jl-fg-3">—</span>
   const d = new Date(data)
   if (Number.isNaN(d.getTime())) return <span className="text-jl-fg-3">—</span>
   return (
     <span className="whitespace-nowrap text-small text-jl-fg-2">
-      {d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+      {mostrarData
+        ? `${d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: TZ })} ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: TZ })}`
+        : d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: TZ })}
     </span>
   )
 }
@@ -194,6 +198,8 @@ export function VendasTable({
   m,
   locale,
   vendaInicial = null,
+  mostrarData = false,
+  emptyActions = null,
 }: {
   vendas: VendaLinha[]
   labels: VendasLabels
@@ -201,6 +207,10 @@ export function VendasTable({
   locale: string
   /** Deep-link (ex.: Relatórios) — abre o detalhe desta venda ao montar, mesmo fora da página/filtro atual. */
   vendaInicial?: string | null
+  /** Períodos multi-dia: exibe dd/mm na coluna Hora. */
+  mostrarData?: boolean
+  /** Ações no estado vazio (limpar filtros, ampliar período). */
+  emptyActions?: React.ReactNode
 }) {
   const router = useRouter()
   const [alvo, setAlvo] = useState<VendaAlvo | null>(() => (vendaInicial ? { id: vendaInicial } : null))
@@ -214,8 +224,8 @@ export function VendasTable({
       header: labels.colVenda,
       sortValue: (r) => r.id,
       cell: (r) => (
-        <span className="max-w-[120px] truncate font-medium text-jl-fg-1" title={r.id}>
-          {r.id}
+        <span className="font-mono font-medium text-jl-fg-1" title={r.id}>
+          #{r.id.replace(/-/g, '').slice(0, 6).toUpperCase()}
         </span>
       ),
     },
@@ -223,7 +233,7 @@ export function VendasTable({
       key: 'hora',
       header: labels.colHora,
       sortValue: (r) => r.data ?? '',
-      cell: (r) => <HoraCell data={r.data} />,
+      cell: (r) => <HoraCell data={r.data} mostrarData={mostrarData} />,
     },
     {
       key: 'itens',
@@ -273,9 +283,10 @@ export function VendasTable({
         rowKey={(r) => `${r.id}:${r.data ?? ''}:${r.status ?? ''}`}
         emptyState={
           <div className="flex flex-col items-center gap-2 py-16 text-center">
-            <span className="text-4xl text-jl-fg-3" aria-hidden>🧾</span>
+            <Receipt size={36} className="text-jl-fg-3" aria-hidden />
             <p className="text-body font-medium text-jl-fg-2">{labels.vazioTitulo}</p>
             <p className="text-small text-jl-fg-3">{labels.vazioSub}</p>
+            {emptyActions}
           </div>
         }
         className="rounded-none border-x-0 border-b-0"
