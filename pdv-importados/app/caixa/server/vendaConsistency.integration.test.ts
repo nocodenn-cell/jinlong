@@ -115,10 +115,24 @@ describe.skipIf(!SERVICE_ROLE_KEY)('Consistência de Vendas - PDV (RPC real, Pos
 
   afterEach(async () => {
     if (!SERVICE_ROLE_KEY) return
-    if (caixaId) {
-      await supabase.from('caixas').update({ status: 'FECHADO' }).eq('id', caixaId)
-    }
+    if (caixaId) await fecharCaixaDeTeste(caixaId)
   })
+
+  /**
+   * Fecha o turno pelo caminho canônico (`fechar_caixa_pdv_atomico`, service_role),
+   * que persiste `data_fechamento`/`valor_fechamento`/`fechamento_diferenca`.
+   * NUNCA `UPDATE caixas SET status='FECHADO'` direto: deixaria um FECHADO sem
+   * dados de fechamento, estado que o produto não produz (aparecia órfão em
+   * `/admin/caixas`). Se o turno já estiver fechado, o RPC recusa — ignorado.
+   */
+  async function fecharCaixaDeTeste(id: string) {
+    const { data: esperado } = await supabase.rpc('calcular_valor_sistema_dinheiro_caixa', { p_caixa_id: id })
+    await supabase.rpc('fechar_caixa_pdv_atomico', {
+      p_caixa_id: id,
+      p_valor_contado: Number(esperado ?? 0),
+      p_observacao: 'teardown de teste de integração',
+    })
+  }
 
   async function abrirCaixa() {
     const { data, error } = await supabase

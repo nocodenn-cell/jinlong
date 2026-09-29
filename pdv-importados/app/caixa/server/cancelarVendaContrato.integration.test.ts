@@ -24,6 +24,7 @@ const VALOR_VENDA = 50
 describe('Contrato RPC cancelar_venda_transacional', () => {
   let supabase: Awaited<ReturnType<typeof createClient>>
   let caixaId: string
+  let operadorId: string
   let produtoId: string
   let vendaId: string | null = null
   let vendaCancelada = false
@@ -37,6 +38,7 @@ describe('Contrato RPC cancelar_venda_transacional', () => {
       data: { user },
     } = await supabase.auth.getUser()
     if (!user) throw new Error('Usuário não autenticado — rode seed:dev-users e faça login')
+    operadorId = user.id
 
     const { data: caixa, error: ce } = await supabase
       .from('caixas')
@@ -82,7 +84,17 @@ describe('Contrato RPC cancelar_venda_transacional', () => {
       await cancelarVendaImpl(vendaId, 'Test cleanup')
     }
     if (caixaId) {
-      await supabase.from('caixas').update({ status: 'FECHADO' }).eq('id', caixaId)
+      // Fecha pelo caminho canônico (persiste data/valor/diferença de fechamento).
+      // Um `UPDATE caixas SET status='FECHADO'` direto deixaria um turno FECHADO
+      // sem dados de fechamento, estado que o produto não produz.
+      const { data: esperado } = await supabase.rpc('calcular_valor_sistema_dinheiro_caixa', {
+        p_caixa_id: caixaId,
+      })
+      await supabase.rpc('fechar_caixa_atomico', {
+        p_operador_id: operadorId,
+        p_valor_contado: Number(esperado ?? 0),
+        p_motivo: 'teardown de teste de integração',
+      })
     }
   })
 

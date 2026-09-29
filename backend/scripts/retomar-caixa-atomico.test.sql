@@ -51,12 +51,12 @@ BEGIN
   ON CONFLICT (id) DO UPDATE SET perfil = EXCLUDED.perfil, ativo = EXCLUDED.ativo, loja_id = EXCLUDED.loja_id;
 
   DELETE FROM public.caixas WHERE id IN (v_caixa_fechado, v_caixa_aberto, v_caixa_fechado2, v_caixa_gerentec);
-  INSERT INTO public.caixas (id, loja_id, operador_id, status, valor_inicial, data_abertura, data_fechamento, valor_fechamento)
+  INSERT INTO public.caixas (id, loja_id, operador_id, status, valor_inicial, data_abertura, data_fechamento, valor_fechamento, fechamento_diferenca)
   VALUES
-    (v_caixa_fechado, v_loja_a, v_operador, 'FECHADO', 100, now() - interval '1 day', now() - interval '1 hour', 150),
-    (v_caixa_aberto, v_loja_a, v_operador2, 'ABERTO', 0, now(), NULL, NULL),
-    (v_caixa_fechado2, v_loja_a, v_operador, 'FECHADO', 50, now() - interval '1 day', now() - interval '1 hour', 50),
-    (v_caixa_gerentec, v_loja_a, v_gerente_c, 'ABERTO', 0, now(), NULL, NULL)
+    (v_caixa_fechado, v_loja_a, v_operador, 'FECHADO', 100, now() - interval '1 day', now() - interval '1 hour', 150, 0),
+    (v_caixa_aberto, v_loja_a, v_operador2, 'ABERTO', 0, now(), NULL, NULL, NULL),
+    (v_caixa_fechado2, v_loja_a, v_operador, 'FECHADO', 50, now() - interval '1 day', now() - interval '1 hour', 50, 0),
+    (v_caixa_gerentec, v_loja_a, v_gerente_c, 'ABERTO', 0, now(), NULL, NULL, NULL)
   ON CONFLICT (id) DO NOTHING;
 
   DELETE FROM public.tokens_desconto_gerente WHERE token LIKE 'retc-test-%';

@@ -43,7 +43,7 @@ ORDER BY id LIMIT 1 \gset
 SELECT preco_varejo AS preco_tabela FROM public.produtos WHERE id = :'produto' \gset
 
 -- Exatamente um caixa aberto na loja durante a suíte. Rollback desfaz.
-UPDATE public.caixas SET status = 'FECHADO'
+UPDATE public.caixas SET status = 'FECHADO', data_fechamento = now(), valor_fechamento = COALESCE(saldo_atual, 0), fechamento_diferenca = 0
 WHERE loja_id = :'loja'::uuid AND status = 'ABERTO';
 
 SELECT gen_random_uuid() AS caixa, gen_random_uuid() AS outra_loja,
@@ -131,8 +131,8 @@ END $g$;
 DO $g$
 DECLARE v_id uuid; v_saldo numeric; v_ini numeric;
 BEGIN
-  INSERT INTO public.caixas(operador_id, loja_id, status, valor_inicial, saldo_atual)
-  VALUES (NULL, current_setting('t.loja')::uuid, 'FECHADO', 250, 999999)
+  INSERT INTO public.caixas(operador_id, loja_id, status, valor_inicial, saldo_atual, data_fechamento, valor_fechamento, fechamento_diferenca)
+  VALUES (NULL, current_setting('t.loja')::uuid, 'FECHADO', 250, 999999, now(), 250, 0)
   RETURNING id INTO v_id;
   SELECT saldo_atual, valor_inicial INTO v_saldo, v_ini FROM public.caixas WHERE id = v_id;
   IF v_saldo <> v_ini OR v_saldo <> 250 THEN

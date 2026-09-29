@@ -6,14 +6,21 @@
  * — ver `app/gerente/caixas/caixasHistorico.ts`); clicar numa linha abre um
  * Sheet com as movimentações (sangria/suprimento) daquele turno, buscadas
  * sob demanda pelo id — mesmo padrão de `KardexSheet`/`VendaDetailSheet`.
+ * O motivo do fechamento fica só no detalhe (não ocupa largura da tabela).
  */
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { X } from 'lucide-react'
 import { listarMovimentacoesCaixa } from '@/app/gerente/caixas/actions'
-import type { CaixaHistoricoLinha, CaixaMovimentacaoLinha } from '@/app/gerente/caixas/caixasHistorico'
+import {
+  normalizarTipoMovimentacao,
+  temDiferenca,
+  type CaixaHistoricoLinha,
+  type CaixaMovimentacaoLinha,
+} from '@/app/gerente/caixas/caixasHistorico'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { EmptyState, ErrorState, Loading } from '@/components/ui/feedback'
+import { StatusChip } from '@/components/ui/StatusChip'
 import { formatBRL } from '@/lib/format/money'
 import { formatDateTimeOrDash } from '@/lib/format/datetime'
 
@@ -25,6 +32,10 @@ export type CaixasHistoricoLabels = Readonly<{
   colValorContado: string
   colDiferenca: string
   colMotivo: string
+  colStatus: string
+  statusFechado: string
+  statusDivergencia: string
+  statusRetomado: string
   semMotivo: string
   vazioTitulo: string
   vazioSub: string
@@ -39,8 +50,10 @@ export type CaixasHistoricoLabels = Readonly<{
 }>
 
 function rotuloTipoMovimentacao(tipo: string, labels: CaixasHistoricoLabels): string {
-  if (tipo === 'SANGRIA') return labels.movTipoSangria
-  if (tipo === 'SUPRIMENTO') return labels.movTipoSuprimento
+  // O banco grava o tipo em minúsculas (`sangria`/`suprimento`/`estorno`).
+  const normalizado = normalizarTipoMovimentacao(tipo)
+  if (normalizado === 'SANGRIA') return labels.movTipoSangria
+  if (normalizado === 'SUPRIMENTO') return labels.movTipoSuprimento
   return tipo
 }
 
@@ -56,6 +69,7 @@ export function CaixasHistoricoTable({
   labels: CaixasHistoricoLabels
 }) {
   const [alvo, setAlvo] = useState<CaixaHistoricoLinha | null>(null)
+  const fecharDetalhe = useCallback(() => setAlvo(null), [])
 
   if (erro) {
     return <ErrorState title={labels.erroTitulo} description={erro} />
@@ -107,7 +121,7 @@ export function CaixasHistoricoTable({
       cell: (r) => (
         <span
           className={
-            Math.abs(r.diferenca) > 0.009
+            temDiferenca(r.diferenca)
               ? 'font-medium tabular-nums text-[var(--color-warning-strong)]'
               : 'tabular-nums text-fg-subtle'
           }
@@ -118,11 +132,16 @@ export function CaixasHistoricoTable({
       ),
     },
     {
-      key: 'motivo',
-      header: labels.colMotivo,
+      key: 'status',
+      header: labels.colStatus,
       cell: (r) => (
-        <span className="max-w-[220px] truncate text-caption text-fg-muted" title={r.motivo ?? undefined}>
-          {r.motivo ?? labels.semMotivo}
+        <span className="flex flex-wrap items-center gap-1.5">
+          {temDiferenca(r.diferenca) ? (
+            <StatusChip status="ALERTA" label={`⚠ ${labels.statusDivergencia}`} />
+          ) : (
+            <StatusChip status="FECHADO" label={labels.statusFechado} />
+          )}
+          {r.retomado ? <StatusChip status="PROCESSANDO" label={`↻ ${labels.statusRetomado}`} /> : null}
         </span>
       ),
     },
@@ -137,7 +156,7 @@ export function CaixasHistoricoTable({
         onRowClick={(r) => setAlvo(r)}
         emptyState={<EmptyState title={labels.vazioTitulo} description={labels.vazioSub} />}
       />
-      <CaixaDetalheSheet alvo={alvo} onClose={() => setAlvo(null)} locale={locale} labels={labels} />
+      <CaixaDetalheSheet alvo={alvo} onClose={fecharDetalhe} locale={locale} labels={labels} />
     </>
   )
 }
@@ -156,6 +175,22 @@ function CaixaDetalheSheet({
   const [movimentacoes, setMovimentacoes] = useState<CaixaMovimentacaoLinha[]>([])
   const [carregando, setCarregando] = useState(false)
   const [erroMov, setErroMov] = useState<string | null>(null)
+
+  // Mesmo padrão do `VendaDetailSheet`: Escape fecha e o scroll do body fica
+  // travado enquanto o painel está aberto.
+  useEffect(() => {
+    if (!alvo) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prev
+    }
+  }, [alvo, onClose])
 
   useEffect(() => {
     if (!alvo) return
@@ -218,14 +253,15 @@ function CaixaDetalheSheet({
             </div>
             <div>
               <dt className="text-jl-fg-3">{labels.colDiferenca}</dt>
-              <dd className="tabular-nums text-jl-fg-1">{formatBRL(alvo.diferenca)}</dd>
+              <dd className="tabular-nums text-jl-fg-1">
+                {alvo.diferenca > 0 ? '+' : ''}
+                {formatBRL(alvo.diferenca)}
+              </dd>
             </div>
-            {alvo.motivo ? (
-              <div className="col-span-2">
-                <dt className="text-jl-fg-3">{labels.colMotivo}</dt>
-                <dd className="text-jl-fg-1">{alvo.motivo}</dd>
-              </div>
-            ) : null}
+            <div className="col-span-2">
+              <dt className="text-jl-fg-3">{labels.colMotivo}</dt>
+              <dd className="text-jl-fg-1">{alvo.motivo ?? labels.semMotivo}</dd>
+            </div>
           </dl>
 
           <h3 className="mb-2 mt-5 text-caption font-semibold uppercase tracking-[0.06em] text-jl-fg-3">

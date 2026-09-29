@@ -16,7 +16,7 @@ WHERE perfil = 'GERENTE' AND ativo = true AND loja_id = :'loja' LIMIT 1 \gset
 SELECT id AS operador_id FROM public.usuarios
 WHERE perfil = 'OPERADOR' AND ativo = true AND loja_id = :'loja' LIMIT 1 \gset
 -- Exatamente um caixa aberto na loja durante a suíte. Rollback desfaz.
-UPDATE public.caixas SET status = 'FECHADO'
+UPDATE public.caixas SET status = 'FECHADO', data_fechamento = now(), valor_fechamento = COALESCE(saldo_atual, 0), fechamento_diferenca = 0
 WHERE loja_id = :'loja'::uuid AND status = 'ABERTO';
 INSERT INTO public.caixas(operador_id, loja_id, status, valor_inicial)
 VALUES (NULL, :'loja', 'ABERTO', 0);
@@ -38,9 +38,9 @@ INSERT INTO public.lojas(id, nome, codigo)
 VALUES (:'other_store', 'Outra loja AP 2B', 'AP2B-' || left(:'other_store', 8));
 INSERT INTO public.fornecedores(id, cnpj, nome, loja_id)
 VALUES (:'other_supplier', 'T2O-' || left(:'other_supplier', 10), 'Fornecedor outra loja', :'other_store');
-INSERT INTO public.caixas(id, operador_id, loja_id, status, valor_inicial)
-VALUES (:'closed_cash', :'operador_id', :'loja', 'FECHADO', 1000),
-       (:'other_cash', :'gerente_id', :'other_store', 'ABERTO', 1000);
+INSERT INTO public.caixas(id, operador_id, loja_id, status, valor_inicial, data_fechamento, valor_fechamento, fechamento_diferenca)
+VALUES (:'closed_cash', :'operador_id', :'loja', 'FECHADO', 1000, now(), 1000, 0),
+       (:'other_cash', :'gerente_id', :'other_store', 'ABERTO', 1000, NULL, NULL, NULL);
 INSERT INTO public.contas_pagar(id, fornecedor_id, loja_id, vencimento, valor_total, valor_pago, descricao)
 VALUES (:'permission_account', :'fornecedor', :'loja', current_date, 10, 0, 'Sem permissão');
 

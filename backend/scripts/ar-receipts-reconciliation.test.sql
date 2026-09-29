@@ -19,7 +19,7 @@ SELECT id AS operador_id FROM public.usuarios
 WHERE perfil = 'OPERADOR' AND ativo = true AND loja_id = :'loja'::uuid LIMIT 1
 \gset
 -- Exatamente um caixa aberto na loja durante a suíte. Rollback desfaz.
-UPDATE public.caixas SET status = 'FECHADO'
+UPDATE public.caixas SET status = 'FECHADO', data_fechamento = now(), valor_fechamento = COALESCE(saldo_atual, 0), fechamento_diferenca = 0
 WHERE loja_id = :'loja'::uuid AND status = 'ABERTO';
 INSERT INTO public.caixas(operador_id, loja_id, status, valor_inicial)
 VALUES (NULL, :'loja', 'ABERTO', 0);
@@ -32,12 +32,12 @@ FROM public.caixas WHERE loja_id = :'loja'::uuid AND status = 'ABERTO' LIMIT 1
 SELECT gen_random_uuid() AS closed_cash, gen_random_uuid() AS other_store,
        gen_random_uuid() AS other_cash, gen_random_uuid() AS permission_title
 \gset
-INSERT INTO public.caixas(id, operador_id, loja_id, status, saldo_atual)
-VALUES (:'closed_cash', :'operador_id', :'loja', 'FECHADO', 0);
+INSERT INTO public.caixas(id, operador_id, loja_id, status, saldo_atual, data_fechamento, valor_fechamento, fechamento_diferenca)
+VALUES (:'closed_cash', :'operador_id', :'loja', 'FECHADO', 0, now(), 0, 0);
 INSERT INTO public.lojas(id, nome, codigo)
 VALUES (:'other_store', 'Teste outra loja', 'T2A-' || left(:'other_store', 8));
-INSERT INTO public.caixas(id, operador_id, loja_id, status, saldo_atual)
-VALUES (:'other_cash', :'operador_id', :'other_store', 'FECHADO', 0);
+INSERT INTO public.caixas(id, operador_id, loja_id, status, saldo_atual, data_fechamento, valor_fechamento, fechamento_diferenca)
+VALUES (:'other_cash', :'operador_id', :'other_store', 'FECHADO', 0, now(), 0, 0);
 INSERT INTO public.contas_receber(id, cliente_id, valor_total, valor_aberto, loja_id)
 VALUES (:'permission_title', :'cliente_id', 1, 1, :'loja');
 

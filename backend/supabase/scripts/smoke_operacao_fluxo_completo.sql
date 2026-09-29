@@ -257,7 +257,8 @@ BEGIN
   SET
     status = 'FECHADO',
     data_fechamento = now(),
-    valor_fechamento = 320.00
+    valor_fechamento = 320.00,
+    fechamento_diferenca = 0
   WHERE id = v_caixa_id;
 
   -- VALIDAÇÕES
