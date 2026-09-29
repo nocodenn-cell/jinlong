@@ -393,6 +393,11 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
       tone: 'gold',
       labelWrap: true,
       sparkAriaLabel: sparkAria,
+      // Faturamento = vendas registradas (accrual), não dinheiro efetivamente
+      // recebido — soma total_liquido bruto, inclusive a parte que ficou em
+      // contas_receber como pendente. Ver achado FIN-3/FIN-298-07 (auditoria
+      // de regras de negócio).
+      hint: L.metricTotalSalesHint[lk],
     },
     {
       label: L.metricOrders[lk],

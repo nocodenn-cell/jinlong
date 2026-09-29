@@ -191,3 +191,83 @@ describe('salvar/excluir — isolamento entre lojas', () => {
     expect(deleteEqLoja).toHaveBeenCalledWith('loja_id', 'loja-a')
   })
 })
+
+describe('excluir — violação de FK (23503) tem mensagem de domínio, não erro cru do banco', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('fornecedor com produtos/compras vinculadas (contas quitadas, sem PENDENTE/PARCIAL) recebe mensagem explícita', async () => {
+    assertGerenteSession.mockResolvedValue({
+      ok: true,
+      session: { lojaId: 'loja-a', idioma: 'pt', userId: 'u1' },
+    })
+
+    const deleteSelect = vi.fn().mockResolvedValue({
+      data: null,
+      error: {
+        code: '23503',
+        message:
+          'update or delete on table "fornecedores" violates foreign key constraint "produtos_fornecedor_id_fkey"',
+      },
+    })
+    const deleteEqLoja = vi.fn(() => ({ select: deleteSelect }))
+    const deleteEqId = vi.fn(() => ({ eq: deleteEqLoja }))
+    const del = vi.fn(() => ({ eq: deleteEqId }))
+
+    createClient.mockResolvedValue({
+      from: vi.fn((table: string) => {
+        if (table === 'contas_pagar') {
+          // sem contas PENDENTE/PARCIAL — passa pela primeira checagem
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                in: vi.fn().mockResolvedValue({ count: 0, error: null }),
+              })),
+            })),
+          }
+        }
+        return { delete: del }
+      }),
+    })
+
+    const r = await excluirFornecedorAction('fornecedor-com-produtos')
+    expect(r.ok).toBe(false)
+    if (!r.ok) {
+      expect(r.error).toBe('Fornecedor possui produtos ou compras vinculadas e não pode ser excluído.')
+      expect(r.error).not.toMatch(/foreign key|constraint|fkey/i)
+    }
+  })
+
+  it('bulk delete também converte 23503 em mensagem de domínio', async () => {
+    assertGerenteSession.mockResolvedValue({
+      ok: true,
+      session: { lojaId: 'loja-a', idioma: 'pt', userId: 'u1' },
+    })
+
+    const deleteSelect = vi.fn().mockResolvedValue({
+      data: null,
+      error: { code: '23503', message: 'violates foreign key constraint' },
+    })
+    const deleteEqLoja = vi.fn(() => ({ select: deleteSelect }))
+    const deleteIn = vi.fn(() => ({ eq: deleteEqLoja }))
+    const del = vi.fn(() => ({ in: deleteIn }))
+
+    createClient.mockResolvedValue({
+      from: vi.fn((table: string) => {
+        if (table === 'contas_pagar') {
+          return {
+            select: vi.fn(() => ({
+              in: vi.fn(() => ({
+                in: vi.fn().mockResolvedValue({ data: [], error: null }),
+              })),
+            })),
+          }
+        }
+        return { delete: del }
+      }),
+    })
+
+    const r = await bulkExcluirFornecedoresAction(['f-a'])
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.error).toBe('Fornecedor possui produtos ou compras vinculadas e não pode ser excluído.')
+  })
+})

@@ -7,6 +7,7 @@ import {
   type PeriodoRelatorioResolvido,
 } from '@/lib/relatorios/periodoRelatorio'
 import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
+import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 
 export type RelatorioVendaDiaDTO = {
   dia: string
@@ -115,6 +116,12 @@ export async function carregarDadosRelatoriosGerente(input: {
   de?: string
   ate?: string
 }): Promise<RelatoriosGerentePayload> {
+  // Defesa em profundidade: hoje esta função só é chamada a partir de
+  // /admin/relatorios e /gerente/relatorios, ambas já cobertas pelo
+  // middleware, mas essa checagem não deve depender só da rota que a chama.
+  const auth = await assertGerenteSession()
+  if (!auth.ok) throw new Error(auth.error)
+
   const supabase = await createClient()
   const tzRelatorio = await getRelatorioTimezone(supabase)
   const periodo = resolverPeriodoRelatorio(input.de, input.ate, tzRelatorio)

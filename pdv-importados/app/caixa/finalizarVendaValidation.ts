@@ -175,8 +175,8 @@ export function totalsMatchDeclared(
   declared: Pick<FinalizarVendaInput, 'totalBruto' | 'totalDesconto' | 'totalLiquido'>,
 ) {
   return (
-    Math.round(computed.totalBruto * 100) === Math.round(declared.totalBruto * 100) &&
-    Math.round(computed.totalLiquido * 100) === Math.round(declared.totalLiquido * 100) &&
-    Math.round(computed.totalDesconto * 100) === Math.round(declared.totalDesconto * 100)
+    roundMoney2(computed.totalBruto) === roundMoney2(declared.totalBruto) &&
+    roundMoney2(computed.totalLiquido) === roundMoney2(declared.totalLiquido) &&
+    roundMoney2(computed.totalDesconto) === roundMoney2(declared.totalDesconto)
   )
 }

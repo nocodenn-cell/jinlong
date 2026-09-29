@@ -64,7 +64,16 @@ export function createCustomerWriter(supabase: SupabaseClient): CustomerWriter {
           .insert(buildInsertRow(command))
           .select('id')
           .single()
-        if (error) return { ok: false, error: error.message }
+        if (error) {
+          if (error.code === '23505') {
+            return {
+              ok: false,
+              error: 'Já existe um cliente com este CPF/CNPJ nesta loja.',
+              code: CUSTOMER_ERROR_CODES.DOCUMENT_DUPLICATE,
+            }
+          }
+          return { ok: false, error: error.message }
+        }
 
         const reload = await reader.getById(data.id)
         if (!reload.ok) return { ok: false, error: reload.error }

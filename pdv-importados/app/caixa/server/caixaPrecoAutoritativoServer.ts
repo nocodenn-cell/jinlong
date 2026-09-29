@@ -97,7 +97,7 @@ function parseCalcularPrecoProdutoRpc(
   if (!Number.isFinite(precoNum) || precoNum < 0) return null
   const tipo = row.tipo === 'ATACADO' ? 'ATACADO' : 'VAREJO'
   const regraId = typeof row.regra_id === 'string' ? row.regra_id : null
-  return { preco: Math.round(precoNum * 100) / 100, tipo, regraId }
+  return { preco: roundMoney2(precoNum), tipo, regraId }
 }
 
 /**

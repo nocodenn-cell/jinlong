@@ -39,7 +39,16 @@ export function createCustomerUpdater(supabase: SupabaseClient): CustomerUpdater
           .from('clientes')
           .update(buildClientePersistPayload(command.input))
           .eq('id', command.id)
-        if (error) return { ok: false, error: error.message }
+        if (error) {
+          if (error.code === '23505') {
+            return {
+              ok: false,
+              error: 'Já existe um cliente com este CPF/CNPJ nesta loja.',
+              code: CUSTOMER_ERROR_CODES.DOCUMENT_DUPLICATE,
+            }
+          }
+          return { ok: false, error: error.message }
+        }
 
         const reload = await reader.getById(command.id)
         if (!reload.ok) return { ok: false, error: reload.error }

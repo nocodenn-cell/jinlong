@@ -17,6 +17,14 @@ export type { FornecedorInput, FornecedorListRow }
 
 const PAGE_SIZE = 20
 
+/**
+ * Regra de negócio explícita para exclusão bloqueada por vínculo (constraint de
+ * FK — ex.: produtos ou contas a pagar já quitadas/canceladas referenciando o
+ * fornecedor). Antes disso, o erro cru do Postgres (23503) vazava ao usuário.
+ */
+const MSG_FORNECEDOR_VINCULADO =
+  'Fornecedor possui produtos ou compras vinculadas e não pode ser excluído.'
+
 function asListRow(raw: unknown): FornecedorListRow {
   const r = raw as FornecedorListRow
   return {
@@ -185,7 +193,10 @@ export async function excluirFornecedorAction(
       .eq('id', id)
       .eq('loja_id', tenant.lojaId)
       .select('id')
-    if (error) return { ok: false, error: mensagemErroComSecao('Fornecedor', error.message) }
+    if (error) {
+      if (error.code === '23503') return { ok: false, error: MSG_FORNECEDOR_VINCULADO }
+      return { ok: false, error: mensagemErroComSecao('Fornecedor', error.message) }
+    }
     if (!data?.length) return { ok: false, error: 'Fornecedor não encontrado.' }
     revalidarFornecedores()
     return { ok: true }
@@ -225,7 +236,10 @@ export async function bulkExcluirFornecedoresAction(
       .in('id', liberados)
       .eq('loja_id', tenant.lojaId)
       .select('id')
-    if (error) return { ok: false, error: mensagemErroComSecao('Fornecedor', error.message) }
+    if (error) {
+      if (error.code === '23503') return { ok: false, error: MSG_FORNECEDOR_VINCULADO }
+      return { ok: false, error: mensagemErroComSecao('Fornecedor', error.message) }
+    }
     revalidarFornecedores()
     return { ok: true, excluidos: data?.length ?? 0, bloqueados: bloqueadosIds.size }
   } catch (e) {

@@ -1734,7 +1734,11 @@
       },
       "metricTotalSales": {
         "cn": "总销售额",
-        "pt": "Vendas totais no período"
+        "pt": "Faturamento (vendas registradas)"
+      },
+      "metricTotalSalesHint": {
+        "cn": "可能包含仍在应收账款中的待收金额。",
+        "pt": "Pode incluir valores ainda pendentes em contas a receber."
       },
       "metricOrders": {
         "cn": "订单量",
@@ -2559,6 +2563,7 @@
     "err_telefone": "电话不完整。",
     "err_limite_negativo": "额度不能为负数。",
     "err_nome_invalido": "姓名无效。",
+    "err_documento_duplicado": "本门店已存在使用该 CPF/CNPJ 的客户。",
     "err_crediario_aberto": "客户“{{nome}}”仍有挂账余额。请先结清后再删除。",
     "err_nao_encontrado": "未找到客户。",
     "err_create_com_id": "创建操作不能带有 id。",
