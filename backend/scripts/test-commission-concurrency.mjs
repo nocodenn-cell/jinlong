@@ -175,7 +175,7 @@ function setupFixture() {
   const produto = runOnce(`SELECT id FROM public.produtos WHERE loja_id='${loja}' AND preco_varejo > 0 ORDER BY id LIMIT 1;`).trim()
   const preco = runOnce(`SELECT preco_varejo FROM public.produtos WHERE id='${produto}';`).trim()
 
-  runOnce(`UPDATE public.caixas SET status='FECHADO' WHERE loja_id='${loja}' AND status='ABERTO';`)
+  runOnce(`UPDATE public.caixas SET status='FECHADO', data_fechamento=now(), valor_fechamento=COALESCE(saldo_atual,0), fechamento_diferenca=0 WHERE loja_id='${loja}' AND status='ABERTO';`)
   const caixa = runOnce(`SELECT gen_random_uuid();`).trim()
   runOnce(`INSERT INTO public.caixas(id, operador_id, loja_id, status, valor_inicial) VALUES ('${caixa}', NULL, '${loja}', 'ABERTO', 1000);`)
   runOnce(`DELETE FROM public.precos_atacado WHERE produto_id='${produto}';`)

@@ -21,7 +21,7 @@ ORDER BY p.loja_id, p.id LIMIT 1 \gset
 SELECT id AS gerente_id FROM public.usuarios WHERE perfil='GERENTE' AND ativo AND loja_id=:'loja' LIMIT 1 \gset
 SELECT id AS operador_id FROM public.usuarios WHERE perfil='OPERADOR' AND ativo AND loja_id=:'loja' LIMIT 1 \gset
 
-UPDATE public.caixas SET status='FECHADO' WHERE loja_id=:'loja'::uuid AND status='ABERTO';
+UPDATE public.caixas SET status = 'FECHADO', data_fechamento = now(), valor_fechamento = COALESCE(saldo_atual, 0), fechamento_diferenca = 0 WHERE loja_id=:'loja'::uuid AND status='ABERTO';
 INSERT INTO public.caixas(operador_id, loja_id, status, valor_inicial) VALUES (NULL, :'loja', 'ABERTO', 0);
 SELECT id AS caixa FROM public.caixas WHERE loja_id=:'loja' AND status='ABERTO' LIMIT 1 \gset
 UPDATE public.caixas SET valor_inicial=100000, saldo_atual=100000 WHERE id=:'caixa';

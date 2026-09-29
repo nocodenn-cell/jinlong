@@ -33,6 +33,13 @@ function nomeRelacao(rel: unknown, campo: string): string | null {
   return null
 }
 
+/** Mesma tolerância visual da tela: diferenças abaixo de 1 centavo não contam. */
+export const TOLERANCIA_DIFERENCA = 0.009
+
+export function temDiferenca(diferenca: number): boolean {
+  return Math.abs(diferenca) > TOLERANCIA_DIFERENCA
+}
+
 export type CaixaHistoricoRaw = {
   id: string
   operador_id: string
@@ -42,6 +49,8 @@ export type CaixaHistoricoRaw = {
   valor_fechamento: number | null
   fechamento_diferenca: number | null
   fechamento_observacao: string | null
+  turno_anterior_id?: string | null
+  motivo_retomada?: string | null
   operador: unknown
 }
 
@@ -55,7 +64,13 @@ export type CaixaHistoricoLinha = Readonly<{
   valorContado: number
   diferenca: number
   motivo: string | null
+  /** Turno criado por retomada autorizada (`retomar_caixa_atomico`). */
+  retomado: boolean
 }>
+
+function foiRetomado(row: { turno_anterior_id?: string | null; motivo_retomada?: string | null }): boolean {
+  return row.turno_anterior_id != null || row.motivo_retomada != null
+}
 
 /**
  * Mapeia uma linha crua de `caixas` (já filtrada por `status = 'FECHADO'`)
@@ -78,6 +93,77 @@ export function mapCaixaHistoricoLinha(row: CaixaHistoricoRaw): CaixaHistoricoLi
     valorContado: row.valor_fechamento,
     diferenca: row.fechamento_diferenca,
     motivo: row.fechamento_observacao,
+    retomado: foiRetomado(row),
+  }
+}
+
+export type CaixaAbertoRaw = {
+  id: string
+  operador_id: string
+  data_abertura: string
+  valor_inicial: number
+  turno_anterior_id?: string | null
+  motivo_retomada?: string | null
+  operador: unknown
+}
+
+export type CaixaAbertoLinha = Readonly<{
+  id: string
+  operadorNome: string
+  dataAbertura: string
+  valorInicial: number
+  /** Soma das sangrias APROVADAS do turno (pendentes/canceladas não entram). */
+  sangrias: number
+  /** Soma dos suprimentos APROVADOS do turno. */
+  suprimentos: number
+  retomado: boolean
+}>
+
+export type CaixaMovimentoAgregavelRaw = {
+  caixa_id: string
+  tipo: string
+  valor: number
+  status: string
+}
+
+/** O CHECK do banco grava `sangria`/`suprimento`/`estorno` em minúsculas. */
+export function normalizarTipoMovimentacao(tipo: string): string {
+  return tipo.trim().toUpperCase()
+}
+
+/**
+ * Totais informativos de sangria/suprimento por turno, a partir de UMA
+ * consulta em lote (`in('caixa_id', ids)`) — nunca N+1. Só movimentações
+ * aprovadas contam. NÃO é o "esperado" do turno (ADR-CAIXA-002).
+ */
+export function agregarMovimentosPorCaixa(
+  rows: readonly CaixaMovimentoAgregavelRaw[],
+): Map<string, { sangrias: number; suprimentos: number }> {
+  const porCaixa = new Map<string, { sangrias: number; suprimentos: number }>()
+  for (const r of rows) {
+    if (r.status.trim().toLowerCase() !== 'aprovado') continue
+    const tipo = normalizarTipoMovimentacao(r.tipo)
+    if (tipo !== 'SANGRIA' && tipo !== 'SUPRIMENTO') continue
+    const acc = porCaixa.get(r.caixa_id) ?? { sangrias: 0, suprimentos: 0 }
+    if (tipo === 'SANGRIA') acc.sangrias = roundMoney2(acc.sangrias + r.valor)
+    else acc.suprimentos = roundMoney2(acc.suprimentos + r.valor)
+    porCaixa.set(r.caixa_id, acc)
+  }
+  return porCaixa
+}
+
+export function mapCaixaAbertoLinha(
+  row: CaixaAbertoRaw,
+  totais: { sangrias: number; suprimentos: number } | undefined,
+): CaixaAbertoLinha {
+  return {
+    id: row.id,
+    operadorNome: nomeRelacao(row.operador, 'nome') ?? '—',
+    dataAbertura: row.data_abertura,
+    valorInicial: row.valor_inicial,
+    sangrias: totais?.sangrias ?? 0,
+    suprimentos: totais?.suprimentos ?? 0,
+    retomado: foiRetomado(row),
   }
 }
 
