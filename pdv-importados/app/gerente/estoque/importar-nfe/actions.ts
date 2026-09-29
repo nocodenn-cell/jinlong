@@ -150,7 +150,10 @@ export async function previewImportacaoNfe(xml: string): Promise<
     parsed = parseNfeXml(xml)
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Falha ao ler XML.'
-    return { success: false, error: msg }
+    // Só o sentinela da duplicata usa o texto amigável; as demais mensagens de
+    // leitura do XML seguem cruas como antes.
+    const duplicataInvalida = msg.includes('IMPORT_NFE_DUPLICATA_INVALIDA')
+    return { success: false, error: duplicataInvalida ? mapRpcImportNfe(msg) : msg }
   }
 
   const supabase = await createClient()
