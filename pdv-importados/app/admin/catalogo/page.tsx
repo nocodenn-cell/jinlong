@@ -353,7 +353,7 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
               vazioFiltrosTitulo: ui.catalogo_vazio_filtros_titulo,
               vazioFiltrosSub: ui.catalogo_vazio_filtros_sub,
               limparFiltros: m.comum.limpar_filtros,
-              cadastroRapido: m.produtos.cadastro_produto,
+              cadastroRapido: m.produtos.cadastro_rapido,
               origemChina: ui.estoque_origem_china,
               origemBrasilNf: ui.estoque_origem_brasil_nf,
               origemBrasil: ui.estoque_origem_brasil,

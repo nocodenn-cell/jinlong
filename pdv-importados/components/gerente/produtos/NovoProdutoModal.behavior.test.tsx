@@ -64,7 +64,7 @@ describe('NovoProdutoModal — ProdutoForm unificado', () => {
     )
 
     expectSecaoEssencialVisivel(container, m)
-    expect(container.textContent).toContain(m.produtos.cadastro_produto)
+    expect(container.textContent).toContain(m.produtos.cadastro_rapido_produto_titulo)
   })
 
   it('após salvar envia produto e fecha o modal', async () => {

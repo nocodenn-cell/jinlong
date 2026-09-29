@@ -1,7 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus } from 'lucide-react'
+import Link from 'next/link'
+import { Plus, ClipboardList } from 'lucide-react'
+import { ROUTES } from '@shared-core/navigation/routes'
 import type { OpcoesFiltrosProdutos } from '@/app/gerente/produtos/actions'
 import type { Mensagens } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
@@ -11,12 +13,15 @@ import { useRouter } from 'next/navigation'
 
 export function CatalogoNovoButton({
   label,
+  labelCompleto,
   titleHint,
   m,
   opcoes,
   idioma,
 }: {
   label: string
+  /** Cadastro completo (página `novo/completo`). Sem rótulo, o link não é exibido. */
+  labelCompleto?: string
   /** Ex.: “Atalho: N” — aparece no title do botão. */
   titleHint?: string
   m: Mensagens
@@ -38,6 +43,15 @@ export function CatalogoNovoButton({
         <Plus size={14} aria-hidden />
         {label}
       </Button>
+
+      {labelCompleto ? (
+        <Button asChild variant="secondary" className="gap-1.5">
+          <Link href={ROUTES.admin.catalogoCompletoNovo}>
+            <ClipboardList size={14} aria-hidden />
+            {labelCompleto}
+          </Link>
+        </Button>
+      ) : null}
 
       <NovoProdutoModal
         open={open}

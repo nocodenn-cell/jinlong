@@ -92,6 +92,7 @@ export function CatalogoHeaderActions({ m, ui, opcoes, filtrosExport, idioma }: 
         </Button>
         <CatalogoNovoButton
           label={m.produtos.cadastro_rapido}
+          labelCompleto={m.produtos.cadastro_completo}
           titleHint={ui.catalogo_atalho_novo}
           m={m}
           opcoes={opcoes}

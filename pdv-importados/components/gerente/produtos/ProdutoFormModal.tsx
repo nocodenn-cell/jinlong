@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Package, Printer, Warehouse } from 'lucide-react'
+import { ClipboardList, Package, Printer, Warehouse } from 'lucide-react'
 import {
+  adminCatalogoCompletoEditarHref,
   adminEstoqueProdutoQuery,
   adminEtiquetasProdutoQuery,
 } from '@shared-core/navigation/routes'
@@ -152,6 +153,12 @@ export function ProdutoFormModal({
               {p.pos_salvar_imprimir_etiqueta}
             </Link>
           </Button>
+          <Button asChild variant="secondary" size="sm" className="gap-1.5">
+            <Link href={adminCatalogoCompletoEditarHref(posSalvar.produtoId)} onClick={orch.fechar}>
+              <ClipboardList size={14} aria-hidden />
+              {p.pos_salvar_completar_cadastro}
+            </Link>
+          </Button>
         </div>
 
         {/* Fluxo pós-save OPCIONAL de faixas adicionais — não é etapa
@@ -185,7 +192,7 @@ export function ProdutoFormModal({
         sheet
         size="lg"
         icon={Package}
-        title={p.cadastro_produto}
+        title={p.cadastro_rapido_produto_titulo}
         dismissable={!orch.saving}
         closeLabel={m.comum.cancelar}
         footer={
@@ -212,6 +219,7 @@ export function ProdutoFormModal({
           </>
         }
       >
+        <p className="mb-3 text-caption text-jl-fg-3">{p.cadastro_rapido_descricao}</p>
         <div
           ref={orch.formWrapRef}
           onKeyDown={(e) => {
