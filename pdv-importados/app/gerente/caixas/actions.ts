@@ -86,14 +86,60 @@ export async function listarMovimentacoesCaixa(caixaId: string): Promise<R<Caixa
   if (caixaError) return { ok: false, error: 'Não foi possível confirmar o caixa selecionado.' }
   if (!caixa) return { ok: false, error: 'Caixa não encontrado.' }
 
-  const { data, error } = await supabase
-    .from('movimentacoes_caixa')
-    .select('id, tipo, valor, motivo, status, created_at')
-    .eq('caixa_id', caixaId)
-    .is('deleted_at', null)
-    .order('created_at', { ascending: true })
+  const [movimentacoes, liquidacoes] = await Promise.all([
+    supabase
+      .from('movimentacoes_caixa')
+      .select('id, tipo, valor, motivo, status, created_at')
+      .eq('caixa_id', caixaId)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: true }),
+    // Recebimento/estorno de contas a receber em DINHEIRO credita/debita
+    // `caixas.saldo_atual` diretamente (`registrar_liquidacao_receber`), sem
+    // passar por `movimentacoes_caixa` — sem isto, esse dinheiro afeta o
+    // saldo de fechamento mas nunca aparece no extrato do turno para o
+    // gerente conferir. `caixa_id` só vem preenchido quando a forma foi
+    // DINHEIRO (ver migration 20260813231034), então nenhum filtro extra é
+    // necessário aqui.
+    supabase
+      .from('liquidacoes_receber')
+      .select('id, valor, operacao_tipo, created_at')
+      .eq('caixa_id', caixaId)
+      .order('created_at', { ascending: true }),
+  ])
 
-  if (error) return { ok: false, error: 'Não foi possível carregar as movimentações do turno.' }
+  if (movimentacoes.error) {
+    return { ok: false, error: 'Não foi possível carregar as movimentações do turno.' }
+  }
+  // Leitura complementar — uma falha aqui não deve impedir a exibição do
+  // extrato principal (mesma fonte oficial, sem lógica financeira paralela:
+  // só não conseguimos enriquecer o extrato desta vez).
+  const liquidacoesRows = liquidacoes.error ? [] : (liquidacoes.data ?? [])
 
-  return { ok: true, data: (data as unknown as CaixaMovimentacaoRaw[]).map(mapCaixaMovimentacaoLinha) }
+  const linhasMovimentacao = (movimentacoes.data as unknown as CaixaMovimentacaoRaw[]).map(
+    mapCaixaMovimentacaoLinha,
+  )
+  const linhasLiquidacao = liquidacoesRows.map(
+    (row): CaixaMovimentacaoLinha => ({
+      id: row.id,
+      // Sinal segue o padrão de `movimentacoes_caixa` (valor sempre positivo,
+      // direção comunicada só pelo tipo/motivo — não por número negativo).
+      // `rotuloTipoMovimentacao` (CaixasHistoricoTable) só mapeia SANGRIA/
+      // SUPRIMENTO para um rótulo traduzido e devolve o resto cru — por isso
+      // o texto aqui já vem pronto para exibição, não uma chave de tipo.
+      tipo: row.operacao_tipo === 'ESTORNO' ? 'Estorno de recebimento' : 'Recebimento (conta a receber)',
+      valor: Math.abs(Number(row.valor)),
+      motivo:
+        row.operacao_tipo === 'ESTORNO'
+          ? 'Estorno de recebimento de conta a receber (dinheiro)'
+          : 'Recebimento de conta a receber (dinheiro)',
+      status: 'aprovada',
+      criadaEm: row.created_at,
+    }),
+  )
+
+  const data = [...linhasMovimentacao, ...linhasLiquidacao].sort((a, b) =>
+    a.criadaEm < b.criadaEm ? -1 : a.criadaEm > b.criadaEm ? 1 : 0,
+  )
+
+  return { ok: true, data }
 }

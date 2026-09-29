@@ -34,7 +34,7 @@
 | Área | Rotas | Responsabilidade |
 |---|---|---|
 | **PDV** | `/caixa` | Venda, scan, carrinho, pagamento (OPERADOR, PT fixo) |
-| **Gerente** | `/gerente/*` | Painel legado bilíngue PT/ZH (migração para admin) |
+| **Gerente** | `/gerente/*` | Painel legado bilíngue PT/ZH. **Não é só UI morta**: `/gerente/produtos/actions.ts` e afins hospedam a facade (Zod na borda + `assertGerenteSession`) que `/admin/catalogo` consome — ver [[05_CADASTRO_PRODUTO]]. Não remover sem migrar essa facade primeiro. |
 | **Admin** | `/admin/*` | Painel v2 — SSoT de entidades |
 | **API** | `/api/health`, `/api/caixa/scan-telemetry` | SSRA, telemetria |
 
@@ -60,13 +60,13 @@
 
 | Módulo | Exports principais |
 |---|---|
-| `pricing/` | `PricingService`, resolução faixas atacado |
-| `cart/` | `CartEngine` (add, remove, recalculate) |
-| `caixa/` | `variantesChaveLeitura`, `mapRegrasPreco` |
+| `pricing/` | Resolução de regras de pre­ço/faixas atacado (não é a fonte de runtime online — `calcular_preco_produto` no Postgres é; ver [[07_DECISOES_ARQUITETURAIS]] D0-01) |
+| `cart/` | Tipos de carrinho |
+| `caixa/` | `variantesChaveLeitura`, `mapRegrasPreco` (fonte única; `pdv-importados/core/caixa/mapRegrasPreco.ts` é apenas re-export) |
 | `pdv/` | Invariantes operacionais, pipeline scan |
-| `money/` | `roundAbnt` (arredondamento ABNT) |
-| `ledger/` | `LedgerEngine` |
 | `observability/` | Logger estruturado |
+
+**Nota de correção:** `money/roundAbnt` e `ledger/LedgerEngine` **não ficam em `shared-core`** — vivem em `pdv-importados/core/money/roundAbnt.ts` e `pdv-importados/core/ledger/LedgerEngine.ts` respectivamente (workspace diferente). `roundAbnt` é a fonte única de arredondamento monetário (`pdv-importados/shared/cart/totals.ts:roundMoney2` delega a ela). `LedgerEngine` **não é usado em produção** — nenhum código fora do próprio teste do módulo o importa; a fonte real de dinheiro é 100% Postgres (RPCs `SECURITY DEFINER` + triggers). Não alterar regra financeira ali achando que é a camada ativa.
 
 ---
 
@@ -166,14 +166,16 @@ Telas oficiais (regra `entity-ssot.mdc`):
 
 1. **Preço autoritativo no servidor** — RPC recalcula no commit; cliente não dita preço final
 2. **Código único por loja** — constraint em `produtos`
-3. **Margem não negativa** — trigger `guard_margem_negativa`
+3. **Margem não negativa** — três triggers por tabela (não um único `guard_margem_negativa`, nome que nunca existiu no banco): `trg_regras_preco_margem_biu` (`regras_preco`), `trg_precos_atacado_margem_biu` (`precos_atacado`), `trg_produtos_margem_biu` (`produtos`)
 4. **Produto sem NF é válido** — `tem_nf = false` não bloqueia fluxos
 5. **Faixas atacado** — prioridade: produto > categoria > varejo
 6. **Estoque só via RPC** — `authenticated` não faz UPDATE direto em `estoque`
 7. **Venda só via RPC v4** — v2/v3 bloqueadas
 8. **SSoT de entidades** — cadastros apenas nas telas oficiais admin
 9. **Operador sempre PT** — caixa sem lógica de idioma
-10. **Perfil em `public.usuarios`** — nunca em `public.perfis` (tabela órfã)
+10. **Perfil em `public.usuarios`** — nunca em `public.perfis` (tabela órfã, nunca existiu)
+11. **Saldo de caixa tem duas fontes, não reconciliadas automaticamente** — `caixas.saldo_atual` (cache incremental, ~10 funções escrevem nele, usado para aprovar sangria/bloquear cancelamento) vs. `calcular_valor_sistema_dinheiro_caixa` (recomputo puro, único usado em `fechar_caixa_atomico`). Divergência persistente já ocorreu 2× historicamente (corrigida). Não presumir que `saldo_atual` é sempre confiável — ver ADR-CAIXA-002 e a auditoria de regras de negócio (Sprint 1/2).
+12. **Tabela nova em `public` herda GRANT amplo por padrão** — `ALTER DEFAULT PRIVILEGES` (migration 255) concede SELECT/INSERT/UPDATE/DELETE a `authenticated` para toda tabela nova, dependendo de RLS ou de REVOKE manual para proteção real. Causa raiz confirmada de múltiplos incidentes já corrigidos (kardex editável, TRUNCATE em `caixas`). Toda tabela tipo "ledger"/auditoria precisa de REVOKE explícito de UPDATE/DELETE/TRUNCATE (+ trigger de bloqueio), não confiar no default.
 
 ---
 

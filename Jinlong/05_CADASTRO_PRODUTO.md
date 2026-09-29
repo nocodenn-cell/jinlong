@@ -10,7 +10,7 @@
 | Rota | Uso |
 |---|---|
 | `/admin/catalogo` | CRUD principal, paginação server-side |
-| `/gerente/produtos` | Legado — ainda funcional, migração para admin |
+| `/gerente/produtos` | **Não tem `page.tsx` própria** (não é uma tela renderizável). `app/gerente/produtos/actions.ts` e arquivos irmãos (`precosAtacadoActions.ts`, `historicoPrecosActions.ts`, `produtoAutoriaActions.ts`, `produtoFormSchema.ts`) são a facade (Zod na borda + `assertGerenteSession`) que `/admin/catalogo` importa e depende para funcionar. Não são "legado a apagar" — mover exigiria migrar essa facade primeiro. |
 
 **Regra:** nenhum outro fluxo cria produto (exceto import NF-e em `/admin/estoque/importar-nfe`).
 
@@ -31,7 +31,7 @@
 | Unicidade código por loja | ✅ |
 | Import CSV no catálogo | ✅ |
 | Import NF-e de compra | ✅ (`/admin/estoque/importar-nfe`) |
-| Histórico de preço | ❌ Não implementado |
+| Histórico de preço | ✅ Implementado (`historico_precos_produto` para varejo/atacado/custo; `historico_tiers_crud` para faixas de `precos_atacado`) |
 | Variantes (cor/tamanho) | ❌ Catálogo plano |
 | Produto composto/kit | ❌ Não implementado |
 | Peso/dimensões | ❌ Não encontrado |
@@ -40,16 +40,14 @@
 
 ## Seções do Formulário
 
-```
-ProdutoFormModal
-  ├─ EssencialSection   → nome, código, categoria, marca
-  ├─ ComercialSection   → preço varejo, atacado, faixas, margem
-  ├─ CompraSection      → custo, fornecedor, NCM
-  ├─ EstoqueSection     → saldo inicial, mínimo
-  └─ FiscalSection      → CFOP, CSOSN, CEST, CST, tem_nf
-```
+Desde a separação de cadastro rápido/completo (`ProdutoFormRapido.tsx` / `ProdutoFormCompleto.tsx`), o diagrama de um único `ProdutoFormModal` com 5 seções fixas não reflete mais o código:
 
-**Validação:** Zod no cliente → Server Action → trigger `guard_margem_negativa` no banco.
+- **Cadastro Rápido** (`ProdutoFormRapido`) — Essencial + Preços + Categoria/Fornecedor rápidos + Estoque. Sem marca, origem, referência de fornecedor, nome reduzido PDV, observação, "permitir abaixo do custo" e **sem nenhum campo fiscal** — decisão deliberada (nenhum desses campos é exigido para o produto existir, vender, estocar ou entrar na fila fiscal).
+- **Cadastro Completo** (`ProdutoFormCompleto`) — todos os campos, incluindo a seção Fiscal (CFOP, CSOSN, CEST, CST, `tem_nf`).
+
+A validação Zod (`ProdutoFormBaseSchema`/`NovoProdutoSchema`) é a **mesma** para os dois modos — não há divergência de regra entre Rápido e Completo, só de quais campos são expostos na UI.
+
+**Validação:** Zod no cliente → Server Action → triggers de margem no banco (`trg_regras_preco_margem_biu`, `trg_precos_atacado_margem_biu`, `trg_produtos_margem_biu` — não existe um único `guard_margem_negativa`).
 
 ---
 
@@ -59,10 +57,10 @@ ProdutoFormModal
 
 | Momento | Permitido | Proibido |
 |---|---|---|
-| **Durante criação** (primeiro save) | `aplicarEstoqueInicial()` via `atualizarEstoqueProduto` | — |
+| **Durante criação** (primeiro save) | RPC `criar_produto_com_estoque_inicial` (chama `ajustar_estoque_manual` internamente, gera kardex) | — |
 | **Após criação** | — | Qualquer alteração de saldo fora de `/admin/estoque/*` |
 
-Implementação: `ProdutoFormModal.tsx` → `aplicarEstoqueInicial`.
+Implementação: `components/gerente/produtos/form/useProdutoFormOrchestration.ts` → `criar_produto_com_estoque_inicial`. (O nome antigo `ProdutoFormModal.aplicarEstoqueInicial` não existe mais no código — só aparece em `tests/consolidacao-post-audit.test.ts` como teste-guarda garantindo que não volte.)
 
 ### Produto sem NF
 - `tem_nf = false` é cidadão de primeira classe
@@ -70,7 +68,9 @@ Implementação: `ProdutoFormModal.tsx` → `aplicarEstoqueInicial`.
 - Alerta na venda COM_NF se produto sem NF (gerente confirma)
 
 ### Faixas de atacado
-Prioridade: **regra por produto > regra por categoria > preço varejo**
+Fonte real em runtime (`calcular_preco_produto`, decisão D0-01): tiers ativos de `precos_atacado`, escolhidos por `quantidade_minima` decrescente (sem tier aplicável → preço varejo). Não há hierarquia "produto > categoria > varejo" participando do cálculo automático — o motor de regras por categoria (`shared-core/src/pricing`, `regras_preco`) só é usado no caminho de venda MANUAL/PROMOCAO revalidado no servidor, não no preço automático de item.
+
+`produtos.preco_atacado` + `quantidade_gatilho_atacado` (par no formulário) **não são lidos diretamente por `calcular_preco_produto`**, mas também não são inertes: ao editar, `atualizar_produto_com_faixa_atacado` deriva esse par para a **faixa 1** de `precos_atacado` (`derivarFaixaAtacado`, `app/admin/produtos/productUpdater.ts`), então mexem no preço de venda real de forma indireta. A confusão potencial não é "campo morto" — é que existem dois editores para a mesma tabela `precos_atacado`: este par simplificado (faixa 1, no formulário principal) e o `FaixasAtacadoEditor` completo (múltiplas faixas, após o produto já existir). Antes de qualquer mudança de UI/rótulo aqui, mapear precisamente a interação entre os dois editores — não investigado a fundo nesta rodada.
 
 ### Código único por loja
 Dois produtos da mesma loja não podem ter o mesmo código de barras (`migrations/102`).
@@ -122,7 +122,6 @@ Categorias financeiras separadas em `/gerente/categorias-financeiras` (legado).
 
 | Item | Prioridade | Status |
 |---|---|---|
-| Histórico de preço | P2 | Backlog |
 | Variantes (cor/tamanho) | P3 | Fora do escopo |
 | Produto composto/kit | P3 | Fora do escopo |
 | Salvar e continuar no cadastro | P0 piloto | IN no Feature Freeze |

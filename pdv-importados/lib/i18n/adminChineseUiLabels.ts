@@ -90,7 +90,7 @@ const legacyAdminUi = {
       cn: '生意兴隆 · 财源广进',
       pt: 'Prosperidade nos negócios',
     } satisfies BilingualLine,
-    metricTotalSales: { cn: '总销售额', pt: 'Vendas totais no período' } satisfies BilingualLine,
+    metricTotalSales: { cn: '总销售额', pt: 'Faturamento (vendas registradas)' } satisfies BilingualLine,
     metricOrders: { cn: '订单量', pt: 'Pedidos registrados' } satisfies BilingualLine,
     metricTicket: { cn: '客单价', pt: 'Ticket médio' } satisfies BilingualLine,
     metricStock: { cn: '库存预警', pt: 'Estoque baixo' } satisfies BilingualLine,

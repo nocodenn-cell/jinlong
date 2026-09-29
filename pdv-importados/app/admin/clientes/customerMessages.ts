@@ -22,6 +22,7 @@ const CODE_TO_KEY: Record<CustomerErrorCode, string> = {
   [CUSTOMER_ERROR_CODES.NOT_FOUND]: 'clientes.err_nao_encontrado',
   [CUSTOMER_ERROR_CODES.CREATE_WITH_ID]: 'clientes.err_create_com_id',
   [CUSTOMER_ERROR_CODES.UPDATE_WITHOUT_ID]: 'clientes.err_update_sem_id',
+  [CUSTOMER_ERROR_CODES.DOCUMENT_DUPLICATE]: 'clientes.err_documento_duplicado',
 }
 
 export function resolveCustomerMessage(

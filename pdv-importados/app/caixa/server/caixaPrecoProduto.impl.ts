@@ -6,6 +6,7 @@ import { idiomaOperadorParaErro } from '@/app/caixa/server/caixaErroOperador'
 import { caixaMsgServidor } from '@/app/caixa/server/caixaMensagensServidor'
 import type { CalcularPrecoProdutoCaixaResult } from '@/app/caixa/caixaActionTypes'
 import { quantidadeParaRpcPreco } from '@/lib/format/quantidadeCaixa'
+import { roundMoney2 } from '@/shared/cart/totals'
 
 type RpcRow = {
   preco: number | string | null
@@ -62,7 +63,7 @@ export async function calcularPrecoProdutoCaixaImpl(input: {
       typeof row.quantidade_minima === 'string' ? Number(row.quantidade_minima) : row.quantidade_minima
     const quantidadeMinima =
       tipo === 'ATACADO' && qtdMinNum != null && Number.isFinite(qtdMinNum) ? qtdMinNum : null
-    return { ok: true, preco: Math.round(precoNum * 100) / 100, tipo, quantidadeMinima }
+    return { ok: true, preco: roundMoney2(precoNum), tipo, quantidadeMinima }
   } catch (e) {
     return {
       ok: false,

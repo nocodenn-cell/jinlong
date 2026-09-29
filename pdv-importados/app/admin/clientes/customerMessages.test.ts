@@ -35,6 +35,15 @@ describe('customerMessages — i18n borda (5.3)', () => {
     expect(zh).not.toBe(pt)
   })
 
+  it('DOCUMENT_DUPLICATE: PT e ZH têm mensagem de domínio própria (não erro cru de banco)', () => {
+    const pt = resolveCustomerMessage('pt', CUSTOMER_ERROR_CODES.DOCUMENT_DUPLICATE)
+    expect(pt).toBe('Já existe um cliente com este CPF/CNPJ nesta loja.')
+
+    const zh = resolveCustomerMessage('zh', CUSTOMER_ERROR_CODES.DOCUMENT_DUPLICATE)
+    expect(zh.length).toBeGreaterThan(0)
+    expect(zh).not.toBe(pt)
+  })
+
   it('fallback en-US → pt-BR', () => {
     expect(resolveCustomerMessage('en-US', CUSTOMER_ERROR_CODES.NOT_FOUND)).toBe(
       'Cliente não encontrado.',

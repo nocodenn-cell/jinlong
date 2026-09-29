@@ -5,6 +5,7 @@ import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 import { getRelatorioTimezone } from '@/lib/relatorios/getRelatorioTimezone'
 import { inicioDoDiaCivilEmUtc, subtrairDiasCivis } from '@/lib/relatorios/periodoRelatorio'
 import type { Database } from '@/lib/supabase/database.types'
+import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 
 export type VendaReportRow = {
   id: string
@@ -86,6 +87,9 @@ export async function buscarRelatorioVendasAvancadoAction(
   | { ok: true } & RelatorioVendasAvancadoPayload
   | { ok: false; error: string }
 > {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { ok: false, error: auth.error }
+
   try {
     const supabase = await createClient()
     const tz = await getRelatorioTimezone(supabase)

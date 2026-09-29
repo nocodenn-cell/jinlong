@@ -243,4 +243,79 @@ describe('listarMovimentacoesCaixa (S9/G-01)', () => {
     expect(res.ok).toBe(true)
     expect(lojasFiltradas).toEqual([])
   })
+
+  it('inclui recebimentos/estornos de contas a receber (liquidacoes_receber) mesclados por data', async () => {
+    createClient.mockResolvedValue({
+      from: buildFromMock({
+        'caixas:maybeSingle': { data: { id: 'c1' }, error: null },
+        movimentacoes_caixa: {
+          data: [
+            {
+              id: 'm1',
+              tipo: 'SANGRIA',
+              valor: 50,
+              motivo: 'Pagamento fornecedor',
+              status: 'aprovada',
+              created_at: '2026-09-17T12:00:00Z',
+            },
+          ],
+          error: null,
+        },
+        liquidacoes_receber: {
+          data: [
+            {
+              id: 'l1',
+              valor: '30.00',
+              operacao_tipo: 'RECEBIMENTO',
+              created_at: '2026-09-17T11:00:00Z',
+            },
+            {
+              id: 'l2',
+              valor: '10.00',
+              operacao_tipo: 'ESTORNO',
+              created_at: '2026-09-17T13:00:00Z',
+            },
+          ],
+          error: null,
+        },
+      }),
+    })
+
+    const res = await listarMovimentacoesCaixa('c1')
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+
+    // Ordenado por criadaEm: liquidação (11h) → sangria (12h) → estorno (13h)
+    expect(res.data.map((r) => r.id)).toEqual(['l1', 'm1', 'l2'])
+    expect(res.data[0].valor).toBe(30)
+    expect(res.data[0].tipo).toBe('Recebimento (conta a receber)')
+    expect(res.data[2].valor).toBe(10) // sempre positivo, direção via tipo/motivo
+    expect(res.data[2].tipo).toBe('Estorno de recebimento')
+  })
+
+  it('falha ao ler liquidacoes_receber não impede o extrato principal (sem lógica financeira paralela)', async () => {
+    createClient.mockResolvedValue({
+      from: buildFromMock({
+        'caixas:maybeSingle': { data: { id: 'c1' }, error: null },
+        movimentacoes_caixa: {
+          data: [
+            {
+              id: 'm1',
+              tipo: 'SANGRIA',
+              valor: 50,
+              motivo: 'Pagamento fornecedor',
+              status: 'aprovada',
+              created_at: '2026-09-17T12:00:00Z',
+            },
+          ],
+          error: null,
+        },
+        liquidacoes_receber: { data: null, error: { message: 'boom' } },
+      }),
+    })
+
+    const res = await listarMovimentacoesCaixa('c1')
+    expect(res.ok).toBe(true)
+    if (res.ok) expect(res.data).toEqual([expect.objectContaining({ id: 'm1' })])
+  })
 })
