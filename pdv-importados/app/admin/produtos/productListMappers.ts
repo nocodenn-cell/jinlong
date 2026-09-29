@@ -22,6 +22,7 @@ export function mapListRowToGerente(row: ProductListFilteredRow): ProdutoGerente
     estoque_minimo: row.estoqueMinimo,
     permitir_abaixo_custo: row.permitirAbaixoCusto,
     quantidade_gatilho_atacado: row.quantidadeGatilhoAtacado,
+    atacado_faixas_adicionais: row.atacadoFaixasAdicionais ?? 0,
     quantidade_atual: row.quantidadeAtual,
     origem: row.origem,
     tem_nf: row.temNf,

@@ -17,10 +17,6 @@ import { useMoneyInput } from '@/hooks/useMoneyInput'
 type Props = Readonly<{
   produtoId: string
   p: Mensagens['produtos']
-  /** `preco_atacado` do produto (fora da tabela de faixas) — usado só pra
-   *  explicar, quando a lista de faixas está vazia, que o preço simples do
-   *  catálogo já está ativo via fallback do PDV (não é "atacado inativo"). */
-  precoAtacadoCatalogo?: number | null
 }>
 
 const IN = 'fp-control fp-control--sm h-8 w-full font-mono text-caption'
@@ -130,7 +126,7 @@ function FaixaFormRow({
 
 /** Editor CRUD de faixas de preço atacado (tabela `precos_atacado`). Remover
  *  inativa a faixa (ativo=false) em vez de excluir fisicamente. */
-export function FaixasAtacadoEditor({ produtoId, p, precoAtacadoCatalogo }: Props) {
+export function FaixasAtacadoEditor({ produtoId, p }: Props) {
   const [faixas, setFaixas] = useState<FaixaAtacado[]>([])
   const [carregando, setCarregando] = useState(true)
   const [editandoId, setEditandoId] = useState<string | null>(null)
@@ -201,11 +197,7 @@ export function FaixasAtacadoEditor({ produtoId, p, precoAtacadoCatalogo }: Prop
         {carregando ? (
           <p className="px-2 text-xs text-jl-fg-3">{p.faixa_carregando}</p>
         ) : faixas.length === 0 && !mostrandoNova ? (
-          <p className="px-2 text-xs text-jl-fg-3">
-            {precoAtacadoCatalogo != null && precoAtacadoCatalogo > 0
-              ? p.faixa_vazio_com_fallback.replace('{{preco}}', formatBRL(precoAtacadoCatalogo))
-              : p.faixa_vazio}
-          </p>
+          <p className="px-2 text-xs text-jl-fg-3">{p.faixa_vazio}</p>
         ) : null}
 
         {faixas.map((f) =>

@@ -137,11 +137,7 @@ export function PrecosSection({
           {readOnly.produtoId !== null ? (
             <>
               <p className="mb-2 text-caption text-jl-fg-3">{p.hint_faixas_atacado}</p>
-              <FaixasAtacadoEditor
-                produtoId={readOnly.produtoId}
-                p={p}
-                precoAtacadoCatalogo={ctx.precoAtacadoInput.parse()}
-              />
+              <FaixasAtacadoEditor produtoId={readOnly.produtoId} p={p} />
             </>
           ) : (
             <div className="space-y-2">

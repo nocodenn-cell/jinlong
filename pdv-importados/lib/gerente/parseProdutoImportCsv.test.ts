@@ -88,3 +88,66 @@ describe('parseProdutoImportCsv', () => {
     expect(r.outcomes[2]?.ok).toBe(false)
   })
 })
+
+describe('parseProdutoImportCsv — vazio mantém, #limpar apaga (atualização por id)', () => {
+  const HEADER =
+    'id,nome,codigo_barras,preco_varejo,preco_atacado,quantidade_gatilho_atacado,unidade_medida,observacao,origem,tem_nf,ativo'
+  const ID = '550e8400-e29b-41d4-a716-446655440000'
+
+  function linhaOk(csvLine: string) {
+    const r = validateProdutoImportCsvDocument([HEADER, csvLine].join('\n'), {
+      permiteAtualizacaoPorId: true,
+    })
+    expect(r.ok).toBe(true)
+    if (!r.ok) throw new Error('documento inválido')
+    const o = r.outcomes[0]
+    expect(o?.ok).toBe(true)
+    if (!o?.ok) throw new Error('linha inválida')
+    return o.data
+  }
+
+  it('células opcionais em branco entram em `vazios` (o valor atual deve ser mantido)', () => {
+    const d = linhaOk(`${ID},Arroz,,12.5,,,,,china_manual,,1`)
+    expect([...d.vazios].sort()).toEqual(
+      [
+        'codigo_barras',
+        'observacao',
+        'preco_atacado',
+        'quantidade_gatilho_atacado',
+        'tem_nf',
+        'unidade_medida',
+      ].sort(),
+    )
+    // Valores "de criação" seguem os mesmos de antes (null / 'UN' / false).
+    expect(d.preco_atacado).toBeNull()
+    expect(d.unidade_medida).toBe('UN')
+  })
+
+  it('células preenchidas não entram em `vazios`', () => {
+    const d = linhaOk(`${ID},Arroz,789123,12.5,9.9,6,KG,obs,china_manual,1,1`)
+    expect(d.vazios).toEqual([])
+    expect(d.preco_atacado).toBe(9.9)
+    expect(d.quantidade_gatilho_atacado).toBe(6)
+    expect(d.unidade_medida).toBe('KG')
+    expect(d.observacao).toBe('obs')
+  })
+
+  it('#limpar (qualquer caixa) apaga de propósito e NÃO entra em `vazios`', () => {
+    const d = linhaOk(`${ID},Arroz,#Limpar,12.5,#limpar,#LIMPAR,,#limpar,china_manual,1,1`)
+    expect(d.codigo_barras).toBeNull()
+    expect(d.preco_atacado).toBeNull()
+    expect(d.quantidade_gatilho_atacado).toBeNull()
+    expect(d.observacao).toBeNull()
+    expect(d.vazios).toEqual(['unidade_medida'])
+  })
+
+  it('#limpar não vale para unidade de medida (campo obrigatório com padrão)', () => {
+    const r = validateProdutoImportCsvDocument(
+      [HEADER, `${ID},Arroz,,12.5,,,#limpar,,china_manual,1,1`].join('\n'),
+      { permiteAtualizacaoPorId: true },
+    )
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.outcomes[0]?.ok).toBe(false)
+  })
+})

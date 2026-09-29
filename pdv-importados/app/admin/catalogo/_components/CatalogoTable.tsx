@@ -25,6 +25,7 @@ import { ProdutosExcluirLoteModal } from '@/components/gerente/produtos/Produtos
 import { NovoProdutoModal } from '@/components/gerente/produtos/NovoProdutoModal'
 import { CatalogoPublicacaoActions } from './CatalogoPublicacaoActions'
 import { CatalogoLoteToolbar } from './CatalogoLoteToolbar'
+import { atacadoEntradaTexto } from './catalogoAtacadoTexto'
 
 // CatalogoProduto é ProdutoGerenteRow com o campo sku computado adicionado.
 export type CatalogoProduto = ProdutoGerenteRow & {
@@ -52,6 +53,11 @@ export type CatalogoLabels = {
   origemChina: string
   origemBrasilNf: string
   origemBrasil: string
+  /** `{{n}}` = quantidade mínima, `{{preco}}` = preço já formatado. */
+  atacadoAPartir: string
+  atacadoFaixasUm: string
+  /** `{{n}}` = quantas faixas além da de entrada. */
+  atacadoFaixasN: string
   acaoEditar: string
   acaoDuplicar: string
   acaoVerEstoque: string
@@ -222,12 +228,26 @@ export function CatalogoTable({
       key: 'atacado',
       header: labels.atacado,
       align: 'right',
-      cell: (r) =>
-        r.preco_atacado != null ? (
-          <span className="text-caption text-fg-muted">{formatBRL(r.preco_atacado)}</span>
-        ) : (
-          <span className="text-fg-subtle">—</span>
-        ),
+      // Faixa de ENTRADA (menor quantidade mínima ativa em `precos_atacado`) + quantas
+      // faixas além dela. É o que o PDV aplica — não `produtos.preco_atacado`.
+      cell: (r) => {
+        const texto = atacadoEntradaTexto(
+          {
+            quantidadeMinima: r.quantidade_gatilho_atacado,
+            precoUnitario: r.preco_atacado,
+            faixasAdicionais: r.atacado_faixas_adicionais,
+          },
+          labels,
+          formatBRL,
+        )
+        if (!texto) return <span className="text-fg-subtle">—</span>
+        return (
+          <span className="flex flex-col items-end leading-tight">
+            <span className="text-caption text-fg-muted">{texto.principal}</span>
+            {texto.extras ? <span className="text-caption text-fg-subtle">{texto.extras}</span> : null}
+          </span>
+        )
+      },
     },
     {
       key: 'estoque',

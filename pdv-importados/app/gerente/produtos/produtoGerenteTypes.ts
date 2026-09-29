@@ -14,6 +14,10 @@ export type ProdutoGerenteRow = {
   /** Localização física na loja (ex: "A-12", "ESTANTE 3"). */
   localizacao_prateleira: string | null
   preco_varejo: number
+  /**
+   * Preço da FAIXA DE ENTRADA do atacado (menor `quantidade_minima` ativa em
+   * `precos_atacado`) — não a coluna legado `produtos.preco_atacado`.
+   */
   preco_atacado: number | null
   /** Preço de custo (base da trava de margem); null = não informado. */
   preco_custo: number | null
@@ -23,7 +27,10 @@ export type ProdutoGerenteRow = {
   estoque_minimo: number | null
   /** Override: permite preço de venda abaixo do custo. */
   permitir_abaixo_custo: boolean
+  /** `quantidade_minima` da faixa de entrada do atacado (ver `preco_atacado`). */
   quantidade_gatilho_atacado: number | null
+  /** Quantas faixas ativas existem além da de entrada. */
+  atacado_faixas_adicionais?: number
   /** Estoque atual (da tabela estoque). Negativo = ruptura. */
   quantidade_atual: number | null
   origem: string

@@ -99,16 +99,11 @@ export function mapUpdateProductInputToRow(input: UpdateProductInput): ProdutoUp
     nome_reduzido_pdv: input.nomeReduzidoPdv?.trim() || null,
     localizacao_prateleira: input.localizacaoPrateleira?.trim() || null,
     preco_varejo: Number(input.precoVarejo),
-    preco_atacado:
-      input.precoAtacado !== undefined && input.precoAtacado !== null
-        ? Number(input.precoAtacado)
-        : null,
     preco_custo:
       input.precoCusto !== undefined && input.precoCusto !== null
         ? Number(input.precoCusto)
         : null,
     permitir_abaixo_custo: input.permitirAbaixoCusto ?? false,
-    quantidade_gatilho_atacado: input.quantidadeGatilhoAtacado ?? null,
     unidade_medida: input.unidadeMedida ?? 'UN',
     observacao: input.observacao?.trim() || null,
     categoria_id: input.categoriaId ?? null,
@@ -121,6 +116,17 @@ export function mapUpdateProductInputToRow(input: UpdateProductInput): ProdutoUp
     cst_pis: input.cstPis ?? null,
     cst_cofins: input.cstCofins ?? null,
     icms_origem: input.icmsOrigem ?? null,
+  }
+
+  // Atacado: chave AUSENTE = "não mexe". Só entram no payload quando o chamador
+  // informou (mesmo que `null`, que significa "limpar" de propósito). Sem isto,
+  // toda edição que não fala de atacado mandaria `null` e a RPC leria como
+  // remoção do par (e desativaria a faixa do catálogo).
+  if (input.precoAtacado !== undefined) {
+    row.preco_atacado = input.precoAtacado === null ? null : Number(input.precoAtacado)
+  }
+  if (input.quantidadeGatilhoAtacado !== undefined) {
+    row.quantidade_gatilho_atacado = input.quantidadeGatilhoAtacado ?? null
   }
 
   if (input.origem) row.origem = input.origem
@@ -270,7 +276,12 @@ function defaultUpdateRow(supabase: SupabaseClient): UpdateProdutoRowFn {
 
     const antes = parAtacado(atual ?? {})
     const depois = parAtacado(payload)
-    const mudaAtacado = antes.preco !== depois.preco || antes.gatilho !== depois.gatilho
+    // Payload sem NENHUMA das duas chaves = o chamador não falou de atacado:
+    // não é mudança (comparar com `null` a leria como remoção).
+    const falouDeAtacado =
+      'preco_atacado' in payload || 'quantidade_gatilho_atacado' in payload
+    const mudaAtacado =
+      falouDeAtacado && (antes.preco !== depois.preco || antes.gatilho !== depois.gatilho)
     const payloadRpc = { ...payload }
     if (!mudaAtacado) {
       // Reenvio do catálogo não deve recriar nem inativar faixas do editor.

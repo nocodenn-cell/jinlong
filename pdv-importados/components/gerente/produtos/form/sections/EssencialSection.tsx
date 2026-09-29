@@ -6,6 +6,7 @@ import { useProdutoFormContext } from '../ProdutoFormContext'
 import { focusOnEnter } from '../focusOnEnter'
 import { CAMPO_INVALIDO_CLASS, CampoErroMsg, erroDoCampo } from '../CampoErro'
 import type { UnidadeCode } from '../produtoForm.types'
+import { CODIGO_INTERNO_MAX } from '@/app/gerente/produtos/produtoFormSchema'
 
 type Props = Readonly<{
   nomeRef?: RefObject<HTMLInputElement | null>
@@ -97,6 +98,7 @@ export function EssencialSection({
               value={ctx.codigoInterno}
               onChange={(e) => ctx.setCodigoInterno(e.target.value)}
               disabled={disabled}
+              maxLength={CODIGO_INTERNO_MAX}
               placeholder={p.codigo_interno_placeholder}
               autoComplete="off"
             />

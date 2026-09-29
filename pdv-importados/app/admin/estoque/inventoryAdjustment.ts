@@ -73,11 +73,32 @@ export function createInventoryAdjustmentService(
       }
 
       try {
+        // `ajustar_estoque_manual` SEMPRE grava `estoque_minimo = p_estoque_minimo`.
+        // Comando sem mínimo não pode virar `0` por omissão (zeraria o mínimo em
+        // silêncio a cada ajuste de saldo): preserva o valor atual da linha.
+        // Linha inexistente (produto legado) não tem mínimo a preservar → 0, e a
+        // RPC vai responder "linha não encontrada" de qualquer forma.
+        let estoqueMinimo = cmd.estoqueMinimo
+        if (estoqueMinimo === undefined) {
+          const atual = await resolved.reader.getBalance(cmd.productId)
+          if (atual.ok) {
+            estoqueMinimo = atual.item.minimum
+          } else if (atual.notFound) {
+            estoqueMinimo = 0
+          } else {
+            return {
+              ok: false,
+              error: resolveInventoryMessage('pt-BR', INVENTORY_ERROR_CODES.READ_FAILED),
+              code: INVENTORY_ERROR_CODES.READ_FAILED,
+            }
+          }
+        }
+
         const { error } = await resolved.adjustRpc({
           p_produto_id: cmd.productId,
           p_loja_id: cmd.lojaId,
           p_quantidade_atual: cmd.quantity,
-          p_estoque_minimo: cmd.estoqueMinimo ?? 0,
+          p_estoque_minimo: estoqueMinimo,
           p_motivo_codigo: cmd.reason,
           p_observacao: cmd.observacao ?? undefined,
           p_ator_id: cmd.atorId,

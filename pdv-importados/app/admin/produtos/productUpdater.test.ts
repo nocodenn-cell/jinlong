@@ -56,6 +56,52 @@ describe('salvar catálogo preserva as faixas administradas pelo editor', () => 
   })
 })
 
+describe('edição sem falar de atacado não toca nas faixas', () => {
+  it('input sem atacado: RPC não recebe chaves de atacado nem p_faixa (não desativa a faixa)', async () => {
+    const rpc = vi.fn(async (_nome: string, _args: Record<string, unknown>) => ({ error: null }))
+    const supabase = {
+      rpc,
+      from: () => ({ select: () => ({ eq: () => ({ eq: () => ({
+        // O par legado no banco é NÃO nulo — comparar o payload sem chaves com ele
+        // seria lido como "remoção" e desativaria a faixa do catálogo.
+        maybeSingle: async () => ({ data: { preco_atacado: 80, quantidade_gatilho_atacado: 5 }, error: null }),
+      }) }) }) }),
+    }
+    const getById = vi.fn(async () => ({ ok: true as const, product: catalogRow }))
+    const updater = createProductUpdater(supabase as never, { reader: { getById } })
+    const result = await updater.update({
+      id: 'prod-1',
+      lojaId: 'loja-1',
+      input: { nome: 'Produto editado', precoVarejo: 100 },
+    })
+    expect(result.ok).toBe(true)
+    const args = rpc.mock.calls[0]![1]
+    expect(args.p_faixa).toBeNull()
+    expect(args.p_payload).not.toHaveProperty('preco_atacado')
+    expect(args.p_payload).not.toHaveProperty('quantidade_gatilho_atacado')
+  })
+
+  it('limpar atacado de propósito (null explícito) continua chegando à RPC como remoção', async () => {
+    const rpc = vi.fn(async (_nome: string, _args: Record<string, unknown>) => ({ error: null }))
+    const supabase = {
+      rpc,
+      from: () => ({ select: () => ({ eq: () => ({ eq: () => ({
+        maybeSingle: async () => ({ data: { preco_atacado: 80, quantidade_gatilho_atacado: 5 }, error: null }),
+      }) }) }) }),
+    }
+    const getById = vi.fn(async () => ({ ok: true as const, product: catalogRow }))
+    const updater = createProductUpdater(supabase as never, { reader: { getById } })
+    await updater.update({
+      id: 'prod-1',
+      lojaId: 'loja-1',
+      input: { nome: 'Produto', precoVarejo: 100, precoAtacado: null, quantidadeGatilhoAtacado: null },
+    })
+    const args = rpc.mock.calls[0]![1]
+    expect(args.p_payload).toMatchObject({ preco_atacado: null, quantidade_gatilho_atacado: null })
+    expect(args.p_faixa).toBeNull()
+  })
+})
+
 describe('productUpdater — mapping', () => {
   it('mapUpdateProductInputToRow mapeia catálogo sem colunas de estoque', () => {
     const row = mapUpdateProductInputToRow({
@@ -77,7 +123,6 @@ describe('productUpdater — mapping', () => {
       preco_atacado: 15,
       preco_custo: null,
       permitir_abaixo_custo: false,
-      quantidade_gatilho_atacado: null,
       unidade_medida: 'UN',
       observacao: null,
       categoria_id: 'cat-1',
@@ -95,6 +140,23 @@ describe('productUpdater — mapping', () => {
     })
     expect(row).not.toHaveProperty('estoque_inicial_quantidade')
     expect(row).not.toHaveProperty('quantidade')
+  })
+
+  it('atacado AUSENTE no input não vira null no payload (chave omitida = não mexe)', () => {
+    const row = mapUpdateProductInputToRow({ nome: 'Ok', precoVarejo: 10 })
+    expect(row).not.toHaveProperty('preco_atacado')
+    expect(row).not.toHaveProperty('quantidade_gatilho_atacado')
+  })
+
+  it('atacado null EXPLÍCITO é preservado no payload (limpar de propósito)', () => {
+    const row = mapUpdateProductInputToRow({
+      nome: 'Ok',
+      precoVarejo: 10,
+      precoAtacado: null,
+      quantidadeGatilhoAtacado: null,
+    })
+    expect(row.preco_atacado).toBeNull()
+    expect(row.quantidade_gatilho_atacado).toBeNull()
   })
 
   it('omite lifecycle quando statusPublicacao não vem no input', () => {

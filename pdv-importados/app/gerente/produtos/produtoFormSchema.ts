@@ -6,6 +6,28 @@ export const optionalTexto = (max: number) =>
     return t.length === 0 ? null : t.slice(0, max)
   })
 
+/** `produtos.codigo_interno` é `varchar(50)` (mig. 20260816135000). */
+export const CODIGO_INTERNO_MAX = 50
+
+/**
+ * SKU: vazio → null; acima do limite da coluna → ERRO. Antes usava
+ * `optionalTexto(60)`, que truncava em silêncio em 60 — acima do `varchar(50)`
+ * do banco (o valor passava na validação e estourava no INSERT/UPDATE) e, em
+ * qualquer caso, alterava o SKU digitado sem avisar.
+ */
+export const codigoInternoField = z
+  .string()
+  .nullable()
+  .optional()
+  .transform((s) => {
+    const t = (s ?? '').trim()
+    return t.length === 0 ? null : t
+  })
+  .refine(
+    (s) => s === null || s.length <= CODIGO_INTERNO_MAX,
+    `O código interno (SKU) deve ter no máximo ${CODIGO_INTERNO_MAX} caracteres.`,
+  )
+
 const codigoBarrasField = z
   .string()
   .nullable()
@@ -36,7 +58,7 @@ const precoAtacadoRefine = (
 const produtoFormBaseObject = z.object({
   nome: z.string().min(2, 'O nome deve ter pelo menos 2 caracteres.'),
   codigo_barras: codigoBarrasField,
-  codigo_interno: optionalTexto(60),
+  codigo_interno: codigoInternoField,
   referencia_fornecedor: optionalTexto(60),
   nome_reduzido_pdv: optionalTexto(40),
   localizacao_prateleira: optionalTexto(60),

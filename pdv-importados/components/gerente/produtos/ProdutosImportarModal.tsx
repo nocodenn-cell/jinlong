@@ -356,6 +356,10 @@ export function ProdutosImportarModal({
           </label>
         </div>
 
+        {atualizarPorId ? (
+          <p className="text-caption text-fg-subtle">{p.import_modal_vazio_mantem}</p>
+        ) : null}
+
         <p className="text-caption text-fg-subtle">{p.bulk_colar_hint}</p>
 
         {/* Grade editável */}

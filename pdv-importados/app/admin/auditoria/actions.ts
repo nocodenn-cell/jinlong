@@ -16,6 +16,11 @@
  *   - movimentos_estoque_log   (ajustes/movimentos)          → created_at
  *   - system_alerts            (anomalias margem/preço/estq) → criado_em
  *   - descontos_venda          (desconto gerente aplicado)   → aplicado_em
+ *   - historico_precos_produto (preço varejo/atacado/custo)  → alterado_em
+ *   - historico_tiers_crud     (faixas de atacado)           → criado_em
+ *     Ambas já são gravadas por trigger; aqui só se LÊ. Não têm loja_id própria:
+ *     o isolamento é explícito via join com `produtos.loja_id` (a policy de SELECT
+ *     de `historico_tiers_crud` só checa perfil, não loja).
  *     Isolamento por loja via RLS (migration 20260811110000: vendas→caixas),
  *     não há coluna loja_id na tabela — igual ao padrão de DEVOLUCAO.
  *
@@ -47,6 +52,7 @@ export type AuditoriaTipo =
   | 'ALERTA'
   | 'DESCONTO'
   | 'DEVOLUCAO'
+  | 'PRECO_PRODUTO'
 
 /**
  * Item 16 do Plano Mestre: `resumo` deixou de ser uma frase pronta em PT.
@@ -92,6 +98,22 @@ function wantsTipo(filtro: AuditoriaFiltro, tipo: AuditoriaTipo): boolean {
 function num(v: unknown): number {
   const n = Number(v ?? 0)
   return Number.isFinite(n) ? n : 0
+}
+
+/**
+ * Par anterior/novo de um preço, só quando o valor MUDOU (o trigger grava a linha
+ * inteira, inclusive os preços que não mudaram). `null` vira '—': um preço limpo
+ * (atacado removido) precisa continuar visível no detalhe, que oculta `null`.
+ */
+function diffPreco(
+  chave: string,
+  antes: unknown,
+  depois: unknown,
+): Record<string, number | string> {
+  const a = antes == null ? null : num(antes)
+  const d = depois == null ? null : num(depois)
+  if (a === d) return {}
+  return { [`${chave}_anterior`]: a ?? '—', [`${chave}_novo`]: d ?? '—' }
 }
 
 function str(v: unknown): string | null {
@@ -373,6 +395,93 @@ export async function listarEventosAuditoria(
           forma_estorno: forma,
           valor_estornado: num(r.valor_estornado),
           valor_caixa_estornado: num(r.valor_caixa_estornado),
+        },
+      })
+    }
+  }
+
+// ── 7. Preços de produto + faixas de atacado ──────────────────────────────
+  // Expõe na timeline os históricos que JÁ existem (mig. 259 e 20260901020000),
+  // sem tabela nova. Só-leitura; isolamento por loja via join com `produtos`.
+  if (wantsTipo(filtro, 'PRECO_PRODUTO')) {
+    let q = supabase
+      .from('historico_precos_produto')
+      .select(
+        'id, produto_id, preco_varejo_anterior, preco_varejo_novo, preco_atacado_anterior, preco_atacado_novo, preco_custo_anterior, preco_custo_novo, alterado_por, alterado_em, produtos!inner(loja_id)',
+      )
+      .eq('produtos.loja_id', loja)
+      .order('alterado_em', { ascending: false })
+      .limit(LIMITE_POR_FONTE)
+    if (filtro.inicio) q = q.gte('alterado_em', filtro.inicio)
+    if (filtro.fim) q = q.lte('alterado_em', filtro.fim)
+    if (operadorFiltro) q = q.eq('alterado_por', operadorFiltro)
+
+    const { data, error } = await q
+    const rows = error ? [] : (data ?? [])
+    for (const r of rows) {
+      const opId = str(r.alterado_por)
+      if (opId) operadorIds.add(opId)
+      const prodId = str(r.produto_id)
+      if (prodId) produtoIds.add(prodId)
+      eventos.push({
+        id: `preco:${r.id}`,
+        tipo: 'PRECO_PRODUTO',
+        ocorridoEm: String(r.alterado_em),
+        operadorId: opId,
+        operadorNome: null,
+        resumoCodigo: 'preco_produto',
+        resumoParams: {},
+        valor: null,
+        detalhe: {
+          produto_id: prodId,
+          ...diffPreco('preco_varejo', r.preco_varejo_anterior, r.preco_varejo_novo),
+          ...diffPreco('preco_atacado', r.preco_atacado_anterior, r.preco_atacado_novo),
+          ...diffPreco('preco_custo', r.preco_custo_anterior, r.preco_custo_novo),
+        },
+      })
+    }
+
+    let qt = supabase
+      .from('historico_tiers_crud')
+      .select(
+        'id, produto_id, acao, quantidade_minima_antes, quantidade_minima_depois, preco_unitario_antes, preco_unitario_depois, criado_por, criado_em, produtos!inner(loja_id)',
+      )
+      .eq('produtos.loja_id', loja)
+      .order('criado_em', { ascending: false })
+      .limit(LIMITE_POR_FONTE)
+    if (filtro.inicio) qt = qt.gte('criado_em', filtro.inicio)
+    if (filtro.fim) qt = qt.lte('criado_em', filtro.fim)
+    if (operadorFiltro) qt = qt.eq('criado_por', operadorFiltro)
+
+    const { data: tiers, error: tiersErr } = await qt
+    for (const r of tiersErr ? [] : (tiers ?? [])) {
+      if (r.criado_em == null) continue
+      const opId = str(r.criado_por)
+      if (opId) operadorIds.add(opId)
+      const prodId = str(r.produto_id)
+      if (prodId) produtoIds.add(prodId)
+      const acao = String(r.acao ?? '')
+      const qtd = r.quantidade_minima_depois ?? r.quantidade_minima_antes
+      eventos.push({
+        id: `faixa:${r.id}`,
+        tipo: 'PRECO_PRODUTO',
+        ocorridoEm: String(r.criado_em),
+        operadorId: opId,
+        operadorNome: null,
+        resumoCodigo:
+          acao === 'CRIADO'
+            ? 'faixa_atacado_criada'
+            : acao === 'DELETADO'
+              ? 'faixa_atacado_removida'
+              : 'faixa_atacado_atualizada',
+        resumoParams: { qtd: qtd == null ? '—' : Number(qtd) },
+        valor: null,
+        detalhe: {
+          produto_id: prodId,
+          quantidade_minima_antes: r.quantidade_minima_antes == null ? null : num(r.quantidade_minima_antes),
+          quantidade_minima_depois: r.quantidade_minima_depois == null ? null : num(r.quantidade_minima_depois),
+          preco_unitario_antes: r.preco_unitario_antes == null ? null : num(r.preco_unitario_antes),
+          preco_unitario_depois: r.preco_unitario_depois == null ? null : num(r.preco_unitario_depois),
         },
       })
     }

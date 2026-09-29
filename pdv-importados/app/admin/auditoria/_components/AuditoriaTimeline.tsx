@@ -7,6 +7,7 @@ import {
   Percent,
   RotateCcw,
   ShoppingCart,
+  Tag,
   X,
   XCircle,
   type LucideIcon,
@@ -32,6 +33,7 @@ export type AuditoriaTimelineLabels = {
   chipAlerta: string
   chipDesconto: string
   chipDevolucao: string
+  chipPreco: string
   detalheLabels: Record<string, string>
   vazioTitulo: string
   vazioSub: string
@@ -60,6 +62,7 @@ const TIPO_VISUAL: Record<AuditoriaTipo, TipoVisual> = {
   ALERTA: { icon: AlertTriangle, chipClass: 'admin-v2-badge-warning', iconClass: 'admin-v2-alert-warning' },
   DESCONTO: { icon: Percent, chipClass: 'admin-v2-badge-gold', iconClass: 'admin-v2-alert-warning' },
   DEVOLUCAO: { icon: RotateCcw, chipClass: 'admin-v2-badge-warning', iconClass: 'admin-v2-alert-warning' },
+  PRECO_PRODUTO: { icon: Tag, chipClass: 'admin-v2-badge-gold', iconClass: 'admin-v2-alert-warning' },
 }
 
 function tipoChipLabel(tipo: AuditoriaTipo, labels: AuditoriaTimelineLabels): string {
@@ -76,6 +79,8 @@ function tipoChipLabel(tipo: AuditoriaTipo, labels: AuditoriaTimelineLabels): st
       return labels.chipDesconto
     case 'DEVOLUCAO':
       return labels.chipDevolucao
+    case 'PRECO_PRODUTO':
+      return labels.chipPreco
   }
 }
 
@@ -107,13 +112,25 @@ function resumoTexto(evento: AuditoriaEvento, labels: AuditoriaTimelineLabels): 
   return interpolate(template, params)
 }
 
+/** Detalhes de preço de produto/faixa (histórico de preços e de faixas de atacado). */
+function isChavePreco(chave: string): boolean {
+  return (
+    /^preco_(varejo|atacado|custo)_(anterior|novo)$/.test(chave) ||
+    chave === 'preco_unitario_antes' ||
+    chave === 'preco_unitario_depois'
+  )
+}
+
 function detalheValor(
   chave: string,
   valor: string | number | null,
   labels: AuditoriaTimelineLabels,
 ): string {
   if (valor == null || valor === '') return '—'
+  // Preço "limpo" chega como '—' (não numérico): mostra como está.
+  if (isChavePreco(chave) && typeof valor === 'string' && Number.isNaN(Number(valor))) return valor
   if (
+    isChavePreco(chave) ||
     chave === 'total_bruto' ||
     chave === 'total_liquido' ||
     chave === 'valor_estornado' ||
@@ -287,7 +304,11 @@ function AuditoriaDetailSheet({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-3">
-          {produtoId ? (
+          {produtoId && evento.tipo === 'PRECO_PRODUTO' ? (
+            <div className="admin-v2-panel mb-3 rounded-[10px] p-3 text-[12px] font-medium text-jl-fg-1">
+              {produtoNome}
+            </div>
+          ) : produtoId ? (
             <button
               type="button"
               onClick={() => onAbrirKardex({ produtoId, produtoNome: produtoNome ?? produtoId })}

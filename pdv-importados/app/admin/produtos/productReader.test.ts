@@ -196,8 +196,10 @@ describe('productReader — listComFiltros', () => {
       nome: 'Camiseta',
       codigo_barras: '789100',
       preco_varejo: 19.9,
-      preco_atacado: 15,
-      quantidade_gatilho_atacado: 10,
+      // Colunas LEGADO de `produtos`: divergem de propósito das faixas — a listagem
+      // não pode usá-las (a autoridade do atacado é `precos_atacado`).
+      preco_atacado: 99,
+      quantidade_gatilho_atacado: 3,
       origem: 'china_manual',
       tem_nf: false,
       ativo: true,
@@ -236,7 +238,19 @@ describe('productReader — listComFiltros', () => {
       ],
       error: null,
     })
-    const from = vi.fn((table: string) => (table === 'estoque' ? estoqueQb : extraQb))
+    const faixasQb = mockQuery({
+      data: [
+        { produto_id: 'p1', quantidade_minima: 30, preco_unitario: 12, loja_id: null },
+        { produto_id: 'p1', quantidade_minima: 10, preco_unitario: 15, loja_id: null },
+        // faixa de outra loja e faixa de outro produto não entram
+        { produto_id: 'p1', quantidade_minima: 5, preco_unitario: 17, loja_id: 'loja-2' },
+        { produto_id: 'p9', quantidade_minima: 2, preco_unitario: 1, loja_id: null },
+      ],
+      error: null,
+    })
+    const from = vi.fn((table: string) =>
+      table === 'estoque' ? estoqueQb : table === 'precos_atacado' ? faixasQb : extraQb,
+    )
     const rpc = vi.fn(async () => ({ data: [rpcRow], error: null }))
     const supabase = { from, rpc } as never
     const reader = createProductReader(supabase)
@@ -269,6 +283,7 @@ describe('productReader — listComFiltros', () => {
       quantidadeAtual: 5,
       estoqueMinimo: 2,
       quantidadeGatilhoAtacado: 10,
+      atacadoFaixasAdicionais: 1,
       origem: 'china_manual',
       temNf: false,
       ativo: true,

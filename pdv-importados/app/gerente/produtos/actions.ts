@@ -35,8 +35,14 @@ import { PRODUTO_IMPORT_MAX_FILE_BYTES, PRODUTO_IMPORT_MAX_ROWS } from '@/lib/ge
 import {
   parseAndValidateImportRow,
   validateProdutoImportCsvDocument,
+  type ProdutoImportCampoOpcional,
   type ProdutoImportRowParsed,
 } from '@/lib/gerente/parseProdutoImportCsv'
+import {
+  capturarFaixasProduto,
+  restaurarFaixasProduto,
+  type FaixaSnapshot,
+} from '@/lib/gerente/importarProdutosFaixas'
 import {
   importCsvFatalToString,
   importCsvRowFailToString,
@@ -98,26 +104,43 @@ async function atualizarProdutoViaImportRow(
   const csvLifecycle = row.ativo
     ? dualWriteFromStatus('PUBLICADO')
     : dualWriteFromStatus('INATIVO')
+  // Célula VAZIA = "não informado" → mantém o valor atual do produto. Apagar é
+  // explícito (`#limpar`). Ver IMPORT_LIMPAR_TOKEN em parseProdutoImportCsv.
+  // Para o atacado, devolver o valor atual faz o updater ver "sem mudança" e não
+  // tocar em `precos_atacado` (antes: `null` → a RPC lia como remoção do par e
+  // desativava a faixa do catálogo).
+  const manter = (campo: ProdutoImportCampoOpcional) => row.vazios.includes(campo)
+  const numOuNull = (v: unknown): number | null => (v != null ? Number(v) : null)
   const result = await atualizarProdutoAction(
     row.id as string,
     mapFormToUpdateProductInput(
       {
         produto_id: row.id as string,
         nome: row.nome,
-        codigo_barras: row.codigo_barras,
+        codigo_barras: manter('codigo_barras')
+          ? ((p.codigo_barras as string | null) ?? null)
+          : row.codigo_barras,
         codigo_interno: (p.codigo_interno as string | null) ?? null,
         referencia_fornecedor: (p.referencia_fornecedor as string | null) ?? null,
         nome_reduzido_pdv: (p.nome_reduzido_pdv as string | null) ?? null,
         localizacao_prateleira: (p.localizacao_prateleira as string | null) ?? null,
         preco_varejo: row.preco_varejo,
-        preco_atacado: row.preco_atacado ?? null,
+        preco_atacado: manter('preco_atacado')
+          ? numOuNull(p.preco_atacado)
+          : (row.preco_atacado ?? null),
         preco_custo: p.preco_custo != null ? Number(p.preco_custo) : null,
         permitir_abaixo_custo: Boolean(p.permitir_abaixo_custo),
-        quantidade_gatilho_atacado: row.quantidade_gatilho_atacado ?? null,
+        quantidade_gatilho_atacado: manter('quantidade_gatilho_atacado')
+          ? numOuNull(p.quantidade_gatilho_atacado)
+          : (row.quantidade_gatilho_atacado ?? null),
         origem: row.origem,
-        tem_nf: row.tem_nf,
-        unidade_medida: row.unidade_medida ?? 'UN',
-        observacao: row.observacao ?? null,
+        tem_nf: manter('tem_nf') ? Boolean(p.tem_nf) : row.tem_nf,
+        unidade_medida: manter('unidade_medida')
+          ? ((p.unidade_medida as ProdutoImportRowParsed['unidade_medida'] | null) ?? 'UN')
+          : (row.unidade_medida ?? 'UN'),
+        observacao: manter('observacao')
+          ? ((p.observacao as string | null) ?? null)
+          : (row.observacao ?? null),
         categoria_id: (p.categoria_id as string | null) ?? null,
         marca_id: (p.marca_id as string | null) ?? null,
         fornecedor_id: (p.fornecedor_id as string | null) ?? null,
@@ -398,21 +421,49 @@ export async function importarProdutosLote(
 
   // 3. Gravação com rollback seguro (create via ProductWriter).
   const criadosIds: string[] = []
-  const snapshotsUpdate: Array<{ id: string; prev: Record<string, unknown> }> = []
+  const snapshotsUpdate: Array<{
+    id: string
+    prev: Record<string, unknown>
+    /** Estado das faixas de atacado ANTES do update (a RPC mexe nelas). */
+    faixas: FaixaSnapshot[]
+  }> = []
 
-  async function reverter(): Promise<void> {
+  /**
+   * Desfaz o que o lote já gravou. Devolve os problemas encontrados (lista vazia =
+   * reversão completa) — antes os erros eram ignorados e o operador nunca sabia
+   * que o rollback tinha ficado pela metade.
+   */
+  async function reverter(): Promise<string[]> {
+    const problemas: string[] = []
     for (let i = snapshotsUpdate.length - 1; i >= 0; i--) {
       const s = snapshotsUpdate[i]
-      await supabase.from('produtos').update(s.prev).eq('id', s.id)
+      const { error } = await supabase.from('produtos').update(s.prev).eq('id', s.id)
+      if (error) problemas.push(`produto ${s.id}: ${error.message}`)
+      // Faixas por último: a RPC pode ter criado, alterado ou desativado faixas
+      // e o UPDATE acima só devolve as colunas de `produtos`.
+      problemas.push(...(await restaurarFaixasProduto(supabase, s.id, s.faixas)))
     }
     if (criadosIds.length > 0) {
       // RPC (não DELETE direto) — ver 20260904110000_estoque_fecha_bypass_
       // delete_insert_e_nan.sql.
       for (const produtoId of criadosIds) {
-        await supabase.rpc('excluir_linha_estoque_produto', { p_produto_id: produtoId })
+        const { error } = await supabase.rpc('excluir_linha_estoque_produto', {
+          p_produto_id: produtoId,
+        })
+        if (error) problemas.push(`estoque de ${produtoId}: ${error.message}`)
       }
-      await supabase.from('produtos').delete().in('id', criadosIds)
+      // As faixas do produto criado saem junto (`precos_atacado.produto_id` é ON DELETE CASCADE).
+      const { error } = await supabase.from('produtos').delete().in('id', criadosIds)
+      if (error) problemas.push(`produtos criados: ${error.message}`)
     }
+    return problemas
+  }
+
+  /** Motivo da falha + aviso explícito quando a reversão não ficou completa. */
+  async function abortar(motivo: string): Promise<string> {
+    const problemas = await reverter()
+    if (problemas.length === 0) return motivo
+    return `${motivo} — ${mensagemErroComSecao(m.import_lote_rollback_secao, problemas.join('; '), idioma)}`
   }
 
   let criados = 0
@@ -428,7 +479,20 @@ export async function importarProdutosLote(
         .eq('id', data.id)
         .maybeSingle()
       if (exErr || !existente) {
-        await reverter()
+        const motivo = exErr
+          ? mensagemErroComSecao(m.import_row_atualizar_secao, exErr.message, idioma)
+          : interpolateTemplate(m.import_row_id_nao_encontrado, { id: data.id })
+        return {
+          success: true,
+          criados: 0,
+          atualizados: 0,
+          falhas: [{ linha, motivo: await abortar(motivo) }],
+        }
+      }
+
+      // Sem o estado das faixas não dá para garantir o rollback: não escreve.
+      const faixasAntes = await capturarFaixasProduto(supabase, data.id)
+      if (!faixasAntes.ok) {
         return {
           success: true,
           criados: 0,
@@ -436,9 +500,9 @@ export async function importarProdutosLote(
           falhas: [
             {
               linha,
-              motivo: exErr
-                ? mensagemErroComSecao(m.import_row_atualizar_secao, exErr.message, idioma)
-                : interpolateTemplate(m.import_row_id_nao_encontrado, { id: data.id }),
+              motivo: await abortar(
+                mensagemErroComSecao(m.import_lote_rollback_secao, faixasAntes.error, idioma),
+              ),
             },
           ],
         }
@@ -446,16 +510,16 @@ export async function importarProdutosLote(
       snapshotsUpdate.push({
         id: data.id,
         prev: existente as unknown as Record<string, unknown>,
+        faixas: faixasAntes.faixas,
       })
 
       const up = await atualizarProdutoViaImportRow(supabase, data, idioma, m)
       if (!up.ok) {
-        await reverter()
         return {
           success: true,
           criados: 0,
           atualizados: 0,
-          falhas: [{ linha, motivo: up.error }],
+          falhas: [{ linha, motivo: await abortar(up.error) }],
         }
       }
       atualizados++
@@ -464,12 +528,11 @@ export async function importarProdutosLote(
 
     const result = await criarProdutoAction(mapImportRowToCreateProductInput(data))
     if (!result.ok) {
-      await reverter()
       return {
         success: true,
         criados: 0,
         atualizados: 0,
-        falhas: [{ linha, motivo: result.error }],
+        falhas: [{ linha, motivo: await abortar(result.error) }],
       }
     }
     criadosIds.push(result.product.id)
@@ -855,9 +918,17 @@ export async function atualizarDadosProdutoGerente(
   const statusAtual = (atualRow?.status_publicacao ?? null) as StatusPublicacao | null
   const lifecycle = lifecycleAoEditarProduto(asDraft, statusAtual)
 
+  // D0-01: a edição do cadastro NÃO altera atacado. Preço/quantidade de atacado
+  // vivem em `precos_atacado` (editor de faixas, ou criação/importação). O form
+  // hidrata esses campos com a faixa de entrada só para validar preço × varejo;
+  // reenviá-los aqui faria a RPC tratar a faixa de entrada como "o par do
+  // catálogo" e poderia desativar/recriar faixas. Chave ausente = não mexe.
   const result = await atualizarProdutoAction(
     parsed.data.produto_id,
-    mapFormToUpdateProductInput(parsed.data, lifecycle),
+    mapFormToUpdateProductInput(
+      { ...parsed.data, preco_atacado: undefined, quantidade_gatilho_atacado: undefined },
+      lifecycle,
+    ),
   )
   if (!result.ok) return { success: false, error: result.error }
   return { success: true, data: null }

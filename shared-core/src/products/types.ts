@@ -123,7 +123,14 @@ export type ProductListFilteredRow = {
   precoCustoMedio: number
   estoqueMinimo: number | null
   permitirAbaixoCusto: boolean
+  /**
+   * `precoAtacado` + `quantidadeGatilhoAtacado` = FAIXA DE ENTRADA do atacado
+   * (menor `quantidade_minima` ativa em `precos_atacado`), não as colunas legado
+   * de `produtos`. Ver `app/admin/produtos/atacadoFaixaEntrada.ts`.
+   */
   quantidadeGatilhoAtacado: number | null
+  /** Faixas ativas além da de entrada (0 quando há uma só, ou nenhuma). */
+  atacadoFaixasAdicionais?: number
   /** Snapshot inventory — read-through. */
   quantidadeAtual: number | null
   origem: string

@@ -152,7 +152,41 @@ const ImportRowZ = z
   })
   .strict()
 
-export type ProdutoImportRowParsed = z.infer<typeof ImportRowZ>
+type ImportRowBase = z.infer<typeof ImportRowZ>
+
+/**
+ * Convenção de célula (vale para criar E atualizar):
+ *  - **vazia**  → "não informado". Ao ATUALIZAR por id, o valor atual do produto é
+ *    mantido (o campo entra em `vazios`). Ao CRIAR, vira o padrão (null / 'UN' / false).
+ *  - **`#limpar`** → apagar de propósito (null). Só existe onde apagar faz sentido:
+ *    `codigo_barras`, `preco_atacado`, `quantidade_gatilho_atacado`, `observacao`.
+ * Sem essa distinção, uma planilha com coluna em branco apagava silenciosamente
+ * atacado, código de barras e observação de produtos existentes (e a RPC de edição
+ * ainda desativava a faixa de atacado).
+ */
+export const IMPORT_LIMPAR_TOKEN = '#limpar'
+
+/** Colunas opcionais em que "vazio" e "limpar" têm significados diferentes. */
+export type ProdutoImportCampoOpcional =
+  | 'codigo_barras'
+  | 'preco_atacado'
+  | 'quantidade_gatilho_atacado'
+  | 'unidade_medida'
+  | 'observacao'
+  | 'tem_nf'
+
+export type ProdutoImportRowParsed = ImportRowBase & {
+  /** Colunas opcionais que vieram VAZIAS na linha (ver convenção acima). */
+  vazios: readonly ProdutoImportCampoOpcional[]
+}
+
+function ehLimpar(raw: string | undefined): boolean {
+  return (raw ?? '').trim().toLowerCase() === IMPORT_LIMPAR_TOKEN
+}
+
+function ehVazio(raw: string | undefined): boolean {
+  return (raw ?? '').trim() === ''
+}
 
 export function rowCellsToObject(cells: string[]): Record<string, string> {
   const o: Record<string, string> = {}
@@ -201,10 +235,14 @@ export function parseAndValidateImportRow(
     }
   }
 
-  const precoAtacadoRaw = parsePrecoOpcional(raw.preco_atacado ?? '')
+  const precoAtacadoRaw = ehLimpar(raw.preco_atacado)
+    ? ({ ok: true, value: null } as const)
+    : parsePrecoOpcional(raw.preco_atacado ?? '')
   if (!precoAtacadoRaw.ok) return { ok: false, reason: { t: 'atacado_invalid' } }
 
-  const gatilhoRaw = parseIntOpcional(raw.quantidade_gatilho_atacado ?? '')
+  const gatilhoRaw = ehLimpar(raw.quantidade_gatilho_atacado)
+    ? ({ ok: true, value: null } as const)
+    : parseIntOpcional(raw.quantidade_gatilho_atacado ?? '')
   if (!gatilhoRaw.ok) return { ok: false, reason: { t: 'gatilho_invalid' } }
 
   const unidadeRaw = parseUnidade(raw.unidade_medida ?? '')
@@ -217,12 +255,20 @@ export function parseAndValidateImportRow(
   const ativo = parseBoolLoose(raw.ativo ?? '')
   if (!ativo.ok) return { ok: false, reason: { t: 'boolean_invalid', field: 'ativo' } }
 
-  const observacaoRaw = (raw.observacao ?? '').trim()
+  const observacaoRaw = ehLimpar(raw.observacao) ? '' : (raw.observacao ?? '').trim()
+
+  const vazios: ProdutoImportCampoOpcional[] = []
+  if (ehVazio(raw.codigo_barras)) vazios.push('codigo_barras')
+  if (ehVazio(raw.preco_atacado)) vazios.push('preco_atacado')
+  if (ehVazio(raw.quantidade_gatilho_atacado)) vazios.push('quantidade_gatilho_atacado')
+  if (ehVazio(raw.unidade_medida)) vazios.push('unidade_medida')
+  if (ehVazio(raw.observacao)) vazios.push('observacao')
+  if (ehVazio(raw.tem_nf)) vazios.push('tem_nf')
 
   const parsed = ImportRowZ.safeParse({
     id,
     nome: raw.nome ?? '',
-    codigo_barras: raw.codigo_barras ?? '',
+    codigo_barras: ehLimpar(raw.codigo_barras) ? '' : (raw.codigo_barras ?? ''),
     preco_varejo: precoRaw.value,
     preco_atacado: precoAtacadoRaw.value,
     quantidade_gatilho_atacado: gatilhoRaw.value,
@@ -236,7 +282,7 @@ export function parseAndValidateImportRow(
   if (!parsed.success) {
     return { ok: false, reason: zodFailToReason(parsed.error) }
   }
-  return { ok: true, data: parsed.data }
+  return { ok: true, data: { ...parsed.data, vazios } }
 }
 
 export type ProdutoImportRowOutcome =

@@ -3,7 +3,7 @@
  *
  * Server Component. Timeline unificada SOMENTE-LEITURA sobre os ledgers que JÁ
  * existem (venda_eventos, vendas_canceladas_auditoria, movimentos_estoque_log,
- * system_alerts, descontos_venda). Nenhuma tabela/RPC nova; nenhuma escrita.
+ * system_alerts, descontos_venda, historico_precos_produto, historico_tiers_crud). Nenhuma tabela/RPC nova; nenhuma escrita.
  *
  * Estrutura espelhada de /admin/vendas: PageHeader (period pills) + MetricCards
  * + SectionCard com chips de tipo + timeline (client) com Sheet de detalhe.
@@ -94,6 +94,7 @@ export default async function AdminAuditoriaPage({ searchParams }: PageProps) {
     { id: 'ALERTA', label: ui.auditoria_tipo_alerta },
     { id: 'DESCONTO', label: ui.auditoria_tipo_desconto },
     { id: 'DEVOLUCAO', label: ui.auditoria_tipo_devolucao },
+    { id: 'PRECO_PRODUTO', label: ui.auditoria_tipo_preco },
   ]
 
   const timelineLabels: AuditoriaTimelineLabels = {
@@ -104,6 +105,7 @@ export default async function AdminAuditoriaPage({ searchParams }: PageProps) {
     chipAlerta: ui.auditoria_chip_alerta,
     chipDesconto: ui.auditoria_chip_desconto,
     chipDevolucao: ui.auditoria_chip_devolucao,
+    chipPreco: ui.auditoria_chip_preco,
     detalheLabels: {
       forma_pagamento: ui.auditoria_detalhe_forma_pagamento,
       total_bruto: ui.auditoria_detalhe_total_bruto,
@@ -124,6 +126,16 @@ export default async function AdminAuditoriaPage({ searchParams }: PageProps) {
       tipo_operacao: ui.auditoria_detalhe_tipo_operacao,
       forma_estorno: ui.auditoria_detalhe_forma_estorno,
       valor_caixa_estornado: ui.auditoria_detalhe_valor_caixa_estornado,
+      preco_varejo_anterior: ui.auditoria_detalhe_preco_varejo_anterior,
+      preco_varejo_novo: ui.auditoria_detalhe_preco_varejo_novo,
+      preco_atacado_anterior: ui.auditoria_detalhe_preco_atacado_anterior,
+      preco_atacado_novo: ui.auditoria_detalhe_preco_atacado_novo,
+      preco_custo_anterior: ui.auditoria_detalhe_preco_custo_anterior,
+      preco_custo_novo: ui.auditoria_detalhe_preco_custo_novo,
+      quantidade_minima_antes: ui.auditoria_detalhe_qtd_minima_antes,
+      quantidade_minima_depois: ui.auditoria_detalhe_qtd_minima_depois,
+      preco_unitario_antes: ui.auditoria_detalhe_preco_unitario_antes,
+      preco_unitario_depois: ui.auditoria_detalhe_preco_unitario_depois,
     },
     vazioTitulo: ui.auditoria_vazio_titulo,
     vazioSub: ui.auditoria_vazio_sub,
@@ -140,6 +152,10 @@ export default async function AdminAuditoriaPage({ searchParams }: PageProps) {
       desconto: ui.auditoria_resumo_desconto,
       troca: ui.auditoria_resumo_troca,
       devolucao: ui.auditoria_resumo_devolucao,
+      preco_produto: ui.auditoria_resumo_preco_produto,
+      faixa_atacado_criada: ui.auditoria_resumo_faixa_criada,
+      faixa_atacado_atualizada: ui.auditoria_resumo_faixa_atualizada,
+      faixa_atacado_removida: ui.auditoria_resumo_faixa_removida,
     },
     ajusteLabels: {
       ENTRADA_VENDA: ui.auditoria_ajuste_entrada_venda,
@@ -190,7 +206,7 @@ export default async function AdminAuditoriaPage({ searchParams }: PageProps) {
   const periodo = oneOf<Periodo>(sp.periodo, ['tudo', 'hoje', 'ontem', '7d', 'mes'], '7d')
   const tipo = oneOf<TipoFiltro>(
     sp.tipo,
-    ['all', 'VENDA', 'CANCELAMENTO', 'AJUSTE_ESTOQUE', 'ALERTA', 'DESCONTO', 'DEVOLUCAO'],
+    ['all', 'VENDA', 'CANCELAMENTO', 'AJUSTE_ESTOQUE', 'ALERTA', 'DESCONTO', 'DEVOLUCAO', 'PRECO_PRODUTO'],
     'all'
   )
 
@@ -211,7 +227,15 @@ export default async function AdminAuditoriaPage({ searchParams }: PageProps) {
       acc[e.tipo] += 1
       return acc
     },
-    { VENDA: 0, CANCELAMENTO: 0, AJUSTE_ESTOQUE: 0, ALERTA: 0, DESCONTO: 0, DEVOLUCAO: 0 }
+    {
+      VENDA: 0,
+      CANCELAMENTO: 0,
+      AJUSTE_ESTOQUE: 0,
+      ALERTA: 0,
+      DESCONTO: 0,
+      DEVOLUCAO: 0,
+      PRECO_PRODUTO: 0,
+    }
   )
 
   const metricCards: Array<{

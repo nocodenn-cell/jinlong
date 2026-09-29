@@ -28,6 +28,7 @@ const labelsZh: AuditoriaTimelineLabels = {
   chipAlerta: '警报',
   chipDesconto: '折扣',
   chipDevolucao: '退货/换货',
+  chipPreco: '价格',
   detalheLabels: {
     forma_pagamento: '付款方式',
     itens: '商品数量',
@@ -37,6 +38,8 @@ const labelsZh: AuditoriaTimelineLabels = {
     tipo: '警报类型',
     desconto_percentual: '折扣（%）',
     forma_estorno: '退款方式',
+    preco_varejo_anterior: '零售价（修改前）',
+    preco_atacado_novo: '档案批发价（修改后）',
   },
   vazioTitulo: '本期没有事件',
   vazioSub: '调整时间范围或事件类型以查看审计轨迹。',
@@ -53,6 +56,7 @@ const labelsZh: AuditoriaTimelineLabels = {
     desconto: '经理折扣 • {{pct}}%',
     troca: '换货 • {{forma}}',
     devolucao: '退货 • {{forma}}',
+    preco_produto: '商品价格已修改',
   },
   ajusteLabels: { COMPRA: '采购入库' },
   alertaLabels: { margem_negativa: '负毛利' },
@@ -191,6 +195,43 @@ describe('AuditoriaTimeline — i18n (item 16)', () => {
     })
     const linha = container.querySelector('li button') as HTMLButtonElement
     flushSync(() => linha.click())
+    expect(container.textContent).not.toContain(labelsZh.verKardex)
+  })
+
+  it('evento de preço de produto: mostra valores em BRL, preço limpo como traço e NÃO oferece Kardex', () => {
+    flushSync(() => {
+      root.render(
+        <AuditoriaTimeline
+          eventos={[
+            evento({
+              id: 'e-preco',
+              tipo: 'PRECO_PRODUTO',
+              resumoCodigo: 'preco_produto',
+              resumoParams: {},
+              valor: null,
+              detalhe: {
+                produto_id: 'produto-77',
+                produto_nome: 'Cabo USB-C',
+                preco_varejo_anterior: 10,
+                preco_atacado_novo: '—',
+              },
+            }),
+          ]}
+          labels={labelsZh}
+        />,
+      )
+    })
+    expect(container.textContent).toContain('商品价格已修改')
+    expect(container.textContent).toContain('价格')
+
+    const linha = container.querySelector('li button') as HTMLButtonElement
+    flushSync(() => linha.click())
+
+    expect(container.textContent).toContain('零售价（修改前）')
+    expect(container.textContent).toMatch(/R\$\s?10,00/)
+    expect(container.textContent).toContain('档案批发价（修改后）')
+    expect(container.textContent).toContain('Cabo USB-C')
+    // Evento de preço não é movimento de estoque: sem botão "Ver Kardex".
     expect(container.textContent).not.toContain(labelsZh.verKardex)
   })
 })

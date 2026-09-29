@@ -161,7 +161,7 @@ export function ProdutoFormModal({
           {mostrarFaixasAdicionais ? (
             <>
               <p className="mb-2 text-xs font-medium text-jl-fg-2">{p.titulo_faixas_atacado}</p>
-              <FaixasAtacadoEditor produtoId={posSalvar.produtoId} p={p} precoAtacadoCatalogo={null} />
+              <FaixasAtacadoEditor produtoId={posSalvar.produtoId} p={p} />
             </>
           ) : (
             <button

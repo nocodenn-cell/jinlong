@@ -22,6 +22,11 @@ import {
   resolveStatusPublicacaoLeitura,
   statusFromAtivoLegacy,
 } from '@/core/catalog/statusPublicacao'
+import {
+  resumirFaixasAtacado,
+  type AtacadoResumo,
+  type FaixaAtacadoAtiva,
+} from '@/app/admin/produtos/atacadoFaixaEntrada'
 
 export const PRODUTOS_PAGE_SIZE = 20
 
@@ -227,6 +232,7 @@ function mapFilteredRow(
   r: RpcProdutoFilteredRow,
   extra: ExtraProdutoSnap | undefined,
   estoque: EstoqueSnap | undefined,
+  atacado: AtacadoResumo | undefined,
 ): ProductListFilteredRow {
   const statusPublicacao = resolveStatusPublicacaoLeitura(
     extra?.status_publicacao ?? statusFromAtivoLegacy(r.ativo),
@@ -241,13 +247,17 @@ function mapFilteredRow(
     nomeReduzidoPdv: extra?.nome_reduzido_pdv ?? null,
     localizacaoPrateleira: extra?.localizacao_prateleira ?? null,
     precoVarejo: Number(r.preco_varejo),
-    precoAtacado: r.preco_atacado != null ? Number(r.preco_atacado) : null,
+    // D0-01: atacado vem das FAIXAS ativas (`precos_atacado`), a mesma fonte que o
+    // PDV usa — não de `produtos.preco_atacado`/`quantidade_gatilho_atacado`
+    // (legado, que o editor de faixas não sincroniza). `precoAtacado` e
+    // `quantidadeGatilhoAtacado` passam a significar "faixa de entrada".
+    precoAtacado: atacado?.precoUnitario ?? null,
     precoCusto: extra?.preco_custo ?? null,
     precoCustoMedio: extra?.preco_custo_medio ?? 0,
     estoqueMinimo: estoque?.estoque_minimo ?? null,
     permitirAbaixoCusto: extra?.permitir_abaixo_custo ?? false,
-    quantidadeGatilhoAtacado:
-      r.quantidade_gatilho_atacado != null ? Number(r.quantidade_gatilho_atacado) : null,
+    quantidadeGatilhoAtacado: atacado?.quantidadeMinima ?? null,
+    atacadoFaixasAdicionais: atacado?.faixasAdicionais ?? 0,
     quantidadeAtual: estoque?.quantidade_atual ?? null,
     origem: r.origem,
     temNf: r.tem_nf,
@@ -275,19 +285,26 @@ function mapFilteredRow(
 async function loadFilteredSupplements(
   supabase: SupabaseClient,
   productIds: string[],
+  lojaId: string | null,
 ): Promise<{
   estoqueMap: Map<string, EstoqueSnap>
   extraMap: Map<string, ExtraProdutoSnap>
+  atacadoMap: Map<string, AtacadoResumo>
 }> {
   if (productIds.length === 0) {
-    return { estoqueMap: new Map(), extraMap: new Map() }
+    return { estoqueMap: new Map(), extraMap: new Map(), atacadoMap: new Map() }
   }
-  const [estoqueRes, extraRes] = await Promise.all([
+  const [estoqueRes, extraRes, faixasRes] = await Promise.all([
     supabase
       .from('estoque')
       .select('produto_id, quantidade_atual, estoque_minimo')
       .in('produto_id', productIds),
     supabase.from('produtos').select(EXTRA_PRODUTO_COLS).in('id', productIds),
+    supabase
+      .from('precos_atacado')
+      .select('produto_id, quantidade_minima, preco_unitario, loja_id')
+      .in('produto_id', productIds)
+      .eq('ativo', true),
   ])
   return {
     estoqueMap: buildEstoqueMap(
@@ -298,6 +315,7 @@ async function loadFilteredSupplements(
       }[],
     ),
     extraMap: buildExtraMap((extraRes.data ?? []) as Parameters<typeof buildExtraMap>[0]),
+    atacadoMap: resumirFaixasAtacado((faixasRes?.data ?? []) as FaixaAtacadoAtiva[], lojaId),
   }
 }
 
@@ -326,11 +344,14 @@ async function listComFiltrosImpl(
 
     const list = (data ?? []) as RpcProdutoFilteredRow[]
     const total = list.length > 0 ? Number(list[0].total_count) : 0
-    const { estoqueMap, extraMap } = await loadFilteredSupplements(
+    const { estoqueMap, extraMap, atacadoMap } = await loadFilteredSupplements(
       supabase,
       list.map((r) => r.id),
+      query.lojaId ?? null,
     )
-    const rows = list.map((r) => mapFilteredRow(r, extraMap.get(r.id), estoqueMap.get(r.id)))
+    const rows = list.map((r) =>
+      mapFilteredRow(r, extraMap.get(r.id), estoqueMap.get(r.id), atacadoMap.get(r.id)),
+    )
     return { ok: true, rows, total }
   } catch (e) {
     return filteredListFailed(e instanceof Error ? e.message : undefined)
@@ -367,8 +388,13 @@ export async function buscarProdutoFiltradoPorId(
   if (error || !data) return null
 
   const row = data as unknown as Omit<RpcProdutoFilteredRow, 'total_count'>
-  const { estoqueMap, extraMap } = await loadFilteredSupplements(supabase, [id])
-  return mapFilteredRow({ ...row, total_count: 0 }, extraMap.get(id), estoqueMap.get(id))
+  const { estoqueMap, extraMap, atacadoMap } = await loadFilteredSupplements(supabase, [id], lojaId)
+  return mapFilteredRow(
+    { ...row, total_count: 0 },
+    extraMap.get(id),
+    estoqueMap.get(id),
+    atacadoMap.get(id),
+  )
 }
 
 /**
