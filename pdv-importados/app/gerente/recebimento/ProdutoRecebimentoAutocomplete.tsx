@@ -28,7 +28,22 @@ type Props = Readonly<{
   limparLabel: string
   /** Pré-seleciona o produto (ex.: deep-link "Repor" a partir do estoque crítico). */
   valorInicial?: RecebimentoProdutoBusca | null
+  /** Avisa o formulário quando um produto é escolhido/limpo (para mostrar o nome na confirmação). */
+  onChange?: (produto: RecebimentoProdutoBusca | null) => void
 }>
+
+/**
+ * Escolha automática para leitor de código de barras: um único resultado, ou um resultado cujo
+ * código de barras é exatamente o termo digitado. Com mais de um candidato o operador decide.
+ */
+function escolhaAutomatica(
+  lista: readonly RecebimentoProdutoBusca[],
+  termo: string,
+): RecebimentoProdutoBusca | null {
+  if (lista.length === 1) return lista[0]
+  const exatos = lista.filter((p) => p.codigo_barras !== null && p.codigo_barras === termo)
+  return exatos.length === 1 ? exatos[0] : null
+}
 
 export function ProdutoRecebimentoAutocomplete({
   disabled,
@@ -37,6 +52,7 @@ export function ProdutoRecebimentoAutocomplete({
   minimoLabel,
   limparLabel,
   valorInicial = null,
+  onChange,
 }: Props) {
   const listId = useId()
   const [termo, setTermo] = useState(() =>
@@ -47,12 +63,21 @@ export function ProdutoRecebimentoAutocomplete({
       : '',
   )
   const [opcoes, setOpcoes] = useState<RecebimentoProdutoBusca[]>([])
+  // Termo a que `opcoes` responde: o Enter só confia na lista quando ela é do que está digitado.
+  // Um leitor de código de barras digita e envia Enter antes do debounce; sem essa checagem o Enter
+  // escolheria o 1º item de uma busca ANTERIOR (produto errado).
+  const [termoDasOpcoes, setTermoDasOpcoes] = useState('')
+  const termoAtualRef = useRef('')
   const [carregando, setCarregando] = useState(false)
   const [aberto, setAberto] = useState(false)
   const [selecionado, setSelecionado] = useState<RecebimentoProdutoBusca | null>(valorInicial)
   const wrapRef = useRef<HTMLDivElement>(null)
 
   const termoDebounced = useDebounce(termo, 260)
+
+  useEffect(() => {
+    termoAtualRef.current = termo.trim()
+  }, [termo])
 
   useEffect(() => {
     // Já escolheu: não fica buscando enquanto o campo mostra o nome escolhido.
@@ -68,6 +93,7 @@ export function ProdutoRecebimentoAutocomplete({
       .then((r) => {
         if (cancelado) return
         setOpcoes(r.success ? r.data : [])
+        setTermoDasOpcoes(t)
       })
       .finally(() => {
         if (!cancelado) setCarregando(false)
@@ -89,13 +115,42 @@ export function ProdutoRecebimentoAutocomplete({
     setSelecionado(p)
     setTermo(p.codigo_barras ? `${p.nome} · ${p.codigo_barras}` : p.nome)
     setAberto(false)
+    onChange?.(p)
   }
 
   const limpar = () => {
     setSelecionado(null)
     setTermo('')
     setOpcoes([])
+    setTermoDasOpcoes('')
     setAberto(false)
+    onChange?.(null)
+  }
+
+  // Enter nunca envia o formulário a partir deste campo (produto vazio = erro; produto escolhido =
+  // confirmação acidental). Escolhe o que a lista mostra ou, sem lista do termo atual (leitor de
+  // código de barras), busca na hora e só escolhe sozinho se o resultado for inequívoco.
+  const aoEnter = async () => {
+    if (selecionado) return
+    const t = termo.trim()
+    if (t.length < 2) return
+    if (termoDasOpcoes === t && opcoes.length > 0) {
+      escolher(opcoes[0])
+      return
+    }
+    setCarregando(true)
+    setAberto(true)
+    try {
+      const r = await buscarProdutosRecebimento(t)
+      if (termoAtualRef.current !== t) return // o operador continuou digitando
+      const lista = r.success ? r.data : []
+      setOpcoes(lista)
+      setTermoDasOpcoes(t)
+      const unico = escolhaAutomatica(lista, t)
+      if (unico) escolher(unico)
+    } finally {
+      setCarregando(false)
+    }
   }
 
   return (
@@ -119,6 +174,7 @@ export function ProdutoRecebimentoAutocomplete({
           aria-autocomplete="list"
           className="pl-8"
           onChange={(e) => {
+            if (selecionado) onChange?.(null)
             setSelecionado(null)
             setTermo(e.target.value)
             setAberto(true)
@@ -126,11 +182,9 @@ export function ProdutoRecebimentoAutocomplete({
           onFocus={() => setAberto(true)}
           onKeyDown={(e) => {
             if (e.key === 'Escape') setAberto(false)
-            // Enter no autocomplete escolhe o primeiro resultado em vez de
-            // submeter o formulário com produto vazio.
-            if (e.key === 'Enter' && aberto && !selecionado && opcoes.length > 0) {
+            if (e.key === 'Enter') {
               e.preventDefault()
-              escolher(opcoes[0])
+              void aoEnter()
             }
           }}
         />

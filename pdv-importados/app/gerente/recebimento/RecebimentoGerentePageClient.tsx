@@ -37,7 +37,8 @@ export type RemessaRecenteRow = {
 
 type Props = Readonly<{
   idioma: Idioma
-  produtos: RecebimentoProdutoOpt[]
+  /** Há ao menos um produto na loja? Sem isso o formulário fica desabilitado. */
+  temProdutos: boolean
   remessasRecentes: RemessaRecenteRow[]
   /** Admin hub S6: oculta link “voltar” redundante com abas de estoque. */
   embeddedInAdminHub?: boolean
@@ -47,7 +48,7 @@ type Props = Readonly<{
 
 export function RecebimentoGerentePageClient({
   idioma,
-  produtos,
+  temProdutos,
   remessasRecentes,
   embeddedInAdminHub = false,
   produtoPreSelecionado = null,
@@ -57,7 +58,7 @@ export function RecebimentoGerentePageClient({
   const locale = useMemo(() => localeFromIdioma(idioma), [idioma])
   const router = useRouter()
   const refetch = useCallback(() => router.refresh(), [router])
-  const semProdutos = produtos.length === 0
+  const semProdutos = !temProdutos
 
   const [qtdEspStr, setQtdEspStr] = useState('')
   const [qtdConfStr, setQtdConfStr] = useState('')
@@ -72,20 +73,33 @@ export function RecebimentoGerentePageClient({
   const [ocEscolhida, setOcEscolhida] = useState<OcListaDTO | null>(null)
   const [ocSaldo, setOcSaldo] = useState<OcDetalheDTO | null>(null)
   const [ocSaldoCarregando, setOcSaldoCarregando] = useState(false)
+  const [ocSaldoErro, setOcSaldoErro] = useState(false)
   const [resultado, setResultado] = useState<string | null>(null)
-  const ultimoCreditadoRef = useRef(0)
+  // Produto escolhido no autocomplete (só para mostrar o nome na confirmação).
+  const [produtoEscolhido, setProdutoEscolhido] = useState<RecebimentoProdutoOpt | null>(
+    produtoPreSelecionado,
+  )
 
   // Saldo por item do pedido escolhido, para o operador ver o que ainda falta ANTES de lançar.
   useEffect(() => {
     if (!ocEscolhida) {
       setOcSaldo(null)
+      setOcSaldoErro(false)
       return
     }
     let ativo = true
     setOcSaldoCarregando(true)
+    setOcSaldoErro(false)
     void obterOrdemCompraDetalhe(ocEscolhida.id)
       .then((res) => {
-        if (ativo) setOcSaldo(res.success ? res.data : null)
+        if (!ativo) return
+        setOcSaldo(res.success ? res.data : null)
+        setOcSaldoErro(!res.success)
+      })
+      .catch(() => {
+        if (!ativo) return
+        setOcSaldo(null)
+        setOcSaldoErro(true)
       })
       .finally(() => {
         if (ativo) setOcSaldoCarregando(false)
@@ -97,10 +111,15 @@ export function RecebimentoGerentePageClient({
 
   const escolherVia = useCallback((v: 'SEM_DOCUMENTO' | 'ORDEM_COMPRA') => {
     setVia(v)
-    if (v === 'SEM_DOCUMENTO') setOcEscolhida(null)
+    if (v === 'SEM_DOCUMENTO') {
+      // Sem documento não há expectativa: some o campo e a divergência deixa de existir.
+      setOcEscolhida(null)
+      setQtdEspStr('')
+    }
   }, [])
 
   const divergenciaDetalhe = useMemo(() => {
+    if (via !== 'ORDEM_COMPRA') return null
     const esp = Number(qtdEspStr.replace(',', '.'))
     const conf = Number(qtdConfStr.replace(',', '.'))
     if (qtdEspStr === '' || qtdConfStr === '') return null
@@ -111,7 +130,7 @@ export function RecebimentoGerentePageClient({
     const pct = esp > 1e-9 ? (abs / esp) * 100 : 100
     const grave = pct >= 10 || abs >= 5
     return { esp, conf, delta, abs, pct, grave }
-  }, [qtdEspStr, qtdConfStr])
+  }, [via, qtdEspStr, qtdConfStr])
 
   const numLocale = idioma === 'pt' ? 'pt-BR' : 'zh-CN'
 
@@ -120,7 +139,9 @@ export function RecebimentoGerentePageClient({
       origem: string
       observacao: string
       produto_id: string
-      qtd_esperada: number
+      produto_nome: string
+      /** Ausente na entrada sem documento (a action assume esperada = conferida). */
+      qtd_esperada?: number
       qtd_conferida: number
       idempotency_key: string
       ordem_compra_id: string
@@ -133,34 +154,40 @@ export function RecebimentoGerentePageClient({
         itens: [
           {
             produto_id: p.produto_id,
-            quantidade_esperada: p.qtd_esperada,
+            ...(p.qtd_esperada !== undefined ? { quantidade_esperada: p.qtd_esperada } : {}),
             quantidade_conferida: p.qtd_conferida,
           },
         ],
       })
       if (!res.success) throw new Error(res.error)
       refetch()
-      return res.data
+      return { ...res.data, produtoNome: p.produto_nome, creditado: p.qtd_conferida }
     },
     {
       onSuccess: (data) => {
         if (data) {
-          const id = data.remessaId
+          const id = fmtGerenteIdCurto(data.remessaId)
           idempotencyKeyRef.current = crypto.randomUUID()
           setQtdEspStr('')
           setQtdConfStr('')
           setUsarProdutoPreSelecionado(false)
           setOcEscolhida(null)
+          setProdutoEscolhido(null)
           setFormKey((k) => k + 1)
           // Depois da entrada: o que mudou de fato (estoque, saldo do pedido, se o pedido fechou),
           // não uma mensagem genérica.
+          const vars = { id, produto: data.produtoNome, qtd: fmtQtd(data.creditado) }
+          const saldo =
+            data.saldoAtual === null || data.saldoAtual === undefined
+              ? ''
+              : ` ${fmtTemplate(r.resultado_saldo, { n: fmtQtd(data.saldoAtual) })}`
           const texto = data.oc
-            ? `${fmtTemplate(r.resultado_com_pedido, { id })} ${textoPosEntrada(
+            ? `${fmtTemplate(r.resultado_com_pedido, vars)} ${textoPosEntrada(
                 { estoque: m.compras.pos_entrada_estoque, parcial: m.compras.pos_entrada_parcial, completo: m.compras.resumo_completo },
                 data.oc,
-                ultimoCreditadoRef.current,
-              )}`
-            : fmtTemplate(r.resultado_sem_pedido, { id })
+                data.creditado,
+              )}${saldo}`
+            : `${fmtTemplate(r.resultado_sem_pedido, vars)}${saldo}`
           setResultado(texto)
           emitGerenteToast({ kind: 'success', message: texto })
         }
@@ -221,7 +248,7 @@ export function RecebimentoGerentePageClient({
         subtitle={r.subtitulo}
         filters={
           <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-soft)] px-2.5 py-0.5 text-caption font-semibold text-fg-muted">
-            {r.badge}
+            {via === 'ORDEM_COMPRA' ? r.badge_pedido : r.badge}
           </span>
         }
       />
@@ -258,9 +285,15 @@ export function RecebimentoGerentePageClient({
             if (semProdutos) return
             const fd = new FormData(e.currentTarget)
             const pid = readFormDataString(fd, 'produto_id')
-            const qEsp = Number(fd.get('qtd_esperada'))
+            // Só o modo Pedido tem "esperada"; sem documento a action assume esperada = conferida.
+            const qEsp = via === 'ORDEM_COMPRA' ? Number(fd.get('qtd_esperada')) : undefined
             const qConf = Number(fd.get('qtd_conferida'))
-            if (!pid || !Number.isFinite(qEsp) || !Number.isFinite(qConf) || qEsp <= 0 || qConf <= 0) {
+            if (
+              !pid ||
+              !Number.isFinite(qConf) ||
+              qConf <= 0 ||
+              (qEsp !== undefined && (!Number.isFinite(qEsp) || qEsp <= 0))
+            ) {
               emitGerenteToast({ kind: 'error', message: r.toast_dados_invalidos })
               return
             }
@@ -269,12 +302,12 @@ export function RecebimentoGerentePageClient({
               emitGerenteToast({ kind: 'error', message: r.ordem_compra_obrigatoria })
               return
             }
-            ultimoCreditadoRef.current = qConf
             setResultado(null)
             void mutate({
               origem: readFormDataString(fd, 'origem'),
               observacao: readFormDataString(fd, 'observacao'),
               produto_id: pid,
+              produto_nome: produtoEscolhido?.nome ?? '',
               qtd_esperada: qEsp,
               qtd_conferida: qConf,
               idempotency_key: idempotencyKeyRef.current,
@@ -338,6 +371,7 @@ export function RecebimentoGerentePageClient({
                 minimoLabel={r.produto_busca_minimo}
                 limparLabel={r.produto_limpar}
                 valorInicial={usarProdutoPreSelecionado ? produtoPreSelecionado : null}
+                onChange={setProdutoEscolhido}
               />
             </Field>
             {via === 'ORDEM_COMPRA' ? (
@@ -391,6 +425,8 @@ export function RecebimentoGerentePageClient({
                       ))}
                     </ul>
                   )
+                ) : ocSaldoErro ? (
+                  <p className="text-caption text-[var(--color-warning-strong)]">{r.oc_saldo_erro}</p>
                 ) : null}
               </div>
             ) : null}
@@ -401,18 +437,20 @@ export function RecebimentoGerentePageClient({
                 placeholder={r.ph_observacao}
               />
             </Field>
-            <Field id="rec-q-esp" label={r.label_qtd_esperada} required>
-              <Input
-                name="qtd_esperada"
-                type="number"
-                min="0.001"
-                step="0.001"
-                required
-                disabled={semProdutos}
-                value={qtdEspStr}
-                onChange={(e) => setQtdEspStr(e.target.value)}
-              />
-            </Field>
+            {via === 'ORDEM_COMPRA' ? (
+              <Field id="rec-q-esp" label={r.label_qtd_esperada} required>
+                <Input
+                  name="qtd_esperada"
+                  type="number"
+                  min="0.001"
+                  step="0.001"
+                  required
+                  disabled={semProdutos}
+                  value={qtdEspStr}
+                  onChange={(e) => setQtdEspStr(e.target.value)}
+                />
+              </Field>
+            ) : null}
             <Field id="rec-q-conf" label={r.label_qtd_conferida} required>
               <Input
                 name="qtd_conferida"

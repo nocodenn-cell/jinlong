@@ -46,6 +46,34 @@ describe('recebimento/actions validações', () => {
     ).toBe('Quantidade conferida deve ser maior que zero para confirmar a entrada.')
   })
 
+  it('esperada é opcional (entrada sem documento); quando informada, segue positiva', () => {
+    expect(
+      validarRemessaInput({
+        origem: 'Container',
+        itens: [{ produto_id: 'p1', quantidade_conferida: 4 }],
+      }),
+    ).toBeNull()
+    expect(
+      validarRemessaInput({
+        origem: 'Container',
+        itens: [{ produto_id: 'p1', quantidade_esperada: null, quantidade_conferida: 4 }],
+      }),
+    ).toBeNull()
+    // sem esperada, a conferida continua obrigatória e positiva
+    expect(
+      validarRemessaInput({
+        origem: 'Container',
+        itens: [{ produto_id: 'p1', quantidade_conferida: 0 }],
+      }),
+    ).toBe('Quantidade conferida deve ser maior que zero para confirmar a entrada.')
+    expect(
+      validarRemessaInput({
+        origem: 'Container',
+        itens: [{ produto_id: 'p1', quantidade_esperada: 0, quantidade_conferida: 4 }],
+      }),
+    ).toBe('Quantidade esperada deve ser maior que zero.')
+  })
+
   it('aceita payload válido', () => {
     expect(
       validarRemessaInput({

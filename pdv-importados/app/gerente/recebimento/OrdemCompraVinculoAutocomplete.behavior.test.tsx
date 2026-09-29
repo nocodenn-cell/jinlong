@@ -146,6 +146,72 @@ describe('OrdemCompraVinculoAutocomplete (S8/RM-14, PR3)', () => {
     expect(hiddenValue()).toBe('')
   })
 
+  function digitar(input: HTMLInputElement, valor: string) {
+    act(() => {
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')!.set!
+      setter.call(input, valor)
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+  }
+
+  async function enter(input: HTMLInputElement): Promise<KeyboardEvent> {
+    const ev = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
+    await act(async () => {
+      input.dispatchEvent(ev)
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    return ev
+  }
+
+  it('Enter antes do debounce: busca na hora, escolhe o único pedido e nunca envia o formulário', async () => {
+    render()
+    const input = container.querySelector('input[role="combobox"]') as HTMLInputElement
+
+    digitar(input, 'Alfa')
+    const ev = await enter(input) // sem esperar os 260 ms
+
+    expect(ev.defaultPrevented).toBe(true)
+    expect(listarOrdensCompraElegiveisParaVinculoMock).toHaveBeenCalledWith('Alfa')
+    expect(hiddenValue()).toBe(ocConfirmada.id)
+  })
+
+  it('Enter com vários pedidos e sem lista do termo atual: não escolhe sozinho, mostra a lista', async () => {
+    listarOrdensCompraElegiveisParaVinculoMock.mockResolvedValue([
+      ocConfirmada,
+      { ...ocConfirmada, id: 'oc-outra', fornecedor_nome: 'Fornecedor Alfa 2' },
+    ])
+    render()
+    const input = container.querySelector('input[role="combobox"]') as HTMLInputElement
+
+    digitar(input, 'Alfa')
+    const ev = await enter(input)
+
+    expect(ev.defaultPrevented).toBe(true)
+    expect(hiddenValue()).toBe('')
+    expect(container.querySelectorAll('button[role="option"]')).toHaveLength(2)
+  })
+
+  it('termo mudou depois da lista: Enter NÃO escolhe o 1º pedido da busca anterior', async () => {
+    const outra = { ...ocConfirmada, id: 'oc-beta', fornecedor_nome: 'Fornecedor Beta' }
+    listarOrdensCompraElegiveisParaVinculoMock.mockImplementation(async (termo: string) =>
+      termo === 'Alfa' ? [ocConfirmada, outra] : [outra],
+    )
+    render()
+    const input = container.querySelector('input[role="combobox"]') as HTMLInputElement
+
+    digitar(input, 'Alfa')
+    await act(async () => {
+      vi.advanceTimersByTime(300)
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    digitar(input, 'Beta')
+    await enter(input)
+
+    expect(hiddenValue()).toBe('oc-beta')
+  })
+
   it('sem resultados mostra a mensagem certa e não quebra', async () => {
     listarOrdensCompraElegiveisParaVinculoMock.mockResolvedValue([])
     render()

@@ -8,8 +8,9 @@ import { validarRemessaInput, validarVinculoOrdemCompra } from './actions.valida
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 import { isInativo, type StatusPublicacao } from '@/core/catalog/statusPublicacao'
 import type { StatusOC } from '@/app/gerente/compras/actions'
-import { mensagemErroOc, mensagemPosEntradaOc, type OcResumoRecebimento } from '@/app/gerente/compras/ocRecebimento'
+import { mensagemErroOc, type OcResumoRecebimento } from '@/app/gerente/compras/ocRecebimento'
 import { carregarResumoOc } from '@/app/gerente/compras/ocResumoQuery'
+import { createInventoryReader } from '@/app/admin/estoque/inventoryReader'
 
 type R<T = null> = { success: true; data: T } | { success: false; error: string }
 
@@ -132,15 +133,19 @@ export type RemessaConferenciaResultado = {
   remessaId: string
   /** Estado do pedido depois da entrada (só quando a entrada foi vinculada a um pedido). */
   oc: OcResumoRecebimento | null
-  /** Texto operacional: o que entrou, quanto falta no pedido, se o pedido fechou. */
-  mensagemOc: string | null
+  /**
+   * Saldo do produto DEPOIS da entrada, lido de `estoque` (mesmo reader do inventário). Só existe
+   * quando a remessa tem um único item; `null` se a leitura falhar — a entrada já foi confirmada.
+   */
+  saldoAtual: number | null
 }
 
 export async function criarRemessaConferencia(input: {
   origem: string
   observacao?: string
   idempotency_key: string
-  itens: Array<{ produto_id: string; quantidade_esperada: number; quantidade_conferida: number }>
+  /** `quantidade_esperada` ausente (entrada sem documento) vale a própria quantidade conferida. */
+  itens: Array<{ produto_id: string; quantidade_esperada?: number; quantidade_conferida: number }>
   /** S8/RM-14 — vínculo opcional com uma Ordem de Compra (id de `ordens_compra`). */
   ordemCompraId?: string | null
 }): Promise<R<RemessaConferenciaResultado>> {
@@ -157,6 +162,12 @@ export async function criarRemessaConferencia(input: {
     itens: input.itens,
   })
   if (erro) return { success: false, error: erro }
+  // Sem documento não há expectativa: a RPC exige os dois valores, então esperada = conferida.
+  const itens = input.itens.map((i) => ({
+    produto_id: i.produto_id,
+    quantidade_esperada: i.quantidade_esperada ?? i.quantidade_conferida,
+    quantidade_conferida: i.quantidade_conferida,
+  }))
   const idempotencyKey = input.idempotency_key?.trim()
   if (!idempotencyKey) {
     return { success: false, error: 'Não foi possível identificar esta tentativa. Tente novamente.' }
@@ -187,7 +198,7 @@ export async function criarRemessaConferencia(input: {
   const { data: remessaId, error } = await supabase.rpc('criar_confirmar_remessa_entrada', {
     p_origem: input.origem.trim(),
     p_observacao: input.observacao?.trim() || null,
-    p_itens: input.itens,
+    p_itens: itens,
     p_idempotency_key: idempotencyKey,
     // Só envia o vínculo quando há pedido: entrada sem pedido segue com os 4 argumentos de sempre.
     ...(ordemCompraId ? { p_ordem_compra_id: ordemCompraId } : {}),
@@ -203,14 +214,15 @@ export async function criarRemessaConferencia(input: {
   }
 
   // Depois da entrada, mostra o estado real do pedido (o que falta, se fechou), lido do banco.
-  let oc: OcResumoRecebimento | null = null
-  let mensagemOc: string | null = null
-  if (ordemCompraId) {
-    oc = await carregarResumoOc(supabase, lojaId, ordemCompraId)
-    if (oc) {
-      const creditado = input.itens.reduce((s, i) => s + i.quantidade_conferida, 0)
-      mensagemOc = mensagemPosEntradaOc(oc, creditado)
-    }
+  const oc: OcResumoRecebimento | null = ordemCompraId
+    ? await carregarResumoOc(supabase, lojaId, ordemCompraId)
+    : null
+
+  // Saldo novo do produto, só para dar feedback ao operador: leitura, nunca decide nada.
+  let saldoAtual: number | null = null
+  if (itens.length === 1) {
+    const saldo = await createInventoryReader(supabase, lojaId).getBalance(itens[0].produto_id)
+    if (saldo.ok) saldoAtual = saldo.item.quantity
   }
 
   revalidatePath('/gerente/recebimento')
@@ -219,5 +231,5 @@ export async function criarRemessaConferencia(input: {
     revalidatePath('/gerente/compras')
     revalidatePath('/admin/compras')
   }
-  return { success: true, data: { remessaId: String(remessaId), oc, mensagemOc } }
+  return { success: true, data: { remessaId: String(remessaId), oc, saldoAtual } }
 }

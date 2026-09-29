@@ -49,12 +49,20 @@ export function OrdemCompraVinculoAutocomplete({
   const listId = useId()
   const [termo, setTermo] = useState('')
   const [opcoes, setOpcoes] = useState<OcListaDTO[]>([])
+  // Termo a que `opcoes` responde (mesma razão do autocomplete de produto: Enter não pode escolher
+  // o 1º item de uma busca anterior).
+  const [termoDasOpcoes, setTermoDasOpcoes] = useState('')
+  const termoAtualRef = useRef('')
   const [carregando, setCarregando] = useState(false)
   const [aberto, setAberto] = useState(false)
   const [selecionado, setSelecionado] = useState<OcListaDTO | null>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
 
   const termoDebounced = useDebounce(termo, 260)
+
+  useEffect(() => {
+    termoAtualRef.current = termo.trim()
+  }, [termo])
 
   useEffect(() => {
     if (selecionado) return
@@ -69,6 +77,7 @@ export function OrdemCompraVinculoAutocomplete({
       .then((rows) => {
         if (cancelado) return
         setOpcoes(rows)
+        setTermoDasOpcoes(t)
       })
       .finally(() => {
         if (!cancelado) setCarregando(false)
@@ -99,8 +108,32 @@ export function OrdemCompraVinculoAutocomplete({
     setSelecionado(null)
     setTermo('')
     setOpcoes([])
+    setTermoDasOpcoes('')
     setAberto(false)
     onChange?.(null)
+  }
+
+  // Enter nunca envia o formulário a partir deste campo. Escolhe o 1º da lista do termo atual ou,
+  // sem ela, busca na hora e só escolhe sozinho se houver exatamente um pedido.
+  const aoEnter = async () => {
+    if (selecionado) return
+    const t = termo.trim()
+    if (t.length < 2) return
+    if (termoDasOpcoes === t && opcoes.length > 0) {
+      escolher(opcoes[0])
+      return
+    }
+    setCarregando(true)
+    setAberto(true)
+    try {
+      const rows = await listarOrdensCompraElegiveisParaVinculo(t)
+      if (termoAtualRef.current !== t) return
+      setOpcoes(rows)
+      setTermoDasOpcoes(t)
+      if (rows.length === 1) escolher(rows[0])
+    } finally {
+      setCarregando(false)
+    }
   }
 
   return (
@@ -132,9 +165,9 @@ export function OrdemCompraVinculoAutocomplete({
           onFocus={() => setAberto(true)}
           onKeyDown={(e) => {
             if (e.key === 'Escape') setAberto(false)
-            if (e.key === 'Enter' && aberto && !selecionado && opcoes.length > 0) {
+            if (e.key === 'Enter') {
               e.preventDefault()
-              escolher(opcoes[0])
+              void aoEnter()
             }
           }}
         />
