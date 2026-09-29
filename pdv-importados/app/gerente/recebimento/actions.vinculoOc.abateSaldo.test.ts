@@ -15,13 +15,24 @@ const rpcMock = vi.fn()
 const ocLeituraMock = vi.fn()
 const escritaMock = vi.fn()
 
+let estoqueFalha = false
+const SALDO_ESTOQUE = { produto_id: 'p1', loja_id: 'loja-1', quantidade_atual: 75, estoque_minimo: 0 }
+
 function buildSupabaseMock() {
   return {
     rpc: rpcMock,
     from: (table: string) => ({
       select: () => ({
         eq: () => ({
-          eq: () => ({ maybeSingle: async () => ocLeituraMock(table) }),
+          eq: () => ({
+            // `estoque` é lido só para o feedback do saldo novo; o resto é a leitura do pedido.
+            maybeSingle: async () =>
+              table === 'estoque'
+                ? estoqueFalha
+                  ? { data: null, error: { message: 'falha' } }
+                  : { data: SALDO_ESTOQUE, error: null }
+                : ocLeituraMock(table),
+          }),
         }),
       }),
       insert: (...a: unknown[]) => escritaMock(table, 'insert', a),
@@ -76,7 +87,7 @@ describe('recebimento manual com pedido — o vínculo abate o saldo (UX-04)', (
     if (res.success) {
       expect(res.data.remessaId).toBe('remessa-1')
       expect(res.data.oc).toMatchObject({ pedido_total: 100, recebido_total: 60, pendente_total: 40, encerrada: false })
-      expect(res.data.mensagemOc).toContain('Faltam 40 unidades.')
+      expect(res.data.saldoAtual).toBe(75)
     }
     // a action nunca altera o pedido por conta própria: quem abate é o banco, dentro da RPC
     expect(escritaMock).not.toHaveBeenCalled()
@@ -100,8 +111,7 @@ describe('recebimento manual com pedido — o vínculo abate o saldo (UX-04)', (
     expect(res.success).toBe(true)
     if (res.success) {
       expect(res.data.oc?.encerrada).toBe(true)
-      expect(res.data.mensagemOc).toContain('Pedido totalmente recebido.')
-      expect(res.data.mensagemOc).toContain('Estoque atualizado: +40.')
+      expect(res.data.oc).toMatchObject({ pedido_total: 100, recebido_total: 100, pendente_total: 0 })
     }
   })
 
@@ -119,7 +129,32 @@ describe('recebimento manual com pedido — o vínculo abate o saldo (UX-04)', (
     expect(ocLeituraMock).not.toHaveBeenCalled()
     if (res.success) {
       expect(res.data.oc).toBeNull()
-      expect(res.data.mensagemOc).toBeNull()
+      expect(res.data.saldoAtual).toBe(75)
+    }
+  })
+
+  it('sem documento: esperada ausente vira a própria conferida na RPC (a RPC continua exigindo os dois)', async () => {
+    const { criarRemessaConferencia } = await import('./actions')
+    const res = await criarRemessaConferencia({
+      origem: 'Container 02',
+      idempotency_key: 'k-4',
+      itens: [{ produto_id: 'p1', quantidade_conferida: 7.5 }],
+    })
+
+    expect(res.success).toBe(true)
+    const [, params] = rpcMock.mock.calls[0] as [string, { p_itens: unknown }]
+    expect(params.p_itens).toEqual([{ produto_id: 'p1', quantidade_esperada: 7.5, quantidade_conferida: 7.5 }])
+  })
+
+  it('saldo novo indisponível: a entrada continua confirmada, com saldoAtual nulo', async () => {
+    estoqueFalha = true
+    try {
+      const { criarRemessaConferencia } = await import('./actions')
+      const res = await criarRemessaConferencia({ origem: 'Container 03', idempotency_key: 'k-5', itens: [item60] })
+      expect(res.success).toBe(true)
+      if (res.success) expect(res.data.saldoAtual).toBeNull()
+    } finally {
+      estoqueFalha = false
     }
   })
 

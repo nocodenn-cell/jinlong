@@ -46,11 +46,7 @@ export default async function AdminEstoqueRecebimentoPage({ searchParams }: Page
       : Promise.resolve({ data: [] }),
   ])
 
-  const produtos: RecebimentoProdutoOpt[] = (produtosRaw ?? []).map((p) => ({
-    id: p.id,
-    nome: p.nome,
-    codigo_barras: p.codigo_barras,
-  }))
+  const temProdutos = (produtosRaw ?? []).length > 0
 
   const remessasRecentes: RemessaRecenteRow[] = (remessasRaw ?? []).map((r) => ({
     id: r.id,
@@ -73,7 +69,7 @@ export default async function AdminEstoqueRecebimentoPage({ searchParams }: Page
       <EstoqueHubNav />
       <RecebimentoGerentePageClient
         idioma={idioma}
-        produtos={produtos}
+        temProdutos={temProdutos}
         remessasRecentes={remessasRecentes}
         produtoPreSelecionado={produtoPreSelecionado}
         embeddedInAdminHub

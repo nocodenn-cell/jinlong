@@ -20,7 +20,11 @@ function buildSupabaseMock() {
       select: (_cols: string) => ({
         eq: (_col1: string, _val1: string) => ({
           eq: (_col2: string, _val2: string) => ({
-            maybeSingle: async () => ocQueryMock(table),
+            // `estoque` é lido só para o feedback do saldo novo; o resto é a consulta do pedido.
+            maybeSingle: async () =>
+              table === 'estoque'
+                ? { data: { produto_id: 'p1', loja_id: 'loja-1', quantidade_atual: 10, estoque_minimo: 0 }, error: null }
+                : ocQueryMock(table),
           }),
         }),
       }),
