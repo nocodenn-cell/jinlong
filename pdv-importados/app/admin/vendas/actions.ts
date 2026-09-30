@@ -48,6 +48,11 @@ export type VendaDetalhe = Readonly<{
   cliente_nome: string | null
   tem_conta_receber: boolean
   valor_aberto_cr: number
+  /** Pagamentos por forma (split). Vazio em vendas legadas sem `vendas_pagamentos`. */
+  pagamentos: Readonly<{ forma_pagamento: string; valor: number }>[]
+  /** Desconto do gerente (`descontos_venda`); 0 quando não houve. Já incluído em `total_desconto`. */
+  desconto_gerente_valor: number
+  desconto_gerente_percentual: number
   itens: VendaItemDetalhe[]
   showMargemVisual: boolean
   showPrecoFonte: boolean
@@ -132,6 +137,20 @@ export async function obterDetalheVenda(vendaId: string): Promise<VendaDetalhe |
     .in('status', ['ABERTO', 'PARCIAL'])
     .maybeSingle()
 
+  // Dados do cupom (2ª via): mesmas tabelas que o histórico do caixa lê; RLS por loja/perfil.
+  const [{ data: pagRaw }, { data: descRow }] = await Promise.all([
+    supabase.from('vendas_pagamentos').select('forma_pagamento, valor').eq('venda_id', vendaId),
+    supabase
+      .from('descontos_venda')
+      .select('desconto_percentual, desconto_valor')
+      .eq('venda_id', vendaId)
+      .maybeSingle(),
+  ])
+  const pagamentos = (pagRaw ?? []).map((p) => ({
+    forma_pagamento: String(p.forma_pagamento ?? ''),
+    valor: Number(p.valor ?? 0),
+  }))
+
   const temContaReceber = !!crRow
   const valorAbertoCr = Number(crRow?.valor_aberto ?? 0)
 
@@ -170,6 +189,9 @@ export async function obterDetalheVenda(vendaId: string): Promise<VendaDetalhe |
     cliente_nome: nomeRelacao(venda.cliente, 'nome'),
     tem_conta_receber: temContaReceber,
     valor_aberto_cr: valorAbertoCr,
+    pagamentos,
+    desconto_gerente_valor: Number(descRow?.desconto_valor ?? 0) || 0,
+    desconto_gerente_percentual: Number(descRow?.desconto_percentual ?? 0) || 0,
     itens,
     showMargemVisual: false,
     showPrecoFonte: false,

@@ -9,7 +9,7 @@ const FORMAS_VALIDAS = new Set<FinalizarVendaInput['formaPagamento']>([
   'CARTAO_CREDITO',
 ])
 
-function asFormaPagamento(valor: string): FinalizarVendaInput['formaPagamento'] {
+export function asFormaPagamento(valor: string): FinalizarVendaInput['formaPagamento'] {
   const up = valor.toUpperCase()
   return FORMAS_VALIDAS.has(up as FinalizarVendaInput['formaPagamento'])
     ? (up as FinalizarVendaInput['formaPagamento'])
