@@ -61,6 +61,9 @@ jobs:
       - name: Architecture Lock (core rules, PDV flow, routes)
         run: npm run guard:all
 
+      - name: shared-core isolado (typecheck + testes)
+        run: npx turbo run typecheck test --filter=@fastproduct/shared-core
+
       - name: Lint, typecheck e unit tests
         run: npx turbo run lint typecheck test --filter=pdv-importados
 
