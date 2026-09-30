@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { descontoProdutosLiquido } from '@/lib/caixa/reciboTotais'
 import {
   historicoDetalheParaRecibo,
   totalDescontoItensHistorico,
@@ -83,7 +84,10 @@ describe('historicoDetalheParaRecibo — ID 28 reimpressão fiel', () => {
     const recibo = historicoDetalheParaRecibo(d, 'R$')
     expect(recibo.descontoGerentePercentual).toBe(10)
     expect(recibo.valorDescontoGerente).toBe(20)
-    expect(recibo.totalDesconto).toBe(10)
+    // totalDesconto inclui o do gerente; o cupom separa itens = 30 − 20 = 10
+    expect(recibo.totalDesconto).toBe(30)
+    expect(descontoProdutosLiquido(recibo)).toBe(10)
+    expect(recibo.totalBruto - descontoProdutosLiquido(recibo) - recibo.valorDescontoGerente).toBe(170)
     expect(recibo.totalLiquidoComGerente).toBe(170)
   })
 
@@ -115,7 +119,8 @@ describe('historicoDetalheParaRecibo — ID 28 reimpressão fiel', () => {
       'R$',
     )
     expect(recibo.totalBruto).toBe(500)
-    expect(recibo.totalDesconto).toBe(25)
+    expect(recibo.totalDesconto).toBe(50)
+    expect(descontoProdutosLiquido(recibo)).toBe(25)
     expect(recibo.totalLiquidoComGerente).toBe(450)
   })
 

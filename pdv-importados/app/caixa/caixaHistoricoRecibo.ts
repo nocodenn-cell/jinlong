@@ -46,7 +46,9 @@ export function historicoDetalheParaRecibo(
       valor: p.valor,
     })),
     totalBruto: detalhe.totalBruto,
-    totalDesconto: totalDescontoItensHistorico(detalhe),
+    // Mesma semântica do cupom emitido na hora: `totalDesconto` INCLUI o desconto do gerente
+    // (o cupom separa "Desconto produtos" = totalDesconto − valorDescontoGerente).
+    totalDesconto: detalhe.totalDesconto,
     totalLiquidoComGerente: detalhe.totalLiquido,
     descontoGerentePercentual,
     valorDescontoGerente,
