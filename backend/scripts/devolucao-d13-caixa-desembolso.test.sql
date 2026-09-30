@@ -632,6 +632,40 @@ BEGIN
         OR s.absorvido > GREATEST(0, it.itens - ve.total_liquido) + 0.01),                 -- absorvido ≤ desconto
     'T16 por venda: caixa ≤ meio ≤ pago; abatido ≤ financiado; caixa+AR ≤ total líquido; absorvido ≤ desconto');
 END $t16$;
+-- ═══ T14 — retry idempotente exige autorização: a chave de idempotência não é bypass nem oráculo ═════════
+DO $t14$
+DECLARE cx uuid; cx2 uuid; v uuid; e text; n1 bigint; aut numeric; est numeric;
+BEGIN
+  cx := pg_temp.abrir(41, 12, 0);
+  cx2 := pg_temp.abrir(42, 12, 0);
+  v := pg_temp.vender(41, 12, cx, 100, pg_temp.din(100));
+  e := pg_temp.dev(12, v, 2, 'd13-t14', 'DINHEIRO', cx);                        -- o criador (gerente da loja 12) grava; loja 12 tem N caixas abertos → caixa explícito
+  PERFORM pg_temp.assert(e IS NULL, 'T14 criador devolve (' || coalesce(e, 'ok') || ')');
+  n1 := pg_temp.n_dev(v); aut := pg_temp.auth(cx); est := pg_temp.estoque(12);
+
+  e := pg_temp.dev(12, v, 2, 'd13-t14', 'DINHEIRO', cx);                        -- retry do criador continua idempotente
+  PERFORM pg_temp.assert(e IS NULL AND pg_temp.n_dev(v) = n1 AND pg_temp.auth(cx) = aut AND pg_temp.estoque(12) = est,
+    'T14 criador repetindo a chave continua idempotente (' || coalesce(e, 'ok') || ')');
+
+  e := pg_temp.dev(13, v, 2, 'd13-t14', 'DINHEIRO', cx);                        -- gerente de OUTRA loja repete a chave
+  PERFORM pg_temp.assert(e = 'DEVOLVER_VENDA_SEM_PERMISSAO', 'T14 gerente de outra loja repetindo a chave → SEM_PERMISSAO (' || coalesce(e, 'aceita') || ')');
+  e := pg_temp.dev(13, v, 2, 'd13-t14', 'DINHEIRO', cx, NULL, pg_temp.gid(12));   -- p_operador_id não vale com sessão
+  PERFORM pg_temp.assert(e = 'DEVOLVER_VENDA_SEM_PERMISSAO', 'T14 p_operador_id de gerente da loja é ignorado com sessão (' || coalesce(e, 'aceita') || ')');
+  e := pg_temp.dev(12, v, 2, 'd13-t14', 'DINHEIRO', cx, pg_temp.op(41));           -- operador sem perfil gerencial
+  PERFORM pg_temp.assert(e = 'DEVOLVER_VENDA_SEM_PERMISSAO', 'T14 operador repetindo a chave → SEM_PERMISSAO (' || coalesce(e, 'aceita') || ')');
+
+  -- Sem oráculo: caixa divergente informado por quem não tem permissão também é SEM_PERMISSAO (não RETRY_CAIXA_DIVERGENTE)
+  e := pg_temp.dev(13, v, 2, 'd13-t14', 'DINHEIRO', cx2);
+  PERFORM pg_temp.assert(e = 'DEVOLVER_VENDA_SEM_PERMISSAO', 'T14 caixa divergente por gerente de outra loja não vaza RETRY_CAIXA_DIVERGENTE (' || coalesce(e, 'aceita') || ')');
+  e := pg_temp.dev(12, v, 2, 'd13-t14', 'DINHEIRO', cx2, pg_temp.op(42));
+  PERFORM pg_temp.assert(e = 'DEVOLVER_VENDA_SEM_PERMISSAO', 'T14 caixa divergente por operador não vaza RETRY_CAIXA_DIVERGENTE (' || coalesce(e, 'aceita') || ')');
+  -- Quem tem permissão segue recebendo o erro explícito de caixa divergente
+  e := pg_temp.dev(12, v, 2, 'd13-t14', 'DINHEIRO', cx2);
+  PERFORM pg_temp.assert(e = 'DEVOLVER_VENDA_RETRY_CAIXA_DIVERGENTE', 'T14 gerente da loja com caixa divergente → RETRY_CAIXA_DIVERGENTE (' || coalesce(e, 'aceita') || ')');
+
+  PERFORM pg_temp.assert(pg_temp.n_dev(v) = n1 AND pg_temp.auth(cx) = aut AND pg_temp.estoque(12) = est,
+    'T14 nenhuma tentativa negada alterou operação, caixa ou estoque');
+END $t14$;
 
 -- ═══ Estrutura: exatamente UMA assinatura de devolver_ou_trocar_venda e ACL esperada ═══════════════════
 DO $estrutura$
