@@ -20,7 +20,7 @@ Classificação por evidência do código (imports, dependências, conceitos). `
 | `../navigation/routes.ts` (fora de `src/`) | **Específico do Jinlong** | rotas `/gerente`, `/caixa`, `/admin` | deve sair do `shared-core` (Fase 2.7) |
 
 ## Invariantes hoje verdadeiras (verificadas)
-- `shared-core/src` importa, fora de testes, apenas `zustand`.
+- Fora de testes e de arquivos de configuração, `shared-core` importa apenas `zustand` (1 arquivo: `stores/unifiedCartStore.ts`) e nenhum import relativo escapa do pacote. Congelado pelo `boundary-ratchet-guard` (regra `shared-core-externals`).
 - Nenhum arquivo executável importa `pdv-importados`, `pdv-local` ou Supabase.
 - `npm run typecheck` e `npm run test` do pacote rodam **dentro do monorepo** (incluindo os `*.test.ts`).
 - **Ainda não é autossuficiente fora do monorepo** (spike 0.6): faltam como devDependencies `vitest`, `@types/node` e `jsdom`, e `react` como peer (via `zustand`). Ver `modularizacao_sprint1_evidencias.md`, seção 4.

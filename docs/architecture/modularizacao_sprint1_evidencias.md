@@ -24,7 +24,7 @@ Baseline gravada (contagens):
 
 | Regra | Baseline | Meta |
 |---|---|---|
-| `lib-to-app` (arquivos de `lib` importando `@/app/…`) | 5 | 0 |
+| `lib-to-app` (arquivos de `lib` importando `@/app/…`) | 5 (inalterado na continuação; ver seção 9) | 0 |
 | `ui-to-app` (`components/ui`) | 2 | 0 |
 | `components-to-app` | 27 imports / 19 arquivos | só tipos → 0 |
 | `shared-to-apps` (`shared/` raiz importando apps) | 0 | 0 |
@@ -139,8 +139,8 @@ Observação: rodar `deno check` modificou `deno.lock` na raiz; o arquivo foi re
 5. `shared-core/package.json` sem `vitest`, `@types/node`, `jsdom` (devDependencies) e `react` (peer).
 6. `shared-core/src/observability/index.ts` em UTF-16LE, exportando só `vendaTrace`; mensagem padrão de `runActionWithObservability` fixa em português.
 7. `rpc-gate-guard` não cobre escrita em `estoque`/`caixas.saldo_atual`; não existe lista de funções escritoras permitidas.
-8. Código morto: `core/services/produtoService.ts` + `ProdutoRepositoryPort` (sem chamador/implementador).
-9. Duplicatas restantes congeladas pelo ratchet: `mensagemErroUsuario` (2) e `unified-logger` (2); `PricingService` (guardado por guard e teste).
+8. ~~Código morto `produtoService.ts`~~ — removido na continuação (seção 9).
+9. Duplicatas restantes congeladas pelo ratchet: `mensagemErroUsuario` (2); `PricingService` (guardado por guard e teste). `unified-logger` passou a 1 implementação (seção 9).
 10. Observação de segurança (não avaliada como defeito): `gtin_lookup_cache` permite INSERT/UPDATE a qualquer `authenticated` com predicado `true`.
 11. Desktop: `@tauri-apps/api` e `@vitejs/plugin-react-swc` não instalados neste ambiente; Deno local não lê lockfile v5.
 
@@ -152,3 +152,29 @@ Observação: rodar `deno check` modificou `deno.lock` na raiz; o arquivo foi re
 - **D-01** — qual é o próximo produto Natural Code real e do que ele precisa (define a ordem da Fase 5).
 - **D-02** — como distribuir ativos com parte em SQL, dado o ADR-011 (um único diretório de migrations).
 - **D-03** — modelo de distribuição dos ativos (workspace, registry privado ou repositório por ativo).
+
+## 9. Continuação após as decisões de 2026-09-30 (D-01, D-02, D-05)
+
+**Decisões:** D-01 — não existe segundo produto real; sem extração agressiva nem abstração especulativa; avançar só até o limite da Fase 2; a prova de reutilização externa fica condicionada a um Sistema B real. D-02 — SQL do Jinlong permanece no hospedeiro; nada de migrations/RPCs/RLS como ativos; fronteiras por contratos/adapters com dependências SQL documentadas. D-05 — freeze vigente: não alterar `finalizar_venda_*`, preço nem caixa.
+
+**Feito (sem tocar caixa, preço ou `finalizar_venda_*`):**
+- 1.8 (código morto): removidos `core/services/produtoService.ts` e `ProdutoRepositoryPort` (zero chamadores e zero implementadores); `core/ports/produto.ts` mantém os tipos de entrada. O guard `check-entity-ssot-boundary` deixou de citar o arquivo inexistente.
+- 1.7 (logger): `pdv-importados/shared/unified-logger.ts` virou shim de `shared/unified-logger.ts`. A única diferença entre as cópias eram casts de tipo (`as unknown as T`), e a versão da raiz, pura e sem `Deno`/`process`, é a mesma usada pelo desktop e pelas Edge Functions.
+- 2.5 (parcial): tipo `FinanceiroTabId` movido para `lib/navigation/financeiroTabId.ts`. `LanguageToggle` **não** foi movido: ele chama a server action `setIdiomaAction` do produto; movê-lo só deslocaria o acoplamento e injetar a action por props seria abstração sem necessidade. Fica como exceção documentada (`components/ui/admin-v2/AdminV2UtilityBar.tsx`).
+- 2.6: tipos `ProdutoGerenteRow`, `OpcoesFiltrosProdutos`, `ProdutoAutoria`, `FilaStatusPayload` e `HealthPayload` movidos para `lib/` (os arquivos originais reexportam). `components → app`: 27 → 14 imports.
+- 4.3 (guard de independência do `shared-core`): nova regra `shared-core-externals` no ratchet (externos por arquivos distintos e imports relativos que escapam do pacote). Baseline: `externo:zustand` em 1 arquivo, 0 escapes. Arquivos `*.config.ts` são ignorados.
+- D-02: `docs/architecture/dependencias_sql_por_contrato.md` (tabelas, views e RPCs por adapter; existência confirmada por `SELECT` no catálogo local).
+
+**Não feito, e por quê (gates que dependem de decisão):**
+| Item | Motivo |
+|---|---|
+| 2.7 mover `shared-core/navigation/routes.ts` | Exige reescrever import em 84 arquivos, incluindo 1 arquivo de `app/caixa` (`caixaPainelGestao.ts`); além disso `route-guard.mjs` e `check-routes-invariant.mjs` fixam o caminho. O freeze proíbe alterar caixa; **decidir se uma troca de caminho de import, sem mudança de comportamento, em arquivo de caixa é permitida** |
+| 1.6 unificar `mensagemErroUsuario` | Muda mensagens exibidas no desktop (caixa offline): comportamento visível em área sob freeze |
+| 1.9, 1.10, 1.11 (`PricingService`, `roundAbnt`) e G3 (`derivarFaixaAtacado`) | Preço: freeze |
+| 2.3, 2.1 restante (`reciboTypes → FinalizarVendaInput`), G2 | Caixa/validação de venda: freeze |
+| 2.5 `LanguageToggle`, G4/G5 (adapters em `lib`, wrapper de sugestão) | Sem ganho sem abstração nova ou sem Fase 3 |
+| Fase 3 (contratos como fronteira real), Fase 4.4+, Fase 5 | Além do limite da Fase 2 definido por D-01; Fase 3 também envolve escrita de caixa/financeiro |
+
+`lib → app` permanece em 5 arquivos, por: `reciboTypes` (caixa), `fetchPdvStateSnapshot.internal` (caixa), `criarProdutoComEstoqueInicialRpc` (helper de faixa de atacado = preço), `financeiroTitulosServer` (adapter em `app/`, Fase 3) e `cadastroSugestaoClient` (wrapper cliente de server action, direção legítima).
+
+**Verificação da continuação:** `guard:all` exit 0 (ratchet com 9 testes); `shared-core` 221 testes; web lint (0 erros), typecheck e 1731 testes passando; **`next build` da web passou** (com `NEXT_PUBLIC_SUPABASE_URL`/`ANON_KEY` fictícios); mesmas falhas pré-existentes da base (1 suíte de integração web, 8 erros de `tsc` no desktop, 19 violações de `check:routes`).
