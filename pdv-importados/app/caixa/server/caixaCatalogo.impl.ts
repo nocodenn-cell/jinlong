@@ -97,13 +97,23 @@ function mesclarCandidatos(
 
 type SupabaseCaixa = Awaited<ReturnType<typeof createClient>>
 
+/**
+ * Produtos vendáveis DA LOJA do operador. O `loja_id` explícito é defesa em
+ * profundidade: a RLS libera leitura global a ADMIN e o código de barras é único
+ * só por loja, então sem este filtro um código repetido em outra loja colidiria.
+ */
+function produtosVendaveisDaLoja(supabase: SupabaseCaixa, lojaId: string) {
+  return aplicarFiltroProdutoVendavel(supabase.from('produtos').select('*')).eq('loja_id', lojaId)
+}
+
 async function buscarVendaveisPorColunaIlike(
   supabase: SupabaseCaixa,
   coluna: 'codigo_interno' | 'nome',
   frag: string,
   idioma: string,
+  lojaId: string,
 ): Promise<{ ok: true; lista: ProdutoRowCaixa[] } | { ok: false; error: string }> {
-  const { data, error } = await aplicarFiltroProdutoVendavel(supabase.from('produtos').select('*'))
+  const { data, error } = await produtosVendaveisDaLoja(supabase, lojaId)
     .ilike(coluna, `%${frag}%`)
     .order('nome', { ascending: true })
     .limit(LIMITE_CANDIDATOS_AMBIGUOS)
@@ -194,39 +204,41 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
     const t = termo.trim()
     if (!t) return { ok: true, status: 'nao_encontrado' }
 
+    // Código exato primeiro: um cadastro `0789…` e outro `789…` na mesma loja não
+    // devem virar "ambíguo" quando a leitura bate exatamente com um deles. As
+    // variantes (zeros à esquerda, prefixos) só entram se o exato não achar nada.
     const variantes = variantesChaveLeitura(t)
-    if (variantes.length > 0) {
-      const { data: porCodigoLista, error: errCodigo } = await aplicarFiltroProdutoVendavel(
-        supabase.from('produtos').select('*'),
-      )
-        .in('codigo_barras', variantes)
+    const tentativas: string[][] = [[t], variantes.filter((v) => v !== t)]
+    for (const chaves of tentativas) {
+      if (chaves.length === 0) continue
+      const { data: porCodigoLista, error: errCodigo } = await produtosVendaveisDaLoja(supabase, lojaId)
+        .in('codigo_barras', chaves)
         .limit(10)
 
       if (errCodigo) return { ok: false, error: mensagemErroParaUsuario(errCodigo.message, idioma) }
       const listaCod = filtrarSomenteProdutosVendaveis((porCodigoLista ?? []) as ProdutoRowCaixa[])
-      if (listaCod.length > 0) {
-        const ids = new Set(listaCod.map((r) => r.id))
-        if (ids.size > 1) {
-          // Sem candidatos de propósito: colisão de código de barras não é uma
-          // ambiguidade de nome que o operador resolva visualmente — é sintoma
-          // do modelo produto↔loja/tenant (decisão de domínio ainda pendente).
-          return {
-            ok: true,
-            status: 'ambiguo',
-            mensagem: caixaMsgServidor(idioma, 'err_srv_codigo_ambiguo'),
-            candidatos: [],
-          }
-        }
-        const row = listaCod[0]
-        if (!rowVendavel(row)) {
-          return { ok: true, status: 'nao_encontrado' }
-        }
-        const est = await estoqueResumoParaCaixa(supabase, row.id, lojaId)
+      if (listaCod.length === 0) continue
+
+      const ids = new Set(listaCod.map((r) => r.id))
+      if (ids.size > 1) {
+        // Sem candidatos de propósito: colisão de código de barras não é uma
+        // ambiguidade de nome que o operador resolva visualmente.
         return {
           ok: true,
-          status: 'encontrado',
-          produto: mapProdutoRow(row, est.quantidade_atual, est.estoque_minimo),
+          status: 'ambiguo',
+          mensagem: caixaMsgServidor(idioma, 'err_srv_codigo_ambiguo'),
+          candidatos: [],
         }
+      }
+      const row = listaCod[0]
+      if (!rowVendavel(row)) {
+        return { ok: true, status: 'nao_encontrado' }
+      }
+      const est = await estoqueResumoParaCaixa(supabase, row.id, lojaId)
+      return {
+        ok: true,
+        status: 'encontrado',
+        produto: mapProdutoRow(row, est.quantidade_atual, est.estoque_minimo),
       }
     }
 
@@ -244,6 +256,7 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
       'codigo_interno',
       frag,
       idioma,
+      lojaId,
     )
     if (!porSku.ok) return porSku
     const skuExatos = skuExato(porSku.lista, t)
@@ -256,9 +269,7 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
     // "cafe" passa a encontrar "Café" sem cair para sequential scan (a coluna
     // tem seu próprio índice trigram; ver migration para o porquê).
     const fragSemAcento = semAcento(frag)
-    const { data: porNome, error: errNome } = await aplicarFiltroProdutoVendavel(
-      supabase.from('produtos').select('*'),
-    )
+    const { data: porNome, error: errNome } = await produtosVendaveisDaLoja(supabase, lojaId)
       .ilike('nome_sem_acento', `%${fragSemAcento}%`)
       .order('nome', { ascending: true })
       .limit(LIMITE_CANDIDATOS_AMBIGUOS)
@@ -275,9 +286,7 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
       if (errCat) return { ok: false, error: mensagemErroParaUsuario(errCat.message, idioma) }
       const catIds = (cats ?? []).map((c) => c.id)
       if (catIds.length > 0) {
-        const { data: porCat, error: errPorCat } = await aplicarFiltroProdutoVendavel(
-          supabase.from('produtos').select('*'),
-        )
+        const { data: porCat, error: errPorCat } = await produtosVendaveisDaLoja(supabase, lojaId)
           .in('categoria_id', catIds)
           .order('nome', { ascending: true })
           .limit(LIMITE_CANDIDATOS_AMBIGUOS)
