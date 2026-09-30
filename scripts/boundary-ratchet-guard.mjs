@@ -13,6 +13,8 @@
  *  shared-to-apps    shared/** (raiz) importa pdv-importados | pdv-local   (meta: 0)
  *  routes-coupling   nº de arquivos que importam '@shared-core/navigation/routes'
  *  direct-from       uso direto de `.from('<tabela de domínio>')` em app/ e lib/ (por arquivo+tabela)
+ *  shared-core-externals  pacotes externos importados por shared-core (produção) e imports relativos que
+ *                    escapam do pacote — hoje só `zustand`, 0 escapes (independência do shared-core)
  *  duplicates        declarações duplicadas conhecidas (StatusPublicacao, OrigemProduto,
  *                    mensagemErroUsuario, unified-logger)
  *
@@ -85,6 +87,7 @@ function measure() {
     'shared-to-apps': {},
     'routes-coupling': {},
     'direct-from': {},
+    'shared-core-externals': {},
     duplicates: {},
   }
 
@@ -117,6 +120,29 @@ function measure() {
   }
   out['routes-coupling']['arquivos-importando-shared-core/navigation/routes'] = routeImporters
 
+  // independência do shared-core: externos (arquivos distintos por pacote) e imports relativos que escapam
+  const coreRoot = path.join(root, 'shared-core')
+  const importRe = /(?:from\s+|import\s*\(\s*)['"]([^'"]+)['"]/g
+  const filesByKey = {}
+  for (const f of walk(coreRoot)) {
+    if (/\.config\.(ts|mjs|js)$/.test(path.basename(f))) continue // config de tooling, não é código de produção
+    const text = read(f)
+    let m
+    while ((m = importRe.exec(text))) {
+      const spec = m[1]
+      let k = null
+      if (spec.startsWith('.')) {
+        const target = path.resolve(path.dirname(f), spec)
+        if (!(target + path.sep).startsWith(coreRoot + path.sep)) k = 'escape-relativo'
+      } else if (!spec.startsWith('node:')) {
+        const parts = spec.split('/')
+        k = `externo:${spec.startsWith('@') ? parts.slice(0, 2).join('/') : parts[0]}`
+      }
+      if (k) (filesByKey[k] ||= new Set()).add(f)
+    }
+  }
+  for (const [k, set] of Object.entries(filesByKey)) out['shared-core-externals'][k] = set.size
+
   // uso direto de .from('<tabela>') fora de testes
   const fromRe = new RegExp(`\\.from\\(\\s*['"](${DOMAIN_TABLES.join('|')})['"]\\s*\\)`, 'g')
   for (const base of [path.join(pdv, 'app'), path.join(pdv, 'lib')]) {
@@ -148,7 +174,7 @@ function measure() {
     if (/^\s*export\s+type\s+StatusPublicacao\s*=/m.test(text)) statusDecl++
     if (/^\s*export\s+type\s+OrigemProduto\s*=/m.test(text)) origemDecl++
     if (/export\s+function\s+mensagemErroParaUsuario\b/.test(text)) mensagemImpl++
-    if (path.basename(f) === 'unified-logger.ts') loggerFiles++
+    if (path.basename(f) === 'unified-logger.ts' && !/export\s+\*\s+from/.test(text)) loggerFiles++ // shim não conta
   }
   out.duplicates['declaracoes-StatusPublicacao'] = statusDecl
   out.duplicates['declaracoes-OrigemProduto'] = origemDecl

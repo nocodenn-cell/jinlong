@@ -7,29 +7,21 @@
     "pdv-importados/lib/pdv/fetchPdvStateSnapshot.internal.ts": 1
   },
   "ui-to-app": {
-    "pdv-importados/components/ui/admin-v2/AdminV2UtilityBar.tsx": 1,
-    "pdv-importados/components/ui/admin-v2/FinanceiroHubNavShell.tsx": 1
+    "pdv-importados/components/ui/admin-v2/AdminV2UtilityBar.tsx": 1
   },
   "components-to-app": {
     "pdv-importados/components/caixa/CaixaToastViewport.tsx": 1,
-    "pdv-importados/components/gerente/GerenteHeaderNav.tsx": 3,
+    "pdv-importados/components/gerente/GerenteHeaderNav.tsx": 1,
     "pdv-importados/components/gerente/produtos/form/fields/FornecedorCombobox.tsx": 2,
-    "pdv-importados/components/gerente/produtos/form/mergeOpcoesFiltros.ts": 1,
-    "pdv-importados/components/gerente/produtos/form/produtoForm.mappers.ts": 2,
-    "pdv-importados/components/gerente/produtos/form/produtoForm.types.ts": 2,
+    "pdv-importados/components/gerente/produtos/form/produtoForm.mappers.ts": 1,
     "pdv-importados/components/gerente/produtos/form/sections/CategoriaQuickField.tsx": 1,
     "pdv-importados/components/gerente/produtos/form/sections/ClassificacaoSection.tsx": 1,
-    "pdv-importados/components/gerente/produtos/form/useProdutoForm.ts": 1,
-    "pdv-importados/components/gerente/produtos/form/useProdutoFormOrchestration.ts": 3,
-    "pdv-importados/components/gerente/produtos/NovoProdutoModal.tsx": 1,
-    "pdv-importados/components/gerente/produtos/ProdutoFormCompletoClient.tsx": 2,
-    "pdv-importados/components/gerente/produtos/ProdutoFormModal.tsx": 1,
+    "pdv-importados/components/gerente/produtos/form/useProdutoFormOrchestration.ts": 2,
     "pdv-importados/components/gerente/produtos/produtoFormSections/FaixasAtacadoEditor.tsx": 1,
     "pdv-importados/components/gerente/produtos/produtoFormSections/HistoricoPrecosSection.tsx": 1,
     "pdv-importados/components/gerente/produtos/ProdutoImagemCell.tsx": 1,
     "pdv-importados/components/gerente/produtos/ProdutosExcluirLoteModal.tsx": 1,
-    "pdv-importados/components/gerente/produtos/ProdutosImportarModal.tsx": 1,
-    "pdv-importados/components/gerente/produtos/ProdutosListaImpressao.tsx": 1
+    "pdv-importados/components/gerente/produtos/ProdutosImportarModal.tsx": 1
   },
   "shared-to-apps": {},
   "routes-coupling": {
@@ -98,10 +90,13 @@
     "pdv-importados/lib/gerente/produtoCodigoBarrasDuplicado.ts|produtos": 1,
     "pdv-importados/lib/pdv/fetchPdvStateSnapshot.internal.ts|caixas": 1
   },
+  "shared-core-externals": {
+    "externo:zustand": 1
+  },
   "duplicates": {
     "declaracoes-StatusPublicacao": 1,
     "declaracoes-OrigemProduto": 1,
     "implementacoes-mensagemErroParaUsuario": 2,
-    "arquivos-unified-logger": 2
+    "arquivos-unified-logger": 1
   }
 }
