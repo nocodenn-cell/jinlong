@@ -124,6 +124,8 @@ export default async function AdminAuditoriaPage({ searchParams }: PageProps) {
       tipo_operacao: ui.auditoria_detalhe_tipo_operacao,
       forma_estorno: ui.auditoria_detalhe_forma_estorno,
       valor_caixa_estornado: ui.auditoria_detalhe_valor_caixa_estornado,
+      valor_abatido_ar: ui.auditoria_detalhe_valor_abatido_ar,
+      caixa_desembolso_id: ui.auditoria_detalhe_caixa_desembolso_id,
     },
     vazioTitulo: ui.auditoria_vazio_titulo,
     vazioSub: ui.auditoria_vazio_sub,

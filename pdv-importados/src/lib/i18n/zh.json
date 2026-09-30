@@ -3000,6 +3000,8 @@
     "auditoria_detalhe_tipo_operacao": "操作类型",
     "auditoria_detalhe_forma_estorno": "退款方式",
     "auditoria_detalhe_valor_caixa_estornado": "收银台退款金额",
+    "auditoria_detalhe_valor_abatido_ar": "冲减应收账款金额",
+    "auditoria_detalhe_caixa_desembolso_id": "实际付款的收银台",
     "auditoria_vazio_titulo": "本期没有事件",
     "auditoria_vazio_sub": "调整时间范围或事件类型以查看审计轨迹。",
     "auditoria_fechar_aria": "关闭",

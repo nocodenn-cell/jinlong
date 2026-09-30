@@ -118,7 +118,8 @@ function detalheValor(
     chave === 'total_liquido' ||
     chave === 'valor_estornado' ||
     chave === 'desconto_valor' ||
-    chave === 'valor_caixa_estornado'
+    chave === 'valor_caixa_estornado' ||
+    chave === 'valor_abatido_ar'
   ) {
     return formatBRL(Number(valor))
   }
