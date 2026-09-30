@@ -92,10 +92,13 @@ export function VendaDetailSheet({
   const [comprovanteDevolucao, setComprovanteDevolucao] =
     useState<ComprovanteDevolucao | null>(null)
 
+  // Comprovante aberto por cima do painel trata o próprio ESC; o painel só fecha quando nenhum está aberto.
+  const comprovanteAberto = reimprimirAberto || comprovanteDevolucao !== null
+
   useEffect(() => {
     if (!alvo) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape' && !comprovanteAberto) onClose()
     }
     document.addEventListener('keydown', onKey)
     const prev = document.body.style.overflow
@@ -104,7 +107,7 @@ export function VendaDetailSheet({
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = prev
     }
-  }, [alvo, onClose])
+  }, [alvo, onClose, comprovanteAberto])
 
   useEffect(() => {
     if (!alvo) return
