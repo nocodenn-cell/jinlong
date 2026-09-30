@@ -5,6 +5,8 @@
 
 **2026-08-27:** o GO de código (`e1327e62`) **não** encerra este freeze. Features novas (Fiscal real, WhatsApp, orçamentos, redesign) continuam OUT. A próxima sprint proposta é **estabilização operacional** ([piloto-d0/PROXIMA_SPRINT.md](./piloto-d0/PROXIMA_SPRINT.md)), não expansão de escopo.
 
+**2026-09-30 — decisão do responsável:** o freeze **continua vigente** até decisão posterior documentada neste arquivo. A ausência de um documento de encerramento não o revoga. Contexto: `docs/architecture/modularizacao_sprint1_evidencias.md` (seção 8).
+
 ## Perfil do piloto (contrato)
 
 | Item | Decisão |
