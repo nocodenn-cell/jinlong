@@ -79,6 +79,14 @@ const MSG_CANCELAR_SALDO_CAIXA: Record<IdiomaErro, string> = {
   pt: 'Dinheiro em caixa insuficiente para estornar esta venda. Registre um suprimento com o valor e cancele novamente.',
   zh: '收银台现金不足以退还本笔销售。请先登记等额的现金补充，再重新取消。',
 }
+/**
+ * `VENDAS_SUSPENSAS` (trigger de `vendas`, migration 20260930090100): regra do banco,
+ * vale para todos os perfis. Não é falha transitória — repetir não adianta.
+ */
+const MSG_VENDAS_SUSPENSAS: Record<IdiomaErro, string> = {
+  pt: 'Vendas suspensas pela gerência. Nenhuma venda pode ser finalizada até serem reativadas.',
+  zh: '门店已暂停销售。恢复前无法完成任何销售。',
+}
 const MSG_LIMITE_CREDITO: Record<IdiomaErro, string> = {
   pt: 'Venda excede o limite de crédito do cliente — autorização do gerente necessária.',
   zh: '销售超过客户信用额度 — 需要经理授权。',
@@ -104,6 +112,9 @@ export function caixaErroOperador(
   }
   if (l.includes('fechar_caixa_movimentacoes_pendentes') || (l.includes('movimentação') && l.includes('pendente'))) {
     return MSG_MOVIMENTACOES_PENDENTES[idioma]
+  }
+  if (l.includes('vendas_suspensas')) {
+    return MSG_VENDAS_SUSPENSAS[idioma]
   }
   if (l.includes('caixa fechado') || l.includes('não há caixa aberto') || l.includes('nao ha caixa aberto')) {
     return l.includes('finalizar') ? MSG_CAIXA_FECHADO[idioma] : MSG_NAO_HA_CAIXA_ABERTO[idioma]

@@ -1027,11 +1027,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       setCaixaMensagem(m.caixa.msg_venda_pendente_bloqueio, { kind: "warning" })
       return
     }
-    if (
-      configCaixaWeb.vendas_suspensas === 'true' &&
-      perfil !== null &&
-      !['GERENTE', 'DONO', 'ADMIN'].includes(perfil)
-    ) {
+    // A regra vive no banco (trigger de `vendas`); aqui é só UX para não gastar a viagem.
+    if (configCaixaWeb.vendas_suspensas === 'true') {
       const motivo = configCaixaWeb.motivo_suspensao?.trim()
       setCaixaMensagem(
         motivo
@@ -1302,7 +1299,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     setCaixaMensagem,
     setCaixaMensagemVendaOk,
     tocarFeedback,
-    perfil,
     clienteId,
     clienteNome,
     saldoPendente,

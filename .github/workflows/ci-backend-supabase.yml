@@ -112,6 +112,22 @@ jobs:
           fi
           psql "$PSQL_URL" -v ON_ERROR_STOP=1 -f scripts/fase2-coalesce-operador-id-regressao.test.sql
 
+      # C1/C2 (auditoria 2026-09-30): guarda de classe SECURITY DEFINER sem identidade,
+      # ACL padrão fail-closed e suspensão de vendas no trigger de `vendas`. Só catálogo
+      # + transação com ROLLBACK; roda sem guard de fork PR.
+      - name: Security regression — SECDEF sem identidade e suspensão de vendas
+        run: |
+          set -euo pipefail
+          cd backend
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          PSQL_URL="${POSTGRES_URL:-${DB_URL:-}}"
+          if [ -z "$PSQL_URL" ]; then
+            echo "::error::Sem URL do Postgres (POSTGRES_URL ou DB_URL)." >&2
+            exit 1
+          fi
+          psql "$PSQL_URL" -v ON_ERROR_STOP=1 -f scripts/c1-secdef-sem-identidade.test.sql
+          psql "$PSQL_URL" -v ON_ERROR_STOP=1 -f scripts/c2-suspensao-vendas-trigger.test.sql
+
       - name: Test RLS scope by profile
         run: |
           set -euo pipefail
