@@ -68,7 +68,7 @@ export type ListClientesPaginadosResult = ListClientesPaginadosOk | ListClientes
 
 /**
  * Port de leitura do domínio customers.
- * Implementado: `pdv-importados/app/admin/clientes/customerReader.ts` (Fase 2).
+ * Adapter de referência: ver ADR-005 / docs/architecture/customers_contracts_adapters.md.
  */
 export type CustomerReader = {
   listPaginados(query: ListClientesPaginadosQuery): Promise<ListClientesPaginadosResult>

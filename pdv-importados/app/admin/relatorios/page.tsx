@@ -15,7 +15,7 @@ import { resolverPeriodoRelatorio } from '@/lib/relatorios/periodoRelatorio'
 import { createClient } from '@/lib/supabase/server'
 import { getMessages } from '@/i18n/getMessages'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES } from '@/lib/navigation/routes'
 import { RelatoriosContent, type RelatoriosDados } from './_components/RelatoriosContent'
 
 type SearchParams = {

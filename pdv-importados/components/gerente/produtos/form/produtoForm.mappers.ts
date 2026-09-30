@@ -1,5 +1,5 @@
 import type { ProdutoFormBaseValues } from '@/app/gerente/produtos/produtoFormSchema'
-import type { ProdutoGerenteRow } from '@/app/gerente/produtos/produtoGerenteTypes'
+import type { ProdutoGerenteRow } from '@/lib/gerente/produtos/produtoGerenteTypes'
 import type { OrigemCode, UnidadeCode } from './produtoForm.types'
 
 export function mapOrigemFromRow(origem: string): OrigemCode {

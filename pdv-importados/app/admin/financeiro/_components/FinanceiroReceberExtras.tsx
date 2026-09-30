@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Fragment, useState, useTransition } from 'react'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES } from '@/lib/navigation/routes'
 import { formatBRL } from '@/lib/format/money'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { DragonModal } from '@/components/ui/DragonModal'

@@ -1,5 +1,5 @@
 import type { Mensagens } from '@/i18n/getMessages'
-import type { OrigemProdutoCaixa } from '@/app/caixa/caixaActionTypes'
+import type { OrigemProduto as OrigemProdutoCaixa } from '@shared-core/src/products/types'
 
 export function labelOrigemCaixa(
   origem: OrigemProdutoCaixa,

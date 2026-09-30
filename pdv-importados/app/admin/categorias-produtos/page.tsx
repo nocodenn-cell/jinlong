@@ -13,7 +13,7 @@ import { CatalogoHubNav } from '@/components/ui/admin-v2/CatalogoHubNav'
 import { listarCategoriasProdutos } from '@/app/gerente/categorias-produtos/actions'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES } from '@/lib/navigation/routes'
 import { CategoriasProdutosContent } from './_components/CategoriasProdutosContent'
 
 type SearchParams = {

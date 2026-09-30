@@ -6,7 +6,7 @@ import {
   LEGACY_GERENTE_REDIRECTS,
   ROUTES,
   pathWithQuery,
-} from '@shared-core/navigation/routes'
+} from '@/lib/navigation/routes'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 

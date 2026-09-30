@@ -94,7 +94,7 @@ function isAllowed(rel, allowedPrefixes) {
 }
 
 function isActionDefinition(rel) {
-  return rel.endsWith('/actions.ts') || rel.endsWith('produtoService.ts')
+  return rel.endsWith('/actions.ts')
 }
 
 const files = [...walk(APP), ...walk(COMPONENTS)]

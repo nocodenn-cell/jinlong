@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES } from '@/lib/navigation/routes'
 import type { FiltroComissoes } from '@/app/gerente/comissoes/actions'
 
 export type ComissoesFiltersLabels = {

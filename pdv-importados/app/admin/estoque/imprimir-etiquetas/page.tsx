@@ -1,5 +1,5 @@
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES } from '@/lib/navigation/routes'
 import { EstoqueHubNav } from '@/components/ui/admin-v2/EstoqueHubNav'
 import { ImprimirEtiquetasPageClient } from '@/app/gerente/estoque/imprimir-etiquetas/ImprimirEtiquetasPageClient'
 

@@ -9,7 +9,7 @@ import type {
   DiagnosticoCheck,
   DiagnosticoCheckCategoria,
 } from '@/lib/caixa/diagnosticoPreProducaoTypes'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES } from '@/lib/navigation/routes'
 import { cn } from '@/lib/utils'
 
 type Props = {

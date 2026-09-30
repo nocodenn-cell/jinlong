@@ -2,7 +2,7 @@
  * Policy pura de exclusão/inativação de produto.
  * Espelha `motivoBloqueioExclusaoFisica` + lote em gerente/produtos (sem I/O).
  *
- * Evidência: pdv-importados/lib/gerente/produtoExclusaoLote.ts
+ * Evidência: ver ADR-007 (exclusão = policy pura + efeitos na borda).
  * + aplicarExclusaoOuInativacaoEmLote (actions).
  *
  * Saldo atual de estoque NÃO bloqueia delete físico — só referências

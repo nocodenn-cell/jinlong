@@ -1,16 +1,12 @@
 import { NextResponse } from 'next/server'
+import type { HealthPayload } from '@/lib/gerente/apiPayloadTypes'
 import { createClient } from '@/lib/supabase/server'
 import { requireAdminContextApi } from '@/lib/admin/auth/requireAdminSessionApi'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 
-export type HealthPayload = {
-  status: 'online' | 'degraded' | 'offline'
-  latency: number
-  fiscal_erro: number
-  fiscal_fila: number
-}
+export type { HealthPayload }
 
 export async function GET() {
   const t0 = Date.now()

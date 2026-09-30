@@ -6,21 +6,14 @@ import { formatBRL } from '@/lib/format/money'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 
-export type AtividadeRailTipo = 'VENDA' | 'FISCAL_OK' | 'FISCAL_ERRO' | 'CAIXA'
-export type AtividadeRailSeverity = 'info' | 'warning' | 'error'
+import type {
+  AtividadeFeedPayload,
+  AtividadeRailItem,
+  AtividadeRailSeverity,
+  AtividadeRailTipo,
+} from '@/lib/hooks/atividadeFeedTypes'
 
-export type AtividadeRailItem = {
-  id: string
-  tipo: AtividadeRailTipo
-  titulo: string
-  ts: string
-  severity: AtividadeRailSeverity
-}
-
-export type AtividadeFeedPayload = {
-  items: AtividadeRailItem[]
-  generatedAt: string
-}
+export type { AtividadeFeedPayload, AtividadeRailItem, AtividadeRailSeverity, AtividadeRailTipo }
 
 const WINDOW_MS = 2 * 60 * 60 * 1000 // 2h
 

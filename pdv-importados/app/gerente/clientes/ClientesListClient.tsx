@@ -10,7 +10,7 @@ import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react
 import Link from 'next/link'
 import { useDebounce } from '@/lib/hooks/useDebounce'
 import { AlertTriangle, Pencil, Receipt, Trash2, Plus } from 'lucide-react'
-import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
+import { ROUTES, pathWithQuery } from '@/lib/navigation/routes'
 import { Button } from '@/components/ui/button'
 import { SearchInput } from '@/components/ui/forms'
 import { DataTable, type Column } from '@/components/ui/DataTable'

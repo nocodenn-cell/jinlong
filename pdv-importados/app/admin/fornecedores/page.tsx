@@ -3,7 +3,7 @@ import { buscarFornecedoresPaginadosAction } from '@/app/gerente/fornecedores/ac
 import { FornecedoresListClient } from '@/app/gerente/fornecedores/FornecedoresListClient'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES } from '@/lib/navigation/routes'
 
 export default async function AdminFornecedoresPage() {
   const { session } = await loadAdminContext({

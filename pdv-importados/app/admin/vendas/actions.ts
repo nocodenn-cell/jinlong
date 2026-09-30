@@ -14,49 +14,13 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { assertAdminSession } from '@/lib/admin/auth/assertAdminSession'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES } from '@/lib/navigation/routes'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-export type VendaItemDetalhe = Readonly<{
-  id: string
-  nome: string
-  codigo_barras: string | null
-  quantidade: number
-  quantidade_devolvida: number
-  preco_unitario: number
-  preco_unitario_original: number
-  desconto_unitario: number
-  subtotal: number
-  tipo_preco: string | null
-  tipo_preco_fonte: string | null
-  custo_unitario_snap: number | null
-  regra_aplicada_id: string | null
-}>
+import type { VendaDetalhe, VendaItemDetalhe } from '@/lib/caixa/vendaDetalheTypes'
 
-export type VendaDetalhe = Readonly<{
-  id: string
-  data: string | null
-  total_bruto: number
-  total_desconto: number
-  total_liquido: number
-  forma_pagamento: string | null
-  tipo_venda: string | null
-  status: string | null
-  numero_nf: string | null
-  operador_nome: string | null
-  cliente_nome: string | null
-  tem_conta_receber: boolean
-  valor_aberto_cr: number
-  /** Pagamentos por forma (split). Vazio em vendas legadas sem `vendas_pagamentos`. */
-  pagamentos: Readonly<{ forma_pagamento: string; valor: number }>[]
-  /** Desconto do gerente (`descontos_venda`); 0 quando não houve. Já incluído em `total_desconto`. */
-  desconto_gerente_valor: number
-  desconto_gerente_percentual: number
-  itens: VendaItemDetalhe[]
-  showMargemVisual: boolean
-  showPrecoFonte: boolean
-}>
+export type { VendaDetalhe, VendaItemDetalhe }
 
 function nomeRelacao(rel: unknown, campo: string): string | null {
   if (rel && typeof rel === 'object' && campo in rel) {

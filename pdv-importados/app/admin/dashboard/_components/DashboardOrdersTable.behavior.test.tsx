@@ -9,7 +9,7 @@ import React from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { act } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ROUTES, adminVendaDetalheQuery } from '@shared-core/navigation/routes'
+import { ROUTES, adminVendaDetalheQuery } from '@/lib/navigation/routes'
 
 const routerPushMock = vi.fn()
 

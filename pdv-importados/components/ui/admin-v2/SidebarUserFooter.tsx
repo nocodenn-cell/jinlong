@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import type { AdminSession } from '@/lib/admin/auth/types'
 import { getMessages } from '@/i18n/getMessages'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES } from '@/lib/navigation/routes'
 
 type SidebarUserFooterProps = {
   session: AdminSession

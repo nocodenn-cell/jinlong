@@ -182,11 +182,11 @@ Layout: `app/admin/layout.tsx` → `AdminV2Shell`.
 | Rota | Comportamento |
 |------|---------------|
 | `/gerente` | → `/admin/dashboard` |
-| `/gerente/[...path]` | `legacyGerenteRedirect` (`@shared-core/navigation/routes`) |
+| `/gerente/[...path]` | `legacyGerenteRedirect` (`@/lib/navigation/routes`) |
 | `/gerente/estoque/imprimir-etiquetas` | redirect preservando query |
 | `/gerente/financeiro/contas-pagar` | redirect preservando query |
 
-Mapa completo de slugs: `LEGACY_GERENTE_REDIRECTS` em `shared-core/navigation/routes.ts`.
+Mapa completo de slugs: `LEGACY_GERENTE_REDIRECTS` em `pdv-importados/lib/navigation/routes.ts`.
 
 Layout `app/gerente/layout.tsx` ainda existe para páginas remanescentes; **não** há `page.tsx` de CRUD sob gerente (só redirect + clients importados pelo admin).
 
@@ -433,4 +433,4 @@ Recomendação de ordem: **scaffold shared-core (fundação ADR) → spike clien
 |-------|---------|------|
 | Eng | Inventário frontend + regras de import + recomendação **clientes** + GO restrito | 2026-07-18 |
 
-**Referências:** ADR-005 · inventário 5.1a · entity-ssot · `scripts/domain-boundary-guard.mjs` · `shared-core/navigation/routes.ts`.
+**Referências:** ADR-005 · inventário 5.1a · entity-ssot · `scripts/domain-boundary-guard.mjs` · `pdv-importados/lib/navigation/routes.ts`.

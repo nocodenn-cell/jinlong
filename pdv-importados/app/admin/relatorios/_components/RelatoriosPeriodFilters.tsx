@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { Download } from 'lucide-react'
 import { useMemo } from 'react'
 import { defaultUltimosDiasNoFuso } from '@/lib/relatorios/periodoRelatorio'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES } from '@/lib/navigation/routes'
 
 export type RelatoriosFiltrosLabels = {
   de: string

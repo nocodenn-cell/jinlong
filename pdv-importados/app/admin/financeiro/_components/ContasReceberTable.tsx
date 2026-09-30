@@ -10,7 +10,7 @@
 
 import Link from 'next/link'
 import { Receipt } from 'lucide-react'
-import { adminVendaDetalheQuery } from '@shared-core/navigation/routes'
+import { adminVendaDetalheQuery } from '@/lib/navigation/routes'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { formatBRL } from '@/lib/format/money'
 import { formatDateTimeOrDash } from '@/lib/format/datetime'

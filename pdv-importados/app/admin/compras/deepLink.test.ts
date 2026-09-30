@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { adminComprasFornecedorQuery, ROUTES } from '@shared-core/navigation/routes'
+import { adminComprasFornecedorQuery, ROUTES } from '@/lib/navigation/routes'
 
 describe('adminComprasFornecedorQuery (G-03 — Fornecedor abre "Nova OC" pré-selecionada)', () => {
   it('monta a URL de compras com o id do fornecedor na query string', () => {

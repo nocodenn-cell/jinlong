@@ -2,7 +2,7 @@
 
 import type { RefObject } from 'react'
 import Link from 'next/link'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES } from '@/lib/navigation/routes'
 import { ProdutoFormSectionHeading } from '../ProdutoFormSectionHeading'
 import { useProdutoFormContext } from '../ProdutoFormContext'
 

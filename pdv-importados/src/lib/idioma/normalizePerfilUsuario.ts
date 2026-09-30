@@ -1,15 +1,6 @@
-export type PerfilUsuario = 'OPERADOR' | 'GERENTE' | 'DONO' | 'ADMIN'
-
-const PERFIS_VALIDOS: ReadonlySet<PerfilUsuario> = new Set([
-  'OPERADOR',
-  'GERENTE',
-  'DONO',
-  'ADMIN',
-])
-
-export function normalizePerfilUsuario(perfil: string | null | undefined): PerfilUsuario {
-  const normalized = perfil?.trim().toUpperCase()
-  return normalized && PERFIS_VALIDOS.has(normalized as PerfilUsuario)
-    ? (normalized as PerfilUsuario)
-    : 'OPERADOR'
-}
+/**
+ * Shim: `PerfilUsuario` e `normalizePerfilUsuario` pertencem a `lib/auth/perfil`.
+ * Remover quando não houver importadores de `@/idioma/normalizePerfilUsuario`.
+ */
+export { normalizePerfilUsuario } from '../../../lib/auth/perfil'
+export type { PerfilUsuario } from '../../../lib/auth/perfil'

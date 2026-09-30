@@ -14,7 +14,7 @@
 
 import Link from 'next/link'
 import { Suspense } from 'react'
-import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
+import { ROUTES, pathWithQuery } from '@/lib/navigation/routes'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
 import { createClient } from '@/lib/supabase/server'

@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES } from '@/lib/navigation/routes'
 import { obterKpisCompras, listarOrdensCompra } from '@/app/gerente/compras/actions'
 import { lojaIdDaSessao } from '@/app/gerente/fornecedores/fornecedorContrato'
 import { ComprasContent } from './_components/ComprasContent'

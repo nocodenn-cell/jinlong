@@ -8,7 +8,7 @@ import React from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { flushSync } from 'react-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { adminComprasFornecedorQuery } from '@shared-core/navigation/routes'
+import { adminComprasFornecedorQuery } from '@/lib/navigation/routes'
 
 vi.mock('./actions', () => ({
   buscarFornecedoresPaginadosAction: vi.fn(),

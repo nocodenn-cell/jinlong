@@ -1,5 +1,6 @@
 'use server'
 
+import type { OpcoesFiltrosProdutos } from '@/lib/gerente/produtos/opcoesFiltrosTypes'
 import crypto from 'crypto'
 import { z } from 'zod'
 import { revalidatePath, unstable_cache } from 'next/cache'
@@ -845,18 +846,7 @@ const BuscarProdutosComFiltrosInputSchema = z.object({
 
 export type BuscarProdutosComFiltrosInput = z.infer<typeof BuscarProdutosComFiltrosInputSchema>
 
-export type OpcoesFiltrosProdutos = {
-  /**
-   * `ativo` acompanha a categoria porque o formulário precisa distinguir "não
-   * ofereço mais" de "não existe": a categoria inativa some das escolhas novas,
-   * mas continua visível no produto que já a usa (senão salvar apagaria o
-   * vínculo). Ver `Jinlong/decisoes/CATALOGO_CATEGORIA_INATIVA_E_PUBLICAR.md`.
-   */
-  categorias: { id: string; nome: string; ativo?: boolean }[]
-  /** `ativo` pelo mesmo motivo de `categorias` — ver nota acima. */
-  marcas: { id: string; nome: string; ativo?: boolean }[]
-  fornecedores: { id: string; nome: string }[]
-}
+export type { OpcoesFiltrosProdutos }
 
 /**
  * Busca as opções de filtro do lado servidor, cacheada com TTL de 120 s.

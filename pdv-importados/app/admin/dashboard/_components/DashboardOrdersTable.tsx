@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { EmptyState, ErrorState } from '@/components/ui/feedback'
-import { adminVendaDetalheQuery } from '@shared-core/navigation/routes'
+import { adminVendaDetalheQuery } from '@/lib/navigation/routes'
 import { shortOrderId } from '../dashboardUtils'
 
 export type DashboardOrderRow = {

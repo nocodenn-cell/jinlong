@@ -11,7 +11,7 @@ import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import { carregarResumoComissoes } from '@/app/gerente/comissoes/actions'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES } from '@/lib/navigation/routes'
 import { ComissoesContent } from './_components/ComissoesContent'
 import {
   ComissoesFilters,

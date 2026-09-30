@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { History, PackagePlus, SlidersHorizontal } from 'lucide-react'
-import { adminEstoqueRecebimentoProdutoQuery } from '@shared-core/navigation/routes'
+import { adminEstoqueRecebimentoProdutoQuery } from '@/lib/navigation/routes'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'

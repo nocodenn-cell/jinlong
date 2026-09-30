@@ -2,7 +2,7 @@
  * Monta o `ReciboVenda` (2ª via) a partir do detalhe de venda do admin.
  * Mesma semântica do cupom emitido no caixa: `totalDesconto` inclui o desconto do gerente.
  */
-import type { VendaDetalhe } from "@/app/admin/vendas/actions"
+import type { VendaDetalhe } from "@/lib/caixa/vendaDetalheTypes"
 import { asFormaPagamento, type ReciboVenda } from "@/lib/caixa/reciboTypes"
 
 export function vendaAdminParaRecibo(venda: VendaDetalhe, moeda: string): ReciboVenda {

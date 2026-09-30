@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES } from '@/lib/navigation/routes'
 import {
   ADMIN_V2_CORE_ITEMS,
   ADMIN_V2_EXPANDED_ITEMS,

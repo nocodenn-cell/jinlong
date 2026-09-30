@@ -7,8 +7,9 @@
 /** Identificador estável do SKU (`produtos.id`). */
 export type ProductId = string
 
-/** Ciclo de vida de publicação — alinhado a `produtos.status_publicacao`. */
-export type StatusPublicacao = 'DRAFT' | 'PUBLICADO' | 'INATIVO'
+/** Ciclo de vida de publicação — fonte única em `engine/productEngine`. */
+import type { StatusPublicacao } from '../engine/productEngine'
+export type { StatusPublicacao }
 
 /** Origem do cadastro — alinhado a `produtos.origem`. */
 export type OrigemProduto = 'china_manual' | 'brasil_nf' | 'brasil_sem_nf'

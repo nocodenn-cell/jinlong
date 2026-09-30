@@ -8,7 +8,7 @@ import {
   ROUTES,
   adminEstoqueProdutoQuery,
   adminCatalogoCompletoEditarHref,
-} from '@shared-core/navigation/routes'
+} from '@/lib/navigation/routes'
 import { Copy, FilterX, ImageIcon, Package, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'

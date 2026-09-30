@@ -3,7 +3,10 @@
  */
 import { isProdutoVendavel } from '../../../shared-core/src/catalog/isProdutoVendavel'
 
-export type StatusPublicacao = 'DRAFT' | 'PUBLICADO' | 'INATIVO'
+import type { StatusPublicacao } from '../../../shared-core/src/engine/productEngine'
+
+/** Fonte única: `shared-core/src/engine/productEngine`. */
+export type { StatusPublicacao }
 
 export function ativoFromStatusPublicacao(status: StatusPublicacao): boolean {
   return status === 'PUBLICADO'

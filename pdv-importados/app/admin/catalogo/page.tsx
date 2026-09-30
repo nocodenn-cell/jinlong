@@ -18,7 +18,7 @@
 
 import { Suspense } from 'react'
 import Link from 'next/link'
-import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
+import { ROUTES, pathWithQuery } from '@/lib/navigation/routes'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
 import { opcoesSelecionaveis } from '@/core/catalog/opcoesCadastro'
