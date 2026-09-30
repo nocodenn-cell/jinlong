@@ -11,7 +11,8 @@
  *  ui-to-app         pdv-importados/components/ui/** importa '@/app/…'
  *  components-to-app pdv-importados/components/** (fora de ui) importa '@/app/…'
  *  shared-to-apps    shared/** (raiz) importa pdv-importados | pdv-local   (meta: 0)
- *  routes-coupling   nº de arquivos que importam '@shared-core/navigation/routes'
+ *  routes-coupling   nº de arquivos que importam '@shared-core/navigation/routes' (alias antigo) e
+ *                    existência de shared-core/navigation/routes.ts (meta: 0 e 0)
  *  direct-from       uso direto de `.from('<tabela de domínio>')` em app/ e lib/ (por arquivo+tabela)
  *  shared-core-externals  pacotes externos importados por shared-core (produção) e imports relativos que
  *                    escapam do pacote — hoje só `zustand`, 0 escapes (independência do shared-core)
@@ -119,6 +120,12 @@ function measure() {
     }
   }
   out['routes-coupling']['arquivos-importando-shared-core/navigation/routes'] = routeImporters
+  // rotas do Jinlong não podem voltar a viver dentro do shared-core (foram para pdv-importados/lib/navigation)
+  out['routes-coupling']['shared-core/navigation/routes.ts-existe'] = fs.existsSync(
+    path.join(root, 'shared-core', 'navigation', 'routes.ts'),
+  )
+    ? 1
+    : 0
 
   // independência do shared-core: externos (arquivos distintos por pacote) e imports relativos que escapam
   const coreRoot = path.join(root, 'shared-core')

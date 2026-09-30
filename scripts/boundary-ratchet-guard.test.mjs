@@ -129,3 +129,17 @@ test('shared-core: novo pacote externo e import relativo que escapa falham; impo
   assert.equal(r.code, 1)
   assert.match(r.out, /\[shared-core-externals\] escape-relativo: 0 → 1/)
 })
+
+test('rotas do Jinlong: voltar a criar shared-core/navigation/routes.ts ou importar o alias antigo falha', () => {
+  const { root, w } = fixture()
+  run(root, '--update')
+  w('shared-core/navigation/routes.ts', 'export const ROUTES = {}\n')
+  let r = run(root)
+  assert.equal(r.code, 1)
+  assert.match(r.out, /shared-core\/navigation\/routes\.ts-existe: 0 → 1/)
+  fs.unlinkSync(path.join(root, 'shared-core/navigation/routes.ts'))
+  w('pdv-importados/app/x.ts', "import { ROUTES } from '@shared-core/navigation/routes'\nexport const r = ROUTES\n")
+  r = run(root)
+  assert.equal(r.code, 1)
+  assert.match(r.out, /arquivos-importando-shared-core\/navigation\/routes: 0 → 1/)
+})

@@ -25,7 +25,8 @@
   },
   "shared-to-apps": {},
   "routes-coupling": {
-    "arquivos-importando-shared-core/navigation/routes": 84
+    "arquivos-importando-shared-core/navigation/routes": 0,
+    "shared-core/navigation/routes.ts-existe": 0
   },
   "direct-from": {
     "pdv-importados/app/admin/auditoria/actions.ts|produtos": 1,
