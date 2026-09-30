@@ -27,19 +27,37 @@ function formatarPreco(preco: number): string {
 }
 
 /**
+ * Expande o carrinho em uma entrada por etiqueta a imprimir (`quantidade` cópias
+ * de cada produto, na ordem do carrinho). Quantidade inválida ou < 1 não gera etiqueta.
+ */
+export function expandirEtiquetas(itens: ItemCarrinho[]): ItemCarrinho[] {
+  const out: ItemCarrinho[] = []
+  for (const item of itens) {
+    const copias = Number.isFinite(item.quantidade) ? Math.floor(item.quantidade) : 0
+    for (let i = 0; i < copias; i++) out.push(item)
+  }
+  return out
+}
+
+/**
  * Gera PDF de etiquetas térmicas.
- * Uma etiqueta por página do PDF com dimensões configuráveis.
+ * Uma etiqueta por página do PDF (`quantidade` páginas por produto) com dimensões configuráveis.
  */
 export async function gerarPdfEtiquetas(
-  itens: ItemCarrinho[],
+  carrinho: ItemCarrinho[],
   options: GerarPdfOptions
 ): Promise<Blob> {
   const config = options.config || getEtiquetaConfig()
-  
-  // Validar limite de etiquetas
+  const itens = expandirEtiquetas(carrinho)
+
+  if (itens.length === 0) {
+    throw new Error('Nenhuma etiqueta a imprimir: informe a quantidade de pelo menos um produto.')
+  }
+
+  // Validar limite de etiquetas (conta etiquetas, não produtos)
   if (itens.length > config.maxEtiquetasPorPdf) {
     throw new Error(
-      `Máximo de ${config.maxEtiquetasPorPdf} etiquetas por PDF. Você tem ${itens.length} itens.`
+      `Máximo de ${config.maxEtiquetasPorPdf} etiquetas por PDF. Você tem ${itens.length} etiquetas.`
     )
   }
 
@@ -52,6 +70,17 @@ export async function gerarPdfEtiquetas(
     unit: 'mm',
     format: [config.largura, config.altura],
   })
+
+  // Código de barras: gerado uma vez por produto (cópias reutilizam a imagem)
+  const barcodeCache = new Map<string, Promise<string>>()
+  const barcodeDe = (codigo: string) => {
+    let p = barcodeCache.get(codigo)
+    if (!p) {
+      p = gerarBarcodeParaPdf(codigo)
+      barcodeCache.set(codigo, p)
+    }
+    return p
+  }
 
   // Gerar etiquetas
   for (let i = 0; i < itens.length; i++) {
@@ -82,7 +111,7 @@ export async function gerarPdfEtiquetas(
 
     // Código de barras
     try {
-      const barcodeDataUrl = await gerarBarcodeParaPdf(item.codigoBarras)
+      const barcodeDataUrl = await barcodeDe(item.codigoBarras)
       pdf.addImage(
         barcodeDataUrl,
         'PNG',
