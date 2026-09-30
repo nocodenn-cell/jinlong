@@ -260,8 +260,9 @@ export function ImprimirEtiquetasPageClient({
         config,
         nomeArquivo: `etiquetas-${Date.now()}.pdf`,
       })
-    } catch {
-      alert(t.erroPdf)
+    } catch (e) {
+      // Mantém o motivo (ex.: acima do limite por PDF, quantidade zerada) em vez de um erro genérico.
+      alert(e instanceof Error && e.message ? `${t.erroPdf}: ${e.message}` : t.erroPdf)
     } finally {
       setGerandoPdf(false)
     }
