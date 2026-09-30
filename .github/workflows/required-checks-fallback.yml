@@ -39,6 +39,8 @@ jobs:
             pdv:
               - 'pdv-importados/**'
               - 'shared-core/**'
+              - 'shared/**'
+              - 'scripts/**'
               - 'backend/scripts/**'
               - 'package.json'
               - 'package-lock.json'

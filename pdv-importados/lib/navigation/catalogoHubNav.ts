@@ -1,4 +1,4 @@
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES } from '@/lib/navigation/routes'
 import type { HubTabDef } from './hubNavModel'
 
 /** Hub Catálogo — produtos + taxonomias (rotas SSOT inalteradas). */

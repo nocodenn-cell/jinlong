@@ -8,8 +8,8 @@ import {
   Home, Package, Box, ShoppingCart, Coins, TrendingUp, Settings,
   ChevronDown, LogOut, Bell, AlertTriangle, Clock, Activity,
 } from 'lucide-react'
-import type { FilaStatusPayload } from '@/app/api/gerente/fila/status/route'
-import type { HealthPayload } from '@/app/api/gerente/health/route'
+import type { FilaStatusPayload } from '@/lib/gerente/apiPayloadTypes'
+import type { HealthPayload } from '@/lib/gerente/apiPayloadTypes'
 import { useActivityFeed } from '@/lib/hooks/useActivityFeed'
 import { usePolling } from '@/lib/hooks/usePolling'
 import { ActivityRailDrawer } from '@/components/gerente/ActivityRailDrawer'

@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { PASSWORD_MIN_LENGTH, validateNewPassword } from '@/lib/auth/passwordPolicy'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES } from '@/lib/navigation/routes'
 import {
   isPerfilFuncionarioUi,
   podeAtribuirPerfil,

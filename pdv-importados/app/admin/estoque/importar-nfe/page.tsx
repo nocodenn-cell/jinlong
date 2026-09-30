@@ -1,5 +1,5 @@
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES } from '@/lib/navigation/routes'
 import { EstoqueHubNav } from '@/components/ui/admin-v2/EstoqueHubNav'
 import { ImportarNfePageClient } from '@/app/gerente/estoque/importar-nfe/ImportarNfePageClient'
 

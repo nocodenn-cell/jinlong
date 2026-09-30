@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { assertAdminSession } from '@/lib/admin/auth/assertAdminSession'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES } from '@/lib/navigation/routes'
 import type {
   DocumentoFiscalDetalheDoc,
   DocumentoFiscalDetalheEvento,

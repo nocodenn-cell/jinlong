@@ -1,14 +1,12 @@
 import { NextResponse } from 'next/server'
+import type { FilaStatusPayload } from '@/lib/gerente/apiPayloadTypes'
 import { createClient } from '@/lib/supabase/server'
 import { requireAdminSessionApi } from '@/lib/admin/auth/requireAdminSessionApi'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 
-export type FilaStatusPayload = {
-  fiscal: { pendente: number; erro: number }
-  aprovacoes: number
-}
+export type { FilaStatusPayload }
 
 export async function GET() {
   try {

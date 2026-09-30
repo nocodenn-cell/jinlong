@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
+import { ROUTES, pathWithQuery } from '@/lib/navigation/routes'
 
 /** Deep-link legado → modal de criação no catálogo canônico. */
 export default function AdminCatalogoNovoRedirectPage() {

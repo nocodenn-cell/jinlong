@@ -114,7 +114,7 @@ const MATRIZ: readonly PilarRow[] = [
         mustContain: ['ImprimirEtiquetasPageClient'],
       },
       {
-        path: '../shared-core/navigation/routes.ts',
+        path: 'lib/navigation/routes.ts',
         mustContain: ['adminEtiquetasProdutoQuery'],
       },
     ],

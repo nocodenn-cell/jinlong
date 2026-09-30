@@ -14,7 +14,7 @@ import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages } from '@/i18n/getMessages'
 import { fmtTemplate } from '@/i18n/fmtTemplate'
 import { Checkbox, Input, Textarea } from '@/components/ui/forms'
-import { ROUTES, adminFinanceiroContasPagarFornecedorQuery } from '@shared-core/navigation/routes'
+import { ROUTES, adminFinanceiroContasPagarFornecedorQuery } from '@/lib/navigation/routes'
 import type { NfeParsed } from '@/lib/nfe/nfeParser'
 import type {
   ConferenciaImportacaoNfe,

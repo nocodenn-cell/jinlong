@@ -14,7 +14,7 @@ import { getMessages } from '@/i18n/getMessages'
 import { transferenciaActionResultToLegacy } from '@/lib/observability/actionResultAdapters'
 import { executarTransferencia, obterEstoqueDisponivelTransferencia } from './actions'
 import { caixaFmt } from '@/app/caixa/caixaI18n'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES } from '@/lib/navigation/routes'
 
 export type TransferenciaLojaRow = { id: string; nome: string; codigo: string }
 export type TransferenciaProdutoOpt = {

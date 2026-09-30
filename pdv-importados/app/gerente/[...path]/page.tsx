@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { legacyGerenteRedirect } from '@shared-core/navigation/routes'
+import { legacyGerenteRedirect } from '@/lib/navigation/routes'
 
 export default async function GerenteRedirect({
   params,

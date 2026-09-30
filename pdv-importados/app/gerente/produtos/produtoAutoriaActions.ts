@@ -1,5 +1,6 @@
 'use server'
 
+import type { ProdutoAutoria } from '@/lib/gerente/produtos/produtoAutoriaTypes'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
@@ -17,15 +18,7 @@ import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 
 type ActionResult<T> = { success: true; data: T } | { success: false; error: string }
 
-export type ProdutoAutoria = {
-  criadoPorNome: string | null
-  criadoEm: string | null
-  /** true quando há autor registrado mas o nome não pôde ser lido (≠ removido). */
-  criadoPorIndisponivel: boolean
-  atualizadoPorNome: string | null
-  atualizadoEm: string | null
-  atualizadoPorIndisponivel: boolean
-}
+export type { ProdutoAutoria }
 
 const SECAO = 'Autoria do produto'
 

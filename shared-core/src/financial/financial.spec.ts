@@ -15,7 +15,7 @@ describe('financial — contracts', () => {
         return { ok: true, tituloId: 't1' }
       },
     }
-    await expect(writer.create({ clienteId: 'c1', valorTotal: 10 })).resolves.toEqual({
+    await expect(writer.create({ clienteId: 'c1', valorTotal: 10, lojaId: 'l1' })).resolves.toEqual({
       ok: true,
       tituloId: 't1',
     })
@@ -25,6 +25,9 @@ describe('financial — contracts', () => {
     const svc: ReceivableLiquidationService = {
       async liquidate() {
         return { ok: true, liquidacaoId: 'l1', idempotentReplay: false }
+      },
+      async reverse() {
+        return { ok: true } as Awaited<ReturnType<ReceivableLiquidationService['reverse']>>
       },
     }
     expect(svc.liquidate).toBeTypeOf('function')
@@ -56,6 +59,9 @@ describe('financial — contracts', () => {
     const receivables: ReceivableReader = {
       async list() {
         return { ok: true, titulos: [], capped: false }
+      },
+      async listLiquidacoes() {
+        return { ok: true, liquidacoes: [] } as Awaited<ReturnType<ReceivableReader['listLiquidacoes']>>
       },
     }
     expect(payables.list).toBeTypeOf('function')

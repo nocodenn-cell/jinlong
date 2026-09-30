@@ -84,4 +84,11 @@ describe('caixaErroOperador', () => {
     expect(caixaErroOperador('FINALIZAR_VENDA_CANONICA_LIMITE_CREDITO_TOKEN_INVALIDO')).toBe(esperado)
     expect(caixaErroOperador('FINALIZAR_VENDA_CANONICA_LIMITE_CREDITO_TOKEN_JA_USADO')).toBe(esperado)
   })
+
+  it('mapeia VENDAS_SUSPENSAS como regra, não como falha transitória (PT e 中文)', () => {
+    const pt = caixaErroOperador('VENDAS_SUSPENSAS')
+    expect(pt).toContain('suspensas')
+    expect(pt).not.toContain('Tente novamente')
+    expect(caixaErroOperador('FINALIZAR_VENDA_VENDAS_SUSPENSAS', 'zh')).toContain('暂停销售')
+  })
 })

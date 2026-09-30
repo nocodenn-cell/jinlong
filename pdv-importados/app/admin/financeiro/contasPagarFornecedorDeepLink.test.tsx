@@ -6,7 +6,7 @@
  */
 import React from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { adminFinanceiroContasPagarFornecedorQuery, ROUTES } from '@shared-core/navigation/routes'
+import { adminFinanceiroContasPagarFornecedorQuery, ROUTES } from '@/lib/navigation/routes'
 
 const FORN_ID = '11111111-2222-4333-8444-555555555555'
 

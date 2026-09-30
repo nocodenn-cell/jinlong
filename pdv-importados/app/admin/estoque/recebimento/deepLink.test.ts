@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { adminEstoqueRecebimentoProdutoQuery, ROUTES } from '@shared-core/navigation/routes'
+import { adminEstoqueRecebimentoProdutoQuery, ROUTES } from '@/lib/navigation/routes'
 
 describe('adminEstoqueRecebimentoProdutoQuery (RM-02 — "Repor" a partir do estoque crítico)', () => {
   it('monta a URL do recebimento com o produto na query string', () => {

@@ -11,7 +11,7 @@ import { PageHeader } from '@/components/ui/admin-v2'
 import { FinanceiroHubNavShell } from '@/components/ui/admin-v2/FinanceiroHubNavShell'
 import { listarCategoriasFinanceiras } from '@/app/gerente/categorias-financeiras/actions'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES } from '@/lib/navigation/routes'
 import { CategoriasFinanceirasContent } from './_components/CategoriasFinanceirasContent'
 
 type SearchParams = {

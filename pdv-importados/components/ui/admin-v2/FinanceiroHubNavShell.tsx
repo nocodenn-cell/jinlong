@@ -4,7 +4,7 @@ import { Suspense, useMemo } from 'react'
 import { FinanceiroHubNav } from '@/components/ui/admin-v2/AdminHubTabNav'
 import { useAdminV2Session } from '@/components/ui/admin-v2/AdminV2SessionContext'
 import { getMessages } from '@/i18n/getMessages'
-import type { FinanceiroTabId } from '@/app/admin/financeiro/_components/financeiroTabs'
+import type { FinanceiroTabId } from '@/lib/navigation/financeiroTabId'
 
 type Props = {
   activeTab?: FinanceiroTabId

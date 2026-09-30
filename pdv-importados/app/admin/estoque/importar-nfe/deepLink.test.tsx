@@ -5,7 +5,7 @@
  */
 import React from 'react'
 import { describe, expect, it, vi } from 'vitest'
-import { adminImportNfeImportacaoQuery, ROUTES } from '@shared-core/navigation/routes'
+import { adminImportNfeImportacaoQuery, ROUTES } from '@/lib/navigation/routes'
 
 vi.mock('@/lib/admin/auth/loadAdminContext', () => ({
   loadAdminContext: vi.fn(async () => ({ session: { idioma: 'pt' } })),

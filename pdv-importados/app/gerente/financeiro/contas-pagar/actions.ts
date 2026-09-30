@@ -6,7 +6,7 @@ import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 import { createPayablePaymentService } from '@/app/admin/financeiro/payablePayment'
 import { createPayableReader } from '@/app/admin/financeiro/payableReader'
-import type { PayableTitle } from '@shared-core/src/financial'
+import type { FormaPagamentoPagar, PayableTitle } from '@shared-core/src/financial'
 import { hojeYmd, isTituloVencido } from '@shared-core/src/financial'
 
 export type ContaPagarStatus = 'PENDENTE' | 'PARCIAL' | 'PAGO' | 'ATRASADO' | 'CANCELADO'
@@ -28,7 +28,8 @@ export type ContaPagarRow = {
   atrasado: boolean
 }
 
-export type FormaPagamento = 'DINHEIRO' | 'PIX' | 'CARTAO' | 'BOLETO' | 'TRANSF'
+/** Fonte única: `shared-core/src/financial/types` (`FormaPagamentoPagar`). */
+export type FormaPagamento = FormaPagamentoPagar
 
 const COLUMNS = `
   id, fornecedor_id, descricao, valor_total, valor_pago, vencimento,

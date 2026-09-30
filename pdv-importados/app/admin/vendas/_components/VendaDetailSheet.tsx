@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { X } from 'lucide-react'
-import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
+import { ROUTES, pathWithQuery } from '@/lib/navigation/routes'
 import { StatusBadge, PaymentBadge, FiscalBadge } from '@/components/ui/badges'
 import { MargemCell } from '@/components/ui/MargemCell'
 import { PriceTooltip } from '@/components/ui/PriceTooltip'

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { adminVendaDetalheQuery, ROUTES } from '@shared-core/navigation/routes'
+import { adminVendaDetalheQuery, ROUTES } from '@/lib/navigation/routes'
 
 describe('adminVendaDetalheQuery (RM-03 — linha de Relatórios abre o detalhe da venda)', () => {
   it('monta a URL de vendas com o id da venda na query string', () => {

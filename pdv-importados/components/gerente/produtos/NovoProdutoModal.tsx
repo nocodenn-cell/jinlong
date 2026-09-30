@@ -1,6 +1,6 @@
 'use client'
 
-import type { OpcoesFiltrosProdutos } from '@/app/gerente/produtos/actions'
+import type { OpcoesFiltrosProdutos } from '@/lib/gerente/produtos/opcoesFiltrosTypes'
 import type { Mensagens } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { ProdutoFormModal } from './ProdutoFormModal'

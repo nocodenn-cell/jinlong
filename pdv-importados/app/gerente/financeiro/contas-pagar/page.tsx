@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
+import { ROUTES, pathWithQuery } from '@/lib/navigation/routes'
 
 type SearchParams = { status?: string; periodo?: string }
 

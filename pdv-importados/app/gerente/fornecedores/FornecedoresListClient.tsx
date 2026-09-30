@@ -12,7 +12,7 @@ import { Banknote, ClipboardList, Pencil, Trash2, Plus } from 'lucide-react'
 import {
   adminComprasFornecedorQuery,
   adminFinanceiroContasPagarFornecedorQuery,
-} from '@shared-core/navigation/routes'
+} from '@/lib/navigation/routes'
 import { Button } from '@/components/ui/button'
 import { Checkbox, SearchInput } from '@/components/ui/forms'
 import { DataTable, type Column } from '@/components/ui/DataTable'

@@ -20,7 +20,7 @@ import {
   UserCog,
   Users,
 } from 'lucide-react'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES } from '@/lib/navigation/routes'
 
 export type AdminV2NavItem = {
   id: string

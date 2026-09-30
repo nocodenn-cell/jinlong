@@ -13,7 +13,7 @@ import { EmptyState, ErrorState } from '@/components/ui/feedback'
 import { formatBRL } from '@/lib/format/money'
 import { formatDayMonthInLocale, formatDateTimeOrDash } from '@/lib/format/datetime'
 import { CHART_COLORS } from '@/lib/tokens/chartColors'
-import { ROUTES, adminCatalogoCompletoEditarHref, adminVendaDetalheQuery } from '@shared-core/navigation/routes'
+import { ROUTES, adminCatalogoCompletoEditarHref, adminVendaDetalheQuery } from '@/lib/navigation/routes'
 import type {
   RelatorioVendaDiaDTO,
   RelatorioTopProdDTO,

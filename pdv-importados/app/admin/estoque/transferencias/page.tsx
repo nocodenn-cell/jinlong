@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES } from '@/lib/navigation/routes'
 import { EstoqueHubNav } from '@/components/ui/admin-v2/EstoqueHubNav'
 import {
   TransferenciasGerentePageClient,

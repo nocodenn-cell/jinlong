@@ -3,7 +3,7 @@ import { buscarClientesPaginadosAction } from '@/app/admin/clientes/actions'
 import { ClientesListClient } from '@/app/gerente/clientes/ClientesListClient'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessagesForLocaleInput } from '@/i18n/catalogAdapter'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES } from '@/lib/navigation/routes'
 
 /**
  * Admin clientes — primeiro domínio com i18n na borda (Missão 5.3).

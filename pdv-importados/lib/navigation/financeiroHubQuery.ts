@@ -1,4 +1,4 @@
-import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
+import { ROUTES, pathWithQuery } from '@/lib/navigation/routes'
 
 export type FinanceiroHubTabId = 'receber' | 'pagar' | 'fiscal'
 

@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getMessagesForLocaleInput } from '@/i18n/catalogAdapter'
 import { destinoPosLoginPorPerfil } from '@/lib/auth/painelGerencial'
 import { PASSWORD_MIN_LENGTH } from '@/lib/auth/passwordPolicy'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES } from '@/lib/navigation/routes'
 import { AlterarSenhaForm } from './AlterarSenhaForm'
 
 export default async function AlterarSenhaPage() {

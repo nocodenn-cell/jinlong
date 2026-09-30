@@ -10,7 +10,7 @@
  */
 
 import Link from 'next/link'
-import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
+import { ROUTES, pathWithQuery } from '@/lib/navigation/routes'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { MetricCard, PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import type { MetricCardIconKey } from '@/components/ui/admin-v2/MetricCard'

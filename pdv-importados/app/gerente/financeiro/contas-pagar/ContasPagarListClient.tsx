@@ -24,7 +24,7 @@ import {
   type ContasPagarFilters,
 } from './actions'
 import { PagamentoModal } from './PagamentoModal'
-import { ROUTES, adminImportNfeImportacaoQuery } from '@shared-core/navigation/routes'
+import { ROUTES, adminImportNfeImportacaoQuery } from '@/lib/navigation/routes'
 
 type Props = Readonly<{
   idioma: Idioma

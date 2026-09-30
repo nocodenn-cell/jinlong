@@ -12,7 +12,7 @@ import { gotoApp } from './helpers/url'
  * GERENTE/DONO/ADMIN sempre caem em /admin/dashboard pós-login
  * (`destinoPosLoginPorPerfil`) e o painel inteiro vive em `/admin/*` — as
  * rotas antigas `/gerente/*` que este arquivo testava viraram redirects
- * legados (`LEGACY_GERENTE_REDIRECTS` em `shared-core/navigation/routes.ts`),
+ * legados (`LEGACY_GERENTE_REDIRECTS` em `lib/navigation/routes.ts`),
  * quando ainda existem. Navega direto para as rotas atuais em vez de confiar
  * no redirect, e usa os títulos reais de `PageHeader` (sempre `<h1>`, texto
  * vindo do i18n) para não colidir com sub-headings (`<h2>`) de texto

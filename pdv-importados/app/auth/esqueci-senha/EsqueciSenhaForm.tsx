@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { DragonOuroLoader } from '@/components/branding/DragonOuroLoader'
 import { AuthShell } from '@/components/auth/AuthShell'
 import { buildAuthCallbackUrl } from '@/lib/auth/appOrigin'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES } from '@/lib/navigation/routes'
 import type { AppLocale } from '@shared-core/src/i18n'
 
 export type EsqueciSenhaLabels = {
