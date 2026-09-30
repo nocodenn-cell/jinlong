@@ -128,7 +128,6 @@ type Aba = 'loja' | 'impostos' | 'preferencias'
 
 const REGIMES = ['SIMPLES_NACIONAL', 'LUCRO_PRESUMIDO', 'LUCRO_REAL', 'MEI'] as const
 const IDIOMAS = ['pt', 'zh'] as const
-const FORMATOS = ['TERMICA', 'A4'] as const
 
 function emptyLoja(): LojaConfig {
   return {
@@ -721,35 +720,11 @@ export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; la
                   ))}
                 </Select>
               </Field>
-              <Field id="prefs-formato" label={labels.prefs.formato}>
-                <Select
-                  value={pdv.formato_impressao}
-                  onChange={(e) =>
-                    setPdv({ ...pdv, formato_impressao: e.target.value as 'TERMICA' | 'A4' })
-                  }
-                >
-                  {FORMATOS.map((f) => (
-                    <option key={f} value={f}>
-                      {labels.enums.formatos[f] ?? f}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
             </div>
 
-            <div className="flex items-start justify-between gap-4 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-background-secondary)] px-3 py-3">
-              <div>
-                <p className="text-small font-medium text-fg">{labels.prefs.imprimirAuto}</p>
-                <p className="text-caption text-fg-subtle">{labels.prefs.hintImprimirAuto}</p>
-              </div>
-              <Switch
-                id="prefs-imprimir"
-                checked={pdv.imprimir_cupom_auto}
-                onCheckedChange={(checked) => setPdv({ ...pdv, imprimir_cupom_auto: checked })}
-                aria-label={labels.prefs.imprimirAuto}
-              />
-            </div>
-
+            {/* "Formato de impressão" e "Imprimir cupom automaticamente" ficam ocultos: os valores
+                (pdv_config.formato_impressao / imprimir_cupom_auto) continuam salvos, mas o caixa
+                ainda não os consome. Reexibir junto com a implementação no PDV. */}
             {pdvErro ? (
               <ErrorState dense title={pdvErro} description={pdvErro} className="items-start text-left" />
             ) : null}
