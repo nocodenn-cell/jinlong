@@ -334,6 +334,20 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const lastScanItemRef = useRef<{ codigo: string; itemId: string; produtoId: string; ts: number } | null>(null)
   const lastReciboRef = useRef<ReciboVenda | null>(null)
   const [reimprimirModalAberto, setReimprimirModalAberto] = useState(false)
+  /** false só enquanto o cupom recém-emitido está na tela; qualquer reabertura é 2ª via. */
+  const [reciboSegundaVia, setReciboSegundaVia] = useState(true)
+  const [lojaNomeRecibo, setLojaNomeRecibo] = useState<string | null>(null)
+  useEffect(() => {
+    let cancelado = false
+    void obterNomeLojaAtual()
+      .then((r) => {
+        if (!cancelado && r.ok) setLojaNomeRecibo(r.nome)
+      })
+      .catch(() => {})
+    return () => {
+      cancelado = true
+    }
+  }, [])
   const [clienteId, setClienteId] = useState<string | null>(null)  // ✅ NOVO (Fase 5b)
   const [clienteNome, setClienteNome] = useState<string | null>(null)  // ✅ NOVO (Fase 5b) - para exibição
   const [selecionarClienteModalAberto, setSelecionarClienteModalAberto] = useState(false)  // ✅ NOVO (Fase 5b)
@@ -1159,6 +1173,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           moeda: m.caixa.moeda_prefixo,
         }
         setCheckoutHint(null)
+        setReciboSegundaVia(false)
         setReimprimirModalAberto(true)
         // Captura antes de limpar: empty cart zera vendaEmEsperaOrigemId no store.
         const origemConvertida = useCarrinhoStore.getState().vendaEmEsperaOrigemId
@@ -1746,13 +1761,20 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       {reimprimirModalAberto && lastReciboRef.current && (
         <CaixaReciboModal
           venda={lastReciboRef.current}
+          lojaNome={lojaNomeRecibo}
+          segundaVia={reciboSegundaVia}
           m={m}
-          onClose={() => setReimprimirModalAberto(false)}
+          onClose={() => {
+            setReciboSegundaVia(true)
+            setReimprimirModalAberto(false)
+          }}
           onNovaVenda={() => {
+            setReciboSegundaVia(true)
             setReimprimirModalAberto(false)
             focarCampoBusca()
           }}
           onFinalizarCaixa={() => {
+            setReciboSegundaVia(true)
             setReimprimirModalAberto(false)
             handleFecharCaixaClick()
           }}

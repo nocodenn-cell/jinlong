@@ -1557,7 +1557,8 @@
       "pagamento": "Pagamento",
       "rodape_obrigado": "Obrigado pela preferência!",
       "rodape_nao_fiscal": "Este não é um documento fiscal.",
-      "atacado": "atacado"
+      "atacado": "atacado",
+      "segunda_via": "2ª VIA"
     }
   },
   "pdv": {

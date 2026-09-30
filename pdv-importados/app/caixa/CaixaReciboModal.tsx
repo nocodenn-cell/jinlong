@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useMemo, useRef } from "react"
 import type { UseThermalPrinterReturn } from "@/hooks/useThermalPrinter"
 import type { Mensagens } from "@/i18n/getMessages"
 import { buildReciboLabels, type ReciboVenda } from "@/lib/caixa/reciboTypes"
@@ -13,6 +13,10 @@ import { imprimirNoIframe } from "@/lib/print/imprimirNoIframe"
 
 type Props = Readonly<{
   venda: ReciboVenda
+  /** Nome da loja (cabeçalho do cupom). */
+  lojaNome?: string | null
+  /** true na reimpressão de um cupom já emitido. */
+  segundaVia?: boolean
   m: Mensagens
   onClose: () => void
   onNovaVenda: () => void
@@ -35,7 +39,9 @@ function fmtData(d: Date): string {
 }
 
 export function CaixaReciboModal({
-  venda,
+  venda: vendaBase,
+  lojaNome = null,
+  segundaVia = false,
   m,
   onClose,
   onNovaVenda,
@@ -45,6 +51,10 @@ export function CaixaReciboModal({
   const printRef = useRef<HTMLDivElement>(null)
   const supportsWebUSB = typeof navigator !== "undefined" && "usb" in navigator
   const labels = buildReciboLabels(m)
+  const venda = useMemo<ReciboVenda>(
+    () => ({ ...vendaBase, lojaNome, segundaVia }),
+    [vendaBase, lojaNome, segundaVia],
+  )
   const termicaEmUso = thermal.status === "connected" || thermal.status === "printing"
 
   const handleThermalPrint = async () => {
@@ -67,6 +77,7 @@ export function CaixaReciboModal({
       ".recibo-header h1 { font-size: 14px; font-weight: bold; }",
       ".recibo-header p { font-size: 11px; color: #555; }",
       ".recibo-id { font-size: 10px; color: #777; }",
+      ".recibo-loja, .recibo-segunda-via { font-weight: bold; color: #000 !important; }",
       ".recibo-itens { border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 6px; }",
       ".recibo-item { margin-bottom: 3px; }",
       ".recibo-item-nome { font-weight: bold; }",
@@ -154,11 +165,19 @@ export function CaixaReciboModal({
           <div ref={printRef} className="flex flex-col gap-3 font-mono text-xs text-foreground">
             {/* Cabeçalho */}
             <div className="recibo-header text-center border-b border-dashed border-border pb-3">
+              {venda.lojaNome ? (
+                <p className="recibo-loja text-caption font-semibold text-foreground">{venda.lojaNome}</p>
+              ) : null}
               <h1 className="text-sm font-bold">
                 <span className="mr-1 text-amber-500" aria-hidden="true">福</span>
                 {labels.titulo}
                 <span className="ml-1 text-amber-500" aria-hidden="true">福</span>
               </h1>
+              {venda.segundaVia ? (
+                <p className="recibo-segunda-via text-caption font-bold text-foreground" data-testid="caixa-recibo-segunda-via">
+                  {labels.segundaVia}
+                </p>
+              ) : null}
               <p className="text-muted-foreground">{fmtData(venda.data)}</p>
               <p className="recibo-id text-muted-foreground/70 text-caption">
                 #{venda.vendaId.slice(0, 8).toUpperCase()}
