@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import { aplicarDescontoGerenteSobreTotal } from '@/stores/managerDiscount'
+import { calcularTroco } from '@/app/caixa/caixaPagamentoSaldo'
 import {
   finalizarVendaInputSchema,
+  pagamentoSoDinheiro,
   roundMoney2,
   totaisFromItens,
   totalsMatchDeclared,
@@ -161,6 +164,87 @@ describe('finalizarVendaValidation', () => {
       itens: [itemBase],
     })
     expect(r.success).toBe(true)
+  })
+
+  describe('desconto de gerente em dinheiro', () => {
+    const descontoBase = {
+      totalBruto: 100,
+      totalDesconto: 5,
+      totalLiquido: 95,
+      descontoGerenteToken: 'tok-gerente',
+      descontoGerentePercentual: 5,
+      itens: [itemBase],
+    }
+
+    it('5% sobre R$ 100 em dinheiro: total 95, valor 5 e troco 5 sobre R$ 100 recebidos', () => {
+      const d = aplicarDescontoGerenteSobreTotal({ totalLiquido: 100, percentual: 5, maxPermitido: 20 })
+      expect(d.descontoValor).toBe(5)
+      expect(d.totalLiquidoComDesconto).toBe(95)
+      expect(calcularTroco(d.totalLiquidoComDesconto, 100).troco).toBe(5)
+    })
+
+    it('10% sobre R$ 250 em dinheiro: total 225', () => {
+      const d = aplicarDescontoGerenteSobreTotal({ totalLiquido: 250, percentual: 10, maxPermitido: 20 })
+      expect(d.descontoValor).toBe(25)
+      expect(d.totalLiquidoComDesconto).toBe(225)
+    })
+
+    it('0% não altera o total; percentual acima do teto é reduzido ao teto', () => {
+      expect(aplicarDescontoGerenteSobreTotal({ totalLiquido: 100, percentual: 0, maxPermitido: 20 }).totalLiquidoComDesconto).toBe(100)
+      expect(aplicarDescontoGerenteSobreTotal({ totalLiquido: 100, percentual: 50, maxPermitido: 20 }).totalLiquidoComDesconto).toBe(80)
+    })
+
+    it('aceita desconto com pagamento único em DINHEIRO', () => {
+      const r = finalizarVendaInputSchema.safeParse({
+        ...descontoBase,
+        formaPagamento: 'DINHEIRO',
+        pagamentos: [{ formaPagamento: 'DINHEIRO', valor: 95 }],
+      })
+      expect(r.success).toBe(true)
+    })
+
+    it.each(['PIX', 'CARTAO_DEBITO', 'CARTAO_CREDITO'] as const)('rejeita desconto com %s', (forma) => {
+      const r = finalizarVendaInputSchema.safeParse({
+        ...descontoBase,
+        formaPagamento: forma,
+        pagamentos: [{ formaPagamento: forma, valor: 95 }],
+      })
+      expect(r.success).toBe(false)
+    })
+
+    it('rejeita desconto em venda dividida dinheiro + cartão', () => {
+      const r = finalizarVendaInputSchema.safeParse({
+        ...descontoBase,
+        formaPagamento: 'DINHEIRO',
+        pagamentos: [
+          { formaPagamento: 'DINHEIRO', valor: 50 },
+          { formaPagamento: 'CARTAO_DEBITO', valor: 45 },
+        ],
+      })
+      expect(r.success).toBe(false)
+    })
+
+    it('rejeita percentual inválido (0, negativo, >100) ou token sem percentual', () => {
+      const dinheiro = { formaPagamento: 'DINHEIRO' as const, pagamentos: [{ formaPagamento: 'DINHEIRO' as const, valor: 95 }] }
+      for (const pct of [0, -5, 101]) {
+        expect(finalizarVendaInputSchema.safeParse({ ...descontoBase, ...dinheiro, descontoGerentePercentual: pct }).success).toBe(false)
+      }
+      const { descontoGerentePercentual: _omit, ...semPct } = descontoBase
+      expect(finalizarVendaInputSchema.safeParse({ ...semPct, ...dinheiro }).success).toBe(false)
+    })
+
+    it('regressão: venda sem desconto continua aceita em qualquer forma e em split', () => {
+      const sem = { totalBruto: 20, totalDesconto: 2, totalLiquido: 18, itens: [itemBase] }
+      for (const forma of ['DINHEIRO', 'PIX', 'CARTAO_DEBITO', 'CARTAO_CREDITO'] as const) {
+        expect(finalizarVendaInputSchema.safeParse({ ...sem, formaPagamento: forma, pagamentos: [{ formaPagamento: forma, valor: 18 }] }).success).toBe(true)
+      }
+    })
+
+    it('pagamentoSoDinheiro', () => {
+      expect(pagamentoSoDinheiro({ formaPagamento: 'DINHEIRO', pagamentos: [{ formaPagamento: 'DINHEIRO' }] })).toBe(true)
+      expect(pagamentoSoDinheiro({ formaPagamento: 'DINHEIRO', pagamentos: [{ formaPagamento: 'DINHEIRO' }, { formaPagamento: 'PIX' }] })).toBe(false)
+      expect(pagamentoSoDinheiro({ formaPagamento: 'PIX', pagamentos: [{ formaPagamento: 'PIX' }] })).toBe(false)
+    })
   })
 
   it('finalizarVendaInputSchema rejeita idempotencyKey inválido', () => {

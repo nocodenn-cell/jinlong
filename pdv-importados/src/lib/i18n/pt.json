@@ -1283,6 +1283,7 @@
     "descontos_regras": "Descontos (atacado/manual)",
     "economia_atacado_por_quantidade": "Inclui economia atacado (por quantidade): {{valor}}",
     "desconto_gerente_label": "Desconto gerente ({{pct}}%)",
+    "desconto_gerente_so_dinheiro": "Desconto só vale para venda paga totalmente em dinheiro.",
     "gerente_valido_ate": "Gerente até {{hora}} · {{pct}}% (máx. {{max}}%)",
     "empty_guardiao": "O guardião aguarda o primeiro item.",
     "header_guardiao_saldo_eyebrow": "Saldo em espécie (estimado)",
