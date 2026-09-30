@@ -1275,6 +1275,7 @@ export type Database = {
       }
       devolucoes: {
         Row: {
+          caixa_desembolso_id: string | null
           created_at: string
           forma_pagamento: string
           id: string
@@ -1285,6 +1286,7 @@ export type Database = {
           venda_id: string
         }
         Insert: {
+          caixa_desembolso_id?: string | null
           created_at?: string
           forma_pagamento: string
           id?: string
@@ -1295,6 +1297,7 @@ export type Database = {
           venda_id: string
         }
         Update: {
+          caixa_desembolso_id?: string | null
           created_at?: string
           forma_pagamento?: string
           id?: string
@@ -1305,6 +1308,13 @@ export type Database = {
           venda_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "devolucoes_caixa_desembolso_id_fkey"
+            columns: ["caixa_desembolso_id"]
+            isOneToOne: false
+            referencedRelation: "caixas"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "devolucoes_operacao_id_fkey"
             columns: ["operacao_id"]
@@ -4580,6 +4590,7 @@ export type Database = {
       }
       venda_pos_venda_operacoes: {
         Row: {
+          caixa_desembolso_id: string | null
           caixa_id: string
           contas_receber_id: string | null
           created_at: string
@@ -4589,12 +4600,14 @@ export type Database = {
           motivo: string
           operador_id: string
           tipo: string
+          valor_abatido_ar: number
           valor_caixa_estornado: number
           valor_estornado: number
           venda_id: string
           venda_substituta_id: string | null
         }
         Insert: {
+          caixa_desembolso_id?: string | null
           caixa_id: string
           contas_receber_id?: string | null
           created_at?: string
@@ -4604,12 +4617,14 @@ export type Database = {
           motivo: string
           operador_id: string
           tipo: string
+          valor_abatido_ar?: number
           valor_caixa_estornado?: number
           valor_estornado?: number
           venda_id: string
           venda_substituta_id?: string | null
         }
         Update: {
+          caixa_desembolso_id?: string | null
           caixa_id?: string
           contas_receber_id?: string | null
           created_at?: string
@@ -4619,12 +4634,20 @@ export type Database = {
           motivo?: string
           operador_id?: string
           tipo?: string
+          valor_abatido_ar?: number
           valor_caixa_estornado?: number
           valor_estornado?: number
           venda_id?: string
           venda_substituta_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "venda_pos_venda_operacoes_caixa_desembolso_id_fkey"
+            columns: ["caixa_desembolso_id"]
+            isOneToOne: false
+            referencedRelation: "caixas"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "venda_pos_venda_operacoes_caixa_id_fkey"
             columns: ["caixa_id"]
@@ -5709,6 +5732,7 @@ export type Database = {
       }
       devolver_ou_trocar_venda: {
         Args: {
+          p_caixa_id?: string
           p_forma_estorno: string
           p_idempotency_key: string
           p_itens: Json

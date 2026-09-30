@@ -77,13 +77,22 @@ describe('cadeia devolução/troca', () => {
     expect(sql).toMatch(/INSERT INTO public\.movimentos_estoque_log/)
     expect(sql).toMatch(/'ENTRADA_DEVOLUCAO_CLIENTE'/)
     expect(sql).toMatch(/itens jsonb/)
-    expect(sql).not.toMatch(/DROP FUNCTION IF EXISTS public\.devolver_ou_trocar_venda/)
+    // Um DROP só é aceitável quando a assinatura MUDA (novo parâmetro criaria overload ambíguo). Nesse caso a mesma
+    // migration precisa recriar a função, reaplicar as permissões e provar que não sobrou overload (PR-2D).
+    if (/DROP FUNCTION IF EXISTS public\.devolver_ou_trocar_venda/.test(sql)) {
+      expect(sql).toMatch(/CREATE FUNCTION public\.devolver_ou_trocar_venda\s*\(/)
+      expect(sql).toMatch(/GRANT EXECUTE ON FUNCTION public\.devolver_ou_trocar_venda\([^)]*\)\s*TO authenticated/)
+      expect(sql).toMatch(/REVOKE ALL ON FUNCTION public\.devolver_ou_trocar_venda\([^)]*\)\s*FROM PUBLIC, anon/)
+      expect(sql).toMatch(/overload de devolver_ou_trocar_venda/)
+    }
   })
 
   it('a definição vigente preserva EXECUTE autenticado e revoga anon', () => {
     const sql = fs.readFileSync(path.join(MIGRATIONS, latestDevolverRpcMigration()), 'utf8')
     expect(sql).toMatch(/REVOKE ALL ON FUNCTION public\.devolver_ou_trocar_venda\([^)]*\)\s*FROM PUBLIC/)
     expect(sql).toMatch(/GRANT EXECUTE ON FUNCTION public\.devolver_ou_trocar_venda\([^)]*\)\s*TO authenticated/)
-    expect(sql).toMatch(/REVOKE EXECUTE ON FUNCTION public\.devolver_ou_trocar_venda\([^)]*\)\s*FROM anon/)
+    expect(sql).toMatch(
+      /REVOKE (?:EXECUTE|ALL) ON FUNCTION public\.devolver_ou_trocar_venda\([^)]*\)\s*FROM (?:PUBLIC, )?anon/,
+    )
   })
 })

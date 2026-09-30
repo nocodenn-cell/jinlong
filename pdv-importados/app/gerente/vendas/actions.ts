@@ -308,6 +308,37 @@ export async function obterDadosComprovanteCancelamento(
   }
 }
 
+export type CaixaElegivelDevolucao = Readonly<{ id: string; operador: string }>
+
+/**
+ * Caixas ABERTOS da loja do gerente logado — o conjunto que o servidor considera elegível para pagar uma
+ * devolução em dinheiro (regra 0/1/N em `internal.resolver_caixa_pagador`). A loja vem da sessão (nunca do
+ * cliente) e a RLS de `caixas` limita a leitura. É só conveniência de UI: a decisão é sempre do servidor.
+ */
+export async function listarCaixasElegiveisDevolucaoAction(): Promise<
+  { ok: true; caixas: CaixaElegivelDevolucao[] } | { ok: false; error: string }
+> {
+  const authCheck = await assertGerenteSession()
+  if (!authCheck.ok) return { ok: false, error: authCheck.error }
+  const lojaId = await resolveLojaId()
+  if (!lojaId) return { ok: false, error: 'Loja não identificada.' }
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('caixas')
+    .select('id, usuarios!caixas_operador_id_fkey(nome)')
+    .eq('loja_id', lojaId)
+    .eq('status', 'ABERTO')
+    .order('data_abertura', { ascending: true })
+  if (error) return { ok: false, error: 'Não foi possível listar os caixas abertos.' }
+  return {
+    ok: true,
+    caixas: (data ?? []).map((c) => ({
+      id: c.id,
+      operador: (c.usuarios as { nome?: string } | null)?.nome ?? c.id.slice(0, 8),
+    })),
+  }
+}
+
 export async function devolverOuTrocarVendaAction(formData: FormData) {
   const authCheck = await assertGerenteSession()
   if (!authCheck.ok) {
