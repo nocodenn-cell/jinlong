@@ -2,9 +2,11 @@
  * Porta de persistência de produtos — implementação em lib/adapters/supabase.
  * O domínio não conhece Supabase.
  */
-export type StatusPublicacao = 'DRAFT' | 'PUBLICADO' | 'INATIVO'
+import type { StatusPublicacao } from '../../../shared-core/src/engine/productEngine'
+import type { OrigemProduto } from '../../../shared-core/src/products/types'
 
-export type OrigemProduto = 'china_manual' | 'brasil_nf' | 'brasil_sem_nf'
+/** Fonte única: `shared-core` (engine/productEngine e products/types). */
+export type { StatusPublicacao, OrigemProduto }
 
 export type UnidadeMedida = 'UN' | 'KG' | 'CX' | 'FD' | 'M'
 
