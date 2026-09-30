@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useRef, useState } from 'react'
-import type { AtividadeFeedPayload, AtividadeRailItem } from '@/app/api/gerente/atividades/recent/route'
+import type { AtividadeFeedPayload, AtividadeRailItem } from '@/lib/hooks/atividadeFeedTypes'
 import { usePolling } from '@/lib/hooks/usePolling'
 
 export type { AtividadeRailItem }
