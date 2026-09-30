@@ -189,3 +189,41 @@ describe('CaixaReciboModal — botão de impressão térmica (WebUSB)', () => {
     expect(navegador).toBeDefined()
   })
 })
+
+describe('CaixaReciboModal — loja e 2ª via no cabeçalho', () => {
+  function renderCom(m: ReturnType<typeof getMessages>, extra: { lojaNome?: string | null; segundaVia?: boolean }) {
+    act(() => {
+      root.render(
+        <CaixaReciboModal
+          venda={venda}
+          m={m}
+          onClose={() => {}}
+          onNovaVenda={() => {}}
+          onFinalizarCaixa={() => {}}
+          thermal={thermal}
+          {...extra}
+        />,
+      )
+    })
+  }
+
+  it('mostra o nome da loja quando informado', () => {
+    renderCom(getMessages('pt'), { lojaNome: 'Loja Centro' })
+    expect(container.textContent).toContain('Loja Centro')
+  })
+
+  it('cupom original não mostra a marca de 2ª via', () => {
+    renderCom(getMessages('pt'), { segundaVia: false })
+    expect(container.querySelector('[data-testid="caixa-recibo-segunda-via"]')).toBeNull()
+  })
+
+  it('reimpressão mostra a marca no idioma da sessão (pt e zh)', () => {
+    for (const idioma of ['pt', 'zh'] as const) {
+      const m = getMessages(idioma)
+      renderCom(m, { segundaVia: true })
+      expect(container.querySelector('[data-testid="caixa-recibo-segunda-via"]')?.textContent).toBe(
+        m.caixa.recibo.segunda_via,
+      )
+    }
+  })
+})

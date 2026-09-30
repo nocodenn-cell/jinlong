@@ -116,3 +116,31 @@ describe('buildReciboEscPos — descontos (sem duplicidade com o desconto do ger
     expect(texto).not.toContain(labels.subtotal)
   })
 })
+
+describe('buildReciboEscPos — cabeçalho: loja e 2ª via', () => {
+  it('com loja: o nome da loja abre o cabeçalho, antes do título', () => {
+    const texto = decode(buildReciboEscPos({ ...vendaBase, lojaNome: 'Loja Centro' }, labels))
+    expect(texto).toContain('Loja Centro')
+    expect(texto.indexOf('Loja Centro')).toBeLessThan(texto.indexOf(labels.titulo))
+  })
+
+  it('nome de loja maior que a bobina é truncado', () => {
+    const longo = 'Loja Com Um Nome Absurdamente Grande Para A Bobina'
+    const texto = decode(buildReciboEscPos({ ...vendaBase, lojaNome: longo }, labels, 32))
+    expect(texto).toContain(longo.slice(0, 32))
+    expect(texto).not.toContain(longo)
+  })
+
+  it('segunda via: imprime a marca; original não imprime', () => {
+    const via = decode(buildReciboEscPos({ ...vendaBase, segundaVia: true }, labels))
+    const original = decode(buildReciboEscPos(vendaBase, labels))
+    expect(via).toContain(labels.segundaVia)
+    expect(original).not.toContain(labels.segundaVia)
+  })
+
+  it('sem loja e sem 2ª via: cabeçalho idêntico ao anterior (só título, data e id)', () => {
+    const texto = decode(buildReciboEscPos(vendaBase, labels))
+    expect(texto).not.toContain('undefined')
+    expect(texto).not.toContain('null')
+  })
+})

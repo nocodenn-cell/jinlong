@@ -26,6 +26,10 @@ export type ReciboVenda = {
   descontoGerentePercentual: number
   valorDescontoGerente: number
   moeda: string
+  /** Nome da loja no cabeçalho do cupom — omitido quando indisponível. */
+  lojaNome?: string | null
+  /** Reimpressão de um cupom já emitido: marca "2ª VIA" no cabeçalho. */
+  segundaVia?: boolean
 }
 
 /** Rótulos do cupom já resolvidos no idioma do operador — compartilhados entre a tela e o ESC/POS. */
@@ -40,6 +44,7 @@ export type ReciboLabels = {
   rodapeObrigado: string
   rodapeNaoFiscal: string
   atacado: string
+  segundaVia: string
   /** Forma de pagamento (DINHEIRO/PIX/CARTAO_DEBITO/CARTAO_CREDITO) → rótulo traduzido. */
   formas: Record<string, string>
 }
@@ -58,6 +63,7 @@ export function buildReciboLabels(m: Mensagens): ReciboLabels {
     rodapeObrigado: r.rodape_obrigado,
     rodapeNaoFiscal: r.rodape_nao_fiscal,
     atacado: r.atacado,
+    segundaVia: r.segunda_via,
     formas: {
       DINHEIRO: m.caixa.pdv_metodo_pagamento_dinheiro,
       PIX: m.caixa.pdv_metodo_pagamento_pix,

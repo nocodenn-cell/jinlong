@@ -94,11 +94,11 @@ export function buildReciboEscPos(venda: ReciboVenda, labels: ReciboLabels, cols
   const brl = (v: number) => `${venda.moeda} ${v.toFixed(2)}`
 
   // ── Header ──
-  b.init()
-   .center()
-   .boldOn()
-   .line(labels.titulo)
-   .boldOff()
+  b.init().center()
+  if (venda.lojaNome) b.boldOn().line(venda.lojaNome.slice(0, cols)).boldOff()
+  b.boldOn().line(labels.titulo).boldOff()
+  if (venda.segundaVia) b.boldOn().line(labels.segundaVia).boldOff()
+  b
    .line(venda.data.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }))
    .line("#" + venda.vendaId.slice(0, 8).toUpperCase())
 
