@@ -1283,6 +1283,7 @@
     "descontos_regras": "折扣（批发/手工）",
     "economia_atacado_por_quantidade": "含按数量批发价优惠：{{valor}}",
     "desconto_gerente_label": "经理折扣 ({{pct}}%)",
+    "desconto_gerente_so_dinheiro": "折扣仅适用于全额现金支付的销售。",
     "gerente_valido_ate": "经理授权至 {{hora}} · {{pct}}%（最高 {{max}}%）",
     "empty_guardiao": "守护龙等待第一件商品。",
     "header_guardiao_saldo_eyebrow": "现金余额（估算）",

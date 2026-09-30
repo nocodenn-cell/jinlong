@@ -23,7 +23,7 @@ import { useCaixaBuscaSugestoes } from "@/app/caixa/hooks/useCaixaBuscaSugestoes
 import { createClient as createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { historicoDetalheParaRecibo } from "@/app/caixa/caixaHistoricoRecibo"
 import type { MovimentacaoCaixaDTO } from "@/app/caixa/caixaMovimentacaoTypes"
-import { roundMoney2, type FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
+import { pagamentoSoDinheiro, roundMoney2, type FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
 import {
   pagamentoParcialExigeCliente,
   EXCESSO_PAGAMENTO_EPS,
@@ -1507,7 +1507,21 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const handleAbrirCaixaClick = useCallback(() => void handleAbrirCaixa(), [handleAbrirCaixa])
   const handleFecharCaixaClick = useCallback(() => void handleFecharCaixa(), [handleFecharCaixa])
   const handleFinalizarClick = useCallback(() => void handleFinalizar(), [handleFinalizar])
-  const abrirGerenteModal = useCallback(() => setGerenteModalAberto(true), [])
+  const abrirGerenteModal = useCallback(() => {
+    if (!pagamentoSoDinheiro({ formaPagamento: pagamentos[0]?.formaPagamento ?? "DINHEIRO", pagamentos })) {
+      setCaixaMensagem(m.caixa.desconto_gerente_so_dinheiro, { kind: "warning" })
+      return
+    }
+    setGerenteModalAberto(true)
+  }, [pagamentos, m, setCaixaMensagem])
+
+  // Desconto é exclusivo de venda 100% dinheiro: trocar/dividir para outra forma o descarta.
+  useEffect(() => {
+    if (descontoGerentePercentualEfetivo <= 0) return
+    if (pagamentoSoDinheiro({ formaPagamento: pagamentos[0]?.formaPagamento ?? "DINHEIRO", pagamentos })) return
+    limparEstadoDescontoGerente()
+    setCaixaMensagem(m.caixa.desconto_gerente_so_dinheiro, { kind: "warning" })
+  }, [pagamentos, descontoGerentePercentualEfetivo, limparEstadoDescontoGerente, m, setCaixaMensagem])
   // BR-01: gerente autoriza → reenvia a MESMA finalização com o token, revalidando
   // o carrinho atual (não reaproveita um payload antigo).
   const handleAutorizarLimiteCredito = useCallback(
@@ -1552,6 +1566,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 onAtualizarForma={atualizarForma}
                 onAtualizarValor={atualizarValor}
                 onAutoCompletar={autoCompletarUltima}
+                onDescontoDinheiro={abrirGerenteModal}
                 moedaPrefixo={m.caixa.moeda_prefixo}
                 metodoPagamentoPanel={metodoPagamentoSelector}
                 produtoPanel={

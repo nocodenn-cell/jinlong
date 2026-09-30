@@ -53,6 +53,14 @@ export const pagamentoParcelaSchema = z.object({
   valor: z.number().positive('O valor da parcela deve ser maior que zero.'),
 })
 
+/** true quando a forma da venda e todas as parcelas são DINHEIRO (pré-condição do desconto de gerente). */
+export function pagamentoSoDinheiro(v: {
+  formaPagamento: string
+  pagamentos: ReadonlyArray<{ formaPagamento: string }>
+}): boolean {
+  return v.formaPagamento === 'DINHEIRO' && v.pagamentos.every((p) => p.formaPagamento === 'DINHEIRO')
+}
+
 export const finalizarVendaInputSchema = z.object({
   /** Opcional: UUID estável por tentativa de finalização (fluxo unificado); vira `p_venda_id` e evita duplicar venda em retry/duplo clique. */
   idempotencyKey: z.string().uuid().optional(),
@@ -83,6 +91,15 @@ export const finalizarVendaInputSchema = z.object({
       code: z.ZodIssueCode.custom,
       path: ['descontoGerenteToken'],
       message: 'Token e percentual de desconto de gerente devem ser enviados juntos.',
+    })
+  }
+
+  // Regra comercial: desconto percentual de gerente só existe em venda 100% dinheiro.
+  if (hasToken && !pagamentoSoDinheiro(value)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['descontoGerenteToken'],
+      message: 'O desconto de gerente só vale para venda paga totalmente em dinheiro.',
     })
   }
 

@@ -38,6 +38,8 @@ type PagamentoPanelProps = {
   onAtualizarForma: (index: number, forma: FormaPagamento) => void
   onAtualizarValor: (index: number, valor: number) => void
   onAutoCompletar: () => void
+  /** Abre a autorização de gerente para desconto %; só oferecido em pagamento único em dinheiro. */
+  onDescontoDinheiro?: () => void
   moedaPrefixo: string
   metodoPagamentoPanel?: ReactNode
 }
@@ -59,6 +61,7 @@ const PagamentoPanelImpl = forwardRef(function PagamentoPanelImpl(
     onAtualizarForma,
     onAtualizarValor,
     onAutoCompletar,
+    onDescontoDinheiro,
     moedaPrefixo,
     metodoPagamentoPanel,
   }: PagamentoPanelProps,
@@ -94,6 +97,17 @@ const PagamentoPanelImpl = forwardRef(function PagamentoPanelImpl(
       className="flex shrink-0 flex-col gap-2 rounded-lg border border-border/60 bg-card/60 p-3 shadow-sm"
     >
       {metodoPagamentoPanel}
+
+      {pedeValorRecebido && onDescontoDinheiro ? (
+        <button
+          type="button"
+          onClick={onDescontoDinheiro}
+          data-testid="caixa-desconto-dinheiro"
+          className="self-start text-small font-medium text-primary underline underline-offset-2 transition hover:text-primary/80"
+        >
+          {m.caixa.validar_gerente}
+        </button>
+      ) : null}
 
       {pedeValorRecebido ? (
         <div className="flex items-center gap-2">
@@ -274,6 +288,7 @@ export function CaixaPdvOperadorTabs({
   onAtualizarForma,
   onAtualizarValor,
   onAutoCompletar,
+  onDescontoDinheiro,
   moedaPrefixo,
   produtoPanel,
   metodoPagamentoPanel,
@@ -294,6 +309,7 @@ export function CaixaPdvOperadorTabs({
         onAtualizarForma={onAtualizarForma}
         onAtualizarValor={onAtualizarValor}
         onAutoCompletar={onAutoCompletar}
+        onDescontoDinheiro={onDescontoDinheiro}
         moedaPrefixo={moedaPrefixo}
         metodoPagamentoPanel={metodoPagamentoPanel}
       />
