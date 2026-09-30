@@ -75,3 +75,44 @@ describe('buildReciboEscPos — cliente no cabeçalho (fechamento S6)', () => {
     expect(comCliente.replace(linhaClienteComLf, '')).toBe(semCliente)
   })
 })
+
+describe('buildReciboEscPos — descontos (sem duplicidade com o desconto do gerente)', () => {
+  it('desconto de item + gerente: "Desconto produtos" mostra só a parte dos itens', () => {
+    const venda: ReciboVenda = {
+      ...vendaBase,
+      totalBruto: 100,
+      totalDesconto: 15, // já inclui os 5 do gerente
+      valorDescontoGerente: 5,
+      descontoGerentePercentual: 5,
+      totalLiquidoComGerente: 85,
+    }
+    const texto = decode(buildReciboEscPos(venda, labels, 48))
+    const linhas = texto.split('\n')
+    const linhaProdutos = linhas.find((l) => l.includes(labels.descontoProdutos))
+    const linhaGerente = linhas.find((l) => l.includes(labels.descontoGerente))
+    expect(linhaProdutos?.trimEnd().endsWith('- R$ 10.00')).toBe(true)
+    expect(linhaGerente?.trimEnd().endsWith('- R$ 5.00')).toBe(true)
+    expect(texto).not.toContain('- R$ 15.00')
+  })
+
+  it('só desconto do gerente: a linha "Desconto produtos" não é impressa', () => {
+    const venda: ReciboVenda = {
+      ...vendaBase,
+      totalBruto: 100,
+      totalDesconto: 5,
+      valorDescontoGerente: 5,
+      descontoGerentePercentual: 5,
+      totalLiquidoComGerente: 95,
+    }
+    const texto = decode(buildReciboEscPos(venda, labels))
+    expect(texto).not.toContain(labels.descontoProdutos)
+    expect(texto).toContain(labels.descontoGerente)
+  })
+
+  it('sem desconto: nenhuma linha de desconto nem subtotal', () => {
+    const texto = decode(buildReciboEscPos(vendaBase, labels))
+    expect(texto).not.toContain(labels.descontoProdutos)
+    expect(texto).not.toContain(labels.descontoGerente)
+    expect(texto).not.toContain(labels.subtotal)
+  })
+})

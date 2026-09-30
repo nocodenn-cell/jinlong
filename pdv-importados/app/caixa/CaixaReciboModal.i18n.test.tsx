@@ -159,4 +159,32 @@ describe('CaixaReciboModal — botão de impressão térmica (WebUSB)', () => {
     // nunca deve conter o "Carregando" em PT do design system como parte do nome acessível anunciado
     expect(termicoBtn.getAttribute('aria-label')).not.toContain('Carregando')
   })
+
+  function botoesImpressao(m: ReturnType<typeof getMessages>) {
+    const botoes = Array.from(container.querySelectorAll('button'))
+    return {
+      termica: botoes.find(
+        (b) => b.getAttribute('aria-label') === m.caixa.modal_recibo_venda_imprimir_termica,
+      ),
+      navegador: botoes.find((b) => b.textContent?.includes(m.caixa.btn_imprimir_comprovante)),
+    }
+  }
+
+  it('com WebUSB: mostra os DOIS botões (térmica e navegador)', () => {
+    const m = getMessages('pt')
+    renderModal(m)
+    const { termica, navegador } = botoesImpressao(m)
+    expect(termica).toBeDefined()
+    expect(navegador).toBeDefined()
+    expect(navegador?.title).toBe(m.caixa.modal_recibo_venda_imprimir_janela_hint)
+  })
+
+  it('sem WebUSB: mostra só o botão de navegador', () => {
+    delete (globalThis.navigator as unknown as { usb?: unknown }).usb
+    const m = getMessages('pt')
+    renderModal(m)
+    const { termica, navegador } = botoesImpressao(m)
+    expect(termica).toBeUndefined()
+    expect(navegador).toBeDefined()
+  })
 })
