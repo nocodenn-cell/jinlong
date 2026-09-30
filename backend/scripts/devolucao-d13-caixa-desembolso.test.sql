@@ -26,7 +26,7 @@ DO $setup$
 DECLARE l int; v_cat uuid := 'f7000003-0000-4000-8000-000000000001';
 BEGIN
   INSERT INTO public.categorias (id, nome) VALUES (v_cat, 'D13 Cat') ON CONFLICT (id) DO NOTHING;
-  FOR l IN 1..14 LOOP
+  FOR l IN 1..16 LOOP
     INSERT INTO public.lojas (id, nome, codigo, ativo) VALUES (pg_temp.lid(l), 'D13 Loja ' || l, 'D13L' || l, true)
     ON CONFLICT (id) DO UPDATE SET ativo = true;
     INSERT INTO auth.users (id) VALUES (pg_temp.gid(l)) ON CONFLICT (id) DO NOTHING;
@@ -542,6 +542,96 @@ BEGIN
   PERFORM pg_temp.assert(v_msg LIKE '%venda_pos_venda_operacoes_conciliacao_chk%',
     'A-9 T13 o banco recusa saída de caixa maior que o valor estornado (' || coalesce(v_msg, 'aceita') || ')');
 END $t13$;
+
+-- ═══ T15 — D-13: o desconto já absorvido por devoluções anteriores é descontado da sobra aceitável ════════
+-- Venda de 4 un x R$ 25 (itens 100), total líquido 90 (desconto implícito 10), pago 90. Mata a mutação que remove
+-- `- v_desc_abs` do guard de excesso: sem ele, o desconto seria reutilizado e o absorvido total passaria de 10.
+DO $t15$
+DECLARE cx uuid; v uuid; e text; n_antes bigint; absorvido numeric;
+BEGIN
+  cx := pg_temp.abrir(70, 15, 0);
+  v := pg_temp.vender(70, 15, cx, 100, pg_temp.din(100));
+  UPDATE public.vendas SET total_bruto = 100, total_desconto = 10, total_liquido = 90 WHERE id = v;
+  UPDATE public.vendas_pagamentos SET valor = 90 WHERE venda_id = v;
+  e := pg_temp.dev(15, v, 2, 'd13-t15-a', 'DINHEIRO');                                  -- V=50: pago restante 40
+  PERFORM pg_temp.assert(e IS NULL, 'D-13 T15 op1 (2 un = 50) aceita (' || coalesce(e, 'ok') || ')');
+  UPDATE public.vendas_pagamentos SET valor = 69 WHERE venda_id = v;                      -- pago restante = 69 - 50 = 19
+  e := pg_temp.dev(15, v, 1, 'd13-t15-b', 'DINHEIRO');                                  -- V=25: dinheiro 19 + sobra 6 absorvida
+  PERFORM pg_temp.assert(e IS NULL, 'D-13 T15 op2 (1 un = 25: dinheiro 19 + 6 de desconto) aceita (' || coalesce(e, 'ok') || ')');
+  UPDATE public.vendas_pagamentos SET valor = 72 WHERE venda_id = v;                      -- reabre pago restante = 72 - 69 = 3
+  n_antes := pg_temp.n_dev(v);
+  e := pg_temp.dev(15, v, 0.32, 'd13-t15-c', 'DINHEIRO');                               -- V=8: dinheiro 3 + sobra 5; só restam 4 de desconto
+  PERFORM pg_temp.assert(e = 'DEVOLVER_VENDA_EXCEDE_VALOR_PAGO',
+    'D-13 T15 op3 (sobra 5 > desconto restante 4) rejeitada (' || coalesce(e, 'aceita') || ')');
+  PERFORM pg_temp.assert(pg_temp.n_dev(v) = n_antes
+    AND NOT EXISTS (SELECT 1 FROM public.venda_pos_venda_operacoes WHERE idempotency_key = 'd13-t15-c')
+    AND NOT EXISTS (SELECT 1 FROM public.devolucoes d JOIN public.venda_pos_venda_operacoes o ON o.id = d.operacao_id
+                     WHERE o.venda_id = v AND o.idempotency_key = 'd13-t15-c'),
+    'D-13 T15 op3 rejeitada não cria operação nem devolução');
+  SELECT COALESCE(sum(COALESCE((SELECT sum(vpi.subtotal) FROM public.venda_pos_venda_itens vpi WHERE vpi.operacao_id = o.id), 0)
+                      - o.valor_estornado), 0)
+    INTO absorvido FROM public.venda_pos_venda_operacoes o WHERE o.venda_id = v;
+  PERFORM pg_temp.assert(absorvido <= 10 + 0.01, 'D-13 T15 desconto absorvido total (' || absorvido || ') ≤ desconto da venda (10)');
+END $t15$;
+
+-- ═══ T16 — propriedades (60 vendas, seed fixa): invariantes contábeis de devoluções parciais repetidas ═════
+DO $t16$
+DECLARE cx uuid; v uuid; e text; i int; k int; u int; d numeric; total numeric; pago numeric; q numeric; rest numeric;
+        n_ok int := 0; n_rej int := 0;
+BEGIN
+  PERFORM setseed(0.4321);
+  UPDATE public.clientes SET limite_credito = 1000000 WHERE id = pg_temp.cid(16);
+  cx := pg_temp.abrir(71, 16, 0);
+  FOR i IN 1..60 LOOP
+    u := 2 + floor(random() * 7)::int;
+    total := 25 * u;
+    IF random() < 0.4 THEN                                                                 -- a prazo parcial (sem desconto)
+      pago := 25 * (1 + floor(random() * (u - 1))::int);
+      v := pg_temp.vender(71, 16, cx, total, pg_temp.din(pago), pg_temp.cid(16));
+    ELSE                                                                                   -- pago à vista, com ou sem desconto
+      d := CASE WHEN random() < 0.5 THEN 0 ELSE 1 + floor(random() * (total / 5))::int END;
+      v := pg_temp.vender(71, 16, cx, total, pg_temp.din(total));
+      IF d > 0 THEN
+        UPDATE public.vendas SET total_bruto = total, total_desconto = d, total_liquido = total - d WHERE id = v;
+        UPDATE public.vendas_pagamentos SET valor = total - d WHERE venda_id = v;
+      END IF;
+    END IF;
+    rest := u;
+    FOR k IN 1..4 LOOP
+      EXIT WHEN rest <= 0;
+      q := CASE WHEN k = 4 THEN rest ELSE LEAST(rest, ceil(random() * rest * 4) / 4) END;
+      e := pg_temp.dev(16, v, q, 'd13-prop-' || i || '-' || k, 'DINHEIRO');
+      IF e IS NULL THEN n_ok := n_ok + 1; rest := rest - q;
+      ELSE
+        IF e NOT IN ('DEVOLVER_VENDA_EXCEDE_VALOR_PAGO', 'DEVOLVER_VENDA_VALOR_ZERO') THEN
+          RAISE EXCEPTION 'FALHOU: T16 rejeição inesperada (%)', e;   -- só excesso/valor zero são rejeições legítimas
+        END IF;
+        n_rej := n_rej + 1;
+      END IF;
+    END LOOP;
+  END LOOP;
+  PERFORM pg_temp.assert(n_ok >= 60, 'T16 aceitou ' || n_ok || ' devoluções (' || n_rej || ' rejeitadas)');
+
+  CREATE TEMP TABLE t16_ops ON COMMIT DROP AS
+  SELECT o.venda_id, o.valor_estornado, o.valor_abatido_ar, o.valor_caixa_estornado,
+         COALESCE((SELECT sum(dv.valor) FROM public.devolucoes dv WHERE dv.operacao_id = o.id), 0) AS meio,
+         COALESCE((SELECT sum(vpi.subtotal) FROM public.venda_pos_venda_itens vpi WHERE vpi.operacao_id = o.id), 0) AS itens
+    FROM public.venda_pos_venda_operacoes o WHERE o.idempotency_key LIKE 'd13-prop-%';
+  PERFORM pg_temp.assert(NOT EXISTS (SELECT 1 FROM t16_ops WHERE abs(valor_estornado - (meio + valor_abatido_ar)) > 0.001),
+    'T16 estornado = meio + abatido em toda operação');
+  PERFORM pg_temp.assert(NOT EXISTS (
+    SELECT 1 FROM (
+      SELECT t.venda_id, sum(t.meio) AS meio, sum(t.valor_caixa_estornado) AS cx, sum(t.valor_abatido_ar) AS ar, sum(t.itens - t.valor_estornado) AS absorvido
+        FROM t16_ops t GROUP BY t.venda_id) s
+      JOIN public.vendas ve ON ve.id = s.venda_id
+      CROSS JOIN LATERAL (SELECT COALESCE(sum(vp.valor), 0) AS pago FROM public.vendas_pagamentos vp WHERE vp.venda_id = s.venda_id) p
+      CROSS JOIN LATERAL (SELECT COALESCE(sum(iv.preco_unitario * iv.quantidade), 0) AS itens FROM public.itens_venda iv WHERE iv.venda_id = s.venda_id) it
+     WHERE NOT (s.cx <= s.meio + 0.001 AND s.meio <= p.pago + 0.001)                     -- caixa ≤ meio ≤ pago
+        OR s.ar > GREATEST(0, ve.total_liquido - p.pago) + 0.001                           -- abatido ≤ financiado
+        OR s.cx + s.ar > ve.total_liquido + 0.001                                          -- caixa + AR ≤ total líquido
+        OR s.absorvido > GREATEST(0, it.itens - ve.total_liquido) + 0.01),                 -- absorvido ≤ desconto
+    'T16 por venda: caixa ≤ meio ≤ pago; abatido ≤ financiado; caixa+AR ≤ total líquido; absorvido ≤ desconto');
+END $t16$;
 
 -- ═══ Estrutura: exatamente UMA assinatura de devolver_ou_trocar_venda e ACL esperada ═══════════════════
 DO $estrutura$
