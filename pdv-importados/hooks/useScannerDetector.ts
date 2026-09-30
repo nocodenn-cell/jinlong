@@ -8,6 +8,19 @@ type UseScannerDetectorOptions = {
   ignoreWhen?: (target: EventTarget | null) => boolean
 }
 
+/** Instante da última tecla da rajada em curso (0 = nenhuma rajada com caracteres no buffer). */
+let ultimaTeclaDaRajada = 0
+
+/**
+ * True enquanto uma rajada de leitor está sendo digitada (há caracteres no buffer
+ * e a última tecla é recente). Quem devolve o foco ao campo de busca deve esperar:
+ * focar um input no meio da rajada faz o detector descartar o começo do código e
+ * o resto cair no campo, gerando um "não encontrado" com texto sobrando.
+ */
+export function scannerBurstEmAndamento(agora: number = Date.now(), janelaMs = 150): boolean {
+  return ultimaTeclaDaRajada > 0 && agora - ultimaTeclaDaRajada < janelaMs
+}
+
 function isEditableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false
   if (target.isContentEditable) return true
@@ -37,6 +50,7 @@ export function useScannerDetector(
     const clearBuffer = () => {
       bufferRef.current = ""
       lastKeyTimeRef.current = 0
+      ultimaTeclaDaRajada = 0
       if (timerRef.current !== null) {
         window.clearTimeout(timerRef.current)
         timerRef.current = null
@@ -77,6 +91,7 @@ export function useScannerDetector(
 
       bufferRef.current += e.key
       lastKeyTimeRef.current = now
+      ultimaTeclaDaRajada = now
       scheduleFlush()
     }
 
