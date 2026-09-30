@@ -1,4 +1,4 @@
-import type { OpcoesFiltrosProdutos } from '@/app/gerente/produtos/actions'
+import type { OpcoesFiltrosProdutos } from '@/lib/gerente/produtos/opcoesFiltrosTypes'
 
 /**
  * Sincroniza opções do servidor com appends locais do modal aberto.

@@ -11,7 +11,9 @@
  * Regra: só entra aqui o que for puro e utilizável nos dois runtimes.
  */
 
-export type FinanceiroTabId = 'receber' | 'pagar' | 'fiscal'
+import type { FinanceiroTabId } from '@/lib/navigation/financeiroTabId'
+
+export type { FinanceiroTabId }
 
 export const FINANCEIRO_TABS: ReadonlyArray<{ id: FinanceiroTabId; label: string }> = [
   { id: 'receber', label: 'A receber' },

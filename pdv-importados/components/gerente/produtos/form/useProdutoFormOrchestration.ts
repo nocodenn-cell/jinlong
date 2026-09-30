@@ -4,10 +4,11 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   atualizarDadosProdutoGerente,
   criarProduto,
-  type OpcoesFiltrosProdutos,
 } from '@/app/gerente/produtos/actions'
-import type { ProdutoGerenteRow } from '@/app/gerente/produtos/produtoGerenteTypes'
-import { obterAutoriaProduto, type ProdutoAutoria } from '@/app/gerente/produtos/produtoAutoriaActions'
+import type { OpcoesFiltrosProdutos } from '@/lib/gerente/produtos/opcoesFiltrosTypes'
+import type { ProdutoGerenteRow } from '@/lib/gerente/produtos/produtoGerenteTypes'
+import { obterAutoriaProduto } from '@/app/gerente/produtos/produtoAutoriaActions'
+import type { ProdutoAutoria } from '@/lib/gerente/produtos/produtoAutoriaTypes'
 import type { Mensagens } from '@/i18n/getMessages'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import {

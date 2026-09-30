@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { ProdutoGerenteRow } from '@/app/gerente/produtos/produtoGerenteTypes'
+import type { ProdutoGerenteRow } from '@/lib/gerente/produtos/produtoGerenteTypes'
 import { useMoneyInput } from '@/hooks/useMoneyInput'
 import { formatDecimalBRL } from '@/lib/format/money'
 import type { OrigemCode, UnidadeCode } from './produtoForm.types'

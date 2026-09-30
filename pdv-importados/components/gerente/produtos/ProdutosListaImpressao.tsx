@@ -4,7 +4,7 @@ import type { Mensagens } from '@/i18n/getMessages'
 import { formatBRL } from '@/lib/format/money'
 import { interpolateTemplate } from '@/lib/gerente/formatDashboardAtividade'
 import { cn } from '@/lib/utils'
-import type { ProdutoGerenteRow } from '@/app/gerente/produtos/produtoGerenteTypes'
+import type { ProdutoGerenteRow } from '@/lib/gerente/produtos/produtoGerenteTypes'
 
 function origemTexto(p: ProdutoGerenteRow, mp: Mensagens['produtos']): string {
   if (p.origem === 'china_manual') return mp.origem_china

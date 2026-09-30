@@ -8,7 +8,7 @@ import {
   adminEstoqueProdutoQuery,
   adminEtiquetasProdutoQuery,
 } from '@shared-core/navigation/routes'
-import type { OpcoesFiltrosProdutos } from '@/app/gerente/produtos/actions'
+import type { OpcoesFiltrosProdutos } from '@/lib/gerente/produtos/opcoesFiltrosTypes'
 import { Button } from '@/components/ui/button'
 import { DragonModal } from '@/components/ui/DragonModal'
 import type { Mensagens } from '@/i18n/getMessages'

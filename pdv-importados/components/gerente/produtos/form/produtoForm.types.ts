@@ -1,7 +1,7 @@
 import type { MoneyInputBag } from '@/hooks/useMoneyInput'
 import type { Mensagens } from '@/i18n/getMessages'
-import type { OpcoesFiltrosProdutos } from '@/app/gerente/produtos/actions'
-import type { ProdutoGerenteRow } from '@/app/gerente/produtos/produtoGerenteTypes'
+import type { OpcoesFiltrosProdutos } from '@/lib/gerente/produtos/opcoesFiltrosTypes'
+import type { ProdutoGerenteRow } from '@/lib/gerente/produtos/produtoGerenteTypes'
 
 export type OrigemCode = 'china_manual' | 'brasil_nf' | 'brasil_sem_nf'
 export type UnidadeCode = 'UN' | 'KG' | 'CX' | 'FD' | 'M'
