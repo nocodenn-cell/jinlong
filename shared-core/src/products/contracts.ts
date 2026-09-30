@@ -76,7 +76,7 @@ export type ListProductsFilteredResult =
 
 /**
  * Port de leitura do catálogo.
- * Adapter: `pdv-importados/app/admin/produtos/productReader.ts`.
+ * Adapter de referência: ver ADR-007 (docs/adr/ADR-007-products-domain-boundary.md).
  * `listComFiltros` pode enriquecer com snapshot de estoque (read-through inventory).
  */
 export type ProductReader = {
