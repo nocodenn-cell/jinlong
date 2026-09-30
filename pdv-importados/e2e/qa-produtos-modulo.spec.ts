@@ -10,7 +10,7 @@ import * as path from 'node:path'
 
 const LOGIN = '/login'
 // `/gerente/produtos` é rota legada — `LEGACY_GERENTE_REDIRECTS.produtos`
-// (`shared-core/navigation/routes.ts`) resolve para `/admin/catalogo`
+// (`lib/navigation/routes.ts`) resolve para `/admin/catalogo`
 // desde a consolidação admin-v2 (mesma migração documentada em
 // `gerente.spec.ts`). Navega direto pra rota atual em vez de confiar no
 // redirect.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES } from '@/lib/navigation/routes'
 import { painelGestaoHrefParaPerfil } from './caixaPainelGestao'
 
 describe('painelGestaoHrefParaPerfil (PDV → painel)', () => {

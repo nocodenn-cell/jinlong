@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES } from '@/lib/navigation/routes'
 import { cn } from '@/lib/utils'
 import { hubTabIsActive, type HubTabDef } from '@/lib/navigation/hubNavModel'
 import { financeiroHrefForTab } from '@/lib/navigation/financeiroHubQuery'

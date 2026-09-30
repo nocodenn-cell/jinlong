@@ -1,5 +1,5 @@
 import { isPerfilPainelGerencial } from '@/lib/auth/painelGerencial'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES } from '@/lib/navigation/routes'
 
 /**
  * Destino do atalho "Painel de gestão" no PDV. Só perfis com acesso ao painel

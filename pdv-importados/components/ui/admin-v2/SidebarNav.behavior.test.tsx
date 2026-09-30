@@ -29,7 +29,7 @@ vi.mock('next/link', () => ({
 
 const { SidebarNav } = await import('@/components/ui/admin-v2/SidebarNav')
 const { getMessages } = await import('@/i18n/getMessages')
-const { ROUTES } = await import('@shared-core/navigation/routes')
+const { ROUTES } = await import('@/lib/navigation/routes')
 
 let container: HTMLDivElement
 let root: Root

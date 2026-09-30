@@ -2,7 +2,7 @@
 
 import { Monitor } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES } from '@/lib/navigation/routes'
 
 type Props = {
   title: string

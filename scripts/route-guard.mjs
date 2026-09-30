@@ -2,7 +2,7 @@
 /**
  * ROUTE GUARD — frontend nunca aponta para rota /admin inexistente (404).
  *
- * Para cada rota estática de ROUTES.admin.* (shared-core/navigation/routes.ts),
+ * Para cada rota estática de ROUTES.admin.* (pdv-importados/lib/navigation/routes.ts),
  * exige a página correspondente em pdv-importados/app/<path>/page.tsx.
  * Teria pego o 404 de /admin/estoque/importar-nfe (link sem página).
  */
@@ -11,7 +11,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const routesFile = path.join(root, 'shared-core', 'navigation', 'routes.ts')
+const routesFile = path.join(root, 'pdv-importados', 'lib', 'navigation', 'routes.ts')
 const appDir = path.join(root, 'pdv-importados', 'app')
 
 const text = fs.readFileSync(routesFile, 'utf8')

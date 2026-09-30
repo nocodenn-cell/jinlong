@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { adminEtiquetasProdutoQuery } from '@shared-core/navigation/routes'
+import { adminEtiquetasProdutoQuery } from '@/lib/navigation/routes'
 
 type SearchParams = { codigo?: string; produto?: string }
 

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { History } from 'lucide-react'
-import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
+import { ROUTES, pathWithQuery } from '@/lib/navigation/routes'
 import { obterKardexProduto, type KardexMovimento } from '../actions'
 import { DragonModal } from '@/components/ui/DragonModal'
 import { DataTable, type Column } from '@/components/ui/DataTable'

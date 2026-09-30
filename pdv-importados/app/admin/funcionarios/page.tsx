@@ -1,7 +1,7 @@
 import { PageHeader } from '@/components/ui/admin-v2'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES } from '@/lib/navigation/routes'
 import { listarFuncionariosAction } from './actions'
 import { FuncionariosListClient } from './FuncionariosListClient'
 

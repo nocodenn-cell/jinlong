@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Gate de navegação — fonte única ROUTES em shared-core/navigation/routes.ts
+ * Gate de navegação — fonte única ROUTES em pdv-importados/lib/navigation/routes.ts
  */
 import fs from 'node:fs'
 import path from 'node:path'
@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url'
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const pdv = path.join(root, 'pdv-importados')
 
-const ROUTES_SOURCE = path.normalize(path.join(root, 'shared-core', 'navigation', 'routes.ts'))
+const ROUTES_SOURCE = path.normalize(path.join(pdv, 'lib', 'navigation', 'routes.ts'))
 
 const BANNED_IMPORTS = [
   '@/lib/navigation/appRoutes',
@@ -88,7 +88,7 @@ for (const legacy of ['appRoutes.ts', 'appFlow.ts', 'painelGerencialNav.ts']) {
 }
 
 if (!fs.existsSync(ROUTES_SOURCE)) {
-  violations.push('shared-core/navigation/routes.ts: arquivo canônico ausente')
+  violations.push('pdv-importados/lib/navigation/routes.ts: arquivo canônico ausente')
 }
 
 if (violations.length > 0) {

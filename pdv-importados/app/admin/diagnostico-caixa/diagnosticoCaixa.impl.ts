@@ -13,7 +13,7 @@ import {
   type DiagnosticoCheckStatus,
   type DiagnosticoCaixaResult,
 } from '@/lib/caixa/diagnosticoPreProducaoTypes'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES } from '@/lib/navigation/routes'
 import { obterStatusCaixaOperador } from '@/app/caixa/actions'
 import { buscarProdutoComPrecoCaixa } from '@/app/caixa/actions'
 

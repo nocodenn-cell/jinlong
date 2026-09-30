@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { DragonOuroLoader } from '@/components/branding/DragonOuroLoader'
 import { AuthShell } from '@/components/auth/AuthShell'
 import { PASSWORD_MIN_LENGTH, validateNewPassword } from '@/lib/auth/passwordPolicy'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES } from '@/lib/navigation/routes'
 import type { AppLocale } from '@shared-core/src/i18n'
 
 export type RedefinirSenhaLabels = {

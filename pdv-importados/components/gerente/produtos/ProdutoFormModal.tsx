@@ -7,7 +7,7 @@ import {
   adminCatalogoCompletoEditarHref,
   adminEstoqueProdutoQuery,
   adminEtiquetasProdutoQuery,
-} from '@shared-core/navigation/routes'
+} from '@/lib/navigation/routes'
 import type { OpcoesFiltrosProdutos } from '@/lib/gerente/produtos/opcoesFiltrosTypes'
 import { Button } from '@/components/ui/button'
 import { DragonModal } from '@/components/ui/DragonModal'

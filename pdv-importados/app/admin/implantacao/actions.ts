@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { createClient } from '@/lib/supabase/server'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES } from '@/lib/navigation/routes'
 import {
   avaliarBloqueiosGo,
   calcularGateStatus,
