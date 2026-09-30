@@ -318,6 +318,7 @@ export function VendasTable({
         <VendaCancelamentoReciboModal
           comprovante={comprovanteCancelamento}
           locale={locale}
+          m={m}
           onClose={() => setComprovanteCancelamento(null)}
         />
       )}

@@ -4,6 +4,8 @@ import { useRef } from 'react'
 import { fmtGerenteBRL, fmtGerenteDateTime, fmtGerenteIdCurto } from '@/lib/format/gerenteValues'
 import type { ComprovanteCancelamentoItem } from './actions'
 import { imprimirNoIframe } from '@/lib/print/imprimirNoIframe'
+import type { Mensagens } from '@/i18n/getMessages'
+import { Button } from '@/components/ui/button'
 
 export type ComprovanteCancelamento = Readonly<{
   vendaId: string
@@ -19,12 +21,14 @@ export type ComprovanteCancelamento = Readonly<{
 type Props = Readonly<{
   comprovante: ComprovanteCancelamento
   locale: string
+  m: Mensagens
   onClose: () => void
 }>
 
 /** Comprovante impresso de cancelamento de venda — impressão via janela do navegador. */
-export function VendaCancelamentoReciboModal({ comprovante: c, locale, onClose }: Props) {
+export function VendaCancelamentoReciboModal({ comprovante: c, locale, m, onClose }: Props) {
   const printRef = useRef<HTMLDivElement>(null)
+  const t = m.gerente.comprovante_venda
 
   const handlePrint = () => {
     const el = printRef.current
@@ -58,29 +62,21 @@ export function VendaCancelamentoReciboModal({ comprovante: c, locale, onClose }
     >
       <div className="flex max-h-[90dvh] w-full max-w-sm flex-col overflow-hidden rounded-xl border border-jl-border-1 bg-jl-surface-base shadow-xl">
         <div className="flex items-center justify-between border-b border-jl-border-1 px-4 py-3">
-          <span className="text-sm font-semibold text-jl-fg-1">Comprovante de cancelamento</span>
+          <span className="text-sm font-semibold text-jl-fg-1">{t.cancelamento_titulo}</span>
           <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={handlePrint}
-              className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700"
-            >
-              Imprimir comprovante
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg px-3 py-1.5 text-xs font-medium app-muted hover:text-jl-fg-1"
-            >
-              Fechar
-            </button>
+            <Button type="button" size="sm" variant="primary" onClick={handlePrint}>
+              {m.caixa.btn_imprimir_comprovante}
+            </Button>
+            <Button type="button" size="sm" variant="secondary" onClick={onClose}>
+              {m.caixa.btn_fechar_comprovante}
+            </Button>
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4">
           <div ref={printRef} className="flex flex-col gap-3 font-mono text-xs text-jl-fg-1">
             <div className="comp-header text-center border-b border-dashed border-jl-border-1 pb-3">
-              <h1 className="text-sm font-bold">VENDA CANCELADA</h1>
+              <h1 className="text-sm font-bold">{t.venda_cancelada}</h1>
               <p className="text-jl-fg-3">{fmtGerenteDateTime(c.dataCancelamento.toISOString(), locale)}</p>
               <p className="text-jl-fg-3 text-[10px]">#{fmtGerenteIdCurto(c.vendaId)}</p>
             </div>
@@ -103,29 +99,29 @@ export function VendaCancelamentoReciboModal({ comprovante: c, locale, onClose }
 
             <div className="flex flex-col gap-1">
               <div className="comp-linha flex justify-between">
-                <span className="text-jl-fg-3">Venda original</span>
+                <span className="text-jl-fg-3">{t.venda_original}</span>
                 <span>{c.dataOriginal ? fmtGerenteDateTime(c.dataOriginal, locale) : '—'}</span>
               </div>
               <div className="comp-linha flex justify-between">
-                <span className="text-jl-fg-3">Pagamento</span>
+                <span className="text-jl-fg-3">{t.pagamento}</span>
                 <span>{c.formaPagamentoLabel}</span>
               </div>
               <div className="comp-linha total flex justify-between border-t border-dashed border-jl-border-1 pt-2 mt-1 font-bold text-sm">
-                <span>Total estornado</span>
+                <span>{t.total_estornado}</span>
                 <span>{fmtGerenteBRL(c.totalLiquido, locale)}</span>
               </div>
               <div className="comp-linha flex justify-between">
-                <span className="text-jl-fg-3">Motivo</span>
+                <span className="text-jl-fg-3">{t.motivo}</span>
                 <span className="text-right">{c.motivo}</span>
               </div>
               <div className="comp-linha flex justify-between">
-                <span className="text-jl-fg-3">Cancelado por</span>
+                <span className="text-jl-fg-3">{t.cancelado_por}</span>
                 <span>{c.operadorNome}</span>
               </div>
             </div>
 
             <div className="comp-footer border-t border-dashed border-jl-border-1 pt-3 text-center text-jl-fg-3">
-              <p>Comprovante interno — não é documento fiscal.</p>
+              <p>{m.caixa.recibo.rodape_nao_fiscal}</p>
             </div>
           </div>
         </div>

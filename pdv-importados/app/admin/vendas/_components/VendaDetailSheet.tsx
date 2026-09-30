@@ -305,10 +305,11 @@ export function VendaDetailSheet({
         />
       ) : null}
 
-      {locale && comprovanteDevolucao ? (
+      {m && locale && comprovanteDevolucao ? (
         <VendaDevolucaoReciboModal
           comprovante={comprovanteDevolucao}
           locale={locale}
+          m={m}
           onClose={() => setComprovanteDevolucao(null)}
         />
       ) : null}

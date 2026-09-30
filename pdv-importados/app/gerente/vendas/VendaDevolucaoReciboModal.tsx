@@ -4,6 +4,8 @@ import { useRef } from 'react'
 import { fmtGerenteBRL, fmtGerenteDateTime, fmtGerenteIdCurto } from '@/lib/format/gerenteValues'
 import type { DevolverVendaItemResult } from './devolverOuTrocarVenda.impl'
 import { imprimirNoIframe } from '@/lib/print/imprimirNoIframe'
+import type { Mensagens } from '@/i18n/getMessages'
+import { Button } from '@/components/ui/button'
 
 export type ComprovanteDevolucao = Readonly<{
   operacaoId: string
@@ -20,13 +22,15 @@ export type ComprovanteDevolucao = Readonly<{
 type Props = Readonly<{
   comprovante: ComprovanteDevolucao
   locale: string
+  m: Mensagens
   onClose: () => void
 }>
 
 /** Comprovante impresso de devolução/troca — impressão via janela do navegador. */
-export function VendaDevolucaoReciboModal({ comprovante: c, locale, onClose }: Props) {
+export function VendaDevolucaoReciboModal({ comprovante: c, locale, m, onClose }: Props) {
   const printRef = useRef<HTMLDivElement>(null)
-  const titulo = c.tipo === 'TROCA' ? 'COMPROVANTE DE TROCA' : 'COMPROVANTE DE DEVOLUÇÃO'
+  const t = m.gerente.comprovante_venda
+  const titulo = c.tipo === 'TROCA' ? t.troca_titulo : t.devolucao_titulo
 
   const handlePrint = () => {
     const el = printRef.current
@@ -62,20 +66,12 @@ export function VendaDevolucaoReciboModal({ comprovante: c, locale, onClose }: P
         <div className="flex items-center justify-between border-b border-jl-border-1 px-4 py-3">
           <span className="text-sm font-semibold text-jl-fg-1">{titulo}</span>
           <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={handlePrint}
-              className="rounded-lg bg-jl-accent px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90"
-            >
-              Imprimir comprovante
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg px-3 py-1.5 text-xs font-medium app-muted hover:text-jl-fg-1"
-            >
-              Fechar
-            </button>
+            <Button type="button" size="sm" variant="primary" onClick={handlePrint}>
+              {m.caixa.btn_imprimir_comprovante}
+            </Button>
+            <Button type="button" size="sm" variant="secondary" onClick={onClose}>
+              {m.caixa.btn_fechar_comprovante}
+            </Button>
           </div>
         </div>
 
@@ -85,7 +81,7 @@ export function VendaDevolucaoReciboModal({ comprovante: c, locale, onClose }: P
               <h1 className="text-sm font-bold">{titulo}</h1>
               <p className="text-jl-fg-3">{fmtGerenteDateTime(c.dataOperacao.toISOString(), locale)}</p>
               <p className="text-jl-fg-3 text-[10px]">
-                Venda #{fmtGerenteIdCurto(c.vendaId)} · Op. #{fmtGerenteIdCurto(c.operacaoId)}
+                {t.venda} #{fmtGerenteIdCurto(c.vendaId)} · {t.operacao_abrev} #{fmtGerenteIdCurto(c.operacaoId)}
               </p>
             </div>
 
@@ -107,25 +103,25 @@ export function VendaDevolucaoReciboModal({ comprovante: c, locale, onClose }: P
 
             <div className="flex flex-col gap-1">
               <div className="comp-linha total flex justify-between border-t border-dashed border-jl-border-1 pt-2 mt-1 font-bold text-sm">
-                <span>Total estornado</span>
+                <span>{t.total_estornado}</span>
                 <span>{fmtGerenteBRL(c.valorEstornado, locale)}</span>
               </div>
               <div className="comp-linha flex justify-between">
-                <span className="text-jl-fg-3">Forma de estorno</span>
+                <span className="text-jl-fg-3">{t.forma_estorno}</span>
                 <span>{c.formaEstornoLabel}</span>
               </div>
               <div className="comp-linha flex justify-between">
-                <span className="text-jl-fg-3">Motivo</span>
+                <span className="text-jl-fg-3">{t.motivo}</span>
                 <span className="text-right">{c.motivo}</span>
               </div>
               <div className="comp-linha flex justify-between">
-                <span className="text-jl-fg-3">Operador</span>
+                <span className="text-jl-fg-3">{t.operador}</span>
                 <span>{c.operadorNome}</span>
               </div>
             </div>
 
             <div className="comp-footer border-t border-dashed border-jl-border-1 pt-3 text-center text-jl-fg-3">
-              <p>Comprovante interno — não é documento fiscal.</p>
+              <p>{m.caixa.recibo.rodape_nao_fiscal}</p>
             </div>
           </div>
         </div>
