@@ -1,6 +1,5 @@
 import type { HistoricoVendaDetalhe } from '@/app/caixa/actions'
 import { asFormaPagamento, type ReciboVenda } from '@/lib/caixa/reciboTypes'
-import type { FinalizarVendaInput } from '@/app/caixa/finalizarVendaValidation'
 
 /** Monta ReciboVenda a partir do detalhe do histórico (reimpressão). */
 export function historicoDetalheParaRecibo(
