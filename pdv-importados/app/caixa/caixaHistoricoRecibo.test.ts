@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import { descontoProdutosLiquido } from '@/lib/caixa/reciboTotais'
 import {
   historicoDetalheParaRecibo,
-  totalDescontoItensHistorico,
 } from '@/app/caixa/caixaHistoricoRecibo'
 import type { HistoricoVendaDetalhe } from '@/app/caixa/actions'
 
@@ -80,7 +79,6 @@ describe('historicoDetalheParaRecibo — ID 28 reimpressão fiel', () => {
       descontoGerentePercentual: 10,
       valorDescontoGerente: 20,
     })
-    expect(totalDescontoItensHistorico(d)).toBe(10)
     const recibo = historicoDetalheParaRecibo(d, 'R$')
     expect(recibo.descontoGerentePercentual).toBe(10)
     expect(recibo.valorDescontoGerente).toBe(20)

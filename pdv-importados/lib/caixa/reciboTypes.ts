@@ -5,6 +5,21 @@
 import type { FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
 import type { Mensagens } from "@/i18n/getMessages"
 
+const FORMAS_VALIDAS = new Set<FinalizarVendaInput["formaPagamento"]>([
+  "DINHEIRO",
+  "PIX",
+  "CARTAO_DEBITO",
+  "CARTAO_CREDITO",
+])
+
+/** Normaliza a forma de pagamento vinda do banco para as formas do cupom (desconhecida → DINHEIRO). */
+export function asFormaPagamento(valor: string): FinalizarVendaInput["formaPagamento"] {
+  const up = valor.toUpperCase()
+  return FORMAS_VALIDAS.has(up as FinalizarVendaInput["formaPagamento"])
+    ? (up as FinalizarVendaInput["formaPagamento"])
+    : "DINHEIRO"
+}
+
 export type ReciboItem = {
   nome: string
   quantidade: number
