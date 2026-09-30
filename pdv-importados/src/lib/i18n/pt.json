@@ -480,6 +480,22 @@
     "sem_validade": "Sem validade"
   },
   "gerente": {
+    "comprovante_venda": {
+      "cancelamento_titulo": "Comprovante de cancelamento",
+      "venda_cancelada": "VENDA CANCELADA",
+      "venda_original": "Venda original",
+      "pagamento": "Pagamento",
+      "total_estornado": "Total estornado",
+      "motivo": "Motivo",
+      "cancelado_por": "Cancelado por",
+      "devolucao_titulo": "COMPROVANTE DE DEVOLUÇÃO",
+      "troca_titulo": "COMPROVANTE DE TROCA",
+      "venda": "Venda",
+      "operacao_abrev": "Op.",
+      "forma_estorno": "Forma de estorno",
+      "operador": "Operador",
+      "forma_estorno_credito_cliente": "Abater do crédito do cliente"
+    },
     "titulo_painel": "Painel do Gerente",
     "inicio": "Início",
     "nav_vendas": "Vendas",

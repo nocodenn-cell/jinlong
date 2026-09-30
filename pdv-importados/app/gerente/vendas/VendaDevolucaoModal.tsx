@@ -50,13 +50,13 @@ function calcularValorEstorno(venda: VendaDetalhe, selecionados: Record<string, 
   }, 0)
 }
 
-function labelFormaEstorno(forma: string): string {
+function labelFormaEstorno(forma: string, m: Mensagens): string {
   const mapa: Record<string, string> = {
-    DINHEIRO: 'Dinheiro',
-    PIX: 'PIX',
-    CARTAO_DEBITO: 'Cartão débito',
-    CARTAO_CREDITO: 'Cartão crédito',
-    CREDITO_CLIENTE: 'Abater do crédito do cliente',
+    DINHEIRO: m.caixa.pdv_metodo_pagamento_dinheiro,
+    PIX: m.caixa.pdv_metodo_pagamento_pix,
+    CARTAO_DEBITO: m.caixa.pdv_metodo_pagamento_debito,
+    CARTAO_CREDITO: m.caixa.pdv_metodo_pagamento_credito,
+    CREDITO_CLIENTE: m.gerente.comprovante_venda.forma_estorno_credito_cliente,
   }
   return mapa[forma] ?? forma
 }
@@ -136,7 +136,7 @@ export function VendaDevolucaoModal({
             dataOperacao: new Date(),
             itens: res.itens,
             valorEstornado: res.valorEstornado,
-            formaEstornoLabel: labelFormaEstorno(formaEstorno),
+            formaEstornoLabel: labelFormaEstorno(formaEstorno, m),
             motivo: motivoTrim,
             operadorNome: res.operadorNome,
           })
@@ -287,7 +287,7 @@ export function VendaDevolucaoModal({
             >
               {formasDisponiveis.map((f) => (
                 <option key={f} value={f}>
-                  {labelFormaEstorno(f)}
+                  {labelFormaEstorno(f, m)}
                 </option>
               ))}
             </select>

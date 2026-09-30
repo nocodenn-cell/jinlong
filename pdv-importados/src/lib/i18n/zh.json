@@ -480,6 +480,22 @@
     "sem_validade": "长期有效"
   },
   "gerente": {
+    "comprovante_venda": {
+      "cancelamento_titulo": "取消凭证",
+      "venda_cancelada": "销售已取消",
+      "venda_original": "原销售单",
+      "pagamento": "付款方式",
+      "total_estornado": "退款总额",
+      "motivo": "原因",
+      "cancelado_por": "取消人",
+      "devolucao_titulo": "退货凭证",
+      "troca_titulo": "换货凭证",
+      "venda": "销售",
+      "operacao_abrev": "操作",
+      "forma_estorno": "退款方式",
+      "operador": "操作员",
+      "forma_estorno_credito_cliente": "抵扣客户余额"
+    },
     "titulo_painel": "经理面板",
     "inicio": "首页",
     "nav_vendas": "销售记录",
