@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buildReciboEscPos } from './escpos'
-import { buildReciboLabels, type ReciboVenda } from '@/app/caixa/CaixaReciboModal'
+import { buildReciboLabels, type ReciboVenda } from '@/lib/caixa/reciboTypes'
 import { getMessages } from '@/i18n/getMessages'
 
 const labels = buildReciboLabels(getMessages('pt'))

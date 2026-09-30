@@ -1,5 +1,5 @@
 import type { HistoricoVendaDetalhe } from '@/app/caixa/actions'
-import type { ReciboVenda } from '@/app/caixa/CaixaReciboModal'
+import type { ReciboVenda } from '@/lib/caixa/reciboTypes'
 import type { FinalizarVendaInput } from '@/app/caixa/finalizarVendaValidation'
 
 const FORMAS_VALIDAS = new Set<FinalizarVendaInput['formaPagamento']>([

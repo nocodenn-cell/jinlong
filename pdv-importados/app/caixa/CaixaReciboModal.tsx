@@ -1,53 +1,15 @@
 "use client"
 
 import { useEffect, useRef } from "react"
-import type { FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
 import type { UseThermalPrinterReturn } from "@/hooks/useThermalPrinter"
 import type { Mensagens } from "@/i18n/getMessages"
+import { buildReciboLabels, type ReciboVenda } from "@/lib/caixa/reciboTypes"
 import { Button } from "@/components/ui/button"
 import { ErrorState } from "@/components/ui/feedback"
 import { cn } from "@/lib/utils"
 import { formatDecimalBRL } from "@/lib/format/money"
 import { descontoProdutosLiquido } from "@/lib/caixa/reciboTotais"
-
-export type ReciboItem = {
-  nome: string
-  quantidade: number
-  precoUnitario: number
-  precoOriginal: number
-  tipoPreco: string
-}
-
-export type ReciboVenda = {
-  vendaId: string
-  data: Date
-  /** Cliente vinculado à venda (ex.: venda fiado) — `null` quando anônima ou indisponível (reimpressão). */
-  clienteNome: string | null
-  itens: ReciboItem[]
-  pagamentos: Array<{ formaPagamento: FinalizarVendaInput["formaPagamento"]; valor: number }>
-  totalBruto: number
-  totalDesconto: number
-  totalLiquidoComGerente: number
-  descontoGerentePercentual: number
-  valorDescontoGerente: number
-  moeda: string
-}
-
-/** Rótulos do cupom já resolvidos no idioma do operador — compartilhados entre a tela e o ESC/POS. */
-export type ReciboLabels = {
-  titulo: string
-  cliente: string
-  subtotal: string
-  descontoProdutos: string
-  descontoGerente: string
-  total: string
-  pagamento: string
-  rodapeObrigado: string
-  rodapeNaoFiscal: string
-  atacado: string
-  /** Forma de pagamento (DINHEIRO/PIX/CARTAO_DEBITO/CARTAO_CREDITO) → rótulo traduzido. */
-  formas: Record<string, string>
-}
+import { imprimirNoIframe } from "@/lib/print/imprimirNoIframe"
 
 type Props = Readonly<{
   venda: ReciboVenda
@@ -57,29 +19,6 @@ type Props = Readonly<{
   onFinalizarCaixa: () => void
   thermal: UseThermalPrinterReturn
 }>
-
-/** Monta os rótulos do cupom a partir do dicionário ativo (pt/zh). */
-export function buildReciboLabels(m: Mensagens): ReciboLabels {
-  const r = m.caixa.recibo
-  return {
-    titulo: r.titulo,
-    cliente: r.cliente,
-    subtotal: r.subtotal,
-    descontoProdutos: r.desconto_produtos,
-    descontoGerente: r.desconto_gerente,
-    total: r.total,
-    pagamento: r.pagamento,
-    rodapeObrigado: r.rodape_obrigado,
-    rodapeNaoFiscal: r.rodape_nao_fiscal,
-    atacado: r.atacado,
-    formas: {
-      DINHEIRO: m.caixa.pdv_metodo_pagamento_dinheiro,
-      PIX: m.caixa.pdv_metodo_pagamento_pix,
-      CARTAO_DEBITO: m.caixa.pdv_metodo_pagamento_debito,
-      CARTAO_CREDITO: m.caixa.pdv_metodo_pagamento_credito,
-    },
-  }
-}
 
 function fmtBRL(valor: number, moeda: string): string {
   return `${moeda} ${formatDecimalBRL(valor)}`
@@ -139,24 +78,7 @@ export function CaixaReciboModal({
       ".recibo-footer { text-align: center; font-size: 10px; color: #888; border-top: 1px dashed #000; padding-top: 6px; }",
     ].join("\n")
 
-    // Use a hidden same-page iframe so we avoid window.open (S5148) while
-    // still getting an isolated print context with clean styles.
-    const iframe = document.createElement("iframe")
-    iframe.style.cssText = "position:absolute;width:0;height:0;border:0;visibility:hidden"
-    document.body.appendChild(iframe)
-
-    const doc = iframe.contentDocument
-    if (!doc) { document.body.removeChild(iframe); return }
-
-    const style = doc.createElement("style")
-    style.textContent = PRINT_CSS
-    doc.head.appendChild(style)
-    doc.body.appendChild(el.cloneNode(true))
-
-    const win = iframe.contentWindow
-    if (!win) { document.body.removeChild(iframe); return }
-    win.onafterprint = () => document.body.removeChild(iframe)
-    win.print()
+    imprimirNoIframe(el, PRINT_CSS)
   }
 
   // Fecha com Escape
