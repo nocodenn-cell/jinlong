@@ -28,6 +28,9 @@ on:
     paths:
       - 'pdv-importados/**'
       - 'shared-core/**'
+      # `shared/` (raiz) e `scripts/` (guards de arquitetura, ex.: boundary-ratchet-guard)
+      - 'shared/**'
+      - 'scripts/**'
       # Scripts consumidos diretamente pelos jobs de E2E deste workflow
       # (`ci-e2e-readiness-check.mjs`, `ci-supabase-local-start.sh`) — sem
       # este path, um PR que só mudasse um desses arquivos nunca rodaria o
