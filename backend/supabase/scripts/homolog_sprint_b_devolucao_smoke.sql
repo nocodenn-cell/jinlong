@@ -74,7 +74,8 @@ BEGIN
   SELECT quantidade_atual INTO v_estoque_antes
   FROM public.estoque WHERE produto_id = v_prod AND loja_id = v_loja;
 
-  SELECT saldo_atual INTO v_saldo_antes FROM public.caixas WHERE id = v_caixa;
+  -- PR-2D: a verdade do caixa é a autoridade (internal.valor_sistema_dinheiro); saldo_atual é cache derivado.
+  v_saldo_antes := internal.valor_sistema_dinheiro(v_caixa);
 
   SELECT operacao_id, valor_estornado, valor_caixa_estornado
   INTO v_op, v_valor_estornado, v_valor_caixa
@@ -87,7 +88,8 @@ BEGIN
     10.00,
     'DINHEIRO',
     NULL,
-    v_user
+    v_user,
+    v_caixa
   );
 
   IF v_op IS NULL THEN
@@ -104,20 +106,29 @@ BEGIN
     10.00,
     'DINHEIRO',
     NULL,
-    v_user
+    v_user,
+    v_caixa
   );
 
   SELECT quantidade_atual INTO v_estoque_depois
   FROM public.estoque WHERE produto_id = v_prod AND loja_id = v_loja;
 
-  SELECT saldo_atual INTO v_saldo_depois FROM public.caixas WHERE id = v_caixa;
+  v_saldo_depois := internal.valor_sistema_dinheiro(v_caixa);
 
   IF v_estoque_depois <> v_estoque_antes + 1 THEN
     RAISE EXCEPTION 'SMOKE_FAIL: estoque esperado %, obtido %', v_estoque_antes + 1, v_estoque_depois;
   END IF;
 
   IF v_saldo_depois <> v_saldo_antes - 10 THEN
-    RAISE EXCEPTION 'SMOKE_FAIL: caixa esperado %, obtido %', v_saldo_antes - 10, v_saldo_depois;
+    RAISE EXCEPTION 'SMOKE_FAIL: caixa (autoridade) esperado %, obtido %', v_saldo_antes - 10, v_saldo_depois;
+  END IF;
+
+  IF (SELECT saldo_atual FROM public.caixas WHERE id = v_caixa) <> v_saldo_depois THEN
+    RAISE EXCEPTION 'SMOKE_FAIL: cache saldo_atual deveria refletir a autoridade (%)', v_saldo_depois;
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM public.devolucoes WHERE operacao_id = v_op AND forma_pagamento = 'DINHEIRO' AND caixa_desembolso_id = v_caixa) THEN
+    RAISE EXCEPTION 'SMOKE_FAIL: devolução em dinheiro sem caixa_desembolso_id';
   END IF;
 
   IF NOT EXISTS (SELECT 1 FROM public.devolucoes WHERE venda_id = v_venda AND operacao_id = v_op) THEN
