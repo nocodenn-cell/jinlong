@@ -11,6 +11,7 @@ import { formatBRL } from '@/lib/format/money'
 import { formatDateTimeOrDash } from '@/lib/format/datetime'
 import { cn } from '@/lib/utils'
 import { obterDetalheVenda, type VendaDetalhe } from '../actions'
+import { VendaReimpressaoModal } from './VendaReimpressaoModal'
 import { toPayment, toVendaStatus, toFiscal } from './vendaMaps'
 import { VendaCancelarModal } from '@/app/gerente/vendas/VendaCancelarModal'
 import type { ComprovanteCancelamento } from '@/app/gerente/vendas/VendaCancelamentoReciboModal'
@@ -87,6 +88,7 @@ export function VendaDetailSheet({
   const [erro, setErro] = useState(false)
   const [cancelarAberto, setCancelarAberto] = useState(false)
   const [devolverAberto, setDevolverAberto] = useState(false)
+  const [reimprimirAberto, setReimprimirAberto] = useState(false)
   const [comprovanteDevolucao, setComprovanteDevolucao] =
     useState<ComprovanteDevolucao | null>(null)
 
@@ -272,6 +274,14 @@ export function VendaDetailSheet({
           <div className="flex flex-col gap-2 border-t border-[var(--color-border-secondary)] px-5 py-3">
             <button
               type="button"
+              onClick={() => setReimprimirAberto(true)}
+              data-testid="venda-detalhe-imprimir-cupom"
+              className="w-full rounded-lg border border-jl-border-1 bg-jl-surface-base px-3 py-2 text-sm font-semibold text-jl-fg-1 transition hover:bg-jl-surface-raised"
+            >
+              {m.caixa.historico_tool_imprimir_cupom}
+            </button>
+            <button
+              type="button"
               onClick={() => setDevolverAberto(true)}
               className="w-full rounded-lg border border-jl-border-1 bg-jl-surface-base px-3 py-2 text-sm font-semibold text-jl-fg-1 transition hover:bg-jl-surface-raised"
             >
@@ -287,6 +297,10 @@ export function VendaDetailSheet({
           </div>
         ) : null}
       </aside>
+
+      {m && venda && reimprimirAberto ? (
+        <VendaReimpressaoModal venda={venda} m={m} onClose={() => setReimprimirAberto(false)} />
+      ) : null}
 
       {m && locale && venda && devolverAberto ? (
         <VendaDevolucaoModal

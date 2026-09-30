@@ -19,8 +19,9 @@ type Props = Readonly<{
   segundaVia?: boolean
   m: Mensagens
   onClose: () => void
-  onNovaVenda: () => void
-  onFinalizarCaixa: () => void
+  /** Ações de fluxo do PDV; omitidas quando o cupom é reaberto fora do caixa (ex.: detalhe da venda no admin). */
+  onNovaVenda?: () => void
+  onFinalizarCaixa?: () => void
   thermal: UseThermalPrinterReturn
 }>
 
@@ -263,7 +264,9 @@ export function CaixaReciboModal({
           </div>
         </div>
 
+        {onNovaVenda || onFinalizarCaixa ? (
         <div className="flex flex-col gap-2 border-t border-border bg-surface-muted p-4">
+          {onNovaVenda ? (
           <Button
             type="button"
             variant="primary"
@@ -274,6 +277,8 @@ export function CaixaReciboModal({
           >
             {m.caixa.btn_adicionar_nova_venda}
           </Button>
+          ) : null}
+          {onFinalizarCaixa ? (
           <Button
             type="button"
             variant="secondary"
@@ -282,7 +287,9 @@ export function CaixaReciboModal({
           >
             {m.caixa.btn_finalizar_caixa}
           </Button>
+          ) : null}
         </div>
+        ) : null}
       </div>
     </div>
   )
