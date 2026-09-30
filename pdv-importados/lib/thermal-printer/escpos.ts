@@ -3,7 +3,7 @@
  * Generates a Uint8Array ready to be sent via WebUSB or serial.
  */
 
-import type { ReciboVenda, ReciboLabels } from "@/app/caixa/CaixaReciboModal"
+import type { ReciboVenda, ReciboLabels } from "@/lib/caixa/reciboTypes"
 import { descontoProdutosLiquido } from "@/lib/caixa/reciboTotais"
 
 // ── ESC/POS command bytes ────────────────────────────────────────────────────

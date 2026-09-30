@@ -15,7 +15,8 @@ import { createRoot, type Root } from 'react-dom/client'
 import { act } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { getMessages } from '@/i18n/getMessages'
-import { CaixaReciboModal, type ReciboVenda } from '@/app/caixa/CaixaReciboModal'
+import { CaixaReciboModal } from '@/app/caixa/CaixaReciboModal'
+import type { ReciboVenda } from '@/lib/caixa/reciboTypes'
 import type { UseThermalPrinterReturn } from '@/hooks/useThermalPrinter'
 
 let container: HTMLDivElement

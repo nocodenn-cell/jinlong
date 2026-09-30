@@ -4,6 +4,7 @@ import { useRef } from "react"
 import type { Mensagens } from "@/i18n/getMessages"
 import { Button } from "@/components/ui/button"
 import { formatDecimalBRL } from "@/lib/format/money"
+import { imprimirNoIframe } from "@/lib/print/imprimirNoIframe"
 
 export type ComprovanteFechamento = {
   lojaNome: string
@@ -57,22 +58,7 @@ export function CaixaFechamentoReciboModal({ comprovante: c, m, onClose }: Props
       ".comp-footer { text-align: center; font-size: 10px; color: #888; border-top: 1px dashed #000; padding-top: 6px; margin-top: 6px; }",
     ].join("\n")
 
-    const iframe = document.createElement("iframe")
-    iframe.style.cssText = "position:absolute;width:0;height:0;border:0;visibility:hidden"
-    document.body.appendChild(iframe)
-
-    const doc = iframe.contentDocument
-    if (!doc) { document.body.removeChild(iframe); return }
-
-    const style = doc.createElement("style")
-    style.textContent = PRINT_CSS
-    doc.head.appendChild(style)
-    doc.body.appendChild(el.cloneNode(true))
-
-    const win = iframe.contentWindow
-    if (!win) { document.body.removeChild(iframe); return }
-    win.onafterprint = () => document.body.removeChild(iframe)
-    win.print()
+    imprimirNoIframe(el, PRINT_CSS)
   }
 
   return (

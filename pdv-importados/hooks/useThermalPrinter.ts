@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from "react"
 import { WebUsbPrinter, type ThermalPrinterInfo } from "@/lib/thermal-printer/webUsbAdapter"
 import { buildReciboEscPos } from "@/lib/thermal-printer/escpos"
-import type { ReciboVenda, ReciboLabels } from "@/app/caixa/CaixaReciboModal"
+import type { ReciboVenda, ReciboLabels } from "@/lib/caixa/reciboTypes"
 
 export type ThermalStatus = "idle" | "connecting" | "connected" | "printing" | "error"
 
