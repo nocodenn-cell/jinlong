@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { ErrorState } from "@/components/ui/feedback"
 import { cn } from "@/lib/utils"
 import { formatDecimalBRL } from "@/lib/format/money"
+import { descontoProdutosLiquido } from "@/lib/caixa/reciboTotais"
 
 export type ReciboItem = {
   nome: string
@@ -105,6 +106,7 @@ export function CaixaReciboModal({
   const printRef = useRef<HTMLDivElement>(null)
   const supportsWebUSB = typeof navigator !== "undefined" && "usb" in navigator
   const labels = buildReciboLabels(m)
+  const termicaEmUso = thermal.status === "connected" || thermal.status === "printing"
 
   const handleThermalPrint = async () => {
     if (!thermal.deviceInfo) {
@@ -167,15 +169,7 @@ export function CaixaReciboModal({
   }, [onClose])
 
   const temDesconto = venda.totalBruto > venda.totalLiquidoComGerente
-  /**
-   * Parte do desconto que veio das LINHAS (faixa de atacado / preco manual).
-   * `venda.totalDesconto` ja embute o desconto do gerente, entao subtrai-lo
-   * evita listar o mesmo valor duas vezes no cupom.
-   */
-  const descontoProdutosLiquido = Math.max(
-    0,
-    Number((venda.totalDesconto - venda.valorDescontoGerente).toFixed(2)),
-  )
+  const descontoProdutos = descontoProdutosLiquido(venda)
 
   return (
     <div
@@ -195,11 +189,7 @@ export function CaixaReciboModal({
               <Button
                 type="button"
                 size="sm"
-                variant={
-                  thermal.status === "connected" || thermal.status === "printing"
-                    ? "primary"
-                    : "secondary"
-                }
+                variant={termicaEmUso ? "primary" : "secondary"}
                 onClick={() => { void handleThermalPrint().catch(() => { }) }}
                 disabled={thermal.status === "connecting" || thermal.status === "printing"}
                 loading={thermal.status === "connecting" || thermal.status === "printing"}
@@ -210,17 +200,17 @@ export function CaixaReciboModal({
                  thermal.status === "printing"   ? m.caixa.modal_recibo_venda_imprimindo :
                  m.caixa.modal_recibo_venda_imprimir_termica}
               </Button>
-            ) : (
-              <Button
-                type="button"
-                size="sm"
-                variant="primary"
-                onClick={handlePrint}
-                title={m.caixa.modal_recibo_venda_imprimir_janela_hint}
-              >
-                {m.caixa.btn_imprimir_comprovante}
-              </Button>
-            )}
+            ) : null}
+            {/* Sempre disponível: impressora com driver do SO não é alcançável via WebUSB. */}
+            <Button
+              type="button"
+              size="sm"
+              variant={supportsWebUSB && termicaEmUso ? "secondary" : "primary"}
+              onClick={handlePrint}
+              title={m.caixa.modal_recibo_venda_imprimir_janela_hint}
+            >
+              {m.caixa.btn_imprimir_comprovante}
+            </Button>
             <Button
               type="button"
               size="sm"
@@ -291,10 +281,10 @@ export function CaixaReciboModal({
                     <span className="text-muted-foreground">{labels.subtotal}</span>
                     <span>{fmtBRL(venda.totalBruto, venda.moeda)}</span>
                   </div>
-                  {descontoProdutosLiquido > 0 && (
+                  {descontoProdutos > 0 && (
                     <div className="recibo-linha flex justify-between text-muted-foreground">
                       <span>{labels.descontoProdutos}</span>
-                      <span>− {fmtBRL(descontoProdutosLiquido, venda.moeda)}</span>
+                      <span>− {fmtBRL(descontoProdutos, venda.moeda)}</span>
                     </div>
                   )}
                   {venda.descontoGerentePercentual > 0 && (

@@ -4,6 +4,7 @@
  */
 
 import type { ReciboVenda, ReciboLabels } from "@/app/caixa/CaixaReciboModal"
+import { descontoProdutosLiquido } from "@/lib/caixa/reciboTotais"
 
 // ── ESC/POS command bytes ────────────────────────────────────────────────────
 const CMD = {
@@ -123,8 +124,9 @@ export function buildReciboEscPos(venda: ReciboVenda, labels: ReciboLabels, cols
   // ── Totals ──
   if (venda.totalBruto > venda.totalLiquidoComGerente) {
     b.cols2(labels.subtotal, brl(venda.totalBruto))
-    if (venda.totalDesconto > 0)
-      b.cols2(labels.descontoProdutos, `- ${brl(venda.totalDesconto)}`)
+    const descontoProdutos = descontoProdutosLiquido(venda)
+    if (descontoProdutos > 0)
+      b.cols2(labels.descontoProdutos, `- ${brl(descontoProdutos)}`)
     if (venda.descontoGerentePercentual > 0)
       b.cols2(
         `${labels.descontoGerente} ${venda.descontoGerentePercentual.toFixed(1)}%`,
