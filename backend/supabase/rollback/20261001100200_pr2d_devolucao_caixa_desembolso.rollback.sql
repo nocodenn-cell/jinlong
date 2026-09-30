@@ -210,7 +210,10 @@ BEGIN
 END;
 $function$;
 
--- 3) Funções internas e colunas (ver a nota de ATENÇÃO no topo).
+-- 3) Constraint de conciliação (20261001100300) — antes de remover a coluna que ela referencia.
+ALTER TABLE public.venda_pos_venda_operacoes DROP CONSTRAINT IF EXISTS venda_pos_venda_operacoes_conciliacao_chk;
+
+-- 4) Funções internas e colunas (ver a nota de ATENÇÃO no topo).
 DROP FUNCTION IF EXISTS internal.sincronizar_saldo_cache(uuid);
 DROP FUNCTION IF EXISTS internal.resolver_caixa_pagador(uuid, uuid, text);
 DROP FUNCTION IF EXISTS internal.valor_sistema_dinheiro(uuid);

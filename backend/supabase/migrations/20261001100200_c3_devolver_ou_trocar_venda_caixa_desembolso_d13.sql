@@ -12,6 +12,10 @@
 --  3. D-13 — conciliação: valor da devolução = parte devolvida em meio de pagamento (limitada ao que foi
 --     efetivamente pago e ainda não reembolsado) + parte que abate o saldo a receber (CREDITO_CLIENTE). Nenhuma
 --     combinação gera saída de caixa acima do valor efetivamente recebido, nem dinheiro por saldo em aberto.
+--     O reembolso é monetariamente FUNGÍVEL: não precisa sair pelo mesmo meio do pagamento original (sem rastreio por
+--     forma); o limite é o total efetivamente pago na venda e ainda não devolvido em meio de pagamento. Desconto da
+--     venda (itens a preço cheio somam mais que o total líquido) não é reembolsável: a sobra explicada por ele é
+--     absorvida e o valor_estornado gravado é o efetivamente devolvido (meio + abatimento de AR).
 --  4. D-13 — título com liquidação ativa (RECEBIMENTO sem ESTORNO) bloqueia a devolução:
 --     DEVOLVER_VENDA_TITULO_COM_LIQUIDACAO (o operador estorna a liquidação pelo fluxo financeiro).
 --  5. Retry idempotente com caixa divergente do gravado → DEVOLVER_VENDA_RETRY_CAIXA_DIVERGENTE.
@@ -71,6 +75,10 @@ DECLARE
   v_pago_restante numeric(10, 2) := 0;
   v_valor_meio numeric(10, 2) := 0;
   v_valor_ar numeric(10, 2) := 0;
+  v_disp_ar numeric(10, 2) := 0;
+  v_excesso numeric(10, 2) := 0;
+  v_desc_impl numeric(10, 2) := 0;
+  v_desc_abs numeric(10, 2) := 0;
   v_forma_op text;
   v_pagador uuid := NULL;
   c_source constant text := 'gerente_panel';
@@ -169,12 +177,31 @@ BEGIN
      WHERE o.venda_id = p_venda_id AND o.forma_estorno <> 'CREDITO_CLIENTE';
     v_pago_restante := GREATEST(0, public.round_abnt(v_pago_total - v_meio_ja, 2));
 
+    -- Reembolso monetariamente FUNGÍVEL: não precisa ser pelo mesmo meio do pagamento original; o limite é o total
+    -- efetivamente pago na venda e ainda não devolvido em meio de pagamento (sem rastreio por forma de pagamento).
     v_valor_meio := LEAST(v_valor_estorno, v_pago_restante);
     v_valor_ar := public.round_abnt(v_valor_estorno - v_valor_meio, 2);
     IF v_valor_ar > 0.009 THEN
       -- O excedente só pode abater saldo a receber existente; nunca vira dinheiro nem dívida artificial.
-      IF v_cr.id IS NULL OR v_cr.status NOT IN ('ABERTO', 'PARCIAL') OR v_cr.valor_aberto < v_valor_ar - 0.01 THEN
-        RAISE EXCEPTION 'DEVOLVER_VENDA_EXCEDE_VALOR_PAGO';
+      v_disp_ar := CASE WHEN v_cr.id IS NOT NULL AND v_cr.status IN ('ABERTO', 'PARCIAL') THEN v_cr.valor_aberto ELSE 0 END;
+      v_excesso := GREATEST(0, public.round_abnt(v_valor_ar - v_disp_ar, 2));
+      v_valor_ar := LEAST(v_valor_ar, v_disp_ar);
+      IF v_excesso > 0.009 THEN
+        -- Sobra além do pago + saldo em aberto. Só é aceitável se vier do DESCONTO da venda (itens a preço cheio
+        -- somam mais que o total líquido): esse valor nunca foi pago, logo não é reembolsável. Qualquer outra sobra
+        -- é excesso real → rejeitado. O que sobra de desconto já "absorvido" em devoluções anteriores é descontado.
+        SELECT GREATEST(0, COALESCE(sum(iv.preco_unitario * iv.quantidade), 0) - v_venda.total_liquido)
+          INTO v_desc_impl FROM public.itens_venda iv WHERE iv.venda_id = p_venda_id;
+        SELECT COALESCE(sum(op.itens_subtotal - op.valor_estornado), 0) INTO v_desc_abs
+          FROM (SELECT o.valor_estornado,
+                       COALESCE((SELECT sum(vpi.subtotal) FROM public.venda_pos_venda_itens vpi WHERE vpi.operacao_id = o.id), 0) AS itens_subtotal
+                  FROM public.venda_pos_venda_operacoes o WHERE o.venda_id = p_venda_id) op;
+        IF v_excesso > v_desc_impl - v_desc_abs + 0.01 THEN
+          RAISE EXCEPTION 'DEVOLVER_VENDA_EXCEDE_VALOR_PAGO';
+        END IF;
+        -- Valor efetivamente devolvido = meio + abatimento de AR (a parcela de desconto não é estornada).
+        v_valor_estorno := public.round_abnt(v_valor_meio + v_valor_ar, 2);
+        IF v_valor_estorno <= 0 THEN RAISE EXCEPTION 'DEVOLVER_VENDA_VALOR_ZERO'; END IF;
       END IF;
     ELSE
       v_valor_ar := 0;
@@ -187,7 +214,10 @@ BEGIN
   -- ── Caixa pagador (D-2/D-3): só quando há DINHEIRO a devolver ──────────────────────────────────────
   IF v_forma = 'DINHEIRO' AND v_valor_meio > 0 THEN
     v_pagador := internal.resolver_caixa_pagador(p_caixa_id, v_uid, 'DEVOLVER_VENDA');
-    SELECT c.* INTO v_caixa_pag FROM public.caixas c WHERE c.id = v_pagador FOR UPDATE;
+    -- FOR NO KEY UPDATE (e não FOR UPDATE): serializa os pagadores do MESMO caixa (conflita com ele mesmo, com FOR UPDATE e
+    -- com os UPDATE de saldo dos demais escritores), mas NÃO bloqueia o FK KEY SHARE que outra devolução, pagando por
+    -- outro caixa, precisa no caixa da venda de origem (provado em devolucao-concorrencia.sh, cenário 3).
+    SELECT c.* INTO v_caixa_pag FROM public.caixas c WHERE c.id = v_pagador FOR NO KEY UPDATE;
     IF NOT FOUND OR v_caixa_pag.status <> 'ABERTO' THEN RAISE EXCEPTION 'DEVOLVER_VENDA_CAIXA_INVALIDO'; END IF;
     -- Disponibilidade pela AUTORIDADE (D-1), medida depois do lock e antes de qualquer saída.
     IF internal.valor_sistema_dinheiro(v_pagador) - v_valor_meio < 0 THEN
