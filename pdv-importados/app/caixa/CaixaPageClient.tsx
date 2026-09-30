@@ -80,7 +80,7 @@ import { CaixaToastViewport } from "@/components/caixa/CaixaToastViewport"
 import { CaixaValorNumericoModal } from "@/components/caixa/CaixaValorNumericoModal"
 import { CaixaMotivoMinModal } from "@/components/caixa/CaixaMotivoMinModal"
 import { CaixaConfirmModal } from "@/app/caixa/CaixaConfirmModal"
-import { useScannerDetector } from "@/hooks/useScannerDetector"
+import { scannerBurstEmAndamento, useScannerDetector } from "@/hooks/useScannerDetector"
 import { useCaixaScanPipeline } from "@/app/caixa/scan-pipeline/useCaixaScanPipeline"
 import { useThermalPrinter } from "@/hooks/useThermalPrinter"
 import { CaixaReciboModal } from "@/app/caixa/CaixaReciboModal"
@@ -357,13 +357,22 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const thermal = useThermalPrinter()
 
   const focarCampoBusca = useCallback(() => {
-    requestAnimationFrame(() => {
-      // Não roubar foco enquanto um modal está aberto (senha do gerente, valor de
-      // fechamento, confirmação, recibo): o ímã de 3s ou o refoco pós-venda não devem
-      // puxar o foco para a busca atrás do diálogo.
-      if (typeof document !== "undefined" && document.querySelector('[role="dialog"]')) return
-      buscaInputRef.current?.focus()
-    })
+    const tentar = (restantes: number) => {
+      requestAnimationFrame(() => {
+        // Não roubar foco enquanto um modal está aberto (senha do gerente, valor de
+        // fechamento, confirmação, recibo): o ímã de 3s ou o refoco pós-venda não devem
+        // puxar o foco para a busca atrás do diálogo.
+        if (typeof document !== "undefined" && document.querySelector('[role="dialog"]')) return
+        // Leitor no meio de uma rajada (bip seguinte já começou enquanto o campo estava
+        // desabilitado): focar agora cortaria o começo do código. Espera a rajada acabar.
+        if (restantes > 0 && scannerBurstEmAndamento()) {
+          window.setTimeout(() => tentar(restantes - 1), 60)
+          return
+        }
+        buscaInputRef.current?.focus()
+      })
+    }
+    tentar(10)
   }, [])
 
   const focarAbaPagamento = useCallback(() => {

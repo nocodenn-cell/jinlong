@@ -3,7 +3,7 @@ import React from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { act } from "react-dom/test-utils"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { useScannerDetector } from "@/hooks/useScannerDetector"
+import { scannerBurstEmAndamento, useScannerDetector } from "@/hooks/useScannerDetector"
 
 function TestHarness({ onScan }: { onScan: (code: string) => void }) {
   useScannerDetector(onScan, {
@@ -206,6 +206,54 @@ describe("useScannerDetector", () => {
     press("Enter")
 
     expect(onScan).toHaveBeenCalledWith("912")
+  })
+  describe("rajada em andamento (refoco do campo de busca)", () => {
+    it("foco em input no meio da rajada descarta o começo do código (regressão que motiva o adiamento do refoco)", () => {
+      const onScan = vi.fn()
+      mount(onScan)
+      const input = document.createElement("input")
+      document.body.appendChild(input)
+
+      let t = 0
+      for (const ch of "78985") {
+        vi.setSystemTime(new Date(2026, 0, 1, 0, 0, 0, t))
+        press(ch)
+        t += 10
+      }
+      // campo ganha foco no meio da rajada: o resto da leitura passa a ter alvo editável
+      for (const ch of "12340003") {
+        vi.setSystemTime(new Date(2026, 0, 1, 0, 0, 0, t))
+        press(ch, input)
+        t += 10
+      }
+      vi.setSystemTime(new Date(2026, 0, 1, 0, 0, 0, t))
+      press("Enter", input)
+
+      expect(onScan).not.toHaveBeenCalled()
+      input.remove()
+    })
+
+    it("scannerBurstEmAndamento: true durante a rajada, false após Enter ou silêncio", () => {
+      const onScan = vi.fn()
+      mount(onScan)
+      expect(scannerBurstEmAndamento()).toBe(false)
+
+      vi.setSystemTime(new Date(2026, 0, 1, 0, 0, 0, 0))
+      press("7")
+      vi.setSystemTime(new Date(2026, 0, 1, 0, 0, 0, 10))
+      press("8")
+      expect(scannerBurstEmAndamento()).toBe(true)
+
+      vi.setSystemTime(new Date(2026, 0, 1, 0, 0, 0, 20))
+      press("9")
+      press("Enter")
+      expect(scannerBurstEmAndamento()).toBe(false)
+
+      vi.setSystemTime(new Date(2026, 0, 1, 0, 0, 1, 0))
+      press("7")
+      vi.setSystemTime(new Date(2026, 0, 1, 0, 0, 1, 500))
+      expect(scannerBurstEmAndamento()).toBe(false)
+    })
   })
 })
 
