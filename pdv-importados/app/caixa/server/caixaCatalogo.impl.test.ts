@@ -59,9 +59,14 @@ function filtraPorNome(frag: string): Row[] {
   return TODAS.filter((p) => p.nome.toLowerCase().includes(f)).sort((a, b) => a.nome.localeCompare(b.nome))
 }
 
+/** Filtros `.eq` recebidos pela tabela produtos (para afirmar o escopo por loja). */
+const eqProdutos: Array<[string, unknown]> = []
+
 function criarSupabaseMock(opts: {
   porNome: Row[]
   porCodigoBarras?: Row[]
+  /** Simula o IN do Postgres: devolve só as linhas cujo codigo_barras está nas chaves consultadas. */
+  porCodigoBarrasExato?: Row[]
   porSku?: Row[]
   porCategoriaIds?: Row[]
   categorias?: { id: string }[]
@@ -94,11 +99,16 @@ function criarSupabaseMock(opts: {
     }
     if (table === 'produtos') {
       let mode: 'codigo_barras' | 'nome' | 'sku' | 'categoria_id' | null = null
+      let chaves: string[] = []
       const q: Record<string, unknown> = {}
       q.select = () => q
-      q.eq = () => q // aplicarFiltroProdutoVendavel (.eq ativo / .eq status_publicacao)
-      q.in = (col: string) => {
+      q.eq = (col: string, val: unknown) => {
+        eqProdutos.push([col, val])
+        return q
+      } // aplicarFiltroProdutoVendavel (.eq ativo / .eq status_publicacao) + escopo por loja
+      q.in = (col: string, vals?: string[]) => {
         mode = col === 'codigo_barras' ? 'codigo_barras' : 'categoria_id'
+        chaves = vals ?? []
         return q
       }
       q.ilike = (col: string) => {
@@ -111,7 +121,9 @@ function criarSupabaseMock(opts: {
       q.then = (resolve: (v: unknown) => void) => {
         const data =
           mode === 'codigo_barras'
-            ? opts.porCodigoBarras ?? []
+            ? opts.porCodigoBarrasExato
+              ? opts.porCodigoBarrasExato.filter((r) => r.codigo_barras != null && chaves.includes(r.codigo_barras))
+              : opts.porCodigoBarras ?? []
             : mode === 'sku'
               ? opts.porSku ?? []
               : mode === 'categoria_id'
@@ -133,6 +145,7 @@ const { buscarProdutoParaCaixaImpl } = await import('./caixaCatalogo.impl')
 
 beforeEach(() => {
   vi.clearAllMocks()
+  eqProdutos.length = 0
   getUsuarioAtual.mockResolvedValue({ userId: 'u1', lojaId: 'loja-1', idioma: 'pt' })
 })
 
@@ -306,5 +319,51 @@ describe('buscarProdutoParaCaixaImpl — SKU / codigo_interno (ID 6)', () => {
     expect(r.ok).toBe(true)
     if (!r.ok || r.status !== 'encontrado') throw new Error('esperado encontrado')
     expect(r.produto.nome).toBe('Parafuso 8mm')
+  })
+})
+
+describe('buscarProdutoParaCaixaImpl — escopo por loja e código exato (auditoria barcode)', () => {
+  it('toda busca em produtos é filtrada pelo loja_id do operador (barcode, SKU, nome)', async () => {
+    createClient.mockResolvedValue(criarSupabaseMock({ porNome: [], porCodigoBarras: [CADEIRA_VERDE] }))
+    await buscarProdutoParaCaixaImpl('7891000000002')
+    expect(eqProdutos).toContainEqual(['loja_id', 'loja-1'])
+
+    eqProdutos.length = 0
+    createClient.mockResolvedValue(criarSupabaseMock({ porNome: [] }))
+    await buscarProdutoParaCaixaImpl('cadeira')
+    const lojaEqs = eqProdutos.filter(([col]) => col === 'loja_id')
+    expect(lojaEqs.length).toBeGreaterThanOrEqual(2) // SKU + nome
+    expect(lojaEqs.every(([, v]) => v === 'loja-1')).toBe(true)
+  })
+
+  it('código exato vence a variante sem zeros à esquerda (0789… e 789… na mesma loja)', async () => {
+    const comZero = produto({ id: 'p-zero', nome: 'Com zero', codigo_barras: '0789100000001' })
+    const semZero = produto({ id: 'p-sem', nome: 'Sem zero', codigo_barras: '789100000001' })
+    createClient.mockResolvedValue(
+      criarSupabaseMock({ porNome: [], porCodigoBarrasExato: [comZero, semZero] }),
+    )
+    const r = await buscarProdutoParaCaixaImpl('0789100000001')
+    expect(r.ok).toBe(true)
+    if (!r.ok || r.status !== 'encontrado') throw new Error('esperado status encontrado')
+    expect(r.produto.id).toBe('p-zero')
+  })
+
+  it('sem acerto exato, a variante (zero à esquerda) ainda encontra o produto', async () => {
+    const semZero = produto({ id: 'p-sem', nome: 'Sem zero', codigo_barras: '789100000001' })
+    createClient.mockResolvedValue(criarSupabaseMock({ porNome: [], porCodigoBarrasExato: [semZero] }))
+    const r = await buscarProdutoParaCaixaImpl('0789100000001')
+    expect(r.ok).toBe(true)
+    if (!r.ok || r.status !== 'encontrado') throw new Error('esperado status encontrado')
+    expect(r.produto.id).toBe('p-sem')
+  })
+
+  it('colisão entre variantes sem acerto exato continua ambígua', async () => {
+    const a = produto({ id: 'p-a', nome: 'A', codigo_barras: '789100000001' })
+    const b = produto({ id: 'p-b', nome: 'B', codigo_barras: '0078910000000' })
+    createClient.mockResolvedValue(criarSupabaseMock({ porNome: [], porCodigoBarrasExato: [a, b] }))
+    const r = await buscarProdutoParaCaixaImpl('00789100000001')
+    expect(r.ok).toBe(true)
+    if (!r.ok) throw new Error('esperado ok')
+    expect(r.status).toBe('ambiguo')
   })
 })
