@@ -87,6 +87,13 @@ describe('cadeia devolução/troca', () => {
     }
   })
 
+  it('o SELECT do caixa pagador usa FOR NO KEY UPDATE (FOR UPDATE conflita com o KEY SHARE do FK e serializa caixas distintos)', () => {
+    const sql = fs.readFileSync(path.join(MIGRATIONS, latestDevolverRpcMigration()), 'utf8')
+    const codigo = sql.replace(/--[^\n]*/g, '')
+    expect(codigo).toMatch(/FROM public\.caixas c WHERE c\.id = v_pagador FOR NO KEY UPDATE;/)
+    expect(codigo).not.toMatch(/WHERE c\.id = v_pagador FOR UPDATE/)
+  })
+
   it('a definição vigente preserva EXECUTE autenticado e revoga anon', () => {
     const sql = fs.readFileSync(path.join(MIGRATIONS, latestDevolverRpcMigration()), 'utf8')
     expect(sql).toMatch(/REVOKE ALL ON FUNCTION public\.devolver_ou_trocar_venda\([^)]*\)\s*FROM PUBLIC/)

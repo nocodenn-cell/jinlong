@@ -202,6 +202,23 @@ jobs:
           cd backend
           npm run check:types-drift -w fastproduct-backend
 
+      # PR-2D: concorrência da devolução com sessões psql reais (serialização por caixa, mesma venda disputada,
+      # caixas distintos sem bloqueio). O script grava dados COMMITADOS; por isso roda como ÚLTIMO passo de teste do
+      # job (nada que dependa do estado do banco vem depois; o stack é destruído no teardown). `createdb -T` não serve:
+      # os serviços do Supabase mantêm conexões no banco `postgres` e o CREATE DATABASE ... TEMPLATE falha.
+      # Regressão guardada: trocar `FOR NO KEY UPDATE` por `FOR UPDATE` no SELECT do caixa pagador estoura o
+      # lock_timeout no cenário 3 (FK KEY SHARE de venda_pos_venda_operacoes.caixa_id).
+      - name: Devolução — concorrência (PR-2D, sessões reais)
+        run: |
+          set -euo pipefail
+          eval "$(cd backend && npx supabase status -o env | sed 's/^/export /')"
+          export DB_URL="${POSTGRES_URL:-${DB_URL:-}}"
+          if [ -z "${DB_URL:-}" ]; then
+            echo "::error::Sem URL do Postgres para o teste de concorrência." >&2
+            exit 1
+          fi
+          bash backend/scripts/devolucao-concorrencia.sh
+
       - name: Diagnóstico em falha (logs + status)
         if: failure()
         run: |
