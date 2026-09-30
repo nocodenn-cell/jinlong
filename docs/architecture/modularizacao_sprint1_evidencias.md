@@ -168,8 +168,7 @@ Observação: rodar `deno check` modificou `deno.lock` na raiz; o arquivo foi re
 **Não feito, e por quê (gates que dependem de decisão):**
 | Item | Motivo |
 |---|---|
-| 2.7 mover `shared-core/navigation/routes.ts` | Exige reescrever import em 84 arquivos, incluindo 1 arquivo de `app/caixa` (`caixaPainelGestao.ts`); além disso `route-guard.mjs` e `check-routes-invariant.mjs` fixam o caminho. O freeze proíbe alterar caixa; **decidir se uma troca de caminho de import, sem mudança de comportamento, em arquivo de caixa é permitida** |
-| 1.6 unificar `mensagemErroUsuario` | Muda mensagens exibidas no desktop (caixa offline): comportamento visível em área sob freeze |
+| 1.6 unificar `mensagemErroUsuario` | **Bloqueado pelo D-05 (decisão 2026-09-30):** a unificação muda mensagens observáveis no desktop/offline (10 de 208 entradas divergem — D-04). **Pendência do freeze**: retomar só quando o freeze for encerrado por decisão documentada; a versão oficial indicada pela D-04 é a da web |
 | 1.9, 1.10, 1.11 (`PricingService`, `roundAbnt`) e G3 (`derivarFaixaAtacado`) | Preço: freeze |
 | 2.3, 2.1 restante (`reciboTypes → FinalizarVendaInput`), G2 | Caixa/validação de venda: freeze |
 | 2.5 `LanguageToggle`, G4/G5 (adapters em `lib`, wrapper de sugestão) | Sem ganho sem abstração nova ou sem Fase 3 |
@@ -178,3 +177,11 @@ Observação: rodar `deno check` modificou `deno.lock` na raiz; o arquivo foi re
 `lib → app` permanece em 5 arquivos, por: `reciboTypes` (caixa), `fetchPdvStateSnapshot.internal` (caixa), `criarProdutoComEstoqueInicialRpc` (helper de faixa de atacado = preço), `financeiroTitulosServer` (adapter em `app/`, Fase 3) e `cadastroSugestaoClient` (wrapper cliente de server action, direção legítima).
 
 **Verificação da continuação:** `guard:all` exit 0 (ratchet com 9 testes); `shared-core` 221 testes; web lint (0 erros), typecheck e 1731 testes passando; **`next build` da web passou** (com `NEXT_PUBLIC_SUPABASE_URL`/`ANON_KEY` fictícios); mesmas falhas pré-existentes da base (1 suíte de integração web, 8 erros de `tsc` no desktop, 19 violações de `check:routes`).
+
+## 10. Fase 2.7 concluída (autorizada em 2026-09-30)
+
+- `shared-core/navigation/routes.ts` foi movido (`git mv`, 100% de similaridade) para `pdv-importados/lib/navigation/routes.ts`. O diretório `shared-core/navigation` deixou de existir; o `shared-core` não contém mais rotas do Jinlong.
+- 97 arquivos tiveram só o texto do import alterado de `@shared-core/navigation/routes` para `@/lib/navigation/routes` (79 em `app`, 10 em `components`, 7 em `lib`, 1 em `tests`), **incluindo** `app/caixa/caixaPainelGestao.ts` (uma única linha de import; lógica do caixa intocada). O diff fora da movimentação é só: imports, 2 caminhos em guards, 1 caminho em `tests/pilares-integracao.matrix.test.ts`, 2 comentários de e2e e 3 referências em `inventario_frontend_boundary.md`.
+- Guards atualizados: `scripts/route-guard.mjs` e `scripts/check-routes-invariant.mjs` passam a ler o novo caminho; o ratchet trava a reaparição do arquivo e do alias antigo (`routes-coupling`: 84 → 0; teste novo, 10 casos).
+- Validação: `guard:all` exit 0; `shared-core` 221 testes; web lint/typecheck, 1731 testes e `next build`; `check:routes` com as **mesmas 19 violações** da base, arquivos e trechos idênticos (comparação linha a linha); desktop com os mesmos 8 erros de `tsc` e sem importar `routes`.
+- Referências históricas ao caminho antigo em relatórios datados (`CORRECOES_ESTABILIZACAO.md`, `docs/AUDITORIA_*.md`, `docs/INVESTIGACAO_E2E_SYNC_FLUXO_GERENTE.md`, `Jinlong/decisoes/*`) foram mantidas como registro histórico.

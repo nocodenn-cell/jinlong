@@ -17,7 +17,7 @@ Classificação por evidência do código (imports, dependências, conceitos). `
 | `caixa/` (`mapRegrasPreco`, `variantesChaveLeitura`, `checkoutSnapshot`) | **Específico do Jinlong** | conceitos de caixa/PDV | ADR-009: utilitário de PDV, não é o domínio `cash/` |
 | `pdv/` (scan-pipeline, invariants, saleEvent) | **Específico do Jinlong** | 57 menções a "caixa", 35 a "venda" | |
 | `stores/unifiedCartStore`, `cart/` | **Específico do Jinlong** | zustand `persist` em localStorage; acoplado a preço e desconto de gerente | |
-| `../navigation/routes.ts` (fora de `src/`) | **Específico do Jinlong** | rotas `/gerente`, `/caixa`, `/admin` | deve sair do `shared-core` (Fase 2.7) |
+| ~~`../navigation/routes.ts`~~ | **Específico do Jinlong — já movido** | rotas `/gerente`, `/caixa`, `/admin` | movido em 2026-09-30 para `pdv-importados/lib/navigation/routes.ts` (Fase 2.7); o ratchet falha se o arquivo reaparecer no `shared-core` |
 
 ## Invariantes hoje verdadeiras (verificadas)
 - Fora de testes e de arquivos de configuração, `shared-core` importa apenas `zustand` (1 arquivo: `stores/unifiedCartStore.ts`) e nenhum import relativo escapa do pacote. Congelado pelo `boundary-ratchet-guard` (regra `shared-core-externals`).
