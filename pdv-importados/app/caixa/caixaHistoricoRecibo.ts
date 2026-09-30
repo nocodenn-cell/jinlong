@@ -1,26 +1,6 @@
 import type { HistoricoVendaDetalhe } from '@/app/caixa/actions'
-import type { ReciboVenda } from '@/lib/caixa/reciboTypes'
+import { asFormaPagamento, type ReciboVenda } from '@/lib/caixa/reciboTypes'
 import type { FinalizarVendaInput } from '@/app/caixa/finalizarVendaValidation'
-
-const FORMAS_VALIDAS = new Set<FinalizarVendaInput['formaPagamento']>([
-  'DINHEIRO',
-  'PIX',
-  'CARTAO_DEBITO',
-  'CARTAO_CREDITO',
-])
-
-export function asFormaPagamento(valor: string): FinalizarVendaInput['formaPagamento'] {
-  const up = valor.toUpperCase()
-  return FORMAS_VALIDAS.has(up as FinalizarVendaInput['formaPagamento'])
-    ? (up as FinalizarVendaInput['formaPagamento'])
-    : 'DINHEIRO'
-}
-
-/** Separa desconto de itens do desconto gerente (vendas.total_desconto agrega ambos). */
-export function totalDescontoItensHistorico(detalhe: HistoricoVendaDetalhe): number {
-  const valorGerente = Math.max(0, detalhe.valorDescontoGerente ?? 0)
-  return Math.max(0, detalhe.totalDesconto - valorGerente)
-}
 
 /** Monta ReciboVenda a partir do detalhe do histórico (reimpressão). */
 export function historicoDetalheParaRecibo(

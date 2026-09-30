@@ -3,8 +3,7 @@
  * Mesma semântica do cupom emitido no caixa: `totalDesconto` inclui o desconto do gerente.
  */
 import type { VendaDetalhe } from "@/app/admin/vendas/actions"
-import { asFormaPagamento } from "@/app/caixa/caixaHistoricoRecibo"
-import type { ReciboVenda } from "@/lib/caixa/reciboTypes"
+import { asFormaPagamento, type ReciboVenda } from "@/lib/caixa/reciboTypes"
 
 export function vendaAdminParaRecibo(venda: VendaDetalhe, moeda: string): ReciboVenda {
   const data = venda.data ? new Date(venda.data) : new Date()
