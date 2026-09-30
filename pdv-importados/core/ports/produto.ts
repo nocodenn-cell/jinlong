@@ -1,6 +1,6 @@
 /**
- * Porta de persistência de produtos — implementação em lib/adapters/supabase.
- * O domínio não conhece Supabase.
+ * Tipos de entrada do cadastro de produto (`NovoProdutoInput`).
+ * A criação é feita por `ProductWriter` (shared-core/products) → RPC `criar_produto_com_estoque_inicial`.
  */
 import type { StatusPublicacao } from '../../../shared-core/src/engine/productEngine'
 import type { OrigemProduto } from '../../../shared-core/src/products/types'
@@ -59,18 +59,4 @@ export interface NovoProdutoInput {
   estoque_inicial_minimo?: number
   /** Idempotência de retry do cadastro (UUID do client). */
   client_request_id?: string | null
-}
-
-export interface ProdutoRepositoryPort {
-  createWithDefaultEstoque(input: NovoProdutoInput): Promise<
-    { ok: true; id: string } | { ok: false; message: string }
-  >
-  updateAtivo(
-    produtoId: string,
-    ativo: boolean
-  ): Promise<{ ok: true } | { ok: false; message: string }>
-  updateStatusPublicacao(
-    produtoId: string,
-    status: StatusPublicacao
-  ): Promise<{ ok: true } | { ok: false; message: string }>
 }
