@@ -21,6 +21,7 @@ export type ReciboVenda = {
   itens: ReciboItem[]
   pagamentos: Array<{ formaPagamento: FinalizarVendaInput["formaPagamento"]; valor: number }>
   totalBruto: number
+  /** Desconto total da venda — INCLUI `valorDescontoGerente` (ver `descontoProdutosLiquido`). */
   totalDesconto: number
   totalLiquidoComGerente: number
   descontoGerentePercentual: number
