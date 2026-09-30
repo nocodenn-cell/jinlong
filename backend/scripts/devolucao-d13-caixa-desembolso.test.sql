@@ -10,10 +10,10 @@
 BEGIN;
 
 -- ── identidades determinísticas ─────────────────────────────────────────────────────────────────
-CREATE FUNCTION pg_temp.lid(l int) RETURNS uuid LANGUAGE sql AS $$ SELECT ('f7000001-0000-4000-8000-00000000000' || l)::uuid $$;
-CREATE FUNCTION pg_temp.gid(l int) RETURNS uuid LANGUAGE sql AS $$ SELECT ('f7000006-0000-4000-8000-00000000000' || l)::uuid $$;
-CREATE FUNCTION pg_temp.pid(l int) RETURNS uuid LANGUAGE sql AS $$ SELECT ('f7000004-0000-4000-8000-00000000000' || l)::uuid $$;
-CREATE FUNCTION pg_temp.cid(l int) RETURNS uuid LANGUAGE sql AS $$ SELECT ('f7000005-0000-4000-8000-00000000000' || l)::uuid $$;
+CREATE FUNCTION pg_temp.lid(l int) RETURNS uuid LANGUAGE sql AS $$ SELECT ('f7000001-0000-4000-8000-0000000000' || lpad(l::text, 2, '0'))::uuid $$;
+CREATE FUNCTION pg_temp.gid(l int) RETURNS uuid LANGUAGE sql AS $$ SELECT ('f7000006-0000-4000-8000-0000000000' || lpad(l::text, 2, '0'))::uuid $$;
+CREATE FUNCTION pg_temp.pid(l int) RETURNS uuid LANGUAGE sql AS $$ SELECT ('f7000004-0000-4000-8000-0000000000' || lpad(l::text, 2, '0'))::uuid $$;
+CREATE FUNCTION pg_temp.cid(l int) RETURNS uuid LANGUAGE sql AS $$ SELECT ('f7000005-0000-4000-8000-0000000000' || lpad(l::text, 2, '0'))::uuid $$;
 CREATE FUNCTION pg_temp.op(n int) RETURNS uuid LANGUAGE sql AS $$ SELECT ('f7000002-0000-4000-8000-0000000000' || lpad(n::text, 2, '0'))::uuid $$;
 
 CREATE FUNCTION pg_temp.assert(p_ok boolean, p_msg text) RETURNS void LANGUAGE plpgsql AS
@@ -26,7 +26,7 @@ DO $setup$
 DECLARE l int; v_cat uuid := 'f7000003-0000-4000-8000-000000000001';
 BEGIN
   INSERT INTO public.categorias (id, nome) VALUES (v_cat, 'D13 Cat') ON CONFLICT (id) DO NOTHING;
-  FOR l IN 1..9 LOOP
+  FOR l IN 1..14 LOOP
     INSERT INTO public.lojas (id, nome, codigo, ativo) VALUES (pg_temp.lid(l), 'D13 Loja ' || l, 'D13L' || l, true)
     ON CONFLICT (id) DO UPDATE SET ativo = true;
     INSERT INTO auth.users (id) VALUES (pg_temp.gid(l)) ON CONFLICT (id) DO NOTHING;
@@ -371,6 +371,199 @@ BEGIN
   PERFORM pg_temp.assert(e = 'DEVOLVER_VENDA_VALOR_EXCEDE_ABERTO', 'D-13.4 CREDITO_CLIENTE acima do saldo em aberto → VALOR_EXCEDE_ABERTO (' || coalesce(e, 'aceita') || ')');
 END $d5$;
 
+-- ═══ T7 — caixa FECHADO imutável: nenhuma devolução nova altera saldo, fechamento, valor esperado nem movimentações ═══
+DO $t7$
+DECLARE a uuid; b uuid; v uuid; e text;
+  row_antes jsonb; row_depois jsonb; mov_antes text; mov_depois text; liq_antes bigint; liq_depois bigint;
+  aut_antes numeric; aut_depois numeric; esperado_fech numeric;
+BEGIN
+  a := pg_temp.abrir(30, 10, 0);
+  v := pg_temp.vender(30, 10, a, 100, pg_temp.din(100));
+  PERFORM set_config('request.jwt.claim.sub', pg_temp.op(30)::text, true);
+  PERFORM public.registrar_movimentacao(a, 'sangria', 'dinheiro', 20, 'd13', 'RETIRADA', NULL, NULL, gen_random_uuid()::text);
+  PERFORM public.registrar_movimentacao(a, 'suprimento', 'dinheiro', 10, 'd13', 'TROCO', NULL, NULL, gen_random_uuid()::text);
+  PERFORM pg_temp.fechar(30, pg_temp.auth(a));                       -- fechamento sem diferença: esperado = contado = 90
+  b := pg_temp.abrir(31, 10, 100);
+
+  SELECT to_jsonb(c.*) INTO row_antes FROM public.caixas c WHERE c.id = a;
+  SELECT COALESCE(string_agg(m.id::text || ':' || m.tipo || ':' || m.valor || ':' || m.status || ':' || m.saldo_antes || ':' || m.saldo_depois, ',' ORDER BY m.id), '')
+    INTO mov_antes FROM public.movimentacoes_caixa m WHERE m.caixa_id = a;
+  SELECT count(*) INTO liq_antes FROM public.liquidacoes_receber l WHERE l.caixa_id = a;
+  aut_antes := pg_temp.auth(a);
+  esperado_fech := (row_antes->>'valor_fechamento')::numeric - (row_antes->>'fechamento_diferenca')::numeric;
+  PERFORM pg_temp.assert(aut_antes = esperado_fech, 'A-1 T7 antes: autoridade do fechado = snapshot do fechamento (valor_fechamento - diferença = ' || esperado_fech || ')');
+
+  e := pg_temp.dev(10, v, 2, 'd13-t7-a', 'DINHEIRO');
+  PERFORM pg_temp.assert(e IS NULL, 'T7 devolução de venda do caixa fechado aceita (paga por B) (' || coalesce(e, 'ok') || ')');
+  e := pg_temp.dev(10, v, 2, 'd13-t7-b', 'PIX');
+  PERFORM pg_temp.assert(e IS NULL, 'T7 segunda devolução (PIX) também aceita (' || coalesce(e, 'ok') || ')');
+
+  SELECT to_jsonb(c.*) INTO row_depois FROM public.caixas c WHERE c.id = a;
+  SELECT COALESCE(string_agg(m.id::text || ':' || m.tipo || ':' || m.valor || ':' || m.status || ':' || m.saldo_antes || ':' || m.saldo_depois, ',' ORDER BY m.id), '')
+    INTO mov_depois FROM public.movimentacoes_caixa m WHERE m.caixa_id = a;
+  SELECT count(*) INTO liq_depois FROM public.liquidacoes_receber l WHERE l.caixa_id = a;
+  aut_depois := pg_temp.auth(a);
+  PERFORM pg_temp.assert(row_antes = row_depois, 'A-1 T7 linha inteira do caixa fechado idêntica (saldo_atual, status, datas, valor_fechamento, fechamento_diferenca…)');
+  PERFORM pg_temp.assert(aut_antes = aut_depois AND aut_depois = esperado_fech, 'A-1 T7 valor esperado (autoridade) do caixa fechado idêntico e igual ao snapshot do fechamento');
+  PERFORM pg_temp.assert(mov_antes = mov_depois AND mov_antes <> '', 'A-1 T7 movimentações do caixa fechado idênticas (conteúdo e saldos)');
+  PERFORM pg_temp.assert(liq_antes = liq_depois, 'A-1 T7 liquidações do caixa fechado idênticas');
+  PERFORM pg_temp.assert(pg_temp.auth(b) = 50, 'T7 só o caixa pagador B foi afetado (100 - 50)');
+END $t7$;
+
+-- ═══ T8 — p_caixa_id inexistente ═══════════════════════════════════════════════════════════════════
+DO $t8$
+DECLARE cx uuid; v uuid; e text;
+BEGIN
+  cx := pg_temp.abrir(32, 11, 0);
+  v := pg_temp.vender(32, 11, cx, 100, pg_temp.din(100));
+  e := pg_temp.dev(11, v, 2, 'd13-t8', 'DINHEIRO', gen_random_uuid());
+  PERFORM pg_temp.assert(e = 'DEVOLVER_VENDA_CAIXA_INVALIDO', 'A-3 T8 p_caixa_id inexistente → CAIXA_INVALIDO (' || coalesce(e, 'aceita') || ')');
+  PERFORM pg_temp.assert(pg_temp.n_dev(v) = 0 AND pg_temp.auth(cx) = 100, 'A-3 T8 sem efeito');
+END $t8$;
+
+-- ═══ T9 — autorização: GERENTE/DONO/ADMIN seguem o contrato; operador só usa o próprio caixa ═══════════
+CREATE FUNCTION pg_temp.resolver(p_caixa uuid, p_uid uuid) RETURNS text LANGUAGE plpgsql AS
+$$ BEGIN RETURN internal.resolver_caixa_pagador(p_caixa, p_uid, 'X')::text;
+EXCEPTION WHEN OTHERS THEN RETURN SQLERRM; END $$;
+
+DO $t9$
+DECLARE cx33 uuid; cx34 uuid; v uuid; e text; dono uuid := pg_temp.op(37); adm uuid := pg_temp.op(38);
+BEGIN
+  INSERT INTO auth.users (id) VALUES (dono), (adm) ON CONFLICT (id) DO NOTHING;
+  INSERT INTO public.usuarios (id, nome, perfil, ativo, loja_id) VALUES
+    (dono, 'D13 Dono', 'DONO', true, pg_temp.lid(12)), (adm, 'D13 Admin', 'ADMIN', true, pg_temp.lid(12))
+  ON CONFLICT (id) DO UPDATE SET perfil = EXCLUDED.perfil, ativo = true, loja_id = EXCLUDED.loja_id;
+
+  cx33 := pg_temp.abrir(33, 12, 0);
+  v := pg_temp.vender(33, 12, cx33, 100, pg_temp.din(100));
+  -- 1 caixa aberto: DONO e ADMIN da loja devolvem (perfil gerencial), cada um com sua chave
+  e := pg_temp.dev(12, v, 1, 'd13-t9-dono', 'DINHEIRO', NULL, dono);
+  PERFORM pg_temp.assert(e IS NULL, 'T9 DONO da loja devolve (' || coalesce(e, 'ok') || ')');
+  e := pg_temp.dev(12, v, 1, 'd13-t9-admin', 'DINHEIRO', NULL, adm);
+  PERFORM pg_temp.assert(e IS NULL, 'T9 ADMIN da loja devolve (' || coalesce(e, 'ok') || ')');
+  e := pg_temp.dev(12, v, 1, 'd13-t9-op', 'DINHEIRO', NULL, pg_temp.op(33));
+  PERFORM pg_temp.assert(e = 'DEVOLVER_VENDA_SEM_PERMISSAO', 'T9 OPERADOR não devolve (' || coalesce(e, 'aceita') || ')');
+
+  -- 2 caixas abertos: operador só enxerga o próprio; gerencial precisa escolher
+  cx34 := pg_temp.abrir(34, 12, 0);
+  PERFORM pg_temp.assert(pg_temp.resolver(NULL, pg_temp.op(33)) = cx33::text, 'T9 resolvedor: operador com 2 caixas abertos na loja → seu único caixa elegível (automático)');
+  PERFORM pg_temp.assert(pg_temp.resolver(cx34, pg_temp.op(33)) = 'X_CAIXA_INVALIDO', 'T9 resolvedor: operador não pode usar o caixa de OUTRO operador');
+  PERFORM pg_temp.assert(pg_temp.resolver(cx34, pg_temp.op(34)) = cx34::text, 'T9 resolvedor: operador usa o próprio caixa');
+  PERFORM pg_temp.assert(pg_temp.resolver(NULL, pg_temp.gid(12)) = 'X_CAIXA_OBRIGATORIO', 'T9 resolvedor: GERENTE com 2 abertos sem p_caixa_id → CAIXA_OBRIGATORIO');
+  PERFORM pg_temp.assert(pg_temp.resolver(cx34, pg_temp.gid(12)) = cx34::text, 'T9 resolvedor: GERENTE escolhe qualquer caixa aberto da loja (D-8b)');
+  PERFORM pg_temp.assert(pg_temp.resolver(cx34, dono) = cx34::text AND pg_temp.resolver(cx33, adm) = cx33::text, 'T9 resolvedor: DONO e ADMIN da loja escolhem qualquer caixa aberto da loja');
+  PERFORM pg_temp.assert(pg_temp.resolver(cx34, pg_temp.gid(13)) IN ('X_CAIXA_INVALIDO', 'X_SEM_CAIXA_ABERTO'), 'A-5 T9 resolvedor: gerente de OUTRA loja é bloqueado e nunca recebe o caixa alheio');
+  PERFORM pg_temp.assert(pg_temp.resolver(NULL, NULL) = 'X_AUTH', 'T9 resolvedor: sem identidade → bloqueia');
+END $t9$;
+
+-- ═══ T10 — idempotência de operação MISTA (dinheiro + abatimento de AR): retry não duplica nada ═════════
+DO $t10$
+DECLARE cx uuid; v uuid; e text; n_dev bigint; n_ops bigint; est numeric; aut numeric; aberto numeric; st text; ar numeric; caixa_out numeric;
+BEGIN
+  cx := pg_temp.abrir(35, 13, 0);
+  v := pg_temp.vender(35, 13, cx, 100, pg_temp.din(60), pg_temp.cid(13));            -- pago 60, aberto 40
+  e := pg_temp.dev(13, v, 4, 'd13-t10', 'DINHEIRO');                                  -- 100 = 60 dinheiro + 40 abatimento
+  PERFORM pg_temp.assert(e IS NULL, 'T10 operação mista registrada (' || coalesce(e, 'ok') || ')');
+  SELECT count(*) INTO n_dev FROM public.devolucoes d JOIN public.venda_pos_venda_operacoes o ON o.id = d.operacao_id WHERE o.venda_id = v;
+  SELECT count(*) INTO n_ops FROM public.venda_pos_venda_operacoes WHERE venda_id = v;
+  est := pg_temp.estoque(13); aut := pg_temp.auth(cx);
+  SELECT valor_aberto, status INTO aberto, st FROM public.contas_receber WHERE venda_id = v;
+  SELECT valor_abatido_ar, valor_caixa_estornado INTO ar, caixa_out FROM public.venda_pos_venda_operacoes WHERE idempotency_key = 'd13-t10';
+  PERFORM pg_temp.assert(ar = 40 AND caixa_out = 60 AND aberto = 0 AND st = 'QUITADO' AND aut = 0, 'T10 base: abatimento 40, dinheiro 60, título quitado por abatimento, caixa 0');
+
+  e := pg_temp.dev(13, v, 4, 'd13-t10', 'DINHEIRO');                                  -- RETRY idêntico
+  PERFORM pg_temp.assert(e IS NULL, 'T10 retry idêntico devolve a operação existente (' || coalesce(e, 'ok') || ')');
+  e := pg_temp.dev(13, v, 4, 'd13-t10', 'DINHEIRO', (SELECT id FROM public.caixas WHERE operador_id = pg_temp.op(35)));  -- retry com o MESMO caixa
+  PERFORM pg_temp.assert(e IS NULL, 'T10 retry informando o mesmo caixa também é idempotente (' || coalesce(e, 'ok') || ')');
+  PERFORM pg_temp.assert(
+    (SELECT count(*) FROM public.devolucoes d JOIN public.venda_pos_venda_operacoes o ON o.id = d.operacao_id WHERE o.venda_id = v) = n_dev
+    AND (SELECT count(*) FROM public.venda_pos_venda_operacoes WHERE venda_id = v) = n_ops
+    AND pg_temp.estoque(13) = est AND pg_temp.auth(cx) = aut
+    AND (SELECT valor_aberto FROM public.contas_receber WHERE venda_id = v) = aberto
+    AND (SELECT status FROM public.contas_receber WHERE venda_id = v) = st,
+    'A-4 T10 retry não duplica devolução, operação, estoque, abatimento de crédito (AR) nem saída de caixa');
+END $t10$;
+
+-- ═══ T11 — D-13: reembolso FUNGÍVEL (não precisa ser pelo mesmo meio do pagamento original) ═══════════
+DO $t11$
+DECLARE cx uuid; v uuid; e text; soma_meio numeric;
+BEGIN
+  cx := pg_temp.abrir(36, 14, 100);
+  v := pg_temp.vender(36, 14, cx, 100, pg_temp.pix(100));                              -- pago 100% em PIX
+  PERFORM pg_temp.assert(pg_temp.auth(cx) = 100, 'T11 setup: venda em PIX não entrou no caixa (fundo 100)');
+  e := pg_temp.dev(14, v, 2, 'd13-t11-a', 'DINHEIRO');                                  -- devolve 50 em DINHEIRO
+  PERFORM pg_temp.assert(e IS NULL AND pg_temp.auth(cx) = 50, 'D-13 T11 venda paga em PIX pode ser devolvida em DINHEIRO até o valor pago (caixa 100 → 50) (' || coalesce(e, 'ok') || ')');
+  e := pg_temp.dev(14, v, 2, 'd13-t11-b', 'CARTAO_CREDITO');                            -- devolve os outros 50 por outro meio
+  PERFORM pg_temp.assert(e IS NULL, 'D-13 T11 o restante pode sair por qualquer outro meio (' || coalesce(e, 'ok') || ')');
+  SELECT COALESCE(sum(d.valor), 0) INTO soma_meio FROM public.devolucoes d JOIN public.venda_pos_venda_operacoes o ON o.id = d.operacao_id WHERE o.venda_id = v;
+  PERFORM pg_temp.assert(soma_meio = 100, 'D-13 T11 total devolvido em meios (100) = valor efetivamente pago (100), sem rastreio por forma');
+  e := pg_temp.dev(14, v, 1, 'd13-t11-c', 'DINHEIRO');
+  PERFORM pg_temp.assert(e = 'DEVOLVER_VENDA_QTD_EXCEDE_VENDIDA', 'D-13 T11 nada além do vendido/pago pode ser devolvido (' || coalesce(e, 'aceita') || ')');
+END $t11$;
+
+-- ═══ T12 — D-13: desconto da venda não é reembolsável; nunca se devolve mais que o pago ═════════════════
+DO $t12$
+DECLARE cx uuid; v uuid; e text; op1 record; op2 record; soma_meio numeric;
+BEGIN
+  cx := (SELECT id FROM public.caixas WHERE operador_id = pg_temp.op(32) AND status = 'ABERTO');  -- loja 11: único aberto
+  v := pg_temp.vender(32, 11, cx, 100, pg_temp.din(100));
+  -- simula desconto de venda (itens a preço cheio = 100; total líquido pago = 90)
+  UPDATE public.vendas SET total_bruto = 100, total_desconto = 10, total_liquido = 90 WHERE id = v;
+  UPDATE public.vendas_pagamentos SET valor = 90 WHERE venda_id = v;
+  e := pg_temp.dev(11, v, 2, 'd13-t12-a', 'DINHEIRO');
+  PERFORM pg_temp.assert(e IS NULL, 'D-13 T12 primeira devolução (2 un = 50) aceita (' || coalesce(e, 'ok') || ')');
+  e := pg_temp.dev(11, v, 2, 'd13-t12-b', 'DINHEIRO');                                  -- 50 pedido; só 40 restam de valor pago
+  PERFORM pg_temp.assert(e IS NULL, 'D-13 T12 devolver o restante de venda com desconto é aceito (não trava a devolução total) (' || coalesce(e, 'ok') || ')');
+  SELECT * INTO op2 FROM public.venda_pos_venda_operacoes WHERE idempotency_key = 'd13-t12-b';
+  PERFORM pg_temp.assert(op2.valor_estornado = 40 AND op2.valor_caixa_estornado = 40 AND op2.valor_abatido_ar = 0,
+    'D-13 T12 valor efetivamente devolvido = 40 (desconto de 10 não reembolsado); valor_estornado = meio + abatimento');
+  SELECT COALESCE(sum(d.valor), 0) INTO soma_meio FROM public.devolucoes d JOIN public.venda_pos_venda_operacoes o ON o.id = d.operacao_id WHERE o.venda_id = v;
+  PERFORM pg_temp.assert(soma_meio = 90, 'A-9 T12 total devolvido (90) = valor pago (90): nunca acima do elegível');
+END $t12$;
+
+-- ═══ T13 — constraint do banco: conciliação da operação é invariante ═════════════════════════════════
+DO $t13$
+DECLARE v_msg text;
+BEGIN
+  BEGIN
+    UPDATE public.venda_pos_venda_operacoes SET valor_abatido_ar = valor_estornado + 1
+     WHERE idempotency_key = 'd13-t10';
+    v_msg := NULL;
+  EXCEPTION WHEN check_violation THEN v_msg := SQLERRM;
+  END;
+  PERFORM pg_temp.assert(v_msg LIKE '%venda_pos_venda_operacoes_conciliacao_chk%',
+    'A-9 T13 o banco recusa operação com abatimento maior que o valor estornado (' || coalesce(v_msg, 'aceita') || ')');
+  BEGIN
+    UPDATE public.venda_pos_venda_operacoes SET valor_caixa_estornado = valor_estornado + 1
+     WHERE idempotency_key = 'd13-t10';
+    v_msg := NULL;
+  EXCEPTION WHEN check_violation THEN v_msg := SQLERRM;
+  END;
+  PERFORM pg_temp.assert(v_msg LIKE '%venda_pos_venda_operacoes_conciliacao_chk%',
+    'A-9 T13 o banco recusa saída de caixa maior que o valor estornado (' || coalesce(v_msg, 'aceita') || ')');
+END $t13$;
+
+-- ═══ Estrutura: exatamente UMA assinatura de devolver_ou_trocar_venda e ACL esperada ═══════════════════
+DO $estrutura$
+DECLARE r record;
+BEGIN
+  SELECT count(*) AS n, bool_and(NOT (p.proacl::text ~ '(^|[{,])=X/')) AS sem_public,
+         bool_and(has_function_privilege('anon', p.oid, 'EXECUTE') = false) AS sem_anon,
+         bool_and(has_function_privilege('authenticated', p.oid, 'EXECUTE')) AS com_auth,
+         bool_and(has_function_privilege('service_role', p.oid, 'EXECUTE')) AS com_service,
+         bool_and(pg_get_function_identity_arguments(p.oid) LIKE '%p_caixa_id uuid') AS tem_p_caixa_id
+    INTO r FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+   WHERE n.nspname = 'public' AND p.proname = 'devolver_ou_trocar_venda';
+  PERFORM pg_temp.assert(r.n = 1, 'estrutura: exatamente UMA assinatura de devolver_ou_trocar_venda (sem overload)');
+  PERFORM pg_temp.assert(r.tem_p_caixa_id, 'estrutura: a assinatura vigente tem p_caixa_id');
+  PERFORM pg_temp.assert(r.sem_public AND r.sem_anon, 'estrutura: PUBLIC e anon sem EXECUTE');
+  PERFORM pg_temp.assert(r.com_auth AND r.com_service, 'estrutura: authenticated e service_role com EXECUTE');
+  PERFORM pg_temp.assert(NOT has_function_privilege('authenticated', 'internal.valor_sistema_dinheiro(uuid)', 'EXECUTE')
+    AND NOT has_function_privilege('authenticated', 'internal.resolver_caixa_pagador(uuid, uuid, text)', 'EXECUTE')
+    AND NOT has_function_privilege('authenticated', 'internal.sincronizar_saldo_cache(uuid)', 'EXECUTE'),
+    'estrutura: funções internal.* do PR-2D não são executáveis por authenticated');
+END $estrutura$;
+
 -- ═══ A-9 / A-2 — varredura de invariantes sobre TODAS as operações criadas neste teste ═════════════
 DO $varredura$
 DECLARE r record; n int := 0; soma_meio numeric; v_pago numeric;
@@ -390,7 +583,7 @@ BEGIN
       PERFORM pg_temp.assert(r.caixa_desembolso_id IS NOT NULL, 'A-2 op ' || r.idempotency_key || ': saída em dinheiro tem caixa pagador');
     END IF;
   END LOOP;
-  PERFORM pg_temp.assert(n >= 10, 'varredura cobriu ' || n || ' operações');
+  PERFORM pg_temp.assert(n >= 20, 'varredura cobriu ' || n || ' operações');
 
   -- Nenhuma devolução em dinheiro deste teste sem caixa pagador; e por venda: dinheiro devolvido ≤ valor pago
   PERFORM pg_temp.assert(NOT EXISTS (
@@ -410,7 +603,7 @@ BEGIN
     SELECT 1 FROM public.contas_receber cr WHERE cr.valor_aberto < 0 OR cr.valor_aberto > cr.valor_total),
     'A-9 contas_receber: 0 ≤ valor_aberto ≤ valor_total em todos os títulos');
   PERFORM pg_temp.assert(NOT EXISTS (
-    SELECT 1 FROM public.caixas c WHERE c.status = 'ABERTO' AND c.operador_id IN (SELECT pg_temp.op(g) FROM generate_series(1, 21) g)
+    SELECT 1 FROM public.caixas c WHERE c.status = 'ABERTO' AND c.operador_id IN (SELECT pg_temp.op(g) FROM generate_series(1, 60) g)
       AND c.operador_id <> pg_temp.op(16)   -- op 16: cache envenenado de propósito no T6
       AND c.saldo_atual <> internal.valor_sistema_dinheiro(c.id)),
     'A-6/A-8 cache saldo_atual = autoridade em todos os caixas abertos tocados');
