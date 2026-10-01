@@ -49,12 +49,24 @@ export async function atualizarSuspensaoVendas(
     { chave: 'motivo_suspensao', valor: motivo.trim().slice(0, 300) },
   ]
 
-  for (const u of updates) {
-    const { error } = await supabase
+  for (const [i, u] of updates.entries()) {
+    // `.select('chave')` devolve as linhas afetadas: UPDATE sem erro mas com 0 linhas
+    // (linha ausente ou RLS negando) não pode virar "sucesso".
+    const { data, error } = await supabase
       .from('configuracoes_gerais')
       .update({ valor: u.valor })
       .eq('chave', u.chave)
+      .select('chave')
     if (error) return { success: false, error: error.message }
+    if (data?.length !== 1) {
+      return {
+        success: false,
+        error:
+          i === 0
+            ? 'Não foi possível confirmar a alteração da suspensão. Nada foi salvo.'
+            : 'A suspensão foi alterada, mas o motivo não pôde ser confirmado. Recarregue a página e confira o estado.',
+      }
+    }
   }
 
   revalidatePath('/gerente')
