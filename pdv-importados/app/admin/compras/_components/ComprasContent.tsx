@@ -7,6 +7,7 @@ import { MetricCard, PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/forms'
+import { ErrorState } from '@/components/ui/feedback'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { getMessages } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
@@ -321,6 +322,16 @@ export function ComprasContent({
           </Button>
         </div>
       </SectionCard>
+
+      {dados.erro ? (
+        <ErrorState
+          dense
+          description={c.erro_carregar_lista}
+          retryLabel={c.tentar_novamente}
+          onRetry={() => void carregar(pagina)}
+          className="mb-4 items-start text-left"
+        />
+      ) : null}
 
       <DataTable
         columns={columns}
