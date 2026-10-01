@@ -12,6 +12,10 @@ type Props = {
   finalizando: boolean
   movimentandoCaixa: boolean
   caixaAberto: boolean
+  /** Estado conhecido FECHADO (não vale para carregando/erro): exibe a faixa com "Abrir caixa". */
+  caixaFechado?: boolean
+  onAbrirCaixa?: () => void
+  abrindoCaixa?: boolean
   itensLength: number
   buscando: boolean
   carregandoRegras: boolean
@@ -31,6 +35,9 @@ export function CaixaPdvCartSaleBar({
   finalizando,
   movimentandoCaixa,
   caixaAberto,
+  caixaFechado = false,
+  onAbrirCaixa,
+  abrindoCaixa = false,
   itensLength,
   buscando,
   carregandoRegras,
@@ -53,6 +60,25 @@ export function CaixaPdvCartSaleBar({
       data-caixa-cart-sale-bar
     >
       <div className="flex flex-col gap-3">
+        {caixaFechado ? (
+          <div
+            role="alert"
+            data-testid="caixa-fechado-faixa"
+            className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[var(--color-warning-strong)] bg-jl-surface-soft px-3 py-2"
+          >
+            <span className="text-sm font-semibold text-jl-fg-1">{m.caixa.caixa_fechado_faixa}</span>
+            {onAbrirCaixa ? (
+              <Button
+                type="button"
+                className="min-h-11 bg-jl-accent px-5 font-bold text-white hover:bg-jl-accent/90"
+                onClick={onAbrirCaixa}
+                disabled={abrindoCaixa}
+              >
+                {m.caixa.abrir}
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
         {/* Linha 1: total sempre inteiro e legível, sem competir por espaço com os botões. */}
         <div className="text-right">
           <div className="text-xs font-semibold uppercase tracking-wide text-jl-fg-3">

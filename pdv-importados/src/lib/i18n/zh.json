@@ -1104,6 +1104,7 @@
     "rail_turno_vendas": "销售：{{n}}",
     "rail_turno_total": "合计：",
     "rail_turno_caixa_fechado": "收银台已关",
+    "caixa_fechado_faixa": "收银台已关闭 — 请先开启收银台再销售",
     "operacoes_consulta_rapida": "快速查询",
     "operacoes_historico": "历史记录",
     "operacoes_painel_gestao": "管理后台",

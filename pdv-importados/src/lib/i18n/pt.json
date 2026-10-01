@@ -1104,6 +1104,7 @@
     "rail_turno_vendas": "Vendas: {{n}}",
     "rail_turno_total": "Total:",
     "rail_turno_caixa_fechado": "Caixa fechado",
+    "caixa_fechado_faixa": "Caixa fechado — abra o caixa para vender",
     "operacoes_consulta_rapida": "Consulta rápida",
     "operacoes_historico": "Histórico",
     "operacoes_painel_gestao": "Painel de gestão",

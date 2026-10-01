@@ -1657,6 +1657,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 finalizando={finalizando}
                 movimentandoCaixa={movimentandoCaixa}
                 caixaAberto={isCaixaAberto(caixaStatus)}
+                caixaFechado={caixaStatus?.status === "FECHADO"}
+                onAbrirCaixa={handleAbrirCaixaClick}
+                abrindoCaixa={processandoCaixa}
                 itensLength={itens.length}
                 buscando={buscandoPipeline}
                 carregandoRegras={carregandoRegras}
@@ -1673,7 +1676,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 type="button"
                 className="w-full rounded-md border px-3 py-2 text-center text-sm font-semibold disabled:pointer-events-none disabled:opacity-50 border-border bg-primary text-primary-foreground hover:bg-primary/90"
                 onClick={() => void handleNovaVendaOuEspera()}
-                disabled={carregandoRegras || finalizando}
+                disabled={carregandoRegras || finalizando || caixaStatus?.status === "FECHADO"}
               >
                 {m.caixa.nova_venda_espera}
               </button>
