@@ -10,8 +10,8 @@ import { emitGerenteToast } from '@/lib/gerente/toast'
 import {
   cancelarVendaGerenteAction,
   obterDadosComprovanteCancelamento,
-  type VendaListRow,
 } from './actions'
+import type { VendaListRow } from '@/lib/vendas/vendasListaRpc'
 import type { ComprovanteCancelamento } from './VendaCancelamentoReciboModal'
 
 type Props = Readonly<{
