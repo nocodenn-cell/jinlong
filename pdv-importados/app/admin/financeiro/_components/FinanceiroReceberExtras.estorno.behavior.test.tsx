@@ -29,6 +29,7 @@ vi.mock('next/navigation', () => ({
 }))
 
 const { FinanceiroReceberExtras } = await import('./FinanceiroReceberExtras')
+const { AdminV2SessionProvider } = await import('@/components/ui/admin-v2/AdminV2SessionContext')
 
 const conta = {
   id: 'titulo-1',
@@ -73,12 +74,14 @@ afterEach(() => {
 function render() {
   flushSync(() =>
     root.render(
-      <FinanceiroReceberExtras
-        contas={[conta]}
-        clientesIniciais={[]}
-        caixasAbertos={[]}
-        actorLojaId="loja-1"
-      />,
+      <AdminV2SessionProvider idioma="pt">
+        <FinanceiroReceberExtras
+          contas={[conta]}
+          clientesIniciais={[]}
+          caixasAbertos={[]}
+          actorLojaId="loja-1"
+        />
+      </AdminV2SessionProvider>,
     ),
   )
 }
@@ -159,5 +162,33 @@ describe('FinanceiroReceberExtras — modal de estorno (N-02)', () => {
     expect(estornarLiquidacaoReceberMock).toHaveBeenCalledWith(
       expect.objectContaining({ liquidacao_id: 'liq-1', motivo: 'Pagamento em duplicidade' }),
     )
+  })
+})
+
+describe('FinanceiroReceberExtras — card de liquidação (UX-005)', () => {
+  it('identifica o título (cliente + em aberto) numa linha própria, acima dos controles', () => {
+    render()
+    const li = container.querySelector('li') as HTMLElement
+    const form = li.querySelector('form') as HTMLFormElement
+    const nome = Array.from(li.querySelectorAll('span')).find((e) => e.textContent === 'Cliente Alfa') as HTMLElement
+
+    expect(nome).toBeTruthy()
+    expect(nome.getAttribute('title')).toBe('Cliente Alfa')
+    expect(nome.className).toContain('truncate')
+    expect(form.contains(nome)).toBe(false)
+    expect(li.className).not.toContain('sm:flex-row')
+    expect(li.textContent).toContain('em aberto')
+    // cliente aparece antes do formulário no DOM
+    expect(nome.compareDocumentPosition(form) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('formas de pagamento têm rótulo legível, mantendo o código como value', () => {
+    render()
+    const select = container.querySelector('select[name="forma"]') as HTMLSelectElement
+    const opts = Array.from(select.options)
+    expect(opts.map((o) => o.value)).toEqual(['DINHEIRO', 'PIX', 'CARTAO_DEBITO', 'CARTAO_CREDITO'])
+    for (const o of opts) {
+      expect(o.textContent).not.toMatch(/CARTAO_|^[A-Z_]{4,}$/)
+    }
   })
 })
