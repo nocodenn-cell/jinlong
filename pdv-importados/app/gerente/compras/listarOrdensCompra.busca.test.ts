@@ -127,9 +127,16 @@ describe('listarOrdensCompra — busca', () => {
     expect(chamadas.filter((c) => c.metodo === 'eq').map((c) => c.args)).toContainEqual(['loja_id', 'loja-b'])
   })
 
-  it('erro de consulta continua devolvendo lista vazia (contrato atual)', async () => {
+  it('erro de consulta devolve lista vazia E o motivo (UX-016: erro não pode parecer "nenhuma ordem")', async () => {
     preparar({ data: null, error: { message: 'boom' }, count: null })
-    expect(await listarOrdensCompra({ busca: 'Alfa', limite: 10, offset: 0 })).toEqual({ rows: [], total: 0 })
+    expect(await listarOrdensCompra({ busca: 'Alfa', limite: 10, offset: 0 })).toEqual({ rows: [], total: 0, erro: 'boom' })
+  })
+
+  it('consulta sem erro não traz a chave erro', async () => {
+    preparar()
+    const r = await listarOrdensCompra({ limite: 10, offset: 0 })
+    expect(r.erro).toBeUndefined()
+    expect(r.total).toBe(1)
   })
 
   it('vínculo do recebimento: as duas consultas (CONFIRMADA e EM_TRANSITO) recebem o mesmo filtro por fornecedor', async () => {

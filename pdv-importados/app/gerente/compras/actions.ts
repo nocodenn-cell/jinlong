@@ -92,6 +92,8 @@ export type OcKpisDTO = {
 export type OcListaResult = {
   rows: OcListaDTO[]
   total: number
+  /** Preenchido quando a consulta FALHOU — distingue "erro" de "nenhuma ordem" (os KPIs contam as mesmas linhas). */
+  erro?: string
 }
 
 export type OcItemInput = {
@@ -285,7 +287,7 @@ export async function listarOrdensCompra(input: {
 
   const { data, error, count } = await q
 
-  if (error) return { rows: [], total: 0 }
+  if (error) return { rows: [], total: 0, erro: error.message }
 
   return {
     rows: (data as unknown as RawOcRow[]).map(mapOcListaRow),
