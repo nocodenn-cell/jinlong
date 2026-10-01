@@ -117,6 +117,7 @@ export default async function AdminRelatoriosPage({ searchParams }: PageProps) {
         secCurvaAbc: ui.relatorios_sec_curva_abc,
         curvaAbcColNome: ui.relatorios_curva_abc_col_nome,
         curvaAbcColValor: ui.relatorios_curva_abc_col_valor,
+        curvaAbcColParticipacao: ui.relatorios_curva_abc_col_participacao,
         curvaAbcColAcumulado: ui.relatorios_curva_abc_col_acumulado,
         curvaAbcColClasse: ui.relatorios_curva_abc_col_classe,
         vazioCurvaAbc: ui.relatorios_vazio_curva_abc,

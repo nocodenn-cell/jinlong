@@ -90,6 +90,7 @@ const labels = {
   secCurvaAbc: 'Curva ABC',
   curvaAbcColNome: 'Produto',
   curvaAbcColValor: 'Faturado',
+  curvaAbcColParticipacao: 'Participação',
   curvaAbcColAcumulado: 'Acumulado',
   curvaAbcColClasse: 'Classe',
   vazioCurvaAbc: 'Sem ABC',
@@ -284,7 +285,7 @@ describe('RelatoriosContent presentation', () => {
                   nome: 'Produto A',
                   totalQuantidade: 3,
                   totalValor: 100,
-                  percentualValor: 77.2,
+                  percentualValor: 40.5,
                   percentualAcumulado: 77.2,
                   classeAbc: 'A',
                 },
@@ -301,6 +302,9 @@ describe('RelatoriosContent presentation', () => {
     flushSync(() => margemTab.click())
     expect(container.textContent).toContain('77,2%')
     expect(container.textContent).not.toContain('77.2%')
+    // UX-021/P-32: coluna Participação (percentualValor) ao lado do acumulado
+    expect(container.textContent).toContain('Participação')
+    expect(container.textContent).toContain('40,5%')
   })
 
   it('mostra reposição e cobertura na aba estoque', () => {

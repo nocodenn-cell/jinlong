@@ -88,7 +88,7 @@ function interpolate(template: string, params: Record<string, string | number>):
 }
 
 /** Resolve `resumoCodigo`/`resumoParams` (dado estruturado) para texto no idioma da sessão. */
-function resumoTexto(evento: AuditoriaEvento, labels: AuditoriaTimelineLabels): string {
+export function resumoTexto(evento: AuditoriaEvento, labels: AuditoriaTimelineLabels): string {
   const { resumoCodigo, resumoParams } = evento
   const params = { ...resumoParams }
   if (resumoCodigo === 'ajuste_estoque') {
@@ -105,7 +105,13 @@ function resumoTexto(evento: AuditoriaEvento, labels: AuditoriaTimelineLabels): 
   }
   const template = labels.resumoTemplates[resumoCodigo]
   if (!template) return resumoCodigo
-  return interpolate(template, params)
+  const texto = interpolate(template, params)
+  // Ajuste de estoque sem o produto na linha ("Saída por venda • −1") não diz o que mudou.
+  if (resumoCodigo === 'ajuste_estoque') {
+    const produto = evento.detalhe?.produto_nome
+    if (typeof produto === 'string' && produto) return `${produto} — ${texto}`
+  }
+  return texto
 }
 
 function detalheValor(
