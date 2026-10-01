@@ -38,6 +38,13 @@ export type VendaDetalhe = Readonly<{
   desconto_gerente_valor: number
   desconto_gerente_percentual: number
   itens: VendaItemDetalhe[]
+  /** Dados do cancelamento (`vendas_canceladas_auditoria`); null quando a venda não foi cancelada ou não há registro. */
+  cancelamento?: Readonly<{
+    em: string | null
+    motivo: string | null
+    operador_nome: string | null
+    valor_estornado: number
+  }> | null
   showMargemVisual: boolean
   showPrecoFonte: boolean
 }>

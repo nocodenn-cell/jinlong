@@ -36,6 +36,7 @@ import {
   oneOf,
   periodoFim,
   periodoInicio,
+  rotulosOperadores,
   type CaixasFiltro,
   type CaixasPeriodo,
   type CaixasStatusFiltro,
@@ -121,7 +122,7 @@ export default async function AdminCaixasPage({ searchParams }: PageProps) {
   if (periodo !== 'tudo') chips.push({ key: 'periodo', label: PERIODO_LABEL[periodo], href: hrefWith({ periodo: 'tudo' }) })
   if (status !== 'all') chips.push({ key: 'status', label: STATUS_LABEL[status], href: hrefWith({ status: null }) })
   if (operadorId) {
-    const nome = operadores.find((o) => o.id === operadorId)?.nome ?? operadorId
+    const nome = rotulosOperadores(operadores).find((o) => o.value === operadorId)?.label ?? operadorId
     chips.push({ key: 'operador', label: `${ui.caixas_filtro_operador}: ${nome}`, href: hrefWith({ operador: null }) })
   }
 
@@ -130,6 +131,7 @@ export default async function AdminCaixasPage({ searchParams }: PageProps) {
       type: 'select',
       key: 'status',
       label: ui.caixas_filtro_status,
+      showLabel: true,
       defaultValue: 'all',
       options: [
         { value: 'all', label: ui.filtro_todos },
@@ -141,8 +143,9 @@ export default async function AdminCaixasPage({ searchParams }: PageProps) {
       type: 'select',
       key: 'operador',
       label: ui.caixas_filtro_operador,
+      showLabel: true,
       defaultValue: 'all',
-      options: [{ value: 'all', label: ui.filtro_todos }, ...operadores.map((o) => ({ value: o.id, label: o.nome }))],
+      options: [{ value: 'all', label: ui.filtro_todos }, ...rotulosOperadores(operadores)],
     },
   ]
 
