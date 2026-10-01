@@ -441,6 +441,7 @@ export function FornecedoresListClient({
         <FornecedorEditarModal
           idioma={idioma}
           fornecedor={emEdicao}
+          nomesExistentes={fornecedores.map((f) => f.nome)}
           onClose={() => setModalAberto(false)}
           onSalvo={onSalvo}
         />

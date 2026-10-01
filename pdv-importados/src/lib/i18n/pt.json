@@ -145,6 +145,8 @@
     "buscar": "Buscar produto...",
     "codigo_barras": "Código de barras",
     "codigo_barras_opcional": "Opcional. Se preencher, use pelo menos 3 caracteres.",
+    "aviso_ean_dv": "Este código parece um EAN, mas o dígito verificador não confere — confira a digitação. (Códigos internos são aceitos.)",
+    "aviso_nome_duplicado": "Já existe um produto com este nome. Confira para não duplicar o cadastro.",
     "nome": "Nome",
     "preco_varejo": "Preço varejo",
     "preco_custo": "Preço de custo",
@@ -2038,6 +2040,8 @@
     "err_doc_obrigatorio": "Informe o documento.",
     "err_cpf_invalido": "CPF deve ter 11 dígitos.",
     "err_cnpj_invalido": "CNPJ deve ter 14 dígitos.",
+    "aviso_cnpj_dv": "O dígito verificador deste CNPJ não confere — confira o número. (Não impede o cadastro.)",
+    "aviso_nome_duplicado": "Já existe um fornecedor com este nome. Confira para não duplicar o cadastro.",
     "err_email": "E-mail inválido.",
     "err_cep": "CEP deve ter 8 dígitos."
   },
