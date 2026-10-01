@@ -62,6 +62,9 @@ export function RecebimentoGerentePageClient({
   const semProdutos = !temProdutos
 
   const [qtdEspStr, setQtdEspStr] = useState('')
+  // Produtos adicionais da MESMA entrada (só "Sem documento"): a RPC já recebe uma lista de itens.
+  const [extras, setExtras] = useState<Array<{ key: number; produto: RecebimentoProdutoOpt | null; qtd: string }>>([])
+  const proximaChaveExtra = useRef(1)
   const [qtdConfStr, setQtdConfStr] = useState('')
   const idempotencyKeyRef = useRef(crypto.randomUUID())
   // Depois de confirmar a entrada o formulário volta ao estado inicial: com os
@@ -116,6 +119,9 @@ export function RecebimentoGerentePageClient({
       // Sem documento não há expectativa: some o campo e a divergência deixa de existir.
       setOcEscolhida(null)
       setQtdEspStr('')
+    } else {
+      // Com pedido a conferência é de um item por vez (a divergência é calculada por item).
+      setExtras([])
     }
   }, [])
 
@@ -144,6 +150,8 @@ export function RecebimentoGerentePageClient({
       /** Ausente na entrada sem documento (a action assume esperada = conferida). */
       qtd_esperada?: number
       qtd_conferida: number
+      /** Produtos adicionais da mesma entrada (UX-018). */
+      adicionais?: Array<{ produto_id: string; qtd_conferida: number }>
       idempotency_key: string
       ordem_compra_id: string
     }) => {
@@ -158,11 +166,20 @@ export function RecebimentoGerentePageClient({
             ...(p.qtd_esperada !== undefined ? { quantidade_esperada: p.qtd_esperada } : {}),
             quantidade_conferida: p.qtd_conferida,
           },
+          ...(p.adicionais ?? []).map((a) => ({
+            produto_id: a.produto_id,
+            quantidade_conferida: a.qtd_conferida,
+          })),
         ],
       })
       if (!res.success) throw new Error(res.error)
       refetch()
-      return { ...res.data, produtoNome: p.produto_nome, creditado: p.qtd_conferida }
+      return {
+        ...res.data,
+        produtoNome: p.produto_nome,
+        creditado: p.qtd_conferida,
+        totalProdutos: 1 + (p.adicionais?.length ?? 0),
+      }
     },
     {
       onSuccess: (data) => {
@@ -174,6 +191,7 @@ export function RecebimentoGerentePageClient({
           setUsarProdutoPreSelecionado(false)
           setOcEscolhida(null)
           setProdutoEscolhido(null)
+          setExtras([])
           setFormKey((k) => k + 1)
           // Depois da entrada: o que mudou de fato (estoque, saldo do pedido, se o pedido fechou),
           // não uma mensagem genérica.
@@ -182,7 +200,9 @@ export function RecebimentoGerentePageClient({
             data.saldoAtual === null || data.saldoAtual === undefined
               ? ''
               : ` ${fmtTemplate(r.resultado_saldo, { n: fmtQtd(data.saldoAtual) })}`
-          const texto = data.oc
+          const texto = data.totalProdutos > 1
+            ? fmtTemplate(r.resultado_multi, { id, n: String(data.totalProdutos) })
+            : data.oc
             ? `${fmtTemplate(r.resultado_com_pedido, vars)} ${textoPosEntrada(
                 { estoque: m.compras.pos_entrada_estoque, parcial: m.compras.pos_entrada_parcial, completo: m.compras.resumo_completo },
                 data.oc,
@@ -303,6 +323,23 @@ export function RecebimentoGerentePageClient({
               emitGerenteToast({ kind: 'error', message: r.ordem_compra_obrigatoria })
               return
             }
+            // Linhas extras: ignora as totalmente em branco; as parciais ou repetidas são recusadas.
+            const adicionais: Array<{ produto_id: string; qtd_conferida: number }> = []
+            const vistos = new Set<string>([pid])
+            for (const ex of via === 'SEM_DOCUMENTO' ? extras : []) {
+              const qtd = Number(ex.qtd.replace(',', '.'))
+              if (!ex.produto && ex.qtd.trim() === '') continue
+              if (!ex.produto || !Number.isFinite(qtd) || qtd <= 0) {
+                emitGerenteToast({ kind: 'error', message: r.toast_dados_invalidos })
+                return
+              }
+              if (vistos.has(ex.produto.id)) {
+                emitGerenteToast({ kind: 'error', message: r.toast_produto_repetido })
+                return
+              }
+              vistos.add(ex.produto.id)
+              adicionais.push({ produto_id: ex.produto.id, qtd_conferida: qtd })
+            }
             setResultado(null)
             void mutate({
               origem: readFormDataString(fd, 'origem'),
@@ -311,6 +348,7 @@ export function RecebimentoGerentePageClient({
               produto_nome: produtoEscolhido?.nome ?? '',
               qtd_esperada: qEsp,
               qtd_conferida: qConf,
+              adicionais,
               idempotency_key: idempotencyKeyRef.current,
               ordem_compra_id: readFormDataString(fd, 'ordem_compra_id'),
             })
@@ -464,6 +502,61 @@ export function RecebimentoGerentePageClient({
                 onChange={(e) => setQtdConfStr(e.target.value)}
               />
             </Field>
+            {via === 'SEM_DOCUMENTO' ? (
+              <div className="space-y-2 md:col-span-2" data-testid="rec-itens-extra">
+                {extras.map((ex, idx) => (
+                  <div key={ex.key} className="grid grid-cols-1 items-end gap-3 md:grid-cols-[1fr_9rem_auto]">
+                    <Field id={`rec-extra-prod-${ex.key}`} label={r.label_produto}>
+                      <ProdutoRecebimentoAutocomplete
+                        disabled={semProdutos}
+                        placeholder={r.ph_produto_busca}
+                        semResultadosLabel={r.produto_sem_resultados}
+                        minimoLabel={r.produto_busca_minimo}
+                        limparLabel={r.produto_limpar}
+                        onChange={(produto) =>
+                          setExtras((atual) => atual.map((x) => (x.key === ex.key ? { ...x, produto } : x)))
+                        }
+                      />
+                    </Field>
+                    <Field id={`rec-extra-qtd-${ex.key}`} label={r.label_qtd_item}>
+                      <Input
+                        type="number"
+                        min="0.001"
+                        step="0.001"
+                        disabled={semProdutos}
+                        value={ex.qtd}
+                        onChange={(e) =>
+                          setExtras((atual) => atual.map((x) => (x.key === ex.key ? { ...x, qtd: e.target.value } : x)))
+                        }
+                      />
+                    </Field>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => setExtras((atual) => atual.filter((x) => x.key !== ex.key))}
+                      aria-label={`${r.btn_remover_item} ${idx + 2}`}
+                    >
+                      {r.btn_remover_item}
+                    </Button>
+                  </div>
+                ))}
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={semProdutos}
+                    onClick={() =>
+                      setExtras((atual) => [...atual, { key: proximaChaveExtra.current++, produto: null, qtd: '' }])
+                    }
+                  >
+                    {r.btn_add_item}
+                  </Button>
+                  {extras.length > 0 ? (
+                    <span className="text-caption text-fg-subtle">{r.itens_extra_ajuda}</span>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
             {divergenciaDetalhe ? (
               <div
                 className={`rounded-lg border px-3 py-2 text-body md:col-span-2 ${
