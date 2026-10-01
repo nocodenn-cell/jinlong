@@ -1,4 +1,17 @@
-import type { VendaListRow } from '@/app/gerente/vendas/actions'
+/** Linha da lista de vendas exibida em /admin/vendas e no modal de cancelamento (uma por `vendas.id`). */
+export type VendaListRow = {
+  id: string
+  data: string | null
+  total_liquido: number | null
+  total_bruto: number | null
+  forma_pagamento: string | null
+  status: string | null
+  caixa_id: string | null
+  operador_id: string | null
+  qtd_itens_total: number
+  qtd_itens_distintos: number
+  primeiro_produto: string | null
+}
 
 /** Linha de `listar_vendas_gerente`: uma por `vendas.id`, com o estado atual da venda. */
 export type RpcVendaRow = {

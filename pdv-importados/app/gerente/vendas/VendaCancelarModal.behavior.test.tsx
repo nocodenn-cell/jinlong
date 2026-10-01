@@ -25,7 +25,7 @@ vi.mock('./actions', () => ({
 vi.mock('@/lib/gerente/toast', () => ({ emitGerenteToast: vi.fn() }))
 
 import { VendaCancelarModal } from '@/app/gerente/vendas/VendaCancelarModal'
-import type { VendaListRow } from '@/app/gerente/vendas/actions'
+import type { VendaListRow } from '@/lib/vendas/vendasListaRpc'
 import type { ComprovanteCancelamento } from '@/app/gerente/vendas/VendaCancelamentoReciboModal'
 
 const m = getMessages('pt')

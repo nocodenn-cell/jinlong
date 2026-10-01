@@ -9,21 +9,7 @@ import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { getGerenteLojaId } from '@/lib/gerente/auth/sessionContext'
 import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import { metricasDeRpc, type KpisVendasRpcRow } from '@/lib/vendas/metricasVendas'
-import { mapVendaRow, statusFromFiltro, type RpcVendaRow } from '@/lib/vendas/vendasListaRpc'
-
-export type VendaListRow = {
-  id: string
-  data: string | null
-  total_liquido: number | null
-  total_bruto: number | null
-  forma_pagamento: string | null
-  status: string | null
-  caixa_id: string | null
-  operador_id: string | null
-  qtd_itens_total: number
-  qtd_itens_distintos: number
-  primeiro_produto: string | null
-}
+import { mapVendaRow, statusFromFiltro, type RpcVendaRow, type VendaListRow } from '@/lib/vendas/vendasListaRpc'
 
 export type VendasFiltro = Readonly<{
   inicio: string | null

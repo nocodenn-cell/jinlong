@@ -11,7 +11,7 @@ import {
   VendaCancelamentoReciboModal,
   type ComprovanteCancelamento,
 } from '@/app/gerente/vendas/VendaCancelamentoReciboModal'
-import type { VendaListRow } from '@/app/gerente/vendas/actions'
+import type { VendaListRow } from '@/lib/vendas/vendasListaRpc'
 import { VendaDetailSheet, type VendaAlvo } from './VendaDetailSheet'
 import { toPayment, toVendaStatus } from './vendaMaps'
 
