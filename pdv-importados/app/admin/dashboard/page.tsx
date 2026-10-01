@@ -39,6 +39,7 @@ import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { ROUTES } from '@/lib/navigation/routes'
 import { getMessages } from '@/i18n/getMessages'
 import { labelFormaPagamentoVenda } from '@/lib/format/vendaLabels'
+import { contarSituacoesEstoque } from '@/lib/estoque/classificarEstoque'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 
 type SalesPoint = {
@@ -233,6 +234,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     novosUsuariosAtualRes,
     novosUsuariosPrevRes,
     estoqueBaixoListaRes,
+    estoqueBaixoSituacoesRes,
     usersRes,
   ] = await Promise.all([
     vendasRangeQuery,
@@ -246,6 +248,8 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
           .order('deficit', { ascending: false })
           .limit(5)
       : Promise.resolve(null),
+    // Mesma view do contador: separa zerados / abaixo do mínimo / no mínimo (só rótulo, a regra do alerta não muda).
+    supabase.from('v_estoque_baixo').select('quantidade_atual, estoque_minimo').limit(5000),
     operatorIds.length > 0
       ? supabase.from('usuarios').select('id,nome').in('id', operatorIds)
       : Promise.resolve(null),
@@ -256,6 +260,10 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     quantidade_atual: number
     estoque_minimo: number
   }>
+
+  const situacoesEstoque = contarSituacoesEstoque(
+    (estoqueBaixoSituacoesRes?.data ?? []) as Array<{ quantidade_atual: number | null; estoque_minimo: number | null }>,
+  )
 
   const dashboardErrors = collectSupabaseErrors([
     {
@@ -620,6 +628,15 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
           </div>
           {estoqueBaixoCount === 0 && !estoqueBaixoRes.error ? (
             <p className="mt-3 text-caption text-fg-subtle">{L.lowStockEmpty[lk]}</p>
+          ) : null}
+          {estoqueBaixoCount > 0 && !estoqueBaixoRes.error && !estoqueBaixoSituacoesRes?.error ? (
+            <p className="mt-3 text-caption text-fg-muted">
+              {fillTemplate(L.lowStockBreakdown[lk], {
+                zerados: formatNumberLocale(situacoesEstoque.zerados, locale),
+                abaixo: formatNumberLocale(situacoesEstoque.abaixoMinimo, locale),
+                noMinimo: formatNumberLocale(situacoesEstoque.noMinimo, locale),
+              })}
+            </p>
           ) : null}
           {showStockAlerts && estoqueBaixoLista.length > 0 ? (
             <ul className="mt-3 flex flex-col gap-1.5 border-t border-[var(--color-border)] pt-3">
