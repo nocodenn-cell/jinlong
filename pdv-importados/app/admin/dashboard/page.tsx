@@ -179,8 +179,6 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   }> = []
   let usuariosRows: Array<{ id: string; nome: string }> = []
   let estoqueBaixoCount = 0
-  let novosUsuariosAtual = 0
-  let novosUsuariosPrev = 0
 
   // População das métricas = vendas CONCLUIDA (contrato canônico, lib/vendas/metricasVendas.ts):
   // cancelada não é faturamento/pedido. O filtro `?status=` só afeta "últimos pedidos".
@@ -198,18 +196,6 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     .eq('status', 'CONCLUIDA')
     .gte('data', previousStart.toISOString())
     .lt('data', previousEnd.toISOString())
-
-  const novosUsuariosAtualQuery = supabase
-    .from('usuarios')
-    .select('id', { count: 'exact', head: true })
-    .gte('created_at', start.toISOString())
-    .lte('created_at', end.toISOString())
-
-  const novosUsuariosPrevQuery = supabase
-    .from('usuarios')
-    .select('id', { count: 'exact', head: true })
-    .gte('created_at', previousStart.toISOString())
-    .lt('created_at', previousEnd.toISOString())
 
   const flagsVisuaisRow = Array.isArray(flagsVisuaisRes.data)
     ? flagsVisuaisRes.data[0]
@@ -231,16 +217,12 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   const [
     vendasRangeRes,
     vendasPrevRes,
-    novosUsuariosAtualRes,
-    novosUsuariosPrevRes,
     estoqueBaixoListaRes,
     estoqueBaixoSituacoesRes,
     usersRes,
   ] = await Promise.all([
     vendasRangeQuery,
     vendasPrevQuery,
-    novosUsuariosAtualQuery,
-    novosUsuariosPrevQuery,
     showStockAlerts
       ? supabase
           .from('v_estoque_baixo')
@@ -282,21 +264,11 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
       label: L.errorSourceLowStock[lk],
       error: estoqueBaixoRes.error,
     },
-    {
-      label: L.errorSourceNewUsersPeriod[lk],
-      error: novosUsuariosAtualRes.error,
-    },
-    {
-      label: L.errorSourceNewUsersPreviousPeriod[lk],
-      error: novosUsuariosPrevRes.error,
-    },
   ], idioma)
 
   if (!vendasRangeRes.error) vendasRange = (vendasRangeRes.data ?? []) as typeof vendasRange
   if (!vendasPrevRes.error) vendasPrevRange = (vendasPrevRes.data ?? []) as typeof vendasPrevRange
   if (!estoqueBaixoRes.error) estoqueBaixoCount = estoqueBaixoRes.count ?? 0
-  if (!novosUsuariosAtualRes.error) novosUsuariosAtual = novosUsuariosAtualRes.count ?? 0
-  if (!novosUsuariosPrevRes.error) novosUsuariosPrev = novosUsuariosPrevRes.count ?? 0
 
   const periodSalesFailed = !!vendasRangeRes.error
   const tableLoadFailed = !!recentOrdersRes.error
@@ -376,7 +348,6 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   const totalTrend = formatTrendPercent(totalAtual, totalPrev, trendLabels)
   const pedidosTrend = formatTrendPercent(pedidosAtual, pedidosPrev, trendLabels)
   const ticketTrend = formatTrendPercent(ticketAtual, ticketPrev, trendLabels)
-  const novosTrend = formatTrendPercent(novosUsuariosAtual, novosUsuariosPrev, trendLabels)
 
   const unavail = adminUi.common.unavailable[lk]
 
@@ -481,7 +452,8 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   const activityItems: ActivityItem[] = latestOrders.slice(0, 8).map((order) => ({
     id: order.id,
     type: order.status === 'CANCELADA' ? 'cancel' : 'sale',
-    description: `${order.formaPagamento || ui.dashboard_pagamento_fallback} • ${order.operador}`,
+    // Texto além da cor do marcador (acessibilidade): venda cancelada diz "Cancelada".
+    description: `${order.status === 'CANCELADA' ? `${m.gerente.venda_status_cancelada} • ` : ''}${order.formaPagamento || ui.dashboard_pagamento_fallback} • ${order.operador}`,
     amount: amountByOrderId.get(order.id),
     relativeTime: order.data,
   }))
@@ -496,7 +468,6 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     <div className="admin-v2-page admin-v2-stack">
       <PageHeader
         title={L.pageTitle[lk]}
-        subtitle={`${L.newUsers[lk]}: ${formatNumberLocale(novosUsuariosAtual, locale)} (${novosTrend.label})`}
         filters={<DashboardFilters options={periodOptions} />}
         actions={
           <PageActions>

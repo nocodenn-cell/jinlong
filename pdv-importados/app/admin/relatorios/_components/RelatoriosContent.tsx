@@ -107,6 +107,7 @@ export type RelatoriosLabels = {
   secCurvaAbc: string
   curvaAbcColNome: string
   curvaAbcColValor: string
+  curvaAbcColParticipacao: string
   curvaAbcColAcumulado: string
   curvaAbcColClasse: string
   vazioCurvaAbc: string
@@ -334,6 +335,7 @@ function CurvaAbcList({
           <tr className="border-b border-[var(--color-border-secondary)] text-left text-caption text-jl-fg-3">
             <th className="py-1.5 pr-3 font-medium">{labels.curvaAbcColNome}</th>
             <th className="py-1.5 pr-3 text-right font-medium">{labels.curvaAbcColValor}</th>
+            <th className="py-1.5 pr-3 text-right font-medium">{labels.curvaAbcColParticipacao}</th>
             <th className="py-1.5 pr-3 text-right font-medium">{labels.curvaAbcColAcumulado}</th>
             <th className="py-1.5 pr-3 text-right font-medium">{labels.curvaAbcColClasse}</th>
           </tr>
@@ -347,6 +349,7 @@ function CurvaAbcList({
                 </Link>
               </td>
               <td className="py-1.5 pr-3 text-right text-jl-fg-2">{formatBRL(p.totalValor)}</td>
+              <td className="py-1.5 pr-3 text-right text-jl-fg-2">{formatPercent(p.percentualValor / 100, labels.locale)}</td>
               <td className="py-1.5 pr-3 text-right text-jl-fg-3">{formatPercent(p.percentualAcumulado / 100, labels.locale)}</td>
               <td className="py-1.5 pr-3 text-right">
                 <span
