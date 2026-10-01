@@ -17,4 +17,12 @@ describe('configMasks', () => {
   it('digitsOnly limita tamanho', () => {
     expect(digitsOnly('ab12cd345', 4)).toBe('1234')
   })
+
+  it('aceita null/undefined sem lançar (loja sem CNPJ cadastrado)', () => {
+    expect(digitsOnly(null)).toBe('')
+    expect(digitsOnly(undefined, 4)).toBe('')
+    expect(maskCnpj(null)).toBe('')
+    expect(maskTel(undefined)).toBe('')
+    expect(maskCep(null)).toBe('')
+  })
 })
