@@ -280,7 +280,7 @@ export function FornecedoresListClient({
       header: m.fornecedores.field_cnpj,
       priority: 'contextual',
       cell: (f) => (
-        <span className="font-mono text-caption text-fg-muted">{maskCnpj(f.cnpj)}</span>
+        <span className="whitespace-nowrap font-mono text-caption text-fg-muted">{maskCnpj(f.cnpj)}</span>
       ),
     },
   ]
