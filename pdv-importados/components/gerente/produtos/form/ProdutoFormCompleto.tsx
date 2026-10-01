@@ -17,7 +17,6 @@ import { FornecedorQuickField } from './sections/FornecedorQuickField'
 import { EstoqueSection } from './sections/EstoqueSection'
 import { ClassificacaoSection } from './sections/ClassificacaoSection'
 import { DetalhesSection } from './sections/DetalhesSection'
-import { CompraSection } from './sections/CompraSection'
 import { FiscalSection } from './sections/FiscalSection'
 
 type Props = ProdutoFormShellProps &
@@ -124,7 +123,7 @@ export function ProdutoFormCompleto(props: Props) {
         ) : null}
 
         <EssencialSection />
-        <PrecosSection mostrarHistorico />
+        <PrecosSection mostrarHistorico mostrarCompra />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <CategoriaQuickField />
           <FornecedorQuickField idioma={props.idioma} />
@@ -132,7 +131,6 @@ export function ProdutoFormCompleto(props: Props) {
         <EstoqueSection />
         <ClassificacaoSection />
         <DetalhesSection />
-        <CompraSection />
         <FiscalSection />
       </div>
     </ProdutoFormProvider>
