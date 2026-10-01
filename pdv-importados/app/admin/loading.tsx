@@ -6,7 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton'
  */
 export default function AdminLoading() {
   return (
-    <div className="admin-v2-page admin-v2-stack min-h-[40vh]" aria-busy="true" aria-live="polite" data-testid="admin-loading">
+    <div className="admin-v2-page admin-v2-stack min-h-[40vh] bg-jl-surface-soft" aria-busy="true" aria-live="polite" data-testid="admin-loading">
       <Skeleton className="h-8 w-56" />
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
