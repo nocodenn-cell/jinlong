@@ -145,6 +145,8 @@
     "buscar": "搜索商品...",
     "codigo_barras": "条形码",
     "codigo_barras_opcional": "可选。若填写请至少 3 个字符。",
+    "aviso_ean_dv": "该条码看起来是 EAN，但校验位不正确，请核对输入。（内部编码可正常使用。）",
+    "aviso_nome_duplicado": "已存在同名商品，请核对以免重复登记。",
     "nome": "商品名称",
     "preco_varejo": "零售价",
     "preco_custo": "成本价",
@@ -2224,6 +2226,8 @@
     "err_doc_obrigatorio": "请填写证件号。",
     "err_cpf_invalido": "CPF 须为 11 位数字。",
     "err_cnpj_invalido": "CNPJ 须为 14 位数字。",
+    "aviso_cnpj_dv": "此 CNPJ 的校验位不正确，请核对号码。（不影响保存。）",
+    "aviso_nome_duplicado": "已存在同名供应商，请核对以免重复登记。",
     "err_email": "邮箱无效。",
     "err_cep": "邮编须为 8 位数字。"
   },
