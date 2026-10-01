@@ -12,6 +12,7 @@ import { isCaixaAberto } from "@/app/caixa/hooks/useCaixaStatusMovimentacoes"
 import type { MovimentacaoCaixaDTO } from "@/app/caixa/caixaMovimentacaoTypes"
 import { cn } from "@/lib/utils"
 import { formatDecimalBRL } from "@/lib/format/money"
+import { CAIXA_ATALHOS, atalhoRotulo } from "@/app/caixa/caixaAtalhos"
 
 type Props = {
   m: Mensagens
@@ -137,27 +138,27 @@ function CaixaPdvOperacoesMenuImpl({
     {
       id: "consulta",
       label: m.caixa.operacoes_consulta_rapida,
-      shortcut: "F3",
+      shortcut: atalhoRotulo(CAIXA_ATALHOS.consultaRapida),
       onClick: () => runAndClose(onConsultaRapida),
     },
     {
       id: "cliente",
       label: m.caixa.selecionar_cliente_titulo,
-      shortcut: "Alt+C",
+      shortcut: atalhoRotulo(CAIXA_ATALHOS.cliente),
       disabled: busy,
       onClick: () => runAndClose(onSelecionarCliente),
     },
     {
       id: "suprimento",
       label: m.caixa.suprimento,
-      shortcut: "Ctrl+Shift+S",
+      shortcut: atalhoRotulo(CAIXA_ATALHOS.suprimento),
       disabled: !caixaAberto || busy,
       onClick: () => runAndClose(onAbrirSuprimento),
     },
     {
       id: "sangria",
       label: m.caixa.sangria,
-      shortcut: "Ctrl+Shift+R",
+      shortcut: atalhoRotulo(CAIXA_ATALHOS.sangria),
       disabled: !caixaAberto || busy,
       onClick: () => runAndClose(onAbrirSangria),
     },
@@ -169,7 +170,7 @@ function CaixaPdvOperacoesMenuImpl({
     {
       id: "imprimir",
       label: m.caixa.operacoes_imprimir_ultima,
-      shortcut: "F12",
+      shortcut: atalhoRotulo(CAIXA_ATALHOS.reimprimir),
       disabled: !podeReimprimir,
       onClick: () => runAndClose(onImprimirUltima),
     },
@@ -179,7 +180,7 @@ function CaixaPdvOperacoesMenuImpl({
     itens.push({
       id: "fechar",
       label: m.caixa.fechar,
-      shortcut: "F6",
+      shortcut: atalhoRotulo(CAIXA_ATALHOS.fecharCaixa),
       destructive: true,
       disabled: busy,
       onClick: () => runAndClose(onFecharCaixa),
