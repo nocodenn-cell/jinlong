@@ -36,6 +36,14 @@ afterEach(() => {
   container.remove()
 })
 
+function renderEl(statusInicial: { suspensas: boolean; motivo: string }) {
+  return (
+    <AdminV2SessionProvider idioma="pt">
+      <SuspensaoContent statusInicial={statusInicial} />
+    </AdminV2SessionProvider>
+  )
+}
+
 function render(statusInicial: { suspensas: boolean; motivo: string }) {
   act(() =>
     root.render(
@@ -82,7 +90,7 @@ describe('SuspensaoContent (UX-012)', () => {
     expect(atualizarMock).not.toHaveBeenCalled()
   })
 
-  it('confirmar suspende com o motivo e passa a exibir "Vendas suspensas" e "Liberar vendas"', async () => {
+  it('confirmar suspende com o motivo; o badge só muda quando o servidor devolve o estado gravado', async () => {
     render({ suspensas: false, motivo: '' })
     digitarMotivo('  Inventário  ')
     act(() => botao('Suspender vendas')!.click())
@@ -92,13 +100,19 @@ describe('SuspensaoContent (UX-012)', () => {
       await Promise.resolve()
     })
     expect(atualizarMock).toHaveBeenCalledWith(true, 'Inventário')
+    expect(refreshMock).toHaveBeenCalled()
+    // sem novas props do servidor, o badge NÃO é alterado por estado otimista
+    expect(container.textContent).toContain('Vendas ativas')
+    expect(botao('Liberar vendas')).toBeUndefined()
+
+    // refresh traz o estado persistido
+    act(() => root.render(renderEl({ suspensas: true, motivo: 'Inventário' })))
     expect(container.textContent).toContain('Vendas suspensas')
     expect(container.textContent).toContain('Motivo: Inventário')
     expect(botao('Liberar vendas')).toBeTruthy()
-    expect(refreshMock).toHaveBeenCalled()
   })
 
-  it('liberar confirma e limpa o motivo (action recebe false e string vazia)', async () => {
+  it('liberar confirma e limpa o motivo (action recebe false e string vazia); badge segue o servidor', async () => {
     render({ suspensas: true, motivo: 'Inventário' })
     expect(container.textContent).toContain('Vendas suspensas')
     act(() => botao('Liberar vendas')!.click())
@@ -108,6 +122,9 @@ describe('SuspensaoContent (UX-012)', () => {
       await Promise.resolve()
     })
     expect(atualizarMock).toHaveBeenCalledWith(false, '')
+    expect(refreshMock).toHaveBeenCalled()
+
+    act(() => root.render(renderEl({ suspensas: false, motivo: '' })))
     expect(container.textContent).toContain('Vendas ativas')
     expect((container.querySelector('#suspensao-motivo') as HTMLTextAreaElement).value).toBe('')
   })
@@ -124,5 +141,18 @@ describe('SuspensaoContent (UX-012)', () => {
     })
     expect(container.textContent).toContain('Sem permissão')
     expect(container.textContent).toContain('Vendas ativas')
+  })
+
+  it('falha do servidor pede refresh para reler o estado persistido', async () => {
+    atualizarMock.mockResolvedValue({ success: false, error: 'Falha parcial' })
+    render({ suspensas: false, motivo: '' })
+    digitarMotivo('x')
+    act(() => botao('Suspender vendas')!.click())
+    const dialog = document.querySelector('[role="dialog"]') as HTMLElement
+    await act(async () => {
+      botao('Suspender vendas', dialog)!.click()
+      await Promise.resolve()
+    })
+    expect(refreshMock).toHaveBeenCalled()
   })
 })

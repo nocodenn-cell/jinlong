@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { AlertCircle } from 'lucide-react'
 import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
@@ -16,9 +16,11 @@ const MOTIVO_MAX = 300
 
 export function SuspensaoContent({ statusInicial }: Props) {
   const router = useRouter()
-  // Estado persistido (não um rascunho): só muda depois que o servidor confirma.
-  const [suspensas, setSuspensas] = useState(statusInicial.suspensas)
-  const [motivoAtual, setMotivoAtual] = useState(statusInicial.motivo)
+  // O estado exibido (badge, motivo vigente) vem SEMPRE do servidor, via props: só muda depois que
+  // `router.refresh()` reler o que foi realmente gravado. Nada de setState otimista.
+  const suspensas = statusInicial.suspensas
+  const motivoAtual = statusInicial.motivo
+  const [atualizando, startTransition] = useTransition()
   const [motivo, setMotivo] = useState('')
   const [confirmando, setConfirmando] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -39,14 +41,14 @@ export function SuspensaoContent({ statusInicial }: Props) {
       const res = await atualizarSuspensaoVendas(suspender, motivoEnviado)
       if (!res.success) {
         setError(res.error)
+        // Falha parcial possível (flag gravada, motivo não): releia o estado persistido.
+        startTransition(() => router.refresh())
         return
       }
-      setSuspensas(suspender)
-      setMotivoAtual(motivoEnviado)
       setMotivo('')
       setSuccess(suspender ? 'Vendas suspensas.' : 'Vendas liberadas.')
       setTimeout(() => setSuccess(null), 3000)
-      router.refresh()
+      startTransition(() => router.refresh())
     } finally {
       setLoading(false)
       setConfirmando(false)
@@ -79,7 +81,7 @@ export function SuspensaoContent({ statusInicial }: Props) {
                 </p>
               </div>
             </div>
-            <Button type="button" onClick={() => setConfirmando(true)} disabled={loading}>
+            <Button type="button" onClick={() => setConfirmando(true)} disabled={loading || atualizando}>
               Liberar vendas
             </Button>
           </>
@@ -108,7 +110,7 @@ export function SuspensaoContent({ statusInicial }: Props) {
               type="button"
               variant="danger"
               onClick={() => setConfirmando(true)}
-              disabled={!motivoValido || loading}
+              disabled={!motivoValido || loading || atualizando}
             >
               Suspender vendas
             </Button>
