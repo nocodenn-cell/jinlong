@@ -101,3 +101,32 @@ describe('CaixaPdvCartSaleBar — layout do rodapé (UX-002)', () => {
     expect(total.parentElement!.textContent).toContain(m.caixa.descontos_regras)
   })
 })
+
+describe('CaixaPdvCartSaleBar — faixa de caixa fechado (UX-011)', () => {
+  it('com caixa fechado mostra a faixa e o botão "Abrir caixa", que chama onAbrirCaixa', () => {
+    const onAbrirCaixa = vi.fn()
+    render({ caixaAberto: false, caixaFechado: true, onAbrirCaixa })
+    const faixa = container.querySelector('[data-testid="caixa-fechado-faixa"]') as HTMLElement
+    expect(faixa).toBeTruthy()
+    expect(faixa.textContent).toContain('Caixa fechado — abra o caixa para vender')
+    const btn = Array.from(faixa.querySelectorAll('button')).find(
+      (b) => b.textContent === m.caixa.abrir,
+    ) as HTMLButtonElement
+    expect(btn.disabled).toBe(false)
+    act(() => btn.click())
+    expect(onAbrirCaixa).toHaveBeenCalledTimes(1)
+  })
+
+  it('não mostra a faixa com caixa aberto nem em estado desconhecido (carregando/erro)', () => {
+    render({ caixaAberto: true, caixaFechado: false })
+    expect(container.querySelector('[data-testid="caixa-fechado-faixa"]')).toBeNull()
+    render({ caixaAberto: false })
+    expect(container.querySelector('[data-testid="caixa-fechado-faixa"]')).toBeNull()
+  })
+
+  it('botão fica desabilitado enquanto o caixa está sendo aberto', () => {
+    render({ caixaAberto: false, caixaFechado: true, onAbrirCaixa: vi.fn(), abrindoCaixa: true })
+    const btn = Array.from(container.querySelectorAll('[data-testid="caixa-fechado-faixa"] button'))[0] as HTMLButtonElement
+    expect(btn.disabled).toBe(true)
+  })
+})
