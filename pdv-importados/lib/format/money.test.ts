@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { filterBRLChars, formatBRL, formatDecimal2, formatNumberLocale, formatDecimalPlaces, formatDecimalBRL, parseBRL } from './money'
+import { filterBRLChars, formatBRL, formatDecimal2, formatNumberLocale, formatDecimalPlaces, formatDecimalBRL, formatPercent, parseBRL } from './money'
 
 describe('money formatters — defensivo contra valores não-finitos', () => {
   it('formata valores válidos normalmente', () => {
@@ -103,5 +103,26 @@ describe('formatDecimalBRL — snapshot de consistência', () => {
     expect(parseBRL(formatDecimalBRL(1234.56))).toBe(1234.56)
     expect(parseBRL(formatDecimalBRL(9.99))).toBe(9.99)
     expect(parseBRL(formatDecimalBRL(0))).toBe(0)
+  })
+})
+
+describe('formatPercent — contrato: fração 0..1 → percentual pt-BR', () => {
+  it('formata frações', () => {
+    expect(formatPercent(0)).toBe('0,0%')
+    expect(formatPercent(0.333)).toBe('33,3%')
+    expect(formatPercent(1)).toBe('100,0%')
+  })
+
+  it('taxa de cancelamento 2 de 6 = 33,3%', () => {
+    expect(formatPercent(2 / 6)).toBe('33,3%')
+  })
+
+  it('não multiplica de novo: valor já percentual precisa ser dividido por 100 pelo chamador', () => {
+    expect(formatPercent(77.2 / 100)).toBe('77,2%')
+    expect(formatPercent(77.2)).toBe('7.720,0%')
+  })
+
+  it('não-finito vira 0,0%', () => {
+    expect(formatPercent(Number.NaN)).toBe('0,0%')
   })
 })
