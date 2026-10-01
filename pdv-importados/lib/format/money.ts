@@ -36,6 +36,19 @@ export function formatNumberLocale(value: number, locale = 'pt-BR'): string {
   return toFiniteNumber(value).toLocaleString(locale)
 }
 
+/**
+ * Percentual para apresentação.
+ * Contrato: `fraction` é FRAÇÃO 0..1 (0.333 → "33,3%"), não um valor já em 0..100.
+ * Valores já percentuais (ex.: `percentual_acumulado` da curva ABC) devem ser divididos por 100 antes.
+ */
+export function formatPercent(fraction: number, locale = 'pt-BR', fractionDigits = 1): string {
+  return toFiniteNumber(fraction).toLocaleString(locale, {
+    style: 'percent',
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  })
+}
+
 /** Quantidade com casas decimais fixas (ex.: estoque 3 casas). */
 export function formatDecimalPlaces(value: number, fractionDigits: number): string {
   return toFiniteNumber(value).toFixed(fractionDigits)
