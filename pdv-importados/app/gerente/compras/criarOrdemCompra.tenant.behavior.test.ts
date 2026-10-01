@@ -159,8 +159,19 @@ describe('criarOrdemCompra — produto_id dos itens scoped à loja', () => {
       from: vi.fn((table: string) => {
         if (table === 'produtos') {
           return {
+            // ProductReader.getIdentityById: select(...).eq('id', id).maybeSingle()
             select: vi.fn(() => ({
-              in: vi.fn().mockResolvedValue({ data: opts.produtosEncontrados, error: null }),
+              eq: vi.fn((_col: string, id: string) => ({
+                maybeSingle: vi.fn().mockResolvedValue({
+                  data: (() => {
+                    const p = opts.produtosEncontrados.find((x) => x.id === id)
+                    return p
+                      ? { id: p.id, loja_id: p.loja_id, nome: 'P', codigo_barras: null, codigo_interno: null, ativo: true, status_publicacao: 'PUBLICADO' }
+                      : null
+                  })(),
+                  error: null,
+                }),
+              })),
             })),
           }
         }
@@ -239,7 +250,7 @@ describe('criarOrdemCompra — produto_id dos itens scoped à loja', () => {
       from: vi.fn((table: string) => {
         if (table === 'produtos') {
           produtosQuery()
-          return { select: vi.fn(() => ({ in: vi.fn() })) }
+          return { select: vi.fn(() => ({ eq: vi.fn() })) }
         }
         if (table === 'ordens_compra_itens') return { insert: insertItens }
         return {

@@ -65,8 +65,19 @@ describe('atualizarOrdemCompra — produto_id dos itens scoped à loja', () => {
         }
         if (table === 'produtos') {
           return {
+            // ProductReader.getIdentityById: select(...).eq('id', id).maybeSingle()
             select: vi.fn(() => ({
-              in: vi.fn().mockResolvedValue({ data: opts.produtosEncontrados, error: null }),
+              eq: vi.fn((_col: string, id: string) => ({
+                maybeSingle: vi.fn().mockResolvedValue({
+                  data: (() => {
+                    const p = opts.produtosEncontrados.find((x) => x.id === id)
+                    return p
+                      ? { id: p.id, loja_id: p.loja_id, nome: 'P', codigo_barras: null, codigo_interno: null, ativo: true, status_publicacao: 'PUBLICADO' }
+                      : null
+                  })(),
+                  error: null,
+                }),
+              })),
             })),
           }
         }

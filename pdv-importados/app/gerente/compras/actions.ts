@@ -7,6 +7,7 @@ import { getGerenteLojaId, getGerenteUserId } from '@/lib/gerente/auth/sessionCo
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 import { hojeYmd } from '@shared-core/src/financial/policies/tituloVencido'
 import { lojaIdDaSessao } from '@/app/gerente/fornecedores/fornecedorContrato'
+import { createProductReader } from '@/app/admin/produtos/productReader'
 import { mensagemSeFornecedorForaDaLoja, mensagemSeProdutosForaDaLoja } from './fornecedorOcBoundary'
 import { montarFiltroBuscaOc } from './ocBusca'
 import {
@@ -137,8 +138,9 @@ async function assertFornecedorDaLojaOc(
 }
 
 /**
- * Confirma que todo produto_id referenciado pelos itens pertence à loja da
- * OC. Uma única query (`in`) para toda a lista de itens, não uma por item.
+ * Confirma que todo produto_id referenciado pelos itens pertence à loja da OC.
+ * Lê via `ProductReader` (camada de produtos) — sem acesso direto à tabela, que o boundary-ratchet
+ * barra em `app/gerente/compras`. Uma leitura por produto DISTINTO, em paralelo (OCs têm poucas linhas).
  */
 async function assertProdutosDaLojaOc(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -148,14 +150,19 @@ async function assertProdutosDaLojaOc(
   const produtoIds = [...new Set(itens.map((i) => i.produto_id).filter((id): id is string => !!id))]
   if (produtoIds.length === 0) return null
 
-  const { data, error } = await supabase.from('produtos').select('id, loja_id').in('id', produtoIds)
-  if (error) return mensagemErroComSecao('Produto', error.message)
+  const reader = createProductReader(supabase)
+  const resultados = await Promise.all(produtoIds.map((id) => reader.getIdentityById(id)))
 
-  return mensagemSeProdutosForaDaLoja({
-    produtoIds,
-    produtosEncontrados: (data ?? []) as Array<{ id: string; loja_id: string | null }>,
-    lojaIdOc: lojaId,
-  })
+  const produtosEncontrados: Array<{ id: string; loja_id: string | null }> = []
+  for (const r of resultados) {
+    if (r.ok) {
+      produtosEncontrados.push({ id: r.identity.id, loja_id: r.identity.lojaId ?? null })
+    } else if (!('notFound' in r && r.notFound)) {
+      return mensagemErroComSecao('Produto', r.error)
+    }
+  }
+
+  return mensagemSeProdutosForaDaLoja({ produtoIds, produtosEncontrados, lojaIdOc: lojaId })
 }
 
 type RawOcItem = { quantidade: number; preco_unitario: number; quantidade_recebida: number }
