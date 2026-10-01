@@ -47,9 +47,9 @@ const POR_DIA_RPC = [
 
 /** Dashboard: linhas de `vendas` (CONCLUIDA) com devoluções embutidas — mesmo universo. */
 const DASHBOARD_ROWS = [
-  { status: 'CONCLUIDA', total_liquido: 100, devolucoes: [] },
-  { status: 'CONCLUIDA', total_liquido: 123.9, devolucoes: [{ valor: 50, operacao_id: 'op-1' }] },
-  { status: 'CONCLUIDA', total_liquido: 130, devolucoes: [] },
+  { status: 'CONCLUIDA', total_liquido: 100, venda_pos_venda_operacoes: [] },
+  { status: 'CONCLUIDA', total_liquido: 123.9, venda_pos_venda_operacoes: [{ valor_estornado: 50 }] },
+  { status: 'CONCLUIDA', total_liquido: 130, venda_pos_venda_operacoes: [] },
 ]
 
 // ── mocks de infraestrutura ─────────────────────────────────────────────────────────────────

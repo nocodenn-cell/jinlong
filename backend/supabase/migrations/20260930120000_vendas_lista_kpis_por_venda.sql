@@ -9,9 +9,12 @@
 --   identidade = vendas.id · estado = vendas.status · data = vendas.data · loja = caixas.loja_id (vendas não tem loja_id)
 --   vendas_registradas = count(vendas) · vendas_concluidas/faturado = status CONCLUIDA
 --   vendas_canceladas/valor_cancelado = status CANCELADA (cancelada NÃO entra em faturado nem em receita líquida)
---   devolucoes = devolucoes.valor com operacao_id IS NOT NULL (devolução pós-venda efetiva) de venda CONCLUIDA.
---     A linha que cancelar_venda_transacional grava em `devolucoes` tem operacao_id NULL e pertence a venda
---     CANCELADA: fica fora, logo não há contagem em dobro com o cancelamento.
+--   devolucoes = Σ venda_pos_venda_operacoes.valor_estornado (devolução pós-venda efetiva, VALOR ECONÔMICO TOTAL) de
+--     venda CONCLUIDA. NÃO usa `devolucoes.valor`: no PR-2D (D-13) essa tabela registra só a parcela devolvida em meio
+--     de pagamento; a parcela que abateu o saldo a receber fica em venda_pos_venda_operacoes.valor_abatido_ar e
+--     `valor_estornado = meio + valor_abatido_ar`. Antes do D-13 as duas fontes coincidem (uma linha por operação).
+--     A linha que cancelar_venda_transacional grava em `devolucoes` tem operacao_id NULL e não gera operação pós-venda:
+--     fica fora, logo não há contagem em dobro com o cancelamento.
 --   receita_liquida = faturado - devolucoes · ticket_medio = faturado / vendas_concluidas (0 se zero; sem arredondar)
 --   taxa_cancelamento = vendas_canceladas / vendas_registradas (fração 0..1; 0 se zero). Percentual é só apresentação.
 --
@@ -126,11 +129,10 @@ AS $function$
     FROM base b
   ),
   dev AS (
-    SELECT COALESCE(SUM(d.valor), 0)::numeric(14,2) AS devolvido
-    FROM public.devolucoes d
-    INNER JOIN base b ON b.id = d.venda_id
+    SELECT COALESCE(SUM(o.valor_estornado), 0)::numeric(14,2) AS devolvido
+    FROM public.venda_pos_venda_operacoes o
+    INNER JOIN base b ON b.id = o.venda_id
     WHERE b.status = 'CONCLUIDA'
-      AND d.operacao_id IS NOT NULL
   )
   SELECT
     a.registradas,
