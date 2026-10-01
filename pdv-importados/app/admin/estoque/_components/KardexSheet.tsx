@@ -10,6 +10,7 @@ import { DataTable, type Column } from '@/components/ui/DataTable'
 import { EmptyState, Loading } from '@/components/ui/feedback'
 import { MovementBadge } from '@/components/ui/MovementBadge'
 import { StatusChip } from '@/components/ui/StatusChip'
+import { humanizarCodigo } from '@/lib/format/vendaLabels'
 
 export type KardexAlvo = Readonly<{ produtoId: string; produtoNome: string }>
 
@@ -96,7 +97,7 @@ export function KardexSheet({
   }, [alvo])
 
   const rotuloTipo = (codigo: string): string =>
-    labels.tipoMap[codigo] ?? codigo.replace(/_/g, ' ').toLowerCase()
+    labels.tipoMap[codigo] ?? humanizarCodigo(codigo)
 
   const columns: Column<KardexMovimento>[] = useMemo(
     () => [

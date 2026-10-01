@@ -22,6 +22,7 @@ import {
 } from '@/app/gerente/vendas/VendaDevolucaoReciboModal'
 import type { VendaListRow } from '@/lib/vendas/vendasListaRpc'
 import type { Mensagens } from '@/i18n/getMessages'
+import { labelTipoVenda } from '@/lib/format/vendaLabels'
 import { useRouter } from 'next/navigation'
 
 export type VendaAlvo = Readonly<{ id: string }>
@@ -191,7 +192,7 @@ export function VendaDetailSheet({
 
               <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3">
                 <Info label={labels.data}>{formatDateTimeOrDash(venda.data, 'pt-BR', 'medium')}</Info>
-                <Info label={labels.tipo}>{venda.tipo_venda ?? '—'}</Info>
+                <Info label={labels.tipo}>{m ? labelTipoVenda(venda.tipo_venda, m) : (venda.tipo_venda ?? '—')}</Info>
                 <Info label={labels.operador}>{venda.operador_nome ?? '—'}</Info>
                 <Info label={labels.nfe}>{venda.numero_nf ?? '—'}</Info>
                 {venda.cliente_nome ? <Info label={labels.cliente}>{venda.cliente_nome}</Info> : null}
