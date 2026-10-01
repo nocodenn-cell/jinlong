@@ -308,6 +308,9 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
               semMovimentos: ui.estoque_sem_movimentos,
               semMovimentosSub: ui.estoque_sem_movimentos_sub,
               tipoMap: tipoMovimentoEstoqueLabels(m),
+              situacaoZerado: m.estoque.situacao_zerado,
+              situacaoAbaixoMinimo: m.estoque.situacao_abaixo_minimo,
+              situacaoNoMinimo: m.estoque.situacao_no_minimo,
             }}
           />
         )}
