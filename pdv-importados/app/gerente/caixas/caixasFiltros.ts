@@ -59,3 +59,21 @@ export function periodoFim(periodo: CaixasPeriodo, now: Date = new Date()): stri
   d.setHours(23, 59, 59, 999)
   return d.toISOString()
 }
+
+/**
+ * Rótulos do filtro de operador: nomes repetidos (ex.: dois "Operador E2E") ganham o início do id
+ * para o gerente conseguir distinguir; nomes únicos ficam como estão.
+ */
+export function rotulosOperadores(
+  operadores: ReadonlyArray<{ id: string; nome: string }>,
+): Array<{ value: string; label: string }> {
+  const contagem = new Map<string, number>()
+  for (const o of operadores) {
+    const k = o.nome.trim().toLowerCase()
+    contagem.set(k, (contagem.get(k) ?? 0) + 1)
+  }
+  return operadores.map((o) => ({
+    value: o.id,
+    label: (contagem.get(o.nome.trim().toLowerCase()) ?? 0) > 1 ? `${o.nome} (${o.id.slice(0, 4)})` : o.nome,
+  }))
+}

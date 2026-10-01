@@ -124,3 +124,19 @@ describe('movimentações (tipo em minúsculas no banco)', () => {
     })
   })
 })
+
+describe('rotulosOperadores (UX-019 / P-18)', () => {
+  it('nomes repetidos ganham sufixo do id; únicos ficam inalterados', async () => {
+    const { rotulosOperadores } = await import('./caixasFiltros')
+    const r = rotulosOperadores([
+      { id: 'aaaa1111', nome: 'Operador E2E' },
+      { id: 'bbbb2222', nome: 'operador e2e' },
+      { id: 'cccc3333', nome: 'Maria' },
+    ])
+    expect(r).toEqual([
+      { value: 'aaaa1111', label: 'Operador E2E (aaaa)' },
+      { value: 'bbbb2222', label: 'operador e2e (bbbb)' },
+      { value: 'cccc3333', label: 'Maria' },
+    ])
+  })
+})

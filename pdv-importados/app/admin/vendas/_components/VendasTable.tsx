@@ -60,6 +60,11 @@ export type VendasLabels = {
   detalheOperador: string
   detalheNfe: string
   detalheCliente: string
+  detalheCancelamento: string
+  detalheCanceladoEm: string
+  detalheCanceladoPor: string
+  detalheMotivo: string
+  detalheEstornado: string
   detalheSaldoAberto: string
   detalheVerFinanceiro: string
   detalheBruto: string
@@ -338,6 +343,11 @@ export function VendasTable({
           operador: labels.detalheOperador,
           nfe: labels.detalheNfe,
           cliente: labels.detalheCliente,
+          cancelamentoTitulo: labels.detalheCancelamento,
+          canceladoEm: labels.detalheCanceladoEm,
+          canceladoPor: labels.detalheCanceladoPor,
+          motivo: labels.detalheMotivo,
+          estornado: labels.detalheEstornado,
           saldoAberto: labels.detalheSaldoAberto,
           verFinanceiro: labels.detalheVerFinanceiro,
           bruto: labels.detalheBruto,

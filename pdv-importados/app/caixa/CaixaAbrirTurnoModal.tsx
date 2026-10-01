@@ -86,25 +86,29 @@ export function CaixaAbrirTurnoModal({
         </div>
         <label className="block text-xs text-jl-fg-3">
           {m.caixa.abrir_turno_valor}
-          <Input
-            ref={inputRef}
-            type="text"
-            inputMode="decimal"
-            autoComplete="off"
-            value={valorStr}
-            onChange={(e) => {
-              setValorStr(e.target.value)
-              setErro(null)
-            }}
-            placeholder="0,00"
-            className="mt-1"
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault()
-                handleConfirmar()
-              }
-            }}
-          />
+          <div className="mt-1 flex items-center gap-2">
+            <span className="text-sm font-semibold text-jl-fg-2" data-testid="abrir-turno-moeda">
+              {m.caixa.moeda_prefixo}
+            </span>
+            <Input
+              ref={inputRef}
+              type="text"
+              inputMode="decimal"
+              autoComplete="off"
+              value={valorStr}
+              onChange={(e) => {
+                setValorStr(e.target.value)
+                setErro(null)
+              }}
+              placeholder="0,00"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault()
+                  handleConfirmar()
+                }
+              }}
+            />
+          </div>
         </label>
         {erro ? <ErrorState dense description={erro} /> : null}
       </div>
