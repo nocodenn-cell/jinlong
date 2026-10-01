@@ -35,6 +35,7 @@ import { formatBRL, formatNumberLocale } from '@/lib/format/money'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { ROUTES } from '@/lib/navigation/routes'
 import { getMessages } from '@/i18n/getMessages'
+import { labelFormaPagamentoVenda } from '@/lib/format/vendaLabels'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 
 type SalesPoint = {
@@ -350,7 +351,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     paymentMap.set(key, (paymentMap.get(key) ?? 0) + Number(row.total_liquido ?? 0))
   }
   const paymentDonutData = Array.from(paymentMap.entries())
-    .map(([name, value]) => ({ name, value: Math.round(value * 100) / 100 }))
+    .map(([name, value]) => ({ name: labelFormaPagamentoVenda(name, m), value: Math.round(value * 100) / 100 }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 6)
 
@@ -461,7 +462,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     valor: formatBRL(Number(o.total_liquido ?? 0), locale),
     status: o.status,
     data: formatDateTimeLocaleDefault(o.data, locale),
-    formaPagamento: o.forma_pagamento,
+    formaPagamento: labelFormaPagamentoVenda(o.forma_pagamento, m),
   }))
   const amountByOrderId = new Map(
     recentOrdersRaw.map((raw) => [raw.id, Number(raw.total_liquido ?? 0)])

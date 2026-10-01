@@ -17,6 +17,7 @@ import type { MetricCardIconKey } from '@/components/ui/admin-v2/MetricCard'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import { formatNumberLocale } from '@/lib/format/money'
 import { getMessages } from '@/i18n/getMessages'
+import { tipoMovimentoEstoqueLabels } from '@/lib/format/vendaLabels'
 import {
   listarEventosAuditoria,
   type AuditoriaFiltro,
@@ -142,6 +143,7 @@ export default async function AdminAuditoriaPage({ searchParams }: PageProps) {
       devolucao: ui.auditoria_resumo_devolucao,
     },
     ajusteLabels: {
+      ...tipoMovimentoEstoqueLabels(m),
       ENTRADA_VENDA: ui.auditoria_ajuste_entrada_venda,
       SAIDA_VENDA: ui.auditoria_ajuste_saida_venda,
       SAIDA_AJUSTE: ui.auditoria_ajuste_saida_ajuste,
@@ -170,20 +172,7 @@ export default async function AdminAuditoriaPage({ searchParams }: PageProps) {
       semMovimentos: ui.estoque_sem_movimentos,
       semMovimentosSub: ui.estoque_sem_movimentos_sub,
       verAuditoria: ui.estoque_kardex_ver_auditoria,
-      tipoMap: {
-        VENDA: ui.estoque_tipo_venda,
-        COMPRA: ui.estoque_tipo_compra,
-        ENTRADA_NF: ui.estoque_tipo_entrada_nf,
-        ENTRADA: ui.estoque_tipo_entrada,
-        SAIDA: ui.estoque_tipo_saida,
-        AJUSTE: ui.estoque_tipo_ajuste,
-        ACERTO_INVENTARIO: m.estoque.motivo_acerto_inventario,
-        PERDA: m.estoque.motivo_perda,
-        QUEBRA: m.estoque.motivo_quebra_avaria,
-        DEVOLUCAO: ui.estoque_tipo_devolucao,
-        TRANSFERENCIA: ui.estoque_tipo_transferencia,
-        OUTRO: m.estoque.motivo_outro,
-      },
+      tipoMap: tipoMovimentoEstoqueLabels(m),
     },
   }
 

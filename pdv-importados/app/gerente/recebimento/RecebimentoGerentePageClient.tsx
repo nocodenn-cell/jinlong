@@ -1,5 +1,6 @@
 'use client'
 
+import { labelStatusOperacional } from '@/lib/format/vendaLabels'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -217,7 +218,7 @@ export function RecebimentoGerentePageClient({
       {
         key: 'status',
         header: m.gerente.col_status,
-        cell: (row) => <StatusChip status={row.status} />,
+        cell: (row) => <StatusChip status={row.status} label={labelStatusOperacional(row.status, m)} />,
       },
       {
         key: 'data',
@@ -230,7 +231,7 @@ export function RecebimentoGerentePageClient({
         ),
       },
     ],
-    [locale, m.gerente.col_status, r.col_data, r.col_origem, r.col_remessa],
+    [locale, m, r.col_data, r.col_origem, r.col_remessa],
   )
 
   return (

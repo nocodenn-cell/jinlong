@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button'
 import { ErrorState } from '@/components/ui/feedback'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
+import { tipoMovimentoEstoqueLabels } from '@/lib/format/vendaLabels'
 import { obterListaEstoqueGerente } from '@/app/gerente/estoque/actions'
 import { listarOpcoesFiltrosProdutos } from '@/app/gerente/produtos/actions'
 import { EstoqueTable, type EstoqueLinha } from './_components/EstoqueTable'
@@ -306,18 +307,7 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
               kardexVerAuditoria: ui.estoque_kardex_ver_auditoria,
               semMovimentos: ui.estoque_sem_movimentos,
               semMovimentosSub: ui.estoque_sem_movimentos_sub,
-              tipoVenda: ui.estoque_tipo_venda,
-              tipoCompra: ui.estoque_tipo_compra,
-              tipoEntradaNf: ui.estoque_tipo_entrada_nf,
-              tipoEntrada: ui.estoque_tipo_entrada,
-              tipoSaida: ui.estoque_tipo_saida,
-              tipoAjuste: ui.estoque_tipo_ajuste,
-              tipoDevolucao: ui.estoque_tipo_devolucao,
-              tipoTransferencia: ui.estoque_tipo_transferencia,
-              tipoAcertoInventario: m.estoque.motivo_acerto_inventario,
-              tipoPerda: m.estoque.motivo_perda,
-              tipoQuebra: m.estoque.motivo_quebra_avaria,
-              tipoOutro: m.estoque.motivo_outro,
+              tipoMap: tipoMovimentoEstoqueLabels(m),
             }}
           />
         )}

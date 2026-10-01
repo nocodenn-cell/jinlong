@@ -54,18 +54,7 @@ export type EstoqueLabels = {
   kardexVerAuditoria: string
   semMovimentos: string
   semMovimentosSub: string
-  tipoVenda: string
-  tipoCompra: string
-  tipoEntradaNf: string
-  tipoEntrada: string
-  tipoSaida: string
-  tipoAjuste: string
-  tipoDevolucao: string
-  tipoTransferencia: string
-  tipoAcertoInventario: string
-  tipoPerda: string
-  tipoQuebra: string
-  tipoOutro: string
+  tipoMap: Record<string, string>
 }
 
 const ORIGEM_BADGE: Record<string, string> = {
@@ -242,20 +231,7 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
           semMovimentos: labels.semMovimentos,
           semMovimentosSub: labels.semMovimentosSub,
           verAuditoria: labels.kardexVerAuditoria,
-          tipoMap: {
-            VENDA: labels.tipoVenda,
-            COMPRA: labels.tipoCompra,
-            ENTRADA_NF: labels.tipoEntradaNf,
-            ENTRADA: labels.tipoEntrada,
-            SAIDA: labels.tipoSaida,
-            AJUSTE: labels.tipoAjuste,
-            ACERTO_INVENTARIO: labels.tipoAcertoInventario,
-            PERDA: labels.tipoPerda,
-            QUEBRA: labels.tipoQuebra,
-            DEVOLUCAO: labels.tipoDevolucao,
-            TRANSFERENCIA: labels.tipoTransferencia,
-            OUTRO: labels.tipoOutro,
-          },
+          tipoMap: labels.tipoMap,
         }}
       />
     </>

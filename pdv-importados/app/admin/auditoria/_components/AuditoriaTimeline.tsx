@@ -1,5 +1,6 @@
 'use client'
 
+import { humanizarCodigo } from '@/lib/format/vendaLabels'
 import { useEffect, useState } from 'react'
 import {
   AlertTriangle,
@@ -92,7 +93,7 @@ function resumoTexto(evento: AuditoriaEvento, labels: AuditoriaTimelineLabels): 
   const params = { ...resumoParams }
   if (resumoCodigo === 'ajuste_estoque') {
     const codigo = String(resumoParams.codigo ?? '')
-    params.tipo = labels.ajusteLabels[codigo] ?? codigo
+    params.tipo = labels.ajusteLabels[codigo] ?? humanizarCodigo(codigo)
   }
   if (resumoCodigo === 'alerta') {
     const tipo = String(resumoParams.tipo ?? '')
@@ -122,7 +123,7 @@ function detalheValor(
   ) {
     return formatBRL(Number(valor))
   }
-  if (chave === 'tipo_codigo') return labels.ajusteLabels[String(valor)] ?? String(valor)
+  if (chave === 'tipo_codigo') return labels.ajusteLabels[String(valor)] ?? humanizarCodigo(String(valor))
   if (chave === 'tipo') return labels.alertaLabels[String(valor)] ?? String(valor)
   if (chave === 'forma_estorno') return labels.formaLabels[String(valor)] ?? String(valor)
   return String(valor)
