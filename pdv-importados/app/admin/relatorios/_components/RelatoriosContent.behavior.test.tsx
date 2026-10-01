@@ -307,6 +307,37 @@ describe('RelatoriosContent presentation', () => {
     expect(container.textContent).not.toContain('Devoluções')
   })
 
+  it('curva ABC: percentual acumulado (já 0..100) é exibido sem multiplicar de novo', () => {
+    flushSync(() => {
+      root.render(
+        renderRelatorios(
+          <RelatoriosContent
+            dados={baseDados({
+              curvaAbc: [
+                {
+                  produtoId: 'a1',
+                  nome: 'Produto A',
+                  totalQuantidade: 3,
+                  totalValor: 100,
+                  percentualValor: 77.2,
+                  percentualAcumulado: 77.2,
+                  classeAbc: 'A',
+                },
+              ],
+            })}
+            labels={labels}
+          />,
+        ),
+      )
+    })
+    const margemTab = Array.from(container.querySelectorAll('[role="tab"]')).find(
+      (el) => el.textContent === 'Margem e ABC',
+    ) as HTMLButtonElement
+    flushSync(() => margemTab.click())
+    expect(container.textContent).toContain('77,2%')
+    expect(container.textContent).not.toContain('77.2%')
+  })
+
   it('mostra reposição e cobertura na aba estoque', () => {
     flushSync(() => {
       root.render(renderRelatorios(<RelatoriosContent dados={baseDados()} labels={labels} />))
