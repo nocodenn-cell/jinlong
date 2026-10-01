@@ -278,6 +278,7 @@ export async function listarMovimentacoesCaixa(caixaId: string): Promise<R<Caixa
           : 'Recebimento de conta a receber (dinheiro)',
       status: 'aprovada',
       criadaEm: row.created_at,
+      categoria: row.operacao_tipo === 'ESTORNO' ? 'ESTORNO_AR' : 'RECEBIMENTO_AR',
     }),
   )
 

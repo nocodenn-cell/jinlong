@@ -183,6 +183,8 @@ export type CaixaMovimentacaoLinha = Readonly<{
   motivo: string
   status: string
   criadaEm: string
+  /** Natureza tipada, para a composição do valor sistema. Ausente = movimento sem efeito conhecido no dinheiro. */
+  categoria?: 'SANGRIA' | 'SUPRIMENTO' | 'RECEBIMENTO_AR' | 'ESTORNO_AR'
 }>
 
 export function mapCaixaMovimentacaoLinha(row: CaixaMovimentacaoRaw): CaixaMovimentacaoLinha {
@@ -193,5 +195,51 @@ export function mapCaixaMovimentacaoLinha(row: CaixaMovimentacaoRaw): CaixaMovim
     motivo: row.motivo,
     status: row.status,
     criadaEm: row.created_at,
+    categoria: categoriaDeTipo(row.tipo),
   }
+}
+
+function categoriaDeTipo(tipo: string): 'SANGRIA' | 'SUPRIMENTO' | undefined {
+  const t = normalizarTipoMovimentacao(tipo)
+  return t === 'SANGRIA' || t === 'SUPRIMENTO' ? t : undefined
+}
+
+export type ComposicaoValorSistema = Readonly<{
+  valorInicial: number
+  suprimentos: number
+  sangrias: number
+  /** Recebimentos de contas a receber em dinheiro, já líquidos de estornos. */
+  recebimentosReceber: number
+  /** Vendas em dinheiro, devoluções e demais efeitos: obtido POR DIFERENÇA a partir do valor sistema gravado. */
+  outros: number
+  valorSistema: number
+}>
+
+/**
+ * Explica o "valor sistema" de um turno FECHADO sem recalculá-lo: parte do valor gravado no fechamento
+ * (`derivarValorSistemaFechamento`) e separa o que a lista de movimentações já mostra (suprimentos,
+ * sangrias e recebimentos de contas a receber aprovados). O restante — vendas em dinheiro, devoluções e
+ * ajustes — sai por diferença, então a soma das linhas SEMPRE fecha no valor sistema registrado.
+ */
+export function decomporValorSistema(
+  valorInicial: number,
+  valorSistema: number,
+  movimentacoes: ReadonlyArray<Pick<CaixaMovimentacaoLinha, 'valor' | 'status' | 'categoria'>>,
+): ComposicaoValorSistema {
+  let suprimentos = 0
+  let sangrias = 0
+  let recebimentos = 0
+  for (const mv of movimentacoes) {
+    if (!mv.status.trim().toLowerCase().startsWith('aprovad')) continue
+    const v = Math.abs(Number(mv.valor) || 0)
+    if (mv.categoria === 'SUPRIMENTO') suprimentos += v
+    else if (mv.categoria === 'SANGRIA') sangrias += v
+    else if (mv.categoria === 'RECEBIMENTO_AR') recebimentos += v
+    else if (mv.categoria === 'ESTORNO_AR') recebimentos -= v
+  }
+  suprimentos = roundMoney2(suprimentos)
+  sangrias = roundMoney2(sangrias)
+  recebimentos = roundMoney2(recebimentos)
+  const outros = roundMoney2(valorSistema - valorInicial - suprimentos + sangrias - recebimentos)
+  return { valorInicial, suprimentos, sangrias, recebimentosReceber: recebimentos, outros, valorSistema }
 }

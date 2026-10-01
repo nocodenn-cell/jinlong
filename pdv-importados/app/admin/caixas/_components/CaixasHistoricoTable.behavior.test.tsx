@@ -90,6 +90,39 @@ describe('CaixasHistoricoTable (S9/G-01)', () => {
     expect(container.textContent).toContain('Falha ao consultar.')
   })
 
+  it('UX-015: detalhe do turno explica o valor sistema (inicial ± movimentações = sistema gravado)', async () => {
+    listarMovimentacoesCaixaMock.mockResolvedValue({
+      ok: true,
+      data: [
+        { id: 'm1', tipo: 'Recebimento (conta a receber)', valor: 10, motivo: 'r', status: 'aprovada', criadaEm: '2026-09-17T11:00:00Z', categoria: 'RECEBIMENTO_AR' },
+      ],
+    })
+    act(() => {
+      root.render(
+        <CaixasHistoricoTable
+          linhas={[linhaFechada]}
+          erro={null}
+          locale="pt-BR"
+          labels={{ ...labels, composicaoTitulo: 'Como o valor sistema foi calculado', composicaoSuprimentos: 'Suprimentos', composicaoSangrias: 'Sangrias', composicaoRecebimentos: 'Recebimentos', composicaoOutros: 'Vendas em dinheiro e demais' }}
+        />,
+      )
+    })
+    const linha = Array.from(container.querySelectorAll('tbody tr')).find((r) => r.textContent?.includes('Maria')) as HTMLElement
+    await act(async () => {
+      linha.click()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    const bloco = document.querySelector('[data-testid="caixa-composicao-valor-sistema"]') as HTMLElement
+    expect(bloco).toBeTruthy()
+    const t = (bloco.textContent ?? '').replace(/ /g, ' ')
+    // linhaFechada: inicial 100, sistema 160, recebimento 10 → vendas/demais 50
+    expect(t).toContain('100,00')
+    expect(t).toContain('10,00')
+    expect(t).toContain('50,00')
+    expect(t).toContain('160,00')
+  })
+
   it('UX-014: coluna Operador fica fixa durante o scroll horizontal', () => {
     act(() => {
       root.render(
