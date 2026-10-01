@@ -90,6 +90,17 @@ describe('CaixasHistoricoTable (S9/G-01)', () => {
     expect(container.textContent).toContain('Falha ao consultar.')
   })
 
+  it('UX-014: coluna Operador fica fixa durante o scroll horizontal', () => {
+    act(() => {
+      root.render(
+        <CaixasHistoricoTable linhas={[linhaFechada]} erro={null} locale="pt-BR" labels={labels} />,
+      )
+    })
+    const primeiraTh = container.querySelector('thead th') as HTMLElement
+    expect(primeiraTh.textContent).toContain('Operador')
+    expect(primeiraTh.className).toContain('sticky')
+  })
+
   it('lista o turno com o valor sistema já recebido (não recalcula nada)', () => {
     act(() => {
       root.render(

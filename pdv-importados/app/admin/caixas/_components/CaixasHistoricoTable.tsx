@@ -79,6 +79,7 @@ export function CaixasHistoricoTable({
     {
       key: 'operador',
       header: labels.colOperador,
+      sticky: true,
       priority: 'primary',
       cell: (r) => <span className="font-medium text-fg">{r.operadorNome}</span>,
     },

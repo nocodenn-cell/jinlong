@@ -72,6 +72,8 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
     {
       key: 'produto',
       header: labels.produto,
+      // Fixa o produto durante o scroll horizontal (ver DataTable `sticky`).
+      sticky: true,
       sortValue: (r) => r.nome,
       cell: (r) => (
         <div className="min-w-0">

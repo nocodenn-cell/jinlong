@@ -174,6 +174,7 @@ export function ComprasContent({
       {
         key: 'id',
         header: c.col_id,
+        sticky: true,
         cell: (row) => (
           <span className="font-mono text-caption text-fg-muted">{idCurto(row.id)}</span>
         ),
@@ -259,7 +260,7 @@ export function ComprasContent({
     <>
       <PageHeader title={c.titulo} subtitle={c.subtitulo} />
 
-      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4 [&>*]:min-w-0">
         <MetricCard label={c.kpi_rascunho} value={String(kpisIniciais.total_rascunho)} icon="list-filter" tone="gold" />
         <MetricCard
           label={c.kpi_confirmadas}
