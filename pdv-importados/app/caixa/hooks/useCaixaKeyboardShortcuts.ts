@@ -1,4 +1,5 @@
 import { useEffect } from "react"
+import { CAIXA_ATALHOS, atalhoCombina } from "@/app/caixa/caixaAtalhos"
 
 /** Atalhos extras do layout PDV clássico (Fase E). Layout único desde a Fase 6.1 (Onda 3). */
 export type CaixaPdvClassicAtalhos = {
@@ -38,17 +39,6 @@ type Params = {
   /** F1: abre referência de atalhos (Fase 3). */
   onAbrirReferencia?: () => void
   pdvClassicAtalhos?: CaixaPdvClassicAtalhos | null
-}
-
-const CODE_TO_METODO_INDICE: Record<string, 1 | 2 | 3 | 4> = {
-  Digit1: 1,
-  Numpad1: 1,
-  Digit2: 2,
-  Numpad2: 2,
-  Digit3: 3,
-  Numpad3: 3,
-  Digit4: 4,
-  Numpad4: 4,
 }
 
 function alvoEhCampoTexto(target: EventTarget | null): boolean {
@@ -92,17 +82,14 @@ export function useCaixaKeyboardShortcuts({
 }: Params) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!(e.ctrlKey && e.shiftKey)) return
+      const suprimento = atalhoCombina(CAIXA_ATALHOS.suprimento, e)
+      if (!suprimento && !atalhoCombina(CAIXA_ATALHOS.sangria, e)) return
       if (e.repeat) return
       if (!caixaAberto || movimentandoCaixa) return
       if (alvoEhCampoTexto(e.target) || existeDialogAberto()) return
-      if (e.code === "KeyS") {
-        e.preventDefault()
-        onAbrirSuprimento()
-      } else if (e.code === "KeyR") {
-        e.preventDefault()
-        onAbrirSangria()
-      }
+      e.preventDefault()
+      if (suprimento) onAbrirSuprimento()
+      else onAbrirSangria()
     }
     globalThis.addEventListener("keydown", onKey)
     return () => globalThis.removeEventListener("keydown", onKey)
@@ -114,38 +101,38 @@ export function useCaixaKeyboardShortcuts({
       if (alvoEhCampoTexto(e.target)) return
       // F1 alterna a própria referência de atalhos, por isso passa antes do
       // guard de diálogo (é o único atalho que deve agir com ela aberta).
-      if (e.code === "F1") {
+      if (atalhoCombina(CAIXA_ATALHOS.ajuda, e)) {
         e.preventDefault()
         onAbrirReferencia?.()
         return
       }
       if (existeDialogAberto()) return
-      if (e.code === "F4" || e.code === "F9") {
+      if (atalhoCombina(CAIXA_ATALHOS.finalizar, e)) {
         e.preventDefault()
         onFinalizar()
         return
       }
-      if (e.code === "F2") {
+      if (atalhoCombina(CAIXA_ATALHOS.buscar, e)) {
         e.preventDefault()
         onFocarBusca()
         return
       }
-      if (e.code === "F3") {
+      if (atalhoCombina(CAIXA_ATALHOS.consultaRapida, e)) {
         e.preventDefault()
         onConsultaRapida?.()
         return
       }
-      if (e.code === "F6") {
+      if (atalhoCombina(CAIXA_ATALHOS.fecharCaixa, e)) {
         e.preventDefault()
         onFecharCaixa()
         return
       }
-      if (e.code === "F8") {
+      if (atalhoCombina(CAIXA_ATALHOS.novoCupom, e)) {
         e.preventDefault()
         onNovoCupom()
         return
       }
-      if (e.code === "F12") {
+      if (atalhoCombina(CAIXA_ATALHOS.reimprimir, e)) {
         e.preventDefault()
         onReimprimir?.()
         return
@@ -153,59 +140,42 @@ export function useCaixaKeyboardShortcuts({
       // 1–4: forma de pagamento (sem modificadores). Mesma semântica dos F:
       // já barrado em campo de texto pelo guard no topo, então não conflita
       // com a digitação de código de barras.
-      if (
-        onSelecionarMetodo &&
-        !e.ctrlKey &&
-        !e.altKey &&
-        !e.shiftKey &&
-        !e.metaKey &&
-        CODE_TO_METODO_INDICE[e.code]
-      ) {
+      const indiceMetodo = CAIXA_ATALHOS.metodoPagamento.findIndex((a) => atalhoCombina(a, e))
+      if (onSelecionarMetodo && indiceMetodo >= 0) {
         e.preventDefault()
-        onSelecionarMetodo(CODE_TO_METODO_INDICE[e.code])
-        return
-      }
-      if (e.ctrlKey && !e.shiftKey && !e.altKey && e.code === "KeyB") {
-        e.preventDefault()
-        onFocarBusca()
+        onSelecionarMetodo((indiceMetodo + 1) as 1 | 2 | 3 | 4)
         return
       }
       // Ctrl+Z fora de campo de texto (guard no topo do handler) → desfazer
       // remoção de item. Em input/textarea o undo nativo do navegador segue.
-      if (onDesfazerRemocao && e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey && e.code === "KeyZ") {
+      if (onDesfazerRemocao && atalhoCombina(CAIXA_ATALHOS.desfazerRemocao, e)) {
         e.preventDefault()
         onDesfazerRemocao()
         return
       }
-      if (
-        pdvClassicAtalhos &&
-        e.altKey &&
-        !e.ctrlKey &&
-        !e.shiftKey &&
-        !e.metaKey
-      ) {
-        if (e.code === "KeyQ") {
+      if (pdvClassicAtalhos) {
+        if (atalhoCombina(CAIXA_ATALHOS.excluirVenda, e)) {
           e.preventDefault()
           pdvClassicAtalhos.onExcluirVenda()
           return
         }
-        if (e.code === "KeyS") {
+        if (atalhoCombina(CAIXA_ATALHOS.finalizarClassico, e)) {
           e.preventDefault()
           pdvClassicAtalhos.onFinalizarVenda()
           return
         }
         const abas = pdvClassicAtalhos.abas
-        if (abas?.produto && e.code === "KeyZ") {
+        if (abas?.produto && atalhoCombina(CAIXA_ATALHOS.focoProduto, e)) {
           e.preventDefault()
           abas.produto()
           return
         }
-        if (abas?.cliente && e.code === "KeyC") {
+        if (abas?.cliente && atalhoCombina(CAIXA_ATALHOS.cliente, e)) {
           e.preventDefault()
           abas.cliente()
           return
         }
-        if (abas?.pgto && e.code === "KeyB") {
+        if (abas?.pgto && atalhoCombina(CAIXA_ATALHOS.pagamento, e)) {
           e.preventDefault()
           abas.pgto()
           return
