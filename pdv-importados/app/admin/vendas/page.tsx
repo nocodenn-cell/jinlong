@@ -229,6 +229,12 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
       value: formatBRL(kpis.faturado),
       icon: 'dollar-sign',
       tone: 'gold',
+      // Devolução pós-venda não altera `faturado` (venda segue CONCLUIDA): aparece à parte,
+      // junto da receita líquida = faturado − devoluções (contrato em lib/vendas/metricasVendas.ts).
+      hint:
+        kpis.devolucoes > 0
+          ? `${ui.vendas_devolucoes} ${formatBRL(kpis.devolucoes)} · ${ui.vendas_receita_liquida} ${formatBRL(kpis.receitaLiquida)}`
+          : undefined,
     },
     {
       label: ui.vendas_concluidas,
