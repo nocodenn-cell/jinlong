@@ -40,8 +40,24 @@ DECLARE
   v_antigo int;
   p1 uuid[]; p2 uuid[]; p3 uuid[];
 BEGIN
+  -- Fixture autossuficiente (CI usa banco recém-criado com seed determinístico; nada aqui depende de dados de
+  -- desenvolvimento). Tudo dentro da transação com ROLLBACK. Produtos vêm da migration 027.
+  INSERT INTO auth.users (id) VALUES (c_ger_a), (c_ger_b), (c_op_b) ON CONFLICT DO NOTHING;
+  INSERT INTO public.lojas (id, nome, codigo, ativo) VALUES
+    (c_loja_a, 'Onda A Loja A', 'ONDAA-A', true),
+    (c_loja_b, 'Onda A Loja B', 'ONDAA-B', true)
+  ON CONFLICT DO NOTHING;
+  INSERT INTO public.usuarios (id, nome, perfil, ativo, loja_id) VALUES
+    (c_ger_a, 'Onda A Gerente A', 'GERENTE',  true, c_loja_a),
+    (c_ger_b, 'Onda A Gerente B', 'GERENTE',  true, c_loja_b),
+    (c_op_b,  'Onda A Operador B', 'OPERADOR', true, c_loja_b)
+  ON CONFLICT (id) DO UPDATE SET perfil = EXCLUDED.perfil, ativo = true, loja_id = EXCLUDED.loja_id;
+
   SELECT c.id INTO v_caixa FROM public.caixas c WHERE c.loja_id = c_loja_a LIMIT 1;
-  IF v_caixa IS NULL THEN RAISE EXCEPTION 'onda-a: fixture sem caixa na loja A'; END IF;
+  IF v_caixa IS NULL THEN
+    v_caixa := gen_random_uuid();
+    INSERT INTO public.caixas (id, operador_id, loja_id, status, valor_inicial) VALUES (v_caixa, c_ger_a, c_loja_a, 'ABERTO', 0);
+  END IF;
   IF NOT EXISTS (SELECT 1 FROM public.produtos WHERE id IN (c_prod1, c_prod2) HAVING count(*) = 2) THEN
     RAISE EXCEPTION 'onda-a: fixture sem os 2 produtos de seed';
   END IF;
