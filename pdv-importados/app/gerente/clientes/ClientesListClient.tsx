@@ -207,6 +207,7 @@ export function ClientesListClient({
       key: 'cliente',
       header: m.clientes.col_cliente,
       priority: 'primary',
+      sticky: true,
       cell: (c) => (
         <div className="flex min-w-0 items-center gap-2.5">
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-info-bg)] text-caption font-bold text-brand">
@@ -235,14 +236,14 @@ export function ClientesListClient({
       header: m.clientes.col_documento,
       priority: 'contextual',
       cell: (c) => (
-        <span className="font-mono text-caption text-fg-muted">{maskDocumentoDisplay(c.documento)}</span>
+        <span className="whitespace-nowrap font-mono text-caption text-fg-muted">{maskDocumentoDisplay(c.documento)}</span>
       ),
     },
     {
       key: 'tel',
       header: m.clientes.col_telefone,
       cell: (c) => (
-        <span className="tabular-nums text-caption text-fg" title={c.telefone ?? undefined}>
+        <span className="whitespace-nowrap tabular-nums text-caption text-fg" title={c.telefone ?? undefined}>
           {maskTelefoneDisplay(c.telefone)}
         </span>
       ),

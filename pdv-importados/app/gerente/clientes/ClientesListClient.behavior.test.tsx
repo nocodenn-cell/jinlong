@@ -112,6 +112,24 @@ describe('ClientesListClient Fase A', () => {
     expect(container.textContent).toContain('Mostrando 1 cliente')
   })
 
+  it('UX-014: coluna Cliente fixa no scroll horizontal; documento e telefone não quebram linha', () => {
+    render(
+      <ClientesListClient
+        idioma="pt"
+        locale="pt-BR"
+        messages={m}
+        clientesIniciais={[row]}
+        hasMoreInicial={false}
+      />,
+    )
+    const primeiraTh = container.querySelector('thead th') as HTMLElement
+    expect(primeiraTh.className).toContain('sticky')
+    const tel = container.querySelector('td span.tabular-nums.text-caption') as HTMLElement
+    expect(tel.className).toContain('whitespace-nowrap')
+    const doc = container.querySelector('td span.font-mono') as HTMLElement
+    expect(doc.className).toContain('whitespace-nowrap')
+  })
+
   it('oferece Carregar mais quando hasMore', () => {
     render(
       <ClientesListClient
