@@ -1079,6 +1079,8 @@
     "erro_sem_itens": "Adicione ao menos um item.",
     "vazio_titulo": "Nenhuma ordem de compra",
     "vazio_sub": "Crie uma nova ordem para registrar pedidos com fornecedores.",
+    "erro_carregar_lista": "Não foi possível carregar a lista de ordens de compra. Os indicadores acima podem não bater com a lista até recarregar.",
+    "tentar_novamente": "Tentar novamente",
     "busca_placeholder": "Fornecedor, produto ou ID…",
     "filtro_todos_status": "Todos os status",
     "pag_prev": "← Anterior",

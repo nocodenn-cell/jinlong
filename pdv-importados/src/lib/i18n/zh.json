@@ -1079,6 +1079,8 @@
     "erro_sem_itens": "请至少添加一条明细。",
     "vazio_titulo": "暂无采购单",
     "vazio_sub": "创建新采购单以登记与供应商的订单。",
+    "erro_carregar_lista": "无法加载采购单列表。重新加载前，上方指标可能与列表不一致。",
+    "tentar_novamente": "重试",
     "busca_placeholder": "供应商、商品或编号…",
     "filtro_todos_status": "全部状态",
     "pag_prev": "← 上一页",
