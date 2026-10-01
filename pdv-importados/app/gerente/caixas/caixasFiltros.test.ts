@@ -14,28 +14,39 @@ import {
   temDiferenca,
 } from './caixasHistorico'
 
-// Quarta-feira, 2026-09-30 15:30 (hora local do runner).
-const AGORA = new Date(2026, 8, 30, 15, 30, 0)
+// 30/09/2026 18:30 em Brasília = 30/09/2026 21:30Z (independe do fuso do runner).
+const AGORA = new Date('2026-09-30T21:30:00Z')
+// 29/09/2026 23:30 em Brasília = 30/09 02:30Z: o servidor (UTC) já está no dia seguinte.
+const NOITE = new Date('2026-09-30T02:30:00Z')
 
-describe('períodos do histórico de caixas', () => {
+describe('períodos do histórico de caixas (UX-013: mesma janela BRT de Vendas/Auditoria)', () => {
   it('tudo não limita o intervalo', () => {
     expect(periodoInicio('tudo', AGORA)).toBeNull()
     expect(periodoFim('tudo', AGORA)).toBeNull()
   })
 
-  it('hoje começa à meia-noite local e não tem fim', () => {
-    expect(new Date(periodoInicio('hoje', AGORA) as string).getTime()).toBe(new Date(2026, 8, 30, 0, 0, 0, 0).getTime())
+  it('hoje começa à meia-noite de Brasília e não tem fim', () => {
+    expect(periodoInicio('hoje', AGORA)).toBe('2026-09-30T03:00:00.000Z')
     expect(periodoFim('hoje', AGORA)).toBeNull()
   })
 
-  it('ontem cobre 00:00:00.000 a 23:59:59.999 do dia anterior', () => {
-    expect(new Date(periodoInicio('ontem', AGORA) as string).getTime()).toBe(new Date(2026, 8, 29, 0, 0, 0, 0).getTime())
-    expect(new Date(periodoFim('ontem', AGORA) as string).getTime()).toBe(new Date(2026, 8, 29, 23, 59, 59, 999).getTime())
+  it('hoje não escorrega para o dia seguinte quando o servidor em UTC já virou o dia', () => {
+    expect(periodoInicio('hoje', NOITE)).toBe('2026-09-29T03:00:00.000Z')
   })
 
-  it('7d volta exatamente 7 dias; mes começa no dia 1', () => {
-    expect(new Date(periodoInicio('7d', AGORA) as string).getTime()).toBe(AGORA.getTime() - 7 * 86_400_000)
-    expect(new Date(periodoInicio('mes', AGORA) as string).getTime()).toBe(new Date(2026, 8, 1, 0, 0, 0, 0).getTime())
+  it('ontem cobre 00:00:00.000 a 23:59:59.999 (BRT) do dia anterior', () => {
+    expect(periodoInicio('ontem', AGORA)).toBe('2026-09-29T03:00:00.000Z')
+    expect(periodoFim('ontem', AGORA)).toBe('2026-09-30T02:59:59.999Z')
+  })
+
+  it('7d e 30d são janelas de dias corridos incluindo hoje; mes começa no dia 1', () => {
+    expect(periodoInicio('7d', AGORA)).toBe('2026-09-24T03:00:00.000Z')
+    expect(periodoInicio('30d', AGORA)).toBe('2026-09-01T03:00:00.000Z')
+    expect(periodoInicio('mes', AGORA)).toBe('2026-09-01T03:00:00.000Z')
+  })
+
+  it('oferece os mesmos períodos das demais telas (inclui 30d)', () => {
+    expect([...CAIXAS_PERIODOS].sort()).toEqual(['30d', '7d', 'hoje', 'mes', 'ontem', 'tudo'])
   })
 })
 
