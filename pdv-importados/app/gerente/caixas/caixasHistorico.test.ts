@@ -69,7 +69,7 @@ describe('S9/G-01 — mapCaixaHistoricoLinha', () => {
 })
 
 describe('S9/G-01 — mapCaixaMovimentacaoLinha', () => {
-  it('mapeia campos 1:1, sem transformação de valor', () => {
+  it('mapeia campos 1:1, sem transformação de valor (mais a categoria tipada)', () => {
     const linha = mapCaixaMovimentacaoLinha({
       id: 'mov-1',
       tipo: 'SANGRIA',
@@ -85,6 +85,51 @@ describe('S9/G-01 — mapCaixaMovimentacaoLinha', () => {
       motivo: 'Pagamento fornecedor',
       status: 'aprovada',
       criadaEm: '2026-09-17T12:00:00Z',
+      categoria: 'SANGRIA',
     })
+  })
+})
+
+describe('decomporValorSistema (UX-015)', () => {
+  it('turno do exemplo da auditoria: inicial 50 + recebimento 10 → vendas/demais 52 = sistema 112', async () => {
+    const { decomporValorSistema } = await import('./caixasHistorico')
+    const c = decomporValorSistema(50, 112, [
+      { valor: 10, status: 'aprovada', categoria: 'RECEBIMENTO_AR' },
+    ])
+    expect(c).toEqual({ valorInicial: 50, suprimentos: 0, sangrias: 0, recebimentosReceber: 10, outros: 52, valorSistema: 112 })
+  })
+
+  it('a soma das linhas sempre fecha no valor sistema gravado', async () => {
+    const { decomporValorSistema } = await import('./caixasHistorico')
+    const mov = [
+      { valor: 20, status: 'aprovado', categoria: 'SUPRIMENTO' as const },
+      { valor: 30, status: 'aprovado', categoria: 'SANGRIA' as const },
+      { valor: 15, status: 'aprovada', categoria: 'RECEBIMENTO_AR' as const },
+      { valor: 5, status: 'aprovada', categoria: 'ESTORNO_AR' as const },
+    ]
+    const c = decomporValorSistema(100, 180, mov)
+    const soma = c.valorInicial + c.suprimentos - c.sangrias + c.recebimentosReceber + c.outros
+    expect(Math.round(soma * 100) / 100).toBe(180)
+    expect(c.recebimentosReceber).toBe(10)
+  })
+
+  it('pendentes, canceladas e movimentos sem categoria não entram nas linhas (caem em "demais")', async () => {
+    const { decomporValorSistema } = await import('./caixasHistorico')
+    const c = decomporValorSistema(50, 80, [
+      { valor: 99, status: 'pendente', categoria: 'SANGRIA' },
+      { valor: 99, status: 'cancelado', categoria: 'SUPRIMENTO' },
+      { valor: 7, status: 'aprovado', categoria: undefined },
+    ])
+    expect(c.sangrias).toBe(0)
+    expect(c.suprimentos).toBe(0)
+    expect(c.outros).toBe(30)
+  })
+
+  it('mapCaixaMovimentacaoLinha tipa sangria/suprimento (banco grava em minúsculas)', async () => {
+    const { mapCaixaMovimentacaoLinha } = await import('./caixasHistorico')
+    const base = { id: 'x', valor: 1, motivo: 'm', status: 'aprovado', created_at: 'd' }
+    expect(mapCaixaMovimentacaoLinha({ ...base, tipo: 'sangria' }).categoria).toBe('SANGRIA')
+    expect(mapCaixaMovimentacaoLinha({ ...base, tipo: 'suprimento' }).categoria).toBe('SUPRIMENTO')
+    expect(mapCaixaMovimentacaoLinha({ ...base, tipo: 'estorno' }).categoria).toBeUndefined()
   })
 })
