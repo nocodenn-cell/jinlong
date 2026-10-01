@@ -102,7 +102,10 @@ export function ProdutoFormCompletoClient({
           />
         </div>
 
-        <div className="mt-6 flex flex-wrap items-center justify-end gap-3 border-t border-[var(--color-border-secondary)] pt-4">
+        <div
+          className="sticky bottom-0 z-10 mt-6 flex flex-wrap items-center justify-end gap-3 border-t border-[var(--color-border-secondary)] bg-[var(--color-surface)] py-3"
+          data-testid="produto-completo-acoes"
+        >
           <Button type="button" variant="secondary" onClick={orch.fechar} disabled={orch.saving}>
             {m.comum.cancelar}
           </Button>
