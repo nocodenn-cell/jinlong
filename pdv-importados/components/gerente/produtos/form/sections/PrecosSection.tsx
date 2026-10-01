@@ -23,6 +23,8 @@ type Props = Readonly<{
   onEnterSubmit?: () => void
   /** Cadastro Completo mostra o histórico de preços; Rápido não (produto novo não tem histórico). */
   mostrarHistorico?: boolean
+  /** Cadastro Completo: "permitir abaixo do custo" e custo médio ficam junto dos preços (antes numa seção Compra distante). */
+  mostrarCompra?: boolean
 }>
 
 export function PrecosSection({
@@ -31,6 +33,7 @@ export function PrecosSection({
   proximoAposVarejoRef,
   onEnterSubmit,
   mostrarHistorico = false,
+  mostrarCompra = false,
 }: Props) {
   const ctx = useProdutoFormContext()
   const p = ctx.m.produtos
@@ -124,6 +127,32 @@ export function PrecosSection({
             <p className="mt-1 text-caption text-jl-fg-3">{p.margem_sem_custo}</p>
           ) : null}
         </div>
+
+        {mostrarCompra ? (
+          <div className="space-y-3" data-testid="precos-compra">
+            <div>
+              <label className="flex h-9 cursor-pointer items-center gap-2 text-xs font-medium text-jl-fg-3">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-amber-400"
+                  checked={ctx.permitirAbaixoCusto}
+                  onChange={(e) => ctx.setPermitirAbaixoCusto(e.target.checked)}
+                  disabled={disabled}
+                />
+                {p.permitir_abaixo_custo}
+              </label>
+              <p className="mt-0.5 text-caption text-jl-fg-3">{p.permitir_abaixo_custo_hint}</p>
+            </div>
+
+            <div className="rounded-md border border-[var(--color-border-secondary)] bg-white/[.04] p-3">
+              <p className="text-xs font-medium text-jl-fg-3">{p.custo_medio_label}</p>
+              <p className="mt-1 text-sm font-medium text-jl-fg-1">
+                {readOnly.custoMedio !== null ? formatBRL(readOnly.custoMedio) : '—'}
+              </p>
+              <p className="mt-0.5 text-caption text-jl-fg-3">{p.custo_medio_hint}</p>
+            </div>
+          </div>
+        ) : null}
 
         {/* Faixa 1 do atacado (preço + qtd. mínima) é a fonte que a RPC de
             criação usa (`p_faixa`) para gravar atomicamente a 1ª linha de
