@@ -30,6 +30,16 @@ export type AjusteAlvo = Readonly<{
   estoqueMinimo: number
 }>
 
+/** "Saldo: 9 → 5 (−4)". Sem valor válido, mostra só o saldo atual. */
+export function previaAjuste(atual: number, novo: number | null): string {
+  const fmt = (n: number) => n.toLocaleString('pt-BR', { maximumFractionDigits: 3 })
+  if (novo == null || !Number.isFinite(novo)) return `Saldo atual: ${fmt(atual)}`
+  const delta = Math.round((novo - atual) * 1000) / 1000
+  if (delta === 0) return `Saldo: ${fmt(atual)} (sem alteração)`
+  const sinal = delta > 0 ? '+' : '−'
+  return `Saldo: ${fmt(atual)} → ${fmt(novo)} (${sinal}${fmt(Math.abs(delta))})`
+}
+
 export function AjusteSaldoModal({
   alvo,
   onClose,
@@ -42,9 +52,14 @@ export function AjusteSaldoModal({
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [erro, setErro] = useState<string | null>(null)
+  // Valor digitado no campo de saldo, só para a prévia da diferença (o envio continua lendo o FormData).
+  const [novoSaldo, setNovoSaldo] = useState<number | null>(null)
 
   useEffect(() => {
-    if (alvo) setErro(null)
+    if (alvo) {
+      setErro(null)
+      setNovoSaldo(alvo.quantidadeAtual)
+    }
   }, [alvo])
 
   if (!alvo) return null
@@ -106,6 +121,7 @@ export function AjusteSaldoModal({
               step="0.001"
               required
               defaultValue={alvo.quantidadeAtual}
+              onChange={(e) => setNovoSaldo(e.target.value === '' ? null : Number(e.target.value))}
             />
           </Field>
           <Field id="ajuste-min" label={labels.estoqueMinimo} required>
@@ -119,6 +135,10 @@ export function AjusteSaldoModal({
             />
           </Field>
         </div>
+
+        <p className="text-caption text-fg-muted" data-testid="ajuste-previa" aria-live="polite">
+          {previaAjuste(alvo.quantidadeAtual, novoSaldo)}
+        </p>
 
         <Field id="ajuste-motivo" label={labels.motivo} required>
           <Select name="motivo" required defaultValue="ACERTO_INVENTARIO">

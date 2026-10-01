@@ -23,16 +23,19 @@ export default async function CaixaPage() {
   const metaNome =
     typeof user?.user_metadata?.full_name === "string" ? user.user_metadata.full_name.trim() : ""
   const emailLocalPart = user?.email?.trim()?.split("@")[0]?.trim() ?? ""
+
+  const { data: usuarioData } = user
+    ? await supabase.from('usuarios').select('perfil, nome').eq('id', user.id).maybeSingle()
+    : { data: null }
+  const perfil = usuarioData?.perfil ?? null
+  // Nome do funcionário (cadastro) antes do login: quem abre o caixa é identificado pelo nome.
+  const nomeCadastro = typeof usuarioData?.nome === "string" ? usuarioData.nome.trim() : ""
   const operadorLabel =
     (metaNome.length > 0 ? metaNome : null) ||
+    (nomeCadastro.length > 0 ? nomeCadastro : null) ||
     (emailLocalPart.length > 0 ? emailLocalPart : null) ||
     (user?.id ? user.id.slice(0, 8) : null) ||
     "—"
-
-  const { data: usuarioData } = user
-    ? await supabase.from('usuarios').select('perfil').eq('id', user.id).maybeSingle()
-    : { data: null }
-  const perfil = usuarioData?.perfil ?? null
 
   return <CaixaPageClient messages={messages} idioma={idioma} operadorLabel={operadorLabel} perfil={perfil} userId={user?.id ?? null} />
 }
