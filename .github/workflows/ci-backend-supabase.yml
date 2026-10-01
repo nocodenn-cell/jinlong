@@ -142,6 +142,7 @@ jobs:
             exit 1
           fi
           psql "$PSQL_URL" -v ON_ERROR_STOP=1 -f scripts/devolucao-d13-caixa-desembolso.test.sql
+          psql "$PSQL_URL" -v ON_ERROR_STOP=1 -f scripts/listar-caixas-elegiveis-desembolso.test.sql
 
       - name: Test RLS scope by profile
         run: |

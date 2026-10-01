@@ -6232,6 +6232,13 @@ export type Database = {
           unidade_medida: string
         }[]
       }
+      listar_caixas_elegiveis_desembolso: {
+        Args: never
+        Returns: {
+          id: string
+          operador_nome: string
+        }[]
+      }
       listar_venda_eventos_gerente: {
         Args: {
           p_event_types?: string[]
