@@ -8,7 +8,6 @@ import { devolverOuTrocarVendaImpl } from '@/app/gerente/vendas/devolverOuTrocar
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { getGerenteLojaId } from '@/lib/gerente/auth/sessionContext'
 import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
-import { liquidarKpis } from '@/app/gerente/vendas/kpisLiquidos'
 
 export type VendaListRow = {
   id: string
@@ -181,12 +180,15 @@ export async function obterKpisVendas(
     const row = (Array.isArray(data) ? data[0] : data) as RpcKpiRow | undefined
     if (!row) return vazio
 
-    return liquidarKpis({
+    // `kpis_venda_eventos_gerente` já agrega VENDAS (concluída pela data da venda, cancelada pela data do
+    // cancelamento): nada a abater aqui. (O antigo `liquidarKpis` compensava o KPI por evento do ledger.)
+    return {
       faturado: Number(row.faturado ?? 0),
       qtdConcluidas: Number(row.qtd_concluidas ?? 0),
+      ticketMedio: Number(row.ticket_medio ?? 0),
       qtdCanceladas: Number(row.qtd_canceladas ?? 0),
       valorCanceladas: Number(row.valor_canceladas ?? 0),
-    })
+    }
   } catch {
     return vazio
   }

@@ -293,13 +293,15 @@ export async function validateRaceCondition(
 /** Teste 4 — KPI drift tolerância zero (substitui A.5). */
 export function validateKpiDrift(snapshot: LojaFinancialSnapshot): GateTestVerdict {
   const details: string[] = []
-  if (!moneyEq(snapshot.ledgerFaturado, snapshot.kpiFaturado)) {
+  // P-03/UX-010: o KPI lê `vendas` (exclui CANCELADA de faturado/concluídas); o ledger soma todo SALE_REGISTERED,
+  // inclusive de vendas depois canceladas. A base de comparação do KPI é `vendas CONCLUIDA`.
+  if (!moneyEq(snapshot.vendasFaturado, snapshot.kpiFaturado)) {
     details.push(
-      `ledger faturado ${snapshot.ledgerFaturado} != KPI ${snapshot.kpiFaturado}`,
+      `vendas CONCLUIDA faturado ${snapshot.vendasFaturado} != KPI ${snapshot.kpiFaturado}`,
     )
   }
-  if (snapshot.ledgerQtd !== snapshot.kpiQtd) {
-    details.push(`ledger qtd ${snapshot.ledgerQtd} != KPI qtd ${snapshot.kpiQtd}`)
+  if (snapshot.vendasQtd !== snapshot.kpiQtd) {
+    details.push(`vendas CONCLUIDA qtd ${snapshot.vendasQtd} != KPI qtd ${snapshot.kpiQtd}`)
   }
   const pass = details.length === 0
   return { name: 'KPI drift', pass, details }
