@@ -6,8 +6,10 @@
  * `relatorio_resumo_executivo_periodo`; o teste de contrato entre telas garante que os dois lados concordam.
  *
  *   faturado          = Σ total_liquido das vendas CONCLUIDA
- *   devolucoes        = Σ devolução pós-venda efetiva (operacao_id preenchido) de venda CONCLUIDA
- *                       (a linha gerada por cancelamento tem operacao_id NULL e pertence a venda CANCELADA)
+ *   devolucoes        = Σ `venda_pos_venda_operacoes.valor_estornado` (valor econômico TOTAL da devolução pós-venda:
+ *                       meio de pagamento + abatimento do saldo a receber, PR-2D/D-13) de venda CONCLUIDA.
+ *                       Não usa `devolucoes.valor`, que no D-13 guarda só a parcela paga em meio de pagamento.
+ *                       A linha gerada por cancelamento não gera operação pós-venda e a venda é CANCELADA
  *   receita_liquida   = faturado − devolucoes
  *   ticket_medio      = faturado / vendas_concluidas (0 sem vendas concluídas; não deduz devolução)
  *   taxa_cancelamento = vendas_canceladas / vendas_registradas, FRAÇÃO 0..1 (0 sem vendas); % é só apresentação
@@ -15,15 +17,15 @@
 
 export type StatusVenda = 'CONCLUIDA' | 'CANCELADA'
 
-export type DevolucaoVendaMin = Readonly<{
-  valor: number | string | null
-  operacao_id: string | null
+/** Operação pós-venda (devolução/troca) de uma venda; `valor_estornado` = meio de pagamento + abatimento de AR. */
+export type OperacaoPosVendaMin = Readonly<{
+  valor_estornado: number | string | null
 }>
 
 export type VendaMetricaMin = Readonly<{
   status: string | null
   total_liquido: number | string | null
-  devolucoes?: ReadonlyArray<DevolucaoVendaMin> | null
+  venda_pos_venda_operacoes?: ReadonlyArray<OperacaoPosVendaMin> | null
 }>
 
 export type MetricasVendas = Readonly<{
@@ -82,8 +84,8 @@ export function calcularMetricasVendas(vendas: ReadonlyArray<VendaMetricaMin>): 
     if (v.status === 'CONCLUIDA') {
       concluidas += 1
       faturado += total
-      for (const d of v.devolucoes ?? []) {
-        if (d.operacao_id) devolvido += num(d.valor)
+      for (const op of v.venda_pos_venda_operacoes ?? []) {
+        devolvido += num(op.valor_estornado)
       }
     } else if (v.status === 'CANCELADA') {
       canceladas += 1

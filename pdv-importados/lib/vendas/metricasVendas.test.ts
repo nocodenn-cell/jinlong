@@ -11,20 +11,18 @@ import {
 
 /** Cenário de aceite da Onda A (o mesmo do harness SQL vendas-lista-kpis-por-venda.test.sql). */
 const CENARIO: VendaMetricaMin[] = [
-  { status: 'CONCLUIDA', total_liquido: 100.0, devolucoes: [] },
+  { status: 'CONCLUIDA', total_liquido: 100.0, venda_pos_venda_operacoes: [] },
   {
     status: 'CONCLUIDA',
     total_liquido: 123.9,
-    devolucoes: [{ valor: 50, operacao_id: 'op-1' }], // devolução pós-venda efetiva
+    venda_pos_venda_operacoes: [{ valor_estornado: 50 }], // devolução pós-venda efetiva (valor econômico total)
   },
-  { status: 'CONCLUIDA', total_liquido: 130.0, devolucoes: [] },
+  { status: 'CONCLUIDA', total_liquido: 130.0, venda_pos_venda_operacoes: [] },
   {
     status: 'CANCELADA',
     total_liquido: 129.9,
-    devolucoes: [
-      { valor: 129.9, operacao_id: null }, // linha gerada pelo cancelamento
-      { valor: 10, operacao_id: 'op-2' }, // devolução anterior ao cancelamento
-    ],
+    // cancelamento não gera operação pós-venda; a devolução anterior ao cancelamento está fora (venda CANCELADA)
+    venda_pos_venda_operacoes: [{ valor_estornado: 10 }],
   },
 ]
 
@@ -81,9 +79,19 @@ describe('metricasVendas — contrato canônico', () => {
     expect(formatarPercentual(taxaCancelamento(0, 0))).toBe('0,0%')
   })
 
+  it('devolução MISTA (D-13): venda 100, devolução 30 = 10 em meio + 20 abatidos de AR → devolução 30 e receita líquida 70', () => {
+    // `devolucoes.valor` guardaria só os 10; o valor econômico é `venda_pos_venda_operacoes.valor_estornado` = 30.
+    const m = calcularMetricasVendas([
+      { status: 'CONCLUIDA', total_liquido: 100, venda_pos_venda_operacoes: [{ valor_estornado: 30 }] },
+    ])
+    expect(m.devolucoes).toBe(30)
+    expect(m.receitaLiquida).toBe(70)
+    expect(m.ticketMedio).toBe(100) // ticket não deduz devolução
+  })
+
   it('totais como string do PostgREST são tratados como número', () => {
     const m = calcularMetricasVendas([
-      { status: 'CONCLUIDA', total_liquido: '10.50', devolucoes: [{ valor: '2.50', operacao_id: 'x' }] },
+      { status: 'CONCLUIDA', total_liquido: '10.50', venda_pos_venda_operacoes: [{ valor_estornado: '2.50' }] },
     ])
     expect(m.faturado).toBe(10.5)
     expect(m.devolucoes).toBe(2.5)

@@ -15,15 +15,15 @@ type Row = {
   status: 'CONCLUIDA' | 'CANCELADA'
   forma_pagamento: string
   operador_id: string | null
-  devolucoes: Array<{ valor: number; operacao_id: string | null }>
+  venda_pos_venda_operacoes: Array<{ valor_estornado: number }>
 }
 
 const AGORA = new Date().toISOString()
 const TODAS: Row[] = [
-  { id: 'v1', data: AGORA, total_liquido: 100, status: 'CONCLUIDA', forma_pagamento: 'PIX', operador_id: null, devolucoes: [] },
-  { id: 'v2', data: AGORA, total_liquido: 123.9, status: 'CONCLUIDA', forma_pagamento: 'DINHEIRO', operador_id: null, devolucoes: [{ valor: 50, operacao_id: 'op-1' }] },
-  { id: 'v3', data: AGORA, total_liquido: 130, status: 'CONCLUIDA', forma_pagamento: 'PIX', operador_id: null, devolucoes: [] },
-  { id: 'v4', data: AGORA, total_liquido: 129.9, status: 'CANCELADA', forma_pagamento: 'DINHEIRO', operador_id: null, devolucoes: [{ valor: 129.9, operacao_id: null }] },
+  { id: 'v1', data: AGORA, total_liquido: 100, status: 'CONCLUIDA', forma_pagamento: 'PIX', operador_id: null, venda_pos_venda_operacoes: [] },
+  { id: 'v2', data: AGORA, total_liquido: 123.9, status: 'CONCLUIDA', forma_pagamento: 'DINHEIRO', operador_id: null, venda_pos_venda_operacoes: [{ valor_estornado: 50 }] },
+  { id: 'v3', data: AGORA, total_liquido: 130, status: 'CONCLUIDA', forma_pagamento: 'PIX', operador_id: null, venda_pos_venda_operacoes: [] },
+  { id: 'v4', data: AGORA, total_liquido: 129.9, status: 'CANCELADA', forma_pagamento: 'DINHEIRO', operador_id: null, venda_pos_venda_operacoes: [] },
 ]
 
 type Query = { table: string; select?: unknown; eqs: Array<[string, unknown]> }
@@ -94,11 +94,11 @@ describe('Dashboard — população e fórmulas canônicas (Onda A)', () => {
     await AdminDashboardPage({ searchParams: Promise.resolve({}) })
 
     const vendasQ = queries.filter((q) => q.table === 'vendas')
-    const periodoAtual = vendasQ.find((q) => String(q.select).includes('devolucoes'))
+    const periodoAtual = vendasQ.find((q) => String(q.select).includes('venda_pos_venda_operacoes'))
     const periodoAnterior = vendasQ.find(
       (q) => String(q.select) === 'total_liquido,status',
     )
-    const recentes = vendasQ.find((q) => String(q.select).includes('operador_id') && !String(q.select).includes('devolucoes'))
+    const recentes = vendasQ.find((q) => String(q.select).includes('operador_id') && !String(q.select).includes('venda_pos_venda_operacoes'))
 
     expect(periodoAtual?.eqs).toContainEqual(['status', 'CONCLUIDA'])
     expect(periodoAnterior?.eqs).toContainEqual(['status', 'CONCLUIDA'])

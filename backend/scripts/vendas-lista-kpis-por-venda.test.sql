@@ -3,7 +3,8 @@
 -- Cenário controlado (loja Matriz, janela 2099-06-10, sem interferência de dados reais):
 --   4 vendas distintas: 3 CONCLUIDA (100,00 + 123,90 + 130,00 = 353,90) e 1 CANCELADA (129,90);
 --   ledger com 5 eventos (4 SALE_REGISTERED + 1 SALE_CANCELLED) — prova que o ledger NÃO é a identidade da venda;
---   devolução pós-venda de 50,00 (operacao_id NOT NULL) em venda CONCLUIDA;
+--   devolução pós-venda MISTA de 50,00 em venda CONCLUIDA (20,00 em meio de pagamento + 30,00 abatidos do saldo a receber;
+--   `devolucoes.valor` guarda só os 20,00 — a métrica tem de contar os 50,00 de venda_pos_venda_operacoes.valor_estornado);
 --   linha de devolução gerada pelo cancelamento (operacao_id NULL) e devolução pós-venda em venda CANCELADA:
 --   ambas FORA da métrica (sem contagem em dobro).
 -- Cobre: lista (uma linha por venda, UUID único, status atual), KPIs canônicos, taxa como fração, denominador zero,
@@ -30,6 +31,8 @@ DECLARE
   v2 uuid := gen_random_uuid();
   v3 uuid := gen_random_uuid();
   v4 uuid := gen_random_uuid();
+  op_v2 uuid := gen_random_uuid();
+  op_v4 uuid := gen_random_uuid();
   k record;
   n int;
   n_ids int;
@@ -62,10 +65,17 @@ BEGIN
     ('SALE_REGISTERED', v4, v_caixa, c_ger_a, c_loja_a, 129.90, 129.90, 'DINHEIRO', '2099-06-10 13:00:00+00', 'onda_a_test', 'onda_a:' || v4 || ':r'),
     ('SALE_CANCELLED',  v4, v_caixa, c_ger_a, c_loja_a, 129.90, 129.90, 'DINHEIRO', '2099-06-10 14:00:00+00', 'onda_a_test', 'onda_a:' || v4 || ':c');
 
+  -- Operações pós-venda (fonte do valor econômico). op_v2 é MISTA (PR-2D/D-13): devolução de 50,00 = 20,00 devolvidos em
+  -- meio de pagamento (linha em `devolucoes`) + 30,00 abatidos do saldo a receber (SEM linha em `devolucoes`).
+  -- A métrica tem de contar 50,00, não os 20,00 de `devolucoes.valor`.
+  INSERT INTO public.venda_pos_venda_operacoes (id, idempotency_key, venda_id, tipo, motivo, valor_estornado, valor_caixa_estornado, forma_estorno, operador_id, caixa_id) VALUES
+    (op_v2, 'onda_a:' || op_v2, v2, 'DEVOLUCAO', 'devolucao mista teste',      50.00, 20.00, 'DINHEIRO', c_ger_a, v_caixa), -- conta 50,00
+    (op_v4, 'onda_a:' || op_v4, v4, 'DEVOLUCAO', 'devolucao antes de cancelar', 10.00, 10.00, 'DINHEIRO', c_ger_a, v_caixa); -- fora (venda CANCELADA)
+
   INSERT INTO public.devolucoes (venda_id, valor, forma_pagamento, motivo, operador_id, operacao_id) VALUES
-    (v2, 50.00,  'DINHEIRO', 'devolucao pos-venda teste', c_ger_a, gen_random_uuid()), -- conta
-    (v4, 129.90, 'DINHEIRO', 'linha do cancelamento',     c_ger_a, NULL),              -- fora (operacao_id NULL)
-    (v4, 10.00,  'DINHEIRO', 'devolucao antes de cancelar', c_ger_a, gen_random_uuid()); -- fora (venda CANCELADA)
+    (v2, 20.00,  'DINHEIRO', 'parcela em meio da devolucao mista', c_ger_a, op_v2), -- só a parcela em meio
+    (v4, 129.90, 'DINHEIRO', 'linha do cancelamento',     c_ger_a, NULL),            -- sem operação pós-venda
+    (v4, 10.00,  'DINHEIRO', 'devolucao antes de cancelar', c_ger_a, op_v4);        -- venda CANCELADA
 
   SELECT count(*) INTO n_eventos_antes FROM public.venda_eventos WHERE sale_id IN (v1, v2, v3, v4);
   IF n_eventos_antes <> 5 THEN RAISE EXCEPTION 'onda-a: fixture do ledger esperava 5 eventos, veio %', n_eventos_antes; END IF;
@@ -83,7 +93,7 @@ BEGIN
   IF k.faturado <> 353.90 THEN RAISE EXCEPTION 'faturado esperava 353.90, veio %', k.faturado; END IF;
   IF k.vendas_canceladas <> 1 THEN RAISE EXCEPTION 'canceladas esperava 1, veio %', k.vendas_canceladas; END IF;
   IF k.valor_cancelado <> 129.90 THEN RAISE EXCEPTION 'valor_cancelado esperava 129.90, veio %', k.valor_cancelado; END IF;
-  IF k.devolucoes <> 50.00 THEN RAISE EXCEPTION 'devolucoes esperava 50.00 (sem a linha do cancelamento), veio %', k.devolucoes; END IF;
+  IF k.devolucoes <> 50.00 THEN RAISE EXCEPTION 'devolucoes esperava 50.00 (valor economico da devolucao mista, sem cancelamento), veio %', k.devolucoes; END IF;
   IF k.receita_liquida <> 303.90 THEN RAISE EXCEPTION 'receita_liquida esperava 303.90, veio %', k.receita_liquida; END IF;
   IF round(k.ticket_medio, 2) <> 117.97 OR abs(k.ticket_medio - (353.90 / 3)) > 0.0001 THEN
     RAISE EXCEPTION 'ticket_medio esperava 117,966..., veio %', k.ticket_medio;

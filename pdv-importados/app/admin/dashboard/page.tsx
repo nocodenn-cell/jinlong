@@ -164,7 +164,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     status: VendaStatus
     forma_pagamento: string
     operador_id: string | null
-    devolucoes: Array<{ valor: number; operacao_id: string | null }> | null
+    venda_pos_venda_operacoes: Array<{ valor_estornado: number }> | null
   }> = []
   let vendasPrevRange: Array<{ total_liquido: number; status: VendaStatus }> = []
   let recentOrdersRaw: Array<{
@@ -184,7 +184,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   // cancelada não é faturamento/pedido. O filtro `?status=` só afeta "últimos pedidos".
   const vendasRangeQuery = supabase
     .from('vendas')
-    .select('id,data,total_liquido,status,forma_pagamento,operador_id,devolucoes(valor,operacao_id)')
+    .select('id,data,total_liquido,status,forma_pagamento,operador_id,venda_pos_venda_operacoes(valor_estornado)')
     .eq('status', 'CONCLUIDA')
     .gte('data', start.toISOString())
     .lte('data', end.toISOString())
