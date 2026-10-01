@@ -42,6 +42,19 @@ const dtFmt = new Intl.DateTimeFormat('pt-BR', {
   minute: '2-digit',
 })
 
+/**
+ * `observacao` do log vem como texto técnico (`devolucao | motivo=troca | operacao=<uuid>`).
+ * Só apresentação: mostra o motivo legível e esconde o id da operação (o dado persistido não muda).
+ */
+export function formatObservacaoKardex(observacao: string | null | undefined): string {
+  const partes = String(observacao ?? '')
+    .split('|')
+    .map((p) => p.trim())
+    .filter((p) => p && !/^operacao=/i.test(p))
+  const motivos = partes.filter((p) => /^motivo=/i.test(p)).map((p) => p.replace(/^motivo=/i, '').trim())
+  return (motivos.length > 0 ? motivos : partes).filter(Boolean).join(' · ')
+}
+
 /** Tipos de movimento → tom de StatusChip (mesmo padrão visual). */
 function toneStatusForTipo(codigo: string, entrada: boolean): string {
   if (codigo === 'VENDA' || codigo === 'SAIDA' || codigo === 'PERDA' || codigo === 'QUEBRA') {
@@ -88,36 +101,45 @@ export function KardexSheet({
   const columns: Column<KardexMovimento>[] = useMemo(
     () => [
       {
-        key: 'tipo',
-        header: 'Tipo',
-        priority: 'primary',
-        cell: (m) => (
-          <div className="min-w-0">
-            <StatusChip
-              status={toneStatusForTipo(m.tipo_codigo, m.quantidade_delta >= 0)}
-              label={rotuloTipo(m.tipo_codigo)}
-            />
-            {m.observacao ? (
-              <p className="mt-1 truncate text-caption text-fg-subtle">{m.observacao}</p>
-            ) : null}
-          </div>
-        ),
-      },
-      {
         key: 'quando',
-        header: '',
-        priority: 'contextual',
+        header: 'Data',
         cell: (m) => (
-          <span className="text-caption text-fg-subtle">
+          <span className="whitespace-nowrap text-caption text-fg-subtle">
             {dtFmt.format(new Date(m.created_at))}
           </span>
         ),
       },
       {
+        key: 'tipo',
+        header: 'Tipo',
+        priority: 'primary',
+        cell: (m) => (
+          <StatusChip
+            status={toneStatusForTipo(m.tipo_codigo, m.quantidade_delta >= 0)}
+            label={rotuloTipo(m.tipo_codigo)}
+          />
+        ),
+      },
+      {
         key: 'delta',
-        header: '',
+        header: 'Qtd',
         align: 'right',
         cell: (m) => <MovementBadge delta={m.quantidade_delta} />,
+      },
+      {
+        key: 'motivo',
+        header: 'Motivo',
+        className: 'max-w-[14rem]',
+        cell: (m) => {
+          const texto = formatObservacaoKardex(m.observacao)
+          return texto ? (
+            <span className="block truncate text-caption text-fg-subtle" title={texto}>
+              {texto}
+            </span>
+          ) : (
+            <span className="text-caption text-fg-subtle">—</span>
+          )
+        },
       },
     ],
     // labels.tipoMap identity is stable per open; rotuloTipo closes over labels
@@ -132,7 +154,7 @@ export function KardexSheet({
       open
       onClose={onClose}
       sheet
-      size="md"
+      size="lg"
       icon={History}
       title={labels.titulo}
       subtitle={alvo.produtoNome}
