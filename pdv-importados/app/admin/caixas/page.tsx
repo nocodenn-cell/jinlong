@@ -17,7 +17,7 @@ import { Suspense } from 'react'
 import { ROUTES, pathWithQuery } from '@/lib/navigation/routes'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
-import { MetricCard, PageActions, PageHeader, SectionCard } from '@/components/ui/admin-v2'
+import { MetricCard, PageActions, PageHeader, PeriodFilter, periodoLabelsAdmin, SectionCard } from '@/components/ui/admin-v2'
 import type { MetricCardIconKey } from '@/components/ui/admin-v2/MetricCard'
 import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
 import { formatNumberLocale } from '@/lib/format/money'
@@ -106,13 +106,7 @@ export default async function AdminCaixasPage({ searchParams }: PageProps) {
     return pathWithQuery(ROUTES.admin.caixas, p)
   }
 
-  const PERIODO_LABEL: Record<CaixasPeriodo, string> = {
-    hoje: ui.vendas_periodo_label_hoje,
-    ontem: ui.vendas_periodo_label_ontem,
-    '7d': ui.vendas_periodo_label_7d,
-    mes: ui.vendas_periodo_label_mes,
-    tudo: ui.filtro_todos,
-  }
+  const PERIODO_LABEL = periodoLabelsAdmin(ui)
   const STATUS_LABEL: Record<Exclude<CaixasStatusFiltro, 'all'>, string> = {
     divergencia: ui.caixas_filtro_divergencia,
     retomado: ui.caixas_filtro_retomado,
@@ -149,7 +143,6 @@ export default async function AdminCaixasPage({ searchParams }: PageProps) {
     },
   ]
 
-  const periodOptions: CaixasPeriodo[] = ['hoje', 'ontem', '7d', 'mes', 'tudo']
 
   const resumo = resumoRes.ok ? resumoRes.data : null
   const metricCards: Array<{ label: string; value: string; icon: MetricCardIconKey; tone: 'gold' | 'success' | 'warning' }> = [
@@ -179,18 +172,12 @@ export default async function AdminCaixasPage({ searchParams }: PageProps) {
         title={ui.caixas_titulo}
         subtitle={ui.caixas_subtitulo}
         filters={(
-          <div className="admin-v2-segmented">
-            {periodOptions.map((option) => (
-              <Link
-                key={option}
-                href={hrefWith({ periodo: option === CAIXAS_PERIODO_PADRAO ? null : option })}
-                data-active={periodo === option}
-                className="admin-v2-filter-pill rounded-full px-3 py-1.5 text-xs font-medium transition-colors"
-              >
-                {PERIODO_LABEL[option]}
-              </Link>
-            ))}
-          </div>
+          <PeriodFilter
+            options={CAIXAS_PERIODOS}
+            active={periodo}
+            labels={PERIODO_LABEL}
+            hrefFor={(option) => hrefWith({ periodo: option === CAIXAS_PERIODO_PADRAO ? null : option })}
+          />
         )}
         actions={(
           <PageActions>

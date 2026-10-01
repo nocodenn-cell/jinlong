@@ -18,7 +18,7 @@ import { ROUTES, pathWithQuery } from '@/lib/navigation/routes'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
 import { createClient } from '@/lib/supabase/server'
-import { MetricCard, PageHeader, SectionCard } from '@/components/ui/admin-v2'
+import { MetricCard, PageHeader, PeriodFilter, periodoLabelsAdmin, SectionCard } from '@/components/ui/admin-v2'
 import type { MetricCardIconKey } from '@/components/ui/admin-v2/MetricCard'
 import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
 import { buscarVendasPaginadasAction, obterKpisVendas, type VendasFiltro } from '@/app/gerente/vendas/actions'
@@ -186,13 +186,8 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
     },
   ]
 
-  const periodOptions: Array<{ id: Periodo; label: string }> = [
-    { id: 'hoje', label: ui.vendas_periodo_label_hoje },
-    { id: 'ontem', label: ui.vendas_periodo_label_ontem },
-    { id: '7d', label: '7d' },
-    { id: '30d', label: ui.vendas_periodo_label_30d },
-    { id: 'tudo', label: ui.filtro_todos },
-  ]
+  const periodOptions: readonly Periodo[] = ['hoje', 'ontem', '7d', '30d', 'mes', 'tudo']
+  const periodLabels = periodoLabelsAdmin(ui)
 
   const periodHref = (next: Periodo) => {
     const p = new URLSearchParams(activeParams)
@@ -257,18 +252,7 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
         title={m.gerente.nav_topico_vendas_caixa}
         subtitle={ui.vendas_subtitulo}
         filters={(
-          <div className="admin-v2-segmented">
-            {periodOptions.map((option) => (
-              <Link
-                key={option.id}
-                href={periodHref(option.id)}
-                data-active={periodo === option.id}
-                className="admin-v2-filter-pill rounded-full px-3 py-1.5 text-xs font-medium transition-colors"
-              >
-                {option.label}
-              </Link>
-            ))}
-          </div>
+          <PeriodFilter options={periodOptions} active={periodo} labels={periodLabels} hrefFor={periodHref} />
         )}
       />
 

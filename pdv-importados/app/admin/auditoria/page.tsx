@@ -12,7 +12,8 @@
 import Link from 'next/link'
 import { ROUTES, pathWithQuery } from '@/lib/navigation/routes'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
-import { MetricCard, PageHeader, SectionCard } from '@/components/ui/admin-v2'
+import { MetricCard, PageHeader, PeriodFilter, periodoLabelsAdmin, SectionCard } from '@/components/ui/admin-v2'
+import { PERIODOS, periodoFim, periodoInicio, type Periodo } from '@/lib/admin/periodo'
 import type { MetricCardIconKey } from '@/components/ui/admin-v2/MetricCard'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import { formatNumberLocale } from '@/lib/format/money'
@@ -25,45 +26,10 @@ import {
 } from './actions'
 import { AuditoriaTimeline, type AuditoriaTimelineLabels } from './_components/AuditoriaTimeline'
 
-type Periodo = 'tudo' | 'hoje' | 'ontem' | '7d' | 'mes'
 type TipoFiltro = 'all' | AuditoriaTipo
-
-const DIA_MS = 86_400_000
 
 function oneOf<T extends string>(raw: string | undefined, allowed: readonly T[], fallback: T): T {
   return allowed.includes(raw as T) ? (raw as T) : fallback
-}
-
-function periodoInicio(periodo: Periodo): string | null {
-  const now = new Date()
-  if (periodo === 'hoje') {
-    const d = new Date(now)
-    d.setHours(0, 0, 0, 0)
-    return d.toISOString()
-  }
-  if (periodo === 'ontem') {
-    const d = new Date(now)
-    d.setDate(d.getDate() - 1)
-    d.setHours(0, 0, 0, 0)
-    return d.toISOString()
-  }
-  if (periodo === '7d') return new Date(now.getTime() - 7 * DIA_MS).toISOString()
-  if (periodo === 'mes') {
-    const d = new Date(now)
-    d.setDate(1)
-    d.setHours(0, 0, 0, 0)
-    return d.toISOString()
-  }
-  return null
-}
-
-function periodoFim(periodo: Periodo): string | null {
-  if (periodo !== 'ontem') return null
-  const now = new Date()
-  const d = new Date(now)
-  d.setDate(d.getDate() - 1)
-  d.setHours(23, 59, 59, 999)
-  return d.toISOString()
 }
 
 type SearchParams = { periodo?: string; tipo?: string }
@@ -79,13 +45,7 @@ export default async function AdminAuditoriaPage({ searchParams }: PageProps) {
   const ui = m.admin_ui
   const sp = (searchParams ? await searchParams : {}) ?? {}
 
-  const PERIODO_LABEL: Record<Periodo, string> = {
-    hoje: ui.auditoria_periodo_hoje,
-    ontem: ui.auditoria_periodo_ontem,
-    '7d': ui.auditoria_periodo_7d,
-    mes: ui.auditoria_periodo_mes,
-    tudo: ui.auditoria_periodo_tudo,
-  }
+  const periodLabels = periodoLabelsAdmin(ui)
 
   const TIPO_OPTIONS: Array<{ id: TipoFiltro; label: string }> = [
     { id: 'all', label: ui.auditoria_tipo_all },
@@ -176,7 +136,7 @@ export default async function AdminAuditoriaPage({ searchParams }: PageProps) {
     },
   }
 
-  const periodo = oneOf<Periodo>(sp.periodo, ['tudo', 'hoje', 'ontem', '7d', 'mes'], '7d')
+  const periodo = oneOf<Periodo>(sp.periodo, PERIODOS, '7d')
   const tipo = oneOf<TipoFiltro>(
     sp.tipo,
     ['all', 'VENDA', 'CANCELAMENTO', 'AJUSTE_ESTOQUE', 'ALERTA', 'DESCONTO', 'DEVOLUCAO'],
@@ -260,18 +220,7 @@ export default async function AdminAuditoriaPage({ searchParams }: PageProps) {
         title={ui.auditoria_titulo}
         subtitle={ui.auditoria_subtitulo}
         filters={(
-          <div className="admin-v2-segmented">
-            {(['hoje', 'ontem', '7d', 'mes', 'tudo'] as Periodo[]).map((option) => (
-              <Link
-                key={option}
-                href={periodHref(option)}
-                data-active={periodo === option}
-                className="admin-v2-filter-pill rounded-full px-3 py-1.5 text-xs font-medium transition-colors"
-              >
-                {PERIODO_LABEL[option]}
-              </Link>
-            ))}
-          </div>
+          <PeriodFilter options={PERIODOS} active={periodo} labels={periodLabels} hrefFor={periodHref} />
         )}
       />
 
