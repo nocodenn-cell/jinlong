@@ -2,6 +2,8 @@
  * Período dos relatórios: datas YYYY-MM-DD são dias civis no fuso passado (via `getRelatorioTimezone` + RPC).
  */
 
+import { hojeYmd } from '@shared-core/src/financial/policies/tituloVencido'
+
 export const RELATORIO_TZ_PADRAO = 'America/Sao_Paulo'
 
 export const RELATORIO_MAX_DIAS_INCLUSIVOS = 366
@@ -17,18 +19,20 @@ export function isYmd(s: string): boolean {
   )
 }
 
-/** Data civil (YYYY-MM-DD) de um instante, no fuso informado. */
+/**
+ * Data civil (YYYY-MM-DD) de um instante, no fuso informado.
+ * Implementação única em `hojeYmd` (shared-core): vencimentos e relatórios usam a mesma regra de dia civil.
+ */
 export function ymdEmFuso(instante: Date, timeZone: string = RELATORIO_TZ_PADRAO): string {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(instante)
-  const y = parts.find((p) => p.type === 'year')!.value
-  const m = parts.find((p) => p.type === 'month')!.value
-  const d = parts.find((p) => p.type === 'day')!.value
-  return `${y}-${m}-${d}`
+  return hojeYmd(instante, timeZone)
+}
+
+/** Hora cheia (0–23) de um instante no fuso informado (não a hora do processo Node, que roda em UTC). */
+export function horaEmFuso(instante: Date, timeZone: string = RELATORIO_TZ_PADRAO): number {
+  const h = new Intl.DateTimeFormat('en-US', { timeZone, hourCycle: 'h23', hour: '2-digit' })
+    .formatToParts(instante)
+    .find((p) => p.type === 'hour')!.value
+  return Number(h)
 }
 
 /** Hoje (data civil) no fuso do relatório. */
@@ -147,4 +151,27 @@ export function formatarDiaRelatorioParaLocale(ymd: string, locale: string): str
     dateStyle: 'medium',
     timeZone: 'UTC',
   })
+}
+
+/**
+ * Formata uma data CIVIL (coluna `date`, ex.: vencimento) como dd/mm/aaaa, sem hora e sem deslocar de dia.
+ * `new Date('2026-09-05')` é meia-noite UTC e, em Brasília, viraria 04/09 21:00 — por isso o fuso é fixado em UTC.
+ */
+export function formatarDataCivilNumerica(ymd: string | null | undefined, locale: string): string {
+  const s = String(ymd ?? '').slice(0, 10)
+  if (!YMD.test(s)) return '—'
+  const [y, mo, d] = s.split('-').map(Number)
+  return new Date(Date.UTC(y, mo - 1, d)).toLocaleDateString(locale, {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    timeZone: 'UTC',
+  })
+}
+
+/** Dias civis entre `hoje` e o vencimento (negativo = vencido). Ambos YYYY-MM-DD; sem hora, sem fuso. */
+export function diasAteVencimento(vencimentoYmd: string, hojeYmdCivil: string): number {
+  const [y1, m1, d1] = hojeYmdCivil.slice(0, 10).split('-').map(Number)
+  const [y2, m2, d2] = vencimentoYmd.slice(0, 10).split('-').map(Number)
+  return Math.round((Date.UTC(y2, m2 - 1, d2) - Date.UTC(y1, m1 - 1, d1)) / 86_400_000)
 }

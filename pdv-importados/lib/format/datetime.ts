@@ -15,15 +15,17 @@ export function formatDateTimeOrDash(
 
 /**
  * Equivalente a `Date#toLocaleString(locale)` sem opções, com o mesmo critério de “—” que `formatDateTimeOrDash`.
+ * Em Server Components (Node em UTC) passe `timeZone` (fuso da loja); sem ele usa o fuso do processo.
  */
 export function formatDateTimeLocaleDefault(
   value: string | Date | null | undefined,
   locale: string,
+  timeZone?: string,
 ): string {
   if (value == null || value === '') return '—'
   const d = typeof value === 'string' ? new Date(value) : value
   if (Number.isNaN(d.getTime())) return '—'
-  return d.toLocaleString(locale)
+  return timeZone ? d.toLocaleString(locale, { timeZone }) : d.toLocaleString(locale)
 }
 
 /** Dia/mês para eixos de gráfico (ex.: admin dashboard). */

@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { getGerenteLojaId, getGerenteUserId } from '@/lib/gerente/auth/sessionContext'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
+import { hojeYmd } from '@shared-core/src/financial/policies/tituloVencido'
 import { lojaIdDaSessao } from '@/app/gerente/fornecedores/fornecedorContrato'
 import { mensagemSeFornecedorForaDaLoja } from './fornecedorOcBoundary'
 import { montarFiltroBuscaOc } from './ocBusca'
@@ -409,7 +410,7 @@ export async function criarOrdemCompra(input: CriarOcInput): Promise<R<string>> 
       loja_id: lojaId,
       fornecedor_id: input.fornecedor_id ?? null,
       fornecedor_nome: input.fornecedor_nome?.trim() || null,
-      data_emissao: input.data_emissao ?? new Date().toISOString().slice(0, 10),
+      data_emissao: input.data_emissao ?? hojeYmd(),
       data_prevista_chegada: input.data_prevista_chegada ?? null,
       observacao: input.observacao?.trim() || null,
       status: 'RASCUNHO',
@@ -484,7 +485,7 @@ export async function atualizarOrdemCompra(input: AtualizarOcInput): Promise<R<n
     .update({
       fornecedor_id: input.fornecedor_id ?? null,
       fornecedor_nome: input.fornecedor_nome?.trim() || null,
-      data_emissao: input.data_emissao ?? new Date().toISOString().slice(0, 10),
+      data_emissao: input.data_emissao ?? hojeYmd(),
       data_prevista_chegada: input.data_prevista_chegada ?? null,
       observacao: input.observacao?.trim() || null,
     })
