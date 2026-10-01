@@ -32,6 +32,7 @@ import {
 import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 import { formatDateTimeLocaleDefault, formatDayMonthInLocale } from '@/lib/format/datetime'
 import { formatBRL, formatNumberLocale } from '@/lib/format/money'
+import { calcularMetricasVendas } from '@/lib/vendas/metricasVendas'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { ROUTES } from '@/lib/navigation/routes'
 import { getMessages } from '@/i18n/getMessages'
@@ -161,8 +162,9 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     status: VendaStatus
     forma_pagamento: string
     operador_id: string | null
+    devolucoes: Array<{ valor: number; operacao_id: string | null }> | null
   }> = []
-  let vendasPrevRange: Array<{ total_liquido: number }> = []
+  let vendasPrevRange: Array<{ total_liquido: number; status: VendaStatus }> = []
   let recentOrdersRaw: Array<{
     id: string
     data: string
@@ -176,16 +178,20 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   let novosUsuariosAtual = 0
   let novosUsuariosPrev = 0
 
+  // População das métricas = vendas CONCLUIDA (contrato canônico, lib/vendas/metricasVendas.ts):
+  // cancelada não é faturamento/pedido. O filtro `?status=` só afeta "últimos pedidos".
   const vendasRangeQuery = supabase
     .from('vendas')
-    .select('id,data,total_liquido,status,forma_pagamento,operador_id')
+    .select('id,data,total_liquido,status,forma_pagamento,operador_id,devolucoes(valor,operacao_id)')
+    .eq('status', 'CONCLUIDA')
     .gte('data', start.toISOString())
     .lte('data', end.toISOString())
     .order('data', { ascending: true })
 
   const vendasPrevQuery = supabase
     .from('vendas')
-    .select('total_liquido')
+    .select('total_liquido,status')
+    .eq('status', 'CONCLUIDA')
     .gte('data', previousStart.toISOString())
     .lt('data', previousEnd.toISOString())
 
@@ -226,8 +232,8 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     estoqueBaixoListaRes,
     usersRes,
   ] = await Promise.all([
-    statusDb ? vendasRangeQuery.eq('status', statusDb) : vendasRangeQuery,
-    statusDb ? vendasPrevQuery.eq('status', statusDb) : vendasPrevQuery,
+    vendasRangeQuery,
+    vendasPrevQuery,
     novosUsuariosAtualQuery,
     novosUsuariosPrevQuery,
     showStockAlerts
@@ -354,12 +360,19 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     .sort((a, b) => b.value - a.value)
     .slice(0, 6)
 
-  const totalAtual = vendasRange.reduce((acc, row) => acc + Number(row.total_liquido ?? 0), 0)
-  const totalPrev = vendasPrevRange.reduce((acc, row) => acc + Number(row.total_liquido ?? 0), 0)
-  const pedidosAtual = vendasRange.length
-  const pedidosPrev = vendasPrevRange.length
-  const ticketAtual = pedidosAtual > 0 ? totalAtual / pedidosAtual : 0
-  const ticketPrev = pedidosPrev > 0 ? totalPrev / pedidosPrev : 0
+  const metricasAtual = calcularMetricasVendas(vendasRange)
+  const metricasPrev = calcularMetricasVendas(vendasPrevRange)
+  const totalAtual = metricasAtual.faturado
+  const totalPrev = metricasPrev.faturado
+  const pedidosAtual = metricasAtual.vendasConcluidas
+  const pedidosPrev = metricasPrev.vendasConcluidas
+  const ticketAtual = metricasAtual.ticketMedio
+  const ticketPrev = metricasPrev.ticketMedio
+  // Devolução pós-venda não reduz `faturado`; aparece à parte (receita líquida = faturado − devoluções).
+  const totalSalesHint =
+    metricasAtual.devolucoes > 0
+      ? `${L.metricTotalSalesHint[lk]} ${ui.vendas_devolucoes} ${formatBRL(metricasAtual.devolucoes, locale)} · ${ui.vendas_receita_liquida} ${formatBRL(metricasAtual.receitaLiquida, locale)}`
+      : L.metricTotalSalesHint[lk]
 
   const trendLabels = { newLabel: L.trendNew[lk], flatLabel: dash.emDash }
   const totalTrend = formatTrendPercent(totalAtual, totalPrev, trendLabels)
@@ -397,7 +410,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
       // recebido — soma total_liquido bruto, inclusive a parte que ficou em
       // contas_receber como pendente. Ver achado FIN-3/FIN-298-07 (auditoria
       // de regras de negócio).
-      hint: L.metricTotalSalesHint[lk],
+      hint: totalSalesHint,
     },
     {
       label: L.metricOrders[lk],

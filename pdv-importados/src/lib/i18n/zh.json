@@ -2699,6 +2699,8 @@
     "vendas_faturado": "已结算",
     "vendas_concluidas": "已完成",
     "vendas_canceladas": "已取消",
+    "vendas_devolucoes": "退货",
+    "vendas_receita_liquida": "净收入",
     "vendas_periodo_label_hoje": "今天",
     "vendas_periodo_label_ontem": "昨天",
     "vendas_periodo_label_7d": "最近7天",

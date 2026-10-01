@@ -44,11 +44,15 @@ import {
   ticketMedio,
   type RelatoriosTabId,
 } from './relatoriosUi'
+import { formatarPercentual } from '@/lib/vendas/metricasVendas'
 
 export type RelatoriosDados = {
   periodo: PeriodoRelatorioResolvido
   tzRelatorio: string
   resumoExecutivo: RelatorioResumoExecutivoDTO
+  /** Devolução pós-venda do período e receita líquida (= faturado − devoluções); ver lib/vendas/metricasVendas.ts. */
+  devolucoes?: number
+  receitaLiquida?: number
   porDia: RelatorioVendaDiaDTO[]
   top: RelatorioTopProdDTO[]
   baixo: RelatorioEstoqueBaixoDTO[]
@@ -79,6 +83,8 @@ export type RelatoriosLabels = {
   kpiTicket: string
   kpiVendas: string
   kpiCancelamento: string
+  kpiDevolucoes: string
+  kpiReceitaLiquida: string
   kpiMargem: string
   kpiMargemIndisponivel: string
   tabVisao: string
@@ -681,6 +687,11 @@ export function RelatoriosContent({
             value={formatBRL(faturamento)}
             icon="dollar-sign"
             sparkData={porDiaOrdenado.map((r) => r.total_liquido)}
+            hint={
+              (dados.devolucoes ?? 0) > 0
+                ? `${labels.kpiDevolucoes} ${formatBRL(dados.devolucoes ?? 0)} · ${labels.kpiReceitaLiquida} ${formatBRL(dados.receitaLiquida ?? 0)}`
+                : undefined
+            }
           />
           <MetricCard
             label={labels.kpiTicket}
@@ -691,7 +702,7 @@ export function RelatoriosContent({
             label={labels.kpiVendas}
             value={String(dados.resumoExecutivo.vendas_concluidas)}
             icon="shopping-bag"
-            hint={`${labels.kpiCancelamento}: ${dados.resumoExecutivo.taxa_cancelamento.toFixed(1)}%`}
+            hint={`${labels.kpiCancelamento}: ${formatarPercentual(dados.resumoExecutivo.taxa_cancelamento, labels.locale)}`}
           />
           <MetricCard
             label={labels.kpiMargem}
