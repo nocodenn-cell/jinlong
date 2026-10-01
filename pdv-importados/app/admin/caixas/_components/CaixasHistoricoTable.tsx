@@ -13,6 +13,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { X } from 'lucide-react'
 import { listarMovimentacoesCaixa } from '@/app/gerente/caixas/actions'
 import {
+  decomporValorSistema,
   normalizarTipoMovimentacao,
   temDiferenca,
   type CaixaHistoricoLinha,
@@ -42,6 +43,12 @@ export type CaixasHistoricoLabels = Readonly<{
   detalheTitulo: string
   detalheValorInicial: string
   detalheMovimentacoes: string
+  composicaoTitulo?: string
+  composicaoSuprimentos?: string
+  composicaoSangrias?: string
+  composicaoRecebimentos?: string
+  composicaoOutros?: string
+  composicaoNota?: string
   detalheSemMovimentacoes: string
   movTipoSangria: string
   movTipoSuprimento: string
@@ -162,6 +169,48 @@ export function CaixasHistoricoTable({
   )
 }
 
+/** "Como o valor sistema foi calculado": valor inicial ± movimentações = valor sistema gravado no fechamento. */
+function ComposicaoValorSistemaBloco({
+  alvo,
+  movimentacoes,
+  labels,
+}: {
+  alvo: CaixaHistoricoLinha
+  movimentacoes: CaixaMovimentacaoLinha[]
+  labels: CaixasHistoricoLabels
+}) {
+  const c = decomporValorSistema(alvo.valorInicial, alvo.valorSistema, movimentacoes)
+  const linhas: Array<{ chave: string; label: string; valor: number; sinal: '+' | '−' | '' }> = [
+    { chave: 'inicial', label: labels.detalheValorInicial, valor: c.valorInicial, sinal: '' },
+    { chave: 'suprimentos', label: labels.composicaoSuprimentos ?? '', valor: c.suprimentos, sinal: '+' },
+    { chave: 'sangrias', label: labels.composicaoSangrias ?? '', valor: c.sangrias, sinal: '−' },
+    { chave: 'recebimentos', label: labels.composicaoRecebimentos ?? '', valor: c.recebimentosReceber, sinal: '+' },
+    { chave: 'outros', label: labels.composicaoOutros ?? '', valor: c.outros, sinal: c.outros < 0 ? '−' : '+' },
+  ]
+  return (
+    <section className="mt-5" data-testid="caixa-composicao-valor-sistema">
+      <h3 className="mb-2 text-caption font-semibold uppercase tracking-[0.06em] text-jl-fg-3">
+        {labels.composicaoTitulo}
+      </h3>
+      <dl className="admin-v2-panel space-y-1.5 rounded-[10px] p-3 text-[12px]">
+        {linhas.map((l) => (
+          <div key={l.chave} className="flex items-center justify-between gap-3">
+            <dt className="text-jl-fg-3">{l.label}</dt>
+            <dd className="tabular-nums text-jl-fg-1">
+              {l.sinal} {formatBRL(Math.abs(l.valor))}
+            </dd>
+          </div>
+        ))}
+        <div className="flex items-center justify-between gap-3 border-t border-[var(--color-border-secondary)] pt-1.5 font-semibold">
+          <dt className="text-jl-fg-2">{labels.colValorSistema}</dt>
+          <dd className="tabular-nums text-jl-fg-1">= {formatBRL(c.valorSistema)}</dd>
+        </div>
+      </dl>
+      {labels.composicaoNota ? <p className="mt-1.5 text-caption text-fg-subtle">{labels.composicaoNota}</p> : null}
+    </section>
+  )
+}
+
 function CaixaDetalheSheet({
   alvo,
   onClose,
@@ -264,6 +313,10 @@ function CaixaDetalheSheet({
               <dd className="text-jl-fg-1">{alvo.motivo ?? labels.semMotivo}</dd>
             </div>
           </dl>
+
+          {!carregando && !erroMov && labels.composicaoTitulo ? (
+            <ComposicaoValorSistemaBloco alvo={alvo} movimentacoes={movimentacoes} labels={labels} />
+          ) : null}
 
           <h3 className="mb-2 mt-5 text-caption font-semibold uppercase tracking-[0.06em] text-jl-fg-3">
             {labels.detalheMovimentacoes}
