@@ -49,4 +49,4 @@ export {
   validateLiquidateReceivableInput,
 } from './policies/validateReceivable'
 
-export { hojeYmd, isTituloVencido } from './policies/tituloVencido'
+export { FUSO_PADRAO_LOJA, hojeYmd, isTituloVencido } from './policies/tituloVencido'

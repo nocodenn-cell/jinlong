@@ -22,7 +22,9 @@ import { CaixaShortcut } from './_components/CaixaShortcut'
 import { DashboardFilters } from './_components/DashboardFilters'
 import { DashboardOrdersTable } from './_components/DashboardOrdersTable'
 import {
-  dateKey,
+  agruparVendasPorDia,
+  agruparVendasPorHora,
+  diasCivisDoPeriodo,
   formatTrendPercent,
   getPeriodRange,
   normalizePeriod,
@@ -302,40 +304,27 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
 
   const userById = new Map(usuariosRows.map((u) => [u.id, u.nome]))
 
-  const chartBucket = new Map<string, number>()
-  const ordersBucket = new Map<string, number>()
-  for (const row of vendasRange) {
-    const d = new Date(row.data)
-    const key = dateKey(d)
-    chartBucket.set(key, (chartBucket.get(key) ?? 0) + Number(row.total_liquido ?? 0))
-    ordersBucket.set(key, (ordersBucket.get(key) ?? 0) + 1)
-  }
+  // Agrupamento por dia/hora no FUSO DA LOJA (antes: UTC e hora do processo Node).
+  const { total: chartBucket, pedidos: ordersBucket } = agruparVendasPorDia(vendasRange, relatorioTz)
 
   const chartData: SalesPoint[] = []
   const salesSpark: number[] = []
   const ordersSpark: number[] = []
   const ticketSpark: number[] = []
-  const cursor = new Date(start)
-  cursor.setHours(0, 0, 0, 0)
-  while (cursor <= end) {
-    const key = dateKey(cursor)
+  for (const key of diasCivisDoPeriodo(start, end, relatorioTz)) {
     const dayTotal = chartBucket.get(key) ?? 0
     const dayOrders = ordersBucket.get(key) ?? 0
+    const [yy, mm, dd] = key.split('-').map(Number)
     chartData.push({
-      label: formatDayMonthInLocale(cursor, locale),
+      label: formatDayMonthInLocale(new Date(yy, mm - 1, dd), locale),
       total: Math.round(dayTotal * 100) / 100,
     })
     salesSpark.push(dayTotal)
     ordersSpark.push(dayOrders)
     ticketSpark.push(dayOrders > 0 ? dayTotal / dayOrders : 0)
-    cursor.setDate(cursor.getDate() + 1)
   }
 
-  const hourlyBucket = new Array<number>(24).fill(0)
-  for (const row of vendasRange) {
-    const hour = new Date(row.data).getHours()
-    hourlyBucket[hour] = (hourlyBucket[hour] ?? 0) + Number(row.total_liquido ?? 0)
-  }
+  const hourlyBucket = agruparVendasPorHora(vendasRange, relatorioTz)
   const hourlyLabels = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}h`)
   const hourlySeries: HourlyPoint[] = hourlyLabels.map((label, idx) => ({
     label,
@@ -473,7 +462,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     operador: o.operador_id ? (userById.get(o.operador_id) ?? '—') : '—',
     valor: formatBRL(Number(o.total_liquido ?? 0), locale),
     status: o.status,
-    data: formatDateTimeLocaleDefault(o.data, locale),
+    data: formatDateTimeLocaleDefault(o.data, locale, relatorioTz),
     formaPagamento: o.forma_pagamento,
   }))
   const amountByOrderId = new Map(
