@@ -182,9 +182,11 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
 
   // População das métricas = vendas CONCLUIDA (contrato canônico, lib/vendas/metricasVendas.ts):
   // cancelada não é faturamento/pedido. O filtro `?status=` só afeta "últimos pedidos".
+  // O embed precisa do hint de FK: venda_pos_venda_operacoes tem 2 FKs para vendas (venda_id e venda_substituta_id) e,
+  // sem ele, o PostgREST responde PGRST201 (300) e a consulta inteira do período falha.
   const vendasRangeQuery = supabase
     .from('vendas')
-    .select('id,data,total_liquido,status,forma_pagamento,operador_id,venda_pos_venda_operacoes(valor_estornado)')
+    .select('id,data,total_liquido,status,forma_pagamento,operador_id,venda_pos_venda_operacoes!venda_pos_venda_operacoes_venda_id_fkey(valor_estornado)')
     .eq('status', 'CONCLUIDA')
     .gte('data', start.toISOString())
     .lte('data', end.toISOString())
