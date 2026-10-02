@@ -11,6 +11,7 @@ import { formatDecimalBRL, parseBRL } from '@/lib/format/money'
 import { roundMoney2 } from '@/shared/cart/totals'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { cn } from '@/lib/utils'
+import { hojeYmd } from '@shared-core/src/financial/policies/tituloVencido'
 import {
   buscarCaixasAbertosPagamentoAction,
   registrarPagamentoAction,
@@ -41,7 +42,8 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
 
   const [valor, setValor] = useState(formatDecimalBRL(aberto))
   const [forma, setForma] = useState<FormaPagamento>('PIX')
-  const [dataPag, setDataPag] = useState(new Date().toISOString().slice(0, 10))
+  // Dia civil da loja (Onda B): `toISOString()` virava "amanhã" entre 21h e 24h BRT.
+  const [dataPag, setDataPag] = useState(() => hojeYmd())
   const [observacao, setObservacao] = useState('')
   const [erros, setErros] = useState<Record<string, string | null>>({})
   const [salvando, setSalvando] = useState(false)
@@ -367,7 +369,7 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
                     if (erros.data) setErros((x) => ({ ...x, data: null }))
                   }}
                   disabled={salvando}
-                  max={new Date().toISOString().slice(0, 10)}
+                  max={hojeYmd()}
                   className={cn('app-input mt-1 h-10 w-full rounded-md px-3 text-sm tabular-nums', erros.data && 'border-[var(--color-danger-strong)]')}
                   aria-invalid={!!erros.data}
                 />

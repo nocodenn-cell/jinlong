@@ -1,5 +1,6 @@
 import {
   RELATORIO_TZ_PADRAO,
+  horaEmFuso,
   inicioDoDiaCivilEmUtc,
   subtrairDiasCivis,
   ymdEmFuso,
@@ -82,8 +83,56 @@ export function formatTrendPercent(
   }
 }
 
-export function dateKey(date: Date) {
-  return date.toISOString().slice(0, 10)
+/** Dia civil (YYYY-MM-DD) no fuso da loja. Antes: `toISOString()`, que agrupava em UTC (23:30 BRT caía no dia seguinte). */
+export function dateKey(date: Date, timeZone: string = RELATORIO_TZ_PADRAO) {
+  return ymdEmFuso(date, timeZone)
+}
+
+/** Dias civis (YYYY-MM-DD) de `start` a `end` inclusive, no fuso da loja. */
+export function diasCivisDoPeriodo(
+  start: Date,
+  end: Date,
+  timeZone: string = RELATORIO_TZ_PADRAO,
+): string[] {
+  const dias: string[] = []
+  const ultimo = ymdEmFuso(end, timeZone)
+  let atual = ymdEmFuso(start, timeZone)
+  // trava de segurança: período máximo do dashboard é 30 dias
+  for (let i = 0; i < 400 && atual <= ultimo; i++) {
+    dias.push(atual)
+    atual = subtrairDiasCivis(atual, -1)
+  }
+  return dias
+}
+
+type VendaTempo = { data: string; total_liquido: number | string | null }
+
+/** Soma e contagem por dia civil do fuso da loja. */
+export function agruparVendasPorDia(
+  rows: ReadonlyArray<VendaTempo>,
+  timeZone: string = RELATORIO_TZ_PADRAO,
+): { total: Map<string, number>; pedidos: Map<string, number> } {
+  const total = new Map<string, number>()
+  const pedidos = new Map<string, number>()
+  for (const row of rows) {
+    const key = dateKey(new Date(row.data), timeZone)
+    total.set(key, (total.get(key) ?? 0) + Number(row.total_liquido ?? 0))
+    pedidos.set(key, (pedidos.get(key) ?? 0) + 1)
+  }
+  return { total, pedidos }
+}
+
+/** Soma por hora cheia (0–23) NO FUSO DA LOJA — não a hora do processo Node (UTC em produção). */
+export function agruparVendasPorHora(
+  rows: ReadonlyArray<VendaTempo>,
+  timeZone: string = RELATORIO_TZ_PADRAO,
+): number[] {
+  const horas = new Array<number>(24).fill(0)
+  for (const row of rows) {
+    const h = horaEmFuso(new Date(row.data), timeZone)
+    horas[h] = (horas[h] ?? 0) + Number(row.total_liquido ?? 0)
+  }
+  return horas
 }
 
 /** Prefixo curto de UUID/id para tabela; valor completo fica no title. */

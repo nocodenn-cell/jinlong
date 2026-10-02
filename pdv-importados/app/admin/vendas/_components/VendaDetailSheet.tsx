@@ -20,7 +20,7 @@ import {
   VendaDevolucaoReciboModal,
   type ComprovanteDevolucao,
 } from '@/app/gerente/vendas/VendaDevolucaoReciboModal'
-import type { VendaListRow } from '@/app/gerente/vendas/actions'
+import type { VendaListRow } from '@/lib/vendas/vendasListaRpc'
 import type { Mensagens } from '@/i18n/getMessages'
 import { useRouter } from 'next/navigation'
 

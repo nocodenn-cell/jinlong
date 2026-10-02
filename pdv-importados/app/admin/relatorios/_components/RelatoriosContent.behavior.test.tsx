@@ -68,6 +68,8 @@ const labels = {
   kpiTicket: 'Ticket médio',
   kpiVendas: 'Vendas concluídas',
   kpiCancelamento: 'Cancelamento',
+  kpiDevolucoes: 'Devoluções',
+  kpiReceitaLiquida: 'Receita líquida',
   kpiMargem: 'Margem estimada',
   kpiMargemIndisponivel: 'Indisponível',
   tabVisao: 'Visão geral',
@@ -247,6 +249,62 @@ describe('RelatoriosContent presentation', () => {
     expect(container.textContent).toContain('Faturamento')
     expect(container.textContent).toContain('Custo não confiável')
     expect(container.textContent).not.toContain('XLSX')
+  })
+
+  it('Onda A: taxa de cancelamento é fração no domínio e aparece como 25,0% (nunca 0.3%)', () => {
+    flushSync(() => {
+      root.render(
+        renderRelatorios(
+          <RelatoriosContent
+            dados={baseDados({
+              resumoExecutivo: {
+                itens_vendidos: 10,
+                vendas_concluidas: 3,
+                vendas_canceladas: 1,
+                taxa_cancelamento: 0.25,
+                cobertura_custo: 1,
+                custo_confiavel: true,
+                margem_bruta_estimada: 100,
+              },
+            })}
+            labels={labels}
+          />,
+        ),
+      )
+    })
+    expect(container.textContent).toContain('Cancelamento: 25,0%')
+    expect(container.textContent).not.toContain('0.3%')
+    expect(container.textContent).not.toContain('0.2%')
+  })
+
+  it('Onda A: taxa zero (denominador zero) aparece como 0,0%', () => {
+    flushSync(() => {
+      root.render(renderRelatorios(<RelatoriosContent dados={baseDados()} labels={labels} />))
+    })
+    expect(container.textContent).toContain('Cancelamento: 0,0%')
+  })
+
+  it('Onda A: devolução pós-venda aparece à parte, com receita líquida = faturado − devoluções', () => {
+    flushSync(() => {
+      root.render(
+        renderRelatorios(
+          <RelatoriosContent
+            dados={baseDados({ devolucoes: 50, receitaLiquida: 0 })}
+            labels={labels}
+          />,
+        ),
+      )
+    })
+    // faturamento do fixture = 30 + 20 = 50; receitaLiquida vem do banco (aqui 0 = 50 − 50)
+    expect(container.textContent).toMatch(/Devoluções\s+R\$\s*50,00/)
+    expect(container.textContent).toMatch(/Receita líquida\s+R\$\s*0,00/)
+  })
+
+  it('Onda A: sem devolução não exibe linha de devolução', () => {
+    flushSync(() => {
+      root.render(renderRelatorios(<RelatoriosContent dados={baseDados()} labels={labels} />))
+    })
+    expect(container.textContent).not.toContain('Devoluções')
   })
 
   it('mostra reposição e cobertura na aba estoque', () => {

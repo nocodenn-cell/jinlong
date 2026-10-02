@@ -46,4 +46,26 @@ describe('hojeYmd', () => {
   it('formata como YYYY-MM-DD', () => {
     expect(hojeYmd(new Date('2026-09-04T23:59:00Z'))).toBe('2026-09-04')
   })
+
+  it('usa o dia civil de Brasília, não o UTC: 23:30 BRT ainda é o mesmo dia', () => {
+    // 04/09 23:30 BRT = 05/09 02:30Z → UTC já diria 05/09
+    expect(hojeYmd(new Date('2026-09-05T02:30:00Z'))).toBe('2026-09-04')
+  })
+
+  it('00:10 BRT já é o dia seguinte (mudança de dia)', () => {
+    // 05/09 00:10 BRT = 05/09 03:10Z
+    expect(hojeYmd(new Date('2026-09-05T03:10:00Z'))).toBe('2026-09-05')
+    expect(hojeYmd(new Date('2026-09-05T02:59:59Z'))).toBe('2026-09-04')
+  })
+
+  it('aceita outro fuso explícito', () => {
+    expect(hojeYmd(new Date('2026-09-05T02:30:00Z'), 'UTC')).toBe('2026-09-05')
+  })
+
+  it('título que vence "hoje" às 23:30 BRT NÃO está vencido', () => {
+    const agora = new Date('2026-09-05T02:30:00Z') // 04/09 23:30 BRT
+    expect(isTituloVencido('2026-09-04', 'PENDENTE', hojeYmd(agora))).toBe(false)
+    // e vira vencido à 00:10 BRT do dia seguinte
+    expect(isTituloVencido('2026-09-04', 'PENDENTE', hojeYmd(new Date('2026-09-05T03:10:00Z')))).toBe(true)
+  })
 })

@@ -8,21 +8,8 @@ import { devolverOuTrocarVendaImpl } from '@/app/gerente/vendas/devolverOuTrocar
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { getGerenteLojaId } from '@/lib/gerente/auth/sessionContext'
 import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
-import { liquidarKpis } from '@/app/gerente/vendas/kpisLiquidos'
-
-export type VendaListRow = {
-  id: string
-  data: string | null
-  total_liquido: number | null
-  total_bruto: number | null
-  forma_pagamento: string | null
-  status: string | null
-  caixa_id: string | null
-  operador_id: string | null
-  qtd_itens_total: number
-  qtd_itens_distintos: number
-  primeiro_produto: string | null
-}
+import { metricasDeRpc, type KpisVendasRpcRow } from '@/lib/vendas/metricasVendas'
+import { mapVendaRow, statusFromFiltro, type RpcVendaRow, type VendaListRow } from '@/lib/vendas/vendasListaRpc'
 
 export type VendasFiltro = Readonly<{
   inicio: string | null
@@ -38,39 +25,23 @@ const FILTRO_VENDAS_VAZIO: VendasFiltro = {
   formaPagamento: [],
 }
 
+/**
+ * Métricas canônicas (ver `lib/vendas/metricasVendas.ts` e a migration 20260930120000):
+ * `faturado` = vendas CONCLUIDA; `receitaLiquida` = faturado − devoluções pós-venda;
+ * `taxaCancelamento` é FRAÇÃO (0..1) — formatar com `formatarPercentual`.
+ */
 export type VendasKpisDTO = Readonly<{
   faturado: number
   qtdConcluidas: number
   ticketMedio: number
   qtdCanceladas: number
   valorCanceladas: number
+  devolucoes: number
+  receitaLiquida: number
+  taxaCancelamento: number
 }>
 
 const PAGE_SIZE = 20
-
-type RpcEventRow = {
-  event_id: string
-  sale_id: string
-  event_type: string
-  occurred_at: string
-  total: number
-  total_bruto: number | null
-  forma_pagamento: string | null
-  caixa_id: string
-  operador_id: string
-  items: unknown
-  qtd_itens_total: number
-  qtd_itens_distintos: number
-  primeiro_produto: string | null
-}
-
-type RpcKpiRow = {
-  faturado: number
-  qtd_concluidas: number
-  ticket_medio: number
-  qtd_canceladas: number
-  valor_canceladas: number
-}
 
 /**
  * Toda action que usa este client chama `assertGerenteSession()` antes: a sessão já
@@ -79,30 +50,6 @@ type RpcKpiRow = {
  */
 async function createVendasSupabaseClient() {
   return createClient()
-}
-
-function eventTypesFromFiltro(status: ReadonlyArray<string>): string[] {
-  if (status.length === 0) return ['SALE_REGISTERED', 'SALE_CANCELLED']
-  const types: string[] = []
-  if (status.some((s) => String(s).toUpperCase() === 'CONCLUIDA')) types.push('SALE_REGISTERED')
-  if (status.some((s) => String(s).toUpperCase() === 'CANCELADA')) types.push('SALE_CANCELLED')
-  return types.length > 0 ? types : ['SALE_REGISTERED', 'SALE_CANCELLED']
-}
-
-function mapEventRow(raw: RpcEventRow): VendaListRow {
-  return {
-    id: raw.sale_id,
-    data: raw.occurred_at,
-    total_liquido: raw.total,
-    total_bruto: raw.total_bruto,
-    forma_pagamento: raw.forma_pagamento,
-    status: raw.event_type === 'SALE_CANCELLED' ? 'CANCELADA' : 'CONCLUIDA',
-    caixa_id: raw.caixa_id,
-    operador_id: raw.operador_id ?? null,
-    qtd_itens_total: Number(raw.qtd_itens_total ?? 0),
-    qtd_itens_distintos: Number(raw.qtd_itens_distintos ?? 0),
-    primeiro_produto: raw.primeiro_produto,
-  }
 }
 
 async function resolveLojaId(): Promise<string | null> {
@@ -126,11 +73,11 @@ export async function buscarVendasPaginadasAction(
     if (!lojaId) return { ok: false, error: 'Não foi possível identificar a loja.' }
 
     const offset = (page - 1) * PAGE_SIZE
-    const { data, error } = await supabase.rpc('listar_venda_eventos_gerente', {
+    const { data, error } = await supabase.rpc('listar_vendas_gerente', {
       p_loja_id: lojaId,
       p_inicio: filtros.inicio,
       p_fim: filtros.fim,
-      p_event_types: eventTypesFromFiltro(filtros.status),
+      p_status: statusFromFiltro(filtros.status),
       p_formas_pagamento:
         filtros.formaPagamento.length > 0 ? [...filtros.formaPagamento] : null,
       p_offset: offset,
@@ -139,9 +86,9 @@ export async function buscarVendasPaginadasAction(
 
     if (error) return { ok: false, error: error.message }
 
-    const raw = (data ?? []) as RpcEventRow[]
+    const raw = (data ?? []) as RpcVendaRow[]
     const hasMore = raw.length > PAGE_SIZE
-    const vendas = (hasMore ? raw.slice(0, PAGE_SIZE) : raw).map(mapEventRow)
+    const vendas = (hasMore ? raw.slice(0, PAGE_SIZE) : raw).map(mapVendaRow)
     return { ok: true, vendas, hasMore }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Erro ao buscar vendas.' }
@@ -157,6 +104,9 @@ export async function obterKpisVendas(
     ticketMedio: 0,
     qtdCanceladas: 0,
     valorCanceladas: 0,
+    devolucoes: 0,
+    receitaLiquida: 0,
+    taxaCancelamento: 0,
   }
   const authCheck = await assertGerenteSession()
   if (!authCheck.ok) return vazio
@@ -168,7 +118,7 @@ export async function obterKpisVendas(
     const lojaId = await resolveLojaId()
     if (!lojaId) return vazio
 
-    const { data, error } = await supabase.rpc('kpis_venda_eventos_gerente', {
+    const { data, error } = await supabase.rpc('kpis_vendas_gerente', {
       p_loja_id: lojaId,
       p_inicio: filtros.inicio,
       p_fim: filtros.fim,
@@ -178,15 +128,20 @@ export async function obterKpisVendas(
 
     if (error || !data) return vazio
 
-    const row = (Array.isArray(data) ? data[0] : data) as RpcKpiRow | undefined
+    const row = (Array.isArray(data) ? data[0] : data) as KpisVendasRpcRow | undefined
     if (!row) return vazio
 
-    return liquidarKpis({
-      faturado: Number(row.faturado ?? 0),
-      qtdConcluidas: Number(row.qtd_concluidas ?? 0),
-      qtdCanceladas: Number(row.qtd_canceladas ?? 0),
-      valorCanceladas: Number(row.valor_canceladas ?? 0),
-    })
+    const m = metricasDeRpc(row)
+    return {
+      faturado: m.faturado,
+      qtdConcluidas: m.vendasConcluidas,
+      ticketMedio: m.ticketMedio,
+      qtdCanceladas: m.vendasCanceladas,
+      valorCanceladas: m.valorCancelado,
+      devolucoes: m.devolucoes,
+      receitaLiquida: m.receitaLiquida,
+      taxaCancelamento: m.taxaCancelamento,
+    }
   } catch {
     return vazio
   }
@@ -209,11 +164,11 @@ export async function obterVendasCompletaParaExport(
 
     let offset = 0
     while (acc.length < EXPORT_MAX_ROWS) {
-      const { data, error } = await supabase.rpc('listar_venda_eventos_gerente', {
+      const { data, error } = await supabase.rpc('listar_vendas_gerente', {
         p_loja_id: lojaId,
         p_inicio: filtros.inicio,
         p_fim: filtros.fim,
-        p_event_types: eventTypesFromFiltro(filtros.status),
+        p_status: statusFromFiltro(filtros.status),
         p_formas_pagamento:
           filtros.formaPagamento.length > 0 ? [...filtros.formaPagamento] : null,
         p_offset: offset,
@@ -222,8 +177,8 @@ export async function obterVendasCompletaParaExport(
 
       if (error || !data || data.length === 0) break
 
-      const raw = data as RpcEventRow[]
-      acc.push(...raw.map(mapEventRow))
+      const raw = data as RpcVendaRow[]
+      acc.push(...raw.map(mapVendaRow))
       if (raw.length < EXPORT_PAGE) break
       offset += EXPORT_PAGE
     }

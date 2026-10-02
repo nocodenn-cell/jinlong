@@ -3,6 +3,8 @@
  * Só formatação/ordenação visual — sem alterar contratos RPC.
  */
 
+import { ticketMedio as ticketMedioCanonico } from '@/lib/vendas/metricasVendas'
+
 export type AvisoPeriodo = 'nenhum' | 'datas_invalidas' | 'periodo_invertido' | 'periodo_limitado'
 
 export type RelatoriosTabId = 'visao' | 'produtos' | 'estoque' | 'margem' | 'vendas'
@@ -37,9 +39,10 @@ export function sumFaturamento(rows: Array<{ total_liquido: number }>): number {
   return rows.reduce((acc, row) => acc + Number(row.total_liquido ?? 0), 0)
 }
 
+/** Mesma fórmula canônica (`lib/vendas/metricasVendas`); aqui `null` só para exibir "—" sem vendas. */
 export function ticketMedio(faturamento: number, vendasConcluidas: number): number | null {
   if (vendasConcluidas <= 0) return null
-  return faturamento / vendasConcluidas
+  return ticketMedioCanonico(faturamento, vendasConcluidas)
 }
 
 export function sortReposicaoPorDeficit<T extends { deficit: number }>(rows: T[]): T[] {

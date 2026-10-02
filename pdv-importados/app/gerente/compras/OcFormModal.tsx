@@ -6,6 +6,7 @@ import { getMessages } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { cn } from '@/lib/utils'
+import { hojeYmd } from '@shared-core/src/financial/policies/tituloVencido'
 import { formatBRL, formatDecimalBRL, parseBRL } from '@/lib/format/money'
 import {
   criarOrdemCompra,
@@ -77,7 +78,8 @@ export function OcFormModal({
     ocInicial?.fornecedor_nome ?? '',
   )
   const [dataEmissao, setDataEmissao] = useState(
-    ocInicial?.data_emissao ?? new Date().toISOString().slice(0, 10),
+    // Dia civil da loja (Onda B): `toISOString()` virava "amanhã" entre 21h e 24h BRT.
+    ocInicial?.data_emissao ?? hojeYmd(),
   )
   const [dataPrevista, setDataPrevista] = useState(ocInicial?.data_prevista_chegada ?? '')
   const [observacao, setObservacao] = useState(ocInicial?.observacao ?? '')
