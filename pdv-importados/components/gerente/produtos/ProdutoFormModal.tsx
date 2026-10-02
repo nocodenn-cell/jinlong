@@ -248,6 +248,7 @@ export function ProdutoFormModal({
             onFornecedoresChange={orch.onFornecedoresChange}
             onCategoriasChange={orch.onCategoriasChange}
             onMarcasChange={orch.onMarcasChange}
+            buscarNomesSimilares={orch.buscarNomesSimilares}
             {...orch.form}
           />
         </div>

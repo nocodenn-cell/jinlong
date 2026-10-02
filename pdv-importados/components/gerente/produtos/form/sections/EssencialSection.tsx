@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, type RefObject } from 'react'
-import { buscarProdutosComFiltros } from '@/app/gerente/produtos/actions'
 import { eanComDvSuspeito, nomeJaExiste } from '@/lib/validacao/documentos'
 import { ProdutoFormSectionHeading } from '../ProdutoFormSectionHeading'
 import { useProdutoFormContext } from '../ProdutoFormContext'
@@ -36,16 +35,14 @@ export function EssencialSection({
 
   async function verificarNomeDuplicado() {
     const nome = ctx.nome.trim()
-    if (nome.length < 2) {
+    if (nome.length < 2 || !ctx.buscarNomesSimilares) {
       setNomeDuplicado(false)
       return
     }
     try {
-      const r = await buscarProdutosComFiltros({ busca: nome, pageSize: 20 })
-      if (!r.success) return
-      setNomeDuplicado(
-        r.data.rows.some((row) => row.id !== ctx.produto?.id && nomeJaExiste(nome, [row.nome])),
-      )
+      const rows = await ctx.buscarNomesSimilares(nome)
+      if (!rows) return
+      setNomeDuplicado(rows.some((row) => row.id !== ctx.produto?.id && nomeJaExiste(nome, [row.nome])))
     } catch {
       /* aviso é opcional: falha de rede não atrapalha o cadastro */
     }

@@ -6,7 +6,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { getMessages } from '@/i18n/getMessages'
 
 const buscarMock = vi.fn()
-vi.mock('@/app/gerente/produtos/actions', () => ({ buscarProdutosComFiltros: (...a: unknown[]) => buscarMock(...a) }))
 
 ;(globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
@@ -42,6 +41,7 @@ function ctx(over: Record<string, unknown>) {
     setCodigoBarras: () => {},
     setNome: () => {},
     setUnidadeMedida: () => {},
+    buscarNomesSimilares: (...a: unknown[]) => buscarMock(...a),
     ...over,
   } as never
 }
@@ -67,7 +67,7 @@ describe('EssencialSection — avisos (UX-020)', () => {
   })
 
   it('ao sair do campo nome, avisa se já existe produto com o mesmo nome (e ignora o próprio produto)', async () => {
-    buscarMock.mockResolvedValue({ success: true, data: { total: 1, rows: [{ id: 'outro', nome: 'Caneta Azul' }] } })
+    buscarMock.mockResolvedValue([{ id: 'outro', nome: 'Caneta Azul' }])
     render({ nome: 'caneta azul' })
     const nome = document.querySelector('input[data-field="nome"]') as HTMLInputElement
     await act(async () => {
@@ -78,7 +78,7 @@ describe('EssencialSection — avisos (UX-020)', () => {
     expect(document.querySelector('[data-testid="aviso-nome-duplicado"]')).toBeTruthy()
 
     // editando o próprio produto: não é duplicidade
-    buscarMock.mockResolvedValue({ success: true, data: { total: 1, rows: [{ id: 'eu', nome: 'Caneta Azul' }] } })
+    buscarMock.mockResolvedValue([{ id: 'eu', nome: 'Caneta Azul' }])
     render({ nome: 'caneta azul', produto: { id: 'eu' } })
     const nome2 = document.querySelector('input[data-field="nome"]') as HTMLInputElement
     await act(async () => {
