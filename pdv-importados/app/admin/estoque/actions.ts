@@ -12,6 +12,7 @@ import { assertAdminSession } from '@/lib/admin/auth/assertAdminSession'
 import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import { ROUTES } from '@/lib/navigation/routes'
 import { createInventoryMovementReader } from '@/app/admin/estoque/inventoryMovementReader'
+import { createInventoryReader } from '@/app/admin/estoque/inventoryReader'
 import { calcularSaldoApos } from '@/app/admin/estoque/kardexSaldo'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -64,13 +65,8 @@ export async function obterKardexProduto(produtoId: string): Promise<KardexMovim
   }
 
   // Saldo após: reconstruído do saldo atual; só vale se a soma de TODO o histórico fecha com ele.
-  const [{ data: est }, { data: todos }] = await Promise.all([
-    supabase
-      .from('estoque')
-      .select('quantidade_atual')
-      .eq('loja_id', loja)
-      .eq('produto_id', produtoId)
-      .maybeSingle(),
+  const [saldoRes, { data: todos }] = await Promise.all([
+    createInventoryReader(supabase, loja).getBalance(produtoId),
     supabase
       .from('v_kardex_unificado')
       .select('quantidade_delta')
@@ -78,7 +74,7 @@ export async function obterKardexProduto(produtoId: string): Promise<KardexMovim
       .eq('loja_id', loja)
       .range(0, KARDEX_TOTAL_MAX - 1),
   ])
-  const saldoAtual = est?.quantidade_atual == null ? null : Number(est.quantidade_atual)
+  const saldoAtual = saldoRes.ok ? saldoRes.item.quantity : null
   const linhas = (todos ?? []) as Array<{ quantidade_delta: number | string }>
   // Se o total estourou o teto de leitura, não dá para provar o fechamento: sem saldo.
   const somaTodos =
