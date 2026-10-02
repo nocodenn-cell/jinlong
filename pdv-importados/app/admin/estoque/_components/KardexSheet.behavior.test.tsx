@@ -39,6 +39,8 @@ beforeEach(() => {
       tipo_codigo: 'DEVOLUCAO',
       quantidade_delta: 2,
       observacao: `devolucao | motivo=troca de tamanho | operacao=${OP}`,
+      usuario_nome: 'Maria Souza',
+      saldo_apos: 7,
     },
     {
       id: 'm2',
@@ -46,6 +48,8 @@ beforeEach(() => {
       tipo_codigo: 'VENDA',
       quantidade_delta: -1,
       observacao: null,
+      usuario_nome: null,
+      saldo_apos: 5,
     },
   ])
   container = document.createElement('div')
@@ -83,14 +87,34 @@ describe('KardexSheet — colunas legíveis (UX-007)', () => {
     })
   }
 
-  it('exibe cabeçalhos Data, Tipo, Qtd e Motivo e os valores de data e quantidade', async () => {
+  it('exibe cabeçalhos Data, Tipo, Qtd, Saldo após, Usuário e Motivo e os valores', async () => {
     await abrir()
     const headers = Array.from(document.querySelectorAll('th')).map((th) => th.textContent?.trim())
-    expect(headers).toEqual(['Data', 'Tipo', 'Qtd', 'Motivo'])
+    expect(headers).toEqual(['Data', 'Tipo', 'Qtd', 'Saldo após', 'Usuário', 'Motivo'])
     const texto = document.body.textContent ?? ''
+    expect(texto).toContain('Maria Souza')
+    expect(texto).toContain('7')
+    expect(texto).toContain('5')
     expect(texto).toContain('30/09/26')
     expect(texto).toContain('Devolução')
     expect(texto).toContain('troca de tamanho')
+  })
+
+  it('sem saldo provado a coluna Saldo após some; usuário ausente vira traço', async () => {
+    obterKardexProdutoMock.mockResolvedValue([
+      {
+        id: 'm3',
+        created_at: '2026-09-28T12:00:00Z',
+        tipo_codigo: 'VENDA',
+        quantidade_delta: -1,
+        observacao: null,
+        usuario_nome: null,
+        saldo_apos: null,
+      },
+    ])
+    await abrir()
+    const headers = Array.from(document.querySelectorAll('th')).map((th) => th.textContent?.trim())
+    expect(headers).toEqual(['Data', 'Tipo', 'Qtd', 'Usuário', 'Motivo'])
   })
 
   it('não vaza o uuid da operação nem o texto técnico', async () => {
@@ -103,8 +127,10 @@ describe('KardexSheet — colunas legíveis (UX-007)', () => {
 
   it('motivo longo é truncado com tooltip, sem alargar a tabela', async () => {
     await abrir()
-    const celula = Array.from(document.querySelectorAll('td span.truncate'))[0] as HTMLElement
-    expect(celula.getAttribute('title')).toBe('troca de tamanho')
+    const celula = Array.from(document.querySelectorAll('td span.truncate')).find(
+      (el) => el.getAttribute('title') === 'troca de tamanho',
+    ) as HTMLElement
+    expect(celula).toBeTruthy()
     expect((celula.closest('td') as HTMLElement).className).toContain('max-w-')
   })
 })
