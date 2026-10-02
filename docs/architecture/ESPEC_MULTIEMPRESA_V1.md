@@ -1,6 +1,6 @@
 # Especificação Multiempresa — Jinlong (v1, congelada para revisão)
 
-> Status: **PROPOSTA PARA CONGELAMENTO** · Data: 2026-10-02 · Implementação: **não autorizada**
+> Status: **DECISÕES FECHADAS (D1–D19)** · Data: 2026-10-02 · Fase 1: conceitualmente aprovada, **execução em produção não autorizada**
 > Base: inventário read-only de produção (`kbabmewnahysfvlybiak`) e do repositório (HEAD `897f1c6`).
 > Marcadores: **[FATO]** evidência observada · **[INFERÊNCIA]** conclusão derivada · **[NÃO CONFIRMADO]** a validar · **[DECISÃO]** decidido pelo produto · **[PENDENTE]** decisão em aberto.
 
@@ -18,6 +18,15 @@
 | D8 | `perfis`: manter durante a transição; remover só com dependência zero comprovada | [DECISÃO] |
 | D9 | ADMIN atual: não migrar até identificação humana | [DECISÃO] |
 | D10 | Cliente 1 não percebe a transformação: comportamento operacional equivalente em todas as etapas | [DECISÃO] |
+| D11 | `lojas.codigo` único **dentro da empresa** (`UNIQUE (empresa_id, codigo)`); a unicidade global atual só sai depois que `provisionamento` deixar de usar o código como identificador global | [DECISÃO] |
+| D12 | `regras_preco`, `categorias_financeiras`, `pricing_config_versions` pertencem à EMPRESA | [DECISÃO] |
+| D13 | `configuracoes_gerais` = EMPRESA por padrão, com escopo classificado chave a chave (§7.1); sem segunda tabela | [DECISÃO] |
+| D14 | `relatorio_settings` = LOJA | [DECISÃO] |
+| D15 | `precos_atacado.loja_id NULL` = preço padrão da EMPRESA; `loja_id = X` = override da loja X; nunca global entre empresas | [DECISÃO] |
+| D16 | Guarda RESTRICTIVE aprovada só para protótipo em poucas tabelas; expansão depois da bateria do §7.2 | [DECISÃO] |
+| D17 | Fase 1 = migration **aditiva**, sem mudar policies, sem trocar a fonte de verdade, sem remover `usuarios.perfil`/`usuarios.loja_id` | [DECISÃO] |
+| D18 | Regra de segurança: toda operação nova responde "qual é o tenant?"; "não sei" ou `LOJA_MATRIZ_ID` ⇒ falha fechada | [DECISÃO] |
+| D19 | PR desta especificação contém só documentação; implementação em branch separada | [DECISÃO] |
 
 ## 1. Identidade
 
@@ -52,7 +61,8 @@ empresas (
 
 - `lojas.empresa_id uuid NOT NULL REFERENCES empresas(id)` (nullable → backfill → NOT NULL).
 - `UNIQUE (id, empresa_id)` em `lojas`, para permitir FK composta a partir de `usuario_vinculos` (garante que a loja do vínculo pertence à empresa do vínculo).
-- `lojas.codigo` hoje é `UNIQUE` global ([FATO]). Proposta: `UNIQUE (empresa_id, codigo)` — **[PENDENTE]** (afeta `provisionamento` que busca loja por código).
+- `lojas.codigo`: **[DECISÃO D11]** único por empresa. [FATO] Hoje existe `lojas_codigo_key UNIQUE (codigo)` e `app/admin/provisionamento/actions.ts:108-140` (`ensureLoja`) busca a loja **por código no banco inteiro** e reaproveita a existente — é o único uso como identificador global encontrado (nenhuma função SQL, rota ou Edge Function usa `lojas.codigo` [FATO]; `TransferenciasGerentePageClient` só exibe). Sequência: Fase 1 adiciona `UNIQUE (empresa_id, codigo)` **sem** remover a global; `ensureLoja` passa a filtrar por empresa; só então `lojas_codigo_key` é removida.
+- `lojas.empresa_id` fica **anulável** na Fase 1: `provisionamento` ainda insere loja sem empresa [FATO]. `NOT NULL` só depois que o fluxo de criação de loja gravar `empresa_id`.
 - `lojas.ativo` continua sendo o desligamento operacional da loja.
 
 ## 4. Vínculo
@@ -136,12 +146,43 @@ CREATE POLICY tenant_guard ON <tabela> AS RESTRICTIVE FOR ALL TO authenticated
 |---|---|---|
 | L — loja direta | as 36 com `loja_id` | `fp_pode_loja(loja_id, NULL)` (colunas `loja_id` anuláveis: tratar caso a caso, §12) |
 | J — loja por join | `vendas` (via `caixas`), `itens_venda`, `vendas_pagamentos`, `descontos_venda`, `devolucoes`, `movimentos_caixa`, `estoque_baixas`, `estoque_reposicoes_*`, `remessa_itens`, `ordens_compra_itens`, `importacoes_nfe_itens`, `importacoes_nfe_duplicatas`, `comissoes_itens`, `comissoes_pagamentos_ajustes`, `comissoes_regras_historico`, `venda_pos_venda_*`, `vendas_canceladas_auditoria`, `documentos_fiscais_*`, `historico_precos_produto`, `historico_tiers_crud` | `EXISTS (pai WHERE pai.id = fk AND fp_pode_loja(pai.loja_id, NULL))` — **sem** adicionar coluna |
-| E — empresa | `categorias`, `marcas` (D4); `regras_preco`, `categorias_financeiras`, `pricing_config_versions` **[PENDENTE confirmação]** | `empresa_id IN (SELECT fp_empresas_do_usuario())` (requer coluna `empresa_id`) |
-| E/L indefinido | `configuracoes_gerais`, `relatorio_settings` | **[PENDENTE]** |
+| E — empresa | `categorias`, `marcas` (D4); `regras_preco`, `categorias_financeiras`, `pricing_config_versions` (D12); `configuracoes_gerais` (D13, ver §7.1) | `empresa_id IN (SELECT fp_empresas_do_usuario())` (requer coluna `empresa_id`, adicionada de forma incremental) |
+| L por decisão | `relatorio_settings` (D14) | ganha `loja_id`; a linha única atual vira a da MATRIZ |
+| L com padrão de empresa | `precos_atacado` (D15) | `loja_id IS NULL` ⇒ padrão da empresa do **produto**; `loja_id = X` ⇒ override da loja X. Guarda: produto visível ao usuário **e** (`loja_id IS NULL` ou `fp_pode_loja(loja_id)`) |
 | R — raiz | `lojas` | SELECT: `empresa_id IN fp_empresas_do_usuario()`; escrita: DONO da empresa (e plataforma via servidor) |
 | P — plataforma | `feature_flags`, `tipos_movimento_estoque` | leitura autenticada; escrita só `service_role` |
 | T — técnico | `gtin_lookup_cache`, `sync_request_nonces`, `gerente_auth_*`, `transferencias_idempotencia`, `venda_engine_shadow_runs`, `caixa_scan_telemetry_events`, `_backup_schema_migrations_20260802` | sem tenant; revisar acesso direto (`sync_request_nonces` e `venda_engine_shadow_runs` estão **sem RLS** [FATO]) |
 | V — identidade/vínculo | `usuarios`, `usuario_vinculos`, `plataforma_admins`, `empresas`, `perfis` | próprio usuário + DONO da empresa (leitura); escrita só servidor |
+
+### 7.1 `configuracoes_gerais` — escopo por chave ([FATO] 8 chaves em produção)
+
+| Chave | Escopo | Observação |
+|---|---|---|
+| `comissao_padrao_percentual` | empresa | política comercial |
+| `desconto_maximo_operador_percentual` | empresa | política comercial |
+| `cancelamento_maximo_valor_sem_gerente` | empresa | marcada como "Reservado" na descrição |
+| `lead_time_min_dias`, `lead_time_max_dias` | empresa | importação |
+| `estoque_minimo_padrao` | empresa | default de criação de linha de estoque |
+| `vendas_suspensas`, `motivo_suspensao` | empresa | suspende **todas** as lojas da empresa. Suspensão por loja não existe hoje [FATO] e **não** é criada agora |
+
+Nenhuma chave foi comprovada como específica de loja ⇒ todas recebem `empresa_id`; nenhuma é duplicada.
+
+### 7.2 `precos_atacado` — validação contra a SSOT de preço
+
+- [FATO] Produção: 58 linhas, **todas** com `loja_id NULL`. `calcular_preco_produto` filtra `AND (pa.loja_id IS NULL OR pa.loja_id = p_loja_id)`.
+- [FATO] `precos_atacado` referencia `produto_id`, e `produtos.loja_id` é `NOT NULL`. Logo uma linha `NULL` já fica presa ao tenant do produto: **não existe hoje caminho de preço global entre empresas** pela SSOT.
+- [NÃO CONFIRMADO] Precedência override (loja) > padrão (NULL) quando ambos existirem: não verificada no corpo da função. Validar antes de qualquer mudança de comportamento (teste com as duas linhas para o mesmo produto/faixa).
+- Risco remanescente: `precos_atacado_escrita` (PERMISSIVE por perfil, sem loja) — coberto pela guarda.
+
+### 7.3 Protótipo da guarda RESTRICTIVE (D16)
+
+Antes de expandir, aplicar em 3 tabelas representativas — `fornecedores` (L direta), `contas_receber` (L, financeira) e `itens_venda` (J por join) — e provar:
+1. SELECT/INSERT/UPDATE/DELETE para DONO, GERENTE, OPERADOR;
+2. Empresa A × Empresa B;
+3. combinação com cada PERMISSIVE existente da tabela (nenhuma concede fora do tenant);
+4. `service_role` (ignora RLS — esperado; documentar);
+5. RPCs `SECURITY DEFINER` que escrevem nessas tabelas (ignoram RLS — esperado; cobertas pelo §8);
+6. `EXPLAIN ANALYZE` antes/depois.
 
 - **Views:** [FATO] as 12 views são `security_invoker` → herdam a guarda. Manter assim (bloquear view nova sem `security_invoker` no CI).
 - **Desempenho [NÃO CONFIRMADO]:** guarda em tabelas grandes (`itens_venda`, `venda_eventos`) precisa de medição (`EXPLAIN ANALYZE`) antes/depois; helpers `STABLE` e chamados como `(SELECT fp_…())` para virar initplan.
@@ -177,7 +218,7 @@ Regra: nenhuma RPC aceita `loja_id`/`empresa_id` do cliente como autorização �
 
 ## 10. Storage
 
-- Bucket `produto-imagens`: `public = true` mantido (D5). [FATO] 0 objetos; 4 policies (INSERT/UPDATE/DELETE/SELECT) condicionadas a perfil gerencial e à existência do `produtos.id` no prefixo do caminho.
+- **[DECISÃO D5]** Leitura pública mantida; URL pública ≠ autorização de escrita. Bucket `produto-imagens`: `public = true`. [FATO] 0 objetos; 4 policies (INSERT/UPDATE/DELETE/SELECT) condicionadas a perfil gerencial e à existência do `produtos.id` no prefixo do caminho.
 - [INFERÊNCIA] O subselect em `produtos` dentro da policy roda com a RLS de quem chama, logo já herda o escopo de `produtos`. **Mesmo assim**, explicitar: `fp_pode_loja(p.loja_id, ARRAY['GERENTE','DONO'])` no INSERT/UPDATE/DELETE.
 - Caminho do objeto continua `<produto_id>/<arquivo>`; não incluir empresa no caminho (o produto já determina).
 
@@ -186,7 +227,7 @@ Regra: nenhuma RPC aceita `loja_id`/`empresa_id` do cliente como autorização �
 | Função | [FATO] hoje | Regra |
 |---|---|---|
 | `validar-gerente` | JWT do usuário; `loja_id` vem do corpo | loja derivada do usuário/vínculo no servidor; corpo só seleciona entre lojas permitidas (fecha SEC-04, ainda não aplicada em produção) |
-| `sync-outbox` | HMAC (chave por dispositivo ou `SYNC_KEY` global); loja do header `x-loja-id`, fallback `DEFAULT_PDV_LOJA_ID` | **fora do 1º corte (D6)**. Antes de multi-cliente: tabela dispositivo→loja, chave por dispositivo obrigatória, header só confirma, sem fallback |
+| `sync-outbox` | HMAC (chave por dispositivo ou `SYNC_KEY` global); loja do header `x-loja-id`, fallback `DEFAULT_PDV_LOJA_ID` | **fora do 1º corte (D6)**; P1 aberto. Pré-requisitos para operação multiempresa pelo desktop: dispositivo vinculado à loja no servidor; loja enviada pelo cliente ignorada como autorização; `DEFAULT_PDV_LOJA_ID` não é mecanismo de autorização; teste dispositivo A → loja B negado |
 | `fiscal-worker` | chave `X-FISCAL-WORKER-KEY`, `verify_jwt=false`, `service_role`; credencial por `loja_id` do payload | manter; validar `fp_empresa_operacional` da loja antes de emitir; `fiscal_provider_config` não existe em produção [FATO] (frente fiscal, separada) |
 
 Server Actions com `service_role` ([FATO]): `admin/provisionamento` (exige perfil ADMIN → passa a exigir `fp_eh_plataforma`), `admin/funcionarios` (cria usuário e **passa a criar vínculo**; valida loja ∈ lojas permitidas do ator), `gerente/estoque` e `criarProdutoComEstoqueInicialRpc` (passam a validar loja via helper antes da RPC), `api/health` (sem dado de tenant).
@@ -212,14 +253,14 @@ Cada etapa: local → staging (clone) → autorização explícita → produçã
 | 12 | Remover defaults MATRIZ; `usuarios.perfil/loja_id` passam a derivados | não | restaurar defaults |
 | 13 | Cliente 2 | — | — |
 
-**Colunas `loja_id` anuláveis** ([FATO] 9 tabelas: `cadastro_produto_telemetry_events`, `contas_pagar_pagamentos`, `liquidacoes_receber`, `movimentacoes_caixa`, `pdv_config`, `perfis`, `precos_atacado`, `system_alerts`, `tokens_desconto_gerente`): antes da etapa 7, contar NULLs em produção e decidir por tabela (backfill, derivar por join ou tratar NULL como "da empresa" — **nunca** como global). `precos_atacado.loja_id NULL` é usado por design pelo fluxo de atacado do GERENTE ([FATO], comentário em `20260829120000`) → **[PENDENTE]**.
+**Colunas `loja_id` anuláveis** ([FATO] 9 tabelas; NULLs contados em produção em 2026-10-02): `movimentacoes_caixa` 3 · `pdv_config` 1 (de 2 linhas) · `tokens_desconto_gerente` 2 · `cadastro_produto_telemetry_events` 1 · `precos_atacado` 58/58 (semântica D15) · `contas_pagar_pagamentos`, `liquidacoes_receber`, `system_alerts` 0 · `perfis` (fora do modelo, D8). Antes da etapa 7, decidir por tabela (backfill, derivar por join ou tratar NULL como "da empresa" — **nunca** como global).
 
 ## 13. Compatibilidade
 
 - `usuarios.perfil` e `usuarios.loja_id` permanecem e continuam válidos até a etapa 12; durante a transição a fonte de verdade é `usuarios` e o vínculo é derivado (trigger, etapa 4). No corte, inverte: vínculo é fonte; `usuarios.*` vira derivado ou é removido em etapa futura.
 - Assinaturas de RPC **não mudam** (o frontend não precisa de deploy sincronizado com o banco).
 - Códigos de erro existentes (`*_LOJA_INVALIDA`, `*_PERFIL`) são mantidos; novos só para casos novos (`*_EMPRESA_INVALIDA`, `EMPRESA_NAO_OPERACIONAL`).
-- `perfis` (D8): [FATO] nenhuma função, view ou policy de outra tabela a usa; nenhum uso no código da aplicação; 3 linhas (2 com `user_id` existente em `usuarios`); roles `perfil_restrito`, `perfil_gerente`, `perfil_admin` sem membros além de `postgres`. Mantida intocada; recebe guarda V.
+- `perfis` (D8): [FATO] nenhuma função, view ou policy de outra tabela a usa; nenhum uso no código da aplicação; 3 linhas (2 com `user_id` existente em `usuarios`); roles `perfil_restrito`, `perfil_gerente`, `perfil_admin` sem membros além de `postgres`. **[DECISÃO]** não remover, não alterar, não usar como fonte de autorização. A fonte do novo modelo é `usuario_vinculos` + `plataforma_admins` + helpers `fp_*`.
 
 ## 14. Testes
 
@@ -239,7 +280,9 @@ Cada etapa: local → staging (clone) → autorização explícita → produçã
 - [FATO] Único ADMIN: `4b19c169-…`, **inativo**, criado e último login em 2026-07-19, 0 vendas e 0 movimentos de estoque como ator.
 - [FATO] O e-mail é exatamente o valor padrão de `PLAYWRIGHT_ADMIN_EMAIL` em `pdv-importados/e2e/smoke-fase1-provisionamento-homologacao.spec.ts:50`.
 - [INFERÊNCIA] Conta de teste automatizado (e2e) criada em produção — não é pessoa da equipe nem do cliente.
-- [NÃO CONFIRMADO] Quem executou o e2e contra produção. Decisão humana pendente (D9). Observação: contas e2e e `@localhost.test` ativas em produção (DONO, GERENTE, OPERADOR) são um risco separado (P2) a tratar antes do cliente 2.
+- [NÃO CONFIRMADO] Quem executou o e2e contra produção.
+- **[DECISÃO]** Classificada como **conta técnica/teste legada**. Não é promovida a plataforma, não recebe vínculo, permanece inativa; nenhum UPDATE/DELETE em produção nesta etapa. O backfill da Fase 1 a ignora explicitamente.
+- **Pré-requisito do cliente 2:** revisar todas as contas de teste em produção (e2e, `@localhost.test`, `@example.com`) e garantir que não participem da operação real.
 
 ## Anexo B — Drift (pendência 2)
 
@@ -250,6 +293,8 @@ Cada etapa: local → staging (clone) → autorização explícita → produçã
 | `20260928201815` | `atualizar_preco_varejo_produto_rpc` | a função **não existe em nenhum arquivo** do repositório; usa padrão DONO/ADMIN global |
 | `20260930090200` | `p03_vendas_lista_kpi_uma_linha_por_venda` | **conflita** com `20260930120000_vendas_lista_kpis_por_venda.sql` (só repo): duas implementações da mesma correção |
 | `20261002104957` | `pos_venda_operacoes_select_dono_todas_lojas` | redefine `venda_pos_venda_operacoes_select_loja` com `auth_usuario_eh_dono()` global; repositório tem versão anterior |
+
+**[DECISÃO D7/drift] Ordem:** (A) registrar no repositório as 3 migrations só-produção; (B) trazer para o repositório a RPC `atualizar_preco_varejo_produto`; (C) resolver o conflito `20260930090200` (produção) × `20260930120000` (repositório) escolhendo **uma** implementação; (D) avaliar SEC-04 e SEC-06 para o plano SaaS. As demais **não** são aplicadas só por estarem no repositório.
 
 **Só no repositório (27) — classificação:**
 
