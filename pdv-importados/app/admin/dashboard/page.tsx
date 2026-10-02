@@ -24,6 +24,7 @@ import { DashboardOrdersTable } from './_components/DashboardOrdersTable'
 import {
   agruparVendasPorDia,
   agruparVendasPorHora,
+  carregarTodasPaginas,
   diasCivisDoPeriodo,
   formatTrendPercent,
   getPeriodRange,
@@ -184,20 +185,30 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   // cancelada não é faturamento/pedido. O filtro `?status=` só afeta "últimos pedidos".
   // O embed precisa do hint de FK: venda_pos_venda_operacoes tem 2 FKs para vendas (venda_id e venda_substituta_id) e,
   // sem ele, o PostgREST responde PGRST201 (300) e a consulta inteira do período falha.
-  const vendasRangeQuery = supabase
-    .from('vendas')
-    .select('id,data,total_liquido,status,forma_pagamento,operador_id,venda_pos_venda_operacoes!venda_pos_venda_operacoes_venda_id_fkey(valor_estornado)')
-    .eq('status', 'CONCLUIDA')
-    .gte('data', start.toISOString())
-    .lte('data', end.toISOString())
-    .order('data', { ascending: true })
+  // Paginado: o PostgREST corta em silêncio em `max_rows` (1000). `id` desempata a ordenação para as páginas não se sobreporem.
+  const vendasRangeQuery = carregarTodasPaginas<(typeof vendasRange)[number]>((from, to) =>
+    supabase
+      .from('vendas')
+      .select('id,data,total_liquido,status,forma_pagamento,operador_id,venda_pos_venda_operacoes!venda_pos_venda_operacoes_venda_id_fkey(valor_estornado)')
+      .eq('status', 'CONCLUIDA')
+      .gte('data', start.toISOString())
+      .lte('data', end.toISOString())
+      .order('data', { ascending: true })
+      .order('id', { ascending: true })
+      .range(from, to) as unknown as PromiseLike<{ data: (typeof vendasRange)[number][] | null; error: { message: string } | null }>,
+  )
 
-  const vendasPrevQuery = supabase
-    .from('vendas')
-    .select('total_liquido,status')
-    .eq('status', 'CONCLUIDA')
-    .gte('data', previousStart.toISOString())
-    .lt('data', previousEnd.toISOString())
+  const vendasPrevQuery = carregarTodasPaginas<(typeof vendasPrevRange)[number]>((from, to) =>
+    supabase
+      .from('vendas')
+      .select('total_liquido,status')
+      .eq('status', 'CONCLUIDA')
+      .gte('data', previousStart.toISOString())
+      .lt('data', previousEnd.toISOString())
+      .order('data', { ascending: true })
+      .order('id', { ascending: true })
+      .range(from, to) as unknown as PromiseLike<{ data: (typeof vendasPrevRange)[number][] | null; error: { message: string } | null }>,
+  )
 
   const flagsVisuaisRow = Array.isArray(flagsVisuaisRes.data)
     ? flagsVisuaisRes.data[0]
@@ -273,6 +284,8 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   if (!estoqueBaixoRes.error) estoqueBaixoCount = estoqueBaixoRes.count ?? 0
 
   const periodSalesFailed = !!vendasRangeRes.error
+  // Teto de páginas atingido: os totais podem estar incompletos — nunca apresentar como completos.
+  const periodSalesTruncated = vendasRangeRes.truncated || vendasPrevRes.truncated
   const tableLoadFailed = !!recentOrdersRes.error
 
   if (usersRes) {
@@ -488,6 +501,15 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
           title={adminUi.errors.criticalSalesTitle[lk]}
           description={adminUi.errors.criticalSalesBody[lk]}
         />
+      ) : null}
+
+      {periodSalesTruncated ? (
+        <div
+          role="alert"
+          className="mb-4 rounded-[var(--radius-lg)] border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] px-4 py-3 text-body text-[var(--color-warning-strong)]"
+        >
+          {ui.dashboard_dados_incompletos}
+        </div>
       ) : null}
 
       <ErrorBanner

@@ -2809,6 +2809,7 @@
     "dashboard_pagamento_fallback": "支付",
     "dashboard_erro_banner_sg": "1条加载错误",
     "dashboard_erro_banner_pl": "{{n}}条加载错误",
+    "dashboard_dados_incompletos": "数据可能不完整：该时段的销售量超过了仪表盘的读取上限。销售额、订单数、客单价和图表可能偏低——请在报表中查看准确总数。",
     "grafico_carregando": "图表加载中…",
     "financeiro_titulo": "财务与税务",
     "financeiro_subtitulo": "历史应收单与税务队列只读查询。新挂账销售已禁用。",
