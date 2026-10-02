@@ -77,13 +77,29 @@ describe('cadeia devolução/troca', () => {
     expect(sql).toMatch(/INSERT INTO public\.movimentos_estoque_log/)
     expect(sql).toMatch(/'ENTRADA_DEVOLUCAO_CLIENTE'/)
     expect(sql).toMatch(/itens jsonb/)
-    expect(sql).not.toMatch(/DROP FUNCTION IF EXISTS public\.devolver_ou_trocar_venda/)
+    // Um DROP só é aceitável quando a assinatura MUDA (novo parâmetro criaria overload ambíguo). Nesse caso a mesma
+    // migration precisa recriar a função, reaplicar as permissões e provar que não sobrou overload (PR-2D).
+    if (/DROP FUNCTION IF EXISTS public\.devolver_ou_trocar_venda/.test(sql)) {
+      expect(sql).toMatch(/CREATE FUNCTION public\.devolver_ou_trocar_venda\s*\(/)
+      expect(sql).toMatch(/GRANT EXECUTE ON FUNCTION public\.devolver_ou_trocar_venda\([^)]*\)\s*TO authenticated/)
+      expect(sql).toMatch(/REVOKE ALL ON FUNCTION public\.devolver_ou_trocar_venda\([^)]*\)\s*FROM PUBLIC, anon/)
+      expect(sql).toMatch(/overload de devolver_ou_trocar_venda/)
+    }
+  })
+
+  it('o SELECT do caixa pagador usa FOR NO KEY UPDATE (FOR UPDATE conflita com o KEY SHARE do FK e serializa caixas distintos)', () => {
+    const sql = fs.readFileSync(path.join(MIGRATIONS, latestDevolverRpcMigration()), 'utf8')
+    const codigo = sql.replace(/--[^\n]*/g, '')
+    expect(codigo).toMatch(/FROM public\.caixas c WHERE c\.id = v_pagador FOR NO KEY UPDATE;/)
+    expect(codigo).not.toMatch(/WHERE c\.id = v_pagador FOR UPDATE/)
   })
 
   it('a definição vigente preserva EXECUTE autenticado e revoga anon', () => {
     const sql = fs.readFileSync(path.join(MIGRATIONS, latestDevolverRpcMigration()), 'utf8')
     expect(sql).toMatch(/REVOKE ALL ON FUNCTION public\.devolver_ou_trocar_venda\([^)]*\)\s*FROM PUBLIC/)
     expect(sql).toMatch(/GRANT EXECUTE ON FUNCTION public\.devolver_ou_trocar_venda\([^)]*\)\s*TO authenticated/)
-    expect(sql).toMatch(/REVOKE EXECUTE ON FUNCTION public\.devolver_ou_trocar_venda\([^)]*\)\s*FROM anon/)
+    expect(sql).toMatch(
+      /REVOKE (?:EXECUTE|ALL) ON FUNCTION public\.devolver_ou_trocar_venda\([^)]*\)\s*FROM (?:PUBLIC, )?anon/,
+    )
   })
 })

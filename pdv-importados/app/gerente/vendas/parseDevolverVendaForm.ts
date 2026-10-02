@@ -24,6 +24,8 @@ export const devolverVendaInputSchema = z.object({
   valorEstorno: z.number().positive(),
   formaEstorno: z.enum(FORMAS_ESTORNO_DEVOLUCAO),
   vendaSubstitutaId: z.string().uuid().optional(),
+  /** Caixa aberto que desembolsa o dinheiro (regra 0/1/N do servidor). Omitido = o servidor usa o único elegível, se houver. */
+  caixaId: z.string().uuid().optional(),
 })
 
 export type DevolverVendaInput = z.infer<typeof devolverVendaInputSchema>
@@ -48,6 +50,7 @@ export function parseDevolverVendaForm(formData: FormData): DevolverVendaInput |
     valorEstorno: Number(formData.get('valor_estorno')),
     formaEstorno: formData.get('forma_estorno'),
     vendaSubstitutaId: formData.get('venda_substituta_id') || undefined,
+    caixaId: formData.get('caixa_id') || undefined,
   })
 
   return parsed.success ? parsed.data : null

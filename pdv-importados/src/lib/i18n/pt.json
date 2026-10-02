@@ -2816,6 +2816,8 @@
     "auditoria_detalhe_tipo_operacao": "Tipo de operação",
     "auditoria_detalhe_forma_estorno": "Forma de estorno",
     "auditoria_detalhe_valor_caixa_estornado": "Valor estornado em caixa",
+    "auditoria_detalhe_valor_abatido_ar": "Valor abatido do saldo a receber",
+    "auditoria_detalhe_caixa_desembolso_id": "Caixa que pagou o dinheiro",
     "auditoria_vazio_titulo": "Nenhum evento no período",
     "auditoria_vazio_sub": "Ajuste o período ou o tipo de evento para ver a trilha de auditoria.",
     "auditoria_fechar_aria": "Fechar",

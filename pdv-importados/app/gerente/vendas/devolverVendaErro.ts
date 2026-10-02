@@ -19,6 +19,19 @@ const MAPA: Record<string, string> = {
   DEVOLVER_VENDA_VALOR_EXCEDE_ABERTO: 'Valor excede o saldo em aberto do cliente.',
   DEVOLVER_VENDA_ESTOQUE_NAO_ENCONTRADO: 'Estoque do produto não encontrado na loja.',
   DEVOLVER_VENDA_SALDO_CAIXA_INSUFICIENTE: 'Saldo em dinheiro do caixa insuficiente para estorno.',
+  // PR-2D — caixa pagador (regra 0/1/N) e conciliação D-13
+  DEVOLVER_VENDA_SEM_CAIXA_ABERTO:
+    'Não há caixa aberto para pagar a devolução em dinheiro. Abra um caixa ou escolha outra forma de estorno.',
+  DEVOLVER_VENDA_CAIXA_OBRIGATORIO:
+    'Há mais de um caixa aberto. Escolha o caixa que vai pagar a devolução em dinheiro.',
+  DEVOLVER_VENDA_CAIXA_INVALIDO:
+    'O caixa escolhido não está aberto ou não pertence a esta loja. Escolha outro caixa.',
+  DEVOLVER_VENDA_RETRY_CAIXA_DIVERGENTE:
+    'Esta devolução já foi registrada com outro caixa. Confira o comprovante antes de tentar de novo.',
+  DEVOLVER_VENDA_TITULO_COM_LIQUIDACAO:
+    'Esta venda tem pagamentos já recebidos no contas a receber. Estorne as liquidações em Financeiro (Contas a receber) e tente a devolução de novo.',
+  DEVOLVER_VENDA_EXCEDE_VALOR_PAGO:
+    'O valor devolvido excede o que o cliente efetivamente pagou e o saldo em aberto não cobre a diferença. Reduza a quantidade.',
 }
 
 export function mensagemErroDevolverVenda(codigoBruto: string): string {

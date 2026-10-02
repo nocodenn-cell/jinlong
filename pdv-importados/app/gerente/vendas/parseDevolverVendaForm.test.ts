@@ -38,3 +38,37 @@ describe('parseDevolverVendaForm', () => {
     expect(parseDevolverVendaForm(fd)).toBeNull()
   })
 })
+
+describe('parseDevolverVendaForm — caixa pagador (PR-2D)', () => {
+  const CAIXA_ID = '44444444-4444-4444-8444-444444444444'
+
+  function baseForm(): FormData {
+    const fd = new FormData()
+    fd.set('venda_id', VENDA_ID)
+    fd.set('idempotency_key', KEY)
+    fd.set('motivo', 'Defeito no produto')
+    fd.set('tipo', 'DEVOLUCAO')
+    fd.set('forma_estorno', 'DINHEIRO')
+    fd.set('valor_estorno', '50')
+    fd.set('itens_json', JSON.stringify([{ itemVendaId: ITEM_ID, quantidade: 2 }]))
+    return fd
+  }
+
+  it('caixa_id é opcional (o servidor usa o único caixa elegível)', () => {
+    const parsed = parseDevolverVendaForm(baseForm())
+    expect(parsed).not.toBeNull()
+    expect(parsed?.caixaId).toBeUndefined()
+  })
+
+  it('repassa caixa_id válido', () => {
+    const fd = baseForm()
+    fd.set('caixa_id', CAIXA_ID)
+    expect(parseDevolverVendaForm(fd)?.caixaId).toBe(CAIXA_ID)
+  })
+
+  it('rejeita caixa_id que não é UUID', () => {
+    const fd = baseForm()
+    fd.set('caixa_id', 'primeiro')
+    expect(parseDevolverVendaForm(fd)).toBeNull()
+  })
+})

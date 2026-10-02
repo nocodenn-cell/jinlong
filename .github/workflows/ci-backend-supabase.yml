@@ -128,6 +128,22 @@ jobs:
           psql "$PSQL_URL" -v ON_ERROR_STOP=1 -f scripts/c1-secdef-sem-identidade.test.sql
           psql "$PSQL_URL" -v ON_ERROR_STOP=1 -f scripts/c2-suspensao-vendas-trigger.test.sql
 
+      # PR-2D (C3): devolução paga pelo caixa pagador (regra 0/1/N), caixa fechado imutável e conciliação D-13.
+      # Transação com ROLLBACK, dados sintéticos; roda sem guard de fork PR. A concorrência com 2 sessões reais
+      # (backend/scripts/devolucao-concorrencia.sh) grava dados commitados e por isso roda só manualmente/noturno.
+      - name: Devolução — caixa pagador e conciliação D-13 (A-1…A-9)
+        run: |
+          set -euo pipefail
+          cd backend
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          PSQL_URL="${POSTGRES_URL:-${DB_URL:-}}"
+          if [ -z "$PSQL_URL" ]; then
+            echo "::error::Sem URL do Postgres (POSTGRES_URL ou DB_URL)." >&2
+            exit 1
+          fi
+          psql "$PSQL_URL" -v ON_ERROR_STOP=1 -f scripts/devolucao-d13-caixa-desembolso.test.sql
+          psql "$PSQL_URL" -v ON_ERROR_STOP=1 -f scripts/listar-caixas-elegiveis-desembolso.test.sql
+
       - name: Test RLS scope by profile
         run: |
           set -euo pipefail
@@ -218,6 +234,23 @@ jobs:
           set -euo pipefail
           cd backend
           npm run check:types-drift -w fastproduct-backend
+
+      # PR-2D: concorrência da devolução com sessões psql reais (serialização por caixa, mesma venda disputada,
+      # caixas distintos sem bloqueio). O script grava dados COMMITADOS; por isso roda como ÚLTIMO passo de teste do
+      # job (nada que dependa do estado do banco vem depois; o stack é destruído no teardown). `createdb -T` não serve:
+      # os serviços do Supabase mantêm conexões no banco `postgres` e o CREATE DATABASE ... TEMPLATE falha.
+      # Regressão guardada: trocar `FOR NO KEY UPDATE` por `FOR UPDATE` no SELECT do caixa pagador estoura o
+      # lock_timeout no cenário 3 (FK KEY SHARE de venda_pos_venda_operacoes.caixa_id).
+      - name: Devolução — concorrência (PR-2D, sessões reais)
+        run: |
+          set -euo pipefail
+          eval "$(cd backend && npx supabase status -o env | sed 's/^/export /')"
+          export DB_URL="${POSTGRES_URL:-${DB_URL:-}}"
+          if [ -z "${DB_URL:-}" ]; then
+            echo "::error::Sem URL do Postgres para o teste de concorrência." >&2
+            exit 1
+          fi
+          bash backend/scripts/devolucao-concorrencia.sh
 
       - name: Diagnóstico em falha (logs + status)
         if: failure()

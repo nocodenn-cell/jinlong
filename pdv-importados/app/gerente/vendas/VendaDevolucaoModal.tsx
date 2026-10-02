@@ -7,7 +7,11 @@ import { fmtGerenteBRL, fmtGerenteDateTime, fmtGerenteIdCurto } from '@/lib/form
 import { labelFormaPagamentoVenda } from '@/lib/format/vendaLabels'
 import type { Mensagens } from '@/i18n/getMessages'
 import { emitGerenteToast } from '@/lib/gerente/toast'
-import { devolverOuTrocarVendaAction } from './actions'
+import {
+  devolverOuTrocarVendaAction,
+  listarCaixasElegiveisDevolucaoAction,
+  type CaixaElegivelDevolucao,
+} from './actions'
 import {
   FORMAS_ESTORNO_DEVOLUCAO,
   TIPOS_POS_VENDA,
@@ -74,6 +78,9 @@ export function VendaDevolucaoModal({
   const [formaEstorno, setFormaEstorno] = useState<(typeof FORMAS_ESTORNO_DEVOLUCAO)[number]>('PIX')
   const [selecionados, setSelecionados] = useState<Record<string, number>>({})
   const [idempotencyKey] = useState(() => crypto.randomUUID())
+  const [caixasElegiveis, setCaixasElegiveis] = useState<CaixaElegivelDevolucao[]>([])
+  const [caixasCarregadas, setCaixasCarregadas] = useState(false)
+  const [caixaId, setCaixaId] = useState('')
   const [isPending, startTransition] = useTransition()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -83,7 +90,22 @@ export function VendaDevolucaoModal({
     setTipo('DEVOLUCAO')
     setFormaEstorno(venda.tem_conta_receber ? 'CREDITO_CLIENTE' : 'PIX')
     setSelecionados({})
+    setCaixaId('')
     queueMicrotask(() => textareaRef.current?.focus())
+  }, [venda])
+
+  // Caixas abertos da loja (conjunto elegível para pagar dinheiro). A decisão final é do servidor (regra 0/1/N).
+  useEffect(() => {
+    if (!venda) return
+    let cancelado = false
+    void listarCaixasElegiveisDevolucaoAction().then((res) => {
+      if (cancelado) return
+      setCaixasElegiveis(res.ok ? res.caixas : [])
+      setCaixasCarregadas(true)
+    })
+    return () => {
+      cancelado = true
+    }
   }, [venda])
 
   const valorEstorno = useMemo(
@@ -96,11 +118,15 @@ export function VendaDevolucaoModal({
 
   const motivoTrim = motivo.trim()
   const itensPayload = montarItensSelecionados(venda, selecionados)
+  // D-3: com 2+ caixas abertos o operador escolhe qual paga o dinheiro; com 1 o servidor usa o único; com 0 avisa.
+  const exigeEscolhaCaixa =
+    formaEstorno === 'DINHEIRO' && caixasCarregadas && caixasElegiveis.length >= 2
   const podeEnviar =
     motivoTrim.length >= 2 &&
     motivoTrim.length <= 500 &&
     itensPayload.length > 0 &&
-    valorEstorno > 0
+    valorEstorno > 0 &&
+    (!exigeEscolhaCaixa || caixaId !== '')
 
   function alterarQtd(itemId: string, max: number, delta: number) {
     setSelecionados((prev) => {
@@ -122,6 +148,7 @@ export function VendaDevolucaoModal({
     fd.set('forma_estorno', formaEstorno)
     fd.set('valor_estorno', String(valorEstorno))
     fd.set('itens_json', JSON.stringify(itensPayload))
+    if (formaEstorno === 'DINHEIRO' && caixaId) fd.set('caixa_id', caixaId)
 
     startTransition(async () => {
       try {
@@ -299,6 +326,43 @@ export function VendaDevolucaoModal({
             </span>
           </div>
         </div>
+
+        {formaEstorno === 'DINHEIRO' && caixasCarregadas && (
+          <div data-testid="devolucao-caixa-pagador">
+            {caixasElegiveis.length >= 2 && (
+              <>
+                <label htmlFor="caixa-pagador" className="mb-1.5 block text-xs font-medium text-jl-fg-3">
+                  Caixa que paga a devolução em dinheiro <span className="text-red-400">*</span>
+                </label>
+                <select
+                  id="caixa-pagador"
+                  value={caixaId}
+                  onChange={(e) => setCaixaId(e.target.value)}
+                  disabled={isPending}
+                  required
+                  className="w-full rounded-lg border border-jl-border-1 bg-jl-surface-base px-3 py-2 text-sm"
+                >
+                  <option value="">Selecione o caixa…</option>
+                  {caixasElegiveis.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.operador} · {fmtGerenteIdCurto(c.id)}
+                    </option>
+                  ))}
+                </select>
+              </>
+            )}
+            {caixasElegiveis.length === 1 && (
+              <p className="text-xs text-jl-fg-3">
+                O dinheiro sai do caixa de {caixasElegiveis[0].operador}.
+              </p>
+            )}
+            {caixasElegiveis.length === 0 && (
+              <p className="text-xs text-amber-500">
+                Não há caixa aberto: a parte paga em dinheiro não poderá ser devolvida. Abra um caixa ou use outra forma de estorno.
+              </p>
+            )}
+          </div>
+        )}
 
         <div>
           <label htmlFor="motivo-devolucao" className="mb-1.5 block text-xs font-medium text-jl-fg-3">

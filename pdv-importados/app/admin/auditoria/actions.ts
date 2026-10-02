@@ -342,7 +342,7 @@ export async function listarEventosAuditoria(
     let q = supabase
       .from('venda_pos_venda_operacoes')
       .select(
-        'id, venda_id, tipo, motivo, valor_estornado, valor_caixa_estornado, forma_estorno, operador_id, created_at'
+        'id, venda_id, tipo, motivo, valor_estornado, valor_caixa_estornado, valor_abatido_ar, caixa_desembolso_id, forma_estorno, operador_id, created_at'
       )
       .order('created_at', { ascending: false })
       .limit(LIMITE_POR_FONTE)
@@ -373,6 +373,9 @@ export async function listarEventosAuditoria(
           forma_estorno: forma,
           valor_estornado: num(r.valor_estornado),
           valor_caixa_estornado: num(r.valor_caixa_estornado),
+          // D-13: parte que abateu o saldo a receber e caixa que efetivamente pagou o dinheiro
+          valor_abatido_ar: num(r.valor_abatido_ar),
+          caixa_desembolso_id: str(r.caixa_desembolso_id),
         },
       })
     }

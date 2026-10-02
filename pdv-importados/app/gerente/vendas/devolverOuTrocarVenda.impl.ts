@@ -84,6 +84,7 @@ export async function devolverOuTrocarVendaImpl(
       p_forma_estorno: input.formaEstorno,
       p_venda_substituta_id: input.vendaSubstitutaId ?? null,
       p_operador_id: user.id,
+      p_caixa_id: input.caixaId ?? null,
     })
 
     if (error) {

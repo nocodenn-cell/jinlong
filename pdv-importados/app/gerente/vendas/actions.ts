@@ -263,6 +263,29 @@ export async function obterDadosComprovanteCancelamento(
   }
 }
 
+export type CaixaElegivelDevolucao = Readonly<{ id: string; operador: string }>
+type CaixaElegivelRpcRow = { id: string; operador_nome: string }
+
+/**
+ * Caixas que o servidor considera elegíveis para pagar uma devolução em dinheiro — a mesma regra 0/1/N de
+ * `internal.resolver_caixa_pagador`, exposta pela RPC `listar_caixas_elegiveis_desembolso`. A identidade e a loja
+ * vêm da sessão no banco (`auth.uid()`); nada de loja é enviado pelo cliente. É só conveniência de UI: a decisão
+ * é sempre do servidor na devolução.
+ */
+export async function listarCaixasElegiveisDevolucaoAction(): Promise<
+  { ok: true; caixas: CaixaElegivelDevolucao[] } | { ok: false; error: string }
+> {
+  const authCheck = await assertGerenteSession()
+  if (!authCheck.ok) return { ok: false, error: authCheck.error }
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc('listar_caixas_elegiveis_desembolso')
+  if (error) return { ok: false, error: 'Não foi possível listar os caixas abertos.' }
+  return {
+    ok: true,
+    caixas: ((data ?? []) as CaixaElegivelRpcRow[]).map((c) => ({ id: c.id, operador: c.operador_nome })),
+  }
+}
+
 export async function devolverOuTrocarVendaAction(formData: FormData) {
   const authCheck = await assertGerenteSession()
   if (!authCheck.ok) {
