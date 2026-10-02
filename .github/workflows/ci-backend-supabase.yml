@@ -225,6 +225,18 @@ jobs:
           fi
           psql "$PSQL_URL" -v ON_ERROR_STOP=1 -f scripts/vendas-lista-kpis-por-venda.test.sql
 
+      - name: Multiempresa Fase 1 — estrutura aditiva, backfill e rollback
+        run: |
+          set -euo pipefail
+          cd backend
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          PSQL_URL="${POSTGRES_URL:-${DB_URL:-}}"
+          if [ -z "$PSQL_URL" ]; then
+            echo "::error::Sem URL do Postgres (POSTGRES_URL ou DB_URL)." >&2
+            exit 1
+          fi
+          psql "$PSQL_URL" -v ON_ERROR_STOP=1 -f scripts/multiempresa-fase1.test.sql
+
       # F-5: o gate de tipos em `financialRpcContract.ts` afirma adapters x tipos.
       # Uma migration que muda a assinatura de uma RPC sem regenerar os tipos
       # passava silenciosamente, porque os dois lados seguiam consistentes entre

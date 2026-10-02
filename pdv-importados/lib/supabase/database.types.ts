@@ -1606,6 +1606,51 @@ export type Database = {
           },
         ]
       }
+      empresas: {
+        Row: {
+          cnpj: string | null
+          created_at: string
+          id: string
+          max_lojas: number | null
+          max_usuarios: number | null
+          nome: string
+          plano: string
+          razao_social: string | null
+          status: string
+          updated_at: string
+          vigencia_fim: string | null
+          vigencia_inicio: string
+        }
+        Insert: {
+          cnpj?: string | null
+          created_at?: string
+          id?: string
+          max_lojas?: number | null
+          max_usuarios?: number | null
+          nome: string
+          plano?: string
+          razao_social?: string | null
+          status?: string
+          updated_at?: string
+          vigencia_fim?: string | null
+          vigencia_inicio?: string
+        }
+        Update: {
+          cnpj?: string | null
+          created_at?: string
+          id?: string
+          max_lojas?: number | null
+          max_usuarios?: number | null
+          nome?: string
+          plano?: string
+          razao_social?: string | null
+          status?: string
+          updated_at?: string
+          vigencia_fim?: string | null
+          vigencia_inicio?: string
+        }
+        Relationships: []
+      }
       estoque: {
         Row: {
           estoque_minimo: number
@@ -2826,6 +2871,7 @@ export type Database = {
           codigo: string | null
           created_at: string
           email: string | null
+          empresa_id: string | null
           endereco_bairro: string | null
           endereco_cep: string | null
           endereco_cidade: string | null
@@ -2850,6 +2896,7 @@ export type Database = {
           codigo?: string | null
           created_at?: string
           email?: string | null
+          empresa_id?: string | null
           endereco_bairro?: string | null
           endereco_cep?: string | null
           endereco_cidade?: string | null
@@ -2874,6 +2921,7 @@ export type Database = {
           codigo?: string | null
           created_at?: string
           email?: string | null
+          empresa_id?: string | null
           endereco_bairro?: string | null
           endereco_cep?: string | null
           endereco_cidade?: string | null
@@ -2891,7 +2939,15 @@ export type Database = {
           razao_social?: string | null
           telefone?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "lojas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       marcas: {
         Row: {
@@ -3576,6 +3632,38 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_estoque_baixo"
             referencedColumns: ["loja_id"]
+          },
+        ]
+      }
+      plataforma_admins: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          created_by: string | null
+          motivo: string
+          usuario_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          created_by?: string | null
+          motivo: string
+          usuario_id: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          created_by?: string | null
+          motivo?: string
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plataforma_admins_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: true
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -4415,6 +4503,61 @@ export type Database = {
           },
           {
             foreignKeyName: "transferencias_idempotencia_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      usuario_vinculos: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          created_by: string | null
+          empresa_id: string
+          id: string
+          loja_id: string | null
+          papel: string
+          usuario_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          created_by?: string | null
+          empresa_id: string
+          id?: string
+          loja_id?: string | null
+          papel: string
+          usuario_id: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          created_by?: string | null
+          empresa_id?: string
+          id?: string
+          loja_id?: string | null
+          papel?: string
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usuario_vinculos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "usuario_vinculos_loja_da_empresa_fkey"
+            columns: ["loja_id", "empresa_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id", "empresa_id"]
+          },
+          {
+            foreignKeyName: "usuario_vinculos_usuario_id_fkey"
             columns: ["usuario_id"]
             isOneToOne: false
             referencedRelation: "usuarios"
