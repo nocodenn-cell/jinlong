@@ -3,11 +3,16 @@
 import { createClient } from '@/lib/supabase/server'
 import { getRelatorioTimezone } from '@/lib/relatorios/getRelatorioTimezone'
 import {
+  inicioDoDiaCivilEmUtc,
   resolverPeriodoRelatorio,
+  subtrairDiasCivis,
   type PeriodoRelatorioResolvido,
 } from '@/lib/relatorios/periodoRelatorio'
 import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
+import { getGerenteLojaId } from '@/lib/gerente/auth/sessionContext'
+import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
+import { metricasDeRpc, type KpisVendasRpcRow } from '@/lib/vendas/metricasVendas'
 
 export type RelatorioVendaDiaDTO = {
   dia: string
@@ -103,6 +108,12 @@ export type RelatoriosGerentePayload = {
   top: RelatorioTopProdDTO[]
   baixo: RelatorioEstoqueBaixoDTO[]
   resumoExecutivo: RelatorioResumoExecutivoDTO
+  /**
+   * Devolução pós-venda e receita líquida do período, da mesma definição canônica de Vendas/Dashboard
+   * (`kpis_vendas_gerente`). `faturado` do relatório NÃO desconta devolução; receita líquida = faturado − devoluções.
+   */
+  devolucoes: number
+  receitaLiquida: number
   margemPorVenda: RelatorioMargemVendaDTO[]
   curvaAbc: RelatorioCurvaAbcDTO[]
   coberturaEstoque: RelatorioCoberturaEstoqueDTO[]
@@ -125,6 +136,10 @@ export async function carregarDadosRelatoriosGerente(input: {
   const supabase = await createClient()
   const tzRelatorio = await getRelatorioTimezone(supabase)
   const periodo = resolverPeriodoRelatorio(input.de, input.ate, tzRelatorio)
+  const lojaIdKpis = (await getGerenteLojaId()) ?? LOJA_MATRIZ_ID
+  const inicioKpis = inicioDoDiaCivilEmUtc(periodo.de, tzRelatorio)
+  // `p_fim` é inclusivo: último instante do dia civil `ate`.
+  const fimKpis = new Date(inicioDoDiaCivilEmUtc(subtrairDiasCivis(periodo.ate, -1), tzRelatorio).getTime() - 1)
 
   // As 8 leituras são independentes entre si (só dependem de período/fuso, já
   // resolvidos): em paralelo. Antes eram 8 awaits em série — o tempo da tela era a
@@ -138,6 +153,7 @@ export async function carregarDadosRelatoriosGerente(input: {
     { data: curvaAbcRaw, error: errCurvaAbc },
     { data: coberturaEstoqueRaw, error: errCoberturaEstoque },
     { data: divergenciaEstoqueRaw },
+    { data: kpisVendasRaw },
   ] = await Promise.all([
     supabase.rpc('relatorio_vendas_por_dia_periodo', {
       p_de: periodo.de,
@@ -179,6 +195,11 @@ export async function carregarDadosRelatoriosGerente(input: {
       )
       .order('divergencia', { ascending: false })
       .limit(50),
+    supabase.rpc('kpis_vendas_gerente', {
+      p_loja_id: lojaIdKpis,
+      p_inicio: inicioKpis.toISOString(),
+      p_fim: fimKpis.toISOString(),
+    }),
   ])
 
   const rpcErro =
@@ -191,6 +212,9 @@ export async function carregarDadosRelatoriosGerente(input: {
     null
   const rpcErroAmigavel = rpcErro ? mensagemErroParaUsuario(rpcErro) : null
   const resumo = Array.isArray(resumoRaw) ? resumoRaw[0] : resumoRaw
+  const kpisVendas = metricasDeRpc(
+    (Array.isArray(kpisVendasRaw) ? kpisVendasRaw[0] : kpisVendasRaw) as KpisVendasRpcRow | undefined,
+  )
 
   return {
     periodo: {
@@ -214,6 +238,8 @@ export async function carregarDadosRelatoriosGerente(input: {
           ? null
           : Number(resumo.margem_bruta_estimada),
     },
+    devolucoes: kpisVendas.devolucoes,
+    receitaLiquida: kpisVendas.receitaLiquida,
     margemPorVenda: ((margemPorVendaRaw ?? []) as Array<{
       venda_id: string
       data: string

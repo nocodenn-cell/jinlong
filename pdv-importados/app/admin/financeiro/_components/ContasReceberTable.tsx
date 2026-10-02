@@ -13,7 +13,7 @@ import { Receipt } from 'lucide-react'
 import { adminVendaDetalheQuery } from '@/lib/navigation/routes'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { formatBRL } from '@/lib/format/money'
-import { formatDateTimeOrDash } from '@/lib/format/datetime'
+import { formatarDataCivilNumerica } from '@/lib/relatorios/periodoRelatorio'
 import { cn } from '@/lib/utils'
 
 export type ContaLinha = {
@@ -89,7 +89,7 @@ export function ContasReceberTable({ contas, labels }: { contas: ContaLinha[]; l
       sortValue: (r) => r.vencimento ?? '',
       cell: (r) => (
         <span className="whitespace-nowrap text-small text-jl-fg-2">
-          {formatDateTimeOrDash(r.vencimento, labels.locale, 'short')}
+          {formatarDataCivilNumerica(r.vencimento, labels.locale)}
         </span>
       ),
     },

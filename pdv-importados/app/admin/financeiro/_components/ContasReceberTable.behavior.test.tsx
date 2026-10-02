@@ -70,4 +70,16 @@ describe('ContasReceberTable (RM-07 — link de volta para a venda de origem)', 
     })
     expect(container.textContent).not.toContain('Ver venda')
   })
+
+  it('Onda B: vencimento é data civil — mostra 05/09/2026, sem hora e sem recuar um dia', () => {
+    flushSync(() => {
+      root.render(
+        <ContasReceberTable contas={[conta({ vencimento: '2026-09-05' })]} labels={labels} />,
+      )
+    })
+    const texto = container.textContent ?? ''
+    expect(texto).toContain('05/09/2026')
+    expect(texto).not.toContain('04/09/2026')
+    expect(texto).not.toMatch(/05\/09\/2026[, ]+\d{1,2}:\d{2}/)
+  })
 })

@@ -2513,6 +2513,8 @@
     "vendas_faturado": "Faturado",
     "vendas_concluidas": "Concluídas",
     "vendas_canceladas": "Canceladas",
+    "vendas_devolucoes": "Devoluções",
+    "vendas_receita_liquida": "Receita líquida",
     "vendas_periodo_label_hoje": "Hoje",
     "vendas_periodo_label_ontem": "Ontem",
     "vendas_periodo_label_7d": "Últimos 7 dias",

@@ -25,7 +25,21 @@ export function isTituloVencido(
   return vencimento.slice(0, 10) < hojeYmd
 }
 
-/** `hoje` em `YYYY-MM-DD`, para comparar com colunas `date` (sem hora/fuso). */
-export function hojeYmd(d: Date = new Date()): string {
-  return d.toISOString().slice(0, 10)
+/** Fuso padrão da loja (mesmo valor de `RELATORIO_TZ_PADRAO` do app). */
+export const FUSO_PADRAO_LOJA = 'America/Sao_Paulo'
+
+/**
+ * Dia civil (`YYYY-MM-DD`) de um instante no fuso da loja, para comparar com colunas `date`
+ * (sem hora/fuso). NÃO usar `toISOString()`: em UTC, entre 21h e 24h de Brasília "hoje" já
+ * viraria amanhã e um título que vence hoje apareceria como vencido.
+ */
+export function hojeYmd(d: Date = new Date(), timeZone: string = FUSO_PADRAO_LOJA): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(d)
+  const get = (t: string) => parts.find((p) => p.type === t)!.value
+  return `${get('year')}-${get('month')}-${get('day')}`
 }

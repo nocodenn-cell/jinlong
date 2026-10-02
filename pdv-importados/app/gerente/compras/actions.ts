@@ -5,8 +5,10 @@ import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { getGerenteLojaId, getGerenteUserId } from '@/lib/gerente/auth/sessionContext'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
+import { hojeYmd } from '@shared-core/src/financial/policies/tituloVencido'
 import { lojaIdDaSessao } from '@/app/gerente/fornecedores/fornecedorContrato'
-import { mensagemSeFornecedorForaDaLoja } from './fornecedorOcBoundary'
+import { createProductReader } from '@/app/admin/produtos/productReader'
+import { mensagemSeFornecedorForaDaLoja, mensagemSeProdutosForaDaLoja } from './fornecedorOcBoundary'
 import { montarFiltroBuscaOc } from './ocBusca'
 import {
   mensagemErroOc,
@@ -133,6 +135,34 @@ async function assertFornecedorDaLojaOc(
     fornecedorLojaId: (data?.loja_id as string | undefined) ?? null,
     lojaIdOc: lojaId,
   })
+}
+
+/**
+ * Confirma que todo produto_id referenciado pelos itens pertence à loja da OC.
+ * Lê via `ProductReader` (camada de produtos) — sem acesso direto à tabela, que o boundary-ratchet
+ * barra em `app/gerente/compras`. Uma leitura por produto DISTINTO, em paralelo (OCs têm poucas linhas).
+ */
+async function assertProdutosDaLojaOc(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  lojaId: string,
+  itens: OcItemInput[],
+): Promise<string | null> {
+  const produtoIds = [...new Set(itens.map((i) => i.produto_id).filter((id): id is string => !!id))]
+  if (produtoIds.length === 0) return null
+
+  const reader = createProductReader(supabase)
+  const resultados = await Promise.all(produtoIds.map((id) => reader.getIdentityById(id)))
+
+  const produtosEncontrados: Array<{ id: string; loja_id: string | null }> = []
+  for (const r of resultados) {
+    if (r.ok) {
+      produtosEncontrados.push({ id: r.identity.id, loja_id: r.identity.lojaId ?? null })
+    } else if (!('notFound' in r && r.notFound)) {
+      return mensagemErroComSecao('Produto', r.error)
+    }
+  }
+
+  return mensagemSeProdutosForaDaLoja({ produtoIds, produtosEncontrados, lojaIdOc: lojaId })
 }
 
 type RawOcItem = { quantidade: number; preco_unitario: number; quantidade_recebida: number }
@@ -403,13 +433,16 @@ export async function criarOrdemCompra(input: CriarOcInput): Promise<R<string>> 
   const fornErr = await assertFornecedorDaLojaOc(supabase, lojaId, input.fornecedor_id)
   if (fornErr) return { success: false, error: fornErr }
 
+  const produtoErr = await assertProdutosDaLojaOc(supabase, lojaId, input.itens)
+  if (produtoErr) return { success: false, error: produtoErr }
+
   const { data: oc, error: e1 } = await supabase
     .from('ordens_compra')
     .insert({
       loja_id: lojaId,
       fornecedor_id: input.fornecedor_id ?? null,
       fornecedor_nome: input.fornecedor_nome?.trim() || null,
-      data_emissao: input.data_emissao ?? new Date().toISOString().slice(0, 10),
+      data_emissao: input.data_emissao ?? hojeYmd(),
       data_prevista_chegada: input.data_prevista_chegada ?? null,
       observacao: input.observacao?.trim() || null,
       status: 'RASCUNHO',
@@ -478,13 +511,15 @@ export async function atualizarOrdemCompra(input: AtualizarOcInput): Promise<R<n
       error: 'Este pedido já recebeu mercadoria e não pode mais ser editado. Se faltar algo, use "Encerrar com falta".',
     }
   }
+  const produtoErr = await assertProdutosDaLojaOc(supabase, lojaId, input.itens)
+  if (produtoErr) return { success: false, error: produtoErr }
 
   const { error: e1 } = await supabase
     .from('ordens_compra')
     .update({
       fornecedor_id: input.fornecedor_id ?? null,
       fornecedor_nome: input.fornecedor_nome?.trim() || null,
-      data_emissao: input.data_emissao ?? new Date().toISOString().slice(0, 10),
+      data_emissao: input.data_emissao ?? hojeYmd(),
       data_prevista_chegada: input.data_prevista_chegada ?? null,
       observacao: input.observacao?.trim() || null,
     })

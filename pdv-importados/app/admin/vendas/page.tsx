@@ -18,6 +18,7 @@ import { ROUTES, pathWithQuery } from '@/lib/navigation/routes'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
 import { createClient } from '@/lib/supabase/server'
+import { getRelatorioTimezone } from '@/lib/relatorios/getRelatorioTimezone'
 import { MetricCard, PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import type { MetricCardIconKey } from '@/components/ui/admin-v2/MetricCard'
 import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
@@ -72,9 +73,13 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
   )
   const page = clampPage(sp.page)
 
+  // Fuso da loja (mesma fonte de Dashboard e Relatórios), não offset fixo.
+  const supabase = await createClient()
+  const tz = await getRelatorioTimezone(supabase)
+
   const filtros: VendasFiltro = {
-    inicio: periodoInicio(periodo),
-    fim: periodoFim(periodo),
+    inicio: periodoInicio(periodo, new Date(), tz),
+    fim: periodoFim(periodo, new Date(), tz),
     status: status === 'all' ? [] : [status],
     formaPagamento: pagamento === 'all' ? [] : [pagamento],
   }
@@ -91,7 +96,6 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
   )
   const nomeOperadorPorId = new Map<string, string>()
   if (operadorIds.length > 0) {
-    const supabase = await createClient()
     const { data: usuariosRaw } = await supabase.from('usuarios').select('id, nome').in('id', operadorIds)
     for (const u of usuariosRaw ?? []) nomeOperadorPorId.set(u.id, u.nome)
   }
@@ -229,6 +233,12 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
       value: formatBRL(kpis.faturado),
       icon: 'dollar-sign',
       tone: 'gold',
+      // Devolução pós-venda não altera `faturado` (venda segue CONCLUIDA): aparece à parte,
+      // junto da receita líquida = faturado − devoluções (contrato em lib/vendas/metricasVendas.ts).
+      hint:
+        kpis.devolucoes > 0
+          ? `${ui.vendas_devolucoes} ${formatBRL(kpis.devolucoes)} · ${ui.vendas_receita_liquida} ${formatBRL(kpis.receitaLiquida)}`
+          : undefined,
     },
     {
       label: ui.vendas_concluidas,

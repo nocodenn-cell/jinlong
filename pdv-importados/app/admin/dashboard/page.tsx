@@ -22,7 +22,9 @@ import { CaixaShortcut } from './_components/CaixaShortcut'
 import { DashboardFilters } from './_components/DashboardFilters'
 import { DashboardOrdersTable } from './_components/DashboardOrdersTable'
 import {
-  dateKey,
+  agruparVendasPorDia,
+  agruparVendasPorHora,
+  diasCivisDoPeriodo,
   formatTrendPercent,
   getPeriodRange,
   normalizePeriod,
@@ -32,6 +34,7 @@ import {
 import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 import { formatDateTimeLocaleDefault, formatDayMonthInLocale } from '@/lib/format/datetime'
 import { formatBRL, formatNumberLocale } from '@/lib/format/money'
+import { calcularMetricasVendas } from '@/lib/vendas/metricasVendas'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { ROUTES } from '@/lib/navigation/routes'
 import { getMessages } from '@/i18n/getMessages'
@@ -161,8 +164,9 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     status: VendaStatus
     forma_pagamento: string
     operador_id: string | null
+    venda_pos_venda_operacoes: Array<{ valor_estornado: number }> | null
   }> = []
-  let vendasPrevRange: Array<{ total_liquido: number }> = []
+  let vendasPrevRange: Array<{ total_liquido: number; status: VendaStatus }> = []
   let recentOrdersRaw: Array<{
     id: string
     data: string
@@ -176,16 +180,20 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   let novosUsuariosAtual = 0
   let novosUsuariosPrev = 0
 
+  // População das métricas = vendas CONCLUIDA (contrato canônico, lib/vendas/metricasVendas.ts):
+  // cancelada não é faturamento/pedido. O filtro `?status=` só afeta "últimos pedidos".
   const vendasRangeQuery = supabase
     .from('vendas')
-    .select('id,data,total_liquido,status,forma_pagamento,operador_id')
+    .select('id,data,total_liquido,status,forma_pagamento,operador_id,venda_pos_venda_operacoes(valor_estornado)')
+    .eq('status', 'CONCLUIDA')
     .gte('data', start.toISOString())
     .lte('data', end.toISOString())
     .order('data', { ascending: true })
 
   const vendasPrevQuery = supabase
     .from('vendas')
-    .select('total_liquido')
+    .select('total_liquido,status')
+    .eq('status', 'CONCLUIDA')
     .gte('data', previousStart.toISOString())
     .lt('data', previousEnd.toISOString())
 
@@ -226,8 +234,8 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     estoqueBaixoListaRes,
     usersRes,
   ] = await Promise.all([
-    statusDb ? vendasRangeQuery.eq('status', statusDb) : vendasRangeQuery,
-    statusDb ? vendasPrevQuery.eq('status', statusDb) : vendasPrevQuery,
+    vendasRangeQuery,
+    vendasPrevQuery,
     novosUsuariosAtualQuery,
     novosUsuariosPrevQuery,
     showStockAlerts
@@ -296,40 +304,27 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
 
   const userById = new Map(usuariosRows.map((u) => [u.id, u.nome]))
 
-  const chartBucket = new Map<string, number>()
-  const ordersBucket = new Map<string, number>()
-  for (const row of vendasRange) {
-    const d = new Date(row.data)
-    const key = dateKey(d)
-    chartBucket.set(key, (chartBucket.get(key) ?? 0) + Number(row.total_liquido ?? 0))
-    ordersBucket.set(key, (ordersBucket.get(key) ?? 0) + 1)
-  }
+  // Agrupamento por dia/hora no FUSO DA LOJA (antes: UTC e hora do processo Node).
+  const { total: chartBucket, pedidos: ordersBucket } = agruparVendasPorDia(vendasRange, relatorioTz)
 
   const chartData: SalesPoint[] = []
   const salesSpark: number[] = []
   const ordersSpark: number[] = []
   const ticketSpark: number[] = []
-  const cursor = new Date(start)
-  cursor.setHours(0, 0, 0, 0)
-  while (cursor <= end) {
-    const key = dateKey(cursor)
+  for (const key of diasCivisDoPeriodo(start, end, relatorioTz)) {
     const dayTotal = chartBucket.get(key) ?? 0
     const dayOrders = ordersBucket.get(key) ?? 0
+    const [yy, mm, dd] = key.split('-').map(Number)
     chartData.push({
-      label: formatDayMonthInLocale(cursor, locale),
+      label: formatDayMonthInLocale(new Date(yy, mm - 1, dd), locale),
       total: Math.round(dayTotal * 100) / 100,
     })
     salesSpark.push(dayTotal)
     ordersSpark.push(dayOrders)
     ticketSpark.push(dayOrders > 0 ? dayTotal / dayOrders : 0)
-    cursor.setDate(cursor.getDate() + 1)
   }
 
-  const hourlyBucket = new Array<number>(24).fill(0)
-  for (const row of vendasRange) {
-    const hour = new Date(row.data).getHours()
-    hourlyBucket[hour] = (hourlyBucket[hour] ?? 0) + Number(row.total_liquido ?? 0)
-  }
+  const hourlyBucket = agruparVendasPorHora(vendasRange, relatorioTz)
   const hourlyLabels = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}h`)
   const hourlySeries: HourlyPoint[] = hourlyLabels.map((label, idx) => ({
     label,
@@ -354,12 +349,19 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     .sort((a, b) => b.value - a.value)
     .slice(0, 6)
 
-  const totalAtual = vendasRange.reduce((acc, row) => acc + Number(row.total_liquido ?? 0), 0)
-  const totalPrev = vendasPrevRange.reduce((acc, row) => acc + Number(row.total_liquido ?? 0), 0)
-  const pedidosAtual = vendasRange.length
-  const pedidosPrev = vendasPrevRange.length
-  const ticketAtual = pedidosAtual > 0 ? totalAtual / pedidosAtual : 0
-  const ticketPrev = pedidosPrev > 0 ? totalPrev / pedidosPrev : 0
+  const metricasAtual = calcularMetricasVendas(vendasRange)
+  const metricasPrev = calcularMetricasVendas(vendasPrevRange)
+  const totalAtual = metricasAtual.faturado
+  const totalPrev = metricasPrev.faturado
+  const pedidosAtual = metricasAtual.vendasConcluidas
+  const pedidosPrev = metricasPrev.vendasConcluidas
+  const ticketAtual = metricasAtual.ticketMedio
+  const ticketPrev = metricasPrev.ticketMedio
+  // Devolução pós-venda não reduz `faturado`; aparece à parte (receita líquida = faturado − devoluções).
+  const totalSalesHint =
+    metricasAtual.devolucoes > 0
+      ? `${L.metricTotalSalesHint[lk]} ${ui.vendas_devolucoes} ${formatBRL(metricasAtual.devolucoes, locale)} · ${ui.vendas_receita_liquida} ${formatBRL(metricasAtual.receitaLiquida, locale)}`
+      : L.metricTotalSalesHint[lk]
 
   const trendLabels = { newLabel: L.trendNew[lk], flatLabel: dash.emDash }
   const totalTrend = formatTrendPercent(totalAtual, totalPrev, trendLabels)
@@ -397,7 +399,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
       // recebido — soma total_liquido bruto, inclusive a parte que ficou em
       // contas_receber como pendente. Ver achado FIN-3/FIN-298-07 (auditoria
       // de regras de negócio).
-      hint: L.metricTotalSalesHint[lk],
+      hint: totalSalesHint,
     },
     {
       label: L.metricOrders[lk],
@@ -460,7 +462,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     operador: o.operador_id ? (userById.get(o.operador_id) ?? '—') : '—',
     valor: formatBRL(Number(o.total_liquido ?? 0), locale),
     status: o.status,
-    data: formatDateTimeLocaleDefault(o.data, locale),
+    data: formatDateTimeLocaleDefault(o.data, locale, relatorioTz),
     formaPagamento: o.forma_pagamento,
   }))
   const amountByOrderId = new Map(

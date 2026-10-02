@@ -17,6 +17,12 @@ import { getMessages } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { cn } from '@/lib/utils'
 import {
+  RELATORIO_TZ_PADRAO,
+  diasAteVencimento,
+  formatarDataCivilNumerica,
+  ymdEmFuso,
+} from '@/lib/relatorios/periodoRelatorio'
+import {
   buscarContasPagarAction,
   cancelarContaPagarAction,
   exportarContasPagarParaCSVAction,
@@ -50,15 +56,19 @@ const STATUS_BADGE_CLS: Record<string, string> = {
   PENDENTE: 'border border-[var(--color-border)] bg-[var(--color-surface-soft)] text-fg-muted',
 }
 
+// `vencimento` é data CIVIL (coluna `date`): sem fuso e sem hora. `new Date('2026-09-05')` seria meia-noite UTC
+// e em Brasília apareceria como 04/09 — por isso formatação e diferença de dias usam o dia civil.
 function fmtDate(iso: string | null, locale: string): string {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' })
+  return formatarDataCivilNumerica(iso, locale)
+}
+
+function diasParaVencer(iso: string): number {
+  return diasAteVencimento(iso, ymdEmFuso(new Date(), RELATORIO_TZ_PADRAO))
 }
 
 function relativoVenc(iso: string | null, locale: string): string {
   if (!iso) return ''
-  const ms = new Date(iso).getTime() - Date.now()
-  const dias = Math.round(ms / 86400000)
+  const dias = diasParaVencer(iso)
   if (dias === 0) return 'hoje'
   if (dias === 1) return 'amanhã'
   if (dias === -1) return 'ontem'
@@ -72,7 +82,7 @@ function statusBadgeClass(s: string): string {
 function vencimentoTone(c: ContaPagarRow): string {
   const podePagar = c.status !== 'PAGO' && c.status !== 'CANCELADO'
   if (!podePagar || !c.vencimento) return 'text-fg'
-  const dias = Math.round((new Date(c.vencimento).getTime() - Date.now()) / 86400000)
+  const dias = diasParaVencer(c.vencimento)
   if (dias < 0) return 'text-[var(--color-danger-strong)] font-semibold'
   if (dias <= 7) return 'text-[var(--color-warning)]'
   return 'text-fg-muted'
@@ -242,7 +252,7 @@ export function ContasPagarListClient({
         r.rows.map((c) => ({
           fornecedor: c.fornecedor_nome ?? '—',
           descricao: c.descricao,
-          vencimento: c.vencimento ? new Date(c.vencimento).toISOString().slice(0, 10) : '',
+          vencimento: c.vencimento ? c.vencimento.slice(0, 10) : '',
           valor_total: c.valor_total,
           valor_pago: c.valor_pago,
           em_aberto: Number((c.valor_total - c.valor_pago).toFixed(2)),

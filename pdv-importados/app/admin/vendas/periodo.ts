@@ -1,47 +1,59 @@
 /**
- * Janelas de período da tela de Vendas, sempre no fuso de Brasília (UTC-3, sem
- * horário de verão desde 2019). O servidor roda em UTC, então `setHours(0,0,0,0)`
- * deslocava "Hoje"/"Ontem" em 3h (vendas da noite caíam no dia errado).
+ * Janelas de período da tela de Vendas, no FUSO DA LOJA (padrão America/Sao_Paulo). O servidor roda em UTC,
+ * então `setHours(0,0,0,0)` deslocava "Hoje"/"Ontem" (vendas da noite caíam no dia errado).
+ *
+ * Reutiliza os helpers de dia civil de `lib/relatorios/periodoRelatorio` (mesma regra de Dashboard e Relatórios);
+ * antes havia um offset fixo de 3h próprio desta tela.
  */
+import {
+  RELATORIO_TZ_PADRAO,
+  inicioDoDiaCivilEmUtc,
+  subtrairDiasCivis,
+  ymdEmFuso,
+} from '@/lib/relatorios/periodoRelatorio'
 
 export type Periodo = 'tudo' | 'hoje' | 'ontem' | '7d' | '30d' | 'mes'
 
 export const PERIODOS: readonly Periodo[] = ['tudo', 'hoje', 'ontem', '7d', '30d', 'mes']
 
-const BRT_OFFSET_H = 3
-
-/** Meia-noite (BRT) de `now` + `diasOffset` dias, como instante UTC. */
-function inicioDiaBrt(now: Date, diasOffset = 0): number {
-  const brt = new Date(now.getTime() - BRT_OFFSET_H * 3_600_000)
-  return Date.UTC(brt.getUTCFullYear(), brt.getUTCMonth(), brt.getUTCDate() + diasOffset, BRT_OFFSET_H)
+/** Início (instante UTC) do dia civil `diasAtras` dias antes de hoje no fuso da loja. */
+function inicioDiaCivil(now: Date, timeZone: string, diasAtras = 0): Date {
+  return inicioDoDiaCivilEmUtc(subtrairDiasCivis(ymdEmFuso(now, timeZone), diasAtras), timeZone)
 }
 
-export function periodoInicio(periodo: Periodo, now: Date = new Date()): string | null {
+export function periodoInicio(
+  periodo: Periodo,
+  now: Date = new Date(),
+  timeZone: string = RELATORIO_TZ_PADRAO,
+): string | null {
   switch (periodo) {
     case 'hoje':
-      return new Date(inicioDiaBrt(now)).toISOString()
+      return inicioDiaCivil(now, timeZone).toISOString()
     case 'ontem':
-      return new Date(inicioDiaBrt(now, -1)).toISOString()
+      return inicioDiaCivil(now, timeZone, 1).toISOString()
     case '7d':
-      return new Date(inicioDiaBrt(now, -6)).toISOString()
+      return inicioDiaCivil(now, timeZone, 6).toISOString()
     case '30d':
-      return new Date(inicioDiaBrt(now, -29)).toISOString()
+      return inicioDiaCivil(now, timeZone, 29).toISOString()
     case 'mes': {
-      const brt = new Date(now.getTime() - BRT_OFFSET_H * 3_600_000)
-      return new Date(Date.UTC(brt.getUTCFullYear(), brt.getUTCMonth(), 1, BRT_OFFSET_H)).toISOString()
+      const primeiroDoMes = `${ymdEmFuso(now, timeZone).slice(0, 8)}01`
+      return inicioDoDiaCivilEmUtc(primeiroDoMes, timeZone).toISOString()
     }
     default:
       return null
   }
 }
 
-export function periodoFim(periodo: Periodo, now: Date = new Date()): string | null {
+export function periodoFim(
+  periodo: Periodo,
+  now: Date = new Date(),
+  timeZone: string = RELATORIO_TZ_PADRAO,
+): string | null {
   if (periodo !== 'ontem') return null
-  return new Date(inicioDiaBrt(now) - 1).toISOString()
+  return new Date(inicioDiaCivil(now, timeZone).getTime() - 1).toISOString()
 }
 
 /** Períodos que cobrem mais de um dia: a tabela precisa mostrar a data, não só a hora. */
 export function periodoMultiDia(periodo: Periodo): boolean {
   return periodo === '7d' || periodo === '30d' || periodo === 'mes' || periodo === 'tudo'
 }
-

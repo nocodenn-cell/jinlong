@@ -6173,6 +6173,25 @@ export type Database = {
           valor_canceladas: number
         }[]
       }
+      kpis_vendas_gerente: {
+        Args: {
+          p_fim?: string
+          p_formas_pagamento?: string[]
+          p_inicio?: string
+          p_loja_id: string
+        }
+        Returns: {
+          devolucoes: number
+          faturado: number
+          receita_liquida: number
+          taxa_cancelamento: number
+          ticket_medio: number
+          valor_cancelado: number
+          vendas_canceladas: number
+          vendas_concluidas: number
+          vendas_registradas: number
+        }[]
+      }
       liquidar_comissoes: {
         Args: {
           p_idempotency_key: string
@@ -6266,6 +6285,30 @@ export type Database = {
         }[]
       }
       listar_vendas_em_espera: { Args: never; Returns: Json }
+      listar_vendas_gerente: {
+        Args: {
+          p_fim?: string
+          p_formas_pagamento?: string[]
+          p_inicio?: string
+          p_limit?: number
+          p_loja_id: string
+          p_offset?: number
+          p_status?: string[]
+        }
+        Returns: {
+          caixa_id: string
+          data: string
+          forma_pagamento: string
+          operador_id: string
+          primeiro_produto: string
+          qtd_itens_distintos: number
+          qtd_itens_total: number
+          status: string
+          total_bruto: number
+          total_liquido: number
+          venda_id: string
+        }[]
+      }
       marcar_comissoes_pagas: {
         Args: { p_ids: string[]; p_loja_id: string; p_operador_id: string }
         Returns: number
