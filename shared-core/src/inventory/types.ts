@@ -55,6 +55,8 @@ export type InventoryMovement = {
   quantity: number
   reason: string | null
   createdAt: string
+  /** Quem lançou o movimento (quando a origem registra). */
+  userId?: string | null
 }
 
 /**

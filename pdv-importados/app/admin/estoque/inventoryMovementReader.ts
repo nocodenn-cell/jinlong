@@ -17,7 +17,7 @@ import type {
 } from '@shared-core/src/inventory'
 import { INVENTORY_ERROR_CODES } from '@shared-core/src/inventory'
 
-const KARDEX_COLS = 'evento_id, ocorrido_em, tipo_codigo, quantidade_delta, observacao, produto_id'
+const KARDEX_COLS = 'evento_id, ocorrido_em, tipo_codigo, quantidade_delta, observacao, produto_id, usuario_id'
 const DEFAULT_LIMIT = 60
 
 type KardexRow = {
@@ -27,6 +27,7 @@ type KardexRow = {
   quantidade_delta: number | string
   observacao: string | null
   produto_id: string
+  usuario_id?: string | null
 }
 
 export function mapKardexRow(r: KardexRow): InventoryMovement {
@@ -37,6 +38,7 @@ export function mapKardexRow(r: KardexRow): InventoryMovement {
     quantity: Number(r.quantidade_delta ?? 0),
     reason: r.observacao == null ? null : String(r.observacao),
     createdAt: String(r.ocorrido_em),
+    userId: r.usuario_id == null ? null : String(r.usuario_id),
   }
 }
 
