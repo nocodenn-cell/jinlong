@@ -70,10 +70,12 @@ export async function runConsistencyCheck(
     .eq('loja_id', lojaId)
   if (evErr) throw new Error(`venda_eventos: ${evErr.message}`)
 
-  const { data: caixas, error: cxErr } = await admin.from('caixas').select('id')
+  const { data: caixas, error: cxErr } = await admin.from('caixas').select('id, loja_id')
   if (cxErr) throw new Error(`caixas: ${cxErr.message}`)
 
   const caixaIds = new Set((caixas ?? []).map((c) => c.id))
+  // `vendas` não tem loja_id: a loja vem do caixa.
+  const caixaIdsDaLoja = (caixas ?? []).filter((c) => c.loja_id === lojaId).map((c) => c.id)
   const scopedEvents = (eventos ?? []).filter((e) => {
     if (scope.caixaId && e.caixa_id !== scope.caixaId) return false
     if (scope.operadorId) {
@@ -113,7 +115,7 @@ export async function runConsistencyCheck(
   let vendasQuery = admin
     .from('vendas')
     .select('id, total_liquido, caixa_id, status')
-    .eq('loja_id', lojaId)
+    .in('caixa_id', caixaIdsDaLoja)
     .eq('status', 'CONCLUIDA')
   if (scope.caixaId) vendasQuery = vendasQuery.eq('caixa_id', scope.caixaId)
 
@@ -193,7 +195,7 @@ export async function runConsistencyCheck(
     }
   }
 
-  // --- Gerente KPIs vs ledger (SQL authority) ---
+  // --- Gerente KPIs vs vendas CONCLUIDA (P-03/UX-010: a RPC agrega VENDAS, não o ledger) ---
   const { data: kpis, error: kpiErr } = await admin.rpc('kpis_venda_eventos_gerente', {
     p_loja_id: lojaId,
   })
@@ -207,10 +209,11 @@ export async function runConsistencyCheck(
     }
     const kpiFaturado = roundMoney2(Number(row?.faturado ?? 0))
     const kpiQtd = Number(row?.qtd_concluidas ?? 0)
-    if (!moneyEq(kpiFaturado, ledgerSum) || kpiQtd !== ledgerSaleCount) {
+    // O KPI é da loja inteira; só é comparável com `vendas` quando não há escopo de caixa.
+    if (!scope.caixaId && (!moneyEq(kpiFaturado, vendasSum) || kpiQtd !== vendasCount)) {
       gerenteVsLedger = 'MISMATCH'
       details.push(
-        `Gerente KPIs: faturado=${kpiFaturado} qtd=${kpiQtd} vs ledger sum=${ledgerSum} qtd=${ledgerSaleCount}`,
+        `Gerente KPIs: faturado=${kpiFaturado} qtd=${kpiQtd} vs vendas CONCLUIDA sum=${vendasSum} qtd=${vendasCount}`,
       )
     }
   }
