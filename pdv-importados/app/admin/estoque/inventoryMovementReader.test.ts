@@ -14,6 +14,7 @@ describe('inventoryMovementReader', () => {
         quantidade_delta: -2,
         observacao: null,
         produto_id: 'p1',
+        usuario_id: 'u1',
       }),
     ).toEqual({
       movementId: 'mel:m1',
@@ -22,6 +23,7 @@ describe('inventoryMovementReader', () => {
       quantity: -2,
       reason: null,
       createdAt: '2026-07-18T00:00:00.000Z',
+      userId: 'u1',
     })
   })
 

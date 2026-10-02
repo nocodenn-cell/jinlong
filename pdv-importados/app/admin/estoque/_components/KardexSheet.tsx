@@ -56,6 +56,8 @@ export function formatObservacaoKardex(observacao: string | null | undefined): s
   return (motivos.length > 0 ? motivos : partes).filter(Boolean).join(' · ')
 }
 
+const fmtSaldo = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 3 })
+
 /** Tipos de movimento → tom de StatusChip (mesmo padrão visual). */
 function toneStatusForTipo(codigo: string, entrada: boolean): string {
   if (codigo === 'VENDA' || codigo === 'SAIDA' || codigo === 'PERDA' || codigo === 'QUEBRA') {
@@ -99,6 +101,9 @@ export function KardexSheet({
   const rotuloTipo = (codigo: string): string =>
     labels.tipoMap[codigo] ?? humanizarCodigo(codigo)
 
+  // Sem nenhum saldo provado (histórico não fecha com o estoque atual), a coluna some em vez de mostrar "—" em tudo.
+  const temSaldo = movimentos.some((m) => m.saldo_apos != null)
+
   const columns: Column<KardexMovimento>[] = useMemo(
     () => [
       {
@@ -128,6 +133,25 @@ export function KardexSheet({
         cell: (m) => <MovementBadge delta={m.quantidade_delta} />,
       },
       {
+        key: 'saldo',
+        header: 'Saldo após',
+        align: 'right',
+        cell: (m) => (
+          <span className="whitespace-nowrap tabular-nums text-body text-fg">
+            {m.saldo_apos == null ? '—' : fmtSaldo.format(m.saldo_apos)}
+          </span>
+        ),
+      },
+      {
+        key: 'usuario',
+        header: 'Usuário',
+        cell: (m) => (
+          <span className="block max-w-[9rem] truncate text-caption text-fg-subtle" title={m.usuario_nome ?? undefined}>
+            {m.usuario_nome ?? '—'}
+          </span>
+        ),
+      },
+      {
         key: 'motivo',
         header: 'Motivo',
         className: 'max-w-[14rem]',
@@ -146,6 +170,10 @@ export function KardexSheet({
     // labels.tipoMap identity is stable per open; rotuloTipo closes over labels
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [labels],
+  )
+  const colunasVisiveis = useMemo(
+    () => columns.filter((c) => c.key !== 'saldo' || temSaldo),
+    [columns, temSaldo],
   )
 
   if (!alvo) return null
@@ -173,7 +201,7 @@ export function KardexSheet({
         <Loading label="…" className="min-h-0 py-12" size="sm" />
       ) : (
         <DataTable
-          columns={columns}
+          columns={colunasVisiveis}
           data={movimentos}
           rowKey={(m) => m.id}
           emptyState={
