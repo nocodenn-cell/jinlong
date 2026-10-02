@@ -2623,6 +2623,7 @@
     "dashboard_pagamento_fallback": "Pagamento",
     "dashboard_erro_banner_sg": "1 erro ao carregar",
     "dashboard_erro_banner_pl": "{{n}} erros ao carregar",
+    "dashboard_dados_incompletos": "Dados possivelmente incompletos: o volume de vendas do período passou do limite de leitura do Dashboard. Faturamento, pedidos, ticket e gráficos podem estar subestimados — use Relatórios para o total exato.",
     "grafico_carregando": "Carregando gráfico…",
     "financeiro_titulo": "Financeiro e fiscal",
     "financeiro_subtitulo": "Consulta histórica de títulos e fila fiscal. Novas vendas fiado estão desabilitadas.",
