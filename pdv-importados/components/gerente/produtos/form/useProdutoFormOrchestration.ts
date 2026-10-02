@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   atualizarDadosProdutoGerente,
+  buscarProdutosComFiltros,
   criarProduto,
 } from '@/app/gerente/produtos/actions'
 import type { OpcoesFiltrosProdutos } from '@/lib/gerente/produtos/opcoesFiltrosTypes'
@@ -180,6 +181,12 @@ export function useProdutoFormOrchestration({
       cancelado = true
     }
   }, [open, editando, produto])
+
+  /** Nomes de produtos parecidos, para o aviso (não bloqueante) de duplicidade do cadastro. */
+  const buscarNomesSimilares = useCallback(async (nome: string) => {
+    const r = await buscarProdutosComFiltros({ busca: nome, pageSize: 20 })
+    return r.success ? r.data.rows.map((row) => ({ id: row.id, nome: row.nome })) : null
+  }, [])
 
   const aplicarSugestaoBarcode = useCallback(
     async (codigoOverride?: string) => {
@@ -495,6 +502,7 @@ export function useProdutoFormOrchestration({
     fechar,
     fecharDeVerdade,
     aplicarSugestaoBarcode,
+    buscarNomesSimilares,
   }
 }
 

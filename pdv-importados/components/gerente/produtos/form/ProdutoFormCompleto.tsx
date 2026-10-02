@@ -47,6 +47,7 @@ export function ProdutoFormCompleto(props: Props) {
     onFornecedoresChange: props.onFornecedoresChange,
     onCategoriasChange: props.onCategoriasChange,
     onMarcasChange: props.onMarcasChange,
+    buscarNomesSimilares: props.buscarNomesSimilares,
     erro: props.erro,
     ...fields,
     nome: props.nome,
