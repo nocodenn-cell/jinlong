@@ -195,20 +195,20 @@ export async function runConsistencyCheck(
     }
   }
 
-  // --- Gerente KPIs vs vendas CONCLUIDA (P-03/UX-010: a RPC agrega VENDAS, não o ledger) ---
-  const { data: kpis, error: kpiErr } = await admin.rpc('kpis_venda_eventos_gerente', {
+  // --- Gerente KPIs vs vendas CONCLUIDA (Onda A: kpis_vendas_gerente agrega VENDAS, não o ledger) ---
+  const { data: kpis, error: kpiErr } = await admin.rpc('kpis_vendas_gerente', {
     p_loja_id: lojaId,
   })
   if (kpiErr) {
-    details.push(`kpis_venda_eventos_gerente: ${kpiErr.message}`)
+    details.push(`kpis_vendas_gerente: ${kpiErr.message}`)
     gerenteVsLedger = 'MISMATCH'
   } else {
     const row = (Array.isArray(kpis) ? kpis[0] : kpis) as {
       faturado?: number
-      qtd_concluidas?: number
+      vendas_concluidas?: number
     }
     const kpiFaturado = roundMoney2(Number(row?.faturado ?? 0))
-    const kpiQtd = Number(row?.qtd_concluidas ?? 0)
+    const kpiQtd = Number(row?.vendas_concluidas ?? 0)
     // O KPI é da loja inteira; só é comparável com `vendas` quando não há escopo de caixa.
     if (!scope.caixaId && (!moneyEq(kpiFaturado, vendasSum) || kpiQtd !== vendasCount)) {
       gerenteVsLedger = 'MISMATCH'
