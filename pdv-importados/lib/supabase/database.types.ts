@@ -5568,6 +5568,10 @@ export type Database = {
           status_movimentacao: string
         }[]
       }
+      atualizar_preco_varejo_produto: {
+        Args: { p_preco: number; p_produto_id: string }
+        Returns: undefined
+      }
       atualizar_produto_com_faixa_atacado: {
         Args: {
           p_ator_id?: string
