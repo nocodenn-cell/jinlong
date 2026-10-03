@@ -246,6 +246,14 @@ DECLARE
   v_prod_null uuid;
   v_row record;
 BEGIN
+  -- B2 (go-live): o autoteste roda dentro de um sub-bloco que SEMPRE termina
+  -- com a exceção sentinela VRB01. O Postgres desfaz tudo o que o sub-bloco
+  -- gravou (vendas, itens, pagamentos, estoque, saldo, kardex, comissões,
+  -- documentos fiscais, eventos). As asserções continuam valendo: qualquer
+  -- outra exceção (inclusive as RAISE do teste) não é capturada e aborta a
+  -- migration, como antes. Os RETURN de pré-condição vêm antes de qualquer
+  -- escrita, então não deixam efeito.
+  BEGIN
   -- Contrato: assinatura/segurança/dono preservados após DROP+CREATE.
   SELECT pg_get_function_result(p.oid), p.proowner::regrole::text, p.prosecdef, p.proconfig
   INTO v_ret, v_owner, v_secdef, v_search_path
@@ -343,6 +351,10 @@ BEGIN
 
     DELETE FROM public.produtos WHERE id IN (v_prod_com_dados, v_prod_null);
   END IF;
+  RAISE EXCEPTION 'VERIFY_ROLLBACK_SENTINELA' USING ERRCODE = 'VRB01';
+  EXCEPTION WHEN SQLSTATE 'VRB01' THEN
+    RAISE NOTICE '20260902150000: autoteste concluído; efeitos desfeitos (rollback do sub-bloco)';
+  END;
 END
 $verify$;
 

@@ -238,6 +238,14 @@ DECLARE
   v_venda_id uuid;
   v_doc_id uuid;
 BEGIN
+  -- B2 (go-live): o autoteste roda dentro de um sub-bloco que SEMPRE termina
+  -- com a exceção sentinela VRB01. O Postgres desfaz tudo o que o sub-bloco
+  -- gravou (vendas, itens, pagamentos, estoque, saldo, kardex, comissões,
+  -- documentos fiscais, eventos). As asserções continuam valendo: qualquer
+  -- outra exceção (inclusive as RAISE do teste) não é capturada e aborta a
+  -- migration, como antes. Os RETURN de pré-condição vêm antes de qualquer
+  -- escrita, então não deixam efeito.
+  BEGIN
   IF position('PROVIDER_CONGELADO' IN pg_get_functiondef('tg_documentos_fiscais_eventos_au'::regproc)) = 0 THEN
     RAISE EXCEPTION 'EVT_PROVIDER_CONGELADO_AUSENTE_NA_FUNCAO';
   END IF;
@@ -289,6 +297,10 @@ BEGIN
   DELETE FROM public.documentos_fiscais_pendentes WHERE id = v_doc_id;
   DELETE FROM public.vendas WHERE id = v_venda_id;
   RAISE NOTICE 'EVT_PROVIDER_CONGELADO: TODAS AS PROVAS VIVAS PASSARAM';
+  RAISE EXCEPTION 'VERIFY_ROLLBACK_SENTINELA' USING ERRCODE = 'VRB01';
+  EXCEPTION WHEN SQLSTATE 'VRB01' THEN
+    RAISE NOTICE '20260903160000: autoteste concluído; efeitos desfeitos (rollback do sub-bloco)';
+  END;
 END
 $verify$;
 

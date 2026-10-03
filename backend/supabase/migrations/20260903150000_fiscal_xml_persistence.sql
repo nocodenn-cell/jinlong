@@ -380,6 +380,14 @@ DECLARE
   v_hash1 text := repeat('a', 64);
   v_hash2 text := repeat('b', 64);
 BEGIN
+  -- B2 (go-live): o autoteste roda dentro de um sub-bloco que SEMPRE termina
+  -- com a exceção sentinela VRB01. O Postgres desfaz tudo o que o sub-bloco
+  -- gravou (vendas, itens, pagamentos, estoque, saldo, kardex, comissões,
+  -- documentos fiscais, eventos). As asserções continuam valendo: qualquer
+  -- outra exceção (inclusive as RAISE do teste) não é capturada e aborta a
+  -- migration, como antes. Os RETURN de pré-condição vêm antes de qualquer
+  -- escrita, então não deixam efeito.
+  BEGIN
   -- Estrutural: constraints/colunas/bucket.
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'documentos_fiscais_xml_status_check') THEN
     RAISE EXCEPTION 'C3_XML_CHECK_STATUS_AUSENTE';
@@ -508,6 +516,10 @@ BEGIN
   DELETE FROM public.vendas WHERE id = v_venda_id;
 
   RAISE NOTICE 'C3_XML: TODAS AS PROVAS VIVAS PASSARAM (1-8)';
+  RAISE EXCEPTION 'VERIFY_ROLLBACK_SENTINELA' USING ERRCODE = 'VRB01';
+  EXCEPTION WHEN SQLSTATE 'VRB01' THEN
+    RAISE NOTICE '20260903150000: autoteste concluído; efeitos desfeitos (rollback do sub-bloco)';
+  END;
 END
 $verify$;
 

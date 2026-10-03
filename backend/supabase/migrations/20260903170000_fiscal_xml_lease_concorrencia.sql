@@ -446,6 +446,14 @@ DECLARE
   v_hash1 text := repeat('a', 64);
   v_hash2 text := repeat('b', 64);
 BEGIN
+  -- B2 (go-live): o autoteste roda dentro de um sub-bloco que SEMPRE termina
+  -- com a exceção sentinela VRB01. O Postgres desfaz tudo o que o sub-bloco
+  -- gravou (vendas, itens, pagamentos, estoque, saldo, kardex, comissões,
+  -- documentos fiscais, eventos). As asserções continuam valendo: qualquer
+  -- outra exceção (inclusive as RAISE do teste) não é capturada e aborta a
+  -- migration, como antes. Os RETURN de pré-condição vêm antes de qualquer
+  -- escrita, então não deixam efeito.
+  BEGIN
   IF position('FISCAL_XML_TRANSICAO_INVALIDA' IN pg_get_functiondef('tg_documentos_fiscais_estado_bu'::regproc)) = 0 THEN
     RAISE EXCEPTION 'HOTFIX_XML_TRIGGER_TRANSICAO_AUSENTE';
   END IF;
@@ -585,6 +593,10 @@ BEGIN
   DELETE FROM public.vendas WHERE id = v_venda_id;
 
   RAISE NOTICE 'HOTFIX_XML_CONCORRENCIA: TODAS AS PROVAS VIVAS PASSARAM (1-9)';
+  RAISE EXCEPTION 'VERIFY_ROLLBACK_SENTINELA' USING ERRCODE = 'VRB01';
+  EXCEPTION WHEN SQLSTATE 'VRB01' THEN
+    RAISE NOTICE '20260903170000: autoteste concluído; efeitos desfeitos (rollback do sub-bloco)';
+  END;
 END
 $verify$;
 
