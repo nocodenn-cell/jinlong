@@ -233,6 +233,48 @@
       "remoteOnlyVersion": "20261002104957",
       "reason": "pos_venda_operacoes_select_dono_todas_lojas aplicada via MCP apply_migration (não CLI) em 02/10/2026 (commit 31b76fd9 na main): schema_migrations.version gravado foi o timestamp real de aplicação (20261002104957), name bate integralmente, created_by = usuário. Equivalência verificada por leitura no remoto: SQL de schema_migrations.statements idêntico ao arquivo após remover comentários/espaços. Migration é DROP POLICY IF EXISTS + CREATE POLICY — seguro reaplicar se um futuro db push tentar.",
       "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20260930120000",
+      "remoteOnlyVersion": "20261003203909",
+      "reason": "Consta no remoto sob a version 20261003203909, name vendas_lista_kpis_por_venda (name bate integralmente com o identificador lógico do arquivo 20260930120000_vendas_lista_kpis_por_venda.sql, version não: o remoto gravou o timestamp real de aplicação, 03/10/2026). Versão e name lidos em leitura somente-leitura de supabase_migrations.schema_migrations em produção em 03/10/2026. Método de aplicação e equivalência do SQL não foram reverificados nesta reconciliação — só a divergência de version e o name.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20261001100000",
+      "remoteOnlyVersion": "20261003203447",
+      "reason": "Consta no remoto sob a version 20261003203447, name c3_colunas_caixa_desembolso_devolucao (name bate integralmente com o identificador lógico do arquivo 20261001100000_c3_colunas_caixa_desembolso_devolucao.sql, version não: o remoto gravou o timestamp real de aplicação, 03/10/2026). Versão e name lidos em leitura somente-leitura de supabase_migrations.schema_migrations em produção em 03/10/2026. Método de aplicação e equivalência do SQL não foram reverificados nesta reconciliação — só a divergência de version e o name.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20261001100100",
+      "remoteOnlyVersion": "20261003203523",
+      "reason": "Consta no remoto sob a version 20261003203523, name c3_internal_autoridade_resolvedor_cache (name bate integralmente com o identificador lógico do arquivo 20261001100100_c3_internal_autoridade_resolvedor_cache.sql, version não: o remoto gravou o timestamp real de aplicação, 03/10/2026). Versão e name lidos em leitura somente-leitura de supabase_migrations.schema_migrations em produção em 03/10/2026. Método de aplicação e equivalência do SQL não foram reverificados nesta reconciliação — só a divergência de version e o name.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20261001100200",
+      "remoteOnlyVersion": "20261003203648",
+      "reason": "Consta no remoto sob a version 20261003203648, name c3_devolver_ou_trocar_venda_caixa_desembolso_d13 (name bate integralmente com o identificador lógico do arquivo 20261001100200_c3_devolver_ou_trocar_venda_caixa_desembolso_d13.sql, version não: o remoto gravou o timestamp real de aplicação, 03/10/2026). Versão e name lidos em leitura somente-leitura de supabase_migrations.schema_migrations em produção em 03/10/2026. Método de aplicação e equivalência do SQL não foram reverificados nesta reconciliação — só a divergência de version e o name.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20261001100300",
+      "remoteOnlyVersion": "20261003203715",
+      "reason": "Consta no remoto sob a version 20261003203715, name c3_conciliacao_devolucao_check (name bate integralmente com o identificador lógico do arquivo 20261001100300_c3_conciliacao_devolucao_check.sql, version não: o remoto gravou o timestamp real de aplicação, 03/10/2026). Versão e name lidos em leitura somente-leitura de supabase_migrations.schema_migrations em produção em 03/10/2026. Método de aplicação e equivalência do SQL não foram reverificados nesta reconciliação — só a divergência de version e o name.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20261001100400",
+      "remoteOnlyVersion": "20261003203833",
+      "reason": "Consta no remoto sob a version 20261003203833, name c3_devolver_retry_autorizacao (name bate integralmente com o identificador lógico do arquivo 20261001100400_c3_devolver_retry_autorizacao.sql, version não: o remoto gravou o timestamp real de aplicação, 03/10/2026). Versão e name lidos em leitura somente-leitura de supabase_migrations.schema_migrations em produção em 03/10/2026. Método de aplicação e equivalência do SQL não foram reverificados nesta reconciliação — só a divergência de version e o name.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20261001100500",
+      "remoteOnlyVersion": "20261003203718",
+      "reason": "Consta no remoto sob a version 20261003203718, name c3_listar_caixas_elegiveis_desembolso (name bate integralmente com o identificador lógico do arquivo 20261001100500_c3_listar_caixas_elegiveis_desembolso.sql, version não: o remoto gravou o timestamp real de aplicação, 03/10/2026). Versão e name lidos em leitura somente-leitura de supabase_migrations.schema_migrations em produção em 03/10/2026. Método de aplicação e equivalência do SQL não foram reverificados nesta reconciliação — só a divergência de version e o name.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
     }
   ]
 }
