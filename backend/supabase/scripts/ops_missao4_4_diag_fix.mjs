@@ -9,6 +9,14 @@ import { writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
+
+// Guard de ambiente (go-live), mesmo padrão de backend/scripts/fallback-sem-rpc-real.mjs:
+// o projeto Supabase é único (produção = Preview = E2E); este script grava dados e só
+// roda em localhost/127.0.0.1, antes de qualquer conexão.
+if (url && !/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/?$/.test(url)) {
+  console.error(`RECUSADO: o alvo não é local; este script grava dados e não pode rodar contra produção. URL=${url}`)
+  process.exit(2)
+}
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 const anonKey =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||

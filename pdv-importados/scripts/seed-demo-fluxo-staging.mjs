@@ -42,6 +42,14 @@ const url =
   process.env.SUPABASE_URL?.trim() ||
   process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ||
   ''
+
+// Guard de ambiente (go-live), mesmo padrão de backend/scripts/fallback-sem-rpc-real.mjs:
+// o projeto Supabase é único (produção = Preview = E2E); este script grava dados e só
+// roda em localhost/127.0.0.1, antes de qualquer conexão.
+if (url && !/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/?$/.test(url)) {
+  console.error(`RECUSADO: o alvo não é local; este script grava dados e não pode rodar contra produção. URL=${url}`)
+  process.exit(2)
+}
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() || ''
 const LOJA_MATRIZ_ID = 'a0000001-0000-4000-8000-000000000001'
 const TROCO_INICIAL = 100
