@@ -253,6 +253,14 @@ DECLARE
   v_hash1 text := repeat('a', 64);
   v_backfill_count integer;
 BEGIN
+  -- B2 (go-live): o autoteste roda dentro de um sub-bloco que SEMPRE termina
+  -- com a exceção sentinela VRB01. O Postgres desfaz tudo o que o sub-bloco
+  -- gravou (vendas, itens, pagamentos, estoque, saldo, kardex, comissões,
+  -- documentos fiscais, eventos). As asserções continuam valendo: qualquer
+  -- outra exceção (inclusive as RAISE do teste) não é capturada e aborta a
+  -- migration, como antes. Os RETURN de pré-condição vêm antes de qualquer
+  -- escrita, então não deixam efeito.
+  BEGIN
   -- Estrutural: grant de INSERT restaurado.
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.role_table_grants
@@ -323,6 +331,10 @@ BEGIN
   DELETE FROM public.documentos_fiscais_pendentes WHERE id = v_doc_id;
   DELETE FROM public.vendas WHERE id = v_venda_id;
   RAISE NOTICE 'HOTFIX_CODEX_REVIEW: TODAS AS PROVAS VIVAS PASSARAM (A,B)';
+  RAISE EXCEPTION 'VERIFY_ROLLBACK_SENTINELA' USING ERRCODE = 'VRB01';
+  EXCEPTION WHEN SQLSTATE 'VRB01' THEN
+    RAISE NOTICE '20260903180000: autoteste concluído; efeitos desfeitos (rollback do sub-bloco)';
+  END;
 END
 $verify$;
 

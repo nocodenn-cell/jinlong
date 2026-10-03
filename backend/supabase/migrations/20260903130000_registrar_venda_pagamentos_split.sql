@@ -279,6 +279,14 @@ DECLARE
   v_venda_mista uuid := gen_random_uuid();
   v_qtd_pag integer;
 BEGIN
+  -- B2 (go-live): o autoteste roda dentro de um sub-bloco que SEMPRE termina
+  -- com a exceção sentinela VRB01. O Postgres desfaz tudo o que o sub-bloco
+  -- gravou (vendas, itens, pagamentos, estoque, saldo, kardex, comissões,
+  -- documentos fiscais, eventos). As asserções continuam valendo: qualquer
+  -- outra exceção (inclusive as RAISE do teste) não é capturada e aborta a
+  -- migration, como antes. Os RETURN de pré-condição vêm antes de qualquer
+  -- escrita, então não deixam efeito.
+  BEGIN
   SELECT id INTO v_loja_id FROM public.lojas LIMIT 1;
   IF v_loja_id IS NULL THEN
     RAISE NOTICE 'C2_10_P05: sem loja para prova viva; verificação estrutural (overload) já OK';
@@ -333,6 +341,10 @@ BEGIN
   DELETE FROM public.itens_venda WHERE venda_id IN (v_venda_escalar, v_venda_mista);
   DELETE FROM public.comissoes_vendedores WHERE venda_id IN (v_venda_escalar, v_venda_mista);
   DELETE FROM public.vendas WHERE id IN (v_venda_escalar, v_venda_mista);
+  RAISE EXCEPTION 'VERIFY_ROLLBACK_SENTINELA' USING ERRCODE = 'VRB01';
+  EXCEPTION WHEN SQLSTATE 'VRB01' THEN
+    RAISE NOTICE '20260903130000: autoteste concluído; efeitos desfeitos (rollback do sub-bloco)';
+  END;
 END
 $verify$;
 

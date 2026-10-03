@@ -62,6 +62,14 @@ DO $verify$
 DECLARE
   v_deltype "char";
 BEGIN
+  -- B2 (go-live): o autoteste roda dentro de um sub-bloco que SEMPRE termina
+  -- com a exceção sentinela VRB01. O Postgres desfaz tudo o que o sub-bloco
+  -- gravou (vendas, itens, pagamentos, estoque, saldo, kardex, comissões,
+  -- documentos fiscais, eventos). As asserções continuam valendo: qualquer
+  -- outra exceção (inclusive as RAISE do teste) não é capturada e aborta a
+  -- migration, como antes. Os RETURN de pré-condição vêm antes de qualquer
+  -- escrita, então não deixam efeito.
+  BEGIN
   SELECT confdeltype INTO v_deltype
   FROM pg_constraint
   WHERE conrelid = 'public.documentos_fiscais_pendentes'::regclass
@@ -124,6 +132,10 @@ BEGIN
       DELETE FROM public.documentos_fiscais_pendentes WHERE id = v_doc_id;
       DELETE FROM public.vendas WHERE id = v_venda_id;
     END IF;
+  END;
+  RAISE EXCEPTION 'VERIFY_ROLLBACK_SENTINELA' USING ERRCODE = 'VRB01';
+  EXCEPTION WHEN SQLSTATE 'VRB01' THEN
+    RAISE NOTICE '20260902160000: autoteste concluído; efeitos desfeitos (rollback do sub-bloco)';
   END;
 END
 $verify$;

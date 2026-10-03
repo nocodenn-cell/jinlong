@@ -150,6 +150,14 @@ DECLARE
   v_doc_id uuid;
   v_row record;
 BEGIN
+  -- B2 (go-live): o autoteste roda dentro de um sub-bloco que SEMPRE termina
+  -- com a exceção sentinela VRB01. O Postgres desfaz tudo o que o sub-bloco
+  -- gravou (vendas, itens, pagamentos, estoque, saldo, kardex, comissões,
+  -- documentos fiscais, eventos). As asserções continuam valendo: qualquer
+  -- outra exceção (inclusive as RAISE do teste) não é capturada e aborta a
+  -- migration, como antes. Os RETURN de pré-condição vêm antes de qualquer
+  -- escrita, então não deixam efeito.
+  BEGIN
   SELECT p.proowner::regrole::text, p.prosecdef, p.proacl::text[], pg_get_function_result(p.oid)
   INTO v_owner, v_secdef, v_acl, v_ret
   FROM pg_proc p WHERE p.proname = 'fiscal_claim_documentos';
@@ -239,6 +247,10 @@ BEGIN
     DELETE FROM public.documentos_fiscais_pendentes WHERE id = v_doc_id;
     DELETE FROM public.vendas WHERE id = v_venda_id;
   END IF;
+  RAISE EXCEPTION 'VERIFY_ROLLBACK_SENTINELA' USING ERRCODE = 'VRB01';
+  EXCEPTION WHEN SQLSTATE 'VRB01' THEN
+    RAISE NOTICE '20260903100000: autoteste concluído; efeitos desfeitos (rollback do sub-bloco)';
+  END;
 END
 $verify$;
 

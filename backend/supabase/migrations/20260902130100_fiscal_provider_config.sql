@@ -135,6 +135,14 @@ DECLARE
   v_prova_criada boolean := false;
   v_secret_selection_bloqueado boolean := false;
 BEGIN
+  -- B2 (go-live): o autoteste roda dentro de um sub-bloco que SEMPRE termina
+  -- com a exceção sentinela VRB01. O Postgres desfaz tudo o que o sub-bloco
+  -- gravou (vendas, itens, pagamentos, estoque, saldo, kardex, comissões,
+  -- documentos fiscais, eventos). As asserções continuam valendo: qualquer
+  -- outra exceção (inclusive as RAISE do teste) não é capturada e aborta a
+  -- migration, como antes. Os RETURN de pré-condição vêm antes de qualquer
+  -- escrita, então não deixam efeito.
+  BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'fiscal_provider_config'
   ) THEN
@@ -208,6 +216,10 @@ BEGIN
       DELETE FROM public.fiscal_provider_config WHERE loja_id = v_loja_id AND ambiente = 'homologacao';
     END IF;
   END IF;
+  RAISE EXCEPTION 'VERIFY_ROLLBACK_SENTINELA' USING ERRCODE = 'VRB01';
+  EXCEPTION WHEN SQLSTATE 'VRB01' THEN
+    RAISE NOTICE '20260902130100: autoteste concluído; efeitos desfeitos (rollback do sub-bloco)';
+  END;
 END
 $verify$;
 
