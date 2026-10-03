@@ -10,6 +10,11 @@ const e2ePort = getE2eTestPort()
 const defaultBase = getE2eBaseUrl()
 const baseURL = defaultBase
 
+const allowNonLocalE2E = process.env.ALLOW_NONLOCAL_E2E === '1'
+if (!allowNonLocalE2E && !/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(baseURL)) {
+  throw new Error(`RECUSADO: alvo não local; o E2E não pode rodar contra produção. URL=${baseURL}`)
+}
+
 const isCi = process.env.CI === 'true'
 
 /** No CI, sobe Next localmente quando `PLAYWRIGHT_E2E_WITH_DEV=1` (ver workflow opcional). */

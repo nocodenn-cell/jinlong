@@ -609,6 +609,7 @@ DO $verify$
 DECLARE
   v_def text;
 BEGIN
+  BEGIN
   v_def := pg_get_functiondef('public.finalizar_venda_transacional_canonica_v4_unscoped(
     uuid, uuid, uuid, uuid, text, numeric, numeric, numeric, jsonb, jsonb, text, numeric,
     boolean, boolean, text, text, text, text, uuid, motivo_desconto_enum_tipo, text, text
@@ -650,6 +651,11 @@ BEGIN
   IF position('''data_venda'', v.data' IN v_def) = 0 THEN
     RAISE EXCEPTION 'BP01_DATA_VENDA_AUSENTE';
   END IF;
+    RAISE EXCEPTION USING ERRCODE = 'ZX001', MESSAGE = 'verify-rollback-sentinel';
+  EXCEPTION
+    WHEN SQLSTATE 'ZX001' THEN
+      NULL;
+  END;
 END
 $verify$;
 

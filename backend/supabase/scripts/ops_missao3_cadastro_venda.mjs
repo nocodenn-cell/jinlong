@@ -9,6 +9,11 @@ import { writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
+
+if (process.env.ALLOW_NONLOCAL_SUPABASE_SCRIPT !== '1' && !/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(url)) {
+  console.error(`RECUSADO: alvo não local; este script não pode rodar contra produção. URL=${url}`)
+  process.exit(2)
+}
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 const anonKey =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||

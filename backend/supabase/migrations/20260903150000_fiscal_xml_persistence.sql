@@ -380,6 +380,7 @@ DECLARE
   v_hash1 text := repeat('a', 64);
   v_hash2 text := repeat('b', 64);
 BEGIN
+  BEGIN
   -- Estrutural: constraints/colunas/bucket.
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'documentos_fiscais_xml_status_check') THEN
     RAISE EXCEPTION 'C3_XML_CHECK_STATUS_AUSENTE';
@@ -508,6 +509,11 @@ BEGIN
   DELETE FROM public.vendas WHERE id = v_venda_id;
 
   RAISE NOTICE 'C3_XML: TODAS AS PROVAS VIVAS PASSARAM (1-8)';
+    RAISE EXCEPTION USING ERRCODE = 'ZX001', MESSAGE = 'verify-rollback-sentinel';
+  EXCEPTION
+    WHEN SQLSTATE 'ZX001' THEN
+      NULL;
+  END;
 END
 $verify$;
 

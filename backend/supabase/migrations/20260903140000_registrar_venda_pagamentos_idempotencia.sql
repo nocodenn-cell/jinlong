@@ -302,6 +302,7 @@ DECLARE
   v_venda_b uuid;
   v_erro_capturado boolean;
 BEGIN
+  BEGIN
   SELECT id INTO v_loja_id FROM public.lojas LIMIT 1;
   IF v_loja_id IS NULL THEN
     RAISE NOTICE 'C2_11_P03: sem loja para prova viva; verificação estrutural OK';
@@ -413,6 +414,11 @@ BEGIN
   DELETE FROM public.vendas WHERE id IN (v_venda_a, v_venda_b);
 
   RAISE NOTICE 'C2_11_P03: prova viva OK — retry idêntico/ordem-diferente PASS, split divergente REJECT, valor divergente REJECT, escalar->split REJECT.';
+    RAISE EXCEPTION USING ERRCODE = 'ZX001', MESSAGE = 'verify-rollback-sentinel';
+  EXCEPTION
+    WHEN SQLSTATE 'ZX001' THEN
+      NULL;
+  END;
 END
 $verify$;
 

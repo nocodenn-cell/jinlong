@@ -253,6 +253,7 @@ DECLARE
   v_hash1 text := repeat('a', 64);
   v_backfill_count integer;
 BEGIN
+  BEGIN
   -- Estrutural: grant de INSERT restaurado.
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.role_table_grants
@@ -323,6 +324,11 @@ BEGIN
   DELETE FROM public.documentos_fiscais_pendentes WHERE id = v_doc_id;
   DELETE FROM public.vendas WHERE id = v_venda_id;
   RAISE NOTICE 'HOTFIX_CODEX_REVIEW: TODAS AS PROVAS VIVAS PASSARAM (A,B)';
+    RAISE EXCEPTION USING ERRCODE = 'ZX001', MESSAGE = 'verify-rollback-sentinel';
+  EXCEPTION
+    WHEN SQLSTATE 'ZX001' THEN
+      NULL;
+  END;
 END
 $verify$;
 

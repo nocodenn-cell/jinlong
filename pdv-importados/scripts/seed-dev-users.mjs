@@ -67,6 +67,11 @@ const LOJA_MATRIZ_ID = 'a0000001-0000-4000-8000-000000000001'
 
 async function findAuthUserByEmail(supabase, email) {
   const target = email.toLowerCase()
+
+if (process.env.ALLOW_NONLOCAL_SUPABASE_SCRIPT !== '1' && !/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(url)) {
+  console.error(`RECUSADO: alvo não local; este script não pode rodar contra produção. URL=${url}`)
+  process.exit(2)
+}
   for (let page = 1; page <= 10; page += 1) {
     const { data: list, error: listErr } = await supabase.auth.admin.listUsers({
       page,

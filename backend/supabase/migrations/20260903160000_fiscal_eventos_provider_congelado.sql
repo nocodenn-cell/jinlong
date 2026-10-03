@@ -238,6 +238,7 @@ DECLARE
   v_venda_id uuid;
   v_doc_id uuid;
 BEGIN
+  BEGIN
   IF position('PROVIDER_CONGELADO' IN pg_get_functiondef('tg_documentos_fiscais_eventos_au'::regproc)) = 0 THEN
     RAISE EXCEPTION 'EVT_PROVIDER_CONGELADO_AUSENTE_NA_FUNCAO';
   END IF;
@@ -289,6 +290,11 @@ BEGIN
   DELETE FROM public.documentos_fiscais_pendentes WHERE id = v_doc_id;
   DELETE FROM public.vendas WHERE id = v_venda_id;
   RAISE NOTICE 'EVT_PROVIDER_CONGELADO: TODAS AS PROVAS VIVAS PASSARAM';
+    RAISE EXCEPTION USING ERRCODE = 'ZX001', MESSAGE = 'verify-rollback-sentinel';
+  EXCEPTION
+    WHEN SQLSTATE 'ZX001' THEN
+      NULL;
+  END;
 END
 $verify$;
 

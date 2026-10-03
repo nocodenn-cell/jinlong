@@ -137,3 +137,8 @@ main().catch((e) => {
   console.error(e)
   process.exit(1)
 })
+
+if (process.env.ALLOW_NONLOCAL_SUPABASE_SCRIPT !== '1' && !/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(url)) {
+  console.error(`RECUSADO: alvo não local; este script não pode rodar contra produção. URL=${url}`)
+  process.exit(2)
+}

@@ -246,6 +246,7 @@ DECLARE
   v_prod_null uuid;
   v_row record;
 BEGIN
+  BEGIN
   -- Contrato: assinatura/segurança/dono preservados após DROP+CREATE.
   SELECT pg_get_function_result(p.oid), p.proowner::regrole::text, p.prosecdef, p.proconfig
   INTO v_ret, v_owner, v_secdef, v_search_path
@@ -343,6 +344,11 @@ BEGIN
 
     DELETE FROM public.produtos WHERE id IN (v_prod_com_dados, v_prod_null);
   END IF;
+    RAISE EXCEPTION USING ERRCODE = 'ZX001', MESSAGE = 'verify-rollback-sentinel';
+  EXCEPTION
+    WHEN SQLSTATE 'ZX001' THEN
+      NULL;
+  END;
 END
 $verify$;
 

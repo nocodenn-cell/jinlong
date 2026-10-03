@@ -1,3 +1,8 @@
+-- PADRÃO DE SEGURANÇA: a execução é transacional e termina em ROLLBACK.
+-- Para persistir deliberadamente, substitua o ROLLBACK final por COMMIT.
+
+BEGIN;
+
 -- Smoke: migration 069 — RPC fiscal_enfileirar_documento_venda com auth.role() = service_role.
 -- SQL puro. Sem Edge, APIs externas ou Focus. Rodar no SQL Editor (homologação / local pós-migrations).
 -- Pré-requisitos: migration 069 aplicada; ≥1 linha em public.vendas.
@@ -78,4 +83,6 @@ BEGIN
 
   DELETE FROM public.documentos_fiscais_pendentes WHERE id = v_doc_id;
   RAISE NOTICE 'Passo 6 OK — linha de teste removida. Migration 069 / smoke OK.';
-END $$;
+END $;
+
+ROLLBACK;

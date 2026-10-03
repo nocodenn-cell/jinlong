@@ -62,6 +62,7 @@ DO $verify$
 DECLARE
   v_deltype "char";
 BEGIN
+  BEGIN
   SELECT confdeltype INTO v_deltype
   FROM pg_constraint
   WHERE conrelid = 'public.documentos_fiscais_pendentes'::regclass
@@ -124,6 +125,11 @@ BEGIN
       DELETE FROM public.documentos_fiscais_pendentes WHERE id = v_doc_id;
       DELETE FROM public.vendas WHERE id = v_venda_id;
     END IF;
+  END;
+    RAISE EXCEPTION USING ERRCODE = 'ZX001', MESSAGE = 'verify-rollback-sentinel';
+  EXCEPTION
+    WHEN SQLSTATE 'ZX001' THEN
+      NULL;
   END;
 END
 $verify$;

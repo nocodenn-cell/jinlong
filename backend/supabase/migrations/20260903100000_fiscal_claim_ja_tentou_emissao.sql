@@ -150,6 +150,7 @@ DECLARE
   v_doc_id uuid;
   v_row record;
 BEGIN
+  BEGIN
   SELECT p.proowner::regrole::text, p.prosecdef, p.proacl::text[], pg_get_function_result(p.oid)
   INTO v_owner, v_secdef, v_acl, v_ret
   FROM pg_proc p WHERE p.proname = 'fiscal_claim_documentos';
@@ -239,6 +240,11 @@ BEGIN
     DELETE FROM public.documentos_fiscais_pendentes WHERE id = v_doc_id;
     DELETE FROM public.vendas WHERE id = v_venda_id;
   END IF;
+    RAISE EXCEPTION USING ERRCODE = 'ZX001', MESSAGE = 'verify-rollback-sentinel';
+  EXCEPTION
+    WHEN SQLSTATE 'ZX001' THEN
+      NULL;
+  END;
 END
 $verify$;
 

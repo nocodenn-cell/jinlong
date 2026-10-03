@@ -1,3 +1,6 @@
+-- PADRÃO DE SEGURANÇA: a execução é transacional e termina em ROLLBACK.
+-- Para persistir deliberadamente, substitua o ROLLBACK final por COMMIT.
+
 -- Homolog PDV web — fluxo completo em ambiente limpo (Supabase local).
 -- Cobre: pesquisa/preço → espera → retomar → multi-pagamento → saldo pendente
 -- (contas_receber 24702) → kardex → integridade financeira → cancelamento →
@@ -549,4 +552,4 @@ BEGIN
     v_espera_id, v_has_contas_receber, v_has_auditoria_cancel;
 END $$;
 
-COMMIT;
+ROLLBACK;

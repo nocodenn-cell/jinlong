@@ -446,6 +446,7 @@ DECLARE
   v_hash1 text := repeat('a', 64);
   v_hash2 text := repeat('b', 64);
 BEGIN
+  BEGIN
   IF position('FISCAL_XML_TRANSICAO_INVALIDA' IN pg_get_functiondef('tg_documentos_fiscais_estado_bu'::regproc)) = 0 THEN
     RAISE EXCEPTION 'HOTFIX_XML_TRIGGER_TRANSICAO_AUSENTE';
   END IF;
@@ -585,6 +586,11 @@ BEGIN
   DELETE FROM public.vendas WHERE id = v_venda_id;
 
   RAISE NOTICE 'HOTFIX_XML_CONCORRENCIA: TODAS AS PROVAS VIVAS PASSARAM (1-9)';
+    RAISE EXCEPTION USING ERRCODE = 'ZX001', MESSAGE = 'verify-rollback-sentinel';
+  EXCEPTION
+    WHEN SQLSTATE 'ZX001' THEN
+      NULL;
+  END;
 END
 $verify$;
 

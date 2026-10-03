@@ -279,6 +279,7 @@ DECLARE
   v_venda_mista uuid := gen_random_uuid();
   v_qtd_pag integer;
 BEGIN
+  BEGIN
   SELECT id INTO v_loja_id FROM public.lojas LIMIT 1;
   IF v_loja_id IS NULL THEN
     RAISE NOTICE 'C2_10_P05: sem loja para prova viva; verificação estrutural (overload) já OK';
@@ -333,6 +334,11 @@ BEGIN
   DELETE FROM public.itens_venda WHERE venda_id IN (v_venda_escalar, v_venda_mista);
   DELETE FROM public.comissoes_vendedores WHERE venda_id IN (v_venda_escalar, v_venda_mista);
   DELETE FROM public.vendas WHERE id IN (v_venda_escalar, v_venda_mista);
+    RAISE EXCEPTION USING ERRCODE = 'ZX001', MESSAGE = 'verify-rollback-sentinel';
+  EXCEPTION
+    WHEN SQLSTATE 'ZX001' THEN
+      NULL;
+  END;
 END
 $verify$;
 

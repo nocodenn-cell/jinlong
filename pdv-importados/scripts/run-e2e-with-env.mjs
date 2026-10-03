@@ -34,6 +34,12 @@ function loadEnvLocal() {
 }
 
 loadEnvLocal()
+
+const baseURL = process.env.PLAYWRIGHT_BASE_URL?.trim() || `http://localhost:${process.env.PLAYWRIGHT_TEST_PORT ?? '3000'}`
+if (process.env.ALLOW_NONLOCAL_E2E !== '1' && !/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(baseURL)) {
+  console.error(`RECUSADO: alvo não local; o E2E não pode rodar contra produção. URL=${baseURL}`)
+  process.exit(2)
+}
 const need = ['PLAYWRIGHT_CAIXA_TEST_EMAIL', 'PLAYWRIGHT_CAIXA_TEST_PASSWORD']
 for (const k of need) {
   if (!process.env[k]?.trim()) {

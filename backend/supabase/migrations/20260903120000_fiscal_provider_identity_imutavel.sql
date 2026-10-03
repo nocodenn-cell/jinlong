@@ -106,6 +106,7 @@ DECLARE
   v_doc_id uuid;
   v_bloqueado boolean := false;
 BEGIN
+  BEGIN
   v_def := pg_get_functiondef('tg_documentos_fiscais_estado_bu'::regproc);
   IF position('FISCAL_PROVIDER_IMUTAVEL_APOS_CONGELADO' IN v_def) = 0 THEN
     RAISE EXCEPTION 'C2_10_P01_CHECAGEM_IMUTABILIDADE_AUSENTE';
@@ -173,6 +174,11 @@ BEGIN
     DELETE FROM public.documentos_fiscais_pendentes WHERE id = v_doc_id;
     DELETE FROM public.vendas WHERE id = v_venda_id;
   END IF;
+    RAISE EXCEPTION USING ERRCODE = 'ZX001', MESSAGE = 'verify-rollback-sentinel';
+  EXCEPTION
+    WHEN SQLSTATE 'ZX001' THEN
+      NULL;
+  END;
 END
 $verify$;
 

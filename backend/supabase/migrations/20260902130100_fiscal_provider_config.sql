@@ -135,6 +135,7 @@ DECLARE
   v_prova_criada boolean := false;
   v_secret_selection_bloqueado boolean := false;
 BEGIN
+  BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'fiscal_provider_config'
   ) THEN
@@ -208,6 +209,11 @@ BEGIN
       DELETE FROM public.fiscal_provider_config WHERE loja_id = v_loja_id AND ambiente = 'homologacao';
     END IF;
   END IF;
+    RAISE EXCEPTION USING ERRCODE = 'ZX001', MESSAGE = 'verify-rollback-sentinel';
+  EXCEPTION
+    WHEN SQLSTATE 'ZX001' THEN
+      NULL;
+  END;
 END
 $verify$;
 

@@ -10,6 +10,10 @@
 -- - PELO MENOS 4 PRODUTOS ATIVOS COM ESTOQUE > 0.
 --
 -- OBS: ESTE SCRIPT GERA DADOS FICTÍCIOS DE TESTE.
+-- PADRÃO DE SEGURANÇA: a execução é transacional e termina em ROLLBACK.
+-- Para persistir deliberadamente, substitua o ROLLBACK final por COMMIT.
+
+BEGIN;
 
 DO $$
 DECLARE
@@ -326,4 +330,6 @@ BEGIN
   END IF;
 
   RAISE NOTICE 'SMOKE_OK: CAIXA % TESTADO COM SUCESSO.', v_caixa_id;
-END $$;
+END $;
+
+ROLLBACK;
