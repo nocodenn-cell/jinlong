@@ -34,6 +34,22 @@ function loadEnvLocal() {
 }
 
 loadEnvLocal()
+
+// Guard de ambiente (go-live): mesmo padrão de backend/scripts/fallback-sem-rpc-real.mjs.
+// O projeto Supabase é único (produção = Preview = E2E); .env.local apontado para ele
+// faria o E2E gravar em produção. Override consciente: ALLOW_NONLOCAL_E2E=1.
+const ALVO_LOCAL = /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/?$/
+if (process.env.ALLOW_NONLOCAL_E2E !== '1') {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? ''
+  if (!ALVO_LOCAL.test(supabaseUrl)) {
+    console.error(
+      `RECUSADO: o alvo do E2E não é local (NEXT_PUBLIC_SUPABASE_URL=${supabaseUrl || '<vazio>'}). ` +
+        'O E2E não pode rodar contra produção: só roda em localhost/127.0.0.1. ' +
+        'Override consciente: ALLOW_NONLOCAL_E2E=1.',
+    )
+    process.exit(2)
+  }
+}
 const need = ['PLAYWRIGHT_CAIXA_TEST_EMAIL', 'PLAYWRIGHT_CAIXA_TEST_PASSWORD']
 for (const k of need) {
   if (!process.env[k]?.trim()) {
