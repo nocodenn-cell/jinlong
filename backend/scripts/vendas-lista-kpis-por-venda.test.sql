@@ -96,11 +96,13 @@ BEGIN
   SELECT count(*) INTO n_eventos_antes FROM public.venda_eventos WHERE sale_id IN (v1, v2, v3, v4);
   IF n_eventos_antes <> 5 THEN RAISE EXCEPTION 'onda-a: fixture do ledger esperava 5 eventos, veio %', n_eventos_antes; END IF;
 
-  -- o RPC antigo (ledger) devolve 5 linhas para 4 vendas: é a causa raiz que a nova função elimina
+  -- O ledger tem 5 eventos para 4 vendas (asserção acima): essa é a causa raiz. O RPC legado
+  -- `listar_venda_eventos_gerente` já foi corrigido em produção por 20260930090200 (P-03, lê `vendas`),
+  -- então hoje também devolve UMA linha por venda — 4, e não 5.
   PERFORM set_config('request.jwt.claims', '{"role":"service_role"}', true);
   EXECUTE 'SET LOCAL ROLE service_role';
   SELECT count(*) INTO v_antigo FROM public.listar_venda_eventos_gerente(c_loja_a, v_ini, v_fim, ARRAY['SALE_REGISTERED','SALE_CANCELLED'], NULL, 0, 100);
-  IF v_antigo <> 5 THEN RAISE EXCEPTION 'onda-a: ledger antigo esperava 5 linhas (prova da causa raiz), veio %', v_antigo; END IF;
+  IF v_antigo <> 4 THEN RAISE EXCEPTION 'onda-a: RPC legado (P-03) esperava 4 linhas (uma por venda), veio %', v_antigo; END IF;
 
   -- ── KPIs canônicos (service_role) ─────────────────────────────────────────────────────────────
   SELECT * INTO k FROM public.kpis_vendas_gerente(c_loja_a, v_ini, v_fim, NULL);
