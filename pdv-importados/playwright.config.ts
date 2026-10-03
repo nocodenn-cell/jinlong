@@ -1,3 +1,5 @@
+import fs from 'node:fs'
+import path from 'node:path'
 import { defineConfig, devices } from '@playwright/test'
 import { getE2eBaseUrl, getE2eTestPort } from './e2e/helpers/url'
 
@@ -11,6 +13,51 @@ const defaultBase = getE2eBaseUrl()
 const baseURL = defaultBase
 
 const isCi = process.env.CI === 'true'
+
+/**
+ * Guard de ambiente (go-live): o mesmo projeto Supabase serve produção,
+ * Preview e E2E. Rodar o Playwright local com `.env.local` apontado para ele
+ * grava em produção (11 vendas de R$ 68,00 em #307/#308). Mesmo padrão de
+ * `backend/scripts/fallback-sem-rpc-real.mjs`: só localhost/127.0.0.1.
+ * Confere o alvo EFETIVO: `process.env` e, na falta, os `.env*` que o
+ * `next dev` carregaria. Override consciente: `ALLOW_NONLOCAL_E2E=1`.
+ */
+const ALVO_LOCAL = /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/?$/
+
+function lerEnvArquivo(nome: string, chave: string): string | undefined {
+  const arquivo = path.join(__dirname, nome)
+  if (!fs.existsSync(arquivo)) return undefined
+  for (const linha of fs.readFileSync(arquivo, 'utf8').split(/\r?\n/)) {
+    const m = linha.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/)
+    if (m && m[1] === chave) return m[2].replace(/^['"]|['"]$/g, '').trim()
+  }
+  return undefined
+}
+
+function supabaseUrlEfetiva(): string | undefined {
+  const doEnv = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
+  if (doEnv) return doEnv
+  for (const nome of ['.env.development.local', '.env.local', '.env.development', '.env']) {
+    const v = lerEnvArquivo(nome, 'NEXT_PUBLIC_SUPABASE_URL')
+    if (v) return v
+  }
+  return undefined
+}
+
+if (process.env.ALLOW_NONLOCAL_E2E !== '1') {
+  const supabaseUrl = supabaseUrlEfetiva()
+  const alvosNaoLocais = [
+    supabaseUrl && !ALVO_LOCAL.test(supabaseUrl) ? `NEXT_PUBLIC_SUPABASE_URL=${supabaseUrl}` : null,
+    !ALVO_LOCAL.test(baseURL) ? `baseURL=${baseURL}` : null,
+  ].filter(Boolean)
+  if (alvosNaoLocais.length > 0) {
+    throw new Error(
+      `RECUSADO: o alvo do E2E não é local (${alvosNaoLocais.join(', ')}). ` +
+        'O E2E não pode rodar contra produção: só roda em localhost/127.0.0.1. ' +
+        'Override consciente: ALLOW_NONLOCAL_E2E=1.',
+    )
+  }
+}
 
 /** No CI, sobe Next localmente quando `PLAYWRIGHT_E2E_WITH_DEV=1` (ver workflow opcional). */
 const ciWithLocalServer =
