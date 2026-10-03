@@ -1,3 +1,12 @@
+-- ============================================================================
+-- PADRÃO SEGURO (go-live): este arquivo roda dentro de BEGIN … ROLLBACK.
+-- Executá-lo NUNCA persiste nada — as asserções/NOTICEs rodam e tudo é
+-- desfeito no final. O projeto Supabase é único (produção = Preview = E2E).
+-- Para persistir de propósito, troque explicitamente o ROLLBACK final por
+-- COMMIT, e só num banco local.
+-- ============================================================================
+BEGIN;
+
 -- Smoke: migration 069 — RPC fiscal_enfileirar_documento_venda com auth.role() = service_role.
 -- SQL puro. Sem Edge, APIs externas ou Focus. Rodar no SQL Editor (homologação / local pós-migrations).
 -- Pré-requisitos: migration 069 aplicada; ≥1 linha em public.vendas.
@@ -79,3 +88,6 @@ BEGIN
   DELETE FROM public.documentos_fiscais_pendentes WHERE id = v_doc_id;
   RAISE NOTICE 'Passo 6 OK — linha de teste removida. Migration 069 / smoke OK.';
 END $$;
+
+-- Padrão seguro: nada persiste. Troque por COMMIT só de propósito (banco local).
+ROLLBACK;

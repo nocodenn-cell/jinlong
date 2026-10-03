@@ -8,6 +8,14 @@ import { join } from "node:path";
 
 // Nomes alinhados ao `supabase status -o env` (CLI recente) + aliases usados em docs/CI antigos.
 const SUPABASE_URL = process.env.SUPABASE_URL ?? process.env.API_URL ?? "";
+
+// Guard de ambiente (go-live), mesmo padrão de backend/scripts/fallback-sem-rpc-real.mjs:
+// o projeto Supabase é único (produção = Preview = E2E); este script grava dados e só
+// roda em localhost/127.0.0.1, antes de qualquer conexão.
+if (SUPABASE_URL && !/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/?$/.test(SUPABASE_URL)) {
+  console.error(`RECUSADO: o alvo não é local; este script grava dados e não pode rodar contra produção. URL=${SUPABASE_URL}`);
+  process.exit(2);
+}
 const SUPABASE_ANON_KEY =
   process.env.SUPABASE_ANON_KEY ?? process.env.ANON_KEY ?? process.env.PUBLISHABLE_KEY ?? "";
 const SUPABASE_SERVICE_ROLE_KEY =

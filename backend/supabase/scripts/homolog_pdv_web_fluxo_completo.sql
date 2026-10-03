@@ -1,3 +1,10 @@
+-- ============================================================================
+-- PADRÃO SEGURO (go-live): este arquivo roda dentro de BEGIN … ROLLBACK.
+-- Executá-lo NUNCA persiste nada — as asserções/NOTICEs rodam e tudo é
+-- desfeito no final. O projeto Supabase é único (produção = Preview = E2E).
+-- Para persistir de propósito, troque explicitamente o ROLLBACK final por
+-- COMMIT, e só num banco local.
+-- ============================================================================
 -- Homolog PDV web — fluxo completo em ambiente limpo (Supabase local).
 -- Cobre: pesquisa/preço → espera → retomar → multi-pagamento → saldo pendente
 -- (contas_receber 24702) → kardex → integridade financeira → cancelamento →
@@ -549,4 +556,5 @@ BEGIN
     v_espera_id, v_has_contas_receber, v_has_auditoria_cancel;
 END $$;
 
-COMMIT;
+-- Padrão seguro: nada persiste. Troque por COMMIT só de propósito (banco local).
+ROLLBACK;

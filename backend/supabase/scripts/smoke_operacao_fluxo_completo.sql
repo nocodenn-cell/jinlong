@@ -1,3 +1,12 @@
+-- ============================================================================
+-- PADRÃO SEGURO (go-live): este arquivo roda dentro de BEGIN … ROLLBACK.
+-- Executá-lo NUNCA persiste nada — as asserções/NOTICEs rodam e tudo é
+-- desfeito no final. O projeto Supabase é único (produção = Preview = E2E).
+-- Para persistir de propósito, troque explicitamente o ROLLBACK final por
+-- COMMIT, e só num banco local.
+-- ============================================================================
+BEGIN;
+
 -- SMOKE OPERACIONAL COMPLETO (SUPABASE / SQL EDITOR)
 -- Simula: COMPRA (ENTRADA DE ESTOQUE), VENDA (DINHEIRO/PIX/CRÉDITO/DÉBITO),
 -- DESCONTO DE GERENTE, CANCELAMENTO, MOVIMENTOS DE CAIXA E FECHAMENTO DE CAIXA.
@@ -327,3 +336,6 @@ BEGIN
 
   RAISE NOTICE 'SMOKE_OK: CAIXA % TESTADO COM SUCESSO.', v_caixa_id;
 END $$;
+
+-- Padrão seguro: nada persiste. Troque por COMMIT só de propósito (banco local).
+ROLLBACK;
