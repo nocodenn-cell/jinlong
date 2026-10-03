@@ -17,7 +17,7 @@ import { Suspense } from 'react'
 import { ROUTES, pathWithQuery } from '@/lib/navigation/routes'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
-import { MetricCard, PageActions, PageHeader, SectionCard } from '@/components/ui/admin-v2'
+import { MetricCard, PageActions, PageHeader, PeriodFilter, periodoLabelsAdmin, SectionCard } from '@/components/ui/admin-v2'
 import type { MetricCardIconKey } from '@/components/ui/admin-v2/MetricCard'
 import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
 import { formatNumberLocale } from '@/lib/format/money'
@@ -36,6 +36,7 @@ import {
   oneOf,
   periodoFim,
   periodoInicio,
+  rotulosOperadores,
   type CaixasFiltro,
   type CaixasPeriodo,
   type CaixasStatusFiltro,
@@ -105,13 +106,7 @@ export default async function AdminCaixasPage({ searchParams }: PageProps) {
     return pathWithQuery(ROUTES.admin.caixas, p)
   }
 
-  const PERIODO_LABEL: Record<CaixasPeriodo, string> = {
-    hoje: ui.vendas_periodo_label_hoje,
-    ontem: ui.vendas_periodo_label_ontem,
-    '7d': ui.vendas_periodo_label_7d,
-    mes: ui.vendas_periodo_label_mes,
-    tudo: ui.filtro_todos,
-  }
+  const PERIODO_LABEL = periodoLabelsAdmin(ui)
   const STATUS_LABEL: Record<Exclude<CaixasStatusFiltro, 'all'>, string> = {
     divergencia: ui.caixas_filtro_divergencia,
     retomado: ui.caixas_filtro_retomado,
@@ -121,7 +116,7 @@ export default async function AdminCaixasPage({ searchParams }: PageProps) {
   if (periodo !== 'tudo') chips.push({ key: 'periodo', label: PERIODO_LABEL[periodo], href: hrefWith({ periodo: 'tudo' }) })
   if (status !== 'all') chips.push({ key: 'status', label: STATUS_LABEL[status], href: hrefWith({ status: null }) })
   if (operadorId) {
-    const nome = operadores.find((o) => o.id === operadorId)?.nome ?? operadorId
+    const nome = rotulosOperadores(operadores).find((o) => o.value === operadorId)?.label ?? operadorId
     chips.push({ key: 'operador', label: `${ui.caixas_filtro_operador}: ${nome}`, href: hrefWith({ operador: null }) })
   }
 
@@ -130,6 +125,7 @@ export default async function AdminCaixasPage({ searchParams }: PageProps) {
       type: 'select',
       key: 'status',
       label: ui.caixas_filtro_status,
+      showLabel: true,
       defaultValue: 'all',
       options: [
         { value: 'all', label: ui.filtro_todos },
@@ -141,12 +137,12 @@ export default async function AdminCaixasPage({ searchParams }: PageProps) {
       type: 'select',
       key: 'operador',
       label: ui.caixas_filtro_operador,
+      showLabel: true,
       defaultValue: 'all',
-      options: [{ value: 'all', label: ui.filtro_todos }, ...operadores.map((o) => ({ value: o.id, label: o.nome }))],
+      options: [{ value: 'all', label: ui.filtro_todos }, ...rotulosOperadores(operadores)],
     },
   ]
 
-  const periodOptions: CaixasPeriodo[] = ['hoje', 'ontem', '7d', 'mes', 'tudo']
 
   const resumo = resumoRes.ok ? resumoRes.data : null
   const metricCards: Array<{ label: string; value: string; icon: MetricCardIconKey; tone: 'gold' | 'success' | 'warning' }> = [
@@ -176,18 +172,12 @@ export default async function AdminCaixasPage({ searchParams }: PageProps) {
         title={ui.caixas_titulo}
         subtitle={ui.caixas_subtitulo}
         filters={(
-          <div className="admin-v2-segmented">
-            {periodOptions.map((option) => (
-              <Link
-                key={option}
-                href={hrefWith({ periodo: option === CAIXAS_PERIODO_PADRAO ? null : option })}
-                data-active={periodo === option}
-                className="admin-v2-filter-pill rounded-full px-3 py-1.5 text-xs font-medium transition-colors"
-              >
-                {PERIODO_LABEL[option]}
-              </Link>
-            ))}
-          </div>
+          <PeriodFilter
+            options={CAIXAS_PERIODOS}
+            active={periodo}
+            labels={PERIODO_LABEL}
+            hrefFor={(option) => hrefWith({ periodo: option === CAIXAS_PERIODO_PADRAO ? null : option })}
+          />
         )}
         actions={(
           <PageActions>
@@ -283,6 +273,12 @@ export default async function AdminCaixasPage({ searchParams }: PageProps) {
             detalheTitulo: ui.caixas_detalhe_titulo,
             detalheValorInicial: ui.caixas_detalhe_valor_inicial,
             detalheMovimentacoes: ui.caixas_detalhe_movimentacoes,
+            composicaoTitulo: ui.caixas_composicao_titulo,
+            composicaoSuprimentos: ui.caixas_composicao_suprimentos,
+            composicaoSangrias: ui.caixas_composicao_sangrias,
+            composicaoRecebimentos: ui.caixas_composicao_recebimentos,
+            composicaoOutros: ui.caixas_composicao_outros,
+            composicaoNota: ui.caixas_composicao_nota,
             detalheSemMovimentacoes: ui.caixas_detalhe_sem_movimentacoes,
             movTipoSangria: ui.caixas_mov_tipo_sangria,
             movTipoSuprimento: ui.caixas_mov_tipo_suprimento,

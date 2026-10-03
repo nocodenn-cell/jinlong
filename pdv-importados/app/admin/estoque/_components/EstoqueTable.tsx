@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/ui/feedback'
 import { QuantityCell } from '@/components/ui/QuantityCell'
+import { classificarEstoque } from '@/lib/estoque/classificarEstoque'
 import { cn } from '@/lib/utils'
 import { AjusteSaldoModal, type AjusteAlvo } from './AjusteSaldoModal'
 import { KardexSheet, type KardexAlvo } from './KardexSheet'
@@ -54,18 +55,10 @@ export type EstoqueLabels = {
   kardexVerAuditoria: string
   semMovimentos: string
   semMovimentosSub: string
-  tipoVenda: string
-  tipoCompra: string
-  tipoEntradaNf: string
-  tipoEntrada: string
-  tipoSaida: string
-  tipoAjuste: string
-  tipoDevolucao: string
-  tipoTransferencia: string
-  tipoAcertoInventario: string
-  tipoPerda: string
-  tipoQuebra: string
-  tipoOutro: string
+  tipoMap: Record<string, string>
+  situacaoZerado: string
+  situacaoAbaixoMinimo: string
+  situacaoNoMinimo: string
 }
 
 const ORIGEM_BADGE: Record<string, string> = {
@@ -83,6 +76,8 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
     {
       key: 'produto',
       header: labels.produto,
+      // Fixa o produto durante o scroll horizontal (ver DataTable `sticky`).
+      sticky: true,
       sortValue: (r) => r.nome,
       cell: (r) => (
         <div className="min-w-0">
@@ -96,9 +91,24 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
       header: labels.saldo,
       align: 'right',
       sortValue: (r) => r.quantidade_atual ?? Number.NEGATIVE_INFINITY,
-      cell: (r) => (
-        <QuantityCell value={r.quantidade_atual} threshold={r.estoque_minimo} />
-      ),
+      cell: (r) => {
+        // Texto além da cor (acessibilidade) e nome próprio para cada situação (UX-006).
+        const situacao = classificarEstoque(r.quantidade_atual, r.estoque_minimo)
+        const rotulo =
+          situacao === 'ZERADO'
+            ? labels.situacaoZerado
+            : situacao === 'ABAIXO_MINIMO'
+              ? labels.situacaoAbaixoMinimo
+              : situacao === 'NO_MINIMO'
+                ? labels.situacaoNoMinimo
+                : null
+        return (
+          <div className="flex flex-col items-end">
+            <QuantityCell value={r.quantidade_atual} threshold={r.estoque_minimo} />
+            {rotulo ? <span className="text-caption text-fg-subtle">{rotulo}</span> : null}
+          </div>
+        )
+      },
     },
     {
       key: 'minimo',
@@ -242,20 +252,7 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
           semMovimentos: labels.semMovimentos,
           semMovimentosSub: labels.semMovimentosSub,
           verAuditoria: labels.kardexVerAuditoria,
-          tipoMap: {
-            VENDA: labels.tipoVenda,
-            COMPRA: labels.tipoCompra,
-            ENTRADA_NF: labels.tipoEntradaNf,
-            ENTRADA: labels.tipoEntrada,
-            SAIDA: labels.tipoSaida,
-            AJUSTE: labels.tipoAjuste,
-            ACERTO_INVENTARIO: labels.tipoAcertoInventario,
-            PERDA: labels.tipoPerda,
-            QUEBRA: labels.tipoQuebra,
-            DEVOLUCAO: labels.tipoDevolucao,
-            TRANSFERENCIA: labels.tipoTransferencia,
-            OUTRO: labels.tipoOutro,
-          },
+          tipoMap: labels.tipoMap,
         }}
       />
     </>

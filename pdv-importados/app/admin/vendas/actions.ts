@@ -115,6 +115,27 @@ export async function obterDetalheVenda(vendaId: string): Promise<VendaDetalhe |
     valor: Number(p.valor ?? 0),
   }))
 
+  // Cancelamento: tabela de auditoria já existente (1 linha por venda cancelada; RLS por loja).
+  let cancelamento: VendaDetalhe['cancelamento'] = null
+  if (String(venda.status ?? '').toUpperCase() === 'CANCELADA') {
+    const { data: aud } = await supabase
+      .from('vendas_canceladas_auditoria')
+      .select(
+        `created_at, motivo, valor_estornado,
+         operador:usuarios!vendas_canceladas_auditoria_operador_id_fkey ( nome )`,
+      )
+      .eq('venda_id', vendaId)
+      .maybeSingle()
+    if (aud) {
+      cancelamento = {
+        em: aud.created_at == null ? null : String(aud.created_at),
+        motivo: aud.motivo == null ? null : String(aud.motivo),
+        operador_nome: nomeRelacao(aud.operador, 'nome'),
+        valor_estornado: Number(aud.valor_estornado ?? 0),
+      }
+    }
+  }
+
   const temContaReceber = !!crRow
   const valorAbertoCr = Number(crRow?.valor_aberto ?? 0)
 
@@ -157,6 +178,7 @@ export async function obterDetalheVenda(vendaId: string): Promise<VendaDetalhe |
     desconto_gerente_valor: Number(descRow?.desconto_valor ?? 0) || 0,
     desconto_gerente_percentual: Number(descRow?.desconto_percentual ?? 0) || 0,
     itens,
+    cancelamento,
     showMargemVisual: false,
     showPrecoFonte: false,
   }

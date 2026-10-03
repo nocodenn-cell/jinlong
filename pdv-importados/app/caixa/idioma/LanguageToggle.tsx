@@ -29,7 +29,9 @@ export default function LanguageToggle({ idiomaAtual }: Props) {
           value={value}
           title={title}
           disabled={idiomaAtual === value}
-          className={baseBtn}
+          aria-pressed={idiomaAtual === value}
+          data-active={idiomaAtual === value}
+          className={cn(baseBtn, idiomaAtual === value && 'bg-[var(--color-brand)] text-[var(--color-brand-fg)] border-transparent disabled:opacity-100')}
           style={font ? { fontFamily: font } : undefined}
         >
           {label}

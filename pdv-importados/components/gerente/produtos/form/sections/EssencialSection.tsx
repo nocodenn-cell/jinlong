@@ -1,6 +1,7 @@
 'use client'
 
-import type { RefObject } from 'react'
+import { useState, type RefObject } from 'react'
+import { eanComDvSuspeito, nomeJaExiste } from '@/lib/validacao/documentos'
 import { ProdutoFormSectionHeading } from '../ProdutoFormSectionHeading'
 import { useProdutoFormContext } from '../ProdutoFormContext'
 import { focusOnEnter } from '../focusOnEnter'
@@ -28,6 +29,24 @@ export function EssencialSection({
   const { disabled, inputClassName, inputMonoClassName, selectClassName } = ctx
 
   const erroNome = erroDoCampo(ctx.erro, 'nome')
+  // Avisos NÃO bloqueantes (UX-020): nome repetido no catálogo e EAN com dígito verificador errado.
+  const [nomeDuplicado, setNomeDuplicado] = useState(false)
+  const avisoEan = eanComDvSuspeito(ctx.codigoBarras)
+
+  async function verificarNomeDuplicado() {
+    const nome = ctx.nome.trim()
+    if (nome.length < 2 || !ctx.buscarNomesSimilares) {
+      setNomeDuplicado(false)
+      return
+    }
+    try {
+      const rows = await ctx.buscarNomesSimilares(nome)
+      if (!rows) return
+      setNomeDuplicado(rows.some((row) => row.id !== ctx.produto?.id && nomeJaExiste(nome, [row.nome])))
+    } catch {
+      /* aviso é opcional: falha de rede não atrapalha o cadastro */
+    }
+  }
   const erroBarras = erroDoCampo(ctx.erro, 'codigo_barras')
 
   return (
@@ -51,6 +70,11 @@ export function EssencialSection({
             onKeyDown={(e) => focusOnEnter(e, nomeRef?.current)}
           />
           <CampoErroMsg mensagem={erroBarras} />
+          {avisoEan && !erroBarras ? (
+            <span className="mt-1 block text-caption text-[var(--color-warning-strong)]" data-testid="aviso-ean">
+              {p.aviso_ean_dv}
+            </span>
+          ) : null}
           {sugestaoHint ? (
             <span className="mt-1 block text-caption font-medium text-jl-accent">{sugestaoHint}</span>
           ) : null}
@@ -68,9 +92,15 @@ export function EssencialSection({
             autoComplete="off"
             data-field="nome"
             aria-invalid={erroNome ? true : undefined}
+            onBlur={() => void verificarNomeDuplicado()}
             onKeyDown={(e) => focusOnEnter(e, proximoAposNomeRef?.current)}
           />
           <CampoErroMsg mensagem={erroNome} />
+          {nomeDuplicado && !erroNome ? (
+            <span className="mt-1 block text-caption text-[var(--color-warning-strong)]" data-testid="aviso-nome-duplicado">
+              {p.aviso_nome_duplicado}
+            </span>
+          ) : null}
         </label>
 
         <div className="grid grid-cols-2 gap-3">

@@ -92,6 +92,7 @@ const labels = {
   secCurvaAbc: 'Curva ABC',
   curvaAbcColNome: 'Produto',
   curvaAbcColValor: 'Faturado',
+  curvaAbcColParticipacao: 'Participação',
   curvaAbcColAcumulado: 'Acumulado',
   curvaAbcColClasse: 'Classe',
   vazioCurvaAbc: 'Sem ABC',
@@ -305,6 +306,40 @@ describe('RelatoriosContent presentation', () => {
       root.render(renderRelatorios(<RelatoriosContent dados={baseDados()} labels={labels} />))
     })
     expect(container.textContent).not.toContain('Devoluções')
+  })
+
+  it('curva ABC: percentual acumulado (já 0..100) é exibido sem multiplicar de novo', () => {
+    flushSync(() => {
+      root.render(
+        renderRelatorios(
+          <RelatoriosContent
+            dados={baseDados({
+              curvaAbc: [
+                {
+                  produtoId: 'a1',
+                  nome: 'Produto A',
+                  totalQuantidade: 3,
+                  totalValor: 100,
+                  percentualValor: 40.5,
+                  percentualAcumulado: 77.2,
+                  classeAbc: 'A',
+                },
+              ],
+            })}
+            labels={labels}
+          />,
+        ),
+      )
+    })
+    const margemTab = Array.from(container.querySelectorAll('[role="tab"]')).find(
+      (el) => el.textContent === 'Margem e ABC',
+    ) as HTMLButtonElement
+    flushSync(() => margemTab.click())
+    expect(container.textContent).toContain('77,2%')
+    expect(container.textContent).not.toContain('77.2%')
+    // UX-021/P-32: coluna Participação (percentualValor) ao lado do acumulado
+    expect(container.textContent).toContain('Participação')
+    expect(container.textContent).toContain('40,5%')
   })
 
   it('mostra reposição e cobertura na aba estoque', () => {

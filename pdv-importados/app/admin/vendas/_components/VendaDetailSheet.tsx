@@ -22,6 +22,7 @@ import {
 } from '@/app/gerente/vendas/VendaDevolucaoReciboModal'
 import type { VendaListRow } from '@/lib/vendas/vendasListaRpc'
 import type { Mensagens } from '@/i18n/getMessages'
+import { labelTipoVenda } from '@/lib/format/vendaLabels'
 import { useRouter } from 'next/navigation'
 
 export type VendaAlvo = Readonly<{ id: string }>
@@ -42,6 +43,11 @@ type DetalheLabels = {
   liquido: string
   itens: string
   nenhumItem: string
+  cancelamentoTitulo?: string
+  canceladoEm?: string
+  canceladoPor?: string
+  motivo?: string
+  estornado?: string
   cancelar?: string
   devolver?: string
 }
@@ -191,11 +197,28 @@ export function VendaDetailSheet({
 
               <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3">
                 <Info label={labels.data}>{formatDateTimeOrDash(venda.data, 'pt-BR', 'medium')}</Info>
-                <Info label={labels.tipo}>{venda.tipo_venda ?? '—'}</Info>
+                <Info label={labels.tipo}>{m ? labelTipoVenda(venda.tipo_venda, m) : (venda.tipo_venda ?? '—')}</Info>
                 <Info label={labels.operador}>{venda.operador_nome ?? '—'}</Info>
                 <Info label={labels.nfe}>{venda.numero_nf ?? '—'}</Info>
                 {venda.cliente_nome ? <Info label={labels.cliente}>{venda.cliente_nome}</Info> : null}
               </dl>
+
+              {venda.cancelamento && labels.cancelamentoTitulo ? (
+                <div
+                  className="mt-4 rounded-[10px] border border-destructive/30 bg-destructive/10 p-3"
+                  data-testid="venda-cancelamento"
+                >
+                  <p className="text-caption font-semibold text-destructive">{labels.cancelamentoTitulo}</p>
+                  <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2">
+                    <Info label={labels.canceladoEm ?? ''}>
+                      {formatDateTimeOrDash(venda.cancelamento.em, 'pt-BR', 'medium')}
+                    </Info>
+                    <Info label={labels.canceladoPor ?? ''}>{venda.cancelamento.operador_nome ?? '—'}</Info>
+                    <Info label={labels.estornado ?? ''}>{formatBRL(venda.cancelamento.valor_estornado)}</Info>
+                    <Info label={labels.motivo ?? ''}>{venda.cancelamento.motivo ?? '—'}</Info>
+                  </dl>
+                </div>
+              ) : null}
 
               <div className="admin-v2-panel mt-4 rounded-[10px] p-3">
                 <Linha label={labels.bruto} valor={formatBRL(venda.total_bruto)} />

@@ -91,4 +91,9 @@ export type ProdutoFormShellProps = Readonly<{
    * — fechar aqui descartaria os campos ainda não salvos.
    */
   onImagemChange?: (imagemUrl: string | null) => void
+  /**
+   * Busca produtos de nome parecido para o aviso de duplicidade (UX-020). Injetada pelo container
+   * (que é quem fala com as actions); sem ela, o aviso não aparece. `null` = busca falhou.
+   */
+  buscarNomesSimilares?: (nome: string) => Promise<ReadonlyArray<{ id: string; nome: string }> | null>
 }>

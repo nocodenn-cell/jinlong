@@ -7,6 +7,7 @@ import { MetricCard, PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/forms'
+import { EmptyState, ErrorState } from '@/components/ui/feedback'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { getMessages } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
@@ -173,6 +174,7 @@ export function ComprasContent({
       {
         key: 'id',
         header: c.col_id,
+        sticky: true,
         cell: (row) => (
           <span className="font-mono text-caption text-fg-muted">{idCurto(row.id)}</span>
         ),
@@ -245,20 +247,14 @@ export function ComprasContent({
   )
 
   const emptyState = (
-    <div className="py-12 text-center">
-      <div className="text-5xl text-[var(--color-brand)]/60" style={{ fontFamily: 'var(--font-serif-han)' }}>
-        購
-      </div>
-      <div className="mt-3 text-body font-semibold">{c.vazio_titulo}</div>
-      <div className="mt-1 text-caption text-fg-muted">{c.vazio_sub}</div>
-    </div>
+    <EmptyState title={c.vazio_titulo} description={c.vazio_sub} />
   )
 
   return (
     <>
       <PageHeader title={c.titulo} subtitle={c.subtitulo} />
 
-      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4 [&>*]:min-w-0">
         <MetricCard label={c.kpi_rascunho} value={String(kpisIniciais.total_rascunho)} icon="list-filter" tone="gold" />
         <MetricCard
           label={c.kpi_confirmadas}
@@ -321,6 +317,16 @@ export function ComprasContent({
           </Button>
         </div>
       </SectionCard>
+
+      {dados.erro ? (
+        <ErrorState
+          dense
+          description={c.erro_carregar_lista}
+          retryLabel={c.tentar_novamente}
+          onRetry={() => void carregar(pagina)}
+          className="mb-4 items-start text-left"
+        />
+      ) : null}
 
       <DataTable
         columns={columns}

@@ -19,7 +19,7 @@ import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
 import { createClient } from '@/lib/supabase/server'
 import { getRelatorioTimezone } from '@/lib/relatorios/getRelatorioTimezone'
-import { MetricCard, PageHeader, SectionCard } from '@/components/ui/admin-v2'
+import { MetricCard, PageHeader, PeriodFilter, periodoLabelsAdmin, SectionCard } from '@/components/ui/admin-v2'
 import type { MetricCardIconKey } from '@/components/ui/admin-v2/MetricCard'
 import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
 import { buscarVendasPaginadasAction, obterKpisVendas, type VendasFiltro } from '@/app/gerente/vendas/actions'
@@ -190,13 +190,8 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
     },
   ]
 
-  const periodOptions: Array<{ id: Periodo; label: string }> = [
-    { id: 'hoje', label: ui.vendas_periodo_label_hoje },
-    { id: 'ontem', label: ui.vendas_periodo_label_ontem },
-    { id: '7d', label: '7d' },
-    { id: '30d', label: ui.vendas_periodo_label_30d },
-    { id: 'tudo', label: ui.filtro_todos },
-  ]
+  const periodOptions: readonly Periodo[] = ['hoje', 'ontem', '7d', '30d', 'mes', 'tudo']
+  const periodLabels = periodoLabelsAdmin(ui)
 
   const periodHref = (next: Periodo) => {
     const p = new URLSearchParams(activeParams)
@@ -267,18 +262,7 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
         title={m.gerente.nav_topico_vendas_caixa}
         subtitle={ui.vendas_subtitulo}
         filters={(
-          <div className="admin-v2-segmented">
-            {periodOptions.map((option) => (
-              <Link
-                key={option.id}
-                href={periodHref(option.id)}
-                data-active={periodo === option.id}
-                className="admin-v2-filter-pill rounded-full px-3 py-1.5 text-xs font-medium transition-colors"
-              >
-                {option.label}
-              </Link>
-            ))}
-          </div>
+          <PeriodFilter options={periodOptions} active={periodo} labels={periodLabels} hrefFor={periodHref} />
         )}
       />
 
@@ -365,6 +349,11 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
           detalheOperador: ui.vendas_detalhe_operador,
           detalheNfe: ui.vendas_detalhe_nfe,
           detalheCliente: ui.vendas_detalhe_cliente,
+          detalheCancelamento: ui.vendas_detalhe_cancelamento,
+          detalheCanceladoEm: ui.vendas_detalhe_cancelado_em,
+          detalheCanceladoPor: ui.vendas_detalhe_cancelado_por,
+          detalheMotivo: ui.vendas_detalhe_motivo,
+          detalheEstornado: ui.vendas_detalhe_estornado,
           detalheSaldoAberto: ui.vendas_detalhe_saldo_aberto,
           detalheVerFinanceiro: ui.vendas_detalhe_ver_financeiro,
           detalheBruto: m.gerente.venda_bruto,

@@ -1,5 +1,6 @@
 'use client'
 
+import { humanizarCodigo } from '@/lib/format/vendaLabels'
 import { useEffect, useState } from 'react'
 import {
   AlertTriangle,
@@ -87,12 +88,12 @@ function interpolate(template: string, params: Record<string, string | number>):
 }
 
 /** Resolve `resumoCodigo`/`resumoParams` (dado estruturado) para texto no idioma da sessão. */
-function resumoTexto(evento: AuditoriaEvento, labels: AuditoriaTimelineLabels): string {
+export function resumoTexto(evento: AuditoriaEvento, labels: AuditoriaTimelineLabels): string {
   const { resumoCodigo, resumoParams } = evento
   const params = { ...resumoParams }
   if (resumoCodigo === 'ajuste_estoque') {
     const codigo = String(resumoParams.codigo ?? '')
-    params.tipo = labels.ajusteLabels[codigo] ?? codigo
+    params.tipo = labels.ajusteLabels[codigo] ?? humanizarCodigo(codigo)
   }
   if (resumoCodigo === 'alerta') {
     const tipo = String(resumoParams.tipo ?? '')
@@ -104,7 +105,13 @@ function resumoTexto(evento: AuditoriaEvento, labels: AuditoriaTimelineLabels): 
   }
   const template = labels.resumoTemplates[resumoCodigo]
   if (!template) return resumoCodigo
-  return interpolate(template, params)
+  const texto = interpolate(template, params)
+  // Ajuste de estoque sem o produto na linha ("Saída por venda • −1") não diz o que mudou.
+  if (resumoCodigo === 'ajuste_estoque') {
+    const produto = evento.detalhe?.produto_nome
+    if (typeof produto === 'string' && produto) return `${produto} — ${texto}`
+  }
+  return texto
 }
 
 function detalheValor(
@@ -123,7 +130,7 @@ function detalheValor(
   ) {
     return formatBRL(Number(valor))
   }
-  if (chave === 'tipo_codigo') return labels.ajusteLabels[String(valor)] ?? String(valor)
+  if (chave === 'tipo_codigo') return labels.ajusteLabels[String(valor)] ?? humanizarCodigo(String(valor))
   if (chave === 'tipo') return labels.alertaLabels[String(valor)] ?? String(valor)
   if (chave === 'forma_estorno') return labels.formaLabels[String(valor)] ?? String(valor)
   return String(valor)

@@ -11,15 +11,18 @@ import { emitGerenteToast } from '@/lib/gerente/toast'
 import { salvarFornecedorAction, type FornecedorInput, type FornecedorListRow } from './actions'
 import { maskCnpj } from './fornecedoresListUi'
 import { normalizarCnpj } from './fornecedorContrato'
+import { cnpjDvValido, nomeJaExiste } from '@/lib/validacao/documentos'
 
 type Props = Readonly<{
   idioma: Idioma
   fornecedor: FornecedorListRow | null
+  /** Nomes já cadastrados — só para avisar (não bloqueia) sobre duplicidade. */
+  nomesExistentes?: ReadonlyArray<string>
   onClose: () => void
   onSalvo: (f: FornecedorListRow) => void
 }>
 
-export function FornecedorEditarModal({ idioma, fornecedor, onClose, onSalvo }: Props) {
+export function FornecedorEditarModal({ idioma, fornecedor, nomesExistentes = [], onClose, onSalvo }: Props) {
   const m = getMessages(idioma)
   const editando = !!fornecedor
 
@@ -78,6 +81,12 @@ export function FornecedorEditarModal({ idioma, fornecedor, onClose, onSalvo }: 
     }
   }
 
+  // Avisos NÃO bloqueantes (UX-020): o cadastro segue permitido, mas o operador é alertado.
+  const avisoNome = nomeJaExiste(nome, nomesExistentes, fornecedor?.nome) ? m.fornecedores.aviso_nome_duplicado : undefined
+  const digitosCnpj = normalizarCnpj(cnpj)
+  const avisoCnpj =
+    digitosCnpj.length === 14 && !cnpjDvValido(digitosCnpj) ? m.fornecedores.aviso_cnpj_dv : undefined
+
   const titulo = editando ? m.fornecedores.modal_editar_titulo : m.fornecedores.modal_novo_titulo
 
   return (
@@ -111,6 +120,7 @@ export function FornecedorEditarModal({ idioma, fornecedor, onClose, onSalvo }: 
           label={m.fornecedores.field_razao_social}
           required
           error={erros.nome ?? undefined}
+          hint={avisoNome}
         >
           <Input
             value={nome}
@@ -129,6 +139,7 @@ export function FornecedorEditarModal({ idioma, fornecedor, onClose, onSalvo }: 
           label={m.fornecedores.field_cnpj}
           required
           error={erros.cnpj ?? undefined}
+          hint={avisoCnpj}
         >
           <Input
             inputMode="numeric"

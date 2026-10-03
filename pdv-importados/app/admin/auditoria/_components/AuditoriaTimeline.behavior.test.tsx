@@ -175,9 +175,10 @@ describe('AuditoriaTimeline — i18n (item 16)', () => {
     flushSync(() => linha.click())
 
     expect(container.querySelector('[data-testid="kardex-sheet"]')).toBeNull()
-    const btnKardex = Array.from(container.querySelectorAll('button')).find((b) =>
-      b.textContent?.includes('Cabo USB-C'),
-    ) as HTMLButtonElement
+    // O resumo da linha agora também traz o nome do produto (UX-021/P-30): o botão do Kardex é o do detalhe (último).
+    const btnKardex = Array.from(container.querySelectorAll('button'))
+      .filter((b) => b.textContent?.includes('Cabo USB-C'))
+      .at(-1) as HTMLButtonElement
     expect(btnKardex).toBeTruthy()
     flushSync(() => btnKardex.click())
 

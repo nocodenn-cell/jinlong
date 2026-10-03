@@ -280,7 +280,7 @@ export function FornecedoresListClient({
       header: m.fornecedores.field_cnpj,
       priority: 'contextual',
       cell: (f) => (
-        <span className="font-mono text-caption text-fg-muted">{maskCnpj(f.cnpj)}</span>
+        <span className="whitespace-nowrap font-mono text-caption text-fg-muted">{maskCnpj(f.cnpj)}</span>
       ),
     },
   ]
@@ -441,6 +441,7 @@ export function FornecedoresListClient({
         <FornecedorEditarModal
           idioma={idioma}
           fornecedor={emEdicao}
+          nomesExistentes={fornecedores.map((f) => f.nome)}
           onClose={() => setModalAberto(false)}
           onSalvo={onSalvo}
         />

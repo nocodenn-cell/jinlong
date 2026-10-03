@@ -5,6 +5,7 @@ import { DragonModal } from "@/components/ui/DragonModal"
 import type { Mensagens } from "@/i18n/getMessages"
 import { HelpCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { CAIXA_ATALHOS, atalhoRotulo } from "@/app/caixa/caixaAtalhos"
 
 type Props = {
   m: Mensagens
@@ -30,12 +31,12 @@ function buildShortcutsData(m: Mensagens): ShortcutGroup[] {
       category: "Venda",
       shortcuts: [
         {
-          keys: "F4 / F9",
+          keys: atalhoRotulo(CAIXA_ATALHOS.finalizar),
           label: m.caixa.finalizar_venda,
           context: "Sempre disponível",
         },
         {
-          keys: "F8",
+          keys: atalhoRotulo(CAIXA_ATALHOS.novoCupom),
           label: m.caixa.novo_cupom || "Novo Cupom",
           context: "Caixa aberto",
         },
@@ -45,32 +46,42 @@ function buildShortcutsData(m: Mensagens): ShortcutGroup[] {
       category: "Navegação",
       shortcuts: [
         {
-          keys: "F1",
+          keys: atalhoRotulo(CAIXA_ATALHOS.ajuda),
           label: m.caixa.atalho_ajuda,
           context: "Sempre disponível",
         },
         {
-          keys: "F2 / Ctrl+B",
+          keys: atalhoRotulo(CAIXA_ATALHOS.buscar),
           label: "Buscar Produto",
           context: "Sempre disponível",
         },
         {
-          keys: "Alt+Z",
+          keys: atalhoRotulo(CAIXA_ATALHOS.focoProduto),
           label: m.caixa.pdv_tab_produto,
           context: "Sempre disponível",
         },
         {
-          keys: "Alt+B / Alt+C",
+          keys: atalhoRotulo(CAIXA_ATALHOS.pagamento),
           label: m.caixa.pdv_tab_pgto,
           context: "Sempre disponível",
         },
         {
-          keys: "F3",
+          keys: atalhoRotulo(CAIXA_ATALHOS.cliente),
+          label: m.caixa.selecionar_cliente_titulo,
+          context: "Sempre disponível",
+        },
+        {
+          keys: CAIXA_ATALHOS.metodoPagamento.map(atalhoRotulo).join(" / "),
+          label: m.caixa.pdv_metodo_pagamento_titulo,
+          context: `${m.caixa.pdv_metodo_pagamento_dinheiro} · ${m.caixa.pdv_metodo_pagamento_pix} · ${m.caixa.pdv_metodo_pagamento_credito} · ${m.caixa.pdv_metodo_pagamento_debito}`,
+        },
+        {
+          keys: atalhoRotulo(CAIXA_ATALHOS.consultaRapida),
           label: m.caixa.operacoes_consulta_rapida,
           context: "Sempre disponível",
         },
         {
-          keys: "F6",
+          keys: atalhoRotulo(CAIXA_ATALHOS.fecharCaixa),
           label: m.caixa.fechar,
           context: "Caixa aberto",
         },
@@ -80,12 +91,12 @@ function buildShortcutsData(m: Mensagens): ShortcutGroup[] {
       category: "Operações",
       shortcuts: [
         {
-          keys: "Ctrl+Shift+S",
+          keys: atalhoRotulo(CAIXA_ATALHOS.suprimento),
           label: m.caixa.suprimento,
           context: "Caixa aberto",
         },
         {
-          keys: "Ctrl+Shift+R",
+          keys: atalhoRotulo(CAIXA_ATALHOS.sangria),
           label: m.caixa.sangria,
           context: "Caixa aberto",
         },
@@ -95,12 +106,12 @@ function buildShortcutsData(m: Mensagens): ShortcutGroup[] {
       category: "Edição",
       shortcuts: [
         {
-          keys: "Ctrl+Z",
+          keys: atalhoRotulo(CAIXA_ATALHOS.desfazerRemocao),
           label: "Desfazer Remoção",
           context: "Item removido",
         },
         {
-          keys: "F12",
+          keys: atalhoRotulo(CAIXA_ATALHOS.reimprimir),
           label: m.caixa.reimprimir_cupom || "Reimprimir Recibo",
           context: "Após finalizar venda",
         },
@@ -110,12 +121,12 @@ function buildShortcutsData(m: Mensagens): ShortcutGroup[] {
       category: "Gerente (PDV Clássico)",
       shortcuts: [
         {
-          keys: "Alt+Q",
+          keys: atalhoRotulo(CAIXA_ATALHOS.excluirVenda),
           label: m.caixa.cart_bar_excluir_venda || "Excluir Venda",
           context: "Apenas PDV clássico",
         },
         {
-          keys: "Alt+S",
+          keys: atalhoRotulo(CAIXA_ATALHOS.finalizarClassico),
           label: m.caixa.finalizar_venda,
           context: "Apenas PDV clássico",
         },

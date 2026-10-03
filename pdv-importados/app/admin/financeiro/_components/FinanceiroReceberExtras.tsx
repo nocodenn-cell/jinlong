@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation'
 import { Fragment, useState, useTransition } from 'react'
 import { ROUTES } from '@/lib/navigation/routes'
 import { formatBRL } from '@/lib/format/money'
+import { labelFormaPagamentoVenda } from '@/lib/format/vendaLabels'
+import { getMessages } from '@/i18n/getMessages'
+import { useAdminV2Session } from '@/components/ui/admin-v2/AdminV2SessionContext'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { DragonModal } from '@/components/ui/DragonModal'
 import { Button } from '@/components/ui/button'
@@ -35,6 +38,8 @@ const LINK_MUTED =
 
 export function FinanceiroReceberExtras({ contas, clientesIniciais, caixasAbertos, actorLojaId }: Props) {
   const router = useRouter()
+  const { idioma } = useAdminV2Session()
+  const m = getMessages(idioma)
   const [pending, startTransition] = useTransition()
   const [formasPorTitulo, setFormasPorTitulo] = useState<Record<string, (typeof FORMAS)[number]>>({})
   const [historicoAbertoId, setHistoricoAbertoId] = useState<string | null>(null)
@@ -168,16 +173,19 @@ export function FinanceiroReceberExtras({ contas, clientesIniciais, caixasAberto
               return (
               <Fragment key={c.id}>
               <li
-                className="flex flex-col gap-2 rounded-md border border-[var(--color-border-secondary)] bg-jl-surface-base p-2 sm:flex-row sm:items-center"
+                className="flex flex-col gap-2 rounded-md border border-[var(--color-border-secondary)] bg-jl-surface-base p-2"
               >
-                <div className="min-w-0 flex-1 text-small">
-                  <span className="font-medium text-jl-fg-1">{c.cliente_nome}</span>
-                  <span className="ml-2 text-jl-fg-3">{formatBRL(c.valor_aberto)} em aberto</span>
+                {/* Linha 1: identifica o título (cliente + em aberto) antes dos controles. */}
+                <div className="flex min-w-0 items-baseline gap-2 text-small">
+                  <span className="min-w-0 flex-1 truncate font-medium text-jl-fg-1" title={c.cliente_nome}>
+                    {c.cliente_nome}
+                  </span>
+                  <span className="shrink-0 whitespace-nowrap text-jl-fg-3">{formatBRL(c.valor_aberto)} em aberto</span>
                   {!foraDaLoja ? (
                     <button
                       type="button"
                       onClick={() => handleToggleHistorico(c.id)}
-                      className="ml-2 text-caption font-medium text-[var(--color-warning-strong)] hover:underline"
+                      className="shrink-0 whitespace-nowrap text-caption font-medium text-[var(--color-warning-strong)] hover:underline"
                     >
                       {historicoAbertoId === c.id ? 'Ocultar histórico' : 'Histórico'}
                     </button>
@@ -223,7 +231,7 @@ export function FinanceiroReceberExtras({ contas, clientesIniciais, caixasAberto
                   >
                     {FORMAS.map((f) => (
                       <option key={f} value={f}>
-                        {f}
+                        {labelFormaPagamentoVenda(f, m)}
                       </option>
                     ))}
                   </select>
@@ -250,7 +258,7 @@ export function FinanceiroReceberExtras({ contas, clientesIniciais, caixasAberto
                       {historicoPorTitulo[c.id]!.map((l) => (
                         <li key={l.id} className="flex flex-wrap items-center justify-between gap-2">
                           <span className={l.operacaoTipo === 'ESTORNO' ? 'text-jl-fg-3 line-through' : 'text-jl-fg-1'}>
-                            {formatBRL(l.valor)} · {l.formaPagamento} ·{' '}
+                            {formatBRL(l.valor)} · {labelFormaPagamentoVenda(l.formaPagamento, m)} ·{' '}
                             {new Date(l.createdAt).toLocaleString('pt-BR')}
                             {l.operacaoTipo === 'ESTORNO' ? ' (estorno)' : ''}
                           </span>

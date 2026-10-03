@@ -24,6 +24,7 @@ import { DashboardOrdersTable } from './_components/DashboardOrdersTable'
 import {
   agruparVendasPorDia,
   agruparVendasPorHora,
+  carregarTodasPaginas,
   diasCivisDoPeriodo,
   formatTrendPercent,
   getPeriodRange,
@@ -38,6 +39,8 @@ import { calcularMetricasVendas } from '@/lib/vendas/metricasVendas'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { ROUTES } from '@/lib/navigation/routes'
 import { getMessages } from '@/i18n/getMessages'
+import { labelFormaPagamentoVenda } from '@/lib/format/vendaLabels'
+import { contarSituacoesEstoque } from '@/lib/estoque/classificarEstoque'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 
 type SalesPoint = {
@@ -177,37 +180,35 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   }> = []
   let usuariosRows: Array<{ id: string; nome: string }> = []
   let estoqueBaixoCount = 0
-  let novosUsuariosAtual = 0
-  let novosUsuariosPrev = 0
 
   // População das métricas = vendas CONCLUIDA (contrato canônico, lib/vendas/metricasVendas.ts):
   // cancelada não é faturamento/pedido. O filtro `?status=` só afeta "últimos pedidos".
-  const vendasRangeQuery = supabase
-    .from('vendas')
-    .select('id,data,total_liquido,status,forma_pagamento,operador_id,venda_pos_venda_operacoes(valor_estornado)')
-    .eq('status', 'CONCLUIDA')
-    .gte('data', start.toISOString())
-    .lte('data', end.toISOString())
-    .order('data', { ascending: true })
+  // O embed precisa do hint de FK: venda_pos_venda_operacoes tem 2 FKs para vendas (venda_id e venda_substituta_id) e,
+  // sem ele, o PostgREST responde PGRST201 (300) e a consulta inteira do período falha.
+  // Paginado: o PostgREST corta em silêncio em `max_rows` (1000). `id` desempata a ordenação para as páginas não se sobreporem.
+  const vendasRangeQuery = carregarTodasPaginas<(typeof vendasRange)[number]>((from, to) =>
+    supabase
+      .from('vendas')
+      .select('id,data,total_liquido,status,forma_pagamento,operador_id,venda_pos_venda_operacoes!venda_pos_venda_operacoes_venda_id_fkey(valor_estornado)')
+      .eq('status', 'CONCLUIDA')
+      .gte('data', start.toISOString())
+      .lte('data', end.toISOString())
+      .order('data', { ascending: true })
+      .order('id', { ascending: true })
+      .range(from, to) as unknown as PromiseLike<{ data: (typeof vendasRange)[number][] | null; error: { message: string } | null }>,
+  )
 
-  const vendasPrevQuery = supabase
-    .from('vendas')
-    .select('total_liquido,status')
-    .eq('status', 'CONCLUIDA')
-    .gte('data', previousStart.toISOString())
-    .lt('data', previousEnd.toISOString())
-
-  const novosUsuariosAtualQuery = supabase
-    .from('usuarios')
-    .select('id', { count: 'exact', head: true })
-    .gte('created_at', start.toISOString())
-    .lte('created_at', end.toISOString())
-
-  const novosUsuariosPrevQuery = supabase
-    .from('usuarios')
-    .select('id', { count: 'exact', head: true })
-    .gte('created_at', previousStart.toISOString())
-    .lt('created_at', previousEnd.toISOString())
+  const vendasPrevQuery = carregarTodasPaginas<(typeof vendasPrevRange)[number]>((from, to) =>
+    supabase
+      .from('vendas')
+      .select('total_liquido,status')
+      .eq('status', 'CONCLUIDA')
+      .gte('data', previousStart.toISOString())
+      .lt('data', previousEnd.toISOString())
+      .order('data', { ascending: true })
+      .order('id', { ascending: true })
+      .range(from, to) as unknown as PromiseLike<{ data: (typeof vendasPrevRange)[number][] | null; error: { message: string } | null }>,
+  )
 
   const flagsVisuaisRow = Array.isArray(flagsVisuaisRes.data)
     ? flagsVisuaisRes.data[0]
@@ -229,15 +230,12 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   const [
     vendasRangeRes,
     vendasPrevRes,
-    novosUsuariosAtualRes,
-    novosUsuariosPrevRes,
     estoqueBaixoListaRes,
+    estoqueBaixoSituacoesRes,
     usersRes,
   ] = await Promise.all([
     vendasRangeQuery,
     vendasPrevQuery,
-    novosUsuariosAtualQuery,
-    novosUsuariosPrevQuery,
     showStockAlerts
       ? supabase
           .from('v_estoque_baixo')
@@ -245,6 +243,8 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
           .order('deficit', { ascending: false })
           .limit(5)
       : Promise.resolve(null),
+    // Mesma view do contador: separa zerados / abaixo do mínimo / no mínimo (só rótulo, a regra do alerta não muda).
+    supabase.from('v_estoque_baixo').select('quantidade_atual, estoque_minimo').limit(5000),
     operatorIds.length > 0
       ? supabase.from('usuarios').select('id,nome').in('id', operatorIds)
       : Promise.resolve(null),
@@ -255,6 +255,10 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     quantidade_atual: number
     estoque_minimo: number
   }>
+
+  const situacoesEstoque = contarSituacoesEstoque(
+    (estoqueBaixoSituacoesRes?.data ?? []) as Array<{ quantidade_atual: number | null; estoque_minimo: number | null }>,
+  )
 
   const dashboardErrors = collectSupabaseErrors([
     {
@@ -273,23 +277,15 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
       label: L.errorSourceLowStock[lk],
       error: estoqueBaixoRes.error,
     },
-    {
-      label: L.errorSourceNewUsersPeriod[lk],
-      error: novosUsuariosAtualRes.error,
-    },
-    {
-      label: L.errorSourceNewUsersPreviousPeriod[lk],
-      error: novosUsuariosPrevRes.error,
-    },
   ], idioma)
 
   if (!vendasRangeRes.error) vendasRange = (vendasRangeRes.data ?? []) as typeof vendasRange
   if (!vendasPrevRes.error) vendasPrevRange = (vendasPrevRes.data ?? []) as typeof vendasPrevRange
   if (!estoqueBaixoRes.error) estoqueBaixoCount = estoqueBaixoRes.count ?? 0
-  if (!novosUsuariosAtualRes.error) novosUsuariosAtual = novosUsuariosAtualRes.count ?? 0
-  if (!novosUsuariosPrevRes.error) novosUsuariosPrev = novosUsuariosPrevRes.count ?? 0
 
   const periodSalesFailed = !!vendasRangeRes.error
+  // Teto de páginas atingido: os totais podem estar incompletos — nunca apresentar como completos.
+  const periodSalesTruncated = vendasRangeRes.truncated || vendasPrevRes.truncated
   const tableLoadFailed = !!recentOrdersRes.error
 
   if (usersRes) {
@@ -345,7 +341,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     paymentMap.set(key, (paymentMap.get(key) ?? 0) + Number(row.total_liquido ?? 0))
   }
   const paymentDonutData = Array.from(paymentMap.entries())
-    .map(([name, value]) => ({ name, value: Math.round(value * 100) / 100 }))
+    .map(([name, value]) => ({ name: labelFormaPagamentoVenda(name, m), value: Math.round(value * 100) / 100 }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 6)
 
@@ -367,7 +363,6 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   const totalTrend = formatTrendPercent(totalAtual, totalPrev, trendLabels)
   const pedidosTrend = formatTrendPercent(pedidosAtual, pedidosPrev, trendLabels)
   const ticketTrend = formatTrendPercent(ticketAtual, ticketPrev, trendLabels)
-  const novosTrend = formatTrendPercent(novosUsuariosAtual, novosUsuariosPrev, trendLabels)
 
   const unavail = adminUi.common.unavailable[lk]
 
@@ -463,7 +458,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     valor: formatBRL(Number(o.total_liquido ?? 0), locale),
     status: o.status,
     data: formatDateTimeLocaleDefault(o.data, locale, relatorioTz),
-    formaPagamento: o.forma_pagamento,
+    formaPagamento: labelFormaPagamentoVenda(o.forma_pagamento, m),
   }))
   const amountByOrderId = new Map(
     recentOrdersRaw.map((raw) => [raw.id, Number(raw.total_liquido ?? 0)])
@@ -472,7 +467,8 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   const activityItems: ActivityItem[] = latestOrders.slice(0, 8).map((order) => ({
     id: order.id,
     type: order.status === 'CANCELADA' ? 'cancel' : 'sale',
-    description: `${order.formaPagamento || ui.dashboard_pagamento_fallback} • ${order.operador}`,
+    // Texto além da cor do marcador (acessibilidade): venda cancelada diz "Cancelada".
+    description: `${order.status === 'CANCELADA' ? `${m.gerente.venda_status_cancelada} • ` : ''}${order.formaPagamento || ui.dashboard_pagamento_fallback} • ${order.operador}`,
     amount: amountByOrderId.get(order.id),
     relativeTime: order.data,
   }))
@@ -487,7 +483,6 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     <div className="admin-v2-page admin-v2-stack">
       <PageHeader
         title={L.pageTitle[lk]}
-        subtitle={`${L.newUsers[lk]}: ${formatNumberLocale(novosUsuariosAtual, locale)} (${novosTrend.label})`}
         filters={<DashboardFilters options={periodOptions} />}
         actions={
           <PageActions>
@@ -506,6 +501,15 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
           title={adminUi.errors.criticalSalesTitle[lk]}
           description={adminUi.errors.criticalSalesBody[lk]}
         />
+      ) : null}
+
+      {periodSalesTruncated ? (
+        <div
+          role="alert"
+          className="mb-4 rounded-[var(--radius-lg)] border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] px-4 py-3 text-body text-[var(--color-warning-strong)]"
+        >
+          {ui.dashboard_dados_incompletos}
+        </div>
       ) : null}
 
       <ErrorBanner
@@ -619,6 +623,15 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
           </div>
           {estoqueBaixoCount === 0 && !estoqueBaixoRes.error ? (
             <p className="mt-3 text-caption text-fg-subtle">{L.lowStockEmpty[lk]}</p>
+          ) : null}
+          {estoqueBaixoCount > 0 && !estoqueBaixoRes.error && !estoqueBaixoSituacoesRes?.error ? (
+            <p className="mt-3 text-caption text-fg-muted">
+              {fillTemplate(L.lowStockBreakdown[lk], {
+                zerados: formatNumberLocale(situacoesEstoque.zerados, locale),
+                abaixo: formatNumberLocale(situacoesEstoque.abaixoMinimo, locale),
+                noMinimo: formatNumberLocale(situacoesEstoque.noMinimo, locale),
+              })}
+            </p>
           ) : null}
           {showStockAlerts && estoqueBaixoLista.length > 0 ? (
             <ul className="mt-3 flex flex-col gap-1.5 border-t border-[var(--color-border)] pt-3">

@@ -141,3 +141,42 @@ export function shortOrderId(id: string, keep = 8): string {
   if (trimmed.length <= keep) return trimmed
   return `${trimmed.slice(0, keep)}…`
 }
+
+/** Tamanho de página = `max_rows` do PostgREST (backend/supabase/config.toml): acima disso a API corta em silêncio. */
+export const DASHBOARD_PAGE_SIZE = 1000
+/** Teto de segurança: 20 mil linhas por consulta. Atingido com a última página cheia → dados possivelmente incompletos. */
+export const DASHBOARD_MAX_PAGES = 20
+
+type PaginaResultado<T> = {
+  data: T[] | null
+  error: { message: string } | null
+}
+
+export type TodasPaginas<T> = {
+  data: T[]
+  error: { message: string } | null
+  /** `true` quando o teto de páginas foi atingido com a última página cheia (pode haver mais linhas). */
+  truncated: boolean
+}
+
+/**
+ * Lê todas as páginas de uma consulta (`.range(from, to)`), evitando o corte silencioso de `max_rows`.
+ * A consulta precisa ter ordenação estável (ex.: `data` + `id`) para as páginas não se sobreporem.
+ * Em erro, devolve o erro e nenhuma linha parcial — o chamador já trata `error` como falha da fonte.
+ */
+export async function carregarTodasPaginas<T>(
+  buscarPagina: (from: number, to: number) => PromiseLike<PaginaResultado<T>>,
+  pageSize: number = DASHBOARD_PAGE_SIZE,
+  maxPages: number = DASHBOARD_MAX_PAGES,
+): Promise<TodasPaginas<T>> {
+  const acumulado: T[] = []
+  for (let pagina = 0; pagina < maxPages; pagina++) {
+    const from = pagina * pageSize
+    const { data, error } = await buscarPagina(from, from + pageSize - 1)
+    if (error) return { data: [], error, truncated: false }
+    const linhas = data ?? []
+    acumulado.push(...linhas)
+    if (linhas.length < pageSize) return { data: acumulado, error: null, truncated: false }
+  }
+  return { data: acumulado, error: null, truncated: true }
+}

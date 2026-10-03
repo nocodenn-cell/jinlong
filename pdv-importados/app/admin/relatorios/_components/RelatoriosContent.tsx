@@ -10,7 +10,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChartCard, MetricCard, PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import { EmptyState, ErrorState } from '@/components/ui/feedback'
-import { formatBRL } from '@/lib/format/money'
+import { formatBRL, formatPercent } from '@/lib/format/money'
 import { formatDayMonthInLocale, formatDateTimeOrDash } from '@/lib/format/datetime'
 import { CHART_COLORS } from '@/lib/tokens/chartColors'
 import { ROUTES, adminCatalogoCompletoEditarHref, adminVendaDetalheQuery } from '@/lib/navigation/routes'
@@ -107,6 +107,7 @@ export type RelatoriosLabels = {
   secCurvaAbc: string
   curvaAbcColNome: string
   curvaAbcColValor: string
+  curvaAbcColParticipacao: string
   curvaAbcColAcumulado: string
   curvaAbcColClasse: string
   vazioCurvaAbc: string
@@ -334,6 +335,7 @@ function CurvaAbcList({
           <tr className="border-b border-[var(--color-border-secondary)] text-left text-caption text-jl-fg-3">
             <th className="py-1.5 pr-3 font-medium">{labels.curvaAbcColNome}</th>
             <th className="py-1.5 pr-3 text-right font-medium">{labels.curvaAbcColValor}</th>
+            <th className="py-1.5 pr-3 text-right font-medium">{labels.curvaAbcColParticipacao}</th>
             <th className="py-1.5 pr-3 text-right font-medium">{labels.curvaAbcColAcumulado}</th>
             <th className="py-1.5 pr-3 text-right font-medium">{labels.curvaAbcColClasse}</th>
           </tr>
@@ -347,7 +349,8 @@ function CurvaAbcList({
                 </Link>
               </td>
               <td className="py-1.5 pr-3 text-right text-jl-fg-2">{formatBRL(p.totalValor)}</td>
-              <td className="py-1.5 pr-3 text-right text-jl-fg-3">{p.percentualAcumulado.toFixed(1)}%</td>
+              <td className="py-1.5 pr-3 text-right text-jl-fg-2">{formatPercent(p.percentualValor / 100, labels.locale)}</td>
+              <td className="py-1.5 pr-3 text-right text-jl-fg-3">{formatPercent(p.percentualAcumulado / 100, labels.locale)}</td>
               <td className="py-1.5 pr-3 text-right">
                 <span
                   className={`inline-flex items-center rounded-full px-2 py-0.5 text-caption font-medium leading-none ${CLASSE_ABC_BADGE[p.classeAbc]}`}

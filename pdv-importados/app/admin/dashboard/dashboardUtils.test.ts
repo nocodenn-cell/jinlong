@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   agruparVendasPorDia,
   agruparVendasPorHora,
+  carregarTodasPaginas,
   dateKey,
   diasCivisDoPeriodo,
   formatTrendPercent,
@@ -120,5 +121,54 @@ describe('dashboardUtils', () => {
       const somaNosDias = dias.reduce((a, d) => a + (total.get(d) ?? 0), 0)
       expect(somaNosDias).toBe(7)
     })
+  })
+})
+
+describe('carregarTodasPaginas (B1 — limite silencioso de 1000 linhas)', () => {
+  const linhas = (n: number, ini = 0) => Array.from({ length: n }, (_, i) => ({ id: ini + i }))
+  const fonte = (total: number) =>
+    vi.fn(async (from: number, to: number) => ({
+      data: linhas(Math.max(0, Math.min(to + 1, total) - from), from),
+      error: null,
+    }))
+
+  it('junta páginas até a última incompleta e não marca truncamento', async () => {
+    const buscar = fonte(2500)
+    const r = await carregarTodasPaginas(buscar, 1000, 20)
+    expect(r.data).toHaveLength(2500)
+    expect(new Set(r.data.map((x) => x.id)).size).toBe(2500)
+    expect(r.truncated).toBe(false)
+    expect(r.error).toBeNull()
+    expect(buscar.mock.calls.map(([f, t]) => [f, t])).toEqual([[0, 999], [1000, 1999], [2000, 2999]])
+  })
+
+  it('total múltiplo exato do tamanho da página: pede uma página extra vazia e não trunca', async () => {
+    const buscar = fonte(2000)
+    const r = await carregarTodasPaginas(buscar, 1000, 20)
+    expect(r.data).toHaveLength(2000)
+    expect(r.truncated).toBe(false)
+    expect(buscar).toHaveBeenCalledTimes(3)
+  })
+
+  it('sem linhas: vazio, sem erro, sem truncamento', async () => {
+    const r = await carregarTodasPaginas(fonte(0), 1000, 20)
+    expect(r).toEqual({ data: [], error: null, truncated: false })
+  })
+
+  it('teto de páginas atingido com a última página cheia → truncated=true', async () => {
+    const r = await carregarTodasPaginas(fonte(10_000), 1000, 3)
+    expect(r.data).toHaveLength(3000)
+    expect(r.truncated).toBe(true)
+  })
+
+  it('erro em qualquer página: devolve o erro e nenhuma linha parcial', async () => {
+    const buscar = vi
+      .fn()
+      .mockResolvedValueOnce({ data: linhas(1000), error: null })
+      .mockResolvedValueOnce({ data: null, error: { message: 'boom' } })
+    const r = await carregarTodasPaginas(buscar, 1000, 20)
+    expect(r.error).toEqual({ message: 'boom' })
+    expect(r.data).toEqual([])
+    expect(r.truncated).toBe(false)
   })
 })
