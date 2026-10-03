@@ -44,13 +44,13 @@ Deno.test("extractLojaId lê payload.loja_id; ausente/malformado -> null", () =>
   assertEquals(extractLojaId({ loja_id: 123 } as unknown as Record<string, unknown>), null);
 });
 
-Deno.test("autorizado -> chama fiscal_marcar_emitido, nenhuma outra RPC", async () => {
+Deno.test("autorizado -> chama fiscal_marcar_emitido_focus (EMITIDO + referências Focus), nenhuma outra RPC", async () => {
   const supabase = fakeSupabase();
   const c = counters();
   const estado: FocusRemoteState = { kind: "autorizado", chave_fiscal: "chave-x", protocolo: "proto-x", provider_ref: "ref-1", payload: null };
   await applyFocusRemoteState(supabase, doc(), estado, c);
   assertEquals(supabase.rpcCalls.length, 1);
-  assertEquals(supabase.rpcCalls[0].fn, "fiscal_marcar_emitido");
+  assertEquals(supabase.rpcCalls[0].fn, "fiscal_marcar_emitido_focus");
   assertEquals(supabase.rpcCalls[0].args.p_chave_fiscal, "chave-x");
   assertEquals(c.emitted, ["doc-1"]);
 });
@@ -69,7 +69,9 @@ Deno.test("HOTFIX (achado Codex) — autorizado NUNCA repassa a resposta do prov
     payload: { status: "autorizado", mensagem_sefaz: "Autorizado o uso da NF-e", numero_recibo: "999" },
   };
   await applyFocusRemoteState(supabase, doc(), estado, c);
-  assertEquals(supabase.rpcCalls[0].args.p_payload, null);
+  // `fiscal_marcar_emitido_focus` nem recebe payload: chama
+  // `fiscal_marcar_emitido(..., NULL)` internamente.
+  assertEquals("p_payload" in supabase.rpcCalls[0].args, false);
 });
 
 Deno.test("processando -> ZERO chamadas de RPC (7. 202 não é erro; reaproveita EM_PROCESSAMENTO já setado pelo claim)", async () => {
@@ -122,7 +124,7 @@ Deno.test("9/10. retry (tentativas>0) — consulta antes de reemitir é responsa
   const c = counters();
   const estadoDaConsulta: FocusRemoteState = { kind: "autorizado", chave_fiscal: "chave-recuperada", protocolo: "proto-recuperado", provider_ref: null, payload: null };
   await applyFocusRemoteState(supabase, doc(), estadoDaConsulta, c);
-  assertEquals(supabase.rpcCalls[0].fn, "fiscal_marcar_emitido");
+  assertEquals(supabase.rpcCalls[0].fn, "fiscal_marcar_emitido_focus");
   assertEquals(supabase.rpcCalls[0].args.p_chave_fiscal, "chave-recuperada");
   // Nenhuma chamada de emissão (POST) aconteceu neste teste — só a aplicação
   // do resultado da consulta. O laço em index.ts só chama emitirNfce/emitirNfe
@@ -160,7 +162,7 @@ Deno.test("P0 query-before-reemit — tentativas>0 e estado remoto CONHECIDO (n�
   assertEquals(provider.chamadas, 1); // consulta realmente aconteceu
   assertEquals(gate.proceed, false); // chamador NÃO deve prosseguir para um novo POST
   assertEquals(supabase.rpcCalls.length, 1);
-  assertEquals(supabase.rpcCalls[0].fn, "fiscal_marcar_emitido"); // resultado da consulta aplicado, não uma 2ª emissão
+  assertEquals(supabase.rpcCalls[0].fn, "fiscal_marcar_emitido_focus"); // resultado da consulta aplicado, não uma 2ª emissão
   assertEquals(supabase.rpcCalls[0].args.p_chave_fiscal, "chave-recuperada-retry");
 });
 
@@ -216,7 +218,7 @@ Deno.test("P0-1 (achado Codex) — bypass DLQ/reprocessamento: tentativas=0 (res
 
   assertEquals(provider.chamadas, 1); // consulta aconteceu apesar de tentativas=0
   assertEquals(gate.proceed, false); // POST máximo = 1: novo POST continua bloqueado
-  assertEquals(supabase.rpcCalls[0].fn, "fiscal_marcar_emitido");
+  assertEquals(supabase.rpcCalls[0].fn, "fiscal_marcar_emitido_focus");
   assertEquals(supabase.rpcCalls[0].args.p_chave_fiscal, "recuperada-pos-dlq");
 });
 

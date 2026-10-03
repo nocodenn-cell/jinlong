@@ -26,10 +26,30 @@ export type FiscalDoc = {
  * POST /v2/nfce ou /v2/nfe — ver `fiscal-provider-adapter.ts`.
  */
 export type FiscalXmlResult =
-  | { kind: "obtido"; xml: string }
+  | {
+    kind: "obtido";
+    xml: string;
+    /** Sprint P0 Focus — preenchido quando o caminho do XML não estava
+     * persistido e foi recuperado por consulta (GET) da mesma referência; o
+     * chamador grava a referência original antes de armazenar. */
+    caminho_recuperado?: string;
+    artefatos?: FocusArtefatosRefs;
+  }
   | { kind: "blocked_external"; motivo: string }
   | { kind: "erro_transitorio"; motivo: string }
   | { kind: "erro_definitivo"; motivo: string };
+
+/**
+ * Sprint P0 Focus — referências devolvidas pela Focus na autorização
+ * (`caminho_xml_nota_fiscal`, `caminho_danfe`, `qrcode_url`; contrato
+ * confirmado pela Focus em 2026-10-03). Valor ORIGINAL, sem composição de
+ * host/path: é exatamente o que a Focus devolveu.
+ */
+export type FocusArtefatosRefs = {
+  xml_path: string | null;
+  danfe_path: string | null;
+  qrcode_url: string | null;
+};
 
 export type ProviderResult =
   | {
@@ -38,6 +58,7 @@ export type ProviderResult =
     protocolo: string;
     provider_ref?: string | null;
     payload?: Record<string, unknown> | null;
+    artefatos?: FocusArtefatosRefs | null;
   }
   | {
     ok: false;
@@ -60,7 +81,15 @@ export type FiscalNormalizedError = {
 
 /**
  * Onda C2.9 (prontidão Focus NFe) — resultado canônico interno, traduzido pelo
- * adapter a partir da resposta real da Focus. Nada além destes 6 estados escapa
+ * adapter a partir da resposta real da Focus.
+ *
+ * ATUALIZAÇÃO — Sprint P0 Focus (2026-10-03): as lacunas descritas abaixo
+ * (`cancelado` ausente, rejeição confundida com processando, cancelado
+ * classificado como autorizado) foram FECHADAS: o campo `status` do corpo
+ * (`autorizado`, `processando_autorizacao`, `erro_autorizacao`, `cancelado`,
+ * `denegado`) agora é a fonte da classificação (`classifyByFocusStatus`), e
+ * `cancelado`/`denegado`/`ja_processado` são estados próprios. O histórico
+ * abaixo fica como registro de por que isso foi necessário. Nada além destes 6 estados escapa
  * do adapter para o domínio (index.ts, RPCs, timeline) — nomes/campos da Focus
  * ficam contidos aqui.
  *
@@ -111,9 +140,32 @@ export type FocusRemoteState =
     chave_fiscal: string;
     protocolo: string;
     provider_ref: string | null;
+    /** Sprint P0 Focus — referências da autorização; ausentes em respostas
+     * que não as trazem. */
+    artefatos?: FocusArtefatosRefs;
     payload: Record<string, unknown> | null;
   }
   | { kind: "processando"; payload: Record<string, unknown> | null }
+  /** Sprint P0 Focus — `status = cancelado`. Nunca vira EMITIDO, mesmo com
+   * chave/protocolo da autorização original no corpo. */
+  | {
+    kind: "cancelado";
+    protocolo_cancelamento: string | null;
+    xml_cancelamento_path: string | null;
+    payload: Record<string, unknown> | null;
+  }
+  /** Sprint P0 Focus — `status = denegado`. Terminal, nunca EMITIDO. */
+  | {
+    kind: "denegado";
+    erro: string;
+    provider_code: string | null;
+    provider_message: string | null;
+    payload: Record<string, unknown> | null;
+  }
+  /** Sprint P0 Focus — POST recusado com `already_processed`: a referência já
+   * existe na Focus. Resolvido consultando a MESMA referência — nunca com
+   * uma nova emissão sob outra referência. */
+  | { kind: "ja_processado"; payload: Record<string, unknown> | null }
   | {
     kind: "rejeitado";
     erro: string;

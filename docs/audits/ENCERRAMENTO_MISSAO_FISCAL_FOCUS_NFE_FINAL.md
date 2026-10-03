@@ -1,5 +1,11 @@
 # Encerramento da Missão — Frente Fiscal Focus NFe
 
+> **Atualização 2026-10-03 — Sprint P0 Focus:** o contrato do XML (`caminho_xml_nota_fiscal`, links sem autenticação),
+> do cancelamento (`caminho_xml_cancelamento`), do PIX (17/20/23) e de `natureza_operacao` (obrigatória, sem default)
+> foi confirmado pela Focus. Obtenção do XML, cancelamento com XML separado e classificação por `status` estão
+> implementados. Os itens "Obtenção do XML autorizado", "Respostas Focus (Cancelada)" e "Cancelamento fiscal integrado"
+> abaixo estão superados. Estado atual: `docs/audits/SPRINT_P0_FOCUS_NFE_PRONTIDAO.md`.
+
 **Data:** 2026-09-03
 **Branch:** `claude/jinlong-focus-nfe-readiness-d5524b`
 **HEAD final:** `32a5c16e`

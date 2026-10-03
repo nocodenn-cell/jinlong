@@ -34,14 +34,22 @@ Deno.test("mapeia cnpj_emitente quando o snapshot tem o dado", () => {
   assertEquals(body.cnpj_emitente, "12345678000199");
 });
 
-Deno.test("9. natureza_operacao NUNCA é populado — ausente por decisão, não 'VENDA' nem qualquer string mágica", () => {
+Deno.test("9. natureza_operacao ausente no snapshot -> gap BLOQUEANTE; nunca preenchido com 'VENDA' ou outro default", () => {
   const payload = { emitente: { cnpj: "12345678000199" } };
-  const { body, omittedByDesign: omitted } = buildFocusNfceEnvelope(payload);
+  const { body, gaps, bloqueante, omittedByDesign: omitted } = buildFocusNfceEnvelope(payload);
   // deno-lint-ignore no-explicit-any
   assertEquals((body as any).natureza_operacao, undefined);
-  const decisao = omitted.find((o) => o.campo === "natureza_operacao");
-  assertExists(decisao);
-  assertEquals(decisao!.motivo.includes("Focus aplica seu próprio padrão"), true);
+  assertEquals(gaps.some((g) => g.campo === "natureza_operacao"), true);
+  assertEquals(bloqueante, true);
+  // Não está mais em omittedByDesign: Focus confirmou que é obrigatória e sem default.
+  assertEquals(omitted.some((o) => o.campo === "natureza_operacao"), false);
+});
+
+Deno.test("9b. natureza_operacao presente no snapshot -> enviado exatamente como congelado", () => {
+  const payload = { natureza_operacao: "Venda de mercadoria", emitente: { cnpj: "12345678000199" } };
+  const { body, gaps } = buildFocusNfceEnvelope(payload);
+  assertEquals(body.natureza_operacao, "Venda de mercadoria");
+  assertEquals(gaps.some((g) => g.campo === "natureza_operacao"), false);
 });
 
 Deno.test("10/11/12. modalidade_frete/local_destino/presenca_comprador confirmados", () => {
@@ -144,11 +152,35 @@ Deno.test("5. dinheiro -> forma_pagamento '01', indicador_pagamento '0' (à vist
   assertEquals(gap, null);
 });
 
-Deno.test("6. PIX -> PENDENTE REGRA (enum genérico Jinlong sem modalidade), não mapeado para 17/20/23 por suposição", () => {
+Deno.test("6. PIX genérico -> bloqueado (modalidade desconhecida); nenhuma modalidade presumida", () => {
   const { entrada, gap } = mapPagamentoToFocus({ forma_pagamento: "PIX", valor: 100 });
   assertEquals(entrada, null);
   assertExists(gap);
-  assertEquals(gap!.motivo.includes("PENDENTE REGRA"), true);
+  assertEquals(gap!.motivo.includes("modalidade"), true);
+});
+
+Deno.test("6b. PIX com pix_modalidade -> códigos confirmados pela Focus: 17 estático, 20 dinâmico, 23 automático", () => {
+  assertEquals(mapPagamentoToFocus({ forma_pagamento: "PIX", valor: 10, pix_modalidade: "ESTATICO" }).entrada?.forma_pagamento, "17");
+  assertEquals(mapPagamentoToFocus({ forma_pagamento: "PIX", valor: 10, pix_modalidade: "DINAMICO" }).entrada?.forma_pagamento, "20");
+  assertEquals(mapPagamentoToFocus({ forma_pagamento: "PIX", valor: 10, pix_modalidade: "AUTOMATICO" }).entrada?.forma_pagamento, "23");
+  const r = mapPagamentoToFocus({ forma_pagamento: "pix", valor: 12.5, pix_modalidade: "dinamico" });
+  assertEquals(r.entrada, { forma_pagamento: "20", valor_pagamento: 12.5, indicador_pagamento: "0" });
+  assertEquals(r.gap, null);
+  // modalidade fora do contrato -> bloqueado, sem fallback
+  assertEquals(mapPagamentoToFocus({ forma_pagamento: "PIX", valor: 1, pix_modalidade: "QRCODE" }).entrada, null);
+});
+
+Deno.test("6c. venda 100% PIX dinâmico -> uma forma '20' com o valor total; total bate com totais.liquido", () => {
+  const payload = {
+    natureza_operacao: "Venda de mercadoria",
+    emitente: { cnpj: "1" },
+    totais: { liquido: 136 },
+    itens: [itemCompleto()],
+    pagamentos: [{ forma_pagamento: "PIX", valor: 136, pix_modalidade: "DINAMICO" }],
+  };
+  const { body, gaps } = buildFocusNfceEnvelope(payload);
+  assertEquals(body.formas_pagamento, [{ forma_pagamento: "20", valor_pagamento: 136, indicador_pagamento: "0" }]);
+  assertEquals(gaps.some((g) => g.campo.startsWith("formas_pagamento")), false);
 });
 
 Deno.test("7. cartão (crédito/débito) -> código confirmado, mas gap de dados transacionais não capturados", () => {
@@ -160,20 +192,66 @@ Deno.test("7. cartão (crédito/débito) -> código confirmado, mas gap de dados
   assertEquals(debito.entrada?.forma_pagamento, "04");
 });
 
-Deno.test("8. pagamento misto — dinheiro + cartão gera 2 entradas; PIX no meio bloqueia só a própria entrada", () => {
+Deno.test("8. pagamento misto — dinheiro + cartão + PIX estático gera 3 entradas na ordem, soma = total", () => {
   const payload = {
+    natureza_operacao: "Venda de mercadoria",
     emitente: { cnpj: "1" },
+    totais: { liquido: 156 },
     itens: [itemCompleto()],
     pagamentos: [
       { forma_pagamento: "DINHEIRO", valor: 50 },
       { forma_pagamento: "CARTAO_CREDITO", valor: 86 },
-      { forma_pagamento: "PIX", valor: 20 },
+      { forma_pagamento: "PIX", valor: 20, pix_modalidade: "ESTATICO" },
     ],
   };
   const { body, gaps } = buildFocusNfceEnvelope(payload);
-  assertEquals(body.formas_pagamento?.length, 2);
-  assertEquals(body.formas_pagamento?.map((p) => p.forma_pagamento), ["01", "03"]);
-  assertEquals(gaps.some((g) => g.motivo.includes("PENDENTE REGRA")), true);
+  assertEquals(body.formas_pagamento?.map((p) => p.forma_pagamento), ["01", "03", "17"]);
+  assertEquals(body.formas_pagamento?.map((p) => p.valor_pagamento), [50, 86, 20]);
+  assertEquals(gaps.some((g) => g.campo === "formas_pagamento[].valor_pagamento"), false);
+});
+
+Deno.test("8b. pagamento misto com PIX genérico -> PIX bloqueado e emissão bloqueante (nunca reduz a venda a uma forma)", () => {
+  const payload = {
+    natureza_operacao: "Venda de mercadoria",
+    emitente: { cnpj: "1" },
+    itens: [itemCompleto()],
+    pagamentos: [
+      { forma_pagamento: "DINHEIRO", valor: 50 },
+      { forma_pagamento: "PIX", valor: 20 },
+    ],
+  };
+  const { body, gaps, bloqueante } = buildFocusNfceEnvelope(payload);
+  assertEquals(body.formas_pagamento?.map((p) => p.forma_pagamento), ["01"]);
+  assertEquals(gaps.some((g) => g.campo === "formas_pagamento[].PIX"), true);
+  assertEquals(bloqueante, true);
+});
+
+Deno.test("8c. múltiplos pagamentos cuja soma diverge do total líquido -> gap bloqueante", () => {
+  const payload = {
+    natureza_operacao: "Venda de mercadoria",
+    emitente: { cnpj: "1" },
+    totais: { liquido: 100 },
+    itens: [itemCompleto()],
+    pagamentos: [
+      { forma_pagamento: "DINHEIRO", valor: 50 },
+      { forma_pagamento: "PIX", valor: 40, pix_modalidade: "DINAMICO" },
+    ],
+  };
+  const { gaps, bloqueante } = buildFocusNfceEnvelope(payload);
+  assertEquals(gaps.some((g) => g.campo === "formas_pagamento[].valor_pagamento"), true);
+  assertEquals(bloqueante, true);
+});
+
+Deno.test("CSOSN/regime: grupo de tributação continua não confirmado -> gap bloqueante por item (não inventado)", () => {
+  const item = { ...itemCompleto(), csosn: "102" };
+  const { gaps, bloqueante } = buildFocusNfceEnvelope({
+    natureza_operacao: "Venda de mercadoria",
+    emitente: { cnpj: "1", regime_tributario: "SIMPLES_NACIONAL" },
+    itens: [item],
+    pagamentos: [{ forma_pagamento: "DINHEIRO", valor: 136 }],
+  });
+  assertEquals(gaps.some((g) => g.campo === "items[1].tributacao_icms_pis_cofins"), true);
+  assertEquals(bloqueante, true);
 });
 
 Deno.test("forma de pagamento Jinlong desconhecida -> gap explícito, não inventa código", () => {

@@ -268,17 +268,19 @@ export async function applyFocusRemoteState(
 ): Promise<void> {
   switch (estado.kind) {
     case "autorizado": {
-      // Achado de revisão (Codex): ver comentário equivalente em
-      // index.ts. `fiscal_marcar_emitido` faz `payload = COALESCE(p_payload,
-      // payload)` — passar `estado.payload` (a resposta bruta do provider)
-      // sobrescreveria o snapshot fiscal imutável (C1) com o JSON de
-      // resposta da Focus. Nunca passa payload aqui.
-      const { error } = await supabase.rpc("fiscal_marcar_emitido", {
+      // Sprint P0 Focus: EMITIDO + referências originais da Focus
+      // (`caminho_xml_nota_fiscal`/`caminho_danfe`/`qrcode_url`) na mesma
+      // transação (`fiscal_marcar_emitido_focus`, que reusa
+      // `fiscal_marcar_emitido` sem payload — o snapshot congelado de C1
+      // nunca é sobrescrito pela resposta da Focus).
+      const { error } = await supabase.rpc("fiscal_marcar_emitido_focus", {
         p_documento_id: doc.id,
         p_chave_fiscal: estado.chave_fiscal,
         p_protocolo: estado.protocolo,
         p_provider_ref: estado.provider_ref ?? null,
-        p_payload: null,
+        p_focus_xml_path: estado.artefatos?.xml_path ?? null,
+        p_focus_danfe_path: estado.artefatos?.danfe_path ?? null,
+        p_focus_qrcode_url: estado.artefatos?.qrcode_url ?? null,
       });
       if (error) {
         counters.failed.push({ id: doc.id, erro: `MARCAR_EMITIDO_ERROR:${error.message}` });
@@ -297,6 +299,51 @@ export async function applyFocusRemoteState(
     case "processando": {
       // Nenhuma RPC — status já é EM_PROCESSAMENTO desde o claim. Reconciliação
       // (não este laço) resolve depois via consulta.
+      break;
+    }
+
+    case "cancelado": {
+      // Sprint P0 Focus: a Focus diz que o documento está cancelado —
+      // CANCELADO, nunca EMITIDO (mesmo que o corpo traga a chave da
+      // autorização original). Sem lease: não é o fluxo de pedido de
+      // cancelamento, é reconciliação do estado remoto.
+      const { error } = await supabase.rpc("fiscal_marcar_cancelado", {
+        p_documento_id: doc.id,
+        p_protocolo_cancelamento: estado.protocolo_cancelamento,
+        p_focus_xml_cancelamento_path: estado.xml_cancelamento_path,
+        p_lease_token: null,
+      });
+      counters.failed.push({ id: doc.id, erro: error ? `MARCAR_CANCELADO_FAILED:${error.message}` : "FOCUS_DOCUMENTO_CANCELADO" });
+      break;
+    }
+
+    case "denegado": {
+      const { error } = await supabase.rpc("fiscal_marcar_erro_normalizado", {
+        p_documento_id: doc.id,
+        p_erro: estado.erro,
+        p_transitorio: false,
+        p_error_code: "FOCUS_DENEGADO",
+        p_error_category: "REJEICAO_REGRA_FISCAL",
+        p_action_hint: "Uso denegado pela SEFAZ — documento não autorizado; revisar situação cadastral do emitente/destinatário.",
+        p_retryable: false,
+        p_next_step_url: "/gerente/financeiro?tab=fiscal",
+        p_error_payload: estado.payload,
+      });
+      counters.failed.push({ id: doc.id, erro: error ? `MARCAR_ERRO_NORMALIZADO_FAILED:${error.message}` : "FOCUS_DENEGADO" });
+      break;
+    }
+
+    case "ja_processado": {
+      // Só chega aqui sem consulta conclusiva (ver `resolverEstadoEmissao`).
+      // Transitório: a próxima tentativa passa pelo retry seguro, que
+      // consulta a MESMA referência antes de qualquer POST.
+      const { error: retryErr } = await supabase.rpc("fiscal_marcar_erro", {
+        p_documento_id: doc.id,
+        p_erro: "FOCUS_ALREADY_PROCESSED_SEM_CONSULTA_CONCLUSIVA",
+        p_transitorio: true,
+      });
+      if (retryErr) counters.failed.push({ id: doc.id, erro: `MARCAR_ERRO:${retryErr.message}` });
+      else counters.retried.push({ id: doc.id, proxima_tentativa: null });
       break;
     }
 
@@ -484,4 +531,117 @@ export async function enforceRetrySafeGate(
   }
   // nao_encontrado: Focus confirma que não processou esta ref — seguro emitir.
   return { proceed: true };
+}
+
+/**
+ * Sprint P0 Focus — `already_processed` no POST: a referência já existe na
+ * Focus. Resolve CONSULTANDO A MESMA referência e aplicando o estado remoto;
+ * nunca gera uma segunda emissão com outra referência. Consulta não
+ * conclusiva (`nao_encontrado`/`ja_processado`) => erro transitório.
+ */
+export async function resolverEstadoEmissao(
+  doc: FiscalDoc,
+  estado: FocusRemoteState,
+  provider: { consultarDocumento?: (ref: string, tipoDoc: string, cfg: ProviderConfig) => Promise<FocusRemoteState> },
+  ref: string,
+  cfg: ProviderConfig,
+): Promise<FocusRemoteState> {
+  if (estado.kind !== "ja_processado") return estado;
+  if (!provider.consultarDocumento) return estado;
+  const consultado = await provider.consultarDocumento(ref, doc.tipo_doc, cfg);
+  if (consultado.kind === "nao_encontrado" || consultado.kind === "ja_processado") {
+    return { kind: "ja_processado", payload: estado.payload };
+  }
+  return consultado;
+}
+
+// ---------------------------------------------------------------------------
+// Sprint P0 Focus — cancelamento fiscal
+// ---------------------------------------------------------------------------
+
+export type CancelamentoResultado =
+  | "cancelado"
+  | "ja_cancelado"
+  | "em_andamento"
+  | "erro"
+  | "provider_sem_cancelamento";
+
+export type CancelamentoDoc = {
+  id: string;
+  venda_id: string;
+  tipo_doc: string;
+  lease_token: string;
+  tentativas_anteriores: number;
+};
+
+/**
+ * Pedido de cancelamento de UM documento já EMITIDO (lease obtido em
+ * `fiscal_iniciar_cancelamento`). Se já houve tentativa anterior, consulta a
+ * MESMA referência antes de repetir o DELETE (o pedido anterior pode ter sido
+ * aceito com a resposta perdida). Só `status = cancelado` confirma; qualquer
+ * outra resposta mantém o documento EMITIDO e registra o erro.
+ */
+export async function processarCancelamento(
+  supabase: SupabaseLike,
+  doc: CancelamentoDoc,
+  provider: {
+    consultarDocumento?: (ref: string, tipoDoc: string, cfg: ProviderConfig) => Promise<FocusRemoteState>;
+    cancelarDocumento?: (ref: string, tipoDoc: string, justificativa: string, cfg: ProviderConfig) => Promise<FocusRemoteState>;
+  },
+  ref: string,
+  justificativa: string,
+  cfg: ProviderConfig,
+): Promise<{ resultado: CancelamentoResultado; erro?: string }> {
+  if (!provider.cancelarDocumento) {
+    await marcarCancelamentoErro(supabase, doc, "PROVIDER_SEM_CANCELAMENTO");
+    return { resultado: "provider_sem_cancelamento" };
+  }
+
+  if (doc.tentativas_anteriores > 0) {
+    if (!provider.consultarDocumento) {
+      await marcarCancelamentoErro(supabase, doc, "FISCAL_PROVIDER_SEM_CONSULTA_APOS_TENTATIVA");
+      return { resultado: "erro", erro: "FISCAL_PROVIDER_SEM_CONSULTA_APOS_TENTATIVA" };
+    }
+    const atual = await provider.consultarDocumento(ref, doc.tipo_doc, cfg);
+    if (atual.kind === "cancelado") {
+      return await confirmarCancelado(supabase, doc, atual);
+    }
+    if (atual.kind !== "autorizado") {
+      const erro = `CANCELAMENTO_CONSULTA_INCONCLUSIVA:${atual.kind}`;
+      await marcarCancelamentoErro(supabase, doc, erro);
+      return { resultado: "erro", erro };
+    }
+  }
+
+  const estado = await provider.cancelarDocumento(ref, doc.tipo_doc, justificativa, cfg);
+  if (estado.kind === "cancelado") {
+    return await confirmarCancelado(supabase, doc, estado);
+  }
+  const erro = "erro" in estado ? estado.erro : `CANCELAMENTO_NAO_CONFIRMADO:${estado.kind}`;
+  await marcarCancelamentoErro(supabase, doc, erro);
+  return { resultado: "erro", erro };
+}
+
+async function confirmarCancelado(
+  supabase: SupabaseLike,
+  doc: CancelamentoDoc,
+  estado: Extract<FocusRemoteState, { kind: "cancelado" }>,
+): Promise<{ resultado: CancelamentoResultado; erro?: string }> {
+  const { data: aplicado, error } = await supabase.rpc("fiscal_marcar_cancelado", {
+    p_documento_id: doc.id,
+    p_protocolo_cancelamento: estado.protocolo_cancelamento,
+    p_focus_xml_cancelamento_path: estado.xml_cancelamento_path,
+    p_lease_token: doc.lease_token,
+  });
+  if (error) return { resultado: "erro", erro: `MARCAR_CANCELADO_FAILED:${error.message}` };
+  if (!aplicado) return { resultado: "em_andamento" };
+  return { resultado: "cancelado" };
+}
+
+async function marcarCancelamentoErro(supabase: SupabaseLike, doc: CancelamentoDoc, erro: string): Promise<void> {
+  await supabase.rpc("fiscal_marcar_cancelamento_erro", {
+    p_documento_id: doc.id,
+    p_erro: erro,
+    p_lease_token: doc.lease_token,
+  });
 }

@@ -144,6 +144,20 @@ jobs:
           psql "$PSQL_URL" -v ON_ERROR_STOP=1 -f scripts/devolucao-d13-caixa-desembolso.test.sql
           psql "$PSQL_URL" -v ON_ERROR_STOP=1 -f scripts/listar-caixas-elegiveis-desembolso.test.sql
 
+      # Sprint P0 Focus NFe: referências Focus, XML de autorização, cancelamento e XML de
+      # cancelamento (migration 20261003120000). Transação com ROLLBACK, dados sintéticos.
+      - name: Fiscal — Focus P0 (referências, XML, cancelamento)
+        run: |
+          set -euo pipefail
+          cd backend
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          PSQL_URL="${POSTGRES_URL:-${DB_URL:-}}"
+          if [ -z "$PSQL_URL" ]; then
+            echo "::error::Sem URL do Postgres (POSTGRES_URL ou DB_URL)." >&2
+            exit 1
+          fi
+          psql "$PSQL_URL" -v ON_ERROR_STOP=1 -f scripts/fiscal-focus-p0.test.sql
+
       - name: Test RLS scope by profile
         run: |
           set -euo pipefail
@@ -303,6 +317,11 @@ jobs:
         # fixa `deno@2.2.2`, que nao le v5). Sem isto, o passo reescreveria o
         # lock e criaria churn/quebra por efeito colateral.
         run: deno test --no-lock --no-check --allow-net backend/supabase/functions/_shared/
+
+      # Testes do fiscal-worker (fetch sempre substituído por stub — nenhuma rede real).
+      # Antes deste passo eles existiam no repo sem nenhum invocador em CI.
+      - name: Test Edge Functions (fiscal-worker)
+        run: deno test --no-lock --allow-env --allow-net --config backend/supabase/functions/fiscal-worker/deno.json backend/supabase/functions/fiscal-worker/
 
   outbox-contract:
     runs-on: ubuntu-latest

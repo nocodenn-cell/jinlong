@@ -1479,6 +1479,14 @@ export type Database = {
       }
       documentos_fiscais_pendentes: {
         Row: {
+          cancelado_em: string | null
+          cancelamento_justificativa: string | null
+          cancelamento_lease_expires_em: string | null
+          cancelamento_lease_token: string | null
+          cancelamento_protocolo: string | null
+          cancelamento_solicitado_em: string | null
+          cancelamento_tentativas: number
+          cancelamento_ultimo_erro: string | null
           chave_fiscal: string | null
           correlation_id: string
           created_at: string
@@ -1489,6 +1497,10 @@ export type Database = {
           fiscal_error_payload: Json | null
           fiscal_next_step_url: string | null
           fiscal_retryable: boolean | null
+          focus_danfe_path: string | null
+          focus_qrcode_url: string | null
+          focus_xml_cancelamento_path: string | null
+          focus_xml_path: string | null
           id: string
           payload: Json | null
           processado_em: string | null
@@ -1506,6 +1518,15 @@ export type Database = {
           updated_at: string
           venda_id: string
           xml_armazenado_em: string | null
+          xml_cancelamento_armazenado_em: string | null
+          xml_cancelamento_lease_expires_em: string | null
+          xml_cancelamento_lease_token: string | null
+          xml_cancelamento_proxima_tentativa_em: string | null
+          xml_cancelamento_sha256: string | null
+          xml_cancelamento_status: string
+          xml_cancelamento_storage_path: string | null
+          xml_cancelamento_tentativas: number
+          xml_cancelamento_ultimo_erro: string | null
           xml_lease_expires_em: string | null
           xml_lease_token: string | null
           xml_proxima_tentativa_em: string | null
@@ -1516,6 +1537,14 @@ export type Database = {
           xml_ultimo_erro: string | null
         }
         Insert: {
+          cancelado_em?: string | null
+          cancelamento_justificativa?: string | null
+          cancelamento_lease_expires_em?: string | null
+          cancelamento_lease_token?: string | null
+          cancelamento_protocolo?: string | null
+          cancelamento_solicitado_em?: string | null
+          cancelamento_tentativas?: number
+          cancelamento_ultimo_erro?: string | null
           chave_fiscal?: string | null
           correlation_id?: string
           created_at?: string
@@ -1526,6 +1555,10 @@ export type Database = {
           fiscal_error_payload?: Json | null
           fiscal_next_step_url?: string | null
           fiscal_retryable?: boolean | null
+          focus_danfe_path?: string | null
+          focus_qrcode_url?: string | null
+          focus_xml_cancelamento_path?: string | null
+          focus_xml_path?: string | null
           id?: string
           payload?: Json | null
           processado_em?: string | null
@@ -1543,6 +1576,15 @@ export type Database = {
           updated_at?: string
           venda_id: string
           xml_armazenado_em?: string | null
+          xml_cancelamento_armazenado_em?: string | null
+          xml_cancelamento_lease_expires_em?: string | null
+          xml_cancelamento_lease_token?: string | null
+          xml_cancelamento_proxima_tentativa_em?: string | null
+          xml_cancelamento_sha256?: string | null
+          xml_cancelamento_status?: string
+          xml_cancelamento_storage_path?: string | null
+          xml_cancelamento_tentativas?: number
+          xml_cancelamento_ultimo_erro?: string | null
           xml_lease_expires_em?: string | null
           xml_lease_token?: string | null
           xml_proxima_tentativa_em?: string | null
@@ -1553,6 +1595,14 @@ export type Database = {
           xml_ultimo_erro?: string | null
         }
         Update: {
+          cancelado_em?: string | null
+          cancelamento_justificativa?: string | null
+          cancelamento_lease_expires_em?: string | null
+          cancelamento_lease_token?: string | null
+          cancelamento_protocolo?: string | null
+          cancelamento_solicitado_em?: string | null
+          cancelamento_tentativas?: number
+          cancelamento_ultimo_erro?: string | null
           chave_fiscal?: string | null
           correlation_id?: string
           created_at?: string
@@ -1563,6 +1613,10 @@ export type Database = {
           fiscal_error_payload?: Json | null
           fiscal_next_step_url?: string | null
           fiscal_retryable?: boolean | null
+          focus_danfe_path?: string | null
+          focus_qrcode_url?: string | null
+          focus_xml_cancelamento_path?: string | null
+          focus_xml_path?: string | null
           id?: string
           payload?: Json | null
           processado_em?: string | null
@@ -1580,6 +1634,15 @@ export type Database = {
           updated_at?: string
           venda_id?: string
           xml_armazenado_em?: string | null
+          xml_cancelamento_armazenado_em?: string | null
+          xml_cancelamento_lease_expires_em?: string | null
+          xml_cancelamento_lease_token?: string | null
+          xml_cancelamento_proxima_tentativa_em?: string | null
+          xml_cancelamento_sha256?: string | null
+          xml_cancelamento_status?: string
+          xml_cancelamento_storage_path?: string | null
+          xml_cancelamento_tentativas?: number
+          xml_cancelamento_ultimo_erro?: string | null
           xml_lease_expires_em?: string | null
           xml_lease_token?: string | null
           xml_proxima_tentativa_em?: string | null
@@ -6038,6 +6101,7 @@ export type Database = {
         Args: { p_lease_segundos?: number; p_limit?: number }
         Returns: {
           correlation_id: string
+          focus_xml_path: string
           id: string
           payload: Json
           provider: string
@@ -6046,6 +6110,20 @@ export type Database = {
           xml_lease_token: string
           xml_status: string
           xml_tentativas: number
+        }[]
+      }
+      fiscal_claim_documentos_xml_cancelamento: {
+        Args: { p_lease_segundos?: number; p_limit?: number }
+        Returns: {
+          correlation_id: string
+          focus_xml_cancelamento_path: string
+          id: string
+          provider: string
+          tipo_doc: string
+          venda_id: string
+          xml_cancelamento_lease_token: string
+          xml_cancelamento_status: string
+          xml_cancelamento_tentativas: number
         }[]
       }
       fiscal_enfileirar_documento_venda: {
@@ -6057,11 +6135,54 @@ export type Database = {
         }
         Returns: string
       }
+      fiscal_iniciar_cancelamento: {
+        Args: {
+          p_documento_id: string
+          p_justificativa: string
+          p_lease_segundos?: number
+        }
+        Returns: {
+          cancelamento_lease_token: string
+          cancelamento_tentativas_anteriores: number
+          correlation_id: string
+          id: string
+          payload: Json
+          provider: string
+          resultado: string
+          tipo_doc: string
+          venda_id: string
+        }[]
+      }
+      fiscal_marcar_cancelado: {
+        Args: {
+          p_documento_id: string
+          p_focus_xml_cancelamento_path: string
+          p_lease_token?: string
+          p_protocolo_cancelamento: string
+        }
+        Returns: boolean
+      }
+      fiscal_marcar_cancelamento_erro: {
+        Args: { p_documento_id: string; p_erro: string; p_lease_token: string }
+        Returns: boolean
+      }
       fiscal_marcar_emitido: {
         Args: {
           p_chave_fiscal: string
           p_documento_id: string
           p_payload?: Json
+          p_protocolo: string
+          p_provider_ref?: string
+        }
+        Returns: undefined
+      }
+      fiscal_marcar_emitido_focus: {
+        Args: {
+          p_chave_fiscal: string
+          p_documento_id: string
+          p_focus_danfe_path?: string
+          p_focus_qrcode_url?: string
+          p_focus_xml_path?: string
           p_protocolo: string
           p_provider_ref?: string
         }
@@ -6106,6 +6227,27 @@ export type Database = {
         }
         Returns: boolean
       }
+      fiscal_marcar_xml_cancelamento_armazenado: {
+        Args: {
+          p_documento_id: string
+          p_lease_token: string
+          p_sha256: string
+          p_storage_path: string
+        }
+        Returns: boolean
+      }
+      fiscal_marcar_xml_cancelamento_bloqueado: {
+        Args: {
+          p_documento_id: string
+          p_lease_token: string
+          p_motivo: string
+        }
+        Returns: boolean
+      }
+      fiscal_marcar_xml_cancelamento_erro: {
+        Args: { p_documento_id: string; p_erro: string; p_lease_token: string }
+        Returns: boolean
+      }
       fiscal_marcar_xml_erro: {
         Args: { p_documento_id: string; p_erro: string; p_lease_token: string }
         Returns: boolean
@@ -6125,6 +6267,15 @@ export type Database = {
           p_venda_id: string
         }
         Returns: undefined
+      }
+      fiscal_registrar_referencias_focus: {
+        Args: {
+          p_documento_id: string
+          p_focus_danfe_path?: string
+          p_focus_qrcode_url?: string
+          p_focus_xml_path: string
+        }
+        Returns: boolean
       }
       fiscal_reprocessar_documento: {
         Args: { p_documento_id: string }

@@ -32,7 +32,7 @@
 //      REAL verificado.
 
 import type { FiscalXmlResult } from "./fiscal_types.ts";
-import type { FiscalProvider, ProviderConfig } from "./fiscal-provider-adapter.ts";
+import { isWellFormedXml, type FiscalProvider, type ProviderConfig } from "./fiscal-provider-adapter.ts";
 
 // deno-lint-ignore no-explicit-any
 type SupabaseLike = any;
@@ -48,6 +48,27 @@ export type XmlDoc = {
   /** Token do lease de processamento (fiscal_claim_documentos_xml) — exigido
    * por toda RPC de confirmação/erro/bloqueio; prova de posse vigente. */
   lease_token: string;
+  /** Sprint P0 Focus — referência ORIGINAL devolvida pela Focus
+   * (`caminho_xml_nota_fiscal` para AUTORIZACAO, `caminho_xml_cancelamento`
+   * para CANCELAMENTO). NULL quando ainda não persistida. */
+  focus_xml_path?: string | null;
+};
+
+/** Sprint P0 Focus — os dois artefatos XML são distintos e têm fila, colunas
+ * e path próprios: o XML de cancelamento nunca sobrescreve o da autorização. */
+export type XmlArtefato = "AUTORIZACAO" | "CANCELAMENTO";
+
+const RPCS_XML: Record<XmlArtefato, { armazenado: string; bloqueado: string; erro: string }> = {
+  AUTORIZACAO: {
+    armazenado: "fiscal_marcar_xml_armazenado",
+    bloqueado: "fiscal_marcar_xml_bloqueado",
+    erro: "fiscal_marcar_xml_erro",
+  },
+  CANCELAMENTO: {
+    armazenado: "fiscal_marcar_xml_cancelamento_armazenado",
+    bloqueado: "fiscal_marcar_xml_cancelamento_bloqueado",
+    erro: "fiscal_marcar_xml_cancelamento_erro",
+  },
 };
 
 export type XmlWorkerCounters = {
@@ -82,9 +103,14 @@ export async function sha256Hex(content: string): Promise<string> {
  * daí a sanitização para `/` (que também deixa o path mais navegável:
  * focus/homologacao/<loja_id>/<tipo_doc>/<documento_id>.xml).
  */
-export function computeXmlStoragePath(doc: { id: string; tipo_doc: string }, providerIdentity: string): string {
+export function computeXmlStoragePath(
+  doc: { id: string; tipo_doc: string },
+  providerIdentity: string,
+  artefato: XmlArtefato = "AUTORIZACAO",
+): string {
   const sanitized = providerIdentity.replace(/:/g, "/");
-  return `${sanitized}/${doc.tipo_doc}/${doc.id}.xml`;
+  const sufixo = artefato === "CANCELAMENTO" ? "-cancelamento" : "";
+  return `${sanitized}/${doc.tipo_doc}/${doc.id}${sufixo}.xml`;
 }
 
 export type ParsedProviderIdentity =
@@ -135,38 +161,63 @@ export async function processXmlDocumento(
   ref: string,
   cfg: ProviderConfig,
   counters: XmlWorkerCounters,
+  artefato: XmlArtefato = "AUTORIZACAO",
 ): Promise<void> {
-  if (!provider.obterXmlAutorizado) {
-    await marcarXmlBloqueado(supabase, doc, "PROVIDER_SEM_SUPORTE_XML: este provider não implementa obterXmlAutorizado.", counters);
+  const marcarBloqueado = (motivo: string) => marcarXmlBloqueado(supabase, doc, motivo, counters, artefato);
+  const marcarErro = (motivo: string) => marcarXmlErro(supabase, doc, motivo, counters, artefato);
+
+  const obter = artefato === "CANCELAMENTO"
+    ? (provider.obterXmlCancelamento
+      ? () => provider.obterXmlCancelamento!(doc.focus_xml_path ?? null, ref, doc.tipo_doc, cfg)
+      : null)
+    : (provider.obterXmlAutorizado
+      ? () => provider.obterXmlAutorizado!(ref, doc.tipo_doc, cfg, doc.focus_xml_path ?? null)
+      : null);
+  if (!obter) {
+    await marcarBloqueado(`PROVIDER_SEM_SUPORTE_XML: este provider não obtém o XML de ${artefato}.`);
     return;
   }
 
   let resultado: FiscalXmlResult;
   try {
-    resultado = await provider.obterXmlAutorizado(ref, doc.tipo_doc, cfg);
+    resultado = await obter();
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    await marcarXmlErro(supabase, doc, `OBTER_XML_EXCECAO:${msg}`, counters);
+    await marcarErro(`OBTER_XML_EXCECAO:${msg}`);
     return;
   }
 
   switch (resultado.kind) {
     case "blocked_external":
-      await marcarXmlBloqueado(supabase, doc, resultado.motivo, counters);
+      await marcarBloqueado(resultado.motivo);
       return;
     case "erro_transitorio":
     case "erro_definitivo":
-      await marcarXmlErro(supabase, doc, resultado.motivo, counters);
+      await marcarErro(resultado.motivo);
       return;
     case "obtido": {
-      // Validação interna mínima (não é contrato Focus — só sanidade do
-      // que ESTE sistema vai persistir como "XML autorizado"): um provider
-      // com bug ou uma resposta malformada não pode fazer um blob vazio ou
-      // claramente não-XML ser marcado ARMAZENADO como se fosse sucesso.
+      // Sprint P0 Focus: o conteúdo precisa ser XML bem formado (não só
+      // "começar com <") antes de qualquer upload — um HTML de erro, JSON ou
+      // corpo truncado nunca vira ARMAZENADO.
       const conteudo = resultado.xml.trim();
-      if (!conteudo || !conteudo.startsWith("<")) {
-        await marcarXmlErro(supabase, doc, "XML_OBTIDO_VAZIO_OU_INVALIDO", counters);
+      if (!conteudo || !isWellFormedXml(conteudo)) {
+        await marcarErro("XML_OBTIDO_VAZIO_OU_INVALIDO");
         return;
+      }
+      // Referência recuperada por consulta (documento emitido antes de a
+      // referência ser persistida): grava o valor original da Focus antes
+      // de armazenar, para que a auditoria aponte sempre a origem do XML.
+      if (artefato === "AUTORIZACAO" && resultado.caminho_recuperado && !doc.focus_xml_path) {
+        const { error: refErr } = await supabase.rpc("fiscal_registrar_referencias_focus", {
+          p_documento_id: doc.id,
+          p_focus_xml_path: resultado.caminho_recuperado,
+          p_focus_danfe_path: resultado.artefatos?.danfe_path ?? null,
+          p_focus_qrcode_url: resultado.artefatos?.qrcode_url ?? null,
+        });
+        if (refErr) {
+          await marcarErro(`REGISTRAR_REFERENCIA_FOCUS_FALHOU:${refErr.message}`);
+          return;
+        }
       }
       if (!doc.provider) {
         // Documento EMITIDO sem identidade de provider congelada (só
@@ -174,10 +225,10 @@ export async function processXmlDocumento(
         // C2.10) — sem identidade não há como montar um path
         // determinístico isolado por loja/ambiente/provider com
         // segurança. Fail-closed permanente (não adianta tentar de novo).
-        await marcarXmlBloqueado(supabase, doc, "PROVIDER_IDENTIDADE_DESCONHECIDA_DOCUMENTO_LEGADO", counters);
+        await marcarBloqueado("PROVIDER_IDENTIDADE_DESCONHECIDA_DOCUMENTO_LEGADO");
         return;
       }
-      const path = computeXmlStoragePath(doc, doc.provider);
+      const path = computeXmlStoragePath(doc, doc.provider, artefato);
       const hash = await sha256Hex(resultado.xml);
 
       // Hotfix concorrência: create-only. NUNCA upsert — se o path já
@@ -190,7 +241,7 @@ export async function processXmlDocumento(
       });
 
       if (uploadErr && !isStorageDuplicateConflict(uploadErr)) {
-        await marcarXmlErro(supabase, doc, `UPLOAD_STORAGE_FALHOU:${uploadErr.message}`, counters);
+        await marcarErro(`UPLOAD_STORAGE_FALHOU:${uploadErr.message}`);
         return;
       }
 
@@ -207,7 +258,7 @@ export async function processXmlDocumento(
       // blob realmente armazenado.
       const { data: existente, error: downloadErr } = await supabase.storage.from(FISCAL_XML_BUCKET).download(path);
       if (downloadErr || !existente) {
-        await marcarXmlErro(supabase, doc, `VERIFICACAO_POS_UPLOAD_FALHOU:${downloadErr?.message ?? "sem dados"}`, counters);
+        await marcarErro(`VERIFICACAO_POS_UPLOAD_FALHOU:${downloadErr?.message ?? "sem dados"}`);
         return;
       }
       const conteudoReal = await existente.text();
@@ -218,11 +269,11 @@ export async function processXmlDocumento(
         // (conflito real) ou já havia um XML diferente ali. Nunca
         // confirma um hash que não corresponde à realidade; fail-closed,
         // nunca sobrescreve.
-        await marcarXmlErro(supabase, doc, "XML_DIVERGENTE_DE_BLOB_JA_EXISTENTE_NO_PATH", counters);
+        await marcarErro("XML_DIVERGENTE_DE_BLOB_JA_EXISTENTE_NO_PATH");
         return;
       }
 
-      const { data: aplicado, error: rpcErr } = await supabase.rpc("fiscal_marcar_xml_armazenado", {
+      const { data: aplicado, error: rpcErr } = await supabase.rpc(RPCS_XML[artefato].armazenado, {
         p_documento_id: doc.id,
         p_storage_path: path,
         p_sha256: hashReal,
@@ -232,7 +283,7 @@ export async function processXmlDocumento(
         // Upload (ou reconciliação) já aconteceu com sucesso — uma próxima
         // tentativa reencontra o MESMO path com o MESMO conteúdo
         // (create-only não deixa isso divergir) e confirma de novo.
-        await marcarXmlErro(supabase, doc, `CONFIRMAR_XML_ARMAZENADO_FALHOU:${rpcErr.message}`, counters);
+        await marcarErro(`CONFIRMAR_XML_ARMAZENADO_FALHOU:${rpcErr.message}`);
         return;
       }
       if (aplicado) {
@@ -250,8 +301,14 @@ export async function processXmlDocumento(
   }
 }
 
-async function marcarXmlBloqueado(supabase: SupabaseLike, doc: XmlDoc, motivo: string, counters: XmlWorkerCounters): Promise<void> {
-  const { data: aplicado, error } = await supabase.rpc("fiscal_marcar_xml_bloqueado", {
+async function marcarXmlBloqueado(
+  supabase: SupabaseLike,
+  doc: XmlDoc,
+  motivo: string,
+  counters: XmlWorkerCounters,
+  artefato: XmlArtefato,
+): Promise<void> {
+  const { data: aplicado, error } = await supabase.rpc(RPCS_XML[artefato].bloqueado, {
     p_documento_id: doc.id,
     p_motivo: motivo,
     p_lease_token: doc.lease_token,
@@ -265,8 +322,14 @@ async function marcarXmlBloqueado(supabase: SupabaseLike, doc: XmlDoc, motivo: s
   }
 }
 
-async function marcarXmlErro(supabase: SupabaseLike, doc: XmlDoc, motivo: string, counters: XmlWorkerCounters): Promise<void> {
-  const { data: aplicado, error } = await supabase.rpc("fiscal_marcar_xml_erro", {
+async function marcarXmlErro(
+  supabase: SupabaseLike,
+  doc: XmlDoc,
+  motivo: string,
+  counters: XmlWorkerCounters,
+  artefato: XmlArtefato,
+): Promise<void> {
+  const { data: aplicado, error } = await supabase.rpc(RPCS_XML[artefato].erro, {
     p_documento_id: doc.id,
     p_erro: motivo,
     p_lease_token: doc.lease_token,
