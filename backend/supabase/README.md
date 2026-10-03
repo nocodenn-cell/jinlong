@@ -114,6 +114,23 @@ receberam `20260831140429` e `20260831140500`. Nenhuma linha de histórico foi
 apagada ou reescrita. Os dois registros de cada migration são preservados e
 reconciliados como pares HUMAN_GATE auditáveis em `migration-human-gates.json`.
 
+### Reconciliação de drift de 03/10/2026
+
+O gate `migration-remote-drift` acusava 3 versões só no remoto. Nenhuma alteração foi feita em
+produção; a reconciliação foi só no repositório, após comparação por leitura de
+`schema_migrations.statements`, `pg_proc` e `pg_policies`:
+
+| Remoto | Arquivo | Como foi aplicada | Reconciliação |
+|---|---|---|---|
+| `20260928201815` | `20260928120000_atualizar_preco_varejo_produto_rpc.sql` (vinha só da branch `claude/hardening-certificacao-operacional-f2e6ce`, commit `e352e76d`) | MCP `apply_migration` | arquivo trazido para a `main` sem alteração + par HUMAN_GATE |
+| `20260930090200` | `20260930090200_p03_vendas_lista_kpi_uma_linha_por_venda.sql` (vinha só da branch `claude/jinlong-ux-audit-4ab5be`, commit `20c30283`) | CLI (mesma versão do arquivo, `created_by` nulo) | arquivo trazido para a `main` sem alteração (versão já bate; sem par) |
+| `20261002104957` | `20261002100000_pos_venda_operacoes_select_dono_todas_lojas.sql` (já na `main`) | MCP `apply_migration` | par HUMAN_GATE |
+
+Conteúdo idêntico ao remoto em todos os casos (SQL normalizado e md5 dos corpos das funções).
+Ponto em aberto, fora desta reconciliação: `20260930120000_vendas_lista_kpis_por_venda.sql` (na `main`,
+não aplicada em produção) é outra implementação do mesmo problema de `20260930090200` e cria
+`listar_vendas_gerente`/`kpis_vendas_gerente`, já usadas pelo código da `main`.
+
 Quando uma migration é aplicada via ferramenta MCP do Supabase (`apply_migration`, usado por agentes/Claude
 em vez do CLI), o `schema_migrations.version` gravado é o **timestamp real da aplicação**, não o timestamp
 que está no nome do arquivo local. O nome do arquivo passado na chamada vai para `schema_migrations.name`,
