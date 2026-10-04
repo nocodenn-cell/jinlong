@@ -151,9 +151,9 @@ test.describe('QA módulo produtos (gerente)', () => {
       timeout: 30_000,
     })
 
-    await page.locator('section').filter({ has: page.getByRole('heading', { name: /Lista de produtos|商品列表/ }) }).getByRole('textbox', { name: /Buscar|搜索/i }).fill(novoNome.slice(0, 16))
+    await page.getByRole('search').getByRole('textbox', { name: /Buscar|搜索/i }).fill(novoNome.slice(0, 16))
     await expect(page.getByText(novoNome, { exact: true })).toBeVisible({ timeout: 15_000 })
-    await page.locator('section').filter({ has: page.getByRole('heading', { name: /Lista de produtos|商品列表/ }) }).getByRole('textbox', { name: /Buscar|搜索/i }).fill(segundoNome.slice(0, 16))
+    await page.getByRole('search').getByRole('textbox', { name: /Buscar|搜索/i }).fill(segundoNome.slice(0, 16))
     await expect(page.getByText(segundoNome, { exact: true })).toBeVisible({ timeout: 20_000 })
   })
 
