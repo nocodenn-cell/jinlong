@@ -121,18 +121,13 @@ test.describe('Painel do gerente (/admin/*)', () => {
     await expect(page.getByText(/erro interno/i)).not.toBeVisible()
   })
 
-  test('página de vendas (rota legada /gerente/caixas) resolve para /admin/vendas', async ({
+  test('rota legada /gerente/caixas resolve para a página de caixas', async ({
     page,
   }) => {
-    // `LEGACY_GERENTE_REDIRECTS['caixas'] = ROUTES.admin.vendas` — não existe
-    // mais uma página dedicada de listagem de caixas com export CSV; o link
-    // legado hoje aponta para a mesma página de vendas. Este teste confirma
-    // que o redirect resolve para uma página real (não 404/erro), não que a
-    // feature original de export ainda existe sob este caminho.
     await gotoApp(page, '/gerente/caixas')
-    await expect(page).toHaveURL(/\/admin\/vendas/)
+    await expect(page).toHaveURL(/\/admin\/caixas/)
     await expect(
-      page.getByRole('heading', { level: 1, name: 'Vendas e caixa', exact: true }),
+      page.getByRole('heading', { level: 1, name: 'Caixas', exact: true }),
     ).toBeVisible()
   })
 

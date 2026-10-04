@@ -237,7 +237,7 @@ test.describe('Fluxo crítico sync-outbox -> gerente/vendas', () => {
 
     let found = false
     for (let i = 0; i < 8; i++) {
-      if (await page.getByRole('cell', { name: vendaId, exact: true }).isVisible().catch(() => false)) {
+      if (await page.locator(`table tbody span[title="${vendaId}"]`).isVisible().catch(() => false)) {
         found = true
         break
       }

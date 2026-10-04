@@ -9,8 +9,8 @@ export const BTN_FECHAR_CAIXA = /Fechar caixa|结算收银台|关闭收银|關�
 type TurnoUi = 'loading' | 'aberto' | 'fechado'
 
 async function lerTurnoUi(page: Page): Promise<TurnoUi> {
-  const abrir = page.getByRole('button', { name: BTN_ABRIR_CAIXA })
-  const fechar = page.getByRole('button', { name: BTN_FECHAR_CAIXA })
+  const abrir = page.getByRole('banner').getByRole('button', { name: BTN_ABRIR_CAIXA })
+  const fechar = page.getByRole('banner').getByRole('button', { name: BTN_FECHAR_CAIXA })
   if (await fechar.isVisible().catch(() => false)) return 'aberto'
   if (await abrir.isEnabled().catch(() => false)) return 'fechado'
   if (await abrir.isVisible().catch(() => false)) return 'loading'
@@ -27,8 +27,8 @@ export async function ensureCaixaAberto(
   page: Page,
   valorFundo = '300',
 ): Promise<'ja_aberto' | 'abriu'> {
-  const abrir = page.getByRole('button', { name: BTN_ABRIR_CAIXA })
-  const fechar = page.getByRole('button', { name: BTN_FECHAR_CAIXA })
+  const abrir = page.getByRole('banner').getByRole('button', { name: BTN_ABRIR_CAIXA })
+  const fechar = page.getByRole('banner').getByRole('button', { name: BTN_FECHAR_CAIXA })
 
   const fecharDialog = page.getByRole('dialog', {
     name: /Fechar caixa|结算收银台|关闭收银|關閉收銀/i,

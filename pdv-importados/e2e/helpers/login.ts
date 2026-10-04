@@ -72,11 +72,11 @@ async function waitPostLogin(page: Page, postLoginUrl: RegExp, timeout: number):
   try {
     await page.waitForURL(postLoginUrl, { timeout, waitUntil: 'commit' })
   } catch (err) {
-    const alertTxt = (await page.getByRole('alert').first().textContent().catch(() => null))?.trim()
+    const alertTxt = (await page.getByRole('alert').first().textContent({ timeout: 1_000 }).catch(() => null))?.trim()
     const btn = (
-      await page.getByRole('button', { name: /Entrar|Entrando/i }).textContent().catch(() => null)
+      await page.getByRole('button', { name: /Entrar|Entrando/i }).textContent({ timeout: 1_000 }).catch(() => null)
     )?.trim()
-    const emailVal = await page.locator('#login-email').inputValue().catch(() => '')
+    const emailVal = await page.locator('#login-email').inputValue({ timeout: 1_000 }).catch(() => '')
     const detail = [
       alertTxt && `alert=${alertTxt}`,
       btn && `btn=${btn}`,

@@ -20,14 +20,13 @@ import { expect, type Page } from '@playwright/test'
  * `afterEach` (defesa adicional — cobre o teste que troca de idioma e falha
  * no meio, antes de rodar seu próprio revert inline).
  *
- * No-op fora do painel `/admin/*` (ex.: contexto ainda não logado, ou uma
- * página sem o toggle PT/普通话) e no-op se a página já foi fechada.
+ * Fora do painel ou com a página fechada, não altera o estado.
+ * No painel, aguarda o toggle montar antes de preparar o idioma.
  */
 export async function garantirIdiomaPt(page: Page): Promise<void> {
-  if (page.isClosed()) return
+  if (page.isClosed() || !/\/admin(?:\/|$|\?)/.test(page.url())) return
   const ptBtn = page.getByRole('button', { name: /^PT$/ })
-  const jaVisivel = await ptBtn.isVisible().catch(() => false)
-  if (!jaVisivel) return
+  await expect(ptBtn).toBeVisible({ timeout: 10_000 })
   const jaPt = await ptBtn.isDisabled().catch(() => false)
   if (jaPt) return
 
