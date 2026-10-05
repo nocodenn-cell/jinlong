@@ -115,7 +115,7 @@ function mapRpcImportNfe(message: string): string {
 }
 
 /** Estado de reconhecimento de cada item na conferência. */
-export type StatusItemNfe = 'RECONHECIDO_DEPARA' | 'RECONHECIDO_EAN' | 'DESCONHECIDO'
+export type StatusItemNfe = 'RECONHECIDO_DEPARA' | 'RECONHECIDO_EAN' | 'RECONHECIDO_CATALOGO' | 'DESCONHECIDO'
 
 export type LinhaPreviewNfe = {
   nome_produto: string
@@ -174,7 +174,7 @@ export async function previewNotaManualNfe(
   const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
-  const v = NotaManualSchema.safeParse(input)
+  const v = NotaManualSchema.safeParse(normalizarEntradaManual(input))
   if (!v.success) {
     return { success: false, error: v.error.issues[0]?.message ?? 'Dados da nota inválidos.' }
   }
@@ -195,6 +195,7 @@ export async function previewNotaManualNfe(
     numero_nf: numero,
     emitente: { nome: n.emitente_nome, cnpj: n.emitente_cnpj },
     itens: n.itens.map((i) => ({
+      produto_id: i.produto_id,
       nome_produto: i.nome_produto,
       gtin: i.gtin || null,
       ref_fornecedor: i.ref_fornecedor || i.gtin || i.nome_produto.slice(0, 60),
@@ -212,7 +213,16 @@ export async function previewNotaManualNfe(
 
   const supabase = await createClient()
   const linhas = await montarLinhasPreview(supabase, lojaId, parsed)
+  if (n.itens.some((item, idx) => item.produto_id && linhas[idx]?.produto_id !== item.produto_id)) {
+    return { success: false, error: 'Um produto selecionado não está disponível nesta loja. Escolha o produto novamente.' }
+  }
   return { success: true, data: { parsed, linhas } }
+}
+
+function normalizarEntradaManual(input: unknown): unknown {
+  if (!input || typeof input !== 'object' || !('sem_documento' in input)) return input
+  if (input.sem_documento !== true) return input
+  return { ...input, numero_nf: `ENT-${randomUUID().slice(0, 8)}`, serie: undefined, chave_acesso: undefined }
 }
 
 async function montarLinhasPreview(
@@ -236,6 +246,7 @@ async function montarLinhasPreview(
     ),
   ]
   const refs = [...new Set(parsed.itens.map((i) => i.ref_fornecedor))]
+  const ids = parsed.itens.map((i) => i.produto_id).filter((id): id is string => !!id)
 
   // (1) De-Para aprendido: [loja + fornecedor + ref] → produto
   const byDePara = new Map<string, { id: string; nome: string }>()
@@ -256,13 +267,15 @@ async function montarLinhasPreview(
 
   // (2) Código de barras (cEAN) na loja
   const byGtin = new Map<string, { id: string; nome: string }>()
-  if (gtins.length > 0) {
+  const byId = new Map<string, { id: string; nome: string }>()
+  if (gtins.length > 0 || ids.length > 0) {
     const { data: rows } = await supabase
       .from('produtos')
       .select('id, nome, codigo_barras')
       .eq('loja_id', lojaId)
-      .in('codigo_barras', gtins)
+      .or([gtins.length ? `codigo_barras.in.(${gtins.join(',')})` : '', ids.length ? `id.in.(${ids.join(',')})` : ''].filter(Boolean).join(','))
     for (const r of rows ?? []) {
+      byId.set(r.id as string, { id: r.id as string, nome: r.nome as string })
       const cb = r.codigo_barras as string | null
       if (cb) byGtin.set(cb, { id: r.id as string, nome: r.nome as string })
     }
@@ -271,12 +284,17 @@ async function montarLinhasPreview(
   const linhas: LinhaPreviewNfe[] = parsed.itens.map((item) => {
     const dePara = byDePara.get(item.ref_fornecedor)
     const ean = item.gtin && item.gtin.length >= 8 ? byGtin.get(item.gtin) : undefined
+    const escolhido = item.produto_id ? byId.get(item.produto_id) : undefined
 
     let status: StatusItemNfe = 'DESCONHECIDO'
     let produtoId: string | null = null
     let produtoNome: string | null = null
 
-    if (dePara) {
+    if (escolhido) {
+      status = 'RECONHECIDO_CATALOGO'
+      produtoId = escolhido.id
+      produtoNome = escolhido.nome
+    } else if (dePara) {
       status = 'RECONHECIDO_DEPARA'
       produtoId = dePara.id
       produtoNome = dePara.nome
