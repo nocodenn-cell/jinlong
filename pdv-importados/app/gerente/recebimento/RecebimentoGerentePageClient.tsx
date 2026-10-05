@@ -22,6 +22,7 @@ import { StatusChip } from '@/components/ui/StatusChip'
 import { Field, Input } from '@/components/ui/forms'
 import { ROUTES } from '@/lib/navigation/routes'
 import { criarRemessaConferencia } from './actions'
+import { ImportarNfePageClient } from '../estoque/importar-nfe/ImportarNfePageClient'
 import { obterOrdemCompraDetalhe, type OcDetalheDTO, type OcListaDTO } from '../compras/actions'
 import { fmtQtd, textoPosEntrada } from '../compras/ocRecebimento'
 import { ProdutoRecebimentoAutocomplete } from './ProdutoRecebimentoAutocomplete'
@@ -62,9 +63,6 @@ export function RecebimentoGerentePageClient({
   const semProdutos = !temProdutos
 
   const [qtdEspStr, setQtdEspStr] = useState('')
-  // Produtos adicionais da MESMA entrada (só "Sem documento"): a RPC já recebe uma lista de itens.
-  const [extras, setExtras] = useState<Array<{ key: number; produto: RecebimentoProdutoOpt | null; qtd: string }>>([])
-  const proximaChaveExtra = useRef(1)
   const [qtdConfStr, setQtdConfStr] = useState('')
   const idempotencyKeyRef = useRef(crypto.randomUUID())
   // Depois de confirmar a entrada o formulário volta ao estado inicial: com os
@@ -119,9 +117,6 @@ export function RecebimentoGerentePageClient({
       // Sem documento não há expectativa: some o campo e a divergência deixa de existir.
       setOcEscolhida(null)
       setQtdEspStr('')
-    } else {
-      // Com pedido a conferência é de um item por vez (a divergência é calculada por item).
-      setExtras([])
     }
   }, [])
 
@@ -191,7 +186,6 @@ export function RecebimentoGerentePageClient({
           setUsarProdutoPreSelecionado(false)
           setOcEscolhida(null)
           setProdutoEscolhido(null)
-          setExtras([])
           setFormKey((k) => k + 1)
           // Depois da entrada: o que mudou de fato (estoque, saldo do pedido, se o pedido fechou),
           // não uma mensagem genérica.
@@ -297,66 +291,8 @@ export function RecebimentoGerentePageClient({
       ) : null}
 
       <CadastroRapidoBlock title={r.sec_formulario} defaultOpen className="mt-8">
-        <form
-          key={formKey}
-          id="recebimento-form"
-          className="space-y-0"
-          onSubmit={(e) => {
-            e.preventDefault()
-            if (semProdutos) return
-            const fd = new FormData(e.currentTarget)
-            const pid = readFormDataString(fd, 'produto_id')
-            // Só o modo Pedido tem "esperada"; sem documento a action assume esperada = conferida.
-            const qEsp = via === 'ORDEM_COMPRA' ? Number(fd.get('qtd_esperada')) : undefined
-            const qConf = Number(fd.get('qtd_conferida'))
-            if (
-              !pid ||
-              !Number.isFinite(qConf) ||
-              qConf <= 0 ||
-              (qEsp !== undefined && (!Number.isFinite(qEsp) || qEsp <= 0))
-            ) {
-              emitGerenteToast({ kind: 'error', message: r.toast_dados_invalidos })
-              return
-            }
-            const ocId = readFormDataString(fd, 'ordem_compra_id')
-            if (via === 'ORDEM_COMPRA' && !ocId) {
-              emitGerenteToast({ kind: 'error', message: r.ordem_compra_obrigatoria })
-              return
-            }
-            // Linhas extras: ignora as totalmente em branco; as parciais ou repetidas são recusadas.
-            const adicionais: Array<{ produto_id: string; qtd_conferida: number }> = []
-            const vistos = new Set<string>([pid])
-            for (const ex of via === 'SEM_DOCUMENTO' ? extras : []) {
-              const qtd = Number(ex.qtd.replace(',', '.'))
-              if (!ex.produto && ex.qtd.trim() === '') continue
-              if (!ex.produto || !Number.isFinite(qtd) || qtd <= 0) {
-                emitGerenteToast({ kind: 'error', message: r.toast_dados_invalidos })
-                return
-              }
-              if (vistos.has(ex.produto.id)) {
-                emitGerenteToast({ kind: 'error', message: r.toast_produto_repetido })
-                return
-              }
-              vistos.add(ex.produto.id)
-              adicionais.push({ produto_id: ex.produto.id, qtd_conferida: qtd })
-            }
-            setResultado(null)
-            void mutate({
-              origem: readFormDataString(fd, 'origem'),
-              observacao: readFormDataString(fd, 'observacao'),
-              produto_id: pid,
-              produto_nome: produtoEscolhido?.nome ?? '',
-              qtd_esperada: qEsp,
-              qtd_conferida: qConf,
-              adicionais,
-              idempotency_key: idempotencyKeyRef.current,
-              ordem_compra_id: readFormDataString(fd, 'ordem_compra_id'),
-            })
-          }}
-        >
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {/* Como chegou? — a mesma entrada, três caminhos, sem tela nova. */}
-            <div className="md:col-span-2" data-testid="rec-como-chegou">
+            <div className="mb-6" data-testid="rec-como-chegou">
               <p className="mb-1.5 text-caption font-semibold text-fg-muted">{r.como_chegou}</p>
               <div role="group" aria-label={r.como_chegou} className="flex flex-wrap gap-2">
                 <Link
@@ -388,10 +324,54 @@ export function RecebimentoGerentePageClient({
                   </button>
                 ))}
               </div>
-              <p className="mt-1.5 text-caption text-fg-subtle">
+              <p className="mt-3 text-caption leading-relaxed text-fg-subtle">
                 {via === 'ORDEM_COMPRA' ? r.via_pedido_ajuda : r.via_sem_documento_ajuda}
               </p>
             </div>
+
+        {via === 'SEM_DOCUMENTO' ? (
+          <ImportarNfePageClient idioma={idioma} embeddedInAdminHub semDocumento produtoInicial={produtoPreSelecionado} />
+        ) : null}
+        {via === 'ORDEM_COMPRA' ? (<form
+          key={formKey}
+          id="recebimento-form"
+          className="mt-6 space-y-6"
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (semProdutos) return
+            const fd = new FormData(e.currentTarget)
+            const pid = readFormDataString(fd, 'produto_id')
+            // Só o modo Pedido tem "esperada"; sem documento a action assume esperada = conferida.
+            const qEsp = via === 'ORDEM_COMPRA' ? Number(fd.get('qtd_esperada')) : undefined
+            const qConf = Number(fd.get('qtd_conferida'))
+            if (
+              !pid ||
+              !Number.isFinite(qConf) ||
+              qConf <= 0 ||
+              (qEsp !== undefined && (!Number.isFinite(qEsp) || qEsp <= 0))
+            ) {
+              emitGerenteToast({ kind: 'error', message: r.toast_dados_invalidos })
+              return
+            }
+            const ocId = readFormDataString(fd, 'ordem_compra_id')
+            if (via === 'ORDEM_COMPRA' && !ocId) {
+              emitGerenteToast({ kind: 'error', message: r.ordem_compra_obrigatoria })
+              return
+            }
+            setResultado(null)
+            void mutate({
+              origem: readFormDataString(fd, 'origem'),
+              observacao: readFormDataString(fd, 'observacao'),
+              produto_id: pid,
+              produto_nome: produtoEscolhido?.nome ?? '',
+              qtd_esperada: qEsp,
+              qtd_conferida: qConf,
+              idempotency_key: idempotencyKeyRef.current,
+              ordem_compra_id: readFormDataString(fd, 'ordem_compra_id'),
+            })
+          }}
+        >
+          <div className="grid grid-cols-1 gap-x-6 gap-y-6 md:grid-cols-2">
             <Field id="rec-origem" label={r.label_origem} required>
               <Input
                 name="origem"
@@ -502,61 +482,6 @@ export function RecebimentoGerentePageClient({
                 onChange={(e) => setQtdConfStr(e.target.value)}
               />
             </Field>
-            {via === 'SEM_DOCUMENTO' ? (
-              <div className="space-y-2 md:col-span-2" data-testid="rec-itens-extra">
-                {extras.map((ex, idx) => (
-                  <div key={ex.key} className="grid grid-cols-1 items-end gap-3 md:grid-cols-[1fr_9rem_auto]">
-                    <Field id={`rec-extra-prod-${ex.key}`} label={r.label_produto}>
-                      <ProdutoRecebimentoAutocomplete
-                        disabled={semProdutos}
-                        placeholder={r.ph_produto_busca}
-                        semResultadosLabel={r.produto_sem_resultados}
-                        minimoLabel={r.produto_busca_minimo}
-                        limparLabel={r.produto_limpar}
-                        onChange={(produto) =>
-                          setExtras((atual) => atual.map((x) => (x.key === ex.key ? { ...x, produto } : x)))
-                        }
-                      />
-                    </Field>
-                    <Field id={`rec-extra-qtd-${ex.key}`} label={r.label_qtd_item}>
-                      <Input
-                        type="number"
-                        min="0.001"
-                        step="0.001"
-                        disabled={semProdutos}
-                        value={ex.qtd}
-                        onChange={(e) =>
-                          setExtras((atual) => atual.map((x) => (x.key === ex.key ? { ...x, qtd: e.target.value } : x)))
-                        }
-                      />
-                    </Field>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={() => setExtras((atual) => atual.filter((x) => x.key !== ex.key))}
-                      aria-label={`${r.btn_remover_item} ${idx + 2}`}
-                    >
-                      {r.btn_remover_item}
-                    </Button>
-                  </div>
-                ))}
-                <div className="flex flex-wrap items-center gap-3">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    disabled={semProdutos}
-                    onClick={() =>
-                      setExtras((atual) => [...atual, { key: proximaChaveExtra.current++, produto: null, qtd: '' }])
-                    }
-                  >
-                    {r.btn_add_item}
-                  </Button>
-                  {extras.length > 0 ? (
-                    <span className="text-caption text-fg-subtle">{r.itens_extra_ajuda}</span>
-                  ) : null}
-                </div>
-              </div>
-            ) : null}
             {divergenciaDetalhe ? (
               <div
                 className={`rounded-lg border px-3 py-2 text-body md:col-span-2 ${
@@ -597,7 +522,7 @@ export function RecebimentoGerentePageClient({
               {loading ? r.btn_confirmando : r.btn_confirmar}
             </Button>
           </div>
-        </form>
+        </form>) : null}
         {resultado ? (
           <div
             className="mt-4 rounded-lg border border-[var(--color-success-border)] bg-[var(--color-success-bg)] px-3 py-2 text-body text-[var(--color-success-strong)]"

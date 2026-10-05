@@ -10,10 +10,13 @@ import type { getMessages } from '@/i18n/getMessages'
 import { previewNotaManualNfe, type LinhaPreviewNfe } from './actions'
 import type { NfeParsed } from '@/lib/nfe/nfeParser'
 import { totalItensEmCentavos, totalParcelasEmCentavos } from './notaManualFinanceiro'
+import { ProdutoRecebimentoAutocomplete } from '@/app/gerente/recebimento/ProdutoRecebimentoAutocomplete'
+import type { RecebimentoProdutoOpt } from '@/app/gerente/recebimento/RecebimentoGerentePageClient'
 
 type Mi = ReturnType<typeof getMessages>['estoque']['import_nfe']
 
 type ItemForm = {
+  produto?: RecebimentoProdutoOpt | null
   nome: string
   ref: string
   gtin: string
@@ -47,12 +50,14 @@ function toNumber(raw: string): number {
 
 type Props = Readonly<{
   mi: Mi
+  semDocumento?: boolean
+  produtoInicial?: RecebimentoProdutoOpt | null
   onPreview: (data: { parsed: NfeParsed; linhas: LinhaPreviewNfe[] }) => void
 }>
 
 /** Nota de chegada digitada à mão. Entrega o mesmo `{ parsed, linhas }` que o XML. */
-export function NotaManualForm({ mi, onPreview }: Props) {
-  const [aberto, setAberto] = useState(false)
+export function NotaManualForm({ mi, onPreview, semDocumento = false, produtoInicial }: Props) {
+  const [aberto, setAberto] = useState(semDocumento)
   const [carregando, setCarregando] = useState(false)
   const [fornecedor, setFornecedor] = useState('')
   const [cnpj, setCnpj] = useState('')
@@ -60,7 +65,10 @@ export function NotaManualForm({ mi, onPreview }: Props) {
   const [serie, setSerie] = useState('')
   const [chave, setChave] = useState('')
   const [dataBaseVencimentos, setDataBaseVencimentos] = useState(hojeYmd())
-  const [itens, setItens] = useState<ItemForm[]>([itemVazio()])
+  const [itens, setItens] = useState<ItemForm[]>([{
+    ...itemVazio(), produto: produtoInicial, nome: produtoInicial?.nome ?? '',
+    gtin: produtoInicial?.codigo_barras ?? '',
+  }])
   const [parcelas, setParcelas] = useState<ParcelaForm[]>([])
 
   const setItem = (idx: number, patch: Partial<ItemForm>) =>
@@ -120,12 +128,14 @@ export function NotaManualForm({ mi, onPreview }: Props) {
     setCarregando(true)
     try {
       const r = await previewNotaManualNfe({
+        sem_documento: semDocumento,
         emitente_nome: fornecedor,
         emitente_cnpj: cnpj,
         numero_nf: numero,
         serie,
         chave_acesso: chave,
         itens: itens.map((i) => ({
+          produto_id: i.produto?.id,
           nome_produto: i.nome,
           ref_fornecedor: i.ref,
           gtin: i.gtin,
@@ -169,18 +179,18 @@ export function NotaManualForm({ mi, onPreview }: Props) {
           {mi.manual_cnpj}
           <Input value={cnpj} inputMode="numeric" onChange={(e) => setCnpj(e.target.value)} />
         </label>
-        <label className="text-caption">
+        {!semDocumento ? <label className="text-caption">
           {mi.manual_numero}
           <Input value={numero} onChange={(e) => setNumero(e.target.value)} />
-        </label>
-        <label className="text-caption">
+        </label> : null}
+        {!semDocumento ? <label className="text-caption">
           {mi.manual_serie}
           <Input value={serie} onChange={(e) => setSerie(e.target.value)} />
-        </label>
-        <label className="text-caption md:col-span-2">
+        </label> : null}
+        {!semDocumento ? <label className="text-caption md:col-span-2">
           {mi.manual_chave}
           <Input value={chave} inputMode="numeric" onChange={(e) => setChave(e.target.value)} />
-        </label>
+        </label> : null}
         <label className="text-caption">
           Data-base dos vencimentos
           <Input type="date" value={dataBaseVencimentos} onChange={(e) => setDataBaseVencimentos(e.target.value)} />
@@ -192,10 +202,23 @@ export function NotaManualForm({ mi, onPreview }: Props) {
         <p className="text-caption font-semibold text-fg-muted">{mi.manual_itens}</p>
         {itens.map((it, idx) => (
           <div key={idx} className="grid grid-cols-2 gap-2 rounded-lg bg-[var(--color-surface-soft)] p-2 md:grid-cols-12">
-            <label className="col-span-2 text-caption md:col-span-4">
+            <label className={`col-span-2 text-caption ${semDocumento ? 'md:col-span-12' : 'md:col-span-4'}`}>
               {mi.manual_item_desc}
-              <Input value={it.nome} onChange={(e) => setItem(idx, { nome: e.target.value })} />
+              {semDocumento ? (
+                <ProdutoRecebimentoAutocomplete
+                  name={`produto-manual-${idx}`}
+                  placeholder={mi.manual_item_desc}
+                  semResultadosLabel="Nenhum produto encontrado"
+                  minimoLabel="Digite pelo menos 2 caracteres"
+                  limparLabel="Trocar produto"
+                  valorInicial={it.produto}
+                  onChange={(produto) => setItem(idx, {
+                    produto, nome: produto?.nome ?? '', ref: produto?.id ?? '', gtin: produto?.codigo_barras ?? '',
+                  })}
+                />
+              ) : <Input value={it.nome} onChange={(e) => setItem(idx, { nome: e.target.value })} />}
             </label>
+            {!semDocumento ? <>
             <label className="text-caption md:col-span-2">
               {mi.manual_item_ref}
               <Input value={it.ref} onChange={(e) => setItem(idx, { ref: e.target.value })} />
@@ -212,6 +235,7 @@ export function NotaManualForm({ mi, onPreview }: Props) {
               {mi.manual_item_un}
               <Input value={it.un} maxLength={6} onChange={(e) => setItem(idx, { un: e.target.value.toUpperCase() })} />
             </label>
+            </> : null}
             <label className="text-caption md:col-span-3">
               {mi.manual_item_qtd}
               <Input value={it.qtd} inputMode="decimal" onChange={(e) => setItem(idx, { qtd: e.target.value })} />
@@ -312,9 +336,9 @@ export function NotaManualForm({ mi, onPreview }: Props) {
       </div>
 
       <div className="flex justify-end gap-2 border-t border-[var(--color-border)] pt-3">
-        <Button type="button" variant="ghost" size="sm" onClick={() => setAberto(false)}>
+        {!semDocumento ? <Button type="button" variant="ghost" size="sm" onClick={() => setAberto(false)}>
           {mi.manual_fechar}
-        </Button>
+        </Button> : null}
         <Button type="button" variant="primary" size="sm" loading={carregando} onClick={() => void continuar()}>
           {mi.manual_continuar}
         </Button>

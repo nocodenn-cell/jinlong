@@ -91,7 +91,7 @@ export const NotaManualSchema = z.object({
   emitente_cnpj: z
     .string()
     .transform((v) => v.replace(/\D/g, ''))
-    .refine((v) => v.length === 14 || v.length === 11, 'CNPJ (14 dígitos) ou CPF (11) inválido.'),
+    .refine((v) => v.length === 14, 'Informe o CNPJ do fornecedor com 14 dígitos.'),
   numero_nf: z.string().trim().min(1, 'Informe o número da nota.'),
   serie: z.string().trim().optional(),
   chave_acesso: z
@@ -103,6 +103,7 @@ export const NotaManualSchema = z.object({
     .array(
       z.object({
         nome_produto: z.string().trim().min(1, 'Todo item precisa de descrição.'),
+        produto_id: z.string().uuid().optional(),
         ref_fornecedor: z.string().trim().optional(),
         gtin: z
           .string()

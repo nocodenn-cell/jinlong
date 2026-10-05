@@ -45,6 +45,8 @@ import { fmtQtd } from '@/app/gerente/compras/ocRecebimento'
 import { fmtGerenteDateTime, fmtGerenteIdCurto } from '@/lib/format/gerenteValues'
 
 type Props = Readonly<{
+  semDocumento?: boolean
+  produtoInicial?: import('@/app/gerente/recebimento/RecebimentoGerentePageClient').RecebimentoProdutoOpt | null
   idioma: Idioma
   embeddedInAdminHub?: boolean
   /** Deep-link `?importacao=<id>`: abre essa importação (aberta ou concluída) ao montar. */
@@ -73,7 +75,7 @@ function fmtVencimento(ymd: string, locale: string): string {
 }
 
 function statusBadgeKey(status: StatusItemNfe): string {
-  if (status === 'RECONHECIDO_DEPARA') return 'ATIVO'
+  if (status === 'RECONHECIDO_DEPARA' || status === 'RECONHECIDO_CATALOGO') return 'ATIVO'
   if (status === 'RECONHECIDO_EAN') return 'TEM_NF'
   return 'ALERTA'
 }
@@ -136,9 +138,18 @@ export function ImportarNfePageClient({
   idioma,
   embeddedInAdminHub = false,
   importacaoInicialId = null,
+  semDocumento = false,
+  produtoInicial = null,
 }: Props) {
   const m = getMessages(idioma)
-  const mi = m.estoque.import_nfe
+  const mi = useMemo(() => semDocumento ? {
+    ...m.estoque.import_nfe,
+    manual_titulo: m.gerente.recebimento_page.entrada_manual_titulo,
+    manual_ajuda: m.gerente.recebimento_page.via_sem_documento_ajuda,
+    manual_itens: m.gerente.recebimento_page.entrada_manual_itens,
+    manual_item_desc: m.gerente.recebimento_page.label_produto,
+    numero_nf: m.gerente.recebimento_page.entrada_manual_referencia,
+  } : m.estoque.import_nfe, [m, semDocumento])
   const locale = localeFromIdioma(idioma)
   const fontClass = idioma === 'pt' ? '' : 'font-chinese'
 
@@ -531,7 +542,9 @@ export function ImportarNfePageClient({
           <StatusChip
             status={statusBadgeKey(l.status_produto)}
             label={
-              l.status_produto === 'RECONHECIDO_DEPARA'
+              l.status_produto === 'RECONHECIDO_CATALOGO'
+                ? l.produto_nome ?? l.nome_produto
+                : l.status_produto === 'RECONHECIDO_DEPARA'
                 ? mi.status_reconhecido_depara
                 : mi.status_reconhecido_ean
             }
@@ -701,7 +714,7 @@ export function ImportarNfePageClient({
           : `admin-v2-page space-y-4 ${fontClass}`
       }
     >
-      <PageHeader title={mi.titulo} subtitle={mi.subtitulo} />
+      {!semDocumento ? <PageHeader title={mi.titulo} subtitle={mi.subtitulo} /> : null}
 
       {!embeddedInAdminHub ? (
         <Link href={ROUTES.admin.estoque} className="gerente-nav-back text-sm font-medium hover:underline">
@@ -781,7 +794,7 @@ export function ImportarNfePageClient({
         </SectionCard>
       ) : null}
 
-      <section
+      {!semDocumento ? <section
         onDragOver={(e) => {
           e.preventDefault()
           setDragOver(true)
@@ -833,7 +846,9 @@ export function ImportarNfePageClient({
           spellCheck={false}
         />
         <NotaManualForm mi={mi} onPreview={aplicarPreview} />
-      </section>
+      </section> : !parsed && !conferencia ? (
+        <NotaManualForm mi={mi} onPreview={aplicarPreview} semDocumento produtoInicial={produtoInicial} />
+      ) : null}
 
       {parsed && !conferencia ? (
         <SectionCard title={mi.emitente}>

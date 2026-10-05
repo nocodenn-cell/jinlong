@@ -21,6 +21,7 @@ import {
 } from './actions'
 
 type Props = Readonly<{
+  name?: string
   disabled?: boolean
   placeholder: string
   semResultadosLabel: string
@@ -46,6 +47,7 @@ function escolhaAutomatica(
 }
 
 export function ProdutoRecebimentoAutocomplete({
+  name = 'produto_id',
   disabled,
   placeholder,
   semResultadosLabel,
@@ -155,7 +157,7 @@ export function ProdutoRecebimentoAutocomplete({
 
   return (
     <div ref={wrapRef} className="relative">
-      <input type="hidden" name="produto_id" value={selecionado?.id ?? ''} />
+      <input type="hidden" name={name} value={selecionado?.id ?? ''} />
 
       <div className="relative">
         <Search
@@ -173,6 +175,7 @@ export function ProdutoRecebimentoAutocomplete({
           aria-controls={listId}
           aria-autocomplete="list"
           className="pl-8"
+          style={{ paddingLeft: '2rem', paddingRight: selecionado ? '7rem' : undefined }}
           onChange={(e) => {
             if (selecionado) onChange?.(null)
             setSelecionado(null)
@@ -204,7 +207,7 @@ export function ProdutoRecebimentoAutocomplete({
         <ul
           id={listId}
           role="listbox"
-          className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] py-1 shadow-lg"
+          className="relative z-20 mt-2 max-h-64 w-full overflow-auto rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] py-1 shadow-lg"
         >
           {/* Estados de aviso não são escolhas: `role="presentation"` evita que
               o leitor de tela os anuncie como opções da lista. */}
