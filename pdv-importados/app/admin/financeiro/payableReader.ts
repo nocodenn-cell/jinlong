@@ -113,6 +113,13 @@ function payableTable(supabase: SupabaseClient) {
   return supabase.from('contas_pagar')
 }
 
+export function readPayablePayments(supabase: SupabaseClient, contaId: string, lojaId: string) {
+  return supabase.from('contas_pagar_pagamentos')
+    .select('id, valor, forma_pagamento, data_pagamento, operacao_tipo, conta:contas_pagar!inner(loja_id)')
+    .eq('conta_id', contaId).eq('conta.loja_id', lojaId)
+    .order('data_pagamento', { ascending: false }).limit(100)
+}
+
 export function readNfePayables(supabase: SupabaseClient, lojaId: string) {
   return payableTable(supabase)
     .select('nfe_importacao_id, valor_total, valor_pago, vencimento, fornecedor_id, status')

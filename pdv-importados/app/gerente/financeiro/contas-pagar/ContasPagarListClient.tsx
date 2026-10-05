@@ -7,6 +7,7 @@ import { Download, Plus, FileText, XCircle, DollarSign, FilterX } from 'lucide-r
 import { CrudListShell, MetricCard, PageActions } from '@/components/ui/admin-v2'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { DragonModal } from '@/components/ui/DragonModal'
+import { ContaPagarDetalhe } from './ContaPagarDetalhe'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input, SearchInput, Select } from '@/components/ui/forms'
@@ -113,6 +114,8 @@ export function ContasPagarListClient({
   const [periodo, setPeriodo] = useState(periodoInicial)
 
   const [emPagamento, setEmPagamento] = useState<ContaPagarRow | null>(null)
+  const [detalheId, setDetalheId] = useState<string | null>(null)
+  const detalhe = contas.find((c) => c.id === detalheId)
 
   // G-10: modal do app em vez de window.prompt() nativo pro motivo de cancelamento.
   const [cancelandoAlvo, setCancelandoAlvo] = useState<ContaPagarRow | null>(null)
@@ -311,14 +314,16 @@ export function ContasPagarListClient({
         key: 'fornecedor',
         header: m.contas_pagar.col_fornecedor,
         priority: 'primary',
-        cell: (c) => <span className="font-medium text-fg">{c.fornecedor_nome ?? '—'}</span>,
+        cell: (c) => <button type="button" className="fp-focus-ring text-left font-medium text-fg underline"
+          onClick={() => setDetalheId(c.id)}>{c.fornecedor_nome ?? '—'}</button>,
       },
       {
         key: 'descricao',
         header: m.contas_pagar.col_descricao,
         cell: (c) => (
           <div>
-            <div className="font-medium text-fg">{c.descricao}</div>
+            <button type="button" className="fp-focus-ring text-left font-medium text-fg underline"
+              onClick={() => setDetalheId(c.id)}>{c.descricao || c.nfe_numero || c.id}</button>
             <div className="mt-0.5 text-caption text-fg-subtle">
               {m.contas_pagar.lancado_em} {fmtGerenteDateTime(c.criado_em, locale)}
             </div>
@@ -433,7 +438,7 @@ export function ContasPagarListClient({
 
   return (
     <>
-      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label={m.contas_pagar.kpi_em_aberto}
           value={fmtGerenteBRL(kpis.totalAbertos, locale)}
@@ -465,16 +470,17 @@ export function ContasPagarListClient({
       </div>
 
       <CrudListShell
+        className="mb-6"
         toolbar={
           <>
-            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
               <div className="min-w-[200px] flex-1 sm:max-w-md">
                 <SearchInput
                   value={termo}
                   onChange={(e) => setTermo(e.target.value)}
                   placeholder={m.contas_pagar.placeholder_busca}
                   aria-label={m.contas_pagar.placeholder_busca}
-                  controlSize="sm"
+                  controlSize="default"
                 />
               </div>
               <Input
@@ -482,15 +488,15 @@ export function ContasPagarListClient({
                 value={periodo}
                 onChange={(e) => setPeriodo(e.target.value)}
                 aria-label={m.contas_pagar.filtro_periodo}
-                controlSize="sm"
-                className="h-9 w-auto tabular-nums"
+                controlSize="default"
+                className="w-full tabular-nums sm:w-auto"
               />
               <Select
                 value={fornecedorId}
                 onChange={(e) => setFornecedorId(e.target.value)}
                 aria-label={m.contas_pagar.filtro_fornecedor}
-                controlSize="sm"
-                className="h-9 min-w-[180px]"
+                controlSize="default"
+                className="w-full sm:min-w-[220px] sm:w-auto"
               >
                 <option value="">{m.contas_pagar.todos_fornecedores}</option>
                 {fornecedoresOpts.map((f) => (
@@ -549,9 +555,8 @@ export function ContasPagarListClient({
           data={contas}
           rowKey={(c) => c.id}
           loading={loading}
-          compact
           emptyState={emptyState}
-          className="rounded-none border-x-0 border-b-0"
+          className="rounded-none border-x-0 border-b-0 [&_table]:min-w-[760px] [&_td]:text-sm [&_th]:text-sm [&_td]:py-4"
           rowActions={(c) => {
             const statusPagavel = c.status !== 'PAGO' && c.status !== 'CANCELADO'
             const foraDaLoja = actorLojaId != null && c.loja_id !== actorLojaId
@@ -594,6 +599,11 @@ export function ContasPagarListClient({
           }}
         />
       </CrudListShell>
+
+      {detalhe ? <ContaPagarDetalhe conta={detalhe} idioma={idioma} locale={locale}
+        podePagar={!['PAGO', 'CANCELADO'].includes(detalhe.status) && (actorLojaId === null || detalhe.loja_id === actorLojaId)}
+        onClose={() => setDetalheId(null)}
+        onPagamento={() => { setDetalheId(null); setEmPagamento(detalhe) }} /> : null}
 
       {emPagamento ? (
         <PagamentoModal

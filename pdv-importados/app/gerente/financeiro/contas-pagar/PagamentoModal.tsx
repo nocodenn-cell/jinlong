@@ -224,7 +224,7 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
     >
         <form id="pg-form" onSubmit={submeter} className="space-y-4 pb-1">
             {/* Resumo */}
-            <div className="grid grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div className="rounded-lg app-border border bg-jl-surface-soft px-3 py-2.5">
                 <div className="text-[9px] font-bold uppercase tracking-[0.12em] text-jl-fg-3">{m.contas_pagar.modal_total}</div>
                 <div className="mt-1 text-sm font-bold tabular-nums text-jl-fg-1">{fmtGerenteBRL(conta.valor_total, locale)}</div>

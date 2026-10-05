@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 import { createPayablePaymentService } from '@/app/admin/financeiro/payablePayment'
-import { createPayableReader } from '@/app/admin/financeiro/payableReader'
+import { createPayableReader, readPayablePayments } from '@/app/admin/financeiro/payableReader'
 import type { FormaPagamentoPagar, PayableTitle } from '@shared-core/src/financial'
 import { hojeYmd, isTituloVencido } from '@shared-core/src/financial'
 
@@ -30,6 +30,26 @@ export type ContaPagarRow = {
 
 /** Fonte única: `shared-core/src/financial/types` (`FormaPagamentoPagar`). */
 export type FormaPagamento = FormaPagamentoPagar
+
+export type PagamentoContaRow = { id: string; valor: number; forma: string; data: string; tipo: string }
+
+export async function listarPagamentosContaAction(contaId: string): Promise<
+  { ok: true; pagamentos: PagamentoContaRow[] } | { ok: false; error: string }
+> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { ok: false, error: auth.error }
+  if (!auth.session.lojaId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(contaId)) return { ok: false, error: 'Conta ou loja inválida.' }
+  try {
+    const { data, error } = await readPayablePayments(await createClient(), contaId, auth.session.lojaId)
+    if (error) return { ok: false, error: mensagemErroComSecao('Histórico de pagamentos', error.message) }
+    return { ok: true, pagamentos: (data ?? []).map((p) => ({
+      id: p.id, valor: Number(p.valor), forma: p.forma_pagamento, data: p.data_pagamento,
+      tipo: p.operacao_tipo ?? 'PAGAMENTO',
+    })) }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Não foi possível carregar os pagamentos.' }
+  }
+}
 
 const COLUMNS = `
   id, fornecedor_id, favorecido, descricao, valor_total, valor_pago, vencimento,
