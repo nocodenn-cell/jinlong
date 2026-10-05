@@ -147,6 +147,7 @@ export function FinanceiroContent({
 
       {activeTab === 'pagar' ? (
         <ContasPagarListClient
+          somenteCaixa
           idioma={contasPagar.idioma}
           locale={contasPagar.locale}
           contasIniciais={contasPagar.contasIniciais}

@@ -24,7 +24,7 @@ export function FinanceiroDespesaForm({ data }: { data: FinanceiroPainel }) {
 
 export function FinanceiroTitulosOperations({ data, tipo }: { data: FinanceiroPainel; tipo: 'AP' | 'AR' }) {
  const titulos = (tipo === 'AP' ? data.pagar : data.receber).filter(t => !['PAGO','QUITADO','CANCELADO'].includes(t.status))
- return <div className="admin-v2-stack">
+ return <div id="baixa-conta-financeira" className="admin-v2-stack">
   {tipo === 'AP' ? <FinanceiroDespesaForm data={data} /> : null}
   <FinanceiroForm title={tipo === 'AP' ? 'Pagar pela conta financeira' : 'Receber na conta financeira'} tipo={tipo === 'AP' ? 'BAIXAR_AP' : 'BAIXAR_AR'}>
    <Field name="titulo_id" label="Título desta página"><option value="">Selecione</option>{titulos.map(t => <option key={t.id} value={t.id}>{t.nome} · {t.descricao} · {formatBRL(t.valor_aberto ?? t.valor_total - (t.valor_pago ?? 0))}</option>)}</Field>

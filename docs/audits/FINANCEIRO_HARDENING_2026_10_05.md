@@ -200,21 +200,32 @@ Referências oficiais consultadas: [RLS](https://supabase.com/docs/guides/databa
 
 ## Validação e entrega
 
+Revisão final dos botões de baixa encontrou outro P0: os formulários antigos
+permitiam PIX/cartão sem `conta_financeira_id`, quitando o título sem gerar o
+journal bancário. No hub, esses formulários agora oferecem somente dinheiro no
+caixa físico. As demais formas usam “Pagar pela conta financeira” / “Receber na
+conta financeira”, que exigem conta e executam BAIXAR_AP/BAIXAR_AR. A autorização
+da sangria e o escritor original do caixa permanecem preservados. As RPCs antigas
+continuam compatíveis; esta correção limita o caminho diário da interface, não
+proíbe métodos históricos na API. Dois testes de comportamento verificam essa
+separação e o envio em dinheiro. Não cadastrar baixa bancária avulsa novamente
+para um título já pago pelo formulário de conta.
+
 | Verificação local | Resultado |
 |---|---|
 | `test:financeiro-loja` | 14/14 aprovados, incluindo 80 combinações de ACL, tentativas reais e os valores obrigatórios |
 | Interface e contratos relacionados | 17/17 aprovados; quatro são os testes novos de fiscal/nav/primeiro uso PT/zh |
-| Suíte web completa | Primeira execução: 2.009 aprovados e integração de produto com chave placeholder inválida. Reexecução: 2.007 aprovados, contrato textual das abas corrigido e timeout de dashboard que passou isoladamente. Nova execução completa/CI necessária; não declarar verde integral |
+| Suíte web completa | Execução final local: 321 arquivos e 2.009 testes aprovados, sete testes ignorados. Uma suíte de integração de produtos falhou por chave placeholder inválida (`Expected 3 parts in JWT; got 1`). URL apontada somente ao Supabase local. CI web acompanhado separadamente |
 | Tipos | Aprovado |
 | Lint | Aprovado, um aviso anterior de `any` em E2E de atalhos |
 | `guard:all` | Aprovado, um aviso anterior de cadastro inline de fornecedor |
-| Build | Build local aprovado; reexecução final em acompanhamento |
-| Gate financeiro completo | Instalação anterior: 29/31 suítes aprovadas; as duas falhas também reproduzidas com arquivos de main. Com migrations dentro de transações: 24/26 SQL aprovados, incluindo novo teste cash/PDV completo e AP/AR. Fixtures antigas foram isoladas; execução final interrompida por Docker indisponível, ainda exige CI completo |
+| Build | Build local aprovado; nova execução após ajuste dos botões de baixa em acompanhamento |
+| Gate financeiro completo | CI backend no commit d6c8a79: Supabase local gates aprovado, incluindo reset de todas as migrations, gate financeiro completo, teste novo cash/PDV, AP/AR, fixtures isoladas, RLS SQL/REST, types drift e concorrência. [Execução verificável](https://github.com/nocodenn-cell/fastproduct/actions/runs/37326529424/job/111818594784). Falhas iniciais locais e indisponibilidade posterior de Docker não substituem esse resultado |
 | Edge | Sync e validar-gerente aprovados; fiscal-worker aprovado com Deno temporário2.9.6. `npm run check` com Deno2.2.2 falha por lockfile v5 preexistente; nenhuma dependência/lockfile alterada |
 | Advisor / drift remoto | Leitura documentada acima; 19 pendências anteriores mais esta migration nova não aplicada. Não dispensar o gate |
 
 O teste SQL novo foi registrado no runner do gate financeiro, portanto o CI
-deve executá-lo na instalação completa, além do PGlite. As transações do harness
+executou-o na instalação completa, além do PGlite. As transações do harness
 local foram desfeitas; nem a migration financeira anterior foi persistida nessa
 instalação local durante o teste. Não confundir falha de infraestrutura com teste
 aprovado. A PR permanece para revisão e sem merge.
@@ -224,6 +235,7 @@ Arquivos alterados:
 - Banco: `backend/supabase/migrations/20261005091218_financeiro_hardening_final.sql`.
 - Banco/testes: `backend/scripts/test-financeiro-loja.mjs`, `financeiro-hardening-full-schema.test.sql`, `run-financial-tests.mjs`, `ap-payments-reconciliation.test.sql`, `sale-totals-invariant.test.sql`, `financial-adversarial-gates.test.sql`.
 - Interface: `pdv-importados/app/admin/financeiro/_components/FinanceiroContent.tsx`, `FinanceiroWorkspace.tsx`, `FinanceiroPrimeiroUso.tsx`, `financeiroTabs.ts`, `FinanceiroHardening.behavior.test.tsx`.
+- Baixas: `FinanceiroReceberExtras.tsx`, `FinanceiroTitulosOperations.tsx`, `FinanceiroReceberExtras.estorno.behavior.test.tsx` no mesmo diretório; `pdv-importados/app/gerente/financeiro/contas-pagar/ContasPagarListClient.tsx`, `PagamentoModal.tsx`, `PagamentoModal.movimentacaoCaixaId.behavior.test.tsx`.
 - Navegação: `pdv-importados/components/ui/admin-v2/AdminHubTabNav.tsx`, `pdv-importados/lib/navigation/financeiroTabId.ts`.
 - Idiomas: `pdv-importados/src/lib/i18n/pt.json`, `zh.json`.
 - Documentação: este relatório, `docs/financeiro-loja.md`, `docs/architecture/GO_LIVE_FINANCEIRO_FISCAL.md`.

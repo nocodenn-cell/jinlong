@@ -12,10 +12,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const estornarLiquidacaoReceberMock = vi.fn()
 const listarLiquidacoesReceberMock = vi.fn()
+const liquidarTituloMock = vi.fn()
 
 vi.mock('@/app/gerente/financeiro/actions', () => ({
   criarTituloReceber: vi.fn(),
-  liquidarTitulo: vi.fn(),
+  liquidarTitulo: (...args: unknown[]) => liquidarTituloMock(...args),
   listarLiquidacoesReceber: (...args: unknown[]) => listarLiquidacoesReceberMock(...args),
   estornarLiquidacaoReceber: (...args: unknown[]) => estornarLiquidacaoReceberMock(...args),
 }))
@@ -97,6 +98,16 @@ async function abrirHistorico() {
 }
 
 describe('FinanceiroReceberExtras — modal de estorno (N-02)', () => {
+  it('o formulário físico oferece só dinheiro e encaminha baixa bancária à conta de destino', async () => {
+    liquidarTituloMock.mockResolvedValue({ success: true })
+    render()
+    expect(Array.from(container.querySelectorAll('select[name="forma"] option')).map(o => (o as HTMLOptionElement).value)).toEqual(['DINHEIRO'])
+    expect(container.querySelector('a[href="#baixa-conta-financeira"]')?.textContent).toBe('Receber na conta financeira')
+    await act(async () => {
+      container.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+    })
+    expect(liquidarTituloMock).toHaveBeenCalledWith(expect.objectContaining({ titulo_id: 'titulo-1', valor: 40, forma_pagamento: 'DINHEIRO' }))
+  })
   it('clicar em Estornar abre um modal do app, nunca window.prompt', async () => {
     render()
     await abrirHistorico()
@@ -186,7 +197,7 @@ describe('FinanceiroReceberExtras — card de liquidação (UX-005)', () => {
     render()
     const select = container.querySelector('select[name="forma"]') as HTMLSelectElement
     const opts = Array.from(select.options)
-    expect(opts.map((o) => o.value)).toEqual(['DINHEIRO', 'PIX', 'CARTAO_DEBITO', 'CARTAO_CREDITO'])
+    expect(opts.map((o) => o.value)).toEqual(['DINHEIRO'])
     for (const o of opts) {
       expect(o.textContent).not.toMatch(/CARTAO_|^[A-Z_]{4,}$/)
     }
