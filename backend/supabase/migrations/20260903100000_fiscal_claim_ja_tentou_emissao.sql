@@ -190,12 +190,14 @@ BEGIN
     INSERT INTO public.vendas (id, operador_id, total_bruto, total_desconto, total_liquido, forma_pagamento, status)
     VALUES (v_venda_id, v_uid, 10, 0, 10, 'DINHEIRO', 'CONCLUIDA');
 
-    INSERT INTO public.documentos_fiscais_pendentes (venda_id, tipo_doc, status, payload)
-    VALUES (v_venda_id, 'NFC_E_STUB', 'PENDENTE', '{}'::jsonb)
+    -- O documento sintético deve ser o primeiro mesmo em uma fila já populada.
+    -- Claim de um único item evita reclamar documentos reais no autoteste.
+    INSERT INTO public.documentos_fiscais_pendentes (venda_id, tipo_doc, status, payload, created_at)
+    VALUES (v_venda_id, 'NFC_E_STUB', 'PENDENTE', '{}'::jsonb, '-infinity'::timestamptz)
     RETURNING id INTO v_doc_id;
 
     -- 1º claim: primeira vez, nunca reclamado antes.
-    SELECT * INTO v_row FROM public.fiscal_claim_documentos(10) WHERE id = v_doc_id;
+    SELECT * INTO v_row FROM public.fiscal_claim_documentos(1) WHERE id = v_doc_id;
     IF v_row.id IS NULL THEN
       RAISE EXCEPTION 'C2_9_P01_PRIMEIRO_CLAIM_NAO_RETORNOU_DOCUMENTO';
     END IF;
@@ -230,7 +232,7 @@ BEGIN
     -- 2º claim, pós-reprocessamento: tentativas=0 (reset), mas
     -- ja_tentou_emissao_antes TEM que continuar TRUE — é exatamente o
     -- bypass que este fix fecha.
-    SELECT * INTO v_row FROM public.fiscal_claim_documentos(10) WHERE id = v_doc_id;
+    SELECT * INTO v_row FROM public.fiscal_claim_documentos(1) WHERE id = v_doc_id;
     IF v_row.id IS NULL THEN
       RAISE EXCEPTION 'C2_9_P01_SEGUNDO_CLAIM_NAO_RETORNOU_DOCUMENTO';
     END IF;
