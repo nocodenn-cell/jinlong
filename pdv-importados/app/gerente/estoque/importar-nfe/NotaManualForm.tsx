@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/forms'
 import { formatBRL, parseBRL } from '@/lib/format/money'
 import { emitGerenteToast } from '@/lib/gerente/toast'
+import { hojeYmd } from '@shared-core/src/financial/policies/tituloVencido'
 import type { getMessages } from '@/i18n/getMessages'
 import { previewNotaManualNfe, type LinhaPreviewNfe } from './actions'
 import type { NfeParsed } from '@/lib/nfe/nfeParser'
@@ -25,6 +26,19 @@ type ParcelaForm = { venc: string; valor: string }
 
 const itemVazio = (): ItemForm => ({ nome: '', ref: '', gtin: '', ncm: '', un: 'UN', qtd: '1', valor: '' })
 
+const CONDICOES: Array<{ label: string; dias: number[] }> = [
+  { label: 'À vista', dias: [0] },
+  { label: '30 dias', dias: [30] },
+  { label: '30 / 60 dias', dias: [30, 60] },
+  { label: '30 / 60 / 90 dias', dias: [30, 60, 90] },
+]
+
+function somaDias(ymd: string, dias: number): string {
+  const [y, m, d] = ymd.split('-').map(Number)
+  const dt = new Date(Date.UTC(y, m - 1, d + dias))
+  return dt.toISOString().slice(0, 10)
+}
+
 function toNumber(raw: string): number {
   const n = Number(raw.replace(',', '.'))
   return Number.isFinite(n) ? n : 0
@@ -44,6 +58,9 @@ export function NotaManualForm({ mi, onPreview }: Props) {
   const [numero, setNumero] = useState('')
   const [serie, setSerie] = useState('')
   const [chave, setChave] = useState('')
+  const [emissao, setEmissao] = useState(hojeYmd())
+  const [frete, setFrete] = useState('')
+  const [desconto, setDesconto] = useState('')
   const [itens, setItens] = useState<ItemForm[]>([itemVazio()])
   const [parcelas, setParcelas] = useState<ParcelaForm[]>([])
 
@@ -53,8 +70,25 @@ export function NotaManualForm({ mi, onPreview }: Props) {
     setParcelas((rows) => rows.map((r, i) => (i === idx ? { ...r, ...patch } : r)))
 
   const totalItens = itens.reduce((s, i) => s + toNumber(i.qtd) * (parseBRL(i.valor) ?? 0), 0)
+  const totalNota = totalItens + (parseBRL(frete) ?? 0) - (parseBRL(desconto) ?? 0)
   const totalParcelas = parcelas.reduce((s, p) => s + (parseBRL(p.valor) ?? 0), 0)
-  const parcelasDiferem = parcelas.length > 0 && Math.abs(totalParcelas - totalItens) > 0.01
+  const parcelasDiferem = parcelas.length > 0 && Math.abs(totalParcelas - totalNota) > 0.01
+
+  function gerarParcelas(idx: number) {
+    const cond = CONDICOES[idx]
+    if (!cond || totalNota <= 0) {
+      emitGerenteToast({ kind: 'error', message: 'Informe os itens antes de gerar as parcelas.' })
+      return
+    }
+    const centavos = Math.round(totalNota * 100)
+    const base = Math.floor(centavos / cond.dias.length)
+    setParcelas(
+      cond.dias.map((d, i) => {
+        const c = i === cond.dias.length - 1 ? centavos - base * (cond.dias.length - 1) : base
+        return { venc: somaDias(emissao, d), valor: (c / 100).toFixed(2).replace('.', ',') }
+      }),
+    )
+  }
 
   if (!aberto) {
     return (
@@ -131,6 +165,10 @@ export function NotaManualForm({ mi, onPreview }: Props) {
           {mi.manual_chave}
           <Input value={chave} inputMode="numeric" onChange={(e) => setChave(e.target.value)} />
         </label>
+        <label className="text-caption">
+          Data de emissão
+          <Input type="date" value={emissao} onChange={(e) => setEmissao(e.target.value)} />
+        </label>
       </div>
 
       <div className="space-y-2">
@@ -191,8 +229,43 @@ export function NotaManualForm({ mi, onPreview }: Props) {
         </div>
       </div>
 
+      <div className="grid grid-cols-2 gap-3 rounded-lg bg-[var(--color-surface-soft)] p-3 md:grid-cols-4">
+        <div className="text-caption">
+          Valor dos produtos
+          <p className="mt-1 text-body font-semibold tabular-nums">{formatBRL(totalItens)}</p>
+        </div>
+        <label className="text-caption">
+          Frete (R$)
+          <Input value={frete} inputMode="decimal" placeholder="0,00" onChange={(e) => setFrete(e.target.value)} />
+        </label>
+        <label className="text-caption">
+          Desconto (R$)
+          <Input value={desconto} inputMode="decimal" placeholder="0,00" onChange={(e) => setDesconto(e.target.value)} />
+        </label>
+        <div className="text-caption">
+          Valor total da nota
+          <p className="mt-1 text-body font-semibold tabular-nums">{formatBRL(totalNota)}</p>
+        </div>
+      </div>
+
       <div className="space-y-2">
         <p className="text-caption font-semibold text-fg-muted">{mi.manual_parcelas}</p>
+        <label className="block text-caption">
+          Condição de pagamento
+          <select
+            className="app-select mt-1 w-full rounded-lg px-3 py-2 text-sm"
+            defaultValue=""
+            onChange={(e) => {
+              if (e.target.value !== '') gerarParcelas(Number(e.target.value))
+              e.target.value = ''
+            }}
+          >
+            <option value="">Escolha para gerar as parcelas…</option>
+            {CONDICOES.map((c, i) => (
+              <option key={c.label} value={i}>{c.label}</option>
+            ))}
+          </select>
+        </label>
         {parcelas.map((p, idx) => (
           <div key={idx} className="grid grid-cols-[1fr_1fr_auto] items-end gap-2">
             <label className="text-caption">

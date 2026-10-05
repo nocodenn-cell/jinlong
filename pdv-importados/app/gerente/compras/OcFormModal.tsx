@@ -8,9 +8,11 @@ import { emitGerenteToast } from '@/lib/gerente/toast'
 import { cn } from '@/lib/utils'
 import { hojeYmd } from '@shared-core/src/financial/policies/tituloVencido'
 import { formatBRL, formatDecimalBRL, parseBRL } from '@/lib/format/money'
+import { fmtGerenteIdCurto } from '@/lib/format/gerenteValues'
 import {
   criarOrdemCompra,
   atualizarOrdemCompra,
+  atualizarStatusOC,
   type OcDetalheDTO,
 } from './actions'
 
@@ -129,7 +131,7 @@ export function OcFormModal({
     )
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent, confirmar = false) {
     e.preventDefault()
     if (isPending) return
 
@@ -168,6 +170,19 @@ export function OcFormModal({
           emitGerenteToast({ kind: 'error', message: result.error })
           return
         }
+        // "Salvar e confirmar": só um pedido confirmado aparece para receber/vincular à nota.
+        if (confirmar && (!editando || ocInicial!.status === 'RASCUNHO')) {
+          const ocId = editando ? ocInicial!.id : (result.data as string)
+          const conf = await atualizarStatusOC(ocId, 'CONFIRMADA')
+          if (!conf.success) {
+            emitGerenteToast({ kind: 'error', message: conf.error })
+            onSaved()
+            return
+          }
+          emitGerenteToast({ kind: 'success', message: 'Pedido salvo e confirmado.' })
+          onSaved()
+          return
+        }
         emitGerenteToast({ kind: 'success', message: editando ? c.toast_atualizada : c.toast_criada })
         onSaved()
       } catch {
@@ -192,6 +207,11 @@ export function OcFormModal({
         <div className="flex items-center justify-between border-b border-jl-border-1 px-5 py-3.5">
           <h2 className="text-base font-semibold app-surface-text">
             {editando ? c.modal_editar_titulo : c.modal_nova_titulo}
+            {editando ? (
+              <span className="ml-2 font-mono text-xs font-normal text-jl-fg-3">
+                Pedido nº {fmtGerenteIdCurto(ocInicial!.id)}
+              </span>
+            ) : null}
           </h2>
           <button
             type="button"
@@ -397,6 +417,18 @@ export function OcFormModal({
             </button>
           </div>
 
+          {/* Resumo do pedido */}
+          <div className="rounded-lg border border-jl-border-1 bg-white/[0.03] px-4 py-3 text-sm">
+            <div className="flex items-center justify-between text-jl-fg-3">
+              <span>Subtotal ({itens.length} {itens.length === 1 ? 'item' : 'itens'})</span>
+              <span className="tabular-nums">{fmtTotal(itens)}</span>
+            </div>
+            <div className="mt-1 flex items-center justify-between font-semibold text-amber-300">
+              <span>Total do pedido</span>
+              <span className="tabular-nums">{fmtTotal(itens)}</span>
+            </div>
+          </div>
+
           {/* Footer */}
           <div className="flex items-center justify-end gap-2 border-t border-jl-border-1 pt-4">
             <button
@@ -414,6 +446,16 @@ export function OcFormModal({
             >
               {isPending ? m.comum.salvando : m.comum.salvar}
             </button>
+            {!editando || ocInicial!.status === 'RASCUNHO' ? (
+              <button
+                type="button"
+                onClick={(e) => handleSubmit(e as unknown as React.FormEvent, true)}
+                disabled={isPending}
+                className="inline-flex min-w-[170px] items-center justify-center rounded-lg border border-amber-500 px-4 py-2 text-sm font-semibold text-amber-300 transition hover:bg-amber-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isPending ? m.comum.salvando : 'Salvar e confirmar pedido'}
+              </button>
+            ) : null}
           </div>
         </form>
       </div>
