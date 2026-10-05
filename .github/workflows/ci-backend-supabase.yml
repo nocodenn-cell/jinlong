@@ -61,6 +61,9 @@ jobs:
       - name: Install dependencies (workspace root)
         run: npm ci
 
+      - name: Financial store ledger regression (PostgreSQL in memory)
+        run: npm run test:financeiro-loja -w fastproduct-backend
+
       - name: Enforce seed password secret for internal PRs
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
         env:
