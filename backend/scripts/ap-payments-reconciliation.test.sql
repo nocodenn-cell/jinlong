@@ -62,31 +62,39 @@ SELECT set_config('test.fornecedor', :'fornecedor', true);
 SELECT set_config('test.caixa', :'caixa', true);
 SELECT set_config('test.closed_cash', :'closed_cash', true);
 SELECT set_config('test.other_cash', :'other_cash', true);
+
+-- Dados de teste são preparados pelo proprietário. O usuário autenticado
+-- pode pagar via RPC, mas não criar/reescrever AP diretamente pela API.
+SELECT gen_random_uuid() AS total_pix, gen_random_uuid() AS partial,
+       gen_random_uuid() AS cash, gen_random_uuid() AS retry,
+       gen_random_uuid() AS rollback_account, gen_random_uuid() AS reuse \gset
+INSERT INTO public.contas_pagar(id, fornecedor_id, loja_id, vencimento, valor_total, valor_pago, descricao)
+VALUES
+ (:'total_pix', :'fornecedor', :'loja', current_date, 10, 0, 'PIX total'),
+ (:'partial', :'fornecedor', :'loja', current_date, 20, 0, 'Parciais'),
+ (:'cash', :'fornecedor', :'loja', current_date, 10.01, 0, 'Dinheiro'),
+ (:'retry', :'fornecedor', :'loja', current_date, 10, 0, 'Retry'),
+ (:'rollback_account', :'fornecedor', :'loja', current_date, 10, 0, 'Rollback'),
+ (:'reuse', :'fornecedor', :'loja', current_date, 10, 0, 'Reuse');
+SELECT set_config('test.total_pix', :'total_pix', true), set_config('test.partial', :'partial', true),
+ set_config('test.cash', :'cash', true), set_config('test.retry', :'retry', true),
+ set_config('test.rollback_account', :'rollback_account', true), set_config('test.reuse', :'reuse', true);
 SET LOCAL ROLE authenticated;
 
 DO $test$
 DECLARE
-  v_total_pix uuid := gen_random_uuid();
-  v_partial uuid := gen_random_uuid();
-  v_cash uuid := gen_random_uuid();
-  v_retry uuid := gen_random_uuid();
-  v_rollback uuid := gen_random_uuid();
-  v_reuse uuid := gen_random_uuid();
+  v_total_pix uuid := current_setting('test.total_pix')::uuid;
+  v_partial uuid := current_setting('test.partial')::uuid;
+  v_cash uuid := current_setting('test.cash')::uuid;
+  v_retry uuid := current_setting('test.retry')::uuid;
+  v_rollback uuid := current_setting('test.rollback_account')::uuid;
+  v_reuse uuid := current_setting('test.reuse')::uuid;
   v_r record;
   v_before numeric;
   v_expected_before numeric;
   v_mov uuid;
   v_count bigint;
 BEGIN
-  INSERT INTO public.contas_pagar(id, fornecedor_id, loja_id, vencimento, valor_total, valor_pago, descricao)
-  VALUES
-    (v_total_pix, current_setting('test.fornecedor')::uuid, current_setting('test.loja')::uuid, current_date, 10, 0, 'PIX total'),
-    (v_partial, current_setting('test.fornecedor')::uuid, current_setting('test.loja')::uuid, current_date, 20, 0, 'Parciais'),
-    (v_cash, current_setting('test.fornecedor')::uuid, current_setting('test.loja')::uuid, current_date, 10.01, 0, 'Dinheiro'),
-    (v_retry, current_setting('test.fornecedor')::uuid, current_setting('test.loja')::uuid, current_date, 10, 0, 'Retry'),
-    (v_rollback, current_setting('test.fornecedor')::uuid, current_setting('test.loja')::uuid, current_date, 10, 0, 'Rollback'),
-    (v_reuse, current_setting('test.fornecedor')::uuid, current_setting('test.loja')::uuid, current_date, 10, 0, 'Reuse');
-
   -- Total and partial non-physical payments never change the drawer.
   SELECT saldo_atual INTO v_before FROM public.caixas WHERE id = current_setting('test.caixa')::uuid;
   SELECT * INTO v_r FROM public.registrar_pagamento_contas_pagar(

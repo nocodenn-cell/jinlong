@@ -1,5 +1,9 @@
 # Go-Live — inventário Financeiro + Fiscal
 
+> Registro histórico da entrega de 19/07/2026. A restrição “AP somente NF-e”
+> descreve aquela versão; a operação atual também inclui despesas manuais e
+> recorrentes. Consulte [Financeiro para a loja](../financeiro-loja.md).
+
 | Campo | Valor |
 |--------|--------|
 | **PR** | [#220](https://github.com/nocodenn-cell/fastproduct/pull/220) |

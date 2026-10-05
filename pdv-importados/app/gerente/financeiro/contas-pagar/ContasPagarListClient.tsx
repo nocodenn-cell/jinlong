@@ -44,6 +44,7 @@ type Props = Readonly<{
   fornecedorInicial?: string
   /** Loja do ator autenticado — `registrar_pagamento_contas_pagar` rejeita pagamento cross-loja para todos os perfis. */
   actorLojaId?: string | null
+  somenteCaixa?: boolean
 }>
 
 const STATUS_LIST = ['todos', 'pendente', 'parcial', 'atrasado', 'pago', 'cancelado'] as const
@@ -98,6 +99,7 @@ export function ContasPagarListClient({
   periodoInicial,
   fornecedorInicial = '',
   actorLojaId = null,
+  somenteCaixa = false,
 }: Props) {
   const m = getMessages(idioma)
   const [contas, setContas] = useState<ContaPagarRow[]>(contasIniciais)
@@ -595,6 +597,7 @@ export function ContasPagarListClient({
 
       {emPagamento ? (
         <PagamentoModal
+          somenteCaixa={somenteCaixa}
           key={emPagamento.id}
           idioma={idioma}
           locale={locale}

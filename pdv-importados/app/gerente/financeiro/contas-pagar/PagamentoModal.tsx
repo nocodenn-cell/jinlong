@@ -26,6 +26,7 @@ type Props = Readonly<{
   conta: ContaPagarRow
   onClose: () => void
   onPagamentoRegistrado: (c: ContaPagarRow) => void
+  somenteCaixa?: boolean
 }>
 
 const FORMAS: Array<{ id: FormaPagamento; glyph: string }> = [
@@ -36,12 +37,12 @@ const FORMAS: Array<{ id: FormaPagamento; glyph: string }> = [
   { id: 'TRANSF', glyph: '↔' },
 ]
 
-export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegistrado }: Props) {
+export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegistrado, somenteCaixa = false }: Props) {
   const m = getMessages(idioma)
   const aberto = roundMoney2(conta.valor_total - conta.valor_pago)
 
   const [valor, setValor] = useState(formatDecimalBRL(aberto))
-  const [forma, setForma] = useState<FormaPagamento>('PIX')
+  const [forma, setForma] = useState<FormaPagamento>(somenteCaixa ? 'DINHEIRO' : 'PIX')
   // Dia civil da loja (Onda B): `toISOString()` virava "amanhã" entre 21h e 24h BRT.
   const [dataPag, setDataPag] = useState(() => hojeYmd())
   const [observacao, setObservacao] = useState('')
@@ -312,7 +313,7 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
                 {m.contas_pagar.modal_forma}<span className="ml-0.5 text-[color:var(--accent)]">*</span>
               </span>
               <div role="radiogroup" aria-label={m.contas_pagar.modal_forma} className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-                {FORMAS.map((f) => (
+                {FORMAS.filter(f => !somenteCaixa || f.id === 'DINHEIRO').map((f) => (
                   <button
                     key={f.id}
                     type="button"
@@ -332,6 +333,7 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
                   </button>
                 ))}
               </div>
+              {somenteCaixa ? <p className="mt-2 text-xs text-jl-fg-3">Este formulário paga em dinheiro pelo caixa físico. Para PIX, boleto, cartão ou transferência, feche esta janela e use Pagar pela conta financeira, selecionando a conta de origem.</p> : null}
             </div>
 
             {forma === 'DINHEIRO' ? (

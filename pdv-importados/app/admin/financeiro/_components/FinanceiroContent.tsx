@@ -4,6 +4,7 @@ import { Suspense, useState } from 'react'
 import type { FinanceiroPainel } from '../financeiroLojaTypes'
 import { FinanceiroTitulosOperations } from './FinanceiroTitulosOperations'
 import { FinanceiroPaginacao } from './FinanceiroWorkspace'
+import { FinanceiroPrimeiroUso } from './FinanceiroPrimeiroUso'
 import { SectionCard } from '@/components/ui/admin-v2'
 import { formatDateTimeOrDash } from '@/lib/format/datetime'
 import { ContasReceberTable, type ContaLinha, type ContasLabels } from './ContasReceberTable'
@@ -126,6 +127,7 @@ export function FinanceiroContent({
 
       {activeTab === 'receber' ? (
         <>
+          {financeiroData ? <FinanceiroPrimeiroUso semContas={financeiroData.contas.length === 0} /> : null}
           {kpiSection}
           {filterSection}
           <div className="admin-v2-stack">
@@ -139,15 +141,13 @@ export function FinanceiroContent({
                 actorLojaId={actorLojaId}
               />
             </SectionCard>
-            <SectionCard title={panelLabels.filaFiscal}>
-              <FiscalList fiscal={fiscal} labels={panelLabels} onSelect={setFiscalDetalheId} />
-            </SectionCard>
           </div>
         </>
       ) : null}
 
       {activeTab === 'pagar' ? (
         <ContasPagarListClient
+          somenteCaixa
           idioma={contasPagar.idioma}
           locale={contasPagar.locale}
           contasIniciais={contasPagar.contasIniciais}
