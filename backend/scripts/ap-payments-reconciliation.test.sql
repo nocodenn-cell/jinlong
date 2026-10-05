@@ -169,12 +169,14 @@ BEGIN
     RAISE EXCEPTION 'movement_reused';
   EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE '%PAGAMENTO_SANGRIA_CORRELACAO_EXISTENTE%' THEN RAISE; END IF; END;
 
-  -- A DB constraint proves one movement cannot be attached to a second payment.
+  -- O histórico só pode ser escrito pelas RPCs; o cliente não pode trocar o vínculo.
+  PERFORM set_config('test.total_pix_id', v_total_pix::text, true);
+  PERFORM set_config('test.retry_mov_id', v_mov::text, true);
   BEGIN
     UPDATE public.contas_pagar_pagamentos SET movimentacao_caixa_id = v_mov
     WHERE conta_id = v_total_pix;
-    RAISE EXCEPTION 'movement_linked_twice';
-  EXCEPTION WHEN unique_violation THEN NULL; END;
+    RAISE EXCEPTION 'payment_history_direct_update_allowed';
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
 
   -- Failure after drawer mutation rolls back movement, payment, title and drawer.
   SELECT saldo_atual INTO v_before FROM public.caixas WHERE id = current_setting('test.caixa')::uuid;
@@ -192,6 +194,16 @@ $test$;
 
 -- Two eligible drawers require explicit selection; no original-sale drawer is inferred.
 RESET ROLE;
+-- A unicidade continua protegendo o banco, inclusive para seu proprietário.
+DO $unique_link$
+BEGIN
+  BEGIN
+    UPDATE public.contas_pagar_pagamentos
+    SET movimentacao_caixa_id = current_setting('test.retry_mov_id')::uuid
+    WHERE conta_id = current_setting('test.total_pix_id')::uuid;
+    RAISE EXCEPTION 'movement_linked_twice';
+  EXCEPTION WHEN unique_violation THEN NULL; END;
+END $unique_link$;
 DELETE FROM public.caixas WHERE id = :'other_cash';
 SELECT gen_random_uuid() AS second_cash, gen_random_uuid() AS multi_cash_account \gset
 INSERT INTO public.caixas(id, operador_id, loja_id, status, valor_inicial)

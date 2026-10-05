@@ -15,6 +15,11 @@ function FinanceiroHubNavInner({ activeTab }: { activeTab: FinanceiroTabId }) {
   const ui = getMessages(idioma).admin_ui
   const labels = useMemo(
     () => ({
+      resumo: ui.hub_financeiro_resumo,
+      contas: ui.hub_financeiro_contas,
+      recebiveis: ui.hub_financeiro_recebiveis,
+      conciliacao: ui.hub_financeiro_conciliacao,
+      resultado: ui.hub_financeiro_resultado,
       receber: ui.hub_financeiro_receber,
       pagar: ui.hub_financeiro_pagar,
       fiscal: ui.hub_financeiro_fiscal,

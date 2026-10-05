@@ -61,6 +61,9 @@ jobs:
       - name: Install dependencies (workspace root)
         run: npm ci
 
+      - name: Financial store ledger regression (PostgreSQL in memory)
+        run: npm run test:financeiro-loja -w fastproduct-backend
+
       - name: Enforce seed password secret for internal PRs
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
         env:
@@ -93,6 +96,16 @@ jobs:
             exit 1
           fi
           psql "$PSQL_URL" -v ON_ERROR_STOP=1 -f supabase/scripts/smoke_rls_painel_gerente.sql
+
+      - name: Export database types for schema diagnostics
+        run: cd backend && npx supabase gen types typescript --local > ../database.types.generated.ts
+
+      - name: Upload database schema diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: database-types-local
+          path: database.types.generated.ts
+          retention-days: 3
 
       # Achado de code review (#337, P2): registrar este check só em
       # `test:financial` o deixava restrito ao guard de fork PR (mesma

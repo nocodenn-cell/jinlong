@@ -13,6 +13,10 @@ const FORN_ID = '11111111-2222-4333-8444-555555555555'
 const buscarContasPagarMock = vi.fn()
 const fornecedorLookupMock = vi.fn()
 
+vi.mock('./financeiroLojaActions', () => ({
+ carregarFinanceiroLoja: vi.fn(async () => ({ ok:false,error:'Banco novo ainda não instalado' })),
+}))
+
 vi.mock('@/lib/admin/auth/loadAdminContext', () => ({
   loadAdminContext: vi.fn(async () => ({ session: { idioma: 'pt', lojaId: 'loja-1' } })),
 }))

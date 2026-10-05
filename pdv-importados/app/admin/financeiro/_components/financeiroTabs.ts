@@ -16,12 +16,18 @@ import type { FinanceiroTabId } from '@/lib/navigation/financeiroTabId'
 export type { FinanceiroTabId }
 
 export const FINANCEIRO_TABS: ReadonlyArray<{ id: FinanceiroTabId; label: string }> = [
+  { id: 'resumo', label: 'Resumo' },
+  { id: 'contas', label: 'Contas e movimentos' },
+  { id: 'recebiveis', label: 'PIX e cartões' },
+  { id: 'conciliacao', label: 'Conciliação' },
+  { id: 'resultado', label: 'Resultado' },
   { id: 'receber', label: 'A receber' },
   { id: 'pagar', label: 'A pagar' },
   { id: 'fiscal', label: 'Fila fiscal' },
 ]
 
 export function parseFinanceiroTab(raw: string | undefined): FinanceiroTabId {
-  if (raw === 'pagar' || raw === 'fiscal') return raw
+  const tab = FINANCEIRO_TABS.find(t => t.id === raw)
+  if (tab) return tab.id
   return 'receber'
 }

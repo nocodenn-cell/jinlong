@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Edit2, Check, X } from 'lucide-react'
 import { SectionCard } from '@/components/ui/admin-v2'
@@ -23,6 +23,9 @@ export function CategoriasFinanceirasContent({ dados }: Props) {
   const [editingNome, setEditingNome] = useState('')
   const [creatingNew, setCreatingNew] = useState(false)
   const [newNome, setNewNome] = useState('')
+  const [newTipo, setNewTipo] = useState<'RECEITA'|'DESPESA'|'AMBOS'>('DESPESA')
+  const [editingTipo, setEditingTipo] = useState<'RECEITA'|'DESPESA'|'AMBOS'>('DESPESA')
+  useEffect(() => setRows(dados.rows), [dados.rows])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -31,7 +34,7 @@ export function CategoriasFinanceirasContent({ dados }: Props) {
     setLoading(true)
     setError(null)
     try {
-      const res = await criarCategoriaFinanceira({ nome: newNome })
+      const res = await criarCategoriaFinanceira({ nome: newNome, tipo: newTipo })
       if (!res.success) {
         setError(res.error)
         return
@@ -49,15 +52,16 @@ export function CategoriasFinanceirasContent({ dados }: Props) {
     setLoading(true)
     setError(null)
     try {
-      const res = await atualizarCategoriaFinanceira({ id, nome: editingNome })
+      const res = await atualizarCategoriaFinanceira({ id, nome: editingNome, tipo: editingTipo })
       if (!res.success) {
         setError(res.error)
         return
       }
       setRows((prev) =>
-        prev.map((r) => (r.id === id ? { ...r, nome: editingNome } : r))
+        prev.map((r) => (r.id === id ? { ...r, nome: editingNome, tipo: editingTipo } : r))
       )
       setEditingId(null)
+      router.refresh()
     } finally {
       setLoading(false)
     }
@@ -74,6 +78,7 @@ export function CategoriasFinanceirasContent({ dados }: Props) {
       setRows((prev) =>
         prev.map((r) => (r.id === id ? { ...r, ativo: !r.ativo } : r))
       )
+      router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao atualizar')
     }
@@ -87,6 +92,11 @@ export function CategoriasFinanceirasContent({ dados }: Props) {
       cell: (r) => (
         <span className="font-medium text-jl-fg-1">{r.nome}</span>
       ),
+    },
+    {
+      key: 'tipo',
+      header: 'Tipo',
+      cell: r => <span>{r.tipo}</span>,
     },
     {
       key: 'ativo',
@@ -107,15 +117,18 @@ export function CategoriasFinanceirasContent({ dados }: Props) {
       cell: (r) => (
         <div className="flex items-center gap-2">
           <button
+            aria-label={r.ativo ? `Desativar ${r.nome}` : `Ativar ${r.nome}`}
             onClick={() => handleToggleAtivo(r.id, r.ativo)}
             className="rounded px-2 py-1 text-[12px] text-jl-fg-2 transition-colors hover:bg-white/[0.04]"
           >
-            {r.ativo ? '✓' : '○'}
+            {r.ativo ? 'Desativar' : 'Ativar'}
           </button>
           <button
+            aria-label={`Editar ${r.nome}`}
             onClick={() => {
               setEditingId(r.id)
               setEditingNome(r.nome)
+              setEditingTipo(r.tipo)
             }}
             className="rounded p-1 text-jl-fg-3 transition-colors hover:bg-white/[0.04] hover:text-jl-fg-1"
           >
@@ -151,6 +164,7 @@ export function CategoriasFinanceirasContent({ dados }: Props) {
             <input
               type="text"
               value={newNome}
+              aria-label="Nome da nova categoria"
               onChange={(e) => setNewNome(e.target.value)}
               placeholder="Nome da categoria..."
               className="admin-v2-input flex-1 px-3 py-2 text-[12px] outline-none placeholder:text-jl-fg-3 focus:border-jl-accent/50"
@@ -159,14 +173,17 @@ export function CategoriasFinanceirasContent({ dados }: Props) {
                 if (e.key === 'Escape') setCreatingNew(false)
               }}
             />
+            <label className="grid gap-1 text-small">Tipo<select className="fp-control" value={newTipo} onChange={e => setNewTipo(e.target.value as typeof newTipo)}><option value="DESPESA">Despesa</option><option value="RECEITA">Receita</option><option value="AMBOS">Ambos</option></select></label>
             <button
               onClick={handleCreate}
+              aria-label="Salvar nova categoria"
               disabled={loading || !newNome.trim()}
               className="admin-v2-btn-primary disabled:opacity-50"
             >
               <Check size={14} />
             </button>
             <button
+              aria-label="Cancelar nova categoria"
               onClick={() => setCreatingNew(false)}
               className="admin-v2-btn-secondary"
             >
@@ -182,6 +199,7 @@ export function CategoriasFinanceirasContent({ dados }: Props) {
             <input
               type="text"
               value={editingNome}
+              aria-label="Nome da categoria"
               onChange={(e) => setEditingNome(e.target.value)}
               placeholder="Nome da categoria..."
               className="admin-v2-input flex-1 px-3 py-2 text-[12px] outline-none focus:border-jl-accent/50"
@@ -190,14 +208,17 @@ export function CategoriasFinanceirasContent({ dados }: Props) {
                 if (e.key === 'Escape') setEditingId(null)
               }}
             />
+            <label className="grid gap-1 text-small">Tipo<select className="fp-control" value={editingTipo} onChange={e => setEditingTipo(e.target.value as typeof editingTipo)}><option value="DESPESA">Despesa</option><option value="RECEITA">Receita</option><option value="AMBOS">Ambos</option></select></label>
             <button
               onClick={() => handleUpdate(editingId)}
+              aria-label="Salvar edição da categoria"
               disabled={loading || !editingNome.trim()}
               className="admin-v2-btn-primary disabled:opacity-50"
             >
               <Check size={14} />
             </button>
             <button
+              aria-label="Cancelar edição"
               onClick={() => setEditingId(null)}
               className="admin-v2-btn-secondary"
             >

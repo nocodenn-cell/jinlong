@@ -1,6 +1,9 @@
 'use client'
 
 import Link from 'next/link'
+import type { FinanceiroPainel } from '../financeiroLojaTypes'
+import { executarFinanceiroLoja } from '../financeiroLojaActions'
+import { CategoriaOptions } from './FinanceiroOptions'
 import { useRouter } from 'next/navigation'
 import { Fragment, useState, useTransition } from 'react'
 import { ROUTES } from '@/lib/navigation/routes'
@@ -24,6 +27,7 @@ import type { ContaLinha } from './ContasReceberTable'
 type ClienteOpt = { id: string; nome: string }
 
 type Props = {
+  financeiroData?: FinanceiroPainel
   contas: ContaLinha[]
   clientesIniciais: ClienteOpt[]
   caixasAbertos: Array<{ id: string; loja_id: string; operador: string }>
@@ -36,7 +40,7 @@ const FORMAS = ['DINHEIRO', 'PIX', 'CARTAO_DEBITO', 'CARTAO_CREDITO'] as const
 const LINK_MUTED =
   'text-caption font-medium text-[var(--color-warning-strong)] hover:underline'
 
-export function FinanceiroReceberExtras({ contas, clientesIniciais, caixasAbertos, actorLojaId }: Props) {
+export function FinanceiroReceberExtras({ financeiroData, contas, clientesIniciais, caixasAbertos, actorLojaId }: Props) {
   const router = useRouter()
   const { idioma } = useAdminV2Session()
   const m = getMessages(idioma)
@@ -137,10 +141,17 @@ export function FinanceiroReceberExtras({ contas, clientesIniciais, caixasAberto
 
   function handleNovoTitulo(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    const fd = new FormData(e.currentTarget)
+    const form = e.currentTarget
+    const fd = new FormData(form)
     const valor = Number(fd.get('valor_total'))
     startTransition(async () => {
-      const r = await criarTituloReceber({
+      const dados = { cliente_id:String(fd.get('cliente_id')),valor: String(fd.get('valor_total')),data:String(fd.get('vencimento')),categoria_id:String(fd.get('categoria_id')),descricao:String(fd.get('descricao')) }
+      const serialized = JSON.stringify(dados)
+      const requestId = form.dataset.payload === serialized && form.dataset.requestId ? form.dataset.requestId : crypto.randomUUID()
+      form.dataset.requestId = requestId
+      form.dataset.payload = serialized
+      const novo = financeiroData ? await executarFinanceiroLoja({ tipo: 'CRIAR_AR', requestId, dados }) : null
+      const r = novo ? (novo.ok ? { success:true as const } : { success:false as const, error:novo.error }) : await criarTituloReceber({
         cliente_id: String(fd.get('cliente_id') ?? ''),
         valor_total: valor,
         descricao: String(fd.get('descricao') ?? '') || undefined,
@@ -151,7 +162,9 @@ export function FinanceiroReceberExtras({ contas, clientesIniciais, caixasAberto
         return
       }
       emitGerenteToast({ kind: 'success', message: 'Título criado.' })
-      e.currentTarget.reset()
+      delete form.dataset.requestId
+      delete form.dataset.payload
+      form.reset()
       refresh()
     })
   }
@@ -311,7 +324,8 @@ export function FinanceiroReceberExtras({ contas, clientesIniciais, caixasAberto
             placeholder="Valor total"
             className="fp-control text-small"
           />
-          <input name="vencimento" type="date" className="fp-control text-small" />
+          <input name="vencimento" type="date" required={!!financeiroData} aria-label="Vencimento" className="fp-control text-small" />
+          {financeiroData ? <select name="categoria_id" required className="fp-control text-small" aria-label="Categoria"><CategoriaOptions data={financeiroData} tipo="RECEITA" /></select> : null}
           <input
             name="descricao"
             type="text"

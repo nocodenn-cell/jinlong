@@ -276,7 +276,10 @@ END $t6$;
 DO $d1$
 DECLARE cx uuid; v uuid; e text; tit record; op record;
 BEGIN
+  -- Conclui os eventos das vendas anteriores antes da alteração de schema da fixture.
+  SET CONSTRAINTS ALL IMMEDIATE;
   EXECUTE 'ALTER TABLE public.vendas ALTER COLUMN forma_pagamento DROP NOT NULL';   -- transacional; revertido no ROLLBACK
+  SET CONSTRAINTS ALL DEFERRED;
   cx := pg_temp.abrir(17, 9, 0);
   v := pg_temp.vender(17, 9, cx, 100, pg_temp.din(25), pg_temp.cid(9));             -- 25 pago + 75 a receber
   -- transforma em 100% a prazo: nenhum pagamento, sem forma, título de 100 em aberto

@@ -1,6 +1,9 @@
 'use client'
 
 import { Suspense, useState } from 'react'
+import type { FinanceiroPainel } from '../financeiroLojaTypes'
+import { FinanceiroTitulosOperations } from './FinanceiroTitulosOperations'
+import { FinanceiroPaginacao } from './FinanceiroWorkspace'
 import { SectionCard } from '@/components/ui/admin-v2'
 import { formatDateTimeOrDash } from '@/lib/format/datetime'
 import { ContasReceberTable, type ContaLinha, type ContasLabels } from './ContasReceberTable'
@@ -24,6 +27,7 @@ export type DocumentoFiscalPendenteRow = {
 type ClienteOpt = { id: string; nome: string }
 
 type Props = {
+  financeiroData?: FinanceiroPainel
   activeTab: FinanceiroTabId
   contas: ContaLinha[]
   fiscal: DocumentoFiscalPendenteRow[]
@@ -99,6 +103,7 @@ function FiscalList({
 }
 
 export function FinanceiroContent({
+  financeiroData,
   activeTab,
   contas,
   fiscal,
@@ -123,10 +128,11 @@ export function FinanceiroContent({
         <>
           {kpiSection}
           {filterSection}
-          <div className="admin-v2-grid-2">
+          <div className="admin-v2-stack">
             <SectionCard title={panelLabels.titulosEmAberto}>
               <ContasReceberTable contas={contas} labels={contasLabels} />
               <FinanceiroReceberExtras
+                financeiroData={financeiroData}
                 contas={contas}
                 clientesIniciais={clientesOpts}
                 caixasAbertos={caixasAbertos}
@@ -164,6 +170,7 @@ export function FinanceiroContent({
         </SectionCard>
       ) : null}
 
+      {financeiroData && (activeTab === 'pagar' || activeTab === 'receber') ? <><FinanceiroTitulosOperations data={financeiroData} tipo={activeTab === 'pagar' ? 'AP' : 'AR'} /><FinanceiroPaginacao data={financeiroData} countKey={activeTab} /></> : null}
       <DocumentoFiscalDetailSheet
         documentoId={fiscalDetalheId}
         onClose={() => setFiscalDetalheId(null)}
