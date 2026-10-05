@@ -948,6 +948,14 @@
       "layout": "布局"
     },
     "import_nfe": {
+      "lancadas_titulo": "已入库发票",
+      "lancadas_hint": "已入库的发票：供应商、收货数量以及仍需支付的金额。",
+      "lancadas_itens": "项",
+      "lancadas_unidades": "件",
+      "lancadas_valor": "金额：",
+      "lancadas_a_pagar": "应付供应商",
+      "lancadas_quitada": "已结清 / 无未付分期",
+      "lancadas_abrir": "查看发票",
       "manual_abrir": "手动录入发票（无 XML）",
       "manual_titulo": "手动录入到货发票",
       "manual_ajuda": "纸质发票或没有 XML 时使用。之后与 XML 流程相同：关联商品、核对数量并入库。",

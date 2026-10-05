@@ -948,6 +948,14 @@
       "layout": "Layout"
     },
     "import_nfe": {
+      "lancadas_titulo": "Notas lançadas",
+      "lancadas_hint": "Notas que já deram entrada no estoque: fornecedor, quantidade recebida e o que ainda falta pagar.",
+      "lancadas_itens": "itens",
+      "lancadas_unidades": "unidades",
+      "lancadas_valor": "Valor:",
+      "lancadas_a_pagar": "A pagar ao fornecedor",
+      "lancadas_quitada": "Nota quitada / sem parcelas em aberto",
+      "lancadas_abrir": "Ver nota",
       "manual_abrir": "Digitar nota manualmente (sem XML)",
       "manual_titulo": "Nota de chegada digitada",
       "manual_ajuda": "Use quando a nota chegou em papel ou sem XML. Depois você vincula os produtos, confere as quantidades e dá entrada no estoque, igual à nota em XML.",

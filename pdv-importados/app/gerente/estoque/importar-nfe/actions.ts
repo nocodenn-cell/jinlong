@@ -713,6 +713,92 @@ export async function listarImportacoesNfePendentes(): Promise<
   return { success: true, data: rows }
 }
 
+export type NotaLancada = {
+  importacao_id: string
+  numero_nf: string | null
+  fornecedor_nome: string
+  fornecedor_cnpj: string
+  created_at: string
+  itens_total: number
+  unidades_total: number
+  valor_total: number
+  /** Soma do que ainda falta pagar ao fornecedor nas parcelas desta nota (exclui canceladas). */
+  a_pagar: number
+}
+
+/** Notas de chegada já com entrada no estoque: o que veio, de quem e quanto ainda se deve. */
+export async function listarNotasLancadas(): Promise<ActionResult<NotaLancada[]>> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const lojaId = await lojaIdDoUsuarioLogado()
+  if (!lojaId) return { success: false, error: 'Não foi possível identificar sua loja.' }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('importacoes_nfe')
+    .select(
+      'id, numero_nf, created_at, fornecedores(nome, cnpj), importacoes_nfe_itens(quantidade_nfe, quantidade_conferida, custo_unitario)',
+    )
+    .eq('loja_id', lojaId)
+    .neq('status', 'EM_CONFERENCIA')
+    .order('created_at', { ascending: false })
+    .limit(30)
+
+  if (error) {
+    return { success: false, error: mensagemErroComSecao('Importação NF-e', error.message) }
+  }
+
+  const ids = (data ?? []).map((r) => r.id as string)
+  const aPagarPorNota = new Map<string, number>()
+  if (ids.length > 0) {
+    const { data: contas } = await supabase
+      .from('contas_pagar')
+      .select('nfe_importacao_id, valor_total, valor_pago, status')
+      .eq('loja_id', lojaId)
+      .in('nfe_importacao_id', ids)
+      .neq('status', 'CANCELADO')
+    for (const c of contas ?? []) {
+      const id = c.nfe_importacao_id as string | null
+      if (!id) continue
+      const falta = Math.max(0, Number(c.valor_total) - Number(c.valor_pago ?? 0))
+      aPagarPorNota.set(id, (aPagarPorNota.get(id) ?? 0) + falta)
+    }
+  }
+
+  const rows: NotaLancada[] = (data ?? []).map((r) => {
+    const forn = (r as { fornecedores: { nome: string; cnpj: string } | { nome: string; cnpj: string }[] | null })
+      .fornecedores
+    const f = Array.isArray(forn) ? forn[0] : forn
+    const itens =
+      (r as {
+        importacoes_nfe_itens:
+          | { quantidade_nfe: number; quantidade_conferida: number | null; custo_unitario: number }[]
+          | null
+      }).importacoes_nfe_itens ?? []
+    let unidades = 0
+    let valor = 0
+    for (const i of itens) {
+      const q = Number(i.quantidade_conferida ?? i.quantidade_nfe)
+      unidades += q
+      valor += q * Number(i.custo_unitario)
+    }
+    const id = r.id as string
+    return {
+      importacao_id: id,
+      numero_nf: (r.numero_nf as string | null) ?? null,
+      fornecedor_nome: f?.nome ?? '',
+      fornecedor_cnpj: f?.cnpj ?? '',
+      created_at: r.created_at as string,
+      itens_total: itens.length,
+      unidades_total: unidades,
+      valor_total: valor,
+      a_pagar: aPagarPorNota.get(id) ?? 0,
+    }
+  })
+  return { success: true, data: rows.filter((n) => n.itens_total > 0) }
+}
+
 /** Registra a contagem física por item (pré-requisito de `confirmarImportacaoNfe`). */
 export async function registrarConferenciaNfe(
   input: unknown,

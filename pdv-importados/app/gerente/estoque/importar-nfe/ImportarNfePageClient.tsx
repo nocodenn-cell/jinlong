@@ -32,6 +32,8 @@ import {
   confirmarImportacaoNfe,
   executarImportacaoNfe,
   listarImportacoesNfePendentes,
+  listarNotasLancadas,
+  type NotaLancada,
   obterConferenciaImportacaoNfe,
   obterResumoContasPagarImportacaoNfe,
   previewImportacaoNfe,
@@ -40,7 +42,7 @@ import {
 } from './actions'
 import { OrdemCompraVinculoAutocomplete } from '@/app/gerente/recebimento/OrdemCompraVinculoAutocomplete'
 import { fmtQtd } from '@/app/gerente/compras/ocRecebimento'
-import { fmtGerenteIdCurto } from '@/lib/format/gerenteValues'
+import { fmtGerenteDateTime, fmtGerenteIdCurto } from '@/lib/format/gerenteValues'
 
 type Props = Readonly<{
   idioma: Idioma
@@ -167,9 +169,16 @@ export function ImportarNfePageClient({
     if (r.success) setPendentes(r.data)
   }, [])
 
+  const [lancadas, setLancadas] = useState<NotaLancada[]>([])
+  const carregarLancadas = useCallback(async () => {
+    const r = await listarNotasLancadas()
+    if (r.success) setLancadas(r.data)
+  }, [])
+
   useEffect(() => {
     void carregarPendentes()
-  }, [carregarPendentes])
+    void carregarLancadas()
+  }, [carregarPendentes, carregarLancadas])
 
   const aplicarConferencia = useCallback((c: ConferenciaImportacaoNfe) => {
     setConferencia(c)
@@ -324,6 +333,7 @@ export function ImportarNfePageClient({
       onSuccess: (res: ConfirmarImportacaoNfeResultado) => {
         setEstoqueAtualizadoOk(true)
         void carregarPendentes()
+        void carregarLancadas()
         const oc = res?.oc
         if (oc) {
           const vars = {
@@ -339,7 +349,7 @@ export function ImportarNfePageClient({
         }
       },
     }),
-    [mi.confirmar_estoque_ok, mi.oc_resultado_completo, mi.oc_resultado_parcial, carregarPendentes],
+    [mi.confirmar_estoque_ok, mi.oc_resultado_completo, mi.oc_resultado_parcial, carregarPendentes, carregarLancadas],
   )
 
   const { mutate: confirmarMut, loading: confirmarLoading } = useGerenteMutation(
@@ -696,6 +706,49 @@ export function ImportarNfePageClient({
         <Link href={ROUTES.admin.estoque} className="gerente-nav-back text-sm font-medium hover:underline">
           ← {mi.voltar}
         </Link>
+      ) : null}
+
+      {lancadas.length > 0 && !conferencia ? (
+        <SectionCard title={mi.lancadas_titulo} subtitle={mi.lancadas_hint}>
+          <ul className="divide-y divide-[var(--color-border)]" data-testid="notas-lancadas">
+            {lancadas.map((n) => (
+              <li key={n.importacao_id} className="flex flex-wrap items-center justify-between gap-3 py-2">
+                <div className="min-w-0">
+                  <p className="truncate text-body font-medium">
+                    {n.numero_nf ? `${mi.numero_nf} ${n.numero_nf}` : mi.pendentes_sem_numero} —{' '}
+                    <span className="text-fg-muted">{n.fornecedor_nome}</span>
+                    {n.fornecedor_cnpj ? (
+                      <span className="ml-2 font-mono text-caption text-fg-muted">{n.fornecedor_cnpj}</span>
+                    ) : null}
+                  </p>
+                  <p className="text-caption text-fg-muted">
+                    {fmtGerenteDateTime(n.created_at, locale)} · {n.itens_total} {mi.lancadas_itens} ·{' '}
+                    {fmtQtd(n.unidades_total)} {mi.lancadas_unidades} · {mi.lancadas_valor}{' '}
+                    {formatBRL(n.valor_total)}
+                  </p>
+                  <p
+                    className={`text-caption font-semibold ${
+                      n.a_pagar > 0 ? 'text-[var(--color-warning-strong)]' : 'text-[var(--color-success-strong)]'
+                    }`}
+                  >
+                    {n.a_pagar > 0
+                      ? `${mi.lancadas_a_pagar}: ${formatBRL(n.a_pagar)}`
+                      : mi.lancadas_quitada}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  loading={retomarLoading}
+                  onClick={() => void retomarMut(n.importacao_id)}
+                >
+                  {mi.lancadas_abrir}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </SectionCard>
       ) : null}
 
       {pendentes.length > 0 && !conferencia ? (
