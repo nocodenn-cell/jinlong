@@ -15,7 +15,7 @@ import { FINANCIAL_ERROR_CODES, hojeYmd, isTituloVencido } from '@shared-core/sr
 export const PAYABLES_PAGE_SIZE = 20
 
 const COLUMNS = `
-  id, fornecedor_id, descricao, valor_total, valor_pago, vencimento,
+  id, fornecedor_id, favorecido, descricao, valor_total, valor_pago, vencimento,
   status, nfe_numero, nfe_importacao_id, criado_em, loja_id,
   fornecedor:fornecedores!contas_pagar_fornecedor_id_fkey ( nome )
 `

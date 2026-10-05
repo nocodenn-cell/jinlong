@@ -3,6 +3,9 @@
  */
 
 import { Suspense } from 'react'
+import { carregarFinanceiroLoja } from './financeiroLojaActions'
+import { FinanceiroHubNavShell } from '@/components/ui/admin-v2/FinanceiroHubNavShell'
+import { FinanceiroWorkspace, type FinanceiroWorkspaceTab } from './_components/FinanceiroWorkspace'
 import { createClient } from '@/lib/supabase/server'
 import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
 import { MetricCard, PageHeader } from '@/components/ui/admin-v2'
@@ -25,6 +28,7 @@ import { FinanceiroContent } from './_components/FinanceiroContent'
 import { parseFinanceiroTab } from './_components/financeiroTabs'
 
 type SearchParams = {
+  pagina?: string
   tab?: string
   opcao?: string
   cliente_id?: string
@@ -53,6 +57,14 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
 
   const sp = (searchParams ? await searchParams : {}) ?? {}
   const activeTab = parseFinanceiroTab(sp.tab)
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone:'America/Sao_Paulo', year:'numeric', month:'2-digit', day:'2-digit' }).format(new Date())
+  const de = sp.de || today.slice(0,7) + '-01'
+  const ate = sp.ate || today
+  const pagina = Number(sp.pagina || 1)
+  const financeiro = activeTab === 'fiscal' ? null : await carregarFinanceiroLoja(de, ate, pagina)
+  if (['resumo','contas','recebiveis','conciliacao','resultado'].includes(activeTab)) {
+    return <div className="admin-v2-page"><PageHeader title={ui.financeiro_titulo} subtitle={ui.financeiro_subtitulo} /><FinanceiroHubNavShell activeTab={activeTab} />{financeiro?.ok ? <FinanceiroWorkspace data={financeiro.data} tab={activeTab as FinanceiroWorkspaceTab} de={de} ate={ate} /> : <p role="alert">{financeiro && !financeiro.ok ? financeiro.error : 'Não foi possível carregar o financeiro.'}</p>}</div>
+  }
   const parsed = parseTituloFiltersFromSearchParams(sp as Record<string, string | string[] | undefined>)
   const { limite, ...filters } = parsed
 
@@ -234,6 +246,7 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
 
       <div className="admin-v2-stack">
         <FinanceiroContent
+          financeiroData={financeiro?.ok ? financeiro.data : undefined}
           activeTab={activeTab}
           contas={contas}
           fiscal={fiscal}
