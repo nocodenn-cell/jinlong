@@ -5,19 +5,16 @@ BEGIN;
 -- que tem produto precificado. Sem isto a suíte dependia de já existir um caixa
 -- aberto na loja certa — `test:rls-scope` deixa caixas numa loja sem produtos e
 -- o bloco offline falhava com `offline_fixture_missing`. Rollback desfaz.
-INSERT INTO public.caixas(operador_id, loja_id, status, valor_inicial)
-SELECT (SELECT u.id FROM public.usuarios u
-        WHERE u.loja_id = p.loja_id AND u.ativo AND u.perfil = 'OPERADOR'
-          AND NOT EXISTS (SELECT 1 FROM public.caixas c2
-                          WHERE c2.operador_id = u.id AND c2.status = 'ABERTO')
-        LIMIT 1),
-       p.loja_id, 'ABERTO', 0
-FROM public.produtos p
-WHERE p.preco_varejo > 0
-  AND EXISTS (SELECT 1 FROM public.usuarios u WHERE u.loja_id = p.loja_id
-              AND u.ativo AND u.perfil = 'OPERADOR')
-ORDER BY p.loja_id, p.id
-LIMIT 1;
+SELECT p.loja_id AS fixture_loja FROM public.produtos p
+WHERE p.preco_varejo>0 AND p.ativo
+ AND EXISTS(SELECT 1 FROM public.estoque e WHERE e.produto_id=p.id AND e.loja_id=p.loja_id AND e.quantidade_atual>0)
+ORDER BY p.loja_id,p.id LIMIT 1 \gset
+SELECT gen_random_uuid() AS fixture_operador \gset
+INSERT INTO auth.users(id) VALUES (:'fixture_operador');
+INSERT INTO public.usuarios(id,nome,perfil,ativo,loja_id)
+VALUES (:'fixture_operador','Teste totais online','OPERADOR',true,:'fixture_loja');
+INSERT INTO public.caixas(operador_id,loja_id,status,valor_inicial)
+VALUES (:'fixture_operador',:'fixture_loja','ABERTO',0);
 
 DO $test$
 DECLARE
@@ -144,6 +141,8 @@ SELECT c.operador_id AS test_user, c.id AS test_caixa, c.loja_id AS test_loja,
 FROM public.caixas c
 JOIN public.produtos p ON p.loja_id = c.loja_id AND p.ativo = true
 WHERE c.status = 'ABERTO'
+  -- A fixture offline pode abrir um caixa sem operador; não é uma sessão online.
+  AND c.operador_id IS NOT NULL
   AND public.calcular_preco_produto(p.id, 1, c.loja_id)->>'preco' IS NOT NULL
   -- A v4 baixa estoque: o produto precisa ter saldo na loja do caixa.
   -- `test:rls-scope` cria produto sem linha de estoque cujo id ordena antes do

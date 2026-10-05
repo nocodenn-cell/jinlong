@@ -11,6 +11,7 @@ import { FinanceiroForm, FinanceiroField as Field } from './FinanceiroForm'
 import { FinanceiroContas } from './FinanceiroContas'
 import { FinanceiroRecebiveis } from './FinanceiroRecebiveis'
 import { FinanceiroConciliacao } from './FinanceiroConciliacao'
+import { FinanceiroPrimeiroUso } from './FinanceiroPrimeiroUso'
 
 export type FinanceiroWorkspaceTab = 'resumo' | 'contas' | 'recebiveis' | 'conciliacao' | 'resultado'
 
@@ -64,6 +65,7 @@ export function FinanceiroPaginacao({ data, countKey }: { data:FinanceiroPainel;
 
 export function FinanceiroWorkspace({ data, tab, de, ate }: { data:FinanceiroPainel; tab:FinanceiroWorkspaceTab; de:string; ate:string }) {
  return <div className="admin-v2-stack"><FinanceiroPeriodo de={de} ate={ate} />
+  {(tab==='resumo' || tab==='contas') ? <FinanceiroPrimeiroUso semContas={data.contas.length === 0} /> : null}
   {tab==='resumo' ? <FinanceiroResumo data={data} /> : null}
   {tab==='contas' ? <><FinanceiroContas data={data} /><FinanceiroMovimentos data={data} /><FinanceiroPaginacao data={data} countKey="movimentos" /></> : null}
   {tab==='recebiveis' ? <><FinanceiroRecebiveis data={data} /><FinanceiroPaginacao data={data} countKey="recebiveis" /></> : null}

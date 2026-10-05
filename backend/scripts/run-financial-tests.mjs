@@ -37,6 +37,7 @@ const SCRIPT_SUITES = [
 ]
 
 const SQL_SUITES = [
+  'financeiro-hardening-full-schema.test.sql',
   'sale-totals-invariant.test.sql',
   'ar-receipts-reconciliation.test.sql',
   'ap-payments-reconciliation.test.sql',

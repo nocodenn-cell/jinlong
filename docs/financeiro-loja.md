@@ -57,6 +57,12 @@ Em caso de problema na versão web, reverter a versão do aplicativo preserva o 
 
 ## Pendência anterior de alinhamento remoto
 
+Auditoria final de 05/10/2026: [diagnóstico, fluxos, segurança, testes e classificação das 19 pendências](audits/FINANCEIRO_HARDENING_2026_10_05.md).
+A migration `20261005091218_financeiro_hardening_final.sql` é uma proposta de
+correção adicional nesta PR e não foi aplicada em produção. Ela corrige a
+classificação do estorno de transferência PDV e restringe o acesso direto aos
+títulos/históricos por loja, mantendo a criação manual de AR validada.
+
 Na verificação de implantação de 04/10/2026, a migration financeira nova está registrada no remoto como `20261005004647`. O gate remoto identifica 19 migrations anteriores ausentes: 18 de vendas/fiscal/segurança e a proposta de validação de fechamentos `20260929120000`. Essas pendências não devem ser marcadas como aplicadas nem dispensadas pelo gate sem execução ou prova de equivalência.
 
 A proposta de fechamento exige conferir os seis caixas históricos incompletos antes de impor a constraint. Não preencher valores de fechamento por estimativa. A aplicação das demais migrations altera o escritor central de vendas e a fila fiscal e depende de autorização específica para ampliar esta entrega; a revisão automática bloqueou essa aplicação. As melhorias financeiras preservam as rotinas fiscais existentes enquanto essa decisão está pendente.
