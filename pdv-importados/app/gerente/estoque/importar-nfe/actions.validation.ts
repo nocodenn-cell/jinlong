@@ -73,3 +73,56 @@ export const ConfirmarImportacaoNfePayloadSchema = z.object({
 export type ConfirmarImportacaoNfePayloadInput = z.infer<
   typeof ConfirmarImportacaoNfePayloadSchema
 >
+
+/**
+ * Nota digitada à mão (sem XML): o balcão recebeu a mercadoria com a nota em papel
+ * ou o fornecedor não mandou o XML. Vira o mesmo `NfeParsed` do XML e segue o fluxo
+ * normal (vínculo de produtos → conferência → entrada de estoque + contas a pagar).
+ * Chave de acesso é opcional: sem ela o servidor gera um identificador interno.
+ */
+export const NotaManualSchema = z.object({
+  emitente_nome: z.string().trim().min(1, 'Informe o nome do fornecedor.'),
+  emitente_cnpj: z
+    .string()
+    .transform((v) => v.replace(/\D/g, ''))
+    .refine((v) => v.length === 14 || v.length === 11, 'CNPJ (14 dígitos) ou CPF (11) inválido.'),
+  numero_nf: z.string().trim().min(1, 'Informe o número da nota.'),
+  serie: z.string().trim().optional(),
+  chave_acesso: z
+    .string()
+    .optional()
+    .transform((v) => (v ?? '').replace(/\D/g, ''))
+    .refine((v) => v === '' || v.length === 44, 'A chave de acesso deve ter 44 dígitos (ou fique em branco).'),
+  itens: z
+    .array(
+      z.object({
+        nome_produto: z.string().trim().min(1, 'Todo item precisa de descrição.'),
+        ref_fornecedor: z.string().trim().optional(),
+        gtin: z
+          .string()
+          .optional()
+          .transform((v) => (v ?? '').replace(/\D/g, ''))
+          .refine((v) => v === '' || (v.length >= 8 && v.length <= 14), 'GTIN deve ter de 8 a 14 dígitos.'),
+        ncm: z
+          .string()
+          .optional()
+          .transform((v) => (v ?? '').replace(/\D/g, ''))
+          .refine((v) => v === '' || v.length === 8, 'NCM deve ter 8 dígitos.'),
+        u_com: z.string().trim().max(6).optional(),
+        q_com: z.number().positive('Quantidade deve ser maior que zero.').finite(),
+        v_un_com: z.number().nonnegative('Valor unitário inválido.').finite(),
+      }),
+    )
+    .min(1, 'Adicione ao menos um item.'),
+  duplicatas: z
+    .array(
+      z.object({
+        numero: z.string().trim().nullable().optional(),
+        data_vencimento: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Vencimento inválido.'),
+        valor: z.number().positive('Valor da parcela deve ser maior que zero.').finite(),
+      }),
+    )
+    .default([]),
+})
+
+export type NotaManualInput = z.input<typeof NotaManualSchema>

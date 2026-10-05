@@ -1,5 +1,6 @@
 'use server'
 
+import { randomUUID } from 'node:crypto'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
@@ -13,6 +14,7 @@ import { getGerenteLojaId } from '@/lib/gerente/auth/sessionContext'
 import {
   ConfirmarImportacaoNfePayloadSchema,
   ImportNfePayloadSchema,
+  NotaManualSchema,
   RegistrarConferenciaNfePayloadSchema,
 } from './actions.validation'
 import { createInventoryMovementWriter } from '@/app/admin/estoque/inventoryMovementWriter'
@@ -157,6 +159,65 @@ export async function previewImportacaoNfe(xml: string): Promise<
   }
 
   const supabase = await createClient()
+  const linhas = await montarLinhasPreview(supabase, lojaId, parsed)
+  return { success: true, data: { parsed, linhas } }
+}
+
+/**
+ * Nota digitada sem XML: monta o mesmo `NfeParsed` e devolve o mesmo preview, de modo que
+ * vínculo de itens, conferência, estoque e contas a pagar seguem exatamente o fluxo do XML.
+ */
+export async function previewNotaManualNfe(
+  input: unknown,
+): Promise<ActionResult<{ parsed: NfeParsed; linhas: LinhaPreviewNfe[] }>> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const v = NotaManualSchema.safeParse(input)
+  if (!v.success) {
+    return { success: false, error: v.error.issues[0]?.message ?? 'Dados da nota inválidos.' }
+  }
+
+  const lojaId = await lojaIdDoUsuarioLogado()
+  if (!lojaId) return { success: false, error: 'Não foi possível identificar sua loja.' }
+
+  const n = v.data
+  // Sem chave real: identificador interno de 44 caracteres (a coluna é UNIQUE e exige 44).
+  const chave =
+    n.chave_acesso ||
+    `MANUAL${randomUUID().replace(/-/g, '')}${randomUUID().replace(/-/g, '')}`.slice(0, 44)
+  const numero = n.serie ? `${n.numero_nf}/${n.serie}` : n.numero_nf
+
+  const parsed: NfeParsed = {
+    chave_acesso: chave,
+    numero_nf: numero,
+    emitente: { nome: n.emitente_nome, cnpj: n.emitente_cnpj },
+    itens: n.itens.map((i) => ({
+      nome_produto: i.nome_produto,
+      gtin: i.gtin || null,
+      ref_fornecedor: i.ref_fornecedor || i.gtin || i.nome_produto.slice(0, 60),
+      ncm: i.ncm || null,
+      u_com: i.u_com || 'UN',
+      q_com: i.q_com,
+      v_un_com: i.v_un_com,
+    })),
+    duplicatas: n.duplicatas.map((d) => ({
+      numero: d.numero || null,
+      data_vencimento: d.data_vencimento,
+      valor: d.valor,
+    })),
+  }
+
+  const supabase = await createClient()
+  const linhas = await montarLinhasPreview(supabase, lojaId, parsed)
+  return { success: true, data: { parsed, linhas } }
+}
+
+async function montarLinhasPreview(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  lojaId: string,
+  parsed: NfeParsed,
+): Promise<LinhaPreviewNfe[]> {
   const cnpj = onlyDigits(parsed.emitente.cnpj)
 
   const { data: forn } = await supabase
@@ -237,7 +298,7 @@ export async function previewImportacaoNfe(xml: string): Promise<
     }
   })
 
-  return { success: true, data: { parsed, linhas } }
+  return linhas
 }
 
 /** Busca produtos do catálogo da loja para amarrar o De-Para de um item desconhecido. */

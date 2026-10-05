@@ -6,6 +6,7 @@ import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { Button } from '@/components/ui/button'
+import { NotaManualForm } from './NotaManualForm'
 import { formatBRL } from '@/lib/format/money'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import { emitGerenteToast } from '@/lib/gerente/toast'
@@ -220,13 +221,11 @@ export function ImportarNfePageClient({
     [mi.import_ok, mi.import_draft_aviso, aplicarConferencia],
   )
 
-  const { mutate: previewMut, loading: previewLoading } = useGerenteMutation(
-    async (xml: string) => {
-      const r = await previewImportacaoNfe(xml)
-      if (!r.success) throw new Error(r.error)
-      setParsed(r.data.parsed)
+  const aplicarPreview = useCallback(
+    (data: { parsed: NfeParsed; linhas: LinhaPreviewNfe[] }) => {
+      setParsed(data.parsed)
       setLinhas(
-        r.data.linhas.map((l) => ({
+        data.linhas.map((l) => ({
           ...l,
           fator: 1,
           atualizar_custo: atualizarGlobalRef.current,
@@ -235,6 +234,15 @@ export function ImportarNfePageClient({
           vinculo_nome: l.produto_nome,
         })),
       )
+    },
+    [],
+  )
+
+  const { mutate: previewMut, loading: previewLoading } = useGerenteMutation(
+    async (xml: string) => {
+      const r = await previewImportacaoNfe(xml)
+      if (!r.success) throw new Error(r.error)
+      aplicarPreview(r.data)
       return null
     },
     previewOpts,
@@ -770,6 +778,7 @@ export function ImportarNfePageClient({
           className="mt-4 h-24 font-mono text-caption"
           spellCheck={false}
         />
+        <NotaManualForm mi={mi} onPreview={aplicarPreview} />
       </section>
 
       {parsed && !conferencia ? (
