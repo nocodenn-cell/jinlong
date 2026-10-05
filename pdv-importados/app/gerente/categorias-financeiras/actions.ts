@@ -12,7 +12,7 @@ import {
 } from '../shared/actionHelpers'
 import type { CategoriaFinanceiraRow, CategoriaFinanceiraTipo } from './categoriasFinanceirasTypes'
 
-const REVALIDATE_PATH = '/gerente/categorias-financeiras'
+const REVALIDATE_PATHS = ['/gerente/categorias-financeiras', '/admin/categorias-financeiras', '/admin/financeiro']
 const TABELA = 'categorias_financeiras'
 
 type ActionResult<T> = CadastroActionResult<T>
@@ -70,7 +70,7 @@ export async function criarCategoriaFinanceira(
 ): Promise<ActionResult<{ id: string }>> {
   const parsed = NovaCategoriaFinSchema.safeParse(input)
   if (!parsed.success) return zodValidationError(parsed.error.issues)
-  return criarCadastro(TABELA, { nome: parsed.data.nome.trim(), tipo: parsed.data.tipo, ativo: true }, 'Criar categoria financeira', [REVALIDATE_PATH])
+  return criarCadastro(TABELA, { nome: parsed.data.nome.trim(), tipo: parsed.data.tipo, ativo: true }, 'Criar categoria financeira', REVALIDATE_PATHS)
 }
 
 export async function atualizarCategoriaFinanceira(
@@ -78,13 +78,13 @@ export async function atualizarCategoriaFinanceira(
 ): Promise<ActionResult<null>> {
   const parsed = AtualizarCategoriaFinSchema.safeParse(input)
   if (!parsed.success) return zodValidationError(parsed.error.issues)
-  return atualizarCadastro(TABELA, parsed.data.id, { nome: parsed.data.nome.trim(), tipo: parsed.data.tipo }, 'Atualizar categoria financeira', [REVALIDATE_PATH])
+  return atualizarCadastro(TABELA, parsed.data.id, { nome: parsed.data.nome.trim(), tipo: parsed.data.tipo }, 'Atualizar categoria financeira', REVALIDATE_PATHS)
 }
 
 export async function alternarAtivoCategoriaFinanceira(id: string, ativo: boolean): Promise<ActionResult<null>> {
-  return alternarAtivoCadastro(TABELA, id, ativo, [REVALIDATE_PATH])
+  return alternarAtivoCadastro(TABELA, id, ativo, REVALIDATE_PATHS)
 }
 
 export async function excluirCategoriaFinanceira(id: string): Promise<ActionResult<null>> {
-  return excluirCadastro(TABELA, id, 'Excluir categoria financeira', [REVALIDATE_PATH])
+  return excluirCadastro(TABELA, id, 'Excluir categoria financeira', REVALIDATE_PATHS)
 }

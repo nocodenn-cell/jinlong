@@ -32,7 +32,7 @@ export type ContaPagarRow = {
 export type FormaPagamento = FormaPagamentoPagar
 
 const COLUMNS = `
-  id, fornecedor_id, descricao, valor_total, valor_pago, vencimento,
+  id, fornecedor_id, favorecido, descricao, valor_total, valor_pago, vencimento,
   status, nfe_numero, nfe_importacao_id, criado_em, loja_id,
   fornecedor:fornecedores!contas_pagar_fornecedor_id_fkey ( nome )
 `
