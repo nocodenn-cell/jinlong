@@ -852,6 +852,17 @@ export function ImportarNfePageClient({
               {parsed.numero_nf}
             </p>
           ) : null}
+          {(parsed.duplicatas?.length ?? 0) > 0 ? (
+            <p className="text-body" data-testid="previa-contas-pagar">
+              <span className="text-fg-muted">Contas a pagar que serão geradas: </span>
+              {parsed.duplicatas.length} {parsed.duplicatas.length === 1 ? 'parcela' : 'parcelas'} ·{' '}
+              {formatBRL(parsed.duplicatas.reduce((t, d) => t + d.valor, 0))}
+            </p>
+          ) : (
+            <p className="text-body text-[var(--color-warning-strong)]">
+              Esta nota não tem parcelas: nenhuma conta a pagar será gerada.
+            </p>
+          )}
 
           <label className="mt-2 flex items-center gap-2 text-body">
             <Checkbox

@@ -101,6 +101,21 @@ export function NotaManualForm({ mi, onPreview }: Props) {
   }
 
   async function continuar() {
+    const validas = parcelas.filter((p) => p.venc && (parseBRL(p.valor) ?? 0) > 0)
+    if (validas.length === 0) {
+      emitGerenteToast({
+        kind: 'error',
+        message: 'Escolha a condição de pagamento: é ela que lança a compra em Contas a pagar.',
+      })
+      return
+    }
+    if (parcelasDiferem) {
+      emitGerenteToast({
+        kind: 'error',
+        message: `A soma das parcelas (${formatBRL(totalParcelas)}) precisa ser igual ao total da nota (${formatBRL(totalNota)}).`,
+      })
+      return
+    }
     setCarregando(true)
     try {
       const r = await previewNotaManualNfe({
@@ -249,7 +264,7 @@ export function NotaManualForm({ mi, onPreview }: Props) {
       </div>
 
       <div className="space-y-2">
-        <p className="text-caption font-semibold text-fg-muted">{mi.manual_parcelas}</p>
+        <p className="text-caption font-semibold text-fg-muted">{mi.manual_parcelas} *</p>
         <label className="block text-caption">
           Condição de pagamento
           <select
