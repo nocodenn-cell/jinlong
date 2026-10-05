@@ -24,6 +24,7 @@ export type NfeDuplicataParsed = {
 }
 
 export type NfeParsed = {
+  origem_manual?: boolean
   chave_acesso: string
   numero_nf: string | null
   emitente: NfeEmitenteParsed

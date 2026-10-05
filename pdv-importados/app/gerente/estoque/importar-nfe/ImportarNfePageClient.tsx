@@ -436,6 +436,7 @@ export function ImportarNfePageClient({
   const handleImportar = () => {
     if (!parsed || !tudoResolvido) return
     const base = {
+      origem_manual: parsed.origem_manual,
       chave_acesso: parsed.chave_acesso,
       numero_nf: parsed.numero_nf,
       emitente_cnpj: onlyDigits(parsed.emitente.cnpj),

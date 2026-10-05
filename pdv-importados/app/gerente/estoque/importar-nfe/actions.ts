@@ -190,6 +190,7 @@ export async function previewNotaManualNfe(
   const numero = n.serie ? `${n.numero_nf}/${n.serie}` : n.numero_nf
 
   const parsed: NfeParsed = {
+    origem_manual: true,
     chave_acesso: chave,
     numero_nf: numero,
     emitente: { nome: n.emitente_nome, cnpj: n.emitente_cnpj },

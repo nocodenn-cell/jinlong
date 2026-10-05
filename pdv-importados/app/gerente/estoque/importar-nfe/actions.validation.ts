@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { erroFinanceiroNotaManual } from './notaManualFinanceiro'
 
 export const ImportNfeLinhaSchema = z
   .object({
@@ -31,6 +32,7 @@ const ImportNfeDuplicataSchema = z.object({
 })
 
 export const ImportNfePayloadSchema = z.object({
+  origem_manual: z.boolean().optional(),
   chave_acesso: z.string().length(44),
   numero_nf: z.string().nullable(),
   emitente_cnpj: z.string().regex(/^\d{14}$/),
@@ -38,6 +40,10 @@ export const ImportNfePayloadSchema = z.object({
   atualizar_custo_padrao: z.boolean(),
   linhas: z.array(ImportNfeLinhaSchema).min(1),
   duplicatas: z.array(ImportNfeDuplicataSchema).default([]),
+}).superRefine((nota, ctx) => {
+  if (!nota.origem_manual && !nota.chave_acesso.startsWith('MANUAL')) return
+  const erro = erroFinanceiroNotaManual(nota.linhas, nota.duplicatas)
+  if (erro) ctx.addIssue({ code: z.ZodIssueCode.custom, message: erro, path: ['duplicatas'] })
 })
 
 export type ImportNfePayloadInput = z.infer<typeof ImportNfePayloadSchema>
@@ -110,7 +116,7 @@ export const NotaManualSchema = z.object({
           .refine((v) => v === '' || v.length === 8, 'NCM deve ter 8 dígitos.'),
         u_com: z.string().trim().max(6).optional(),
         q_com: z.number().positive('Quantidade deve ser maior que zero.').finite(),
-        v_un_com: z.number().nonnegative('Valor unitário inválido.').finite(),
+        v_un_com: z.number().positive('Valor unitário deve ser maior que zero.').finite(),
       }),
     )
     .min(1, 'Adicione ao menos um item.'),
@@ -123,6 +129,9 @@ export const NotaManualSchema = z.object({
       }),
     )
     .min(1, 'Escolha a condição de pagamento para gerar Contas a pagar.'),
+}).superRefine((nota, ctx) => {
+  const erro = erroFinanceiroNotaManual(nota.itens, nota.duplicatas)
+  if (erro) ctx.addIssue({ code: z.ZodIssueCode.custom, message: erro, path: ['duplicatas'] })
 })
 
 export type NotaManualInput = z.input<typeof NotaManualSchema>

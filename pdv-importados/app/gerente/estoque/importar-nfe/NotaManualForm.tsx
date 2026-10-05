@@ -9,6 +9,7 @@ import { hojeYmd } from '@shared-core/src/financial/policies/tituloVencido'
 import type { getMessages } from '@/i18n/getMessages'
 import { previewNotaManualNfe, type LinhaPreviewNfe } from './actions'
 import type { NfeParsed } from '@/lib/nfe/nfeParser'
+import { totalItensEmCentavos, totalParcelasEmCentavos } from './notaManualFinanceiro'
 
 type Mi = ReturnType<typeof getMessages>['estoque']['import_nfe']
 
@@ -58,9 +59,7 @@ export function NotaManualForm({ mi, onPreview }: Props) {
   const [numero, setNumero] = useState('')
   const [serie, setSerie] = useState('')
   const [chave, setChave] = useState('')
-  const [emissao, setEmissao] = useState(hojeYmd())
-  const [frete, setFrete] = useState('')
-  const [desconto, setDesconto] = useState('')
+  const [dataBaseVencimentos, setDataBaseVencimentos] = useState(hojeYmd())
   const [itens, setItens] = useState<ItemForm[]>([itemVazio()])
   const [parcelas, setParcelas] = useState<ParcelaForm[]>([])
 
@@ -69,10 +68,12 @@ export function NotaManualForm({ mi, onPreview }: Props) {
   const setParcela = (idx: number, patch: Partial<ParcelaForm>) =>
     setParcelas((rows) => rows.map((r, i) => (i === idx ? { ...r, ...patch } : r)))
 
-  const totalItens = itens.reduce((s, i) => s + toNumber(i.qtd) * (parseBRL(i.valor) ?? 0), 0)
-  const totalNota = totalItens + (parseBRL(frete) ?? 0) - (parseBRL(desconto) ?? 0)
-  const totalParcelas = parcelas.reduce((s, p) => s + (parseBRL(p.valor) ?? 0), 0)
-  const parcelasDiferem = parcelas.length > 0 && Math.abs(totalParcelas - totalNota) > 0.01
+  const totalItens = totalItensEmCentavos(itens.map((item) => ({
+    q_com: toNumber(item.qtd), v_un_com: parseBRL(item.valor) ?? 0,
+  }))) / 100
+  const totalNota = totalItens
+  const totalParcelas = totalParcelasEmCentavos(parcelas.map((p) => ({ valor: parseBRL(p.valor) ?? 0 }))) / 100
+  const parcelasDiferem = parcelas.length > 0 && totalParcelas !== totalNota
 
   function gerarParcelas(idx: number) {
     const cond = CONDICOES[idx]
@@ -85,7 +86,7 @@ export function NotaManualForm({ mi, onPreview }: Props) {
     setParcelas(
       cond.dias.map((d, i) => {
         const c = i === cond.dias.length - 1 ? centavos - base * (cond.dias.length - 1) : base
-        return { venc: somaDias(emissao, d), valor: (c / 100).toFixed(2).replace('.', ',') }
+        return { venc: somaDias(dataBaseVencimentos, d), valor: (c / 100).toFixed(2).replace('.', ',') }
       }),
     )
   }
@@ -181,8 +182,9 @@ export function NotaManualForm({ mi, onPreview }: Props) {
           <Input value={chave} inputMode="numeric" onChange={(e) => setChave(e.target.value)} />
         </label>
         <label className="text-caption">
-          Data de emissão
-          <Input type="date" value={emissao} onChange={(e) => setEmissao(e.target.value)} />
+          Data-base dos vencimentos
+          <Input type="date" value={dataBaseVencimentos} onChange={(e) => setDataBaseVencimentos(e.target.value)} />
+          <span className="text-fg-muted">Usada somente para gerar as parcelas.</span>
         </label>
       </div>
 
@@ -249,19 +251,15 @@ export function NotaManualForm({ mi, onPreview }: Props) {
           Valor dos produtos
           <p className="mt-1 text-body font-semibold tabular-nums">{formatBRL(totalItens)}</p>
         </div>
-        <label className="text-caption">
-          Frete (R$)
-          <Input value={frete} inputMode="decimal" placeholder="0,00" onChange={(e) => setFrete(e.target.value)} />
-        </label>
-        <label className="text-caption">
-          Desconto (R$)
-          <Input value={desconto} inputMode="decimal" placeholder="0,00" onChange={(e) => setDesconto(e.target.value)} />
-        </label>
         <div className="text-caption">
           Valor total da nota
           <p className="mt-1 text-body font-semibold tabular-nums">{formatBRL(totalNota)}</p>
         </div>
       </div>
+
+      <p className="text-caption text-fg-muted">
+        Nesta entrada manual, o total da nota corresponde ao valor dos produtos. Frete e desconto não estão disponíveis.
+      </p>
 
       <div className="space-y-2">
         <p className="text-caption font-semibold text-fg-muted">{mi.manual_parcelas} *</p>
