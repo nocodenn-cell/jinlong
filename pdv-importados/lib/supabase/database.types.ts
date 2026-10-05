@@ -1176,6 +1176,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "contas_pagar_importacao_nfe_id_fkey"
+            columns: ["nfe_importacao_id"]
+            isOneToOne: false
+            referencedRelation: "importacoes_nfe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "contas_pagar_loja_id_fkey"
             columns: ["loja_id"]
             isOneToOne: false
@@ -1188,13 +1195,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_estoque_baixo"
             referencedColumns: ["loja_id"]
-          },
-          {
-            foreignKeyName: "contas_pagar_nfe_importacao_id_fkey"
-            columns: ["nfe_importacao_id"]
-            isOneToOne: false
-            referencedRelation: "importacoes_nfe"
-            referencedColumns: ["id"]
           },
         ]
       }
