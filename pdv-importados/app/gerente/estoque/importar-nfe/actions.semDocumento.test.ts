@@ -30,6 +30,14 @@ beforeEach(() => {
   auth.mockResolvedValue({ ok: true }); loja.mockResolvedValue('loja-a'); client.mockResolvedValue(banco([produto]))
 })
 describe('entrada sem documento: servidor', () => {
+  it('aceita nome digitado sem produto selecionado para cadastrar ou vincular na conferência', async () => {
+    const result = await previewNotaManualNfe({ ...entrada, emitente_cnpj: '',
+      itens: [{ nome_produto: 'Produto novo', q_com: 900, v_un_com: 10 }],
+    })
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.data.linhas[0]).toMatchObject({ nome_produto: 'Produto novo', produto_id: null, status_produto: 'DESCONHECIDO' })
+  })
   it('gera referência interna sem número de nota e vincula o produto da loja, sem escrever', async () => {
     const result = await previewNotaManualNfe(entrada)
     expect(result.success).toBe(true)

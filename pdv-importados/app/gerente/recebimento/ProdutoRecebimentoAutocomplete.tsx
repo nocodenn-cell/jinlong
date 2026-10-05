@@ -31,6 +31,7 @@ type Props = Readonly<{
   valorInicial?: RecebimentoProdutoBusca | null
   /** Avisa o formulário quando um produto é escolhido/limpo (para mostrar o nome na confirmação). */
   onChange?: (produto: RecebimentoProdutoBusca | null) => void
+  onSearchChange?: (nome: string) => void
 }>
 
 /**
@@ -55,6 +56,7 @@ export function ProdutoRecebimentoAutocomplete({
   limparLabel,
   valorInicial = null,
   onChange,
+  onSearchChange,
 }: Props) {
   const listId = useId()
   const [termo, setTermo] = useState(() =>
@@ -180,6 +182,7 @@ export function ProdutoRecebimentoAutocomplete({
             if (selecionado) onChange?.(null)
             setSelecionado(null)
             setTermo(e.target.value)
+            onSearchChange?.(e.target.value)
             setAberto(true)
           }}
           onFocus={() => setAberto(true)}

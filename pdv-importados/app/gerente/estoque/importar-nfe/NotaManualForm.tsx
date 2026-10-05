@@ -112,9 +112,9 @@ export function NotaManualForm({ mi, onPreview, semDocumento = false, produtoIni
 
   async function continuar() {
     setValidarProdutos(true)
-    const itemSemProduto = semDocumento ? itens.findIndex((item) => !item.produto?.id) : -1
+    const itemSemProduto = semDocumento ? itens.findIndex((item) => !item.nome.trim()) : -1
     if (itemSemProduto >= 0) {
-      emitGerenteToast({ kind: 'error', message: `Item ${itemSemProduto + 1}: selecione o produto na lista de resultados da busca.` })
+      emitGerenteToast({ kind: 'error', message: `Item ${itemSemProduto + 1}: informe o nome do produto ou selecione um produto da lista.` })
       return
     }
     const validas = parcelas.filter((p) => p.venc && (parseBRL(p.valor) ?? 0) > 0)
@@ -224,14 +224,15 @@ export function NotaManualForm({ mi, onPreview, semDocumento = false, produtoIni
                   minimoLabel="Digite pelo menos 2 caracteres"
                   limparLabel="Trocar produto"
                   valorInicial={it.produto}
+                  onSearchChange={(nome) => setItem(idx, { nome, produto: null, ref: '', gtin: '' })}
                   onChange={(produto) => setItem(idx, {
                     produto, nome: produto?.nome ?? '', ref: produto?.id ?? '', gtin: produto?.codigo_barras ?? '',
                   })}
                 />
               ) : <Input value={it.nome} onChange={(e) => setItem(idx, { nome: e.target.value })} />}
-              {semDocumento ? <span role={validarProdutos && !it.produto ? 'alert' : undefined}
-                className={`mt-2 block text-caption ${validarProdutos && !it.produto ? 'text-destructive' : 'text-fg-muted'}`}>
-                {it.produto ? `Selecionado: ${it.produto.nome}` : 'Digite e selecione o produto na lista. Se não encontrar, cadastre-o no Catálogo.'}
+              {semDocumento ? <span role={validarProdutos && !it.nome.trim() ? 'alert' : undefined}
+                className={`mt-2 block text-caption ${validarProdutos && !it.nome.trim() ? 'text-destructive' : 'text-fg-muted'}`}>
+                {it.produto ? `Selecionado: ${it.produto.nome}` : 'Digite o nome de um produto novo ou selecione um existente. Na próxima etapa você poderá cadastrar ou vincular o produto.'}
               </span> : null}
             </label>
             {!semDocumento ? <>
