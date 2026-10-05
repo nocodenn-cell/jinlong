@@ -2060,7 +2060,7 @@
     "contas_carregadas": "contas carregadas",
     "lancar": "Importar NF-e",
     "pagamento_registrado_com_sangria": "Pagamento registrado. Sangria do caixa: {{id}}.",
-    "origem_nfe_hint": "Contas a pagar vêm só da importação de NF-e — sem lançamento manual.",
+    "origem_nfe_hint": "Contas a pagar incluem compras importadas de NF-e e despesas cadastradas no financeiro.",
     "acoes_rapidas": "Ações",
     "kpi_em_aberto": "Em aberto",
     "kpi_atrasadas": "Atrasadas",
