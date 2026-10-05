@@ -101,7 +101,7 @@ jobs:
         run: cd backend && npx supabase gen types typescript --local > ../database.types.generated.ts
 
       - name: Upload database schema diagnostics
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: database-types-local
           path: database.types.generated.ts
