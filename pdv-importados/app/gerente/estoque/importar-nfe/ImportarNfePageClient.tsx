@@ -6,6 +6,7 @@ import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { Button } from '@/components/ui/button'
+import { NotaManualForm } from './NotaManualForm'
 import { formatBRL } from '@/lib/format/money'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import { emitGerenteToast } from '@/lib/gerente/toast'
@@ -31,6 +32,8 @@ import {
   confirmarImportacaoNfe,
   executarImportacaoNfe,
   listarImportacoesNfePendentes,
+  listarNotasLancadas,
+  type NotaLancada,
   obterConferenciaImportacaoNfe,
   obterResumoContasPagarImportacaoNfe,
   previewImportacaoNfe,
@@ -39,9 +42,11 @@ import {
 } from './actions'
 import { OrdemCompraVinculoAutocomplete } from '@/app/gerente/recebimento/OrdemCompraVinculoAutocomplete'
 import { fmtQtd } from '@/app/gerente/compras/ocRecebimento'
-import { fmtGerenteIdCurto } from '@/lib/format/gerenteValues'
+import { fmtGerenteDateTime, fmtGerenteIdCurto } from '@/lib/format/gerenteValues'
 
 type Props = Readonly<{
+  semDocumento?: boolean
+  produtoInicial?: import('@/app/gerente/recebimento/RecebimentoGerentePageClient').RecebimentoProdutoOpt | null
   idioma: Idioma
   embeddedInAdminHub?: boolean
   /** Deep-link `?importacao=<id>`: abre essa importação (aberta ou concluída) ao montar. */
@@ -70,7 +75,7 @@ function fmtVencimento(ymd: string, locale: string): string {
 }
 
 function statusBadgeKey(status: StatusItemNfe): string {
-  if (status === 'RECONHECIDO_DEPARA') return 'ATIVO'
+  if (status === 'RECONHECIDO_DEPARA' || status === 'RECONHECIDO_CATALOGO') return 'ATIVO'
   if (status === 'RECONHECIDO_EAN') return 'TEM_NF'
   return 'ALERTA'
 }
@@ -133,9 +138,18 @@ export function ImportarNfePageClient({
   idioma,
   embeddedInAdminHub = false,
   importacaoInicialId = null,
+  semDocumento = false,
+  produtoInicial = null,
 }: Props) {
   const m = getMessages(idioma)
-  const mi = m.estoque.import_nfe
+  const mi = useMemo(() => semDocumento ? {
+    ...m.estoque.import_nfe,
+    manual_titulo: m.gerente.recebimento_page.entrada_manual_titulo,
+    manual_ajuda: m.gerente.recebimento_page.via_sem_documento_ajuda,
+    manual_itens: m.gerente.recebimento_page.entrada_manual_itens,
+    manual_item_desc: m.gerente.recebimento_page.label_produto,
+    numero_nf: m.gerente.recebimento_page.entrada_manual_referencia,
+  } : m.estoque.import_nfe, [m, semDocumento])
   const locale = localeFromIdioma(idioma)
   const fontClass = idioma === 'pt' ? '' : 'font-chinese'
 
@@ -166,9 +180,16 @@ export function ImportarNfePageClient({
     if (r.success) setPendentes(r.data)
   }, [])
 
+  const [lancadas, setLancadas] = useState<NotaLancada[]>([])
+  const carregarLancadas = useCallback(async () => {
+    const r = await listarNotasLancadas()
+    if (r.success) setLancadas(r.data)
+  }, [])
+
   useEffect(() => {
     void carregarPendentes()
-  }, [carregarPendentes])
+    void carregarLancadas()
+  }, [carregarPendentes, carregarLancadas])
 
   const aplicarConferencia = useCallback((c: ConferenciaImportacaoNfe) => {
     setConferencia(c)
@@ -220,13 +241,11 @@ export function ImportarNfePageClient({
     [mi.import_ok, mi.import_draft_aviso, aplicarConferencia],
   )
 
-  const { mutate: previewMut, loading: previewLoading } = useGerenteMutation(
-    async (xml: string) => {
-      const r = await previewImportacaoNfe(xml)
-      if (!r.success) throw new Error(r.error)
-      setParsed(r.data.parsed)
+  const aplicarPreview = useCallback(
+    (data: { parsed: NfeParsed; linhas: LinhaPreviewNfe[] }) => {
+      setParsed(data.parsed)
       setLinhas(
-        r.data.linhas.map((l) => ({
+        data.linhas.map((l) => ({
           ...l,
           fator: 1,
           atualizar_custo: atualizarGlobalRef.current,
@@ -235,6 +254,15 @@ export function ImportarNfePageClient({
           vinculo_nome: l.produto_nome,
         })),
       )
+    },
+    [],
+  )
+
+  const { mutate: previewMut, loading: previewLoading } = useGerenteMutation(
+    async (xml: string) => {
+      const r = await previewImportacaoNfe(xml)
+      if (!r.success) throw new Error(r.error)
+      aplicarPreview(r.data)
       return null
     },
     previewOpts,
@@ -316,6 +344,7 @@ export function ImportarNfePageClient({
       onSuccess: (res: ConfirmarImportacaoNfeResultado) => {
         setEstoqueAtualizadoOk(true)
         void carregarPendentes()
+        void carregarLancadas()
         const oc = res?.oc
         if (oc) {
           const vars = {
@@ -331,7 +360,7 @@ export function ImportarNfePageClient({
         }
       },
     }),
-    [mi.confirmar_estoque_ok, mi.oc_resultado_completo, mi.oc_resultado_parcial, carregarPendentes],
+    [mi.confirmar_estoque_ok, mi.oc_resultado_completo, mi.oc_resultado_parcial, carregarPendentes, carregarLancadas],
   )
 
   const { mutate: confirmarMut, loading: confirmarLoading } = useGerenteMutation(
@@ -418,6 +447,7 @@ export function ImportarNfePageClient({
   const handleImportar = () => {
     if (!parsed || !tudoResolvido) return
     const base = {
+      origem_manual: parsed.origem_manual,
       chave_acesso: parsed.chave_acesso,
       numero_nf: parsed.numero_nf,
       emitente_cnpj: onlyDigits(parsed.emitente.cnpj),
@@ -512,7 +542,9 @@ export function ImportarNfePageClient({
           <StatusChip
             status={statusBadgeKey(l.status_produto)}
             label={
-              l.status_produto === 'RECONHECIDO_DEPARA'
+              l.status_produto === 'RECONHECIDO_CATALOGO'
+                ? l.produto_nome ?? l.nome_produto
+                : l.status_produto === 'RECONHECIDO_DEPARA'
                 ? mi.status_reconhecido_depara
                 : mi.status_reconhecido_ean
             }
@@ -682,12 +714,55 @@ export function ImportarNfePageClient({
           : `admin-v2-page space-y-4 ${fontClass}`
       }
     >
-      <PageHeader title={mi.titulo} subtitle={mi.subtitulo} />
+      {!semDocumento ? <PageHeader title={mi.titulo} subtitle={mi.subtitulo} /> : null}
 
       {!embeddedInAdminHub ? (
         <Link href={ROUTES.admin.estoque} className="gerente-nav-back text-sm font-medium hover:underline">
           ← {mi.voltar}
         </Link>
+      ) : null}
+
+      {lancadas.length > 0 && !conferencia ? (
+        <SectionCard title={mi.lancadas_titulo} subtitle={mi.lancadas_hint}>
+          <ul className="divide-y divide-[var(--color-border)]" data-testid="notas-lancadas">
+            {lancadas.map((n) => (
+              <li key={n.importacao_id} className="flex flex-wrap items-center justify-between gap-3 py-2">
+                <div className="min-w-0">
+                  <p className="truncate text-body font-medium">
+                    {n.numero_nf ? `${mi.numero_nf} ${n.numero_nf}` : mi.pendentes_sem_numero} —{' '}
+                    <span className="text-fg-muted">{n.fornecedor_nome}</span>
+                    {n.fornecedor_cnpj ? (
+                      <span className="ml-2 font-mono text-caption text-fg-muted">{n.fornecedor_cnpj}</span>
+                    ) : null}
+                  </p>
+                  <p className="text-caption text-fg-muted">
+                    {fmtGerenteDateTime(n.created_at, locale)} · {n.itens_total} {mi.lancadas_itens} ·{' '}
+                    {fmtQtd(n.unidades_total)} {mi.lancadas_unidades} · {mi.lancadas_valor}{' '}
+                    {formatBRL(n.valor_total)}
+                  </p>
+                  <p
+                    className={`text-caption font-semibold ${
+                      n.a_pagar > 0 ? 'text-[var(--color-warning-strong)]' : 'text-[var(--color-success-strong)]'
+                    }`}
+                  >
+                    {n.a_pagar > 0
+                      ? `${mi.lancadas_a_pagar}: ${formatBRL(n.a_pagar)}`
+                      : mi.lancadas_quitada}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  loading={retomarLoading}
+                  onClick={() => void retomarMut(n.importacao_id)}
+                >
+                  {mi.lancadas_abrir}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </SectionCard>
       ) : null}
 
       {pendentes.length > 0 && !conferencia ? (
@@ -719,7 +794,7 @@ export function ImportarNfePageClient({
         </SectionCard>
       ) : null}
 
-      <section
+      {!semDocumento ? <section
         onDragOver={(e) => {
           e.preventDefault()
           setDragOver(true)
@@ -770,7 +845,10 @@ export function ImportarNfePageClient({
           className="mt-4 h-24 font-mono text-caption"
           spellCheck={false}
         />
-      </section>
+        <NotaManualForm mi={mi} onPreview={aplicarPreview} />
+      </section> : !parsed && !conferencia ? (
+        <NotaManualForm mi={mi} onPreview={aplicarPreview} semDocumento produtoInicial={produtoInicial} />
+      ) : null}
 
       {parsed && !conferencia ? (
         <SectionCard title={mi.emitente}>
@@ -790,6 +868,17 @@ export function ImportarNfePageClient({
               {parsed.numero_nf}
             </p>
           ) : null}
+          {(parsed.duplicatas?.length ?? 0) > 0 ? (
+            <p className="text-body" data-testid="previa-contas-pagar">
+              <span className="text-fg-muted">Contas a pagar que serão geradas: </span>
+              {parsed.duplicatas.length} {parsed.duplicatas.length === 1 ? 'parcela' : 'parcelas'} ·{' '}
+              {formatBRL(parsed.duplicatas.reduce((t, d) => t + d.valor, 0))}
+            </p>
+          ) : (
+            <p className="text-body text-[var(--color-warning-strong)]">
+              Esta nota não tem parcelas: nenhuma conta a pagar será gerada.
+            </p>
+          )}
 
           <label className="mt-2 flex items-center gap-2 text-body">
             <Checkbox

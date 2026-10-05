@@ -1,159 +1,125 @@
 /** @vitest-environment jsdom */
-/**
- * UX-018 — entrada "Sem documento" aceita vários produtos na MESMA confirmação (a RPC já recebe uma
- * lista de itens; o formulário só permitia um). Com pedido, continua um item por vez.
- */
 import React, { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 ;(globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
-
-const criarRemessaMock = vi.fn()
-const buscarMock = vi.fn()
-const toastMock = vi.fn()
-
-vi.mock('./actions', () => ({
-  criarRemessaConferencia: (...a: unknown[]) => criarRemessaMock(...a),
-  buscarProdutosRecebimento: (...a: unknown[]) => buscarMock(...a),
-}))
+const preview = vi.hoisted(() => vi.fn())
+const remessa = vi.hoisted(() => vi.fn())
+const buscar = vi.hoisted(() => vi.fn())
+const toast = vi.hoisted(() => vi.fn())
+vi.mock('./actions', () => ({ criarRemessaConferencia: remessa, buscarProdutosRecebimento: buscar }))
 vi.mock('../compras/actions', () => ({
-  listarOrdensCompraElegiveisParaVinculo: vi.fn(async () => []),
-  obterOrdemCompraDetalhe: vi.fn(async () => ({ success: false })),
+  listarOrdensCompraElegiveisParaVinculo: vi.fn(async () => []), obterOrdemCompraDetalhe: vi.fn(),
 }))
-vi.mock('@/lib/gerente/toast', () => ({ emitGerenteToast: (...a: unknown[]) => toastMock(...a) }))
+vi.mock('../estoque/importar-nfe/actions', () => ({
+  previewNotaManualNfe: preview, listarImportacoesNfePendentes: vi.fn(async () => ({ success: true, data: [] })),
+  listarNotasLancadas: vi.fn(async () => ({ success: true, data: [] })),
+  previewImportacaoNfe: vi.fn(), executarImportacaoNfe: vi.fn(), confirmarImportacaoNfe: vi.fn(),
+  buscarProdutosParaVinculo: vi.fn(), registrarConferenciaNfe: vi.fn(), vincularImportacaoNfeOrdemCompra: vi.fn(),
+  obterConferenciaImportacaoNfe: vi.fn(), obterResumoContasPagarImportacaoNfe: vi.fn(),
+}))
+vi.mock('@/lib/gerente/toast', () => ({ emitGerenteToast: toast }))
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), replace: vi.fn() }),
-  usePathname: () => '/admin/estoque/recebimento',
-  useSearchParams: () => new URLSearchParams(),
+  usePathname: () => '/admin/estoque/recebimento', useSearchParams: () => new URLSearchParams(),
 }))
+import { RecebimentoGerentePageClient } from './RecebimentoGerentePageClient'
+import { AdminV2SessionProvider } from '@/components/ui/admin-v2/AdminV2SessionContext'
 
-const { RecebimentoGerentePageClient } = await import('./RecebimentoGerentePageClient')
-const { AdminV2SessionProvider } = await import('@/components/ui/admin-v2/AdminV2SessionContext')
-
-const P1 = { id: 'p1', nome: 'Produto A', codigo_barras: null }
-const P2 = { id: 'p2', nome: 'Produto B', codigo_barras: null }
-
+const P1 = { id: '11111111-1111-4111-8111-111111111111', nome: 'Tapete', codigo_barras: null }
+const P2 = { id: '22222222-2222-4222-8222-222222222222', nome: 'Outro produto', codigo_barras: null }
 let container: HTMLDivElement
 let root: Root
-
-beforeEach(() => {
-  vi.useFakeTimers()
-  criarRemessaMock.mockReset()
-  buscarMock.mockReset()
-  toastMock.mockReset()
-  buscarMock.mockResolvedValue({ success: true, data: [P2] })
-  criarRemessaMock.mockResolvedValue({ success: true, data: { remessaId: 'rem-12345678', oc: null, saldoAtual: null } })
-  container = document.createElement('div')
-  document.body.appendChild(container)
-  root = createRoot(container)
+beforeEach(async () => {
+  vi.useFakeTimers(); vi.clearAllMocks()
+  buscar.mockResolvedValue({ success: true, data: [P2] })
+  preview.mockResolvedValue({ success: false, error: 'Falha de rede' })
+  container = document.createElement('div'); document.body.appendChild(container); root = createRoot(container)
+  await act(async () => root.render(<AdminV2SessionProvider idioma="pt">
+    <RecebimentoGerentePageClient idioma="pt" temProdutos remessasRecentes={[]} embeddedInAdminHub produtoPreSelecionado={P1} />
+  </AdminV2SessionProvider>))
 })
-afterEach(() => {
-  act(() => root.unmount())
-  container.remove()
-  vi.useRealTimers()
-})
-
-async function renderizar() {
-  await act(async () => {
-    root.render(
-      <AdminV2SessionProvider idioma="pt">
-        <RecebimentoGerentePageClient idioma="pt" temProdutos remessasRecentes={[]} embeddedInAdminHub produtoPreSelecionado={P1} />
-      </AdminV2SessionProvider>,
-    )
-  })
-}
-
-function definirValor(input: HTMLInputElement, valor: string) {
-  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!
-  setter.call(input, valor)
+afterEach(() => { act(() => root.unmount()); container.remove(); vi.useRealTimers() })
+function setInput(input: HTMLInputElement, value: string) {
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value)
   input.dispatchEvent(new Event('input', { bubbles: true }))
 }
-const form = () => container.querySelector('#recebimento-form') as HTMLFormElement
-const botao = (txt: string) => Array.from(container.querySelectorAll('button')).find((b) => b.textContent?.trim() === txt) as HTMLButtonElement
-
-async function escolherProdutoExtra() {
-  const combos = Array.from(container.querySelectorAll('input[role="combobox"]')) as HTMLInputElement[]
-  const busca = combos.at(-1)!
-  act(() => {
-    busca.dispatchEvent(new Event('focus', { bubbles: true }))
-    definirValor(busca, 'Produto B')
-  })
+function input(label: string, index = 0): HTMLInputElement {
+  return [...container.querySelectorAll('label')].filter((l) => l.textContent?.trim().startsWith(label))[index].querySelector('input')!
+}
+function button(label: string): HTMLButtonElement {
+  return [...container.querySelectorAll('button')].find((b) => b.textContent?.trim() === label)!
+}
+async function preencher() {
   await act(async () => {
-    vi.advanceTimersByTime(400)
-    await Promise.resolve()
-    await Promise.resolve()
+    setInput(input('Fornecedor'), 'Fornecedor A'); setInput(input('CNPJ'), '12345678000199')
+    setInput(input('Qtd.'), '900'); setInput(input('Valor unit.'), '10,00')
   })
-  const opcao = container.querySelector('button[role="option"]') as HTMLButtonElement
+}
+async function parcelas() {
   await act(async () => {
-    opcao.click()
-    await Promise.resolve()
+    const select = container.querySelector('select')!
+    select.value = '0'; select.dispatchEvent(new Event('change', { bubbles: true }))
   })
 }
 
-describe('Recebimento — vários produtos na mesma entrada (UX-018)', () => {
-  it('"Sem documento": envia os dois produtos numa única chamada e mostra "2 produtos creditados"', async () => {
-    await renderizar()
-    await act(async () => botao('+ Adicionar outro produto').click())
-    await escolherProdutoExtra()
-    const qtdExtra = container.querySelector('[data-testid="rec-itens-extra"] input[type="number"]') as HTMLInputElement
-    await act(async () => {
-      definirValor(form().querySelector('input[name="origem"]') as HTMLInputElement, 'Entrega avulsa')
-      definirValor(form().querySelector('input[name="qtd_conferida"]') as HTMLInputElement, '10')
-      definirValor(qtdExtra, '4')
-    })
-    await act(async () => {
-      form().requestSubmit()
-      await Promise.resolve()
-      await Promise.resolve()
-    })
-    expect(criarRemessaMock).toHaveBeenCalledTimes(1)
-    const arg = criarRemessaMock.mock.calls[0][0]
-    expect(arg.itens).toEqual([
-      { produto_id: 'p1', quantidade_conferida: 10 },
-      { produto_id: 'p2', quantidade_conferida: 4 },
-    ])
-    expect(container.textContent).toContain('2 produtos creditados')
+describe('Sem documento — entrada manual com valores', () => {
+  it('permite continuar sem CNPJ, mantendo fornecedor, itens e parcelas', async () => {
+    await preencher()
+    await act(async () => setInput(input('CNPJ'), ''))
+    await parcelas()
+    await act(async () => button('Continuar para vincular produtos').click())
+    expect(preview).toHaveBeenCalledWith(expect.objectContaining({
+      emitente_nome: 'Fornecedor A', emitente_cnpj: '',
+      duplicatas: [expect.objectContaining({ valor: 9000 })],
+    }))
   })
-
-  it('linha extra totalmente em branco é ignorada (continua enviando 1 item)', async () => {
-    await renderizar()
-    await act(async () => botao('+ Adicionar outro produto').click())
-    await act(async () => {
-      definirValor(form().querySelector('input[name="origem"]') as HTMLInputElement, 'Entrega')
-      definirValor(form().querySelector('input[name="qtd_conferida"]') as HTMLInputElement, '3')
-    })
-    await act(async () => {
-      form().requestSubmit()
-      await Promise.resolve()
-      await Promise.resolve()
-    })
-    expect(criarRemessaMock.mock.calls[0][0].itens).toEqual([{ produto_id: 'p1', quantidade_conferida: 3 }])
+  it('limita o CNPJ a 14 dígitos e remove símbolos ao digitar ou colar', async () => {
+    const campo = input('CNPJ')
+    expect(campo.maxLength).toBe(14)
+    await act(async () => setInput(campo, '12.345.678/0001-99+123456789'))
+    expect(campo.value).toBe('12345678000199')
+    await act(async () => setInput(campo, 'abc+123'))
+    expect(campo.value).toBe('123')
   })
-
-  it('linha extra incompleta (quantidade sem produto) recusa o envio', async () => {
-    await renderizar()
-    await act(async () => botao('+ Adicionar outro produto').click())
-    const qtdExtra = container.querySelector('[data-testid="rec-itens-extra"] input[type="number"]') as HTMLInputElement
-    await act(async () => {
-      definirValor(form().querySelector('input[name="origem"]') as HTMLInputElement, 'Entrega')
-      definirValor(form().querySelector('input[name="qtd_conferida"]') as HTMLInputElement, '3')
-      definirValor(qtdExtra, '2')
-    })
-    await act(async () => {
-      form().requestSubmit()
-    })
-    expect(criarRemessaMock).not.toHaveBeenCalled()
-    expect(toastMock).toHaveBeenCalledWith(expect.objectContaining({ kind: 'error' }))
+  it('abre quantidade, valor unitário e parcelas diretamente, sem exigir nota ou XML', () => {
+    expect(container.querySelector('[data-testid="nota-manual"]')).not.toBeNull()
+    expect(input('Qtd.')).toBeTruthy(); expect(input('Valor unit.')).toBeTruthy()
+    expect(container.querySelector('#recebimento-form')).toBeNull()
+    expect(container.textContent).toContain('Parcelas / vencimentos')
+    expect(container.textContent).not.toContain('Nº da nota')
+    expect(container.querySelector('input[type="file"]')).toBeNull()
   })
-
-  it('remover a linha extra e trocar para "Ordem de Compra" esconde a lista (pedido = um item por vez)', async () => {
-    await renderizar()
-    await act(async () => botao('+ Adicionar outro produto').click())
-    expect(container.querySelectorAll('[data-testid="rec-itens-extra"] input[type="number"]')).toHaveLength(1)
-    await act(async () => botao('Remover').click())
-    expect(container.querySelectorAll('[data-testid="rec-itens-extra"] input[type="number"]')).toHaveLength(0)
-    await act(async () => botao('Ordem de Compra').click())
-    expect(container.querySelector('[data-testid="rec-itens-extra"]')).toBeNull()
+  it('envia quantidade e valor ao fluxo financeiro existente e preserva os dados numa falha', async () => {
+    await preencher(); await parcelas()
+    await act(async () => button('Continuar para vincular produtos').click())
+    expect(preview).toHaveBeenCalledWith(expect.objectContaining({
+      sem_documento: true,
+      itens: [expect.objectContaining({ produto_id: P1.id, q_com: 900, v_un_com: 10 })],
+      duplicatas: [expect.objectContaining({ valor: 9000 })],
+    }))
+    expect(remessa).not.toHaveBeenCalled()
+    expect(input('Qtd.').value).toBe('900')
+    expect(toast).toHaveBeenCalledWith(expect.objectContaining({ message: 'Falha de rede' }))
+  })
+  it('não cria entrada nem dívida sem condição de pagamento', async () => {
+    await preencher(); await act(async () => button('Continuar para vincular produtos').click())
+    expect(preview).not.toHaveBeenCalled(); expect(remessa).not.toHaveBeenCalled()
+  })
+  it('envia dois produtos, cada um com sua quantidade e valor, no mesmo lançamento', async () => {
+    await preencher(); await act(async () => button('Adicionar item').click())
+    const busca = [...container.querySelectorAll<HTMLInputElement>('input[role="combobox"]')][1]
+    await act(async () => { busca.dispatchEvent(new Event('focus', { bubbles: true })); setInput(busca, 'Outro') })
+    await act(async () => { vi.advanceTimersByTime(400); await Promise.resolve(); await Promise.resolve() })
+    await act(async () => (container.querySelector('button[role="option"]') as HTMLButtonElement).click())
+    await act(async () => { setInput(input('Qtd.', 1), '4'); setInput(input('Valor unit.', 1), '25,00') })
+    await parcelas(); await act(async () => button('Continuar para vincular produtos').click())
+    expect(preview).toHaveBeenCalledWith(expect.objectContaining({
+      itens: [expect.objectContaining({ produto_id: P1.id, q_com: 900, v_un_com: 10 }),
+        expect.objectContaining({ produto_id: P2.id, q_com: 4, v_un_com: 25 })],
+      duplicatas: [expect.objectContaining({ valor: 9100 })],
+    }))
+    expect(remessa).not.toHaveBeenCalled()
   })
 })

@@ -5,7 +5,7 @@ import { usePathname, useSearchParams } from 'next/navigation'
 import { ROUTES } from '@/lib/navigation/routes'
 import { cn } from '@/lib/utils'
 import { hubTabIsActive, type HubTabDef } from '@/lib/navigation/hubNavModel'
-import type { FinanceiroTabId } from '@/lib/navigation/financeiroTabId'
+import { FINANCEIRO_TAB_ORDER, type FinanceiroTabId } from '@/lib/navigation/financeiroTabId'
 import { financeiroHrefForTab } from '@/lib/navigation/financeiroHubQuery'
 
 const HUB_TAB_CLASS =
@@ -72,27 +72,8 @@ export function FinanceiroHubNav({ activeTab, labels, ariaLabel }: FinanceiroHub
   const onFinanceiro = pathname === ROUTES.admin.financeiro
   const onCategorias = pathname.startsWith(ROUTES.admin.categoriasFinanceiras)
 
-  const extraTabs = ['resumo','contas','recebiveis','conciliacao','resultado'] as const
   const items: Array<{ id: string; label: string; href: string; active: boolean }> = [
-    ...extraTabs.map(id => ({ id, label: labels[id] ?? id, href: financeiroHrefForTab(id, searchParams), active: onFinanceiro && activeTab === id })),
-    {
-      id: 'receber',
-      label: labels.receber,
-      href: financeiroHrefForTab('receber', searchParams),
-      active: onFinanceiro && activeTab === 'receber',
-    },
-    {
-      id: 'pagar',
-      label: labels.pagar,
-      href: financeiroHrefForTab('pagar', searchParams),
-      active: onFinanceiro && activeTab === 'pagar',
-    },
-    {
-      id: 'fiscal',
-      label: labels.fiscal,
-      href: financeiroHrefForTab('fiscal', searchParams),
-      active: onFinanceiro && activeTab === 'fiscal',
-    },
+    ...FINANCEIRO_TAB_ORDER.map(id => ({ id, label: labels[id] ?? id, href: financeiroHrefForTab(id, searchParams), active: onFinanceiro && activeTab === id })),
     {
       id: 'categorias',
       label: labels.categorias,

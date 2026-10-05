@@ -35,7 +35,7 @@ type Props = {
   actorLojaId: string | null
 }
 
-const FORMAS = ['DINHEIRO', 'PIX', 'CARTAO_DEBITO', 'CARTAO_CREDITO'] as const
+const FORMAS = ['DINHEIRO'] as const
 
 const LINK_MUTED =
   'text-caption font-medium text-[var(--color-warning-strong)] hover:underline'
@@ -113,7 +113,7 @@ export function FinanceiroReceberExtras({ financeiroData, contas, clientesInicia
   function handleLiquidar(tituloId: string, form: HTMLFormElement) {
     const fd = new FormData(form)
     const valor = Number(fd.get('valor'))
-    const forma = String(fd.get('forma') ?? 'DINHEIRO') as (typeof FORMAS)[number]
+    const forma = 'DINHEIRO'
     const caixaId = String(fd.get('caixa_id') ?? '') || null
     const idempotencyKey = form.dataset.idempotencyKey || crypto.randomUUID()
     form.dataset.idempotencyKey = idempotencyKey
@@ -179,6 +179,11 @@ export function FinanceiroReceberExtras({ financeiroData, contas, clientesInicia
           <h3 className="mb-2 text-caption font-semibold uppercase tracking-wide text-jl-fg-3">
             Liquidar título
           </h3>
+          <p className="mb-2 text-caption text-jl-fg-3">
+            Este formulário recebe dinheiro no caixa físico. Para PIX, cartão ou transferência, use{' '}
+            <a href="#baixa-conta-financeira" className={LINK_MUTED}>Receber na conta financeira</a>{' '}
+            e selecione a conta de destino.
+          </p>
           <ul className="space-y-2">
             {abertas.slice(0, 8).map((c) => {
               const caixasTitulo = caixasAbertos.filter((caixa) => caixa.loja_id === c.loja_id)

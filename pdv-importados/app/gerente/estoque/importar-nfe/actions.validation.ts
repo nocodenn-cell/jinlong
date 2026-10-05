@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { erroFinanceiroNotaManual } from './notaManualFinanceiro'
 
 export const ImportNfeLinhaSchema = z
   .object({
@@ -31,13 +32,21 @@ const ImportNfeDuplicataSchema = z.object({
 })
 
 export const ImportNfePayloadSchema = z.object({
+  origem_manual: z.boolean().optional(),
   chave_acesso: z.string().length(44),
   numero_nf: z.string().nullable(),
-  emitente_cnpj: z.string().regex(/^\d{14}$/),
+  emitente_cnpj: z.string().refine((v) => v === '' || /^\d{14}$/.test(v), 'CNPJ deve ter 14 dígitos quando informado.'),
   emitente_nome: z.string().min(1),
   atualizar_custo_padrao: z.boolean(),
   linhas: z.array(ImportNfeLinhaSchema).min(1),
   duplicatas: z.array(ImportNfeDuplicataSchema).default([]),
+}).superRefine((nota, ctx) => {
+  if (!nota.emitente_cnpj && !nota.chave_acesso.startsWith('MANUAL')) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'CNPJ é obrigatório na importação XML.', path: ['emitente_cnpj'] })
+  }
+  if (!nota.origem_manual && !nota.chave_acesso.startsWith('MANUAL')) return
+  const erro = erroFinanceiroNotaManual(nota.linhas, nota.duplicatas)
+  if (erro) ctx.addIssue({ code: z.ZodIssueCode.custom, message: erro, path: ['duplicatas'] })
 })
 
 export type ImportNfePayloadInput = z.infer<typeof ImportNfePayloadSchema>
@@ -73,3 +82,60 @@ export const ConfirmarImportacaoNfePayloadSchema = z.object({
 export type ConfirmarImportacaoNfePayloadInput = z.infer<
   typeof ConfirmarImportacaoNfePayloadSchema
 >
+
+/**
+ * Nota digitada à mão (sem XML): o balcão recebeu a mercadoria com a nota em papel
+ * ou o fornecedor não mandou o XML. Vira o mesmo `NfeParsed` do XML e segue o fluxo
+ * normal (vínculo de produtos → conferência → entrada de estoque + contas a pagar).
+ * Chave de acesso é opcional: sem ela o servidor gera um identificador interno.
+ */
+export const NotaManualSchema = z.object({
+  emitente_nome: z.string().trim().min(1, 'Informe o nome do fornecedor.'),
+  emitente_cnpj: z
+    .string()
+    .refine((v) => v.trim() === '' || v.replace(/\D/g, '').length === 14, 'CNPJ deve ter 14 dígitos quando informado.')
+    .transform((v) => v.replace(/\D/g, '')),
+  numero_nf: z.string().trim().min(1, 'Informe o número da nota.'),
+  serie: z.string().trim().optional(),
+  chave_acesso: z
+    .string()
+    .optional()
+    .transform((v) => (v ?? '').replace(/\D/g, ''))
+    .refine((v) => v === '' || v.length === 44, 'A chave de acesso deve ter 44 dígitos (ou fique em branco).'),
+  itens: z
+    .array(
+      z.object({
+        nome_produto: z.string().trim().min(1, 'Todo item precisa de descrição.'),
+        produto_id: z.string().uuid().optional(),
+        ref_fornecedor: z.string().trim().optional(),
+        gtin: z
+          .string()
+          .optional()
+          .transform((v) => (v ?? '').replace(/\D/g, ''))
+          .refine((v) => v === '' || (v.length >= 8 && v.length <= 14), 'GTIN deve ter de 8 a 14 dígitos.'),
+        ncm: z
+          .string()
+          .optional()
+          .transform((v) => (v ?? '').replace(/\D/g, ''))
+          .refine((v) => v === '' || v.length === 8, 'NCM deve ter 8 dígitos.'),
+        u_com: z.string().trim().max(6).optional(),
+        q_com: z.number().positive('Quantidade deve ser maior que zero.').finite(),
+        v_un_com: z.number().positive('Valor unitário deve ser maior que zero.').finite(),
+      }),
+    )
+    .min(1, 'Adicione ao menos um item.'),
+  duplicatas: z
+    .array(
+      z.object({
+        numero: z.string().trim().nullable().optional(),
+        data_vencimento: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Vencimento inválido.'),
+        valor: z.number().positive('Valor da parcela deve ser maior que zero.').finite(),
+      }),
+    )
+    .min(1, 'Escolha a condição de pagamento para gerar Contas a pagar.'),
+}).superRefine((nota, ctx) => {
+  const erro = erroFinanceiroNotaManual(nota.itens, nota.duplicatas)
+  if (erro) ctx.addIssue({ code: z.ZodIssueCode.custom, message: erro, path: ['duplicatas'] })
+})
+
+export type NotaManualInput = z.input<typeof NotaManualSchema>

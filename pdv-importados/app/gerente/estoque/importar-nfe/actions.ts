@@ -1,6 +1,8 @@
 'use server'
 
+import { randomUUID } from 'node:crypto'
 import { revalidatePath } from 'next/cache'
+import { readNfePayables } from '@/app/admin/financeiro/payableReader'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import {
@@ -13,6 +15,7 @@ import { getGerenteLojaId } from '@/lib/gerente/auth/sessionContext'
 import {
   ConfirmarImportacaoNfePayloadSchema,
   ImportNfePayloadSchema,
+  NotaManualSchema,
   RegistrarConferenciaNfePayloadSchema,
 } from './actions.validation'
 import { createInventoryMovementWriter } from '@/app/admin/estoque/inventoryMovementWriter'
@@ -112,7 +115,7 @@ function mapRpcImportNfe(message: string): string {
 }
 
 /** Estado de reconhecimento de cada item na conferência. */
-export type StatusItemNfe = 'RECONHECIDO_DEPARA' | 'RECONHECIDO_EAN' | 'DESCONHECIDO'
+export type StatusItemNfe = 'RECONHECIDO_DEPARA' | 'RECONHECIDO_EAN' | 'RECONHECIDO_CATALOGO' | 'DESCONHECIDO'
 
 export type LinhaPreviewNfe = {
   nome_produto: string
@@ -157,6 +160,76 @@ export async function previewImportacaoNfe(xml: string): Promise<
   }
 
   const supabase = await createClient()
+  const linhas = await montarLinhasPreview(supabase, lojaId, parsed)
+  return { success: true, data: { parsed, linhas } }
+}
+
+/**
+ * Nota digitada sem XML: monta o mesmo `NfeParsed` e devolve o mesmo preview, de modo que
+ * vínculo de itens, conferência, estoque e contas a pagar seguem exatamente o fluxo do XML.
+ */
+export async function previewNotaManualNfe(
+  input: unknown,
+): Promise<ActionResult<{ parsed: NfeParsed; linhas: LinhaPreviewNfe[] }>> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const v = NotaManualSchema.safeParse(normalizarEntradaManual(input))
+  if (!v.success) {
+    return { success: false, error: v.error.issues[0]?.message ?? 'Dados da nota inválidos.' }
+  }
+
+  const lojaId = await lojaIdDoUsuarioLogado()
+  if (!lojaId) return { success: false, error: 'Não foi possível identificar sua loja.' }
+
+  const n = v.data
+  // Sem chave real: identificador interno de 44 caracteres (a coluna é UNIQUE e exige 44).
+  const chave =
+    n.chave_acesso ||
+    `MANUAL${randomUUID().replace(/-/g, '')}${randomUUID().replace(/-/g, '')}`.slice(0, 44)
+  const numero = n.serie ? `${n.numero_nf}/${n.serie}` : n.numero_nf
+
+  const parsed: NfeParsed = {
+    origem_manual: true,
+    chave_acesso: chave,
+    numero_nf: numero,
+    emitente: { nome: n.emitente_nome, cnpj: n.emitente_cnpj },
+    itens: n.itens.map((i) => ({
+      produto_id: i.produto_id,
+      nome_produto: i.nome_produto,
+      gtin: i.gtin || null,
+      ref_fornecedor: i.ref_fornecedor || i.gtin || i.nome_produto.slice(0, 60),
+      ncm: i.ncm || null,
+      u_com: i.u_com || 'UN',
+      q_com: i.q_com,
+      v_un_com: i.v_un_com,
+    })),
+    duplicatas: n.duplicatas.map((d) => ({
+      numero: d.numero || null,
+      data_vencimento: d.data_vencimento,
+      valor: d.valor,
+    })),
+  }
+
+  const supabase = await createClient()
+  const linhas = await montarLinhasPreview(supabase, lojaId, parsed)
+  if (n.itens.some((item, idx) => item.produto_id && linhas[idx]?.produto_id !== item.produto_id)) {
+    return { success: false, error: 'Um produto selecionado não está disponível nesta loja. Escolha o produto novamente.' }
+  }
+  return { success: true, data: { parsed, linhas } }
+}
+
+function normalizarEntradaManual(input: unknown): unknown {
+  if (!input || typeof input !== 'object' || !('sem_documento' in input)) return input
+  if (input.sem_documento !== true) return input
+  return { ...input, numero_nf: `ENT-${randomUUID().slice(0, 8)}`, serie: undefined, chave_acesso: undefined }
+}
+
+async function montarLinhasPreview(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  lojaId: string,
+  parsed: NfeParsed,
+): Promise<LinhaPreviewNfe[]> {
   const cnpj = onlyDigits(parsed.emitente.cnpj)
 
   const { data: forn } = await supabase
@@ -173,6 +246,7 @@ export async function previewImportacaoNfe(xml: string): Promise<
     ),
   ]
   const refs = [...new Set(parsed.itens.map((i) => i.ref_fornecedor))]
+  const ids = parsed.itens.map((i) => i.produto_id).filter((id): id is string => !!id)
 
   // (1) De-Para aprendido: [loja + fornecedor + ref] → produto
   const byDePara = new Map<string, { id: string; nome: string }>()
@@ -193,13 +267,15 @@ export async function previewImportacaoNfe(xml: string): Promise<
 
   // (2) Código de barras (cEAN) na loja
   const byGtin = new Map<string, { id: string; nome: string }>()
-  if (gtins.length > 0) {
+  const byId = new Map<string, { id: string; nome: string }>()
+  if (gtins.length > 0 || ids.length > 0) {
     const { data: rows } = await supabase
       .from('produtos')
       .select('id, nome, codigo_barras')
       .eq('loja_id', lojaId)
-      .in('codigo_barras', gtins)
+      .or([gtins.length ? `codigo_barras.in.(${gtins.join(',')})` : '', ids.length ? `id.in.(${ids.join(',')})` : ''].filter(Boolean).join(','))
     for (const r of rows ?? []) {
+      byId.set(r.id as string, { id: r.id as string, nome: r.nome as string })
       const cb = r.codigo_barras as string | null
       if (cb) byGtin.set(cb, { id: r.id as string, nome: r.nome as string })
     }
@@ -208,12 +284,17 @@ export async function previewImportacaoNfe(xml: string): Promise<
   const linhas: LinhaPreviewNfe[] = parsed.itens.map((item) => {
     const dePara = byDePara.get(item.ref_fornecedor)
     const ean = item.gtin && item.gtin.length >= 8 ? byGtin.get(item.gtin) : undefined
+    const escolhido = item.produto_id ? byId.get(item.produto_id) : undefined
 
     let status: StatusItemNfe = 'DESCONHECIDO'
     let produtoId: string | null = null
     let produtoNome: string | null = null
 
-    if (dePara) {
+    if (escolhido) {
+      status = 'RECONHECIDO_CATALOGO'
+      produtoId = escolhido.id
+      produtoNome = escolhido.nome
+    } else if (dePara) {
       status = 'RECONHECIDO_DEPARA'
       produtoId = dePara.id
       produtoNome = dePara.nome
@@ -237,7 +318,7 @@ export async function previewImportacaoNfe(xml: string): Promise<
     }
   })
 
-  return { success: true, data: { parsed, linhas } }
+  return linhas
 }
 
 /** Busca produtos do catálogo da loja para amarrar o De-Para de um item desconhecido. */
@@ -553,12 +634,8 @@ export async function obterResumoContasPagarImportacaoNfe(
   if (!lojaId) return { success: false, error: 'Não foi possível identificar sua loja.' }
 
   const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('contas_pagar')
-    .select('valor_total, vencimento, fornecedor_id')
+  const { data, error } = await readNfePayables(supabase, lojaId)
     .eq('nfe_importacao_id', importacaoId)
-    .eq('loja_id', lojaId)
-    .neq('status', 'CANCELADO')
 
   if (error) {
     return { success: false, error: mensagemErroComSecao('Contas a pagar', error.message) }
@@ -650,6 +727,91 @@ export async function listarImportacoesNfePendentes(): Promise<
     .filter((row) => row.itens_total > 0)
 
   return { success: true, data: rows }
+}
+
+export type NotaLancada = {
+  importacao_id: string
+  numero_nf: string | null
+  fornecedor_nome: string
+  fornecedor_cnpj: string
+  created_at: string
+  itens_total: number
+  unidades_total: number
+  valor_total: number
+  /** Soma do que ainda falta pagar ao fornecedor nas parcelas desta nota (exclui canceladas). */
+  a_pagar: number
+}
+
+/** Notas de chegada já com entrada no estoque: o que veio, de quem e quanto ainda se deve. */
+export async function listarNotasLancadas(): Promise<ActionResult<NotaLancada[]>> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const lojaId = await lojaIdDoUsuarioLogado()
+  if (!lojaId) return { success: false, error: 'Não foi possível identificar sua loja.' }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('importacoes_nfe')
+    .select(
+      'id, numero_nf, created_at, fornecedores(nome, cnpj), importacoes_nfe_itens(quantidade_nfe, quantidade_conferida, custo_unitario)',
+    )
+    .eq('loja_id', lojaId)
+    .neq('status', 'EM_CONFERENCIA')
+    .order('created_at', { ascending: false })
+    .limit(30)
+
+  if (error) {
+    return { success: false, error: mensagemErroComSecao('Importação NF-e', error.message) }
+  }
+
+  const ids = (data ?? []).map((r) => r.id as string)
+  const aPagarPorNota = new Map<string, number>()
+  if (ids.length > 0) {
+    const { data: contas, error: contasError } = await readNfePayables(supabase, lojaId)
+      .in('nfe_importacao_id', ids)
+    if (contasError) {
+      return { success: false, error: mensagemErroComSecao('Contas a pagar', contasError.message) }
+    }
+    for (const c of contas ?? []) {
+      const id = c.nfe_importacao_id as string | null
+      if (!id) continue
+      const falta = Math.max(0, Number(c.valor_total) - Number(c.valor_pago ?? 0))
+      aPagarPorNota.set(id, (aPagarPorNota.get(id) ?? 0) + falta)
+    }
+  }
+
+  const rows: NotaLancada[] = (data ?? []).map((r) => {
+    const forn = (r as { fornecedores: { nome: string; cnpj: string } | { nome: string; cnpj: string }[] | null })
+      .fornecedores
+    const f = Array.isArray(forn) ? forn[0] : forn
+    const itens =
+      (r as {
+        importacoes_nfe_itens:
+          | { quantidade_nfe: number; quantidade_conferida: number | null; custo_unitario: number }[]
+          | null
+      }).importacoes_nfe_itens ?? []
+    let unidades = 0
+    let valor = 0
+    for (const i of itens) {
+      const q = Number(i.quantidade_conferida ?? i.quantidade_nfe)
+      unidades += q
+      valor += q * Number(i.custo_unitario)
+    }
+    const id = r.id as string
+    return {
+      importacao_id: id,
+      numero_nf: (r.numero_nf as string | null) ?? null,
+      fornecedor_nome: f?.nome ?? '',
+      fornecedor_cnpj: f?.cnpj ?? '',
+      created_at: r.created_at as string,
+      itens_total: itens.length,
+      unidades_total: unidades,
+      valor_total: valor,
+      a_pagar: aPagarPorNota.get(id) ?? 0,
+    }
+  })
+  return { success: true, data: rows.filter((n) => n.itens_total > 0) }
 }
 
 /** Registra a contagem física por item (pré-requisito de `confirmarImportacaoNfe`). */

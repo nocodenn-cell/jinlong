@@ -2,6 +2,7 @@ import { XMLParser } from 'fast-xml-parser'
 
 /** Linha extraída do XML (antes do fator / conferência). */
 export type NfeItemParsed = {
+  produto_id?: string
   nome_produto: string
   /** GTIN (cEAN); pode ser "SEM GTIN" ou vazio → usar ref_fornecedor. */
   gtin: string | null
@@ -24,6 +25,7 @@ export type NfeDuplicataParsed = {
 }
 
 export type NfeParsed = {
+  origem_manual?: boolean
   chave_acesso: string
   numero_nf: string | null
   emitente: NfeEmitenteParsed

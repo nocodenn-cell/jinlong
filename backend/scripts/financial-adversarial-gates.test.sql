@@ -1166,9 +1166,9 @@ DECLARE
   v_loja uuid := current_setting('t.loja')::uuid;
   v_prod uuid := current_setting('t.produto')::uuid;
   v_preco numeric := current_setting('t.preco')::numeric;
-  -- Vendedor proprio: o OPERADOR ja acumula ajustes dos gates anteriores e a
-  -- liquidacao (corretamente) consumiria esse debito, mascarando o cenario.
-  v_op uuid := current_setting('t.dono')::uuid;
+  -- Vendedor sintético exclusivo: nem o OPERADOR nem o DONO do seed garantem
+  -- ausência de ajustes anteriores em uma instalação local já utilizada.
+  v_op uuid := gen_random_uuid();
   v_ger uuid := current_setting('t.gerente')::uuid;
   v_caixa uuid := current_setting('t.caixa')::uuid;
   v_unit numeric := (public.calcular_preco_produto(v_prod, 10, v_loja)->>'preco')::numeric;
@@ -1180,6 +1180,9 @@ DECLARE
   v_liq numeric := round(v_unit * 10, 2);
   v_com numeric; v_aj numeric; v_esperado numeric;
 BEGIN
+  INSERT INTO auth.users(id) VALUES (v_op);
+  INSERT INTO public.usuarios(id,nome,perfil,ativo,loja_id)
+  VALUES (v_op,'Teste isolado GATE19','OPERADOR',true,v_loja);
   INSERT INTO public.configuracoes_gerais(chave, valor, tipo_dado)
   VALUES ('comissao_padrao_percentual', '5', 'percent')
   ON CONFLICT (chave) DO UPDATE SET valor = '5';
@@ -1236,7 +1239,7 @@ BEGIN
   -- retry do lote não paga de novo
   SELECT * INTO r FROM public.liquidar_comissoes(v_loja, v_op, ARRAY[v_c2], 'g19-lote2-' || v_v2::text);
   IF NOT r.idempotent_replay THEN RAISE EXCEPTION 'GATE19_RETRY_NAO_E_REPLAY'; END IF;
-  IF (SELECT count(*) FROM public.comissoes_pagamentos) <> 2 THEN
+  IF (SELECT count(*) FROM public.comissoes_pagamentos WHERE loja_id=v_loja AND operador_id=v_op) <> 2 THEN
     RAISE EXCEPTION 'GATE19_RETRY_CRIOU_LOTE';
   END IF;
 

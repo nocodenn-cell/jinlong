@@ -295,11 +295,16 @@ BEGIN
 
   SELECT id INTO v_operador_id FROM public.usuarios WHERE loja_id = v_loja_id LIMIT 1;
   SELECT id INTO v_caixa_id FROM public.caixas WHERE loja_id = v_loja_id AND status = 'ABERTO' LIMIT 1;
-  SELECT id INTO v_produto_id FROM public.produtos WHERE loja_id = v_loja_id AND ativo = true LIMIT 1;
-  IF v_operador_id IS NULL OR v_caixa_id IS NULL OR v_produto_id IS NULL THEN
+  IF v_operador_id IS NULL OR v_caixa_id IS NULL THEN
     RAISE NOTICE 'C2_10_P05: sem operador/caixa aberto/produto para prova viva; verificação estrutural (overload) já OK';
     RETURN;
   END IF;
+
+  -- Preço controlado: a prova não depende do catálogo real da loja.
+  -- O produto e todas as escritas da prova são desfeitos pela sentinela.
+  INSERT INTO public.produtos (nome, loja_id, preco_varejo, ativo, origem, tem_nf)
+  VALUES ('AUTOTEST C2.10 split (rollback)', v_loja_id, 20, true, 'china_manual', false)
+  RETURNING id INTO v_produto_id;
 
   -- Caminho escalar (sem p_pagamentos) — comportamento idêntico ao anterior.
   PERFORM public.registrar_venda_com_itens(
@@ -341,6 +346,7 @@ BEGIN
   DELETE FROM public.itens_venda WHERE venda_id IN (v_venda_escalar, v_venda_mista);
   DELETE FROM public.comissoes_vendedores WHERE venda_id IN (v_venda_escalar, v_venda_mista);
   DELETE FROM public.vendas WHERE id IN (v_venda_escalar, v_venda_mista);
+  DELETE FROM public.produtos WHERE id = v_produto_id;
   RAISE EXCEPTION 'VERIFY_ROLLBACK_SENTINELA' USING ERRCODE = 'VRB01';
   EXCEPTION WHEN SQLSTATE 'VRB01' THEN
     RAISE NOTICE '20260903130000: autoteste concluído; efeitos desfeitos (rollback do sub-bloco)';

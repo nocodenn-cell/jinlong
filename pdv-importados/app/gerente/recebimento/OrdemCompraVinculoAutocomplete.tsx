@@ -156,6 +156,7 @@ export function OrdemCompraVinculoAutocomplete({
           aria-controls={listId}
           aria-autocomplete="list"
           className="pl-8"
+          style={{ paddingLeft: '2rem' }}
           onChange={(e) => {
             if (selecionado) onChange?.(null)
             setSelecionado(null)
@@ -187,7 +188,7 @@ export function OrdemCompraVinculoAutocomplete({
         <ul
           id={listId}
           role="listbox"
-          className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] py-1 shadow-lg"
+          className="relative z-20 mt-2 max-h-64 w-full overflow-auto rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] py-1 shadow-lg"
         >
           {carregando ? (
             <li

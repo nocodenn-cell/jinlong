@@ -11,20 +11,17 @@
  * Regra: só entra aqui o que for puro e utilizável nos dois runtimes.
  */
 
-import type { FinanceiroTabId } from '@/lib/navigation/financeiroTabId'
+import { FINANCEIRO_TAB_ORDER, type FinanceiroTabId } from '@/lib/navigation/financeiroTabId'
 
 export type { FinanceiroTabId }
 
-export const FINANCEIRO_TABS: ReadonlyArray<{ id: FinanceiroTabId; label: string }> = [
-  { id: 'resumo', label: 'Resumo' },
-  { id: 'contas', label: 'Contas e movimentos' },
-  { id: 'recebiveis', label: 'PIX e cartões' },
-  { id: 'conciliacao', label: 'Conciliação' },
-  { id: 'resultado', label: 'Resultado' },
-  { id: 'receber', label: 'A receber' },
-  { id: 'pagar', label: 'A pagar' },
-  { id: 'fiscal', label: 'Fila fiscal' },
-]
+const LABELS: Record<FinanceiroTabId, string> = {
+  'resumo': 'Resumo', 'receber': 'A receber', 'pagar': 'A pagar',
+  'contas': 'Contas e movimentos', 'recebiveis': 'PIX e cartões',
+  'conciliacao': 'Conciliação', 'resultado': 'Resultado', 'fiscal': 'Fiscal',
+}
+export const FINANCEIRO_TABS: ReadonlyArray<{ id: FinanceiroTabId; label: string }> =
+  FINANCEIRO_TAB_ORDER.map(id => ({ id, label: LABELS[id] }))
 
 export function parseFinanceiroTab(raw: string | undefined): FinanceiroTabId {
   const tab = FINANCEIRO_TABS.find(t => t.id === raw)

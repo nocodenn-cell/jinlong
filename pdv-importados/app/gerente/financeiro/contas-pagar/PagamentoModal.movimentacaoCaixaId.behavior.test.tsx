@@ -100,6 +100,19 @@ async function montarESelecionarDinheiro() {
 }
 
 describe('PagamentoModal — movimentacaoCaixaId no toast (G-09)', () => {
+  it('no hub financeiro, a baixa física oferece só dinheiro e preserva a sangria', async () => {
+    registrarPagamentoActionMock.mockResolvedValue({ ok: true, conta: { ...conta, valor_pago: 100, status: 'PAGO' }, movimentacaoCaixaId: 'mov-caixa' })
+    await act(async () => {
+      root.render(<PagamentoModal somenteCaixa idioma="pt" locale="pt-BR" conta={conta} onClose={vi.fn()} onPagamentoRegistrado={vi.fn()} />)
+    })
+    expect(container.querySelectorAll('[role="radio"]')).toHaveLength(1)
+    expect(container.querySelector('[role="radio"]')?.getAttribute('aria-checked')).toBe('true')
+    expect(container.textContent).toContain('Pagar pela conta financeira')
+    await act(async () => {
+      container.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+    })
+    expect(registrarPagamentoActionMock).toHaveBeenCalledWith(expect.objectContaining({ forma: 'DINHEIRO', caixa_id: 'caixa-1' }))
+  })
   it('pagamento em dinheiro com movimentacaoCaixaId: toast inclui a referência da sangria', async () => {
     registrarPagamentoActionMock.mockResolvedValue({
       ok: true,
