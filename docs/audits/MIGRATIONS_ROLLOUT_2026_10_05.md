@@ -148,4 +148,3 @@ Pendências separadas: a chave antiga de smoke permanece inválida; configuraç�
 secrets e homologação do provedor fiscal não fazem parte desta aplicação; avisos
 dos advisors permanecem documentados. A atualização do histórico deve entrar em
 main para que o gate remoto reconheça as aplicações reais.
-
