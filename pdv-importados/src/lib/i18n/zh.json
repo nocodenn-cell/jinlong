@@ -963,7 +963,7 @@
       "manual_titulo": "手动录入到货发票",
       "manual_ajuda": "纸质发票或没有 XML 时使用。之后与 XML 流程相同：关联商品、核对数量并入库。",
       "manual_fornecedor": "供应商名称",
-      "manual_cnpj": "供应商 CNPJ（14位）",
+      "manual_cnpj": "供应商 CNPJ（可选，14位）",
       "manual_numero": "发票号",
       "manual_serie": "系列",
       "manual_chave": "访问密钥（44 位，可选）",

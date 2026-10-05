@@ -15,6 +15,13 @@ const importacao = {
 }
 
 describe('nota manual: proteção financeira no servidor', () => {
+  it('aceita CNPJ vazio somente na entrada manual e recusa CNPJ incompleto', () => {
+    expect(NotaManualSchema.safeParse({ ...nota, emitente_cnpj: '', duplicatas }).success).toBe(true)
+    expect(ImportNfePayloadSchema.safeParse({ ...importacao, emitente_cnpj: '',
+      chave_acesso: 'MANUAL' + '1'.repeat(38) }).success).toBe(true)
+    expect(ImportNfePayloadSchema.safeParse({ ...importacao, emitente_cnpj: '' }).success).toBe(false)
+    expect(NotaManualSchema.safeParse({ ...nota, emitente_cnpj: '123', duplicatas }).success).toBe(false)
+  })
   it('recusa nota sem parcelas', () => {
     expect(NotaManualSchema.safeParse(nota).success).toBe(false)
     expect(NotaManualSchema.safeParse({ ...nota, duplicatas: [] }).success).toBe(false)

@@ -15,7 +15,7 @@ export function montarTituloContagem(
   return hasMore ? `${base} · ${labels.ha_mais}` : base
 }
 
-export function maskCnpj(raw: string): string {
+export function maskCnpj(raw: string | null): string {
   const x = (raw ?? '').replace(/\D/g, '').slice(0, 14)
   if (x.length === 14) return x.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5')
   return x.replace(/(\d{0,2})(\d{0,3})(\d{0,3})(\d{0,4})(\d{0,2})/, (_, a, b, c, d, e) =>

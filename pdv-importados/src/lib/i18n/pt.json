@@ -963,7 +963,7 @@
       "manual_titulo": "Nota de chegada digitada",
       "manual_ajuda": "Use quando a nota chegou em papel ou sem XML. Depois você vincula os produtos, confere as quantidades e dá entrada no estoque, igual à nota em XML.",
       "manual_fornecedor": "Fornecedor (razão social)",
-      "manual_cnpj": "CNPJ do fornecedor (14 dígitos)",
+      "manual_cnpj": "CNPJ do fornecedor (opcional, 14 dígitos)",
       "manual_numero": "Nº da nota",
       "manual_serie": "Série",
       "manual_chave": "Chave de acesso (44 dígitos, opcional)",

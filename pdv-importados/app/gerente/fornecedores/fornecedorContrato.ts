@@ -27,7 +27,7 @@ export const FORNECEDOR_COLUNAS_FANTASMA = [
 
 export type FornecedorListRow = {
   id: string
-  cnpj: string
+  cnpj: string | null
   nome: string
   loja_id: string
   created_at: string
