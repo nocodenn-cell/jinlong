@@ -54,3 +54,9 @@ npm run build -w pdv-importados
 Os testes do banco usam PostgreSQL em memória e as migrations originais das RPCs de baixa/estorno, com catálogo preexistente simplificado. Cobrem centavos, vencimentos, competência, repetição, saldo, baixas/estornos, conciliação, venda mista, parcelamento, reembolso, correção de depósito, RLS, perfil e isolamento entre lojas. O CI também executa a suíte contra a instalação local completa do Supabase e verifica o contrato de tipos.
 
 Em caso de problema na versão web, reverter a versão do aplicativo preserva o histórico novo no banco; as rotinas anteriores permanecem disponíveis. Não apagar as tabelas financeiras após o cliente começar a operar.
+
+## Pendência anterior de alinhamento remoto
+
+Na verificação de implantação de 04/10/2026, a migration financeira nova está registrada no remoto como `20261005004647`. O gate remoto identifica 19 migrations anteriores ausentes: 18 de vendas/fiscal/segurança e a proposta de validação de fechamentos `20260929120000`. Essas pendências não devem ser marcadas como aplicadas nem dispensadas pelo gate sem execução ou prova de equivalência.
+
+A proposta de fechamento exige conferir os seis caixas históricos incompletos antes de impor a constraint. Não preencher valores de fechamento por estimativa. A aplicação das demais migrations altera o escritor central de vendas e a fila fiscal e depende de autorização específica para ampliar esta entrega; a revisão automática bloqueou essa aplicação. As melhorias financeiras preservam as rotinas fiscais existentes enquanto essa decisão está pendente.
