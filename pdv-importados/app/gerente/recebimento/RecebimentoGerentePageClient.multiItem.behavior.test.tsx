@@ -65,6 +65,14 @@ async function parcelas() {
 }
 
 describe('Sem documento — entrada manual com valores', () => {
+  it('limita o CNPJ a 14 dígitos e remove símbolos ao digitar ou colar', async () => {
+    const campo = input('CNPJ')
+    expect(campo.maxLength).toBe(14)
+    await act(async () => setInput(campo, '12.345.678/0001-99+123456789'))
+    expect(campo.value).toBe('12345678000199')
+    await act(async () => setInput(campo, 'abc+123'))
+    expect(campo.value).toBe('123')
+  })
   it('abre quantidade, valor unitário e parcelas diretamente, sem exigir nota ou XML', () => {
     expect(container.querySelector('[data-testid="nota-manual"]')).not.toBeNull()
     expect(input('Qtd.')).toBeTruthy(); expect(input('Valor unit.')).toBeTruthy()

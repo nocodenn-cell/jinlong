@@ -177,7 +177,12 @@ export function NotaManualForm({ mi, onPreview, semDocumento = false, produtoIni
         </label>
         <label className="text-caption md:col-span-2">
           {mi.manual_cnpj}
-          <Input value={cnpj} inputMode="numeric" onChange={(e) => setCnpj(e.target.value)} />
+          <Input
+            value={cnpj}
+            inputMode="numeric"
+            maxLength={14}
+            onChange={(e) => setCnpj(e.target.value.replace(/\D/g, '').slice(0, 14))}
+          />
         </label>
         {!semDocumento ? <label className="text-caption">
           {mi.manual_numero}
