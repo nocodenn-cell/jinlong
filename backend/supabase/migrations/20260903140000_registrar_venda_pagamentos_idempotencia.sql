@@ -318,11 +318,15 @@ BEGIN
 
   SELECT id INTO v_operador_id FROM public.usuarios WHERE loja_id = v_loja_id LIMIT 1;
   SELECT id INTO v_caixa_id FROM public.caixas WHERE loja_id = v_loja_id AND status = 'ABERTO' LIMIT 1;
-  SELECT id INTO v_produto_id FROM public.produtos WHERE loja_id = v_loja_id AND ativo = true LIMIT 1;
-  IF v_operador_id IS NULL OR v_caixa_id IS NULL OR v_produto_id IS NULL THEN
+  IF v_operador_id IS NULL OR v_caixa_id IS NULL THEN
     RAISE NOTICE 'C2_11_P03: sem operador/caixa aberto/produto para prova viva; verificação estrutural OK';
     RETURN;
   END IF;
+
+  -- Catálogo sintético para provar replay sem assumir preços da operação.
+  INSERT INTO public.produtos (nome, loja_id, preco_varejo, ativo, origem, tem_nf)
+  VALUES ('AUTOTEST C2.11 replay (rollback)', v_loja_id, 20, true, 'china_manual', false)
+  RETURNING id INTO v_produto_id;
 
   -- (A) Retry idêntico (split 60/40) -> PASS, sem exceção, sem duplicar linhas.
   v_venda_a := gen_random_uuid();
@@ -419,6 +423,7 @@ BEGIN
   DELETE FROM public.itens_venda WHERE venda_id IN (v_venda_a, v_venda_b);
   DELETE FROM public.comissoes_vendedores WHERE venda_id IN (v_venda_a, v_venda_b);
   DELETE FROM public.vendas WHERE id IN (v_venda_a, v_venda_b);
+  DELETE FROM public.produtos WHERE id = v_produto_id;
 
   RAISE NOTICE 'C2_11_P03: prova viva OK — retry idêntico/ordem-diferente PASS, split divergente REJECT, valor divergente REJECT, escalar->split REJECT.';
   RAISE EXCEPTION 'VERIFY_ROLLBACK_SENTINELA' USING ERRCODE = 'VRB01';

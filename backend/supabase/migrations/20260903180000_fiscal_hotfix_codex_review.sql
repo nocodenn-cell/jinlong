@@ -234,7 +234,11 @@ COMMENT ON FUNCTION public.fiscal_marcar_xml_erro(uuid, text, uuid) IS
 --    exatamente o que falta tocar).
 UPDATE public.documentos_fiscais_pendentes
 SET xml_status = 'PENDENTE'
-WHERE status = 'EMITIDO' AND xml_status = 'NAO_APLICAVEL';
+WHERE status = 'EMITIDO' AND xml_status = 'NAO_APLICAVEL'
+  -- Fixtures anteriores ao CHECK NOT VALID podem ter chave de smoke inválida.
+  -- Não inventar chave fiscal nem tentar obter XML de um documento inválido.
+  -- Mantê-las intactas também evita revalidar dados antigos durante o UPDATE.
+  AND chave_fiscal ~ '^[0-9]{44}$';
 
 -- 3. Restaura INSERT para authenticated (achado C2.9 P0-7 tinha escopo
 --    maior que o necessário — o problema real era DELETE direto, não

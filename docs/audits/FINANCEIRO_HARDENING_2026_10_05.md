@@ -1,5 +1,10 @@
 # Auditoria final do financeiro — 05/10/2026
 
+**Atualização posterior:** o usuário autorizou o merge e o rollout das pendências.
+As 19 migrations e o hardening foram aplicados; os seis caixas foram confirmados
+como testes. Esta auditoria preserva o diagnóstico anterior. Veja os resultados
+e correções em [Rollout das migrations](MIGRATIONS_ROLLOUT_2026_10_05.md).
+
 Base: main `9cc73a6`; branch `fix/financeiro-hardening-final`. Diagnóstico entregue
 antes das alterações. Consultas remotas somente leitura; nenhuma migration,
 correção de dados, merge ou publicação em produção autorizada nesta etapa.

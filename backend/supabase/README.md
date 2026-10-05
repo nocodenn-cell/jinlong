@@ -116,6 +116,15 @@ reconciliados como pares HUMAN_GATE auditáveis em `migration-human-gates.json`.
 
 ### Reconciliação de drift de 03/10/2026
 
+Atualização de 05/10/2026: as 19 pendências antigas e o hardening financeiro
+foram efetivamente aplicados via MCP, sob autorização do usuário. Os 20 pares
+adicionais em `migration-human-gates.json` têm comparação integral do SQL
+persistido, SHA-256 normalizado e validações de pós-condição. Inventário, correção
+dos seis caixas confirmados como testes, ajustes dos autotestes e limites:
+[Rollout de 05/10/2026](../../docs/audits/MIGRATIONS_ROLLOUT_2026_10_05.md).
+Não executar `migration repair` nem reaplicar substituições antigas só para
+igualar timestamps: a versão remota representa uma aplicação real já verificada.
+
 O gate `migration-remote-drift` acusava 3 versões só no remoto. Nenhuma alteração foi feita em
 produção; a reconciliação foi só no repositório, após comparação por leitura de
 `schema_migrations.statements`, `pg_proc` e `pg_policies`:
