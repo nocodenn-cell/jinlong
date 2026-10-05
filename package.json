@@ -61,9 +61,9 @@
   },
   "packageManager": "npm@10.9.2",
   "dependencies": {
-    "@sentry/nextjs": "^10.65.0",
-    "@sentry/node": "^10.65.0",
-    "@sentry/react": "^10.65.0",
+    "@sentry/nextjs": "^11.2.0",
+    "@sentry/node": "^11.2.0",
+    "@sentry/react": "^11.2.0",
     "@sentry/react-native": "^8.18.0",
     "@sentry/tracing": "^7.120.4",
     "@supabase/server": "^1.4.0",
