@@ -70,6 +70,7 @@ export function NotaManualForm({ mi, onPreview, semDocumento = false, produtoIni
     gtin: produtoInicial?.codigo_barras ?? '',
   }])
   const [parcelas, setParcelas] = useState<ParcelaForm[]>([])
+  const [validarProdutos, setValidarProdutos] = useState(false)
 
   const setItem = (idx: number, patch: Partial<ItemForm>) =>
     setItens((rows) => rows.map((r, i) => (i === idx ? { ...r, ...patch } : r)))
@@ -110,6 +111,12 @@ export function NotaManualForm({ mi, onPreview, semDocumento = false, produtoIni
   }
 
   async function continuar() {
+    setValidarProdutos(true)
+    const itemSemProduto = semDocumento ? itens.findIndex((item) => !item.produto?.id) : -1
+    if (itemSemProduto >= 0) {
+      emitGerenteToast({ kind: 'error', message: `Item ${itemSemProduto + 1}: selecione o produto na lista de resultados da busca.` })
+      return
+    }
     const validas = parcelas.filter((p) => p.venc && (parseBRL(p.valor) ?? 0) > 0)
     if (validas.length === 0) {
       emitGerenteToast({
@@ -222,6 +229,10 @@ export function NotaManualForm({ mi, onPreview, semDocumento = false, produtoIni
                   })}
                 />
               ) : <Input value={it.nome} onChange={(e) => setItem(idx, { nome: e.target.value })} />}
+              {semDocumento ? <span role={validarProdutos && !it.produto ? 'alert' : undefined}
+                className={`mt-2 block text-caption ${validarProdutos && !it.produto ? 'text-destructive' : 'text-fg-muted'}`}>
+                {it.produto ? `Selecionado: ${it.produto.nome}` : 'Digite e selecione o produto na lista. Se não encontrar, cadastre-o no Catálogo.'}
+              </span> : null}
             </label>
             {!semDocumento ? <>
             <label className="text-caption md:col-span-2">
