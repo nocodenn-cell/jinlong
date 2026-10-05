@@ -169,7 +169,7 @@ describe('RecebimentoGerentePageClient — "Como chegou?" (UX-04)', () => {
 
     const faixa = container.querySelector('[data-testid="rec-como-chegou"]')
     expect(faixa?.textContent).toContain('Como chegou?')
-    const nfe = Array.from(faixa!.querySelectorAll('a')).find((a) => a.textContent?.trim() === 'NF-e')
+    const nfe = Array.from(faixa!.querySelectorAll('a')).find((a) => a.textContent?.trim() === 'Nota fiscal (com valores)')
     expect(nfe?.getAttribute('href')).toContain('importar-nfe')
     expect(botaoVia('Ordem de Compra')).toBeTruthy()
     expect(botaoVia('Sem documento').getAttribute('aria-pressed')).toBe('true')
