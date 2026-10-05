@@ -2,6 +2,7 @@
 
 import { randomUUID } from 'node:crypto'
 import { revalidatePath } from 'next/cache'
+import { readNfePayables } from '@/app/admin/financeiro/payableReader'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import {
@@ -614,12 +615,8 @@ export async function obterResumoContasPagarImportacaoNfe(
   if (!lojaId) return { success: false, error: 'Não foi possível identificar sua loja.' }
 
   const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('contas_pagar')
-    .select('valor_total, vencimento, fornecedor_id')
+  const { data, error } = await readNfePayables(supabase, lojaId)
     .eq('nfe_importacao_id', importacaoId)
-    .eq('loja_id', lojaId)
-    .neq('status', 'CANCELADO')
 
   if (error) {
     return { success: false, error: mensagemErroComSecao('Contas a pagar', error.message) }
@@ -752,12 +749,11 @@ export async function listarNotasLancadas(): Promise<ActionResult<NotaLancada[]>
   const ids = (data ?? []).map((r) => r.id as string)
   const aPagarPorNota = new Map<string, number>()
   if (ids.length > 0) {
-    const { data: contas } = await supabase
-      .from('contas_pagar')
-      .select('nfe_importacao_id, valor_total, valor_pago, status')
-      .eq('loja_id', lojaId)
+    const { data: contas, error: contasError } = await readNfePayables(supabase, lojaId)
       .in('nfe_importacao_id', ids)
-      .neq('status', 'CANCELADO')
+    if (contasError) {
+      return { success: false, error: mensagemErroComSecao('Contas a pagar', contasError.message) }
+    }
     for (const c of contas ?? []) {
       const id = c.nfe_importacao_id as string | null
       if (!id) continue

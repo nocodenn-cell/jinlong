@@ -20,6 +20,7 @@ const resumoContasMock = vi.fn()
 const confirmarMock = vi.fn()
 
 vi.mock('./actions', () => ({
+  listarNotasLancadas: async () => ({ success: true, data: [] }),
   buscarProdutosParaVinculo: vi.fn(),
   confirmarImportacaoNfe: (p: unknown) => confirmarMock(p),
   executarImportacaoNfe: vi.fn(),

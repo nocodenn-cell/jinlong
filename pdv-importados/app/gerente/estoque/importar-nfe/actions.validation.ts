@@ -122,7 +122,7 @@ export const NotaManualSchema = z.object({
         valor: z.number().positive('Valor da parcela deve ser maior que zero.').finite(),
       }),
     )
-    .default([]),
+    .min(1, 'Escolha a condição de pagamento para gerar Contas a pagar.'),
 })
 
 export type NotaManualInput = z.input<typeof NotaManualSchema>

@@ -52,8 +52,7 @@ export function createPayableReader(supabase: SupabaseClient): PayableReader {
         const from = (query.page - 1) * PAYABLES_PAGE_SIZE
         const to = from + PAYABLES_PAGE_SIZE
 
-        let qb = supabase
-          .from('contas_pagar')
+        let qb = payableTable(supabase)
           .select(COLUMNS)
           .order('vencimento', { ascending: true, nullsFirst: false })
           .range(from, to)
@@ -108,4 +107,15 @@ export function createPayableReader(supabase: SupabaseClient): PayableReader {
       }
     },
   }
+}
+
+function payableTable(supabase: SupabaseClient) {
+  return supabase.from('contas_pagar')
+}
+
+export function readNfePayables(supabase: SupabaseClient, lojaId: string) {
+  return payableTable(supabase)
+    .select('nfe_importacao_id, valor_total, valor_pago, vencimento, fornecedor_id, status')
+    .eq('loja_id', lojaId)
+    .neq('status', 'CANCELADO')
 }
