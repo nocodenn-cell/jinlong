@@ -65,6 +65,16 @@ async function parcelas() {
 }
 
 describe('Sem documento — entrada manual com valores', () => {
+  it('permite continuar sem CNPJ, mantendo fornecedor, itens e parcelas', async () => {
+    await preencher()
+    await act(async () => setInput(input('CNPJ'), ''))
+    await parcelas()
+    await act(async () => button('Continuar para vincular produtos').click())
+    expect(preview).toHaveBeenCalledWith(expect.objectContaining({
+      emitente_nome: 'Fornecedor A', emitente_cnpj: '',
+      duplicatas: [expect.objectContaining({ valor: 9000 })],
+    }))
+  })
   it('limita o CNPJ a 14 dígitos e remove símbolos ao digitar ou colar', async () => {
     const campo = input('CNPJ')
     expect(campo.maxLength).toBe(14)

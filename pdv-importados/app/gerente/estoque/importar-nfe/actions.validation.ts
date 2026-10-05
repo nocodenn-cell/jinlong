@@ -35,12 +35,15 @@ export const ImportNfePayloadSchema = z.object({
   origem_manual: z.boolean().optional(),
   chave_acesso: z.string().length(44),
   numero_nf: z.string().nullable(),
-  emitente_cnpj: z.string().regex(/^\d{14}$/),
+  emitente_cnpj: z.string().refine((v) => v === '' || /^\d{14}$/.test(v), 'CNPJ deve ter 14 dígitos quando informado.'),
   emitente_nome: z.string().min(1),
   atualizar_custo_padrao: z.boolean(),
   linhas: z.array(ImportNfeLinhaSchema).min(1),
   duplicatas: z.array(ImportNfeDuplicataSchema).default([]),
 }).superRefine((nota, ctx) => {
+  if (!nota.emitente_cnpj && !nota.chave_acesso.startsWith('MANUAL')) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'CNPJ é obrigatório na importação XML.', path: ['emitente_cnpj'] })
+  }
   if (!nota.origem_manual && !nota.chave_acesso.startsWith('MANUAL')) return
   const erro = erroFinanceiroNotaManual(nota.linhas, nota.duplicatas)
   if (erro) ctx.addIssue({ code: z.ZodIssueCode.custom, message: erro, path: ['duplicatas'] })
@@ -90,8 +93,8 @@ export const NotaManualSchema = z.object({
   emitente_nome: z.string().trim().min(1, 'Informe o nome do fornecedor.'),
   emitente_cnpj: z
     .string()
-    .transform((v) => v.replace(/\D/g, ''))
-    .refine((v) => v.length === 14, 'Informe o CNPJ do fornecedor com 14 dígitos.'),
+    .refine((v) => v.trim() === '' || v.replace(/\D/g, '').length === 14, 'CNPJ deve ter 14 dígitos quando informado.')
+    .transform((v) => v.replace(/\D/g, '')),
   numero_nf: z.string().trim().min(1, 'Informe o número da nota.'),
   serie: z.string().trim().optional(),
   chave_acesso: z
