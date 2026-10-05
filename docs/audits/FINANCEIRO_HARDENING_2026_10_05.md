@@ -214,13 +214,13 @@ para um título já pago pelo formulário de conta.
 | Verificação local | Resultado |
 |---|---|
 | `test:financeiro-loja` | 14/14 aprovados, incluindo 80 combinações de ACL, tentativas reais e os valores obrigatórios |
-| Interface e contratos relacionados | 17/17 aprovados; quatro são os testes novos de fiscal/nav/primeiro uso PT/zh |
-| Suíte web completa | Execução final local: 321 arquivos e 2.009 testes aprovados, sete testes ignorados. Uma suíte de integração de produtos falhou por chave placeholder inválida (`Expected 3 parts in JWT; got 1`). URL apontada somente ao Supabase local. CI web acompanhado separadamente |
+| Interface e contratos relacionados | 17/17 aprovados inicialmente; depois, 13/13 de comportamento fiscal/nav/primeiro uso/baixas aprovados, incluindo dois novos testes dos formulários físicos |
+| Suíte web completa | Execução integral local: 321 arquivos e 2.009 testes aprovados, sete testes ignorados; uma suíte de integração de produtos falhou por chave placeholder inválida (`Expected 3 parts in JWT; got 1`). URL somente ao Supabase local. Após a correção final dos botões, reexecução explicitamente sem essa única suíte de integração: 321 arquivos e 2.011 testes aprovados, cinco ignorados. Não é certificação da integração excluída; CI web ainda em execução |
 | Tipos | Aprovado |
 | Lint | Aprovado, um aviso anterior de `any` em E2E de atalhos |
 | `guard:all` | Aprovado, um aviso anterior de cadastro inline de fornecedor |
-| Build | Build local aprovado; nova execução após ajuste dos botões de baixa em acompanhamento |
-| Gate financeiro completo | CI backend no commit d6c8a79: Supabase local gates aprovado, incluindo reset de todas as migrations, gate financeiro completo, teste novo cash/PDV, AP/AR, fixtures isoladas, RLS SQL/REST, types drift e concorrência. [Execução verificável](https://github.com/nocodenn-cell/fastproduct/actions/runs/37326529424/job/111818594784). Falhas iniciais locais e indisponibilidade posterior de Docker não substituem esse resultado |
+| Build | Build local final após ajuste dos botões de baixa aprovado |
+| Gate financeiro completo | CI backend no commit d6c8a79: Supabase local gates aprovado, incluindo reset de todas as migrations, **32/32 suítes financeiras**, teste novo cash/PDV, AP/AR, fixtures isoladas, RLS SQL/REST, types drift e concorrência. [Execução verificável](https://github.com/nocodenn-cell/fastproduct/actions/runs/37326529424/job/111818594784). Código de banco/testes SQL não mudou no commit 681bd56; novo CI também disparado. Falhas iniciais locais e indisponibilidade posterior de Docker não substituem esse resultado |
 | Edge | Sync e validar-gerente aprovados; fiscal-worker aprovado com Deno temporário2.9.6. `npm run check` com Deno2.2.2 falha por lockfile v5 preexistente; nenhuma dependência/lockfile alterada |
 | Advisor / drift remoto | Leitura documentada acima; 19 pendências anteriores mais esta migration nova não aplicada. Não dispensar o gate |
 
