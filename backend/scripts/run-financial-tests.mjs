@@ -27,6 +27,8 @@ const HERE = dirname(fileURLToPath(import.meta.url))
 const NODE_SUITES = [
   'financial-idempotency-correlation-contract.test.mjs',
   'nfe-conferencia-margem-contract.test.mjs',
+  'test-financeiro-loja.mjs',
+  'test-pdv-caixa-financeiro-fluxo.mjs',
 ]
 
 const SCRIPT_SUITES = [
