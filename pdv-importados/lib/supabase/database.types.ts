@@ -7,40 +7,33 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
-      _backup_schema_migrations_20260802: {
-        Row: {
-          created_by: string | null
-          idempotency_key: string | null
-          name: string | null
-          rollback: string[] | null
-          statements: string[] | null
-          version: string | null
-        }
-        Insert: {
-          created_by?: string | null
-          idempotency_key?: string | null
-          name?: string | null
-          rollback?: string[] | null
-          statements?: string[] | null
-          version?: string | null
-        }
-        Update: {
-          created_by?: string | null
-          idempotency_key?: string | null
-          name?: string | null
-          rollback?: string[] | null
-          statements?: string[] | null
-          version?: string | null
-        }
-        Relationships: []
-      }
       cadastro_produto_telemetry_events: {
         Row: {
           created_at: string
@@ -1193,6 +1186,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "contas_pagar_importacao_nfe_id_fkey"
+            columns: ["nfe_importacao_id"]
+            isOneToOne: false
+            referencedRelation: "importacoes_nfe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "contas_pagar_loja_id_fkey"
             columns: ["loja_id"]
             isOneToOne: false
@@ -1205,13 +1205,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_estoque_baixo"
             referencedColumns: ["loja_id"]
-          },
-          {
-            foreignKeyName: "contas_pagar_nfe_importacao_id_fkey"
-            columns: ["nfe_importacao_id"]
-            isOneToOne: false
-            referencedRelation: "importacoes_nfe"
-            referencedColumns: ["id"]
           },
         ]
       }
@@ -1581,7 +1574,36 @@ export type Database = {
           tipo_doc?: string
           venda_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "documentos_fiscais_dlq_documento_id_fkey"
+            columns: ["documento_id"]
+            isOneToOne: false
+            referencedRelation: "documentos_fiscais_pendentes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentos_fiscais_dlq_documento_id_fkey"
+            columns: ["documento_id"]
+            isOneToOne: false
+            referencedRelation: "v_fiscal_doc_status_event_mismatch"
+            referencedColumns: ["documento_id"]
+          },
+          {
+            foreignKeyName: "documentos_fiscais_dlq_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "v_venda_consistencia_anomalias"
+            referencedColumns: ["venda_id"]
+          },
+          {
+            foreignKeyName: "documentos_fiscais_dlq_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "vendas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       documentos_fiscais_eventos: {
         Row: {
@@ -2459,7 +2481,7 @@ export type Database = {
       }
       fornecedores: {
         Row: {
-          cnpj: string | null
+          cnpj: string
           created_at: string
           id: string
           loja_id: string
@@ -2467,7 +2489,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          cnpj?: string | null
+          cnpj: string
           created_at?: string
           id?: string
           loja_id: string
@@ -2475,7 +2497,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          cnpj?: string | null
+          cnpj?: string
           created_at?: string
           id?: string
           loja_id?: string
@@ -3413,21 +3435,21 @@ export type Database = {
       marcas: {
         Row: {
           ativo: boolean
-          created_at: string | null
+          created_at: string
           id: string
           nome: string
           updated_at: string
         }
         Insert: {
           ativo?: boolean
-          created_at?: string | null
+          created_at?: string
           id?: string
           nome: string
           updated_at?: string
         }
         Update: {
           ativo?: boolean
-          created_at?: string | null
+          created_at?: string
           id?: string
           nome?: string
           updated_at?: string
@@ -3445,7 +3467,6 @@ export type Database = {
           id: string
           idempotency_key: string
           ip_address: unknown
-          loja_id: string | null
           motivo: string
           motivo_codigo: string
           movimentacao_origem_id: string | null
@@ -3470,7 +3491,6 @@ export type Database = {
           id?: string
           idempotency_key: string
           ip_address?: unknown
-          loja_id?: string | null
           motivo: string
           motivo_codigo?: string
           movimentacao_origem_id?: string | null
@@ -3495,7 +3515,6 @@ export type Database = {
           id?: string
           idempotency_key?: string
           ip_address?: unknown
-          loja_id?: string | null
           motivo?: string
           motivo_codigo?: string
           movimentacao_origem_id?: string | null
@@ -4101,6 +4120,7 @@ export type Database = {
           formato_impressao: string
           gerente_id: string
           gerente_senha_bcrypt: string | null
+          gerente_senha_sha256: string
           id: number
           idioma_padrao: string
           imprimir_cupom_auto: boolean
@@ -4127,6 +4147,7 @@ export type Database = {
           formato_impressao?: string
           gerente_id: string
           gerente_senha_bcrypt?: string | null
+          gerente_senha_sha256: string
           id?: number
           idioma_padrao?: string
           imprimir_cupom_auto?: boolean
@@ -4153,6 +4174,7 @@ export type Database = {
           formato_impressao?: string
           gerente_id?: string
           gerente_senha_bcrypt?: string | null
+          gerente_senha_sha256?: string
           id?: number
           idioma_padrao?: string
           imprimir_cupom_auto?: boolean
@@ -4180,45 +4202,6 @@ export type Database = {
           },
           {
             foreignKeyName: "pdv_config_loja_id_fkey"
-            columns: ["loja_id"]
-            isOneToOne: false
-            referencedRelation: "v_estoque_baixo"
-            referencedColumns: ["loja_id"]
-          },
-        ]
-      }
-      perfis: {
-        Row: {
-          created_at: string | null
-          id: string
-          loja_id: string | null
-          perfil: string
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          loja_id?: string | null
-          perfil: string
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          loja_id?: string | null
-          perfil?: string
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "perfis_loja_id_fkey"
-            columns: ["loja_id"]
-            isOneToOne: false
-            referencedRelation: "lojas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "perfis_loja_id_fkey"
             columns: ["loja_id"]
             isOneToOne: false
             referencedRelation: "v_estoque_baixo"
@@ -4434,7 +4417,7 @@ export type Database = {
           quantidade_gatilho_atacado: number | null
           referencia_fornecedor: string | null
           status_publicacao: string
-          tags: string[] | null
+          tags: string[]
           tem_nf: boolean
           unidade_medida: string
           updated_at: string
@@ -4461,7 +4444,7 @@ export type Database = {
           imagem_url?: string | null
           limite_transferencia_sem_observacao?: number | null
           localizacao_prateleira?: string | null
-          loja_id: string
+          loja_id?: string
           marca_id?: string | null
           ncm?: string | null
           nome: string
@@ -4477,7 +4460,7 @@ export type Database = {
           quantidade_gatilho_atacado?: number | null
           referencia_fornecedor?: string | null
           status_publicacao?: string
-          tags?: string[] | null
+          tags?: string[]
           tem_nf?: boolean
           unidade_medida?: string
           updated_at?: string
@@ -4520,7 +4503,7 @@ export type Database = {
           quantidade_gatilho_atacado?: number | null
           referencia_fornecedor?: string | null
           status_publicacao?: string
-          tags?: string[] | null
+          tags?: string[]
           tem_nf?: boolean
           unidade_medida?: string
           updated_at?: string
@@ -5124,39 +5107,6 @@ export type Database = {
           },
         ]
       }
-      venda_engine_shadow_runs: {
-        Row: {
-          consistencia: Json
-          created_at: string
-          engine: string
-          erro: string | null
-          id: string
-          ok: boolean
-          resultado: Json
-          shadow_venda_id: string | null
-        }
-        Insert: {
-          consistencia?: Json
-          created_at?: string
-          engine?: string
-          erro?: string | null
-          id?: string
-          ok: boolean
-          resultado?: Json
-          shadow_venda_id?: string | null
-        }
-        Update: {
-          consistencia?: Json
-          created_at?: string
-          engine?: string
-          erro?: string | null
-          id?: string
-          ok?: boolean
-          resultado?: Json
-          shadow_venda_id?: string | null
-        }
-        Relationships: []
-      }
       venda_eventos: {
         Row: {
           caixa_id: string
@@ -5388,7 +5338,6 @@ export type Database = {
           data: string
           forma_pagamento: string
           id: string
-          idempotency_key: string | null
           numero_nf: string | null
           operador_id: string | null
           pricing_version_id: string | null
@@ -5406,7 +5355,6 @@ export type Database = {
           data?: string
           forma_pagamento: string
           id?: string
-          idempotency_key?: string | null
           numero_nf?: string | null
           operador_id?: string | null
           pricing_version_id?: string | null
@@ -5424,7 +5372,6 @@ export type Database = {
           data?: string
           forma_pagamento?: string
           id?: string
-          idempotency_key?: string | null
           numero_nf?: string | null
           operador_id?: string | null
           pricing_version_id?: string | null
@@ -6297,7 +6244,6 @@ export type Database = {
         Returns: boolean
       }
       auth_usuario_loja_id: { Args: never; Returns: string }
-      caixa_integridade_gate_check: { Args: never; Returns: Json }
       calcular_preco_produto: {
         Args: { p_loja_id?: string; p_produto_id: string; p_quantidade: number }
         Returns: Json
@@ -6557,33 +6503,20 @@ export type Database = {
           o_valor_sistema: number
         }[]
       }
-      finalizar_venda_transacional:
-        | {
-            Args: {
-              p_caixa_id: string
-              p_forma_pagamento: string
-              p_itens: Json
-              p_total_bruto: number
-              p_total_desconto: number
-              p_total_liquido: number
-              p_venda_id: string
-            }
-            Returns: undefined
-          }
-        | {
-            Args: {
-              p_caixa_id: string
-              p_desconto_gerente_percentual?: number
-              p_desconto_gerente_token?: string
-              p_forma_pagamento: string
-              p_itens: Json
-              p_total_bruto: number
-              p_total_desconto: number
-              p_total_liquido: number
-              p_venda_id: string
-            }
-            Returns: undefined
-          }
+      finalizar_venda_transacional: {
+        Args: {
+          p_caixa_id: string
+          p_desconto_gerente_percentual?: number
+          p_desconto_gerente_token?: string
+          p_forma_pagamento: string
+          p_itens: Json
+          p_total_bruto: number
+          p_total_desconto: number
+          p_total_liquido: number
+          p_venda_id: string
+        }
+        Returns: undefined
+      }
       finalizar_venda_transacional_canonica_v2:
         | { Args: never; Returns: undefined }
         | {
@@ -6616,23 +6549,6 @@ export type Database = {
               p_total_bruto?: number
               p_total_desconto?: number
               p_total_liquido?: number
-              p_venda_id: string
-            }
-            Returns: undefined
-          }
-        | {
-            Args: {
-              p_caixa_id: string
-              p_desconto_gerente_percentual: number
-              p_desconto_gerente_token: string
-              p_forma_pagamento: string
-              p_itens: Json
-              p_operador_id: string
-              p_pagamentos: Json
-              p_strict_manager_discount_auth: boolean
-              p_total_bruto: number
-              p_total_desconto: number
-              p_total_liquido: number
               p_venda_id: string
             }
             Returns: undefined
@@ -6823,52 +6739,28 @@ export type Database = {
         }
         Returns: undefined
       }
-      fiscal_marcar_erro:
-        | {
-            Args: {
-              p_documento_id: string
-              p_erro: string
-              p_transitorio?: boolean
-            }
-            Returns: undefined
-          }
-        | {
-            Args: {
-              p_documento_id: string
-              p_erro: string
-              p_erro_detalhe?: Json
-              p_erro_normalizado?: string
-              p_retryable?: boolean
-              p_transitorio: boolean
-            }
-            Returns: undefined
-          }
-      fiscal_marcar_erro_normalizado:
-        | {
-            Args: {
-              p_action_hint?: string
-              p_documento_id: string
-              p_erro: string
-              p_error_category?: string
-              p_error_code?: string
-              p_error_payload?: Json
-              p_next_step_url?: string
-              p_retryable?: boolean
-              p_transitorio?: boolean
-            }
-            Returns: undefined
-          }
-        | {
-            Args: {
-              p_documento_id: string
-              p_erro: string
-              p_erro_detalhe?: Json
-              p_erro_normalizado: string
-              p_retryable?: boolean
-              p_transitorio: boolean
-            }
-            Returns: undefined
-          }
+      fiscal_marcar_erro: {
+        Args: {
+          p_documento_id: string
+          p_erro: string
+          p_transitorio?: boolean
+        }
+        Returns: undefined
+      }
+      fiscal_marcar_erro_normalizado: {
+        Args: {
+          p_action_hint?: string
+          p_documento_id: string
+          p_erro: string
+          p_error_category?: string
+          p_error_code?: string
+          p_error_payload?: Json
+          p_next_step_url?: string
+          p_retryable?: boolean
+          p_transitorio?: boolean
+        }
+        Returns: undefined
+      }
       fiscal_marcar_xml_armazenado: {
         Args: {
           p_documento_id: string
@@ -7036,13 +6928,6 @@ export type Database = {
         Returns: {
           id: string
           operador_nome: string
-        }[]
-      }
-      listar_valores_sistema_dinheiro_caixas: {
-        Args: { p_caixa_ids: string[] }
-        Returns: {
-          caixa_id: string
-          valor: number
         }[]
       }
       listar_venda_eventos_gerente: {
@@ -7446,10 +7331,6 @@ export type Database = {
         Args: { p_scale?: number; p_value: number }
         Returns: number
       }
-      shadow_validar_venda_engine_v4: {
-        Args: { p_payload: Json }
-        Returns: Json
-      }
       texto_sem_acento: { Args: { texto: string }; Returns: string }
       transferir_estoque_entre_lojas: {
         Args: {
@@ -7525,12 +7406,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -7554,11 +7435,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -7579,11 +7460,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -7604,11 +7485,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -7621,11 +7502,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never) = never,
+    : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -7635,6 +7516,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       categoria_financeira_tipo: ["RECEITA", "DESPESA", "AMBOS"],
@@ -7650,3 +7534,4 @@ export const Constants = {
     },
   },
 } as const
+
