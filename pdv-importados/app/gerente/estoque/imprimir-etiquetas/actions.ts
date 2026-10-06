@@ -15,6 +15,7 @@ import {
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 import { getGerenteLojaId } from '@/lib/gerente/auth/sessionContext'
 import type { ProdutoComEstoqueDTO } from '@/lib/etiqueta/types'
+import { buscarProdutosRecebimento } from '@/app/gerente/recebimento/actions'
 
 type ActionResult<T = null> =
   | { success: true; data: T }
@@ -60,16 +61,16 @@ async function lojaIdDoUsuarioLogado(): Promise<string | null> {
 }
 
 /**
- * Sanitiza termo para PostgREST `.or()` (mesma regra do recebimento):
- * remove tokens que quebram o parser e curingas LIKE.
+ * Sanitiza termo para validação (mesma limpeza do recebimento).
  */
 function sanitizarTermoBusca(termo: string): string {
   return (termo ?? '').replace(/[,()%_\\]/g, ' ').trim().slice(0, 120)
 }
 
 /**
- * Busca produtos por nome, código interno ou código de barras (parcial),
- * com estoque da loja — para autocomplete da tela de etiquetas.
+ * Busca produtos por nome/código para o autocomplete de etiquetas.
+ * Compõe a busca textual do recebimento + estoque/preço já existentes
+ * neste módulo (sem query adicional de catálogo aqui).
  */
 export async function buscarProdutosParaEtiqueta(
   termo: string,
@@ -100,40 +101,11 @@ export async function buscarProdutosParaEtiqueta(
     return { success: false, error: mensagemErroValidacaoZod(msg, idioma) }
   }
 
-  const digitos = t.replace(/\D/g, '')
-  const ors = [`nome.ilike.%${t}%`, `codigo_interno.ilike.%${t}%`]
-  if (digitos) ors.push(`codigo_barras.like.%${digitos}%`)
+  const busca = await buscarProdutosRecebimento(t)
+  if (!busca.success) return { success: false, error: busca.error }
+  if (busca.data.length === 0) return { success: true, data: [] }
 
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('produtos')
-    .select(`
-      id,
-      nome,
-      codigo_barras,
-      preco_varejo,
-      unidade_medida,
-      estoque!inner (
-        quantidade_atual,
-        estoque_minimo
-      )
-    `)
-    .eq('estoque.loja_id', lojaId)
-    .eq('ativo', true)
-    .or(ors.join(','))
-    .order('nome', { ascending: true })
-    .limit(20)
-
-  if (error) {
-    const { idioma } = await getUsuarioIdioma()
-    return {
-      success: false,
-      error: mensagemErroComSecao('Impressão de Etiquetas', error.message, idioma),
-    }
-  }
-
-  const produtos = (data ?? []) as ProdutoComEstoqueSelectRow[]
-  return { success: true, data: produtos.map(rowParaProdutoComEstoqueDTO) }
+  return buscarEstoqueAtual(busca.data.map((p) => p.id))
 }
 
 /**
