@@ -335,6 +335,17 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
                   buscarPlaceholder: ui.estoque_acao_buscar,
                   selecionarProduto: ui.estoque_acao_selecionar,
                   motivoObrigatorio: ui.estoque_acao_motivo_obrigatorio,
+                  quantidadeRetirar: ui.estoque_acao_qtd_retirar,
+                  quantidadeContada: ui.estoque_acao_qtd_contada,
+                  saldoAnterior: ui.estoque_acao_saldo_anterior,
+                  referenciaDoc: ui.estoque_acao_ref_doc,
+                  referenciaDocHint: ui.estoque_acao_ref_doc_hint,
+                  confirmarRetirada: ui.estoque_acao_confirmar_retirada,
+                  confirmarAjuste: ui.estoque_acao_confirmar_ajuste,
+                  erroRetiradaInvalida: ui.estoque_acao_erro_retirada_invalida,
+                  erroRetiradaExcede: ui.estoque_acao_erro_retirada_excede,
+                  codigoLabel: ui.estoque_acao_codigo,
+                  unidadeLabel: ui.estoque_acao_unidade,
                 }}
               />
             </div>

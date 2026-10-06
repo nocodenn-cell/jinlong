@@ -10,7 +10,7 @@ import Link from 'next/link'
 import { PackageMinus, PackagePlus, SlidersHorizontal } from 'lucide-react'
 import { DragonModal } from '@/components/ui/DragonModal'
 import { ROUTES } from '@/lib/navigation/routes'
-import { AjusteSaldoModal, type AjusteAlvo } from './AjusteSaldoModal'
+import { AjusteSaldoModal, type AjusteAlvo, type AjusteModo } from './AjusteSaldoModal'
 import type { EstoqueLinha, EstoqueLabels } from './EstoqueTable'
 
 type QuickLabels = {
@@ -29,6 +29,17 @@ type QuickLabels = {
   buscarPlaceholder: string
   selecionarProduto: string
   motivoObrigatorio: string
+  quantidadeRetirar: string
+  quantidadeContada: string
+  saldoAnterior: string
+  referenciaDoc: string
+  referenciaDocHint: string
+  confirmarRetirada: string
+  confirmarAjuste: string
+  erroRetiradaInvalida: string
+  erroRetiradaExcede: string
+  codigoLabel: string
+  unidadeLabel: string
 }
 
 type Props = {
@@ -40,31 +51,64 @@ type Props = {
 const BTN =
   'inline-flex min-h-14 min-w-[9.5rem] flex-1 items-center justify-center gap-2 rounded-lg border border-[var(--color-border-secondary)] bg-jl-surface-elev px-3 text-[18px] font-semibold text-jl-fg-1 shadow-sm transition hover:bg-jl-surface-soft focus-visible:outline-none focus-visible:shadow-focus sm:flex-none'
 
+function motivosPorModo(modo: AjusteModo, labels: EstoqueLabels) {
+  if (modo === 'retirar') {
+    return [
+      { value: 'PERDA', label: labels.motivoPerda },
+      { value: 'QUEBRA', label: labels.motivoQuebra },
+      { value: 'OUTRO', label: labels.motivoOutro },
+    ]
+  }
+  if (modo === 'ajustar') {
+    return [
+      { value: 'ACERTO_INVENTARIO', label: labels.motivoAcertoInventario },
+      { value: 'OUTRO', label: labels.motivoOutro },
+    ]
+  }
+  return [
+    { value: 'ACERTO_INVENTARIO', label: labels.motivoAcertoInventario },
+    { value: 'COMPRA', label: labels.motivoEntradaCompra },
+    { value: 'PERDA', label: labels.motivoPerda },
+    { value: 'QUEBRA', label: labels.motivoQuebra },
+    { value: 'OUTRO', label: labels.motivoOutro },
+  ]
+}
+
 export function EstoqueAcoesRapidas({ linhas, labels, quick }: Props) {
   const [painel, setPainel] = useState<'entrada' | 'retirar' | 'ajustar' | null>(null)
   const [busca, setBusca] = useState('')
   const [ajusteAlvo, setAjusteAlvo] = useState<AjusteAlvo | null>(null)
 
-  const filtrados = linhas.filter((l) => {
-    const q = busca.trim().toLowerCase()
-    if (!q) return true
-    return l.nome.toLowerCase().includes(q) || (l.codigo_barras ?? '').toLowerCase().includes(q)
-  }).slice(0, 12)
+  const filtrados = linhas
+    .filter((l) => {
+      const q = busca.trim().toLowerCase()
+      if (!q) return true
+      return l.nome.toLowerCase().includes(q) || (l.codigo_barras ?? '').toLowerCase().includes(q)
+    })
+    .slice(0, 12)
 
   function abrirAjuste(linha: EstoqueLinha, modo: 'retirar' | 'ajustar') {
     setPainel(null)
+    setBusca('')
     setAjusteAlvo({
       produtoId: linha.id,
       produtoNome: linha.nome,
       quantidadeAtual: linha.quantidade_atual ?? 0,
       estoqueMinimo: linha.estoque_minimo ?? 0,
+      codigoBarras: linha.codigo_barras,
+      unidade: linha.unidade_medida,
+      modo,
     })
-    // Motivo default via modal — retirada exige perda/quebra/consumo no formulário.
-    void modo
   }
 
+  const modoAtivo: AjusteModo = ajusteAlvo?.modo ?? 'generico'
   const ajusteLabels = {
-    titulo: painel === 'retirar' ? quick.retirarTitulo : labels.ajusteTitulo,
+    titulo:
+      modoAtivo === 'retirar'
+        ? quick.retirarTitulo
+        : modoAtivo === 'ajustar'
+          ? quick.ajustarTitulo
+          : labels.ajusteTitulo,
     saldoAtual: labels.saldoAtual,
     estoqueMinimo: labels.estoqueMinimo,
     motivo: labels.motivo,
@@ -72,13 +116,18 @@ export function EstoqueAcoesRapidas({ linhas, labels, quick }: Props) {
     cancelar: labels.cancelar,
     salvar: labels.salvarAjuste,
     salvando: labels.salvando,
-    motivos: [
-      { value: 'ACERTO_INVENTARIO', label: labels.motivoAcertoInventario },
-      { value: 'ENTRADA_COMPRA', label: labels.motivoEntradaCompra },
-      { value: 'PERDA', label: labels.motivoPerda },
-      { value: 'QUEBRA', label: labels.motivoQuebra },
-      { value: 'OUTRO', label: labels.motivoOutro },
-    ],
+    motivos: motivosPorModo(modoAtivo, labels),
+    quantidadeRetirar: quick.quantidadeRetirar,
+    quantidadeContada: quick.quantidadeContada,
+    saldoAnterior: quick.saldoAnterior,
+    referenciaDoc: quick.referenciaDoc,
+    referenciaDocHint: quick.referenciaDocHint,
+    confirmarRetirada: quick.confirmarRetirada,
+    confirmarAjuste: quick.confirmarAjuste,
+    erroRetiradaInvalida: quick.erroRetiradaInvalida,
+    erroRetiradaExcede: quick.erroRetiradaExcede,
+    codigoLabel: quick.codigoLabel,
+    unidadeLabel: quick.unidadeLabel,
   }
 
   return (
@@ -118,7 +167,10 @@ export function EstoqueAcoesRapidas({ linhas, labels, quick }: Props) {
 
       <DragonModal
         open={painel === 'retirar' || painel === 'ajustar'}
-        onClose={() => setPainel(null)}
+        onClose={() => {
+          setPainel(null)
+          setBusca('')
+        }}
         title={painel === 'retirar' ? quick.retirarTitulo : quick.ajustarTitulo}
         size="lg"
       >
@@ -140,14 +192,22 @@ export function EstoqueAcoesRapidas({ linhas, labels, quick }: Props) {
             <li key={l.id}>
               <button
                 type="button"
-                className="flex w-full items-center justify-between rounded-lg border border-[var(--color-border-secondary)] px-3 py-3 text-left text-[16px] hover:bg-jl-surface-soft focus-visible:outline-none focus-visible:shadow-focus"
+                className="flex w-full items-center justify-between gap-3 rounded-lg border border-[var(--color-border-secondary)] px-3 py-3 text-left text-[16px] hover:bg-jl-surface-soft focus-visible:outline-none focus-visible:shadow-focus"
                 onClick={() => abrirAjuste(l, painel === 'retirar' ? 'retirar' : 'ajustar')}
               >
                 <span className="min-w-0">
                   <span className="block truncate font-medium">{l.nome}</span>
-                  <span className="font-mono text-caption text-jl-fg-3">{l.codigo_barras ?? '—'}</span>
+                  <span className="font-mono text-caption text-jl-fg-3">
+                    {l.codigo_barras ?? '—'}
+                    {l.unidade_medida ? ` · ${l.unidade_medida}` : ''}
+                  </span>
                 </span>
-                <span className="shrink-0 tabular-nums text-jl-fg-2">{l.quantidade_atual ?? 0}</span>
+                <span className="shrink-0 text-right">
+                  <span className="block tabular-nums text-jl-fg-1">{l.quantidade_atual ?? 0}</span>
+                  <span className="block text-caption text-jl-fg-3">
+                    mín. {l.estoque_minimo ?? 0}
+                  </span>
+                </span>
               </button>
             </li>
           ))}
