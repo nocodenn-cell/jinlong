@@ -41,6 +41,6 @@ Inspeção visual em navegador de componentes reais com estilos da aplicação e
 
 ## Publicação
 
-Migrations locais: `20261005224553_estoque_ajuste_concorrente.sql` e `20261005225856_entrada_documento_posterior.sql`. **Não aplicadas em produção.** Homologar no schema completo de staging e coordenar migrations/publicação: a aplicação depende da nova função de ajuste e da tabela de associação. A função antiga de ajuste passa a rejeitar clientes sem snapshot. Não usar fallback inseguro.
+Migrations: `20261005224553_estoque_ajuste_concorrente.sql` e `20261005225856_entrada_documento_posterior.sql`. **Aplicadas em produção (jinlong) em 06/10/2026 via MCP** (versions remotas `20261006195639` / `20261006195805`; ver `migration-human-gates.json`). A aplicação depende da nova função de ajuste e da tabela de associação. A função antiga de ajuste rejeita clientes sem snapshot. Não usar fallback inseguro.
 
 Os registros cadastrados pelo usuário são testes fictícios e não foram alterados, excluídos ou usados para afirmar corrupção de dados. Não houve mudança no PDV.
