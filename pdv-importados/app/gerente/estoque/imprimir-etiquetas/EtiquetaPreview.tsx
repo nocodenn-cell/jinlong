@@ -56,7 +56,7 @@ export function EtiquetaPreview({ item, config, vazioLabel, modeloLabel }: Props
         aria-label={item ? `Preview ${item.nome}` : vazioLabel}
       >
         {!item ? (
-          <p className="flex h-full items-center justify-center text-center text-[10px] text-neutral-400">
+          <p className="flex h-full items-center justify-center text-center text-caption text-neutral-400">
             {vazioLabel}
           </p>
         ) : (
