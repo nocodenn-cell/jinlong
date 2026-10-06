@@ -42,6 +42,8 @@ type PagamentoPanelProps = {
   onAutoCompletar: () => void
   /** Abre a autorização de gerente para desconto %; só oferecido em pagamento único em dinheiro. */
   onDescontoDinheiro?: () => void
+  /** Painel de desconto comercial (até 10%) no dinheiro — renderizado pelo pai. */
+  descontoComercialPanel?: ReactNode
   moedaPrefixo: string
   metodoPagamentoPanel?: ReactNode
 }
@@ -65,6 +67,7 @@ const PagamentoPanelImpl = forwardRef(function PagamentoPanelImpl(
     onAtualizarValor,
     onAutoCompletar,
     onDescontoDinheiro,
+    descontoComercialPanel,
     moedaPrefixo,
     metodoPagamentoPanel,
   }: PagamentoPanelProps,
@@ -100,6 +103,8 @@ const PagamentoPanelImpl = forwardRef(function PagamentoPanelImpl(
       className="flex shrink-0 flex-col gap-2 rounded-lg border border-border/60 bg-card/60 p-3 shadow-sm"
     >
       {metodoPagamentoPanel}
+
+      {pedeValorRecebido && descontoComercialPanel ? descontoComercialPanel : null}
 
       {pedeValorRecebido && onDescontoDinheiro ? (
         <button
@@ -300,6 +305,7 @@ export function CaixaPdvOperadorTabs({
   onAtualizarValor,
   onAutoCompletar,
   onDescontoDinheiro,
+  descontoComercialPanel,
   moedaPrefixo,
   produtoPanel,
   metodoPagamentoPanel,
@@ -322,6 +328,7 @@ export function CaixaPdvOperadorTabs({
         onAtualizarValor={onAtualizarValor}
         onAutoCompletar={onAutoCompletar}
         onDescontoDinheiro={onDescontoDinheiro}
+        descontoComercialPanel={descontoComercialPanel}
         moedaPrefixo={moedaPrefixo}
         metodoPagamentoPanel={metodoPagamentoPanel}
       />

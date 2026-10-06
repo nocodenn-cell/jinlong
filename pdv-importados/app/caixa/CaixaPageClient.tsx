@@ -94,6 +94,8 @@ import {
 import { limiteDescontoOperador } from "@/app/caixa/descontoManualPolicy"
 import { atualizarPedidoEspera } from "@/app/caixa/caixaAtualizacaoEspera"
 import { CaixaDescontoManual } from "@/app/caixa/CaixaDescontoManual"
+import { CaixaDescontoComercialDinheiro } from "@/app/caixa/CaixaDescontoComercialDinheiro"
+import { focarBuscaCaixa } from "@/app/caixa/caixaFocoBusca"
 import "@/styles/caixa-operacional.css"
 import { CaixaPdvOperadorTabs } from "@/app/caixa/CaixaPdvOperadorTabs"
 import { CaixaSelecionarClienteModal } from "@/app/caixa/CaixaSelecionarClienteModal"  // ✅ NOVO (Fase 5b)
@@ -167,6 +169,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const [processandoCaixa, setProcessandoCaixa] = useState(false)
   const [validandoGerente, setValidandoGerente] = useState(false)
   const [gerenteModalAberto, setGerenteModalAberto] = useState(false)
+  const [descontoComercialPendente, setDescontoComercialPendente] = useState<number | null>(null)
   const [limiteCreditoModalAberto, setLimiteCreditoModalAberto] = useState(false)
   const [movimentacaoModalTipo, setMovimentacaoModalTipo] =
     useState<TipoMovimentacaoUi | null>(null)
@@ -590,6 +593,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     setDescontoGerentePercentual(0)
     setMotivoDesconto('NAO_ESPECIFICADO')
     setMotivoDescontoDescricao(null)
+    setDescontoComercialPendente(null)
   }, [])
 
   useCaixaBootstrapData({
@@ -1542,6 +1546,16 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       setCaixaMensagem(m.caixa.desconto_gerente_so_dinheiro, { kind: "warning" })
       return
     }
+    setDescontoComercialPendente(null)
+    setGerenteModalAberto(true)
+  }, [pagamentos, m, setCaixaMensagem])
+
+  const solicitarDescontoComercialDinheiro = useCallback((percentual: number) => {
+    if (!pagamentoSoDinheiro({ formaPagamento: pagamentos[0]?.formaPagamento ?? "DINHEIRO", pagamentos })) {
+      setCaixaMensagem(m.caixa.desconto_gerente_so_dinheiro, { kind: "warning" })
+      return
+    }
+    setDescontoComercialPendente(percentual)
     setGerenteModalAberto(true)
   }, [pagamentos, m, setCaixaMensagem])
 
@@ -1598,6 +1612,16 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 onAtualizarValor={atualizarValor}
                 onAutoCompletar={autoCompletarUltima}
                 onDescontoDinheiro={abrirGerenteModal}
+                descontoComercialPanel={
+                  <CaixaDescontoComercialDinheiro
+                    idioma={idioma === "pt" ? "pt" : "zh"}
+                    subtotal={totalLiquidoComGerente + valorDescontoGerente}
+                    disabled={finalizando || processandoEspera || carregandoRegras}
+                    descontoPercentualAtual={descontoGerentePercentualEfetivo}
+                    onSolicitar={solicitarDescontoComercialDinheiro}
+                    onLimpar={limparEstadoDescontoGerente}
+                  />
+                }
                 moedaPrefixo={m.caixa.moeda_prefixo}
                 metodoPagamentoPanel={metodoPagamentoSelector}
                 produtoPanel={
@@ -1661,6 +1685,10 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                   listEmptyVariant="pdv_classic"
                   onAlterarQuantidade={handleAlterarQuantidade}
                   onRemover={handleRemover}
+                  onAdicionarMaisItens={() => {
+                    focarBuscaCaixa()
+                    buscaInputRef.current?.focus()
+                  }}
                 />
               </div>
               <CaixaPdvCartSaleBar
@@ -1816,6 +1844,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         onOpenChange={setGerenteModalAberto}
         m={m}
         validando={validandoGerente}
+        percentualInicial={descontoComercialPendente ?? undefined}
+        motivoInicial={descontoComercialPendente != null ? 'AUTORIZACAO_COMERCIAL' : undefined}
         onValidateSenha={handleValidateSenhaGerente}
         onApply={handleAplicarDescontoGerente}
       />

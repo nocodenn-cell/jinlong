@@ -48,6 +48,7 @@ type Props = {
   listEmptyVariant?: CaixaCartListEmptyVariant
   onAlterarQuantidade: (itemId: string, quantidade: number) => void
   onRemover: (itemId: string) => void
+  onAdicionarMaisItens?: () => void
 }
 
 function listLocale(idioma: Idioma) {
@@ -87,9 +88,9 @@ const QuantidadeStepper = memo(function QuantidadeStepper({
   onRemover,
 }: StepperProps) {
   const isCompact = size === "sm"
-  const buttonSizeClass = isCompact ? "h-8 w-8" : "h-9 w-9"
-  const inputSizeClass = isCompact ? "h-8 w-12" : "h-9 w-14"
-  const iconClass = isCompact ? "h-3.5 w-3.5" : "h-4 w-4"
+  const buttonSizeClass = isCompact ? "h-12 w-12 min-h-[48px] min-w-[48px]" : "h-14 w-14 min-h-[56px] min-w-[56px]"
+  const inputSizeClass = isCompact ? "h-12 w-16 text-base" : "h-14 w-20 text-lg"
+  const iconClass = isCompact ? "h-6 w-6" : "h-7 w-7"
 
   const handleDecrement = () => {
     if (item.quantidade <= 1) {
@@ -118,11 +119,11 @@ const QuantidadeStepper = memo(function QuantidadeStepper({
         type="button"
         variant="ghost"
         size="icon"
-        className={`${buttonSizeClass} rounded-none border-r border-border text-foreground hover:bg-muted hover:text-primary`}
+        className={`${buttonSizeClass} rounded-none border-r-2 border-slate-400 bg-slate-100 text-slate-900 hover:bg-slate-200 hover:text-primary`}
         aria-label={caixaFmt(m.caixa.aria_qtde_diminuir, { nome: item.nome })}
         onClick={handleDecrement}
       >
-        <Minus className={iconClass} aria-hidden="true" />
+        <Minus className={iconClass} strokeWidth={3} aria-hidden="true" />
       </Button>
       <Input
         type="number"
@@ -135,17 +136,17 @@ const QuantidadeStepper = memo(function QuantidadeStepper({
           onAlterarQuantidade(item.id, parseQuantidadeInput(e.target.value))
         }
         onKeyDown={enterVoltaParaBusca}
-        className={`${inputSizeClass} rounded-none border-0 text-center text-sm tabular-nums px-1 bg-background focus-visible:ring-1 focus-visible:ring-primary/40`}
+        className={`${inputSizeClass} rounded-none border-0 text-center font-semibold tabular-nums px-1 bg-background focus-visible:ring-1 focus-visible:ring-primary/40`}
       />
       <Button
         type="button"
         variant="ghost"
         size="icon"
-        className={`${buttonSizeClass} rounded-none border-l border-border text-foreground hover:bg-muted hover:text-primary`}
+        className={`${buttonSizeClass} rounded-none border-l-2 border-slate-400 bg-slate-100 text-slate-900 hover:bg-slate-200 hover:text-primary`}
         aria-label={caixaFmt(m.caixa.aria_qtde_aumentar, { nome: item.nome })}
         onClick={handleIncrement}
       >
-        <Plus className={iconClass} aria-hidden="true" />
+        <Plus className={iconClass} strokeWidth={3} aria-hidden="true" />
       </Button>
     </div>
   )
@@ -171,7 +172,7 @@ const CartRowDesktop = memo(function CartRowDesktop({
   const res = resultadoLinha(item)
   return (
     <li
-      className="grid grid-cols-[minmax(6rem,2.55fr)_8.5rem_5rem_5.5rem_5.5rem] gap-2 px-3 py-3 items-center hover:bg-accent/50 transition-colors"
+      className="grid grid-cols-[minmax(6rem,2.2fr)_11rem_5rem_5.5rem_5.5rem] gap-2 px-3 py-3 items-center hover:bg-accent/50 transition-colors"
     >
       <div className="flex flex-col min-w-0 gap-1">
         <div className="flex items-center gap-2 min-w-0">
@@ -345,6 +346,7 @@ function CaixaCartListInner({
   listEmptyVariant = "default",
   onAlterarQuantidade,
   onRemover,
+  onAdicionarMaisItens,
 }: Props) {
   const locale = listLocale(idioma)
 
@@ -398,7 +400,7 @@ function CaixaCartListInner({
     <>
       {/* Desktop: tabela */}
       <div className="hidden md:block">
-        <header className="grid grid-cols-[minmax(6rem,2.55fr)_8.5rem_5rem_5.5rem_5.5rem] gap-2 px-3 py-2 text-sm text-foreground/85 border-b border-border">
+        <header className="grid grid-cols-[minmax(6rem,2.2fr)_11rem_5rem_5.5rem_5.5rem] gap-2 px-3 py-2 text-sm text-foreground/85 border-b border-border">
           <span>{m.caixa.col_produto}</span>
           <span className="text-right">{m.caixa.col_qtde}</span>
           <span className="text-right">{m.caixa.col_unit}</span>
@@ -434,6 +436,21 @@ function CaixaCartListInner({
           />
         ))}
       </ul>
+
+      {onAdicionarMaisItens ? (
+        <div className="border-t border-border p-3">
+          <Button
+            type="button"
+            variant="outline"
+            className="flex h-14 min-h-[56px] w-full items-center justify-center gap-2 border-2 border-slate-500 text-[18px] font-semibold"
+            onClick={onAdicionarMaisItens}
+            data-testid="caixa-adicionar-mais-itens"
+          >
+            <Plus className="h-6 w-6" aria-hidden />
+            {idioma === "zh" ? "继续添加商品" : "Adicionar mais itens"}
+          </Button>
+        </div>
+      ) : null}
     </>
   )
 }
