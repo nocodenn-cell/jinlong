@@ -48,6 +48,7 @@ export const ROUTES = {
     fornecedores: '/admin/fornecedores',
     estoque: '/admin/estoque',
     estoqueRecebimento: '/admin/estoque/recebimento',
+    estoqueMovimentacoes: '/admin/estoque/movimentacoes',
     estoqueTransferencias: '/admin/estoque/transferencias',
     estoqueImprimirEtiquetas: '/admin/estoque/imprimir-etiquetas',
     importNfe: '/admin/estoque/importar-nfe',

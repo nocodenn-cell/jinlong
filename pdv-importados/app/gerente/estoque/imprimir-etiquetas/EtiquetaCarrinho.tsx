@@ -55,6 +55,7 @@ export function EtiquetaCarrinho({
 
   return (
     <SectionCard
+      className="h-auto"
       title={`${labels.total}: ${totalEtiquetas}`}
       action={
         <Button type="button" variant="ghost" size="sm" onClick={onLimpar}>
@@ -66,7 +67,7 @@ export function EtiquetaCarrinho({
         {itens.map((item) => (
           <div
             key={item.produtoId}
-            className="flex items-center gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3"
+            className="flex flex-wrap items-center gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3"
           >
             <div className="min-w-0 flex-1">
               <p className="truncate text-body font-medium">{item.nome}</p>
@@ -89,7 +90,13 @@ export function EtiquetaCarrinho({
                 <Minus className="h-4 w-4" />
               </Button>
 
-              <span className="w-8 text-center text-body font-medium">{item.quantidade}</span>
+              <input type="number" min={1} max={500} step={1} value={item.quantidade}
+                aria-label={`${labels.quantidade} ${item.nome}`}
+                className="w-16 rounded border border-[var(--color-border)] bg-[var(--color-surface)] p-1 text-center"
+                onChange={(e) => {
+                  const value = Number(e.target.value)
+                  if (Number.isInteger(value) && value >= 1 && value <= 500) onAtualizarQuantidade(item.produtoId, value)
+                }} />
 
               <Button
                 type="button"
@@ -97,6 +104,7 @@ export function EtiquetaCarrinho({
                 size="icon"
                 className="h-8 w-8"
                 onClick={() => onAtualizarQuantidade(item.produtoId, item.quantidade + 1)}
+                disabled={item.quantidade >= 500}
                 aria-label={`${labels.quantidade} +1`}
               >
                 <Plus className="h-4 w-4" />

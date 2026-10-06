@@ -2,10 +2,10 @@
 
 import { labelStatusOperacional } from '@/lib/format/vendaLabels'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { FileText, ClipboardList, PackagePlus, Truck, History } from 'lucide-react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { CadastroRapidoBlock } from '@/components/gerente/cadastro'
-import { DataTable, type Column } from '@/components/ui/DataTable'
+import { type Column } from '@/components/ui/DataTable'
 import { readFormDataString } from '@/lib/forms/readFormDataString'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { fmtGerenteDateTime, fmtGerenteIdCurto } from '@/lib/format/gerenteValues'
@@ -17,16 +17,19 @@ import { getMessages } from '@/i18n/getMessages'
 import { fmtTemplate } from '@/i18n/fmtTemplate'
 import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import { Button } from '@/components/ui/button'
-import { EmptyState } from '@/components/ui/feedback'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { Field, Input } from '@/components/ui/forms'
 import { ROUTES } from '@/lib/navigation/routes'
 import { criarRemessaConferencia } from './actions'
+import { produtosPendentes, ItensPedidoRecebimento } from './ItensPedidoRecebimento'
 import { ImportarNfePageClient } from '../estoque/importar-nfe/ImportarNfePageClient'
 import { obterOrdemCompraDetalhe, type OcDetalheDTO, type OcListaDTO } from '../compras/actions'
 import { fmtQtd, textoPosEntrada } from '../compras/ocRecebimento'
 import { ProdutoRecebimentoAutocomplete } from './ProdutoRecebimentoAutocomplete'
+import { HistoricoEntregas } from './HistoricoEntregas'
 import { OrdemCompraVinculoAutocomplete } from './OrdemCompraVinculoAutocomplete'
+
+const VIA_ICONS = { NFE: FileText, ORDEM_COMPRA: ClipboardList, SEM_DOCUMENTO: PackagePlus, FISICA: Truck, HISTORICO: History }
 
 export type RecebimentoProdutoOpt = { id: string; nome: string; codigo_barras: string | null }
 
@@ -70,8 +73,8 @@ export function RecebimentoGerentePageClient({
   // criaria outra entrada (e outro crédito de estoque) com os mesmos dados.
   const [formKey, setFormKey] = useState(0)
   const [usarProdutoPreSelecionado, setUsarProdutoPreSelecionado] = useState(true)
-  // "Como chegou?": a NF-e tem tela própria (link); aqui a entrada é com pedido ou sem documento.
-  const [via, setVia] = useState<'SEM_DOCUMENTO' | 'ORDEM_COMPRA'>('SEM_DOCUMENTO')
+  const searchParams = useSearchParams()
+  const [via, setVia] = useState<'SEM_DOCUMENTO' | 'ORDEM_COMPRA' | 'NFE' | 'HISTORICO' | 'FISICA'>(searchParams.get('modo') === 'pedido' ? 'ORDEM_COMPRA' : searchParams.get('modo') === 'nfe' ? 'NFE' : searchParams.get('modo') === 'historico' ? 'HISTORICO' : 'SEM_DOCUMENTO')
   const [ocEscolhida, setOcEscolhida] = useState<OcListaDTO | null>(null)
   const [ocSaldo, setOcSaldo] = useState<OcDetalheDTO | null>(null)
   const [ocSaldoCarregando, setOcSaldoCarregando] = useState(false)
@@ -81,6 +84,18 @@ export function RecebimentoGerentePageClient({
   const [produtoEscolhido, setProdutoEscolhido] = useState<RecebimentoProdutoOpt | null>(
     produtoPreSelecionado,
   )
+
+  const pedidoInicial = searchParams.get('oc')
+  useEffect(() => {
+    if (!pedidoInicial) return
+    let ativo = true
+    void obterOrdemCompraDetalhe(pedidoInicial).then((res) => {
+      if (!ativo) return
+      if (res.success && ['CONFIRMADA', 'EM_TRANSITO'].includes(res.data.status)) setOcEscolhida(res.data)
+      else setOcSaldoErro(true)
+    }).catch(() => { if (ativo) setOcSaldoErro(true) })
+    return () => { ativo = false }
+  }, [pedidoInicial])
 
   // Saldo por item do pedido escolhido, para o operador ver o que ainda falta ANTES de lançar.
   useEffect(() => {
@@ -111,9 +126,9 @@ export function RecebimentoGerentePageClient({
     }
   }, [ocEscolhida])
 
-  const escolherVia = useCallback((v: 'SEM_DOCUMENTO' | 'ORDEM_COMPRA') => {
+  const escolherVia = useCallback((v: 'SEM_DOCUMENTO' | 'ORDEM_COMPRA' | 'NFE' | 'HISTORICO' | 'FISICA') => {
     setVia(v)
-    if (v === 'SEM_DOCUMENTO') {
+    if (v !== 'ORDEM_COMPRA') {
       // Sem documento não há expectativa: some o campo e a divergência deixa de existir.
       setOcEscolhida(null)
       setQtdEspStr('')
@@ -146,7 +161,7 @@ export function RecebimentoGerentePageClient({
       qtd_esperada?: number
       qtd_conferida: number
       /** Produtos adicionais da mesma entrada (UX-018). */
-      adicionais?: Array<{ produto_id: string; qtd_conferida: number }>
+      adicionais?: Array<{ produto_id: string; qtd_conferida: number; qtd_esperada?: number }>
       idempotency_key: string
       ordem_compra_id: string
     }) => {
@@ -164,6 +179,7 @@ export function RecebimentoGerentePageClient({
           ...(p.adicionais ?? []).map((a) => ({
             produto_id: a.produto_id,
             quantidade_conferida: a.qtd_conferida,
+            quantidade_esperada: a.qtd_esperada,
           })),
         ],
       })
@@ -274,7 +290,7 @@ export function RecebimentoGerentePageClient({
         </Link>
       ) : null}
 
-      {semProdutos ? (
+      {semProdutos && (via === 'ORDEM_COMPRA' || via === 'FISICA') ? (
         <div
           className="mt-8 rounded-xl border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] p-5 text-[var(--color-warning-strong)] shadow-sm"
           role="status"
@@ -290,49 +306,42 @@ export function RecebimentoGerentePageClient({
         </div>
       ) : null}
 
-      <CadastroRapidoBlock title={r.sec_formulario} defaultOpen className="mt-8">
+      <SectionCard title={r.sec_formulario} className="mt-8">
             {/* Como chegou? — a mesma entrada, três caminhos, sem tela nova. */}
             <div className="mb-6" data-testid="rec-como-chegou">
               <p className="mb-1.5 text-caption font-semibold text-fg-muted">{r.como_chegou}</p>
               <div role="group" aria-label={r.como_chegou} className="flex flex-wrap gap-2">
-                <Link
-                  href={ROUTES.admin.importNfe}
-                  className="fp-focus-ring rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-body font-medium text-fg hover:bg-[var(--color-surface-soft)]"
-                  title={r.via_nfe_ajuda}
-                >
-                  {r.via_nfe}
-                </Link>
                 {(
                   [
+                    ['NFE', r.via_nfe],
                     ['ORDEM_COMPRA', r.via_pedido],
-                    ['SEM_DOCUMENTO', r.via_sem_documento],
+                    ['SEM_DOCUMENTO', idioma === 'pt' ? 'Sem documento, com valores' : '无单据，已知金额'],
+                    ['FISICA', idioma === 'pt' ? 'Receber sem valores' : '仅收货，金额未知'],
+                    ['HISTORICO', idioma === 'pt' ? 'Histórico de entradas' : '入库记录'],
                   ] as const
-                ).map(([v, rotulo]) => (
-                  <button
+                ).map(([v, rotulo]) => { const Icon = VIA_ICONS[v]; return (
+                  <Button
+                    variant={via === v ? 'primary' : 'outline'}
                     key={v}
                     type="button"
                     aria-pressed={via === v}
                     onClick={() => escolherVia(v)}
-                    disabled={semProdutos}
-                    className={`fp-focus-ring rounded-lg border px-3 py-1.5 text-body font-medium ${
-                      via === v
-                        ? 'border-[var(--color-brand)] bg-[var(--color-brand)] text-[var(--color-brand-fg)]'
-                        : 'border-[var(--color-border)] text-fg hover:bg-[var(--color-surface-soft)]'
-                    }`}
+                    disabled={loading}
                   >
-                    {rotulo}
-                  </button>
-                ))}
+                    <Icon aria-hidden />{rotulo}
+                  </Button>
+                )})}
               </div>
-              <p className="mt-3 text-caption leading-relaxed text-fg-subtle">
-                {via === 'ORDEM_COMPRA' ? r.via_pedido_ajuda : r.via_sem_documento_ajuda}
-              </p>
+              {via !== 'SEM_DOCUMENTO' && via !== 'HISTORICO' ? <p className="mt-3 text-caption leading-relaxed text-fg-subtle">
+                {via === 'ORDEM_COMPRA' ? r.via_pedido_ajuda : via === 'NFE' ? r.via_nfe_ajuda : via === 'FISICA' ? (idioma === 'pt' ? 'Registra somente a mercadoria conferida. Não gera contas a pagar nem atualiza custo; associe a nota ou cobrança depois à mesma entrega.' : '仅记录实收商品，不生成应付款或更新成本。后续单据应关联原收货。') : r.via_sem_documento_ajuda}
+              </p> : null}
             </div>
 
+        {via === 'NFE' || via === 'HISTORICO' ? <ImportarNfePageClient idioma={idioma} embeddedInAdminHub historicoOnly={via === 'HISTORICO'} /> : null}
         {via === 'SEM_DOCUMENTO' ? (
           <ImportarNfePageClient idioma={idioma} embeddedInAdminHub semDocumento produtoInicial={produtoPreSelecionado} />
         ) : null}
-        {via === 'ORDEM_COMPRA' ? (<form
+        {via === 'ORDEM_COMPRA' || via === 'FISICA' ? (<form
           key={formKey}
           id="recebimento-form"
           className="mt-6 space-y-6"
@@ -340,6 +349,20 @@ export function RecebimentoGerentePageClient({
             e.preventDefault()
             if (semProdutos) return
             const fd = new FormData(e.currentTarget)
+            if (ocSaldo) {
+              const rows = produtosPendentes(ocSaldo.itens).map((row, index) => ({ ...row,
+                quantidade_conferida: Number(fd.get(index === 0 ? 'qtd_conferida' : `qtd_${row.produto_id}`) ?? '') }))
+              const invalid = rows.some((row) => !Number.isFinite(row.quantidade_conferida) || row.quantidade_conferida < 0 || row.quantidade_conferida > row.quantidade_esperada)
+              const arrived = rows.filter((row) => row.quantidade_conferida > 0)
+              if (invalid || !arrived.length) { emitGerenteToast({ kind: 'error', message: r.toast_dados_invalidos }); return }
+              const first = arrived[0]
+              void mutate({ origem: String(fd.get('origem') || ocSaldo.fornecedor_nome || ocSaldo.id),
+                observacao: String(fd.get('observacao') ?? ''), produto_id: first.produto_id, produto_nome: first.nome,
+                qtd_esperada: first.quantidade_esperada, qtd_conferida: first.quantidade_conferida,
+                adicionais: arrived.slice(1).map((row) => ({ produto_id: row.produto_id, qtd_conferida: row.quantidade_conferida, qtd_esperada: row.quantidade_esperada })),
+                idempotency_key: idempotencyKeyRef.current, ordem_compra_id: ocSaldo.id })
+              return
+            }
             const pid = readFormDataString(fd, 'produto_id')
             // Só o modo Pedido tem "esperada"; sem documento a action assume esperada = conferida.
             const qEsp = via === 'ORDEM_COMPRA' ? Number(fd.get('qtd_esperada')) : undefined
@@ -380,7 +403,7 @@ export function RecebimentoGerentePageClient({
                 placeholder={r.ph_origem}
               />
             </Field>
-            <Field id="rec-prod" label={r.label_produto} required>
+            {!ocSaldo ? <Field id="rec-prod" label={r.label_produto} required>
               {/* Busca server-side: o `<select>` anterior carregava só os 500
                   primeiros produtos e o resto ficava inalcançável, sem aviso. */}
               <ProdutoRecebimentoAutocomplete
@@ -392,18 +415,19 @@ export function RecebimentoGerentePageClient({
                 valorInicial={usarProdutoPreSelecionado ? produtoPreSelecionado : null}
                 onChange={setProdutoEscolhido}
               />
-            </Field>
+            </Field> : null}
             {via === 'ORDEM_COMPRA' ? (
               <Field
                 id="rec-oc"
                 label={r.label_ordem_compra}
-                hint={r.ordem_compra_ajuda}
+                hint={idioma === 'pt' ? 'A conferência abaixo usa o saldo pendente deste pedido.' : '下方验收以此采购单的待收数量为准。'}
                 required
                 className="md:col-span-2"
               >
                 {/* UX-04 — a entrada abate o saldo do pedido, item a item. Sem escolher o pedido
                     (modo "Sem documento") nada é enviado e a entrada segue como sempre. */}
                 <OrdemCompraVinculoAutocomplete
+                  valorInicial={ocEscolhida}
                   disabled={semProdutos}
                   placeholder={r.ph_ordem_compra_busca}
                   semResultadosLabel={r.ordem_compra_sem_resultados}
@@ -449,6 +473,8 @@ export function RecebimentoGerentePageClient({
                 ) : null}
               </div>
             ) : null}
+            {ocSaldo ? <ItensPedidoRecebimento key={ocSaldo.id} itens={ocSaldo.itens} zh={idioma === 'zh'} loading={loading}
+ /> : null}
             <Field id="rec-obs" label={r.label_observacao} className="md:col-span-2">
               <Input
                 name="observacao"
@@ -456,7 +482,7 @@ export function RecebimentoGerentePageClient({
                 placeholder={r.ph_observacao}
               />
             </Field>
-            {via === 'ORDEM_COMPRA' ? (
+            {via === 'ORDEM_COMPRA' && !ocSaldo ? (
               <Field id="rec-q-esp" label={r.label_qtd_esperada} required>
                 <Input
                   name="qtd_esperada"
@@ -470,7 +496,7 @@ export function RecebimentoGerentePageClient({
                 />
               </Field>
             ) : null}
-            <Field id="rec-q-conf" label={r.label_qtd_conferida} required>
+            {!ocSaldo ? <Field id="rec-q-conf" label={r.label_qtd_conferida} required>
               <Input
                 name="qtd_conferida"
                 type="number"
@@ -481,7 +507,7 @@ export function RecebimentoGerentePageClient({
                 value={qtdConfStr}
                 onChange={(e) => setQtdConfStr(e.target.value)}
               />
-            </Field>
+            </Field> : null}
             {divergenciaDetalhe ? (
               <div
                 className={`rounded-lg border px-3 py-2 text-body md:col-span-2 ${
@@ -517,11 +543,11 @@ export function RecebimentoGerentePageClient({
               </div>
             ) : null}
           </div>
-          <div className="mt-6 flex justify-end border-t border-[var(--color-border)] pt-5">
+          {!ocSaldo ? <div className="mt-6 flex justify-end border-t border-[var(--color-border)] pt-5">
             <Button type="submit" variant="primary" loading={loading} disabled={semProdutos}>
               {loading ? r.btn_confirmando : r.btn_confirmar}
             </Button>
-          </div>
+          </div> : null}
         </form>) : null}
         {resultado ? (
           <div
@@ -533,25 +559,11 @@ export function RecebimentoGerentePageClient({
             <p>{resultado}</p>
           </div>
         ) : null}
-      </CadastroRapidoBlock>
-
-      <SectionCard title={r.sec_recentes} subtitle={r.sec_recentes_ajuda} className="mt-10">
-        <DataTable
-          columns={remessaColumns}
-          data={remessasRecentes}
-          rowKey={(row) => row.id}
-          compact
-          emptyState={
-            <EmptyState
-              title={r.empty_recentes}
-              actionLabel={r.btn_confirmar}
-              onAction={() => {
-                document.getElementById('recebimento-form')?.scrollIntoView({ behavior: 'smooth' })
-              }}
-            />
-          }
-        />
       </SectionCard>
+
+      {via === 'HISTORICO' ? <SectionCard title={r.sec_recentes} subtitle={r.sec_recentes_ajuda} className="mt-10">
+        <HistoricoEntregas inicial={remessasRecentes} columns={remessaColumns} zh={idioma === 'zh'} />
+      </SectionCard> : null}
     </div>
   )
 }

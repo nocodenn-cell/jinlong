@@ -120,7 +120,6 @@ function digitar(el: HTMLInputElement | HTMLTextAreaElement, valor: string) {
   el.dispatchEvent(new Event('input', { bubbles: true }))
 }
 
-const qtdAgora = () => container.querySelector('#oc-agora-it-1') as HTMLInputElement
 const btnReceber = () => container.querySelector('[data-testid="oc-btn-registrar-recebimento"]') as HTMLButtonElement
 const btnEncerrar = () => container.querySelector('[data-testid="oc-btn-encerrar-falta"]') as HTMLButtonElement | null
 const textoBotoes = () => Array.from(container.querySelectorAll('button')).map((b) => b.textContent?.trim())
@@ -200,127 +199,13 @@ describe('OcDetalheModal — pedido / recebido / pendente (UX-04)', () => {
   })
 })
 
-describe('OcDetalheModal — registrar recebimento parcial (UX-04)', () => {
-  it('sem quantidade informada o botão fica desabilitado (recebimento zerado não é enviado)', async () => {
-    await abrir({ recebida: 60 })
-
-    expect(btnReceber().disabled).toBe(true)
-    await act(async () => btnReceber().click())
+describe('OcDetalheModal — porta única de entrada', () => {
+  it.each(['CONFIRMADA', 'EM_TRANSITO'] as const)('pedido %s direciona para Entradas com o pedido selecionado', async (status) => {
+    await abrir({ status, recebida: 60 })
+    const link = container.querySelector('[data-testid="oc-btn-registrar-recebimento"]')
+    expect(link?.getAttribute('href')).toBe(`/admin/estoque/recebimento?modo=pedido&oc=${OC_ID}`)
+    expect(container.querySelector('input[type="number"]')).toBeNull()
     expect(receberMock).not.toHaveBeenCalled()
-  })
-
-  it('acima do que falta: alerta na linha, botão desabilitado e nada enviado', async () => {
-    await abrir({ recebida: 60 })
-
-    await act(async () => digitar(qtdAgora(), '41'))
-    expect(container.querySelector('[role="alert"]')?.textContent).toContain('não pode passar do que falta receber')
-    expect(btnReceber().disabled).toBe(true)
-    expect(receberMock).not.toHaveBeenCalled()
-  })
-
-  it('"Preencher com o que falta" põe o saldo em cada item', async () => {
-    await abrir({ recebida: 60 })
-
-    await act(async () => (container.querySelector('[data-testid="oc-preencher-saldo"]') as HTMLButtonElement).click())
-    expect(qtdAgora().value).toBe('40')
-    expect(btnReceber().disabled).toBe(false)
-  })
-
-  it('envia só o que chegou nesta entrega, com chave de idempotência, e mostra estoque + saldo novo', async () => {
-    const aoMudar = vi.fn()
-    receberMock.mockResolvedValue({
-      success: true,
-      data: {
-        oc_id: OC_ID,
-        status: 'EM_TRANSITO',
-        pedido_total: 100,
-        recebido_total: 60,
-        pendente_total: 40,
-        itens_pendentes: 1,
-        encerrada: false,
-        encerrada_com_falta: false,
-        replay: false,
-        entrada_id: 'e1',
-        quantidade_creditada: 60,
-        mensagem: 'x',
-      },
-    })
-    await abrir({}, aoMudar)
-    obterDetalheMock.mockResolvedValue({ success: true, data: oc({ recebida: 60 }) })
-
-    await act(async () => digitar(qtdAgora(), '60'))
-    await act(async () => btnReceber().click())
-
-    expect(receberMock).toHaveBeenCalledTimes(1)
-    const [ocId, itens, chave] = receberMock.mock.calls[0] as [string, unknown[], string]
-    expect(ocId).toBe(OC_ID)
-    expect(itens).toEqual([{ item_id: 'it-1', quantidade_recebida: 60 }])
-    expect(typeof chave).toBe('string')
-    expect(chave.length).toBeGreaterThan(8)
-
-    const aviso = container.querySelector('[data-testid="oc-aviso-ultima-entrada"]')
-    expect(aviso?.textContent).toContain('Estoque atualizado: +60.')
-    expect(aviso?.textContent).toContain('Pedido: 60 de 100 recebidas. Faltam 40 unidades.')
-    // o modal permanece aberto mostrando o saldo novo, e a lista/KPIs são atualizados
-    expect(container.querySelector('[data-testid="oc-resumo-saldo"]')?.textContent).toBe('Faltam 40 unidades.')
-    expect(aoMudar).toHaveBeenCalled()
-  })
-
-  it('reenvio idêntico após falha usa a MESMA chave; mudar a quantidade gera chave nova', async () => {
-    receberMock.mockResolvedValue({ success: false, error: 'Falha de rede.' })
-    await abrir({ recebida: 60 })
-
-    await act(async () => digitar(qtdAgora(), '30'))
-    await act(async () => btnReceber().click())
-    await act(async () => btnReceber().click())
-    expect(receberMock).toHaveBeenCalledTimes(2)
-    const k1 = (receberMock.mock.calls[0] as unknown[])[2]
-    const k2 = (receberMock.mock.calls[1] as unknown[])[2]
-    expect(k2).toBe(k1)
-
-    await act(async () => digitar(qtdAgora(), '31'))
-    await act(async () => btnReceber().click())
-    const k3 = (receberMock.mock.calls[2] as unknown[])[2]
-    expect(k3).not.toBe(k1)
-  })
-
-  it('replay do servidor: avisa que já estava registrado e que o estoque não foi creditado de novo', async () => {
-    receberMock.mockResolvedValue({
-      success: true,
-      data: {
-        oc_id: OC_ID,
-        status: 'EM_TRANSITO',
-        pedido_total: 100,
-        recebido_total: 60,
-        pendente_total: 40,
-        itens_pendentes: 1,
-        encerrada: false,
-        encerrada_com_falta: false,
-        replay: true,
-        entrada_id: 'e1',
-        quantidade_creditada: 0,
-        mensagem: 'x',
-      },
-    })
-    await abrir({ recebida: 60 })
-    await act(async () => digitar(qtdAgora(), '40'))
-    await act(async () => btnReceber().click())
-
-    expect(container.querySelector('[data-testid="oc-aviso-ultima-entrada"]')?.textContent).toContain(
-      'não foi creditado de novo',
-    )
-  })
-
-  it('erro do banco (ex.: acima do saldo por concorrência) aparece como erro e não como sucesso', async () => {
-    receberMock.mockResolvedValue({ success: false, error: 'A quantidade informada é maior do que ainda falta receber deste pedido.' })
-    await abrir({ recebida: 60 })
-    await act(async () => digitar(qtdAgora(), '40'))
-    await act(async () => btnReceber().click())
-
-    expect(toastMock).toHaveBeenCalledWith(
-      expect.objectContaining({ kind: 'error', message: expect.stringContaining('maior do que ainda falta') }),
-    )
-    expect(container.querySelector('[data-testid="oc-aviso-ultima-entrada"]')).toBeNull()
   })
 })
 

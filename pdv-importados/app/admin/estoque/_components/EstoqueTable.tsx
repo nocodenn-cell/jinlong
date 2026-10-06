@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { History, PackagePlus, SlidersHorizontal } from 'lucide-react'
 import { adminEstoqueRecebimentoProdutoQuery } from '@/lib/navigation/routes'
@@ -11,6 +12,7 @@ import { EmptyState } from '@/components/ui/feedback'
 import { QuantityCell } from '@/components/ui/QuantityCell'
 import { classificarEstoque } from '@/lib/estoque/classificarEstoque'
 import { cn } from '@/lib/utils'
+import { SaldoMobileCards } from './SaldoMobileCards'
 import { AjusteSaldoModal, type AjusteAlvo } from './AjusteSaldoModal'
 import { KardexSheet, type KardexAlvo } from './KardexSheet'
 
@@ -68,26 +70,42 @@ const ORIGEM_BADGE: Record<string, string> = {
   brasil_sem_nf: 'border-[var(--color-border)] bg-[var(--color-surface-muted)] text-fg-muted',
 }
 
-export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; labels: EstoqueLabels }) {
+const SORT_KEYS: Record<string, string> = { produto: 'nome', saldo: 'quantidade_atual', minimo: 'estoque_minimo', deficit: 'deficit' }
+
+export function EstoqueTable({ linhas, labels, ordem = 'nome', direcao = 'asc', idioma = 'pt' }: {
+  linhas: EstoqueLinha[]; labels: EstoqueLabels; ordem?: string; direcao?: 'asc' | 'desc'; idioma?: 'pt' | 'zh'
+}) {
+  const router = useRouter()
+  const params = useSearchParams()
+  const pathname = usePathname()
+  const ordenar = (key: string, direction: 'asc' | 'desc') => {
+    const query = new URLSearchParams(params.toString())
+    query.set('ordem', SORT_KEYS[key] ?? 'nome')
+    query.set('dir', direction)
+    query.delete('page')
+    router.replace(`${pathname}?${query}`)
+  }
   const [ajusteAlvo, setAjusteAlvo] = useState<AjusteAlvo | null>(null)
   const [kardexAlvo, setKardexAlvo] = useState<KardexAlvo | null>(null)
 
   const columns: Column<EstoqueLinha>[] = [
     {
       key: 'produto',
+      priority: 'primary',
       header: labels.produto,
       // Fixa o produto durante o scroll horizontal (ver DataTable `sticky`).
       sticky: true,
       sortValue: (r) => r.nome,
       cell: (r) => (
         <div className="min-w-0">
-          <p className="max-w-[240px] truncate text-body font-medium text-fg">{r.nome}</p>
+          <p className="max-w-[150px] whitespace-normal sm:max-w-[240px] text-body font-medium text-fg">{r.nome}</p>
           <p className="font-mono text-caption text-fg-subtle">{r.codigo_barras ?? '—'}</p>
         </div>
       ),
     },
     {
       key: 'saldo',
+      priority: 'primary',
       header: labels.saldo,
       align: 'right',
       sortValue: (r) => r.quantidade_atual ?? Number.NEGATIVE_INFINITY,
@@ -112,6 +130,7 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
     },
     {
       key: 'minimo',
+      priority: 'contextual',
       header: labels.minimo,
       align: 'right',
       sortValue: (r) => r.estoque_minimo ?? Number.NEGATIVE_INFINITY,
@@ -124,6 +143,7 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
     },
     {
       key: 'deficit',
+      priority: 'contextual',
       header: labels.deficit,
       align: 'right',
       sortValue: (r) => r.deficit ?? 0,
@@ -163,19 +183,26 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
 
   return (
     <>
+      <SaldoMobileCards linhas={linhas} labels={labels} idioma={idioma}
+        onAjustar={(row) => setAjusteAlvo({ produtoId: row.id, produtoNome: row.nome, quantidadeAtual: row.quantidade_atual ?? 0, estoqueMinimo: row.estoque_minimo ?? 0 })}
+        onKardex={(row) => setKardexAlvo({ produtoId: row.id, produtoNome: row.nome })} />
+      <div className="hidden lg:block">
       <DataTable
         data={linhas}
+        onSort={ordenar}
+        sortKey={Object.keys(SORT_KEYS).find((key) => SORT_KEYS[key] === ordem)}
+        sortDirection={direcao}
         columns={columns}
         rowKey={(r) => r.id}
         emptyState={<EmptyState title={labels.vazioTitulo} description={labels.vazioSub} />}
         className="rounded-none border-x-0 border-b-0"
         rowActions={(row) => (
-          <div className="flex items-center justify-end gap-1">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             {row.deficit != null && row.deficit > 0 ? (
               <Button
                 type="button"
-                size="icon"
-                variant="ghost"
+                size="sm"
+                variant="outline"
                 aria-label={`${labels.reporTitulo} ${row.nome}`}
                 title={labels.reporTitulo}
                 asChild
@@ -184,14 +211,14 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
                   href={adminEstoqueRecebimentoProdutoQuery(row.id)}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <PackagePlus className="h-3.5 w-3.5" aria-hidden />
+                  <PackagePlus className="h-5 w-5" aria-hidden />{labels.reporTitulo}
                 </Link>
               </Button>
             ) : null}
             <Button
               type="button"
-              size="icon"
-              variant="ghost"
+              size="sm"
+              variant="outline"
               aria-label={`${labels.ajusteTitulo} ${row.nome}`}
               title={labels.ajusteTitulo}
               onClick={(e) => {
@@ -204,12 +231,12 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
                 })
               }}
             >
-              <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden />
+              <SlidersHorizontal className="h-5 w-5" aria-hidden />{labels.ajusteTitulo}
             </Button>
             <Button
               type="button"
-              size="icon"
-              variant="ghost"
+              size="sm"
+              variant="outline"
               aria-label={`${labels.kardexTitulo} ${row.nome}`}
               title={labels.kardexTitulo}
               onClick={(e) => {
@@ -217,12 +244,13 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
                 setKardexAlvo({ produtoId: row.id, produtoNome: row.nome })
               }}
             >
-              <History className="h-3.5 w-3.5" aria-hidden />
+              <History className="h-5 w-5" aria-hidden />{labels.kardexTitulo}
             </Button>
           </div>
         )}
       />
 
+      </div>
       <AjusteSaldoModal
         alvo={ajusteAlvo}
         onClose={() => setAjusteAlvo(null)}
@@ -245,6 +273,7 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
         }}
       />
       <KardexSheet
+        idioma={idioma}
         alvo={kardexAlvo}
         onClose={() => setKardexAlvo(null)}
         labels={{

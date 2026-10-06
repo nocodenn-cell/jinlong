@@ -1,6 +1,6 @@
 /**
  * Adapter InventoryAdjustmentService — ajuste manual.
- * Autoridade: RPC `ajustar_estoque_manual`. Policy no shared-core.
+ * Autoridade: RPC `ajustar_estoque_manual_seguro`. Policy no shared-core.
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -24,8 +24,10 @@ export type AdjustEstoqueRpcFn = (args: {
   p_quantidade_atual: number
   p_estoque_minimo: number
   p_motivo_codigo: string
-  p_observacao?: string
+  p_observacao: string | null
   p_ator_id: string
+  p_quantidade_esperada: number | null
+  p_minimo_esperado: number | null
 }) => Promise<{ error: { message: string } | null }>
 
 export type InventoryAdjustmentDeps = {
@@ -36,7 +38,7 @@ export type InventoryAdjustmentDeps = {
 function defaultDeps(supabase: SupabaseClient, lojaId: string): InventoryAdjustmentDeps {
   return {
     adjustRpc: async (args) => {
-      const { error } = await supabase.rpc('ajustar_estoque_manual', args)
+      const { error } = await supabase.rpc('ajustar_estoque_manual_seguro', args)
       return { error }
     },
     reader: createInventoryReader(supabase, lojaId),
@@ -79,8 +81,10 @@ export function createInventoryAdjustmentService(
           p_quantidade_atual: cmd.quantity,
           p_estoque_minimo: cmd.estoqueMinimo ?? 0,
           p_motivo_codigo: cmd.reason,
-          p_observacao: cmd.observacao ?? undefined,
+          p_observacao: cmd.observacao ?? null,
           p_ator_id: cmd.atorId,
+          p_quantidade_esperada: cmd.expectedQuantity ?? null,
+          p_minimo_esperado: cmd.expectedMinimum ?? null,
         })
         if (error) {
           const code = mapAjusteRpcMessageToCode(error.message)

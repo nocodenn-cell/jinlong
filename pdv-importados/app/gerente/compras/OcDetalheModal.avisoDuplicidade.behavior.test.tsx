@@ -88,17 +88,17 @@ async function abrir(status: string) {
 }
 
 describe('OcDetalheModal — aviso de duplicidade no recebimento (BP-F1)', () => {
-  it('pedido em trânsito: avisa que o mesmo lançamento por outro caminho credita o estoque duas vezes', async () => {
-    await abrir('EM_TRANSITO')
+  it.each(['EM_TRANSITO', 'CONFIRMADA'])('pedido %s: avisa que o mesmo lançamento por outro caminho credita o estoque duas vezes', async (status) => {
+    await abrir(status)
 
     const aviso = container.querySelector('[data-testid="oc-aviso-recebimento-duplicidade"]')
     expect(aviso).toBeTruthy()
-    expect(aviso?.textContent).toContain('credita o estoque agora')
-    expect(aviso?.textContent).toContain('creditado duas vezes')
-    expect(container.textContent).toContain('Registrar recebimento')
+    expect(aviso?.textContent).toContain('Registre a entrega em Entradas')
+    expect(aviso?.textContent).toContain('sem lançar estoque novamente')
+    expect(container.textContent).toContain('Receber em Entradas')
   })
 
-  it.each(['RASCUNHO', 'CONFIRMADA', 'RECEBIDA', 'CANCELADA'])(
+  it.each(['RASCUNHO', 'RECEBIDA', 'CANCELADA'])(
     'pedido %s: não mostra o aviso (não há recebimento a registrar)',
     async (status) => {
       await abrir(status)

@@ -5,7 +5,8 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }))
-vi.mock('@/app/gerente/estoque/actions', () => ({ atualizarEstoqueProduto: vi.fn() }))
+const atualizarMock = vi.fn()
+vi.mock('@/app/gerente/estoque/actions', () => ({ atualizarEstoqueProduto: (p: unknown) => atualizarMock(p) }))
 
 ;(globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
@@ -66,4 +67,29 @@ describe('AjusteSaldoModal — prévia ao digitar', () => {
     })
     expect(previa()).toBe('Saldo: 9 → 5 (−4)')
   })
+})
+
+it('envia snapshot original mesmo ao editar apenas o mínimo', async () => {
+  const container = document.createElement('div')
+  document.body.appendChild(container)
+  const root = createRoot(container)
+  atualizarMock.mockResolvedValue({ ok: false, error: 'Conflito sintético' })
+  try {
+    await act(async () => root.render(
+      <AjusteSaldoModal alvo={{ produtoId: 'p1', produtoNome: 'Sintético', quantidadeAtual: 9, estoqueMinimo: 2 }}
+        onClose={() => {}} labels={labels} />,
+    ))
+    const input = document.querySelector('input[name="estoque_minimo"]') as HTMLInputElement
+    input.value = '3'
+    await act(async () => document.querySelector('form#ajuste-saldo-form')!.dispatchEvent(
+      new Event('submit', { bubbles: true, cancelable: true }),
+    ))
+    expect(atualizarMock).toHaveBeenCalledWith(expect.objectContaining({
+      quantidade_atual: 9, estoque_minimo: 3, quantidade_esperada: 9, minimo_esperado: 2,
+    }))
+    expect(document.body.textContent).toContain('Conflito sintético')
+  } finally {
+    act(() => root.unmount())
+    container.remove()
+  }
 })

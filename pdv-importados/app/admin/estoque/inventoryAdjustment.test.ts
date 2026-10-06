@@ -53,6 +53,8 @@ describe('createInventoryAdjustmentService', () => {
       productId: 'p1',
       lojaId: 'loja-1',
       quantity: 8,
+      expectedQuantity: 10,
+      expectedMinimum: 1,
       estoqueMinimo: 1,
       reason: 'ACERTO_INVENTARIO',
       atorId: 'u1',
@@ -72,9 +74,24 @@ describe('createInventoryAdjustmentService', () => {
       expect.objectContaining({
         p_produto_id: 'p1',
         p_quantidade_atual: 8,
+        p_quantidade_esperada: 10,
+        p_minimo_esperado: 1,
         p_motivo_codigo: 'ACERTO_INVENTARIO',
         p_ator_id: 'u1',
       }),
     )
   })
+})
+
+it('conflito da RPC chega como erro descritivo e não recarrega como sucesso', async () => {
+  const reader = { getBalance: vi.fn(), getBalances: vi.fn() }
+  const adjustRpc = vi.fn(async () => ({ error: { message: 'AJUSTE_ESTOQUE_SALDO_ALTERADO' } }))
+  const service = createInventoryAdjustmentService({ rpc: vi.fn() } as never, 'loja-1', { reader, adjustRpc })
+  const result = await service.adjustInventory({
+    productId: 'p1', lojaId: 'loja-1', quantity: 8, estoqueMinimo: 2,
+    expectedQuantity: 10, expectedMinimum: 1, reason: 'ACERTO_INVENTARIO', atorId: 'u1',
+  })
+  expect(result).toMatchObject({ ok: false, code: INVENTORY_ERROR_CODES.STALE_BALANCE })
+  if (!result.ok) expect(result.error).toContain('mudou')
+  expect(reader.getBalance).not.toHaveBeenCalled()
 })

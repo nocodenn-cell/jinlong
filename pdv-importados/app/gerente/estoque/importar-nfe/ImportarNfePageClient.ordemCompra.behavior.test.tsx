@@ -15,6 +15,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const obterConferenciaMock = vi.fn()
 const vincularMock = vi.fn()
 const confirmarMock = vi.fn()
+const registrarMock = vi.fn()
 const emitToastMock = vi.fn()
 
 vi.mock('./actions', () => ({
@@ -29,7 +30,7 @@ vi.mock('./actions', () => ({
     data: { quantidade: 0, valor_total: 0, primeiro_vencimento: null, fornecedor_id: null },
   }),
   previewImportacaoNfe: vi.fn(),
-  registrarConferenciaNfe: vi.fn(),
+  registrarConferenciaNfe: (p: unknown) => registrarMock(p),
   vincularImportacaoNfeOrdemCompra: (p: unknown) => vincularMock(p),
 }))
 vi.mock('@/app/gerente/compras/actions', () => ({
@@ -101,6 +102,7 @@ beforeEach(() => {
   obterConferenciaMock.mockReset()
   vincularMock.mockReset()
   confirmarMock.mockReset()
+  registrarMock.mockReset()
   emitToastMock.mockReset()
   container = document.createElement('div')
   document.body.appendChild(container)
@@ -187,5 +189,92 @@ describe('ImportarNfePageClient — NF-e ↔ Ordem de Compra (UX-04)', () => {
     await abrir(conferencia({ status: 'CONCLUIDA' }))
 
     expect(painel()).toBeNull()
+  })
+})
+
+function botaoConfirmar(): HTMLButtonElement {
+  return Array.from(container.querySelectorAll('button')).find((b) =>
+    b.textContent?.includes('Confirmar e atualizar estoque'),
+  ) as HTMLButtonElement
+}
+
+async function editarQuantidade(value: string) {
+  const input = container.querySelector('input[type="number"]') as HTMLInputElement
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value)
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+}
+
+describe('P0 — confirmar somente a conferência visível já salva', () => {
+  it.each(['59', '', '0'])('bloqueia quantidade local %s e não confirma saldo antigo', async (value) => {
+    await abrir(conferencia())
+    expect(botaoConfirmar().disabled).toBe(false)
+    await editarQuantidade(value)
+    expect(botaoConfirmar().disabled).toBe(true)
+    await act(async () => botaoConfirmar().click())
+    expect(confirmarMock).not.toHaveBeenCalled()
+  })
+
+  it('reabilita após registrar e recarregar exatamente a nova quantidade', async () => {
+    await abrir(conferencia())
+    await editarQuantidade('59')
+    registrarMock.mockResolvedValue({ success: true, data: null })
+    const saved = conferencia()
+    saved.itens[0].quantidade_conferida = 59
+    obterConferenciaMock.mockResolvedValue({ success: true, data: saved })
+    const registrar = Array.from(container.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Registrar conferência'),
+    )!
+    await act(async () => registrar.click())
+    expect(registrarMock).toHaveBeenCalledWith({
+      importacao_id: 'imp-1',
+      itens: [{ item_id: 'it-1', quantidade_conferida: 59, divergencia_obs: null }],
+    })
+    expect(botaoConfirmar().disabled).toBe(false)
+  })
+
+  it('falha ao registrar mantém confirmação bloqueada', async () => {
+    await abrir(conferencia())
+    await editarQuantidade('59')
+    registrarMock.mockResolvedValue({ success: false, error: 'Falha simulada' })
+    const registrar = Array.from(container.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Registrar conferência'),
+    )!
+    await act(async () => registrar.click())
+    expect(botaoConfirmar().disabled).toBe(true)
+    expect(confirmarMock).not.toHaveBeenCalled()
+  })
+})
+
+it('P0 — alteração somente da observação também impede confirmar', async () => {
+  const saved = conferencia()
+  saved.itens[0].quantidade_conferida = 59
+  await abrir(saved)
+  const quantity = container.querySelector('input[type="number"]')!
+  const observation = quantity.closest('tr')!.querySelector('input[type="text"]') as HTMLInputElement
+  expect(observation).toBeTruthy()
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(observation, 'Contagem sintética')
+    observation!.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+  expect(botaoConfirmar().disabled).toBe(true)
+  expect(confirmarMock).not.toHaveBeenCalled()
+})
+
+describe('Documento recebido depois da mercadoria', () => {
+  it('escolher entrega anterior bloqueia crédito até salvar a associação', async () => {
+    await abrir(conferencia())
+    const button = Array.from(container.querySelectorAll('button')).find((item) => item.textContent?.includes('Mercadoria já entrou?'))!
+    await act(async () => button.click())
+    const confirmar = botaoConfirmar()
+    expect(confirmar.disabled).toBe(true)
+    await act(async () => confirmar.click())
+    expect(confirmarMock).not.toHaveBeenCalled()
+  })
+  it('associação persistida explica que documento não creditará novamente', async () => {
+    await abrir(conferencia({ entrega_anterior_id: 'remessa-1' }))
+    expect(container.textContent).toContain('sem creditar estoque novamente')
+    expect(container.textContent).toContain('remessa-')
   })
 })

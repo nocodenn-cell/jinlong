@@ -34,7 +34,7 @@ const LABELS = {
     busca: 'Escanear Código de Barras',
     placeholder: 'Código de barras...',
     acoesRapidas: 'Ações Rápidas',
-    saldoTotal: 'Imprimir Saldo Total',
+    saldoTotal: 'Usar quantidades do estoque',
     saldoHint: 'Usar quantidade atual do estoque',
     categoria: 'Selecionar por Categoria',
     categoriaHint: 'Adicionar todos os produtos da categoria',
@@ -57,7 +57,7 @@ const LABELS = {
     busca: '扫描条形码',
     placeholder: '条形码...',
     acoesRapidas: '快速操作',
-    saldoTotal: '打印库存总量',
+    saldoTotal: '使用库存数量',
     saldoHint: '使用当前库存数量',
     categoria: '按类别选择',
     categoriaHint: '添加该类别的所有产品',
@@ -70,7 +70,7 @@ const LABELS = {
     tamanho: '尺寸',
     maximo: '最大数量',
     etiquetas: '标签',
-    layout: 'Layout',
+    layout: '排版',
     erroPdf: '生成PDF时出错',
     toastSemProduto: '该类别没有产品',
     toastAdicionados: (n: number) => `已添加 ${n} 个产品`,
@@ -243,7 +243,7 @@ export function ImprimirEtiquetasPageClient({
           const estoque = estoqueAtual.find((e) => e.id === item.produtoId)
           return {
             ...item,
-            quantidade: estoque ? Math.floor(estoque.quantidade_atual) : item.quantidade,
+            quantidade: estoque ? Math.max(1, Math.floor(estoque.quantidade_atual)) : item.quantidade,
           }
         })
       )
@@ -251,7 +251,7 @@ export function ImprimirEtiquetasPageClient({
   }
 
   const handleGerarPdf = async () => {
-    if (carrinho.length === 0) return
+    if (carrinho.length === 0 || totalEtiquetas > getEtiquetaConfig().maxEtiquetasPorPdf) return
 
     setGerandoPdf(true)
     try {
@@ -262,7 +262,7 @@ export function ImprimirEtiquetasPageClient({
       })
     } catch (e) {
       // Mantém o motivo (ex.: acima do limite por PDF, quantidade zerada) em vez de um erro genérico.
-      alert(e instanceof Error && e.message ? `${t.erroPdf}: ${e.message}` : t.erroPdf)
+      emitGerenteToast({ kind: 'error', message: e instanceof Error && e.message ? `${t.erroPdf}: ${e.message}` : t.erroPdf })
     } finally {
       setGerandoPdf(false)
     }
@@ -282,7 +282,7 @@ export function ImprimirEtiquetasPageClient({
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-6">
-          <SectionCard title={t.busca}>
+          <SectionCard title={t.busca} className="h-auto">
             <div className="flex gap-2">
               <Field id="etiqueta-codigo" label="" className="flex-1 [&>label]:sr-only">
                 <Input
@@ -320,13 +320,13 @@ export function ImprimirEtiquetasPageClient({
         </div>
 
         <div className="space-y-6">
-          <SectionCard>
+          <SectionCard className="h-auto">
             <Button
               type="button"
               variant="success"
               className="w-full"
               onClick={() => void handleGerarPdf()}
-              disabled={carrinho.length === 0 || gerandoPdf}
+              disabled={carrinho.length === 0 || gerandoPdf || totalEtiquetas > getEtiquetaConfig().maxEtiquetasPorPdf}
               loading={gerandoPdf}
             >
               <Printer className="h-5 w-5" />
@@ -337,9 +337,14 @@ export function ImprimirEtiquetasPageClient({
                 </span>
               ) : null}
             </Button>
+            {totalEtiquetas > getEtiquetaConfig().maxEtiquetasPorPdf ? (
+              <p role="alert" className="mt-2 text-caption text-[var(--color-danger)]">
+                {idioma === 'pt' ? 'Reduza a quantidade: o limite por PDF é' : '请减少数量：每个PDF最多'} {getEtiquetaConfig().maxEtiquetasPorPdf} {t.etiquetas}.
+              </p>
+            ) : null}
           </SectionCard>
 
-          <SectionCard title={t.acoesRapidas}>
+          <SectionCard title={t.acoesRapidas} className="h-auto">
             <div className="space-y-2">
               <Button
                 type="button"
