@@ -8,12 +8,14 @@ import {
 } from '@/lib/errors/mensagemErroUsuario'
 import {
   buscarProdutoPorCodigoSchema,
+  buscarProdutosParaEtiquetaSchema,
   buscarProdutosPorCategoriaSchema,
   buscarEstoqueAtualSchema,
 } from './actions.validation'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 import { getGerenteLojaId } from '@/lib/gerente/auth/sessionContext'
 import type { ProdutoComEstoqueDTO } from '@/lib/etiqueta/types'
+import { buscarProdutosRecebimento } from '@/app/gerente/recebimento/actions'
 
 type ActionResult<T = null> =
   | { success: true; data: T }
@@ -56,6 +58,54 @@ function rowParaProdutoComEstoqueDTO(p: ProdutoComEstoqueSelectRow): ProdutoComE
 
 async function lojaIdDoUsuarioLogado(): Promise<string | null> {
   return getGerenteLojaId()
+}
+
+/**
+ * Sanitiza termo para validação (mesma limpeza do recebimento).
+ */
+function sanitizarTermoBusca(termo: string): string {
+  return (termo ?? '').replace(/[,()%_\\]/g, ' ').trim().slice(0, 120)
+}
+
+/**
+ * Busca produtos por nome/código para o autocomplete de etiquetas.
+ * Compõe a busca textual do recebimento + estoque/preço já existentes
+ * neste módulo (sem query adicional de catálogo aqui).
+ */
+export async function buscarProdutosParaEtiqueta(
+  termo: string,
+): Promise<ActionResult<ProdutoComEstoqueDTO[]>> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const lojaId = await lojaIdDoUsuarioLogado()
+  if (!lojaId) {
+    const { idioma } = await getUsuarioIdioma()
+    return {
+      success: false,
+      error: mensagemErroComSecao(
+        'Impressão de Etiquetas',
+        'Não foi possível identificar sua loja. Faça login novamente.',
+        idioma,
+      ),
+    }
+  }
+
+  const t = sanitizarTermoBusca(termo)
+  if (t.length < 2) return { success: true, data: [] }
+
+  const parsed = buscarProdutosParaEtiquetaSchema.safeParse({ termo: t, loja_id: lojaId })
+  if (!parsed.success) {
+    const msg = parsed.error.issues.map((i) => i.message).join('; ')
+    const { idioma } = await getUsuarioIdioma()
+    return { success: false, error: mensagemErroValidacaoZod(msg, idioma) }
+  }
+
+  const busca = await buscarProdutosRecebimento(t)
+  if (!busca.success) return { success: false, error: busca.error }
+  if (busca.data.length === 0) return { success: true, data: [] }
+
+  return buscarEstoqueAtual(busca.data.map((p) => p.id))
 }
 
 /**

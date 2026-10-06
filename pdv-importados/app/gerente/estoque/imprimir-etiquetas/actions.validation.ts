@@ -11,6 +11,12 @@ export const buscarProdutoPorCodigoSchema = z.object({
   loja_id: z.string().uuid('ID da loja inválido'),
 })
 
+/** Schema para busca textual (nome / código) na tela de etiquetas */
+export const buscarProdutosParaEtiquetaSchema = z.object({
+  termo: z.string().min(1, 'Informe nome ou código').max(120),
+  loja_id: z.string().uuid('ID da loja inválido'),
+})
+
 /** Schema para buscar produtos por categoria */
 export const buscarProdutosPorCategoriaSchema = z.object({
   categoria_id: z.string().uuid('ID da categoria inválido').optional(),

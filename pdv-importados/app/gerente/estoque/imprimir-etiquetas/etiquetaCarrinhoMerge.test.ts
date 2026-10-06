@@ -25,6 +25,12 @@ describe('toCarrinhoItem', () => {
     })
   })
 
+  it('aceita quantidade inicial e normaliza limites', () => {
+    expect(toCarrinhoItem(produto('a'), 12).quantidade).toBe(12)
+    expect(toCarrinhoItem(produto('a'), 0).quantidade).toBe(1)
+    expect(toCarrinhoItem(produto('a'), 999).quantidade).toBe(500)
+  })
+
   it('normaliza codigo_barras null para string vazia', () => {
     expect(toCarrinhoItem(produto('a', { codigo_barras: null })).codigoBarras).toBe('')
   })
@@ -44,6 +50,13 @@ describe('mesclarProdutosNoCarrinho', () => {
     const resultado = mesclarProdutosNoCarrinho(carrinho, [produto('a'), produto('b')])
     expect(resultado.find((i) => i.produtoId === 'a')?.quantidade).toBe(2)
     expect(resultado.find((i) => i.produtoId === 'b')?.quantidade).toBe(1)
+  })
+
+  it('usa incremento customizado ao mesclar', () => {
+    const resultado = mesclarProdutosNoCarrinho([], [produto('a')], 5)
+    expect(resultado[0].quantidade).toBe(5)
+    const novamente = mesclarProdutosNoCarrinho(resultado, [produto('a')], 3)
+    expect(novamente[0].quantidade).toBe(8)
   })
 
   it('conta duplicatas dentro do mesmo lote', () => {
