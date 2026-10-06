@@ -12,10 +12,12 @@ export type HubTabDef = {
    * `prefix`: href ou subpaths (ex.: /admin/catalogo/novo).
    */
   match: 'exact' | 'prefix'
+  aliases?: readonly string[]
 }
 
 export function hubTabIsActive(pathname: string, tab: HubTabDef): boolean {
   const path = pathname.replace(/\/$/, '') || '/'
+  if (tab.aliases?.some((alias) => path === alias || path.startsWith(`${alias}/`))) return true
   const href = tab.href.replace(/\/$/, '') || '/'
   if (tab.match === 'exact') {
     return path === href

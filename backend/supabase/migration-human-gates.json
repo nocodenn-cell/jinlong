@@ -395,6 +395,30 @@
       "remoteOnlyVersion": "20261005151736",
       "reason": "Aplicada de fato em produção via Supabase apply_migration em 05/10/2026, sob pedido explícito para resolver as 19 pendências e integrar à main. O MCP gravou o timestamp real 20261005151736; name=financeiro_hardening_final. SQL armazenado em schema_migrations.statements[1] comparado integralmente com o arquivo local (normalização somente CR/LF e whitespace nas extremidades): igual; SHA-256 normalizado=bd9e46886fdb0c9b80628d4c4736560cf61f5ad8b64b64840491f540837ef33f. As 19 migrations passaram em ordem no Supabase local com rollback; verificação remota de pós-condições registrada no relatório. Não é dispensa por ausência: o gate aceita apenas quando os dois lados do par estão presentes.",
       "decisionDoc": "docs/audits/MIGRATIONS_ROLLOUT_2026_10_05.md"
+    },
+    {
+      "gitOnlyVersion": "20261005224553",
+      "remoteOnlyVersion": "20261006195639",
+      "reason": "Aplicada via MCP apply_migration em 06/10/2026 na entrega da sprint financeiro/operacional (PR #464): schema_migrations.version gravado foi o timestamp real de aplicação (20261006195639); name=estoque_ajuste_concorrente. Migration cria ajustar_estoque_manual_seguro + stub do RPC antigo + atualiza criar_produto_com_estoque_inicial. CREATE OR REPLACE — seguro reaplicar.",
+      "decisionDoc": "docs/estoque-sprint-entradas.md"
+    },
+    {
+      "gitOnlyVersion": "20261005225856",
+      "remoteOnlyVersion": "20261006195805",
+      "reason": "Aplicada via MCP apply_migration em 06/10/2026 na entrega da sprint financeiro/operacional (PR #464): schema_migrations.version gravado foi o timestamp real de aplicação (20261006195805); name=entrada_documento_posterior. Migration adiciona associação documento↔entrega e reescreve confirmar_importacao_nfe. CREATE OR REPLACE / ADD TABLE — seguro reaplicar.",
+      "decisionDoc": "docs/estoque-sprint-entradas.md"
+    },
+    {
+      "gitOnlyVersion": "20261006180000",
+      "remoteOnlyVersion": "20261006195837",
+      "reason": "Aplicada via MCP apply_migration em 06/10/2026 na entrega da sprint financeiro/operacional (PR #464): schema_migrations.version gravado foi o timestamp real de aplicação (20261006195837); name=financeiro_contas_operacionais. Migration cria financeiro_contas_forma e comandos operacionais. Idempotente — seguro reaplicar.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20261006190000",
+      "remoteOnlyVersion": "20261006200048",
+      "reason": "Aplicada via MCP apply_migration em 06/10/2026 na entrega da sprint financeiro/operacional (PR #464): schema_migrations.version gravado foi o timestamp real de aplicação (20261006200048); name=desconto_comercial_operador_dinheiro. Libera desconto comercial ≤10% sem token (motivo AUTORIZACAO_COMERCIAL) no wrapper/unscoped v4. Idempotente (early return se já patchado) — seguro reaplicar.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
     }
   ]
 }

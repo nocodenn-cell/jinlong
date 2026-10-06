@@ -12,6 +12,7 @@ import { FinanceiroContas } from './FinanceiroContas'
 import { FinanceiroRecebiveis } from './FinanceiroRecebiveis'
 import { FinanceiroConciliacao } from './FinanceiroConciliacao'
 import { FinanceiroPrimeiroUso } from './FinanceiroPrimeiroUso'
+import { FinanceiroQuickActions } from './FinanceiroQuickActions'
 
 export type FinanceiroWorkspaceTab = 'resumo' | 'contas' | 'recebiveis' | 'conciliacao' | 'resultado'
 
@@ -29,10 +30,10 @@ function FinanceiroResumo({ data }: { data: FinanceiroPainel }) {
 
 function FinanceiroMovimentos({ data }: { data: FinanceiroPainel }) {
  function download() {
-  const blob = new Blob(['\uFEFF' + exportFinanceiroCsv(data.movimentos.map(m => ({ data:m.data,conta:m.conta_nome,descricao:m.descricao,categoria:m.categoria_nome,valor:m.valor,origem:m.origem })))], { type:'text/csv;charset=utf-8' })
+  const blob = new Blob(['\uFEFF' + exportFinanceiroCsv(data.movimentos.map(m => ({ data:m.data,conta:m.conta_nome,descricao:m.descricao,categoria:m.categoria_nome,valor:m.valor,origem:m.origem,usuario:m.usuario_nome })))], { type:'text/csv;charset=utf-8' })
   const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download='movimentos-financeiros-pagina.csv'; a.click(); URL.revokeObjectURL(url)
  }
- return <div className="admin-v2-stack"><SectionCard title="Movimentações realizadas" action={<button className="admin-v2-btn-secondary" onClick={download} disabled={!data.movimentos.length}>Exportar esta página</button>}><div className="overflow-x-auto"><table className="w-full text-small"><thead><tr>{['Data','Conta','Descrição','Categoria','Valor','Conciliação'].map(h => <th key={h} className="p-2 text-left">{h}</th>)}</tr></thead><tbody>{data.movimentos.map(m => <tr key={m.id} className="border-t border-[var(--color-border-secondary)]"><td className="p-2">{m.data}</td><td className="p-2">{m.conta_nome}</td><td className="p-2">{m.descricao}{m.estornado ? ' · estornado' : ''}</td><td className="p-2">{m.categoria_nome ?? '—'}</td><td className="p-2">{formatBRL(m.valor)}</td><td className="p-2">{m.conciliacao_id ? 'Conciliado' : 'Pendente'}</td></tr>)}</tbody></table></div>{!data.movimentos.length ? <p className="py-3">Sem movimentos neste período e página.</p> : null}</SectionCard>
+ return <div className="admin-v2-stack"><SectionCard title="Extrato / movimentações realizadas" action={<button className="admin-v2-btn-secondary" onClick={download} disabled={!data.movimentos.length}>Exportar esta página</button>}><div className="overflow-x-auto"><table className="w-full text-small"><thead><tr>{['Data','Conta','Descrição','Usuário','Origem','Categoria','Valor','Conciliação'].map(h => <th key={h} className="p-2 text-left">{h}</th>)}</tr></thead><tbody>{data.movimentos.map(m => <tr key={m.id} className="border-t border-[var(--color-border-secondary)]"><td className="p-2">{m.data}</td><td className="p-2">{m.conta_nome}</td><td className="p-2">{m.descricao}{m.estornado ? ' · estornado' : ''}</td><td className="p-2">{m.usuario_nome ?? '—'}</td><td className="p-2">{m.origem}{m.origem_id ? ` · ${m.origem_id.slice(0,8)}` : ''}</td><td className="p-2">{m.categoria_nome ?? '—'}</td><td className="p-2">{formatBRL(m.valor)}</td><td className="p-2">{m.conciliacao_id ? 'Conciliado' : 'Pendente'}</td></tr>)}</tbody></table></div>{!data.movimentos.length ? <p className="py-3">Sem movimentos neste período e página.</p> : null}</SectionCard>
  <FinanceiroForm title="Estornar movimento avulso" tipo="ESTORNAR_MOVIMENTO"><Field name="movimento_id" label="Movimento"><option value="">Selecione</option>{data.movimentos.filter(m => m.origem==='MANUAL' && !m.estornado).map(m => <option key={m.id} value={m.id}>{m.descricao} · {formatBRL(m.valor)}</option>)}</Field><Field name="data" label="Data do estorno" type="date" value={data.hoje} /><Field name="descricao" label="Motivo" /></FinanceiroForm></div>
 }
 
@@ -64,7 +65,9 @@ export function FinanceiroPaginacao({ data, countKey }: { data:FinanceiroPainel;
 }
 
 export function FinanceiroWorkspace({ data, tab, de, ate }: { data:FinanceiroPainel; tab:FinanceiroWorkspaceTab; de:string; ate:string }) {
- return <div className="admin-v2-stack"><FinanceiroPeriodo de={de} ate={ate} />
+ return <div className="admin-v2-stack">
+  <FinanceiroQuickActions data={data} />
+  <FinanceiroPeriodo de={de} ate={ate} />
   {(tab==='resumo' || tab==='contas') ? <FinanceiroPrimeiroUso semContas={data.contas.length === 0} /> : null}
   {tab==='resumo' ? <FinanceiroResumo data={data} /> : null}
   {tab==='contas' ? <><FinanceiroContas data={data} /><FinanceiroMovimentos data={data} /><FinanceiroPaginacao data={data} countKey="movimentos" /></> : null}

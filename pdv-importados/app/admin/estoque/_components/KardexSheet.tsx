@@ -3,11 +3,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { History } from 'lucide-react'
-import { ROUTES, pathWithQuery } from '@/lib/navigation/routes'
+import { Button } from '@/components/ui/button'
+import { ROUTES } from '@/lib/navigation/routes'
 import { obterKardexProduto, type KardexMovimento } from '../actions'
 import { DragonModal } from '@/components/ui/DragonModal'
 import { DataTable, type Column } from '@/components/ui/DataTable'
-import { EmptyState, Loading } from '@/components/ui/feedback'
+import { ErrorState, EmptyState, Loading } from '@/components/ui/feedback'
 import { MovementBadge } from '@/components/ui/MovementBadge'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { humanizarCodigo } from '@/lib/format/vendaLabels'
@@ -22,18 +23,6 @@ export type KardexLabels = {
   /** RM-10: link de volta para a trilha de auditoria (filtro geral de ajustes de estoque). */
   verAuditoria: string
 }
-
-/**
- * Kardex e Auditoria leem os mesmos dados (`movimentos_estoque_log`), mas até aqui
- * eram becos sem saída um em relação ao outro. Sem filtro por produto na Auditoria
- * ainda (RM-10 fica com esse follow-up), este link abre a trilha já filtrada por
- * tipo — o operador continua tendo que localizar a linha do produto, mas não parte
- * mais do zero.
- */
-const AUDITORIA_AJUSTES_HREF = pathWithQuery(
-  ROUTES.admin.auditoria,
-  new URLSearchParams({ tipo: 'AJUSTE_ESTOQUE' }),
-)
 
 const dtFmt = new Intl.DateTimeFormat('pt-BR', {
   day: '2-digit',
@@ -73,30 +62,39 @@ export function KardexSheet({
   alvo,
   onClose,
   labels,
+  idioma = 'pt',
 }: {
   alvo: KardexAlvo | null
   onClose: () => void
   labels: KardexLabels
+  idioma?: 'pt' | 'zh'
 }) {
   const [movimentos, setMovimentos] = useState<KardexMovimento[]>([])
+  const zh = idioma === 'zh'
+  const [limite, setLimite] = useState(60)
+  const [erro, setErro] = useState<string | null>(null)
   const [carregando, setCarregando] = useState(false)
+
+  useEffect(() => { setLimite(60) }, [alvo?.produtoId])
 
   useEffect(() => {
     if (!alvo) return
     let vivo = true
     setCarregando(true)
+    setErro(null)
     setMovimentos([])
-    obterKardexProduto(alvo.produtoId)
+    obterKardexProduto(alvo.produtoId, limite)
       .then((rows) => {
         if (vivo) setMovimentos(rows)
       })
+      .catch((error: unknown) => { if (vivo) setErro(error instanceof Error ? error.message : 'Erro ao carregar movimentos.') })
       .finally(() => {
         if (vivo) setCarregando(false)
       })
     return () => {
       vivo = false
     }
-  }, [alvo])
+  }, [alvo, limite])
 
   const rotuloTipo = (codigo: string): string =>
     labels.tipoMap[codigo] ?? humanizarCodigo(codigo)
@@ -108,7 +106,7 @@ export function KardexSheet({
     () => [
       {
         key: 'quando',
-        header: 'Data',
+        header: zh ? '日期' : 'Data',
         cell: (m) => (
           <span className="whitespace-nowrap text-caption text-fg-subtle">
             {dtFmt.format(new Date(m.created_at))}
@@ -117,7 +115,7 @@ export function KardexSheet({
       },
       {
         key: 'tipo',
-        header: 'Tipo',
+        header: zh ? '类型' : 'Tipo',
         priority: 'primary',
         cell: (m) => (
           <StatusChip
@@ -128,13 +126,13 @@ export function KardexSheet({
       },
       {
         key: 'delta',
-        header: 'Qtd',
+        header: zh ? '数量' : 'Qtd',
         align: 'right',
         cell: (m) => <MovementBadge delta={m.quantidade_delta} />,
       },
       {
         key: 'saldo',
-        header: 'Saldo após',
+        header: zh ? '操作后库存' : 'Saldo após',
         align: 'right',
         cell: (m) => (
           <span className="whitespace-nowrap tabular-nums text-body text-fg">
@@ -144,7 +142,7 @@ export function KardexSheet({
       },
       {
         key: 'usuario',
-        header: 'Usuário',
+        header: zh ? '用户' : 'Usuário',
         cell: (m) => (
           <span className="block max-w-[9rem] truncate text-caption text-fg-subtle" title={m.usuario_nome ?? undefined}>
             {m.usuario_nome ?? '—'}
@@ -153,7 +151,7 @@ export function KardexSheet({
       },
       {
         key: 'motivo',
-        header: 'Motivo',
+        header: zh ? '原因' : 'Motivo',
         className: 'max-w-[14rem]',
         cell: (m) => {
           const texto = formatObservacaoKardex(m.observacao)
@@ -169,7 +167,7 @@ export function KardexSheet({
     ],
     // labels.tipoMap identity is stable per open; rotuloTipo closes over labels
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [labels],
+    [labels, zh],
   )
   const colunasVisiveis = useMemo(
     () => columns.filter((c) => c.key !== 'saldo' || temSaldo),
@@ -187,17 +185,17 @@ export function KardexSheet({
       icon={History}
       title={labels.titulo}
       subtitle={alvo.produtoNome}
-      closeLabel="Fechar"
+      closeLabel={zh ? "关闭" : "Fechar"}
       footer={
         <Link
-          href={AUDITORIA_AJUSTES_HREF}
+          href={`${ROUTES.admin.estoqueMovimentacoes}?q=${encodeURIComponent(alvo.produtoNome)}`}
           className="text-caption font-medium text-[var(--color-info)] hover:underline"
         >
-          {labels.verAuditoria}
+          {zh ? '查看全部库存变动' : 'Ver todas as movimentações deste produto'}
         </Link>
       }
     >
-      {carregando ? (
+      {erro ? <ErrorState dense description={erro} onRetry={() => setLimite((value) => value + 1)} /> : carregando ? (
         <Loading label="…" className="min-h-0 py-12" size="sm" />
       ) : (
         <DataTable
@@ -210,6 +208,10 @@ export function KardexSheet({
           className="rounded-none border-0"
         />
       )}
+      {!erro && !carregando && movimentos.length > 0 && !temSaldo ? <p className="mt-2 text-caption text-fg-muted">
+        {zh ? '历史记录无法与当前库存核对，因此未显示操作后库存。' : 'O histórico não fecha com o saldo atual; o saldo após cada movimento não pôde ser comprovado.'}
+      </p> : null}
+      {!erro && !carregando && movimentos.length >= limite && limite < 1000 ? <Button variant="outline" onClick={() => setLimite((value) => value + 60)}>{zh ? '加载更多' : 'Carregar mais movimentos'}</Button> : null}
     </DragonModal>
   )
 }

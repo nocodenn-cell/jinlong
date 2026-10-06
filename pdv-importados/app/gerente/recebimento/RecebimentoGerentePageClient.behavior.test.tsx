@@ -137,7 +137,7 @@ function campo(nome: string): HTMLInputElement {
 
 function botaoVia(rotulo: string): HTMLButtonElement {
   return Array.from(container.querySelectorAll('[data-testid="rec-como-chegou"] button')).find(
-    (b) => b.textContent?.trim() === rotulo,
+    (b) => b.textContent?.trim().startsWith(rotulo),
   ) as HTMLButtonElement
 }
 
@@ -170,8 +170,9 @@ describe('RecebimentoGerentePageClient — "Como chegou?" (UX-04)', () => {
 
     const faixa = container.querySelector('[data-testid="rec-como-chegou"]')
     expect(faixa?.textContent).toContain('Como chegou?')
-    const nfe = Array.from(faixa!.querySelectorAll('a')).find((a) => a.textContent?.trim() === 'Nota fiscal (com valores)')
-    expect(nfe?.getAttribute('href')).toContain('importar-nfe')
+    const nfe = botaoVia('Nota fiscal (com valores)')
+    expect(nfe).toBeTruthy()
+    expect(botaoVia('Histórico de entradas')).toBeTruthy()
     expect(botaoVia('Ordem de Compra')).toBeTruthy()
     expect(botaoVia('Sem documento').getAttribute('aria-pressed')).toBe('true')
 
@@ -185,7 +186,7 @@ describe('RecebimentoGerentePageClient — "Como chegou?" (UX-04)', () => {
     await act(async () => botaoVia('Ordem de Compra').click())
 
     const hint = container.querySelector('#rec-oc-hint')
-    expect(hint?.textContent).toContain('abate o saldo do pedido, item a item')
+    expect(hint?.textContent).toContain('saldo pendente deste pedido')
     // o texto antigo ("não dá baixa", "duplicaria o estoque") não pode mais aparecer
     expect(container.textContent).not.toContain('Ele não dá baixa no pedido')
     expect(container.textContent).not.toContain('duplicaria o estoque')
@@ -198,7 +199,7 @@ describe('RecebimentoGerentePageClient — "Como chegou?" (UX-04)', () => {
     expect(faixa?.textContent).not.toContain('undefined')
     expect((faixa?.textContent ?? '').length).toBeGreaterThan(8)
 
-    const viaPedido = faixa!.querySelectorAll('button')[0] as HTMLButtonElement
+    const viaPedido = faixa!.querySelectorAll('button')[1] as HTMLButtonElement
     await act(async () => viaPedido.click())
     const hint = container.querySelector('#rec-oc-hint')
     expect((hint?.textContent ?? '').length).toBeGreaterThan(10)
@@ -260,7 +261,7 @@ describe('RecebimentoGerentePageClient — "Como chegou?" (UX-04)', () => {
     expect(criarRemessaMock).toHaveBeenCalledWith(
       expect.objectContaining({
         ordemCompraId: OC_ID,
-        itens: [{ produto_id: 'p1', quantidade_esperada: 60, quantidade_conferida: 60 }],
+        itens: [{ produto_id: 'p1', quantidade_esperada: 100, quantidade_conferida: 60 }],
       }),
     )
     const resultado = container.querySelector('[data-testid="rec-resultado"]')
@@ -412,7 +413,7 @@ describe('RecebimentoGerentePageClient — formulário limpo após confirmar a e
     expect(criarRemessaMock).toHaveBeenCalledWith(
       expect.objectContaining({
         origem: 'Entrega do fornecedor X',
-        itens: [{ produto_id: 'p1', quantidade_esperada: 10, quantidade_conferida: 10 }],
+        itens: [{ produto_id: 'p1', quantidade_esperada: 100, quantidade_conferida: 10 }],
       }),
     )
 
@@ -446,4 +447,19 @@ describe('RecebimentoGerentePageClient — formulário limpo após confirmar a e
     expect(campo('qtd_conferida').value).toBe('10')
     expect(campo('produto_id').value).toBe('p1')
   })
+})
+
+it('pedido com vários produtos: item não recebido não credita, o segundo mantém seu saldo esperado', async () => {
+  detalheOcMock.mockResolvedValue({ success: true, data: { ...OC_DETALHE, itens: [
+    ...OC_DETALHE.itens, { ...OC_DETALHE.itens[0], id: 'it-2', produto_id: 'p2', produto_nome: 'Produto B', saldo_pendente: 5 },
+  ] } })
+  criarRemessaMock.mockResolvedValue({ success: true, data: { remessaId: 'rem-multi' } })
+  await renderizar()
+  await act(async () => botaoVia('Ordem de Compra').click())
+  await escolherPedidoNaLista()
+  await act(async () => { definirValor(campo('origem'), 'Entrega parcial'); definirValor(campo('qtd_p2'), '3') })
+  await act(async () => form().requestSubmit())
+  expect(criarRemessaMock).toHaveBeenCalledWith(expect.objectContaining({
+    ordemCompraId: OC_ID, itens: [{ produto_id: 'p2', quantidade_esperada: 5, quantidade_conferida: 3 }],
+  }))
 })

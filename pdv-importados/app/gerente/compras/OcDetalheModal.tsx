@@ -1,7 +1,9 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
-import { X, Edit2, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { useCallback, useEffect, useState, useTransition } from 'react'
+import Link from 'next/link'
+import { ROUTES } from '@/lib/navigation/routes'
+import { X, Edit2, AlertTriangle } from 'lucide-react'
 import { getMessages } from '@/i18n/getMessages'
 import { fmtTemplate } from '@/i18n/fmtTemplate'
 import type { Idioma } from '@/idioma/normalizeIdioma'
@@ -11,7 +13,6 @@ import { formatBRL } from '@/lib/format/money'
 import {
   obterOrdemCompraDetalhe,
   atualizarStatusOC,
-  registrarRecebimentoOC,
   encerrarOrdemCompraComFalta,
   type OcDetalheDTO,
   type StatusOC,
@@ -22,7 +23,6 @@ import {
   ocPodeCancelar,
   ocPodeEncerrarComFalta,
   situacaoRecebimento,
-  textoPosEntrada,
 } from './ocRecebimento'
 
 type Props = Readonly<{
@@ -54,35 +54,16 @@ function idCurto(id: string): string {
   return id.slice(0, 8).toUpperCase()
 }
 
-function parseQtd(raw: string | undefined): number {
-  const n = Number((raw ?? '').replace(',', '.'))
-  return Number.isFinite(n) && n > 0 ? n : 0
-}
-
-function novaChave(): string {
-  return globalThis.crypto?.randomUUID?.() ?? `oc-${Date.now()}-${Math.random().toString(36).slice(2)}`
-}
-
 export function OcDetalheModal({ idioma, ocId, onClose, onEditar, onStatusChanged }: Props) {
   const m = getMessages(idioma)
   const c = m.compras
 
   const [oc, setOc] = useState<OcDetalheDTO | null>(null)
   const [carregando, setCarregando] = useState(true)
-  /** Quantidade que chegou NESTA entrega, por item (vazio = nada chegou). */
-  const [qtdsAgora, setQtdsAgora] = useState<Record<string, string>>({})
   const [isPending, startTransition] = useTransition()
   const [confirmandoCancelamento, setConfirmandoCancelamento] = useState(false)
   const [encerrando, setEncerrando] = useState(false)
   const [motivo, setMotivo] = useState('')
-  /** Resultado operacional da última entrada (o que entrou e quanto falta). */
-  const [aviso, setAviso] = useState<string | null>(null)
-  /**
-   * Chave de idempotência do recebimento: a MESMA para o mesmo conteúdo (duplo clique/retry não
-   * credita duas vezes); nova quando o operador muda as quantidades ou depois de um sucesso.
-   */
-  const chaveRef = useRef<{ key: string; assinatura: string } | null>(null)
-
   const carregar = useCallback(async (): Promise<OcDetalheDTO | null> => {
     const r = await obterOrdemCompraDetalhe(ocId)
     if (!r.success) return null
@@ -142,54 +123,6 @@ export function OcDetalheModal({ idioma, ocId, onClose, onEditar, onStatusChange
     setConfirmandoCancelamento(false)
   }
 
-  const itensAgora = (oc?.itens ?? []).map((i) => ({ item: i, agora: parseQtd(qtdsAgora[i.id]) }))
-  const somaAgora = itensAgora.reduce((s, x) => s + x.agora, 0)
-  const acimaDoSaldo = itensAgora.some((x) => x.agora > x.item.saldo_pendente + 1e-9)
-
-  function handleRecebimento() {
-    if (!oc || isPending) return
-    if (somaAgora <= 0) {
-      emitGerenteToast({ kind: 'error', message: c.erro_receber_vazio })
-      return
-    }
-    if (acimaDoSaldo) {
-      emitGerenteToast({ kind: 'error', message: c.erro_receber_acima_saldo })
-      return
-    }
-    const itensRecebidos = itensAgora
-      .filter((x) => x.agora > 0)
-      .map((x) => ({ item_id: x.item.id, quantidade_recebida: x.agora }))
-    const assinatura = JSON.stringify(itensRecebidos)
-    if (!chaveRef.current || chaveRef.current.assinatura !== assinatura) {
-      chaveRef.current = { key: novaChave(), assinatura }
-    }
-    const chave = chaveRef.current.key
-    startTransition(async () => {
-      try {
-        const r = await registrarRecebimentoOC(oc.id, itensRecebidos, chave)
-        if (!r.success) {
-          emitGerenteToast({ kind: 'error', message: r.error })
-          return
-        }
-        chaveRef.current = null
-        setQtdsAgora({})
-        const texto = r.data.replay
-          ? c.pos_entrada_replay
-          : textoPosEntrada(
-              { estoque: c.pos_entrada_estoque, parcial: c.pos_entrada_parcial, completo: c.resumo_completo },
-              r.data,
-              r.data.quantidade_creditada,
-            )
-        setAviso(texto)
-        emitGerenteToast({ kind: 'success', message: texto })
-        await carregar()
-        onStatusChanged()
-      } catch {
-        emitGerenteToast({ kind: 'error', message: m.comum.erro })
-      }
-    })
-  }
-
   function handleEncerrarComFalta() {
     if (!oc || isPending) return
     if (motivo.trim().length < 5) {
@@ -206,7 +139,6 @@ export function OcDetalheModal({ idioma, ocId, onClose, onEditar, onStatusChange
         emitGerenteToast({ kind: 'success', message: c.toast_encerrada })
         setEncerrando(false)
         setMotivo('')
-        setAviso(null)
         await carregar()
         onStatusChanged()
       } catch {
@@ -217,8 +149,7 @@ export function OcDetalheModal({ idioma, ocId, onClose, onEditar, onStatusChange
 
   const podeEditar = oc && ['RASCUNHO', 'CONFIRMADA'].includes(oc.status) && oc.recebido_total <= 0
   const podeCancelar = oc ? ocPodeCancelar(oc) : false
-  // O "Receber" do pedido só existe em trânsito (comportamento anterior); CONFIRMADA recebe via NF-e/entrada vinculada.
-  const podeReceber = oc ? oc.status === 'EM_TRANSITO' && ocAceitaRecebimento(oc.status, oc.pendente_total) : false
+  const podeReceber = oc ? ocAceitaRecebimento(oc.status, oc.pendente_total) : false
   const podeEncerrarFalta = oc ? ocPodeEncerrarComFalta(oc) : false
   const situacao = oc ? situacaoRecebimento(oc) : null
   const mostraRecebimento = oc != null && oc.status !== 'RASCUNHO' && oc.status !== 'CANCELADA'
@@ -348,43 +279,13 @@ export function OcDetalheModal({ idioma, ocId, onClose, onEditar, onStatusChange
                 </div>
               )}
 
-              {aviso && (
-                <div
-                  className="flex gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/[0.08] px-4 py-3 text-sm text-emerald-100"
-                  role="status"
-                  data-testid="oc-aviso-ultima-entrada"
-                >
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" aria-hidden />
-                  <span>{aviso}</span>
-                </div>
-              )}
-
               {/* Itens */}
               <div>
                 <div className="mb-2 flex items-center justify-between">
                   <div className="text-xs font-semibold text-jl-fg-2">{c.field_itens_titulo}</div>
-                  {podeReceber && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setQtdsAgora(
-                          Object.fromEntries(
-                            oc.itens.filter((i) => i.saldo_pendente > 0).map((i) => [i.id, String(i.saldo_pendente)]),
-                          ),
-                        )
-                      }
-                      disabled={isPending}
-                      className="text-[11px] font-medium text-emerald-300 hover:text-emerald-200 disabled:opacity-40"
-                      data-testid="oc-preencher-saldo"
-                    >
-                      {c.btn_preencher_saldo}
-                    </button>
-                  )}
                 </div>
                 <div className="overflow-hidden rounded-xl border border-jl-border-1">
                   {oc.itens.map((item, idx) => {
-                    const agora = parseQtd(qtdsAgora[item.id])
-                    const estouro = agora > item.saldo_pendente + 1e-9
                     return (
                       <div
                         key={item.id}
@@ -434,44 +335,6 @@ export function OcDetalheModal({ idioma, ocId, onClose, onEditar, onStatusChange
                           </div>
                         )}
 
-                        {/* Quanto chegou NESTA entrega */}
-                        {podeReceber && item.saldo_pendente > 0 && (
-                          <div className="mt-2 flex items-center gap-2">
-                            <label
-                              htmlFor={`oc-agora-${item.id}`}
-                              className="text-[10px] text-jl-fg-3"
-                            >
-                              {c.item_receber_agora}:
-                            </label>
-                            <input
-                              id={`oc-agora-${item.id}`}
-                              type="number"
-                              min="0"
-                              step="any"
-                              max={item.saldo_pendente}
-                              inputMode="decimal"
-                              placeholder="0"
-                              value={qtdsAgora[item.id] ?? ''}
-                              onChange={(e) =>
-                                setQtdsAgora((prev) => ({ ...prev, [item.id]: e.target.value }))
-                              }
-                              disabled={isPending}
-                              aria-invalid={estouro}
-                              className={cn(
-                                'app-input w-24 rounded-md px-2 py-1 text-right text-sm tabular-nums disabled:opacity-60',
-                                estouro && 'border-red-500/60',
-                              )}
-                            />
-                            <span className="text-[10px] text-jl-fg-3">
-                              / {fmtQtd(item.saldo_pendente)}
-                            </span>
-                            {estouro && (
-                              <span className="text-[10px] text-red-300" role="alert">
-                                {c.erro_receber_acima_saldo}
-                              </span>
-                            )}
-                          </div>
-                        )}
                       </div>
                     )
                   })}
@@ -589,7 +452,7 @@ export function OcDetalheModal({ idioma, ocId, onClose, onEditar, onStatusChange
                   data-testid="oc-aviso-recebimento-duplicidade"
                 >
                   <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-                  <span>{c.aviso_recebimento_duplicidade}</span>
+                  <span>{idioma === 'pt' ? 'Registre a entrega em Entradas. Se a nota chegar depois, associe-a à entrega recebida sem lançar estoque novamente.' : '请在入库页面登记交货。发票后到时，关联已收货记录，请勿重复入库。'}</span>
                 </p>
               )}
 
@@ -622,15 +485,11 @@ export function OcDetalheModal({ idioma, ocId, onClose, onEditar, onStatusChange
                   </button>
                 )}
                 {podeReceber && (
-                  <button
-                    type="button"
-                    onClick={handleRecebimento}
-                    disabled={isPending || somaAgora <= 0 || acimaDoSaldo}
+                  <Link href={`${ROUTES.admin.estoqueRecebimento}?modo=pedido&oc=${oc.id}`}
                     data-testid="oc-btn-registrar-recebimento"
-                    className="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-500 disabled:opacity-50"
-                  >
-                    {isPending ? m.comum.salvando : c.btn_registrar_recebimento}
-                  </button>
+                    className="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500">
+                    {idioma === 'pt' ? 'Receber em Entradas' : '前往入库验收'}
+                  </Link>
                 )}
 
                 <div className="flex-1" />

@@ -1,0 +1,36 @@
+.estoque-operacional {
+  --color-fg: #172033;
+  --color-fg-muted: #475569;
+  --color-fg-subtle: #475569;
+  --color-border: #94a3b8;
+  --color-fg-on-brand: #ffffff;
+  --admin-v2-text-primary: #172033;
+  --admin-v2-text-secondary: #334155;
+  --admin-v2-text-muted: #475569;
+  color: var(--color-fg);
+}
+
+.estoque-operacional .text-caption {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.estoque-operacional .fp-control {
+  border-color: var(--color-border);
+}
+
+.estoque-operacional .fp-control::placeholder {
+  color: #64748b;
+  opacity: 1;
+}
+
+.estoque-operacional .fp-btn svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  stroke-width: 2.25;
+  flex-shrink: 0;
+}
+
+.estoque-operacional .fp-btn--ghost {
+  color: #334155;
+}

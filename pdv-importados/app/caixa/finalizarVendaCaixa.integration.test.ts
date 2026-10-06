@@ -215,6 +215,22 @@ describe.sequential('finalizarVendaCaixa — split e validações', { timeout: 1
     // vez de skip: nenhum assert foi removido.
   }, 60_000)
 
+  it.each(['DINHEIRO', 'PIX', 'CARTAO_CREDITO', 'CARTAO_DEBITO'] as const)('envia venda e desconto manual de %s ao contrato administrativo', async (forma) => {
+    const { supabase, rpcCalls } = makeSupabase()
+    createClientMock.mockResolvedValue(supabase)
+    const { finalizarVendaCaixa } = await import('./actions')
+    const input = payloadBase()
+    input.formaPagamento = forma
+    input.itens[0] = { ...input.itens[0], tipoPreco: 'MANUAL', precoUnitario: 9.5 }
+    input.totalDesconto = 1.5
+    input.totalLiquido = 28.5
+    input.pagamentos = [{ formaPagamento: forma, valor: 28.5 }]
+    expect(await finalizarVendaCaixa(input)).toMatchObject({ ok: true })
+    const tx = rpcCalls.find((call) => call.name === 'finalizar_venda_transacional_canonica_v4')
+    expect(tx?.params).toMatchObject({ p_total_bruto: 30, p_total_desconto: 1.5, p_total_liquido: 28.5,
+      p_pagamentos: [{ forma_pagamento: forma, valor: 28.5 }] })
+  })
+
   it('BR-01: envia p_limite_credito_gerente_token quando presente no payload', async () => {
     const { supabase, rpcCalls } = makeSupabase()
     createClientMock.mockResolvedValue(supabase)
@@ -238,6 +254,31 @@ describe.sequential('finalizarVendaCaixa — split e validações', { timeout: 1
 
     const txCall = rpcCalls.find((c) => c.name === 'finalizar_venda_transacional_canonica_v4')
     expect(txCall?.params.p_limite_credito_gerente_token).toBeNull()
+  })
+
+  it('operador: desconto comercial ≤10% em dinheiro sem token chega na RPC', async () => {
+    const { supabase, rpcCalls } = makeSupabase()
+    createClientMock.mockResolvedValue(supabase)
+    const { finalizarVendaCaixa } = await import('./actions')
+
+    const input = payloadBase()
+    input.pagamentos = [{ formaPagamento: 'DINHEIRO', valor: 27 }]
+    input.descontoGerentePercentual = 10
+    input.motivoDesconto = 'AUTORIZACAO_COMERCIAL'
+    input.totalDesconto = 3
+    input.totalLiquido = 27
+
+    const result = await finalizarVendaCaixa(input)
+    expect(result).toMatchObject({ ok: true })
+
+    const txCall = rpcCalls.find((c) => c.name === 'finalizar_venda_transacional_canonica_v4')
+    expect(txCall?.params).toMatchObject({
+      p_desconto_gerente_token: null,
+      p_desconto_gerente_percentual: 10,
+      p_motivo_desconto: 'AUTORIZACAO_COMERCIAL',
+      p_total_liquido: 27,
+      p_total_desconto: 3,
+    })
   })
 
   it('retorna mensagem de erro esperada para payload inválido (pagamentos > total)', async () => {

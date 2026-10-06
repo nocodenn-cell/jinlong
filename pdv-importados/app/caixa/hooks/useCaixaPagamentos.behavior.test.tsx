@@ -125,3 +125,14 @@ describe("useCaixaPagamentos — resetPagamentos encerra o cupom", () => {
     expect(valores()).toEqual([0])
   })
 })
+
+describe("pagamento eletrônico acompanha total e troca de método", () => {
+  it.each(["PIX", "CARTAO_CREDITO", "CARTAO_DEBITO"] as const)("%s usa total atual depois de recebido em dinheiro", (forma) => {
+    act(() => root.render(<Harness total={75} forma="DINHEIRO" />))
+    act(() => api?.atualizarValor(0, 100))
+    act(() => root.render(<Harness total={75} forma={forma} />))
+    expect(valores()).toEqual([75])
+    act(() => root.render(<Harness total={67.5} forma={forma} />))
+    expect(valores()).toEqual([67.5])
+  })
+})

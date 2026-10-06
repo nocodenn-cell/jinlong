@@ -1,0 +1,26 @@
+.caixa-oriental-root {
+  --jl-fg-1: #172033;
+  --jl-fg-2: #334155;
+  --jl-fg-3: #475569;
+  --jl-border-1: #94a3b8;
+}
+.caixa-oriental-root .text-muted-foreground { color: #475569; }
+.caixa-oriental-root input,
+.caixa-oriental-root select { color: #172033; background: #fff; border-color: #94a3b8; min-height: 42px; }
+.caixa-oriental-root input::placeholder { color: #64748b; opacity: 1; }
+.caixa-oriental-root button:not(:disabled) { font-weight: 600; }
+.caixa-oriental-root .text-success { color: #166534; }
+.caixa-oriental-root .border-border { border-color: #94a3b8; }
+
+.caixa-oriental-root { font-size: 16px; line-height: 1.5; }
+.caixa-oriental-root .text-xs,
+.caixa-oriental-root .text-caption,
+.caixa-oriental-root .text-small { font-size: 14px; line-height: 1.4; }
+.caixa-oriental-root .text-sm { font-size: 16px; line-height: 1.5; }
+.caixa-oriental-root input { font-size: 18px; }
+.caixa-oriental-root [role="radio"] { min-height: 80px; }
+.caixa-oriental-root [role="radio"] svg { width: 32px; height: 32px; }
+
+.caixa-oriental-root #caixa-pdv-panel-pgto { border-color: #94a3b8; background: #fff; }
+.caixa-oriental-root [role="group"] input,
+.caixa-oriental-root [role="group"] button { min-height: 42px; }

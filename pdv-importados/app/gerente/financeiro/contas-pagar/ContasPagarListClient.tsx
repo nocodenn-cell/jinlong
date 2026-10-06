@@ -333,7 +333,7 @@ export function ContasPagarListClient({
                 className="mt-1 inline-flex items-center gap-1 font-mono text-caption text-[var(--color-warning-strong)] hover:underline"
               >
                 <FileText className="h-3 w-3" aria-hidden />
-                NF-e #{c.nfe_numero}
+                {idioma === 'pt' ? 'Documento' : '单据'} #{c.nfe_numero}
               </Link>
             ) : c.nfe_numero ? (
               // G-08: sem nfe_importacao_id não há pra onde navegar — antes
@@ -342,7 +342,7 @@ export function ContasPagarListClient({
               // de clique.
               <span className="mt-1 inline-flex items-center gap-1 font-mono text-caption text-fg-subtle">
                 <FileText className="h-3 w-3" aria-hidden />
-                NF-e #{c.nfe_numero}
+                {idioma === 'pt' ? 'Documento' : '单据'} #{c.nfe_numero}
               </span>
             ) : null}
           </div>
@@ -423,7 +423,7 @@ export function ContasPagarListClient({
         ),
       },
     ],
-    [locale, m],
+    [locale, m, idioma],
   )
 
   const emptyState = (

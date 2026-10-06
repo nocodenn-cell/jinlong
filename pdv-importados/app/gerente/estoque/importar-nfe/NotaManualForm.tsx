@@ -50,13 +50,15 @@ function toNumber(raw: string): number {
 
 type Props = Readonly<{
   mi: Mi
+  idioma?: 'pt' | 'zh'
   semDocumento?: boolean
   produtoInicial?: RecebimentoProdutoOpt | null
   onPreview: (data: { parsed: NfeParsed; linhas: LinhaPreviewNfe[] }) => void
 }>
 
 /** Nota de chegada digitada à mão. Entrega o mesmo `{ parsed, linhas }` que o XML. */
-export function NotaManualForm({ mi, onPreview, semDocumento = false, produtoInicial }: Props) {
+export function NotaManualForm({ mi, onPreview, semDocumento = false, produtoInicial, idioma = 'pt' }: Props) {
+  const zh = idioma === 'zh'
   const [aberto, setAberto] = useState(semDocumento)
   const [carregando, setCarregando] = useState(false)
   const [fornecedor, setFornecedor] = useState('')
@@ -87,7 +89,7 @@ export function NotaManualForm({ mi, onPreview, semDocumento = false, produtoIni
   function gerarParcelas(idx: number) {
     const cond = CONDICOES[idx]
     if (!cond || totalNota <= 0) {
-      emitGerenteToast({ kind: 'error', message: 'Informe os itens antes de gerar as parcelas.' })
+      emitGerenteToast({ kind: 'error', message: zh ? '请先输入商品，再生成付款期次。' : 'Informe os itens antes de gerar as parcelas.' })
       return
     }
     const centavos = Math.round(totalNota * 100)
@@ -121,7 +123,7 @@ export function NotaManualForm({ mi, onPreview, semDocumento = false, produtoIni
     if (validas.length === 0) {
       emitGerenteToast({
         kind: 'error',
-        message: 'Escolha a condição de pagamento: é ela que lança a compra em Contas a pagar.',
+        message: zh ? '请选择付款条件，以生成应付款。' : 'Escolha a condição de pagamento: é ela que lança a compra em Contas a pagar.',
       })
       return
     }
@@ -204,9 +206,9 @@ export function NotaManualForm({ mi, onPreview, semDocumento = false, produtoIni
           <Input value={chave} inputMode="numeric" onChange={(e) => setChave(e.target.value)} />
         </label> : null}
         <label className="text-caption">
-          Data-base dos vencimentos
+          {idioma === 'pt' ? 'Data-base dos vencimentos' : '付款到期基准日'}
           <Input type="date" value={dataBaseVencimentos} onChange={(e) => setDataBaseVencimentos(e.target.value)} />
-          <span className="text-fg-muted">Usada somente para gerar as parcelas.</span>
+          <span className="text-fg-muted">{idioma === 'pt' ? 'Usada somente para gerar as parcelas.' : '仅用于生成付款期次。'}</span>
         </label>
       </div>
 
@@ -220,9 +222,9 @@ export function NotaManualForm({ mi, onPreview, semDocumento = false, produtoIni
                 <ProdutoRecebimentoAutocomplete
                   name={`produto-manual-${idx}`}
                   placeholder={mi.manual_item_desc}
-                  semResultadosLabel="Nenhum produto encontrado"
-                  minimoLabel="Digite pelo menos 2 caracteres"
-                  limparLabel="Trocar produto"
+                  semResultadosLabel={zh ? '未找到商品' : 'Nenhum produto encontrado'}
+                  minimoLabel={zh ? '请至少输入2个字符' : 'Digite pelo menos 2 caracteres'}
+                  limparLabel={zh ? '更换商品' : 'Trocar produto'}
                   valorInicial={it.produto}
                   onSearchChange={(nome) => setItem(idx, { nome, produto: null, ref: '', gtin: '' })}
                   onChange={(produto) => setItem(idx, {
@@ -232,7 +234,7 @@ export function NotaManualForm({ mi, onPreview, semDocumento = false, produtoIni
               ) : <Input value={it.nome} onChange={(e) => setItem(idx, { nome: e.target.value })} />}
               {semDocumento ? <span role={validarProdutos && !it.nome.trim() ? 'alert' : undefined}
                 className={`mt-2 block text-caption ${validarProdutos && !it.nome.trim() ? 'text-destructive' : 'text-fg-muted'}`}>
-                {it.produto ? `Selecionado: ${it.produto.nome}` : 'Digite o nome de um produto novo ou selecione um existente. Na próxima etapa você poderá cadastrar ou vincular o produto.'}
+                {it.produto ? `${zh ? '已选择' : 'Selecionado'}: ${it.produto.nome}` : zh ? '输入新商品名称或选择已有商品；下一步可登记或关联商品。' : 'Digite o nome de um produto novo ou selecione um existente. Na próxima etapa você poderá cadastrar ou vincular o produto.'}
               </span> : null}
             </label>
             {!semDocumento ? <>
@@ -289,23 +291,23 @@ export function NotaManualForm({ mi, onPreview, semDocumento = false, produtoIni
 
       <div className="grid grid-cols-2 gap-3 rounded-lg bg-[var(--color-surface-soft)] p-3 md:grid-cols-4">
         <div className="text-caption">
-          Valor dos produtos
+          {zh ? '商品金额' : 'Valor dos produtos'}
           <p className="mt-1 text-body font-semibold tabular-nums">{formatBRL(totalItens)}</p>
         </div>
         <div className="text-caption">
-          Valor total da nota
+          {zh ? '单据总额' : 'Valor total da nota'}
           <p className="mt-1 text-body font-semibold tabular-nums">{formatBRL(totalNota)}</p>
         </div>
       </div>
 
       <p className="text-caption text-fg-muted">
-        Nesta entrada manual, o total da nota corresponde ao valor dos produtos. Frete e desconto não estão disponíveis.
+        {zh ? '手工入库总额等于商品金额，目前不支持运费或折扣。' : 'Nesta entrada manual, o total corresponde ao valor dos produtos. Frete e desconto não estão disponíveis.'}
       </p>
 
       <div className="space-y-2">
         <p className="text-caption font-semibold text-fg-muted">{mi.manual_parcelas} *</p>
         <label className="block text-caption">
-          Condição de pagamento
+          {zh ? '付款条件' : 'Condição de pagamento'}
           <select
             className="app-select mt-1 w-full rounded-lg px-3 py-2 text-sm"
             defaultValue=""
@@ -314,9 +316,9 @@ export function NotaManualForm({ mi, onPreview, semDocumento = false, produtoIni
               e.target.value = ''
             }}
           >
-            <option value="">Escolha para gerar as parcelas…</option>
+            <option value="">{zh ? '选择付款条件以生成期次…' : 'Escolha para gerar as parcelas…'}</option>
             {CONDICOES.map((c, i) => (
-              <option key={c.label} value={i}>{c.label}</option>
+              <option key={c.label} value={i}>{zh ? ['即付', '30天', '30 / 60天', '30 / 60 / 90天'][i] : c.label}</option>
             ))}
           </select>
         </label>

@@ -32,6 +32,10 @@ type Props = {
   onOpenChange: (open: boolean) => void
   m: Mensagens
   validando: boolean
+  /** Prefill do percentual (ex.: desconto comercial 10% no dinheiro). */
+  percentualInicial?: number
+  /** Prefill do motivo (ex.: AUTORIZACAO_COMERCIAL). */
+  motivoInicial?: MotivoDescontoEnum
   onValidateSenha: (senha: string) => Promise<ValidarSenhaGerenteResult>
   onApply: (payload: {
     token: string
@@ -48,6 +52,8 @@ export function CaixaGerenteModal({
   onOpenChange,
   m,
   validando,
+  percentualInicial,
+  motivoInicial,
   onValidateSenha,
   onApply,
 }: Props) {
@@ -75,13 +81,17 @@ export function CaixaGerenteModal({
     if (!open) return
     setPasso("senha")
     setSenha("")
-    setMotivo('NAO_ESPECIFICADO')
+    setMotivo(motivoInicial && motivoInicial !== 'NAO_ESPECIFICADO' ? motivoInicial : 'NAO_ESPECIFICADO')
     setMotivoDescricao("")
-    setPercentStr("5")
+    setPercentStr(
+      percentualInicial && percentualInicial > 0
+        ? String(Math.round(percentualInicial * 100) / 100)
+        : "5",
+    )
     setErroLocal(null)
     setCtx(null)
     queueMicrotask(() => senhaRef.current?.focus())
-  }, [open])
+  }, [open, percentualInicial, motivoInicial])
 
   useEffect(() => {
     if (!open) return

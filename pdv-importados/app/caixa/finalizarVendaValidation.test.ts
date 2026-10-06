@@ -245,6 +245,44 @@ describe('finalizarVendaValidation', () => {
       expect(pagamentoSoDinheiro({ formaPagamento: 'DINHEIRO', pagamentos: [{ formaPagamento: 'DINHEIRO' }, { formaPagamento: 'PIX' }] })).toBe(false)
       expect(pagamentoSoDinheiro({ formaPagamento: 'PIX', pagamentos: [{ formaPagamento: 'PIX' }] })).toBe(false)
     })
+
+    it('operador: aceita até 10% comercial sem token em 100% dinheiro', () => {
+      const r = finalizarVendaInputSchema.safeParse({
+        formaPagamento: 'DINHEIRO',
+        totalBruto: 100,
+        totalDesconto: 10,
+        totalLiquido: 90,
+        descontoGerentePercentual: 10,
+        motivoDesconto: 'AUTORIZACAO_COMERCIAL',
+        pagamentos: [{ formaPagamento: 'DINHEIRO', valor: 90 }],
+        itens: [itemBase],
+      })
+      expect(r.success).toBe(true)
+    })
+
+    it('operador: rejeita comercial sem token acima de 10% ou fora de dinheiro', () => {
+      expect(finalizarVendaInputSchema.safeParse({
+        formaPagamento: 'DINHEIRO',
+        totalBruto: 100,
+        totalDesconto: 15,
+        totalLiquido: 85,
+        descontoGerentePercentual: 15,
+        motivoDesconto: 'AUTORIZACAO_COMERCIAL',
+        pagamentos: [{ formaPagamento: 'DINHEIRO', valor: 85 }],
+        itens: [itemBase],
+      }).success).toBe(false)
+
+      expect(finalizarVendaInputSchema.safeParse({
+        formaPagamento: 'PIX',
+        totalBruto: 100,
+        totalDesconto: 10,
+        totalLiquido: 90,
+        descontoGerentePercentual: 10,
+        motivoDesconto: 'AUTORIZACAO_COMERCIAL',
+        pagamentos: [{ formaPagamento: 'PIX', valor: 90 }],
+        itens: [itemBase],
+      }).success).toBe(false)
+    })
   })
 
   it('finalizarVendaInputSchema rejeita idempotencyKey inválido', () => {

@@ -7,6 +7,8 @@ describe('actions.validation estoque', () => {
       produto_id: '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
       quantidade_atual: 10,
       estoque_minimo: 2,
+      quantidade_esperada: 10,
+      minimo_esperado: 2,
       motivo: 'ACERTO_INVENTARIO',
       observacao: 'contagem cega',
     })
@@ -18,6 +20,8 @@ describe('actions.validation estoque', () => {
       produto_id: '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
       quantidade_atual: 10,
       estoque_minimo: 2,
+      quantidade_esperada: 10,
+      minimo_esperado: 2,
       motivo: 'OUTRO',
       observacao: '',
     })
@@ -28,6 +32,8 @@ describe('actions.validation estoque', () => {
     const base = {
       produto_id: '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
       estoque_minimo: 0,
+      quantidade_esperada: 10,
+      minimo_esperado: 0,
       motivo: 'ACERTO_INVENTARIO' as const,
       observacao: 'nenhum item encontrado',
     }
@@ -39,4 +45,11 @@ describe('actions.validation estoque', () => {
     const r = ProdutoIdSchema.safeParse({ produto_id: 'x' })
     expect(r.success).toBe(false)
   })
+})
+
+it('rejeita ajuste sem saldo original em vez de permitir escrita desprotegida', () => {
+  expect(AtualizarEstoqueSchema.safeParse({
+    produto_id: '6ba7b810-9dad-11d1-80b4-00c04fd430c8', quantidade_atual: 8,
+    estoque_minimo: 2, motivo: 'ACERTO_INVENTARIO',
+  }).success).toBe(false)
 })

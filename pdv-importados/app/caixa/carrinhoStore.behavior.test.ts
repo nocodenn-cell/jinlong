@@ -360,3 +360,11 @@ describe('useCarrinhoStore behavior', () => {
   })
 })
 
+
+it('desconto manual do PDV usa a alçada configurada sem mudar o limite legado', () => {
+  resetCarrinhoStore()
+  useCarrinhoStore.getState().adicionarItem({ id: 'manual-pdv', produtoId: 'manual-pdv', nome: 'Teste', quantidade: 1, precoOriginal: 100, precoUnitario: 100 })
+  expect(() => useCarrinhoStore.getState().aplicarDescontoManual('manual-pdv', 20)).toThrow('limite')
+  useCarrinhoStore.getState().aplicarDescontoManual('manual-pdv', 20, undefined, 20)
+  expect(useCarrinhoStore.getState().totalLiquido).toBe(80)
+})
