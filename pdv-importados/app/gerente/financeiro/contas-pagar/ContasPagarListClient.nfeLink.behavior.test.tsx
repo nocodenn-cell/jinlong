@@ -80,9 +80,9 @@ describe('ContasPagarListClient — link de NF-e (G-08)', () => {
       ),
     )
 
-    expect(container.textContent).toContain('NF-e #12345')
+    expect(container.textContent).toContain('Documento #12345')
     const links = Array.from(container.querySelectorAll('a')).filter((a) =>
-      a.textContent?.includes('NF-e #12345'),
+      a.textContent?.includes('Documento #12345'),
     )
     expect(links).toHaveLength(0)
   })
@@ -103,7 +103,7 @@ describe('ContasPagarListClient — link de NF-e (G-08)', () => {
     )
 
     const link = Array.from(container.querySelectorAll('a')).find((a) =>
-      a.textContent?.includes('NF-e #12345'),
+      a.textContent?.includes('Documento #12345'),
     ) as HTMLAnchorElement | undefined
     expect(link).toBeTruthy()
     // BP-A3: rota canônica do admin + parâmetro que a página de destino lê.

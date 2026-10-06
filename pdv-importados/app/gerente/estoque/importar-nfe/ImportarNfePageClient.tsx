@@ -7,6 +7,7 @@ import { DataTable, type Column } from '@/components/ui/DataTable'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { Button } from '@/components/ui/button'
 import { NotaManualForm } from './NotaManualForm'
+import { DocumentoEntregaLink } from './DocumentoEntregaLink'
 import { formatBRL } from '@/lib/format/money'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import { emitGerenteToast } from '@/lib/gerente/toast'
@@ -49,6 +50,7 @@ type Props = Readonly<{
   produtoInicial?: import('@/app/gerente/recebimento/RecebimentoGerentePageClient').RecebimentoProdutoOpt | null
   idioma: Idioma
   embeddedInAdminHub?: boolean
+  historicoOnly?: boolean
   /** Deep-link `?importacao=<id>`: abre essa importação (aberta ou concluída) ao montar. */
   importacaoInicialId?: string | null
 }>
@@ -137,6 +139,7 @@ export function buildItensConferenciaPreenchidos(
 export function ImportarNfePageClient({
   idioma,
   embeddedInAdminHub = false,
+  historicoOnly = false,
   importacaoInicialId = null,
   semDocumento = false,
   produtoInicial = null,
@@ -169,6 +172,12 @@ export function ImportarNfePageClient({
   const [conferencia, setConferencia] = useState<ConferenciaImportacaoNfe | null>(null)
   const [qtdConferida, setQtdConferida] = useState<Record<string, string>>({})
   const [obsDivergencia, setObsDivergencia] = useState<Record<string, string>>({})
+  const [associarEntrega, setAssociarEntrega] = useState(false)
+  const [historicoBusca, setHistoricoBusca] = useState('')
+  const [historicoPagina, setHistoricoPagina] = useState(1)
+  const [historicoErro, setHistoricoErro] = useState<string | null>(null)
+  const [historicoLoading, setHistoricoLoading] = useState(false)
+  const [pendentesErro, setPendentesErro] = useState<string | null>(null)
   const [pendentes, setPendentes] = useState<ImportacaoNfePendente[]>([])
   const [estoqueAtualizadoOk, setEstoqueAtualizadoOk] = useState(false)
   const [resumoContasPagar, setResumoContasPagar] = useState<ResumoContasPagarImportacaoNfe | null>(null)
@@ -176,15 +185,29 @@ export function ImportarNfePageClient({
   const [resultadoOc, setResultadoOc] = useState<string | null>(null)
 
   const carregarPendentes = useCallback(async () => {
-    const r = await listarImportacoesNfePendentes()
-    if (r.success) setPendentes(r.data)
+    try {
+      const r = await listarImportacoesNfePendentes()
+      setPendentesErro(r.success ? null : r.error)
+      if (r.success) setPendentes(r.data)
+    } catch { setPendentesErro('Falha ao consultar conferências pendentes.') }
   }, [])
 
   const [lancadas, setLancadas] = useState<NotaLancada[]>([])
+  const historicoRequest = useRef(0)
   const carregarLancadas = useCallback(async () => {
-    const r = await listarNotasLancadas()
-    if (r.success) setLancadas(r.data)
-  }, [])
+    const request = ++historicoRequest.current
+    setHistoricoLoading(true)
+    try {
+      const result = await listarNotasLancadas({ busca: historicoBusca, pagina: historicoPagina })
+      if (request !== historicoRequest.current) return
+      setHistoricoErro(result.success ? null : result.error)
+      setLancadas(result.success ? result.data : [])
+    } catch {
+      if (request === historicoRequest.current) setHistoricoErro(idioma === 'pt' ? 'Falha ao consultar entradas.' : '查询入库失败。')
+    } finally {
+      if (request === historicoRequest.current) setHistoricoLoading(false)
+    }
+  }, [historicoBusca, historicoPagina, idioma])
 
   useEffect(() => {
     void carregarPendentes()
@@ -365,6 +388,7 @@ export function ImportarNfePageClient({
 
   const { mutate: confirmarMut, loading: confirmarLoading } = useGerenteMutation(
     async (importacaoId: string) => {
+      if (!podeConfirmarEstoque) throw new Error(mi.confirmar_estoque_pendente)
       const r = await confirmarImportacaoNfe({ importacao_id: importacaoId })
       if (!r.success) throw new Error(r.error)
       return r.data
@@ -478,6 +502,7 @@ export function ImportarNfePageClient({
     setLinhas([])
     setDraftNovos(null)
     setConferencia(null)
+    setAssociarEntrega(false)
     setQtdConferida({})
     setObsDivergencia({})
     setEstoqueAtualizadoOk(false)
@@ -492,11 +517,22 @@ export function ImportarNfePageClient({
     () => (conferencia?.itens ?? []).filter((i) => i.status_conferencia === 'EM_CONFERENCIA'),
     [conferencia],
   )
-  const podeConfirmarEstoque =
+  const conferenciaAlterada = (conferencia?.itens ?? []).some((item) => {
+    const raw = qtdConferida[item.item_id]
+    const quantidade = raw === undefined || raw.trim() === '' ? null : Number(raw)
+    const observacao = (obsDivergencia[item.item_id] ?? '').trim() || null
+    return quantidade !== item.quantidade_conferida || observacao !== item.divergencia_obs
+  })
+  const conferenciaPronta =
     !!conferencia &&
     conferencia.status === 'EM_CONFERENCIA' &&
     conferencia.itens.length > 0 &&
-    itensPendentesConferencia.length === 0
+    itensPendentesConferencia.length === 0 &&
+    !conferenciaAlterada &&
+    !registrarLoading &&
+    !confirmarLoading
+
+  const podeConfirmarEstoque = conferenciaPronta && (!associarEntrega || !!conferencia?.entrega_anterior_id)
 
   const divergeDaNota = (item: ItemConferenciaNfe): boolean => {
     const raw = qtdConferida[item.item_id]
@@ -722,7 +758,18 @@ export function ImportarNfePageClient({
         </Link>
       ) : null}
 
-      {lancadas.length > 0 && !conferencia ? (
+      {historicoOnly && pendentesErro ? <p role="alert">{pendentesErro}</p> : null}
+      {historicoOnly && !conferencia ? <div className="flex flex-wrap gap-2">
+        <Input aria-label={idioma === 'pt' ? 'Buscar documento ou fornecedor' : '搜索单据或供应商'}
+          placeholder={idioma === 'pt' ? 'Documento ou fornecedor' : '单据或供应商'} value={historicoBusca}
+          onChange={(e) => { setHistoricoBusca(e.target.value); setHistoricoPagina(1) }} />
+        <Button variant="outline" disabled={historicoPagina <= 1 || historicoLoading} onClick={() => setHistoricoPagina((page) => page - 1)}>{idioma === 'pt' ? 'Anterior' : '上一页'}</Button>
+        <span className="self-center text-caption">{historicoPagina}</span>
+        <Button variant="outline" disabled={lancadas.length < 30 || historicoLoading} onClick={() => setHistoricoPagina((page) => page + 1)}>{idioma === 'pt' ? 'Próxima' : '下一页'}</Button>
+        {historicoErro ? <p role="alert">{historicoErro}</p> : null}
+        {!historicoLoading && !historicoErro && lancadas.length === 0 ? <p>{idioma === 'pt' ? 'Nenhuma entrada encontrada.' : '未找到入库记录。'}</p> : null}
+      </div> : null}
+      {historicoOnly && lancadas.length > 0 && !conferencia ? (
         <SectionCard title={mi.lancadas_titulo} subtitle={mi.lancadas_hint}>
           <ul className="divide-y divide-[var(--color-border)]" data-testid="notas-lancadas">
             {lancadas.map((n) => (
@@ -765,7 +812,7 @@ export function ImportarNfePageClient({
         </SectionCard>
       ) : null}
 
-      {pendentes.length > 0 && !conferencia ? (
+      {historicoOnly && pendentes.length > 0 && !conferencia ? (
         <SectionCard title={mi.pendentes_titulo} subtitle={mi.pendentes_hint}>
           <ul className="divide-y divide-[var(--color-border)]">
             {pendentes.map((p) => (
@@ -794,7 +841,7 @@ export function ImportarNfePageClient({
         </SectionCard>
       ) : null}
 
-      {!semDocumento ? <section
+      {!historicoOnly && !parsed && !conferencia && !semDocumento ? <section
         onDragOver={(e) => {
           e.preventDefault()
           setDragOver(true)
@@ -841,13 +888,13 @@ export function ImportarNfePageClient({
         <Textarea
           value={xmlText}
           onChange={(e) => setXmlText(e.target.value)}
-          placeholder="XML (opcional colar conteúdo)"
+          placeholder={idioma === 'pt' ? 'XML (opcional colar conteúdo)' : 'XML（可直接粘贴内容）'}
           className="mt-4 h-24 font-mono text-caption"
           spellCheck={false}
         />
-        <NotaManualForm mi={mi} onPreview={aplicarPreview} />
-      </section> : !parsed && !conferencia ? (
-        <NotaManualForm mi={mi} onPreview={aplicarPreview} semDocumento produtoInicial={produtoInicial} />
+        <NotaManualForm idioma={idioma} mi={mi} onPreview={aplicarPreview} />
+      </section> : !historicoOnly && !parsed && !conferencia ? (
+        <NotaManualForm idioma={idioma} mi={mi} onPreview={aplicarPreview} semDocumento produtoInicial={produtoInicial} />
       ) : null}
 
       {parsed && !conferencia ? (
@@ -959,6 +1006,13 @@ export function ImportarNfePageClient({
               data-testid="nfe-oc-vinculo"
             >
               <p className="text-caption font-semibold text-fg-muted">{mi.oc_titulo}</p>
+              {conferencia.status === 'EM_CONFERENCIA' ? <DocumentoEntregaLink key={conferencia.importacao_id} importacaoId={conferencia.importacao_id}
+                entregaId={conferencia.entrega_anterior_id} zh={idioma === 'zh'}
+                podeAssociar={conferenciaPronta} onSelecionarModo={setAssociarEntrega}
+                onAssociada={() => { void obterConferenciaImportacaoNfe(conferencia.importacao_id).then((result) => {
+                  if (result.success) aplicarConferencia(result.data)
+                  else emitGerenteToast({ kind: 'error', message: result.error })
+                }) }} /> : conferencia.entrega_anterior_id ? <p>{idioma === 'pt' ? 'Documento associado à entrega; sem novo crédito de estoque.' : '单据已关联收货，未再次增加库存。'}</p> : null}
               {conferencia.ordem_compra ? (
                 <>
                   <p className="mt-1 text-body" data-testid="nfe-oc-vinculada">
@@ -1031,8 +1085,12 @@ export function ImportarNfePageClient({
                   const diverge = divergeDaNota(item)
                   return (
                     <tr key={item.item_id} className="border-t border-[var(--color-border)]">
-                      <td className="max-w-[14rem] truncate py-1.5 pr-2 font-medium">
+                      <td className="max-w-[14rem] break-words py-1.5 pr-2 font-medium">
                         {item.produto_nome}
+                        {estoqueAtualizadoOk ? <p className="mt-1 text-caption font-normal text-fg-muted">
+                          {idioma === 'pt' ? 'Custo do documento / custo atual do catálogo: ' : '单据成本 / 当前商品成本：'}
+                          {formatBRL(item.custo_unitario, locale)} / {item.produto_custo_atual == null ? '—' : formatBRL(item.produto_custo_atual, locale)}
+                        </p> : null}
                         {item.produto_codigo_barras ? (
                           <span className="ml-2 font-mono text-fg-muted">
                             {item.produto_codigo_barras}
@@ -1046,7 +1104,7 @@ export function ImportarNfePageClient({
                           min={0}
                           step={0.001}
                           controlSize="sm"
-                          disabled={estoqueAtualizadoOk}
+                          disabled={estoqueAtualizadoOk || registrarLoading || confirmarLoading}
                           value={qtdConferida[item.item_id] ?? ''}
                           onChange={(e) =>
                             setQtdConferida((prev) => ({ ...prev, [item.item_id]: e.target.value }))
@@ -1059,7 +1117,7 @@ export function ImportarNfePageClient({
                           <Input
                             type="text"
                             controlSize="sm"
-                            disabled={estoqueAtualizadoOk}
+                            disabled={estoqueAtualizadoOk || registrarLoading || confirmarLoading}
                             placeholder={mi.divergencia_obs_placeholder}
                             value={obsDivergencia[item.item_id] ?? ''}
                             onChange={(e) =>
@@ -1103,7 +1161,7 @@ export function ImportarNfePageClient({
             {estoqueAtualizadoOk ? (
               <>
                 <p className="text-body font-medium text-[var(--color-success-strong)]">
-                  {mi.confirmar_estoque_ok}
+                  {conferencia.entrega_anterior_id ? (idioma === 'pt' ? 'Documento confirmado sem novo crédito de estoque.' : '单据已确认，未再次增加库存。') : mi.confirmar_estoque_ok}
                 </p>
                 {resultadoOc ? (
                   <p className="text-body" role="status" data-testid="nfe-oc-resultado">
@@ -1150,6 +1208,7 @@ export function ImportarNfePageClient({
                     type="button"
                     variant="outline"
                     loading={registrarLoading}
+                    disabled={confirmarLoading}
                     onClick={() => void registrarMut(conferencia)}
                   >
                     {mi.btn_registrar_conferencia}

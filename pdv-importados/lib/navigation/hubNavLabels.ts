@@ -6,6 +6,7 @@ export type HubNavLabelSet = {
   catalogoCategorias: string
   catalogoMarcas: string
   estoqueSaldos: string
+  estoqueMovimentacoes?: string
   estoqueRecebimento: string
   estoqueTransferencias: string
   estoqueImportarNfe: string
@@ -36,26 +37,17 @@ export function buildEstoqueHubTabs(labels: HubNavLabelSet): readonly HubTabDef[
       id: 'recebimento',
       label: labels.estoqueRecebimento,
       href: ROUTES.admin.estoqueRecebimento,
+      aliases: [ROUTES.admin.importNfe],
       match: 'prefix',
     },
+    { id: 'movimentacoes', label: labels.estoqueMovimentacoes ?? 'Movimentações', href: ROUTES.admin.estoqueMovimentacoes, match: 'prefix' },
     {
       id: 'transferencias',
       label: labels.estoqueTransferencias,
       href: ROUTES.admin.estoqueTransferencias,
       match: 'prefix',
     },
-    {
-      id: 'importar-nfe',
-      label: labels.estoqueImportarNfe,
-      href: ROUTES.admin.importNfe,
-      match: 'prefix',
-    },
-    {
-      id: 'etiquetas',
-      label: labels.estoqueEtiquetas,
-      href: ROUTES.admin.estoqueImprimirEtiquetas,
-      match: 'prefix',
-    },
+
   ]
 }
 
@@ -63,6 +55,7 @@ export function hubLabelsFromAdminUi(ui: {
   hub_catalogo_produtos: string
   hub_catalogo_categorias: string
   hub_catalogo_marcas: string
+  hub_estoque_movimentacoes?: string
   hub_estoque_saldos: string
   hub_estoque_recebimento: string
   hub_estoque_transferencias: string
@@ -78,6 +71,7 @@ export function hubLabelsFromAdminUi(ui: {
     catalogoCategorias: ui.hub_catalogo_categorias,
     catalogoMarcas: ui.hub_catalogo_marcas,
     estoqueSaldos: ui.hub_estoque_saldos,
+    estoqueMovimentacoes: ui.hub_estoque_movimentacoes,
     estoqueRecebimento: ui.hub_estoque_recebimento,
     estoqueTransferencias: ui.hub_estoque_transferencias,
     estoqueImportarNfe: ui.hub_estoque_importar_nfe,

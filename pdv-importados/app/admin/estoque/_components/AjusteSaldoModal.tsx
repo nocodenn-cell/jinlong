@@ -69,6 +69,8 @@ export function AjusteSaldoModal({
     const fd = new FormData(e.currentTarget)
     const payload = {
       produto_id: alvo.produtoId,
+      quantidade_esperada: alvo.quantidadeAtual,
+      minimo_esperado: alvo.estoqueMinimo,
       quantidade_atual: Number(fd.get('quantidade_atual')),
       estoque_minimo: Number(fd.get('estoque_minimo')),
       motivo: String(fd.get('motivo') ?? ''),
@@ -158,7 +160,7 @@ export function AjusteSaldoModal({
           />
         </Field>
 
-        {erro ? <ErrorState dense title={erro} /> : null}
+        {erro ? <ErrorState dense description={erro} /> : null}
       </form>
     </DragonModal>
   )

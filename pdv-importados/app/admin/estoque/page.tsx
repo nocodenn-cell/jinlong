@@ -4,6 +4,7 @@
  */
 
 import { Suspense } from 'react'
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Upload } from 'lucide-react'
 import { ROUTES, pathWithQuery } from '@/lib/navigation/routes'
@@ -49,6 +50,8 @@ type SearchParams = {
   origem?: string
   categoria?: string
   page?: string
+  ordem?: string
+  dir?: string
 }
 
 type PageProps = { searchParams?: Promise<SearchParams> }
@@ -71,6 +74,8 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
   )
   const categoria = uuidOrUndef(sp.categoria)
   const page = clampPage(sp.page)
+  const ordem = oneOf(sp.ordem, ['nome', 'quantidade_atual', 'estoque_minimo', 'codigo_barras', 'deficit'] as const, 'nome')
+  const dir = oneOf(sp.dir, ['asc', 'desc'] as const, 'asc')
 
   const [opcoesRes, listaRes] = await Promise.all([
     listarOpcoesFiltrosProdutos(),
@@ -79,8 +84,8 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
       busca: q,
       categoria_id: categoria ?? null,
       origem,
-      ordem: 'nome',
-      dir_asc: true,
+      ordem,
+      dir_asc: dir === 'asc',
       limite: PAGE_SIZE,
       offset: (page - 1) * PAGE_SIZE,
     }).then(
@@ -153,6 +158,8 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
   ]
 
   const activeParams: Record<string, string> = {}
+  activeParams.ordem = ordem
+  activeParams.dir = dir
   if (q) activeParams.q = q
   if (visao !== 'geral') activeParams.visao = visao
   if (origem !== '') activeParams.origem = origem
@@ -169,6 +176,8 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
     if (target > 1) p.set('page', String(target))
     return pathWithQuery(ROUTES.admin.estoque, p)
   }
+
+  if (listaRes.ok && page > totalPages) redirect(pageHref(totalPages))
 
   const nomeCategoria = (id: string) => opcoes.categorias.find((c) => c.id === id)?.nome ?? id
 
@@ -201,9 +210,9 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
         actions={
           <PageActions>
             <Button asChild variant="secondary" size="sm" className="gap-1.5">
-              <Link href={ROUTES.admin.importNfe}>
+              <Link href={ROUTES.admin.estoqueRecebimento}>
                 <Upload className="h-4 w-4" aria-hidden />
-                {ui.catalogo_importar_nfe}
+                {ui.hub_estoque_recebimento}
               </Link>
             </Button>
           </PageActions>
@@ -223,7 +232,7 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
         toolbar={
           <div className="flex w-full flex-col gap-2.5">
             <Suspense fallback={<div className="h-9" />}>
-              <FilterBar filters={filters} />
+              <FilterBar filters={filters} resetPageOnChange />
             </Suspense>
             {chips.length > 0 ? (
               <div className="flex flex-wrap items-center gap-1.5">
@@ -276,11 +285,14 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
       >
         {loadError ? (
           <div className="p-4">
-            <ErrorState dense title={loadError} />
+            <ErrorState dense description={loadError} />
           </div>
         ) : (
           <EstoqueTable
+            idioma={session.idioma}
             linhas={linhas}
+            ordem={ordem}
+            direcao={dir}
             labels={{
               produto: m.estoque.col_produto,
               saldo: ui.estoque_col_saldo,

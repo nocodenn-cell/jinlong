@@ -105,6 +105,8 @@ export type AdjustInventoryCommand = {
   lojaId: LojaId
   quantity: number
   estoqueMinimo?: number
+  expectedQuantity?: number
+  expectedMinimum?: number
   reason: string
   observacao?: string | null
   atorId?: string | null

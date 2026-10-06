@@ -23,6 +23,7 @@ import { listarOrdensCompraElegiveisParaVinculo, type OcListaDTO } from '../comp
 import { fmtQtd } from '../compras/ocRecebimento'
 
 type Props = Readonly<{
+  valorInicial?: OcListaDTO | null
   disabled?: boolean
   placeholder: string
   semResultadosLabel: string
@@ -37,6 +38,7 @@ type Props = Readonly<{
 }>
 
 export function OrdemCompraVinculoAutocomplete({
+  valorInicial = null,
   disabled,
   placeholder,
   semResultadosLabel,
@@ -56,6 +58,7 @@ export function OrdemCompraVinculoAutocomplete({
   const [carregando, setCarregando] = useState(false)
   const [aberto, setAberto] = useState(false)
   const [selecionado, setSelecionado] = useState<OcListaDTO | null>(null)
+  useEffect(() => { setSelecionado(valorInicial) }, [valorInicial])
   const wrapRef = useRef<HTMLDivElement>(null)
 
   const termoDebounced = useDebounce(termo, 260)
@@ -155,7 +158,7 @@ export function OrdemCompraVinculoAutocomplete({
           aria-expanded={aberto}
           aria-controls={listId}
           aria-autocomplete="list"
-          className="pl-8"
+          className="w-full pl-8"
           style={{ paddingLeft: '2rem' }}
           onChange={(e) => {
             if (selecionado) onChange?.(null)

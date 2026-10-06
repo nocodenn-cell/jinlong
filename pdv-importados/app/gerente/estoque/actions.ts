@@ -97,6 +97,8 @@ export async function atualizarEstoqueProduto(input: unknown): Promise<ActionRes
         productId: parsed.data.produto_id,
         lojaId,
         quantity: parsed.data.quantidade_atual,
+        expectedQuantity: parsed.data.quantidade_esperada,
+        expectedMinimum: parsed.data.minimo_esperado,
         estoqueMinimo: parsed.data.estoque_minimo,
         reason: parsed.data.motivo,
         observacao,

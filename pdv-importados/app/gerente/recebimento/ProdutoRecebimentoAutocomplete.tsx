@@ -176,7 +176,7 @@ export function ProdutoRecebimentoAutocomplete({
           aria-expanded={aberto}
           aria-controls={listId}
           aria-autocomplete="list"
-          className="pl-8"
+          className="w-full pl-8"
           style={{ paddingLeft: '2rem', paddingRight: selecionado ? '7rem' : undefined }}
           onChange={(e) => {
             if (selecionado) onChange?.(null)
