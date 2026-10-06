@@ -290,10 +290,10 @@ BEGIN
     RAISE EXCEPTION 'FLX05_FALHOU: observação do kardex deveria mencionar divergência, veio: %', v_kardex_obs;
   END IF;
 
-  -- contas_pagar: duplicata materializada só agora, com valor/vencimento do XML.
+  -- contas_pagar: duplicata materializada com nfe_numero = numero da NF (não o n° da duplicata).
   SELECT valor_total INTO v_cp_valor
     FROM public.contas_pagar
-   WHERE nfe_importacao_id = v_imp_id AND nfe_numero = 'DUP-1';
+   WHERE nfe_importacao_id = v_imp_id AND nfe_numero = 'FLX05-1';
   IF v_cp_valor IS NULL THEN
     RAISE EXCEPTION 'FLX05_FALHOU: contas_pagar não foi gerada a partir da duplicata';
   END IF;

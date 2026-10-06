@@ -246,14 +246,16 @@ BEGIN
   PERFORM set_config('request.jwt.claim.role', '', true);
   SET LOCAL ROLE service_role;
 
-  PERFORM public.ajustar_estoque_manual(
+  PERFORM public.ajustar_estoque_manual_seguro(
     p_produto_id => v_produto,
     p_loja_id => v_loja,
     p_quantidade_atual => 80,
     p_estoque_minimo => 0,
     p_motivo_codigo => 'ACERTO_INVENTARIO',
     p_observacao => NULL,
-    p_ator_id => v_gerente
+    p_ator_id => v_gerente,
+    p_quantidade_esperada => 100,
+    p_minimo_esperado => 0
   );
 
   RESET ROLE;

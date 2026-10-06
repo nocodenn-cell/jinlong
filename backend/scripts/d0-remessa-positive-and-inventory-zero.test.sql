@@ -165,12 +165,14 @@ BEGIN
   FROM public.estoque
   WHERE produto_id = current_setting('d0.produto')::uuid
     AND loja_id = current_setting('d0.loja')::uuid;
-  PERFORM public.ajustar_estoque_manual(
+  PERFORM public.ajustar_estoque_manual_seguro(
     current_setting('d0.produto')::uuid,
     current_setting('d0.loja')::uuid,
     0::numeric, 0::numeric, 'ACERTO_INVENTARIO'::text,
     'nenhum item encontrado'::text,
-    current_setting('request.jwt.claim.sub')::uuid);
+    current_setting('request.jwt.claim.sub')::uuid,
+    v_saldo_antes,
+    0::numeric);
 
   IF (SELECT quantidade_atual FROM public.estoque
       WHERE produto_id = current_setting('d0.produto')::uuid
