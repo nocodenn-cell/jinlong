@@ -1,7 +1,7 @@
 /**
- * Desconto comercial no pagamento em dinheiro (até 10% do subtotal dos produtos).
- * Só se aplica quando o cupom é 100% DINHEIRO. Não substitui o desconto de gerente
- * com token; alimenta o mesmo cálculo de total para autorização comercial.
+ * Desconto comercial no pagamento em dinheiro (até 10% do subtotal).
+ * O operador aplica sem token de gerente quando o cupom é 100% DINHEIRO.
+ * Acima de 10% continua exigindo autorização de gerente.
  */
 export const DESCONTO_COMERCIAL_DINHEIRO_MAX_PCT = 10
 
@@ -49,4 +49,16 @@ export function calcularDescontoComercialDinheiro(
     descontoValor: capped,
     totalFinal: round2(subtotal - capped),
   }
+}
+
+/** Contrato servidor/UI: comercial do operador ≤10%, sem token, motivo AUTORIZACAO_COMERCIAL. */
+export function isDescontoComercialOperador(input: {
+  token?: string | null
+  percentual?: number | null
+  motivo?: string | null
+}): boolean {
+  if (input.token) return false
+  const pct = input.percentual
+  if (pct == null || !Number.isFinite(pct) || pct <= 0 || pct > DESCONTO_COMERCIAL_DINHEIRO_MAX_PCT) return false
+  return input.motivo === 'AUTORIZACAO_COMERCIAL'
 }

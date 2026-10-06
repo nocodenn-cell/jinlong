@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { calcularDescontoComercialDinheiro } from './descontoComercialDinheiro'
+import {
+  calcularDescontoComercialDinheiro,
+  isDescontoComercialOperador,
+} from './descontoComercialDinheiro'
 
 describe('calcularDescontoComercialDinheiro', () => {
   it('aceita 10% rápido', () => {
@@ -20,5 +23,39 @@ describe('calcularDescontoComercialDinheiro', () => {
     const r = calcularDescontoComercialDinheiro({ subtotal: 100, modo: 'percentual', valor: 10.1 })
     expect(r.ok).toBe(false)
     expect(r.motivo).toBe('ACIMA_DO_LIMITE')
+  })
+})
+
+describe('isDescontoComercialOperador', () => {
+  it('aceita até 10% sem token com motivo AUTORIZACAO_COMERCIAL', () => {
+    expect(isDescontoComercialOperador({
+      token: null,
+      percentual: 10,
+      motivo: 'AUTORIZACAO_COMERCIAL',
+    })).toBe(true)
+    expect(isDescontoComercialOperador({
+      percentual: 5,
+      motivo: 'AUTORIZACAO_COMERCIAL',
+    })).toBe(true)
+  })
+
+  it('rejeita com token, acima de 10%, sem motivo ou percentual inválido', () => {
+    expect(isDescontoComercialOperador({
+      token: 'tok',
+      percentual: 10,
+      motivo: 'AUTORIZACAO_COMERCIAL',
+    })).toBe(false)
+    expect(isDescontoComercialOperador({
+      percentual: 10.01,
+      motivo: 'AUTORIZACAO_COMERCIAL',
+    })).toBe(false)
+    expect(isDescontoComercialOperador({
+      percentual: 10,
+      motivo: 'CORTESIA',
+    })).toBe(false)
+    expect(isDescontoComercialOperador({
+      percentual: 0,
+      motivo: 'AUTORIZACAO_COMERCIAL',
+    })).toBe(false)
   })
 })

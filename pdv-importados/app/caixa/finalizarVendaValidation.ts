@@ -86,7 +86,15 @@ export const finalizarVendaInputSchema = z.object({
 }).superRefine((value, ctx) => {
   const hasToken = !!value.descontoGerenteToken
   const hasPercentual = value.descontoGerentePercentual !== undefined
-  if (hasToken !== hasPercentual) {
+  const comercialOperador =
+    !hasToken
+    && hasPercentual
+    && (value.descontoGerentePercentual ?? 0) > 0
+    && (value.descontoGerentePercentual ?? 0) <= 10
+    && value.motivoDesconto === 'AUTORIZACAO_COMERCIAL'
+    && pagamentoSoDinheiro(value)
+
+  if (hasToken !== hasPercentual && !comercialOperador) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['descontoGerenteToken'],
@@ -94,8 +102,8 @@ export const finalizarVendaInputSchema = z.object({
     })
   }
 
-  // Regra comercial: desconto percentual de gerente só existe em venda 100% dinheiro.
-  if (hasToken && !pagamentoSoDinheiro(value)) {
+  // Regra comercial: desconto percentual de gerente/comercial só existe em venda 100% dinheiro.
+  if ((hasToken || comercialOperador) && !pagamentoSoDinheiro(value)) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['descontoGerenteToken'],
