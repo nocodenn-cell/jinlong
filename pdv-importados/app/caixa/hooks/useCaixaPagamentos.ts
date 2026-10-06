@@ -37,12 +37,12 @@ export function useCaixaPagamentos(
       prevFormaRef.current = formaPagamento
       setParcelas((old) => {
         if (old.length === 1) {
-          return [{ ...old[0], formaPagamento }]
+          return [{ ...old[0], formaPagamento, valor: formaPagamento === "DINHEIRO" ? old[0].valor : roundMoney2(totalLiquidoComGerente) }]
         }
         return old
       })
     }
-  }, [formaPagamento])
+  }, [formaPagamento, totalLiquidoComGerente])
 
   useEffect(() => {
     const prev = prevTotalRef.current
@@ -53,7 +53,7 @@ export function useCaixaPagamentos(
       // Parcela única: atualizar valor se for vazio/zerado
       if (old.length === 1) {
         const currentValor = old[0].valor
-        if (currentValor <= 0.009) {
+        if (old[0].formaPagamento !== "DINHEIRO" || currentValor <= 0.009) {
           return [{ ...old[0], valor: roundMoney2(Math.max(0, totalLiquidoComGerente)) }]
         }
         return old

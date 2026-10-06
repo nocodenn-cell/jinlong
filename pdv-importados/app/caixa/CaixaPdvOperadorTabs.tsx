@@ -9,6 +9,7 @@ import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { enterVoltaParaBusca } from "@/app/caixa/caixaFocoBusca"
 import type { FormaPagamento } from "@/app/caixa/hooks/useCaixaPagamentos"
 import { formatDecimalBRL } from "@/lib/format/money"
+import { CaixaMoneyInput } from "@/app/caixa/CaixaMoneyInput"
 import { Select } from "@/components/ui/select"
 import {
   EXCESSO_PAGAMENTO_EPS,
@@ -27,6 +28,7 @@ type PagamentoLinha = {
 
 type PagamentoPanelProps = {
   m: Mensagens
+  disabled?: boolean
   pagamentos: PagamentoLinha[]
   totalLiquidoComGerente: number
   somaParcelas: number
@@ -51,6 +53,7 @@ type Props = PagamentoPanelProps & {
 const PagamentoPanelImpl = forwardRef(function PagamentoPanelImpl(
   {
     m,
+    disabled = false,
     pagamentos,
     totalLiquidoComGerente,
     diferenca,
@@ -100,6 +103,7 @@ const PagamentoPanelImpl = forwardRef(function PagamentoPanelImpl(
 
       {pedeValorRecebido && onDescontoDinheiro ? (
         <button
+          disabled={disabled}
           type="button"
           onClick={onDescontoDinheiro}
           data-testid="caixa-desconto-dinheiro"
@@ -121,22 +125,26 @@ const PagamentoPanelImpl = forwardRef(function PagamentoPanelImpl(
             <span className="shrink-0 text-xs font-medium text-muted-foreground">
               {moedaPrefixo}
             </span>
-            <input
+            <CaixaMoneyInput
+              disabled={disabled}
               id="caixa-valor-recebido"
-              type="number"
               inputMode="decimal"
               step="0.01"
               min="0"
-              value={pagamentos[0].valor === 0 ? "" : pagamentos[0].valor.toFixed(2)}
-              onChange={(e) => {
-                const v = parseFloat(e.target.value)
-                onAtualizarValor(0, Number.isFinite(v) ? v : 0)
-              }}
+              value={pagamentos[0].valor}
+              onValueChange={(value) => onAtualizarValor(0, value)}
               onKeyDown={enterVoltaParaBusca}
               data-caixa-atalho-bloqueado="true"
               className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-right text-base font-semibold tabular-nums text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
             />
           </div>
+        </div>
+      ) : null}
+
+      {!dividido && !pedeValorRecebido ? (
+        <div className="flex justify-between gap-3 rounded border p-2 font-semibold">
+          <span>{labelFormaPagamentoVenda(formaUnica ?? "PIX", m)}</span>
+          <span>{moedaPrefixo} {formatDecimalBRL(totalLiquidoComGerente)}</span>
         </div>
       ) : null}
 
@@ -148,6 +156,7 @@ const PagamentoPanelImpl = forwardRef(function PagamentoPanelImpl(
               className="flex items-center gap-1.5 rounded-md border border-border/60 bg-muted/20 p-2"
             >
               <Select
+                disabled={disabled}
                 value={p.formaPagamento}
                 onChange={(e) => onAtualizarForma(idx, e.target.value as FormaPagamento)}
                 aria-label={caixaFmt(m.caixa.aria_parcela_forma, { n: idx + 1 })}
@@ -159,22 +168,20 @@ const PagamentoPanelImpl = forwardRef(function PagamentoPanelImpl(
                   </option>
                 ))}
               </Select>
-              <input
-                type="number"
+              <CaixaMoneyInput
+                disabled={disabled}
                 inputMode="decimal"
                 step="0.01"
                 min="0"
-                value={p.valor === 0 ? "" : p.valor.toFixed(2)}
-                onChange={(e) => {
-                  const v = parseFloat(e.target.value)
-                  onAtualizarValor(idx, Number.isFinite(v) ? v : 0)
-                }}
+                value={p.valor}
+                onValueChange={(value) => onAtualizarValor(idx, value)}
                 onKeyDown={enterVoltaParaBusca}
                 aria-label={caixaFmt(m.caixa.aria_parcela_valor, { n: idx + 1 })}
                 data-caixa-atalho-bloqueado="true"
                 className="w-28 rounded-md border border-border bg-background px-2 py-1.5 text-right text-sm font-semibold tabular-nums text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
               />
               <button
+                disabled={disabled}
                 type="button"
                 onClick={() => onRemoverParcela(idx)}
                 aria-label={caixaFmt(m.caixa.aria_remover_parcela, { n: idx + 1 })}
@@ -187,6 +194,7 @@ const PagamentoPanelImpl = forwardRef(function PagamentoPanelImpl(
           <div className="flex items-center justify-between gap-2">
             {podeAdicionarParcela ? (
               <button
+                disabled={disabled}
                 type="button"
                 onClick={() => onAdicionarParcela()}
                 aria-label={m.caixa.aria_adicionar_parcela}
@@ -200,6 +208,7 @@ const PagamentoPanelImpl = forwardRef(function PagamentoPanelImpl(
               </span>
             )}
             <button
+              disabled={disabled}
               type="button"
               onClick={onAutoCompletar}
               className="rounded-md border border-border bg-muted/60 px-2 py-1 text-small font-semibold text-foreground/80 transition hover:bg-muted hover:text-foreground"
@@ -261,6 +270,7 @@ const PagamentoPanelImpl = forwardRef(function PagamentoPanelImpl(
 
       {!dividido && podeAdicionarParcela ? (
         <button
+          disabled={disabled}
           type="button"
           onClick={() => onAdicionarParcela()}
           aria-label={m.caixa.aria_adicionar_parcela}
@@ -277,6 +287,7 @@ PagamentoPanelImpl.displayName = "PagamentoPanel"
 
 export function CaixaPdvOperadorTabs({
   m,
+  disabled = false,
   pagamentos,
   totalLiquidoComGerente,
   somaParcelas,
@@ -298,6 +309,7 @@ export function CaixaPdvOperadorTabs({
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">{produtoPanel}</div>
       <PagamentoPanelImpl
         m={m}
+        disabled={disabled}
         pagamentos={pagamentos}
         totalLiquidoComGerente={totalLiquidoComGerente}
         somaParcelas={somaParcelas}

@@ -91,6 +91,10 @@ import {
   metodoPagamentoToForma,
   type MetodoPagamentoUi,
 } from "@/app/caixa/caixaMetodoPagamento"
+import { limiteDescontoOperador } from "@/app/caixa/descontoManualPolicy"
+import { atualizarPedidoEspera } from "@/app/caixa/caixaAtualizacaoEspera"
+import { CaixaDescontoManual } from "@/app/caixa/CaixaDescontoManual"
+import "@/styles/caixa-operacional.css"
 import { CaixaPdvOperadorTabs } from "@/app/caixa/CaixaPdvOperadorTabs"
 import { CaixaSelecionarClienteModal } from "@/app/caixa/CaixaSelecionarClienteModal"  // ✅ NOVO (Fase 5b)
 
@@ -730,7 +734,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     // Cupom abandonado: devolve RETOMADA → EM_ESPERA para o pedido voltar à lista
     // (P2). Sem isso o claim da retomada deixaria o cupom invisível para sempre.
     if (origemAbandonada) {
-      void devolverVendaEmEsperaCaixa(origemAbandonada).catch(() => {})
+      void atualizarPedidoEspera(origemAbandonada, devolverVendaEmEsperaCaixa,
+        (error) => setCaixaMensagem(error, { kind: "warning" }), m.caixa.err_srv_devolver_espera)
     }
     focarCampoBusca()
   }, [
@@ -739,6 +744,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     limparCarrinho,
     limparEstadoDescontoGerente,
     m.caixa.msg_venda_pendente_bloqueio,
+    m.caixa.err_srv_devolver_espera,
     resetPagamentos,
     setCaixaMensagem,
   ])
@@ -766,6 +772,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const {
     vendasEmEspera,
     carregandoEmEspera,
+    processandoEspera,
     handleNovaVendaOuEspera,
     handleRetomarEmEspera,
     handleDescartarEmEspera,
@@ -1195,7 +1202,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         // porta da venda duplicada). Falhando, o pedido fica RETOMADA (não
         // revendável) até correção manual — melhor que estoque em dobro.
         if (origemConvertida) {
-          void converterVendaEmEsperaCaixa(origemConvertida).catch(() => {})
+          void atualizarPedidoEspera(origemConvertida, converterVendaEmEsperaCaixa,
+            (error) => setCaixaMensagem(error, { kind: "warning" }), m.caixa.err_srv_converter_espera)
         }
         setTurnoRefreshToken((t) => t + 1)
         // Fecha o modal de "venda pendente" se por acaso ainda estiver aberto
@@ -1337,7 +1345,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         setClienteNome(null)
         // Acessório, como no caminho de sucesso: não pode derrubar a recuperação.
         if (origemConvertida) {
-          void converterVendaEmEsperaCaixa(origemConvertida).catch(() => {})
+          void atualizarPedidoEspera(origemConvertida, converterVendaEmEsperaCaixa,
+            (error) => setCaixaMensagem(error, { kind: "warning" }), m.caixa.err_srv_converter_espera)
         }
         setVendaPendenteModalAberto(false)
         setCheckoutHint(null)
@@ -1576,6 +1585,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
             <div className="min-h-0 flex flex-col md:min-h-0">
               <CaixaPdvOperadorTabs
                 m={m}
+                disabled={finalizando || processandoEspera || carregandoRegras}
                 pagamentos={pagamentos}
                 totalLiquidoComGerente={totalLiquidoComGerente}
                 somaParcelas={somaParcelas}
@@ -1600,6 +1610,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                       onRemoverCliente={handleRemoverCliente}
                       onSelecionarCliente={abrirSelecionarCliente}
                     />
+                    <CaixaDescontoManual key={cupomSessionIdRef.current} idioma={idioma === "pt" ? "pt" : "zh"}
+                      limite={limiteDescontoOperador(configCaixaWeb.desconto_maximo_operador_percentual)}
+                      disabled={finalizando || carregandoRegras || !isCaixaAberto(caixaStatus)} />
                     <div className="shrink-0">
                       <CaixaSearchBar
                         ref={buscaInputRef}
@@ -1676,7 +1689,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 type="button"
                 className="w-full rounded-md border px-3 py-2 text-center text-sm font-semibold disabled:pointer-events-none disabled:opacity-50 border-border bg-primary text-primary-foreground hover:bg-primary/90"
                 onClick={() => void handleNovaVendaOuEspera()}
-                disabled={carregandoRegras || finalizando || caixaStatus?.status === "FECHADO"}
+                disabled={processandoEspera || carregandoRegras || finalizando || caixaStatus?.status === "FECHADO"}
               >
                 {m.caixa.nova_venda_espera}
               </button>
@@ -1712,6 +1725,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 {m.caixa.rail_titulo_em_aberto}
               </div>
               <CaixaEmAbertoList
+                disabled={processandoEspera || finalizando}
                 m={m}
                 vendas={vendasEmEspera}
                 carregando={carregandoEmEspera}
