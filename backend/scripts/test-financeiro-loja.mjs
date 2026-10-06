@@ -19,7 +19,7 @@ before(async () => {
  create function auth.uid() returns uuid language sql stable as 'select nullif(current_setting(''request.jwt.claim.sub'',true),'''')::uuid';
  create function public.round_abnt(numeric,integer) returns numeric language sql immutable as 'select round($1,$2)';
  create table lojas(id uuid primary key);
- create table usuarios(id uuid primary key,loja_id uuid,perfil text,ativo boolean);
+ create table usuarios(id uuid primary key,loja_id uuid,perfil text,ativo boolean,nome text);
  create table clientes(id uuid primary key,loja_id uuid,nome text);
  create table fornecedores(id uuid primary key,loja_id uuid,nome text);
  create type categoria_financeira_tipo as enum('RECEITA','DESPESA','AMBOS');
@@ -36,6 +36,7 @@ before(async () => {
  create table contas_pagar_pagamentos(id uuid primary key default gen_random_uuid(),conta_id uuid,valor numeric,forma_pagamento text,data_pagamento timestamptz,observacao text,usuario_id uuid,created_at timestamptz default now(),idempotency_key text,origem text,loja_id uuid,caixa_id uuid,operacao_tipo text default 'PAGAMENTO',operacao_origem_id uuid,movimentacao_caixa_id uuid,unique(conta_id,idempotency_key));
  create table liquidacoes_receber(id uuid primary key default gen_random_uuid(),titulo_id uuid,valor numeric,forma_pagamento text,observacao text,created_by uuid,idempotency_key text,origem text,loja_id uuid,caixa_id uuid,operacao_tipo text default 'RECEBIMENTO',operacao_origem_id uuid,created_at timestamptz default now(),unique(titulo_id,idempotency_key));
  create table movimentacoes_caixa(id uuid primary key,caixa_id uuid,tipo text,valor numeric,status text,deleted_at timestamptz,forma_pagamento text,created_at timestamptz,movimentacao_origem_id uuid);
+ create table formas_pagamento(id uuid primary key default gen_random_uuid(),loja_id uuid not null,codigo text not null,nome text not null,taxa_percentual numeric default 0,prazo_compensacao_dias integer default 0,ativo boolean default true,created_at timestamptz default now(),updated_at timestamptz default now(),unique(loja_id,codigo));
  grant usage on schema public,auth to authenticated;
  grant select on usuarios,clientes to authenticated;
  grant all on contas_pagar_pagamentos,liquidacoes_receber to authenticated,anon;
@@ -56,11 +57,13 @@ before(async () => {
  }
  await db.exec(readFileSync(new URL('../supabase/migrations/20261005004647_financeiro_loja_contas_ledger.sql',import.meta.url),'utf8'));
  await db.exec(readFileSync(new URL('../supabase/migrations/20261005091218_financeiro_hardening_final.sql',import.meta.url),'utf8'));
+ await db.exec(readFileSync(new URL('../supabase/migrations/20261006120000_financeiro_contas_formas_e_painel.sql',import.meta.url),'utf8'));
  await sql('insert into lojas values($1),($2)',[loja,outra]);
  await sql("insert into usuarios values($1,$2,'DONO',true),($3,$4,'ADMIN',true),($5,$2,'OPERADOR',true)",[usuario,loja,outroUsuario,outra,operador]);
  await sql("insert into categorias_financeiras values($1,'Geral','AMBOS',true)",[categoria]);
  await sql("insert into clientes values($1,$2,'Cliente teste')",[cliente,loja]);
  await sql("insert into caixas(id,loja_id,saldo_atual,status) values($1,$2,100,'ABERTO')",[caixa,loja]);
+ await sql("insert into formas_pagamento(loja_id,codigo,nome) values($1,'DINHEIRO','Dinheiro'),($1,'PIX','Pix'),($1,'CARTAO_CREDITO','Cartão')",[loja]);
  await sql("select set_config('request.jwt.claim.sub',$1,false)",[usuario]);
  banco=(await cmd('CRIAR_CONTA',{nome:'Banco',tipo:'BANCO',data:'2026-10-01',valor:1000})).id;
  reserva=(await cmd('CRIAR_CONTA',{nome:'Reserva',tipo:'RESERVA',data:'2026-10-01'})).id;
@@ -273,4 +276,40 @@ test('cancelar PIX ainda pendente não cria depósito nem saída bancária',asyn
  assert.equal((await painel()).saldo,before);
  assert.equal((await sql('select status from financeiro_recebiveis_venda where venda_id=$1',[sale]))[0].status,'CANCELADO');
  assert.equal(Number((await sql("select count(*) as n from movimentos_financeiros where origem='VENDA' and origem_id in(select id from financeiro_recebiveis_venda where venda_id=$1)",[sale]))[0].n),0);
+});
+
+test('aceite: saldo 5000 + pix 2000 − pagamento 800 = 6200; vínculo forma; inativar',async () => {
+ const conta=(await cmd('CRIAR_CONTA',{nome:'Banco Aceite',tipo:'BANCO',data:'2026-10-01',valor:5000})).id;
+ await cmd('VINCULAR_FORMA_PAGAMENTO',{codigo:'PIX',conta_id:conta});
+ const formas=(await painel()).formas_pagamento;
+ assert.equal(formas.find(f=>f.codigo==='PIX')?.conta_financeira_id,conta);
+ await assert.rejects(cmd('VINCULAR_FORMA_PAGAMENTO',{codigo:'DINHEIRO',conta_id:conta}),/caixa\/reserva/);
+ await cmd('VINCULAR_FORMA_PAGAMENTO',{codigo:'DINHEIRO',conta_id:reserva});
+ await cmd('MOVIMENTO',{conta_id:conta,direcao:'ENTRADA',categoria_id:categoria,descricao:'Pix recebido aceite',valor:2000,data:'2026-10-03'});
+ await cmd('CRIAR_AP',{descricao:'Despesa aceite',favorecido:'Fornecedor',categoria_id:categoria,valor:800,data:'2026-10-04',parcelas:1});
+ const titulo=(await sql("select id from contas_pagar where descricao='Despesa aceite' order by criado_em desc limit 1"))[0].id;
+ // Compra a prazo: obrigação sem reduzir saldo
+ assert.equal(Number((await sql('select coalesce(sum(valor),0) as s from movimentos_financeiros where conta_financeira_id=$1',[conta]))[0].s),7000);
+ await cmd('BAIXAR_AP',{titulo_id:titulo,conta_id:conta,valor:800,data:'2026-10-04',descricao:'Pagamento aceite'});
+ assert.equal(Number((await sql('select coalesce(sum(valor),0) as s from movimentos_financeiros where conta_financeira_id=$1',[conta]))[0].s),6200);
+ const p=await painel();
+ const row=p.contas.find(c=>c.id===conta);
+ assert.equal(Number(row.saldo),6200);
+ assert.ok(Number(row.entradas_periodo)>=2000);
+ const key=randomUUID();
+ await cmd('VINCULAR_FORMA_PAGAMENTO',{codigo:'PIX',conta_id:''},key);
+ assert.deepEqual(await cmd('VINCULAR_FORMA_PAGAMENTO',{codigo:'PIX',conta_id:''},key),await cmd('VINCULAR_FORMA_PAGAMENTO',{codigo:'PIX',conta_id:''},key));
+ await cmd('INATIVAR_CONTA',{conta_id:conta});
+ assert.equal((await sql('select ativo from contas_financeiras where id=$1',[conta]))[0].ativo,false);
+ assert.equal(Number((await sql('select count(*) as n from movimentos_financeiros where conta_financeira_id=$1',[conta]))[0].n)>0,true);
+});
+
+test('transferência 500 reduz origem e aumenta destino sem alterar consolidado',async () => {
+ const a=(await cmd('CRIAR_CONTA',{nome:'Origem T',tipo:'BANCO',data:'2026-10-01',valor:1000})).id;
+ const b=(await cmd('CRIAR_CONTA',{nome:'Destino T',tipo:'BANCO',data:'2026-10-01',valor:100})).id;
+ const antes=Number((await sql('select coalesce(sum(valor),0) as s from movimentos_financeiros where conta_financeira_id in ($1,$2)',[a,b]))[0].s);
+ await cmd('TRANSFERIR',{conta_id:a,destino_id:b,valor:500,data:'2026-10-05'});
+ assert.equal(Number((await sql('select coalesce(sum(valor),0) as s from movimentos_financeiros where conta_financeira_id=$1',[a]))[0].s),500);
+ assert.equal(Number((await sql('select coalesce(sum(valor),0) as s from movimentos_financeiros where conta_financeira_id=$1',[b]))[0].s),600);
+ assert.equal(Number((await sql('select coalesce(sum(valor),0) as s from movimentos_financeiros where conta_financeira_id in ($1,$2)',[a,b]))[0].s),antes);
 });

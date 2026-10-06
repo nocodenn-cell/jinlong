@@ -281,6 +281,7 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
             vazioTitulo: ui.financeiro_vazio_titulo,
             vazioSub: ui.financeiro_vazio_sub,
             verVenda: ui.financeiro_ver_venda,
+            receber: ui.financeiro_acao_receber,
             locale,
           }}
           contasPagar={{
