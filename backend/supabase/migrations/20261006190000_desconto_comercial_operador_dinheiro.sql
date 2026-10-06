@@ -25,7 +25,7 @@ DECLARE
   fonte text;
   proc regprocedure := 'public.finalizar_venda_transacional_canonica_v4(uuid,uuid,uuid,uuid,text,numeric,numeric,numeric,jsonb,jsonb,text,numeric,boolean,boolean,text,text,text,text,uuid,public.motivo_desconto_enum_tipo,text,text)'::regprocedure;
 BEGIN
-  SELECT pg_get_functiondef(proc) INTO fonte;
+  SELECT replace(replace(pg_get_functiondef(proc), E'\r\n', E'\n'), E'\r', E'\n') INTO fonte;
   IF strpos(fonte, 'desconto_comercial_operador_ok') > 0 THEN RETURN; END IF;
   IF strpos(fonte, 'CASE WHEN p_desconto_gerente_token IS NULL THEN NULL ELSE p_desconto_gerente_percentual END') = 0 THEN
     RAISE EXCEPTION 'Desconto comercial: expressão de totais no wrapper não encontrada.';
@@ -45,11 +45,9 @@ DECLARE
   proc regprocedure := 'public.finalizar_venda_transacional_canonica_v4_unscoped(uuid,uuid,uuid,uuid,text,numeric,numeric,numeric,jsonb,jsonb,text,numeric,boolean,boolean,text,text,text,text,uuid,public.motivo_desconto_enum_tipo,text,text)'::regprocedure;
   marca_auth text := 'p_strict_manager_discount_auth AND v_has_gerente_desconto AND p_desconto_gerente_token IS NULL';
   marca_auth2 text := 'ELSIF p_strict_manager_discount_auth AND v_has_gerente_desconto THEN';
-  marca_calc text := 'IF p_desconto_gerente_token IS NOT NULL THEN
-    v_desconto_gerente_valor := public.round_abnt((v_total_liquido_base_calc * p_desconto_gerente_percentual) / 100, 2);
-  END IF;';
+  marca_calc text := E'IF p_desconto_gerente_token IS NOT NULL THEN\n    v_desconto_gerente_valor := public.round_abnt((v_total_liquido_base_calc * p_desconto_gerente_percentual) / 100, 2);\n  END IF;';
 BEGIN
-  SELECT pg_get_functiondef(proc) INTO fonte;
+  SELECT replace(replace(pg_get_functiondef(proc), E'\r\n', E'\n'), E'\r', E'\n') INTO fonte;
   IF strpos(fonte, 'desconto_comercial_operador_ok') > 0 THEN RETURN; END IF;
 
   IF strpos(fonte, marca_auth) = 0 THEN
@@ -75,9 +73,7 @@ BEGIN
   fonte := replace(
     fonte,
     marca_calc,
-    'IF p_desconto_gerente_token IS NOT NULL OR internal.desconto_comercial_operador_ok(p_desconto_gerente_token, p_desconto_gerente_percentual, p_motivo_desconto) THEN
-    v_desconto_gerente_valor := public.round_abnt((v_total_liquido_base_calc * p_desconto_gerente_percentual) / 100, 2);
-  END IF;'
+    E'IF p_desconto_gerente_token IS NOT NULL OR internal.desconto_comercial_operador_ok(p_desconto_gerente_token, p_desconto_gerente_percentual, p_motivo_desconto) THEN\n    v_desconto_gerente_valor := public.round_abnt((v_total_liquido_base_calc * p_desconto_gerente_percentual) / 100, 2);\n  END IF;'
   );
 
   -- Após gravar desconto com token, grava também o caminho comercial (sem token).
