@@ -2,7 +2,18 @@
 
 O módulo `/admin/financeiro` reúne planejamento, contas bancárias, despesas, títulos a receber, depósitos de PIX/cartão, conciliação e resultado gerencial. O saldo da gaveta continua sob responsabilidade de Caixas/PDV, conforme ADR-010.
 
-## Como começar
+## Contas e saldos (sprint ações rápidas)
+
+A aba **Contas e saldos** exibe o **saldo registrado no sistema** por conta (caixa/reserva ou banco), entradas e saídas do período e extrato com origem/usuário. O saldo inicial continua sendo movimento auditável `SALDO_INICIAL`; o saldo atual não é editável diretamente.
+
+Formas de pagamento podem apontar para uma conta financeira padrão (`formas_pagamento.conta_financeira_id`). Dinheiro → reserva; PIX/cartão → banco. Cartão/PIX só aumentam o saldo bancário na liquidação do recebível (após taxa). A captura de venda pré-preenche a conta sugerida, sem creditar saldo.
+
+Ações rápidas fixas no topo do Financeiro: Registrar venda (PDV oficial), Receber, Pagar / Registrar despesa, Transferir. No Estoque: Entrada de mercadoria, Retirar, Ajustar — reutilizando NF-e/recebimento/ajuste existentes, sem gerar pagamento automático.
+
+Inativação de conta preserva histórico; não há exclusão. Integração bancária real e importação automática de Pix/boletos ficam fora desta sprint.
+
+---
+
 
 1. Em **Categorias financeiras**, confirme o tipo de cada categoria: Receita, Despesa ou Ambos.
 2. Em **Contas e movimentos**, cadastre cada banco e a reserva de numerário fora do PDV. Informe o saldo efetivamente conferido na data inicial. Saldo inicial não é receita e admite conta devedora.

@@ -2309,6 +2309,7 @@ export type Database = {
         Row: {
           ativo: boolean
           codigo: string
+          conta_financeira_id: string | null
           created_at: string
           id: string
           loja_id: string
@@ -2320,6 +2321,7 @@ export type Database = {
         Insert: {
           ativo?: boolean
           codigo: string
+          conta_financeira_id?: string | null
           created_at?: string
           id?: string
           loja_id: string
@@ -2331,6 +2333,7 @@ export type Database = {
         Update: {
           ativo?: boolean
           codigo?: string
+          conta_financeira_id?: string | null
           created_at?: string
           id?: string
           loja_id?: string
@@ -2340,6 +2343,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "formas_pagamento_conta_financeira_id_fkey"
+            columns: ["conta_financeira_id"]
+            isOneToOne: false
+            referencedRelation: "contas_financeiras"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "formas_pagamento_loja_id_fkey"
             columns: ["loja_id"]

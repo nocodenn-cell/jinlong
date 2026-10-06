@@ -22,6 +22,7 @@ import { tipoMovimentoEstoqueLabels } from '@/lib/format/vendaLabels'
 import { obterListaEstoqueGerente } from '@/app/gerente/estoque/actions'
 import { listarOpcoesFiltrosProdutos } from '@/app/gerente/produtos/actions'
 import { EstoqueTable, type EstoqueLinha } from './_components/EstoqueTable'
+import { EstoqueAcoesRapidas } from './_components/EstoqueAcoesRapidas'
 import { cn } from '@/lib/utils'
 
 const PAGE_SIZE = 25
@@ -279,44 +280,103 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
             <ErrorState dense title={loadError} />
           </div>
         ) : (
-          <EstoqueTable
-            linhas={linhas}
-            labels={{
-              produto: m.estoque.col_produto,
-              saldo: ui.estoque_col_saldo,
-              minimo: ui.estoque_col_minimo,
-              deficit: m.estoque.col_deficit,
-              unidade: ui.estoque_col_unidade_abrev,
-              origem: m.produtos.origem_label,
-              origemChina: ui.estoque_origem_china,
-              origemBrasilNf: ui.estoque_origem_brasil_nf,
-              origemBrasil: ui.estoque_origem_brasil,
-              vazioTitulo: ui.estoque_vazio_titulo,
-              vazioSub: ui.estoque_vazio_sub,
-              ajusteTitulo: ui.estoque_ajuste_titulo,
-              reporTitulo: ui.estoque_repor_titulo,
-              saldoAtual: ui.estoque_saldo_atual,
-              estoqueMinimo: m.estoque.col_estoque_minimo,
-              motivo: m.estoque.ajuste_motivo_label,
-              observacao: m.produtos.observacao,
-              cancelar: m.cadastro_comum.cancelar,
-              salvarAjuste: ui.estoque_salvar_ajuste,
-              salvando: m.cadastro_comum.salvando,
-              motivoAcertoInventario: m.estoque.motivo_acerto_inventario,
-              motivoEntradaCompra: m.estoque.motivo_entrada_compra,
-              motivoPerda: m.estoque.motivo_perda,
-              motivoQuebra: m.estoque.motivo_quebra_avaria,
-              motivoOutro: m.estoque.motivo_outro,
-              kardexTitulo: ui.estoque_kardex_titulo,
-              kardexVerAuditoria: ui.estoque_kardex_ver_auditoria,
-              semMovimentos: ui.estoque_sem_movimentos,
-              semMovimentosSub: ui.estoque_sem_movimentos_sub,
-              tipoMap: tipoMovimentoEstoqueLabels(m),
-              situacaoZerado: m.estoque.situacao_zerado,
-              situacaoAbaixoMinimo: m.estoque.situacao_abaixo_minimo,
-              situacaoNoMinimo: m.estoque.situacao_no_minimo,
-            }}
-          />
+          <>
+            <div className="px-3 pt-3 sm:px-4">
+              <EstoqueAcoesRapidas
+                linhas={linhas}
+                labels={{
+                  produto: m.estoque.col_produto,
+                  saldo: ui.estoque_col_saldo,
+                  minimo: ui.estoque_col_minimo,
+                  deficit: m.estoque.col_deficit,
+                  unidade: ui.estoque_col_unidade_abrev,
+                  origem: m.produtos.origem_label,
+                  origemChina: ui.estoque_origem_china,
+                  origemBrasilNf: ui.estoque_origem_brasil_nf,
+                  origemBrasil: ui.estoque_origem_brasil,
+                  vazioTitulo: ui.estoque_vazio_titulo,
+                  vazioSub: ui.estoque_vazio_sub,
+                  ajusteTitulo: ui.estoque_ajuste_titulo,
+                  reporTitulo: ui.estoque_repor_titulo,
+                  saldoAtual: ui.estoque_saldo_atual,
+                  estoqueMinimo: m.estoque.col_estoque_minimo,
+                  motivo: m.estoque.ajuste_motivo_label,
+                  observacao: m.produtos.observacao,
+                  cancelar: m.cadastro_comum.cancelar,
+                  salvarAjuste: ui.estoque_salvar_ajuste,
+                  salvando: m.cadastro_comum.salvando,
+                  motivoAcertoInventario: m.estoque.motivo_acerto_inventario,
+                  motivoEntradaCompra: m.estoque.motivo_entrada_compra,
+                  motivoPerda: m.estoque.motivo_perda,
+                  motivoQuebra: m.estoque.motivo_quebra_avaria,
+                  motivoOutro: m.estoque.motivo_outro,
+                  kardexTitulo: ui.estoque_kardex_titulo,
+                  kardexVerAuditoria: ui.estoque_kardex_ver_auditoria,
+                  semMovimentos: ui.estoque_sem_movimentos,
+                  semMovimentosSub: ui.estoque_sem_movimentos_sub,
+                  tipoMap: tipoMovimentoEstoqueLabels(m),
+                  situacaoZerado: m.estoque.situacao_zerado,
+                  situacaoAbaixoMinimo: m.estoque.situacao_abaixo_minimo,
+                  situacaoNoMinimo: m.estoque.situacao_no_minimo,
+                }}
+                quick={{
+                  faixaAria: ui.estoque_acoes_aria,
+                  entrada: ui.estoque_acao_entrada,
+                  retirar: ui.estoque_acao_retirar,
+                  ajustar: ui.estoque_acao_ajustar,
+                  entradaTitulo: ui.estoque_acao_entrada_titulo,
+                  entradaTexto: ui.estoque_acao_entrada_texto,
+                  entradaNfe: ui.estoque_acao_entrada_nfe,
+                  entradaManual: ui.estoque_acao_entrada_manual,
+                  retirarTitulo: ui.estoque_acao_retirar_titulo,
+                  retirarTexto: ui.estoque_acao_retirar_texto,
+                  ajustarTitulo: ui.estoque_acao_ajustar_titulo,
+                  ajustarTexto: ui.estoque_acao_ajustar_texto,
+                  buscarPlaceholder: ui.estoque_acao_buscar,
+                  selecionarProduto: ui.estoque_acao_selecionar,
+                  motivoObrigatorio: ui.estoque_acao_motivo_obrigatorio,
+                }}
+              />
+            </div>
+            <EstoqueTable
+              linhas={linhas}
+              labels={{
+                produto: m.estoque.col_produto,
+                saldo: ui.estoque_col_saldo,
+                minimo: ui.estoque_col_minimo,
+                deficit: m.estoque.col_deficit,
+                unidade: ui.estoque_col_unidade_abrev,
+                origem: m.produtos.origem_label,
+                origemChina: ui.estoque_origem_china,
+                origemBrasilNf: ui.estoque_origem_brasil_nf,
+                origemBrasil: ui.estoque_origem_brasil,
+                vazioTitulo: ui.estoque_vazio_titulo,
+                vazioSub: ui.estoque_vazio_sub,
+                ajusteTitulo: ui.estoque_ajuste_titulo,
+                reporTitulo: ui.estoque_repor_titulo,
+                saldoAtual: ui.estoque_saldo_atual,
+                estoqueMinimo: m.estoque.col_estoque_minimo,
+                motivo: m.estoque.ajuste_motivo_label,
+                observacao: m.produtos.observacao,
+                cancelar: m.cadastro_comum.cancelar,
+                salvarAjuste: ui.estoque_salvar_ajuste,
+                salvando: m.cadastro_comum.salvando,
+                motivoAcertoInventario: m.estoque.motivo_acerto_inventario,
+                motivoEntradaCompra: m.estoque.motivo_entrada_compra,
+                motivoPerda: m.estoque.motivo_perda,
+                motivoQuebra: m.estoque.motivo_quebra_avaria,
+                motivoOutro: m.estoque.motivo_outro,
+                kardexTitulo: ui.estoque_kardex_titulo,
+                kardexVerAuditoria: ui.estoque_kardex_ver_auditoria,
+                semMovimentos: ui.estoque_sem_movimentos,
+                semMovimentosSub: ui.estoque_sem_movimentos_sub,
+                tipoMap: tipoMovimentoEstoqueLabels(m),
+                situacaoZerado: m.estoque.situacao_zerado,
+                situacaoAbaixoMinimo: m.estoque.situacao_abaixo_minimo,
+                situacaoNoMinimo: m.estoque.situacao_no_minimo,
+              }}
+            />
+          </>
         )}
       </CrudListShell>
     </div>

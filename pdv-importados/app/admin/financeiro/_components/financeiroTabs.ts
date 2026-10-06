@@ -17,7 +17,7 @@ export type { FinanceiroTabId }
 
 const LABELS: Record<FinanceiroTabId, string> = {
   'resumo': 'Resumo', 'receber': 'A receber', 'pagar': 'A pagar',
-  'contas': 'Contas e movimentos', 'recebiveis': 'PIX e cartões',
+  'contas': 'Contas e saldos', 'recebiveis': 'PIX e cartões',
   'conciliacao': 'Conciliação', 'resultado': 'Resultado', 'fiscal': 'Fiscal',
 }
 export const FINANCEIRO_TABS: ReadonlyArray<{ id: FinanceiroTabId; label: string }> =
