@@ -20,6 +20,7 @@ import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 import { getGerenteLojaId } from '@/lib/gerente/auth/sessionContext'
 import { createInventoryAdjustmentService } from '@/app/admin/estoque/inventoryAdjustment'
 import { createInventoryQueryService } from '@/app/admin/estoque/inventoryQueryService'
+import { createInventoryReader } from '@/app/admin/estoque/inventoryReader'
 import { localizeInventoryFailure } from '@/app/admin/estoque/inventoryMessages'
 import {
   INVENTORY_ERROR_CODES,
@@ -51,6 +52,35 @@ async function criarLinhaEstoqueZerada(
     estoque_minimo: 0,
   })
   return !error || error.code === '23505'
+}
+
+/** Saldo pontual para refresh após conflito de concorrência no modal. */
+export async function consultarSaldoEstoqueProduto(
+  produtoId: string,
+): Promise<ActionResult<{ quantidade: number; minimo: number }>> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return actionFail(auth.error, { errorCode: 'UNAUTHORIZED' })
+  const parsed = ProdutoIdSchema.safeParse({ produto_id: produtoId })
+  if (!parsed.success) return actionFail('Produto inválido.', { errorCode: 'VALIDATION_FAILED' })
+  const lojaId = await lojaIdDoUsuarioLogado()
+  if (!lojaId) {
+    return actionFail('Não foi possível identificar sua loja. Faça login novamente.', {
+      errorCode: 'UNAUTHORIZED',
+    })
+  }
+  try {
+    const admin = createAdminClient()
+    const reader = createInventoryReader(admin, lojaId)
+    const res = await reader.getBalance(parsed.data.produto_id)
+    if (!res.ok) return actionFail(res.error, { errorCode: 'RPC_ERROR' })
+    return {
+      ok: true,
+      data: { quantidade: res.item.quantity, minimo: res.item.minimum },
+    }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Falha ao consultar saldo.'
+    return actionFail(msg, { errorCode: 'UNKNOWN' })
+  }
 }
 
 export async function atualizarEstoqueProduto(input: unknown): Promise<ActionResult<null>> {
@@ -101,6 +131,7 @@ export async function atualizarEstoqueProduto(input: unknown): Promise<ActionRes
         reason: parsed.data.motivo,
         observacao,
         atorId,
+        saldoEsperado: parsed.data.saldo_esperado,
       }
 
       const result = await ajustarComLinhaGarantida(comando, {
@@ -110,6 +141,10 @@ export async function atualizarEstoqueProduto(input: unknown): Promise<ActionRes
 
       if (!result.ok) {
         const localized = localizeInventoryFailure(idioma, result)
+        // Concorrência: mensagem amigável sem prefixo de seção (UI atualiza o saldo).
+        if (result.code === INVENTORY_ERROR_CODES.CONCURRENCY) {
+          throw new Error(localized.error)
+        }
         throw new Error(mensagemErroComSecao('Estoque', localized.error))
       }
       revalidatePath('/gerente/estoque')

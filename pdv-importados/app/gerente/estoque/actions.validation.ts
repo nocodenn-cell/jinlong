@@ -16,6 +16,8 @@ export const AtualizarEstoqueSchema = z.object({
     .max(500, 'Observação muito longa (máx. 500 caracteres).')
     .optional()
     .default(''),
+  /** Saldo visto na UI ao abrir o modal — protege contra lost-update. */
+  saldo_esperado: z.coerce.number().min(0).optional(),
 }).superRefine((data, ctx) => {
   if (data.motivo === 'OUTRO' && !data.observacao) {
     ctx.addIssue({

@@ -1,17 +1,22 @@
 /** @vitest-environment jsdom */
-/** UX-019 / P-25 — o ajuste de saldo mostra a diferença (9 → 5 = −4) antes de salvar. */
 import React, { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+const atualizarMock = vi.fn()
+const consultarMock = vi.fn()
+
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }))
-vi.mock('@/app/gerente/estoque/actions', () => ({ atualizarEstoqueProduto: vi.fn() }))
+vi.mock('@/app/gerente/estoque/actions', () => ({
+  atualizarEstoqueProduto: (...args: unknown[]) => atualizarMock(...args),
+  consultarSaldoEstoqueProduto: (...args: unknown[]) => consultarMock(...args),
+}))
 
 ;(globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
-const { AjusteSaldoModal, previaAjuste, previaRetirada } = await import('./AjusteSaldoModal')
+const { AjusteSaldoModal } = await import('./AjusteSaldoModal')
 
-const labels = {
+const baseLabels = {
   titulo: 'Ajustar',
   saldoAtual: 'Saldo atual',
   estoqueMinimo: 'Mínimo',
@@ -20,7 +25,7 @@ const labels = {
   cancelar: 'Cancelar',
   salvar: 'Salvar',
   salvando: 'Salvando',
-  motivos: [{ value: 'ACERTO_INVENTARIO', label: 'Acerto' }],
+  motivos: [{ value: 'ACERTO_INVENTARIO', label: 'Inventário' }],
   quantidadeRetirar: 'Quantidade a retirar',
   quantidadeContada: 'Quantidade contada',
   saldoAnterior: 'Saldo anterior',
@@ -28,64 +33,44 @@ const labels = {
   referenciaDocHint: 'Opcional',
   confirmarRetirada: 'Confirmar retirada',
   confirmarAjuste: 'Confirmar ajuste',
+  erroRetiradaInvalida: 'Informe uma quantidade positiva a retirar.',
+  erroRetiradaExcede: 'Não é possível retirar mais que o saldo atual.',
+  erroConcorrencia:
+    'O estoque deste produto foi alterado enquanto esta tela estava aberta. Atualizamos as informações; confira a quantidade e tente novamente.',
   codigoLabel: 'Código',
   unidadeLabel: 'Unidade',
+  produtoLabel: 'Produto',
+  resumoTitulo: 'Resumo da operação',
+  resumoSaldoAtual: 'Saldo atual',
+  resumoRetirada: 'Retirada',
+  resumoSaldoApos: 'Saldo após retirada',
+  resumoSistema: 'Quantidade no sistema',
+  resumoContagem: 'Quantidade contada',
+  resumoDiferenca: 'Diferença',
+  resumoNovoSaldo: 'Novo saldo',
 }
 
-describe('previaAjuste', () => {
-  it('queda, aumento, sem alteração e valor inválido', () => {
-    expect(previaAjuste(9, 5)).toBe('Saldo: 9 → 5 (−4)')
-    expect(previaAjuste(5, 12)).toBe('Saldo: 5 → 12 (+7)')
-    expect(previaAjuste(5, 5)).toBe('Saldo: 5 (sem alteração)')
-    expect(previaAjuste(5, null)).toBe('Saldo atual: 5')
-    expect(previaAjuste(1.5, 1)).toBe('Saldo: 1,5 → 1 (−0,5)')
-  })
-})
-
-describe('previaRetirada', () => {
-  it('mostra saldo resultante após retirada', () => {
-    expect(previaRetirada(10, null)).toBe('Saldo atual: 10')
-    expect(previaRetirada(10, 0)).toBe('Saldo atual: 10')
-    expect(previaRetirada(10, 4)).toBe('Saldo: 10 → 6 (−4)')
-  })
-})
-
-describe('AjusteSaldoModal — prévia ao digitar', () => {
+describe('AjusteSaldoModal — Retirar / Ajustar', () => {
   let container: HTMLDivElement
   let root: Root
+
   beforeEach(() => {
     container = document.createElement('div')
     document.body.appendChild(container)
     root = createRoot(container)
+    atualizarMock.mockReset()
+    consultarMock.mockReset()
   })
+
   afterEach(() => {
-    act(() => root.unmount())
+    act(() => {
+      root.unmount()
+    })
     container.remove()
   })
 
-  it('atualiza a diferença conforme o novo saldo é digitado', () => {
-    act(() =>
-      root.render(
-        <AjusteSaldoModal
-          alvo={{ produtoId: 'p1', produtoNome: 'Caneca', quantidadeAtual: 9, estoqueMinimo: 2 }}
-          onClose={() => {}}
-          labels={labels}
-        />,
-      ),
-    )
-    const previa = () => document.querySelector('[data-testid="ajuste-previa"]')!.textContent
-    expect(previa()).toBe('Saldo: 9 (sem alteração)')
-    const input = document.querySelector('input[name="quantidade_atual"]') as HTMLInputElement
-    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')!.set!
+  it('retirar: resumo 10 − 3 = 7 e CTA Confirmar retirada', () => {
     act(() => {
-      setter.call(input, '5')
-      input.dispatchEvent(new Event('input', { bubbles: true }))
-    })
-    expect(previa()).toBe('Saldo: 9 → 5 (−4)')
-  })
-
-  it('modo retirar pede quantidade a sair e mostra contexto', () => {
-    act(() =>
       root.render(
         <AjusteSaldoModal
           alvo={{
@@ -99,7 +84,7 @@ describe('AjusteSaldoModal — prévia ao digitar', () => {
           }}
           onClose={() => {}}
           labels={{
-            ...labels,
+            ...baseLabels,
             titulo: 'Retirar',
             motivos: [
               { value: 'PERDA', label: 'Perda' },
@@ -108,45 +93,82 @@ describe('AjusteSaldoModal — prévia ao digitar', () => {
             ],
           }}
         />,
-      ),
-    )
-    expect(document.querySelector('[data-testid="ajuste-produto-contexto"]')?.textContent).toContain('Parafuso')
-    expect(document.querySelector('input[name="quantidade_retirar"]')).toBeTruthy()
-    expect(document.querySelector('input[name="quantidade_atual"]')).toBeNull()
-    expect(document.querySelector('input[name="referencia_doc"]')).toBeTruthy()
-    const footer = document.body.textContent ?? ''
-    expect(footer).toContain('Confirmar retirada')
-    const select = document.querySelector('select[name="motivo"]') as HTMLSelectElement
-    expect(select.value).toBe('PERDA')
-    expect(Array.from(select.options).map((o) => o.value)).toEqual(['PERDA', 'QUEBRA', 'OUTRO'])
+      )
+    })
 
-    const input = document.querySelector('input[name="quantidade_retirar"]') as HTMLInputElement
-    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')!.set!
+    expect(container.textContent).toContain('Confirmar retirada')
+    expect(container.querySelector('[data-testid="ajuste-produto-contexto"]')?.textContent).toContain('Parafuso')
+    const input = container.querySelector('input[name="quantidade_retirar"]') as HTMLInputElement
     act(() => {
-      setter.call(input, '3')
+      const native = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')!.set!
+      native.call(input, '3')
       input.dispatchEvent(new Event('input', { bubbles: true }))
     })
-    expect(document.querySelector('[data-testid="ajuste-previa"]')!.textContent).toBe(
-      'Saldo: 10 → 7 (−3)',
-    )
+    expect(container.querySelector('[data-testid="ajuste-previa"]')!.textContent).toBe('7')
+    expect(container.textContent).toMatch(/Retirada/)
+    const select = container.querySelector('select[name="motivo"]') as HTMLSelectElement
+    expect(Array.from(select.options).map((o) => o.value)).toEqual(['PERDA', 'QUEBRA', 'OUTRO'])
   })
 
-  it('modo ajustar usa quantidade contada e motivos de inventário', () => {
-    act(() =>
+  it('retirar: bloqueia 0 e 11 quando saldo é 10', () => {
+    act(() => {
       root.render(
         <AjusteSaldoModal
           alvo={{
             produtoId: 'p1',
-            produtoNome: 'Caneca',
-            quantidadeAtual: 9,
+            produtoNome: 'X',
+            quantidadeAtual: 10,
+            estoqueMinimo: 0,
+            modo: 'retirar',
+          }}
+          onClose={() => {}}
+          labels={{
+            ...baseLabels,
+            titulo: 'Retirar',
+            motivos: [{ value: 'PERDA', label: 'Perda' }],
+          }}
+        />,
+      )
+    })
+
+    const form = container.querySelector('#ajuste-saldo-form') as HTMLFormElement
+    const input = container.querySelector('input[name="quantidade_retirar"]') as HTMLInputElement
+    const setQtd = (v: string) => {
+      act(() => {
+        const native = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')!.set!
+        native.call(input, v)
+        input.dispatchEvent(new Event('input', { bubbles: true }))
+      })
+    }
+
+    setQtd('0')
+    act(() => {
+      form.requestSubmit()
+    })
+    expect(container.textContent).toContain('Informe uma quantidade positiva a retirar.')
+
+    setQtd('11')
+    act(() => {
+      form.requestSubmit()
+    })
+    expect(container.textContent).toContain('Não é possível retirar mais que o saldo atual.')
+    expect(atualizarMock).not.toHaveBeenCalled()
+  })
+
+  it('ajustar: diferença −3 / +3 / 0 e sem motivo COMPRA', () => {
+    act(() => {
+      root.render(
+        <AjusteSaldoModal
+          alvo={{
+            produtoId: 'p1',
+            produtoNome: 'Cadeira',
+            quantidadeAtual: 10,
             estoqueMinimo: 2,
-            codigoBarras: '111',
-            unidade: 'UN',
             modo: 'ajustar',
           }}
           onClose={() => {}}
           labels={{
-            ...labels,
+            ...baseLabels,
             titulo: 'Ajustar quantidade',
             motivos: [
               { value: 'ACERTO_INVENTARIO', label: 'Inventário' },
@@ -154,13 +176,160 @@ describe('AjusteSaldoModal — prévia ao digitar', () => {
             ],
           }}
         />,
-      ),
-    )
-    expect(document.querySelector('[data-testid="ajuste-produto-contexto"]')).toBeTruthy()
-    expect(document.body.textContent).toContain('Quantidade contada')
-    expect(document.body.textContent).toContain('Confirmar ajuste')
-    const select = document.querySelector('select[name="motivo"]') as HTMLSelectElement
-    expect(select.value).toBe('ACERTO_INVENTARIO')
+      )
+    })
+
+    expect(container.textContent).toContain('Confirmar ajuste')
+    expect(container.textContent).toContain('Quantidade contada')
+    const select = container.querySelector('select[name="motivo"]') as HTMLSelectElement
     expect(Array.from(select.options).map((o) => o.value)).toEqual(['ACERTO_INVENTARIO', 'OUTRO'])
+    expect(Array.from(select.options).map((o) => o.value)).not.toContain('COMPRA')
+
+    const input = container.querySelector('input[name="quantidade_atual"]') as HTMLInputElement
+    const setVal = (v: string) => {
+      act(() => {
+        const native = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')!.set!
+        native.call(input, v)
+        input.dispatchEvent(new Event('input', { bubbles: true }))
+      })
+    }
+
+    setVal('7')
+    expect(container.querySelector('[data-testid="ajuste-diferenca"]')!.textContent).toBe('−3')
+    setVal('13')
+    expect(container.querySelector('[data-testid="ajuste-diferenca"]')!.textContent).toBe('+3')
+    setVal('10')
+    expect(container.querySelector('[data-testid="ajuste-diferenca"]')!.textContent).toBe('0')
+  })
+
+  it('ajustar: envia saldo_esperado e quantidade contada; mín. sem alterar lógica de payload', async () => {
+    atualizarMock.mockResolvedValue({ ok: true, data: null })
+    act(() => {
+      root.render(
+        <AjusteSaldoModal
+          alvo={{
+            produtoId: '11111111-1111-1111-1111-111111111111',
+            produtoNome: 'Cadeira',
+            quantidadeAtual: 10,
+            estoqueMinimo: 2,
+            modo: 'ajustar',
+          }}
+          onClose={() => {}}
+          labels={{
+            ...baseLabels,
+            titulo: 'Ajustar quantidade',
+            motivos: [
+              { value: 'ACERTO_INVENTARIO', label: 'Inventário' },
+              { value: 'OUTRO', label: 'Outro' },
+            ],
+          }}
+        />,
+      )
+    })
+
+    const min = container.querySelector('input[name="estoque_minimo"]') as HTMLInputElement
+    const qtd = container.querySelector('input[name="quantidade_atual"]') as HTMLInputElement
+    act(() => {
+      const native = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')!.set!
+      native.call(min, '3')
+      min.dispatchEvent(new Event('input', { bubbles: true }))
+      native.call(qtd, '10')
+      qtd.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+
+    await act(async () => {
+      ;(container.querySelector('#ajuste-saldo-form') as HTMLFormElement).requestSubmit()
+    })
+
+    expect(atualizarMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        quantidade_atual: 10,
+        estoque_minimo: 3,
+        saldo_esperado: 10,
+        motivo: 'ACERTO_INVENTARIO',
+      }),
+    )
+  })
+
+  it('concorrência: mostra mensagem e atualiza saldo base', async () => {
+    atualizarMock.mockResolvedValue({
+      ok: false,
+      error:
+        'O estoque deste produto foi alterado enquanto esta tela estava aberta. Atualizamos as informações; confira a quantidade e tente novamente.',
+    })
+    consultarMock.mockResolvedValue({ ok: true, data: { quantidade: 9, minimo: 2 } })
+
+    act(() => {
+      root.render(
+        <AjusteSaldoModal
+          alvo={{
+            produtoId: '11111111-1111-1111-1111-111111111111',
+            produtoNome: 'X',
+            quantidadeAtual: 10,
+            estoqueMinimo: 2,
+            modo: 'ajustar',
+          }}
+          onClose={() => {}}
+          labels={baseLabels}
+        />,
+      )
+    })
+
+    await act(async () => {
+      ;(container.querySelector('#ajuste-saldo-form') as HTMLFormElement).requestSubmit()
+    })
+
+    expect(container.textContent).toContain('foi alterado enquanto esta tela estava aberta')
+    expect(consultarMock).toHaveBeenCalled()
+    expect(container.querySelector('[data-testid="ajuste-saldo-atual"]')?.textContent).toContain('9')
+  })
+
+  it('retirar: envia observação com Doc e saldo_esperado', async () => {
+    atualizarMock.mockResolvedValue({ ok: true, data: null })
+    act(() => {
+      root.render(
+        <AjusteSaldoModal
+          alvo={{
+            produtoId: '11111111-1111-1111-1111-111111111111',
+            produtoNome: 'X',
+            quantidadeAtual: 10,
+            estoqueMinimo: 1,
+            modo: 'retirar',
+          }}
+          onClose={() => {}}
+          labels={{
+            ...baseLabels,
+            titulo: 'Retirar',
+            motivos: [{ value: 'PERDA', label: 'Perda' }],
+          }}
+        />,
+      )
+    })
+
+    const qtd = container.querySelector('input[name="quantidade_retirar"]') as HTMLInputElement
+    const ref = container.querySelector('input[name="referencia_doc"]') as HTMLInputElement
+    const obs = container.querySelector('input[name="observacao"]') as HTMLInputElement
+    act(() => {
+      const native = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')!.set!
+      native.call(qtd, '3')
+      qtd.dispatchEvent(new Event('input', { bubbles: true }))
+      native.call(ref, 'OS-9')
+      ref.dispatchEvent(new Event('input', { bubbles: true }))
+      native.call(obs, 'quebrado')
+      obs.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+
+    await act(async () => {
+      ;(container.querySelector('#ajuste-saldo-form') as HTMLFormElement).requestSubmit()
+    })
+
+    expect(atualizarMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        quantidade_atual: 7,
+        saldo_esperado: 10,
+        observacao: '[Doc: OS-9] quebrado',
+        motivo: 'PERDA',
+      }),
+    )
   })
 })

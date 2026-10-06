@@ -1,14 +1,18 @@
 /** @vitest-environment jsdom */
 import React, { act } from 'react'
 import { createRoot } from 'react-dom/client'
-import { flushSync } from 'react-dom'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { EstoqueAcoesRapidas } from './EstoqueAcoesRapidas'
 import type { EstoqueLabels, EstoqueLinha } from './EstoqueTable'
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }))
-vi.mock('next/link', () => ({ default: ({ children, ...props }: React.ComponentProps<'a'>) => <a {...props}>{children}</a> }))
-vi.mock('@/app/gerente/estoque/actions', () => ({ atualizarEstoqueProduto: vi.fn() }))
+vi.mock('next/link', () => ({
+  default: ({ children, ...props }: React.ComponentProps<'a'>) => <a {...props}>{children}</a>,
+}))
+vi.mock('@/app/gerente/estoque/actions', () => ({
+  atualizarEstoqueProduto: vi.fn(),
+  consultarSaldoEstoqueProduto: vi.fn(),
+}))
 
 ;(globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
@@ -73,8 +77,18 @@ const quick = {
   confirmarAjuste: 'Confirmar ajuste',
   erroRetiradaInvalida: 'Qtd inválida',
   erroRetiradaExcede: 'Excede saldo',
+  erroConcorrencia: 'Estoque alterado',
   codigoLabel: 'Código',
   unidadeLabel: 'Unidade',
+  produtoLabel: 'Produto',
+  resumoTitulo: 'Resumo',
+  resumoSaldoAtual: 'Saldo atual',
+  resumoRetirada: 'Retirada',
+  resumoSaldoApos: 'Saldo após',
+  resumoSistema: 'Sistema',
+  resumoContagem: 'Contagem',
+  resumoDiferenca: 'Diferença',
+  resumoNovoSaldo: 'Novo saldo',
 }
 
 const linhas: EstoqueLinha[] = [
@@ -98,13 +112,18 @@ beforeEach(() => {
   document.body.appendChild(container)
   root = createRoot(container)
 })
+
 afterEach(() => {
-  flushSync(() => root.unmount())
+  act(() => {
+    root.unmount()
+  })
   container.remove()
 })
 
 it('faixa fixa do estoque tem Entrada, Retirar e Ajustar', () => {
-  flushSync(() => root.render(<EstoqueAcoesRapidas linhas={linhas} labels={labels} quick={quick} />))
+  act(() => {
+    root.render(<EstoqueAcoesRapidas linhas={linhas} labels={labels} quick={quick} />)
+  })
   for (const texto of ['Entrada de mercadoria', 'Retirar do estoque', 'Ajustar quantidade']) {
     const btn = Array.from(container.querySelectorAll('button')).find((b) => b.textContent?.includes(texto))
     expect(btn, texto).toBeDefined()
@@ -113,11 +132,15 @@ it('faixa fixa do estoque tem Entrada, Retirar e Ajustar', () => {
 })
 
 it('Entrada aponta para NF-e e recebimento oficiais', () => {
-  flushSync(() => root.render(<EstoqueAcoesRapidas linhas={linhas} labels={labels} quick={quick} />))
+  act(() => {
+    root.render(<EstoqueAcoesRapidas linhas={linhas} labels={labels} quick={quick} />)
+  })
   const entrada = Array.from(container.querySelectorAll('button')).find((b) =>
     b.textContent?.includes('Entrada de mercadoria'),
   )
-  flushSync(() => entrada!.click())
+  act(() => {
+    entrada!.click()
+  })
   expect(container.querySelector('a[href="/admin/estoque/importar-nfe"]')?.textContent).toContain('Importar NF-e')
   expect(container.querySelector('a[href="/admin/estoque/recebimento"]')?.textContent).toContain(
     'Recebimento manual',
@@ -125,32 +148,46 @@ it('Entrada aponta para NF-e e recebimento oficiais', () => {
 })
 
 it('Retirar abre formulário com quantidade a retirar e motivos de saída', () => {
-  flushSync(() => root.render(<EstoqueAcoesRapidas linhas={linhas} labels={labels} quick={quick} />))
+  act(() => {
+    root.render(<EstoqueAcoesRapidas linhas={linhas} labels={labels} quick={quick} />)
+  })
   const retirar = Array.from(container.querySelectorAll('button')).find((b) =>
     b.textContent?.includes('Retirar do estoque'),
   )
-  flushSync(() => retirar!.click())
+  act(() => {
+    retirar!.click()
+  })
   const produto = Array.from(container.querySelectorAll('button')).find((b) => b.textContent?.includes('Parafuso'))
   expect(produto?.textContent).toMatch(/mín\.\s*2/)
-  act(() => produto!.click())
+  act(() => {
+    produto!.click()
+  })
   expect(container.querySelector('[data-testid="ajuste-produto-contexto"]')?.textContent).toContain('Parafuso')
   expect(container.querySelector('input[name="quantidade_retirar"]')).toBeTruthy()
   expect(container.textContent).toContain('Confirmar retirada')
+  expect(container.textContent).toContain('Resumo')
   const select = container.querySelector('select[name="motivo"]') as HTMLSelectElement
   expect(Array.from(select.options).map((o) => o.value)).toEqual(['PERDA', 'QUEBRA', 'OUTRO'])
 })
 
 it('Ajustar quantidade abre formulário com quantidade contada', () => {
-  flushSync(() => root.render(<EstoqueAcoesRapidas linhas={linhas} labels={labels} quick={quick} />))
+  act(() => {
+    root.render(<EstoqueAcoesRapidas linhas={linhas} labels={labels} quick={quick} />)
+  })
   const ajustar = Array.from(container.querySelectorAll('button')).find((b) =>
     b.textContent?.includes('Ajustar quantidade'),
   )
-  flushSync(() => ajustar!.click())
+  act(() => {
+    ajustar!.click()
+  })
   const produto = Array.from(container.querySelectorAll('button')).find((b) => b.textContent?.includes('Parafuso'))
-  act(() => produto!.click())
+  act(() => {
+    produto!.click()
+  })
   expect(container.textContent).toContain('Quantidade contada')
   expect(container.textContent).toContain('Confirmar ajuste')
   expect(container.querySelector('input[name="quantidade_atual"]')).toBeTruthy()
   const select = container.querySelector('select[name="motivo"]') as HTMLSelectElement
   expect(Array.from(select.options).map((o) => o.value)).toEqual(['ACERTO_INVENTARIO', 'OUTRO'])
+  expect(Array.from(select.options).map((o) => o.value)).not.toContain('COMPRA')
 })

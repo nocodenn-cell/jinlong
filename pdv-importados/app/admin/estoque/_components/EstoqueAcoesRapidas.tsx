@@ -38,8 +38,18 @@ type QuickLabels = {
   confirmarAjuste: string
   erroRetiradaInvalida: string
   erroRetiradaExcede: string
+  erroConcorrencia: string
   codigoLabel: string
   unidadeLabel: string
+  produtoLabel: string
+  resumoTitulo: string
+  resumoSaldoAtual: string
+  resumoRetirada: string
+  resumoSaldoApos: string
+  resumoSistema: string
+  resumoContagem: string
+  resumoDiferenca: string
+  resumoNovoSaldo: string
 }
 
 type Props = {
@@ -126,8 +136,18 @@ export function EstoqueAcoesRapidas({ linhas, labels, quick }: Props) {
     confirmarAjuste: quick.confirmarAjuste,
     erroRetiradaInvalida: quick.erroRetiradaInvalida,
     erroRetiradaExcede: quick.erroRetiradaExcede,
+    erroConcorrencia: quick.erroConcorrencia,
     codigoLabel: quick.codigoLabel,
     unidadeLabel: quick.unidadeLabel,
+    produtoLabel: quick.produtoLabel,
+    resumoTitulo: quick.resumoTitulo,
+    resumoSaldoAtual: quick.resumoSaldoAtual,
+    resumoRetirada: quick.resumoRetirada,
+    resumoSaldoApos: quick.resumoSaldoApos,
+    resumoSistema: quick.resumoSistema,
+    resumoContagem: quick.resumoContagem,
+    resumoDiferenca: quick.resumoDiferenca,
+    resumoNovoSaldo: quick.resumoNovoSaldo,
   }
 
   return (

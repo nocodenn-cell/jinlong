@@ -3,11 +3,24 @@
 import { useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { PackageMinus, SlidersHorizontal } from 'lucide-react'
-import { atualizarEstoqueProduto } from '@/app/gerente/estoque/actions'
+import {
+  atualizarEstoqueProduto,
+  consultarSaldoEstoqueProduto,
+} from '@/app/gerente/estoque/actions'
 import { DragonModal } from '@/components/ui/DragonModal'
 import { Button } from '@/components/ui/button'
 import { Field, Input, Select } from '@/components/ui/forms'
 import { ErrorState } from '@/components/ui/feedback'
+import { montarObservacaoComDoc } from './ajusteObservacaoDoc'
+import {
+  diferencaAjuste,
+  fmtQtd,
+  previaAjuste,
+  previaRetirada,
+  validarRetirada,
+} from './ajusteSaldoHelpers'
+
+export { previaAjuste, previaRetirada } from './ajusteSaldoHelpers'
 
 type Motivo = { value: string; label: string }
 
@@ -34,6 +47,16 @@ type AjusteLabels = {
   confirmarAjuste?: string
   erroRetiradaInvalida?: string
   erroRetiradaExcede?: string
+  erroConcorrencia?: string
+  resumoTitulo?: string
+  resumoSaldoAtual?: string
+  resumoRetirada?: string
+  resumoSaldoApos?: string
+  resumoSistema?: string
+  resumoContagem?: string
+  resumoDiferenca?: string
+  resumoNovoSaldo?: string
+  produtoLabel?: string
 }
 
 export type AjusteAlvo = Readonly<{
@@ -45,34 +68,6 @@ export type AjusteAlvo = Readonly<{
   unidade?: string
   modo?: AjusteModo
 }>
-
-const fmt = (n: number) => n.toLocaleString('pt-BR', { maximumFractionDigits: 3 })
-
-/** "Saldo: 9 → 5 (−4)". Sem valor válido, mostra só o saldo atual. */
-export function previaAjuste(atual: number, novo: number | null): string {
-  if (novo == null || !Number.isFinite(novo)) return `Saldo atual: ${fmt(atual)}`
-  const delta = Math.round((novo - atual) * 1000) / 1000
-  if (delta === 0) return `Saldo: ${fmt(atual)} (sem alteração)`
-  const sinal = delta > 0 ? '+' : '−'
-  return `Saldo: ${fmt(atual)} → ${fmt(novo)} (${sinal}${fmt(Math.abs(delta))})`
-}
-
-/** Prévia da retirada: quantidade a remover → saldo resultante. */
-export function previaRetirada(atual: number, qtdRetirar: number | null): string {
-  if (qtdRetirar == null || !Number.isFinite(qtdRetirar) || qtdRetirar <= 0) {
-    return `Saldo atual: ${fmt(atual)}`
-  }
-  const novo = Math.round((atual - qtdRetirar) * 1000) / 1000
-  return `Saldo: ${fmt(atual)} → ${fmt(novo)} (−${fmt(qtdRetirar)})`
-}
-
-function montarObservacao(referencia: string, observacao: string): string | undefined {
-  const ref = referencia.trim()
-  const obs = observacao.trim()
-  if (ref && obs) return `[Doc: ${ref}] ${obs}`
-  if (ref) return `[Doc: ${ref}]`
-  return obs || undefined
-}
 
 function motivoPadrao(modo: AjusteModo, motivos: Motivo[]): string {
   if (modo === 'retirar') {
@@ -100,7 +95,10 @@ export function AjusteSaldoModal({
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [erro, setErro] = useState<string | null>(null)
-  const [campoQtd, setCampoQtd] = useState<number | null>(null)
+  const [saldoBase, setSaldoBase] = useState(0)
+  const [minimoBase, setMinimoBase] = useState(0)
+  const [qtdRaw, setQtdRaw] = useState('')
+  const [minimoRaw, setMinimoRaw] = useState('')
   const [referencia, setReferencia] = useState('')
   const [observacao, setObservacao] = useState('')
 
@@ -111,7 +109,10 @@ export function AjusteSaldoModal({
     setErro(null)
     setReferencia('')
     setObservacao('')
-    setCampoQtd(modo === 'retirar' ? null : alvo.quantidadeAtual)
+    setSaldoBase(alvo.quantidadeAtual)
+    setMinimoBase(alvo.estoqueMinimo)
+    setMinimoRaw(String(alvo.estoqueMinimo))
+    setQtdRaw(modo === 'retirar' ? '' : String(alvo.quantidadeAtual))
   }, [alvo, modo])
 
   if (!alvo) return null
@@ -124,44 +125,47 @@ export function AjusteSaldoModal({
         ? (labels.confirmarAjuste ?? labels.salvar)
         : labels.salvar
 
-  const previaTexto =
-    modo === 'retirar'
-      ? previaRetirada(alvo.quantidadeAtual, campoQtd)
-      : previaAjuste(alvo.quantidadeAtual, campoQtd)
-
-  const qtdFieldLabel =
-    modo === 'retirar'
-      ? (labels.quantidadeRetirar ?? labels.saldoAtual)
-      : modo === 'ajustar'
-        ? (labels.quantidadeContada ?? labels.saldoAtual)
-        : labels.saldoAtual
+  const qtdNum = Number(qtdRaw.replace(',', '.'))
+  const qtdValida = qtdRaw.trim() !== '' && Number.isFinite(qtdNum)
+  const contada = modo === 'ajustar' && qtdValida ? qtdNum : null
+  const retirada = modo === 'retirar' && qtdValida ? qtdNum : null
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const fd = new FormData(e.currentTarget)
     const motivo = String(fd.get('motivo') ?? '')
-    const obsFinal = montarObservacao(referencia, observacao)
+    const obsFinal = montarObservacaoComDoc(referencia, observacao)
 
-    let quantidadeAtual = alvo.quantidadeAtual
-    let estoqueMinimo = alvo.estoqueMinimo
+    let quantidadeAtual = saldoBase
+    let estoqueMinimo = minimoBase
 
     if (modo === 'retirar') {
-      const qtdRetirar = Number(fd.get('quantidade_retirar'))
-      if (!Number.isFinite(qtdRetirar) || qtdRetirar <= 0) {
-        setErro(labels.erroRetiradaInvalida ?? 'Informe uma quantidade positiva a retirar.')
+      const v = validarRetirada(saldoBase, qtdRaw)
+      if (!v.ok) {
+        if (v.erro === 'excede') {
+          setErro(
+            labels.erroRetiradaExcede ??
+              `Não é possível retirar mais que o saldo atual (${fmtQtd(saldoBase)}).`,
+          )
+        } else {
+          setErro(labels.erroRetiradaInvalida ?? 'Informe uma quantidade positiva a retirar.')
+        }
         return
       }
-      if (qtdRetirar > alvo.quantidadeAtual) {
-        setErro(
-          labels.erroRetiradaExcede ??
-            `Não é possível retirar mais que o saldo atual (${fmt(alvo.quantidadeAtual)}).`,
-        )
-        return
-      }
-      quantidadeAtual = Math.round((alvo.quantidadeAtual - qtdRetirar) * 1000) / 1000
+      quantidadeAtual = v.novoSaldo
     } else {
-      quantidadeAtual = Number(fd.get('quantidade_atual'))
-      estoqueMinimo = Number(fd.get('estoque_minimo'))
+      const novo = Number(String(fd.get('quantidade_atual') ?? qtdRaw).replace(',', '.'))
+      const min = Number(String(fd.get('estoque_minimo') ?? minimoRaw).replace(',', '.'))
+      if (!Number.isFinite(novo) || novo < 0) {
+        setErro(labels.erroRetiradaInvalida ?? 'Quantidade inválida.')
+        return
+      }
+      if (!Number.isFinite(min) || min < 0) {
+        setErro('Estoque mínimo inválido.')
+        return
+      }
+      quantidadeAtual = novo
+      estoqueMinimo = min
     }
 
     const payload = {
@@ -170,13 +174,31 @@ export function AjusteSaldoModal({
       estoque_minimo: estoqueMinimo,
       motivo,
       observacao: obsFinal,
+      saldo_esperado: saldoBase,
     }
     setErro(null)
     startTransition(async () => {
       try {
         const res = await atualizarEstoqueProduto(payload)
         if (!res.ok) {
-          setErro(res.error)
+          const msg = res.error
+          const isConcurrency =
+            Boolean(labels.erroConcorrencia && msg.includes(labels.erroConcorrencia)) ||
+            msg.includes('foi alterado enquanto') ||
+            msg.includes('已在此页面打开期间')
+          if (isConcurrency) {
+            setErro(labels.erroConcorrencia ?? msg)
+            const saldo = await consultarSaldoEstoqueProduto(alvo.produtoId)
+            if (saldo.ok) {
+              setSaldoBase(saldo.data.quantidade)
+              setMinimoBase(saldo.data.minimo)
+              setMinimoRaw(String(saldo.data.minimo))
+              setQtdRaw(modo === 'retirar' ? '' : String(saldo.data.quantidade))
+            }
+            router.refresh()
+            return
+          }
+          setErro(msg)
           return
         }
         router.refresh()
@@ -208,33 +230,55 @@ export function AjusteSaldoModal({
         </>
       }
     >
-      <form id="ajuste-saldo-form" onSubmit={handleSubmit} className="flex flex-col gap-3">
-        <ProdutoContexto alvo={alvo} labels={labels} />
+      <form id="ajuste-saldo-form" noValidate onSubmit={handleSubmit} className="flex flex-col gap-3">
+        {modo !== 'generico' ? (
+          <ProdutoContexto
+            nome={alvo.produtoNome}
+            codigo={alvo.codigoBarras}
+            unidade={alvo.unidade}
+            saldo={saldoBase}
+            minimo={minimoBase}
+            labels={labels}
+          />
+        ) : null}
 
         {modo === 'retirar' ? (
-          <Field id="ajuste-qtd-retirar" label={qtdFieldLabel} required>
+          <Field id="ajuste-qtd-retirar" label={labels.quantidadeRetirar ?? 'Quantidade a retirar'} required>
             <Input
               name="quantidade_retirar"
               type="number"
               min={0.001}
-              max={alvo.quantidadeAtual}
+              max={saldoBase}
               step="0.001"
               required
+              inputMode="decimal"
+              value={qtdRaw}
               placeholder="0"
-              onChange={(e) => setCampoQtd(e.target.value === '' ? null : Number(e.target.value))}
+              className="text-[20px] font-semibold tabular-nums"
+              onChange={(e) => setQtdRaw(e.target.value)}
             />
           </Field>
         ) : (
           <div className="grid grid-cols-2 gap-3">
-            <Field id="ajuste-qtd" label={qtdFieldLabel} required>
+            <Field
+              id="ajuste-qtd"
+              label={
+                modo === 'ajustar'
+                  ? (labels.quantidadeContada ?? labels.saldoAtual)
+                  : labels.saldoAtual
+              }
+              required
+            >
               <Input
                 name="quantidade_atual"
                 type="number"
                 min={0}
                 step="0.001"
                 required
-                defaultValue={alvo.quantidadeAtual}
-                onChange={(e) => setCampoQtd(e.target.value === '' ? null : Number(e.target.value))}
+                inputMode="decimal"
+                value={qtdRaw}
+                className="text-[20px] font-semibold tabular-nums"
+                onChange={(e) => setQtdRaw(e.target.value)}
               />
             </Field>
             <Field id="ajuste-min" label={labels.estoqueMinimo} required>
@@ -244,15 +288,27 @@ export function AjusteSaldoModal({
                 min={0}
                 step="0.001"
                 required
-                defaultValue={alvo.estoqueMinimo}
+                inputMode="decimal"
+                value={minimoRaw}
+                onChange={(e) => setMinimoRaw(e.target.value)}
               />
             </Field>
           </div>
         )}
 
-        <p className="text-caption text-fg-muted" data-testid="ajuste-previa" aria-live="polite">
-          {previaTexto}
-        </p>
+        {modo === 'retirar' || modo === 'ajustar' ? (
+          <ResumoOperacao
+            modo={modo === 'retirar' ? 'retirar' : 'ajustar'}
+            saldoBase={saldoBase}
+            retirada={retirada}
+            contada={contada}
+            labels={labels}
+          />
+        ) : (
+          <p className="text-caption text-fg-muted" data-testid="ajuste-previa" aria-live="polite">
+            {previaAjuste(saldoBase, qtdValida ? qtdNum : null)}
+          </p>
+        )}
 
         <Field id="ajuste-motivo" label={labels.motivo} required>
           <Select name="motivo" required defaultValue={motivoPadrao(modo, labels.motivos)}>
@@ -286,45 +342,117 @@ export function AjusteSaldoModal({
           />
         </Field>
 
-        {erro ? <ErrorState dense title={erro} /> : null}
+        {erro ? <ErrorState dense description={erro} /> : null}
       </form>
     </DragonModal>
   )
 }
 
 function ProdutoContexto({
-  alvo,
+  nome,
+  codigo,
+  unidade,
+  saldo,
+  minimo,
   labels,
 }: {
-  alvo: AjusteAlvo
+  nome: string
+  codigo?: string | null
+  unidade?: string
+  saldo: number
+  minimo: number
   labels: AjusteLabels
 }) {
-  const modo = alvo.modo ?? 'generico'
-  if (modo === 'generico') return null
-
+  const un = unidade?.trim() || labels.unidadeLabel || 'un'
   return (
     <div
-      className="rounded-lg border border-[var(--color-border-secondary)] bg-jl-surface-soft px-3 py-2.5 text-small"
+      className="rounded-lg border border-[var(--color-border-secondary)] bg-jl-surface-soft px-3 py-3"
       data-testid="ajuste-produto-contexto"
     >
-      <p className="font-medium text-jl-fg-1">{alvo.produtoNome}</p>
-      <dl className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-caption text-jl-fg-3">
-        <div>
-          <dt className="inline">{labels.codigoLabel ?? 'Código'}: </dt>
-          <dd className="inline font-mono">{alvo.codigoBarras?.trim() || '—'}</dd>
-        </div>
-        <div>
-          <dt className="inline">{labels.unidadeLabel ?? 'Unidade'}: </dt>
-          <dd className="inline uppercase">{alvo.unidade ?? '—'}</dd>
-        </div>
-        <div>
-          <dt className="inline">{labels.saldoAnterior ?? labels.saldoAtual}: </dt>
-          <dd className="inline tabular-nums">{fmt(alvo.quantidadeAtual)}</dd>
-        </div>
-        <div>
-          <dt className="inline">{labels.estoqueMinimo}: </dt>
-          <dd className="inline tabular-nums">{fmt(alvo.estoqueMinimo)}</dd>
-        </div>
+      <p className="text-caption uppercase tracking-wide text-jl-fg-3">
+        {labels.produtoLabel ?? 'Produto'}
+      </p>
+      <p className="text-[18px] font-semibold text-jl-fg-1">{nome}</p>
+      <p className="mt-0.5 font-mono text-caption text-jl-fg-3">
+        {(labels.codigoLabel ?? 'Código')}: {codigo?.trim() || '—'}
+        {unidade ? ` · ${unidade}` : ''}
+      </p>
+      <p className="mt-2 text-[22px] font-bold tabular-nums text-jl-fg-1" data-testid="ajuste-saldo-atual">
+        {labels.resumoSaldoAtual ?? labels.saldoAtual}: {fmtQtd(saldo)} {un}
+      </p>
+      <p className="text-caption text-jl-fg-3">
+        {labels.estoqueMinimo}: {fmtQtd(minimo)}
+      </p>
+    </div>
+  )
+}
+
+function ResumoOperacao({
+  modo,
+  saldoBase,
+  retirada,
+  contada,
+  labels,
+}: {
+  modo: 'retirar' | 'ajustar'
+  saldoBase: number
+  retirada: number | null
+  contada: number | null
+  labels: AjusteLabels
+}) {
+  if (modo === 'retirar') {
+    const ok = retirada != null && retirada > 0
+    const apos = ok ? Math.round((saldoBase - retirada) * 1000) / 1000 : null
+    return (
+      <div
+        className="rounded-lg border border-[var(--color-border-secondary)] px-3 py-3"
+        data-testid="ajuste-resumo"
+        aria-live="polite"
+      >
+        <p className="mb-2 text-caption font-semibold uppercase tracking-wide text-jl-fg-3">
+          {labels.resumoTitulo ?? 'Resumo da operação'}
+        </p>
+        <dl className="grid grid-cols-[1fr_auto] gap-y-1.5 text-[16px]">
+          <dt className="text-jl-fg-2">{labels.resumoSaldoAtual ?? 'Saldo atual'}</dt>
+          <dd className="tabular-nums font-semibold">{fmtQtd(saldoBase)}</dd>
+          <dt className="text-jl-fg-2">{labels.resumoRetirada ?? 'Retirada'}</dt>
+          <dd className="tabular-nums font-semibold text-[var(--color-danger-strong,inherit)]">
+            {ok ? `−${fmtQtd(retirada)}` : '—'}
+          </dd>
+          <dt className="text-jl-fg-1 font-medium">{labels.resumoSaldoApos ?? 'Saldo após retirada'}</dt>
+          <dd className="text-[20px] font-bold tabular-nums" data-testid="ajuste-previa">
+            {apos != null ? fmtQtd(apos) : previaRetirada(saldoBase, null).replace('Saldo atual: ', '')}
+          </dd>
+        </dl>
+      </div>
+    )
+  }
+
+  const ok = contada != null && contada >= 0
+  const diff = ok ? diferencaAjuste(saldoBase, contada) : null
+  const sinal = diff != null && diff !== 0 ? (diff > 0 ? '+' : '−') : ''
+  return (
+    <div
+      className="rounded-lg border border-[var(--color-border-secondary)] px-3 py-3"
+      data-testid="ajuste-resumo"
+      aria-live="polite"
+    >
+      <p className="mb-2 text-caption font-semibold uppercase tracking-wide text-jl-fg-3">
+        {labels.resumoTitulo ?? 'Resumo da operação'}
+      </p>
+      <dl className="grid grid-cols-[1fr_auto] gap-y-1.5 text-[16px]">
+        <dt className="text-jl-fg-2">{labels.resumoSistema ?? 'Quantidade no sistema'}</dt>
+        <dd className="tabular-nums font-semibold">{fmtQtd(saldoBase)}</dd>
+        <dt className="text-jl-fg-2">{labels.resumoContagem ?? 'Quantidade contada'}</dt>
+        <dd className="tabular-nums font-semibold">{ok ? fmtQtd(contada) : '—'}</dd>
+        <dt className="text-jl-fg-2">{labels.resumoDiferenca ?? 'Diferença'}</dt>
+        <dd className="tabular-nums font-semibold" data-testid="ajuste-diferenca">
+          {diff == null ? '—' : diff === 0 ? '0' : `${sinal}${fmtQtd(Math.abs(diff))}`}
+        </dd>
+        <dt className="text-jl-fg-1 font-medium">{labels.resumoNovoSaldo ?? 'Novo saldo'}</dt>
+        <dd className="text-[20px] font-bold tabular-nums" data-testid="ajuste-previa">
+          {ok ? fmtQtd(contada) : '—'}
+        </dd>
       </dl>
     </div>
   )

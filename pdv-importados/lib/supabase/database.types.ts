@@ -6066,6 +6066,7 @@ export type Database = {
               p_observacao?: string
               p_produto_id: string
               p_quantidade_atual: number
+              p_saldo_esperado?: number
             }
             Returns: undefined
           }

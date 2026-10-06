@@ -27,6 +27,7 @@ const CODE_TO_KEY: Record<InventoryErrorCode, string> = {
   [INVENTORY_ERROR_CODES.REMESSA_ID_REQUIRED]: 'estoque.err_remessa_id',
   [INVENTORY_ERROR_CODES.NFE_PAYLOAD_INVALID]: 'estoque.err_nfe_payload',
   [INVENTORY_ERROR_CODES.ADJUST_FAILED]: 'estoque.err_ajuste_falhou',
+  [INVENTORY_ERROR_CODES.CONCURRENCY]: 'estoque.err_concorrencia',
   [INVENTORY_ERROR_CODES.MOVEMENT_FAILED]: 'estoque.err_movimento_falhou',
   [INVENTORY_ERROR_CODES.LIST_FAILED]: 'estoque.err_listagem_falhou',
   [INVENTORY_ERROR_CODES.READ_FAILED]: 'estoque.err_leitura_falhou',

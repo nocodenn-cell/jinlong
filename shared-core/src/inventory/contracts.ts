@@ -108,6 +108,8 @@ export type AdjustInventoryCommand = {
   reason: string
   observacao?: string | null
   atorId?: string | null
+  /** Saldo visto pelo cliente ao abrir a tela — RPC rejeita se divergir (lost-update). */
+  saldoEsperado?: number | null
 }
 
 export type AdjustInventoryResult =

@@ -26,6 +26,7 @@ export type AdjustEstoqueRpcFn = (args: {
   p_motivo_codigo: string
   p_observacao?: string
   p_ator_id: string
+  p_saldo_esperado?: number
 }) => Promise<{ error: { message: string } | null }>
 
 export type InventoryAdjustmentDeps = {
@@ -81,6 +82,9 @@ export function createInventoryAdjustmentService(
           p_motivo_codigo: cmd.reason,
           p_observacao: cmd.observacao ?? undefined,
           p_ator_id: cmd.atorId,
+          ...(cmd.saldoEsperado != null && Number.isFinite(cmd.saldoEsperado)
+            ? { p_saldo_esperado: cmd.saldoEsperado }
+            : {}),
         })
         if (error) {
           const code = mapAjusteRpcMessageToCode(error.message)

@@ -77,4 +77,33 @@ describe('createInventoryAdjustmentService', () => {
       }),
     )
   })
+
+  it('envia p_saldo_esperado e mapeia concorrência', async () => {
+    const adjustRpc = vi.fn(async () => ({
+      error: { message: 'AJUSTE_ESTOQUE_CONCORRENCIA: saldo mudou (atual=9, esperado=10).' },
+    }))
+    const reader = { getBalance: vi.fn(), getBalances: vi.fn() }
+    const svc = createInventoryAdjustmentService(
+      { rpc: vi.fn() } as never,
+      'loja-1',
+      { adjustRpc, reader },
+    )
+
+    const result = await svc.adjustInventory({
+      productId: 'p1',
+      lojaId: 'loja-1',
+      quantity: 7,
+      estoqueMinimo: 1,
+      reason: 'PERDA',
+      atorId: 'u1',
+      saldoEsperado: 10,
+    })
+
+    expect(adjustRpc).toHaveBeenCalledWith(
+      expect.objectContaining({ p_saldo_esperado: 10, p_quantidade_atual: 7 }),
+    )
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.code).toBe(INVENTORY_ERROR_CODES.CONCURRENCY)
+  })
 })
+
