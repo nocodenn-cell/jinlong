@@ -23,6 +23,7 @@ import { tipoMovimentoEstoqueLabels } from '@/lib/format/vendaLabels'
 import { obterListaEstoqueGerente } from '@/app/gerente/estoque/actions'
 import { listarOpcoesFiltrosProdutos } from '@/app/gerente/produtos/actions'
 import { EstoqueTable, type EstoqueLinha } from './_components/EstoqueTable'
+import { EstoqueQuickActions } from './_components/EstoqueQuickActions'
 import { cn } from '@/lib/utils'
 
 const PAGE_SIZE = 25
@@ -220,6 +221,30 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
       />
 
       <EstoqueHubNav />
+
+      {!loadError ? (
+        <EstoqueQuickActions
+          idioma={session.idioma === 'zh' ? 'zh' : 'pt'}
+          linhas={linhas}
+          ajusteLabels={{
+            titulo: ui.estoque_ajuste_titulo,
+            saldoAtual: ui.estoque_saldo_atual,
+            estoqueMinimo: m.estoque.col_estoque_minimo,
+            motivo: m.estoque.ajuste_motivo_label,
+            observacao: m.produtos.observacao,
+            cancelar: m.cadastro_comum.cancelar,
+            salvar: ui.estoque_salvar_ajuste,
+            salvando: m.cadastro_comum.salvando,
+            motivos: [
+              { value: 'ACERTO_INVENTARIO', label: m.estoque.motivo_acerto_inventario },
+              { value: 'COMPRA', label: m.estoque.motivo_entrada_compra },
+              { value: 'PERDA', label: m.estoque.motivo_perda },
+              { value: 'QUEBRA', label: m.estoque.motivo_quebra_avaria },
+              { value: 'OUTRO', label: m.estoque.motivo_outro },
+            ],
+          }}
+        />
+      ) : null}
 
       <CrudListShell
         title={ui.estoque_saldos_titulo}
