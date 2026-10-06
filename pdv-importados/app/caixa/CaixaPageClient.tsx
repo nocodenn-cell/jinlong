@@ -1555,9 +1555,22 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       setCaixaMensagem(m.caixa.desconto_gerente_so_dinheiro, { kind: "warning" })
       return
     }
-    setDescontoComercialPendente(percentual)
-    setGerenteModalAberto(true)
-  }, [pagamentos, m, setCaixaMensagem])
+    const pct = Math.min(10, Math.max(0, percentual))
+    if (pct <= 0) return
+    setDescontoComercialPendente(null)
+    setGerenteToken(null)
+    setGerenteValidadoAte(null)
+    setMaxDescontoGerentePercentual(10)
+    setDescontoGerentePercentual(pct)
+    setMotivoDesconto('AUTORIZACAO_COMERCIAL')
+    setMotivoDescontoDescricao(null)
+    setCaixaMensagem(
+      idioma === 'zh'
+        ? `已应用现金商业折扣 ${pct.toFixed(2)}%（无需经理）。`
+        : `Desconto comercial de ${pct.toFixed(2)}% aplicado no dinheiro (sem gerente).`,
+      { kind: 'success' },
+    )
+  }, [pagamentos, m, setCaixaMensagem, idioma])
 
   // Desconto é exclusivo de venda 100% dinheiro: trocar/dividir para outra forma o descarta.
   useEffect(() => {

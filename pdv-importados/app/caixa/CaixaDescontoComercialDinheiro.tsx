@@ -12,31 +12,33 @@ import { formatDecimalBRL } from '@/lib/format/money'
 const textos = {
   pt: {
     title: 'Desconto comercial no dinheiro',
-    help: `Até ${DESCONTO_COMERCIAL_DINHEIRO_MAX_PCT}% sobre o subtotal dos produtos. Só vale se o pagamento for 100% em dinheiro.`,
+    help: `Até ${DESCONTO_COMERCIAL_DINHEIRO_MAX_PCT}% sobre o subtotal dos produtos. Só vale se o pagamento for 100% em dinheiro. O operador aplica direto, sem gerente.`,
     quick: `${DESCONTO_COMERCIAL_DINHEIRO_MAX_PCT}% de desconto no dinheiro`,
     mode: 'Tipo',
     percent: 'Percentual (%)',
     amount: 'Valor (R$)',
-    apply: 'Aplicar (autorização comercial)',
+    apply: 'Aplicar desconto',
     clear: 'Remover desconto',
     subtotal: 'Subtotal',
     desconto: 'Desconto aplicado',
     total: 'Total final a pagar',
     error: 'Desconto inválido ou acima de 10%.',
+    applied: 'Desconto comercial aplicado. Sem necessidade de gerente até 10%.',
   },
   zh: {
     title: '现金商业折扣',
-    help: `商品小计最多 ${DESCONTO_COMERCIAL_DINHEIRO_MAX_PCT}%。仅当全部现金支付时有效。`,
+    help: `商品小计最多 ${DESCONTO_COMERCIAL_DINHEIRO_MAX_PCT}%。仅当全部现金支付时有效；操作员可直接应用，无需经理。`,
     quick: `现金折扣 ${DESCONTO_COMERCIAL_DINHEIRO_MAX_PCT}%`,
     mode: '类型',
     percent: '百分比 (%)',
     amount: '金额 (R$)',
-    apply: '应用（需商业授权）',
+    apply: '应用折扣',
     clear: '移除折扣',
     subtotal: '小计',
     desconto: '已应用折扣',
     total: '应付合计',
     error: '折扣无效或超过 10%。',
+    applied: '已应用现金商业折扣（≤10% 无需经理）。',
   },
 } as const
 
@@ -136,6 +138,9 @@ export function CaixaDescontoComercialDinheiro({
           ) : null}
         </div>
         {feedback ? <p role="alert" className="text-sm font-semibold text-red-700">{feedback}</p> : null}
+        {!feedback && descontoPercentualAtual > 0 ? (
+          <p role="status" className="text-sm font-semibold text-blue-900">{t.applied}</p>
+        ) : null}
       </fieldset>
     </div>
   )

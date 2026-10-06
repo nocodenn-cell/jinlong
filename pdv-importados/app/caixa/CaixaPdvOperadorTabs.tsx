@@ -40,9 +40,9 @@ type PagamentoPanelProps = {
   onAtualizarForma: (index: number, forma: FormaPagamento) => void
   onAtualizarValor: (index: number, valor: number) => void
   onAutoCompletar: () => void
-  /** Abre a autorização de gerente para desconto %; só oferecido em pagamento único em dinheiro. */
+  /** Abre autorização de gerente para desconto % acima do comercial do operador. */
   onDescontoDinheiro?: () => void
-  /** Painel de desconto comercial (até 10%) no dinheiro — renderizado pelo pai. */
+  /** Painel de desconto comercial (até 10%) no dinheiro — operador aplica sem gerente. */
   descontoComercialPanel?: ReactNode
   moedaPrefixo: string
   metodoPagamentoPanel?: ReactNode
