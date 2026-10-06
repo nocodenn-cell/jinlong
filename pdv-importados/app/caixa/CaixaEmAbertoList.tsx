@@ -11,6 +11,7 @@ import { EmptyState, Loading } from "@/components/ui/feedback"
 type Props = {
   m: Mensagens
   vendas: VendaEmEsperaCard[]
+  disabled?: boolean
   carregando?: boolean
   onRetomar: (id: string) => void
   onDescartar: (id: string) => void
@@ -20,6 +21,7 @@ function CaixaEmAbertoListImpl({
   m,
   vendas,
   carregando,
+  disabled = false,
   onRetomar,
   onDescartar,
 }: Props) {
@@ -40,6 +42,7 @@ function CaixaEmAbertoListImpl({
         <li key={v.id}>
           <div className={cn("rounded-md p-2", card)}>
             <button
+              disabled={disabled}
               type="button"
               className="w-full text-left"
               onClick={() => onRetomar(v.id)}
@@ -58,6 +61,7 @@ function CaixaEmAbertoListImpl({
               </p>
             </button>
             <button
+              disabled={disabled}
               type="button"
               className="mt-1 text-small underline-offset-2 hover:underline text-destructive"
               onClick={() => onDescartar(v.id)}

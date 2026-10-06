@@ -84,7 +84,7 @@ export interface CarrinhoState {
     id: string,
     patch: { precoUnitario: number; tipoPreco: 'VAREJO' | 'ATACADO'; quantidadeMinima?: number | null },
   ) => void
-  aplicarDescontoManual: (id: string, descontoValor: number, motivo?: string) => void
+  aplicarDescontoManual: (id: string, descontoValor: number, motivo?: string, limitePercentual?: number) => void
   aplicarDescontoGerente: (percentual: number, token?: string | null, maxClamp?: number | null) => void
   setMaxDescontoGerentePercentual: (valor: number) => void
   /** Devolve a chave do cupom, criando-a na primeira chamada. Nunca a troca. */
@@ -379,7 +379,7 @@ export const useCartStore = create<CarrinhoState>()(
 
       setRegras: (regras) => set({ regras }),
 
-      aplicarDescontoManual: (id, descontoValor) =>
+      aplicarDescontoManual: (id, descontoValor, _motivo, limitePercentual) =>
         set((state) => {
           const item = state.itens.find((i) => i.id === id)
           if (!item) return {}
@@ -387,7 +387,8 @@ export const useCartStore = create<CarrinhoState>()(
           // ✅ VALIDAÇÃO ADICIONADA: Rejeita desconto > limite permitido antes de aplicar
           const precoOriginal = item.precoOriginal ?? item.precoVariejo ?? item.precoUnitario ?? 0
           const descontoPercentual = precoOriginal > 0 ? (descontoValor / precoOriginal) * 100 : 0
-          const maxPermitido = 15 // Default limit for non-ATACADO
+          const maxPermitido = limitePercentual != null && Number.isFinite(limitePercentual)
+            ? Math.max(0, Math.min(100, limitePercentual)) : 15
 
           if (descontoPercentual > maxPermitido && item.resultado?.tipoPreco !== 'ATACADO') {
             throw new Error(

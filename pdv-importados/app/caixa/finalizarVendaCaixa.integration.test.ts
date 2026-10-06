@@ -215,6 +215,22 @@ describe.sequential('finalizarVendaCaixa — split e validações', { timeout: 1
     // vez de skip: nenhum assert foi removido.
   }, 60_000)
 
+  it.each(['DINHEIRO', 'PIX', 'CARTAO_CREDITO', 'CARTAO_DEBITO'] as const)('envia venda e desconto manual de %s ao contrato administrativo', async (forma) => {
+    const { supabase, rpcCalls } = makeSupabase()
+    createClientMock.mockResolvedValue(supabase)
+    const { finalizarVendaCaixa } = await import('./actions')
+    const input = payloadBase()
+    input.formaPagamento = forma
+    input.itens[0] = { ...input.itens[0], tipoPreco: 'MANUAL', precoUnitario: 9.5 }
+    input.totalDesconto = 1.5
+    input.totalLiquido = 28.5
+    input.pagamentos = [{ formaPagamento: forma, valor: 28.5 }]
+    expect(await finalizarVendaCaixa(input)).toMatchObject({ ok: true })
+    const tx = rpcCalls.find((call) => call.name === 'finalizar_venda_transacional_canonica_v4')
+    expect(tx?.params).toMatchObject({ p_total_bruto: 30, p_total_desconto: 1.5, p_total_liquido: 28.5,
+      p_pagamentos: [{ forma_pagamento: forma, valor: 28.5 }] })
+  })
+
   it('BR-01: envia p_limite_credito_gerente_token quando presente no payload', async () => {
     const { supabase, rpcCalls } = makeSupabase()
     createClientMock.mockResolvedValue(supabase)
