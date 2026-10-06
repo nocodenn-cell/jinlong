@@ -2481,7 +2481,7 @@ export type Database = {
       }
       fornecedores: {
         Row: {
-          cnpj: string
+          cnpj: string | null
           created_at: string
           id: string
           loja_id: string
@@ -2489,7 +2489,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          cnpj: string
+          cnpj?: string | null
           created_at?: string
           id?: string
           loja_id: string
@@ -2497,7 +2497,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          cnpj?: string
+          cnpj?: string | null
           created_at?: string
           id?: string
           loja_id?: string
