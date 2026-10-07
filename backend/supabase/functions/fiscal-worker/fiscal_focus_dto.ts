@@ -6,6 +6,7 @@
 import { asString, isRecord } from "./fiscal_http.ts";
 
 export type FocusNfceEnvelopeKnownFields = {
+  natureza_operacao?: string;
   cnpj_emitente?: string;
   modalidade_frete?: "0" | "1" | "2" | "9";
   local_destino?: "1" | "2" | "3";
@@ -33,14 +34,12 @@ export type FocusNfceMapResult = {
   bloqueante: boolean;
 };
 
+// Sprint P0 Focus (2026-10-03): `natureza_operacao` SAIU desta lista. A Focus
+// confirmou oficialmente que o campo é obrigatório na NFC-e e não tem valor
+// padrão — a premissa anterior ("omitido = padrão da Focus") estava errada.
+// Agora é lido do snapshot (`payload.natureza_operacao`) e, ausente, bloqueia
+// a emissão. Nenhum valor é inventado aqui.
 const OMITTED_BY_DESIGN: readonly FocusNfceOmittedByDesign[] = [
-  {
-    campo: "natureza_operacao",
-    motivo:
-      "Confirmado 2x pela documentação oficial (Gate C2.5, rodadas 1 e 2): se omitido, a Focus aplica seu próprio " +
-      "padrão para venda ao consumidor. Jinlong não tem regra de negócio própria (não existe em produto/loja/" +
-      "pdv_config) — decisão deliberada de deixar o default pertencer à Focus, não inventar valor no domínio.",
-  },
   {
     campo: "unidade_tributavel / quantidade_tributavel / valor_unitario_tributavel",
     motivo:
@@ -196,24 +195,46 @@ export function mapSnapshotItemToFocus(item: Record<string, unknown>, numeroItem
 // nfe/FormaPagamentoXML.html + lista de códigos colada pelo usuário.
 // ---------------------------------------------------------------------------
 
-/** Só os 3 códigos Jinlong com mapeamento inequívoco confirmado. PIX fica de
- * fora deliberadamente — ver `mapPagamentoToFocus`. */
+/** Códigos Jinlong com mapeamento inequívoco confirmado. */
 const FORMA_PAGAMENTO_CONFIRMADA: Readonly<Record<string, string>> = {
   DINHEIRO: "01",
   CARTAO_CREDITO: "03",
   CARTAO_DEBITO: "04",
 };
 
+/**
+ * PIX — Sprint P0 Focus (contrato confirmado pela Focus em 2026-10-03): a
+ * NFC-e aceita 17 = PIX estático, 20 = PIX dinâmico, 23 = PIX automático.
+ *
+ * O domínio Jinlong só registra `PIX` (CHECK em vendas/vendas_pagamentos),
+ * sem a modalidade. O código Focus só é escolhido quando a entrada de
+ * pagamento do snapshot traz `pix_modalidade` explícita; sem ela a forma fica
+ * BLOQUEADA — nunca presumimos uma modalidade. Hoje nenhum ponto do domínio
+ * preenche `pix_modalidade` (gap de domínio documentado).
+ */
+const PIX_MODALIDADE_FOCUS: Readonly<Record<string, string>> = {
+  ESTATICO: "17",
+  DINAMICO: "20",
+  AUTOMATICO: "23",
+};
+
 export type FocusPagamentoMapResult = { entrada: Record<string, unknown> | null; gap: FocusNfceGap | null };
 
-export function mapPagamentoToFocus(pagamento: { forma_pagamento: string; valor: number }): FocusPagamentoMapResult {
+export function mapPagamentoToFocus(
+  pagamento: { forma_pagamento: string; valor: number; pix_modalidade?: string | null },
+): FocusPagamentoMapResult {
   const codigoJinlong = (pagamento.forma_pagamento ?? "").trim().toUpperCase();
-  const codigoFocus = FORMA_PAGAMENTO_CONFIRMADA[codigoJinlong];
+  const modalidadePix = (pagamento.pix_modalidade ?? "").trim().toUpperCase();
+  const codigoFocus = codigoJinlong === "PIX"
+    ? PIX_MODALIDADE_FOCUS[modalidadePix]
+    : FORMA_PAGAMENTO_CONFIRMADA[codigoJinlong];
 
   if (!codigoFocus) {
     const motivo = codigoJinlong === "PIX"
-      ? "PIX Jinlong é enum genérico (sem distinguir dinâmico=17/estático=20/automático=23) — PENDENTE REGRA " +
-        "até definirmos a modalidade operacional da loja ou passarmos a armazenar essa informação."
+      ? (modalidadePix
+        ? `pix_modalidade '${modalidadePix}' fora do contrato (ESTATICO=17, DINAMICO=20, AUTOMATICO=23).`
+        : "PIX sem pix_modalidade no snapshot — a Focus exige 17 (estático), 20 (dinâmico) ou 23 (automático) e o " +
+          "domínio Jinlong não registra a modalidade; nenhuma modalidade é presumida.")
       : `Código de pagamento Jinlong '${codigoJinlong}' sem mapeamento confirmado para a Focus.`;
     return { entrada: null, gap: { campo: `formas_pagamento[].${codigoJinlong || "(vazio)"}`, motivo } };
   }
@@ -294,6 +315,20 @@ export function buildFocusNfceEnvelope(payload: Record<string, unknown> | null |
   const gaps: FocusNfceGap[] = [];
   const body: FocusNfceEnvelopeKnownFields = {};
 
+  // Obrigatório e sem default na Focus (confirmado 2026-10-03). O domínio
+  // Jinlong ainda não tem fonte para este valor (nem loja, nem pdv_config,
+  // nem produto) — só o snapshot pode trazê-lo. Ausente => bloqueia.
+  const naturezaOperacao = asString(payload?.natureza_operacao);
+  if (naturezaOperacao) body.natureza_operacao = naturezaOperacao;
+  else {
+    gaps.push({
+      campo: "natureza_operacao",
+      motivo:
+        "Obrigatório na NFC-e e sem valor padrão na Focus; o snapshot da venda não traz natureza_operacao " +
+        "(o domínio Jinlong ainda não define essa informação). Emissão bloqueada — nenhum valor presumido.",
+    });
+  }
+
   const emitente = isRecord(payload?.emitente) ? (payload!.emitente as Record<string, unknown>) : null;
   const cnpj = emitente ? asString(emitente.cnpj) : null;
   if (cnpj) body.cnpj_emitente = cnpj;
@@ -329,7 +364,7 @@ export function buildFocusNfceEnvelope(payload: Record<string, unknown> | null |
     if (!isRecord(raw)) return;
     const forma = asString(raw.forma_pagamento) ?? "";
     const valor = typeof raw.valor === "number" ? raw.valor : 0;
-    const { entrada, gap } = mapPagamentoToFocus({ forma_pagamento: forma, valor });
+    const { entrada, gap } = mapPagamentoToFocus({ forma_pagamento: forma, valor, pix_modalidade: asString(raw.pix_modalidade) });
     if (gap) gaps.push(gap);
     if (entrada) formasPagamento.push(entrada);
   });
@@ -351,8 +386,25 @@ export function buildFocusNfceEnvelope(payload: Record<string, unknown> | null |
   // bloqueanteItens acima — nunca reduz venda mista a uma única forma.
   const bloqueantePagamentos = pagamentosRaw.length === 0 ||
     formasPagamento.length < pagamentosRaw.filter((r) => isRecord(r)).length;
-  const bloqueante = !cnpj || bloqueanteItens || bloqueantePagamentos || bloqueanteDestinatario ||
-    gaps.some((g) => g.campo.includes("tributacao"));
+  // Sprint P0 Focus: soma das formas de pagamento precisa bater com o total
+  // líquido congelado da venda (quando o snapshot o traz) — nunca envia um
+  // total de pagamentos diferente do total da nota.
+  let bloqueanteTotal = false;
+  const totais = isRecord(payload?.totais) ? (payload!.totais as Record<string, unknown>) : null;
+  const totalLiquido = typeof totais?.liquido === "number" ? totais.liquido : null;
+  if (totalLiquido != null && formasPagamento.length > 0) {
+    const soma = formasPagamento.reduce((acc, f) => acc + (typeof f.valor_pagamento === "number" ? f.valor_pagamento : 0), 0);
+    if (Math.abs(Math.round(soma * 100) - Math.round(totalLiquido * 100)) > 0) {
+      bloqueanteTotal = true;
+      gaps.push({
+        campo: "formas_pagamento[].valor_pagamento",
+        motivo: `Soma dos pagamentos (${soma.toFixed(2)}) diferente do total líquido da venda (${totalLiquido.toFixed(2)}).`,
+      });
+    }
+  }
+
+  const bloqueante = !naturezaOperacao || !cnpj || bloqueanteItens || bloqueantePagamentos || bloqueanteDestinatario ||
+    bloqueanteTotal || gaps.some((g) => g.campo.includes("tributacao"));
 
   return { body, gaps, omittedByDesign: [...OMITTED_BY_DESIGN], bloqueante };
 }

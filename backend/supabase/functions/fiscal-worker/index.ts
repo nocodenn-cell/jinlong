@@ -3,11 +3,19 @@ import { timingSafeEqualSecret } from "../_shared/crypto.ts";
 import { classifyFiscalError } from "./fiscal_classify.ts";
 import type { FiscalDoc } from "./fiscal_types.ts";
 import { isRecord, json } from "./fiscal_http.ts";
-import { callProvider, createFiscalProvider, resolveFocusRef, type ProviderConfig } from "./fiscal-provider-adapter.ts";
+import {
+  callProvider,
+  createFiscalProvider,
+  justificativaCancelamentoValida,
+  resolveFocusRef,
+  type ProviderConfig,
+} from "./fiscal-provider-adapter.ts";
 import { resolveDeployAmbiente, resolveFocusBaseUrl, resolveFocusCredential } from "./fiscal_credential_resolver.ts";
 import {
   applyCredentialResolutionFailure,
   applyFocusRemoteState,
+  processarCancelamento,
+  resolverEstadoEmissao,
   applyProviderIdentityMismatch,
   applyReconciliarIdentityMismatch,
   computeProviderIdentity,
@@ -20,6 +28,7 @@ import {
 import {
   parseProviderIdentity,
   processXmlDocumento,
+  type XmlArtefato,
   type XmlDoc,
   type XmlWorkerCounters,
 } from "./fiscal_xml_orchestration.ts";
@@ -100,6 +109,13 @@ Deno.serve(async (req) => {
   const reconciliarId = readReconciliarDocumentoId(parsedBody);
   if (reconciliarId) {
     return await handleReconciliar(supabase, reconciliarId, providerType, deployAmbiente, legacyProviderConfig, timeoutMs);
+  }
+
+  // Sprint P0 Focus — cancelamento fiscal: modo explícito, por documento
+  // (mesmo padrão da reconciliação). Nunca acionado pelo laço de emissão.
+  const cancelar = readCancelarPedido(parsedBody);
+  if (cancelar) {
+    return await handleCancelar(supabase, cancelar, providerType, deployAmbiente, legacyProviderConfig, timeoutMs);
   }
 
   const { data: docs, error: claimErr } = await supabase.rpc("fiscal_claim_documentos", {
@@ -192,8 +208,15 @@ Deno.serve(async (req) => {
     // C2.6 — NF-e: 3 estados possíveis (201 autorizado / 202 processando /
     // erro). Reaproveita EM_PROCESSAMENTO já existente para "processando" —
     // nenhuma RPC é chamada nesse caso (ver applyFocusRemoteState).
-    if (doc.tipo_doc.trim().toUpperCase() === "NFE" && provider.emitirNfe) {
-      const estado = await provider.emitirNfe(doc, cfg);
+    //
+    // Sprint P0 Focus — NFC-e também passa por aqui: o `status` devolvido
+    // pela Focus (autorizado/processando_autorizacao/erro_autorizacao/
+    // cancelado/denegado) é aplicado sem ser achatado em 2 estados, e
+    // `already_processed` é resolvido consultando a MESMA referência.
+    if (provider.emitirDocumento) {
+      const ref = resolveFocusRef(doc);
+      const estadoPost = await provider.emitirDocumento(doc, cfg);
+      const estado = await resolverEstadoEmissao(doc, estadoPost, provider, ref, cfg);
       await applyFocusRemoteState(supabase, doc, estado, counters);
       continue;
     }
@@ -320,58 +343,10 @@ Deno.serve(async (req) => {
   // durável (xml_lease_token); toda RPC de confirmação/erro/bloqueio abaixo
   // exige esse token e é ignorada se ele não for mais o vigente (outro
   // worker já resolveu o documento). Ver fiscal_xml_orchestration.ts.
-  const { data: xmlDocs, error: xmlClaimErr } = await supabase.rpc("fiscal_claim_documentos_xml", { p_limit: limit });
-  if (!xmlClaimErr) {
-    for (const raw of (xmlDocs ?? []) as Array<Record<string, unknown>>) {
-      const xmlDoc: XmlDoc = {
-        id: String(raw.id),
-        venda_id: String(raw.venda_id),
-        tipo_doc: String(raw.tipo_doc),
-        provider: typeof raw.provider === "string" ? raw.provider : null,
-        correlation_id: typeof raw.correlation_id === "string" ? raw.correlation_id : undefined,
-        lease_token: String(raw.xml_lease_token),
-      };
-      const parsed = parseProviderIdentity(xmlDoc.provider);
-      if (!parsed) {
-        // Documento EMITIDO sem identidade de provider reconhecível — só
-        // possível para documentos legados anteriores à Sprint C2.10.
-        // `processXmlDocumento` também cobre isto (payload.provider null),
-        // mas aqui a identidade existe e não é reconhecida — mesma
-        // classificação fail-closed permanente.
-        const { data: aplicado, error } = await supabase.rpc("fiscal_marcar_xml_bloqueado", {
-          p_documento_id: xmlDoc.id,
-          p_motivo: "PROVIDER_IDENTIDADE_NAO_RECONHECIDA_DOCUMENTO_LEGADO",
-          p_lease_token: xmlDoc.lease_token,
-        });
-        if (error) xmlCounters.comErro.push({ id: xmlDoc.id, erro: `MARCAR_XML_BLOQUEADO_FALHOU:${error.message}` });
-        else if (aplicado) xmlCounters.bloqueados.push(xmlDoc.id);
-        else xmlCounters.ignoradosPorConcorrencia.push(xmlDoc.id);
-        continue;
-      }
-
-      let xmlCfg: ProviderConfig;
-      if (parsed.type === "focus") {
-        const cred = await resolveFocusCredential(supabase, parsed.lojaId, parsed.ambiente);
-        if (!cred.ok) {
-          const { data: aplicado, error } = await supabase.rpc("fiscal_marcar_xml_erro", {
-            p_documento_id: xmlDoc.id,
-            p_erro: `CREDENCIAL_INDISPONIVEL:${cred.code}`,
-            p_lease_token: xmlDoc.lease_token,
-          });
-          if (error) xmlCounters.comErro.push({ id: xmlDoc.id, erro: `MARCAR_XML_ERRO_FALHOU:${error.message}` });
-          else if (aplicado) xmlCounters.comErro.push({ id: xmlDoc.id, erro: `CREDENCIAL_INDISPONIVEL:${cred.code}` });
-          else xmlCounters.ignoradosPorConcorrencia.push(xmlDoc.id);
-          continue;
-        }
-        xmlCfg = { type: "focus", token: cred.token, url: resolveFocusBaseUrl(cred.ambiente), timeout: timeoutMs };
-      } else {
-        xmlCfg = { type: parsed.type, url: providerUrl || undefined, token: providerToken || undefined, timeout: timeoutMs };
-      }
-
-      const xmlProvider = createFiscalProvider(xmlCfg);
-      await processXmlDocumento(supabase, xmlDoc, xmlProvider, resolveFocusRef(xmlDoc), xmlCfg, xmlCounters);
-    }
-  }
+  const xmlFila = await processarFilaXml(supabase, "AUTORIZACAO", limit, xmlCounters, providerUrl, providerToken, timeoutMs);
+  // Sprint P0 Focus — XML de cancelamento: fila, colunas e path próprios.
+  const xmlCancCounters: XmlWorkerCounters = { armazenados: [], bloqueados: [], comErro: [], ignoradosPorConcorrencia: [] };
+  const xmlCancFila = await processarFilaXml(supabase, "CANCELAMENTO", limit, xmlCancCounters, providerUrl, providerToken, timeoutMs);
 
   return json(200, {
     ok: true,
@@ -382,7 +357,7 @@ Deno.serve(async (req) => {
     failed: counters.failed,
     retried: counters.retried,
     xml: {
-      claimed: (xmlDocs ?? []).length,
+      claimed: xmlFila.claimed,
       armazenados: xmlCounters.armazenados,
       bloqueados: xmlCounters.bloqueados,
       com_erro: xmlCounters.comErro,
@@ -394,10 +369,184 @@ Deno.serve(async (req) => {
       // externo via essa chamada nunca saberia que o passo de XML parou de
       // funcionar. Superfície explícita do erro, sem afetar `ok`/status do
       // laço de emissão acima (que já terminou e não é afetado por isto).
-      claim_error: xmlClaimErr?.message ?? null,
+      claim_error: xmlFila.claimError,
+    },
+    xml_cancelamento: {
+      claimed: xmlCancFila.claimed,
+      armazenados: xmlCancCounters.armazenados,
+      bloqueados: xmlCancCounters.bloqueados,
+      com_erro: xmlCancCounters.comErro,
+      ignorados_por_concorrencia: xmlCancCounters.ignoradosPorConcorrencia,
+      claim_error: xmlCancFila.claimError,
     },
   });
 });
+
+/**
+ * Passo de XML (C3) — fila desacoplada da emissão. Sprint P0 Focus: mesma
+ * rotina para os dois artefatos (AUTORIZACAO e CANCELAMENTO), cada um com sua
+ * fila/RPCs/colunas; credencial resolvida POR DOCUMENTO a partir da
+ * identidade congelada. O download do link Focus não usa a credencial (link
+ * sem autenticação); ela só é usada se for preciso consultar a referência.
+ */
+async function processarFilaXml(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  artefato: XmlArtefato,
+  limit: number,
+  xmlCounters: XmlWorkerCounters,
+  providerUrl: string,
+  providerToken: string | null,
+  timeoutMs: number,
+): Promise<{ claimed: number; claimError: string | null }> {
+  const claimRpc = artefato === "CANCELAMENTO" ? "fiscal_claim_documentos_xml_cancelamento" : "fiscal_claim_documentos_xml";
+  const bloqueadoRpc = artefato === "CANCELAMENTO" ? "fiscal_marcar_xml_cancelamento_bloqueado" : "fiscal_marcar_xml_bloqueado";
+  const erroRpc = artefato === "CANCELAMENTO" ? "fiscal_marcar_xml_cancelamento_erro" : "fiscal_marcar_xml_erro";
+  const { data: xmlDocs, error: xmlClaimErr } = await supabase.rpc(claimRpc, { p_limit: limit });
+  if (xmlClaimErr) return { claimed: 0, claimError: xmlClaimErr.message };
+
+  for (const raw of (xmlDocs ?? []) as Array<Record<string, unknown>>) {
+    const leaseRaw = artefato === "CANCELAMENTO" ? raw.xml_cancelamento_lease_token : raw.xml_lease_token;
+    const caminhoRaw = artefato === "CANCELAMENTO" ? raw.focus_xml_cancelamento_path : raw.focus_xml_path;
+    const xmlDoc: XmlDoc = {
+      id: String(raw.id),
+      venda_id: String(raw.venda_id),
+      tipo_doc: String(raw.tipo_doc),
+      provider: typeof raw.provider === "string" ? raw.provider : null,
+      correlation_id: typeof raw.correlation_id === "string" ? raw.correlation_id : undefined,
+      lease_token: String(leaseRaw),
+      focus_xml_path: typeof caminhoRaw === "string" ? caminhoRaw : null,
+    };
+    const parsed = parseProviderIdentity(xmlDoc.provider);
+    if (!parsed) {
+      const { data: aplicado, error } = await supabase.rpc(bloqueadoRpc, {
+        p_documento_id: xmlDoc.id,
+        p_motivo: "PROVIDER_IDENTIDADE_NAO_RECONHECIDA_DOCUMENTO_LEGADO",
+        p_lease_token: xmlDoc.lease_token,
+      });
+      if (error) xmlCounters.comErro.push({ id: xmlDoc.id, erro: `MARCAR_XML_BLOQUEADO_FALHOU:${error.message}` });
+      else if (aplicado) xmlCounters.bloqueados.push(xmlDoc.id);
+      else xmlCounters.ignoradosPorConcorrencia.push(xmlDoc.id);
+      continue;
+    }
+
+    let xmlCfg: ProviderConfig;
+    if (parsed.type === "focus") {
+      const cred = await resolveFocusCredential(supabase, parsed.lojaId, parsed.ambiente);
+      if (!cred.ok) {
+        const { data: aplicado, error } = await supabase.rpc(erroRpc, {
+          p_documento_id: xmlDoc.id,
+          p_erro: `CREDENCIAL_INDISPONIVEL:${cred.code}`,
+          p_lease_token: xmlDoc.lease_token,
+        });
+        if (error) xmlCounters.comErro.push({ id: xmlDoc.id, erro: `MARCAR_XML_ERRO_FALHOU:${error.message}` });
+        else if (aplicado) xmlCounters.comErro.push({ id: xmlDoc.id, erro: `CREDENCIAL_INDISPONIVEL:${cred.code}` });
+        else xmlCounters.ignoradosPorConcorrencia.push(xmlDoc.id);
+        continue;
+      }
+      xmlCfg = { type: "focus", token: cred.token, url: resolveFocusBaseUrl(cred.ambiente), timeout: timeoutMs };
+    } else {
+      xmlCfg = { type: parsed.type, url: providerUrl || undefined, token: providerToken || undefined, timeout: timeoutMs };
+    }
+
+    const xmlProvider = createFiscalProvider(xmlCfg);
+    await processXmlDocumento(supabase, xmlDoc, xmlProvider, resolveFocusRef(xmlDoc), xmlCfg, xmlCounters, artefato);
+  }
+  return { claimed: (xmlDocs ?? []).length, claimError: null };
+}
+
+type PedidoCancelamento = { documento_id: string; justificativa: string };
+
+/** Sprint P0 Focus — `{ mode: "cancelar", documento_id, justificativa }`. */
+function readCancelarPedido(body: unknown): PedidoCancelamento | null {
+  if (
+    isRecord(body) && body.mode === "cancelar" &&
+    typeof body.documento_id === "string" && body.documento_id.trim() !== "" &&
+    typeof body.justificativa === "string"
+  ) {
+    return { documento_id: body.documento_id, justificativa: body.justificativa };
+  }
+  return null;
+}
+
+/**
+ * Sprint P0 Focus — cancelamento de UM documento EMITIDO. Sequência:
+ * identidade congelada validada -> credencial da loja -> lease
+ * (`fiscal_iniciar_cancelamento`: no máximo um pedido em andamento) ->
+ * consulta prévia se já houve tentativa -> DELETE pela mesma referência ->
+ * `cancelado` confirma (CANCELADO + XML de cancelamento enfileirado); qualquer
+ * outra resposta mantém EMITIDO e registra o erro. O XML da autorização não é
+ * tocado.
+ */
+async function handleCancelar(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  pedido: PedidoCancelamento,
+  providerType: ProviderConfig["type"],
+  deployAmbiente: "homologacao" | "producao" | null,
+  legacyProviderConfig: ProviderConfig,
+  timeoutMs: number,
+): Promise<Response> {
+  if (!justificativaCancelamentoValida(pedido.justificativa)) {
+    return json(400, { ok: false, error: "JUSTIFICATIVA_INVALIDA" });
+  }
+  const { data: raw, error: fetchErr } = await supabase
+    .from("documentos_fiscais_pendentes")
+    .select("id, venda_id, tipo_doc, payload, status, provider")
+    .eq("id", pedido.documento_id)
+    .maybeSingle();
+  if (fetchErr || !raw) {
+    return json(404, { ok: false, error: "DOCUMENTO_NAO_ENCONTRADO" });
+  }
+
+  const lojaId = extractLojaId(raw.payload && isRecord(raw.payload) ? raw.payload : null);
+  const identidadeAtual = computeProviderIdentity(providerType, deployAmbiente, lojaId);
+  const frozenProvider = typeof raw.provider === "string" ? raw.provider : null;
+  const idCheck = validateProviderIdentity(frozenProvider, identidadeAtual);
+  if (!idCheck.ok || idCheck.shouldFreeze) {
+    // Cancelar exige identidade já congelada e igual à atual (o documento foi
+    // emitido por ESTA empresa/ambiente/provider) — nunca congela aqui.
+    return json(409, { ok: false, error: "IDENTIDADE_PROVIDER_DIVERGENTE_OU_AUSENTE" });
+  }
+
+  let cfg: ProviderConfig = legacyProviderConfig;
+  if (providerType === "focus") {
+    const cred = await resolveFocusCredential(supabase, lojaId, deployAmbiente);
+    if (!cred.ok) return json(200, { ok: true, documento_id: raw.id, resultado: "erro_credencial", detalhe: cred.code });
+    cfg = { type: "focus", token: cred.token, url: resolveFocusBaseUrl(cred.ambiente), timeout: timeoutMs };
+  }
+
+  const { data: inicio, error: iniErr } = await supabase.rpc("fiscal_iniciar_cancelamento", {
+    p_documento_id: raw.id,
+    p_justificativa: pedido.justificativa,
+  });
+  if (iniErr) return json(409, { ok: false, error: `CANCELAMENTO_RECUSADO:${iniErr.message}` });
+  const linha = Array.isArray(inicio) ? inicio[0] : inicio;
+  if (!linha || linha.resultado === "JA_CANCELADO") {
+    return json(200, { ok: true, documento_id: raw.id, resultado: "ja_cancelado" });
+  }
+  if (linha.resultado !== "INICIADO" || !linha.cancelamento_lease_token) {
+    return json(200, { ok: true, documento_id: raw.id, resultado: "em_andamento" });
+  }
+
+  const provider = createFiscalProvider(cfg);
+  const ref = resolveFocusRef({ id: String(raw.id), venda_id: String(raw.venda_id) });
+  const r = await processarCancelamento(
+    supabase,
+    {
+      id: String(raw.id),
+      venda_id: String(raw.venda_id),
+      tipo_doc: String(raw.tipo_doc),
+      lease_token: String(linha.cancelamento_lease_token),
+      tentativas_anteriores: Number(linha.cancelamento_tentativas_anteriores ?? 0),
+    },
+    provider,
+    ref,
+    pedido.justificativa,
+    cfg,
+  );
+  return json(200, { ok: true, documento_id: raw.id, resultado: r.resultado, erro: r.erro ?? null });
+}
 
 /** Recebe o corpo JÁ PARSEADO (uma Request só pode ter o corpo lido uma
  * vez — ver comentário no chamador) — nunca lê a Request diretamente. */

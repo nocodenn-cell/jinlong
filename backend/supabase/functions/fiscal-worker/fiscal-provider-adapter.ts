@@ -1,4 +1,4 @@
-import type { FiscalDoc, FiscalXmlResult, FocusRemoteState, ProviderResult } from "./fiscal_types.ts";
+import type { FiscalDoc, FiscalXmlResult, FocusArtefatosRefs, FocusRemoteState, ProviderResult } from "./fiscal_types.ts";
 import { asString, isRecord, randomHex } from "./fiscal_http.ts";
 import { buildFocusNfceEnvelope } from "./fiscal_focus_dto.ts";
 
@@ -92,6 +92,97 @@ function extractErrorCodeMessage(record: Record<string, unknown>): { code: strin
   };
 }
 
+
+/**
+ * Sprint P0 Focus — referências devolvidas pela Focus na autorização
+ * (contrato confirmado pela Focus em 2026-10-03). Guardadas como vieram,
+ * sem compor host/path.
+ */
+export function extractFocusArtefatos(record: Record<string, unknown>): FocusArtefatosRefs {
+  return {
+    xml_path: asString(record.caminho_xml_nota_fiscal),
+    danfe_path: asString(record.caminho_danfe),
+    qrcode_url: asString(record.qrcode_url),
+  };
+}
+
+/** `already_processed`: a referência já foi usada numa emissão anterior. */
+export function isFocusAlreadyProcessed(record: Record<string, unknown>): boolean {
+  return asString(record.codigo)?.toLowerCase() === "already_processed";
+}
+
+/**
+ * Sprint P0 Focus — classificação pelo campo `status` do corpo, que é a fonte
+ * de verdade quando presente. Valores tratados (contrato Focus):
+ * `autorizado`, `processando_autorizacao`, `erro_autorizacao`, `cancelado`,
+ * `denegado`. Devolve `null` quando o corpo não traz `status` reconhecível —
+ * o chamador cai na classificação por HTTP já existente.
+ *
+ *   - `cancelado` NUNCA vira `autorizado`, mesmo que o corpo ainda traga a
+ *     chave/protocolo da autorização original.
+ *   - `denegado` é terminal e nunca vira `autorizado`.
+ *   - `autorizado` sem chave/protocolo não é aceito como EMITIDO: vira erro
+ *     transitório (a próxima tentativa consulta antes de qualquer POST).
+ *   - `status` presente mas desconhecido: erro transitório explícito (nunca
+ *     presumido sucesso nem rejeição).
+ */
+export function classifyByFocusStatus(record: Record<string, unknown>): FocusRemoteState | null {
+  const status = asString(record.status)?.toLowerCase();
+  if (!status) return null;
+  const { code, message } = extractErrorCodeMessage(record);
+  switch (status) {
+    case "autorizado": {
+      const { chave, protocolo } = pickFocusChaveProtocolo(record);
+      if (!chave || !protocolo) {
+        return {
+          kind: "erro_transitorio",
+          erro: "FOCUS_AUTORIZADO_SEM_CHAVE_PROTOCOLO",
+          http_status: null,
+          provider_code: "FOCUS_AUTORIZADO_SEM_CHAVE_PROTOCOLO",
+          provider_message: "Focus devolveu status=autorizado sem chave/protocolo reconhecíveis.",
+          payload: record,
+        };
+      }
+      const providerRef = asString(record.ref) ?? asString(record.referencia) ?? null;
+      return { kind: "autorizado", chave_fiscal: chave, protocolo, provider_ref: providerRef, artefatos: extractFocusArtefatos(record), payload: record };
+    }
+    case "processando_autorizacao":
+      return { kind: "processando", payload: record };
+    case "erro_autorizacao":
+      return {
+        kind: "rejeitado",
+        erro: "FOCUS_ERRO_AUTORIZACAO",
+        provider_code: code && code !== status ? code : "FOCUS_ERRO_AUTORIZACAO",
+        provider_message: message,
+        payload: record,
+      };
+    case "cancelado":
+      return {
+        kind: "cancelado",
+        protocolo_cancelamento: asString(record.numero_protocolo),
+        xml_cancelamento_path: asString(record.caminho_xml_cancelamento),
+        payload: record,
+      };
+    case "denegado":
+      return {
+        kind: "denegado",
+        erro: "FOCUS_DENEGADO",
+        provider_code: code && code !== status ? code : "FOCUS_DENEGADO",
+        provider_message: message,
+        payload: record,
+      };
+    default:
+      return {
+        kind: "erro_transitorio",
+        erro: `FOCUS_STATUS_DESCONHECIDO:${status}`,
+        http_status: null,
+        provider_code: "FOCUS_STATUS_DESCONHECIDO",
+        provider_message: `status='${status}' não faz parte do contrato tratado.`,
+        payload: record,
+      };
+  }
+}
+
 /**
  * Onda C2.9 — classifica a resposta HTTP de uma chamada de EMISSÃO (POST) em um
  * `FocusRemoteState` canônico. Reaproveitada por `emitirNfce`/`emitirNfe` — única
@@ -110,6 +201,12 @@ function extractErrorCodeMessage(record: Record<string, unknown>): { code: strin
  * sem inventar um DTO "completo" que não existe de verdade hoje.
  */
 export function classifyFocusEmitResponse(res: Response, record: Record<string, unknown>): FocusRemoteState {
+  // Sprint P0 Focus: `status` do corpo é a fonte da classificação quando
+  // presente; `already_processed` resolve pela MESMA referência.
+  if (isFocusAlreadyProcessed(record)) return { kind: "ja_processado", payload: record };
+  const porStatus = classifyByFocusStatus(record);
+  if (porStatus) return porStatus;
+
   if (res.status === 202) {
     return { kind: "processando", payload: record };
   }
@@ -124,7 +221,7 @@ export function classifyFocusEmitResponse(res: Response, record: Record<string, 
   const { chave, protocolo } = pickFocusChaveProtocolo(record);
   if (chave && protocolo) {
     const providerRef = asString(record.ref) ?? asString(record.referencia) ?? null;
-    return { kind: "autorizado", chave_fiscal: chave, protocolo, provider_ref: providerRef, payload: record };
+    return { kind: "autorizado", chave_fiscal: chave, protocolo, provider_ref: providerRef, artefatos: extractFocusArtefatos(record), payload: record };
   }
 
   // 2xx sem chave/protocolo reconhecível: tratado como rejeição, não como
@@ -148,6 +245,8 @@ export function classifyFocusEmitResponse(res: Response, record: Record<string, 
  */
 export function classifyFocusConsultaResponse(res: Response, record: Record<string, unknown>): FocusRemoteState {
   if (res.status === 404) return { kind: "nao_encontrado" };
+  const porStatus = classifyByFocusStatus(record);
+  if (porStatus) return porStatus;
 
   if (!res.ok) {
     const { code, message } = extractErrorCodeMessage(record);
@@ -159,7 +258,7 @@ export function classifyFocusConsultaResponse(res: Response, record: Record<stri
   const { chave, protocolo } = pickFocusChaveProtocolo(record);
   if (chave && protocolo) {
     const providerRef = asString(record.ref) ?? asString(record.referencia) ?? null;
-    return { kind: "autorizado", chave_fiscal: chave, protocolo, provider_ref: providerRef, payload: record };
+    return { kind: "autorizado", chave_fiscal: chave, protocolo, provider_ref: providerRef, artefatos: extractFocusArtefatos(record), payload: record };
   }
 
   return { kind: "processando", payload: record };
@@ -168,7 +267,44 @@ export function classifyFocusConsultaResponse(res: Response, record: Record<stri
 function focusStateToProviderResult(state: FocusRemoteState): ProviderResult {
   switch (state.kind) {
     case "autorizado":
-      return { ok: true, chave_fiscal: state.chave_fiscal, protocolo: state.protocolo, provider_ref: state.provider_ref, payload: state.payload };
+      return {
+        ok: true,
+        chave_fiscal: state.chave_fiscal,
+        protocolo: state.protocolo,
+        provider_ref: state.provider_ref,
+        payload: state.payload,
+        artefatos: state.artefatos,
+      };
+    case "cancelado":
+      // Nunca `ok: true` — cancelado não é emissão autorizada.
+      return {
+        ok: false,
+        erro: "FOCUS_DOCUMENTO_CANCELADO",
+        transitorio: false,
+        provider_code: "FOCUS_DOCUMENTO_CANCELADO",
+        provider_message: "Focus informou status=cancelado.",
+        payload: state.payload,
+      };
+    case "denegado":
+      return {
+        ok: false,
+        erro: state.erro,
+        transitorio: false,
+        provider_code: state.provider_code,
+        provider_message: state.provider_message,
+        payload: state.payload,
+      };
+    case "ja_processado":
+      // Transitório: a próxima tentativa passa pelo retry seguro, que
+      // CONSULTA a mesma referência antes de qualquer POST.
+      return {
+        ok: false,
+        erro: "FOCUS_ALREADY_PROCESSED",
+        transitorio: true,
+        provider_code: "already_processed",
+        provider_message: "Referência já processada pela Focus — resolver por consulta.",
+        payload: state.payload,
+      };
     case "rejeitado":
       return {
         ok: false,
@@ -199,14 +335,16 @@ function focusStateToProviderResult(state: FocusRemoteState): ProviderResult {
         payload: state.payload,
       };
     case "processando":
-      // NFC-e é sempre síncrona (contrato confirmado) — 202 aqui é inesperado.
-      // Tratado como erro definitivo explícito em vez de mascarado como sucesso/retry.
+      // `callProvider` só devolve 2 estados; "ainda processando" vira erro
+      // transitório (a próxima tentativa consulta a mesma referência antes de
+      // qualquer POST). O worker Focus usa `emitirDocumento`, que preserva o
+      // estado `processando` sem passar por aqui.
       return {
         ok: false,
-        erro: "FOCUS_NFCE_202_INESPERADO",
-        transitorio: false,
-        provider_code: "FOCUS_NFCE_202_INESPERADO",
-        provider_message: "NFC-e deveria ser síncrona; Focus retornou 202 para um doc NFC-e.",
+        erro: "FOCUS_PROCESSANDO_AUTORIZACAO",
+        transitorio: true,
+        provider_code: "FOCUS_PROCESSANDO_AUTORIZACAO",
+        provider_message: "Focus ainda processando a autorização.",
         payload: state.payload,
       };
     case "nao_encontrado":
@@ -229,7 +367,17 @@ export interface ProviderConfig {
 export interface FiscalProvider {
   callProvider(doc: FiscalDoc, config: ProviderConfig): Promise<ProviderResult>;
   emitirNfe?(doc: FiscalDoc, config: ProviderConfig): Promise<FocusRemoteState>;
+  /** Sprint P0 Focus — emissão NFC-e ou NF-e devolvendo o estado canônico
+   * completo (inclui `processando`, `cancelado`, `denegado`,
+   * `ja_processado`), sem achatar em `ProviderResult`. */
+  emitirDocumento?(doc: FiscalDoc, config: ProviderConfig): Promise<FocusRemoteState>;
   consultarDocumento?(ref: string, tipoDoc: string, config: ProviderConfig): Promise<FocusRemoteState>;
+  /** Sprint P0 Focus — pedido de cancelamento (DELETE pela mesma referência,
+   * corpo `{ justificativa }`). */
+  cancelarDocumento?(ref: string, tipoDoc: string, justificativa: string, config: ProviderConfig): Promise<FocusRemoteState>;
+  /** Sprint P0 Focus — XML de cancelamento a partir do
+   * `caminho_xml_cancelamento` devolvido pela Focus. GET-only. */
+  obterXmlCancelamento?(caminho: string | null, ref: string, tipoDoc: string, config: ProviderConfig): Promise<FiscalXmlResult>;
   /**
    * Missão final (C3) — obtém o XML autorizado de um documento já EMITIDO.
    * Contrato GET-only: nenhuma implementação pode chamar
@@ -238,7 +386,7 @@ export interface FiscalProvider {
    * (nunca reabre/reemite nada). Opcional (mesmo padrão de `emitirNfe`/
    * `consultarDocumento`) — só implementado onde fizer sentido.
    */
-  obterXmlAutorizado?(ref: string, tipoDoc: string, config: ProviderConfig): Promise<FiscalXmlResult>;
+  obterXmlAutorizado?(ref: string, tipoDoc: string, config: ProviderConfig, caminho?: string | null): Promise<FiscalXmlResult>;
 }
 
 // Mock Provider - mantém comportamento existente
@@ -259,10 +407,17 @@ export class MockProvider implements FiscalProvider {
   /** Só para exercitar a infraestrutura de armazenamento/idempotência de
    * XML nos testes (`fiscal_xml_orchestration.test.ts`) — não representa
    * nenhum contrato real (mock não fala com nenhuma SEFAZ). */
-  async obterXmlAutorizado(ref: string, tipoDoc: string, _config: ProviderConfig): Promise<FiscalXmlResult> {
+  async obterXmlAutorizado(ref: string, tipoDoc: string, _config: ProviderConfig, _caminho?: string | null): Promise<FiscalXmlResult> {
     return {
       kind: "obtido",
       xml: `<?xml version="1.0"?><mockNFe ref="${ref}" tipo="${tipoDoc}"/>`,
+    };
+  }
+
+  async obterXmlCancelamento(_caminho: string | null, ref: string, tipoDoc: string, _config: ProviderConfig): Promise<FiscalXmlResult> {
+    return {
+      kind: "obtido",
+      xml: `<?xml version="1.0"?><mockCancelamento ref="${ref}" tipo="${tipoDoc}"/>`,
     };
   }
 }
@@ -500,60 +655,222 @@ export async function postFocusEmit(url: string, token: string, body: Record<str
   }
 }
 
+/**
+ * Sprint P0 Focus — resolve o link de um artefato devolvido pela Focus
+ * (`caminho_xml_nota_fiscal`, `caminho_xml_cancelamento`) usando SOMENTE o
+ * valor devolvido:
+ *   - URL absoluta `https://...` -> usada exatamente como veio;
+ *   - caminho relativo começando com `/` (não `//`) -> resolvido contra a URL
+ *     base do MESMO ambiente Focus que devolveu o valor (`config.url`), sem
+ *     acrescentar `/v2` nem nenhum outro segmento;
+ *   - qualquer outra forma (http sem TLS, `//host`, esquema diferente, vazio)
+ *     -> recusado. Nunca inventa host.
+ */
+export function resolveFocusArtefatoUrl(caminho: string | null | undefined, baseUrl: string | null | undefined): string | null {
+  const valor = (caminho ?? "").trim();
+  if (!valor) return null;
+  if (/^https:\/\//i.test(valor)) {
+    try {
+      return new URL(valor).toString();
+    } catch {
+      return null;
+    }
+  }
+  if (valor.startsWith("/") && !valor.startsWith("//")) {
+    const base = (baseUrl ?? "").trim();
+    if (!/^https:\/\//i.test(base)) return null;
+    try {
+      const origem = new URL(base);
+      return new URL(valor, origem.origin).toString();
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+/**
+ * Sprint P0 Focus — checagem de XML bem formado (sem DOMParser no runtime
+ * das Edge Functions): exige um único elemento raiz e tags balanceadas;
+ * aceita declaração `<?xml ...?>`, comentários, CDATA e DOCTYPE.
+ */
+export function isWellFormedXml(text: string): boolean {
+  const s = text.replace(/^\uFEFF/, "").trim();
+  if (!s.startsWith("<")) return false;
+  const stack: string[] = [];
+  let i = 0;
+  let raizes = 0;
+  while (i < s.length) {
+    const lt = s.indexOf("<", i);
+    if (lt === -1) {
+      if (stack.length === 0 && s.slice(i).trim() !== "") return false;
+      break;
+    }
+    if (stack.length === 0 && s.slice(i, lt).trim() !== "") return false;
+    if (s.startsWith("<?", lt)) {
+      const end = s.indexOf("?>", lt + 2);
+      if (end === -1) return false;
+      i = end + 2;
+      continue;
+    }
+    if (s.startsWith("<!--", lt)) {
+      const end = s.indexOf("-->", lt + 4);
+      if (end === -1) return false;
+      i = end + 3;
+      continue;
+    }
+    if (s.startsWith("<![CDATA[", lt)) {
+      if (stack.length === 0) return false;
+      const end = s.indexOf("]]>", lt + 9);
+      if (end === -1) return false;
+      i = end + 3;
+      continue;
+    }
+    if (s.startsWith("<!", lt)) {
+      if (raizes > 0 || stack.length > 0) return false;
+      const end = s.indexOf(">", lt + 2);
+      if (end === -1) return false;
+      i = end + 1;
+      continue;
+    }
+    const gt = s.indexOf(">", lt + 1);
+    if (gt === -1) return false;
+    const conteudo = s.slice(lt + 1, gt);
+    if (conteudo.startsWith("/")) {
+      const nome = conteudo.slice(1).trim();
+      if (stack.pop() !== nome) return false;
+    } else {
+      const m = /^([A-Za-z_][\w.:-]*)/.exec(conteudo);
+      if (!m) return false;
+      const autoFechada = conteudo.trimEnd().endsWith("/");
+      if (stack.length === 0) {
+        raizes += 1;
+        if (raizes > 1) return false;
+      }
+      if (!autoFechada) stack.push(m[1]);
+    }
+    i = gt + 1;
+  }
+  return raizes === 1 && stack.length === 0;
+}
+
+/**
+ * Sprint P0 Focus — GET no link devolvido pela Focus. Contrato confirmado:
+ * links sem autenticação e sem expiração — por isso NUNCA envia
+ * `Authorization` (nem Basic, nem o token da empresa). Valida HTTP 2xx e XML
+ * bem formado antes de devolver `obtido`.
+ */
+export async function baixarXmlFocus(caminho: string | null, baseUrl: string | null | undefined, timeout: number): Promise<FiscalXmlResult> {
+  if (!caminho || !caminho.trim()) {
+    return { kind: "erro_transitorio", motivo: "FOCUS_XML_REFERENCIA_AUSENTE" };
+  }
+  const url = resolveFocusArtefatoUrl(caminho, baseUrl);
+  if (!url) {
+    return { kind: "erro_definitivo", motivo: "FOCUS_XML_CAMINHO_INVALIDO" };
+  }
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), timeout);
+  try {
+    const res = await fetch(url, { method: "GET", signal: controller.signal });
+    if (!res.ok) {
+      await res.body?.cancel();
+      return {
+        kind: httpStatusIsTransient(res.status) || res.status === 404 ? "erro_transitorio" : "erro_definitivo",
+        motivo: `FOCUS_XML_HTTP_${res.status}`,
+      };
+    }
+    const xml = await res.text();
+    if (!isWellFormedXml(xml)) {
+      return { kind: "erro_definitivo", motivo: "FOCUS_XML_CONTEUDO_INVALIDO" };
+    }
+    return { kind: "obtido", xml };
+  } catch (e) {
+    const isAbort = e instanceof Error && e.name === "AbortError";
+    return { kind: "erro_transitorio", motivo: isAbort ? "FOCUS_XML_TIMEOUT" : "FOCUS_XML_FALHA_REDE" };
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+/** Justificativa do cancelamento: 15 a 255 caracteres (documentação Focus,
+ * registrada na Fase B). */
+export function justificativaCancelamentoValida(justificativa: string | null | undefined): boolean {
+  const n = (justificativa ?? "").trim().length;
+  return n >= 15 && n <= 255;
+}
+
+/** Sprint P0 Focus — resposta do DELETE de cancelamento. Só `status =
+ * cancelado` confirma o cancelamento; qualquer outra resposta 2xx é erro
+ * explícito (nunca presumido cancelado). */
+export function classifyFocusCancelResponse(res: Response, record: Record<string, unknown>): FocusRemoteState {
+  const porStatus = classifyByFocusStatus(record);
+  if (porStatus?.kind === "cancelado") return porStatus;
+  if (!res.ok) {
+    const { code, message } = extractErrorCodeMessage(record);
+    const errorCode = code ?? `HTTP_${res.status}`;
+    const kind = httpStatusIsTransient(res.status) ? "erro_transitorio" as const : "erro_definitivo" as const;
+    return { kind, erro: errorCode, http_status: res.status, provider_code: errorCode, provider_message: message, payload: record };
+  }
+  if (porStatus && porStatus.kind === "erro_transitorio") return porStatus;
+  const { code, message } = extractErrorCodeMessage(record);
+  return {
+    kind: "erro_definitivo",
+    erro: "FOCUS_CANCELAMENTO_NAO_CONFIRMADO",
+    http_status: res.status,
+    provider_code: code ?? "FOCUS_CANCELAMENTO_NAO_CONFIRMADO",
+    provider_message: message,
+    payload: record,
+  };
+}
+
+function focusConfigAusente(): FocusRemoteState {
+  return {
+    kind: "erro_definitivo",
+    erro: "FOCUS_MISSING_URL_OR_TOKEN",
+    http_status: null,
+    provider_code: "FOCUS_MISSING_URL_OR_TOKEN",
+    provider_message: "Config do provider sem URL base ou token resolvido.",
+    payload: null,
+  };
+}
+
+function focusErroDeRede(e: unknown): FocusRemoteState {
+  const isAbort = e instanceof Error && e.name === "AbortError";
+  const msg = e instanceof Error ? e.message : String(e);
+  return {
+    kind: "erro_transitorio",
+    erro: isAbort ? "FOCUS_PROVIDER_TIMEOUT" : `FOCUS_PROVIDER_ERROR:${msg}`,
+    http_status: null,
+    provider_code: isAbort ? "FOCUS_PROVIDER_TIMEOUT" : "FOCUS_PROVIDER_ERROR",
+    provider_message: msg,
+    payload: null,
+  };
+}
+
+async function lerJson(res: Response): Promise<Record<string, unknown>> {
+  try {
+    const parsed: unknown = await res.json();
+    return isRecord(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
 export class FocusProvider implements FiscalProvider {
   private resolveRef(doc: FiscalDoc): string {
     return resolveFocusRef(doc);
   }
 
-  /** C2.4 — emissão NFC-e (sempre síncrona). Mantém o contrato `ProviderResult`
-   * já usado pelo restante do worker (fiscal_marcar_emitido/fiscal_marcar_erro),
-   * sem exigir mudança no chamador existente. */
+  /** C2.4 — mantém o contrato `ProviderResult` (2 estados) para quem ainda
+   * usa `callProvider`. O worker usa `emitirDocumento`. */
   async callProvider(doc: FiscalDoc, config: ProviderConfig): Promise<ProviderResult> {
-    const { url, token, timeout = 30_000 } = config;
-
-    if (!url?.trim() || !token?.trim()) {
-      return {
-        ok: false,
-        erro: "FOCUS_MISSING_URL_OR_TOKEN",
-        transitorio: false,
-        provider_code: "FOCUS_MISSING_URL_OR_TOKEN",
-        provider_message: "Config do provider sem URL base ou token resolvido.",
-      };
-    }
-
-    const ref = this.resolveRef(doc);
-    const { body, bloqueante, gaps } = buildFocusEmitBody(doc, ref);
-    if (bloqueante) {
-      return {
-        ok: false,
-        erro: "FOCUS_DTO_INCOMPLETO",
-        transitorio: false,
-        provider_code: "FOCUS_DTO_INCOMPLETO",
-        provider_message: `Payload fiscal incompleto — bloqueado antes do POST (zero chamada HTTP). Campos: ${gaps.join(", ")}`,
-        payload: { gaps },
-      };
-    }
-    const requestUrl = buildFocusEmitUrl(url, doc.tipo_doc, ref);
-    const state = await postFocusEmit(requestUrl, token, body, timeout);
-    return focusStateToProviderResult(state);
+    return focusStateToProviderResult(await this.emitirDocumento(doc, config));
   }
 
-  /** C2.6 — emissão NF-e (201 autorizada ou 202 processando; 202 NÃO é erro —
-   * ver classifyFocusEmitResponse). Retorna o estado canônico direto: o
-   * chamador decide o que fazer com "processando" (nada — o documento já está
-   * EM_PROCESSAMENTO desde o claim; reconciliação resolve depois). */
-  async emitirNfe(doc: FiscalDoc, config: ProviderConfig): Promise<FocusRemoteState> {
+  /** Sprint P0 Focus — emissão NFC-e/NF-e. Gap bloqueante = zero POST. */
+  async emitirDocumento(doc: FiscalDoc, config: ProviderConfig): Promise<FocusRemoteState> {
     const { url, token, timeout = 30_000 } = config;
-    if (!url?.trim() || !token?.trim()) {
-      return {
-        kind: "erro_definitivo",
-        erro: "FOCUS_MISSING_URL_OR_TOKEN",
-        http_status: null,
-        provider_code: "FOCUS_MISSING_URL_OR_TOKEN",
-        provider_message: "Config do provider sem URL base ou token resolvido.",
-        payload: null,
-      };
-    }
+    if (!url?.trim() || !token?.trim()) return focusConfigAusente();
     const ref = this.resolveRef(doc);
     const { body, bloqueante, gaps } = buildFocusEmitBody(doc, ref);
     if (bloqueante) {
@@ -570,22 +887,15 @@ export class FocusProvider implements FiscalProvider {
     return await postFocusEmit(requestUrl, token, body, timeout);
   }
 
-  /** C2.5/C2.8 — consulta por referência (GET). Nunca emite; só lê. Usada tanto
-   * para resolver NF-e 202 quanto para reconciliação/retry-seguro de qualquer
-   * tipo de documento. */
+  /** C2.6 — mantido por compatibilidade; mesmo caminho de `emitirDocumento`. */
+  async emitirNfe(doc: FiscalDoc, config: ProviderConfig): Promise<FocusRemoteState> {
+    return await this.emitirDocumento(doc, config);
+  }
+
+  /** C2.5/C2.8 — consulta por referência (GET). Nunca emite; só lê. */
   async consultarDocumento(ref: string, tipoDoc: string, config: ProviderConfig): Promise<FocusRemoteState> {
     const { url, token, timeout = 30_000 } = config;
-    if (!url?.trim() || !token?.trim()) {
-      return {
-        kind: "erro_definitivo",
-        erro: "FOCUS_MISSING_URL_OR_TOKEN",
-        http_status: null,
-        provider_code: "FOCUS_MISSING_URL_OR_TOKEN",
-        provider_message: "Config do provider sem URL base ou token resolvido.",
-        payload: null,
-      };
-    }
-
+    if (!url?.trim() || !token?.trim()) return focusConfigAusente();
     const requestUrl = buildFocusConsultaUrl(url, tipoDoc, ref);
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), timeout);
@@ -598,53 +908,76 @@ export class FocusProvider implements FiscalProvider {
         },
         signal: controller.signal,
       });
-
-      let parsed: unknown = null;
-      try {
-        parsed = await res.json();
-      } catch {
-        // corpo não JSON
-      }
-      const record = isRecord(parsed) ? parsed : {};
-      return classifyFocusConsultaResponse(res, record);
+      return classifyFocusConsultaResponse(res, await lerJson(res));
     } catch (e) {
-      const isAbort = e instanceof Error && e.name === "AbortError";
-      const msg = e instanceof Error ? e.message : String(e);
+      return focusErroDeRede(e);
+    } finally {
+      clearTimeout(t);
+    }
+  }
+
+  /** Sprint P0 Focus — DELETE /v2/nfce|nfe/{referencia} com `justificativa`
+   * (15–255). Mesma URL da consulta, mesma referência — nunca outra. */
+  async cancelarDocumento(ref: string, tipoDoc: string, justificativa: string, config: ProviderConfig): Promise<FocusRemoteState> {
+    const { url, token, timeout = 30_000 } = config;
+    if (!url?.trim() || !token?.trim()) return focusConfigAusente();
+    if (!justificativaCancelamentoValida(justificativa)) {
       return {
-        kind: "erro_transitorio",
-        erro: isAbort ? "FOCUS_PROVIDER_TIMEOUT" : `FOCUS_PROVIDER_ERROR:${msg}`,
+        kind: "erro_definitivo",
+        erro: "FOCUS_CANCELAMENTO_JUSTIFICATIVA_INVALIDA",
         http_status: null,
-        provider_code: isAbort ? "FOCUS_PROVIDER_TIMEOUT" : "FOCUS_PROVIDER_ERROR",
-        provider_message: msg,
+        provider_code: "FOCUS_CANCELAMENTO_JUSTIFICATIVA_INVALIDA",
+        provider_message: "Justificativa deve ter entre 15 e 255 caracteres.",
         payload: null,
       };
+    }
+    const requestUrl = buildFocusConsultaUrl(url, tipoDoc, ref);
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), timeout);
+    try {
+      const res = await fetch(requestUrl, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: `Basic ${encodeFocusBasicAuth(token)}`,
+        },
+        body: JSON.stringify({ justificativa: justificativa.trim() }),
+        signal: controller.signal,
+      });
+      return classifyFocusCancelResponse(res, await lerJson(res));
+    } catch (e) {
+      return focusErroDeRede(e);
     } finally {
       clearTimeout(t);
     }
   }
 
   /**
-   * Missão final (C3) — BLOCKED EXTERNAL por construção, ZERO chamada de
-   * rede. A documentação oficial da Focus colada nesta missão (Gate C2.5)
-   * nunca confirmou o nome do campo/endpoint que devolve o XML autorizado
-   * (mesma lacuna já registrada para o corpo de resposta de consulta —
-   * `RESPOSTAS FOCUS: BLOCKED` desde C2.5, `fiscal_types.ts`). Inventar um
-   * nome de campo (ex.: um "caminho_xml_nota_fiscal" plausível) violaria a
-   * regra explícita desta missão de nunca supor contrato Focus não
-   * confirmado. Quando o contrato for confirmado (documentação oficial
-   * colada pelo usuário, ou resposta real de homologação observada), só
-   * este método precisa mudar — toda a infraestrutura de armazenamento/
-   * idempotência/retenção ao redor (fiscal_xml_orchestration.ts, migration
-   * 20260903150000) já está pronta e não depende deste detalhe.
+   * Sprint P0 Focus — XML autorizado a partir de `caminho_xml_nota_fiscal`
+   * (persistido em `focus_xml_path`). Sem referência persistida, consulta a
+   * MESMA referência (GET) para obtê-la; nunca emite. O link não exige
+   * autenticação (contrato Focus) — o download não envia o token.
    */
-  async obterXmlAutorizado(_ref: string, _tipoDoc: string, _config: ProviderConfig): Promise<FiscalXmlResult> {
-    return {
-      kind: "blocked_external",
-      motivo:
-        "FOCUS_XML_CONTRATO_NAO_CONFIRMADO: nome do campo/endpoint que devolve o XML autorizado nunca foi " +
-        "confirmado pela documentação oficial da Focus nesta missão — não inventado, ver fiscal_types.ts " +
-        "(mesma lacuna de RESPOSTAS FOCUS, Gate C2.5).",
-    };
+  async obterXmlAutorizado(ref: string, tipoDoc: string, config: ProviderConfig, caminho?: string | null): Promise<FiscalXmlResult> {
+    const timeout = config.timeout ?? 30_000;
+    let caminhoEfetivo = caminho ?? null;
+    if (!caminhoEfetivo) {
+      const estado = await this.consultarDocumento(ref, tipoDoc, config);
+      if (estado.kind === "autorizado") caminhoEfetivo = estado.artefatos?.xml_path ?? null;
+      if (!caminhoEfetivo) {
+        return { kind: "erro_transitorio", motivo: `FOCUS_XML_REFERENCIA_AUSENTE:consulta=${estado.kind}` };
+      }
+      const xml = await baixarXmlFocus(caminhoEfetivo, config.url, timeout);
+      return xml.kind === "obtido" ? { ...xml, caminho_recuperado: caminhoEfetivo, artefatos: estado.kind === "autorizado" ? estado.artefatos : undefined } : xml;
+    }
+    return await baixarXmlFocus(caminhoEfetivo, config.url, timeout);
+  }
+
+  /** Sprint P0 Focus — XML de cancelamento a partir de
+   * `caminho_xml_cancelamento`. Sem caminho: erro (fila tenta de novo). */
+  async obterXmlCancelamento(caminho: string | null, _ref: string, _tipoDoc: string, config: ProviderConfig): Promise<FiscalXmlResult> {
+    return await baixarXmlFocus(caminho, config.url, config.timeout ?? 30_000);
   }
 }
 
