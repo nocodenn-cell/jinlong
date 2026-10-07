@@ -3,8 +3,11 @@
 import { useState } from 'react'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { History, PackagePlus, SlidersHorizontal } from 'lucide-react'
-import { adminEstoqueRecebimentoProdutoQuery } from '@/lib/navigation/routes'
+import { History, PackagePlus, Printer, SlidersHorizontal } from 'lucide-react'
+import {
+  adminEstoqueRecebimentoProdutoQuery,
+  adminEtiquetasProdutoQuery,
+} from '@/lib/navigation/routes'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -41,6 +44,7 @@ export type EstoqueLabels = {
   vazioSub: string
   ajusteTitulo: string
   reporTitulo: string
+  etiquetasTitulo: string
   saldoAtual: string
   estoqueMinimo: string
   motivo: string
@@ -183,9 +187,19 @@ export function EstoqueTable({ linhas, labels, ordem = 'nome', direcao = 'asc', 
 
   return (
     <>
-      <SaldoMobileCards linhas={linhas} labels={labels} idioma={idioma}
-        onAjustar={(row) => setAjusteAlvo({ produtoId: row.id, produtoNome: row.nome, quantidadeAtual: row.quantidade_atual ?? 0, estoqueMinimo: row.estoque_minimo ?? 0 })}
-        onKardex={(row) => setKardexAlvo({ produtoId: row.id, produtoNome: row.nome })} />
+      <SaldoMobileCards
+        linhas={linhas}
+        labels={labels}
+        onAjustar={(row) =>
+          setAjusteAlvo({
+            produtoId: row.id,
+            produtoNome: row.nome,
+            quantidadeAtual: row.quantidade_atual ?? 0,
+            estoqueMinimo: row.estoque_minimo ?? 0,
+          })
+        }
+        onKardex={(row) => setKardexAlvo({ produtoId: row.id, produtoNome: row.nome })}
+      />
       <div className="hidden lg:block">
       <DataTable
         data={linhas}
@@ -245,6 +259,25 @@ export function EstoqueTable({ linhas, labels, ordem = 'nome', direcao = 'asc', 
               }}
             >
               <History className="h-5 w-5" aria-hidden />{labels.kardexTitulo}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              aria-label={`${labels.etiquetasTitulo} ${row.nome}`}
+              title={labels.etiquetasTitulo}
+              asChild
+            >
+              <Link
+                href={adminEtiquetasProdutoQuery({
+                  codigo: row.codigo_barras,
+                  produtoId: row.codigo_barras ? null : row.id,
+                })}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Printer className="h-5 w-5" aria-hidden />
+                {labels.etiquetasTitulo}
+              </Link>
             </Button>
           </div>
         )}

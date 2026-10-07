@@ -1,15 +1,20 @@
 'use client'
 
 import Link from 'next/link'
-import { SlidersHorizontal, History, PackagePlus, Tag } from 'lucide-react'
+import { SlidersHorizontal, History, PackagePlus, Printer } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/feedback'
 import type { EstoqueLabels, EstoqueLinha } from './EstoqueTable'
-import { adminEstoqueRecebimentoProdutoQuery, ROUTES } from '@/lib/navigation/routes'
+import {
+  adminEstoqueRecebimentoProdutoQuery,
+  adminEtiquetasProdutoQuery,
+} from '@/lib/navigation/routes'
 
-export function SaldoMobileCards({ linhas, labels, idioma, onAjustar, onKardex }: {
-  linhas: EstoqueLinha[]; labels: EstoqueLabels; idioma: 'pt' | 'zh';
-  onAjustar: (row: EstoqueLinha) => void; onKardex: (row: EstoqueLinha) => void
+export function SaldoMobileCards({ linhas, labels, onAjustar, onKardex }: {
+  linhas: EstoqueLinha[]
+  labels: EstoqueLabels
+  onAjustar: (row: EstoqueLinha) => void
+  onKardex: (row: EstoqueLinha) => void
 }) {
   return <div className="space-y-3 p-3 lg:hidden">
     {linhas.length === 0 ? <EmptyState title={labels.vazioTitulo} description={labels.vazioSub} /> : null}
@@ -25,7 +30,17 @@ export function SaldoMobileCards({ linhas, labels, idioma, onAjustar, onKardex }
         <Button variant="outline" size="sm" onClick={() => onAjustar(row)}><SlidersHorizontal aria-hidden />{labels.ajusteTitulo}</Button>
         <Button variant="outline" size="sm" onClick={() => onKardex(row)}><History aria-hidden />{labels.kardexTitulo}</Button>
         <Button asChild variant="outline" size="sm"><Link href={adminEstoqueRecebimentoProdutoQuery(row.id)}><PackagePlus aria-hidden />{labels.reporTitulo}</Link></Button>
-        <Link className="inline-flex items-center gap-2 self-center text-caption font-semibold underline" href={`${ROUTES.admin.estoqueImprimirEtiquetas}?produto=${row.id}`}><Tag className="h-5 w-5" aria-hidden />{idioma === 'zh' ? '标签' : 'Etiquetas'}</Link>
+        <Button asChild variant="outline" size="sm">
+          <Link
+            href={adminEtiquetasProdutoQuery({
+              codigo: row.codigo_barras,
+              produtoId: row.codigo_barras ? null : row.id,
+            })}
+          >
+            <Printer aria-hidden />
+            {labels.etiquetasTitulo}
+          </Link>
+        </Button>
       </div>
     </article>)}
   </div>

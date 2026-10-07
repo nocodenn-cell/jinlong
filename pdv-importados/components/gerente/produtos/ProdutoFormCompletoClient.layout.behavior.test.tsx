@@ -142,6 +142,18 @@ describe('ProdutoFormCompletoClient — UX-017', () => {
     expect(salvar).toBeTruthy()
   })
 
+  it('edição expõe Imprimir etiqueta na rota canônica do produto', () => {
+    montar()
+    const link = container.querySelector(
+      '[data-testid="produto-completo-imprimir-etiqueta"]',
+    ) as HTMLAnchorElement | null
+    expect(link).toBeTruthy()
+    expect(link!.textContent).toContain(m.produtos.pos_salvar_imprimir_etiqueta)
+    expect(link!.getAttribute('href')).toBe(
+      `/admin/estoque/imprimir-etiquetas?codigo=${produto.codigo_barras}`,
+    )
+  })
+
   it('o checkbox continua alterando o estado do formulário', () => {
     montar()
     const check = container.querySelector('[data-testid="precos-compra"] input[type="checkbox"]') as HTMLInputElement

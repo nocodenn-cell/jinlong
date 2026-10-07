@@ -367,6 +367,7 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
               origemBrasil: ui.estoque_origem_brasil,
               acaoEditar: ui.catalogo_acao_editar,
               acaoDuplicar: ui.catalogo_acao_duplicar,
+              acaoImprimirEtiqueta: ui.catalogo_acao_imprimir_etiqueta,
               acaoVerEstoque: ui.catalogo_acao_ver_estoque,
               acaoSelecionarLinha: ui.catalogo_acao_selecionar_linha,
               reativar: ui.catalogo_acao_reativar,

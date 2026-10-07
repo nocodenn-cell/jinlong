@@ -71,6 +71,7 @@ const labels = {
   origemBrasil: 'Brasil',
   acaoEditar: 'Editar {{nome}}',
   acaoDuplicar: 'Duplicar {{nome}}',
+  acaoImprimirEtiqueta: 'Imprimir etiqueta — {{nome}}',
   acaoVerEstoque: 'Ver estoque',
   acaoSelecionarLinha: 'Selecionar {{nome}}',
   reativar: 'Reativar',
@@ -212,6 +213,14 @@ describe('Cadastro produto — entradas alinhadas ao CatalogoNovoButton', () => 
     expect(duplicarLink, 'link de duplicar').toBeTruthy()
     expect(duplicarLink.getAttribute('href')).toBe(
       `/admin/catalogo/novo/completo?duplicarDe=${produto.id}`,
+    )
+
+    const etiquetaLink = container.querySelector(
+      `a[aria-label="${labels.acaoImprimirEtiqueta.replace('{{nome}}', produto.nome)}"]`,
+    ) as HTMLAnchorElement
+    expect(etiquetaLink, 'link de imprimir etiqueta').toBeTruthy()
+    expect(etiquetaLink.getAttribute('href')).toBe(
+      `/admin/estoque/imprimir-etiquetas?codigo=${produto.codigo_barras}`,
     )
   })
 })
