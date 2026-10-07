@@ -212,6 +212,60 @@ export type Database = {
           },
         ]
       }
+      caixas_fechamento_formas: {
+        Row: {
+          caixa_id: string
+          created_at: string
+          created_by: string | null
+          diferenca: number | null
+          forma_pagamento: string
+          id: string
+          metrica: string
+          origem_regra: string
+          valor_informado: number | null
+          valor_sistema_snapshot: number
+        }
+        Insert: {
+          caixa_id: string
+          created_at?: string
+          created_by?: string | null
+          diferenca?: number | null
+          forma_pagamento: string
+          id?: string
+          metrica: string
+          origem_regra?: string
+          valor_informado?: number | null
+          valor_sistema_snapshot: number
+        }
+        Update: {
+          caixa_id?: string
+          created_at?: string
+          created_by?: string | null
+          diferenca?: number | null
+          forma_pagamento?: string
+          id?: string
+          metrica?: string
+          origem_regra?: string
+          valor_informado?: number | null
+          valor_sistema_snapshot?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "caixas_fechamento_formas_caixa_id_fkey"
+            columns: ["caixa_id"]
+            isOneToOne: false
+            referencedRelation: "caixas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "caixas_fechamento_formas_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categorias: {
         Row: {
           ativo: boolean
@@ -6193,7 +6247,6 @@ export type Database = {
               p_observacao?: string
               p_produto_id: string
               p_quantidade_atual: number
-              p_saldo_esperado?: number
             }
             Returns: undefined
           }
@@ -6276,6 +6329,14 @@ export type Database = {
       calcular_valor_sistema_dinheiro_caixa: {
         Args: { p_caixa_id: string }
         Returns: number
+      }
+      calcular_valor_sistema_por_forma_caixa: {
+        Args: { p_caixa_id: string }
+        Returns: {
+          forma_pagamento: string
+          metrica: string
+          valor_sistema: number
+        }[]
       }
       cancelar_conta_pagar: {
         Args: {
@@ -6681,9 +6742,17 @@ export type Database = {
         Args: { p_dados: Json; p_request_id: string; p_tipo: string }
         Returns: Json
       }
+      financeiro_comando_v1: {
+        Args: { p_dados: Json; p_request_id: string; p_tipo: string }
+        Returns: Json
+      }
       financeiro_painel: {
         Args: { p_ate: string; p_de: string; p_pagina?: number }
         Returns: Json
+      }
+      fiscal_cancelar_documento: {
+        Args: { p_documento_id: string; p_justificativa: string }
+        Returns: undefined
       }
       fiscal_claim_documentos: {
         Args: { p_limit?: number }
@@ -6739,6 +6808,14 @@ export type Database = {
           p_venda_id: string
         }
         Returns: string
+      }
+      fiscal_marcar_cancelado: {
+        Args: {
+          p_documento_id: string
+          p_motivo?: string
+          p_provider_payload?: Json
+        }
+        Returns: undefined
       }
       fiscal_marcar_emitido: {
         Args: {
@@ -6939,6 +7016,18 @@ export type Database = {
         Returns: {
           id: string
           operador_nome: string
+        }[]
+      }
+      listar_caixas_fechamento_formas: {
+        Args: { p_caixa_id: string }
+        Returns: {
+          created_at: string
+          diferenca: number
+          forma_pagamento: string
+          metrica: string
+          origem_regra: string
+          valor_informado: number
+          valor_sistema_snapshot: number
         }[]
       }
       listar_venda_eventos_gerente: {
