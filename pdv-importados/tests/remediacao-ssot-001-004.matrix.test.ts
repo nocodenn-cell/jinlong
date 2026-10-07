@@ -127,10 +127,34 @@ describe('SSOT-004 — enqueue fiscal canônico', () => {
     expect(enqueue).toContain("rpc('fiscal_enfileirar_documento_venda'")
   })
 
+  it('sync-outbox também enfileira só via RPC canônica', () => {
+    const sync = readFileSync(
+      join(ROOT, 'backend/supabase/functions/sync-outbox/fiscal_enqueue_after_venda_sync.ts'),
+      'utf8',
+    )
+    expect(sync).toContain('fiscal_enfileirar_documento_venda')
+    expect(sync).toMatch(/\.rpc\s*\(\s*["']fiscal_enfileirar_documento_venda["']/)
+    expect(sync).not.toMatch(/\.from\s*\(\s*["']documentos_fiscais_pendentes["']\s*\)\s*\.insert/)
+  })
+
   it('REVOKE INSERT authenticated presente (idempotente)', () => {
     expect(revoke).toContain('REVOKE INSERT ON public.documentos_fiscais_pendentes')
     expect(prior).toContain('REVOKE INSERT ON public.documentos_fiscais_pendentes')
     expect(revoke).toContain('SSOT-004 PROVA FAIL')
+  })
+
+  it('hotfix GRANT INSERT é anterior aos REVOKE SSOT-004 (ordem lexicográfica)', () => {
+    const hotfix = '20260903180000_fiscal_hotfix_codex_review.sql'
+    const r1 = '20261007161220_fiscal_cancelado_ssot.sql'
+    const r2 = '20261007163200_ssot_004_revoke_insert_documentos_fiscais.sql'
+    expect(hotfix < r1).toBe(true)
+    expect(r1 < r2).toBe(true)
+    const hotfixSql = mig(hotfix)
+    expect(hotfixSql).toContain('GRANT INSERT ON public.documentos_fiscais_pendentes TO authenticated')
+    expect(revoke).toContain(
+      "privilege_type = 'INSERT'",
+    )
+    expect(revoke).toContain("grantee = 'authenticated'")
   })
 })
 

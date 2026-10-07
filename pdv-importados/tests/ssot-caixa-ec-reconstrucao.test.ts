@@ -85,4 +85,33 @@ describe('E(C) reconstrução canônica', () => {
       }),
     ).toBe(80)
   })
+
+  it('recebimento parcial AR soma só o liquidado (sem dupla contabilização do título)', () => {
+    const parcial1 = 40
+    const parcial2 = 35
+    const e = eDeC({
+      valorInicial: 0,
+      vendasDinheiro: 0,
+      arDinheiro: parcial1 + parcial2,
+      suprimentos: 0,
+      sangrias: 0,
+      devolucoesDinheiro: 0,
+    })
+    expect(e).toBe(75)
+    // título 100 aberto: E(c) não inclui o residual não liquidado
+    expect(e).not.toBe(100)
+  })
+
+  it('mesmos eventos → mesmo E(c) (idempotência da fórmula)', () => {
+    const base: Events = {
+      valorInicial: 50,
+      vendasDinheiro: 100,
+      arDinheiro: 20,
+      suprimentos: 10,
+      sangrias: 15,
+      devolucoesDinheiro: 5,
+    }
+    expect(eDeC(base)).toBe(eDeC({ ...base }))
+    expect(eDeC(base)).toBe(160)
+  })
 })

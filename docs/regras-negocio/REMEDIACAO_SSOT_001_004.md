@@ -62,8 +62,20 @@ Importações / Contábil / Intelligence **não** são implementados neste PR �
 cd pdv-importados
 npm run check:entity-ssot
 npx vitest run tests/remediacao-ssot-001-004.matrix.test.ts tests/ssot-caixa-ec-reconstrucao.test.ts
-# Deno (fiscal, herdado #475):
-cd ../backend/supabase/functions/fiscal-worker && deno test fiscal-provider-adapter.test.ts fiscal_worker_orchestration.test.ts
+# Deno (fiscal, #475 + cancelado):
+cd ../backend/supabase/functions/fiscal-worker
+deno test --allow-env --allow-net --allow-read \
+  fiscal-provider-adapter.test.ts fiscal_worker_orchestration.test.ts
 ```
 
-Migrations **não** aplicadas no Jinlong remoto nesta sprint (prova estrutural + DO blocks na aplicação local/homolog).
+### Resultado da validação (esta branch)
+
+| Suite | Resultado |
+|-------|-----------|
+| `check:entity-ssot` | OK |
+| vitest matriz + E(c) | passed |
+| deno fiscal-worker | 67 passed (com `--allow-env`) |
+| typecheck monorepo completo | não exigido (sem mudança de API TS de runtime) |
+| apply migrations Jinlong remoto | **não** (proibido nesta sprint) |
+
+Prova negativa INSERT autenticado: bloco `DO` em `20261007163200` consulta `information_schema.role_table_grants` e falha a migration se `authenticated` ainda tiver INSERT. Roda no apply local/homolog — não no remoto Jinlong nesta sprint.
