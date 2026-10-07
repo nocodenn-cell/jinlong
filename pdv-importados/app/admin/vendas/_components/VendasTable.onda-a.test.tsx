@@ -74,6 +74,16 @@ describe('VendasTable — uma linha por venda (Onda A)', () => {
     expect(ids.size).toBe(4)
   })
 
+  it('coluna Venda: título = UUID completo e texto = # + 6 hex (contrato E2E sync-fluxo)', () => {
+    render()
+    const id = 'aaaaaaaa-0000-4000-8000-000000000001'
+    const span = container.querySelector(`span[title="${id}"]`)
+    expect(span).toBeTruthy()
+    expect(span!.textContent?.trim()).toBe('#AAAAAA')
+    // getByRole('cell', { name: id }) NÃO casa — accessible name da célula é o texto curto.
+    expect(span!.closest('td')?.textContent?.includes(id)).toBe(false)
+  })
+
   it('o status exibido é o ATUAL: 3 concluídas e 1 cancelada', () => {
     render()
     const text = container.textContent ?? ''
