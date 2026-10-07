@@ -44,8 +44,22 @@ const digito = (n: 1 | 2 | 3 | 4): CaixaAtalho => [
 export const CAIXA_ATALHOS = {
   ajuda: [f('F1')],
   buscar: [f('F2'), { code: 'KeyB', label: 'Ctrl+B', ctrl: true, shift: false, alt: false }],
-  consultaRapida: [f('F3')],
-  finalizar: [f('F4'), f('F9')],
+  /** Drawer único de descontos (manual / comercial / gerente). */
+  aplicarDesconto: [f('F3')],
+  /** Consulta rápida (preço/estoque) — migrada de F3 para liberar desconto. */
+  consultaRapida: [f('F7')],
+  finalizar: [
+    f('F4'),
+    f('F9'),
+    {
+      code: 'Enter',
+      label: 'Enter',
+      ctrl: false,
+      alt: false,
+      shift: false,
+      meta: false,
+    },
+  ],
   fecharCaixa: [f('F6')],
   novoCupom: [f('F8')],
   reimprimir: [f('F12')],

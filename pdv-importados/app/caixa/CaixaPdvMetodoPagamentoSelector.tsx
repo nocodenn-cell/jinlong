@@ -67,15 +67,9 @@ function CaixaPdvMetodoPagamentoSelectorImpl({
             )}
           >
             <Icon className="h-7 w-7" strokeWidth={selected ? 2.4 : 1.9} aria-hidden />
-            <span>{label}</span>
-            <span
-              aria-hidden
-              className={cn(
-                "absolute right-1 top-1 text-caption font-bold tabular-nums",
-                selected ? "text-primary/70" : "text-jl-fg-3",
-              )}
-            >
-              {atalho}
+            <span className="text-center">
+              <span className="tabular-nums text-caption font-bold opacity-70">[{atalho}]</span>{' '}
+              {label}
             </span>
           </RadioGroupItem>
         )
