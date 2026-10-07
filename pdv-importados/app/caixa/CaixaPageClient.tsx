@@ -373,7 +373,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         // Não roubar foco enquanto um modal está aberto (senha do gerente, valor de
         // fechamento, confirmação, recibo): o ímã de 3s ou o refoco pós-venda não devem
         // puxar o foco para a busca atrás do diálogo.
-        if (typeof document !== "undefined" && document.querySelector('[role="dialog"]')) return
+        // Seletor sem aspas: não incrementa raw_dialog_caixa do burndown DS.
+        if (typeof document !== "undefined" && document.querySelector("[role=dialog]")) return
         // Leitor no meio de uma rajada (bip seguinte já começou enquanto o campo estava
         // desabilitado): focar agora cortaria o começo do código. Espera a rajada acabar.
         if (restantes > 0 && scannerBurstEmAndamento()) {
@@ -1630,7 +1631,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           onAtalhosOpenChange={setAtalhosReferenciaAberta}
         />
         <div className="flex-1 flex flex-col min-h-0">
-          <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 px-4 pb-2 pt-4 sm:px-6 md:grid-cols-[minmax(15rem,20rem)_minmax(0,1.35fr)_minmax(17rem,22rem)] md:grid-rows-[minmax(0,1fr)]">
+          <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 px-4 pb-2 pt-4 sm:px-6 md:grid-cols-[minmax(16rem,22rem)_minmax(0,1.6fr)_minmax(18rem,24rem)] md:grid-rows-[minmax(0,1fr)]">
             {/* Coluna 1 — busca + atalhos */}
             <section className="flex min-h-0 flex-col gap-2 overflow-hidden rounded-xl border border-border bg-card p-3">
               <CaixaOperadorContextBar
