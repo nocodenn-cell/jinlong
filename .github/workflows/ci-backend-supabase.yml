@@ -56,10 +56,25 @@ jobs:
       - name: Install PostgreSQL client
         run: |
           set -euo pipefail
-          # Timeout evita hang indefinido em apt mirrors (visto em tip 9334577d
-          # — step preso >20min em "Install PostgreSQL client").
-          sudo timeout 120 apt-get update -y
-          sudo timeout 180 apt-get install -y --no-install-recommends postgresql-client
+          # Runner às vezes já traz psql; senão apt com retry — mirrors
+          # do GitHub Hosted podem travar (hang >20min tip 9334577d;
+          # timeout 124 no tip 82ce598a).
+          if command -v psql >/dev/null 2>&1; then
+            psql --version
+            exit 0
+          fi
+          for attempt in 1 2 3; do
+            echo "apt postgresql-client attempt ${attempt}/3"
+            if sudo timeout 180 apt-get update -y \
+              && sudo timeout 240 apt-get install -y --no-install-recommends postgresql-client; then
+              psql --version
+              exit 0
+            fi
+            echo "apt attempt ${attempt} falhou; backoff..."
+            sleep $((attempt * 20))
+          done
+          echo "::error::Falha ao instalar postgresql-client após 3 tentativas."
+          exit 1
 
       - name: Install dependencies (workspace root)
         run: npm ci
