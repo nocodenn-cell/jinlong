@@ -91,9 +91,7 @@ import {
   metodoPagamentoToForma,
   type MetodoPagamentoUi,
 } from "@/app/caixa/caixaMetodoPagamento"
-import { limiteDescontoOperador } from "@/app/caixa/descontoManualPolicy"
 import { atualizarPedidoEspera } from "@/app/caixa/caixaAtualizacaoEspera"
-import { CaixaDescontoManual } from "@/app/caixa/CaixaDescontoManual"
 import { CaixaDescontoComercialDinheiro } from "@/app/caixa/CaixaDescontoComercialDinheiro"
 import { focarBuscaCaixa } from "@/app/caixa/caixaFocoBusca"
 import "@/styles/caixa-operacional.css"
@@ -1647,9 +1645,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                       onRemoverCliente={handleRemoverCliente}
                       onSelecionarCliente={abrirSelecionarCliente}
                     />
-                    <CaixaDescontoManual key={cupomSessionIdRef.current} idioma={idioma === "pt" ? "pt" : "zh"}
-                      limite={limiteDescontoOperador(configCaixaWeb.desconto_maximo_operador_percentual)}
-                      disabled={finalizando || carregandoRegras || !isCaixaAberto(caixaStatus)} />
                     <div className="shrink-0">
                       <CaixaSearchBar
                         ref={buscaInputRef}

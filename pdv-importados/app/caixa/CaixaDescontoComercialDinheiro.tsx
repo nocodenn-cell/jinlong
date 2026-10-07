@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { BadgePercent } from 'lucide-react'
+import { BadgePercent, ChevronDown } from 'lucide-react'
 import { CaixaMoneyInput } from './CaixaMoneyInput'
 import {
   DESCONTO_COMERCIAL_DINHEIRO_MAX_PCT,
@@ -82,11 +82,18 @@ export function CaixaDescontoComercialDinheiro({
   }
 
   return (
-    <div className="rounded-lg border-2 border-slate-500 bg-white p-3" data-testid="caixa-desconto-comercial-dinheiro">
-      <p className="flex items-center gap-2 text-[18px] font-bold text-slate-900">
-        <BadgePercent className="h-6 w-6" aria-hidden />
-        {t.title}
-      </p>
+    <details
+      className="rounded-lg border-2 border-slate-500 bg-white p-3 group"
+      data-testid="caixa-desconto-comercial-dinheiro"
+    >
+      <summary className="flex cursor-pointer list-none items-center gap-2 text-[18px] font-bold text-slate-900 [&::-webkit-details-marker]:hidden">
+        <BadgePercent className="h-6 w-6 shrink-0" aria-hidden />
+        <span className="flex-1">{t.title}</span>
+        <ChevronDown
+          className="h-5 w-5 shrink-0 transition-transform group-open:rotate-180"
+          aria-hidden
+        />
+      </summary>
       <p className="mt-1 text-sm text-slate-700">{t.help}</p>
       <fieldset disabled={disabled} className="mt-3 grid gap-2">
         <button
@@ -142,6 +149,6 @@ export function CaixaDescontoComercialDinheiro({
           <p role="status" className="text-sm font-semibold text-blue-900">{t.applied}</p>
         ) : null}
       </fieldset>
-    </div>
+    </details>
   )
 }
