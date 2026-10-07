@@ -1,0 +1,124 @@
+/**
+ * Matriz de evidência SSOT-001..004 — testes estruturais (fonte versionada).
+ */
+import { readFileSync, existsSync } from 'node:fs'
+import { join } from 'node:path'
+import { describe, expect, it } from 'vitest'
+
+const ROOT = join(import.meta.dirname, '../..')
+const mig = (name: string) =>
+  readFileSync(join(ROOT, 'backend/supabase/migrations', name), 'utf8')
+const app = (rel: string) => readFileSync(join(ROOT, 'pdv-importados', rel), 'utf8')
+const docs = (rel: string) =>
+  readFileSync(join(ROOT, 'docs/regras-negocio', rel), 'utf8')
+
+describe('SSOT-001 — painel PDV usa E(c)', () => {
+  const fix = mig('20261007163000_ssot_001_002_painel_ec_cache.sql')
+  const violation = mig('20261005004647_financeiro_loja_contas_ledger.sql')
+
+  it('documento classifica saldo_atual como cache', () => {
+    const d = docs('SSOT_CAIXA_SALDO_CONTRATO.md')
+    expect(d).toMatch(/projeção|cache/i)
+    expect(d).toContain('valor_sistema_dinheiro')
+    expect(d).toMatch(/não é source of truth/i)
+  })
+
+  it('achado histórico: painel original somava saldo_atual', () => {
+    expect(violation).toContain('sum(saldo_atual)')
+  })
+
+  it('fix: patch troca saldo_pdv para internal.valor_sistema_dinheiro', () => {
+    expect(fix).toContain('internal.valor_sistema_dinheiro')
+    expect(fix).toContain('sum(saldo_atual)')
+    expect(fix).toContain('SSOT-001 PROVA FAIL')
+  })
+})
+
+describe('SSOT-002 — writers de cache derivados de E(c)', () => {
+  const fix = mig('20261007163000_ssot_001_002_painel_ec_cache.sql')
+
+  it('trigger de venda usa sincronizar_saldo_cache', () => {
+    expect(fix).toContain('PERFORM internal.sincronizar_saldo_cache(v_caixa_id)')
+  })
+
+  it('cancelar_venda guarda por E(c) e sincroniza cache', () => {
+    expect(fix).toContain('internal.valor_sistema_dinheiro(v_caixa.id)')
+    expect(fix).toContain('PERFORM internal.sincronizar_saldo_cache(v_caixa.id)')
+    expect(fix).toContain('CANCELAR_VENDA_SALDO_CAIXA_INSUFICIENTE')
+    expect(fix).not.toContain(
+      'SET saldo_atual = ROUND(c.saldo_atual - v_valor_estornado',
+    )
+  })
+
+  it('invariante documentado: esperado = E(C)', () => {
+    const d = docs('SSOT_CAIXA_SALDO_CONTRATO.md')
+    expect(d).toContain('E(C)')
+    expect(d).toContain('sincronizar_saldo_cache')
+  })
+})
+
+describe('SSOT-003 — obrigação financeira na aquisição', () => {
+  const fix = mig('20261007163100_ssot_003_nfe_obrigacao_duplicata.sql')
+  const policy = docs('SSOT_AQUISICAO_OBRIGACAO_FINANCEIRA.md')
+
+  it('política distingue OC/remessa sem obrigação vs NF-e com duplicatas', () => {
+    expect(policy).toContain('ENTRADA_OC')
+    expect(policy).toMatch(/sem.*obrigação/i)
+    expect(policy).toContain('IMPORT_NFE_OBRIGACAO_SEM_DUPLICATA')
+  })
+
+  it('confirm NF-e rejeita econômico > 0 sem duplicatas', () => {
+    expect(fix).toContain('IMPORT_NFE_OBRIGACAO_SEM_DUPLICATA')
+    expect(fix).toContain('v_econ > 0 AND v_n_dup = 0')
+  })
+
+  it('AP continua com origem nfe_importacao_id', () => {
+    expect(fix).toContain('nfe_importacao_id')
+    expect(fix).toContain('importacoes_nfe_duplicatas')
+  })
+
+  it('OC documentada como sem AP', () => {
+    expect(fix).toContain('receber_ordem_compra')
+    expect(fix).toContain('Sem obrigação financeira')
+  })
+})
+
+describe('SSOT-004 — enqueue fiscal canônico', () => {
+  const revoke = mig('20261007163200_ssot_004_revoke_insert_documentos_fiscais.sql')
+  const prior = mig('20261007161220_fiscal_cancelado_ssot.sql')
+  const actions = app('app/gerente/financeiro/actions.ts')
+  const gate = app('scripts/check-entity-ssot-boundary.mjs')
+  const enqueue = app('app/caixa/server/caixaFiscalEnqueueServer.ts')
+
+  it('stub enfileirarDocFiscalStub ausente das actions', () => {
+    expect(actions).not.toContain('enfileirarDocFiscalStub')
+    expect(actions).not.toContain(".from('documentos_fiscais_pendentes').insert")
+  })
+
+  it('gate check-entity-ssot proíbe reintroduzir stub e INSERT direto', () => {
+    expect(gate).toContain("symbol: 'enfileirarDocFiscalStub'")
+    expect(gate).toContain("table: 'documentos_fiscais_pendentes'")
+  })
+
+  it('enqueue canônico via RPC fiscal_enfileirar_documento_venda', () => {
+    expect(enqueue).toContain("rpc('fiscal_enfileirar_documento_venda'")
+  })
+
+  it('REVOKE INSERT authenticated presente (idempotente)', () => {
+    expect(revoke).toContain('REVOKE INSERT ON public.documentos_fiscais_pendentes')
+    expect(prior).toContain('REVOKE INSERT ON public.documentos_fiscais_pendentes')
+    expect(revoke).toContain('SSOT-004 PROVA FAIL')
+  })
+})
+
+describe('Matriz REMEDIACAO documentada', () => {
+  it('arquivo de validação existe com as quatro linhas', () => {
+    const path = join(ROOT, 'docs/regras-negocio/REMEDIACAO_SSOT_001_004.md')
+    expect(existsSync(path)).toBe(true)
+    const md = readFileSync(path, 'utf8')
+    for (const id of ['SSOT-001', 'SSOT-002', 'SSOT-003', 'SSOT-004']) {
+      expect(md).toContain(id)
+    }
+    expect(md).toMatch(/\bGO\b|\bNO-GO\b/)
+  })
+})
