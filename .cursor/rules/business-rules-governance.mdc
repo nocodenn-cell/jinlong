@@ -1,0 +1,53 @@
+# Governança de Regras de Negócio (SSoT de domínio)
+
+Obrigatório para **código novo** e features que toquem dados críticos.
+Documentos canônicos:
+
+- `docs/regras-negocio/GOVERNANCA_REGRAS_NEGOCIO.md`
+- `docs/regras-negocio/MAPA_DOMINIOS_REGRAS_NEGOCIO.md`
+- `docs/regras-negocio/CHECKLIST_FEATURE_DOMINIO.md`
+
+## Gate arquitetural
+
+**Recusar / não implementar** se a mudança:
+
+1. Cria uma **segunda fonte de verdade** para saldo, custo, custo nacionalizado, margem, preço efetivo, AR/AP, saldo financeiro, impostos, classificação fiscal, disponibilidade ou status de pedido.
+2. **Duplica** uma regra já canônica (RPC/ADR/consolidação P1) com algoritmo paralelo.
+3. **Altera outro domínio** sem contrato explícito (RPC orquestradora ou port documentado).
+
+## Um dono por dado crítico
+
+| Dado | Dono |
+|------|------|
+| Identidade / cadastro produto | products (`/admin/catalogo`) |
+| Saldo / movimentos estoque | inventory (`/admin/estoque`) |
+| Venda / pagamentos da venda | sales (`/caixa`, cancel em `/admin/vendas`) |
+| Turno / \(E(c)\) / sangria | cash |
+| AR / AP / liquidações | financial (`/admin/financeiro`) |
+| Documentos fiscais | fiscal |
+| Cliente / fornecedor | customers / suppliers (telas oficiais) |
+
+Domínios futuros (Importações, Contábil, Intelligence, Demanda/Compras central, Mobile) **só** após atualizar o mapa e definir contratos — ver §2 do mapa.
+
+## Contratos (não UPDATE silencioso)
+
+- Importação/Compra **solicita** entrada ao Estoque — não faz UPDATE direto em `estoque`.
+- Consequência econômica termina no **Financeiro** com origem rastreável.
+- Venda baixa estoque só via orquestrador canônico (`finalizar_venda_*` / cancel / devolver).
+- Intelligence e Mobile são **consumidores** (read-only / thin client) — sem regra de negócio própria persistida como verdade.
+
+## Antes de implementar feature nova
+
+Exigir respostas às 13 perguntas do checklist. Se não estiverem claras, **parar** e documentar/ADR antes de código.
+
+## Número explicável e auditoria
+
+Números críticos (financeiro, fiscal, importação, contábil, intelligence) devem permitir: origem, registros, cálculo, regra vigente, status (confirmado/estimado/pendente).
+
+Mutações críticas: quem → quando → o quê → antes → depois → origem → motivo → aprovação.
+
+## Relação com outras rules
+
+- Complementa `entity-ssot.mdc` (telas oficiais de CRUD).
+- Complementa `governance.mdc` (escopo de módulo no monorepo).
+- Não substitui ADRs 005–012; em conflito factual com inventário recente, **atualizar o mapa** em PR de docs antes de expandir o módulo.

@@ -115,6 +115,22 @@ Closes #123
 
 ---
 
+## 🧭 Domain / business-rule governance
+
+New features that touch critical data must follow **one owner → one source of truth → multiple consumers**.
+
+- Directive: `docs/regras-negocio/GOVERNANCA_REGRAS_NEGOCIO.md`
+- Domain map (code-confronted): `docs/regras-negocio/MAPA_DOMINIOS_REGRAS_NEGOCIO.md`
+- Pre-implementation checklist (13 questions): `docs/regras-negocio/CHECKLIST_FEATURE_DOMINIO.md`
+- Agent rule: `.cursor/rules/business-rules-governance.mdc`
+- Entity UI SSoT: `.cursor/rules/entity-ssot.mdc`
+
+**Do not merge** a PR that creates a second source of truth, duplicates a canonical rule, or mutates another domain without an explicit contract (documented RPC/orchestrator).
+
+Large planned modules (Importações, Central Fiscal, Contabilidade, Intelligence, Demanda/Compras, Mobile) require an updated domain-map row + ADR/contracts before implementation.
+
+---
+
 ## ✅ Code Review Checklist
 
 ### Before Requesting Review
@@ -125,6 +141,7 @@ Closes #123
 - [ ] No console.log or debug code left
 - [ ] Commit messages follow format
 - [ ] No hardcoded secrets/credentials
+- [ ] Domain checklist filled when the PR changes business rules or critical data
 
 ### Reviewer Responsibilities
 - [ ] Code does what PR claims
