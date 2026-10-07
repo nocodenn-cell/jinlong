@@ -6,6 +6,7 @@
 | **Data** | 2026-10-07 |
 | **Governança** | [GOVERNANCA_REGRAS_NEGOCIO.md](./GOVERNANCA_REGRAS_NEGOCIO.md) |
 | **Confrontação** | Código (`pdv-importados`, `shared-core`, `backend/supabase`) + ADRs 005–012 + inventários `docs/architecture/` |
+| **Auditoria SSoT (2026-10-07)** | [AUDITORIA_SSoT_DOMINIOS.md](./AUDITORIA_SSoT_DOMINIOS.md) · [INVENTARIO_IMPLEMENTACAO_DOMINIOS.md](./INVENTARIO_IMPLEMENTACAO_DOMINIOS.md) — **NO-GO** módulos grandes até SSOT-001…004 |
 | **Legenda de maturidade** | **Operacional** = dono ativo em produção · **Parcial** = artefato existe, dono ainda misturado · **Planejado** = domínio futuro sem SSoT próprio |
 
 ---
