@@ -26,6 +26,8 @@ type Props = {
   /** Percentual efetivo do desconto de gerente — só rotula a linha do resumo. */
   descontoGerentePercentual?: number
   moedaPrefixo: string
+  /** Layout 3 colunas: totais/finalizar ficam na coluna direita. */
+  hideTotaisEFinalizar?: boolean
 }
 
 export function CaixaPdvCartSaleBar({
@@ -47,6 +49,7 @@ export function CaixaPdvCartSaleBar({
   valorDescontoGerente = 0,
   descontoGerentePercentual = 0,
   moedaPrefixo,
+  hideTotaisEFinalizar = false,
 }: Props) {
   const excluirDisabled =
     !caixaAberto || movimentandoCaixa || finalizando || carregandoRegras
@@ -79,54 +82,56 @@ export function CaixaPdvCartSaleBar({
             ) : null}
           </div>
         ) : null}
-        {/* Linha 1: total sempre inteiro e legível, sem competir por espaço com os botões. */}
-        <div className="text-right">
-          <div className="text-xs font-semibold uppercase tracking-wide text-jl-fg-3">
-            {m.caixa.cart_bar_total_label}
-          </div>
-
-          <div
-            data-testid="caixa-total-liquido"
-            data-total-liquido={totalLiquidoComGerente.toFixed(2)}
-            className="whitespace-nowrap text-4xl font-black tabular-nums leading-tight text-jl-fg-1"
-          >
-            {moedaPrefixo} {formatDecimalBRL(totalLiquidoComGerente)}
-          </div>
-
-          {(hasDesconto || hasDescontoGerente) && (
-            <div className="mt-0.5 flex flex-col items-end gap-0.5 text-xs text-jl-fg-3">
-              <div className="flex justify-end gap-2">
-                <span>{m.caixa.bruto}</span>
-                <span className="tabular-nums">
-                  {moedaPrefixo} {formatDecimalBRL(totalBruto)}
-                </span>
-              </div>
-              {hasDesconto && (
-                <div className="flex justify-end gap-2">
-                  <span>{m.caixa.descontos_regras}</span>
-                  <span className="tabular-nums text-[var(--color-warning-strong)]">
-                    -{moedaPrefixo} {formatDecimalBRL(totalDesconto)}
-                  </span>
-                </div>
-              )}
-              {hasDescontoGerente && (
-                <div className="flex justify-end gap-2">
-                  <span>
-                    {caixaFmt(m.caixa.desconto_gerente_label, {
-                      pct: descontoGerentePercentual.toFixed(2),
-                    })}
-                  </span>
-                  <span className="tabular-nums text-[var(--color-warning-strong)]">
-                    -{moedaPrefixo} {formatDecimalBRL(valorDescontoGerente)}
-                  </span>
-                </div>
-              )}
+        {!hideTotaisEFinalizar ? (
+          <div className="text-right">
+            <div className="text-xs font-semibold uppercase tracking-wide text-jl-fg-3">
+              {m.caixa.cart_bar_total_label}
             </div>
-          )}
-        </div>
 
-        {/* Linha 2: ação destrutiva (secundária, à esquerda) separada da principal (à direita). */}
-        <div className="flex items-center justify-between gap-3">
+            <div
+              data-testid="caixa-total-liquido"
+              data-total-liquido={totalLiquidoComGerente.toFixed(2)}
+              className="whitespace-nowrap text-4xl font-black tabular-nums leading-tight text-jl-fg-1"
+            >
+              {moedaPrefixo} {formatDecimalBRL(totalLiquidoComGerente)}
+            </div>
+
+            {(hasDesconto || hasDescontoGerente) && (
+              <div className="mt-0.5 flex flex-col items-end gap-0.5 text-xs text-jl-fg-3">
+                <div className="flex justify-end gap-2">
+                  <span>{m.caixa.bruto}</span>
+                  <span className="tabular-nums">
+                    {moedaPrefixo} {formatDecimalBRL(totalBruto)}
+                  </span>
+                </div>
+                {hasDesconto && (
+                  <div className="flex justify-end gap-2">
+                    <span>{m.caixa.descontos_regras}</span>
+                    <span className="tabular-nums text-[var(--color-warning-strong)]">
+                      -{moedaPrefixo} {formatDecimalBRL(totalDesconto)}
+                    </span>
+                  </div>
+                )}
+                {hasDescontoGerente && (
+                  <div className="flex justify-end gap-2">
+                    <span>
+                      {caixaFmt(m.caixa.desconto_gerente_label, {
+                        pct: descontoGerentePercentual.toFixed(2),
+                      })}
+                    </span>
+                    <span className="tabular-nums text-[var(--color-warning-strong)]">
+                      -{moedaPrefixo} {formatDecimalBRL(valorDescontoGerente)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        ) : null}
+
+        <div
+          className={`flex items-center gap-3 ${hideTotaisEFinalizar ? 'justify-start' : 'justify-between'}`}
+        >
           <Button
             type="button"
             variant="outline"
@@ -137,17 +142,19 @@ export function CaixaPdvCartSaleBar({
             {m.caixa.cart_bar_excluir_venda}
           </Button>
 
-          <Button
-            type="button"
-            className="h-14 min-w-[11rem] shrink-0 bg-jl-accent px-8 text-base font-bold text-white shadow-sm hover:bg-jl-accent/90 disabled:opacity-60"
-            onClick={onFinalizar}
-            disabled={
-              finalizando || itensLength === 0 || buscando || carregandoRegras
-            }
-            aria-busy={finalizando}
-          >
-            {m.caixa.finalizar_venda}
-          </Button>
+          {!hideTotaisEFinalizar ? (
+            <Button
+              type="button"
+              className="h-14 min-w-[11rem] shrink-0 bg-jl-accent px-8 text-base font-bold text-white shadow-sm hover:bg-jl-accent/90 disabled:opacity-60"
+              onClick={onFinalizar}
+              disabled={
+                finalizando || itensLength === 0 || buscando || carregandoRegras
+              }
+              aria-busy={finalizando}
+            >
+              {m.caixa.finalizar_venda}
+            </Button>
+          ) : null}
         </div>
       </div>
     </div>
