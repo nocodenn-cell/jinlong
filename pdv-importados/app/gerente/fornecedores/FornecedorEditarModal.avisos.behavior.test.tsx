@@ -6,7 +6,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { getMessages } from '@/i18n/getMessages'
 
 const salvarMock = vi.fn()
-vi.mock('./actions', () => ({ salvarFornecedorAction: (...a: unknown[]) => salvarMock(...a) }))
+vi.mock('./actions', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./actions')>()
+  return {
+    ...actual,
+    // Contrato atual do modal: createSupplier (alias canônico) → salvarFornecedorAction.
+    createSupplier: (...a: unknown[]) => salvarMock(...a),
+    salvarFornecedorAction: (...a: unknown[]) => salvarMock(...a),
+  }
+})
 vi.mock('@/lib/gerente/toast', () => ({ emitGerenteToast: vi.fn() }))
 
 ;(globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true

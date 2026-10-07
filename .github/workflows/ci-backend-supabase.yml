@@ -272,7 +272,7 @@ jobs:
           cd backend
           npx supabase status || true
           docker ps -a || true
-          for c in $(docker ps -a --format '{{.Names}}' | rg supabase); do
+          for c in $(docker ps -a --format '{{.Names}}' | grep supabase); do
             echo "--- $c ---"
             docker logs "$c" --tail 200 || true
           done

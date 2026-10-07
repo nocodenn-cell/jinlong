@@ -208,10 +208,13 @@ function setupFixture() {
   const loja = uuid()
   const gerente = uuid()
   const categoria = uuid()
+  // codigo único por execução — permite re-rodar o harness no mesmo DB sem reset
+  // (CI usa db reset; localmente o unique lojas_codigo_key falhava na 2ª passada).
+  const codigo = ('NFE' + loja.replace(/-/g, '')).slice(0, 20)
 
   runOnce(`INSERT INTO auth.users (id) VALUES ('${gerente}') ON CONFLICT (id) DO NOTHING;`)
   runOnce(
-    `INSERT INTO public.lojas (id, nome, codigo, ativo) VALUES ('${loja}', 'NFE-CONC Loja', 'NFECONC-A', true) ON CONFLICT (id) DO UPDATE SET ativo = true;`,
+    `INSERT INTO public.lojas (id, nome, codigo, ativo) VALUES ('${loja}', 'NFE-CONC Loja', '${codigo}', true) ON CONFLICT (id) DO UPDATE SET ativo = true;`,
   )
   runOnce(
     `INSERT INTO public.usuarios (id, nome, perfil, ativo, loja_id) VALUES ('${gerente}', 'NFE-CONC Gerente', 'GERENTE', true, '${loja}') ON CONFLICT (id) DO UPDATE SET perfil='GERENTE', ativo=true, loja_id='${loja}';`,
@@ -223,10 +226,19 @@ function setupFixture() {
   return { loja, gerente, categoria }
 }
 
-/** Importa 1 item novo via importar_nfe_transacao; devolve {importacaoId, itemId, produtoId}. */
+/**
+ * Importa 1 item novo via importar_nfe_transacao; devolve {importacaoId, itemId, produtoId}.
+ *
+ * SSOT-003 (mig 20261007163100): confirmar_importacao_nfe rejeita valor econômico > 0
+ * sem ≥1 duplicata (IMPORT_NFE_OBRIGACAO_SEM_DUPLICATA). Um RAISE EXCEPTION aborta a
+ * transação do harness e o marcador de Session.exec nunca chega → TIMEOUT 8s falso
+ * (parece hang/lock). Fixture inclui duplicata cobrindo q_com * v_un_com.
+ */
 function criarImportacaoComUmItem(fx, refSuffix, custo) {
   const chave = ('35260800000000000000550010000000' + Math.floor(Math.random() * 1e9)).padEnd(44, '0').slice(0, 44)
   const cnpj = String(10000000000000 + Math.floor(Math.random() * 89999999999999)).slice(0, 14)
+  const qCom = 10
+  const valorDup = (qCom * Number(custo)).toFixed(2)
   // set_config(..., false) é escopo de sessão — precisa estar na MESMA
   // invocação de psql que chama a RPC (cada runOnce() abre uma conexão nova).
   runOnce(`
@@ -236,10 +248,15 @@ function criarImportacaoComUmItem(fx, refSuffix, custo) {
       jsonb_build_array(jsonb_build_object(
         'nome_produto', 'NFE-CONC Produto ${refSuffix}', 'gtin', null,
         'ref_fornecedor', 'REF-CONC-${refSuffix}', 'ncm', null, 'u_com', 'UN',
-        'q_com', 10, 'v_un_com', ${custo}, 'fator', 1,
+        'q_com', ${qCom}, 'v_un_com', ${custo}, 'fator', 1,
         'atualizar_custo', true, 'acao', 'CRIAR', 'produto_id_destino', null
       )),
-      true, null
+      true,
+      jsonb_build_array(jsonb_build_object(
+        'numero', '001',
+        'data_vencimento', (CURRENT_DATE + 30)::text,
+        'valor', ${valorDup}
+      ))
     );
   `)
   const importacaoId = firstRow(
