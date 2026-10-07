@@ -52,6 +52,18 @@ describe('SSOT-002 — writers de cache derivados de E(c)', () => {
     expect(body).not.toContain('UPDATE public.caixas c SET saldo_atual')
   })
 
+  it('cancel: guard E(c) precede INSERT devolucoes (hotfix 171000)', () => {
+    const hotfix = mig('20261007171000_ssot_002_cancel_guard_antes_devolucao.sql')
+    const start = hotfix.indexOf('CREATE OR REPLACE FUNCTION public.cancelar_venda_transacional')
+    const end = hotfix.indexOf('$function$;', start)
+    const body = hotfix.slice(start, end)
+    const guard = body.indexOf('CANCELAR_VENDA_SALDO_CAIXA_INSUFICIENTE')
+    const ins = body.indexOf('INSERT INTO public.devolucoes')
+    expect(guard).toBeGreaterThan(0)
+    expect(ins).toBeGreaterThan(0)
+    expect(guard).toBeLessThan(ins)
+  })
+
   it('sangria/suprimento/aprovação não incrementam saldo_atual; usam E(c)+sync', () => {
     expect(movAr).toContain('valor_sistema_dinheiro')
     expect(movAr).toContain('sincronizar_saldo_cache')

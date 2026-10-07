@@ -153,10 +153,7 @@ BEGIN
     SELECT COALESCE(SUM(vp.valor) FILTER (WHERE vp.forma_pagamento = 'DINHEIRO'), 0)::numeric(10,2)
       INTO v_valor_estornado FROM public.vendas_pagamentos vp WHERE vp.venda_id = p_venda_id;
     v_valor_estornado := ROUND(v_valor_estornado * v_proporcao_pendente, 2);
-    INSERT INTO public.devolucoes (venda_id, valor, forma_pagamento, motivo, operador_id)
-    SELECT p_venda_id, ROUND(SUM(vp.valor) * v_proporcao_pendente, 2), vp.forma_pagamento, v_motivo, v_uid
-      FROM public.vendas_pagamentos vp WHERE vp.venda_id = p_venda_id GROUP BY vp.forma_pagamento
-      HAVING ROUND(SUM(vp.valor) * v_proporcao_pendente, 2) > 0;
+    -- Guard ANTES de inserir devolucoes: E(c) já subtrai devolucoes.
     IF v_valor_estornado > 0
        AND v_caixa.status = 'ABERTO'
        AND internal.valor_sistema_dinheiro(v_caixa.id) < v_valor_estornado THEN
@@ -164,17 +161,21 @@ BEGIN
         USING DETAIL = format('valor_sistema=%s estorno_dinheiro=%s',
           internal.valor_sistema_dinheiro(v_caixa.id), v_valor_estornado);
     END IF;
+    INSERT INTO public.devolucoes (venda_id, valor, forma_pagamento, motivo, operador_id)
+    SELECT p_venda_id, ROUND(SUM(vp.valor) * v_proporcao_pendente, 2), vp.forma_pagamento, v_motivo, v_uid
+      FROM public.vendas_pagamentos vp WHERE vp.venda_id = p_venda_id GROUP BY vp.forma_pagamento
+      HAVING ROUND(SUM(vp.valor) * v_proporcao_pendente, 2) > 0;
     v_forma_auditoria := 'SPLIT';
   ELSIF v_venda.forma_pagamento = 'DINHEIRO' THEN
     v_valor_estornado := v_pendente_total;
-    INSERT INTO public.devolucoes (venda_id, valor, forma_pagamento, motivo, operador_id)
-    VALUES (p_venda_id, v_valor_estornado, 'DINHEIRO', v_motivo, v_uid) ON CONFLICT DO NOTHING;
     IF v_caixa.status = 'ABERTO'
        AND internal.valor_sistema_dinheiro(v_caixa.id) < v_valor_estornado THEN
       RAISE EXCEPTION 'CANCELAR_VENDA_SALDO_CAIXA_INSUFICIENTE'
         USING DETAIL = format('valor_sistema=%s estorno_dinheiro=%s',
           internal.valor_sistema_dinheiro(v_caixa.id), v_valor_estornado);
     END IF;
+    INSERT INTO public.devolucoes (venda_id, valor, forma_pagamento, motivo, operador_id)
+    VALUES (p_venda_id, v_valor_estornado, 'DINHEIRO', v_motivo, v_uid) ON CONFLICT DO NOTHING;
     v_forma_auditoria := v_venda.forma_pagamento;
   ELSE
     INSERT INTO public.devolucoes (venda_id, valor, forma_pagamento, motivo, operador_id)

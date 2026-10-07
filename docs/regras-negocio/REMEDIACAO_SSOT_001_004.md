@@ -26,7 +26,7 @@ Importações / Contábil / Intelligence **não** são implementados neste PR �
 | ID | Antes | Depois | Invariante | Evidência | Teste positivo | Teste negativo |
 |----|-------|--------|------------|-----------|----------------|----------------|
 | **SSOT-001** | VIOLAÇÃO `sum(saldo_atual)` | **OK** | `saldo_pdv` / exibido = \(E(C)\) | `20261007163000_…painel_ec_cache.sql`; `SSOT_CAIXA_SALDO_CONTRATO.md` | painel usa `valor_sistema_dinheiro`; `ssot-caixa-ec-reconstrucao.test.ts` | migration DO falha se `sum(saldo_atual)` reaparecer |
-| **SSOT-002** | VIOLAÇÃO writers + decisão por A | **OK** | decisões usam \(E(C)\); cache só materializa | `163000` (venda/cancel) + `20261007170000_ssot_002_mov_ar_ec_cache.sql` (mov/AR) | guard+sync em registrar/aprovar/liquidar/estornar | DO prova falha se UPDATE incremental de `saldo_atual` voltar |
+| **SSOT-002** | VIOLAÇÃO writers + decisão por A | **OK** | decisões usam \(E(C)\); cache só materializa | `163000` + `170000` mov/AR + `171000` cancel guard antes de `devolucoes` | guard+sync em registrar/aprovar/liquidar/estornar/cancel | DO prova falha se UPDATE incremental de `saldo_atual` voltar; guard após INSERT devolucoes |
 | **SSOT-003** | VIOLAÇÃO estoque NF-e sem AP | **OK** | econ>0 sem duplicata ⇒ rejeita; OC/remessa sem AP fictícia porém rotuladas | `20261007163100_…`; `SSOT_AQUISICAO_OBRIGACAO_FINANCEIRA.md` | guard + AP com `nfe_importacao_id` | `IMPORT_NFE_OBRIGACAO_SEM_DUPLICATA` |
 | **SSOT-004** | VIOLAÇÃO stub + GRANT INSERT | **OK** | enqueue só RPC; INSERT authenticated impossível | stub ausente; `161220`+`163200` REVOKE; gate entity-ssot | `fiscal_enfileirar_documento_venda` no caixa | grant INSERT autenticado falha na prova SQL; gate falha se stub/INSERT app |
 
