@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { flushSync } from 'react-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CaixaDescontoComercialDinheiro } from './CaixaDescontoComercialDinheiro'
+import { calcularDescontoComercialDinheiro } from './descontoComercialDinheiro'
 
 let container: HTMLDivElement
 let root: Root
@@ -19,51 +20,75 @@ afterEach(() => {
   container.remove()
 })
 
-describe('CaixaDescontoComercialDinheiro — gaveta', () => {
-  it('fica fechada por padrão e só mostra o formulário ao abrir', () => {
-    flushSync(() => {
-      root.render(
-        <CaixaDescontoComercialDinheiro
-          idioma="pt"
-          subtotal={100}
-          descontoPercentualAtual={0}
-          onSolicitar={vi.fn()}
-          onLimpar={vi.fn()}
-        />,
-      )
-    })
-
-    const gaveta = container.querySelector(
+function renderGaveta(props?: {
+  subtotal?: number
+  descontoPercentualAtual?: number
+  onSolicitar?: (pct: number) => void
+  onLimpar?: () => void
+}) {
+  const onSolicitar = props?.onSolicitar ?? vi.fn()
+  const onLimpar = props?.onLimpar ?? vi.fn()
+  flushSync(() => {
+    root.render(
+      <CaixaDescontoComercialDinheiro
+        idioma="pt"
+        subtotal={props?.subtotal ?? 100}
+        descontoPercentualAtual={props?.descontoPercentualAtual ?? 0}
+        onSolicitar={onSolicitar}
+        onLimpar={onLimpar}
+      />,
+    )
+  })
+  return {
+    onSolicitar,
+    onLimpar,
+    gaveta: container.querySelector(
       '[data-testid="caixa-desconto-comercial-dinheiro"]',
-    ) as HTMLDetailsElement
+    ) as HTMLDetailsElement,
+  }
+}
+
+describe('CaixaDescontoComercialDinheiro — gaveta colapsável', () => {
+  it('inicia fechada (sem atributo open)', () => {
+    const { gaveta } = renderGaveta()
     expect(gaveta).toBeTruthy()
     expect(gaveta.tagName).toBe('DETAILS')
     expect(gaveta.open).toBe(false)
-
-    const applyClosed = Array.from(container.querySelectorAll('button')).find((b) =>
-      /Aplicar desconto/i.test(b.textContent ?? ''),
-    )
-    // Conteúdo existe no DOM, mas a gaveta começa fechada (details sem open).
-    expect(applyClosed).toBeTruthy()
-    expect(gaveta.open).toBe(false)
-
-    gaveta.open = true
-    expect(gaveta.open).toBe(true)
-    expect(container.textContent).toContain('Aplicar desconto')
+    expect(gaveta.hasAttribute('open')).toBe(false)
   })
 
-  it('mostra badge quando já há desconto aplicado', () => {
-    flushSync(() => {
-      root.render(
-        <CaixaDescontoComercialDinheiro
-          idioma="pt"
-          subtotal={100}
-          descontoPercentualAtual={10}
-          onSolicitar={vi.fn()}
-          onLimpar={vi.fn()}
-        />,
-      )
+  it('clique no summary abre; segundo clique fecha', () => {
+    const { gaveta } = renderGaveta()
+    const summary = gaveta.querySelector('summary')
+    expect(summary).toBeTruthy()
+
+    summary!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    expect(gaveta.open).toBe(true)
+
+    summary!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    expect(gaveta.open).toBe(false)
+  })
+
+  it('preserva cálculo comercial ao aplicar 10% rápido', () => {
+    const onSolicitar = vi.fn()
+    const { gaveta } = renderGaveta({ subtotal: 200, onSolicitar })
+    gaveta.open = true
+
+    const esperado = calcularDescontoComercialDinheiro({
+      subtotal: 200,
+      modo: 'percentual',
+      valor: 10,
     })
-    expect(container.textContent).toMatch(/10% aplicado/i)
+    expect(esperado.ok).toBe(true)
+    expect(esperado.percentual).toBe(10)
+    expect(esperado.descontoValor).toBe(20)
+    expect(esperado.totalFinal).toBe(180)
+
+    const botaoRapido = Array.from(container.querySelectorAll('button')).find((b) =>
+      /10% de desconto no dinheiro/i.test(b.textContent ?? ''),
+    )
+    expect(botaoRapido).toBeTruthy()
+    botaoRapido!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    expect(onSolicitar).toHaveBeenCalledWith(10)
   })
 })
