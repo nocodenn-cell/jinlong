@@ -48,8 +48,8 @@ describe('HubNav — Etiquetas visível (pt/zh)', () => {
   })
 
   it.each([
-    { idioma: 'pt' as const, label: 'Etiquetas' },
-    { idioma: 'zh' as const, label: '标签' },
+    { idioma: 'pt' as const, label: 'Imprimir Etiquetas' },
+    { idioma: 'zh' as const, label: '打印标签' },
   ])('EstoqueHubNav expõe $label → rota canônica ($idioma)', ({ idioma, label }) => {
     act(() => {
       root.render(
@@ -64,8 +64,8 @@ describe('HubNav — Etiquetas visível (pt/zh)', () => {
   })
 
   it.each([
-    { idioma: 'pt' as const, label: 'Etiquetas' },
-    { idioma: 'zh' as const, label: '标签' },
+    { idioma: 'pt' as const, label: 'Imprimir Etiquetas' },
+    { idioma: 'zh' as const, label: '打印标签' },
   ])('CatalogoHubNav expõe $label → mesma rota ($idioma)', ({ idioma, label }) => {
     act(() => {
       root.render(

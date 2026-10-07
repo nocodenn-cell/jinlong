@@ -20,7 +20,7 @@ export const ESTOQUE_HUB_TABS: readonly HubTabDef[] = [
   },
   {
     id: 'etiquetas',
-    label: 'Etiquetas',
+    label: 'Imprimir Etiquetas',
     href: ROUTES.admin.estoqueImprimirEtiquetas,
     match: 'prefix',
   },

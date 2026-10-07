@@ -3,8 +3,12 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
-import { ROUTES, adminCatalogoCompletoEditarHref } from '@/lib/navigation/routes'
+import { ArrowLeft, Printer } from 'lucide-react'
+import {
+  ROUTES,
+  adminCatalogoCompletoEditarHref,
+  adminEtiquetasProdutoQuery,
+} from '@/lib/navigation/routes'
 import type { OpcoesFiltrosProdutos } from '@/lib/gerente/produtos/opcoesFiltrosTypes'
 import type { ProdutoGerenteRow } from '@/lib/gerente/produtos/produtoGerenteTypes'
 import type { Mensagens } from '@/i18n/getMessages'
@@ -67,6 +71,12 @@ export function ProdutoFormCompletoClient({
   }, [orch.posSalvar, editando, router])
 
   const titulo = editando ? p.editar_modal_titulo : p.cadastro_produto
+  const etiquetaHref = editando
+    ? adminEtiquetasProdutoQuery({
+        codigo: produtoInicial.codigo_barras,
+        produtoId: produtoInicial.codigo_barras ? null : produtoInicial.id,
+      })
+    : null
 
   return (
     <div className="admin-v2-page">
@@ -74,13 +84,23 @@ export function ProdutoFormCompletoClient({
         title={titulo}
         subtitle={editando ? produtoInicial.nome : undefined}
         actions={
-          <Link
-            href={ROUTES.admin.catalogo}
-            className="inline-flex items-center gap-1.5 text-caption font-medium text-fg-subtle hover:text-fg"
-          >
-            <ArrowLeft size={14} aria-hidden />
-            {m.comum.voltar}
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            {etiquetaHref ? (
+              <Button asChild variant="secondary" size="sm" className="gap-1.5">
+                <Link href={etiquetaHref} data-testid="produto-completo-imprimir-etiqueta">
+                  <Printer size={14} aria-hidden />
+                  {p.pos_salvar_imprimir_etiqueta}
+                </Link>
+              </Button>
+            ) : null}
+            <Link
+              href={ROUTES.admin.catalogo}
+              className="inline-flex items-center gap-1.5 text-caption font-medium text-fg-subtle hover:text-fg"
+            >
+              <ArrowLeft size={14} aria-hidden />
+              {m.comum.voltar}
+            </Link>
+          </div>
         }
       />
 

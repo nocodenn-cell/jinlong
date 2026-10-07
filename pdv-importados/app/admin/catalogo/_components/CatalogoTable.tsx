@@ -8,8 +8,9 @@ import {
   ROUTES,
   adminEstoqueProdutoQuery,
   adminCatalogoCompletoEditarHref,
+  adminEtiquetasProdutoQuery,
 } from '@/lib/navigation/routes'
-import { Copy, FilterX, ImageIcon, Package, Pencil, Trash2 } from 'lucide-react'
+import { Copy, FilterX, ImageIcon, Package, Pencil, Printer, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/ui/feedback'
@@ -54,6 +55,7 @@ export type CatalogoLabels = {
   origemBrasil: string
   acaoEditar: string
   acaoDuplicar: string
+  acaoImprimirEtiqueta: string
   acaoVerEstoque: string
   acaoSelecionarLinha: string
   reativar: string
@@ -378,6 +380,23 @@ export function CatalogoTable({
             >
               <Link href={adminCatalogoCompletoEditarHref(row.id)}>
                 <Pencil size={13} aria-hidden />
+              </Link>
+            </Button>
+            <Button
+              asChild
+              type="button"
+              size="icon"
+              variant="ghost"
+              aria-label={acaoLabel(labels.acaoImprimirEtiqueta, row.nome)}
+              title={acaoLabel(labels.acaoImprimirEtiqueta, row.nome)}
+            >
+              <Link
+                href={adminEtiquetasProdutoQuery({
+                  codigo: row.codigo_barras,
+                  produtoId: row.codigo_barras ? null : row.id,
+                })}
+              >
+                <Printer size={13} aria-hidden />
               </Link>
             </Button>
             <Button

@@ -30,6 +30,7 @@ const labels = {
   vazioSub: '—',
   ajusteTitulo: 'Ajustar',
   reporTitulo: 'Repor',
+  etiquetasTitulo: 'Imprimir etiqueta',
   saldoAtual: 'Saldo atual',
   estoqueMinimo: 'Mínimo',
   motivo: 'Motivo',
