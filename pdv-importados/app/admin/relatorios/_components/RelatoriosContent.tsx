@@ -708,6 +708,7 @@ export function RelatoriosContent({
           de={dados.periodo.de}
           ate={dados.periodo.ate}
           tab={tab}
+          view={activeExecView ?? undefined}
           csvRows={porDiaOrdenado.map((row) => ({
             dia: row.dia,
             vendas: row.num_vendas,
