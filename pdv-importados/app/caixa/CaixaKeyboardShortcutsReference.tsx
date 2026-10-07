@@ -76,11 +76,6 @@ function buildShortcutsData(m: Mensagens): ShortcutGroup[] {
           context: `${m.caixa.pdv_metodo_pagamento_dinheiro} · ${m.caixa.pdv_metodo_pagamento_pix} · ${m.caixa.pdv_metodo_pagamento_credito} · ${m.caixa.pdv_metodo_pagamento_debito}`,
         },
         {
-          keys: atalhoRotulo(CAIXA_ATALHOS.aplicarDesconto),
-          label: "Aplicar desconto",
-          context: "Drawer F3",
-        },
-        {
           keys: atalhoRotulo(CAIXA_ATALHOS.consultaRapida),
           label: m.caixa.operacoes_consulta_rapida,
           context: "Sempre disponível",

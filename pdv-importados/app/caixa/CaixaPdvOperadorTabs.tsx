@@ -290,9 +290,6 @@ const PagamentoPanelImpl = forwardRef(function PagamentoPanelImpl(
 
 PagamentoPanelImpl.displayName = "PagamentoPanel"
 
-/** Painel de pagamento isolado (coluna direita do layout 3 colunas). */
-export const CaixaPdvPagamentoPanel = PagamentoPanelImpl
-
 export function CaixaPdvOperadorTabs({
   m,
   disabled = false,

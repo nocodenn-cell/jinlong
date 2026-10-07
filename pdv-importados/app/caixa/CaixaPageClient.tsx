@@ -93,14 +93,11 @@ import {
 } from "@/app/caixa/caixaMetodoPagamento"
 import { limiteDescontoOperador } from "@/app/caixa/descontoManualPolicy"
 import { atualizarPedidoEspera } from "@/app/caixa/caixaAtualizacaoEspera"
+import { CaixaDescontoManual } from "@/app/caixa/CaixaDescontoManual"
+import { CaixaDescontoComercialDinheiro } from "@/app/caixa/CaixaDescontoComercialDinheiro"
 import { focarBuscaCaixa } from "@/app/caixa/caixaFocoBusca"
 import "@/styles/caixa-operacional.css"
-import { CaixaPdvPagamentoPanel } from "@/app/caixa/CaixaPdvOperadorTabs"
-import { CaixaCheckoutTotaisPanel } from "@/app/caixa/CaixaCheckoutTotaisPanel"
-import { CaixaDescontoDrawer } from "@/app/caixa/CaixaDescontoDrawer"
-import { CaixaAtalhosProdutosGrid } from "@/app/caixa/CaixaAtalhosProdutosGrid"
-import { CAIXA_ATALHOS_PRODUTOS_PADRAO } from "@/app/caixa/caixaAtalhosProdutos"
-import { calcularTroco } from "@/app/caixa/caixaPagamentoSaldo"
+import { CaixaPdvOperadorTabs } from "@/app/caixa/CaixaPdvOperadorTabs"
 import { CaixaSelecionarClienteModal } from "@/app/caixa/CaixaSelecionarClienteModal"  // ✅ NOVO (Fase 5b)
 
 function newCupomSessionId(): string {
@@ -209,7 +206,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   >(null)
   const [metodoPagamento, setMetodoPagamento] = useState<MetodoPagamentoUi>("dinheiro")
   const [consultaRapidaAberta, setConsultaRapidaAberta] = useState(false)
-  const [descontoDrawerAberto, setDescontoDrawerAberto] = useState(false)
   const [historicoAberto, setHistoricoAberto] = useState(false)
   const [abrirTurnoAberto, setAbrirTurnoAberto] = useState(false)
 
@@ -373,8 +369,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         // Não roubar foco enquanto um modal está aberto (senha do gerente, valor de
         // fechamento, confirmação, recibo): o ímã de 3s ou o refoco pós-venda não devem
         // puxar o foco para a busca atrás do diálogo.
-        // Seletor sem aspas: não incrementa raw_dialog_caixa do burndown DS.
-        if (typeof document !== "undefined" && document.querySelector("[role=dialog]")) return
+        if (typeof document !== "undefined" && document.querySelector('[role="dialog"]')) return
         // Leitor no meio de uma rajada (bip seguinte já começou enquanto o campo estava
         // desabilitado): focar agora cortaria o começo do código. Espera a rajada acabar.
         if (restantes > 0 && scannerBurstEmAndamento()) {
@@ -626,23 +621,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       }
     },
     [codigo, enqueueLeitura, m.caixa.msg_fila_leituras_cheia, setCaixaMensagem],
-  )
-
-  const handleAtalhoProduto = useCallback(
-    (codigoAtalho: string) => {
-      setCodigo(codigoAtalho)
-      const sid = cupomSessionIdRef.current
-      const r = enqueueLeitura(codigoAtalho, {
-        source: "form_submit",
-        cupomSessionId: sid,
-        correlationId: sid,
-      })
-      if (!r) return
-      if (!r.ok && r.reason === "queue_full") {
-        setCaixaMensagem(m.caixa.msg_fila_leituras_cheia, { kind: "warning" })
-      }
-    },
-    [enqueueLeitura, m.caixa.msg_fila_leituras_cheia, setCaixaMensagem],
   )
 
   useScannerDetector(
@@ -1464,7 +1442,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       if (lastReciboRef.current) setReimprimirModalAberto(true)
     }, []),
     onConsultaRapida: () => setConsultaRapidaAberta(true),
-    onAplicarDesconto: () => setDescontoDrawerAberto(true),
     onDesfazerRemocao: handleDesfazerRemocao,
     onAbrirReferencia: useCallback(() => setAtalhosReferenciaAberta((v) => !v), []),
     onSelecionarMetodo: useCallback(
@@ -1631,69 +1608,88 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           onAtalhosOpenChange={setAtalhosReferenciaAberta}
         />
         <div className="flex-1 flex flex-col min-h-0">
-          <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 px-4 pb-2 pt-4 sm:px-6 md:grid-cols-[minmax(16rem,22rem)_minmax(0,1.6fr)_minmax(18rem,24rem)] md:grid-rows-[minmax(0,1fr)]">
-            {/* Coluna 1 — busca + atalhos */}
-            <section className="flex min-h-0 flex-col gap-2 overflow-hidden rounded-xl border border-border bg-card p-3">
-              <CaixaOperadorContextBar
+          <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[auto_minmax(0,1fr)] gap-3 px-4 sm:px-6 pt-4 pb-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(11.5rem,15rem)] md:grid-rows-[minmax(0,1fr)]">
+            <div className="min-h-0 flex flex-col md:min-h-0">
+              <CaixaPdvOperadorTabs
                 m={m}
-                idioma={idioma}
-                configCaixaWeb={configCaixaWeb}
-                clienteNome={clienteNome}
-                onRemoverCliente={handleRemoverCliente}
-                onSelecionarCliente={abrirSelecionarCliente}
-              />
-              <div className="shrink-0">
-                <CaixaSearchBar
-                  ref={buscaInputRef}
-                  m={m}
-                  codigo={codigo}
-                  onCodigoChange={setCodigo}
-                  onSubmit={handleAdicionar}
-                  onNovoCupom={handleExcluirVendaConfirmado}
-                  buscando={buscandoPipeline}
-                  carregandoRegras={carregandoRegras}
-                  somAtivo={somFeedbackAtivo}
-                  onToggleSom={() => setSomFeedbackAtivo((prev) => !prev)}
-                  hideNovoCupom
-                  compact={codigo.trim().length > 0}
-                  temCandidatos={totalCandidatos > 0}
-                  onNavegarCandidato={navegarCandidato}
-                  onSelecionarCandidatoAtivo={selecionarCandidatoAtivo}
-                  onFecharCandidatos={fecharCandidatos}
-                />
-                {candidatos && candidatos.itens.length > 0 ? (
-                  <CaixaCandidatosProduto
-                    m={m}
-                    idioma={idioma}
-                    mensagem={candidatos.mensagem}
-                    itens={candidatos.itens}
-                    ativoIndex={candidatoAtivoIndex}
-                    onHoverIndex={setCandidatoAtivoIndex}
-                    onSelecionar={(produto) => void selecionarCandidato(produto)}
+                disabled={finalizando || processandoEspera || carregandoRegras}
+                pagamentos={pagamentos}
+                totalLiquidoComGerente={totalLiquidoComGerente}
+                somaParcelas={somaParcelas}
+                diferenca={diferencaPagamento}
+                podeAdicionarParcela={podeAdicionarParcela}
+                formasDisponiveis={formasDisponiveis}
+                onAdicionarParcela={adicionarParcela}
+                onRemoverParcela={removerParcela}
+                onAtualizarForma={atualizarForma}
+                onAtualizarValor={atualizarValor}
+                onAutoCompletar={autoCompletarUltima}
+                onDescontoDinheiro={abrirGerenteModal}
+                descontoComercialPanel={
+                  <CaixaDescontoComercialDinheiro
+                    idioma={idioma === "pt" ? "pt" : "zh"}
+                    subtotal={totalLiquidoComGerente + valorDescontoGerente}
+                    disabled={finalizando || processandoEspera || carregandoRegras}
+                    descontoPercentualAtual={descontoGerentePercentualEfetivo}
+                    onSolicitar={solicitarDescontoComercialDinheiro}
+                    onLimpar={limparEstadoDescontoGerente}
                   />
-                ) : null}
-              </div>
-              <CaixaMessageBanner
-                mensagem={mensagem}
-                msgVendaOk={msgVendaOk}
-                kind={checkoutHint ? "error" : undefined}
-                hint={checkoutHint}
-              />
-              <CaixaAtalhosProdutosGrid
-                atalhos={CAIXA_ATALHOS_PRODUTOS_PADRAO}
-                disabled={
-                  finalizando ||
-                  carregandoRegras ||
-                  !isCaixaAberto(caixaStatus) ||
-                  buscandoPipeline
                 }
-                onSelecionar={handleAtalhoProduto}
+                moedaPrefixo={m.caixa.moeda_prefixo}
+                metodoPagamentoPanel={metodoPagamentoSelector}
+                produtoPanel={
+                  <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
+                    <CaixaOperadorContextBar
+                      m={m}
+                      idioma={idioma}
+                      configCaixaWeb={configCaixaWeb}
+                      clienteNome={clienteNome}
+                      onRemoverCliente={handleRemoverCliente}
+                      onSelecionarCliente={abrirSelecionarCliente}
+                    />
+                    <CaixaDescontoManual key={cupomSessionIdRef.current} idioma={idioma === "pt" ? "pt" : "zh"}
+                      limite={limiteDescontoOperador(configCaixaWeb.desconto_maximo_operador_percentual)}
+                      disabled={finalizando || carregandoRegras || !isCaixaAberto(caixaStatus)} />
+                    <div className="shrink-0">
+                      <CaixaSearchBar
+                        ref={buscaInputRef}
+                        m={m}
+                        codigo={codigo}
+                        onCodigoChange={setCodigo}
+                        onSubmit={handleAdicionar}
+                        onNovoCupom={handleExcluirVendaConfirmado}
+                        buscando={buscandoPipeline}
+                        carregandoRegras={carregandoRegras}
+                        somAtivo={somFeedbackAtivo}
+                        onToggleSom={() => setSomFeedbackAtivo((prev) => !prev)}
+                        hideNovoCupom
+                        compact={codigo.trim().length > 0}
+                        temCandidatos={totalCandidatos > 0}
+                        onNavegarCandidato={navegarCandidato}
+                        onSelecionarCandidatoAtivo={selecionarCandidatoAtivo}
+                        onFecharCandidatos={fecharCandidatos}
+                      />
+                      {candidatos && candidatos.itens.length > 0 ? (
+                        <CaixaCandidatosProduto
+                          m={m}
+                          idioma={idioma}
+                          mensagem={candidatos.mensagem}
+                          itens={candidatos.itens}
+                          ativoIndex={candidatoAtivoIndex}
+                          onHoverIndex={setCandidatoAtivoIndex}
+                          onSelecionar={(produto) => void selecionarCandidato(produto)}
+                        />
+                      ) : null}
+                    </div>
+                    <div className="shrink-0">
+                      <CaixaMessageBanner mensagem={mensagem} msgVendaOk={msgVendaOk} kind={checkoutHint ? 'error' : undefined} hint={checkoutHint} />
+                    </div>
+                  </div>
+                }
               />
-            </section>
-
-            {/* Coluna 2 — cupom */}
-            <section className="flex min-h-[12rem] flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card md:min-h-0">
-              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+            </div>
+            <section className="flex min-h-[12rem] flex-1 flex-col overflow-hidden rounded-xl md:min-h-0 border border-border bg-card">
+              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
                 <CaixaCartList
                   m={m}
                   idioma={idioma}
@@ -1727,104 +1723,57 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 valorDescontoGerente={valorDescontoGerente}
                 descontoGerentePercentual={descontoGerentePercentualEfetivo}
                 moedaPrefixo={m.caixa.moeda_prefixo}
-                hideTotaisEFinalizar
               />
             </section>
-
-            {/* Coluna 3 — totais, pagamento, finalizar + ops compactas */}
-            <aside className="flex min-h-0 flex-col gap-2 overflow-hidden">
-              <CaixaCheckoutTotaisPanel
+            <aside className="hidden min-h-0 flex flex-col gap-2 rounded-xl border p-3 text-sm md:flex border-border bg-card text-foreground shadow-[0_2px_3px_0px_rgba(0,0,0,0.2)] rounded-[1.4rem]">
+              <button
+                type="button"
+                className="w-full rounded-md border px-3 py-2 text-center text-sm font-semibold disabled:pointer-events-none disabled:opacity-50 border-border bg-primary text-primary-foreground hover:bg-primary/90"
+                onClick={() => void handleNovaVendaOuEspera()}
+                disabled={processandoEspera || carregandoRegras || finalizando || caixaStatus?.status === "FECHADO"}
+              >
+                {m.caixa.nova_venda_espera}
+              </button>
+              <div className="border-t pt-2 text-xs font-semibold uppercase tracking-wide border-border text-muted-foreground">
+                {m.caixa.rail_titulo_operacoes}
+              </div>
+              <CaixaPdvOperacoesMenu
                 m={m}
-                moedaPrefixo={m.caixa.moeda_prefixo}
-                subtotal={totalBruto}
-                descontoTotal={roundMoney2(totalDesconto + valorDescontoGerente)}
-                totalFinal={totalLiquidoComGerente}
-                valorRecebido={
-                  pagamentos.length === 1 && pagamentos[0]?.formaPagamento === "DINHEIRO"
-                    ? pagamentos[0].valor
-                    : null
-                }
-                troco={
-                  pagamentos.length === 1 && pagamentos[0]?.formaPagamento === "DINHEIRO"
-                    ? calcularTroco(totalLiquidoComGerente, pagamentos[0].valor).troco
-                    : null
-                }
-                descontoPercentual={descontoGerentePercentualEfetivo}
-                onAbrirDesconto={() => setDescontoDrawerAberto(true)}
-                onFinalizar={handleFinalizarClick}
+                idioma={idioma}
+                variant="classic"
+                carregandoRegras={carregandoRegras}
+                caixaStatus={caixaStatus}
+                caixaAberto={isCaixaAberto(caixaStatus)}
+                movimentandoCaixa={movimentandoCaixa}
                 finalizando={finalizando}
-                finalizarDisabled={
-                  itens.length === 0 || buscandoPipeline || carregandoRegras || !isCaixaAberto(caixaStatus)
-                }
-                metodoPagamentoPanel={metodoPagamentoSelector}
-                pagamentoExtra={
-                  <CaixaPdvPagamentoPanel
-                    m={m}
-                    disabled={finalizando || processandoEspera || carregandoRegras}
-                    pagamentos={pagamentos}
-                    totalLiquidoComGerente={totalLiquidoComGerente}
-                    somaParcelas={somaParcelas}
-                    diferenca={diferencaPagamento}
-                    podeAdicionarParcela={podeAdicionarParcela}
-                    formasDisponiveis={formasDisponiveis}
-                    onAdicionarParcela={adicionarParcela}
-                    onRemoverParcela={removerParcela}
-                    onAtualizarForma={atualizarForma}
-                    onAtualizarValor={atualizarValor}
-                    onAutoCompletar={autoCompletarUltima}
-                    moedaPrefixo={m.caixa.moeda_prefixo}
-                  />
-                }
+                validandoGerente={validandoGerente}
+                gerenteValidadoAte={gerenteValidadoAte}
+                podeReimprimir={!!lastReciboRef.current}
+                onAbrirSuprimento={handleAbrirSuprimento}
+                onAbrirSangria={handleAbrirSangria}
+                onValidarGerente={abrirGerenteModal}
+                onHistorico={() => setHistoricoAberto(true)}
+                onImprimirUltima={() => setReimprimirModalAberto(true)}
+                onFecharCaixa={handleFecharCaixaClick}
+                onAbrirCaixa={handleAbrirCaixaClick}
+                onConsultaRapida={() => setConsultaRapidaAberta(true)}
+                onSelecionarCliente={abrirSelecionarCliente}
+                movimentacoesPendentes={movimentacoesPendentes}
+                onResolverPendencia={handleResolverPendencia}
+                painelGestaoHref={painelGestaoHrefParaPerfil(perfil)}
               />
-              <div className="hidden min-h-0 shrink-0 flex-col gap-2 overflow-y-auto rounded-xl border border-border bg-card p-2 text-sm md:flex">
-                <button
-                  type="button"
-                  className="w-full rounded-md border border-border bg-muted/40 px-3 py-2 text-center text-sm font-semibold hover:bg-muted disabled:opacity-50"
-                  onClick={() => void handleNovaVendaOuEspera()}
-                  disabled={
-                    processandoEspera ||
-                    carregandoRegras ||
-                    finalizando ||
-                    caixaStatus?.status === "FECHADO"
-                  }
-                >
-                  {m.caixa.nova_venda_espera}
-                </button>
-                <CaixaPdvOperacoesMenu
-                  m={m}
-                  idioma={idioma}
-                  variant="classic"
-                  carregandoRegras={carregandoRegras}
-                  caixaStatus={caixaStatus}
-                  caixaAberto={isCaixaAberto(caixaStatus)}
-                  movimentandoCaixa={movimentandoCaixa}
-                  finalizando={finalizando}
-                  validandoGerente={validandoGerente}
-                  gerenteValidadoAte={gerenteValidadoAte}
-                  podeReimprimir={!!lastReciboRef.current}
-                  onAbrirSuprimento={handleAbrirSuprimento}
-                  onAbrirSangria={handleAbrirSangria}
-                  onValidarGerente={() => {
-                    setDescontoDrawerAberto(true)
-                  }}
-                  onHistorico={() => setHistoricoAberto(true)}
-                  onImprimirUltima={() => setReimprimirModalAberto(true)}
-                  onFecharCaixa={handleFecharCaixaClick}
-                  onAbrirCaixa={handleAbrirCaixaClick}
-                  onConsultaRapida={() => setConsultaRapidaAberta(true)}
-                  onSelecionarCliente={abrirSelecionarCliente}
-                  movimentacoesPendentes={movimentacoesPendentes}
-                  onResolverPendencia={handleResolverPendencia}
-                  painelGestaoHref={painelGestaoHrefParaPerfil(perfil)}
-                />
-                <CaixaEmAbertoList
-                  disabled={processandoEspera || finalizando}
-                  m={m}
-                  vendas={vendasEmEspera}
-                  carregando={carregandoEmEspera}
-                  onRetomar={(id) => void handleRetomarEmEspera(id)}
-                  onDescartar={(id) => void handleDescartarEmEspera(id)}
-                />
+              <div className="border-t pt-2 text-xs font-semibold uppercase tracking-wide border-border text-muted-foreground">
+                {m.caixa.rail_titulo_em_aberto}
+              </div>
+              <CaixaEmAbertoList
+                disabled={processandoEspera || finalizando}
+                m={m}
+                vendas={vendasEmEspera}
+                carregando={carregandoEmEspera}
+                onRetomar={(id) => void handleRetomarEmEspera(id)}
+                onDescartar={(id) => void handleDescartarEmEspera(id)}
+              />
+              <div className="mt-auto border-t pt-2">
                 <CaixaRailTurnoSummary
                   m={m}
                   idioma={idioma}
@@ -1903,22 +1852,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           activeCupomSessionId={pipelineDebugMounted ? cupomSessionIdRef.current : undefined}
         />
       )}
-      <CaixaDescontoDrawer
-        open={descontoDrawerAberto}
-        onClose={() => setDescontoDrawerAberto(false)}
-        idioma={idioma === "pt" ? "pt" : "zh"}
-        limiteManual={limiteDescontoOperador(configCaixaWeb.desconto_maximo_operador_percentual)}
-        disabled={finalizando || carregandoRegras || !isCaixaAberto(caixaStatus)}
-        subtotal={totalLiquidoComGerente + valorDescontoGerente}
-        descontoPercentualAtual={descontoGerentePercentualEfetivo}
-        onSolicitarComercial={solicitarDescontoComercialDinheiro}
-        onLimparComercial={limparEstadoDescontoGerente}
-        onAbrirGerente={abrirGerenteModal}
-        podeComercialDinheiro={pagamentoSoDinheiro({
-          formaPagamento: pagamentos[0]?.formaPagamento ?? "DINHEIRO",
-          pagamentos,
-        })}
-      />
       <CaixaGerenteModal
         open={gerenteModalAberto}
         onOpenChange={setGerenteModalAberto}

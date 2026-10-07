@@ -19,8 +19,9 @@ const textos = {
     amount: 'Valor (R$)',
     apply: 'Aplicar desconto',
     clear: 'Remover desconto',
-    subtotal: 'Subtotal (base)',
-    desconto: 'Desconto (prévia)',
+    subtotal: 'Subtotal',
+    desconto: 'Desconto aplicado',
+    total: 'Total final a pagar',
     error: 'Desconto inválido ou acima de 10%.',
     applied: 'Desconto comercial aplicado. Sem necessidade de gerente até 10%.',
   },
@@ -33,8 +34,9 @@ const textos = {
     amount: '金额 (R$)',
     apply: '应用折扣',
     clear: '移除折扣',
-    subtotal: '小计（基数）',
-    desconto: '折扣（预览）',
+    subtotal: '小计',
+    desconto: '已应用折扣',
+    total: '应付合计',
     error: '折扣无效或超过 10%。',
     applied: '已应用现金商业折扣（≤10% 无需经理）。',
   },
@@ -114,17 +116,15 @@ export function CaixaDescontoComercialDinheiro({
             data-caixa-atalho-bloqueado="true"
           />
         </label>
-        {/* Prévia do ajuste — sem repetir o TOTAL FINAL da coluna de fechamento. */}
         <dl className="grid gap-1 rounded border border-slate-300 bg-slate-50 p-2 text-[16px]">
-          <div className="flex justify-between gap-2">
-            <dt>{t.subtotal}</dt>
-            <dd className="tabular-nums">R$ {formatDecimalBRL(subtotal)}</dd>
-          </div>
+          <div className="flex justify-between gap-2"><dt>{t.subtotal}</dt><dd>R$ {formatDecimalBRL(subtotal)}</dd></div>
           <div className="flex justify-between gap-2 font-semibold text-blue-900">
             <dt>{t.desconto}</dt>
-            <dd className="tabular-nums">
-              R$ {formatDecimalBRL(preview.descontoValor)} ({preview.percentual.toFixed(2)}%)
-            </dd>
+            <dd>R$ {formatDecimalBRL(preview.descontoValor)} ({preview.percentual.toFixed(2)}%)</dd>
+          </div>
+          <div className="flex justify-between gap-2 text-[18px] font-bold">
+            <dt>{t.total}</dt>
+            <dd>R$ {formatDecimalBRL(preview.totalFinal)}</dd>
           </div>
         </dl>
         <div className="flex flex-wrap gap-2">

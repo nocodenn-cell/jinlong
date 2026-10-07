@@ -172,11 +172,11 @@ const CartRowDesktop = memo(function CartRowDesktop({
   const res = resultadoLinha(item)
   return (
     <li
-      className="grid grid-cols-[minmax(6rem,2.2fr)_11rem_5.5rem_6rem_5.5rem] gap-2 px-3 py-3.5 items-center hover:bg-accent/50 transition-colors"
+      className="grid grid-cols-[minmax(6rem,2.2fr)_11rem_5rem_5.5rem_5.5rem] gap-2 px-3 py-3 items-center hover:bg-accent/50 transition-colors"
     >
       <div className="flex flex-col min-w-0 gap-1">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="truncate text-lg font-bold leading-snug text-foreground">{item.nome}</span>
+          <span className="font-semibold truncate text-base text-foreground">{item.nome}</span>
           {res.tipoPreco === "ATACADO" ? (
             <Badge
               variant="outline"
@@ -205,14 +205,13 @@ const CartRowDesktop = memo(function CartRowDesktop({
           type="button"
           variant="ghost"
           size="sm"
-          className="h-10 min-w-10 px-2 text-sm font-semibold text-muted-foreground hover:text-destructive"
+          className="h-8 px-1 text-small text-muted-foreground hover:text-primary"
           onClick={() => onRemover(item.id)}
-          aria-label={`${m.caixa.remover} ${item.nome}`}
         >
           {m.caixa.remover}
         </Button>
       </div>
-      <div className="text-right text-base font-semibold tabular-nums">
+      <div className="text-right tabular-nums text-sm">
         {res.tipoPreco === "ATACADO" && res.precoOriginal > res.precoUnitario ? (
           <div className="space-y-0.5">
             <div className="line-through text-foreground/55 text-xs">
@@ -228,7 +227,7 @@ const CartRowDesktop = memo(function CartRowDesktop({
           </span>
         )}
       </div>
-      <div className="text-right text-lg font-bold tabular-nums">
+      <div className="text-right tabular-nums text-sm">
         <div>
           {moeda}{" "}
           {formatDecimal2(res.precoUnitario * item.quantidade, locale)}
@@ -401,7 +400,7 @@ function CaixaCartListInner({
     <>
       {/* Desktop: tabela */}
       <div className="hidden md:block">
-        <header className="grid grid-cols-[minmax(6rem,2.2fr)_11rem_5.5rem_6rem_5.5rem] gap-2 border-b border-border px-3 py-2 text-sm font-semibold text-foreground/85">
+        <header className="grid grid-cols-[minmax(6rem,2.2fr)_11rem_5rem_5.5rem_5.5rem] gap-2 px-3 py-2 text-sm text-foreground/85 border-b border-border">
           <span>{m.caixa.col_produto}</span>
           <span className="text-right">{m.caixa.col_qtde}</span>
           <span className="text-right">{m.caixa.col_unit}</span>
