@@ -232,11 +232,8 @@ DECLARE
 BEGIN
   SELECT count(*) INTO v_antes FROM public.movimentos_estoque_log WHERE produto_id = v_produto;
 
-  -- ajustar_estoque_manual(7 args) é service_role-only desde a migration 289
-  -- (REVOKE ALL ... FROM authenticated/anon; GRANT só a service_role) — o
-  -- app real chama via client admin (service_role) e passa p_ator_id
-  -- explicitamente, já que não há JWT/auth.uid() nessa role. Named args
-  -- também desambiguam da sobrecarga de 6 args (sem p_ator_id).
+  -- ajustar_estoque_manual_seguro (snapshot obrigatório desde 20261005224553).
+  -- Clientes antigos (7 args) falham fechados; o app usa _seguro via service_role.
   --
   -- set_config(..., true) com is_local=true dura até o FIM DA TRANSAÇÃO, não
   -- só do statement — RESET ROLE muda o papel, mas não limpa
@@ -248,14 +245,16 @@ BEGIN
   PERFORM set_config('request.jwt.claim.role', '', true);
   SET LOCAL ROLE service_role;
 
-  PERFORM public.ajustar_estoque_manual(
+  PERFORM public.ajustar_estoque_manual_seguro(
     p_produto_id => v_produto,
     p_loja_id => v_loja,
     p_quantidade_atual => 90,
     p_estoque_minimo => 0,
     p_motivo_codigo => 'ACERTO_INVENTARIO',
     p_observacao => NULL,
-    p_ator_id => v_gerente
+    p_ator_id => v_gerente,
+    p_quantidade_esperada => 100,
+    p_minimo_esperado => 0
   );
 
   RESET ROLE;
@@ -263,10 +262,10 @@ BEGIN
   SELECT count(*) INTO v_depois FROM public.movimentos_estoque_log WHERE produto_id = v_produto;
 
   IF v_depois <> v_antes + 1 THEN
-    RAISE EXCEPTION 'PR1B_FALHOU: ajustar_estoque_manual não gravou movimento novo (antes=%, depois=%)', v_antes, v_depois;
+    RAISE EXCEPTION 'PR1B_FALHOU: ajustar_estoque_manual_seguro não gravou movimento novo (antes=%, depois=%)', v_antes, v_depois;
   END IF;
 
-  RAISE NOTICE 'Positivo OK: ajustar_estoque_manual gravou 1 movimento novo no kardex (antes=%, depois=%).', v_antes, v_depois;
+  RAISE NOTICE 'Positivo OK: ajustar_estoque_manual_seguro gravou 1 movimento novo no kardex (antes=%, depois=%).', v_antes, v_depois;
 END
 $pos_fluxo_legitimo$;
 

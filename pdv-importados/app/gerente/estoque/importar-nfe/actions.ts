@@ -456,6 +456,7 @@ export type ItemConferenciaNfe = {
   produto_codigo_barras: string | null
   quantidade_nfe: number
   custo_unitario: number
+  produto_custo_atual?: number | null
   atualizar_custo: boolean
   quantidade_conferida: number | null
   divergencia_obs: string | null
@@ -482,6 +483,7 @@ export type ConferenciaImportacaoNfe = {
   created_at: string
   itens: ItemConferenciaNfe[]
   ordem_compra: OrdemCompraVinculadaNfe | null
+  entrega_anterior_id?: string | null
 }
 
 /** Lê uma importação (aberta ou já concluída) com seus itens para a tela de conferência. */
@@ -513,7 +515,7 @@ export async function obterConferenciaImportacaoNfe(
   const { data: itens, error: itensError } = await supabase
     .from('importacoes_nfe_itens')
     .select(
-      'id, produto_id, quantidade_nfe, custo_unitario, atualizar_custo, quantidade_conferida, divergencia_obs, status_conferencia, produtos(nome, codigo_barras)',
+      'id, produto_id, quantidade_nfe, custo_unitario, atualizar_custo, quantidade_conferida, divergencia_obs, status_conferencia, produtos(nome, codigo_barras, preco_custo)',
     )
     .eq('importacao_nfe_id', importacaoId)
     .order('created_at', { ascending: true })
@@ -529,7 +531,7 @@ export async function obterConferenciaImportacaoNfe(
     : (fornecedorRel?.nome ?? '')
 
   const linhas: ItemConferenciaNfe[] = (itens ?? []).map((row) => {
-    const produtoRel = (row as { produtos: { nome: string; codigo_barras: string | null } | { nome: string; codigo_barras: string | null }[] | null }).produtos
+    const produtoRel = (row as { produtos: { nome: string; codigo_barras: string | null; preco_custo?: number | null } | { nome: string; codigo_barras: string | null; preco_custo?: number | null }[] | null }).produtos
     const produto = Array.isArray(produtoRel) ? produtoRel[0] : produtoRel
     return {
       item_id: row.id as string,
@@ -538,6 +540,7 @@ export async function obterConferenciaImportacaoNfe(
       produto_codigo_barras: produto?.codigo_barras ?? null,
       quantidade_nfe: Number(row.quantidade_nfe),
       custo_unitario: Number(row.custo_unitario),
+      produto_custo_atual: produto?.preco_custo == null ? null : Number(produto.preco_custo),
       atualizar_custo: Boolean(row.atualizar_custo),
       quantidade_conferida:
         row.quantidade_conferida != null ? Number(row.quantidade_conferida) : null,
@@ -564,9 +567,13 @@ export async function obterConferenciaImportacaoNfe(
     }
   }
 
+  const entrega = await supabase.from('entrada_documentos').select('remessa_id').eq('importacao_id', importacaoId).eq('loja_id', lojaId).maybeSingle()
+  if (entrega.error) return { success: false, error: mensagemErroComSecao('Entradas', entrega.error.message) }
+
   return {
     success: true,
     data: {
+      entrega_anterior_id: entrega.data?.remessa_id ?? null,
       importacao_id: imp.id as string,
       status: imp.status as 'EM_CONFERENCIA' | 'CONCLUIDA',
       numero_nf: (imp.numero_nf as string | null) ?? null,
@@ -743,7 +750,7 @@ export type NotaLancada = {
 }
 
 /** Notas de chegada já com entrada no estoque: o que veio, de quem e quanto ainda se deve. */
-export async function listarNotasLancadas(): Promise<ActionResult<NotaLancada[]>> {
+export async function listarNotasLancadas(input: { busca?: string; pagina?: number } = {}): Promise<ActionResult<NotaLancada[]>> {
   const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
@@ -751,7 +758,12 @@ export async function listarNotasLancadas(): Promise<ActionResult<NotaLancada[]>
   if (!lojaId) return { success: false, error: 'Não foi possível identificar sua loja.' }
 
   const supabase = await createClient()
-  const { data, error } = await supabase
+  const busca = (input.busca ?? '').replace(/[,()%_\\]/g, ' ').trim().slice(0, 100)
+  const pagina = Number.isFinite(input.pagina) ? Math.max(1, Math.floor(input.pagina!)) : 1
+  const supplierResult = busca ? await supabase.from('fornecedores').select('id').eq('loja_id', lojaId).ilike('nome', `%${busca}%`).limit(500) : null
+  if (supplierResult?.error) return { success: false, error: mensagemErroComSecao('Entradas', supplierResult.error.message) }
+  const suppliers = supplierResult?.data?.map((row) => row.id) ?? []
+  let query = supabase
     .from('importacoes_nfe')
     .select(
       'id, numero_nf, created_at, fornecedores(nome, cnpj), importacoes_nfe_itens(quantidade_nfe, quantidade_conferida, custo_unitario)',
@@ -759,8 +771,10 @@ export async function listarNotasLancadas(): Promise<ActionResult<NotaLancada[]>
     .eq('loja_id', lojaId)
     .neq('status', 'EM_CONFERENCIA')
     .order('created_at', { ascending: false })
-    .limit(30)
+    .range((pagina - 1) * 30, pagina * 30 - 1)
 
+  if (busca) query = query.or(`numero_nf.ilike.%${busca}%${suppliers.length ? `,fornecedor_id.in.(${suppliers.join(',')})` : ''}`)
+  const { data, error } = await query
   if (error) {
     return { success: false, error: mensagemErroComSecao('Importação NF-e', error.message) }
   }
@@ -921,4 +935,29 @@ export async function confirmarImportacaoNfe(
   revalidatePath('/gerente/estoque')
   revalidatePath('/gerente/produtos')
   return { success: true, data: { oc, abatido } }
+}
+
+export async function listarEntregasParaDocumento(busca = '', pagina = 1): Promise<ActionResult<Array<{ id: string; origem_descricao: string; created_at: string }>>> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+  const loja = await lojaIdDoUsuarioLogado()
+  if (!loja) return { success: false, error: 'Loja não identificada.' }
+  const client = await createClient()
+  const filtro = busca.replace(/[,()%_\\]/g, ' ').trim().slice(0, 100)
+  let query = client.from('remessas').select('id, origem_descricao, created_at').eq('loja_id', loja).eq('status', 'CONCLUIDA').order('created_at', { ascending: false })
+  if (filtro) query = query.ilike('origem_descricao', `%${filtro}%`)
+  const page = Number.isFinite(pagina) ? Math.max(1, Math.floor(pagina)) : 1
+  const result = await query.range((page - 1) * 20, page * 20 - 1)
+  return result.error ? { success: false, error: mensagemErroComSecao('Entradas', result.error.message) } : { success: true, data: result.data ?? [] }
+}
+
+export async function associarDocumentoEntrada(importacaoId: string, remessaId: string): Promise<ActionResult> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  if (!uuid.test(importacaoId) || !uuid.test(remessaId)) return { success: false, error: 'Entrada inválida.' }
+  const client = await createClient()
+  const result = await client.rpc('associar_documento_entrada', { p_importacao: importacaoId, p_remessa: remessaId })
+  if (result.error) return { success: false, error: 'Não foi possível associar: confira se os produtos e as quantidades coincidem com a entrega, se ela pertence à loja e se já possui documento associado.' }
+  return { success: true, data: null }
 }

@@ -127,11 +127,12 @@ export async function atualizarEstoqueProduto(input: unknown): Promise<ActionRes
         productId: parsed.data.produto_id,
         lojaId,
         quantity: parsed.data.quantidade_atual,
+        expectedQuantity: parsed.data.quantidade_esperada,
+        expectedMinimum: parsed.data.minimo_esperado,
         estoqueMinimo: parsed.data.estoque_minimo,
         reason: parsed.data.motivo,
         observacao,
         atorId,
-        saldoEsperado: parsed.data.saldo_esperado,
       }
 
       const result = await ajustarComLinhaGarantida(comando, {
@@ -141,8 +142,8 @@ export async function atualizarEstoqueProduto(input: unknown): Promise<ActionRes
 
       if (!result.ok) {
         const localized = localizeInventoryFailure(idioma, result)
-        // Concorrência: mensagem amigável sem prefixo de seção (UI atualiza o saldo).
-        if (result.code === INVENTORY_ERROR_CODES.CONCURRENCY) {
+        // Stale snapshot: mensagem amigável sem prefixo (UI refresca via consultarSaldo).
+        if (result.code === INVENTORY_ERROR_CODES.STALE_BALANCE) {
           throw new Error(localized.error)
         }
         throw new Error(mensagemErroComSecao('Estoque', localized.error))

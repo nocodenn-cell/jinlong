@@ -91,6 +91,12 @@ import {
   metodoPagamentoToForma,
   type MetodoPagamentoUi,
 } from "@/app/caixa/caixaMetodoPagamento"
+import { limiteDescontoOperador } from "@/app/caixa/descontoManualPolicy"
+import { atualizarPedidoEspera } from "@/app/caixa/caixaAtualizacaoEspera"
+import { CaixaDescontoManual } from "@/app/caixa/CaixaDescontoManual"
+import { CaixaDescontoComercialDinheiro } from "@/app/caixa/CaixaDescontoComercialDinheiro"
+import { focarBuscaCaixa } from "@/app/caixa/caixaFocoBusca"
+import "@/styles/caixa-operacional.css"
 import { CaixaPdvOperadorTabs } from "@/app/caixa/CaixaPdvOperadorTabs"
 import { CaixaSelecionarClienteModal } from "@/app/caixa/CaixaSelecionarClienteModal"  // ✅ NOVO (Fase 5b)
 
@@ -163,6 +169,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const [processandoCaixa, setProcessandoCaixa] = useState(false)
   const [validandoGerente, setValidandoGerente] = useState(false)
   const [gerenteModalAberto, setGerenteModalAberto] = useState(false)
+  const [descontoComercialPendente, setDescontoComercialPendente] = useState<number | null>(null)
   const [limiteCreditoModalAberto, setLimiteCreditoModalAberto] = useState(false)
   const [movimentacaoModalTipo, setMovimentacaoModalTipo] =
     useState<TipoMovimentacaoUi | null>(null)
@@ -586,6 +593,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     setDescontoGerentePercentual(0)
     setMotivoDesconto('NAO_ESPECIFICADO')
     setMotivoDescontoDescricao(null)
+    setDescontoComercialPendente(null)
   }, [])
 
   useCaixaBootstrapData({
@@ -730,7 +738,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     // Cupom abandonado: devolve RETOMADA → EM_ESPERA para o pedido voltar à lista
     // (P2). Sem isso o claim da retomada deixaria o cupom invisível para sempre.
     if (origemAbandonada) {
-      void devolverVendaEmEsperaCaixa(origemAbandonada).catch(() => {})
+      void atualizarPedidoEspera(origemAbandonada, devolverVendaEmEsperaCaixa,
+        (error) => setCaixaMensagem(error, { kind: "warning" }), m.caixa.err_srv_devolver_espera)
     }
     focarCampoBusca()
   }, [
@@ -739,6 +748,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     limparCarrinho,
     limparEstadoDescontoGerente,
     m.caixa.msg_venda_pendente_bloqueio,
+    m.caixa.err_srv_devolver_espera,
     resetPagamentos,
     setCaixaMensagem,
   ])
@@ -766,6 +776,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const {
     vendasEmEspera,
     carregandoEmEspera,
+    processandoEspera,
     handleNovaVendaOuEspera,
     handleRetomarEmEspera,
     handleDescartarEmEspera,
@@ -1195,7 +1206,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         // porta da venda duplicada). Falhando, o pedido fica RETOMADA (não
         // revendável) até correção manual — melhor que estoque em dobro.
         if (origemConvertida) {
-          void converterVendaEmEsperaCaixa(origemConvertida).catch(() => {})
+          void atualizarPedidoEspera(origemConvertida, converterVendaEmEsperaCaixa,
+            (error) => setCaixaMensagem(error, { kind: "warning" }), m.caixa.err_srv_converter_espera)
         }
         setTurnoRefreshToken((t) => t + 1)
         // Fecha o modal de "venda pendente" se por acaso ainda estiver aberto
@@ -1337,7 +1349,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         setClienteNome(null)
         // Acessório, como no caminho de sucesso: não pode derrubar a recuperação.
         if (origemConvertida) {
-          void converterVendaEmEsperaCaixa(origemConvertida).catch(() => {})
+          void atualizarPedidoEspera(origemConvertida, converterVendaEmEsperaCaixa,
+            (error) => setCaixaMensagem(error, { kind: "warning" }), m.caixa.err_srv_converter_espera)
         }
         setVendaPendenteModalAberto(false)
         setCheckoutHint(null)
@@ -1533,8 +1546,31 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       setCaixaMensagem(m.caixa.desconto_gerente_so_dinheiro, { kind: "warning" })
       return
     }
+    setDescontoComercialPendente(null)
     setGerenteModalAberto(true)
   }, [pagamentos, m, setCaixaMensagem])
+
+  const solicitarDescontoComercialDinheiro = useCallback((percentual: number) => {
+    if (!pagamentoSoDinheiro({ formaPagamento: pagamentos[0]?.formaPagamento ?? "DINHEIRO", pagamentos })) {
+      setCaixaMensagem(m.caixa.desconto_gerente_so_dinheiro, { kind: "warning" })
+      return
+    }
+    const pct = Math.min(10, Math.max(0, percentual))
+    if (pct <= 0) return
+    setDescontoComercialPendente(null)
+    setGerenteToken(null)
+    setGerenteValidadoAte(null)
+    setMaxDescontoGerentePercentual(10)
+    setDescontoGerentePercentual(pct)
+    setMotivoDesconto('AUTORIZACAO_COMERCIAL')
+    setMotivoDescontoDescricao(null)
+    setCaixaMensagem(
+      idioma === 'zh'
+        ? `已应用现金商业折扣 ${pct.toFixed(2)}%（无需经理）。`
+        : `Desconto comercial de ${pct.toFixed(2)}% aplicado no dinheiro (sem gerente).`,
+      { kind: 'success' },
+    )
+  }, [pagamentos, m, setCaixaMensagem, idioma])
 
   // Desconto é exclusivo de venda 100% dinheiro: trocar/dividir para outra forma o descarta.
   useEffect(() => {
@@ -1576,6 +1612,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
             <div className="min-h-0 flex flex-col md:min-h-0">
               <CaixaPdvOperadorTabs
                 m={m}
+                disabled={finalizando || processandoEspera || carregandoRegras}
                 pagamentos={pagamentos}
                 totalLiquidoComGerente={totalLiquidoComGerente}
                 somaParcelas={somaParcelas}
@@ -1588,6 +1625,16 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 onAtualizarValor={atualizarValor}
                 onAutoCompletar={autoCompletarUltima}
                 onDescontoDinheiro={abrirGerenteModal}
+                descontoComercialPanel={
+                  <CaixaDescontoComercialDinheiro
+                    idioma={idioma === "pt" ? "pt" : "zh"}
+                    subtotal={totalLiquidoComGerente + valorDescontoGerente}
+                    disabled={finalizando || processandoEspera || carregandoRegras}
+                    descontoPercentualAtual={descontoGerentePercentualEfetivo}
+                    onSolicitar={solicitarDescontoComercialDinheiro}
+                    onLimpar={limparEstadoDescontoGerente}
+                  />
+                }
                 moedaPrefixo={m.caixa.moeda_prefixo}
                 metodoPagamentoPanel={metodoPagamentoSelector}
                 produtoPanel={
@@ -1600,6 +1647,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                       onRemoverCliente={handleRemoverCliente}
                       onSelecionarCliente={abrirSelecionarCliente}
                     />
+                    <CaixaDescontoManual key={cupomSessionIdRef.current} idioma={idioma === "pt" ? "pt" : "zh"}
+                      limite={limiteDescontoOperador(configCaixaWeb.desconto_maximo_operador_percentual)}
+                      disabled={finalizando || carregandoRegras || !isCaixaAberto(caixaStatus)} />
                     <div className="shrink-0">
                       <CaixaSearchBar
                         ref={buscaInputRef}
@@ -1648,6 +1698,10 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                   listEmptyVariant="pdv_classic"
                   onAlterarQuantidade={handleAlterarQuantidade}
                   onRemover={handleRemover}
+                  onAdicionarMaisItens={() => {
+                    focarBuscaCaixa()
+                    buscaInputRef.current?.focus()
+                  }}
                 />
               </div>
               <CaixaPdvCartSaleBar
@@ -1676,7 +1730,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 type="button"
                 className="w-full rounded-md border px-3 py-2 text-center text-sm font-semibold disabled:pointer-events-none disabled:opacity-50 border-border bg-primary text-primary-foreground hover:bg-primary/90"
                 onClick={() => void handleNovaVendaOuEspera()}
-                disabled={carregandoRegras || finalizando || caixaStatus?.status === "FECHADO"}
+                disabled={processandoEspera || carregandoRegras || finalizando || caixaStatus?.status === "FECHADO"}
               >
                 {m.caixa.nova_venda_espera}
               </button>
@@ -1712,6 +1766,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 {m.caixa.rail_titulo_em_aberto}
               </div>
               <CaixaEmAbertoList
+                disabled={processandoEspera || finalizando}
                 m={m}
                 vendas={vendasEmEspera}
                 carregando={carregandoEmEspera}
@@ -1802,6 +1857,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         onOpenChange={setGerenteModalAberto}
         m={m}
         validando={validandoGerente}
+        percentualInicial={descontoComercialPendente ?? undefined}
+        motivoInicial={descontoComercialPendente != null ? 'AUTORIZACAO_COMERCIAL' : undefined}
         onValidateSenha={handleValidateSenhaGerente}
         onApply={handleAplicarDescontoGerente}
       />

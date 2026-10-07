@@ -172,9 +172,10 @@ export function AjusteSaldoModal({
       produto_id: alvo.produtoId,
       quantidade_atual: quantidadeAtual,
       estoque_minimo: estoqueMinimo,
+      quantidade_esperada: saldoBase,
+      minimo_esperado: minimoBase,
       motivo,
       observacao: obsFinal,
-      saldo_esperado: saldoBase,
     }
     setErro(null)
     startTransition(async () => {
@@ -182,12 +183,17 @@ export function AjusteSaldoModal({
         const res = await atualizarEstoqueProduto(payload)
         if (!res.ok) {
           const msg = res.error
-          const isConcurrency =
+          const isStale =
             Boolean(labels.erroConcorrencia && msg.includes(labels.erroConcorrencia)) ||
             msg.includes('foi alterado enquanto') ||
-            msg.includes('已在此页面打开期间')
-          if (isConcurrency) {
-            setErro(labels.erroConcorrencia ?? msg)
+            msg.includes('Atualizamos as informações') ||
+            msg.includes('已在此页面打开期间') ||
+            msg.includes('mudou desde que')
+          if (isStale) {
+            setErro(
+              labels.erroConcorrencia ??
+                'O estoque deste produto foi alterado enquanto esta tela estava aberta. Atualizamos as informações; confira a quantidade e tente novamente.',
+            )
             const saldo = await consultarSaldoEstoqueProduto(alvo.produtoId)
             if (saldo.ok) {
               setSaldoBase(saldo.data.quantidade)

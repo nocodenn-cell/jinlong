@@ -5,10 +5,17 @@ export const MotivoAjusteEstoqueSchema = z.enum(
   { errorMap: () => ({ message: 'Motivo de ajuste inválido.' }) },
 )
 
+/**
+ * Contrato canônico de `atualizarEstoqueProduto`.
+ * Snapshot obrigatório: `quantidade_esperada` + `minimo_esperado`
+ * (RPC `ajustar_estoque_manual_seguro`).
+ */
 export const AtualizarEstoqueSchema = z.object({
   produto_id: z.string().uuid('Produto inválido.'),
   quantidade_atual: z.coerce.number().min(0, 'Quantidade atual não pode ser negativa.'),
   estoque_minimo: z.coerce.number().min(0, 'Estoque mínimo não pode ser negativo.'),
+  quantidade_esperada: z.number().finite().nonnegative(),
+  minimo_esperado: z.number().finite().nonnegative(),
   motivo: MotivoAjusteEstoqueSchema,
   observacao: z
     .string()
@@ -16,8 +23,6 @@ export const AtualizarEstoqueSchema = z.object({
     .max(500, 'Observação muito longa (máx. 500 caracteres).')
     .optional()
     .default(''),
-  /** Saldo visto na UI ao abrir o modal — protege contra lost-update. */
-  saldo_esperado: z.coerce.number().min(0).optional(),
 }).superRefine((data, ctx) => {
   if (data.motivo === 'OUTRO' && !data.observacao) {
     ctx.addIssue({

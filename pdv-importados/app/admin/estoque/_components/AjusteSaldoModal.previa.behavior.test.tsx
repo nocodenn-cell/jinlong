@@ -202,7 +202,7 @@ describe('AjusteSaldoModal — Retirar / Ajustar', () => {
     expect(container.querySelector('[data-testid="ajuste-diferenca"]')!.textContent).toBe('0')
   })
 
-  it('ajustar: envia saldo_esperado e quantidade contada; mín. sem alterar lógica de payload', async () => {
+  it('ajustar: só mínimo envia snapshot canônico (quantidade_esperada/minimo_esperado)', async () => {
     atualizarMock.mockResolvedValue({ ok: true, data: null })
     act(() => {
       root.render(
@@ -245,13 +245,15 @@ describe('AjusteSaldoModal — Retirar / Ajustar', () => {
       expect.objectContaining({
         quantidade_atual: 10,
         estoque_minimo: 3,
-        saldo_esperado: 10,
+        quantidade_esperada: 10,
+        minimo_esperado: 2,
         motivo: 'ACERTO_INVENTARIO',
       }),
     )
+    expect(atualizarMock.mock.calls[0][0]).not.toHaveProperty('saldo_esperado')
   })
 
-  it('concorrência: mostra mensagem e atualiza saldo base', async () => {
+  it('stale stock: mostra mensagem, consulta saldo e atualiza base (10→9)', async () => {
     atualizarMock.mockResolvedValue({
       ok: false,
       error:
@@ -279,12 +281,18 @@ describe('AjusteSaldoModal — Retirar / Ajustar', () => {
       ;(container.querySelector('#ajuste-saldo-form') as HTMLFormElement).requestSubmit()
     })
 
+    expect(atualizarMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        quantidade_esperada: 10,
+        minimo_esperado: 2,
+      }),
+    )
     expect(container.textContent).toContain('foi alterado enquanto esta tela estava aberta')
     expect(consultarMock).toHaveBeenCalled()
     expect(container.querySelector('[data-testid="ajuste-saldo-atual"]')?.textContent).toContain('9')
   })
 
-  it('retirar: envia observação com Doc e saldo_esperado', async () => {
+  it('retirar: envia Doc + snapshot quantidade_esperada/minimo_esperado', async () => {
     atualizarMock.mockResolvedValue({ ok: true, data: null })
     act(() => {
       root.render(
@@ -326,10 +334,48 @@ describe('AjusteSaldoModal — Retirar / Ajustar', () => {
     expect(atualizarMock).toHaveBeenCalledWith(
       expect.objectContaining({
         quantidade_atual: 7,
-        saldo_esperado: 10,
+        estoque_minimo: 1,
+        quantidade_esperada: 10,
+        minimo_esperado: 1,
         observacao: '[Doc: OS-9] quebrado',
         motivo: 'PERDA',
       }),
     )
+  })
+
+  it('modo genérico: snapshot original mesmo ao editar apenas o mínimo', async () => {
+    atualizarMock.mockResolvedValue({ ok: false, error: 'Conflito sintético' })
+    act(() => {
+      root.render(
+        <AjusteSaldoModal
+          alvo={{
+            produtoId: '11111111-1111-1111-1111-111111111111',
+            produtoNome: 'Sintético',
+            quantidadeAtual: 9,
+            estoqueMinimo: 2,
+          }}
+          onClose={() => {}}
+          labels={baseLabels}
+        />,
+      )
+    })
+    const min = container.querySelector('input[name="estoque_minimo"]') as HTMLInputElement
+    act(() => {
+      const native = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')!.set!
+      native.call(min, '3')
+      min.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    await act(async () => {
+      ;(container.querySelector('#ajuste-saldo-form') as HTMLFormElement).requestSubmit()
+    })
+    expect(atualizarMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        quantidade_atual: 9,
+        estoque_minimo: 3,
+        quantidade_esperada: 9,
+        minimo_esperado: 2,
+      }),
+    )
+    expect(container.textContent).toContain('Conflito sintético')
   })
 })

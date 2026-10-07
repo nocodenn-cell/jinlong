@@ -168,7 +168,7 @@ BEGIN
   END IF;
 
   SELECT valor_total INTO v_cp FROM public.contas_pagar
-   WHERE nfe_importacao_id = v_imp_id AND nfe_numero = 'DUP-M';
+   WHERE nfe_importacao_id = v_imp_id AND nfe_numero = 'FLX05-M1';
   IF v_cp <> 1200.00 THEN
     RAISE EXCEPTION 'FLX05_MARGEM_FALHOU: contas_pagar deveria ser 1200, veio %', v_cp;
   END IF;

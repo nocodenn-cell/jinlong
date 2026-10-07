@@ -50,6 +50,7 @@ const CODE_TO_PT: Record<InventoryErrorCode, string> = {
   [INVENTORY_ERROR_CODES.TRANSFER_KEY_REQUIRED]: 'Chave de idempotência ausente.',
   [INVENTORY_ERROR_CODES.REMESSA_ID_REQUIRED]: 'Identificador da remessa ausente.',
   [INVENTORY_ERROR_CODES.NFE_PAYLOAD_INVALID]: 'Dados da NF-e inválidos para importação.',
+  [INVENTORY_ERROR_CODES.STALE_BALANCE]: 'O saldo ou o mínimo mudou. Atualize a lista e confira novamente.',
   [INVENTORY_ERROR_CODES.ADJUST_FAILED]: 'Não foi possível ajustar o estoque.',
   [INVENTORY_ERROR_CODES.MOVEMENT_FAILED]: 'Não foi possível registrar o movimento de estoque.',
   [INVENTORY_ERROR_CODES.LIST_FAILED]: 'Não foi possível listar o estoque.',

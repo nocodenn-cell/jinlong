@@ -4,9 +4,10 @@ import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { assertAdminSession } from '@/lib/admin/auth/assertAdminSession'
-import { FINANCEIRO_OPERACOES, type FinanceiroPainel } from './financeiroLojaTypes'
+import { FINANCEIRO_OPERACOES, FINANCEIRO_OPERACOES_OPERACIONAIS, type FinanceiroPainel } from './financeiroLojaTypes'
 
 const commandSchema = z.object({ tipo: z.enum(FINANCEIRO_OPERACOES), dados: z.record(z.unknown()), requestId: z.string().uuid() })
+const operacionalSchema = z.object({ tipo: z.enum(FINANCEIRO_OPERACOES_OPERACIONAIS), dados: z.record(z.unknown()), requestId: z.string().uuid() })
 const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 
 export async function buscarCandidatosConciliacao(extrato: string, busca = ''): Promise<{ ok: true; data: { id:string; data:string; descricao:string; valor:number }[] } | { ok:false; error:string }> {
@@ -37,6 +38,23 @@ export async function executarFinanceiroLoja(input: unknown): Promise<{ ok: true
  const supabase = await createClient()
  const { error } = await supabase.rpc('financeiro_comando', { p_tipo: parsed.data.tipo, p_dados: parsed.data.dados, p_request_id: parsed.data.requestId })
  if (error) return { ok: false, error: error.message }
+ revalidatePath('/admin/financeiro')
+ revalidatePath('/admin/caixas')
+ return { ok: true }
+}
+
+export async function executarFinanceiroOperacional(input: unknown): Promise<{ ok: true } | { ok: false; error: string }> {
+ const auth = await assertAdminSession(undefined, { resource: 'sensitive:financeiro' })
+ if (!auth.ok) return auth
+ const parsed = operacionalSchema.safeParse(input)
+ if (!parsed.success) return { ok: false, error: 'Dados da operação inválidos.' }
+ const supabase = await createClient()
+ const { error } = await supabase.rpc('financeiro_comando_operacional', {
+  p_tipo: parsed.data.tipo,
+  p_dados: parsed.data.dados,
+  p_request_id: parsed.data.requestId,
+ })
+ if (error) return { ok: false, error: error.code === 'PGRST202' ? 'Atualize o banco para configurar contas por forma de pagamento.' : error.message }
  revalidatePath('/admin/financeiro')
  revalidatePath('/admin/caixas')
  return { ok: true }

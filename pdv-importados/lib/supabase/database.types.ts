@@ -118,6 +118,7 @@ export type Database = {
       caixas: {
         Row: {
           autorizado_por: string | null
+          conta_financeira_id: string | null
           data_abertura: string
           data_fechamento: string | null
           fechamento_diferenca: number | null
@@ -134,6 +135,7 @@ export type Database = {
         }
         Insert: {
           autorizado_por?: string | null
+          conta_financeira_id?: string | null
           data_abertura?: string
           data_fechamento?: string | null
           fechamento_diferenca?: number | null
@@ -150,6 +152,7 @@ export type Database = {
         }
         Update: {
           autorizado_por?: string | null
+          conta_financeira_id?: string | null
           data_abertura?: string
           data_fechamento?: string | null
           fechamento_diferenca?: number | null
@@ -170,6 +173,13 @@ export type Database = {
             columns: ["autorizado_por"]
             isOneToOne: false
             referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "caixas_conta_financeira_id_fkey"
+            columns: ["conta_financeira_id"]
+            isOneToOne: false
+            referencedRelation: "contas_financeiras"
             referencedColumns: ["id"]
           },
           {
@@ -1788,6 +1798,66 @@ export type Database = {
           },
         ]
       }
+      entrada_documentos: {
+        Row: {
+          created_at: string
+          criado_por: string
+          importacao_id: string
+          loja_id: string
+          remessa_id: string
+        }
+        Insert: {
+          created_at?: string
+          criado_por: string
+          importacao_id: string
+          loja_id: string
+          remessa_id: string
+        }
+        Update: {
+          created_at?: string
+          criado_por?: string
+          importacao_id?: string
+          loja_id?: string
+          remessa_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entrada_documentos_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entrada_documentos_importacao_id_fkey"
+            columns: ["importacao_id"]
+            isOneToOne: true
+            referencedRelation: "importacoes_nfe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entrada_documentos_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entrada_documentos_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["loja_id"]
+          },
+          {
+            foreignKeyName: "entrada_documentos_remessa_id_fkey"
+            columns: ["remessa_id"]
+            isOneToOne: true
+            referencedRelation: "remessas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       estoque: {
         Row: {
           estoque_minimo: number
@@ -2156,6 +2226,59 @@ export type Database = {
           },
         ]
       }
+      financeiro_contas_forma: {
+        Row: {
+          atualizado_em: string
+          atualizado_por: string | null
+          conta_financeira_id: string | null
+          forma_pagamento: string
+          loja_id: string
+        }
+        Insert: {
+          atualizado_em?: string
+          atualizado_por?: string | null
+          conta_financeira_id?: string | null
+          forma_pagamento: string
+          loja_id: string
+        }
+        Update: {
+          atualizado_em?: string
+          atualizado_por?: string | null
+          conta_financeira_id?: string | null
+          forma_pagamento?: string
+          loja_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financeiro_contas_forma_atualizado_por_fkey"
+            columns: ["atualizado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_contas_forma_conta_financeira_id_fkey"
+            columns: ["conta_financeira_id"]
+            isOneToOne: false
+            referencedRelation: "contas_financeiras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_contas_forma_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_contas_forma_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["loja_id"]
+          },
+        ]
+      }
       financeiro_recebiveis_venda: {
         Row: {
           bruto: number
@@ -2368,7 +2491,7 @@ export type Database = {
       }
       fornecedores: {
         Row: {
-          cnpj: string
+          cnpj: string | null
           created_at: string
           id: string
           loja_id: string
@@ -2376,7 +2499,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          cnpj: string
+          cnpj?: string | null
           created_at?: string
           id?: string
           loja_id: string
@@ -2384,7 +2507,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          cnpj?: string
+          cnpj?: string | null
           created_at?: string
           id?: string
           loja_id?: string
@@ -6045,6 +6168,10 @@ export type Database = {
         Returns: undefined
       }
       _oc_resumo_json: { Args: { p_ordem_id: string }; Returns: Json }
+      _validar_documento_entrega: {
+        Args: { p_importacao: string; p_loja: string; p_remessa: string }
+        Returns: undefined
+      }
       ajustar_estoque_manual:
         | {
             Args: {
@@ -6070,6 +6197,20 @@ export type Database = {
             }
             Returns: undefined
           }
+      ajustar_estoque_manual_seguro: {
+        Args: {
+          p_ator_id: string
+          p_estoque_minimo: number
+          p_loja_id: string
+          p_minimo_esperado: number
+          p_motivo_codigo: string
+          p_observacao: string
+          p_produto_id: string
+          p_quantidade_atual: number
+          p_quantidade_esperada: number
+        }
+        Returns: undefined
+      }
       aprovar_movimentacao: {
         Args: {
           p_autorizacao_token?: string
@@ -6085,6 +6226,10 @@ export type Database = {
           saldo_atual: number
           status_movimentacao: string
         }[]
+      }
+      associar_documento_entrada: {
+        Args: { p_importacao: string; p_remessa: string }
+        Returns: undefined
       }
       atualizar_preco_varejo_produto: {
         Args: { p_preco: number; p_produto_id: string }
@@ -6529,6 +6674,10 @@ export type Database = {
         Returns: Json
       }
       financeiro_comando: {
+        Args: { p_dados: Json; p_request_id: string; p_tipo: string }
+        Returns: Json
+      }
+      financeiro_comando_operacional: {
         Args: { p_dados: Json; p_request_id: string; p_tipo: string }
         Returns: Json
       }

@@ -8,12 +8,14 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import {
   finalizarVendaInputSchema,
+  pagamentoSoDinheiro,
   roundMoney2,
   descontoDiscricionarioFromItens,
   totaisFromItens,
   totalsMatchDeclared,
 } from '@/app/caixa/finalizarVendaValidation'
 import type { FinalizarVendaInput } from '@/app/caixa/finalizarVendaValidation'
+import { isDescontoComercialOperador } from '@/app/caixa/descontoComercialDinheiro'
 import { pagamentoParcialExigeCliente } from '@/app/caixa/caixaPagamentoSaldo'
 import { getLojaIdUsuario, LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import { mensagemErroDeExcecao, mensagemErroValidacaoZod } from '@/lib/errors/mensagemErroUsuario'
@@ -194,7 +196,13 @@ export async function finalizarVendaCaixaImpl(
 
     const computedBase = totaisFromItens(itensAut)
     const gerentePercentual = input.descontoGerentePercentual ?? null
-    const hasDescontoGerente = !!input.descontoGerenteToken && gerentePercentual !== null
+    const comercialOperador = isDescontoComercialOperador({
+      token: input.descontoGerenteToken,
+      percentual: gerentePercentual,
+      motivo: input.motivoDesconto,
+    }) && pagamentoSoDinheiro(input)
+    const hasDescontoGerente =
+      (!!input.descontoGerenteToken && gerentePercentual !== null) || comercialOperador
 
     if (!hasDescontoGerente && computedBase.totalBruto > 0.009) {
       const cfgMap = await obterMapaConfiguracoesParaCaixaWeb(supabase)
@@ -213,7 +221,7 @@ export async function finalizarVendaCaixaImpl(
       }
     }
 
-    const descontoGerenteValor = hasDescontoGerente
+    const descontoGerenteValor = hasDescontoGerente && gerentePercentual !== null
       ? roundMoney2((computedBase.totalLiquido * gerentePercentual) / 100)
       : 0
 

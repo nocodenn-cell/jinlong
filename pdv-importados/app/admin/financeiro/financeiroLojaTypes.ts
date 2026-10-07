@@ -35,9 +35,16 @@ export type FinanceiroFormaPagamento = {
   conta_nome: string | null
   conta_tipo: string | null
 }
+export type FinanceiroContaForma = {
+  forma_pagamento: string
+  conta_financeira_id: string | null
+  conta_nome: string | null
+  conta_tipo: string | null
+}
 export type FinanceiroPainel = {
  hoje: string; saldo: number; saldo_pdv: number; pagina: number
  contas: FinanceiroConta[]; categorias: FinanceiroCategoria[]
+ contas_forma?: FinanceiroContaForma[]
  clientes: { id: string; nome: string }[]; fornecedores: { id: string; nome: string }[]
  pagar: FinanceiroTitulo[]; receber: FinanceiroTitulo[]; movimentos: FinanceiroMovimento[]
  recebiveis: FinanceiroRecebivel[]; extratos: FinanceiroExtrato[]
@@ -55,4 +62,8 @@ export const FINANCEIRO_OPERACOES = [
   'IMPORTAR_EXTRATO','CONCILIAR','DESCONCILIAR','CLASSIFICAR_TITULO','VINCULAR_CAIXA',
   'INATIVAR_CONTA','VINCULAR_FORMA_PAGAMENTO',
 ] as const
+export const FINANCEIRO_OPERACOES_OPERACIONAIS = [
+  'ALTERAR_CONTA','CONFIGURAR_CONTA_FORMA','VINCULAR_TURNO_CONTA',
+] as const
 export type FinanceiroOperacao = typeof FINANCEIRO_OPERACOES[number]
+export type FinanceiroOperacaoOperacional = typeof FINANCEIRO_OPERACOES_OPERACIONAIS[number]

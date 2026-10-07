@@ -169,8 +169,8 @@ describe('inventory — contracts (split de leitura)', () => {
     expect(mapAjusteRpcMessageToCode('AJUSTE_ESTOQUE_QTD_INVALIDA')).toBe(
       INVENTORY_ERROR_CODES.QTY_INVALID,
     )
-    expect(mapAjusteRpcMessageToCode('AJUSTE_ESTOQUE_CONCORRENCIA: saldo mudou')).toBe(
-      INVENTORY_ERROR_CODES.CONCURRENCY,
+    expect(mapAjusteRpcMessageToCode('AJUSTE_ESTOQUE_SALDO_ALTERADO')).toBe(
+      INVENTORY_ERROR_CODES.STALE_BALANCE,
     )
     expect(validateAdjustInventoryCommand({
       productId: 'p1',

@@ -4,7 +4,8 @@ import React, { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }))
+const replaceMock = vi.fn()
+vi.mock('next/navigation', () => ({ useSearchParams: () => new URLSearchParams('q=caneca&visao=critico&page=4'), usePathname: () => '/admin/estoque', useRouter: () => ({ refresh: vi.fn(), replace: (url: string) => replaceMock(url) }) }))
 vi.mock('../actions', () => ({ obterKardexProduto: vi.fn(async () => []), ajustarSaldoEstoque: vi.fn() }))
 
 ;(globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
@@ -58,4 +59,15 @@ describe('EstoqueTable — situação do saldo (UX-006)', () => {
     const d = textoDaLinha('D')
     expect(d).not.toContain('situacao')
   })
+})
+
+it('ordenar preserva os filtros e volta à primeira página do servidor', () => {
+  act(() => root.render(<EstoqueTable linhas={[linha('A', 1, 2)]} labels={labels} />))
+  const header = Array.from(container.querySelectorAll('th')).find((item) => item.textContent?.includes('saldo'))!
+  act(() => header.click())
+  const url = new URL(replaceMock.mock.calls.at(-1)![0], 'https://local.test')
+  expect(url.searchParams.get('q')).toBe('caneca')
+  expect(url.searchParams.get('visao')).toBe('critico')
+  expect(url.searchParams.get('ordem')).toBe('quantidade_atual')
+  expect(url.searchParams.has('page')).toBe(false)
 })

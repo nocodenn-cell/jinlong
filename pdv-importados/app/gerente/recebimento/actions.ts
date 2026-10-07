@@ -233,3 +233,33 @@ export async function criarRemessaConferencia(input: {
   }
   return { success: true, data: { remessaId: String(remessaId), oc, saldoAtual } }
 }
+
+export async function listarHistoricoEntregas(busca = '', pagina = 1): Promise<R<{ rows: Array<{ id: string; origem_descricao: string; status: string; created_at: string }>; total: number }>> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+  const lojaId = await lojaDoUsuario()
+  if (!lojaId) return { success: false, error: 'Loja não identificada.' }
+  const db = await createClient()
+  const filtro = busca.replace(/[,%_()\\]/g, ' ').trim().slice(0, 100)
+  let query = db.from('remessas').select('id,origem_descricao,status,created_at', { count: 'exact' }).eq('loja_id', lojaId)
+  if (filtro) query = query.ilike('origem_descricao', `%${filtro}%`)
+  const page = Number.isFinite(pagina) ? Math.max(1, Math.floor(pagina)) : 1
+  const result = await query.order('created_at', { ascending: false }).order('id').range((page - 1) * 20, page * 20 - 1)
+  if (result.error) return { success: false, error: mensagemErroComSecao('Histórico de entregas', result.error.message) }
+  return { success: true, data: { rows: result.data ?? [], total: result.count ?? 0 } }
+}
+
+export type EntregaItemHistorico = { id: string; nome: string; esperada: number; conferida: number }
+export async function obterItensEntrega(remessaId: string): Promise<R<EntregaItemHistorico[]>> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+  const lojaId = await lojaDoUsuario()
+  const db = await createClient()
+  const remessa = await db.from('remessas').select('id').eq('id', remessaId).eq('loja_id', lojaId ?? '').maybeSingle()
+  if (remessa.error || !remessa.data) return { success: false, error: 'Entrega não encontrada nesta loja.' }
+  const result = await db.from('remessa_itens').select('id,quantidade_esperada,quantidade_conferida,produtos(nome)').eq('remessa_id', remessaId).order('id')
+  if (result.error) return { success: false, error: mensagemErroComSecao('Itens da entrega', result.error.message) }
+  return { success: true, data: (result.data ?? []).map((item) => ({ id: item.id,
+    nome: (Array.isArray(item.produtos) ? item.produtos[0] : item.produtos)?.nome ?? '—',
+    esperada: Number(item.quantidade_esperada), conferida: Number(item.quantidade_conferida) })) }
+}

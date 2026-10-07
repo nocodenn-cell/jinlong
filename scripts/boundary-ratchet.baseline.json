@@ -12,16 +12,16 @@
   "components-to-app": {
     "pdv-importados/components/caixa/CaixaToastViewport.tsx": 1,
     "pdv-importados/components/gerente/GerenteHeaderNav.tsx": 1,
+    "pdv-importados/components/gerente/produtos/ProdutoImagemCell.tsx": 1,
+    "pdv-importados/components/gerente/produtos/ProdutosExcluirLoteModal.tsx": 1,
+    "pdv-importados/components/gerente/produtos/ProdutosImportarModal.tsx": 1,
     "pdv-importados/components/gerente/produtos/form/fields/FornecedorCombobox.tsx": 2,
     "pdv-importados/components/gerente/produtos/form/produtoForm.mappers.ts": 1,
     "pdv-importados/components/gerente/produtos/form/sections/CategoriaQuickField.tsx": 1,
     "pdv-importados/components/gerente/produtos/form/sections/ClassificacaoSection.tsx": 1,
     "pdv-importados/components/gerente/produtos/form/useProdutoFormOrchestration.ts": 2,
     "pdv-importados/components/gerente/produtos/produtoFormSections/FaixasAtacadoEditor.tsx": 1,
-    "pdv-importados/components/gerente/produtos/produtoFormSections/HistoricoPrecosSection.tsx": 1,
-    "pdv-importados/components/gerente/produtos/ProdutoImagemCell.tsx": 1,
-    "pdv-importados/components/gerente/produtos/ProdutosExcluirLoteModal.tsx": 1,
-    "pdv-importados/components/gerente/produtos/ProdutosImportarModal.tsx": 1
+    "pdv-importados/components/gerente/produtos/produtoFormSections/HistoricoPrecosSection.tsx": 1
   },
   "shared-to-apps": {},
   "routes-coupling": {
@@ -37,6 +37,7 @@
     "pdv-importados/app/admin/compras/page.tsx|produtos": 1,
     "pdv-importados/app/admin/dashboard/page.tsx|caixas": 1,
     "pdv-importados/app/admin/estoque/inventoryReader.ts|estoque": 2,
+    "pdv-importados/app/admin/estoque/movimentacoes/actions.ts|produtos": 2,
     "pdv-importados/app/admin/estoque/recebimento/page.tsx|produtos": 1,
     "pdv-importados/app/admin/estoque/transferencias/page.tsx|produtos": 1,
     "pdv-importados/app/admin/financeiro/page.tsx|caixas": 1,
@@ -75,7 +76,6 @@
     "pdv-importados/app/gerente/categorias-produtos/actions.ts|produtos": 1,
     "pdv-importados/app/gerente/estoque/actions.ts|estoque": 3,
     "pdv-importados/app/gerente/estoque/importar-nfe/actions.ts|produtos": 2,
-    "pdv-importados/app/gerente/estoque/importar-nfe/actions.ts|contas_pagar": 1,
     "pdv-importados/app/gerente/estoque/imprimir-etiquetas/actions.ts|produtos": 3,
     "pdv-importados/app/gerente/financeiro/actions.ts|clientes": 2,
     "pdv-importados/app/gerente/financeiro/contas-pagar/actions.ts|caixas": 1,

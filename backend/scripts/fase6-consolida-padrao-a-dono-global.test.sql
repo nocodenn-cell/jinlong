@@ -76,10 +76,11 @@ BEGIN
   -- GERENTE de A tentando ajustar estoque de produto da loja B: continua recusado.
   PERFORM set_config('request.jwt.claim.sub', v_gerente_a::text, true);
   BEGIN
-    PERFORM public.ajustar_estoque_manual(v_produto_b, v_loja_b, 20, 0, 'ACERTO_INVENTARIO', null, null);
+    PERFORM public.ajustar_estoque_manual_seguro(
+      v_produto_b, v_loja_b, 20, 0, 'ACERTO_INVENTARIO', null, null, 10, 0);
   EXCEPTION WHEN OTHERS THEN
     IF SQLERRM = 'AJUSTE_ESTOQUE_LOJA_INVALIDA' THEN v_falhou := true;
-    ELSE RAISE EXCEPTION 'FASE6_FALHOU: GERENTE cross-loja recebeu erro inesperado em ajustar_estoque_manual: %', SQLERRM; END IF;
+    ELSE RAISE EXCEPTION 'FASE6_FALHOU: GERENTE cross-loja recebeu erro inesperado em ajustar_estoque_manual_seguro: %', SQLERRM; END IF;
   END;
   IF NOT v_falhou THEN
     RAISE EXCEPTION 'FASE6_FALHOU (BLOCKER): GERENTE de outra loja conseguiu ajustar estoque cross-loja — Padrão A quebrado.';
@@ -87,7 +88,8 @@ BEGIN
 
   -- DONO (Padrão A, novo comportamento): consegue ajustar estoque de loja que não é a sua.
   PERFORM set_config('request.jwt.claim.sub', v_dono::text, true);
-  PERFORM public.ajustar_estoque_manual(v_produto_b, v_loja_b, 25, 0, 'ACERTO_INVENTARIO', null, null);
+  PERFORM public.ajustar_estoque_manual_seguro(
+    v_produto_b, v_loja_b, 25, 0, 'ACERTO_INVENTARIO', null, null, 10, 0);
   PERFORM 1 FROM public.estoque WHERE produto_id = v_produto_b AND loja_id = v_loja_b AND quantidade_atual = 25;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'FASE6_FALHOU: DONO deveria ter conseguido ajustar estoque cross-loja (Padrão A).';
@@ -95,13 +97,14 @@ BEGIN
 
   -- ADMIN (sanity — já era global antes, continua): mesmo teste.
   PERFORM set_config('request.jwt.claim.sub', v_admin::text, true);
-  PERFORM public.ajustar_estoque_manual(v_produto_b, v_loja_b, 30, 0, 'ACERTO_INVENTARIO', null, null);
+  PERFORM public.ajustar_estoque_manual_seguro(
+    v_produto_b, v_loja_b, 30, 0, 'ACERTO_INVENTARIO', null, null, 25, 0);
   PERFORM 1 FROM public.estoque WHERE produto_id = v_produto_b AND loja_id = v_loja_b AND quantidade_atual = 30;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'FASE6_FALHOU: ADMIN deveria continuar conseguindo ajustar estoque cross-loja.';
   END IF;
 
-  RAISE NOTICE 'Passo 1 OK: ajustar_estoque_manual — GERENTE bloqueado, DONO e ADMIN globais.';
+  RAISE NOTICE 'Passo 1 OK: ajustar_estoque_manual_seguro — GERENTE bloqueado, DONO e ADMIN globais.';
 END
 $ajuste$;
 
@@ -174,10 +177,11 @@ BEGIN
   -- DONO desativado tentando ajustar estoque de outra loja: bloqueado.
   PERFORM set_config('request.jwt.claim.sub', v_dono_inativo::text, true);
   BEGIN
-    PERFORM public.ajustar_estoque_manual(v_produto_b, v_loja_b, 40, 0, 'ACERTO_INVENTARIO', null, null);
+    PERFORM public.ajustar_estoque_manual_seguro(
+      v_produto_b, v_loja_b, 40, 0, 'ACERTO_INVENTARIO', null, null, 30, 0);
   EXCEPTION WHEN OTHERS THEN
     IF SQLERRM = 'AJUSTE_ESTOQUE_LOJA_INVALIDA' THEN v_falhou := true;
-    ELSE RAISE EXCEPTION 'FASE6_FALHOU: DONO desativado recebeu erro inesperado em ajustar_estoque_manual: %', SQLERRM; END IF;
+    ELSE RAISE EXCEPTION 'FASE6_FALHOU: DONO desativado recebeu erro inesperado em ajustar_estoque_manual_seguro: %', SQLERRM; END IF;
   END;
   IF NOT v_falhou THEN
     RAISE EXCEPTION 'FASE6_FALHOU (BLOCKER): DONO desativado conseguiu ajustar estoque cross-loja — regressão de escopo.';

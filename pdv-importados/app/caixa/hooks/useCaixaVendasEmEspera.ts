@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import {
   colocarVendaEmEsperaCaixa,
   descartarVendaEmEsperaCaixa,
@@ -95,6 +95,17 @@ export function useCaixaVendasEmEspera(deps: UseCaixaVendasEmEsperaDeps) {
     setVendaEmEsperaOrigemId(null)
   }, [vendaEmEsperaOrigemId, setVendaEmEsperaOrigemId])
 
+  const operacaoRef = useRef(false)
+  const [processandoEspera, setProcessandoEspera] = useState(false)
+  const executarOperacao = useCallback(async (operacao: () => Promise<void>) => {
+    if (operacaoRef.current) return
+    operacaoRef.current = true
+    setProcessandoEspera(true)
+    try { await operacao() }
+    catch (error) { setCaixaMensagem(error instanceof Error ? error.message : m.caixa.em_aberto_finalize_antes, { kind: "error" }) }
+    finally { operacaoRef.current = false; setProcessandoEspera(false) }
+  }, [setCaixaMensagem, m.caixa.em_aberto_finalize_antes])
+
   const [vendasEmEspera, setVendasEmEspera] = useState<VendaEmEsperaCard[]>([])
   const [carregandoEmEspera, setCarregandoEmEspera] = useState(false)
 
@@ -103,10 +114,13 @@ export function useCaixaVendasEmEspera(deps: UseCaixaVendasEmEsperaDeps) {
     try {
       const res = await listarVendasEmEsperaCaixa()
       if (res.ok) setVendasEmEspera(res.vendas)
+      else setCaixaMensagem(res.error, { kind: "error" })
+    } catch (error) {
+      setCaixaMensagem(error instanceof Error ? error.message : m.caixa.em_aberto_finalize_antes, { kind: "error" })
     } finally {
       setCarregandoEmEspera(false)
     }
-  }, [])
+  }, [setCaixaMensagem, m.caixa.em_aberto_finalize_antes])
 
   useEffect(() => {
     void recarregarEmEspera()
@@ -253,8 +267,9 @@ export function useCaixaVendasEmEspera(deps: UseCaixaVendasEmEsperaDeps) {
     vendasEmEspera,
     carregandoEmEspera,
     recarregarEmEspera,
-    handleNovaVendaOuEspera,
-    handleRetomarEmEspera,
-    handleDescartarEmEspera,
+    processandoEspera,
+    handleNovaVendaOuEspera: () => executarOperacao(handleNovaVendaOuEspera),
+    handleRetomarEmEspera: (id: string) => executarOperacao(() => handleRetomarEmEspera(id)),
+    handleDescartarEmEspera: (id: string) => executarOperacao(() => handleDescartarEmEspera(id)),
   }
 }

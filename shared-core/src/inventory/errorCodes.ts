@@ -1,7 +1,7 @@
 /**
  * Códigos estáveis do domínio inventory — a borda resolve para i18n.
  * Policies emitem só `code`; sem string de idioma no core.
- * Espelha codes da RPC `ajustar_estoque_manual` quando aplicável.
+ * Espelha codes da RPC `ajustar_estoque_manual_seguro` quando aplicável.
  */
 
 export const INVENTORY_ERROR_CODES = {
@@ -20,7 +20,7 @@ export const INVENTORY_ERROR_CODES = {
   REMESSA_ID_REQUIRED: 'INVENTORY_REMESSA_ID_REQUIRED',
   NFE_PAYLOAD_INVALID: 'INVENTORY_NFE_PAYLOAD_INVALID',
   ADJUST_FAILED: 'INVENTORY_ADJUST_FAILED',
-  CONCURRENCY: 'INVENTORY_CONCURRENCY',
+  STALE_BALANCE: 'INVENTORY_STALE_BALANCE',
   MOVEMENT_FAILED: 'INVENTORY_MOVEMENT_FAILED',
   LIST_FAILED: 'INVENTORY_LIST_FAILED',
   READ_FAILED: 'INVENTORY_READ_FAILED',
@@ -53,6 +53,9 @@ export type InventoryAdjustReason = (typeof INVENTORY_ADJUST_REASONS)[number]
 /** Mapeia fragmento de erro RPC → code de domínio. */
 export function mapAjusteRpcMessageToCode(detalhe: string): InventoryErrorCode {
   const raw = (detalhe ?? '').trim()
+  if (raw.includes('AJUSTE_ESTOQUE_SALDO_ALTERADO') || raw.includes('AJUSTE_ESTOQUE_SNAPSHOT_OBRIGATORIO')) {
+    return INVENTORY_ERROR_CODES.STALE_BALANCE
+  }
   if (raw.includes('AJUSTE_ESTOQUE_AUTH')) return INVENTORY_ERROR_CODES.AUTH_REQUIRED
   if (raw.includes('AJUSTE_ESTOQUE_PERFIL')) return INVENTORY_ERROR_CODES.PROFILE_DENIED
   if (raw.includes('AJUSTE_ESTOQUE_LOJA_INVALIDA')) return INVENTORY_ERROR_CODES.LOJA_MISMATCH
@@ -64,9 +67,6 @@ export function mapAjusteRpcMessageToCode(detalhe: string): InventoryErrorCode {
   }
   if (raw.includes('AJUSTE_ESTOQUE_LINHA_NAO_ENCONTRADA')) {
     return INVENTORY_ERROR_CODES.NOT_FOUND
-  }
-  if (raw.includes('AJUSTE_ESTOQUE_CONCORRENCIA')) {
-    return INVENTORY_ERROR_CODES.CONCURRENCY
   }
   if (raw.includes('ESTOQUE_INSUFICIENTE')) return INVENTORY_ERROR_CODES.INSUFFICIENT
   return INVENTORY_ERROR_CODES.ADJUST_FAILED

@@ -37,20 +37,20 @@ const KARDEX_TOTAL_MAX = 1000
  * Últimas movimentações de estoque de um produto na loja do usuário logado.
  * Read-only; em qualquer erro retorna lista vazia (o Sheet mostra o empty state).
  */
-export async function obterKardexProduto(produtoId: string): Promise<KardexMovimento[]> {
-  if (!UUID_RE.test(produtoId)) return []
+export async function obterKardexProduto(produtoId: string, limite = KARDEX_LIMITE): Promise<KardexMovimento[]> {
+  if (!UUID_RE.test(produtoId)) throw new Error('Produto inválido.')
 
   const auth = await assertAdminSession('estoque:kardex', {
     pathname: ROUTES.admin.estoque,
     resource: `route:${ROUTES.admin.estoque}`,
   })
-  if (!auth.ok) return []
+  if (!auth.ok) throw new Error(auth.error)
 
   const supabase = await createClient()
   const loja = auth.session.lojaId ?? LOJA_MATRIZ_ID
   const reader = createInventoryMovementReader(supabase, loja)
-  const result = await reader.listByProduct({ productId: produtoId, limit: KARDEX_LIMITE })
-  if (!result.ok) return []
+  const result = await reader.listByProduct({ productId: produtoId, limit: Math.min(1000, Math.max(60, Math.floor(limite))) })
+  if (!result.ok) throw new Error(result.error)
 
   const movimentos = result.movements
 

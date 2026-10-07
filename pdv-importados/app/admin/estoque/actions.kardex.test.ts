@@ -68,6 +68,6 @@ describe('obterKardexProduto — Usuário e Saldo após (UX-007)', () => {
   })
 
   it('id inválido devolve lista vazia sem consultar', async () => {
-    expect(await obterKardexProduto('x')).toEqual([])
+    await expect(obterKardexProduto('x')).rejects.toThrow('Produto inválido')
   })
 })

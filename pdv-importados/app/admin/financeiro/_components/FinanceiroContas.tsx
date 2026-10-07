@@ -11,6 +11,13 @@ import { CategoriaOptions, ContaOptions } from './FinanceiroOptions'
 import { executarFinanceiroLoja } from '../financeiroLojaActions'
 import { useRouter } from 'next/navigation'
 
+const FORMAS = [
+  { id: 'DINHEIRO', label: 'Dinheiro (gaveta / reserva)' },
+  { id: 'PIX', label: 'PIX → banco' },
+  { id: 'CARTAO_CREDITO', label: 'Cartão crédito → a receber no banco' },
+  { id: 'CARTAO_DEBITO', label: 'Cartão débito → a receber no banco' },
+] as const
+
 type Labels = {
   saldosTitulo: string
   saldoRegistrado: string
@@ -165,7 +172,7 @@ export function FinanceiroContas({ data, labels }: { data: FinanceiroPainel; lab
   const [selecionada, setSelecionada] = useState<string | null>(data.contas[0]?.id ?? null)
   const [pendingInativar, setPendingInativar] = useState(false)
   const conta = data.contas.find((c) => c.id === selecionada) ?? null
-  const formas = data.formas_pagamento ?? []
+  const contasForma = data.contas_forma ?? []
 
   async function inativar(contaId: string) {
     if (!window.confirm(labels.inativarConfirm)) return
@@ -206,45 +213,44 @@ export function FinanceiroContas({ data, labels }: { data: FinanceiroPainel; lab
 
       {conta ? <ExtratoConta conta={conta} movimentos={data.movimentos} labels={labels} /> : null}
 
-      <SectionCard title={labels.formasTitulo}>
-        <p className="mb-3 text-small text-jl-fg-3">{labels.formasHint}</p>
-        <ul className="space-y-3">
-          {formas.map((f) => (
-            <li key={f.id} className="rounded-lg border border-[var(--color-border-secondary)] p-3">
-              <FinanceiroForm
-                title={`${f.nome} (${f.codigo})`}
-                tipo="VINCULAR_FORMA_PAGAMENTO"
-                submit={labels.salvarVinculo}
-                fixed={{ codigo: f.codigo }}
-              >
-                <Field name="conta_id" label={labels.formaConta} required={false} value={f.conta_financeira_id ?? ''}>
-                  <option value="">{labels.formaSemConta}</option>
-                  {data.contas
-                    .filter((c) => c.ativo)
-                    .filter((c) => {
-                      if (f.codigo === 'DINHEIRO') return c.tipo === 'RESERVA'
-                      if (['PIX', 'CARTAO_DEBITO', 'CARTAO_CREDITO'].includes(f.codigo)) return c.tipo === 'BANCO'
-                      return true
-                    })
-                    .map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.nome} · {tipoLabel(c.tipo, labels)}
-                      </option>
-                    ))}
-                </Field>
-              </FinanceiroForm>
-              {f.conta_nome ? (
-                <p className="mt-1 text-caption text-jl-fg-3">
-                  {labels.formaCodigo}: {f.codigo} → {f.conta_nome}
-                </p>
-              ) : null}
-            </li>
+      <FinanceiroForm title="Ativar ou inativar conta" tipo="ALTERAR_CONTA" operacional>
+        <Field name="conta_id" label="Conta">
+          <ContaOptions data={data} incluirInativas />
+        </Field>
+        <Field name="nome" label="Nome (opcional)" required={false} />
+        <Field name="ativo" label="Situação">
+          <option value="true">Ativa</option>
+          <option value="false">Inativa</option>
+        </Field>
+      </FinanceiroForm>
+
+      <FinanceiroForm title={labels.formasTitulo} tipo="CONFIGURAR_CONTA_FORMA" operacional submit={labels.salvarVinculo}>
+        <p className="text-small sm:col-span-2">{labels.formasHint}</p>
+        <p className="text-small sm:col-span-2">
+          Vale apenas para vendas e baixas novas. Não relança histórico nem reconstrói saldos. Dinheiro continua na
+          gaveta do PDV; reserve só se quiser espelho de numerário fora do turno.
+        </p>
+        <Field name="forma_pagamento" label={labels.formaCodigo}>
+          {FORMAS.map((f) => (
+            <option key={f.id} value={f.id}>
+              {f.label}
+            </option>
           ))}
-        </ul>
-        {!formas.length ? (
-          <p className="text-small text-jl-fg-3">Formas de pagamento da loja aparecerão após a atualização do painel.</p>
+        </Field>
+        <Field name="conta_id" label={labels.formaConta} required={false}>
+          <option value="">{labels.formaSemConta}</option>
+          <ContaOptions data={data} />
+        </Field>
+        {contasForma.length ? (
+          <ul className="sm:col-span-2 text-small text-jl-fg-3">
+            {contasForma.map((f) => (
+              <li key={f.forma_pagamento}>
+                {f.forma_pagamento}: {f.conta_nome ?? 'não configurada'}
+              </li>
+            ))}
+          </ul>
         ) : null}
-      </SectionCard>
+      </FinanceiroForm>
 
       <FinanceiroForm
         title={labels.cadastrarTitulo}
