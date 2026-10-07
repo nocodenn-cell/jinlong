@@ -78,4 +78,12 @@ deno test --allow-env --allow-net --allow-read \
 | typecheck monorepo completo | não exigido (sem mudança de API TS de runtime) |
 | apply migrations Jinlong remoto | **não** (proibido nesta sprint) |
 
-Prova negativa INSERT autenticado: bloco `DO` em `20261007163200` consulta `information_schema.role_table_grants` e falha a migration se `authenticated` ainda tiver INSERT. Roda no apply local/homolog — não no remoto Jinlong nesta sprint.
+Prova negativa INSERT autenticado: bloco `DO` em `20261007163200` + prova efetiva `SET ROLE authenticated` no Postgres local.
+
+### Pré-merge local (Postgres Supabase isolado)
+
+- Container: `public.ecr.aws/supabase/postgres:17.6.1.165` em `127.0.0.1:54322` (não Jinlong remoto).
+- `supabase migration up --db-url` — cadeia completa, incluindo `20261007163000`…`20261007171000`.
+- Hotfix pré-merge: `171000` — guard de cancel **antes** de `INSERT devolucoes` (E(c) já subtrai devoluções).
+- Provas operacionais OK: abertura→venda→suprimento→sangria→AR→painel=`E(c)`→cancel→facade; INSERT auth falha; NF-e sem/com duplicata; OC sem AP fictícia.
+- `npm run check:edge`: não executado — `deno.lock` do fiscal-worker em versão incompatível com Deno do PATH do ambiente.
