@@ -1,5 +1,7 @@
 # Estratégia de integração — stack #473…#478 (+ PR B)
 
+> **Supersedido para decisão de merge:** usar [STACK_INTEGRACAO_473_479.md](./STACK_INTEGRACAO_473_479.md) (tip `#479`, estratégia 2 recomendada, rehearsal + gates).
+
 | Campo | Valor |
 |--------|--------|
 | **Data** | 2026-10-07 |
