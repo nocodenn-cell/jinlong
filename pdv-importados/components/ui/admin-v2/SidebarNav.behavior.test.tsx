@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/admin/dashboard',
+  useSearchParams: () => new URLSearchParams(''),
 }))
 
 vi.mock('next/link', () => ({
@@ -30,6 +31,7 @@ vi.mock('next/link', () => ({
 const { SidebarNav } = await import('@/components/ui/admin-v2/SidebarNav')
 const { getMessages } = await import('@/i18n/getMessages')
 const { ROUTES } = await import('@/lib/navigation/routes')
+const { executiveRelatoriosHref } = await import('@/lib/navigation/executiveViews')
 
 let container: HTMLDivElement
 let root: Root
@@ -60,24 +62,34 @@ function renderMenu(perfilAdmin: boolean): string[] {
   return Array.from(container.querySelectorAll('a')).map((a) => a.getAttribute('href') ?? '')
 }
 
-/** Abre a gaveta "Mais" e devolve os hrefs visíveis depois disso. */
-function renderMenuComMaisAberto(perfilAdmin: boolean): string[] {
+/** Recolhe Operações (default aberta) e devolve hrefs só de Análises + Sistema. */
+function renderMenuComOperacoesFechada(perfilAdmin: boolean): string[] {
   renderMenu(perfilAdmin)
-  const toggle = container.querySelector<HTMLButtonElement>('button[aria-expanded]')
+  const toggle = container.querySelector<HTMLButtonElement>('button[aria-controls="nav-operacoes-items"]')
   expect(toggle).not.toBeNull()
+  // Default open → click fecha
   flushSync(() => toggle?.click())
   return Array.from(container.querySelectorAll('a')).map((a) => a.getAttribute('href') ?? '')
 }
 
 describe('SidebarNav — perfil DONO/GERENTE (cliente)', () => {
   it('não expõe nenhuma ferramenta interna de implantação/diagnóstico', () => {
-    const hrefs = renderMenuComMaisAberto(false)
+    const hrefs = renderMenu(false)
     expect(hrefs).not.toContain(ROUTES.admin.implantacao)
     expect(hrefs).not.toContain(ROUTES.admin.diagnosticoCaixa)
     expect(hrefs).not.toContain(ROUTES.admin.provisionamento)
   })
 
-  it('alcança catálogo e estoque no CORE (taxonomias via hub, não sidebar)', () => {
+  it('Análises expõe as 5 abas sem precisar abrir Operações', () => {
+    const hrefs = renderMenuComOperacoesFechada(false)
+    expect(hrefs).toContain(ROUTES.admin.dashboard)
+    expect(hrefs).toContain(executiveRelatoriosHref('vendas-caixas'))
+    expect(hrefs).toContain(executiveRelatoriosHref('dre-financeiro'))
+    expect(hrefs).toContain(executiveRelatoriosHref('produtos-estoque'))
+    expect(hrefs).toContain(executiveRelatoriosHref('crm-auditoria'))
+  })
+
+  it('Operações (aberta) alcança catálogo e estoque via hub, não taxonomias soltas', () => {
     const hrefs = renderMenu(false)
     expect(hrefs).toContain(ROUTES.admin.catalogo)
     expect(hrefs).not.toContain(ROUTES.admin.categoriasProdutos)
@@ -86,13 +98,8 @@ describe('SidebarNav — perfil DONO/GERENTE (cliente)', () => {
     expect(hrefs).not.toContain(ROUTES.admin.estoqueRecebimento)
   })
 
-  it('categorias financeiras não aparecem em "Mais" (aba do hub financeiro)', () => {
-    expect(renderMenuComMaisAberto(false)).not.toContain(ROUTES.admin.categoriasFinanceiras)
-  })
-
-  it('vê relatórios no CORE sem abrir a gaveta "Mais"', () => {
-    const hrefs = renderMenu(false)
-    expect(hrefs).toContain(ROUTES.admin.relatorios)
+  it('categorias financeiras não aparecem em Operações', () => {
+    expect(renderMenu(false)).not.toContain(ROUTES.admin.categoriasFinanceiras)
   })
 
   it('rotula a suspensão pela função real, não por "licença"', () => {
@@ -100,6 +107,13 @@ describe('SidebarNav — perfil DONO/GERENTE (cliente)', () => {
     const texto = container.textContent ?? ''
     expect(texto).toContain('Suspensão de vendas')
     expect(texto).not.toMatch(/licen/i)
+  })
+
+  it('seções Análises e Operações estão presentes', () => {
+    renderMenu(false)
+    const texto = container.textContent ?? ''
+    expect(texto).toMatch(/Análises/i)
+    expect(texto).toMatch(/Operações/i)
   })
 })
 

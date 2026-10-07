@@ -1678,7 +1678,7 @@
       "tagline": { "cn": "管理层 · 销售 · 库存 · 财务", "pt": "Painel administrativo" }
     },
     "nav": {
-      "dashboard": { "cn": "主控台", "pt": "Dashboard" },
+      "dashboard": { "cn": "总览", "pt": "Visão Geral" },
       "gerente": { "cn": "经理面板", "pt": "Gerente" },
       "produtos": { "cn": "商品", "pt": "Produtos" },
       "clientes": { "cn": "客户", "pt": "Clientes" },
@@ -1694,10 +1694,14 @@
       "implantacao": { "cn": "上线清单", "pt": "Implantação" },
       "provisionamento": { "cn": "开通店铺", "pt": "Provisionamento" },
       "comissoes": { "cn": "佣金", "pt": "Comissões" },
-      "suspensao": { "cn": "暂停销售", "pt": "Suspensão" }
+      "suspensao": { "cn": "暂停销售", "pt": "Suspensão" },
+      "execVendasCaixas": { "cn": "销售与收银", "pt": "Vendas & Caixas" },
+      "execDreFinanceiro": { "cn": "损益与财务", "pt": "DRE & Financeiro" },
+      "execProdutosEstoque": { "cn": "商品与库存", "pt": "Produtos & Estoque" },
+      "execCrmAuditoria": { "cn": "客户与审计", "pt": "CRM & Auditoria" }
     },
     "navHints": {
-      "dashboard": "Métricas, gráfico de vendas e últimos pedidos do período.",
+      "dashboard": "KPIs globais, tendência diária e alertas executivos.",
       "gerente": "Painel do gerente e atalhos operacionais.",
       "produtos": "Cadastro e preços de produtos.",
       "clientes": "Cadastro de clientes da loja.",
@@ -1706,14 +1710,18 @@
       "estoque": "Saldos por loja e alertas de estoque.",
       "recebimento": "Entrada de mercadorias e conferência.",
       "transferencias": "Movimentação entre lojas.",
-      "relatorios": "Relatórios e análises operacionais.",
+      "relatorios": "Hub analítico detalhado por domínio.",
       "caixas": "Caixas e operações de ponto de venda.",
       "financeiro": "Movimentações e visão financeira.",
       "configuracoes": "Parâmetros globais (comissão, limites de caixa, lead time, estoque mínimo).",
       "implantacao": "Gate oficial de GO-LIVE — checklist persistido por loja.",
       "provisionamento": "Wizard interno: criar loja e DONO sem SQL.",
       "comissoes": "Regras e percentuais de comissão.",
-      "suspensao": "Suspender ou liberar vendas no PDV."
+      "suspensao": "Suspender ou liberar vendas no PDV.",
+      "execVendasCaixas": "Picos horários, auditoria de caixas e detalhe de pedidos.",
+      "execDreFinanceiro": "DRE em cascata, fluxo de caixa e inadimplência.",
+      "execProdutosEstoque": "Curva ABC, encalhe, reposição e OC em trânsito.",
+      "execCrmAuditoria": "RFV, performance de equipe e painel de perdas."
     },
     "dashboard": {
       "pageTitle": { "cn": "生意看板", "pt": "Dashboard comercial" },

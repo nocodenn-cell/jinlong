@@ -6,9 +6,23 @@
  */
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChartCard, MetricCard, PageHeader, SectionCard } from '@/components/ui/admin-v2'
+import {
+  ChartCard,
+  ExecutiveAnalyticsHubNav,
+  ExecutivePageHeader,
+  MetricCard,
+  SectionCard,
+} from '@/components/ui/admin-v2'
+import {
+  isExecutiveRelatoriosView,
+  parseExecutiveView,
+  type ExecutiveRelatoriosViewId,
+  type ExecutiveViewId,
+} from '@/lib/navigation/executiveViews'
+import { ExecutiveDomainView } from './executive/ExecutiveDomainView'
+import type { ExecutiveExtras } from './executive/executiveExtras'
 import { EmptyState, ErrorState } from '@/components/ui/feedback'
 import { formatBRL, formatPercent } from '@/lib/format/money'
 import { formatDayMonthInLocale, formatDateTimeOrDash } from '@/lib/format/datetime'
@@ -590,18 +604,33 @@ function chartLabelFromYmd(ymd: string, locale: string): string {
   return formatDayMonthInLocale(new Date(y, m - 1, d), locale)
 }
 
+const EXEC_VIEW_TITLE: Record<ExecutiveRelatoriosViewId, string> = {
+  'vendas-caixas': 'Vendas & Caixas',
+  'dre-financeiro': 'DRE & Financeiro',
+  'produtos-estoque': 'Produtos & Estoque',
+  'crm-auditoria': 'CRM & Auditoria',
+}
+
 export function RelatoriosContent({
   dados,
   labels,
   initialTab,
+  initialView,
+  executiveExtras,
 }: {
   dados: RelatoriosDados
   labels: RelatoriosLabels
   initialTab?: string
+  /** Aba executiva via `?view=` (hub analytics). */
+  initialView?: string
+  /** Dados extras (caixas / financeiro) para abas Fase 2. */
+  executiveExtras?: ExecutiveExtras
 }) {
   const router = useRouter()
   const [tab, setTab] = useState<RelatoriosTabId>(() => parseRelatoriosTab(initialTab))
   const [kardexAlvo, setKardexAlvo] = useState<KardexAlvo | null>(null)
+  const executiveView: ExecutiveViewId = parseExecutiveView(initialView)
+  const activeExecView = isExecutiveRelatoriosView(executiveView) ? executiveView : null
 
   useEffect(() => {
     setTab(parseRelatoriosTab(initialTab))
@@ -640,15 +669,18 @@ export function RelatoriosContent({
       ate: dados.periodo.ate,
     })
     if (next !== 'visao') q.set('tab', next)
+    if (activeExecView) q.set('view', activeExecView)
     router.replace(`${ROUTES.admin.relatorios}?${q.toString()}`, { scroll: false })
   }
 
+  const pageTitle = activeExecView ? EXEC_VIEW_TITLE[activeExecView] : labels.titulo
+
   return (
-    <div className="admin-v2-page">
-      <PageHeader
-        title={labels.titulo}
+    <div className="admin-v2-page" data-executive-view={activeExecView ?? 'legado'}>
+      <ExecutivePageHeader
+        title={pageTitle}
         subtitle={periodoSubtitle}
-        actions={
+        primaryActions={
           <button
             type="button"
             className="admin-v2-btn-secondary admin-v2-print-hide"
@@ -657,7 +689,15 @@ export function RelatoriosContent({
             {labels.filtros.imprimir}
           </button>
         }
+        secondaryActions={[
+          { id: 'visao-geral', label: 'Visão Geral', href: ROUTES.admin.dashboard },
+          { id: 'export-csv', label: 'Exportar (via filtros)', disabled: true },
+        ]}
       />
+
+      <Suspense fallback={null}>
+        <ExecutiveAnalyticsHubNav activeView={activeExecView ?? undefined} />
+      </Suspense>
 
       {dados.rpcErro ? (
         <ErrorState title={labels.erroTitulo} description={dados.rpcErro} dense className="mb-6" />
@@ -668,6 +708,7 @@ export function RelatoriosContent({
           de={dados.periodo.de}
           ate={dados.periodo.ate}
           tab={tab}
+          view={activeExecView ?? undefined}
           csvRows={porDiaOrdenado.map((row) => ({
             dia: row.dia,
             vendas: row.num_vendas,
@@ -678,12 +719,22 @@ export function RelatoriosContent({
           labels={labels.filtros}
         />
 
-        {!dados.resumoExecutivo.custo_confiavel ? (
+        {activeExecView ? (
+          <ExecutiveDomainView
+            view={activeExecView}
+            dados={dados}
+            extras={executiveExtras}
+            locale={labels.locale}
+          />
+        ) : null}
+
+        {!activeExecView && !dados.resumoExecutivo.custo_confiavel ? (
           <p role="status" className="admin-v2-alert-warning rounded-lg px-3 py-2 text-caption">
             {labels.custoNaoConfiavel}
           </p>
         ) : null}
 
+        {!activeExecView ? (
         <div className="admin-v2-grid-kpi">
           <MetricCard
             label={labels.kpiFaturamento}
@@ -715,10 +766,13 @@ export function RelatoriosContent({
             hint={dados.resumoExecutivo.custo_confiavel ? undefined : labels.custoNaoConfiavel}
           />
         </div>
+        ) : null}
 
+        {!activeExecView ? (
         <RelatoriosTabs active={tab} labels={labels} onChange={selectTab} />
+        ) : null}
 
-        {tab === 'visao' ? (
+        {!activeExecView && tab === 'visao' ? (
           <div
             id="relatorios-panel-visao"
             role="tabpanel"
@@ -755,7 +809,7 @@ export function RelatoriosContent({
           </div>
         ) : null}
 
-        {tab === 'produtos' ? (
+        {!activeExecView && tab === 'produtos' ? (
           <div id="relatorios-panel-produtos" role="tabpanel" aria-labelledby="relatorios-tab-produtos">
             <SectionCard title={labels.secTopProdutos}>
               <TopProdutosList top={dados.top} labels={labels} />
@@ -763,7 +817,7 @@ export function RelatoriosContent({
           </div>
         ) : null}
 
-        {tab === 'estoque' ? (
+        {!activeExecView && tab === 'estoque' ? (
           <div
             id="relatorios-panel-estoque"
             role="tabpanel"
@@ -789,7 +843,7 @@ export function RelatoriosContent({
           </div>
         ) : null}
 
-        {tab === 'vendas' ? (
+        {!activeExecView && tab === 'vendas' ? (
           <div id="relatorios-panel-vendas" role="tabpanel" aria-labelledby="relatorios-tab-vendas">
             <SectionCard title={labels.secVendasDetalhe}>
               {dados.vendasDetalheErro ? (
@@ -805,7 +859,7 @@ export function RelatoriosContent({
           </div>
         ) : null}
 
-        {tab === 'margem' ? (
+        {!activeExecView && tab === 'margem' ? (
           <div
             id="relatorios-panel-margem"
             role="tabpanel"

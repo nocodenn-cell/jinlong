@@ -9,6 +9,8 @@
 import { carregarDadosRelatoriosGerente } from '@/app/gerente/relatorios/actions'
 import { buscarRelatorioVendasAvancadoAction } from '@/app/gerente/relatorios/vendas/actions'
 import { carregarProdutosSemGiro } from '@/app/gerente/relatorios/sem-giro/actions'
+import { listarHistoricoCaixas, resumoCaixas } from '@/app/gerente/caixas/actions'
+import { carregarFinanceiroLoja } from '@/app/admin/financeiro/financeiroLojaActions'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getRelatorioTimezone } from '@/lib/relatorios/getRelatorioTimezone'
 import { resolverPeriodoRelatorio } from '@/lib/relatorios/periodoRelatorio'
@@ -17,12 +19,16 @@ import { getMessages } from '@/i18n/getMessages'
 import { tipoMovimentoEstoqueLabels } from '@/lib/format/vendaLabels'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import { ROUTES } from '@/lib/navigation/routes'
+import { isExecutiveRelatoriosView } from '@/lib/navigation/executiveViews'
 import { RelatoriosContent, type RelatoriosDados } from './_components/RelatoriosContent'
+import type { ExecutiveExtras } from './_components/executive/executiveExtras'
 
 type SearchParams = {
   de?: string
   ate?: string
   tab?: string
+  /** Aba executiva (Fase 1): vendas-caixas | dre-financeiro | produtos-estoque | crm-auditoria */
+  view?: string
 }
 
 type PageProps = { searchParams?: Promise<SearchParams> }
@@ -45,14 +51,48 @@ export default async function AdminRelatoriosPage({ searchParams }: PageProps) {
   const tzRelatorio = await getRelatorioTimezone(await createClient())
   const periodo = resolverPeriodoRelatorio(sp.de, sp.ate, tzRelatorio)
 
-  const [dados, semGiro, vendasAvancado] = await Promise.all([
-    carregarDadosRelatoriosGerente({
-      de: sp.de,
-      ate: sp.ate,
-    }),
-    carregarProdutosSemGiro({ de: periodo.de, ate: periodo.ate }),
-    buscarRelatorioVendasAvancadoAction({ de: periodo.de, ate: periodo.ate }),
-  ])
+  const execView = isExecutiveRelatoriosView(sp.view) ? sp.view : null
+  const needsCaixas = execView === 'vendas-caixas'
+  const needsFinanceiro = execView === 'dre-financeiro'
+
+  const caixasFiltro = {
+    inicio: `${periodo.de}T00:00:00.000Z`,
+    fim: `${periodo.ate}T23:59:59.999Z`,
+    status: 'all' as const,
+    operadorId: null,
+  }
+
+  const [dados, semGiro, vendasAvancado, caixasHistoricoRes, caixasResumoRes, financeiroRes] =
+    await Promise.all([
+      carregarDadosRelatoriosGerente({
+        de: sp.de,
+        ate: sp.ate,
+      }),
+      carregarProdutosSemGiro({ de: periodo.de, ate: periodo.ate }),
+      buscarRelatorioVendasAvancadoAction({ de: periodo.de, ate: periodo.ate }),
+      needsCaixas ? listarHistoricoCaixas(caixasFiltro, 1) : Promise.resolve(null),
+      needsCaixas ? resumoCaixas(caixasFiltro) : Promise.resolve(null),
+      needsFinanceiro ? carregarFinanceiroLoja(periodo.de, periodo.ate, 1) : Promise.resolve(null),
+    ])
+
+  const executiveExtras: ExecutiveExtras = {}
+  if (needsCaixas) {
+    executiveExtras.caixasLinhas =
+      caixasHistoricoRes && caixasHistoricoRes.ok ? caixasHistoricoRes.data.linhas : []
+    executiveExtras.caixasResumo =
+      caixasResumoRes && caixasResumoRes.ok ? caixasResumoRes.data : null
+    executiveExtras.caixasErro =
+      caixasHistoricoRes && !caixasHistoricoRes.ok
+        ? caixasHistoricoRes.error
+        : caixasResumoRes && !caixasResumoRes.ok
+          ? caixasResumoRes.error
+          : null
+  }
+  if (needsFinanceiro) {
+    executiveExtras.financeiro = financeiroRes && financeiroRes.ok ? financeiroRes.data : null
+    executiveExtras.financeiroErro =
+      financeiroRes && !financeiroRes.ok ? financeiroRes.error : null
+  }
 
   const relDados: RelatoriosDados = {
     periodo: dados.periodo,
@@ -80,6 +120,8 @@ export default async function AdminRelatoriosPage({ searchParams }: PageProps) {
     <RelatoriosContent
       dados={relDados}
       initialTab={sp.tab}
+      initialView={sp.view}
+      executiveExtras={executiveExtras}
       labels={{
         titulo: ui.relatorios_titulo,
         periodoLabel: ui.relatorios_periodo_label,

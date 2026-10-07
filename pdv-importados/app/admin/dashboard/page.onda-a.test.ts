@@ -74,16 +74,35 @@ import { formatBRL } from '@/lib/format/money'
 
 type Card = { label: string; value: string; hint?: string }
 
-/** Coleta os props de MetricCard percorrendo a árvore de elementos devolvida pelo Server Component. */
+/** Coleta KPIs (MetricCard / KpiStripItem) na árvore do Server Component. */
 function coletarCards(node: unknown, out: Card[] = []): Card[] {
   if (Array.isArray(node)) {
-    node.forEach((n) => coletarCards(n, out))
-  } else if (React.isValidElement(node)) {
+    for (const n of node) {
+      if (
+        n &&
+        typeof n === 'object' &&
+        'label' in n &&
+        'value' in n &&
+        typeof (n as Card).label === 'string' &&
+        typeof (n as Card).value === 'string' &&
+        'icon' in n
+      ) {
+        const item = n as Card & { icon?: unknown }
+        out.push({ label: item.label, value: item.value, hint: item.hint })
+        continue
+      }
+      coletarCards(n, out)
+    }
+    return out
+  }
+  if (React.isValidElement(node)) {
     const p = node.props as Record<string, unknown>
     if (typeof p.label === 'string' && typeof p.value === 'string' && 'icon' in p) {
       out.push({ label: p.label, value: p.value, hint: p.hint as string | undefined })
     }
-    coletarCards(p.children, out)
+    for (const key of ['children', 'items', 'kpis', 'main', 'side', 'footer', 'trailing'] as const) {
+      if (key in p) coletarCards(p[key], out)
+    }
   }
   return out
 }

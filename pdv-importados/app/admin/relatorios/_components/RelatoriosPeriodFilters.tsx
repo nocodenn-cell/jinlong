@@ -26,6 +26,8 @@ type RelatoriosPeriodFiltersProps = {
   csvRows: Array<Record<string, string | number>>
   labels: RelatoriosFiltrosLabels
   tab?: string
+  /** Preserva aba executiva (`?view=`) ao filtrar período. */
+  view?: string
 }
 
 function escapeCsv(value: string | number): string {
@@ -52,10 +54,11 @@ function downloadCsv(filename: string, rows: Array<Record<string, string | numbe
   URL.revokeObjectURL(url)
 }
 
-function presetHref(dias: number, tab?: string): string {
+function presetHref(dias: number, tab?: string, view?: string): string {
   const { de, ate } = defaultUltimosDiasNoFuso(dias)
   const q = new URLSearchParams({ de, ate })
   if (tab && tab !== 'visao') q.set('tab', tab)
+  if (view) q.set('view', view)
   return `${ROUTES.admin.relatorios}?${q.toString()}`
 }
 
@@ -64,9 +67,10 @@ function isPresetActive(dias: number, de?: string, ate?: string): boolean {
   return de === preset.de && ate === preset.ate
 }
 
-function limparHref(tab?: string): string {
+function limparHref(tab?: string, view?: string): string {
   const q = new URLSearchParams()
   if (tab && tab !== 'visao') q.set('tab', tab)
+  if (view) q.set('view', view)
   const qs = q.toString()
   return qs ? `${ROUTES.admin.relatorios}?${qs}` : ROUTES.admin.relatorios
 }
@@ -77,6 +81,7 @@ export function RelatoriosPeriodFilters({
   csvRows,
   labels,
   tab,
+  view,
 }: RelatoriosPeriodFiltersProps) {
   const deDefault = useMemo(() => de ?? '', [de])
   const ateDefault = useMemo(() => ate ?? '', [ate])
@@ -92,6 +97,7 @@ export function RelatoriosPeriodFilters({
       className="admin-v2-print-hide sticky top-0 z-10 flex flex-col gap-3 rounded-lg border border-[var(--color-border-secondary)] bg-jl-surface-soft p-3"
     >
       {tab && tab !== 'visao' ? <input type="hidden" name="tab" value={tab} /> : null}
+      {view ? <input type="hidden" name="view" value={view} /> : null}
 
       <div className="flex flex-wrap items-center gap-2">
         <div
@@ -102,7 +108,7 @@ export function RelatoriosPeriodFilters({
           {presets.map((preset) => (
             <Link
               key={preset.dias}
-              href={presetHref(preset.dias, tab)}
+              href={presetHref(preset.dias, tab, view)}
               data-active={isPresetActive(preset.dias, de, ate)}
               className="admin-v2-filter-pill rounded-full px-3 py-1.5 text-caption font-medium transition-colors"
             >
@@ -112,7 +118,7 @@ export function RelatoriosPeriodFilters({
         </div>
         {!isPresetActive(30, de, ate) ? (
           <Link
-            href={limparHref(tab)}
+            href={limparHref(tab, view)}
             className="text-caption font-medium text-jl-fg-3 underline-offset-2 hover:text-jl-fg-1 hover:underline"
           >
             {labels.limpar}
