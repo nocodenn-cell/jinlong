@@ -7,7 +7,10 @@ Registro canônico de obrigações comerciais e **governança de domínio** do J
 | [GOVERNANCA_REGRAS_NEGOCIO.md](./GOVERNANCA_REGRAS_NEGOCIO.md) | Diretriz obrigatória: um dono, sem duplicação, contratos, gate |
 | [MAPA_DOMINIOS_REGRAS_NEGOCIO.md](./MAPA_DOMINIOS_REGRAS_NEGOCIO.md) | Mapa Domínio → entidade → dado → dono → regra → eventos |
 | [INVENTARIO_IMPLEMENTACAO_DOMINIOS.md](./INVENTARIO_IMPLEMENTACAO_DOMINIOS.md) | Inventário real (tabelas/RPCs/app) confrontado com o mapa |
-| [AUDITORIA_SSoT_DOMINIOS.md](./AUDITORIA_SSoT_DOMINIOS.md) | Violações SSoT + **GO CONDICIONAL** (bloqueadores fiscais fechados; caixa/entrada abertos) |
+| [AUDITORIA_SSoT_DOMINIOS.md](./AUDITORIA_SSoT_DOMINIOS.md) | Auditoria SSoT (histórico) |
+| [REMEDIACAO_SSOT_001_004.md](./REMEDIACAO_SSOT_001_004.md) | Gate final SSOT-001…004 — **GO** |
+| [SSOT_CAIXA_SALDO_CONTRATO.md](./SSOT_CAIXA_SALDO_CONTRATO.md) | E(c) vs `saldo_atual` (cache) |
+| [SSOT_AQUISICAO_OBRIGACAO_FINANCEIRA.md](./SSOT_AQUISICAO_OBRIGACAO_FINANCEIRA.md) | OC/remessa/NF-e → obrigação |
 | [CHECKLIST_FEATURE_DOMINIO.md](./CHECKLIST_FEATURE_DOMINIO.md) | 13 perguntas obrigatórias antes de implementar |
 | [MATRIZ_AUTORIDADES_P1.md](./MATRIZ_AUTORIDADES_P1.md) | Matriz de autoridades (critério de encerramento P1) |
 | [CONSOLIDACAO_P1_NUCLEO_PDV.md](./CONSOLIDACAO_P1_NUCLEO_PDV.md) | Preço · parcial · espera · estoque · fechamento |

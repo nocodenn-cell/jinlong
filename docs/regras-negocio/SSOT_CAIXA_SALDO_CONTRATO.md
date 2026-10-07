@@ -47,17 +47,25 @@ Nenhuma decisão financeira pode ler `saldo_atual`. Escrita preferida: `internal
 
 ## 7. Operações
 
-| Operação | \(E(C)\) | Cache |
-|----------|----------|-------|
-| Abertura | + fundo | init/sync |
-| Venda DINHEIRO | + | sync (trigger) |
-| Recebimento AR | + | delta legado |
-| Suprimento / sangria | ± | delta mov |
-| Cancelamento | some venda CONCLUIDA | guard \(E\) + sync |
+| Operação | \(E(C)\) | Cache / decisão |
+|----------|----------|-----------------|
+| Abertura | + fundo (`valor_inicial`) | init |
+| Venda DINHEIRO | + pagamentos CONCLUIDA | trigger → `sincronizar_saldo_cache` |
+| Recebimento AR DINHEIRO | + `liquidacoes_receber` | sync após fato (`20261007170000`) |
+| Estorno AR DINHEIRO | − liquidação ESTORNO | guard E(c)≥0 pós-fato + sync |
+| Suprimento / sangria / estorno mov | ± `movimentacoes_caixa` aprovado | guard E(c)+δ; sync após fato |
+| Cancelamento | venda deixa de ser CONCLUIDA | guard E(c); sync |
 | Devolução | − desembolsador | sync (C3) |
-| Fechamento | comprovante | imutável |
-| Reabertura | novo caixa | novo |
+| Fechamento | lê E(c) no comprovante | cache não decide |
+| Reabertura | novo caixa / novo \(E\) | novo |
 
 ## 8. Resposta explícita
 
-`saldo_atual` é **projeção/cache derivado**, não source of truth. SoT = \(E(C)\).
+> O que é `caixas.saldo_atual` depois da correção?
+
+**Projeção / cache derivado de \(E(C)\)** — não fonte canônica, não legado com autoridade paralela.
+
+- SoT do saldo esperado = `internal.valor_sistema_dinheiro` / `calcular_valor_sistema_dinheiro_caixa`.
+- `financeiro_painel.saldo_pdv` e guards de disponibilidade usam \(E(C)\).
+- Escrita preferida do cache: `internal.sincronizar_saldo_cache` (após o fato canônico).
+- **Proibido** usar `saldo_atual` como decisão financeira (KPI, Contábil, Intelligence).

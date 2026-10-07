@@ -36,6 +36,7 @@ describe('SSOT-001 — painel PDV usa E(c)', () => {
 
 describe('SSOT-002 — writers de cache derivados de E(c)', () => {
   const fix = mig('20261007163000_ssot_001_002_painel_ec_cache.sql')
+  const movAr = mig('20261007170000_ssot_002_mov_ar_ec_cache.sql')
 
   it('trigger de venda usa sincronizar_saldo_cache', () => {
     expect(fix).toContain('PERFORM internal.sincronizar_saldo_cache(v_caixa_id)')
@@ -51,10 +52,24 @@ describe('SSOT-002 — writers de cache derivados de E(c)', () => {
     expect(body).not.toContain('UPDATE public.caixas c SET saldo_atual')
   })
 
-  it('invariante documentado: esperado = E(C)', () => {
+  it('sangria/suprimento/aprovação não incrementam saldo_atual; usam E(c)+sync', () => {
+    expect(movAr).toContain('valor_sistema_dinheiro')
+    expect(movAr).toContain('sincronizar_saldo_cache')
+    expect(movAr).toContain('SSOT-002 PROVA FAIL: registrar_movimentacao ainda incrementa saldo_atual')
+    expect(movAr).toContain('SSOT-002 PROVA FAIL: aprovar_movimentacao ainda incrementa saldo_atual')
+  })
+
+  it('liquidação/estorno AR materializam cache sem UPDATE incremental', () => {
+    expect(movAr).toContain('SSOT-002 PROVA FAIL: liquidacao ainda UPDATE saldo_atual')
+    expect(movAr).toContain('SSOT-002 PROVA FAIL: estorno AR ainda UPDATE saldo_atual')
+  })
+
+  it('contrato: saldo_atual é cache; SoT = E(C)', () => {
     const d = docs('SSOT_CAIXA_SALDO_CONTRATO.md')
     expect(d).toContain('E(C)')
+    expect(d).toMatch(/projeção|cache/i)
     expect(d).toContain('sincronizar_saldo_cache')
+    expect(d).toMatch(/não fonte canônica|não é source of truth/i)
   })
 })
 
@@ -66,6 +81,13 @@ describe('SSOT-003 — obrigação financeira na aquisição', () => {
     expect(policy).toContain('ENTRADA_OC')
     expect(policy).toMatch(/sem.*obrigação/i)
     expect(policy).toContain('IMPORT_NFE_OBRIGACAO_SEM_DUPLICATA')
+    expect(policy).toContain('nfe_importacao_id')
+    expect(policy).toMatch(/rastreio|Rastreio/i)
+  })
+
+  it('documenta resposta NF-e sem duplicatas (rejeição, não zona cinzenta)', () => {
+    expect(policy).toMatch(/IMPORT_NFE_OBRIGACAO_SEM_DUPLICATA/)
+    expect(policy).toMatch(/não.*conclui|rejeit/i)
   })
 
   it('confirm NF-e rejeita econômico > 0 sem duplicatas', () => {
