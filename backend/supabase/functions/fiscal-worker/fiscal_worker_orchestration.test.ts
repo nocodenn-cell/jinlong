@@ -34,7 +34,7 @@ function doc(): FiscalDoc {
 }
 
 function counters(): WorkerCounters {
-  return { emitted: [], failed: [], retried: [] };
+  return { emitted: [], cancelled: [], failed: [], retried: [] };
 }
 
 Deno.test("extractLojaId lê payload.loja_id; ausente/malformado -> null", () => {
@@ -53,6 +53,24 @@ Deno.test("autorizado -> chama fiscal_marcar_emitido, nenhuma outra RPC", async 
   assertEquals(supabase.rpcCalls[0].fn, "fiscal_marcar_emitido");
   assertEquals(supabase.rpcCalls[0].args.p_chave_fiscal, "chave-x");
   assertEquals(c.emitted, ["doc-1"]);
+});
+
+Deno.test("P0 cancelado -> fiscal_marcar_cancelado; NUNCA fiscal_marcar_emitido (mesmo com chave/protocolo)", async () => {
+  const supabase = fakeSupabase();
+  const c = counters();
+  const estado: FocusRemoteState = {
+    kind: "cancelado",
+    chave_fiscal: "chave-ja-autorizada",
+    protocolo: "proto-ja-autorizado",
+    provider_ref: "ref-1",
+    payload: { status: "cancelado", chave_nfe: "chave-ja-autorizada", protocolo: "proto-ja-autorizado" },
+  };
+  await applyFocusRemoteState(supabase, doc(), estado, c);
+  assertEquals(supabase.rpcCalls.length, 1);
+  assertEquals(supabase.rpcCalls[0].fn, "fiscal_marcar_cancelado");
+  assertEquals(supabase.rpcCalls.some((c) => c.fn === "fiscal_marcar_emitido"), false);
+  assertEquals(c.cancelled, ["doc-1"]);
+  assertEquals(c.emitted, []);
 });
 
 Deno.test("HOTFIX (achado Codex) — autorizado NUNCA repassa a resposta do provider como p_payload, mesmo quando estado.payload tem conteúdo — protege o snapshot fiscal imutável de C1", async () => {

@@ -20,6 +20,7 @@ type SupabaseLike = any;
 
 export type WorkerCounters = {
   emitted: string[];
+  cancelled: string[];
   failed: Array<{ id: string; erro: string }>;
   retried: Array<{ id: string; proxima_tentativa: string | null }>;
 };
@@ -290,6 +291,21 @@ export async function applyFocusRemoteState(
         if (!retryErr) counters.retried.push({ id: doc.id, proxima_tentativa: null });
       } else {
         counters.emitted.push(doc.id);
+      }
+      break;
+    }
+
+    case "cancelado": {
+      // Nunca chama fiscal_marcar_emitido — mesmo com chave/protocolo presentes.
+      const { error } = await supabase.rpc("fiscal_marcar_cancelado", {
+        p_documento_id: doc.id,
+        p_motivo: "FOCUS_CANCELADO",
+        p_provider_payload: estado.payload,
+      });
+      if (error) {
+        counters.failed.push({ id: doc.id, erro: `MARCAR_CANCELADO_ERROR:${error.message}` });
+      } else {
+        counters.cancelled.push(doc.id);
       }
       break;
     }

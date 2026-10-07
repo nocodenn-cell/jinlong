@@ -59,57 +59,28 @@ export type FiscalNormalizedError = {
 };
 
 /**
- * Onda C2.9 (prontidão Focus NFe) — resultado canônico interno, traduzido pelo
- * adapter a partir da resposta real da Focus. Nada além destes 6 estados escapa
- * do adapter para o domínio (index.ts, RPCs, timeline) — nomes/campos da Focus
- * ficam contidos aqui.
+ * Resultado canônico interno Focus → domínio. Nomes/campos da Focus ficam no adapter.
  *
- * Nota honesta, atualizada no Gate C2.5 (2ª rodada): a documentação oficial
- * confirma que a consulta NFC-e/NF-e retorna, entre outros, os estados
- * "Processando autorização", "Autorizada", "Autorizada completa", "Cancelada"
- * e "Erro autorização" (além de 404 = referência não encontrada — CONFIRMADO,
- * mapeado 1:1 para `nao_encontrado`, não mais heurística). Isso confirma que
- * HTTP 200 sozinho não determina o estado — o body precisa ser interpretado —
- * mas o JSON exato de cada exemplo não foi obtido nesta sessão (WebFetch/
- * WebSearch indisponíveis). Duas lacunas residuais, deliberadamente NÃO
- * resolvidas por heurística nova:
- *   1. Não há tipo `cancelado` neste union — "Cancelada" é um estado real de
- *      consulta que hoje cairia em `processando` (2xx sem chave) ou
- *      `erro_definitivo`, dependendo de como a Focus estrutura o body — não
- *      adicionado sem saber detectar.
- *   2. `classifyFocusConsultaResponse` trata QUALQUER 2xx sem chave/protocolo
- *      como `processando` — mas agora sabemos que "Erro autorização" também
- *      pode ser um 2xx sem chave. Isso significa que uma consulta rejeitada
- *      pode hoje ser classificada incorretamente como "ainda processando" em
- *      vez de erro. Mantido deliberadamente no lado conservador (nunca
- *      declarar erro sem certeza) até termos o JSON real que distingue os
- *      dois casos — mas é um risco residual real, não apenas teórico, e deve
- *      ser resolvido antes de confiar em reconciliação automática real.
- * Validar contra resposta real de homologação antes de confiar cegamente
- * nesta distinção em produção.
+ * Status Focus confirmados (docs oficiais / SDK): `processando_autorizacao`,
+ * `autorizado`, `cancelado`, `erro_autorizacao`, `denegado`.
  *
- * REVISÃO — Sprint C2.9 (P0-6, achado Codex): risco residual mais grave que
- * o item 1 sugere isoladamente. Um documento "Cancelada" provavelmente
- * carrega a MESMA chave/protocolo que tinha quando foi autorizado (ele foi
- * autorizado antes de ser cancelado) — se o corpo real da Focus incluir
- * esses campos mesmo cancelado, `classifyFocusConsultaResponse` bateria no
- * primeiro branch (`chave && protocolo`) e classificaria como `autorizado`,
- * NÃO `processando`. Isso é pior que o item 2 (rejeição confundida com
- * "ainda processando"): uma consulta de reconciliação chamaria
- * `fiscal_marcar_emitido` para um documento que a Focus já cancelou,
- * persistindo EMITIDO permanentemente sobre um cancelamento real. Não
- * corrigido nesta sprint — não há campo confirmado que distinga os dois
- * casos sem adivinhar, e "Cancelamento fiscal" está fora de escopo desta
- * sprint (C2.9) por instrução explícita. BLOQUEADOR EXTERNO: precisa do
- * JSON real de uma consulta a documento cancelado antes de confiar em
- * reconciliação automática para qualquer documento que já tenha sido
- * autorizado alguma vez.
+ * GO CONDICIONAL P0: `cancelado` é first-class. Em consulta, o campo `status`
+ * DEVE ser lido ANTES de chave/protocolo — documento cancelado frequentemente
+ * ainda carrega chave/protocolo da autorização anterior; classificar como
+ * `autorizado` chamaria `fiscal_marcar_emitido` e corromperia o SSoT fiscal.
  */
 export type FocusRemoteState =
   | {
     kind: "autorizado";
     chave_fiscal: string;
     protocolo: string;
+    provider_ref: string | null;
+    payload: Record<string, unknown> | null;
+  }
+  | {
+    kind: "cancelado";
+    chave_fiscal: string | null;
+    protocolo: string | null;
     provider_ref: string | null;
     payload: Record<string, unknown> | null;
   }

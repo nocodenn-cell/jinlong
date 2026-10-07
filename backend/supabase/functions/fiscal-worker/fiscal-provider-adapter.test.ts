@@ -475,16 +475,44 @@ Deno.test("4. consulta NFC-e autorizada — GET /v2/nfce/{ref}", async () => {
   }
 });
 
-Deno.test("5. consulta NFC-e rejeitada — BLOQUEADO (schema de rejeição via consulta não confirmado)", () => {
-  // Registrado, não implementado: a documentação fornecida confirma que a
-  // consulta "pode retornar... erro de autorização", mas não o nome/formato
-  // do campo que sinaliza isso. classifyFocusConsultaResponse trata qualquer
-  // 2xx sem chave/protocolo reconhecível como "processando" (lado seguro —
-  // não presumir rejeição sem confirmação), não "rejeitado". Ver
-  // fiscal_types.ts (nota sobre schema de resposta não confirmado) — mesma
-  // ambiguidade cobre "Cancelada" (P0-6): sem o JSON real, não dá pra
-  // distinguir de "Autorizada" quando o corpo também carrega chave/protocolo.
-  assertEquals(true, true);
+Deno.test("P0 — consulta status=cancelado COM chave/protocolo -> cancelado (nunca autorizado)", () => {
+  const estado = classifyFocusConsultaResponse(fakeResponse(200), {
+    status: "cancelado",
+    chave_nfe: "35260100000000000000550010000000011000000010",
+    protocolo: "135260000000001",
+    caminho_xml_cancelamento: "/arquivos/cancelamento.xml",
+  });
+  assertEquals(estado.kind, "cancelado");
+  if (estado.kind === "cancelado") {
+    assertEquals(estado.chave_fiscal?.startsWith("3526"), true);
+    assertEquals(estado.protocolo, "135260000000001");
+  }
+});
+
+Deno.test("P0 — consulta status=autorizado com chave -> autorizado", () => {
+  const estado = classifyFocusConsultaResponse(fakeResponse(200), {
+    status: "autorizado",
+    chave_nfe: "chave-ok",
+    protocolo: "proto-ok",
+  });
+  assertEquals(estado.kind, "autorizado");
+});
+
+Deno.test("P0 — processando_autorizacao NÃO classifica como autorizado (substring autorizad)", () => {
+  const estado = classifyFocusConsultaResponse(fakeResponse(200), {
+    status: "processando_autorizacao",
+    chave_nfe: "chave-parcial",
+    protocolo: "proto-parcial",
+  });
+  assertEquals(estado.kind, "processando");
+});
+
+Deno.test("P0 — erro_autorizacao -> rejeitado", () => {
+  const estado = classifyFocusConsultaResponse(fakeResponse(200), {
+    status: "erro_autorizacao",
+    mensagem: "Rejeicao SEFAZ",
+  });
+  assertEquals(estado.kind, "rejeitado");
 });
 
 Deno.test("8. consulta posterior de NF-e 202 -> autorizada", async () => {
