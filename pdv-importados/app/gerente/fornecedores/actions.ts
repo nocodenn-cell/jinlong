@@ -100,6 +100,17 @@ export async function buscarFornecedoresPaginadosAction(
   }
 }
 
+/**
+ * Comando canônico de create/update de fornecedor (domínio Suppliers).
+ * Outras UIs (ex.: modal no cadastro de produto) podem *iniciar* esta operação;
+ * não podem reimplementar INSERT/regra própria.
+ */
+export async function createSupplier(
+  input: FornecedorInput,
+): Promise<{ ok: true; fornecedor: FornecedorListRow } | { ok: false; error: string }> {
+  return salvarFornecedorAction(input)
+}
+
 export async function salvarFornecedorAction(
   input: FornecedorInput,
 ): Promise<{ ok: true; fornecedor: FornecedorListRow } | { ok: false; error: string }> {

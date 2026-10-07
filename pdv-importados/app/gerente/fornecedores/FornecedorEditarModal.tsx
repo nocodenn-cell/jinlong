@@ -8,7 +8,7 @@ import { DragonModal } from '@/components/ui/DragonModal'
 import { getMessages } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { emitGerenteToast } from '@/lib/gerente/toast'
-import { salvarFornecedorAction, type FornecedorInput, type FornecedorListRow } from './actions'
+import { createSupplier, type FornecedorInput, type FornecedorListRow } from './actions'
 import { maskCnpj } from './fornecedoresListUi'
 import { normalizarCnpj } from './fornecedorContrato'
 import { cnpjDvValido, nomeJaExiste } from '@/lib/validacao/documentos'
@@ -70,7 +70,7 @@ export function FornecedorEditarModal({ idioma, fornecedor, nomesExistentes = []
     }
     setSalvando(true)
     try {
-      const r = await salvarFornecedorAction(input)
+      const r = await createSupplier(input)
       if (!r.ok) {
         emitGerenteToast({ kind: 'error', message: r.error })
         return
