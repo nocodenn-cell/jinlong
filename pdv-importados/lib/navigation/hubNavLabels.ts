@@ -27,6 +27,12 @@ export function buildCatalogoHubTabs(labels: HubNavLabelSet): readonly HubTabDef
       match: 'prefix',
     },
     { id: 'marcas', label: labels.catalogoMarcas, href: ROUTES.admin.marcasProdutos, match: 'prefix' },
+    {
+      id: 'etiquetas',
+      label: labels.estoqueEtiquetas,
+      href: ROUTES.admin.estoqueImprimirEtiquetas,
+      match: 'prefix',
+    },
   ]
 }
 
@@ -40,14 +46,24 @@ export function buildEstoqueHubTabs(labels: HubNavLabelSet): readonly HubTabDef[
       aliases: [ROUTES.admin.importNfe],
       match: 'prefix',
     },
-    { id: 'movimentacoes', label: labels.estoqueMovimentacoes ?? 'Movimentações', href: ROUTES.admin.estoqueMovimentacoes, match: 'prefix' },
+    {
+      id: 'movimentacoes',
+      label: labels.estoqueMovimentacoes ?? 'Movimentações',
+      href: ROUTES.admin.estoqueMovimentacoes,
+      match: 'prefix',
+    },
     {
       id: 'transferencias',
       label: labels.estoqueTransferencias,
       href: ROUTES.admin.estoqueTransferencias,
       match: 'prefix',
     },
-
+    {
+      id: 'etiquetas',
+      label: labels.estoqueEtiquetas,
+      href: ROUTES.admin.estoqueImprimirEtiquetas,
+      match: 'prefix',
+    },
   ]
 }
 

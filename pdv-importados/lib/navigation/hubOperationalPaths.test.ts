@@ -8,11 +8,15 @@ const PATH_CLICKS = {
   catalogo: {
     produtoParaCategoria: 1,
     produtoParaMarca: 1,
+    /** Catálogo → Etiquetas (mesma rota canônica de estoque) */
+    produtoParaEtiquetas: 1,
   },
   estoque: {
     saldosParaRecebimentoComHub: 1,
     /** Legado: link “voltar” + aba = 2; S7 embeddedInAdminHub remove voltar */
     saldosParaRecebimentoLegadoBackLink: 2,
+    /** Saldos → Etiquetas via aba do hub */
+    saldosParaEtiquetas: 1,
   },
   financeiro: {
     receberParaPagar: 1,
@@ -30,6 +34,11 @@ describe('hub operational click budgets', () => {
     expect(PATH_CLICKS.estoque.saldosParaRecebimentoComHub).toBeLessThan(
       PATH_CLICKS.estoque.saldosParaRecebimentoLegadoBackLink,
     )
+  })
+
+  it('Etiquetas permanece a 1 clique nos hubs Catálogo e Estoque', () => {
+    expect(PATH_CLICKS.catalogo.produtoParaEtiquetas).toBe(1)
+    expect(PATH_CLICKS.estoque.saldosParaEtiquetas).toBe(1)
   })
 
   it('ponte dashboard ↔ relatórios é simétrica (1 clique cada)', () => {
