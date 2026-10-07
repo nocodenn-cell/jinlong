@@ -8,11 +8,6 @@ import {
   validateLiquidateReceivableInput,
 } from '@shared-core/src/financial'
 
-export function validarCriarClienteInput(input: { nome: string }): string | null {
-  if (!input.nome?.trim()) return 'Nome obrigatório'
-  return null
-}
-
 export function validarCriarTituloInput(input: {
   cliente_id: string
   valor_total: number
