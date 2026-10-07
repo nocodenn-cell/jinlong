@@ -18,6 +18,8 @@ Registro canônico de obrigações comerciais e **governança de domínio** do J
 | [STACK_INTEGRACAO_473_479.md](./STACK_INTEGRACAO_473_479.md) | Estratégia de merge tip #479 (**canônica**) |
 | [STACK_INTEGRACAO_473_478.md](./STACK_INTEGRACAO_473_478.md) | Estratégia intermediária (apontar para 473–479) |
 | [INTEGRACAO_HARDENING_473_479.md](./INTEGRACAO_HARDENING_473_479.md) | Gates stack + restore + smoke |
+| [GATE_BACKUP_PRODUCAO.md](./GATE_BACKUP_PRODUCAO.md) | RPO NÃO GARANTIDO · Opção B · ação humana |
+| [STACK_MERGE_FINAL_473_480.md](./STACK_MERGE_FINAL_473_480.md) | Merge tip #480 → main (humano) |
 | [SSOT_AQUISICAO_OBRIGACAO_FINANCEIRA.md](./SSOT_AQUISICAO_OBRIGACAO_FINANCEIRA.md) | OC/remessa/NF-e → obrigação |
 | [CHECKLIST_FEATURE_DOMINIO.md](./CHECKLIST_FEATURE_DOMINIO.md) | 13 perguntas obrigatórias antes de implementar |
 | [MATRIZ_AUTORIDADES_P1.md](./MATRIZ_AUTORIDADES_P1.md) | Matriz de autoridades (critério de encerramento P1) |
