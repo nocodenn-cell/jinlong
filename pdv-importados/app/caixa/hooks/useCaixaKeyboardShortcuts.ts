@@ -26,8 +26,10 @@ type Params = {
   onFocarBusca: () => void
   onNovoCupom: () => void
   onReimprimir?: () => void
-  /** F3: consulta rápida de produto (sem adicionar ao carrinho). */
+  /** F7: consulta rápida de produto (sem adicionar ao carrinho). */
   onConsultaRapida?: () => void
+  /** F3: abre drawer único de descontos. */
+  onAplicarDesconto?: () => void
   /** Ctrl+Z: repõe o último item removido do carrinho (achado #13). */
   onDesfazerRemocao?: () => void
   /**
@@ -75,6 +77,7 @@ export function useCaixaKeyboardShortcuts({
   onNovoCupom,
   onReimprimir,
   onConsultaRapida,
+  onAplicarDesconto,
   onDesfazerRemocao,
   onSelecionarMetodo,
   onAbrirReferencia,
@@ -108,6 +111,20 @@ export function useCaixaKeyboardShortcuts({
       }
       if (existeDialogAberto()) return
       if (atalhoCombina(CAIXA_ATALHOS.finalizar, e)) {
+        // Enter em botão/radio já tem ativação nativa — não duplicar finalizar.
+        if (e.code === 'Enter' && e.target instanceof HTMLElement) {
+          const tag = e.target.tagName
+          const role = e.target.getAttribute('role')
+          if (
+            tag === 'BUTTON' ||
+            tag === 'A' ||
+            role === 'button' ||
+            role === 'radio' ||
+            role === 'menuitem'
+          ) {
+            return
+          }
+        }
         e.preventDefault()
         onFinalizar()
         return
@@ -115,6 +132,11 @@ export function useCaixaKeyboardShortcuts({
       if (atalhoCombina(CAIXA_ATALHOS.buscar, e)) {
         e.preventDefault()
         onFocarBusca()
+        return
+      }
+      if (atalhoCombina(CAIXA_ATALHOS.aplicarDesconto, e)) {
+        e.preventDefault()
+        onAplicarDesconto?.()
         return
       }
       if (atalhoCombina(CAIXA_ATALHOS.consultaRapida, e)) {
@@ -192,6 +214,7 @@ export function useCaixaKeyboardShortcuts({
     onNovoCupom,
     onReimprimir,
     onConsultaRapida,
+    onAplicarDesconto,
     onDesfazerRemocao,
     onSelecionarMetodo,
     pdvClassicAtalhos,

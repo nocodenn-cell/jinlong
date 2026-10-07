@@ -67,7 +67,9 @@ describe('integridade do mapa', () => {
   })
 
   it('rótulos preservam o que o operador já conhece', () => {
-    expect(atalhoRotulo(CAIXA_ATALHOS.finalizar)).toBe('F4 / F9')
+    expect(atalhoRotulo(CAIXA_ATALHOS.finalizar)).toBe('F4 / F9 / Enter')
+    expect(atalhoRotulo(CAIXA_ATALHOS.aplicarDesconto)).toBe('F3')
+    expect(atalhoRotulo(CAIXA_ATALHOS.consultaRapida)).toBe('F7')
     expect(atalhoRotulo(CAIXA_ATALHOS.buscar)).toBe('F2 / Ctrl+B')
     expect(atalhoRotulo(CAIXA_ATALHOS.novoCupom)).toBe('F8')
     expect(atalhoRotulo(CAIXA_ATALHOS.suprimento)).toBe('Ctrl+Shift+S')
@@ -99,6 +101,7 @@ function montarHandler() {
     onNovoCupom: vi.fn(),
     onReimprimir: vi.fn(),
     onConsultaRapida: vi.fn(),
+    onAplicarDesconto: vi.fn(),
     onDesfazerRemocao: vi.fn(),
     onSelecionarMetodo: vi.fn(),
     onAbrirReferencia: vi.fn(),
@@ -125,6 +128,7 @@ function montarHandler() {
       onNovoCupom: cb.onNovoCupom,
       onReimprimir: cb.onReimprimir,
       onConsultaRapida: cb.onConsultaRapida,
+      onAplicarDesconto: cb.onAplicarDesconto,
       onDesfazerRemocao: cb.onDesfazerRemocao,
       onSelecionarMetodo: cb.onSelecionarMetodo,
       onAbrirReferencia: cb.onAbrirReferencia,
@@ -154,6 +158,7 @@ describe('handler consome o mapa: cada atalho executa a ação certa', () => {
     ['onAbrirReferencia', CAIXA_ATALHOS.ajuda],
     ['onFocarBusca', CAIXA_ATALHOS.buscar],
     ['onConsultaRapida', CAIXA_ATALHOS.consultaRapida],
+    ['onAplicarDesconto', CAIXA_ATALHOS.aplicarDesconto],
     ['onFinalizar', CAIXA_ATALHOS.finalizar],
     ['onFecharCaixa', CAIXA_ATALHOS.fecharCaixa],
     ['onNovoCupom', CAIXA_ATALHOS.novoCupom],
@@ -218,6 +223,7 @@ describe('ajuda e menu exibem o que o mapa define', () => {
       [CAIXA_ATALHOS.focoProduto, m.caixa.pdv_tab_produto],
       [CAIXA_ATALHOS.pagamento, m.caixa.pdv_tab_pgto],
       [CAIXA_ATALHOS.cliente, m.caixa.selecionar_cliente_titulo],
+      [CAIXA_ATALHOS.aplicarDesconto, 'Aplicar desconto'],
       [CAIXA_ATALHOS.consultaRapida, m.caixa.operacoes_consulta_rapida],
       [CAIXA_ATALHOS.fecharCaixa, m.caixa.fechar],
       [CAIXA_ATALHOS.suprimento, m.caixa.suprimento],
