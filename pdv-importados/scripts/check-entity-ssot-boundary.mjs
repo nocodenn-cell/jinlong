@@ -62,12 +62,48 @@ const LEGACY_ORPHAN_WARN = [
   '/app/gerente/relatorios/RelatoriosGerentePageClient.tsx',
 ]
 
-/** Atalhos conhecidos — warn até redirecionar para tela oficial. */
-const KNOWN_SHORTCUT_WARN = [
+/**
+ * UI pode iniciar operação de outro domínio se usar o comando canônico.
+ * FornecedorCombobox + FornecedorEditarModal → createSupplier / salvarFornecedorAction.
+ */
+const ALLOWED_CROSS_DOMAIN_UI = [
   {
     file: '/components/gerente/produtos/form/fields/FornecedorCombobox.tsx',
-    symbol: 'FornecedorEditarModal',
-    reason: 'Cadastro inline de fornecedor no form de produto; preferir /admin/fornecedores',
+    mustInclude: 'FornecedorEditarModal',
+    reason: 'OK: modal inicia createSupplier (domínio Suppliers), sem INSERT próprio',
+  },
+]
+
+/** Writers mortos / bypass — fail hard. */
+const FORBIDDEN_SYMBOLS = [
+  {
+    fileIncludes: '/app/gerente/financeiro/',
+    symbol: 'enfileirarDocFiscalStub',
+    reason: 'Removido — enqueue só via fiscal_enfileirar_*',
+  },
+  {
+    fileIncludes: '/app/gerente/financeiro/',
+    symbol: 'criarCliente',
+    reason: 'Removido — clientes só via CustomerWriter /admin/clientes',
+  },
+]
+
+/** INSERT direto em tabelas de entidade — só writers autorizados. */
+const FORBIDDEN_TABLE_INSERTS = [
+  {
+    table: 'clientes',
+    allowedPathIncludes: [
+      '/app/admin/clientes/customerWriter.ts',
+      '/app/admin/clientes/actions.ts',
+      '/app/gerente/clientes/',
+    ],
+  },
+  {
+    table: 'documentos_fiscais_pendentes',
+    allowedPathIncludes: [
+      // Nenhum app path — só RPC SECURITY DEFINER / service_role / testes
+    ],
+    allowTests: true,
   },
 ]
 
@@ -111,24 +147,39 @@ for (const file of files) {
     continue
   }
 
-  for (const { file: f, symbol, reason } of KNOWN_SHORTCUT_WARN) {
-    if (rel.includes(f) && content.includes(symbol)) {
-      console.warn(`[ssot:shortcut] ${rel} — ${reason}`)
-      warned++
+  for (const { file: f, mustInclude, reason } of ALLOWED_CROSS_DOMAIN_UI) {
+    if (rel.includes(f) && content.includes(mustInclude)) {
+      console.log(`[ssot:cross-domain-ok] ${rel} — ${reason}`)
     }
+  }
+
+  for (const { fileIncludes, symbol, reason } of FORBIDDEN_SYMBOLS) {
+    if (rel.includes(fileIncludes) && referencesSymbol(content, symbol)) {
+      console.error(`[ssot:forbidden] ${rel} — ${symbol}: ${reason}`)
+      failed = true
+    }
+  }
+
+  for (const rule of FORBIDDEN_TABLE_INSERTS) {
+    const insertRe = new RegExp(
+      String.raw`\.from\(\s*['"]${rule.table}['"]\s*\)[\s\S]{0,120}?\.insert\s*\(`,
+      'm',
+    )
+    if (!insertRe.test(content)) continue
+    const allowed = (rule.allowedPathIncludes || []).some((p) => rel.includes(p))
+    const isTest = /\.(spec|test)\.(ts|tsx)$/.test(rel) || rel.includes('/e2e/')
+    if (allowed || (rule.allowTests && isTest)) continue
+    // Definições em actions canônicas de clientes já cobertas por allowedPath
+    if (isActionDefinition(rel) && rule.table === 'clientes' && rel.includes('/clientes/')) continue
+    console.error(`[ssot:insert] ${rel} faz .from('${rule.table}').insert fora do writer canônico`)
+    failed = true
   }
 
   if (isActionDefinition(rel)) continue
 
   for (const [symbol, allowed] of Object.entries(ALLOWED_UI)) {
     if (!referencesSymbol(content, symbol)) continue
-    if (allowed.length === 0) {
-      if (rel.includes('/app/gerente/financeiro/') && symbol === 'criarCliente') {
-        console.error(`[ssot] ${rel} referencia ${symbol} — use /admin/clientes`)
-        failed = true
-      }
-      continue
-    }
+    if (allowed.length === 0) continue
     if (!isAllowed(rel, allowed)) {
       console.error(`[ssot] ${rel} referencia ${symbol} fora das telas oficiais`)
       failed = true

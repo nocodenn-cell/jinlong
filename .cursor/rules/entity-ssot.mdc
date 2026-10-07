@@ -34,7 +34,9 @@ Nenhuma **nova tela ou fluxo** pode criar ou alterar cadastros fora destas casas
 
 ### `FornecedorCombobox` (cadastro inline no form de produto)
 
-Cadastro rápido de fornecedor dentro do modal de produto. Preferir `/admin/fornecedores`.
+Cadastro rápido de fornecedor dentro do modal de produto. Preferir `/admin/fornecedores` para navegação.
+
+**Atualização 2026-10-07 (GO CONDICIONAL):** o modal inline é aceitável **somente** se gravar via `createSupplier` / `salvarFornecedorAction` (mesma action canônica de `/admin/fornecedores`). Não introduzir INSERT direto nem segundo writer. Novos atalhos inline em outras telas continuam bloqueados.
 
 ### Estoque inicial no cadastro (TX atômica)
 
