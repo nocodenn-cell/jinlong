@@ -201,30 +201,30 @@ const ADMIN_V2_DESKTOP_BREAKPOINT_PX = 1024
  * Prova de RBAC pós-login do GERENTE: a URL sozinha não prova que o RBAC
  * autorizou o perfil certo, só a navegação do painel prova.
  *
- * Abaixo de `lg` (1024px) o `<aside>` que contém o `<nav>` fica `hidden`
- * (`AdminV2Shell.tsx`) — a navegação real só existe dentro do
- * `AdminV2MobileNavDrawer`, atrás do botão "Navegação", e só depois de
- * clicado. `getByRole('navigation')` direto sem abrir o drawer nunca
- * encontra nada em viewport mobile — não é falha de RBAC nem de login, é o
- * layout responsivo funcionando como desenhado. Comprovado ao vivo: as duas
- * projects mobile (`mobile-chrome-pixel`, `mobile-safari-iphone`) falhavam
- * 100% das vezes nesse ponto enquanto `chromium` passava.
+ * Desktop: a prova é a sidebar (`executive-sidebar-nav`). O hub executivo
+ * também é `<nav>` (`executive-analytics-hub-nav`) e não autoriza o perfil.
+ * Abaixo de `lg` (1024px) o `<aside>` fica `hidden` (`AdminV2Shell.tsx`) e
+ * continua no DOM com o mesmo testid. A navegação visível só existe dentro
+ * do `AdminV2MobileNavDrawer`, atrás do botão "Navegação", e só depois de
+ * clicado. Sem abrir o drawer, viewport mobile não mostra a sidebar — não é
+ * falha de RBAC nem de login, é o layout responsivo.
  */
 export async function assertGerenteNavVisible(page: Page): Promise<void> {
   const viewportWidth = page.viewportSize()?.width ?? 0
   if (viewportWidth === 0 || viewportWidth >= ADMIN_V2_DESKTOP_BREAKPOINT_PX) {
-    await expect(page.getByRole('navigation')).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByTestId('executive-sidebar-nav')).toBeVisible({ timeout: 10_000 })
     return
   }
   const menuButton = page.getByRole('button', { name: 'Navegação' })
   await expect(menuButton).toBeVisible({ timeout: 10_000 })
   await menuButton.click()
-  await expect(page.getByRole('dialog', { name: 'Navegação' })).toBeVisible({ timeout: 10_000 })
-  await expect(page.getByRole('navigation')).toBeVisible({ timeout: 10_000 })
+  const drawer = page.getByRole('dialog', { name: 'Navegação' })
+  await expect(drawer).toBeVisible({ timeout: 10_000 })
+  await expect(drawer.getByTestId('executive-sidebar-nav')).toBeVisible({ timeout: 10_000 })
   // Fecha de novo para não vazar o drawer aberto (backdrop cobrindo a tela
   // inteira) para o corpo do teste que chamou `loginGerente`.
   await page.keyboard.press('Escape')
-  await expect(page.getByRole('dialog', { name: 'Navegação' })).not.toBeVisible({ timeout: 10_000 })
+  await expect(drawer).not.toBeVisible({ timeout: 10_000 })
 }
 
 export async function loginGerente(
