@@ -7,6 +7,8 @@ import type { RelatoriosDados, RelatoriosLabels } from './RelatoriosContent'
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: vi.fn() }),
+  usePathname: () => '/admin/relatorios',
+  useSearchParams: () => new URLSearchParams(),
 }))
 
 vi.mock('next/link', () => ({

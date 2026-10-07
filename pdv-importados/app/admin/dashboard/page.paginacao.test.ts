@@ -61,11 +61,15 @@ import AdminDashboardPage from './page'
 import { DASHBOARD_MAX_PAGES } from './dashboardUtils'
 import { getMessages } from '@/i18n/getMessages'
 
-function contemTexto(node: unknown, alvo: string): boolean {
+function contemTexto(node: unknown, alvo: string, seen = new Set<unknown>()): boolean {
   if (typeof node === 'string') return node.includes(alvo)
-  if (Array.isArray(node)) return node.some((n) => contemTexto(n, alvo))
-  if (React.isValidElement(node)) return contemTexto((node.props as { children?: unknown }).children, alvo)
-  return false
+  if (node == null || typeof node !== 'object') return false
+  if (seen.has(node)) return false
+  seen.add(node)
+  if (Array.isArray(node)) return node.some((item) => contemTexto(item, alvo, seen))
+  if (!React.isValidElement(node)) return false
+  const props = node.props as Record<string, unknown>
+  return Object.values(props).some((value) => contemTexto(value, alvo, seen))
 }
 
 const AVISO = getMessages('pt').admin_ui.dashboard_dados_incompletos
