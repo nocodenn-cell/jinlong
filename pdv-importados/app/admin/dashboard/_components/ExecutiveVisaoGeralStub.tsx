@@ -72,7 +72,7 @@ export function ExecutiveVisaoGeralStub({
       <div className="rounded-card border border-[var(--color-border)] p-3" data-testid="executive-alerts-stub">
         <div className="mb-2 flex items-center justify-between gap-2">
           <h2 className="text-small font-semibold text-fg">Alertas rápidos</h2>
-          <StatusBadge tone="neutral">Fase 1</StatusBadge>
+          <StatusBadge tone="neutral">Executivo</StatusBadge>
         </div>
         <DenseDataTable
           caption="Alertas executivos"
