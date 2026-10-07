@@ -53,8 +53,9 @@ Pré/pós: produtos=16, estoque=16, vendas=3, pagamentos=4, caixas=1, snap=4, CR
 
 | Meta | Valor | Justificativa |
 |------|-------|---------------|
-| **RPO** | **24h** | Dump diário off-site (Opção B) ou backup diário Pro (Opção A); Jinlong Free sem backup plataforma |
-| **RTO** | **4h úteis** | Restore ensaiado em minutos em DB isolado; buffer para DNS/secrets/validação humana |
+| **RPO alvo** | 24h | Objetivo de estágio |
+| **RPO efetivamente garantido** | **`NÃO GARANTIDO`** | Free sem backup nativo; Opção B falha (JIT/PAM) — ver [GATE_BACKUP_PRODUCAO.md](./GATE_BACKUP_PRODUCAO.md) |
+| **RTO esperado** | **4h úteis** | Restore ensaiado em minutos em DB isolado; buffer para DNS/secrets/validação humana |
 
 ## 7. Smoke local
 

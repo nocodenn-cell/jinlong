@@ -1,177 +1,139 @@
 # Runbook canônico — Backup & Restore (Jinlong)
 
-> **Referência única** para recuperação de dados. Documentos históricos (`P0-2`, `P0-3`, auditoria) apontam para este arquivo.
+> **Referência única** para recuperação de dados.
 >
-> **Produção (ORIGEM):** projeto `jinlong` · ref `PROJECT_REF_JINLONG` · org `NatureCode` (`ORG_ID_NATURECODE`)
->
-> **Segredos:** nunca commitar `PGPASSWORD`, `service_role` ou connection strings reais. Usar env local / secret manager.
+> **Produção (ORIGEM):** projeto `jinlong` · org NatureCode  
+> **Segredos:** nunca no Git (`PGPASSWORD`, PAT, `service_role`, connection strings).
 
 ---
 
-## Estado (reverificação 2026-10-07)
+## Estado operacional (2026-10-07)
 
 | Campo | Valor |
 |-------|-------|
-| Plano org (API Management) | **Free** (histórico; confirmar no painel) |
-| Backup automático plataforma | **Não** no Free |
-| PITR | **Não** no Free |
-| Script repo `backup.sh` | Existe (`pg_dump -Fc` + retenção dias) — **sem cron/workflow agendado** |
-| Storage off-site | **Não** automatizado |
-| Criptografia em trânsito | TLS do Postgres/Supabase; artefato dump: proteger no storage (ACL + opcional age/gpg) |
-| Restore ensaiado (local isolado) | **SIM — 2026-10-07** → `RESTORE_DRILL_PASS` |
-| Restore ensaiado (DESTINO Supabase remoto) | **Não** (gate humano) |
-| RPO / RTO alvo (estágio atual) | **RPO = 24h** · **RTO = 4h úteis** |
+| Plano org | **Free** (`get_organization` → `plan: free`) |
+| Backup nativo / PITR | **Não** no Free |
+| Automação Opção B | Workflows em `.github/workflows/backup-*.yml` — **ativos, falhando** |
+| Últimos 30 runs `backup-scheduled` | **0 success / 30 failure** (PAM/JIT) |
+| RPO **alvo** | 24h |
+| RPO **efetivamente garantido** | **`NÃO GARANTIDO`** |
+| RTO **alvo / esperado** | 4h úteis |
+| Restore drill local (`pg_dump -Fc`) | `RESTORE_DRILL_PASS` (fase hardening) |
+| Formato CI (age/sql) | `AUTOMATION_FORMAT_RESTORE_PASS` (isolado; não é dump prod) |
+| Gate | **`BACKUP_PRODUCTION_PENDING`** — ver [GATE_BACKUP_PRODUCAO.md](../regras-negocio/GATE_BACKUP_PRODUCAO.md) |
 
-### Inventário: real vs só documentado
-
-| Capacidade | Existe de fato? | Notas |
-|------------|-----------------|-------|
-| `backup.sh` | Sim (repo) | Requer `PGHOST/PGPORT/PGDATABASE/PGUSER/PGPASSWORD` |
-| Agendamento | **Não** | Sem GitHub Action / cron comprovado |
-| Retenção | Só no script (`RETENTION_DAYS=7`) | Só se alguém rodar o script |
-| Backup Pro/PITR | Documentado | Não contratado |
-| Runbook | Este arquivo | Atualizado pós-drill |
-| Drill local | **Feito** | Artefatos em `/opt/cursor/artifacts/hardening-backup/` (ambiente agent; não é backup de produção) |
-
-**Produção Jinlong:** gap de backup sustentado permanece (**ACHADO P1**) até Opção A (Pro) ou Opção B (cron + off-site) autorizada.
+**Não afirmar SLA de RPO enquanto não houver artefato de produção com sucesso &lt; 25h.**
 
 ---
 
-## RPO / RTO (executáveis agora)
+## Estratégia escolhida
 
-| Meta | Valor | Justificativa |
-|------|-------|---------------|
-| **RPO** | **24h** | Uma cópia consistente por dia basta para o estágio atual; sem PITR não prometemos minutos |
-| **RTO** | **4h úteis** | Drill local restaurou em minutos; buffer para provisionar DESTINO, secrets, DNS e validação |
+**Opção B — dump externo automatizado** (GitHub Actions + Temporary Access/JIT + `age` + artifact).
 
-Não comprar infra complexa preventivamente. Escolher **uma** linha:
+| Critério | Motivo |
+|----------|--------|
+| Custo | Zero adicional no Free |
+| Já implementada | `backup-scheduled.yml` + `backup-restore-test.yml` |
+| Segurança | Sem senha Postgres permanente; cifrar antes do artifact |
+| Fallback | Opção A (Pro, backup diário 7d) se JIT permanecer bloqueado |
 
-- **Opção A:** Supabase Pro → backup diário gerenciado (menor risco operacional).
-- **Opção B:** `backup.sh` diário + storage off-site + alerta se dump > 24h.
+**Opção C (A+B):** não neste estágio.
 
 ---
 
 ## Pré-condições
 
-1. Destino **isolado** (nunca sobrescrever ORIGEM sem ordem escrita).
-2. Cliente `pg_dump` / `pg_restore` **major ≥ dump** (dump atual = archive **1.16** → **PostgreSQL 17+**).
-3. Target com roles Supabase (`authenticated`, `anon`, `service_role`, …) **ou** imagem `public.ecr.aws/supabase/postgres:17.x`.
-4. Variáveis só em ambiente seguro (não no Git).
-5. Autorização humana para qualquer ação em dados reais.
+1. Secrets/vars GitHub configurados (dono do repo):
+   - `secrets.SUPABASE_BACKUP_JIT_PAT`
+   - `secrets.BACKUP_AGE_PRIVATE_KEY` (só restore-drill)
+   - `vars.SUPABASE_BACKUP_USER_ID`
+   - `vars.BACKUP_AGE_PUBLIC_KEY`
+2. Temporary Access habilitado no projeto (Dashboard).
+3. Destino de restore **sempre isolado** (nunca sobrescrever ORIGEM sem ordem escrita).
 
 ---
 
-## Backup (Opção B — dump)
+## Backup automático (Opção B)
 
-```bash
-export PGHOST=... PGPORT=5432 PGDATABASE=postgres PGUSER=... PGPASSWORD=...
-export OUT_DIR=/var/backups/fastproduct   # ou path off-site montado
-export RETENTION_DAYS=7
-./backup.sh
-sha256sum "$OUT_DIR"/fastproduct_*.dump | tee "$OUT_DIR"/latest.sha256
+```text
+Actions → "Backup automatico (item 19)" → Run workflow
+Cron: 0 6 * * * (06:00 UTC)
+Saída: artifact jinlong-backup-<run_id>
+  roles.sql.age, schema.sql.age, data.sql.age, checksums.sha256, manifest.json
+Retenção artifact: 30 dias
 ```
 
-Registrar: comando, timestamp, tamanho, hash, local de armazenamento.
+### Validação
 
-### Evidência drill local (2026-10-07)
+- Step summary / logs: tamanhos dos SQL &gt; 32 bytes  
+- Artifact presente  
+- `Backup freshness monitor` verde (idade ≤ 25h)
 
-| Campo | Valor |
-|-------|-------|
-| Dump | `jinlong_hardening_1791395882311.dump` |
-| Bytes | 1 940 607 |
-| SHA-256 | `8f5007acd3a4c612d4c12c330fa6f460306a2802c9cef4ca7e9696af6f79be7c` |
-| Dataset | produtos/estoque/vendas/pagamentos/caixa fechado/snap por forma/CR |
+### Bloqueio atual (não contornar)
+
+Sintoma estável:
+
+```text
+aws-1-sa-east-1.pooler.supabase.com → PAM authentication failed for user "postgres"
+```
+
+com JIT `PUT/GET` HTTP 2xx. Detalhe: `docs/audits/ENCERRAMENTO_SPRINT_BACKUP_JIT_ITENS_18_21.md`.
+
+**Única próxima ação humana:** ticket Supabase (EXTERNAL-BLOCKER) **ou** autorizar Opção A (Pro).
 
 ---
 
-## Validação do artefato
+## Monitoramento de falha
 
-```bash
-pg_restore -l "$DUMP" | head   # lista TOC; falha se major do cliente < dump
-sha256sum -c latest.sha256
-```
+| Mecanismo | Função |
+|-----------|--------|
+| Conclusão do workflow `backup-scheduled` | sucesso/falha por execução |
+| `backup-freshness-monitor.yml` (cron 08:00 UTC) | falha se nenhum sucesso ≤ 25h |
+| Artifact + `checksums.sha256` | integridade / tamanho implícito |
+| `manifest.json` | contagens agregadas (sem PII) |
 
----
-
-## Restore (DESTINO isolado)
-
-### Docker Supabase PG17 (padrão ensaiado)
-
-```bash
-docker rm -f restore_dest || true
-docker run -d --name restore_dest \
-  -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_USER=supabase_admin \
-  -e POSTGRES_DB=postgres \
-  -p 54329:5432 \
-  public.ecr.aws/supabase/postgres:17.6.1.165
-# aguardar ready
-docker cp "$DUMP" restore_dest:/tmp/app.dump
-docker exec restore_dest pg_restore -U supabase_admin -d postgres \
-  --clean --if-exists --no-owner --no-acl /tmp/app.dump
-```
-
-### Verificação pós-restore
-
-```sql
-SELECT 'produtos' t, count(*) FROM produtos
-UNION ALL SELECT 'estoque', count(*) FROM estoque
-UNION ALL SELECT 'vendas', count(*) FROM vendas
-UNION ALL SELECT 'vendas_pagamentos', count(*) FROM vendas_pagamentos
-UNION ALL SELECT 'caixas', count(*) FROM caixas
-UNION ALL SELECT 'caixas_fechamento_formas', count(*) FROM caixas_fechamento_formas
-UNION ALL SELECT 'contas_receber', count(*) FROM contas_receber
-UNION ALL SELECT 'contas_pagar', count(*) FROM contas_pagar;
-
-SELECT version FROM supabase_migrations.schema_migrations
- WHERE version >= '20261007161220' ORDER BY version;
-
--- Explicabilidade fechamento (exemplo)
-SELECT forma_pagamento, metrica, valor_sistema_snapshot, valor_informado
-FROM caixas_fechamento_formas ORDER BY 1;
-```
-
-Comparar contagens críticas com o manifesto do backup. Auth/RLS: roles + `relrowsecurity` nas tabelas críticas.
-
-**Drill local:** `RESTORE_DRILL_PASS` (0 erros `pg_restore` na imagem Supabase).
+Não há stack de observabilidade dedicada — Actions + freshness bastam.
 
 ---
 
-## Rollback
+## Retenção
 
-- Se restore no DESTINO falhar: destruir DESTINO; manter ORIGEM intacta; reintentar com cliente/imagem corretos.
-- Se DESTINO era cutover: **não** apontar app para DESTINO até verificação PASS; rollback = DNS/env de volta à ORIGEM.
+| Camada | Retenção | Justificativa |
+|--------|----------|---------------|
+| Artifact GitHub (Opção B) | **30 dias** | Cobre detecção de problema em poucos dias + margem mensal; sem storage caro |
+| Pro daily (se A) | 7 dias | Padrão plataforma |
+| PITR | Não adotar agora | Custo alto vs estágio |
+
+---
+
+## Restore
+
+### Produção / CI (formato Opção B)
+
+```text
+Actions → "Restore drill (item 20)" → Run workflow
+```
+
+Nunca apontar o drill para o projeto `jinlong`. Runner efêmero Postgres 17; decifra com `BACKUP_AGE_PRIVATE_KEY`; compara contagens ao manifesto.
+
+### Local equivalente (`pg_dump -Fc`) — já ensaiado
+
+Ver evidência hardening: dump sha256 `8f5007ac…` → restore imagem Supabase PG17 → `RESTORE_DRILL_PASS`.
+
+### Rollback
+
+Falha no DESTINO → destruir DESTINO; ORIGEM intacta. Cutover só após verificação PASS.
 
 ---
 
 ## Erros comuns
 
-| Sintoma | Causa | Ação |
-|---------|-------|------|
-| `unsupported version (1.16) in file header` | `pg_restore` &lt; PG17 | Usar cliente 17+ / imagem Supabase 17 |
-| `role "authenticated" does not exist` | Postgres bare | Restaurar em imagem Supabase ou criar roles antes |
-| `turbo: not found` / checks locais | Tooling env | Não confundir com falha de restore |
-| Dump sem hash | Processo incompleto | Sempre gravar `sha256` no manifesto |
-
----
-
-## Opção A — Supabase Pro (referência)
-
-Menor risco quando autorizada: backup diário + restore to new project. Metas RPO≤24h / RTO≤4h úteis. Ver histórico de IDs 183–187 abaixo.
-
----
-
-## IDs auditoria (histórico)
-
-| ID | PASS quando |
-|----|-------------|
-| 183 | Backup automático real ativo (Pro+) **ou** Opção B monitorada |
-| 184 | Lista/captura comprova execuções recentes |
-| 185 | Restore em DESTINO isolado + contagens — **drill local PASS 2026-10-07**; remoto pendente |
-| 186 | RPO documentado ≤ 24h **sustentado** pelo mecanismo |
-| 187 | RTO medido ≤ 4h úteis (atualizado) |
-
-**Produção:** não marcar gap de backup Jinlong CLOSED até 183–185 no DESTINO/ORIGEM reais.
+| Sintoma | Ação |
+|---------|------|
+| `PAM authentication failed` + JIT 200 | Bloqueio externo; não “mais um fix de workflow” sem evidência nova — seguir ação humana do gate |
+| `unsupported version (1.16)` | Cliente `pg_restore` &lt; 17 |
+| `role "authenticated" does not exist` | Target bare Postgres; usar imagem Supabase |
+| Freshness FAIL | RPO não garantido; investigar último `backup-scheduled` |
 
 ---
 
@@ -179,8 +141,8 @@ Menor risco quando autorizada: backup diário + restore to new project. Metas RP
 
 | Papel | Quem |
 |-------|------|
-| Executar backup/restore | Ops / engenharia on-call |
-| Autorizar cutover / Pro | Dono do produto (humano) |
-| Atualizar este runbook | Após cada drill |
+| Secrets / ticket Supabase / Pro | Dono do projeto (humano) |
+| Disparar workflows pós-desbloqueio | Ops / engenharia |
+| Atualizar este runbook | Após primeiro SUCCESS de produção |
 
-Referências: D0-06, `P0-2_BACKUP_EVIDENCIA.md`, `P0-3_HUMAN_GATE.md`, [INTEGRACAO_HARDENING_473_479.md](../regras-negocio/INTEGRACAO_HARDENING_473_479.md).
+Referências: [GATE_BACKUP_PRODUCAO.md](../regras-negocio/GATE_BACKUP_PRODUCAO.md) · P0-2 · P0-3 · INTEGRACAO_HARDENING_473_479.md
