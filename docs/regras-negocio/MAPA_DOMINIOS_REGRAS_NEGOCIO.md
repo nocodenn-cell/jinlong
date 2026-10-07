@@ -172,7 +172,7 @@ Estrutura de cada linha:
 | **Dados críticos** | Situação do pedido de compra, itens, vínculo com entrada |
 | **Dono atual** | **Parcial** — UI/legado em `gerente/compras` + estoque recebimento; **não** há ADR de Compras dedicado |
 | **Regra canônica hoje** | OC: mig. `109`/`110`; NF-e compra: `importacoes_nfe` + `confirmar_importacao_nfe` (efeito estoque + AP) |
-| **Lacuna** | `remessas` / `importacoes_nfe` **não** referenciam OC de forma canônica (dívida UX-03); Central de Compras futura deve **eleger dono** sem duplicar AP/estoque |
+| **Lacuna** | `importacoes_nfe.ordem_compra_id` FK **existe** (mig 20260918); `remessas` ainda vínculo textual (`origem_ref`) — dívida UX-03 residual; Central de Compras futura deve **eleger dono** sem duplicar AP/estoque |
 | **Maturidade** | **Parcial** |
 
 **Gate para Central de Compras / Demanda Comercial:** não criar saldo, AP ou custo paralelo; solicitar entrada ao Estoque e título ao Financeiro.
@@ -282,8 +282,8 @@ Apps **chamam** o orquestrador; **não** reimplementam a política no TypeScript
 
 | ID | Problema | Domínios | Ação |
 |----|----------|----------|------|
-| D-F1 | `criarCliente` no financeiro | financial × customers | Não expandir; link para `/admin/clientes` |
-| UX-03 | OC sem FK em remessa/NF-e | purchases × inventory | Resolver no ADR Compras — sem segundo SSoT |
+| D-F1 | `criarCliente` no financeiro | financial × customers | **FECHADO** (removido); link `/admin/clientes` |
+| UX-03 | OC: FK em NF-e ok; remessa textual | purchases × inventory | FK `importacoes_nfe.ordem_compra_id` ok; remessa → ADR Compras |
 | NF-e sob Estoque | Importação nacional misturada na UI de estoque | inventory × purchases × financial | Central de Compras/Importações deve **explicitar** dono do processo sem mover saldo para fora de inventory |
 | Dual-layer gerente/admin | Actions em `gerente/*` + UI `/admin/*` | vários | Camada de dados OK; UI nova só em `/admin/*` |
 | Intelligence paralelo | Risco de métrica como “verdade” | intelligence × todos | Read-only + Número Explicável |

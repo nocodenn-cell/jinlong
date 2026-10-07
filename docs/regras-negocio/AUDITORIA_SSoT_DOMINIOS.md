@@ -3,11 +3,11 @@
 | Campo | Valor |
 |--------|--------|
 | **Missão** | Validar governança contra implementação real |
-| **Data** | 2026-10-07 |
+| **Data** | 2026-10-07 (atualizado: sprint GO CONDICIONAL) |
 | **Inventário** | [INVENTARIO_IMPLEMENTACAO_DOMINIOS.md](./INVENTARIO_IMPLEMENTACAO_DOMINIOS.md) |
 | **Mapa** | [MAPA_DOMINIOS_REGRAS_NEGOCIO.md](./MAPA_DOMINIOS_REGRAS_NEGOCIO.md) |
 | **Governança** | [GOVERNANCA_REGRAS_NEGOCIO.md](./GOVERNANCA_REGRAS_NEGOCIO.md) |
-| **Decisão** | **NO-GO** para iniciar módulos grandes (Importações / Contábil / Intelligence / Demanda / Mobile com regra) até corrigir bloqueadores mínimos |
+| **Decisão** | **GO CONDICIONAL** — núcleo PDV pode evoluir com gates; módulos grandes (Importações / Contábil / Intelligence / Demanda / Mobile com regra) ainda **bloqueados** até SSOT-001…003 + Reality Check Products→Cash→Financial |
 
 ---
 
@@ -28,38 +28,46 @@
 | Vendas | OK | OK | OK (cancel auditoria) | EXPLICÁVEL (totais RPC) | Baixo |
 | Caixa | **VIOLAÇÃO** (A vs E(c)) | ATENÇÃO | PARCIAL | PARCIAL / NÃO no painel | **Alto** |
 | Financeiro | ATENÇÃO | ATENÇÃO | PARCIAL | PARCIAL (origem opcional) | **Alto** |
-| Fiscal | OK (fila) | **VIOLAÇÃO** (stub INSERT) | OK (eventos) | EXPLICÁVEL status DB | Médio |
-| Clientes | OK | ATENÇÃO (legado financeiro) | PARCIAL | N/A | Baixo |
-| Fornecedores | OK | **VIOLAÇÃO** (combobox) | PARCIAL | N/A | Baixo |
+| Fiscal | OK (fila) | OK (RPC + REVOKE INSERT; gap cancel→P0 fechado no sprint) | OK (eventos) | EXPLICÁVEL status DB | Baixo residual |
+| Clientes | OK | OK (`criarCliente` financeiro removido) | PARCIAL | N/A | Baixo |
+| Fornecedores | OK | ATENÇÃO (combobox → `createSupplier` canônico) | PARCIAL | N/A | Baixo |
 | Compras | ATENÇÃO | ATENÇÃO (3 vias ≠ F) | PARCIAL | PARCIAL | **Alto** p/ Importações |
 
 ---
 
-# Decisão: NO-GO
+# Decisão: GO CONDICIONAL
 
-Existem violações estruturais que **bloqueiam** Contabilidade, Intelligence e Importações se esses módulos forem construídos agora como consumidores dos números/contratos atuais.
+Violações **fiscais/boundary stub + cliente financeiro + cancel fiscal** foram tratadas no sprint 2026-10-07. Restam bloqueadores de **caixa/painel** e **contrato econômico de entrada** antes de Contábil / Intelligence / Importações.
 
-### Bloqueia novos módulos
+**GO** para: endurecimento do núcleo PDV, fiscal (worker/RPC), entity-ssot gates, Reality Check Products→Cash→Financial.
 
-| ID | Correção mínima |
-|----|-----------------|
-| **SSOT-001** | `financeiro_painel.saldo_pdv` deve usar \(E(c)\) (`calcular_valor_sistema_dinheiro_caixa` / `internal.valor_sistema_dinheiro`) — **nunca** `sum(saldo_atual)` |
-| **SSOT-002** | Unificar writers de `saldo_atual`: após mutações que afetam \(E(c)\), chamar `sincronizar_saldo_cache` **ou** eliminar updates incrementais (trigger/cancel/liquidação) em favor do cache derivado |
-| **SSOT-003** | Contrato econômico de entrada: se a operação gera obrigação de pagamento, **obrigar** AP com origem (`nfe_importacao_id` / doc); proibir Importações de copiar “estoque sem AP quando sem duplicatas” sem decisão explícita de produto |
-| **SSOT-004** | Remover ou encapsular `enfileirarDocFiscalStub` — só RPC `fiscal_enfileirar_*` |
+**NO-GO** ainda para: Contabilidade, Intelligence, Importações internacionais, Demanda/Mobile com regra própria — enquanto SSOT-001…003 abertos.
 
-### Pode ser corrigido posteriormente
+### Bloqueia módulos grandes (repriorizado)
 
-| ID | Item |
-|----|------|
-| SSOT-005 | `FornecedorCombobox` inline → link `/admin/fornecedores` |
-| SSOT-006 | Remover `criarCliente` morto em `gerente/financeiro/actions.ts` |
-| SSOT-007 | Offline sem CR parcial — documentar canal ou alinhar quando Local passar a aceitar parcial |
-| SSOT-008 | Dívida D-P3 colunas `preco_atacado` / gatilho no cadastro vs tiers D0 |
-| SSOT-009 | `garantirLinhaEstoque` INSERT qty 0 → RPC |
-| SSOT-010 | Atualizar mapa UX-03 (FK NF-e→OC já existe) |
-| SSOT-011 | CR/AP manuais sem origem rastreável obrigatória |
-| SSOT-012 | Cancel venda desacoplado de cancel fiscal (órfãos) |
+| ID | Prioridade | Correção mínima | Status |
+|----|------------|-----------------|--------|
+| **SSOT-012** (órfão fiscal) | **P0** (fechado no sprint) | `fiscal_marcar_cancelado` + `fiscal_cancelar_documento` + classify Focus `cancelado`; **não** acoplar a `cancelar_venda` | **FECHADO** (código + mig local; remoto Jinlong pendente) |
+| **SSOT-004** | **P1** (fechado) | Remover `enfileirarDocFiscalStub` + REVOKE INSERT authenticated | **FECHADO** |
+| **SSOT-006** | **P1** (fechado) | Remover `criarCliente` + gate entity-ssot | **FECHADO** |
+| **SSOT-001** | **P1** (aberto) | `financeiro_painel.saldo_pdv` → \(E(c)\) — nunca `sum(saldo_atual)` | Aberto |
+| **SSOT-002** | **P1** (aberto) | Unificar writers de `saldo_atual` / `sincronizar_saldo_cache` | Aberto |
+| **SSOT-003** | **P1** (aberto) | Contrato econômico de entrada: AP com origem ou política “sem obrigação” explícita | Aberto |
+
+### Pode ser corrigido posteriormente / residual
+
+| ID | Item | Status |
+|----|------|--------|
+| SSOT-005 | `FornecedorCombobox` → `createSupplier` / `salvarFornecedorAction` (modal OK se writer canônico) | **MITIGADO** |
+| SSOT-007 | Offline sem CR parcial — documentar canal ou alinhar Local | Aberto |
+| SSOT-008 | Dívida D-P3 colunas `preco_atacado` / gatilho vs tiers D0 | Aberto |
+| SSOT-009 | `garantirLinhaEstoque` INSERT qty 0 → RPC | Aberto |
+| SSOT-010 | Mapa UX-03: FK `importacoes_nfe.ordem_compra_id` existe (mig 20260918); remessa ainda textual | **DOC atualizado neste sprint** |
+| SSOT-011 | CR/AP manuais sem origem rastreável obrigatória | Aberto |
+
+### Próximo Reality Check (pendente)
+
+**Products → Cash → Financial** com invariantes: (1) preço efetivo único; (2) \(E(c)\) ≡ painel; (3) entrada com obrigação → AP com origem; (4) cancel venda ≠ auto-cancel fiscal (comando explícito).
 
 ---
 
@@ -93,10 +101,10 @@ Existem violações estruturais que **bloqueiam** Contabilidade, Intelligence e 
 | AR / liquidação | financial | writers + comando + v4 | painel | tabelas AR | ATENÇÃO multi-path |
 | AP / pagamento | financial | NF-e + comando + RPC pagar | painel | `contas_pagar` | ATENÇÃO entrada sem AP |
 | Saldo conta financeira | financial | `movimentos_financeiros` | painel | sum movimentos | OK |
-| Doc fiscal status | fiscal | worker RPCs | UI | `documentos_fiscais_pendentes` | ATENÇÃO stub |
+| Doc fiscal status | fiscal | worker RPCs (`fiscal_marcar_*` / cancel) | UI | `documentos_fiscais_pendentes` | OK (stub removido) |
 | Pedido compra | purchases | actions OC | NF-e/remessa | `ordens_compra` | ATENÇÃO |
-| Cliente | customers | CustomerWriter (+ legado) | PDV/fin | `clientes` | ATENÇÃO |
-| Fornecedor | suppliers | actions + combobox + NF-e | produtos | `fornecedores` | **VIOLAÇÃO** inline |
+| Cliente | customers | CustomerWriter | PDV | `clientes` | OK (financeiro sem create) |
+| Fornecedor | suppliers | `createSupplier` (+ combobox via alias) + NF-e | produtos | `fornecedores` | ATENÇÃO (mitigado) |
 
 ---
 
@@ -110,9 +118,9 @@ Existem violações estruturais que **bloqueiam** Contabilidade, Intelligence e 
 | Venda→Cash A | trigger em `vendas_pagamentos` | **não** é orquestrador documentado no mapa | cash `saldo_atual` | n/a | fraca | cancel debita A |
 | Venda→E(c) | leitura | composição vendas+movs+AR+dev | — | — | reconstruível | — |
 | Venda→CR | v4 se parcial | INSERT `contas_receber` | financial | unique venda | parcial | cancel trata AR |
-| Venda→Fiscal | flag/enqueue | `fiscal_enfileirar_*` | fiscal | por venda | eventos | cancel **não** cancela fiscal |
+| Venda→Fiscal | flag/enqueue | `fiscal_enfileirar_*` | fiscal | por venda | eventos | cancel venda **não** cancela fiscal (comando `fiscal_cancelar_documento` separado) |
 
-**Escrita direta cross-domínio:** trigger sales→cash A (SSOT-002). Stub fiscal INSERT (SSOT-004).
+**Escrita direta cross-domínio:** trigger sales→cash A (SSOT-002). Stub fiscal INSERT **removido** (SSOT-004 fechado).
 
 ### Compra → Recebimento → Estoque → Financeiro
 
@@ -130,7 +138,7 @@ Existem violações estruturais que **bloqueiam** Contabilidade, Intelligence e 
 |----------|------------|------------|
 | Cancel | estoque +, cash A −, AR, auditoria | Não sincroniza cache via `sincronizar_saldo_cache` |
 | Devolver C3 | estoque +, sync cache, desembolso | Modelo alinhado a E(c) |
-| Fiscal | inalterado | Risco de doc autorizado órfão |
+| Fiscal | inalterado pelo cancel venda | Cancel fiscal = comando explícito (`fiscal_cancelar_documento` / Focus cancelado → `fiscal_marcar_cancelado`) |
 
 ---
 
@@ -160,7 +168,7 @@ Existem violações estruturais que **bloqueiam** Contabilidade, Intelligence e 
 | Liquidação AR | RPC | sim | liquidação | valores | caixa/origem | — | — |
 | AP NF-e | confirm | sim | insert | — | nfe id | — | — |
 | AP/CR manual | app/comando | parcial | insert | — | **opcional** | descricao | — |
-| Fiscal stub | INSERT app | fraco | doc | — | payload stub | — | — |
+| Fiscal enqueue/cancel | RPC service_role | sim | status/eventos | antes→depois | venda/doc | justificativa cancel | — |
 
 Logs técnicos (Sentry/edge) **não** substituem as lacunas de origem em AR/AP manuais nem o cache A.
 
@@ -210,39 +218,28 @@ Logs técnicos (Sentry/edge) **não** substituem as lacunas de origem em AR/AP m
 | **Menor correção** | Guard na confirm: se valor da nota > 0 e zero duplicatas → rejeitar **ou** criar AP única com origem; documentar remessa/OC como “sem título” |
 | **Teste** | Confirm NF-e sem duplicatas falha ou cria 1 AP; com duplicatas N APs |
 
-### SSOT-004
+### SSOT-004 — **FECHADO** (sprint GO CONDICIONAL)
 
 | Campo | Conteúdo |
 |-------|----------|
-| **Severidade** | **P1** |
-| **Evidência** | `pdv-importados/app/gerente/financeiro/actions.ts:191-201` INSERT `documentos_fiscais_pendentes` |
-| **Regra afetada** | Fiscal só via RPC enqueue |
-| **Fonte atual** | Action stub + GRANT INSERT residual |
-| **Canônica** | `fiscal_enfileirar_documento_venda` |
-| **Impacto** | Doc sem payload real; Central Fiscal herdaria atalho |
-| **Cenário** | Gerente chama action → fila com `NFC_E_STUB` |
-| **Menor correção** | Remover export / dead-code + revoke INSERT authenticated se seguro |
-| **Teste** | Guard: zero `.from('documentos_fiscais_pendentes').insert` no app |
+| **Severidade** | P1 → fechado |
+| **Correção** | Removido `enfileirarDocFiscalStub`; mig `20261007161220` REVOKE INSERT; gate `check-entity-ssot-boundary.mjs` |
+| **Canônica** | só `fiscal_enfileirar_*` / worker RPCs |
 
-### SSOT-005
+### SSOT-005 — **MITIGADO**
 
 | Campo | Conteúdo |
 |-------|----------|
-| **Severidade** | **P2** |
-| **Evidência** | `FornecedorCombobox.tsx` → create inline; `check-entity-ssot-boundary.mjs` warn |
-| **Regra** | entity-ssot suppliers |
-| **Menor correção** | Link para `/admin/fornecedores` |
-| **Pode ser depois** | Sim |
+| **Severidade** | P2 → mitigado |
+| **Correção** | Modal/combobox grava via `createSupplier` → `salvarFornecedorAction`; rule entity-ssot atualizada |
+| **Residual** | Preferir `/admin/fornecedores` para navegação; não replicar atalho em outras telas |
 
-### SSOT-006
+### SSOT-006 — **FECHADO**
 
 | Campo | Conteúdo |
 |-------|----------|
-| **Severidade** | **P2** |
-| **Evidência** | `gerente/financeiro/actions.ts:25-59` INSERT `clientes` |
-| **Regra** | entity-ssot customers (D-F1) |
-| **Menor correção** | Remover função morta |
-| **Pode ser depois** | Sim (sem callers UI) |
+| **Severidade** | P2 → fechado |
+| **Correção** | Removido `criarCliente` + `validarCriarClienteInput` de `gerente/financeiro`; gate entity-ssot |
 
 ### SSOT-007
 
@@ -274,8 +271,8 @@ Ver seção “Pode ser corrigido posteriormente” (D-P3, linha estoque zero, d
 
 ## Próximo passo recomendado (fora desta missão)
 
-1. PR mínimo SSOT-001 + SSOT-002 (caixa/painel).
-2. PR SSOT-003 (política AP na entrada) antes de Importações.
-3. PR SSOT-004 (remover stub fiscal).
-4. Atualizar `MAPA_DOMINIOS_REGRAS_NEGOCIO.md` com writers reais e UX-03 parcial.
-5. Só então reavaliar **GO** para módulos grandes.
+1. **Reality Check** Products→Cash→Financial (invariantes E(c)/painel + origem AP).
+2. PR mínimo SSOT-001 + SSOT-002 (caixa/painel).
+3. PR SSOT-003 (política AP na entrada) antes de Importações.
+4. Aplicar mig `20261007161220_fiscal_cancelado_ssot.sql` no remoto Jinlong (fora deste sprint — só validação local).
+5. Reavaliar **GO pleno** para módulos grandes só após 1–3.
