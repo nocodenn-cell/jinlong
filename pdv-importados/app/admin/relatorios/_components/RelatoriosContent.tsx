@@ -6,9 +6,22 @@
  */
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChartCard, MetricCard, PageHeader, SectionCard } from '@/components/ui/admin-v2'
+import {
+  ChartCard,
+  ExecutiveAnalyticsHubNav,
+  ExecutivePageHeader,
+  MetricCard,
+  SectionCard,
+  StatusBadge,
+} from '@/components/ui/admin-v2'
+import {
+  isExecutiveRelatoriosView,
+  parseExecutiveView,
+  type ExecutiveRelatoriosViewId,
+  type ExecutiveViewId,
+} from '@/lib/navigation/executiveViews'
 import { EmptyState, ErrorState } from '@/components/ui/feedback'
 import { formatBRL, formatPercent } from '@/lib/format/money'
 import { formatDayMonthInLocale, formatDateTimeOrDash } from '@/lib/format/datetime'
@@ -590,18 +603,30 @@ function chartLabelFromYmd(ymd: string, locale: string): string {
   return formatDayMonthInLocale(new Date(y, m - 1, d), locale)
 }
 
+const EXEC_VIEW_TITLE: Record<ExecutiveRelatoriosViewId, string> = {
+  'vendas-caixas': 'Vendas & Caixas',
+  'dre-financeiro': 'DRE & Financeiro',
+  'produtos-estoque': 'Produtos & Estoque',
+  'crm-auditoria': 'CRM & Auditoria',
+}
+
 export function RelatoriosContent({
   dados,
   labels,
   initialTab,
+  initialView,
 }: {
   dados: RelatoriosDados
   labels: RelatoriosLabels
   initialTab?: string
+  /** Aba executiva via `?view=` (Fase 1 — hub analytics). */
+  initialView?: string
 }) {
   const router = useRouter()
   const [tab, setTab] = useState<RelatoriosTabId>(() => parseRelatoriosTab(initialTab))
   const [kardexAlvo, setKardexAlvo] = useState<KardexAlvo | null>(null)
+  const executiveView: ExecutiveViewId = parseExecutiveView(initialView)
+  const activeExecView = isExecutiveRelatoriosView(executiveView) ? executiveView : null
 
   useEffect(() => {
     setTab(parseRelatoriosTab(initialTab))
@@ -640,15 +665,18 @@ export function RelatoriosContent({
       ate: dados.periodo.ate,
     })
     if (next !== 'visao') q.set('tab', next)
+    if (activeExecView) q.set('view', activeExecView)
     router.replace(`${ROUTES.admin.relatorios}?${q.toString()}`, { scroll: false })
   }
 
+  const pageTitle = activeExecView ? EXEC_VIEW_TITLE[activeExecView] : labels.titulo
+
   return (
-    <div className="admin-v2-page">
-      <PageHeader
-        title={labels.titulo}
+    <div className="admin-v2-page" data-executive-view={activeExecView ?? 'legado'}>
+      <ExecutivePageHeader
+        title={pageTitle}
         subtitle={periodoSubtitle}
-        actions={
+        primaryActions={
           <button
             type="button"
             className="admin-v2-btn-secondary admin-v2-print-hide"
@@ -657,7 +685,28 @@ export function RelatoriosContent({
             {labels.filtros.imprimir}
           </button>
         }
+        secondaryActions={[
+          { id: 'visao-geral', label: 'Visão Geral', href: ROUTES.admin.dashboard },
+          { id: 'export-csv', label: 'Exportar (via filtros)', disabled: true },
+        ]}
       />
+
+      <Suspense fallback={null}>
+        <ExecutiveAnalyticsHubNav activeView={activeExecView ?? undefined} />
+      </Suspense>
+
+      {activeExecView ? (
+        <div
+          className="mb-4 flex flex-wrap items-center gap-2 rounded-card border border-[var(--color-border)] px-3 py-2 text-small text-fg-subtle"
+          data-testid="executive-view-fase1-banner"
+        >
+          <StatusBadge tone="neutral">Fase 1</StatusBadge>
+          <span>
+            Layout executivo ativo para <strong className="text-fg">{EXEC_VIEW_TITLE[activeExecView]}</strong>.
+            Conteúdo de domínio completo na Fase 2 — abaixo segue o hub analítico existente.
+          </span>
+        </div>
+      ) : null}
 
       {dados.rpcErro ? (
         <ErrorState title={labels.erroTitulo} description={dados.rpcErro} dense className="mb-6" />

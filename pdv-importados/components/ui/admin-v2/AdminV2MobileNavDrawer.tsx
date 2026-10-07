@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Menu, X } from 'lucide-react'
@@ -137,12 +137,14 @@ export function AdminV2MobileNavDrawer({
               </button>
             </div>
 
-            <SidebarNav
-              admin={m.admin}
-              chineseLanguage={chineseLanguage}
-              stockAlertCount={stockAlertCount}
-              showAdminOnlyItems={showAdminOnlyItems}
-            />
+            <Suspense fallback={<nav className="p-3" aria-busy="true" aria-label="Navegação" />}>
+              <SidebarNav
+                admin={m.admin}
+                chineseLanguage={chineseLanguage}
+                stockAlertCount={stockAlertCount}
+                showAdminOnlyItems={showAdminOnlyItems}
+              />
+            </Suspense>
             <SidebarUserFooter session={session} />
           </div>
         </div>
