@@ -55,8 +55,11 @@ jobs:
 
       - name: Install PostgreSQL client
         run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client
+          set -euo pipefail
+          # Timeout evita hang indefinido em apt mirrors (visto em tip 9334577d
+          # — step preso >20min em "Install PostgreSQL client").
+          sudo timeout 120 apt-get update -y
+          sudo timeout 180 apt-get install -y --no-install-recommends postgresql-client
 
       - name: Install dependencies (workspace root)
         run: npm ci
