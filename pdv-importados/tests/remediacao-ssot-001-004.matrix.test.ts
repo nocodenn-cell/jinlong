@@ -42,12 +42,13 @@ describe('SSOT-002 — writers de cache derivados de E(c)', () => {
   })
 
   it('cancelar_venda guarda por E(c) e sincroniza cache', () => {
-    expect(fix).toContain('internal.valor_sistema_dinheiro(v_caixa.id)')
-    expect(fix).toContain('PERFORM internal.sincronizar_saldo_cache(v_caixa.id)')
-    expect(fix).toContain('CANCELAR_VENDA_SALDO_CAIXA_INSUFICIENTE')
-    expect(fix).not.toContain(
-      'SET saldo_atual = ROUND(c.saldo_atual - v_valor_estornado',
-    )
+    const start = fix.indexOf('CREATE OR REPLACE FUNCTION public.cancelar_venda_transacional')
+    const end = fix.indexOf('$function$;', start)
+    const body = fix.slice(start, end)
+    expect(body).toContain('internal.valor_sistema_dinheiro(v_caixa.id)')
+    expect(body).toContain('PERFORM internal.sincronizar_saldo_cache(v_caixa.id)')
+    expect(body).toContain('CANCELAR_VENDA_SALDO_CAIXA_INSUFICIENTE')
+    expect(body).not.toContain('UPDATE public.caixas c SET saldo_atual')
   })
 
   it('invariante documentado: esperado = E(C)', () => {
