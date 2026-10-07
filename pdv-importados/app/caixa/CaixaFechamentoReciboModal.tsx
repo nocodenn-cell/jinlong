@@ -5,6 +5,8 @@ import type { Mensagens } from "@/i18n/getMessages"
 import { Button } from "@/components/ui/button"
 import { formatDecimalBRL } from "@/lib/format/money"
 import { imprimirNoIframe } from "@/lib/print/imprimirNoIframe"
+import { CaixaFechamentoFormasPanel } from "@/app/caixa/CaixaFechamentoFormasPanel"
+import type { FechamentoFormaLinha } from "@/app/caixa/fechamentoPorFormaTypes"
 
 export type ComprovanteFechamento = {
   lojaNome: string
@@ -19,6 +21,8 @@ export type ComprovanteFechamento = {
   valorSistemaDinheiro: number
   valorContado: number
   diferenca: number
+  formas: FechamentoFormaLinha[] | null
+  formasError: string | null
 }
 
 type Props = Readonly<{
@@ -138,6 +142,16 @@ export function CaixaFechamentoReciboModal({ comprovante: c, m, onClose }: Props
                   {moeda} {formatDecimalBRL(Math.abs(c.diferenca))}
                 </span>
               </div>
+            </div>
+
+            <div className="border-t border-dashed border-border pt-3">
+              <CaixaFechamentoFormasPanel
+                linhas={c.formas}
+                erro={c.formasError}
+                m={m}
+                moeda={moeda}
+                compact
+              />
             </div>
 
             <div className="comp-footer border-t border-dashed border-border pt-3 text-center text-caption text-fg-muted">

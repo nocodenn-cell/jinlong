@@ -165,6 +165,13 @@ export async function fecharCaixaOperador(input: {
   return fecharCaixaOperadorImpl(input)
 }
 
+export async function listarFechamentoFormasCaixa(caixaId: string) {
+  const { listarFechamentoFormasCaixaImpl } = await import(
+    '@/app/caixa/server/fechamentoPorForma.impl'
+  )
+  return listarFechamentoFormasCaixaImpl(caixaId)
+}
+
 export async function validarGerenteDesconto(input: {
   senha: string
   lojaId?: string
