@@ -68,7 +68,8 @@ Deno.test("P0 cancelado -> fiscal_marcar_cancelado; NUNCA fiscal_marcar_emitido 
   await applyFocusRemoteState(supabase, doc(), estado, c);
   assertEquals(supabase.rpcCalls.length, 1);
   assertEquals(supabase.rpcCalls[0].fn, "fiscal_marcar_cancelado");
-  assertEquals(supabase.rpcCalls.some((c) => c.fn === "fiscal_marcar_emitido"), false);
+  const rpcFns: string[] = supabase.rpcCalls.map((call: { fn: string }) => call.fn);
+  assertEquals(rpcFns.includes("fiscal_marcar_emitido"), false);
   assertEquals(c.cancelled, ["doc-1"]);
   assertEquals(c.emitted, []);
 });
