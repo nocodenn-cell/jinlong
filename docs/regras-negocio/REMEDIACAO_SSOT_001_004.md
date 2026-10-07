@@ -17,7 +17,9 @@ SSOT-001…004 estão resolvidos com **uma semântica** por domínio:
 | Aquisição | Obrigação só na NF-e com duplicatas; OC/remessa = físico sem título, rastreável |
 | Enqueue fiscal | Só RPC `fiscal_enfileirar_*`; INSERT `authenticated` revogado |
 
-Importações / Contábil / Intelligence **não** são implementados neste PR — recomendação pós-merge: **Importações → Contábil → Intelligence**.
+Importações / Contábil / Intelligence **não** são implementados neste PR.
+
+**Próxima frente imediata (pós-gate, 2026-10-07):** ver [PROXIMA_FASE_POS_GATE.md](./PROXIMA_FASE_POS_GATE.md) — **Fechamento de caixa por forma de pagamento** (capacidade existente), não um módulo ERP novo. Ordem futura de módulos grandes permanece **Importações → Contábil → Intelligence** *depois* das capacidades operacionais básicas.
 
 ---
 

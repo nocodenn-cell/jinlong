@@ -2,11 +2,13 @@
 
 | Campo | Valor |
 |--------|--------|
-| **Status** | Canônico — pré-requisito para novos módulos grandes |
+| **Status** | Canônico — pós-gate SSOT-001…004 (**GO**) |
 | **Data** | 2026-10-07 |
 | **Governança** | [GOVERNANCA_REGRAS_NEGOCIO.md](./GOVERNANCA_REGRAS_NEGOCIO.md) |
 | **Confrontação** | Código (`pdv-importados`, `shared-core`, `backend/supabase`) + ADRs 005–012 + inventários `docs/architecture/` |
-| **Auditoria SSoT (2026-10-07)** | [AUDITORIA_SSoT_DOMINIOS.md](./AUDITORIA_SSoT_DOMINIOS.md) · [INVENTARIO_IMPLEMENTACAO_DOMINIOS.md](./INVENTARIO_IMPLEMENTACAO_DOMINIOS.md) — **NO-GO** módulos grandes até SSOT-001…004 |
+| **Auditoria SSoT (histórico)** | [AUDITORIA_SSoT_DOMINIOS.md](./AUDITORIA_SSoT_DOMINIOS.md) · [INVENTARIO_IMPLEMENTACAO_DOMINIOS.md](./INVENTARIO_IMPLEMENTACAO_DOMINIOS.md) |
+| **Estado pós-gate** | [ESTADO_POS_GATE_SSoT.md](./ESTADO_POS_GATE_SSoT.md) · remediação [REMEDIACAO_SSOT_001_004.md](./REMEDIACAO_SSOT_001_004.md) — **GO**; módulos grandes ainda exigem ADR + checklist |
+| **Próxima capacidade** | [PROXIMA_FASE_POS_GATE.md](./PROXIMA_FASE_POS_GATE.md) |
 | **Legenda de maturidade** | **Operacional** = dono ativo em produção · **Parcial** = artefato existe, dono ainda misturado · **Planejado** = domínio futuro sem SSoT próprio |
 
 ---
@@ -98,19 +100,19 @@ Estrutura de cada linha:
 | Campo | Conteúdo |
 |-------|----------|
 | **Entidades** | `caixas`, `movimentacoes_caixa` |
-| **Dados críticos** | Turno aberto/fechado, `saldo_atual` (físico A), esperado \(E(c)\) |
-| **Dono** | **cash** — ADR-009 · ADR-CAIXA-002 · UI `/caixa` |
-| **Regra canônica** | \(E(c)\) = `calcular_valor_sistema_dinheiro_caixa`; movs via `registrar_movimentacao` / aprovar / cancelar / estornar |
+| **Dados críticos** | Turno aberto/fechado; **\(E(c)\) = autoridade**; `saldo_atual` = **cache/projeção derivada** (não autoridade) |
+| **Dono** | **cash** — ADR-009 · ADR-CAIXA-002 · [SSOT_CAIXA_SALDO_CONTRATO.md](./SSOT_CAIXA_SALDO_CONTRATO.md) · UI `/caixa` |
+| **Regra canônica** | \(E(c)\) = `calcular_valor_sistema_dinheiro_caixa` / `internal.valor_sistema_dinheiro`; decisões (sangria, aprovação, liquidação AR que toca gaveta, cancel, guards) usam \(E(c)\); cache materializado por `sincronizar_saldo_cache` |
 | **Operações permitidas** | Abrir, fechar, sangria, suprimento, autorização gerente |
-| **Quem só consulta** | Relatórios de turno; Intelligence |
-| **Integrações** | ← sales (efeito físico em cancel/devolver); **não** owns AR/AP |
+| **Quem só consulta** | Relatórios de turno; painel (`saldo_pdv` = soma \(E(c)\)); Intelligence (read-only) |
+| **Integrações** | ← sales (efeito em cancel/devolver via sync de cache); **não** owns AR/AP |
 | **Eventos** | abertura, fechamento, movimentação |
 | **Consequências** | F: liquidez física ≠ saldo contábil/financeiro; Fi: não; E: não |
-| **Auditoria** | Movimentações com aprovação; fechamento cego |
-| **Maturidade** | **Operacional** |
+| **Auditoria** | Movimentações com aprovação; fechamento cego (hoje só dinheiro — ver Onda 3) |
+| **Maturidade** | **Operacional** (autoridade \(E(c)\) fechada no gate; fechamento por forma = capacidade pendente) |
 | **Inventário** | [inventario_cash_autoridade.md](../architecture/inventario_cash_autoridade.md) |
 
-**Proibido:** Usar `saldo_atual` como esperado contábil; misturar AR/AP no domínio cash.
+**Proibido:** Usar `saldo_atual` como autoridade financeira ou esperado contábil quando \(E(c)\) é a autoridade; misturar AR/AP no domínio cash; alterar `calcular_valor_sistema_dinheiro_caixa` para incluir PIX/cartão (Gate 3 — formas não físicas não tocam a gaveta).
 
 ---
 
@@ -142,16 +144,16 @@ Estrutura de cada linha:
 | **Entidades** | `documentos_fiscais_pendentes`, eventos/timeline/DLQ, `fiscal_provider_config` (quando existir), campos fiscais em `produtos`/`lojas` |
 | **Dados críticos** | Status do documento, chave/protocolo, erros, classificação fiscal usada na emissão |
 | **Dono** | **fiscal** — worker `backend/supabase/functions/fiscal-worker`; UI fila em `/admin/financeiro?tab=fiscal` |
-| **Regra canônica** | Fila + state machine + Focus como **adapter**; DTOs Focus não vazam para sales/PDV |
-| **Operações permitidas** | Enfileirar, claim, emitir, consultar, reprocessar, DLQ |
+| **Regra canônica** | Enqueue **somente** via RPC canônica (`fiscal_enfileirar_*`); **INSERT direto por `authenticated` proibido** (REVOKE — SSOT-004); fila + state machine + Focus como **adapter**; cancel via `fiscal_cancelar_documento` / `fiscal_marcar_cancelado` |
+| **Operações permitidas** | Enfileirar (RPC), claim, emitir, consultar, reprocessar, DLQ, cancelar documento |
 | **Quem só consulta** | Financeiro (aba); Intelligence |
-| **Integrações** | ← sales (enqueue pós-venda); provider externo (Focus) |
+| **Integrações** | ← sales (enqueue pós-venda via RPC); provider externo (Focus); worker com `service_role` |
 | **Eventos** | enqueued, processing, authorized, rejected, cancelled |
 | **Consequências** | F: indireta; Fi: **é** o dono; E: não |
 | **Auditoria** | `documentos_fiscais_eventos`, correlation id, DLQ |
-| **Maturidade** | **Parcial / operacional base** (worker pode estar inativo sem Vault — ver remediação fiscal) |
+| **Maturidade** | **Parcial / operacional base** (emissão SEFAZ real / Vault / reaper ainda fora do piloto) |
 
-**Proibido:** Segundo motor fiscal na UI de vendas; misturar regra Focus no domínio de venda.
+**Proibido:** Segundo motor fiscal na UI de vendas; INSERT `authenticated` na fila; misturar regra Focus no domínio de venda; stub de enqueue na UI.
 
 ---
 
@@ -169,13 +171,14 @@ Estrutura de cada linha:
 | Campo | Conteúdo |
 |-------|----------|
 | **Entidades** | `ordens_compra`, `ordens_compra_itens`; recebimento via remessa / NF-e |
-| **Dados críticos** | Situação do pedido de compra, itens, vínculo com entrada |
+| **Dados críticos** | Situação do pedido de compra, itens, vínculo com entrada; **nascimento da obrigação financeira** |
 | **Dono atual** | **Parcial** — UI/legado em `gerente/compras` + estoque recebimento; **não** há ADR de Compras dedicado |
-| **Regra canônica hoje** | OC: mig. `109`/`110`; NF-e compra: `importacoes_nfe` + `confirmar_importacao_nfe` (efeito estoque + AP) |
+| **Contrato econômico (pós SSOT-003)** | `OC` → `recebimento físico` → `reconhecimento da obrigação` → `AP` → `liquidação`. **Recebimento físico não gera AP automaticamente.** NF-e com consequência econômica > 0 **sem duplicatas** ⇒ rejeita (`IMPORT_NFE_OBRIGACAO_SEM_DUPLICATA`). OC/remessa sem obrigação reconhecida ⇒ estoque/custo físico **sem** AP fictícia |
+| **Regra canônica hoje** | OC: mig. `109`/`110`; NF-e: `importacoes_nfe` + `confirmar_importacao_nfe` (estoque + AP **somente** com duplicatas); ver [SSOT_AQUISICAO_OBRIGACAO_FINANCEIRA.md](./SSOT_AQUISICAO_OBRIGACAO_FINANCEIRA.md) |
 | **Lacuna** | `importacoes_nfe.ordem_compra_id` FK **existe** (mig 20260918); `remessas` ainda vínculo textual (`origem_ref`) — dívida UX-03 residual; Central de Compras futura deve **eleger dono** sem duplicar AP/estoque |
-| **Maturidade** | **Parcial** |
+| **Maturidade** | **Parcial** (contrato econômico fechado; UX de vínculo remessa ainda aberta) |
 
-**Gate para Central de Compras / Demanda Comercial:** não criar saldo, AP ou custo paralelo; solicitar entrada ao Estoque e título ao Financeiro.
+**Gate para Central de Compras / Demanda Comercial:** não criar saldo, AP ou custo paralelo; solicitar entrada ao Estoque e título ao Financeiro; respeitar o pipeline OC→físico→reconhecimento→AP.
 
 ---
 
@@ -251,8 +254,8 @@ Antes de implementar, atualizar este mapa com writers/RPCs reais e ADR dedicado.
 | Disponibilidade | inventory | ≈ `quantidade_atual` | PDV |
 | Situação venda | sales | `vendas.status` | fiscal, financial |
 | Pagamentos da venda | sales | `vendas_pagamentos` | cash (E(c) lê), financial |
-| Esperado caixa \(E(c)\) | cash | RPC `calcular_valor_sistema_dinheiro_caixa` | fechamento |
-| `saldo_atual` gaveta | cash | contador físico A | UI caixa |
+| Esperado caixa \(E(c)\) — **autoridade** | cash | RPC `calcular_valor_sistema_dinheiro_caixa` | painel, guards, fechamento dinheiro |
+| `saldo_atual` gaveta — **cache** | cash | projeção materializada de \(E(c)\) | UI caixa (exibição); **não** decidir |
 | Contas a receber | financial | `contas_receber` | contábil, intelligence |
 | Contas a pagar | financial | `contas_pagar` | contábil, intelligence |
 | Documento fiscal | fiscal | `documentos_fiscais_*` | financial UI, intelligence |
@@ -288,6 +291,8 @@ Apps **chamam** o orquestrador; **não** reimplementam a política no TypeScript
 | Dual-layer gerente/admin | Actions em `gerente/*` + UI `/admin/*` | vários | Camada de dados OK; UI nova só em `/admin/*` |
 | Intelligence paralelo | Risco de métrica como “verdade” | intelligence × todos | Read-only + Número Explicável |
 | `regras_preco` | Motor legado fora da cadeia atacado | products/pricing | Não reativar como SSoT |
+| Onda 3 | Fechamento só dinheiro; PIX/cartão sem conferência | cash × sales | Capacidade pendente — [ONDA3](../ONDA3_DIAGNOSTICO_FECHAMENTO_CAIXA.md); **não** alterar \(E(c)\) dinheiro |
+| SSOT-004 grants | INSERT fila fiscal | fiscal | **FECHADO** (REVOKE authenticated); enqueue só RPC |
 
 ---
 
