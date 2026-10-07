@@ -11,4 +11,10 @@ export const CATALOGO_HUB_TABS: readonly HubTabDef[] = [
     match: 'prefix',
   },
   { id: 'marcas', label: 'Marcas', href: ROUTES.admin.marcasProdutos, match: 'prefix' },
+  {
+    id: 'etiquetas',
+    label: 'Etiquetas',
+    href: ROUTES.admin.estoqueImprimirEtiquetas,
+    match: 'prefix',
+  },
 ] as const
