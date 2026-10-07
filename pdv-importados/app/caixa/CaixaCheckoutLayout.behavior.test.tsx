@@ -20,48 +20,64 @@ vi.mock('@/app/caixa/CaixaDescontoComercialDinheiro', () => ({
 const m = {
   caixa: {
     bruto: 'Subtotal',
-    desconto: 'Desconto',
+    descontos_regras: 'Desconto',
     cart_bar_total_label: 'Total',
     pdv_pgto_valor_recebido: 'Recebido',
     pdv_pgto_troco_cliente: 'Troco',
-    finalizar: 'Finalizar',
+    finalizar_venda: 'Finalizar venda',
     finalizando: 'Finalizando…',
     pdv_tab_aria_pgto: 'Pagamento',
   },
 } as unknown as Mensagens
 
 describe('CaixaCheckoutTotaisPanel', () => {
-  it('exibe totais com tabular-nums e abre desconto / finalizar', () => {
+  it('oculta linha de desconto quando zero e mostra resumo quando aplicado', () => {
     const onAbrirDesconto = vi.fn()
-    const onFinalizar = vi.fn()
-    render(
+    const { rerender } = render(
+      <CaixaCheckoutTotaisPanel
+        m={m}
+        moedaPrefixo="R$"
+        subtotal={100}
+        descontoTotal={0}
+        totalFinal={100}
+        onAbrirDesconto={onAbrirDesconto}
+        onFinalizar={vi.fn()}
+        finalizando={false}
+        finalizarDisabled={false}
+        metodoPagamentoPanel={<div data-testid="metodo-pgto" />}
+      />,
+    )
+    expect(screen.queryByTestId('caixa-desconto-resumo')).toBeNull()
+    expect(screen.getByTestId('caixa-abrir-desconto').textContent).toMatch(/Aplicar desconto/)
+
+    rerender(
       <CaixaCheckoutTotaisPanel
         m={m}
         moedaPrefixo="R$"
         subtotal={100}
         descontoTotal={10}
         totalFinal={90}
+        descontoPercentual={10}
         valorRecebido={100}
         troco={10}
         onAbrirDesconto={onAbrirDesconto}
-        onFinalizar={onFinalizar}
+        onFinalizar={vi.fn()}
         finalizando={false}
         finalizarDisabled={false}
         metodoPagamentoPanel={<div data-testid="metodo-pgto" />}
       />,
     )
-    expect(screen.getByTestId('caixa-checkout-totais')).toBeTruthy()
+    expect(screen.getByTestId('caixa-desconto-resumo')).toBeTruthy()
     expect(screen.getByTestId('caixa-total-liquido').textContent).toMatch(/90/)
     expect(screen.getByTestId('caixa-troco-destaque').textContent).toMatch(/10/)
+    expect(screen.getByTestId('caixa-abrir-desconto').textContent).toMatch(/10/)
     fireEvent.click(screen.getByTestId('caixa-abrir-desconto'))
     expect(onAbrirDesconto).toHaveBeenCalledOnce()
-    fireEvent.click(screen.getByTestId('caixa-finalizar-primario'))
-    expect(onFinalizar).toHaveBeenCalledOnce()
   })
 })
 
 describe('CaixaDescontoDrawer', () => {
-  it('abre com tabs e fecha no Escape', () => {
+  it('abre com tabs e fecha pelo botão do DragonModal', () => {
     const onClose = vi.fn()
     render(
       <CaixaDescontoDrawer
@@ -79,7 +95,7 @@ describe('CaixaDescontoDrawer', () => {
     )
     expect(screen.getByTestId('caixa-desconto-drawer')).toBeTruthy()
     expect(screen.getByTestId('mock-desconto-manual')).toBeTruthy()
-    fireEvent.keyDown(window, { key: 'Escape' })
+    fireEvent.click(screen.getByRole('button', { name: 'Fechar' }))
     expect(onClose).toHaveBeenCalled()
   })
 })

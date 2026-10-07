@@ -5,17 +5,14 @@
  * (3) ajuda (F1) e menu Operações exibem exatamente o que o mapa define; (4) guards de campo de texto/diálogo
  * continuam valendo.
  */
-import React, { act } from 'react'
-import { createRoot, type Root } from 'react-dom/client'
-import { flushSync } from 'react-dom'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import React from 'react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { act, cleanup, render, screen } from '@testing-library/react'
 import { getMessages } from '@/i18n/getMessages'
 import { CAIXA_ATALHOS, atalhoCombina, atalhoRotulo, type CaixaAtalho, type CaixaTecla } from './caixaAtalhos'
 import { useCaixaKeyboardShortcuts } from './hooks/useCaixaKeyboardShortcuts'
 import { CaixaKeyboardShortcutsReference } from './CaixaKeyboardShortcutsReference'
 import { CaixaPdvOperacoesMenu } from './CaixaPdvOperacoesMenu'
-
-;(globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
 const m = getMessages('pt')
 
@@ -77,17 +74,8 @@ describe('integridade do mapa', () => {
   })
 })
 
-let container: HTMLDivElement
-let root: Root
-
-beforeEach(() => {
-  container = document.createElement('div')
-  document.body.appendChild(container)
-  root = createRoot(container)
-})
 afterEach(() => {
-  flushSync(() => root.unmount())
-  container.remove()
+  cleanup()
   vi.unstubAllGlobals()
 })
 
@@ -136,21 +124,23 @@ function montarHandler() {
     })
     return <input data-testid="campo" />
   }
-  flushSync(() => root.render(<Harness />))
+  render(<Harness />)
   return cb
 }
 
 function tecla(t: CaixaTecla, code?: string, alvo: EventTarget = window) {
-  alvo.dispatchEvent(
-    new KeyboardEvent('keydown', {
-      code: code ?? (typeof t.code === 'string' ? t.code : t.code[0]),
-      ctrlKey: t.ctrl === true,
-      shiftKey: t.shift === true,
-      altKey: t.alt === true,
-      metaKey: t.meta === true,
-      bubbles: true,
-    }),
-  )
+  act(() => {
+    alvo.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        code: code ?? (typeof t.code === 'string' ? t.code : t.code[0]),
+        ctrlKey: t.ctrl === true,
+        shiftKey: t.shift === true,
+        altKey: t.alt === true,
+        metaKey: t.meta === true,
+        bubbles: true,
+      }),
+    )
+  })
 }
 
 describe('handler consome o mapa: cada atalho executa a ação certa', () => {
@@ -195,8 +185,10 @@ describe('handler consome o mapa: cada atalho executa a ação certa', () => {
 
   it('NÃO dispara com o foco em campo de texto', () => {
     const cb = montarHandler()
-    const campo = container.querySelector('[data-testid="campo"]') as HTMLInputElement
-    campo.focus()
+    const campo = screen.getByTestId('campo')
+    act(() => {
+      campo.focus()
+    })
     for (const [, atalho] of casos) tecla(atalho[0], undefined, campo)
     CAIXA_ATALHOS.metodoPagamento.forEach((a) => tecla(a[0], undefined, campo))
     for (const fn of Object.values(cb)) expect(fn as ReturnType<typeof vi.fn>).not.toHaveBeenCalled()
@@ -205,9 +197,7 @@ describe('handler consome o mapa: cada atalho executa a ação certa', () => {
 
 describe('ajuda e menu exibem o que o mapa define', () => {
   it('ajuda (F1) lista cada atalho com o rótulo do mapa; Alt+C = cliente, Alt+B = pagamento', () => {
-    act(() => {
-      root.render(<CaixaKeyboardShortcutsReference m={m} open onOpenChange={() => {}} />)
-    })
+    render(<CaixaKeyboardShortcutsReference m={m} open onOpenChange={() => {}} />)
     const linhas = Array.from(document.querySelectorAll('kbd')).map((k) => k.closest('.grid'))
     const porTecla = new Map<string, string>()
     for (const l of linhas) {
@@ -234,9 +224,7 @@ describe('ajuda e menu exibem o que o mapa define', () => {
     for (const [atalho, label] of esperadas) {
       expect(porTecla.get(atalhoRotulo(atalho)), atalhoRotulo(atalho)).toBe(label)
     }
-    // Nenhuma entrada antiga "Alt+B / Alt+C" atribuindo pagamento ao Alt+C
     expect(porTecla.has('Alt+B / Alt+C')).toBe(false)
-    // cada teclado listado na ajuda existe no mapa (sem atalho fantasma)
     const rotulosDoMapa = new Set(acoes().map(([, a]) => atalhoRotulo(a)))
     const metodos = CAIXA_ATALHOS.metodoPagamento.map(atalhoRotulo).join(' / ')
     for (const k of porTecla.keys()) {
@@ -250,38 +238,36 @@ describe('ajuda e menu exibem o que o mapa define', () => {
       return 0
     })
     const noop = () => {}
+    render(
+      <CaixaPdvOperacoesMenu
+        m={m}
+        idioma="pt"
+        variant="classic"
+        carregandoRegras={false}
+        caixaStatus={null}
+        caixaAberto
+        movimentandoCaixa={false}
+        finalizando={false}
+        validandoGerente={false}
+        gerenteValidadoAte={null}
+        podeReimprimir
+        onAbrirSuprimento={noop}
+        onAbrirSangria={noop}
+        onValidarGerente={noop}
+        onHistorico={noop}
+        onImprimirUltima={noop}
+        onFecharCaixa={noop}
+        onAbrirCaixa={noop}
+        onConsultaRapida={noop}
+        onSelecionarCliente={noop}
+        movimentacoesPendentes={[]}
+        onResolverPendencia={noop}
+      />,
+    )
+    const gatilho = screen.getByRole('button', { name: m.caixa.rail_titulo_operacoes })
     act(() => {
-      root.render(
-        <CaixaPdvOperacoesMenu
-          m={m}
-          idioma="pt"
-          variant="classic"
-          carregandoRegras={false}
-          caixaStatus={null}
-          caixaAberto
-          movimentandoCaixa={false}
-          finalizando={false}
-          validandoGerente={false}
-          gerenteValidadoAte={null}
-          podeReimprimir
-          onAbrirSuprimento={noop}
-          onAbrirSangria={noop}
-          onValidarGerente={noop}
-          onHistorico={noop}
-          onImprimirUltima={noop}
-          onFecharCaixa={noop}
-          onAbrirCaixa={noop}
-          onConsultaRapida={noop}
-          onSelecionarCliente={noop}
-          movimentacoesPendentes={[]}
-          onResolverPendencia={noop}
-        />,
-      )
+      gatilho.click()
     })
-    const gatilho = Array.from(container.querySelectorAll('button')).find(
-      (b) => b.textContent?.trim() === m.caixa.rail_titulo_operacoes,
-    ) as HTMLButtonElement
-    act(() => gatilho.click())
     const texto = document.body.textContent ?? ''
     for (const a of [
       CAIXA_ATALHOS.consultaRapida,
