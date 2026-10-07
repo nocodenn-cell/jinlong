@@ -255,6 +255,7 @@ Antes de implementar, atualizar este mapa com writers/RPCs reais e ADR dedicado.
 | Situação venda | sales | `vendas.status` | fiscal, financial |
 | Pagamentos da venda | sales | `vendas_pagamentos` | cash (E(c) lê), financial |
 | Esperado caixa \(E(c)\) — **autoridade** | cash | RPC `calcular_valor_sistema_dinheiro_caixa` | painel, guards, fechamento dinheiro |
+| Registrado por forma (PIX/cartões) | cash | RPC `calcular_valor_sistema_por_forma_caixa` (métrica `REGISTRADO_JINLONG`) | conferência de fechamento (não banco) |
 | `saldo_atual` gaveta — **cache** | cash | projeção materializada de \(E(c)\) | UI caixa (exibição); **não** decidir |
 | Contas a receber | financial | `contas_receber` | contábil, intelligence |
 | Contas a pagar | financial | `contas_pagar` | contábil, intelligence |
