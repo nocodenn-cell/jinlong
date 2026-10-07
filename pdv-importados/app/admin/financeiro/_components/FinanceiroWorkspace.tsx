@@ -12,7 +12,9 @@ import { FinanceiroContas } from './FinanceiroContas'
 import { FinanceiroRecebiveis } from './FinanceiroRecebiveis'
 import { FinanceiroConciliacao } from './FinanceiroConciliacao'
 import { FinanceiroPrimeiroUso } from './FinanceiroPrimeiroUso'
-import { FinanceiroQuickActions } from './FinanceiroQuickActions'
+import { FinanceiroAcoesRapidas } from './FinanceiroAcoesRapidas'
+import { useAdminV2Session } from '@/components/ui/admin-v2/AdminV2SessionContext'
+import { getMessages } from '@/i18n/getMessages'
 
 export type FinanceiroWorkspaceTab = 'resumo' | 'contas' | 'recebiveis' | 'conciliacao' | 'resultado'
 
@@ -65,12 +67,70 @@ export function FinanceiroPaginacao({ data, countKey }: { data:FinanceiroPainel;
 }
 
 export function FinanceiroWorkspace({ data, tab, de, ate }: { data:FinanceiroPainel; tab:FinanceiroWorkspaceTab; de:string; ate:string }) {
+ const { idioma } = useAdminV2Session()
+ const ui = getMessages(idioma).admin_ui
+ const contasLabels = {
+  saldosTitulo: ui.financeiro_contas_saldos_titulo,
+  saldoRegistrado: ui.financeiro_saldo_registrado,
+  saldoRegistradoHint: ui.financeiro_saldo_registrado_hint,
+  tipoBanco: ui.financeiro_tipo_banco,
+  tipoCaixa: ui.financeiro_tipo_caixa,
+  inativa: ui.financeiro_conta_inativa,
+  entradasPeriodo: ui.financeiro_entradas_periodo,
+  saidasPeriodo: ui.financeiro_saidas_periodo,
+  verExtrato: ui.financeiro_ver_extrato,
+  extratoTitulo: ui.financeiro_extrato_titulo,
+  colData: ui.financeiro_col_data,
+  colDesc: ui.financeiro_col_descricao,
+  colValor: ui.financeiro_col_valor,
+  colOrigem: ui.financeiro_col_origem,
+  colUsuario: ui.financeiro_col_usuario,
+  cadastrarTitulo: ui.financeiro_cadastrar_conta,
+  nomeConta: ui.financeiro_nome_conta,
+  tipoConta: ui.financeiro_tipo_conta,
+  dataInicial: ui.financeiro_data_inicial,
+  saldoInicial: ui.financeiro_saldo_inicial,
+  transferirTitulo: ui.financeiro_transferir_titulo,
+  vincularPdv: ui.financeiro_vincular_pdv,
+  vincularPdvHint: ui.financeiro_vincular_pdv_hint,
+  movimentoAvulso: ui.financeiro_movimento_avulso,
+  movimentoAvulsoHint: ui.financeiro_movimento_avulso_hint,
+  formasTitulo: ui.financeiro_formas_titulo,
+  formasHint: ui.financeiro_formas_hint,
+  formaCodigo: ui.financeiro_forma_codigo,
+  formaConta: ui.financeiro_forma_conta,
+  formaSemConta: ui.financeiro_forma_sem_conta,
+  salvarVinculo: ui.financeiro_salvar_vinculo,
+  inativar: ui.financeiro_inativar_conta,
+  inativarConfirm: ui.financeiro_inativar_confirm,
+  origemDoc: ui.financeiro_origem_doc,
+  semMovimentos: ui.financeiro_sem_movimentos,
+ }
+ const acoesLabels = {
+  faixaAria: ui.financeiro_acoes_aria,
+  registrarVenda: ui.financeiro_acao_registrar_venda,
+  receber: ui.financeiro_acao_receber,
+  pagar: ui.financeiro_acao_pagar,
+  transferir: ui.financeiro_acao_transferir,
+  vendaTitulo: ui.financeiro_acao_venda_titulo,
+  vendaTexto: ui.financeiro_acao_venda_texto,
+  vendaPdv: ui.financeiro_acao_venda_pdv,
+  vendaBuscar: ui.financeiro_acao_venda_buscar,
+  receberTitulo: ui.financeiro_acao_receber_titulo,
+  pagarTitulo: ui.financeiro_acao_pagar_titulo,
+  transferirTitulo: ui.financeiro_acao_transferir_titulo,
+  avulsoHint: ui.financeiro_acao_avulso_hint,
+  confirmarReceber: ui.financeiro_acao_confirmar_receber,
+  confirmarPagar: ui.financeiro_acao_confirmar_pagar,
+  confirmarTransferir: ui.financeiro_acao_confirmar_transferir,
+  saldoRegistrado: ui.financeiro_saldo_registrado_hint,
+ }
  return <div className="admin-v2-stack">
-  <FinanceiroQuickActions data={data} />
+  <FinanceiroAcoesRapidas data={data} labels={acoesLabels} />
   <FinanceiroPeriodo de={de} ate={ate} />
   {(tab==='resumo' || tab==='contas') ? <FinanceiroPrimeiroUso semContas={data.contas.length === 0} /> : null}
   {tab==='resumo' ? <FinanceiroResumo data={data} /> : null}
-  {tab==='contas' ? <><FinanceiroContas data={data} /><FinanceiroMovimentos data={data} /><FinanceiroPaginacao data={data} countKey="movimentos" /></> : null}
+  {tab==='contas' ? <><FinanceiroContas data={data} labels={contasLabels} /><FinanceiroMovimentos data={data} /><FinanceiroPaginacao data={data} countKey="movimentos" /></> : null}
   {tab==='recebiveis' ? <><FinanceiroRecebiveis data={data} /><FinanceiroPaginacao data={data} countKey="recebiveis" /></> : null}
   {tab==='conciliacao' ? <><FinanceiroConciliacao data={data} /><FinanceiroPaginacao data={data} countKey="extratos" /></> : null}
   {tab==='resultado' ? <FinanceiroResultado data={data} /> : null}

@@ -105,7 +105,9 @@ export type AdjustInventoryCommand = {
   lojaId: LojaId
   quantity: number
   estoqueMinimo?: number
+  /** Snapshot da quantidade ao abrir a tela — RPC `p_quantidade_esperada`. */
   expectedQuantity?: number
+  /** Snapshot do mínimo ao abrir a tela — RPC `p_minimo_esperado`. */
   expectedMinimum?: number
   reason: string
   observacao?: string | null
@@ -124,7 +126,7 @@ export type AdjustInventoryResult =
 
 /**
  * Superfície canônica de **ajuste manual** (inventory-led).
- * Autoridade: RPC `ajustar_estoque_manual`.
+ * Autoridade: RPC `ajustar_estoque_manual_seguro`.
  */
 export type InventoryAdjustmentService = {
   adjustInventory(command: AdjustInventoryCommand): Promise<AdjustInventoryResult>

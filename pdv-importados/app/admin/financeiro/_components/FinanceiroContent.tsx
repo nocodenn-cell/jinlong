@@ -5,7 +5,7 @@ import type { FinanceiroPainel } from '../financeiroLojaTypes'
 import { FinanceiroTitulosOperations } from './FinanceiroTitulosOperations'
 import { FinanceiroPaginacao } from './FinanceiroWorkspace'
 import { FinanceiroPrimeiroUso } from './FinanceiroPrimeiroUso'
-import { FinanceiroQuickActions } from './FinanceiroQuickActions'
+import { FinanceiroAcoesRapidas } from './FinanceiroAcoesRapidas'
 import { SectionCard } from '@/components/ui/admin-v2'
 import { formatDateTimeOrDash } from '@/lib/format/datetime'
 import { ContasReceberTable, type ContaLinha, type ContasLabels } from './ContasReceberTable'
@@ -18,6 +18,8 @@ import { ContasPagarListClient } from '@/app/gerente/financeiro/contas-pagar/Con
 import type { ContaPagarRow } from '@/app/gerente/financeiro/contas-pagar/actions'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import type { ReactNode } from 'react'
+import { useAdminV2Session } from '@/components/ui/admin-v2/AdminV2SessionContext'
+import { getMessages } from '@/i18n/getMessages'
 
 export type DocumentoFiscalPendenteRow = {
   id: string
@@ -119,6 +121,27 @@ export function FinanceiroContent({
   kpiSection,
 }: Props) {
   const [fiscalDetalheId, setFiscalDetalheId] = useState<string | null>(null)
+  const { idioma } = useAdminV2Session()
+  const ui = getMessages(idioma).admin_ui
+  const acoesLabels = {
+    faixaAria: ui.financeiro_acoes_aria,
+    registrarVenda: ui.financeiro_acao_registrar_venda,
+    receber: ui.financeiro_acao_receber,
+    pagar: ui.financeiro_acao_pagar,
+    transferir: ui.financeiro_acao_transferir,
+    vendaTitulo: ui.financeiro_acao_venda_titulo,
+    vendaTexto: ui.financeiro_acao_venda_texto,
+    vendaPdv: ui.financeiro_acao_venda_pdv,
+    vendaBuscar: ui.financeiro_acao_venda_buscar,
+    receberTitulo: ui.financeiro_acao_receber_titulo,
+    pagarTitulo: ui.financeiro_acao_pagar_titulo,
+    transferirTitulo: ui.financeiro_acao_transferir_titulo,
+    avulsoHint: ui.financeiro_acao_avulso_hint,
+    confirmarReceber: ui.financeiro_acao_confirmar_receber,
+    confirmarPagar: ui.financeiro_acao_confirmar_pagar,
+    confirmarTransferir: ui.financeiro_acao_confirmar_transferir,
+    saldoRegistrado: ui.financeiro_saldo_registrado_hint,
+  }
 
   return (
     <>
@@ -126,12 +149,7 @@ export function FinanceiroContent({
         <FinanceiroHubNavShell activeTab={activeTab} />
       </Suspense>
 
-      {financeiroData ? (
-        <FinanceiroQuickActions
-          data={financeiroData}
-          idioma={contasPagar.idioma === 'zh' ? 'zh' : 'pt'}
-        />
-      ) : null}
+      <FinanceiroAcoesRapidas data={financeiroData} labels={acoesLabels} />
 
       {activeTab === 'receber' ? (
         <>

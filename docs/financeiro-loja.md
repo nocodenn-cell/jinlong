@@ -2,10 +2,42 @@
 
 O módulo `/admin/financeiro` reúne planejamento, contas bancárias, despesas, títulos a receber, depósitos de PIX/cartão, conciliação e resultado gerencial. O saldo da gaveta continua sob responsabilidade de Caixas/PDV, conforme ADR-010.
 
+## Contas e saldos (sprint ações rápidas)
+
+A aba **Contas e saldos** exibe o **saldo registrado no sistema** por conta (caixa/reserva ou banco), entradas e saídas do período e extrato com origem/usuário. O saldo inicial continua sendo movimento auditável `SALDO_INICIAL`; o saldo atual não é editável diretamente.
+
+Formas de pagamento podem apontar para uma conta financeira padrão (`formas_pagamento.conta_financeira_id`). Dinheiro → reserva; PIX/cartão → banco. Cartão/PIX só aumentam o saldo bancário na liquidação do recebível (após taxa). A captura de venda pré-preenche a conta sugerida, sem creditar saldo.
+
+Ações rápidas fixas no topo do Financeiro: Registrar venda (PDV oficial), Receber, Pagar / Registrar despesa, Transferir. No Estoque: Entrada de mercadoria, Retirar, Ajustar — reutilizando NF-e/recebimento/ajuste existentes, sem gerar pagamento automático.
+
+Inativação de conta preserva histórico; não há exclusão. Integração bancária real e importação automática de Pix/boletos ficam fora desta sprint.
+
+### Fluxo PDV ↔ caixa ↔ financeiro (prova automatizada)
+
+Narrativa contínua em PostgreSQL em memória (migrations oficiais + trigger de crédito da gaveta):
+
+```sh
+npm run test:pdv-caixa-financeiro -w fastproduct-backend
+```
+
+| Passo | Efeito esperado |
+|---|---|
+| Venda DINHEIRO | Credita `caixas.saldo_atual`; não cria recebível nem movimento bancário |
+| Venda PIX/cartão | Cria recebível com conta sugerida; banco inalterado até `RECEBER_VENDA` |
+| Cartão com taxa | Credita banco = bruto − taxa |
+| Sangria + `VINCULAR_CAIXA` | Uma saída no PDV + uma entrada no banco; retry recusado |
+| Estorno da sangria | Reverte gaveta e banco; não entra em resultado como despesa |
+| Compra a prazo / pagamento parcial | Obrigação sem reduzir saldo; baixa parcial reduz só o liquidado |
+| Loja B | Não movimenta conta da loja A |
+
+Suíte regressiva: `npm run test:financeiro-loja -w fastproduct-backend`. Gate com Supabase local: `npm run test:financial -w fastproduct-backend` (inclui sangria via RPC real em `financeiro-hardening-full-schema.test.sql`).
+
+---
+
 ## Como começar
 
 1. Em **Categorias financeiras**, confirme o tipo de cada categoria: Receita, Despesa ou Ambos.
-2. Em **Contas e movimentos**, cadastre cada banco e a reserva de numerário fora do PDV. Informe o saldo efetivamente conferido na data inicial. Saldo inicial não é receita e admite conta devedora.
+2. Em **Contas e saldos**, cadastre cada banco e a reserva de numerário fora do PDV. Informe o saldo efetivamente conferido na data inicial. Saldo inicial não é receita e admite conta devedora.
 3. Em **A pagar**, cadastre aluguel, energia, salários e outras despesas manuais. Fornecedor é opcional quando houver favorecido. O parcelamento divide o total; a recorrência repete o valor mensal por um número definido de meses, até 60. Vencimentos no dia 31 se ajustam ao último dia de cada mês.
 4. Registre pagamentos e recebimentos na conta financeira correspondente. Baixas parciais atualizam o título e a conta na mesma transação. Dinheiro recebido/pago no PDV continua pelo fluxo existente. Use os históricos dos títulos para estornar baixas incorretas.
 5. Em **PIX e cartões**, confira a taxa em reais, a conta e a previsão de depósito. É possível dividir um recebível em até 60 parcelas mensais, conferindo cada parcela separadamente. Registrar um depósito recebido movimenta o banco; uma previsão não movimenta saldo.

@@ -1,7 +1,7 @@
 /**
  * Códigos estáveis do domínio inventory — a borda resolve para i18n.
  * Policies emitem só `code`; sem string de idioma no core.
- * Espelha codes da RPC `ajustar_estoque_manual` quando aplicável.
+ * Espelha codes da RPC `ajustar_estoque_manual_seguro` quando aplicável.
  */
 
 export const INVENTORY_ERROR_CODES = {

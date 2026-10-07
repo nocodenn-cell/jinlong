@@ -108,7 +108,10 @@ export function createInventoryAdjustmentService(
       } catch (e) {
         return {
           ok: false,
-          error: e instanceof Error ? e.message : resolveInventoryMessage('pt-BR', INVENTORY_ERROR_CODES.ADJUST_FAILED),
+          error:
+            e instanceof Error
+              ? e.message
+              : resolveInventoryMessage('pt-BR', INVENTORY_ERROR_CODES.ADJUST_FAILED),
           code: INVENTORY_ERROR_CODES.ADJUST_FAILED,
         }
       }

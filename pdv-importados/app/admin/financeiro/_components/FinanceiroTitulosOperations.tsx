@@ -26,10 +26,10 @@ export function FinanceiroTitulosOperations({ data, tipo }: { data: FinanceiroPa
  const titulos = (tipo === 'AP' ? data.pagar : data.receber).filter(t => !['PAGO','QUITADO','CANCELADO'].includes(t.status))
  return <div id="baixa-conta-financeira" className="admin-v2-stack">
   {tipo === 'AP' ? <FinanceiroDespesaForm data={data} /> : null}
-  <FinanceiroForm title={tipo === 'AP' ? 'Pagar pela conta financeira' : 'Receber na conta financeira'} tipo={tipo === 'AP' ? 'BAIXAR_AP' : 'BAIXAR_AR'}>
+  <FinanceiroForm title={tipo === 'AP' ? 'Pagar' : 'Receber'} tipo={tipo === 'AP' ? 'BAIXAR_AP' : 'BAIXAR_AR'} submit={tipo === 'AP' ? 'Pagar' : 'Receber'}>
    <Field name="titulo_id" label="Título desta página"><option value="">Selecione</option>{titulos.map(t => <option key={t.id} value={t.id}>{t.nome} · {t.descricao} · {formatBRL(t.valor_aberto ?? t.valor_total - (t.valor_pago ?? 0))}</option>)}</Field>
    <Field name="conta_id" label={tipo === 'AP' ? 'Conta de origem' : 'Conta de destino'}><ContaOptions data={data} /></Field>
-   <Field name="valor" label="Valor da baixa (R$)" type="number" />
+   <Field name="valor" label="Valor (R$)" type="number" />
    <Field name="data" label="Data efetiva" type="date" value={data.hoje} />
    <Field name="descricao" label="Observação / referência do comprovante" required={false} />
   </FinanceiroForm>

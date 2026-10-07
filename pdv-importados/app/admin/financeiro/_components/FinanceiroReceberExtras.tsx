@@ -177,7 +177,7 @@ export function FinanceiroReceberExtras({ financeiroData, contas, clientesInicia
       {abertas.length > 0 ? (
         <div className="rounded-lg border border-[var(--color-border-secondary)] bg-jl-surface-soft p-3">
           <h3 className="mb-2 text-caption font-semibold uppercase tracking-wide text-jl-fg-3">
-            Liquidar título
+            Receber
           </h3>
           <p className="mb-2 text-caption text-jl-fg-3">
             Este formulário recebe dinheiro no caixa físico. Para PIX, cartão ou transferência, use{' '}
@@ -260,7 +260,7 @@ export function FinanceiroReceberExtras({ financeiroData, contas, clientesInicia
                     </select>
                   ) : null}
                   <button type="submit" disabled={pending} className="admin-v2-btn-secondary text-small">
-                    Liquidar
+                    Receber
                   </button>
                 </form>
                 )}

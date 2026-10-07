@@ -169,6 +169,9 @@ describe('inventory — contracts (split de leitura)', () => {
     expect(mapAjusteRpcMessageToCode('AJUSTE_ESTOQUE_QTD_INVALIDA')).toBe(
       INVENTORY_ERROR_CODES.QTY_INVALID,
     )
+    expect(mapAjusteRpcMessageToCode('AJUSTE_ESTOQUE_SALDO_ALTERADO')).toBe(
+      INVENTORY_ERROR_CODES.STALE_BALANCE,
+    )
     expect(validateAdjustInventoryCommand({
       productId: 'p1',
       lojaId: 'l1',
@@ -177,6 +180,7 @@ describe('inventory — contracts (split de leitura)', () => {
     }).ok).toBe(true)
   })
 })
+
 
 describe('inventory — barrel exports', () => {
   it('reexporta policies puras sem side effects de Supabase', async () => {

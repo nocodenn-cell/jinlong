@@ -28,7 +28,7 @@ describe('createInventoryAdjustmentService', () => {
     expect(adjustRpc).not.toHaveBeenCalled()
   })
 
-  it('chama RPC e recarrega saldo', async () => {
+  it('chama RPC seguro com snapshot e recarrega saldo', async () => {
     const adjustRpc = vi.fn(async () => ({ error: null }))
     const reader = {
       getBalance: vi.fn(async () => ({
@@ -81,17 +81,27 @@ describe('createInventoryAdjustmentService', () => {
       }),
     )
   })
-})
 
-it('conflito da RPC chega como erro descritivo e não recarrega como sucesso', async () => {
-  const reader = { getBalance: vi.fn(), getBalances: vi.fn() }
-  const adjustRpc = vi.fn(async () => ({ error: { message: 'AJUSTE_ESTOQUE_SALDO_ALTERADO' } }))
-  const service = createInventoryAdjustmentService({ rpc: vi.fn() } as never, 'loja-1', { reader, adjustRpc })
-  const result = await service.adjustInventory({
-    productId: 'p1', lojaId: 'loja-1', quantity: 8, estoqueMinimo: 2,
-    expectedQuantity: 10, expectedMinimum: 1, reason: 'ACERTO_INVENTARIO', atorId: 'u1',
+  it('conflito da RPC chega como STALE_BALANCE e não recarrega como sucesso', async () => {
+    const reader = { getBalance: vi.fn(), getBalances: vi.fn() }
+    const adjustRpc = vi.fn(async () => ({ error: { message: 'AJUSTE_ESTOQUE_SALDO_ALTERADO' } }))
+    const service = createInventoryAdjustmentService(
+      { rpc: vi.fn() } as never,
+      'loja-1',
+      { reader, adjustRpc },
+    )
+    const result = await service.adjustInventory({
+      productId: 'p1',
+      lojaId: 'loja-1',
+      quantity: 8,
+      estoqueMinimo: 2,
+      expectedQuantity: 10,
+      expectedMinimum: 1,
+      reason: 'ACERTO_INVENTARIO',
+      atorId: 'u1',
+    })
+    expect(result).toMatchObject({ ok: false, code: INVENTORY_ERROR_CODES.STALE_BALANCE })
+    if (!result.ok) expect(result.error).toMatch(/alterado|mudou/i)
+    expect(reader.getBalance).not.toHaveBeenCalled()
   })
-  expect(result).toMatchObject({ ok: false, code: INVENTORY_ERROR_CODES.STALE_BALANCE })
-  if (!result.ok) expect(result.error).toContain('mudou')
-  expect(reader.getBalance).not.toHaveBeenCalled()
 })

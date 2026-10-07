@@ -5,6 +5,11 @@ export const MotivoAjusteEstoqueSchema = z.enum(
   { errorMap: () => ({ message: 'Motivo de ajuste inválido.' }) },
 )
 
+/**
+ * Contrato canônico de `atualizarEstoqueProduto`.
+ * Snapshot obrigatório: `quantidade_esperada` + `minimo_esperado`
+ * (RPC `ajustar_estoque_manual_seguro`).
+ */
 export const AtualizarEstoqueSchema = z.object({
   produto_id: z.string().uuid('Produto inválido.'),
   quantidade_atual: z.coerce.number().min(0, 'Quantidade atual não pode ser negativa.'),

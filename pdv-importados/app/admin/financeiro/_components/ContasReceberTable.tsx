@@ -44,6 +44,7 @@ export type ContasLabels = {
   vazioSub: string
   verVenda: string
   locale: string
+  receber?: string
 }
 
 function StatusPill({ status, labels }: { status: string; labels: ContasLabels }) {
@@ -129,6 +130,21 @@ export function ContasReceberTable({ contas, labels }: { contas: ContaLinha[]; l
       header: labels.colStatus,
       align: 'center',
       cell: (r) => <StatusPill status={r.status} labels={labels} />,
+    },
+    {
+      key: 'acoes',
+      header: labels.receber ?? 'Receber',
+      align: 'right',
+      cell: (r) =>
+        r.valor_aberto > 0 ? (
+          <a
+            href="#baixa-conta-financeira"
+            className="admin-v2-btn-secondary inline-flex min-h-10 items-center px-3 text-small font-semibold"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {labels.receber ?? 'Receber'}
+          </a>
+        ) : null,
     },
   ]
 
