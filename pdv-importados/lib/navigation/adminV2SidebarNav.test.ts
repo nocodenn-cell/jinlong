@@ -1,19 +1,21 @@
 import { describe, expect, it } from 'vitest'
 import { ROUTES } from '@/lib/navigation/routes'
 import {
+  ADMIN_V2_ANALISES_ITEMS,
   ADMIN_V2_CORE_ITEMS,
-  ADMIN_V2_EXPANDED_ITEMS,
+  ADMIN_V2_OPERACOES_ITEMS,
   ADMIN_V2_SISTEMA_ITEMS,
   type AdminV2NavItem,
 } from './adminV2SidebarNav'
+import { executiveRelatoriosHref } from './executiveViews'
 
 const TODOS: readonly AdminV2NavItem[] = [
-  ...ADMIN_V2_CORE_ITEMS,
-  ...ADMIN_V2_EXPANDED_ITEMS,
+  ...ADMIN_V2_ANALISES_ITEMS,
+  ...ADMIN_V2_OPERACOES_ITEMS,
   ...ADMIN_V2_SISTEMA_ITEMS,
 ]
 
-/** Espelha o filtro de `SidebarNav`: itens `adminOnly` só para perfil ADMIN. */
+/** Espelha o filtro de `ExecutiveSidebarNav`: itens `adminOnly` só para perfil ADMIN. */
 function itensVisiveis(perfilAdmin: boolean): AdminV2NavItem[] {
   return TODOS.filter((item) => !item.adminOnly || perfilAdmin)
 }
@@ -34,12 +36,13 @@ describe('menu admin — sanidade estrutural', () => {
     }
   })
 
-  it('CORE tem no máximo 10 itens (Sprint 6 — redução de carga cognitiva)', () => {
-    expect(ADMIN_V2_CORE_ITEMS.length).toBeLessThanOrEqual(10)
+  it('ANÁLISES tem exatamente 5 abas executivas', () => {
+    expect(ADMIN_V2_ANALISES_ITEMS).toHaveLength(5)
+    expect(ADMIN_V2_CORE_ITEMS).toBe(ADMIN_V2_ANALISES_ITEMS)
   })
 })
 
-describe('menu admin — hubs (Sprint 6)', () => {
+describe('menu admin — hubs (Sprint 6 + Fase 1 executiva)', () => {
   it('categorias e marcas de produto não são entradas separadas na sidebar', () => {
     const visiveis = hrefs(itensVisiveis(false))
     expect(visiveis).not.toContain(ROUTES.admin.categoriasProdutos)
@@ -54,8 +57,8 @@ describe('menu admin — hubs (Sprint 6)', () => {
     expect(visiveis).toContain(ROUTES.admin.estoque)
   })
 
-  it('categorias financeiras não aparecem em "Mais"', () => {
-    expect(hrefs(ADMIN_V2_EXPANDED_ITEMS)).not.toContain(ROUTES.admin.categoriasFinanceiras)
+  it('categorias financeiras não aparecem em Operações', () => {
+    expect(hrefs(ADMIN_V2_OPERACOES_ITEMS)).not.toContain(ROUTES.admin.categoriasFinanceiras)
   })
 })
 
@@ -96,9 +99,24 @@ describe('menu admin — nomenclatura', () => {
   })
 })
 
-describe('menu admin — tarefas diárias não ficam escondidas', () => {
-  it('relatórios permanecem no CORE', () => {
-    expect(hrefs(ADMIN_V2_CORE_ITEMS)).toContain(ROUTES.admin.relatorios)
+describe('menu admin — IA executiva Fase 1', () => {
+  it('Visão Geral aponta para /admin/dashboard', () => {
+    expect(hrefs(ADMIN_V2_ANALISES_ITEMS)).toContain(ROUTES.admin.dashboard)
+  })
+
+  it('abas 2–5 apontam para /admin/relatorios?view=…', () => {
+    expect(hrefs(ADMIN_V2_ANALISES_ITEMS)).toContain(executiveRelatoriosHref('vendas-caixas'))
+    expect(hrefs(ADMIN_V2_ANALISES_ITEMS)).toContain(executiveRelatoriosHref('dre-financeiro'))
+    expect(hrefs(ADMIN_V2_ANALISES_ITEMS)).toContain(executiveRelatoriosHref('produtos-estoque'))
+    expect(hrefs(ADMIN_V2_ANALISES_ITEMS)).toContain(executiveRelatoriosHref('crm-auditoria'))
+  })
+
+  it('ERP operacional permanece em Operações (catálogo, estoque, financeiro)', () => {
+    const ops = hrefs(ADMIN_V2_OPERACOES_ITEMS)
+    expect(ops).toContain(ROUTES.admin.catalogo)
+    expect(ops).toContain(ROUTES.admin.estoque)
+    expect(ops).toContain(ROUTES.admin.financeiro)
+    expect(ops).toContain(ROUTES.admin.vendas)
   })
 
   it('atalho para o PDV permanece disponível a todos os perfis gerenciais', () => {

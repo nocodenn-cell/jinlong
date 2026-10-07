@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react'
+import { Suspense, type ReactNode } from 'react'
 import Link from 'next/link'
 import '@/styles/admin-v2.css'
 import { SessionIdleLogout } from '@/components/security/SessionIdleLogout'
@@ -9,6 +9,10 @@ import { AdminV2SessionProvider } from './AdminV2SessionContext'
 import { AdminV2MobileNavDrawer } from './AdminV2MobileNavDrawer'
 import { SidebarNav } from './SidebarNav'
 import { SidebarUserFooter } from './SidebarUserFooter'
+
+function SidebarNavFallback() {
+  return <nav className="flex flex-col gap-6 p-3 lg:p-4" aria-busy="true" aria-label="Navegação" />
+}
 
 type AdminV2ShellProps = {
   session: AdminSession
@@ -73,12 +77,14 @@ export function AdminV2Shell({ session, children, stockAlertCount }: AdminV2Shel
               />
             </Link>
           </div>
-          <SidebarNav
-            admin={admin}
-            chineseLanguage={chineseLanguage}
-            stockAlertCount={stockAlertCount}
-            showAdminOnlyItems={session.perfil === 'ADMIN'}
-          />
+          <Suspense fallback={<SidebarNavFallback />}>
+            <SidebarNav
+              admin={admin}
+              chineseLanguage={chineseLanguage}
+              stockAlertCount={stockAlertCount}
+              showAdminOnlyItems={session.perfil === 'ADMIN'}
+            />
+          </Suspense>
           <SidebarUserFooter session={session} />
         </aside>
 

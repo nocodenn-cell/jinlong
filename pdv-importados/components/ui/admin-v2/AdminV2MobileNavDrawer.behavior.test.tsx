@@ -13,6 +13,7 @@ let currentPathname = '/admin/catalogo'
 
 vi.mock('next/navigation', () => ({
   usePathname: () => currentPathname,
+  useSearchParams: () => new URLSearchParams(''),
 }))
 
 vi.mock('next/link', () => ({

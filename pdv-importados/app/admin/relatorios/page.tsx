@@ -23,6 +23,8 @@ type SearchParams = {
   de?: string
   ate?: string
   tab?: string
+  /** Aba executiva (Fase 1): vendas-caixas | dre-financeiro | produtos-estoque | crm-auditoria */
+  view?: string
 }
 
 type PageProps = { searchParams?: Promise<SearchParams> }
@@ -80,6 +82,7 @@ export default async function AdminRelatoriosPage({ searchParams }: PageProps) {
     <RelatoriosContent
       dados={relDados}
       initialTab={sp.tab}
+      initialView={sp.view}
       labels={{
         titulo: ui.relatorios_titulo,
         periodoLabel: ui.relatorios_periodo_label,

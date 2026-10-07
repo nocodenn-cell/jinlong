@@ -20,6 +20,8 @@ const PATH_CLICKS = {
   analises: {
     dashboardParaRelatorios: 1,
     relatoriosParaDashboard: 1,
+    /** Sidebar Análises: cada aba executiva é 1 clique a partir de qualquer tela admin. */
+    sidebarParaAbaExecutiva: 1,
   },
 } as const
 
@@ -33,5 +35,9 @@ describe('hub operational click budgets', () => {
   it('ponte dashboard ↔ relatórios é simétrica (1 clique cada)', () => {
     expect(PATH_CLICKS.analises.dashboardParaRelatorios).toBe(1)
     expect(PATH_CLICKS.analises.relatoriosParaDashboard).toBe(1)
+  })
+
+  it('abas executivas na sidebar Análises são 1 clique', () => {
+    expect(PATH_CLICKS.analises.sidebarParaAbaExecutiva).toBe(1)
   })
 })

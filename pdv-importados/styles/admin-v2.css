@@ -91,6 +91,19 @@
   gap: var(--admin-v2-space-4);
 }
 
+[data-admin-v2] .admin-v2-dashboard-grid {
+  width: 100%;
+}
+
+[data-admin-v2] .admin-v2-dense-table {
+  font-variant-numeric: tabular-nums;
+}
+
+[data-admin-v2] .admin-v2-dense-table th,
+[data-admin-v2] .admin-v2-dense-table td {
+  vertical-align: middle;
+}
+
 [data-admin-v2] .admin-v2-grid-kpi {
   display: grid;
   gap: var(--admin-v2-space-4);

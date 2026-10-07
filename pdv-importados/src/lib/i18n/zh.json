@@ -1685,8 +1685,8 @@
     },
     "nav": {
       "dashboard": {
-        "cn": "主控台",
-        "pt": "Dashboard"
+        "cn": "总览",
+        "pt": "Visão Geral"
       },
       "gerente": {
         "cn": "经理面板",
@@ -1751,10 +1751,26 @@
       "suspensao": {
         "cn": "暂停销售",
         "pt": "Suspensão"
+      },
+      "execVendasCaixas": {
+        "cn": "销售与收银",
+        "pt": "Vendas & Caixas"
+      },
+      "execDreFinanceiro": {
+        "cn": "损益与财务",
+        "pt": "DRE & Financeiro"
+      },
+      "execProdutosEstoque": {
+        "cn": "商品与库存",
+        "pt": "Produtos & Estoque"
+      },
+      "execCrmAuditoria": {
+        "cn": "客户与审计",
+        "pt": "CRM & Auditoria"
       }
     },
     "navHints": {
-      "dashboard": "Métricas, gráfico de vendas e últimos pedidos do período.",
+      "dashboard": "KPIs globais, tendência diária e alertas executivos.",
       "gerente": "Painel do gerente e atalhos operacionais.",
       "produtos": "Cadastro e preços de produtos.",
       "clientes": "店铺客户管理。",
@@ -1763,14 +1779,18 @@
       "estoque": "Saldos por loja e alertas de estoque.",
       "recebimento": "Entrada de mercadorias e conferência.",
       "transferencias": "Movimentação entre lojas.",
-      "relatorios": "Relatórios e análises operacionais.",
+      "relatorios": "Hub analítico detalhado por domínio.",
       "caixas": "Caixas e operações de ponto de venda.",
       "financeiro": "Movimentações e visão financeira.",
       "configuracoes": "全局参数（佣金、收银限制、交期、最低库存）。",
       "implantacao": "正式上线门禁 — 按店铺持久化的检查清单。",
       "provisionamento": "内部向导：无需 SQL 创建门店与店主。",
       "comissoes": "Regras e percentuais de comissão.",
-      "suspensao": "Suspender ou liberar vendas no PDV."
+      "suspensao": "Suspender ou liberar vendas no PDV.",
+      "execVendasCaixas": "Picos horários, auditoria de caixas e detalhe de pedidos.",
+      "execDreFinanceiro": "DRE em cascata, fluxo de caixa e inadimplência.",
+      "execProdutosEstoque": "Curva ABC, encalhe, reposição e OC em trânsito.",
+      "execCrmAuditoria": "RFV, performance de equipe e painel de perdas."
     },
     "dashboard": {
       "pageTitle": {

@@ -3,13 +3,11 @@ import Link from 'next/link'
 import { ActivityFeed, type ActivityItem } from '@/components/ui/ActivityFeed'
 import {
   ChartCard,
-  MetricCard,
-  PageHeader,
-  PageActions,
   SectionCard,
+  type KpiStripItem,
 } from '@/components/ui/admin-v2'
-import { Button } from '@/components/ui/button'
 import type { MetricCardIconKey } from '@/components/ui/admin-v2/MetricCard'
+import { ExecutiveVisaoGeralStub } from './_components/ExecutiveVisaoGeralStub'
 import type { SparkTone } from '@/components/ui/admin-v2/sparkline'
 import { EmptyState, ErrorState } from '@/components/ui/feedback'
 import { createClient } from '@/lib/supabase/server'
@@ -479,39 +477,53 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     { id: '30D', label: L.period30d[lk] },
   ]
 
-  return (
-    <div className="admin-v2-page admin-v2-stack">
-      <PageHeader
-        title={L.pageTitle[lk]}
-        filters={<DashboardFilters options={periodOptions} />}
-        actions={
-          <PageActions>
-            <Button asChild variant="secondary" size="sm">
-              <Link href={ROUTES.admin.relatorios} title={ui.dashboard_link_relatorios_hint}>
-                {ui.relatorios_titulo}
-              </Link>
-            </Button>
-          </PageActions>
-        }
-      />
+  const kpiItems: KpiStripItem[] = metrics.map((metric, index) => ({
+    id: `kpi-${index}-${metric.label}`,
+    label: metric.label,
+    value: metric.value,
+    delta: metric.delta,
+    deltaPositiveIsGood: metric.deltaPositiveIsGood,
+    icon: metric.icon,
+    sparkData: metric.sparkData,
+    tone: metric.tone,
+    hint: metric.hint,
+    href: metric.href,
+    labelWrap: metric.labelWrap,
+    sparkAriaLabel: metric.sparkAriaLabel,
+  }))
 
+  const alertRows = [
+    {
+      id: 'estoque-critico',
+      label: estoqueBaixoCount > 0 ? 'Estoque baixo' : 'Estoque OK',
+      detail: formatNumberLocale(estoqueBaixoCount, locale),
+      tone: (estoqueBaixoCount > 0 ? 'warning' : 'success') as 'warning' | 'success',
+    },
+    {
+      id: 'caixa-status',
+      label: algumCaixaAberto ? 'Caixa aberto' : 'Caixas fechados',
+      detail: algumCaixaAberto ? '1+' : '0',
+      tone: (algumCaixaAberto ? 'warning' : 'neutral') as 'warning' | 'neutral',
+    },
+  ]
+
+  const mainCharts = (
+    <>
       {periodSalesFailed ? (
         <ErrorState
-          className="mb-6"
+          className="mb-2"
           title={adminUi.errors.criticalSalesTitle[lk]}
           description={adminUi.errors.criticalSalesBody[lk]}
         />
       ) : null}
-
       {periodSalesTruncated ? (
         <div
           role="alert"
-          className="mb-4 rounded-[var(--radius-lg)] border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] px-4 py-3 text-body text-[var(--color-warning-strong)]"
+          className="mb-2 rounded-[var(--radius-lg)] border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] px-4 py-3 text-body text-[var(--color-warning-strong)]"
         >
           {ui.dashboard_dados_incompletos}
         </div>
       ) : null}
-
       <ErrorBanner
         messages={dashboardErrors}
         title={
@@ -520,140 +532,120 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
             : ui.dashboard_erro_banner_pl.replace('{{n}}', String(dashboardErrors.length))
         }
       />
-
-      <div className="admin-v2-grid-kpi">
-        {metrics.map((metric) => {
-          const { href, ...cardProps } = metric
-          if (!href) {
-            return <MetricCard key={metric.label} {...cardProps} />
-          }
-          return (
-            <Link
-              key={metric.label}
-              href={href}
-              className="block rounded-card focus-visible:outline-none focus-visible:shadow-focus"
-              aria-label={`${metric.label}: ${metric.value}. ${metric.hint ?? ''}`.trim()}
-            >
-              <MetricCard {...cardProps} />
-            </Link>
-          )
-        })}
-      </div>
-
-      <div className="admin-v2-grid-3-main">
-        {periodSalesFailed ? (
-          <ChartCard title={L.chartTitle[lk]}>
-            <ErrorState
-              dense
-              title={adminUi.errors.chartUnavailable[lk]}
-              description={adminUi.errors.chartUnavailable[lk]}
-              className="h-full"
-            />
-          </ChartCard>
-        ) : hasSalesInPeriod ? (
-          <ChartCard title={L.chartTitle[lk]} className="admin-v2-chart-area">
-            <SalesTrendChartLazy
-              data={chartData}
-              variant="default"
-              summary={salesTrendSummary}
-            />
-          </ChartCard>
-        ) : (
-          <ChartCard title={L.chartTitle[lk]} className="admin-v2-chart-area">
-            <EmptyState title={L.chartEmpty[lk]} className="h-full py-8" />
-          </ChartCard>
-        )}
-
-        <SectionCard title={L.hourlyChartTitle[lk]} className="admin-v2-chart-area">
-          {periodSalesFailed ? (
-            <ErrorState
-              dense
-              title={adminUi.errors.chartUnavailable[lk]}
-              description={adminUi.errors.chartUnavailable[lk]}
-              className="h-full"
-            />
-          ) : hasHourlySales ? (
-            <DashboardChart
-              titleLabel={L.hourlyChartTitle[lk]}
-              subtitleLabel={L.hourlyChartSubtitle[lk]}
-              peakLabel={L.hourlyChartPeak[lk]}
-              labels={hourlyLabels}
-              data={hourlySeries.map((item) => item.total)}
-              peakHour={peakHour}
-              peakValue={formatBRL(peakValueRaw, locale)}
-              summary={hourlySummary}
-            />
-          ) : (
-            <EmptyState title={L.hourlyChartEmpty[lk]} className="h-full py-8" />
-          )}
-        </SectionCard>
-
-        <SectionCard title={L.paymentsTitle[lk]} className="admin-v2-chart-area">
-          <PaymentDonutChartLazy
-            data={paymentDonutData}
-            total={totalAtual}
-            noDataLabel={L.paymentNoData[lk]}
-            distributionLabel={L.paymentDistribution[lk]}
-            summary={paymentsSummary}
+      {periodSalesFailed ? (
+        <ChartCard title={L.chartTitle[lk]}>
+          <ErrorState
+            dense
+            title={adminUi.errors.chartUnavailable[lk]}
+            description={adminUi.errors.chartUnavailable[lk]}
+            className="h-full"
           />
-        </SectionCard>
-      </div>
+        </ChartCard>
+      ) : hasSalesInPeriod ? (
+        <ChartCard title={L.chartTitle[lk]} className="admin-v2-chart-area">
+          <SalesTrendChartLazy
+            data={chartData}
+            variant="default"
+            summary={salesTrendSummary}
+          />
+        </ChartCard>
+      ) : (
+        <ChartCard title={L.chartTitle[lk]} className="admin-v2-chart-area">
+          <EmptyState title={L.chartEmpty[lk]} className="h-full py-8" />
+        </ChartCard>
+      )}
+      <SectionCard title={L.hourlyChartTitle[lk]} className="admin-v2-chart-area">
+        {periodSalesFailed ? (
+          <ErrorState
+            dense
+            title={adminUi.errors.chartUnavailable[lk]}
+            description={adminUi.errors.chartUnavailable[lk]}
+            className="h-full"
+          />
+        ) : hasHourlySales ? (
+          <DashboardChart
+            titleLabel={L.hourlyChartTitle[lk]}
+            subtitleLabel={L.hourlyChartSubtitle[lk]}
+            peakLabel={L.hourlyChartPeak[lk]}
+            labels={hourlyLabels}
+            data={hourlySeries.map((item) => item.total)}
+            peakHour={peakHour}
+            peakValue={formatBRL(peakValueRaw, locale)}
+            summary={hourlySummary}
+          />
+        ) : (
+          <EmptyState title={L.hourlyChartEmpty[lk]} className="h-full py-8" />
+        )}
+      </SectionCard>
+      <SectionCard title={L.paymentsTitle[lk]} className="admin-v2-chart-area">
+        <PaymentDonutChartLazy
+          data={paymentDonutData}
+          total={totalAtual}
+          noDataLabel={L.paymentNoData[lk]}
+          distributionLabel={L.paymentDistribution[lk]}
+          summary={paymentsSummary}
+        />
+      </SectionCard>
+    </>
+  )
 
+  const sidePanel = (
+    <>
       <CaixaShortcut
         title={L.caixaShortcutTitle[lk]}
         status={algumCaixaAberto ? L.caixaShortcutStatusAberto[lk] : L.caixaShortcutStatusFechado[lk]}
         openBtn={L.caixaShortcutBtn[lk]}
       />
+      <SectionCard title={L.lowStockTitle[lk]} subtitle={L.lowStockSubtitle[lk]}>
+        <div className="flex items-end justify-between gap-3">
+          <Link
+            href={ROUTES.admin.estoque}
+            className="text-h1 font-bold tabular-nums text-[var(--color-chart-warm)] underline-offset-2 hover:underline focus-visible:outline-none focus-visible:shadow-focus"
+          >
+            {formatNumberLocale(estoqueBaixoCount, locale)}
+          </Link>
+          <Link
+            href={ROUTES.admin.estoque}
+            className="shrink-0 text-small font-medium text-brand underline-offset-2 hover:underline focus-visible:outline-none focus-visible:shadow-focus"
+          >
+            {L.lowStockCta[lk]}
+          </Link>
+        </div>
+        {estoqueBaixoCount === 0 && !estoqueBaixoRes.error ? (
+          <p className="mt-3 text-caption text-fg-subtle">{L.lowStockEmpty[lk]}</p>
+        ) : null}
+        {estoqueBaixoCount > 0 && !estoqueBaixoRes.error && !estoqueBaixoSituacoesRes?.error ? (
+          <p className="mt-3 text-caption text-fg-muted">
+            {fillTemplate(L.lowStockBreakdown[lk], {
+              zerados: formatNumberLocale(situacoesEstoque.zerados, locale),
+              abaixo: formatNumberLocale(situacoesEstoque.abaixoMinimo, locale),
+              noMinimo: formatNumberLocale(situacoesEstoque.noMinimo, locale),
+            })}
+          </p>
+        ) : null}
+        {showStockAlerts && estoqueBaixoLista.length > 0 ? (
+          <ul className="mt-3 flex flex-col gap-1.5 border-t border-[var(--color-border)] pt-3">
+            {estoqueBaixoLista.map((item) => (
+              <li key={item.nome} className="flex items-center justify-between text-caption">
+                <span className="truncate text-fg-muted" title={item.nome}>
+                  {item.nome}
+                </span>
+                <span className="shrink-0 tabular-nums text-[var(--color-warning-fg)]">
+                  {item.quantidade_atual} / {item.estoque_minimo}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </SectionCard>
+      <SectionCard title={L.recentActivitiesTitle[lk]}>
+        <ActivityFeed items={activityItems} variant="embedded" />
+      </SectionCard>
+    </>
+  )
 
-      <div className="admin-v2-grid-2">
-        <SectionCard title={L.lowStockTitle[lk]} subtitle={L.lowStockSubtitle[lk]}>
-          <div className="flex items-end justify-between gap-3">
-            <Link
-              href={ROUTES.admin.estoque}
-              className="text-h1 font-bold tabular-nums text-[var(--color-chart-warm)] underline-offset-2 hover:underline focus-visible:outline-none focus-visible:shadow-focus"
-            >
-              {formatNumberLocale(estoqueBaixoCount, locale)}
-            </Link>
-            <Link
-              href={ROUTES.admin.estoque}
-              className="shrink-0 text-small font-medium text-brand underline-offset-2 hover:underline focus-visible:outline-none focus-visible:shadow-focus"
-            >
-              {L.lowStockCta[lk]}
-            </Link>
-          </div>
-          {estoqueBaixoCount === 0 && !estoqueBaixoRes.error ? (
-            <p className="mt-3 text-caption text-fg-subtle">{L.lowStockEmpty[lk]}</p>
-          ) : null}
-          {estoqueBaixoCount > 0 && !estoqueBaixoRes.error && !estoqueBaixoSituacoesRes?.error ? (
-            <p className="mt-3 text-caption text-fg-muted">
-              {fillTemplate(L.lowStockBreakdown[lk], {
-                zerados: formatNumberLocale(situacoesEstoque.zerados, locale),
-                abaixo: formatNumberLocale(situacoesEstoque.abaixoMinimo, locale),
-                noMinimo: formatNumberLocale(situacoesEstoque.noMinimo, locale),
-              })}
-            </p>
-          ) : null}
-          {showStockAlerts && estoqueBaixoLista.length > 0 ? (
-            <ul className="mt-3 flex flex-col gap-1.5 border-t border-[var(--color-border)] pt-3">
-              {estoqueBaixoLista.map((item) => (
-                <li key={item.nome} className="flex items-center justify-between text-caption">
-                  <span className="truncate text-fg-muted" title={item.nome}>
-                    {item.nome}
-                  </span>
-                  <span className="shrink-0 tabular-nums text-[var(--color-warning-fg)]">
-                    {item.quantidade_atual} / {item.estoque_minimo}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </SectionCard>
-
-        <SectionCard title={L.recentActivitiesTitle[lk]}>
-          <ActivityFeed items={activityItems} variant="embedded" />
-        </SectionCard>
-      </div>
-
+  const footerBlock = (
+    <>
       <SectionCard title={L.tableTitle[lk]}>
         <DashboardOrdersTable
           orders={latestOrders}
@@ -674,10 +666,22 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
           }}
         />
       </SectionCard>
-
       <footer className="text-center text-fg-subtle">
         <p className="text-body">{L.footer[lk]}</p>
       </footer>
-    </div>
+    </>
+  )
+
+  return (
+    <ExecutiveVisaoGeralStub
+      title={L.pageTitle[lk]}
+      subtitle={L.pageSubtitle[lk]}
+      filters={<DashboardFilters options={periodOptions} />}
+      kpis={kpiItems}
+      alertRows={alertRows}
+      main={mainCharts}
+      side={sidePanel}
+      footer={footerBlock}
+    />
   )
 }
