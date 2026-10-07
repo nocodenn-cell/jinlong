@@ -235,9 +235,10 @@ test.describe('Fluxo crítico sync-outbox -> gerente/vendas', () => {
     // Artifact CI #1105: /vendas/i casa 2 headings (h1 "Vendas e caixa" + h2 "Vendas do dia").
     await expect(page.getByRole('heading', { name: 'Vendas e caixa' })).toBeVisible()
 
+    // VendasTable: texto "#XXXXXX" + title=UUID (não accessible name da célula).
     let found = false
     for (let i = 0; i < 8; i++) {
-      if (await page.getByRole('cell', { name: vendaId, exact: true }).isVisible().catch(() => false)) {
+      if (await page.getByTitle(vendaId).isVisible().catch(() => false)) {
         found = true
         break
       }
