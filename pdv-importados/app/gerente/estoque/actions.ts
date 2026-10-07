@@ -152,7 +152,7 @@ export async function atualizarEstoqueProduto(input: unknown): Promise<ActionRes
       revalidatePath('/admin/estoque')
       return null
     },
-    'ajustar_estoque_manual',
+    'ajustar_estoque_manual_seguro',
   )
 }
 

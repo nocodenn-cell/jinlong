@@ -55,7 +55,7 @@ describe('montarObservacaoComDoc', () => {
   })
 })
 
-/** Espelho do contrato da RPC ajustar_estoque_manual (kardex tipo_codigo). */
+/** Espelho do contrato da RPC ajustar_estoque_manual_seguro (kardex tipo_codigo). */
 function tipoCodigoAjuste(delta: number, motivo: string): string {
   if (delta > 0) return 'ENTRADA_AJUSTE'
   if (motivo === 'PERDA' || motivo === 'QUEBRA') return 'SAIDA_AVARIA'
