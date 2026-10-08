@@ -25,8 +25,8 @@ Foram implementadas proteções locais e provas comportamentais (PGlite) para mi
 | P0-01 | Backup recuperável | **BLOQUEADO** / NÃO VALIDADO | PR #485 workflow sonda direta | `guard:backup-jit` (branch #485) | Sem artifact success validado |
 | P0-02 | Restauração isolada | **IMPLEMENTADO, NÃO VALIDADO** (sintético) | `PROCEDIMENTO_RESTORE_*` + `restore-synthetic-local.sh` | Script SKIP (Docker ausente neste VM) | Restore prod **BLOQUEADO** |
 | P0-03 | Smoke presencial | **IMPLEMENTADO, NÃO VALIDADO** | `CHECKLIST_SMOKE_PRESENCIAL_P0.md` | N/A (roteiro) | Execução loja **PENDENTE** |
-| P0-04 | Migration `…120000` proibida | **RESOLVIDO E VALIDADO** (caminhos automatizados cobertos) | `forbidden-migrations.json` + header + CI | assert + unit tests PASS | Apply remoto não exercitado (proibido) |
-| P0-05 | INSERT fiscal | **IMPLEMENTADO, NÃO VALIDADO** (remoto) | mig `20261008120000` DROP POLICY | PGlite 4/4 PASS | Apply remoto **BLOQUEADO** |
+| P0-04 | Migration `…120000` proibida | **RESOLVIDO E VALIDADO** (CLI apply path) | quarantine `migrations-forbidden/` + deny-list + CI | assert + unit + apply-path PASS | MCP/psql manual ainda possível |
+| P0-05 | INSERT fiscal | **IMPLEMENTADO, NÃO VALIDADO** (remoto) | SQL em `migrations-pending-auth/` (fora do CLI) | PGlite carrega SQL real + defesa re-GRANT | Apply remoto **BLOQUEADO** |
 | P1-01 | Testes financeiros comportamentais | **IMPLEMENTADO, NÃO VALIDADO** (cobertura parcial) | `test-financeiro-comportamental-p1.mjs` | 4/4 PASS (PIX, split, idempotência, AR) | N/A |
 | P1-02 | Drift Git × produção | **IMPLEMENTADO, NÃO VALIDADO** (plano) | `PLANO_RECONCILIACAO_DRIFT_9_*` | Deny-list isenta só `120000` | Demais 8 ainda bloqueiam CI drift |
 | P1-03 | NF-e sem duplicata | **IMPLEMENTADO, NÃO VALIDADO** (especificação) | `MATRIZ_NFE_ENTRADA_*` | N/A | Decisão comercial pendente |
@@ -35,11 +35,11 @@ Foram implementadas proteções locais e provas comportamentais (PGlite) para mi
 
 ## 3. Correções implementadas
 
-1. **Deny-list permanente** `backend/supabase/forbidden-migrations.json` + cabeçalho `-- FORBIDDEN_APPLY` no SQL histórico `20261006120000_*` (arquivo preservado).  
-2. **Guards:** `assert-forbidden-migrations.mjs`, `guard-apply-migrations.mjs`, integração em `guard:all` e CI backend.  
-3. **Drift:** `p0-migration-status` classifica `remote_ausente` de versões forbidden como não bloqueante (esperado).  
-4. **SSOT-004 defesa:** migration local `20261008120000_ssot_004_drop_policy_insert_documentos_fiscais.sql` (DROP POLICY + REVOKE; **não** aplicada no remoto).  
-5. **Testes PGlite:** INSERT fiscal (negativo/positivo DEFINER) e financeiro comportamental mínimo.  
+1. **Deny-list + quarantine:** SQL `20261006120000_*` movido para `migrations-forbidden/` (fora do path do CLI) + registry + header `FORBIDDEN_APPLY`.  
+2. **Guards:** assert falha se o SQL reaparecer em `migrations/`; `guard-apply-migrations`; CI + `guard:all`.  
+3. **Drift:** versões forbidden em quarantine não entram mais no apply path (deixam de aparecer como `remote_ausente` no disco).  
+4. **SSOT-004 defesa:** SQL em `migrations-pending-auth/` (não aplicado pelo CLI até auth humana).  
+5. **Testes PGlite:** fiscal carrega SQL real + caso re-GRANT; financeiro com escopo honesto (taxas/split/TRANSFERIR/BAIXAR_AR).  
 6. **Docs:** smoke, restore sintético, drift 9, matriz NF-e, este relatório.
 
 ---

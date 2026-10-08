@@ -7,7 +7,7 @@
 
 | Version | Arquivo | Classificação | Equivalência remota? | Ação |
 |---|---|---|---|---|
-| 20261006120000 | financeiro_contas_formas_e_painel | DESCARTAR_OBSOLETA | Superseded por 180000→195837 | Deny-list (`forbidden-migrations.json`) |
+| 20261006120000 | financeiro_contas_formas_e_painel | DESCARTAR_OBSOLETA | Superseded por 180000→195837 | Quarantine `migrations-forbidden/` + deny-list |
 | 20261007161220 | fiscal_cancelado_ssot | APLICAR condicional | Não | Auth humana |
 | 20261007163000 | ssot_001_002_painel_ec_cache | APLICAR condicional | Não | Auth + ordem |
 | 20261007163100 | ssot_003_nfe_obrigacao_duplicata | INVESTIGAR | Não | Ver matriz NF-e |
@@ -21,7 +21,7 @@
 
 ```text
 161220 → 163000 → [163100 só com GO comercial] → 163200 → 170000 → 171000 → 180000 → 190000
-(+ 20261008120000 DROP POLICY insert — opcional defesa, também só com auth)
+(+ mover 20261008120000 de migrations-pending-auth/ → migrations/ só com auth, após 163200)
 ```
 
 **Nunca:** `20261006120000`, `db push --include-all` cego, apply em lote sem smoke.

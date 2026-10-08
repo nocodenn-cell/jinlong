@@ -39,7 +39,7 @@ function parseArgs(argv) {
 
 function main(argv = process.argv.slice(2)) {
   const { versions, command } = parseArgs(argv)
-  const entries = loadForbiddenRegistry(fs.readFileSync(FORBIDDEN_FILE, 'utf8'))
+  const { entries } = loadForbiddenRegistry(fs.readFileSync(FORBIDDEN_FILE, 'utf8'))
   assertNotInAutomatedApplyList(versions, entries)
   const [bin, ...args] = command
   const result = spawnSync(bin, args, { stdio: 'inherit', env: process.env })

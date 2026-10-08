@@ -3,9 +3,14 @@
  * P1-01 — testes financeiros comportamentais (PGlite, fixtures sintéticas).
  * Exercita estado persistido e invariantes — não é grep de SQL.
  *
- * Escopo desta entrega: PIX capture, split, taxa de forma, idempotência de comando,
- * e consistência saldo painel. Cancel/fechamento por forma dependem de RPCs
- * carregadas em suites irmãs (test-pdv-caixa-financeiro / fechamento-por-forma).
+ * Escopo comprovado nesta suíte:
+ *  - taxas no catálogo formas_pagamento (PIX=0; cartão com taxa)
+ *  - invariante split pagamentos == total_liquido (inserts diretos)
+ *  - idempotência real de financeiro_comando TRANSFERIR
+ *  - BAIXAR_AR parcial + replay idempotente
+ *
+ * Fora de escopo (suites irmãs / expansão): capture PIX via trigger de venda,
+ * cancelamento, devolução, sangria, fechamento por forma, concorrência, painel saldo.
  */
 import { PGlite } from '@electric-sql/pglite'
 import { readFileSync } from 'node:fs'
@@ -122,7 +127,7 @@ before(async () => {
 
 after(async () => db?.close())
 
-test('PIX: venda CONCLUIDA gera recebível; taxa forma 0; idempotência de captura', async () => {
+test('catálogo: taxa PIX=0 e cartão com taxa; trigger de captura opcional', async () => {
   const vendaId = randomUUID()
   const pagId = randomUUID()
   await sql(

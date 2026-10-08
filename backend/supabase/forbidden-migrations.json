@@ -1,6 +1,7 @@
 {
   "version": 1,
-  "description": "Migrations cujo apply remoto/automatizado é permanentemente proibido. O arquivo SQL permanece no histórico; testes locais podem carregá-lo explicitamente.",
+  "description": "Migrations cujo apply remoto/automatizado é permanentemente proibido. O SQL fica FORA de supabase/migrations/ (quarantine) para que db reset/db push não as apliquem. Testes locais podem carregá-las explicitamente.",
+  "quarantineDir": "migrations-forbidden",
   "entries": [
     {
       "version": "20261006120000",

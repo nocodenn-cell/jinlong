@@ -29,7 +29,8 @@ export function loadForbiddenVersions(
   readFile = (p) => fs.readFileSync(p, "utf8"),
 ) {
   if (!fs.existsSync(registryPath)) return new Set();
-  return new Set(loadForbiddenRegistry(readFile(registryPath)).map((e) => e.version));
+  const { entries } = loadForbiddenRegistry(readFile(registryPath));
+  return new Set(entries.map((e) => e.version));
 }
 
 function readArgs(argv) {
