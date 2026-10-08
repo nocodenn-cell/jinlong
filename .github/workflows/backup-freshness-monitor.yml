@@ -1,0 +1,70 @@
+# Monitoramento simples: falha se não houver backup-scheduled com sucesso
+# nas últimas ~25h. Detecta RPO 24h NÃO GARANTIDO sem plataforma nova.
+#
+# Não acessa o banco. Não usa secrets de Postgres/JIT.
+# Requer permissions: actions:read (API de runs).
+name: Backup freshness monitor
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: backup-freshness-monitor
+  cancel-in-progress: true
+
+on:
+  schedule:
+    # 08:00 UTC — ~2h após o cron 06:00 UTC do backup-scheduled
+    - cron: '0 8 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  freshness:
+    name: Último backup-scheduled sucesso ≤ 25h
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verificar idade do último backup com sucesso
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MAX_AGE_HOURS: '25'
+        run: |
+          set -euo pipefail
+          repo="${{ github.repository }}"
+          json=$(gh run list --repo "$repo" \
+            --workflow=backup-scheduled.yml --status=success --limit=1 \
+            --json databaseId,createdAt,url,displayTitle,headBranch)
+          count=$(printf '%s' "$json" | jq 'length')
+          if [ "$count" -eq 0 ]; then
+            echo "::error::Nenhum run com sucesso de backup-scheduled.yml."
+            echo "RPO 24h = NÃO GARANTIDO. Ação humana: desbloquear Temporary Access/JIT"
+            echo "(ver docs/runbooks/BACKUP_RESTORE_CANONICO.md) e disparar workflow_dispatch."
+            {
+              echo "## Backup freshness — FAIL"
+              echo ""
+              echo "- Último sucesso: **nenhum**"
+              echo "- Veredito: \`RPO 24h = NÃO GARANTIDO\`"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          created=$(printf '%s' "$json" | jq -r '.[0].createdAt')
+          run_id=$(printf '%s' "$json" | jq -r '.[0].databaseId')
+          url=$(printf '%s' "$json" | jq -r '.[0].url')
+          created_epoch=$(date -u -d "$created" +%s)
+          now_epoch=$(date -u +%s)
+          age_h=$(( (now_epoch - created_epoch) / 3600 ))
+          echo "Último sucesso: run $run_id em $created (idade ≈ ${age_h}h) — $url"
+          {
+            echo "## Backup freshness"
+            echo ""
+            echo "- Último sucesso: [$run_id]($url) em \`$created\`"
+            echo "- Idade aproximada: **${age_h}h** (limite ${MAX_AGE_HOURS}h)"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$age_h" -gt "$MAX_AGE_HOURS" ]; then
+            echo "::error::Backup stale: ${age_h}h > ${MAX_AGE_HOURS}h. RPO 24h = NÃO GARANTIDO."
+            echo "Veredito: \`BACKUP_STALE\`" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "Freshness OK (≤ ${MAX_AGE_HOURS}h)."
+          echo "Veredito: \`BACKUP_FRESH\`" >> "$GITHUB_STEP_SUMMARY"

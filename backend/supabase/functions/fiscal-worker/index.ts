@@ -110,7 +110,7 @@ Deno.serve(async (req) => {
   }
 
   const processed: string[] = [];
-  const counters: WorkerCounters = { emitted: [], failed: [], retried: [] };
+  const counters: WorkerCounters = { emitted: [], cancelled: [], failed: [], retried: [] };
 
   for (const raw of (docs ?? []) as Array<Record<string, unknown>>) {
     const doc: FiscalDoc = {
@@ -462,7 +462,7 @@ async function handleReconciliar(
   if (providerType === "focus") {
     const cred = await resolveFocusCredential(supabase, lojaId, deployAmbiente);
     if (!cred.ok) {
-      const counters: WorkerCounters = { emitted: [], failed: [], retried: [] };
+      const counters: WorkerCounters = { emitted: [], cancelled: [], failed: [], retried: [] };
       await applyCredentialResolutionFailure(supabase, doc, cred.code, counters);
       return json(200, { ok: true, documento_id: doc.id, resultado: "erro_credencial", detalhe: cred.code });
     }
@@ -476,7 +476,7 @@ async function handleReconciliar(
 
   const ref = resolveFocusRef(doc);
   const estado = await provider.consultarDocumento(ref, doc.tipo_doc, cfg);
-  const counters: WorkerCounters = { emitted: [], failed: [], retried: [] };
+  const counters: WorkerCounters = { emitted: [], cancelled: [], failed: [], retried: [] };
   await applyFocusRemoteState(supabase, doc, estado, counters);
 
   return json(200, { ok: true, documento_id: doc.id, resultado: estado.kind });

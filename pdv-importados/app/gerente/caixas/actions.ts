@@ -237,13 +237,11 @@ export async function listarMovimentacoesCaixa(caixaId: string): Promise<R<Caixa
       .eq('caixa_id', caixaId)
       .is('deleted_at', null)
       .order('created_at', { ascending: true }),
-    // Recebimento/estorno de contas a receber em DINHEIRO credita/debita
-    // `caixas.saldo_atual` diretamente (`registrar_liquidacao_receber`), sem
-    // passar por `movimentacoes_caixa` — sem isto, esse dinheiro afeta o
-    // saldo de fechamento mas nunca aparece no extrato do turno para o
-    // gerente conferir. `caixa_id` só vem preenchido quando a forma foi
-    // DINHEIRO (ver migration 20260813231034), então nenhum filtro extra é
-    // necessário aqui.
+    // Recebimento/estorno AR em DINHEIRO entra em E(c) via liquidacoes_receber
+    // (SSOT-002); o cache saldo_atual é só materializado. Sem isto no extrato,
+    // o dinheiro afeta o esperado do turno mas não aparece para conferência.
+    // `caixa_id` só vem preenchido quando a forma foi DINHEIRO
+    // (migration 20260813231034).
     supabase
       .from('liquidacoes_receber')
       .select('id, valor, operacao_tipo, created_at')

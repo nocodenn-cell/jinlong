@@ -55,8 +55,26 @@ jobs:
 
       - name: Install PostgreSQL client
         run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client
+          set -euo pipefail
+          # Runner às vezes já traz psql; senão apt com retry — mirrors
+          # do GitHub Hosted podem travar (hang >20min tip 9334577d;
+          # timeout 124 no tip 82ce598a).
+          if command -v psql >/dev/null 2>&1; then
+            psql --version
+            exit 0
+          fi
+          for attempt in 1 2 3; do
+            echo "apt postgresql-client attempt ${attempt}/3"
+            if sudo timeout 180 apt-get update -y \
+              && sudo timeout 240 apt-get install -y --no-install-recommends postgresql-client; then
+              psql --version
+              exit 0
+            fi
+            echo "apt attempt ${attempt} falhou; backoff..."
+            sleep $((attempt * 20))
+          done
+          echo "::error::Falha ao instalar postgresql-client após 3 tentativas."
+          exit 1
 
       - name: Install dependencies (workspace root)
         run: npm ci
@@ -272,7 +290,7 @@ jobs:
           cd backend
           npx supabase status || true
           docker ps -a || true
-          for c in $(docker ps -a --format '{{.Names}}' | rg supabase); do
+          for c in $(docker ps -a --format '{{.Names}}' | grep supabase); do
             echo "--- $c ---"
             docker logs "$c" --tail 200 || true
           done

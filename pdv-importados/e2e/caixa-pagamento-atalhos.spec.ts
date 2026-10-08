@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 import { hasCaixaOperadorUser, e2eProdutoCodigoBarras } from './helpers/env'
 import { loginCaixaOperador } from './helpers/login'
 import { expectCaixaShellVisible } from './helpers/caixaShell'
@@ -25,7 +25,7 @@ test.describe('Caixa — atalhos de teclado e clique do mouse para método de pa
     await loginCaixaOperador(page)
   })
 
-  async function setupPagamento(page: any) {
+  async function setupPagamento(page: Page) {
     await gotoApp(page, '/caixa')
     await expectCaixaShellVisible(page)
     await ensureCaixaAberto(page, '300')

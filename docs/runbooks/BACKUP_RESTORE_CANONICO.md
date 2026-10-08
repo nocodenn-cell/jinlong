@@ -1,169 +1,148 @@
 # Runbook canônico — Backup & Restore (Jinlong)
 
-> **Referência única** para recuperação de dados. Documentos históricos (`P0-2`, `P0-3`, auditoria) apontam para este arquivo.
+> **Referência única** para recuperação de dados.
 >
-> **Produção (ORIGEM):** projeto `jinlong` · ref `PROJECT_REF_JINLONG` · org `NatureCode` (`ORG_ID_NATURECODE`)
+> **Produção (ORIGEM):** projeto `jinlong` · org NatureCode  
+> **Segredos:** nunca no Git (`PGPASSWORD`, PAT, `service_role`, connection strings).
 
 ---
 
-## Estado atual (reverificação 2026-08-31)
+## Estado operacional (2026-10-07)
 
 | Campo | Valor |
 |-------|-------|
-| Plano org (API Management) | **Free** (`get_organization` → `plan: "free"`) |
-| Backup automático plataforma | **Não incluído** (Free) |
-| PITR | **Não disponível** (Free) |
-| `backup.sh` agendado | **Não** (artefato repo; sem workflow/cron) |
-| Restore ensaiado | **Não** |
-| IDs 183–187 | **FAIL** (ver auditoria) |
+| Plano org | **Free** (`get_organization` → `plan: free`) |
+| Backup nativo / PITR | **Não** no Free |
+| Automação Opção B | Workflows em `.github/workflows/backup-*.yml` — **ativos, falhando** |
+| Últimos 30 runs `backup-scheduled` | **0 success / 30 failure** (PAM/JIT) |
+| RPO **alvo** | 24h |
+| RPO **efetivamente garantido** | **`NÃO GARANTIDO`** |
+| RTO **alvo / esperado** | 4h úteis |
+| Restore drill local (`pg_dump -Fc`) | `RESTORE_DRILL_PASS` (fase hardening) |
+| Formato CI (age/sql) | `AUTOMATION_FORMAT_RESTORE_PASS` (isolado; não é dump prod) |
+| Gate | **`BACKUP_PRODUCTION_PENDING`** — ver [GATE_BACKUP_PRODUCAO.md](../regras-negocio/GATE_BACKUP_PRODUCAO.md) |
 
-**Histórico:** em 2026-08-27, P0-2 também classificou **FAIL** — ver [`../piloto-d0/P0-2_BACKUP_EVIDENCIA.md`](../piloto-d0/P0-2_BACKUP_EVIDENCIA.md).
-
----
-
-## Decisão aprovada (2026-08-31) — atualizada
-
-| Item | Decisão |
-|------|---------|
-| Avaliação técnica | **Opção A (Supabase Pro)** — menor risco operacional |
-| Priorização consciente | **Não contratar Pro/PITR/add-ons neste momento** |
-| `backup.sh` | **Não implementar** como solução até execução automática + restore |
-| PITR | **Não autorizado** |
-| Metas | RPO ≤ 24h · RTO ≤ 8h |
-| Tratamento | **Onda 7** do plano de fechamento (backup sem novo custo) |
-| Status gap | **`GAP P0 BACKUP/RESTORE REMAINS OPEN`** — **não** é PASS |
-
-**Não aguardar** `UPGRADE PRO CONCLUÍDO`. Próxima ação de produto: plano de ondas (`GO — ONDA 1`).
+**Não afirmar SLA de RPO enquanto não houver artefato de produção com sucesso &lt; 25h.**
 
 ---
 
-## Opção A — Backup gerenciado Supabase (Pro) — referência
+## Estratégia escolhida
 
-Para cliente pagante, **Opção A** é a menor solução adequada em risco operacional.
+**Opção B — dump externo automatizado** (GitHub Actions + Temporary Access/JIT + `age` + artifact).
 
-### Comparação A vs B
+| Critério | Motivo |
+|----------|--------|
+| Custo | Zero adicional no Free |
+| Já implementada | `backup-scheduled.yml` + `backup-restore-test.yml` |
+| Segurança | Sem senha Postgres permanente; cifrar antes do artifact |
+| Fallback | Opção A (Pro, backup diário 7d) se JIT permanecer bloqueado |
 
-| Critério | A — Supabase Pro (gerenciado) | B — Dump externo (`pg_dump` / `backup.sh`) |
-|----------|-------------------------------|--------------------------------------------|
-| **Custo** | ~**$25/mês** org Pro + compute (~$10/mês micro incluso via crédito) | Infra storage + CI/cron; tempo de engenharia recorrente |
-| **Complexidade** | Baixa — ativa no painel | Alta — secrets, cron, storage off-site, rotação, alertas |
-| **Frequência** | Diário automático (7 dias retenção Pro) | Depende do schedule (ex.: cron 24h) |
-| **Retenção** | 7 dias (Pro) | Configurável (`RETENTION_DAYS=7` no script) |
-| **Segurança** | Backups na plataforma; sem `service_role` em cron | Risco de vazamento de credenciais PG em CI/VM |
-| **Monitoramento** | Dashboard + API `GET .../database/backups` | Precisa construir (falha de job, idade do dump) |
-| **RPO sustentado** | **≤ 24h** (daily backup) — **atende D0-06** | ≤ 24h **se** agendado diário **e** monitorado |
-| **RTO** | Restore UI/API para projeto novo; depende do tamanho do DB | Dump + restore manual; tipicamente mais lento |
-| **Restore** | Restore to New Project (Pro+) | `pg_restore` em DESTINO isolado |
-| **Manutenção** | Baixa | Alta (script, OS, retenção, testes) |
-| **Risco operacional** | **Menor** | Maior (drift, credencial, job silencioso) |
-
-**Quando B seria justificável:** org não pode migrar para Pro; requisito legal de cópia off-site em bucket próprio (complementar A, não substituir).
+**Opção C (A+B):** não neste estágio.
 
 ---
 
-## Metas D0-06
+## Pré-condições
 
-| Meta | Valor | Status atual |
-|------|-------|--------------|
-| RPO | ≤ 24h | **NÃO ATENDE** |
-| RTO | ≤ 8h úteis | **NÃO ATENDE** (sem drill) |
-
----
-
-## Gate humano obrigatório (antes de qualquer ação paga ou com dados)
-
-> **Estado 2026-08-31 (atualizado):** Opção A avaliada; **não contratar Pro agora** (priorização consciente). Gap permanece ABERTO → Onda 7.
-
-1. **Upgrade Pro** — **não autorizado nesta priorização**.
-2. **`SUPABASE_ACCESS_TOKEN`** — opcional para evidência futura; não necessário até Onda 7.
-3. **Restore drill (P0-3)** — somente na Onda 7, com DESTINO isolado preenchido.
-4. **Dump / `backup.sh`** — avaliar na Onda 7; não implementar agora.
-5. **PITR** — **não contratar**.
-
-**Produção permanece somente leitura** durante investigação e drill.
+1. Secrets/vars GitHub configurados (dono do repo):
+   - `secrets.SUPABASE_BACKUP_JIT_PAT`
+   - `secrets.BACKUP_AGE_PRIVATE_KEY` (só restore-drill)
+   - `vars.SUPABASE_BACKUP_USER_ID`
+   - `vars.BACKUP_AGE_PUBLIC_KEY`
+2. Temporary Access habilitado no projeto (Dashboard).
+3. Destino de restore **sempre isolado** (nunca sobrescrever ORIGEM sem ordem escrita).
 
 ---
 
-## Procedimento — Opção A (após upgrade Pro autorizado)
+## Backup automático (Opção B)
 
-### Fase 1 — Habilitar backup automático (IDs 183–184)
-
-1. Humano: Dashboard → Organization → upgrade **Pro** (confirmar cobrança).
-2. Aguardar **primeiro backup diário** (até 24h após upgrade).
-3. Evidência:
-   - Dashboard → Database → Backups (captura), **ou**
-   - `GET https://api.supabase.com/v1/projects/PROJECT_REF_JINLONG/database/backups` com `SUPABASE_ACCESS_TOKEN`
-4. Registrar em P0-2: data/hora, contagem de backups, retenção visível.
-
-### Fase 2 — Restore drill (ID 185)
-
-1. Dashboard ORIGEM → Database → Backups → **Restore to a New Project**.
-2. Anotar ref **DESTINO** em P0-3 **antes** de confirmar.
-3. Aguardar conclusão (projeto DESTINO isolado).
-4. **Validação** (DESTINO apenas — contagens agregadas, sem PII em Git):
-
-```sql
--- Executar no DESTINO; comparar ordem de grandeza com ORIGEM (read-only)
-SELECT 'produtos' AS t, count(*) FROM produtos
-UNION ALL SELECT 'categorias', count(*) FROM categorias
-UNION ALL SELECT 'marcas', count(*) FROM marcas
-UNION ALL SELECT 'estoque', count(*) FROM estoque
-UNION ALL SELECT 'vendas', count(*) FROM vendas
-UNION ALL SELECT 'itens_venda', count(*) FROM itens_venda
-UNION ALL SELECT 'vendas_pagamentos', count(*) FROM vendas_pagamentos
-UNION ALL SELECT 'caixas', count(*) FROM caixas
-UNION ALL SELECT 'movimentacoes_caixa', count(*) FROM movimentacoes_caixa
-UNION ALL SELECT 'movimentos_estoque_log', count(*) FROM movimentos_estoque_log
-UNION ALL SELECT 'contas_receber', count(*) FROM contas_receber
-UNION ALL SELECT 'contas_pagar', count(*) FROM contas_pagar
-UNION ALL SELECT 'venda_eventos', count(*) FROM venda_eventos;
+```text
+Actions → "Backup automatico (item 19)" → Run workflow
+Cron: 0 6 * * * (06:00 UTC)
+Saída: artifact jinlong-backup-<run_id>
+  roles.sql.age, schema.sql.age, data.sql.age, checksums.sha256, manifest.json
+Retenção artifact: 30 dias
 ```
 
-5. Invariantes opcionais: `sum(total) FROM vendas WHERE status='CONCLUIDA'` (ordem de grandeza); checksum de `count(*)` por tabela crítica documentado em evidência interna (não commitar PII).
+### Validação
 
-6. Medir RTO: T0 = clique restore → T1 = query acima retorna → registrar minutos.
+- Step summary / logs: tamanhos dos SQL &gt; 32 bytes  
+- Artifact presente  
+- `Backup freshness monitor` verde (idade ≤ 25h)
 
-7. Destruir DESTINO após evidência (pause/delete project).
+### Bloqueio atual (não contornar)
 
-### Fase 3 — RPO/RTO (IDs 186–187)
+Sintoma estável:
 
-- **RPO:** documentar “backup diário, retenção 7d” → **ATENDE** meta 24h.
-- **RTO:** se drill < 8h úteis → **ATENDE**; senão documentar desvio e plano.
+```text
+aws-1-sa-east-1.pooler.supabase.com → PAM authentication failed for user "postgres"
+```
 
----
+com JIT `PUT/GET` HTTP 2xx. Detalhe: `docs/audits/ENCERRAMENTO_SPRINT_BACKUP_JIT_ITENS_18_21.md`.
 
-## Procedimento — Opção B (somente se A inviável e autorizado)
-
-1. Criar projeto DESTINO vazio; preencher P0-3.
-2. Autorização escrita para dump read-only da ORIGEM.
-3. `pg_dump -Fc` ou `supabase db dump` → artefato criptografado off-site.
-4. `pg_restore` **somente no DESTINO**.
-5. Mesma validação SQL acima.
-6. Agendar repetição + monitoramento de idade do dump.
-
-**Nota:** Opção B **não** reclassifica ID 183 como gerenciado; no máximo cobre 184 se monitorado, com maior risco.
+**Única próxima ação humana:** ticket Supabase (EXTERNAL-BLOCKER) **ou** autorizar Opção A (Pro).
 
 ---
 
-## IDs da auditoria — critérios de PASS
+## Monitoramento de falha
 
-| ID | PASS quando |
-|----|-------------|
-| 183 | Backup automático real ativo (Pro+ daily) |
-| 184 | Lista/captura/API comprova execuções recentes |
-| 185 | Restore em DESTINO isolado + validação contagens |
-| 186 | RPO documentado ≤ 24h sustentado pelo mecanismo |
-| 187 | RTO medido no drill ≤ 8h úteis (ou desvio aceito formalmente) |
+| Mecanismo | Função |
+|-----------|--------|
+| Conclusão do workflow `backup-scheduled` | sucesso/falha por execução |
+| `backup-freshness-monitor.yml` (cron 08:00 UTC) | falha se nenhum sucesso ≤ 25h |
+| Artifact + `checksums.sha256` | integridade / tamanho implícito |
+| `manifest.json` | contagens agregadas (sem PII) |
 
-**Não marcar GAP CLOSED** até 185 validado.
+Não há stack de observabilidade dedicada — Actions + freshness bastam.
 
 ---
 
-## Referências
+## Retenção
 
-- [Supabase Backups](https://supabase.com/docs/guides/platform/backups)
-- [Supabase Pricing](https://supabase.com/pricing)
-- D0-06: [`../piloto-d0/DEFINICAO_FUNCIONAL_D0.md`](../piloto-d0/DEFINICAO_FUNCIONAL_D0.md)
-- Evidência histórica: [`../piloto-d0/P0-2_BACKUP_EVIDENCIA.md`](../piloto-d0/P0-2_BACKUP_EVIDENCIA.md)
-- Gate restore: [`../piloto-d0/P0-3_HUMAN_GATE.md`](../piloto-d0/P0-3_HUMAN_GATE.md)
-- Matriz auditoria: [`../AUDITORIA_PRONTIDAO_CLIENTE_PAGANTE.md`](../AUDITORIA_PRONTIDAO_CLIENTE_PAGANTE.md)
+| Camada | Retenção | Justificativa |
+|--------|----------|---------------|
+| Artifact GitHub (Opção B) | **30 dias** | Cobre detecção de problema em poucos dias + margem mensal; sem storage caro |
+| Pro daily (se A) | 7 dias | Padrão plataforma |
+| PITR | Não adotar agora | Custo alto vs estágio |
+
+---
+
+## Restore
+
+### Produção / CI (formato Opção B)
+
+```text
+Actions → "Restore drill (item 20)" → Run workflow
+```
+
+Nunca apontar o drill para o projeto `jinlong`. Runner efêmero Postgres 17; decifra com `BACKUP_AGE_PRIVATE_KEY`; compara contagens ao manifesto.
+
+### Local equivalente (`pg_dump -Fc`) — já ensaiado
+
+Ver evidência hardening: dump sha256 `8f5007ac…` → restore imagem Supabase PG17 → `RESTORE_DRILL_PASS`.
+
+### Rollback
+
+Falha no DESTINO → destruir DESTINO; ORIGEM intacta. Cutover só após verificação PASS.
+
+---
+
+## Erros comuns
+
+| Sintoma | Ação |
+|---------|------|
+| `PAM authentication failed` + JIT 200 | Bloqueio externo; não “mais um fix de workflow” sem evidência nova — seguir ação humana do gate |
+| `unsupported version (1.16)` | Cliente `pg_restore` &lt; 17 |
+| `role "authenticated" does not exist` | Target bare Postgres; usar imagem Supabase |
+| Freshness FAIL | RPO não garantido; investigar último `backup-scheduled` |
+
+---
+
+## Responsável
+
+| Papel | Quem |
+|-------|------|
+| Secrets / ticket Supabase / Pro | Dono do projeto (humano) |
+| Disparar workflows pós-desbloqueio | Ops / engenharia |
+| Atualizar este runbook | Após primeiro SUCCESS de produção |
+
+Referências: [GATE_BACKUP_PRODUCAO.md](../regras-negocio/GATE_BACKUP_PRODUCAO.md) · P0-2 · P0-3 · INTEGRACAO_HARDENING_473_479.md

@@ -886,6 +886,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
             valorSistemaDinheiro: res.valorSistemaDinheiro,
             valorContado: res.valorContado,
             diferenca: res.diferenca,
+            formas: res.formas,
+            formasError: res.formasError,
           })
         }
       } finally {

@@ -140,11 +140,22 @@ export function classifyFocusEmitResponse(res: Response, record: Record<string, 
   };
 }
 
+/** Focus: `status` canônico em consulta (docs oficiais). Normaliza espaços/caso. */
+export function focusConsultaStatus(record: Record<string, unknown>): string | null {
+  const raw = asString(record.status) ?? asString(record.situacao) ?? asString(record.estado);
+  if (!raw) return null;
+  return raw.trim().toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
+}
+
+function isFocusCanceladoStatus(status: string | null): boolean {
+  if (!status) return false;
+  return status === "cancelado" || status === "cancelada" || status.startsWith("cancelad");
+}
+
 /**
- * Onda C2.5/C2.8 — classifica a resposta HTTP de uma CONSULTA (GET). Ambíguo
- * (2xx sem chave/protocolo) vira `processando`, não `rejeitado`: uma consulta
- * existe justamente para resolver incerteza, então o lado seguro de um caso
- * ambíguo é "ainda não sei", não "presumir rejeitado".
+ * Classifica CONSULTA (GET). `status=cancelado` tem precedência sobre
+ * chave/protocolo — evita cancelado→emitido na reconciliação.
+ * Ambíguo (2xx sem chave e sem status terminal) → `processando`.
  */
 export function classifyFocusConsultaResponse(res: Response, record: Record<string, unknown>): FocusRemoteState {
   if (res.status === 404) return { kind: "nao_encontrado" };
@@ -156,10 +167,56 @@ export function classifyFocusConsultaResponse(res: Response, record: Record<stri
     return { kind, erro: errorCode, http_status: res.status, provider_code: errorCode, provider_message: message, payload: record };
   }
 
+  const focusStatus = focusConsultaStatus(record);
   const { chave, protocolo } = pickFocusChaveProtocolo(record);
-  if (chave && protocolo) {
-    const providerRef = asString(record.ref) ?? asString(record.referencia) ?? null;
+  const providerRef = asString(record.ref) ?? asString(record.referencia) ?? null;
+
+  if (isFocusCanceladoStatus(focusStatus)) {
+    return {
+      kind: "cancelado",
+      chave_fiscal: chave || null,
+      protocolo: protocolo || null,
+      provider_ref: providerRef,
+      payload: record,
+    };
+  }
+
+  if (focusStatus === "erro_autorizacao" || focusStatus === "denegado") {
+    const { code, message } = extractErrorCodeMessage(record);
+    return {
+      kind: "rejeitado",
+      erro: code ?? focusStatus.toUpperCase(),
+      provider_code: code ?? focusStatus,
+      provider_message: message,
+      payload: record,
+    };
+  }
+
+  const statusAutorizado =
+    focusStatus === null ||
+    focusStatus === "autorizado" ||
+    focusStatus === "autorizada" ||
+    focusStatus === "autorizada_completa" ||
+    focusStatus === "autorizado_completo";
+
+  if (chave && protocolo && statusAutorizado) {
     return { kind: "autorizado", chave_fiscal: chave, protocolo, provider_ref: providerRef, payload: record };
+  }
+
+  if (focusStatus && (focusStatus.includes("process") || focusStatus === "processando_autorizacao")) {
+    return { kind: "processando", payload: record };
+  }
+
+  if (chave && protocolo && focusStatus) {
+    // Status desconhecido + chave: fail-closed — não assumir autorizado
+    return {
+      kind: "erro_definitivo",
+      erro: `FOCUS_STATUS_DESCONHECIDO:${focusStatus}`,
+      http_status: res.status,
+      provider_code: focusStatus,
+      provider_message: asString(record.mensagem_sefaz) ?? asString(record.mensagem),
+      payload: record,
+    };
   }
 
   return { kind: "processando", payload: record };
@@ -169,6 +226,15 @@ function focusStateToProviderResult(state: FocusRemoteState): ProviderResult {
   switch (state.kind) {
     case "autorizado":
       return { ok: true, chave_fiscal: state.chave_fiscal, protocolo: state.protocolo, provider_ref: state.provider_ref, payload: state.payload };
+    case "cancelado":
+      return {
+        ok: false,
+        erro: "FOCUS_CANCELADO",
+        transitorio: false,
+        provider_code: "FOCUS_CANCELADO",
+        provider_message: "Documento cancelado no provedor.",
+        payload: state.payload,
+      };
     case "rejeitado":
       return {
         ok: false,

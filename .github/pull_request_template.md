@@ -8,6 +8,19 @@
 - [ ] **Supabase:** migrations e Edge revisadas se o PR tocar `backend/supabase/`.
 - [ ] **Testes:** `npm test` / `npm run lint` nos pacotes alterados quando fizer sentido.
 
+### Governança de domínio (obrigatório se criar/alterar regra de negócio ou dado crítico)
+
+Ref: `docs/regras-negocio/GOVERNANCA_REGRAS_NEGOCIO.md` · mapa `docs/regras-negocio/MAPA_DOMINIOS_REGRAS_NEGOCIO.md` · checklist `docs/regras-negocio/CHECKLIST_FEATURE_DOMINIO.md`
+
+- [ ] Checklist das 13 perguntas preenchido (ou N/A: só docs/chore/UI sem regra)
+- [ ] Domínio dono e fonte de verdade identificados
+- [ ] Não cria segunda fonte de verdade nem regra duplicada
+- [ ] Não altera outro domínio sem contrato/RPC explícito
+- [ ] Consequências financeiro / fiscal / estoque tratadas no dono canônico
+- [ ] Número crítico explicável (origem + regra + status) quando aplicável
+- [ ] Auditoria (quem/quando/antes/depois/origem/motivo) quando mutação crítica
+- [ ] Confrontado com o mapa de domínios; entity-ssot respeitado
+
 ### Design System (obrigatório se tocar UI)
 
 Ref: `docs/architecture/DS_MIGRATION_GOVERNANCE.md`

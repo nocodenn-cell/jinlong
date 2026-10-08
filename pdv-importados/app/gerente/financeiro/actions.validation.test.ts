@@ -1,16 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
-  validarCriarClienteInput,
   validarCriarTituloInput,
   validarLiquidarTituloInput,
 } from './actions.validation'
 
 describe('financeiro/actions validações', () => {
-  it('valida criar cliente', () => {
-    expect(validarCriarClienteInput({ nome: '' })).toBe('Nome obrigatório')
-    expect(validarCriarClienteInput({ nome: ' Cliente ' })).toBeNull()
-  })
-
   it('valida criar título', () => {
     expect(validarCriarTituloInput({ cliente_id: '', valor_total: 10 })).toBe('Cliente obrigatório')
     expect(validarCriarTituloInput({ cliente_id: 'c1', valor_total: 0 })).toBe('Valor inválido')

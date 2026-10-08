@@ -17,6 +17,8 @@ export type AbrirCaixaOperadorResult =
   | { ok: true; caixaId: string }
   | { ok: false; error: string }
 
+import type { FechamentoFormaLinha } from '@/app/caixa/fechamentoPorFormaTypes'
+
 export type FecharCaixaOperadorResult =
   | {
       ok: true
@@ -25,5 +27,8 @@ export type FecharCaixaOperadorResult =
       valorContado: number
       diferenca: number
       alreadyClosed?: boolean
+      /** Snapshot por forma; null = falha de leitura (nunca tratar como lista vazia/zero). */
+      formas: FechamentoFormaLinha[] | null
+      formasError: string | null
     }
   | { ok: false; error: string }

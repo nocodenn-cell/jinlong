@@ -64,7 +64,8 @@ Uma mesma mercadoria pode ser lançada por três caminhos que creditam estoque *
 | Referência a outro documento | nenhuma | `origem_tipo`/`origem_ref` **existem e não são usados** | nenhuma |
 
 ### EVIDÊNCIAS ([F] e [B])
-- **[F]** Único FK envolvendo OC: `ordens_compra_itens.ordem_id → ordens_compra` (`109_ordens_compra.sql`). `remessas` e `importacoes_nfe` **não referenciam OC**; `movimentos_estoque_log` só tem FK para `remessa_id` (`034_…sql:47-58`) e `venda_id` (`127_…sql`).
+- **[F]** FK de itens: `ordens_compra_itens.ordem_id → ordens_compra` (`109_ordens_compra.sql`). `movimentos_estoque_log` só tem FK para `remessa_id` (`034_…sql:47-58`) e `venda_id` (`127_…sql`).
+- **[F] Atualização 2026-10-07:** `importacoes_nfe.ordem_compra_id` **existe** como FK nullable → `ordens_compra(id)` desde mig. `20260918100000_oc_recebimento_parcial.sql` (índice parcial + uso em `confirmar_importacao_nfe` / vínculo). **Remessa** ainda não tem coluna FK `ordem_compra_id`: o vínculo opcional continua **textual** via `origem_tipo=ORDEM_COMPRA` + `origem_ref` (texto do UUID) em `criar_confirmar_remessa_entrada(p_ordem_compra_id)` — dívida residual UX-03.
 - **[F]** `receber_ordem_compra` exige `status='EM_TRANSITO'` e conferência completa, credita `quantidade_conferida`, grava `quantidade_recebida` e **sempre** fecha a OC como `RECEBIDA` — mesmo com menos do que o pedido (`20260805193920_295_…sql:126-209`). **Não há recebimento parcial.**
 - **[F]** Transições da OC: `EM_TRANSITO → RECEBIDA | CANCELADA`; `RECEBIDA` e `CANCELADA` são terminais (`app/gerente/compras/actions.ts:15-21`).
 - **[F]** `criar_confirmar_remessa_entrada(p_origem, p_observacao, p_itens, p_idempotency_key)` não recebe id de OC e não toca `ordens_compra` (`20260828150000_…sql:43-200`). O vínculo opcional de OC (S8/RM-14, "Opção 1") só **valida** que a OC não está `RECEBIDA` (`recebimento/actions.ts:164-180`). Teste de caracterização: `actions.vinculoOc.naoBaixaOc.characterization.test.ts`.
@@ -129,7 +130,7 @@ M0: continua exigindo disciplina. M1: mais transparência. M2: o fluxo "pedi →
 Q1–Q4 da §12.
 
 ### RECOMENDAÇÃO
-**M0 agora (já entregue) → M2 variante B em etapas.** Sequência sugerida: (1) decidir Q1–Q4; (2) migração **aditiva** (`ordem_compra_id` nullable + FK em `remessas` e `importacoes_nfe`); (3) NF-e primeiro (é o caso mais frequente, S1), entrada manual depois; (4) manter `receber_ordem_compra` inalterada, com a trava já existente (pedido `RECEBIDA` não aceita novo vínculo). **M4 fica como destino de longo prazo**, sem prazo. **Isto é "mudar o modelo"** — o único ponto do UX-03 em que a resposta não é só exposição.
+**M0 agora (já entregue) → M2 variante B em etapas.** Progresso 2026-10: (2 parcial) FK `importacoes_nfe.ordem_compra_id` **já aplicada** (mig 20260918); falta FK/coluna canônica em `remessas` (ainda `origem_ref` textual). Sequência restante: (1) decidir Q1–Q4 abertos; (2b) FK aditiva em `remessas` se produto exigir; (3) completar UX do vínculo NF-e; (4) manter `receber_ordem_compra` com trava `RECEBIDA`. **M4 fica como destino de longo prazo**, sem prazo.
 
 ---
 
