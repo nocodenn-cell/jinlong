@@ -86,7 +86,16 @@ before(async () => {
   await db.exec(readFileSync(new URL('../supabase/migrations/20260731195933_credita_saldo_caixa_venda_dinheiro.sql', import.meta.url), 'utf8'))
   await db.exec(readFileSync(new URL('../supabase/migrations/20261005004647_financeiro_loja_contas_ledger.sql', import.meta.url), 'utf8'))
   await db.exec(readFileSync(new URL('../supabase/migrations/20261005091218_financeiro_hardening_final.sql', import.meta.url), 'utf8'))
-  await db.exec(readFileSync(new URL('../supabase/migrations/20261006120000_financeiro_contas_formas_e_painel.sql', import.meta.url), 'utf8'))
+  // Fixture histórica em quarantine (FORBIDDEN_APPLY) — path fora de migrations/.
+  await db.exec(
+    readFileSync(
+      new URL(
+        '../supabase/migrations-forbidden/20261006120000_financeiro_contas_formas_e_painel.sql',
+        import.meta.url,
+      ),
+      'utf8',
+    ),
+  )
 
   await sql('insert into lojas values($1),($2)', [loja, outra])
   await sql("insert into usuarios values($1,$2,'DONO',true,'Gerente'),($3,$4,'ADMIN',true,'Outro')", [usuario, loja, outroUsuario, outra])
