@@ -9,7 +9,7 @@
 | B-P0-03 | Ops | Smoke presencial | Sim | Roteiro PASS | PENDENTE |
 | B-P0-04 | Integrity | Deny-list `120000` | — | Quarantine + fixtures | RESOLVIDO código (#488) |
 | B-P0-05 | Security | INSERT fiscal remoto | Sim (apply pending-auth) | PGlite PASS | IMPLEMENTADO local |
-| B-P0-06 | Types | types-drift pós-quarentena | — | mig `20261008140000` | CORRIGIDO tip `f594945a` |
+| B-P0-06 | Types | types-drift pós-quarentena | — | migs `140000`+`140100` | CORRIGIDO tip `da0ff15d` (aguardar CI) |
 | B-P1-01 | Tests | Financeiro comportamental completo | Parcial | Mínimo PASS | PARCIAL |
 | B-P1-02 | Drift | 8 SSOT `remote_ausente` | Sim (apply seletivo) | Plano pronto | BLOQUEADO apply |
 | B-P1-03 | Comercial | NF-e `163100` | Sim (decisão) | Matriz pronta | BLOQUEADO |
