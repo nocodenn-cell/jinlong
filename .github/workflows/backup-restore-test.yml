@@ -25,20 +25,12 @@ jobs:
     name: Restaura backup mais recente em Postgres 17 efemero
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_PASSWORD: restore-drill-local-only
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
     steps:
+      - name: Checkout (scripts de restore)
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          sparse-checkout: backend/scripts
+
       - name: Instalar age e cliente postgres
         run: |
           sudo apt-get update -y
@@ -91,83 +83,42 @@ jobs:
           done
           shred -u /tmp/age-key.txt 2>/dev/null || rm -f /tmp/age-key.txt
 
-      - name: Aguardar Postgres efemero ficar pronto
+      - name: Subir Postgres efemero (imagem Supabase, com roles/auth base)
         run: |
-          for i in $(seq 1 30); do
-            pg_isready -h 127.0.0.1 -p 5432 -U postgres && break
-            sleep 1
+          set -euo pipefail
+          docker run -d --name restore-drill             -e POSTGRES_PASSWORD=restore-drill-local-only -e PGPASSWORD=restore-drill-local-only             -e JWT_SECRET=restore-drill-local-only-secret-0123456789 -e JWT_EXP=3600             public.ecr.aws/supabase/postgres:17.6.1.165 docker-entrypoint.sh postgres -D /etc/postgresql
+          for i in $(seq 1 60); do
+            docker exec restore-drill pg_isready -h 127.0.0.1 -U postgres && break
+            sleep 2
           done
 
-      - name: Restaurar roles -> schema -> data (ordem oficial Supabase)
+      - name: Restaurar roles -> schema -> data (backend/scripts/restore-drill.sh)
         id: restore
-        env:
-          PGPASSWORD: restore-drill-local-only
         run: |
           set -euo pipefail
           start_ts=$(date -u +%s)
           echo "restore_start_iso=$(date -u -d "@$start_ts" '+%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
 
-          psql -h 127.0.0.1 -U postgres -d postgres \
-            --single-transaction \
-            --variable ON_ERROR_STOP=1 \
-            --file /tmp/restore-plain/roles.sql \
-            --file /tmp/restore-plain/schema.sql \
-            --command 'SET session_replication_role = replica' \
-            --file /tmp/restore-plain/data.sql
+          node backend/scripts/filter-data-dump.mjs /tmp/restore-plain/data.sql /tmp/restore-plain/data.filtered.sql
+          docker exec restore-drill mkdir -p /tmp/dump
+          for f in roles schema data data.filtered; do
+            docker cp "/tmp/restore-plain/$f.sql" "restore-drill:/tmp/dump/$f.sql"
+          done
+          docker cp backend/scripts/restore-drill.sh restore-drill:/tmp/restore-drill.sh
+          docker exec -e SKIP_FILTER=1 -e PSQL="psql -U supabase_admin -d postgres" restore-drill             bash /tmp/restore-drill.sh /tmp/dump | tee /tmp/restore-plain/restored-counts.txt
 
           end_ts=$(date -u +%s)
           echo "restore_end_iso=$(date -u -d "@$end_ts" '+%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
           echo "restore_duration_seconds=$((end_ts - start_ts))" >> "$GITHUB_OUTPUT"
           echo "Restore concluido em $((end_ts - start_ts))s."
 
-      - name: Validar estrutura e contagens contra o manifesto do backup
-        env:
-          PGPASSWORD: restore-drill-local-only
+      - name: Validar contagens e objetos contra o manifesto do backup
         run: |
           set -euo pipefail
-          echo "=== Manifesto do backup (contagens no momento do dump) ==="
-          cat /tmp/restore/manifest.json
-          echo
-
-          echo "=== Objetos criticos presentes apos restore ==="
-          psql -h 127.0.0.1 -U postgres -d postgres -Atq -c "
-            SELECT json_build_object(
-              'vendas', (SELECT count(*) FROM public.vendas),
-              'caixas', (SELECT count(*) FROM public.caixas),
-              'produtos', (SELECT count(*) FROM public.produtos),
-              'usuarios', (SELECT count(*) FROM public.usuarios),
-              'auth_users', (SELECT count(*) FROM auth.users),
-              'rls_policies', (SELECT count(*) FROM pg_policies WHERE schemaname='public'),
-              'functions_public', (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public'),
-              'triggers_public', (SELECT count(*) FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND NOT t.tgisinternal)
-            )::text
-          " | tee /tmp/restore-plain/post-restore-counts.json
-
-          echo
-          echo "=== Comparacao automatica vendas/caixas/produtos/usuarios/auth_users ==="
-          python3 - <<'PYEOF'
-          import json
-          manifest = json.load(open('/tmp/restore/manifest.json'))
-          restored = json.load(open('/tmp/restore-plain/post-restore-counts.json'))
-          keys = ['vendas', 'caixas', 'produtos', 'usuarios', 'auth_users']
-          mismatches = []
-          for k in keys:
-              m, r = int(manifest[k]), int(restored[k])
-              status = 'OK' if m == r else 'MISMATCH'
-              if m != r:
-                  mismatches.append(k)
-              print(f'  {k}: backup={m} restaurado={r}  [{status}]')
-          if restored['rls_policies'] == '0' or int(restored['rls_policies']) == 0:
-              mismatches.append('rls_policies_zero')
-              print('  ALERTA: 0 RLS policies restauradas')
-          if int(restored['functions_public']) == 0:
-              mismatches.append('functions_zero')
-              print('  ALERTA: 0 functions restauradas em public')
-          if mismatches:
-              print(f'FALHA: divergencias em {mismatches}')
-              raise SystemExit(1)
-          print('Todas as contagens batem; RLS e functions presentes.')
-          PYEOF
+          node backend/scripts/verify-restore-manifest.mjs /tmp/restore/manifest.json /tmp/restore-plain/restored-counts.txt
+          objs=$(docker exec restore-drill psql -U supabase_admin -d postgres -Atq -c "SELECT (SELECT count(*) FROM pg_policies WHERE schemaname='public') || ',' || (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public')")
+          echo "  policies,functions em public: $objs"
+          case "$objs" in 0,*|*,0) echo "::error::Sem RLS/functions restauradas."; exit 1;; esac
 
       - name: Limpar material em texto puro
         if: always()

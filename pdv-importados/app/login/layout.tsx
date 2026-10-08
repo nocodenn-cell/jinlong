@@ -1,14 +1,10 @@
 import React, { type ReactNode } from 'react'
-import { Cinzel } from 'next/font/google'
+import '@fontsource/cinzel/latin-400.css'
 import '@fontsource/noto-serif-sc/chinese-simplified-600.css'
 
-const cinzel = Cinzel({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-login-cinzel',
-})
+const CINZEL_VARS = { ['--font-login-cinzel' as string]: "'Cinzel'" } as React.CSSProperties
 
 /** Noto Serif SC: subset chinês + peso 600 via @fontsource (self-host em node_modules, sem Google Fonts). */
 export default function LoginLayout({ children }: { children: ReactNode }) {
-  return <div className={`${cinzel.variable} min-h-0 antialiased`}>{children}</div>
+  return <div className="min-h-0 antialiased" style={CINZEL_VARS}>{children}</div>
 }

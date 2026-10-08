@@ -66,7 +66,27 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y age postgresql-client
 
+      - name: Checkout (scripts de backup)
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          sparse-checkout: backend/scripts
+      - name: Selecionar metodo de acesso ao banco
+        id: method
+        env:
+          ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          # Metodo "cli": token de acesso (PAT) -> supabase CLI cria uma role temporaria
+          # (cli_login_postgres) sem senha permanente de banco. Validado em 2026-10-08
+          # (dump + restore reais). Metodo "jit": Temporary Access, bloqueado por
+          # "PAM authentication failed" ate o suporte Supabase resolver.
+          if [ -n "$ACCESS_TOKEN" ]; then
+            echo "method=cli" >> "$GITHUB_OUTPUT"
+          else
+            echo "method=jit" >> "$GITHUB_OUTPUT"
+            echo "::warning::SUPABASE_ACCESS_TOKEN ausente: usando Temporary Access/JIT (bloqueado ate o suporte Supabase resolver)."
+          fi
       - name: Autorizar janela Temporary Access/JIT (10 min, role postgres)
+        if: steps.method.outputs.method == 'jit'
         env:
           JIT_PAT: ${{ secrets.SUPABASE_BACKUP_JIT_PAT }}
           BACKUP_USER_ID: ${{ vars.SUPABASE_BACKUP_USER_ID }}
@@ -133,6 +153,7 @@ jobs:
           sleep 15
 
       - name: Descobrir host do pooler (teste real de tenant, nao pg_isready)
+        if: steps.method.outputs.method == 'jit'
         id: discover-pooler
         env:
           JIT_PAT: ${{ secrets.SUPABASE_BACKUP_JIT_PAT }}
@@ -200,6 +221,7 @@ jobs:
           echo "pooler_host=${host}" >> "$GITHUB_OUTPUT"
 
       - name: Produzir dump (roles/schema/data)
+        if: steps.method.outputs.method == 'jit'
         env:
           JIT_PAT: ${{ secrets.SUPABASE_BACKUP_JIT_PAT }}
           POOLER_HOST: ${{ steps.discover-pooler.outputs.pooler_host }}
@@ -235,28 +257,30 @@ jobs:
             fi
           done
 
-      - name: Manifesto de sanidade (contagens, sem dado sensivel)
+      - name: Produzir dump via supabase CLI (roles/schema/data)
+        if: steps.method.outputs.method == 'cli'
         env:
-          JIT_PAT: ${{ secrets.SUPABASE_BACKUP_JIT_PAT }}
-          POOLER_HOST: ${{ steps.discover-pooler.outputs.pooler_host }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           set -euo pipefail
           set +x
-          JIT_PAT_ENC=$(jq -rn --arg v "$JIT_PAT" '$v|@uri')
-          conn="postgres://postgres.${SUPABASE_PROJECT_REF}:${JIT_PAT_ENC}@${POOLER_HOST}:5432/postgres?options=-c%20jit%3dtrue"
-          psql "$conn" -Atq -c "
-            SELECT json_build_object(
-              'generated_at', now(),
-              'vendas', (SELECT count(*) FROM public.vendas),
-              'caixas', (SELECT count(*) FROM public.caixas),
-              'produtos', (SELECT count(*) FROM public.produtos),
-              'usuarios', (SELECT count(*) FROM public.usuarios),
-              'auth_users', (SELECT count(*) FROM auth.users),
-              'storage_objetos_produto_imagens', (SELECT count(*) FROM storage.objects WHERE bucket_id = 'produto-imagens')
-            )::text
-          " > /tmp/backup/manifest.json
-          cat /tmp/backup/manifest.json
-
+          supabase link --project-ref "${SUPABASE_PROJECT_REF}" >/dev/null
+          mkdir -p /tmp/backup
+          supabase db dump --linked -f /tmp/backup/roles.sql --role-only
+          supabase db dump --linked -f /tmp/backup/schema.sql
+          supabase db dump --linked -f /tmp/backup/data.sql --use-copy --data-only
+          for f in roles.sql schema.sql data.sql; do
+            size=$(stat -c%s "/tmp/backup/$f")
+            echo "  $f: ${size} bytes"
+            if [ "$size" -lt 32 ]; then
+              echo "::error::/tmp/backup/$f suspeito de vazio (${size} bytes)."
+              exit 1
+            fi
+          done
+      - name: Manifesto de sanidade (contagens do proprio dump, sem dado sensivel)
+        run: |
+          set -euo pipefail
+          node backend/scripts/backup-manifest.mjs /tmp/backup/data.sql | tee /tmp/backup/manifest.json
       - name: Cifrar com age e remover texto puro
         run: |
           set -euo pipefail
