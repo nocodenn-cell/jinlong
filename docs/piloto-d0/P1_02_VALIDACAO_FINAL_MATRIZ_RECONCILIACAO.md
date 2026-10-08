@@ -2,6 +2,7 @@
 
 **Status:** planejamento validado localmente · **nenhuma** aplicação remota.  
 **Tip de referência (#488):** `da0ff15d`  
+**Fechamento operacional:** `docs/piloto-d0/P1_02_FECHAMENTO_RECONCILIACAO_GIT_PRODUCAO.md`  
 **Diagnóstico prévio:** `docs/audits/P0_RECONCILIACAO_MIGRATIONS_CI_2026_10_08.md` (#497)  
 **Restrições cumpridas:** sem DDL remota, sem `migration repair`, sem merge/deploy, sem `db push --include-all`, gate de drift intacto, testes só com dados sintéticos.
 
