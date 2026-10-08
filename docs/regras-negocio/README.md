@@ -14,6 +14,8 @@ Registro canônico de obrigações comerciais e **governança de domínio** do J
 | [SSOT_CAIXA_SALDO_CONTRATO.md](./SSOT_CAIXA_SALDO_CONTRATO.md) | E(c) vs `saldo_atual` (cache) |
 | [CONTRATO_FECHAMENTO_POR_FORMA.md](./CONTRATO_FECHAMENTO_POR_FORMA.md) | Read model fechamento por forma (PR A) |
 | [GATE_FECHAMENTO_POR_FORMA_PR_A.md](./GATE_FECHAMENTO_POR_FORMA_PR_A.md) | Gate **READY FOR CLOSURE UI** |
+| [GATE_FECHAMENTO_POR_FORMA_PR_B.md](./GATE_FECHAMENTO_POR_FORMA_PR_B.md) | Gate UX/snapshot PR B |
+| [STACK_INTEGRACAO_473_478.md](./STACK_INTEGRACAO_473_478.md) | Estratégia de merge da stack |
 | [SSOT_AQUISICAO_OBRIGACAO_FINANCEIRA.md](./SSOT_AQUISICAO_OBRIGACAO_FINANCEIRA.md) | OC/remessa/NF-e → obrigação |
 | [CHECKLIST_FEATURE_DOMINIO.md](./CHECKLIST_FEATURE_DOMINIO.md) | 13 perguntas obrigatórias antes de implementar |
 | [MATRIZ_AUTORIDADES_P1.md](./MATRIZ_AUTORIDADES_P1.md) | Matriz de autoridades (critério de encerramento P1) |

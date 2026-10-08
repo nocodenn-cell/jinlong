@@ -167,6 +167,12 @@ export async function fecharCaixaOperadorImpl(input: {
     revalidatePath('/caixa')
     revalidatePath('/gerente/caixas')
     revalidatePath('/gerente/vendas')
+
+    const { listarFechamentoFormasCaixaImpl } = await import(
+      '@/app/caixa/server/fechamentoPorForma.impl'
+    )
+    const formasRes = await listarFechamentoFormasCaixaImpl(caixaIdFechado)
+
     return {
       ok: true,
       caixaId: caixaIdFechado,
@@ -174,6 +180,8 @@ export async function fecharCaixaOperadorImpl(input: {
       valorContado: closed.valorContado,
       diferenca: closed.diferenca,
       alreadyClosed: closed.alreadyClosed,
+      formas: formasRes.ok ? formasRes.linhas : null,
+      formasError: formasRes.ok ? null : formasRes.error,
     }
   } catch (e) {
     return {

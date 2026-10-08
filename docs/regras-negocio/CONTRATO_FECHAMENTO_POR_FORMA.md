@@ -111,13 +111,22 @@ R(c,F) = V_{\mathrm{split}}(c,F) + V_{\mathrm{legado}}(c,F) - D(c,F)
 
 ---
 
-## 5. Persistência (PR B — não neste PR)
+## 5. Persistência (PR B)
 
-Não criar tabela neste PR A. Quando o PR B persistir declaração do operador:
+Tabela `caixas_fechamento_formas` — **SNAPSHOT_AUDITAVEL** (mig. `20261007190000`).
 
-- Owner: `cash`
-- Snapshot auditável do fechamento (**não** nova autoridade transacional)
-- Campos mínimos: `caixa_id`, `forma`, `valor_sistema_snapshot`, `valor_informado`, `diferenca`, `usuario_id`, `timestamp`, justificativa opcional
+| Campo | Papel |
+|-------|--------|
+| Owner | `cash` |
+| SSoT? | **Não** — cópia no fechamento; autoridade continua \(E(c)\) / fatos de venda |
+| `valor_sistema_snapshot` | Resultado de `calcular_valor_sistema_por_forma_caixa` no TX do fechar |
+| `valor_informado` | Só **DINHEIRO** (contado); NULL em PIX/cartão nesta sprint |
+| `diferenca` | Só DINHEIRO |
+| Justificativa | Continua em `caixas.fechamento_observacao` (regra ≥ R$ 5 existente) |
+
+Persistência via `internal.persistir_fechamento_formas` chamada por `fechar_caixa_atomico` (mesmo TX, `ON CONFLICT DO NOTHING`).
+
+**Produto — conferência eletrônica:** sem fonte operacional canônica (maquininha/extrato integrada), **não** há campo informado para PIX/débito/crédito. UI mostra apenas “Registrado no Jinlong”.
 
 ---
 
