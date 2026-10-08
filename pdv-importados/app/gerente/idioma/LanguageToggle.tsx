@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { setIdiomaAction } from './actions'
 import { cn } from '@/lib/utils'
 import type { Idioma } from '@/idioma/normalizeIdioma'
@@ -25,13 +26,21 @@ export default function LanguageToggle({ idiomaAtual }: Props) {
   // O marcador deixa o estado observável (mesmo contrato de `data-login-hydrated`).
   const [hydrated, setHydrated] = useState(false)
   useEffect(() => setHydrated(true), [])
+  const router = useRouter()
+
+  // O refresh explícito roda DEPOIS da gravação: sem ele a UI pode continuar no idioma antigo
+  // quando outra transição de rota (prefetch/navegação recente) concorre com o revalidatePath da action.
+  async function trocarIdioma(formData: FormData) {
+    await setIdiomaAction(formData)
+    router.refresh()
+  }
   const baseBtn = cn(
     'rounded-full px-2.5 py-1 text-xs font-semibold transition-colors',
     'app-btn-neutral disabled:cursor-default disabled:opacity-55',
   )
 
   return (
-    <form className="flex gap-1" action={setIdiomaAction} data-idioma-hydrated={hydrated ? '1' : '0'}>
+    <form className="flex gap-1" action={trocarIdioma} data-idioma-hydrated={hydrated ? '1' : '0'}>
       {LANGS.map(({ value, label, title, font }) => (
         <button
           key={value}

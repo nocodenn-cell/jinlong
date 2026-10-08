@@ -64,13 +64,14 @@ test.describe('Painel do gerente (/admin/*)', () => {
     }
     // `getByTestId`, não `getByRole('navigation')`: o dashboard também tem a nav
     // "Abas executivas" (hub analítico), então o role sozinho é ambíguo.
-    const nav = page.getByTestId('executive-sidebar-nav')
+    // `:visible`: no mobile existem a sidebar (oculta) e o drawer com o mesmo testid.
+    const nav = page.locator('[data-testid="executive-sidebar-nav"]:visible')
     await expect(nav).toBeVisible()
     // Rótulos reais de `lib/navigation/adminV2SidebarNav.ts` — "Produtos"/
     // "Caixas" (do arquivo antigo) não existem mais como itens de menu.
     await expect(nav.getByRole('link', { name: 'Vendas', exact: true })).toBeVisible()
     await expect(nav.getByRole('link', { name: /Catálogo/i })).toBeVisible()
-    await expect(nav.getByRole('link', { name: /Estoque/i })).toBeVisible()
+    await expect(nav.getByRole('link', { name: 'Estoque', exact: true })).toBeVisible()
     await expect(nav.getByRole('link', { name: /Relatórios/i })).toBeVisible()
     await expect(page.getByRole('main')).toBeVisible()
   })

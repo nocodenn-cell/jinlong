@@ -68,7 +68,8 @@ test.describe('Contrato de login por perfil', () => {
 
     const isMobileProject = testInfo.project.name.startsWith('mobile-')
     // testid, não role: o dashboard também expõe a nav "Abas executivas" (sempre visível).
-    const nav = page.getByTestId('executive-sidebar-nav')
+    // `:visible`: a sidebar oculta e o drawer aberto compartilham o testid no mobile.
+    const nav = page.locator('[data-testid="executive-sidebar-nav"]:visible')
     const menuButton = page.getByRole('button', { name: 'Navegação' })
 
     if (isMobileProject) {
