@@ -1,6 +1,9 @@
 # Migração: site comercial em jinlong.app, ERP em app.jinlong.app
 
-**Status:** proposta, sem nenhuma operação remota executada.
+**Status (2026-10-08):** Fase 1 parcialmente executada; **nenhum domínio, DNS, Supabase ou projeto do ERP foi alterado.**
+- Criado o projeto Vercel `jinlong-site` (time `jinlong`, Root Directory `site`, Vercel Authentication = *all*, sem domínio personalizado, sem variáveis de ambiente).
+- *Ignored Build Step* do site em `site/vercel.json`. O do ERP já pulava todo build fora de produção (`if [ "$VERCEL_ENV" == "production" ]; then exit 1; else exit 0; fi`) e **não foi alterado**.
+- Decisão de migração aprovada: **novo login obrigatório** e **corte com caixas fechados**. Plano de homologação: `HOMOLOGACAO_APP_JINLONG_APP.md`.
 **Levantamento:** 2026-10-08, somente leitura (Vercel CLI, `curl`, código do repositório).
 
 ## Arquitetura-alvo
