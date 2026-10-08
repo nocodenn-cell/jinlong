@@ -42,7 +42,8 @@
     "guard:domain": "node scripts/domain-boundary-guard.mjs",
     "guard:ratchet": "node scripts/boundary-ratchet-guard.mjs",
     "guard:ratchet:test": "node --test scripts/boundary-ratchet-guard.test.mjs",
-    "guard:all": "npm run guard:core && npm run guard:pdv && npm run guard:routes && npm run guard:rpc && npm run guard:pricing && npm run guard:deps && npm run guard:migrations && npm run guard:domain && npm run guard:ratchet && npm run guard:ratchet:test && npm run check:entity-ssot -w pdv-importados",
+    "guard:backup-jit": "node scripts/assert-backup-jit-direct-probe.mjs",
+    "guard:all": "npm run guard:core && npm run guard:pdv && npm run guard:routes && npm run guard:rpc && npm run guard:pricing && npm run guard:deps && npm run guard:migrations && npm run guard:domain && npm run guard:ratchet && npm run guard:ratchet:test && npm run guard:backup-jit && npm run check:entity-ssot -w pdv-importados",
     "pre-deploy:check": "bash scripts/pre-deploy-checklist.sh"
   },
   "overrides": {
