@@ -1,5 +1,4 @@
 import { getCachedAdminSession } from '@/lib/admin/auth/sessionConsistency'
-import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import type { AdminSession } from '@/lib/admin/auth/types'
 
 /** Identidade de sessão já normalizada (após assertGerenteSession ou layout gate). */
@@ -12,8 +11,18 @@ export async function getGerenteUserId(): Promise<string | null> {
   return session?.userId ?? null
 }
 
+/**
+ * Loja da sessão — sem fallback LOJA_MATRIZ_ID (M2-B F1/F3).
+ * Ausência de loja → null (caller deve falhar fechado).
+ */
 export async function getGerenteLojaId(): Promise<string | null> {
   const session = await getCachedAdminSession()
   if (!session) return null
-  return session.lojaId ?? LOJA_MATRIZ_ID
+  return session.lojaId ?? null
+}
+
+/** Empresa ativa da sessão (null em modo legado sem vínculos). */
+export async function getGerenteEmpresaId(): Promise<string | null> {
+  const session = await getCachedAdminSession()
+  return session?.empresaId ?? null
 }

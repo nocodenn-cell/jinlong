@@ -14,6 +14,10 @@ import type {
   SessionNormalization,
   SessionSource,
 } from './types'
+import {
+  resolverContextoEmpresaAtiva,
+  type TenantVinculo,
+} from '@/lib/admin/auth/tenantContext'
 
 export type RawUsuarioRow = {
   perfil: string | null | undefined
@@ -23,10 +27,23 @@ export type RawUsuarioRow = {
   ativo?: boolean | null
 }
 
+/** Snapshot opcional M2-B — ausente quando tabelas multiempresa não existem. */
+export type RawTenantSnapshot = {
+  available: boolean
+  vinculos: TenantVinculo[]
+  persistido: { empresaId: string; lojaId: string | null; version: number } | null
+  lojas: Record<string, { empresaId: string }>
+}
+
 export type RawSession =
   | { status: 'anonymous' }
   | { status: 'stale' }
-  | { status: 'authenticated'; user: User; usuario: RawUsuarioRow | null }
+  | {
+      status: 'authenticated'
+      user: User
+      usuario: RawUsuarioRow | null
+      tenant?: RawTenantSnapshot | null
+    }
   | { status: 'auth_error'; error: Error }
   | { status: 'db_error'; user: User; error: Error }
 
@@ -67,12 +84,54 @@ function perfilToRole(perfil: PerfilUsuario): AdminRole | null {
 function buildAdminSession(raw: Extract<RawSession, { status: 'authenticated' }>): AdminSession | null {
   const perfil = normalizePerfilUsuario(raw.usuario?.perfil ?? null)
   if (!isPerfilPainelGerencial(perfil)) return null
+  const resolved = resolveTenantForRaw(raw)
+  const lojaId =
+    resolved?.ok === true
+      ? resolved.lojaId
+      : ((raw.usuario?.loja_id as string | null | undefined) ?? null)
   return {
     userId: raw.user.id,
     user: raw.user,
     perfil,
     idioma: normalizeIdioma(raw.usuario?.idioma_preferido),
-    lojaId: (raw.usuario?.loja_id as string | null | undefined) ?? null,
+    lojaId,
+    empresaId: resolved?.ok === true && resolved.empresaId ? resolved.empresaId : null,
+  }
+}
+
+function resolveTenantForRaw(raw: Extract<RawSession, { status: 'authenticated' }>) {
+  const tenant = raw.tenant
+  if (!tenant?.available) return null
+  return resolverContextoEmpresaAtiva({
+    authUserId: raw.user.id,
+    ativo: raw.usuario?.ativo !== false,
+    vinculos: tenant.vinculos,
+    persistido: tenant.persistido,
+    lojas: tenant.lojas,
+    legacyLojaId: raw.usuario?.loja_id ?? null,
+  })
+}
+
+function mapTenantBlock(
+  code: string,
+): SessionBlockedReason | null {
+  switch (code) {
+    case 'USUARIO_INATIVO':
+      return 'inativo'
+    case 'SEM_VINCULO':
+      return 'sem_loja'
+    case 'EMPRESA_ATIVA_OBRIGATORIA':
+      return 'empresa_ativa_obrigatoria'
+    case 'EMPRESA_NAO_AUTORIZADA':
+      return 'empresa_nao_autorizada'
+    case 'LOJA_FORA_DA_EMPRESA':
+    case 'LOJA_NAO_AUTORIZADA':
+      return 'loja_nao_autorizada'
+    case 'EMPRESA_DIVERGENTE':
+    case 'CONTEXTO_OBSOLETO':
+      return 'empresa_divergente'
+    default:
+      return null
   }
 }
 
@@ -158,13 +217,76 @@ export async function fetchRawSession(supabase: SupabaseClient): Promise<RawSess
     return { status: 'db_error', user, error: dbError }
   }
 
-  return { status: 'authenticated', user, usuario }
+  const tenant = await loadTenantSnapshot(supabase, user.id)
+  return { status: 'authenticated', user, usuario, tenant }
 }
 
-/** Bloqueio de identidade: conta desativada ou sem loja vinculada não entra em rota protegida. */
+/** Carrega vínculos/contexto se as tabelas M1/M2 existirem; senão available=false (legado). */
+async function loadTenantSnapshot(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<RawTenantSnapshot> {
+  const vinculosRes = await supabase
+    .from('usuario_vinculos')
+    .select('empresa_id, loja_id, papel, ativo')
+    .eq('usuario_id', userId)
+    .eq('ativo', true)
+
+  if (vinculosRes.error) {
+    return { available: false, vinculos: [], persistido: null, lojas: {} }
+  }
+
+  const vinculos: TenantVinculo[] = (vinculosRes.data ?? []).map((row) => ({
+    empresaId: String(row.empresa_id),
+    lojaId: row.loja_id == null ? null : String(row.loja_id),
+    papel: row.papel as TenantVinculo['papel'],
+    ativo: row.ativo !== false,
+  }))
+
+  const ctxRes = await supabase
+    .from('usuario_contexto_ativo')
+    .select('empresa_id, loja_id, version')
+    .eq('usuario_id', userId)
+    .maybeSingle()
+
+  const persistido =
+    ctxRes.error || !ctxRes.data
+      ? null
+      : {
+          empresaId: String(ctxRes.data.empresa_id),
+          lojaId: ctxRes.data.loja_id == null ? null : String(ctxRes.data.loja_id),
+          version: Number(ctxRes.data.version ?? 1),
+        }
+
+  const lojaIds = [
+    ...new Set(
+      vinculos.map((v) => v.lojaId).filter((id): id is string => typeof id === 'string'),
+    ),
+  ]
+  const lojas: Record<string, { empresaId: string }> = {}
+  if (lojaIds.length > 0) {
+    const lojasRes = await supabase.from('lojas').select('id, empresa_id').in('id', lojaIds)
+    for (const row of lojasRes.data ?? []) {
+      if (row.empresa_id) lojas[String(row.id)] = { empresaId: String(row.empresa_id) }
+    }
+  }
+
+  return { available: true, vinculos, persistido, lojas }
+}
+
+/** Bloqueio: inativo, sem loja, ou contexto multiempresa inválido (M2-B). */
 function resolveBlockedReason(raw: RawSession): SessionBlockedReason | null {
   if (raw.status !== 'authenticated') return null
   if (raw.usuario?.ativo === false) return 'inativo'
+
+  if (raw.tenant?.available) {
+    const resolved = resolveTenantForRaw(raw)
+    if (!resolved) return 'sem_loja'
+    if (!resolved.ok) return mapTenantBlock(resolved.code) ?? 'sem_loja'
+    if (resolved.mode === 'legacy_single_loja' && !resolved.lojaId) return 'sem_loja'
+    return null
+  }
+
   if (!raw.usuario?.loja_id) return 'sem_loja'
   return null
 }

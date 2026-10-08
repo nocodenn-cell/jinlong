@@ -1,6 +1,28 @@
 import { isPerfilPainelGerencial } from '@/lib/auth/painelGerencial'
 import type { PerfilUsuario } from '@/idioma/normalizePerfilUsuario'
-import type { AdminSession, SessionNormalization } from '@/lib/admin/auth/types'
+import type {
+  AdminSession,
+  SessionBlockedReason,
+  SessionNormalization,
+} from '@/lib/admin/auth/types'
+
+function blockedReasonToPolicy(reason: SessionBlockedReason | undefined): string {
+  switch (reason) {
+    case 'inativo':
+      return 'conta_inativa'
+    case 'empresa_ativa_obrigatoria':
+      return 'empresa_ativa_obrigatoria'
+    case 'empresa_nao_autorizada':
+      return 'empresa_nao_autorizada'
+    case 'loja_nao_autorizada':
+      return 'loja_nao_autorizada'
+    case 'empresa_divergente':
+      return 'empresa_divergente'
+    case 'sem_loja':
+    default:
+      return 'conta_sem_loja'
+  }
+}
 
 /** Escopo da decisão — única fonte de verdade para autorização /admin e /gerente. */
 export type DecisionScope = 'edge' | 'api' | 'action' | 'resource' | 'gerente'
@@ -163,14 +185,10 @@ export function middlewareAdminDecision(
       : allow('db_error_public_route', 'edge')
   }
   if (authState === 'blocked') {
-    // Conta desativada (usuarios.ativo = false) ou sem loja vinculada: não entra
-    // em nenhuma rota protegida — nem painel, nem /caixa.
+    // Conta desativada, sem loja, ou contexto multiempresa inválido (M2-B).
+    // Não redireciona silenciosamente para outra empresa.
     return isProtectedRoute(pathname)
-      ? redirect(
-          loginPath(pathname),
-          normalized.blockedReason === 'inativo' ? 'conta_inativa' : 'conta_sem_loja',
-          'edge'
-        )
+      ? redirect(loginPath(pathname), blockedReasonToPolicy(normalized.blockedReason), 'edge')
       : allow('blocked_public_route', 'edge')
   }
   if (isProtectedRoute(pathname) && authState === 'anonymous') {
