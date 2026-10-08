@@ -1,9 +1,12 @@
 # P1-02 — Fechamento: reconciliação Git × Produção
 
 **Status:** preparação técnica **completa** · execução remota **NÃO autorizada**  
-**Tip #488:** `da0ff15d` · branch desta entrega: `cursor/p1-02-fechamento-reconciliacao-1966`  
+**Tip #488:** `da0ff15d` · branches: `cursor/p1-02-fechamento-reconciliacao-1966` · atualização P0: `cursor/p0-desbloqueio-reconciliacao-1966`  
 **Base documental:** `P1_02_VALIDACAO_FINAL_MATRIZ_RECONCILIACAO.md`  
+**Desbloqueio operacional:** `docs/piloto-d0/P0_DESBLOQUEIO_OPERACIONAL_RECONCILIACAO.md`  
 **Restrições cumpridas:** sem DDL remota, sem `db push`, sem `migration repair`, sem merge/deploy, gate intacto, sem dados reais.
+
+> **Versionamento:** este arquivo **não** está em `main` nem no tip #488 (`da0ff15d`). Está nas branches de fechamento/desbloqueio acima (PRs dedicados). Não confundir ausência em #488 com ausência no repositório.
 
 Legenda de evidência: **COMPROVADO** · **INFERÊNCIA** · **BLOQUEADO**.
 
@@ -263,4 +266,19 @@ Próximo passo humano sugerido: (1) backup/Pro ou aceite FAIL documentado; (2) a
 
 ---
 
+## 11. Adendo P0 desbloqueio (2026-10-08)
+
+| Tema | Resultado |
+|---|---|
+| Backup drill sintético | **PASS** procedimento — **não** valida prod (`BACKUP_RESTORE_DRILL_SINTETICO.md`) |
+| `163100` | **MANTER BLOQUEADA** (R5 comercial) |
+| `163200` vs `08120000` | **COMPLEMENTARES**; remoto ainda tem GRANT+policy INSERT |
+| `types-drift` / fechamento-forma | **BLOQUEADO** (Docker overlayfs whiteout) — não PASS |
+| Merge #488 | continua **NO-GO** |
+
+Detalhe: `P0_DESBLOQUEIO_OPERACIONAL_RECONCILIACAO.md`.
+
+---
+
 *Nenhuma operação remota de escrita foi executada. Aguardando decisão humana.*
+
