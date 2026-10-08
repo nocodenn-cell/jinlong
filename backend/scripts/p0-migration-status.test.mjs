@@ -10,6 +10,12 @@ import {
   parseMigrationListTable,
   parseHumanGateRegistry,
 } from "./p0-migration-status.mjs";
+import {
+  assertForbiddenNotReconciled,
+  deriveForbiddenExit,
+  forbiddenPendingApply,
+  pendingApplyVersions,
+} from "./forbidden-migration-apply.mjs";
 
 test("interpreta JSON atual do Supabase CLI, inclusive linhas remote-only", () => {
   const parsed = parseMigrationListOutput(`Connecting to remote database...\n{
@@ -168,6 +174,27 @@ test("estado sem divergência é ALIGNED", () => {
       extraBlocking: [],
     }),
     "ALIGNED",
+  );
+});
+
+test("20261006120000 pendente de apply é FORBIDDEN_APPLY mesmo com warn-only", () => {
+  const pending = pendingApplyVersions({
+    blocking: [{ version: "20261006120000", reason: "remote_ausente", remote: null }],
+    missingInList: [],
+  });
+  const hits = forbiddenPendingApply(pending);
+  assert.deepEqual(hits, ["20261006120000"]);
+  assert.equal(deriveForbiddenExit(hits, true), 1);
+  assert.equal(deriveForbiddenExit([], true), 0);
+});
+
+test("par HUMAN_GATE não pode reconciliar a migration obsoleta", () => {
+  assert.throws(
+    () => assertForbiddenNotReconciled([{
+      gitOnlyVersion: "20261006120000",
+      remoteOnlyVersion: "20261006195837",
+    }]),
+    /FORBIDDEN_APPLY/,
   );
 });
 

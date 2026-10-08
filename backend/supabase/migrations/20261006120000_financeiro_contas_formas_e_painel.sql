@@ -1,3 +1,6 @@
+-- FORBIDDEN_APPLY: superseded by 20261006180000 / remote 20261006195837
+-- DESCARTAR_OBSOLETA: não aplicar, não db push, não apagar este arquivo.
+-- Reaplicar o CREATE OR REPLACE abaixo regride PIX auto-liquidação e contas operacionais.
 -- Sprint contas financeiras: vínculo forma→conta, inativação, painel enriquecido.
 -- Aditiva. Não reescreve saldos históricos. Ledger continua em movimentos_financeiros.
 BEGIN;

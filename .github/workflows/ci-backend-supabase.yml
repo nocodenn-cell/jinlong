@@ -345,6 +345,20 @@ jobs:
       - name: Contract smoke (sync-outbox payload v1)
         run: node backend/scripts/sync-outbox-contract-smoke.mjs
 
+  forbidden-migration-apply:
+    name: Bloqueio permanente migration 20261006120000
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+
+      - name: Deny-list FORBIDDEN_APPLY (sem remoto)
+        run: node backend/scripts/forbidden-migration-apply.mjs --check-static
+
   migration-remote-drift:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
