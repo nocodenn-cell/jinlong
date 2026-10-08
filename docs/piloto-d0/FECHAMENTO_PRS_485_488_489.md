@@ -32,7 +32,8 @@ Ordem sugerida de merge (após aceite humano): **#489 → #485 → #488** (docs/
 2. Tip `1fac3bed` → types-drift coluna (`conta_financeira_id`)  
 3. Tip `f594945a` → `20261008140000` coluna IF NOT EXISTS  
 4. Tip `f594945a` CI → types-drift RPC (`financeiro_comando_v1` ausente)  
-5. Tip `da0ff15d` → `20261008140100` rename+wrapper (sem captura) — aguardar CI types-drift PASS; drift remoto permanece humano
+5. Tip `da0ff15d` → `20261008140100` rename+wrapper (sem captura)  
+6. CI run `37814186308`: **`check:types-drift` PASS** (`Tipos em dia com o banco: 7636 linhas.`); job `Supabase local gates` PASS; **`migration-remote-drift` FAIL** (humano)
 
 ---
 
