@@ -17,6 +17,7 @@
     "fonts:subset": "tsx scripts/cjk-display-chars.ts && python -I scripts/subset_cjk_font.py"
   },
   "dependencies": {
+    "@vercel/speed-insights": "^2.0.0",
     "next": "15.5.15",
     "react": "19.2.5",
     "react-dom": "19.2.5"

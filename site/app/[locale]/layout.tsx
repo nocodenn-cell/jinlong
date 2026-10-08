@@ -3,6 +3,7 @@ import { Fraunces, IBM_Plex_Mono, IBM_Plex_Sans } from 'next/font/google'
 import localFont from 'next/font/local'
 import { notFound } from 'next/navigation'
 import type { ReactNode } from 'react'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 import { getHomeContent } from '@/lib/content'
 import { isSiteLocale, SITE_LOCALES } from '@/lib/locales'
 import { isLocalePublic } from '@/lib/publication'
@@ -74,6 +75,7 @@ export default async function RootLayout({ children, params }: RootLayoutProps) 
           {skipLink}
         </a>
         {children}
+        <SpeedInsights />
       </body>
     </html>
   )
