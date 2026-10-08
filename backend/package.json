@@ -25,7 +25,8 @@
     "test:migration-status": "node --test scripts/p0-migration-status.test.mjs",
     "test:venda-finance-context-retirement": "node --test supabase/scripts/verify-venda-finance-context-catalog.test.mjs",
     "test:financeiro-loja": "node scripts/test-financeiro-loja.mjs",
-    "test:pdv-caixa-financeiro": "node scripts/test-pdv-caixa-financeiro-fluxo.mjs"
+    "test:pdv-caixa-financeiro": "node scripts/test-pdv-caixa-financeiro-fluxo.mjs",
+    "test:m2a-contrato": "node --test scripts/test-m2a-contrato-empresa-ativa.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.104.0",
