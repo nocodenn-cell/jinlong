@@ -1,0 +1,2 @@
+# Scripts executados no Linux da Vercel: fim de linha LF obrigatório (CRLF quebra o sh).
+site/scripts/*.sh text eol=lf
