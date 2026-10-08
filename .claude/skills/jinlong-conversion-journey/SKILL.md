@@ -9,11 +9,11 @@ description: Jornada comercial do Jinlong (home, demonstração, loja de teste d
 1 Home → 2 Funcionalidades → 3 Demonstração com dados fictícios → 4 Pedido de loja de teste → 5 Onboarding → 6 Teste de 15 dias → 7 Acompanhamento → 8 Assinatura.
 
 ## Estado atual (sprint 1)
-Entregues: 1, 2 e a prévia do PDV. Contato por WhatsApp/WeChat via variáveis de ambiente.
+Entregues: 1, 2 e a prévia do PDV, no app `site/` (jinlong.app). O ERP fica em app.jinlong.app; links do site para o ERP usam `NEXT_PUBLIC_ERP_URL`. Contato por WhatsApp/WeChat via variáveis de ambiente.
 NÃO implementar sem aprovação de segurança: cadastro público de lojas, provisionamento automático, pagamento, assinatura, tabela de leads.
 
 ## Regras
-- Demonstração: somente dados fictícios e componentes isolados. Nunca Supabase, nunca `/demo-fluxo`, nunca dados de loja.
+- Demonstração: somente dados fictícios e componentes isolados. Nunca Supabase, nunca `/demo-fluxo`, nunca dados de loja. O teste `site/lib/platform.test.ts` barra referências a Supabase/credenciais.
 - Canais: `NEXT_PUBLIC_SITE_WHATSAPP_URL` (https://wa.me/…) e `NEXT_PUBLIC_SITE_WECHAT_ID`. Sem valor válido, o canal não aparece. Nunca inventar número, conta ou link.
 - Canal principal por idioma: WhatsApp em pt-BR, WeChat em zh-CN.
 - CTA único por tela dominante; texto diz o que acontece depois.

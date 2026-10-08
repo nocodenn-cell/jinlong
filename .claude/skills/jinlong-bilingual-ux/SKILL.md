@@ -1,13 +1,14 @@
 ---
 name: jinlong-bilingual-ux
-description: Regras de UX bilíngue pt-BR / zh-CN do site comercial Jinlong (conteúdo, glossário, fontes, publicação e revisão humana). Use ao editar lib/site/content, rotas [locale] ou qualquer texto do site.
+description: Regras de UX bilíngue pt-BR / zh-CN do site comercial Jinlong (conteúdo, glossário, fontes, publicação e revisão humana). Use ao editar site/lib/content, rotas site/app/[locale] ou qualquer texto do site.
 ---
 
 # Jinlong · UX bilíngue
 
 ## Estrutura
-- Conteúdo tipado em `lib/site/content/` (`home.pt.ts`, `home.zh.ts`, contrato em `types.ts`). Mesmas chaves nos dois idiomas; `lib/site/site.test.ts` falha se divergirem.
-- Rotas `/pt-BR` e `/zh-CN`; `lang` no wrapper e sincronizado no `<html>` (`SiteLangSync`). Preferência no cookie `idioma_preferido` (`pt`|`zh`).
+- Conteúdo tipado em `site/lib/content/` (`home.pt.ts`, `home.zh.ts`, contrato em `types.ts`). Mesmas chaves nos dois idiomas; `site/lib/site.test.ts` falha se divergirem.
+- Rotas `/pt-BR` e `/zh-CN`; o layout raiz `site/app/[locale]/layout.tsx` emite `<html lang>` no servidor. `/` negocia o idioma (cookie `idioma_preferido` → `Accept-Language`).
+- Fonte de títulos zh é um subset: após mudar qualquer título em chinês, rode `npm run fonts:subset -w jinlong-site` (o teste `displayText.test.ts` falha se faltar caractere).
 - Nunca criar segundo frontend nem copiar componentes por idioma.
 
 ## Publicação do chinês

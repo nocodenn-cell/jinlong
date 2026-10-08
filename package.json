@@ -6,7 +6,8 @@
     "pdv-importados",
     "pdv-local",
     "backend",
-    "shared-core"
+    "shared-core",
+    "site"
   ],
   "engines": {
     "node": ">=20.0.0 <25.0.0"
@@ -43,7 +44,10 @@
     "guard:ratchet": "node scripts/boundary-ratchet-guard.mjs",
     "guard:ratchet:test": "node --test scripts/boundary-ratchet-guard.test.mjs",
     "guard:all": "npm run guard:core && npm run guard:pdv && npm run guard:routes && npm run guard:rpc && npm run guard:pricing && npm run guard:deps && npm run guard:migrations && npm run guard:domain && npm run guard:ratchet && npm run guard:ratchet:test && npm run check:entity-ssot -w pdv-importados",
-    "pre-deploy:check": "bash scripts/pre-deploy-checklist.sh"
+    "pre-deploy:check": "bash scripts/pre-deploy-checklist.sh",
+    "dev:site": "npm run dev -w jinlong-site",
+    "build:site": "turbo run build --filter=jinlong-site",
+    "test:site": "npm run test -w jinlong-site"
   },
   "overrides": {
     "vitest": "^3.2.6",
