@@ -50,6 +50,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+      - name: Checkout (script de diagnostico da sonda direta)
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          persist-credentials: false
+
       # NOTA: as demais actions deste repo sao fixadas por SHA (convencao
       # estabelecida). Nao foi possivel confirmar o SHA exato desta acao
       # oficial da Supabase sem acesso a internet nesta sessao; usando a
@@ -135,8 +140,10 @@ jobs:
       # Doc oficial Temporary Access (2026-10): conexao DIRETA
       #   postgres://postgres:<PAT>@db.<ref>.supabase.co:5432/postgres
       # nao exige options=-c jit=true. Pooler IPv4 exige user postgres.<ref>
-      # + jit=true. Ate 2026-10-07 o workflow so sondava o pooler — lacuna
-      # documentada em docs/piloto-d0/JIT_ALTERNATIVAS_DESBLOQUEIO.md.
+      # + jit=true. No plano Free o host direto so tem AAAA; ubuntu-latest nao
+      # tem rota IPv6 e o grant JIT daqui so cobre 0.0.0.0/0. Esta sonda nao
+      # troca runner nem add-on: registra o motivo e cai no pooler.
+      # docs/piloto-d0/JIT_ALTERNATIVAS_DESBLOQUEIO.md
       - name: Descobrir host DB (direto primeiro, depois pooler)
         id: discover-db
         env:
@@ -145,12 +152,40 @@ jobs:
           set -euo pipefail
           set +x
           JIT_PAT_ENC=$(jq -rn --arg v "$JIT_PAT" '$v|@uri')
+          export JIT_PAT_ENC
           host=""
           mode=""
           auth_host=""
 
+          redact_err() {
+            node scripts/backup-jit-direct-failure.mjs --redact-only --err /tmp/probe-err.txt \
+              || echo "stderr suprimido (redacao indisponivel)."
+          }
+          log_direct_failure() {
+            node scripts/backup-jit-direct-failure.mjs \
+              --err /tmp/probe-err.txt \
+              --a-count "$dns_a" \
+              --aaaa-count "$dns_aaaa" \
+              --ipv6-route "$ipv6_route" \
+              || echo "direct: motivo=outro detalhe=classificador indisponivel; stderr suprimido."
+          }
+          count_dns() {
+            node scripts/backup-jit-direct-failure.mjs --print-dns --host "$1" --family "$2" || echo 0
+          }
+
           # 1) Direto — caminho oficial sem Supavisor/PAM do pooler.
           direct_host="db.${SUPABASE_PROJECT_REF}.supabase.co"
+          dns_a=$(count_dns "$direct_host" A)
+          dns_aaaa=$(count_dns "$direct_host" AAAA)
+          case "$dns_a" in ''|*[!0-9]*) dns_a=0 ;; esac
+          case "$dns_aaaa" in ''|*[!0-9]*) dns_aaaa=0 ;; esac
+          ipv6_route=0
+          if ip -6 route show default 2>/dev/null | grep -q '^default' \
+            && ip -6 addr show scope global 2>/dev/null | grep -q 'inet6 '; then
+            ipv6_route=1
+          fi
+          echo "direct: pre-sonda host=${direct_host} dns_a=${dns_a} dns_aaaa=${dns_aaaa} rota_ipv6_default=${ipv6_route}."
+
           conn_direct="postgres://postgres:${JIT_PAT_ENC}@${direct_host}:5432/postgres?sslmode=require"
           if PGCONNECT_TIMEOUT=8 psql "$conn_direct" -Atq -v ON_ERROR_STOP=1 -c "SELECT 1" >/tmp/probe-out.txt 2>/tmp/probe-err.txt; then
             if [ "$(cat /tmp/probe-out.txt)" = "1" ]; then
@@ -161,11 +196,8 @@ jobs:
           else
             if grep -qiE "PAM authentication failed|password authentication failed" /tmp/probe-err.txt; then
               auth_host="$direct_host"
-              echo "direct ($direct_host): autenticacao recusada."
-            else
-              echo "direct ($direct_host): sem sucesso (detalhe sem segredo abaixo)."
             fi
-            sed -E "s#${JIT_PAT}#***#g; s#${JIT_PAT_ENC}#***#g" /tmp/probe-err.txt || true
+            log_direct_failure
           fi
 
           # 2) Pooler compartilhado (IPv4 session :5432) — so se direto falhou.
@@ -187,7 +219,7 @@ jobs:
               else
                 echo "idx=$idx ($candidate): sem sucesso de tenant (detalhe sem segredo abaixo)."
               fi
-              sed -E "s#${JIT_PAT}#***#g; s#${JIT_PAT_ENC}#***#g" /tmp/probe-err.txt || true
+              redact_err
             done
           fi
 
