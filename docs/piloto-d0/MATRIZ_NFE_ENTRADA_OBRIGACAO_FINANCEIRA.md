@@ -33,3 +33,8 @@ Se aplicada: R5 com \(\sum qtd \times custo > 0\) e 0 duplicatas → `IMPORT_NFE
 3. Relatório de NF-e históricas sem AP (somente leitura)? ________  
 
 **Até preencher:** `163100` permanece **NO-GO** apply.
+
+### Decisão técnica P0 (2026-10-08) — não substitui R5
+
+Veredito de engenharia: **MANTER BLOQUEADA** (`P0_DESBLOQUEIO_OPERACIONAL_RECONCILIACAO.md`).  
+Não APLICAR só para CI. Escopo = NF-e entrada/AP; sem efeito em vendas/AR/NFC-e saída.
