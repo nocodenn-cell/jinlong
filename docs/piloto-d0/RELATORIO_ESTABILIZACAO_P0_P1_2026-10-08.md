@@ -163,8 +163,8 @@ Ver `MATRIZ_NFE_ENTRADA_OBRIGACAO_FINANCEIRA.md`: R5 (NF-e com valor e zero dupl
 | PR / branch | Escopo | Merge |
 |---|---|---|
 | [#485](https://github.com/nocodenn-cell/fastproduct/pull/485) `cursor/p0-estabilizacao-jit-1966` | Backup JIT / docs GO-NO-GO | Não automático; checks mistos |
-| `cursor/p0-seguranca-integridade-1966` | P0-04/05, P1 docs/testes, CI guards | Draft — sem merge automático |
-| `cursor/p0-recuperacao-ops-1966` | Restore sintético + smoke checklist | Draft — sem merge automático |
+| [#488](https://github.com/nocodenn-cell/fastproduct/pull/488) `cursor/p0-seguranca-integridade-1966` | P0-04/05, P1 docs/testes, CI guards | Draft — sem merge automático |
+| [#489](https://github.com/nocodenn-cell/fastproduct/pull/489) `cursor/p0-recuperacao-ops-1966` | Restore sintético + smoke checklist | Draft — sem merge automático |
 
 ---
 
