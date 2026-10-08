@@ -1,5 +1,12 @@
--- Sprint contas financeiras: vínculo forma→conta, inativação, painel enriquecido.
+-- FORBIDDEN_APPLY: superseded by 20261006180000 / remote 20261006195837
+-- NÃO aplicar em Jinlong remoto nem via db push/apply_migration automatizado.
+-- Motivo: regrede PIX auto-liquidação e modelo financeiro_contas_forma.
+-- Registro: backend/supabase/forbidden-migrations.json
+-- Decisão: docs/piloto-d0/PLANO_POS_OPS02_INTEGRIDADE_FINANCEIRA.md
+--
+-- Sprint contas financeiras (histórico): vínculo forma→conta, inativação, painel enriquecido.
 -- Aditiva. Não reescreve saldos históricos. Ledger continua em movimentos_financeiros.
+-- Arquivo preservado para histórico e fixtures locais explícitas — apply remoto = NO-GO.
 BEGIN;
 
 ALTER TABLE public.formas_pagamento

@@ -15,11 +15,23 @@ import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { loadForbiddenRegistry } from "./assert-forbidden-migrations.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const BACKEND_ROOT = path.resolve(__dirname, "..");
 const MIGRATIONS_DIR = path.join(BACKEND_ROOT, "supabase", "migrations");
 const HUMAN_GATES_FILE = path.join(BACKEND_ROOT, "supabase", "migration-human-gates.json");
+const FORBIDDEN_FILE = path.join(BACKEND_ROOT, "supabase", "forbidden-migrations.json");
+
+/** Versões com FORBIDDEN_APPLY: remote_ausente é esperado (nunca aplicar). */
+export function loadForbiddenVersions(
+  registryPath = FORBIDDEN_FILE,
+  readFile = (p) => fs.readFileSync(p, "utf8"),
+) {
+  if (!fs.existsSync(registryPath)) return new Set();
+  const { entries } = loadForbiddenRegistry(readFile(registryPath));
+  return new Set(entries.map((e) => e.version));
+}
 
 function readArgs(argv) {
   return {
@@ -70,12 +82,16 @@ function isLegacyRemoteOnlyNumeric(version) {
   return n >= 205 && n <= 289;
 }
 
-export function classifyDriftEntries(drift) {
+export function classifyDriftEntries(drift, forbiddenVersions = loadForbiddenVersions()) {
   const blocking = [];
   const legacyNumericMirror = [];
   const greenfieldSsotReorder = [];
+  const forbiddenNeverApply = [];
+  const deny = forbiddenVersions instanceof Set ? forbiddenVersions : new Set(forbiddenVersions);
   for (const d of drift) {
-    if (isGreenfieldSsotReorderDrift(d)) {
+    if (deny.has(d.version) && d.reason === "remote_ausente") {
+      forbiddenNeverApply.push(d);
+    } else if (isGreenfieldSsotReorderDrift(d)) {
       greenfieldSsotReorder.push(d);
     } else if (isLegacyNumericMirrorDrift(d)) {
       legacyNumericMirror.push(d);
@@ -83,7 +99,7 @@ export function classifyDriftEntries(drift) {
       blocking.push(d);
     }
   }
-  return { blocking, legacyNumericMirror, greenfieldSsotReorder };
+  return { blocking, legacyNumericMirror, greenfieldSsotReorder, forbiddenNeverApply };
 }
 
 /**
@@ -445,8 +461,14 @@ function main() {
   const { format: cliOutputFormat, rows } = parsed;
 
   const { drift, missingInList, extraInList, maxDisk } = analyze(rows, diskVersions);
-  const { blocking: initiallyBlocking, legacyNumericMirror, greenfieldSsotReorder } =
-    classifyDriftEntries(drift);
+  const forbiddenVersions = loadForbiddenVersions();
+  const {
+    blocking: initiallyBlocking,
+    legacyNumericMirror,
+    greenfieldSsotReorder,
+    forbiddenNeverApply,
+  } = classifyDriftEntries(drift, forbiddenVersions);
+  const missingAfterForbidden = missingInList.filter((v) => !forbiddenVersions.has(v));
   const extraLegacyRemote = extraInList.filter(isLegacyRemoteOnlyNumeric);
   const initiallyExtraBlocking = extraInList.filter((v) => !isLegacyRemoteOnlyNumeric(v));
   let gates;
@@ -464,7 +486,11 @@ function main() {
     extraBlocking,
     humanGate,
   } = applyHumanGateRegistry(
-    { blocking: initiallyBlocking, missingInList, extraBlocking: initiallyExtraBlocking },
+    {
+      blocking: initiallyBlocking,
+      missingInList: missingAfterForbidden,
+      extraBlocking: initiallyExtraBlocking,
+    },
     gates,
   );
   const status = deriveOverallStatus({
@@ -504,6 +530,11 @@ function main() {
       reason: d.reason,
       note: "Reordenação greenfield 270–289 → timestamps; remoto pode registrar chave numérica legada",
     })),
+    driftForbiddenNeverApply: forbiddenNeverApply.map((d) => ({
+      version: d.version,
+      reason: d.reason,
+      note: "FORBIDDEN_APPLY: remote_ausente esperado — nunca aplicar (ver forbidden-migrations.json)",
+    })),
     extraLegacyRemoteOnlyNumeric: extraLegacyRemote,
     missingInCliTable: missingInList,
     blockingMissingInCliTable: blockingMissingInList,
@@ -535,6 +566,13 @@ function main() {
     if (legacyNumericMirror.length) {
       console.log("Espelhos numéricos 205–289 (reconciliação SSOT; não bloqueia o gate):");
       console.log(`  ${legacyNumericMirror.length} versões com remote_ausente\n`);
+    }
+    if (forbiddenNeverApply.length) {
+      console.log("FORBIDDEN_APPLY (remote_ausente esperado; não bloqueia o gate):");
+      for (const d of forbiddenNeverApply) {
+        console.log(`  - ${d.version}`);
+      }
+      console.log("");
     }
     if (blocking.length) {
       console.log("Drift bloqueante:");

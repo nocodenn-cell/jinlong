@@ -57,7 +57,9 @@ before(async () => {
  }
  await db.exec(readFileSync(new URL('../supabase/migrations/20261005004647_financeiro_loja_contas_ledger.sql',import.meta.url),'utf8'));
  await db.exec(readFileSync(new URL('../supabase/migrations/20261005091218_financeiro_hardening_final.sql',import.meta.url),'utf8'));
- await db.exec(readFileSync(new URL('../supabase/migrations/20261006120000_financeiro_contas_formas_e_painel.sql',import.meta.url),'utf8'));
+ // Fixture histórica: SQL em quarantine (FORBIDDEN_APPLY) — NÃO está em migrations/.
+ // Carregamento explícito só para PGlite; CLI db reset/push não aplica este arquivo.
+ await db.exec(readFileSync(new URL('../supabase/migrations-forbidden/20261006120000_financeiro_contas_formas_e_painel.sql',import.meta.url),'utf8'));
  await sql('insert into lojas values($1),($2)',[loja,outra]);
  await sql("insert into usuarios values($1,$2,'DONO',true),($3,$4,'ADMIN',true),($5,$2,'OPERADOR',true)",[usuario,loja,outroUsuario,outra,operador]);
  await sql("insert into categorias_financeiras values($1,'Geral','AMBOS',true)",[categoria]);
