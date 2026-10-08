@@ -72,6 +72,17 @@ const reuseExistingServer =
     ? false
     : !isCi || !ciWithLocalServer
 
+/**
+ * `PLAYWRIGHT_E2E_PROD_SERVER=1`: serve o build de produção (`next build` prévio + `next start`)
+ * em vez de `next dev`. Usado no CI, onde o `next dev` compilando ~45 rotas sob demanda, junto da
+ * stack Docker do Supabase e dos browsers, estourava o heap (`JavaScript heap out of memory`) e
+ * derrubava todos os testes seguintes com ERR_CONNECTION_REFUSED. Local continua `next dev`.
+ */
+const useProdServer = process.env.PLAYWRIGHT_E2E_PROD_SERVER === '1'
+const webServerCommand = useProdServer
+  ? `npx next start -p ${e2ePort}`
+  : `npx next dev -p ${e2ePort}`
+
 export default defineConfig({
   testDir: './e2e',
   // 150s, não 90s: `loginGerente`/`loginCaixaOperador` (e2e/helpers/login.ts) chamam
@@ -143,19 +154,22 @@ export default defineConfig({
   webServer:
     ciWithLocalServer || !isCi
       ? {
-          command: `npx next dev -p ${e2ePort}`,
+          command: webServerCommand,
           url: defaultBase,
           reuseExistingServer,
           timeout: 120_000,
           // CI #1226: `next dev` reiniciou 3× por "memory threshold". Heap
           // maior reduz o thrash — mas NÃO 8192: runners github-hosted ~7GB;
           // 8GB (CI #1227) matou o runner ("lost communication"). 4096 cabe.
-          env: {
-            ...process.env,
-            NODE_OPTIONS: [process.env.NODE_OPTIONS, '--max-old-space-size=4096']
-              .filter(Boolean)
-              .join(' '),
-          },
+          // `next start` serve o build já compilado (sem compilação sob demanda) e não precisa disso.
+          env: useProdServer
+            ? { ...process.env }
+            : {
+                ...process.env,
+                NODE_OPTIONS: [process.env.NODE_OPTIONS, '--max-old-space-size=4096']
+                  .filter(Boolean)
+                  .join(' '),
+              },
         }
       : undefined,
 })

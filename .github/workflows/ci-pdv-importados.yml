@@ -307,12 +307,25 @@ jobs:
           SEED_OPERADOR_EMAIL: e2e-operador@localhost.test
         run: node pdv-importados/scripts/seed-dev-users.mjs
 
+      # e2e-critical: serve o build de produção (`next start`), não `next dev`. O `next dev`
+      # compilando ~45 rotas sob demanda + stack Docker do Supabase + browsers estourava o
+      # heap (`JavaScript heap out of memory`) e os testes seguintes viravam ERR_CONNECTION_REFUSED.
+      # NEXT_PUBLIC_* são embutidas no build: precisam ser as da stack local efêmera deste job.
+      - name: Build de produção para o E2E
+        timeout-minutes: 15
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+          NEXT_PUBLIC_SUPABASE_URL: ${{ env.SB_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ env.SB_ANON }}
+        run: npx turbo run build --filter=pdv-importados
+
       - name: Pipeline E2E crítico
         timeout-minutes: 20
         env:
           NODE_OPTIONS: --max-old-space-size=4096
           CI: true
           PLAYWRIGHT_E2E_WITH_DEV: '1'
+          PLAYWRIGHT_E2E_PROD_SERVER: '1'
           NEXT_PUBLIC_SUPABASE_URL: ${{ env.SB_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ env.SB_ANON }}
           PLAYWRIGHT_TEST_EMAIL: e2e-gerente@localhost.test
@@ -545,11 +558,24 @@ jobs:
       # 50, não 35: com WebKit (`mobile-safari-iphone`) a suíte passa de ~29min
       # de testes (#1226) e o step E2E do #1227 foi cancelado ~38min após start
       # — teto curto + pressão de memória matam o job sem artefato.
+      # e2e-playwright: serve o build de produção (`next start`), não `next dev`. O `next dev`
+      # compilando ~45 rotas sob demanda + stack Docker do Supabase + browsers estourava o
+      # heap (`JavaScript heap out of memory`) e os testes seguintes viravam ERR_CONNECTION_REFUSED.
+      # NEXT_PUBLIC_* são embutidas no build: precisam ser as da stack local efêmera deste job.
+      - name: Build de produção para o E2E
+        timeout-minutes: 15
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+          NEXT_PUBLIC_SUPABASE_URL: ${{ env.SB_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ env.SB_ANON }}
+        run: npx turbo run build --filter=pdv-importados
+
       - name: E2E
         timeout-minutes: 50
         env:
           CI: true
           PLAYWRIGHT_E2E_WITH_DEV: '1'
+          PLAYWRIGHT_E2E_PROD_SERVER: '1'
           # 4096, não 8192: runner ubuntu-latest ~7GB RAM; 8GB (#1227) gerou
           # "hosted runner lost communication" e cancelou o step sem logs.
           NODE_OPTIONS: --max-old-space-size=4096
