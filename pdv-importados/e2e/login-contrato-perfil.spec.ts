@@ -67,7 +67,8 @@ test.describe('Contrato de login por perfil', () => {
     await garantirIdiomaPt(page)
 
     const isMobileProject = testInfo.project.name.startsWith('mobile-')
-    const nav = page.getByRole('navigation')
+    // testid, não role: o dashboard também expõe a nav "Abas executivas" (sempre visível).
+    const nav = page.getByTestId('executive-sidebar-nav')
     const menuButton = page.getByRole('button', { name: 'Navegação' })
 
     if (isMobileProject) {

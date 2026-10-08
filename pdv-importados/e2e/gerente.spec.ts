@@ -4,7 +4,7 @@ import {
   assertSupabasePublicEnvInCi,
   hasGerenteTestUser,
 } from './helpers/env'
-import { garantirIdiomaPt } from './helpers/idioma'
+import { clicarIdioma, garantirIdiomaPt } from './helpers/idioma'
 import { loginGerente } from './helpers/login'
 import { gotoApp } from './helpers/url'
 
@@ -62,11 +62,13 @@ test.describe('Painel do gerente (/admin/*)', () => {
     if (await mobileToggle.isVisible().catch(() => false)) {
       await mobileToggle.click()
     }
-    const nav = page.getByRole('navigation')
+    // `getByTestId`, não `getByRole('navigation')`: o dashboard também tem a nav
+    // "Abas executivas" (hub analítico), então o role sozinho é ambíguo.
+    const nav = page.getByTestId('executive-sidebar-nav')
     await expect(nav).toBeVisible()
     // Rótulos reais de `lib/navigation/adminV2SidebarNav.ts` — "Produtos"/
     // "Caixas" (do arquivo antigo) não existem mais como itens de menu.
-    await expect(nav.getByRole('link', { name: /Vendas e caixa/i })).toBeVisible()
+    await expect(nav.getByRole('link', { name: 'Vendas', exact: true })).toBeVisible()
     await expect(nav.getByRole('link', { name: /Catálogo/i })).toBeVisible()
     await expect(nav.getByRole('link', { name: /Estoque/i })).toBeVisible()
     await expect(nav.getByRole('link', { name: /Relatórios/i })).toBeVisible()
@@ -81,14 +83,14 @@ test.describe('Painel do gerente (/admin/*)', () => {
   test('página de imprimir etiquetas carrega', async ({ page }) => {
     await gotoApp(page, '/admin/estoque/imprimir-etiquetas')
     await expect(page.getByRole('heading', { name: /Imprimir Etiquetas|打印标签/ })).toBeVisible()
-    await expect(page.getByPlaceholder(/Código de barras|条形码/)).toBeVisible()
+    await expect(page.getByRole('combobox', { name: /código de barras|条形码/i })).toBeVisible()
     await expect(page.getByRole('button', { name: /Gerar PDF|生成PDF/ })).toBeVisible()
   })
 
   test('fluxo básico: bipar produto -> adicionar ao carrinho -> gerar PDF', async ({ page }) => {
     await gotoApp(page, '/admin/estoque/imprimir-etiquetas')
 
-    const searchInput = page.getByPlaceholder(/Código de barras|条形码/)
+    const searchInput = page.getByRole('combobox', { name: /código de barras|条形码/i })
     await expect(searchInput).toBeVisible()
 
     await searchInput.fill('7891234567890')
@@ -146,14 +148,14 @@ test.describe('Painel do gerente (/admin/*)', () => {
     await gotoApp(page, '/admin/catalogo')
     const zhBtn = page.getByRole('button', { name: '普通话' })
     await expect(zhBtn).toBeVisible()
-    await zhBtn.click()
+    await clicarIdioma(page, '普通话')
     await expect(zhBtn).toBeDisabled({ timeout: 10_000 })
     await garantirIdiomaPt(page)
   })
 
   test('fluxo crítico admin/gerente em chinês + validação traduzida', async ({ page }) => {
     await gotoApp(page, '/admin/catalogo')
-    await page.getByRole('button', { name: '普通话' }).click()
+    await clicarIdioma(page, '普通话')
     await expect(page.getByRole('button', { name: '普通话' })).toBeDisabled({ timeout: 10_000 })
 
     // `/admin/catalogo` é só a listagem — o formulário de produto vive no

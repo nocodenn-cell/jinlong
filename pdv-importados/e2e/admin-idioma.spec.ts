@@ -4,6 +4,7 @@ import {
   assertSupabasePublicEnvInCi,
   hasGerenteTestUser,
 } from './helpers/env'
+import { clicarIdioma } from './helpers/idioma'
 import { loginGerente } from './helpers/login'
 import { gotoApp } from './helpers/url'
 
@@ -11,7 +12,7 @@ async function switchToPtIfNeeded(page: Page) {
   const ptBtn = page.getByRole('button', { name: /^PT$/ })
   await expect(ptBtn).toBeVisible()
   if (!(await ptBtn.isDisabled())) {
-    await ptBtn.click()
+    await clicarIdioma(page, /^PT$/)
     await expect(ptBtn).toBeDisabled({ timeout: 10_000 })
     // Confirma persistência de verdade com um reload — o mesmo padrão que o
     // teste principal usa pra provar que zh persiste. Só o botão ficar
@@ -46,7 +47,7 @@ test.describe('Admin - i18n idioma', () => {
 
   test('alterna para zh e persiste após refresh', async ({ page }) => {
     await expect(page.getByText('Dashboard comercial')).toBeVisible()
-    await page.getByRole('button', { name: '普通话' }).click()
+    await clicarIdioma(page, '普通话')
     // Não `getByText('主控台')`: esse é o rótulo do item de menu na sidebar,
     // que em `mobile-chrome-pixel`/`mobile-safari-iphone` fica dentro do
     // drawer de navegação (`AdminV2MobileNavDrawer`, fechado por padrão) —

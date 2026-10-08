@@ -23,6 +23,15 @@ import { expect, type Page } from '@playwright/test'
  * No-op fora do painel `/admin/*` (ex.: contexto ainda não logado, ou uma
  * página sem o toggle PT/普通话) e no-op se a página já foi fechada.
  */
+/**
+ * Clica num botão do toggle de idioma só depois da hidratação: o toggle é um `<form action>`
+ * (Server Action) e um clique antes de hidratar é descartado sem erro.
+ */
+export async function clicarIdioma(page: Page, nome: string | RegExp): Promise<void> {
+  await page.locator('form[data-idioma-hydrated="1"]').first().waitFor({ state: 'attached', timeout: 30_000 })
+  await page.getByRole('button', { name: nome }).click()
+}
+
 export async function garantirIdiomaPt(page: Page): Promise<void> {
   if (page.isClosed()) return
   const ptBtn = page.getByRole('button', { name: /^PT$/ })
@@ -31,7 +40,7 @@ export async function garantirIdiomaPt(page: Page): Promise<void> {
   const jaPt = await ptBtn.isDisabled().catch(() => false)
   if (jaPt) return
 
-  await ptBtn.click()
+  await clicarIdioma(page, /^PT$/)
   await expect(ptBtn).toBeDisabled({ timeout: 10_000 })
   await page.reload({ waitUntil: 'domcontentloaded' })
   await expect(page.getByRole('button', { name: /^PT$/ })).toBeDisabled({ timeout: 10_000 })
