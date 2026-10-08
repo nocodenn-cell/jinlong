@@ -37,9 +37,29 @@ psql 'postgres://postgres:<PAT>@db.<project-ref>.supabase.co/postgres'
 - **sem** `options=-c jit=true`
 - caminho que **não** passa pelo PAM do Supavisor do shared pooler
 
-**Correção (branch desta sprint):** `backup-scheduled.yml` tenta `direct` primeiro; só então o pooler.  
+**Correção (branch desta sprint):** `backup-scheduled.yml` tenta `direct` primeiro; se falhar, grava `direct: motivo=` e só então o pooler.  
 **Gate estático:** `npm run guard:backup-jit`.  
-**Validação runtime em produção:** exige `workflow_dispatch` / cron **após merge** (autorização humana — toca ORIGEM em leitura).
+**Validação runtime em produção:** exige `workflow_dispatch` / cron **após merge** (autorização humana — toca ORIGEM em leitura). O dispatch seguinte coleta o motivo; no runner atual ele não prova o caminho direto (seção abaixo).
+
+---
+
+## Limitação IPv6 (confirmada pela documentação, 2026-10-08)
+
+Hipótese verificada **só** em documentação oficial (nenhum `workflow_dispatch` novo nesta mudança):
+
+- Free: host direto `db.<ref>.supabase.co:5432` resolve **apenas IPv6** ([matriz de endpoints](https://supabase.com/docs/guides/database/connecting-to-postgres#endpoints-and-ip-versions)).
+- GitHub Actions / `ubuntu-latest` está na lista de redes **só IPv4** ([add-on IPv4](https://supabase.com/docs/guides/platform/ipv4-address); [runner-images#668](https://github.com/actions/runner-images/issues/668)).
+- O `PUT` JIT deste workflow envia somente `allowed_cidrs: [{cidr: 0.0.0.0/0}]`. Faixa IPv6 é o campo separado `allowed_cidrs_v6`.
+
+Por isso a sonda direta, neste runner, deve falhar antes do PAM e cair no pooler. O workflow registra `sem_aaaa`, `sem_rota_ipv6`, `autenticacao` ou `timeout` sem imprimir o PAT. Não há troca de runner, add-on ou CIDR neste repositório.
+
+**Saídas possíveis (humano, depois do log):**
+
+| Saída | O que muda |
+|-------|------------|
+| Runner com IPv6 + `allowed_cidrs_v6` | A sonda direta passa a ter rota e grant compatíveis |
+| Add-on IPv4 (Pro+) | O host direto deixa de ser AAAA e passa a ter A |
+| Ticket Supabase | Caminho do `EXTERNAL-BLOCKER` no Free: grant 2xx, PAM no `aws-1` e a linha `direct: motivo=` |
 
 ---
 
@@ -47,12 +67,12 @@ psql 'postgres://postgres:<PAT>@db.<project-ref>.supabase.co/postgres'
 
 | # | Alternativa | Custo | Quem | Risco | Quando usar |
 |---|---|---|---|---|---|
-| **A** | Após merge: disparar `Backup automatico` e ler se `modo=direct` PASS | $0 | Ops | Baixo (só dump leitura) | **Próximo passo imediato** |
+| **A** | Após merge: disparar `Backup automatico` e arquivar `direct: motivo=` + resultado do pooler | $0 | Ops | Baixo (só dump leitura) | **Próximo passo imediato** (diagnóstico) |
 | **B** | Dashboard → Temporary Access: confirmar toggle enabled + regra do `user_id` com `0.0.0.0/0` e role `postgres` (UI vs API) | $0 | Dono | Nenhum | Se A falhar no direto com PAM |
 | **C** | Rotacionar PAT (`Database JIT` read-write), atualizar `SUPABASE_BACKUP_JIT_PAT`, re-dispatch | $0 | Dono | Baixo | Se A/B falharem |
 | **D** | Ticket Supabase com evidência grant 2xx + PAM aws-1 + PG 17.6.1.084 + tentativa direta | $0 | Dono | Nenhum | Se A–C falharem — **caminho oficial do EXTERNAL-BLOCKER** |
 | **E** | Dump manual pontual na máquina do dono (`supabase db dump` / `pg_dump`) com senha Postgres **temporária** → artifact cifrado local → restore em DESTINO novo | $0 | Dono | Médio (senha em máquina local; gate P0-3) | Contingência se JIT permanecer morto **sem** upgrade |
-| **F** | Opção A plataforma (Pro daily backup) | Pago | Dono | Baixo ops | **Fora** desta decisão (sponsor escolheu Free) |
+| **F** | Opção A plataforma (Pro daily backup) | Pago | Dono | Baixo ops | **Fora** desta decisão (sponsor manteve Free). Não substitui o ticket como ação corrente |
 
 **Não fazer sem autorização explícita:** gravar senha Postgres permanente em GitHub Secrets como substituto do JIT; restore em cima de produção; upgrade de plano.
 
@@ -70,8 +90,12 @@ psql via aws-1-sa-east-1.pooler.supabase.com:5432 with
 user=postgres.{ref}, password=PAT, options=-c jit=true →
 FATAL: PAM authentication failed for user "postgres"
 aws-0 → tenant/user not found (wrong pooler cluster).
-We will also test direct db.{ref}.supabase.co with user=postgres (no jit option).
-Please advise if Temporary Access on Free / this region has a known PAM sync bug.
+Direct db.{ref}.supabase.co from GitHub-hosted ubuntu-latest is expected to fail
+before auth: Free direct endpoint is IPv6-only, the runner has no IPv6 route,
+and the JIT grant only lists allowed_cidrs 0.0.0.0/0 (no allowed_cidrs_v6).
+The workflow logs direct: motivo= before falling back to the pooler.
+Please advise if Temporary Access on Free / this region has a known PAM sync bug,
+and whether direct JIT from an IPv4-only CI runner is supported without the IPv4 add-on.
 ```
 
 ---

@@ -46,6 +46,10 @@ jobs:
               - 'package-lock.json'
               - 'turbo.json'
               - '.github/workflows/ci-pdv-importados.yml'
+              # Espelho de ci-pdv-importados.yml: backup + scripts do guard.
+              - '.github/workflows/backup-scheduled.yml'
+              - 'scripts/assert-backup-jit-direct-probe.mjs'
+              - 'scripts/backup-jit-direct-failure.mjs'
             backend:
               - 'backend/**'
               - 'package.json'

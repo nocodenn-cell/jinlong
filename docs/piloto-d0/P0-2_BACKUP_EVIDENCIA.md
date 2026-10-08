@@ -20,7 +20,7 @@
 | Últimos runs schedule | **failure** (PAM/JIT) | ex.: run `37625648145` 2026-10-07 |
 | Artifact prod &lt;25h | **Não** | 0 success recentes |
 | Restore drill item 20 | **Não** (sem artifact success) | `backup-restore-test.yml` |
-| Sonda direta no workflow | **Adicionada nesta sprint** (ainda sem run success) | `discover-db` + `guard:backup-jit` |
+| Sonda direta no workflow | **Diagnóstico** (Free + `ubuntu-latest` = IPv6; ainda sem run com `direct: motivo=`) | `discover-db` + `guard:backup-jit` |
 | `backup.sh` | Artefato local; **não** é o caminho Opção B | `backup.sh` |
 
 **Conclusão:** mecanismo **nomeado** (Opção B / JIT + age + artifact), mas **não utilizável** enquanto PAM/JIT falhar. Meta D0-06 (RPO 24h) **não** demonstrada.

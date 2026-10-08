@@ -42,6 +42,12 @@ on:
       - 'package-lock.json'
       - 'turbo.json'
       - '.github/workflows/ci-pdv-importados.yml'
+      # guard:backup-jit vive em guard:all. Sem estes paths, um PR que so
+      # altera o workflow de backup (ou o script do guard) nao dispara o
+      # job required build-and-test, e o fallback marca o check como sucesso.
+      - '.github/workflows/backup-scheduled.yml'
+      - 'scripts/assert-backup-jit-direct-probe.mjs'
+      - 'scripts/backup-jit-direct-failure.mjs'
   workflow_dispatch:
 
 jobs:

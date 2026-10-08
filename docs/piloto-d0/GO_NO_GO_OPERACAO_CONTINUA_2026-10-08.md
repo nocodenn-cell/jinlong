@@ -43,7 +43,7 @@
 
 | Teste | Executado? | Resultado |
 |---|---|---|
-| `node scripts/assert-backup-jit-direct-probe.mjs` (`guard:backup-jit`) | **Sim** (local) | **PASS** (7 checks) — log `/opt/cursor/artifacts/guard-backup-jit.log` |
+| `npm run guard:backup-jit` | **Sim** (local, follow-up) | **PASS** — 22 checks estáticos + testes de redação/motivo |
 | Dump/restore produção | **Não** | Proibido sem auth; JIT ainda falha |
 | Restore drill item 20 | **Não** | Sem artifact success |
 | Smoke loja / E2E contra prod | **Não** | Fora do ambiente isolado |
@@ -53,10 +53,10 @@
 
 ## Próxima ação humana (mínima)
 
-1. Revisar/merge desta branch.  
-2. `workflow_dispatch` → **Backup automatico (item 19)** e anexar log (`modo=direct` vs PAM).  
-3. Se success → disparar **Restore drill (item 20)** → atualizar gate.  
-4. Se failure no direto → seguir B→D em `JIT_ALTERNATIVAS_DESBLOQUEIO.md` (Dashboard / rotacionar PAT / ticket).  
+1. Revisar/merge do follow-up de CI/IPv6 (empilhado nesta linha).  
+2. `workflow_dispatch` → **Backup automatico (item 19)** e anexar `direct: motivo=` mais o resultado do pooler. No `ubuntu-latest` o motivo esperado da sonda direta é rede IPv6 (`sem_rota_ipv6` ou `sem_aaaa`), não sucesso `modo=direct`.  
+3. Se o backup completo der success → disparar **Restore drill (item 20)** → atualizar gate.  
+4. Com o motivo no log, escolher uma saída humana do gate: runner IPv6 + `allowed_cidrs_v6`, add-on IPv4, ou ticket. Dashboard/rotação de PAT só se o motivo for `autenticacao`. Pro permanece fora da decisão.  
 5. Agendar P0-1 na loja em paralelo.
 
 **Só então** reavaliar operação contínua para **GO** ou **GO CONDICIONAL** com RPO comprovado.

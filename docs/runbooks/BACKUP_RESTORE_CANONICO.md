@@ -35,7 +35,7 @@
 | Custo | Zero adicional no Free |
 | Já implementada | `backup-scheduled.yml` + `backup-restore-test.yml` |
 | Segurança | Sem senha Postgres permanente; cifrar antes do artifact |
-| Fallback | Opção A (Pro, backup diário 7d) se JIT permanecer bloqueado |
+| Fallback de produto | Opção A (Pro) existe na tabela do gate e **fica fora** da decisão vigente (Free) |
 
 **Opção C (A+B):** não neste estágio.
 
@@ -79,7 +79,9 @@ aws-1-sa-east-1.pooler.supabase.com → PAM authentication failed for user "post
 
 com JIT `PUT/GET` HTTP 2xx. Histórico: `docs/audits/ENCERRAMENTO_SPRINT_BACKUP_JIT_ITENS_18_21.md`.
 
-**2026-10-08:** workflow passa a sondar **conexão direta** Temporary Access antes do pooler. Alternativas e ordem humana: [`docs/piloto-d0/JIT_ALTERNATIVAS_DESBLOQUEIO.md`](../piloto-d0/JIT_ALTERNATIVAS_DESBLOQUEIO.md). Gate: `BACKUP_PRODUCTION_PENDING` até success &lt;25h.
+**2026-10-08:** o workflow sonda a conexão direta e, se ela falhar, registra `direct: motivo=` (`sem_aaaa`, `sem_rota_ipv6`, `autenticacao`, `timeout`) antes do pooler. No Free + `ubuntu-latest` essa sonda não autentica: o host direto é só IPv6, o runner não tem rota IPv6 e o grant JIT só cobre `0.0.0.0/0`. Detalhe e saídas (runner IPv6 + `allowed_cidrs_v6`, add-on IPv4, ticket): [GATE_BACKUP_PRODUCAO.md](../regras-negocio/GATE_BACKUP_PRODUCAO.md) e [`docs/piloto-d0/JIT_ALTERNATIVAS_DESBLOQUEIO.md`](../piloto-d0/JIT_ALTERNATIVAS_DESBLOQUEIO.md).
+
+**Próxima ação humana:** um `workflow_dispatch` para obter esse motivo. A decisão vigente continua Free + Opção B. Pro não é a ação corrente. Gate: `BACKUP_PRODUCTION_PENDING` até success &lt;25h.
 
 ---
 
@@ -130,7 +132,9 @@ Falha no DESTINO → destruir DESTINO; ORIGEM intacta. Cutover só após verific
 
 | Sintoma | Ação |
 |---------|------|
-| `PAM authentication failed` + JIT 200 | Bloqueio externo; não “mais um fix de workflow” sem evidência nova — seguir ação humana do gate |
+| `direct: motivo=sem_rota_ipv6` ou `sem_aaaa` | Esperado no `ubuntu-latest` + Free; ler a seção IPv6 do gate antes de tratar como falha de PAT |
+| `direct: motivo=autenticacao` ou `timeout` | Host ou rota alcançados; seguir Dashboard / PAT / ticket conforme o motivo |
+| `PAM authentication failed` + JIT 200 | Bloqueio externo do pooler; ticket com o log da sonda direta. Pro continua fora da decisão vigente |
 | `unsupported version (1.16)` | Cliente `pg_restore` &lt; 17 |
 | `role "authenticated" does not exist` | Target bare Postgres; usar imagem Supabase |
 | Freshness FAIL | RPO não garantido; investigar último `backup-scheduled` |

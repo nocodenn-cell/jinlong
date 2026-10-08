@@ -186,9 +186,9 @@ flowchart TD
 |---|---|---|---|
 | A1 | Pré-merge audit (já feito) | N/A | Sem secrets; só SELECT/dump |
 | A2 | Human/admin merge apesar drift **não** introduzido pelo PR | Revert merge commit | #485 MERGED |
-| A3 | **1×** `workflow_dispatch` backup | N/A (só leitura) | Log `modo=direct` ou erro exato |
+| A3 | **1×** `workflow_dispatch` backup | N/A (só leitura) | Log `direct: motivo=` (no `ubuntu-latest` o esperado é `sem_rota_ipv6` ou `sem_aaaa`) + resultado do pooler |
 | A4 | Se success: plano restore drill isolado (**não** executar sem auth) | Destroy DESTINO | Plano escrito |
-| A5 | Se fail: ticket/Dashboard/PAT — **não** upgrade | N/A | Erro + alternativa menor custo |
+| A5 | Se fail: ticket com o motivo, ou saída IPv6/add-on do gate. Pro fica fora da decisão | N/A | Erro classificado |
 
 **GO/NO-GO operação contínua:** permanece **NO-GO** até backup + restore + smoke loja.
 
