@@ -763,13 +763,24 @@ function parseLojaIdHeader(req: Request): string | null {
 
 async function handleCatalogoSync(req: Request, supabase: SupabaseAdmin) {
   // Aut#1: precos_atacado como array canônico (não projetar em regras_preco).
+  // M1 / XT-02: service_role ignora RLS — NUNCA dump full catalog.
+  // Exige loja (header ou DEFAULT_PDV_LOJA_ID) e filtra produtos/regras por ela.
   const lojaId = parseLojaIdHeader(req);
+  if (!lojaId) {
+    return jsonResponse(req, 400, {
+      ok: false,
+      error: "LOJA_ID_OBRIGATORIO",
+      detail: "Catálogo sync exige x-loja-id ou DEFAULT_PDV_LOJA_ID (fail closed).",
+    });
+  }
+
   const [produtosRes, regrasRes, atacadoRes] = await Promise.all([
     supabase
       .from("produtos")
       .select(
         "id,nome,codigo_barras,preco_varejo,preco_atacado,categoria_id,ativo,status_publicacao,origem,tem_nf,imagem_url",
       )
+      .eq("loja_id", lojaId)
       .order("nome", { ascending: true })
       .limit(100000),
     supabase
@@ -790,6 +801,15 @@ async function handleCatalogoSync(req: Request, supabase: SupabaseAdmin) {
   if (regrasRes.error) throw new Error(`ERRO_CATALOGO_REGRAS: ${regrasRes.error.message}`);
   if (atacadoRes.error) throw new Error(`ERRO_CATALOGO_PRECOS_ATACADO: ${atacadoRes.error.message}`);
 
+  const produtoIds = new Set(
+    ((produtosRes.data ?? []) as Array<{ id: string }>).map((p) => p.id),
+  );
+
+  // Regras sem produto_id (categoria/global) ficam fora até escopo empresa (D12) — fail closed.
+  const regras = ((regrasRes.data ?? []) as Array<{ produto_id: string | null }>).filter(
+    (r) => r.produto_id != null && produtoIds.has(r.produto_id),
+  );
+
   const precosAtacado = ((atacadoRes.data ?? []) as Array<{
     id: string;
     produto_id: string;
@@ -798,14 +818,15 @@ async function handleCatalogoSync(req: Request, supabase: SupabaseAdmin) {
     preco_unitario: number;
     ativo: boolean;
   }>).filter((row) => {
+    if (!produtoIds.has(row.produto_id)) return false;
     const lid = row.loja_id;
-    return lid == null || (lojaId != null && lid === lojaId);
+    return lid == null || lid === lojaId;
   });
 
   return jsonResponse(req, 200, {
     ok: true,
     produtos: produtosRes.data ?? [],
-    regras: regrasRes.data ?? [],
+    regras,
     precos_atacado: precosAtacado,
     loja_id: lojaId,
   });
