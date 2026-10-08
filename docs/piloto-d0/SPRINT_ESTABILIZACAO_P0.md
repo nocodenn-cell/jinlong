@@ -1,6 +1,10 @@
 # Sprint — Estabilização Operacional do Piloto (P0)
 
-**Status:** plano oficial. P0-2 **FAIL** — [P0-2_BACKUP_EVIDENCIA.md](./P0-2_BACKUP_EVIDENCIA.md). P0-3 **parado no human gate** — [P0-3_HUMAN_GATE.md](./P0-3_HUMAN_GATE.md). Nenhuma operação destrutiva executada.
+**Status:** em execução (2026-10-08). Decisão sponsor: **1A + Free/JIT**.  
+Reconciliação: [RECONCILIACAO_P0_AUDITORIA_360.md](./RECONCILIACAO_P0_AUDITORIA_360.md).  
+GO/NO-GO: [GO_NO_GO_OPERACAO_CONTINUA_2026-10-08.md](./GO_NO_GO_OPERACAO_CONTINUA_2026-10-08.md) → operação contínua **NO-GO** enquanto backup FAIL.  
+P0-2 **FAIL** — [P0-2_BACKUP_EVIDENCIA.md](./P0-2_BACKUP_EVIDENCIA.md). P0-3 **parado no human gate** — [P0-3_HUMAN_GATE.md](./P0-3_HUMAN_GATE.md). P0-4 runbook honesto — [RUNBOOK_INCIDENTE_1_PAGINA.md](./RUNBOOK_INCIDENTE_1_PAGINA.md).  
+JIT: [JIT_ALTERNATIVAS_DESBLOQUEIO.md](./JIT_ALTERNATIVAS_DESBLOQUEIO.md) + sonda direta em `backup-scheduled.yml`. Nenhuma operação destrutiva em produção.
 
 | Campo | Valor |
 |---|---|

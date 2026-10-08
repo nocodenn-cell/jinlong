@@ -69,17 +69,17 @@ Retenção artifact: 30 dias
 - Artifact presente  
 - `Backup freshness monitor` verde (idade ≤ 25h)
 
-### Bloqueio atual (não contornar)
+### Bloqueio atual (não contornar com aceite de risco)
 
-Sintoma estável:
+Sintoma estável no pooler:
 
 ```text
 aws-1-sa-east-1.pooler.supabase.com → PAM authentication failed for user "postgres"
 ```
 
-com JIT `PUT/GET` HTTP 2xx. Detalhe: `docs/audits/ENCERRAMENTO_SPRINT_BACKUP_JIT_ITENS_18_21.md`.
+com JIT `PUT/GET` HTTP 2xx. Histórico: `docs/audits/ENCERRAMENTO_SPRINT_BACKUP_JIT_ITENS_18_21.md`.
 
-**Única próxima ação humana:** ticket Supabase (EXTERNAL-BLOCKER) **ou** autorizar Opção A (Pro).
+**2026-10-08:** workflow passa a sondar **conexão direta** Temporary Access antes do pooler. Alternativas e ordem humana: [`docs/piloto-d0/JIT_ALTERNATIVAS_DESBLOQUEIO.md`](../piloto-d0/JIT_ALTERNATIVAS_DESBLOQUEIO.md). Gate: `BACKUP_PRODUCTION_PENDING` até success &lt;25h.
 
 ---
 
