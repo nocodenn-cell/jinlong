@@ -43,11 +43,14 @@ Não escolher A só por ser “pago”. A torna-se **fallback** se o bloqueio JI
 
 ---
 
-## Única próxima ação humana
+## Próximas ações humanas (ordem — decisão 2026-10-08: Free + JIT)
 
-> **Abrir ticket no suporte Supabase** anexando a evidência de `EXTERNAL-BLOCKER-SUPABASE-JIT` (grant JIT confirmado + PAM rejeitando o mesmo PAT no cluster `aws-1`), **ou**, se a decisão de produto for não esperar a plataforma: **autorizar upgrade Pro (Opção A)** para backup nativo diário.
+1. **Merge + `workflow_dispatch`** do backup após a sonda **direta** (`db.<ref>.supabase.co`) em `backup-scheduled.yml` — ver [`docs/piloto-d0/JIT_ALTERNATIVAS_DESBLOQUEIO.md`](../piloto-d0/JIT_ALTERNATIVAS_DESBLOQUEIO.md).  
+2. Se ainda PAM/FAIL: Dashboard Temporary Access (UI vs API) → rotacionar `SUPABASE_BACKUP_JIT_PAT`.  
+3. **Ticket Supabase** com evidência grant 2xx + PAM em `aws-1` (+ resultado da sonda direta).  
+4. Upgrade Pro (**Opção A**) permanece fora desta decisão de produto (sponsor manteve Free).
 
-Após desbloqueio (JIT verde **ou** Pro ativo):
+Após desbloqueio (JIT verde):
 
 1. `workflow_dispatch` → `Backup automatico (item 19)` até **success** + artifact `jinlong-backup-*`.
 2. `workflow_dispatch` → `Restore drill (item 20)` até **success**.

@@ -132,94 +132,95 @@ jobs:
           echo "Aguardando 15s para eventual propagacao do grant ao Supavisor..."
           sleep 15
 
-      - name: Descobrir host do pooler (teste real de tenant, nao pg_isready)
-        id: discover-pooler
+      # Doc oficial Temporary Access (2026-10): conexao DIRETA
+      #   postgres://postgres:<PAT>@db.<ref>.supabase.co:5432/postgres
+      # nao exige options=-c jit=true. Pooler IPv4 exige user postgres.<ref>
+      # + jit=true. Ate 2026-10-07 o workflow so sondava o pooler — lacuna
+      # documentada em docs/piloto-d0/JIT_ALTERNATIVAS_DESBLOQUEIO.md.
+      - name: Descobrir host DB (direto primeiro, depois pooler)
+        id: discover-db
         env:
           JIT_PAT: ${{ secrets.SUPABASE_BACKUP_JIT_PAT }}
         run: |
           set -euo pipefail
           set +x
-          # `pg_isready` so confirma que ALGUM processo Supavisor esta
-          # escutando naquele host - nao que ele conhece o tenant deste
-          # projeto. Achado ao vivo (nslookup, sem credenciais): aws-0 e
-          # aws-1-sa-east-1.pooler.supabase.com resolvem para ELBs
-          # DIFERENTES (IPs completamente distintos) - clusters realmente
-          # separados, nao copias redundantes do mesmo pool regional; aws-2+
-          # nem existe em DNS nesta regiao hoje. O host anterior (aws-0,
-          # escolhido so por responder pg_isready) causava "tenant/user ...
-          # not found" em toda tentativa, mesmo com JIT/roles/allowed_networks
-          # corretos e confirmados via GET - consistente com o projeto estar
-          # atribuido a um cluster diferente. Correcao: descobrir o host
-          # tentando a MESMA autenticacao real (JIT) que o dump vai usar,
-          # nao um ping sem autenticacao.
-          # Percent-encode a senha antes de embuti-la na URI: a API de
-          # Management (Authorization: Bearer) nao passa pelo parser de URI,
-          # mas aqui o valor vai dentro de postgres://user:SENHA@host/... -
-          # qualquer caractere reservado (:, /, @, %, ?, #, etc.) no PAT
-          # quebraria o parsing da URI e mandaria uma senha diferente (ou
-          # trunca) para o servidor, produzindo o MESMO sintoma de uma senha
-          # genuinamente errada ("PAM authentication failed").
           JIT_PAT_ENC=$(jq -rn --arg v "$JIT_PAT" '$v|@uri')
           host=""
-          # Host ERRADO e CREDENCIAL errada tem sintomas diferentes e exigem
-          # acoes diferentes:
-          #   - "tenant/user ... not found" -> este host nao atende este projeto;
-          #     continuar procurando faz sentido.
-          #   - "PAM authentication failed" -> o host ACERTOU o tenant e recusou
-          #     a senha. Continuar procurando so gera ruido, e o erro final
-          #     ("nenhum host resolveu o tenant") aponta para o lugar errado.
-          # Guardar o host que autenticou-mal permite dizer exatamente o que
-          # precisa ser rotacionado.
+          mode=""
           auth_host=""
-          for idx in 0 1 2 3; do
-            candidate="aws-${idx}-${SUPABASE_PROJECT_REGION}.pooler.supabase.com"
-            conn_probe="postgres://postgres.${SUPABASE_PROJECT_REF}:${JIT_PAT_ENC}@${candidate}:5432/postgres?options=-c%20jit%3dtrue"
-            if PGCONNECT_TIMEOUT=5 psql "$conn_probe" -Atq -v ON_ERROR_STOP=1 -c "SELECT 1" >/tmp/probe-out.txt 2>/tmp/probe-err.txt; then
-              if [ "$(cat /tmp/probe-out.txt)" = "1" ]; then
-                host="$candidate"
-                echo "Host correto encontrado: $candidate (idx=$idx)."
-                break
-              fi
+
+          # 1) Direto — caminho oficial sem Supavisor/PAM do pooler.
+          direct_host="db.${SUPABASE_PROJECT_REF}.supabase.co"
+          conn_direct="postgres://postgres:${JIT_PAT_ENC}@${direct_host}:5432/postgres?sslmode=require"
+          if PGCONNECT_TIMEOUT=8 psql "$conn_direct" -Atq -v ON_ERROR_STOP=1 -c "SELECT 1" >/tmp/probe-out.txt 2>/tmp/probe-err.txt; then
+            if [ "$(cat /tmp/probe-out.txt)" = "1" ]; then
+              host="$direct_host"
+              mode="direct"
+              echo "Host correto encontrado: $direct_host (modo=direct)."
             fi
+          else
             if grep -qiE "PAM authentication failed|password authentication failed" /tmp/probe-err.txt; then
-              auth_host="$candidate"
-              echo "idx=$idx ($candidate): tenant RESOLVIDO, mas a autenticacao foi recusada."
+              auth_host="$direct_host"
+              echo "direct ($direct_host): autenticacao recusada."
             else
-              echo "idx=$idx ($candidate): sem sucesso de tenant (detalhe sem segredo abaixo)."
+              echo "direct ($direct_host): sem sucesso (detalhe sem segredo abaixo)."
             fi
             sed -E "s#${JIT_PAT}#***#g; s#${JIT_PAT_ENC}#***#g" /tmp/probe-err.txt || true
-          done
+          fi
+
+          # 2) Pooler compartilhado (IPv4 session :5432) — so se direto falhou.
+          if [ -z "$host" ]; then
+            for idx in 0 1 2 3; do
+              candidate="aws-${idx}-${SUPABASE_PROJECT_REGION}.pooler.supabase.com"
+              conn_probe="postgres://postgres.${SUPABASE_PROJECT_REF}:${JIT_PAT_ENC}@${candidate}:5432/postgres?options=-c%20jit%3dtrue"
+              if PGCONNECT_TIMEOUT=5 psql "$conn_probe" -Atq -v ON_ERROR_STOP=1 -c "SELECT 1" >/tmp/probe-out.txt 2>/tmp/probe-err.txt; then
+                if [ "$(cat /tmp/probe-out.txt)" = "1" ]; then
+                  host="$candidate"
+                  mode="pooler"
+                  echo "Host correto encontrado: $candidate (modo=pooler, idx=$idx)."
+                  break
+                fi
+              fi
+              if grep -qiE "PAM authentication failed|password authentication failed" /tmp/probe-err.txt; then
+                auth_host="$candidate"
+                echo "idx=$idx ($candidate): tenant RESOLVIDO, autenticacao recusada."
+              else
+                echo "idx=$idx ($candidate): sem sucesso de tenant (detalhe sem segredo abaixo)."
+              fi
+              sed -E "s#${JIT_PAT}#***#g; s#${JIT_PAT_ENC}#***#g" /tmp/probe-err.txt || true
+            done
+          fi
+
           if [ -z "$host" ] && [ -n "$auth_host" ]; then
-            echo "::error::Credencial de banco recusada em ${auth_host} (o tenant do projeto foi resolvido, a senha nao foi aceita). Isto NAO e host errado nem indisponibilidade: rotacione o secret do GitHub usado por este workflow (senha do banco do projeto ${SUPABASE_PROJECT_REF}) e rode novamente."
+            echo "::error::Temporary Access/JIT recusado em ${auth_host} (tenant/host alcançado; PAT nao autenticou como postgres). Nao e senha permanente do Postgres. Acoes: (1) confirmar Temporary Access enabled + regra do user_id no Dashboard; (2) rotacionar secrets.SUPABASE_BACKUP_JIT_PAT (escopo Database JIT); (3) ticket Supabase EXTERNAL-BLOCKER-SUPABASE-JIT. Ver docs/piloto-d0/JIT_ALTERNATIVAS_DESBLOQUEIO.md."
             exit 1
           fi
           if [ -z "$host" ]; then
-            echo "::error::Nenhum host de pooler resolveu o tenant deste projeto (aws-0..3-${SUPABASE_PROJECT_REGION}) e nenhum recusou credencial. Ver detalhes acima (sem segredo)."
+            echo "::error::Nenhum host (direto db.<ref> nem pooler aws-0..3-${SUPABASE_PROJECT_REGION}) aceitou Temporary Access. Ver detalhes acima (sem segredo)."
             exit 1
           fi
+          echo "db_host=${host}" >> "$GITHUB_OUTPUT"
+          echo "conn_mode=${mode}" >> "$GITHUB_OUTPUT"
+          # Compat: steps antigos / logs que ainda leem pooler_host
           echo "pooler_host=${host}" >> "$GITHUB_OUTPUT"
 
       - name: Produzir dump (roles/schema/data)
         env:
           JIT_PAT: ${{ secrets.SUPABASE_BACKUP_JIT_PAT }}
-          POOLER_HOST: ${{ steps.discover-pooler.outputs.pooler_host }}
+          DB_HOST: ${{ steps.discover-db.outputs.db_host }}
+          CONN_MODE: ${{ steps.discover-db.outputs.conn_mode }}
         run: |
           set -euo pipefail
           set +x
-          # options=-c jit=true (nao "on"): valor exato do exemplo oficial em
-          # https://supabase.com/docs/guides/platform/temporary-access. E o
-          # sinal que o Supavisor usa para reconhecer a conexao como uma
-          # sessao de Temporary Access; "on" (sinonimo booleano valido em
-          # Postgres, mas nao o literal esperado aqui) faz o Supavisor cair
-          # no roteamento normal de tenant e devolver "tenant/user ... not
-          # found", pois postgres.{ref} nao e um tenant valido fora do fluxo
-          # de Temporary Access.
-          #
-          # Senha percent-encoded (jq @uri) antes de embutir na URI - mesmo
-          # motivo do step de descoberta: um caractere reservado no PAT bruto
-          # quebraria o parsing e mandaria a senha errada ao servidor.
           JIT_PAT_ENC=$(jq -rn --arg v "$JIT_PAT" '$v|@uri')
-          conn="postgres://postgres.${SUPABASE_PROJECT_REF}:${JIT_PAT_ENC}@${POOLER_HOST}:5432/postgres?options=-c%20jit%3dtrue"
+          if [ "$CONN_MODE" = "direct" ]; then
+            # Doc: user=postgres (sem .ref), sem options jit no host direto.
+            conn="postgres://postgres:${JIT_PAT_ENC}@${DB_HOST}:5432/postgres?sslmode=require"
+          else
+            # Pooler: user=postgres.<ref> + options=-c jit=true (literal "true").
+            conn="postgres://postgres.${SUPABASE_PROJECT_REF}:${JIT_PAT_ENC}@${DB_HOST}:5432/postgres?options=-c%20jit%3dtrue"
+          fi
+          echo "Dump via conn_mode=${CONN_MODE} host=${DB_HOST}."
 
           mkdir -p /tmp/backup
           supabase db dump --db-url "$conn" -f /tmp/backup/roles.sql --role-only
@@ -238,12 +239,17 @@ jobs:
       - name: Manifesto de sanidade (contagens, sem dado sensivel)
         env:
           JIT_PAT: ${{ secrets.SUPABASE_BACKUP_JIT_PAT }}
-          POOLER_HOST: ${{ steps.discover-pooler.outputs.pooler_host }}
+          DB_HOST: ${{ steps.discover-db.outputs.db_host }}
+          CONN_MODE: ${{ steps.discover-db.outputs.conn_mode }}
         run: |
           set -euo pipefail
           set +x
           JIT_PAT_ENC=$(jq -rn --arg v "$JIT_PAT" '$v|@uri')
-          conn="postgres://postgres.${SUPABASE_PROJECT_REF}:${JIT_PAT_ENC}@${POOLER_HOST}:5432/postgres?options=-c%20jit%3dtrue"
+          if [ "$CONN_MODE" = "direct" ]; then
+            conn="postgres://postgres:${JIT_PAT_ENC}@${DB_HOST}:5432/postgres?sslmode=require"
+          else
+            conn="postgres://postgres.${SUPABASE_PROJECT_REF}:${JIT_PAT_ENC}@${DB_HOST}:5432/postgres?options=-c%20jit%3dtrue"
+          fi
           psql "$conn" -Atq -c "
             SELECT json_build_object(
               'generated_at', now(),
