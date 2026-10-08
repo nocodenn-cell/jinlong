@@ -15,6 +15,12 @@ import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  assertForbiddenNotReconciled,
+  deriveForbiddenExit,
+  forbiddenPendingApply,
+  pendingApplyVersions,
+} from "./forbidden-migration-apply.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const BACKEND_ROOT = path.resolve(__dirname, "..");
@@ -452,12 +458,16 @@ function main() {
   let gates;
   try {
     gates = loadHumanGateRegistry();
+    assertForbiddenNotReconciled(gates);
   } catch (error) {
     const message = String(error.message ?? error);
     if (opts.json) console.log(JSON.stringify({ ok: false, error: "human_gate_registry_invalid", message }, null, 2));
     else console.error(message);
     process.exit(2);
   }
+  const forbiddenApply = forbiddenPendingApply(
+    pendingApplyVersions({ blocking: initiallyBlocking, missingInList }),
+  );
   const {
     blocking,
     missingInList: blockingMissingInList,
@@ -508,6 +518,7 @@ function main() {
     missingInCliTable: missingInList,
     blockingMissingInCliTable: blockingMissingInList,
     extraInCliTableNotOnDisk: extraInList,
+    forbiddenApply,
   };
 
   if (opts.json) {
@@ -536,6 +547,12 @@ function main() {
       console.log("Espelhos numéricos 205–289 (reconciliação SSOT; não bloqueia o gate):");
       console.log(`  ${legacyNumericMirror.length} versões com remote_ausente\n`);
     }
+    if (forbiddenApply.length) {
+      console.error(
+        `FORBIDDEN_APPLY: versões obsoletas não podem entrar em apply/push: ${forbiddenApply.join(", ")}`,
+      );
+      console.error("Não reconcilie este drift aplicando o arquivo. Ele está na deny-list.\n");
+    }
     if (blocking.length) {
       console.log("Drift bloqueante:");
       for (const d of blocking) {
@@ -558,7 +575,8 @@ function main() {
     }
   }
 
-  process.exit(deriveExitCode(status, opts.warnOnly));
+  const forbiddenCode = deriveForbiddenExit(forbiddenApply, opts.warnOnly);
+  process.exit(forbiddenCode === 1 ? 1 : deriveExitCode(status, opts.warnOnly));
 }
 
 const invokedPath = process.argv[1] ? path.resolve(process.argv[1]) : null;

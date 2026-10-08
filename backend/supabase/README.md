@@ -125,6 +125,17 @@ dos seis caixas confirmados como testes, ajustes dos autotestes e limites:
 Não executar `migration repair` nem reaplicar substituições antigas só para
 igualar timestamps: a versão remota representa uma aplicação real já verificada.
 
+### Apply proibido — `20261006120000`
+
+`20261006120000_financeiro_contas_formas_e_painel.sql` está **obsoleta**
+(superseded by `20261006180000` / remoto `20261006195837`). Reaplicá-la regride
+a liquidação PIX. O arquivo permanece no Git. A deny-list
+`forbiddenApply` em `migration-human-gates.json` e
+`backend/scripts/forbidden-migration-apply.mjs` fazem o CI falhar com
+`FORBIDDEN_APPLY` se a versão aparecer como pendente de apply/push.
+Não apague o arquivo e não crie par HUMAN_GATE para ela.
+Relatório: [docs/audits/POS_OPS02_FASES_BCD_INTEGRIDADE.md](../../docs/audits/POS_OPS02_FASES_BCD_INTEGRIDADE.md).
+
 O gate `migration-remote-drift` acusava 3 versões só no remoto. Nenhuma alteração foi feita em
 produção; a reconciliação foi só no repositório, após comparação por leitura de
 `schema_migrations.statements`, `pg_proc` e `pg_policies`:

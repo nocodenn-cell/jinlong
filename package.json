@@ -39,10 +39,11 @@
     "guard:pricing": "node scripts/pricing-rpc-guard.mjs",
     "guard:deps": "node scripts/dep-version-guard.mjs",
     "guard:migrations": "node scripts/migration-sequence-guard.mjs",
+    "guard:forbidden-migrations": "node backend/scripts/forbidden-migration-apply.mjs --check-static",
     "guard:domain": "node scripts/domain-boundary-guard.mjs",
     "guard:ratchet": "node scripts/boundary-ratchet-guard.mjs",
     "guard:ratchet:test": "node --test scripts/boundary-ratchet-guard.test.mjs",
-    "guard:all": "npm run guard:core && npm run guard:pdv && npm run guard:routes && npm run guard:rpc && npm run guard:pricing && npm run guard:deps && npm run guard:migrations && npm run guard:domain && npm run guard:ratchet && npm run guard:ratchet:test && npm run check:entity-ssot -w pdv-importados",
+    "guard:all": "npm run guard:core && npm run guard:pdv && npm run guard:routes && npm run guard:rpc && npm run guard:pricing && npm run guard:deps && npm run guard:migrations && npm run guard:forbidden-migrations && npm run guard:domain && npm run guard:ratchet && npm run guard:ratchet:test && npm run check:entity-ssot -w pdv-importados",
     "pre-deploy:check": "bash scripts/pre-deploy-checklist.sh"
   },
   "overrides": {
