@@ -155,6 +155,14 @@ describe('SSOT-004 — enqueue fiscal canônico', () => {
     expect(revoke).toContain('SSOT-004 PROVA FAIL')
   })
 
+  it('DROP POLICY de INSERT é local e não reabre GRANT', () => {
+    const drop = mig('20261008013613_ssot_004_drop_policy_insert_fiscal.sql')
+    expect(drop).toContain('NAO_APLICADA_REMOTAMENTE')
+    expect(drop).toContain('DROP POLICY IF EXISTS doc_fiscal_pendentes_insert_loja')
+    expect(drop).not.toMatch(/^\s*GRANT\s+INSERT/im)
+    expect(drop).toContain('SSOT-004 DROP POLICY recusou')
+  })
+
   it('hotfix GRANT INSERT é anterior aos REVOKE SSOT-004 (ordem lexicográfica)', () => {
     const hotfix = '20260903180000_fiscal_hotfix_codex_review.sql'
     const r1 = '20261007161220_fiscal_cancelado_ssot.sql'

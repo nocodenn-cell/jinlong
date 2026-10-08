@@ -29,6 +29,8 @@ const NODE_SUITES = [
   'nfe-conferencia-margem-contract.test.mjs',
   'test-financeiro-loja.mjs',
   'test-pdv-caixa-financeiro-fluxo.mjs',
+  'ssot-004-insert-fiscal-negativo.test.mjs',
+  'integridade-financeira-pos-ops02.test.mjs',
 ]
 
 const SCRIPT_SUITES = [
@@ -65,6 +67,8 @@ const SQL_SUITES = [
   'relatorio-consistencia-vendas-gerente.test.sql',
   'retomar-caixa-atomico.test.sql',
   'sec04-token-gerente-tenant.test.sql',
+  'ssot-004-insert-fiscal-negativo.test.sql',
+  'integridade-financeira-pos-ops02.test.sql',
 ]
 
 /** `psql` está de fato instalado e executável neste host? */
