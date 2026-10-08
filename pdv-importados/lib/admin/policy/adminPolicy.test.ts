@@ -37,7 +37,7 @@ describe('adminPolicy', () => {
 
   describe('middlewareAdminDecision — usuário bloqueado', () => {
     function blockedNormalization(
-      blockedReason: 'inativo' | 'sem_loja'
+      blockedReason: SessionNormalization['blockedReason'] & string
     ): SessionNormalization {
       return {
         contract: null,
@@ -63,6 +63,16 @@ describe('adminPolicy', () => {
       const decision = middlewareAdminDecision(blockedNormalization('sem_loja'), '/caixa')
       expect(decision.type).toBe('redirect')
       expect(decision.reason).toBe('conta_sem_loja')
+    })
+
+    it('empresa ativa obrigatória não redireciona para outra empresa', () => {
+      const decision = middlewareAdminDecision(
+        blockedNormalization('empresa_ativa_obrigatoria'),
+        '/admin/dashboard'
+      )
+      expect(decision.type).toBe('redirect')
+      expect(decision.reason).toBe('empresa_ativa_obrigatoria')
+      expect(decision.target).toContain('/login')
     })
 
     it('rota pública segue permitida mesmo bloqueado', () => {

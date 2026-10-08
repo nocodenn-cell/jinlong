@@ -29,7 +29,13 @@ export type SessionAuthState =
   | 'blocked'
 
 /** Motivo de bloqueio de usuário autenticado (authState === 'blocked'). */
-export type SessionBlockedReason = 'inativo' | 'sem_loja'
+export type SessionBlockedReason =
+  | 'inativo'
+  | 'sem_loja'
+  | 'empresa_ativa_obrigatoria'
+  | 'empresa_nao_autorizada'
+  | 'loja_nao_autorizada'
+  | 'empresa_divergente'
 
 /**
  * Resultado completo da normalização: contrato policy + sessão legada + metadados.
@@ -51,4 +57,6 @@ export type AdminSession = {
   perfil: PerfilUsuario
   idioma: Idioma
   lojaId: string | null
+  /** M2-B: empresa ativa resolvida no servidor (null em modo legado sem vínculos). */
+  empresaId?: string | null
 }
