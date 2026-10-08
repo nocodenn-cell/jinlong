@@ -30,14 +30,32 @@ export const E2E_GOTO_DOMCONTENTLOADED = {
 }
 
 /**
+ * Espera o React hidratar a página (o `document` ganha a chave `__reactContainer$…`).
+ * Interagir ANTES disso perde o clique (hamburger do drawer) ou, num <form action={serverAction}>
+ * (toggle PT/普通话), dispara um POST de página inteira cujo streaming Suspense fica preso em
+ * `div[hidden]` — `main` vazio e h1 "hidden". Com `next dev` frio a hidratação leva segundos.
+ * Não falha se a página não hidrata (ex.: resposta não-React): a asserção do teste decide.
+ */
+export async function waitForHydration(page: Page, timeout = 60_000) {
+  await page
+    .waitForFunction(() => Object.keys(document).some((k) => k.startsWith('__reactContainer')), undefined, {
+      timeout,
+    })
+    .catch(() => undefined)
+}
+
+/**
  * Navegação com URL absoluta — não depende de `use.baseURL` no CI.
  * Default `domcontentloaded`: CI #1228 WebKit estourou 150s em `waitUntil=load`
  * (`gerente.spec` imprimir-etiquetas) enquanto o `next dev` recompilava.
+ * Depois do `goto`, espera a hidratação (ver `waitForHydration`).
  */
 export async function gotoApp(
   page: Page,
   path: string,
   options?: Parameters<Page['goto']>[1],
 ) {
-  return page.goto(resolveE2eUrl(path), { ...E2E_GOTO_DOMCONTENTLOADED, ...options })
+  const response = await page.goto(resolveE2eUrl(path), { ...E2E_GOTO_DOMCONTENTLOADED, ...options })
+  await waitForHydration(page)
+  return response
 }
