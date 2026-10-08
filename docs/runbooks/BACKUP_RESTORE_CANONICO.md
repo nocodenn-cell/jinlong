@@ -26,6 +26,53 @@
 
 ---
 
+## Atualização Sprint 0 (2026-10-08) — backup real produzido e restaurado
+
+**Caminho validado: `supabase db dump --linked`** (a CLI cria a role temporária `cli_login_postgres` via
+Management API usando um token de acesso do dono; não usa senha de banco nem Temporary Access/JIT).
+Executado contra produção em **somente leitura** (pg_dump); arquivos mantidos fora do repositório.
+
+| Evidência | Resultado |
+|---|---|
+| Dump produzido | `roles.sql` 638 B · `schema.sql` 890 KB · `data.sql` 2,5 MB |
+| Restauração | em Postgres/Supabase **descartável** (container local), `restore-drill.sh`, **7,8 s** |
+| Tabelas de `public` | **87/87** com contagem idêntica à produção |
+| Objetos | 152 policies · 163 functions · 53 triggers · 3 constraints `NOT VALID` — idênticos |
+| Contas | 14 `auth.users` restauradas |
+| Negócio | 258 vendas, 56 caixas, 155 produtos, 11 usuários — iguais ao manifesto |
+| Repetição | restauração refeita do zero numa segunda stack: mesmo resultado |
+
+RTO medido do restore: **~8 s** para 3,4 MB (o RTO real inclui provisionar o destino e o cutover humano).
+
+### Achados do drill (corrigidos em `backend/scripts/restore-drill.sh`)
+
+1. **Constraints `CHECK … NOT VALID` continuam validando linhas novas, inclusive no `COPY`.** Produção tem
+   uma linha legada (documento fiscal de teste com chave de 15 dígitos) que viola
+   `documentos_fiscais_chave_formato`; um restore ingênuo falhava e perdia a tabela inteira. O script remove
+   as constraints `NOT VALID` antes da carga e as recria como `NOT VALID` depois.
+2. **auth/storage de um Postgres local podem ser mais antigos que os de produção** (tabelas/colunas geridas
+   pelo GoTrue/Storage). `filter-data-dump.mjs` carrega apenas `public` + `auth.users` + `auth.identities`.
+3. O restore drill do CI usava `postgres:17-alpine` (sem roles `anon`/`authenticated` nem schema `auth`);
+   passou a usar a imagem `supabase/postgres`.
+
+### Por que o backup diário no GitHub continua vermelho
+
+O workflow tentava só Temporary Access/JIT, que o pooler recusa (`PAM authentication failed`, 0 sucessos em 30
+execuções). `backup-scheduled.yml` agora **usa o caminho da CLI quando existir o secret
+`SUPABASE_ACCESS_TOKEN`** e mantém o JIT como fallback. **Falta uma ação humana, gratuita:**
+
+> Criar um token de acesso pessoal Supabase (Account → Access Tokens, preferencialmente com expiração) e
+> cadastrá-lo como secret `SUPABASE_ACCESS_TOKEN` do repositório. Depois: `workflow_dispatch` em
+> *Backup automatico (item 19)* → *Restore drill (item 20)* → *Backup freshness monitor*.
+
+Enquanto isso não for feito, o RPO de 24 h **continua NÃO GARANTIDO** de forma automática. O backup manual
+acima prova que o procedimento funciona; não substitui a execução diária.
+
+**Antes de qualquer operação destrutiva em produção (limpeza, migrations):** repetir o dump
+(`supabase link` + `supabase db dump --linked`) e o drill (`restore-drill.sh`).
+
+---
+
 ## Estratégia escolhida
 
 **Opção B — dump externo automatizado** (GitHub Actions + Temporary Access/JIT + `age` + artifact).
