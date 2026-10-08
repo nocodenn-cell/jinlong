@@ -1,42 +1,58 @@
-import Link from 'next/link'
 import type { HomeContent } from '@/lib/content'
 import { erpHref } from '@/lib/erpLinks'
-import { otherSiteLocale, sitePath, type SiteLocale } from '@/lib/locales'
-import { LocaleSwitch } from './LocaleSwitch'
+import type { SiteLocale } from '@/lib/locales'
+import { Brand } from './Brand'
+import { LanguageSwitch } from './LanguageSwitch'
+import { MobileMenu, type MenuLink } from './MobileMenu'
 
 interface SiteHeaderProps {
   locale: SiteLocale
   content: HomeContent
   showSwitch: boolean
+  hasContact: boolean
 }
 
-export function SiteHeader({ locale, content, showSwitch }: SiteHeaderProps) {
-  const { nav, locale: localeCopy } = content
+function buildLinks(content: HomeContent, hasContact: boolean): MenuLink[] {
+  const { nav } = content
+  const links: MenuLink[] = [
+    { href: '#inicio', label: nav.home },
+    { href: '#funcionalidades', label: nav.features },
+    { href: '#demonstracao', label: nav.demo },
+    { href: '#como-funciona', label: nav.how },
+  ]
+  return hasContact ? [...links, { href: '#contato', label: nav.contact }] : links
+}
+
+export function SiteHeader({ locale, content, showSwitch, hasContact }: SiteHeaderProps) {
+  const { nav } = content
+  const links = buildLinks(content, hasContact)
+  const loginHref = erpHref('/login')
   return (
-    <header className="site-header">
-      <div className="site-wrap site-header__row">
-        <Link href={sitePath(locale)} className="site-brand" aria-label="Jinlong 金龙">
-          <span className="site-seal" aria-hidden="true">金</span>
-          <span className="site-wordmark" aria-hidden="true">Jinlong</span>
-        </Link>
-        <nav className="site-nav" aria-label={nav.menuLabel}>
-          <a href="#features">{nav.features}</a>
-          <a href="#demo">{nav.demo}</a>
-          <a href="#journey">{nav.journey}</a>
-          <a href="#contact">{nav.contact}</a>
-        </nav>
-        <div className="site-header__tools">
-          {showSwitch && (
-            <LocaleSwitch
-              target={otherSiteLocale(locale)}
-              label={localeCopy.other}
-              ariaLabel={localeCopy.switchLabel}
-            />
-          )}
-          <a href={erpHref('/login')} className="site-login">
-            {nav.login}
-          </a>
-        </div>
+    <header className="jl-nav">
+      <Brand locale={locale} label={content.brandLabel} />
+      <nav aria-label={nav.label}>
+        <ul>
+          {links.map((link, index) => (
+            <li key={link.href}>
+              <a href={link.href} aria-current={index === 0 ? 'page' : undefined}>
+                {link.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+      <div className="jl-nav-right">
+        {showSwitch && <LanguageSwitch current={locale} copy={content.langSwitch} />}
+        <a className="jl-btn jl-btn--ghost" href={loginHref}>
+          {nav.login}
+        </a>
+        <MobileMenu
+          links={links}
+          loginHref={loginHref}
+          loginLabel={nav.login}
+          openLabel={nav.menuOpen}
+          closeLabel={nav.menuClose}
+        />
       </div>
     </header>
   )

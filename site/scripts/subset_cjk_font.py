@@ -1,10 +1,13 @@
 """
-Subset da Noto Serif SC 600 (SIL OFL 1.1) para os caracteres dos títulos zh-CN.
+Subset do Noto Sans SC (SIL OFL 1.1) por peso, só com os caracteres de cada papel tipográfico.
 
-Fonte: fatias woff2 de @fontsource/noto-serif-sc (já no monorepo).
-Saída: app/fonts/noto-serif-sc-600-subset.woff2 (+ OFL.txt ao lado).
-Requer fonttools + brotli em ambiente isolado (não é dependência do projeto).
+Entrada : app/fonts/cjk-<500|700|900>.chars.txt (gerado por scripts/cjk-chars.ts)
+Fonte   : --source <pasta que contém node_modules/@fontsource/noto-sans-sc>
+          (instale fora do repositório: `npm install @fontsource/noto-sans-sc --prefix <pasta>`)
+Saída   : app/fonts/noto-sans-sc-<peso>-subset.woff2 e app/fonts/OFL-NotoSansSC.txt
+Requer fonttools + brotli em ambiente Python isolado (não são dependências do projeto).
 """
+import argparse
 import re
 import shutil
 import sys
@@ -15,14 +18,14 @@ from fontTools.merge import Merger
 from fontTools.ttLib import TTFont
 
 SITE = Path(__file__).resolve().parent.parent
-FONTSOURCE = SITE.parent / "node_modules" / "@fontsource" / "noto-serif-sc"
-CHARS_FILE = SITE / "app" / "fonts" / "noto-serif-sc-600.chars.txt"
-OUT_FONT = SITE / "app" / "fonts" / "noto-serif-sc-600-subset.woff2"
-WORK = SITE / ".font-work"
+FONTS = SITE / "app" / "fonts"
+WEIGHTS = (500, 700, 900)
 
 
-def parse_slices(css: str):
-    pattern = re.compile(r"url\(\./files/([^)]+?-600-normal\.woff2)\).*?unicode-range:\s*([^;]+);", re.S)
+def parse_slices(css: str, weight: int):
+    pattern = re.compile(
+        r"url\(\./files/([^)]*-%d-normal\.woff2)\)[^;]*;\s*(?:font-[^;]*;\s*)*?unicode-range:\s*([^;]+);" % weight, re.S
+    )
     for match in pattern.finditer(css):
         yield match.group(1), match.group(2)
 
@@ -30,19 +33,15 @@ def parse_slices(css: str):
 def in_range(codepoint: int, ranges: str) -> bool:
     for part in ranges.split(","):
         bounds = part.strip().removeprefix("U+").split("-")
-        low = int(bounds[0], 16)
-        high = int(bounds[-1], 16)
-        if low <= codepoint <= high:
+        if int(bounds[0], 16) <= codepoint <= int(bounds[-1], 16):
             return True
     return False
 
 
 def subset_slice(source: Path, text: str, target: Path) -> None:
     options = subset.Options()
-    options.flavor = None
     options.layout_features = ["*"]
     options.name_IDs = ["*"]
-    options.notdef_outline = True
     font = subset.load_font(str(source), options)
     subsetter = subset.Subsetter(options)
     subsetter.populate(text=text)
@@ -51,28 +50,39 @@ def subset_slice(source: Path, text: str, target: Path) -> None:
     font.save(str(target))
 
 
-def main() -> int:
-    chars = CHARS_FILE.read_text(encoding="utf-8").strip()
-    css = (FONTSOURCE / "600.css").read_text(encoding="utf-8")
-    shutil.rmtree(WORK, ignore_errors=True)
-    WORK.mkdir()
+def build_weight(package: Path, weight: int, work: Path) -> tuple[Path, str]:
+    chars = (FONTS / f"cjk-{weight}.chars.txt").read_text(encoding="utf-8").strip()
+    css = (package / f"{weight}.css").read_text(encoding="utf-8")
     parts = []
-    for filename, ranges in parse_slices(css):
+    for filename, ranges in parse_slices(css, weight):
         needed = "".join(c for c in chars if in_range(ord(c), ranges))
-        if not needed:
-            continue
-        target = WORK / f"{len(parts)}.ttf"
-        subset_slice(FONTSOURCE / "files" / filename, needed, target)
-        parts.append(str(target))
+        if needed:
+            target = work / f"{weight}-{len(parts)}.ttf"
+            subset_slice(package / "files" / filename, needed, target)
+            parts.append(str(target))
     merged = Merger().merge(parts) if len(parts) > 1 else TTFont(parts[0])
     merged.flavor = "woff2"
-    merged.save(str(OUT_FONT))
-    shutil.copyfile(FONTSOURCE / "LICENSE", OUT_FONT.parent / "OFL.txt")
-    covered = set(chr(cp) for cp in merged.getBestCmap())
-    missing = [c for c in chars if c not in covered]
-    shutil.rmtree(WORK, ignore_errors=True)
-    print(f"{len(parts)} fatias -> {OUT_FONT.name}: {OUT_FONT.stat().st_size / 1024:.1f} KB; faltando: {''.join(missing) or 'nenhum'}")
-    return 1 if missing else 0
+    out = FONTS / f"noto-sans-sc-{weight}-subset.woff2"
+    merged.save(str(out))
+    covered = {chr(cp) for cp in merged.getBestCmap()}
+    return out, "".join(c for c in chars if c not in covered)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--source", required=True, type=Path)
+    package = parser.parse_args().source / "node_modules" / "@fontsource" / "noto-sans-sc"
+    work = SITE / ".font-work"
+    shutil.rmtree(work, ignore_errors=True)
+    work.mkdir()
+    failed = False
+    for weight in WEIGHTS:
+        out, missing = build_weight(package, weight, work)
+        print(f"{weight}: {out.name} {out.stat().st_size / 1024:.1f} KB; faltando: {missing or 'nenhum'}")
+        failed = failed or bool(missing)
+    shutil.copyfile(package / "LICENSE", FONTS / "OFL-NotoSansSC.txt")
+    shutil.rmtree(work, ignore_errors=True)
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":

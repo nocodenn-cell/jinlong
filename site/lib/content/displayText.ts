@@ -1,23 +1,58 @@
+import { homePt } from './home.pt'
+import { homeZh } from './home.zh'
 import type { HomeContent } from './types'
 
-/** Textos renderizados com a fonte de títulos (Noto Serif SC em zh-CN). */
-export function displayStrings(content: HomeContent): string[] {
+/**
+ * Caracteres chineses por papel tipográfico. O site só baixa fonte CJK da web para estes papéis;
+ * o resto do texto chinês usa a fonte do sistema (PingFang SC / Microsoft YaHei).
+ *
+ *  - 900 (marca):       bloco 金龙 e o ícone 中
+ *  - 500 (interface):   linha-assinatura, nomes de idioma, chip bilíngue, 金龙 do CTA final
+ *  - 700 (títulos zh):  h1/h2/h3 da página em chinês
+ */
+export type CjkWeight = 500 | 700 | 900
+
+export const CJK_WEIGHTS: readonly CjkWeight[] = [500, 700, 900]
+
+const CJK = /[　-〿㐀-鿿＀-￯]/g
+
+function headingStrings(content: HomeContent): string[] {
+  const { hero, benefits, screens, wholesale, languages, steps, final } = content
   return [
-    content.hero.title,
-    content.preview.sale,
-    content.features.title,
-    ...content.features.items.map((item) => item.title),
-    content.journey.title,
-    ...content.journey.steps.map((step) => step.title),
-    content.contact.title,
-    '金',
+    hero.h1.line1,
+    hero.h1.line2,
+    hero.h1.emphasis,
+    hero.h1.rest,
+    benefits.title,
+    ...benefits.items.map((item) => item.title),
+    screens.title,
+    screens.stock.captionTitle,
+    screens.close.captionTitle,
+    screens.panel.captionTitle,
+    wholesale.title,
+    wholesale.product,
+    languages.title,
+    steps.title,
+    ...steps.items.map((item) => item.title),
+    final.title,
   ]
 }
 
-const CJK = /[\u3000-\u303f\u4e00-\u9fff\uff00-\uffef]/g
+function interfaceStrings(content: HomeContent): string[] {
+  const { hero, langSwitch, languages } = content
+  const chip = [hero.chipFirst, hero.chipSecond].filter((part) => part.lang === 'zh-CN').map((part) => part.text)
+  return [hero.signature, langSwitch.zh, langSwitch.zhShort, ...chip, '金龙', languages.title]
+}
 
-/** Caracteres CJK únicos (ordenados) que a fonte de títulos precisa cobrir. */
-export function cjkDisplayChars(content: HomeContent): string {
-  const chars = new Set(displayStrings(content).join('').match(CJK) ?? [])
+function uniqueCjk(strings: readonly string[]): string {
+  const chars = new Set(strings.join('').match(CJK) ?? [])
   return [...chars].sort().join('')
+}
+
+export function cjkCharsByWeight(): Record<CjkWeight, string> {
+  return {
+    500: uniqueCjk([...interfaceStrings(homePt), ...interfaceStrings(homeZh)]),
+    700: uniqueCjk(headingStrings(homeZh)),
+    900: uniqueCjk(['金龙', '中']),
+  }
 }

@@ -1,11 +1,15 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { ContactSection } from '@/components/ContactSection'
-import { FeatureLedger } from '@/components/FeatureLedger'
-import { HomeHero } from '@/components/HomeHero'
-import { JourneySection } from '@/components/JourneySection'
+import { Benefits } from '@/components/Benefits'
+import { FinalCta } from '@/components/FinalCta'
+import { Hero } from '@/components/Hero'
+import { LanguageCompare } from '@/components/LanguageCompare'
+import { Screens } from '@/components/Screens'
 import { SiteFooter } from '@/components/SiteFooter'
 import { SiteHeader } from '@/components/SiteHeader'
+import { Steps } from '@/components/Steps'
+import { hasContactChannel } from '@/components/TrialCta'
+import { WholesaleSection } from '@/components/WholesaleSection'
 import { getHomeContent } from '@/lib/content'
 import { isSiteLocale, otherSiteLocale, sitePath, type SiteLocale } from '@/lib/locales'
 import { isLocaleDraft, isLocalePublic, isZhReviewed } from '@/lib/publication'
@@ -15,9 +19,9 @@ interface HomePageProps {
 }
 
 function buildAlternates(locale: SiteLocale): Metadata['alternates'] {
-  const alternates: Record<string, string> = { 'pt-BR': sitePath('pt-BR') }
-  if (isZhReviewed()) alternates['zh-CN'] = sitePath('zh-CN')
-  return { canonical: sitePath(locale), languages: alternates }
+  const languages: Record<string, string> = { 'pt-BR': sitePath('pt-BR') }
+  if (isZhReviewed()) languages['zh-CN'] = sitePath('zh-CN')
+  return { canonical: sitePath(locale), languages }
 }
 
 export async function generateMetadata({ params }: HomePageProps): Promise<Metadata> {
@@ -43,23 +47,29 @@ export default async function HomePage({ params }: HomePageProps) {
   if (!isSiteLocale(locale)) notFound()
 
   const content = getHomeContent(locale)
-  const showSwitch = isLocalePublic(otherSiteLocale(locale))
-
   return (
     <>
       {isLocaleDraft(locale) && (
-        <p className="site-draft" role="note">
-          {content.locale.draftBanner}
+        <p className="jl-draft" role="note">
+          {content.draftBanner}
         </p>
       )}
-      <SiteHeader locale={locale} content={content} showSwitch={showSwitch} />
+      <SiteHeader
+        locale={locale}
+        content={content}
+        showSwitch={isLocalePublic(otherSiteLocale(locale))}
+        hasContact={hasContactChannel(locale)}
+      />
       <main id="main-content">
-        <HomeHero locale={locale} content={content} />
-        <FeatureLedger content={content} />
-        <JourneySection content={content} />
-        <ContactSection locale={locale} content={content} />
+        <Hero locale={locale} content={content} />
+        <Benefits locale={locale} content={content} />
+        <Screens locale={locale} content={content} />
+        <WholesaleSection locale={locale} content={content} />
+        <LanguageCompare locale={locale} content={content} />
+        <Steps content={content} />
+        <FinalCta locale={locale} content={content} />
       </main>
-      <SiteFooter content={content} />
+      <SiteFooter locale={locale} content={content} />
     </>
   )
 }

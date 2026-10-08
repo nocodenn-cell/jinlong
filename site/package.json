@@ -14,7 +14,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "fonts:subset": "tsx scripts/cjk-display-chars.ts && python -I scripts/subset_cjk_font.py"
+    "fonts:subset": "tsx scripts/cjk-chars.ts && python -I scripts/subset_cjk_font.py"
   },
   "dependencies": {
     "next": "15.5.15",

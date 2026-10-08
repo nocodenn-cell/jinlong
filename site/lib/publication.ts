@@ -24,3 +24,12 @@ export function isLocalePublic(locale: SiteLocale, env: SiteEnv = process.env): 
 export function isLocaleDraft(locale: SiteLocale, env: SiteEnv = process.env): boolean {
   return locale === 'zh-CN' && !isZhReviewed(env)
 }
+
+/**
+ * Trechos em chinês na página em português (linha-assinatura, chip bilíngue, painel
+ * comparativo) são texto de marketing ainda sem revisão nativa: em produção só aparecem
+ * depois da revisão. Nome do idioma e a marca 金龙 não são afetados.
+ */
+export function isDraftChineseVisible(env: SiteEnv = process.env): boolean {
+  return isZhReviewed(env) || env.VERCEL_ENV !== 'production'
+}

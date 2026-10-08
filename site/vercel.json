@@ -1,5 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "regions": ["gru1"],
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- . ../package.json ../package-lock.json"
+  "ignoreCommand": "sh scripts/vercel-ignore.sh"
 }

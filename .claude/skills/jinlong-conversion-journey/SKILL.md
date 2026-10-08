@@ -9,7 +9,7 @@ description: Jornada comercial do Jinlong (home, demonstração, loja de teste d
 1 Home → 2 Funcionalidades → 3 Demonstração com dados fictícios → 4 Pedido de loja de teste → 5 Onboarding → 6 Teste de 15 dias → 7 Acompanhamento → 8 Assinatura.
 
 ## Estado atual (sprint 1)
-Entregues: 1, 2 e a prévia do PDV, no app `site/` (jinlong.app). O ERP fica em app.jinlong.app; links do site para o ERP usam `NEXT_PUBLIC_ERP_URL`. Contato por WhatsApp/WeChat via variáveis de ambiente.
+Entregues: 1, 2 e o simulador ilustrativo de atacado (dados fictícios, sem operação real), no app `site/` (jinlong.app). O ERP fica em app.jinlong.app; links do site para o ERP usam `NEXT_PUBLIC_ERP_URL`. Contato por WhatsApp/WeChat via variáveis de ambiente.
 NÃO implementar sem aprovação de segurança: cadastro público de lojas, provisionamento automático, pagamento, assinatura, tabela de leads.
 
 ## Regras
