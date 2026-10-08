@@ -47,3 +47,9 @@ O teste `lib/content/displayText.test.ts` falha se algum caractere ficar de fora
 ## Migração de domínios
 
 Ver [docs/site/MIGRACAO_SITE_ERP_DOMINIOS.md](../docs/site/MIGRACAO_SITE_ERP_DOMINIOS.md).
+
+## Vercel
+
+Projeto próprio (Root Directory `site`). `vercel.json` define o *Ignored Build Step*:
+só há build quando `site/`, `package.json` ou `package-lock.json` da raiz mudam no commit.
+Saída 0 do `git diff` = pular; diferença ou erro = buildar (padrão seguro).

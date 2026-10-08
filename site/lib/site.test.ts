@@ -83,8 +83,8 @@ describe('publicação do chinês', () => {
 
 describe('canais de contato', () => {
   const env = {
-    NEXT_PUBLIC_SITE_WHATSAPP_URL: 'https://wa.me/5581900000000',
-    NEXT_PUBLIC_SITE_WECHAT_ID: 'jinlong_demo',
+    NEXT_PUBLIC_SITE_WHATSAPP_URL: 'https://wa.me/550000000000',
+    NEXT_PUBLIC_SITE_WECHAT_ID: 'ficticio_teste',
   }
 
   it('sem variáveis não há canais (nada embutido no código)', () => {
@@ -97,8 +97,8 @@ describe('canais de contato', () => {
   })
 
   it('rejeita URLs e IDs inválidos', () => {
-    expect(parseWhatsappUrl('http://wa.me/5581900000000')).toBeNull()
-    expect(parseWhatsappUrl('https://evil.example/wa.me/5581900000000')).toBeNull()
+    expect(parseWhatsappUrl('http://wa.me/550000000000')).toBeNull()
+    expect(parseWhatsappUrl('https://evil.example/wa.me/550000000000')).toBeNull()
     expect(parseWhatsappUrl('javascript:alert(1)')).toBeNull()
     expect(parseWechatId('<script>')).toBeNull()
     expect(parseWechatId('ab')).toBeNull()
