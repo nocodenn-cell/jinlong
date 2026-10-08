@@ -1,6 +1,10 @@
 import type { Metadata, Viewport } from 'next'
-import { Noto_Sans_SC } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+/* Fontes self-hosted (@fontsource): o build não depende do Google Fonts. */
+import '@fontsource/noto-sans-sc/latin-400.css'
+import '@fontsource/noto-sans-sc/latin-500.css'
+import '@fontsource/noto-sans-sc/latin-600.css'
+import '@fontsource/noto-sans-sc/latin-700.css'
 import './globals.css'
 import '@/styles/theme-oriental.css'
 /* DS Onda 2 — depois do oriental/jl para prevalecer (Button, focus, bridges) */
@@ -8,13 +12,6 @@ import '@/styles/ds/index.css'
 import { AppThemeProvider } from '@/components/theme/AppThemeProvider'
 import { HydrationFix } from '@/components/ui/HydrationFix'
 import React from 'react'
-
-const notoSansSC = Noto_Sans_SC({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-noto-sc',
-  display: 'swap',
-})
 
 export const metadata: Metadata = {
   title: {
@@ -42,13 +39,12 @@ export default function RootLayout({
   return (
     <html
       lang="pt-BR"
-      className={`${notoSansSC.variable}`}
       data-app-theme="classico"
       data-gerente-ui-theme="dragon-light"
       suppressHydrationWarning
     >
       <body
-        className={`${notoSansSC.variable} antialiased`}
+        className="antialiased"
       >
         <HydrationFix />
         {/* Skip to main content link for keyboard navigation (WCAG 2.1 Level A) */}
