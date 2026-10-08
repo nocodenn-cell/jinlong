@@ -2,7 +2,8 @@
 
 **Data:** 2026-10-08  
 **Alvo:** Jinlong 金龙 ERP/PDV — operação contínua em **uma** loja  
-**Veredito geral:** **NO-GO PARA OPERAÇÃO CONTÍNUA**
+**Veredito geral:** **NO-GO PARA OPERAÇÃO CONTÍNUA**  
+**Atualização Engineering Loop:** ver `ENG_LOOP_CICLO_2026-10-08.md` (quarantine CLI, restore sintético PASS local, readiness #485).
 
 Estados usados: `RESOLVIDO E VALIDADO` · `IMPLEMENTADO, NÃO VALIDADO` · `BLOQUEADO` · `NÃO VERIFICADO`
 
@@ -117,7 +118,7 @@ Foram implementadas proteções locais e provas comportamentais (PGlite) para mi
 | Aspecto | Estado |
 |---|---|
 | Procedimento sintético documentado | **IMPLEMENTADO** |
-| Drill sintético neste VM | **NÃO VERIFICADO** (Docker) |
+| Drill sintético neste VM | **RESOLVIDO E VALIDADO** (Postgres local; ver #489) |
 | Restore backup real | **BLOQUEADO** |
 
 ---
