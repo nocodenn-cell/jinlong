@@ -67,7 +67,10 @@ test.describe('Contrato de login por perfil', () => {
     await garantirIdiomaPt(page)
 
     const isMobileProject = testInfo.project.name.startsWith('mobile-')
-    const nav = page.getByRole('navigation')
+    // Sidebar do painel (não qualquer <nav>): a aba "Abas executivas" (`executive-analytics-hub-nav`)
+    // fica visível no corpo da página em qualquer viewport. No mobile a sidebar existe no
+    // `<aside>` (oculto) e no drawer aberto; "visível" = a que o usuário enxerga.
+    const nav = page.getByTestId('executive-sidebar-nav').filter({ visible: true })
     const menuButton = page.getByRole('button', { name: 'Navegação' })
 
     if (isMobileProject) {

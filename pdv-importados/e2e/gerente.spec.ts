@@ -62,14 +62,17 @@ test.describe('Painel do gerente (/admin/*)', () => {
     if (await mobileToggle.isVisible().catch(() => false)) {
       await mobileToggle.click()
     }
-    const nav = page.getByRole('navigation')
+    // A sidebar (não qualquer <nav>): a aba "Abas executivas" (`executive-analytics-hub-nav`)
+    // também é um landmark de navegação e quebraria o strict mode. No mobile a sidebar existe
+    // no `<aside>` (oculto) e no drawer aberto; só a visível interessa.
+    const nav = page.getByTestId('executive-sidebar-nav').filter({ visible: true })
     await expect(nav).toBeVisible()
-    // Rótulos reais de `lib/navigation/adminV2SidebarNav.ts` — "Produtos"/
-    // "Caixas" (do arquivo antigo) não existem mais como itens de menu.
-    await expect(nav.getByRole('link', { name: /Vendas e caixa/i })).toBeVisible()
-    await expect(nav.getByRole('link', { name: /Catálogo/i })).toBeVisible()
-    await expect(nav.getByRole('link', { name: /Estoque/i })).toBeVisible()
-    await expect(nav.getByRole('link', { name: /Relatórios/i })).toBeVisible()
+    // Rótulos reais de `lib/navigation/adminV2SidebarNav.ts` (Fase 1 layout executivo,
+    // 488210ed). Nomes exatos: "Produtos & Estoque" (aba de análise) também contém "Estoque".
+    await expect(nav.getByRole('link', { name: 'Vendas', exact: true })).toBeVisible()
+    await expect(nav.getByRole('link', { name: 'Catálogo', exact: true })).toBeVisible()
+    await expect(nav.getByRole('link', { name: 'Estoque', exact: true })).toBeVisible()
+    await expect(nav.getByRole('link', { name: /^Relatórios/ })).toBeVisible()
     await expect(page.getByRole('main')).toBeVisible()
   })
 
@@ -81,14 +84,14 @@ test.describe('Painel do gerente (/admin/*)', () => {
   test('página de imprimir etiquetas carrega', async ({ page }) => {
     await gotoApp(page, '/admin/estoque/imprimir-etiquetas')
     await expect(page.getByRole('heading', { name: /Imprimir Etiquetas|打印标签/ })).toBeVisible()
-    await expect(page.getByPlaceholder(/Código de barras|条形码/)).toBeVisible()
+    await expect(page.getByPlaceholder(/código de barras|条形码/i)).toBeVisible()
     await expect(page.getByRole('button', { name: /Gerar PDF|生成PDF/ })).toBeVisible()
   })
 
   test('fluxo básico: bipar produto -> adicionar ao carrinho -> gerar PDF', async ({ page }) => {
     await gotoApp(page, '/admin/estoque/imprimir-etiquetas')
 
-    const searchInput = page.getByPlaceholder(/Código de barras|条形码/)
+    const searchInput = page.getByPlaceholder(/código de barras|条形码/i)
     await expect(searchInput).toBeVisible()
 
     await searchInput.fill('7891234567890')
