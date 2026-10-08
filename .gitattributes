@@ -1,0 +1,7 @@
+# Finais de linha: SQL e shell precisam ser LF em qualquer sistema operacional.
+# Algumas migrations (ex.: 20261006120000) comparam o texto de funções existentes
+# (pg_get_functiondef) com literais de string. Em checkout Windows com autocrlf=true os
+# arquivos viravam CRLF e o replay local (supabase db reset) divergia do CI em Linux.
+*.sql text eol=lf
+*.sh text eol=lf
+*.sql.txt text eol=lf
