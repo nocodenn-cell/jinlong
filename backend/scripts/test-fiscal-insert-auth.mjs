@@ -1,0 +1,208 @@
+#!/usr/bin/env node
+/**
+ * P0-05 — prova comportamental LOCAL (PGlite) de INSERT em documentos_fiscais_pendentes.
+ *
+ * NÃO conecta a produção. Fixture sintética: tabela mínima + GRANTs/REVOKE no padrão SSOT-004.
+ *
+ * Cenários:
+ *  1) authenticated SEM INSERT (REVOKE) → INSERT falha
+ *  2) policy INSERT + GRANT (regressão hotfix) → INSERT autenticado possível (detecta risco)
+ *  3) após REVOKE + DROP POLICY → INSERT authenticated falha mesmo com SET ROLE
+ *  4) SECURITY DEFINER enqueue simulado (owner) → INSERT ok (fluxo legítimo)
+ */
+import { PGlite } from '@electric-sql/pglite'
+import assert from 'node:assert/strict'
+import { randomUUID } from 'node:crypto'
+import test from 'node:test'
+
+async function bootstrapSchema(db) {
+  await db.exec(`
+    CREATE ROLE anon NOLOGIN;
+    CREATE ROLE authenticated NOLOGIN;
+    CREATE ROLE service_role NOLOGIN BYPASSRLS;
+    CREATE SCHEMA IF NOT EXISTS auth;
+    CREATE FUNCTION auth.uid() RETURNS uuid
+      LANGUAGE sql STABLE AS $$
+        SELECT NULLIF(current_setting('request.jwt.claim.sub', true), '')::uuid
+      $$;
+
+    CREATE TABLE public.lojas (id uuid PRIMARY KEY);
+    CREATE TABLE public.usuarios (
+      id uuid PRIMARY KEY,
+      loja_id uuid REFERENCES public.lojas(id),
+      perfil text NOT NULL,
+      ativo boolean NOT NULL DEFAULT true
+    );
+
+    CREATE TABLE public.documentos_fiscais_pendentes (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      loja_id uuid NOT NULL REFERENCES public.lojas(id),
+      venda_id uuid,
+      tipo_doc text NOT NULL DEFAULT 'NFC_E_STUB',
+      status text NOT NULL DEFAULT 'PENDENTE',
+      payload jsonb,
+      created_at timestamptz NOT NULL DEFAULT now()
+    );
+
+    ALTER TABLE public.documentos_fiscais_pendentes ENABLE ROW LEVEL SECURITY;
+
+    CREATE POLICY doc_fiscal_pendentes_insert_loja
+      ON public.documentos_fiscais_pendentes
+      FOR INSERT TO authenticated
+      WITH CHECK (
+        EXISTS (
+          SELECT 1 FROM public.usuarios u
+          WHERE u.id = auth.uid()
+            AND u.ativo
+            AND (u.perfil = 'ADMIN' OR u.loja_id = loja_id)
+        )
+      );
+
+    GRANT USAGE ON SCHEMA public TO anon, authenticated;
+    GRANT SELECT ON public.usuarios, public.lojas TO authenticated;
+    -- Hotfix histórico (20260903180000): INSERT aberto — estado INSEGURO.
+    GRANT INSERT ON public.documentos_fiscais_pendentes TO authenticated;
+
+    -- RPC legítima (SECURITY DEFINER) — simula fiscal_enfileirar_documento_venda.
+    CREATE OR REPLACE FUNCTION public.fiscal_enfileirar_documento_venda_local(
+      p_loja_id uuid,
+      p_tipo text,
+      p_payload jsonb
+    ) RETURNS uuid
+    LANGUAGE plpgsql
+    SECURITY DEFINER
+    SET search_path TO public
+    AS $$
+    DECLARE v_id uuid;
+    BEGIN
+      INSERT INTO public.documentos_fiscais_pendentes (loja_id, tipo_doc, payload)
+      VALUES (p_loja_id, p_tipo, p_payload)
+      RETURNING id INTO v_id;
+      RETURN v_id;
+    END;
+    $$;
+    REVOKE ALL ON FUNCTION public.fiscal_enfileirar_documento_venda_local(uuid, text, jsonb) FROM PUBLIC;
+    GRANT EXECUTE ON FUNCTION public.fiscal_enfileirar_documento_venda_local(uuid, text, jsonb)
+      TO authenticated, service_role;
+  `)
+}
+
+async function seed(db, { lojaId, userId, perfil }) {
+  await db.query('INSERT INTO public.lojas(id) VALUES ($1) ON CONFLICT DO NOTHING', [lojaId])
+  await db.query(
+    `INSERT INTO public.usuarios(id, loja_id, perfil, ativo)
+     VALUES ($1,$2,$3,true)
+     ON CONFLICT (id) DO UPDATE SET loja_id=EXCLUDED.loja_id, perfil=EXCLUDED.perfil`,
+    [userId, lojaId, perfil],
+  )
+  await db.query(`SELECT set_config('request.jwt.claim.sub', $1, false)`, [userId])
+}
+
+test('P0-05: GRANT INSERT (hotfix) fica visível no catálogo — risco detectável', async () => {
+  const db = await PGlite.create()
+  await bootstrapSchema(db)
+  // Prova de catálogo (igual SSOT-004): com GRANT do hotfix, privilege INSERT existe.
+  // (SET ROLE + INSERT em PGlite pode diferir do Postgres completo; o risco operacional
+  // remoto é exatamente este privilégio no catálogo.)
+  const priv = await db.query(`
+    SELECT has_table_privilege('authenticated', 'public.documentos_fiscais_pendentes', 'INSERT') AS ok
+  `)
+  assert.equal(priv.rows[0].ok, true, 'hotfix GRANT deve aparecer em has_table_privilege')
+  const policy = await db.query(`
+    SELECT count(*)::int AS n FROM pg_policies
+    WHERE tablename = 'documentos_fiscais_pendentes'
+      AND policyname = 'doc_fiscal_pendentes_insert_loja'
+  `)
+  assert.equal(policy.rows[0].n, 1, 'policy INSERT residual deve existir no estado inseguro')
+  await db.close()
+})
+
+test('P0-05: REVOKE INSERT (SSOT-004) nega INSERT autenticado', async () => {
+  const db = await PGlite.create()
+  await bootstrapSchema(db)
+  await db.exec(`
+    REVOKE INSERT ON public.documentos_fiscais_pendentes FROM authenticated, anon;
+  `)
+  const lojaId = randomUUID()
+  const userId = randomUUID()
+  await seed(db, { lojaId, userId, perfil: 'GERENTE' })
+
+  await db.query('SET ROLE authenticated')
+  let denied = false
+  try {
+    await db.query(
+      `INSERT INTO public.documentos_fiscais_pendentes (loja_id, tipo_doc, payload)
+       VALUES ($1, 'NFC_E_STUB', '{"origem":"negativo"}'::jsonb)`,
+      [lojaId],
+    )
+  } catch (err) {
+    denied = /permission denied|42501/i.test(String(err?.message || err))
+  }
+  await db.query('RESET ROLE')
+  assert.equal(denied, true, 'INSERT autenticado deve falhar após REVOKE')
+
+  const count = await db.query('SELECT count(*)::int AS n FROM public.documentos_fiscais_pendentes')
+  assert.equal(count.rows[0].n, 0)
+  await db.close()
+})
+
+test('P0-05: DROP POLICY + REVOKE — defesa em profundidade; RPC DEFINER ainda funciona', async () => {
+  const db = await PGlite.create()
+  await bootstrapSchema(db)
+  // Correção mínima proposta (migration aditiva local — não aplicada em remoto nesta missão).
+  await db.exec(`
+    REVOKE INSERT ON public.documentos_fiscais_pendentes FROM authenticated, anon;
+    DROP POLICY IF EXISTS doc_fiscal_pendentes_insert_loja ON public.documentos_fiscais_pendentes;
+  `)
+
+  const lojaId = randomUUID()
+  const userId = randomUUID()
+  await seed(db, { lojaId, userId, perfil: 'ADMIN' })
+
+  await db.query('SET ROLE authenticated')
+  let denied = false
+  try {
+    await db.query(
+      `INSERT INTO public.documentos_fiscais_pendentes (loja_id, tipo_doc)
+       VALUES ($1, 'NFC_E_STUB')`,
+      [lojaId],
+    )
+  } catch (err) {
+    denied = /permission denied|42501/i.test(String(err?.message || err))
+  }
+  assert.equal(denied, true)
+
+  // Fluxo legítimo: RPC SECURITY DEFINER (como fiscal_enfileirar_*).
+  const rpc = await db.query(
+    `SELECT public.fiscal_enfileirar_documento_venda_local($1, 'NFC_E_STUB', '{"ok":true}'::jsonb) AS id`,
+    [lojaId],
+  )
+  await db.query('RESET ROLE')
+  assert.ok(rpc.rows[0].id)
+
+  const count = await db.query('SELECT count(*)::int AS n FROM public.documentos_fiscais_pendentes')
+  assert.equal(count.rows[0].n, 1)
+  await db.close()
+})
+
+test('P0-05: anon não recebe INSERT após REVOKE', async () => {
+  const db = await PGlite.create()
+  await bootstrapSchema(db)
+  await db.exec(`REVOKE INSERT ON public.documentos_fiscais_pendentes FROM authenticated, anon;`)
+  const lojaId = randomUUID()
+  await db.query('INSERT INTO public.lojas(id) VALUES ($1)', [lojaId])
+
+  await db.query('SET ROLE anon')
+  let denied = false
+  try {
+    await db.query(
+      `INSERT INTO public.documentos_fiscais_pendentes (loja_id, tipo_doc) VALUES ($1, 'NFC_E_STUB')`,
+      [lojaId],
+    )
+  } catch (err) {
+    denied = /permission denied|42501/i.test(String(err?.message || err))
+  }
+  await db.query('RESET ROLE')
+  assert.equal(denied, true)
+  await db.close()
+})

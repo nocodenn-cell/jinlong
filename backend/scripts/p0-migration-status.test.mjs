@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   analyze,
   applyHumanGateRegistry,
+  classifyDriftEntries,
   deriveExitCode,
   deriveOverallStatus,
   parseMigrationListOutput,
@@ -182,4 +183,18 @@ test("registro HUMAN_GATE inválido falha explicitamente", () => {
     () => parseHumanGateRegistry('{"pairs":[{"gitOnlyVersion":"1","remoteOnlyVersion":"abc","reason":"x","decisionDoc":"x"}]}'),
     /remoteOnlyVersion deve ser numérica/,
   );
+});
+
+test("FORBIDDEN_APPLY remote_ausente não bloqueia o gate de drift", () => {
+  const classified = classifyDriftEntries(
+    [
+      { version: "20261006120000", reason: "remote_ausente", remote: null },
+      { version: "20261007163200", reason: "remote_ausente", remote: null },
+    ],
+    new Set(["20261006120000"]),
+  );
+  assert.equal(classified.forbiddenNeverApply.length, 1);
+  assert.equal(classified.forbiddenNeverApply[0].version, "20261006120000");
+  assert.equal(classified.blocking.length, 1);
+  assert.equal(classified.blocking[0].version, "20261007163200");
 });

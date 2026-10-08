@@ -79,6 +79,21 @@ jobs:
       - name: Install dependencies (workspace root)
         run: npm ci
 
+      # P0-04: deny-list permanente — migration obsoleta 20261006120000 nunca
+      # pode entrar em caminhos automatizados cobertos pelo repo.
+      - name: Forbidden migrations guard (P0-04)
+        run: |
+          set -euo pipefail
+          npm run assert:forbidden-migrations -w fastproduct-backend
+          npm run test:forbidden-migrations -w fastproduct-backend
+
+      # P0-05 / P1-01: provas PGlite (sem stack Supabase, sem produção).
+      - name: Fiscal INSERT auth + financeiro comportamental (PGlite)
+        run: |
+          set -euo pipefail
+          npm run test:fiscal-insert-auth -w fastproduct-backend
+          npm run test:financeiro-comportamental -w fastproduct-backend
+
       - name: Financial store ledger regression (PostgreSQL in memory)
         run: npm run test:financeiro-loja -w fastproduct-backend
 
