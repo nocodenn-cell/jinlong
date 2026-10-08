@@ -20,6 +20,7 @@ DECLARE
   v_id1 uuid;
   v_id2 uuid;
   v_saldo_antes numeric;
+  v_minimo_antes numeric;
 BEGIN
   SELECT count(*) INTO v_rem_antes FROM public.remessas;
   SELECT count(*) INTO v_itens_antes FROM public.remessa_itens;
@@ -161,7 +162,7 @@ BEGIN
   END;
 
   -- Inventário/contagem física zero continua legítimo no fluxo próprio.
-  SELECT quantidade_atual INTO v_saldo_antes
+  SELECT quantidade_atual, estoque_minimo INTO v_saldo_antes, v_minimo_antes
   FROM public.estoque
   WHERE produto_id = current_setting('d0.produto')::uuid
     AND loja_id = current_setting('d0.loja')::uuid;
@@ -172,7 +173,7 @@ BEGIN
     'nenhum item encontrado'::text,
     current_setting('request.jwt.claim.sub')::uuid,
     v_saldo_antes,
-    0::numeric);
+    v_minimo_antes);
 
   IF (SELECT quantidade_atual FROM public.estoque
       WHERE produto_id = current_setting('d0.produto')::uuid
