@@ -53,3 +53,10 @@ Ver [docs/site/MIGRACAO_SITE_ERP_DOMINIOS.md](../docs/site/MIGRACAO_SITE_ERP_DOM
 Projeto próprio (Root Directory `site`). `vercel.json` define o *Ignored Build Step*:
 só há build quando `site/`, `package.json` ou `package-lock.json` da raiz mudam no commit.
 Saída 0 do `git diff` = pular; diferença ou erro = buildar (padrão seguro).
+
+### Primeiro deploy de um projeto novo
+
+A Vercel promove o **primeiro** deploy de um projeto sem produção a `production`, mesmo vindo de
+uma branch. Nesse deploy `VERCEL_ENV=production`, então o zh-CN responde 404 (portão de revisão
+nativa, `lib/publication.ts`). Os deploys seguintes da branch são Previews de verdade e mostram o
+zh-CN como rascunho. Sem domínio personalizado e com Vercel Authentication em "all", nenhum deles é público.
