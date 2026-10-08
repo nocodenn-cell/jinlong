@@ -1,15 +1,15 @@
 # P0-02 — Restore sintético local (procedimento)
 
-**Status:** procedimento + script · restore de artifact **real de produção** = **NÃO VALIDADO** (proibido sem auth).
+**Status:** procedimento + script · drill sintético local **VALIDADO** (Postgres local) · restore de artifact **real de produção** = **NÃO VALIDADO** (proibido sem auth).
 
 ## Objetivo
 
-Validar a **mecânica** de restore (ordem roles→schema→data, checksum, contagens) com dump sintético gerado localmente — sem dados de clientes.
+Validar a **mecânica** de restore (ordem schema→data, checksum age, contagens) com dump sintético gerado localmente — sem dados de clientes.
 
 ## Pré-requisitos
 
-- Docker com `postgres:17-alpine` **ou** Postgres 17 local  
-- `age`, `psql`, `sha256sum`  
+- Docker com `postgres:17-alpine` **ou** Postgres local com `sudo -u postgres`  
+- `age`, `age-keygen`, `psql`, `sha256sum`  
 - Script: [`scripts/restore-synthetic-local.sh`](../../scripts/restore-synthetic-local.sh)
 
 ## Sequência
@@ -17,10 +17,10 @@ Validar a **mecânica** de restore (ordem roles→schema→data, checksum, conta
 1. Gerar schema+data sintéticos mínimos (lojas/produtos/vendas fake UUIDs).  
 2. Cifrar com `age` (chave efêmera do script).  
 3. Checksum SHA-256 dos `.age`.  
-4. Subir Postgres 17 efêmero.  
-5. Decifrar → `psql` na ordem: roles (se houver) → schema → `SET session_replication_role = replica` → data.  
-6. Validar `count(*)` vs manifesto.  
-7. Destruir container e arquivos plaintext.
+4. Destino isolado: container Docker **ou** `createdb` efêmero no Postgres local.  
+5. Decifrar → `psql` na ordem: schema → `SET session_replication_role = replica` → data.  
+6. Validar `count(*)` vs manifesto (`lojas/produtos/vendas` = 1).  
+7. Drop database / destroy container e apagar plaintext.
 
 ## RPO / RTO (meta D0 — não SLA)
 
