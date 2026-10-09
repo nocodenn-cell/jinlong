@@ -49,6 +49,7 @@ export default async function AdminFuncionariosPage() {
           ativar: f.ativar,
           desativar: f.desativar,
           editar: f.editar,
+          verComissoes: f.ver_comissoes,
           perfilOperador: f.perfil_operador,
           perfilGerente: f.perfil_gerente,
           perfilDono: f.perfil_dono,

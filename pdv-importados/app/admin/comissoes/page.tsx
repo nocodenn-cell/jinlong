@@ -22,6 +22,8 @@ type SearchParams = {
   de?: string
   ate?: string
   status?: string
+  /** Deep-link (ex.: Funcionários) — abre o detalhe deste operador ao carregar. */
+  operador?: string
 }
 
 type PageProps = { searchParams?: Promise<SearchParams> }
@@ -103,6 +105,7 @@ export default async function AdminComissoesPage({ searchParams }: PageProps) {
         <ComissoesContent
           dados={dados}
           filtroInicial={filtro}
+          operadorInicialId={sp.operador ?? null}
           labels={{
             colOperador: ui.comissoes_col_operador,
             colVendas: ui.comissoes_col_vendas,

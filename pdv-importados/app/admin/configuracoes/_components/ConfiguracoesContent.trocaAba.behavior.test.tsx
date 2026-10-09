@@ -40,6 +40,9 @@ const labels: ConfiguracoesLabels = {
   subtituloImpostos: ui.configuracoes_subtitulo_impostos,
   subtituloPreferencias: ui.configuracoes_subtitulo_preferencias,
   tabsAria: ui.configuracoes_tabs_aria,
+  atalhosAria: ui.configuracoes_atalhos_aria,
+  atalhoSuspensao: ui.configuracoes_atalho_suspensao,
+  atalhoCategoriasFinanceiras: ui.configuracoes_atalho_categorias_financeiras,
   unsavedWarn: ui.configuracoes_unsaved_warn,
   salvando: ui.configuracoes_salvando,
   tabLoja: ui.configuracoes_tab_loja,
@@ -209,5 +212,20 @@ describe('ConfiguracoesContent — confirmação de troca de aba (N-03)', () => 
     act(() => btnSim.click())
 
     expect(container.querySelector('#config-panel-impostos')).toBeTruthy()
+  })
+})
+
+describe('ConfiguracoesContent — atalhos para configurações em páginas próprias (UX-IA-01 PR 3)', () => {
+  it('oferece links para Suspensão de vendas e Categorias financeiras', () => {
+    render()
+    const nav = container.querySelector('[data-testid="configuracoes-atalhos"]')
+    expect(nav).toBeTruthy()
+    const hrefs = Array.from(nav!.querySelectorAll('a')).map((a) => a.getAttribute('href'))
+    expect(hrefs).toEqual(['/admin/suspensao', '/admin/categorias-financeiras'])
+  })
+
+  it('os atalhos não interferem nas abas internas (continuam 3)', () => {
+    render()
+    expect(container.querySelectorAll('[role="tab"]')).toHaveLength(3)
   })
 })

@@ -8,6 +8,7 @@
  */
 
 import { Fragment, useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Upload, X } from 'lucide-react'
 import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
@@ -16,6 +17,7 @@ import { DragonModal } from '@/components/ui/DragonModal'
 import { Field, Input, Select, Switch } from '@/components/ui/forms'
 import { ErrorState } from '@/components/ui/feedback'
 import { cn } from '@/lib/utils'
+import { ROUTES } from '@/lib/navigation/routes'
 import type { IdiomaPadrao, LojaConfig, PdvConfig, RegimeTributario } from '@/app/gerente/configuracoes/actions'
 import {
   atualizarDadosLojaAction,
@@ -105,6 +107,9 @@ export type ConfiguracoesLabels = {
   subtituloImpostos: string
   subtituloPreferencias: string
   tabsAria: string
+  atalhosAria: string
+  atalhoSuspensao: string
+  atalhoCategoriasFinanceiras: string
   unsavedWarn: string
   salvando: string
   tabLoja: string
@@ -307,6 +312,23 @@ export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; la
     <Fragment>
     <div className="admin-v2-page mx-auto max-w-4xl">
       <PageHeader title={labels.titulo} subtitle={subtitulo} />
+
+      {/* Outras configurações que moram em páginas próprias (rotas inalteradas). */}
+      <nav
+        aria-label={labels.atalhosAria}
+        className="mb-4 flex flex-wrap gap-x-4 gap-y-1 text-small"
+        data-testid="configuracoes-atalhos"
+      >
+        <Link href={ROUTES.admin.suspensao} className="text-[var(--color-info)] underline-offset-2 hover:underline">
+          {labels.atalhoSuspensao}
+        </Link>
+        <Link
+          href={ROUTES.admin.categoriasFinanceiras}
+          className="text-[var(--color-info)] underline-offset-2 hover:underline"
+        >
+          {labels.atalhoCategoriasFinanceiras}
+        </Link>
+      </nav>
 
       <div
         role="tablist"

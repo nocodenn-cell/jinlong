@@ -124,6 +124,13 @@ export function adminVendaDetalheQuery(vendaId: string): string {
   return pathWithQuery(ROUTES.admin.vendas, q)
 }
 
+/** Abre Comissões já com o detalhe de um funcionário/operador (ex.: a partir de Funcionários). */
+export function adminComissoesOperadorQuery(operadorId: string): string {
+  const q = new URLSearchParams()
+  if (operadorId.trim()) q.set('operador', operadorId.trim())
+  return pathWithQuery(ROUTES.admin.comissoes, q)
+}
+
 /** Abre uma importação de NF-e específica (aberta ou já concluída), ex.: a partir de um título em Contas a pagar. */
 export function adminImportNfeImportacaoQuery(importacaoId: string): string {
   const q = new URLSearchParams()

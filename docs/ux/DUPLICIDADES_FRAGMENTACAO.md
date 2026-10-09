@@ -33,10 +33,10 @@ Evidências: ver `AUDITORIA_NAVEGACAO_JINLONG.md`.
 | Fornecedor → compras / contas a pagar | **Existe** |
 | NF-e ↔ conta a pagar | **Existe** nos dois sentidos |
 | Kardex → auditoria | **Existe** (`KardexSheet.tsx:23`) |
-| **Auditoria → produto/Kardex** | **Falta** (`AuditoriaTimeline.tsx` sem `Link`) |
-| **Funcionário ↔ Comissões** | **Falta** (zero referências cruzadas) |
-| **Caixa (histórico) → vendas do turno / fechamento** | **Falta** (`caixas/_components` sem links) |
-| **Configurações → Suspensão / Categorias financeiras** | **Falta** |
+| Auditoria → produto/Kardex | **Existe** (botão "Ver Kardex" no painel de detalhe do evento, `AuditoriaTimeline.tsx:298-312`). Correção: a auditoria de 08/10 dizia "falta" por procurar só `<Link>` |
+| Funcionário → Comissões | **Feito no PR 3** (`?operador=` abre o detalhe). Comissões → Funcionário: não feito (a tela de funcionários não tem deep-link por id) |
+| **Caixa (histórico) → vendas do turno** | **Falta e exige mudança de banco**: `listar_vendas_gerente` (RPC) só filtra por período/status/pagamento, não por caixa. Fora do escopo (sem migrations). Decisão de produto pendente |
+| Configurações → Suspensão / Categorias financeiras | **Feito no PR 3** (atalhos sob o título) |
 | **Pedido de compra → recebimento manual** | **Falta** e é regra de negócio (item 8) |
 | Busca global | **Falta** |
 

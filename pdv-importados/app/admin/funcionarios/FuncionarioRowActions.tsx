@@ -1,13 +1,16 @@
 'use client'
 
-import { Pencil } from 'lucide-react'
+import Link from 'next/link'
+import { Pencil, Percent } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { adminComissoesOperadorQuery } from '@/lib/navigation/routes'
 import type { FuncionarioListRow } from './actions'
 import { motivoBloqueioEditar, motivoBloqueioToggle } from './funcionarioUi'
 
 type Labels = {
   editar: string
+  verComissoes: string
   ativar: string
   desativar: string
   somenteLeitura: string
@@ -40,17 +43,36 @@ export function FuncionarioRowActions({
   const podeEditar = !bloqueioEditar
   const podeToggle = !bloqueioToggle
   const toggleLabel = row.ativo ? L.desativar : L.ativar
+  // Comissão só existe para quem vende (operador/gerente); DONO/ADMIN não têm.
+  const temComissao = row.perfil === 'OPERADOR' || row.perfil === 'GERENTE'
+  const linkComissoes = temComissao ? (
+    <Button asChild size="sm" variant="ghost" className="gap-1">
+      <Link
+        href={adminComissoesOperadorQuery(row.id)}
+        aria-label={`${L.verComissoes} — ${row.nome}`}
+        data-testid="funcionario-ver-comissoes"
+      >
+        <Percent className="h-3.5 w-3.5" aria-hidden />
+        <span className={cn(compactLabels && 'hidden sm:inline')}>{L.verComissoes}</span>
+      </Link>
+    </Button>
+  ) : null
 
   if (!podeEditar && !podeToggle) {
     return (
-      <span
-        className="text-caption text-fg-subtle"
-        title={bloqueioEditar ?? L.somenteLeitura}
-        aria-label={bloqueioEditar ?? L.somenteLeitura}
+      <div
+        className="flex flex-wrap items-center justify-end gap-1"
         onClick={(e) => e.stopPropagation()}
       >
-        {L.somenteLeitura}
-      </span>
+        <span
+          className="text-caption text-fg-subtle"
+          title={bloqueioEditar ?? L.somenteLeitura}
+          aria-label={bloqueioEditar ?? L.somenteLeitura}
+        >
+          {L.somenteLeitura}
+        </span>
+        {linkComissoes}
+      </div>
     )
   }
 
@@ -72,6 +94,7 @@ export function FuncionarioRowActions({
         <Pencil className="h-3.5 w-3.5" aria-hidden />
         <span className={cn(compactLabels && 'hidden sm:inline')}>{L.editar}</span>
       </Button>
+      {linkComissoes}
       <Button
         type="button"
         size="sm"
