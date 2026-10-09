@@ -43,6 +43,7 @@ type AdminUi = Parameters<typeof hubLabelsFromAdminUi>[0] &
     hub_financeiro_recebiveis: string
     hub_financeiro_conciliacao: string
     hub_financeiro_resultado: string
+    hub_financeiro_comissoes: string
     command_palette_acao_novo_produto: string
   }
 
@@ -144,6 +145,7 @@ export function buildCommandEntries(input: BuildEntriesInput): CommandEntry[] {
   for (const id of FINANCEIRO_TAB_ORDER) {
     tab(`hub-financeiro-${id}`, financeiroHrefForTab(id, new URLSearchParams()), ui[FINANCEIRO_LABEL_KEY[id]] as string, 'financeiro')
   }
+  tab('hub-financeiro-comissoes', ROUTES.admin.comissoes, ui.hub_financeiro_comissoes, 'financeiro')
   tab('hub-financeiro-categorias', ROUTES.admin.categoriasFinanceiras, ui.hub_financeiro_categorias, 'financeiro')
   tab('hub-estoque-importar-nfe', ROUTES.admin.importNfe, ui.hub_estoque_importar_nfe, 'estoque')
 

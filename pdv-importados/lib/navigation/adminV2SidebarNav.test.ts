@@ -14,6 +14,7 @@ import {
   type OperationalHubLabelSet,
 } from './operationalHubNav'
 import { CATALOGO_HUB_TABS } from './catalogoHubNav'
+import { buildFinanceiroHub, type FinanceiroHubLabels } from './financeiroHubGroups'
 import { ESTOQUE_HUB_TABS } from './estoqueHubNav'
 
 const L: OperationalHubLabelSet = {
@@ -24,7 +25,19 @@ const L: OperationalHubLabelSet = {
   pessoasClientes: 'cl',
   pessoasFuncionarios: 'fu',
 }
+const FIN_LABELS: FinanceiroHubLabels = {
+  resumo: 'r', resultado: 'rs', receber: 're', pagar: 'p', contasConciliacao: 'cc', contas: 'c',
+  recebiveis: 'rb', conciliacao: 'co', fiscal: 'f', comissoes: 'cm', categorias: 'ca',
+}
+const FIN_HUB = buildFinanceiroHub({
+  pathname: '/admin/financeiro',
+  activeTab: 'contas',
+  searchParams: new URLSearchParams(),
+  labels: FIN_LABELS,
+})
 const HUB_HREFS: string[] = [
+  ...FIN_HUB.primary.map((i) => i.href),
+  ...(FIN_HUB.secondary ?? []).map((i) => i.href),
   ...OPERATIONAL_HUB_IDS.flatMap((h) => buildOperationalHubTabs(h, L).map((t) => t.href)),
   ...CATALOGO_HUB_TABS.map((t) => t.href),
   ...ESTOQUE_HUB_TABS.map((t) => t.href),
