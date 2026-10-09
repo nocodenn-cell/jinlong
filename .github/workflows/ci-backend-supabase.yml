@@ -82,6 +82,9 @@ jobs:
       - name: Financial store ledger regression (PostgreSQL in memory)
         run: npm run test:financeiro-loja -w fastproduct-backend
 
+      - name: Fiscal RPC store isolation (PostgreSQL in memory)
+        run: npm run test:fiscal-rpc-authz -w fastproduct-backend
+
       - name: Enforce seed password secret for internal PRs
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
         env:
