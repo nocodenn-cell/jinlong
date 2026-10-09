@@ -159,6 +159,11 @@ export function ExecVendasCaixasPanel({
                       cell: (r) => formatDateTimeOrDash(r.data, locale, 'short'),
                     },
                     {
+                      id: 'cliente',
+                      header: 'Cliente',
+                      cell: (r) => r.cliente_nome ?? '—',
+                    },
+                    {
                       id: 'op',
                       header: 'Operador',
                       cell: (r) => r.vendedor_nome ?? '—',

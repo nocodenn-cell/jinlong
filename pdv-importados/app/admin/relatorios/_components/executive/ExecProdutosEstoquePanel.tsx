@@ -166,6 +166,12 @@ export function ExecProdutosEstoquePanel({
                     cell: (r) => String(r.quantidade_atual),
                   },
                   {
+                    id: 'imob',
+                    header: 'Valor imobilizado',
+                    numeric: true,
+                    cell: (r) => formatBRL(r.valor_imobilizado),
+                  },
+                  {
                     id: 'ult',
                     header: 'Ult. venda',
                     cell: (r) =>
@@ -223,6 +229,12 @@ export function ExecProdutosEstoquePanel({
                   header: 'Saldo',
                   numeric: true,
                   cell: (r) => String(r.quantidadeAtual),
+                },
+                {
+                  id: 'media',
+                  header: 'Média/dia',
+                  numeric: true,
+                  cell: (r) => r.mediaDiariaVendida.toFixed(2),
                 },
                 {
                   id: 'dias',
