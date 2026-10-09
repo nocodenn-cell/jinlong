@@ -14,6 +14,7 @@ import { EmptyState } from '@/components/ui/feedback'
 import { formatBRL } from '@/lib/format/money'
 import { ROUTES } from '@/lib/navigation/routes'
 import { financeiroHrefForTab } from '@/lib/navigation/financeiroHubQuery'
+import { useExecT } from '@/lib/i18n/useExecT'
 import type { RelatorioResumoExecutivoDTO } from '@/app/gerente/relatorios/actions'
 import type { FinanceiroPainel } from '@/app/admin/financeiro/financeiroLojaTypes'
 
@@ -81,6 +82,7 @@ export function ExecDreFinanceiroPanel({
   vendasSemCusto,
   fusoDiverge = false,
 }: Props) {
+  const t = useExecT()
   const gerencial = financeiro?.resultado_gerencial
   const cmv = gerencial?.custo_conhecido ?? null
   const margemBruta =
@@ -96,34 +98,37 @@ export function ExecDreFinanceiroPanel({
       : null
   const textoIntervalo = (v: number) =>
     piso != null
-      ? `${formatBRL(piso, locale)} a ${formatBRL(v, locale)}`
+      ? t('dre.mb_faixa', { piso: formatBRL(piso, locale), teto: formatBRL(v, locale) })
       : formatBRL(v, locale)
-  const parcialTxt = vendasSemCusto?.parcial
-    ? ' — lista parcial (200 vendas mais recentes): pode haver outras vendas sem custo'
-    : ''
+  const parcialTxt = vendasSemCusto?.parcial ? t('dre.hint_parcial') : ''
   const hintMargem =
     piso != null && vendasSemCusto
-      ? `Custo incompleto em ${vendasSemCusto.qtd} venda(s) (${formatBRL(vendasSemCusto.receita, locale)})${parcialTxt}: margem entre piso e teto${devolucoes > 0 ? '; piso conservador (há devoluções)' : ''}`
+      ? t('dre.hint_faixa', {
+          n: vendasSemCusto.qtd,
+          valor: formatBRL(vendasSemCusto.receita, locale),
+          parcial: parcialTxt,
+          devolucoes: devolucoes > 0 ? t('dre.hint_devolucoes') : '',
+        })
       : fusoDiverge
-        ? 'Custo incompleto — apenas o teto (fuso do relatório difere do Financeiro)'
-        : `Custo incompleto — margem aproximada (teto)${parcialTxt}`
+        ? t('dre.hint_fuso')
+        : t('dre.hint_teto', { parcial: parcialTxt })
   const despesas = gerencial ? gerencial.despesas_manuais + gerencial.taxas_conferidas : null
   const lucro =
     margemBruta != null && despesas != null ? margemBruta - despesas : null
 
   const cascata: CascataLinha[] = [
-    { id: 'bruta', label: 'Receita bruta (faturamento)', valor: faturamentoBruto, tom: 'neutral' },
-    { id: 'dev', label: '(−) Devolucoes', valor: -devolucoes, tom: devolucoes > 0 ? 'warning' : 'neutral' },
-    { id: 'liq', label: 'Receita liquida', valor: receitaLiquida, tom: 'success', destaque: true },
+    { id: 'bruta', label: t('dre.cascata_bruta'), valor: faturamentoBruto, tom: 'neutral' },
+    { id: 'dev', label: t('dre.cascata_dev'), valor: -devolucoes, tom: devolucoes > 0 ? 'warning' : 'neutral' },
+    { id: 'liq', label: t('dre.cascata_liq'), valor: receitaLiquida, tom: 'success', destaque: true },
     {
       id: 'cmv',
-      label: '(−) CMV / custo conhecido',
+      label: t('dre.cascata_cmv'),
       valor: cmv != null ? -cmv : null,
       tom: 'warning',
     },
     {
       id: 'mb',
-      label: 'Margem bruta estimada',
+      label: t('dre.cascata_mb'),
       valor: margemBruta,
       texto: piso != null && margemBruta != null ? textoIntervalo(margemBruta) : undefined,
       tom: 'success',
@@ -131,13 +136,13 @@ export function ExecDreFinanceiroPanel({
     },
     {
       id: 'desp',
-      label: '(−) Despesas + taxas',
+      label: t('dre.cascata_desp'),
       valor: despesas != null ? -despesas : null,
       tom: 'warning',
     },
     {
       id: 'll',
-      label: 'Resultado operacional estimado',
+      label: t('dre.cascata_ll'),
       valor: lucro,
       tom: lucro != null && lucro < 0 ? 'danger' : 'success',
       destaque: true,
@@ -159,21 +164,21 @@ export function ExecDreFinanceiroPanel({
   const kpis: KpiStripItem[] = [
     {
       id: 'bruta',
-      label: 'Receita bruta',
+      label: t('dre.kpi_bruta'),
       value: formatBRL(faturamentoBruto, locale),
       icon: 'dollar-sign',
       tone: 'gold',
     },
     {
       id: 'liq',
-      label: 'Receita liquida',
+      label: t('dre.kpi_liq'),
       value: formatBRL(receitaLiquida, locale),
       icon: 'wallet-cards',
       tone: 'success',
     },
     {
       id: 'mb',
-      label: 'Margem bruta est.',
+      label: t('dre.kpi_mb'),
       value: margemBruta == null ? '—' : textoIntervalo(margemBruta),
       icon: 'file-check-2',
       tone: resumo.custo_confiavel ? 'gold' : 'warning',
@@ -181,7 +186,7 @@ export function ExecDreFinanceiroPanel({
     },
     {
       id: 'inad',
-      label: 'Titulos vencidos (AR)',
+      label: t('dre.kpi_vencidos'),
       value: String(vencidos.length),
       icon: 'alert-circle',
       tone: vencidos.length > 0 ? 'danger' : 'success',
@@ -194,20 +199,20 @@ export function ExecDreFinanceiroPanel({
       <DashboardGrid
         kpis={<KpiStrip items={kpis} />}
         main={
-          <SectionCard title="DRE em cascata (estimativa gerencial)">
+          <SectionCard title={t('dre.sec_cascata')}>
             {financeiroErro ? (
               <p role="status" className="mb-3 text-small text-[var(--color-warning-strong)]">
-                Painel financeiro parcial: {financeiroErro}. Cascata usa dados de vendas disponiveis.
+                {t('dre.parcial_fin', { erro: financeiroErro })}
               </p>
             ) : null}
             <DenseDataTable
-              caption="DRE cascata"
+              caption={t('dre.cap_cascata')}
               rows={cascata}
               rowKey={(r) => r.id}
               columns={[
                 {
                   id: 'label',
-                  header: 'Linha',
+                  header: t('dre.col_linha'),
                   cell: (r) => (
                     <span className={r.destaque ? 'font-semibold text-fg' : 'text-fg-muted'}>
                       {r.label}
@@ -216,11 +221,11 @@ export function ExecDreFinanceiroPanel({
                 },
                 {
                   id: 'valor',
-                  header: 'Valor',
+                  header: t('com.valor'),
                   numeric: true,
                   cell: (r) =>
                     r.valor == null ? (
-                      <StatusBadge tone="neutral">Indisponivel</StatusBadge>
+                      <StatusBadge tone="neutral">{t('com.indisponivel')}</StatusBadge>
                     ) : (
                       <StatusBadge tone={r.tom}>{r.texto ?? formatBRL(r.valor, locale)}</StatusBadge>
                     ),
@@ -228,75 +233,74 @@ export function ExecDreFinanceiroPanel({
               ]}
             />
             <p className="mt-3 text-caption text-fg-subtle">
-              Nao e lucro contabil. CMV e despesas vêm do resultado gerencial do Financeiro quando
-              carregado; cadastre custos e despesas para fechar a cascata.
+              {t('dre.nota_contabil')}
             </p>
           </SectionCard>
         }
         side={
           <>
-            <SectionCard title="Previsao de fluxo (saldo)">
+            <SectionCard title={t('dre.sec_fluxo')}>
               {financeiro?.fluxo?.length ? (
                 <DenseDataTable
-                  caption="Fluxo"
+                  caption={t('dre.cap_fluxo')}
                   rows={financeiro.fluxo.slice(0, 14)}
                   rowKey={(r) => r.dia}
                   columns={[
-                    { id: 'dia', header: 'Dia', cell: (r) => r.dia },
+                    { id: 'dia', header: t('dre.col_dia'), cell: (r) => r.dia },
                     {
                       id: 'ent',
-                      header: 'Entradas',
+                      header: t('dre.col_entradas'),
                       numeric: true,
                       cell: (r) => formatBRL(r.entradas, locale),
                     },
                     {
                       id: 'sai',
-                      header: 'Saidas',
+                      header: t('dre.col_saidas'),
                       numeric: true,
                       cell: (r) => formatBRL(r.saidas, locale),
                     },
                     {
                       id: 'saldo',
-                      header: 'Saldo',
+                      header: t('dre.col_saldo'),
                       numeric: true,
                       cell: (r) => formatBRL(r.saldo, locale),
                     },
                   ]}
                 />
               ) : (
-                <EmptyState title="Fluxo nao carregado neste recorte" className="py-4" />
+                <EmptyState title={t('dre.empty_fluxo')} className="py-4" />
               )}
               <div className="mt-3 flex flex-wrap gap-3 text-small">
                 <Link
                   className="underline"
                   href={financeiroHrefForTab('resumo', fluxoParams)}
                 >
-                  Resumo financeiro
+                  {t('dre.link_resumo')}
                 </Link>
                 <Link
                   className="underline"
                   href={financeiroHrefForTab('resultado', fluxoParams)}
                 >
-                  Resultado
+                  {t('dre.link_resultado')}
                 </Link>
               </div>
             </SectionCard>
-            <SectionCard title="Inadimplencia / titulos vencidos">
+            <SectionCard title={t('dre.sec_inadimplencia')}>
               <DenseDataTable
-                caption="Vencidos a receber"
+                caption={t('dre.cap_vencidos')}
                 rows={vencidos.slice(0, 15)}
                 rowKey={(r) => r.id}
-                empty={<EmptyState title="Nenhum titulo vencido em aberto" className="py-4" />}
+                empty={<EmptyState title={t('dre.empty_vencidos')} className="py-4" />}
                 columns={[
-                  { id: 'nome', header: 'Titulo', cell: (r) => r.nome },
+                  { id: 'nome', header: t('dre.col_titulo'), cell: (r) => r.nome },
                   {
                     id: 'venc',
-                    header: 'Vencimento',
+                    header: t('dre.col_vencimento'),
                     cell: (r) => r.vencimento ?? '—',
                   },
                   {
                     id: 'valor',
-                    header: 'Aberto',
+                    header: t('dre.col_aberto'),
                     numeric: true,
                     cell: (r) => (
                       <StatusBadge tone="danger">
@@ -310,7 +314,7 @@ export function ExecDreFinanceiroPanel({
                 href={financeiroHrefForTab('pagar', fluxoParams)}
                 className="mt-3 inline-block text-small underline"
               >
-                Ver contas a pagar ({aPagarProx.length}+)
+                {t('dre.link_pagar', { n: aPagarProx.length })}
               </Link>
             </SectionCard>
           </>
@@ -318,9 +322,9 @@ export function ExecDreFinanceiroPanel({
       />
       {extra}
       <p className="text-caption text-fg-subtle">
-        Operacao de titulos permanece em{' '}
+        {t('dre.rodape')}{' '}
         <Link href={ROUTES.admin.financeiro} className="underline">
-          Financeiro e fiscal
+          {t('dre.rodape_link')}
         </Link>
         .
       </p>

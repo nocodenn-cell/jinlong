@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/admin-v2'
 import type { MetricCardIconKey } from '@/components/ui/admin-v2/MetricCard'
 import { ExecutiveVisaoGeralStub } from './_components/ExecutiveVisaoGeralStub'
+import { traduzir } from '@/lib/i18n/execTexts'
 import type { SparkTone } from '@/components/ui/admin-v2/sparkline'
 import { EmptyState, ErrorState } from '@/components/ui/feedback'
 import { createClient } from '@/lib/supabase/server'
@@ -495,13 +496,13 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   const alertRows = [
     {
       id: 'estoque-critico',
-      label: estoqueBaixoCount > 0 ? 'Estoque baixo' : 'Estoque OK',
+      label: traduzir(idioma, estoqueBaixoCount > 0 ? 'dash.estoque_baixo' : 'dash.estoque_ok'),
       detail: formatNumberLocale(estoqueBaixoCount, locale),
       tone: (estoqueBaixoCount > 0 ? 'warning' : 'success') as 'warning' | 'success',
     },
     {
       id: 'caixa-status',
-      label: algumCaixaAberto ? 'Caixa aberto' : 'Caixas fechados',
+      label: traduzir(idioma, algumCaixaAberto ? 'dash.caixa_aberto' : 'dash.caixas_fechados'),
       detail: algumCaixaAberto ? '1+' : '0',
       tone: (algumCaixaAberto ? 'warning' : 'neutral') as 'warning' | 'neutral',
     },
@@ -679,6 +680,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
       filters={<DashboardFilters options={periodOptions} />}
       kpis={kpiItems}
       alertRows={alertRows}
+      idioma={idioma}
       main={mainCharts}
       side={sidePanel}
       footer={footerBlock}

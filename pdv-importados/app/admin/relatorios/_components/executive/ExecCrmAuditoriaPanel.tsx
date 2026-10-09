@@ -19,7 +19,8 @@ import type {
   RelatorioResumoExecutivoDTO,
 } from '@/app/gerente/relatorios/actions'
 import { formatarPercentual } from '@/lib/vendas/metricasVendas'
-import { construirSegmentacaoRfv } from './rfvSegmentacao'
+import { CLIENTE_NAO_IDENTIFICADO, construirSegmentacaoRfv } from './rfvSegmentacao'
+import { useExecT, type ExecTextKey } from '@/lib/i18n/useExecT'
 
 type Props = {
   vendas: readonly VendaReportRow[]
@@ -48,6 +49,7 @@ export function ExecCrmAuditoriaPanel({
   periodoAte,
   locale,
 }: Props) {
+  const t = useExecT()
   const rfv = useMemo(
     () => construirSegmentacaoRfv(vendas, periodoAte, 30),
     [vendas, periodoAte],
@@ -56,7 +58,7 @@ export function ExecCrmAuditoriaPanel({
   const operadores = useMemo(() => {
     const map = new Map<string, OperadorPerf>()
     for (const v of vendas) {
-      const nome = (v.vendedor_nome ?? '').trim() || 'Sem operador'
+      const nome = (v.vendedor_nome ?? '').trim() || t('com.sem_operador')
       const prev = map.get(nome) ?? { nome, faturamento: 0, vendas: 0, canceladas: 0 }
       if (v.status === 'CANCELADA') {
         prev.canceladas += 1
@@ -67,7 +69,7 @@ export function ExecCrmAuditoriaPanel({
       map.set(nome, prev)
     }
     return [...map.values()].sort((a, b) => b.faturamento - a.faturamento).slice(0, 20)
-  }, [vendas])
+  }, [vendas, t])
 
   const descontos = useMemo(
     () => margemPorVenda.reduce((acc, v) => acc + (Number(v.total_desconto) || 0), 0),
@@ -79,7 +81,7 @@ export function ExecCrmAuditoriaPanel({
   const kpis: KpiStripItem[] = [
     {
       id: 'clientes',
-      label: 'Clientes no RFV',
+      label: t('crm.kpi_clientes'),
       value: String(rfv.length),
       icon: 'shopping-bag',
       tone: 'gold',
@@ -87,7 +89,7 @@ export function ExecCrmAuditoriaPanel({
     },
     {
       id: 'cancel',
-      label: 'Cancelamentos %',
+      label: t('crm.kpi_cancel'),
       value: formatarPercentual(taxaCancel, locale),
       icon: 'x-circle',
       tone: taxaCancel > 0.05 ? 'danger' : 'success',
@@ -95,18 +97,18 @@ export function ExecCrmAuditoriaPanel({
     },
     {
       id: 'desc',
-      label: 'Descontos concedidos',
+      label: t('crm.kpi_desc'),
       value: formatBRL(descontos, locale),
       icon: 'list-filter',
       tone: descontos > 0 ? 'warning' : 'success',
     },
     {
       id: 'comissoes',
-      label: 'Comissoes',
-      value: 'Abrir',
+      label: t('crm.kpi_comissoes'),
+      value: t('com.abrir'),
       icon: 'file-check-2',
       href: ROUTES.admin.comissoes,
-      hint: 'Apuracao e liquidacao no modulo Comissoes',
+      hint: t('crm.kpi_comissoes_hint'),
     },
   ]
 
@@ -115,25 +117,28 @@ export function ExecCrmAuditoriaPanel({
       <DashboardGrid
         kpis={<KpiStrip items={kpis} />}
         main={
-          <SectionCard title="Segmentacao RFV (periodo)">
+          <SectionCard title={t('crm.sec_rfv')}>
             <p className="mb-3 text-caption text-fg-subtle">
-              Heuristica local sobre vendas do periodo (Recencia · Frequencia · Valor). Cadastro
-              completo em{' '}
+              {t('crm.rfv_nota')}{' '}
               <Link href={ROUTES.admin.clientes} className="underline">
-                Clientes
+                {t('crm.rfv_link')}
               </Link>
               .
             </p>
             <DenseDataTable
-              caption="RFV"
+              caption={t('crm.cap_rfv')}
               rows={rfv}
               rowKey={(r) => r.cliente}
-              empty={<EmptyState title="Sem clientes com compra no periodo" className="py-6" />}
+              empty={<EmptyState title={t('crm.empty_rfv')} className="py-6" />}
               columns={[
-                { id: 'cli', header: 'Cliente', cell: (r) => r.cliente },
+                {
+                  id: 'cli',
+                  header: t('com.cliente'),
+                  cell: (r) => (r.cliente === CLIENTE_NAO_IDENTIFICADO ? t('crm.cliente_anonimo') : r.cliente),
+                },
                 {
                   id: 'seg',
-                  header: 'Segmento',
+                  header: t('crm.col_segmento'),
                   cell: (r) => {
                     const tone =
                       r.segmento === 'Campeões' || r.segmento === 'Fieis'
@@ -141,12 +146,12 @@ export function ExecCrmAuditoriaPanel({
                         : r.segmento === 'Em risco'
                           ? 'warning'
                           : 'neutral'
-                    return <StatusBadge tone={tone}>{r.segmento}</StatusBadge>
+                    return <StatusBadge tone={tone}>{t(`crm.seg.${r.segmento}` as ExecTextKey)}</StatusBadge>
                   },
                 },
                 {
                   id: 'r',
-                  header: 'R (dias)',
+                  header: t('crm.col_r'),
                   numeric: true,
                   cell: (r) => String(r.recenciaDias),
                 },
@@ -158,7 +163,7 @@ export function ExecCrmAuditoriaPanel({
                 },
                 {
                   id: 'v',
-                  header: 'Valor',
+                  header: t('com.valor'),
                   numeric: true,
                   cell: (r) => formatBRL(r.valor, locale),
                 },
@@ -168,29 +173,29 @@ export function ExecCrmAuditoriaPanel({
         }
         side={
           <>
-            <SectionCard title="Performance de operadores">
+            <SectionCard title={t('crm.sec_operadores')}>
               <DenseDataTable
-                caption="Operadores"
+                caption={t('crm.cap_operadores')}
                 rows={operadores}
                 rowKey={(r) => r.nome}
-                empty={<EmptyState title="Sem vendas por operador" className="py-4" />}
+                empty={<EmptyState title={t('crm.empty_operadores')} className="py-4" />}
                 columns={[
-                  { id: 'nome', header: 'Operador', cell: (r) => r.nome },
+                  { id: 'nome', header: t('com.operador'), cell: (r) => r.nome },
                   {
                     id: 'fat',
-                    header: 'Faturamento',
+                    header: t('crm.col_fat'),
                     numeric: true,
                     cell: (r) => formatBRL(r.faturamento, locale),
                   },
                   {
                     id: 'n',
-                    header: 'Vendas',
+                    header: t('crm.col_vendas'),
                     numeric: true,
                     cell: (r) => String(r.vendas),
                   },
                   {
                     id: 'canc',
-                    header: 'Canc.',
+                    header: t('crm.col_canc'),
                     numeric: true,
                     cell: (r) => (
                       <StatusBadge tone={r.canceladas > 0 ? 'danger' : 'success'}>
@@ -204,25 +209,25 @@ export function ExecCrmAuditoriaPanel({
                 href={ROUTES.admin.comissoes}
                 className="mt-3 inline-block text-small font-medium text-brand underline-offset-2 hover:underline"
               >
-                Ver comissoes apuradas
+                {t('crm.link_comissoes')}
               </Link>
             </SectionCard>
-            <SectionCard title="Painel de perdas">
+            <SectionCard title={t('crm.sec_perdas')}>
               <ul className="space-y-2 text-small">
                 <li className="flex items-center justify-between gap-2">
-                  <span>Cancelamentos</span>
+                  <span>{t('crm.perda_cancel')}</span>
                   <StatusBadge tone={canceladas > 0 ? 'danger' : 'success'}>
                     {canceladas} · {formatarPercentual(taxaCancel, locale)}
                   </StatusBadge>
                 </li>
                 <li className="flex items-center justify-between gap-2">
-                  <span>Descontos (amostra margem)</span>
+                  <span>{t('crm.perda_desc')}</span>
                   <StatusBadge tone={descontos > 0 ? 'warning' : 'neutral'}>
                     {formatBRL(descontos, locale)}
                   </StatusBadge>
                 </li>
                 <li className="flex items-center justify-between gap-2">
-                  <span>Faturamento base</span>
+                  <span>{t('crm.perda_base')}</span>
                   <span className="tabular-nums font-medium">{formatBRL(faturamento, locale)}</span>
                 </li>
               </ul>
@@ -230,7 +235,7 @@ export function ExecCrmAuditoriaPanel({
                 href={ROUTES.admin.auditoria}
                 className="mt-3 inline-block text-small underline"
               >
-                Timeline de auditoria operacional
+                {t('crm.link_auditoria')}
               </Link>
             </SectionCard>
           </>

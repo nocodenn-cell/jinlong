@@ -21,6 +21,7 @@ import type {
 } from '@/app/gerente/relatorios/actions'
 import type { RelatorioSemGiroDTO } from '@/app/gerente/relatorios/sem-giro/actions'
 import { formatDiasCobertura, sortCoberturaUrgente, sortReposicaoPorDeficit } from '../relatoriosUi'
+import { useExecT } from '@/lib/i18n/useExecT'
 
 type Props = {
   /** Seções migradas do relatório clássico (UX-IA-01 D1/D2); ausentes em testes. */
@@ -43,6 +44,7 @@ export function ExecProdutosEstoquePanel({
   locale,
   extra,
 }: Props) {
+  const t = useExecT()
   const reposicao = sortReposicaoPorDeficit([...baixo]).slice(0, 20)
   const coberturaUrgente = sortCoberturaUrgente([...cobertura]).slice(0, 15)
   const encalhe = semGiro.slice(0, 20)
@@ -50,14 +52,14 @@ export function ExecProdutosEstoquePanel({
   const kpis: KpiStripItem[] = [
     {
       id: 'abc-a',
-      label: 'Classe A',
+      label: t('pe.kpi_classe_a'),
       value: String(curvaAbc.filter((p) => p.classeAbc === 'A').length),
       icon: 'shopping-bag',
       tone: 'gold',
     },
     {
       id: 'encalhe',
-      label: 'Sem giro (>30d)',
+      label: t('pe.kpi_sem_giro'),
       value: String(semGiro.length),
       icon: 'package',
       tone: semGiro.length > 0 ? 'warning' : 'success',
@@ -65,7 +67,7 @@ export function ExecProdutosEstoquePanel({
     },
     {
       id: 'reposicao',
-      label: 'Reposicao urgente',
+      label: t('pe.kpi_reposicao'),
       value: String(baixo.length),
       icon: 'alert-circle',
       tone: baixo.length > 0 ? 'danger' : 'success',
@@ -73,11 +75,11 @@ export function ExecProdutosEstoquePanel({
     },
     {
       id: 'compras',
-      label: 'Ordens de compra',
-      value: 'Abrir',
+      label: t('pe.kpi_oc'),
+      value: t('com.abrir'),
       icon: 'list-filter',
       href: ROUTES.admin.compras,
-      hint: 'Acompanhar OC em transito no modulo Compras',
+      hint: t('pe.kpi_oc_hint'),
     },
   ]
 
@@ -86,16 +88,16 @@ export function ExecProdutosEstoquePanel({
       <DashboardGrid
         kpis={<KpiStrip items={kpis} />}
         main={
-          <SectionCard title="Curva ABC por contribuicao de receita">
+          <SectionCard title={t('pe.sec_abc')}>
             <DenseDataTable
-              caption="Curva ABC"
+              caption={t('pe.cap_abc')}
               rows={curvaAbc.slice(0, 40)}
               rowKey={(r) => r.produtoId}
-              empty={<EmptyState title="Sem dados de curva ABC no periodo" className="py-6" />}
+              empty={<EmptyState title={t('pe.empty_abc')} className="py-6" />}
               columns={[
                 {
                   id: 'nome',
-                  header: 'Produto',
+                  header: t('com.produto'),
                   cell: (r) => (
                     <Link
                       href={adminCatalogoCompletoEditarHref(r.produtoId)}
@@ -107,25 +109,25 @@ export function ExecProdutosEstoquePanel({
                 },
                 {
                   id: 'valor',
-                  header: 'Receita',
+                  header: t('pe.col_receita'),
                   numeric: true,
                   cell: (r) => formatBRL(r.totalValor, locale),
                 },
                 {
                   id: 'part',
-                  header: 'Part. %',
+                  header: t('pe.col_part'),
                   numeric: true,
                   cell: (r) => formatPercent(r.percentualValor / 100, locale),
                 },
                 {
                   id: 'acum',
-                  header: 'Acum. %',
+                  header: t('pe.col_acum'),
                   numeric: true,
                   cell: (r) => formatPercent(r.percentualAcumulado / 100, locale),
                 },
                 {
                   id: 'classe',
-                  header: 'Classe',
+                  header: t('pe.col_classe'),
                   cell: (r) => (
                     <StatusBadge
                       tone={r.classeAbc === 'A' ? 'success' : r.classeAbc === 'B' ? 'warning' : 'neutral'}
@@ -140,16 +142,16 @@ export function ExecProdutosEstoquePanel({
         }
         side={
           <>
-            <SectionCard title="Encalhe (sem giro)">
+            <SectionCard title={t('pe.sec_encalhe')}>
               <DenseDataTable
-                caption="Encalhe"
+                caption={t('pe.cap_encalhe')}
                 rows={encalhe}
                 rowKey={(r) => r.produto_id}
-                empty={<EmptyState title="Nenhum item sem giro no recorte" className="py-4" />}
+                empty={<EmptyState title={t('pe.empty_encalhe')} className="py-4" />}
                 columns={[
                   {
                     id: 'nome',
-                    header: 'Produto',
+                    header: t('com.produto'),
                     cell: (r) => (
                       <Link
                         href={adminCatalogoCompletoEditarHref(r.produto_id)}
@@ -161,37 +163,37 @@ export function ExecProdutosEstoquePanel({
                   },
                   {
                     id: 'saldo',
-                    header: 'Saldo',
+                    header: t('pe.col_saldo'),
                     numeric: true,
                     cell: (r) => String(r.quantidade_atual),
                   },
                   {
                     id: 'imob',
-                    header: 'Valor imobilizado',
+                    header: t('pe.col_imob'),
                     numeric: true,
                     cell: (r) => formatBRL(r.valor_imobilizado),
                   },
                   {
                     id: 'ult',
-                    header: 'Ult. venda',
+                    header: t('pe.col_ult'),
                     cell: (r) =>
                       r.ultima_venda
                         ? formatDateTimeOrDash(r.ultima_venda, locale, 'short')
-                        : 'Nunca',
+                        : t('com.nunca'),
                   },
                 ]}
               />
             </SectionCard>
-            <SectionCard title="Reposicao urgente">
+            <SectionCard title={t('pe.sec_reposicao')}>
               <DenseDataTable
-                caption="Reposicao"
+                caption={t('pe.cap_reposicao')}
                 rows={reposicao}
                 rowKey={(r) => r.id}
-                empty={<EmptyState title="Nenhum item abaixo do minimo" className="py-4" />}
+                empty={<EmptyState title={t('pe.empty_reposicao')} className="py-4" />}
                 columns={[
                   {
                     id: 'nome',
-                    header: 'Produto',
+                    header: t('com.produto'),
                     cell: (r) => (
                       <Link href={adminCatalogoCompletoEditarHref(r.id)} className="hover:underline">
                         {r.nome}
@@ -200,7 +202,7 @@ export function ExecProdutosEstoquePanel({
                   },
                   {
                     id: 'def',
-                    header: 'Deficit',
+                    header: t('pe.col_deficit'),
                     numeric: true,
                     cell: (r) => (
                       <StatusBadge tone="danger">{r.deficit}</StatusBadge>
@@ -208,7 +210,7 @@ export function ExecProdutosEstoquePanel({
                   },
                   {
                     id: 'saldo',
-                    header: 'Atual/min',
+                    header: t('pe.col_atual_min'),
                     numeric: true,
                     cell: (r) => `${r.quantidade_atual}/${r.estoque_minimo}`,
                   },
@@ -218,22 +220,22 @@ export function ExecProdutosEstoquePanel({
                 href={ROUTES.admin.compras}
                 className="mt-3 inline-block text-small font-medium text-brand underline-offset-2 hover:underline"
               >
-                Criar / acompanhar OC
+                {t('pe.link_oc')}
               </Link>
             </SectionCard>
           </>
         }
         footer={
-          <SectionCard title="Cobertura de estoque (dias)">
+          <SectionCard title={t('pe.sec_cobertura')}>
             <DenseDataTable
-              caption="Cobertura"
+              caption={t('pe.cap_cobertura')}
               rows={coberturaUrgente}
               rowKey={(r) => `${r.produtoId}-${r.lojaId}`}
-              empty={<EmptyState title="Sem cobertura calculada" className="py-4" />}
+              empty={<EmptyState title={t('pe.empty_cobertura')} className="py-4" />}
               columns={[
                 {
                   id: 'nome',
-                  header: 'Produto',
+                  header: t('com.produto'),
                   cell: (r) => (
                     <Link href={adminCatalogoCompletoEditarHref(r.produtoId)} className="hover:underline">
                       {r.nome}
@@ -242,26 +244,26 @@ export function ExecProdutosEstoquePanel({
                 },
                 {
                   id: 'qtd',
-                  header: 'Saldo',
+                  header: t('pe.col_saldo'),
                   numeric: true,
                   cell: (r) => String(r.quantidadeAtual),
                 },
                 {
                   id: 'media',
-                  header: 'Média/dia',
+                  header: t('pe.col_media'),
                   numeric: true,
                   cell: (r) => r.mediaDiariaVendida.toFixed(2),
                 },
                 {
                   id: 'dias',
-                  header: 'Cobertura',
+                  header: t('pe.col_cobertura'),
                   numeric: true,
                   cell: (r) =>
                     r.diasCobertura == null
                       ? '—'
                       : formatDiasCobertura(r.diasCobertura, {
-                          dias: 'dias',
-                          diasCap: '>{{n}} dias',
+                          dias: t('pe.dias'),
+                          diasCap: t('pe.dias_cap'),
                         }),
                 },
               ]}

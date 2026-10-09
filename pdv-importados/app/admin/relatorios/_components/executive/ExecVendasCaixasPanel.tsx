@@ -22,6 +22,7 @@ import type { CaixaHistoricoLinha } from '@/app/gerente/caixas/caixasHistorico'
 import type { ResumoCaixas } from '@/app/gerente/caixas/actions'
 import { formatarPercentual } from '@/lib/vendas/metricasVendas'
 import { agruparVendasPorHora, picoDeVendas } from './vendasPorHora'
+import { useExecT } from '@/lib/i18n/useExecT'
 
 type Props = {
   /** Seções migradas do relatório clássico (UX-IA-01 D1/D2); ausentes em testes. */
@@ -58,6 +59,7 @@ export function ExecVendasCaixasPanel({
   caixasErro,
   extra,
 }: Props) {
+  const t = useExecT()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const selected = useMemo(
     () => vendas.find((v) => v.id === selectedId) ?? null,
@@ -74,21 +76,21 @@ export function ExecVendasCaixasPanel({
   const kpis: KpiStripItem[] = [
     {
       id: 'fat',
-      label: 'Faturamento',
+      label: t('vc.kpi_fat'),
       value: formatBRL(faturamento, locale),
       icon: 'dollar-sign',
       tone: 'gold',
     },
     {
       id: 'vendas',
-      label: 'Vendas concluidas',
+      label: t('vc.kpi_vendas'),
       value: String(resumo.vendas_concluidas),
       icon: 'shopping-bag',
       tone: 'success',
     },
     {
       id: 'cancel',
-      label: 'Taxa cancelamento',
+      label: t('vc.kpi_cancel'),
       value: formatarPercentual(resumo.taxa_cancelamento, locale),
       icon: 'x-circle',
       tone: resumo.taxa_cancelamento > 0.05 ? 'danger' : 'gold',
@@ -96,12 +98,12 @@ export function ExecVendasCaixasPanel({
     },
     {
       id: 'div-caixa',
-      label: 'Caixas com divergencia',
+      label: t('vc.kpi_divcaixa'),
       value: String(caixasResumo?.comDiferenca ?? '—'),
       icon: 'alert-circle',
       tone: (caixasResumo?.comDiferenca ?? 0) > 0 ? 'warning' : 'success',
       href: ROUTES.admin.caixas,
-      hint: 'Abrir auditoria operacional de caixas',
+      hint: t('vc.kpi_divcaixa_hint'),
     },
   ]
 
@@ -112,18 +114,18 @@ export function ExecVendasCaixasPanel({
         kpis={<KpiStrip items={kpis} />}
         main={
           <>
-            <ChartCard title="Vendas por hora do dia">
+            <ChartCard title={t('vc.chart_hora')}>
               {vendasErro ? (
                 <EmptyState title={vendasErro} className="py-8" />
               ) : pico == null ? (
-                <EmptyState title="Sem vendas concluidas no periodo" className="py-8" />
+                <EmptyState title={t('vc.sem_vendas')} className="py-8" />
               ) : (
                 <div className="space-y-2">
                   <p className="text-caption text-fg-subtle">
-                    Pico: <strong className="text-fg">{pico.label}</strong> ·{' '}
-                    {formatBRL(pico.total, locale)} ({pico.count} vendas)
+                    {t('vc.pico')}: <strong className="text-fg">{pico.label}</strong> ·{' '}
+                    {formatBRL(pico.total, locale)} {t('vc.pico_vendas', { n: pico.count })}
                   </p>
-                  <ul className="flex h-40 items-end gap-0.5" aria-label="Barras por hora">
+                  <ul className="flex h-40 items-end gap-0.5" aria-label={t('vc.aria_barras')}>
                     {buckets.map((b) => (
                       <li key={b.hour} className="flex min-w-0 flex-1 flex-col items-center gap-1">
                         <div
@@ -143,48 +145,48 @@ export function ExecVendasCaixasPanel({
               )}
             </ChartCard>
 
-            <SectionCard title="Transacoes do periodo">
+            <SectionCard title={t('vc.sec_transacoes')}>
               {vendasErro ? (
                 <EmptyState title={vendasErro} className="py-6" />
               ) : (
                 <DenseDataTable
-                  caption="Transacoes"
+                  caption={t('vc.cap_transacoes')}
                   rows={vendas.slice(0, 50)}
                   rowKey={(r) => r.id}
-                  empty={<EmptyState title="Nenhuma venda no periodo" className="py-6" />}
+                  empty={<EmptyState title={t('vc.empty_transacoes')} className="py-6" />}
                   columns={[
                     {
                       id: 'quando',
-                      header: 'Data',
+                      header: t('com.data'),
                       cell: (r) => formatDateTimeOrDash(r.data, locale, 'short'),
                     },
                     {
                       id: 'cliente',
-                      header: 'Cliente',
+                      header: t('com.cliente'),
                       cell: (r) => r.cliente_nome ?? '—',
                     },
                     {
                       id: 'op',
-                      header: 'Operador',
+                      header: t('com.operador'),
                       cell: (r) => r.vendedor_nome ?? '—',
                     },
                     {
                       id: 'pag',
-                      header: 'Pagamento',
+                      header: t('vc.col_pagamento'),
                       cell: (r) => r.forma_pagamento ?? '—',
                     },
                     {
                       id: 'status',
-                      header: 'Status',
+                      header: t('com.status'),
                       cell: (r) => (
                         <StatusBadge tone={r.status === 'CANCELADA' ? 'danger' : 'success'}>
-                          {r.status === 'CANCELADA' ? 'Cancelada' : 'Concluida'}
+                          {r.status === 'CANCELADA' ? t('vc.st_cancelada') : t('vc.st_concluida')}
                         </StatusBadge>
                       ),
                     },
                     {
                       id: 'valor',
-                      header: 'Valor',
+                      header: t('com.valor'),
                       numeric: true,
                       cell: (r) => (
                         <button
@@ -205,49 +207,49 @@ export function ExecVendasCaixasPanel({
         side={
           <>
             <SectionCard
-              title="Auditoria de caixas"
-              subtitle="Sistema vs contado (fechamentos do periodo)"
+              title={t('vc.sec_caixas')}
+              subtitle={t('vc.sec_caixas_sub')}
             >
               {caixasErro ? (
                 <p className="text-small text-[var(--color-danger-strong)]">{caixasErro}</p>
               ) : null}
               <div className="mb-3 flex flex-wrap gap-2 text-caption">
                 <StatusBadge tone="neutral">
-                  Fechados hoje: {caixasResumo?.fechadosHoje ?? '—'}
+                  {t('vc.fechados_hoje', { n: caixasResumo?.fechadosHoje ?? '—' })}
                 </StatusBadge>
                 <StatusBadge tone={(caixasResumo?.comDiferenca ?? 0) > 0 ? 'warning' : 'success'}>
-                  Com divergencia: {caixasResumo?.comDiferenca ?? '—'}
+                  {t('vc.com_div', { n: caixasResumo?.comDiferenca ?? '—' })}
                 </StatusBadge>
               </div>
               <DenseDataTable
-                caption="Caixas fechados"
+                caption={t('vc.cap_caixas')}
                 rows={caixasLinhas.slice(0, 12)}
                 rowKey={(r) => r.id}
                 empty={
                   <p className="text-small text-fg-subtle">
-                    Nenhum fechamento no recorte.{' '}
+                    {t('vc.empty_caixas')}{' '}
                     <Link href={ROUTES.admin.caixas} className="underline">
-                      Abrir Caixas
+                      {t('vc.abrir_caixas')}
                     </Link>
                   </p>
                 }
                 columns={[
-                  { id: 'op', header: 'Operador', cell: (r) => r.operadorNome },
+                  { id: 'op', header: t('com.operador'), cell: (r) => r.operadorNome },
                   {
                     id: 'sis',
-                    header: 'Sistema',
+                    header: t('vc.col_sistema'),
                     numeric: true,
                     cell: (r) => formatBRL(r.valorSistema, locale),
                   },
                   {
                     id: 'cont',
-                    header: 'Contado',
+                    header: t('vc.col_contado'),
                     numeric: true,
                     cell: (r) => formatBRL(r.valorContado, locale),
                   },
                   {
                     id: 'diff',
-                    header: 'Diverg.',
+                    header: t('vc.col_diverg'),
                     numeric: true,
                     cell: (r) => (
                       <StatusBadge tone={tomDivergencia(r.diferenca)}>
@@ -261,7 +263,7 @@ export function ExecVendasCaixasPanel({
                 href={ROUTES.admin.caixas}
                 className="mt-3 inline-block text-small font-medium text-brand underline-offset-2 hover:underline"
               >
-                Ver historico completo
+                {t('vc.ver_historico')}
               </Link>
             </SectionCard>
 
@@ -271,13 +273,13 @@ export function ExecVendasCaixasPanel({
                 data-testid="exec-venda-drawer"
               >
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <h3 className="text-small font-semibold">Detalhe do pedido</h3>
+                  <h3 className="text-small font-semibold">{t('vc.det_pedido')}</h3>
                   <button
                     type="button"
                     className="text-caption text-fg-subtle underline"
                     onClick={() => setSelectedId(null)}
                   >
-                    Fechar
+                    {t('com.fechar')}
                   </button>
                 </div>
                 <dl className="space-y-1.5 text-small">
@@ -286,15 +288,15 @@ export function ExecVendasCaixasPanel({
                     <dd className="tabular-nums">{selected.id.slice(0, 8)}</dd>
                   </div>
                   <div className="flex justify-between gap-2">
-                    <dt className="text-fg-subtle">Cliente</dt>
+                    <dt className="text-fg-subtle">{t('com.cliente')}</dt>
                     <dd>{selected.cliente_nome ?? '—'}</dd>
                   </div>
                   <div className="flex justify-between gap-2">
-                    <dt className="text-fg-subtle">Operador</dt>
+                    <dt className="text-fg-subtle">{t('com.operador')}</dt>
                     <dd>{selected.vendedor_nome ?? '—'}</dd>
                   </div>
                   <div className="flex justify-between gap-2">
-                    <dt className="text-fg-subtle">Valor</dt>
+                    <dt className="text-fg-subtle">{t('com.valor')}</dt>
                     <dd className="tabular-nums font-medium">
                       {formatBRL(selected.total_liquido, locale)}
                     </dd>
@@ -304,12 +306,12 @@ export function ExecVendasCaixasPanel({
                   href={adminVendaDetalheQuery(selected.id)}
                   className="mt-3 inline-block text-small font-medium text-brand underline-offset-2 hover:underline"
                 >
-                  Abrir ficha completa
+                  {t('vc.abrir_ficha')}
                 </Link>
               </aside>
             ) : (
               <p className="text-caption text-fg-subtle">
-                Clique no valor de uma transacao para ver o resumo lateral.
+                {t('vc.clique_valor')}
               </p>
             )}
           </>

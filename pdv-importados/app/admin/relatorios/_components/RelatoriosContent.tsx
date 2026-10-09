@@ -10,6 +10,7 @@ import { useMemo, useState } from 'react'
 import { ExecutivePageHeader } from '@/components/ui/admin-v2'
 import type { ExecutiveRelatoriosViewId } from '@/lib/navigation/executiveViews'
 import { ExecutiveDomainView } from './executive/ExecutiveDomainView'
+import { useExecT } from '@/lib/i18n/useExecT'
 import type { ExecutiveExtras } from './executive/executiveExtras'
 import { ErrorState } from '@/components/ui/feedback'
 import { ROUTES } from '@/lib/navigation/routes'
@@ -145,13 +146,6 @@ function avisoCopy(aviso: ReturnType<typeof avisoPeriodoVisivel>, labels: Relato
   return labels.avisoPeriodoLimitado
 }
 
-const EXEC_VIEW_TITLE: Record<ExecutiveRelatoriosViewId, string> = {
-  'vendas-caixas': 'Vendas & Caixas',
-  'dre-financeiro': 'DRE & Financeiro',
-  'produtos-estoque': 'Produtos & Estoque',
-  'crm-auditoria': 'CRM & Auditoria',
-}
-
 export function RelatoriosContent({
   dados,
   labels,
@@ -165,6 +159,7 @@ export function RelatoriosContent({
   /** Dados extras (caixas / financeiro) para as abas executivas. */
   executiveExtras?: ExecutiveExtras
 }) {
+  const t = useExecT()
   const [kardexAlvo, setKardexAlvo] = useState<KardexAlvo | null>(null)
 
   const aviso = avisoPeriodoVisivel(dados.periodo.aviso)
@@ -182,7 +177,7 @@ export function RelatoriosContent({
   return (
     <div className="admin-v2-page" data-executive-view={view}>
       <ExecutivePageHeader
-        title={EXEC_VIEW_TITLE[view]}
+        title={t(`view.${view}`)}
         subtitle={periodoSubtitle}
         primaryActions={
           <button
@@ -193,9 +188,10 @@ export function RelatoriosContent({
             {labels.filtros.imprimir}
           </button>
         }
+        secondaryActionsLabel={t('hdr.mais_acoes')}
         secondaryActions={[
-          { id: 'visao-geral', label: 'Visão Geral', href: ROUTES.admin.dashboard },
-          { id: 'export-csv', label: 'Exportar (via filtros)', disabled: true },
+          { id: 'visao-geral', label: t('hdr.visao_geral'), href: ROUTES.admin.dashboard },
+          { id: 'export-csv', label: t('hdr.exportar'), disabled: true },
         ]}
       />
 
