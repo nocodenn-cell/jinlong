@@ -21,7 +21,7 @@ export type ItemAutoritativo = {
   tipoPreco: 'VAREJO' | 'ATACADO' | 'MANUAL' | 'PROMOCAO'
   /**
    * N1: sempre `null` aqui. O OPERADOR não lê `produtos.preco_custo`; o snapshot de custo da venda é gravado
-   * pelo banco (`finalizar_venda_transacional_canonica_v4` lê o custo no servidor, ignorando este campo).
+   * pelo banco (a RPC canônica de finalização lê o custo no servidor, ignorando este campo).
    */
   custoUnitarioSnap: number | null
   /** Observabilidade visual (não usado em cálculo): id da faixa/regra usada como referência. */
