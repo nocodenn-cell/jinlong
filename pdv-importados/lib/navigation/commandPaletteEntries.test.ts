@@ -124,6 +124,13 @@ describe('paleta de comandos — busca', () => {
     expect(top('codigo de barras')).toBe(ROUTES.admin.estoqueImprimirEtiquetas)
   })
 
+  it('com a UI em chinês, digitar o grupo em português acha as abas dele (ex.: "estoque")', () => {
+    const zh = entries('zh', false)
+    const h = searchCommandEntries(zh, 'estoque').map((e) => e.href)
+    expect(h).toContain(ROUTES.admin.estoqueMovimentacoes)
+    expect(h).toContain(ROUTES.admin.estoqueTransferencias)
+  })
+
   it('sem resultado devolve lista vazia', () => {
     expect(searchCommandEntries(pt, 'zzzxxx')).toEqual([])
   })

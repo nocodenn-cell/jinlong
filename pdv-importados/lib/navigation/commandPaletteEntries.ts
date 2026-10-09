@@ -96,29 +96,41 @@ export function buildCommandEntries(input: BuildEntriesInput): CommandEntry[] {
   const entries: CommandEntry[] = []
   const seen = new Set<string>()
 
-  const push = (e: Omit<CommandEntry, 'keywords'>) => {
+  // Nome do grupo em português: com a UI em chinês o grupo sai só em chinês, mas quem digita
+  // "estoque" deve achar as abas do Estoque do mesmo jeito.
+  const groupPt = (destId: string): string => {
+    const d = ADMIN_V2_DESTINATIONS.find((x) => x.id === destId)
+    return d ? resolveNavLabels(d, { ...input, chineseLanguage: false }).primary : ''
+  }
+  const push = (e: Omit<CommandEntry, 'keywords'>, groupAlt = '') => {
     if (seen.has(e.href)) return
     seen.add(e.href)
-    entries.push({ ...e, keywords: KEYWORDS[e.href] ?? '' })
+    entries.push({ ...e, keywords: normalizeForSearch(`${KEYWORDS[e.href] ?? ''} ${groupAlt}`) })
   }
-  const fromItem = (item: AdminV2NavItem, group: string, kind: CommandEntry['kind'] = 'destino') => {
+  const fromItem = (
+    item: AdminV2NavItem,
+    group: string,
+    kind: CommandEntry['kind'] = 'destino',
+    groupAlt = '',
+  ) => {
     if (item.adminOnly && !showAdminOnlyItems) return
     const l = resolveNavLabels(item, input)
-    push({ id: item.id, href: item.href, label: l.primary, secondary: l.secondary, group, kind })
+    push({ id: item.id, href: item.href, label: l.primary, secondary: l.secondary, group, kind }, groupAlt)
   }
   const groupOf = (destId: string): string => {
     const d = ADMIN_V2_DESTINATIONS.find((x) => x.id === destId)
     return d ? resolveNavLabels(d, input).primary : ''
   }
   const tab = (id: string, href: string, label: string, destId: string) =>
-    push({ id, href, label, secondary: '', group: groupOf(destId), kind: 'destino' })
+    push({ id, href, label, secondary: '', group: groupOf(destId), kind: 'destino' }, groupPt(destId))
 
   // 1) Sidebar: destinos, sub-links, PDV e (se ADMIN) internos.
   fromItem(ADMIN_V2_PDV_ITEM, '', 'acao')
   for (const d of ADMIN_V2_DESTINATIONS) {
     const g = resolveNavLabels(d, input).primary
-    fromItem(d, g)
-    for (const c of d.children ?? []) fromItem(c, g)
+    const gPt = groupPt(d.id)
+    fromItem(d, g, 'destino', gPt)
+    for (const c of d.children ?? []) fromItem(c, g, 'destino', gPt)
   }
 
   // 2) Abas dos hubs (rotas que não estão na sidebar).
@@ -136,14 +148,17 @@ export function buildCommandEntries(input: BuildEntriesInput): CommandEntry[] {
   tab('hub-estoque-importar-nfe', ROUTES.admin.importNfe, ui.hub_estoque_importar_nfe, 'estoque')
 
   // 3) Ações de navegação (abrem a tela já no ponto de partida da tarefa).
-  push({
-    id: 'acao-novo-produto',
-    href: ROUTES.admin.catalogoNovo,
-    label: ui.command_palette_acao_novo_produto,
-    secondary: '',
-    group: groupOf('produtos'),
-    kind: 'acao',
-  })
+  push(
+    {
+      id: 'acao-novo-produto',
+      href: ROUTES.admin.catalogoNovo,
+      label: ui.command_palette_acao_novo_produto,
+      secondary: '',
+      group: groupOf('produtos'),
+      kind: 'acao',
+    },
+    groupPt('produtos'),
+  )
 
   // Internos (ADMIN) entram por último, já filtrados.
   const internoGroup = input.chineseLanguage ? input.admin.nav.interno.cn : input.admin.nav.interno.pt
