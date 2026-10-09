@@ -12,6 +12,7 @@
  * Novidade: VendaDetailSheet (única action nova, read-only) aberto por linha.
  */
 
+import { OperationalHubNav } from '@/components/ui/admin-v2/OperationalHubNav'
 import Link from 'next/link'
 import { Suspense } from 'react'
 import { ROUTES, pathWithQuery } from '@/lib/navigation/routes'
@@ -265,6 +266,8 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
           <PeriodFilter options={periodOptions} active={periodo} labels={periodLabels} hrefFor={periodHref} />
         )}
       />
+
+      <OperationalHubNav hub="vendas" />
 
       <div className="admin-v2-grid-kpi">
         {metricCards.map((card) => (

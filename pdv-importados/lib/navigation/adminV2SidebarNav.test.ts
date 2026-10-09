@@ -8,6 +8,27 @@ import {
   type AdminV2NavItem,
 } from './adminV2SidebarNav'
 import { executiveRelatoriosHref } from './executiveViews'
+import {
+  OPERATIONAL_HUB_IDS,
+  buildOperationalHubTabs,
+  type OperationalHubLabelSet,
+} from './operationalHubNav'
+import { CATALOGO_HUB_TABS } from './catalogoHubNav'
+import { ESTOQUE_HUB_TABS } from './estoqueHubNav'
+
+const L: OperationalHubLabelSet = {
+  vendasVendas: 'v',
+  vendasCaixas: 'c',
+  comprasPedidos: 'p',
+  comprasFornecedores: 'f',
+  pessoasClientes: 'cl',
+  pessoasFuncionarios: 'fu',
+}
+const HUB_HREFS: string[] = [
+  ...OPERATIONAL_HUB_IDS.flatMap((h) => buildOperationalHubTabs(h, L).map((t) => t.href)),
+  ...CATALOGO_HUB_TABS.map((t) => t.href),
+  ...ESTOQUE_HUB_TABS.map((t) => t.href),
+]
 
 const TODOS: readonly AdminV2NavItem[] = flattenAdminV2Nav()
 
@@ -106,10 +127,18 @@ describe('menu admin — alcance: nenhuma rota saiu da sidebar', () => {
     executiveRelatoriosHref('crm-auditoria'),
   ]
 
-  it('todo destino anterior continua na sidebar do gerente', () => {
-    const visiveis = hrefs(itensVisiveis(false))
+  it('todo destino anterior continua alcançável: sidebar do gerente ou barra de abas do hub', () => {
+    const alcancaveis = new Set([...hrefs(itensVisiveis(false)), ...HUB_HREFS])
     for (const href of ANTES) {
-      expect(visiveis, href).toContain(href)
+      expect(alcancaveis.has(href), href).toBe(true)
+    }
+  })
+
+  it('páginas irmãs com barra de abas não duplicam sub-link na sidebar', () => {
+    const naSidebar = new Set(hrefs(itensVisiveis(false)))
+    for (const h of OPERATIONAL_HUB_IDS) {
+      const [, ...irmas] = buildOperationalHubTabs(h, L)
+      for (const t of irmas) expect(naSidebar.has(t.href), t.href).toBe(false)
     }
   })
 

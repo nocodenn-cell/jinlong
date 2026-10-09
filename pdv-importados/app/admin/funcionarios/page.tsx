@@ -1,4 +1,5 @@
 import { PageHeader } from '@/components/ui/admin-v2'
+import { OperationalHubNav } from '@/components/ui/admin-v2/OperationalHubNav'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
 import { ROUTES } from '@/lib/navigation/routes'
@@ -19,6 +20,7 @@ export default async function AdminFuncionariosPage() {
   return (
     <div className="admin-v2-page">
       <PageHeader title={f.titulo} subtitle={f.subtitulo} />
+      <OperationalHubNav hub="pessoas" />
       {!list.ok ? (
         <p className="mb-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {list.error}

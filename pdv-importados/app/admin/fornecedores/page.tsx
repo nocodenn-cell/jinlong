@@ -1,4 +1,5 @@
 import { PageHeader } from '@/components/ui/admin-v2'
+import { OperationalHubNav } from '@/components/ui/admin-v2/OperationalHubNav'
 import { buscarFornecedoresPaginadosAction } from '@/app/gerente/fornecedores/actions'
 import { FornecedoresListClient } from '@/app/gerente/fornecedores/FornecedoresListClient'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
@@ -23,6 +24,7 @@ export default async function AdminFornecedoresPage() {
         title={m.fornecedores.titulo}
         subtitle={m.fornecedores.subtitulo}
       />
+      <OperationalHubNav hub="compras" />
       <FornecedoresListClient
         idioma={session.idioma}
         fornecedoresIniciais={fornecedoresIniciais}
