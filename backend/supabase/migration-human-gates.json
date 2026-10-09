@@ -431,6 +431,18 @@
       "remoteOnlyVersion": "20261009115256",
       "reason": "Aplicada em produção via MCP apply_migration (autorização explícita do responsável, 2026-10-09): schema_migrations.version gravado foi o timestamp real de aplicação (20261009115256), name=pdv_diagnostico_somente_dono_admin, não o do arquivo (20261009150000_pdv_diagnostico_somente_dono_admin.sql). A migration lê a definição vigente e só troca o guard de perfil de pdv_diagnostico_pre_producao (GERENTE,DONO,ADMIN -> DONO,ADMIN); aborta se o guard não ocorrer 1x, logo reaplicar é inofensivo (aborta sem alterar). Pré-check: guard antigo 1x, novo 0x, grants authenticated/postgres/service_role. Pós-aplicação: guard antigo 0x, novo 1x, grants idênticos.",
       "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20261009180000",
+      "remoteOnlyVersion": "20261009135940",
+      "reason": "N1 fase A aplicada em produção via MCP apply_migration (autorização expressa do responsável, 2026-10-09): version gravada = timestamp de aplicação (20261009135940), name=protege_preco_custo_operador_fase_a; conteúdo idêntico ao arquivo 20261009180000_protege_preco_custo_operador.sql. Aditiva (view produtos_custos, 4 funções, policy de system_alerts, RPC de alerta); as 4 funções são reescritas a partir da definição vigente e a migration aborta sem alterar nada se a definição não casar. Verificação pós-aplicação: view com ACL authenticated=r, 4 funções 1x via view e 0 referências antigas, policy nova presente e antiga ausente.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20261009180001",
+      "remoteOnlyVersion": "20261009140739",
+      "reason": "N1 fase B aplicada em produção via MCP apply_migration (autorização expressa do responsável, 2026-10-09, após deploy READY do app novo): version gravada = timestamp de aplicação (20261009140739), name=revoga_leitura_direta_preco_custo_fase_b; conteúdo idêntico ao arquivo 20261009180001_revoga_leitura_direta_preco_custo.sql. Revoga SELECT de produtos.preco_custo/preco_custo_medio para anon/authenticated (39 colunas sem custo com grant). Verificação: 0 grants de SELECT em colunas de custo; service_role mantém; OPERADOR recebe 42501 ao ler preco_custo; GERENTE lê 155 linhas pela view. Rollback: GRANT SELECT ON public.produtos TO anon, authenticated.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
     }
   ]
 }
