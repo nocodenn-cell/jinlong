@@ -193,6 +193,29 @@ describe('AdminV2MobileNavDrawer — bloqueio de scroll e item ativo', () => {
   })
 })
 
+describe('AdminV2MobileNavDrawer — fecha ao ativar um link', () => {
+  it('clicar num sub-link que só troca a query (?view=) fecha o drawer, mesmo sem mudar o pathname', () => {
+    currentPathname = '/admin/relatorios'
+    render()
+    act(() => hamburger().click())
+    expect(dialog()).not.toBeNull()
+    const link = dialog()!.querySelector<HTMLAnchorElement>('nav a[href^="/admin/relatorios?view="]')
+    expect(link).not.toBeNull()
+    // o jsdom tentaria navegar; só importa o fechamento do drawer
+    link!.addEventListener('click', (e) => e.preventDefault())
+    act(() => link!.click())
+    expect(dialog()).toBeNull()
+  })
+
+  it('clicar fora de um link (ex.: título do grupo) não fecha o drawer', () => {
+    render()
+    act(() => hamburger().click())
+    const nav = dialog()!.querySelector('nav')!
+    act(() => nav.click())
+    expect(dialog()).not.toBeNull()
+  })
+})
+
 describe('AdminV2MobileNavDrawer — sem duplicidade de menu', () => {
   it('só existe UMA instância de cada link de navegação dentro do <nav> do drawer (SidebarNav não duplica itens)', () => {
     render()
