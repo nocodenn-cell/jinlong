@@ -20,7 +20,10 @@ Data: 2026-10-09 · Escopo: navegação, relatórios, i18n PT-BR/中文 e pendê
 | #519 | **Aposenta o relatório clássico; margem em intervalo (R5-b)**; redirects `?tab=`→`?view=` | `bec8a261` |
 | #520 | **i18n dos painéis executivos (PT/中文)** | `b943b548` |
 
-Abertos, não mergeados: **#521** (migration de segurança do Diagnóstico — aguarda autorização, ver §5) e **#491** (branch de trabalho do usuário, intocado).
+| #521 | **RPC do Diagnóstico só DONO/ADMIN** — migration aplicada em produção com autorização expressa | `c18a99de` |
+| #523 | Registro do par de versão da migration do #521 (`migration-human-gates.json`) | ver PR |
+
+Aberto, não mergeado: **#491** (branch de trabalho do usuário, intocado).
 
 ## 2. CI e testes
 
@@ -35,7 +38,7 @@ Abertos, não mergeados: **#521** (migration de segurança do Diagnóstico — a
 - **Margem em intervalo:** `R$ 675,52 a R$ 727,12` com 1 venda sem custo (R$ 51,60), em PT e 中文.
 - **Redirects legados:** `?tab=margem&de=…&ate=…` → `view=dre-financeiro` com datas preservadas; rota nua → `view=vendas-caixas`; nenhum link da sidebar aponta para a rota sem `view`.
 - **Visual PT/中文, desktop e mobile 375 px:** 4 views + Visão Geral em 中文 sem texto PT de interface (restam apenas dados: nomes de produto/cliente, e o rótulo secundário bilíngue da sidebar, por desenho). Corrigido no caminho: overflow horizontal de 14 px no mobile (MetricCard) e truncamento do teto da faixa de margem.
-- **Perfis:** GO-LIVE — smoke de 13 checks (GERENTE bloqueado, DONO autoriza, OPERADOR sem acesso) sem regressão. Diagnóstico (RPC) — OPERADOR 403, DONO 200, ADMIN 200; **GERENTE 200 hoje no banco** (corrigido apenas no #521). Rotas de tela: política `adminPolicy` coberta por testes unitários.
+- **Perfis:** GO-LIVE — smoke de 13 checks (GERENTE bloqueado, DONO autoriza, OPERADOR sem acesso) sem regressão. Diagnóstico (RPC) — OPERADOR 403, DONO 200, ADMIN 200; GERENTE 200 antes do #521 e 403 depois (local); em produção, corrigido no catálogo. Rotas de tela: política `adminPolicy` coberta por testes unitários.
 
 ## 4. Achados novos desta rodada (não silenciados)
 
@@ -48,7 +51,7 @@ Abertos, não mergeados: **#521** (migration de segurança do Diagnóstico — a
 ## 5. Segurança: `go_autorizado` e RPC do Diagnóstico
 
 - **`go_autorizado` / `go_autorizado_por`:** RESOLVIDO e **verificado em produção** (consulta somente-leitura em 2026-10-09: `trg_implantacao_checklists_proteger_go`, `BEFORE INSERT OR UPDATE`, habilitado, SECURITY DEFINER). Evidência local da correção: smoke de 13 checks.
-- **RPC `pdv_diagnostico_pre_producao` aceitando GERENTE no banco:** **PENDENTE em produção.** PR isolado **#521** com migration `20261009150000` (lê a definição vigente, troca só a lista de perfis, aborta se o guard não bater 1x) + smoke. Evidência local: antes GERENTE 200, depois 403. **Não mergeado e não aplicado** — requer autorização expressa (merge para `main` pode ser seguido de aplicação manual; mantive em aberto de propósito). Smoke do #521 só foi re-executado antes do último ajuste (provisionamento de senhas): após esse ajuste houve apenas `node --check`, pois o stack local já havia sido encerrado.
+- **RPC `pdv_diagnostico_pre_producao` aceitando GERENTE no banco:** **RESOLVIDO em produção** (2026-10-09, com autorização expressa). #521 mergeado (`c18a99de`); migration aplicada via MCP (versão remota `20261009115256`). Pré-check: guard antigo 1x; pós-aplicação: guard `DONO, ADMIN` 1x, grants inalterados (consulta de catálogo). Prova funcional (GERENTE 200 → 403) feita no stack local; **não** foi exercitada com login real em produção. Rollback no cabeçalho da migration.
 
 ## 6. Ambiente local
 
@@ -60,13 +63,12 @@ Abertos, não mergeados: **#521** (migration de segurança do Diagnóstico — a
 
 - #519 (`bec8a261`): deploy `dpl_FajKU4TT…` **READY** (production). `/login` 200; `/admin/relatorios` sem sessão → 307 para login (esperado).
 - #520 (`b943b548`): deploy `dpl_HkSaNGiN…` **READY** (production, alias `www.jinlong.app`, `aliasError: null`). `/login` 200; `/admin/relatorios` sem sessão → 307 para login. A renderização autenticada em produção **não** foi exercitada (sem credenciais reais, por regra); a verificação funcional foi feita no stack local.
-- Migration #516 aplicada em produção com autorização; nenhuma outra migration foi aplicada nesta rodada.
+- Migrations aplicadas em produção nesta sprint, ambas com autorização expressa: #516 (trigger do GO-LIVE) e #521 (guard do Diagnóstico).
 
 ## 8. Pendências, responsáveis e próximos passos
 
 | Pendência | Responsável | Próximo passo |
 |---|---|---|
-| Autorizar merge/aplicação do #521 | Dono do produto | Decidir; aplicar migration com pré-checagem e rollback documentado |
 | N1 — guard nas RPCs de relatório | Backend | Migration + smoke por perfil; mapear chamadores |
 | Revisão de termos financeiros em 中文 | Falante nativo / negócio | Revisar `lib/i18n/execTexts.ts` |
 | Ambiente Supabase isolado para previews do ERP | Infra | Criar projeto isolado (auth + dados fictícios) antes de reabilitar previews |
@@ -75,4 +77,4 @@ Abertos, não mergeados: **#521** (migration de segurança do Diagnóstico — a
 
 ## 9. Decisão
 
-**GO COM RESSALVAS** para encerrar a sprint de navegação/relatórios/i18n: funcionalidades previstas entregues e verificadas, gates cumpridos. As ressalvas são **N1 (aberto, médio)** e **#521 (aguardando autorização)** — devem ser as primeiras tarefas antes de iniciar Multiempresa/Multiloja.
+**GO COM RESSALVA** para encerrar a sprint de navegação/relatórios/i18n: funcionalidades previstas entregues e verificadas, gates cumpridos, achados de autorização do GO-LIVE e do Diagnóstico encerrados em produção. A ressalva é o **N1 (aberto, médio)** — deve ser a primeira tarefa antes de iniciar Multiempresa/Multiloja.
