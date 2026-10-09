@@ -2837,6 +2837,7 @@
     "hub_aria_catalogo": "目录分区",
     "hub_aria_estoque": "库存分区",
     "hub_aria_financeiro": "财务分区",
+    "restrito_dono_admin": "此区域仅限店主和 FastProduct 团队（ADMIN）。",
     "relatorios_link_visao_geral": "总览",
     "dashboard_link_relatorios_hint": "按期间、ABC 与毛利分析",
     "catalogo_subtitulo": "店铺已注册商品",
