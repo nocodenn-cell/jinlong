@@ -1,5 +1,6 @@
 'use client'
 
+import { OperationalHubNav } from '@/components/ui/admin-v2/OperationalHubNav'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, FilterX } from 'lucide-react'
@@ -253,6 +254,7 @@ export function ComprasContent({
   return (
     <>
       <PageHeader title={c.titulo} subtitle={c.subtitulo} />
+      <OperationalHubNav hub="compras" />
 
       <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4 [&>*]:min-w-0">
         <MetricCard label={c.kpi_rascunho} value={String(kpisIniciais.total_rascunho)} icon="list-filter" tone="gold" />

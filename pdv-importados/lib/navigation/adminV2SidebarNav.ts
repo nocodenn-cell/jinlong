@@ -29,13 +29,16 @@ export type AdminV2NavItem = {
   hint?: string
   /** Exibir só para perfil ADMIN (equipe interna FastProduct). */
   adminOnly?: boolean
+  /** Rotas irmãs (abas do hub) que também marcam este item como ativo. */
+  alsoActivePaths?: readonly string[]
 }
 
 /**
- * Destino principal da sidebar. `href` é a página padrão do grupo; `children` são as
- * OUTRAS páginas do mesmo assunto (nunca repetem o `href` do pai) e só aparecem
- * quando o grupo está aberto. Rotas e permissões não mudam — é só agrupamento
- * de acesso (UX-IA-01, PR 1).
+ * Destino principal da sidebar. `href` é a página padrão do grupo. Páginas irmãs ficam em
+ * barra de abas dentro da página (hubs: ver `operationalHubNav.ts`, `catalogoHubNav.ts`, ...);
+ * `children` só existe onde NÃO há barra de abas (Relatórios, Financeiro > Comissões,
+ * Configurações > Suspensão) e nunca repete o `href` do pai. Só aparecem com o grupo aberto.
+ * Rotas e permissões não mudam (UX-IA-01).
  */
 export type AdminV2NavDestination = AdminV2NavItem & {
   icon: LucideIcon
@@ -61,16 +64,8 @@ export const ADMIN_V2_DESTINATIONS: readonly AdminV2NavDestination[] = [
     icon: ShoppingCart,
     labelOverridePt: 'Vendas',
     dictKey: 'vendas',
-    hint: 'Listagem operacional de vendas, comprovantes e cancelamentos.',
-    children: [
-      {
-        id: 'caixas',
-        href: ROUTES.admin.caixas,
-        labelOverridePt: 'Caixas',
-        labelCn: '收银历史',
-        hint: 'Histórico de abertura, fechamento e divergência de turnos.',
-      },
-    ],
+    alsoActivePaths: [ROUTES.admin.caixas],
+    hint: 'Vendas e histórico de caixas (abas na página).',
   },
   {
     id: 'produtos',
@@ -78,6 +73,7 @@ export const ADMIN_V2_DESTINATIONS: readonly AdminV2NavDestination[] = [
     icon: Tag,
     labelOverridePt: 'Produtos',
     dictKey: 'produtos',
+    alsoActivePaths: [ROUTES.admin.categoriasProdutos, ROUTES.admin.marcasProdutos],
     hint: 'Produtos, categorias, marcas e etiquetas (abas na página).',
   },
   {
@@ -94,15 +90,8 @@ export const ADMIN_V2_DESTINATIONS: readonly AdminV2NavDestination[] = [
     icon: ClipboardList,
     labelOverridePt: 'Compras',
     dictKey: 'compras',
-    hint: 'Pedidos de compra e fornecedores.',
-    children: [
-      {
-        id: 'fornecedores',
-        href: ROUTES.admin.fornecedores,
-        labelOverridePt: 'Fornecedores',
-        dictKey: 'fornecedores',
-      },
-    ],
+    alsoActivePaths: [ROUTES.admin.fornecedores],
+    hint: 'Pedidos de compra e fornecedores (abas na página).',
   },
   {
     id: 'financeiro',
@@ -110,6 +99,7 @@ export const ADMIN_V2_DESTINATIONS: readonly AdminV2NavDestination[] = [
     icon: Banknote,
     labelOverridePt: 'Financeiro',
     dictKey: 'financeiro',
+    alsoActivePaths: [ROUTES.admin.categoriasFinanceiras],
     hint: 'Contas a receber e pagar, conciliação e fiscal (abas na página).',
     children: [
       {
@@ -126,16 +116,8 @@ export const ADMIN_V2_DESTINATIONS: readonly AdminV2NavDestination[] = [
     icon: Users,
     labelOverridePt: 'Pessoas',
     dictKey: 'pessoas',
-    hint: 'Clientes e funcionários da loja.',
-    children: [
-      {
-        id: 'funcionarios',
-        href: ROUTES.admin.funcionarios,
-        labelOverridePt: 'Funcionários',
-        dictKey: 'funcionarios',
-        hint: 'Cadastro de operadores e gerentes da loja.',
-      },
-    ],
+    alsoActivePaths: [ROUTES.admin.funcionarios],
+    hint: 'Clientes e funcionários (abas na página).',
   },
   {
     id: 'relatorios',

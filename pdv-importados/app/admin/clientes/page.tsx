@@ -1,4 +1,5 @@
 import { PageHeader } from '@/components/ui/admin-v2'
+import { OperationalHubNav } from '@/components/ui/admin-v2/OperationalHubNav'
 import { buscarClientesPaginadosAction } from '@/app/admin/clientes/actions'
 import { ClientesListClient } from '@/app/gerente/clientes/ClientesListClient'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
@@ -28,6 +29,7 @@ export default async function AdminClientesPage() {
         subtitle={messages.clientes.subtitulo}
         className="mb-3 border-b border-[var(--color-border)] pb-3"
       />
+      <OperationalHubNav hub="pessoas" />
       <ClientesListClient
         idioma={legacyIdioma}
         locale={locale}

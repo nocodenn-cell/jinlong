@@ -96,18 +96,39 @@ describe('SidebarNav — perfil DONO/GERENTE (cliente)', () => {
   })
 
   it('sub-links só aparecem com o grupo aberto (rota atual dentro do grupo)', () => {
-    expect(renderMenu(false)).not.toContain(ROUTES.admin.caixas)
-    currentPathname = ROUTES.admin.vendas
+    expect(renderMenu(false)).not.toContain(ROUTES.admin.comissoes)
+    currentPathname = ROUTES.admin.financeiro
     const hrefs = renderMenu(false)
-    expect(hrefs).toContain(ROUTES.admin.caixas)
-    expect(container.querySelector('[data-nav-children-of="vendas"]')).not.toBeNull()
+    expect(hrefs).toContain(ROUTES.admin.comissoes)
+    expect(container.querySelector('[data-nav-children-of="financeiro"]')).not.toBeNull()
   })
 
-  it('estando em Caixas, o grupo Vendas permanece aberto e Caixas fica ativo', () => {
-    currentPathname = ROUTES.admin.caixas
-    renderMenu(false)
-    const ativo = container.querySelector('[aria-current="page"]')
-    expect(ativo?.getAttribute('href')).toBe(ROUTES.admin.caixas)
+  it('Caixas, Fornecedores e Funcionários não são links da sidebar (vivem na barra de abas)', () => {
+    for (const path of [ROUTES.admin.vendas, ROUTES.admin.caixas, ROUTES.admin.compras, ROUTES.admin.clientes]) {
+      currentPathname = path
+      const hrefs = renderMenu(false)
+      expect(hrefs).not.toContain(ROUTES.admin.caixas)
+      expect(hrefs).not.toContain(ROUTES.admin.fornecedores)
+      expect(hrefs).not.toContain(ROUTES.admin.funcionarios)
+    }
+  })
+
+  it('em páginas irmãs de um hub, o destino do grupo fica ativo', () => {
+    const casos: Array<[string, string]> = [
+      [ROUTES.admin.caixas, ROUTES.admin.vendas],
+      [ROUTES.admin.fornecedores, ROUTES.admin.compras],
+      [ROUTES.admin.funcionarios, ROUTES.admin.clientes],
+      [ROUTES.admin.categoriasProdutos, ROUTES.admin.catalogo],
+      [ROUTES.admin.marcasProdutos, ROUTES.admin.catalogo],
+      [ROUTES.admin.categoriasFinanceiras, ROUTES.admin.financeiro],
+      [ROUTES.admin.estoqueRecebimento, ROUTES.admin.estoque],
+    ]
+    for (const [path, destino] of casos) {
+      currentPathname = path
+      renderMenu(false)
+      const ativo = container.querySelector('[aria-current="page"]')
+      expect(ativo?.getAttribute('href'), path).toBe(destino)
+    }
   })
 
   it('Relatórios aberto expõe views, Auditoria e o detalhe clássico', () => {

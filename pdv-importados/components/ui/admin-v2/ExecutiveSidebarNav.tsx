@@ -45,6 +45,13 @@ const LINK_BASE =
   'admin-v2-nav-link flex items-center gap-3 rounded-full border border-transparent px-3 py-2.5 ' +
   'data-[active=true]:border-[rgba(251,191,36,0.35)] data-[active=true]:bg-[rgba(251,191,36,0.1)] data-[active=true]:text-[var(--color-brand-primary)]'
 
+function isItemActive(item: AdminV2NavItem, pathname: string, search: string): boolean {
+  return (
+    isAdminNavActive(pathname, search, item.href) ||
+    (item.alsoActivePaths ?? []).some((p) => pathname === p || pathname.startsWith(`${p}/`))
+  )
+}
+
 function NavItemLink({
   item,
   ctx,
@@ -61,7 +68,7 @@ function NavItemLink({
   nested?: boolean
 }) {
   const badgeCount = item.id === 'estoque' ? stockAlertCount : undefined
-  const active = isAdminNavActive(pathname, search, item.href)
+  const active = isItemActive(item, pathname, search)
   const Icon = item.icon
   const { primary, secondary, hintText } = resolveLabels(item, ctx)
 
@@ -106,8 +113,8 @@ function DestinationGroup({
   // a URL é a fonte de verdade, então o menu nunca fica fora de sincronia com a tela.
   const open =
     children.length > 0 &&
-    (isAdminNavActive(pathname, search, destination.href) ||
-      children.some((c) => isAdminNavActive(pathname, search, c.href)))
+    (isItemActive(destination, pathname, search) ||
+      children.some((c) => isItemActive(c, pathname, search)))
   const linkProps = { ctx, stockAlertCount, pathname, search }
 
   return (

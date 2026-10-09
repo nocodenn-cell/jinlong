@@ -6,11 +6,10 @@
  */
 
 import Link from 'next/link'
-import { Suspense, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   ChartCard,
-  ExecutiveAnalyticsHubNav,
   ExecutivePageHeader,
   MetricCard,
   SectionCard,
@@ -694,10 +693,6 @@ export function RelatoriosContent({
           { id: 'export-csv', label: 'Exportar (via filtros)', disabled: true },
         ]}
       />
-
-      <Suspense fallback={null}>
-        <ExecutiveAnalyticsHubNav activeView={activeExecView ?? undefined} />
-      </Suspense>
 
       {dados.rpcErro ? (
         <ErrorState title={labels.erroTitulo} description={dados.rpcErro} dense className="mb-6" />
