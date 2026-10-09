@@ -1,5 +1,6 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import Link from 'next/link'
 import {
   DashboardGrid,
@@ -22,6 +23,8 @@ import type { RelatorioSemGiroDTO } from '@/app/gerente/relatorios/sem-giro/acti
 import { formatDiasCobertura, sortCoberturaUrgente, sortReposicaoPorDeficit } from '../relatoriosUi'
 
 type Props = {
+  /** Seções migradas do relatório clássico (UX-IA-01 D1/D2); ausentes em testes. */
+  extra?: ReactNode
   curvaAbc: readonly RelatorioCurvaAbcDTO[]
   semGiro: readonly RelatorioSemGiroDTO[]
   baixo: readonly RelatorioEstoqueBaixoDTO[]
@@ -38,6 +41,7 @@ export function ExecProdutosEstoquePanel({
   baixo,
   cobertura,
   locale,
+  extra,
 }: Props) {
   const reposicao = sortReposicaoPorDeficit([...baixo]).slice(0, 20)
   const coberturaUrgente = sortCoberturaUrgente([...cobertura]).slice(0, 15)
@@ -162,6 +166,12 @@ export function ExecProdutosEstoquePanel({
                     cell: (r) => String(r.quantidade_atual),
                   },
                   {
+                    id: 'imob',
+                    header: 'Valor imobilizado',
+                    numeric: true,
+                    cell: (r) => formatBRL(r.valor_imobilizado),
+                  },
+                  {
                     id: 'ult',
                     header: 'Ult. venda',
                     cell: (r) =>
@@ -221,6 +231,12 @@ export function ExecProdutosEstoquePanel({
                   cell: (r) => String(r.quantidadeAtual),
                 },
                 {
+                  id: 'media',
+                  header: 'Média/dia',
+                  numeric: true,
+                  cell: (r) => r.mediaDiariaVendida.toFixed(2),
+                },
+                {
                   id: 'dias',
                   header: 'Cobertura',
                   numeric: true,
@@ -237,6 +253,7 @@ export function ExecProdutosEstoquePanel({
           </SectionCard>
         }
       />
+      {extra}
     </div>
   )
 }

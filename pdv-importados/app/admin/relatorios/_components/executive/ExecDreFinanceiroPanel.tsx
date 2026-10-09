@@ -1,5 +1,6 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import Link from 'next/link'
 import {
   DashboardGrid,
@@ -17,6 +18,8 @@ import type { RelatorioResumoExecutivoDTO } from '@/app/gerente/relatorios/actio
 import type { FinanceiroPainel } from '@/app/admin/financeiro/financeiroLojaTypes'
 
 type Props = {
+  /** Seções migradas do relatório clássico (UX-IA-01 D1/D2); ausentes em testes. */
+  extra?: ReactNode
   faturamentoBruto: number
   receitaLiquida: number
   devolucoes: number
@@ -50,6 +53,7 @@ export function ExecDreFinanceiroPanel({
   periodoAte,
   financeiro,
   financeiroErro,
+  extra,
 }: Props) {
   const gerencial = financeiro?.resultado_gerencial
   const cmv = gerencial?.custo_conhecido ?? null
@@ -267,6 +271,7 @@ export function ExecDreFinanceiroPanel({
           </>
         }
       />
+      {extra}
       <p className="text-caption text-fg-subtle">
         Operacao de titulos permanece em{' '}
         <Link href={ROUTES.admin.financeiro} className="underline">

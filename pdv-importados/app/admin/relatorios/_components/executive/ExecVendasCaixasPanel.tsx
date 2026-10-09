@@ -1,5 +1,6 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import {
@@ -23,6 +24,8 @@ import { formatarPercentual } from '@/lib/vendas/metricasVendas'
 import { agruparVendasPorHora, picoDeVendas } from './vendasPorHora'
 
 type Props = {
+  /** Seções migradas do relatório clássico (UX-IA-01 D1/D2); ausentes em testes. */
+  extra?: ReactNode
   vendas: readonly VendaReportRow[]
   vendasErro: string | null
   resumo: RelatorioResumoExecutivoDTO
@@ -53,6 +56,7 @@ export function ExecVendasCaixasPanel({
   caixasResumo,
   caixasLinhas = [],
   caixasErro,
+  extra,
 }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const selected = useMemo(
@@ -103,6 +107,7 @@ export function ExecVendasCaixasPanel({
 
   return (
     <div data-testid="exec-vendas-caixas" className="admin-v2-stack">
+      {extra}
       <DashboardGrid
         kpis={<KpiStrip items={kpis} />}
         main={
@@ -152,6 +157,11 @@ export function ExecVendasCaixasPanel({
                       id: 'quando',
                       header: 'Data',
                       cell: (r) => formatDateTimeOrDash(r.data, locale, 'short'),
+                    },
+                    {
+                      id: 'cliente',
+                      header: 'Cliente',
+                      cell: (r) => r.cliente_nome ?? '—',
                     },
                     {
                       id: 'op',
