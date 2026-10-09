@@ -148,13 +148,6 @@ export const ADMIN_V2_DESTINATIONS: readonly AdminV2NavDestination[] = [
         dictKey: 'auditoria',
         hint: 'Linha do tempo de eventos operacionais.',
       },
-      {
-        id: 'relatorios-detalhe',
-        href: ROUTES.admin.relatorios,
-        labelOverridePt: 'Detalhe por domínio',
-        dictKey: 'relatoriosDetalhe',
-        hint: 'Abas clássicas de detalhe (Produtos, Estoque, Margem, Vendas).',
-      },
     ],
   },
   {

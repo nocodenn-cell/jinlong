@@ -138,7 +138,7 @@ describe('SidebarNav — perfil DONO/GERENTE (cliente)', () => {
     }
   })
 
-  it('Relatórios aberto expõe views, Auditoria e o detalhe clássico', () => {
+  it('Relatórios aberto expõe as views e Auditoria (sem o detalhe clássico)', () => {
     currentPathname = ROUTES.admin.relatorios
     currentSearch = 'view=dre-financeiro'
     const hrefs = renderMenu(false)
@@ -146,7 +146,7 @@ describe('SidebarNav — perfil DONO/GERENTE (cliente)', () => {
     expect(hrefs).toContain(executiveRelatoriosHref('produtos-estoque'))
     expect(hrefs).toContain(executiveRelatoriosHref('crm-auditoria'))
     expect(hrefs).toContain(ROUTES.admin.auditoria)
-    expect(hrefs).toContain(ROUTES.admin.relatorios)
+    expect(hrefs).not.toContain(ROUTES.admin.relatorios)
   })
 
   it('catálogo e estoque entram pelo hub, não por taxonomias soltas', () => {

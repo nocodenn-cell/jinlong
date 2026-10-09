@@ -189,7 +189,15 @@ export function ExecProdutosEstoquePanel({
                 rowKey={(r) => r.id}
                 empty={<EmptyState title="Nenhum item abaixo do minimo" className="py-4" />}
                 columns={[
-                  { id: 'nome', header: 'Produto', cell: (r) => r.nome },
+                  {
+                    id: 'nome',
+                    header: 'Produto',
+                    cell: (r) => (
+                      <Link href={adminCatalogoCompletoEditarHref(r.id)} className="hover:underline">
+                        {r.nome}
+                      </Link>
+                    ),
+                  },
                   {
                     id: 'def',
                     header: 'Deficit',
@@ -223,7 +231,15 @@ export function ExecProdutosEstoquePanel({
               rowKey={(r) => `${r.produtoId}-${r.lojaId}`}
               empty={<EmptyState title="Sem cobertura calculada" className="py-4" />}
               columns={[
-                { id: 'nome', header: 'Produto', cell: (r) => r.nome },
+                {
+                  id: 'nome',
+                  header: 'Produto',
+                  cell: (r) => (
+                    <Link href={adminCatalogoCompletoEditarHref(r.produtoId)} className="hover:underline">
+                      {r.nome}
+                    </Link>
+                  ),
+                },
                 {
                   id: 'qtd',
                   header: 'Saldo',

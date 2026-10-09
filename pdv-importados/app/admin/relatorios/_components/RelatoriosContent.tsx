@@ -2,29 +2,17 @@
 
 /**
  * FastProduct Admin — RelatoriosContent
- * Apresentação da tela de relatórios (KPIs, gráficos, abas). Sem alteração de contratos.
+ * Apresentação da tela de relatórios: sempre uma das 4 views executivas (`?view=`).
+ * O relatório clássico por abas foi aposentado (UX-IA-01 PR 7).
  */
 
-import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import {
-  ExecutivePageHeader,
-  MetricCard,
-  SectionCard,
-} from '@/components/ui/admin-v2'
-import {
-  isExecutiveRelatoriosView,
-  parseExecutiveView,
-  type ExecutiveRelatoriosViewId,
-  type ExecutiveViewId,
-} from '@/lib/navigation/executiveViews'
+import { useMemo, useState } from 'react'
+import { ExecutivePageHeader } from '@/components/ui/admin-v2'
+import type { ExecutiveRelatoriosViewId } from '@/lib/navigation/executiveViews'
 import { ExecutiveDomainView } from './executive/ExecutiveDomainView'
 import type { ExecutiveExtras } from './executive/executiveExtras'
-import { EmptyState, ErrorState } from '@/components/ui/feedback'
-import { formatBRL, formatPercent } from '@/lib/format/money'
-import { formatDateTimeOrDash } from '@/lib/format/datetime'
-import { ROUTES, adminCatalogoCompletoEditarHref, adminVendaDetalheQuery } from '@/lib/navigation/routes'
+import { ErrorState } from '@/components/ui/feedback'
+import { ROUTES } from '@/lib/navigation/routes'
 import type {
   RelatorioVendaDiaDTO,
   RelatorioTopProdDTO,
@@ -38,29 +26,10 @@ import type {
 import type { RelatorioSemGiroDTO } from '@/app/gerente/relatorios/sem-giro/actions'
 import type { VendaReportRow } from '@/app/gerente/relatorios/vendas/actions'
 import type { PeriodoRelatorioResolvido } from '@/lib/relatorios/periodoRelatorio'
-import {
-  DivergenciaEstoqueList,
-  FaturamentoPorDiaCard,
-  MargemPorVendaList,
-  StatusVendasCard,
-  TopProdutosList,
-} from './RelatoriosSections'
 import { RelatoriosPeriodFilters } from './RelatoriosPeriodFilters'
 import type { RelatoriosFiltrosLabels } from './RelatoriosPeriodFilters'
 import { KardexSheet, type KardexAlvo, type KardexLabels } from '@/app/admin/estoque/_components/KardexSheet'
-import {
-  avisoPeriodoVisivel,
-  formatDiasCobertura,
-  parseRelatoriosTab,
-  RELATORIOS_TAB_IDS,
-  sortCoberturaUrgente,
-  sortPorDiaAsc,
-  sortReposicaoPorDeficit,
-  sumFaturamento,
-  ticketMedio,
-  type RelatoriosTabId,
-} from './relatoriosUi'
-import { formatarPercentual } from '@/lib/vendas/metricasVendas'
+import { avisoPeriodoVisivel, sortPorDiaAsc } from './relatoriosUi'
 
 export type RelatoriosDados = {
   periodo: PeriodoRelatorioResolvido
@@ -176,278 +145,6 @@ function avisoCopy(aviso: ReturnType<typeof avisoPeriodoVisivel>, labels: Relato
   return labels.avisoPeriodoLimitado
 }
 
-function EstoqueReposicaoList({
-  baixo,
-  labels,
-}: {
-  baixo: RelatorioEstoqueBaixoDTO[]
-  labels: RelatoriosLabels
-}) {
-  const ordenado = sortReposicaoPorDeficit(baixo).slice(0, 12)
-  if (ordenado.length === 0) return <EmptyState title={labels.vazioEstoque} className="py-8" />
-  return (
-    <div className="space-y-2">
-      <div className="flex justify-end">
-        <Link href={ROUTES.admin.estoque} className="text-caption font-medium text-[var(--color-info)] underline-offset-2 hover:underline">
-          {labels.linkAbrirEstoque}
-        </Link>
-      </div>
-      {ordenado.map((item) => {
-        const minZero = Number(item.estoque_minimo) <= 0
-        return (
-          <Link
-            key={item.id}
-            href={adminCatalogoCompletoEditarHref(item.id)}
-            className="flex items-center justify-between rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-background-secondary)] px-3 py-2 transition-colors hover:border-[var(--color-border)]"
-          >
-            <div className="min-w-0">
-              <p className="truncate text-small font-medium text-jl-fg-1">{item.nome}</p>
-              <p className="text-caption text-jl-fg-3">
-                {labels.saldoMinTemplate
-                  .replace('{{atual}}', String(item.quantidade_atual))
-                  .replace('{{min}}', String(item.estoque_minimo))}
-                {minZero ? ` · ${labels.minZeroHint}` : ''}
-              </p>
-            </div>
-            <span className="admin-v2-badge-warning shrink-0 rounded-full px-2 py-1 text-caption">
-              {labels.reporTemplate.replace('{{n}}', String(item.deficit))}
-            </span>
-          </Link>
-        )
-      })}
-    </div>
-  )
-}
-
-const CLASSE_ABC_BADGE: Record<'A' | 'B' | 'C', string> = {
-  A: 'admin-v2-badge-gold',
-  B: 'admin-v2-badge-muted',
-  C: 'admin-v2-badge-muted',
-}
-
-function CurvaAbcList({
-  produtos,
-  labels,
-}: {
-  produtos: RelatorioCurvaAbcDTO[]
-  labels: RelatoriosLabels
-}) {
-  if (produtos.length === 0) return <EmptyState title={labels.vazioCurvaAbc} className="py-8" />
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-small">
-        <thead>
-          <tr className="border-b border-[var(--color-border-secondary)] text-left text-caption text-jl-fg-3">
-            <th className="py-1.5 pr-3 font-medium">{labels.curvaAbcColNome}</th>
-            <th className="py-1.5 pr-3 text-right font-medium">{labels.curvaAbcColValor}</th>
-            <th className="py-1.5 pr-3 text-right font-medium">{labels.curvaAbcColParticipacao}</th>
-            <th className="py-1.5 pr-3 text-right font-medium">{labels.curvaAbcColAcumulado}</th>
-            <th className="py-1.5 pr-3 text-right font-medium">{labels.curvaAbcColClasse}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {produtos.slice(0, 30).map((p) => (
-            <tr key={p.produtoId} className="border-b border-[var(--color-background-tertiary)]">
-              <td className="max-w-[220px] truncate py-1.5 pr-3 text-jl-fg-1">
-                <Link href={adminCatalogoCompletoEditarHref(p.produtoId)} className="hover:underline">
-                  {p.nome}
-                </Link>
-              </td>
-              <td className="py-1.5 pr-3 text-right text-jl-fg-2">{formatBRL(p.totalValor)}</td>
-              <td className="py-1.5 pr-3 text-right text-jl-fg-2">{formatPercent(p.percentualValor / 100, labels.locale)}</td>
-              <td className="py-1.5 pr-3 text-right text-jl-fg-3">{formatPercent(p.percentualAcumulado / 100, labels.locale)}</td>
-              <td className="py-1.5 pr-3 text-right">
-                <span
-                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-caption font-medium leading-none ${CLASSE_ABC_BADGE[p.classeAbc]}`}
-                >
-                  {p.classeAbc}
-                </span>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
-}
-
-function CoberturaEstoqueList({
-  itens,
-  labels,
-}: {
-  itens: RelatorioCoberturaEstoqueDTO[]
-  labels: RelatoriosLabels
-}) {
-  const comCobertura = sortCoberturaUrgente(itens).slice(0, 15)
-  if (comCobertura.length === 0) {
-    return <EmptyState title={labels.vazioCoberturaEstoque} className="py-8" />
-  }
-  return (
-    <div className="space-y-2">
-      <p className="text-caption italic text-jl-fg-3">{labels.coberturaEstoqueHint}</p>
-      {comCobertura.map((i) => (
-        <Link
-          key={`${i.produtoId}-${i.lojaId}`}
-          href={adminCatalogoCompletoEditarHref(i.produtoId)}
-          className="flex items-center justify-between rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-background-secondary)] px-3 py-2 transition-colors hover:border-[var(--color-border)]"
-        >
-          <div className="min-w-0">
-            <p className="truncate text-small font-medium text-jl-fg-1">{i.nome}</p>
-            <p className="text-caption text-jl-fg-3">
-              {labels.coberturaEstoqueColAtual}: {i.quantidadeAtual} ·{' '}
-              {labels.coberturaEstoqueColMedia}: {i.mediaDiariaVendida.toFixed(2)}/dia
-            </p>
-          </div>
-          <span className="admin-v2-badge-muted shrink-0 rounded-full px-2 py-1 text-caption">
-            {formatDiasCobertura(i.diasCobertura ?? 0, {
-              dias: labels.coberturaEstoqueColDias,
-              diasCap: labels.coberturaEstoqueDiasCap,
-            })}
-          </span>
-        </Link>
-      ))}
-    </div>
-  )
-}
-
-function SemGiroList({
-  itens,
-  labels,
-}: {
-  itens: RelatorioSemGiroDTO[]
-  labels: RelatoriosLabels
-}) {
-  if (itens.length === 0) return <EmptyState title={labels.vazioSemGiro} className="py-8" />
-  return (
-    <div className="space-y-2">
-      <p className="text-caption italic text-jl-fg-3">{labels.semGiroHint}</p>
-      <div className="overflow-x-auto">
-        <table className="w-full text-small">
-          <thead>
-            <tr className="border-b border-[var(--color-border-secondary)] text-left text-caption text-jl-fg-3">
-              <th className="py-1.5 pr-3 font-medium">{labels.curvaAbcColNome}</th>
-              <th className="py-1.5 pr-3 text-right font-medium">{labels.semGiroColSaldo}</th>
-              <th className="py-1.5 pr-3 text-right font-medium">{labels.semGiroColValor}</th>
-              <th className="py-1.5 pr-3 font-medium">{labels.semGiroColUltimaVenda}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {itens.slice(0, 30).map((p) => (
-              <tr key={p.produto_id} className="border-b border-[var(--color-background-tertiary)]">
-                <td className="max-w-[220px] truncate py-1.5 pr-3 text-jl-fg-1">
-                  <Link href={adminCatalogoCompletoEditarHref(p.produto_id)} className="hover:underline">
-                    {p.nome}
-                  </Link>
-                </td>
-                <td className="py-1.5 pr-3 text-right tabular-nums text-jl-fg-2">{p.quantidade_atual}</td>
-                <td className="py-1.5 pr-3 text-right tabular-nums text-jl-fg-1">
-                  {formatBRL(p.valor_imobilizado)}
-                </td>
-                <td className="py-1.5 pr-3 text-jl-fg-3">
-                  {p.ultima_venda ? formatDateTimeOrDash(p.ultima_venda, labels.locale, 'short') : labels.semGiroNuncaVendeu}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  )
-}
-
-function VendasDetalheList({
-  vendas,
-  labels,
-}: {
-  vendas: VendaReportRow[]
-  labels: RelatoriosLabels
-}) {
-  if (vendas.length === 0) return <EmptyState title={labels.vazioVendasDetalhe} className="py-8" />
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-small">
-        <thead>
-          <tr className="border-b border-[var(--color-border-secondary)] text-left text-caption text-jl-fg-3">
-            <th className="py-1.5 pr-3 font-medium">{labels.vendasColData}</th>
-            <th className="py-1.5 pr-3 font-medium">{labels.vendasColCliente}</th>
-            <th className="py-1.5 pr-3 font-medium">{labels.vendasColVendedor}</th>
-            <th className="py-1.5 pr-3 font-medium">{labels.vendasColForma}</th>
-            <th className="py-1.5 pr-3 text-right font-medium">{labels.vendasColValor}</th>
-            <th className="py-1.5 pr-3 font-medium">{labels.vendasColStatus}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {vendas.slice(0, 100).map((v) => (
-            <tr key={v.id} className="border-b border-[var(--color-background-tertiary)]">
-              <td className="py-1.5 pr-3 text-jl-fg-2">
-                <Link href={adminVendaDetalheQuery(v.id)} className="hover:underline">
-                  {v.data ? formatDateTimeOrDash(v.data, labels.locale, 'short') : '—'}
-                </Link>
-              </td>
-              <td className="max-w-[180px] truncate py-1.5 pr-3 text-jl-fg-1">
-                {v.cliente_nome ?? labels.vendasSemCliente}
-              </td>
-              <td className="max-w-[160px] truncate py-1.5 pr-3 text-jl-fg-2">{v.vendedor_nome ?? '—'}</td>
-              <td className="py-1.5 pr-3 text-jl-fg-2">{v.forma_pagamento ?? '—'}</td>
-              <td className="py-1.5 pr-3 text-right tabular-nums text-jl-fg-1">{formatBRL(v.total_liquido)}</td>
-              <td className="py-1.5 pr-3">
-                <span
-                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-caption font-medium leading-none ${
-                    v.status === 'CANCELADA' ? 'admin-v2-badge-muted' : 'admin-v2-badge-gold'
-                  }`}
-                >
-                  {v.status}
-                </span>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
-}
-
-function RelatoriosTabs({
-  active,
-  labels,
-  onChange,
-}: {
-  active: RelatoriosTabId
-  labels: RelatoriosLabels
-  onChange: (tab: RelatoriosTabId) => void
-}) {
-  const tabLabels: Record<RelatoriosTabId, string> = {
-    visao: labels.tabVisao,
-    produtos: labels.tabProdutos,
-    estoque: labels.tabEstoque,
-    margem: labels.tabMargem,
-    vendas: labels.tabVendas,
-  }
-  return (
-    <div
-      className="admin-v2-segmented admin-v2-print-hide flex flex-wrap gap-1"
-      role="tablist"
-      aria-label={labels.tabsAria}
-    >
-      {RELATORIOS_TAB_IDS.map((tab) => (
-        <button
-          key={tab}
-          type="button"
-          role="tab"
-          id={`relatorios-tab-${tab}`}
-          aria-selected={active === tab}
-          aria-controls={`relatorios-panel-${tab}`}
-          data-active={active === tab}
-          className="admin-v2-filter-pill rounded-full px-3 py-1.5 text-caption font-medium transition-colors"
-          onClick={() => onChange(tab)}
-        >
-          {tabLabels[tab]}
-        </button>
-      ))}
-    </div>
-  )
-}
-
 const EXEC_VIEW_TITLE: Record<ExecutiveRelatoriosViewId, string> = {
   'vendas-caixas': 'Vendas & Caixas',
   'dre-financeiro': 'DRE & Financeiro',
@@ -458,27 +155,17 @@ const EXEC_VIEW_TITLE: Record<ExecutiveRelatoriosViewId, string> = {
 export function RelatoriosContent({
   dados,
   labels,
-  initialTab,
-  initialView,
+  view,
   executiveExtras,
 }: {
   dados: RelatoriosDados
   labels: RelatoriosLabels
-  initialTab?: string
-  /** Aba executiva via `?view=` (hub analytics). */
-  initialView?: string
-  /** Dados extras (caixas / financeiro) para abas Fase 2. */
+  /** Aba executiva via `?view=` (a página redireciona valores ausentes/legados antes de chegar aqui). */
+  view: ExecutiveRelatoriosViewId
+  /** Dados extras (caixas / financeiro) para as abas executivas. */
   executiveExtras?: ExecutiveExtras
 }) {
-  const router = useRouter()
-  const [tab, setTab] = useState<RelatoriosTabId>(() => parseRelatoriosTab(initialTab))
   const [kardexAlvo, setKardexAlvo] = useState<KardexAlvo | null>(null)
-  const executiveView: ExecutiveViewId = parseExecutiveView(initialView)
-  const activeExecView = isExecutiveRelatoriosView(executiveView) ? executiveView : null
-
-  useEffect(() => {
-    setTab(parseRelatoriosTab(initialTab))
-  }, [initialTab])
 
   const aviso = avisoPeriodoVisivel(dados.periodo.aviso)
   const avisoTexto = avisoCopy(aviso, labels)
@@ -491,30 +178,11 @@ export function RelatoriosContent({
     .join(' · ')
 
   const porDiaOrdenado = useMemo(() => sortPorDiaAsc(dados.porDia), [dados.porDia])
-  const faturamento = useMemo(() => sumFaturamento(porDiaOrdenado), [porDiaOrdenado])
-  const ticket = ticketMedio(faturamento, dados.resumoExecutivo.vendas_concluidas)
-  const margemValor =
-    dados.resumoExecutivo.custo_confiavel && dados.resumoExecutivo.margem_bruta_estimada != null
-      ? formatBRL(dados.resumoExecutivo.margem_bruta_estimada)
-      : labels.kpiMargemIndisponivel
-
-  function selectTab(next: RelatoriosTabId) {
-    setTab(next)
-    const q = new URLSearchParams({
-      de: dados.periodo.de,
-      ate: dados.periodo.ate,
-    })
-    if (next !== 'visao') q.set('tab', next)
-    if (activeExecView) q.set('view', activeExecView)
-    router.replace(`${ROUTES.admin.relatorios}?${q.toString()}`, { scroll: false })
-  }
-
-  const pageTitle = activeExecView ? EXEC_VIEW_TITLE[activeExecView] : labels.titulo
 
   return (
-    <div className="admin-v2-page" data-executive-view={activeExecView ?? 'legado'}>
+    <div className="admin-v2-page" data-executive-view={view}>
       <ExecutivePageHeader
-        title={pageTitle}
+        title={EXEC_VIEW_TITLE[view]}
         subtitle={periodoSubtitle}
         primaryActions={
           <button
@@ -539,8 +207,7 @@ export function RelatoriosContent({
         <RelatoriosPeriodFilters
           de={dados.periodo.de}
           ate={dados.periodo.ate}
-          tab={tab}
-          view={activeExecView ?? undefined}
+          view={view}
           csvRows={porDiaOrdenado.map((row) => ({
             dia: row.dia,
             vendas: row.num_vendas,
@@ -551,138 +218,14 @@ export function RelatoriosContent({
           labels={labels.filtros}
         />
 
-        {activeExecView ? (
-          <ExecutiveDomainView
-            view={activeExecView}
-            dados={dados}
-            extras={executiveExtras}
-            locale={labels.locale}
-            labels={labels}
-            onAbrirKardex={setKardexAlvo}
-          />
-        ) : null}
-
-        {!activeExecView && !dados.resumoExecutivo.custo_confiavel ? (
-          <p role="status" className="admin-v2-alert-warning rounded-lg px-3 py-2 text-caption">
-            {labels.custoNaoConfiavel}
-          </p>
-        ) : null}
-
-        {!activeExecView ? (
-        <div className="admin-v2-grid-kpi">
-          <MetricCard
-            label={labels.kpiFaturamento}
-            value={formatBRL(faturamento)}
-            icon="dollar-sign"
-            sparkData={porDiaOrdenado.map((r) => r.total_liquido)}
-            hint={
-              (dados.devolucoes ?? 0) > 0
-                ? `${labels.kpiDevolucoes} ${formatBRL(dados.devolucoes ?? 0)} · ${labels.kpiReceitaLiquida} ${formatBRL(dados.receitaLiquida ?? 0)}`
-                : undefined
-            }
-          />
-          <MetricCard
-            label={labels.kpiTicket}
-            value={ticket == null ? '—' : formatBRL(ticket)}
-            icon="wallet-cards"
-          />
-          <MetricCard
-            label={labels.kpiVendas}
-            value={String(dados.resumoExecutivo.vendas_concluidas)}
-            icon="shopping-bag"
-            hint={`${labels.kpiCancelamento}: ${formatarPercentual(dados.resumoExecutivo.taxa_cancelamento, labels.locale)}`}
-          />
-          <MetricCard
-            label={labels.kpiMargem}
-            value={margemValor}
-            icon="file-check-2"
-            tone={dados.resumoExecutivo.custo_confiavel ? 'gold' : 'danger'}
-            hint={dados.resumoExecutivo.custo_confiavel ? undefined : labels.custoNaoConfiavel}
-          />
-        </div>
-        ) : null}
-
-        {!activeExecView ? (
-        <RelatoriosTabs active={tab} labels={labels} onChange={selectTab} />
-        ) : null}
-
-        {!activeExecView && tab === 'visao' ? (
-          <div
-            id="relatorios-panel-visao"
-            role="tabpanel"
-            aria-labelledby="relatorios-tab-visao"
-            className="admin-v2-grid-2"
-          >
-            <FaturamentoPorDiaCard porDiaOrdenado={porDiaOrdenado} labels={labels} />
-            <StatusVendasCard resumo={dados.resumoExecutivo} labels={labels} />
-          </div>
-        ) : null}
-
-        {!activeExecView && tab === 'produtos' ? (
-          <div id="relatorios-panel-produtos" role="tabpanel" aria-labelledby="relatorios-tab-produtos">
-            <SectionCard title={labels.secTopProdutos}>
-              <TopProdutosList top={dados.top} labels={labels} />
-            </SectionCard>
-          </div>
-        ) : null}
-
-        {!activeExecView && tab === 'estoque' ? (
-          <div
-            id="relatorios-panel-estoque"
-            role="tabpanel"
-            aria-labelledby="relatorios-tab-estoque"
-            className="admin-v2-stack"
-          >
-            <SectionCard title={labels.secEstoqueReposicao}>
-              <EstoqueReposicaoList baixo={dados.baixo} labels={labels} />
-            </SectionCard>
-            <SectionCard title={labels.secCoberturaEstoque}>
-              <CoberturaEstoqueList itens={dados.coberturaEstoque} labels={labels} />
-            </SectionCard>
-            <SectionCard title={labels.secDivergenciaEstoque}>
-              <DivergenciaEstoqueList
-                itens={dados.divergenciaEstoque}
-                labels={labels}
-                onAbrirKardex={setKardexAlvo}
-              />
-            </SectionCard>
-            <SectionCard title={labels.secSemGiro}>
-              <SemGiroList itens={dados.semGiro} labels={labels} />
-            </SectionCard>
-          </div>
-        ) : null}
-
-        {!activeExecView && tab === 'vendas' ? (
-          <div id="relatorios-panel-vendas" role="tabpanel" aria-labelledby="relatorios-tab-vendas">
-            <SectionCard title={labels.secVendasDetalhe}>
-              {dados.vendasDetalheErro ? (
-                <ErrorState
-                  title={labels.erroTitulo}
-                  description={dados.vendasDetalheErro}
-                  dense
-                />
-              ) : (
-                <VendasDetalheList vendas={dados.vendasDetalhe} labels={labels} />
-              )}
-            </SectionCard>
-          </div>
-        ) : null}
-
-        {!activeExecView && tab === 'margem' ? (
-          <div
-            id="relatorios-panel-margem"
-            role="tabpanel"
-            aria-labelledby="relatorios-tab-margem"
-            className="admin-v2-grid-2"
-          >
-            <SectionCard title={labels.secMargemPorVenda}>
-              <MargemPorVendaList vendas={dados.margemPorVenda} labels={labels} />
-            </SectionCard>
-            <SectionCard title={labels.secCurvaAbc}>
-              <CurvaAbcList produtos={dados.curvaAbc} labels={labels} />
-            </SectionCard>
-          </div>
-        ) : null}
+        <ExecutiveDomainView
+          view={view}
+          dados={dados}
+          extras={executiveExtras}
+          locale={labels.locale}
+          labels={labels}
+          onAbrirKardex={setKardexAlvo}
+        />
       </div>
 
       <KardexSheet alvo={kardexAlvo} onClose={() => setKardexAlvo(null)} labels={labels.kardex} />

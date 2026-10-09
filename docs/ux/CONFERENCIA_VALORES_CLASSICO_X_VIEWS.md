@@ -54,7 +54,7 @@ Origem: `ExecDreFinanceiroPanel.tsx` usa a margem do resumo só se `custo_confia
 
 **Não foi alterado**: é regra de exibição financeira (restrição da sprint) e exige decisão de produto. Opções:
 - (a) DRE também mostra "indisponível" quando o custo é incompleto (igual ao clássico);
-- (b) manter o aproximado, mas exibir o **intervalo** ("≥ 530,30 · custo faltando em 1 venda de R$ 51,60") em vez de um número único;
+- (b) manter o aproximado, mas exibir o **intervalo** ("R$ 478,70 a R$ 530,30 · custo faltando em 1 venda de R$ 51,60") em vez de um número único. **Correção de redação:** o texto original dizia "≥ 530,30", o que está invertido — 530,30 é o **teto** (custo zero na venda sem custo); o **piso** é 530,30 − 51,60;
 - (c) manter como está e apenas aposentar o clássico (a margem "Indisponível" deixa de existir em qualquer lugar).
 Recomendo **(b)**: não esconde o dado e não mente.
 
@@ -81,3 +81,11 @@ Antes de aposentar o clássico:
 2. Mergear #514 (inclui o `08d07f1e`).
 3. No PR 7: redirecionar `?tab=` → `?view=` conforme a tabela de URLs, e **manter** a rota base `/admin/relatorios` abrindo Vendas & Caixas; remover "Detalhe por domínio" da sidebar só nesse PR.
 4. Repetir a conferência com **um cliente a prazo** e **um desconto autorizado** (exigem gerente) numa rodada curta.
+
+## 6. Resolução de R5 (PR 7) — opção (b) implementada
+
+- `ExecDreFinanceiroPanel` mostra **piso a teto** (KPI "Margem bruta est." e linha "Margem bruta estimada" da DRE) quando `custo_confiavel = false` e há vendas sem custo. Teto = receita − custo conhecido; piso = teto − receita das vendas sem custo (premissa: custo ≤ preço de venda).
+- A receita das vendas sem custo vem de `margemPorVenda` (RPC com `p_limite = 200`). Se a lista atingir 200 linhas, o aviso acrescenta **"lista parcial"** — o piso pode estar superestimado.
+- Custo confiável: valor único, sem mudança.
+- Conferência repetida no ambiente local com **cliente a prazo** (venda de R$ 189,00 com R$ 89,00 pagos) e **desconto autorizado** (10%, token de gerente de uso único): clássico e views conferem em faturamento, devolução, receita líquida, ticket, cancelamento, CMV, margem por venda, descontos concedidos e "A receber" (total 189,00 / pago 89,00 / aberto 100,00).
+- Limitação conhecida: o "Resultado operacional estimado" da cascata continua derivado do teto da margem.

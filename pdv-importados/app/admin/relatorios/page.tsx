@@ -11,6 +11,7 @@ import { buscarRelatorioVendasAvancadoAction } from '@/app/gerente/relatorios/ve
 import { carregarProdutosSemGiro } from '@/app/gerente/relatorios/sem-giro/actions'
 import { listarHistoricoCaixas, resumoCaixas } from '@/app/gerente/caixas/actions'
 import { carregarFinanceiroLoja } from '@/app/admin/financeiro/financeiroLojaActions'
+import { redirect } from 'next/navigation'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getRelatorioTimezone } from '@/lib/relatorios/getRelatorioTimezone'
 import { resolverPeriodoRelatorio } from '@/lib/relatorios/periodoRelatorio'
@@ -19,15 +20,16 @@ import { getMessages } from '@/i18n/getMessages'
 import { tipoMovimentoEstoqueLabels } from '@/lib/format/vendaLabels'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import { ROUTES } from '@/lib/navigation/routes'
-import { isExecutiveRelatoriosView } from '@/lib/navigation/executiveViews'
+import { resolverViewRelatorios } from './_components/relatoriosUi'
 import { RelatoriosContent, type RelatoriosDados } from './_components/RelatoriosContent'
 import type { ExecutiveExtras } from './_components/executive/executiveExtras'
 
 type SearchParams = {
   de?: string
   ate?: string
+  /** Legado (relatório clássico, aposentado): redireciona para a view equivalente. */
   tab?: string
-  /** Aba executiva (Fase 1): vendas-caixas | dre-financeiro | produtos-estoque | crm-auditoria */
+  /** Aba executiva: vendas-caixas | dre-financeiro | produtos-estoque | crm-auditoria */
   view?: string
 }
 
@@ -44,6 +46,17 @@ export default async function AdminRelatoriosPage({ searchParams }: PageProps) {
 
   const sp = (searchParams ? await searchParams : {}) ?? {}
 
+  // Relatório clássico aposentado (UX-IA-01 PR 7): `?tab=` e a rota sem `?view=` caem na view
+  // executiva equivalente, preservando o período. Roda antes de carregar qualquer dado.
+  const { view: execView, precisaRedirecionar } = resolverViewRelatorios(sp.view, sp.tab)
+  if (precisaRedirecionar) {
+    const q = new URLSearchParams()
+    if (sp.de) q.set('de', sp.de)
+    if (sp.ate) q.set('ate', sp.ate)
+    q.set('view', execView)
+    redirect(`${ROUTES.admin.relatorios}?${q.toString()}`)
+  }
+
   // Sem-giro e vendas detalhadas só precisam do período resolvido — o mesmo que
   // `carregarDadosRelatoriosGerente` resolve (mesma entrada, mesmo fuso). Resolvê-lo
   // aqui permite carregar os três blocos em paralelo, em vez de esperar o pacote
@@ -51,7 +64,6 @@ export default async function AdminRelatoriosPage({ searchParams }: PageProps) {
   const tzRelatorio = await getRelatorioTimezone(await createClient())
   const periodo = resolverPeriodoRelatorio(sp.de, sp.ate, tzRelatorio)
 
-  const execView = isExecutiveRelatoriosView(sp.view) ? sp.view : null
   const needsCaixas = execView === 'vendas-caixas'
   const needsFinanceiro = execView === 'dre-financeiro'
 
@@ -119,8 +131,7 @@ export default async function AdminRelatoriosPage({ searchParams }: PageProps) {
   return (
     <RelatoriosContent
       dados={relDados}
-      initialTab={sp.tab}
-      initialView={sp.view}
+      view={execView}
       executiveExtras={executiveExtras}
       labels={{
         titulo: ui.relatorios_titulo,

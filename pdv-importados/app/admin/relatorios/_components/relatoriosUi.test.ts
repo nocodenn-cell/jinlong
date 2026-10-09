@@ -3,6 +3,7 @@ import {
   avisoPeriodoVisivel,
   formatDiasCobertura,
   parseRelatoriosTab,
+  resolverViewRelatorios,
   sortCoberturaUrgente,
   sortPorDiaAsc,
   sortReposicaoPorDeficit,
@@ -54,5 +55,42 @@ describe('relatoriosUi', () => {
   it('parseia aba da URL com fallback', () => {
     expect(parseRelatoriosTab('estoque')).toBe('estoque')
     expect(parseRelatoriosTab('xyz')).toBe('visao')
+  })
+})
+
+describe('resolverViewRelatorios (PR 7 — relatório clássico aposentado)', () => {
+  it('?view= válido sem ?tab= não redireciona', () => {
+    expect(resolverViewRelatorios('dre-financeiro', undefined)).toEqual({
+      view: 'dre-financeiro',
+      precisaRedirecionar: false,
+    })
+  })
+
+  it.each([
+    ['visao', 'vendas-caixas'],
+    ['vendas', 'vendas-caixas'],
+    ['produtos', 'produtos-estoque'],
+    ['estoque', 'produtos-estoque'],
+    ['margem', 'dre-financeiro'],
+  ])('?tab=%s cai em %s', (tab, view) => {
+    expect(resolverViewRelatorios(undefined, tab)).toEqual({ view, precisaRedirecionar: true })
+  })
+
+  it('sem parâmetros abre Vendas & Caixas (com redirecionamento)', () => {
+    expect(resolverViewRelatorios(undefined, undefined)).toEqual({
+      view: 'vendas-caixas',
+      precisaRedirecionar: true,
+    })
+  })
+
+  it('?view= válido vence ?tab= legado, mas o ?tab= é removido da URL', () => {
+    expect(resolverViewRelatorios('crm-auditoria', 'margem')).toEqual({
+      view: 'crm-auditoria',
+      precisaRedirecionar: true,
+    })
+  })
+
+  it('valores desconhecidos não quebram', () => {
+    expect(resolverViewRelatorios('xyz', 'abc').view).toBe('vendas-caixas')
   })
 })

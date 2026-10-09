@@ -1807,10 +1807,6 @@
       "abrirPdv": {
         "cn": "前往收银",
         "pt": "Abrir PDV"
-      },
-      "relatoriosDetalhe": {
-        "cn": "分类明细",
-        "pt": "Detalhe por domínio"
       }
     },
     "navHints": {
@@ -1841,8 +1837,7 @@
       "pessoas": "店铺客户与员工。",
       "auditoria": "业务事件时间线。",
       "interno": "FastProduct 团队内部工具。",
-      "abrirPdv": "打开收银终端。",
-      "relatoriosDetalhe": "按领域查看的经典明细页签。"
+      "abrirPdv": "打开收银终端。"
     },
     "dashboard": {
       "pageTitle": {

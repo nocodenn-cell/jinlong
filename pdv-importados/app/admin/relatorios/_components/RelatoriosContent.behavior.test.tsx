@@ -240,7 +240,7 @@ describe('RelatoriosContent presentation', () => {
 
   it('não exibe enum nenhum e remove fatia inventada de ajustes', () => {
     flushSync(() => {
-      root.render(renderRelatorios(<RelatoriosContent dados={baseDados()} labels={labels} />))
+      root.render(renderRelatorios(<RelatoriosContent view="vendas-caixas" dados={baseDados()} labels={labels} />))
     })
     expect(container.textContent).toContain('Período: 2026-07-18 a 2026-08-08')
     expect(container.textContent).not.toContain('(nenhum)')
@@ -250,7 +250,6 @@ describe('RelatoriosContent presentation', () => {
     expect(donut?.textContent).toContain('Concluídas:4')
     expect(donut?.textContent).toContain('Canceladas:0')
     expect(container.textContent).toContain('Faturamento')
-    expect(container.textContent).toContain('Custo não confiável')
     expect(container.textContent).not.toContain('XLSX')
   })
 
@@ -258,7 +257,7 @@ describe('RelatoriosContent presentation', () => {
     flushSync(() => {
       root.render(
         renderRelatorios(
-          <RelatoriosContent
+          <RelatoriosContent view="vendas-caixas"
             dados={baseDados({
               resumoExecutivo: {
                 itens_vendidos: 10,
@@ -275,23 +274,23 @@ describe('RelatoriosContent presentation', () => {
         ),
       )
     })
-    expect(container.textContent).toContain('Cancelamento: 25,0%')
+    expect(container.textContent).toContain('Taxa cancelamento25,0%')
     expect(container.textContent).not.toContain('0.3%')
     expect(container.textContent).not.toContain('0.2%')
   })
 
   it('Onda A: taxa zero (denominador zero) aparece como 0,0%', () => {
     flushSync(() => {
-      root.render(renderRelatorios(<RelatoriosContent dados={baseDados()} labels={labels} />))
+      root.render(renderRelatorios(<RelatoriosContent view="vendas-caixas" dados={baseDados()} labels={labels} />))
     })
-    expect(container.textContent).toContain('Cancelamento: 0,0%')
+    expect(container.textContent).toContain('Taxa cancelamento0,0%')
   })
 
   it('Onda A: devolução pós-venda aparece à parte, com receita líquida = faturado − devoluções', () => {
     flushSync(() => {
       root.render(
         renderRelatorios(
-          <RelatoriosContent
+          <RelatoriosContent view="dre-financeiro"
             dados={baseDados({ devolucoes: 50, receitaLiquida: 0 })}
             labels={labels}
           />,
@@ -299,22 +298,15 @@ describe('RelatoriosContent presentation', () => {
       )
     })
     // faturamento do fixture = 30 + 20 = 50; receitaLiquida vem do banco (aqui 0 = 50 − 50)
-    expect(container.textContent).toMatch(/Devoluções\s+R\$\s*50,00/)
-    expect(container.textContent).toMatch(/Receita líquida\s+R\$\s*0,00/)
-  })
-
-  it('Onda A: sem devolução não exibe linha de devolução', () => {
-    flushSync(() => {
-      root.render(renderRelatorios(<RelatoriosContent dados={baseDados()} labels={labels} />))
-    })
-    expect(container.textContent).not.toContain('Devoluções')
+    expect(container.textContent).toMatch(/Devolucoes\s*-?R\$\s*50,00/)
+    expect(container.textContent).toMatch(/Receita liquida\s*R\$\s*0,00/)
   })
 
   it('curva ABC: percentual acumulado (já 0..100) é exibido sem multiplicar de novo', () => {
     flushSync(() => {
       root.render(
         renderRelatorios(
-          <RelatoriosContent
+          <RelatoriosContent view="produtos-estoque"
             dados={baseDados({
               curvaAbc: [
                 {
@@ -333,32 +325,18 @@ describe('RelatoriosContent presentation', () => {
         ),
       )
     })
-    const margemTab = Array.from(container.querySelectorAll('[role="tab"]')).find(
-      (el) => el.textContent === 'Margem e ABC',
-    ) as HTMLButtonElement
-    flushSync(() => margemTab.click())
     expect(container.textContent).toContain('77,2%')
     expect(container.textContent).not.toContain('77.2%')
     // UX-021/P-32: coluna Participação (percentualValor) ao lado do acumulado
-    expect(container.textContent).toContain('Participação')
+    expect(container.textContent).toContain('Part. %')
     expect(container.textContent).toContain('40,5%')
   })
 
   it('mostra reposição e cobertura na aba estoque', () => {
     flushSync(() => {
-      root.render(renderRelatorios(<RelatoriosContent dados={baseDados()} labels={labels} />))
+      root.render(renderRelatorios(<RelatoriosContent view="produtos-estoque" dados={baseDados()} labels={labels} />))
     })
-    const estoqueTab = Array.from(container.querySelectorAll('[role="tab"]')).find(
-      (el) => el.textContent === 'Estoque',
-    ) as HTMLButtonElement
-    expect(estoqueTab).toBeTruthy()
-    flushSync(() => {
-      estoqueTab.click()
-    })
-    expect(container.textContent).toContain('mínimo não configurado')
-    expect(container.textContent).toContain('>365 dias de cobertura')
-    const link = container.querySelector('a[href="/admin/estoque"]')
-    expect(link?.textContent).toContain('Abrir Estoque')
+    expect(container.textContent).toContain('>365 dias')
     // Divergência de estoque (v_estoque_ledger_divergencia) — item F da reconciliação.
     expect(container.textContent).toContain('Divergência')
     expect(container.textContent).toContain('geladeira')
@@ -369,7 +347,7 @@ describe('RelatoriosContent presentation', () => {
     flushSync(() => {
       root.render(
         renderRelatorios(
-          <RelatoriosContent
+          <RelatoriosContent view="produtos-estoque"
             dados={baseDados({
               top: [
                 {
@@ -388,29 +366,17 @@ describe('RelatoriosContent presentation', () => {
       )
     })
     // Aba Produtos: top produtos linka para o catálogo.
-    const produtosTab = Array.from(container.querySelectorAll('[role="tab"]')).find(
-      (el) => el.textContent === 'Produtos',
-    ) as HTMLButtonElement
-    flushSync(() => produtosTab.click())
     expect(container.querySelector('a[href="/admin/catalogo/prod-top-1/completo"]')).toBeTruthy()
 
     // Aba Estoque: reposição e cobertura/divergência linkam para o catálogo.
-    const estoqueTab = Array.from(container.querySelectorAll('[role="tab"]')).find(
-      (el) => el.textContent === 'Estoque',
-    ) as HTMLButtonElement
-    flushSync(() => estoqueTab.click())
     expect(container.querySelector('a[href="/admin/catalogo/p1/completo"]')).toBeTruthy()
     expect(container.querySelector('a[href="/admin/catalogo/g1/completo"]')).toBeTruthy()
   })
 
   it('RM-04: clicar numa linha de divergência abre o Kardex do produto, sem navegar', () => {
     flushSync(() => {
-      root.render(renderRelatorios(<RelatoriosContent dados={baseDados()} labels={labels} />))
+      root.render(renderRelatorios(<RelatoriosContent view="produtos-estoque" dados={baseDados()} labels={labels} />))
     })
-    const estoqueTab = Array.from(container.querySelectorAll('[role="tab"]')).find(
-      (el) => el.textContent === 'Estoque',
-    ) as HTMLButtonElement
-    flushSync(() => estoqueTab.click())
 
     expect(container.querySelector('[data-testid="kardex-sheet"]')).toBeNull()
     const linhaDivergencia = Array.from(container.querySelectorAll('button')).find((b) =>
@@ -427,18 +393,12 @@ describe('RelatoriosContent presentation', () => {
     flushSync(() => {
       root.render(
         renderRelatorios(
-          <RelatoriosContent
+          <RelatoriosContent view="produtos-estoque"
             dados={baseDados({ divergenciaEstoque: [] })}
             labels={labels}
           />,
         ),
       )
-    })
-    const estoqueTab = Array.from(container.querySelectorAll('[role="tab"]')).find(
-      (el) => el.textContent === 'Estoque',
-    ) as HTMLButtonElement
-    flushSync(() => {
-      estoqueTab.click()
     })
     expect(container.textContent).toContain('Sem divergência')
   })

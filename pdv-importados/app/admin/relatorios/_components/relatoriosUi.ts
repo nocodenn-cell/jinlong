@@ -4,6 +4,7 @@
  */
 
 import { ticketMedio as ticketMedioCanonico } from '@/lib/vendas/metricasVendas'
+import { isExecutiveRelatoriosView, type ExecutiveRelatoriosViewId } from '@/lib/navigation/executiveViews'
 
 export type AvisoPeriodo = 'nenhum' | 'datas_invalidas' | 'periodo_invertido' | 'periodo_limitado'
 
@@ -24,6 +25,27 @@ export function parseRelatoriosTab(raw: string | null | undefined): RelatoriosTa
     return raw
   }
   return 'visao'
+}
+
+/**
+ * UX-IA-01 PR 7: as abas do relatório clássico (`?tab=`) foram aposentadas. Links antigos
+ * (favoritos, exportações, e-mails) caem na view executiva equivalente; sem nada, abre Vendas & Caixas.
+ */
+const VIEW_POR_TAB_LEGADA = {
+  visao: 'vendas-caixas',
+  vendas: 'vendas-caixas',
+  produtos: 'produtos-estoque',
+  estoque: 'produtos-estoque',
+  margem: 'dre-financeiro',
+} as const
+
+export function resolverViewRelatorios(
+  view: string | null | undefined,
+  tab: string | null | undefined,
+): { view: ExecutiveRelatoriosViewId; precisaRedirecionar: boolean } {
+  if (isExecutiveRelatoriosView(view)) return { view, precisaRedirecionar: tab != null }
+  const t = parseRelatoriosTab(tab)
+  return { view: VIEW_POR_TAB_LEGADA[t], precisaRedirecionar: true }
 }
 
 /** Omite aviso neutro; demais viram chave i18n. */
