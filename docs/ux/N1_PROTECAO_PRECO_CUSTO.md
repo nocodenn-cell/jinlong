@@ -93,3 +93,10 @@ Também: UI real (GERENTE) — catálogo, edição ("Preço de custo 38,00" carr
 4. Se algo falhar: rollback da fase B (1 comando) reabre a leitura imediatamente.
 
 Observação: o merge do PR em `main` **não** aplica migrations em produção (aplicação é manual via MCP, como no #516/#521); mesmo assim, o app novo depende da fase A — **não fazer o deploy do app novo antes da fase A**.
+
+## 9. Aplicação em produção (2026-10-09, autorizada)
+
+1. **Fase A** aplicada via MCP (`20261009135940`); verificada por catálogo (view com ACL `authenticated=r`, 4 funções via view, policy nova) e execução das funções.
+2. **PR #525 mergeado** (`a92b30f3`); deploy `dpl_44nCuxSG…` **READY** (alias `www.jinlong.app`); `/login` 200.
+3. **Fase B** aplicada via MCP (`20261009140739`). Verificação: 0 grants de SELECT em `preco_custo`/`preco_custo_medio` para `anon`/`authenticated`; 39/39 colunas sem custo legíveis; `service_role` lê; **OPERADOR real (simulado por claims, transação revertida)**: view = 0 linhas, `produtos` = 155 linhas sem custo, `select preco_custo` → **42501**; **GERENTE real**: view = 155 linhas, relatório de resumo executa.
+4. Não houve teste com login real em produção (sem credenciais); o fluxo de tela foi verificado no stack local.
