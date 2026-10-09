@@ -2655,6 +2655,7 @@
     "hub_aria_catalogo": "Seções do catálogo",
     "hub_aria_estoque": "Seções do estoque",
     "hub_aria_financeiro": "Seções do financeiro",
+    "restrito_dono_admin": "Esta área é restrita ao DONO e à equipe FastProduct (ADMIN).",
     "relatorios_link_visao_geral": "Visão geral",
     "dashboard_link_relatorios_hint": "Análises por período, ABC e margem",
     "catalogo_subtitulo": "Produtos cadastrados na loja",
