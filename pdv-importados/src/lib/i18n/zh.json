@@ -1823,7 +1823,7 @@
       "estoque": "Saldos por loja e alertas de estoque.",
       "recebimento": "Entrada de mercadorias e conferência.",
       "transferencias": "Movimentação entre lojas.",
-      "relatorios": "Hub analítico detalhado por domínio.",
+      "relatorios": "销售、损益、商品、客户与审计。",
       "caixas": "Caixas e operações de ponto de venda.",
       "financeiro": "Movimentações e visão financeira.",
       "configuracoes": "全局参数（佣金、收银限制、交期、最低库存）。",
