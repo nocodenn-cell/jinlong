@@ -5,7 +5,7 @@ import type { RelatoriosDados } from '../RelatoriosContent'
 import type { ExecutiveExtras } from './executiveExtras'
 import { ExecVendasCaixasPanel } from './ExecVendasCaixasPanel'
 import { ExecProdutosEstoquePanel } from './ExecProdutosEstoquePanel'
-import { ExecDreFinanceiroPanel } from './ExecDreFinanceiroPanel'
+import { ExecDreFinanceiroPanel, resumirVendasSemCusto } from './ExecDreFinanceiroPanel'
 import { ExecCrmAuditoriaPanel } from './ExecCrmAuditoriaPanel'
 import { SectionCard } from '@/components/ui/admin-v2'
 import type { KardexAlvo } from '@/app/admin/estoque/_components/KardexSheet'
@@ -111,6 +111,7 @@ export function ExecutiveDomainView({ view, dados, extras = {}, locale, labels, 
         periodoAte={dados.periodo.ate}
         financeiro={extras.financeiro}
         financeiroErro={extras.financeiroErro}
+        vendasSemCusto={resumirVendasSemCusto(dados.margemPorVenda)}
         extra={
           labels ? (
             <div data-testid="exec-extra-dre">

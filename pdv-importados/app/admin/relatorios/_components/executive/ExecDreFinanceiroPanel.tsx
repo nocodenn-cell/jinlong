@@ -29,6 +29,26 @@ type Props = {
   periodoAte: string
   financeiro?: FinanceiroPainel | null
   financeiroErro?: string | null
+  /**
+   * Vendas do periodo sem custo confiavel (UX-IA-01 R5, opcao b): a margem aproximada
+   * e um teto; o piso desconta a receita dessas vendas (custo >= 0). `parcial` quando a
+   * lista do RPC atingiu o limite e pode haver mais vendas sem custo.
+   */
+  vendasSemCusto?: { qtd: number; receita: number; parcial: boolean }
+}
+
+export const LIMITE_MARGEM_POR_VENDA = 200
+
+/** Resume vendas sem custo confiavel a partir da lista do RPC de margem por venda. */
+export function resumirVendasSemCusto(
+  vendas: ReadonlyArray<{ custo_confiavel: boolean; total_liquido: number }>,
+): { qtd: number; receita: number; parcial: boolean } {
+  const sem = vendas.filter((v) => !v.custo_confiavel)
+  return {
+    qtd: sem.length,
+    receita: Math.round(sem.reduce((a, v) => a + (Number(v.total_liquido) || 0), 0) * 100) / 100,
+    parcial: vendas.length >= LIMITE_MARGEM_POR_VENDA,
+  }
 }
 
 type CascataLinha = {
@@ -37,6 +57,8 @@ type CascataLinha = {
   valor: number | null
   tom: 'neutral' | 'success' | 'warning' | 'danger'
   destaque?: boolean
+  /** Texto no lugar do valor (ex.: intervalo de margem). */
+  texto?: string
 }
 
 /**
@@ -54,6 +76,7 @@ export function ExecDreFinanceiroPanel({
   financeiro,
   financeiroErro,
   extra,
+  vendasSemCusto,
 }: Props) {
   const gerencial = financeiro?.resultado_gerencial
   const cmv = gerencial?.custo_conhecido ?? null
@@ -63,6 +86,15 @@ export function ExecDreFinanceiroPanel({
       : gerencial
         ? gerencial.receita_vendas - gerencial.custo_conhecido
         : null
+  const aproximada = !resumo.custo_confiavel && margemBruta != null
+  const piso =
+    aproximada && vendasSemCusto && vendasSemCusto.qtd > 0
+      ? Math.round((margemBruta - vendasSemCusto.receita) * 100) / 100
+      : null
+  const textoIntervalo = (v: number) =>
+    piso != null
+      ? `${formatBRL(piso, locale)} a ${formatBRL(v, locale)}`
+      : formatBRL(v, locale)
   const despesas = gerencial ? gerencial.despesas_manuais + gerencial.taxas_conferidas : null
   const lucro =
     margemBruta != null && despesas != null ? margemBruta - despesas : null
@@ -81,6 +113,7 @@ export function ExecDreFinanceiroPanel({
       id: 'mb',
       label: 'Margem bruta estimada',
       valor: margemBruta,
+      texto: piso != null && margemBruta != null ? textoIntervalo(margemBruta) : undefined,
       tom: 'success',
       destaque: true,
     },
@@ -129,10 +162,14 @@ export function ExecDreFinanceiroPanel({
     {
       id: 'mb',
       label: 'Margem bruta est.',
-      value: margemBruta == null ? '—' : formatBRL(margemBruta, locale),
+      value: margemBruta == null ? '—' : textoIntervalo(margemBruta),
       icon: 'file-check-2',
       tone: resumo.custo_confiavel ? 'gold' : 'warning',
-      hint: resumo.custo_confiavel ? undefined : 'Custo incompleto — margem aproximada',
+      hint: resumo.custo_confiavel
+        ? undefined
+        : piso != null && vendasSemCusto
+          ? `Custo incompleto em ${vendasSemCusto.qtd} venda(s) (${formatBRL(vendasSemCusto.receita, locale)})${vendasSemCusto.parcial ? ' — lista parcial' : ''}: margem entre piso e teto`
+          : 'Custo incompleto — margem aproximada (teto)',
     },
     {
       id: 'inad',
@@ -177,7 +214,7 @@ export function ExecDreFinanceiroPanel({
                     r.valor == null ? (
                       <StatusBadge tone="neutral">Indisponivel</StatusBadge>
                     ) : (
-                      <StatusBadge tone={r.tom}>{formatBRL(r.valor, locale)}</StatusBadge>
+                      <StatusBadge tone={r.tom}>{r.texto ?? formatBRL(r.valor, locale)}</StatusBadge>
                     ),
                 },
               ]}
