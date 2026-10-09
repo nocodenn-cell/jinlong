@@ -11,7 +11,6 @@ import {
 } from '@/components/ui/admin-v2'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { ROUTES } from '@/lib/navigation/routes'
 import { executiveRelatoriosHref } from '@/lib/navigation/executiveViews'
 
 type AlertRow = {
@@ -35,11 +34,6 @@ type ExecutiveVisaoGeralStubProps = {
 }
 
 const DEFAULT_SECONDARY: readonly PageActionSecondaryItem[] = [
-  {
-    id: 'abrir-relatorios',
-    label: 'Relatórios detalhados',
-    href: ROUTES.admin.relatorios,
-  },
   {
     id: 'vendas-caixas',
     label: 'Ir para Vendas & Caixas',

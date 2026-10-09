@@ -110,8 +110,8 @@ describe('menu admin — 9 destinos (UX-IA-01 PR 1)', () => {
     expect(filhos).toContain(executiveRelatoriosHref('produtos-estoque'))
     expect(filhos).toContain(executiveRelatoriosHref('crm-auditoria'))
     expect(filhos).toContain(ROUTES.admin.auditoria)
-    // aba clássica continua alcançável até a consolidação (PR 7)
-    expect(filhos).toContain(ROUTES.admin.relatorios)
+    // PR 7: o relatório clássico foi aposentado — nenhum item aponta mais para a rota sem ?view=
+    expect(filhos).not.toContain(ROUTES.admin.relatorios)
   })
 })
 
@@ -130,7 +130,6 @@ describe('menu admin — alcance: nenhuma rota saiu da sidebar', () => {
     ROUTES.admin.fornecedores,
     ROUTES.admin.compras,
     ROUTES.admin.comissoes,
-    ROUTES.admin.relatorios,
     ROUTES.admin.configuracoes,
     ROUTES.admin.suspensao,
     ROUTES.caixa.home,
