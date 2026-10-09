@@ -1730,7 +1730,7 @@
       "estoque": "Saldos por loja e alertas de estoque.",
       "recebimento": "Entrada de mercadorias e conferência.",
       "transferencias": "Movimentação entre lojas.",
-      "relatorios": "Hub analítico detalhado por domínio.",
+      "relatorios": "Vendas, resultado, produtos, clientes e auditoria.",
       "caixas": "Caixas e operações de ponto de venda.",
       "financeiro": "Movimentações e visão financeira.",
       "configuracoes": "Parâmetros globais (comissão, limites de caixa, lead time, estoque mínimo).",
