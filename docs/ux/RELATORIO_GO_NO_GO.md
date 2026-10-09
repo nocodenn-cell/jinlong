@@ -1,5 +1,7 @@
 # Relatório GO / NO-GO — Sprint UX-IA-01 (Fase de Auditoria)
 
+> **Atualização (2026-10-09):** #509, #510, #511, #512, #514 e #515 estão **mergeados e em produção** (deploys READY); #516 (GO-LIVE) aplicado em produção; #517/#518 (Diagnóstico). PR 5 foi entregue como barra agrupada de 7 controles. **PR 6 cancelado** (já existia). **PR 7 segue em espera** (margem em intervalo, opção b; repetir a conferência com cliente a prazo e desconto autorizado). PR de i18n dos painéis executivos planejado depois. Detalhe: `RELATORIO_HOMOLOGACAO_E_MATRIZ_FINAL.md`, `HOMOLOGACAO_RODADA_2_E_GATES.md`.
+
 ## A. Diagnóstico
 32 páginas em `/admin` (de 45 no app), 23 entradas na sidebar (20 visíveis ao gerente), 18 rotas alcançáveis pela sidebar e 14 só por aba/link. 12 páginas têm barra de hub; 20 não têm sub-navegação. Financeiro expõe 9 controles. Relatórios é navegado por 3 controles sobrepostos. Sem busca global. Detalhes: `AUDITORIA_NAVEGACAO_JINLONG.md`.
 
@@ -31,6 +33,7 @@ Reaproveita `HubTabDef`, `AdminHubTabNav`, `ROUTES`. Sem migrations, sem RPC, se
 - A sidebar esconde Implantação e Diagnóstico de GERENTE, mas a policy **não os bloqueia** por URL (achado de segurança/produto, fora do escopo de UX).
 - Algumas funções citadas na missão **não existem** (inventário como tela, histórico de preços, importação em massa, impressoras, integrações, perfis editáveis, personas Estoquista/Financeiro).
 - A auditoria de 08/10 listou "Auditoria → produto/Kardex" e "Resultado ↔ DRE" como links faltantes; **ambos já existem** (botão Ver Kardex no detalhe do evento; a view DRE linka `?tab=resultado` e `?tab=resumo` do Financeiro). Detectado ao implementar o PR 3.
+- A "porta única de recebimento" (PR 6) **já existe** no código (seletor "Como chegou?", `?modo=pedido&oc=`, aviso de duplicidade). O PR 6 foi cancelado; os documentos de jornada/duplicidades foram anotados.
 - "Caixa → vendas do turno" depende de filtro por caixa na RPC `listar_vendas_gerente`: **não é só UI**.
 
 ## J. Decisão

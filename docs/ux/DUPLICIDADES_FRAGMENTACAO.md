@@ -14,7 +14,7 @@ Evidências: ver `AUDITORIA_NAVEGACAO_JINLONG.md`.
 | 5 | Auditoria (item) × "CRM & Auditoria" (view) | **DN** parcial | sidebar | Auditoria = linha do tempo (1 destino). View CRM/RFV = análise de clientes: renomear para não sugerir auditoria |
 | 6 | Etiquetas em Catálogo e Estoque | **DN** | `catalogoHubNav.ts:15`, `estoqueHubNav.ts:20` | Dono: Produtos. No Estoque, atalho contextual (já existe por linha: `adminEtiquetasProdutoQuery`) |
 | 7 | Contas a pagar: `/financeiro/contas-pagar` × `?tab=pagar` | era **DN**; **já resolvida** por redirect | `contas-pagar/page.tsx` | Nada a fazer |
-| 8 | Receber mercadoria: OC × manual × NF-e | **FP** + risco de lançar a mesma entrada 2× (audit 2.1) | `compras/actions.ts` × `recebimento/actions.ts` | **Não unificar as regras.** Unificar a *porta de entrada*: tela "Receber mercadoria" pergunta "contra pedido / NF-e / manual". Vínculo OC↔recebimento manual é decisão de negócio (precisa de aprovação) |
+| 8 | Receber mercadoria: OC × manual × NF-e | **FP — já mitigada no código** (seletor "Como chegou?", `?modo=pedido&oc=`, aviso de duplicidade na OC; ver correção em JORNADAS_OPERACIONAIS §C). Era FP + risco de lançar a mesma entrada 2× (audit 2.1) | `compras/actions.ts` × `recebimento/actions.ts` | **Não unificar as regras.** Unificar a *porta de entrada*: tela "Receber mercadoria" pergunta "contra pedido / NF-e / manual". Vínculo OC↔recebimento manual é decisão de negócio (precisa de aprovação) |
 | 9 | Fornecedores / Compras / Entradas em 3 lugares | **FP** de navegação | sidebar + hub Estoque | Compras agrupa Pedidos + Fornecedores; "Receber mercadoria" fica em Estoque com link cruzado |
 | 10 | Clientes / Funcionários / Fornecedores / Comissões | **FP** leve: pessoas ≠ mesmo domínio (cliente e fornecedor são parceiros; funcionário é equipe) | sidebar | Agrupar **Clientes + Funcionários**; Fornecedores segue em Compras; Comissões onde a liquidação ocorre (ver §3) |
 | 11 | Categorias financeiras só dentro do hub Financeiro | **DN** invertida (cadastro de config escondido no módulo) | `AdminHubTabNav.tsx:73` | Acesso também em Configurações |
@@ -37,7 +37,7 @@ Evidências: ver `AUDITORIA_NAVEGACAO_JINLONG.md`.
 | Funcionário → Comissões | **Feito no PR 3** (`?operador=` abre o detalhe). Comissões → Funcionário: não feito (a tela de funcionários não tem deep-link por id) |
 | **Caixa (histórico) → vendas do turno** | **Falta e exige mudança de banco**: `listar_vendas_gerente` (RPC) só filtra por período/status/pagamento, não por caixa. Fora do escopo (sem migrations). Decisão de produto pendente |
 | Configurações → Suspensão / Categorias financeiras | **Feito no PR 3** (atalhos sob o título) |
-| **Pedido de compra → recebimento manual** | **Falta** e é regra de negócio (item 8) |
+| Pedido de compra → recebimento | **Existe** (botão "Receber em Entradas" com `?modo=pedido&oc=`; o banco recusa excesso). Correção: eu o havia listado como faltante |
 | Busca global | **Falta** |
 
 ## 3. Pessoas × Financeiro: onde fica Comissões?
