@@ -30,7 +30,10 @@ Ressalva: a navegação do painel **não toca** o PDV; esta sprint não deve aum
 
 Telas: 1 (Catálogo+modal) → 1 (PDV). **Jornada já é curta.** O problema não é fragmentação, é descobrir o atacado (3 níveis de revelação). Recomendação: **não mexer na estrutura**; só tornar "atacado" visível no formulário.
 
-## C. Comprar e receber mercadorias — **maior fragmentação**
+## C. Comprar e receber mercadorias — **maior fragmentação** (parcialmente resolvida)
+
+> **Correção (09/10, ao implementar o PR 6):** a "porta única de recebimento" **já existe**. `RecebimentoGerentePageClient.tsx` tem o bloco "Como chegou?" (NF-e · Ordem de Compra · Sem documento · Receber sem valores · Histórico), com texto de ajuda por via, e a OC abre `…/recebimento?modo=pedido&oc=<id>` (`OcDetalheModal.tsx`) com aviso de duplicidade. Entregue por #459, #464 e UX-018. Os trechos abaixo que dizem "3 portas sem pergunta" ou "sem vínculo OC↔recebimento" descrevem o estado de 17/09 e **estão desatualizados**.
+
 
 Caminho com Ordem de Compra: `Fornecedores` (1) → `Compras` (2, criar OC) → detalhe da OC → "Registrar Recebimento" (conferência + crédito, 2 RPCs em 1 clique) → `Financeiro > A pagar` (3, verificar obrigação) → `Estoque` (4, conferir saldo).
 Caminho NF-e: `Estoque > Entradas` → `Importar NF-e` (4 fases) → link para A pagar (**existe**, `ImportarNfePageClient.tsx:1189`).
