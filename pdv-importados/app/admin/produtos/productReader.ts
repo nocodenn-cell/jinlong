@@ -3,6 +3,7 @@
  * Lê `produtos`; `listComFiltros` faz read-through de estoque (snapshot).
  */
 
+import { anexarCustosProdutos, carregarCustosProdutos } from '@/lib/gerente/produtos/custosProdutos'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   PRODUCT_ERROR_CODES,
@@ -29,10 +30,10 @@ export const PRODUTOS_PAGE_SIZE = 20
 export const MSG_PRODUTO_NAO_ENCONTRADO = 'Produto não encontrado.'
 
 const PRODUTO_COLS =
-  'id, nome, codigo_barras, codigo_interno, loja_id, ativo, status_publicacao, preco_varejo, preco_atacado, preco_custo, categoria_id, marca_id, fornecedor_id, imagem_url'
+  'id, nome, codigo_barras, codigo_interno, loja_id, ativo, status_publicacao, preco_varejo, preco_atacado, categoria_id, marca_id, fornecedor_id, imagem_url'
 
 const EXTRA_PRODUTO_COLS =
-  'id, codigo_interno, referencia_fornecedor, nome_reduzido_pdv, localizacao_prateleira, preco_custo, preco_custo_medio, permitir_abaixo_custo, status_publicacao'
+  'id, codigo_interno, referencia_fornecedor, nome_reduzido_pdv, localizacao_prateleira, permitir_abaixo_custo, status_publicacao'
 
 /** Linha mínima de `produtos` para o map de domínio. */
 export type ProdutoRow = {
@@ -289,6 +290,12 @@ async function loadFilteredSupplements(
       .in('produto_id', productIds),
     supabase.from('produtos').select(EXTRA_PRODUTO_COLS).in('id', productIds),
   ])
+  // N1: o custo não é legível em `produtos`; vem da view gerencial `produtos_custos`.
+  const custos = await carregarCustosProdutos(supabase, productIds)
+  const extraRows = ((extraRes.data ?? []) as Parameters<typeof buildExtraMap>[0]).map((r) => ({
+    ...r,
+    ...(custos.get(r.id) ?? {}),
+  }))
   return {
     estoqueMap: buildEstoqueMap(
       (estoqueRes.data ?? []) as {
@@ -297,7 +304,7 @@ async function loadFilteredSupplements(
         estoque_minimo: number
       }[],
     ),
-    extraMap: buildExtraMap((extraRes.data ?? []) as Parameters<typeof buildExtraMap>[0]),
+    extraMap: buildExtraMap(extraRows),
   }
 }
 
@@ -389,7 +396,8 @@ export function createProductReader(supabase: SupabaseClient): ProductReader {
           return { ok: false, error: error.message }
         }
         if (!data) return notFoundResult()
-        return { ok: true, product: mapProdutoCatalog(data as ProdutoRow) }
+        const [comCusto] = await anexarCustosProdutos(supabase, [data as unknown as Omit<ProdutoRow, 'preco_custo'> & { id: string }])
+        return { ok: true, product: mapProdutoCatalog(comCusto as unknown as ProdutoRow) }
       } catch (e) {
         return {
           ok: false,
@@ -466,7 +474,11 @@ export function createProductReader(supabase: SupabaseClient): ProductReader {
         const { data, error } = await qb
         if (error) return listFailed(error.message)
 
-        const rows = ((data ?? []) as ProdutoRow[]).map(mapProdutoCatalog)
+        const comCusto = await anexarCustosProdutos(
+          supabase,
+          (data ?? []) as unknown as (Omit<ProdutoRow, 'preco_custo'> & { id: string })[],
+        )
+        const rows = (comCusto as unknown as ProdutoRow[]).map(mapProdutoCatalog)
         return { ok: true, ...slicePage(rows, pageSize) }
       } catch (e) {
         return listFailed(e instanceof Error ? e.message : undefined)

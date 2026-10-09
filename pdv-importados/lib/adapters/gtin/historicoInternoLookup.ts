@@ -6,6 +6,7 @@ import {
   sugerirPrecoVarejoDeCusto,
 } from '@/core/catalog/sugestaoCadastro'
 import type { SugestaoCadastroProduto } from '@/core/ports/gtinLookup'
+import { anexarCustosProdutos } from '@/lib/gerente/produtos/custosProdutos'
 
 type ProdutoHit = {
   id: string
@@ -19,6 +20,16 @@ type ProdutoHit = {
 
 type CategoriaRow = { id: string; nome: string }
 
+/** N1: o custo não é legível em `produtos`; vem da view gerencial (nulo para quem não tem permissão). */
+async function comCusto(
+  supabase: SupabaseClient,
+  hit: Omit<ProdutoHit, 'preco_custo'> | null,
+): Promise<ProdutoHit | null> {
+  if (!hit) return null
+  const [h] = await anexarCustosProdutos(supabase, [hit])
+  return h as unknown as ProdutoHit
+}
+
 export async function buscarProdutoPorGtinLoja(
   supabase: SupabaseClient,
   lojaId: string,
@@ -28,12 +39,12 @@ export async function buscarProdutoPorGtinLoja(
   if (variantes.length === 0) return null
   const { data } = await supabase
     .from('produtos')
-    .select('id, nome, codigo_barras, preco_varejo, preco_custo, ncm, categoria_id')
+    .select('id, nome, codigo_barras, preco_varejo, ncm, categoria_id')
     .eq('loja_id', lojaId)
     .in('codigo_barras', variantes)
     .limit(1)
     .maybeSingle()
-  return (data as ProdutoHit | null) ?? null
+  return comCusto(supabase, data as Omit<ProdutoHit, 'preco_custo'> | null)
 }
 
 export async function buscarViaVinculoNfe(
@@ -53,11 +64,11 @@ export async function buscarViaVinculoNfe(
   if (!produtoId) return null
   const { data } = await supabase
     .from('produtos')
-    .select('id, nome, codigo_barras, preco_varejo, preco_custo, ncm, categoria_id')
+    .select('id, nome, codigo_barras, preco_varejo, ncm, categoria_id')
     .eq('id', produtoId)
     .eq('loja_id', lojaId)
     .maybeSingle()
-  return (data as ProdutoHit | null) ?? null
+  return comCusto(supabase, data as Omit<ProdutoHit, 'preco_custo'> | null)
 }
 
 export async function listarCategoriasLoja(

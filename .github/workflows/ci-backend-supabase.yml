@@ -283,6 +283,20 @@ jobs:
           fi
           bash backend/scripts/devolucao-concorrencia.sh
 
+      # N1 (migration 20261009180000): o OPERADOR não lê produtos.preco_custo por nenhum caminho (coluna, embed,
+      # view, RPC, alerta), GERENTE/DONO/ADMIN leem pela view produtos_custos, o PDV conclui venda sem ler custo
+      # e o isolamento entre lojas é mantido. Provisiona uma senha aleatória nos usuários do seed (só neste stack
+      # efêmero). Deixa uma venda de teste — por isso roda depois dos demais gates de dados.
+      - name: N1 — preço de custo protegido (smoke adversarial por perfil)
+        run: |
+          set -euo pipefail
+          cd backend
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          export SUPABASE_URL="${API_URL:-}"
+          export SEED_PASSWORD="$(openssl rand -hex 16)"
+          export PROVISION_PASSWORDS=1
+          node scripts/n1-preco-custo-authz-smoke.mjs
+
       - name: Diagnóstico em falha (logs + status)
         if: failure()
         run: |

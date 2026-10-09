@@ -1,5 +1,6 @@
 'use server'
 
+import { anexarCustosProdutos } from '@/lib/gerente/produtos/custosProdutos'
 import type { OpcoesFiltrosProdutos } from '@/lib/gerente/produtos/opcoesFiltrosTypes'
 import crypto from 'crypto'
 import { z } from 'zod'
@@ -69,7 +70,7 @@ type ActionResult<T> =
   | { success: false; error: string }
 
 const IMPORT_MERGE_COLS =
-  'id, nome, codigo_barras, codigo_interno, referencia_fornecedor, nome_reduzido_pdv, localizacao_prateleira, preco_varejo, preco_atacado, preco_custo, permitir_abaixo_custo, quantidade_gatilho_atacado, origem, tem_nf, unidade_medida, observacao, categoria_id, marca_id, fornecedor_id, ncm, cfop_produto, csosn, cest, cst_pis, cst_cofins, icms_origem'
+  'id, nome, codigo_barras, codigo_interno, referencia_fornecedor, nome_reduzido_pdv, localizacao_prateleira, preco_varejo, preco_atacado, permitir_abaixo_custo, quantidade_gatilho_atacado, origem, tem_nf, unidade_medida, observacao, categoria_id, marca_id, fornecedor_id, ncm, cfop_produto, csosn, cest, cst_pis, cst_cofins, icms_origem'
 
 /** CSV/lote update → ProductUpdater (merge para não apagar campos omitidos). */
 async function atualizarProdutoViaImportRow(
@@ -95,7 +96,17 @@ async function atualizarProdutoViaImportRow(
       error: interpolateTemplate(m.import_row_id_nao_encontrado, { id: row.id }),
     }
   }
-  const p = prev as Record<string, unknown>
+  // N1: custo vem da view gerencial (produtos.preco_custo não é legível); erro → falha da linha, nunca "custo nulo".
+  let p: Record<string, unknown>
+  try {
+    const [comCusto] = await anexarCustosProdutos(supabase, [prev as unknown as { id: string }])
+    p = comCusto as unknown as Record<string, unknown>
+  } catch (e) {
+    return {
+      ok: false,
+      error: mensagemErroComSecao(m.import_row_atualizar_secao, e instanceof Error ? e.message : 'custo', idioma),
+    }
+  }
   const csvLifecycle = row.ativo
     ? dualWriteFromStatus('PUBLICADO')
     : dualWriteFromStatus('INATIVO')
@@ -409,9 +420,27 @@ export async function importarProdutosLote(
           ],
         }
       }
+      let existenteComCusto: Record<string, unknown>
+      try {
+        const [c] = await anexarCustosProdutos(supabase, [existente as unknown as { id: string }])
+        existenteComCusto = c as unknown as Record<string, unknown>
+      } catch (e) {
+        await reverter()
+        return {
+          success: true,
+          criados: 0,
+          atualizados: 0,
+          falhas: [
+            {
+              linha,
+              motivo: mensagemErroComSecao(m.import_row_atualizar_secao, e instanceof Error ? e.message : 'custo', idioma),
+            },
+          ],
+        }
+      }
       snapshotsUpdate.push({
         id: data.id,
-        prev: existente as unknown as Record<string, unknown>,
+        prev: existenteComCusto,
       })
 
       const up = await atualizarProdutoViaImportRow(supabase, data, idioma, m)

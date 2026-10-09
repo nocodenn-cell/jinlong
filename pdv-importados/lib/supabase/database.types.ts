@@ -576,6 +576,13 @@ export type Database = {
             foreignKeyName: "comissoes_itens_produto_id_fkey"
             columns: ["produto_id"]
             isOneToOne: false
+            referencedRelation: "produtos_custos"
+            referencedColumns: ["produto_id"]
+          },
+          {
+            foreignKeyName: "comissoes_itens_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
             referencedRelation: "v_estoque_baixo"
             referencedColumns: ["id"]
           },
@@ -805,6 +812,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "produtos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_regras_funcionario_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos_custos"
+            referencedColumns: ["produto_id"]
           },
           {
             foreignKeyName: "comissoes_regras_funcionario_produto_id_fkey"
@@ -1966,6 +1980,13 @@ export type Database = {
             foreignKeyName: "estoque_produto_id_fkey"
             columns: ["produto_id"]
             isOneToOne: false
+            referencedRelation: "produtos_custos"
+            referencedColumns: ["produto_id"]
+          },
+          {
+            foreignKeyName: "estoque_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
             referencedRelation: "v_estoque_baixo"
             referencedColumns: ["id"]
           },
@@ -2004,6 +2025,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "produtos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estoque_baixas_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos_custos"
+            referencedColumns: ["produto_id"]
           },
           {
             foreignKeyName: "estoque_baixas_produto_id_fkey"
@@ -2061,6 +2089,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "produtos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estoque_reposicoes_cancelamento_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos_custos"
+            referencedColumns: ["produto_id"]
           },
           {
             foreignKeyName: "estoque_reposicoes_cancelamento_produto_id_fkey"
@@ -2125,6 +2160,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "produtos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estoque_reposicoes_devolucao_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos_custos"
+            referencedColumns: ["produto_id"]
           },
           {
             foreignKeyName: "estoque_reposicoes_devolucao_produto_id_fkey"
@@ -2856,6 +2898,13 @@ export type Database = {
             foreignKeyName: "historico_precos_produto_produto_id_fkey"
             columns: ["produto_id"]
             isOneToOne: false
+            referencedRelation: "produtos_custos"
+            referencedColumns: ["produto_id"]
+          },
+          {
+            foreignKeyName: "historico_precos_produto_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
             referencedRelation: "v_estoque_baixo"
             referencedColumns: ["id"]
           },
@@ -2919,6 +2968,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "produtos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "historico_tiers_crud_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos_custos"
+            referencedColumns: ["produto_id"]
           },
           {
             foreignKeyName: "historico_tiers_crud_produto_id_fkey"
@@ -3208,6 +3264,13 @@ export type Database = {
             foreignKeyName: "importacoes_nfe_itens_produto_id_fkey"
             columns: ["produto_id"]
             isOneToOne: false
+            referencedRelation: "produtos_custos"
+            referencedColumns: ["produto_id"]
+          },
+          {
+            foreignKeyName: "importacoes_nfe_itens_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
             referencedRelation: "v_estoque_baixo"
             referencedColumns: ["id"]
           },
@@ -3279,6 +3342,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "produtos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itens_venda_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos_custos"
+            referencedColumns: ["produto_id"]
           },
           {
             foreignKeyName: "itens_venda_produto_id_fkey"
@@ -3728,6 +3798,13 @@ export type Database = {
             foreignKeyName: "movimentos_estoque_log_produto_id_fkey"
             columns: ["produto_id"]
             isOneToOne: false
+            referencedRelation: "produtos_custos"
+            referencedColumns: ["produto_id"]
+          },
+          {
+            foreignKeyName: "movimentos_estoque_log_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
             referencedRelation: "v_estoque_baixo"
             referencedColumns: ["id"]
           },
@@ -4021,6 +4098,13 @@ export type Database = {
             foreignKeyName: "ordens_compra_itens_produto_id_fkey"
             columns: ["produto_id"]
             isOneToOne: false
+            referencedRelation: "produtos_custos"
+            referencedColumns: ["produto_id"]
+          },
+          {
+            foreignKeyName: "ordens_compra_itens_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
             referencedRelation: "v_estoque_baixo"
             referencedColumns: ["id"]
           },
@@ -4150,6 +4234,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "produtos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordens_compra_recebimentos_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos_custos"
+            referencedColumns: ["produto_id"]
           },
           {
             foreignKeyName: "ordens_compra_recebimentos_produto_id_fkey"
@@ -4330,6 +4421,13 @@ export type Database = {
             foreignKeyName: "precos_atacado_produto_id_fkey"
             columns: ["produto_id"]
             isOneToOne: false
+            referencedRelation: "produtos_custos"
+            referencedColumns: ["produto_id"]
+          },
+          {
+            foreignKeyName: "precos_atacado_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
             referencedRelation: "v_estoque_baixo"
             referencedColumns: ["id"]
           },
@@ -4425,6 +4523,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "produtos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produto_create_requests_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos_custos"
+            referencedColumns: ["produto_id"]
           },
           {
             foreignKeyName: "produto_create_requests_produto_id_fkey"
@@ -4685,6 +4790,13 @@ export type Database = {
             foreignKeyName: "regras_preco_produto_id_fkey"
             columns: ["produto_id"]
             isOneToOne: false
+            referencedRelation: "produtos_custos"
+            referencedColumns: ["produto_id"]
+          },
+          {
+            foreignKeyName: "regras_preco_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
             referencedRelation: "v_estoque_baixo"
             referencedColumns: ["id"]
           },
@@ -4744,6 +4856,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "produtos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remessa_itens_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos_custos"
+            referencedColumns: ["produto_id"]
           },
           {
             foreignKeyName: "remessa_itens_produto_id_fkey"
@@ -4927,6 +5046,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "produtos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_alerts_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos_custos"
+            referencedColumns: ["produto_id"]
           },
           {
             foreignKeyName: "system_alerts_produto_id_fkey"
@@ -5265,6 +5391,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "produtos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venda_pos_venda_itens_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos_custos"
+            referencedColumns: ["produto_id"]
           },
           {
             foreignKeyName: "venda_pos_venda_itens_produto_id_fkey"
@@ -5734,6 +5867,13 @@ export type Database = {
             foreignKeyName: "vinculos_fornecedor_produto_produto_id_fkey"
             columns: ["produto_id"]
             isOneToOne: false
+            referencedRelation: "produtos_custos"
+            referencedColumns: ["produto_id"]
+          },
+          {
+            foreignKeyName: "vinculos_fornecedor_produto_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
             referencedRelation: "v_estoque_baixo"
             referencedColumns: ["id"]
           },
@@ -6001,6 +6141,30 @@ export type Database = {
           },
         ]
       }
+      produtos_custos: {
+        Row: {
+          loja_id: string | null
+          preco_custo: number | null
+          preco_custo_medio: number | null
+          produto_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "produtos_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produtos_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["loja_id"]
+          },
+        ]
+      }
       v_clientes_gerente: {
         Row: {
           ativo: boolean | null
@@ -6081,6 +6245,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "produtos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estoque_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos_custos"
+            referencedColumns: ["produto_id"]
           },
           {
             foreignKeyName: "estoque_produto_id_fkey"
@@ -7127,6 +7298,10 @@ export type Database = {
       pdv_diagnostico_pre_producao: {
         Args: { p_produto_codigo?: string }
         Returns: Json
+      }
+      pdv_registrar_alertas_margem_venda: {
+        Args: { p_venda_id: string }
+        Returns: undefined
       }
       processar_ajuste_comissao_venda: {
         Args: { p_origem_id: string; p_tipo: string; p_venda_id: string }
