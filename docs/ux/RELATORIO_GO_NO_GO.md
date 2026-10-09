@@ -1,5 +1,7 @@
 # Relatório GO / NO-GO — Sprint UX-IA-01 (Fase de Auditoria)
 
+> **Atualização (2026-10-09):** #509, #510, #511, #512, #514 e #515 estão **mergeados e em produção** (deploys READY); #516 (GO-LIVE) aplicado em produção; #517/#518 (Diagnóstico). PR 5 foi entregue como barra agrupada de 7 controles. **PR 6 cancelado** (já existia). **PR 7 segue em espera** (margem em intervalo, opção b; repetir a conferência com cliente a prazo e desconto autorizado). PR de i18n dos painéis executivos planejado depois. Detalhe: `RELATORIO_HOMOLOGACAO_E_MATRIZ_FINAL.md`, `HOMOLOGACAO_RODADA_2_E_GATES.md`.
+
 ## A. Diagnóstico
 32 páginas em `/admin` (de 45 no app), 23 entradas na sidebar (20 visíveis ao gerente), 18 rotas alcançáveis pela sidebar e 14 só por aba/link. 12 páginas têm barra de hub; 20 não têm sub-navegação. Financeiro expõe 9 controles. Relatórios é navegado por 3 controles sobrepostos. Sem busca global. Detalhes: `AUDITORIA_NAVEGACAO_JINLONG.md`.
 

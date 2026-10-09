@@ -1,5 +1,11 @@
 # VERCEL-RED-01 — Diagnóstico dos deployments em erro/cancelados
 
+> **Atualização (2026-10-09, após aprovação):** o diagnóstico abaixo é o estado **anterior**. Resolvido assim:
+> - **#507 mergeado** (`19f05be5`) em vez de dois merges (o #507 já continha o conteúdo do #494, idêntico por diff); **#494 fechado** como redundante. `jinlong-site` ficou **READY** (produção do projeto do site, protegido por SSO, sem domínio).
+> - **Previews do ERP mantidos bloqueados de propósito.** O Ignored Build Step do ERP é `VERCEL_ENV == production → constrói; senão ignora` (documentado no teste do #507). Só mudam quando existir Supabase isolado para preview.
+> - **Proteção da `main`:** os 6 checks obrigatórios são `build-and-test`, `gitleaks`, `Supabase local gates`, `edge-functions-typecheck`, `outbox-contract` e `anti-replay-diagnostic-gate`. **Os checks `Vercel – …` não são obrigatórios; nenhum ajuste foi necessário.**
+> - Branches abertas só saem do ERROR do site ao receber a `main` nova (não bloqueia merge).
+
 | Campo | Valor |
 |---|---|
 | Data | 2026-10-09 |

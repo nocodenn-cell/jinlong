@@ -1,5 +1,11 @@
 # Investigação — autorização por URL em Implantação e Diagnóstico do Caixa
 
+> **Atualização (2026-10-09):**
+> - **A3 (RLS do GO-LIVE): corrigido e aplicado em produção** com autorização explícita — PR #516 (mergeado). Versão remota `20261009033124` (nome do arquivo `20261009120000`), par registrado em `migration-human-gates.json`. Pré-check de catálogo: produção idêntica ao repositório. Verificação pós-aplicação (catálogo): trigger habilitado, função `SECURITY DEFINER`, sem `EXECUTE` para `PUBLIC`, linha existente inalterada.
+> - **A1 (Diagnóstico por URL): decidido** — só DONO/ADMIN; **Implantação segue acessível ao GERENTE**. PR #517 (mergeado). Descoberta: `loadAdminContext` só calcula permissões e **não bloqueia**; a página e a Server Action agora barram explicitamente.
+> - **A2 (action sem guarda): corrigido** no #517; erro de permissão correto e tratamento de exceção no #518.
+> - **Aberto:** a RPC `pdv_diagnostico_pre_producao` ainda aceita GERENTE no banco (só leitura). Exige migration; decisão pendente.
+
 | Campo | Valor |
 |---|---|
 | Data | 2026-10-08 |
