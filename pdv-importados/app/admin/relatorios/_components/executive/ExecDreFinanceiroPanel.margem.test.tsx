@@ -87,6 +87,23 @@ describe('ExecDreFinanceiroPanel — margem em intervalo', () => {
     expect(t).toContain('lista parcial')
   })
 
+  it('lista parcial sem venda sem custo na fatia: ainda divulga o truncamento (só teto)', () => {
+    const t = montar({ vendasSemCusto: { qtd: 0, receita: 0, parcial: true } })
+    expect(t).toContain('lista parcial')
+    expect(t).not.toMatch(/ a R\$/)
+  })
+
+  it('devoluções: piso é sinalizado como conservador', () => {
+    const t = montar({ devolucoes: 100, vendasSemCusto: { qtd: 1, receita: 100, parcial: false } })
+    expect(t).toContain('piso conservador')
+  })
+
+  it('fuso divergente: só o teto, sem piso', () => {
+    const t = montar({ fusoDiverge: true, vendasSemCusto: { qtd: 1, receita: 51.6, parcial: false } })
+    expect(t).not.toMatch(/ a R\$/)
+    expect(t).toContain('fuso do relatório')
+  })
+
   it('custo confiável: valor único, sem intervalo', () => {
     const t = montar({
       resumo: resumo({ custo_confiavel: true, margem_bruta_estimada: 530 }),

@@ -135,11 +135,10 @@ test.describe('Painel do gerente (/admin/*)', () => {
 
   test('página de relatórios exibe filtros de período', async ({ page }) => {
     await gotoApp(page, '/admin/relatorios')
-    await expect(page.getByRole('heading', { level: 1, name: 'Relatórios', exact: true })).toBeVisible()
-    // Sem link "Hoje" nesta página (isso existe em /admin/vendas, não aqui) —
-    // confirma um h2 real das seções de relatório em vez de um filtro
-    // inventado.
-    await expect(page.getByRole('heading', { level: 2, name: 'Faturamento por dia' })).toBeVisible()
+    // PR 7: a rota nua redireciona para a view executiva padrão.
+    await expect(page).toHaveURL(/\/admin\/relatorios\?.*view=vendas-caixas/)
+    await expect(page.getByRole('heading', { level: 1, name: 'Vendas & Caixas', exact: true })).toBeVisible()
+    await expect(page.getByText('Faturamento por dia').first()).toBeVisible()
   })
 
   test('toggle de idioma exibe mandarim no painel', async ({ page }) => {

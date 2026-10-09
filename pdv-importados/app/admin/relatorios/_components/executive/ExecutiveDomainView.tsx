@@ -112,6 +112,8 @@ export function ExecutiveDomainView({ view, dados, extras = {}, locale, labels, 
         financeiro={extras.financeiro}
         financeiroErro={extras.financeiroErro}
         vendasSemCusto={resumirVendasSemCusto(dados.margemPorVenda)}
+        // O RPC financeiro fixa America/Sao_Paulo; com outro fuso o piso nao seria comparavel ao teto.
+        fusoDiverge={dados.tzRelatorio !== 'America/Sao_Paulo'}
         extra={
           labels ? (
             <div data-testid="exec-extra-dre">

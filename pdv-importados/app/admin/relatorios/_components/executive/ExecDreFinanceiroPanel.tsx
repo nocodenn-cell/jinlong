@@ -35,6 +35,8 @@ type Props = {
    * lista do RPC atingiu o limite e pode haver mais vendas sem custo.
    */
   vendasSemCusto?: { qtd: number; receita: number; parcial: boolean }
+  /** Fuso do relatorio difere do usado pelo Financeiro: o piso nao e confiavel, so o teto. */
+  fusoDiverge?: boolean
 }
 
 export const LIMITE_MARGEM_POR_VENDA = 200
@@ -77,6 +79,7 @@ export function ExecDreFinanceiroPanel({
   financeiroErro,
   extra,
   vendasSemCusto,
+  fusoDiverge = false,
 }: Props) {
   const gerencial = financeiro?.resultado_gerencial
   const cmv = gerencial?.custo_conhecido ?? null
@@ -88,13 +91,22 @@ export function ExecDreFinanceiroPanel({
         : null
   const aproximada = !resumo.custo_confiavel && margemBruta != null
   const piso =
-    aproximada && vendasSemCusto && vendasSemCusto.qtd > 0
+    aproximada && !fusoDiverge && vendasSemCusto && vendasSemCusto.qtd > 0
       ? Math.round((margemBruta - vendasSemCusto.receita) * 100) / 100
       : null
   const textoIntervalo = (v: number) =>
     piso != null
       ? `${formatBRL(piso, locale)} a ${formatBRL(v, locale)}`
       : formatBRL(v, locale)
+  const parcialTxt = vendasSemCusto?.parcial
+    ? ' — lista parcial (200 vendas mais recentes): pode haver outras vendas sem custo'
+    : ''
+  const hintMargem =
+    piso != null && vendasSemCusto
+      ? `Custo incompleto em ${vendasSemCusto.qtd} venda(s) (${formatBRL(vendasSemCusto.receita, locale)})${parcialTxt}: margem entre piso e teto${devolucoes > 0 ? '; piso conservador (há devoluções)' : ''}`
+      : fusoDiverge
+        ? 'Custo incompleto — apenas o teto (fuso do relatório difere do Financeiro)'
+        : `Custo incompleto — margem aproximada (teto)${parcialTxt}`
   const despesas = gerencial ? gerencial.despesas_manuais + gerencial.taxas_conferidas : null
   const lucro =
     margemBruta != null && despesas != null ? margemBruta - despesas : null
@@ -165,11 +177,7 @@ export function ExecDreFinanceiroPanel({
       value: margemBruta == null ? '—' : textoIntervalo(margemBruta),
       icon: 'file-check-2',
       tone: resumo.custo_confiavel ? 'gold' : 'warning',
-      hint: resumo.custo_confiavel
-        ? undefined
-        : piso != null && vendasSemCusto
-          ? `Custo incompleto em ${vendasSemCusto.qtd} venda(s) (${formatBRL(vendasSemCusto.receita, locale)})${vendasSemCusto.parcial ? ' — lista parcial' : ''}: margem entre piso e teto`
-          : 'Custo incompleto — margem aproximada (teto)',
+      hint: resumo.custo_confiavel ? undefined : hintMargem,
     },
     {
       id: 'inad',
