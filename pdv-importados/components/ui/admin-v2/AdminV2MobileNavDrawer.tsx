@@ -137,14 +137,23 @@ export function AdminV2MobileNavDrawer({
               </button>
             </div>
 
-            <Suspense fallback={<nav className="p-3" aria-busy="true" aria-label="Navegação" />}>
-              <SidebarNav
-                admin={m.admin}
-                chineseLanguage={chineseLanguage}
-                stockAlertCount={stockAlertCount}
-                showAdminOnlyItems={showAdminOnlyItems}
-              />
-            </Suspense>
+            {/* Fecha ao ativar qualquer link: trocar só o `?view=` (ex.: Relatórios › DRE) não muda o
+                pathname, então o efeito de [pathname] sozinho deixaria o modal aberto sobre a página. */}
+            <div
+              data-drawer-nav
+              onClick={(e) => {
+                if ((e.target as HTMLElement).closest('a[href]')) setOpen(false)
+              }}
+            >
+              <Suspense fallback={<nav className="p-3" aria-busy="true" aria-label="Navegação" />}>
+                <SidebarNav
+                  admin={m.admin}
+                  chineseLanguage={chineseLanguage}
+                  stockAlertCount={stockAlertCount}
+                  showAdminOnlyItems={showAdminOnlyItems}
+                />
+              </Suspense>
+            </div>
             <SidebarUserFooter session={session} />
           </div>
         </div>
