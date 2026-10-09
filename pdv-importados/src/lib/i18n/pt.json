@@ -2664,6 +2664,7 @@
     "hub_aria_vendas": "Seções de vendas",
     "hub_aria_compras": "Seções de compras",
     "hub_aria_pessoas": "Seções de pessoas",
+    "restrito_dono_admin": "Esta área é restrita ao DONO e à equipe FastProduct (ADMIN).",
     "relatorios_link_visao_geral": "Visão geral",
     "dashboard_link_relatorios_hint": "Análises por período, ABC e margem",
     "catalogo_subtitulo": "Produtos cadastrados na loja",
