@@ -21,7 +21,7 @@ Data: 2026-10-09 · Escopo: navegação, relatórios, i18n PT-BR/中文 e pendê
 | #520 | **i18n dos painéis executivos (PT/中文)** | `b943b548` |
 
 | #521 | **RPC do Diagnóstico só DONO/ADMIN** — migration aplicada em produção com autorização expressa | `c18a99de` |
-| #523 | Registro do par de versão da migration do #521 (`migration-human-gates.json`) | ver PR |
+| #523 | Registro do par de versão da migration do #521 (`migration-human-gates.json`) | `d94be565` |
 
 Aberto, não mergeado: **#491** (branch de trabalho do usuário, intocado).
 
