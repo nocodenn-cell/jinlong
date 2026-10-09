@@ -7,6 +7,7 @@
 
 import { Suspense } from 'react'
 import { PageHeader } from '@/components/ui/admin-v2'
+import { FinanceiroHubNavShell } from '@/components/ui/admin-v2/FinanceiroHubNavShell'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
@@ -84,6 +85,8 @@ export default async function AdminComissoesPage({ searchParams }: PageProps) {
         title={ui.comissoes_titulo}
         subtitle={ui.comissoes_subtitulo}
       />
+
+      <FinanceiroHubNavShell />
 
       <ComissoesFilters
         filtro={filtro}

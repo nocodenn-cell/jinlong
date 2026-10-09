@@ -99,16 +99,8 @@ export const ADMIN_V2_DESTINATIONS: readonly AdminV2NavDestination[] = [
     icon: Banknote,
     labelOverridePt: 'Financeiro',
     dictKey: 'financeiro',
-    alsoActivePaths: [ROUTES.admin.categoriasFinanceiras],
-    hint: 'Contas a receber e pagar, conciliação e fiscal (abas na página).',
-    children: [
-      {
-        id: 'comissoes',
-        href: ROUTES.admin.comissoes,
-        labelOverridePt: 'Comissões',
-        dictKey: 'comissoes',
-      },
-    ],
+    alsoActivePaths: [ROUTES.admin.categoriasFinanceiras, ROUTES.admin.comissoes],
+    hint: 'Contas a receber e pagar, conciliação, fiscal e comissões (abas na página).',
   },
   {
     id: 'pessoas',

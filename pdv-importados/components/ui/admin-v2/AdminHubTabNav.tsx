@@ -2,11 +2,10 @@
 
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { ROUTES } from '@/lib/navigation/routes'
 import { cn } from '@/lib/utils'
 import { hubTabIsActive, type HubTabDef } from '@/lib/navigation/hubNavModel'
-import { FINANCEIRO_TAB_ORDER, type FinanceiroTabId } from '@/lib/navigation/financeiroTabId'
-import { financeiroHrefForTab } from '@/lib/navigation/financeiroHubQuery'
+import type { FinanceiroTabId } from '@/lib/navigation/financeiroTabId'
+import { buildFinanceiroHub, type FinanceiroHubLabels } from '@/lib/navigation/financeiroHubGroups'
 
 const HUB_TAB_CLASS =
   'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors outline-none ' +
@@ -52,35 +51,20 @@ export function AdminHubTabNav({ tabs, ariaLabel }: AdminHubTabNavProps) {
 
 type FinanceiroHubNavProps = {
   activeTab: FinanceiroTabId
-  labels: {
-    resumo?: string
-    contas?: string
-    recebiveis?: string
-    conciliacao?: string
-    resultado?: string
-    receber: string
-    pagar: string
-    fiscal: string
-    categorias: string
-  }
+  labels: FinanceiroHubLabels
   ariaLabel: string
+  /** aria-label da segunda linha (vistas dentro do grupo). */
+  subAriaLabel: string
 }
 
-export function FinanceiroHubNav({ activeTab, labels, ariaLabel }: FinanceiroHubNavProps) {
+/**
+ * Barra do Financeiro: 7 controles + seletor de vistas dentro do grupo (UX-IA-01 PR 5).
+ * Todos os `?tab=` continuam válidos — ver `financeiroHubGroups.ts`.
+ */
+export function FinanceiroHubNav({ activeTab, labels, ariaLabel, subAriaLabel }: FinanceiroHubNavProps) {
   const pathname = usePathname() ?? ''
   const searchParams = useSearchParams()
-  const onFinanceiro = pathname === ROUTES.admin.financeiro
-  const onCategorias = pathname.startsWith(ROUTES.admin.categoriasFinanceiras)
-
-  const items: Array<{ id: string; label: string; href: string; active: boolean }> = [
-    ...FINANCEIRO_TAB_ORDER.map(id => ({ id, label: labels[id] ?? id, href: financeiroHrefForTab(id, searchParams), active: onFinanceiro && activeTab === id })),
-    {
-      id: 'categorias',
-      label: labels.categorias,
-      href: ROUTES.admin.categoriasFinanceiras,
-      active: onCategorias,
-    },
-  ]
+  const { primary, secondary } = buildFinanceiroHub({ pathname, activeTab, searchParams, labels })
 
   return (
     <div
@@ -88,7 +72,7 @@ export function FinanceiroHubNav({ activeTab, labels, ariaLabel }: FinanceiroHub
       data-hub-tab-nav
     >
       <nav aria-label={ariaLabel} className="flex gap-1 overflow-x-auto overscroll-x-contain pb-0.5">
-        {items.map((item) => (
+        {primary.map((item) => (
           <Link
             key={item.id}
             href={item.href}
@@ -105,6 +89,30 @@ export function FinanceiroHubNav({ activeTab, labels, ariaLabel }: FinanceiroHub
           </Link>
         ))}
       </nav>
+      {secondary ? (
+        <nav
+          aria-label={subAriaLabel}
+          data-hub-subnav
+          className="mt-1.5 flex gap-1 overflow-x-auto overscroll-x-contain pb-0.5"
+        >
+          {secondary.map((item) => (
+            <Link
+              key={item.id}
+              href={item.href}
+              className={cn(
+                'shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium outline-none transition-colors',
+                'focus-visible:ring-2 focus-visible:ring-amber-400/70',
+                item.active
+                  ? 'bg-[rgba(251,191,36,0.14)] text-jl-fg-1'
+                  : 'text-jl-fg-3 hover:bg-jl-surface-soft hover:text-jl-fg-1',
+              )}
+              aria-current={item.active ? 'page' : undefined}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+      ) : null}
     </div>
   )
 }

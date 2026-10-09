@@ -42,15 +42,18 @@ it('A receber não repete a fila; Fiscal mantém o documento e abre seu detalhe'
  expect(container.querySelector('[role=dialog]')?.textContent).toBe('documento-pendente')
 })
 
-it('navegação mostra a ordem operacional e preserva apenas os filtros próprios de cada aba', () => {
+it('navegação (barra agrupada, PR 5) mostra a ordem operacional e preserva apenas os filtros próprios de cada aba', () => {
  flushSync(() => root.render(<AdminV2SessionProvider idioma="pt"><FinanceiroContent {...props} activeTab="receber" /></AdminV2SessionProvider>))
  const links=Array.from(container.querySelectorAll('nav a'))
- expect(links.map(a => a.textContent)).toEqual(['Resumo','A receber','A pagar','Contas e saldos','PIX e cartões','Conciliação','Resultado','Fiscal','Categorias'])
+ expect(links.map(a => a.textContent)).toEqual(['Resumo','A receber','A pagar','Contas e conciliação','Fiscal','Comissões','Categorias'])
  expect(links[1].getAttribute('aria-current')).toBe('page')
  expect(links[1].getAttribute('href')).toContain('q=cliente')
  expect(links[3].getAttribute('href')).toContain('de=2026-10-01')
  expect(links[3].getAttribute('href')).not.toContain('q=cliente')
- expect(FINANCEIRO_TABS.map(t => t.id)).toEqual(links.slice(0,8).map(a => new URL(a.getAttribute('href')!, 'https://local.test').searchParams.get('tab')))
+ // Cada grupo entra pela sua primeira aba; as demais (Resultado, PIX e cartões, Conciliação) ficam no
+ // seletor de vistas do grupo — a cobertura de todas as 8 abas está em lib/navigation/financeiroHubGroups.test.ts.
+ expect(links.slice(0,5).map(a => new URL(a.getAttribute('href')!, 'https://local.test').searchParams.get('tab'))).toEqual(['resumo','receber','pagar','contas','fiscal'])
+ expect(FINANCEIRO_TABS.map(t => t.id)).toHaveLength(8)
 })
 
 it.each(['pt','zh'] as const)('primeiro uso em %s orienta saldo, reservas, despesas e taxas sem fazer lançamentos', idioma => {

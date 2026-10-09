@@ -96,11 +96,18 @@ describe('SidebarNav — perfil DONO/GERENTE (cliente)', () => {
   })
 
   it('sub-links só aparecem com o grupo aberto (rota atual dentro do grupo)', () => {
-    expect(renderMenu(false)).not.toContain(ROUTES.admin.comissoes)
-    currentPathname = ROUTES.admin.financeiro
+    expect(renderMenu(false)).not.toContain(ROUTES.admin.suspensao)
+    currentPathname = ROUTES.admin.configuracoes
     const hrefs = renderMenu(false)
-    expect(hrefs).toContain(ROUTES.admin.comissoes)
-    expect(container.querySelector('[data-nav-children-of="financeiro"]')).not.toBeNull()
+    expect(hrefs).toContain(ROUTES.admin.suspensao)
+    expect(container.querySelector('[data-nav-children-of="configuracoes"]')).not.toBeNull()
+  })
+
+  it('Comissões é aba do Financeiro: não é link da sidebar, e o destino Financeiro fica ativo nela', () => {
+    currentPathname = ROUTES.admin.comissoes
+    const hrefs = renderMenu(false)
+    expect(hrefs).not.toContain(ROUTES.admin.comissoes)
+    expect(container.querySelector('[aria-current="page"]')?.getAttribute('href')).toBe(ROUTES.admin.financeiro)
   })
 
   it('Caixas, Fornecedores e Funcionários não são links da sidebar (vivem na barra de abas)', () => {
