@@ -3,9 +3,6 @@ import type { ItemAutoritativo } from '@/app/caixa/server/caixaPrecoAutoritativo
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>
 
-/** Margem unitária negativa em relação ao custo já capturado (migration 235). */
-const LIMITE_MARGEM_NEGATIVA = 0
-
 /** Desconto unitário acima de 50% do preço de referência é considerado fora do padrão. */
 const LIMITE_DESCONTO_FORA_PADRAO = 0.5
 
@@ -28,19 +25,11 @@ export async function registrarAlertasLevesVenda(
     const flags = Array.isArray(flagsRows) ? flagsRows[0] : flagsRows
     if (!flags?.alertas_leves_ativos) return
 
-    for (const item of itens) {
-      if (item.custoUnitarioSnap != null && item.precoUnitario < item.custoUnitarioSnap - LIMITE_MARGEM_NEGATIVA) {
-        await supabase.rpc('registrar_system_alert', {
-          p_tipo: 'margem_negativa',
-          p_produto_id: item.produtoId,
-          p_venda_id: vendaId,
-          p_detalhe: {
-            preco_unitario: item.precoUnitario,
-            custo_unitario_snap: item.custoUnitarioSnap,
-          },
-        })
-      }
+    // N1: o alerta de margem negativa é calculado NO BANCO (compara com o snapshot de custo gravado pela
+    // venda e não grava nem devolve o custo). O app não lê custo.
+    await supabase.rpc('pdv_registrar_alertas_margem_venda', { p_venda_id: vendaId })
 
+    for (const item of itens) {
       if (
         item.precoOriginal > 0 &&
         item.descontoUnitario / item.precoOriginal > LIMITE_DESCONTO_FORA_PADRAO

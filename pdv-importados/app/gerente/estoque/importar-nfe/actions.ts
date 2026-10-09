@@ -1,5 +1,6 @@
 'use server'
 
+import { carregarCustosProdutos } from '@/lib/gerente/produtos/custosProdutos'
 import { randomUUID } from 'node:crypto'
 import { revalidatePath } from 'next/cache'
 import { readNfePayables } from '@/app/admin/financeiro/payableReader'
@@ -339,7 +340,7 @@ export async function buscarProdutosParaVinculo(
   const padrao = `%${t}%`
   const { data, error } = await supabase
     .from('produtos')
-    .select('id, nome, codigo_barras, preco_custo')
+    .select('id, nome, codigo_barras')
     .eq('loja_id', lojaId)
     .eq('ativo', true)
     .or(`nome.ilike.${padrao},codigo_barras.ilike.${padrao},codigo_interno.ilike.${padrao}`)
@@ -350,11 +351,18 @@ export async function buscarProdutosParaVinculo(
     return { success: false, error: mensagemErroComSecao('Produtos', error.message) }
   }
 
+  // N1: custo vem da view gerencial `produtos_custos` (produtos.preco_custo não é legível).
+  let custos: Map<string, { preco_custo: number | null }>
+  try {
+    custos = await carregarCustosProdutos(supabase, (data ?? []).map((r) => r.id as string))
+  } catch (e) {
+    return { success: false, error: mensagemErroComSecao('Produtos', e instanceof Error ? e.message : 'custo') }
+  }
   const rows = (data ?? []).map((r) => ({
     id: r.id as string,
     nome: r.nome as string,
     codigo_barras: (r.codigo_barras as string | null) ?? null,
-    preco_custo: r.preco_custo != null ? Number(r.preco_custo) : null,
+    preco_custo: custos.get(r.id as string)?.preco_custo ?? null,
   }))
   return { success: true, data: rows }
 }
@@ -515,7 +523,7 @@ export async function obterConferenciaImportacaoNfe(
   const { data: itens, error: itensError } = await supabase
     .from('importacoes_nfe_itens')
     .select(
-      'id, produto_id, quantidade_nfe, custo_unitario, atualizar_custo, quantidade_conferida, divergencia_obs, status_conferencia, produtos(nome, codigo_barras, preco_custo)',
+      'id, produto_id, quantidade_nfe, custo_unitario, atualizar_custo, quantidade_conferida, divergencia_obs, status_conferencia, produtos(nome, codigo_barras)',
     )
     .eq('importacao_nfe_id', importacaoId)
     .order('created_at', { ascending: true })
@@ -530,8 +538,19 @@ export async function obterConferenciaImportacaoNfe(
     ? (fornecedorRel[0]?.nome ?? '')
     : (fornecedorRel?.nome ?? '')
 
+  // N1: custo atual do produto vem da view gerencial (o embed `produtos(preco_custo)` não é mais permitido).
+  let custosAtuais: Map<string, { preco_custo: number | null }>
+  try {
+    custosAtuais = await carregarCustosProdutos(
+      supabase,
+      (itens ?? []).map((r) => r.produto_id as string).filter(Boolean),
+    )
+  } catch (e) {
+    return { success: false, error: mensagemErroComSecao('Importação NF-e', e instanceof Error ? e.message : 'custo') }
+  }
+
   const linhas: ItemConferenciaNfe[] = (itens ?? []).map((row) => {
-    const produtoRel = (row as { produtos: { nome: string; codigo_barras: string | null; preco_custo?: number | null } | { nome: string; codigo_barras: string | null; preco_custo?: number | null }[] | null }).produtos
+    const produtoRel = (row as { produtos: { nome: string; codigo_barras: string | null } | { nome: string; codigo_barras: string | null }[] | null }).produtos
     const produto = Array.isArray(produtoRel) ? produtoRel[0] : produtoRel
     return {
       item_id: row.id as string,
@@ -540,7 +559,7 @@ export async function obterConferenciaImportacaoNfe(
       produto_codigo_barras: produto?.codigo_barras ?? null,
       quantidade_nfe: Number(row.quantidade_nfe),
       custo_unitario: Number(row.custo_unitario),
-      produto_custo_atual: produto?.preco_custo == null ? null : Number(produto.preco_custo),
+      produto_custo_atual: custosAtuais.get(row.produto_id as string)?.preco_custo ?? null,
       atualizar_custo: Boolean(row.atualizar_custo),
       quantidade_conferida:
         row.quantidade_conferida != null ? Number(row.quantidade_conferida) : null,

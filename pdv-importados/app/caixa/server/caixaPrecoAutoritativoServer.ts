@@ -19,7 +19,10 @@ export type ItemAutoritativo = {
   precoUnitario: number
   descontoUnitario: number
   tipoPreco: 'VAREJO' | 'ATACADO' | 'MANUAL' | 'PROMOCAO'
-  /** Observabilidade visual (não usado em cálculo): snapshot de produtos.preco_custo. */
+  /**
+   * N1: sempre `null` aqui. O OPERADOR não lê `produtos.preco_custo`; o snapshot de custo da venda é gravado
+   * pelo banco (`finalizar_venda_transacional_canonica_v4` lê o custo no servidor, ignorando este campo).
+   */
   custoUnitarioSnap: number | null
   /** Observabilidade visual (não usado em cálculo): id da faixa/regra usada como referência. */
   regraAplicadaId: string | null
@@ -166,7 +169,7 @@ export async function recalcularItensNoServidor(
   const produtosIds = Array.from(new Set(itensInput.map((i) => i.produtoId)))
   const { data: produtosRows, error: prodErr } = await supabase
     .from('produtos')
-    .select('id, preco_varejo, preco_custo, ativo, status_publicacao')
+    .select('id, preco_varejo, ativo, status_publicacao')
     .in('id', produtosIds)
 
   if (prodErr) return { ok: false, error: mensagemErroComSecao('Produtos', prodErr.message, await idiomaOperadorParaErro()) }
@@ -174,7 +177,6 @@ export async function recalcularItensNoServidor(
     (produtosRows ?? []) as {
       id: string
       preco_varejo: number
-      preco_custo: number | null
       ativo: boolean
       status_publicacao: string | null
     }[],
@@ -239,7 +241,7 @@ export async function recalcularItensNoServidor(
         precoUnitario,
         descontoUnitario: roundMoney2(precoOriginal - precoUnitario),
         tipoPreco: i.tipoPreco,
-        custoUnitarioSnap: p.preco_custo == null ? null : roundMoney2(Number(p.preco_custo)),
+        custoUnitarioSnap: null,
         regraAplicadaId: null,
         fontePreco: i.tipoPreco,
         pricingVersionId,
@@ -324,7 +326,7 @@ export async function recalcularItensNoServidor(
       precoUnitario,
       descontoUnitario: roundMoney2(precoOriginal - precoUnitario),
       tipoPreco: i.tipoPreco,
-      custoUnitarioSnap: p.preco_custo == null ? null : roundMoney2(Number(p.preco_custo)),
+      custoUnitarioSnap: null,
       regraAplicadaId: esperado.regraId,
       fontePreco: fontePrecoDeRpc(esperado),
       pricingVersionId,

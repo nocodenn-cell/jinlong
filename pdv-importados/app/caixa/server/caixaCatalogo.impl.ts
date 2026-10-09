@@ -1,3 +1,4 @@
+import { PRODUTO_COLS } from '@/app/caixa/server/caixaProdutoSql'
 import { createClient } from '@/lib/supabase/server'
 import { getUsuarioAtual } from '@/lib/auth/usuarioAtual'
 import { mapRegraPrecoRow, type RegraPrecoRow } from '@/core/caixa/mapRegrasPreco'
@@ -103,7 +104,7 @@ type SupabaseCaixa = Awaited<ReturnType<typeof createClient>>
  * só por loja, então sem este filtro um código repetido em outra loja colidiria.
  */
 function produtosVendaveisDaLoja(supabase: SupabaseCaixa, lojaId: string) {
-  return aplicarFiltroProdutoVendavel(supabase.from('produtos').select('*')).eq('loja_id', lojaId)
+  return aplicarFiltroProdutoVendavel(supabase.from('produtos').select(PRODUTO_COLS)).eq('loja_id', lojaId)
 }
 
 async function buscarVendaveisPorColunaIlike(

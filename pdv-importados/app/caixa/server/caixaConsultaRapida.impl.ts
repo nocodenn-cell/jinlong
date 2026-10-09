@@ -50,7 +50,7 @@ export async function consultarProdutoRapidoCaixaImpl(
       aplicarFiltroProdutoVendavel(
         supabase
           .from('produtos')
-          .select('preco_custo, ativo, status_publicacao')
+          .select('ativo, status_publicacao')
           .eq('id', produtoId),
       ).maybeSingle(),
     ])
@@ -86,9 +86,18 @@ export async function consultarProdutoRapidoCaixaImpl(
         cfgRes.mapa.show_margin_visual === '1' ||
         cfgRes.mapa.show_margin_visual === 'TRUE')
 
-    const custoRaw = custoRow.preco_custo
-    const custo =
-      custoRaw == null || custoRaw === undefined ? null : Number(custoRaw)
+    // N1: a margem % só aparece para quem pode ver o custo (GERENTE/DONO da loja, ADMIN). Para OPERADOR a view
+    // `produtos_custos` devolve 0 linhas → sem custo → sem margem; o OPERADOR não deduz custo pelo percentual.
+    let custo: number | null = null
+    if (mostrarMargem) {
+      const { data: custoView } = await supabase
+        .from('produtos_custos')
+        .select('preco_custo')
+        .eq('produto_id', produtoId)
+        .maybeSingle()
+      const custoRaw = (custoView as { preco_custo: number | string | null } | null)?.preco_custo
+      custo = custoRaw == null ? null : Number(custoRaw)
+    }
     const preco = busca.precoCalculado
     let margemPercentual: number | null = null
     if (mostrarMargem && custo != null && Number.isFinite(custo) && preco > 0) {
