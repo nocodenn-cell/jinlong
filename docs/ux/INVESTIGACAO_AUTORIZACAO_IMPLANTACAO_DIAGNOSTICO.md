@@ -95,3 +95,11 @@ Nenhum dos três afeta venda, caixa, estoque ou financeiro. O alcance real do A3
 - Verificação **somente local**. Não consultei o banco de produção; o estado das policies lá deveria ser conferido (`pg_policies`), pois o ambiente pode divergir (há `MIGRATIONS_DRIFT_CLASSIFICATION.md` no repositório).
 - Não testei a política de `implantacao_checklist_itens` com o mesmo rigor (escrita permitida a GERENTE é intencional).
 - O gate de DONO só foi exercitado pelo fluxo de UI na leitura de código, não por clique em navegador.
+
+---
+
+## Atualização (2026-10-09) — go_autorizado e RPC do Diagnóstico
+
+- **`go_autorizado` / `go_autorizado_por` (Implantação):** CORRIGIDO e verificado em produção. A migration `20261009120000` (PR #516) foi aplicada com autorização; consulta somente-leitura em 2026-10-09 confirmou o trigger `trg_implantacao_checklists_proteger_go` (BEFORE INSERT OR UPDATE, habilitado, função SECURITY DEFINER). Smoke local de 13 checks reexecutado sem regressão.
+- **RPC `pdv_diagnostico_pre_producao` aceitava GERENTE no banco** (a UI já exigia DONO/ADMIN desde o #518): correção preparada em PR isolado — migration `20261009150000` (troca só a lista de perfis do guard, lendo a definição vigente; aborta se a cláusula não bater 1x) + `backend/scripts/pdv-diagnostico-authz-smoke.mjs`. Evidência local: antes, GERENTE recebia HTTP 200 com o checklist; depois, 403 `nao_autorizado`; DONO e ADMIN continuam recebendo o checklist; OPERADOR segue negado. **NÃO aplicada em produção** — depende de autorização expressa e de pré-checagem do guard vigente (a migration já aborta se divergir). Único chamador no app: `diagnosticoCaixa.impl.ts` (já restrito a DONO/ADMIN).
+- Risco residual do achado: baixo (leitura, STABLE, sem dados de clientes), mas é informação de infraestrutura; permanece ABERTO em produção até a aplicação.
