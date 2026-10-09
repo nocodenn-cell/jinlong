@@ -30,7 +30,7 @@ Hoje há 5 abas clássicas (`?tab=visao|produtos|estoque|margem|vendas`, só qua
 | R14 | Margem › **Margem por venda** (líquido/custo/margem) | **Não encontrado** | DRE mostra margem agregada | Alta | **Migrar** |
 | R15 | Margem › Curva ABC | Sim | Produtos & Estoque › "Curva ABC" | Alta | — |
 
-**Situação (09/10):** R2, R6, R7, R8, R11 e R14 foram **migrados** para as views (PR #514, aditivo: Ticket médio, Faturamento por dia e Status das vendas em Vendas & Caixas; Mais vendidos e Divergência de estoque em Produtos & Estoque; Margem por venda em DRE & Financeiro). O clássico continua ativo. Falta conferir valores (R1, R5, R13) antes do PR 7.
+**Situação (09/10):** R2, R6, R7, R8, R11 e R14 foram **migrados** para as views (PR #514, aditivo: Ticket médio, Faturamento por dia e Status das vendas em Vendas & Caixas; Mais vendidos e Divergência de estoque em Produtos & Estoque; Margem por venda em DRE & Financeiro). O clássico continua ativo. **Conferência valor a valor feita em 09/10** (`CONFERENCIA_VALORES_CLASSICO_X_VIEWS.md`): números conferem em todos os itens, exceto **R5 (margem com custo incompleto: clássico esconde, DRE mostra aproximado)**, que pende de decisão; achou e corrigiu 3 lacunas (Cliente, Valor imobilizado, Média/dia). PR 7: GO COM RESSALVAS.
 
 **Conclusão R (estado de 08/10, antes da migração):** a aba clássica **não podia ser aposentada**. Seis conteúdos não têm equivalente nas views (R2, R6, R7, R8, R11, R14), sendo R11 sinal de integridade. Caminho seguro para o PR 7:
 1. Mover R6/R7/R2 para Vendas & Caixas; R8/R11 para Produtos & Estoque; R14 para DRE (ou para Vendas & Caixas).
