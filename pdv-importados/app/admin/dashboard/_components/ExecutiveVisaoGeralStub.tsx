@@ -12,6 +12,8 @@ import {
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { executiveRelatoriosHref } from '@/lib/navigation/executiveViews'
+import type { Idioma } from '@/idioma/normalizeIdioma'
+import { traduzir, type ExecTextKey } from '@/lib/i18n/execTexts'
 
 type AlertRow = {
   id: string
@@ -31,20 +33,24 @@ type ExecutiveVisaoGeralStubProps = {
   /** Alertas rápidos para validar StatusBadge + DenseDataTable (Fase 1). */
   alertRows?: readonly AlertRow[]
   secondaryActions?: readonly PageActionSecondaryItem[]
+  /** Idioma da interface (padrão PT). */
+  idioma?: Idioma
 }
 
-const DEFAULT_SECONDARY: readonly PageActionSecondaryItem[] = [
+function defaultSecondary(idioma: Idioma): readonly PageActionSecondaryItem[] {
+  return [
   {
     id: 'vendas-caixas',
-    label: 'Ir para Vendas & Caixas',
+    label: traduzir(idioma, 'dash.ir_vendas'),
     href: executiveRelatoriosHref('vendas-caixas'),
   },
   {
     id: 'export-placeholder',
-    label: 'Exportar PDF (em breve)',
+    label: traduzir(idioma, 'dash.exportar_pdf'),
     disabled: true,
   },
-]
+  ]
+}
 
 /**
  * Stub de validação da Fase 1 — Visão Geral com primitivas executivas.
@@ -59,28 +65,30 @@ export function ExecutiveVisaoGeralStub({
   side,
   footer,
   alertRows = [],
-  secondaryActions = DEFAULT_SECONDARY,
+  secondaryActions,
+  idioma = 'pt',
 }: ExecutiveVisaoGeralStubProps) {
+  const tr = (key: ExecTextKey) => traduzir(idioma, key)
   const alertsPanel =
     alertRows.length > 0 ? (
       <div className="rounded-card border border-[var(--color-border)] p-3" data-testid="executive-alerts-stub">
         <div className="mb-2 flex items-center justify-between gap-2">
-          <h2 className="text-small font-semibold text-fg">Alertas rápidos</h2>
-          <StatusBadge tone="neutral">Executivo</StatusBadge>
+          <h2 className="text-small font-semibold text-fg">{tr('dash.alertas')}</h2>
+          <StatusBadge tone="neutral">{tr('dash.executivo')}</StatusBadge>
         </div>
         <DenseDataTable
-          caption="Alertas executivos"
+          caption={tr('dash.cap_alertas')}
           rows={alertRows}
           rowKey={(row) => row.id}
           columns={[
             {
               id: 'status',
-              header: 'Status',
+              header: tr('com.status'),
               cell: (row) => <StatusBadge tone={row.tone}>{row.label}</StatusBadge>,
             },
             {
               id: 'detail',
-              header: 'Detalhe',
+              header: tr('dash.col_detalhe'),
               numeric: true,
               cell: (row) => row.detail,
             },
@@ -97,11 +105,11 @@ export function ExecutiveVisaoGeralStub({
         filters={filters}
         primaryActions={
           <Button asChild variant="secondary" size="sm">
-            <Link href={executiveRelatoriosHref('vendas-caixas')}>Vendas & Caixas</Link>
+            <Link href={executiveRelatoriosHref('vendas-caixas')}>{tr('view.vendas-caixas')}</Link>
           </Button>
         }
-        secondaryActions={secondaryActions}
-        secondaryActionsLabel="Mais ações"
+        secondaryActions={secondaryActions ?? defaultSecondary(idioma)}
+        secondaryActionsLabel={tr('hdr.mais_acoes')}
       />
 
       <Suspense fallback={null}>

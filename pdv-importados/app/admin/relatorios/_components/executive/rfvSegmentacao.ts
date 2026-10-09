@@ -11,6 +11,9 @@ export type VendaRfvInput = {
   status: string
 }
 
+/** Marcador interno do cliente sem nome; a UI traduz na exibição. */
+export const CLIENTE_NAO_IDENTIFICADO = 'Cliente não identificado'
+
 export type ClienteRfv = {
   cliente: string
   recenciaDias: number
@@ -43,7 +46,7 @@ export function construirSegmentacaoRfv(
 
   for (const venda of vendas) {
     if (venda.status !== 'CONCLUIDA') continue
-    const nome = (venda.cliente_nome ?? '').trim() || 'Cliente não identificado'
+    const nome = (venda.cliente_nome ?? '').trim() || CLIENTE_NAO_IDENTIFICADO
     if (!venda.data) continue
     const prev = map.get(nome)
     if (!prev) {

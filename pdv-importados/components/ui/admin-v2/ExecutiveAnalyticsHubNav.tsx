@@ -10,14 +10,7 @@ import {
 } from '@/lib/navigation/executiveViews'
 import { ROUTES } from '@/lib/navigation/routes'
 import { cn } from '@/lib/utils'
-
-const VIEW_LABELS: Record<ExecutiveViewId, string> = {
-  'visao-geral': 'Visão Geral',
-  'vendas-caixas': 'Vendas & Caixas',
-  'dre-financeiro': 'DRE & Financeiro',
-  'produtos-estoque': 'Produtos & Estoque',
-  'crm-auditoria': 'CRM & Auditoria',
-}
+import { useExecT } from '@/lib/i18n/useExecT'
 
 type ExecutiveAnalyticsHubNavProps = {
   /** View forçada (SSR). Se omitida, lê `?view=` da URL. */
@@ -42,6 +35,7 @@ function resolveActiveView(
 }
 
 export function ExecutiveAnalyticsHubNav({ activeView, className }: ExecutiveAnalyticsHubNavProps) {
+  const t = useExecT()
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const current = resolveActiveView(pathname, searchParams?.get('view') ?? null, activeView)
@@ -52,7 +46,7 @@ export function ExecutiveAnalyticsHubNav({ activeView, className }: ExecutiveAna
         'mb-4 flex flex-wrap gap-1 border-b border-[var(--color-border)] pb-2',
         className,
       )}
-      aria-label="Abas executivas"
+      aria-label={t('hdr.abas_executivas')}
       data-testid="executive-analytics-hub-nav"
     >
       {EXECUTIVE_VIEW_IDS.map((view) => {
@@ -71,7 +65,7 @@ export function ExecutiveAnalyticsHubNav({ activeView, className }: ExecutiveAna
                 : 'text-fg-subtle hover:text-fg',
             )}
           >
-            {VIEW_LABELS[view]}
+            {view === 'visao-geral' ? t('hdr.visao_geral') : t(`view.${view}`)}
           </Link>
         )
       })}

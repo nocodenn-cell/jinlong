@@ -17,7 +17,7 @@ import { getRelatorioTimezone } from '@/lib/relatorios/getRelatorioTimezone'
 import { resolverPeriodoRelatorio } from '@/lib/relatorios/periodoRelatorio'
 import { createClient } from '@/lib/supabase/server'
 import { getMessages } from '@/i18n/getMessages'
-import { tipoMovimentoEstoqueLabels } from '@/lib/format/vendaLabels'
+import { labelFormaPagamentoVenda, tipoMovimentoEstoqueLabels } from '@/lib/format/vendaLabels'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import { ROUTES } from '@/lib/navigation/routes'
 import { resolverViewRelatorios } from './_components/relatoriosUi'
@@ -120,7 +120,10 @@ export default async function AdminRelatoriosPage({ searchParams }: PageProps) {
     coberturaEstoque: dados.coberturaEstoque,
     divergenciaEstoque: dados.divergenciaEstoque,
     semGiro: semGiro.itens,
-    vendasDetalhe: vendasAvancado.ok ? vendasAvancado.vendas : [],
+    // Forma de pagamento chega como código (DINHEIRO…); rotula no idioma do usuário (PT/中文).
+    vendasDetalhe: vendasAvancado.ok
+      ? vendasAvancado.vendas.map((v) => ({ ...v, forma_pagamento: labelFormaPagamentoVenda(v.forma_pagamento, m) }))
+      : [],
     // Falha na listagem NÃO pode virar "nenhuma venda": os KPIs desta mesma tela
     // vêm de outra consulta e continuariam mostrando faturamento, produzindo um
     // relatório que se contradiz. Propaga o erro para a aba renderizar ErrorState.

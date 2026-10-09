@@ -7,6 +7,9 @@ type AdminV2SessionCtx = Readonly<{ idioma: Idioma }>
 
 const Ctx = createContext<AdminV2SessionCtx | null>(null)
 
+/** Contexto bruto: permite leitura opcional (sem lançar) em componentes testados isoladamente. */
+export const AdminV2SessionContext = Ctx
+
 export function AdminV2SessionProvider({
   idioma,
   children,

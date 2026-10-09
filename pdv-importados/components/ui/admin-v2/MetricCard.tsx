@@ -98,7 +98,7 @@ export function MetricCard({
   return (
     <div
       className={cn(
-        'admin-v2-metric-card grid h-full min-h-32 grid-rows-[auto,1fr,auto] gap-3 rounded-card p-4',
+        'admin-v2-metric-card grid h-full min-h-32 grid-cols-[minmax(0,1fr)] grid-rows-[auto,1fr,auto] gap-3 rounded-card p-4',
         className,
       )}
     >
@@ -144,7 +144,13 @@ export function MetricCard({
         <div className="min-w-0 flex-1">
           <div
             title={value}
-            className="truncate text-h2 font-semibold leading-none tabular-nums text-fg md:text-h1"
+            className={cn(
+              'font-semibold tabular-nums text-fg',
+              // Valores longos (ex.: faixa de margem "R$ a R$") quebram em vez de esconder o limite superior.
+              value.length > 16
+                ? 'whitespace-normal break-words text-body leading-tight [overflow-wrap:anywhere]'
+                : 'truncate text-h2 leading-none md:text-h1',
+            )}
           >
             {value}
           </div>
