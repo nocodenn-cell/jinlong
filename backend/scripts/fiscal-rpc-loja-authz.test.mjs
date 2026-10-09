@@ -368,11 +368,15 @@ try {
   )
   assert.ok(gerentePropria.rows[0].id)
   await asUser(DONO_A)
-  const donoOutra = await db.query(
-    `SELECT fiscal_enfileirar_documento_venda($1, 'NFE', '{}'::jsonb)::text AS id`,
-    [VENDA_B],
+  await expectReject(
+    () => db.query(`SELECT fiscal_enfileirar_documento_venda($1, 'NFE', '{}'::jsonb)`, [VENDA_B]),
+    /FISCAL_ENQUEUE_PERMISSAO/,
   )
-  assert.ok(donoOutra.rows[0].id)
+  const donoPropria = await db.query(
+    `SELECT fiscal_enfileirar_documento_venda($1, 'NFE', '{}'::jsonb)::text AS id`,
+    [VENDA_A],
+  )
+  assert.ok(donoPropria.rows[0].id)
 
   await asPostgres()
   await db.exec(`UPDATE vendas SET tipo_venda = 'SEM_NF' WHERE id = '${VENDA_A}'`)
@@ -437,6 +441,13 @@ try {
   await db.query('SELECT fiscal_registrar_evento_enqueue_erro($1, $2, $3, $4::jsonb)', [
     VENDA_A, 'NFCE', 'erro da propria venda', '{}',
   ])
+  await asUser(DONO_A)
+  await expectReject(
+    () => db.query('SELECT fiscal_registrar_evento_enqueue_erro($1, $2, $3, $4::jsonb)', [
+      VENDA_B, 'NFCE', 'dono outra loja', '{}',
+    ]),
+    /FISCAL_ENQUEUE_ERRO_EVENTO_AUTH/,
+  )
   await asPostgres()
   const eventosOk = await db.query(
     `SELECT count(*)::int AS n FROM documentos_fiscais_eventos WHERE evento_tipo = 'ERRO_ENQUEUE'`,
@@ -454,8 +465,50 @@ try {
     /FISCAL_REPROCESSO_AUTH/,
   )
 
+  await asPostgres()
+  await db.exec(`
+    UPDATE usuarios SET ativo = false
+     WHERE id IN ('${GER_B}', '${OP_A}', '${DONO_A}', '${ADMIN}');
+    UPDATE documentos_fiscais_pendentes SET status = 'ERRO' WHERE id = '${DOC_B}';
+  `)
+  await asUser(GER_B)
+  await expectReject(
+    () => db.query('SELECT fiscal_reprocessar_documento($1)', [DOC_B]),
+    /FISCAL_REPROCESSO_PERFIL/,
+  )
+  assert.equal(await statusOf(DOC_B), 'ERRO')
+  await asUser(OP_A)
+  await expectReject(
+    () => db.query(`SELECT fiscal_enfileirar_documento_venda($1, 'NFCE', '{}'::jsonb)`, [VENDA_A]),
+    /FISCAL_ENQUEUE_PERMISSAO/,
+  )
+  await asUser(DONO_A)
+  await expectReject(
+    () => db.query(`SELECT fiscal_enfileirar_documento_venda($1, 'NFCE', '{}'::jsonb)`, [VENDA_A]),
+    /FISCAL_ENQUEUE_PERMISSAO/,
+  )
+  await asUser(ADMIN)
+  await expectReject(
+    () => db.query('SELECT fiscal_reprocessar_documento($1)', [DOC_B]),
+    /FISCAL_REPROCESSO_PERFIL/,
+  )
+  await asUser(OP_A)
+  await expectReject(
+    () => db.query('SELECT fiscal_registrar_evento_enqueue_erro($1, $2, $3, $4::jsonb)', [
+      VENDA_A, 'NFCE', 'inativo', '{}',
+    ]),
+    /FISCAL_ENQUEUE_ERRO_EVENTO_AUTH/,
+  )
+  await asPostgres()
+  await db.exec(`UPDATE usuarios SET ativo = true`)
+  await asUser(GER_B)
+  await db.query('SELECT fiscal_reprocessar_documento($1)', [DOC_B])
+  assert.equal(await statusOf(DOC_B), 'PENDENTE')
+
   const fonte = await readFile(migrationUrl, 'utf8')
   assert.match(fonte, /session_user IN \('postgres', 'supabase_admin'\)/)
+  assert.match(fonte, /não restaurar os corpos anteriores/)
+  assert.doesNotMatch(fonte, /git show desta migration/)
   await asPostgres()
   const defs = await db.query(`
     SELECT pg_get_functiondef(p.oid) AS def
@@ -472,7 +525,7 @@ try {
     assert.doesNotMatch(row.def, /current_user <> 'postgres'/)
   }
 
-  console.log('DEPOIS: operador e gerente de outra loja negados; mesma loja, ADMIN, service_role e manutenção seguem válidos')
+  console.log('DEPOIS: outra loja e usuário inativo negados; mesma loja, ADMIN ativo, service_role e manutenção seguem válidos')
   console.log('OK: isolamento fiscal entre lojas')
 } finally {
   await db.close()

@@ -27,16 +27,22 @@
 --     dentro de SECURITY DEFINER.
 --   * Reprocesso e cancelamento: GERENTE/DONO só na loja do caixa da venda;
 --     ADMIN global. Igual à RLS da fila fiscal.
---   * Enfileirar e evento de erro: operador da própria venda, GERENTE da loja
---     do caixa, DONO/ADMIN globais — a regra que o corpo já declarava, agora
---     efetiva e com loja vinda de caixas.
+--   * Enfileirar e evento de erro: operador ativo da própria venda, GERENTE ou
+--     DONO ativos da loja do caixa, ADMIN ativo global. A RLS
+--     doc_fiscal_pendentes_* (094) e auth_usuario_gerencial_loja prendem o
+--     DONO à loja. A leitura consolidada de vendas do piloto
+--     (pos_venda_operacoes_select_dono_todas_lojas) é SELECT e não autoriza
+--     mutação fiscal em outra loja. ESPEC_MULTIEMPRESA_V1 ainda não é a
+--     fonte em vigor (D17: fase 1 não troca policies).
+--   * Usuário com usuarios.ativo = false recebe o mesmo código de perfil ou
+--     permissão. Sessão privilegiada (worker) não passa por essa checagem.
 --   service_role e a sessão de migration continuam podendo chamar (worker,
 --     sync-outbox, smoke).
 --
--- ROLLBACK: restaurar os corpos anteriores via git show desta migration^
---   (fiscal_reprocessar_documento, fiscal_cancelar_documento,
---   fiscal_enfileirar_documento_venda, fiscal_registrar_evento_enqueue_erro)
---   e DROP FUNCTION internal.fiscal_sessao_privilegiada().
+-- ROLLBACK: não restaurar os corpos anteriores. Eles reabrem o bypass de
+--   current_user, o cancelamento entre lojas e o enqueue do DONO fora da loja.
+--   Este arquivo é CREATE OR REPLACE idempotente: se sair do ledger, reaplique
+--   este mesmo SQL. Não há script que volte à definição vulnerável.
 
 CREATE SCHEMA IF NOT EXISTS internal;
 
@@ -75,6 +81,7 @@ BEGIN
       SELECT 1
       FROM public.usuarios u
       WHERE u.id = v_uid
+        AND u.ativo
         AND u.perfil IN ('GERENTE', 'DONO', 'ADMIN')
     ) THEN
       RAISE EXCEPTION 'FISCAL_REPROCESSO_PERFIL';
@@ -102,6 +109,7 @@ BEGIN
       SELECT 1
       FROM public.usuarios u
       WHERE u.id = v_uid
+        AND u.ativo
         AND (
           u.perfil = 'ADMIN'
           OR (u.perfil IN ('GERENTE', 'DONO') AND u.loja_id = v_loja)
@@ -188,7 +196,9 @@ BEGIN
 
   IF NOT EXISTS (
     SELECT 1 FROM public.usuarios u
-    WHERE u.id = v_uid AND u.perfil IN ('GERENTE', 'DONO', 'ADMIN')
+    WHERE u.id = v_uid
+      AND u.ativo
+      AND u.perfil IN ('GERENTE', 'DONO', 'ADMIN')
   ) THEN
     RAISE EXCEPTION 'FISCAL_CANCELAR_FORBIDDEN' USING ERRCODE = '42501';
   END IF;
@@ -217,6 +227,7 @@ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM public.usuarios u
     WHERE u.id = v_uid
+      AND u.ativo
       AND (
         u.perfil = 'ADMIN'
         OR (u.perfil IN ('GERENTE', 'DONO') AND u.loja_id = v_loja)
@@ -272,7 +283,6 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  v_admin_profiles TEXT[] := ARRAY['GERENTE', 'DONO', 'ADMIN'];
   v_uid            uuid := auth.uid();
   v_tipo           text := upper(COALESCE(NULLIF(trim(p_tipo_doc), ''), 'NFC_E_STUB'));
   v_documento_id   uuid;
@@ -314,16 +324,27 @@ BEGIN
       FROM public.vendas v
       WHERE v.id = p_venda_id
         AND (
-          v.operador_id = v_uid
+          (
+            v.operador_id = v_uid
+            AND EXISTS (
+              SELECT 1
+              FROM public.usuarios op
+              WHERE op.id = v_uid
+                AND op.ativo
+            )
+          )
           OR EXISTS (
             SELECT 1
             FROM public.usuarios u
             WHERE u.id = v_uid
-              AND u.perfil = ANY(v_admin_profiles)
+              AND u.ativo
               AND (
-                u.perfil IN ('DONO', 'ADMIN')
-                OR u.loja_id = (
-                  SELECT c.loja_id FROM public.caixas c WHERE c.id = v.caixa_id
+                u.perfil = 'ADMIN'
+                OR (
+                  u.perfil IN ('GERENTE', 'DONO')
+                  AND u.loja_id = (
+                    SELECT c.loja_id FROM public.caixas c WHERE c.id = v.caixa_id
+                  )
                 )
               )
           )
@@ -417,7 +438,7 @@ REVOKE ALL ON FUNCTION public.fiscal_enfileirar_documento_venda(uuid, text, json
 GRANT EXECUTE ON FUNCTION public.fiscal_enfileirar_documento_venda(uuid, text, jsonb, uuid) TO authenticated, service_role;
 
 COMMENT ON FUNCTION public.fiscal_enfileirar_documento_venda(uuid, text, jsonb, uuid) IS
-  'Enfileira documento fiscal. authenticated: operador da venda, GERENTE da loja do caixa, DONO/ADMIN. p_loja_id, se informado, tem de bater com a loja do caixa. Loja da venda = caixas.loja_id.';
+  'Enfileira documento fiscal. authenticated ativo: operador da venda, GERENTE/DONO da loja do caixa, ADMIN global. p_loja_id, se informado, tem de bater com a loja do caixa. Loja da venda = caixas.loja_id.';
 
 CREATE OR REPLACE FUNCTION public.fiscal_registrar_evento_enqueue_erro(
   p_venda_id uuid,
@@ -449,10 +470,11 @@ BEGIN
       JOIN public.caixas c ON c.id = v.caixa_id
       JOIN public.usuarios u ON u.id = auth.uid()
       WHERE v.id = p_venda_id
+        AND u.ativo
         AND (
           v.operador_id = auth.uid()
-          OR u.perfil IN ('DONO', 'ADMIN')
-          OR (u.perfil = 'GERENTE' AND u.loja_id = c.loja_id)
+          OR u.perfil = 'ADMIN'
+          OR (u.perfil IN ('GERENTE', 'DONO') AND u.loja_id = c.loja_id)
         )
     ) THEN
       RAISE EXCEPTION 'FISCAL_ENQUEUE_ERRO_EVENTO_AUTH' USING ERRCODE = '42501';
@@ -521,6 +543,16 @@ BEGIN
   END IF;
   IF position('v.loja_id' IN v_enq) > 0 THEN
     RAISE EXCEPTION 'FISCAL_ENQUEUE_LOJA_INEXISTENTE';
+  END IF;
+  IF position('u.ativo' IN v_reproc) = 0
+     OR position('u.ativo' IN v_can) = 0
+     OR position('op.ativo' IN v_enq) = 0
+     OR position('u.ativo' IN v_evt) = 0 THEN
+    RAISE EXCEPTION 'FISCAL_AUTHZ_SEM_ATIVO';
+  END IF;
+  IF position('u.perfil IN (''DONO'', ''ADMIN'')' IN v_enq) > 0
+     OR position('u.perfil IN (''DONO'', ''ADMIN'')' IN v_evt) > 0 THEN
+    RAISE EXCEPTION 'FISCAL_DONO_GLOBAL';
   END IF;
 END
 $verify$;
