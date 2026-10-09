@@ -6,6 +6,11 @@ export type LoadingProps = {
   label?: string
   className?: string
   size?: 'sm' | 'md' | 'lg'
+  /**
+   * `spinner` (padrão) — Loader2 na cor da marca.
+   * `brand` — selo Jīn Lóng girando em sentido horário; só para carregamento de tela cheia.
+   */
+  variant?: 'spinner' | 'brand'
 }
 
 const SIZE = {
@@ -14,8 +19,19 @@ const SIZE = {
   lg: 'h-8 w-8',
 } as const
 
+const BRAND_SIZE = {
+  sm: 'h-10 w-10',
+  md: 'h-16 w-16',
+  lg: 'h-24 w-24',
+} as const
+
 /** Spinner canônico de rota / bloco. */
-export function Loading({ label = 'Carregando…', className, size = 'md' }: LoadingProps) {
+export function Loading({
+  label = 'Carregando…',
+  className,
+  size = 'md',
+  variant = 'spinner',
+}: LoadingProps) {
   return (
     <div
       role="status"
@@ -25,10 +41,25 @@ export function Loading({ label = 'Carregando…', className, size = 'md' }: Loa
         className,
       )}
     >
-      <Loader2
-        className={cn('animate-spin text-[var(--color-brand)]', SIZE[size])}
-        aria-hidden
-      />
+      {variant === 'brand' ? (
+        // eslint-disable-next-line @next/next/no-img-element -- brand logo estático; dimensões fixas no CSS
+        <img
+          src="/branding/brand-double-dragon.png"
+          alt=""
+          aria-hidden
+          draggable={false}
+          data-testid="loading-brand-mark"
+          className={cn(
+            'animate-[spin_2.8s_linear_infinite] object-contain motion-reduce:animate-pulse',
+            BRAND_SIZE[size],
+          )}
+        />
+      ) : (
+        <Loader2
+          className={cn('animate-spin text-[var(--color-brand)]', SIZE[size])}
+          aria-hidden
+        />
+      )}
       <p className="text-body text-[var(--color-fg-muted)]">{label}</p>
     </div>
   )
