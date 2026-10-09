@@ -16,6 +16,8 @@ const API = (process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321').replace(/\/$/
 const ANON = process.env.ANON_KEY
 const PW = process.env.SEED_PASSWORD
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL
+const SERVICE = process.env.SERVICE_ROLE_KEY
+const PROVISION = process.env.PROVISION_PASSWORDS === '1'
 
 if (!/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(API)) {
   console.error(`RECUSADO: SUPABASE_URL (${API}) não é local.`)
@@ -25,6 +27,24 @@ if (!ANON || !PW) {
   console.error('Faltam ANON_KEY ou SEED_PASSWORD.')
   process.exit(2)
 }
+
+async function provisionarSenhas() {
+  if (!SERVICE) throw new Error('PROVISION_PASSWORDS=1 exige SERVICE_ROLE_KEY')
+  const r = await fetch(`${API}/auth/v1/admin/users?per_page=200`, {
+    headers: { apikey: SERVICE, authorization: `Bearer ${SERVICE}` },
+  })
+  const { users = [] } = await r.json()
+  const alvo = new Set(['operador.seed@local.test', 'gerente.seed@local.test', 'dono.seed@local.test', ADMIN_EMAIL].filter(Boolean))
+  for (const u of users.filter((x) => alvo.has(x.email))) {
+    const up = await fetch(`${API}/auth/v1/admin/users/${u.id}`, {
+      method: 'PUT',
+      headers: { apikey: SERVICE, authorization: `Bearer ${SERVICE}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ password: PW }),
+    })
+    if (!up.ok) throw new Error(`não foi possível definir a senha de ${u.email}`)
+  }
+}
+if (PROVISION) await provisionarSenhas()
 
 async function login(email) {
   const r = await fetch(`${API}/auth/v1/token?grant_type=password`, {
