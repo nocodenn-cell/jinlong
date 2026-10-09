@@ -3,6 +3,7 @@ import type { AdminSession, SessionNormalization } from '@/lib/admin/auth/types'
 import {
   canAccessAdmin,
   canAccessResource,
+  apiAdminDecision,
   canExecuteAction,
   middlewareAdminDecision,
 } from './adminPolicy'
@@ -33,6 +34,26 @@ describe('adminPolicy', () => {
     expect(canAccessResource(session, 'route:/admin/dashboard')).toBe(true)
     expect(canAccessResource(session, 'api:gerente:health')).toBe(true)
     expect(canAccessResource(session, 'sensitive:financeiro')).toBe(true)
+  })
+
+  describe('Diagnóstico do Caixa — só DONO/ADMIN (UX-IA-01 A1/A2)', () => {
+    const RECURSO = 'route:/admin/diagnostico-caixa'
+
+    it('GERENTE não acessa; DONO e ADMIN acessam', () => {
+      expect(canAccessResource(session, RECURSO)).toBe(false)
+      expect(canAccessResource({ ...session, perfil: 'DONO' }, RECURSO)).toBe(true)
+      expect(canAccessResource({ ...session, perfil: 'ADMIN' }, RECURSO)).toBe(true)
+    })
+
+    it('a decisão de API nega o recurso a GERENTE (usada por assertGerenteSession)', () => {
+      expect(apiAdminDecision(session, RECURSO)).toMatchObject({ type: 'deny', reason: 'forbidden_resource' })
+      expect(apiAdminDecision({ ...session, perfil: 'DONO' }, RECURSO).type).toBe('allow')
+    })
+
+    it('não afeta as demais rotas: GERENTE continua acessando Implantação e o resto do painel', () => {
+      expect(canAccessResource(session, 'route:/admin/implantacao')).toBe(true)
+      expect(canAccessResource(session, 'route:/admin/financeiro')).toBe(true)
+    })
   })
 
   describe('middlewareAdminDecision — usuário bloqueado', () => {

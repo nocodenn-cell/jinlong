@@ -77,7 +77,11 @@ const RESOURCE_PROFILES: Readonly<Record<string, readonly PerfilUsuario[]>> = {
   'route:/admin/vendas': ALL_ADMIN_PROFILES,
   'route:/admin/auditoria': ALL_ADMIN_PROFILES,
   'route:/admin/estoque': ALL_ADMIN_PROFILES,
-  'route:/admin/diagnostico-caixa': ALL_ADMIN_PROFILES,
+  /**
+   * Ferramenta de equipe/dono (estado técnico do PDV): GERENTE não acessa.
+   * ATENÇÃO: a policy só decide; a página e a Server Action precisam checar (loadAdminContext não bloqueia).
+   */
+  'route:/admin/diagnostico-caixa': ['DONO', 'ADMIN'] as const,
   'api:gerente:health': ALL_ADMIN_PROFILES,
   'api:gerente:atividades:recent': ALL_ADMIN_PROFILES,
   'api:gerente:atividades:history': ALL_ADMIN_PROFILES,
