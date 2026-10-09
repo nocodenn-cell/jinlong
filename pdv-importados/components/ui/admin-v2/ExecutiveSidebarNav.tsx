@@ -10,6 +10,7 @@ import {
   type AdminV2NavItem,
 } from '@/lib/navigation/adminV2SidebarNav'
 import { isAdminNavActive } from '@/lib/navigation/isAdminNavActive'
+import { resolveNavLabels, type NavLabelsCtx } from '@/lib/navigation/resolveNavLabels'
 import type { Mensagens } from '@/i18n/getMessages'
 import { cn } from '@/lib/utils'
 import { StockAlertBadge } from '@/components/ui/StockAlertBadge'
@@ -23,21 +24,7 @@ export type ExecutiveSidebarNavProps = {
   showAdminOnlyItems?: boolean
 }
 
-type NavLabelsCtx = { admin: Mensagens['admin']; chineseLanguage: boolean }
-
-function resolveLabels(
-  item: AdminV2NavItem,
-  { admin, chineseLanguage }: NavLabelsCtx,
-): { primary: string; secondary: string; hintText: string } {
-  const dictKey = item.dictKey
-  const line = dictKey ? admin.nav[dictKey as keyof typeof admin.nav] : undefined
-  const hint = dictKey ? admin.navHints[dictKey as keyof typeof admin.navHints] : undefined
-  const ptLabel = item.labelOverridePt ?? item.labelPt ?? line?.pt ?? item.id
-  const cnLabel = line?.cn ?? item.labelCn
-  const primary = chineseLanguage && cnLabel ? cnLabel : ptLabel
-  const secondary = chineseLanguage && cnLabel ? ptLabel : ''
-  return { primary, secondary, hintText: item.hint ?? hint ?? '' }
-}
+const resolveLabels = resolveNavLabels
 
 const LINK_BASE =
   'admin-v2-nav-link flex items-center gap-3 rounded-full border border-transparent px-3 py-2.5 ' +

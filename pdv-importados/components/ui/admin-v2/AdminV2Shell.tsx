@@ -9,6 +9,8 @@ import { AdminV2SessionProvider } from './AdminV2SessionContext'
 import { AdminV2MobileNavDrawer } from './AdminV2MobileNavDrawer'
 import { SidebarNav } from './SidebarNav'
 import { SidebarUserFooter } from './SidebarUserFooter'
+import { CommandPalette } from './CommandPalette'
+import { CommandPaletteTrigger } from './CommandPaletteTrigger'
 
 function SidebarNavFallback() {
   return <nav className="flex flex-col gap-6 p-3 lg:p-4" aria-busy="true" aria-label="Navegação" />
@@ -30,6 +32,7 @@ export function AdminV2Shell({ session, children, stockAlertCount }: AdminV2Shel
   return (
     <div data-admin-v2 className="isolate min-h-dvh min-h-screen bg-[var(--color-background-primary)] text-jl-fg-1">
       <SessionIdleLogout />
+      <CommandPalette idioma={idioma} showAdminOnlyItems={session.perfil === 'ADMIN'} />
 
       {/* Top bar só < lg: marca compacta + hamburger, já que o <aside> fica oculto nesse breakpoint. */}
       <div className="flex items-center justify-between border-b border-[var(--admin-v2-border)] px-4 py-2.5 lg:hidden">
@@ -46,6 +49,8 @@ export function AdminV2Shell({ session, children, stockAlertCount }: AdminV2Shel
             draggable={false}
           />
         </Link>
+        <div className="flex items-center gap-2">
+        <CommandPaletteTrigger compact label={m.admin_ui.command_palette_trigger} />
         <AdminV2MobileNavDrawer
           session={session}
           m={m}
@@ -53,6 +58,7 @@ export function AdminV2Shell({ session, children, stockAlertCount }: AdminV2Shel
           stockAlertCount={stockAlertCount}
           showAdminOnlyItems={session.perfil === 'ADMIN'}
         />
+        </div>
       </div>
 
       <div className="mx-auto flex min-h-dvh max-w-[1600px] flex-col lg:flex-row">
@@ -76,6 +82,9 @@ export function AdminV2Shell({ session, children, stockAlertCount }: AdminV2Shel
                 draggable={false}
               />
             </Link>
+          </div>
+          <div className="px-3 pt-3 lg:px-4">
+            <CommandPaletteTrigger label={m.admin_ui.command_palette_trigger} />
           </div>
           <Suspense fallback={<SidebarNavFallback />}>
             <SidebarNav
