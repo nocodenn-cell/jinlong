@@ -2892,6 +2892,7 @@
     "command_palette_aria": "搜索页面和操作",
     "command_palette_trigger": "搜索…",
     "command_palette_acao_novo_produto": "新增商品",
+    "restrito_dono_admin": "此区域仅限店主和 FastProduct 团队（ADMIN）。",
     "relatorios_link_visao_geral": "总览",
     "dashboard_link_relatorios_hint": "按期间、ABC 与毛利分析",
     "catalogo_subtitulo": "店铺已注册商品",
