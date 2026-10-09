@@ -1,4 +1,10 @@
--- N1 — Proteção do preço de custo: OPERADOR não lê produtos.preco_custo / preco_custo_medio.
+-- N1 (fase A, ADITIVA) — Proteção do preço de custo: infraestrutura para o OPERADOR não ler produtos.preco_custo.
+--
+-- ESTA migration não revoga nada em `produtos`: cria a via gerencial de leitura do custo (view `produtos_custos`),
+-- reescreve as 4 funções INVOKER para usá-la, fecha `system_alerts` e cria o alerta de margem no banco. É segura
+-- com o app ANTIGO e com o NOVO. O FECHAMENTO (REVOKE do custo em `produtos`) está em
+-- 20261009180001_revoga_leitura_direta_preco_custo.sql e só deve ser aplicado DEPOIS do deploy do app novo.
+--
 --
 -- PROBLEMA (reproduzido em stack local, 2026-10-09): a policy `produtos_leitura` libera SELECT a qualquer
 -- perfil da loja e o GRANT de tabela libera TODAS as colunas ao papel `authenticated` (que é o mesmo papel de
@@ -7,7 +13,7 @@
 -- `custo_unitario_snap` em alertas de margem negativa, legíveis por qualquer usuário autenticado.
 --
 -- DESENHO (menor complexidade que fecha todos os caminhos de leitura):
---   1. Privilégio de COLUNA: REVOKE SELECT na tabela + GRANT SELECT só nas colunas SEM custo para
+--   1. [fase B, 20261009180001] Privilégio de COLUNA: REVOKE SELECT na tabela + GRANT SELECT só nas colunas SEM custo para
 --      anon/authenticated. Nenhum `select`, `select *`, embed, RETURNING ou view security_invoker sobre
 --      `produtos` consegue ler o custo (erro 42501). Função/trigger SECURITY DEFINER e service_role seguem lendo.
 --   2. Acesso gerencial por OBJETO PRÓPRIO: `public.produtos_custos`, view de dono (security_invoker = off) cuja
@@ -24,18 +30,20 @@
 --      do custo) e passa a `pdv_registrar_alertas_margem_venda(venda)`, SECURITY DEFINER, que compara o snapshot
 --      já gravado pela venda e NÃO grava custo no detalhe do alerta.
 --
--- ATENÇÃO (futuro): colunas NOVAS em `produtos` não ficam legíveis por padrão (grant por coluna). Quem criar
--- uma coluna precisa conceder SELECT à coluna (anon, authenticated). O smoke `n1-preco-custo-authz-smoke.mjs`
--- falha se alguma coluna sem custo ficar sem grant ou se o custo voltar a ficar legível.
---
--- ROLLBACK (idempotente; devolve o comportamento anterior):
---   GRANT SELECT ON public.produtos TO anon, authenticated;
+-- ROLLBACK (idempotente; reverte esta fase; se a fase B foi aplicada, reverta-a ANTES — ver o cabeçalho dela):
 --   DROP POLICY IF EXISTS system_alerts_select_gerencial ON public.system_alerts;
 --   CREATE POLICY system_alerts_select_authenticated ON public.system_alerts FOR SELECT TO authenticated USING (true);
---   -- funções: reaplicar as definições de 20260818000000_reconcile_production_report_functions.sql e a de
---   -- dashboard_gerente_resumo vigente anterior (a view produtos_custos pode permanecer; é inofensiva).
 --   DROP FUNCTION IF EXISTS public.pdv_registrar_alertas_margem_venda(uuid);
---   DROP VIEW IF EXISTS public.produtos_custos;
+--   -- as 4 funções: transformação exatamente inversa da seção 2 (vale para qualquer variante vigente):
+--   DO $r$ DECLARE v_sig text; BEGIN
+--     FOREACH v_sig IN ARRAY ARRAY['public.dashboard_gerente_resumo(uuid,text)',
+--       'public.relatorio_margem_por_venda_periodo(date,date,text,integer)',
+--       'public.relatorio_produtos_sem_giro_periodo(uuid,timestamp with time zone,timestamp with time zone)',
+--       'public.relatorio_resumo_executivo_periodo(date,date,text)'] LOOP
+--       EXECUTE replace(replace(pg_get_functiondef(v_sig::regprocedure),
+--         ' LEFT JOIN public.produtos_custos pc ON pc.produto_id = p.id', ''), 'pc.preco_custo', 'p.preco_custo');
+--     END LOOP; END $r$;
+--   DROP VIEW IF EXISTS public.produtos_custos;   -- só depois de reverter o app (ele lê o custo pela view)
 --   NOTIFY pgrst, 'reload schema';
 
 -- 1) View gerencial de custos (dono; autorização por perfil via junção com usuarios) ----------------------
@@ -58,29 +66,7 @@ COMMENT ON VIEW public.produtos_custos IS
 REVOKE ALL ON public.produtos_custos FROM PUBLIC, anon, authenticated;
 GRANT SELECT ON public.produtos_custos TO authenticated, service_role;
 
--- 2) Privilégio de coluna em produtos ----------------------------------------------------------------------
-DO $priv$
-DECLARE
-  v_cols text;
-BEGIN
-  SELECT string_agg(quote_ident(a.attname), ', ' ORDER BY a.attnum)
-    INTO v_cols
-  FROM pg_attribute a
-  WHERE a.attrelid = 'public.produtos'::regclass
-    AND a.attnum > 0
-    AND NOT a.attisdropped
-    AND a.attname NOT IN ('preco_custo', 'preco_custo_medio');
-
-  IF v_cols IS NULL OR position('id' IN v_cols) = 0 THEN
-    RAISE EXCEPTION 'produtos: lista de colunas sem custo inválida — abortado sem alterar nada';
-  END IF;
-
-  EXECUTE 'REVOKE SELECT ON public.produtos FROM anon, authenticated';
-  EXECUTE format('GRANT SELECT (%s) ON public.produtos TO anon, authenticated', v_cols);
-END
-$priv$;
-
--- 3) Funções INVOKER passam a ler o custo da view gerencial -------------------------------------------------
+-- 2) Funções INVOKER passam a ler o custo da view gerencial -------------------------------------------------
 -- Lê a definição VIGENTE de cada função (a de produção pode diferir do repositório) e, no PRIMEIRO
 -- `JOIN public.produtos p ON p.id = <x>.produto_id` que vem depois da primeira referência a `p.preco_custo`
 -- (o FROM do mesmo SELECT que soma o custo), acrescenta `LEFT JOIN public.produtos_custos pc`; depois troca
@@ -125,14 +111,14 @@ BEGIN
 END
 $fn$;
 
--- 4) system_alerts: leitura só para gerencial da loja --------------------------------------------------------
+-- 3) system_alerts: leitura só para gerencial da loja --------------------------------------------------------
 DROP POLICY IF EXISTS system_alerts_select_authenticated ON public.system_alerts;
 DROP POLICY IF EXISTS system_alerts_select_gerencial ON public.system_alerts;
 CREATE POLICY system_alerts_select_gerencial ON public.system_alerts
   FOR SELECT TO authenticated
   USING (public.auth_usuario_gerencial_loja(loja_id));
 
--- 5) Alerta de margem negativa calculado no banco (sem custo no cliente nem no detalhe) -----------------------
+-- 4) Alerta de margem negativa calculado no banco (sem custo no cliente nem no detalhe) -----------------------
 CREATE OR REPLACE FUNCTION public.pdv_registrar_alertas_margem_venda(p_venda_id uuid)
 RETURNS integer
 LANGUAGE plpgsql
