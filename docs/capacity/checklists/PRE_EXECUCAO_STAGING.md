@@ -1,52 +1,55 @@
-# Checklist — Pré-execução FASE 3/4 (gate humano)
+# Checklist — Pré-execução FASE 3 (custo zero)
 
-Marcar **todos** os itens antes de qualquer script de carga ou falha.  
-Base: [STG01_HOMOLOGACAO_ISOLADA.md](../STG01_HOMOLOGACAO_ISOLADA.md).
+Base: [STG01_HOMOLOGACAO_ISOLADA.md](../STG01_HOMOLOGACAO_ISOLADA.md) §6.  
+**Orçamento adicional: R$ 0.** Sem Pro, sem Vercel Preview nesta fase.
 
-## STG-01 — provisionamento (antes deste checklist)
+## Autorização (obrigatório)
 
-- [ ] Autorizações A1–A2 (criar projeto + orçamento) assinadas
-- [ ] Projeto Supabase de homologação criado (ref **diferente** de `staging/prod-denylist.json`)
-- [ ] `.env.capacity` criado a partir de `.env.staging.example` (sem tocar `.env.local`)
+- [ ] Checklist §6 do STG-01 assinado (Trilha F e/ou L)
+- [ ] Confirmado: não alterar produção `jinlong`
+- [ ] Confirmado: não sobrescrever `.env.local`
+
+## Trilha escolhida
+
+- [ ] **F** — Free remoto `jinlong-staging` **ou**
+- [ ] **L** — Docker `fastproduct-capacity` (ports isoladas) **ou**
+- [ ] **F→L** — tentar F; se limite de projetos, cair para L
+
+## Ambiente (Trilha F)
+
+- [ ] Projeto `jinlong-staging` criado (Free, US$ 0/mês) — ref ≠ produção
+- [ ] Produção `jinlong` intacta; `ageguard` não apagado sem autorização
+- [ ] `.env.capacity` a partir de `.env.staging.example`
+- [ ] `CAPACITY_BLOCKED_PROJECT_REFS` = ref produção (não versionado)
 - [ ] `npm run capacity:assert-target` OK
-- [ ] Migrations + Edge aplicadas via `apply-migrations-staging.sh` com `CAPACITY_CONFIRM_DB_PUSH=yes`
-- [ ] Seed sintético: `CAPACITY_CONFIRM_SEED=yes npm run capacity:seed`
+- [ ] Migrations + Edge só no staging (`CAPACITY_CONFIRM_DB_PUSH=yes`)
+- [ ] Seed `CAPACITY_LOJAS` ∈ {1,5,10}
 
-## Ambiente
+## Ambiente (Trilha L)
 
-- [ ] Plano/compute documentado (Free / Micro / Small / …) — limita extrapolação
-- [ ] Preview/homolog Vercel apontando **somente** para o ref de staging
-- [ ] Confirmação escrita: **não** usar `jinlong.app` produção nem DB do cliente
-- [ ] `SYNC_KEY` do staging é **novo** (não copiado de produção)
+- [ ] Config/ports `fastproduct-capacity` criados (sem tocar stack `fastproduct`)
+- [ ] Stack capacidade no ar; DEV existente intacto
+- [ ] `CAPACITY_ENV=local` + URL `127.0.0.1:<porta capacidade>`
+- [ ] Seed sintético OK
 
-## Dados e credenciais
+## App e carga (ambas)
 
-- [ ] Seeds sintéticos: N lojas `CAP_L*`, 2 operadores/loja, catálogo, estoque generoso + SKU qty=1
-- [ ] Zero CPF/CNPJ/nome real de cliente
-- [ ] `.env.local` de desenvolvimento **não** sobrescrito
-- [ ] Shell de teste sem `SUPABASE_SERVICE_ROLE_KEY` de produção
-- [ ] `CAPACITY_ENV=staging`, `CAPACITY_ALLOWED_PROJECT_REF=<staging>`, `CAPACITY_BLOCKED_PROJECT_REFS=<produção>` definidos
-- [ ] `npm run guard:no-prod-target` e `npm run guard:capacity-target` passam
+- [ ] Next.js **local** (`dev:web`) — sem Preview Vercel
+- [ ] k6 **local**
+- [ ] Escada: Smoke → 1 → 5 → 10 lojas; abortar no primeiro limite
+- [ ] Relatório distingue C1 / C2 / C3 (STG-01 §2.2)
 
-## Observabilidade
+## Segurança
 
-- [ ] Dashboard Supabase (CPU, conexões, logs) acessível
-- [ ] Sentry/projeto staging ou environment tag `staging`
-- [ ] Destino de artefatos k6 sob `/opt/cursor/artifacts/` ou CI artifacts
-- [ ] `collect-metrics.sql` disponível no SQL Editor staging
+- [ ] Guards verdes (`guard:capacity-target`, `guard:no-prod-target`)
+- [ ] Zero PII de cliente nos seeds
+- [ ] `SYNC_KEY` staging/local distinto de produção (se Edge usada)
 
-## Escopo autorizado
+## Aprovação final para rodar k6
 
-- [ ] Cenário inicial: **Smoke → Piloto** apenas
-- [ ] Soak 8–12 h agendado só após Piloto APROVADO
-- [ ] Correções estruturais **fora** do escopo até relatório FASE 5
-- [ ] Multiempresa **fora** de escopo
+| Papel | Nome | Data |
+|-------|------|------|
+| Product | | |
+| Engenharia | | |
 
-## Aprovação
-
-| Papel | Nome | Data | Assinatura |
-|-------|------|------|------------|
-| Product / dono | | | |
-| Engenharia | | | |
-
-**Sem esta checklist completa: NO-GO para FASE 3.**
+**Sem assinatura: NO-GO para carga.**
