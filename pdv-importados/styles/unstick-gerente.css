@@ -7,7 +7,7 @@
  * above the PDV chrome.
  */
 
-/* Gerente token overlay: sits above PDV top-bar (z-50) */
+/* Gerente token overlay: sits above the PDV chrome (headers and bars, no explicit z-index) */
 [data-gerente-overlay] {
   z-index: 60;
   position: fixed;
@@ -19,7 +19,3 @@
   overscroll-behavior: contain;
 }
 
-/* Prevent the caixa page root from clipping portal layers */
-.caixa-pdv-root {
-  isolation: isolate;
-}

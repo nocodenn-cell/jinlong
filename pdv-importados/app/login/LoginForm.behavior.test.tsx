@@ -66,7 +66,8 @@ async function tentarLogin() {
     setValue(inputs[0] as HTMLInputElement, 'operador@loja.com')
     setValue(inputs[1] as HTMLInputElement, 'senha-errada')
   })
-  const form = container.querySelector('form') as HTMLFormElement
+  // O seletor de idioma também é um <form>; o de login é identificado pelo testid.
+  const form = container.querySelector('form[data-testid="login-form"]') as HTMLFormElement
   await act(async () => {
     form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
     // deixa a promise de signInWithPassword resolver

@@ -8,7 +8,8 @@
 
 [data-theme='login'] {
   --login-fg: #fafafa;
-  --login-fg-muted: rgb(250 250 250 / 0.38);
+  /* Placeholder: 55% sobre a superfície = ~6:1 (antes 38% = ~3,4:1). */
+  --login-fg-muted: rgb(250 250 250 / 0.55);
   --login-surface: rgb(13 13 13 / 0.85);
   --login-surface-strong: rgb(13 13 13 / 0.95);
   color: var(--login-fg);
@@ -26,8 +27,100 @@
   box-shadow: none;
 }
 
+[data-theme='login'] .fp-control {
+  /* 16px evita o zoom automático do Safari iOS ao focar o campo. */
+  font-size: 1rem;
+}
+
 [data-theme='login'] .fp-control::placeholder {
   color: var(--login-fg-muted);
+}
+
+/* Na tela de login, o skip link da layout raiz (texto fixo em PT) é substituído pelo traduzido. */
+html:has(#login-email) body > .skip-link {
+  display: none;
+}
+
+/* Telas de pouca altura: logo menor, proporcional (height auto), para o formulário subir. */
+@media (max-height: 760px) {
+  [data-theme='login'] .login-premium-dragon-img {
+    width: min(100%, 30vh);
+    height: auto;
+  }
+}
+
+[data-theme='login'] .login-lang-switch {
+  display: inline-flex;
+  gap: 0.2rem;
+  padding: 0.15rem;
+  border: 1px solid color-mix(in srgb, var(--color-login-gold) 35%, transparent);
+  border-radius: var(--radius-md);
+  background: rgb(0 0 0 / 0.55);
+}
+
+[data-theme='login'] .login-lang-switch__btn {
+  min-height: 2rem;
+  padding: 0.25rem 0.6rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: color-mix(in srgb, var(--color-login-gold-wordmark) 85%, transparent);
+  font-size: 0.75rem;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+/* Área de toque de 44px (WCAG 2.5.5 / recomendação iOS e Android) sem aumentar o visual:
+   o pseudo-elemento cobre o botão e se estende até 44px de altura. */
+[data-theme='login'] .login-lang-switch__btn {
+  position: relative;
+}
+
+[data-theme='login'] .login-lang-switch__btn::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 100%;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  transform: translate(-50%, -50%);
+}
+
+[data-theme='login'] .login-lang-switch__btn:hover {
+  color: var(--color-login-gold-wordmark);
+}
+
+[data-theme='login'] .login-lang-switch__btn[data-active='true'] {
+  background: var(--color-login-gold);
+  color: #000000;
+}
+
+[data-theme='login'] .login-lang-switch__btn:focus-visible {
+  outline: 2px solid var(--color-login-gold-wordmark);
+  outline-offset: 2px;
+}
+
+[data-theme='login'] .login-senha-toggle {
+  position: absolute;
+  top: 1.425rem;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  color: color-mix(in srgb, var(--color-login-gold) 85%, transparent);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+[data-theme='login'] .login-senha-toggle:hover,
+[data-theme='login'] .login-senha-toggle:focus-visible {
+  color: var(--color-login-gold-wordmark);
 }
 
 [data-theme='login'] .fp-control:hover:not(:disabled):not([readonly]) {
@@ -50,7 +143,8 @@
   font-weight: var(--font-weight-semibold);
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--color-login-gold) 52%, transparent);
+  /* 85% sobre preto = ~7,3:1 (WCAG AA). Antes 52% = ~3,2:1. */
+  color: color-mix(in srgb, var(--color-login-gold) 85%, transparent);
 }
 
 [data-theme='login'] .fp-btn--primary {
@@ -80,7 +174,7 @@
 }
 
 [data-theme='login'] .login-link {
-  color: color-mix(in srgb, var(--color-login-gold-wordmark) 70%, transparent);
+  color: color-mix(in srgb, var(--color-login-gold-wordmark) 85%, transparent);
   font-size: var(--font-size-caption);
   text-decoration: underline;
   text-underline-offset: 2px;
@@ -91,13 +185,13 @@
 }
 
 [data-theme='login'] .login-legal {
-  color: rgb(255 255 255 / 0.25);
+  color: rgb(255 255 255 / 0.7);
   font-size: var(--font-size-caption);
   line-height: var(--line-height-relaxed);
 }
 
 [data-theme='login'] .login-legal a {
-  color: rgb(255 255 255 / 0.4);
+  color: rgb(255 255 255 / 0.85);
   text-decoration: underline;
   text-underline-offset: 2px;
 }

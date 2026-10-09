@@ -11,7 +11,6 @@ export const ROUTES = {
     changePassword: '/auth/alterar-senha',
     callback: '/auth/callback',
   },
-  onboarding: '/onboarding',
   caixa: {
     home: '/caixa',
     historico: '/caixa/historico',

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { Eye, EyeOff } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Field, Input } from '@/components/ui/forms'
@@ -13,6 +14,8 @@ import { ROUTES } from '@/lib/navigation/routes'
 import { destinoPosLoginPorPerfil } from '@/lib/auth/painelGerencial'
 import { isContaDesativada } from '@/core/auth/contaUsuario'
 import { fmtTemplate } from '@/i18n/fmtTemplate'
+import { toLegacyIdioma } from '@shared-core/src/i18n'
+import { LoginLanguageSwitch } from './LoginLanguageSwitch'
 
 /** Evita open redirect: só `/gerente...` ou `/caixa...`. */
 function destinoAposLogin(nextRaw: string | null, padraoPerfil: string): string {
@@ -33,9 +36,12 @@ type Props = {
 
 export function LoginForm({ messages: m, locale }: Props) {
   const L = m.login
+  const idiomaAtual = toLegacyIdioma(locale ?? 'pt-BR')
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [erro, setErro] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; senha?: string }>({})
+  const [mostrarSenha, setMostrarSenha] = useState(false)
   const [loading, setLoading] = useState(false)
   const [hydrated, setHydrated] = useState(false)
   const router = useRouter()
@@ -48,7 +54,21 @@ export function LoginForm({ messages: m, locale }: Props) {
 
   async function login(e: React.FormEvent) {
     e.preventDefault()
+    if (loading) return
     setErro('')
+
+    const novosErros: { email?: string; senha?: string } = {}
+    if (!email.trim()) {
+      novosErros.email = L.email_obrigatorio
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      novosErros.email = L.email_invalido
+    }
+    if (!senha) {
+      novosErros.senha = L.senha_obrigatoria
+    }
+    setFieldErrors(novosErros)
+    if (novosErros.email || novosErros.senha) return
+
     setLoading(true)
     try {
       let supabase
@@ -153,16 +173,24 @@ export function LoginForm({ messages: m, locale }: Props) {
       className="login-premium-root flex min-h-[100dvh] w-full flex-col items-center justify-center px-4 py-10 sm:py-14"
       data-locale={locale}
     >
-      <div className="flex w-full max-w-[380px] flex-col items-center">
+      {/* Skip link próprio, traduzido. O da layout raiz fica oculto nesta tela (ver login-theme.css). */}
+      <a href="#main-content" className="skip-link">
+        {L.ir_conteudo}
+      </a>
+      <main id="main-content" className="flex w-full max-w-[380px] flex-col items-center">
+        <div className="mb-4 flex w-full justify-end">
+          <LoginLanguageSwitch idiomaAtual={idiomaAtual} label={L.idioma_selecionar} />
+        </div>
         <div className="login-premium-art-wrap mb-2 w-full">
           <div className="login-premium-dragon-frame">
             <div className="login-premium-dragon-media">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/branding/brand-double-dragon.png"
+                src="/branding/brand-double-dragon-480.webp"
                 alt=""
                 width={240}
                 height={240}
+                fetchPriority="high"
                 className="login-premium-dragon-img mx-auto block"
                 draggable={false}
               />
@@ -188,15 +216,20 @@ export function LoginForm({ messages: m, locale }: Props) {
 
           <form
             onSubmit={login}
+            noValidate
             className="flex w-full flex-col gap-6"
             data-testid="login-form"
             data-login-hydrated={hydrated ? '1' : '0'}
           >
-            <Field id="login-email" label={L.email_placeholder} required>
+            <Field id="login-email" label={L.email_placeholder} required error={fieldErrors.email}>
               <Input
                 type="email"
+                name="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value)
+                  setFieldErrors((prev) => ({ ...prev, email: undefined }))
+                }}
                 placeholder={L.email_placeholder}
                 autoComplete="username"
                 required
@@ -205,16 +238,32 @@ export function LoginForm({ messages: m, locale }: Props) {
             </Field>
 
             <div className="flex flex-col gap-2">
-              <Field id="login-senha" label={L.senha_placeholder} required>
-                <Input
-                  type="password"
-                  value={senha}
-                  onChange={(e) => setSenha(e.target.value)}
-                  placeholder={L.senha_placeholder}
-                  autoComplete="current-password"
-                  required
-                />
-              </Field>
+              <div className="relative">
+                <Field id="login-senha" label={L.senha_placeholder} required error={fieldErrors.senha}>
+                  <Input
+                    type={mostrarSenha ? 'text' : 'password'}
+                    name="password"
+                    value={senha}
+                    onChange={(e) => {
+                      setSenha(e.target.value)
+                      setFieldErrors((prev) => ({ ...prev, senha: undefined }))
+                    }}
+                    placeholder={L.senha_placeholder}
+                    autoComplete="current-password"
+                    required
+                    className="pr-11"
+                  />
+                </Field>
+                <button
+                  type="button"
+                  onClick={() => setMostrarSenha((v) => !v)}
+                  aria-label={mostrarSenha ? L.senha_ocultar : L.senha_mostrar}
+                  aria-pressed={mostrarSenha}
+                  className="login-senha-toggle"
+                >
+                  {mostrarSenha ? <EyeOff size={18} aria-hidden /> : <Eye size={18} aria-hidden />}
+                </button>
+              </div>
               <div className="flex justify-end">
                 <Link href={ROUTES.auth.forgotPassword} className="login-link">
                   {L.esqueci_link}
@@ -235,7 +284,7 @@ export function LoginForm({ messages: m, locale }: Props) {
             <a href="/privacidade">{L.consentimento_privacidade}</a>.
           </p>
         </div>
-      </div>
+      </main>
     </div>
   )
 }
