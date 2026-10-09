@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | Data | 2026-10-08 |
-| Status | **Proposta para aprovação. Nada foi implementado.** PR 5 e PR 7 seguem NO-GO até a aprovação desta tabela. |
+| Status | **Atualizado 09/10 após aprovação de D1/D2 e abertura do PR 5.** D1/D2 migrados em #514 (aditivo; o clássico segue ativo). PR 5 (barra do Financeiro) aberto em #515 com as recomendações D3–D5. **PR 7 (aposentar o clássico) segue pendente** da conferência valor a valor (R1, R5, R13). |
 | Método | Leitura de `FINANCEIRO_TAB_ORDER`, `FinanceiroWorkspace.tsx`, `RelatoriosContent.tsx` (seções 770–880), painéis `executive/Exec*Panel.tsx` e busca por deep-links de entrada. **Conteúdo comparado por título de seção e rótulo de KPI, não campo a campo nem valor a valor** — por isso a coluna "Confiança". |
 
 ---
@@ -30,7 +30,9 @@ Hoje há 5 abas clássicas (`?tab=visao|produtos|estoque|margem|vendas`, só qua
 | R14 | Margem › **Margem por venda** (líquido/custo/margem) | **Não encontrado** | DRE mostra margem agregada | Alta | **Migrar** |
 | R15 | Margem › Curva ABC | Sim | Produtos & Estoque › "Curva ABC" | Alta | — |
 
-**Conclusão R:** a aba clássica **não pode ser aposentada hoje**. Seis conteúdos não têm equivalente nas views (R2, R6, R7, R8, R11, R14), sendo R11 sinal de integridade. Caminho seguro para o PR 7:
+**Situação (09/10):** R2, R6, R7, R8, R11 e R14 foram **migrados** para as views (PR #514, aditivo: Ticket médio, Faturamento por dia e Status das vendas em Vendas & Caixas; Mais vendidos e Divergência de estoque em Produtos & Estoque; Margem por venda em DRE & Financeiro). O clássico continua ativo. Falta conferir valores (R1, R5, R13) antes do PR 7.
+
+**Conclusão R (estado de 08/10, antes da migração):** a aba clássica **não podia ser aposentada**. Seis conteúdos não têm equivalente nas views (R2, R6, R7, R8, R11, R14), sendo R11 sinal de integridade. Caminho seguro para o PR 7:
 1. Mover R6/R7/R2 para Vendas & Caixas; R8/R11 para Produtos & Estoque; R14 para DRE (ou para Vendas & Caixas).
 2. Só depois remover o item "Detalhe por domínio" da sidebar e fazer `?tab=` redirecionar para `?view=` correspondente.
 3. Até lá, "Detalhe por domínio" **permanece na sidebar** (já está, PR #509).
@@ -98,4 +100,4 @@ Ordem atual (`FINANCEIRO_TAB_ORDER`): resumo · receber · pagar · contas · re
 | D4 | "Resultado" fica como aba, seção do Resumo, ou link? | Seção do Resumo + URL mantida; rotular "Resultado de caixa" ≠ "DRE" |
 | D5 | Comissões entra na barra de Financeiro? | Sim (a liquidação é financeira); sidebar mantém o sub-link até lá |
 
-**Sem as respostas D1–D2, o PR 7 permanece NO-GO. O PR 5 pode seguir com D3–D5.**
+**D1/D2 respondidos (migrar). D3–D5 aplicados como recomendado no PR #515.** Nota: a barra principal do Financeiro ficou em **7** (não 6): Categorias permanece (a página de categorias só tem essa barra) e Comissões entrou (D5).
