@@ -419,6 +419,12 @@
       "remoteOnlyVersion": "20261006200048",
       "reason": "Aplicada via MCP apply_migration em 06/10/2026 na entrega da sprint financeiro/operacional (PR #464): schema_migrations.version gravado foi o timestamp real de aplicação (20261006200048); name=desconto_comercial_operador_dinheiro. Libera desconto comercial ≤10% sem token (motivo AUTORIZACAO_COMERCIAL) no wrapper/unscoped v4. Idempotente (early return se já patchado) — seguro reaplicar.",
       "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20261009120000",
+      "remoteOnlyVersion": "20261009033124",
+      "reason": "Aplicada em produção via MCP apply_migration (autorização explícita do responsável, 2026-10-09): schema_migrations.version gravado foi o timestamp real de aplicação (20261009033124), não o do nome do arquivo (20261009120000_implantacao_go_live_somente_dono_admin.sql). Migration idempotente (CREATE OR REPLACE + DROP TRIGGER IF EXISTS + CREATE TRIGGER); seguro reaplicar. Pré-check de catálogo antes de aplicar: produção idêntica ao repositório (policies sem restrição de coluna, sem trigger, função inexistente). Verificação pós-aplicação (somente catálogo): trigger habilitado, função SECURITY DEFINER com search_path=public, sem EXECUTE para PUBLIC, 1 linha de checklist inalterada.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
     }
   ]
 }
