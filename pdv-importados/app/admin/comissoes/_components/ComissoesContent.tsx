@@ -12,7 +12,7 @@
  * `comissoes_ajustes_auditoria` — nada aqui recalcula fato financeiro.
  */
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Percent } from 'lucide-react'
 import { MetricCard, SectionCard } from '@/components/ui/admin-v2'
@@ -39,6 +39,8 @@ export type { ComissoesLabels } from './comissoesLabels'
 type Props = {
   dados: ComissaoResumoRow[]
   filtroInicial: FiltroComissoes
+  /** Deep-link `?operador=`: abre o detalhe deste operador se ele tiver comissão no período. */
+  operadorInicialId?: string | null
   labels: ComissoesLabels
 }
 
@@ -56,7 +58,7 @@ function saldoToneClass(valor: number): string {
   return 'text-[12px] text-jl-fg-3'
 }
 
-export function ComissoesContent({ dados, filtroInicial, labels }: Props) {
+export function ComissoesContent({ dados, filtroInicial, operadorInicialId = null, labels }: Props) {
   const router = useRouter()
   const [rows] = useState(dados)
   const [detalheOperador, setDetalheOperador] = useState<ComissaoResumoRow | null>(null)
@@ -107,6 +109,14 @@ export function ComissoesContent({ dados, filtroInicial, labels }: Props) {
     },
     [filtroInicial],
   )
+
+  useEffect(() => {
+    if (!operadorInicialId) return
+    const alvo = rows.find((r) => r.operadorId === operadorInicialId)
+    if (alvo) void abrirDetalhe(alvo)
+    // Só na montagem: o deep-link não deve reabrir o detalhe depois que o usuário o fecha.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const fecharDetalhe = useCallback(() => {
     setDetalheOperador(null)

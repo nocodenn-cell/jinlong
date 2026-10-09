@@ -46,6 +46,7 @@ export type FuncionariosListLabels = {
   ativar: string
   desativar: string
   editar: string
+  verComissoes: string
   perfilOperador: string
   perfilGerente: string
   perfilDono: string
