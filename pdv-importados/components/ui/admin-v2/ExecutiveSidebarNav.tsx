@@ -36,7 +36,9 @@ function resolveLabels(
   const cnLabel = line?.cn ?? item.labelCn
   const primary = chineseLanguage && cnLabel ? cnLabel : ptLabel
   const secondary = chineseLanguage && cnLabel ? ptLabel : ''
-  return { primary, secondary, hintText: item.hint ?? hint ?? '' }
+  // Dica no idioma da interface: em ZH vale a do dicionário (traduzida); `item.hint` é só em PT.
+  const hintText = chineseLanguage ? (hint ?? item.hint ?? '') : (item.hint ?? hint ?? '')
+  return { primary, secondary, hintText }
 }
 
 const LINK_BASE =
