@@ -73,7 +73,7 @@ function GerenteLayoutInner({ children, idioma, perfil, m, logoSubtitle }: Props
         Sticky (ex.: GerenteStickyToolbar) ancora ao viewport; um ancestral com overflow
         não-visible quebra esse comportamento. Manter overflow visível no main.
       */}
-      <main className="relative z-[1] overflow-x-visible overflow-y-visible">{children}</main>
+      <main id="main-content" className="relative z-[1] overflow-x-visible overflow-y-visible">{children}</main>
 
       <div
         className={cn(
