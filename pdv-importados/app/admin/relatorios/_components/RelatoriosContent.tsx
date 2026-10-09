@@ -9,7 +9,6 @@ import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  ChartCard,
   ExecutivePageHeader,
   MetricCard,
   SectionCard,
@@ -24,8 +23,7 @@ import { ExecutiveDomainView } from './executive/ExecutiveDomainView'
 import type { ExecutiveExtras } from './executive/executiveExtras'
 import { EmptyState, ErrorState } from '@/components/ui/feedback'
 import { formatBRL, formatPercent } from '@/lib/format/money'
-import { formatDayMonthInLocale, formatDateTimeOrDash } from '@/lib/format/datetime'
-import { CHART_COLORS } from '@/lib/tokens/chartColors'
+import { formatDateTimeOrDash } from '@/lib/format/datetime'
 import { ROUTES, adminCatalogoCompletoEditarHref, adminVendaDetalheQuery } from '@/lib/navigation/routes'
 import type {
   RelatorioVendaDiaDTO,
@@ -40,10 +38,15 @@ import type {
 import type { RelatorioSemGiroDTO } from '@/app/gerente/relatorios/sem-giro/actions'
 import type { VendaReportRow } from '@/app/gerente/relatorios/vendas/actions'
 import type { PeriodoRelatorioResolvido } from '@/lib/relatorios/periodoRelatorio'
-import { RelatoriosBarChart } from './RelatoriosBarChart'
+import {
+  DivergenciaEstoqueList,
+  FaturamentoPorDiaCard,
+  MargemPorVendaList,
+  StatusVendasCard,
+  TopProdutosList,
+} from './RelatoriosSections'
 import { RelatoriosPeriodFilters } from './RelatoriosPeriodFilters'
 import type { RelatoriosFiltrosLabels } from './RelatoriosPeriodFilters'
-import { PaymentDonutChart } from '@/app/admin/dashboard/_components/PaymentDonutChart'
 import { KardexSheet, type KardexAlvo, type KardexLabels } from '@/app/admin/estoque/_components/KardexSheet'
 import {
   avisoPeriodoVisivel,
@@ -173,71 +176,6 @@ function avisoCopy(aviso: ReturnType<typeof avisoPeriodoVisivel>, labels: Relato
   return labels.avisoPeriodoLimitado
 }
 
-function OrigemBadgeRelatorio({
-  origem,
-  labelChina,
-  labelBrasil,
-}: {
-  origem: string
-  labelChina: string
-  labelBrasil: string
-}) {
-  const isChina = String(origem).toLowerCase().includes('china')
-  const label = isChina ? labelChina : labelBrasil
-  return (
-    <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-caption font-medium leading-none ${
-        isChina ? 'admin-v2-badge-gold' : 'admin-v2-badge-muted'
-      }`}
-      title={label}
-      aria-label={label}
-    >
-      {label}
-    </span>
-  )
-}
-
-function TopProdutosList({ top, labels }: { top: RelatorioTopProdDTO[]; labels: RelatoriosLabels }) {
-  const max = Math.max(1, ...top.map((item) => item.total_valor))
-  if (top.length === 0) return <EmptyState title={labels.vazioProdutos} className="py-8" />
-  return (
-    <div className="space-y-3">
-      {top.slice(0, 8).map((item) => {
-        const width = Math.max(6, Math.round((item.total_valor / max) * 100))
-        return (
-          <Link
-            key={item.id}
-            href={adminCatalogoCompletoEditarHref(item.id)}
-            className="-m-1 block space-y-1 rounded-lg p-1 transition-colors hover:bg-[var(--color-background-secondary)]"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="truncate text-small font-medium text-jl-fg-1">{item.nome}</p>
-                <OrigemBadgeRelatorio
-                  origem={item.origem}
-                  labelChina={labels.origemChina}
-                  labelBrasil={labels.origemBrasil}
-                />
-              </div>
-              <span className="text-small text-jl-fg-2">{formatBRL(item.total_valor)}</span>
-            </div>
-            <div
-              className="h-2 w-full rounded-full bg-[var(--color-background-tertiary)]"
-              role="img"
-              aria-label={`${item.nome}: ${formatBRL(item.total_valor)}`}
-            >
-              <div
-                className="h-full rounded-full bg-[var(--color-chart-gold)]"
-                style={{ width: `${width}%` }}
-              />
-            </div>
-          </Link>
-        )
-      })}
-    </div>
-  )
-}
-
 function EstoqueReposicaoList({
   baixo,
   labels,
@@ -277,52 +215,6 @@ function EstoqueReposicaoList({
           </Link>
         )
       })}
-    </div>
-  )
-}
-
-function MargemPorVendaList({
-  vendas,
-  labels,
-}: {
-  vendas: RelatorioMargemVendaDTO[]
-  labels: RelatoriosLabels
-}) {
-  if (vendas.length === 0) return <EmptyState title={labels.vazioMargemVenda} className="py-8" />
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-small">
-        <thead>
-          <tr className="border-b border-[var(--color-border-secondary)] text-left text-caption text-jl-fg-3">
-            <th className="py-1.5 pr-3 font-medium">{labels.margemVendaColData}</th>
-            <th className="py-1.5 pr-3 text-right font-medium">{labels.margemVendaColLiquido}</th>
-            <th className="py-1.5 pr-3 text-right font-medium">{labels.margemVendaColCusto}</th>
-            <th className="py-1.5 pr-3 text-right font-medium">{labels.margemVendaColMargem}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {vendas.slice(0, 20).map((v) => (
-            <tr key={v.venda_id} className="border-b border-[var(--color-background-tertiary)]">
-              <td className="py-1.5 pr-3 text-jl-fg-2">
-                <Link href={adminVendaDetalheQuery(v.venda_id)} className="hover:underline">
-                  {formatDateTimeOrDash(v.data, labels.locale, 'short')}
-                </Link>
-              </td>
-              <td className="py-1.5 pr-3 text-right text-jl-fg-1">{formatBRL(v.total_liquido)}</td>
-              <td className="py-1.5 pr-3 text-right text-jl-fg-2">
-                {v.custo_confiavel && v.custo_total_estimado != null
-                  ? formatBRL(v.custo_total_estimado)
-                  : labels.margemVendaCustoIndisponivel}
-              </td>
-              <td className="py-1.5 pr-3 text-right font-medium text-jl-fg-1">
-                {v.custo_confiavel && v.margem_estimada != null
-                  ? formatBRL(v.margem_estimada)
-                  : labels.margemVendaCustoIndisponivel}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </div>
   )
 }
@@ -413,47 +305,6 @@ function CoberturaEstoqueList({
             })}
           </span>
         </Link>
-      ))}
-    </div>
-  )
-}
-
-function DivergenciaEstoqueList({
-  itens,
-  labels,
-  onAbrirKardex,
-}: {
-  itens: RelatorioDivergenciaEstoqueDTO[]
-  labels: RelatoriosLabels
-  onAbrirKardex: (alvo: KardexAlvo) => void
-}) {
-  // A view já ordena por |divergência|; aqui só filtramos ruído de arredondamento.
-  const comDivergencia = itens.filter((i) => Math.abs(i.divergencia) > 0.001).slice(0, 15)
-  if (comDivergencia.length === 0) {
-    return <EmptyState title={labels.vazioDivergenciaEstoque} className="py-8" />
-  }
-  return (
-    <div className="space-y-2">
-      <p className="text-caption italic text-jl-fg-3">{labels.divergenciaEstoqueHint}</p>
-      {comDivergencia.map((i) => (
-        <button
-          key={`${i.produtoId}-${i.lojaId}`}
-          type="button"
-          onClick={() => onAbrirKardex({ produtoId: i.produtoId, produtoNome: i.nome })}
-          className="flex w-full items-center justify-between rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-background-secondary)] px-3 py-2 text-left transition-colors hover:border-[var(--color-border)]"
-        >
-          <div className="min-w-0">
-            <p className="truncate text-small font-medium text-jl-fg-1">{i.nome}</p>
-            <p className="text-caption text-jl-fg-3">
-              {labels.divergenciaEstoqueColSaldo}: {i.saldoEstoque} ·{' '}
-              {labels.divergenciaEstoqueColMovimentos}: {i.somaMovimentos}
-            </p>
-          </div>
-          <span className="admin-v2-badge-muted shrink-0 rounded-full px-2 py-1 text-caption font-semibold tabular-nums">
-            {i.divergencia > 0 ? '+' : ''}
-            {i.divergencia}
-          </span>
-        </button>
       ))}
     </div>
   )
@@ -597,12 +448,6 @@ function RelatoriosTabs({
   )
 }
 
-function chartLabelFromYmd(ymd: string, locale: string): string {
-  const [y, m, d] = String(ymd).slice(0, 10).split('-').map(Number)
-  if (!y || !m || !d) return ymd
-  return formatDayMonthInLocale(new Date(y, m - 1, d), locale)
-}
-
 const EXEC_VIEW_TITLE: Record<ExecutiveRelatoriosViewId, string> = {
   'vendas-caixas': 'Vendas & Caixas',
   'dre-financeiro': 'DRE & Financeiro',
@@ -652,14 +497,6 @@ export function RelatoriosContent({
     dados.resumoExecutivo.custo_confiavel && dados.resumoExecutivo.margem_bruta_estimada != null
       ? formatBRL(dados.resumoExecutivo.margem_bruta_estimada)
       : labels.kpiMargemIndisponivel
-
-  const chartData = porDiaOrdenado.map((r) => ({
-    label: chartLabelFromYmd(r.dia, labels.locale),
-    total: r.total_liquido,
-  }))
-
-  const statusTotal =
-    dados.resumoExecutivo.vendas_concluidas + dados.resumoExecutivo.vendas_canceladas
 
   function selectTab(next: RelatoriosTabId) {
     setTab(next)
@@ -720,6 +557,8 @@ export function RelatoriosContent({
             dados={dados}
             extras={executiveExtras}
             locale={labels.locale}
+            labels={labels}
+            onAbrirKardex={setKardexAlvo}
           />
         ) : null}
 
@@ -774,33 +613,8 @@ export function RelatoriosContent({
             aria-labelledby="relatorios-tab-visao"
             className="admin-v2-grid-2"
           >
-            <ChartCard title={labels.chartFaturamento}>
-              {chartData.length === 0 ? (
-                <EmptyState title={labels.noDataLabel} className="py-8" />
-              ) : (
-                <RelatoriosBarChart data={chartData} tooltipLabel={labels.tooltipFaturado} />
-              )}
-            </ChartCard>
-            <ChartCard title={labels.chartStatusVendas}>
-              {statusTotal <= 0 ? (
-                <EmptyState title={labels.noDataLabel} className="py-8" />
-              ) : (
-                <PaymentDonutChart
-                  slices={[
-                    {
-                      label: labels.labelConcluidas,
-                      value: dados.resumoExecutivo.vendas_concluidas,
-                      color: CHART_COLORS[0],
-                    },
-                    {
-                      label: labels.labelCanceladas,
-                      value: dados.resumoExecutivo.vendas_canceladas,
-                      color: CHART_COLORS[3],
-                    },
-                  ]}
-                />
-              )}
-            </ChartCard>
+            <FaturamentoPorDiaCard porDiaOrdenado={porDiaOrdenado} labels={labels} />
+            <StatusVendasCard resumo={dados.resumoExecutivo} labels={labels} />
           </div>
         ) : null}
 
