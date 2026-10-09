@@ -31,6 +31,7 @@ Reaproveita `HubTabDef`, `AdminHubTabNav`, `ROUTES`. Sem migrations, sem RPC, se
 - A sidebar esconde Implantação e Diagnóstico de GERENTE, mas a policy **não os bloqueia** por URL (achado de segurança/produto, fora do escopo de UX).
 - Algumas funções citadas na missão **não existem** (inventário como tela, histórico de preços, importação em massa, impressoras, integrações, perfis editáveis, personas Estoquista/Financeiro).
 - A auditoria de 08/10 listou "Auditoria → produto/Kardex" e "Resultado ↔ DRE" como links faltantes; **ambos já existem** (botão Ver Kardex no detalhe do evento; a view DRE linka `?tab=resultado` e `?tab=resumo` do Financeiro). Detectado ao implementar o PR 3.
+- A "porta única de recebimento" (PR 6) **já existe** no código (seletor "Como chegou?", `?modo=pedido&oc=`, aviso de duplicidade). O PR 6 foi cancelado; os documentos de jornada/duplicidades foram anotados.
 - "Caixa → vendas do turno" depende de filtro por caixa na RPC `listar_vendas_gerente`: **não é só UI**.
 
 ## J. Decisão
