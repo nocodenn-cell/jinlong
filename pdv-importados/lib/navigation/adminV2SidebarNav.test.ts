@@ -1,19 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { ROUTES } from '@/lib/navigation/routes'
 import {
-  ADMIN_V2_ANALISES_ITEMS,
-  ADMIN_V2_CORE_ITEMS,
-  ADMIN_V2_OPERACOES_ITEMS,
-  ADMIN_V2_SISTEMA_ITEMS,
+  ADMIN_V2_DESTINATIONS,
+  ADMIN_V2_INTERNO_ITEMS,
+  ADMIN_V2_PDV_ITEM,
+  flattenAdminV2Nav,
   type AdminV2NavItem,
 } from './adminV2SidebarNav'
 import { executiveRelatoriosHref } from './executiveViews'
 
-const TODOS: readonly AdminV2NavItem[] = [
-  ...ADMIN_V2_ANALISES_ITEMS,
-  ...ADMIN_V2_OPERACOES_ITEMS,
-  ...ADMIN_V2_SISTEMA_ITEMS,
-]
+const TODOS: readonly AdminV2NavItem[] = flattenAdminV2Nav()
 
 /** Espelha o filtro de `ExecutiveSidebarNav`: itens `adminOnly` só para perfil ADMIN. */
 function itensVisiveis(perfilAdmin: boolean): AdminV2NavItem[] {
@@ -25,40 +21,114 @@ function hrefs(itens: readonly AdminV2NavItem[]): string[] {
 }
 
 describe('menu admin — sanidade estrutural', () => {
-  it('ids são únicos entre os três grupos', () => {
+  it('ids e hrefs são únicos (nenhum link duplicado na sidebar)', () => {
     const ids = TODOS.map((i) => i.id)
     expect(new Set(ids).size).toBe(ids.length)
+    const h = hrefs(TODOS)
+    expect(new Set(h).size).toBe(h.length)
   })
 
-  it('todo item tem rótulo pt resolvível sem depender do dicionário', () => {
+  it('todo item tem rótulo pt resolvível', () => {
     for (const item of TODOS) {
       expect(item.labelOverridePt ?? item.labelPt ?? item.dictKey).toBeTruthy()
     }
   })
 
-  it('ANÁLISES tem exatamente 5 abas executivas', () => {
-    expect(ADMIN_V2_ANALISES_ITEMS).toHaveLength(5)
-    expect(ADMIN_V2_CORE_ITEMS).toBe(ADMIN_V2_ANALISES_ITEMS)
+  it('sub-links nunca repetem o href do destino pai', () => {
+    for (const d of ADMIN_V2_DESTINATIONS) {
+      expect(hrefs(d.children ?? [])).not.toContain(d.href)
+    }
   })
 })
 
-describe('menu admin — hubs (Sprint 6 + Fase 1 executiva)', () => {
-  it('categorias e marcas de produto não são entradas separadas na sidebar', () => {
+describe('menu admin — 9 destinos (UX-IA-01 PR 1)', () => {
+  it('tem exatamente 9 destinos principais, na ordem de uso diário', () => {
+    expect(ADMIN_V2_DESTINATIONS.map((d) => d.id)).toEqual([
+      'inicio',
+      'vendas',
+      'produtos',
+      'estoque',
+      'compras',
+      'financeiro',
+      'pessoas',
+      'relatorios',
+      'configuracoes',
+    ])
+  })
+
+  it('gerente vê 9 destinos + Abrir PDV = 10 entradas de primeiro nível', () => {
+    const primeiroNivel = [...ADMIN_V2_DESTINATIONS, ADMIN_V2_PDV_ITEM].filter(
+      (i) => !i.adminOnly,
+    )
+    expect(primeiroNivel).toHaveLength(10)
+  })
+
+  it('"Abrir PDV" aponta para o PDV e é visível a todos os perfis do painel', () => {
+    expect(ADMIN_V2_PDV_ITEM.href).toBe(ROUTES.caixa.home)
+    expect(hrefs(itensVisiveis(false))).toContain(ROUTES.caixa.home)
+  })
+
+  it('Relatórios abre na view Vendas & Caixas e concentra as demais views + Auditoria', () => {
+    const rel = ADMIN_V2_DESTINATIONS.find((d) => d.id === 'relatorios')!
+    expect(rel.href).toBe(executiveRelatoriosHref('vendas-caixas'))
+    const filhos = hrefs(rel.children ?? [])
+    expect(filhos).toContain(executiveRelatoriosHref('dre-financeiro'))
+    expect(filhos).toContain(executiveRelatoriosHref('produtos-estoque'))
+    expect(filhos).toContain(executiveRelatoriosHref('crm-auditoria'))
+    expect(filhos).toContain(ROUTES.admin.auditoria)
+    // aba clássica continua alcançável até a consolidação (PR 7)
+    expect(filhos).toContain(ROUTES.admin.relatorios)
+  })
+})
+
+describe('menu admin — alcance: nenhuma rota saiu da sidebar', () => {
+  // Rotas que eram alcançáveis pela sidebar antes do PR 1 (auditoria 2026-10-08, seção A).
+  const ANTES = [
+    ROUTES.admin.dashboard,
+    ROUTES.admin.vendas,
+    ROUTES.admin.caixas,
+    ROUTES.admin.catalogo,
+    ROUTES.admin.clientes,
+    ROUTES.admin.funcionarios,
+    ROUTES.admin.estoque,
+    ROUTES.admin.financeiro,
+    ROUTES.admin.auditoria,
+    ROUTES.admin.fornecedores,
+    ROUTES.admin.compras,
+    ROUTES.admin.comissoes,
+    ROUTES.admin.relatorios,
+    ROUTES.admin.configuracoes,
+    ROUTES.admin.suspensao,
+    ROUTES.caixa.home,
+    executiveRelatoriosHref('vendas-caixas'),
+    executiveRelatoriosHref('dre-financeiro'),
+    executiveRelatoriosHref('produtos-estoque'),
+    executiveRelatoriosHref('crm-auditoria'),
+  ]
+
+  it('todo destino anterior continua na sidebar do gerente', () => {
+    const visiveis = hrefs(itensVisiveis(false))
+    for (const href of ANTES) {
+      expect(visiveis, href).toContain(href)
+    }
+  })
+
+  it('o ADMIN continua vendo as ferramentas internas', () => {
+    const visiveis = hrefs(itensVisiveis(true))
+    expect(visiveis).toContain(ROUTES.admin.provisionamento)
+    expect(visiveis).toContain(ROUTES.admin.implantacao)
+    expect(visiveis).toContain(ROUTES.admin.diagnosticoCaixa)
+  })
+})
+
+describe('menu admin — hubs mantêm taxonomias fora da sidebar', () => {
+  it('categorias, marcas, recebimento e transferências não são entradas da sidebar', () => {
     const visiveis = hrefs(itensVisiveis(false))
     expect(visiveis).not.toContain(ROUTES.admin.categoriasProdutos)
     expect(visiveis).not.toContain(ROUTES.admin.marcasProdutos)
-    expect(visiveis).toContain(ROUTES.admin.catalogo)
-  })
-
-  it('recebimento e transferências não são entradas separadas na sidebar', () => {
-    const visiveis = hrefs(itensVisiveis(false))
     expect(visiveis).not.toContain(ROUTES.admin.estoqueRecebimento)
     expect(visiveis).not.toContain(ROUTES.admin.estoqueTransferencias)
-    expect(visiveis).toContain(ROUTES.admin.estoque)
-  })
-
-  it('categorias financeiras não aparecem em Operações', () => {
-    expect(hrefs(ADMIN_V2_OPERACOES_ITEMS)).not.toContain(ROUTES.admin.categoriasFinanceiras)
+    expect(visiveis).not.toContain(ROUTES.admin.categoriasFinanceiras)
   })
 })
 
@@ -76,17 +146,10 @@ describe('menu admin — ferramentas internas fora da visão do cliente', () => 
     }
   })
 
-  it('ADMIN continua enxergando as ferramentas internas', () => {
-    const visiveis = hrefs(itensVisiveis(true))
-    for (const href of INTERNOS) {
-      expect(visiveis).toContain(href)
-    }
-  })
-
   it('todo item interno está marcado com adminOnly', () => {
-    for (const href of INTERNOS) {
-      const item = TODOS.find((i) => i.href === href)
-      expect(item?.adminOnly).toBe(true)
+    expect(ADMIN_V2_INTERNO_ITEMS).toHaveLength(INTERNOS.length)
+    for (const item of ADMIN_V2_INTERNO_ITEMS) {
+      expect(item.adminOnly).toBe(true)
     }
   })
 })
@@ -97,29 +160,10 @@ describe('menu admin — nomenclatura', () => {
     expect(item?.labelOverridePt).toBe('Suspensão de vendas')
     expect(item?.labelOverridePt).not.toMatch(/licen/i)
   })
-})
 
-describe('menu admin — IA executiva Fase 1', () => {
-  it('Visão Geral aponta para /admin/dashboard', () => {
-    expect(hrefs(ADMIN_V2_ANALISES_ITEMS)).toContain(ROUTES.admin.dashboard)
-  })
-
-  it('abas 2–5 apontam para /admin/relatorios?view=…', () => {
-    expect(hrefs(ADMIN_V2_ANALISES_ITEMS)).toContain(executiveRelatoriosHref('vendas-caixas'))
-    expect(hrefs(ADMIN_V2_ANALISES_ITEMS)).toContain(executiveRelatoriosHref('dre-financeiro'))
-    expect(hrefs(ADMIN_V2_ANALISES_ITEMS)).toContain(executiveRelatoriosHref('produtos-estoque'))
-    expect(hrefs(ADMIN_V2_ANALISES_ITEMS)).toContain(executiveRelatoriosHref('crm-auditoria'))
-  })
-
-  it('ERP operacional permanece em Operações (catálogo, estoque, financeiro)', () => {
-    const ops = hrefs(ADMIN_V2_OPERACOES_ITEMS)
-    expect(ops).toContain(ROUTES.admin.catalogo)
-    expect(ops).toContain(ROUTES.admin.estoque)
-    expect(ops).toContain(ROUTES.admin.financeiro)
-    expect(ops).toContain(ROUTES.admin.vendas)
-  })
-
-  it('atalho para o PDV permanece disponível a todos os perfis gerenciais', () => {
-    expect(hrefs(itensVisiveis(false))).toContain(ROUTES.caixa.home)
+  it('"Produtos" no menu coincide com a chave do dicionário (antes: "Catálogo" × 商品)', () => {
+    const item = ADMIN_V2_DESTINATIONS.find((d) => d.href === ROUTES.admin.catalogo)
+    expect(item?.labelOverridePt).toBe('Produtos')
+    expect(item?.dictKey).toBe('produtos')
   })
 })

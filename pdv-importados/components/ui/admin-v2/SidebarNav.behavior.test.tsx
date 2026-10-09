@@ -11,9 +11,12 @@ import { createRoot, type Root } from 'react-dom/client'
 import { flushSync } from 'react-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+let currentPathname = '/admin/dashboard'
+let currentSearch = ''
+
 vi.mock('next/navigation', () => ({
-  usePathname: () => '/admin/dashboard',
-  useSearchParams: () => new URLSearchParams(''),
+  usePathname: () => currentPathname,
+  useSearchParams: () => new URLSearchParams(currentSearch),
 }))
 
 vi.mock('next/link', () => ({
@@ -37,6 +40,8 @@ let container: HTMLDivElement
 let root: Root
 
 beforeEach(() => {
+  currentPathname = '/admin/dashboard'
+  currentSearch = ''
   container = document.createElement('div')
   document.body.appendChild(container)
   root = createRoot(container)
@@ -48,27 +53,17 @@ afterEach(() => {
 })
 
 /** Renderiza o menu e devolve os hrefs realmente presentes no DOM. */
-function renderMenu(perfilAdmin: boolean): string[] {
-  const admin = getMessages('pt').admin
+function renderMenu(perfilAdmin: boolean, chinese = false): string[] {
+  const admin = getMessages(chinese ? 'zh' : 'pt').admin
   flushSync(() => {
     root.render(
       React.createElement(SidebarNav, {
         admin,
-        chineseLanguage: false,
+        chineseLanguage: chinese,
         showAdminOnlyItems: perfilAdmin,
       }),
     )
   })
-  return Array.from(container.querySelectorAll('a')).map((a) => a.getAttribute('href') ?? '')
-}
-
-/** Recolhe Operações (default aberta) e devolve hrefs só de Análises + Sistema. */
-function renderMenuComOperacoesFechada(perfilAdmin: boolean): string[] {
-  renderMenu(perfilAdmin)
-  const toggle = container.querySelector<HTMLButtonElement>('button[aria-controls="nav-operacoes-items"]')
-  expect(toggle).not.toBeNull()
-  // Default open → click fecha
-  flushSync(() => toggle?.click())
   return Array.from(container.querySelectorAll('a')).map((a) => a.getAttribute('href') ?? '')
 }
 
@@ -80,49 +75,113 @@ describe('SidebarNav — perfil DONO/GERENTE (cliente)', () => {
     expect(hrefs).not.toContain(ROUTES.admin.provisionamento)
   })
 
-  it('Análises expõe as 5 abas sem precisar abrir Operações', () => {
-    const hrefs = renderMenuComOperacoesFechada(false)
-    expect(hrefs).toContain(ROUTES.admin.dashboard)
-    expect(hrefs).toContain(executiveRelatoriosHref('vendas-caixas'))
+  it('mostra Abrir PDV e os 9 destinos principais sem abrir nada', () => {
+    const hrefs = renderMenu(false)
+    expect(hrefs).toContain(ROUTES.caixa.home)
+    for (const href of [
+      ROUTES.admin.dashboard,
+      ROUTES.admin.vendas,
+      ROUTES.admin.catalogo,
+      ROUTES.admin.estoque,
+      ROUTES.admin.compras,
+      ROUTES.admin.financeiro,
+      ROUTES.admin.clientes,
+      executiveRelatoriosHref('vendas-caixas'),
+      ROUTES.admin.configuracoes,
+    ]) {
+      expect(hrefs).toContain(href)
+    }
+    // 9 destinos + PDV, sem sub-links (grupo fechado: rota atual é o dashboard)
+    expect(hrefs).toHaveLength(10)
+  })
+
+  it('sub-links só aparecem com o grupo aberto (rota atual dentro do grupo)', () => {
+    expect(renderMenu(false)).not.toContain(ROUTES.admin.caixas)
+    currentPathname = ROUTES.admin.vendas
+    const hrefs = renderMenu(false)
+    expect(hrefs).toContain(ROUTES.admin.caixas)
+    expect(container.querySelector('[data-nav-children-of="vendas"]')).not.toBeNull()
+  })
+
+  it('estando em Caixas, o grupo Vendas permanece aberto e Caixas fica ativo', () => {
+    currentPathname = ROUTES.admin.caixas
+    renderMenu(false)
+    const ativo = container.querySelector('[aria-current="page"]')
+    expect(ativo?.getAttribute('href')).toBe(ROUTES.admin.caixas)
+  })
+
+  it('Relatórios aberto expõe views, Auditoria e o detalhe clássico', () => {
+    currentPathname = ROUTES.admin.relatorios
+    currentSearch = 'view=dre-financeiro'
+    const hrefs = renderMenu(false)
     expect(hrefs).toContain(executiveRelatoriosHref('dre-financeiro'))
     expect(hrefs).toContain(executiveRelatoriosHref('produtos-estoque'))
     expect(hrefs).toContain(executiveRelatoriosHref('crm-auditoria'))
+    expect(hrefs).toContain(ROUTES.admin.auditoria)
+    expect(hrefs).toContain(ROUTES.admin.relatorios)
   })
 
-  it('Operações (aberta) alcança catálogo e estoque via hub, não taxonomias soltas', () => {
+  it('catálogo e estoque entram pelo hub, não por taxonomias soltas', () => {
     const hrefs = renderMenu(false)
     expect(hrefs).toContain(ROUTES.admin.catalogo)
     expect(hrefs).not.toContain(ROUTES.admin.categoriasProdutos)
     expect(hrefs).not.toContain(ROUTES.admin.marcasProdutos)
     expect(hrefs).toContain(ROUTES.admin.estoque)
     expect(hrefs).not.toContain(ROUTES.admin.estoqueRecebimento)
-  })
-
-  it('categorias financeiras não aparecem em Operações', () => {
-    expect(renderMenu(false)).not.toContain(ROUTES.admin.categoriasFinanceiras)
+    expect(hrefs).not.toContain(ROUTES.admin.categoriasFinanceiras)
   })
 
   it('rotula a suspensão pela função real, não por "licença"', () => {
+    currentPathname = ROUTES.admin.configuracoes
     renderMenu(false)
     const texto = container.textContent ?? ''
     expect(texto).toContain('Suspensão de vendas')
     expect(texto).not.toMatch(/licen/i)
   })
 
-  it('seções Análises e Operações estão presentes', () => {
+  it('não mostra o grupo Interno ao gerente', () => {
     renderMenu(false)
+    expect(container.querySelector('[data-nav-group="interno"]')).toBeNull()
+  })
+})
+
+describe('SidebarNav — idioma chinês', () => {
+  it('rótulos principais saem em chinês, sem os nomes de grupo antigos em português', () => {
+    renderMenu(false, true)
     const texto = container.textContent ?? ''
-    expect(texto).toMatch(/Análises/i)
-    expect(texto).toMatch(/Operações/i)
+    expect(texto).toContain('首页')
+    expect(texto).toContain('前往收银')
+    expect(texto).not.toMatch(/Análises|Operações|Sistema/)
+  })
+
+  it('grupo Interno do ADMIN usa o rótulo traduzido', () => {
+    renderMenu(true, true)
+    expect(container.textContent ?? '').toContain('内部工具')
+  })
+})
+
+describe('SidebarNav — dicas (title) no idioma da interface', () => {
+  it('em chinês, a dica de cada item sai em chinês (não em português)', () => {
+    renderMenu(false, true)
+    const titulos = Array.from(container.querySelectorAll('a[data-nav-id]')).map((a) => a.getAttribute('title') ?? '')
+    const comPortugues = titulos.filter((t) => /(Vendas|Produtos|Estoque|Compras|Pessoas|abas na página)/.test(t.split(' — ')[1] ?? ''))
+    expect(comPortugues).toEqual([])
+  })
+
+  it('em português, a dica é a descrição atual do item', () => {
+    renderMenu(false)
+    const rel = container.querySelector('a[data-nav-id="relatorios"]')
+    expect(rel?.getAttribute('title')).toContain('Vendas, resultado, produtos, clientes e auditoria.')
   })
 })
 
 describe('SidebarNav — perfil ADMIN (equipe FastProduct)', () => {
-  it('mantém acesso às três ferramentas internas', () => {
+  it('mantém acesso às três ferramentas internas, no grupo Interno', () => {
     const hrefs = renderMenu(true)
     expect(hrefs).toContain(ROUTES.admin.implantacao)
     expect(hrefs).toContain(ROUTES.admin.diagnosticoCaixa)
     expect(hrefs).toContain(ROUTES.admin.provisionamento)
+    expect(container.querySelector('[data-nav-group="interno"]')).not.toBeNull()
   })
 
   it('enxerga exatamente 3 itens a mais que DONO/GERENTE', () => {

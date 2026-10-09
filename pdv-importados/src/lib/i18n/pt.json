@@ -1710,7 +1710,15 @@
       "execVendasCaixas": { "cn": "销售与收银", "pt": "Vendas & Caixas" },
       "execDreFinanceiro": { "cn": "损益与财务", "pt": "DRE & Financeiro" },
       "execProdutosEstoque": { "cn": "商品与库存", "pt": "Produtos & Estoque" },
-      "execCrmAuditoria": { "cn": "客户与审计", "pt": "CRM & Auditoria" }
+      "execCrmAuditoria": { "cn": "客户与审计", "pt": "CRM & Auditoria" },
+      "inicio": { "cn": "首页", "pt": "Início" },
+      "compras": { "cn": "采购", "pt": "Compras" },
+      "fornecedores": { "cn": "供应商", "pt": "Fornecedores" },
+      "pessoas": { "cn": "人员", "pt": "Pessoas" },
+      "interno": { "cn": "内部工具", "pt": "Interno" },
+      "auditoria": { "cn": "审计", "pt": "Auditoria" },
+      "abrirPdv": { "cn": "前往收银", "pt": "Abrir PDV" },
+      "relatoriosDetalhe": { "cn": "分类明细", "pt": "Detalhe por domínio" }
     },
     "navHints": {
       "dashboard": "KPIs globais, tendência diária e alertas executivos.",
@@ -1722,7 +1730,7 @@
       "estoque": "Saldos por loja e alertas de estoque.",
       "recebimento": "Entrada de mercadorias e conferência.",
       "transferencias": "Movimentação entre lojas.",
-      "relatorios": "Hub analítico detalhado por domínio.",
+      "relatorios": "Vendas, resultado, produtos, clientes e auditoria.",
       "caixas": "Caixas e operações de ponto de venda.",
       "financeiro": "Movimentações e visão financeira.",
       "configuracoes": "Parâmetros globais (comissão, limites de caixa, lead time, estoque mínimo).",
@@ -1733,7 +1741,15 @@
       "execVendasCaixas": "Picos horários, auditoria de caixas e detalhe de pedidos.",
       "execDreFinanceiro": "DRE em cascata, fluxo de caixa e inadimplência.",
       "execProdutosEstoque": "Curva ABC, encalhe, reposição e OC em trânsito.",
-      "execCrmAuditoria": "RFV, performance de equipe e painel de perdas."
+      "execCrmAuditoria": "RFV, performance de equipe e painel de perdas.",
+      "inicio": "KPIs globais, tendência diária e alertas.",
+      "compras": "Pedidos de compra e fornecedores.",
+      "fornecedores": "Cadastro de fornecedores.",
+      "pessoas": "Clientes e funcionários da loja.",
+      "auditoria": "Linha do tempo de eventos operacionais.",
+      "interno": "Ferramentas internas da equipe FastProduct.",
+      "abrirPdv": "Abrir o terminal de caixa.",
+      "relatoriosDetalhe": "Abas clássicas de detalhe por domínio."
     },
     "dashboard": {
       "pageTitle": { "cn": "生意看板", "pt": "Dashboard comercial" },
