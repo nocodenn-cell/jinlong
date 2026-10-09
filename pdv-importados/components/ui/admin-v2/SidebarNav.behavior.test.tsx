@@ -160,6 +160,21 @@ describe('SidebarNav — idioma chinês', () => {
   })
 })
 
+describe('SidebarNav — dicas (title) no idioma da interface', () => {
+  it('em chinês, a dica de cada item sai em chinês (não em português)', () => {
+    renderMenu(false, true)
+    const titulos = Array.from(container.querySelectorAll('a[data-nav-id]')).map((a) => a.getAttribute('title') ?? '')
+    const comPortugues = titulos.filter((t) => /(Vendas|Produtos|Estoque|Compras|Pessoas|abas na página)/.test(t.split(' — ')[1] ?? ''))
+    expect(comPortugues).toEqual([])
+  })
+
+  it('em português, a dica é a descrição atual do item', () => {
+    renderMenu(false)
+    const rel = container.querySelector('a[data-nav-id="relatorios"]')
+    expect(rel?.getAttribute('title')).toContain('Vendas, resultado, produtos, clientes e auditoria.')
+  })
+})
+
 describe('SidebarNav — perfil ADMIN (equipe FastProduct)', () => {
   it('mantém acesso às três ferramentas internas, no grupo Interno', () => {
     const hrefs = renderMenu(true)
