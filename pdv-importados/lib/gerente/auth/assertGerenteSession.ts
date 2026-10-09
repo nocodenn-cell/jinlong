@@ -8,6 +8,7 @@ export type GerenteSessionAuth =
   | { ok: true; session: AdminSession }
   | { ok: false; error: string }
 
+const MSG_RECURSO = 'Seu perfil não tem permissão para esta área. Peça a um DONO ou administrador.'
 const MSG_LOGIN = 'Faça login para continuar.'
 const MSG_PERFIL = 'Esta área é só para gerente, dono ou administrador. Use uma conta com permissão.'
 
@@ -24,6 +25,12 @@ export async function assertGerenteSession(
     return { ok: true, session: normalized.session }
   }
 
+  // Sessão gerencial válida, mas o recurso é restrito a outro perfil (ex.: Diagnóstico → DONO/ADMIN):
+  // dizer "faça login" seria enganoso — a sessão está boa, falta permissão.
+  if (decision.type === 'deny' && decision.reason === 'forbidden_resource' && normalized.session) {
+    return { ok: false, error: MSG_RECURSO }
+  }
+
   if (normalized.authState === 'authenticated' && !normalized.session) {
     return { ok: false, error: MSG_PERFIL }
   }

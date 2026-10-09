@@ -39,4 +39,10 @@ describe('executarDiagnosticoCaixaAction — guarda própria (A2)', () => {
     executar.mockRejectedValue(new Error('rpc indisponível'))
     expect(await executarDiagnosticoCaixaAction()).toEqual({ ok: false, error: 'rpc indisponível' })
   })
+
+  it('falha ao resolver a sessão vira { ok:false } e não rejeita a action', async () => {
+    assertGerenteSession.mockRejectedValue(new Error('supabase indisponível'))
+    await expect(executarDiagnosticoCaixaAction()).resolves.toEqual({ ok: false, error: 'supabase indisponível' })
+    expect(executar).not.toHaveBeenCalled()
+  })
 })
