@@ -1,0 +1,21 @@
+{
+  "$schema_note": "Denylist operacional (hosts). Project refs de produção NÃO são versionados — use CAPACITY_BLOCKED_PROJECT_REFS no shell.",
+  "updated": "2026-10-09",
+  "project_refs": [],
+  "project_names": ["jinlong"],
+  "hosts": [
+    "jinlong.app",
+    "www.jinlong.app",
+    "app.jinlong.app",
+    "pdv-importados.vercel.app"
+  ],
+  "url_fragments": [
+    "jinlong.app",
+    "pdv-importados.vercel.app"
+  ],
+  "notes": [
+    "Defina CAPACITY_BLOCKED_PROJECT_REFS com o project ref de produção (20 chars) obtido do dashboard Supabase — nunca commitá-lo.",
+    "ageguard e outros projetos da org não são staging do Jinlong.",
+    "Hosts acima bloqueiam alvos web de produção mesmo sem ref no arquivo."
+  ]
+}

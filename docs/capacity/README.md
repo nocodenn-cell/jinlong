@@ -2,20 +2,22 @@
 
 **Prioridade:** P0 — prontidão para comercialização SaaS  
 **Data início:** 2026-10-09  
-**Escopo desta entrega:** FASE 1 (inventário somente leitura) + FASE 2 (plano de ensaios)  
-**Proibido nesta fase:** carga em produção, alteração de infraestrutura remota, correções estruturais sem aprovação
+**Escopo entregue:** FASE 1 + FASE 2 + **STG-01** (preparação homologação)  
+**Proibido até autorização:** provisionar recursos pagos, carga, migrations remotas
 
 | Documento | Conteúdo |
 |-----------|----------|
-| [FASE1_INVENTARIO_CAPACIDADE_RESILIENCIA.md](./FASE1_INVENTARIO_CAPACIDADE_RESILIENCIA.md) | Arquitetura efetiva, caminho da venda, locks, offline, SPOF, isolamento |
-| [FASE2_PLANO_ENSAIOS_CARGA.md](./FASE2_PLANO_ENSAIOS_CARGA.md) | Cenários 1–50 lojas, k6, continuidade, critérios GO/NO-GO |
-| [k6/](./k6/) | Esqueleto de scripts k6 (não executáveis contra prod; exige staging) |
-| [checklists/PRE_EXECUCAO_STAGING.md](./checklists/PRE_EXECUCAO_STAGING.md) | Gate humano antes de FASE 3/4 |
+| [FASE1_INVENTARIO_CAPACIDADE_RESILIENCIA.md](./FASE1_INVENTARIO_CAPACIDADE_RESILIENCIA.md) | Inventário e diagnóstico |
+| [FASE2_PLANO_ENSAIOS_CARGA.md](./FASE2_PLANO_ENSAIOS_CARGA.md) | Plano k6 / cenários 1–50 |
+| [STG01_HOMOLOGACAO_ISOLADA.md](./STG01_HOMOLOGACAO_ISOLADA.md) | **Gate humano:** arquitetura, custo, provisionamento, segurança |
+| [staging/prod-denylist.json](./staging/prod-denylist.json) | Refs/hosts de produção bloqueados |
+| [k6/](./k6/) | Esqueleto k6 (guard anti-prod) |
+| [checklists/PRE_EXECUCAO_STAGING.md](./checklists/PRE_EXECUCAO_STAGING.md) | Checklist pré-FASE 3 |
 
-## Decisão preliminar (após FASE 1)
+## Decisão atual
 
-**NO-GO para comercialização em escala** até existir homologação isolada e números medidos.
+**NO-GO** comercialização em escala.  
+**GO CONDICIONAL** piloto 1 loja.  
+**STG-01 pronto para autorização de provisionamento** (não executado).
 
-**GO CONDICIONAL** para avançar à FASE 3 **somente após** provisionar staging separado de produção (hoje: staging inexistente — ver `docs/AMBIENTES_E_RELEASE.md`).
-
-Capacidade comprovada hoje: **1 loja piloto** (operacional). Capacidade estimada para 5–50 lojas: **não medida**.
+Scripts: `npm run capacity:assert-target` · `capacity:seed` · `capacity:reset` · `guard:capacity-target`

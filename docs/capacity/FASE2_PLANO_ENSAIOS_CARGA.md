@@ -14,7 +14,7 @@
 | G1 | Projeto Supabase **separado** de produção, com migrations aplicadas via `db reset`/`db push` a partir do Git | FASE 3+ |
 | G2 | App web apontando **somente** para esse projeto (URL preview/homolog) | FASE 3+ |
 | G3 | Seeds sintéticos (lojas L1…L50, operadores, produtos, estoque) — **zero** PII de cliente | FASE 3+ |
-| G4 | `GATE_ENV=staging` + `GATE_STAGING_PROJECT_REF` + `guard:no-prod-target` verdes | Scripts |
+| G4 | `CAPACITY_ENV=staging` + `CAPACITY_ALLOWED_PROJECT_REF` + `guard:capacity-target` + `guard:no-prod-target` (ver STG-01) | Scripts |
 | G5 | Credenciais de produção **ausentes** do shell de teste | Scripts |
 | G6 | Observabilidade mínima: Sentry staging, logs Supabase, métricas Vercel do preview | Medição |
 
