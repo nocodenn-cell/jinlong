@@ -425,6 +425,12 @@
       "remoteOnlyVersion": "20261009033124",
       "reason": "Aplicada em produção via MCP apply_migration (autorização explícita do responsável, 2026-10-09): schema_migrations.version gravado foi o timestamp real de aplicação (20261009033124), não o do nome do arquivo (20261009120000_implantacao_go_live_somente_dono_admin.sql). Migration idempotente (CREATE OR REPLACE + DROP TRIGGER IF EXISTS + CREATE TRIGGER); seguro reaplicar. Pré-check de catálogo antes de aplicar: produção idêntica ao repositório (policies sem restrição de coluna, sem trigger, função inexistente). Verificação pós-aplicação (somente catálogo): trigger habilitado, função SECURITY DEFINER com search_path=public, sem EXECUTE para PUBLIC, 1 linha de checklist inalterada.",
       "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20261009150000",
+      "remoteOnlyVersion": "20261009115256",
+      "reason": "Aplicada em produção via MCP apply_migration (autorização explícita do responsável, 2026-10-09): schema_migrations.version gravado foi o timestamp real de aplicação (20261009115256), name=pdv_diagnostico_somente_dono_admin, não o do arquivo (20261009150000_pdv_diagnostico_somente_dono_admin.sql). A migration lê a definição vigente e só troca o guard de perfil de pdv_diagnostico_pre_producao (GERENTE,DONO,ADMIN -> DONO,ADMIN); aborta se o guard não ocorrer 1x, logo reaplicar é inofensivo (aborta sem alterar). Pré-check: guard antigo 1x, novo 0x, grants authenticated/postgres/service_role. Pós-aplicação: guard antigo 0x, novo 1x, grants idênticos.",
+      "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
     }
   ]
 }
