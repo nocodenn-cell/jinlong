@@ -2,12 +2,11 @@
 
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { useState } from 'react'
-import { ChevronDown } from 'lucide-react'
 import {
-  ADMIN_V2_ANALISES_ITEMS,
-  ADMIN_V2_OPERACOES_ITEMS,
-  ADMIN_V2_SISTEMA_ITEMS,
+  ADMIN_V2_DESTINATIONS,
+  ADMIN_V2_INTERNO_ITEMS,
+  ADMIN_V2_PDV_ITEM,
+  type AdminV2NavDestination,
   type AdminV2NavItem,
 } from '@/lib/navigation/adminV2SidebarNav'
 import { isAdminNavActive } from '@/lib/navigation/isAdminNavActive'
@@ -20,46 +19,49 @@ export type ExecutiveSidebarNavProps = {
   chineseLanguage: boolean
   /** Observabilidade visual (flag `pdv_config.show_stock_alerts`): contagem de itens em estoque baixo. */
   stockAlertCount?: number
-  /** Exibe itens `adminOnly` (wizard de provisionamento, etc.). */
+  /** Exibe itens `adminOnly` (grupo Interno: provisionamento, implantação, diagnóstico). */
   showAdminOnlyItems?: boolean
-  /** Controla expansão inicial da seção Operações (default: aberta). */
-  operacoesDefaultOpen?: boolean
 }
+
+type NavLabelsCtx = { admin: Mensagens['admin']; chineseLanguage: boolean }
 
 function resolveLabels(
   item: AdminV2NavItem,
-  admin: Mensagens['admin'],
-  chineseLanguage: boolean,
+  { admin, chineseLanguage }: NavLabelsCtx,
 ): { primary: string; secondary: string; hintText: string } {
   const dictKey = item.dictKey
   const line = dictKey ? admin.nav[dictKey as keyof typeof admin.nav] : undefined
-  const hint = dictKey ? admin.navHints[dictKey as keyof typeof admin.navHints] : item.hint
+  const hint = dictKey ? admin.navHints[dictKey as keyof typeof admin.navHints] : undefined
   const ptLabel = item.labelOverridePt ?? item.labelPt ?? line?.pt ?? item.id
-  const primary = chineseLanguage && (line?.cn ?? item.labelCn) ? (line?.cn ?? item.labelCn)! : ptLabel
-  const secondary =
-    chineseLanguage && line ? ptLabel : item.labelCn && chineseLanguage ? (item.labelPt ?? '') : ''
-  return { primary, secondary, hintText: hint ?? item.hint ?? '' }
+  const cnLabel = line?.cn ?? item.labelCn
+  const primary = chineseLanguage && cnLabel ? cnLabel : ptLabel
+  const secondary = chineseLanguage && cnLabel ? ptLabel : ''
+  return { primary, secondary, hintText: item.hint ?? hint ?? '' }
 }
+
+const LINK_BASE =
+  'admin-v2-nav-link flex items-center gap-3 rounded-full border border-transparent px-3 py-2.5 ' +
+  'data-[active=true]:border-[rgba(251,191,36,0.35)] data-[active=true]:bg-[rgba(251,191,36,0.1)] data-[active=true]:text-[var(--color-brand-primary)]'
 
 function NavItemLink({
   item,
-  admin,
-  chineseLanguage,
+  ctx,
   stockAlertCount,
   pathname,
   search,
+  nested = false,
 }: {
   item: AdminV2NavItem
-  admin: Mensagens['admin']
-  chineseLanguage: boolean
+  ctx: NavLabelsCtx
   stockAlertCount?: number
   pathname: string
   search: string
+  nested?: boolean
 }) {
   const badgeCount = item.id === 'estoque' ? stockAlertCount : undefined
   const active = isAdminNavActive(pathname, search, item.href)
   const Icon = item.icon
-  const { primary, secondary, hintText } = resolveLabels(item, admin, chineseLanguage)
+  const { primary, secondary, hintText } = resolveLabels(item, ctx)
 
   return (
     <li>
@@ -69,17 +71,14 @@ function NavItemLink({
         data-active={active}
         data-nav-id={item.id}
         aria-current={active ? 'page' : undefined}
-        className={cn(
-          'admin-v2-nav-link flex items-center gap-3 rounded-full border border-transparent px-3 py-2.5',
-          'data-[active=true]:border-[rgba(251,191,36,0.35)] data-[active=true]:bg-[rgba(251,191,36,0.1)] data-[active=true]:text-[var(--color-brand-primary)]',
-        )}
+        className={cn(LINK_BASE, nested && 'py-1.5 pl-3 text-[13px]')}
       >
-        <Icon className="h-4 w-4 shrink-0 opacity-80" strokeWidth={1.75} aria-hidden />
+        {Icon ? <Icon className="h-4 w-4 shrink-0 opacity-80" strokeWidth={1.75} aria-hidden /> : null}
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-medium leading-tight">{primary}</div>
-          {secondary ? (
-            <div className="truncate text-[11px] leading-tight text-jl-fg-3">{secondary}</div>
-          ) : null}
+          <div className={cn('truncate font-medium leading-tight', nested ? 'text-[13px]' : 'text-sm')}>
+            {primary}
+          </div>
+          {secondary ? <div className="truncate text-[11px] leading-tight text-jl-fg-3">{secondary}</div> : null}
         </div>
         {badgeCount != null ? <StockAlertBadge count={badgeCount} /> : null}
       </Link>
@@ -87,69 +86,106 @@ function NavItemLink({
   )
 }
 
+function DestinationGroup({
+  destination,
+  ctx,
+  stockAlertCount,
+  pathname,
+  search,
+}: {
+  destination: AdminV2NavDestination
+  ctx: NavLabelsCtx
+  stockAlertCount?: number
+  pathname: string
+  search: string
+}) {
+  const children = destination.children ?? []
+  // Grupo aberto = página do destino ou de qualquer sub-link está ativa. Sem estado local:
+  // a URL é a fonte de verdade, então o menu nunca fica fora de sincronia com a tela.
+  const open =
+    children.length > 0 &&
+    (isAdminNavActive(pathname, search, destination.href) ||
+      children.some((c) => isAdminNavActive(pathname, search, c.href)))
+  const linkProps = { ctx, stockAlertCount, pathname, search }
+
+  return (
+    <>
+      <NavItemLink item={destination} {...linkProps} />
+      {open ? (
+        <li>
+          <ul
+            className="ml-5 flex flex-col gap-0.5 border-l border-[var(--admin-v2-border)] pl-2"
+            data-nav-children-of={destination.id}
+          >
+            {children.map((child) => (
+              <NavItemLink key={child.id} item={child} {...linkProps} nested />
+            ))}
+          </ul>
+        </li>
+      ) : null}
+    </>
+  )
+}
+
 /**
- * ExecutiveSidebarNav — navegação Admin V2 com ANÁLISES (5 abas) + OPERAÇÕES + SISTEMA.
+ * ExecutiveSidebarNav — Admin V2: "Abrir PDV" em destaque + 9 destinos por tarefa
+ * (sub-links só no grupo aberto) + grupo Interno (ADMIN).
  */
 export function ExecutiveSidebarNav({
   admin,
   chineseLanguage,
   stockAlertCount,
   showAdminOnlyItems = false,
-  operacoesDefaultOpen = true,
 }: ExecutiveSidebarNavProps) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const search = searchParams?.toString() ?? ''
-  const [opsOpen, setOpsOpen] = useState(operacoesDefaultOpen)
-  const sistemaItems = ADMIN_V2_SISTEMA_ITEMS.filter(
-    (item) => !item.adminOnly || showAdminOnlyItems,
-  )
-
-  const linkProps = { admin, chineseLanguage, stockAlertCount, pathname, search }
+  const ctx: NavLabelsCtx = { admin, chineseLanguage }
+  const internos = ADMIN_V2_INTERNO_ITEMS.filter((item) => !item.adminOnly || showAdminOnlyItems)
+  const pdv = resolveLabels(ADMIN_V2_PDV_ITEM, ctx)
+  const PdvIcon = ADMIN_V2_PDV_ITEM.icon
+  const internoLabel = admin.nav.interno
+  const internoText = chineseLanguage ? internoLabel.cn : internoLabel.pt
 
   return (
-    <nav className="flex flex-col gap-6 p-3 lg:p-4" data-testid="executive-sidebar-nav">
-      <div>
-        <div className="admin-v2-nav-group-label mb-2 px-3">Análises</div>
-        <ul className="flex flex-col gap-1">
-          {ADMIN_V2_ANALISES_ITEMS.map((item) => (
-            <NavItemLink key={item.id} item={item} {...linkProps} />
-          ))}
-        </ul>
-      </div>
+    <nav className="flex flex-col gap-4 p-3 lg:p-4" data-testid="executive-sidebar-nav">
+      <Link
+        href={ADMIN_V2_PDV_ITEM.href}
+        data-nav-id={ADMIN_V2_PDV_ITEM.id}
+        title={pdv.hintText}
+        className={cn(
+          'flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold',
+          'bg-[var(--color-brand-primary)] text-[#1c1917] transition-opacity hover:opacity-90',
+          'outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-background-primary)]',
+        )}
+      >
+        <PdvIcon className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
+        <span className="truncate">{pdv.primary}</span>
+      </Link>
 
-      <div>
-        <button
-          type="button"
-          onClick={() => setOpsOpen((current) => !current)}
-          aria-expanded={opsOpen}
-          aria-label={`Operações ${opsOpen ? 'expandido' : 'recolhido'}`}
-          aria-controls="nav-operacoes-items"
-          className="admin-v2-nav-group-label mb-2 flex w-full items-center justify-between px-3 text-left transition-colors hover:text-jl-fg-2"
-        >
-          <span>Operações</span>
-          <ChevronDown
-            className={cn('h-4 w-4 transition-transform', opsOpen ? 'rotate-180' : 'rotate-0')}
-            aria-hidden
+      <ul className="flex flex-col gap-1">
+        {ADMIN_V2_DESTINATIONS.map((destination) => (
+          <DestinationGroup
+            key={destination.id}
+            destination={destination}
+            ctx={ctx}
+            stockAlertCount={stockAlertCount}
+            pathname={pathname}
+            search={search}
           />
-        </button>
-        {opsOpen ? (
-          <ul id="nav-operacoes-items" className="flex flex-col gap-1">
-            {ADMIN_V2_OPERACOES_ITEMS.map((item) => (
-              <NavItemLink key={item.id} item={item} {...linkProps} />
+        ))}
+      </ul>
+
+      {internos.length > 0 ? (
+        <div data-nav-group="interno">
+          <div className="admin-v2-nav-group-label mb-2 px-3">{internoText}</div>
+          <ul className="flex flex-col gap-1">
+            {internos.map((item) => (
+              <NavItemLink key={item.id} item={item} ctx={ctx} pathname={pathname} search={search} />
             ))}
           </ul>
-        ) : null}
-      </div>
-
-      <div>
-        <div className="admin-v2-nav-group-label mb-2 px-3">Sistema</div>
-        <ul className="flex flex-col gap-1">
-          {sistemaItems.map((item) => (
-            <NavItemLink key={item.id} item={item} {...linkProps} />
-          ))}
-        </ul>
-      </div>
+        </div>
+      ) : null}
     </nav>
   )
 }

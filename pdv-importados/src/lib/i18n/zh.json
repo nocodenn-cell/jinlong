@@ -1779,6 +1779,38 @@
       "execCrmAuditoria": {
         "cn": "客户与审计",
         "pt": "CRM & Auditoria"
+      },
+      "inicio": {
+        "cn": "首页",
+        "pt": "Início"
+      },
+      "compras": {
+        "cn": "采购",
+        "pt": "Compras"
+      },
+      "fornecedores": {
+        "cn": "供应商",
+        "pt": "Fornecedores"
+      },
+      "pessoas": {
+        "cn": "人员",
+        "pt": "Pessoas"
+      },
+      "interno": {
+        "cn": "内部工具",
+        "pt": "Interno"
+      },
+      "auditoria": {
+        "cn": "审计",
+        "pt": "Auditoria"
+      },
+      "abrirPdv": {
+        "cn": "前往收银",
+        "pt": "Abrir PDV"
+      },
+      "relatoriosDetalhe": {
+        "cn": "分类明细",
+        "pt": "Detalhe por domínio"
       }
     },
     "navHints": {
@@ -1802,7 +1834,15 @@
       "execVendasCaixas": "Picos horários, auditoria de caixas e detalhe de pedidos.",
       "execDreFinanceiro": "DRE em cascata, fluxo de caixa e inadimplência.",
       "execProdutosEstoque": "Curva ABC, encalhe, reposição e OC em trânsito.",
-      "execCrmAuditoria": "RFV, performance de equipe e painel de perdas."
+      "execCrmAuditoria": "RFV, performance de equipe e painel de perdas.",
+      "inicio": "总览、每日趋势与重点提醒。",
+      "compras": "采购单与供应商。",
+      "fornecedores": "供应商资料。",
+      "pessoas": "店铺客户与员工。",
+      "auditoria": "业务事件时间线。",
+      "interno": "FastProduct 团队内部工具。",
+      "abrirPdv": "打开收银终端。",
+      "relatoriosDetalhe": "按领域查看的经典明细页签。"
     },
     "dashboard": {
       "pageTitle": {

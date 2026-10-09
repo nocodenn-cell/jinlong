@@ -66,8 +66,8 @@ test.describe('Painel do gerente (/admin/*)', () => {
     await expect(nav).toBeVisible()
     // Rótulos reais de `lib/navigation/adminV2SidebarNav.ts` — "Produtos"/
     // "Caixas" (do arquivo antigo) não existem mais como itens de menu.
-    await expect(nav.getByRole('link', { name: /Vendas e caixa/i })).toBeVisible()
-    await expect(nav.getByRole('link', { name: /Catálogo/i })).toBeVisible()
+    await expect(nav.getByRole('link', { name: /Vendas/i })).toBeVisible()
+    await expect(nav.getByRole('link', { name: /Produtos/i })).toBeVisible()
     await expect(nav.getByRole('link', { name: /Estoque/i })).toBeVisible()
     await expect(nav.getByRole('link', { name: /Relatórios/i })).toBeVisible()
     await expect(page.getByRole('main')).toBeVisible()
