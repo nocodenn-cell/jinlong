@@ -57,11 +57,15 @@ SELECT
 FROM public.produtos p
 JOIN public.usuarios u
   ON u.id = (SELECT auth.uid())
+ AND COALESCE(u.ativo, false)
  AND u.perfil IN ('GERENTE', 'DONO', 'ADMIN')
  AND (u.perfil = 'ADMIN' OR u.loja_id = p.loja_id);
 
+-- Escopo = o MESMO de `produtos_leitura` (ADMIN global; demais, a própria loja) restrito a perfis gerenciais ATIVOS:
+-- um usuário desativado (usuarios.ativo = false) com token ainda válido não lê custo. DONO de outra loja já não
+-- enxerga as linhas de `produtos` (RLS), então a view não amplia nem reduz o alcance existente.
 COMMENT ON VIEW public.produtos_custos IS
-  'Custo de aquisição por produto, SOMENTE para GERENTE/DONO da loja e ADMIN (0 linhas para OPERADOR). Única via de leitura do custo para usuários autenticados; produtos.preco_custo tem SELECT revogado.';
+  'Custo de aquisição por produto, SOMENTE para GERENTE/DONO ativos da loja e ADMIN ativo (0 linhas para OPERADOR/inativo). Única via de leitura do custo para usuários autenticados; produtos.preco_custo tem SELECT revogado.';
 
 REVOKE ALL ON public.produtos_custos FROM PUBLIC, anon, authenticated;
 GRANT SELECT ON public.produtos_custos TO authenticated, service_role;
@@ -120,7 +124,7 @@ CREATE POLICY system_alerts_select_gerencial ON public.system_alerts
 
 -- 4) Alerta de margem negativa calculado no banco (sem custo no cliente nem no detalhe) -----------------------
 CREATE OR REPLACE FUNCTION public.pdv_registrar_alertas_margem_venda(p_venda_id uuid)
-RETURNS integer
+RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path TO 'public'
@@ -130,7 +134,6 @@ DECLARE
   v_loja uuid;
   v_operador uuid;
   v_ativo boolean;
-  v_n integer := 0;
   r record;
 BEGIN
   IF v_uid IS NULL THEN
@@ -152,8 +155,12 @@ BEGIN
 
   SELECT COALESCE(p.alertas_leves_ativos, false) INTO v_ativo FROM public.pdv_config p WHERE p.id = 1;
   IF NOT COALESCE(v_ativo, false) THEN
-    RETURN 0;
+    RETURN;
   END IF;
+
+  -- Serializa chamadas concorrentes da MESMA venda (retries idempotentes): sem isso duas transações poderiam
+  -- passar no NOT EXISTS antes de qualquer INSERT confirmar e duplicar o alerta.
+  PERFORM pg_advisory_xact_lock(hashtextextended('pdv_margem_negativa:' || p_venda_id::text, 0));
 
   FOR r IN
     SELECT iv.produto_id, iv.preco_unitario
@@ -169,10 +176,7 @@ BEGIN
     INSERT INTO public.system_alerts (tipo, produto_id, venda_id, loja_id, detalhe)
     VALUES ('margem_negativa', r.produto_id, p_venda_id, v_loja,
             jsonb_build_object('preco_unitario', r.preco_unitario, 'abaixo_do_custo', true));
-    v_n := v_n + 1;
   END LOOP;
-
-  RETURN v_n;
 END;
 $$;
 
@@ -180,6 +184,6 @@ REVOKE ALL ON FUNCTION public.pdv_registrar_alertas_margem_venda(uuid) FROM PUBL
 GRANT EXECUTE ON FUNCTION public.pdv_registrar_alertas_margem_venda(uuid) TO authenticated, service_role;
 
 COMMENT ON FUNCTION public.pdv_registrar_alertas_margem_venda(uuid) IS
-  'Registra system_alerts margem_negativa para itens vendidos abaixo do custo (snapshot da venda). Não grava nem devolve o valor do custo.';
+  'Registra system_alerts margem_negativa para itens vendidos abaixo do custo (snapshot da venda). Retorna void de propósito: contagem/resultado seria um oráculo do custo para o OPERADOR. Idempotente e serializada por venda (advisory lock).';
 
 NOTIFY pgrst, 'reload schema';

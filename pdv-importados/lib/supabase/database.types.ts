@@ -7301,7 +7301,7 @@ export type Database = {
       }
       pdv_registrar_alertas_margem_venda: {
         Args: { p_venda_id: string }
-        Returns: number
+        Returns: undefined
       }
       processar_ajuste_comissao_venda: {
         Args: { p_origem_id: string; p_tipo: string; p_venda_id: string }

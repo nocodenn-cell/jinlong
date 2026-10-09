@@ -178,6 +178,14 @@ try {
     } else {
       check(`${rot} lê o custo da própria loja e NÃO o de outra loja`, v.status === 200 && veA && !veB && Number(v.json.find((l) => l.produto_id === prodA).preco_custo) === CUSTO, `${ids.size} linhas`)
     }
+    if (rot === 'GERENTE') {
+      // usuário desativado com token ainda válido não lê custo (a view é a única fronteira de autorização)
+      const uid = '22222222-2222-4222-8222-222222222222'
+      await call(SERVICE, 'PATCH', `rest/v1/usuarios?id=eq.${uid}`, { ativo: false }, { prefer: 'return=minimal' })
+      const inativo = await get(tGer, `produtos_custos?select=produto_id&produto_id=eq.${prodA}`)
+      await call(SERVICE, 'PATCH', `rest/v1/usuarios?id=eq.${uid}`, { ativo: true }, { prefer: 'return=minimal' })
+      check('GERENTE desativado (token válido) vê 0 linhas em produtos_custos', vazio(inativo), `HTTP ${inativo.status}`)
+    }
     const base = await get(tok, 'produtos?select=id,nome,preco_varejo,estoque_minimo,ncm&limit=5')
     check(`${rot} lê as colunas sem custo`, base.status === 200 && base.json.length > 0)
     const als = await get(tok, 'system_alerts?select=id&limit=1')
@@ -197,13 +205,13 @@ try {
   check('OPERADOR conclui a venda (custo_unitario_snap enviado nulo)', fin.status === 200, `HTTP ${fin.status} ${fin.status === 200 ? '' : fin.text.slice(0, 120)}`)
   const snap = await get(SERVICE, `itens_venda?venda_id=eq.${vendaId}&select=custo_unitario_snap`)
   check('banco gravou o snapshot de custo sem ajuda do cliente', Number(snap.json?.[0]?.custo_unitario_snap) === CUSTO, JSON.stringify(snap.json?.[0] ?? {}))
-  const a1 = await rpc(tOp, 'pdv_registrar_alertas_margem_venda', { p_venda_id: vendaId })
-  check('OPERADOR dispara o alerta de margem negativa da própria venda', a1.status === 200 && Number(a1.json) === 1, `HTTP ${a1.status} retorno=${JSON.stringify(a1.json)}`)
-  const a2 = await rpc(tOp, 'pdv_registrar_alertas_margem_venda', { p_venda_id: vendaId })
-  check('alerta é idempotente (2ª chamada = 0)', a2.status === 200 && Number(a2.json) === 0)
+  // chamadas concorrentes (retries) da mesma venda: exatamente 1 alerta (advisory lock) e retorno não informativo
+  const rs = await Promise.all(Array.from({ length: 5 }, () => rpc(tOp, 'pdv_registrar_alertas_margem_venda', { p_venda_id: vendaId })))
+  check('OPERADOR dispara o alerta da própria venda (5 chamadas concorrentes, retorno vazio)', rs.every((r) => r.status === 204 || (r.status === 200 && (r.json === null || r.json === ''))), rs.map((r) => r.status).join(','))
   const alerta = await get(SERVICE, `system_alerts?venda_id=eq.${vendaId}&select=tipo,detalhe`)
+  check('exatamente 1 alerta apesar da concorrência (idempotente)', alerta.json?.length === 1, `${alerta.json?.length} alertas`)
   const det = JSON.stringify(alerta.json?.[0]?.detalhe ?? {})
-  check('detalhe do alerta NÃO contém o custo', alerta.json?.length === 1 && !det.includes(String(CUSTO)) && !/custo_unitario/.test(det), det)
+  check('detalhe do alerta NÃO contém o custo', !det.includes(String(CUSTO)) && !/custo_unitario/.test(det), det)
   const alG = await get(tGer, `system_alerts?venda_id=eq.${vendaId}&select=tipo`)
   check('GERENTE enxerga o alerta', alG.status === 200 && alG.json.length === 1)
   const alOutra = await rpc(tGer, 'pdv_registrar_alertas_margem_venda', { p_venda_id: randomUUID() })
