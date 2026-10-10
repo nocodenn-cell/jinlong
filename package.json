@@ -1,7 +1,7 @@
 {
   "name": "fastproduct",
   "private": true,
-  "description": "Monorepo PDV — workspaces: pdv-importados (Next), pdv-local (Tauri), backend (Supabase)",
+  "description": "Monorepo PDV \u2014 workspaces: pdv-importados (Next), pdv-local (Tauri), backend (Supabase)",
   "workspaces": [
     "pdv-importados",
     "pdv-local",
@@ -52,7 +52,9 @@
     "pre-deploy:check": "bash scripts/pre-deploy-checklist.sh",
     "dev:site": "npm run dev -w jinlong-site",
     "build:site": "turbo run build --filter=jinlong-site",
-    "test:site": "npm run test -w jinlong-site"
+    "test:site": "npm run test -w jinlong-site",
+    "capacity:matrix": "node scripts/capacity/build-migration-matrix.mjs",
+    "capacity:normalize-dry-run": "node scripts/capacity/dry-run-history-normalize.mjs"
   },
   "overrides": {
     "vitest": "^3.2.6",

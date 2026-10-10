@@ -1,0 +1,879 @@
+{
+  "mode": "local_sqlite_dry_run",
+  "remote_writes": 0,
+  "before_count": 339,
+  "after_count": 359,
+  "proposed_inserts": [
+    {
+      "version": "20260621000500",
+      "name": "20260621000500_209_fiscal_campos_loja_pdvconfig",
+      "evidence": "fingerprint_complete"
+    },
+    {
+      "version": "20260621000600",
+      "name": "20260621000600_210_fiscal_campos_produto",
+      "evidence": "fingerprint_complete"
+    },
+    {
+      "version": "20260621005400",
+      "name": "20260621005400_256_pdv_diagnostico_pre_producao",
+      "evidence": "fingerprint_complete"
+    },
+    {
+      "version": "20260621005500",
+      "name": "20260621005500_258_produtos_localizacao_nome_reduzido",
+      "evidence": "fingerprint_complete"
+    },
+    {
+      "version": "20260621005700",
+      "name": "20260621005700_269_ajustar_estoque_manual_service_ator",
+      "evidence": "fingerprint_complete"
+    },
+    {
+      "version": "20260707020000",
+      "name": "20260707020000_consistencia_vendas_auditoria",
+      "evidence": "fingerprint_complete"
+    },
+    {
+      "version": "20260717031500",
+      "name": "20260717031500_248_devolver_ou_trocar_venda",
+      "evidence": "fingerprint_complete"
+    },
+    {
+      "version": "20260718184800",
+      "name": "20260718184800_adr_caixa_002_modelo_alpha_e_cancel",
+      "evidence": "fingerprint_complete"
+    },
+    {
+      "version": "20260731195704",
+      "name": "20260731195704_fix_movimentacao_gerente_id_bypass_seguranca",
+      "evidence": "fingerprint_complete"
+    },
+    {
+      "version": "20260805185445",
+      "name": "20260805185445_291_estoque_baixas_integridade",
+      "evidence": "fingerprint_complete"
+    },
+    {
+      "version": "20260805193920",
+      "name": "20260805193920_295_ordem_compra_conferencia",
+      "evidence": "fingerprint_complete"
+    },
+    {
+      "version": "20260805213357",
+      "name": "20260805213357_296_nfe_conferencia",
+      "evidence": "fingerprint_complete"
+    },
+    {
+      "version": "20260806002522",
+      "name": "20260806002522_298_br01_limite_credito_por_modo_loja",
+      "evidence": "fingerprint_complete"
+    },
+    {
+      "version": "20260806002925",
+      "name": "20260806002925_299_tb07_pagamento_contas_pagar_limite_saldo",
+      "evidence": "fingerprint_complete"
+    },
+    {
+      "version": "20260806004637",
+      "name": "20260806004637_300_br03_custo_unitario_snap_servidor",
+      "evidence": "fingerprint_complete"
+    },
+    {
+      "version": "20260806011719",
+      "name": "20260806011719_302_f1_05_formas_pagamento_parametrizavel",
+      "evidence": "fingerprint_complete"
+    },
+    {
+      "version": "20260806090414",
+      "name": "20260806090414_303_ssot04_kardex_cancelamento_devolucao",
+      "evidence": "fingerprint_complete"
+    },
+    {
+      "version": "20260806135429",
+      "name": "20260806135429_307_d3_reaper_fiscal_em_processamento",
+      "evidence": "fingerprint_complete"
+    },
+    {
+      "version": "20260806235913",
+      "name": "20260806235913_309_reaplica_091_fiscal_correlation_id",
+      "evidence": "fingerprint_complete"
+    },
+    {
+      "version": "20260807000105",
+      "name": "20260807000105_310_reaplica_288_venda_em_espera_e_caixa_unico",
+      "evidence": "fingerprint_complete"
+    }
+  ],
+  "skipped": [],
+  "orphan_synthetic_flagged_only": [
+    {
+      "version": "20261009175106",
+      "name": "045_caixa_movimentacoes_transacionais_p1_registrar",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009175140",
+      "name": "045_caixa_movimentacoes_transacionais_p2_aprovar_cancelar",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009175142",
+      "name": "045_caixa_movimentacoes_transacionais_p3_estornar_grants",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009181119",
+      "name": "066_fiscal_documento_timeline_tail",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009181222",
+      "name": "075_importar_nfe_transacao_rpc",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009183433",
+      "name": "117_fix_oc_rls_usuarios_pattern_reapply",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009183936",
+      "name": "chunk013_medium_batch",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009184131",
+      "name": "209_210_fiscal_campos",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009191854",
+      "name": "20260621005400_256_258_269_batch",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009192021",
+      "name": "batch_20260707000000_venda_eventos_ledger",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009192126",
+      "name": "batch_20260707020000_consistencia_vendas_auditoria",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009192206",
+      "name": "batch_20260710163032_255_vendas_em_espera_e_consulta_rapida",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009192719",
+      "name": "batch_265_266_clientes",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009193306",
+      "name": "20260717031500_248_devolver_qty_fn",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009193346",
+      "name": "20260717031500_248_devolver_ou_trocar_venda_fn",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009193417",
+      "name": "20260717031500_248_cancelar_venda_transacional",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009193832",
+      "name": "20260718184800_adr_caixa_002_calcular_valor",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009193921",
+      "name": "20260718184800_adr_caixa_002_cancelar_venda",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009194002",
+      "name": "20260731195704_fix_movimentacao_registrar",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009194032",
+      "name": "20260731195704_fix_movimentacao_aprovar",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009195002",
+      "name": "20260731200700_bl2_calcular_promocao_aplicavel",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009195005",
+      "name": "20260731200700_bl2_trg_limite_desconto",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009200922",
+      "name": "20260731202200_314_reafirma_grants_and_estoque_ledger",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009202000",
+      "name": "291_estoque_baixas_integridade",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009202835",
+      "name": "295_registrar_conferencia_ordem_compra",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009202855",
+      "name": "295_receber_ordem_compra_conferencia",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009203011",
+      "name": "296_nfe_conferencia_ddl1",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009203034",
+      "name": "296_nfe_conferencia_ddl2",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009204228",
+      "name": "296_registrar_conferencia_nfe",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009204244",
+      "name": "296_confirmar_importacao_nfe",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009204313",
+      "name": "297_configuracoes_gerais_whitelist",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009204448",
+      "name": "298_pdv_config_modo_limite_credito",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009204817",
+      "name": "298_finalizar_venda_v4_br01_func",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009205527",
+      "name": "298_br01_grants_verify",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009205627",
+      "name": "299_tb07_pagamento_contas_pagar_limite_saldo",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009205754",
+      "name": "300_br03_comment_verify",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009205844",
+      "name": "301_revoke_anon_execute_finalizar_venda_v4_pos_br01",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009205846",
+      "name": "302_formas_pagamento_ddl_seed",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009205912",
+      "name": "302_f1_05_grants_verify",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009210148",
+      "name": "303_cancelar_venda_ssot04_kardex",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009210524",
+      "name": "303_devolver_ou_trocar_venda_ssot04",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009210839",
+      "name": "303_304_305_308_batch",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009211233",
+      "name": "307_d3_reaper_fiscal_reaper_documentos",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009211257",
+      "name": "307_d3_fiscal_claim_documentos",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009211259",
+      "name": "307_d3_fiscal_reprocessar_documento",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009211406",
+      "name": "308_hardening_tg_documentos_fiscais_estado",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009211408",
+      "name": "309_reaplica_091_fiscal_correlation_id",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    },
+    {
+      "version": "20261009211707",
+      "name": "310_reaplica_288_venda_em_espera_e_caixa_unico",
+      "action": "KEEP (no delete in Option B); document mapping only"
+    }
+  ],
+  "unsafe_to_register": [
+    {
+      "stem": "007_estoque_baixa_idempotente",
+      "status": "partial",
+      "reason": "nome no histórico mas fingerprints 1/2"
+    },
+    {
+      "stem": "015_security_rpc_hardening",
+      "status": "indeterminate",
+      "reason": "nome no histórico mas fingerprints ausentes — possível rename/drop posterior ou apply vazio"
+    },
+    {
+      "stem": "045_caixa_movimentacoes_transacionais",
+      "status": "partial",
+      "reason": "nome no histórico mas fingerprints 7/8"
+    },
+    {
+      "stem": "070_decrementar_estoque_idempotente_delega_seguro",
+      "status": "indeterminate",
+      "reason": "nome no histórico mas fingerprints ausentes — possível rename/drop posterior ou apply vazio"
+    },
+    {
+      "stem": "108_contas_pagar_schema_e_rpc_pagamento",
+      "status": "partial",
+      "reason": "nome no histórico mas fingerprints 8/9"
+    },
+    {
+      "stem": "20260618011821_113_rls_audit_fixes",
+      "status": "indeterminate",
+      "reason": "sem histórico e sem fingerprint DDL extraível"
+    },
+    {
+      "stem": "20260618011922_114_pdv_config_loja_backfill",
+      "status": "indeterminate",
+      "reason": "sem histórico e sem fingerprint DDL extraível"
+    },
+    {
+      "stem": "20260619174508_fix_finalizar_venda_v2_stub_quebrado",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20260620020436_complete_v2_block_all_overloads_legacy_disabled",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20260620200253_244_clientes_tipo_endereco_e_view_gerente",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20260620222629_245_remover_venda_fiado",
+      "status": "indeterminate",
+      "reason": "sem histórico e sem fingerprint DDL extraível"
+    },
+    {
+      "stem": "20260621000100_205_force_com_nf",
+      "status": "indeterminate",
+      "reason": "sem histórico e sem fingerprint DDL extraível"
+    },
+    {
+      "stem": "20260621000200_206_vendas_caixa_imutabilidade_trigger",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20260621000400_208_indices_busca_produto_trgm",
+      "status": "indeterminate",
+      "reason": "sem histórico e sem fingerprint DDL extraível"
+    },
+    {
+      "stem": "20260621000700_211_vinculos_fornecedor_produto_depara",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20260621000800_212_restaura_movimentos_caixa_legado",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20260621001000_214_restaura_comissoes_loja_via_caixa",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20260621001100_215_backfill_comissoes_vendas_concluidas",
+      "status": "indeterminate",
+      "reason": "sem histórico e sem fingerprint DDL extraível"
+    },
+    {
+      "stem": "20260621001200_216_fix_marcas_drift_ativo_rls_usuarios",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20260621001300_217_feature_flags_rls_perfil_uppercase",
+      "status": "indeterminate",
+      "reason": "sem histórico e sem fingerprint DDL extraível"
+    },
+    {
+      "stem": "20260621001400_218_revoke_anon_execute_security_definer",
+      "status": "indeterminate",
+      "reason": "sem histórico e sem fingerprint DDL extraível"
+    },
+    {
+      "stem": "20260621001500_219_revoke_anon_dml_grants",
+      "status": "indeterminate",
+      "reason": "sem histórico e sem fingerprint DDL extraível"
+    },
+    {
+      "stem": "20260621001600_220_finalizar_venda_v2_search_path",
+      "status": "indeterminate",
+      "reason": "sem histórico e sem fingerprint DDL extraível"
+    },
+    {
+      "stem": "20260621001700_221_revoke_public_execute_security_definer",
+      "status": "indeterminate",
+      "reason": "sem histórico e sem fingerprint DDL extraível"
+    },
+    {
+      "stem": "20260621001800_222_drop_indices_duplicados",
+      "status": "indeterminate",
+      "reason": "sem histórico e sem fingerprint DDL extraível"
+    },
+    {
+      "stem": "20260621001900_223_indices_fks_sem_cobertura",
+      "status": "indeterminate",
+      "reason": "sem histórico e sem fingerprint DDL extraível"
+    },
+    {
+      "stem": "20260621002000_224_rls_initplan_wrap_auth_select",
+      "status": "indeterminate",
+      "reason": "sem histórico e sem fingerprint DDL extraível"
+    },
+    {
+      "stem": "20260621002400_228_venda_eventos_ledger",
+      "status": "partial",
+      "reason": "nome no histórico mas fingerprints 5/6"
+    },
+    {
+      "stem": "20260621002500_229_venda_eventos_rpc_hooks",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20260621002600_230_caixa_status_fechamento",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20260621002700_231_gerente_venda_eventos_rpcs",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20260621002800_232_produtos_status_publicacao",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20260621002900_233_import_nfe_status_draft",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20260621003000_234_calcular_preco_produto_security_definer",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20260621003100_235_observabilidade_pdv_visual",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20260621003200_236_system_alerts_log_leve",
+      "status": "partial",
+      "reason": "sem histórico; fingerprints 2/4"
+    },
+    {
+      "stem": "20260621003300_237_system_alerts_remove_triggers",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20260621003400_238_relatorio_margem_por_venda",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20260621003500_239_relatorio_curva_abc",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20260621003600_240_relatorio_previsao_estoque",
+      "status": "not_applied",
+      "reason": "sem histórico e fingerprints ausentes"
+    },
+    {
+      "stem": "20260621003700_241_relatorio_margem_por_venda_snapshot_only",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20260621003800_242_relatorio_cobertura_estoque_reclassificacao",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20260621004000_244_consistencia_vendas_auditoria",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20260621004100_245_calcular_preco_produto_precedence_comment",
+      "status": "indeterminate",
+      "reason": "sem histórico e sem fingerprint DDL extraível"
+    },
+    {
+      "stem": "20260621004600_248_devolver_ou_trocar_venda",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20260621004700_249_pricing_version_governance",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20260621004800_250_calcular_preco_produto_decision_fields",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20260621004900_251_rls_admin_alinha_painel_gerente",
+      "status": "indeterminate",
+      "reason": "sem histórico e sem fingerprint DDL extraível"
+    },
+    {
+      "stem": "20260621005000_252_venda_finance_context_mirror",
+      "status": "not_applied",
+      "reason": "sem histórico e fingerprints ausentes"
+    },
+    {
+      "stem": "20260621005100_253_clientes_tipo_endereco_e_view_gerente",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20260621005200_254_pricing_version_venda_scope_guard",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20260621005300_255_grant_baseline_tabelas_authenticated",
+      "status": "indeterminate",
+      "reason": "sem histórico e sem fingerprint DDL extraível"
+    },
+    {
+      "stem": "20260707000000_venda_eventos_ledger",
+      "status": "partial",
+      "reason": "sintético batch_20260707000000_venda_eventos_ledger + fingerprints 5/6"
+    },
+    {
+      "stem": "20260707010000_gerente_venda_eventos_rpcs",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20260709184734_259_historico_precos_produto",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20260710163032_255_vendas_em_espera_e_consulta_rapida",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20260710212200_263_vendas_cliente_id",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20260710212349_265_clientes_insert_operador_pdv",
+      "status": "indeterminate",
+      "reason": "coberto por sintético batch_265_266_clientes sem fingerprint"
+    },
+    {
+      "stem": "20260710212628_266_clientes_unique_documento_loja",
+      "status": "indeterminate",
+      "reason": "coberto por sintético batch_265_266_clientes sem fingerprint"
+    },
+    {
+      "stem": "20260711143312_267_funcionarios_meta_crud",
+      "status": "partial",
+      "reason": "nome no histórico mas fingerprints 2/8"
+    },
+    {
+      "stem": "20260730093000_revoga_operador_cadastro_produto_pdv",
+      "status": "indeterminate",
+      "reason": "sem histórico e sem fingerprint DDL extraível"
+    },
+    {
+      "stem": "20260731200500_reconciliacao_bl1_descontos_token_auditoria_motivo",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20260731200600_bl2_promocao_schema_regra_aplicada",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20260731200700_bl2_promocao_rpc_e_precedencia",
+      "status": "partial",
+      "reason": "sintético 20260731200700_bl2_calcular_promocao_aplicavel,20260731200700_bl2_trg_limite_desconto + fingerprints 3/4"
+    },
+    {
+      "stem": "20260731200800_fix_drift_colunas_observabilidade_itens_venda",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20260731200900_hardening_tipo_preco_remove_promocao_residual",
+      "status": "indeterminate",
+      "reason": "sem histórico e sem fingerprint DDL extraível"
+    },
+    {
+      "stem": "20260731201000_revoke_anon_execute_finalizar_venda_v4",
+      "status": "indeterminate",
+      "reason": "sem histórico e sem fingerprint DDL extraível"
+    },
+    {
+      "stem": "20260731201200_checks_matematicos_vendas_itens",
+      "status": "indeterminate",
+      "reason": "sem histórico e sem fingerprint DDL extraível"
+    },
+    {
+      "stem": "20260731201300_check_formato_chave_fiscal",
+      "status": "indeterminate",
+      "reason": "sem histórico e sem fingerprint DDL extraível"
+    },
+    {
+      "stem": "20260731201400_gtin_lookup_cache_integridade",
+      "status": "indeterminate",
+      "reason": "sem histórico e sem fingerprint DDL extraível"
+    },
+    {
+      "stem": "20260731201600_consolida_constraints_fiado",
+      "status": "indeterminate",
+      "reason": "sem histórico e sem fingerprint DDL extraível"
+    },
+    {
+      "stem": "20260731201700_devolucoes_remove_fiado",
+      "status": "indeterminate",
+      "reason": "sem histórico e sem fingerprint DDL extraível"
+    },
+    {
+      "stem": "20260731201800_desagenda_fiscal_worker_cron",
+      "status": "indeterminate",
+      "reason": "sem histórico e sem fingerprint DDL extraível"
+    },
+    {
+      "stem": "20260731201900_revoke_authenticated_finalizar_venda_transacional_9args",
+      "status": "indeterminate",
+      "reason": "sem histórico e sem fingerprint DDL extraível"
+    },
+    {
+      "stem": "20260731202000_usuarios_select_gerente_mesma_loja",
+      "status": "indeterminate",
+      "reason": "sem histórico e sem fingerprint DDL extraível"
+    },
+    {
+      "stem": "20260731202200_314_reafirma_grants_pos_venda_apos_248",
+      "status": "indeterminate",
+      "reason": "coberto por sintético 20260731202200_314_reafirma_grants_and_estoque_ledger sem fingerprint"
+    },
+    {
+      "stem": "20260801090000_v_estoque_ledger_divergencia",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20260801120000_recebimento_conferencia_explicita",
+      "status": "partial",
+      "reason": "nome no histórico mas fingerprints 2/3"
+    },
+    {
+      "stem": "20260805151822_289_hardening_autorizacao_rpcs_p0",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20260805190920_294_fornecedores_multi_tenant",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20260806000032_297_configuracoes_gerais_whitelist",
+      "status": "indeterminate",
+      "reason": "coberto por sintético 297_configuracoes_gerais_whitelist sem fingerprint"
+    },
+    {
+      "stem": "20260806005804_301_revoke_anon_execute_finalizar_venda_v4_pos_br01",
+      "status": "indeterminate",
+      "reason": "coberto por sintético 301_revoke_anon_execute_finalizar_venda_v4_pos_br01 sem fingerprint"
+    },
+    {
+      "stem": "20260806090531_304_ssot04_drop_baixar_estoque_venda",
+      "status": "indeterminate",
+      "reason": "coberto por sintético 303_304_305_308_batch sem fingerprint"
+    },
+    {
+      "stem": "20260806134834_305_d1_drop_fiscal_reprocessar_documento_overload",
+      "status": "indeterminate",
+      "reason": "coberto por sintético 303_304_305_308_batch sem fingerprint"
+    },
+    {
+      "stem": "20260806135106_306_d2_maquina_estados_fiscal",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20260806140528_308_hardening_tg_documentos_fiscais_estado",
+      "status": "indeterminate",
+      "reason": "coberto por sintético 303_304_305_308_batch,308_hardening_tg_documentos_fiscais_estado sem fingerprint"
+    },
+    {
+      "stem": "20260902150000_list_produtos_gerente_filtrados_campos_fiscais",
+      "status": "partial",
+      "reason": "nome no histórico mas fingerprints 1/2"
+    },
+    {
+      "stem": "20260916120100_sec04_v2_v3_legacy_disabled_convergencia",
+      "status": "indeterminate",
+      "reason": "nome no histórico mas fingerprints ausentes — possível rename/drop posterior ou apply vazio"
+    },
+    {
+      "stem": "20261005004647_financeiro_loja_contas_ledger",
+      "status": "partial",
+      "reason": "tabelas+internal+policies presentes; RPCs public.financeiro_* ausentes; hist_financeiro vazio"
+    },
+    {
+      "stem": "20261005091218_financeiro_hardening_final",
+      "status": "indeterminate",
+      "reason": "sem histórico e sem fingerprint DDL extraível"
+    },
+    {
+      "stem": "20261005173427_entrada_manual_fornecedor_sem_cnpj",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20261005224553_estoque_ajuste_concorrente",
+      "status": "partial",
+      "reason": "sem histórico; fingerprints 2/3"
+    },
+    {
+      "stem": "20261005225856_entrada_documento_posterior",
+      "status": "partial",
+      "reason": "sem histórico; fingerprints 1/4"
+    },
+    {
+      "stem": "20261006120000_financeiro_contas_formas_e_painel",
+      "status": "partial",
+      "reason": "sem histórico; fingerprints 1/3"
+    },
+    {
+      "stem": "20261006180000_financeiro_contas_operacionais",
+      "status": "partial",
+      "reason": "sem histórico; fingerprints 1/5"
+    },
+    {
+      "stem": "20261006190000_desconto_comercial_operador_dinheiro",
+      "status": "not_applied",
+      "reason": "sem histórico e fingerprints ausentes"
+    },
+    {
+      "stem": "20261007161220_fiscal_cancelado_ssot",
+      "status": "partial",
+      "reason": "sem histórico; fingerprints 1/3"
+    },
+    {
+      "stem": "20261007163000_ssot_001_002_painel_ec_cache",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20261007163100_ssot_003_nfe_obrigacao_duplicata",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20261007170000_ssot_002_mov_ar_ec_cache",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20261007171000_ssot_002_cancel_guard_antes_devolucao",
+      "status": "partial",
+      "reason": "schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)"
+    },
+    {
+      "stem": "20261007180000_calcular_valor_sistema_por_forma_caixa",
+      "status": "not_applied",
+      "reason": "sem histórico e fingerprints ausentes"
+    },
+    {
+      "stem": "20261007190000_caixas_fechamento_formas_snapshot",
+      "status": "partial",
+      "reason": "sem histórico; fingerprints 1/4"
+    },
+    {
+      "stem": "20261009180000_protege_preco_custo_operador",
+      "status": "not_applied",
+      "reason": "sem histórico e fingerprints ausentes"
+    },
+    {
+      "stem": "20261009220000_fiscal_rpc_isola_loja",
+      "status": "partial",
+      "reason": "sem histórico; fingerprints 3/5"
+    }
+  ],
+  "verdict": "SAFE_FOR_HISTORY_INSERT_SUBSET_ONLY — still NOT authorized for remote"
+}

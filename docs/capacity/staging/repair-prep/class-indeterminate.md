@@ -1,0 +1,42 @@
+# indeterminate (40)
+
+- `015_security_rpc_hardening` — nome no histórico mas fingerprints ausentes — possível rename/drop posterior ou apply vazio
+- `070_decrementar_estoque_idempotente_delega_seguro` — nome no histórico mas fingerprints ausentes — possível rename/drop posterior ou apply vazio
+- `20260618011821_113_rls_audit_fixes` — sem histórico e sem fingerprint DDL extraível
+- `20260618011922_114_pdv_config_loja_backfill` — sem histórico e sem fingerprint DDL extraível
+- `20260620222629_245_remover_venda_fiado` — sem histórico e sem fingerprint DDL extraível
+- `20260621000100_205_force_com_nf` — sem histórico e sem fingerprint DDL extraível
+- `20260621000400_208_indices_busca_produto_trgm` — sem histórico e sem fingerprint DDL extraível
+- `20260621001100_215_backfill_comissoes_vendas_concluidas` — sem histórico e sem fingerprint DDL extraível
+- `20260621001300_217_feature_flags_rls_perfil_uppercase` — sem histórico e sem fingerprint DDL extraível
+- `20260621001400_218_revoke_anon_execute_security_definer` — sem histórico e sem fingerprint DDL extraível
+- `20260621001500_219_revoke_anon_dml_grants` — sem histórico e sem fingerprint DDL extraível
+- `20260621001600_220_finalizar_venda_v2_search_path` — sem histórico e sem fingerprint DDL extraível
+- `20260621001700_221_revoke_public_execute_security_definer` — sem histórico e sem fingerprint DDL extraível
+- `20260621001800_222_drop_indices_duplicados` — sem histórico e sem fingerprint DDL extraível
+- `20260621001900_223_indices_fks_sem_cobertura` — sem histórico e sem fingerprint DDL extraível
+- `20260621002000_224_rls_initplan_wrap_auth_select` — sem histórico e sem fingerprint DDL extraível
+- `20260621004100_245_calcular_preco_produto_precedence_comment` — sem histórico e sem fingerprint DDL extraível
+- `20260621004900_251_rls_admin_alinha_painel_gerente` — sem histórico e sem fingerprint DDL extraível
+- `20260621005300_255_grant_baseline_tabelas_authenticated` — sem histórico e sem fingerprint DDL extraível
+- `20260710212349_265_clientes_insert_operador_pdv` — coberto por sintético batch_265_266_clientes sem fingerprint
+- `20260710212628_266_clientes_unique_documento_loja` — coberto por sintético batch_265_266_clientes sem fingerprint
+- `20260730093000_revoga_operador_cadastro_produto_pdv` — sem histórico e sem fingerprint DDL extraível
+- `20260731200900_hardening_tipo_preco_remove_promocao_residual` — sem histórico e sem fingerprint DDL extraível
+- `20260731201000_revoke_anon_execute_finalizar_venda_v4` — sem histórico e sem fingerprint DDL extraível
+- `20260731201200_checks_matematicos_vendas_itens` — sem histórico e sem fingerprint DDL extraível
+- `20260731201300_check_formato_chave_fiscal` — sem histórico e sem fingerprint DDL extraível
+- `20260731201400_gtin_lookup_cache_integridade` — sem histórico e sem fingerprint DDL extraível
+- `20260731201600_consolida_constraints_fiado` — sem histórico e sem fingerprint DDL extraível
+- `20260731201700_devolucoes_remove_fiado` — sem histórico e sem fingerprint DDL extraível
+- `20260731201800_desagenda_fiscal_worker_cron` — sem histórico e sem fingerprint DDL extraível
+- `20260731201900_revoke_authenticated_finalizar_venda_transacional_9args` — sem histórico e sem fingerprint DDL extraível
+- `20260731202000_usuarios_select_gerente_mesma_loja` — sem histórico e sem fingerprint DDL extraível
+- `20260731202200_314_reafirma_grants_pos_venda_apos_248` — coberto por sintético 20260731202200_314_reafirma_grants_and_estoque_ledger sem fingerprint
+- `20260806000032_297_configuracoes_gerais_whitelist` — coberto por sintético 297_configuracoes_gerais_whitelist sem fingerprint
+- `20260806005804_301_revoke_anon_execute_finalizar_venda_v4_pos_br01` — coberto por sintético 301_revoke_anon_execute_finalizar_venda_v4_pos_br01 sem fingerprint
+- `20260806090531_304_ssot04_drop_baixar_estoque_venda` — coberto por sintético 303_304_305_308_batch sem fingerprint
+- `20260806134834_305_d1_drop_fiscal_reprocessar_documento_overload` — coberto por sintético 303_304_305_308_batch sem fingerprint
+- `20260806140528_308_hardening_tg_documentos_fiscais_estado` — coberto por sintético 303_304_305_308_batch,308_hardening_tg_documentos_fiscais_estado sem fingerprint
+- `20260916120100_sec04_v2_v3_legacy_disabled_convergencia` — nome no histórico mas fingerprints ausentes — possível rename/drop posterior ou apply vazio
+- `20261005091218_financeiro_hardening_final` — sem histórico e sem fingerprint DDL extraível

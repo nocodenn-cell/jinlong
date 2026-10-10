@@ -169,3 +169,7 @@ Ordem de grandeza total **após credencial:** dezenas de minutos se o reparo est
 - **C)** Manter pausa.
 
 Não reiniciar do zero. Não reset. Não excluir staging.
+
+---
+
+**Atualização Option B (2026-10-10):** análise/prep sem escrita remota em `STG01_OPTION_B_REPAIR_PREP.md` + `docs/capacity/staging/repair-prep/`.
