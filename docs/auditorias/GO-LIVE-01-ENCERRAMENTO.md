@@ -72,7 +72,7 @@ Commits desde `a39a5309`:
 - `28ec40a3` ensaio local da janela
 - `4a9c582c` encerramento
 - `6e33eac2` SHA do encerramento
-- commit seguinte: os refs remotos saem dos arquivos de teste para o guard de CI passar
+- `556456fc` refs remotos saem dos arquivos de teste
 
 ## 6. GitHub, Vercel e Supabase
 
