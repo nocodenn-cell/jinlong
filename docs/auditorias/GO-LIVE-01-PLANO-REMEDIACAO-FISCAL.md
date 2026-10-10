@@ -115,20 +115,20 @@ Pré-condição de execução, todas obrigatórias:
 3. `npm run test:fiscal-rpc-authz` PASS no SHA que será aplicado.
 4. Repetir as leituras da seção 1. Se `fiscal_sessao_privilegiada` já existir, parar.
 
-Aplicar numa transação só, pelo runner de migration. Não colar os `CREATE` um a um no SQL editor: cada um commita sozinho.
+Aplicar numa transação só, pelo runner de migration, usando o bundle de `backend/scripts/fiscal-p0-janela.mjs` (`bundleFiscalP0`). Esse bundle tira o `BEGIN`/`COMMIT` de `20261007163200` e envolve os dois arquivos num único `BEGIN`/`COMMIT`. Não colar os `CREATE` um a um no SQL editor.
 
-1. Guardar fora do Git, no cofre do operador, o `pg_get_functiondef` das três funções que existem. É o rollback de incidente. Não versionar esse SQL: ele reabre o bypass.
-2. Aplicar `20261009220000_fiscal_rpc_isola_loja.sql`. O bloco `DO $verify$` no final do arquivo aborta se o predicado morto permanecer, se faltar `FISCAL_REPROCESSO_LOJA` / `FISCAL_CANCELAR_LOJA` / `u.ativo`, ou se o enqueue voltar a ler `vendas.loja_id`.
-3. Aplicar `20261007163200_ssot_004_revoke_insert_documentos_fiscais.sql`. A prova interna falha se `authenticated` ainda tiver `INSERT`.
-4. Não registrar par em `migration-human-gates.json` antes das duas linhas existirem no ledger.
+1. Rodar o pré-check de objetos (`auth.uid`, `auth.role`, fila, eventos, DLQ, `usuarios.ativo`, `caixas.loja_id`). Se falhar, não aplicar. O `CREATE FUNCTION` em plpgsql não recusa tabela ausente.
+2. Aplicar o bundle. O `DO $verify$` aborta a transação inteira se o predicado morto permanecer.
+3. Não registrar par em `migration-human-gates.json` antes das duas linhas existirem no ledger.
 
-Rollback de incidente, só com decisão escrita:
+Recuperação segura, ensaiada no Postgres local:
 
-- Restaurar os três `pg_get_functiondef` guardados no passo 1.
-- `DROP FUNCTION public.fiscal_cancelar_documento(uuid, text);` devolve a tela ao estado atual (RPC ausente).
-- `GRANT INSERT ON public.documentos_fiscais_pendentes TO authenticated;` desfaz o passo 3. Não é o estado desejado.
-- Linhas já canceladas ou reprocessadas depois da aplicação não voltam com o rollback de código. São 42 documentos hoje; o arquivo não dá `UPDATE` em massa. O efeito em linha só ocorre se alguém chamar a RPC após o apply.
-- Não existe script no repositório que volte à definição vulnerável. O cabeçalho de `20261009220000` diz para reaplicar o mesmo arquivo se ele sair do ledger.
+- Falha no meio do bundle: a transação faz rollback. As funções anteriores continuam. Nada é restaurado à mão.
+- Função segura perdida depois de um apply já commitado: reaplicar somente `20261009220000_fiscal_rpc_isola_loja.sql`. O teste local recusa qualquer outro SQL, inclusive `20261007161220`, com `RECOVERY_RECUSA_SQL_NAO_CANONICO`.
+- Dados já alterados por uma chamada feita depois do apply não voltam com reaplicação de função. A recuperação de dados é o restore do backup lógico da janela num Postgres novo, não a troca de corpo de função.
+- Reaplicar o `pg_get_functiondef` anterior, ou o corpo sem `FISCAL_CANCELAR_LOJA`, não é rollback. Reabre o bypass.
+
+O checklist operacional está em `docs/auditorias/GO-LIVE-01-CHECKLIST-FISCAL.md`.
 
 ## 7. Testes antes e depois
 
@@ -166,11 +166,4 @@ Opção C — aplicar `161220` e depois `220000`, mais a série `06`/`07`. Cobre
 
 ## Checklist antes de qualquer execução
 
-- Backup restaurado num Postgres descartável
-- Staging não usado como ensaio
-- SHA e teste pglite PASS
-- Catálogo ainda igual à seção 1
-- Rollback dos três corpos guardado fora do Git
-- Runner em transação única
-- Human-gates só depois do ledger
-- Sem merge do PR #535 e sem deploy manual neste passo
+O checklist operacional, com snapshot, validação e critérios de interrupção, está em `docs/auditorias/GO-LIVE-01-CHECKLIST-FISCAL.md`. A recuperação versionada reaplica só `20261009220000`. Não guarda corpo vulnerável como rollback.

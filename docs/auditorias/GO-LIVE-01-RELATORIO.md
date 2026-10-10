@@ -210,6 +210,8 @@ Consulta somente leitura em `kbabmewnahysfvlybiak` em 2026-10-10. Nenhuma escrit
 - O staging não reproduz a produção.
 - Nenhuma carga nova e nenhum teste de 12 horas foram iniciados.
 
-O plano executável do drift fiscal está em `docs/auditorias/GO-LIVE-01-PLANO-REMEDIACAO-FISCAL.md`. A execução desse plano também é **NO-GO** até autorização e backup restaurável. A janela recomendada é só `20261009220000` e, em seguida, `20261007163200`.
+O plano executável do drift fiscal está em `docs/auditorias/GO-LIVE-01-PLANO-REMEDIACAO-FISCAL.md`. O checklist da janela está em `docs/auditorias/GO-LIVE-01-CHECKLIST-FISCAL.md`.
+
+Pré-requisitos locais da janela fiscal: **GO CONDICIONAL para solicitar autorização**. `npm run test:fiscal-p0-pre-req` passou em PostgreSQL embarcado, sem escrita remota. A implantação continua **NO-GO** até autorização explícita e até um dump da produção restaurado no dia da janela.
 
 Parar aqui. Qualquer SQL ou deploy de produção espera aprovação explícita.
