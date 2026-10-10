@@ -8,6 +8,12 @@
       "port": 3000
     },
     {
+      "name": "pdv-dev-importacoes-local",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "pdv-importados", "--", "-p", "3100"],
+      "port": 3100
+    },
+    {
       "name": "pdv-local-dev",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--prefix", "pdv-local"],

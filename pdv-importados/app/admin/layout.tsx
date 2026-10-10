@@ -5,6 +5,7 @@ import { resolveAdminSession } from '@/lib/admin/auth/resolveAdminSession'
 import type { AdminSession } from '@/lib/admin/auth/types'
 import { AdminToastViewport, AdminV2Shell } from '@/components/ui/admin-v2'
 import { contarEstoqueBaixo, lerFlagsVisuaisPdv } from '@/lib/admin/sinaisVisuaisAdmin'
+import { modulosAtivosDaSessao } from '@/lib/import/hub/gateImportacoes'
 
 export const dynamic = 'force-dynamic'
 export const fetchCache = 'force-no-store'
@@ -43,9 +44,12 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     stockAlertCount = undefined
   }
 
+  // Módulos opcionais (licença por empresa): best-effort; falha = nenhum módulo no menu.
+  const modulosAtivos = await modulosAtivosDaSessao()
+
   return (
     <>
-      <AdminV2Shell session={adminContext.session} stockAlertCount={stockAlertCount}>
+      <AdminV2Shell session={adminContext.session} stockAlertCount={stockAlertCount} modulosAtivos={modulosAtivos}>
         {children}
       </AdminV2Shell>
       <AdminToastViewport />

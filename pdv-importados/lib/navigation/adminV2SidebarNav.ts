@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react'
 import {
   Banknote,
+  Ship,
   ClipboardCheck,
   ClipboardList,
   FileBarChart2,
@@ -31,6 +32,8 @@ export type AdminV2NavItem = {
   adminOnly?: boolean
   /** Rotas irmãs (abas do hub) que também marcam este item como ativo. */
   alsoActivePaths?: readonly string[]
+  /** Módulo opcional: o item só aparece quando a empresa do usuário tem a licença ativa. */
+  modulo?: 'IMPORT_INTELLIGENCE'
 }
 
 /**
@@ -209,6 +212,28 @@ export const ADMIN_V2_INTERNO_ITEMS: readonly AdminV2NavItem[] = [
     adminOnly: true,
   },
 ] as const
+
+/**
+ * Módulos contratados por cliente. Ficam FORA dos 9 destinos e de `flattenAdminV2Nav`
+ * (paleta de comandos): só aparecem quando o servidor confirma a licença
+ * (`modulosAtivos`). Visibilidade é cosmética — página e actions revalidam no servidor.
+ */
+export const ADMIN_V2_MODULO_ITEMS: readonly AdminV2NavItem[] = [
+  {
+    id: 'importacoes',
+    href: ROUTES.admin.importacoes,
+    icon: Ship,
+    labelOverridePt: 'Importações',
+    labelCn: '进口管理',
+    hint: 'Custo de importação (landed cost): cadastro, apuração e aprovação.',
+    modulo: 'IMPORT_INTELLIGENCE',
+  },
+] as const
+
+export function modulosVisiveis(modulosAtivos: readonly string[] | undefined): AdminV2NavItem[] {
+  const ativos = new Set(modulosAtivos ?? [])
+  return ADMIN_V2_MODULO_ITEMS.filter((item) => item.modulo !== undefined && ativos.has(item.modulo))
+}
 
 /** Todos os links da sidebar, achatados (destinos + sub-links + PDV + internos). */
 export function flattenAdminV2Nav(): AdminV2NavItem[] {

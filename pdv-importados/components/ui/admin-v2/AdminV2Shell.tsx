@@ -21,9 +21,11 @@ type AdminV2ShellProps = {
   children: ReactNode
   /** Observabilidade visual (flag `pdv_config.show_stock_alerts`): contagem de itens em estoque baixo. */
   stockAlertCount?: number
+  /** Módulos opcionais com licença ativa para a empresa do usuário (resolvido no servidor). */
+  modulosAtivos?: readonly string[]
 }
 
-export function AdminV2Shell({ session, children, stockAlertCount }: AdminV2ShellProps) {
+export function AdminV2Shell({ session, children, stockAlertCount, modulosAtivos }: AdminV2ShellProps) {
   const { idioma } = session
   const chineseLanguage = idioma !== 'pt'
   const m: Mensagens = getMessages(idioma)
@@ -57,6 +59,7 @@ export function AdminV2Shell({ session, children, stockAlertCount }: AdminV2Shel
           chineseLanguage={chineseLanguage}
           stockAlertCount={stockAlertCount}
           showAdminOnlyItems={session.perfil === 'ADMIN'}
+          modulosAtivos={modulosAtivos}
         />
         </div>
       </div>
@@ -92,6 +95,7 @@ export function AdminV2Shell({ session, children, stockAlertCount }: AdminV2Shel
               chineseLanguage={chineseLanguage}
               stockAlertCount={stockAlertCount}
               showAdminOnlyItems={session.perfil === 'ADMIN'}
+              modulosAtivos={modulosAtivos}
             />
           </Suspense>
           <SidebarUserFooter session={session} />

@@ -133,7 +133,13 @@ describe.skipIf(!habilitado)('Import Intelligence — integração real (F4)', (
     const direto = await donoA.rpc('import_aprovar_apuracao', { p_apuracao: ap.apuracaoId, p_ator: ids['dono-a'], p_motivo: 'direto pela API', p_verificacao: { recalculo_confere: true } })
     expect(direto.error).toBeTruthy()
 
-    // 5. Aprovação pelo servidor
+    // 5. Aprovação pelo servidor — desde a F5 exige lançamentos conferidos (conferir não muda a versão dos dados)
+    const semConferencia = await aprovarApuracao(comoImport(donoA), admin, ap.apuracaoId, 'antes da conferência')
+    expect(semConferencia.ok).toBe(false)
+    const despesas = await ok(gerenteA.from('import_despesas').select('id').eq('operacao_id', op), 'despesas')
+    for (const d of despesas as { id: string }[]) {
+      await ok(gerenteA.rpc('import_conferir_lancamento', { p_operacao: op, p_tipo: 'DESPESA', p_id: d.id, p_status: 'CONFERIDO' }), 'conferir')
+    }
     const aprov = await aprovarApuracao(comoImport(donoA), admin, ap.apuracaoId, 'Custos conferidos com DI, invoice e BL')
     expect(aprov).toEqual({ ok: true })
     const { data: opDepois } = await donoA.from('import_operacoes').select('status, apuracao_aprovada_id').eq('id', op).single()
