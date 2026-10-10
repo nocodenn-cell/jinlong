@@ -22,7 +22,7 @@ GO só com autorização escrita que nomeie o projeto e o dia.
 
 - [ ] O alvo é produção `kbabmewnahysfvlybiak`, somente leitura.
 - [ ] A saída fica fora do Git, em disco criptografado, sem pasta sincronizada, issue ou PR.
-- [ ] A chave `age` tem custódia nomeada. Chave no repositório recusa o GO.
+- [ ] Custódia de chave `age` só é exigida se o artefato for `.age`. O dump já exercido em 2026-10-08 não usa `age`. Chave privada não entra no relatório.
 - [ ] O comando recusa host `supabase.co` quando o modo é ensaio. O dump real e o restore seguem `docs/auditorias/GO-LIVE-02-ROTEIRO-BACKUP-RESTORE.md`.
 - [ ] O relatório guarda hora UTC, contagem e SHA-256. Não guarda senha, XML, nome nem payload.
 
