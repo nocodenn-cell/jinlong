@@ -163,6 +163,16 @@ SELECT pg_temp.f4_check(
   'F4-06 apuração, itens apurados e auditoria imutáveis (inclusive para o dono do banco)');
 
 -- ============================================================ aprovação ==
+-- Com a F5 aplicada, a aprovação exige despesas e tributos conferidos. A regra é provada no
+-- teste da F5; aqui os lançamentos são marcados conferidos para isolar as regras da F4.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+              WHERE table_schema = 'public' AND table_name = 'import_despesas' AND column_name = 'status_conferencia') THEN
+    EXECUTE 'UPDATE public.import_despesas SET status_conferencia = ''CONFERIDO''';
+    EXECUTE 'UPDATE public.import_tributos SET status_conferencia = ''CONFERIDO''';
+  END IF;
+END $$;
 SELECT set_config('request.jwt.claim.sub', :'dono_a', true) \gset
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.espera_erro(format('SELECT public.import_aprovar_apuracao(%L, %L, %L, %L::jsonb)', :'apu', :'dono_a', 'aprovação direta via API', '{"recalculo_confere":true}'),
