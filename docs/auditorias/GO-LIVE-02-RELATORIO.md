@@ -12,7 +12,7 @@ Nenhuma migration, dump ou escrita foi feita em produção ou staging.
 
 ## 1. CI e PR #535
 
-`114e6c800b4a7b946138c24e06ce7cb99900ae02` está em `origin/sprint/go-live-01`.
+`114e6c800b4a7b946138c24e06ce7cb99900ae02` está em `origin/sprint/go-live-01`. A correção de tipos e este relatório estão no commit `95017e76`.
 
 No run `38049357414` desse SHA:
 
