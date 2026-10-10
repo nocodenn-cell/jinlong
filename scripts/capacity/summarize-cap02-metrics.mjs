@@ -95,13 +95,15 @@ function resourcePeaks() {
   const rowsTsv = lines.map((l) => Object.fromEntries(l.split('\t').map((v, i) => [cols[i], num(v)])))
   if (!rowsTsv.length) return { amostras: 0 }
   const series = (c) => rowsTsv.map((r) => r[c]).filter((v) => v !== null)
-  const max = (c) => Math.max(...series(c))
-  const avg = (c) => Number((series(c).reduce((a, b) => a + b, 0) / series(c).length).toFixed(1))
+  const max = (c) => (series(c).length ? Math.max(...series(c)) : null)
+  const min = (c) => (series(c).length ? Math.min(...series(c)) : null)
+  const avg = (c) =>
+    series(c).length ? Number((series(c).reduce((a, b) => a + b, 0) / series(c).length).toFixed(1)) : null
   const delta = (c) => (series(c).length ? series(c).at(-1) - series(c)[0] : null)
   return {
     amostras: rowsTsv.length,
     host_cpu_pct: { media: avg('host_cpu_pct'), max: max('host_cpu_pct') },
-    mem_avail_mb_min: Math.min(...series('mem_avail_mb')),
+    mem_avail_mb_min: min('mem_avail_mb'),
     pg_conns_max: max('pg_conns'),
     pg_active_max: max('pg_active'),
     locks_wait_max: max('locks_wait'),
