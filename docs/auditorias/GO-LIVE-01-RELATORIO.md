@@ -7,7 +7,7 @@ Escopo executado: leitura de GitHub, Vercel e catálogo Supabase. Nenhuma escrit
 
 Decisão: **NO-GO**.
 
-O painel em produção continua no ar. O conjunto código publicado + banco de produção não está coerente: a correção das RPCs fiscais já está no Git e passa no teste local, e o catálogo de produção ainda executa os corpos antigos.
+O painel em produção continua no ar. O conjunto código publicado + banco de produção não está coerente. A correção das RPCs fiscais está no Git e passa no teste local; a produção ainda executa os corpos antigos. A auditoria somente leitura recebida depois foi confrontada no catálogo: o `EXECUTE` anônimo em `cancelar_venda_transacional` não se confirma; o default de loja no caixa e a falha fiscal engolida se confirmam e foram corrigidos nesta branch, sem aplicação remota.
 
 ## 1. GitHub
 
@@ -111,6 +111,7 @@ Consulta por nome (`financeiro`, `ssot`, `fiscal_cancel`, `fiscal_rpc`, `caixas_
 | `20261007171000_ssot_002_cancel_guard_antes_devolucao.sql` | idem |
 | `20261007190000_caixas_fechamento_formas_snapshot.sql` | sem par; nome não retornou na consulta |
 | `20261009220000_fiscal_rpc_isola_loja.sql` | sem par; corpos antigos ainda no catálogo |
+| `20261010120000_caixa_sem_loja_padrao.sql` | arquivo novo nesta branch; `DROP DEFAULT` de `caixas.loja_id`. Não aplicado. |
 
 `20261007180000_calcular_valor_sistema_por_forma_caixa.sql` não tem par no human-gates. O filtro de nomes desta sessão não incluiu esse identificador, então a ausência no ledger por esse nome **não** foi consultada à parte.
 
@@ -120,11 +121,15 @@ O staging não é cópia da produção. As 339 versões foram regravadas em 2026
 
 ## 5. Correções nesta branch
 
-Nenhuma alteração de aplicação, migration ou painel.
+A correção do P0 fiscal **já está na `main`** e continua sem aplicação remota. Não registrei par no human-gates.
 
-A correção do P0 fiscal **já está na `main`**. Reaplicar o mesmo SQL num arquivo novo duplicaria o histórico. Aplicar em `kbabmewnahysfvlybiak` ou no staging exige autorização explícita; esta sprint não a tinha. Não registrei par no human-gates: o par só existe depois da aplicação, senão o gate de drift passa a tratar migration pendente como já reconciliada.
+Nesta atualização, só o que o catálogo confirmou:
 
-O que esta branch entrega é este relatório.
+- `sync-outbox` exige `loja_id` em `CAIXA_ABERTO` e `VENDA_REGISTRADA`. O insert do caixa inclui essa loja. Caixa já existente de outra loja gera `CAIXA_LOJA_DIVERGENTE`. O PDV local lê `pdv_config_cache.loja_id` e, se estiver vazio, devolve `LOJA_NAO_CONFIGURADA` antes de enfileirar.
+- Com `AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE=true`, falha de leitura ou da RPC fiscal lança `FISCAL_ENFILEIRAR_PENDENTE`. O evento volta para a fila. A venda já registrada retorna no retry, a baixa trata `BAIXA_JA_EXISTE` como sucesso e a RPC fiscal faz upsert por `(venda_id, tipo_doc)`.
+- Migration versionada `20261010120000_caixa_sem_loja_padrao.sql` remove o default de `caixas.loja_id`. Não foi aplicada em produção nem em staging.
+
+`cancelar_venda_transacional` e `devolver_ou_trocar_venda` não foram reescritas. O corpo de produção e os arquivos `20261007171000` / `20261001100400` já recusam o segundo cancelamento antes da reposição e recusam devolução em dinheiro com caixa fechado antes do `UPDATE` de estoque.
 
 ## 6. Testes executados
 
@@ -133,6 +138,12 @@ O que esta branch entrega é este relatório.
 | `npm run test:fiscal-rpc-authz` | `backend/` | **FAIL** na 1ª vez: `Cannot find package '@electric-sql/pglite'`. O pacote está no `package.json` / lock (`0.3.14`) e não estava em `node_modules`. |
 | `npm install --workspace fastproduct-backend --ignore-scripts` | raiz | exit 0. 12 packages adicionados. `git status` não mostrou mudança de lockfile. |
 | `npm run test:fiscal-rpc-authz` | `backend/` | **PASS** (exit 0). O teste reproduz o bypass histórico (operador da loja A reprocessa, enfileira e grava evento da loja B; gerente da loja A cancela documento da loja B) e, depois da migration `20261009220000`, nega outra loja e usuário inativo. Mensagem final: `OK: isolamento fiscal entre lojas`. |
+| `deno check` + `deno test` em `caixaLoja.test.ts` e `fiscal_enqueue_after_venda_sync.test.ts` | `backend/` | **PASS**. 11 testes, 0 falhas. Inclui duas lojas no insert do caixa e `FISCAL_ENFILEIRAR_PENDENTE` sem chamar a RPC quando a leitura falha. |
+| `npm run test:go-live-01-isolamento` | `backend/` | **PASS**. O default da coluna grava a loja piloto; depois do `DROP DEFAULT` o insert sem loja falha; a baixa da loja B não altera o saldo da loja piloto. A ordem `JA_CANCELADA` / `v_ja_reposto_qtd` antes do `UPDATE` de estoque, e `DEVOLVER_VENDA_CAIXA_INVALIDO` antes do `UPDATE`, está nos arquivos citados. |
+| `npm run test:backup-restore-isolado` | `backend/` | **PASS**. Recusa `kbabmewnahysfvlybiak`, `tarxrbxddcwvjkimkbnr` e host `supabase.co`. O ensaio copiou uma linha entre dois bancos pglite. |
+| `node scripts/sync-outbox-contract-smoke.mjs` | `backend/` | **PASS**. Venda e caixa válidos carregam `loja_id`; venda sem `loja_id` é inválida. |
+
+`npx vitest run src/lib/outboxEventValidate.test.ts` em `pdv-local` não chegou a executar: falta `@vitejs/plugin-react-swc` neste workspace. A mesma regra está no contract smoke, que passou. `cargo check` do PDV local não foi executado.
 
 Não executados, e portanto sem declaração de PASS: typecheck, lint, suíte unitária completa, build Next.js, `supabase db reset` local, ensaio de carga, teste de 12 horas. O CI da `main` no SHA `a39a5309` que esta sessão listou foi Secret scan success e Release validate (SSRA) skipped. O job `migration-remote-drift` não roda em push na `main` (só `pull_request` com paths de `backend/**`).
 
@@ -152,19 +163,21 @@ Push desta branch (`sprint/go-live-01`, PR #535), lido em seguida no GitHub:
 
 ## 8. Riscos ainda abertos
 
-1. **P0** Bypass de loja nas três RPCs fiscais que existem em produção, e `fiscal_cancelar_documento` ausente enquanto o app a chama.
-2. **P0/P1** Lote `20261006`/`20261007` acima sem par de versão. O efeito funcional de cada uma não foi reexecutado em produção nesta sessão.
-3. **P1** Staging atrás da `main` e da produção. Homologação e k6 não têm alvo fiel.
-4. **P1** PRs #530–#534 sem Actions porque a base não é `main`. Merge direto herdaria isso.
-5. **P2** Backlog de PRs conflitantes e e2e vermelho (#502–#505, #491 e a série `cursor/p0-*`).
-6. Branches locais ahead (recovery / pr2d / codex) não foram integradas nem descartadas.
+1. **P0** Bypass de loja nas três RPCs fiscais que existem em produção, e `fiscal_cancelar_documento` ausente enquanto o app a chama. Confirmado. Não aplicado.
+2. **P0** `caixas.loja_id` em produção é `NOT NULL` com default `a0000001-0000-4000-8000-000000000001`. O sync publicado ainda insere caixa sem loja. A correção está nesta branch e no arquivo `20261010120000`, sem deploy e sem `db push`.
+3. **P1** Lote `20261006`/`20261007` sem par de versão. O efeito funcional de cada uma não foi reexecutado em produção nesta sessão. O corpo vivo de `cancelar_venda_transacional` já contém as guardas de estoque (seção 12).
+4. **P1** Staging atrás da `main` e da produção. Homologação e k6 não têm alvo fiel.
+5. **P1** PRs #530–#534 sem Actions porque a base não é `main`. Merge direto herdaria isso.
+6. **P1** Backup diário de produção continua não garantido (`docs/runbooks/BACKUP_RESTORE_CANONICO.md`). O ensaio desta sprint foi só pglite.
+7. **P2** Backlog de PRs conflitantes e e2e vermelho (#502–#505, #491 e a série `cursor/p0-*`).
+8. Branches locais ahead (recovery / pr2d / codex) não foram integradas nem descartadas.
 
 ## 9. Ordem de merge
 
-1. **Não mergear** esta entrega até o confronto com a auditoria do Claude e uma autorização explícita.
-2. Quando autorizado, o passo de produção é aplicar, numa janela com backup, **somente** `20261009220000_fiscal_rpc_isola_loja.sql` e em seguida o lote `20261007*` / `20261006120000` cuja ausência for reconfirmada no ledger — cada uma com pré-check de catálogo. Só então criar o par no human-gates. Isso **não** está neste PR.
+1. **Não mergear** o PR #535. Produção e staging não recebem SQL nem deploy até autorização explícita.
+2. Quando autorizado, o passo de produção é aplicar, numa janela com backup, `20261009220000_fiscal_rpc_isola_loja.sql` e `20261010120000_caixa_sem_loja_padrao.sql`, e em seguida o lote `20261007*` / `20261006120000` cuja ausência for reconfirmada no ledger — cada uma com pré-check de catálogo. Só então criar o par no human-gates. Isso **não** está neste PR. O deploy da Edge `sync-outbox` e do PDV local tem de sair junto com o `DROP DEFAULT`, senão o caixa sem `loja_id` deixa de inserir.
 3. PRs prontos para merge agora: **nenhum** dos #529–#534.
-4. Se a capacidade for retomada depois do banco coerente: #529, depois #533 rebaseado, depois #534. Fechar #530 e #532.
+4. Se a capacidade for retomada depois do banco coerente: #529, depois #533 rebaseado, depois #534. Fechar #530 e #532. Não iniciar carga nem o ensaio de 12 h.
 
 ## 10. Entrega
 
@@ -176,12 +189,25 @@ Push desta branch (`sprint/go-live-01`, PR #535), lido em seguida no GitHub:
 | Auto-merge | não solicitado |
 | Produção alterada | não |
 
-## 11. Decisão
+## 11. Achados da auditoria recebida
 
-**NO-GO** para declarar código, deploy e banco coerentes.
+Consulta somente leitura em `kbabmewnahysfvlybiak` em 2026-10-10. Nenhuma escrita.
 
-- GO operacional estreito do piloto já publicado: o deploy do ERP está READY e o N1 de preço de custo está no ledger (`20261009140739`).
-- NO-GO de segurança fiscal: o Git e o teste local estão corrigidos; a produção não.
-- NO-GO de homologação: o staging não reproduz a produção.
+| # | Achado | Classe | Evidência |
+|---|---|---|---|
+| 1 | `anon` ou `PUBLIC` executam `cancelar_venda_transacional` | **REFUTADO** | `proacl` = `{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}`. `has_function_privilege`: anon false, public false, authenticated true. `routine_privileges`: só `postgres`, `authenticated`, `service_role`. O `EXECUTE` de `authenticated` é o desenho; a função ainda exige papel de gerente/dono/admin. |
+| 2 | Venda, caixa ou estoque do sync dependem de loja padrão implícita | **CONFIRMADO** | `caixas.loja_id` é `NOT NULL`, default `'a0000001-0000-4000-8000-000000000001'::uuid`. `ensureCaixaPdv` inseria sem `loja_id`. Corrigido nesta branch. A migration `20261010120000` não foi aplicada. Catálogo de produtos sem filtro de loja fica fora deste item e não foi alterado. |
+| 3 | Falha entre venda, baixa e fila fiscal perde o documento | **CONFIRMADO** | Com a flag ligada, erro de produtos, pagamentos ou RPC só era logado e o evento seguia como processado. Agora lança `FISCAL_ENFILEIRAR_PENDENTE`. Recuperação: retry do outbox, idempotente nas três etapas. |
+| 4 | Cancelamento ou devolução repõe estoque duas vezes, inclusive com caixa fechado | **REFUTADO** para crédito duplicado | Arquivo `20261007171000`: `CANCELAR_VENDA_JA_CANCELADA` e `v_ja_reposto_qtd` vêm antes do `UPDATE public.estoque`. Arquivo `20261001100400`: `DEVOLVER_VENDA_CAIXA_INVALIDO` vem antes do `UPDATE` quando a forma é dinheiro e o caixa pagador não está `ABERTO`. Cancelar com caixa já fechado ainda devolve a mercadoria uma vez e não chama `sincronizar_saldo_cache`. Isso é o contrato atual, não um segundo crédito. As funções não foram reescritas. |
+| 5 | Backup e restauração ensaiados | **PENDENTE DE VALIDAÇÃO** no banco real | O runbook `docs/runbooks/BACKUP_RESTORE_CANONICO.md` já descreve dump manual e o plano Free sem PITR; o backup diário via GitHub segue não garantido. O ensaio desta sprint passou só em pglite e recusa os refs de produção e staging. Não houve `supabase db dump --linked`. |
 
-Parar aqui, antes de qualquer merge, para confrontar com a auditoria independente do Claude.
+## 12. Decisão
+
+**NO-GO** para piloto real e para declarar código, deploy e banco coerentes.
+
+- O deploy do ERP publicado está READY e o N1 de preço de custo está no ledger (`20261009140739`).
+- A produção ainda não tem o isolamento fiscal `20261009220000` nem o `DROP DEFAULT` de `caixas.loja_id`.
+- O staging não reproduz a produção.
+- Nenhuma carga nova e nenhum teste de 12 horas foram iniciados.
+
+Parar aqui. Qualquer SQL ou deploy de produção espera aprovação explícita.

@@ -114,6 +114,7 @@ async function enviarVendaViaSync(params: { produtoId: string; preco: number }) 
   const payload = {
     venda_id: vendaId,
     caixa_id: caixaId,
+    loja_id: LOJA_MATRIZ_ID,
     operador_id: operadorId,
     troco_inicial_caixa: 0,
     forma_pagamento: 'DINHEIRO',

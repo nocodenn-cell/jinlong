@@ -349,6 +349,21 @@ fn operador_id_efetivo(input: &RegistrarVendaInput) -> Option<String> {
 /// registrar_venda_com_itens (backend) exige p_caixa_id desde a migration
 /// 20260814105031 — rejeitar aqui, antes de qualquer escrita local, em vez de
 /// gravar e enfileirar uma venda que só vai falhar no sync (Edge/RPC).
+fn loja_id_configurada(conn: &Connection) -> Result<String, String> {
+    let loja = conn
+        .query_row(
+            "SELECT loja_id FROM pdv_config_cache WHERE id = 1",
+            [],
+            |row| row.get::<_, Option<String>>(0),
+        )
+        .optional()
+        .map_err(|e| e.to_string())?
+        .flatten()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty());
+    loja.ok_or_else(|| "LOJA_NAO_CONFIGURADA".to_string())
+}
+
 fn validar_caixa_id_obrigatorio(caixa_id: &Option<String>) -> Result<(), String> {
     match caixa_id.as_deref().map(str::trim) {
         Some(cid) if !cid.is_empty() => Ok(()),
@@ -367,6 +382,7 @@ pub fn registrar_venda_local(
 
     let path = db_path(app)?;
     let mut conn = Connection::open(path).map_err(|e| e.to_string())?;
+    let loja_id = loja_id_configurada(&conn)?;
     let tx = conn.transaction().map_err(|e| e.to_string())?;
 
     let venda_id = Uuid::new_v4().to_string();
@@ -460,6 +476,7 @@ pub fn registrar_venda_local(
       "desconto_gerente_valor": input.desconto_gerente_valor,
       "gerente_id": input.gerente_id,
       "desconto_gerente_token": input.desconto_gerente_token,
+      "loja_id": loja_id,
       "itens": itens_payload
     })
     .to_string();
@@ -547,6 +564,7 @@ pub fn abrir_caixa_local(
 
     let path = db_path(app)?;
     let mut conn = Connection::open(path).map_err(|e| e.to_string())?;
+    let loja_id = loja_id_configurada(&conn)?;
     let tx = conn.transaction().map_err(|e| e.to_string())?;
 
     let caixa_id = Uuid::new_v4().to_string();
@@ -566,7 +584,8 @@ pub fn abrir_caixa_local(
             "operador_id": operador_id,
             "data_abertura": now,
             "valor_inicial": troco_inicial,
-            "status": "ABERTO"
+            "status": "ABERTO",
+            "loja_id": loja_id
         }),
     )?;
 

@@ -16,13 +16,14 @@
 // | POST   | validar_gerente| handleValidarGerentePdvSync| token gerente + expiração (se ok) — token sensível; erros genéricos |
 // | POST   | (omitido)      | handlePostOutboxBatch      | processed[], failed[{id,error}], request_id — IDs + mensagens de erro internas |
 // |        |                | dispatchOutboxEvent tipos  | Corpo só no POST: VENDA_REGISTRADA (venda+itens), CAIXA_*, MOVIMENTO_CAIXA — persiste no DB; resposta agregada no batch |
-// |        |                | pós-venda fiscal (opcional) | Se `AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE=true`, chama RPC `fiscal_enfileirar_documento_venda` (erro só em log; não falha o batch) |
+// |        |                | pós-venda fiscal (opcional) | Se `AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE=true`, chama RPC `fiscal_enfileirar_documento_venda`. Falha intermediária rejeita o evento para retry idempotente (venda já registrada retorna; baixa `BAIXA_JA_EXISTE`; fiscal faz upsert). |
 // ---
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { timingSafeEqualSecret, timingSafeEqualStr } from "../_shared/crypto.ts";
 import { validateGerenteAndIssueToken } from "../_shared/gerente-auth.ts";
 import { logJson } from "../_shared/logger.ts";
+import { assertMesmaLoja, caixaInsertForLoja, requireExplicitLojaId } from "./caixaLoja.ts";
 import { maybeEnqueueFiscalDocumentAfterSyncedVenda } from "./fiscal_enqueue_after_venda_sync.ts";
 import { captureEdgeException } from "../_shared/sentryEdge.ts";
 
@@ -131,6 +132,7 @@ type VendaPayload = {
   desconto_gerente_token?: string | null;
   gerente_id?: string | null;
   itens: VendaItemPayload[];
+  loja_id: string;
   /**
    * Sprint C2.10 (P0-5) — split de pagamento opcional. `pdv-local`
    * (cliente desktop Tauri) não captura pagamento misto hoje — sua tabela
@@ -316,6 +318,7 @@ function parseVendaPayload(raw: unknown): VendaPayload {
     total_desconto: raw.total_desconto as number,
     total_liquido: raw.total_liquido as number,
     itens,
+    loja_id: requireExplicitLojaId(raw.loja_id),
   };
 
   applyVendaOptionalFields(raw, payload);
@@ -481,28 +484,34 @@ async function ensureCaixaPdv(
   caixaId: string | null | undefined,
   operadorId: string | null | undefined,
   trocoInicial: number | null | undefined,
+  lojaId: unknown,
 ) {
   if (!isUuid(caixaId)) return;
 
   const valorInicial =
     trocoInicial != null && Number.isFinite(trocoInicial) ? trocoInicial : 0;
   const op = isUuid(operadorId) ? operadorId.trim() : null;
+  const id = caixaId.trim();
+  const rowInsert = caixaInsertForLoja({
+    id,
+    operadorId: op,
+    valorInicial,
+    lojaId,
+  });
 
   const { data: row, error: selErr } = await supabase
     .from("caixas")
-    .select("id")
-    .eq("id", caixaId.trim())
+    .select("id,loja_id")
+    .eq("id", id)
     .maybeSingle();
 
   if (selErr) throw new Error(`ERRO_CAIXA_LOOKUP: ${selErr.message}`);
-  if (row) return;
+  if (row) {
+    assertMesmaLoja(row.loja_id == null ? null : String(row.loja_id), rowInsert.loja_id);
+    return;
+  }
 
-  const { error: insErr } = await supabase.from("caixas").insert({
-    id: caixaId.trim(),
-    operador_id: op,
-    valor_inicial: valorInicial,
-    status: "ABERTO",
-  });
+  const { error: insErr } = await supabase.from("caixas").insert(rowInsert);
 
   if (insErr && !String(insErr.message).includes("duplicate key")) {
     throw new Error(`ERRO_CAIXA_INSERT: ${insErr.message}`);
@@ -514,11 +523,12 @@ async function processCaixaAberto(supabase: SupabaseAdmin, ev: OutboxEvent) {
     id: string;
     operador_id?: string | null;
     valor_inicial?: number;
+    loja_id?: unknown;
   };
   const inicial = p.valor_inicial != null && Number.isFinite(p.valor_inicial)
     ? p.valor_inicial
     : 0;
-  await ensureCaixaPdv(supabase, p.id, p.operador_id ?? null, inicial);
+  await ensureCaixaPdv(supabase, p.id, p.operador_id ?? null, inicial, p.loja_id);
 }
 
 async function processCaixaFechado(supabase: SupabaseAdmin, ev: OutboxEvent) {
@@ -683,6 +693,7 @@ async function processVenda(
     payload.caixa_id,
     payload.operador_id,
     payload.troco_inicial_caixa ?? null,
+    payload.loja_id,
   );
 
   const hasManagerDiscount = (payload.desconto_gerente_percentual ?? 0) > 0 ||

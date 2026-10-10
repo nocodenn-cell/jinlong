@@ -15,6 +15,7 @@ describe('validateNormalizedEvent — idempotência de regras do contrato v1', (
       payload: {
         venda_id: UUID2,
         caixa_id: UUID3,
+        loja_id: UUID,
         forma_pagamento: 'DINHEIRO',
         total_bruto: 10,
         total_desconto: 0,
@@ -52,12 +53,30 @@ describe('validateNormalizedEvent — idempotência de regras do contrato v1', (
     expect(r).toEqual({ ok: false, error: 'caixa_id inválido' })
   })
 
+  it('rejeita VENDA_REGISTRADA sem loja_id', () => {
+    const r = validateNormalizedEvent({
+      id: UUID,
+      tipo: 'VENDA_REGISTRADA',
+      created_at: '2026-01-01T12:00:00.000Z',
+      payload: {
+        venda_id: UUID2,
+        caixa_id: UUID3,
+        forma_pagamento: 'DINHEIRO',
+        total_bruto: 10,
+        total_desconto: 0,
+        total_liquido: 10,
+        itens: [{ produto_id: UUID3, quantidade: 1, preco_original: 10, preco_unitario: 10 }],
+      },
+    })
+    expect(r).toEqual({ ok: false, error: 'loja_id inválido' })
+  })
+
   it('aceita CAIXA_ABERTO válido', () => {
     const r = validateNormalizedEvent({
       id: UUID,
       tipo: 'CAIXA_ABERTO',
       created_at: '2026-01-01T12:00:00.000Z',
-      payload: { id: UUID2, valor_inicial: 100 },
+      payload: { id: UUID2, valor_inicial: 100, loja_id: UUID },
     })
     expect(r).toEqual({ ok: true })
   })

@@ -31,6 +31,7 @@ function ok() {
 function validateVendaPayload(payload) {
   if (!isRecord(payload)) return asError("payload.venda deve ser objeto");
   if (!isUuid(payload.venda_id)) return asError("venda_id inválido");
+  if (!isUuid(payload.loja_id)) return asError("loja_id inválido");
   if (typeof payload.forma_pagamento !== "string" || !payload.forma_pagamento.trim()) {
     return asError("forma_pagamento inválida");
   }
@@ -60,6 +61,7 @@ function validateVendaPayload(payload) {
 function validateCaixaAbertoPayload(payload) {
   if (!isRecord(payload)) return asError("payload.caixa_aberto deve ser objeto");
   if (!isUuid(payload.id)) return asError("id caixa inválido");
+  if (!isUuid(payload.loja_id)) return asError("loja_id inválido");
   if (typeof payload.valor_inicial !== "number" || !Number.isFinite(payload.valor_inicial)) {
     return asError("valor_inicial inválido");
   }
@@ -182,6 +184,7 @@ const validCases = [
       desconto_gerente_valor: 10,
       gerente_id: "55555555-5555-4555-8555-555555555555",
       desconto_gerente_token: "tok_abc",
+      loja_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
       itens: [
         {
           item_id: "66666666-6666-4666-8666-666666666666",
@@ -203,6 +206,7 @@ const validCases = [
       data_abertura: "2026-04-18T09:00:00Z",
       valor_inicial: 100,
       status: "ABERTO",
+      loja_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
     }),
   },
   {
@@ -254,6 +258,26 @@ const invalidCases = [
       total_desconto: 10,
       total_liquido: 90,
       itens: [],
+    }),
+  },
+  {
+    ...base,
+    tipo: "VENDA_REGISTRADA",
+    payload_json: JSON.stringify({
+      venda_id: "22222222-2222-4222-8222-222222222222",
+      caixa_id: "33333333-3333-4333-8333-333333333333",
+      forma_pagamento: "DINHEIRO",
+      total_bruto: 10,
+      total_desconto: 0,
+      total_liquido: 10,
+      itens: [
+        {
+          produto_id: "77777777-7777-4777-8777-777777777777",
+          quantidade: 1,
+          preco_original: 10,
+          preco_unitario: 10,
+        },
+      ],
     }),
   },
   {

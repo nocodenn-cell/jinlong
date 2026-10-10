@@ -86,6 +86,18 @@ function fakeSupabase(tables: {
 
 function noopLog(_p: Record<string, unknown>) {}
 
+async function assertFiscalRetry(run: () => Promise<void>): Promise<void> {
+  let thrown = "";
+  try {
+    await run();
+  } catch (err) {
+    thrown = err instanceof Error ? err.message : String(err);
+  }
+  if (!thrown.startsWith("FISCAL_ENFILEIRAR_PENDENTE:")) {
+    throw new Error(`esperava retry fiscal, recebeu: ${thrown || "sucesso"}`);
+  }
+}
+
 Deno.test("desligado por padrão — não chama RPC de enqueue", async () => {
   const prev = Deno.env.get("AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE");
   Deno.env.delete("AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE");
@@ -292,10 +304,7 @@ Deno.test("P0-2 — vendas_pagamentos vazio inesperado -> FAIL-CLOSED, zero RPC 
       itens: [{ produto_id: produtoId, quantidade: 1, preco_original: 50, preco_unitario: 50 }],
     };
 
-    await maybeEnqueueFiscalDocumentAfterSyncedVenda(client, payload, noopLog);
-
-    // Fail-closed: nenhum documento fiscal enfileirado com um pagamento
-    // reconstruído a partir do escalar payload.forma_pagamento.
+    await assertFiscalRetry(() => maybeEnqueueFiscalDocumentAfterSyncedVenda(client, payload, noopLog));
     assertEquals(rpcCalls.length, 0);
   } finally {
     if (prevFlag !== undefined) Deno.env.set("AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE", prevFlag);
@@ -322,8 +331,7 @@ Deno.test("P0-2 — erro ao ler vendas_pagamentos -> FAIL-CLOSED, zero RPC (não
       itens: [{ produto_id: produtoId, quantidade: 1, preco_original: 50, preco_unitario: 50 }],
     };
 
-    await maybeEnqueueFiscalDocumentAfterSyncedVenda(client, payload, noopLog);
-
+    await assertFiscalRetry(() => maybeEnqueueFiscalDocumentAfterSyncedVenda(client, payload, noopLog));
     assertEquals(rpcCalls.length, 0);
   } finally {
     if (prevFlag !== undefined) Deno.env.set("AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE", prevFlag);
@@ -391,8 +399,7 @@ Deno.test("HOTFIX (achado Codex) — erro ao ler produtos -> FAIL-CLOSED, zero R
       itens: [{ produto_id: produtoId, quantidade: 1, preco_original: 50, preco_unitario: 50 }],
     };
 
-    await maybeEnqueueFiscalDocumentAfterSyncedVenda(client, payload, noopLog);
-
+    await assertFiscalRetry(() => maybeEnqueueFiscalDocumentAfterSyncedVenda(client, payload, noopLog));
     assertEquals(rpcCalls.length, 0);
   } finally {
     if (prevFlag !== undefined) Deno.env.set("AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE", prevFlag);
@@ -425,8 +432,7 @@ Deno.test("HOTFIX (achado Codex) — leitura de produtos incompleta (menos linha
       ],
     };
 
-    await maybeEnqueueFiscalDocumentAfterSyncedVenda(client, payload, noopLog);
-
+    await assertFiscalRetry(() => maybeEnqueueFiscalDocumentAfterSyncedVenda(client, payload, noopLog));
     assertEquals(rpcCalls.length, 0);
   } finally {
     if (prevFlag !== undefined) Deno.env.set("AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE", prevFlag);
