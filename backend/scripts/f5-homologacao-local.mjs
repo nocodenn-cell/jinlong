@@ -82,7 +82,7 @@ await umOuCria('fornecedores', `loja_id=eq.${lojaA}&nome=eq.Ningbo%20Hardware%20
   nome: 'Ningbo Hardware Co. (fictício)', loja_id: lojaA,
 })
 const cat = await umOuCria('categorias', 'nome=eq.Homologa%C3%A7%C3%A3o%20Importa%C3%A7%C3%B5es', { nome: 'Homologação Importações' })
-await umOuCria('produtos', `loja_id=eq.${lojaA}&codigo_barras=eq.7899990000017`, {
+const produtoA = await umOuCria('produtos', `loja_id=eq.${lojaA}&codigo_barras=eq.7899990000017`, {
   codigo_barras: '7899990000017', nome: 'Parafuso M6 inox (fictício)', categoria_id: cat, preco_varejo: 1.5, preco_custo: 0.4,
   origem: 'importado', tem_nf: true, ativo: true, status_publicacao: 'PUBLICADO', loja_id: lojaA,
 }).catch(async (e) => {
@@ -93,6 +93,9 @@ await umOuCria('produtos', `loja_id=eq.${lojaA}&codigo_barras=eq.7899990000017`,
     origem: 'brasil_nf', tem_nf: true, ativo: true, status_publicacao: 'PUBLICADO', loja_id: lojaA,
   })
 })
+
+// saldo fictício: o E2E prova que o hub não altera estoque, kardex, AP nem preço desta loja
+await umOuCria('estoque', `loja_id=eq.${lojaA}&produto_id=eq.${produtoA}`, { loja_id: lojaA, produto_id: produtoA, quantidade_atual: 120 })
 
 // módulo: empresas A e C (B fica sem), pelo procedimento operacional auditado
 for (const emp of [empA, empC]) {

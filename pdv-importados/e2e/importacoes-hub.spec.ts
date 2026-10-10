@@ -51,12 +51,18 @@ async function servico(path: string): Promise<unknown> {
   return r.json()
 }
 
+/** ERP das lojas fictícias da homologação (as únicas que o hub poderia afetar); outros testes escrevem no resto do banco em paralelo. */
 async function fotoErp() {
-  const estoque = (await servico('estoque?select=quantidade_atual')) as { quantidade_atual: number }[]
-  const precos = (await servico('produtos?select=id,preco_varejo,preco_custo,preco_custo_medio&order=id')) as unknown[]
-  const ap = (await servico('contas_pagar?select=id')) as unknown[]
-  const kardex = (await servico('movimentos_estoque_log?select=id')) as unknown[]
-  return { estoque: estoque.reduce((a, e) => a + Number(e.quantidade_atual), 0), precos: JSON.stringify(precos), ap: ap.length, kardex: kardex.length }
+  const lojas = ((await servico('lojas?select=id&codigo=like.HOMOLOG-IMP-*')) as { id: string }[]).map((l) => l.id)
+  expect(lojas.length).toBe(3)
+  const em = `loja_id=in.(${lojas.join(',')})`
+  const estoque = (await servico(`estoque?select=produto_id,quantidade_atual&${em}&order=produto_id`)) as { quantidade_atual: number }[]
+  const precos = (await servico(`produtos?select=id,preco_varejo,preco_custo,preco_custo_medio&${em}&order=id`)) as unknown[]
+  const ap = (await servico(`contas_pagar?select=id&${em}`)) as unknown[]
+  const kardex = (await servico(`movimentos_estoque_log?select=id&${em}`)) as unknown[]
+  expect(estoque.length).toBeGreaterThan(0)
+  expect(precos.length).toBeGreaterThan(0)
+  return { estoque: JSON.stringify(estoque), precos: JSON.stringify(precos), ap: ap.length, kardex: kardex.length }
 }
 
 /**
