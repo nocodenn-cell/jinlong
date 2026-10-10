@@ -110,7 +110,7 @@ Depois (`npm install -w pdv-local`, lockfile inalterado):
 | `05e8258a` | `fix(carrinho): isola operador e loja e nao agrega desconto incompativel` |
 | `613641d3` | `fix(carrinho): aplica a loja da sessao no caixa web e no desktop` |
 | `ca634ff3` | `test(carrinho): recoloca a spec de idempotencia no runner web` |
-| (este arquivo) | relatório + cobertura desktop sem `--exclude` dos testes de carrinho |
+| `01885d4e` | `docs(auditoria): registra a correcao do carrinho e a cobertura desktop` |
 
 Não houve push nem merge.
 
