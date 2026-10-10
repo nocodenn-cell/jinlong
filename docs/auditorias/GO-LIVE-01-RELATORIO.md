@@ -168,7 +168,8 @@ Push desta branch de documentação pode gerar os mesmos previews cancelados. N�
 |---|---|
 | Branch | `sprint/go-live-01` |
 | Commit do relatório | `8fbecf1aa93588ba9560fa6b3da0fa876a4356e1` |
-| PR | preenchido após `gh pr create` |
+| Commit que grava esse SHA | `d9856ae4` (ver `git log` da branch para o HEAD final) |
+| PR | https://github.com/nocodenn-cell/fastproduct/pull/535 |
 | Auto-merge | não solicitado |
 | Produção alterada | não |
 
