@@ -1,0 +1,47 @@
+{
+  "schema_version": "1",
+  "processo": {
+    "id": "proc-001",
+    "loja_importadora_id": "loja-0000-0001",
+    "moeda_base": "BRL"
+  },
+  "politica": {
+    "escala_intermediaria": 10,
+    "escala_persistencia": 4,
+    "escala_unitario": 6,
+    "arredondamento": "HALF_UP",
+    "ordem_residuo": "MAIOR_RESTO_ITEM_ID_ASC"
+  },
+  "cambios": [],
+  "itens": [
+    {
+      "id": "item-001",
+      "produto_id": "prod-001",
+      "moeda": "BRL",
+      "valor_mercadoria_moeda": "100.000000",
+      "valor_aduaneiro_brl": null,
+      "quantidade_comercial": "1.000",
+      "unidade_comercial": "UN",
+      "fator_para_estoque": "1.000000",
+      "quantidade_estoque": "1.000",
+      "peso_liquido_kg": "1.000",
+      "peso_bruto_kg": "1.000",
+      "volume_m3": "0.010"
+    }
+  ],
+  "despesas": [],
+  "descontos": [],
+  "tributos": [
+    {
+      "id": "trib-01",
+      "tributo_codigo": "CATALOGO_NAO_CLASSIFICADO",
+      "status_recuperabilidade": "NAO_RECUPERAVEL",
+      "valor_apurado_brl": "25.50",
+      "item_id": "item-001",
+      "regra": {
+        "id": "regra-01",
+        "incorpora_custo": true
+      }
+    }
+  ]
+}

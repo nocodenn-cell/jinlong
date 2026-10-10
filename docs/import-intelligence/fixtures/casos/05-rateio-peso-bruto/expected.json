@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "engine_version": "landed-cost-ref/0.1.0",
+  "input_hash": "sha256:ca0abb94dc66a6297693efe7a8ba4251778c2c730d9f444772ec87e522887bcf",
+  "status": "OK",
+  "divergencias": [],
+  "itens": [
+    {
+      "item_id": "item-001",
+      "produto_id": "prod-001",
+      "quantidade_estoque": "1.000",
+      "componentes_brl": {
+        "mercadoria": "50.0000",
+        "despesas_incorporadas": "20.0000",
+        "tributos_nao_recuperaveis": "0.0000",
+        "descontos": "0.0000"
+      },
+      "custo_total_brl": "70.0000",
+      "custo_unitario_brl": "70.000000",
+      "residuo_unitario_brl": "0.0000000000",
+      "residuo_total_brl": "0.0000000000"
+    },
+    {
+      "item_id": "item-002",
+      "produto_id": "prod-002",
+      "quantidade_estoque": "1.000",
+      "componentes_brl": {
+        "mercadoria": "50.0000",
+        "despesas_incorporadas": "60.0000",
+        "tributos_nao_recuperaveis": "0.0000",
+        "descontos": "0.0000"
+      },
+      "custo_total_brl": "110.0000",
+      "custo_unitario_brl": "110.000000",
+      "residuo_unitario_brl": "0.0000000000",
+      "residuo_total_brl": "0.0000000000"
+    }
+  ],
+  "rateios": [
+    {
+      "origem_id": "desp-01",
+      "componente": "despesas",
+      "criterio": "PESO_BRUTO",
+      "base_total": "40.000",
+      "item_id": "item-001",
+      "base_item": "10.000",
+      "valor_alocado_brl": "20.0000000000",
+      "justificativa": "Frete cobrado conforme nota de transporte"
+    },
+    {
+      "origem_id": "desp-01",
+      "componente": "despesas",
+      "criterio": "PESO_BRUTO",
+      "base_total": "40.000",
+      "item_id": "item-002",
+      "base_item": "30.000",
+      "valor_alocado_brl": "60.0000000000",
+      "justificativa": "Frete cobrado conforme nota de transporte"
+    }
+  ],
+  "despesas_nao_incorporadas": [],
+  "conservacao": {
+    "entradas_brl": "180.0000",
+    "descontos_brl": "0.0000",
+    "saidas_brl": "180.0000",
+    "diferenca_brl": "0.0000000000",
+    "ok": true
+  }
+}
