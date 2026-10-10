@@ -40,6 +40,12 @@ PASSWORD="$(cat "$WORKDIR/k6-password.txt" 2>/dev/null || true)"
   sg docker -c "docker stats --no-stream --format 'table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}'" 2>/dev/null || true
 } | tee "$ART/cap02-${SCENARIO,,}-resources-before.txt"
 
+export CAPACITY_DB_URL="$DB_URL"
+RECONCILE="$ROOT/scripts/capacity/reconcile-capacity-run.mjs"
+CAP02_MODE=baseline CAP02_SCENARIO="$SCENARIO" node "$RECONCILE"
+
+psql "$DB_URL" -tAc "select pg_stat_statements_reset();" >/dev/null
+
 SINCE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 echo "$SINCE" > "$ART/cap02-${SCENARIO,,}-since.txt"
 
@@ -52,10 +58,12 @@ export CAP02_SCENARIO="$SCENARIO"
 export CAP02_SUMMARY_PATH="$ART/cap02-${SCENARIO,,}-summary.json"
 
 echo "[cap02] running $SCENARIO → $API_URL (fastproduct-capacity)"
-k6 run --out json="$ART/cap02-${SCENARIO,,}-metrics.json" \
+set +e
+k6 run -q --out json="$ART/cap02-${SCENARIO,,}-metrics.json" \
   "$ROOT/docs/capacity/k6/scenarios/cap02-progressive.js" \
   | tee "$ART/cap02-${SCENARIO,,}-k6.log"
 K6_EXIT=${PIPESTATUS[0]}
+UNTIL="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 {
   echo "scenario=$SCENARIO ended=$(date -Iseconds) k6_exit=$K6_EXIT"
@@ -64,11 +72,15 @@ K6_EXIT=${PIPESTATUS[0]}
   echo '=== pg ==='
   psql "$DB_URL" -tAc "select count(*) as connections from pg_stat_activity where datname='postgres';"
   psql "$DB_URL" -tAc "select count(*) as waiting_locks from pg_locks where not granted;"
+  echo '=== top statements (mean_ms desc, calls>=5) ==='
+  psql "$DB_URL" -c "select calls, round(mean_exec_time::numeric,2) mean_ms, round(max_exec_time::numeric,2) max_ms, left(regexp_replace(query, '\s+', ' ', 'g'), 110) q from pg_stat_statements where calls >= 5 and query not ilike '%pg_stat%' order by mean_exec_time desc limit 8;"
 } | tee "$ART/cap02-${SCENARIO,,}-resources-after.txt"
 
-export CAP02_SINCE="$SINCE"
-export CAPACITY_DB_URL="$DB_URL"
-node "$ROOT/scripts/capacity/reconcile-capacity-run.mjs" | tee "$ART/cap02-${SCENARIO,,}-reconcile.json"
+CAP02_MODE=check CAP02_SINCE="$SINCE" CAP02_UNTIL="$UNTIL" node "$RECONCILE" \
+  > "$ART/cap02-${SCENARIO,,}-reconcile.log" 2>&1
+RECON_EXIT=$?
+cat "$ART/cap02-${SCENARIO,,}-reconcile.log"
+echo "k6_exit=$K6_EXIT reconcile_exit=$RECON_EXIT" | tee -a "$ART/cap02-${SCENARIO,,}-resources-after.txt"
 
 # Gate: memória disponível crítica
 AVAIL_MB=$(awk '/MemAvailable/ {print int($2/1024)}' /proc/meminfo)
@@ -78,4 +90,5 @@ if [[ "$AVAIL_MB" -lt 800 ]]; then
   exit 3
 fi
 
+[[ "$RECON_EXIT" -eq 0 ]] || { echo "[cap02] STOP: reconciliação divergente" >&2; exit 4; }
 exit "$K6_EXIT"
