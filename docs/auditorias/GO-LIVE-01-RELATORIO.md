@@ -167,7 +167,7 @@ Push desta branch de documentação pode gerar os mesmos previews cancelados. N�
 | Campo | Valor |
 |---|---|
 | Branch | `sprint/go-live-01` |
-| Commit | preenchido no commit deste arquivo |
+| Commit do relatório | `8fbecf1aa93588ba9560fa6b3da0fa876a4356e1` |
 | PR | preenchido após `gh pr create` |
 | Auto-merge | não solicitado |
 | Produção alterada | não |
