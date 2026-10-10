@@ -1,14 +1,16 @@
 # GO-LIVE 02 — Checklist de autorização
 
 Data: 2026-10-10.  
-Branch: `sprint/go-live-01` @ `5cdcc697`.  
+Branch: `sprint/go-live-01` @ `b9670099`.  
+Histórico, não é o head: merge do PR #536 em `5cdcc697`; head do carrinho `79f2beb5`; ensaio `age` sintético em `64a0f5b1`.  
 PR: https://github.com/nocodenn-cell/fastproduct/pull/535
 
 Este texto prepara decisões. Não autoriza dump, restore, migration, deploy nem merge na `main`. Cada bloco abaixo é um GO próprio. Cumprir um não abre o seguinte.
 
 ## 0. O que já está feito e o que não está
 
-- PR #536 mergeado nesta branch. Head do carrinho `79f2beb5`. Merge `5cdcc697`.
+- PR #536 mergeado nesta branch. Head do carrinho `79f2beb5`. Merge `5cdcc697`. O head deste gate é `b9670099`.
+- CI deste head: `migration-remote-drift` vermelho de propósito. `CI pdv-importados` / `build-and-test` falhou em `shared-core` (`unifiedCartStore.spec.ts`: `partialize` indefinido no Vitest `node`, 2 testes). Isso bloqueia tratar a branch como verde. Não bloqueia, por si, pedir autorização de backup.
 - Homologação local do carrinho passou: incluir e recarregar, troca de operador, legado sem dono, primeira loja e troca de loja. Chrome em `http://localhost:3000`, Supabase `127.0.0.1:54321`.
 - Botão Sair ficou pendente fora deste checklist. Duas saídas usaram o botão; duas não navegaram em 8s. Não bloqueia o isolamento já medido e não libera schema.
 - Backup `age` sintético em PostgreSQL 17.11 passou no commit `64a0f5b1`. Isso é ensaio operacional de cifra e restore por pipe. Não é recuperação integral do projeto Supabase.
@@ -21,10 +23,10 @@ GO só com autorização escrita que nomeie o projeto e o dia.
 - [ ] O alvo é produção `kbabmewnahysfvlybiak`, somente leitura.
 - [ ] A saída fica fora do Git, em disco criptografado, sem pasta sincronizada, issue ou PR.
 - [ ] A chave `age` tem custódia nomeada. Chave no repositório recusa o GO.
-- [ ] O comando recusa host `supabase.co` quando o modo é ensaio. O dump real usa o caminho de `docs/runbooks/BACKUP_RESTORE_CANONICO.md`.
+- [ ] O comando recusa host `supabase.co` quando o modo é ensaio. O dump real e o restore seguem `docs/auditorias/GO-LIVE-02-ROTEIRO-BACKUP-RESTORE.md`.
 - [ ] O relatório guarda hora UTC, contagem e SHA-256. Não guarda senha, XML, nome nem payload.
 
-Sem este bloco, os blocos 2, 3 e 4 não abrem.
+O bloco 1 pode ser autorizado sozinho. O bloco 2 exige o dump desse mesmo dia e não abre migration. Cada janela do bloco 3 exige dump e restore isolado daquele dia; em outro dia, repetir 1 e 2. O bloco 4 sem `20261010120000` não exige dump. O par do `DROP DEFAULT` exige os blocos 1, 2 e 3.4 no mesmo change.
 
 ## 2. Restore isolado
 
@@ -82,6 +84,6 @@ Pode ocorrer antes do lote 3.2. Não substitui o lote 3.2 e não exige zero caix
 - [ ] Preview da Vercel e check ignorado não contam como deploy de produção.
 - [ ] Merge do PR #535 na `main` é outra autorização. Este checklist não a concede.
 
-## 5. Condição única de GO operacional
+## 5. GO por etapa
 
-Os quatro blocos acima estão marcados, no mesmo dia, com operador nomeado para interromper. Falta um, o estado permanece NO-GO. Preparar o PR #535 não é essa condição.
+Cada bloco tem decisão própria. Marcar um não marca os outros e não implanta a GO-LIVE inteira. Backup e restore do dia são pré-requisito só da operação que altera ou valida o banco. Preparar o PR #535 não é autorização.

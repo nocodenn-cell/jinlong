@@ -172,7 +172,7 @@ Todos, no mesmo dia. Falhou um, a janela não abre.
 
 ## 11. Decisão
 
-- Merge na `main`: **NO-GO**. O PR #535 fica aberto. O head da branch passou a `5cdcc697` com o merge do PR #536. O drift remoto continua e o guard permanece.
+- Merge na `main`: **NO-GO**. Head deste gate: `b9670099`. O merge do PR #536 permanece o fato histórico `5cdcc697` (head do carrinho `79f2beb5`). Os commits de saneamento são `05681046` e `b9670099`. O drift remoto continua e o guard permanece.
 - Solicitar autorização do backup real: **GO** para pedir. O ensaio sintético em Postgres 17 passou e não é dump de produção.
 - Executar o dump, a implantação fiscal, o lote `20261007*` ou o deploy: **NO-GO**.
 - Piloto: **NO-GO**.

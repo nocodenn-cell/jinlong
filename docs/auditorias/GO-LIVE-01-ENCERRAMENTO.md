@@ -77,7 +77,8 @@ Commits desde `a39a5309`:
 ## 6. GitHub, Vercel e Supabase
 
 - `main` permanece em `a39a5309`. Esta branch não foi mergeada na `main`.
-- PR #536 mergeado nesta branch: head `79f2beb5`, merge `5cdcc697`. Homologação local do carrinho em Chrome, `http://localhost:3000`, Supabase `127.0.0.1:54321`: incluir e recarregar devolveu 1 item; operador B no mesmo navegador ficou com 0 itens; legado sem dono não foi adotado; primeira loja preservou 1 item; troca de loja zerou o cupom. Evidência no comentário do PR #536.
+- PR #536 mergeado nesta branch: head `79f2beb5`, merge `5cdcc697`. O head seguinte, deste gate, é `b9670099`.
+- Homologação local do carrinho, no head `79f2beb5`: Chrome em `http://localhost:3000`, Supabase `127.0.0.1:54321`. Incluir e recarregar devolveu 1 item; operador B no mesmo navegador ficou com 0 itens; legado sem dono não foi adotado; primeira loja preservou 1 item; troca de loja zerou o cupom. Evidência no comentário do PR #536.
 - ERP em produção: deployment **READY** `dpl_DbrwZ7G4dWe6isCfQpVEg9rwyv1U` no mesmo SHA da `main`.
 - Site: último build concluído em `19f05be5`. Ignored Build Step segue cancelando o que não altera `site/`.
 - Produção `kbabmewnahysfvlybiak`: ledger máximo `20261009140739`. Sem `fiscal_sessao_privilegiada`. Sem `fiscal_cancelar_documento`. `anon` não executa `cancelar_venda_transacional`.
