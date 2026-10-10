@@ -104,7 +104,7 @@ npm run test:fiscal-rpc-authz
 
 no diretório `backend/`. O script `backend/scripts/fiscal-rpc-loja-authz.test.mjs` sobe pglite, carrega os corpos históricos e o arquivo `20261009220000`. Resultado registrado: **PASS**. Antes, operador da loja A reprocessa, enfileira e grava evento da loja B, e gerente da loja A cancela documento da loja B. Depois, outra loja e usuário inativo são negados.
 
-Repetir esse comando no commit que for autorizado, imediatamente antes da janela. Não usar staging `tarxrbxddcwvjkimkbnr`: o ledger de lá não é o de produção.
+Repetir esse comando no commit que for autorizado, imediatamente antes da janela. O mesmo roteiro em `postgres:17-alpine` não rodou em 2026-10-10: o daemon Docker estava parado. Isso não substitui o PASS do PGlite e não autoriza pular o dump do dia. Não usar staging `tarxrbxddcwvjkimkbnr`: o ledger de lá não é o de produção.
 
 ## 6. Aplicação e rollback
 

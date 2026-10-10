@@ -27,6 +27,7 @@
     "test:financeiro-loja": "node scripts/test-financeiro-loja.mjs",
     "test:fiscal-rpc-authz": "node scripts/fiscal-rpc-loja-authz.test.mjs",
     "test:go-live-01-isolamento": "node scripts/go-live-01-isolamento.test.mjs",
+    "test:backup-restore-isolado": "node scripts/backup-restore-isolado.test.mjs",
     "test:fiscal-p0-pre-req": "node scripts/fiscal-p0-pre-req.test.mjs",
     "test:pdv-caixa-financeiro": "node scripts/test-pdv-caixa-financeiro-fluxo.mjs"
   },

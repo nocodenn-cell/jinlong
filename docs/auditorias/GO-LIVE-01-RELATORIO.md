@@ -196,22 +196,14 @@ Consulta somente leitura em `kbabmewnahysfvlybiak` em 2026-10-10. Nenhuma escrit
 | # | Achado | Classe | Evidência |
 |---|---|---|---|
 | 1 | `anon` ou `PUBLIC` executam `cancelar_venda_transacional` | **REFUTADO** | `proacl` = `{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}`. `has_function_privilege`: anon false, public false, authenticated true. `routine_privileges`: só `postgres`, `authenticated`, `service_role`. O `EXECUTE` de `authenticated` é o desenho; a função ainda exige papel de gerente/dono/admin. |
-| 2 | Venda, caixa ou estoque do sync dependem de loja padrão implícita | **CONFIRMADO** | `caixas.loja_id` é `NOT NULL`, default `'a0000001-0000-4000-8000-000000000001'::uuid`. `ensureCaixaPdv` inseria sem `loja_id`. Corrigido nesta branch. A migration `20261010120000` não foi aplicada. Catálogo de produtos sem filtro de loja fica fora deste item e não foi alterado. |
-| 3 | Falha entre venda, baixa e fila fiscal perde o documento | **CONFIRMADO** | Com a flag ligada, erro de produtos, pagamentos ou RPC só era logado e o evento seguia como processado. Agora lança `FISCAL_ENFILEIRAR_PENDENTE`. Recuperação: retry do outbox, idempotente nas três etapas. |
-| 4 | Cancelamento ou devolução repõe estoque duas vezes, inclusive com caixa fechado | **REFUTADO** para crédito duplicado | Arquivo `20261007171000`: `CANCELAR_VENDA_JA_CANCELADA` e `v_ja_reposto_qtd` vêm antes do `UPDATE public.estoque`. Arquivo `20261001100400`: `DEVOLVER_VENDA_CAIXA_INVALIDO` vem antes do `UPDATE` quando a forma é dinheiro e o caixa pagador não está `ABERTO`. Cancelar com caixa já fechado ainda devolve a mercadoria uma vez e não chama `sincronizar_saldo_cache`. Isso é o contrato atual, não um segundo crédito. As funções não foram reescritas. |
-| 5 | Backup e restauração ensaiados | **PENDENTE DE VALIDAÇÃO** no banco real | O runbook `docs/runbooks/BACKUP_RESTORE_CANONICO.md` já descreve dump manual e o plano Free sem PITR; o backup diário via GitHub segue não garantido. O ensaio desta sprint passou só em pglite e recusa os refs de produção e staging. Não houve `supabase db dump --linked`. |
+| 2 | Venda, caixa ou estoque do sync dependem de loja padrão implícita | **CONFIRMADO E CORRIGIDO** no código | O default de produção foi lido. A branch exige `loja_id` e versiona `20261010120000`. A migration não foi aplicada. Deploy da Edge e do PDV fica para depois do merge. |
+| 3 | Falha entre venda, baixa e fila fiscal perde o documento | **CONFIRMADO E CORRIGIDO** no código | `FISCAL_ENFILEIRAR_PENDENTE` devolve o evento ao retry. A Edge publicada ainda é a anterior. |
+| 4 | Cancelamento ou devolução repõe estoque duas vezes, inclusive com caixa fechado | **REFUTADO** | No corpo de produção, `CANCELAR_VENDA_JA_CANCELADA` e `v_ja_reposto_qtd` vêm antes do `UPDATE` de estoque. `DEVOLVER_VENDA_CAIXA_INVALIDO` vem antes do `UPDATE` no dinheiro com caixa pagador fechado. Cancelar com caixa fechado devolve a mercadoria uma vez e não sincroniza o saldo do caixa. |
+| 5 | Backup e restauração | **PENDENTE** | Ensaio sintético em PGlite: PASS. Daemon Docker indisponível em 2026-10-10, então não houve Postgres servidor. Dump de produção não autorizado. RPO diário não garantido. |
+| 6 | Falha de sync sem alerta | **CONFIRMADO E CORRIGIDO** no swallow fiscal | O evento fiscal deixa de ser marcado como sucesso quando o enqueue falha. O PDV já mostra banner quando `dlq > 0` (`pdv-local/src/App.tsx`). |
 
 ## 12. Decisão
 
-**NO-GO** para piloto real e para declarar código, deploy e banco coerentes.
+A sprint está encerrada no documento `docs/auditorias/GO-LIVE-01-ENCERRAMENTO.md`.
 
-- O deploy do ERP publicado está READY e o N1 de preço de custo está no ledger (`20261009140739`).
-- A produção ainda não tem o isolamento fiscal `20261009220000` nem o `DROP DEFAULT` de `caixas.loja_id`.
-- O staging não reproduz a produção.
-- Nenhuma carga nova e nenhum teste de 12 horas foram iniciados.
-
-O plano executável do drift fiscal está em `docs/auditorias/GO-LIVE-01-PLANO-REMEDIACAO-FISCAL.md`. O checklist da janela está em `docs/auditorias/GO-LIVE-01-CHECKLIST-FISCAL.md`.
-
-Pré-requisitos locais da janela fiscal: **GO CONDICIONAL para solicitar autorização**. `npm run test:fiscal-p0-pre-req` passou em PostgreSQL embarcado, sem escrita remota. A implantação continua **NO-GO** até autorização explícita e até um dump da produção restaurado no dia da janela.
-
-Parar aqui. Qualquer SQL ou deploy de produção espera aprovação explícita.
+**NO-GO** para merge, para a janela fiscal e para o piloto. O PR #535 fica pronto para revisão. Produção e staging não foram alterados.

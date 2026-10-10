@@ -1,7 +1,7 @@
 # GO-LIVE 01 — Checklist da janela fiscal
 
 Execução em produção: **NO-GO** até autorização explícita.  
-Ensaio local em 2026-10-10: `npm run test:fiscal-p0-pre-req` **PASS**. Motor: PostgreSQL embarcado (PGlite 0.3.14), dois bancos descartáveis. O daemon do Docker não estava ativo; nenhum banco remoto foi aberto. O dump lógico copiou linhas e `pg_get_functiondef` da origem para o banco restaurado.
+Ensaio local em 2026-10-10: `npm run test:fiscal-p0-pre-req` **PASS**. Motor: PostgreSQL embarcado (PGlite 0.3.14). O daemon do Docker não estava ativo (`npipe:////./pipe/dockerDesktopLinuxEngine` ausente), então o ensaio em `postgres:17-alpine` ficou pendente e não bloqueia o PR. Nenhum banco remoto foi aberto.
 
 Alvo futuro, se autorizado: `kbabmewnahysfvlybiak`. Staging `tarxrbxddcwvjkimkbnr` não é ensaio.
 
