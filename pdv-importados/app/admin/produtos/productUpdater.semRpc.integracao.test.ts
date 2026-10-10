@@ -50,8 +50,34 @@ function psql(sqlTexto: string): string {
 let disponivel = false
 let admin: SupabaseClient
 let produtoId = ''
-/** Definição original da RPC, restaurada no final. */
-let rpcOriginal = ''
+/** A RPC foi tirada de cena por este arquivo e precisa voltar no afterAll. */
+let rpcOculta = false
+
+// A RPC some do banco por RENAME, não por DROP. O DROP + recriação por texto
+// perdia o GRANT EXECUTE TO authenticated/service_role, o COMMENT e o
+// `search_path` reais da migration: quem rodava depois (ex.:
+// produtosFiscalEdicao.integration.test.ts) recebia "permission denied". O
+// RENAME preserva ACL, comentário e corpo; restaurar é renomear de volta.
+const RPC_ASSINATURA = 'public.atualizar_produto_com_faixa_atacado(uuid, jsonb, uuid, jsonb)'
+const RPC_NOME = 'atualizar_produto_com_faixa_atacado'
+const RPC_OCULTA = 'atualizar_produto_com_faixa_atacado__oculta_teste_sem_rpc'
+const RPC_OCULTA_ASSINATURA = `public.${RPC_OCULTA}(uuid, jsonb, uuid, jsonb)`
+
+/** Devolve a RPC ao nome original se uma execução anterior abortou no meio. */
+function restaurarRpcSeOculta(): void {
+  psql(`
+    DO $$
+    BEGIN
+      IF to_regprocedure('${RPC_OCULTA_ASSINATURA}') IS NOT NULL THEN
+        IF to_regprocedure('${RPC_ASSINATURA}') IS NULL THEN
+          ALTER FUNCTION ${RPC_OCULTA_ASSINATURA} RENAME TO ${RPC_NOME};
+        ELSE
+          DROP FUNCTION ${RPC_OCULTA_ASSINATURA};
+        END IF;
+      END IF;
+    END $$;
+  `)
+}
 
 async function stackDisponivel(): Promise<boolean> {
   if (!/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(API_URL)) return false
@@ -83,17 +109,8 @@ beforeAll(async () => {
     auth: { persistSession: false, autoRefreshToken: false },
   })
 
-  // Guarda o corpo da RPC para restaurar depois, e a remove — simulando o banco
-  // que ainda não recebeu a migration.
-  rpcOriginal = psql(`
-    SELECT 'CREATE OR REPLACE FUNCTION public.' || p.proname || '(' ||
-           pg_get_function_arguments(p.oid) || ') RETURNS ' ||
-           pg_get_function_result(p.oid) || ' LANGUAGE ' || l.lanname ||
-           CASE WHEN p.prosecdef THEN ' SECURITY DEFINER' ELSE '' END ||
-           ' SET search_path=public AS $BODY$' || p.prosrc || '$BODY$;'
-    FROM pg_proc p JOIN pg_language l ON l.oid = p.prolang
-    WHERE p.proname = 'atualizar_produto_com_faixa_atacado';
-  `).trim()
+  // Resto de uma execução abortada (afterAll não rodou): devolve a RPC antes.
+  restaurarRpcSeOculta()
 
   await admin.from('precos_atacado').delete().eq('quantidade_minima', 4242)
   const { data: velhos } = await admin.from('produtos').select('id').like('nome', `%${SUF}%`)
@@ -123,14 +140,16 @@ beforeAll(async () => {
     .from('precos_atacado')
     .insert({ produto_id: produtoId, quantidade_minima: 10, preco_unitario: 30, loja_id: null, ativo: true })
 
-  psql(`DROP FUNCTION IF EXISTS public.atualizar_produto_com_faixa_atacado(uuid, jsonb, uuid, jsonb);`)
+  // Tira a RPC de cena — simulando o banco que ainda não recebeu a migration.
+  psql(`ALTER FUNCTION ${RPC_ASSINATURA} RENAME TO ${RPC_OCULTA};`)
+  rpcOculta = true
   psql(`NOTIFY pgrst, 'reload schema';`)
   await new Promise((r) => setTimeout(r, 1500))
 }, 60_000)
 
 afterAll(async () => {
   if (!disponivel) return
-  if (rpcOriginal) psql(rpcOriginal)
+  if (rpcOculta) restaurarRpcSeOculta()
   if (produtoId) {
     await admin.from('precos_atacado').delete().eq('produto_id', produtoId)
     await admin.from('historico_precos_produto').delete().eq('produto_id', produtoId)

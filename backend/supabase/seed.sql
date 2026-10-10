@@ -46,10 +46,21 @@ BEGIN;
 -- e `estoque.loja_id` no schema — é a loja canônica de fixture, não um valor
 -- arbitrário. Criada pelas migrations; o INSERT abaixo é só uma rede de
 -- segurança para o caso de o seed rodar antes delas.
+--
+-- Multiempresa (M1/F1): a Matriz recebe a empresa `LEGADA_M1` no backfill da
+-- M1, e o trigger BEFORE INSERT `lojas_empresa_obrigatoria` recusa loja sem
+-- empresa. Trigger BEFORE dispara ANTES da checagem de conflito, então um
+-- `INSERT ... ON CONFLICT DO NOTHING` sem empresa abortava o seed INTEIRO
+-- (LOJA_SEM_EMPRESA) mesmo com a Matriz já existente — e sem seed não havia
+-- usuários nem vínculos, e a cerca RLS escondia os produtos da Matriz.
+-- Por isso: só insere se faltar, e já com a empresa legada.
 -- ---------------------------------------------------------------------------
-INSERT INTO public.lojas (id, nome, codigo)
-VALUES ('a0000001-0000-4000-8000-000000000001', 'Matriz', 'MATRIZ')
-ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.lojas (id, nome, codigo, empresa_id)
+SELECT 'a0000001-0000-4000-8000-000000000001', 'Matriz', 'MATRIZ',
+       (SELECT e.id FROM public.empresas e WHERE e.origem = 'LEGADA_M1')
+WHERE NOT EXISTS (
+  SELECT 1 FROM public.lojas WHERE id = 'a0000001-0000-4000-8000-000000000001'
+);
 
 -- ---------------------------------------------------------------------------
 -- 2. Identidades (auth.users)
@@ -172,5 +183,43 @@ ON CONFLICT (produto_id, loja_id) DO UPDATE
 INSERT INTO public.configuracoes_gerais (chave, valor, tipo_dado)
 VALUES ('comissao_padrao_percentual', '5', 'percent')
 ON CONFLICT (chave) DO UPDATE SET valor = EXCLUDED.valor;
+
+-- ---------------------------------------------------------------------------
+-- 7. Vínculos multiempresa dos usuários-semente (F1)
+--
+-- O trigger `usuarios_sincroniza_vinculo` cria o vínculo LEGADO no INSERT da
+-- seção 3, desde que a loja já tenha empresa. A chamada explícita cobre o
+-- reaplicar sobre um banco antigo (usuários anteriores ao trigger) e o
+-- DO-bloco falha o seed em voz alta se algum usuário-semente ficar sem
+-- vínculo ativo — sem ele a cerca `fp_empresas_cerca()` esconde a Matriz e os
+-- testes de integração falham longe da causa ("permission denied"/0 linhas).
+-- ---------------------------------------------------------------------------
+DO $seed_vinculos$
+DECLARE
+  v_sem_vinculo int;
+BEGIN
+  PERFORM public.m1_sincronizar_vinculo_usuario(u.id)
+  FROM public.usuarios u
+  WHERE u.id IN ('11111111-1111-4111-8111-111111111111',
+                 '22222222-2222-4222-8222-222222222222',
+                 '33333333-3333-4333-8333-333333333333',
+                 '44444444-4444-4444-8444-444444444444');
+
+  SELECT count(*) INTO v_sem_vinculo
+  FROM public.usuarios u
+  JOIN public.lojas l ON l.id = u.loja_id
+  WHERE u.id IN ('11111111-1111-4111-8111-111111111111',
+                 '22222222-2222-4222-8222-222222222222',
+                 '33333333-3333-4333-8333-333333333333',
+                 '44444444-4444-4444-8444-444444444444')
+    AND NOT EXISTS (
+      SELECT 1 FROM public.usuario_vinculos v
+      WHERE v.usuario_id = u.id AND v.empresa_id = l.empresa_id AND v.ativo
+    );
+  IF v_sem_vinculo > 0 THEN
+    RAISE EXCEPTION 'SEED_SEM_VINCULO: % usuário(s)-semente sem vínculo ativo na empresa da Matriz', v_sem_vinculo;
+  END IF;
+END
+$seed_vinculos$;
 
 COMMIT;
