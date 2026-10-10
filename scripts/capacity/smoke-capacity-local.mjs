@@ -57,26 +57,31 @@ async function smokeAuthHttp(apiUrl, anonKey) {
 function runSqlSmoke(dbUrl) {
   assert(/127\.0\.0\.1|localhost/.test(dbUrl), `DB não local: ${dbUrl}`)
   assert(!/supabase\.co/.test(dbUrl), 'DB remoto proibido')
-  const out = execSync(`psql "${dbUrl}" -v ON_ERROR_STOP=1 -f "${SQL}"`, {
-    encoding: 'utf8',
-    maxBuffer: 10 * 1024 * 1024,
-  })
+  // Merge stderr so NOTICE G4_OK is capturable
+  const out = execSync(
+    `psql "${dbUrl}" -v ON_ERROR_STOP=1 -f "${SQL}" 2>&1`,
+    {
+      encoding: 'utf8',
+      maxBuffer: 10 * 1024 * 1024,
+      shell: '/bin/bash',
+    },
+  )
   fs.writeFileSync(path.join(ART, 'al1-smoke-sql.log'), out)
   return out
 }
 
 function parseSqlPass(out) {
   const g4 = /G4_OK/.test(out) || /G4 ROLLBACK done/.test(out)
-  const migrations = /migrations=\s*(\d+)/.exec(out)
-  const rls = /rls_all=\s*(t|true|f|false)/i.exec(out)
-  const rpcs = /rpcs=\s*([^\n]+)/.exec(out)?.[1] ?? ''
+  const migrations = /migrations='?(\d+)'?/.exec(out)
+  const rls = /rls_all='?(t|true|f|false)'?/i.exec(out)
+  const rpcs = /rpcs='?([^'\n]+)'?/.exec(out)?.[1] ?? ''
   return {
     migrations: migrations ? Number(migrations[1]) : null,
     rls_all: rls ? /^t/i.test(rls[1]) : false,
     has_v4: rpcs.includes('finalizar_venda_transacional_canonica_v4'),
     has_financeiro: rpcs.includes('financeiro_comando'),
     has_caixa: rpcs.includes('fechar_caixa_atomico'),
-    g4_sql_ok: g4 && !/ERROR:/.test(out),
+    g4_sql_ok: g4 && !/\nERROR:/.test(out),
     isolation_ok: /isolation_other=0/.test(out) || /G4_OK/.test(out),
   }
 }

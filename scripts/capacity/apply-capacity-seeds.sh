@@ -21,5 +21,6 @@ fi
 echo "[capacity-seed] applying synthetic seed lojas=$N"
 psql "$DB_URL" -v ON_ERROR_STOP=1 -v n_lojas="$N" \
   -f "$ROOT/scripts/capacity/seed-capacity-synthetic.sql" \
-  | tee "/opt/cursor/artifacts/g5-seed-${N}-lojas.log"
+  2>&1 | tee "/opt/cursor/artifacts/g5-seed-${N}-lojas.log"
+# pipefail: falha do psql propaga
 echo "[capacity-seed] OK lojas=$N"

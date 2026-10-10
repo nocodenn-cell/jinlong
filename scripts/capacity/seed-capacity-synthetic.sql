@@ -4,13 +4,13 @@
 \set ON_ERROR_STOP on
 
 \echo '=== Capacity synthetic seed n_lojas=':'n_lojas' '==='
-SELECT (:'n_lojas')::int AS n_lojas \gset
+SELECT set_config('capacity.n_lojas', :'n_lojas', false);
 
 BEGIN;
 
 DO $seed$
 DECLARE
-  n int := :n_lojas;
+  n int := current_setting('capacity.n_lojas')::int;
   i int;
   j int;
   v_loja uuid;
