@@ -43,3 +43,12 @@ export type {
 
 export { verificarAprovacao } from './aprovacao'
 export type { MotivoBloqueioAprovacao, ResultadoVerificacaoAprovacao } from './aprovacao'
+
+// D6 — conciliação de duplicatas e obrigações de NF-e (pura, centavos exatos)
+export { conciliarObrigacoesNfe, centavos } from './conciliacaoObrigacoes'
+export type {
+  ConciliacaoEntrada,
+  ConciliacaoNatureza,
+  ConciliacaoMotivo,
+  ConciliacaoResultado,
+} from './conciliacaoObrigacoes'
