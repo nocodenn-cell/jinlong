@@ -184,7 +184,7 @@ Push desta branch (`sprint/go-live-01`, PR #535), lido em seguida no GitHub:
 | Campo | Valor |
 |---|---|
 | Branch | `sprint/go-live-01` |
-| Commits | `8fbecf1aa93588ba9560fa6b3da0fa876a4356e1` (relatório), `d9856ae4` (SHA), `e8223a0a12f6cf10f95cc46c52d443b6e1b237e5` (link do PR). O commit seguinte só registra o efeito do preview. |
+| Commits | `8fbecf1aa93588ba9560fa6b3da0fa876a4356e1` (relatório), `d9856ae4` (SHA), `e8223a0a12f6cf10f95cc46c52d443b6e1b237e5` (link do PR), `1bca8c3dc60dcb0b78aafb7611a9d7670cec022c` (preview), `8fa5f5246100749af10eef4562a1c0b0e04d5f4e` (loja explícita, retry fiscal, classificação dos achados). |
 | PR | https://github.com/nocodenn-cell/fastproduct/pull/535 |
 | Auto-merge | não solicitado |
 | Produção alterada | não |
