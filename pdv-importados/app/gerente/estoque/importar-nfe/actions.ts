@@ -10,6 +10,7 @@ import {
   mensagemErroComSecao,
   mensagemErroValidacaoZod,
 } from '@/lib/errors/mensagemErroUsuario'
+import { referenciasLegadasAmbiguas } from '@/lib/nfe/referenciasLegadas'
 import { parseNfeXml, type NfeParsed } from '@/lib/nfe/nfeParser'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 import { getGerenteLojaId } from '@/lib/gerente/auth/sessionContext'
@@ -131,7 +132,14 @@ export type LinhaPreviewNfe = {
   produto_id: string | null
   /** Nome do produto reconhecido, para exibir na conferência. */
   produto_nome: string | null
+  /**
+   * D5: como o reconhecimento usou a referência. EXATA = cProd/cEAN como no XML;
+   * LEGADA = vínculo gravado pelo parser anterior (sem zeros à esquerda), mesmo resultado de antes;
+   * AMBIGUA = duas referências distintas da nota colidem no formato antigo → conferência humana.
+   */
+  referencia_match?: 'EXATA' | 'LEGADA' | 'AMBIGUA'
 }
+
 
 export type ProdutoVinculoOpcao = {
   id: string
@@ -241,12 +249,25 @@ async function montarLinhasPreview(
     .maybeSingle()
   const fornId = (forn?.id as string | undefined) ?? null
 
+  // D5: busca pela referência exata E pela forma legada (vínculos gravados antes da correção do parser).
   const gtins = [
     ...new Set(
-      parsed.itens.map((i) => i.gtin).filter((g): g is string => !!g && g.length >= 8),
+      parsed.itens
+        .flatMap((i) => [i.gtin, i.gtin_legado])
+        .filter((g): g is string => !!g && g.length >= 8),
     ),
   ]
-  const refs = [...new Set(parsed.itens.map((i) => i.ref_fornecedor))]
+  const refs = [
+    ...new Set(
+      parsed.itens.flatMap((i) => [i.ref_fornecedor, i.ref_fornecedor_legado]).filter((r): r is string => !!r),
+    ),
+  ]
+  const refsAmbiguas = referenciasLegadasAmbiguas(
+    parsed.itens.map((i) => ({ atual: i.ref_fornecedor, legado: i.ref_fornecedor_legado })),
+  )
+  const gtinsAmbiguos = referenciasLegadasAmbiguas(
+    parsed.itens.map((i) => ({ atual: i.gtin, legado: i.gtin_legado })),
+  )
   const ids = parsed.itens.map((i) => i.produto_id).filter((id): id is string => !!id)
 
   // (1) De-Para aprendido: [loja + fornecedor + ref] → produto
@@ -283,8 +304,24 @@ async function montarLinhasPreview(
   }
 
   const linhas: LinhaPreviewNfe[] = parsed.itens.map((item) => {
-    const dePara = byDePara.get(item.ref_fornecedor)
-    const ean = item.gtin && item.gtin.length >= 8 ? byGtin.get(item.gtin) : undefined
+    const refLegado = item.ref_fornecedor_legado
+    const gtinLegado = item.gtin_legado
+    const refAmbigua = !!refLegado && refLegado !== item.ref_fornecedor && refsAmbiguas.has(refLegado)
+    const gtinAmbiguo = !!gtinLegado && gtinLegado !== item.gtin && gtinsAmbiguos.has(gtinLegado)
+
+    const deParaExato = byDePara.get(item.ref_fornecedor)
+    const deParaLegado =
+      !deParaExato && !refAmbigua && refLegado && refLegado !== item.ref_fornecedor
+        ? byDePara.get(refLegado)
+        : undefined
+    const dePara = deParaExato ?? deParaLegado
+
+    const eanExato = item.gtin && item.gtin.length >= 8 ? byGtin.get(item.gtin) : undefined
+    const eanLegado =
+      !eanExato && !gtinAmbiguo && gtinLegado && gtinLegado !== item.gtin && gtinLegado.length >= 8
+        ? byGtin.get(gtinLegado)
+        : undefined
+    const ean = eanExato ?? eanLegado
     const escolhido = item.produto_id ? byId.get(item.produto_id) : undefined
 
     let status: StatusItemNfe = 'DESCONHECIDO'
@@ -316,6 +353,12 @@ async function montarLinhasPreview(
       status_produto: status,
       produto_id: produtoId,
       produto_nome: produtoNome,
+      referencia_match:
+        (status === 'RECONHECIDO_DEPARA' && deParaLegado) || (status === 'RECONHECIDO_EAN' && eanLegado)
+          ? 'LEGADA'
+          : status === 'DESCONHECIDO' && (refAmbigua || gtinAmbiguo)
+            ? 'AMBIGUA'
+            : 'EXATA',
     }
   })
 
