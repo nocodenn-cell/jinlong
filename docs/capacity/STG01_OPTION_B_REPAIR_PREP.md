@@ -187,3 +187,5 @@ Guards já existentes: `pdv-importados/scripts/staging/assert-staging-target.mjs
   - órfãos sintéticos de confiança baixa (`chunk013_medium_batch`)
 
 **Aguardando aprovação explícita** antes de modificar o banco remoto.
+
+**Comparação A vs B (2026-10-10):** recomendação **B** (baseline local) em `STG01_ESTRATEGIA_A_VS_B.md` — sem INSERTs remotos.

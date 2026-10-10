@@ -173,3 +173,5 @@ Não reiniciar do zero. Não reset. Não excluir staging.
 ---
 
 **Atualização Option B (2026-10-10):** análise/prep sem escrita remota em `STG01_OPTION_B_REPAIR_PREP.md` + `docs/capacity/staging/repair-prep/`.
+
+**Comparação A vs B (2026-10-10):** recomendação **B** (baseline local) em `STG01_ESTRATEGIA_A_VS_B.md` — sem INSERTs remotos.
