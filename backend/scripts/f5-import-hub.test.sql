@@ -131,4 +131,23 @@ SELECT pg_temp.f5_check(:b_lista = 0 AND :a_lista = 1 AND :'a_custo' = '5432.109
   AND (:'lista_sem_ident')::boolean,
   'F5-05 lista: empresa B não vê A; custo como texto exato; exige identidade');
 
+-- produtos para vínculo: via RPC do módulo, só da própria empresa, só id e nome
+INSERT INTO public.categorias (nome) VALUES ('F5 cat') RETURNING id AS cat \gset
+INSERT INTO public.produtos (codigo_barras, nome, categoria_id, preco_varejo, preco_custo, origem, tem_nf, ativo, status_publicacao, loja_id)
+  VALUES ('7899999966001', 'F5 Parafuso A', :'cat', 10, 1, 'brasil_nf', true, true, 'PUBLICADO', :'loja_a') RETURNING id AS prod_a \gset
+INSERT INTO public.produtos (codigo_barras, nome, categoria_id, preco_varejo, preco_custo, origem, tem_nf, ativo, status_publicacao, loja_id)
+  VALUES ('7899999966002', 'F5 Parafuso B', :'cat', 10, 1, 'brasil_nf', true, true, 'PUBLICADO', :'loja_b') RETURNING id AS prod_b \gset
+SELECT set_config('request.jwt.claim.sub', :'dono_a', true) \gset
+SET LOCAL ROLE authenticated;
+SELECT string_agg(nome, ',' ORDER BY nome) AS a_busca FROM public.import_buscar_produtos('F5 Parafuso') \gset
+SELECT count(*) AS a_ids FROM public.import_buscar_produtos(NULL, ARRAY[:'prod_a', :'prod_b']::uuid[]) \gset
+RESET ROLE;
+SELECT set_config('request.jwt.claim.sub', '', true) \gset
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.espera_erro('SELECT * FROM public.import_buscar_produtos(''F5'')', 'IMPORT_AUTH') AS busca_sem_ident \gset
+RESET ROLE;
+SELECT pg_temp.f5_check(:'a_busca' = 'F5 Parafuso A' AND :a_ids = 1 AND (:'busca_sem_ident')::boolean
+  AND pg_get_function_result('public.import_buscar_produtos(text,uuid[])'::regprocedure) = 'TABLE(id uuid, nome text)',
+  'F5-06 produtos para vínculo: só da própria empresa (B fica de fora, até por id), exige identidade');
+
 ROLLBACK;
