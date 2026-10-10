@@ -3,7 +3,7 @@
 **Data:** 2026-10-09 (rev. custo zero)  
 **Prioridade:** P0  
 **Orçamento adicional:** **R$ 0** (restrição absoluta)  
-**Status:** plano revisado — **parado antes de qualquer provisionamento** (aguarda confirmação humana)  
+**Status:** staging Free criado; migrations MCP **pausadas** — ver `STG01_REASSESSMENT_MIGRATIONS.md` (aguarda autorização para retomar via CLI/psql)  
 **Base:** FASE 1 + FASE 2 + guards STG-01 já no repositório
 
 ---
