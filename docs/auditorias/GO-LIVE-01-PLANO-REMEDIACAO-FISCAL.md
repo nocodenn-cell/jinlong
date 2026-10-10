@@ -12,7 +12,7 @@ O plano abaixo está fechado. A aplicação continua bloqueada até autorizaçã
 
 Produção tem 42 linhas em `documentos_fiscais_pendentes` e o ledger termina em `20261009140739`. Três RPCs fiscais existem com o predicado morto `current_user`. `fiscal_cancelar_documento` e `fiscal_marcar_cancelado` não existem. O app publicado chama o cancelamento em `pdv-importados/app/gerente/financeiro/actions.ts`.
 
-A correção que fecha o bypass é um único arquivo, `backend/supabase/migrations/20261009220000_fiscal_rpc_isola_loja.sql`. Ele não depende de `20261006120000` nem da série `2026100716*`–`2026100719*`. Aplicar essa série no mesmo passo mistura financeiro, caixa e NF-e, e `20261007161220` regrava `fiscal_cancelar_documento` sem a checagem de loja.
+A correção que fecha o bypass das RPCs já existentes é `backend/supabase/migrations/20261009220000_fiscal_rpc_isola_loja.sql`. Ele não depende de `20261006120000` nem da série `20261007163000`–`20261007190000`. `20261006120000` está substituída e não se aplica. O lote `20261007*` é outra autorização e exige zero caixas `ABERTO`. O `CREATE` de `fiscal_cancelar_documento` em `20261007161220` é o mesmo texto de `20261009220000`.
 
 ## 1. O que está implantado
 
@@ -51,8 +51,8 @@ Não precisa de:
 
 | Arquivo | Por que fica fora desta janela |
 |---|---|
-| `20261006120000_financeiro_contas_formas_e_painel.sql` | Adiciona `formas_pagamento.conta_financeira_id` e reescreve `internal.financeiro_capturar_venda`. A coluna não existe. Domínio financeiro, não fiscal. |
-| `20261007161220_fiscal_cancelado_ssot.sql` | É o arquivo que **cria** `fiscal_cancelar_documento`, mas o corpo não olha a loja. O `20261009220000` já cria a versão com `FISCAL_CANCELAR_LOJA`. Aplicar `161220` depois reabre o cancelamento entre lojas. O arquivo também tem `BEGIN`/`COMMIT` próprios. |
+| `20261006120000_financeiro_contas_formas_e_painel.sql` | Substituída por `20261006180000` (ledger `20261006195837`). Ausência da coluna `conta_financeira_id` não a torna pendência. Não aplicar. Não é dependência de `20261009220000`. |
+| `20261007161220_fiscal_cancelado_ssot.sql` | O `CREATE` de `fiscal_cancelar_documento` é o mesmo de `20261009220000` (`ativo` + `FISCAL_CANCELAR_LOJA`). Reaplicar o arquivo não reabre cancelamento entre lojas. Continua fora desta janela porque também grava `fiscal_marcar_cancelado` e `fiscal_marcar_emitido`, e entra no lote `20261007*` com zero caixas `ABERTO`. |
 | `20261007163000_ssot_001_002_painel_ec_cache.sql` | Troca `sum(saldo_atual)` por `E(c)` dentro de `financeiro_painel`. O painel de produção ainda soma `saldo_atual`. Domínio de caixa. |
 | `20261007163100_ssot_003_nfe_obrigacao_duplicata.sql` | Reescreve `confirmar_importacao_nfe`. NF-e de compra, não a fila de NFC-e. |
 | `20261007163200_ssot_004_revoke_insert_documentos_fiscais.sql` | Só revoga `INSERT` e prova que a RPC de enqueue existe. A RPC já existe. Pode entrar **depois** do `20261009220000`, no mesmo change, como passo 2. Não substitui função. |
@@ -66,8 +66,10 @@ Ordem segura desta janela: `20261009220000`, em seguida só o arquivo `202610071
 
 A função não aparece em nenhuma migration anterior a 2026-10-07. Os únicos `CREATE` no Git são:
 
-1. `20261007161220_fiscal_cancelado_ssot.sql` — primeira criação, sem checagem de loja
-2. `20261009220000_fiscal_rpc_isola_loja.sql` — substitui pela versão com loja
+1. `20261007161220_fiscal_cancelado_ssot.sql` — instala o mesmo `CREATE` de `20261009220000`
+2. `20261009220000_fiscal_rpc_isola_loja.sql` — último escritor das quatro RPCs, com o mesmo cancelamento
+
+O corpo sem loja não está mais em migration. Ficou em `backend/scripts/fixtures/fiscal_cancelar_documento.pre-isolamento.sql`, só para o teste do bypass histórico. Não aplicar esse fixture.
 
 Nenhum dos dois efeitos está no catálogo: a função não existe e `internal.fiscal_sessao_privilegiada()` não existe. O painel publicado chama a RPC mesmo assim. O cancelamento fiscal da tela falha com função ausente. O reprocesso existe e segue com o bypass de loja.
 
@@ -92,7 +94,7 @@ Códigos novos que a tela mostra em `error.message`, sem mapa próprio: `FISCAL_
 
 As policies RLS não mudam. As RPCs são `SECURITY DEFINER` e atravessam a RLS; a checagem de loja dentro da função é o controle que passa a valer. O `INSERT` direto de `authenticated` permanece até o passo `20261007163200`. Hoje esse insert ainda passa pela policy `doc_fiscal_pendentes_insert_loja`.
 
-`20261007161220`, se fosse aplicado inteiro depois, substituiria o cancelamento seguro e manteria `fiscal_marcar_cancelado` / `fiscal_marcar_emitido` com `current_user <> 'postgres'`. Nessas duas, o `EXECUTE` é só `service_role`, então o predicado morto não abre a função para `authenticated`. Ainda assim o arquivo não entra nesta janela, porque o `CREATE` de `fiscal_cancelar_documento` que ele contém é o corpo sem loja.
+`20261007161220` continua fora desta janela fiscal. O `CREATE` de `fiscal_cancelar_documento` que ele contém é o mesmo de `20261009220000`, então uma execução posterior não reabre o cancelamento entre lojas. O arquivo ainda substitui `fiscal_marcar_cancelado` e `fiscal_marcar_emitido`, cujo `EXECUTE` é só `service_role`. Essas duas entram no lote `20261007*`, com zero caixas `ABERTO`, não neste change.
 
 ## 5. Validação local isolada
 
@@ -162,7 +164,7 @@ Opção A — só `20261009220000`. Menor diff. Deixa `INSERT` de `authenticated
 
 Opção B — `20261009220000` e, na mesma janela, `20261007163200`. É a recomendada. Fecha o bypass das RPCs, cria o cancelamento com loja e tira o insert direto. Não mexe em financeiro nem em caixa.
 
-Opção C — aplicar `161220` e depois `220000`, mais a série `06`/`07`. Cobre `fiscal_marcar_cancelado` e o painel, com janela em que o cancelamento nasce sem loja se os arquivos não forem um único change, e com risco de reescrever `cancelar_venda_transacional` e `financeiro_painel`. Fica para outra autorização.
+Opção C — lote `20261007*` na ordem do runbook de 08/10, com zero caixas `ABERTO`, e `20261009220000` por último entre os escritores das RPCs fiscais. `20261006120000` não entra. Outra autorização, distinta da janela fiscal.
 
 ## Checklist antes de qualquer execução
 

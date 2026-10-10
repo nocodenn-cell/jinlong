@@ -102,7 +102,7 @@ Consulta por nome (`financeiro`, `ssot`, `fiscal_cancel`, `fiscal_rpc`, `caixas_
 
 | Arquivo | Evidência |
 |---|---|
-| `20261006120000_financeiro_contas_formas_e_painel.sql` | sem par; o nome não apareceu entre os `financeiro_*` do ledger |
+| `20261006120000_financeiro_contas_formas_e_painel.sql` | sem par; **substituída** por `20261006180000` (ledger `20261006195837`). Ausência no ledger não é pendência. Não aplicar. |
 | `20261007161220_fiscal_cancelado_ssot.sql` | sem par; `fiscal_cancelar_documento` ausente em `public` |
 | `20261007163000_ssot_001_002_painel_ec_cache.sql` | sem par; nomes `ssot` do ledger são de agosto/2026, não desta leva |
 | `20261007163100_ssot_003_nfe_obrigacao_duplicata.sql` | idem |
@@ -175,7 +175,7 @@ Push desta branch (`sprint/go-live-01`, PR #535), lido em seguida no GitHub:
 ## 9. Ordem de merge
 
 1. **Não mergear** o PR #535. Produção e staging não recebem SQL nem deploy até autorização explícita.
-2. Quando autorizado, o passo de produção é aplicar, numa janela com backup, `20261009220000_fiscal_rpc_isola_loja.sql` e `20261010120000_caixa_sem_loja_padrao.sql`, e em seguida o lote `20261007*` / `20261006120000` cuja ausência for reconfirmada no ledger — cada uma com pré-check de catálogo. Só então criar o par no human-gates. Isso **não** está neste PR. O deploy da Edge `sync-outbox` e do PDV local tem de sair junto com o `DROP DEFAULT`, senão o caixa sem `loja_id` deixa de inserir.
+2. Nenhuma frase deste relatório autoriza execução. A ordem, quando houver autorização separada, está em `docs/auditorias/GO-LIVE-02-CHECKLIST-AUTORIZACAO.md` e no adendo de `docs/runbooks/PLANO_MIGRATIONS_PENDENTES_2026-10-08.md`. Resumo: `20261006120000` não se aplica. O lote `20261007*` exige zero caixas `ABERTO` e, se coincidir com a janela fiscal, vem antes de `20261009220000`. O `CREATE` de `fiscal_cancelar_documento` em `20261007161220` é o mesmo de `20261009220000`; reaplicá-lo não remove `FISCAL_CANCELAR_LOJA`. A recuperação das quatro RPCs é só `20261009220000`. `20261010120000` só sobe com o deploy da Edge e do PDV. O par no human-gates só depois do `COMMIT` autorizado.
 3. PRs prontos para merge agora: **nenhum** dos #529–#534.
 4. Se a capacidade for retomada depois do banco coerente: #529, depois #533 rebaseado, depois #534. Fechar #530 e #532. Não iniciar carga nem o ensaio de 12 h.
 

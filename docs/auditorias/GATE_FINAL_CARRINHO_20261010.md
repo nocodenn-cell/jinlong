@@ -112,7 +112,7 @@ Alvos: `unifiedCartStore.ts`, `unifiedCartStore.spec.ts`, `CaixaCarrinhoAuthSync
 
 ## 8. Riscos residuais
 
-- Ensaio manual no navegador não foi feito. Um bug só de ordem entre `onAuthStateChange` e a tela não aparece no teste de store.
+- Ensaio manual no navegador não foi feito neste gate. A passagem posterior está na seção 10.
 - Cupom antigo no `localStorage` sem dono é descartado no próximo login web. Efeito desejado, uma vez.
 - Os 4 erros de `App.tsx` seguem fora do typecheck oficial.
 - Os 4 testes fiscais seguem vermelhos neste Postgres local até o JWT de teste autenticar como o gerente semeado.
@@ -125,3 +125,9 @@ Alvos: `unifiedCartStore.ts`, `unifiedCartStore.spec.ts`, `CaixaCarrinhoAuthSync
 Os gates automáticos do carrinho passaram: testes de store, checkout e pagamento, typecheck do `shared-core`, typecheck oficial do desktop, ESLint com o config certo, e o build Next após restaurar dependências já declaradas. Os quatro erros de `App.tsx` e os quatro testes fiscais não vêm deste diff.
 
 O merge espera revisão e o ensaio manual ainda pendente: operador A bipa, recarrega, operador B no mesmo navegador não vê o cupom; a primeira loja não apaga a venda; a troca de loja apaga. Sem essa passagem na tela, o PR não deve ser mergeado.
+
+## 10. Atualização de 2026-10-10, depois deste gate
+
+O ensaio manual foi feito em Chrome local, `http://localhost:3000`, Supabase `127.0.0.1:54321`, head `79f2beb5`. Incluir e recarregar devolveu 1 item. O operador B no mesmo navegador ficou com 0 itens. O legado sem dono não foi adotado. A primeira loja preservou 1 item. A troca de loja zerou o cupom. O PR #536 foi mergeado em `sprint/go-live-01` no commit `5cdcc697`.
+
+O botão Sair ficou pendente à parte. As duas primeiras saídas, inclusive a troca de operador, usaram o botão. As duas seguintes não navegaram para `/login` em 8s. Isso não reabre o gate do carrinho e não autoriza deploy nem a janela fiscal.

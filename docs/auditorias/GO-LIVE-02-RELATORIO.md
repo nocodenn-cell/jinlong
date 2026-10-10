@@ -99,8 +99,8 @@ Nenhum par novo foi gravado. Nenhum `migration repair`. O guard permanece.
 |---|---|---|---|
 | `20261009220000` | `remote_ausente` | `internal.fiscal_sessao_privilegiada()` ausente. As três RPCs existentes ainda têm `current_user` e não têm `FISCAL_REPROCESSO_LOJA`. O arquivo não cita `formas_pagamento`, `contas_financeiras` nem `valor_sistema_dinheiro`. | **Não aplicada.** Pendente desta janela, passo 1. |
 | `20261007163200` | `remote_ausente` | `INSERT` em `documentos_fiscais_pendentes` ainda concedido a `authenticated`. A RPC `fiscal_enfileirar_documento_venda(uuid, text, jsonb, uuid)` já existe, então a prova do arquivo não depende da série financeira. | **Não aplicada.** Pendente desta janela, passo 2, na mesma transação, sem o `BEGIN`/`COMMIT` do arquivo. |
-| `20261007161220` | `remote_ausente` | `fiscal_cancelar_documento` e `fiscal_marcar_cancelado` ausentes. `fiscal_marcar_emitido` não contém `CANCELADO`. O cancelamento deste arquivo usa `current_user <> 'postgres'` e não contém `FISCAL_CANCELAR_LOJA`. | **Não aplicada.** **Incompatível** se rodar depois de `20261009220000`: regrava o cancelamento sem loja. `fiscal_marcar_cancelado` e a trava `CANCELADO` de `fiscal_marcar_emitido` continuam pendentes, mas só num arquivo novo que não recrie `fiscal_cancelar_documento`. |
-| `20261006120000` | `remote_ausente` | Coluna `formas_pagamento.conta_financeira_id` ausente. | **Não aplicada.** Pendente de janela financeira. Não é dependência de `20261009220000`. |
+| `20261007161220` | `remote_ausente` | `fiscal_cancelar_documento` e `fiscal_marcar_cancelado` ausentes. `fiscal_marcar_emitido` não contém `CANCELADO`. | **Não aplicada.** O `CREATE` de `fiscal_cancelar_documento` no arquivo é o mesmo de `20261009220000`. Reaplicar não remove `FISCAL_CANCELAR_LOJA`. `fiscal_marcar_cancelado` e a trava `CANCELADO` continuam neste arquivo e entram no lote `20261007*`, com zero caixas `ABERTO`, não na janela fiscal. |
+| `20261006120000` | `remote_ausente` | Coluna `formas_pagamento.conta_financeira_id` ausente. | **Substituída.** `20261006180000_financeiro_contas_operacionais` já cobre o efeito (ledger `20261006195837`). Não aplicar. Não é dependência de `20261009220000`. |
 | `20261007163000` | `remote_ausente` | `financeiro_painel` ainda soma `saldo_atual` e não chama `internal.valor_sistema_dinheiro`. O arquivo é uma transação: se tivesse commitado, o painel teria mudado junto. `CANCELAR_VENDA_JA_CANCELADA` no cancelamento vem de `20260820150000`, já pareada no human-gates, não deste arquivo. | **Não aplicada.** Pendente de janela de caixa. **Incompatível** na janela fiscal: reescreve `cancelar_venda_transacional`. |
 | `20261007163100` | `remote_ausente`; sem versão remota de outro timestamp | O marcador `IMPORT_NFE_OBRIGACAO_SEM_DUPLICATA` não foi relido no corpo de `confirmar_importacao_nfe`. Ausência de ledger não foi promovida a "aplicada por fora". | **Não aplicada no registro.** Efeito no catálogo fica para o pré-check da janela de NF-e. Não entra em lote. |
 | `20261007170000` | `remote_ausente`; sem versão remota de outro timestamp | O corpo de `registrar_movimentacao` não foi relido. `internal.valor_sistema_dinheiro(uuid)` existe e é dependência deste arquivo, não prova de que ele rodou. | **Não aplicada no registro.** Efeito no catálogo fica para a janela de caixa. Não entra em lote. |
@@ -120,7 +120,7 @@ Pré-condição de catálogo, já lida em 2026-10-10 e a repetir no dump do dia:
 1. Cumprir `GO-LIVE-02-CHECKLIST-RESTORE.md` no mesmo dia. Sem dump restaurado, parar.
 2. Pré-checks do `GO-LIVE-01-CHECKLIST-FISCAL.md` nesse Postgres.
 3. Uma transação: `20261009220000_fiscal_rpc_isola_loja.sql` e depois o SQL de `20261007163200` sem o `BEGIN`/`COMMIT` do arquivo. O helper é `bundleFiscalP0` em `backend/scripts/fiscal-p0-janela.mjs`. A segunda aplicação é idempotente. `SELECT 1/0` antes do `COMMIT` desfaz os dois arquivos.
-4. Não aplicar `20261007161220` em momento nenhum depois.
+4. Não usar `20261007161220` como recuperação das quatro RPCs. Reaplicar o arquivo não remove `FISCAL_CANCELAR_LOJA`; `assertRecoveryIsCanonical` ainda recusa qualquer texto que não seja `20261009220000`. O lote `20261007*` é outra autorização e exige zero caixas `ABERTO`. `20261006120000` não se aplica.
 5. Conferir: `internal.fiscal_sessao_privilegiada()` existe; `fiscal_cancelar_documento(uuid, text)` existe; gerente de outra loja recebe `FISCAL_REPROCESSO_LOJA` ou `FISCAL_CANCELAR_LOJA`; usuário inativo é negado; `anon` não executa; `service_role` enfileira; `COUNT(*)` da fila igual ao snapshot; `INSERT` de `authenticated` na fila é zero.
 
 Contrato do app publicado, sem mudança de assinatura:
@@ -135,7 +135,7 @@ Contrato do app publicado, sem mudança de assinatura:
 Detalhe operacional na seção 6 do checklist.
 
 - Falha antes do `COMMIT`: schema e funções ficam como estavam. Não há repair de ledger.
-- Função segura perdida depois do commit: reaplicar só o texto de `20261009220000`. Outro SQL, inclusive `20261007161220`, é recusado por `assertRecoveryIsCanonical`.
+- Função segura perdida depois do commit: reaplicar só o texto de `20261009220000`. Outro SQL, inclusive o arquivo inteiro `20261007161220`, é recusado por `assertRecoveryIsCanonical`. O `CREATE` de cancelamento dentro de `20261007161220` é o mesmo corpo, mas o arquivo também substitui outras funções e não é o script de recuperação.
 - Dado alterado por chamada real: restaurar o dump do dia num Postgres novo. Não trocar o corpo da função pelo corpo vulnerável.
 - Venda ou documento nascido depois da hora do dump: reconciliar pela outbox e pela fila. O restore não os contém.
 
@@ -152,11 +152,13 @@ Detalhe operacional na seção 6 do checklist.
 
 - Dump real de produção ainda não autorizado. O ensaio sintético em Postgres 17 passou.
 - `20261010120000` só pode subir com a Edge e o PDV que enviam `loja_id`. O tipo TypeScript já exige o campo; o default de produção continua.
-- `fiscal_marcar_cancelado` e a trava de `fiscal_marcar_emitido` continuam fora do banco. Exigem arquivo novo, não `20261007161220`.
+- `fiscal_marcar_cancelado` e a trava de `fiscal_marcar_emitido` continuam fora do banco. Estão em `20261007161220`, no lote `20261007*`, com zero caixas `ABERTO`. O cancelamento desse arquivo já não reabre o bypass de loja.
 - Série financeira, NF-e e fechamento por forma permanece não aplicada. `20261007163100` e `20261007170000` ainda precisam de leitura do corpo no dia da janela delas.
 - Staging não é clone.
 
 ## 10. Critérios para liberar a janela fiscal
+
+A checklist que separa backup, restore, lote `20261007*`, janela fiscal e deploy é `docs/auditorias/GO-LIVE-02-CHECKLIST-AUTORIZACAO.md`. Os itens abaixo são só o bloco fiscal.
 
 Todos, no mesmo dia. Falhou um, a janela não abre.
 
@@ -164,15 +166,15 @@ Todos, no mesmo dia. Falhou um, a janela não abre.
 2. Dump lógico do dia restaurado em Postgres descartável, com contagens de tabelas, policies, functions e triggers iguais à origem, SHA-256 anotado e arquivos apagados ao fim.
 3. Pré-checks do checklist fiscal passam nesse restore.
 4. O bundle, nesse restore, passa na matriz da seção 7: outra loja, inativo, `anon`, `service_role`, contagem da fila e `INSERT` revogado.
-5. `20261007161220` não está no conjunto aplicado.
+5. O conjunto desta janela continua só `20261009220000` e `20261007163200`. `20261007161220` não entra aqui. `20261006120000` não entra em janela nenhuma.
 6. Nenhum `migration repair` e nenhum par novo no human-gates antes do `COMMIT` em produção.
 7. Há operador nomeado para interromper se a contagem da fila mudar no DDL.
 
 ## 11. Decisão
 
-- Merge na `main`: **NO-GO**. O PR #535 fica aberto. O drift é real e o guard permanece.
-- Solicitar autorização do backup real: **GO**. O ensaio sintético em Postgres 17 passou.
-- Executar o dump ou a implantação fiscal: **NO-GO** até os sete critérios da seção 10.
+- Merge na `main`: **NO-GO**. O PR #535 fica aberto. O head da branch passou a `5cdcc697` com o merge do PR #536. O drift remoto continua e o guard permanece.
+- Solicitar autorização do backup real: **GO** para pedir. O ensaio sintético em Postgres 17 passou e não é dump de produção.
+- Executar o dump, a implantação fiscal, o lote `20261007*` ou o deploy: **NO-GO**.
 - Piloto: **NO-GO**.
 
 Banco de produção: **inalterado**.
@@ -184,4 +186,5 @@ Banco de produção: **inalterado**.
 - Merge do PR #535.
 - Deploy da Edge e do PDV junto com `20261010120000`.
 - Leitura do corpo de `confirmar_importacao_nfe` e de `registrar_movimentacao` antes das janelas de NF-e e de caixa.
-- Arquivo novo para `fiscal_marcar_cancelado` e para a trava de `fiscal_marcar_emitido`, em change separado.
+- Lote `20261007*`, incluindo `fiscal_marcar_cancelado` e a trava de `fiscal_marcar_emitido` que estão em `20261007161220`. Zero caixas `ABERTO`. `20261006120000` não faz parte desse lote.
+- Correção do botão Sair do caixa. Pendência separada do carrinho e desta janela. No ensaio do head `79f2beb5`, duas saídas usaram o botão e duas não navegaram em 8s.

@@ -54,7 +54,7 @@ Depois do restore, e só no Postgres descartável:
 - [ ] Falha injetada (`SELECT 1/0`) antes do `COMMIT` deixa o predicado antigo no lugar.
 - [ ] Segunda aplicação não muda a contagem da fila.
 - [ ] `anon` não executa as quatro RPCs. Gerente de outra loja recebe `FISCAL_*_LOJA`. Usuário inativo é negado. `service_role` enfileira.
-- [ ] Não aplicar `20261007161220` depois.
+- [ ] Não usar `20261007161220` como recuperação das quatro RPCs. Reaplicar esse arquivo não remove `FISCAL_CANCELAR_LOJA`; o script de recuperação continua sendo só `20261009220000`.
 
 ## 6. Quatro recuperações, sem misturar
 

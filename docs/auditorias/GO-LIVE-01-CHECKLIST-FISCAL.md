@@ -50,7 +50,7 @@ Parar e não continuar se qualquer item abaixo acontecer:
 - `anon` consegue `EXECUTE`
 - a contagem da fila muda durante o DDL
 - o corpo novo ainda contém `current_user <> 'postgres'`
-- alguém pede para reaplicar `20261007161220` ou um `pg_get_functiondef` anterior
+- alguém pede para recuperar as quatro RPCs colando `20261007161220` ou um `pg_get_functiondef` anterior. A recuperação é só `20261009220000`. Reaplicar `20261007161220` não remove `FISCAL_CANCELAR_LOJA`, e mesmo assim não é o script de recuperação.
 
 ## Recuperação
 

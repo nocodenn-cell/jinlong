@@ -8,7 +8,7 @@ Base: `origin/main` @ `a39a530986447c2b608ad409c469267f35141744`.
 Sprint: **CONCLUÍDA** tecnicamente.  
 Prontidão operacional: **NO-GO**.
 
-Nenhuma migration foi aplicada em produção ou staging. Não houve merge, deploy manual, carga nem alteração no AgeGuard.
+Nenhuma migration foi aplicada em produção ou staging. Não houve merge na `main`, deploy manual, carga nem alteração no AgeGuard. O PR #536 entrou nesta branch no merge `5cdcc697` (head do carrinho `79f2beb5`).
 
 ## 1. Objetivo
 
@@ -33,7 +33,7 @@ Fechar a prontidão do piloto Jinlong: alinhar o que o Git, a Vercel e o Supabas
 
 `cancelar_venda_transacional` e `devolver_ou_trocar_venda` não foram reescritas. O corpo de produção já impede o segundo crédito de estoque.
 
-A série `20261006120000` e `20261007163000`–`20261007190000` não entra nesta entrega. Responsável da próxima janela de schema: quem autorizar o change de financeiro/caixa. Critério de aceite: pré-check do corpo de `financeiro_painel` antes de `20261007163000`, e `20261007180000` antes de `20261007190000`. `20261007161220` não pode ser aplicado depois de `20261009220000`.
+`20261006120000` foi substituída por `20261006180000` e não é pendência. A série `20261007163000`–`20261007190000` não entra na janela fiscal. O lote `20261007*` exige zero caixas `ABERTO`. `20261007161220` pode rodar depois de `20261009220000` sem remover o isolamento: os dois `CREATE` de `fiscal_cancelar_documento` são o mesmo texto. A recuperação das quatro RPCs continua sendo só `20261009220000`.
 
 ## 4. Testes
 
@@ -54,7 +54,7 @@ A série `20261006120000` e `20261007163000`–`20261007190000` não entra nesta
 | `next build`, lint do monorepo, `cargo check` | **não executados** |
 | CI `migration-remote-drift` | **FAIL** esperado. `remote_ausente`: `20261006120000`, `20261007161220`, `20261007163000`, `20261007163100`, `20261007163200`, `20261007170000`, `20261007171000`, `20261007180000`, `20261007190000`, `20261009220000`, `20261010120000`. Não foi criado par em `migration-human-gates.json`. |
 
-O diff da branch não contém token `eyJ` nem senha. As menções a `service_role` são nomes de papel.
+O diff da branch não contém token `eyJ` nem senha. As menções a `service_role` são nomes de papel. `20261006120000` aparece no `remote_ausente` e não deve ser aplicada para fazer esse check ficar verde.
 
 ## 5. PRs e commits
 
@@ -76,7 +76,8 @@ Commits desde `a39a5309`:
 
 ## 6. GitHub, Vercel e Supabase
 
-- `main` permanece em `a39a5309`. Esta branch não foi mergeada.
+- `main` permanece em `a39a5309`. Esta branch não foi mergeada na `main`.
+- PR #536 mergeado nesta branch: head `79f2beb5`, merge `5cdcc697`. Homologação local do carrinho em Chrome, `http://localhost:3000`, Supabase `127.0.0.1:54321`: incluir e recarregar devolveu 1 item; operador B no mesmo navegador ficou com 0 itens; legado sem dono não foi adotado; primeira loja preservou 1 item; troca de loja zerou o cupom. Evidência no comentário do PR #536.
 - ERP em produção: deployment **READY** `dpl_DbrwZ7G4dWe6isCfQpVEg9rwyv1U` no mesmo SHA da `main`.
 - Site: último build concluído em `19f05be5`. Ignored Build Step segue cancelando o que não altera `site/`.
 - Produção `kbabmewnahysfvlybiak`: ledger máximo `20261009140739`. Sem `fiscal_sessao_privilegiada`. Sem `fiscal_cancelar_documento`. `anon` não executa `cancelar_venda_transacional`.
@@ -87,16 +88,18 @@ Commits desde `a39a5309`:
 **P0**
 
 - Aplicar a janela fiscal (`20261009220000` e depois `20261007163200`) só com autorização e com dump do dia restaurado. Responsável: operador autorizado pelo dono. Critério: checklist `GO-LIVE-01-CHECKLIST-FISCAL.md`.
-- `fiscal_cancelar_documento` ausente em produção enquanto a tela chama a RPC. Resolve na mesma janela. Não aplicar `20261007161220` depois.
+- `fiscal_cancelar_documento` ausente em produção enquanto a tela chama a RPC. A janela fiscal cria a versão com loja. `20261007161220` não é o script dessa janela; o `CREATE` dele já é o mesmo corpo e não reabre o bypass.
 
 **P1**
 
 - `20261010120000` (`DROP DEFAULT` de `caixas.loja_id`) junto com o deploy da Edge e do PDV que envia `loja_id`. Responsável: o mesmo change de sync, depois do merge. Critério: caixa sem `loja_id` falha; duas lojas não herdam `a0000001-0000-4000-8000-000000000001`.
 - Backup diário de produção. Responsável: dono do repositório, secret `SUPABASE_ACCESS_TOKEN` no workflow já descrito em `docs/runbooks/BACKUP_RESTORE_CANONICO.md`. Critério: um artifact com menos de 25 h.
 - Ensaio em Postgres servidor. Responsável: quem for executar a janela, na máquina com Docker. Critério: repetir o roteiro do `test:fiscal-p0-pre-req` em `postgres:17-alpine` com dados sintéticos. Não bloqueia este PR.
-- Série `20261006` / `20261007163000`–`20261007190000`. Fora desta sprint. Critério na seção 3.
+- Série `20261007163000`–`20261007190000`, com `20261007161220` no início do lote. Fora da janela fiscal. Critério: zero caixas `ABERTO`, backup do dia restaurado e a ordem do adendo em `docs/runbooks/PLANO_MIGRATIONS_PENDENTES_2026-10-08.md`. `20261006120000` não entra.
 
 **P2**
+
+- Botão Sair do caixa, intermitente, fora do isolamento do carrinho. No ensaio Playwright + Chrome em `http://localhost:3000` contra Supabase `127.0.0.1:54321`, head `79f2beb5`, as duas primeiras saídas (incluindo a troca de operador) usaram o botão. As duas seguintes não navegaram para `/login` em 8s; o ensaio encerrou a sessão com `POST /auth/signout` só para semear o cenário seguinte. O cupom já tinha sido medido. Não corrigido.
 
 - Pilha de capacidade #529–#534 continua draft. Não mergear. Sem CAP-02 e sem teste de 12 h.
 - `tsc` do `pdv-local` sem dependências Tauri/Sentry instaladas neste workspace.
@@ -105,8 +108,8 @@ Commits desde `a39a5309`:
 ## 8. Riscos operacionais
 
 - Deploy da Edge nova sem o PDV que manda `loja_id` faz o caixa antigo falhar fechado. É o comportamento desejado, e precisa de comunicação.
-- Aplicar `20261007161220` depois da janela reabre cancelamento fiscal entre lojas.
-- Reaplicar o corpo antigo das RPCs reabre o bypass de `current_user`. A recuperação permitida é reaplicar `20261009220000`.
+- Reaplicar `20261007161220` não reabre o cancelamento entre lojas: o `CREATE` de `fiscal_cancelar_documento` é o de `20261009220000`. O corpo histórico sem loja ficou só no fixture de teste e não é migration.
+- Reaplicar um `pg_get_functiondef` anterior, ou qualquer SQL que não seja o arquivo `20261009220000`, não é a recuperação das quatro RPCs. `assertRecoveryIsCanonical` recusa esse texto.
 - Staging não serve para homologar esta janela.
 - O piloto publicado continua com as três RPCs fiscais no predicado morto.
 

@@ -15,7 +15,7 @@ Este texto pede uma decisão. Não executa dump, migration nem deploy. Não cont
    - `backend/supabase/migrations/20261007163200_ssot_004_revoke_insert_documentos_fiscais.sql` sem o `BEGIN`/`COMMIT` interno
 4. Pausar o worker fiscal durante essa transação.
 
-Fora desta autorização: merge na `main`, deploy, `20261010120000`, `20261007161220` e a série financeira/caixa/NF-e.
+Fora desta autorização: merge na `main`, deploy, `20261010120000`, o lote `20261007*` e qualquer aplicação de `20261006120000`. `20261007161220` não faz parte desta janela. O `CREATE` de `fiscal_cancelar_documento` nesse arquivo é o mesmo de `20261009220000`, então uma execução posterior não reabre o cancelamento entre lojas; ela continua sendo outro change, com zero caixas `ABERTO`.
 
 ## Dados acessados
 
