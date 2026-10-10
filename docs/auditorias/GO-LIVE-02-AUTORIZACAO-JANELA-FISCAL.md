@@ -46,7 +46,7 @@ A troca das funções é uma transação curta. No volume visto em 2026-10-08 (s
 - `fiscal_cancelar_documento` continua ausente até lá, e a tela já chama essa assinatura.
 - `INSERT` de `authenticated` na fila continua aberto até `20261007163200`.
 - RPO diário não está garantido. Sem o dump do dia, não há restore de dados.
-- O script de Postgres 17 ainda não rodou: o daemon Docker está parado. O ensaio embarcado anterior permanece a evidência de comportamento, não de servidor.
+- RPO diário não está garantido. Sem o dump do dia, não há restore de dados de produção. O ensaio sintético em Postgres 17 passou; isso não substitui o dump real.
 - `fiscal_marcar_cancelado` não entra nesta janela.
 
 ## Interromper se
@@ -85,4 +85,4 @@ Assinaturas que o app publicado já usa e que a janela não muda: `fiscal_cancel
 
 **GO CONDICIONAL para solicitar** esta autorização.
 
-**NO-GO para executar** até a autorização escrita e até `bash backend/scripts/fiscal-janela-postgres.sh` passar no Postgres 17 do dia, com o dump restaurado, antes do `COMMIT` em produção.
+**NO-GO para executar** o dump e o `COMMIT` até a autorização escrita. O script sintético em Postgres 17 já passou. No dia, o dump real ainda precisa ser restaurado num Postgres descartável antes do `COMMIT` em produção.

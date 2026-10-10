@@ -53,13 +53,26 @@ Checks obrigatórios de `main`, lidos em `required_status_checks`: `build-and-te
 
 ## 4. PostgreSQL servidor
 
-**NÃO EXECUTADO** de novo nesta preparação final. `docker info` falha: o pipe `dockerDesktopLinuxEngine` não existe. O daemon não foi iniciado e a configuração global não mudou. O comando pronto para quando o daemon subir, sem publicar porta e sem criar rede, é `bash backend/scripts/fiscal-janela-postgres.sh`. Ele sai com código 2 enquanto o Docker estiver parado. Os testes PGlite não foram repetidos. A autorização pedida está em `docs/auditorias/GO-LIVE-02-AUTORIZACAO-JANELA-FISCAL.md`.
+**PASS** em 2026-10-10. Docker Engine 29.8.1, imagem `postgres:17-alpine` (`sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24`). O script `backend/scripts/fiscal-janela-postgres.sh` rodou pelo Git Bash, que enxerga o `docker.exe` do Windows. O `bash` do WSL não enxerga o daemon e não foi usado. Nenhuma porta foi publicada, nenhuma rede foi criada e a configuração global do Docker não mudou. Os containers `jinlong-fiscal-src` e `jinlong-fiscal-dst` foram removidos ao fim.
 
-A evidência transacional já registrada continua válida como ensaio embarcado, não como Postgres 17 servidor: transação única, rollback de `SELECT 1/0`, segunda aplicação idempotente, `anon` negado, outra loja negada, usuário inativo negado, `service_role` enfileira, contagem da fila preservada no DDL. O critério que substitui esse ensaio, no dia da janela, é o restore do dump em Postgres descartável (seção 11).
+Saída, só contagens: `{"fila":3,"eventos":1,"funcoes_public":4,"insert_authenticated":0,"anon_execute":false}`.
+
+| Prova | Resultado |
+|---|---|
+| Restore sintético do `pg_dump` de `public` no segundo container | **PASS**. `auth.uid` e `auth.role` foram reaplicados porque o dump de `public` não traz o schema `auth`. |
+| Pré-check | **PASS** |
+| `20261009220000` + `20261007163200` na mesma transação, duas vezes | **PASS**. Aviso `SSOT-004 PROVA ESTRUTURAL OK`. |
+| `anon` | **PASS**. `permission denied` |
+| Outra loja e usuário inativo | **PASS**. `FISCAL_REPROCESSO_LOJA`, `FISCAL_REPROCESSO_PERFIL`, `FISCAL_CANCELAR_LOJA`, `FISCAL_ENQUEUE_PERMISSAO` |
+| Gerente da própria loja e `service_role` | **PASS**. Reprocesso, cancelamento com os argumentos do frontend e enqueue sem `p_loja_id` |
+| Fila | **PASS**. 2 documentos no seed; o DDL não alterou a contagem; o enqueue de prova levou a 3. `INSERT` de `authenticated` ficou em 0 |
+| Rollback de `SELECT 1/0` | **PASS**. O predicado antigo permaneceu até o `COMMIT` seguinte |
+
+O ensaio embarcado anterior não foi repetido. Dump real continua pendente de autorização.
 
 ## 5. Backup e restauração
 
-**PENDENTE.** Esta continuação não extraiu dados.
+**PENDENTE** para dados reais. O restore sintético em Postgres 17 passou na seção 4. Esta continuação não extraiu dados de produção.
 
 - Plano Free, sem PITR. RPO diário **não garantido** (`docs/runbooks/BACKUP_RESTORE_CANONICO.md`).
 - O último drill com dump real autorizado é de 2026-10-08, fora desta sprint.
@@ -137,7 +150,7 @@ Detalhe operacional na seção 6 do checklist.
 
 **P1**
 
-- Postgres 17 servidor não rodou: daemon Docker ausente.
+- Dump real de produção ainda não autorizado. O ensaio sintético em Postgres 17 passou.
 - `20261010120000` só pode subir com a Edge e o PDV que enviam `loja_id`. O tipo TypeScript já exige o campo; o default de produção continua.
 - `fiscal_marcar_cancelado` e a trava de `fiscal_marcar_emitido` continuam fora do banco. Exigem arquivo novo, não `20261007161220`.
 - Série financeira, NF-e e fechamento por forma permanece não aplicada. `20261007163100` e `20261007170000` ainda precisam de leitura do corpo no dia da janela delas.
@@ -158,7 +171,8 @@ Todos, no mesmo dia. Falhou um, a janela não abre.
 ## 11. Decisão
 
 - Merge na `main`: **NO-GO**. O PR #535 fica aberto. O drift é real e o guard permanece.
-- Implantação fiscal: **NO-GO** até os sete critérios da seção 10.
+- Solicitar autorização do backup real: **GO**. O ensaio sintético em Postgres 17 passou.
+- Executar o dump ou a implantação fiscal: **NO-GO** até os sete critérios da seção 10.
 - Piloto: **NO-GO**.
 
 Banco de produção: **inalterado**.

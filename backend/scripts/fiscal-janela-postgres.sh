@@ -77,6 +77,7 @@ start_pg "$DST"
 psql_file "$DST" "$SQL_DIR/fiscal-drill-roles.sql"
 docker exec -i "$DST" psql -U postgres -v ON_ERROR_STOP=1 -d postgres < "$WORK/dump.filtered.sql" >/dev/null
 TARGET="$DST"
+psql_file "$TARGET" "$SQL_DIR/fiscal-drill-auth.sql"
 psql_file "$TARGET" "$SQL_DIR/fiscal-drill-precheck.sql"
 expect_fail "division by zero" "$(cat "$WORK/51-abort.sql")"
 dead="$(docker exec -i "$TARGET" psql -U postgres -tA -d postgres -c "SELECT position('current_user <> ''postgres''' in pg_get_functiondef('public.fiscal_reprocessar_documento(uuid)'::regprocedure))")"
