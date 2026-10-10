@@ -23,34 +23,30 @@ if (/supabase\.co/.test(dbUrl)) {
 }
 
 function q(sql) {
-  return execSync(`psql "${dbUrl}" -v ON_ERROR_STOP=1 -tAc ${JSON.stringify(sql)}`, {
+  const oneLine = String(sql).replace(/\s+/g, ' ').trim()
+  return execSync(`psql "${dbUrl}" -v ON_ERROR_STOP=1 -tAc ${JSON.stringify(oneLine)}`, {
     encoding: 'utf8',
   }).trim()
 }
 
-const sinceClause = since
-  ? `AND v.data >= '${since}'::timestamptz`
-  : `AND v.data >= now() - interval '2 hours'`
+const sinceSql = since
+  ? `v.data >= '${since}'::timestamptz`
+  : `v.data >= now() - interval '2 hours'`
 
 const vendas = Number(
-  q(`SELECT count(*) FROM public.vendas v WHERE v.status='CONCLUIDA' ${sinceClause}`),
+  q(`SELECT count(*) FROM public.vendas v WHERE v.status='CONCLUIDA' AND ${sinceSql}`),
 )
+
 const porLoja = q(
-  `SELECT coalesce(l.codigo,'?')||'='||count(*)::text
-   FROM public.vendas v
-   JOIN public.lojas l ON l.id=v.loja_id
-   WHERE v.status='CONCLUIDA' ${sinceClause}
-   GROUP BY 1 ORDER BY 1`,
+  `SELECT coalesce(l.codigo,'?')||'='||count(*)::text FROM public.vendas v JOIN public.caixas c ON c.id=v.caixa_id JOIN public.lojas l ON l.id=c.loja_id WHERE v.status='CONCLUIDA' AND ${sinceSql} GROUP BY l.codigo ORDER BY l.codigo`,
 )
   .split('\n')
   .filter(Boolean)
 
 const duplicadas = Number(
-  q(`SELECT count(*) FROM (
-       SELECT id FROM public.vendas v
-       WHERE v.status='CONCLUIDA' ${sinceClause}
-       GROUP BY id HAVING count(*)>1
-     ) d`),
+  q(
+    `SELECT count(*) FROM (SELECT id FROM public.vendas v WHERE v.status='CONCLUIDA' AND ${sinceSql} GROUP BY id HAVING count(*)>1) d`,
+  ),
 )
 
 const estoqueNegativo = Number(
@@ -61,25 +57,23 @@ const caixasAbertos = Number(
   q(`SELECT count(*) FROM public.caixas WHERE status='ABERTO'`),
 )
 
-const locks = q(
-  `SELECT count(*)::text FROM pg_locks WHERE NOT granted`,
+const locks = Number(q(`SELECT count(*) FROM pg_locks WHERE NOT granted`))
+const activity = Number(
+  q(`SELECT count(*) FROM pg_stat_activity WHERE datname='postgres' AND state='active'`),
+)
+const conexoes = Number(
+  q(`SELECT count(*) FROM pg_stat_activity WHERE datname='postgres'`),
 )
 
-const activity = q(
-  `SELECT count(*)::text FROM pg_stat_activity WHERE datname='postgres' AND state='active'`,
-)
-
-const conexoes = q(
-  `SELECT count(*)::text FROM pg_stat_activity WHERE datname='postgres'`,
-)
-
-// Isolamento: venda de loja A com caixa de loja B
+// Isolamento: operador da venda deve pertencer à loja do caixa
 const cruzadas = Number(
-  q(`SELECT count(*)
-     FROM public.vendas v
-     JOIN public.caixas c ON c.id=v.caixa_id
-     WHERE v.status='CONCLUIDA' ${sinceClause}
-       AND v.loja_id IS DISTINCT FROM c.loja_id`),
+  q(
+    `SELECT count(*) FROM public.vendas v JOIN public.caixas c ON c.id=v.caixa_id JOIN public.usuarios u ON u.id=v.operador_id WHERE v.status='CONCLUIDA' AND ${sinceSql} AND u.loja_id IS DISTINCT FROM c.loja_id`,
+  ),
+)
+
+const saldoCaixas = q(
+  `SELECT coalesce(sum(c.saldo_atual),0)::text FROM public.caixas c WHERE c.status='ABERTO'`,
 )
 
 const report = {
@@ -90,14 +84,12 @@ const report = {
   ids_duplicados: duplicadas,
   estoque_negativo: estoqueNegativo,
   caixas_abertos: caixasAbertos,
-  locks_nao_granted: Number(locks),
-  pg_active: Number(activity),
-  pg_conexoes: Number(conexoes),
-  vendas_caixa_loja_cruzada: cruzadas,
-  ok:
-    duplicadas === 0 &&
-    estoqueNegativo === 0 &&
-    cruzadas === 0,
+  saldo_caixas_abertos: Number(saldoCaixas),
+  locks_nao_granted: locks,
+  pg_active: activity,
+  pg_conexoes: conexoes,
+  vendas_operador_loja_cruzada: cruzadas,
+  ok: duplicadas === 0 && estoqueNegativo === 0 && cruzadas === 0 && vendas > 0,
 }
 
 fs.writeFileSync(art, JSON.stringify(report, null, 2))
