@@ -144,7 +144,11 @@ Segredos: este arquivo não contém service role, senha nem token. Refs de proje
 - Site: último build de produção **concluído** em `19f05be5`. Deploys posteriores da `main` que não tocam o site aparecem **Canceled** / Skipped - Not affected. Comportamento do `site/scripts/vercel-ignore.sh`, não falha.
 - Previews do ERP nas branches de capacidade: **Canceled by Ignored Build Step**. Intencional. Não contornar.
 
-Push desta branch de documentação pode gerar os mesmos previews cancelados. Não forçar build.
+Push desta branch (`sprint/go-live-01`, PR #535), lido em seguida no GitHub:
+
+- `pdv-importados`: **Canceled by Ignored Build Step** (check verde).
+- `jinlong-site`: o check entrou como deploy em andamento, não como skip. Branch nova não tem `VERCEL_GIT_PREVIOUS_SHA`; `site/scripts/vercel-ignore.sh` (linhas 26–28) constrói quando não há base. Não forcei nem cancelei esse preview.
+- `gitleaks` e `detect-paths` ainda estavam pending nesse instante. Supabase Preview: skipping.
 
 ## 8. Riscos ainda abertos
 
@@ -167,8 +171,7 @@ Push desta branch de documentação pode gerar os mesmos previews cancelados. N�
 | Campo | Valor |
 |---|---|
 | Branch | `sprint/go-live-01` |
-| Commit do relatório | `8fbecf1aa93588ba9560fa6b3da0fa876a4356e1` |
-| Commit que grava esse SHA | `d9856ae4` (ver `git log` da branch para o HEAD final) |
+| Commits | `8fbecf1aa93588ba9560fa6b3da0fa876a4356e1` (relatório), `d9856ae4` (SHA), `e8223a0a12f6cf10f95cc46c52d443b6e1b237e5` (link do PR). O commit seguinte só registra o efeito do preview. |
 | PR | https://github.com/nocodenn-cell/fastproduct/pull/535 |
 | Auto-merge | não solicitado |
 | Produção alterada | não |
