@@ -1,0 +1,736 @@
+[
+  {
+    "stem": "20260621000500_209_fiscal_campos_loja_pdvconfig",
+    "file": "20260621000500_209_fiscal_campos_loja_pdvconfig.sql",
+    "canonical_version": "20260621000500",
+    "history_name": null,
+    "history_version": null,
+    "synthetic_covers": [
+      "209_210_fiscal_campos"
+    ],
+    "status": "applied_verified",
+    "reason": "coberto por sintético 209_210_fiscal_campos + fingerprints OK",
+    "fingerprint": {
+      "expected": 2,
+      "present": 2,
+      "tables": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      },
+      "views": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      },
+      "routines": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      },
+      "columns": {
+        "expected": 2,
+        "present": 2,
+        "missing": []
+      }
+    }
+  },
+  {
+    "stem": "20260621000600_210_fiscal_campos_produto",
+    "file": "20260621000600_210_fiscal_campos_produto.sql",
+    "canonical_version": "20260621000600",
+    "history_name": null,
+    "history_version": null,
+    "synthetic_covers": [
+      "209_210_fiscal_campos"
+    ],
+    "status": "applied_verified",
+    "reason": "coberto por sintético 209_210_fiscal_campos + fingerprints OK",
+    "fingerprint": {
+      "expected": 1,
+      "present": 1,
+      "tables": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      },
+      "views": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      },
+      "routines": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      },
+      "columns": {
+        "expected": 1,
+        "present": 1,
+        "missing": []
+      }
+    }
+  },
+  {
+    "stem": "20260621005400_256_pdv_diagnostico_pre_producao",
+    "file": "20260621005400_256_pdv_diagnostico_pre_producao.sql",
+    "canonical_version": "20260621005400",
+    "history_name": null,
+    "history_version": null,
+    "synthetic_covers": [
+      "20260621005400_256_258_269_batch"
+    ],
+    "status": "applied_verified",
+    "reason": "coberto por sintético 20260621005400_256_258_269_batch + fingerprints OK",
+    "fingerprint": {
+      "expected": 1,
+      "present": 1,
+      "tables": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      },
+      "views": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      },
+      "routines": {
+        "expected": 1,
+        "present": 1,
+        "missing": []
+      },
+      "columns": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      }
+    }
+  },
+  {
+    "stem": "20260621005500_258_produtos_localizacao_nome_reduzido",
+    "file": "20260621005500_258_produtos_localizacao_nome_reduzido.sql",
+    "canonical_version": "20260621005500",
+    "history_name": null,
+    "history_version": null,
+    "synthetic_covers": [
+      "20260621005400_256_258_269_batch"
+    ],
+    "status": "applied_verified",
+    "reason": "coberto por sintético 20260621005400_256_258_269_batch + fingerprints OK",
+    "fingerprint": {
+      "expected": 2,
+      "present": 2,
+      "tables": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      },
+      "views": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      },
+      "routines": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      },
+      "columns": {
+        "expected": 2,
+        "present": 2,
+        "missing": []
+      }
+    }
+  },
+  {
+    "stem": "20260621005700_269_ajustar_estoque_manual_service_ator",
+    "file": "20260621005700_269_ajustar_estoque_manual_service_ator.sql",
+    "canonical_version": "20260621005700",
+    "history_name": null,
+    "history_version": null,
+    "synthetic_covers": [
+      "20260621005400_256_258_269_batch"
+    ],
+    "status": "applied_verified",
+    "reason": "coberto por sintético 20260621005400_256_258_269_batch + fingerprints OK",
+    "fingerprint": {
+      "expected": 1,
+      "present": 1,
+      "tables": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      },
+      "views": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      },
+      "routines": {
+        "expected": 1,
+        "present": 1,
+        "missing": []
+      },
+      "columns": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      }
+    }
+  },
+  {
+    "stem": "20260707020000_consistencia_vendas_auditoria",
+    "file": "20260707020000_consistencia_vendas_auditoria.sql",
+    "canonical_version": "20260707020000",
+    "history_name": null,
+    "history_version": null,
+    "synthetic_covers": [
+      "batch_20260707020000_consistencia_vendas_auditoria"
+    ],
+    "status": "applied_verified",
+    "reason": "coberto por sintético batch_20260707020000_consistencia_vendas_auditoria + fingerprints OK",
+    "fingerprint": {
+      "expected": 3,
+      "present": 3,
+      "tables": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      },
+      "views": {
+        "expected": 1,
+        "present": 1,
+        "missing": []
+      },
+      "routines": {
+        "expected": 2,
+        "present": 2,
+        "missing": []
+      },
+      "columns": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      }
+    }
+  },
+  {
+    "stem": "20260717031500_248_devolver_ou_trocar_venda",
+    "file": "20260717031500_248_devolver_ou_trocar_venda.sql",
+    "canonical_version": "20260717031500",
+    "history_name": null,
+    "history_version": null,
+    "synthetic_covers": [
+      "20260717031500_248_devolver_qty_fn",
+      "20260717031500_248_devolver_ou_trocar_venda_fn"
+    ],
+    "status": "applied_verified",
+    "reason": "coberto por sintético 20260717031500_248_devolver_qty_fn,20260717031500_248_devolver_ou_trocar_venda_fn + fingerprints OK",
+    "fingerprint": {
+      "expected": 8,
+      "present": 8,
+      "tables": {
+        "expected": 3,
+        "present": 3,
+        "missing": []
+      },
+      "views": {
+        "expected": 1,
+        "present": 1,
+        "missing": []
+      },
+      "routines": {
+        "expected": 3,
+        "present": 3,
+        "missing": []
+      },
+      "columns": {
+        "expected": 1,
+        "present": 1,
+        "missing": []
+      }
+    }
+  },
+  {
+    "stem": "20260718184800_adr_caixa_002_modelo_alpha_e_cancel",
+    "file": "20260718184800_adr_caixa_002_modelo_alpha_e_cancel.sql",
+    "canonical_version": "20260718184800",
+    "history_name": null,
+    "history_version": null,
+    "synthetic_covers": [
+      "20260718184800_adr_caixa_002_calcular_valor",
+      "20260718184800_adr_caixa_002_cancelar_venda"
+    ],
+    "status": "applied_verified",
+    "reason": "coberto por sintético 20260718184800_adr_caixa_002_calcular_valor,20260718184800_adr_caixa_002_cancelar_venda + fingerprints OK",
+    "fingerprint": {
+      "expected": 2,
+      "present": 2,
+      "tables": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      },
+      "views": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      },
+      "routines": {
+        "expected": 2,
+        "present": 2,
+        "missing": []
+      },
+      "columns": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      }
+    }
+  },
+  {
+    "stem": "20260731195704_fix_movimentacao_gerente_id_bypass_seguranca",
+    "file": "20260731195704_fix_movimentacao_gerente_id_bypass_seguranca.sql",
+    "canonical_version": "20260731195704",
+    "history_name": null,
+    "history_version": null,
+    "synthetic_covers": [
+      "20260731195704_fix_movimentacao_registrar",
+      "20260731195704_fix_movimentacao_aprovar"
+    ],
+    "status": "applied_verified",
+    "reason": "coberto por sintético 20260731195704_fix_movimentacao_registrar,20260731195704_fix_movimentacao_aprovar + fingerprints OK",
+    "fingerprint": {
+      "expected": 2,
+      "present": 2,
+      "tables": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      },
+      "views": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      },
+      "routines": {
+        "expected": 2,
+        "present": 2,
+        "missing": []
+      },
+      "columns": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      }
+    }
+  },
+  {
+    "stem": "20260805185445_291_estoque_baixas_integridade",
+    "file": "20260805185445_291_estoque_baixas_integridade.sql",
+    "canonical_version": "20260805185445",
+    "history_name": null,
+    "history_version": null,
+    "synthetic_covers": [
+      "291_estoque_baixas_integridade"
+    ],
+    "status": "applied_verified",
+    "reason": "coberto por sintético 291_estoque_baixas_integridade + fingerprints OK",
+    "fingerprint": {
+      "expected": 3,
+      "present": 3,
+      "tables": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      },
+      "views": {
+        "expected": 2,
+        "present": 2,
+        "missing": []
+      },
+      "routines": {
+        "expected": 1,
+        "present": 1,
+        "missing": []
+      },
+      "columns": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      }
+    }
+  },
+  {
+    "stem": "20260805193920_295_ordem_compra_conferencia",
+    "file": "20260805193920_295_ordem_compra_conferencia.sql",
+    "canonical_version": "20260805193920",
+    "history_name": null,
+    "history_version": null,
+    "synthetic_covers": [
+      "295_registrar_conferencia_ordem_compra",
+      "295_receber_ordem_compra_conferencia"
+    ],
+    "status": "applied_verified",
+    "reason": "coberto por sintético 295_registrar_conferencia_ordem_compra,295_receber_ordem_compra_conferencia + fingerprints OK",
+    "fingerprint": {
+      "expected": 3,
+      "present": 3,
+      "tables": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      },
+      "views": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      },
+      "routines": {
+        "expected": 2,
+        "present": 2,
+        "missing": []
+      },
+      "columns": {
+        "expected": 1,
+        "present": 1,
+        "missing": []
+      }
+    }
+  },
+  {
+    "stem": "20260805213357_296_nfe_conferencia",
+    "file": "20260805213357_296_nfe_conferencia.sql",
+    "canonical_version": "20260805213357",
+    "history_name": null,
+    "history_version": null,
+    "synthetic_covers": [
+      "296_nfe_conferencia_ddl1",
+      "296_nfe_conferencia_ddl2",
+      "296_registrar_conferencia_nfe",
+      "296_confirmar_importacao_nfe"
+    ],
+    "status": "applied_verified",
+    "reason": "coberto por sintético 296_nfe_conferencia_ddl1,296_nfe_conferencia_ddl2,296_registrar_conferencia_nfe,296_confirmar_importacao_nfe + fingerprints OK",
+    "fingerprint": {
+      "expected": 6,
+      "present": 6,
+      "tables": {
+        "expected": 2,
+        "present": 2,
+        "missing": []
+      },
+      "views": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      },
+      "routines": {
+        "expected": 3,
+        "present": 3,
+        "missing": []
+      },
+      "columns": {
+        "expected": 1,
+        "present": 1,
+        "missing": []
+      }
+    }
+  },
+  {
+    "stem": "20260806002522_298_br01_limite_credito_por_modo_loja",
+    "file": "20260806002522_298_br01_limite_credito_por_modo_loja.sql",
+    "canonical_version": "20260806002522",
+    "history_name": null,
+    "history_version": null,
+    "synthetic_covers": [
+      "298_pdv_config_modo_limite_credito",
+      "298_finalizar_venda_v4_br01_func",
+      "298_br01_grants_verify"
+    ],
+    "status": "applied_verified",
+    "reason": "coberto por sintético 298_pdv_config_modo_limite_credito,298_finalizar_venda_v4_br01_func,298_br01_grants_verify + fingerprints OK",
+    "fingerprint": {
+      "expected": 2,
+      "present": 2,
+      "tables": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      },
+      "views": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      },
+      "routines": {
+        "expected": 1,
+        "present": 1,
+        "missing": []
+      },
+      "columns": {
+        "expected": 1,
+        "present": 1,
+        "missing": []
+      }
+    }
+  },
+  {
+    "stem": "20260806002925_299_tb07_pagamento_contas_pagar_limite_saldo",
+    "file": "20260806002925_299_tb07_pagamento_contas_pagar_limite_saldo.sql",
+    "canonical_version": "20260806002925",
+    "history_name": null,
+    "history_version": null,
+    "synthetic_covers": [
+      "299_tb07_pagamento_contas_pagar_limite_saldo"
+    ],
+    "status": "applied_verified",
+    "reason": "coberto por sintético 299_tb07_pagamento_contas_pagar_limite_saldo + fingerprints OK",
+    "fingerprint": {
+      "expected": 1,
+      "present": 1,
+      "tables": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      },
+      "views": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      },
+      "routines": {
+        "expected": 1,
+        "present": 1,
+        "missing": []
+      },
+      "columns": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      }
+    }
+  },
+  {
+    "stem": "20260806004637_300_br03_custo_unitario_snap_servidor",
+    "file": "20260806004637_300_br03_custo_unitario_snap_servidor.sql",
+    "canonical_version": "20260806004637",
+    "history_name": null,
+    "history_version": null,
+    "synthetic_covers": [
+      "300_br03_comment_verify"
+    ],
+    "status": "applied_verified",
+    "reason": "coberto por sintético 300_br03_comment_verify + fingerprints OK",
+    "fingerprint": {
+      "expected": 1,
+      "present": 1,
+      "tables": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      },
+      "views": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      },
+      "routines": {
+        "expected": 1,
+        "present": 1,
+        "missing": []
+      },
+      "columns": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      }
+    }
+  },
+  {
+    "stem": "20260806011719_302_f1_05_formas_pagamento_parametrizavel",
+    "file": "20260806011719_302_f1_05_formas_pagamento_parametrizavel.sql",
+    "canonical_version": "20260806011719",
+    "history_name": null,
+    "history_version": null,
+    "synthetic_covers": [
+      "302_formas_pagamento_ddl_seed",
+      "302_f1_05_grants_verify"
+    ],
+    "status": "applied_verified",
+    "reason": "coberto por sintético 302_formas_pagamento_ddl_seed,302_f1_05_grants_verify + fingerprints OK",
+    "fingerprint": {
+      "expected": 2,
+      "present": 2,
+      "tables": {
+        "expected": 1,
+        "present": 1,
+        "missing": []
+      },
+      "views": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      },
+      "routines": {
+        "expected": 1,
+        "present": 1,
+        "missing": []
+      },
+      "columns": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      }
+    }
+  },
+  {
+    "stem": "20260806090414_303_ssot04_kardex_cancelamento_devolucao",
+    "file": "20260806090414_303_ssot04_kardex_cancelamento_devolucao.sql",
+    "canonical_version": "20260806090414",
+    "history_name": null,
+    "history_version": null,
+    "synthetic_covers": [
+      "303_cancelar_venda_ssot04_kardex",
+      "303_devolver_ou_trocar_venda_ssot04",
+      "303_304_305_308_batch"
+    ],
+    "status": "applied_verified",
+    "reason": "coberto por sintético 303_cancelar_venda_ssot04_kardex,303_devolver_ou_trocar_venda_ssot04,303_304_305_308_batch + fingerprints OK",
+    "fingerprint": {
+      "expected": 2,
+      "present": 2,
+      "tables": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      },
+      "views": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      },
+      "routines": {
+        "expected": 2,
+        "present": 2,
+        "missing": []
+      },
+      "columns": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      }
+    }
+  },
+  {
+    "stem": "20260806135429_307_d3_reaper_fiscal_em_processamento",
+    "file": "20260806135429_307_d3_reaper_fiscal_em_processamento.sql",
+    "canonical_version": "20260806135429",
+    "history_name": null,
+    "history_version": null,
+    "synthetic_covers": [
+      "307_d3_reaper_fiscal_reaper_documentos",
+      "307_d3_fiscal_claim_documentos",
+      "307_d3_fiscal_reprocessar_documento"
+    ],
+    "status": "applied_verified",
+    "reason": "coberto por sintético 307_d3_reaper_fiscal_reaper_documentos,307_d3_fiscal_claim_documentos,307_d3_fiscal_reprocessar_documento + fingerprints OK",
+    "fingerprint": {
+      "expected": 3,
+      "present": 3,
+      "tables": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      },
+      "views": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      },
+      "routines": {
+        "expected": 3,
+        "present": 3,
+        "missing": []
+      },
+      "columns": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      }
+    }
+  },
+  {
+    "stem": "20260806235913_309_reaplica_091_fiscal_correlation_id",
+    "file": "20260806235913_309_reaplica_091_fiscal_correlation_id.sql",
+    "canonical_version": "20260806235913",
+    "history_name": null,
+    "history_version": null,
+    "synthetic_covers": [
+      "309_reaplica_091_fiscal_correlation_id"
+    ],
+    "status": "applied_verified",
+    "reason": "coberto por sintético 309_reaplica_091_fiscal_correlation_id + fingerprints OK",
+    "fingerprint": {
+      "expected": 3,
+      "present": 3,
+      "tables": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      },
+      "views": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      },
+      "routines": {
+        "expected": 1,
+        "present": 1,
+        "missing": []
+      },
+      "columns": {
+        "expected": 2,
+        "present": 2,
+        "missing": []
+      }
+    }
+  },
+  {
+    "stem": "20260807000105_310_reaplica_288_venda_em_espera_e_caixa_unico",
+    "file": "20260807000105_310_reaplica_288_venda_em_espera_e_caixa_unico.sql",
+    "canonical_version": "20260807000105",
+    "history_name": null,
+    "history_version": null,
+    "synthetic_covers": [
+      "310_reaplica_288_venda_em_espera_e_caixa_unico"
+    ],
+    "status": "applied_verified",
+    "reason": "coberto por sintético 310_reaplica_288_venda_em_espera_e_caixa_unico + fingerprints OK",
+    "fingerprint": {
+      "expected": 2,
+      "present": 2,
+      "tables": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      },
+      "views": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      },
+      "routines": {
+        "expected": 2,
+        "present": 2,
+        "missing": []
+      },
+      "columns": {
+        "expected": 0,
+        "present": 0,
+        "missing": []
+      }
+    }
+  }
+]

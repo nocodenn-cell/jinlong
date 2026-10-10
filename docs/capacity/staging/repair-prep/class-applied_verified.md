@@ -1,0 +1,303 @@
+# applied_verified (301)
+
+- `001_schema_inicial` — nome exato + fingerprints presentes
+- `002_mvp_desconto_gerente` — nome exato + fingerprints presentes
+- `003_mvp_idioma_usuario_update` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `004_mvp_idioma_preferido_zh_hk` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `005_mvp_pdv_config` — nome exato + fingerprints presentes
+- `006_pdv_caixa_sync` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `008_descontos_venda_rls` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `009_web_caixa_rpc_estoque_grant` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `010_estoque_baixas_rls_gerente` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `011_relatorios_periodo_rpc` — nome exato + fingerprints presentes
+- `012_relatorios_fuso_brasilia` — nome exato + fingerprints presentes
+- `013_relatorios_timezone_configuravel` — nome exato + fingerprints presentes
+- `014_rpc_registrar_venda_com_itens` — nome exato + fingerprints presentes
+- `016_estoque_atomic_lock` — nome exato + fingerprints presentes
+- `017_decrementar_estoque_seguro_auth` — nome exato + fingerprints presentes
+- `018_tokens_desconto_gerente` — nome exato + fingerprints presentes
+- `019_rls_hardening_insert_policies` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `020_rpc_finalizar_venda_transacional` — nome exato + fingerprints presentes
+- `021_validar_gerente_rate_limit` — nome exato + fingerprints presentes
+- `022_validar_gerente_rate_limit_scopes` — nome exato + fingerprints presentes
+- `023_finalizar_venda_transacional_desconto_gerente_token` — nome exato + fingerprints presentes
+- `024_sync_outbox_hmac_nonce_replay` — nome exato + fingerprints presentes
+- `025_finalizar_venda_transacional_canonica_v2` — nome exato + fingerprints presentes
+- `026_pdv_config_retire_default_gerente_hash` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `027_seed_produtos_demo_importados_zh` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `028_finalizar_venda_canonica_v2_ordem_fk` — nome exato + fingerprints presentes
+- `029_decrementar_estoque_seguro_system_context` — nome exato + fingerprints presentes
+- `030_decrementar_estoque_seguro_sem_coluna_id` — nome exato + fingerprints presentes
+- `031_finalizar_venda_canonica_v2_desconto_sem_token` — nome exato + fingerprints presentes
+- `032_lojas_estoque_por_loja` — nome exato + fingerprints presentes
+- `033_preco_atacado_catalogo` — nome exato + fingerprints presentes
+- `034_remessas_movimentos_transferencias` — nome exato + fingerprints presentes
+- `035_fiado_fiscal_stub` — nome exato + fingerprints presentes
+- `036_loja_filial_demo` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `037_fiscal_emissao_real_worker` — nome exato + fingerprints presentes
+- `038_fix_decrementar_estoque_seguro_estoque_baixas_schema` — nome exato + fingerprints presentes
+- `039_caixa_fechamento_diferenca_observacao` — nome exato + fingerprints presentes
+- `040_v_estoque_baixo_security_invoker` — nome exato + fingerprints presentes
+- `041_vendas_rls_consolidate_authenticated` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `042_estoque_vendas_rls_por_loja` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `043_caixas_loja_id_index_dono_visao_macro_rls` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `044_usuario_perfil_admin_rls` — nome exato + fingerprints presentes
+- `046_aprovar_movimentacao_por_token_gerente` — nome exato + fingerprints presentes
+- `047_obter_limite_sangria_sem_gerente` — nome exato + fingerprints presentes
+- `048_devolucoes` — nome exato + fingerprints presentes
+- `049_calcular_valor_sistema_dinheiro_caixa` — nome exato + fingerprints presentes
+- `050_cancelar_venda_transacional` — nome exato + fingerprints presentes
+- `051_split_payment_vendas_pagamentos` — nome exato + fingerprints presentes
+- `052_split_payment_finalize_venda_rpc` — nome exato + fingerprints presentes
+- `053_split_payment_valor_sistema_dinheiro` — nome exato + fingerprints presentes
+- `054_pdv_config_blind_closure` — nome exato + fingerprints presentes
+- `055_round_abnt_finalize_v2` — nome exato + fingerprints presentes
+- `056_enable_rls_vendas_pagamentos_reconcile` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `057_caixas_rls_consolidate_permissive` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `058_pdv_config_rls_e_rpc_caixa_web` — nome exato + fingerprints presentes
+- `059_cancelar_venda_split_e_auditoria_nao_dinheiro` — nome exato + fingerprints presentes
+- `060_v_kardex_unificado` — nome exato + fingerprints presentes
+- `061_finalizar_venda_canonica_v2_idempotencia` — nome exato + fingerprints presentes
+- `062_fiscal_enqueue_on_sale_rpc` — nome exato + fingerprints presentes
+- `063_ajuste_manual_estoque_kardex` — nome exato + fingerprints presentes
+- `064_relatorio_resumo_executivo_periodo` — nome exato + fingerprints presentes
+- `065_fiscal_error_normalization` — nome exato + fingerprints presentes
+- `066_fiscal_documento_timeline` — nome exato + fingerprints presentes
+- `067_pdv_config_bcrypt_gerente` — nome exato + fingerprints presentes
+- `068_usuarios_rls_dono_sem_recursao` — nome exato + fingerprints presentes
+- `069_fiscal_enqueue_service_role_sync_outbox` — nome exato + fingerprints presentes
+- `071_revoke_execute_decrementar_estoque_idempotente_authenticated` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `072_remove_zh_hk_idioma` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `073_feature_flags` — nome exato + fingerprints presentes
+- `074_remove_zhHK` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `075_importacao_nfe_compra` — nome exato + fingerprints presentes
+- `076_seed_preco_atacado_demo` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `077_precos_atacado_tiers_e_rpc` — nome exato + fingerprints presentes
+- `078_dashboard_gerente_resumo` — nome exato + fingerprints presentes
+- `079_dashboard_gerente_resumo_v2` — nome exato + fingerprints presentes
+- `080_dashboard_gerente_resumo_structured` — nome exato + fingerprints presentes
+- `081_gerente_estoque_list_page_rpc` — nome exato + fingerprints presentes
+- `082_transferencia_segura_idempotente` — nome exato + fingerprints presentes
+- `083_tabela_marcas` — nome exato + fingerprints presentes
+- `084_adicionar_marca_imagem_tags_produtos` — nome exato + fingerprints presentes
+- `085_indices_filtros_produtos` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `086_rpc_list_produtos_gerente_filtrados` — nome exato + fingerprints presentes
+- `087_configuracoes_gerais` — nome exato + fingerprints presentes
+- `088_produto_imagens_storage_bucket` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `089_finalizar_venda_canonica_v3` — nome exato + fingerprints presentes
+- `090_fiscal_enqueue_on_conflict_and_erro_enqueue_evento` — nome exato + fingerprints presentes
+- `091_fiscal_correlation_id` — nome exato + fingerprints presentes
+- `092_fiscal_state_machine` — nome exato + fingerprints presentes
+- `093_fiscal_marcar_erro_backoff_quadratico` — nome exato + fingerprints presentes
+- `094_fiscal_rls_loja_scope_transferencias_idempotencia` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `095_caixa_scan_telemetry_events` — nome exato + fingerprints presentes
+- `096_caixa_scan_telemetry_schema_version` — nome exato + fingerprints presentes
+- `097_caixa_scan_telemetry_indexes_correlation` — nome exato + fingerprints presentes
+- `098_documentos_fiscais_dlq` — nome exato + fingerprints presentes
+- `099_fiscal_enqueue_valida_tipo_venda` — nome exato + fingerprints presentes
+- `100_dashboard_gerente_top_produto` — nome exato + fingerprints presentes
+- `101_fix_dashboard_atividades_limit` — nome exato + fingerprints presentes
+- `102_produtos_unique_codigo_loja` — nome exato + fingerprints presentes
+- `103_comissoes` — nome exato + fingerprints presentes
+- `104_contas_pagar_nfe` — nome exato + fingerprints presentes
+- `105_suspensao_vendas` — nome exato + fingerprints presentes
+- `106_categorias_ativo` — nome exato + fingerprints presentes
+- `107_categorias_financeiras` — nome exato + fingerprints presentes
+- `109_ordens_compra` — nome exato + fingerprints presentes
+- `110_receber_ordem_compra` — nome exato + fingerprints presentes
+- `111_lgpd_clientes_compliance` — nome exato + fingerprints presentes
+- `112_clientes_contas_receber_loja_isolamento` — nome exato + fingerprints presentes
+- `113_descontos_venda_auditoria_operador` — nome exato + fingerprints presentes
+- `114_fiscal_enqueue_loja_validation` — nome exato + fingerprints presentes
+- `115_security_hardening_search_path_rls_permissions` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `116_drop_calcular_valor_sistema_dinheiro_caixa_overloads` — nome exato + fingerprints presentes
+- `117_fix_oc_rls_usuarios_pattern` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `118_fix_vendas_pagamentos_concurrency` — nome exato + fingerprints presentes
+- `119_realtime_movimentacoes_caixa` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `122_limite_desconto_manual_itens` — nome exato + fingerprints presentes
+- `123_revalidar_preco_commit_v3_e_revoke_v2` — nome exato + fingerprints presentes
+- `124_guard_margem_negativa_cadastro_precos` — nome exato + fingerprints presentes
+- `125_guard_margem_produtos_catalogo` — nome exato + fingerprints presentes
+- `126_ajuste_triggers_when_update` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `127_kardex_vendas_imutavel` — nome exato + fingerprints presentes
+- `20260419013345_fix_venda_idempotency_key` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20260515000000_fiscal_worker_cron` — nome exato + fingerprints presentes
+- `20260618161315_264_dashboard_venda_eventos_kpis` — nome exato + fingerprints presentes
+- `20260619234314_block_v2_legacy_overloads_and_create_flags_visuais` — nome exato + fingerprints presentes
+- `20260620004913_stub_v3_full_overload_legacy_disabled` — nome exato + fingerprints presentes
+- `20260621000300_207_fechar_caixa_atomico_rpc` — nome exato + fingerprints presentes
+- `20260621000500_209_fiscal_campos_loja_pdvconfig` — coberto por sintético 209_210_fiscal_campos + fingerprints OK
+- `20260621000600_210_fiscal_campos_produto` — coberto por sintético 209_210_fiscal_campos + fingerprints OK
+- `20260621000900_213_restaura_configuracoes_gerais_drift` — nome exato + fingerprints presentes
+- `20260621002100_225_dashboard_serie_horaria_semana_anterior` — nome exato + fingerprints presentes
+- `20260621002200_226_rls_movimentos_caixa_insert_amarra_loja` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20260621002300_227_fechar_caixa_pdv_atomico` — nome exato + fingerprints presentes
+- `20260621003900_243_finalizar_venda_canonica_v4_captura` — nome exato + fingerprints presentes
+- `20260621004200_246_remover_venda_fiado` — nome exato + fingerprints presentes
+- `20260621004500_24703_vendas_em_espera_e_consulta_rapida` — nome exato + fingerprints presentes
+- `20260621005400_256_pdv_diagnostico_pre_producao` — coberto por sintético 20260621005400_256_258_269_batch + fingerprints OK
+- `20260621005500_258_produtos_localizacao_nome_reduzido` — coberto por sintético 20260621005400_256_258_269_batch + fingerprints OK
+- `20260621005700_269_ajustar_estoque_manual_service_ator` — coberto por sintético 20260621005400_256_258_269_batch + fingerprints OK
+- `20260707020000_consistencia_vendas_auditoria` — coberto por sintético batch_20260707020000_consistencia_vendas_auditoria + fingerprints OK
+- `20260710212305_264_finalizar_venda_canonica_v4_cliente_id` — nome exato + fingerprints presentes
+- `20260710212310_24701_contas_receber_idempotencia_unique_venda` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20260710212320_24702_finalizar_venda_v4_contas_receber_automatico` — nome exato + fingerprints presentes
+- `20260710212330_268_reconcile_finalizar_venda_v4_single_overload` — nome exato + fingerprints presentes
+- `20260711015958_259_funcionarios_separate_from_usuarios` — nome exato + fingerprints presentes
+- `20260711020021_260_comissoes_regras_funcionario` — nome exato + fingerprints presentes
+- `20260711020053_261_comissoes_vendedores_regra_e_congelamento` — nome exato + fingerprints presentes
+- `20260713174909_268_drop_v4_overloads` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20260717031500_248_devolver_ou_trocar_venda` — coberto por sintético 20260717031500_248_devolver_qty_fn,20260717031500_248_devolver_ou_trocar_venda_fn + fingerprints OK
+- `20260717031639_248_fix_anon_grant_drift` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20260717031919_248_fix_quantidade_devolvida_grant` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20260717031938_248_fix_quantidade_devolvida_anon_grant` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20260717033836_278_fix_v_clientes_gerente_ultima_compra` — nome exato + fingerprints presentes
+- `20260718133633_revoke_anon_pdv_rpcs_and_fix_diag` — nome exato + fingerprints presentes
+- `20260718135138_criar_produto_permite_operador_pdv` — nome exato + fingerprints presentes
+- `20260718135500_ajuste_estoque_inicial_operador_pdv` — nome exato + fingerprints presentes
+- `20260718181600_fix_verificar_consistencia_venda_total_liquido` — nome exato + fingerprints presentes
+- `20260718184800_adr_caixa_002_modelo_alpha_e_cancel` — coberto por sintético 20260718184800_adr_caixa_002_calcular_valor,20260718184800_adr_caixa_002_cancelar_venda + fingerprints OK
+- `20260719032927_implantacao_checklist_go_live` — nome exato + fingerprints presentes
+- `20260731195704_fix_movimentacao_gerente_id_bypass_seguranca` — coberto por sintético 20260731195704_fix_movimentacao_registrar,20260731195704_fix_movimentacao_aprovar + fingerprints OK
+- `20260731195933_credita_saldo_caixa_venda_dinheiro` — nome exato + fingerprints presentes
+- `20260731200258_hardening_trg_creditar_saldo_caixa` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20260731200300_criar_produto_com_estoque_inicial` — nome exato + fingerprints presentes
+- `20260731200400_gtin_lookup_cache_e_cadastro_telemetry` — nome exato + fingerprints presentes
+- `20260731201100_revoke_anon_authenticated_funcoes_sem_uso_publico` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20260731201500_restringe_rpcs_fiscais_worker` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20260731202100_pdv_certificacao_operacional_caixa_e_espera` — nome exato + fingerprints presentes
+- `20260805185445_291_estoque_baixas_integridade` — coberto por sintético 291_estoque_baixas_integridade + fingerprints OK
+- `20260805185458_293_documentos_fiscais_dlq_enable_rls` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20260805193920_295_ordem_compra_conferencia` — coberto por sintético 295_registrar_conferencia_ordem_compra,295_receber_ordem_compra_conferencia + fingerprints OK
+- `20260805213357_296_nfe_conferencia` — coberto por sintético 296_nfe_conferencia_ddl1,296_nfe_conferencia_ddl2,296_registrar_conferencia_nfe,296_confirmar_importacao_nfe + fingerprints OK
+- `20260806002522_298_br01_limite_credito_por_modo_loja` — coberto por sintético 298_pdv_config_modo_limite_credito,298_finalizar_venda_v4_br01_func,298_br01_grants_verify + fingerprints OK
+- `20260806002925_299_tb07_pagamento_contas_pagar_limite_saldo` — coberto por sintético 299_tb07_pagamento_contas_pagar_limite_saldo + fingerprints OK
+- `20260806004637_300_br03_custo_unitario_snap_servidor` — coberto por sintético 300_br03_comment_verify + fingerprints OK
+- `20260806011719_302_f1_05_formas_pagamento_parametrizavel` — coberto por sintético 302_formas_pagamento_ddl_seed,302_f1_05_grants_verify + fingerprints OK
+- `20260806090414_303_ssot04_kardex_cancelamento_devolucao` — coberto por sintético 303_cancelar_venda_ssot04_kardex,303_devolver_ou_trocar_venda_ssot04,303_304_305_308_batch + fingerprints OK
+- `20260806135429_307_d3_reaper_fiscal_em_processamento` — coberto por sintético 307_d3_reaper_fiscal_reaper_documentos,307_d3_fiscal_claim_documentos,307_d3_fiscal_reprocessar_documento + fingerprints OK
+- `20260806235913_309_reaplica_091_fiscal_correlation_id` — coberto por sintético 309_reaplica_091_fiscal_correlation_id + fingerprints OK
+- `20260807000105_310_reaplica_288_venda_em_espera_e_caixa_unico` — coberto por sintético 310_reaplica_288_venda_em_espera_e_caixa_unico + fingerprints OK
+- `20260807000138_311_reaplica_235_236_237_observabilidade_e_system_alerts` — nome exato + fingerprints presentes
+- `20260807000157_312_rls_backup_schema_migrations` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20260807000525_313_pdv_config_caixa_web_limite_desconto_manual` — nome exato + fingerprints presentes
+- `20260809120659_fix_venda_em_espera_claim_anti_duplicata` — nome exato + fingerprints presentes
+- `20260809120837_finalize_v4_scope_guard_22args` — nome exato + fingerprints presentes
+- `20260809163502_relatorio_periodo_tz_bounds_sargable` — nome exato + fingerprints presentes
+- `20260810222702_retire_obsolete_venda_finance_context` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20260811110000_descontos_venda_rls_loja_scope` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20260813231034_financial_idempotency_correlation_expand` — nome exato + fingerprints presentes
+- `20260813232133_sale_totals_invariant` — nome exato + fingerprints presentes
+- `20260813234233_ar_receipts_reconciliation` — nome exato + fingerprints presentes
+- `20260814000154_ap_payments_reconciliation` — nome exato + fingerprints presentes
+- `20260814012644_protect_cash_balance_authority` — nome exato + fingerprints presentes
+- `20260814013015_drop_recalcular_saldo_caixa` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20260814013215_reconcile_offline_cash_sales` — nome exato + fingerprints presentes
+- `20260814013447_enforce_store_scoped_receivables` — nome exato + fingerprints presentes
+- `20260814013845_unify_online_offline_price_invariant` — nome exato + fingerprints presentes
+- `20260814014205_offline_resolve_tipo_preco` — nome exato + fingerprints presentes
+- `20260814015032_harden_diagnostics_and_ap_idempotency` — nome exato + fingerprints presentes
+- `20260814090345_validate_offline_replay_payload` — nome exato + fingerprints presentes
+- `20260814095445_auditable_ar_ap_reversals` — nome exato + fingerprints presentes
+- `20260814105031_require_store_context_for_offline_sales` — nome exato + fingerprints presentes
+- `20260814105520_price_band_by_actual_quantity` — nome exato + fingerprints presentes
+- `20260814110028_commission_on_completed_sale_event` — nome exato + fingerprints presentes
+- `20260814111243_revoke_truncate_and_cash_delete` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20260814114654_commission_post_sale_adjustments` — nome exato + fingerprints presentes
+- `20260814142254_commission_net_settlement` — nome exato + fingerprints presentes
+- `20260814142814_commission_adjustment_after_full_operation` — nome exato + fingerprints presentes
+- `20260814151030_commission_item_snapshot` — nome exato + fingerprints presentes
+- `20260814161500_commission_cancellation_order_independence` — nome exato + fingerprints presentes
+- `20260814171500_commission_ledger_immutability_audit` — nome exato + fingerprints presentes
+- `20260814180000_commission_frontend_reporting_reconciliation` — nome exato + fingerprints presentes
+- `20260816094910_produtos_autoria_criado_atualizado_por` — nome exato + fingerprints presentes
+- `20260816095244_historico_precos_alterado_por_on_delete_set_null` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20260816100949_reaplica_102_produtos_codigo_barras_loja_unique` — nome exato + fingerprints presentes
+- `20260816100959_revoke_execute_trg_produtos_autoria` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20260816135000_reconcilia_produtos_codigo_interno` — nome exato + fingerprints presentes
+- `20260816140000_rls_produtos_historico_isolamento_por_loja` — nome exato + fingerprints presentes
+- `20260816141000_criar_produto_autoria_atomica` — nome exato + fingerprints presentes
+- `20260816142000_indices_fks_autoria_produtos` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20260816143000_atualizar_produto_com_faixa_atacado` — nome exato + fingerprints presentes
+- `20260818000000_reconcile_production_report_functions` — nome exato + fingerprints presentes
+- `20260818000001_revoke_relatorio_consistencia_vendas` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20260819000000_revoke_relatorio_consistencia_vendas_de_public` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20260819220000_fase1b_remove_loja_filial_demo` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20260819220100_fase1b_fiscal_enfileirar_assinatura_unica` — nome exato + fingerprints presentes
+- `20260819220200_fase1b_remove_relatorio_consistencia_vendas_3args` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20260819230000_remove_funcoes_sem_consumidor` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20260820120000_devolver_ou_trocar_venda_retorna_itens` — nome exato + fingerprints presentes
+- `20260820120100_fix_anon_grant_drift_devolver_ou_trocar_venda` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20260820150000_fix_cancelar_venda_desconta_devolucoes_previas` — nome exato + fingerprints presentes
+- `20260821110000_restore_devolver_ou_trocar_venda_kardex_ssot04` — nome exato + fingerprints presentes
+- `20260823192022_d0_pricing_tiers_ssot` — nome exato + fingerprints presentes
+- `20260823192024_d0_remessa_quantidade_positiva_atomica` — nome exato + fingerprints presentes
+- `20260824010000_fix_remessas_conferencia_columns_drift` — nome exato + fingerprints presentes
+- `20260824120000_fix_remessa_entrada_aceita_produto_draft` — nome exato + fingerprints presentes
+- `20260828110000_fix_v_kardex_unificado_anti_join_devolucao` — nome exato + fingerprints presentes
+- `20260828120000_fase1_hardening_grants_residuais` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20260828140000_fase3_tenant_isolation_transferencias_remessas` — nome exato + fingerprints presentes
+- `20260828150000_fase4_remessa_idempotencia_payload_hash` — nome exato + fingerprints presentes
+- `20260828150100_restaura_registrar_conferencia_nfe_ui_flx05` — nome exato + fingerprints presentes
+- `20260828160000_revoke_grants_residuais_tabelas_deny_all` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20260829120000_fase6_consolida_padrao_a_dono_global` — nome exato + fingerprints presentes
+- `20260830110000_fix_confirmar_nfe_margem_nao_bloqueia_estoque` — nome exato + fingerprints presentes
+- `20260831100000_busca_pdv_accent_insensitive` — nome exato + fingerprints presentes
+- `20260831110000_criar_produto_faixa_atacado_atomica` — nome exato + fingerprints presentes
+- `20260901000000_validar_tier_preco_menor_que_varejo` — nome exato + fingerprints presentes
+- `20260901020000_historico_tiers_crud` — nome exato + fingerprints presentes
+- `20260901030000_calcular_preco_produto_retorna_quantidade_minima` — nome exato + fingerprints presentes
+- `20260902100000_finalizar_venda_retry_payload_divergente` — nome exato + fingerprints presentes
+- `20260902100100_guard_varejo_menor_que_tier_ativo` — nome exato + fingerprints presentes
+- `20260902100200_fechar_caixa_repeticao_valor_divergente` — nome exato + fingerprints presentes
+- `20260902100300_revoke_execute_trigger_functions_tiers` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20260902120000_serializa_invariante_varejo_tier_e_reativacao` — nome exato + fingerprints presentes
+- `20260902130000_fiscal_payload_snapshot_venda` — nome exato + fingerprints presentes
+- `20260902130100_fiscal_provider_config` — nome exato + fingerprints presentes
+- `20260902140000_produtos_icms_origem` — nome exato + fingerprints presentes
+- `20260902140100_criar_produto_icms_origem` — nome exato + fingerprints presentes
+- `20260902140200_atualizar_produto_icms_origem` — nome exato + fingerprints presentes
+- `20260902140300_fiscal_payload_snapshot_icms_origem` — nome exato + fingerprints presentes
+- `20260902160000_documentos_fiscais_venda_id_restrict` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20260903090000_restringe_update_usuarios_grant_coluna_idioma` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20260903100000_fiscal_claim_ja_tentou_emissao` — nome exato + fingerprints presentes
+- `20260903110000_fiscal_delete_integrity` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20260903120000_fiscal_provider_identity_imutavel` — nome exato + fingerprints presentes
+- `20260903130000_registrar_venda_pagamentos_split` — nome exato + fingerprints presentes
+- `20260903140000_registrar_venda_pagamentos_idempotencia` — nome exato + fingerprints presentes
+- `20260903150000_fiscal_xml_persistence` — nome exato + fingerprints presentes
+- `20260903160000_fiscal_eventos_provider_congelado` — nome exato + fingerprints presentes
+- `20260903170000_fiscal_xml_lease_concorrencia` — nome exato + fingerprints presentes
+- `20260903180000_fiscal_hotfix_codex_review` — nome exato + fingerprints presentes
+- `20260903190000_kardex_estoque_log_imutavel` — nome exato + fingerprints presentes
+- `20260904090000_estoque_quantidade_protecao` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20260904100000_storage_produto_imagens_tenant_isolation` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20260904110000_estoque_fecha_bypass_delete_insert_e_nan` — nome exato + fingerprints presentes
+- `20260904120000_importar_nfe_duplicata_invalida_aborta` — nome exato + fingerprints presentes
+- `20260904130000_relatorio_consistencia_vendas_gerente` — nome exato + fingerprints presentes
+- `20260904140000_retomar_caixa_atomico` — nome exato + fingerprints presentes
+- `20260909120000_tokens_autorizacao_operacao_sangria_ap` — nome exato + fingerprints presentes
+- `20260909180000_aprovar_movimentacao_grant_authenticated` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20260909200000_cancelar_venda_saldo_caixa_insuficiente` — nome exato + fingerprints presentes
+- `20260913090000_relatorio_tz_validado_sem_pg_timezone_names` — nome exato + fingerprints presentes
+- `20260916120000_sec04_token_gerente_vinculo_loja_v4` — nome exato + fingerprints presentes
+- `20260916120200_sec06_revoke_transferir_estoque_entre_lojas_legado` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20260918100000_oc_recebimento_parcial` — nome exato + fingerprints presentes
+- `20260928120000_atualizar_preco_varejo_produto_rpc` — nome exato + fingerprints presentes
+- `20260929120000_caixas_fechado_exige_dados_fechamento` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20260929130000_descontos_venda_exige_pagamento_dinheiro` — nome exato + fingerprints presentes
+- `20260930090000_c1_authz_secdef_fecha_classe` — nome exato + fingerprints presentes
+- `20260930090100_c2_suspensao_vendas_no_trigger_de_vendas` — nome exato + fingerprints presentes
+- `20260930090200_p03_vendas_lista_kpi_uma_linha_por_venda` — nome exato + fingerprints presentes
+- `20260930120000_vendas_lista_kpis_por_venda` — nome exato + fingerprints presentes
+- `20261001100000_c3_colunas_caixa_desembolso_devolucao` — nome exato + fingerprints presentes
+- `20261001100100_c3_internal_autoridade_resolvedor_cache` — nome exato + fingerprints presentes
+- `20261001100200_c3_devolver_ou_trocar_venda_caixa_desembolso_d13` — nome exato + fingerprints presentes
+- `20261001100300_c3_conciliacao_devolucao_check` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20261001100400_c3_devolver_retry_autorizacao` — nome exato + fingerprints presentes
+- `20261001100500_c3_listar_caixas_elegiveis_desembolso` — nome exato + fingerprints presentes
+- `20261002100000_pos_venda_operacoes_select_dono_todas_lojas` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20261007163200_ssot_004_revoke_insert_documentos_fiscais` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20261009120000_implantacao_go_live_somente_dono_admin` — nome exato + fingerprints presentes
+- `20261009150000_pdv_diagnostico_somente_dono_admin` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado
+- `20261009180001_revoga_leitura_direta_preco_custo` — nome exato no histórico; sem fingerprint DDL (grant/seed/policy) — aceito como aplicado

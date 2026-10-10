@@ -1,0 +1,62 @@
+# partial (60)
+
+- `007_estoque_baixa_idempotente` — nome no histórico mas fingerprints 1/2
+- `045_caixa_movimentacoes_transacionais` — nome no histórico mas fingerprints 7/8
+- `108_contas_pagar_schema_e_rpc_pagamento` — nome no histórico mas fingerprints 8/9
+- `20260619174508_fix_finalizar_venda_v2_stub_quebrado` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20260620020436_complete_v2_block_all_overloads_legacy_disabled` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20260620200253_244_clientes_tipo_endereco_e_view_gerente` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20260621000200_206_vendas_caixa_imutabilidade_trigger` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20260621000700_211_vinculos_fornecedor_produto_depara` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20260621000800_212_restaura_movimentos_caixa_legado` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20260621001000_214_restaura_comissoes_loja_via_caixa` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20260621001200_216_fix_marcas_drift_ativo_rls_usuarios` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20260621002400_228_venda_eventos_ledger` — nome no histórico mas fingerprints 5/6
+- `20260621002500_229_venda_eventos_rpc_hooks` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20260621002600_230_caixa_status_fechamento` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20260621002700_231_gerente_venda_eventos_rpcs` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20260621002800_232_produtos_status_publicacao` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20260621002900_233_import_nfe_status_draft` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20260621003000_234_calcular_preco_produto_security_definer` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20260621003100_235_observabilidade_pdv_visual` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20260621003200_236_system_alerts_log_leve` — sem histórico; fingerprints 2/4
+- `20260621003300_237_system_alerts_remove_triggers` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20260621003400_238_relatorio_margem_por_venda` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20260621003500_239_relatorio_curva_abc` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20260621003700_241_relatorio_margem_por_venda_snapshot_only` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20260621003800_242_relatorio_cobertura_estoque_reclassificacao` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20260621004000_244_consistencia_vendas_auditoria` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20260621004600_248_devolver_ou_trocar_venda` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20260621004700_249_pricing_version_governance` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20260621004800_250_calcular_preco_produto_decision_fields` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20260621005100_253_clientes_tipo_endereco_e_view_gerente` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20260621005200_254_pricing_version_venda_scope_guard` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20260707000000_venda_eventos_ledger` — sintético batch_20260707000000_venda_eventos_ledger + fingerprints 5/6
+- `20260707010000_gerente_venda_eventos_rpcs` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20260709184734_259_historico_precos_produto` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20260710163032_255_vendas_em_espera_e_consulta_rapida` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20260710212200_263_vendas_cliente_id` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20260711143312_267_funcionarios_meta_crud` — nome no histórico mas fingerprints 2/8
+- `20260731200500_reconciliacao_bl1_descontos_token_auditoria_motivo` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20260731200600_bl2_promocao_schema_regra_aplicada` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20260731200700_bl2_promocao_rpc_e_precedencia` — sintético 20260731200700_bl2_calcular_promocao_aplicavel,20260731200700_bl2_trg_limite_desconto + fingerprints 3/4
+- `20260731200800_fix_drift_colunas_observabilidade_itens_venda` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20260801090000_v_estoque_ledger_divergencia` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20260801120000_recebimento_conferencia_explicita` — nome no histórico mas fingerprints 2/3
+- `20260805151822_289_hardening_autorizacao_rpcs_p0` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20260805190920_294_fornecedores_multi_tenant` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20260806135106_306_d2_maquina_estados_fiscal` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20260902150000_list_produtos_gerente_filtrados_campos_fiscais` — nome no histórico mas fingerprints 1/2
+- `20261005004647_financeiro_loja_contas_ledger` — tabelas+internal+policies presentes; RPCs public.financeiro_* ausentes; hist_financeiro vazio
+- `20261005173427_entrada_manual_fornecedor_sem_cnpj` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20261005224553_estoque_ajuste_concorrente` — sem histórico; fingerprints 2/3
+- `20261005225856_entrada_documento_posterior` — sem histórico; fingerprints 1/4
+- `20261006120000_financeiro_contas_formas_e_painel` — sem histórico; fingerprints 1/3
+- `20261006180000_financeiro_contas_operacionais` — sem histórico; fingerprints 1/5
+- `20261007161220_fiscal_cancelado_ssot` — sem histórico; fingerprints 1/3
+- `20261007163000_ssot_001_002_painel_ec_cache` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20261007163100_ssot_003_nfe_obrigacao_duplicata` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20261007170000_ssot_002_mov_ar_ec_cache` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20261007171000_ssot_002_cancel_guard_antes_devolucao` — schema contém fingerprints mas SEM registro no histórico (apply via execute_sql / não registrar)
+- `20261007190000_caixas_fechamento_formas_snapshot` — sem histórico; fingerprints 1/4
+- `20261009220000_fiscal_rpc_isola_loja` — sem histórico; fingerprints 3/5
