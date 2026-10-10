@@ -1,7 +1,7 @@
 /**
- * @vitest-environment jsdom
- *
  * Regressão do P0 de venda duplicada (certificação operacional do PDV).
+ * Ambiente node + polyfill de localStorage (o docblock jsdom excluía este arquivo
+ * do runner web, que não instala jsdom).
  *
  * A chave de idempotência da venda é o `venda_id` enviado ao RPC
  * `finalizar_venda_transacional_canonica_v4`, cuja idempotência é keyed nesse id.
