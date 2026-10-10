@@ -82,7 +82,7 @@ export async function emitDrillSql(dir) {
   await mkdir(dir, { recursive: true });
   const reprocess = await readMigration("20260806135429_307_d3_reaper_fiscal_em_processamento.sql");
   const enqueue = await readMigration("20260819220100_fase1b_fiscal_enfileirar_assinatura_unica.sql");
-  const cancel = await readMigration("20261007161220_fiscal_cancelado_ssot.sql");
+  const cancel = await readFile(new URL("./fixtures/fiscal_cancelar_documento.pre-isolamento.sql", import.meta.url), "utf8");
   const evento = await readMigration("090_fiscal_enqueue_on_conflict_and_erro_enqueue_evento.sql");
   const isolacao = await readMigration("20261009220000_fiscal_rpc_isola_loja.sql");
   const revoke = await readMigration("20261007163200_ssot_004_revoke_insert_documentos_fiscais.sql");

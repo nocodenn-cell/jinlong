@@ -175,6 +175,7 @@ GRANT EXECUTE ON FUNCTION public.fiscal_reprocessar_documento(uuid) TO authentic
 COMMENT ON FUNCTION public.fiscal_reprocessar_documento(uuid) IS
   'Reprocessa documento ERRO/PENDENTE. authenticated: GERENTE/DONO só da loja do caixa; ADMIN global. service_role e sessão de manutenção passam.';
 
+-- Corpo mantido igual ao de 20261007161220. Não divergir: o teste fiscal-p0 compara os dois CREATE.
 CREATE OR REPLACE FUNCTION public.fiscal_cancelar_documento(
   p_documento_id uuid,
   p_justificativa text

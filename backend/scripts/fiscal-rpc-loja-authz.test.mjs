@@ -46,7 +46,7 @@ async function loadHistorical(db) {
     'utf8',
   )
   const cancel = await readFile(
-    new URL('../supabase/migrations/20261007161220_fiscal_cancelado_ssot.sql', import.meta.url),
+    new URL('./fixtures/fiscal_cancelar_documento.pre-isolamento.sql', import.meta.url),
     'utf8',
   )
   const evento = await readFile(

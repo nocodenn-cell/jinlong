@@ -64,7 +64,7 @@ async function openDb() {
 async function historicalBodies() {
   const reprocess = await readFile(new URL("../supabase/migrations/20260806135429_307_d3_reaper_fiscal_em_processamento.sql", import.meta.url), "utf8");
   const enqueue = await readFile(new URL("../supabase/migrations/20260819220100_fase1b_fiscal_enfileirar_assinatura_unica.sql", import.meta.url), "utf8");
-  const cancel = await readFile(new URL("../supabase/migrations/20261007161220_fiscal_cancelado_ssot.sql", import.meta.url), "utf8");
+  const cancel = await readFile(new URL("./fixtures/fiscal_cancelar_documento.pre-isolamento.sql", import.meta.url), "utf8");
   const evento = await readFile(new URL("../supabase/migrations/090_fiscal_enqueue_on_conflict_and_erro_enqueue_evento.sql", import.meta.url), "utf8");
   return [
     extractCreate(reprocess, "fiscal_reprocessar_documento"),
@@ -245,8 +245,15 @@ async function main() {
 
   const isolacao = await readFile(new URL("../supabase/migrations/20261009220000_fiscal_rpc_isola_loja.sql", import.meta.url), "utf8");
   const revoke = await readFile(new URL("../supabase/migrations/20261007163200_ssot_004_revoke_insert_documentos_fiscais.sql", import.meta.url), "utf8");
-  const vulnerable = await readFile(new URL("../supabase/migrations/20261007161220_fiscal_cancelado_ssot.sql", import.meta.url), "utf8");
-  assert.throws(() => assertRecoveryIsCanonical(vulnerable, isolacao), /RECOVERY_RECUSA_SQL_NAO_CANONICO/);
+  const canceladoSsot = await readFile(new URL("../supabase/migrations/20261007161220_fiscal_cancelado_ssot.sql", import.meta.url), "utf8");
+  const historicoFraco = await readFile(new URL("./fixtures/fiscal_cancelar_documento.pre-isolamento.sql", import.meta.url), "utf8");
+  assert.equal(
+    extractCreate(canceladoSsot, "fiscal_cancelar_documento"),
+    extractCreate(isolacao, "fiscal_cancelar_documento"),
+  );
+  assert.match(historicoFraco, /perfil IN \('GERENTE', 'DONO', 'ADMIN'\)/);
+  assert.doesNotMatch(historicoFraco, /FISCAL_CANCELAR_LOJA/);
+  assert.throws(() => assertRecoveryIsCanonical(canceladoSsot, isolacao), /RECOVERY_RECUSA_SQL_NAO_CANONICO/);
   assertRecoveryIsCanonical(isolacao, isolacao);
   const bundle = bundleFiscalP0(isolacao, revoke);
   assert.equal(bundle.startsWith("BEGIN;"), true);
@@ -338,6 +345,21 @@ async function main() {
   await asSession(restored, ADMIN, "service_role", "service_role");
   await restored.query("SELECT public.fiscal_enfileirar_documento_venda($1, 'NFCE', '{}'::jsonb)", [VENDA_A]);
   assert.equal(await docCount(restored), 3);
+
+  await asPostgres(restored);
+  await restored.exec(extractCreate(canceladoSsot, "fiscal_cancelar_documento"));
+  const repetido = await restored.query(`
+    SELECT position('FISCAL_CANCELAR_LOJA' in pg_get_functiondef('public.fiscal_cancelar_documento(uuid, text)'::regprocedure)) > 0 AS loja,
+           position('u.ativo' in pg_get_functiondef('public.fiscal_cancelar_documento(uuid, text)'::regprocedure)) > 0 AS ativo
+  `);
+  assert.equal(repetido.rows[0].loja, true);
+  assert.equal(repetido.rows[0].ativo, true);
+  await restored.query("UPDATE public.documentos_fiscais_pendentes SET status = 'EMITIDO' WHERE id = $1", [DOC_B]);
+  await asSession(restored, GER_A, "authenticated", "authenticated");
+  await expectReject(
+    () => restored.query("SELECT public.fiscal_cancelar_documento($1, $2)", [DOC_B, JUST]),
+    /FISCAL_CANCELAR_LOJA/,
+  );
 
   await asPostgres(restored);
   await restored.exec("DROP FUNCTION public.fiscal_cancelar_documento(uuid, text)");
