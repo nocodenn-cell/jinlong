@@ -64,6 +64,7 @@ k6 run -q --out json="$ART/cap02-${SCENARIO,,}-metrics.json" \
   | tee "$ART/cap02-${SCENARIO,,}-k6.log"
 K6_EXIT=${PIPESTATUS[0]}
 UNTIL="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+node "$ROOT/scripts/capacity/summarize-cap02-metrics.mjs" "$SCENARIO" || echo "[cap02] WARN: summarize falhou"
 
 {
   echo "scenario=$SCENARIO ended=$(date -Iseconds) k6_exit=$K6_EXIT"

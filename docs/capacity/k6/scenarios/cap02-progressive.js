@@ -62,6 +62,7 @@ export const options = {
       gracefulStop: '30s',
     },
   },
+  summaryTrendStats: ['avg', 'min', 'med', 'p(90)', 'p(95)', 'p(99)', 'max', 'count'],
   thresholds: {
     http_req_failed: ['rate<0.02'],
     'http_req_duration{op:finalize_v4}': ['p(95)<3000', 'p(99)<8000'],
