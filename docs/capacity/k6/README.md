@@ -1,35 +1,29 @@
-# k6 — esqueleto de capacidade (Jinlong)
+# k6 — capacidade (Jinlong)
 
-**NÃO executar contra produção.** Estes scripts abortam se a URL parecer prod ou se `CAPACITY_ENV` ≠ `staging`/`local`.
+**NÃO executar contra produção.** Guards abortam se a URL não for `localhost`/`127.0.0.1` (local) ou staging allowlisted.
 
-## Pré-requisitos
+## CAP-02 — carga progressiva local (`fastproduct-capacity`)
 
-1. Checklist `../checklists/PRE_EXECUCAO_STAGING.md` completa.
-2. [k6](https://k6.io/docs/get-started/installation/) instalado.
-3. Variáveis:
+Alvo exclusivo: `http://127.0.0.1:54421` (project Docker `fastproduct-capacity`).
 
 ```bash
-export CAPACITY_ENV=staging   # ou local
-export CAPACITY_ALLOWED_PROJECT_REF=YOUR_STAGING_REF   # obrigatório (20 chars)
-export K6_SUPABASE_URL=https://YOUR_STAGING_REF.supabase.co
-export K6_ANON_KEY=...
-export K6_OPERADOR_EMAIL=op.l01.c01@capacity.staging.invalid
-export K6_OPERADOR_PASSWORD=...
+# 1) Stack capacity já up + seed synthetic 1/5/10
+# 2) Preparar 10 lojas × 2 caixas (senhas locais; nunca .env.local)
+sg docker -c 'CAPACITY_LOJAS=10 CAPACITY_CAIXAS_POR_LOJA=2 node scripts/capacity/prepare-capacity-k6.mjs'
+
+# 3) Cenários (só avança se gate anterior verde)
+bash scripts/capacity/run-cap02-scenario.sh T00   # 1 caixa, 1 venda/min, 5m
+bash scripts/capacity/run-cap02-scenario.sh T01   # 1 caixa, 60/h, 15m
+bash scripts/capacity/run-cap02-scenario.sh T02   # 2 caixas, 120/h total, 15m
+bash scripts/capacity/run-cap02-scenario.sh T03   # 2 caixas, 240/h total, 15m
+bash scripts/capacity/run-cap02-scenario.sh T04   # 5×2, 600/h total, 15m
+bash scripts/capacity/run-cap02-scenario.sh T05   # 10×2, 1200/h total, 15m
 ```
 
-Ver também `STG01_HOMOLOGACAO_ISOLADA.md` e `.env.staging.example`.
+Fluxo real por VU: login password → RPC `finalizar_venda_transacional_canonica_v4` autenticada → persistência em `vendas`/`estoque`/`caixas`.
 
-## Comandos
+Variáveis vêm do `supabase status` do workdir capacity — **não** de `NEXT_PUBLIC_*` / `.env.local`.
 
-```bash
-# Guard + smoke (RPC path — implementar auth completa na FASE 3)
-k6 run scenarios/smoke.js
+## Esqueleto legado
 
-# Piloto — só após smoke OK
-k6 run -e K6_LOJAS=1 -e K6_CAIXAS_POR_LOJA=2 scenarios/peak.js
-```
-
-## Estado atual
-
-Esqueleto da FASE 2: guard de ambiente + smoke mínimo.  
-Auth multi-operador, payload canônico v4 e thresholds completos serão preenchidos **após** staging existir (FASE 3).
+`scenarios/smoke.js` e `peak.js` permanecem como reachability/pacing; o caminho canônico CAP-02 é `cap02-progressive.js`.
