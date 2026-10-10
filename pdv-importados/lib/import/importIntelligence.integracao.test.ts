@@ -65,6 +65,9 @@ describe.skipIf(!habilitado)('Import Intelligence — integração real (F4)', (
     const [lojaA] = await ok(admin.from('lojas').insert({ nome: `F4 int A1 ${RUN}`, codigo: `F4I-A-${RUN}`, empresa_id: empA.id }).select('id'), 'loja A')
     const [lojaB] = await ok(admin.from('lojas').insert({ nome: `F4 int B1 ${RUN}`, codigo: `F4I-B-${RUN}`, empresa_id: empB.id }).select('id'), 'loja B')
     ids.lojaA = lojaA.id
+    // ERP da loja A, para provar que o Import Intelligence não toca estoque, AP nem preço
+    const [prod] = await ok(admin.from('produtos').insert({ nome: `F4 int produto ${RUN}`, preco_varejo: 12.34, origem: 'china_manual', tem_nf: false, loja_id: lojaA.id }).select('id'), 'produto A')
+    await ok(admin.from('estoque').insert({ loja_id: lojaA.id, produto_id: prod.id, quantidade_atual: 7 }), 'estoque A')
     donoA = await usuario('dono-a', 'DONO', lojaA.id)
     gerenteA = await usuario('gerente-a', 'GERENTE', lojaA.id)
     donoB = await usuario('dono-b', 'DONO', lojaB.id)
@@ -77,11 +80,14 @@ describe.skipIf(!habilitado)('Import Intelligence — integração real (F4)', (
   }, 60_000)
 
   it('salva, reabre, recalcula igual, aprova pelo servidor e não toca o ERP; B não vê A', async () => {
+    // Snapshot restrito à loja do teste: outros testes de integração escrevem em produtos em paralelo
     const antes = {
-      estoque: await ok(admin.from('estoque').select('quantidade_atual'), 'estoque'),
-      ap: await ok(admin.from('contas_pagar').select('id'), 'contas_pagar'),
-      precos: await ok(admin.from('produtos').select('id, preco_varejo').order('id'), 'precos'),
+      estoque: await ok(admin.from('estoque').select('produto_id, quantidade_atual').eq('loja_id', ids.lojaA).order('produto_id'), 'estoque'),
+      ap: await ok(admin.from('contas_pagar').select('id').eq('loja_id', ids.lojaA), 'contas_pagar'),
+      precos: await ok(admin.from('produtos').select('id, preco_varejo, preco_custo').eq('loja_id', ids.lojaA).order('id'), 'precos'),
     }
+    expect(antes.estoque.length).toBe(1)
+    expect(antes.precos.length).toBe(1)
 
     // 1. GERENTE cria e preenche (tenant derivado da loja)
     const op = (await ok(gerenteA.rpc('import_criar_operacao', {
@@ -147,9 +153,9 @@ describe.skipIf(!habilitado)('Import Intelligence — integração real (F4)', (
 
     // 6. ERP intocado
     const depois = {
-      estoque: await ok(admin.from('estoque').select('quantidade_atual'), 'estoque'),
-      ap: await ok(admin.from('contas_pagar').select('id'), 'contas_pagar'),
-      precos: await ok(admin.from('produtos').select('id, preco_varejo').order('id'), 'precos'),
+      estoque: await ok(admin.from('estoque').select('produto_id, quantidade_atual').eq('loja_id', ids.lojaA).order('produto_id'), 'estoque'),
+      ap: await ok(admin.from('contas_pagar').select('id').eq('loja_id', ids.lojaA), 'contas_pagar'),
+      precos: await ok(admin.from('produtos').select('id, preco_varejo, preco_custo').eq('loja_id', ids.lojaA).order('id'), 'precos'),
     }
     expect(depois).toEqual(antes)
   }, 60_000)
