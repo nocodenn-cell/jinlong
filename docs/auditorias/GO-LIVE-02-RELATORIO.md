@@ -12,24 +12,24 @@ Nenhuma migration, dump ou escrita foi feita em produção ou staging.
 
 ## 1. CI e PR #535
 
-`114e6c800b4a7b946138c24e06ce7cb99900ae02` está em `origin/sprint/go-live-01`. A correção de tipos e este relatório estão no commit `95017e76`.
+`114e6c800b4a7b946138c24e06ce7cb99900ae02` está em `origin/sprint/go-live-01`. A correção de tipos está em `95017e76`. A ponta que o CI abaixo executou é `41ecf9f0`.
 
-No run `38049357414` desse SHA:
+No run `38049357414` de `114e6c80`, `Supabase local gates` falhou em `check:types-drift`. A primeira divergência era `caixas.loja_id` opcional no `Insert` versionado e obrigatório no banco local, porque `20261010120000` faz `DROP DEFAULT`. O arquivo `pdv-importados/lib/supabase/database.types.ts` passou a exigir `loja_id: string` no `Insert`. O `Update` continua opcional. `npx tsc --noEmit -p tsconfig.typecheck.json` em `pdv-importados` passou. `npx eslint lib/supabase/database.types.ts` passou. O caixa web já envia `loja_id` em `pdv-importados/app/caixa/server/cashSession.ts`.
+
+No run de `41ecf9f0`:
 
 | Check | Resultado |
 |---|---|
-| `build-and-test` (`pdv-importados` e `pdv-local`) | PASS |
-| E2E crítico | PASS |
-| `gitleaks`, `detect-paths`, `outbox-contract`, `edge-functions-typecheck`, `anti-replay-diagnostic-gate` | PASS |
-| Vercel `pdv-importados` e `jinlong-site` | PASS por Ignored Build Step |
-| `migration-remote-drift` | FAIL. Lista na seção 6. Não foi mascarado. |
-| `Supabase local gates` | FAIL em `check:types-drift` |
+| `Supabase local gates` | **PASS** (5m48s) |
+| `build-and-test` de `pdv-importados` e de `pdv-local` | **PASS** |
+| `gitleaks`, `detect-paths`, `outbox-contract`, `edge-functions-typecheck`, `anti-replay-diagnostic-gate` | **PASS** |
+| Vercel `pdv-importados` | PASS por Ignored Build Step |
+| Vercel `jinlong-site` | preview concluído pela integração Git. Não houve promote manual. |
+| `migration-remote-drift` | **FAIL**. Lista na seção 6. Não foi mascarado. |
 
-A primeira divergência de tipos era `caixas.loja_id` opcional no `Insert` versionado e obrigatório no banco local, porque `20261010120000` faz `DROP DEFAULT`. O arquivo `pdv-importados/lib/supabase/database.types.ts` passou a exigir `loja_id: string` no `Insert`. O `Update` continua opcional. `npx tsc --noEmit -p tsconfig.typecheck.json` em `pdv-importados` passou. `npx eslint lib/supabase/database.types.ts` passou. O caixa web já envia `loja_id` em `pdv-importados/app/caixa/server/cashSession.ts`.
+Checks obrigatórios de `main`, lidos em `required_status_checks`: `build-and-test`, `gitleaks`, `Supabase local gates`, `edge-functions-typecheck`, `outbox-contract`, `anti-replay-diagnostic-gate`. Todos passaram em `41ecf9f0`. O drift não está nessa lista e permanece vermelho.
 
-O `next build` local não foi executado: o job de CI que o faz depende do secret `CI_NEXT_PUBLIC_SUPABASE_ANON_KEY`. O build do SHA anterior passou; este commit só altera a obrigatoriedade do campo.
-
-`e2e-playwright` do SHA `114e6c80` ainda estava pendente quando esta correção foi preparada. O push novo dispara outro CI. O drift remoto continua vermelho de propósito.
+`e2e-playwright` e o E2E crítico desse SHA ainda estavam pendentes no registro. Não são checks obrigatórios de `main`.
 
 ## 2. Correções
 
@@ -49,7 +49,7 @@ O `next build` local não foi executado: o job de CI que o faz depende do secret
 | `npm run test:go-live-01-isolamento` | PASS |
 | `npm run test:backup-restore-isolado` | PASS |
 | `node scripts/sync-outbox-contract-smoke.mjs` | PASS |
-| Lint, teste e build completos do `pdv-importados` | PASS no CI de `114e6c80`. Não reexecutados por inteiro neste workspace. |
+| Lint, teste e build do `pdv-importados` | PASS no CI de `41ecf9f0` (`build-and-test`, 6m23s). O `next build` local não rodou: o job usa o secret `CI_NEXT_PUBLIC_SUPABASE_ANON_KEY`. |
 
 ## 4. PostgreSQL servidor
 
