@@ -68,7 +68,7 @@ Commits desde `a39a5309`:
 - `bccb81fd` SHA dessa correção
 - `4b5b1b60` plano da remediação
 - `28ec40a3` ensaio local da janela
-- o commit deste encerramento, na ponta da branch depois do push
+- `4a9c582cd5bb8a682452592de901beb92c1d2900` encerramento
 
 ## 6. GitHub, Vercel e Supabase
 
