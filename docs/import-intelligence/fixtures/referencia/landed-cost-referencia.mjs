@@ -114,6 +114,8 @@ export function calcularLandedCost(input) {
   const pendente = (codigo, referencia, mensagem) => divergencias.push({ codigo, severidade: 'BLOQUEANTE', referencia, mensagem })
 
   if (input.schema_version !== '1') erro('LANDED_SCHEMA_VERSAO')
+  // P-02: arredondamento é literal aprovado (DECISÃO-06 v1). Outro modo exige nova versão.
+  if (input.politica?.arredondamento !== 'HALF_UP') erro('LANDED_POLITICA_INVALIDA')
   if (input.processo?.moeda_base !== 'BRL') erro('LANDED_MOEDA_BASE')
 
   // Câmbios: taxa com 10 casas
@@ -226,7 +228,14 @@ export function calcularLandedCost(input) {
       pendente('TRIBUTO_PENDENTE', t.id, 'tributo sem status de recuperabilidade validado')
       continue
     }
-    if (t.status_recuperabilidade === 'NAO_RECUPERAVEL' && t.regra?.incorpora_custo === true) {
+    if (t.regra) {
+      // P-01: regra com vigência; fato gerador fora da vigência → excluído com divergência
+      if (!t.regra.vigencia_inicio || !t.data_fato_gerador) erro('LANDED_DADO_AUSENTE', `tributo.${t.id}.vigencia`)
+      const fora = t.data_fato_gerador < t.regra.vigencia_inicio || (t.regra.vigencia_fim && t.data_fato_gerador > t.regra.vigencia_fim)
+      if (fora) { pendente('TRIBUTO_REGRA_FORA_VIGENCIA', t.id, 'regra não vigente na data do fato gerador'); continue }
+    }
+    // Incorpora ao custo: NAO_RECUPERAVEL ou GLOSADO, quando a regra manda incorporar (doc 03 §3)
+    if (['NAO_RECUPERAVEL', 'GLOSADO'].includes(t.status_recuperabilidade) && t.regra?.incorpora_custo === true) {
       if (!t.item_id) erro('LANDED_TRIBUTO_ALOCACAO_AUSENTE', t.id)
       const valorS10 = reescala(lerDec(t.valor_apurado_brl, 2, `tributo.${t.id}.valor_apurado_brl`), 2, ESC_INTERMEDIARIA)
       aplicarValor(t.item_id, valorS10, `tributo.${t.id}`, 'tributos')

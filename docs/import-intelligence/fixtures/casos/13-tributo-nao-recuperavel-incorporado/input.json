@@ -40,8 +40,11 @@
       "item_id": "item-001",
       "regra": {
         "id": "regra-01",
-        "incorpora_custo": true
-      }
+        "incorpora_custo": true,
+        "vigencia_inicio": "2026-01-01",
+        "vigencia_fim": null
+      },
+      "data_fato_gerador": "2026-09-30"
     }
   ]
 }

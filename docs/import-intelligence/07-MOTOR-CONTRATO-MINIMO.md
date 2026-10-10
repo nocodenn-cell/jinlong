@@ -389,10 +389,22 @@ Fixtures foram **conferidos à mão** para: 03 (empate HALF_UP, resíduo −0,00
 
 | ID | Pendência | Ação |
 |---|---|---|
-| **P-01** | `regra` de tributo sem vigência no contrato, então T-FIS-04 não tem como ser testado | Acrescentar `vigencia_inicio` e `vigencia_fim` ao contrato antes de S1a |
-| **P-02** | `arredondamento` no input aceita só `HALF_UP`, sem ligar à DECISÃO-06 | Trocar por enum com valor aprovado |
-| **P-03** | Não há fixture para T-UNI-03 com fração de unidade **e** critério de rateio | Acrescentar caso com fração e rateio |
-| **P-04** | Hash: o verificador calcula `input_hash` e o motor não deveria | Documentar a separação (seção 3) e decidir quem canoniza |
+| **P-01** | `regra` de tributo sem vigência no contrato | **Resolvido.** `RegraTributo` tem `vigencia_inicio` (obrigatória) e `vigencia_fim` (nula = em vigor); `TributoEntrada` tem `data_fato_gerador`. Fato gerador fora da vigência gera `TRIBUTO_REGRA_FORA_VIGENCIA` e exclui o tributo. Limites inclusivos. Testado em `landedCost.adversarial.spec.ts` |
+| **P-02** | `arredondamento` no input aceita só `HALF_UP`, sem ligar à DECISÃO-06 | **Resolvido.** Tipo literal `'HALF_UP'`; qualquer outro valor gera `LANDED_POLITICA_INVALIDA`. A política é literal, não ajustável por entrada. Mudar exige nova versão do motor |
+| **P-03** | Não há fixture para T-UNI-03 com fração de unidade **e** critério de rateio | **Parcialmente resolvido.** Frações (fixture 20) e rateio por critérios (fixtures 19, 21) estão cobertos separadamente. Combinação no mesmo item segue aberta, coberta por teste adversarial de unidade fracionada |
+| **P-04** | Hash: o verificador calcula `input_hash` e o motor não deveria | **Resolvido.** O motor não calcula hash. `serializarCanonico` (em `canonico.ts`) produz a string canônica; o adapter aplica sha256 |
+
+## 12. Decisões adiadas (registradas na implementação da S1a)
+
+| Item | Motivo do adiamento | Tratamento no motor |
+|---|---|---|
+| Regime tributário da empresa | Decisão contábil (F-01 de `03-MATRIZ-FISCAL.md` §7) | Não entra no motor; a regra chega pronta |
+| Tolerância entre duplicatas e valor da NF-e (DECISÃO-05) | Pertence à guarda de integração (S3) | Fora do motor |
+| Método de baixa de estoque (FIFO, média, atual) | Não definido | Fora do motor |
+| Valores negativos de despesa | Permitidos como ajuste ou estorno; falta confirmar com a contabilidade se todo ajuste precisa de documento | Aceitos com justificativa obrigatória |
+| Parâmetros de política além do aprovado | Só o conjunto da DECISÃO-06 é válido nesta versão | Literais; outro valor é erro |
+
+**Fonte de verdade a partir da implementação:** `shared-core/src/import/types.ts`. A seção 3 deste documento é a referência humana e foi mantida coerente com ele.
 
 ---
 

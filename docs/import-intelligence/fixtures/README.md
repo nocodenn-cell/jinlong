@@ -73,8 +73,8 @@ node docs/import-intelligence/fixtures/referencia/landed-cost-referencia.mjs --g
 
 1. **Os `expected.json` foram gerados pelo verificador.** A conferência à mão cobre os casos marcados. Não é prova de que a regra de negócio está certa: só prova que a aritmética é a descrita.
 2. **O arredondamento HALF_UP é proposta.** Enquanto DECISÃO-06 não for aprovada, qualquer caso com empate pode mudar. Casos afetados: 03, 04, 15, 19, 20, 21.
-3. **Não há caso para regra de tributo fora de vigência** (T-FIS-04), porque o contrato ainda não tem vigência (pendência P-01).
-4. **Não há caso de glosa de crédito** (T-FIS-06).
+3. **Vigência de regra (T-FIS-04)** não tem fixture. Está coberta por testes adversariais em `shared-core/src/import/landedCost.adversarial.spec.ts` (P-01 resolvido).
+4. **Glosa de crédito (T-FIS-06)** não tem fixture. Glosa com incorporação está coberta pelo código, mas não há teste de glosa dedicado.
 5. **Não há caso com fração de unidade e rateio no mesmo item** (pendência P-03).
 
 ## Como acrescentar um caso
