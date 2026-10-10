@@ -392,11 +392,9 @@ jobs:
     # seja, vivia raspando o proprio teto. Somando o setup da stack local, o run
     # de 2026-08-19T21:08 estourou com os testes ainda em andamento.
     #
-    # 110, não 80: soma dos `timeout-minutes` de cada step agora chega a ~104min
-    # no pior caso — mesmo raciocínio do comentário equivalente em `e2e-critical`
-    # (subiu de ~73min pela mesma correção de "Install Playwright Chromium" e
-    # "Readiness" no code review do PR #315).
-    timeout-minutes: 110
+    # 125, não 110: a soma dos `timeout-minutes` passou de ~104 para ~119
+    # com o build do Next antes do E2E geral (o `next dev` estourava a heap).
+    timeout-minutes: 125
 
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
@@ -531,6 +529,19 @@ jobs:
           SEED_OPERADOR_EMAIL: e2e-operador@localhost.test
         run: node pdv-importados/scripts/seed-dev-users.mjs
 
+      # `next dev` na suíte inteira estourou a heap (4096 MB) em ~8 min no run
+      # 38081109994 e o processo morreu. O `ERR_CONNECTION_REFUSED` é efeito
+      # disso, não a primeira falha. `next start` não recompila rota a rota.
+      # O E2E crítico continua em `next dev` (suíte curta, mesmo config).
+      - name: Build Next para o E2E geral
+        timeout-minutes: 15
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+          NEXT_PUBLIC_SUPABASE_URL: ${{ env.SB_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ env.SB_ANON }}
+          USE_UNIFIED_SALES_FLOW: 'true'
+        run: npx turbo run build --filter=pdv-importados
+
       # Contrato de ambiente completo (não copiado do job `e2e-critical`
       # corretamente antes): faltavam SUPABASE_SERVICE_ROLE_KEY, SYNC_ENDPOINT
       # e SYNC_KEY neste step. Sem `SUPABASE_SERVICE_ROLE_KEY`,
@@ -550,6 +561,7 @@ jobs:
         env:
           CI: true
           PLAYWRIGHT_E2E_WITH_DEV: '1'
+          PLAYWRIGHT_E2E_PROD_SERVER: '1'
           # 4096, não 8192: runner ubuntu-latest ~7GB RAM; 8GB (#1227) gerou
           # "hosted runner lost communication" e cancelou o step sem logs.
           NODE_OPTIONS: --max-old-space-size=4096

@@ -52,9 +52,13 @@ test.describe('Admin - i18n idioma', () => {
     // drawer de navegação (`AdminV2MobileNavDrawer`, fechado por padrão) —
     // `hidden`, não ausente. O h1 do dashboard é visível em qualquer
     // viewport e prova o mesmo contrato (idioma trocou/persistiu).
-    await expect(page.getByText('生意看板')).toBeVisible({ timeout: 10_000 })
+    // `getByRole('heading')` ignora o `<div hidden>` do stream do App Router.
+    // `getByText` agarra esse h1 ainda oculto e `toBeVisible` falha por 10s
+    // mesmo quando o título já está no payload (CI #38081109994).
+    const tituloZh = page.getByRole('heading', { level: 1, name: '生意看板' })
+    await expect(tituloZh).toBeVisible({ timeout: 10_000 })
     await page.reload()
-    await expect(page.getByText('生意看板')).toBeVisible({ timeout: 10_000 })
+    await expect(tituloZh).toBeVisible({ timeout: 10_000 })
   })
 
   // `idioma_preferido` é persistido no perfil do usuário GERENTE (comprovado

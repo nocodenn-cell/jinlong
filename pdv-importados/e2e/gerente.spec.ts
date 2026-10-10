@@ -58,11 +58,14 @@ test.describe('Painel do gerente (/admin/*)', () => {
     // navegação real mora no drawer mobile (`AdminV2MobileNavDrawer`),
     // atrás do botão "Navegação". Sem abrir o drawer aqui, o `nav` abaixo
     // nunca fica visível em `mobile-chrome-pixel`/`mobile-safari-iphone`.
-    const mobileToggle = page.getByRole('button', { name: 'Navegação' })
-    if (await mobileToggle.isVisible().catch(() => false)) {
-      await mobileToggle.click()
-    }
-    const nav = page.getByRole('navigation')
+    const menuButton = page.getByRole('button', { name: 'Navegação' })
+    const mobile = await menuButton.isVisible().catch(() => false)
+    if (mobile) await menuButton.click()
+    // O hub (`executive-analytics-hub-nav`) também é `<nav>` e não prova RBAC.
+    // No mobile o drawer aberto + o hub visível violam o strict mode.
+    const nav = mobile
+      ? page.getByRole('dialog', { name: 'Navegação' }).getByTestId('executive-sidebar-nav')
+      : page.locator('aside').getByTestId('executive-sidebar-nav')
     await expect(nav).toBeVisible()
     // Rótulos reais de `lib/navigation/adminV2SidebarNav.ts` — "Produtos"/
     // "Caixas" (do arquivo antigo) não existem mais como itens de menu.
@@ -81,14 +84,14 @@ test.describe('Painel do gerente (/admin/*)', () => {
   test('página de imprimir etiquetas carrega', async ({ page }) => {
     await gotoApp(page, '/admin/estoque/imprimir-etiquetas')
     await expect(page.getByRole('heading', { name: /Imprimir Etiquetas|打印标签/ })).toBeVisible()
-    await expect(page.getByPlaceholder(/Código de barras|条形码/)).toBeVisible()
+    await expect(page.getByPlaceholder(/código de barras|条形码/i)).toBeVisible()
     await expect(page.getByRole('button', { name: /Gerar PDF|生成PDF/ })).toBeVisible()
   })
 
   test('fluxo básico: bipar produto -> adicionar ao carrinho -> gerar PDF', async ({ page }) => {
     await gotoApp(page, '/admin/estoque/imprimir-etiquetas')
 
-    const searchInput = page.getByPlaceholder(/Código de barras|条形码/)
+    const searchInput = page.getByPlaceholder(/código de barras|条形码/i)
     await expect(searchInput).toBeVisible()
 
     await searchInput.fill('7891234567890')
@@ -192,7 +195,9 @@ test.describe('Painel do gerente (/admin/*)', () => {
     // pixel/mobile-safari-iphone só existe dentro do drawer de navegação
     // fechado por padrão. O h1 do dashboard prova o mesmo contrato em
     // qualquer viewport.
-    await expect(page.getByText('生意看板')).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByRole('heading', { level: 1, name: '生意看板' })).toBeVisible({
+      timeout: 10_000,
+    })
 
     await garantirIdiomaPt(page)
   })

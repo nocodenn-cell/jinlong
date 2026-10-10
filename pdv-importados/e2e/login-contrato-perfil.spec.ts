@@ -67,24 +67,25 @@ test.describe('Contrato de login por perfil', () => {
     await garantirIdiomaPt(page)
 
     const isMobileProject = testInfo.project.name.startsWith('mobile-')
-    const nav = page.getByRole('navigation')
+    // Prova de RBAC é a sidebar. O hub executivo também é `<nav>` e fica
+    // visível no dashboard mobile — `getByRole('navigation')` casava ele e
+    // `toBeHidden()` falhava com o landmark certo ainda oculto.
+    const asideNav = page.locator('aside').getByTestId('executive-sidebar-nav')
     const menuButton = page.getByRole('button', { name: 'Navegação' })
 
     if (isMobileProject) {
-      // < lg: `<aside>` (com o `<nav>`) fica `hidden`; só o hamburger existe.
       await expect(menuButton).toBeVisible()
-      await expect(nav).toBeHidden()
+      await expect(asideNav).toBeHidden()
 
       await menuButton.click()
-      await expect(page.getByRole('dialog', { name: 'Navegação' })).toBeVisible()
-      await expect(nav).toBeVisible()
+      const drawer = page.getByRole('dialog', { name: 'Navegação' })
+      await expect(drawer).toBeVisible()
+      await expect(drawer.getByTestId('executive-sidebar-nav')).toBeVisible()
 
       await page.keyboard.press('Escape')
-      await expect(page.getByRole('dialog', { name: 'Navegação' })).not.toBeVisible()
+      await expect(drawer).not.toBeVisible()
     } else {
-      // >= lg: `<nav>` sempre visível; o hamburger nem renderiza (`lg:hidden`
-      // na barra que o contém).
-      await expect(nav).toBeVisible()
+      await expect(asideNav).toBeVisible()
       await expect(menuButton).not.toBeVisible()
     }
   })
