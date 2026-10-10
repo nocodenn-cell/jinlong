@@ -1,5 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "regions": ["gru1"],
-  "ignoreCommand": "sh scripts/vercel-ignore.sh"
+  "ignoreCommand": "sh scripts/vercel-ignore.sh",
+  "git": {
+    "deploymentEnabled": {
+      "claude/import-intelligence-s1a": false
+    }
+  }
 }
