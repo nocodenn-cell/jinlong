@@ -10,7 +10,9 @@
 **/.env
 **/.env.local
 **/.env.*.local
+**/.env.capacity
 !**/.env.example
+!**/.env.staging.example
 
 # Logs e cache
 *.log
@@ -89,3 +91,7 @@ pdv-importados/scripts/_audit_f1_probe.mjs
 /backups/
 /.codex/
 /opencode.json
+
+# STG-01 A-L1 disposable supabase workdir
+backend/.capacity-workdir/
+.capacity-workdir/

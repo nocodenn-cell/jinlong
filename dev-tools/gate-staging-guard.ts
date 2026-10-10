@@ -1,18 +1,15 @@
 import { loadPdvEnv } from './load-env.js'
-
-const DEFAULT_BLOCKED_FRAGMENTS = ['production', 'prod-', '-prod.']
+import { assertCapacityTargetFromEnv } from './capacity-target-guard.js'
 
 /**
- * hybrid_mode só roda em staging — nunca produção.
- * Override explícito: GATE_ALLOW_HYBRID_ANYWHERE=true (apenas dev local).
+ * hybrid_mode só roda em staging/local — nunca produção.
+ *
+ * STG-01: identificação positiva via capacity-target-guard
+ * (denylist de prod + CAPACITY_ALLOWED_PROJECT_REF / GATE_STAGING_PROJECT_REF).
+ * GATE_ALLOW_HYBRID_ANYWHERE NÃO ignora a denylist de produção.
  */
 export function assertHybridStagingOnly(): void {
   loadPdvEnv()
-
-  if (process.env.GATE_ALLOW_HYBRID_ANYWHERE?.trim() === 'true') {
-    console.warn('[gate] GATE_ALLOW_HYBRID_ANYWHERE=true — guard staging desativado')
-    return
-  }
 
   const url = (
     process.env.SUPABASE_URL?.trim() ||
@@ -24,37 +21,27 @@ export function assertHybridStagingOnly(): void {
     throw new Error('hybrid_mode bloqueado: SUPABASE_URL ausente')
   }
 
-  const gateEnv = process.env.GATE_ENV?.trim().toLowerCase()
-  const explicitStaging = gateEnv === 'staging' || gateEnv === 'preview'
-  const localDev = /localhost|127\.0\.0\.1|0\.0\.0\.0/.test(url)
-  const stagingHint = /staging|stg-|preview|dev-/.test(url)
-
-  const blockedExtra = (process.env.GATE_BLOCKED_URL_FRAGMENTS ?? '')
-    .split(',')
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean)
-
-  const blocked = [...DEFAULT_BLOCKED_FRAGMENTS, ...blockedExtra]
-  for (const frag of blocked) {
-    if (url.includes(frag) && !explicitStaging) {
-      throw new Error(
-        `hybrid_mode bloqueado: URL contém "${frag}". Defina GATE_ENV=staging ou use ambiente de staging.`,
-      )
-    }
-  }
-
-  const allowedRef = process.env.GATE_STAGING_PROJECT_REF?.trim().toLowerCase()
-  if (allowedRef && !url.includes(allowedRef)) {
-    throw new Error(
-      `hybrid_mode bloqueado: SUPABASE_URL não corresponde a GATE_STAGING_PROJECT_REF=${allowedRef}`,
+  if (process.env.GATE_ALLOW_HYBRID_ANYWHERE?.trim() === 'true') {
+    console.warn(
+      '[gate] GATE_ALLOW_HYBRID_ANYWHERE=true — ainda aplica denylist de produção',
     )
   }
 
-  if (!explicitStaging && !localDev && !stagingHint) {
-    throw new Error(
-      'hybrid_mode bloqueado: defina GATE_ENV=staging ou use URL de staging/local.',
-    )
+  // Alinha CAPACITY_ENV com GATE_ENV para o guard unificado
+  if (!process.env.CAPACITY_ENV && process.env.GATE_ENV) {
+    process.env.CAPACITY_ENV = process.env.GATE_ENV
+  }
+  if (!process.env.CAPACITY_ALLOWED_PROJECT_REF && process.env.GATE_STAGING_PROJECT_REF) {
+    process.env.CAPACITY_ALLOWED_PROJECT_REF = process.env.GATE_STAGING_PROJECT_REF
   }
 
+  const local = /localhost|127\.0\.0\.1|0\.0\.0\.0/.test(url)
+  if (local) {
+    process.env.CAPACITY_ENV = process.env.CAPACITY_ENV || 'local'
+  } else if (!process.env.CAPACITY_ENV) {
+    process.env.CAPACITY_ENV = 'staging'
+  }
+
+  assertCapacityTargetFromEnv(process.env)
   console.log('[gate] hybrid_mode permitido CHAOS_INJECTION=true staging_guard=PASS')
 }

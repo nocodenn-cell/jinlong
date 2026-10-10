@@ -1,0 +1,750 @@
+[
+  {
+    "history_version": "20261009175106",
+    "history_name": "045_caixa_movimentacoes_transacionais_p1_registrar",
+    "confidence": "high",
+    "covers_git": [
+      "045_caixa_movimentacoes_transacionais"
+    ],
+    "note": "Parte 1 do arquivo 045 canônico.",
+    "covers_exist": [
+      {
+        "stem": "045_caixa_movimentacoes_transacionais",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009175140",
+    "history_name": "045_caixa_movimentacoes_transacionais_p2_aprovar_cancelar",
+    "confidence": "high",
+    "covers_git": [
+      "045_caixa_movimentacoes_transacionais"
+    ],
+    "note": "Parte 2 do arquivo 045 canônico.",
+    "covers_exist": [
+      {
+        "stem": "045_caixa_movimentacoes_transacionais",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009175142",
+    "history_name": "045_caixa_movimentacoes_transacionais_p3_estornar_grants",
+    "confidence": "high",
+    "covers_git": [
+      "045_caixa_movimentacoes_transacionais"
+    ],
+    "note": "Parte 3 do arquivo 045 canônico.",
+    "covers_exist": [
+      {
+        "stem": "045_caixa_movimentacoes_transacionais",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009181119",
+    "history_name": "066_fiscal_documento_timeline_tail",
+    "confidence": "high",
+    "covers_git": [
+      "066_fiscal_documento_timeline"
+    ],
+    "note": "Cauda do arquivo 066.",
+    "covers_exist": [
+      {
+        "stem": "066_fiscal_documento_timeline",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009181222",
+    "history_name": "075_importar_nfe_transacao_rpc",
+    "confidence": "medium",
+    "covers_git": [
+      "075_importacao_nfe_compra"
+    ],
+    "note": "Possível split do pacote 075; verificar se arquivo 075 único no Git cobre RPC.",
+    "covers_exist": [
+      {
+        "stem": "075_importacao_nfe_compra",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009183433",
+    "history_name": "117_fix_oc_rls_usuarios_pattern_reapply",
+    "confidence": "high",
+    "covers_git": [
+      "117_fix_oc_rls_usuarios_pattern"
+    ],
+    "note": "Reapply do 117.",
+    "covers_exist": [
+      {
+        "stem": "117_fix_oc_rls_usuarios_pattern",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009183936",
+    "history_name": "chunk013_medium_batch",
+    "confidence": "low",
+    "covers_git": [],
+    "note": "Batch MCP genérico; conteúdo não recuperável 1:1 — não usar para register canônico.",
+    "covers_exist": []
+  },
+  {
+    "history_version": "20261009184131",
+    "history_name": "209_210_fiscal_campos",
+    "confidence": "high",
+    "covers_git": [
+      "20260621000500_209_fiscal_campos_loja_pdvconfig",
+      "20260621000600_210_fiscal_campos_produto"
+    ],
+    "note": null,
+    "covers_exist": [
+      {
+        "stem": "20260621000500_209_fiscal_campos_loja_pdvconfig",
+        "exists": true
+      },
+      {
+        "stem": "20260621000600_210_fiscal_campos_produto",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009191854",
+    "history_name": "20260621005400_256_258_269_batch",
+    "confidence": "high",
+    "covers_git": [
+      "20260621005400_256_pdv_diagnostico_pre_producao",
+      "20260621005500_258_produtos_localizacao_nome_reduzido",
+      "20260621005700_269_ajustar_estoque_manual_service_ator"
+    ],
+    "note": null,
+    "covers_exist": [
+      {
+        "stem": "20260621005400_256_pdv_diagnostico_pre_producao",
+        "exists": true
+      },
+      {
+        "stem": "20260621005500_258_produtos_localizacao_nome_reduzido",
+        "exists": true
+      },
+      {
+        "stem": "20260621005700_269_ajustar_estoque_manual_service_ator",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009192021",
+    "history_name": "batch_20260707000000_venda_eventos_ledger",
+    "confidence": "high",
+    "covers_git": [
+      "20260707000000_venda_eventos_ledger"
+    ],
+    "note": null,
+    "covers_exist": [
+      {
+        "stem": "20260707000000_venda_eventos_ledger",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009192126",
+    "history_name": "batch_20260707020000_consistencia_vendas_auditoria",
+    "confidence": "high",
+    "covers_git": [
+      "20260707020000_consistencia_vendas_auditoria"
+    ],
+    "note": null,
+    "covers_exist": [
+      {
+        "stem": "20260707020000_consistencia_vendas_auditoria",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009192206",
+    "history_name": "batch_20260710163032_255_vendas_em_espera_e_consulta_rapida",
+    "confidence": "medium",
+    "covers_git": [
+      "20260621004500_24703_vendas_em_espera_e_consulta_rapida"
+    ],
+    "note": "Nome batch aponta 255; arquivo Git próximo é 24703/espera.",
+    "covers_exist": [
+      {
+        "stem": "20260621004500_24703_vendas_em_espera_e_consulta_rapida",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009192719",
+    "history_name": "batch_265_266_clientes",
+    "confidence": "high",
+    "covers_git": [
+      "20260710212349_265_clientes_insert_operador_pdv",
+      "20260710212628_266_clientes_unique_documento_loja"
+    ],
+    "note": null,
+    "covers_exist": [
+      {
+        "stem": "20260710212349_265_clientes_insert_operador_pdv",
+        "exists": true
+      },
+      {
+        "stem": "20260710212628_266_clientes_unique_documento_loja",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009193306",
+    "history_name": "20260717031500_248_devolver_qty_fn",
+    "confidence": "high",
+    "covers_git": [
+      "20260717031500_248_devolver_ou_trocar_venda"
+    ],
+    "note": "Split — stem Git pode diferir; conferir arquivos 248_* no disco.",
+    "covers_exist": [
+      {
+        "stem": "20260717031500_248_devolver_ou_trocar_venda",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009193346",
+    "history_name": "20260717031500_248_devolver_ou_trocar_venda_fn",
+    "confidence": "high",
+    "covers_git": [
+      "20260717031500_248_devolver_ou_trocar_venda"
+    ],
+    "note": null,
+    "covers_exist": [
+      {
+        "stem": "20260717031500_248_devolver_ou_trocar_venda",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009193417",
+    "history_name": "20260717031500_248_cancelar_venda_transacional",
+    "confidence": "medium",
+    "covers_git": [
+      "050_cancelar_venda_transacional"
+    ],
+    "note": "Reapply 248 sobre cancelar_venda; mapear ao arquivo 248 se existir.",
+    "covers_exist": [
+      {
+        "stem": "050_cancelar_venda_transacional",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009193832",
+    "history_name": "20260718184800_adr_caixa_002_calcular_valor",
+    "confidence": "high",
+    "covers_git": [
+      "20260718184800_adr_caixa_002_modelo_alpha_e_cancel"
+    ],
+    "note": null,
+    "covers_exist": [
+      {
+        "stem": "20260718184800_adr_caixa_002_modelo_alpha_e_cancel",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009193921",
+    "history_name": "20260718184800_adr_caixa_002_cancelar_venda",
+    "confidence": "high",
+    "covers_git": [
+      "20260718184800_adr_caixa_002_modelo_alpha_e_cancel"
+    ],
+    "note": null,
+    "covers_exist": [
+      {
+        "stem": "20260718184800_adr_caixa_002_modelo_alpha_e_cancel",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009194002",
+    "history_name": "20260731195704_fix_movimentacao_registrar",
+    "confidence": "high",
+    "covers_git": [
+      "20260731195704_fix_movimentacao_gerente_id_bypass_seguranca"
+    ],
+    "note": null,
+    "covers_exist": [
+      {
+        "stem": "20260731195704_fix_movimentacao_gerente_id_bypass_seguranca",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009194032",
+    "history_name": "20260731195704_fix_movimentacao_aprovar",
+    "confidence": "high",
+    "covers_git": [
+      "20260731195704_fix_movimentacao_gerente_id_bypass_seguranca"
+    ],
+    "note": null,
+    "covers_exist": [
+      {
+        "stem": "20260731195704_fix_movimentacao_gerente_id_bypass_seguranca",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009195002",
+    "history_name": "20260731200700_bl2_calcular_promocao_aplicavel",
+    "confidence": "high",
+    "covers_git": [
+      "20260731200700_bl2_promocao_rpc_e_precedencia"
+    ],
+    "note": null,
+    "covers_exist": [
+      {
+        "stem": "20260731200700_bl2_promocao_rpc_e_precedencia",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009195005",
+    "history_name": "20260731200700_bl2_trg_limite_desconto",
+    "confidence": "high",
+    "covers_git": [
+      "20260731200700_bl2_promocao_rpc_e_precedencia"
+    ],
+    "note": null,
+    "covers_exist": [
+      {
+        "stem": "20260731200700_bl2_promocao_rpc_e_precedencia",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009200922",
+    "history_name": "20260731202200_314_reafirma_grants_and_estoque_ledger",
+    "confidence": "high",
+    "covers_git": [
+      "20260731202200_314_reafirma_grants_pos_venda_apos_248"
+    ],
+    "note": null,
+    "covers_exist": [
+      {
+        "stem": "20260731202200_314_reafirma_grants_pos_venda_apos_248",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009202000",
+    "history_name": "291_estoque_baixas_integridade",
+    "confidence": "medium",
+    "covers_git": [
+      "20260805185445_291_estoque_baixas_integridade"
+    ],
+    "note": "Nome curto; localizar stem *291* no disco via fuzzy.",
+    "covers_exist": [
+      {
+        "stem": "20260805185445_291_estoque_baixas_integridade",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009202835",
+    "history_name": "295_registrar_conferencia_ordem_compra",
+    "confidence": "high",
+    "covers_git": [
+      "20260805193920_295_ordem_compra_conferencia"
+    ],
+    "note": null,
+    "covers_exist": [
+      {
+        "stem": "20260805193920_295_ordem_compra_conferencia",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009202855",
+    "history_name": "295_receber_ordem_compra_conferencia",
+    "confidence": "high",
+    "covers_git": [
+      "20260805193920_295_ordem_compra_conferencia"
+    ],
+    "note": null,
+    "covers_exist": [
+      {
+        "stem": "20260805193920_295_ordem_compra_conferencia",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009203011",
+    "history_name": "296_nfe_conferencia_ddl1",
+    "confidence": "medium",
+    "covers_git": [
+      "20260805213357_296_nfe_conferencia"
+    ],
+    "note": "DDL split NFe; mapear a arquivos 296_* no disco.",
+    "covers_exist": [
+      {
+        "stem": "20260805213357_296_nfe_conferencia",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009203034",
+    "history_name": "296_nfe_conferencia_ddl2",
+    "confidence": "medium",
+    "covers_git": [
+      "20260805213357_296_nfe_conferencia"
+    ],
+    "note": "DDL split NFe parte 2.",
+    "covers_exist": [
+      {
+        "stem": "20260805213357_296_nfe_conferencia",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009204228",
+    "history_name": "296_registrar_conferencia_nfe",
+    "confidence": "medium",
+    "covers_git": [
+      "20260805213357_296_nfe_conferencia"
+    ],
+    "note": "RPC split NFe.",
+    "covers_exist": [
+      {
+        "stem": "20260805213357_296_nfe_conferencia",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009204244",
+    "history_name": "296_confirmar_importacao_nfe",
+    "confidence": "medium",
+    "covers_git": [
+      "20260805213357_296_nfe_conferencia"
+    ],
+    "note": "RPC split NFe.",
+    "covers_exist": [
+      {
+        "stem": "20260805213357_296_nfe_conferencia",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009204313",
+    "history_name": "297_configuracoes_gerais_whitelist",
+    "confidence": "medium",
+    "covers_git": [
+      "20260806000032_297_configuracoes_gerais_whitelist"
+    ],
+    "note": "Localizar stem *297* no disco.",
+    "covers_exist": [
+      {
+        "stem": "20260806000032_297_configuracoes_gerais_whitelist",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009204448",
+    "history_name": "298_pdv_config_modo_limite_credito",
+    "confidence": "high",
+    "covers_git": [
+      "20260806002522_298_br01_limite_credito_por_modo_loja"
+    ],
+    "note": null,
+    "covers_exist": [
+      {
+        "stem": "20260806002522_298_br01_limite_credito_por_modo_loja",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009204817",
+    "history_name": "298_finalizar_venda_v4_br01_func",
+    "confidence": "high",
+    "covers_git": [
+      "20260806002522_298_br01_limite_credito_por_modo_loja"
+    ],
+    "note": null,
+    "covers_exist": [
+      {
+        "stem": "20260806002522_298_br01_limite_credito_por_modo_loja",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009205527",
+    "history_name": "298_br01_grants_verify",
+    "confidence": "high",
+    "covers_git": [
+      "20260806002522_298_br01_limite_credito_por_modo_loja"
+    ],
+    "note": null,
+    "covers_exist": [
+      {
+        "stem": "20260806002522_298_br01_limite_credito_por_modo_loja",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009205627",
+    "history_name": "299_tb07_pagamento_contas_pagar_limite_saldo",
+    "confidence": "medium",
+    "covers_git": [
+      "20260806002925_299_tb07_pagamento_contas_pagar_limite_saldo"
+    ],
+    "note": "Localizar stem *299* no disco.",
+    "covers_exist": [
+      {
+        "stem": "20260806002925_299_tb07_pagamento_contas_pagar_limite_saldo",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009205754",
+    "history_name": "300_br03_comment_verify",
+    "confidence": "high",
+    "covers_git": [
+      "20260806004637_300_br03_custo_unitario_snap_servidor"
+    ],
+    "note": null,
+    "covers_exist": [
+      {
+        "stem": "20260806004637_300_br03_custo_unitario_snap_servidor",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009205844",
+    "history_name": "301_revoke_anon_execute_finalizar_venda_v4_pos_br01",
+    "confidence": "medium",
+    "covers_git": [
+      "20260806005804_301_revoke_anon_execute_finalizar_venda_v4_pos_br01"
+    ],
+    "note": "Localizar stem *301* no disco.",
+    "covers_exist": [
+      {
+        "stem": "20260806005804_301_revoke_anon_execute_finalizar_venda_v4_pos_br01",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009205846",
+    "history_name": "302_formas_pagamento_ddl_seed",
+    "confidence": "high",
+    "covers_git": [
+      "20260806011719_302_f1_05_formas_pagamento_parametrizavel"
+    ],
+    "note": null,
+    "covers_exist": [
+      {
+        "stem": "20260806011719_302_f1_05_formas_pagamento_parametrizavel",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009205912",
+    "history_name": "302_f1_05_grants_verify",
+    "confidence": "high",
+    "covers_git": [
+      "20260806011719_302_f1_05_formas_pagamento_parametrizavel"
+    ],
+    "note": null,
+    "covers_exist": [
+      {
+        "stem": "20260806011719_302_f1_05_formas_pagamento_parametrizavel",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009210148",
+    "history_name": "303_cancelar_venda_ssot04_kardex",
+    "confidence": "high",
+    "covers_git": [
+      "20260806090414_303_ssot04_kardex_cancelamento_devolucao"
+    ],
+    "note": null,
+    "covers_exist": [
+      {
+        "stem": "20260806090414_303_ssot04_kardex_cancelamento_devolucao",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009210524",
+    "history_name": "303_devolver_ou_trocar_venda_ssot04",
+    "confidence": "high",
+    "covers_git": [
+      "20260806090414_303_ssot04_kardex_cancelamento_devolucao"
+    ],
+    "note": null,
+    "covers_exist": [
+      {
+        "stem": "20260806090414_303_ssot04_kardex_cancelamento_devolucao",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009210839",
+    "history_name": "303_304_305_308_batch",
+    "confidence": "high",
+    "covers_git": [
+      "20260806090414_303_ssot04_kardex_cancelamento_devolucao",
+      "20260806090531_304_ssot04_drop_baixar_estoque_venda",
+      "20260806134834_305_d1_drop_fiscal_reprocessar_documento_overload",
+      "20260806140528_308_hardening_tg_documentos_fiscais_estado"
+    ],
+    "note": null,
+    "covers_exist": [
+      {
+        "stem": "20260806090414_303_ssot04_kardex_cancelamento_devolucao",
+        "exists": true
+      },
+      {
+        "stem": "20260806090531_304_ssot04_drop_baixar_estoque_venda",
+        "exists": true
+      },
+      {
+        "stem": "20260806134834_305_d1_drop_fiscal_reprocessar_documento_overload",
+        "exists": true
+      },
+      {
+        "stem": "20260806140528_308_hardening_tg_documentos_fiscais_estado",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009211233",
+    "history_name": "307_d3_reaper_fiscal_reaper_documentos",
+    "confidence": "high",
+    "covers_git": [
+      "20260806135429_307_d3_reaper_fiscal_em_processamento"
+    ],
+    "note": null,
+    "covers_exist": [
+      {
+        "stem": "20260806135429_307_d3_reaper_fiscal_em_processamento",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009211257",
+    "history_name": "307_d3_fiscal_claim_documentos",
+    "confidence": "high",
+    "covers_git": [
+      "20260806135429_307_d3_reaper_fiscal_em_processamento"
+    ],
+    "note": null,
+    "covers_exist": [
+      {
+        "stem": "20260806135429_307_d3_reaper_fiscal_em_processamento",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009211259",
+    "history_name": "307_d3_fiscal_reprocessar_documento",
+    "confidence": "high",
+    "covers_git": [
+      "20260806135429_307_d3_reaper_fiscal_em_processamento"
+    ],
+    "note": null,
+    "covers_exist": [
+      {
+        "stem": "20260806135429_307_d3_reaper_fiscal_em_processamento",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009211406",
+    "history_name": "308_hardening_tg_documentos_fiscais_estado",
+    "confidence": "high",
+    "covers_git": [
+      "20260806140528_308_hardening_tg_documentos_fiscais_estado"
+    ],
+    "note": null,
+    "covers_exist": [
+      {
+        "stem": "20260806140528_308_hardening_tg_documentos_fiscais_estado",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009211408",
+    "history_name": "309_reaplica_091_fiscal_correlation_id",
+    "confidence": "high",
+    "covers_git": [
+      "20260806235913_309_reaplica_091_fiscal_correlation_id"
+    ],
+    "note": null,
+    "covers_exist": [
+      {
+        "stem": "20260806235913_309_reaplica_091_fiscal_correlation_id",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "history_version": "20261009211707",
+    "history_name": "310_reaplica_288_venda_em_espera_e_caixa_unico",
+    "confidence": "high",
+    "covers_git": [
+      "20260807000105_310_reaplica_288_venda_em_espera_e_caixa_unico"
+    ],
+    "note": null,
+    "covers_exist": [
+      {
+        "stem": "20260807000105_310_reaplica_288_venda_em_espera_e_caixa_unico",
+        "exists": true
+      }
+    ]
+  }
+]

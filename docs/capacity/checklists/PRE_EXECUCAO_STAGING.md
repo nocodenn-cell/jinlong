@@ -1,42 +1,55 @@
-# Checklist — Pré-execução FASE 3/4 (gate humano)
+# Checklist — Pré-execução FASE 3 (custo zero)
 
-Marcar **todos** os itens antes de qualquer script de carga ou falha.
+Base: [STG01_HOMOLOGACAO_ISOLADA.md](../STG01_HOMOLOGACAO_ISOLADA.md) §6.  
+**Orçamento adicional: R$ 0.** Sem Pro, sem Vercel Preview nesta fase.
 
-## Ambiente
+## Autorização (obrigatório)
 
-- [ ] Projeto Supabase de homologação criado (**ref diferente** de produção `jinlong`)
-- [ ] Plano/compute documentado (Free / Micro / Small / …) — limita extrapolação
-- [ ] Migrations aplicadas a partir do Git (`db reset` ou `db push` limpo)
-- [ ] Edge Functions deployadas no projeto de homolog (`sync-outbox`, `validar-gerente`, `fiscal-worker`)
-- [ ] Preview/homolog Vercel apontando **somente** para o ref de staging
-- [ ] Confirmação escrita: **não** usar `jinlong.app` produção nem DB do cliente
+- [ ] Checklist §6 do STG-01 assinado (Trilha F e/ou L)
+- [ ] Confirmado: não alterar produção `jinlong`
+- [ ] Confirmado: não sobrescrever `.env.local`
 
-## Dados e credenciais
+## Trilha escolhida
 
-- [ ] Seeds sintéticos: N lojas, 2 operadores/loja, catálogo, estoque generoso + 1 SKU com qty=1 para C8
-- [ ] Zero CPF/CNPJ/nome real de cliente
-- [ ] `.env.local` de desenvolvimento **não** sobrescrito sem autorização
-- [ ] Shell de teste sem `SUPABASE_SERVICE_ROLE_KEY` de produção
-- [ ] `GATE_ENV=staging` e `GATE_STAGING_PROJECT_REF=<ref>` definidos
-- [ ] `npm run guard:no-prod-target` passa com as URLs do shell
+- [ ] **F** — Free remoto `jinlong-staging` **ou**
+- [ ] **L** — Docker `fastproduct-capacity` (ports isoladas) **ou**
+- [ ] **F→L** — tentar F; se limite de projetos, cair para L
 
-## Observabilidade
+## Ambiente (Trilha F)
 
-- [ ] Dashboard Supabase (CPU, conexões, logs) acessível
-- [ ] Sentry/projeto staging ou environment tag `staging`
-- [ ] Destino de artefatos k6 (JSON/HTML) definido sob `/opt/cursor/artifacts/` ou CI artifacts
+- [ ] Projeto `jinlong-staging` criado (Free, US$ 0/mês) — ref ≠ produção
+- [ ] Produção `jinlong` intacta; `ageguard` não apagado sem autorização
+- [ ] `.env.capacity` a partir de `.env.staging.example`
+- [ ] `CAPACITY_BLOCKED_PROJECT_REFS` = ref produção (não versionado)
+- [ ] `npm run capacity:assert-target` OK
+- [ ] Migrations + Edge só no staging (`CAPACITY_CONFIRM_DB_PUSH=yes`)
+- [ ] Seed `CAPACITY_LOJAS` ∈ {1,5,10}
 
-## Escopo autorizado
+## Ambiente (Trilha L)
 
-- [ ] Cenário inicial: **Smoke → Piloto** apenas
-- [ ] Soak 8–12 h agendado só após Piloto APROVADO
-- [ ] Correções estruturais **fora** do escopo até relatório FASE 5
+- [ ] Config/ports `fastproduct-capacity` criados (sem tocar stack `fastproduct`)
+- [ ] Stack capacidade no ar; DEV existente intacto
+- [ ] `CAPACITY_ENV=local` + URL `127.0.0.1:<porta capacidade>`
+- [ ] Seed sintético OK
 
-## Aprovação
+## App e carga (ambas)
 
-| Papel | Nome | Data | Assinatura |
-|-------|------|------|------------|
-| Product / dono | | | |
-| Engenharia | | | |
+- [ ] Next.js **local** (`dev:web`) — sem Preview Vercel
+- [ ] k6 **local**
+- [ ] Escada: Smoke → 1 → 5 → 10 lojas; abortar no primeiro limite
+- [ ] Relatório distingue C1 / C2 / C3 (STG-01 §2.2)
 
-**Sem esta checklist completa: NO-GO para FASE 3.**
+## Segurança
+
+- [ ] Guards verdes (`guard:capacity-target`, `guard:no-prod-target`)
+- [ ] Zero PII de cliente nos seeds
+- [ ] `SYNC_KEY` staging/local distinto de produção (se Edge usada)
+
+## Aprovação final para rodar k6
+
+| Papel | Nome | Data |
+|-------|------|------|
+| Product | | |
+| Engenharia | | |
+
+**Sem assinatura: NO-GO para carga.**

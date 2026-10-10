@@ -10,11 +10,14 @@
 
 ```bash
 export CAPACITY_ENV=staging   # ou local
+export CAPACITY_ALLOWED_PROJECT_REF=YOUR_STAGING_REF   # obrigatório (20 chars)
 export K6_SUPABASE_URL=https://YOUR_STAGING_REF.supabase.co
 export K6_ANON_KEY=...
-export K6_OPERADOR_EMAIL=op.l1.c1@staging.invalid
+export K6_OPERADOR_EMAIL=op.l01.c01@capacity.staging.invalid
 export K6_OPERADOR_PASSWORD=...
 ```
+
+Ver também `STG01_HOMOLOGACAO_ISOLADA.md` e `.env.staging.example`.
 
 ## Comandos
 

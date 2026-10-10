@@ -1,0 +1,16 @@
+{
+  "generated_at": "2026-10-10T00:20:32.848Z",
+  "disk_count": 406,
+  "history_count": 339,
+  "orphan_history_count": 48,
+  "classification_counts": {
+    "applied_verified": 301,
+    "partial": 60,
+    "indeterminate": 40,
+    "not_applied": 5
+  },
+  "normalize_candidate_count": 20,
+  "register_safe_new_count": 20,
+  "scratch_table_present": true,
+  "policy": "Nunca registrar migration sem prova (histórico exato ou fingerprint completo). Partials e indeterminate exigem intervenção manual antes de repair remoto."
+}

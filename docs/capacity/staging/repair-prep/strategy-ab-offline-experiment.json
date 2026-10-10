@@ -1,0 +1,21 @@
+{
+  "experiment": "strategy_b_offline_chain_check",
+  "docker_available": false,
+  "remote_writes": 0,
+  "migration_files": 406,
+  "issues": [],
+  "ok": [
+    "prefixes_unique=406 files=406",
+    "critical_rpcs_declared_in_git_chain"
+  ],
+  "rpc_declared_in_git": {
+    "finalizar_venda_transacional_canonica_v4": true,
+    "financeiro_comando": true,
+    "ajustar_estoque_manual": true,
+    "fechar_caixa": true,
+    "proteger|preco_custo|revoga_leitura_direta_preco_custo": true
+  },
+  "strategy_a_complexity_units": 164.0,
+  "strategy_b_complexity_units": 12,
+  "recommendation_by_units": "B"
+}

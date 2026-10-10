@@ -1,7 +1,7 @@
 {
   "name": "fastproduct",
   "private": true,
-  "description": "Monorepo PDV — workspaces: pdv-importados (Next), pdv-local (Tauri), backend (Supabase)",
+  "description": "Monorepo PDV \u2014 workspaces: pdv-importados (Next), pdv-local (Tauri), backend (Supabase)",
   "workspaces": [
     "pdv-importados",
     "pdv-local",
@@ -44,11 +44,17 @@
     "guard:ratchet": "node scripts/boundary-ratchet-guard.mjs",
     "guard:ratchet:test": "node --test scripts/boundary-ratchet-guard.test.mjs",
     "guard:no-prod-target": "node scripts/no-prod-target-guard.mjs",
-    "guard:all": "npm run guard:core && npm run guard:pdv && npm run guard:routes && npm run guard:rpc && npm run guard:pricing && npm run guard:deps && npm run guard:migrations && npm run guard:domain && npm run guard:ratchet && npm run guard:ratchet:test && npm run guard:no-prod-target && npm run check:entity-ssot -w pdv-importados",
+    "guard:capacity-target": "node --test scripts/capacity-target-guard.test.mjs",
+    "capacity:assert-target": "npm run capacity:assert-target -w pdv-importados",
+    "capacity:seed": "npm run capacity:seed -w pdv-importados",
+    "capacity:reset": "npm run capacity:reset -w pdv-importados",
+    "guard:all": "npm run guard:core && npm run guard:pdv && npm run guard:routes && npm run guard:rpc && npm run guard:pricing && npm run guard:deps && npm run guard:migrations && npm run guard:domain && npm run guard:ratchet && npm run guard:ratchet:test && npm run guard:no-prod-target && npm run guard:capacity-target && npm run check:entity-ssot -w pdv-importados",
     "pre-deploy:check": "bash scripts/pre-deploy-checklist.sh",
     "dev:site": "npm run dev -w jinlong-site",
     "build:site": "turbo run build --filter=jinlong-site",
-    "test:site": "npm run test -w jinlong-site"
+    "test:site": "npm run test -w jinlong-site",
+    "capacity:matrix": "node scripts/capacity/build-migration-matrix.mjs",
+    "capacity:normalize-dry-run": "node scripts/capacity/dry-run-history-normalize.mjs"
   },
   "overrides": {
     "vitest": "^3.2.6",
