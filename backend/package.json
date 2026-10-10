@@ -29,6 +29,7 @@
     "test:go-live-01-isolamento": "node scripts/go-live-01-isolamento.test.mjs",
     "test:backup-restore-isolado": "node scripts/backup-restore-isolado.test.mjs",
     "test:fiscal-p0-pre-req": "node scripts/fiscal-p0-pre-req.test.mjs",
+    "test:fiscal-drill-plano": "node scripts/fiscal-drill-plano.test.mjs",
     "test:pdv-caixa-financeiro": "node scripts/test-pdv-caixa-financeiro-fluxo.mjs"
   },
   "dependencies": {

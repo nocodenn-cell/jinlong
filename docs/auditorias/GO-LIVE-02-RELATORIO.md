@@ -53,7 +53,7 @@ Checks obrigatórios de `main`, lidos em `required_status_checks`: `build-and-te
 
 ## 4. PostgreSQL servidor
 
-**NÃO EXECUTADO.** Recheck nesta continuação, 2026-10-10: `docker info` falha porque o pipe `dockerDesktopLinuxEngine` não existe. O daemon não foi iniciado. Nenhum serviço global foi alterado. Staging não foi usado. Os testes PGlite da GO-LIVE 01 não foram repetidos.
+**NÃO EXECUTADO** de novo nesta preparação final. `docker info` falha: o pipe `dockerDesktopLinuxEngine` não existe. O daemon não foi iniciado e a configuração global não mudou. O comando pronto para quando o daemon subir, sem publicar porta e sem criar rede, é `bash backend/scripts/fiscal-janela-postgres.sh`. Ele sai com código 2 enquanto o Docker estiver parado. Os testes PGlite não foram repetidos. A autorização pedida está em `docs/auditorias/GO-LIVE-02-AUTORIZACAO-JANELA-FISCAL.md`.
 
 A evidência transacional já registrada continua válida como ensaio embarcado, não como Postgres 17 servidor: transação única, rollback de `SELECT 1/0`, segunda aplicação idempotente, `anon` negado, outra loja negada, usuário inativo negado, `service_role` enfileira, contagem da fila preservada no DDL. O critério que substitui esse ensaio, no dia da janela, é o restore do dump em Postgres descartável (seção 11).
 
