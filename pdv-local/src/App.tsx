@@ -14,6 +14,10 @@ import { parseQuantidadeCaixaInput } from '@shared/format/quantidadeCaixa'
 import { recalcularPrecoItemLocal } from './lib/recalcularPrecoItemLocal'
 import { resolverPrecoCanonicoLocal } from './lib/resolverPrecoCanonicoLocal'
 
+function bindLojaCarrinhoDesktop(lojaId: string | null) {
+  useDesktopCartStore.getState().setCartLojaForSession(lojaId)
+}
+
 function mensagemEhErro(msg: string): boolean {
   return /^(falha|não foi possível|sessão|acesso negado|problema|muitas tentativas|dados inválidos|configuração inválida|limite de envio|este registro|você não tem permissão)/i.test(
     msg.trim(),
@@ -93,6 +97,7 @@ export function App() {
     setMaxDescontoGerentePercentual,
     setCaixaAtualId,
     setMensagem,
+    setLojaId: bindLojaCarrinhoDesktop,
   })
 
   const handleAlterarQuantidadeLocal = useCallback(

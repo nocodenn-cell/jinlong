@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import type { ItemCarrinho } from '@core/cart/types'
 import type { ResultadoPreco } from '@core/pricing/types'
-import { calcularTotaisComGerente, ItemCarrinhoComPreco } from './cartStore'
+import { calcularTotaisComGerente, type ItemCarrinhoComPreco } from './cartStore'
 
 function item(
   overrides: Partial<ItemCarrinho> & { resultado?: ResultadoPreco } = {}

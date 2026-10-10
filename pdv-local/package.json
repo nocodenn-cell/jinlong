@@ -15,7 +15,7 @@
     "smoke:sync-edge": "node scripts/smoke-sync-edge.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage --coverage.provider=v8 --coverage.reporter=text --coverage.reporter=lcov --exclude \"src/stores/cartStore.behavior.test.ts\" --exclude \"src/stores/cartStore.test.ts\"",
+    "test:coverage": "vitest run --coverage --coverage.provider=v8 --coverage.reporter=text --coverage.reporter=lcov",
     "test:watch": "vitest"
   },
   "dependencies": {
