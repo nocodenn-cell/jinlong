@@ -40,3 +40,6 @@ export type {
   StatusRecuperabilidade,
   TributoEntrada,
 } from './types'
+
+export { verificarAprovacao } from './aprovacao'
+export type { MotivoBloqueioAprovacao, ResultadoVerificacaoAprovacao } from './aprovacao'
