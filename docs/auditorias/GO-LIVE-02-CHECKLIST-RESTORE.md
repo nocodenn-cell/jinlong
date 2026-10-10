@@ -56,7 +56,18 @@ Depois do restore, e só no Postgres descartável:
 - [ ] `anon` não executa as quatro RPCs. Gerente de outra loja recebe `FISCAL_*_LOJA`. Usuário inativo é negado. `service_role` enfileira.
 - [ ] Não aplicar `20261007161220` depois.
 
-## 6. Encerramento do ensaio
+## 6. Quatro recuperações, sem misturar
+
+O dump do dia não é rollback de função. Cada linha abaixo tem uma prova própria.
+
+| O que se perdeu | O que restaura | Prova | Proibido |
+|---|---|---|---|
+| Corpo seguro das RPCs fiscais, depois do `COMMIT` | Reaplicar só o arquivo `20261009220000` | `assertRecoveryIsCanonical` aceita; `to_regprocedure` de `fiscal_cancelar_documento(uuid, text)` volta | Colar `20261007161220` ou um `pg_get_functiondef` capturado antes da janela |
+| Schema da janela que não commitou | Nada. A transação aberta faz `ROLLBACK` | Predicado `current_user <> 'postgres'` continua na função antiga; contagem da fila igual ao snapshot | `migration repair` para marcar o arquivo como aplicado |
+| Linhas alteradas por chamada real depois do backup | Restaurar `data.sql` do dump do dia num Postgres novo. A produção em uso não é sobrescrita por este roteiro | Contagem de `documentos_fiscais_pendentes` e de `vendas` no destino igual à origem na hora do dump | Copiar `data.sql` para o Git ou para um projeto compartilhado |
+| Vendas, baixas e documentos criados depois do dump | Lista operacional fora do banco restaurado: reprocessar a outbox e a fila a partir do horário do dump. O banco restaurado não contém essas linhas | Hora UTC do dump anotada antes de qualquer chamada nova | Tratar o restore como se apagasse o que a loja fez depois do backup |
+
+## 7. Encerramento do ensaio
 
 - [ ] Derrubar o container e o volume.
 - [ ] Apagar `roles.sql`, `schema.sql` e `data.sql` do disco local.
