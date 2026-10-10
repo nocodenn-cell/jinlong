@@ -1,24 +1,11 @@
 import assert from "node:assert/strict";
-
-const BLOCKED = ["kbabmewnahysfvlybiak", "tarxrbxddcwvjkimkbnr"];
-
-export function assertIsolatedBackupTarget(ref) {
-  const value = String(ref ?? "").trim().toLowerCase();
-  for (const blocked of BLOCKED) {
-    if (value.includes(blocked)) throw new Error(`BACKUP_ALVO_REMOTO_BLOQUEADO:${blocked}`);
-  }
-  if (value.includes("supabase.co") || value.includes("pooler.supabase")) {
-    throw new Error("BACKUP_ALVO_REMOTO_BLOQUEADO");
-  }
-  const local = value === "pglite" || value === "local" || value.startsWith("127.0.0.1") || value.startsWith("localhost");
-  if (!local) throw new Error("BACKUP_ALVO_NAO_ISOLADO");
-}
+import { assertIsolatedBackupTarget, blockedRemoteRefs } from "./fiscal-p0-janela.mjs";
 
 async function rehearsal() {
   assertIsolatedBackupTarget("pglite");
-  assert.throws(() => assertIsolatedBackupTarget("kbabmewnahysfvlybiak"), /BACKUP_ALVO_REMOTO_BLOQUEADO/);
-  assert.throws(() => assertIsolatedBackupTarget("tarxrbxddcwvjkimkbnr"), /BACKUP_ALVO_REMOTO_BLOQUEADO/);
-  assert.throws(() => assertIsolatedBackupTarget("https://kbabmewnahysfvlybiak.supabase.co"), /BACKUP_ALVO_REMOTO_BLOQUEADO/);
+  assert.throws(() => assertIsolatedBackupTarget(blockedRemoteRefs[0]), /BACKUP_ALVO_REMOTO_BLOQUEADO/);
+  assert.throws(() => assertIsolatedBackupTarget(blockedRemoteRefs[1]), /BACKUP_ALVO_REMOTO_BLOQUEADO/);
+  assert.throws(() => assertIsolatedBackupTarget(`https://${blockedRemoteRefs[0]}.supabase.co`), /BACKUP_ALVO_REMOTO_BLOQUEADO/);
 
   const { PGlite } = await import("@electric-sql/pglite");
   const source = new PGlite();

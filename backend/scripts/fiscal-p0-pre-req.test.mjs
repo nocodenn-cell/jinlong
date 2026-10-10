@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import {
   assertFiscalDrillTarget,
   assertRecoveryIsCanonical,
+  blockedRemoteRefs,
   bundleFiscalP0,
   stripTxControl,
 } from "./fiscal-p0-janela.mjs";
@@ -239,8 +240,8 @@ async function deadPredicate(db) {
 
 async function main() {
   assertFiscalDrillTarget("pglite-local-descartavel");
-  assert.throws(() => assertFiscalDrillTarget("kbabmewnahysfvlybiak"), /BACKUP_ALVO_REMOTO_BLOQUEADO/);
-  assert.throws(() => assertFiscalDrillTarget("https://tarxrbxddcwvjkimkbnr.supabase.co"), /BACKUP_ALVO_REMOTO_BLOQUEADO/);
+  assert.throws(() => assertFiscalDrillTarget(blockedRemoteRefs[0]), /BACKUP_ALVO_REMOTO_BLOQUEADO/);
+  assert.throws(() => assertFiscalDrillTarget(`https://${blockedRemoteRefs[1]}.supabase.co`), /BACKUP_ALVO_REMOTO_BLOQUEADO/);
 
   const isolacao = await readFile(new URL("../supabase/migrations/20261009220000_fiscal_rpc_isola_loja.sql", import.meta.url), "utf8");
   const revoke = await readFile(new URL("../supabase/migrations/20261007163200_ssot_004_revoke_insert_documentos_fiscais.sql", import.meta.url), "utf8");

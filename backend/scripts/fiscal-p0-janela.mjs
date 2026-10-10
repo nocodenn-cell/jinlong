@@ -1,16 +1,27 @@
-const BLOCKED = ["kbabmewnahysfvlybiak", "tarxrbxddcwvjkimkbnr"];
+export const blockedRemoteRefs = ["kbabmewnahysfvlybiak", "tarxrbxddcwvjkimkbnr"];
 
-export function assertFiscalDrillTarget(ref) {
+function refusesRemote(ref) {
   const value = String(ref ?? "").trim().toLowerCase();
-  for (const blocked of BLOCKED) {
+  for (const blocked of blockedRemoteRefs) {
     if (value.includes(blocked)) throw new Error(`BACKUP_ALVO_REMOTO_BLOQUEADO:${blocked}`);
   }
   if (value.includes("supabase.co") || value.includes("pooler.supabase")) {
     throw new Error("BACKUP_ALVO_REMOTO_BLOQUEADO");
   }
+  return value;
+}
+
+export function assertFiscalDrillTarget(ref) {
+  const value = refusesRemote(ref);
   if (value !== "postgres-local-descartavel" && value !== "pglite-local-descartavel") {
     throw new Error("BACKUP_ALVO_NAO_ISOLADO");
   }
+}
+
+export function assertIsolatedBackupTarget(ref) {
+  const value = refusesRemote(ref);
+  const local = value === "pglite" || value === "local" || value.startsWith("127.0.0.1") || value.startsWith("localhost");
+  if (!local) throw new Error("BACKUP_ALVO_NAO_ISOLADO");
 }
 
 export function stripTxControl(sql) {

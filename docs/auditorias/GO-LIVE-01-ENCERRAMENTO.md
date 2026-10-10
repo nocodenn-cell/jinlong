@@ -49,8 +49,10 @@ A série `20261006120000` e `20261007163000`–`20261007190000` não entra nesta
 | `node --test scripts/p0-migration-status.test.mjs` | **PASS** (12) |
 | `tsc --noEmit` em `pdv-importados` | **PASS** |
 | `tsc --noEmit` em `pdv-local` | **FAIL** de ambiente: faltam `@tauri-apps/api` e `@sentry/browser`. Os erros não estão nos arquivos alterados. |
+| `node scripts/no-prod-target-guard.mjs` | **PASS** depois de tirar os refs remotos dos arquivos `*.test.mjs`. O CI do `pdv-importados` tinha falhado nesse guard. |
 | Postgres `17-alpine` via Docker | **não executado**. O daemon não estava no pipe `dockerDesktopLinuxEngine`. |
 | `next build`, lint do monorepo, `cargo check` | **não executados** |
+| CI `migration-remote-drift` | **FAIL** esperado. `remote_ausente`: `20261006120000`, `20261007161220`, `20261007163000`, `20261007163100`, `20261007163200`, `20261007170000`, `20261007171000`, `20261007180000`, `20261007190000`, `20261009220000`, `20261010120000`. Não foi criado par em `migration-human-gates.json`. |
 
 O diff da branch não contém token `eyJ` nem senha. As menções a `service_role` são nomes de papel.
 
@@ -68,7 +70,9 @@ Commits desde `a39a5309`:
 - `bccb81fd` SHA dessa correção
 - `4b5b1b60` plano da remediação
 - `28ec40a3` ensaio local da janela
-- `4a9c582cd5bb8a682452592de901beb92c1d2900` encerramento
+- `4a9c582c` encerramento
+- `6e33eac2` SHA do encerramento
+- commit seguinte: os refs remotos saem dos arquivos de teste para o guard de CI passar
 
 ## 6. GitHub, Vercel e Supabase
 
