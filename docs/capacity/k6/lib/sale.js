@@ -68,7 +68,70 @@ export function finalizarVendaV4(apiUrl, anonKey, accessToken, ctx) {
     http_status: res.status,
     rpc_status: statusRpc,
     venda_id: vendaId,
+    total: preco,
     duration_ms: res.timings.duration,
     body_excerpt: String(res.body).slice(0, 240),
   }
+}
+
+function authHeaders(anonKey, accessToken) {
+  return {
+    apikey: anonKey,
+    Authorization: `Bearer ${accessToken}`,
+    'Content-Type': 'application/json',
+  }
+}
+
+function parseJson(res) {
+  try {
+    return res.json()
+  } catch (_) {
+    return null
+  }
+}
+
+/** Bipagem no /caixa: preço autoritativo por produto/loja. */
+export function calcularPrecoProduto(apiUrl, anonKey, accessToken, ctx) {
+  const res = http.post(
+    `${apiUrl}/rest/v1/rpc/calcular_preco_produto`,
+    JSON.stringify({ p_produto_id: ctx.produto_id, p_quantidade: 1, p_loja_id: ctx.loja_id }),
+    { headers: authHeaders(anonKey, accessToken), tags: { op: 'scan_preco' }, timeout: '30s' },
+  )
+  const body = parseJson(res)
+  const ok = res.status === 200 && body !== null && body.erro == null && Number(body.preco) >= 0
+  check(res, { 'scan preço ok': () => ok })
+  return { ok, duration_ms: res.timings.duration, http_status: res.status }
+}
+
+/** Pré-finalização no servidor do /caixa: produto ativo e publicado. */
+export function validarProdutosVenda(apiUrl, anonKey, accessToken, ctx) {
+  const res = http.get(
+    `${apiUrl}/rest/v1/produtos?id=in.(${ctx.produto_id})&select=id,preco_varejo,ativo,status_publicacao`,
+    { headers: authHeaders(anonKey, accessToken), tags: { op: 'prevalidacao' }, timeout: '30s' },
+  )
+  const body = parseJson(res)
+  const ok = res.status === 200 && Array.isArray(body) && body.length === 1 && body[0].ativo === true
+  check(res, { 'prevalidação produto ok': () => ok })
+  return { ok, duration_ms: res.timings.duration, http_status: res.status }
+}
+
+/**
+ * Leitura independente pós-commit (RLS do operador): venda CONCLUIDA, total e pagamentos.
+ * Itens não são legíveis por perfil CAIXA (policy itens_gerente) — validados na reconciliação SQL.
+ */
+export function lerVendaPersistida(apiUrl, anonKey, accessToken, venda) {
+  const res = http.get(
+    `${apiUrl}/rest/v1/vendas?id=eq.${venda.venda_id}&select=id,status,total_liquido,vendas_pagamentos(valor)`,
+    { headers: authHeaders(anonKey, accessToken), tags: { op: 'readback' }, timeout: '30s' },
+  )
+  const body = parseJson(res)
+  const row = Array.isArray(body) && body.length === 1 ? body[0] : null
+  const pago = row ? row.vendas_pagamentos.reduce((s, p) => s + Number(p.valor), 0) : -1
+  const ok =
+    row !== null &&
+    row.status === 'CONCLUIDA' &&
+    Math.abs(Number(row.total_liquido) - venda.total) < 0.005 &&
+    Math.abs(pago - venda.total) < 0.005
+  check(res, { 'readback venda persistida': () => ok })
+  return { ok, duration_ms: res.timings.duration, http_status: res.status }
 }

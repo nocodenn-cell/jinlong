@@ -14,7 +14,12 @@ import { Counter, Rate, Trend } from 'k6/metrics'
 import { SharedArray } from 'k6/data'
 import { assertSafeCapacityTarget } from '../lib/env-guard.js'
 import { loginOperador } from '../lib/auth.js'
-import { finalizarVendaV4 } from '../lib/sale.js'
+import {
+  calcularPrecoProduto,
+  finalizarVendaV4,
+  lerVendaPersistida,
+  validarProdutosVenda,
+} from '../lib/sale.js'
 
 const scenario = (__ENV.CAP02_SCENARIO || 'T00').toUpperCase()
 
@@ -39,6 +44,9 @@ const vendasTentadas = new Counter('vendas_tentadas')
 const vendasConfirmadas = new Counter('vendas_confirmadas')
 const finalizeFail = new Rate('finalize_fail_rate')
 const finalizeDuration = new Trend('finalize_duration', true)
+const vendaCompletaDuration = new Trend('venda_completa_duration', true)
+const readbackFail = new Rate('readback_fail_rate')
+const etapaFail = new Rate('etapa_pre_venda_fail_rate')
 
 const fixtures = new SharedArray('cashiers', () => {
   const path = __ENV.K6_FIXTURES
@@ -67,6 +75,9 @@ export const options = {
     http_req_failed: ['rate<0.02'],
     'http_req_duration{op:finalize_v4}': ['p(95)<3000', 'p(99)<8000'],
     finalize_fail_rate: ['rate<0.02'],
+    readback_fail_rate: ['rate<0.02'],
+    etapa_pre_venda_fail_rate: ['rate<0.02'],
+    venda_completa_duration: ['p(95)<3000', 'p(99)<8000'],
     checks: ['rate>0.95'],
   },
 }
@@ -127,27 +138,46 @@ export function setup() {
   }
 }
 
-export default function (data) {
-  const idx = (__VU - 1) % data.sessions.length
-  const session = data.sessions[idx]
-  vendasTentadas.add(1)
-  const result = finalizarVendaV4(data.api, data.anon, session.access_token, session)
-  finalizeFail.add(!result.ok)
-  finalizeDuration.add(result.duration_ms)
-  if (result.ok) {
-    vendasConfirmadas.add(1)
-  } else {
-    console.error(
-      JSON.stringify({
-        vu: __VU,
-        email: session.email,
-        http: result.http_status,
-        rpc: result.rpc_status,
-        body: result.body_excerpt,
-      }),
-    )
+function logFalha(session, etapa, result) {
+  console.error(
+    JSON.stringify({
+      vu: __VU,
+      email: session.email,
+      etapa,
+      http: result.http_status,
+      rpc: result.rpc_status || null,
+      body: result.body_excerpt || null,
+    }),
+  )
+}
+
+/** Sequência backend do /caixa: bipagem → pré-validação → finalize v4; depois read-back. */
+function executarVenda(data, session) {
+  const scan = calcularPrecoProduto(data.api, data.anon, session.access_token, session)
+  const pre = validarProdutosVenda(data.api, data.anon, session.access_token, session)
+  etapaFail.add(!scan.ok || !pre.ok)
+  if (!scan.ok) logFalha(session, 'scan', scan)
+  if (!pre.ok) logFalha(session, 'prevalidacao', pre)
+  const fin = finalizarVendaV4(data.api, data.anon, session.access_token, session)
+  finalizeFail.add(!fin.ok)
+  finalizeDuration.add(fin.duration_ms)
+  vendaCompletaDuration.add(scan.duration_ms + pre.duration_ms + fin.duration_ms)
+  if (!fin.ok) {
+    logFalha(session, 'finalize', fin)
+    return false
   }
-  check(result, { 'venda ok': (r) => r.ok })
+  const rb = lerVendaPersistida(data.api, data.anon, session.access_token, fin)
+  readbackFail.add(!rb.ok)
+  if (!rb.ok) logFalha(session, 'readback', rb)
+  return scan.ok && pre.ok && rb.ok
+}
+
+export default function (data) {
+  const session = data.sessions[(__VU - 1) % data.sessions.length]
+  vendasTentadas.add(1)
+  const ok = executarVenda(data, session)
+  if (ok) vendasConfirmadas.add(1)
+  check(ok, { 'venda ok': (v) => v })
   sleep(data.sleepSec)
 }
 
@@ -171,7 +201,10 @@ export function handleSummary(data) {
 
 function textSummary(data, scenario, cfg, taxaTotalHora) {
   const m = data.metrics || {}
-  const get = (name, field) => (m[name] && m[name].values && m[name].values[field]) || null
+  const get = (name, field) => {
+    const v = m[name] && m[name].values ? m[name].values[field] : undefined
+    return v === undefined ? null : v
+  }
   return [
     `=== CAP-02 ${scenario} ===`,
     cfg.label,
@@ -181,6 +214,9 @@ function textSummary(data, scenario, cfg, taxaTotalHora) {
     `finalize_fail_rate=${get('finalize_fail_rate', 'rate')}`,
     `finalize_p95=${get('finalize_duration', 'p(95)')}`,
     `finalize_p99=${get('finalize_duration', 'p(99)')}`,
+    `venda_completa_p95=${get('venda_completa_duration', 'p(95)')}`,
+    `venda_completa_p99=${get('venda_completa_duration', 'p(99)')}`,
+    `readback_fail_rate=${get('readback_fail_rate', 'rate')}`,
     `http_req_failed=${get('http_req_failed', 'rate')}`,
     '',
   ].join('\n')

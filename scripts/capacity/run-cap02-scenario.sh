@@ -46,6 +46,10 @@ CAP02_MODE=baseline CAP02_SCENARIO="$SCENARIO" node "$RECONCILE"
 
 psql "$DB_URL" -tAc "select pg_stat_statements_reset();" >/dev/null
 
+bash "$ROOT/scripts/capacity/sample-capacity-resources.sh" "$SCENARIO" "$$" 15 1500 &
+SAMPLER_PID=$!
+trap 'kill "$SAMPLER_PID" 2>/dev/null || true' EXIT INT TERM
+
 SINCE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 echo "$SINCE" > "$ART/cap02-${SCENARIO,,}-since.txt"
 
@@ -64,6 +68,7 @@ k6 run -q --out json="$ART/cap02-${SCENARIO,,}-metrics.json" \
   | tee "$ART/cap02-${SCENARIO,,}-k6.log"
 K6_EXIT=${PIPESTATUS[0]}
 UNTIL="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+kill "$SAMPLER_PID" 2>/dev/null || true
 node "$ROOT/scripts/capacity/summarize-cap02-metrics.mjs" "$SCENARIO" || echo "[cap02] WARN: summarize falhou"
 
 {
