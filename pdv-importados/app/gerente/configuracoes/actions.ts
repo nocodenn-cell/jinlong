@@ -91,6 +91,12 @@ export async function atualizarDadosLojaAction(
 
   const err = validarLoja(input)
   if (err) return { ok: false, error: err }
+  if (!input.id) {
+    return {
+      ok: false,
+      error: 'Novas lojas são criadas somente pelo provisionamento da plataforma.',
+    }
+  }
 
   try {
     const supabase = await createClient()
@@ -115,10 +121,12 @@ export async function atualizarDadosLojaAction(
       numero_serie_nfe: Number(input.numero_serie_nfe) || 1,
     }
 
-    const query = input.id
-      ? supabase.from('lojas').update(payload).eq('id', input.id).select('*').single()
-      : supabase.from('lojas').insert(payload).select('*').single()
-    const { data, error } = await query
+    const { data, error } = await supabase
+      .from('lojas')
+      .update(payload)
+      .eq('id', input.id)
+      .select('*')
+      .single()
     if (error) return { ok: false, error: mensagemErroComSecao('Loja', error.message) }
 
     revalidatePath('/gerente/configuracoes')

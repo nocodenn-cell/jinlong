@@ -24,16 +24,22 @@ INSERT INTO public.lojas (nome, ativo, numero_serie_nfce, numero_serie_nfe, empr
   VALUES ('A2 (teste)', true, 2, 2, :'empresa_a_id') RETURNING id AS loja_a2 \gset
 INSERT INTO public.lojas (nome, ativo, numero_serie_nfce, numero_serie_nfe, empresa_id)
   VALUES ('B1 (teste)', true, 3, 3, :'empresa_b_id') RETURNING id AS loja_b1 \gset
--- Loja SEM empresa, criada após o corte (como o provisionamento atual faz)
+-- Loja SEM empresa, criada após o corte (como o provisionamento fazia antes da F1).
+-- Desde a F1 o trigger lojas_empresa_obrigatoria impede isso; aqui ele é desligado só
+-- dentro desta transação (ROLLBACK) para simular um dado legado órfão.
+ALTER TABLE public.lojas DISABLE TRIGGER lojas_empresa_obrigatoria;
 INSERT INTO public.lojas (nome, ativo, numero_serie_nfce, numero_serie_nfe)
   VALUES ('L0 sem empresa (teste)', true, 4, 4) RETURNING id AS loja_l0 \gset
+ALTER TABLE public.lojas ENABLE TRIGGER lojas_empresa_obrigatoria;
+SELECT l.id AS loja_legada FROM public.lojas l JOIN public.empresas e ON e.id = l.empresa_id
+ WHERE e.origem = 'LEGADA_M1' ORDER BY l.created_at LIMIT 1 \gset
 
-INSERT INTO auth.users (email) VALUES ('dono.a@m1.test') RETURNING id AS dono_a \gset
-INSERT INTO auth.users (email) VALUES ('gerente.a1@m1.test') RETURNING id AS gerente_a1 \gset
-INSERT INTO auth.users (email) VALUES ('operador.a1@m1.test') RETURNING id AS operador_a1 \gset
-INSERT INTO auth.users (email) VALUES ('dono.b@m1.test') RETURNING id AS dono_b \gset
-INSERT INTO auth.users (email) VALUES ('operador.l0@m1.test') RETURNING id AS operador_l0 \gset
-INSERT INTO auth.users (email) VALUES ('admin.tecnico@m1.test') RETURNING id AS admin_t \gset
+INSERT INTO auth.users (id, email) VALUES (gen_random_uuid(), 'dono.a@m1.test') RETURNING id AS dono_a \gset
+INSERT INTO auth.users (id, email) VALUES (gen_random_uuid(), 'gerente.a1@m1.test') RETURNING id AS gerente_a1 \gset
+INSERT INTO auth.users (id, email) VALUES (gen_random_uuid(), 'operador.a1@m1.test') RETURNING id AS operador_a1 \gset
+INSERT INTO auth.users (id, email) VALUES (gen_random_uuid(), 'dono.b@m1.test') RETURNING id AS dono_b \gset
+INSERT INTO auth.users (id, email) VALUES (gen_random_uuid(), 'operador.l0@m1.test') RETURNING id AS operador_l0 \gset
+INSERT INTO auth.users (id, email) VALUES (gen_random_uuid(), 'admin.tecnico@m1.test') RETURNING id AS admin_t \gset
 
 INSERT INTO public.usuarios (id, nome, perfil, loja_id, ativo) VALUES
   (:'dono_a', 'Dono A', 'DONO', :'loja_a1', true),
@@ -97,24 +103,28 @@ SELECT pg_temp.m1_check((:'op_a1')::boolean = true AND (:'op_a2')::boolean = fal
 -- Admin técnico: ramo de compatibilidade legado, nunca plataforma
 SELECT set_config('request.jwt.claim.sub', :'admin_t', true) \gset
 SET LOCAL ROLE authenticated;
-SELECT public.fp_eh_plataforma() AS admin_plat, public.fp_pode_loja(:'loja_b1') AS admin_b1 \gset
+SELECT public.fp_eh_plataforma() AS admin_plat, public.fp_pode_loja(:'loja_b1') AS admin_b1,
+       public.fp_pode_loja(:'loja_legada') AS admin_legada \gset
 RESET ROLE;
-SELECT pg_temp.m1_check((:'admin_plat')::boolean = false AND (:'admin_b1')::boolean = true,
-  'D9: ADMIN legado mantém o ramo de compatibilidade, mas fp_eh_plataforma é falso');
+-- F1: o ramo de compatibilidade do ADMIN legado vale só para a empresa legada.
+SELECT pg_temp.m1_check((:'admin_plat')::boolean = false AND (:'admin_b1')::boolean = false AND (:'admin_legada')::boolean = true,
+  'D9/F1: ADMIN legado mantém compatibilidade só na empresa legada; fp_eh_plataforma é falso');
 
 -- ---------------------------------------------- fixtures adversariais --------
+-- Fixtures sem identidade simulada (F1: a cerca de escrita vale para qualquer auth.uid()).
+SELECT set_config('request.jwt.claim.sub', '', true) \gset
 -- Gerente multi-loja: vínculo adicional em A2 (novidade da M1; a divergência acima já foi medida)
 INSERT INTO public.usuario_vinculos (usuario_id, empresa_id, loja_id, papel, ativo)
   VALUES (:'gerente_a1', :'empresa_a_id', :'loja_a2', 'GERENTE', true);
 -- Usuário sem vínculo correspondente
 -- Identidade SEM registro legado nem vínculo (auth.users apenas). Um GERENTE legado sem
 -- vínculo seria corrigido pelo backfill, por isso o caso de negação usa identidade sem usuário.
-INSERT INTO auth.users (email) VALUES ('sem.vinculo@m1.test') RETURNING id AS sem_vinculo \gset
+INSERT INTO auth.users (id, email) VALUES (gen_random_uuid(), 'sem.vinculo@m1.test') RETURNING id AS sem_vinculo \gset
 -- Usuário inativo: vínculo ativo, identidade inativa
-INSERT INTO auth.users (email) VALUES ('inativo.a@m1.test') RETURNING id AS inativo_a \gset
+INSERT INTO auth.users (id, email) VALUES (gen_random_uuid(), 'inativo.a@m1.test') RETURNING id AS inativo_a \gset
 INSERT INTO public.usuarios (id, nome, perfil, loja_id, ativo) VALUES (:'inativo_a', 'Inativo A', 'DONO', :'loja_a1', false);
-INSERT INTO public.usuario_vinculos (usuario_id, empresa_id, loja_id, papel, ativo)
-  VALUES (:'inativo_a', :'empresa_a_id', NULL, 'DONO', true);
+-- F1: o vínculo LEGADO já nasceu pelo trigger (inativo); força-se ativo para simular vínculo obsoleto.
+UPDATE public.usuario_vinculos SET ativo = true WHERE usuario_id = :'inativo_a';
 
 -- T2: usuário sem vínculo não obtém autorização
 SELECT set_config('request.jwt.claim.sub', :'sem_vinculo', true) \gset
@@ -225,7 +235,7 @@ SET LOCAL ROLE authenticated;
 DO $$
 BEGIN
   BEGIN
-    PERFORM public.ops_definir_modulo_empresa(current_setting('m1.empresa')::uuid, 'IMPORT_INTELLIGENCE', true, 'x', 'autoatendimento de teste');
+    PERFORM public.ops_definir_modulo_empresa(current_setting('m1.empresa')::uuid, 'IMPORT_INTELLIGENCE', true, 'x', 'autoatendimento de teste', 'teste');
     RAISE EXCEPTION 'M1 FAIL: authenticated executou ops_definir_modulo_empresa';
   EXCEPTION WHEN insufficient_privilege THEN NULL;
   END;
@@ -263,11 +273,12 @@ SELECT public.fp_modulo_ativo(:'empresa_a_id', 'IMPORT_INTELLIGENCE') AS mod_def
 SELECT pg_temp.m1_check((:'mod_default')::boolean = false, 'T12 módulo IMPORT_INTELLIGENCE desabilitado por padrão');
 
 -- T12a: habilitação com motivo curto é recusada
+SELECT set_config('request.jwt.claim.sub', '', true) \gset
 SET LOCAL ROLE service_role;
 DO $$
 BEGIN
   BEGIN
-    PERFORM public.ops_definir_modulo_empresa(current_setting('m1.empresa')::uuid, 'IMPORT_INTELLIGENCE', true, 'comercial-1', 'curto');
+    PERFORM public.ops_definir_modulo_empresa(current_setting('m1.empresa')::uuid, 'IMPORT_INTELLIGENCE', true, 'comercial-1', 'curto', 'operador-teste');
     RAISE EXCEPTION 'M1 FAIL: motivo curto aceito';
   EXCEPTION WHEN raise_exception THEN
     IF SQLERRM LIKE 'M1 FAIL%' THEN RAISE; END IF;
@@ -289,8 +300,9 @@ END $$;
 SELECT pg_temp.m1_check(true, 'T12f habilitação sem autorização comercial é recusada');
 
 -- T12b: service_role habilita com autorização e motivo registrados
+SELECT set_config('request.jwt.claim.sub', '', true) \gset
 SET LOCAL ROLE service_role;
-SELECT public.ops_definir_modulo_empresa(:'empresa_a_id', 'IMPORT_INTELLIGENCE', true, 'contrato-teste-m1', 'habilitação de teste M1 (rollback)');
+SELECT public.ops_definir_modulo_empresa(:'empresa_a_id', 'IMPORT_INTELLIGENCE', true, 'contrato-teste-m1', 'habilitação de teste M1 (rollback)', 'operador-teste');
 RESET ROLE;
 SELECT public.fp_modulo_ativo(:'empresa_a_id', 'IMPORT_INTELLIGENCE') AS mod_on \gset
 SELECT pg_temp.m1_check((:'mod_on')::boolean = true, 'T12b service_role habilita com autorização registrada');
@@ -316,8 +328,9 @@ SELECT pg_temp.m1_check((:'mod_dono')::boolean = true AND :mod_status_visivel = 
   'T12c módulo: só DONO da empresa habilitada acessa; DONO de outra empresa não vê o status');
 
 -- T12d: desabilitar mantém histórico; histórico é imutável
+SELECT set_config('request.jwt.claim.sub', '', true) \gset
 SET LOCAL ROLE service_role;
-SELECT public.ops_definir_modulo_empresa(:'empresa_a_id', 'IMPORT_INTELLIGENCE', false, NULL, 'desabilitação de teste M1 (rollback)');
+SELECT public.ops_definir_modulo_empresa(:'empresa_a_id', 'IMPORT_INTELLIGENCE', false, NULL, 'desabilitação de teste M1 (rollback)', 'operador-teste');
 RESET ROLE;
 SELECT public.fp_modulo_ativo(:'empresa_a_id', 'IMPORT_INTELLIGENCE') AS mod_off \gset
 SELECT count(*) AS hist_n FROM public.empresa_modulos_historico WHERE empresa_id = :'empresa_a_id' \gset

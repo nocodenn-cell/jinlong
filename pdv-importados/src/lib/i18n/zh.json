@@ -2493,7 +2493,7 @@
   "provisionamento": {
     "titulo": "开通门店",
     "subtitulo": "FastProduct 内部向导 — 无需 SQL 创建门店、店主与默认配置。",
-    "apenas_admin": "仅 FastProduct 团队（ADMIN）可使用此向导。",
+    "apenas_admin": "仅具有开通权限的平台管理员可使用此向导。",
     "step_loja": "门店",
     "step_dono": "店主",
     "step_confirmar": "确认",
@@ -2501,6 +2501,9 @@
     "field_loja_nome": "门店名称",
     "field_loja_codigo": "代码（可选）",
     "field_loja_codigo_hint": "为空时根据名称生成。相同代码可幂等重试。",
+    "field_empresa": "企业（签约客户）",
+    "field_empresa_hint": "新门店归属于该企业。企业不会根据操作人自动推断。",
+    "sem_empresas": "没有可开通的企业。",
     "field_dono_nome": "店主姓名",
     "field_dono_email": "店主邮箱",
     "field_dono_senha": "店主初始密码",

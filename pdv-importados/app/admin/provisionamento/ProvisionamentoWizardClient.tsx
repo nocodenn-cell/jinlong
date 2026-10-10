@@ -7,7 +7,12 @@ import { emitGerenteToast } from '@/lib/gerente/toast'
 import { PASSWORD_MIN_LENGTH } from '@/lib/auth/passwordPolicy'
 import { provisionarLojaAction, type ProvisionamentoResult } from './actions'
 
+export type EmpresaOpcao = { id: string; nome: string }
+
 export type ProvisionamentoLabels = {
+  fieldEmpresa: string
+  fieldEmpresaHint: string
+  semEmpresas: string
   stepLoja: string
   stepDono: string
   stepConfirmar: string
@@ -41,15 +46,19 @@ export type ProvisionamentoLabels = {
 
 type Props = {
   labels: ProvisionamentoLabels
+  /** Empresas que a plataforma pode provisionar (lidas no servidor com a sessão do usuário). */
+  empresas: EmpresaOpcao[]
 }
 
 type Step = 0 | 1 | 2 | 3
 
-export function ProvisionamentoWizardClient({ labels: L }: Props) {
+export function ProvisionamentoWizardClient({ labels: L, empresas }: Props) {
   const [step, setStep] = useState<Step>(0)
   const [busy, setBusy] = useState(false)
   const [result, setResult] = useState<ProvisionamentoResult | null>(null)
 
+  // Sem pré-seleção: a empresa é sempre escolhida explicitamente (D1).
+  const [empresaId, setEmpresaId] = useState('')
   const [lojaNome, setLojaNome] = useState('')
   const [lojaCodigo, setLojaCodigo] = useState('')
   const [donoNome, setDonoNome] = useState('')
@@ -60,6 +69,7 @@ export function ProvisionamentoWizardClient({ labels: L }: Props) {
   function resetForm() {
     setStep(0)
     setResult(null)
+    setEmpresaId('')
     setLojaNome('')
     setLojaCodigo('')
     setDonoNome('')
@@ -72,6 +82,7 @@ export function ProvisionamentoWizardClient({ labels: L }: Props) {
     setBusy(true)
     try {
       const r = await provisionarLojaAction({
+        empresaId,
         lojaNome,
         lojaCodigo: lojaCodigo.trim() || null,
         donoNome,
@@ -118,6 +129,24 @@ export function ProvisionamentoWizardClient({ labels: L }: Props) {
       {step === 0 ? (
         <div className="space-y-4 rounded-xl border border-jl-border-1 p-4">
           <label className="block space-y-1 text-sm">
+            <span className="font-medium">{L.fieldEmpresa}</span>
+            <select
+              data-testid="prov-empresa"
+              value={empresaId}
+              onChange={(e) => setEmpresaId(e.target.value)}
+              className="fp-control w-full text-small"
+              disabled={empresas.length === 0}
+            >
+              <option value="">{empresas.length === 0 ? L.semEmpresas : '—'}</option>
+              {empresas.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.nome}
+                </option>
+              ))}
+            </select>
+            <span className="text-xs text-jl-fg-3">{L.fieldEmpresaHint}</span>
+          </label>
+          <label className="block space-y-1 text-sm">
             <span className="font-medium">{L.fieldLojaNome}</span>
             <input
               data-testid="prov-loja-nome"
@@ -141,7 +170,7 @@ export function ProvisionamentoWizardClient({ labels: L }: Props) {
           <Button
             type="button"
             data-testid="prov-step-loja-next"
-            disabled={lojaNome.trim().length < 2}
+            disabled={!empresaId || lojaNome.trim().length < 2}
             onClick={() => setStep(1)}
           >
             {L.btnProximo}
@@ -222,6 +251,10 @@ export function ProvisionamentoWizardClient({ labels: L }: Props) {
         <div className="space-y-4 rounded-xl border border-jl-border-1 p-4">
           <h2 className="text-sm font-semibold">{L.resumoTitulo}</h2>
           <ul className="space-y-1 text-sm text-jl-fg-2">
+            <li>
+              <strong>{L.fieldEmpresa}:</strong>{' '}
+              {empresas.find((e) => e.id === empresaId)?.nome ?? '—'}
+            </li>
             <li>
               <strong>{L.fieldLojaNome}:</strong> {lojaNome}
             </li>

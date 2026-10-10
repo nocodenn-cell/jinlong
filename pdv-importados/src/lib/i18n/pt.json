@@ -2274,7 +2274,7 @@
   "provisionamento": {
     "titulo": "Provisionamento de loja",
     "subtitulo": "Wizard interno FastProduct — cria loja, DONO e config padrão sem SQL.",
-    "apenas_admin": "Somente a equipe FastProduct (perfil ADMIN) pode usar este wizard.",
+    "apenas_admin": "Somente administradores de plataforma com permissão de provisionamento podem usar este wizard.",
     "step_loja": "Loja",
     "step_dono": "DONO",
     "step_confirmar": "Confirmar",
@@ -2282,6 +2282,9 @@
     "field_loja_nome": "Nome da loja",
     "field_loja_codigo": "Código (opcional)",
     "field_loja_codigo_hint": "Se vazio, geramos a partir do nome. Mesmo código = operação idempotente.",
+    "field_empresa": "Empresa (cliente contratante)",
+    "field_empresa_hint": "A loja nova pertence a esta empresa. A empresa não é inferida de quem provisiona.",
+    "sem_empresas": "Nenhuma empresa disponível para provisionamento.",
     "field_dono_nome": "Nome do DONO",
     "field_dono_email": "E-mail do DONO",
     "field_dono_senha": "Senha inicial do DONO",

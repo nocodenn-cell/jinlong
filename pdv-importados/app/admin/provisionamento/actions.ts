@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
 import { PASSWORD_MIN_LENGTH, validateNewPassword } from '@/lib/auth/passwordPolicy'
 import { ROUTES } from '@/lib/navigation/routes'
 import { IMPLANTACAO_ITENS } from '../implantacao/implantacaoCatalog'
@@ -63,16 +64,38 @@ function fromLoose(admin: AdminClient, table: string): LooseQuery {
   return (admin as unknown as { from: (t: string) => LooseQuery }).from(table)
 }
 
-async function requireAdminSession() {
+type UserClient = Awaited<ReturnType<typeof createClient>>
+
+/** RPC fora de database.types (desatualizado para as funções de plataforma da F1). */
+function rpcLoose<T>(client: UserClient, fn: string, args: Record<string, unknown>) {
+  return (client as unknown as {
+    rpc: (f: string, a: Record<string, unknown>) => Promise<{ data: T; error: { message: string } | null }>
+  }).rpc(fn, args)
+}
+
+/**
+ * D1/D2 (F1): provisionar exige administrador de PLATAFORMA com capacidade PROVISIONAMENTO,
+ * verificada no banco com a sessão do próprio usuário. O perfil ADMIN legado não basta.
+ */
+async function requirePlataformaProvisionamento() {
   const auth = await assertGerenteSession()
   if (!auth.ok) return { ok: false as const, error: auth.error }
-  if (auth.session.perfil !== 'ADMIN') {
-    return { ok: false as const, error: 'Somente a equipe FastProduct (ADMIN) pode provisionar lojas.' }
+  const userClient = await createClient()
+  const { data, error } = await rpcLoose<boolean>(userClient, 'fp_plataforma_pode', {
+    p_capacidade: 'PROVISIONAMENTO',
+  })
+  if (error || data !== true) {
+    return {
+      ok: false as const,
+      error: 'Somente administradores de plataforma com permissão de provisionamento podem provisionar lojas.',
+    }
   }
-  return { ok: true as const, session: auth.session }
+  return { ok: true as const, session: auth.session, userClient }
 }
 
 const ProvisionSchema = z.object({
+  // Tenant explícito: nunca inferido de quem executa (D1).
+  empresaId: z.string().uuid(),
   lojaNome: z.string().trim().min(2).max(120),
   lojaCodigo: z
     .string()
@@ -99,55 +122,46 @@ async function findAuthUserByEmail(admin: AdminClient, email: string) {
   return null
 }
 
+/**
+ * Cria (ou reaproveita, idempotente) a loja DENTRO da empresa informada, pela RPC de plataforma.
+ * O banco valida a capacidade e a empresa, e recusa código já usado por outra empresa.
+ */
 async function ensureLoja(
+  userClient: UserClient,
   admin: AdminClient,
+  empresaId: string,
   nome: string,
   codigoInput: string | null | undefined,
 ): Promise<{ lojaId: string; nome: string; codigo: string | null; nova: boolean }> {
   const codigo = (codigoInput?.trim() || slugCodigoLoja(nome)).toUpperCase()
 
-  const { data: porCodigo } = await fromLoose(admin, 'lojas')
-    .select('id, nome, codigo')
-    .eq('codigo', codigo)
-    .maybeSingle()
-
-  if (porCodigo) {
-    return {
-      lojaId: String(porCodigo.id),
-      nome: String(porCodigo.nome),
-      codigo: (porCodigo.codigo as string | null) ?? codigo,
-      nova: false,
-    }
-  }
-
-  const { data: inserted, error } = await fromLoose(admin, 'lojas')
-    .insert({ nome, codigo, ativo: true })
-    .select('id, nome, codigo')
-    .single()
-
+  const { data, error } = await rpcLoose<{ loja_id: string; nova: boolean }[]>(
+    userClient,
+    'plataforma_provisionar_loja',
+    { p_empresa: empresaId, p_nome: nome, p_codigo: codigo },
+  )
   if (error) {
-    if (/duplicate|unique|already/i.test(error.message)) {
-      const { data: again } = await fromLoose(admin, 'lojas')
-        .select('id, nome, codigo')
-        .eq('codigo', codigo)
-        .maybeSingle()
-      if (again) {
-        return {
-          lojaId: String(again.id),
-          nome: String(again.nome),
-          codigo: (again.codigo as string | null) ?? codigo,
-          nova: false,
-        }
-      }
+    if (/CODIGO_DE_OUTRA_EMPRESA/.test(error.message)) {
+      throw new Error('Este código de loja já pertence a outra empresa.')
     }
     throw new Error(error.message)
   }
+  const row = data?.[0]
+  if (!row?.loja_id) throw new Error('Provisionamento não retornou a loja.')
+
+  const { data: loja } = await fromLoose(admin, 'lojas')
+    .select('id, nome, codigo, empresa_id')
+    .eq('id', row.loja_id)
+    .maybeSingle()
+  if (!loja || String(loja.empresa_id) !== empresaId) {
+    throw new Error('Loja provisionada não pertence à empresa informada.')
+  }
 
   return {
-    lojaId: String(inserted.id),
-    nome: String(inserted.nome),
-    codigo: (inserted.codigo as string | null) ?? codigo,
-    nova: true,
+    lojaId: String(loja.id),
+    nome: String(loja.nome),
+    codigo: (loja.codigo as string | null) ?? codigo,
+    nova: row.nova,
   }
 }
 
@@ -378,6 +392,7 @@ async function validarProvisionamento(
  * Service Role somente neste módulo (server). Sem Admin API no browser.
  */
 export async function provisionarLojaAction(input: {
+  empresaId: string
   lojaNome: string
   lojaCodigo?: string | null
   donoNome: string
@@ -385,11 +400,13 @@ export async function provisionarLojaAction(input: {
   donoSenha: string
   idiomaPreferido: 'pt' | 'zh'
 }): Promise<ActionResult<ProvisionamentoResult>> {
-  const gate = await requireAdminSession()
+  const gate = await requirePlataformaProvisionamento()
   if (!gate.ok) return fail(gate.error)
 
   const parsed = ProvisionSchema.safeParse(input)
-  if (!parsed.success) return fail('Dados inválidos. Verifique nome da loja, e-mail e senha do DONO.')
+  if (!parsed.success) {
+    return fail('Dados inválidos. Verifique a empresa, o nome da loja, o e-mail e a senha do DONO.')
+  }
 
   const senhaCheck = validateNewPassword(parsed.data.donoSenha, parsed.data.donoSenha)
   if (!senhaCheck.ok) {
@@ -406,7 +423,13 @@ export async function provisionarLojaAction(input: {
   try {
     const admin = createAdminClient()
 
-    const loja = await ensureLoja(admin, parsed.data.lojaNome, parsed.data.lojaCodigo)
+    const loja = await ensureLoja(
+      gate.userClient,
+      admin,
+      parsed.data.empresaId,
+      parsed.data.lojaNome,
+      parsed.data.lojaCodigo,
+    )
 
     const beforeAuth = await findAuthUserByEmail(admin, email)
     const dono = await ensureDono({
