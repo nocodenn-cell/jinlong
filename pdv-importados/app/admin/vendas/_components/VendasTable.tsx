@@ -299,9 +299,19 @@ export function VendasTable({
               <Eye size={13} aria-hidden />
             </ActionBtn>
             {row.status === 'CONCLUIDA' ? (
-              <ActionBtn label={`${labels.cancelarAcao} ${row.id.slice(0, 8)}`} onClick={() => setCancelarAlvo(row)}>
-                <Ban size={13} aria-hidden />
-              </ActionBtn>
+              <button
+                type="button"
+                aria-label={`${labels.cancelarAcao} ${row.id.slice(0, 8)}`}
+                title={`${labels.cancelarAcao} ${row.id.slice(0, 8)}`}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setCancelarAlvo(row)
+                }}
+                className="inline-flex h-8 items-center gap-1 rounded-lg px-2 text-small text-jl-fg-2 transition-colors hover:bg-jl-surface-elev hover:text-jl-fg-1"
+              >
+                <Ban size={14} aria-hidden />
+                {labels.cancelarAcao}
+              </button>
             ) : null}
           </div>
         )}

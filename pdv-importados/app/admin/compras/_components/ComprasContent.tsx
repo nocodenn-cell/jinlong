@@ -40,11 +40,11 @@ type Props = Readonly<{
 }>
 
 const STATUS_CORES: Record<StatusOC, string> = {
-  RASCUNHO: 'bg-[var(--color-surface-soft)] text-fg-muted',
-  CONFIRMADA: 'bg-blue-500/20 text-blue-300',
-  EM_TRANSITO: 'bg-amber-400/20 text-amber-300',
-  RECEBIDA: 'bg-emerald-500/20 text-emerald-300',
-  CANCELADA: 'bg-red-500/20 text-red-300',
+  RASCUNHO: 'admin-v2-badge-muted',
+  CONFIRMADA: 'admin-v2-badge-gold',
+  EM_TRANSITO: 'admin-v2-badge-warning',
+  RECEBIDA: 'admin-v2-badge-success',
+  CANCELADA: 'admin-v2-badge-danger',
 }
 
 function fmtData(d: string | null): string {
@@ -299,6 +299,7 @@ export function ComprasContent({
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             placeholder={c.busca_placeholder}
+            aria-label={c.busca_placeholder}
             className="h-9 w-48 text-body sm:w-56"
           />
 

@@ -39,16 +39,11 @@ type ExecutiveVisaoGeralStubProps = {
 
 function defaultSecondary(idioma: Idioma): readonly PageActionSecondaryItem[] {
   return [
-  {
-    id: 'vendas-caixas',
-    label: traduzir(idioma, 'dash.ir_vendas'),
-    href: executiveRelatoriosHref('vendas-caixas'),
-  },
-  {
-    id: 'export-placeholder',
-    label: traduzir(idioma, 'dash.exportar_pdf'),
-    disabled: true,
-  },
+    {
+      id: 'export-placeholder',
+      label: traduzir(idioma, 'dash.exportar_pdf'),
+      disabled: true,
+    },
   ]
 }
 

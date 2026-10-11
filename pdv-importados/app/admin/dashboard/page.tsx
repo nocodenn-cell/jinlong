@@ -677,7 +677,13 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     <ExecutiveVisaoGeralStub
       title={L.pageTitle[lk]}
       subtitle={L.pageSubtitle[lk]}
-      filters={<DashboardFilters options={periodOptions} />}
+      filters={(
+        <DashboardFilters
+          options={periodOptions}
+          ariaLabel={ui.filtros_regiao_aria}
+          clearAriaLabel={ui.filtros_limpar_aria}
+        />
+      )}
       kpis={kpiItems}
       alertRows={alertRows}
       idioma={idioma}

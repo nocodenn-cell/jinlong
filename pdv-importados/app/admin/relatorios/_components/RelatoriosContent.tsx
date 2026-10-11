@@ -13,7 +13,6 @@ import { ExecutiveDomainView } from './executive/ExecutiveDomainView'
 import { useExecT } from '@/lib/i18n/useExecT'
 import type { ExecutiveExtras } from './executive/executiveExtras'
 import { ErrorState } from '@/components/ui/feedback'
-import { ROUTES } from '@/lib/navigation/routes'
 import type {
   RelatorioVendaDiaDTO,
   RelatorioTopProdDTO,
@@ -190,7 +189,6 @@ export function RelatoriosContent({
         }
         secondaryActionsLabel={t('hdr.mais_acoes')}
         secondaryActions={[
-          { id: 'visao-geral', label: t('hdr.visao_geral'), href: ROUTES.admin.dashboard },
           { id: 'export-csv', label: t('hdr.exportar'), disabled: true },
         ]}
       />

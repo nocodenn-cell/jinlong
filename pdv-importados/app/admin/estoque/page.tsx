@@ -6,16 +6,13 @@
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Upload } from 'lucide-react'
 import { ROUTES, pathWithQuery } from '@/lib/navigation/routes'
 import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
 import {
   PageHeader,
-  PageActions,
   CrudListShell,
 } from '@/components/ui/admin-v2'
 import { EstoqueHubNav } from '@/components/ui/admin-v2/EstoqueHubNav'
-import { Button } from '@/components/ui/button'
 import { ErrorState } from '@/components/ui/feedback'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
@@ -208,16 +205,6 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
       <PageHeader
         title={m.estoque.titulo}
         subtitle={m.estoque.subtitulo}
-        actions={
-          <PageActions>
-            <Button asChild variant="secondary" size="sm" className="gap-1.5">
-              <Link href={ROUTES.admin.estoqueRecebimento}>
-                <Upload className="h-4 w-4" aria-hidden />
-                {ui.hub_estoque_recebimento}
-              </Link>
-            </Button>
-          </PageActions>
-        }
       />
 
       <EstoqueHubNav />
@@ -233,7 +220,12 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
         toolbar={
           <div className="flex w-full flex-col gap-2.5">
             <Suspense fallback={<div className="h-9" />}>
-              <FilterBar filters={filters} resetPageOnChange />
+              <FilterBar
+                filters={filters}
+                resetPageOnChange
+                ariaLabel={ui.filtros_regiao_aria}
+                clearAriaLabel={ui.filtros_limpar_aria}
+              />
             </Suspense>
             {chips.length > 0 ? (
               <div className="flex flex-wrap items-center gap-1.5">

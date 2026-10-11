@@ -1827,6 +1827,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           onClose={() => {
             setReciboSegundaVia(true)
             setReimprimirModalAberto(false)
+            focarCampoBusca()
           }}
           onNovaVenda={() => {
             setReciboSegundaVia(true)

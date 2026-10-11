@@ -332,8 +332,8 @@ export function ClientesListClient({
     <EmptyState
       title={m.clientes.vazio_titulo}
       description={m.clientes.vazio_sub}
-      actionLabel={m.clientes.novo}
-      onAction={abrirNovo}
+      actionLabel={m.comum.limpar_filtros}
+      onAction={() => setTermo('')}
       className="py-8"
     />
   ) : (

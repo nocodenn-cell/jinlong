@@ -42,10 +42,39 @@ export type FilterDef =
       inputClassName?: string
     }
 
+const CHAVES_EXTRAS_VAZIAS: readonly string[] = []
+
+function valorDeFiltroAtivo(filter: FilterDef, current: string | null): boolean {
+  if (current === null || current.length === 0) return false
+  if (filter.type !== 'search' && current === filter.defaultValue) return false
+  return true
+}
+
+function haFiltroAtivo(
+  filters: FilterDef[],
+  get: (key: string) => string | null,
+  extraClearKeys: readonly string[],
+): boolean {
+  if (filters.some((filter) => valorDeFiltroAtivo(filter, get(filter.key)))) return true
+  return extraClearKeys.some((key) => {
+    const current = get(key)
+    return current !== null && current.length > 0
+  })
+}
+
 type FilterBarProps = {
   filters: FilterDef[]
   clearable?: boolean
   clearLabel?: string
+  /** Nome acessível da região. Default permanece o português histórico. */
+  ariaLabel?: string
+  /** Nome acessível do botão Limpar. Default permanece o português histórico. */
+  clearAriaLabel?: string
+  /**
+   * Chaves extras removidas pelo Limpar (ex.: filtros avançados de outra barra).
+   * Também fazem o botão aparecer quando só elas estão ativas.
+   */
+  extraClearKeys?: readonly string[]
   className?: string
   /**
    * Quando true, remove `page` da URL ao mudar/limpar filtros.
@@ -58,6 +87,9 @@ export function FilterBar({
   filters,
   clearable = true,
   clearLabel = 'Limpar',
+  ariaLabel = 'Filtros de busca',
+  clearAriaLabel = 'Limpar todos os filtros',
+  extraClearKeys = CHAVES_EXTRAS_VAZIAS,
   className,
   resetPageOnChange = false,
 }: FilterBarProps) {
@@ -82,25 +114,21 @@ export function FilterBar({
     [router, pathname, searchParams, resetPageOnChange],
   )
 
-  const hasActive = filters.some((f) => {
-    const current = searchParams.get(f.key)
-    if (current === null) return false
-    if (f.type !== 'search' && current === f.defaultValue) return false
-    return current.length > 0
-  })
+  const hasActive = haFiltroAtivo(filters, (key) => searchParams.get(key), extraClearKeys)
 
   const clearAll = useCallback(() => {
     const params = new URLSearchParams(searchParams.toString())
     for (const f of filters) params.delete(f.key)
+    for (const key of extraClearKeys) params.delete(key)
     if (resetPageOnChange) params.delete('page')
     const qs = params.toString()
     router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
-  }, [filters, searchParams, router, pathname, resetPageOnChange])
+  }, [filters, extraClearKeys, searchParams, router, pathname, resetPageOnChange])
 
   return (
     <section
       role="search"
-      aria-label="Filtros de busca"
+      aria-label={ariaLabel}
       className={cn('flex flex-wrap items-center gap-2', className)}
     >
       {filters.map((filter) => {
@@ -143,7 +171,7 @@ export function FilterBar({
           variant="ghost"
           size="sm"
           onClick={clearAll}
-          aria-label="Limpar todos os filtros"
+          aria-label={clearAriaLabel}
           className="gap-1 text-caption text-fg-subtle"
         >
           <X size={12} strokeWidth={2.5} aria-hidden />

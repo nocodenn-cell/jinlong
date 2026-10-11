@@ -6,7 +6,7 @@
  * [data-admin-layout="true"] — estes componentes só renderizam com as cores
  * corretas dentro do shell /admin.
  *
- * Exporta: StatusBadge, OriginBadge, PaymentBadge, FiscalBadge, DeltaChip,
+ * Exporta: VendaStatusBadge, OriginBadge, PaymentBadge, FiscalBadge, DeltaChip,
  * SeverityDot — agrupados de propósito (são pequenos demais p/ arquivos
  * separados e quase sempre importados juntos).
  *
@@ -97,7 +97,7 @@ function Pill({ tone, icon: Icon, children, className, title, ariaLabel, role }:
   )
 }
 
-// ─── StatusBadge (status de venda) ──────────────────────────────────────────
+// ─── VendaStatusBadge (status de venda) ─────────────────────────────────────
 //
 // Status canônico de venda = CONCLUIDA (NÃO "FINALIZADA").
 
@@ -117,7 +117,7 @@ const STATUS_LABEL: Record<VendaStatus, string> = {
   DEVOLVIDA: 'Devolvida',
 }
 
-export function StatusBadge({
+export function VendaStatusBadge({
   status,
   label,
   className,

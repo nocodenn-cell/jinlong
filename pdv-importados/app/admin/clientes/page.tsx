@@ -27,7 +27,6 @@ export default async function AdminClientesPage() {
       <PageHeader
         title={messages.clientes.titulo}
         subtitle={messages.clientes.subtitulo}
-        className="mb-3 border-b border-[var(--color-border)] pb-3"
       />
       <OperationalHubNav hub="pessoas" />
       <ClientesListClient

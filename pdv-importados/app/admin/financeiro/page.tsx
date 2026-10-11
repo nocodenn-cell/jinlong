@@ -223,12 +223,21 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
   const filterSection = (
     <div className="border-b border-[var(--color-border-secondary)] pb-3">
       <Suspense fallback={<div className="h-9" />}>
-        <FilterBar filters={filterDefs} />
+        <FilterBar
+          filters={filterDefs}
+          ariaLabel={ui.filtros_regiao_aria}
+          clearAriaLabel={ui.filtros_limpar_aria}
+        />
       </Suspense>
       {chips.length > 0 ? (
         <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
           {chips.map((chip) => (
-            <Link key={chip.key} href={hrefWithout(chip.key)} className="admin-v2-chip">
+            <Link
+              key={chip.key}
+              href={hrefWithout(chip.key)}
+              className="admin-v2-chip"
+              aria-label={ui.catalogo_chip_remover.replace('{{label}}', chip.label)}
+            >
               {chip.label}
               <span aria-hidden className="text-jl-fg-3">
                 ✕

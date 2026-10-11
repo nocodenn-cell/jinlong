@@ -1,4 +1,3 @@
-import { Button } from '@/components/ui/button'
 /**
  * FastProduct Admin — Catálogo (Fase 4 + UX Fase 1)
  *
@@ -253,10 +252,6 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
   if (imagem !== 'todos') chips.push({ key: 'imagem', label: imagem === 'com_imagem' ? ui.catalogo_imagem_com : ui.catalogo_imagem_sem })
 
   const headerActions = (
-    <div className="flex flex-wrap items-center gap-2">
-      <Button asChild variant="secondary" size="sm">
-        <Link href={ROUTES.admin.estoqueImprimirEtiquetas}>{ui.hub_estoque_etiquetas}</Link>
-      </Button>
     <CatalogoHeaderActions
       m={m}
       ui={ui}
@@ -273,7 +268,6 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
         busca: q,
       }}
     />
-    </div>
   )
 
   const countBadge = (
@@ -302,6 +296,8 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
             maisFiltrosLabel={ui.catalogo_mais_filtros}
             menosFiltrosLabel={ui.catalogo_menos_filtros}
             clearLabel={m.comum.limpar_filtros}
+            filtrosAriaLabel={ui.filtros_regiao_aria}
+            limparAriaLabel={ui.filtros_limpar_aria}
           />
         </Suspense>
 
