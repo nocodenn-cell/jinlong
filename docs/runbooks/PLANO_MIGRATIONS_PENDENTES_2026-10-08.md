@@ -88,3 +88,13 @@ Execução (cada migration é uma transação própria com `BEGIN…COMMIT`):
 O job `migration-remote-drift` (não é check obrigatório da branch protection) compara o repositório com o
 schema remoto e reprova enquanto as 8 migrations não forem aplicadas em produção. Ele só fica verde depois
 da implantação autorizada acima; **não foi mascarado nem tornado não bloqueante**.
+
+## 7. Adendo 2026-10-10 — ordem depois do PR #536
+
+Este adendo não autoriza aplicar nada. Ele impede que o plano de 08/10 e os relatórios da GO-LIVE se contradigam.
+
+- `20261006120000_financeiro_contas_formas_e_painel` continua **substituída** por `20261006180000_financeiro_contas_operacionais` (ledger `20261006195837`). Listá-la como `remote_ausente` não a torna pendência. Não aplicar.
+- Se o lote #1–#8 e `20261009220000_fiscal_rpc_isola_loja` forem autorizados no mesmo período, o lote #1–#8 vem primeiro. `20261009220000` é o último escritor de `fiscal_reprocessar_documento`, `fiscal_enfileirar_documento_venda`, `fiscal_registrar_evento_enqueue_erro` e `fiscal_cancelar_documento`.
+- O `CREATE` de `fiscal_cancelar_documento` no item #1 (`20261007161220`) é o mesmo texto de `20261009220000`. Uma execução posterior do #1 não remove `FISCAL_CANCELAR_LOJA`. A recuperação das quatro RPCs continua sendo só o arquivo `20261009220000`.
+- Zero caixas `ABERTO` continua obrigatório antes do lote #1–#8. A janela só de `20261009220000` + `20261007163200` não reescreve caixa, venda nem financeiro; essa pré-condição é do lote #1–#8.
+- `20261010120000_caixa_sem_loja_padrao` não faz parte deste plano de 08/10. Sobe só junto com o deploy da Edge `sync-outbox` e do PDV que enviam `loja_id`.

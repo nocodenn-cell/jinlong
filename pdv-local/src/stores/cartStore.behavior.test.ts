@@ -31,10 +31,13 @@ if (!('localStorage' in globalThis)) {
 }
 
 function resetCartStore() {
+  useCartStore.getState().setCartOwnerForSession(null)
   useCartStore.setState({
     itens: [],
     regras: [],
     pricingCtx: DEFAULT_PRICING_CONTEXT,
+    cartOwnerUserId: null,
+    cartLojaId: null,
     totalBruto: 0,
     totalDesconto: 0,
     totalLiquido: 0,

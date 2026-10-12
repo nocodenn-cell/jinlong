@@ -7,6 +7,7 @@ import { FinanceiroPaginacao } from './FinanceiroWorkspace'
 import { FinanceiroPrimeiroUso } from './FinanceiroPrimeiroUso'
 import { FinanceiroAcoesRapidas } from './FinanceiroAcoesRapidas'
 import { SectionCard } from '@/components/ui/admin-v2'
+import { EmptyState } from '@/components/ui/feedback'
 import { formatDateTimeOrDash } from '@/lib/format/datetime'
 import { ContasReceberTable, type ContaLinha, type ContasLabels } from './ContasReceberTable'
 import { FinanceiroReceberExtras } from './FinanceiroReceberExtras'
@@ -75,13 +76,11 @@ function FiscalList({
 }) {
   if (fiscal.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-2 py-10 text-center">
-        <span className="text-3xl text-jl-fg-3" aria-hidden>
-          🧾
-        </span>
-        <p className="text-subtitle font-medium text-jl-fg-2">{labels.filaFiscalVazioTitulo}</p>
-        <p className="text-caption text-jl-fg-3">{labels.filaFiscalVazioSub}</p>
-      </div>
+      <EmptyState
+        title={labels.filaFiscalVazioTitulo}
+        description={labels.filaFiscalVazioSub}
+        className="py-10"
+      />
     )
   }
 

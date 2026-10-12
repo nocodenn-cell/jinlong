@@ -10,7 +10,7 @@ import {
   adminCatalogoCompletoEditarHref,
   adminEtiquetasProdutoQuery,
 } from '@/lib/navigation/routes'
-import { Copy, FilterX, ImageIcon, Package, Pencil, Printer, Trash2 } from 'lucide-react'
+import { Copy, FilterX, ImageIcon, MoreHorizontal, Package, Pencil, Printer, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/ui/feedback'
@@ -69,6 +69,70 @@ export type CatalogoLabels = {
 /** `{{nome}}` → nome do produto; mantém o rótulo traduzível. */
 function acaoLabel(template: string, nome: string): string {
   return template.replace('{{nome}}', nome)
+}
+
+function CatalogoLinhaOverflow({
+  menuId,
+  duplicarHref,
+  duplicarLabel,
+  excluirLabel,
+  excluirAria,
+  excluirTitle,
+  maisLabel,
+  onExcluir,
+}: {
+  menuId: string
+  duplicarHref: string
+  duplicarLabel: string
+  excluirLabel: string
+  excluirAria: string
+  excluirTitle: string
+  maisLabel: string
+  onExcluir: () => void
+}) {
+  const itemClass =
+    'flex w-full items-center gap-2 rounded-control px-3 py-2 text-left text-small text-fg hover:bg-[color-mix(in_srgb,var(--color-brand-primary)_10%,transparent)]'
+
+  return (
+    <>
+      <button
+        type="button"
+        popoverTarget={menuId}
+        aria-haspopup="menu"
+        aria-label={maisLabel}
+        onClick={(e) => e.stopPropagation()}
+        className="flex h-8 w-8 items-center justify-center rounded-control text-fg-subtle hover:bg-[color-mix(in_srgb,var(--color-brand-primary)_8%,transparent)]"
+      >
+        <MoreHorizontal className="h-4 w-4" aria-hidden />
+      </button>
+      <div
+        id={menuId}
+        popover="auto"
+        role="menu"
+        className="min-w-[10rem] rounded-control border border-[var(--color-border)] bg-[var(--color-background-primary)] p-1 shadow-md"
+      >
+        <Link href={duplicarHref} role="menuitem" aria-label={duplicarLabel} className={itemClass}>
+          <Copy size={13} aria-hidden />
+          {duplicarLabel}
+        </Link>
+        <button
+          type="button"
+          role="menuitem"
+          aria-label={excluirAria}
+          title={excluirTitle}
+          onClick={(e) => {
+            e.stopPropagation()
+            document.getElementById(menuId)?.hidePopover()
+            onExcluir()
+          }}
+          className={itemClass}
+        >
+          <Trash2 size={13} aria-hidden />
+          {excluirLabel}
+        </button>
+      </div>
+    </>
+  )
 }
 
 const ORIGEM_MAP: Record<string, { badgeClass: string }> = {
@@ -399,35 +463,19 @@ export function CatalogoTable({
                 <Printer size={13} aria-hidden />
               </Link>
             </Button>
-            <Button
-              asChild
-              type="button"
-              size="icon"
-              variant="ghost"
-              aria-label={acaoLabel(labels.acaoDuplicar, row.nome)}
-              title={acaoLabel(labels.acaoDuplicar, row.nome)}
-            >
-              <Link href={`${ROUTES.admin.catalogoCompletoNovo}?duplicarDe=${row.id}`}>
-                <Copy size={13} aria-hidden />
-              </Link>
-            </Button>
-            {/* Não existe tela de detalhe somente leitura — `/admin/catalogo/[id]`
-                sem sufixo nunca foi criada, só `/admin/catalogo/[id]/completo`
-                (edição). O antigo botão "Ver" apontava para a própria lista —
-                clicar não fazia nada. Editar já mostra todos os campos. */}
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              aria-label={m.produtos.exclusao_linha_aria}
-              title={m.produtos.exclusao_linha_title}
-              onClick={() => {
+            <CatalogoLinhaOverflow
+              menuId={`catalogo-mais-${row.id}`}
+              duplicarHref={`${ROUTES.admin.catalogoCompletoNovo}?duplicarDe=${row.id}`}
+              duplicarLabel={acaoLabel(labels.acaoDuplicar, row.nome)}
+              excluirLabel={m.produtos.exclusao_linha_botao}
+              excluirAria={m.produtos.exclusao_linha_aria}
+              excluirTitle={m.produtos.exclusao_linha_title}
+              maisLabel={m.comum.mais_acoes}
+              onExcluir={() => {
                 setExcluirIds([row.id])
                 setExcluirOpen(true)
               }}
-            >
-              <Trash2 size={13} aria-hidden />
-            </Button>
+            />
           </div>
         )}
       />

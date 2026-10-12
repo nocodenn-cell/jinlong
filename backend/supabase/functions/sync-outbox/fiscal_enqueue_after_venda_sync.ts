@@ -29,6 +29,15 @@ function roundMoney2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
+function abortFiscalEnqueue(
+  log: (p: Record<string, unknown>) => void,
+  vendaId: string,
+  detail: string,
+): never {
+  log({ level: "error", stage: "fiscal_enqueue_sync", venda_id: vendaId, detail, retry: true });
+  throw new Error(`FISCAL_ENFILEIRAR_PENDENTE:${detail}`);
+}
+
 function resolveFiscalDocType(raw: string | undefined): "NFC_E_STUB" | "NFCE" | "NFE" {
   const t = (raw ?? "").trim().toUpperCase();
   if (t === "NFCE" || t === "NFE") return t;
@@ -77,7 +86,8 @@ type LojaFiscalRow = {
 /**
  * Opcional: alinha vendas do PDV local (pós-sync) ao mesmo RPC do caixa web.
  * Desligado por predefinição — exige `AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE=true` na Edge.
- * Erros não propagam (não falham o batch de outbox).
+ * Com a flag ligada, falha de leitura ou de RPC rejeita a função para o outbox
+ * tentar de novo. A RPC fiscal é upsert por (venda_id, tipo_doc).
  *
  * B-P0.1 (Onda C1, prontidão Focus NFe): o payload passa a incluir a
  * classificação fiscal do produto (ncm/cfop/csosn/cest/cst_pis/cst_cofins) e
@@ -101,12 +111,7 @@ export async function maybeEnqueueFiscalDocumentAfterSyncedVenda(
   if (isUuid(caixaId)) {
     const { data, error } = await supabase.from("caixas").select("loja_id").eq("id", caixaId).maybeSingle();
     if (error) {
-      log({
-        level: "warn",
-        stage: "fiscal_enqueue_sync",
-        venda_id: payload.venda_id,
-        detail: `loja_lookup:${error.message}`,
-      });
+      abortFiscalEnqueue(log, payload.venda_id, `loja_lookup:${error.message}`);
     } else if (data && data.loja_id != null) {
       loja_id = String(data.loja_id);
     }
@@ -133,23 +138,15 @@ export async function maybeEnqueueFiscalDocumentAfterSyncedVenda(
       .select("id, nome, codigo_barras, ncm, cfop_produto, csosn, cest, cst_pis, cst_cofins, unidade_medida, icms_origem")
       .in("id", produtoIds);
     if (error) {
-      log({
-        level: "error",
-        stage: "fiscal_enqueue_sync",
-        venda_id: payload.venda_id,
-        detail: `produtos_fiscal_lookup_falhou_fail_closed:${error.message}`,
-      });
-      return;
+      abortFiscalEnqueue(log, payload.venda_id, `produtos_fiscal_lookup_falhou_fail_closed:${error.message}`);
     }
     for (const row of (data ?? []) as ProdutoFiscalRow[]) produtosFiscal.set(row.id, row);
     if (produtosFiscal.size < produtoIds.length) {
-      log({
-        level: "error",
-        stage: "fiscal_enqueue_sync",
-        venda_id: payload.venda_id,
-        detail: `produtos_fiscal_lookup_incompleto_fail_closed:esperado=${produtoIds.length},obtido=${produtosFiscal.size}`,
-      });
-      return;
+      abortFiscalEnqueue(
+        log,
+        payload.venda_id,
+        `produtos_fiscal_lookup_incompleto_fail_closed:esperado=${produtoIds.length},obtido=${produtosFiscal.size}`,
+      );
     }
   }
 
@@ -188,31 +185,18 @@ export async function maybeEnqueueFiscalDocumentAfterSyncedVenda(
   // escalar OU branch de split, nunca os dois ausentes) — então uma leitura
   // vazia ou com erro aqui não é "venda sem pagamento", é sinal de que
   // ALGO deu errado (corrida, permissão, rede) e não há como montar um
-  // snapshot fiscal confiável. Fail-closed: não enfileira documento fiscal
-  // nenhum nesta rodada (a venda em si não é afetada — só o auto-enqueue
-  // fiscal, que já é opcional/best-effort por design desta função) em vez
-  // de arriscar um pagamento fiscal incorreto.
+  // snapshot fiscal confiável. Fail-closed: a função lança
+  // FISCAL_ENFILEIRAR_PENDENTE e o evento volta para retry. A venda já
+  // gravada é idempotente; a baixa trata BAIXA_JA_EXISTE como sucesso.
   const { data: pagamentosData, error: pagamentosErr } = await supabase
     .from("vendas_pagamentos")
     .select("forma_pagamento, valor")
     .eq("venda_id", payload.venda_id);
   if (pagamentosErr) {
-    log({
-      level: "error",
-      stage: "fiscal_enqueue_sync",
-      venda_id: payload.venda_id,
-      detail: `vendas_pagamentos_lookup_falhou_fail_closed:${pagamentosErr.message}`,
-    });
-    return;
+    abortFiscalEnqueue(log, payload.venda_id, `vendas_pagamentos_lookup_falhou_fail_closed:${pagamentosErr.message}`);
   }
   if (!pagamentosData || pagamentosData.length === 0) {
-    log({
-      level: "error",
-      stage: "fiscal_enqueue_sync",
-      venda_id: payload.venda_id,
-      detail: "vendas_pagamentos_vazio_inesperado_fail_closed",
-    });
-    return;
+    abortFiscalEnqueue(log, payload.venda_id, "vendas_pagamentos_vazio_inesperado_fail_closed");
   }
   const pagamentos: Array<{ forma_pagamento: string; valor: number }> = (pagamentosData as Array<{ forma_pagamento: string; valor: number }>)
     .map((p) => ({ forma_pagamento: p.forma_pagamento, valor: roundMoney2(p.valor) }));
@@ -329,12 +313,6 @@ export async function maybeEnqueueFiscalDocumentAfterSyncedVenda(
   });
 
   if (rpcErr) {
-    log({
-      level: "warn",
-      stage: "fiscal_enqueue_sync",
-      venda_id: payload.venda_id,
-      tipo_doc: tipoDoc,
-      error: rpcErr.message,
-    });
+    abortFiscalEnqueue(log, payload.venda_id, `rpc:${rpcErr.message}`);
   }
 }

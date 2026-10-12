@@ -228,7 +228,13 @@ export default async function AdminCaixasPage({ searchParams }: PageProps) {
       <SectionCard title={ui.caixas_secao_historico}>
         <div className="mb-3">
           <Suspense fallback={<div className="h-8" />}>
-            <FilterBar filters={filtrosSelect} clearable={false} resetPageOnChange />
+            <FilterBar
+              filters={filtrosSelect}
+              clearable={false}
+              resetPageOnChange
+              ariaLabel={ui.filtros_regiao_aria}
+              clearAriaLabel={ui.filtros_limpar_aria}
+            />
           </Suspense>
         </div>
 
@@ -244,7 +250,12 @@ export default async function AdminCaixasPage({ searchParams }: PageProps) {
         {chips.length > 0 ? (
           <div className="mb-3 flex flex-wrap items-center gap-1.5">
             {chips.map((chip) => (
-              <Link key={chip.key} href={chip.href} className="admin-v2-chip">
+              <Link
+                key={chip.key}
+                href={chip.href}
+                className="admin-v2-chip"
+                aria-label={ui.catalogo_chip_remover.replace('{{label}}', chip.label)}
+              >
                 {chip.label}
                 <span aria-hidden className="text-jl-fg-3">
                   ✕

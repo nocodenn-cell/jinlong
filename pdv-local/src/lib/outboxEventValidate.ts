@@ -29,6 +29,7 @@ export function validateVendaPayload(payload: unknown): { ok: true } | { ok: fal
   // registrar_venda_com_itens exige p_caixa_id (migration 20260814105031) — rejeitar
   // aqui, no envio, em vez de deixar o evento retry/DLQ até um operador notar.
   if (!isUuid(payload.caixa_id)) return { ok: false, error: 'caixa_id inválido' }
+  if (!isUuid(payload.loja_id)) return { ok: false, error: 'loja_id inválido' }
   if (typeof payload.forma_pagamento !== 'string' || !payload.forma_pagamento.trim()) {
     return { ok: false, error: 'forma_pagamento inválida' }
   }
@@ -64,6 +65,7 @@ export function validateCaixaAbertoPayload(
 ): { ok: true } | { ok: false; error: string } {
   if (!isRecord(payload)) return { ok: false, error: 'payload.caixa_aberto deve ser objeto' }
   if (!isUuid(payload.id)) return { ok: false, error: 'id caixa inválido' }
+  if (!isUuid(payload.loja_id)) return { ok: false, error: 'loja_id inválido' }
   if (typeof payload.valor_inicial !== 'number' || !Number.isFinite(payload.valor_inicial)) {
     return { ok: false, error: 'valor_inicial inválido' }
   }

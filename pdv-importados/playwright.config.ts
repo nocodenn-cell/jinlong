@@ -64,6 +64,19 @@ const ciWithLocalServer =
   isCi && process.env.PLAYWRIGHT_E2E_WITH_DEV === '1'
 
 /**
+ * Suíte E2E geral: `next dev` estoura a heap (~8 min, 4096 MB) e o processo
+ * morre; o que vem depois vira `ERR_CONNECTION_REFUSED`. Com
+ * `PLAYWRIGHT_E2E_PROD_SERVER=1` o job já rodou `next build` e aqui só sobe
+ * `next start`. O E2E crítico não define a flag e continua em `next dev`.
+ */
+function e2eWebServerCommand(port: string): string {
+  if (process.env.PLAYWRIGHT_E2E_PROD_SERVER === '1') {
+    return `npx next start -p ${port}`
+  }
+  return `npx next dev -p ${port}`
+}
+
+/**
  * Se a URL do `webServer` já responder, não executa `command` (reutiliza `localhost:${e2ePort}`).
  * `PLAYWRIGHT_REUSE_SERVER=0`: sempre tenta subir via `command` (útil para “sala limpa”; falha se porta ocupada).
  */
@@ -143,7 +156,7 @@ export default defineConfig({
   webServer:
     ciWithLocalServer || !isCi
       ? {
-          command: `npx next dev -p ${e2ePort}`,
+          command: e2eWebServerCommand(e2ePort),
           url: defaultBase,
           reuseExistingServer,
           timeout: 120_000,

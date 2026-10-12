@@ -35,6 +35,8 @@ export interface ItemCarrinho {
 export interface CarrinhoState {
   itens: ItemCarrinho[]
   cartOwnerUserId: string | null
+  /** Loja do cupom persistido. `null` ainda não vinculada — não dispara troca. */
+  cartLojaId: string | null
   totalBruto: number
   totalDesconto: number
   totalLiquido: number
@@ -76,7 +78,13 @@ export interface CarrinhoState {
   limparCarrinho: () => void
   /** Substitui o carrinho por um snapshot (ex.: retomar venda em espera). */
   substituirCarrinho: (itens: ItemCarrinho[]) => void
-  setCartOwnerForSession: (userId: string | null) => void
+  /**
+   * Amarra o carrinho à sessão. `lojaId` omitido não mexe na loja (o scan
+   * autentica o operador antes da loja chegar). Loja diferente descarta itens.
+   */
+  setCartOwnerForSession: (userId: string | null, lojaId?: string | null) => void
+  /** Troca de loja no desktop, onde não há operador autenticado. */
+  setCartLojaForSession: (lojaId: string | null) => void
   setRegras: (regras: unknown[]) => void
   alterarQuantidade: (id: string, quantidade: number) => void
   /** Atualiza preço unitário / tipo após RPC `calcular_preco_produto` (ignora linhas MANUAL / PROMOCAO). */
@@ -204,6 +212,7 @@ function emptyCartFields(ctx: CartPersistedContext): Partial<CarrinhoState> {
   return {
     itens: [],
     cartOwnerUserId: null,
+    cartLojaId: null,
     totalBruto: 0,
     totalDesconto: 0,
     totalLiquido: 0,
@@ -221,11 +230,99 @@ function emptyCartFields(ctx: CartPersistedContext): Partial<CarrinhoState> {
   }
 }
 
+function quantidadeInformada(quantidade: number): boolean {
+  return Number.isFinite(quantidade)
+}
+
 function updateItemQuantity(itens: ItemCarrinho[], id: string, quantidade: number): ItemCarrinho[] {
-  if (quantidade <= 0) {
-    return itens.filter((i) => i.id !== id)
-  }
+  if (!quantidadeInformada(quantidade)) return itens
+  if (quantidade <= 0) return itens.filter((i) => i.id !== id)
   return itens.map((i) => (i.id === id ? normalizarItemCarrinho({ ...i, quantidade }) : i))
+}
+
+function tipoPrecoItem(item: ItemCarrinho): string {
+  return item.resultado?.tipoPreco ?? 'VAREJO'
+}
+
+function precoComercialItem(item: ItemCarrinho): number {
+  const bruto = item.resultado?.precoUnitario ?? item.precoUnitario ?? item.precoVariejo ?? 0
+  return roundMoney(finite(bruto))
+}
+
+function chaveVariantes(item: ItemCarrinho): string {
+  const variantes = item.variantes
+  if (!variantes) return ''
+  const chaves = Object.keys(variantes).sort()
+  if (chaves.length === 0) return ''
+  return JSON.stringify(chaves.map((chave) => [chave, variantes[chave]]))
+}
+
+function precoAutomatico(item: ItemCarrinho): boolean {
+  const tipo = tipoPrecoItem(item)
+  return tipo === 'VAREJO' || tipo === 'ATACADO'
+}
+
+/** VAREJO/ATACADO do mesmo produto agregam (o recálculo ajusta a faixa). Manual/promo só se o preço bater. */
+function condicoesCompativeis(atual: ItemCarrinho, novo: ItemCarrinho): boolean {
+  if (atual.produtoId !== novo.produtoId) return false
+  if (chaveVariantes(atual) !== chaveVariantes(novo)) return false
+  if (precoAutomatico(atual) && precoAutomatico(novo)) return true
+  return tipoPrecoItem(atual) === tipoPrecoItem(novo) && precoComercialItem(atual) === precoComercialItem(novo)
+}
+
+function mergeItemCompativel(itens: ItemCarrinho[], item: ItemCarrinho): ItemCarrinho[] {
+  const existe = itens.find((linha) => condicoesCompativeis(linha, item))
+  if (!existe) return [...itens, item]
+  return itens.map((linha) =>
+    linha === existe
+      ? normalizarItemCarrinho({ ...linha, quantidade: linha.quantidade + item.quantidade })
+      : linha,
+  )
+}
+
+function ownerConflicts(state: CarrinhoState, userId: string): boolean {
+  return state.cartOwnerUserId !== null && state.cartOwnerUserId !== userId
+}
+
+function replaceCartContext(
+  state: CarrinhoState,
+  userId: string,
+  lojaId: string | null | undefined,
+): Partial<CarrinhoState> {
+  return {
+    ...emptyCartFields(state),
+    cartOwnerUserId: userId,
+    cartLojaId: lojaId || null,
+  }
+}
+
+function applyLojaChange(
+  state: CarrinhoState,
+  lojaId: string | null | undefined,
+): Partial<CarrinhoState> {
+  if (!lojaId) return { cartOwnerUserId: state.cartOwnerUserId }
+  if (state.cartLojaId && state.cartLojaId !== lojaId) {
+    return {
+      ...emptyCartFields(state),
+      cartOwnerUserId: state.cartOwnerUserId,
+      cartLojaId: lojaId,
+    }
+  }
+  return { cartOwnerUserId: state.cartOwnerUserId, cartLojaId: lojaId }
+}
+
+function bindCartSession(
+  state: CarrinhoState,
+  userId: string | null,
+  lojaId: string | null | undefined,
+  discardUnboundItems: boolean,
+): Partial<CarrinhoState> {
+  if (userId === null) return emptyCartFields(state)
+  if (discardUnboundItems || ownerConflicts(state, userId)) {
+    return replaceCartContext(state, userId, lojaId)
+  }
+  const stamped = { ...state, cartOwnerUserId: state.cartOwnerUserId ?? userId }
+  return applyLojaChange(stamped, lojaId)
 }
 
 function applyItemDiscount(item: ItemCarrinho, descontoValor: number): ItemCarrinho {
@@ -250,16 +347,17 @@ function applyItemDiscount(item: ItemCarrinho, descontoValor: number): ItemCarri
   })
 }
 
-function mergeItemByProdutoId(itens: ItemCarrinho[], item: ItemCarrinho): ItemCarrinho[] {
-  const existe = itens.find((i) => i.produtoId === item.produtoId)
-  if (!existe) {
-    return [...itens, item]
-  }
-  return itens.map((i) =>
-    i.produtoId === item.produtoId
-      ? normalizarItemCarrinho({ ...i, quantidade: i.quantidade + item.quantidade })
-      : i,
-  )
+let hydratedWithoutOwner = false
+
+function noteHydratedCart(state: Partial<CarrinhoState> | undefined): void {
+  const itens = state?.itens
+  hydratedWithoutOwner = Array.isArray(itens) && itens.length > 0 && !state?.cartOwnerUserId
+}
+
+function consumeHydratedWithoutOwner(): boolean {
+  const pending = hydratedWithoutOwner
+  hydratedWithoutOwner = false
+  return pending
 }
 
 function resolveMaxDescontoGerente(
@@ -277,6 +375,7 @@ export const useCartStore = create<CarrinhoState>()(
     (set, get) => ({
       itens: [],
       cartOwnerUserId: null,
+      cartLojaId: null,
       totalBruto: 0,
       totalDesconto: 0,
       totalLiquido: 0,
@@ -312,8 +411,9 @@ export const useCartStore = create<CarrinhoState>()(
 
       adicionarItem: (item) =>
         set((state) => {
+          if (!quantidadeInformada(item.quantidade) || item.quantidade <= 0) return {}
           const itemNormalizado = normalizarItemCarrinho(item)
-          const novosItens = mergeItemByProdutoId(state.itens, itemNormalizado)
+          const novosItens = mergeItemCompativel(state.itens, itemNormalizado)
           return commitItensComTotais(state, novosItens)
         }),
 
@@ -360,22 +460,13 @@ export const useCartStore = create<CarrinhoState>()(
           }
         }),
 
-      setCartOwnerForSession: (userId) =>
+      setCartOwnerForSession: (userId, lojaId) =>
         set((state) => {
-          if (userId === null) {
-            return emptyCartFields(state)
-          }
-
-          if (state.cartOwnerUserId === null) {
-            return { cartOwnerUserId: userId }
-          }
-
-          if (userId !== state.cartOwnerUserId) {
-            return { ...emptyCartFields(state), cartOwnerUserId: userId }
-          }
-
-          return { cartOwnerUserId: userId }
+          const unbound = consumeHydratedWithoutOwner()
+          return bindCartSession(state, userId, lojaId, unbound && userId !== null)
         }),
+
+      setCartLojaForSession: (lojaId) => set((state) => applyLojaChange(state, lojaId)),
 
       setRegras: (regras) => set({ regras }),
 
@@ -486,6 +577,7 @@ export const useCartStore = create<CarrinhoState>()(
       partialize: (state) => ({
         itens: state.itens,
         cartOwnerUserId: state.cartOwnerUserId,
+        cartLojaId: state.cartLojaId,
         totalBruto: state.totalBruto,
         totalDesconto: state.totalDesconto,
         totalLiquido: state.totalLiquido,
@@ -501,6 +593,9 @@ export const useCartStore = create<CarrinhoState>()(
         vendaFinalizacaoPendente: state.vendaFinalizacaoPendente,
         vendaEmEsperaOrigemId: state.vendaEmEsperaOrigemId,
       }),
+      onRehydrateStorage: () => (state) => {
+        noteHydratedCart(state ?? undefined)
+      },
     },
   ),
 )

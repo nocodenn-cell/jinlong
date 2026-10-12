@@ -2,8 +2,9 @@
 --
 -- 1) fiscal_marcar_cancelado: worker/reconciliação quando Focus status=cancelado
 -- 2) fiscal_marcar_emitido: fail-closed se documento já CANCELADO (nunca cancelado→emitido)
--- 3) fiscal_cancelar_documento: comando explícito (gerente+), ciclo de vida do DOC
---    independente de cancelar_venda_transacional
+-- 3) fiscal_cancelar_documento: mesmo corpo de 20261009220000 (ativo + loja).
+--    Reaplicar este arquivo depois do isolamento não remove FISCAL_CANCELAR_LOJA.
+--    O teste fiscal-p0 exige que os dois CREATE sejam idênticos.
 -- 4) REVOKE INSERT authenticated em documentos_fiscais_pendentes (só RPC enqueue)
 --
 -- Não altera cancelar_venda_transacional.
@@ -145,7 +146,8 @@ REVOKE ALL ON FUNCTION public.fiscal_marcar_emitido(uuid, text, text, text, json
 GRANT EXECUTE ON FUNCTION public.fiscal_marcar_emitido(uuid, text, text, text, jsonb) TO service_role;
 
 -- ---------------------------------------------------------------------------
--- 3. Comando explícito de cancelamento fiscal (não acopla a cancelar_venda)
+-- 3. Cancelamento explícito. Corpo idêntico ao de 20261009220000 para que
+--    uma execução posterior deste arquivo não derrube o isolamento de loja.
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fiscal_cancelar_documento(
   p_documento_id uuid,
@@ -159,6 +161,7 @@ AS $$
 DECLARE
   v_uid uuid := auth.uid();
   v_status text;
+  v_loja uuid;
   v_just text := trim(COALESCE(p_justificativa, ''));
 BEGIN
   IF v_uid IS NULL THEN
@@ -167,7 +170,9 @@ BEGIN
 
   IF NOT EXISTS (
     SELECT 1 FROM public.usuarios u
-    WHERE u.id = v_uid AND u.perfil IN ('GERENTE', 'DONO', 'ADMIN')
+    WHERE u.id = v_uid
+      AND u.ativo
+      AND u.perfil IN ('GERENTE', 'DONO', 'ADMIN')
   ) THEN
     RAISE EXCEPTION 'FISCAL_CANCELAR_FORBIDDEN' USING ERRCODE = '42501';
   END IF;
@@ -185,6 +190,24 @@ BEGIN
 
   IF NOT FOUND THEN
     RAISE EXCEPTION 'FISCAL_DOCUMENTO_NAO_ENCONTRADO';
+  END IF;
+
+  SELECT c.loja_id INTO v_loja
+  FROM public.documentos_fiscais_pendentes d
+  JOIN public.vendas v ON v.id = d.venda_id
+  JOIN public.caixas c ON c.id = v.caixa_id
+  WHERE d.id = p_documento_id;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM public.usuarios u
+    WHERE u.id = v_uid
+      AND u.ativo
+      AND (
+        u.perfil = 'ADMIN'
+        OR (u.perfil IN ('GERENTE', 'DONO') AND u.loja_id = v_loja)
+      )
+  ) THEN
+    RAISE EXCEPTION 'FISCAL_CANCELAR_LOJA' USING ERRCODE = '42501';
   END IF;
 
   IF v_status = 'CANCELADO' THEN
@@ -217,7 +240,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.fiscal_cancelar_documento(uuid, text) IS
-  'Comando explícito de cancelamento do documento fiscal. Não acopla a cancelar_venda_transacional.';
+  'Cancelamento explícito do documento. GERENTE/DONO só da loja do caixa; ADMIN global. Exige sessão de usuário.';
 
 REVOKE ALL ON FUNCTION public.fiscal_cancelar_documento(uuid, text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.fiscal_cancelar_documento(uuid, text) TO authenticated, service_role;

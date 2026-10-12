@@ -5,13 +5,15 @@ import type { DashboardPeriod } from '../dashboardUtils'
 
 type Props = {
   options: Array<{ id: DashboardPeriod; label: string }>
+  ariaLabel?: string
+  clearAriaLabel?: string
 }
 
 /**
  * Filtro de período do Dashboard — mesmo contrato URL (`period`), UI via FilterBar DS.
  * Não altera regras de negócio: só a apresentação dos pills.
  */
-export function DashboardFilters({ options }: Props) {
+export function DashboardFilters({ options, ariaLabel, clearAriaLabel }: Props) {
   const filters: FilterDef[] = [
     {
       type: 'pills',
@@ -22,5 +24,12 @@ export function DashboardFilters({ options }: Props) {
     },
   ]
 
-  return <FilterBar filters={filters} clearable={false} />
+  return (
+    <FilterBar
+      filters={filters}
+      clearable={false}
+      ariaLabel={ariaLabel}
+      clearAriaLabel={clearAriaLabel}
+    />
+  )
 }

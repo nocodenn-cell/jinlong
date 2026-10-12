@@ -141,7 +141,7 @@ export type Database = {
           fechamento_diferenca?: number | null
           fechamento_observacao?: string | null
           id?: string
-          loja_id?: string
+          loja_id: string
           motivo_retomada?: string | null
           operador_id?: string | null
           saldo_atual?: number

@@ -1,9 +1,8 @@
 'use client'
 
 import { useCallback, useState } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Download, FileUp, Upload } from 'lucide-react'
+import { FileUp } from 'lucide-react'
 import { ROUTES } from '@/lib/navigation/routes'
 import { buscarProdutosParaExportacao } from '@/app/gerente/produtos/actions'
 import type { OpcoesFiltrosProdutos } from '@/app/gerente/produtos/actions'
@@ -69,26 +68,25 @@ export function CatalogoHeaderActions({ m, ui, opcoes, filtrosExport, idioma }: 
 
   return (
     <>
-      <PageActions>
+      <PageActions
+        secondaryLabel={m.comum.mais_acoes}
+        secondary={[
+          {
+            id: 'importar-nfe',
+            label: ui.catalogo_importar_nfe,
+            href: ROUTES.admin.importNfe,
+          },
+          {
+            id: 'exportar-csv',
+            label: exporting ? m.comum.carregando : m.gerente.exportar_csv,
+            onClick: () => void exportarCsv(),
+            disabled: exporting,
+          },
+        ]}
+      >
         <Button type="button" variant="primary" className="gap-1.5" onClick={() => setImportOpen(true)}>
           <FileUp size={14} aria-hidden />
           {m.produtos.import_modal_titulo}
-        </Button>
-        <Button asChild variant="secondary" className="gap-1.5">
-          <Link href={ROUTES.admin.importNfe}>
-            <Upload size={14} aria-hidden />
-            {ui.catalogo_importar_nfe}
-          </Link>
-        </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          className="gap-1.5"
-          disabled={exporting}
-          onClick={() => void exportarCsv()}
-        >
-          <Download size={14} aria-hidden />
-          {exporting ? m.comum.carregando : m.gerente.exportar_csv}
         </Button>
         <CatalogoNovoButton
           label={m.produtos.cadastro_rapido}

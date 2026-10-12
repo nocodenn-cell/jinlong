@@ -202,10 +202,16 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
     return pathWithQuery(ROUTES.admin.vendas, p)
   }
 
+  const limparStatusPagamentoHref = () => {
+    const p = new URLSearchParams()
+    if (periodo !== 'hoje') p.set('periodo', periodo)
+    return pathWithQuery(ROUTES.admin.vendas, p)
+  }
+
   const emptyActions = (
     <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-      {chips.length > 0 || periodo !== 'hoje' ? (
-        <PageLink href={pathWithQuery(ROUTES.admin.vendas, new URLSearchParams())} disabled={false}>
+      {status !== 'all' || pagamento !== 'all' ? (
+        <PageLink href={limparStatusPagamentoHref()} disabled={false}>
           {ui.vendas_limpar_filtros}
         </PageLink>
       ) : null}
@@ -299,14 +305,25 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
       >
         <div className="mb-3">
           <Suspense fallback={<div className="h-8" />}>
-            <FilterBar filters={statusPagamentoFilters} clearable={false} resetPageOnChange />
+            <FilterBar
+              filters={statusPagamentoFilters}
+              resetPageOnChange
+              ariaLabel={ui.filtros_regiao_aria}
+              clearAriaLabel={ui.filtros_limpar_aria}
+              clearLabel={ui.vendas_limpar_filtros}
+            />
           </Suspense>
         </div>
 
         {chips.length > 0 ? (
           <div className="mb-3 flex flex-wrap items-center gap-1.5">
             {chips.map((chip) => (
-              <Link key={chip.key} href={hrefWithout(chip.key)} className="admin-v2-chip">
+              <Link
+                key={chip.key}
+                href={hrefWithout(chip.key)}
+                className="admin-v2-chip"
+                aria-label={ui.catalogo_chip_remover.replace('{{label}}', chip.label)}
+              >
                 {chip.label}
                 <span aria-hidden className="text-jl-fg-3">
                   ✕

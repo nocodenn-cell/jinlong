@@ -211,7 +211,7 @@ const CartRowDesktop = memo(function CartRowDesktop({
           {m.caixa.remover}
         </Button>
       </div>
-      <div className="text-right tabular-nums text-sm">
+      <div className="text-right tabular-nums text-base">
         {res.tipoPreco === "ATACADO" && res.precoOriginal > res.precoUnitario ? (
           <div className="space-y-0.5">
             <div className="line-through text-foreground/55 text-xs">
@@ -227,7 +227,7 @@ const CartRowDesktop = memo(function CartRowDesktop({
           </span>
         )}
       </div>
-      <div className="text-right tabular-nums text-sm">
+      <div className="text-right tabular-nums text-base">
         <div>
           {moeda}{" "}
           {formatDecimal2(res.precoUnitario * item.quantidade, locale)}
@@ -277,7 +277,7 @@ const CartCardMobile = memo(function CartCardMobile({
         </div>
         <TipoPrecoBadge m={m} tipo={res.tipoPreco} quantidadeMinima={res.quantidadeMinima} compact />
       </div>
-      <div className="grid grid-cols-2 gap-2 text-xs">
+      <div className="grid grid-cols-2 gap-2 text-base">
         <div>
           <span className="text-foreground/85">{m.caixa.col_qtde}</span>
           <div className="flex items-center gap-2 mt-0.5">

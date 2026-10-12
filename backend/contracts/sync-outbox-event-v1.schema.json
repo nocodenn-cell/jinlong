@@ -154,7 +154,8 @@
         "total_bruto",
         "total_desconto",
         "total_liquido",
-        "itens"
+        "itens",
+        "loja_id"
       ],
       "properties": {
         "venda_id": {
@@ -231,6 +232,10 @@
           "items": {
             "$ref": "#/$defs/payloadVendaItem"
           }
+        },
+        "loja_id": {
+          "type": "string",
+          "format": "uuid"
         }
       }
     },
@@ -239,7 +244,8 @@
       "additionalProperties": false,
       "required": [
         "id",
-        "valor_inicial"
+        "valor_inicial",
+        "loja_id"
       ],
       "properties": {
         "id": {
@@ -257,6 +263,10 @@
         },
         "status": {
           "type": "string"
+        },
+        "loja_id": {
+          "type": "string",
+          "format": "uuid"
         }
       }
     },

@@ -11,13 +11,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 let mockSearchParams = new URLSearchParams('q=camisa')
 const replaceSpy = vi.fn()
+const pushSpy = vi.fn()
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/admin/catalogo',
   useSearchParams: () => mockSearchParams,
   useRouter: () => ({
     replace: replaceSpy,
-    push: vi.fn(),
+    push: pushSpy,
   }),
 }))
 
@@ -29,6 +30,7 @@ let root: Root
 beforeEach(() => {
   mockSearchParams = new URLSearchParams('q=camisa')
   replaceSpy.mockClear()
+  pushSpy.mockClear()
   container = document.createElement('div')
   document.body.appendChild(container)
   root = createRoot(container)
@@ -67,5 +69,28 @@ describe('FilterBar — botão Limpar busca (regressão A2.2)', () => {
 
     const inputAfter = container.querySelector('input') as HTMLInputElement
     expect(inputAfter.value).toBe('')
+  })
+
+  it('o Limpar remove a busca, as chaves extras e a página', () => {
+    mockSearchParams = new URLSearchParams('q=camisa&categoria=abc&page=2')
+    flushSync(() => {
+      root.render(
+        <FilterBar
+          filters={[{ type: 'search', key: 'q', placeholder: 'Buscar…' }]}
+          extraClearKeys={['categoria', 'marca', 'estoque']}
+          resetPageOnChange
+          clearLabel="Limpar filtros"
+        />,
+      )
+    })
+
+    const clear = container.querySelector(
+      'button[aria-label="Limpar todos os filtros"]',
+    ) as HTMLButtonElement
+    flushSync(() => {
+      clear.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    expect(pushSpy).toHaveBeenCalledWith('/admin/catalogo', { scroll: false })
   })
 })

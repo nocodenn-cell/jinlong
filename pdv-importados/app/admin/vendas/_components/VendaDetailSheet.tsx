@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { X } from 'lucide-react'
 import { ROUTES, pathWithQuery } from '@/lib/navigation/routes'
-import { StatusBadge, PaymentBadge, FiscalBadge } from '@/components/ui/badges'
+import { VendaStatusBadge, PaymentBadge, FiscalBadge } from '@/components/ui/badges'
 import { MargemCell } from '@/components/ui/MargemCell'
 import { PriceTooltip } from '@/components/ui/PriceTooltip'
 import { formatBRL } from '@/lib/format/money'
@@ -185,7 +185,7 @@ export function VendaDetailSheet({
             <>
               <div className="flex flex-wrap items-center gap-2">
                 {status ? (
-                  <StatusBadge status={status} />
+                  <VendaStatusBadge status={status} />
                 ) : venda.status ? (
                   <span className="admin-v2-badge-muted inline-flex items-center rounded-full px-2 py-[2px] text-caption font-medium leading-none">
                     {venda.status}

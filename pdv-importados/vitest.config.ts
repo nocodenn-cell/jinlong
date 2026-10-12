@@ -44,6 +44,7 @@ export default defineConfig(({ mode }) => {
         'hooks/**/*.test.tsx',
         'tests/**/*.test.ts',
         '../shared-core/src/**/*.test.ts',
+        '../shared-core/src/stores/**/*.spec.ts',
       ],
       // Testes de integração que exigem Next.js request scope (cookies()) e Supabase real.
       // Devem rodar via Playwright (`npm run test:e2e:critical` na raiz ou neste workspace), não via Vitest.

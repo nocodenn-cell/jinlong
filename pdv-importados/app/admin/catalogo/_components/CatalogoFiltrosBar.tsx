@@ -18,6 +18,8 @@ type Props = Readonly<{
   maisFiltrosLabel: string
   menosFiltrosLabel: string
   clearLabel: string
+  filtrosAriaLabel: string
+  limparAriaLabel: string
 }>
 
 export function CatalogoFiltrosBar({
@@ -27,6 +29,8 @@ export function CatalogoFiltrosBar({
   maisFiltrosLabel,
   menosFiltrosLabel,
   clearLabel,
+  filtrosAriaLabel,
+  limparAriaLabel,
 }: Props) {
   const [open, setOpen] = useState(advancedActive)
 
@@ -39,8 +43,11 @@ export function CatalogoFiltrosBar({
       <div className="flex flex-wrap items-center gap-2">
         <FilterBar
           filters={primaryFilters}
+          extraClearKeys={advancedFilters.map((filter) => filter.key)}
           resetPageOnChange
           clearLabel={clearLabel}
+          ariaLabel={filtrosAriaLabel}
+          clearAriaLabel={limparAriaLabel}
           className="min-w-0 flex-1"
         />
         <Button
@@ -63,6 +70,8 @@ export function CatalogoFiltrosBar({
             filters={advancedFilters}
             resetPageOnChange
             clearable={false}
+            ariaLabel={filtrosAriaLabel}
+            clearAriaLabel={limparAriaLabel}
             className="w-full"
           />
         </div>

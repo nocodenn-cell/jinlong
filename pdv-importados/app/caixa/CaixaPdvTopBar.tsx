@@ -1,5 +1,6 @@
 "use client"
 
+import { Printer } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SignOutButton } from "@/components/auth/SignOutButton"
 import type { Mensagens } from "@/i18n/getMessages"
@@ -121,7 +122,8 @@ export function CaixaPdvTopBar({
                     : "border-jl-border-1 bg-jl-surface-soft",
               )}
             >
-              {printerStatus === "connected" ? "🖨 OK" : printerStatus === "error" ? "🖨 Erro" : "🖨 …"}
+              <Printer className="mr-1 inline h-3.5 w-3.5" aria-hidden />
+              {printerStatus === "connected" ? "OK" : printerStatus === "error" ? "Erro" : "…"}
             </span>
           )}
         </div>

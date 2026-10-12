@@ -1,7 +1,7 @@
 "use client"
 
 import { memo } from "react"
-import { Banknote, CreditCard, QrCode } from "lucide-react"
+import { Banknote, CreditCard, QrCode, Wallet } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { MetodoPagamentoUi } from "@/app/caixa/caixaMetodoPagamento"
@@ -28,7 +28,7 @@ const OPCOES: ReadonlyArray<{
   { id: "dinheiro", labelKey: "pdv_metodo_pagamento_dinheiro", Icon: Banknote },
   { id: "pix", labelKey: "pdv_metodo_pagamento_pix", Icon: QrCode },
   { id: "credito", labelKey: "pdv_metodo_pagamento_credito", Icon: CreditCard },
-  { id: "debito", labelKey: "pdv_metodo_pagamento_debito", Icon: CreditCard },
+  { id: "debito", labelKey: "pdv_metodo_pagamento_debito", Icon: Wallet },
 ]
 
 function CaixaPdvMetodoPagamentoSelectorImpl({
