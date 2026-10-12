@@ -57,6 +57,8 @@
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
     "@vitest/ui": "^4.1.9",
+    "@zxing/browser": "^0.1.5",
+    "@zxing/library": "^0.21.3",
     "autoprefixer": "^10.0.0",
     "bwip-js": "^4.10.1",
     "chart.js": "^4.5.1",

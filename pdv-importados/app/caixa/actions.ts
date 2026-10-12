@@ -27,6 +27,7 @@ import {
 
 } from '@/app/caixa/server/caixaCatalogo.impl'
 import { calcularPrecoProdutoCaixaImpl } from '@/app/caixa/server/caixaPrecoProduto.impl'
+import { consultarEstoqueProdutoCaixaImpl } from '@/app/caixa/server/caixaEstoqueServer'
 import { obterCotacaoUsdBrlImpl } from '@/app/caixa/server/caixaCambioServer'
 import {
   cancelarVendaImpl,
@@ -143,6 +144,11 @@ export async function calcularPrecoProdutoCaixa(input: {
   lojaId?: string | null
 }): Promise<CalcularPrecoProdutoCaixaResult> {
   return calcularPrecoProdutoCaixaImpl(input)
+}
+
+/** Saldo da loja da sessão. Consulta apenas — não grava estoque. */
+export async function consultarEstoqueProdutoCaixa(produtoId: string) {
+  return consultarEstoqueProdutoCaixaImpl(produtoId)
 }
 
 /** Referência USD→BRL (Frankfurter); fallback opcional via env. */

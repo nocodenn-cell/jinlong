@@ -1,3 +1,4 @@
+import { getUsuarioAtual } from '@/lib/auth/usuarioAtual'
 import { createClient } from '@/lib/supabase/server'
 
 export type EstoqueResumoCaixa = {
@@ -25,4 +26,12 @@ export async function estoqueResumoParaCaixa(
     quantidade_atual: q === undefined || q === null ? null : Number(q),
     estoque_minimo: m === undefined || m === null ? null : Number(m),
   }
+}
+
+/** Leitura do saldo da loja da sessão. Não altera estoque. */
+export async function consultarEstoqueProdutoCaixaImpl(produtoId: string): Promise<EstoqueResumoCaixa> {
+  const { userId, lojaId } = await getUsuarioAtual()
+  if (!userId || !lojaId) return { quantidade_atual: null, estoque_minimo: null }
+  const supabase = await createClient()
+  return estoqueResumoParaCaixa(supabase, produtoId, lojaId)
 }
