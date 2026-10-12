@@ -260,6 +260,7 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
           contas={contas}
           fiscal={fiscal}
           actorLojaId={session.lojaId}
+          perfil={session.perfil}
           clientesOpts={clientesOpts}
           caixasAbertos={(caixasRes.data ?? []).map((c) => ({
             id: c.id,

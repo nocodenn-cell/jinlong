@@ -1,6 +1,7 @@
 'use client'
 
 import { Suspense, useState } from 'react'
+import type { FocoTituloConta } from './baixaLinha'
 import type { FinanceiroPainel } from '../financeiroLojaTypes'
 import { FinanceiroTitulosOperations } from './FinanceiroTitulosOperations'
 import { FinanceiroPaginacao } from './FinanceiroWorkspace'
@@ -63,6 +64,8 @@ type Props = {
   }
   filterSection: ReactNode
   kpiSection: ReactNode
+  /** Perfil da sessão. Sem ele, a linha trata o ator como autorizado (chamadas antigas). */
+  perfil?: string | null
 }
 
 function FiscalList({
@@ -118,10 +121,14 @@ export function FinanceiroContent({
   contasPagar,
   filterSection,
   kpiSection,
+  perfil,
 }: Props) {
   const [fiscalDetalheId, setFiscalDetalheId] = useState<string | null>(null)
+  const [focoConta, setFocoConta] = useState<FocoTituloConta | null>(null)
+  const [focoCaixaAr, setFocoCaixaAr] = useState<string | null>(null)
   const { idioma } = useAdminV2Session()
-  const ui = getMessages(idioma).admin_ui
+  const mensagens = getMessages(idioma)
+  const ui = mensagens.admin_ui
   const acoesLabels = {
     faixaAria: ui.financeiro_acoes_aria,
     registrarVenda: ui.financeiro_acao_registrar_venda,
@@ -157,13 +164,31 @@ export function FinanceiroContent({
           {filterSection}
           <div className="admin-v2-stack">
             <SectionCard title={panelLabels.titulosEmAberto}>
-              <ContasReceberTable contas={contas} labels={contasLabels} />
+              <ContasReceberTable
+                contas={contas}
+                labels={{
+                  ...contasLabels,
+                  receberCaixa: ui.financeiro_linha_receber_caixa,
+                  receberConta: ui.financeiro_linha_receber_conta,
+                }}
+                perfil={perfil}
+                actorLojaId={actorLojaId}
+                onReceberCaixa={(row) => setFocoCaixaAr(row.id)}
+                onReceberConta={(row) =>
+                  setFocoConta({
+                    tipo: 'AR',
+                    id: row.id,
+                    rotulo: `${row.cliente_nome} · ${row.descricao ?? ''}`.replace(/\s·\s$/, ''),
+                  })
+                }
+              />
               <FinanceiroReceberExtras
                 financeiroData={financeiroData}
                 contas={contas}
                 clientesIniciais={clientesOpts}
                 caixasAbertos={caixasAbertos}
                 actorLojaId={actorLojaId}
+                destaqueId={focoCaixaAr}
               />
             </SectionCard>
           </div>
@@ -182,6 +207,14 @@ export function FinanceiroContent({
           periodoInicial={contasPagar.periodoInicial}
           fornecedorInicial={contasPagar.fornecedorInicial}
           actorLojaId={actorLojaId}
+          perfil={perfil}
+          onPagarConta={(conta) =>
+            setFocoConta({
+              tipo: 'AP',
+              id: conta.id,
+              rotulo: `${conta.fornecedor_nome ?? ''} · ${conta.descricao}`.trim(),
+            })
+          }
         />
       ) : null}
 
@@ -195,7 +228,7 @@ export function FinanceiroContent({
         </SectionCard>
       ) : null}
 
-      {financeiroData && (activeTab === 'pagar' || activeTab === 'receber') ? <><FinanceiroTitulosOperations data={financeiroData} tipo={activeTab === 'pagar' ? 'AP' : 'AR'} /><FinanceiroPaginacao data={financeiroData} countKey={activeTab} /></> : null}
+      {financeiroData && (activeTab === 'pagar' || activeTab === 'receber') ? <><FinanceiroTitulosOperations data={financeiroData} tipo={activeTab === 'pagar' ? 'AP' : 'AR'} foco={focoConta} tituloFormulario={activeTab === 'pagar' ? mensagens.contas_pagar.btn_pagar_conta : ui.financeiro_linha_receber_conta} /><FinanceiroPaginacao data={financeiroData} countKey={activeTab} /></> : null}
       <DocumentoFiscalDetailSheet
         documentoId={fiscalDetalheId}
         onClose={() => setFiscalDetalheId(null)}

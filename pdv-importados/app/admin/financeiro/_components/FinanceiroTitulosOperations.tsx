@@ -1,11 +1,29 @@
 'use client'
 
+import { useEffect } from 'react'
 import Link from 'next/link'
 import { ROUTES } from '@/lib/navigation/routes'
 import { formatBRL } from '@/lib/format/money'
 import type { FinanceiroPainel } from '../financeiroLojaTypes'
 import { FinanceiroForm, FinanceiroField as Field } from './FinanceiroForm'
 import { CategoriaOptions, ContaOptions } from './FinanceiroOptions'
+import { opcoesComFoco, type FocoTituloConta } from './baixaLinha'
+
+type TituloPainel = FinanceiroPainel['pagar'][number]
+
+function rotuloTitulo(t: TituloPainel): string {
+  const aberto = t.valor_aberto ?? t.valor_total - (t.valor_pago ?? 0)
+  return `${t.nome} · ${t.descricao} · ${formatBRL(aberto)}`
+}
+
+function titulosDaBaixa(data: FinanceiroPainel, tipo: 'AP' | 'AR', foco: FocoTituloConta | null) {
+  const abertos = (tipo === 'AP' ? data.pagar : data.receber).filter(
+    (t) => !['PAGO', 'QUITADO', 'CANCELADO'].includes(t.status),
+  )
+  const base = abertos.map((t) => ({ id: t.id, rotulo: rotuloTitulo(t) }))
+  const extra = foco ? { id: foco.id, rotulo: foco.rotulo } : { id: '', rotulo: '' }
+  return opcoesComFoco(base, foco, tipo, extra)
+}
 
 export function FinanceiroDespesaForm({ data }: { data: FinanceiroPainel }) {
  return <FinanceiroForm title="Nova despesa" tipo="CRIAR_AP">
@@ -22,12 +40,27 @@ export function FinanceiroDespesaForm({ data }: { data: FinanceiroPainel }) {
  </FinanceiroForm>
 }
 
-export function FinanceiroTitulosOperations({ data, tipo }: { data: FinanceiroPainel; tipo: 'AP' | 'AR' }) {
- const titulos = (tipo === 'AP' ? data.pagar : data.receber).filter(t => !['PAGO','QUITADO','CANCELADO'].includes(t.status))
+export function FinanceiroTitulosOperations({
+  data,
+  tipo,
+  foco = null,
+  tituloFormulario,
+}: {
+  data: FinanceiroPainel
+  tipo: 'AP' | 'AR'
+  foco?: FocoTituloConta | null
+  tituloFormulario?: string
+}) {
+ const titulos = titulosDaBaixa(data, tipo, foco)
+ const selecionado = foco?.tipo === tipo ? foco.id : ''
+ useEffect(() => {
+  if (!selecionado) return
+  document.getElementById('baixa-conta-financeira')?.scrollIntoView?.({ block: 'start' })
+ }, [selecionado])
  return <div id="baixa-conta-financeira" className="admin-v2-stack">
   {tipo === 'AP' ? <FinanceiroDespesaForm data={data} /> : null}
-  <FinanceiroForm title={tipo === 'AP' ? 'Pagar' : 'Receber'} tipo={tipo === 'AP' ? 'BAIXAR_AP' : 'BAIXAR_AR'} submit={tipo === 'AP' ? 'Pagar' : 'Receber'}>
-   <Field name="titulo_id" label="Título desta página"><option value="">Selecione</option>{titulos.map(t => <option key={t.id} value={t.id}>{t.nome} · {t.descricao} · {formatBRL(t.valor_aberto ?? t.valor_total - (t.valor_pago ?? 0))}</option>)}</Field>
+  <FinanceiroForm key={`baixa-${tipo}-${selecionado || 'livre'}`} title={tituloFormulario ?? (tipo === 'AP' ? 'Pagar pela conta financeira' : 'Receber na conta financeira')} tipo={tipo === 'AP' ? 'BAIXAR_AP' : 'BAIXAR_AR'} submit={tipo === 'AP' ? 'Pagar' : 'Receber'}>
+   <Field name="titulo_id" label="Título" value={selecionado}><option value="">Selecione</option>{titulos.map(t => <option key={t.id} value={t.id}>{t.rotulo}</option>)}</Field>
    <Field name="conta_id" label={tipo === 'AP' ? 'Conta de origem' : 'Conta de destino'}><ContaOptions data={data} /></Field>
    <Field name="valor" label="Valor (R$)" type="number" />
    <Field name="data" label="Data efetiva" type="date" value={data.hoje} />

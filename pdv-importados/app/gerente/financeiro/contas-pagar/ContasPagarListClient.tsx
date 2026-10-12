@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input, SearchInput, Select } from '@/components/ui/forms'
 import { emitGerenteToast } from '@/lib/gerente/toast'
+import { baixasAutorizadas } from '@/app/admin/financeiro/_components/baixaLinha'
 import { downloadCsvBrowser } from '@/lib/gerente/gerenteCadastroUi'
 import { fmtGerenteBRL, fmtGerenteDateTime } from '@/lib/format/gerenteValues'
 import { getMessages } from '@/i18n/getMessages'
@@ -45,6 +46,10 @@ type Props = Readonly<{
   fornecedorInicial?: string
   /** Loja do ator autenticado — `registrar_pagamento_contas_pagar` rejeita pagamento cross-loja para todos os perfis. */
   actorLojaId?: string | null
+  /** Quando informado, esconde baixas que o perfil não pode executar. */
+  perfil?: string | null
+  /** Abre o formulário BAIXAR_AP já com este título. Ausente: só o caixa. */
+  onPagarConta?: (conta: ContaPagarRow) => void
   somenteCaixa?: boolean
 }>
 
@@ -100,6 +105,8 @@ export function ContasPagarListClient({
   periodoInicial,
   fornecedorInicial = '',
   actorLojaId = null,
+  perfil,
+  onPagarConta,
   somenteCaixa = false,
 }: Props) {
   const m = getMessages(idioma)
@@ -570,19 +577,34 @@ export function ContasPagarListClient({
                 </span>
               )
             }
+            const auth = perfil === undefined ? { caixa: true, conta: Boolean(onPagarConta) } : baixasAutorizadas(perfil)
+            if (!auth.caixa && !auth.conta) return null
             return (
-              <div className="flex items-center justify-end gap-1">
+              <div className="flex flex-wrap items-center justify-end gap-1">
+                {auth.caixa ? (
                 <Button
                   type="button"
                   size="sm"
                   variant="primary"
                   onClick={() => setEmPagamento(c)}
                   className="gap-1"
-                  aria-label={`${m.contas_pagar.registrar_pagamento} — ${c.descricao}`}
+                  aria-label={`${m.contas_pagar.btn_pagar_caixa} — ${c.descricao}`}
                 >
                   <DollarSign className="h-3 w-3" aria-hidden />
-                  {m.contas_pagar.btn_pagar}
+                  {m.contas_pagar.btn_pagar_caixa}
                 </Button>
+                ) : null}
+                {auth.conta && onPagarConta ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onPagarConta(c)}
+                  aria-label={`${m.contas_pagar.btn_pagar_conta} — ${c.descricao}`}
+                >
+                  {m.contas_pagar.btn_pagar_conta}
+                </Button>
+                ) : null}
                 <Button
                   type="button"
                   size="icon"
