@@ -9,23 +9,30 @@ type Query = { table: string; select?: unknown; ranges: Array<[number, number]>;
 const queries: Query[] = []
 let volume: 'pequeno' | 'infinito' = 'pequeno'
 
-function linhaPeriodo(i: number) {
-  return {
-    id: `v${i}`,
-    data: new Date().toISOString(),
-    total_liquido: 10,
-    status: 'CONCLUIDA',
-    forma_pagamento: 'PIX',
-    operador_id: null,
-    venda_pos_venda_operacoes: [],
-  }
+const LINHA_PERIODO = {
+  id: 'v0',
+  data: '2026-01-15T15:00:00.000Z',
+  total_liquido: 10,
+  status: 'CONCLUIDA',
+  forma_pagamento: 'PIX',
+  operador_id: null,
+  venda_pos_venda_operacoes: [] as Array<{ valor_estornado: number }>,
+}
+
+/** Página cheia (1000) reutilizada: o teto depende do tamanho, não de 20 mil objetos novos. */
+const PAGINA_CHEIA = Array.from({ length: 1000 }, () => LINHA_PERIODO)
+
+function linhasPeriodo(n: number) {
+  if (n === 1000) return PAGINA_CHEIA
+  if (n <= 0) return []
+  return Array.from({ length: n }, () => LINHA_PERIODO)
 }
 
 function resolveQuery(q: Query) {
   if (q.table === 'vendas' && q.ranges.length > 0) {
     const [from, to] = q.ranges[q.ranges.length - 1]
     const n = volume === 'infinito' ? to - from + 1 : from === 0 ? 3 : 0
-    return { data: Array.from({ length: n }, (_, i) => linhaPeriodo(from + i)), error: null, count: n }
+    return { data: linhasPeriodo(n), error: null, count: n }
   }
   return { data: [], error: null, count: 0 }
 }

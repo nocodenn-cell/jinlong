@@ -33,13 +33,23 @@ export const FUSO_PADRAO_LOJA = 'America/Sao_Paulo'
  * (sem hora/fuso). NÃO usar `toISOString()`: em UTC, entre 21h e 24h de Brasília "hoje" já
  * viraria amanhã e um título que vence hoje apareceria como vencido.
  */
-export function hojeYmd(d: Date = new Date(), timeZone: string = FUSO_PADRAO_LOJA): string {
-  const parts = new Intl.DateTimeFormat('en-CA', {
+const formatadoresDiaCivil = new Map<string, Intl.DateTimeFormat>()
+
+function formatadorDiaCivil(timeZone: string): Intl.DateTimeFormat {
+  const existente = formatadoresDiaCivil.get(timeZone)
+  if (existente) return existente
+  const criado = new Intl.DateTimeFormat('en-CA', {
     timeZone,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  }).formatToParts(d)
+  })
+  formatadoresDiaCivil.set(timeZone, criado)
+  return criado
+}
+
+export function hojeYmd(d: Date = new Date(), timeZone: string = FUSO_PADRAO_LOJA): string {
+  const parts = formatadorDiaCivil(timeZone).formatToParts(d)
   const get = (t: string) => parts.find((p) => p.type === t)!.value
   return `${get('year')}-${get('month')}-${get('day')}`
 }

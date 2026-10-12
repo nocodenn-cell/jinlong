@@ -27,11 +27,19 @@ export function ymdEmFuso(instante: Date, timeZone: string = RELATORIO_TZ_PADRAO
   return hojeYmd(instante, timeZone)
 }
 
+const formatadoresHora = new Map<string, Intl.DateTimeFormat>()
+
+function formatadorHora(timeZone: string): Intl.DateTimeFormat {
+  const existente = formatadoresHora.get(timeZone)
+  if (existente) return existente
+  const criado = new Intl.DateTimeFormat('en-US', { timeZone, hourCycle: 'h23', hour: '2-digit' })
+  formatadoresHora.set(timeZone, criado)
+  return criado
+}
+
 /** Hora cheia (0–23) de um instante no fuso informado (não a hora do processo Node, que roda em UTC). */
 export function horaEmFuso(instante: Date, timeZone: string = RELATORIO_TZ_PADRAO): number {
-  const h = new Intl.DateTimeFormat('en-US', { timeZone, hourCycle: 'h23', hour: '2-digit' })
-    .formatToParts(instante)
-    .find((p) => p.type === 'hour')!.value
+  const h = formatadorHora(timeZone).formatToParts(instante).find((p) => p.type === 'hour')!.value
   return Number(h)
 }
 
