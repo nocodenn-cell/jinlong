@@ -6,14 +6,15 @@
  * Sem CSS/componentes exclusivos do módulo além de helpers/dialog locais.
  */
 
-import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react'
 import Link from 'next/link'
 import { useDebounce } from '@/lib/hooks/useDebounce'
-import { AlertTriangle, Pencil, Receipt, Trash2, Plus } from 'lucide-react'
+import { AlertTriangle, Receipt, Plus } from 'lucide-react'
 import { ROUTES, pathWithQuery } from '@/lib/navigation/routes'
 import { Button } from '@/components/ui/button'
 import { SearchInput } from '@/components/ui/forms'
 import { DataTable, type Column } from '@/components/ui/DataTable'
+import { RowActionsMenu } from '@/components/ui/RowActionsMenu'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState, ErrorState, Loading } from '@/components/ui/feedback'
 import { CrudListShell, PageActions } from '@/components/ui/admin-v2'
@@ -26,15 +27,21 @@ import { cn } from '@/lib/utils'
 import {
   buscarClientesPaginadosAction,
   excluirClienteAction,
+  type ClienteListaFiltro,
   type ClienteListRow,
 } from '@/app/admin/clientes/actions'
 import { ClienteEditarModal } from './ClienteEditarModal'
+import { ClienteFichaDrawer } from './ClienteFichaDrawer'
+import { escopoCrediario } from './clienteListaEscopo'
 import {
   clienteInitials,
   formatContagemClientes,
   maskDocumentoDisplay,
   maskTelefoneDisplay,
 } from './clienteDisplayFormat'
+
+type TipoFiltro = 'todos' | 'PF' | 'PJ'
+type SituacaoFiltro = 'todos' | 'aberto' | 'atraso'
 
 type Props = Readonly<{
   idioma: Idioma
@@ -51,6 +58,86 @@ function stopRowAction(e: MouseEvent) {
   e.stopPropagation()
 }
 
+function montarFiltro(tipo: TipoFiltro, situacao: SituacaoFiltro): ClienteListaFiltro {
+  return {
+    tipo: tipo === 'todos' ? undefined : tipo,
+    situacao: situacao === 'todos' ? undefined : situacao,
+  }
+}
+
+function rotuloDoEscopo(
+  escopo: ReturnType<typeof escopoCrediario>,
+  m: Mensagens,
+): string {
+  if (escopo === 'filtrado') return m.clientes.crediario_filtrado
+  if (escopo === 'parcial') return m.clientes.crediario_parcial
+  return m.clientes.crediario_todos
+}
+
+function FiltrosCliente({
+  m,
+  tipoF,
+  situacaoF,
+  onTipo,
+  onSituacao,
+}: {
+  m: Mensagens
+  tipoF: TipoFiltro
+  situacaoF: SituacaoFiltro
+  onTipo: (tipo: TipoFiltro) => void
+  onSituacao: (situacao: SituacaoFiltro) => void
+}) {
+  const tipos: TipoFiltro[] = ['todos', 'PF', 'PJ']
+  const chips: SituacaoFiltro[] = ['todos', 'aberto', 'atraso']
+  return (
+    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+      <label className="flex items-center gap-2 text-caption text-fg-muted">
+        {m.clientes.filtro_tipo}
+        <select
+          value={tipoF}
+          aria-label={m.clientes.filtro_tipo}
+          data-testid="cliente-filtro-tipo"
+          className="min-h-9 rounded-control border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-caption text-fg"
+          onChange={(e) => onTipo(e.target.value as TipoFiltro)}
+        >
+          {tipos.map((tipo) => (
+            <option key={tipo} value={tipo}>{rotuloTipo(tipo, m)}</option>
+          ))}
+        </select>
+      </label>
+      <div role="group" aria-label={m.clientes.chip_situacao} className="flex flex-wrap gap-1">
+        {chips.map((chip) => (
+          <button
+            key={chip}
+            type="button"
+            data-testid={`cliente-chip-${chip}`}
+            aria-pressed={situacaoF === chip}
+            className={cn(
+              'min-h-9 rounded-full px-3 text-caption',
+              situacaoF === chip ? 'bg-[var(--color-info-bg)] font-semibold text-brand' : 'text-fg-muted',
+            )}
+            onClick={() => onSituacao(chip)}
+          >
+            {rotuloChip(chip, m)}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function rotuloTipo(tipo: TipoFiltro, m: Mensagens): string {
+  if (tipo === 'PF') return m.clientes.filtro_tipo_pf
+  if (tipo === 'PJ') return m.clientes.filtro_tipo_pj
+  return m.clientes.filtro_tipo_todos
+}
+
+function rotuloChip(chip: SituacaoFiltro, m: Mensagens): string {
+  if (chip === 'aberto') return m.clientes.chip_aberto
+  if (chip === 'atraso') return m.clientes.chip_atraso
+  return m.clientes.chip_todos
+}
+
 export function ClientesListClient({
   idioma,
   locale,
@@ -65,12 +152,17 @@ export function ClientesListClient({
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(erroCargaInicial)
   const [termo, setTermo] = useState('')
+  const [tipoF, setTipoF] = useState<TipoFiltro>('todos')
+  const [situacaoF, setSituacaoF] = useState<SituacaoFiltro>('todos')
   const [modalAberto, setModalAberto] = useState(false)
   const [emEdicao, setEmEdicao] = useState<ClienteListRow | null>(null)
+  const [ficha, setFicha] = useState<ClienteListRow | null>(null)
   const [excluirAlvo, setExcluirAlvo] = useState<ClienteListRow | null>(null)
   const [excluindo, setExcluindo] = useState(false)
 
   const termoDebounced = useDebounce(termo, 280)
+  const filtro = useMemo(() => montarFiltro(tipoF, situacaoF), [tipoF, situacaoF])
+  const filtroAtivo = termoDebounced.trim().length > 0 || tipoF !== 'todos' || situacaoF !== 'todos'
   const pageRef = useRef(1)
   const sentinelRef = useRef<HTMLDivElement>(null)
   const stateRef = useRef({ hasMore, loading, loadError })
@@ -84,7 +176,7 @@ export function ClientesListClient({
     setLoading(true)
     const prox = pageRef.current + 1
     try {
-      const r = await buscarClientesPaginadosAction(prox, termoDebounced || undefined)
+      const r = await buscarClientesPaginadosAction(prox, termoDebounced || undefined, filtro)
       if (!r.ok) {
         emitGerenteToast({ kind: 'error', message: r.error })
         return
@@ -95,7 +187,7 @@ export function ClientesListClient({
     } finally {
       setLoading(false)
     }
-  }, [termoDebounced])
+  }, [termoDebounced, filtro])
 
   useEffect(() => {
     const el = sentinelRef.current
@@ -122,7 +214,7 @@ export function ClientesListClient({
     setLoading(true)
     setLoadError(null)
     pageRef.current = 1
-    buscarClientesPaginadosAction(1, termoDebounced || undefined).then((r) => {
+    buscarClientesPaginadosAction(1, termoDebounced || undefined, filtro).then((r) => {
       if (cancelled) return
       if (!r.ok) {
         setLoadError(r.error)
@@ -140,13 +232,13 @@ export function ClientesListClient({
     return () => {
       cancelled = true
     }
-  }, [termoDebounced, erroCargaInicial])
+  }, [termoDebounced, filtro, erroCargaInicial])
 
   async function recarregarPrimeiraPagina() {
     setLoading(true)
     setLoadError(null)
     pageRef.current = 1
-    const r = await buscarClientesPaginadosAction(1, termoDebounced || undefined)
+    const r = await buscarClientesPaginadosAction(1, termoDebounced || undefined, filtro)
     if (!r.ok) {
       setLoadError(r.error)
       setClientes([])
@@ -164,8 +256,17 @@ export function ClientesListClient({
     setModalAberto(true)
   }
   function abrirEditar(c: ClienteListRow) {
+    setFicha(null)
     setEmEdicao(c)
     setModalAberto(true)
+  }
+  function abrirFicha(c: ClienteListRow) {
+    setFicha(c)
+  }
+  function limparFiltros() {
+    setTermo('')
+    setTipoF('todos')
+    setSituacaoF('todos')
   }
   function onSalvo(c: ClienteListRow) {
     setClientes((cur) => {
@@ -194,7 +295,8 @@ export function ClientesListClient({
   }
 
   const totalCrediario = clientes.reduce((s, c) => s + Number(c.saldo_crediario), 0)
-  const buscando = termoDebounced.trim().length > 0
+  const buscando = filtroAtivo
+  const rotuloCrediario = rotuloDoEscopo(escopoCrediario(filtroAtivo, hasMore), m)
   const contagemTitulo = formatContagemClientes(clientes.length, hasMore, {
     um: m.clientes.contagem_um,
     muitos: m.clientes.contagem_muitos,
@@ -215,7 +317,17 @@ export function ClientesListClient({
           </span>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-1.5">
-              <strong className="truncate text-fg">{c.nome}</strong>
+              <button
+                type="button"
+                className="truncate text-left font-semibold text-fg hover:underline"
+                data-testid="cliente-nome"
+                onClick={(e) => {
+                  stopRowAction(e)
+                  abrirFicha(c)
+                }}
+              >
+                {c.nome}
+              </button>
               <Badge
                 className={
                   c.tipo === 'PJ'
@@ -223,34 +335,29 @@ export function ClientesListClient({
                     : 'border border-[var(--color-info-border)] bg-[var(--color-info-bg)] font-semibold text-brand'
                 }
               >
-                {c.tipo}
+                {c.tipo === 'PJ' ? m.clientes.tipo_sigla_pj : m.clientes.tipo_sigla_pf}
               </Badge>
             </div>
-            {c.email ? <div className="truncate text-caption text-fg-muted">{c.email}</div> : null}
+            <span className="block truncate whitespace-nowrap font-mono text-caption text-fg-muted">{maskDocumentoDisplay(c.documento)}</span>
           </div>
         </div>
       ),
     },
     {
-      key: 'doc',
-      header: m.clientes.col_documento,
-      priority: 'contextual',
+      key: 'contato',
+      header: m.clientes.col_contato,
       cell: (c) => (
-        <span className="whitespace-nowrap font-mono text-caption text-fg-muted">{maskDocumentoDisplay(c.documento)}</span>
-      ),
-    },
-    {
-      key: 'tel',
-      header: m.clientes.col_telefone,
-      cell: (c) => (
-        <span className="whitespace-nowrap tabular-nums text-caption text-fg" title={c.telefone ?? undefined}>
-          {maskTelefoneDisplay(c.telefone)}
-        </span>
+        <div className="min-w-0">
+          <span className="block whitespace-nowrap tabular-nums text-caption text-fg" title={c.telefone ?? undefined}>
+            {maskTelefoneDisplay(c.telefone)}
+          </span>
+          {c.email ? <div className="truncate text-caption text-fg-muted">{c.email}</div> : null}
+        </div>
       ),
     },
     {
       key: 'saldo',
-      header: m.clientes.col_saldo,
+      header: m.clientes.col_situacao,
       priority: 'primary',
       align: 'right',
       cell: (c) => {
@@ -258,9 +365,16 @@ export function ClientesListClient({
         const used = Number(c.saldo_crediario)
         const pct = lim > 0 ? Math.min(100, (used / lim) * 100) : 0
         const alerta = pct >= 70
-        if (used === 0 && lim === 0) {
+        if (used === 0) {
           return (
-            <span className="text-caption text-fg-muted">{m.clientes.saldo_sem_aberto}</span>
+            <div className="text-right">
+              <span className="text-caption text-fg-muted">{m.clientes.saldo_sem_aberto}</span>
+              {lim > 0 ? (
+                <div className="text-caption tabular-nums text-fg-muted">
+                  {m.clientes.limite_label} {fmtGerenteBRL(lim, locale)}
+                </div>
+              ) : null}
+            </div>
           )
         }
         return (
@@ -321,19 +435,20 @@ export function ClientesListClient({
   ]
 
   const meta =
-    totalCrediario > 0 ? (
-      <span className="text-caption text-fg-muted">
+    totalCrediario > 0 || filtroAtivo ? (
+      <span className="text-caption text-fg-muted" data-testid="clientes-crediario-escopo">
         <strong className="tabular-nums text-fg">{fmtGerenteBRL(totalCrediario, locale)}</strong>{' '}
-        {m.clientes.em_crediario}
+        {m.clientes.em_crediario}{' '}
+        <span>{rotuloCrediario}</span>
       </span>
     ) : undefined
 
   const emptyState = buscando ? (
     <EmptyState
       title={m.clientes.vazio_titulo}
-      description={m.clientes.vazio_sub}
+      description={situacaoF === 'atraso' ? m.clientes.vazio_atraso_sub : m.clientes.vazio_sub}
       actionLabel={m.comum.limpar_filtros}
-      onAction={() => setTermo('')}
+      onAction={limparFiltros}
       className="py-8"
     />
   ) : (
@@ -354,13 +469,22 @@ export function ClientesListClient({
         meta={loadError ? undefined : meta}
         toolbar={
           <>
-            <div className="min-w-[240px] max-w-[420px] flex-1">
-              <SearchInput
-                value={termo}
-                onChange={(e) => setTermo(e.target.value)}
-                placeholder={m.clientes.placeholder_busca}
-                aria-label={m.clientes.placeholder_busca}
-                controlSize="sm"
+            <div className="flex min-w-0 flex-1 flex-col gap-2">
+              <div className="min-w-[200px] max-w-[420px] flex-1">
+                <SearchInput
+                  value={termo}
+                  onChange={(e) => setTermo(e.target.value)}
+                  placeholder={m.clientes.placeholder_busca}
+                  aria-label={m.clientes.placeholder_busca}
+                  controlSize="sm"
+                />
+              </div>
+              <FiltrosCliente
+                m={m}
+                tipoF={tipoF}
+                situacaoF={situacaoF}
+                onTipo={setTipoF}
+                onSituacao={setSituacaoF}
               />
             </div>
             <PageActions>
@@ -410,42 +534,49 @@ export function ClientesListClient({
             compact
             loading={loading && clientes.length > 0}
             emptyState={emptyState}
-            onRowClick={abrirEditar}
+            onRowClick={abrirFicha}
             rowActions={(c) => (
               <div className="flex items-center justify-end gap-1" onClick={stopRowAction}>
                 <Button
                   type="button"
-                  size="icon"
+                  size="sm"
                   variant="ghost"
+                  data-testid="cliente-ver-detalhes"
                   onClick={(e) => {
                     stopRowAction(e)
-                    abrirEditar(c)
+                    abrirFicha(c)
                   }}
-                  aria-label={`${m.clientes.editar} — ${c.nome}`}
-                  title={m.clientes.editar}
                 >
-                  <Pencil className="h-3.5 w-3.5 text-fg-muted" aria-hidden />
+                  {m.clientes.ver_detalhes}
                 </Button>
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  onClick={(e) => {
-                    stopRowAction(e)
-                    setExcluirAlvo(c)
-                  }}
-                  aria-label={`${m.clientes.excluir} — ${c.nome}`}
-                  title={m.clientes.excluir}
-                  className="text-[var(--color-danger-strong)] hover:bg-[var(--color-danger-bg)]"
-                >
-                  <Trash2 className="h-3.5 w-3.5" aria-hidden />
-                </Button>
+                <RowActionsMenu
+                  label={`${m.clientes.menu_acoes} — ${c.nome}`}
+                  items={[
+                    { id: 'editar', label: m.clientes.editar, onClick: () => abrirEditar(c) },
+                    {
+                      id: 'excluir',
+                      label: m.clientes.excluir,
+                      danger: true,
+                      onClick: () => setExcluirAlvo(c),
+                    },
+                  ]}
+                />
               </div>
             )}
             className="rounded-none border-x-0 border-b-0"
           />
         )}
       </CrudListShell>
+
+      {ficha ? (
+        <ClienteFichaDrawer
+          cliente={ficha}
+          locale={locale}
+          messages={m}
+          onClose={() => setFicha(null)}
+          onEditar={() => abrirEditar(ficha)}
+        />
+      ) : null}
 
       {modalAberto && (
         <ClienteEditarModal

@@ -27,6 +27,7 @@ export type {
   DeleteClienteResult,
   ListClientesPaginadosErr,
   ListClientesPaginadosOk,
+  ClienteListaSituacao,
   ListClientesPaginadosQuery,
   ListClientesPaginadosResult,
   SaveClienteCommand,

@@ -91,6 +91,21 @@ const RESOURCE_PROFILES: Readonly<Record<string, readonly PerfilUsuario[]>> = {
   'sensitive:comissoes': ALL_ADMIN_PROFILES,
 }
 
+/**
+ * Rotas do painel que o perfil pode abrir, lidas de `RESOURCE_PROFILES`.
+ * Operador não está nessa lista: o destino pós-login é o PDV.
+ */
+export function listarRotasPainelDoPerfil(perfil: string): string[] {
+  const rotas: string[] = []
+  for (const [resource, profiles] of Object.entries(RESOURCE_PROFILES)) {
+    if (!resource.startsWith('route:')) continue
+    if ((profiles as readonly string[]).includes(perfil)) {
+      rotas.push(resource.slice('route:'.length))
+    }
+  }
+  return rotas
+}
+
 function hasAllowedPerfil(
   session: AdminSession,
   allowed: readonly PerfilUsuario[] | undefined
