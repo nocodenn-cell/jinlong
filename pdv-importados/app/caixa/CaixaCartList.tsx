@@ -10,6 +10,11 @@ import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
 import { formatDecimal2 } from "@/lib/format/money"
 import {
+  descontoLinhaCaixa,
+  exibeDescontoTabela,
+  subtotalLinhaCaixa,
+} from "@/app/caixa/linhaPrecoCaixa"
+import {
   parseQuantidadeCaixaFromString,
   QUANTIDADE_CAIXA_MIN,
 } from "@/lib/format/quantidadeCaixa"
@@ -59,6 +64,64 @@ function listLocale(idioma: Idioma) {
 
 function parseQuantidadeInput(raw: string): number {
   return parseQuantidadeCaixaFromString(raw)
+}
+
+function PrecoEfetivo({
+  moeda,
+  locale,
+  original,
+  unitario,
+}: {
+  moeda: string
+  locale: string
+  original: number
+  unitario: number
+}) {
+  if (!exibeDescontoTabela(original, unitario)) {
+    return (
+      <span>
+        {moeda} {formatDecimal2(unitario, locale)}
+      </span>
+    )
+  }
+  return (
+    <span className="block space-y-0.5">
+      <span className="line-through text-foreground/55 text-xs block">
+        {moeda} {formatDecimal2(original, locale)}
+      </span>
+      <span>
+        {moeda} {formatDecimal2(unitario, locale)}
+      </span>
+    </span>
+  )
+}
+
+function SubtotalLinha({
+  moeda,
+  locale,
+  original,
+  unitario,
+  quantidade,
+}: {
+  moeda: string
+  locale: string
+  original: number
+  unitario: number
+  quantidade: number
+}) {
+  const desconto = descontoLinhaCaixa(original, unitario, quantidade)
+  return (
+    <>
+      <div>
+        {moeda} {formatDecimal2(subtotalLinhaCaixa(unitario, quantidade), locale)}
+      </div>
+      {desconto > 0 ? (
+        <div className="text-success text-caption">
+          ↓ {moeda} {formatDecimal2(desconto, locale)}
+        </div>
+      ) : null}
+    </>
+  )
 }
 
 function resultadoLinha(item: ItemCarrinhoComPreco) {
@@ -212,32 +275,21 @@ const CartRowDesktop = memo(function CartRowDesktop({
         </Button>
       </div>
       <div className="text-right tabular-nums text-base">
-        {res.tipoPreco === "ATACADO" && res.precoOriginal > res.precoUnitario ? (
-          <div className="space-y-0.5">
-            <div className="line-through text-foreground/55 text-xs">
-              {moeda} {formatDecimal2(res.precoOriginal, locale)}
-            </div>
-            <div>
-              {moeda} {formatDecimal2(res.precoUnitario, locale)}
-            </div>
-          </div>
-        ) : (
-          <span>
-            {moeda} {formatDecimal2(res.precoUnitario, locale)}
-          </span>
-        )}
+        <PrecoEfetivo
+          moeda={moeda}
+          locale={locale}
+          original={res.precoOriginal}
+          unitario={res.precoUnitario}
+        />
       </div>
       <div className="text-right tabular-nums text-base">
-        <div>
-          {moeda}{" "}
-          {formatDecimal2(res.precoUnitario * item.quantidade, locale)}
-        </div>
-        {res.tipoPreco === "ATACADO" && res.precoOriginal > res.precoUnitario ? (
-          <div className="text-success text-caption">
-            ↓ {moeda}{" "}
-            {formatDecimal2((res.precoOriginal - res.precoUnitario) * item.quantidade, locale)}
-          </div>
-        ) : null}
+        <SubtotalLinha
+          moeda={moeda}
+          locale={locale}
+          original={res.precoOriginal}
+          unitario={res.precoUnitario}
+          quantidade={item.quantidade}
+        />
       </div>
       <TipoPrecoBadge m={m} tipo={res.tipoPreco} quantidadeMinima={res.quantidadeMinima} />
     </li>
@@ -303,34 +355,25 @@ const CartCardMobile = memo(function CartCardMobile({
           <div>
             <span className="text-foreground/85 block">{m.caixa.col_unit}</span>
             <span className="tabular-nums">
-              {res.tipoPreco === "ATACADO" && res.precoOriginal > res.precoUnitario ? (
-                <span className="block space-y-0.5">
-                  <span className="line-through text-foreground/55 text-caption block">
-                    {moeda} {formatDecimal2(res.precoOriginal, locale)}
-                  </span>
-                  <span>
-                    {moeda} {formatDecimal2(res.precoUnitario, locale)}
-                  </span>
-                </span>
-              ) : (
-                <span>
-                  {moeda} {formatDecimal2(res.precoUnitario, locale)}
-                </span>
-              )}
+              <PrecoEfetivo
+                moeda={moeda}
+                locale={locale}
+                original={res.precoOriginal}
+                unitario={res.precoUnitario}
+              />
             </span>
           </div>
           <div>
             <span className="text-foreground/85 block">{m.caixa.col_total}</span>
-            <span className="tabular-nums font-medium">
-              {moeda}{" "}
-              {formatDecimal2(res.precoUnitario * item.quantidade, locale)}
-            </span>
-            {res.tipoPreco === "ATACADO" && res.precoOriginal > res.precoUnitario ? (
-              <span className="text-success text-caption block">
-                ↓ {moeda}{" "}
-                {formatDecimal2((res.precoOriginal - res.precoUnitario) * item.quantidade, locale)}
-              </span>
-            ) : null}
+            <div className="tabular-nums font-medium">
+              <SubtotalLinha
+                moeda={moeda}
+                locale={locale}
+                original={res.precoOriginal}
+                unitario={res.precoUnitario}
+                quantidade={item.quantidade}
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -517,10 +560,11 @@ function TipoPrecoBadge({
         ? CAIXA_CHIP_WARNING
         : tipo === "PROMOCAO"
           ? CAIXA_CHIP_INFO
-          : "border border-border text-muted-foreground bg-muted"
+          : "border-2 border-slate-700 bg-white text-slate-950"
   const badge = (
     <Badge
       variant="outline"
+      data-tipo-preco={tipo}
       className={`${className} text-xs font-semibold shrink-0`}
     >
       {label}

@@ -13,6 +13,7 @@ import { usePdvLocalVendaCaixaFlow } from './hooks/usePdvLocalVendaCaixaFlow'
 import { parseQuantidadeCaixaInput } from '@shared/format/quantidadeCaixa'
 import { recalcularPrecoItemLocal } from './lib/recalcularPrecoItemLocal'
 import { resolverPrecoCanonicoLocal } from './lib/resolverPrecoCanonicoLocal'
+import { apresentacaoPrecoLinha } from './lib/apresentacaoPrecoLinha'
 
 function bindLojaCarrinhoDesktop(lojaId: string | null) {
   useDesktopCartStore.getState().setCartLojaForSession(lojaId)
@@ -667,7 +668,10 @@ export function App() {
                   Nenhum item no carrinho.
                 </div>
               ) : (
-                itens.map((item) => (
+                itens.map((item) => {
+                  const linha = apresentacaoPrecoLinha(item)
+                  const atacado = linha.modalidade === 'ATACADO'
+                  return (
                   <div
                     key={item.id}
                     style={{
@@ -772,44 +776,41 @@ export function App() {
                       </button>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      R$ {' '}
-                      {item.resultado.precoOriginal.toFixed(2)}
+                      {linha.exibeReferencia ? (
+                        <div style={{ textDecoration: 'line-through', color: '#6b7280', fontSize: 11 }}>
+                          R$ {linha.original.toFixed(2)}
+                        </div>
+                      ) : null}
+                      <div>R$ {linha.unitario.toFixed(2)}</div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      R$ {' '}
-                      {(item.resultado.precoUnitario * item.quantidade).toFixed(2)}
+                      <div>R$ {linha.subtotal.toFixed(2)}</div>
+                      {linha.descontoLinha > 0 ? (
+                        <div style={{ color: '#166534', fontSize: 11 }}>
+                          − R$ {linha.descontoLinha.toFixed(2)}
+                        </div>
+                      ) : null}
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      {item.resultado.tipoPreco === 'ATACADO' ? (
-                        <span
-                          style={{
-                            fontSize: 10,
-                            padding: '2px 6px',
-                            borderRadius: 999,
-                            border: '1px solid rgba(22,163,74,0.4)',
-                            color: '#166534',
-                            backgroundColor: '#dcfce7',
-                          }}
-                        >
-                          ATACADO
-                        </span>
-                      ) : (
-                        <span
-                          style={{
-                            fontSize: 10,
-                            padding: '2px 6px',
-                            borderRadius: 999,
-                            border: '1px solid #d1d5db',
-                            color: '#374151',
-                            backgroundColor: '#f9fafb',
-                          }}
-                        >
-                          VAREJO
-                        </span>
-                      )}
+                      <span
+                        data-tipo-preco={linha.modalidade}
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          padding: '2px 6px',
+                          borderRadius: 999,
+                          border: atacado ? '1px solid rgba(22,163,74,0.4)' : '1px solid #374151',
+                          color: atacado ? '#166534' : '#111827',
+                          backgroundColor: atacado ? '#dcfce7' : '#f9fafb',
+                        }}
+                      >
+                        {linha.rotulo}
+                        {linha.quantidadeMinima != null ? ` (mín. ${linha.quantidadeMinima})` : ''}
+                      </span>
                     </div>
                   </div>
-                ))
+                  )
+                })
               )}
             </div>
           </div>

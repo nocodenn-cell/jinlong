@@ -50,6 +50,7 @@ const mockMensagens = {
     varejo: "Varejo",
     atacado: "Atacado",
     manual: "Manual",
+    promocao: "Promoção",
   },
 } as unknown as Mensagens
 
@@ -212,5 +213,77 @@ describe("CaixaCartList — diferenciador do produto (Onda 2 · Bloco 2)", () =>
 
     expect(container.textContent).toContain("CAD-VERM")
     expect(container.textContent).toContain("CAD-VERM-G")
+  })
+})
+
+describe("CaixaCartList — modalidade e valores da linha", () => {
+  let container: HTMLDivElement
+  let root: Root
+
+  beforeEach(() => {
+    container = document.createElement("div")
+    document.body.appendChild(container)
+    root = createRoot(container)
+  })
+
+  afterEach(() => {
+    flushSync(() => {
+      root.unmount()
+    })
+    container.remove()
+  })
+
+  it("varejo mostra a modalidade e o unitário sem risco", () => {
+    const item = buildItem({
+      quantidade: 3,
+      precoUnitario: 10,
+      resultado: {
+        precoUnitario: 10,
+        precoOriginal: 10,
+        descontoUnitario: 0,
+        tipoPreco: "VAREJO",
+      },
+    })
+    renderList(root, [item], vi.fn(), vi.fn())
+    expect(container.querySelector('[data-tipo-preco="VAREJO"]')?.textContent).toContain("Varejo")
+    expect(container.textContent).toContain("30,00")
+    expect(container.textContent).not.toContain("↓")
+  })
+
+  it("atacado mostra referência riscada, subtotal da faixa e o mínimo", () => {
+    const item = buildItem({
+      quantidade: 10,
+      precoUnitario: 8,
+      precoOriginal: 10,
+      resultado: {
+        precoUnitario: 8,
+        precoOriginal: 10,
+        descontoUnitario: 2,
+        tipoPreco: "ATACADO",
+        quantidadeMinima: 10,
+      },
+    })
+    renderList(root, [item], vi.fn(), vi.fn())
+    expect(container.querySelector('[data-tipo-preco="ATACADO"]')?.textContent).toContain("Atacado (min 10)")
+    expect(container.textContent).toContain("80,00")
+    expect(container.textContent).toContain("20,00")
+  })
+
+  it("desconto manual permitido aparece na linha com a modalidade Manual", () => {
+    const item = buildItem({
+      quantidade: 2,
+      precoUnitario: 9.5,
+      precoOriginal: 10,
+      resultado: {
+        precoUnitario: 9.5,
+        precoOriginal: 10,
+        descontoUnitario: 0.5,
+        tipoPreco: "MANUAL",
+      },
+    })
+    renderList(root, [item], vi.fn(), vi.fn())
+    expect(container.querySelector('[data-tipo-preco="MANUAL"]')?.textContent).toContain("Manual")
+    expect(container.textContent).toContain("19,00")
+    expect(container.textContent).toContain("1,00")
   })
 })

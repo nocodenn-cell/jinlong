@@ -1665,6 +1665,9 @@
       "rodape_obrigado": "感谢惠顾！",
       "rodape_nao_fiscal": "本单据非正式财务凭证。",
       "atacado": "批发",
+      "varejo": "零售",
+      "manual": "手动",
+      "promocao": "促销",
       "segunda_via": "补打副本"
     }
   },

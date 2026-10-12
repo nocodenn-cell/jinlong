@@ -9,6 +9,11 @@ import {
 import { quantidadeParaRpcPreco } from '@/lib/format/quantidadeCaixa'
 import { captureMessage } from '@/lib/sentry/vendaSentry'
 import { isPricingVersionRpcAusente } from '@/app/caixa/server/pricingVersionRpcError'
+import {
+  divergenciaPrecoAutomatico,
+  divergenciaPrecoDiscricionario,
+  type CodigoDivergenciaPreco,
+} from '@/app/caixa/server/conferirPrecoCliente'
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>
 
@@ -51,7 +56,13 @@ export type ItemEntradaFinalizacao = {
   tipoPreco: ItemAutoritativo['tipoPreco']
 }
 
-const EPS_PRECO = 0.02
+const CHAVE_DIVERGENCIA_PRECO: Record<CodigoDivergenciaPreco, Parameters<typeof caixaMsgServidor>[1]> = {
+  preco_acima_referencia: 'err_srv_preco_acima_referencia',
+  tipo_preco_mudou: 'err_srv_tipo_preco_mudou',
+  preco_diverge_cadastro: 'err_srv_preco_diverge_cadastro',
+  preco_ref_varejo_inconsistente: 'err_srv_preco_ref_varejo_inconsistente',
+  preco_ref_atacado_inconsistente: 'err_srv_preco_ref_atacado_inconsistente',
+}
 
 /**
  * Concorrência das RPCs de revalidação de preço na finalização.
@@ -228,10 +239,11 @@ export async function recalcularItensNoServidor(
     if (i.tipoPreco === 'MANUAL' || i.tipoPreco === 'PROMOCAO') {
       const precoOriginal = roundMoney2(i.precoOriginal)
       const precoUnitario = roundMoney2(i.precoUnitario)
-      if (precoUnitario > precoOriginal + EPS_PRECO) {
+      const acima = divergenciaPrecoDiscricionario(precoOriginal, precoUnitario)
+      if (acima) {
         return {
           ok: false,
-          error: caixaMsgServidor(idioma, 'err_srv_preco_acima_referencia'),
+          error: caixaMsgServidor(idioma, CHAVE_DIVERGENCIA_PRECO[acima]),
         }
       }
       itens.push({
@@ -287,33 +299,18 @@ export async function recalcularItensNoServidor(
       }
     }
 
-    if (esperado.tipo !== i.tipoPreco) {
+    const divergencia = divergenciaPrecoAutomatico({
+      tipoPreco: i.tipoPreco,
+      precoOriginal: i.precoOriginal,
+      precoUnitario: i.precoUnitario,
+      varejoCadastro: varejo,
+      esperadoPreco: esperado.preco,
+      esperadoTipo: esperado.tipo,
+    })
+    if (divergencia) {
       return {
         ok: false,
-        error: caixaMsgServidor(idioma, 'err_srv_tipo_preco_mudou'),
-      }
-    }
-
-    if (Math.abs(esperado.preco - roundMoney2(i.precoUnitario)) > EPS_PRECO) {
-      return {
-        ok: false,
-        error: caixaMsgServidor(idioma, 'err_srv_preco_diverge_cadastro'),
-      }
-    }
-
-    if (i.tipoPreco === 'VAREJO') {
-      if (Math.abs(varejo - roundMoney2(i.precoOriginal)) > EPS_PRECO) {
-        return {
-          ok: false,
-          error: caixaMsgServidor(idioma, 'err_srv_preco_ref_varejo_inconsistente'),
-        }
-      }
-    } else if (i.tipoPreco === 'ATACADO') {
-      if (Math.abs(varejo - roundMoney2(i.precoOriginal)) > EPS_PRECO) {
-        return {
-          ok: false,
-          error: caixaMsgServidor(idioma, 'err_srv_preco_ref_atacado_inconsistente'),
-        }
+        error: caixaMsgServidor(idioma, CHAVE_DIVERGENCIA_PRECO[divergencia]),
       }
     }
 

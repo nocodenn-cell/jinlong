@@ -60,9 +60,20 @@ export type ReciboLabels = {
   rodapeObrigado: string
   rodapeNaoFiscal: string
   atacado: string
+  varejo: string
+  manual: string
+  promocao: string
   segundaVia: string
   /** Forma de pagamento (DINHEIRO/PIX/CARTAO_DEBITO/CARTAO_CREDITO) → rótulo traduzido. */
   formas: Record<string, string>
+}
+
+/** Rótulo da modalidade no cupom (PT/ZH já resolvidos em `labels`). */
+export function rotuloModalidadeRecibo(tipo: string, labels: ReciboLabels): string {
+  if (tipo === 'ATACADO') return labels.atacado
+  if (tipo === 'MANUAL') return labels.manual
+  if (tipo === 'PROMOCAO') return labels.promocao
+  return labels.varejo
 }
 
 /** Monta os rótulos do cupom a partir do dicionário ativo (pt/zh). */
@@ -79,6 +90,9 @@ export function buildReciboLabels(m: Mensagens): ReciboLabels {
     rodapeObrigado: r.rodape_obrigado,
     rodapeNaoFiscal: r.rodape_nao_fiscal,
     atacado: r.atacado,
+    varejo: r.varejo,
+    manual: r.manual,
+    promocao: r.promocao,
     segundaVia: r.segunda_via,
     formas: {
       DINHEIRO: m.caixa.pdv_metodo_pagamento_dinheiro,

@@ -72,12 +72,14 @@ function ok(
   tipo: 'ATACADO' | 'VAREJO',
   fonte: PriceSourceKind,
   regraId?: string,
+  quantidadeMinima?: number,
 ): CalcularPrecoCanonicoErro {
   const result: PriceResolutionResult = {
     preco,
     tipo,
     fonte,
     ...(regraId ? { regraId } : {}),
+    ...(quantidadeMinima != null ? { quantidadeMinima } : {}),
   }
   assertValidPriceSource(result)
   return { ok: true, result }
@@ -110,6 +112,7 @@ export function calcularPrecoCanonico(
       'ATACADO',
       'tier',
       tier.id,
+      Number(tier.quantidadeMinima),
     )
   }
 

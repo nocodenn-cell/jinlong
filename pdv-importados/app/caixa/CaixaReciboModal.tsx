@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef } from "react"
 import type { UseThermalPrinterReturn } from "@/hooks/useThermalPrinter"
 import type { Mensagens } from "@/i18n/getMessages"
-import { buildReciboLabels, type ReciboVenda } from "@/lib/caixa/reciboTypes"
+import { buildReciboLabels, rotuloModalidadeRecibo, type ReciboVenda } from "@/lib/caixa/reciboTypes"
+import { exibeDescontoTabela, subtotalLinhaCaixa } from "@/app/caixa/linhaPrecoCaixa"
 import { Button } from "@/components/ui/button"
 import { ErrorState } from "@/components/ui/feedback"
 import { cn } from "@/lib/utils"
@@ -198,14 +199,19 @@ export function CaixaReciboModal({
                   <div className="recibo-item-detalhe flex justify-between text-muted-foreground">
                     <span>
                       {item.quantidade} × {fmtBRL(item.precoUnitario, venda.moeda)}
-                      {item.tipoPreco === "ATACADO" && (
-                        <span className="ml-1 text-[9px] uppercase opacity-60">[{labels.atacado}]</span>
-                      )}
+                      <span className="ml-1 text-caption font-semibold uppercase text-foreground" data-tipo-preco={item.tipoPreco}>
+                        [{rotuloModalidadeRecibo(item.tipoPreco, labels)}]
+                      </span>
                     </span>
                     <span className="font-semibold text-foreground">
-                      {fmtBRL(item.quantidade * item.precoUnitario, venda.moeda)}
+                      {fmtBRL(subtotalLinhaCaixa(item.precoUnitario, item.quantidade), venda.moeda)}
                     </span>
                   </div>
+                  {exibeDescontoTabela(item.precoOriginal, item.precoUnitario) ? (
+                    <p className="text-caption text-muted-foreground">
+                      {fmtBRL(item.precoOriginal, venda.moeda)}
+                    </p>
+                  ) : null}
                 </div>
               ))}
             </div>

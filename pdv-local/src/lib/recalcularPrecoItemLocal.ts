@@ -48,5 +48,6 @@ export function recalcularPrecoItemLocal(
   useDesktopCartStore.getState().sincronizarPrecoCalculadoRpc(item.id, {
     precoUnitario: resultado.precoUnitario,
     tipoPreco: resultado.tipoPreco,
+    quantidadeMinima: resultado.quantidadeMinima,
   })
 }

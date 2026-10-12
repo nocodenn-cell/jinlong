@@ -23,6 +23,8 @@ export interface ResultadoPreco {
   precoOriginal: number
   descontoUnitario: number
   tipoPreco: 'VAREJO' | 'ATACADO' | 'MANUAL' | 'PROMOCAO'
+  /** Mínimo do tier aplicado. Só preenchido em ATACADO. */
+  quantidadeMinima?: number | null
 }
 
 export interface PricingContext {

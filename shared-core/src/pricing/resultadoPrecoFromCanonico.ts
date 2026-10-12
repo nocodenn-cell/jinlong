@@ -13,5 +13,6 @@ export function resultadoPrecoFromCanonico(
     precoOriginal,
     descontoUnitario: Math.round((precoOriginal - precoUnitario) * 100) / 100,
     tipoPreco: resolution.tipo,
+    quantidadeMinima: resolution.quantidadeMinima ?? null,
   }
 }

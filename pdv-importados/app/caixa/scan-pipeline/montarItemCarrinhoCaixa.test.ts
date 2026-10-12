@@ -50,10 +50,21 @@ describe('montarItemCarrinhoCaixa — Onda 2 · Bloco 2 (diferenciador no carrin
   })
 
   it('monta o item com o preço já calculado (autoritativo), não o preço de tabela', () => {
-    const item = montarItemCarrinhoCaixa(produto({ preco_varejo: 220 }), 198, 'ATACADO')
+    const item = montarItemCarrinhoCaixa(produto({ preco_varejo: 220 }), 198, 'ATACADO', 1, 6)
     expect(item.precoUnitario).toBe(198)
+    expect(item.precoOriginal).toBe(220)
     expect(item.resultado?.tipoPreco).toBe('ATACADO')
+    expect(item.resultado?.precoOriginal).toBe(220)
+    expect(item.resultado?.descontoUnitario).toBe(22)
+    expect(item.resultado?.quantidadeMinima).toBe(6)
     expect(item.metaPdv?.precoVarejoReferencia).toBe(220)
+  })
+
+  it('varejo mantém original igual ao unitário e sem mínimo de faixa', () => {
+    const item = montarItemCarrinhoCaixa(produto({ preco_varejo: 220 }), 220, 'VAREJO', 1, 6)
+    expect(item.precoOriginal).toBe(220)
+    expect(item.resultado?.descontoUnitario).toBe(0)
+    expect(item.resultado?.quantidadeMinima).toBeNull()
   })
 })
 

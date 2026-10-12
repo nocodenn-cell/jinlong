@@ -1,4 +1,5 @@
 import type { ItemCarrinho } from '../../../../shared-core/src/stores/unifiedCartStore'
+import { resultadoPrecoFromCanonico } from '../../../../shared-core/src/pricing/resultadoPrecoFromCanonico'
 import type { Mensagens } from '@/i18n/getMessages'
 import type { ProdutoCaixaDTO } from '@/app/caixa/caixaActionTypes'
 
@@ -16,6 +17,16 @@ export function montarItemCarrinhoCaixa(
   quantidade: number = 1,
   quantidadeMinima: number | null = null,
 ): ItemCarrinho {
+  // precoOriginal é a referência de varejo. A finalização rejeita atacado cujo
+  // original não seja o varejo do cadastro (err_srv_preco_ref_atacado_inconsistente).
+  const precificado = resultadoPrecoFromCanonico(
+    {
+      preco: precoCalculado,
+      tipo: tipoPrecoCalculado,
+      fonte: tipoPrecoCalculado === 'ATACADO' ? 'tier' : 'varejo',
+    },
+    produto.preco_varejo,
+  )
   return {
     id: `${produto.id}-${Date.now()}`,
     produtoId: produto.id,
@@ -23,12 +34,12 @@ export function montarItemCarrinhoCaixa(
     // Diferenciador no carrinho: barcode, senão SKU (mesmo critério da lista).
     sku: produto.codigo_barras ?? produto.codigo_interno ?? undefined,
     quantidade,
-    precoUnitario: precoCalculado,
-    precoOriginal: precoCalculado,
+    precoUnitario: precificado.precoUnitario,
+    precoOriginal: precificado.precoOriginal,
     resultado: {
-      precoUnitario: precoCalculado,
-      precoOriginal: precoCalculado,
-      descontoUnitario: 0,
+      precoUnitario: precificado.precoUnitario,
+      precoOriginal: precificado.precoOriginal,
+      descontoUnitario: precificado.descontoUnitario,
       tipoPreco: tipoPrecoCalculado,
       quantidadeMinima: tipoPrecoCalculado === 'ATACADO' ? quantidadeMinima : null,
     },

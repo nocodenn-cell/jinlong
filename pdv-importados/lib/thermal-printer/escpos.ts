@@ -3,8 +3,9 @@
  * Generates a Uint8Array ready to be sent via WebUSB or serial.
  */
 
-import type { ReciboVenda, ReciboLabels } from "@/lib/caixa/reciboTypes"
+import { rotuloModalidadeRecibo, type ReciboVenda, type ReciboLabels } from "@/lib/caixa/reciboTypes"
 import { descontoProdutosLiquido } from "@/lib/caixa/reciboTotais"
+import { subtotalLinhaCaixa } from "@/app/caixa/linhaPrecoCaixa"
 
 // ── ESC/POS command bytes ────────────────────────────────────────────────────
 const CMD = {
@@ -114,9 +115,9 @@ export function buildReciboEscPos(venda: ReciboVenda, labels: ReciboLabels, cols
     // Truncate name to fit the column width
     b.line(item.nome.slice(0, cols))
     const label  = `  ${item.quantidade}x ${brl(item.precoUnitario)}`
-    const subtot = brl(item.quantidade * item.precoUnitario)
+    const subtot = brl(subtotalLinhaCaixa(item.precoUnitario, item.quantidade))
     b.cols2(label, subtot)
-    if (item.tipoPreco === "ATACADO") b.line(`  [${labels.atacado}]`)
+    b.line(`  [${rotuloModalidadeRecibo(item.tipoPreco, labels)}]`)
   }
 
   b.rule()

@@ -39,6 +39,8 @@ export interface PriceResolutionResult {
   fonte: PriceSourceKind
   /** ID da regra em precos_atacado, quando fonte='tier'. */
   regraId?: string
+  /** Quantidade mínima do tier aplicado. Ausente no varejo (a RPC devolve null). */
+  quantidadeMinima?: number
 }
 
 /**

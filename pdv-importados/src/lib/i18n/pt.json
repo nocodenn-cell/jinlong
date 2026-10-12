@@ -1665,6 +1665,9 @@
       "rodape_obrigado": "Obrigado pela preferência!",
       "rodape_nao_fiscal": "Este não é um documento fiscal.",
       "atacado": "atacado",
+      "varejo": "varejo",
+      "manual": "manual",
+      "promocao": "promoção",
       "segunda_via": "2ª VIA"
     }
   },
