@@ -19,6 +19,7 @@ import type { FinanceiroPainel } from '../financeiroLojaTypes'
 import { FinanceiroForm, FinanceiroField as Field } from './FinanceiroForm'
 import { ContaOptions, CategoriaOptions } from './FinanceiroOptions'
 import { formatBRL } from '@/lib/format/money'
+import { useTextosBaixaForm } from './textosBaixaForm'
 
 export type FinanceiroAcaoRapida = 'venda' | 'receber' | 'pagar' | 'transferir' | null
 
@@ -69,6 +70,7 @@ function PainelShell({
 }
 
 export function FinanceiroAcoesRapidas({ data, labels }: Props) {
+  const textos = useTextosBaixaForm()
   const [acao, setAcao] = useState<FinanceiroAcaoRapida>(null)
 
   useEffect(() => {
@@ -127,61 +129,61 @@ export function FinanceiroAcoesRapidas({ data, labels }: Props) {
           <PainelShell open={acao === 'receber'} title={labels.receberTitulo} onClose={() => setAcao(null)}>
             <p className="mb-3 text-small text-jl-fg-3">{labels.avulsoHint}</p>
             <FinanceiroForm title={labels.receberTitulo} tipo="BAIXAR_AR" submit={labels.confirmarReceber}>
-              <Field name="titulo_id" label="Título a receber">
-                <option value="">Selecione</option>
+              <Field name="titulo_id" label={textos.tituloReceber}>
+                <option value="">{textos.selecione}</option>
                 {titulosReceber.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.nome} · {t.descricao} · {formatBRL(t.valor_aberto ?? t.valor_total - (t.valor_pago ?? 0))}
                   </option>
                 ))}
               </Field>
-              <Field name="conta_id" label="Conta de destino">
+              <Field name="conta_id" label={textos.contaDestino}>
                 <ContaOptions data={data} />
               </Field>
-              <Field name="valor" label="Valor (R$)" type="number" />
-              <Field name="data" label="Data efetiva" type="date" value={data.hoje} />
+              <Field name="valor" label={textos.valor} type="number" />
+              <Field name="data" label={textos.data} type="date" value={data.hoje} />
               <Field name="descricao" label="Observação / comprovante" required={false} />
             </FinanceiroForm>
             <FinanceiroForm title="Lançamento avulso (entrada)" tipo="MOVIMENTO" submit={labels.confirmarReceber} fixed={{ direcao: 'ENTRADA' }}>
-              <Field name="conta_id" label="Conta">
+              <Field name="conta_id" label={textos.contaDestino}>
                 <ContaOptions data={data} />
               </Field>
               <Field name="categoria_id" label="Categoria">
                 <CategoriaOptions data={data} tipo="RECEITA" />
               </Field>
               <Field name="descricao" label="Descrição" />
-              <Field name="valor" label="Valor (R$)" type="number" />
-              <Field name="data" label="Data efetiva" type="date" value={data.hoje} />
+              <Field name="valor" label={textos.valor} type="number" />
+              <Field name="data" label={textos.data} type="date" value={data.hoje} />
             </FinanceiroForm>
           </PainelShell>
 
           <PainelShell open={acao === 'pagar'} title={labels.pagarTitulo} onClose={() => setAcao(null)}>
             <p className="mb-3 text-small text-jl-fg-3">{labels.avulsoHint}</p>
             <FinanceiroForm title={labels.pagarTitulo} tipo="BAIXAR_AP" submit={labels.confirmarPagar}>
-              <Field name="titulo_id" label="Título a pagar">
-                <option value="">Selecione</option>
+              <Field name="titulo_id" label={textos.tituloPagar}>
+                <option value="">{textos.selecione}</option>
                 {titulosPagar.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.nome} · {t.descricao} · {formatBRL(t.valor_aberto ?? t.valor_total - (t.valor_pago ?? 0))}
                   </option>
                 ))}
               </Field>
-              <Field name="conta_id" label="Conta de origem">
+              <Field name="conta_id" label={textos.contaOrigem}>
                 <ContaOptions data={data} />
               </Field>
-              <Field name="valor" label="Valor (R$)" type="number" />
-              <Field name="data" label="Data efetiva" type="date" value={data.hoje} />
+              <Field name="valor" label={textos.valor} type="number" />
+              <Field name="data" label={textos.data} type="date" value={data.hoje} />
               <Field name="descricao" label="Observação / comprovante" required={false} />
             </FinanceiroForm>
-            <FinanceiroForm title="Registrar despesa (cria título)" tipo="CRIAR_AP" submit={labels.confirmarPagar}>
+            <FinanceiroForm title={textos.novaDespesa} tipo="CRIAR_AP" submit={labels.confirmarPagar}>
               <Field name="descricao" label="Descrição" />
               <Field name="favorecido" label="Favorecido" required={false} />
               <Field name="categoria_id" label="Categoria">
                 <CategoriaOptions data={data} tipo="DESPESA" />
               </Field>
-              <Field name="valor" label="Valor (R$)" type="number" />
-              <Field name="data" label="Vencimento" type="date" value={data.hoje} />
-              <Field name="competencia" label="Competência" type="date" value={data.hoje} />
+              <Field name="valor" label={textos.valor} type="number" />
+              <Field name="data" label={textos.primeiroVencimento} type="date" value={data.hoje} />
+              <Field name="competencia" label={textos.competencia} type="date" value={data.hoje} />
               <Field name="parcelas" label="Parcelas" type="number" value={1} />
               <Field name="recorrente" label="Como gerar">
                 <option value="false">Dividir o valor</option>
@@ -192,14 +194,14 @@ export function FinanceiroAcoesRapidas({ data, labels }: Props) {
 
           <PainelShell open={acao === 'transferir'} title={labels.transferirTitulo} onClose={() => setAcao(null)}>
             <FinanceiroForm title={labels.transferirTitulo} tipo="TRANSFERIR" submit={labels.confirmarTransferir}>
-              <Field name="conta_id" label="Origem">
+              <Field name="conta_id" label={textos.contaOrigem}>
                 <ContaOptions data={data} />
               </Field>
-              <Field name="destino_id" label="Destino">
+              <Field name="destino_id" label={textos.contaDestino}>
                 <ContaOptions data={data} />
               </Field>
-              <Field name="valor" label="Valor (R$)" type="number" />
-              <Field name="data" label="Data efetiva" type="date" value={data.hoje} />
+              <Field name="valor" label={textos.valor} type="number" />
+              <Field name="data" label={textos.data} type="date" value={data.hoje} />
             </FinanceiroForm>
           </PainelShell>
         </>

@@ -8,6 +8,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { act } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { FinanceiroPainel } from '../financeiroLojaTypes'
+import { AdminV2SessionProvider } from '@/components/ui/admin-v2/AdminV2SessionContext'
 import { baixasAutorizadas, opcoesComFoco } from './baixaLinha'
 
 ;(globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
@@ -259,8 +260,8 @@ describe('formulário da conta financeira', () => {
   }
 
   function formBaixa(): HTMLFormElement {
-    const form = Array.from(container.querySelectorAll('form')).find((f) =>
-      f.textContent?.includes('Pagar'),
+    const form = Array.from(container.querySelectorAll('form')).find(
+      (f) => f.querySelector('select[name="titulo_id"]') && f.querySelector('select[name="conta_id"]'),
     )
     if (!form) throw new Error('formulário de baixa não encontrado')
     return form
@@ -273,7 +274,28 @@ describe('formulário da conta financeira', () => {
     expect(executarFinanceiroLoja).not.toHaveBeenCalled()
   })
 
-  it('o envio vai para BAIXAR_AP com o título da linha e sem gaveta; a repetição reusa a chave', async () => {
+  it('mostra conta, valor, data, classificar e nova despesa no idioma da sessão', () => {
+    act(() => {
+      root.render(
+        <AdminV2SessionProvider idioma="zh">
+          <FinanceiroTitulosOperations
+            data={painel}
+            tipo="AP"
+            foco={{ tipo: 'AP', id: 'ap-linha', rotulo: 'Fornecedor Alfa · Compra de mercadoria' }}
+          />
+        </AdminV2SessionProvider>,
+      )
+    })
+    const texto = container.textContent ?? ''
+    expect(texto).toContain('付款账户')
+    expect(texto).toContain('金额 (R$)')
+    expect(texto).toContain('实际日期')
+    expect(texto).toContain('分类账款')
+    expect(texto).toContain('新费用')
+    expect(texto).not.toContain('Conta de origem')
+  })
+
+  it('bloqueia o segundo envio enquanto o primeiro está pendente e reabilita ao concluir', async () => {
     let liberar: (valor: { ok: true }) => void = () => {}
     executarFinanceiroLoja.mockImplementation(
       () => new Promise((resolve) => { liberar = resolve }),
@@ -282,24 +304,47 @@ describe('formulário da conta financeira', () => {
     const form = formBaixa()
     definir(form.querySelector('select[name="conta_id"]') as HTMLSelectElement, 'banco-1')
     definir(form.querySelector('input[name="valor"]') as HTMLInputElement, '40')
+    const enviar = () => form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
 
     await act(async () => {
-      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
-      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+      enviar()
+      enviar()
     })
 
-    expect(executarFinanceiroLoja).toHaveBeenCalledTimes(2)
-    const [primeira, segunda] = executarFinanceiroLoja.mock.calls.map((c) => c[0] as {
+    expect(executarFinanceiroLoja).toHaveBeenCalledTimes(1)
+    const primeira = executarFinanceiroLoja.mock.calls[0][0] as {
       tipo: string
       requestId: string
       dados: Record<string, unknown>
-    })
+    }
     expect(primeira.tipo).toBe('BAIXAR_AP')
     expect(primeira.dados.titulo_id).toBe('ap-linha')
     expect(primeira.dados.conta_id).toBe('banco-1')
     expect(primeira.dados).not.toHaveProperty('caixa_id')
-    expect(segunda.requestId).toBe(primeira.requestId)
-    expect(segunda.dados.titulo_id).toBe('ap-linha')
+    const botao = form.querySelector('button[type="submit"]') as HTMLButtonElement
+    expect(botao.disabled).toBe(true)
+    expect(botao.textContent).toContain('Registrando')
     await act(async () => { liberar({ ok: true }) })
+    expect(botao.disabled).toBe(false)
+    expect(botao.textContent).not.toContain('Registrando')
+  })
+
+  it('depois de um erro, o mesmo payload reusa a chave e o botão volta a aceitar envio', async () => {
+    executarFinanceiroLoja.mockResolvedValue({ ok: false, error: 'saldo insuficiente' })
+    montar()
+    const form = formBaixa()
+    definir(form.querySelector('select[name="conta_id"]') as HTMLSelectElement, 'banco-1')
+    definir(form.querySelector('input[name="valor"]') as HTMLInputElement, '40')
+    const enviar = () => form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+
+    await act(async () => { enviar() })
+    const botao = form.querySelector('button[type="submit"]') as HTMLButtonElement
+    expect(botao.disabled).toBe(false)
+    expect(container.textContent).toContain('saldo insuficiente')
+
+    await act(async () => { enviar() })
+    expect(executarFinanceiroLoja).toHaveBeenCalledTimes(2)
+    const [primeira, segunda] = executarFinanceiroLoja.mock.calls.map((c) => c[0] as { requestId: string })
+    expect(segunda.requestId).toBe(primeira.requestId)
   })
 })
