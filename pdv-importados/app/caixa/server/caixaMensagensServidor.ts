@@ -26,6 +26,8 @@ export type CaixaServidorMsgKey =
   | 'err_srv_qtd_invalida'
   | 'err_srv_produto_inativo'
   | 'err_srv_preco_resposta_invalida'
+  | 'err_srv_preco_nao_autorizado'
+  | 'err_srv_loja_nao_autorizada'
   | 'err_srv_motivo_longo'
   | 'err_srv_caixa_sem_aberto'
   | 'err_srv_senha_invalida'

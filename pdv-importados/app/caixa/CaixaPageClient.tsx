@@ -47,6 +47,7 @@ import { useCaixaBootstrapData } from "@/app/caixa/hooks/useCaixaBootstrapData"
 import { useCaixaKeyboardShortcuts } from "@/app/caixa/hooks/useCaixaKeyboardShortcuts"
 import { useCaixaGerenteTokenExpiry } from "@/app/caixa/hooks/useCaixaGerenteTokenExpiry"
 import { useCaixaVendasEmEspera } from "@/app/caixa/hooks/useCaixaVendasEmEspera"
+import { usePalmPedidosCaixa } from "@/app/caixa/hooks/usePalmPedidosCaixa"
 import { useReprecificarQuantidadeCaixa } from "@/app/caixa/hooks/useReprecificarQuantidadeCaixa"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { formatDecimalBRL } from "@/lib/format/money"
@@ -60,6 +61,7 @@ import { CaixaPdvCartSaleBar } from "@/app/caixa/CaixaPdvCartSaleBar"
 import { CaixaPdvOperacoesMenu } from "@/app/caixa/CaixaPdvOperacoesMenu"
 import { CaixaRailTurnoSummary } from "@/app/caixa/CaixaRailTurnoSummary"
 import { CaixaEmAbertoList } from "@/app/caixa/CaixaEmAbertoList"
+import { PalmPedidosCaixaSection } from "@/components/caixa/PalmPedidosCaixaSection"
 import { CaixaConsultaRapidaModal } from "@/app/caixa/CaixaConsultaRapidaModal"
 import { CaixaHistoricoSheet } from "@/app/caixa/CaixaHistoricoSheet"
 import { CaixaAbrirTurnoModal } from "@/app/caixa/CaixaAbrirTurnoModal"
@@ -800,6 +802,43 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     vendaEmEsperaOrigemId,
     setVendaEmEsperaOrigemId,
   })
+
+  const {
+    pedidos: pedidosPalm,
+    carregando: carregandoPalm,
+    processando: processandoPalm,
+    assumir: assumirPedidoPalmCaixa,
+    recarregar: recarregarPedidosPalm,
+  } = usePalmPedidosCaixa({
+    m,
+    itens,
+    totalBruto,
+    totalDesconto,
+    totalLiquidoComGerente,
+    descontoGerentePercentual,
+    caixaStatus,
+    clienteId,
+    vendaEmEsperaOrigemId,
+    setVendaEmEsperaOrigemId,
+    substituirCarrinho,
+    reprecificar,
+    setCaixaMensagem,
+    tocarFeedback,
+    focarCampoBusca,
+    setClienteId,
+    setClienteNome,
+  })
+
+  const secaoPedidosPalm = (
+    <PalmPedidosCaixaSection
+      m={m}
+      pedidos={pedidosPalm}
+      carregando={carregandoPalm}
+      disabled={processandoEspera || finalizando || processandoPalm}
+      onAssumir={(id) => void assumirPedidoPalmCaixa(id)}
+      onAtualizar={() => void recarregarPedidosPalm()}
+    />
+  )
 
   const parseValorMonetario = useCallback((raw: string | null): number | null => {
     if (raw == null) return null
@@ -1770,6 +1809,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 onRetomar={(id) => void handleRetomarEmEspera(id)}
                 onDescartar={(id) => void handleDescartarEmEspera(id)}
               />
+              {secaoPedidosPalm}
               <div className="mt-auto border-t pt-2">
                 <CaixaRailTurnoSummary
                   m={m}
@@ -1811,6 +1851,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 painelGestaoHref={painelGestaoHrefParaPerfil(perfil)}
               />
             </div>
+            {secaoPedidosPalm}
           </div>
           {/* Rodapé de resumo removido: repetia total, bruto, descontos e o botão
               Finalizar logo abaixo da barra do carrinho — duas faixas empilhadas

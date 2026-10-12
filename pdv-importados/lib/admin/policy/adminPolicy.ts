@@ -44,7 +44,9 @@ function isProtectedRoute(pathname: string): boolean {
     pathname.startsWith('/admin') ||
     pathname.startsWith('/gerente') ||
     pathname === '/caixa' ||
-    pathname.startsWith('/caixa/')
+    pathname.startsWith('/caixa/') ||
+    pathname === '/palm' ||
+    pathname.startsWith('/palm/')
   )
 }
 

@@ -52,6 +52,12 @@ export async function calcularPrecoProdutoCaixaImpl(input: {
     if (row.erro === 'quantidade_invalida') {
       return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_qtd_invalida') }
     }
+    if (row.erro === 'nao_autorizado') {
+      return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_preco_nao_autorizado') }
+    }
+    if (row.erro === 'loja_nao_autorizada') {
+      return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_loja_nao_autorizada') }
+    }
 
     const precoNum = typeof row.preco === 'string' ? Number(row.preco) : row.preco
     if (precoNum == null || !Number.isFinite(precoNum) || precoNum < 0) {

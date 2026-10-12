@@ -72,7 +72,7 @@ describe('adminPolicy', () => {
 
     it('conta inativa não entra no painel nem no caixa', () => {
       const normalized = blockedNormalization('inativo')
-      for (const pathname of ['/admin/dashboard', '/gerente', '/caixa']) {
+      for (const pathname of ['/admin/dashboard', '/gerente', '/caixa', '/palm/vendas']) {
         const decision = middlewareAdminDecision(normalized, pathname)
         expect(decision.type).toBe('redirect')
         expect(decision.target).toContain('/login')
@@ -86,9 +86,52 @@ describe('adminPolicy', () => {
       expect(decision.reason).toBe('conta_sem_loja')
     })
 
+    it('conta sem loja não entra no PALM', () => {
+      const decision = middlewareAdminDecision(blockedNormalization('sem_loja'), '/palm/estoque')
+      expect(decision.type).toBe('redirect')
+      expect(decision.target).toContain('/login')
+      expect(decision.reason).toBe('conta_sem_loja')
+    })
+
     it('rota pública segue permitida mesmo bloqueado', () => {
       const decision = middlewareAdminDecision(blockedNormalization('inativo'), '/termos')
       expect(decision.type).toBe('allow')
+    })
+  })
+
+  describe('middlewareAdminDecision — PALM', () => {
+    const anonima: SessionNormalization = {
+      contract: null,
+      session: null,
+      authState: 'anonymous',
+      perfil: null,
+      source: 'edge',
+    }
+
+    const operador: SessionNormalization = {
+      contract: null,
+      session: {
+        userId: 'op-1',
+        user: mockSupabaseUser('op-1', 'op@test.local'),
+        perfil: 'OPERADOR',
+        idioma: 'pt',
+        lojaId: 'loja-1',
+      },
+      authState: 'authenticated',
+      perfil: 'OPERADOR',
+      source: 'edge',
+    }
+
+    it('anônimo é enviado ao login', () => {
+      const decision = middlewareAdminDecision(anonima, '/palm/vendas')
+      expect(decision.type).toBe('redirect')
+      expect(decision.reason).toBe('unauthenticated')
+      expect(decision.target).toContain('/login')
+    })
+
+    it('OPERADOR da loja abre vendas e estoque', () => {
+      expect(middlewareAdminDecision(operador, '/palm/vendas').type).toBe('allow')
+      expect(middlewareAdminDecision(operador, '/palm/estoque').type).toBe('allow')
     })
   })
 })
