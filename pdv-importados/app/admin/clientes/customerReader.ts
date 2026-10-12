@@ -9,7 +9,8 @@ import type {
   ListClientesPaginadosQuery,
   ListClientesPaginadosResult,
 } from '@shared-core/src/customers'
-import { clienteIdsComTituloVencido, type TituloAbertoCliente } from './clienteListaFiltro'
+import { listarTitulosAbertosComVencimento } from '@/app/admin/financeiro/receivableReader'
+import { clienteIdsComTituloVencido } from './clienteListaFiltro'
 
 export type AdminCustomerReader = CustomerReader & CustomerReaderById
 
@@ -114,15 +115,9 @@ async function idsSeAtraso(
 ): Promise<AtrasoLookup> {
   if (query.situacao !== 'atraso') return { ok: true, ids: null, vazio: false }
   const hoje = hojeYmd()
-  const { data, error } = await supabase
-    .from('contas_receber')
-    .select('cliente_id, vencimento, status')
-    .in('status', ['ABERTO', 'PARCIAL'])
-    .not('vencimento', 'is', null)
-    .lt('vencimento', hoje)
-    .limit(1000)
-  if (error) return { ok: false, error: error.message }
-  const ids = clienteIdsComTituloVencido((data ?? []) as TituloAbertoCliente[], hoje)
+  const listed = await listarTitulosAbertosComVencimento(supabase, hoje)
+  if (!listed.ok) return { ok: false, error: listed.error }
+  const ids = clienteIdsComTituloVencido(listed.rows, hoje)
   return { ok: true, ids, vazio: ids.length === 0 }
 }
 
