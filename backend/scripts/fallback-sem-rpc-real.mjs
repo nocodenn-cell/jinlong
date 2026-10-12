@@ -88,6 +88,10 @@ async function limpar() {
   }
   if (rpcOriginal) {
     psql(rpcOriginal)
+    psql(
+      `REVOKE ALL ON FUNCTION public.atualizar_produto_com_faixa_atacado(uuid, jsonb, uuid, jsonb) FROM PUBLIC, anon;
+       GRANT EXECUTE ON FUNCTION public.atualizar_produto_com_faixa_atacado(uuid, jsonb, uuid, jsonb) TO authenticated, service_role;`,
+    )
     rpcOriginal = null
   }
   // Devolve o grant de escrita em precos_atacado, se foi revogado.

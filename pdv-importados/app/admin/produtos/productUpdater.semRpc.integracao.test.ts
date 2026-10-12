@@ -53,6 +53,27 @@ let produtoId = ''
 /** Definição original da RPC, restaurada no final. */
 let rpcOriginal = ''
 
+const RPC_ATUALIZAR_PRODUTO =
+  'public.atualizar_produto_com_faixa_atacado(uuid, jsonb, uuid, jsonb)'
+
+/**
+ * DROP apaga a ACL. O default do schema (migration 20260930090000) não devolve
+ * EXECUTE a `authenticated`. A função continua SECURITY DEFINER e recusa quem
+ * não é GERENTE/DONO/ADMIN; o grant só reabre o papel de banco previsto.
+ */
+function restaurarPrivilegioRpcAtualizar(): void {
+  psql(
+    `REVOKE ALL ON FUNCTION ${RPC_ATUALIZAR_PRODUTO} FROM PUBLIC, anon;
+     GRANT EXECUTE ON FUNCTION ${RPC_ATUALIZAR_PRODUTO} TO authenticated, service_role;`,
+  )
+}
+
+function restaurarRpcAtualizar(): void {
+  if (!rpcOriginal) return
+  psql(rpcOriginal)
+  restaurarPrivilegioRpcAtualizar()
+}
+
 async function stackDisponivel(): Promise<boolean> {
   if (!/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(API_URL)) return false
   try {
@@ -130,7 +151,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (!disponivel) return
-  if (rpcOriginal) psql(rpcOriginal)
+  restaurarRpcAtualizar()
   if (produtoId) {
     await admin.from('precos_atacado').delete().eq('produto_id', produtoId)
     await admin.from('historico_precos_produto').delete().eq('produto_id', produtoId)
