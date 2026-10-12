@@ -99,7 +99,7 @@ O que ficou sem olhar no browser: pré-seleção na página inteira, clareza dos
 | `36e51f9f` | tradução da tela de categorias financeiras |
 | `aa3c13ed` | auditoria de redundâncias |
 | `cf923fc7` | pré-seleção do título e rótulos dos quatro destinos |
-| este fechamento | idioma dos campos, bloqueio de envio duplo e este relatório. O hash fica no commit que introduz estas seções. |
+| `ba3fa01e` | idioma dos campos, bloqueio de envio duplo e este relatório |
 
 ## Riscos que continuam
 
