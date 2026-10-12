@@ -1985,7 +1985,11 @@
     "filtro_todos": "Todos",
     "filtro_situacao_todos": "Todas",
     "col_nome": "Nome",
-    "col_tipo": "Tipo"
+    "col_tipo": "Tipo",
+    "subtitulo": "Categorias de receitas e despesas usadas nos lançamentos",
+    "status_ativa": "Ativa",
+    "status_inativa": "Inativa",
+    "paginacao_resumo": "Página {{pagina}} de {{paginas}} · {{total}} categorias"
   },
   "funcionarios": {
     "titulo": "Funcionários",

@@ -2204,7 +2204,11 @@
     "filtro_todos": "全部",
     "filtro_situacao_todos": "全部",
     "col_nome": "名称",
-    "col_tipo": "类型"
+    "col_tipo": "类型",
+    "subtitulo": "记账时使用的收入和支出分类",
+    "status_ativa": "启用",
+    "status_inativa": "停用",
+    "paginacao_resumo": "第 {{pagina}} / {{paginas}} 页 · 共 {{total}} 个分类"
   },
   "funcionarios": {
     "titulo": "员工",
