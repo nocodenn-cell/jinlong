@@ -8,11 +8,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ROUTES, pathWithQuery } from '@/lib/navigation/routes'
 import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
-import {
-  PageHeader,
-  CrudListShell,
-} from '@/components/ui/admin-v2'
-import { EstoqueHubNav } from '@/components/ui/admin-v2/EstoqueHubNav'
+import { CrudListShell } from '@/components/ui/admin-v2'
 import { ErrorState } from '@/components/ui/feedback'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
@@ -125,7 +121,13 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
   ]
 
   const filters: FilterDef[] = [
-    { type: 'search', key: 'q', placeholder: m.estoque.buscar_placeholder },
+    {
+      type: 'search',
+      key: 'q',
+      placeholder: m.estoque.buscar_placeholder,
+      className: 'w-full min-w-0 basis-full',
+      inputClassName: 'w-full min-w-0',
+    },
     {
       type: 'pills',
       key: 'visao',
@@ -150,6 +152,7 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
       type: 'select',
       key: 'categoria',
       label: m.produtos.categoria,
+      showLabel: true,
       defaultValue: '',
       options: catOptions,
     },
@@ -180,6 +183,7 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
   const nomeCategoria = (id: string) => opcoes.categorias.find((c) => c.id === id)?.nome ?? id
 
   const chips: Array<{ key: string; label: string }> = []
+  if (q) chips.push({ key: 'q', label: `${m.estoque.buscar_label}: ${q}` })
   if (visao !== 'geral') chips.push({ key: 'visao', label: m.estoque.filtro_estoque_baixo })
   if (origem !== '') {
     chips.push({
@@ -201,14 +205,6 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
   }
 
   return (
-    <div className="admin-v2-page">
-      <PageHeader
-        title={m.estoque.titulo}
-        subtitle={m.estoque.subtitulo}
-      />
-
-      <EstoqueHubNav />
-
       <CrudListShell
         title={ui.estoque_saldos_titulo}
         meta={
@@ -218,29 +214,68 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
           </span>
         }
         toolbar={
-          <div className="flex w-full flex-col gap-2.5">
-            <Suspense fallback={<div className="h-9" />}>
+          <div
+            className="flex w-full min-w-0 basis-full flex-col gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3"
+            data-testid="estoque-filtros"
+          >
+            <Suspense fallback={<div className="h-24" />}>
               <FilterBar
-                filters={filters}
+                filters={filters.slice(0, 1)}
+                clearable={false}
+                resetPageOnChange
+                ariaLabel={ui.filtros_regiao_aria}
+                className="w-full"
+              />
+              <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                <FiltroGrupo label={ui.estoque_filtro_situacao}>
+                  <FilterBar
+                    filters={filters.slice(1, 2)}
+                    clearable={false}
+                    resetPageOnChange
+                    ariaLabel={ui.estoque_filtro_situacao}
+                  />
+                </FiltroGrupo>
+                <FiltroGrupo label={ui.estoque_filtro_origem}>
+                  <FilterBar
+                    filters={filters.slice(2, 3)}
+                    clearable={false}
+                    resetPageOnChange
+                    ariaLabel={ui.estoque_filtro_origem}
+                  />
+                </FiltroGrupo>
+                <FilterBar
+                  filters={filters.slice(3, 4)}
+                  clearable={false}
+                  resetPageOnChange
+                  ariaLabel={m.produtos.categoria}
+                />
+              </div>
+              <FilterBar
+                filters={[]}
+                extraClearKeys={['q', 'visao', 'origem', 'categoria']}
                 resetPageOnChange
                 ariaLabel={ui.filtros_regiao_aria}
                 clearAriaLabel={ui.filtros_limpar_aria}
+                clearLabel={m.comum.limpar_filtros}
               />
             </Suspense>
             {chips.length > 0 ? (
-              <div className="flex flex-wrap items-center gap-1.5">
-                {chips.map((chip) => (
-                  <Link
-                    key={chip.key}
-                    href={hrefWithout(chip.key)}
-                    className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-soft)] px-2.5 py-0.5 text-caption text-fg-muted hover:text-fg"
-                  >
-                    {chip.label}
-                    <span aria-hidden className="text-fg-subtle">
-                      ✕
-                    </span>
-                  </Link>
-                ))}
+              <div className="flex flex-col gap-1.5">
+                <p className="text-caption font-medium text-fg-subtle">{ui.estoque_filtros_ativos}</p>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {chips.map((chip) => (
+                    <Link
+                      key={chip.key}
+                      href={hrefWithout(chip.key)}
+                      className="inline-flex min-h-8 items-center gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-soft)] px-2.5 py-1 text-caption text-fg-muted hover:text-fg"
+                    >
+                      {chip.label}
+                      <span aria-hidden className="text-fg-subtle">
+                        ✕
+                      </span>
+                    </Link>
+                  ))}
+                </div>
               </div>
             ) : null}
           </div>
@@ -323,6 +358,7 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
                 }}
                 quick={{
                   faixaAria: ui.estoque_acoes_aria,
+                  receber: ui.estoque_acao_receber,
                   entrada: ui.estoque_acao_entrada,
                   retirar: ui.estoque_acao_retirar,
                   ajustar: ui.estoque_acao_ajustar,
@@ -406,6 +442,14 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
           </>
         )}
       </CrudListShell>
+  )
+}
+
+function FiltroGrupo({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-1">
+      <span className="text-caption font-medium text-fg-subtle">{label}</span>
+      {children}
     </div>
   )
 }

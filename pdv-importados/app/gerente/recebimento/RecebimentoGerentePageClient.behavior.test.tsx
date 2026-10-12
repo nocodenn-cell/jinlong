@@ -165,18 +165,19 @@ async function escolherPedidoNaLista() {
 }
 
 describe('RecebimentoGerentePageClient — "Como chegou?" (UX-04)', () => {
-  it('pt: oferece NF-e (link para a importação), Ordem de Compra e Sem documento; começa em Sem documento, sem campo de pedido', async () => {
+  it('pt: pergunta como receber e só então mostra o formulário escolhido, sem campo de pedido', async () => {
     await renderizar({ idioma: 'pt' })
 
     const faixa = container.querySelector('[data-testid="rec-como-chegou"]')
-    expect(faixa?.textContent).toContain('Como chegou?')
-    const nfe = botaoVia('Nota fiscal (com valores)')
-    expect(nfe).toBeTruthy()
+    expect(faixa?.textContent).toContain('Como deseja receber?')
+    expect(botaoVia('Nota fiscal (com valores)')).toBeTruthy()
     expect(botaoVia('Histórico de entradas')).toBeTruthy()
     expect(botaoVia('Ordem de Compra')).toBeTruthy()
-    expect(botaoVia('Sem documento').getAttribute('aria-pressed')).toBe('true')
+    expect(container.querySelector('#recebimento-form')).toBeNull()
 
-    // Sem documento: nenhum vínculo é enviado — entrada avulsa como sempre foi
+    await act(async () => botaoVia('Sem documento').click())
+    expect(container.querySelector('[data-testid="rec-como-chegou"]')).toBeNull()
+    expect(container.querySelector('[data-testid="rec-via-ativa"]')?.textContent).toContain('Sem documento, com valores')
     expect((form()?.querySelector('#rec-oc') ?? null)).toBeNull()
     expect((form()?.querySelector('input[name="ordem_compra_id"]') ?? null)).toBeNull()
   })
@@ -190,7 +191,8 @@ describe('RecebimentoGerentePageClient — "Como chegou?" (UX-04)', () => {
     // o texto antigo ("não dá baixa", "duplicaria o estoque") não pode mais aparecer
     expect(container.textContent).not.toContain('Ele não dá baixa no pedido')
     expect(container.textContent).not.toContain('duplicaria o estoque')
-    expect(botaoVia('Ordem de Compra').getAttribute('aria-pressed')).toBe('true')
+    expect(container.querySelector('[data-testid="rec-via-ativa"]')?.textContent).toContain('Ordem de Compra')
+    expect(container.querySelector('[data-testid="rec-como-chegou"]')).toBeNull()
   })
 
   it('zh: a faixa e a ajuda existem sem chave faltando', async () => {
@@ -328,15 +330,20 @@ describe('RecebimentoGerentePageClient — sem documento não pede "esperada" e 
     })
     expect(container.textContent).toContain('Divergência')
 
+    await act(async () => (container.querySelector('[data-testid="rec-trocar-via"]') as HTMLButtonElement).click())
     await act(async () => botaoVia('Sem documento').click())
     expect(container.textContent).not.toContain('Divergência')
+    await act(async () => (container.querySelector('[data-testid="rec-trocar-via"]') as HTMLButtonElement).click())
     await act(async () => botaoVia('Ordem de Compra').click())
     expect(campo('qtd_esperada').value).toBe('')
   })
 
-  it('o selo do topo acompanha o modo: "Entrada sem NF" em Sem documento, "Entrada com pedido" em Pedido', async () => {
+  it('o selo acompanha o modo escolhido: "Entrada sem NF" ou "Entrada com pedido"', async () => {
     await renderizar()
+    expect(container.textContent).not.toContain('Entrada sem NF')
+    await act(async () => botaoVia('Sem documento').click())
     expect(container.textContent).toContain('Entrada sem NF')
+    await act(async () => (container.querySelector('[data-testid="rec-trocar-via"]') as HTMLButtonElement).click())
     await act(async () => botaoVia('Ordem de Compra').click())
     expect(container.textContent).toContain('Entrada com pedido')
     expect(container.textContent).not.toContain('Entrada sem NF')

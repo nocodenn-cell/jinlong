@@ -39,6 +39,9 @@ beforeEach(async () => {
   await act(async () => root.render(<AdminV2SessionProvider idioma="pt">
     <RecebimentoGerentePageClient idioma="pt" temProdutos remessasRecentes={[]} embeddedInAdminHub produtoPreSelecionado={P1} />
   </AdminV2SessionProvider>))
+  await act(async () => {
+    (container.querySelector('[data-via="SEM_DOCUMENTO"]') as HTMLButtonElement).click()
+  })
 })
 afterEach(() => { act(() => root.unmount()); container.remove(); vi.useRealTimers() })
 function setInput(input: HTMLInputElement, value: string) {

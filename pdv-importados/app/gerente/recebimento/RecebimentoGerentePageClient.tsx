@@ -28,8 +28,11 @@ import { fmtQtd, textoPosEntrada } from '../compras/ocRecebimento'
 import { ProdutoRecebimentoAutocomplete } from './ProdutoRecebimentoAutocomplete'
 import { HistoricoEntregas } from './HistoricoEntregas'
 import { OrdemCompraVinculoAutocomplete } from './OrdemCompraVinculoAutocomplete'
-
-const VIA_ICONS = { NFE: FileText, ORDEM_COMPRA: ClipboardList, SEM_DOCUMENTO: PackagePlus, FISICA: Truck, HISTORICO: History }
+import {
+  RecebimentoEscolhaVia,
+  viaRecebimentoFromModo,
+  type ViaRecebimento,
+} from './RecebimentoEscolhaVia'
 
 export type RecebimentoProdutoOpt = { id: string; nome: string; codigo_barras: string | null }
 
@@ -74,7 +77,7 @@ export function RecebimentoGerentePageClient({
   const [formKey, setFormKey] = useState(0)
   const [usarProdutoPreSelecionado, setUsarProdutoPreSelecionado] = useState(true)
   const searchParams = useSearchParams()
-  const [via, setVia] = useState<'SEM_DOCUMENTO' | 'ORDEM_COMPRA' | 'NFE' | 'HISTORICO' | 'FISICA'>(searchParams.get('modo') === 'pedido' ? 'ORDEM_COMPRA' : searchParams.get('modo') === 'nfe' ? 'NFE' : searchParams.get('modo') === 'historico' ? 'HISTORICO' : 'SEM_DOCUMENTO')
+  const [via, setVia] = useState<ViaRecebimento | null>(viaRecebimentoFromModo(searchParams.get('modo')))
   const [ocEscolhida, setOcEscolhida] = useState<OcListaDTO | null>(null)
   const [ocSaldo, setOcSaldo] = useState<OcDetalheDTO | null>(null)
   const [ocSaldoCarregando, setOcSaldoCarregando] = useState(false)
@@ -126,7 +129,7 @@ export function RecebimentoGerentePageClient({
     }
   }, [ocEscolhida])
 
-  const escolherVia = useCallback((v: 'SEM_DOCUMENTO' | 'ORDEM_COMPRA' | 'NFE' | 'HISTORICO' | 'FISICA') => {
+  const escolherVia = useCallback((v: ViaRecebimento | null) => {
     setVia(v)
     if (v !== 'ORDEM_COMPRA') {
       // Sem documento não há expectativa: some o campo e a divergência deixa de existir.
@@ -274,15 +277,19 @@ export function RecebimentoGerentePageClient({
           : `admin-v2-page ${idioma === 'pt' ? '' : 'font-chinese'}`
       }
     >
-      <PageHeader
-        title={r.titulo}
-        subtitle={r.subtitulo}
-        filters={
-          <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-soft)] px-2.5 py-0.5 text-caption font-semibold text-fg-muted">
-            {via === 'ORDEM_COMPRA' ? r.badge_pedido : r.badge}
-          </span>
-        }
-      />
+      {embeddedInAdminHub ? null : (
+        <PageHeader
+          title={r.titulo}
+          subtitle={r.subtitulo}
+          filters={
+            via ? (
+              <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-soft)] px-2.5 py-0.5 text-caption font-semibold text-fg-muted">
+                {via === 'ORDEM_COMPRA' ? r.badge_pedido : r.badge}
+              </span>
+            ) : null
+          }
+        />
+      )}
 
       {!embeddedInAdminHub ? (
         <Link href={ROUTES.admin.estoque} className="gerente-nav-back text-sm font-medium hover:underline">
@@ -306,36 +313,43 @@ export function RecebimentoGerentePageClient({
         </div>
       ) : null}
 
-      <SectionCard title={r.sec_formulario} className="mt-8">
-            {/* Como chegou? — a mesma entrada, três caminhos, sem tela nova. */}
-            <div className="mb-6" data-testid="rec-como-chegou">
-              <p className="mb-1.5 text-caption font-semibold text-fg-muted">{r.como_chegou}</p>
-              <div role="group" aria-label={r.como_chegou} className="flex flex-wrap gap-2">
-                {(
-                  [
-                    ['NFE', r.via_nfe],
-                    ['ORDEM_COMPRA', r.via_pedido],
-                    ['SEM_DOCUMENTO', idioma === 'pt' ? 'Sem documento, com valores' : '无单据，已知金额'],
-                    ['FISICA', idioma === 'pt' ? 'Receber sem valores' : '仅收货，金额未知'],
-                    ['HISTORICO', idioma === 'pt' ? 'Histórico de entradas' : '入库记录'],
-                  ] as const
-                ).map(([v, rotulo]) => { const Icon = VIA_ICONS[v]; return (
-                  <Button
-                    variant={via === v ? 'primary' : 'outline'}
-                    key={v}
-                    type="button"
-                    aria-pressed={via === v}
-                    onClick={() => escolherVia(v)}
-                    disabled={loading}
-                  >
-                    <Icon aria-hidden />{rotulo}
-                  </Button>
-                )})}
-              </div>
-              {via !== 'SEM_DOCUMENTO' && via !== 'HISTORICO' ? <p className="mt-3 text-caption leading-relaxed text-fg-subtle">
-                {via === 'ORDEM_COMPRA' ? r.via_pedido_ajuda : via === 'NFE' ? r.via_nfe_ajuda : via === 'FISICA' ? (idioma === 'pt' ? 'Registra somente a mercadoria conferida. Não gera contas a pagar nem atualiza custo; associe a nota ou cobrança depois à mesma entrega.' : '仅记录实收商品，不生成应付款或更新成本。后续单据应关联原收货。') : r.via_sem_documento_ajuda}
-              </p> : null}
-            </div>
+      {via === null ? (
+        <RecebimentoEscolhaVia
+          pergunta={r.como_deseja_receber}
+          ajuda={r.como_deseja_receber_ajuda}
+          disabled={loading}
+          onEscolher={escolherVia}
+          opcoes={[
+            { id: 'NFE', titulo: r.via_nfe, ajuda: r.via_nfe_ajuda, icon: FileText },
+            { id: 'ORDEM_COMPRA', titulo: r.via_pedido, ajuda: r.via_pedido_ajuda, icon: ClipboardList },
+            { id: 'SEM_DOCUMENTO', titulo: r.via_sem_documento_com_valores, ajuda: r.via_sem_documento_ajuda, icon: PackagePlus },
+            { id: 'FISICA', titulo: r.via_receber_sem_valores, ajuda: r.via_receber_sem_valores_ajuda, icon: Truck },
+            { id: 'HISTORICO', titulo: r.via_historico, ajuda: r.sec_recentes_ajuda, icon: History },
+          ]}
+        />
+      ) : (
+      <SectionCard title={r.sec_formulario} className="mt-4">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3" data-testid="rec-via-ativa">
+          <div className="min-w-0">
+            <p className="text-body font-semibold text-fg">
+              {via === 'NFE'
+                ? r.via_nfe
+                : via === 'ORDEM_COMPRA'
+                  ? r.via_pedido
+                  : via === 'SEM_DOCUMENTO'
+                    ? r.via_sem_documento_com_valores
+                    : via === 'FISICA'
+                      ? r.via_receber_sem_valores
+                      : r.via_historico}
+            </p>
+            <span className="mt-1 inline-flex rounded-full border border-[var(--color-border)] bg-[var(--color-surface-soft)] px-2.5 py-0.5 text-caption font-semibold text-fg-muted">
+              {via === 'ORDEM_COMPRA' ? r.badge_pedido : r.badge}
+            </span>
+          </div>
+          <Button type="button" variant="outline" data-testid="rec-trocar-via" onClick={() => escolherVia(null)} disabled={loading}>
+            {r.via_trocar}
+          </Button>
+        </div>
 
         {via === 'NFE' || via === 'HISTORICO' ? <ImportarNfePageClient idioma={idioma} embeddedInAdminHub historicoOnly={via === 'HISTORICO'} /> : null}
         {via === 'SEM_DOCUMENTO' ? (
@@ -560,6 +574,7 @@ export function RecebimentoGerentePageClient({
           </div>
         ) : null}
       </SectionCard>
+      )}
 
       {via === 'HISTORICO' ? <SectionCard title={r.sec_recentes} subtitle={r.sec_recentes_ajuda} className="mt-10">
         <HistoricoEntregas inicial={remessasRecentes} columns={remessaColumns} zh={idioma === 'zh'} />
