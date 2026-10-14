@@ -1,0 +1,46 @@
+Markdown
+Sempre siga os padrões Clean Code e SonarQube:
+1. Funções com no máximo 20 linhas.
+2. Complexidade cognitiva abaixo de 5 por método.
+3. Tipagem estrita em TypeScript (no implicit any).
+4. Tratamento de erros centralizado e descritivo.
+
+"Escreva o código seguindo as melhores práticas do SonarQube:
+
+Complexidade: Mantenha funções curtas e evite aninhamentos excessivos (Cognitive Complexity).
+
+Segurança: Evite hard-coded secrets e sanitize todas as entradas.
+
+Manutenibilidade: Remova código morto, comentários inúteis e siga o DRY (Don't Repeat Yourself).
+
+Tipagem: No TypeScript, evite o uso de any e garanta interfaces claras."
+
+---
+
+Interpretação operacional (em caso de conflito com as métricas numéricas acima, esta seção prevalece)
+
+"Limites de complexidade são guias para código novo ou alterado; não refatore arquivos inteiros só para atingir 20 linhas. Use bom senso."
+
+Para código novo ou arquivos que você está modificando ativamente: prefira funções ou componentes abaixo de 40–50 linhas e complexidade ciclomática abaixo de 10 (mais realista para painéis React, timelines, filtros e workers Edge).
+
+Não reaplique métricas a arquivos de legado a menos que o pedido seja explicitamente refatorar para cumprir regras de complexidade.
+
+A regra das ~20 linhas aplica-se sobretudo a helpers puros, validações e mapeamentos — não como obrigação rígida para componentes de UI completos nem para workers Edge inteiros.
+
+Refatoração e análise de smells
+
+Quando solicitado a analisar ou refatorar, identifique violações das regras acima. Nunca refatore fora do escopo do pedido. Se vir um problema estrutural grande, aponte-o em um comentário ou no resumo, mas não altere arquivos não relacionados.
+
+2. Pedindo Refatoração de Código Existente
+Se você já tem um arquivo pronto (como o seu fiscal-worker ou o sync-processor) e quer "limpar a casa", use este comando:
+
+"Analise este arquivo sob a lente do SonarQube. Identifique code smells, possíveis bugs e duplicações. Refatore o código para reduzir a complexidade ciclomática e garantir que ele passe em um Quality Gate rigoroso."
+
+3. Foco em Pontos Críticos do seu Sistema
+No seu caso específico, o SonarQube seria muito útil para:
+
+Idempotência da Fila Fiscal: Garantir que não existam "condições de corrida" (race conditions) no banco de dados.
+
+Tratamento de Erros: O SonarQube odeia blocos catch vazios ou genéricos demais. Peça ao Codex: "Garanta que todos os erros fiscais sejam logados e tipados, seguindo a regra de Error Handling do Sonar."
+
+Segurança de API: Como você vai integrar com a Focus NFe, o Sonar exigirá que as chaves de API venham de variáveis de ambiente (process.env) e nunca estejam no código.

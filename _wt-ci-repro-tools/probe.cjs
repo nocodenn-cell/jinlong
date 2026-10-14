@@ -1,0 +1,11 @@
+const { chromium } = require('C:/Naturecode/fastproduct/_wt-ci-repro/node_modules/@playwright/test')
+;(async () => {
+  const b = await chromium.launch(); const p = await b.newPage()
+  await p.route('**/_next/static/**/*.js', async (r) => { await new Promise((s) => setTimeout(s, 1500)); await r.continue() })
+  await p.goto('http://localhost:3000/login', { waitUntil: 'domcontentloaded' })
+  const probe = () => p.evaluate(() => ({ docKeys: Object.keys(document).filter((k) => k.startsWith('__react')), bodyKeys: Object.keys(document.body).filter((k) => k.startsWith('__react')).length, anyEl: [...document.querySelectorAll('button,input,a')].slice(0,3).map((e) => Object.keys(e).filter((k) => k.startsWith('__react')).length) }))
+  console.log('t=0 (pre-hidratacao):', JSON.stringify(await probe()))
+  await p.waitForTimeout(6500)
+  console.log('t=6.5s (pos):', JSON.stringify(await probe()))
+  await b.close()
+})()
