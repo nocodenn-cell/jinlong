@@ -20,13 +20,23 @@ export default async function CaixaPage() {
     }
     throw authError
   }
+  // Defesa em profundidade: não depende do middleware para negar acesso sem sessão.
+  if (!user) {
+    redirect('/login?next=%2Fcaixa')
+  }
   const metaNome =
     typeof user?.user_metadata?.full_name === "string" ? user.user_metadata.full_name.trim() : ""
   const emailLocalPart = user?.email?.trim()?.split("@")[0]?.trim() ?? ""
 
-  const { data: usuarioData } = user
-    ? await supabase.from('usuarios').select('perfil, nome').eq('id', user.id).maybeSingle()
-    : { data: null }
+  const { data: usuarioData } = await supabase
+    .from('usuarios')
+    .select('perfil, nome, ativo, loja_id')
+    .eq('id', user.id)
+    .maybeSingle()
+  // Mesma regra de bloqueio do middleware (adminPolicy): conta desativada ou sem loja não opera o PDV.
+  if (usuarioData?.ativo === false || !usuarioData?.loja_id) {
+    redirect('/login?next=%2Fcaixa')
+  }
   const perfil = usuarioData?.perfil ?? null
   // Nome do funcionário (cadastro) antes do login: quem abre o caixa é identificado pelo nome.
   const nomeCadastro = typeof usuarioData?.nome === "string" ? usuarioData.nome.trim() : ""
