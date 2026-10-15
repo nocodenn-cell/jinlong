@@ -1038,10 +1038,18 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       setCaixaMensagem(m.caixa.msg_venda_pendente_bloqueio, { kind: "warning" })
       return
     }
-    // F4/F9 chegam aqui mesmo com a faixa "Caixa fechado" na tela. O servidor
-    // recusa, mas só depois de marcar a finalização como pendente — barrar antes.
-    if (caixaStatus?.status === "FECHADO") {
-      setCaixaMensagem(m.caixa.caixa_fechado_faixa, { kind: "warning" })
+    // F4/F9 chegam aqui sem passar pelo botão. O servidor recusa caixa fechado,
+    // mas só depois de marcar a finalização como pendente — então só seguimos
+    // com o caixa CONFIRMADO aberto (status ainda carregando ou em erro também barra).
+    if (!isCaixaAberto(caixaStatus)) {
+      setCaixaMensagem(
+        caixaStatus?.status === "FECHADO"
+          ? m.caixa.caixa_fechado_faixa
+          : caixaStatus?.status === "ERRO"
+            ? m.caixa.err_srv_status_caixa_indisponivel
+            : m.caixa.status_carregando,
+        { kind: "warning" },
+      )
       return
     }
     // A regra vive no banco (trigger de `vendas`); aqui é só UX para não gastar a viagem.
@@ -1296,7 +1304,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     }
   }, [
     configCaixaWeb,
-    caixaStatus?.status,
+    caixaStatus,
     descontoGerentePercentualEfetivo,
     valorDescontoGerente,
     finalizando,
