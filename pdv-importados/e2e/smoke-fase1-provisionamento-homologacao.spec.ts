@@ -278,6 +278,10 @@ test.describe('Smoke Fase 1 — provisionamento → venda → dashboard', () => 
     await expect(page.getByText(produtoNome)).toBeVisible({ timeout: 30_000 })
   })
 
+  // Depende das formas de pagamento semeadas pelo provisionamento
+  // (`ensureFormasPagamento`): sem elas a RPC de venda recusa a loja nova.
+  // O #556 marca este teste como `test.fixme`; ao sincronizar com o main depois
+  // dele, o fixme deve sair — esta correção é o que o destrava.
   test('4 — Abrir caixa → venda → fechar caixa', async ({ page }) => {
     await loginAs(page, donoEmail, donoSenha, /\/(admin|gerente)/)
     await gotoApp(page, '/caixa', E2E_GOTO_DOMCONTENTLOADED)
