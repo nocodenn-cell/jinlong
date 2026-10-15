@@ -191,7 +191,7 @@ export function OrdemCompraVinculoAutocomplete({
         <ul
           id={listId}
           role="listbox"
-          className="relative z-20 mt-2 max-h-64 w-full overflow-auto rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] py-1 shadow-lg"
+          className="relative z-20 mt-2 max-h-64 w-full overflow-auto rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] py-1 shadow-lg"
         >
           {carregando ? (
             <li
