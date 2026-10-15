@@ -233,7 +233,9 @@ test.describe('Smoke Fase 1 — provisionamento → venda → dashboard', () => 
     await expect(timeline.getByText(/DONO criado|店主已创建/i)).toBeVisible()
     // Status concluído na linha da loja criada
     const rowLoja = page.getByRole('row').filter({ hasText: /Loja criada|门店已创建/i })
-    await expect(rowLoja.getByText(/Concluído|已完成/i)).toBeVisible()
+    // O status é um `<select>` (ImplantacaoChecklistClient): `getByText` casava
+    // o `<option>` selecionado, que nunca é "visível" — checar o valor.
+    await expect(rowLoja.getByRole('combobox')).toHaveValue('CONCLUIDO')
   })
 
   test('3 — Logout ADMIN → login DONO → cadastrar produto', async ({ page }) => {

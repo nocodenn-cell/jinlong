@@ -57,7 +57,9 @@ export function parcelasNoPainel(page: Page) {
   const panel = painelPgto(page)
   return {
     selects: panel.locator('select'),
-    inputs: panel.locator('input[type="number"]'),
+    // Por aria-label (`aria_parcela_valor`), não `type="number"`: desde o #464
+    // o valor da parcela é `CaixaMoneyInput` (texto + `inputMode="decimal"`).
+    inputs: panel.getByRole('textbox', { name: /Valor \(R\$\) da parcela|笔金额/ }),
   }
 }
 
