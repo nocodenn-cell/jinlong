@@ -13,7 +13,7 @@ export const PDV_CONFIG_DEFAULTS = {
 /**
  * Formas de pagamento padrão de uma loja nova — as mesmas que a migration 302
  * (`formas_pagamento` parametrizável) semeou para as lojas que já existiam.
- * `finalizar_venda_transacional_canonica_v4` só aceita forma ativa cadastrada
+ * A RPC canônica de venda (chamada só por `caixaVendas.impl.ts`) aceita apenas forma ativa cadastrada
  * PARA A LOJA da venda; sem estas linhas, nenhuma venda de loja provisionada
  * pelo wizard passava (`FINALIZAR_VENDA_CANONICA_FORMA_PAGAMENTO_INVALIDA`).
  */
