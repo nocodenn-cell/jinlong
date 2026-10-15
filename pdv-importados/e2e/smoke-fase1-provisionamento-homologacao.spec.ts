@@ -263,7 +263,10 @@ test.describe('Smoke Fase 1 — provisionamento → venda → dashboard', () => 
     const labelEstoque = dialog.locator('label').filter({ hasText: /Estoque inicial|初始库存/i })
     await labelEstoque.locator('input').fill('20')
 
-    await dialog.getByRole('button', { name: /^Salvar$|^保存$/ }).click()
+    // Primário do `NovoProdutoModal` (`m.produtos.salvar_produto`). O rodapé tem
+    // três botões "Salvar…" ("Salvar e novo", "Salvar rascunho"); nenhum se
+    // chama só "Salvar" — o seletor antigo esperava até o timeout do teste.
+    await dialog.getByRole('button', { name: /^Salvar produto$|^保存商品$/ }).click()
 
     // Pós-salvar pode mostrar painel de sucesso; fechar se houver
     const fecharPos = dialog.getByRole('button', { name: /Fechar|关闭|繼續|Continuar/i })
