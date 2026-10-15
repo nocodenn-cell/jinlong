@@ -231,9 +231,11 @@ test.describe('Smoke Fase 1 — provisionamento → venda → dashboard', () => 
     const timeline = page.getByTestId('implantacao-timeline')
     await expect(timeline.getByText(/Loja criada|门店已创建/i)).toBeVisible()
     await expect(timeline.getByText(/DONO criado|店主已创建/i)).toBeVisible()
-    // Status concluído na linha da loja criada
+    // Status concluído na linha da loja criada. O status é um `<select>` por
+    // linha: `getByText('Concluído')` casava a `<option>` selecionada, que nunca
+    // é "visível" para o Playwright — o valor do select é o contrato real.
     const rowLoja = page.getByRole('row').filter({ hasText: /Loja criada|门店已创建/i })
-    await expect(rowLoja.getByText(/Concluído|已完成/i)).toBeVisible()
+    await expect(rowLoja.getByRole('combobox')).toHaveValue('CONCLUIDO')
   })
 
   test('3 — Logout ADMIN → login DONO → cadastrar produto', async ({ page }) => {
