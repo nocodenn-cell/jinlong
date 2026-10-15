@@ -92,30 +92,17 @@
 }
 
 /*
- * #36 — Transições entre rotas. `@view-transition { navigation: auto }` ativa
- * a View Transitions API em navegações cross-document same-origin (ex.: o
- * redirect pós-login → painel). Suaviza o "flash" duro entre páginas com um
- * cross-fade curto. NOTA: navegação client-side do App Router (cliques em
- * <Link>) não dispara cross-document VT — para as abas do gerente animarem é
- * preciso a flag experimental do Next; a regra abaixo é inerte e inofensiva aí.
+ * #36 — Transições entre rotas: `@view-transition { navigation: auto }` foi
+ * REMOVIDO de propósito. Com ele, toda navegação cross-document iniciada pela
+ * própria página (ex.: `redirect()` de um Server Component depois que o
+ * `loading.tsx` já streamou — `/admin/relatorios` sem `?view=`, sessão expirada
+ * -> /login) abria uma View Transition que o Chrome pulava ("AbortError:
+ * Transition was skipped") e o novo documento ficava preso no skeleton: o
+ * conteúdo streamado chegava, mas o boundary de Suspense nunca era revelado.
+ * Reproduzido em `next start` (2/2 preso com a regra, 2/2 ok sem ela). O
+ * cross-fade era só cosmético; não reintroduzir sem cobrir esse caso.
+ * Guarda: tests/view-transition-navegacao.regression.test.ts.
  */
-@view-transition {
-  navigation: auto;
-}
-
-/* Cross-fade de 180ms no documento inteiro (fade do achado). */
-::view-transition-old(root),
-::view-transition-new(root) {
-  animation-duration: 180ms;
-  animation-timing-function: ease;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  ::view-transition-old(root),
-  ::view-transition-new(root) {
-    animation: none;
-  }
-}
 
 /* Screen reader only text — hidden visually but announced to assistive tech (WCAG 2.1) */
 .sr-only {
