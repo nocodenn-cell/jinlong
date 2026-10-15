@@ -85,6 +85,7 @@ const legacyAdminUi = {
       cn: '调整时间范围，或前往销售页查看完整历史。',
       pt: 'Ajuste o período ou abra Vendas para ver o histórico completo.',
     } satisfies BilingualLine,
+    tableEmptyCta: { cn: '查看销售', pt: 'Abrir Vendas' } satisfies BilingualLine,
     openOrdersAria: { cn: '打开销售页', pt: 'Abrir página de vendas' } satisfies BilingualLine,
     footer: {
       cn: '生意兴隆 · 财源广进',

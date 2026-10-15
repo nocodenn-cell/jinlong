@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { EmptyState, ErrorState } from '@/components/ui/feedback'
-import { adminVendaDetalheQuery } from '@/lib/navigation/routes'
+import { ROUTES, adminVendaDetalheQuery } from '@/lib/navigation/routes'
 import { shortOrderId } from '../dashboardUtils'
 
 export type DashboardOrderRow = {
@@ -28,6 +28,8 @@ type Labels = {
   statusCancelled: string
   empty: string
   emptyDescription?: string
+  /** CTA do empty-state (abre Vendas). Sem rótulo, o empty-state fica só informativo. */
+  emptyActionLabel?: string
   loadFailed: string
   openOrdersAria: string
 }
@@ -122,7 +124,12 @@ export function DashboardOrdersTable({ orders, labels, loadFailed }: Props) {
       rowKey={(row) => row.id}
       onRowClick={(row) => router.push(adminVendaDetalheQuery(row.id))}
       emptyState={
-        <EmptyState title={labels.empty} description={labels.emptyDescription} />
+        <EmptyState
+          title={labels.empty}
+          description={labels.emptyDescription}
+          actionLabel={labels.emptyActionLabel}
+          onAction={() => router.push(ROUTES.admin.vendas)}
+        />
       }
     />
   )

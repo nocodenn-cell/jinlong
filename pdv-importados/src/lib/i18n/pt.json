@@ -1766,6 +1766,7 @@
         "cn": "调整时间范围，或前往销售页查看完整历史。",
         "pt": "Ajuste o período ou abra Vendas para ver o histórico completo."
       },
+      "tableEmptyCta": { "cn": "查看销售", "pt": "Abrir Vendas" },
       "openOrdersAria": { "cn": "打开销售页", "pt": "Abrir página de vendas" },
       "footer": { "cn": "生意兴隆 · 财源广进", "pt": "Prosperidade nos negócios" },
       "metricTotalSales": { "cn": "总销售额", "pt": "Faturamento (vendas registradas)" },
