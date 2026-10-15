@@ -299,8 +299,8 @@ export function ContasPagarListClient({
   const algumFiltroAtivo = termo || status !== 'todos' || fornecedorId || periodo
 
   const chipBase =
-    'rounded-full px-2.5 py-1 text-caption font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]'
-  const chipActive = 'bg-[var(--color-brand)] text-[var(--color-brand-fg)]'
+    'rounded-full px-2.5 py-1 text-caption font-medium transition-colors fp-focus-ring'
+  const chipActive = 'bg-[var(--color-brand)] text-[var(--color-fg-on-brand)]'
   const chipInactive =
     'border border-[var(--color-border)] bg-[var(--color-surface-soft)] text-fg-muted hover:bg-[var(--color-surface)]'
 

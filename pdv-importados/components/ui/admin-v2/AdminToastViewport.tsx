@@ -58,7 +58,7 @@ export function AdminToastViewport() {
           key={item.id}
           role="status"
           className={cn(
-            'rounded-lg border px-3 py-2.5 text-small leading-snug shadow-[var(--shadow-elevated)] fp-focus-ring',
+            'rounded-lg border px-3 py-2.5 text-small leading-snug shadow-[var(--shadow-toast)] fp-focus-ring',
             TOAST_KIND_CLASS[item.kind],
           )}
         >
