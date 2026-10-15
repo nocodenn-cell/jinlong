@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState, useTransition } from 'react'
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { ROUTES } from '@/lib/navigation/routes'
 import { Edit2, AlertTriangle } from 'lucide-react'
@@ -87,6 +87,17 @@ export function OcDetalheModal({ idioma, ocId, onClose, onEditar, onStatusChange
 
   // ESC em dois níveis: com uma confirmação inline aberta, o ESC só sai dela. Fechar a gaveta
   // (ESC/backdrop sem confirmação aberta) é do DragonModal — ver `dismissable` abaixo.
+  const confirmacaoRef = useRef<HTMLDivElement>(null)
+  // As confirmações entram no fim do corpo rolável, mas o botão que as abre fica no footer fixo:
+  // traz a confirmação para a vista e foca o primeiro controle, senão o fluxo parece travado.
+  useEffect(() => {
+    if (!confirmandoCancelamento && !encerrando) return
+    const painel = confirmacaoRef.current
+    if (!painel) return
+    painel.scrollIntoView?.({ block: 'nearest' })
+    painel.querySelector<HTMLElement>('textarea, button:not([disabled])')?.focus()
+  }, [confirmandoCancelamento, encerrando])
+
   useEffect(() => {
     if (!confirmandoCancelamento && !encerrando) return
     function onKey(e: KeyboardEvent) {
@@ -240,8 +251,12 @@ export function OcDetalheModal({ idioma, ocId, onClose, onEditar, onStatusChange
       title={c.modal_detalhe_titulo}
       // Nada fecha a gaveta enquanto uma ação grava, nem com uma confirmação inline aberta.
       dismissable={!isPending && !confirmandoCancelamento && !encerrando}
+      // O X segue os mesmos dois níveis do ESC: com uma confirmação aberta, só sai dela.
       onClose={() => {
-        if (!isPending) onClose()
+        if (isPending) return
+        if (confirmandoCancelamento) setConfirmandoCancelamento(false)
+        else if (encerrando) setEncerrando(false)
+        else onClose()
       }}
       footer={acoes}
     >
@@ -414,7 +429,11 @@ export function OcDetalheModal({ idioma, ocId, onClose, onEditar, onStatusChange
 
             {/* Confirmação de cancelamento */}
             {confirmandoCancelamento && (
-              <div className="flex gap-2.5 rounded-xl border border-red-500/30 bg-red-500/[0.08] px-4 py-3">
+              <div
+                ref={confirmacaoRef}
+                className="flex gap-2.5 rounded-xl border border-red-500/30 bg-red-500/[0.08] px-4 py-3"
+                data-testid="oc-confirmar-cancelamento"
+              >
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" aria-hidden />
                 <div className="flex-1 space-y-2 text-xs text-red-100/90">
                   <p className="font-semibold text-red-200">{c.btn_cancelar_oc}</p>
@@ -443,6 +462,7 @@ export function OcDetalheModal({ idioma, ocId, onClose, onEditar, onStatusChange
             {/* Confirmação de "encerrar com falta" (motivo obrigatório, auditável) */}
             {encerrando && (
               <div
+                ref={confirmacaoRef}
                 className="space-y-2 rounded-xl border border-amber-500/30 bg-amber-500/[0.08] px-4 py-3"
                 data-testid="oc-encerrar-falta"
               >

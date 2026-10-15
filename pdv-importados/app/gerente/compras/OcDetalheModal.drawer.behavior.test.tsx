@@ -173,4 +173,32 @@ describe('OcDetalheModal — gaveta (Tarefa 9)', () => {
     esc()
     expect(onClose).toHaveBeenCalledTimes(1)
   })
+
+  it('com uma confirmação aberta, o X só sai dela (não fecha a gaveta nem perde o motivo)', async () => {
+    await abrir({ status: 'RASCUNHO' })
+    act(() => botao(footer(), c.btn_cancelar_oc)!.click())
+    const fechar = gaveta().querySelector('button[aria-label="Fechar"]') as HTMLButtonElement
+    act(() => fechar.click())
+    expect(onClose).not.toHaveBeenCalled()
+    expect(botao(footer(), c.btn_cancelar_oc)).toBeDefined() // saiu da confirmação
+    act(() => fechar.click())
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('abrir a confirmação rola até ela e foca o primeiro controle', async () => {
+    const rolar = vi.fn()
+    const original = Element.prototype.scrollIntoView
+    Element.prototype.scrollIntoView = rolar
+    try {
+      await abrir({ status: 'RASCUNHO' })
+      act(() => botao(footer(), c.btn_cancelar_oc)!.click())
+      const painel = gaveta().querySelector('[data-testid="oc-confirmar-cancelamento"]') as HTMLElement
+      expect(painel).not.toBeNull()
+      expect(rolar).toHaveBeenCalled()
+      expect(rolar.mock.contexts[rolar.mock.contexts.length - 1]).toBe(painel)
+      expect(painel.contains(document.activeElement)).toBe(true)
+    } finally {
+      Element.prototype.scrollIntoView = original
+    }
+  })
 })
