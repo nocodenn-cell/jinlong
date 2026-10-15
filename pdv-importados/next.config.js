@@ -18,6 +18,27 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  // `/admin/relatorios` sem `?view=`/`?tab=` → view executiva padrão, como 307
+  // real ANTES do render. O mesmo `redirect()` em `page.tsx` roda dentro do
+  // Suspense de `app/admin/loading.tsx`: o stream já começou, então o Next
+  // devolve 200 + `<meta http-equiv="refresh" content="1;url=...">`, e o
+  // documento carregado pelo refresh ficava com as boundaries em `<div hidden>`
+  // (sidebar e conteúdo nunca revelados — CI 38656914306, gerente.spec.ts:139).
+  // A query original (ex.: `de`/`ate`) é anexada ao destino pelo Next.
+  // `?tab=` legado continua tratado em `page.tsx` (`resolverViewRelatorios`).
+  async redirects() {
+    return [
+      {
+        source: '/admin/relatorios',
+        missing: [
+          { type: 'query', key: 'view' },
+          { type: 'query', key: 'tab' },
+        ],
+        destination: '/admin/relatorios?view=vendas-caixas',
+        permanent: false,
+      },
+    ];
+  },
   typescript: {
     ignoreBuildErrors: false,
   },
