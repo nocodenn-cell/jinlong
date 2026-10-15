@@ -39,12 +39,12 @@ describe('Dashboard — loading', () => {
     expect(blocos).toEqual(['kpis', 'chart', 'table'])
   })
 
-  it('4 KPIs em grid responsivo (2 colunas no mobile, 4 no sm)', () => {
+  it('4 KPIs no mesmo grid do KpiStrip (sem reflow quando os dados chegam)', () => {
     const kpis = raiz().querySelector('[data-skeleton="kpis"]') as HTMLElement
     expect(kpis.children).toHaveLength(4)
-    for (const cls of ['grid', 'grid-cols-2', 'sm:grid-cols-4']) {
-      expect(kpis.classList.contains(cls)).toBe(true)
-    }
+    // Mesma classe do KpiStrip real (1 → 2 → 4 colunas em 768/1280 px, styles/admin-v2.css).
+    expect(kpis.classList.contains('admin-v2-grid-kpi')).toBe(true)
+    expect(kpis.className).not.toMatch(/grid-cols-/)
   })
 
   it('o gráfico reserva a altura do ChartCard e a tabela mostra linhas', () => {

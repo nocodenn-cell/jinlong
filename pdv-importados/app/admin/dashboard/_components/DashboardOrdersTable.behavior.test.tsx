@@ -101,7 +101,7 @@ describe('DashboardOrdersTable — empty-state com CTA (Tarefa 6)', () => {
     container.remove()
   })
 
-  it('sem pedidos, mostra o CTA e ele abre Vendas', () => {
+  it('sem pedidos, mostra o CTA e ele abre Vendas com o histórico completo', () => {
     act(() =>
       root.render(
         <DashboardOrdersTable
@@ -115,7 +115,8 @@ describe('DashboardOrdersTable — empty-state com CTA (Tarefa 6)', () => {
     const cta = Array.from(container.querySelectorAll('button')).find((b) => b.textContent === 'Abrir Vendas')
     expect(cta).toBeDefined()
     act(() => cta!.click())
-    expect(routerPushMock).toHaveBeenCalledWith(ROUTES.admin.vendas)
+    // O texto promete o histórico completo; Vendas sem `periodo` abre só "hoje".
+    expect(routerPushMock).toHaveBeenCalledWith(`${ROUTES.admin.vendas}?periodo=tudo`)
   })
 
   it('sem rótulo de CTA, o empty-state continua só informativo (compat)', () => {

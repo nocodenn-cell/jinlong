@@ -18,7 +18,8 @@ export default function DashboardLoading() {
         <Skeleton className="mt-2 h-9 w-full max-w-md" />
       </div>
 
-      <div data-skeleton="kpis" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {/* Mesmo grid do KpiStrip: os cards não mudam de coluna quando os dados chegam. */}
+      <div data-skeleton="kpis" className="admin-v2-grid-kpi">
         {Array.from({ length: 4 }, (_, i) => (
           <Skeleton key={i} className="h-24 w-full" />
         ))}
