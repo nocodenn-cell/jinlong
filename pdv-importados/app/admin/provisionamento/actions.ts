@@ -367,9 +367,12 @@ async function validarProvisionamento(
     .select('loja_id')
     .eq('loja_id', lojaId)
     .maybeSingle()
+  // Só formas ATIVAS contam: a RPC de venda exige `ativo = true`, e o upsert
+  // preserva formas que a loja já desativou num reprovisionamento.
   const { data: formasList } = await fromLoose(admin, 'formas_pagamento')
     .select('codigo')
     .eq('loja_id', lojaId)
+    .eq('ativo', true)
   const { data: itensList } = await fromLoose(admin, 'implantacao_checklist_itens')
     .select('item_key')
     .eq('loja_id', lojaId)
