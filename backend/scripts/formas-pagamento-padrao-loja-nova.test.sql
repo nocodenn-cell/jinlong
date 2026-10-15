@@ -8,6 +8,8 @@
 --   3. Loja já configurada não é tocada: forma desativada continua desativada, taxa preservada,
 --      nenhuma forma extra é criada.
 --   4. Backfill: loja ativa sem formas ganha as 4; loja inativa sem formas não é tocada.
+--   4b. Ativação posterior (UPDATE OF ativo): loja inativa sem formas ganha as 4 ao ser ativada;
+--      loja já configurada não muda ao ser desativada/reativada; inativa segue intocada enquanto inativa.
 --   5. Função e trigger não são executáveis por anon/authenticated (gate C1).
 --
 -- Dados sintéticos, tudo dentro de uma transação com ROLLBACK.
@@ -129,6 +131,31 @@ BEGIN
     RAISE EXCEPTION 'FORMAS_P0_FALHOU: segunda passada do backfill não é idempotente (%)', v_n;
   END IF;
   RAISE NOTICE 'OK 4: backfill seguro e idempotente.';
+
+  -- ── 4b. Ativação posterior ─────────────────────────────────────────────────────────────────
+  -- Loja criada inativa não recebe formas; ao ser ativada, recebe.
+  UPDATE public.lojas SET nome = 'FormasP0 Inativa (editada)' WHERE id = v_loja_inativa;
+  SELECT count(*) INTO v_n FROM public.formas_pagamento WHERE loja_id = v_loja_inativa;
+  IF v_n <> 0 THEN
+    RAISE EXCEPTION 'FORMAS_P0_FALHOU: loja inativa foi provisionada sem ser ativada (%)', v_n;
+  END IF;
+  UPDATE public.lojas SET ativo = true WHERE id = v_loja_inativa;
+  SELECT count(*) INTO v_n FROM public.formas_pagamento
+  WHERE loja_id = v_loja_inativa AND ativo AND codigo IN ('DINHEIRO', 'PIX', 'CARTAO_DEBITO', 'CARTAO_CREDITO');
+  IF v_n <> 4 THEN
+    RAISE EXCEPTION 'FORMAS_P0_FALHOU: ativar loja sem formas deveria provisionar as 4 (%)', v_n;
+  END IF;
+  -- Loja já configurada: desativar e reativar não muda nada.
+  UPDATE public.lojas SET ativo = false WHERE id = v_loja_cfg;
+  UPDATE public.lojas SET ativo = true WHERE id = v_loja_cfg;
+  SELECT count(*) INTO v_n FROM public.formas_pagamento WHERE loja_id = v_loja_cfg;
+  SELECT ativo INTO v_ativo FROM public.formas_pagamento WHERE loja_id = v_loja_cfg AND codigo = 'DINHEIRO';
+  SELECT taxa_percentual INTO v_taxa FROM public.formas_pagamento WHERE loja_id = v_loja_cfg AND codigo = 'PIX';
+  IF v_n <> 2 OR v_ativo IS DISTINCT FROM false OR v_taxa IS DISTINCT FROM 1.50 THEN
+    RAISE EXCEPTION 'FORMAS_P0_FALHOU: reativar loja configurada alterou formas (linhas %, dinheiro ativo %, taxa pix %)',
+      v_n, v_ativo, v_taxa;
+  END IF;
+  RAISE NOTICE 'OK 4b: ativação provisiona só loja sem formas; configurada intacta.';
 
   -- ── 5. Sem exposição a anon/authenticated ──────────────────────────────────────────────────
   IF has_function_privilege('authenticated', 'public.garantir_formas_pagamento_padrao(uuid)', 'EXECUTE')

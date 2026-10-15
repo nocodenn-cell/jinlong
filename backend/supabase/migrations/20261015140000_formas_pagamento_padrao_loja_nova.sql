@@ -12,7 +12,7 @@
 --      (mesmos codigo/nome da 302). Só age em loja SEM nenhuma linha em `formas_pagamento`; assim nunca
 --      sobrescreve configuração, nunca reativa forma desativada e nunca mexe em loja já configurada.
 --      Reexecutar é no-op. ON CONFLICT DO NOTHING como defesa extra contra corrida.
---   2. Trigger AFTER INSERT em `lojas` chama a função: cobre TODOS os caminhos (wizard, seed, SQL manual,
+--   2. Trigger AFTER INSERT OR UPDATE OF ativo em `lojas` (só para loja ativa) chama a função: cobre TODOS os caminhos (wizard, seed, SQL manual,
 --      futuras Edge Functions) na mesma transação do INSERT da loja (atômico; falha da forma desfaz a loja).
 --      Preferido a chamar só na RPC/action: não existe RPC de provisionamento (a action insere direto
 --      via PostgREST) e cada novo caminho de criação teria de lembrar de chamar.
@@ -69,7 +69,11 @@ SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
 BEGIN
-  PERFORM public.garantir_formas_pagamento_padrao(NEW.id);
+  -- Loja inativa não é tocada; quando for (re)ativada, o UPDATE OF ativo cai aqui e a função,
+  -- que é no-op para loja com qualquer forma, provisiona só quem ainda não tem nenhuma.
+  IF COALESCE(NEW.ativo, false) THEN
+    PERFORM public.garantir_formas_pagamento_padrao(NEW.id);
+  END IF;
   RETURN NEW;
 END;
 $$;
@@ -78,7 +82,7 @@ REVOKE ALL ON FUNCTION public.trg_lojas_formas_pagamento_padrao() FROM PUBLIC, a
 
 DROP TRIGGER IF EXISTS trg_lojas_formas_pagamento_padrao ON public.lojas;
 CREATE TRIGGER trg_lojas_formas_pagamento_padrao
-  AFTER INSERT ON public.lojas
+  AFTER INSERT OR UPDATE OF ativo ON public.lojas
   FOR EACH ROW
   EXECUTE FUNCTION public.trg_lojas_formas_pagamento_padrao();
 

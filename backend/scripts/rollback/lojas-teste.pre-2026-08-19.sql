@@ -22,6 +22,18 @@
 
 BEGIN;
 
+-- Trigger de formas padrão (migration 20261015140000) desligado só durante o restore: sem isso ele cria
+-- 4 formas com UUID novo ao reinserir a loja e as linhas originais (mesmo loja_id+codigo) estourariam a
+-- UNIQUE. Condicional: em bancos sem a migration o bloco é no-op. Transacional (ALTER TABLE desfaz no rollback).
+DO $trg$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgrelid = 'public.lojas'::regclass
+             AND tgname = 'trg_lojas_formas_pagamento_padrao' AND NOT tgisinternal) THEN
+    ALTER TABLE public.lojas DISABLE TRIGGER trg_lojas_formas_pagamento_padrao;
+  END IF;
+END
+$trg$;
+
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 1. lojas
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -80,6 +92,15 @@ SELECT * FROM jsonb_populate_recordset(NULL::public.formas_pagamento, $json$
 $json$::jsonb)
 ON CONFLICT (id) DO NOTHING;
 
+DO $trg$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgrelid = 'public.lojas'::regclass
+             AND tgname = 'trg_lojas_formas_pagamento_padrao' AND NOT tgisinternal) THEN
+    ALTER TABLE public.lojas ENABLE TRIGGER trg_lojas_formas_pagamento_padrao;
+  END IF;
+END
+$trg$;
+
 COMMIT;
 
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -107,6 +128,20 @@ COMMIT;
 --
 -- Restaurar: rodar o bloco abaixo, ou simplesmente reaplicar a `036`.
 
+BEGIN;
+
+-- Trigger de formas padrão (migration 20261015140000) desligado só durante o restore: sem isso ele cria
+-- 4 formas com UUID novo ao reinserir a loja e as linhas originais (mesmo loja_id+codigo) estourariam a
+-- UNIQUE. Condicional: em bancos sem a migration o bloco é no-op. Transacional (ALTER TABLE desfaz no rollback).
+DO $trg$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgrelid = 'public.lojas'::regclass
+             AND tgname = 'trg_lojas_formas_pagamento_padrao' AND NOT tgisinternal) THEN
+    ALTER TABLE public.lojas DISABLE TRIGGER trg_lojas_formas_pagamento_padrao;
+  END IF;
+END
+$trg$;
+
 INSERT INTO public.lojas
 SELECT * FROM jsonb_populate_recordset(NULL::public.lojas, $json$
 [
@@ -125,3 +160,14 @@ SELECT * FROM jsonb_populate_recordset(NULL::public.formas_pagamento, $json$
 ]
 $json$::jsonb)
 ON CONFLICT (id) DO NOTHING;
+
+DO $trg$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgrelid = 'public.lojas'::regclass
+             AND tgname = 'trg_lojas_formas_pagamento_padrao' AND NOT tgisinternal) THEN
+    ALTER TABLE public.lojas ENABLE TRIGGER trg_lojas_formas_pagamento_padrao;
+  END IF;
+END
+$trg$;
+
+COMMIT;
