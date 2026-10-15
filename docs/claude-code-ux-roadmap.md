@@ -76,14 +76,15 @@ Legenda de risco: 🔴 alto · 🟠 médio · 🟡 baixo.
 - Behavior tests: commit na URL só após 300 ms; Enter aplica na hora; Limpar some sem filtro
   ativo e aparece com filtro; grid aplica as classes responsivas.
 
-### Tarefa 4 🟡 — Primitivo `DetailDrawer`
-- `components/ui/DetailDrawer.tsx`: `open`, `onClose`, `title`, `footer`, `size` (`md` 480 / `lg` 640),
-  `closeDisabled`. Mobile tela cheia; header fixo; corpo rolável; footer fixo;
-  ESC + backdrop fecham; foco preso e restaurado; scroll lock (reaproveitar a lógica do `DragonModal`).
-- Behavior tests: ESC fecha, `closeDisabled` bloqueia, foco vai para a gaveta e volta ao gatilho,
-  footer renderizado, `role="dialog"` + `aria-modal` + `aria-labelledby`.
+### Tarefa 4 🟡 — Gaveta: `DragonModal placement="drawer"`
+- O `DragonModal` é o primitivo único de diálogo; a gaveta vira variante dele, não um
+  componente concorrente. Herda ESC, backdrop, foco preso/restaurado, trava de scroll.
+- Tela cheia no mobile; a partir de `sm`, 480 px (`sm`/`md`) ou 640 px (`lg`/`xl`).
+  Header fixo, só o corpo rola, footer fixo com as ações primárias.
+- Behavior tests: geometria, header/corpo/footer, ESC/backdrop/X, `dismissable`,
+  a11y, foco ao abrir e ao fechar, ciclo de Tab, regressão do diálogo central.
 
-### Tarefa 5 🟡 — `VendaDetailSheet` → `DetailDrawer`
+### Tarefa 5 🟡 — `VendaDetailSheet` → gaveta do `DragonModal`
 - Mesmo conteúdo e ações (reimpressão, cancelamento, devolução); só a casca muda.
 - Testes existentes (`cancelamento`, `reimpressao`) continuam verdes + teste de ESC/footer.
 
@@ -93,7 +94,7 @@ Legenda de risco: 🔴 alto · 🟠 médio · 🟡 baixo.
 - Behavior tests: skeleton com 3 blocos na ordem; empty-state mostra o CTA com href do PDV.
 
 ### Tarefa 7 🟠 — Dashboard: drill-down em gaveta
-- Clicar num KPI grava `?detalhe=<métrica>` na URL e abre `DetailDrawer` com a lista que
+- Clicar num KPI grava `?detalhe=<métrica>` na URL e abre a gaveta (`DragonModal placement="drawer"`) com a lista que
   compõe a métrica (dados já carregados pela página; nenhuma query nova).
 - Behavior test: clique → URL atualizada → gaveta aberta; ESC → parâmetro removido.
 
@@ -102,7 +103,7 @@ Legenda de risco: 🔴 alto · 🟠 médio · 🟡 baixo.
   presets 7d/30d/mês em movimentações.
 - Behavior tests por tela (URL espelhada, Limpar condicional).
 
-### Tarefa 9 🟠 — `OcDetalheModal` → `DetailDrawer`
+### Tarefa 9 🟠 — `OcDetalheModal` → gaveta do `DragonModal`
 - Fluxo de compras/recebimento: maior superfície. Só a casca muda; regras de recebimento parcial
   e aviso de duplicidade intactas (testes existentes como guarda).
 
