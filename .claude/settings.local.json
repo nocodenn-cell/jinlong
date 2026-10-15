@@ -16,7 +16,6 @@
       "Bash(xargs grep -l \"categorias\")",
       "Bash(git add *)",
       "Bash(xargs grep -l \"categori.*financ\\\\|financ.*categori\\\\|dre\")",
-      "Bash(git push *)",
       "Bash(npm run *)",
       "Bash(git commit -m ' *)",
       "Bash(npx tsc *)",
@@ -39,14 +38,11 @@
       "Bash(createWithDefaultEstoque)",
       "Bash(git -C /c/Naturecode/fastproduct add pdv-importados/lib/gerente/parseProdutoImportCsv.test.ts)",
       "Bash(git -C /c/Naturecode/fastproduct commit -m ' *)",
-      "Bash(git -C /c/Naturecode/fastproduct push origin fix/pdv-sonar-build-unblock)",
       "Bash(git -C /c/Naturecode/fastproduct add backend/scripts/sync-outbox-anti-replay-diagnostic.ps1)",
       "Bash(git -C /c/Naturecode/fastproduct add backend/supabase/migrations/105_suspensao_vendas.sql backend/supabase/migrations/099_fiscal_enqueue_valida_tipo_venda.sql)",
-      "Bash(npx supabase *)",
       "PowerShell(Rename-Item \"C:\\\\Naturecode\\\\fastproduct\\\\backend\\\\supabase\\\\migrations\\\\099_categorias_ativo.sql\" \"106_categorias_ativo.sql\")",
       "PowerShell(Rename-Item \"C:\\\\Naturecode\\\\fastproduct\\\\backend\\\\supabase\\\\migrations\\\\100_categorias_financeiras.sql\" \"107_categorias_financeiras.sql\")",
       "mcp__93d8e0ff-3306-4cc0-8b34-9d8a9750000d__list_projects",
-      "mcp__93d8e0ff-3306-4cc0-8b34-9d8a9750000d__execute_sql",
       "Bash(sleep 5 && head -80 /c/Users/User/AppData/Local/Temp/claude/C--Naturecode-fastproduct/d3f82128-1a72-4454-9577-a43b114dd120/tasks/b7r2j3s22.output)",
       "Bash(Get-ChildItem -Path \"C:\\\\Naturecode\\\\fastproduct\\\\pdv-importados\" -Recurse -Depth 2 -Directory)",
       "Bash(Select-Object FullName)",
@@ -132,7 +128,13 @@
       "mcp__visualize__read_me",
       "mcp__visualize__show_widget",
       "Bash(sort -t: -k2 -rn)",
-      "Bash(grep -E \"\\\\.\\(md|txt\\)$\")"
+      "Bash(grep -E \"\\\\.\\(md|txt\\)$\")",
+      "Bash(npx supabase --version)",
+      "Bash(npx supabase status*)",
+      "Bash(npx supabase projects list*)",
+      "Bash(npx supabase migration list*)",
+      "Bash(npx supabase migration new *)",
+      "Bash(npx supabase gen types *)"
     ],
     "deny": [
       "Read(**/.env)",
@@ -145,7 +147,22 @@
       "Bash(supabase db push*)",
       "PowerShell(npx supabase db push*)",
       "PowerShell(supabase db push*)",
-      "mcp__93d8e0ff-3306-4cc0-8b34-9d8a9750000d__apply_migration"
+      "mcp__93d8e0ff-3306-4cc0-8b34-9d8a9750000d__apply_migration",
+      "mcp__93d8e0ff-3306-4cc0-8b34-9d8a9750000d__execute_sql",
+      "Bash(git push*)",
+      "Bash(git -C * push*)",
+      "PowerShell(git push*)",
+      "PowerShell(git -C * push*)",
+      "Bash(npx supabase migration up*)",
+      "Bash(npx supabase migration repair*)",
+      "Bash(supabase migration up*)",
+      "Bash(supabase migration repair*)",
+      "PowerShell(npx supabase migration up*)",
+      "PowerShell(npx supabase migration repair*)",
+      "PowerShell(supabase migration up*)",
+      "PowerShell(supabase migration repair*)",
+      "mcp__claude_ai_Supabase__execute_sql",
+      "mcp__claude_ai_Supabase__apply_migration"
     ]
   }
 }

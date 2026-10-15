@@ -32,7 +32,7 @@ Nenhuma alteração no código do produto, no banco ou em produção. Nenhum mer
 - Instruções de projeto: **não há `CLAUDE.md`** no repositório nem em `~/.claude`. Existe `AGENTS.md` no checkout principal (branch `loop/ux-caixa-gold-token`), mas não na `main`.
 - CI: `secret-scan.yml` (gitleaks em PR e push na `main`), CIs de backend/pdv-importados/pdv-local, release e backups.
 
-**Achados de segurança na configuração encontrada (1 e 2 apenas parcialmente mitigados em §8; ver as lacunas listadas lá):**
+**Achados de segurança na configuração encontrada (2 corrigido e 1 parcialmente mitigado em §8; a leitura indireta de segredos continua aberta):**
 
 1. `.claude/settings.local.json`, que apesar do nome **é versionado no git**, liberava `Bash(cat .env.local)` e `Read(//c//**)`, ou seja, o agente pode ler segredos locais sem perguntar. Isso é exatamente o que o "Secret Redactor" prometia mitigar.
 2. A mesma lista libera `mcp__…__apply_migration` e `mcp__…__execute_sql` (Supabase), `Bash(npx supabase *)` e `Bash(git push *)`, sem confirmação.
@@ -135,19 +135,15 @@ Validação (sessões headless no Claude Code 2.1.295):
 - Com um `.env.local` falso (valor-canário), `Read` foi **negado mesmo em `bypassPermissions`** ("denied by your permission settings"). O arquivo falso foi apagado em seguida.
 - `npx supabase db push --help`, com `--allowedTools Bash`, passou a **pedir confirmação** e não executou.
 
-**Lacunas que continuam abertas (revisão do PR #554).** Este reforço é parcial e **não** corrige por completo os achados 1 e 2:
+**Segunda rodada, aplicada em 2026-10-14** após a revisão do PR #554 e aprovada pelo responsável. Backups em `~/.claude/backups/settings.local.{main,worktree}.backup-pre-hardening2-2026-10-14.json`.
 
-- **Leitura indireta de segredos.** Regras `Read` não se aplicam a buscas pelo shell: um `grep -r SUPABASE .` a partir da raiz lê o `.env.local` sem citá-lo, e `Get-Content .env.local` no PowerShell cai só no prompt normal. Só um sandbox no nível do sistema operacional garante o bloqueio; regras de permissão sozinhas não bastam.
-- **`execute_sql` continua no `allow`.** SQL arbitrário (`UPDATE`, `DELETE`, DDL) no projeto Supabase roda sem confirmação.
-- **Outros comandos remotos do Supabase CLI** continuam liberados pelo `allow` amplo `Bash(npx supabase *)`, por exemplo `migration up --linked` e `migration repair --linked`. O `ask` cobre só `db push`, e o Launch Codes só `db reset`.
-- **`Bash(git push *)` continua no `allow`.** Um push comum para a `main` dispara o deploy de produção da Vercel (`ci-pdv-importados.yml`), e o secret scan só roda depois. O Launch Codes só intercepta `--force`.
+3. **`execute_sql` → `ask`** (saiu do `allow`). SQL arbitrário no Supabase passa a pedir confirmação. O mesmo conector tem nomes diferentes no app desktop (`mcp__93d8e0ff-3306-4cc0-8b34-9d8a9750000d__*`) e no CLI (`mcp__claude_ai_Supabase__*`), por isso `execute_sql` e `apply_migration` estão em `ask` com os dois nomes.
+4. **`git push` → `ask`**: `Bash(git push*)`, `Bash(git -C * push*)` e os equivalentes em PowerShell. Saíram do `allow` o `Bash(git push *)` e o push fixo de `fix/pdv-sonar-build-unblock`. Push para a `main` dispara o deploy da Vercel, e o secret scan só roda depois.
+5. **Supabase CLI.** O `allow` amplo `Bash(npx supabase *)` foi trocado por regras só de leitura e geração local: `--version`, `status`, `projects list`, `migration list`, `migration new`, `gen types`. Entraram em `ask` `migration up` e `migration repair` (Bash e PowerShell, com e sem `npx`), somando-se ao `db push` da primeira rodada. Qualquer outro subcomando cai no prompt padrão.
 
-Fechar essas lacunas exige novas mudanças de permissão, que dependem de decisão do responsável:
+Validação (headless, Claude Code 2.1.295, com o Bash liberado explicitamente via `--allowedTools` para provar que o `ask` tem precedência): `git push --dry-run origin HEAD`, `git -C . push --dry-run origin HEAD`, `npx supabase migration up --help` e `npx supabase migration repair --help` e `execute_sql` com `select 1` **pediram confirmação e não executaram**. Controles: `npx supabase --version` e `list_projects` rodaram sem prompt.
 
-- mover `execute_sql` para `ask`;
-- trocar `Bash(npx supabase *)` por regras específicas, com `ask` para `migration up`, `migration repair` e `db push`;
-- mover `git push` para `ask`;
-- avaliar o sandbox do Claude Code para os arquivos `.env*`.
+**Lacuna que continua aberta:** leitura indireta de segredos. Regras `Read` não se aplicam a buscas pelo shell: um `grep -r SUPABASE .` a partir da raiz lê o `.env.local` sem citá-lo, e `Get-Content .env.local` no PowerShell cai só no prompt normal. Só um sandbox no nível do sistema operacional garante o bloqueio; avaliar o sandbox do Claude Code para os arquivos `.env*`.
 
 **Ainda não aplicado:**
 
