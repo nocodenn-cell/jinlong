@@ -161,6 +161,7 @@ jobs:
           fi
           psql "$PSQL_URL" -v ON_ERROR_STOP=1 -f scripts/c1-secdef-sem-identidade.test.sql
           psql "$PSQL_URL" -v ON_ERROR_STOP=1 -f scripts/c2-suspensao-vendas-trigger.test.sql
+          psql "$PSQL_URL" -v ON_ERROR_STOP=1 -f scripts/formas-pagamento-padrao-loja-nova.test.sql
 
       # PR-2D (C3): devolução paga pelo caixa pagador (regra 0/1/N), caixa fechado imutável e conciliação D-13.
       # Transação com ROLLBACK, dados sintéticos; roda sem guard de fork PR. A concorrência com 2 sessões reais
