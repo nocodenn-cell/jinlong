@@ -24,9 +24,35 @@ function isYmd(s: string): boolean {
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const LIMITE_TITULOS_ATRASO = 1000
 
 function isUuid(s: string): boolean {
   return UUID_RE.test(s)
+}
+
+function tabelaContasReceber(supabase: SupabaseClient) {
+  return supabase.from('contas_receber')
+}
+
+export type TituloAbertoVencimento = {
+  cliente_id: string
+  vencimento: string | null
+  status: string
+}
+
+/** Títulos ABERTO/PARCIAL com vencimento anterior a `hoje`. A política de atraso fica no caller. */
+export async function listarTitulosAbertosComVencimento(
+  supabase: SupabaseClient,
+  hoje: string,
+): Promise<{ ok: true; rows: TituloAbertoVencimento[] } | { ok: false; error: string }> {
+  const { data, error } = await tabelaContasReceber(supabase)
+    .select('cliente_id, vencimento, status')
+    .in('status', ['ABERTO', 'PARCIAL'])
+    .not('vencimento', 'is', null)
+    .lt('vencimento', hoje)
+    .limit(LIMITE_TITULOS_ATRASO)
+  if (error) return { ok: false, error: error.message }
+  return { ok: true, rows: (data ?? []) as TituloAbertoVencimento[] }
 }
 
 async function resolveIdsByBusca(
@@ -37,13 +63,13 @@ async function resolveIdsByBusca(
   if (!needle) return null
   const pat = `%${escapeIlike(needle)}%`
   const [{ data: byDesc }, { data: cliQ }] = await Promise.all([
-    supabase.from('contas_receber').select('id').ilike('descricao', pat).limit(2000),
+    tabelaContasReceber(supabase).select('id').ilike('descricao', pat).limit(2000),
     supabase.from('clientes').select('id').ilike('nome', pat).limit(500),
   ])
   const fromCliIds = cliQ?.map((c) => c.id as string) ?? []
   let fromClienteTitulos: { id: string }[] = []
   if (fromCliIds.length > 0) {
-    const r = await supabase.from('contas_receber').select('id').in('cliente_id', fromCliIds).limit(2000)
+    const r = await tabelaContasReceber(supabase).select('id').in('cliente_id', fromCliIds).limit(2000)
     fromClienteTitulos = r.data ?? []
   }
   const set = new Set<string>()
@@ -92,8 +118,7 @@ export function createReceivableReader(supabase: SupabaseClient): ReceivableRead
           return { ok: true, titulos: [], capped: false }
         }
 
-        let q = supabase
-          .from('contas_receber')
+        let q = tabelaContasReceber(supabase)
           .select('id, valor_total, valor_aberto, status, descricao, vencimento, cliente_id, loja_id, venda_id, clientes(nome)')
 
         if (query.opcao === 'ABERTO') q = q.eq('status', 'ABERTO')

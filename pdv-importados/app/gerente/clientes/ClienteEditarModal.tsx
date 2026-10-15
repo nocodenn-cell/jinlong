@@ -6,7 +6,7 @@
  * Regras LGPD, masks e actions preservadas.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { UserPlus, UserCog } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Field, Input, Checkbox } from '@/components/ui/forms'
@@ -73,6 +73,8 @@ export function ClienteEditarModal({
   const [erros, setErros] = useState<Record<string, string | null>>({})
   const [salvando, setSalvando] = useState(false)
   const [consentimentoLgpd, setConsentimentoLgpd] = useState(false)
+  const [enderecoAberto, setEnderecoAberto] = useState(Boolean(cliente?.endereco))
+  const [prazoAberto, setPrazoAberto] = useState(Boolean(cliente && Number(cliente.limite_crediario) > 0))
 
   const nomeRef = useRef<HTMLInputElement>(null)
 
@@ -226,21 +228,26 @@ export function ClienteEditarModal({
                 onClick={() => handleTipo(t)}
                 disabled={salvando}
                 className={cn(
-                  'h-8 rounded-md text-caption font-medium transition-colors',
+                  'flex min-h-10 flex-col items-center justify-center rounded-md text-caption transition-colors',
                   tipo === t
                     ? 'bg-[var(--color-info-bg)] font-semibold text-brand'
                     : 'text-fg-subtle hover:text-fg',
                 )}
               >
-                {t === 'PF' ? m.clientes.tipo_pf : m.clientes.tipo_pj}
+                <span>{t === 'PF' ? m.clientes.tipo_pessoa_fisica : m.clientes.tipo_empresa}</span>
+                <span className="text-[10px] font-normal opacity-70">
+                  {t === 'PF' ? m.clientes.tipo_sigla_pf : m.clientes.tipo_sigla_pj}
+                </span>
               </button>
             ))}
           </div>
         </div>
 
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field
           id="cli-nome"
           label={tipo === 'PJ' ? m.clientes.field_razao_social : m.clientes.field_nome}
+          hint={tipo === 'PJ' ? m.clientes.hint_nome_unico : undefined}
           required
           error={erros.nome ?? undefined}
         >
@@ -257,7 +264,6 @@ export function ClienteEditarModal({
           />
         </Field>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field
             id="cli-doc"
             label={tipo === 'PF' ? m.clientes.field_cpf : m.clientes.field_cnpj}
@@ -274,6 +280,9 @@ export function ClienteEditarModal({
               className="font-mono"
             />
           </Field>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field id="cli-tel" label={m.clientes.field_telefone} error={erros.telefone ?? undefined}>
             <Input
               type="tel"
@@ -285,9 +294,7 @@ export function ClienteEditarModal({
               className="tabular-nums"
             />
           </Field>
-        </div>
-
-        <Field id="cli-email" label={m.clientes.field_email} error={erros.email ?? undefined}>
+          <Field id="cli-email" label={m.clientes.field_email} error={erros.email ?? undefined}>
           <Input
             type="email"
             value={email}
@@ -299,7 +306,15 @@ export function ClienteEditarModal({
             placeholder="cliente@example.com"
           />
         </Field>
+        </div>
 
+        <SecaoOpcional
+          id="cli-endereco-secao"
+          aberto={enderecoAberto}
+          onToggle={() => setEnderecoAberto((v) => !v)}
+          abrir={m.clientes.secao_endereco}
+          recolher={m.clientes.secao_endereco_recolher}
+        >
         <Field id="cli-end" label={m.clientes.field_endereco}>
           <Input
             value={endereco}
@@ -309,11 +324,19 @@ export function ClienteEditarModal({
             placeholder={m.clientes.placeholder_endereco}
           />
         </Field>
+        </SecaoOpcional>
 
+        <SecaoOpcional
+          id="cli-prazo-secao"
+          aberto={prazoAberto}
+          onToggle={() => setPrazoAberto((v) => !v)}
+          abrir={m.clientes.secao_prazo}
+          recolher={m.clientes.secao_prazo_recolher}
+        >
         <Field
           id="cli-limite"
           label={m.clientes.field_limite_crediario}
-          hint={m.clientes.hint_limite}
+          hint={(parseBRL(limite) ?? 0) === 0 ? m.clientes.hint_limite_zero : m.clientes.hint_limite}
           error={erros.limite_crediario ?? undefined}
         >
           <Input
@@ -325,6 +348,7 @@ export function ClienteEditarModal({
             className="text-right font-mono tabular-nums"
           />
         </Field>
+        </SecaoOpcional>
 
         {!editando ? (
           <div className="border-t border-[var(--color-border)] pt-3">
@@ -354,5 +378,36 @@ export function ClienteEditarModal({
         ) : null}
       </form>
     </DragonModal>
+  )
+}
+
+function SecaoOpcional({
+  id,
+  aberto,
+  onToggle,
+  abrir,
+  recolher,
+  children,
+}: {
+  id: string
+  aberto: boolean
+  onToggle: () => void
+  abrir: string
+  recolher: string
+  children: ReactNode
+}) {
+  return (
+    <div>
+      <button
+        type="button"
+        className="text-caption font-medium text-brand"
+        aria-expanded={aberto}
+        aria-controls={id}
+        onClick={onToggle}
+      >
+        {aberto ? recolher : abrir}
+      </button>
+      {aberto ? <div id={id} className="mt-2">{children}</div> : null}
+    </div>
   )
 }

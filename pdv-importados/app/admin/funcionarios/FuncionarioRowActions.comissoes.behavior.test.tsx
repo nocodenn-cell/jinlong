@@ -22,6 +22,7 @@ const L = {
   bloqueioDonoAdmin: 'bloq-dono',
   bloqueioSemPermissao: 'bloq-perm',
   bloqueioSiMesmo: 'bloq-si',
+  menuMais: 'Mais ações',
 }
 
 const row = (over: Partial<FuncionarioListRow>): FuncionarioListRow =>
@@ -52,7 +53,9 @@ function render(r: FuncionarioListRow, ator = { id: 'dono-1', perfil: 'DONO' }) 
       />,
     )
   })
-  return container.querySelector<HTMLAnchorElement>('[data-testid="funcionario-ver-comissoes"]')
+  const menu = container.querySelector<HTMLButtonElement>('[aria-haspopup="menu"]')
+  if (menu) act(() => menu.click())
+  return document.querySelector<HTMLAnchorElement>('[data-testid="funcionario-ver-comissoes"]')
 }
 
 describe('Funcionários → Comissões', () => {

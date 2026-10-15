@@ -1,4 +1,6 @@
 /** @vitest-environment jsdom */
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
 import React from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { flushSync } from 'react-dom'
@@ -24,6 +26,15 @@ function render(ui: React.ReactElement) {
   flushSync(() => root.render(ui))
 }
 
+describe('DragonModal acima do cabeçalho sticky', () => {
+  it('o token do modal fica acima do token sticky da tabela', () => {
+    const css = readFileSync(path.join(process.cwd(), 'styles/tokens/z-index.css'), 'utf8')
+    const sticky = Number(css.match(/--z-sticky:\s*(\d+)/)?.[1])
+    const modal = Number(css.match(/--z-modal:\s*(\d+)/)?.[1])
+    expect(modal).toBeGreaterThan(sticky)
+  })
+})
+
 describe('DragonModal', () => {
   it('não renderiza quando open=false', () => {
     render(
@@ -43,6 +54,8 @@ describe('DragonModal', () => {
     )
     const dialog = document.querySelector('[role="dialog"]')
     expect(dialog).not.toBeNull()
+    expect(dialog?.className).toContain('z-[var(--z-modal)]')
+    expect(container.contains(dialog)).toBe(true)
     expect(dialog?.getAttribute('aria-modal')).toBe('true')
     // título referenciado por aria-labelledby
     const labelledby = dialog?.getAttribute('aria-labelledby')

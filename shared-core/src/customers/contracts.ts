@@ -7,7 +7,7 @@
  */
 
 import type { CustomerErrorCode, CustomerErrorParams } from './errorCodes'
-import type { ClienteInput, ClienteListRow } from './types'
+import type { ClienteInput, ClienteListRow, ClienteTipo } from './types'
 
 export type ValidateClienteResult =
   | { ok: true }
@@ -47,10 +47,16 @@ export type ClienteAnonymizePayload = {
 
 // ─── Leitura ───────────────────────────────────────────────────────────────
 
+/** Filtro de lista — não cria saldo; só restringe a view já existente. */
+export type ClienteListaSituacao = 'aberto' | 'atraso'
+
 /** Port de leitura paginada (cross-domínio, ex.: financeiro). */
 export type ListClientesPaginadosQuery = {
   page: number
   termo?: string
+  tipo?: ClienteTipo
+  /** `aberto`: saldo_crediario > 0. `atraso`: título em aberto com vencimento anterior a hoje. */
+  situacao?: ClienteListaSituacao
 }
 
 export type ListClientesPaginadosOk = {

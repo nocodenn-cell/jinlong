@@ -151,10 +151,10 @@ export function DragonModal({
       ? 'text-destructive bg-destructive/10'
       : 'text-amber-400 bg-amber-400/10'
 
-  return (
+  const dialog = (
     <div
       className={cn(
-        'fixed inset-0 z-50 flex justify-center',
+        'fixed inset-0 z-[var(--z-modal)] flex justify-center',
         sheet ? 'items-end p-0 sm:items-center sm:p-4' : 'items-center p-4',
       )}
       role="dialog"
@@ -213,4 +213,6 @@ export function DragonModal({
       </div>
     </div>
   )
+
+  return dialog
 }

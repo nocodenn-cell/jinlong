@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import Link from 'next/link'
 import { AlertTriangle, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -12,6 +13,7 @@ import { CrudListShell, PageActions } from '@/components/ui/admin-v2'
 import { DragonModal } from '@/components/ui/DragonModal'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { cn } from '@/lib/utils'
+import { ROUTES } from '@/lib/navigation/routes'
 import {
   definirAtivoFuncionarioAction,
   type FuncionarioListRow,
@@ -26,6 +28,13 @@ import {
   motivoBloqueioToggle,
   type FuncionarioGrupoId,
 } from './funcionarioUi'
+import {
+  FUNCIONARIOS_LISTA_KEY,
+  gravarFuncionariosListaEstado,
+  lerFuncionariosListaEstado,
+  type PerfilFiltro,
+  type StatusFiltro,
+} from './funcionarioListaEstado'
 
 export type FuncionariosListLabels = {
   contagem: string
@@ -70,6 +79,14 @@ export type FuncionariosListLabels = {
   grupoEquipeSub: string
   grupoProtegido: string
   grupoProtegidoSub: string
+  grupoAdminOnde: string
+  grupoAdminLink: string
+  menuMais: string
+  filtroPerfilLabel: string
+  filtroPerfilTodos: string
+  filtroPerfilOperador: string
+  filtroPerfilGerente: string
+  colFuncionario: string
   modal: FuncionarioModalLabels
 }
 
@@ -79,8 +96,6 @@ type Props = {
   iniciais: FuncionarioListRow[]
   labels: FuncionariosListLabels
 }
-
-type StatusFiltro = 'todos' | 'ativos' | 'inativos'
 
 function labelPerfil(perfil: string, L: FuncionariosListLabels): string {
   if (perfil === 'OPERADOR') return L.perfilOperador
@@ -104,18 +119,78 @@ function renderStatusChip(ativo: boolean, L: { ativo: string; inativo: string })
   return <StatusChip status={ativo ? 'ATIVO' : 'INATIVO'} label={ativo ? L.ativo : L.inativo} />
 }
 
-function grupoTitulo(id: FuncionarioGrupoId, L: FuncionariosListLabels): string {
-  return id === 'equipe' ? L.grupoEquipe : L.grupoProtegido
+function grupoTitulo(id: FuncionarioGrupoId, total: number, L: FuncionariosListLabels): string {
+  const nome = id === 'equipe' ? L.grupoEquipe : L.grupoProtegido
+  return `${nome} (${total})`
 }
 
-function grupoSub(id: FuncionarioGrupoId, L: FuncionariosListLabels): string {
-  return id === 'equipe' ? L.grupoEquipeSub : L.grupoProtegidoSub
+function GrupoFuncionarios({
+  id,
+  rows,
+  L,
+  adminAberto,
+  onToggleAdmin,
+  atorPerfil,
+  children,
+}: {
+  id: FuncionarioGrupoId
+  rows: { length: number }
+  L: FuncionariosListLabels
+  adminAberto: boolean
+  onToggleAdmin: () => void
+  atorPerfil: string
+  children: ReactNode
+}) {
+  const titulo = grupoTitulo(id, rows.length, L)
+  const sub = id === 'equipe' ? L.grupoEquipeSub : L.grupoProtegidoSub
+  if (id === 'protegido' && !adminAberto) {
+    return (
+      <section className="space-y-2">
+        <button type="button" className="px-1 text-left" aria-expanded={false} onClick={onToggleAdmin}>
+          <h3 className="text-small font-semibold text-fg">{titulo}</h3>
+          <p className="text-caption text-fg-subtle">{sub}</p>
+        </button>
+      </section>
+    )
+  }
+  return (
+    <section className="space-y-2">
+      {id === 'protegido' ? (
+        <button type="button" className="px-1 text-left" aria-expanded onClick={onToggleAdmin}>
+          <h3 className="text-small font-semibold text-fg">{titulo}</h3>
+        </button>
+      ) : (
+        <header className="px-1">
+          <h3 className="text-small font-semibold text-fg">{titulo}</h3>
+          <p className="text-caption text-fg-subtle">{sub}</p>
+        </header>
+      )}
+      {id === 'protegido' ? <NotaAdmin L={L} atorPerfil={atorPerfil} /> : null}
+      {children}
+    </section>
+  )
+}
+
+function NotaAdmin({ L, atorPerfil }: { L: FuncionariosListLabels; atorPerfil: string }) {
+  return (
+    <p className="px-1 text-caption text-fg-subtle">
+      {L.grupoAdminOnde}{' '}
+      {atorPerfil === 'ADMIN' ? (
+        <Link href={ROUTES.admin.provisionamento} className="text-brand hover:underline">
+          {L.grupoAdminLink}
+        </Link>
+      ) : null}
+    </p>
+  )
 }
 
 export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L }: Props) {
   const [rows, setRows] = useState(iniciais)
   const [termo, setTermo] = useState('')
   const [statusF, setStatusF] = useState<StatusFiltro>('todos')
+  const [perfilF, setPerfilF] = useState<PerfilFiltro>('todos')
+  const [adminAberto, setAdminAberto] = useState(false)
+  const [hydrated, setHydrated] = useState(false)
   const [modalAberto, setModalAberto] = useState(false)
   const [emEdicao, setEmEdicao] = useState<FuncionarioListRow | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
@@ -127,6 +202,7 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
     return rows.filter((r) => {
       if (statusF === 'ativos' && !r.ativo) return false
       if (statusF === 'inativos' && r.ativo) return false
+      if (perfilF !== 'todos' && r.perfil !== perfilF) return false
       if (!q) return true
       return (
         r.nome.toLowerCase().includes(q) ||
@@ -135,10 +211,10 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
         labelPerfil(r.perfil, L).toLowerCase().includes(q)
       )
     })
-  }, [rows, termo, statusF, L])
+  }, [rows, termo, statusF, perfilF, L])
 
   const grupos = useMemo(() => agruparFuncionarios(filtrados), [filtrados])
-  const temFiltroAtivo = termo.trim().length > 0 || statusF !== 'todos'
+  const temFiltroAtivo = termo.trim().length > 0 || statusF !== 'todos' || perfilF !== 'todos'
   const ator = { id: atorId, perfil: atorPerfil }
   const statusOptions: StatusFiltro[] = ['todos', 'ativos', 'inativos']
   const confirmBusy = !!confirmRow && busyId === confirmRow.id
@@ -161,6 +237,17 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
   function limparFiltros() {
     setTermo('')
     setStatusF('todos')
+    setPerfilF('todos')
+  }
+
+  function gravarLista(scrollY?: number) {
+    gravarFuncionariosListaEstado(sessionStorage, {
+      termo,
+      status: statusF,
+      perfil: perfilF,
+      adminAberto,
+      scrollY,
+    })
   }
 
   async function toggleAtivo(row: FuncionarioListRow) {
@@ -195,6 +282,39 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
   }
 
   useEffect(() => {
+    const salvo = lerFuncionariosListaEstado(sessionStorage.getItem(FUNCIONARIOS_LISTA_KEY))
+    if (salvo) {
+      setTermo(salvo.termo)
+      setStatusF(salvo.status)
+      setPerfilF(salvo.perfil)
+      setAdminAberto(salvo.adminAberto)
+      requestAnimationFrame(() => window.scrollTo(0, salvo.scrollY))
+    }
+    setHydrated(true)
+  }, [])
+
+  useEffect(() => {
+    if (!hydrated) return
+    gravarFuncionariosListaEstado(sessionStorage, {
+      termo,
+      status: statusF,
+      perfil: perfilF,
+      adminAberto,
+    })
+    const onScroll = () => {
+      gravarFuncionariosListaEstado(sessionStorage, {
+        termo,
+        status: statusF,
+        perfil: perfilF,
+        adminAberto,
+        scrollY: window.scrollY,
+      })
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [hydrated, termo, statusF, perfilF, adminAberto])
+
+  useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (modalAberto || confirmRow) return
       if (e.key === '/' && !isTypingTarget(e.target)) {
@@ -222,18 +342,15 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
   const columns: Column<FuncionarioListRow>[] = [
     {
       key: 'nome',
-      header: L.colNome,
+      header: L.colFuncionario,
       priority: 'primary',
       sortValue: (row) => row.nome.toLocaleLowerCase(),
       cell: (row) => (
-        <span className={cn('font-medium text-fg', !row.ativo && 'text-fg-subtle')}>{row.nome}</span>
+        <div className="min-w-0">
+          <div className={cn('truncate font-medium text-fg', !row.ativo && 'text-fg-subtle')}>{row.nome}</div>
+          <div className="truncate text-caption text-fg-muted">{row.email ?? '—'}</div>
+        </div>
       ),
-    },
-    {
-      key: 'email',
-      header: L.colEmail,
-      sortValue: (row) => (row.email ?? '').toLocaleLowerCase(),
-      cell: (row) => <span className="text-caption text-fg-muted">{row.email ?? '—'}</span>,
     },
     {
       key: 'perfil',
@@ -275,6 +392,7 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
     labels: L,
     onEditar: abrirEditar,
     onToggle: pedirToggle,
+    onBeforeNavigate: () => gravarLista(window.scrollY),
   }
 
   const confirmTitle = confirmRow
@@ -331,6 +449,20 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
                     </button>
                   ))}
                 </div>
+                <label className="flex items-center gap-2 text-caption text-fg-muted">
+                  {L.filtroPerfilLabel}
+                  <select
+                    value={perfilF}
+                    aria-label={L.filtroPerfilLabel}
+                    data-testid="funcionario-filtro-perfil"
+                    className="min-h-9 rounded-control border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-caption text-fg"
+                    onChange={(e) => setPerfilF(e.target.value as PerfilFiltro)}
+                  >
+                    <option value="todos">{L.filtroPerfilTodos}</option>
+                    <option value="OPERADOR">{L.filtroPerfilOperador}</option>
+                    <option value="GERENTE">{L.filtroPerfilGerente}</option>
+                  </select>
+                </label>
               </div>
             </div>
             <PageActions>
@@ -354,16 +486,15 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
           <>
             <div className="hidden space-y-6 md:block">
               {grupos.map((grupo) => (
-                <section key={grupo.id} className="space-y-2">
-                  <header className="px-1">
-                    <h3 className="text-small font-semibold text-fg">
-                      {grupoTitulo(grupo.id, L)}
-                      <span className="ml-2 text-caption font-normal text-fg-subtle">
-                        {grupo.rows.length}
-                      </span>
-                    </h3>
-                    <p className="text-caption text-fg-subtle">{grupoSub(grupo.id, L)}</p>
-                  </header>
+                <GrupoFuncionarios
+                  key={grupo.id}
+                  id={grupo.id}
+                  rows={grupo.rows}
+                  L={L}
+                  adminAberto={adminAberto}
+                  onToggleAdmin={() => setAdminAberto((v) => !v)}
+                  atorPerfil={atorPerfil}
+                >
                   <DataTable
                     columns={columns}
                     data={grupo.rows}
@@ -372,31 +503,25 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
                     stickyHeader
                     onRowClick={abrirEditar}
                     rowActions={(row) => (
-                      <FuncionarioRowActions
-                        row={row}
-                        busy={busyId === row.id}
-                        compactLabels
-                        {...actionsProps}
-                      />
+                      <FuncionarioRowActions row={row} busy={busyId === row.id} {...actionsProps} />
                     )}
                     className="rounded-none border-x-0 border-b-0"
                   />
-                </section>
+                </GrupoFuncionarios>
               ))}
             </div>
 
             <div className="space-y-5 md:hidden">
               {grupos.map((grupo) => (
-                <section key={grupo.id} className="space-y-2">
-                  <header>
-                    <h3 className="text-small font-semibold text-fg">
-                      {grupoTitulo(grupo.id, L)}
-                      <span className="ml-2 text-caption font-normal text-fg-subtle">
-                        {grupo.rows.length}
-                      </span>
-                    </h3>
-                    <p className="text-caption text-fg-subtle">{grupoSub(grupo.id, L)}</p>
-                  </header>
+                <GrupoFuncionarios
+                  key={grupo.id}
+                  id={grupo.id}
+                  rows={grupo.rows}
+                  L={L}
+                  adminAberto={adminAberto}
+                  onToggleAdmin={() => setAdminAberto((v) => !v)}
+                  atorPerfil={atorPerfil}
+                >
                   <ul className="flex flex-col gap-2">
                     {grupo.rows.map((row) => {
                       const bloqueio = motivoBloqueioEditar(ator, row, L)
@@ -450,7 +575,7 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
                       )
                     })}
                   </ul>
-                </section>
+                </GrupoFuncionarios>
               ))}
             </div>
           </>

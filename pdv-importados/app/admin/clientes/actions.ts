@@ -8,11 +8,15 @@ import { createCustomerWriter } from '@/app/admin/clientes/customerWriter'
 import { createCustomerUpdater } from '@/app/admin/clientes/customerUpdater'
 import { createCustomerExclusion } from '@/app/admin/clientes/customerExclusion'
 import { localizeCustomerFailure } from '@/app/admin/clientes/customerMessages'
+import { resumirTitulosCliente, type ResumoTitulosCliente } from '@/app/admin/clientes/clienteFinanceiroResumo'
+import { createReceivableReader } from '@/app/admin/financeiro/receivableReader'
 import { tApp } from '@/i18n/catalogAdapter'
 import {
   CUSTOMER_ERROR_CODES,
   type ClienteInput,
   type ClienteListRow,
+  type ClienteListaSituacao,
+  type ClienteTipo,
   type DeleteClienteResult,
   type ListClientesPaginadosResult,
   type SaveClienteResult,
@@ -23,16 +27,46 @@ export type { ClienteInput, ClienteListRow }
 /**
  * Borda Server Action — listagem via CustomerReader (Fase 2).
  */
+export type ClienteListaFiltro = {
+  tipo?: ClienteTipo
+  situacao?: ClienteListaSituacao
+}
+
 export async function buscarClientesPaginadosAction(
   page: number,
   termo?: string,
+  filtro?: ClienteListaFiltro,
 ): Promise<ListClientesPaginadosResult> {
   const authCheck = await assertGerenteSession()
   if (!authCheck.ok) return { ok: false, error: authCheck.error }
 
   const supabase = await createClient()
   const reader = createCustomerReader(supabase)
-  return reader.listPaginados({ page, termo })
+  return reader.listPaginados({ page, termo, tipo: filtro?.tipo, situacao: filtro?.situacao })
+}
+
+export type ResumoFinanceiroCliente = ResumoTitulosCliente & { capped: boolean }
+
+export async function resumoFinanceiroClienteAction(
+  clienteId: string,
+): Promise<{ ok: true } & ResumoFinanceiroCliente | { ok: false; error: string }> {
+  const authCheck = await assertGerenteSession()
+  if (!authCheck.ok) return { ok: false, error: authCheck.error }
+  if (!/^[0-9a-f-]{36}$/i.test(clienteId)) return { ok: false, error: 'Identificador inválido.' }
+
+  const supabase = await createClient()
+  const listed = await createReceivableReader(supabase).list({
+    opcao: 'mix',
+    clienteId,
+    nomeCliente: '',
+    q: '',
+    de: '',
+    ate: '',
+    limite: 500,
+  })
+  if (!listed.ok) return { ok: false, error: listed.error }
+  const resumo = resumirTitulosCliente(listed.titulos)
+  return { ok: true, ...resumo, capped: listed.capped }
 }
 
 function revalidateClientesPaths(): void {

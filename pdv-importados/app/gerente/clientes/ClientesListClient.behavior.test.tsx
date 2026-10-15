@@ -1,5 +1,5 @@
 /** @vitest-environment jsdom */
-import React from 'react'
+import React, { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { flushSync } from 'react-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -10,6 +10,15 @@ const excluir = vi.fn()
 vi.mock('@/app/admin/clientes/actions', () => ({
   buscarClientesPaginadosAction: (...args: unknown[]) => buscar(...args),
   excluirClienteAction: (...args: unknown[]) => excluir(...args),
+  resumoFinanceiroClienteAction: vi.fn(async () => ({
+    ok: true,
+    vencido: 40,
+    comVencimento: 1,
+    totalTitulos: 1,
+    capped: false,
+  })),
+  criarClienteAction: vi.fn(),
+  atualizarClienteAction: vi.fn(),
 }))
 
 vi.mock('@/lib/gerente/toast', () => ({
@@ -19,6 +28,8 @@ vi.mock('@/lib/gerente/toast', () => ({
 vi.mock('@/lib/hooks/useDebounce', () => ({
   useDebounce: <T,>(v: T) => v,
 }))
+
+;(globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
 const { ClientesListClient } = await import('./ClientesListClient')
 const { getMessages } = await import('@/i18n/getMessages')
@@ -175,6 +186,74 @@ describe('ClientesListClient Fase A', () => {
         />,
       )
       expect(container.textContent).not.toContain(m.clientes.ver_financeiro)
+    })
+  })
+
+  it('abre a ficha ao clicar no nome e o Esc devolve o foco sem desmontar a busca', () => {
+    render(
+      <ClientesListClient
+        idioma="pt"
+        locale="pt-BR"
+        messages={m}
+        clientesIniciais={[row]}
+        hasMoreInicial={false}
+      />,
+    )
+    const nome = container.querySelector('[data-testid="cliente-nome"]') as HTMLButtonElement
+    act(() => {
+      nome.focus()
+      nome.click()
+    })
+    const dialog = document.querySelector('[role="dialog"]')
+    expect(dialog?.textContent).toContain(m.clientes.drawer_resumo)
+    expect(dialog?.textContent).toContain(m.clientes.drawer_compras)
+    expect(dialog?.textContent).toContain(m.clientes.drawer_financeiro)
+    expect(dialog?.textContent).toContain(m.clientes.drawer_editar)
+    expect(container.querySelector('input')).not.toBeNull()
+    act(() => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    })
+    expect(document.querySelector('[role="dialog"]')).toBeNull()
+    expect(document.activeElement).toBe(nome)
+  })
+
+  it('filtro de saldo em aberto vai para o servidor', async () => {
+    buscar.mockResolvedValue({ ok: true, clientes: [], hasMore: false })
+    render(
+      <ClientesListClient
+        idioma="pt"
+        locale="pt-BR"
+        messages={m}
+        clientesIniciais={[row]}
+        hasMoreInicial={false}
+      />,
+    )
+    const chip = container.querySelector('[data-testid="cliente-chip-aberto"]') as HTMLButtonElement
+    act(() => chip.click())
+    await vi.waitFor(() => {
+      expect(buscar).toHaveBeenCalledWith(1, undefined, { tipo: undefined, situacao: 'aberto' })
+    })
+  })
+
+  it('filtro de tipo vai para o servidor', async () => {
+    buscar.mockResolvedValue({ ok: true, clientes: [row], hasMore: false })
+    render(
+      <ClientesListClient
+        idioma="pt"
+        locale="pt-BR"
+        messages={m}
+        clientesIniciais={[row]}
+        hasMoreInicial={false}
+      />,
+    )
+    const select = container.querySelector('[data-testid="cliente-filtro-tipo"]') as HTMLSelectElement
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value')!.set!
+    act(() => {
+      setter.call(select, 'PF')
+      select.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    await vi.waitFor(() => {
+      expect(buscar).toHaveBeenCalledWith(1, undefined, { tipo: 'PF', situacao: undefined })
     })
   })
 })
