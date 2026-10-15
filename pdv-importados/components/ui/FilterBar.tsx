@@ -2,6 +2,11 @@
 
 /**
  * FilterBar — filtros URL-driven Admin (Fase 2 · Onda 4, consolidado no DS).
+ *
+ * Padrão de filtros do Admin V2 (docs/claude-code-ux-roadmap.md): estado só na URL,
+ * busca com debounce de 300 ms (Enter aplica na hora), Limpar só com filtro ativo e
+ * `layout="grid"` para o grid responsivo (1 → 2 → 4 colunas). Presets de período
+ * (7d / 30d / mês atual) entram como `pills`.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -44,6 +49,20 @@ export type FilterDef =
 
 const CHAVES_EXTRAS_VAZIAS: readonly string[] = []
 
+/** Debounce padrão da busca (padrão de filtros do Admin V2). */
+export const FILTER_SEARCH_DEBOUNCE_MS = 300
+
+/**
+ * `inline` (default): faixa compacta que quebra linha — contrato histórico dos consumidores.
+ * `grid`: 1 coluna no mobile, 2 no `sm`, 4 no `lg`; cada controle ocupa a célula inteira.
+ */
+export type FilterBarLayout = 'inline' | 'grid'
+
+const LAYOUT_CLASS: Record<FilterBarLayout, string> = {
+  inline: 'flex flex-wrap items-center gap-2',
+  grid: 'grid grid-cols-1 items-center gap-3 sm:grid-cols-2 lg:grid-cols-4',
+}
+
 function valorDeFiltroAtivo(filter: FilterDef, current: string | null): boolean {
   if (current === null || current.length === 0) return false
   if (filter.type !== 'search' && current === filter.defaultValue) return false
@@ -81,6 +100,8 @@ type FilterBarProps = {
    * Opt-in: o default permanece o comportamento histórico (não reseta página).
    */
   resetPageOnChange?: boolean
+  /** Disposição dos controles. Default `inline` (comportamento histórico). */
+  layout?: FilterBarLayout
 }
 
 export function FilterBar({
@@ -92,7 +113,9 @@ export function FilterBar({
   extraClearKeys = CHAVES_EXTRAS_VAZIAS,
   className,
   resetPageOnChange = false,
+  layout = 'inline',
 }: FilterBarProps) {
+  const fill = layout === 'grid'
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -129,7 +152,8 @@ export function FilterBar({
     <section
       role="search"
       aria-label={ariaLabel}
-      className={cn('flex flex-wrap items-center gap-2', className)}
+      data-layout={layout}
+      className={cn(LAYOUT_CLASS[layout], className)}
     >
       {filters.map((filter) => {
         switch (filter.type) {
@@ -138,6 +162,7 @@ export function FilterBar({
               <PillsControl
                 key={filter.key}
                 filter={filter}
+                fill={fill}
                 current={searchParams.get(filter.key) ?? filter.defaultValue ?? ''}
                 onChange={(v) => setParam(filter.key, v, filter.defaultValue, false)}
               />
@@ -147,6 +172,7 @@ export function FilterBar({
               <SelectControl
                 key={filter.key}
                 filter={filter}
+                fill={fill}
                 current={searchParams.get(filter.key) ?? filter.defaultValue ?? ''}
                 onChange={(v) => setParam(filter.key, v, filter.defaultValue, false)}
               />
@@ -156,6 +182,7 @@ export function FilterBar({
               <SearchControl
                 key={filter.key}
                 filter={filter}
+                fill={fill}
                 current={searchParams.get(filter.key) ?? ''}
                 onCommit={(v) => setParam(filter.key, v, undefined, true)}
               />
@@ -172,7 +199,7 @@ export function FilterBar({
           size="sm"
           onClick={clearAll}
           aria-label={clearAriaLabel}
-          className="gap-1 text-caption text-fg-subtle"
+          className={cn('gap-1 text-caption text-fg-subtle', fill && 'justify-self-start')}
         >
           <X size={12} strokeWidth={2.5} aria-hidden />
           {clearLabel}
@@ -184,16 +211,21 @@ export function FilterBar({
 
 function PillsControl({
   filter,
+  fill,
   current,
   onChange,
 }: {
   filter: Extract<FilterDef, { type: 'pills' }>
+  fill: boolean
   current: string
   onChange: (value: string) => void
 }) {
   return (
     <div
-      className="inline-flex items-center gap-0.5 rounded-control border border-[var(--color-border)] bg-[var(--color-surface-soft)] p-0.5"
+      className={cn(
+        'inline-flex items-center gap-0.5 rounded-control border border-[var(--color-border)] bg-[var(--color-surface-soft)] p-0.5',
+        fill && 'w-full overflow-x-auto',
+      )}
       role="group"
       aria-label={filter.label}
     >
@@ -208,6 +240,7 @@ function PillsControl({
             aria-label={`${opt.label}${active ? ' (ativo)' : ''}`}
             className={cn(
               'fp-focus-ring rounded-sm px-2.5 py-1 text-caption font-medium leading-none transition-colors',
+              fill && 'shrink-0',
               active
                 ? 'bg-[var(--color-info-bg)] text-brand'
                 : 'text-fg-subtle hover:text-fg',
@@ -223,10 +256,12 @@ function PillsControl({
 
 function SelectControl({
   filter,
+  fill,
   current,
   onChange,
 }: {
   filter: Extract<FilterDef, { type: 'select' }>
+  fill: boolean
   current: string
   onChange: (value: string) => void
 }) {
@@ -236,7 +271,7 @@ function SelectControl({
       value={current}
       onChange={(e) => onChange(e.target.value)}
       controlSize="sm"
-      className="w-auto min-w-[8rem]"
+      className={fill ? 'w-full min-w-0' : 'w-auto min-w-[8rem]'}
     >
       {filter.options.map((opt) => (
         <option key={opt.value} value={opt.value}>
@@ -247,7 +282,12 @@ function SelectControl({
   )
   if (!filter.showLabel || !filter.label) return select
   return (
-    <label className="inline-flex items-center gap-2 text-caption font-medium text-fg-subtle">
+    <label
+      className={cn(
+        'inline-flex items-center gap-2 text-caption font-medium text-fg-subtle',
+        fill && 'w-full',
+      )}
+    >
       <span>{filter.label}</span>
       {select}
     </label>
@@ -256,15 +296,17 @@ function SelectControl({
 
 function SearchControl({
   filter,
+  fill,
   current,
   onCommit,
 }: {
   filter: Extract<FilterDef, { type: 'search' }>
+  fill: boolean
   current: string
   onCommit: (value: string) => void
 }) {
   const [value, setValue] = useState(current)
-  const debounceMs = filter.debounceMs ?? 350
+  const debounceMs = filter.debounceMs ?? FILTER_SEARCH_DEBOUNCE_MS
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const committed = useRef(current)
 
@@ -301,6 +343,7 @@ function SearchControl({
     <div
       className={cn(
         'inline-flex items-center gap-1.5 rounded-control border border-[var(--color-border)] bg-[var(--color-surface-soft)] px-2.5 py-1.5',
+        fill && 'w-full',
         filter.className,
       )}
     >
@@ -316,7 +359,7 @@ function SearchControl({
         }}
         className={cn(
           'fp-focus-ring bg-transparent text-caption text-fg outline-none placeholder:text-fg-subtle',
-          filter.inputClassName ?? 'w-44',
+          filter.inputClassName ?? (fill ? 'w-full min-w-0' : 'w-44'),
         )}
       />
       {value ? (
