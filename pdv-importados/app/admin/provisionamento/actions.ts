@@ -9,6 +9,7 @@ import { ROUTES } from '@/lib/navigation/routes'
 import { IMPLANTACAO_ITENS } from '../implantacao/implantacaoCatalog'
 import {
   CHECKLIST_ITENS_POS_PROVISION,
+  linhasFormasPagamentoPadrao,
   PDV_CONFIG_DEFAULTS,
   slugCodigoLoja,
 } from './provisionamentoDefaults'
@@ -52,7 +53,7 @@ type LooseQuery = {
   select: (cols: string) => LooseQuery
   insert: (row: LooseRow | LooseRow[]) => LooseQuery
   update: (row: LooseRow) => LooseQuery
-  upsert: (row: LooseRow, opts?: { onConflict?: string }) => LooseQuery
+  upsert: (row: LooseRow | LooseRow[], opts?: { onConflict?: string; ignoreDuplicates?: boolean }) => LooseQuery
   eq: (col: string, val: unknown) => LooseQuery
   maybeSingle: () => LooseResult<LooseRow | null>
   single: () => LooseResult<LooseRow>
@@ -297,6 +298,18 @@ async function ensurePdvConfig(admin: AdminClient, lojaId: string, donoId: strin
   }
 }
 
+/**
+ * Garante as formas de pagamento padrão da loja (idempotente). `ignoreDuplicates`
+ * preserva o que a loja já configurou (ex.: forma desativada) num reprovisionamento.
+ */
+async function ensureFormasPagamento(admin: AdminClient, lojaId: string) {
+  const { error } = await fromLoose(admin, 'formas_pagamento').upsert(
+    linhasFormasPagamentoPadrao(lojaId),
+    { onConflict: 'loja_id,codigo', ignoreDuplicates: true },
+  )
+  if (error) throw new Error(error.message)
+}
+
 async function ensureChecklistBootstrap(admin: AdminClient, lojaId: string, atorId: string) {
   const now = new Date().toISOString()
 
@@ -354,6 +367,9 @@ async function validarProvisionamento(
     .select('loja_id')
     .eq('loja_id', lojaId)
     .maybeSingle()
+  const { data: formasList } = await fromLoose(admin, 'formas_pagamento')
+    .select('codigo')
+    .eq('loja_id', lojaId)
   const { data: itensList } = await fromLoose(admin, 'implantacao_checklist_itens')
     .select('item_key')
     .eq('loja_id', lojaId)
@@ -368,7 +384,8 @@ async function validarProvisionamento(
   return {
     lojaOk: Boolean(loja),
     donoOk,
-    configOk: Boolean(cfg),
+    // Sem forma de pagamento ativa a loja não consegue vender: config incompleta.
+    configOk: Boolean(cfg) && (formasList?.length ?? 0) > 0,
     checklistOk: (itensList?.length ?? 0) >= IMPLANTACAO_ITENS.length,
   }
 }
@@ -420,6 +437,7 @@ export async function provisionarLojaAction(input: {
     if (dono.novo && !beforeAuth) createdAuthUserId = dono.donoId
 
     await ensurePdvConfig(admin, loja.lojaId, dono.donoId, parsed.data.idiomaPreferido)
+    await ensureFormasPagamento(admin, loja.lojaId)
     const itensMarcados = await ensureChecklistBootstrap(admin, loja.lojaId, gate.session.userId)
     const validacao = await validarProvisionamento(admin, loja.lojaId, dono.donoId)
 
