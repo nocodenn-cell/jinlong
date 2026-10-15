@@ -1,7 +1,16 @@
 # Próxima sprint — após `e1327e62`
 
 **Status:** **oficial** (aceite 2026-08-27). Plano de execução P0:
-[SPRINT_ESTABILIZACAO_P0.md](./SPRINT_ESTABILIZACAO_P0.md). P0 **ainda não executado**.
+[SPRINT_ESTABILIZACAO_P0.md](./SPRINT_ESTABILIZACAO_P0.md). P0 **parcialmente executado** (status de 2026-10-15; texto original de 2026-08-27 mantido abaixo).
+
+| P0 | Estado em 2026-10-15 | Evidência |
+|---|---|---|
+| P0-BACKUP | **Feito para o backup agendado:** workflow diário com `success` de 2026-10-09 a 2026-10-15 e monitor de frescor passando. Plano da Supabase e política de retenção/SLA não foram reverificados aqui. | [ENCERRAMENTO_SPRINT_BACKUP_JIT_ITENS_18_21.md](../audits/ENCERRAMENTO_SPRINT_BACKUP_JIT_ITENS_18_21.md) (atualização de 2026-10-15) |
+| P0-RESTORE | **Parcial:** ensaio de restore em Supabase local descartável em 2026-10-08 (87/87 tabelas idênticas, ~8 s). `Restore drill (item 20)` em CI sem execução registrada; RPO/RTO formais e aceite do dono não registrados. | [SPRINT0_EVIDENCIAS_2026-10-08.md](./SPRINT0_EVIDENCIAS_2026-10-08.md) §1 |
+| P0-SMOKE-LOJA | **Pendente** (teste na máquina da loja não executado). | `docs/runbooks/CHECKLIST_SMOKE_MAQUINA_LOJA.md` |
+| P0-RUNBOOK | **Não verificado nesta atualização.** | — |
+
+Também pendentes e fora desta atualização: limpeza de dados de teste, migrations `20261007*`, e o E2E (`e2e-playwright`), cuja causa raiz está nos PRs #556/#557. O piloto continua **NO-GO**.
 
 Baseline de produto: `e1327e62`. `main` após a PR documental #331: `99e52de7`.
 

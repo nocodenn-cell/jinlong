@@ -1,5 +1,7 @@
 # Gate final — sprint do carrinho (2026-10-10)
 
+> **Nota de status (2026-10-15):** o "NO-GO para merge" do §9 era o veredito no momento do gate. Ele foi superado: o §10 registra o ensaio manual e o merge do PR [#536](https://github.com/nocodenn-cell/fastproduct/pull/536) em `sprint/go-live-01` (commit `5cdcc697`, 2026-10-10). A base desse merge foi `sprint/go-live-01`, não `main`. O §10 não autoriza deploy nem a janela fiscal; o botão Sair segue pendente.
+
 Branch: `sprint/correcao-carrinho-20261010`  
 Base: `sprint/go-live-01` @ `64a0f5b1`  
 HEAD do gate: ver o commit deste arquivo.  
