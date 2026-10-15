@@ -111,6 +111,10 @@ export async function buscarContasPagarAction(
 ): Promise<
   { ok: true; contas: ContaPagarRow[]; hasMore: boolean } | { ok: false; error: string }
 > {
+  // Server Action é invocável por POST em qualquer rota (fora do matcher do middleware):
+  // o guard próprio não depende do edge; a RLS continua sendo a última barreira.
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { ok: false, error: auth.error }
   try {
     const supabase = await createClient()
     const reader = createPayableReader(supabase)
