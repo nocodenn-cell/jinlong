@@ -285,15 +285,9 @@ test.describe('Smoke Fase 1 — provisionamento → venda → dashboard', () => 
     await expect(page.getByText(produtoNome, { exact: true })).toBeVisible({ timeout: 30_000 })
   })
 
-  // GAP DE PRODUTO (achado em 2026-10-15, reproduzido localmente): a migration 302
-  // (F1-05) só fez backfill de `formas_pagamento` para as lojas que existiam; nenhuma
-  // rotina de provisionamento cria as formas de uma loja nova. Na loja provisionada
-  // por este spec `formas_pagamento` tem 0 linhas e `finalizar_venda_transacional_canonica_v4`
-  // levanta FINALIZAR_VENDA_CANONICA_FORMA_PAGAMENTO_INVALIDA (a UI mostra "Pagamento
-  // inválido ou divergente do total"). Loja nova não consegue vender até isso ser
-  // corrigido em migration/RPC de provisionamento (fora do escopo do PR de e2e). Não
-  // semeamos as formas aqui para não esconder o defeito. Remover o fixme ao corrigir.
-  test.fixme('4 — Abrir caixa → venda → fechar caixa', async ({ page }) => {
+  // Depende das formas de pagamento semeadas pelo provisionamento
+  // (`ensureFormasPagamento`): sem elas a RPC de venda recusa a loja nova.
+  test('4 — Abrir caixa → venda → fechar caixa', async ({ page }) => {
     await loginAs(page, donoEmail, donoSenha, /\/(admin|gerente)/)
     await gotoApp(page, '/caixa', E2E_GOTO_DOMCONTENTLOADED)
 
