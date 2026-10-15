@@ -111,4 +111,5 @@ Legenda de risco: 🔴 alto · 🟠 médio · 🟡 baixo.
 | Tarefa | Status | Commit | Testes |
 |---|---|---|---|
 | 0 | Bloqueada (stash inexistente) | — | — |
-| 1 | Em andamento | — | — |
+| 1 | Concluída (local) | `b169cfe6` | test novo vermelho→verde (4/5 → 5/5); typecheck ✅; eslint ✅; vitest completo 373 arquivos / 2354 testes ✅ |
+| 2 | Próxima | — | — |
