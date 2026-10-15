@@ -53,11 +53,21 @@ export async function adicionarParcela(page: Page): Promise<void> {
   await btn.click()
 }
 
+/**
+ * Campos de valor do painel: "Recebido" (pagamento único em dinheiro) ou
+ * "Valor (R$) da parcela N" (pagamento dividido). Pelo nome acessível, não por
+ * `input[type="number"]`: desde #464 (b1c6b332) são `CaixaMoneyInput`
+ * (`type="text"` + `inputMode="decimal"`) e o seletor antigo nunca casava —
+ * o `fill` esperava até o timeout do teste.
+ */
+const NOME_CAMPO_VALOR =
+  /^(Recebido|Valor recebido|已收|收款金额)$|^Valor \(R\$\) da parcela \d+$|^第 \d+ 笔金额/
+
 export function parcelasNoPainel(page: Page) {
   const panel = painelPgto(page)
   return {
     selects: panel.locator('select'),
-    inputs: panel.locator('input[type="number"]'),
+    inputs: panel.getByRole('textbox', { name: NOME_CAMPO_VALOR }),
   }
 }
 
