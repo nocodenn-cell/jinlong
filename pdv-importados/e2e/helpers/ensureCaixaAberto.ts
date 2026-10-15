@@ -8,9 +8,25 @@ export const BTN_FECHAR_CAIXA = /Fechar caixa|结算收银台|关闭收银|關�
 
 type TurnoUi = 'loading' | 'aberto' | 'fechado'
 
+/**
+ * Botões do turno escopados ao topbar (`<header>` de `CaixaPdvTopBar`).
+ *
+ * Desde o UX-011 (2d8d1eec) a faixa "Caixa fechado" do cupom
+ * (`CaixaPdvCartSaleBar`) também tem um botão "Abrir caixa". Sem escopo o
+ * locator resolve 2 elementos, `isVisible`/`isEnabled` lançam strict mode
+ * violation, o `.catch(() => false)` engole o erro e o turno fica 'loading'
+ * para sempre — mesmo com o status já carregado (CI 38656914306).
+ */
+function botoesTurno(page: Page) {
+  const topbar = page.getByRole('banner')
+  return {
+    abrir: topbar.getByRole('button', { name: BTN_ABRIR_CAIXA }),
+    fechar: topbar.getByRole('button', { name: BTN_FECHAR_CAIXA }),
+  }
+}
+
 async function lerTurnoUi(page: Page): Promise<TurnoUi> {
-  const abrir = page.getByRole('button', { name: BTN_ABRIR_CAIXA })
-  const fechar = page.getByRole('button', { name: BTN_FECHAR_CAIXA })
+  const { abrir, fechar } = botoesTurno(page)
   if (await fechar.isVisible().catch(() => false)) return 'aberto'
   if (await abrir.isEnabled().catch(() => false)) return 'fechado'
   if (await abrir.isVisible().catch(() => false)) return 'loading'
@@ -27,8 +43,7 @@ export async function ensureCaixaAberto(
   page: Page,
   valorFundo = '300',
 ): Promise<'ja_aberto' | 'abriu'> {
-  const abrir = page.getByRole('button', { name: BTN_ABRIR_CAIXA })
-  const fechar = page.getByRole('button', { name: BTN_FECHAR_CAIXA })
+  const { abrir, fechar } = botoesTurno(page)
 
   const fecharDialog = page.getByRole('dialog', {
     name: /Fechar caixa|结算收银台|关闭收银|關閉收銀/i,
