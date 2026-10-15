@@ -60,4 +60,33 @@ describe('tokens CSS usados no código existem', () => {
     }
     expect([...new Set(faltando)].sort()).toEqual([])
   })
+
+  /**
+   * `bg-[var(--token)]/95` não gera regra nenhuma no Tailwind v3: o modificador de opacidade
+   * só funciona com variáveis em canais crus, e os tokens do DS são hex. Use
+   * `bg-[color-mix(in_srgb,var(--token)_95%,transparent)]`.
+   * Ocorrências antigas ficam listadas até serem corrigidas — a lista só pode encolher.
+   */
+  it('nenhuma classe nova aplica /opacidade sobre var(--token)', () => {
+    const LEGADO = new Set([
+      'app/admin/dashboard/SalesTrendChart.tsx → bg-[var(--color-warning-50)]/80',
+      'app/admin/relatorios/_components/executive/ExecVendasCaixasPanel.tsx → bg-[var(--color-brand-primary)]/80',
+      'app/caixa/CaixaFechamentoFormasPanel.tsx → border-[var(--color-danger-strong)]/40',
+      'app/caixa/CaixaFechamentoFormasPanel.tsx → bg-[var(--color-danger-strong)]/10',
+      'app/caixa/CaixaPdvOperacoesMenu.tsx → bg-[var(--color-warning)]/20',
+      'app/gerente/estoque/imprimir-etiquetas/ImprimirEtiquetasPageClient.tsx → bg-[var(--color-surface)]/20',
+      'app/gerente/financeiro/contas-pagar/ContasPagarListClient.tsx → text-[var(--color-warning-strong)]/60',
+      'components/ui/admin-v2/DenseDataTable.tsx → border-[var(--color-border)]/60',
+    ])
+    const encontrados = new Set<string>()
+    for (const file of SOURCE_DIRS.flatMap((d) => walk(d, /\.(ts|tsx)$/))) {
+      if (/\.test\.tsx?$/.test(file)) continue
+      for (const m of fs.readFileSync(file, 'utf8').matchAll(/[\w-]+-\[var\(--[\w-]+\)\]\/\d+/g)) {
+        encontrados.add(`${rel(file)} → ${m[0]}`)
+      }
+    }
+    expect([...encontrados].filter((e) => !LEGADO.has(e)).sort()).toEqual([])
+    // Corrigiu uma antiga? Tire-a da lista para a guarda não afrouxar.
+    expect([...LEGADO].filter((e) => !encontrados.has(e)).sort()).toEqual([])
+  })
 })

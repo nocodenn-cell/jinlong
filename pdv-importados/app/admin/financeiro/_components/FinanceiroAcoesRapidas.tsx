@@ -85,7 +85,7 @@ export function FinanceiroAcoesRapidas({ data, labels }: Props) {
   return (
     <>
       <div
-        className="sticky top-0 z-20 -mx-1 mb-4 border-b border-[var(--color-border-secondary)] bg-[var(--jl-surface-base)]/95 px-1 py-3 backdrop-blur"
+        className="sticky top-0 z-20 -mx-1 mb-4 border-b border-[var(--color-border-secondary)] bg-[color-mix(in_srgb,var(--jl-surface-base)_95%,transparent)] px-1 py-3 backdrop-blur"
         role="toolbar"
         aria-label={labels.faixaAria}
       >
