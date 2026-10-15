@@ -280,7 +280,9 @@ test.describe('Smoke Fase 1 — provisionamento → venda → dashboard', () => 
     })
 
     await page.reload({ waitUntil: 'domcontentloaded' })
-    await expect(page.getByText(produtoNome)).toBeVisible({ timeout: 30_000 })
+    // `exact`: o menu da linha (UX-01) tem o link "Duplicar <nome>", que também
+    // contém o nome e violava o strict mode.
+    await expect(page.getByText(produtoNome, { exact: true })).toBeVisible({ timeout: 30_000 })
   })
 
   test('4 — Abrir caixa → venda → fechar caixa', async ({ page }) => {
