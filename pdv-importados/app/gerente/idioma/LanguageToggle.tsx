@@ -19,6 +19,18 @@ const LANGS: { value: Idioma; label: string; title: string; font?: string }[] = 
   { value: 'zh', label: '普通话', title: 'Mandarim (简体)', font: '"Noto Sans SC","PingFang SC",sans-serif' },
 ]
 
+/**
+ * Troca de idioma = documento novo. Depois de persistir, recarrega a página
+ * em vez de reconciliar a árvore /admin inteira no cliente: o SSR já sai no
+ * idioma novo e o tempo não depende de CPU nem de prefetch (ver `actions.ts`).
+ * Sem `ok` (sessão inválida, erro do banco) não recarrega — o botão continua
+ * clicável.
+ */
+export async function trocarIdioma(formData: FormData): Promise<void> {
+  const { ok } = await setIdiomaAction(formData)
+  if (ok) window.location.reload()
+}
+
 export default function LanguageToggle({ idiomaAtual }: Props) {
   const baseBtn = cn(
     'rounded-full px-2.5 py-1 text-xs font-semibold transition-colors',
@@ -26,7 +38,7 @@ export default function LanguageToggle({ idiomaAtual }: Props) {
   )
 
   return (
-    <form className="flex gap-1" action={setIdiomaAction}>
+    <form className="flex gap-1" action={trocarIdioma}>
       {LANGS.map(({ value, label, title, font }) => (
         <button
           key={value}

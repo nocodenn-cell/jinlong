@@ -231,9 +231,11 @@ test.describe('Smoke Fase 1 — provisionamento → venda → dashboard', () => 
     const timeline = page.getByTestId('implantacao-timeline')
     await expect(timeline.getByText(/Loja criada|门店已创建/i)).toBeVisible()
     await expect(timeline.getByText(/DONO criado|店主已创建/i)).toBeVisible()
-    // Status concluído na linha da loja criada
+    // Status concluído na linha da loja criada. O status é um `<select>` por
+    // linha: `getByText('Concluído')` casava a `<option>` selecionada, que nunca
+    // é "visível" para o Playwright — o valor do select é o contrato real.
     const rowLoja = page.getByRole('row').filter({ hasText: /Loja criada|门店已创建/i })
-    await expect(rowLoja.getByText(/Concluído|已完成/i)).toBeVisible()
+    await expect(rowLoja.getByRole('combobox')).toHaveValue('CONCLUIDO')
   })
 
   test('3 — Logout ADMIN → login DONO → cadastrar produto', async ({ page }) => {
@@ -261,7 +263,10 @@ test.describe('Smoke Fase 1 — provisionamento → venda → dashboard', () => 
     const labelEstoque = dialog.locator('label').filter({ hasText: /Estoque inicial|初始库存/i })
     await labelEstoque.locator('input').fill('20')
 
-    await dialog.getByRole('button', { name: /^Salvar$|^保存$/ }).click()
+    // Primário do `NovoProdutoModal` (`m.produtos.salvar_produto`). O rodapé tem
+    // três botões "Salvar…" ("Salvar e novo", "Salvar rascunho"); nenhum se
+    // chama só "Salvar" — o seletor antigo esperava até o timeout do teste.
+    await dialog.getByRole('button', { name: /^Salvar produto$|^保存商品$/ }).click()
 
     // Pós-salvar pode mostrar painel de sucesso; fechar se houver
     const fecharPos = dialog.getByRole('button', { name: /Fechar|关闭|繼續|Continuar/i })
@@ -275,13 +280,16 @@ test.describe('Smoke Fase 1 — provisionamento → venda → dashboard', () => 
     })
 
     await page.reload({ waitUntil: 'domcontentloaded' })
-    await expect(page.getByText(produtoNome)).toBeVisible({ timeout: 30_000 })
+    // `exact`: o menu da linha (UX-01) tem o link "Duplicar <nome>", que também
+    // contém o nome e violava o strict mode.
+    await expect(page.getByText(produtoNome, { exact: true })).toBeVisible({ timeout: 30_000 })
   })
 
   // Depende das formas de pagamento semeadas pelo provisionamento
-  // (`ensureFormasPagamento`): sem elas a RPC de venda recusa a loja nova.
-  // O #556 marca este teste como `test.fixme`; ao sincronizar com o main depois
-  // dele, o fixme deve sair — esta correção é o que o destrava.
+  // (`ensureFormasPagamento`): a migration 302 só fez backfill de
+  // `formas_pagamento` para as lojas que já existiam, e sem essas linhas a RPC de
+  // venda recusa toda venda da loja nova (FORMA_PAGAMENTO_INVALIDA). O #556 deixou
+  // este teste em `test.fixme` até a correção entrar; o #560 o reativa.
   test('4 — Abrir caixa → venda → fechar caixa', async ({ page }) => {
     await loginAs(page, donoEmail, donoSenha, /\/(admin|gerente)/)
     await gotoApp(page, '/caixa', E2E_GOTO_DOMCONTENTLOADED)
