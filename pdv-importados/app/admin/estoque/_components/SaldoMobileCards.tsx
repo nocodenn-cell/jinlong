@@ -26,11 +26,11 @@ export function SaldoMobileCards({ linhas, labels, onAjustar, onKardex }: {
         <div><dt className="text-caption text-fg-muted">{labels.minimo}</dt><dd>{row.estoque_minimo ?? '—'}</dd></div>
         <div><dt className="text-caption text-fg-muted">{labels.deficit}</dt><dd>{row.deficit ?? '—'}</dd></div>
       </dl>
-      <div className="flex flex-wrap gap-2">
-        <Button variant="outline" size="sm" onClick={() => onAjustar(row)}><SlidersHorizontal aria-hidden />{labels.ajusteTitulo}</Button>
-        <Button variant="outline" size="sm" onClick={() => onKardex(row)}><History aria-hidden />{labels.kardexTitulo}</Button>
-        <Button asChild variant="outline" size="sm"><Link href={adminEstoqueRecebimentoProdutoQuery(row.id)}><PackagePlus aria-hidden />{labels.reporTitulo}</Link></Button>
-        <Button asChild variant="outline" size="sm">
+      <div className="grid grid-cols-2 gap-2">
+        <Button variant="outline" size="sm" className="min-h-11 w-full justify-center whitespace-normal text-center" onClick={() => onAjustar(row)}><SlidersHorizontal aria-hidden />{labels.ajusteTitulo}</Button>
+        <Button variant="outline" size="sm" className="min-h-11 w-full justify-center whitespace-normal text-center" onClick={() => onKardex(row)}><History aria-hidden />{labels.kardexTitulo}</Button>
+        <Button asChild variant="outline" size="sm" className="min-h-11 w-full justify-center whitespace-normal text-center"><Link href={adminEstoqueRecebimentoProdutoQuery(row.id)}><PackagePlus aria-hidden />{labels.reporTitulo}</Link></Button>
+        <Button asChild variant="outline" size="sm" className="min-h-11 w-full justify-center whitespace-normal text-center">
           <Link
             href={adminEtiquetasProdutoQuery({
               codigo: row.codigo_barras,

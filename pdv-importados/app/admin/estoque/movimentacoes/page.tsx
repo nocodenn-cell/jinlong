@@ -5,44 +5,32 @@ import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { ROUTES } from '@/lib/navigation/routes'
 import { getMessages } from '@/i18n/getMessages'
 import { tipoMovimentoEstoqueLabels } from '@/lib/format/vendaLabels'
-import { CrudListShell, PageHeader } from '@/components/ui/admin-v2'
-import { EstoqueHubNav } from '@/components/ui/admin-v2/EstoqueHubNav'
-import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
+import { CrudListShell } from '@/components/ui/admin-v2'
 import { ErrorState } from '@/components/ui/feedback'
 import { listarMovimentacoesEstoque, type MovimentoLinha } from './actions'
+import { MovimentacoesFiltros } from './MovimentacoesFiltros'
 import { MovimentacoesTable } from './MovimentacoesTable'
+import { TIPOS_MOVIMENTO_FILTRO, normalizarPeriodoMovimento, tipoMovimentoFiltro } from './movimentoFiltro'
 
 const path = ROUTES.admin.estoqueMovimentacoes
 
-function href(q: string, sentido: string, page: number) {
-  return `${path}?${new URLSearchParams({ q, sentido, page: String(page) })}`
-}
+type Query = { q?: string; sentido?: string; page?: string; de?: string; ate?: string; tipo?: string }
 
 function sentidoAtivo(raw: string | undefined): string {
   return raw === 'entrada' || raw === 'saida' ? raw : ''
 }
 
-function filtrosMovimentacao(ui: ReturnType<typeof getMessages>['admin_ui']): FilterDef[] {
-  return [
-    { type: 'search', key: 'q', placeholder: ui.estoque_mov_busca },
-    {
-      type: 'pills',
-      key: 'sentido',
-      defaultValue: '',
-      options: [
-        { value: '', label: ui.estoque_mov_todos },
-        { value: 'entrada', label: ui.estoque_mov_entradas },
-        { value: 'saida', label: ui.estoque_mov_saidas },
-      ],
-    },
-  ]
+function href(params: Record<string, string>, page: number) {
+  const search = new URLSearchParams()
+  for (const [key, value] of Object.entries(params)) {
+    if (value) search.set(key, value)
+  }
+  if (page > 1) search.set('page', String(page))
+  const qs = search.toString()
+  return qs ? `${path}?${qs}` : path
 }
 
-export default async function MovimentacoesPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ q?: string; sentido?: string; page?: string }>
-}) {
+export default async function MovimentacoesPage({ searchParams }: { searchParams: Promise<Query> }) {
   const { session } = await loadAdminContext({
     pathname: ROUTES.admin.estoque,
     resource: `route:${ROUTES.admin.estoque}`,
@@ -52,8 +40,15 @@ export default async function MovimentacoesPage({
   const query = await searchParams
   const q = (query.q ?? '').slice(0, 100)
   const sentido = sentidoAtivo(query.sentido)
+  const periodo = normalizarPeriodoMovimento(query.de, query.ate)
+  const tipo = tipoMovimentoFiltro(query.tipo) ?? ''
   const page = Math.max(1, Number.parseInt(query.page ?? '1', 10) || 1)
-  const result = await listarMovimentacoesEstoque(q, sentido, page).then(
+  const tiposMap = tipoMovimentoEstoqueLabels(m)
+  const result = await listarMovimentacoesEstoque(q, sentido, page, {
+    de: periodo.de ?? undefined,
+    ate: periodo.ate ?? undefined,
+    tipo: tipo || undefined,
+  }).then(
     (data) => ({ data, error: null as string | null }),
     (error: unknown) => ({
       data: { rows: [] as MovimentoLinha[], total: 0 },
@@ -61,12 +56,23 @@ export default async function MovimentacoesPage({
     }),
   )
   const totalPages = Math.max(1, Math.ceil(result.data.total / 50))
-  if (!result.error && page > totalPages) redirect(href(q, sentido, totalPages))
+  const params = {
+    q,
+    sentido,
+    de: periodo.de ?? '',
+    ate: periodo.ate ?? '',
+    tipo,
+  }
+  if (!result.error && page > totalPages) redirect(href(params, totalPages))
+
+  const tipos = TIPOS_MOVIMENTO_FILTRO.map((codigo) => ({
+    value: codigo,
+    label: tiposMap[codigo] ?? codigo,
+  }))
 
   return (
-    <div className="admin-v2-page">
-      <PageHeader title={ui.hub_estoque_movimentacoes} subtitle={ui.estoque_mov_subtitulo} />
-      <EstoqueHubNav />
+    <>
+      <p className="mb-4 text-body text-fg-subtle">{ui.estoque_mov_subtitulo}</p>
       <CrudListShell
         title={ui.hub_estoque_movimentacoes}
         meta={(
@@ -75,22 +81,32 @@ export default async function MovimentacoesPage({
           </span>
         )}
         toolbar={(
-          <div className="w-full">
-            <Suspense fallback={<div className="h-9" />}>
-              <FilterBar
-                resetPageOnChange
-                filters={filtrosMovimentacao(ui)}
-                ariaLabel={ui.filtros_regiao_aria}
-                clearAriaLabel={ui.filtros_limpar_aria}
-                clearLabel={m.comum.limpar_filtros}
+          <div className="w-full min-w-0 basis-full">
+            <Suspense fallback={<div className="h-24" />}>
+              <MovimentacoesFiltros
+                tipos={tipos}
+                labels={{
+                  busca: ui.estoque_mov_busca,
+                  periodo: ui.estoque_mov_periodo,
+                  de: ui.estoque_mov_de,
+                  ate: ui.estoque_mov_ate,
+                  tipo: ui.estoque_mov_tipo,
+                  todosTipos: ui.estoque_mov_todos_tipos,
+                  todos: ui.estoque_mov_todos,
+                  entradas: ui.estoque_mov_entradas,
+                  saidas: ui.estoque_mov_saidas,
+                  limpar: m.comum.limpar_filtros,
+                  regiao: ui.filtros_regiao_aria,
+                  limparAria: ui.filtros_limpar_aria,
+                }}
               />
             </Suspense>
           </div>
         )}
         footer={(
           <div className="flex w-full items-center justify-between gap-3 text-body">
-            {page > 1 ? <Link href={href(q, sentido, page - 1)}>{ui.paginacao_anterior}</Link> : <span />}
-            {page < totalPages ? <Link href={href(q, sentido, page + 1)}>{ui.paginacao_proxima}</Link> : <span />}
+            {page > 1 ? <Link href={href(params, page - 1)}>{ui.paginacao_anterior}</Link> : <span />}
+            {page < totalPages ? <Link href={href(params, page + 1)}>{ui.paginacao_proxima}</Link> : <span />}
           </div>
         )}
       >
@@ -100,10 +116,21 @@ export default async function MovimentacoesPage({
           <MovimentacoesTable
             rows={result.data.rows}
             zh={session.idioma === 'zh'}
-            tipos={tipoMovimentoEstoqueLabels(m)}
+            tipos={tiposMap}
+            labels={{
+              detalhe: ui.estoque_mov_detalhe,
+              fechar: ui.estoque_mov_fechar,
+              produto: session.idioma === 'zh' ? '商品' : 'Produto',
+              data: session.idioma === 'zh' ? '日期' : 'Data',
+              tipo: ui.estoque_mov_tipo,
+              variacao: session.idioma === 'zh' ? '数量变化' : 'Variação',
+              observacao: session.idioma === 'zh' ? '备注' : 'Observação',
+              verProduto: ui.estoque_mov_ver_produto,
+              vazio: session.idioma === 'zh' ? '没有库存变动' : 'Nenhuma movimentação encontrada',
+            }}
           />
         )}
       </CrudListShell>
-    </div>
+    </>
   )
 }

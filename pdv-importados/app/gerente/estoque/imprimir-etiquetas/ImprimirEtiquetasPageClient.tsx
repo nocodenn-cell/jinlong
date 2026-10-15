@@ -26,6 +26,9 @@ import {
 } from '@/lib/etiqueta/EtiquetaConfig'
 import type { ItemCarrinho, ProdutoComEstoqueDTO } from '@/lib/etiqueta/types'
 import type { Idioma } from '@/idioma/normalizeIdioma'
+import { getMessages } from '@/i18n/getMessages'
+import { fmtTemplate } from '@/i18n/fmtTemplate'
+import { EtiquetasPassos, type PassoEtiqueta } from './EtiquetasPassos'
 import {
   mesclarProdutosNoCarrinho,
   normalizarQuantidadeEtiqueta,
@@ -122,6 +125,8 @@ export function ImprimirEtiquetasPageClient({
   embeddedInAdminHub = false,
 }: Props) {
   const t = LABELS[idioma]
+  const ui = getMessages(idioma).admin_ui
+  const [passo, setPasso] = useState<PassoEtiqueta>(1)
   const [carrinho, setCarrinho] = useState<ItemCarrinho[]>([])
   const [qtdDesejada, setQtdDesejada] = useState(1)
   const [modelo, setModelo] = useState<ModeloKey>(ETIQUETA_PADRAO)
@@ -213,6 +218,7 @@ export function ImprimirEtiquetasPageClient({
         if (!cancelled && r.success && r.data) {
           setCarrinho((prev) => mesclarProdutosNoCarrinho(prev, [r.data], 1))
           setPreviewId(r.data.id)
+          setPasso(2)
         } else if (!cancelled && r && !r.success) {
           emitGerenteToast({ kind: 'error', message: r.error })
         }
@@ -221,6 +227,7 @@ export function ImprimirEtiquetasPageClient({
         if (!cancelled && r.success && r.data?.[0]) {
           setCarrinho((prev) => mesclarProdutosNoCarrinho(prev, [r.data[0]], 1))
           setPreviewId(r.data[0].id)
+          setPasso(2)
         }
       }
       if (!cancelled) setPreloadDone(true)
@@ -304,9 +311,25 @@ export function ImprimirEtiquetasPageClient({
           : 'admin-v2-page mx-auto max-w-[1100px]'
       }
     >
-      <PageHeader title={t.titulo} subtitle={t.subtitulo} />
+      {embeddedInAdminHub ? null : <PageHeader title={t.titulo} subtitle={t.subtitulo} />}
+      <EtiquetasPassos
+        passo={passo}
+        podeAvancar={carrinho.length > 0}
+        contador={fmtTemplate(ui.etiquetas_passo_contador, { n: String(passo), total: '4' })}
+        rotulos={[
+          ui.etiquetas_passo_selecionar,
+          ui.etiquetas_passo_quantidades,
+          ui.etiquetas_passo_revisar,
+          ui.etiquetas_passo_pdf,
+        ]}
+        onIr={(proximo) => {
+          if (proximo > passo && carrinho.length === 0) return
+          setPasso(proximo)
+        }}
+      />
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6">
+        {passo === 1 ? (
         <div className="space-y-6">
           <SectionCard title={t.busca} className="h-auto">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -340,148 +363,171 @@ export function ImprimirEtiquetasPageClient({
             </div>
           </SectionCard>
 
-          <EtiquetaCarrinho
-            itens={carrinho}
-            onAtualizarQuantidade={handleAtualizarQuantidade}
-            onRemover={handleRemover}
-            onLimpar={handleLimpar}
-            onSelecionarPreview={setPreviewId}
-            produtoPreviewId={itemPreview?.produtoId ?? null}
-            idioma={idioma}
-            maxPorPdf={config.maxEtiquetasPorPdf}
-          />
-        </div>
-
-        <div className="space-y-6">
-          <SectionCard title={t.modelos} className="h-auto">
-            <div className="grid grid-cols-2 gap-2">
-              {MODELOS.map((m) => {
-                const ativo = modelo === m.key
-                const cfg = ETIQUETA_CONFIGS[m.key]
-                return (
-                  <button
-                    key={m.key}
-                    type="button"
-                    onClick={() => setModelo(m.key)}
-                    aria-pressed={ativo}
-                    className={`fp-focus-ring rounded-lg border px-3 py-3 text-left transition-colors ${
-                      ativo
-                        ? 'border-brand/35 bg-[var(--color-info-bg)]'
-                        : 'border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-soft)]'
-                    }`}
-                  >
-                    <span className="block text-body font-semibold">{t[m.labelKey]}</span>
-                    <span className="block text-caption text-fg-muted">{t[m.hintKey]}</span>
-                    <span className="mt-1 block text-caption text-fg-subtle">
-                      {cfg.largura}×{cfg.altura} · max {cfg.maxEtiquetasPorPdf}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-          </SectionCard>
-
-          <SectionCard title={t.preview} className="h-auto">
-            <EtiquetaPreview
-              item={itemPreview}
-              config={config}
-              vazioLabel={t.previewVazio}
-              modeloLabel={`${t[MODELOS.find((m) => m.key === modelo)?.labelKey ?? 'modelo40']} · ${config.largura}×${config.altura}mm`}
-            />
-          </SectionCard>
-
-          <SectionCard className="h-auto">
+          <SectionCard title={t.categoria} className="h-auto">
             <Button
               type="button"
-              variant="success"
-              className="w-full"
-              onClick={() => void handleGerarPdf()}
-              disabled={carrinho.length === 0 || gerandoPdf || acimaDoLimite}
-              loading={gerandoPdf}
+              variant="outline"
+              className="h-auto w-full flex-col items-start gap-1 px-4 py-3 text-left"
+              onClick={() => void handleToggleSeletorCategoria()}
+              disabled={buscandoCategoria}
+              loading={buscandoCategoria}
+              aria-expanded={seletorCategoriaAberto}
             >
-              <Printer className="h-5 w-5" />
-              <span className="font-medium">{t.gerarPdf}</span>
-              {totalEtiquetas > 0 ? (
-                <span className="rounded-full bg-[var(--color-surface)]/20 px-2 py-0.5 text-caption">
-                  {totalEtiquetas}
-                </span>
-              ) : null}
+              <span className="flex items-center gap-2 text-body">
+                <Layers className="h-4 w-4 text-brand" />
+                {t.categoria}
+              </span>
+              <span className="text-caption text-fg-muted">{t.categoriaHint}</span>
             </Button>
-            {acimaDoLimite ? (
-              <p role="alert" className="mt-2 text-caption text-[var(--color-danger)]">
-                {t.limitePdf} {config.maxEtiquetasPorPdf} {t.etiquetas}.
-              </p>
-            ) : (
-              <p className="mt-2 text-caption text-fg-muted">
-                {t.maximo}: {config.maxEtiquetasPorPdf} {t.etiquetas}
-              </p>
-            )}
-          </SectionCard>
-
-          <SectionCard title={t.acoesRapidas} className="h-auto">
-            <div className="space-y-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="h-auto w-full flex-col items-start gap-1 px-4 py-3 text-left"
-                onClick={() => void handleImprimirSaldoTotal()}
-                disabled={carrinho.length === 0 || buscandoEstoque}
-                loading={buscandoEstoque}
-              >
-                <span className="flex items-center gap-2 text-body">
-                  <Package className="h-4 w-4 text-brand" />
-                  {t.saldoTotal}
-                </span>
-                <span className="text-caption text-fg-muted">{t.saldoHint}</span>
-              </Button>
-
-              <Button
-                type="button"
-                variant="outline"
-                className="h-auto w-full flex-col items-start gap-1 px-4 py-3 text-left"
-                onClick={() => void handleToggleSeletorCategoria()}
-                disabled={buscandoCategoria}
-                loading={buscandoCategoria}
-                aria-expanded={seletorCategoriaAberto}
-              >
-                <span className="flex items-center gap-2 text-body">
-                  <Layers className="h-4 w-4 text-brand" />
-                  {t.categoria}
-                </span>
-                <span className="text-caption text-fg-muted">{t.categoriaHint}</span>
-              </Button>
-
-              {seletorCategoriaAberto ? (
-                <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-soft)] p-3">
-                  {carregandoCategorias ? (
-                    <p className="text-caption text-fg-muted">{t.carregandoCat}</p>
-                  ) : categorias.length === 0 ? (
-                    <p className="text-caption text-fg-muted">{t.semCategoria}</p>
-                  ) : (
-                    <Field id="etiqueta-categoria" label={t.escolhaCat}>
-                      <Select
-                        defaultValue=""
-                        disabled={buscandoCategoria}
-                        onChange={(e) => {
-                          void handleSelecionarCategoria(e.target.value)
-                          e.target.value = ''
-                        }}
-                      >
-                        <option value="" disabled>
-                          {t.selecionar}
+            {seletorCategoriaAberto ? (
+              <div className="mt-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-soft)] p-3">
+                {carregandoCategorias ? (
+                  <p className="text-caption text-fg-muted">{t.carregandoCat}</p>
+                ) : categorias.length === 0 ? (
+                  <p className="text-caption text-fg-muted">{t.semCategoria}</p>
+                ) : (
+                  <Field id="etiqueta-categoria" label={t.escolhaCat}>
+                    <Select
+                      defaultValue=""
+                      disabled={buscandoCategoria}
+                      onChange={(e) => {
+                        void handleSelecionarCategoria(e.target.value)
+                        e.target.value = ''
+                      }}
+                    >
+                      <option value="" disabled>
+                        {t.selecionar}
+                      </option>
+                      {categorias.map((categoria) => (
+                        <option key={categoria.id} value={categoria.id}>
+                          {categoria.nome}
                         </option>
-                        {categorias.map((categoria) => (
-                          <option key={categoria.id} value={categoria.id}>
-                            {categoria.nome}
-                          </option>
-                        ))}
-                      </Select>
-                    </Field>
-                  )}
-                </div>
-              ) : null}
-            </div>
+                      ))}
+                    </Select>
+                  </Field>
+                )}
+              </div>
+            ) : null}
           </SectionCard>
+        </div>
+        ) : null}
+
+        {passo === 2 ? (
+          <div className="space-y-6">
+            <EtiquetaCarrinho
+              itens={carrinho}
+              onAtualizarQuantidade={handleAtualizarQuantidade}
+              onRemover={handleRemover}
+              onLimpar={handleLimpar}
+              onSelecionarPreview={setPreviewId}
+              produtoPreviewId={itemPreview?.produtoId ?? null}
+              idioma={idioma}
+              maxPorPdf={config.maxEtiquetasPorPdf}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              className="h-auto w-full flex-col items-start gap-1 px-4 py-3 text-left"
+              onClick={() => void handleImprimirSaldoTotal()}
+              disabled={carrinho.length === 0 || buscandoEstoque}
+              loading={buscandoEstoque}
+            >
+              <span className="flex items-center gap-2 text-body">
+                <Package className="h-4 w-4 text-brand" />
+                {t.saldoTotal}
+              </span>
+              <span className="text-caption text-fg-muted">{t.saldoHint}</span>
+            </Button>
+          </div>
+        ) : null}
+
+        {passo === 3 || passo === 4 ? (
+          <div className="space-y-6">
+            {passo === 3 ? (
+              <SectionCard title={t.modelos} className="h-auto">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {MODELOS.map((modeloItem) => {
+                    const ativo = modelo === modeloItem.key
+                    const cfg = ETIQUETA_CONFIGS[modeloItem.key]
+                    return (
+                      <button
+                        key={modeloItem.key}
+                        type="button"
+                        onClick={() => setModelo(modeloItem.key)}
+                        aria-pressed={ativo}
+                        className={`fp-focus-ring rounded-lg border px-3 py-3 text-left transition-colors ${
+                          ativo
+                            ? 'border-brand/35 bg-[var(--color-info-bg)]'
+                            : 'border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-soft)]'
+                        }`}
+                      >
+                        <span className="block text-body font-semibold">{t[modeloItem.labelKey]}</span>
+                        <span className="block text-caption text-fg-muted">{t[modeloItem.hintKey]}</span>
+                        <span className="mt-1 block text-caption text-fg-subtle">
+                          {cfg.largura}×{cfg.altura} · max {cfg.maxEtiquetasPorPdf}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </SectionCard>
+            ) : null}
+            <SectionCard title={t.preview} className="h-auto">
+              {itemPreview ? null : <p className="mb-3 text-body text-fg-muted">{ui.etiquetas_revisar_vazio}</p>}
+              <EtiquetaPreview
+                ampliada
+                item={itemPreview}
+                config={config}
+                vazioLabel={t.previewVazio}
+                modeloLabel={`${t[MODELOS.find((item) => item.key === modelo)?.labelKey ?? 'modelo40']} · ${config.largura}×${config.altura}mm`}
+              />
+            </SectionCard>
+            {passo === 4 ? (
+              <SectionCard className="h-auto">
+                <p className="mb-3 text-body text-fg">
+                  {totalEtiquetas} {t.etiquetas}
+                </p>
+                <Button
+                  type="button"
+                  variant="success"
+                  className="min-h-12 w-full"
+                  onClick={() => void handleGerarPdf()}
+                  disabled={carrinho.length === 0 || gerandoPdf || acimaDoLimite}
+                  loading={gerandoPdf}
+                >
+                  <Printer className="h-5 w-5" />
+                  <span className="font-medium">{t.gerarPdf}</span>
+                </Button>
+                {acimaDoLimite ? (
+                  <p role="alert" className="mt-2 text-caption text-[var(--color-danger)]">
+                    {t.limitePdf} {config.maxEtiquetasPorPdf} {t.etiquetas}.
+                  </p>
+                ) : (
+                  <p className="mt-2 text-caption text-fg-muted">
+                    {t.maximo}: {config.maxEtiquetasPorPdf} {t.etiquetas}
+                  </p>
+                )}
+              </SectionCard>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
+          {passo > 1 ? (
+            <Button type="button" variant="outline" className="min-h-11" onClick={() => setPasso((atual) => (atual - 1) as PassoEtiqueta)}>
+              {ui.etiquetas_voltar}
+            </Button>
+          ) : <span />}
+          {passo < 4 ? (
+            <Button
+              type="button"
+              className="min-h-11"
+              disabled={carrinho.length === 0}
+              onClick={() => setPasso((atual) => (atual + 1) as PassoEtiqueta)}
+            >
+              {ui.etiquetas_continuar}
+            </Button>
+          ) : null}
         </div>
       </div>
     </div>

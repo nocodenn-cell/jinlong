@@ -3,10 +3,23 @@
 import { createClient } from '@/lib/supabase/server'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { ROUTES } from '@/lib/navigation/routes'
+import {
+  fimDiaSaoPauloIso,
+  inicioDiaSaoPauloIso,
+  normalizarPeriodoMovimento,
+  tipoMovimentoFiltro,
+} from './movimentoFiltro'
 
 export type MovimentoLinha = { evento_id: string; ocorrido_em: string; tipo_codigo: string; quantidade_delta: number; observacao: string | null; produto_id: string; produto_nome: string }
 
-export async function listarMovimentacoesEstoque(busca = '', sentido = '', pagina = 1) {
+export type FiltroMovimentacao = { de?: string; ate?: string; tipo?: string }
+
+export async function listarMovimentacoesEstoque(
+  busca = '',
+  sentido = '',
+  pagina = 1,
+  recorte: FiltroMovimentacao = {},
+) {
   const { session } = await loadAdminContext({ pathname: ROUTES.admin.estoque, resource: `route:${ROUTES.admin.estoque}` })
   if (!session.lojaId) throw new Error('Loja não identificada.')
   const db = await createClient()
@@ -19,6 +32,11 @@ export async function listarMovimentacoesEstoque(busca = '', sentido = '', pagin
   if (produtos) query = query.in('produto_id', (produtos.data ?? []).map((item) => item.id))
   if (sentido === 'entrada') query = query.gt('quantidade_delta', 0)
   if (sentido === 'saida') query = query.lt('quantidade_delta', 0)
+  const periodo = normalizarPeriodoMovimento(recorte.de, recorte.ate)
+  if (periodo.de) query = query.gte('ocorrido_em', inicioDiaSaoPauloIso(periodo.de))
+  if (periodo.ate) query = query.lte('ocorrido_em', fimDiaSaoPauloIso(periodo.ate))
+  const tipo = tipoMovimentoFiltro(recorte.tipo)
+  if (tipo) query = query.eq('tipo_codigo', tipo)
   const page = Number.isFinite(pagina) ? Math.max(1, Math.floor(pagina)) : 1
   const result = await query.order('ocorrido_em', { ascending: false }).order('evento_id', { ascending: false }).range((page - 1) * 50, page * 50 - 1)
   if (result.error) throw new Error(result.error.message)

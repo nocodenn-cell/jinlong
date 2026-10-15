@@ -15,6 +15,8 @@ import { transferenciaActionResultToLegacy } from '@/lib/observability/actionRes
 import { executarTransferencia, obterEstoqueDisponivelTransferencia } from './actions'
 import { caixaFmt } from '@/app/caixa/caixaI18n'
 import { ROUTES } from '@/lib/navigation/routes'
+import type { PerfilUsuario } from '@/lib/auth/perfil'
+import { TransferenciaIndisponivel } from './TransferenciaIndisponivel'
 
 export type TransferenciaLojaRow = { id: string; nome: string; codigo: string }
 export type TransferenciaProdutoOpt = {
@@ -26,6 +28,7 @@ export type TransferenciaProdutoOpt = {
 
 type Props = Readonly<{
   idioma: Idioma
+  perfil?: PerfilUsuario
   lojas: TransferenciaLojaRow[]
   produtos: TransferenciaProdutoOpt[]
   embeddedInAdminHub?: boolean
@@ -33,6 +36,7 @@ type Props = Readonly<{
 
 export function TransferenciasGerentePageClient({
   idioma,
+  perfil = 'GERENTE',
   lojas,
   produtos,
   embeddedInAdminHub = false,
@@ -213,7 +217,7 @@ export function TransferenciasGerentePageClient({
           : `admin-v2-page ${idioma === 'pt' ? '' : 'font-chinese'}`
       }
     >
-      <PageHeader title={m.gerente.nav_transferencias} subtitle={t.intro} />
+      {embeddedInAdminHub ? null : <PageHeader title={m.gerente.nav_transferencias} subtitle={t.intro} />}
 
       {!embeddedInAdminHub ? (
         <Link href={ROUTES.admin.estoque} className="gerente-nav-back text-sm font-medium hover:underline">
@@ -222,12 +226,20 @@ export function TransferenciasGerentePageClient({
       ) : null}
 
       {!podeTransferir ? (
-        <div
-          className="mt-6 rounded-xl border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] p-4 text-body leading-relaxed text-[var(--color-warning-strong)]"
-          role="status"
-        >
-          <strong>{t.uma_loja_aviso_titulo}</strong> {t.uma_loja_aviso_texto}
-        </div>
+        <TransferenciaIndisponivel
+          quantidadeLojas={lojas.length}
+          perfil={perfil}
+          textos={{
+            titulo: t.indisponivel_titulo,
+            motivoUma: t.indisponivel_motivo_uma,
+            motivoNenhuma: t.indisponivel_motivo_nenhuma,
+            acaoAdmin: t.indisponivel_acao_admin,
+            acaoDono: t.indisponivel_acao_dono,
+            acaoGerente: t.indisponivel_acao_gerente,
+            irSaldos: t.indisponivel_ir_saldos,
+            irEntradas: t.indisponivel_ir_entradas,
+          }}
+        />
       ) : null}
 
       {podeTransferir ? (

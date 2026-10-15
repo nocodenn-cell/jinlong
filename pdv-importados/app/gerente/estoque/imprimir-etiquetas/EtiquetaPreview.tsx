@@ -16,20 +16,23 @@ type Props = Readonly<{
   config: EtiquetaConfig
   vazioLabel: string
   modeloLabel: string
+  ampliada?: boolean
 }>
 
 const PX_POR_MM = 3.2
+const PX_POR_MM_AMPLIADA = 5.4
 
 function truncar(texto: string, max: number): string {
   if (texto.length <= max) return texto
   return `${texto.slice(0, max - 1)}…`
 }
 
-export function EtiquetaPreview({ item, config, vazioLabel, modeloLabel }: Props) {
+export function EtiquetaPreview({ item, config, vazioLabel, modeloLabel, ampliada = false }: Props) {
   const [barcodeUrl, setBarcodeUrl] = useState<string | null>(null)
-  const width = config.largura * PX_POR_MM
-  const height = config.altura * PX_POR_MM
-  const pad = config.margem * PX_POR_MM
+  const px = ampliada ? PX_POR_MM_AMPLIADA : PX_POR_MM
+  const width = config.largura * px
+  const height = config.altura * px
+  const pad = config.margem * px
 
   useEffect(() => {
     let cancelado = false
@@ -48,7 +51,7 @@ export function EtiquetaPreview({ item, config, vazioLabel, modeloLabel }: Props
   }, [item?.codigoBarras, item?.produtoId])
 
   return (
-    <div className="flex flex-col items-center gap-3">
+    <div className={ampliada ? 'flex min-h-[280px] w-full flex-col items-center justify-center gap-4 overflow-x-auto rounded-xl bg-[var(--color-surface-soft)] p-4 sm:p-8' : 'flex flex-col items-center gap-3'}>
       <p className="text-caption text-fg-muted">{modeloLabel}</p>
       <div
         className="relative overflow-hidden rounded-sm border border-dashed border-[var(--color-border)] bg-white text-black shadow-sm transition-[width,height] duration-300 ease-out"

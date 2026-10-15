@@ -55,6 +55,7 @@ const labels = {
 
 const quick = {
   faixaAria: 'Ações estoque',
+  receber: 'Receber mercadoria',
   entrada: 'Entrada de mercadoria',
   retirar: 'Retirar do estoque',
   ajustar: 'Ajustar quantidade',
@@ -121,14 +122,17 @@ afterEach(() => {
   container.remove()
 })
 
-it('faixa fixa do estoque tem Entrada, Retirar e Ajustar', () => {
+it('faixa fixa destaca Receber mercadoria e deixa retirada e ajuste secundários', () => {
   act(() => {
     root.render(<EstoqueAcoesRapidas linhas={linhas} labels={labels} quick={quick} />)
   })
-  for (const texto of ['Entrada de mercadoria', 'Retirar do estoque', 'Ajustar quantidade']) {
+  const receber = Array.from(container.querySelectorAll('button')).find((b) => b.textContent?.includes('Receber mercadoria'))
+  expect(receber?.getAttribute('data-emphasis')).toBe('primary')
+  expect(receber?.className).toMatch(/min-h-12/)
+  for (const texto of ['Retirar do estoque', 'Ajustar quantidade']) {
     const btn = Array.from(container.querySelectorAll('button')).find((b) => b.textContent?.includes(texto))
-    expect(btn, texto).toBeDefined()
-    expect(btn!.className).toMatch(/min-h-14/)
+    expect(btn?.getAttribute('data-emphasis')).toBe('secondary')
+    expect(btn?.className).toMatch(/min-h-11/)
   }
 })
 
@@ -137,7 +141,7 @@ it('Entrada aponta para NF-e e recebimento oficiais', () => {
     root.render(<EstoqueAcoesRapidas linhas={linhas} labels={labels} quick={quick} />)
   })
   const entrada = Array.from(container.querySelectorAll('button')).find((b) =>
-    b.textContent?.includes('Entrada de mercadoria'),
+    b.textContent?.includes('Receber mercadoria'),
   )
   act(() => {
     entrada!.click()

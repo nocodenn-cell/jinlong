@@ -9,12 +9,14 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { PackageMinus, PackagePlus, SlidersHorizontal } from 'lucide-react'
 import { DragonModal } from '@/components/ui/DragonModal'
+import { Button } from '@/components/ui/button'
 import { ROUTES } from '@/lib/navigation/routes'
 import { AjusteSaldoModal, type AjusteAlvo, type AjusteModo } from './AjusteSaldoModal'
 import type { EstoqueLinha, EstoqueLabels } from './EstoqueTable'
 
 type QuickLabels = {
   faixaAria: string
+  receber: string
   entrada: string
   retirar: string
   ajustar: string
@@ -57,9 +59,6 @@ type Props = {
   labels: EstoqueLabels
   quick: QuickLabels
 }
-
-const BTN =
-  'inline-flex min-h-14 min-w-[9.5rem] flex-1 items-center justify-center gap-2 rounded-lg border border-[var(--color-border-secondary)] bg-jl-surface-elev px-3 text-[18px] font-semibold text-jl-fg-1 shadow-sm transition hover:bg-jl-surface-soft focus-visible:outline-none focus-visible:shadow-focus sm:flex-none'
 
 function motivosPorModo(modo: AjusteModo, labels: EstoqueLabels) {
   if (modo === 'retirar') {
@@ -153,23 +152,41 @@ export function EstoqueAcoesRapidas({ linhas, labels, quick }: Props) {
   return (
     <>
       <div
-        className="sticky top-0 z-20 mb-4 border-b border-[var(--color-border-secondary)] bg-[var(--color-surface-base)]/95 py-3 backdrop-blur"
+        className="sticky top-14 z-10 mb-3 flex flex-col gap-2 border-b border-[var(--color-border-secondary)] bg-[var(--color-surface-base)]/95 py-2 backdrop-blur sm:flex-row sm:items-center"
         role="toolbar"
         aria-label={quick.faixaAria}
       >
-        <div className="flex flex-wrap gap-2">
-          <button type="button" className={BTN} onClick={() => setPainel('entrada')}>
-            <PackagePlus className="h-5 w-5 shrink-0" aria-hidden />
-            {quick.entrada}
-          </button>
-          <button type="button" className={BTN} onClick={() => setPainel('retirar')}>
-            <PackageMinus className="h-5 w-5 shrink-0" aria-hidden />
+        <Button
+          type="button"
+          variant="primary"
+          className="min-h-12 w-full justify-center sm:w-auto"
+          data-emphasis="primary"
+          onClick={() => setPainel('entrada')}
+        >
+          <PackagePlus className="h-5 w-5 shrink-0" aria-hidden />
+          {quick.receber}
+        </Button>
+        <div className="grid grid-cols-2 gap-2 sm:flex">
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-11 justify-center"
+            data-emphasis="secondary"
+            onClick={() => setPainel('retirar')}
+          >
+            <PackageMinus className="h-4 w-4 shrink-0" aria-hidden />
             {quick.retirar}
-          </button>
-          <button type="button" className={BTN} onClick={() => setPainel('ajustar')}>
-            <SlidersHorizontal className="h-5 w-5 shrink-0" aria-hidden />
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-11 justify-center"
+            data-emphasis="secondary"
+            onClick={() => setPainel('ajustar')}
+          >
+            <SlidersHorizontal className="h-4 w-4 shrink-0" aria-hidden />
             {quick.ajustar}
-          </button>
+          </Button>
         </div>
       </div>
 

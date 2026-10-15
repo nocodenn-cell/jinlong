@@ -750,7 +750,7 @@ export function ImportarNfePageClient({
           : `admin-v2-page space-y-4 ${fontClass}`
       }
     >
-      {!semDocumento ? <PageHeader title={mi.titulo} subtitle={mi.subtitulo} /> : null}
+      {!semDocumento && !embeddedInAdminHub ? <PageHeader title={mi.titulo} subtitle={mi.subtitulo} /> : null}
 
       {!embeddedInAdminHub ? (
         <Link href={ROUTES.admin.estoque} className="gerente-nav-back text-sm font-medium hover:underline">

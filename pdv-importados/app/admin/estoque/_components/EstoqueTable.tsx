@@ -202,6 +202,7 @@ export function EstoqueTable({ linhas, labels, ordem = 'nome', direcao = 'asc', 
       />
       <div className="hidden lg:block">
       <DataTable
+        compact
         data={linhas}
         onSort={ordenar}
         sortKey={Object.keys(SORT_KEYS).find((key) => SORT_KEYS[key] === ordem)}
@@ -211,12 +212,13 @@ export function EstoqueTable({ linhas, labels, ordem = 'nome', direcao = 'asc', 
         emptyState={<EmptyState title={labels.vazioTitulo} description={labels.vazioSub} />}
         className="rounded-none border-x-0 border-b-0"
         rowActions={(row) => (
-          <div className="flex flex-wrap items-center justify-end gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-1">
             {row.deficit != null && row.deficit > 0 ? (
               <Button
                 type="button"
                 size="sm"
                 variant="outline"
+                className="min-h-11 whitespace-normal"
                 aria-label={`${labels.reporTitulo} ${row.nome}`}
                 title={labels.reporTitulo}
                 asChild
@@ -233,6 +235,7 @@ export function EstoqueTable({ linhas, labels, ordem = 'nome', direcao = 'asc', 
               type="button"
               size="sm"
               variant="outline"
+              className="min-h-11 whitespace-normal"
               aria-label={`${labels.ajusteTitulo} ${row.nome}`}
               title={labels.ajusteTitulo}
               onClick={(e) => {
@@ -251,6 +254,7 @@ export function EstoqueTable({ linhas, labels, ordem = 'nome', direcao = 'asc', 
               type="button"
               size="sm"
               variant="outline"
+              className="min-h-11 whitespace-normal"
               aria-label={`${labels.kardexTitulo} ${row.nome}`}
               title={labels.kardexTitulo}
               onClick={(e) => {
@@ -264,6 +268,7 @@ export function EstoqueTable({ linhas, labels, ordem = 'nome', direcao = 'asc', 
               type="button"
               size="sm"
               variant="outline"
+              className="min-h-11 whitespace-normal"
               aria-label={`${labels.etiquetasTitulo} ${row.nome}`}
               title={labels.etiquetasTitulo}
               asChild
