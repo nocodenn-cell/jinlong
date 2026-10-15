@@ -32,9 +32,9 @@ Nenhuma alteração no código do produto, no banco ou em produção. Nenhum mer
 - Instruções de projeto: **não há `CLAUDE.md`** no repositório nem em `~/.claude`. Existe `AGENTS.md` no checkout principal (branch `loop/ux-caixa-gold-token`), mas não na `main`.
 - CI: `secret-scan.yml` (gitleaks em PR e push na `main`), CIs de backend/pdv-importados/pdv-local, release e backups.
 
-**Achados de segurança na configuração atual (não alterados; ver §8):**
+**Achados de segurança na configuração encontrada (1 e 2 corrigidos em §8):**
 
-1. `.claude/settings.local.json` (local, fora do git) libera `Bash(cat .env.local)` e `Read(//c//**)`, ou seja, o agente pode ler segredos locais sem perguntar. Isso é exatamente o que o "Secret Redactor" prometia mitigar.
+1. `.claude/settings.local.json`, que apesar do nome **é versionado no git**, liberava `Bash(cat .env.local)` e `Read(//c//**)`, ou seja, o agente pode ler segredos locais sem perguntar. Isso é exatamente o que o "Secret Redactor" prometia mitigar.
 2. A mesma lista libera `mcp__…__apply_migration` e `mcp__…__execute_sql` (Supabase), `Bash(npx supabase *)` e `Bash(git push *)`, sem confirmação.
 3. `claude.ps1` (versionado na raiz) aponta o Claude Code para um Ollama local (`qwen2.5-coder:3b`); sem segredo, mas fora do padrão do projeto.
 
@@ -120,13 +120,25 @@ claude plugin uninstall context-lens@jinlong-vetted
 claude plugin marketplace remove jinlong-vetted
 ```
 
-## 8. Recomendações não aplicadas (decisão do responsável)
+## 8. Reforço de permissões
 
-1. **Proteger segredos locais** (substituto real do Secret Redactor), em `.claude/settings.local.json`: remover `Bash(cat .env.local)` do `allow` e adicionar
+**Aplicado em 2026-10-14** (8.1 e 8.2, aprovados pelo responsável) em `.claude/settings.local.json`, tanto nesta branch quanto no checkout principal. Backups em `~/.claude/backups/settings.local.{main,worktree}.backup-pre-hardening-2026-10-14.json`. Nenhuma outra regra foi alterada, e a ordem das existentes foi preservada.
+
+1. **Proteger segredos locais** (substituto real do Secret Redactor): removido `Bash(cat .env.local)` do `allow` e adicionado
    `"deny": ["Read(**/.env)", "Read(**/.env.local)", "Read(**/.env.*.local)", "Read(**/.env.production)"]`.
-2. **Confirmar operações de banco/produção** (cobre o que o Launch Codes não vê):
-   `"ask": ["Bash(npx supabase db push*)", "PowerShell(npx supabase db push*)", "mcp__93d8e0ff-3306-4cc0-8b34-9d8a9750000d__apply_migration"]`
-   e retirar `apply_migration` do `allow`.
+2. **Confirmar operações de banco/produção** (cobre o que o Launch Codes não vê): retirado `apply_migration` do `allow` e adicionado
+   `"ask": ["Bash(npx supabase db push*)", "Bash(supabase db push*)", "PowerShell(npx supabase db push*)", "PowerShell(supabase db push*)", "mcp__93d8e0ff-3306-4cc0-8b34-9d8a9750000d__apply_migration"]`.
+   `ask` tem precedência sobre o `allow` amplo `Bash(npx supabase *)`, que foi mantido.
+
+Validação (sessões headless no Claude Code 2.1.295):
+
+- Com um `.env.local` falso (valor-canário), `Read` foi **negado mesmo em `bypassPermissions`** ("denied by your permission settings"). O arquivo falso foi apagado em seguida.
+- `npx supabase db push --help`, com `--allowedTools Bash`, passou a **pedir confirmação** e não executou.
+
+Limite conhecido: o `deny` vale para a ferramenta Read. Um `Get-Content .env.local` via PowerShell ainda cairia no prompt normal de permissão (não há `allow` para ele), mas não é bloqueado de forma absoluta.
+
+**Ainda não aplicado:**
+
 3. **Atualizar o CLI do terminal** de 2.1.283 para a versão do app (`npm i -g @anthropic-ai/claude-code`).
 4. **Criar um `CLAUDE.md` mínimo** a partir do `AGENTS.md` (padrões Sonar já definidos), para que as sessões na `main` recebam as mesmas regras.
 

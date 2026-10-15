@@ -85,7 +85,6 @@
       "Bash(xargs grep -l \"IdiomaBotao\\\\|idioma.*toggle\\\\|toggle.*idioma\\\\|SeletorIdioma\\\\|IdiomaToggle\\\\|traduz\")",
       "Bash(xargs grep -l \"setIdioma\\\\|mudarIdioma\\\\|setLanguage\\\\|switchLanguage\\\\|pt.*zh\\\\|zh.*pt\")",
       "Bash(grep -h \"^CREATE TABLE\" /c/Naturecode/fastproduct/backend/supabase/migrations/*.sql | sed 's/CREATE TABLE.*public\\\\.//' | sed 's/ .*//' | sort -u > /tmp/all_tables.txt && cat /tmp/all_tables.txt)",
-      "Bash(cat .env.local)",
       "Bash(ls lib/supabase/)",
       "Bash(node -e \"const pg = require\\('@supabase/postgrest-js'\\); console.log\\(Object.keys\\(pg\\).filter\\(k => k.includes\\('Filter'\\) || k.includes\\('Query'\\) || k.includes\\('Builder'\\)\\)\\)\")",
       "Bash(git check-ignore *)",
@@ -98,7 +97,6 @@
       "Bash(grep \"^      [a-z_]*: {$\" /c/Naturecode/fastproduct/pdv-importados/lib/supabase/database.types.ts)",
       "Bash(grep -E \"^      [a-z_]+: \\\\{$\" /c/Naturecode/fastproduct/pdv-importados/lib/supabase/database.types.ts)",
       "Bash(awk '{print $1}')",
-      "mcp__93d8e0ff-3306-4cc0-8b34-9d8a9750000d__apply_migration",
       "Bash(Remove-Item \"C:\\\\Naturecode\\\\fastproduct\\\\pdv-importados\\\\supabase\\\\migrations\\\\performance_indices.sql\" -Force)",
       "Bash(Remove-Item \"C:\\\\Naturecode\\\\fastproduct\\\\pdv-importados\\\\supabase\\\\migrations\\\\rls_policies.sql\" -Force)",
       "Bash(Write-Output \"Deletados.\")",
@@ -135,6 +133,19 @@
       "mcp__visualize__show_widget",
       "Bash(sort -t: -k2 -rn)",
       "Bash(grep -E \"\\\\.\\(md|txt\\)$\")"
+    ],
+    "deny": [
+      "Read(**/.env)",
+      "Read(**/.env.local)",
+      "Read(**/.env.*.local)",
+      "Read(**/.env.production)"
+    ],
+    "ask": [
+      "Bash(npx supabase db push*)",
+      "Bash(supabase db push*)",
+      "PowerShell(npx supabase db push*)",
+      "PowerShell(supabase db push*)",
+      "mcp__93d8e0ff-3306-4cc0-8b34-9d8a9750000d__apply_migration"
     ]
   }
 }
