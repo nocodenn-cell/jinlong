@@ -53,13 +53,29 @@ export async function adicionarParcela(page: Page): Promise<void> {
   await btn.click()
 }
 
+/**
+ * Campos de valor do painel: "Recebido" (pagamento único em dinheiro) ou
+ * "Valor (R$) da parcela N" (pagamento dividido). Pelo nome acessível, não por
+ * `input[type="number"]`: desde #464 (b1c6b332) são `CaixaMoneyInput`
+ * (`type="text"` + `inputMode="decimal"`) e o seletor antigo nunca casava —
+ * o `fill` esperava até o timeout do teste.
+ */
+const NOME_CAMPO_VALOR =
+  /^(Recebido|Valor recebido|已收|收款金额)$|^Valor \(R\$\) da parcela \d+$|^第 \d+ 笔金额/
+
+/**
+ * Select de forma de pagamento de cada parcela ("Forma de pagamento da parcela N").
+ * Não `panel.locator('select')`: desde #464 o painel em pagamento único em
+ * dinheiro também tem o `<select>` Percentual/Valor do desconto comercial, que
+ * contava como parcela e quebrava o "voltou ao modo não dividido" (0 selects).
+ */
+const NOME_SELECT_PARCELA = /^Forma de pagamento da parcela \d+$|^第 \d+ 笔付款方式$/
+
 export function parcelasNoPainel(page: Page) {
   const panel = painelPgto(page)
   return {
-    selects: panel.locator('select'),
-    // Por aria-label (`aria_parcela_valor`), não `type="number"`: desde o #464
-    // o valor da parcela é `CaixaMoneyInput` (texto + `inputMode="decimal"`).
-    inputs: panel.getByRole('textbox', { name: /Valor \(R\$\) da parcela|笔金额/ }),
+    selects: panel.getByRole('combobox', { name: NOME_SELECT_PARCELA }),
+    inputs: panel.getByRole('textbox', { name: NOME_CAMPO_VALOR }),
   }
 }
 
