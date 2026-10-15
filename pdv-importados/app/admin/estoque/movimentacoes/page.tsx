@@ -7,41 +7,21 @@ import { getMessages } from '@/i18n/getMessages'
 import { tipoMovimentoEstoqueLabels } from '@/lib/format/vendaLabels'
 import { CrudListShell, PageHeader } from '@/components/ui/admin-v2'
 import { EstoqueHubNav } from '@/components/ui/admin-v2/EstoqueHubNav'
-import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
+import { FilterBar } from '@/components/ui/FilterBar'
 import { ErrorState } from '@/components/ui/feedback'
 import { listarMovimentacoesEstoque, type MovimentoLinha } from './actions'
 import { MovimentacoesTable } from './MovimentacoesTable'
-
-const path = ROUTES.admin.estoqueMovimentacoes
-
-function href(q: string, sentido: string, page: number) {
-  return `${path}?${new URLSearchParams({ q, sentido, page: String(page) })}`
-}
-
-function sentidoAtivo(raw: string | undefined): string {
-  return raw === 'entrada' || raw === 'saida' ? raw : ''
-}
-
-function filtrosMovimentacao(ui: ReturnType<typeof getMessages>['admin_ui']): FilterDef[] {
-  return [
-    { type: 'search', key: 'q', placeholder: ui.estoque_mov_busca },
-    {
-      type: 'pills',
-      key: 'sentido',
-      defaultValue: '',
-      options: [
-        { value: '', label: ui.estoque_mov_todos },
-        { value: 'entrada', label: ui.estoque_mov_entradas },
-        { value: 'saida', label: ui.estoque_mov_saidas },
-      ],
-    },
-  ]
-}
+import {
+  filtrosMovimentacao,
+  hrefMovimentacoes,
+  periodoMovimentacao,
+  sentidoAtivo,
+} from './movimentacoesFiltros'
 
 export default async function MovimentacoesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; sentido?: string; page?: string }>
+  searchParams: Promise<{ q?: string; sentido?: string; periodo?: string; page?: string }>
 }) {
   const { session } = await loadAdminContext({
     pathname: ROUTES.admin.estoque,
@@ -52,8 +32,9 @@ export default async function MovimentacoesPage({
   const query = await searchParams
   const q = (query.q ?? '').slice(0, 100)
   const sentido = sentidoAtivo(query.sentido)
+  const periodo = periodoMovimentacao(query.periodo)
   const page = Math.max(1, Number.parseInt(query.page ?? '1', 10) || 1)
-  const result = await listarMovimentacoesEstoque(q, sentido, page).then(
+  const result = await listarMovimentacoesEstoque(q, sentido, page, periodo).then(
     (data) => ({ data, error: null as string | null }),
     (error: unknown) => ({
       data: { rows: [] as MovimentoLinha[], total: 0 },
@@ -61,7 +42,7 @@ export default async function MovimentacoesPage({
     }),
   )
   const totalPages = Math.max(1, Math.ceil(result.data.total / 50))
-  if (!result.error && page > totalPages) redirect(href(q, sentido, totalPages))
+  if (!result.error && page > totalPages) redirect(hrefMovimentacoes({ q, sentido, periodo, page: totalPages }))
 
   return (
     <div className="admin-v2-page">
@@ -78,6 +59,7 @@ export default async function MovimentacoesPage({
           <div className="w-full">
             <Suspense fallback={<div className="h-9" />}>
               <FilterBar
+                layout="grid"
                 resetPageOnChange
                 filters={filtrosMovimentacao(ui)}
                 ariaLabel={ui.filtros_regiao_aria}
@@ -89,8 +71,8 @@ export default async function MovimentacoesPage({
         )}
         footer={(
           <div className="flex w-full items-center justify-between gap-3 text-body">
-            {page > 1 ? <Link href={href(q, sentido, page - 1)}>{ui.paginacao_anterior}</Link> : <span />}
-            {page < totalPages ? <Link href={href(q, sentido, page + 1)}>{ui.paginacao_proxima}</Link> : <span />}
+            {page > 1 ? <Link href={hrefMovimentacoes({ q, sentido, periodo, page: page - 1 })}>{ui.paginacao_anterior}</Link> : <span />}
+            {page < totalPages ? <Link href={hrefMovimentacoes({ q, sentido, periodo, page: page + 1 })}>{ui.paginacao_proxima}</Link> : <span />}
           </div>
         )}
       >
