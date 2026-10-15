@@ -63,10 +63,18 @@ export async function adicionarParcela(page: Page): Promise<void> {
 const NOME_CAMPO_VALOR =
   /^(Recebido|Valor recebido|已收|收款金额)$|^Valor \(R\$\) da parcela \d+$|^第 \d+ 笔金额/
 
+/**
+ * Select de forma de pagamento de cada parcela ("Forma de pagamento da parcela N").
+ * Não `panel.locator('select')`: desde #464 o painel em pagamento único em
+ * dinheiro também tem o `<select>` Percentual/Valor do desconto comercial, que
+ * contava como parcela e quebrava o "voltou ao modo não dividido" (0 selects).
+ */
+const NOME_SELECT_PARCELA = /^Forma de pagamento da parcela \d+$|^第 \d+ 笔付款方式$/
+
 export function parcelasNoPainel(page: Page) {
   const panel = painelPgto(page)
   return {
-    selects: panel.locator('select'),
+    selects: panel.getByRole('combobox', { name: NOME_SELECT_PARCELA }),
     inputs: panel.getByRole('textbox', { name: NOME_CAMPO_VALOR }),
   }
 }
