@@ -167,7 +167,7 @@ export function ProdutoEtiquetaAutocomplete({
         <ul
           id={listId}
           role="listbox"
-          className="absolute z-30 mt-2 max-h-64 w-full overflow-auto rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] py-1 shadow-lg"
+          className="absolute z-30 mt-2 max-h-64 w-full overflow-auto rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] py-1 shadow-lg"
         >
           {carregando && opcoes.length === 0 ? (
             <li role="presentation" className="px-3 py-2 text-caption text-fg-subtle">

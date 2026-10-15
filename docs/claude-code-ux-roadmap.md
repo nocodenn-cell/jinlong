@@ -107,10 +107,19 @@ Legenda de risco: 🔴 alto · 🟠 médio · 🟡 baixo.
 - Fluxo de compras/recebimento: maior superfície. Só a casca muda; regras de recebimento parcial
   e aviso de duplicidade intactas (testes existentes como guarda).
 
+### Tarefa 10 🟡 — `/opacidade` sobre `var(--token)` (8 ocorrências legadas)
+- `bg-[var(--token)]/NN` não gera CSS no Tailwind v3 (tokens são hex). Achado na revisão do #561.
+- Trocar cada ocorrência listada em `tests/css-tokens-definidos.test.ts` (`LEGADO`) por
+  `color-mix(in_srgb,var(--token)_NN%,transparent)`, esvaziando a lista.
+- Inclui telas do Caixa (PDV): só apresentação, conferir contraste.
+- Teste: a guarda com `LEGADO` vazio + verificação do CSS gerado pelo Tailwind.
+
 ## Registro de execução
 
 | Tarefa | Status | Commit | Testes |
 |---|---|---|---|
 | 0 | Bloqueada (stash inexistente) | — | — |
-| 1 | Concluída (local) | `b169cfe6` | test novo vermelho→verde (4/5 → 5/5); typecheck ✅; eslint ✅; vitest completo 373 arquivos / 2354 testes ✅ |
-| 2 | Próxima | — | — |
+| 1 | Integrada (PR #553) | `b169cfe6` | behavior test vermelho→verde (4/5 → 5/5); typecheck ✅; eslint ✅; vitest completo ✅; CI ✅ |
+| 2 | PR #561 | `93612b75`, `6505cb30` | guarda de tokens vermelho→verde (13 usos → 0); fix da revisão Codex (/95 → color-mix) |
+| 3 | Em andamento | — | — |
+| 10 | Pendente | — | — |
