@@ -151,13 +151,29 @@ test.describe('QA módulo produtos (gerente)', () => {
       timeout: 30_000,
     })
 
-    await page.locator('section').filter({ has: page.getByRole('heading', { name: /Lista de produtos|商品列表/ }) }).getByRole('textbox', { name: /Buscar|搜索/i }).fill(novoNome.slice(0, 16))
+    // Busca do catálogo mora na `FilterBar` (`<section role="search">`,
+    // `admin_ui.filtros_regiao_aria`) — o heading "Lista de produtos" não
+    // existe mais nesta página e o seletor antigo esperava até o timeout.
+    const buscaCatalogo = page
+      .getByRole('search', { name: /Filtros de busca|搜索筛选/ })
+      .getByRole('textbox', { name: /Buscar produtos|搜索商品/ })
+    await buscaCatalogo.fill(novoNome.slice(0, 16))
     await expect(page.getByText(novoNome, { exact: true })).toBeVisible({ timeout: 15_000 })
-    await page.locator('section').filter({ has: page.getByRole('heading', { name: /Lista de produtos|商品列表/ }) }).getByRole('textbox', { name: /Buscar|搜索/i }).fill(segundoNome.slice(0, 16))
+    await buscaCatalogo.fill(segundoNome.slice(0, 16))
     await expect(page.getByText(segundoNome, { exact: true })).toBeVisible({ timeout: 20_000 })
   })
 
-  test('2 — Exportação CSV (filtro Ativo, cabeçalhos, só ativos)', async ({ page }) => {
+  /*
+   * Testes 2–6: `test.fixme`, não deletados. Miram uma UI do catálogo que não
+   * existe mais — form inline `#cadastro-rapido` (hoje o cadastro rápido é o
+   * `NovoProdutoModal`), filtros por `<select>` dentro da seção "Lista de
+   * produtos" (hoje `FilterBar` com botões de status), heading "商品管理" e
+   * botão "从 CSV 导入商品". Nunca rodaram no CI geral: o arquivo é `serial` e o
+   * teste 1 falhava antes (mascarados desde, pelo menos, o run 38087358299 de
+   * 2026-10-10). Reescrever contra a UI atual exige a stack local para validar
+   * — fica como tarefa própria, não como seletor chutado aqui.
+   */
+  test.fixme('2 — Exportação CSV (filtro Ativo, cabeçalhos, só ativos)', async ({ page }) => {
     await page
       .locator('section')
       .filter({ has: page.getByRole('heading', { name: /Lista de produtos|商品列表/ }) })
@@ -182,7 +198,7 @@ test.describe('QA módulo produtos (gerente)', () => {
     }
   })
 
-  test('3 — Imagem: upload, substituir, remover', async ({ page }) => {
+  test.fixme('3 — Imagem: upload, substituir, remover', async ({ page }) => {
     const imgA = path.join(process.cwd(), 'test-assets', 'product-a.png')
     const imgB = path.join(process.cwd(), 'test-assets', 'product-b.png')
     const tag = `QA E2E IMG ${Date.now()}`
@@ -230,7 +246,7 @@ test.describe('QA módulo produtos (gerente)', () => {
     await expect(row5.locator('td').nth(2).locator('svg')).toBeVisible()
   })
 
-  test('4 — Exclusão em lote (toast, sumiu limpo, demo inativo ou removido)', async ({ page }) => {
+  test.fixme('4 — Exclusão em lote (toast, sumiu limpo, demo inativo ou removido)', async ({ page }) => {
     const suffix = String(Date.now())
     const nomeLimpo = `QA DEL LIMPO ${suffix}`
     await page.locator('#cadastro-rapido input[name=nome]').fill(nomeLimpo)
@@ -274,7 +290,7 @@ test.describe('QA módulo produtos (gerente)', () => {
     console.log(`[qa-produtos] após exclusão — linhas com ${nomeB} (Inativo): ${nB}`)
   })
 
-  test('4b — Exclusão individual (ícone na linha)', async ({ page }) => {
+  test.fixme('4b — Exclusão individual (ícone na linha)', async ({ page }) => {
     const suffix = String(Date.now())
     const nome = `QA ROW ${suffix}`
     await page.locator('#cadastro-rapido input[name=nome]').fill(nome)
@@ -299,7 +315,7 @@ test.describe('QA módulo produtos (gerente)', () => {
     await expect(page.getByText(nome, { exact: true })).toHaveCount(0)
   })
 
-  test('5 — Regressão: cadastro rápido, preço inline, filtro Inativos, busca', async ({ page }) => {
+  test.fixme('5 — Regressão: cadastro rápido, preço inline, filtro Inativos, busca', async ({ page }) => {
     const s = String(Date.now())
     const nome = `QA REG ${s}`
     await page.locator('#cadastro-rapido input[name=nome]').fill(nome)
@@ -332,7 +348,7 @@ test.describe('QA módulo produtos (gerente)', () => {
     await expect(page.getByRole('cell', { name: nome })).toBeVisible()
   })
 
-  test('6 — i18n zh: importação com 是/否', async ({ page }) => {
+  test.fixme('6 — i18n zh: importação com 是/否', async ({ page }) => {
     await page.getByRole('button', { name: '普通话' }).click()
     await expect(page.getByRole('heading', { name: '商品管理' })).toBeVisible({ timeout: 15_000 })
 
