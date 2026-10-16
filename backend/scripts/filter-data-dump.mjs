@@ -6,10 +6,13 @@
 // abortaria a transação inteira. Dados de negócio (public) e contas
 // (auth.users, auth.identities) são o que importa para a recuperação.
 //
-// Quando recebe o arquivo de colunas do destino (linhas "schema.tabela.coluna"),
-// cada COPY é projetado só nas colunas que o destino tem: as demais são removidas
-// da lista e dos valores. Colunas de produção ausentes na imagem do drill (ex.:
-// auth.users.email_confirmed_at) deixam de quebrar o restore; ficam registradas.
+// Com o arquivo de colunas do destino (linhas "schema.tabela.coluna"):
+// - COPY de tabela auth.* que o destino não tem é pulado (registrado);
+// - COPY de tabela que o destino tem é projetado nas colunas dele: colunas de
+//   produção ausentes na imagem (ex.: auth.users.email_confirmed_at) saem da lista
+//   e dos valores (registrado).
+// Tabelas public ainda não existem no destino na hora deste filtro (o schema é
+// carregado depois), por isso só auth.* é pulado por ausência.
 //
 // Uso: node filter-data-dump.mjs <entrada.sql> <saida.sql> [regex-permitida] [colunas-destino.txt]
 import { readFileSync, writeFileSync } from 'node:fs'
@@ -22,7 +25,7 @@ function parseColumns(list) {
   return list.split(', ').map((c) => c.replace(/^"|"$/g, ''))
 }
 
-/** Conjunto "schema.tabela" -> Set(colunas) a partir do texto "schema.tabela.coluna" por linha. */
+/** Texto "schema.tabela.coluna" por linha -> Map("schema.tabela" -> Set(colunas)). */
 export function parseTargetColumns(text) {
   const map = new Map()
   for (const raw of text.split('\n')) {
@@ -30,57 +33,66 @@ export function parseTargetColumns(text) {
     if (!line) continue
     const dot = line.lastIndexOf('.')
     const table = line.slice(0, dot)
-    const col = line.slice(dot + 1)
     if (!map.has(table)) map.set(table, new Set())
-    map.get(table).add(col)
+    map.get(table).add(line.slice(dot + 1))
   }
   return map
 }
 
 export function filterDump(sql, allow, targetColumns = null) {
   const out = []
-  let keep = true
-  let skipped = 0
-  let projection = null // { keepIdx: number[] } enquanto dentro de um COPY projetado
   const dropped = []
+  const missingTables = []
+  let skipped = 0
+  let keep = true
+  let projection = null // { keepIdx } dentro de um COPY projetado
   for (const line of sql.split('\n')) {
-    if (projection === null) {
-      const head = COPY_HEAD.exec(line)
-      if (head) {
-        const table = `${head[1]}.${head[2]}`
-        keep = allow.test(table)
-        if (!keep) skipped += 1
-        else if (targetColumns && targetColumns.has(table)) {
-          const cols = parseColumns(head[3])
-          const target = targetColumns.get(table)
-          const keepIdx = []
-          const keepCols = []
-          cols.forEach((c, i) => {
-            if (target.has(c)) { keepIdx.push(i); keepCols.push(c) }
-            else dropped.push(`${table}.${c}`)
-          })
-          projection = { keepIdx }
-          out.push(`COPY "${head[1]}"."${head[2]}" (${keepCols.map((c) => `"${c}"`).join(', ')}) FROM stdin;`)
-          continue
-        }
+    if (projection !== null) {
+      if (line === '\\.') {
+        out.push(line)
+        projection = null
+        keep = true
+      } else {
+        out.push(projection.keepIdx.map((i) => line.split('\t')[i] ?? '\\N').join('\t'))
+      }
+      continue
+    }
+    const head = COPY_HEAD.exec(line)
+    if (head) {
+      const table = `${head[1]}.${head[2]}`
+      keep = allow.test(table)
+      if (keep && targetColumns && table.startsWith('auth.') && !targetColumns.has(table)) {
+        keep = false
+        missingTables.push(table)
+      }
+      if (!keep) {
+        skipped += 1
+      } else if (targetColumns && targetColumns.has(table)) {
+        const target = targetColumns.get(table)
+        const keepIdx = []
+        const keepCols = []
+        parseColumns(head[3]).forEach((c, i) => {
+          if (target.has(c)) {
+            keepIdx.push(i)
+            keepCols.push(c)
+          } else {
+            dropped.push(`${table}.${c}`)
+          }
+        })
+        projection = { keepIdx }
+        out.push(`COPY "${head[1]}"."${head[2]}" (${keepCols.map((c) => `"${c}"`).join(', ')}) FROM stdin;`)
+        continue
       }
       if (keep) out.push(line)
-      if (line === '\\.') keep = true
       continue
     }
-    // dentro do bloco projetado
-    if (line === '\\.') {
-      out.push(line)
-      projection = null
-      keep = true
-      continue
-    }
-    out.push(projection.keepIdx.map((i) => line.split('\t')[i] ?? '\\N').join('\t'))
+    if (keep) out.push(line)
+    if (line === '\\.') keep = true
   }
-  return { text: out.join('\n'), skipped, dropped }
+  return { text: out.join('\n'), skipped, dropped, missingTables }
 }
 
-const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href
+const isMain = process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href
 if (isMain) {
   const [input, output, allowArg, targetArg] = process.argv.slice(2)
   if (!input || !output) {
@@ -88,9 +100,13 @@ if (isMain) {
     process.exit(2)
   }
   const target = targetArg ? parseTargetColumns(readFileSync(targetArg, 'utf8')) : null
-  const { text, skipped, dropped } = filterDump(readFileSync(input, 'utf8'), new RegExp(allowArg ?? DEFAULT_ALLOW), target)
+  const { text, skipped, dropped, missingTables } = filterDump(
+    readFileSync(input, 'utf8'),
+    new RegExp(allowArg ?? DEFAULT_ALLOW),
+    target,
+  )
   writeFileSync(output, text)
   console.log(`blocos COPY ignorados: ${skipped}`)
+  if (missingTables.length) console.log(`tabelas auth ausentes no destino (puladas): ${missingTables.join(', ')}`)
   if (dropped.length) console.log(`colunas de produção ausentes no destino (removidas do COPY): ${dropped.join(', ')}`)
 }
-
