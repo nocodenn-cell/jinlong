@@ -101,6 +101,8 @@ const legacyAdminUi = {
     detalhePorPeriodo: { cn: '按时间', pt: 'Por dia ou hora' } satisfies BilingualLine,
     detalhePorPagamento: { cn: '按支付方式', pt: 'Por forma de pagamento' } satisfies BilingualLine,
     detalheVazio: { cn: '此期间没有数据。', pt: 'Sem dados neste período.' } satisfies BilingualLine,
+    detalhePedidosParcial: { cn: '显示 {{total}} 笔中最近的 {{n}} 笔。', pt: 'Mostrando os {{n}} mais recentes de {{total}}.' } satisfies BilingualLine,
+    detalheVerTodos: { cn: '在销售页查看全部', pt: 'Ver todos em Vendas' } satisfies BilingualLine,
     trendNew: { cn: '新增', pt: 'novo' } satisfies BilingualLine,
     trendStockOk: { cn: '正常', pt: 'OK' } satisfies BilingualLine,
     trendStockWarn: { cn: '注意', pt: 'Atenção' } satisfies BilingualLine,

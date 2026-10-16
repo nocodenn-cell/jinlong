@@ -38,7 +38,7 @@ import { formatDateTimeLocaleDefault, formatDayMonthInLocale } from '@/lib/forma
 import { formatBRL, formatNumberLocale } from '@/lib/format/money'
 import { calcularMetricasVendas } from '@/lib/vendas/metricasVendas'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
-import { ROUTES } from '@/lib/navigation/routes'
+import { ROUTES, adminVendaDetalheQuery, pathWithQuery } from '@/lib/navigation/routes'
 import { getMessages } from '@/i18n/getMessages'
 import { labelFormaPagamentoVenda } from '@/lib/format/vendaLabels'
 import { contarSituacoesEstoque } from '@/lib/estoque/classificarEstoque'
@@ -63,6 +63,9 @@ type Metric = {
   labelWrap?: boolean
   sparkAriaLabel?: string
 }
+
+/** Pedidos listados na gaveta de drill-down; o resto fica a um link de Vendas. */
+const DETALHE_PEDIDOS_MAX = 50
 
 function fillTemplate(template: string, vars: Record<string, string>): string {
   return Object.entries(vars).reduce(
@@ -693,12 +696,53 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     </>
   )
 
-  const detalheVendas = (
+  // Drill-down: tudo sai da mesma população dos KPIs (`vendasRange`: concluídas no período).
+  const porPeriodo =
+    period === 'TODAY'
+      ? hourlySeries.filter((p) => p.total > 0)
+      : chartData
+  const pedidosDoPeriodo = [...vendasRange].sort((x, y) => (x.data < y.data ? 1 : x.data > y.data ? -1 : 0))
+  const pedidosNaGaveta = pedidosDoPeriodo.slice(0, DETALHE_PEDIDOS_MAX)
+  const vendasDoPeriodoHref = pathWithQuery(
+    ROUTES.admin.vendas,
+    new URLSearchParams({ periodo: period === 'TODAY' ? 'hoje' : period === '7D' ? '7d' : '30d' }),
+  )
+
+  const detalheConteudo = periodSalesFailed ? (
+    <ErrorState
+      title={adminUi.errors.criticalSalesTitle[lk]}
+      description={adminUi.errors.criticalSalesBody[lk]}
+    />
+  ) : detalhe === 'pedidos' ? (
+    <div className="flex flex-col gap-3">
+      <DetalheLista
+        titulo={L.detalhePedidosTitulo[lk]}
+        vazio={L.detalheVazio[lk]}
+        linhas={pedidosNaGaveta.map((v) => ({
+          key: v.id,
+          label: `${formatDateTimeLocaleDefault(v.data, locale, relatorioTz)} · ${labelFormaPagamentoVenda(v.forma_pagamento, m)}`,
+          valor: formatBRL(Number(v.total_liquido ?? 0), locale),
+          href: adminVendaDetalheQuery(v.id),
+        }))}
+      />
+      {pedidosDoPeriodo.length > pedidosNaGaveta.length ? (
+        <p className="text-caption text-jl-fg-3">
+          {fillTemplate(L.detalhePedidosParcial[lk], {
+            n: formatNumberLocale(pedidosNaGaveta.length, locale),
+            total: formatNumberLocale(pedidosDoPeriodo.length, locale),
+          })}{' '}
+          <Link href={vendasDoPeriodoHref} className="font-medium text-brand underline-offset-2 hover:underline">
+            {L.detalheVerTodos[lk]}
+          </Link>
+        </p>
+      ) : null}
+    </div>
+  ) : (
     <div className="flex flex-col gap-5">
       <DetalheLista
         titulo={L.detalhePorPeriodo[lk]}
         vazio={L.detalheVazio[lk]}
-        linhas={chartData.map((p) => ({ label: p.label, valor: formatBRL(p.total, locale) }))}
+        linhas={porPeriodo.map((p) => ({ label: p.label, valor: formatBRL(p.total, locale) }))}
       />
       <DetalheLista
         titulo={L.detalhePorPagamento[lk]}
@@ -731,12 +775,9 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
         open={detalhe !== null}
         title={detalhe === 'pedidos' ? L.detalhePedidosTitulo[lk] : L.detalheVendasTitulo[lk]}
         closeHref={dashboardHref(linkParams, null)}
+        closeLabel={m.comum.fechar}
       >
-        {detalhe === 'pedidos' ? (
-          <DashboardOrdersTable orders={latestOrders} loadFailed={tableLoadFailed} labels={ordersTableLabels} />
-        ) : (
-          detalheVendas
-        )}
+        {detalheConteudo}
       </DashboardKpiDrawer>
     </>
   )
@@ -750,7 +791,7 @@ function DetalheLista({
 }: {
   titulo: string
   vazio: string
-  linhas: Array<{ label: string; valor: string }>
+  linhas: Array<{ key?: string; label: string; valor: string; href?: string }>
 }) {
   return (
     <section>
@@ -761,10 +802,18 @@ function DetalheLista({
         <dl className="flex flex-col">
           {linhas.map((linha) => (
             <div
-              key={linha.label}
+              key={linha.key ?? linha.label}
               className="flex items-center justify-between gap-3 border-t border-jl-border-1 py-2 text-small"
             >
-              <dt className="text-jl-fg-2">{linha.label}</dt>
+              <dt className="min-w-0 truncate text-jl-fg-2">
+                {linha.href ? (
+                  <Link href={linha.href} className="hover:text-jl-fg-1 hover:underline">
+                    {linha.label}
+                  </Link>
+                ) : (
+                  linha.label
+                )}
+              </dt>
               <dd className="font-medium tabular-nums text-jl-fg-1">{linha.valor}</dd>
             </div>
           ))}

@@ -1924,6 +1924,8 @@
       "detalhePorPeriodo": { "cn": "按时间", "pt": "Por dia ou hora" },
       "detalhePorPagamento": { "cn": "按支付方式", "pt": "Por forma de pagamento" },
       "detalheVazio": { "cn": "此期间没有数据。", "pt": "Sem dados neste período." },
+      "detalhePedidosParcial": { "cn": "显示 {{total}} 笔中最近的 {{n}} 笔。", "pt": "Mostrando os {{n}} mais recentes de {{total}}." },
+      "detalheVerTodos": { "cn": "在销售页查看全部", "pt": "Ver todos em Vendas" },
       "trendNew": { "cn": "新增", "pt": "novo" },
       "trendStockOk": {
         "cn": "正常",
