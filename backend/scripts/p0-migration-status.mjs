@@ -11,7 +11,7 @@
  * Requer: Supabase CLI linkado (`npx supabase link`) ao projeto remoto alvo.
  */
 
-import { execSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -194,6 +194,53 @@ export function applyHumanGateRegistry({ blocking, missingInList, extraBlocking 
     extraBlocking: extraRemaining,
     humanGate,
   };
+}
+
+/**
+ * Migrations novas do próprio PR (arquivo ausente na base do PR) ainda não
+ * podem estar no projeto de verificação: elas só são aplicadas depois do
+ * merge. Sem esta separação, todo PR que adiciona migration falha até alguém
+ * aplicá-la no remoto antes da revisão — e uma única migration da main não
+ * aplicada passa a reprovar todos os PRs seguintes (o que ocorreu a partir de
+ * 20261006120000). Só `remote_ausente` é elegível: remote-only, versões
+ * divergentes e migrations que JÁ estão na base continuam bloqueando.
+ * `baseVersions === null` (sem ref de base, ex.: workflow_dispatch) mantém o
+ * comportamento estrito.
+ */
+export function separatePrPendingMigrations({ blocking, missingInList }, baseVersions) {
+  if (!baseVersions) return { blocking, missingInList, prPending: [] };
+  const base = new Set(baseVersions);
+  const prPending = [];
+  const keptBlocking = [];
+  for (const entry of blocking) {
+    if (entry.reason === "remote_ausente" && !base.has(entry.version)) prPending.push(entry.version);
+    else keptBlocking.push(entry);
+  }
+  const keptMissing = [];
+  for (const version of missingInList) {
+    if (base.has(version)) keptMissing.push(version);
+    else if (!prPending.includes(version)) prPending.push(version);
+  }
+  prPending.sort((a, b) => Number(a) - Number(b));
+  return { blocking: keptBlocking, missingInList: keptMissing, prPending };
+}
+
+/** Versões de migration presentes no ref git de base (ex.: origin/main). Fail-closed. */
+function listBaseMigrationVersions(ref) {
+  const out = execFileSync("git", ["ls-tree", "--name-only", "--full-name", ref, "--", "supabase/migrations/"], {
+    cwd: BACKEND_ROOT,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  const versions = [];
+  for (const line of out.split(/\r?\n/)) {
+    const m = /\/(\d+)_[^/]*\.sql$/.exec(line.trim());
+    if (m) versions.push(m[1].padStart(3, "0"));
+  }
+  if (versions.length === 0) {
+    throw new Error(`Nenhuma migration encontrada em ${ref}:backend/supabase/migrations.`);
+  }
+  return versions;
 }
 
 export function deriveOverallStatus({
@@ -459,13 +506,33 @@ function main() {
     process.exit(2);
   }
   const {
-    blocking,
-    missingInList: blockingMissingInList,
+    blocking: gatedBlocking,
+    missingInList: gatedMissingInList,
     extraBlocking,
     humanGate,
   } = applyHumanGateRegistry(
     { blocking: initiallyBlocking, missingInList, extraBlocking: initiallyExtraBlocking },
     gates,
+  );
+  const baseRef = (process.env.MIGRATION_DRIFT_BASE_REF ?? "").trim();
+  let baseVersions = null;
+  if (baseRef) {
+    try {
+      baseVersions = listBaseMigrationVersions(baseRef);
+    } catch (error) {
+      const message = `Falha ao ler migrations do ref de base ${baseRef}: ${String(error.message ?? error)}`;
+      if (opts.json) console.log(JSON.stringify({ ok: false, error: "base_ref_failed", message }, null, 2));
+      else console.error(message);
+      process.exit(2);
+    }
+  }
+  const {
+    blocking,
+    missingInList: blockingMissingInList,
+    prPending,
+  } = separatePrPendingMigrations(
+    { blocking: gatedBlocking, missingInList: gatedMissingInList },
+    baseVersions,
   );
   const status = deriveOverallStatus({
     blocking,
@@ -494,6 +561,8 @@ function main() {
       remote: d.remote,
     })),
     humanGates: humanGate,
+    baseRef: baseRef || null,
+    prPendingNotOnBase: prPending,
     driftLegacyNumericMirror: legacyNumericMirror.map((d) => ({
       version: d.version,
       reason: d.reason,
@@ -531,6 +600,10 @@ function main() {
         console.log(`  - ${gate.version} (${gate.direction}; ${gate.reason}; doc=${gate.decisionDoc})`);
       }
       console.log("");
+    }
+    if (prPending.length) {
+      console.log(`Migrations novas deste PR (ausentes em ${baseRef}; aplicar no remoto após o merge; não bloqueia):`);
+      console.log(`  ${prPending.join(", ")}\n`);
     }
     if (legacyNumericMirror.length) {
       console.log("Espelhos numéricos 205–289 (reconciliação SSOT; não bloqueia o gate):");
