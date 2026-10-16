@@ -6,7 +6,7 @@ import { pathToFileURL } from 'node:url'
 //   * RLS ligada nas 2 tabelas internas nega authenticated mesmo com GRANT acidental; service_role segue lendo;
 //   * as 8 funções ficam com search_path = '' e devolvem exatamente o mesmo resultado;
 //   * a migration é idempotente e tolera ambiente sem alguma das funções.
-// Corpos das funções = definição vigente em produção (kbabmewnahysfvlybiak, 2026-10-16).
+// Corpos das funções = definição vigente em produção em 2026-10-16.
 
 const name = process.env.PGLITE_MODULE ? pathToFileURL(process.env.PGLITE_MODULE).href : '@electric-sql/pglite'
 const { PGlite } = await import(name)
