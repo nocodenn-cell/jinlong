@@ -103,4 +103,24 @@ describe('CaixaReciboModal — gatilhos da gaveta', () => {
     act(() => root.render(<CaixaReciboModal venda={{ ...venda, pagamentos }} m={getMessages('pt')} onClose={() => {}} thermal={thermal} />))
     expect(thermal.abrirGaveta).toHaveBeenCalledTimes(1)
   })
+
+  it('tenta de novo quando a impressora conecta após falha por desconexão', async () => {
+    const abrirGaveta = vi.fn<() => Promise<boolean>>()
+      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce(true)
+    const semImpressora = { ...thermal, status: 'idle' as const, abrirGaveta }
+    act(() => root.render(<CaixaReciboModal venda={venda} m={getMessages('pt')} onClose={() => {}} thermal={semImpressora} />))
+    await act(async () => {})
+    expect(abrirGaveta).toHaveBeenCalledTimes(1)
+
+    const conectada = { ...semImpressora, status: 'connected' as const }
+    act(() => root.render(<CaixaReciboModal venda={venda} m={getMessages('pt')} onClose={() => {}} thermal={conectada} />))
+    await act(async () => {})
+    expect(abrirGaveta).toHaveBeenCalledTimes(2)
+
+    const reconectada = { ...conectada, status: 'idle' as const }
+    act(() => root.render(<CaixaReciboModal venda={venda} m={getMessages('pt')} onClose={() => {}} thermal={reconectada} />))
+    await act(async () => {})
+    expect(abrirGaveta).toHaveBeenCalledTimes(2)
+  })
 })
