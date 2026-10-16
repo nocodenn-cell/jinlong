@@ -14,12 +14,23 @@
 # lê no build. Lista de exclusão, não de inclusão: qualquer caminho fora dela (inclusive um
 # diretório novo) constrói o ERP. Sem base, base inexistente ou erro do git => executa o build.
 #
+# `--no-renames`: um arquivo movido do ERP para docs/ precisa aparecer também pela origem.
+#
 # Teste: node --test scripts/vercel-pdv-ignore.test.mjs
 
 if [ "${VERCEL_ENV:-}" != "production" ]; then
   echo "[ignore-step] ambiente ${VERCEL_ENV:-indefinido}: Preview do ERP desativado, ignorando build"
   exit 0
 fi
+
+# Base fora do clone raso da Vercel (profundidade 10; acontece depois de vários commits ignorados
+# seguidos): tenta buscar só aquele commit (`git diff` precisa apenas das duas árvores). Se a busca
+# falhar (o clone da Vercel pode não ter acesso ao remoto), executa o build.
+ensure_commit() {
+  git cat-file -e "${1}^{commit}" 2>/dev/null && return 0
+  git fetch --no-tags --quiet --depth=1 origin "$1" 2>/dev/null || return 1
+  git cat-file -e "${1}^{commit}" 2>/dev/null
+}
 
 previous="${VERCEL_GIT_PREVIOUS_SHA:-}"
 
@@ -28,12 +39,12 @@ if [ -z "$previous" ]; then
   exit 1
 fi
 
-if ! git cat-file -e "${previous}^{commit}" 2>/dev/null; then
+if ! ensure_commit "$previous"; then
   echo "[ignore-step] commit base ${previous} indisponível: executando build"
   exit 1
 fi
 
-if ! changed=$(git diff --name-only "$previous" HEAD 2>/dev/null); then
+if ! changed=$(git diff --no-renames --name-only "$previous" HEAD 2>/dev/null); then
   echo "[ignore-step] erro do git ao comparar com ${previous}: executando build"
   exit 1
 fi

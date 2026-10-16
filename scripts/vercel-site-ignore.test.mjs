@@ -234,6 +234,13 @@ describe('Ignored Build Step do jinlong-site', () => {
     assert.equal(runStep(repo, base), IGNORE)
   })
 
+  it('N: arquivo movido do site para docs/ → executa', () => {
+    const { repo, base } = newRepo()
+    git(repo, 'mv', 'site/app/page.tsx', 'docs/page.tsx')
+    git(repo, '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'move')
+    assert.equal(runStep(repo, base), BUILD)
+  })
+
   it('L: base igual ao HEAD (redeploy do mesmo commit) → ignora', () => {
     const { repo, base } = newRepo()
     assert.equal(runStep(repo, base), IGNORE)

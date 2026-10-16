@@ -151,6 +151,23 @@ describe('Ignored Build Step do pdv-importados', () => {
     assert.equal(runStep(outside, { previous: 'abc', cwd: outside }), BUILD)
   })
 
+  it('produção: arquivo do ERP movido para docs/ → executa (rename não esconde a origem)', () => {
+    const { repo, base } = newRepo()
+    git(repo, 'mv', 'pdv-importados/app/page.tsx', 'docs/page.tsx')
+    git(repo, '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'move')
+    assert.equal(runStep(repo, { previous: base }), BUILD)
+  })
+
+  it('produção: base fora do clone raso, mas buscável no remoto → busca e ignora', () => {
+    const { repo, base } = newRepo()
+    for (let i = 0; i < 12; i++) commit(repo, { [`docs/n${i}.md`]: `# ${i}` })
+    const clone = fs.mkdtempSync(path.join(os.tmpdir(), 'pdv-clone-'))
+    dirs.push(clone)
+    git(repo, 'config', 'uploadpack.allowAnySHA1InWant', 'true')
+    git(clone, 'clone', '-q', '--depth', '10', 'file://' + repo.split(path.sep).join('/'), '.')
+    assert.equal(runStep(clone, { previous: base }), IGNORE)
+  })
+
   it('produção: redeploy do mesmo commit → ignora', () => {
     const { repo, base } = newRepo()
     assert.equal(runStep(repo, { previous: base }), IGNORE)

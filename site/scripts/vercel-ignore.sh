@@ -10,7 +10,7 @@
 # 2. Só em Preview e só quando (1) não existe — primeiro push de uma branch, ou branch que nunca
 #    teve deploy do site: o histórico que a Vercel clonou. O clone da Vercel é raso e não consegue
 #    buscar a `main` (`git fetch` falhou no Preview do PR #574), então comparamos
-#    HEAD com CADA commit de fronteira do clone raso (.git/shallow). Só ignora se nenhum deles
+#    HEAD com CADA commit de fronteira do clone raso (.git/shallow; profundidade documentada: 10). Só ignora se nenhum deles
 #    mostrar mudança relevante. Clone não raso ou com um único commit => executa.
 #    Limite conhecido (só Preview): numa branch mais longa que a profundidade do clone, a mudança
 #    feita no commit de fronteira em si, ou antes dele, não é vista. Um Redeploy resolve.
@@ -26,6 +26,15 @@
 
 RELEVANT_PATHS=". ../package.json ../package-lock.json ../.npmrc"
 
+# Base fora do clone raso da Vercel (profundidade 10; acontece depois de vários commits ignorados
+# seguidos): tenta buscar só aquele commit (`git diff` precisa apenas das duas árvores). Se a busca
+# falhar (o clone da Vercel pode não ter acesso ao remoto), executa o build.
+ensure_commit() {
+  git cat-file -e "${1}^{commit}" 2>/dev/null && return 0
+  git fetch --no-tags --quiet --depth=1 origin "$1" 2>/dev/null || return 1
+  git cat-file -e "${1}^{commit}" 2>/dev/null
+}
+
 previous="${VERCEL_GIT_PREVIOUS_SHA:-}"
 
 # Checkout que só tem o esqueleto de site/ (sem aplicação): não há o que construir.
@@ -36,7 +45,7 @@ fi
 
 compare_and_exit() {
   # shellcheck disable=SC2086
-  git diff --quiet "$1" HEAD -- $RELEVANT_PATHS
+  git diff --quiet --no-renames "$1" HEAD -- $RELEVANT_PATHS
   status=$?
   if [ "$status" -eq 0 ]; then
     echo "[ignore-step] nenhuma mudança relevante ao site desde $2 $1: ignorando build"
@@ -47,7 +56,7 @@ compare_and_exit() {
 }
 
 if [ -n "$previous" ]; then
-  if ! git cat-file -e "${previous}^{commit}" 2>/dev/null; then
+  if ! ensure_commit "$previous"; then
     echo "[ignore-step] commit base ${previous} indisponível: executando build"
     exit 1
   fi
@@ -75,7 +84,7 @@ fi
 
 for boundary in $(cat "$shallow_file"); do
   # shellcheck disable=SC2086
-  git diff --quiet "$boundary" HEAD -- $RELEVANT_PATHS
+  git diff --quiet --no-renames "$boundary" HEAD -- $RELEVANT_PATHS
   status=$?
   if [ "$status" -ne 0 ]; then
     echo "[ignore-step] mudanças relevantes ao site desde ${boundary} (ou erro do git, status ${status}): executando build"

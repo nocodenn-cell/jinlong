@@ -36,13 +36,17 @@ Diagnóstico: `VERCEL_AUDITORIA_SITE_PDV.md`. Arquitetura: `VERCEL_ARQUITETURA_D
 - Verificado que o ERP não importa nada de `site/`, `docs/` nem `.github/` (busca de imports relativos em `pdv-importados/`, `shared-core/`, `shared/`).
 - Efeito medido: 1 de 14 builds de produção da janela seria ignorado (`072f130b`, só docs). O ganho maior é futuro: merges só do site deixam de republicar o ERP.
 
+### M2b — Ajustes da revisão automática (Codex) no PR
+- `git diff --no-renames` nos dois scripts: um arquivo **movido** do ERP (ou do site) para `docs/` aparecia só pelo destino e podia levar a um skip indevido. Agora a origem também conta → constrói.
+- Base (`VERCEL_GIT_PREVIOUS_SHA`) fora do clone raso da Vercel (profundidade 10, por exemplo depois de mais de 10 merges seguidos só de docs/site): os scripts tentam `git fetch --depth=1 origin <sha>` antes de desistir. Se a busca falhar (no Preview deste PR o clone não conseguiu buscar a `main`), constroem, como antes. O pior caso é um build a mais, nunca um build a menos.
+
 ### M3 — Gate SSRA reativado
 `.github/workflows/release-validate.yml`: o filtro passa a aceitar `Production – pdv-importados` (nome atual do ambiente) além de `production` (legado). Deploys do `jinlong-site` não disparam o gate.
 
 ### M4 — Testes
 - `scripts/vercel-site-ignore.test.mjs`: casos novos I2–I6 com clones rasos reais (primeiro push de branch só do ERP ignora; mudança no site em commit intermediário constrói; lockfile constrói; clone não raso constrói; clone de um commit constrói; limite da janela documentado; com base usa a base).
 - `scripts/vercel-pdv-ignore.test.mjs` (novo): 14 casos (Preview sempre ignorado; ERP, compartilhados, lockfile, backend, pdv-local, diretório novo constroem; só site/docs/.github/`*.md` da raiz ignoram; vários commits; sem base; redeploy).
-- Resultado local: `node --test scripts/vercel-site-ignore.test.mjs scripts/vercel-pdv-ignore.test.mjs` → **37/37**.
+- Resultado local: `node --test scripts/vercel-site-ignore.test.mjs scripts/vercel-pdv-ignore.test.mjs` → **40/40**.
 
 ### O que este PR NÃO muda
 Domínios, DNS, variáveis de ambiente, Supabase (Auth, Redirect URLs, secrets), configurações de painel, projetos Vercel, fluxo financeiro/comercial do PDV, required checks do GitHub.
