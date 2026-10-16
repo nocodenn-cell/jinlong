@@ -608,6 +608,10 @@ html:has(.login-premium-root) body {
 .route-loader-delayed {
   animation: route-loader-reveal 0.25s ease-out 0.15s both;
 }
+/* Movimento reduzido: mantém o atraso anti-piscar, mas revela de uma vez (sem fade). */
+@media (prefers-reduced-motion: reduce) {
+  .route-loader-delayed { animation-duration: 0s; }
+}
 
 /* Barra de progresso de topo (navegação) */
 @keyframes gerente-topbar-indeterminate {
