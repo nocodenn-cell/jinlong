@@ -7,7 +7,7 @@ import { Loading } from '@/components/ui/feedback/Loading'
 export default function AdminLoading() {
   return (
     <div aria-busy="true" data-testid="admin-loading" className="route-loader-delayed">
-      <Loading className="min-h-[60vh]" variant="brand" />
+      <Loading className="min-h-[60vh] bg-jl-surface-soft" variant="brand" />
     </div>
   )
 }
