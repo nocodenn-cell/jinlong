@@ -35,6 +35,8 @@ type Props = {
   actorLojaId: string | null
   /** Título escolhido na linha: o formulário de caixa desse id entra na lista e recebe foco. */
   destaqueId?: string | null
+  /** Abre o modal Receber na conta financeira (sem título escolhido). Sem ele, o link vai à âncora antiga. */
+  onReceberConta?: () => void
 }
 
 function titulosVisiveis<T extends { id: string }>(abertas: T[], destaqueId: string | null | undefined): T[] {
@@ -49,7 +51,7 @@ const FORMAS = ['DINHEIRO'] as const
 const LINK_MUTED =
   'text-caption font-medium text-[var(--color-warning-strong)] hover:underline'
 
-export function FinanceiroReceberExtras({ financeiroData, contas, clientesIniciais, caixasAbertos, actorLojaId, destaqueId = null }: Props) {
+export function FinanceiroReceberExtras({ financeiroData, contas, clientesIniciais, caixasAbertos, actorLojaId, destaqueId = null, onReceberConta }: Props) {
   const router = useRouter()
   const { idioma } = useAdminV2Session()
   const m = getMessages(idioma)
@@ -199,7 +201,11 @@ export function FinanceiroReceberExtras({ financeiroData, contas, clientesInicia
           </h3>
           <p className="mb-2 text-caption text-jl-fg-3">
             {ui.financeiro_receber_caixa_hint}{' '}
-            <a href="#baixa-conta-financeira" className={LINK_MUTED}>{ui.financeiro_linha_receber_conta}</a>{' '}
+            {onReceberConta ? (
+              <button type="button" onClick={onReceberConta} className={`${LINK_MUTED} bg-transparent p-0`}>{ui.financeiro_linha_receber_conta}</button>
+            ) : (
+              <a href="#baixa-conta-financeira" className={LINK_MUTED}>{ui.financeiro_linha_receber_conta}</a>
+            )}{' '}
             {ui.financeiro_receber_caixa_hint_fim}
           </p>
           <ul className="space-y-2">

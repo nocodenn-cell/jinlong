@@ -39,7 +39,6 @@ type Labels = {
   tipoConta: string
   dataInicial: string
   saldoInicial: string
-  transferirTitulo: string
   vincularPdv: string
   vincularPdvHint: string
   movimentoAvulso: string
@@ -268,17 +267,6 @@ export function FinanceiroContas({ data, labels }: { data: FinanceiroPainel; lab
         </Field>
         <Field name="data" label={labels.dataInicial} type="date" value={data.hoje} />
         <Field name="valor" label={labels.saldoInicial} type="number" value={0} required={false} />
-      </FinanceiroForm>
-
-      <FinanceiroForm title={labels.transferirTitulo} tipo="TRANSFERIR">
-        <Field name="conta_id" label="Origem">
-          <ContaOptions data={data} />
-        </Field>
-        <Field name="destino_id" label="Destino">
-          <ContaOptions data={data} />
-        </Field>
-        <Field name="valor" label="Valor (R$)" type="number" />
-        <Field name="data" label="Data efetiva" type="date" value={data.hoje} />
       </FinanceiroForm>
 
       <FinanceiroForm title={labels.vincularPdv} tipo="VINCULAR_CAIXA">

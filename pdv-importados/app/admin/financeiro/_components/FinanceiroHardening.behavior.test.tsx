@@ -14,7 +14,7 @@ vi.mock('next/link', () => ({ default: ({ children, ...props }: React.ComponentP
 vi.mock('./FinanceiroReceberExtras', () => ({ FinanceiroReceberExtras: () => null }))
 vi.mock('./FinanceiroWorkspace', () => ({ FinanceiroPaginacao: () => null }))
 vi.mock('./FinanceiroTitulosOperations', () => ({ FinanceiroTitulosOperations: () => null }))
-vi.mock('./FinanceiroAcoesRapidas', () => ({ FinanceiroAcoesRapidas: () => null }))
+vi.mock('./FinanceiroAcoesRapidas', () => ({ FinanceiroAcoesRapidas: () => null, useFinanceiroAcoesLabels: () => ({}) }))
 vi.mock('./DocumentoFiscalDetailSheet', () => ({ DocumentoFiscalDetailSheet: ({ documentoId }: { documentoId: string | null }) => documentoId ? <div role="dialog">{documentoId}</div> : null }))
 vi.mock('@/app/gerente/financeiro/contas-pagar/ContasPagarListClient', () => ({ ContasPagarListClient: () => null }))
 

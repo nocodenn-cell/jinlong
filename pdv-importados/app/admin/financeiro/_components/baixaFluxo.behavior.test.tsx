@@ -38,7 +38,29 @@ vi.mock('@/lib/gerente/toast', () => ({ emitGerenteToast: vi.fn() }))
 
 const { ContasReceberTable } = await import('./ContasReceberTable')
 const { FinanceiroTitulosOperations } = await import('./FinanceiroTitulosOperations')
+const { FinanceiroAcoesRapidas } = await import('./FinanceiroAcoesRapidas')
 const { ContasPagarListClient } = await import('@/app/gerente/financeiro/contas-pagar/ContasPagarListClient')
+
+const labelsAcoes = {
+  faixaAria: 'Operações',
+  registrarVenda: 'Registrar venda',
+  receber: 'Receber',
+  pagar: 'Pagar / Registrar despesa',
+  transferir: 'Transferir',
+  vendaTitulo: 'Registrar venda',
+  vendaTexto: 'Use o PDV',
+  vendaPdv: 'Abrir PDV',
+  vendaBuscar: 'Buscar venda',
+  receberTitulo: 'Receber',
+  pagarTitulo: 'Pagar',
+  transferirTitulo: 'Transferir',
+  avulsoHint: 'Priorize título',
+  confirmarReceber: 'Confirmar',
+  confirmarPagar: 'Confirmar',
+  confirmarTransferir: 'Confirmar',
+}
+
+const focoAp = { tipo: 'AP' as const, id: 'ap-linha', rotulo: 'Fornecedor Alfa · Compra de mercadoria' }
 
 const labelsReceber = {
   colCliente: 'Cliente',
@@ -246,16 +268,21 @@ describe('título da linha', () => {
   })
 })
 
-describe('formulário da conta financeira', () => {
-  function montar() {
+describe('formulário da conta financeira (modal de Pagar)', () => {
+  // O modal de Pagar já vem aberto com o título da linha: o formulário permanente saiu da página.
+  function montar(idioma?: 'pt' | 'zh') {
+    const painelModal = (
+      <FinanceiroAcoesRapidas
+        data={painel}
+        labels={labelsAcoes}
+        mostrar={['pagar']}
+        acao="pagar"
+        onAcao={() => {}}
+        foco={focoAp}
+      />
+    )
     act(() => {
-      root.render(
-        <FinanceiroTitulosOperations
-          data={painel}
-          tipo="AP"
-          foco={{ tipo: 'AP', id: 'ap-linha', rotulo: 'Fornecedor Alfa · Compra de mercadoria' }}
-        />,
-      )
+      root.render(idioma ? <AdminV2SessionProvider idioma={idioma}>{painelModal}</AdminV2SessionProvider> : painelModal)
     })
   }
 
@@ -274,25 +301,23 @@ describe('formulário da conta financeira', () => {
     expect(executarFinanceiroLoja).not.toHaveBeenCalled()
   })
 
-  it('mostra conta, valor, data, classificar e nova despesa no idioma da sessão', () => {
-    act(() => {
-      root.render(
-        <AdminV2SessionProvider idioma="zh">
-          <FinanceiroTitulosOperations
-            data={painel}
-            tipo="AP"
-            foco={{ tipo: 'AP', id: 'ap-linha', rotulo: 'Fornecedor Alfa · Compra de mercadoria' }}
-          />
-        </AdminV2SessionProvider>,
-      )
-    })
+  it('o modal mostra conta, valor, data e nova despesa no idioma da sessão', () => {
+    montar('zh')
     const texto = container.textContent ?? ''
     expect(texto).toContain('付款账户')
     expect(texto).toContain('金额 (R$)')
     expect(texto).toContain('实际日期')
-    expect(texto).toContain('分类账款')
     expect(texto).toContain('新费用')
     expect(texto).not.toContain('Conta de origem')
+  })
+
+  it('a página não tem mais formulário de baixa permanente; a classificação continua', () => {
+    act(() => {
+      root.render(<FinanceiroTitulosOperations data={painel} tipo="AP" />)
+    })
+    expect(container.querySelector('select[name="conta_id"]')).toBeNull()
+    expect(container.querySelector('select[name="titulo_id"]')).not.toBeNull()
+    expect(container.textContent ?? '').toContain('Título desta página')
   })
 
   it('bloqueia o segundo envio enquanto o primeiro está pendente e reabilita ao concluir', async () => {

@@ -445,7 +445,7 @@ export function ContasPagarListClient({
 
   return (
     <>
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <MetricCard
           label={m.contas_pagar.kpi_em_aberto}
           value={fmtGerenteBRL(kpis.totalAbertos, locale)}
@@ -467,14 +467,8 @@ export function ContasPagarListClient({
           icon="list-filter"
           tone="gold"
         />
-        <MetricCard
-          label={m.contas_pagar.acoes_rapidas}
-          value="—"
-          hint={m.contas_pagar.origem_nfe_hint}
-          icon="file-check-2"
-          tone="gold"
-        />
       </div>
+      <p className="-mt-3 mb-6 text-small text-jl-fg-3">{m.contas_pagar.origem_nfe_hint}</p>
 
       <CrudListShell
         className="mb-6"
@@ -561,6 +555,7 @@ export function ContasPagarListClient({
           columns={columns}
           data={contas}
           rowKey={(c) => c.id}
+          caption={m.contas_pagar.titulo}
           loading={loading}
           emptyState={emptyState}
           className="rounded-none border-x-0 border-b-0 [&_table]:min-w-[760px] [&_td]:text-sm [&_th]:text-sm [&_td]:py-4"
