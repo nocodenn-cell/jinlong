@@ -22,10 +22,14 @@ on:
 jobs:
   ssra:
     name: validate-production (SSRA)
-    # Só para deploy de produção que terminou com sucesso.
+    # Só para deploy de produção do ERP que terminou com sucesso. Com dois projetos Vercel no
+    # mesmo repositório, a Vercel nomeia o ambiente "Production – <projeto>"; o nome antigo
+    # "production" ficou só para o histórico. Sem isto o gate era sempre `skipped` desde
+    # 2026-10-08 (docs/infra/VERCEL_AUDITORIA_SITE_PDV.md). Deploys do jinlong-site não entram.
     if: >-
       github.event.deployment_status.state == 'success' &&
-      github.event.deployment.environment == 'production'
+      (github.event.deployment.environment == 'Production – pdv-importados' ||
+       github.event.deployment.environment == 'production')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
