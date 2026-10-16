@@ -58,13 +58,37 @@ function newRepo() {
   return { repo, base: commit(repo, BASE_FILES, 'base') }
 }
 
-/** Executa o script como a Vercel: cwd = Root Directory (site/), base = último deploy bem-sucedido. */
-function runStep(repo, previous, cwd = path.join(repo, 'site')) {
+/**
+ * Executa o script como a Vercel: cwd = Root Directory (site/), base = último deploy bem-sucedido.
+ * `vercelEnv = null` = variável ausente.
+ */
+function runStep(repo, previous, cwd = path.join(repo, 'site'), vercelEnv = 'production') {
   const env = { ...process.env }
   delete env.VERCEL_GIT_PREVIOUS_SHA
+  delete env.VERCEL_ENV
   if (previous !== undefined) env.VERCEL_GIT_PREVIOUS_SHA = previous
+  if (vercelEnv !== null) env.VERCEL_ENV = vercelEnv
   return spawnSync('sh', [SCRIPT], { cwd, env, encoding: 'utf8' }).status
 }
+
+/**
+ * Simula o primeiro push de uma branch como a Vercel o vê: clone RASO (`depth`) da branch, sem
+ * acesso à main e sem deploy anterior (sem VERCEL_GIT_PREVIOUS_SHA).
+ */
+function shallowBranch(branchCommits, depth) {
+  const { repo } = newRepo()
+  // histórico da main maior que a profundidade do clone, como no repositório real
+  for (let i = 0; i < 12; i++) commit(repo, { [`docs/historico-${i}.md`]: `# ${i}` }, `main ${i}`)
+  git(repo, 'checkout', '-q', '-b', 'feature')
+  for (const files of branchCommits) commit(repo, files)
+  const clone = fs.mkdtempSync(path.join(os.tmpdir(), 'ignore-clone-'))
+  dirs.push(clone)
+  const url = 'file://' + repo.split(path.sep).join('/')
+  git(clone, 'clone', '-q', '--depth', String(depth), '--branch', 'feature', url, '.')
+  return clone
+}
+
+const preview = (clone) => runStep(clone, undefined, path.join(clone, 'site'), 'preview')
 
 function scenario(files) {
   const { repo, base } = newRepo()
@@ -139,10 +163,53 @@ describe('Ignored Build Step do jinlong-site', () => {
     assert.equal(runStep(repo, base), IGNORE)
   })
 
-  it('I: sem base do último deploy → executa (nunca ignora por dúvida)', () => {
+  it('I: produção sem base do último deploy → executa (nunca ignora por dúvida)', () => {
     const { repo } = newRepo()
     commit(repo, { 'backend/package.json': '{"v":6}' })
     assert.equal(runStep(repo, undefined), BUILD)
+    assert.equal(runStep(repo, undefined, path.join(repo, 'site'), null), BUILD)
+  })
+
+  it('I2: Preview, primeiro push de branch só do ERP (clone raso) → ignora', () => {
+    const clone = shallowBranch([{ 'pdv-importados/app/page.tsx': 'export default 7' }, { 'docs/x.md': '# x' }], 10)
+    assert.equal(preview(clone), IGNORE)
+  })
+
+  it('I3: Preview, primeiro push com mudança no site em commit intermediário → executa', () => {
+    const clone = shallowBranch([{ 'site/app/page.tsx': 'export default 8' }, { 'backend/package.json': '{"v":8}' }], 10)
+    assert.equal(preview(clone), BUILD)
+  })
+
+  it('I4: Preview, lockfile da raiz mudou na branch → executa', () => {
+    const clone = shallowBranch([{ 'package-lock.json': '{"v":9}' }, { 'docs/y.md': '# y' }], 10)
+    assert.equal(preview(clone), BUILD)
+  })
+
+  it('I5: Preview sem base em clone NÃO raso → executa (nunca ignora por dúvida)', () => {
+    const { repo } = newRepo()
+    commit(repo, { 'backend/package.json': '{"v":10}' })
+    assert.equal(runStep(repo, undefined, path.join(repo, 'site'), 'preview'), BUILD)
+  })
+
+  it('I5b: Preview em clone raso de um único commit → executa', () => {
+    const clone = shallowBranch([{ 'pdv-importados/app/page.tsx': 'export default 12' }], 1)
+    assert.equal(preview(clone), BUILD)
+  })
+
+  it('I5c: limite documentado — branch mais longa que o clone: só o que está dentro da janela conta', () => {
+    const clone = shallowBranch([
+      { 'site/app/page.tsx': 'export default 13' },
+      { 'pdv-importados/a.ts': '1' },
+      { 'pdv-importados/b.ts': '2' },
+      { 'pdv-importados/c.ts': '3' },
+    ], 3)
+    assert.equal(preview(clone), IGNORE)
+  })
+
+  it('I6: Preview com base do último deploy usa a base (não a main)', () => {
+    const { repo, base } = newRepo()
+    commit(repo, { 'site/app/page.tsx': 'export default 11' })
+    assert.equal(runStep(repo, base, path.join(repo, 'site'), 'preview'), BUILD)
   })
 
   it('J: base inexistente (histórico reescrito/clone raso) → executa', () => {
@@ -167,19 +234,15 @@ describe('Ignored Build Step do jinlong-site', () => {
     assert.equal(runStep(repo, base), IGNORE)
   })
 
+  it('N: arquivo movido do site para docs/ → executa', () => {
+    const { repo, base } = newRepo()
+    git(repo, 'mv', 'site/app/page.tsx', 'docs/page.tsx')
+    git(repo, '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'move')
+    assert.equal(runStep(repo, base), BUILD)
+  })
+
   it('L: base igual ao HEAD (redeploy do mesmo commit) → ignora', () => {
     const { repo, base } = newRepo()
     assert.equal(runStep(repo, base), IGNORE)
-  })
-})
-
-describe('Ignored Build Step atual do pdv-importados (remoto, NÃO alterado)', () => {
-  const remote = 'if [ "$VERCEL_ENV" == "production" ]; then exit 1; else exit 0; fi'
-  const run = (vercelEnv) => spawnSync('bash', ['-c', remote], { env: { ...process.env, VERCEL_ENV: vercelEnv }, encoding: 'utf8' }).status
-
-  it('produção constrói; preview é ignorado de propósito (CI cobre os previews)', () => {
-    assert.equal(run('production'), BUILD)
-    assert.equal(run('preview'), IGNORE)
-    assert.equal(run('development'), IGNORE)
   })
 })
