@@ -1,23 +1,13 @@
-import { Skeleton } from '@/components/ui/skeleton'
+import { Loading } from '@/components/ui/feedback/Loading'
 
 /**
- * Carregamento das páginas admin: esqueleto no formato da página (título, KPIs e tabela) em vez de um
- * spinner de tela cheia — o layout não "pula" quando o conteúdo chega.
+ * Carregamento entre abas do admin: selo Jīn Lóng girando na área de conteúdo (sidebar/topo seguem
+ * visíveis). `route-loader-delayed` só revela o selo após ~150ms — navegações rápidas não piscam.
  */
 export default function AdminLoading() {
   return (
-    <div className="admin-v2-page admin-v2-stack min-h-[40vh] bg-jl-surface-soft" aria-busy="true" aria-live="polite" data-testid="admin-loading">
-      <Skeleton className="h-8 w-56" />
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-24 w-full" />
-        ))}
-      </div>
-      <div className="space-y-2">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <Skeleton key={i} className="h-10 w-full" />
-        ))}
-      </div>
+    <div aria-busy="true" data-testid="admin-loading" className="route-loader-delayed">
+      <Loading className="min-h-[60vh]" variant="brand" />
     </div>
   )
 }
