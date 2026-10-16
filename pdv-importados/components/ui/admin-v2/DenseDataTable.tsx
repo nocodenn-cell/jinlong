@@ -69,7 +69,7 @@ export function DenseDataTable<T>({
           {rows.map((row) => (
             <tr
               key={rowKey(row)}
-              className="border-b border-[var(--color-border)]/60 last:border-0 hover:bg-[color-mix(in_srgb,var(--color-brand-primary)_4%,transparent)]"
+              className="border-b border-[color-mix(in_srgb,var(--color-border)_60%,transparent)] last:border-0 hover:bg-[color-mix(in_srgb,var(--color-brand-primary)_4%,transparent)]"
             >
               {columns.map((col) => {
                 const align = cellAlign(col as DenseDataColumn<unknown>)

@@ -65,28 +65,44 @@ describe('tokens CSS usados no código existem', () => {
    * `bg-[var(--token)]/95` não gera regra nenhuma no Tailwind v3: o modificador de opacidade
    * só funciona com variáveis em canais crus, e os tokens do DS são hex. Use
    * `bg-[color-mix(in_srgb,var(--token)_95%,transparent)]`.
-   * Ocorrências antigas ficam listadas até serem corrigidas — a lista só pode encolher.
    */
-  it('nenhuma classe nova aplica /opacidade sobre var(--token)', () => {
-    const LEGADO = new Set([
-      'app/admin/dashboard/SalesTrendChart.tsx → bg-[var(--color-warning-50)]/80',
-      'app/admin/relatorios/_components/executive/ExecVendasCaixasPanel.tsx → bg-[var(--color-brand-primary)]/80',
-      'app/caixa/CaixaFechamentoFormasPanel.tsx → border-[var(--color-danger-strong)]/40',
-      'app/caixa/CaixaFechamentoFormasPanel.tsx → bg-[var(--color-danger-strong)]/10',
-      'app/caixa/CaixaPdvOperacoesMenu.tsx → bg-[var(--color-warning)]/20',
-      'app/gerente/estoque/imprimir-etiquetas/ImprimirEtiquetasPageClient.tsx → bg-[var(--color-surface)]/20',
-      'app/gerente/financeiro/contas-pagar/ContasPagarListClient.tsx → text-[var(--color-warning-strong)]/60',
-      'components/ui/admin-v2/DenseDataTable.tsx → border-[var(--color-border)]/60',
-    ])
-    const encontrados = new Set<string>()
+  it('nenhuma classe aplica /opacidade sobre var(--token)', () => {
+    const encontrados: string[] = []
     for (const file of SOURCE_DIRS.flatMap((d) => walk(d, /\.(ts|tsx)$/))) {
       if (/\.test\.tsx?$/.test(file)) continue
       for (const m of fs.readFileSync(file, 'utf8').matchAll(/[\w-]+-\[var\(--[\w-]+\)\]\/\d+/g)) {
-        encontrados.add(`${rel(file)} → ${m[0]}`)
+        encontrados.push(`${rel(file)} → ${m[0]}`)
       }
     }
-    expect([...encontrados].filter((e) => !LEGADO.has(e)).sort()).toEqual([])
-    // Corrigiu uma antiga? Tire-a da lista para a guarda não afrouxar.
-    expect([...LEGADO].filter((e) => !encontrados.has(e)).sort()).toEqual([])
+    expect([...new Set(encontrados)].sort()).toEqual([])
   })
+
+  /**
+   * Roadmap UX, Tarefa 10: as 8 ocorrências legadas viraram color-mix. Compila cada arquivo
+   * com o Tailwind do projeto e exige que a classe gere a regra (antes não gerava nada).
+   */
+  it('as classes color-mix das antigas ocorrências geram CSS de verdade', async () => {
+    const postcss = (await import('postcss')).default
+    const tailwind = (await import('tailwindcss')).default
+    const config = (await import('../tailwind.config.js')).default
+    const CASOS: Array<[arquivo: string, classe: string, propriedade: string]> = [
+      ['app/admin/dashboard/SalesTrendChart.tsx', 'bg-[color-mix(in_srgb,var(--color-warning-50)_80%,transparent)]', 'background-color'],
+      ['app/admin/relatorios/_components/executive/ExecVendasCaixasPanel.tsx', 'bg-[color-mix(in_srgb,var(--color-brand-primary)_80%,transparent)]', 'background-color'],
+      ['app/caixa/CaixaFechamentoFormasPanel.tsx', 'border-[color-mix(in_srgb,var(--color-danger-strong)_40%,transparent)]', 'border-color'],
+      ['app/caixa/CaixaFechamentoFormasPanel.tsx', 'bg-[color-mix(in_srgb,var(--color-danger-strong)_10%,transparent)]', 'background-color'],
+      ['app/caixa/CaixaPdvOperacoesMenu.tsx', 'hover:bg-[color-mix(in_srgb,var(--color-warning)_20%,transparent)]', 'background-color'],
+      ['app/gerente/estoque/imprimir-etiquetas/ImprimirEtiquetasPageClient.tsx', 'bg-[color-mix(in_srgb,var(--color-surface)_20%,transparent)]', 'background-color'],
+      ['app/gerente/financeiro/contas-pagar/ContasPagarListClient.tsx', 'text-[color-mix(in_srgb,var(--color-warning-strong)_60%,transparent)]', 'color'],
+      ['components/ui/admin-v2/DenseDataTable.tsx', 'border-[color-mix(in_srgb,var(--color-border)_60%,transparent)]', 'border-color'],
+    ]
+    for (const [arquivo, classe, propriedade] of CASOS) {
+      const fonte = fs.readFileSync(path.join(ROOT, arquivo), 'utf8')
+      expect(fonte, arquivo).toContain(classe)
+      const { css } = await postcss([
+        tailwind({ ...config, content: [{ raw: fonte, extension: 'tsx' }] }),
+      ]).process('@tailwind utilities;', { from: undefined })
+      const valor = classe.replace(/^(?:hover:)?[a-z]+-\[(.*)\]$/, '$1').replace(/_/g, ' ')
+      expect(css, `${arquivo} → ${classe}`).toContain(`${propriedade}: ${valor}`)
+    }
+  }, 60_000)
 })
