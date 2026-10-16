@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildReciboEscPos } from './escpos'
+import { buildAbrirGavetaEscPos, buildReciboEscPos } from './escpos'
 import { buildReciboLabels, type ReciboVenda } from '@/lib/caixa/reciboTypes'
 import { getMessages } from '@/i18n/getMessages'
 
@@ -142,5 +142,19 @@ describe('buildReciboEscPos — cabeçalho: loja e 2ª via', () => {
     const texto = decode(buildReciboEscPos(vendaBase, labels))
     expect(texto).not.toContain('undefined')
     expect(texto).not.toContain('null')
+  })
+})
+
+
+describe('gaveta de dinheiro — comando isolado', () => {
+  it('gera ESC p para o pino 2 com pulso delimitado', () => {
+    expect(Array.from(buildAbrirGavetaEscPos())).toEqual([0x1b, 0x70, 0, 50, 50])
+  })
+
+  it('não abre a gaveta na impressão ou reimpressão do cupom', () => {
+    for (const segundaVia of [false, true]) {
+      const data = Array.from(buildReciboEscPos({ ...vendaBase, segundaVia }, labels))
+      expect(data.join(',')).not.toContain(Array.from(buildAbrirGavetaEscPos()).join(','))
+    }
   })
 })
