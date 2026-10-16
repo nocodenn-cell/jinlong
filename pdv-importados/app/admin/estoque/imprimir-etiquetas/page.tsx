@@ -1,6 +1,6 @@
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { ROUTES } from '@/lib/navigation/routes'
-import { EstoqueHubNav } from '@/components/ui/admin-v2/EstoqueHubNav'
+import { OperationalHubNav } from '@/components/ui/admin-v2/OperationalHubNav'
 import { ImprimirEtiquetasPageClient } from '@/app/gerente/estoque/imprimir-etiquetas/ImprimirEtiquetasPageClient'
 
 type SearchParams = { codigo?: string; produto?: string }
@@ -16,8 +16,8 @@ export default async function AdminImprimirEtiquetasPage({ searchParams }: PageP
 
   return (
     <div className="admin-v2-page">
-      <EstoqueHubNav />
       <ImprimirEtiquetasPageClient
+        hubNav={<OperationalHubNav hub="compras" />}
         idioma={session.idioma}
         initialCodigo={typeof sp.codigo === 'string' ? sp.codigo : undefined}
         initialProdutoId={typeof sp.produto === 'string' ? sp.produto : undefined}

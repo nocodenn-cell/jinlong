@@ -75,32 +75,31 @@ describe('SidebarNav — perfil DONO/GERENTE (cliente)', () => {
     expect(hrefs).not.toContain(ROUTES.admin.provisionamento)
   })
 
-  it('mostra Abrir PDV e os 9 destinos principais sem abrir nada', () => {
+  it('mostra Abrir PDV e os 8 destinos da jornada, na ordem, sem abrir nada', () => {
     const hrefs = renderMenu(false)
-    expect(hrefs).toContain(ROUTES.caixa.home)
-    for (const href of [
+    expect(hrefs).toEqual([
+      ROUTES.caixa.home,
       ROUTES.admin.dashboard,
       ROUTES.admin.vendas,
-      ROUTES.admin.catalogo,
-      ROUTES.admin.estoque,
       ROUTES.admin.compras,
+      ROUTES.admin.estoque,
+      ROUTES.admin.catalogo,
       ROUTES.admin.financeiro,
-      ROUTES.admin.clientes,
       executiveRelatoriosHref('vendas-caixas'),
       ROUTES.admin.configuracoes,
-    ]) {
-      expect(hrefs).toContain(href)
+    ])
+    const texto = container.textContent ?? ''
+    for (const rotulo of ['Hoje', 'Vender', 'Abastecer', 'Estoque', 'Produtos', 'Dinheiro', 'Análises', 'Loja e equipe']) {
+      expect(texto).toContain(rotulo)
     }
-    // 9 destinos + PDV, sem sub-links (grupo fechado: rota atual é o dashboard)
-    expect(hrefs).toHaveLength(10)
   })
 
   it('sub-links só aparecem com o grupo aberto (rota atual dentro do grupo)', () => {
-    expect(renderMenu(false)).not.toContain(ROUTES.admin.suspensao)
-    currentPathname = ROUTES.admin.configuracoes
+    expect(renderMenu(false)).not.toContain(ROUTES.admin.auditoria)
+    currentPathname = ROUTES.admin.auditoria
     const hrefs = renderMenu(false)
-    expect(hrefs).toContain(ROUTES.admin.suspensao)
-    expect(container.querySelector('[data-nav-children-of="configuracoes"]')).not.toBeNull()
+    expect(hrefs).toContain(ROUTES.admin.auditoria)
+    expect(container.querySelector('[data-nav-children-of="analises"]')).not.toBeNull()
   })
 
   it('Comissões é aba do Financeiro: não é link da sidebar, e o destino Financeiro fica ativo nela', () => {
@@ -110,11 +109,12 @@ describe('SidebarNav — perfil DONO/GERENTE (cliente)', () => {
     expect(container.querySelector('[aria-current="page"]')?.getAttribute('href')).toBe(ROUTES.admin.financeiro)
   })
 
-  it('Caixas, Fornecedores e Funcionários não são links da sidebar (vivem na barra de abas)', () => {
+  it('Caixas, Clientes, Fornecedores e Funcionários não são links da sidebar (vivem na barra de abas)', () => {
     for (const path of [ROUTES.admin.vendas, ROUTES.admin.caixas, ROUTES.admin.compras, ROUTES.admin.clientes]) {
       currentPathname = path
       const hrefs = renderMenu(false)
       expect(hrefs).not.toContain(ROUTES.admin.caixas)
+      expect(hrefs).not.toContain(ROUTES.admin.clientes)
       expect(hrefs).not.toContain(ROUTES.admin.fornecedores)
       expect(hrefs).not.toContain(ROUTES.admin.funcionarios)
     }
@@ -123,18 +123,25 @@ describe('SidebarNav — perfil DONO/GERENTE (cliente)', () => {
   it('em páginas irmãs de um hub, o destino do grupo fica ativo', () => {
     const casos: Array<[string, string]> = [
       [ROUTES.admin.caixas, ROUTES.admin.vendas],
+      [ROUTES.admin.clientes, ROUTES.admin.vendas],
       [ROUTES.admin.fornecedores, ROUTES.admin.compras],
-      [ROUTES.admin.funcionarios, ROUTES.admin.clientes],
+      [ROUTES.admin.estoqueRecebimento, ROUTES.admin.compras],
+      [ROUTES.admin.importNfe, ROUTES.admin.compras],
+      [ROUTES.admin.estoqueImprimirEtiquetas, ROUTES.admin.compras],
+      [ROUTES.admin.estoqueMovimentacoes, ROUTES.admin.estoque],
+      [ROUTES.admin.estoqueTransferencias, ROUTES.admin.estoque],
       [ROUTES.admin.categoriasProdutos, ROUTES.admin.catalogo],
       [ROUTES.admin.marcasProdutos, ROUTES.admin.catalogo],
-      [ROUTES.admin.categoriasFinanceiras, ROUTES.admin.financeiro],
-      [ROUTES.admin.estoqueRecebimento, ROUTES.admin.estoque],
+      [ROUTES.admin.funcionarios, ROUTES.admin.configuracoes],
+      [ROUTES.admin.categoriasFinanceiras, ROUTES.admin.configuracoes],
+      [ROUTES.admin.suspensao, ROUTES.admin.configuracoes],
     ]
     for (const [path, destino] of casos) {
       currentPathname = path
       renderMenu(false)
-      const ativo = container.querySelector('[aria-current="page"]')
-      expect(ativo?.getAttribute('href'), path).toBe(destino)
+      const ativos = Array.from(container.querySelectorAll('[aria-current="page"]'))
+      // Exatamente UM destino ativo: entradas/etiquetas não acendem Abastecer E Estoque juntos.
+      expect(ativos.map((a) => a.getAttribute('href')), path).toEqual([destino])
     }
   })
 
@@ -159,12 +166,10 @@ describe('SidebarNav — perfil DONO/GERENTE (cliente)', () => {
     expect(hrefs).not.toContain(ROUTES.admin.categoriasFinanceiras)
   })
 
-  it('rotula a suspensão pela função real, não por "licença"', () => {
-    currentPathname = ROUTES.admin.configuracoes
+  it('nenhum rótulo fala em "licença"', () => {
+    currentPathname = ROUTES.admin.suspensao
     renderMenu(false)
-    const texto = container.textContent ?? ''
-    expect(texto).toContain('Suspensão de vendas')
-    expect(texto).not.toMatch(/licen/i)
+    expect(container.textContent ?? '').not.toMatch(/licen/i)
   })
 
   it('não mostra o grupo Interno ao gerente', () => {
@@ -177,9 +182,10 @@ describe('SidebarNav — idioma chinês', () => {
   it('rótulos principais saem em chinês, sem os nomes de grupo antigos em português', () => {
     renderMenu(false, true)
     const texto = container.textContent ?? ''
-    expect(texto).toContain('首页')
-    expect(texto).toContain('前往收银')
-    expect(texto).not.toMatch(/Análises|Operações|Sistema/)
+    for (const cn of ['今日', '销售', '补货', '库存', '商品', '资金', '分析', '店铺与团队', '前往收银']) {
+      expect(texto).toContain(cn)
+    }
+    expect(texto).not.toMatch(/Operações|Sistema/)
   })
 
   it('grupo Interno do ADMIN usa o rótulo traduzido', () => {
@@ -192,13 +198,13 @@ describe('SidebarNav — dicas (title) no idioma da interface', () => {
   it('em chinês, a dica de cada item sai em chinês (não em português)', () => {
     renderMenu(false, true)
     const titulos = Array.from(container.querySelectorAll('a[data-nav-id]')).map((a) => a.getAttribute('title') ?? '')
-    const comPortugues = titulos.filter((t) => /(Vendas|Produtos|Estoque|Compras|Pessoas|abas na página)/.test(t.split(' — ')[1] ?? ''))
+    const comPortugues = titulos.filter((t) => /\b(Vendas|Produtos|Estoque|Compras|Pedido|Dados da loja|abas na página)\b/.test(t.split(' — ')[1] ?? ''))
     expect(comPortugues).toEqual([])
   })
 
   it('em português, a dica é a descrição atual do item', () => {
     renderMenu(false)
-    const rel = container.querySelector('a[data-nav-id="relatorios"]')
+    const rel = container.querySelector('a[data-nav-id="analises"]')
     expect(rel?.getAttribute('title')).toContain('Vendas, resultado, produtos, clientes e auditoria.')
   })
 })

@@ -25,7 +25,6 @@ function FinanceiroHubNavInner({ activeTab }: { activeTab: FinanceiroTabId }) {
       conciliacao: ui.hub_financeiro_conciliacao,
       fiscal: ui.hub_financeiro_fiscal,
       comissoes: ui.hub_financeiro_comissoes,
-      categorias: ui.hub_financeiro_categorias,
     }),
     [ui],
   )

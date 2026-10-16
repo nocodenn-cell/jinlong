@@ -20,14 +20,19 @@ import { ESTOQUE_HUB_TABS } from './estoqueHubNav'
 const L: OperationalHubLabelSet = {
   vendasVendas: 'v',
   vendasCaixas: 'c',
+  vendasClientes: 'cl',
   comprasPedidos: 'p',
+  comprasRecebimento: 'r',
+  comprasEtiquetas: 'e',
   comprasFornecedores: 'f',
-  pessoasClientes: 'cl',
-  pessoasFuncionarios: 'fu',
+  lojaDados: 'ld',
+  lojaFuncionarios: 'fu',
+  lojaCategoriasFinanceiras: 'cf',
+  lojaSuspensao: 's',
 }
 const FIN_LABELS: FinanceiroHubLabels = {
   resumo: 'r', resultado: 'rs', receber: 're', pagar: 'p', contasConciliacao: 'cc', contas: 'c',
-  recebiveis: 'rb', conciliacao: 'co', fiscal: 'f', comissoes: 'cm', categorias: 'ca',
+  recebiveis: 'rb', conciliacao: 'co', fiscal: 'f', comissoes: 'cm',
 }
 const FIN_HUB = buildFinanceiroHub({
   pathname: '/admin/financeiro',
@@ -75,26 +80,44 @@ describe('menu admin — sanidade estrutural', () => {
   })
 })
 
-describe('menu admin — 9 destinos (UX-IA-01 PR 1)', () => {
-  it('tem exatamente 9 destinos principais, na ordem de uso diário', () => {
+describe('menu admin — 8 destinos pela jornada da loja (2026-10-15)', () => {
+  it('segue a jornada: hoje → vender → abastecer → estoque → produtos → dinheiro → análises → loja', () => {
     expect(ADMIN_V2_DESTINATIONS.map((d) => d.id)).toEqual([
       'inicio',
-      'vendas',
-      'produtos',
+      'vender',
+      'abastecer',
       'estoque',
-      'compras',
-      'financeiro',
-      'pessoas',
-      'relatorios',
-      'configuracoes',
+      'produtos',
+      'dinheiro',
+      'analises',
+      'loja',
     ])
   })
 
-  it('gerente vê 9 destinos + Abrir PDV = 10 entradas de primeiro nível', () => {
+  it('gerente vê 8 destinos + Abrir PDV = 9 entradas de primeiro nível', () => {
     const primeiroNivel = [...ADMIN_V2_DESTINATIONS, ADMIN_V2_PDV_ITEM].filter(
       (i) => !i.adminOnly,
     )
-    expect(primeiroNivel).toHaveLength(10)
+    expect(primeiroNivel).toHaveLength(9)
+  })
+
+  it('cada rota de hub pertence a um único destino (sem duplicação entre menus)', () => {
+    const dono = new Map<string, string>()
+    for (const d of ADMIN_V2_DESTINATIONS) {
+      for (const p of [d.href.split('?')[0]!, ...(d.alsoActivePaths ?? [])]) {
+        expect(dono.get(p), `${p} em ${dono.get(p)} e ${d.id}`).toBeUndefined()
+        dono.set(p, d.id)
+      }
+    }
+  })
+
+  it('entradas e etiquetas ficam em Abastecer, não em Estoque', () => {
+    const estoque = ADMIN_V2_DESTINATIONS.find((d) => d.id === 'estoque')!
+    const abastecer = ADMIN_V2_DESTINATIONS.find((d) => d.id === 'abastecer')!
+    for (const p of [ROUTES.admin.estoqueRecebimento, ROUTES.admin.estoqueImprimirEtiquetas, ROUTES.admin.importNfe]) {
+      expect(estoque.notActivePaths).toContain(p)
+      expect(abastecer.alsoActivePaths).toContain(p)
+    }
   })
 
   it('"Abrir PDV" aponta para o PDV e é visível a todos os perfis do painel', () => {
@@ -102,8 +125,8 @@ describe('menu admin — 9 destinos (UX-IA-01 PR 1)', () => {
     expect(hrefs(itensVisiveis(false))).toContain(ROUTES.caixa.home)
   })
 
-  it('Relatórios abre na view Vendas & Caixas e concentra as demais views + Auditoria', () => {
-    const rel = ADMIN_V2_DESTINATIONS.find((d) => d.id === 'relatorios')!
+  it('Análises abre na view Vendas & Caixas e concentra as demais views + Auditoria', () => {
+    const rel = ADMIN_V2_DESTINATIONS.find((d) => d.id === 'analises')!
     expect(rel.href).toBe(executiveRelatoriosHref('vendas-caixas'))
     const filhos = hrefs(rel.children ?? [])
     expect(filhos).toContain(executiveRelatoriosHref('dre-financeiro'))
@@ -163,13 +186,14 @@ describe('menu admin — alcance: nenhuma rota saiu da sidebar', () => {
 })
 
 describe('menu admin — hubs mantêm taxonomias fora da sidebar', () => {
-  it('categorias, marcas, recebimento e transferências não são entradas da sidebar', () => {
+  it('categorias, marcas, recebimento, transferências e suspensão não são entradas da sidebar', () => {
     const visiveis = hrefs(itensVisiveis(false))
     expect(visiveis).not.toContain(ROUTES.admin.categoriasProdutos)
     expect(visiveis).not.toContain(ROUTES.admin.marcasProdutos)
     expect(visiveis).not.toContain(ROUTES.admin.estoqueRecebimento)
     expect(visiveis).not.toContain(ROUTES.admin.estoqueTransferencias)
     expect(visiveis).not.toContain(ROUTES.admin.categoriasFinanceiras)
+    expect(visiveis).not.toContain(ROUTES.admin.suspensao)
   })
 })
 
@@ -197,9 +221,12 @@ describe('menu admin — ferramentas internas fora da visão do cliente', () => 
 
 describe('menu admin — nomenclatura', () => {
   it('suspensão descreve a função real (vendas), não "licença"', () => {
-    const item = TODOS.find((i) => i.href === ROUTES.admin.suspensao)
-    expect(item?.labelOverridePt).toBe('Suspensão de vendas')
-    expect(item?.labelOverridePt).not.toMatch(/licen/i)
+    const aba = buildOperationalHubTabs('loja', {
+      ...L,
+      lojaSuspensao: 'Suspensão de vendas',
+    }).find((t) => t.href === ROUTES.admin.suspensao)
+    expect(aba?.label).toBe('Suspensão de vendas')
+    expect(aba?.label).not.toMatch(/licen/i)
   })
 
   it('"Produtos" no menu coincide com a chave do dicionário (antes: "Catálogo" × 商品)', () => {

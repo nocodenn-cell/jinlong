@@ -915,6 +915,7 @@
     "err_qtd_invalida": "Quantidade de estoque inválida.",
     "err_min_invalido": "Estoque mínimo inválido.",
     "err_motivo_invalido": "Motivo de ajuste de estoque inválido.",
+    "err_motivo_sinal": "Esse motivo não combina com a direção do ajuste: Perda e Quebra só reduzem o saldo, Compra só aumenta. Escolha outro motivo.",
     "err_obs_obrigatoria": "Informe uma observação para este ajuste.",
     "err_perfil": "Seu perfil não pode ajustar estoque. Use uma conta de gerente, dono ou administrador.",
     "err_insuficiente": "Estoque insuficiente para esta operação.",
@@ -1717,7 +1718,13 @@
       "pessoas": { "cn": "人员", "pt": "Pessoas" },
       "interno": { "cn": "内部工具", "pt": "Interno" },
       "auditoria": { "cn": "审计", "pt": "Auditoria" },
-      "abrirPdv": { "cn": "前往收银", "pt": "Abrir PDV" }
+      "abrirPdv": { "cn": "前往收银", "pt": "Abrir PDV" },
+      "hoje": { "cn": "今日", "pt": "Hoje" },
+      "vender": { "cn": "销售", "pt": "Vender" },
+      "abastecer": { "cn": "补货", "pt": "Abastecer" },
+      "dinheiro": { "cn": "资金", "pt": "Dinheiro" },
+      "analises": { "cn": "分析", "pt": "Análises" },
+      "lojaEquipe": { "cn": "店铺与团队", "pt": "Loja e equipe" }
     },
     "navHints": {
       "dashboard": "KPIs globais, tendência diária e alertas executivos.",
@@ -1747,7 +1754,13 @@
       "pessoas": "Clientes e funcionários da loja.",
       "auditoria": "Linha do tempo de eventos operacionais.",
       "interno": "Ferramentas internas da equipe FastProduct.",
-      "abrirPdv": "Abrir o terminal de caixa."
+      "abrirPdv": "Abrir o terminal de caixa.",
+      "hoje": "Pendências e alertas do dia.",
+      "vender": "Vendas, caixas e clientes.",
+      "abastecer": "Pedidos de compra, recebimento, etiquetas e fornecedores.",
+      "dinheiro": "Contas a receber e a pagar, conciliação, fiscal e comissões.",
+      "analises": "Relatórios de vendas, resultado, produtos, clientes e auditoria.",
+      "lojaEquipe": "Dados da loja, funcionários, categorias financeiras e suspensão de vendas."
     },
     "dashboard": {
       "pageTitle": { "cn": "生意看板", "pt": "Dashboard comercial" },
@@ -2709,8 +2722,14 @@
     "hub_pessoas_clientes": "Clientes",
     "hub_pessoas_funcionarios": "Funcionários",
     "hub_aria_vendas": "Seções de vendas",
-    "hub_aria_compras": "Seções de compras",
+    "hub_aria_compras": "Seções de abastecimento",
     "hub_aria_pessoas": "Seções de pessoas",
+    "hub_compras_recebimento": "Recebimento",
+    "hub_compras_etiquetas": "Etiquetas",
+    "hub_loja_dados": "Dados da loja",
+    "hub_loja_categorias_financeiras": "Categorias financeiras",
+    "hub_loja_suspensao": "Suspensão de vendas",
+    "hub_aria_loja": "Seções de loja e equipe",
     "command_palette_placeholder": "Buscar telas e ações…",
     "command_palette_vazio": "Nada encontrado",
     "command_palette_aria": "Buscar telas e ações",

@@ -154,7 +154,8 @@ export function AdminV2MobileNavDrawer({
                 />
               </Suspense>
             </div>
-            <SidebarUserFooter session={session} />
+            {/* Idioma/Sair já ficam na barra superior mobile (AdminV2Shell): não duplicar no drawer. */}
+            <SidebarUserFooter session={session} showUtilityBar={false} />
           </div>
         </div>
       )}

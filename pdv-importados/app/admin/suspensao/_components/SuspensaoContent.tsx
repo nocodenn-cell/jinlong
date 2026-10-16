@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { AlertCircle } from 'lucide-react'
 import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
+import { OperationalHubNav } from '@/components/ui/admin-v2/OperationalHubNav'
 import { Button } from '@/components/ui/button'
 import { DragonModal } from '@/components/ui/DragonModal'
 import { StatusChip } from '@/components/ui/StatusChip'
@@ -61,6 +62,7 @@ export function SuspensaoContent({ statusInicial }: Props) {
         title="Suspensão de Vendas"
         subtitle="Controle de operações da loja"
       />
+      <OperationalHubNav hub="loja" />
 
       <SectionCard title="Status da loja">
         <div className="mb-4 flex items-center gap-3">

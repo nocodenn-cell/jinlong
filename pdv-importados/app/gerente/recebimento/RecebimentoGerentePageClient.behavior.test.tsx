@@ -104,7 +104,9 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-async function renderizar(opts: { idioma?: 'pt' | 'zh'; preSelecionado?: boolean } = {}) {
+async function renderizar(
+  opts: { idioma?: 'pt' | 'zh'; preSelecionado?: boolean; hubNav?: React.ReactNode } = {},
+) {
   const idioma = opts.idioma ?? 'pt'
   await act(async () => {
     root.render(
@@ -115,6 +117,7 @@ async function renderizar(opts: { idioma?: 'pt' | 'zh'; preSelecionado?: boolean
           remessasRecentes={[]}
           embeddedInAdminHub
           produtoPreSelecionado={opts.preSelecionado ? PRODUTO : null}
+          hubNav={opts.hubNav}
         />
       </AdminV2SessionProvider>,
     )
@@ -163,6 +166,19 @@ async function escolherPedidoNaLista() {
     await Promise.resolve()
   })
 }
+
+describe('RecebimentoGerentePageClient — abas do hub', () => {
+  it('renderiza as abas (hubNav) logo abaixo do título, nunca acima', async () => {
+    await renderizar({ hubNav: <nav data-testid="hub-nav">abas</nav> })
+
+    const titulo = container.querySelector('h1')!
+    const nav = container.querySelector('[data-testid="hub-nav"]')!
+    expect(titulo).toBeTruthy()
+    expect(nav).toBeTruthy()
+    expect(titulo.compareDocumentPosition(nav) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(titulo.closest('header')!.nextElementSibling).toBe(nav)
+  })
+})
 
 describe('RecebimentoGerentePageClient — "Como chegou?" (UX-04)', () => {
   it('pt: oferece NF-e (link para a importação), Ordem de Compra e Sem documento; começa em Sem documento, sem campo de pedido', async () => {

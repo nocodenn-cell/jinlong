@@ -912,6 +912,7 @@
     "err_qtd_invalida": "库存数量无效。",
     "err_min_invalido": "最低库存无效。",
     "err_motivo_invalido": "库存调整原因无效。",
+    "err_motivo_sinal": "该原因与调整方向不符：损耗和破损只能减少库存，采购只能增加库存。请选择其他原因。",
     "err_obs_obrigatoria": "请填写本次调整的说明。",
     "err_perfil": "当前角色无法调整库存。请使用经理、店主或管理员账号。",
     "err_insuficiente": "库存不足，无法完成本操作。",
@@ -1807,6 +1808,30 @@
       "abrirPdv": {
         "cn": "前往收银",
         "pt": "Abrir PDV"
+      },
+      "hoje": {
+        "cn": "今日",
+        "pt": "Hoje"
+      },
+      "vender": {
+        "cn": "销售",
+        "pt": "Vender"
+      },
+      "abastecer": {
+        "cn": "补货",
+        "pt": "Abastecer"
+      },
+      "dinheiro": {
+        "cn": "资金",
+        "pt": "Dinheiro"
+      },
+      "analises": {
+        "cn": "分析",
+        "pt": "Análises"
+      },
+      "lojaEquipe": {
+        "cn": "店铺与团队",
+        "pt": "Loja e equipe"
       }
     },
     "navHints": {
@@ -1837,7 +1862,13 @@
       "pessoas": "店铺客户与员工。",
       "auditoria": "业务事件时间线。",
       "interno": "FastProduct 团队内部工具。",
-      "abrirPdv": "打开收银终端。"
+      "abrirPdv": "打开收银终端。",
+      "hoje": "今日待办与提醒。",
+      "vender": "销售、收银与客户。",
+      "abastecer": "采购单、收货、标签与供应商。",
+      "dinheiro": "应收应付、对账、税务与佣金。",
+      "analises": "销售、损益、商品、客户与审计报告。",
+      "lojaEquipe": "店铺资料、员工、财务类别与暂停销售。"
     },
     "dashboard": {
       "pageTitle": {
@@ -2928,8 +2959,14 @@
     "hub_pessoas_clientes": "客户",
     "hub_pessoas_funcionarios": "员工",
     "hub_aria_vendas": "销售分区",
-    "hub_aria_compras": "采购分区",
+    "hub_aria_compras": "补货分区",
     "hub_aria_pessoas": "人员分区",
+    "hub_compras_recebimento": "收货",
+    "hub_compras_etiquetas": "标签",
+    "hub_loja_dados": "店铺资料",
+    "hub_loja_categorias_financeiras": "财务类别",
+    "hub_loja_suspensao": "暂停销售",
+    "hub_aria_loja": "店铺与团队分区",
     "command_palette_placeholder": "搜索页面和操作…",
     "command_palette_vazio": "没有找到结果",
     "command_palette_aria": "搜索页面和操作",

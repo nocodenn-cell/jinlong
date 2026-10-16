@@ -67,12 +67,13 @@ test.describe('Painel do gerente (/admin/*)', () => {
       ? page.getByRole('dialog', { name: 'Navegação' }).getByTestId('executive-sidebar-nav')
       : page.locator('aside').getByTestId('executive-sidebar-nav')
     await expect(nav).toBeVisible()
-    // Rótulos reais de `lib/navigation/adminV2SidebarNav.ts` — "Produtos"/
-    // "Caixas" (do arquivo antigo) não existem mais como itens de menu.
-    await expect(nav.getByRole('link', { name: /Vendas/i })).toBeVisible()
+    // Rótulos reais de `lib/navigation/adminV2SidebarNav.ts` (menu por jornada:
+    // Vender / Abastecer / Estoque / Produtos / Dinheiro / Análises / Loja e equipe).
+    await expect(nav.getByRole('link', { name: /Vender/i })).toBeVisible()
+    await expect(nav.getByRole('link', { name: /Abastecer/i })).toBeVisible()
     await expect(nav.getByRole('link', { name: /Produtos/i })).toBeVisible()
     await expect(nav.getByRole('link', { name: /Estoque/i })).toBeVisible()
-    await expect(nav.getByRole('link', { name: /Relatórios/i })).toBeVisible()
+    await expect(nav.getByRole('link', { name: /Análises/i })).toBeVisible()
     await expect(page.getByRole('main')).toBeVisible()
   })
 
@@ -85,10 +86,10 @@ test.describe('Painel do gerente (/admin/*)', () => {
     await gotoApp(page, '/admin/estoque/imprimir-etiquetas')
     await expect(page.getByRole('heading', { name: /Imprimir Etiquetas|打印标签/ })).toBeVisible()
     await expect(page.getByPlaceholder(/código de barras|条形码/i)).toBeVisible()
-    await expect(page.getByRole('button', { name: /Gerar PDF|生成PDF/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Imprimir etiquetas|打印标签/ })).toBeVisible()
   })
 
-  test('fluxo básico: bipar produto -> adicionar ao carrinho -> gerar PDF', async ({ page }) => {
+  test('fluxo básico: bipar produto -> adicionar ao carrinho -> imprimir', async ({ page }) => {
     await gotoApp(page, '/admin/estoque/imprimir-etiquetas')
 
     const searchInput = page.getByPlaceholder(/código de barras|条形码/i)
@@ -103,7 +104,7 @@ test.describe('Painel do gerente (/admin/*)', () => {
     const isCartVisible = await cartSection.isVisible().catch(() => false)
 
     if (isCartVisible) {
-      const generateButton = page.getByRole('button', { name: /Gerar PDF|生成PDF/ })
+      const generateButton = page.getByRole('button', { name: /Imprimir etiquetas|打印标签/ })
       await expect(generateButton).toBeVisible()
       await generateButton.click()
       await page.waitForTimeout(2000)

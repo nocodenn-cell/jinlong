@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { StatusChip } from '@/components/ui/StatusChip'
@@ -53,6 +53,8 @@ type Props = Readonly<{
   historicoOnly?: boolean
   /** Deep-link `?importacao=<id>`: abre essa importação (aberta ou concluída) ao montar. */
   importacaoInicialId?: string | null
+  /** Abas do hub admin, renderizadas logo abaixo do título. */
+  hubNav?: ReactNode
 }>
 
 type LinhaEditavel = LinhaPreviewNfe & {
@@ -143,6 +145,7 @@ export function ImportarNfePageClient({
   importacaoInicialId = null,
   semDocumento = false,
   produtoInicial = null,
+  hubNav,
 }: Props) {
   const m = getMessages(idioma)
   const mi = useMemo(() => semDocumento ? {
@@ -750,7 +753,12 @@ export function ImportarNfePageClient({
           : `admin-v2-page space-y-4 ${fontClass}`
       }
     >
-      {!semDocumento ? <PageHeader title={mi.titulo} subtitle={mi.subtitulo} /> : null}
+      {!semDocumento ? (
+        <>
+          <PageHeader title={mi.titulo} subtitle={mi.subtitulo} />
+          {hubNav}
+        </>
+      ) : null}
 
       {!embeddedInAdminHub ? (
         <Link href={ROUTES.admin.estoque} className="gerente-nav-back text-sm font-medium hover:underline">

@@ -1,7 +1,7 @@
 import { ROUTES } from '@/lib/navigation/routes'
 import type { HubTabDef } from './hubNavModel'
 
-/** Hub Catálogo — produtos + taxonomias (rotas SSOT inalteradas). */
+/** Hub Catálogo — produtos + taxonomias (rotas SSOT inalteradas). Etiquetas moram em Abastecer. */
 export const CATALOGO_HUB_TABS: readonly HubTabDef[] = [
   { id: 'produtos', label: 'Produtos', href: ROUTES.admin.catalogo, match: 'prefix' },
   {
@@ -11,10 +11,4 @@ export const CATALOGO_HUB_TABS: readonly HubTabDef[] = [
     match: 'prefix',
   },
   { id: 'marcas', label: 'Marcas', href: ROUTES.admin.marcasProdutos, match: 'prefix' },
-  {
-    id: 'etiquetas',
-    label: 'Imprimir Etiquetas',
-    href: ROUTES.admin.estoqueImprimirEtiquetas,
-    match: 'prefix',
-  },
 ] as const
