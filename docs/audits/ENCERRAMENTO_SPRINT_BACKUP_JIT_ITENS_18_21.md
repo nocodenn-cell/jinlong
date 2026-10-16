@@ -1,5 +1,15 @@
 # Encerramento formal — Sprint backup/restore via Temporary Access/JIT (itens 18–21)
 
+> **Atualização de status — 2026-10-15 (verificada com `gh run list`; o texto abaixo, de 2026-09-07, fica como histórico e não foi alterado).**
+>
+> - O bloqueio descrito aqui era do **caminho JIT/PAM**. O workflow `Backup automatico (item 19)` (`backup-scheduled.yml`) hoje usa `supabase db dump` via CLI (os passos de JIT aparecem como `skipped` no run). A troca veio no Sprint 0 (PR [#501](https://github.com/nocodenn-cell/fastproduct/pull/501), mesclado em `main` em 2026-10-08).
+> - Execuções agendadas do workflow, todas `success`: 2026-10-09, 10, 11, 12, 13, 14 e 15 (a mais recente: [38725776712](https://github.com/nocodenn-cell/fastproduct/actions/runs/38725776712)). As de 2026-10-04 a 2026-10-08 ainda falharam.
+> - `Backup freshness monitor` também ficou `success` de 2026-10-10 a 2026-10-15 (última: [38739034502](https://github.com/nocodenn-cell/fastproduct/actions/runs/38739034502)).
+> - Etapas do run de 2026-10-15 com sucesso: dump (roles/schema/data), manifesto de sanidade, cifragem `age`, checksum SHA-256 e publicação do artifact.
+> - **Itens 18 e 19: backup agendado e cifrado em execução, por outro caminho que não o JIT.** O `EXTERNAL-BLOCKER-SUPABASE-JIT` continua sem solução na Supabase, mas deixou de bloquear o backup.
+> - **Itens 20 e 21 (restore drill e RPO/RTO) seguem sem prova em CI:** o workflow `Restore drill (item 20)` não tem nenhuma execução registrada. Existe um ensaio de restore **local** (Sprint 0, 2026-10-08, 87/87 tabelas com contagem idêntica; ver `docs/piloto-d0/SPRINT0_EVIDENCIAS_2026-10-08.md` §1), mas RTO não foi cronometrado formalmente neste registro.
+> - Não verificado aqui: o conteúdo do artifact nem a restaurabilidade de um dump publicado pelo agendamento.
+
 **Data:** 2026-09-07
 **Status:** **20/24 itens do Plano Mestre de Fechamento dos Gaps concluídos. Itens 18–21
 permanecem BLOCKED por dependência externa da Supabase (Temporary Access/JIT/Supavisor).**
