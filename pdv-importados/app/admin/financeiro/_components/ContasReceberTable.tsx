@@ -48,6 +48,8 @@ export type ContasLabels = {
   receber?: string
   receberCaixa?: string
   receberConta?: string
+  /** Nome acessível da tabela, igual ao título da seção (ex.: "Títulos em aberto"). */
+  tabela?: string
 }
 
 type TabelaProps = {
@@ -228,6 +230,7 @@ export function ContasReceberTable({
       data={contas}
       columns={columns}
       rowKey={(r) => r.id}
+      caption={labels.tabela}
       emptyState={
         <div className="flex flex-col items-center gap-2 py-16 text-center">
           <span className="text-4xl text-jl-fg-3" aria-hidden>📋</span>

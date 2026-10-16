@@ -56,6 +56,8 @@ type DataTableProps<T> = {
   skeletonRows?: number
   compact?: boolean
   stickyHeader?: boolean
+  /** Nome acessível da tabela (lido por leitores de tela, invisível na tela). */
+  caption?: string
 }
 
 type SortState = { key: string; direction: SortDirection } | null
@@ -89,6 +91,7 @@ export function DataTable<T>({
   skeletonRows = 6,
   compact = false,
   stickyHeader = false,
+  caption,
 }: DataTableProps<T>) {
   const serverMode = typeof onSort === 'function'
   const [localSort, setLocalSort] = useState<SortState>(null)
@@ -144,6 +147,7 @@ export function DataTable<T>({
         aria-colcount={colSpan}
         aria-busy={loading || undefined}
       >
+        {caption ? <caption className="sr-only">{caption}</caption> : null}
         <thead className={cn(stickyHeader && 'sticky top-0 z-[var(--z-sticky)] bg-[var(--color-surface-soft)]')}>
           <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface-soft)]">
             {columns.map((col) => {

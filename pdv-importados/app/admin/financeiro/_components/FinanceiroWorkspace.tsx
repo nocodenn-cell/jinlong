@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { SectionCard, MetricCard } from '@/components/ui/admin-v2'
@@ -12,7 +13,7 @@ import { FinanceiroContas } from './FinanceiroContas'
 import { FinanceiroRecebiveis } from './FinanceiroRecebiveis'
 import { FinanceiroConciliacao } from './FinanceiroConciliacao'
 import { FinanceiroPrimeiroUso } from './FinanceiroPrimeiroUso'
-import { FinanceiroAcoesRapidas } from './FinanceiroAcoesRapidas'
+import { FinanceiroAcoesRapidas, type FinanceiroAcaoRapida } from './FinanceiroAcoesRapidas'
 import { useAdminV2Session } from '@/components/ui/admin-v2/AdminV2SessionContext'
 import { getMessages } from '@/i18n/getMessages'
 
@@ -67,6 +68,7 @@ export function FinanceiroPaginacao({ data, countKey }: { data:FinanceiroPainel;
 }
 
 export function FinanceiroWorkspace({ data, tab, de, ate }: { data:FinanceiroPainel; tab:FinanceiroWorkspaceTab; de:string; ate:string }) {
+ const [acao, setAcao] = useState<FinanceiroAcaoRapida>(null)
  const { idioma } = useAdminV2Session()
  const ui = getMessages(idioma).admin_ui
  const contasLabels = {
@@ -90,7 +92,6 @@ export function FinanceiroWorkspace({ data, tab, de, ate }: { data:FinanceiroPai
   tipoConta: ui.financeiro_tipo_conta,
   dataInicial: ui.financeiro_data_inicial,
   saldoInicial: ui.financeiro_saldo_inicial,
-  transferirTitulo: ui.financeiro_transferir_titulo,
   vincularPdv: ui.financeiro_vincular_pdv,
   vincularPdvHint: ui.financeiro_vincular_pdv_hint,
   movimentoAvulso: ui.financeiro_movimento_avulso,
@@ -123,14 +124,17 @@ export function FinanceiroWorkspace({ data, tab, de, ate }: { data:FinanceiroPai
   confirmarReceber: ui.financeiro_acao_confirmar_receber,
   confirmarPagar: ui.financeiro_acao_confirmar_pagar,
   confirmarTransferir: ui.financeiro_acao_confirmar_transferir,
-  saldoRegistrado: ui.financeiro_saldo_registrado_hint,
  }
  return <div className="admin-v2-stack">
-  <FinanceiroAcoesRapidas data={data} labels={acoesLabels} />
   <FinanceiroPeriodo de={de} ate={ate} />
   {(tab==='resumo' || tab==='contas') ? <FinanceiroPrimeiroUso semContas={data.contas.length === 0} /> : null}
   {tab==='resumo' ? <FinanceiroResumo data={data} /> : null}
-  {tab==='contas' ? <><FinanceiroContas data={data} labels={contasLabels} /><FinanceiroMovimentos data={data} /><FinanceiroPaginacao data={data} countKey="movimentos" /></> : null}
+  {tab==='contas' ? <>
+    <FinanceiroAcoesRapidas data={data} labels={acoesLabels} mostrar={['transferir']} acao={acao} onAcao={setAcao} />
+    <FinanceiroContas data={data} labels={contasLabels} />
+    <FinanceiroMovimentos data={data} />
+    <FinanceiroPaginacao data={data} countKey="movimentos" />
+  </> : null}
   {tab==='recebiveis' ? <><FinanceiroRecebiveis data={data} /><FinanceiroPaginacao data={data} countKey="recebiveis" /></> : null}
   {tab==='conciliacao' ? <><FinanceiroConciliacao data={data} /><FinanceiroPaginacao data={data} countKey="extratos" /></> : null}
   {tab==='resultado' ? <FinanceiroResultado data={data} /> : null}

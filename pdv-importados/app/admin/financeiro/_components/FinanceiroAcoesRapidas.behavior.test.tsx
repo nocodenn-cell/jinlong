@@ -12,7 +12,7 @@ vi.mock('next/link', () => ({ default: ({ children, ...props }: React.ComponentP
 vi.mock('../financeiroLojaActions', () => ({ executarFinanceiroLoja: vi.fn() }))
 
 const labels = {
-  faixaAria: 'Ações rápidas',
+  faixaAria: 'Operações do financeiro',
   registrarVenda: 'Registrar venda',
   receber: 'Receber',
   pagar: 'Pagar / Registrar despesa',
@@ -28,7 +28,6 @@ const labels = {
   confirmarReceber: 'Confirmar',
   confirmarPagar: 'Confirmar',
   confirmarTransferir: 'Confirmar',
-  saldoRegistrado: 'Saldo registrado no sistema',
 }
 
 const data = {
@@ -57,6 +56,10 @@ const data = {
 let container: HTMLDivElement
 let root: ReturnType<typeof createRoot>
 
+function botao(texto: string): HTMLButtonElement | undefined {
+  return Array.from(container.querySelectorAll('button')).find((b) => b.textContent === texto)
+}
+
 beforeEach(() => {
   container = document.createElement('div')
   document.body.appendChild(container)
@@ -67,21 +70,44 @@ afterEach(() => {
   container.remove()
 })
 
-it('faixa fixa expõe Registrar venda, Receber, Pagar e Transferir com texto legível', () => {
+it('não há barra permanente: sem toolbar fixo e sem o saldo repetido', () => {
   flushSync(() =>
     root.render(
       <AdminV2SessionProvider idioma="pt">
-        <FinanceiroAcoesRapidas data={data} labels={labels} />
+        <FinanceiroAcoesRapidas data={data} labels={labels} mostrar={['venda', 'receber']} />
       </AdminV2SessionProvider>,
     ),
   )
-  const toolbar = container.querySelector('[role=toolbar]')
-  expect(toolbar).not.toBeNull()
-  expect(toolbar?.textContent).toContain('Saldo registrado no sistema')
+  expect(container.querySelector('[role=toolbar]')).toBeNull()
+  expect(container.querySelector('[role=group]')?.getAttribute('aria-label')).toBe('Operações do financeiro')
+  expect(container.textContent).not.toContain('Saldo registrado')
+})
+
+it('cada contexto mostra só as suas operações', () => {
+  flushSync(() =>
+    root.render(
+      <AdminV2SessionProvider idioma="pt">
+        <FinanceiroAcoesRapidas data={data} labels={labels} mostrar={['pagar']} />
+      </AdminV2SessionProvider>,
+    ),
+  )
+  expect(botao('Pagar / Registrar despesa')).toBeDefined()
+  expect(botao('Receber')).toBeUndefined()
+  expect(botao('Registrar venda')).toBeUndefined()
+  expect(botao('Transferir')).toBeUndefined()
+})
+
+it('botões têm área de toque mínima', () => {
+  flushSync(() =>
+    root.render(
+      <AdminV2SessionProvider idioma="pt">
+        <FinanceiroAcoesRapidas data={data} labels={labels} mostrar={['venda', 'receber', 'pagar', 'transferir']} />
+      </AdminV2SessionProvider>,
+    ),
+  )
   for (const texto of ['Registrar venda', 'Receber', 'Pagar / Registrar despesa', 'Transferir']) {
-    const btn = Array.from(container.querySelectorAll('button')).find((b) => b.textContent?.includes(texto))
-    expect(btn, texto).toBeDefined()
-    expect(btn!.className).toMatch(/min-h-14/)
+    expect(botao(texto), texto).toBeDefined()
+    expect(botao(texto)!.className).toMatch(/min-h-14/)
   }
 })
 
@@ -89,12 +115,31 @@ it('Receber abre painel com seleção de título existente', () => {
   flushSync(() =>
     root.render(
       <AdminV2SessionProvider idioma="pt">
-        <FinanceiroAcoesRapidas data={data} labels={labels} />
+        <FinanceiroAcoesRapidas data={data} labels={labels} mostrar={['receber']} />
       </AdminV2SessionProvider>,
     ),
   )
-  const receber = Array.from(container.querySelectorAll('button')).find((b) => b.textContent === 'Receber')
-  flushSync(() => receber!.click())
+  flushSync(() => botao('Receber')!.click())
   expect(container.textContent).toContain('Título a receber')
   expect(container.textContent).toContain('Cliente')
+})
+
+it('um título clicado na linha já vem selecionado no modal de Receber', () => {
+  flushSync(() =>
+    root.render(
+      <AdminV2SessionProvider idioma="pt">
+        <FinanceiroAcoesRapidas
+          data={data}
+          labels={labels}
+          mostrar={['receber']}
+          acao="receber"
+          onAcao={() => {}}
+          foco={{ tipo: 'AR', id: 'ar-linha', rotulo: 'Maria · Fiado' }}
+        />
+      </AdminV2SessionProvider>,
+    ),
+  )
+  const select = container.querySelector('select[name="titulo_id"]') as HTMLSelectElement
+  expect(select.value).toBe('ar-linha')
+  expect(select.textContent).toContain('Maria · Fiado')
 })
