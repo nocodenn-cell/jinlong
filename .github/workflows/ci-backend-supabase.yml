@@ -87,6 +87,12 @@ jobs:
       - name: Fiscal RPC store isolation (PostgreSQL in memory)
         run: npm run test:fiscal-rpc-authz -w fastproduct-backend
 
+      - name: Fiscal cancel category CHECK regression (PostgreSQL in memory)
+        run: npm run test:fiscal-cancelamento-categoria -w fastproduct-backend
+
+      - name: Residual RLS/search_path hardening (PostgreSQL in memory)
+        run: npm run test:hardening-residual -w fastproduct-backend
+
       - name: Enforce seed password secret for internal PRs
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
         env:
