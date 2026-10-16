@@ -99,7 +99,9 @@ jobs:
           start_ts=$(date -u +%s)
           echo "restore_start_iso=$(date -u -d "@$start_ts" '+%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
 
-          node backend/scripts/filter-data-dump.mjs /tmp/restore-plain/data.sql /tmp/restore-plain/data.filtered.sql
+          # Colunas que o destino (imagem Supabase do drill) de fato tem; o filtro projeta o COPY nelas.
+          docker exec restore-drill psql -U supabase_admin -d postgres -Atq -c "select table_schema||'.'||table_name||'.'||column_name from information_schema.columns where table_schema in ('public','auth')" > /tmp/restore-plain/target-columns.txt
+          node backend/scripts/filter-data-dump.mjs /tmp/restore-plain/data.sql /tmp/restore-plain/data.filtered.sql '^(public\.[a-z0-9_]+|auth\.(users|identities))$' /tmp/restore-plain/target-columns.txt
           docker exec restore-drill mkdir -p /tmp/dump
           for f in roles schema data data.filtered; do
             docker cp "/tmp/restore-plain/$f.sql" "restore-drill:/tmp/dump/$f.sql"
@@ -137,3 +139,4 @@ jobs:
             echo "- Fim do restore: ${{ steps.restore.outputs.restore_end_iso }}"
             echo "- **Duracao (RTO medido): ${{ steps.restore.outputs.restore_duration_seconds }}s**"
           } >> "$GITHUB_STEP_SUMMARY"
+
