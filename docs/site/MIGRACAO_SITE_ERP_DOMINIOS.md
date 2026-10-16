@@ -6,7 +6,41 @@
 - Decisão de migração aprovada: **novo login obrigatório** e **corte com caixas fechados**. Plano de homologação: `HOMOLOGACAO_APP_JINLONG_APP.md`.
 **Levantamento:** 2026-10-08, somente leitura (Vercel CLI, `curl`, código do repositório).
 
-## Arquitetura-alvo
+## Atualização 2026-10-16 — canônico no apex (branch `feat/jinlong-site-erp-integration`)
+
+Decisão do responsável: **`jinlong.app` é o canônico do site; `www.jinlong.app` redireciona para ele.** Isto substitui a tabela abaixo (apex → `www`) e as variáveis `…=https://www.jinlong.app` citadas nas fases.
+
+| Domínio | Aplicação | Projeto Vercel |
+|---|---|---|
+| `jinlong.app` | site institucional (`site/`) | `jinlong-site` |
+| `www.jinlong.app` → 307 → `jinlong.app` (caminhos do ERP → 307 direto para `app.jinlong.app`) | — | `jinlong-site` |
+| `app.jinlong.app` | ERP/PDV (`pdv-importados/`) | `pdv-importados` |
+
+O que mudou no código do site (o ERP **não** foi alterado):
+- "Entrar", Privacidade e Termos apontam por padrão para `https://app.jinlong.app` (`site/lib/erpLinks.ts`). `NEXT_PUBLIC_ERP_URL=https://www.jinlong.app` volta ao ERP atual sem novo código.
+- Canonical, sitemap e Open Graph usam `https://jinlong.app` por padrão (`site/lib/siteUrl.ts`).
+- Redirect `www.<apex>/*` → `<apex>/*` (307, preserva caminho e query) em `site/next.config.ts`, depois dos redirects do ERP, para que `www.jinlong.app/login` vá ao ERP em **um** salto. Só atua quando o site recebe o host `www`; hoje o `www` é do ERP, então fica inerte.
+- `ERP_REDIRECT_ORIGIN` continua **explícita** (sem ela, `/login` no site responde 404). É obrigatória no corte.
+
+Estado verificado em 2026-10-16 (somente leitura): `jinlong.app` → 307 → `www.jinlong.app`; `www.jinlong.app` → 307 → `/login` (ERP, projeto `pdv-importados`); `app.jinlong.app` resolve no DNS (curinga) mas não responde HTTP (não vinculado); `jinlong-site` só tem `jinlong-site.vercel.app`.
+
+### Ordem obrigatória (cada passo de produção exige autorização)
+1. **Merge do PR** — sem efeito em produção: o site não tem domínio próprio; o ERP não muda.
+2. **Fase 2:** vincular `app.jinlong.app` ao `pdv-importados` (sem remover `www`); Supabase *Redirect URLs* += `https://app.jinlong.app/**`; secret `VALIDAR_GERENTE_ALLOWED_ORIGINS` += `https://app.jinlong.app`; homologar (`HOMOLOGACAO_APP_JINLONG_APP.md`). Até aqui o "Entrar" do site (só em Preview) aponta para um host que ainda não responde — esperado.
+3. **Fase 4 (corte, caixas fechados):** no `jinlong-site`, `ERP_REDIRECT_ORIGIN=https://app.jinlong.app` (e `NEXT_PUBLIC_SITE_URL` vazio ou `https://jinlong.app`; **nunca** `www`, senão o redirect www→apex fica inerte) → redeploy → mover `jinlong.app` e `www.jinlong.app` do `pdv-importados` para o `jinlong-site` (ambos como domínios normais, ou `www` como redirect de domínio da Vercel para `jinlong.app`) → Supabase `site_url = https://app.jinlong.app`.
+4. Verificação pós-corte (`curl -sI`): `jinlong.app/pt-BR` 200; `www.jinlong.app/` → `jinlong.app/`; `www.jinlong.app/login?next=/caixa` e `jinlong.app/login` → `app.jinlong.app/login…`; `POST /api/*` → 307; `app.jinlong.app/login` 200.
+
+### Rollback
+| Situação | Ação | Tempo |
+|---|---|---|
+| Problema após o corte | mover `www.jinlong.app` (e `jinlong.app`) de volta ao `pdv-importados`; reverter `site_url` | ≈ 1 min |
+| "Entrar" precisa voltar ao ERP antigo | `NEXT_PUBLIC_ERP_URL=https://www.jinlong.app` no `jinlong-site` + redeploy (útil só antes de o `www` ir para o site; depois disso o `www` já é o site e o link apenas ganharia um salto extra) | minutos |
+| Deploy ruim do site | *Instant Rollback* do `jinlong-site` (independente do ERP) | segundos |
+| Reverter o código | `git revert` do merge | minutos |
+
+Redirects são 307 de propósito: navegadores não os fixam, então o rollback não deixa cache permanente.
+
+## Arquitetura-alvo (versão de 2026-10-08, substituída acima quanto ao canônico)
 
 | Domínio | Aplicação | Projeto Vercel |
 |---|---|---|

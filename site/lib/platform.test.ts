@@ -1,8 +1,9 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { CURRENT_ERP_URL, erpHref, getErpUrl, parseErpUrl } from './erpLinks'
-import { buildErpRedirects, ERP_PATH_PATTERNS } from './erpRedirects'
+import { DEFAULT_ERP_URL, erpHref, getErpUrl, parseErpUrl } from './erpLinks'
+import { buildErpRedirects, buildWwwToApexRedirect, ERP_PATH_PATTERNS } from './erpRedirects'
+import { DEFAULT_SITE_URL } from './siteUrl'
 import { negotiateLocale } from './negotiateLocale'
 import { buildContentSecurityPolicy, buildSecurityHeaders } from './securityHeaders'
 
@@ -35,8 +36,15 @@ describe('isolamento: o site não acessa dados reais nem credenciais', () => {
 })
 
 describe('links para o ERP', () => {
-  it('usa o ERP atual por padrão e aceita só origens https (ou localhost)', () => {
-    expect(getErpUrl({})).toBe(CURRENT_ERP_URL)
+  it('"Entrar" aponta para app.jinlong.app/login por padrão', () => {
+    expect(DEFAULT_ERP_URL).toBe('https://app.jinlong.app')
+    expect(erpHref('/login', {})).toBe('https://app.jinlong.app/login')
+  })
+
+  it('a variável permite voltar ao www (rollback) e aceita só origens https (ou localhost)', () => {
+    expect(getErpUrl({})).toBe(DEFAULT_ERP_URL)
+    expect(erpHref('/login', { NEXT_PUBLIC_ERP_URL: 'https://www.jinlong.app' })).toBe('https://www.jinlong.app/login')
+    expect(getErpUrl({ NEXT_PUBLIC_ERP_URL: 'https://evil.example/x' })).toBe(DEFAULT_ERP_URL)
     expect(getErpUrl({ NEXT_PUBLIC_ERP_URL: 'https://app.jinlong.app/' })).toBe('https://app.jinlong.app')
     expect(parseErpUrl('http://app.jinlong.app')).toBeNull()
     expect(parseErpUrl('https://app.jinlong.app/login')).toBeNull()
@@ -60,6 +68,30 @@ describe('redirecionamentos de compatibilidade', () => {
       expect.arrayContaining(['/login', '/auth/:path*', '/admin/:path*', '/caixa/:path*', '/gerente/:path*', '/api/:path*'])
     )
     expect(redirects.find((r) => r.source === '/auth/:path*')?.destination).toBe('https://app.jinlong.app/auth/:path*')
+  })
+})
+
+describe('domínio canônico do site', () => {
+  it('é o apex jinlong.app', () => {
+    expect(DEFAULT_SITE_URL).toBe('https://jinlong.app')
+  })
+
+  it('www.jinlong.app redireciona (307) para jinlong.app preservando o caminho', () => {
+    expect(buildWwwToApexRedirect(DEFAULT_SITE_URL)).toEqual([
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'www.jinlong.app' }],
+        destination: 'https://jinlong.app/:path*',
+        permanent: false,
+      },
+    ])
+  })
+
+  it('fica inerte se o canônico for www, http ou inválido', () => {
+    expect(buildWwwToApexRedirect('https://www.jinlong.app')).toEqual([])
+    expect(buildWwwToApexRedirect('http://jinlong.app')).toEqual([])
+    expect(buildWwwToApexRedirect('não é url')).toEqual([])
+    expect(buildWwwToApexRedirect('http://localhost:3100')).toEqual([])
   })
 })
 

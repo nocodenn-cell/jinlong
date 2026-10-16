@@ -1,7 +1,8 @@
 import path from 'node:path'
 import type { NextConfig } from 'next'
-import { buildErpRedirects } from './lib/erpRedirects'
+import { buildErpRedirects, buildWwwToApexRedirect } from './lib/erpRedirects'
 import { buildSecurityHeaders } from './lib/securityHeaders'
+import { getSiteUrl } from './lib/siteUrl'
 
 const isDev = process.env.NODE_ENV !== 'production'
 
@@ -15,7 +16,8 @@ const nextConfig: NextConfig = {
     return [{ source: '/:path*', headers: buildSecurityHeaders(isDev) }]
   },
   async redirects() {
-    return buildErpRedirects()
+    // Ordem importa: caminhos do ERP primeiro (www/login → app em um salto), depois www → apex.
+    return [...buildErpRedirects(), ...buildWwwToApexRedirect(getSiteUrl())]
   },
 }
 
