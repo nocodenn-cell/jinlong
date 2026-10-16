@@ -84,3 +84,58 @@ describe('DashboardOrdersTable (G-06)', () => {
     expect(routerPushMock).not.toHaveBeenCalledWith(ROUTES.admin.vendas)
   })
 })
+
+describe('DashboardOrdersTable — empty-state com CTA (Tarefa 6)', () => {
+  let container: HTMLDivElement
+  let root: Root
+
+  beforeEach(() => {
+    routerPushMock.mockReset()
+    container = document.createElement('div')
+    document.body.appendChild(container)
+    root = createRoot(container)
+  })
+
+  afterEach(() => {
+    act(() => root.unmount())
+    container.remove()
+  })
+
+  it('sem pedidos, mostra o CTA e ele abre Vendas com o histórico completo', () => {
+    act(() =>
+      root.render(
+        <DashboardOrdersTable
+          orders={[]}
+          labels={{ ...labels, emptyActionLabel: 'Abrir Vendas' }}
+          loadFailed={false}
+        />,
+      ),
+    )
+    expect(container.textContent).toContain('Nenhum pedido')
+    const cta = Array.from(container.querySelectorAll('button')).find((b) => b.textContent === 'Abrir Vendas')
+    expect(cta).toBeDefined()
+    act(() => cta!.click())
+    // O texto promete o histórico completo; Vendas sem `periodo` abre só "hoje".
+    expect(routerPushMock).toHaveBeenCalledWith(`${ROUTES.admin.vendas}?periodo=tudo`)
+  })
+
+  it('sem rótulo de CTA, o empty-state continua só informativo (compat)', () => {
+    act(() => root.render(<DashboardOrdersTable orders={[]} labels={labels} loadFailed={false} />))
+    expect(container.textContent).toContain('Nenhum pedido')
+    expect(container.querySelector('button')).toBeNull()
+  })
+
+  it('com pedidos, não há empty-state nem CTA', () => {
+    act(() =>
+      root.render(
+        <DashboardOrdersTable
+          orders={[pedido]}
+          labels={{ ...labels, emptyActionLabel: 'Abrir Vendas' }}
+          loadFailed={false}
+        />,
+      ),
+    )
+    expect(container.textContent).not.toContain('Nenhum pedido')
+    expect(Array.from(container.querySelectorAll('button')).some((b) => b.textContent === 'Abrir Vendas')).toBe(false)
+  })
+})
