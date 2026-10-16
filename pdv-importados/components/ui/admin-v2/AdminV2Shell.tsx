@@ -11,6 +11,7 @@ import { SidebarNav } from './SidebarNav'
 import { SidebarUserFooter } from './SidebarUserFooter'
 import { CommandPalette } from './CommandPalette'
 import { CommandPaletteTrigger } from './CommandPaletteTrigger'
+import { AdminV2UtilityBar } from './AdminV2UtilityBar'
 
 function SidebarNavFallback() {
   return <nav className="flex flex-col gap-6 p-3 lg:p-4" aria-busy="true" aria-label="Navegação" />
@@ -52,6 +53,8 @@ export function AdminV2Shell({ session, children, stockAlertCount }: AdminV2Shel
           />
         </Link>
         <div className="flex items-center gap-2">
+        {/* Mobile: idioma/Sair sempre à mão (no desktop moram no rodapé do menu lateral). */}
+        <AdminV2UtilityBar compact />
         <CommandPaletteTrigger compact label={m.admin_ui.command_palette_trigger} />
         <AdminV2MobileNavDrawer
           session={session}

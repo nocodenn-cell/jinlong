@@ -57,6 +57,9 @@ describe('v_kardex_unificado anti-join devolução', () => {
     expect(erc).toMatch(/NOT EXISTS/i)
     expect(erc).toContain("mel.tipo_codigo = 'ENTRADA_DEVOLUCAO_CLIENTE'")
     expect(erc).toContain("LIKE 'cancelamento de venda%'")
+    // Verificação da migration conta origens distintas: produto repetido em duas
+    // linhas de itens_venda gera dois lançamentos legítimos no log.
+    expect(src).toContain('HAVING count(DISTINCT origem) > 1')
   })
 
   it('ramo erd omite linhas já lançadas em movimentos_estoque_log', () => {

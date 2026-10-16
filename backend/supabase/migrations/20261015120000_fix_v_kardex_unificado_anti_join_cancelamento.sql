@@ -120,7 +120,10 @@ BEGIN
     RAISE EXCEPTION 'MIG20261015_KARDEX_NULLIF_AUSENTE';
   END IF;
 
-  -- Nenhum par (venda, produto) pode ter estorno de cancelamento no erc E no log.
+  -- Nenhum par (venda, produto) pode ter estorno de cancelamento vindo do erc E do log.
+  -- Conta ORIGENS distintas, não linhas: a mesma venda pode ter o produto em duas
+  -- linhas de itens_venda, e cancelar_venda grava um movimento de log por linha —
+  -- dois lançamentos canônicos no log são legítimos, não duplicação.
   SELECT count(*) INTO v_dup
   FROM (
     SELECT referencia_id, produto_id
@@ -130,7 +133,7 @@ BEGIN
            OR (tipo_codigo = 'ENTRADA_DEVOLUCAO_CLIENTE'
                AND COALESCE(observacao, '') LIKE 'cancelamento de venda%'))
     GROUP BY referencia_id, produto_id
-    HAVING count(*) > 1
+    HAVING count(DISTINCT origem) > 1
   ) d;
   IF v_dup > 0 THEN
     RAISE EXCEPTION 'MIG20261015_KARDEX_CANCELAMENTO_AINDA_DUPLICADO: % pares', v_dup;

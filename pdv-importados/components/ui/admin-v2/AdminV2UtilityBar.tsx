@@ -13,9 +13,11 @@ import { traduzir } from '@/lib/i18n/execTexts'
 
 type AdminV2UtilityBarProps = {
   className?: string
+  /** Barra superior mobile: "Sair" só com ícone (o texto fica para leitores de tela). */
+  compact?: boolean
 }
 
-export function AdminV2UtilityBar({ className }: AdminV2UtilityBarProps) {
+export function AdminV2UtilityBar({ className, compact = false }: AdminV2UtilityBarProps) {
   const router = useRouter()
   const { idioma } = useAdminV2Session()
   const [loggingOut, setLoggingOut] = useState(false)
@@ -45,7 +47,9 @@ export function AdminV2UtilityBar({ className }: AdminV2UtilityBarProps) {
         className="inline-flex h-9 items-center gap-2 rounded-full border border-[var(--admin-v2-border)] bg-[var(--color-background-secondary)] px-3 text-xs font-medium text-jl-fg-2 transition-colors hover:bg-[var(--color-background-tertiary)] hover:text-jl-fg-1"
       >
         <LogOut size={14} aria-hidden />
-        <span>{loggingOut ? '...' : traduzir(idioma === 'pt' ? 'pt' : 'zh', 'hdr.sair')}</span>
+        <span className={compact ? 'sr-only' : undefined}>
+          {loggingOut ? '...' : traduzir(idioma === 'pt' ? 'pt' : 'zh', 'hdr.sair')}
+        </span>
       </Link>
     </div>
   )
