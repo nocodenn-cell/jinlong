@@ -5,7 +5,7 @@ import type { FinanceiroPainel } from '../financeiroLojaTypes'
 import { executarFinanceiroLoja } from '../financeiroLojaActions'
 import { CategoriaOptions } from './FinanceiroOptions'
 import { useRouter } from 'next/navigation'
-import { Fragment, useState, useTransition } from 'react'
+import { Fragment, useEffect, useState, useTransition } from 'react'
 import { ROUTES } from '@/lib/navigation/routes'
 import { formatBRL } from '@/lib/format/money'
 import { labelFormaPagamentoVenda } from '@/lib/format/vendaLabels'
@@ -33,6 +33,15 @@ type Props = {
   caixasAbertos: Array<{ id: string; loja_id: string; operador: string }>
   /** Loja do ator autenticado — `registrar_liquidacao_receber` rejeita liquidação cross-loja para todos os perfis. */
   actorLojaId: string | null
+  /** Título escolhido na linha: o formulário de caixa desse id entra na lista e recebe foco. */
+  destaqueId?: string | null
+}
+
+function titulosVisiveis<T extends { id: string }>(abertas: T[], destaqueId: string | null | undefined): T[] {
+  const primeiras = abertas.slice(0, 8)
+  if (!destaqueId || primeiras.some((c) => c.id === destaqueId)) return primeiras
+  const alvo = abertas.find((c) => c.id === destaqueId)
+  return alvo ? [alvo, ...primeiras] : primeiras
 }
 
 const FORMAS = ['DINHEIRO'] as const
@@ -40,7 +49,7 @@ const FORMAS = ['DINHEIRO'] as const
 const LINK_MUTED =
   'text-caption font-medium text-[var(--color-warning-strong)] hover:underline'
 
-export function FinanceiroReceberExtras({ financeiroData, contas, clientesIniciais, caixasAbertos, actorLojaId }: Props) {
+export function FinanceiroReceberExtras({ financeiroData, contas, clientesIniciais, caixasAbertos, actorLojaId, destaqueId = null }: Props) {
   const router = useRouter()
   const { idioma } = useAdminV2Session()
   const m = getMessages(idioma)
@@ -170,6 +179,15 @@ export function FinanceiroReceberExtras({ financeiroData, contas, clientesInicia
   }
 
   const abertas = contas.filter((c) => c.valor_aberto > 0)
+  const visiveis = titulosVisiveis(abertas, destaqueId)
+  const ui = m.admin_ui
+
+  useEffect(() => {
+    if (!destaqueId) return
+    const form = document.getElementById(`receber-caixa-${destaqueId}`)
+    form?.scrollIntoView?.({ block: 'center' })
+    form?.querySelector<HTMLInputElement>('input[name="valor"]')?.focus()
+  }, [destaqueId])
 
   return (
     <Fragment>
@@ -177,15 +195,15 @@ export function FinanceiroReceberExtras({ financeiroData, contas, clientesInicia
       {abertas.length > 0 ? (
         <div className="rounded-lg border border-[var(--color-border-secondary)] bg-jl-surface-soft p-3">
           <h3 className="mb-2 text-caption font-semibold uppercase tracking-wide text-jl-fg-3">
-            Receber
+            {ui.financeiro_linha_receber_caixa}
           </h3>
           <p className="mb-2 text-caption text-jl-fg-3">
-            Este formulário recebe dinheiro no caixa físico. Para PIX, cartão ou transferência, use{' '}
-            <a href="#baixa-conta-financeira" className={LINK_MUTED}>Receber na conta financeira</a>{' '}
-            e selecione a conta de destino.
+            {ui.financeiro_receber_caixa_hint}{' '}
+            <a href="#baixa-conta-financeira" className={LINK_MUTED}>{ui.financeiro_linha_receber_conta}</a>{' '}
+            {ui.financeiro_receber_caixa_hint_fim}
           </p>
           <ul className="space-y-2">
-            {abertas.slice(0, 8).map((c) => {
+            {visiveis.map((c) => {
               const caixasTitulo = caixasAbertos.filter((caixa) => caixa.loja_id === c.loja_id)
               const foraDaLoja = actorLojaId != null && c.loja_id !== actorLojaId
               return (
@@ -220,6 +238,7 @@ export function FinanceiroReceberExtras({ financeiroData, contas, clientesInicia
                   </span>
                 ) : (
                 <form
+                  id={`receber-caixa-${c.id}`}
                   className="flex flex-wrap items-center gap-1.5"
                   onChange={(e) => {
                     delete e.currentTarget.dataset.idempotencyKey

@@ -5,18 +5,38 @@ import { useRouter } from 'next/navigation'
 import { Plus, Edit2, Check, X } from 'lucide-react'
 import { SectionCard } from '@/components/ui/admin-v2'
 import { DataTable, type Column } from '@/components/ui/DataTable'
+import { EmptyState } from '@/components/ui/feedback'
 import type { CategoriaFinanceiraRow } from '@/app/gerente/categorias-financeiras/categoriasFinanceirasTypes'
 import {
   criarCategoriaFinanceira,
   atualizarCategoriaFinanceira,
   alternarAtivoCategoriaFinanceira,
 } from '@/app/gerente/categorias-financeiras/actions'
+import { getMessages } from '@/i18n/getMessages'
+import { fmtTemplate } from '@/i18n/fmtTemplate'
+import type { Idioma } from '@/idioma/normalizeIdioma'
 
 type Props = {
+  idioma: Idioma
   dados: { rows: CategoriaFinanceiraRow[]; total: number }
 }
 
-export function CategoriasFinanceirasContent({ dados }: Props) {
+const PAGE_SIZE = 50
+
+export function CategoriasFinanceirasContent({ idioma, dados }: Props) {
+  const m = getMessages(idioma).categorias_financeiras
+  const tipoLabel: Record<CategoriaFinanceiraRow['tipo'], string> = {
+    RECEITA: m.tipo_receita,
+    DESPESA: m.tipo_despesa,
+    AMBOS: m.tipo_ambos,
+  }
+  const tipoOptions = (
+    <>
+      <option value="DESPESA">{m.tipo_despesa}</option>
+      <option value="RECEITA">{m.tipo_receita}</option>
+      <option value="AMBOS">{m.tipo_ambos}</option>
+    </>
+  )
   const router = useRouter()
   const [rows, setRows] = useState(dados.rows)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -87,7 +107,7 @@ export function CategoriasFinanceirasContent({ dados }: Props) {
   const columns: Column<CategoriaFinanceiraRow>[] = [
     {
       key: 'nome',
-      header: 'Nome',
+      header: m.col_nome,
       sortValue: (r) => r.nome,
       cell: (r) => (
         <span className="font-medium text-jl-fg-1">{r.nome}</span>
@@ -95,36 +115,39 @@ export function CategoriasFinanceirasContent({ dados }: Props) {
     },
     {
       key: 'tipo',
-      header: 'Tipo',
-      cell: r => <span>{r.tipo}</span>,
+      header: m.col_tipo,
+      cell: r => <span>{tipoLabel[r.tipo] ?? r.tipo}</span>,
     },
     {
       key: 'ativo',
-      header: 'Status',
+      header: m.col_situacao,
       cell: (r) => (
         <span
           className={`inline-flex items-center rounded-full px-2 py-[2px] text-[11px] font-medium ${
             r.ativo ? 'admin-v2-badge-success' : 'admin-v2-badge-danger'
           }`}
         >
-          {r.ativo ? 'Ativo' : 'Inativo'}
+          {r.ativo ? m.status_ativa : m.status_inativa}
         </span>
       ),
     },
     {
       key: 'actions',
-      header: 'Ações',
+      header: m.col_acoes,
       cell: (r) => (
         <div className="flex items-center gap-2">
           <button
-            aria-label={r.ativo ? `Desativar ${r.nome}` : `Ativar ${r.nome}`}
+            type="button"
+            aria-label={`${r.ativo ? m.inativar : m.ativar} ${r.nome}`}
             onClick={() => handleToggleAtivo(r.id, r.ativo)}
             className="rounded px-2 py-1 text-[12px] text-jl-fg-2 transition-colors hover:bg-white/[0.04]"
           >
-            {r.ativo ? 'Desativar' : 'Ativar'}
+            {r.ativo ? m.inativar : m.ativar}
           </button>
           <button
-            aria-label={`Editar ${r.nome}`}
+            type="button"
+            aria-label={`${m.editar_categoria} ${r.nome}`}
+            title={m.editar_categoria}
             onClick={() => {
               setEditingId(r.id)
               setEditingNome(r.nome)
@@ -132,7 +155,7 @@ export function CategoriasFinanceirasContent({ dados }: Props) {
             }}
             className="rounded p-1 text-jl-fg-3 transition-colors hover:bg-white/[0.04] hover:text-jl-fg-1"
           >
-            <Edit2 size={14} />
+            <Edit2 size={14} aria-hidden />
           </button>
         </div>
       ),
@@ -141,14 +164,15 @@ export function CategoriasFinanceirasContent({ dados }: Props) {
 
   return (
     <SectionCard
-      title={`Categorias (${dados.total})`}
+      title={`${m.lista_titulo} (${dados.total})`}
       action={
         <button
+          type="button"
           onClick={() => setCreatingNew(true)}
           className="admin-v2-btn-primary"
         >
-          <Plus size={14} />
-          Nova
+          <Plus size={14} aria-hidden />
+          {m.nova_categoria}
         </button>
       }
     >
@@ -164,30 +188,34 @@ export function CategoriasFinanceirasContent({ dados }: Props) {
             <input
               type="text"
               value={newNome}
-              aria-label="Nome da nova categoria"
+              aria-label={m.nome_label}
               onChange={(e) => setNewNome(e.target.value)}
-              placeholder="Nome da categoria..."
+              placeholder={m.nome_placeholder}
               className="admin-v2-input flex-1 px-3 py-2 text-[12px] outline-none placeholder:text-jl-fg-3 focus:border-jl-accent/50"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleCreate()
                 if (e.key === 'Escape') setCreatingNew(false)
               }}
             />
-            <label className="grid gap-1 text-small">Tipo<select className="fp-control" value={newTipo} onChange={e => setNewTipo(e.target.value as typeof newTipo)}><option value="DESPESA">Despesa</option><option value="RECEITA">Receita</option><option value="AMBOS">Ambos</option></select></label>
+            <label className="grid gap-1 text-small">{m.tipo_label}<select className="fp-control" value={newTipo} onChange={e => setNewTipo(e.target.value as typeof newTipo)}>{tipoOptions}</select></label>
             <button
+              type="button"
               onClick={handleCreate}
-              aria-label="Salvar nova categoria"
+              aria-label={m.criar}
+              title={m.criar}
               disabled={loading || !newNome.trim()}
               className="admin-v2-btn-primary disabled:opacity-50"
             >
-              <Check size={14} />
+              <Check size={14} aria-hidden />
             </button>
             <button
-              aria-label="Cancelar nova categoria"
+              type="button"
+              aria-label={m.cancelar}
+              title={m.cancelar}
               onClick={() => setCreatingNew(false)}
               className="admin-v2-btn-secondary"
             >
-              <X size={14} />
+              <X size={14} aria-hidden />
             </button>
           </div>
         </div>
@@ -199,30 +227,34 @@ export function CategoriasFinanceirasContent({ dados }: Props) {
             <input
               type="text"
               value={editingNome}
-              aria-label="Nome da categoria"
+              aria-label={m.nome_label}
               onChange={(e) => setEditingNome(e.target.value)}
-              placeholder="Nome da categoria..."
+              placeholder={m.nome_placeholder}
               className="admin-v2-input flex-1 px-3 py-2 text-[12px] outline-none focus:border-jl-accent/50"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleUpdate(editingId)
                 if (e.key === 'Escape') setEditingId(null)
               }}
             />
-            <label className="grid gap-1 text-small">Tipo<select className="fp-control" value={editingTipo} onChange={e => setEditingTipo(e.target.value as typeof editingTipo)}><option value="DESPESA">Despesa</option><option value="RECEITA">Receita</option><option value="AMBOS">Ambos</option></select></label>
+            <label className="grid gap-1 text-small">{m.tipo_label}<select className="fp-control" value={editingTipo} onChange={e => setEditingTipo(e.target.value as typeof editingTipo)}>{tipoOptions}</select></label>
             <button
+              type="button"
               onClick={() => handleUpdate(editingId)}
-              aria-label="Salvar edição da categoria"
+              aria-label={m.salvar}
+              title={m.salvar}
               disabled={loading || !editingNome.trim()}
               className="admin-v2-btn-primary disabled:opacity-50"
             >
-              <Check size={14} />
+              <Check size={14} aria-hidden />
             </button>
             <button
-              aria-label="Cancelar edição"
+              type="button"
+              aria-label={m.cancelar}
+              title={m.cancelar}
               onClick={() => setEditingId(null)}
               className="admin-v2-btn-secondary"
             >
-              <X size={14} />
+              <X size={14} aria-hidden />
             </button>
           </div>
         </div>
@@ -233,20 +265,18 @@ export function CategoriasFinanceirasContent({ dados }: Props) {
         columns={columns}
         rowKey={(r) => r.id}
         emptyState={
-          <div className="flex flex-col items-center gap-2 py-12 text-center">
-            <span className="text-3xl text-jl-fg-3" aria-hidden>
-              💰
-            </span>
-            <p className="text-[13px] font-medium text-jl-fg-2">Nenhuma categoria encontrada</p>
-            <p className="text-[11px] text-jl-fg-3">Use o campo acima para cadastrar a primeira categoria.</p>
-          </div>
+          <EmptyState title={m.sem_categorias} description={m.cadastro_rapido_hint} className="py-12" />
         }
         className="rounded-none border-x-0 border-[var(--color-border-secondary)]"
       />
 
-      {dados.total > 50 && (
+      {dados.total > PAGE_SIZE && (
         <div className="mt-4 border-t border-[var(--color-border-secondary)] pt-3 text-center text-[11px] text-jl-fg-3">
-          Página 1 de {Math.ceil(dados.total / 50)} · {dados.total} categorias
+          {fmtTemplate(m.paginacao_resumo, {
+            pagina: 1,
+            paginas: Math.ceil(dados.total / PAGE_SIZE),
+            total: dados.total,
+          })}
         </div>
       )}
     </SectionCard>

@@ -11,6 +11,7 @@ import { PageHeader } from '@/components/ui/admin-v2'
 import { FinanceiroHubNavShell } from '@/components/ui/admin-v2/FinanceiroHubNavShell'
 import { listarCategoriasFinanceiras } from '@/app/gerente/categorias-financeiras/actions'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
+import { getMessages } from '@/i18n/getMessages'
 import { ROUTES } from '@/lib/navigation/routes'
 import { CategoriasFinanceirasContent } from './_components/CategoriasFinanceirasContent'
 
@@ -22,10 +23,11 @@ type SearchParams = {
 type PageProps = { searchParams?: Promise<SearchParams> }
 
 export default async function AdminCategoriasFinanceirasPage({ searchParams }: PageProps) {
-  await loadAdminContext({
+  const { session } = await loadAdminContext({
     pathname: ROUTES.admin.categoriasFinanceiras,
     resource: `route:${ROUTES.admin.categoriasFinanceiras}`,
   })
+  const m = getMessages(session.idioma)
 
   const sp = (await searchParams) ?? {}
   const page = parseInt(sp.page ?? '1', 10)
@@ -42,14 +44,14 @@ export default async function AdminCategoriasFinanceirasPage({ searchParams }: P
   return (
     <div className="admin-v2-page">
       <PageHeader
-        title="Financeiro"
-        subtitle="Categorias de receitas e despesas usadas nos lançamentos"
+        title={m.admin_ui.financeiro_titulo}
+        subtitle={m.categorias_financeiras.subtitulo}
       />
 
       <FinanceiroHubNavShell activeTab="receber" />
 
       <Suspense fallback={<div className="admin-v2-panel h-12 animate-pulse rounded-lg" />}>
-        <CategoriasFinanceirasContent dados={dados} />
+        <CategoriasFinanceirasContent idioma={session.idioma} dados={dados} />
       </Suspense>
     </div>
   )
