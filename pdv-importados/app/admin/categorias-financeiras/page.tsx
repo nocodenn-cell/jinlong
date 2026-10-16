@@ -3,12 +3,12 @@
  *
  * Server Component. Carrega lista de categorias financeiras.
  * Zero query nova — reutiliza actions existentes de /gerente/categorias-financeiras.
- * Sprint 6: abas do hub financeiro (não item isolado na sidebar).
+ * Abas do hub Loja e equipe (categorias saíram do Financeiro — IA por jornada).
  */
 
 import { Suspense } from 'react'
 import { PageHeader } from '@/components/ui/admin-v2'
-import { FinanceiroHubNavShell } from '@/components/ui/admin-v2/FinanceiroHubNavShell'
+import { OperationalHubNav } from '@/components/ui/admin-v2/OperationalHubNav'
 import { listarCategoriasFinanceiras } from '@/app/gerente/categorias-financeiras/actions'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { ROUTES } from '@/lib/navigation/routes'
@@ -46,7 +46,7 @@ export default async function AdminCategoriasFinanceirasPage({ searchParams }: P
         subtitle="Categorias de receitas e despesas usadas nos lançamentos"
       />
 
-      <FinanceiroHubNavShell activeTab="receber" />
+      <OperationalHubNav hub="loja" />
 
       <Suspense fallback={<div className="admin-v2-panel h-12 animate-pulse rounded-lg" />}>
         <CategoriasFinanceirasContent dados={dados} />

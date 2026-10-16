@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import { Button } from '@/components/ui/button'
@@ -29,6 +29,8 @@ type Props = Readonly<{
   lojas: TransferenciaLojaRow[]
   produtos: TransferenciaProdutoOpt[]
   embeddedInAdminHub?: boolean
+  /** Abas do hub admin, renderizadas logo abaixo do título. */
+  hubNav?: ReactNode
 }>
 
 export function TransferenciasGerentePageClient({
@@ -36,6 +38,7 @@ export function TransferenciasGerentePageClient({
   lojas,
   produtos,
   embeddedInAdminHub = false,
+  hubNav,
 }: Props) {
   const m = getMessages(idioma)
   const t = m.gerente.transferencias_page
@@ -214,6 +217,7 @@ export function TransferenciasGerentePageClient({
       }
     >
       <PageHeader title={m.gerente.nav_transferencias} subtitle={t.intro} />
+      {hubNav}
 
       {!embeddedInAdminHub ? (
         <Link href={ROUTES.admin.estoque} className="gerente-nav-back text-sm font-medium hover:underline">

@@ -69,7 +69,11 @@ const conferenciaConcluida = {
 let container: HTMLDivElement
 let root: Root
 
-async function renderar(props: { importacaoInicialId?: string | null }) {
+async function renderar(props: {
+  importacaoInicialId?: string | null
+  hubNav?: React.ReactNode
+  semDocumento?: boolean
+}) {
   await act(async () => {
     root.render(
       <AdminV2SessionProvider idioma="pt">
@@ -98,6 +102,25 @@ beforeEach(() => {
 afterEach(() => {
   act(() => root.unmount())
   container.remove()
+})
+
+describe('ImportarNfePageClient — abas do hub', () => {
+  it('renderiza as abas (hubNav) logo abaixo do título, nunca acima', async () => {
+    await renderar({ hubNav: <nav data-testid="hub-nav">abas</nav> })
+
+    const titulo = container.querySelector('h1')!
+    const nav = container.querySelector('[data-testid="hub-nav"]')!
+    expect(titulo).toBeTruthy()
+    expect(nav).toBeTruthy()
+    expect(titulo.closest('header')!.nextElementSibling).toBe(nav)
+  })
+
+  it('sem documento (embutido no recebimento): sem título, sem abas', async () => {
+    await renderar({ hubNav: <nav data-testid="hub-nav">abas</nav>, semDocumento: true })
+
+    expect(container.querySelector('h1')).toBeNull()
+    expect(container.querySelector('[data-testid="hub-nav"]')).toBeNull()
+  })
 })
 
 describe('ImportarNfePageClient — deep-link ?importacao= (BP-A3)', () => {

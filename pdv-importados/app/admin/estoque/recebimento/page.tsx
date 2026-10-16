@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { ROUTES } from '@/lib/navigation/routes'
-import { EstoqueHubNav } from '@/components/ui/admin-v2/EstoqueHubNav'
+import { OperationalHubNav } from '@/components/ui/admin-v2/OperationalHubNav'
 import {
   RecebimentoGerentePageClient,
   type RecebimentoProdutoOpt,
@@ -66,8 +66,8 @@ export default async function AdminEstoqueRecebimentoPage({ searchParams }: Page
 
   return (
     <div className="admin-v2-page">
-      <EstoqueHubNav />
       <RecebimentoGerentePageClient
+        hubNav={<OperationalHubNav hub="compras" />}
         idioma={idioma}
         temProdutos={temProdutos}
         remessasRecentes={remessasRecentes}

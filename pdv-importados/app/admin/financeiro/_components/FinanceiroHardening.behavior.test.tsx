@@ -45,7 +45,7 @@ it('A receber não repete a fila; Fiscal mantém o documento e abre seu detalhe'
 it('navegação (barra agrupada, PR 5) mostra a ordem operacional e preserva apenas os filtros próprios de cada aba', () => {
  flushSync(() => root.render(<AdminV2SessionProvider idioma="pt"><FinanceiroContent {...props} activeTab="receber" /></AdminV2SessionProvider>))
  const links=Array.from(container.querySelectorAll('nav a'))
- expect(links.map(a => a.textContent)).toEqual(['Resumo','A receber','A pagar','Contas e conciliação','Fiscal','Comissões','Categorias'])
+ expect(links.map(a => a.textContent)).toEqual(['Resumo','A receber','A pagar','Contas e conciliação','Fiscal','Comissões'])
  expect(links[1].getAttribute('aria-current')).toBe('page')
  expect(links[1].getAttribute('href')).toContain('q=cliente')
  expect(links[3].getAttribute('href')).toContain('de=2026-10-01')

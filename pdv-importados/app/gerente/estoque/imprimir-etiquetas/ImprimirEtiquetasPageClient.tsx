@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import { Download, Printer, Package, Layers } from 'lucide-react'
 import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import { Button } from '@/components/ui/button'
@@ -37,6 +37,8 @@ type Props = {
   initialCodigo?: string
   initialProdutoId?: string
   embeddedInAdminHub?: boolean
+  /** Abas do hub admin, renderizadas logo abaixo do título. */
+  hubNav?: ReactNode
 }
 
 type ModeloKey = keyof typeof ETIQUETA_CONFIGS
@@ -122,6 +124,7 @@ export function ImprimirEtiquetasPageClient({
   initialCodigo,
   initialProdutoId,
   embeddedInAdminHub = false,
+  hubNav,
 }: Props) {
   const t = LABELS[idioma]
   const [carrinho, setCarrinho] = useState<ItemCarrinho[]>([])
@@ -311,6 +314,7 @@ export function ImprimirEtiquetasPageClient({
       }
     >
       <PageHeader title={t.titulo} subtitle={t.subtitulo} />
+      {hubNav}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-6">
@@ -413,10 +417,6 @@ export function ImprimirEtiquetasPageClient({
                 </span>
               ) : null}
             </Button>
-            {acimaDoLimite ? (
-              <p role="alert" className="mt-2 text-caption text-[var(--color-danger)]">
-                {t.limitePdf} {config.maxEtiquetasPorPdf} {t.etiquetas}.
-              </p>
             <Button
               type="button"
               variant="outline"
@@ -427,6 +427,10 @@ export function ImprimirEtiquetasPageClient({
               <Download className="h-4 w-4" />
               <span>{t.gerarPdf}</span>
             </Button>
+            {acimaDoLimite ? (
+              <p role="alert" className="mt-2 text-caption text-[var(--color-danger)]">
+                {t.limitePdf} {config.maxEtiquetasPorPdf} {t.etiquetas}.
+              </p>
             ) : (
               <p className="mt-2 text-caption text-fg-muted">
                 {t.maximo}: {config.maxEtiquetasPorPdf} {t.etiquetas}

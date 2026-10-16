@@ -2,7 +2,6 @@ import type { LucideIcon } from 'lucide-react'
 import {
   Banknote,
   ClipboardCheck,
-  ClipboardList,
   FileBarChart2,
   LayoutDashboard,
   Monitor,
@@ -12,7 +11,7 @@ import {
   ShoppingCart,
   Store,
   Tag,
-  Users,
+  Truck,
 } from 'lucide-react'
 import { ROUTES } from '@/lib/navigation/routes'
 import { executiveRelatoriosHref } from '@/lib/navigation/executiveViews'
@@ -31,14 +30,15 @@ export type AdminV2NavItem = {
   adminOnly?: boolean
   /** Rotas irmãs (abas do hub) que também marcam este item como ativo. */
   alsoActivePaths?: readonly string[]
+  /** Sub-rotas sob o `href` que pertencem a OUTRO destino (não marcam este como ativo). */
+  notActivePaths?: readonly string[]
 }
 
 /**
  * Destino principal da sidebar. `href` é a página padrão do grupo. Páginas irmãs ficam em
  * barra de abas dentro da página (hubs: ver `operationalHubNav.ts`, `catalogoHubNav.ts`, ...);
- * `children` só existe onde NÃO há barra de abas (Relatórios, Financeiro > Comissões,
- * Configurações > Suspensão) e nunca repete o `href` do pai. Só aparecem com o grupo aberto.
- * Rotas e permissões não mudam (UX-IA-01).
+ * `children` só existe onde NÃO há barra de abas (Análises) e nunca repete o `href` do pai.
+ * Só aparecem com o grupo aberto. Rotas e permissões não mudam (UX-IA-01).
  */
 export type AdminV2NavDestination = AdminV2NavItem & {
   icon: LucideIcon
@@ -46,26 +46,55 @@ export type AdminV2NavDestination = AdminV2NavItem & {
 }
 
 /**
- * Navegação principal — 9 destinos por tarefa do usuário.
- * Rotas de tabs de hub (Catálogo, Estoque, Financeiro) continuam nas barras de aba das páginas.
+ * Navegação principal — organizada pela jornada da loja (IA por jornada, 2026-10-15):
+ * comprar → receber → etiquetar → vender → receber o dinheiro → analisar.
+ * Cada rota pertence a UM destino; páginas irmãs ficam na barra de abas do hub.
  */
 export const ADMIN_V2_DESTINATIONS: readonly AdminV2NavDestination[] = [
   {
     id: 'inicio',
     href: ROUTES.admin.dashboard,
     icon: LayoutDashboard,
-    labelOverridePt: 'Início',
-    dictKey: 'inicio',
-    hint: 'KPIs globais, tendência e alertas.',
+    labelOverridePt: 'Hoje',
+    dictKey: 'hoje',
+    hint: 'Pendências e alertas do dia.',
   },
   {
-    id: 'vendas',
+    id: 'vender',
     href: ROUTES.admin.vendas,
     icon: ShoppingCart,
-    labelOverridePt: 'Vendas',
-    dictKey: 'vendas',
-    alsoActivePaths: [ROUTES.admin.caixas],
-    hint: 'Vendas e histórico de caixas (abas na página).',
+    labelOverridePt: 'Vender',
+    dictKey: 'vender',
+    alsoActivePaths: [ROUTES.admin.caixas, ROUTES.admin.clientes],
+    hint: 'Vendas, caixas e clientes (abas na página).',
+  },
+  {
+    id: 'abastecer',
+    href: ROUTES.admin.compras,
+    icon: Truck,
+    labelOverridePt: 'Abastecer',
+    dictKey: 'abastecer',
+    alsoActivePaths: [
+      ROUTES.admin.fornecedores,
+      ROUTES.admin.estoqueRecebimento,
+      ROUTES.admin.importNfe,
+      ROUTES.admin.estoqueImprimirEtiquetas,
+    ],
+    hint: 'Pedido de compra → recebimento → etiquetas, e fornecedores (abas na página).',
+  },
+  {
+    id: 'estoque',
+    href: ROUTES.admin.estoque,
+    icon: Package,
+    labelOverridePt: 'Estoque',
+    dictKey: 'estoque',
+    // Entradas e etiquetas vivem sob /admin/estoque/* mas pertencem a Abastecer.
+    notActivePaths: [
+      ROUTES.admin.estoqueRecebimento,
+      ROUTES.admin.importNfe,
+      ROUTES.admin.estoqueImprimirEtiquetas,
+    ],
+    hint: 'Saldos, movimentações e transferências (abas na página).',
   },
   {
     id: 'produtos',
@@ -74,49 +103,23 @@ export const ADMIN_V2_DESTINATIONS: readonly AdminV2NavDestination[] = [
     labelOverridePt: 'Produtos',
     dictKey: 'produtos',
     alsoActivePaths: [ROUTES.admin.categoriasProdutos, ROUTES.admin.marcasProdutos],
-    hint: 'Produtos, categorias, marcas e etiquetas (abas na página).',
+    hint: 'Produtos, categorias e marcas (abas na página).',
   },
   {
-    id: 'estoque',
-    href: ROUTES.admin.estoque,
-    icon: Package,
-    labelOverridePt: 'Estoque',
-    dictKey: 'estoque',
-    hint: 'Saldos, entradas, movimentações e transferências (abas na página).',
-  },
-  {
-    id: 'compras',
-    href: ROUTES.admin.compras,
-    icon: ClipboardList,
-    labelOverridePt: 'Compras',
-    dictKey: 'compras',
-    alsoActivePaths: [ROUTES.admin.fornecedores],
-    hint: 'Pedidos de compra e fornecedores (abas na página).',
-  },
-  {
-    id: 'financeiro',
+    id: 'dinheiro',
     href: ROUTES.admin.financeiro,
     icon: Banknote,
-    labelOverridePt: 'Financeiro',
-    dictKey: 'financeiro',
-    alsoActivePaths: [ROUTES.admin.categoriasFinanceiras, ROUTES.admin.comissoes],
-    hint: 'Contas a receber e pagar, conciliação, fiscal e comissões (abas na página).',
+    labelOverridePt: 'Dinheiro',
+    dictKey: 'dinheiro',
+    alsoActivePaths: [ROUTES.admin.comissoes],
+    hint: 'A receber, a pagar, contas e conciliação, fiscal e comissões (abas na página).',
   },
   {
-    id: 'pessoas',
-    href: ROUTES.admin.clientes,
-    icon: Users,
-    labelOverridePt: 'Pessoas',
-    dictKey: 'pessoas',
-    alsoActivePaths: [ROUTES.admin.funcionarios],
-    hint: 'Clientes e funcionários (abas na página).',
-  },
-  {
-    id: 'relatorios',
+    id: 'analises',
     href: executiveRelatoriosHref('vendas-caixas'),
     icon: FileBarChart2,
-    labelOverridePt: 'Relatórios',
-    dictKey: 'relatorios',
+    labelOverridePt: 'Análises',
+    dictKey: 'analises',
     hint: 'Vendas, resultado, produtos, clientes e auditoria.',
     children: [
       {
@@ -151,19 +154,17 @@ export const ADMIN_V2_DESTINATIONS: readonly AdminV2NavDestination[] = [
     ],
   },
   {
-    id: 'configuracoes',
+    id: 'loja',
     href: ROUTES.admin.configuracoes,
     icon: Settings,
-    labelOverridePt: 'Configurações',
-    dictKey: 'configuracoes',
-    children: [
-      {
-        id: 'suspensao',
-        href: ROUTES.admin.suspensao,
-        labelOverridePt: 'Suspensão de vendas',
-        dictKey: 'suspensao',
-      },
+    labelOverridePt: 'Loja e equipe',
+    dictKey: 'lojaEquipe',
+    alsoActivePaths: [
+      ROUTES.admin.funcionarios,
+      ROUTES.admin.categoriasFinanceiras,
+      ROUTES.admin.suspensao,
     ],
+    hint: 'Dados da loja, funcionários, categorias financeiras e suspensão de vendas (abas na página).',
   },
 ] as const
 

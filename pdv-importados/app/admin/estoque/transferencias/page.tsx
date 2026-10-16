@@ -45,8 +45,8 @@ export default async function AdminEstoqueTransferenciasPage() {
 
   return (
     <div className="admin-v2-page">
-      <EstoqueHubNav />
       <TransferenciasGerentePageClient
+        hubNav={<EstoqueHubNav />}
         idioma={idioma}
         lojas={lojas}
         produtos={produtos}

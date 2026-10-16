@@ -4,7 +4,7 @@ import { labelStatusOperacional } from '@/lib/format/vendaLabels'
 import Link from 'next/link'
 import { FileText, ClipboardList, PackagePlus, Truck, History } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { type Column } from '@/components/ui/DataTable'
 import { readFormDataString } from '@/lib/forms/readFormDataString'
 import { emitGerenteToast } from '@/lib/gerente/toast'
@@ -49,6 +49,8 @@ type Props = Readonly<{
   embeddedInAdminHub?: boolean
   /** Deep-link "Repor" a partir de um item crítico em `/admin/estoque`. */
   produtoPreSelecionado?: RecebimentoProdutoOpt | null
+  /** Abas do hub admin, renderizadas logo abaixo do título. */
+  hubNav?: ReactNode
 }>
 
 export function RecebimentoGerentePageClient({
@@ -57,6 +59,7 @@ export function RecebimentoGerentePageClient({
   remessasRecentes,
   embeddedInAdminHub = false,
   produtoPreSelecionado = null,
+  hubNav,
 }: Props) {
   const m = getMessages(idioma)
   const r = m.gerente.recebimento_page
@@ -283,6 +286,7 @@ export function RecebimentoGerentePageClient({
           </span>
         }
       />
+      {hubNav}
 
       {!embeddedInAdminHub ? (
         <Link href={ROUTES.admin.estoque} className="gerente-nav-back text-sm font-medium hover:underline">

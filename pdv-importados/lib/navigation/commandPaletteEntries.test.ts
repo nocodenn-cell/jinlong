@@ -78,8 +78,8 @@ describe('paleta de comandos — entradas', () => {
 
   it('em chinês os rótulos saem em chinês e o português vira texto secundário', () => {
     const inicio = entries('zh', false).find((x) => x.href === ROUTES.admin.dashboard)
-    expect(inicio?.label).toBe('首页')
-    expect(inicio?.secondary).toBe('Início')
+    expect(inicio?.label).toBe('今日')
+    expect(inicio?.secondary).toBe('Hoje')
   })
 })
 
@@ -109,7 +109,7 @@ describe('paleta de comandos — busca', () => {
     }
   })
 
-  it('busca por grupo: "financeiro" lista as abas do Financeiro', () => {
+  it('busca pelo nome antigo do grupo: "financeiro" lista as abas de Dinheiro', () => {
     const h = searchCommandEntries(pt, 'financeiro').map((e) => e.href)
     expect(h).toContain('/admin/financeiro?tab=receber')
     expect(h).toContain(ROUTES.admin.comissoes)
@@ -139,5 +139,26 @@ describe('paleta de comandos — busca', () => {
     const zh = entries('zh', false)
     expect(searchCommandEntries(zh, 'estoque').map((e) => e.href)).toContain(ROUTES.admin.estoque)
     expect(searchCommandEntries(zh, '库存').map((e) => e.href)).toContain(ROUTES.admin.estoque)
+  })
+})
+
+describe('paleta de comandos — grupos da jornada', () => {
+  const pt = entries('pt', false)
+  const grupoDe = (href: string) => pt.find((e) => e.href === href)?.group
+
+  it('cada aba aparece sob o destino da jornada a que pertence', () => {
+    expect(grupoDe(ROUTES.admin.clientes)).toBe('Vender')
+    expect(grupoDe(ROUTES.admin.estoqueRecebimento)).toBe('Abastecer')
+    expect(grupoDe(ROUTES.admin.estoqueImprimirEtiquetas)).toBe('Abastecer')
+    expect(grupoDe(ROUTES.admin.importNfe)).toBe('Abastecer')
+    expect(grupoDe(ROUTES.admin.funcionarios)).toBe('Loja e equipe')
+    expect(grupoDe(ROUTES.admin.categoriasFinanceiras)).toBe('Loja e equipe')
+    expect(grupoDe(ROUTES.admin.comissoes)).toBe('Dinheiro')
+  })
+
+  it('nomes antigos ainda acham as telas ("compras" acha recebimento e etiquetas)', () => {
+    const h = searchCommandEntries(pt, 'compras').map((e) => e.href)
+    expect(h).toContain(ROUTES.admin.estoqueRecebimento)
+    expect(h).toContain(ROUTES.admin.estoqueImprimirEtiquetas)
   })
 })

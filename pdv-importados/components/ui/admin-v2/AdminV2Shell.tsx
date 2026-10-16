@@ -30,6 +30,8 @@ export function AdminV2Shell({ session, children, stockAlertCount }: AdminV2Shel
   const admin = m.admin
 
   return (
+    // Provider no topo: o rodapé do menu (idioma/Sair) também lê o idioma da sessão.
+    <AdminV2SessionProvider idioma={idioma}>
     <div data-admin-v2 className="isolate min-h-dvh min-h-screen bg-[var(--color-background-primary)] text-jl-fg-1">
       <SessionIdleLogout />
       <CommandPalette idioma={idioma} showAdminOnlyItems={session.perfil === 'ADMIN'} />
@@ -99,11 +101,10 @@ export function AdminV2Shell({ session, children, stockAlertCount }: AdminV2Shel
 
         {/* ARIA landmark: main content area */}
         <main id="main-content" className="admin-v2-main relative min-w-0 flex-1">
-          <AdminV2SessionProvider idioma={idioma}>
-            <div className="relative z-[1] min-h-full">{children}</div>
-          </AdminV2SessionProvider>
+          <div className="relative z-[1] min-h-full">{children}</div>
         </main>
       </div>
     </div>
+    </AdminV2SessionProvider>
   )
 }

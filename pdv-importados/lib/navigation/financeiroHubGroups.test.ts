@@ -19,7 +19,6 @@ const L: FinanceiroHubLabels = {
   conciliacao: 'Conciliação',
   fiscal: 'Fiscal',
   comissoes: 'Comissões',
-  categorias: 'Categorias',
 }
 const hub = (tab: FinanceiroTabId, pathname: string = ROUTES.admin.financeiro, qs = '') =>
   buildFinanceiroHub({ pathname, activeTab: tab, searchParams: new URLSearchParams(qs), labels: L })
@@ -31,7 +30,7 @@ describe('Financeiro — barra agrupada (PR 5)', () => {
     expect([...todas].sort()).toEqual([...FINANCEIRO_TAB_ORDER].sort())
   })
 
-  it('9 controles viram 7 na linha principal', () => {
+  it('a linha principal tem 6 controles (categorias foram para Loja e equipe)', () => {
     const { primary } = hub('receber')
     expect(primary.map((i) => i.label)).toEqual([
       'Resumo',
@@ -40,7 +39,6 @@ describe('Financeiro — barra agrupada (PR 5)', () => {
       'Contas e conciliação',
       'Fiscal',
       'Comissões',
-      'Categorias',
     ])
   })
 
@@ -50,7 +48,8 @@ describe('Financeiro — barra agrupada (PR 5)', () => {
     expect(h.contas).toBe('/admin/financeiro?tab=contas')
     expect(h.fiscal).toBe('/admin/financeiro?tab=fiscal')
     expect(h.comissoes).toBe(ROUTES.admin.comissoes)
-    expect(h.categorias).toBe(ROUTES.admin.categoriasFinanceiras)
+    // Categorias financeiras mudaram para Loja e equipe (IA por jornada).
+    expect(h.categorias).toBeUndefined()
   })
 
   it.each([
@@ -78,12 +77,10 @@ describe('Financeiro — barra agrupada (PR 5)', () => {
     for (const tab of ['receber', 'pagar', 'fiscal'] as const) expect(hub(tab).secondary, tab).toBeNull()
   })
 
-  it('Comissões e Categorias (páginas próprias) marcam só o próprio item e não mostram seletor', () => {
+  it('Comissões (página própria) marca só o próprio item e não mostra seletor', () => {
     const c = hub('receber', ROUTES.admin.comissoes)
     expect(c.primary.filter((i) => i.active).map((i) => i.id)).toEqual(['comissoes'])
     expect(c.secondary).toBeNull()
-    const k = hub('receber', ROUTES.admin.categoriasFinanceiras)
-    expect(k.primary.filter((i) => i.active).map((i) => i.id)).toEqual(['categorias'])
   })
 
   it('documento fiscal (rota própria) não ativa nenhum item pela rota', () => {

@@ -31,10 +31,13 @@ const resolveLabels = resolveNavLabels
 const LINK_BASE =
   'admin-v2-nav-link flex items-center gap-3 rounded-full border border-transparent px-3 py-2.5'
 
+const matchesPath = (pathname: string, p: string) => pathname === p || pathname.startsWith(`${p}/`)
+
 function isItemActive(item: AdminV2NavItem, pathname: string, search: string): boolean {
+  if ((item.notActivePaths ?? []).some((p) => matchesPath(pathname, p))) return false
   return (
     isAdminNavActive(pathname, search, item.href) ||
-    (item.alsoActivePaths ?? []).some((p) => pathname === p || pathname.startsWith(`${p}/`))
+    (item.alsoActivePaths ?? []).some((p) => matchesPath(pathname, p))
   )
 }
 
@@ -123,7 +126,7 @@ function DestinationGroup({
 }
 
 /**
- * ExecutiveSidebarNav — Admin V2: "Abrir PDV" em destaque + 9 destinos por tarefa
+ * ExecutiveSidebarNav — Admin V2: "Abrir PDV" em destaque + 8 destinos pela jornada da loja
  * (sub-links só no grupo aberto) + grupo Interno (ADMIN).
  */
 export function ExecutiveSidebarNav({

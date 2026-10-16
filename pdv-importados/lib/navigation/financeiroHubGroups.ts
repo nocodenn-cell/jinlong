@@ -48,7 +48,6 @@ export type FinanceiroHubLabels = {
   conciliacao: string
   fiscal: string
   comissoes: string
-  categorias: string
 }
 
 export type FinanceiroHubItem = { id: string; label: string; href: string; active: boolean }
@@ -91,7 +90,6 @@ export function buildFinanceiroHub(input: {
   const { pathname, activeTab, searchParams, labels } = input
   const onFinanceiro = pathname === ROUTES.admin.financeiro
   const onComissoes = pathname.startsWith(ROUTES.admin.comissoes)
-  const onCategorias = pathname.startsWith(ROUTES.admin.categoriasFinanceiras)
   const activeGroup = financeiroGroupOf(activeTab)
 
   const primary: FinanceiroHubItem[] = [
@@ -102,7 +100,6 @@ export function buildFinanceiroHub(input: {
       active: onFinanceiro && activeGroup === g.id,
     })),
     { id: 'comissoes', label: labels.comissoes, href: ROUTES.admin.comissoes, active: onComissoes },
-    { id: 'categorias', label: labels.categorias, href: ROUTES.admin.categoriasFinanceiras, active: onCategorias },
   ]
 
   const group = FINANCEIRO_GROUPS.find((g) => g.id === activeGroup)

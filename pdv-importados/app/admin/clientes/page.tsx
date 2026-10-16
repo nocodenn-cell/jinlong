@@ -28,7 +28,7 @@ export default async function AdminClientesPage() {
         title={messages.clientes.titulo}
         subtitle={messages.clientes.subtitulo}
       />
-      <OperationalHubNav hub="pessoas" />
+      <OperationalHubNav hub="vendas" />
       <ClientesListClient
         idioma={legacyIdioma}
         locale={locale}
