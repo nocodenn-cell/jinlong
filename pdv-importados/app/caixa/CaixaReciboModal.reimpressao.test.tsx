@@ -75,3 +75,32 @@ describe('CaixaReciboModal — reaberto fora do PDV (detalhe da venda no admin)'
     expect(container.textContent).toContain(m.caixa.btn_finalizar_caixa)
   })
 })
+
+describe('CaixaReciboModal — gatilhos da gaveta', () => {
+  beforeEach(() => vi.mocked(thermal.abrirGaveta).mockClear())
+
+  it('abre uma vez na primeira via de venda com dinheiro', () => {
+    act(() => root.render(<CaixaReciboModal venda={venda} m={getMessages('pt')} onClose={() => {}} thermal={thermal} />))
+    expect(thermal.abrirGaveta).toHaveBeenCalledTimes(1)
+  })
+
+  it('não abre em segunda via, inclusive com dinheiro', () => {
+    act(() => root.render(<CaixaReciboModal venda={venda} segundaVia m={getMessages('pt')} onClose={() => {}} thermal={thermal} />))
+    expect(thermal.abrirGaveta).not.toHaveBeenCalled()
+  })
+
+  it('não abre em pagamento PIX ou cartão', () => {
+    const pagamentos: ReciboVenda['pagamentos'] = [{ formaPagamento: 'PIX', valor: 10 }]
+    act(() => root.render(<CaixaReciboModal venda={{ ...venda, pagamentos }} m={getMessages('pt')} onClose={() => {}} thermal={thermal} />))
+    expect(thermal.abrirGaveta).not.toHaveBeenCalled()
+  })
+
+  it('abre em pagamento misto com parcela em dinheiro', () => {
+    const pagamentos: ReciboVenda['pagamentos'] = [
+      { formaPagamento: 'PIX', valor: 5 },
+      { formaPagamento: 'DINHEIRO', valor: 5 },
+    ]
+    act(() => root.render(<CaixaReciboModal venda={{ ...venda, pagamentos }} m={getMessages('pt')} onClose={() => {}} thermal={thermal} />))
+    expect(thermal.abrirGaveta).toHaveBeenCalledTimes(1)
+  })
+})
