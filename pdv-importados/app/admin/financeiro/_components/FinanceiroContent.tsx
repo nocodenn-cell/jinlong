@@ -164,16 +164,14 @@ export function FinanceiroContent({
       {activeTab === 'receber' ? (
         <>
           {financeiroData ? <FinanceiroPrimeiroUso semContas={financeiroData.contas.length === 0} /> : null}
-          {financeiroData ? (
-            <FinanceiroAcoesRapidas
-              data={financeiroData}
-              labels={acoesLabels}
-              mostrar={['venda', 'receber']}
-              acao={acao}
-              onAcao={abrirAcao}
-              foco={focoConta}
-            />
-          ) : null}
+          <FinanceiroAcoesRapidas
+            data={financeiroData}
+            labels={acoesLabels}
+            mostrar={['venda', 'receber']}
+            acao={acao}
+            onAcao={abrirAcao}
+            foco={focoConta}
+          />
           {kpiSection}
           {filterSection}
           <div className="admin-v2-stack">
@@ -205,6 +203,7 @@ export function FinanceiroContent({
                 caixasAbertos={caixasAbertos}
                 actorLojaId={actorLojaId}
                 destaqueId={focoCaixaAr}
+                onReceberConta={() => abrirAcao('receber')}
               />
             </SectionCard>
           </div>
@@ -213,16 +212,14 @@ export function FinanceiroContent({
 
       {activeTab === 'pagar' ? (
         <>
-          {financeiroData ? (
-            <FinanceiroAcoesRapidas
-              data={financeiroData}
-              labels={acoesLabels}
-              mostrar={['pagar']}
-              acao={acao}
-              onAcao={abrirAcao}
-              foco={focoConta}
-            />
-          ) : null}
+          <FinanceiroAcoesRapidas
+            data={financeiroData}
+            labels={acoesLabels}
+            mostrar={['pagar']}
+            acao={acao}
+            onAcao={abrirAcao}
+            foco={focoConta}
+          />
         <ContasPagarListClient
           somenteCaixa
           idioma={contasPagar.idioma}

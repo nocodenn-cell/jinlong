@@ -143,3 +143,14 @@ it('um título clicado na linha já vem selecionado no modal de Receber', () => 
   expect(select.value).toBe('ar-linha')
   expect(select.textContent).toContain('Maria · Fiado')
 })
+
+it('ação de outra aba não reabre modal neste contexto', () => {
+  flushSync(() =>
+    root.render(
+      <AdminV2SessionProvider idioma="pt">
+        <FinanceiroAcoesRapidas data={data} labels={labels} mostrar={['pagar']} acao="receber" onAcao={() => {}} />
+      </AdminV2SessionProvider>,
+    ),
+  )
+  expect(container.textContent).not.toContain('Título a receber')
+})

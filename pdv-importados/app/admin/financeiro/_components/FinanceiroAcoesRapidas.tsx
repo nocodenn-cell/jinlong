@@ -82,6 +82,8 @@ export function FinanceiroAcoesRapidas({ data, labels, mostrar, acao: acaoProp, 
   const textos = useTextosBaixaForm()
   const [acaoInterna, setAcaoInterna] = useState<FinanceiroAcaoRapida>(null)
   const acao = acaoProp !== undefined ? acaoProp : acaoInterna
+  // Só abre operações deste contexto: estado antigo de outra aba não reabre modal aqui.
+  const acaoVisivel = acao && mostrar.includes(acao) ? acao : null
   const setAcao = (proximo: FinanceiroAcaoRapida) => (onAcao ? onAcao(proximo) : setAcaoInterna(proximo))
 
   useEffect(() => {
@@ -135,7 +137,7 @@ export function FinanceiroAcoesRapidas({ data, labels, mostrar, acao: acaoProp, 
         ))}
       </div>
 
-      <PainelShell open={acao === 'venda'} title={labels.vendaTitulo} onClose={() => setAcao(null)}>
+      <PainelShell open={acaoVisivel === 'venda'} title={labels.vendaTitulo} onClose={() => setAcao(null)}>
         <p className="text-small text-jl-fg-2">{labels.vendaTexto}</p>
         <div className="mt-4 flex flex-wrap gap-3">
           <Link href={ROUTES.caixa.home} className="admin-v2-btn-primary inline-flex min-h-14 items-center px-4 text-[18px]">
@@ -149,7 +151,7 @@ export function FinanceiroAcoesRapidas({ data, labels, mostrar, acao: acaoProp, 
 
       {data ? (
         <>
-          <PainelShell open={acao === 'receber'} title={labels.receberTitulo} onClose={() => setAcao(null)}>
+          <PainelShell open={acaoVisivel === 'receber'} title={labels.receberTitulo} onClose={() => setAcao(null)}>
             <p className="mb-3 text-small text-jl-fg-3">{labels.avulsoHint}</p>
             <FinanceiroForm key={`receber-${focoReceber?.id ?? 'livre'}`} title={labels.receberTitulo} tipo="BAIXAR_AR" submit={labels.confirmarReceber}>
               <Field name="titulo_id" label={textos.tituloReceber} value={focoReceber?.id ?? ''}>
@@ -180,7 +182,7 @@ export function FinanceiroAcoesRapidas({ data, labels, mostrar, acao: acaoProp, 
             </FinanceiroForm>
           </PainelShell>
 
-          <PainelShell open={acao === 'pagar'} title={labels.pagarTitulo} onClose={() => setAcao(null)}>
+          <PainelShell open={acaoVisivel === 'pagar'} title={labels.pagarTitulo} onClose={() => setAcao(null)}>
             <p className="mb-3 text-small text-jl-fg-3">{labels.avulsoHint}</p>
             <FinanceiroForm key={`pagar-${focoPagar?.id ?? 'livre'}`} title={labels.pagarTitulo} tipo="BAIXAR_AP" submit={labels.confirmarPagar}>
               <Field name="titulo_id" label={textos.tituloPagar} value={focoPagar?.id ?? ''}>
@@ -201,7 +203,7 @@ export function FinanceiroAcoesRapidas({ data, labels, mostrar, acao: acaoProp, 
             <FinanceiroDespesaForm data={data} />
           </PainelShell>
 
-          <PainelShell open={acao === 'transferir'} title={labels.transferirTitulo} onClose={() => setAcao(null)}>
+          <PainelShell open={acaoVisivel === 'transferir'} title={labels.transferirTitulo} onClose={() => setAcao(null)}>
             <FinanceiroForm title={labels.transferirTitulo} tipo="TRANSFERIR" submit={labels.confirmarTransferir}>
               <Field name="conta_id" label={textos.contaOrigem}>
                 <ContaOptions data={data} />
