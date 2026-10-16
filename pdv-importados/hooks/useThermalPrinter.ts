@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react"
 import { WebUsbPrinter, type ThermalPrinterInfo } from "@/lib/thermal-printer/webUsbAdapter"
-import { buildReciboEscPos } from "@/lib/thermal-printer/escpos"
+import { buildAbrirGavetaEscPos, buildReciboEscPos } from "@/lib/thermal-printer/escpos"
 import type { ReciboVenda, ReciboLabels } from "@/lib/caixa/reciboTypes"
 
 export type ThermalStatus = "idle" | "connecting" | "connected" | "printing" | "error"
@@ -16,6 +16,7 @@ export type UseThermalPrinterReturn = {
   connect: () => Promise<void>
   printRecibo: (venda: ReciboVenda, labels: ReciboLabels, cols?: number) => Promise<void>
   disconnect: () => Promise<void>
+  abrirGaveta: () => Promise<boolean>
 }
 
 export function useThermalPrinter(): UseThermalPrinterReturn {
@@ -101,6 +102,16 @@ export function useThermalPrinter(): UseThermalPrinterReturn {
     [printer],
   )
 
+  const abrirGaveta = useCallback(async (): Promise<boolean> => {
+    if (!printer.isConnected()) return false
+    try {
+      await printer.print(buildAbrirGavetaEscPos())
+      return true
+    } catch {
+      return false
+    }
+  }, [printer])
+
   const disconnect = useCallback(async () => {
     await printer.disconnect()
     setDeviceInfo(null)
@@ -116,6 +127,7 @@ export function useThermalPrinter(): UseThermalPrinterReturn {
     errorMsg,
     connect,
     printRecibo,
+    abrirGaveta,
     disconnect,
   }
 }
