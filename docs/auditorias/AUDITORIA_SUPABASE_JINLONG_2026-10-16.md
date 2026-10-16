@@ -1,14 +1,15 @@
 # Auditoria Supabase — Jinlong (2026-10-16)
 
 Produção `kbabmewnahysfvlybiak` (somente leitura) · Homologação `yvdilcmxyjafnnsfdtam` (jinlong-homolog-palm).
-Nenhuma alteração foi feita em produção. Toda simulação de perfil em produção rodou em `BEGIN READ ONLY`.
+Durante a auditoria, produção foi só lida (simulações de perfil em `BEGIN READ ONLY`). Depois, com autorização expressa do
+responsável, foram aplicadas em produção `20261016120000` e `20261009220000` (seção 8).
 
 ## 1. Resumo
 
 | # | Achado | Sev. | Status em produção | Tratamento |
 |---|--------|------|--------------------|-----------|
-| A | RPCs fiscais com guarda morta (`current_user <> 'postgres'` dentro de SECURITY DEFINER): qualquer autenticado (inclusive OPERADOR) reprocessa/enfileira documentos fiscais | **P0** | **ABERTO** — migration `20261009220000_fiscal_rpc_isola_loja` está no repo e em homologação, **não em produção** | Requer aprovação para aplicar (seção 5) |
-| B | `fiscal_cancelar_documento` / `fiscal_marcar_cancelado` gravam `fiscal_error_category='CANCELAMENTO'`, recusado pelo CHECK → todo cancelamento fiscal falha com 23514 | P1 | Ainda não exposto em prod (função chega com A) | **Corrigido**: `20261016120000` (homologação aplicada + teste) |
+| A | RPCs fiscais com guarda morta (`current_user <> 'postgres'` dentro de SECURITY DEFINER): qualquer autenticado (inclusive OPERADOR) reprocessa/enfileira documentos fiscais | **P0** | **CORRIGIDO em produção** (2026-10-16 ~14:50 UTC) | `20261009220000` aplicada após pré-check (seção 8) |
+| B | `fiscal_cancelar_documento` / `fiscal_marcar_cancelado` gravam `fiscal_error_category='CANCELAMENTO'`, recusado pelo CHECK → todo cancelamento fiscal falha com 23514 | P1 | **CORRIGIDO em produção** | `20261016120000` aplicada antes de A (homologação + teste) |
 | C | `produtos_custos` (vazamento de custo ao OPERADOR) | P0 (histórico) | **Corrigido e validado** | Nada a fazer; ERROR do Advisor é aceito por design |
 | D | `sync_request_nonces` com RLS desligada em produção (drift: a 024 liga) e `venda_engine_shadow_runs` (só existe em prod) sem RLS | P2 | Sem exposição hoje (sem grant a anon/authenticated) | **Corrigido**: `20261016120100` |
 | E | 8 funções com `search_path` mutável (Advisor 0011) | P3 | Todas INVOKER, sem EXECUTE para clientes (exceto 1 trigger) | **Corrigido**: `20261016120100` |
@@ -16,8 +17,7 @@ Nenhuma alteração foi feita em produção. Toda simulação de perfil em produ
 | G | `gtin_lookup_cache`: INSERT/UPDATE `true` para qualquer autenticado (envenenamento do cache de GTIN) | P2 | Aberto | Pendência (seção 6) |
 | H | Estoque × kardex: 105/152 linhas de `estoque` sem movimento no ledger; 31 vendas CONCLUIDA sem movimento (25 de abr/2026, 6 até 08/08/2026) | P2 (dado histórico) | Nenhuma ocorrência após 08/08/2026 | Não alterado (regra: não mexer em dado real) |
 
-Critério de conclusão: o único P0 aberto (A) **já tem correção versionada, testada e aplicada em homologação**; o
-bloqueio é exclusivamente a aprovação para produção. Não há P0 sem tratamento no repositório.
+Critério de conclusão: **zero P0 confirmado aberto em produção**. O P0 (A) foi corrigido e verificado em produção (seção 8).
 
 ## 2. Evidências
 
@@ -96,7 +96,7 @@ existe em produção — se o build implantado contém essa action, ela falha ho
 
 ## 5. Pendências que exigem aprovação
 
-1. **[P0] Aplicar em produção, nesta ordem**: `20261016120000` (CHECK) → `20261009220000` (isolamento fiscal).
+1. ~~[P0] Aplicar em produção, nesta ordem~~ **FEITO em 2026-10-16 (seção 8)**: `20261016120000` (CHECK) → `20261009220000` (isolamento fiscal).
    A ordem importa: sem o CHECK, o `fiscal_cancelar_documento` que a 20261009220000 cria nasce quebrado.
    A 20261009220000 tem bloco `DO $verify$` que aborta se a guarda morta sobreviver. Pós-check sugerido:
    `select proname from pg_proc where pronamespace='public'::regnamespace and proname like 'fiscal_%' and prosrc ~ 'current_user\s*<>\s*''postgres''' and has_function_privilege('authenticated', oid, 'EXECUTE');` → 0 linhas.
@@ -128,3 +128,37 @@ existe em produção — se o build implantado contém essa action, ela falha ho
 | Homologação (MCP, transação descartada) | cancelamento GERENTE → CANCELADO/CANCELAMENTO |
 
 Os dois testes novos entram no job `ci-backend-supabase.yml`.
+
+## 8. Aplicação em produção (2026-10-16, autorização expressa do responsável)
+
+Aplicadas via `execute_sql`, cada uma em transação única com `lock_timeout = 5s`, com a versão do **arquivo** registrada em
+`supabase_migrations.schema_migrations`. Não foi preciso registrar nada em `migration-human-gates.json`, porque a versão gravada é a do arquivo.
+
+**Pré-check**
+- Os corpos vigentes de `fiscal_reprocessar_documento`, `fiscal_enfileirar_documento_venda` e
+  `fiscal_registrar_evento_enqueue_erro` são idênticos (md5 do corpo sem espaços) às versões históricas do repo (307, fase1b, 090).
+  A substituição não apaga nenhuma lógica que só existisse em produção.
+- `fiscal_cancelar_documento` e `internal.fiscal_sessao_privilegiada` não existiam.
+- DLQ vazia, nenhuma transação longa, 42 documentos (`ERRO=35, PENDENTE=5, EM_PROCESSAMENTO=1, EMITIDO=1`). Categorias em uso:
+  `FALHA_COMUNICACAO_PROVIDER` e NULL.
+- Colunas de `documentos_fiscais_*`, `caixas` e `usuarios` iguais às de homologação. `vendas` tem 1 coluna a mais em produção, que a migration não usa.
+- Chamadores compatíveis: `sync-outbox` e `fiscal-worker` usam service_role (continuam liberados); o caixa web chama como operador
+  da própria venda (continua liberado).
+
+**Ordem:** `20261016120000` (CHECK validado, `convalidated=true`) → `20261009220000` (o bloco `$verify$` passou).
+
+**Pós-check**
+- Funções `fiscal_*` com `current_user <> 'postgres'` e EXECUTE para authenticated: **0**.
+- As 4 RPCs: SECURITY DEFINER, `search_path=public`, EXECUTE para `authenticated`/`service_role`, **sem anon**.
+  `internal.fiscal_sessao_privilegiada`: EXECUTE só para o dono.
+- Corpos em produção idênticos aos do arquivo do repo (md5 normalizado, as 4 funções).
+- 42 documentos inalterados; versões `20261009220000` e `20261016120000` registradas.
+- Logs desde 14:00 UTC: nenhum ERROR/FATAL no Postgres.
+- Advisor: sem ERROR novo. A contagem de SECURITY DEFINER expostas foi de 70 para 71, só por `fiscal_cancelar_documento`.
+
+**Não verificado em produção:** chamada real da UI ou do worker depois da aplicação. Nenhum documento fiscal foi atualizado
+desde 14/08/2026, então o primeiro uso real vai acontecer na próxima venda com NF. Recomendação: acompanhar o primeiro enqueue
+do caixa web e o primeiro ciclo do `fiscal-worker`.
+
+**Rollback:** não restaurar os corpos antigos, porque eles reabrem o P0. O CHECK pode voltar à lista anterior enquanto nenhuma
+linha usar `CANCELAMENTO` (comando no cabeçalho de `20261016120000`).
