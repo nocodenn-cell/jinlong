@@ -3,9 +3,9 @@
   "private": true,
   "description": "Supabase (migrations + Edge). Scripts npm facilitam o mesmo type-check do CI sem instalar Deno globalmente.",
   "devDependencies": {
-    "@electric-sql/pglite": "0.3.14",
-    "deno": "2.2.2",
-    "supabase": "2.116.0"
+    "@electric-sql/pglite": "0.5.9",
+    "deno": "2.9.6",
+    "supabase": "2.120.0"
   },
   "scripts": {
     "check": "npm run check:edge",
