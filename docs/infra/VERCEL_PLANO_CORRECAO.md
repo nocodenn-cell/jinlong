@@ -23,9 +23,11 @@ Diagnóstico: `VERCEL_AUDITORIA_SITE_PDV.md`. Arquitetura: `VERCEL_ARQUITETURA_D
 ### M1 — Site: Preview só quando a branch mexe no site
 `site/scripts/vercel-ignore.sh`
 - Com `VERCEL_GIT_PREVIOUS_SHA`: comportamento idêntico ao anterior.
-- **Só em Preview** e só sem `VERCEL_GIT_PREVIOUS_SHA` (primeiro push da branch): busca a `main` (`git fetch --depth=200 origin main`) e compara o *merge-base* com o `HEAD`. Se a busca ou o merge-base falharem → **constrói** (regra "nunca ignora por dúvida" mantida).
+- **Só em Preview** e só sem `VERCEL_GIT_PREVIOUS_SHA` (primeiro push da branch): compara o `HEAD` com **cada commit de fronteira do clone raso** que a Vercel faz (`.git/shallow`). Só ignora se nenhuma fronteira mostrar mudança relevante. Clone não raso ou com um único commit → **constrói** (regra "nunca ignora por dúvida" mantida). O script registra no log quantos commits o clone tem.
+- **Primeira versão descartada:** buscar a `main` (`git fetch origin main`) e usar o *merge-base*. No Preview deste PR o log mostrou `sem VERCEL_GIT_PREVIOUS_SHA e sem acesso à main: executando build`: o clone da Vercel não consegue buscar outras branches. Ela foi substituída pela comparação com o clone raso, que não precisa de rede.
+- **Limite conhecido (só Preview):** numa branch com mais commits que a profundidade do clone, mudanças do site feitas antes da janela não são vistas no primeiro push (teste I5c). Impacto: falta de um Preview, resolvido com *Redeploy* ou com um novo commit no site. Produção não é afetada.
 - Produção sem base continua construindo.
-- Efeito medido no histórico real: **20 de 25** Previews do site da janela seriam ignorados (≈ 15 min de build), sem ignorar nenhum dos que tinham mudança relevante.
+- Efeito estimado no histórico real (comparação com o merge-base, limite superior do ganho): **até 20 de 25** Previews do site da janela seriam ignorados (≈ 15 min de build). O ganho real depende da profundidade do clone: merges recentes da `main` que mexeram em lockfile/site dentro da janela ainda disparam build (falso positivo seguro).
 
 ### M2 — ERP: produção só quando algo do ERP mudou; ignore versionado
 `pdv-importados/vercel.json` (`ignoreCommand`) + `pdv-importados/scripts/vercel-ignore.sh` (novo)
@@ -38,9 +40,9 @@ Diagnóstico: `VERCEL_AUDITORIA_SITE_PDV.md`. Arquitetura: `VERCEL_ARQUITETURA_D
 `.github/workflows/release-validate.yml`: o filtro passa a aceitar `Production – pdv-importados` (nome atual do ambiente) além de `production` (legado). Deploys do `jinlong-site` não disparam o gate.
 
 ### M4 — Testes
-- `scripts/vercel-site-ignore.test.mjs`: casos novos I2–I6 (primeiro push de branch só do ERP ignora; mudança no site em commit intermediário constrói; mudança no site feita pela `main` depois do fork não conta; sem remoto constrói; com base usa a base).
+- `scripts/vercel-site-ignore.test.mjs`: casos novos I2–I6 com clones rasos reais (primeiro push de branch só do ERP ignora; mudança no site em commit intermediário constrói; lockfile constrói; clone não raso constrói; clone de um commit constrói; limite da janela documentado; com base usa a base).
 - `scripts/vercel-pdv-ignore.test.mjs` (novo): 14 casos (Preview sempre ignorado; ERP, compartilhados, lockfile, backend, pdv-local, diretório novo constroem; só site/docs/.github/`*.md` da raiz ignoram; vários commits; sem base; redeploy).
-- Resultado local: `node --test scripts/vercel-site-ignore.test.mjs scripts/vercel-pdv-ignore.test.mjs` → **35/35**.
+- Resultado local: `node --test scripts/vercel-site-ignore.test.mjs scripts/vercel-pdv-ignore.test.mjs` → **37/37**.
 
 ### O que este PR NÃO muda
 Domínios, DNS, variáveis de ambiente, Supabase (Auth, Redirect URLs, secrets), configurações de painel, projetos Vercel, fluxo financeiro/comercial do PDV, required checks do GitHub.
@@ -50,8 +52,8 @@ Domínios, DNS, variáveis de ambiente, Supabase (Auth, Redirect URLs, secrets),
 | Risco | Probabilidade | Mitigação |
 |---|---|---|
 | ERP deixar de publicar uma mudança real | Baixa | lista de **exclusão** fechada (tudo fora dela constrói); falha de git → constrói; 14 testes; replay do histórico sem falso negativo |
-| `git fetch` da `main` não funcionar no ambiente de build da Vercel (credencial do clone) | Média | o script constrói nesse caso (comportamento atual). Verificar no log do Preview deste PR (V5). Se falhar, o ganho de M1 não aparece, mas nada piora |
-| Preview do site ignorado quando deveria construir | Baixa | só com prova (diff vazio desde o merge-base); impacto restrito a Preview; *Redeploy* manual resolve |
+| Profundidade do clone da Vercel menor que o esperado (ex.: 1 commit) | Média | com 1 commit o script constrói (sem ganho, sem perda). A profundidade real aparece no log (V5b) |
+| Preview do site ignorado quando deveria construir | Baixa | só com prova (diff vazio desde cada fronteira do clone raso); impacto restrito a Preview; *Redeploy* manual resolve |
 | SSRA voltar a rodar e falhar | Média | o gate só lê (compara `deploymentId`); falha não desfaz deploy. Se falhar, é um achado real de produção a investigar |
 | `vercel.json` sobrepõe o ignore do painel | Esperado | é a intenção (configuração versionada). Rollback = revert |
 
@@ -63,7 +65,8 @@ Domínios, DNS, variáveis de ambiente, Supabase (Auth, Redirect URLs, secrets),
 | V2 | Alteração exclusiva no site | teste `produção: só site/`; teste D do site | site constrói; ERP ignora | ✅ local |
 | V3 | Alteração compartilhada (lockfile/`package.json`) | testes E (site) e "compartilhadas" (ERP) | os dois constroem | ✅ local |
 | V4 | Merge na `main` | após o merge: deployments dos dois projetos para o SHA do merge | ERP constrói (o PR muda `pdv-importados/`); site constrói (o PR muda `site/`) | ⏳ após merge |
-| V5 | Preview de PR | log do Preview do `jinlong-site` para este PR | script roda; build ocorre (PR muda `site/`); mostrar se o `git fetch` da main funcionou | ⏳ ver PR |
+| V5 | Preview de PR | logs dos Previews deste PR (commit `22c51919`) | ERP: `[ignore-step] ambiente preview: Preview do ERP desativado, ignorando build` → cancelado. Site: script versionado executado; `git fetch` da main **falhou** → build (seguro). Fallback trocado pela comparação com o clone raso | ✅ ERP / 🔁 site refeito |
+| V5b | Fallback do clone raso na Vercel | primeira branch nova depois do merge que não mexe no site | log `comparando com o clone raso (N commits disponíveis)` e `ignorando build` | ⏳ após merge |
 | V6 | Deploy de produção | primeiro merge **só de docs** depois deste PR | ERP: `[ignore-step] só site/, docs/…: ignorando build`; site: ignorado | ⏳ após merge |
 | V7 | Navegação site → login → ERP | depende da Fase 2/4 (domínios) | link "Entrar" do site abre `/login` do ERP | ⏳ autorização |
 | V8 | Autenticação e logout | roteiro A1–A9 de `docs/site/HOMOLOGACAO_APP_JINLONG_APP.md` | inalterado por este PR (nenhuma mudança de auth) | n/a neste PR |

@@ -8,7 +8,12 @@
 # Base da comparação:
 # 1. VERCEL_GIT_PREVIOUS_SHA (último deploy bem-sucedido deste projeto nesta branch).
 # 2. Só em Preview e só quando (1) não existe — primeiro push de uma branch, ou branch que nunca
-#    teve deploy do site: o ponto em que a branch saiu da `main` (merge-base com origin/main).
+#    teve deploy do site: o histórico que a Vercel clonou. O clone da Vercel é raso e não consegue
+#    buscar a `main` (`git fetch` falhou no Preview do PR #574), então comparamos
+#    HEAD com CADA commit de fronteira do clone raso (.git/shallow). Só ignora se nenhum deles
+#    mostrar mudança relevante. Clone não raso ou com um único commit => executa.
+#    Limite conhecido (só Preview): numa branch mais longa que a profundidade do clone, a mudança
+#    feita no commit de fronteira em si, ou antes dele, não é vista. Um Redeploy resolve.
 #    Sem isso, toda branch nova do ERP gerava um Preview do site (docs/infra/VERCEL_AUDITORIA_SITE_PDV.md).
 #    Produção nunca usa este fallback.
 #
@@ -20,7 +25,6 @@
 # Teste: node --test scripts/vercel-site-ignore.test.mjs
 
 RELEVANT_PATHS=". ../package.json ../package-lock.json ../.npmrc"
-MAIN_FETCH_DEPTH="${VERCEL_IGNORE_MAIN_DEPTH:-200}"
 
 previous="${VERCEL_GIT_PREVIOUS_SHA:-}"
 
@@ -55,16 +59,29 @@ if [ "${VERCEL_ENV:-}" != "preview" ]; then
   exit 1
 fi
 
-# Preview sem deploy anterior do site nesta branch: compara com o ponto de saída da main.
-if ! git fetch --no-tags --quiet --depth="$MAIN_FETCH_DEPTH" origin "+refs/heads/main:refs/remotes/origin/main" 2>/dev/null; then
-  echo "[ignore-step] sem VERCEL_GIT_PREVIOUS_SHA e sem acesso à main: executando build"
+# Preview sem deploy anterior do site nesta branch: compara com as fronteiras do clone raso.
+shallow_file=$(git rev-parse --git-path shallow 2>/dev/null)
+if [ -z "$shallow_file" ] || [ ! -s "$shallow_file" ]; then
+  echo "[ignore-step] sem VERCEL_GIT_PREVIOUS_SHA e clone não raso: executando build"
   exit 1
 fi
 
-base=$(git merge-base HEAD refs/remotes/origin/main 2>/dev/null)
-if [ -z "$base" ]; then
-  echo "[ignore-step] sem VERCEL_GIT_PREVIOUS_SHA e merge-base com a main não encontrado: executando build"
+available=$(git rev-list --count HEAD 2>/dev/null)
+echo "[ignore-step] Preview sem VERCEL_GIT_PREVIOUS_SHA: comparando com o clone raso (${available:-?} commits disponíveis)"
+if [ -z "$available" ] || [ "$available" -lt 2 ]; then
+  echo "[ignore-step] histórico insuficiente para comparar: executando build"
   exit 1
 fi
 
-compare_and_exit "$base" "a saída da main (merge-base)"
+for boundary in $(cat "$shallow_file"); do
+  # shellcheck disable=SC2086
+  git diff --quiet "$boundary" HEAD -- $RELEVANT_PATHS
+  status=$?
+  if [ "$status" -ne 0 ]; then
+    echo "[ignore-step] mudanças relevantes ao site desde ${boundary} (ou erro do git, status ${status}): executando build"
+    exit 1
+  fi
+done
+
+echo "[ignore-step] nenhuma mudança relevante ao site nos ${available} commits do clone: ignorando build"
+exit 0

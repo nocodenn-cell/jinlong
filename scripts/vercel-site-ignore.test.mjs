@@ -72,28 +72,23 @@ function runStep(repo, previous, cwd = path.join(repo, 'site'), vercelEnv = 'pro
 }
 
 /**
- * Simula o primeiro push de uma branch: `origin` (bare) tem a main; o clone está numa branch
- * nova, sem deploy anterior (sem VERCEL_GIT_PREVIOUS_SHA).
+ * Simula o primeiro push de uma branch como a Vercel o vê: clone RASO (`depth`) da branch, sem
+ * acesso à main e sem deploy anterior (sem VERCEL_GIT_PREVIOUS_SHA).
  */
-function branchFromMain(branchFiles, mainFilesAfterFork) {
-  const { repo: upstream } = newRepo()
-  const bare = fs.mkdtempSync(path.join(os.tmpdir(), 'ignore-origin-'))
-  dirs.push(bare)
-  git(bare, 'init', '-q', '--bare')
-  git(bare, 'symbolic-ref', 'HEAD', 'refs/heads/main')
-  git(upstream, 'branch', '-M', 'main')
-  git(upstream, 'push', '-q', bare, 'main')
+function shallowBranch(branchCommits, depth) {
+  const { repo } = newRepo()
+  // histórico da main maior que a profundidade do clone, como no repositório real
+  for (let i = 0; i < 12; i++) commit(repo, { [`docs/historico-${i}.md`]: `# ${i}` }, `main ${i}`)
+  git(repo, 'checkout', '-q', '-b', 'feature')
+  for (const files of branchCommits) commit(repo, files)
   const clone = fs.mkdtempSync(path.join(os.tmpdir(), 'ignore-clone-'))
   dirs.push(clone)
-  git(clone, 'clone', '-q', bare, '.')
-  git(clone, 'checkout', '-q', '-b', 'feature')
-  for (const files of branchFiles) commit(clone, files)
-  if (mainFilesAfterFork) {
-    commit(upstream, mainFilesAfterFork, 'main andou')
-    git(upstream, 'push', '-q', bare, 'main')
-  }
+  const url = 'file://' + repo.split(path.sep).join('/')
+  git(clone, 'clone', '-q', '--depth', String(depth), '--branch', 'feature', url, '.')
   return clone
 }
+
+const preview = (clone) => runStep(clone, undefined, path.join(clone, 'site'), 'preview')
 
 function scenario(files) {
   const { repo, base } = newRepo()
@@ -175,25 +170,40 @@ describe('Ignored Build Step do jinlong-site', () => {
     assert.equal(runStep(repo, undefined, path.join(repo, 'site'), null), BUILD)
   })
 
-  it('I2: Preview, primeiro push de branch só do ERP → compara com a main e ignora', () => {
-    const clone = branchFromMain([{ 'pdv-importados/app/page.tsx': 'export default 7' }, { 'docs/x.md': '# x' }])
-    assert.equal(runStep(clone, undefined, path.join(clone, 'site'), 'preview'), IGNORE)
+  it('I2: Preview, primeiro push de branch só do ERP (clone raso) → ignora', () => {
+    const clone = shallowBranch([{ 'pdv-importados/app/page.tsx': 'export default 7' }, { 'docs/x.md': '# x' }], 10)
+    assert.equal(preview(clone), IGNORE)
   })
 
   it('I3: Preview, primeiro push com mudança no site em commit intermediário → executa', () => {
-    const clone = branchFromMain([{ 'site/app/page.tsx': 'export default 8' }, { 'backend/package.json': '{"v":8}' }])
-    assert.equal(runStep(clone, undefined, path.join(clone, 'site'), 'preview'), BUILD)
+    const clone = shallowBranch([{ 'site/app/page.tsx': 'export default 8' }, { 'backend/package.json': '{"v":8}' }], 10)
+    assert.equal(preview(clone), BUILD)
   })
 
-  it('I4: Preview, main mudou o site depois do fork → não conta para a branch (ignora)', () => {
-    const clone = branchFromMain([{ 'pdv-importados/app/page.tsx': 'export default 9' }], { 'site/app/page.tsx': 'export default 9' })
-    assert.equal(runStep(clone, undefined, path.join(clone, 'site'), 'preview'), IGNORE)
+  it('I4: Preview, lockfile da raiz mudou na branch → executa', () => {
+    const clone = shallowBranch([{ 'package-lock.json': '{"v":9}' }, { 'docs/y.md': '# y' }], 10)
+    assert.equal(preview(clone), BUILD)
   })
 
-  it('I5: Preview sem remoto acessível → executa', () => {
+  it('I5: Preview sem base em clone NÃO raso → executa (nunca ignora por dúvida)', () => {
     const { repo } = newRepo()
     commit(repo, { 'backend/package.json': '{"v":10}' })
     assert.equal(runStep(repo, undefined, path.join(repo, 'site'), 'preview'), BUILD)
+  })
+
+  it('I5b: Preview em clone raso de um único commit → executa', () => {
+    const clone = shallowBranch([{ 'pdv-importados/app/page.tsx': 'export default 12' }], 1)
+    assert.equal(preview(clone), BUILD)
+  })
+
+  it('I5c: limite documentado — branch mais longa que o clone: só o que está dentro da janela conta', () => {
+    const clone = shallowBranch([
+      { 'site/app/page.tsx': 'export default 13' },
+      { 'pdv-importados/a.ts': '1' },
+      { 'pdv-importados/b.ts': '2' },
+      { 'pdv-importados/c.ts': '3' },
+    ], 3)
+    assert.equal(preview(clone), IGNORE)
   })
 
   it('I6: Preview com base do último deploy usa a base (não a main)', () => {

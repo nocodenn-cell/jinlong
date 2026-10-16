@@ -57,7 +57,7 @@ Nenhuma dessas mudanças altera o Supabase de produção **neste PR**. Todas est
 | | `pdv-importados` | `jinlong-site` |
 |---|---|---|
 | Produção | build só se mudou algo fora de `site/`, `docs/`, `.github/`, `*.md` da raiz (lista de exclusão: na dúvida, constrói) | build só se mudou `site/` ou `package.json`/`package-lock.json`/`.npmrc` da raiz (o site é isolado; na dúvida, constrói) |
-| Preview por PR | **desligado** (Preview usa segredos do Supabase de produção). Validação de PR = CI `build-and-test` | **ligado**, só quando a branch mexe no site (comparação com o último deploy da branch ou, no primeiro push, com a saída da `main`) |
+| Preview por PR | **desligado** (Preview usa segredos do Supabase de produção). Validação de PR = CI `build-and-test` | **ligado**, só quando a branch mexe no site (comparação com o último deploy da branch ou, no primeiro push, com o histórico do clone raso da Vercel) |
 | Configuração | versionada: `pdv-importados/vercel.json` + `pdv-importados/scripts/vercel-ignore.sh` | versionada: `site/vercel.json` + `site/scripts/vercel-ignore.sh` |
 | Gate pós-deploy | SSRA (`release-validate.yml`) no ambiente `Production – pdv-importados` | nenhum (site estático; pendência opcional) |
 | Rollback | Instant Rollback do projeto | Instant Rollback do projeto |
