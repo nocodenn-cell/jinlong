@@ -85,10 +85,10 @@ test.describe('Painel do gerente (/admin/*)', () => {
     await gotoApp(page, '/admin/estoque/imprimir-etiquetas')
     await expect(page.getByRole('heading', { name: /Imprimir Etiquetas|打印标签/ })).toBeVisible()
     await expect(page.getByPlaceholder(/código de barras|条形码/i)).toBeVisible()
-    await expect(page.getByRole('button', { name: /Gerar PDF|生成PDF/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Imprimir etiquetas|打印标签/ })).toBeVisible()
   })
 
-  test('fluxo básico: bipar produto -> adicionar ao carrinho -> gerar PDF', async ({ page }) => {
+  test('fluxo básico: bipar produto -> adicionar ao carrinho -> imprimir', async ({ page }) => {
     await gotoApp(page, '/admin/estoque/imprimir-etiquetas')
 
     const searchInput = page.getByPlaceholder(/código de barras|条形码/i)
@@ -103,7 +103,7 @@ test.describe('Painel do gerente (/admin/*)', () => {
     const isCartVisible = await cartSection.isVisible().catch(() => false)
 
     if (isCartVisible) {
-      const generateButton = page.getByRole('button', { name: /Gerar PDF|生成PDF/ })
+      const generateButton = page.getByRole('button', { name: /Imprimir etiquetas|打印标签/ })
       await expect(generateButton).toBeVisible()
       await generateButton.click()
       await page.waitForTimeout(2000)
