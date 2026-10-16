@@ -912,6 +912,7 @@
     "err_qtd_invalida": "库存数量无效。",
     "err_min_invalido": "最低库存无效。",
     "err_motivo_invalido": "库存调整原因无效。",
+    "err_motivo_sinal": "该原因与调整方向不符：损耗和破损只能减少库存，采购只能增加库存。请选择其他原因。",
     "err_obs_obrigatoria": "请填写本次调整的说明。",
     "err_perfil": "当前角色无法调整库存。请使用经理、店主或管理员账号。",
     "err_insuficiente": "库存不足，无法完成本操作。",
@@ -1807,6 +1808,30 @@
       "abrirPdv": {
         "cn": "前往收银",
         "pt": "Abrir PDV"
+      },
+      "hoje": {
+        "cn": "今日",
+        "pt": "Hoje"
+      },
+      "vender": {
+        "cn": "销售",
+        "pt": "Vender"
+      },
+      "abastecer": {
+        "cn": "补货",
+        "pt": "Abastecer"
+      },
+      "dinheiro": {
+        "cn": "资金",
+        "pt": "Dinheiro"
+      },
+      "analises": {
+        "cn": "分析",
+        "pt": "Análises"
+      },
+      "lojaEquipe": {
+        "cn": "店铺与团队",
+        "pt": "Loja e equipe"
       }
     },
     "navHints": {
@@ -1837,7 +1862,13 @@
       "pessoas": "店铺客户与员工。",
       "auditoria": "业务事件时间线。",
       "interno": "FastProduct 团队内部工具。",
-      "abrirPdv": "打开收银终端。"
+      "abrirPdv": "打开收银终端。",
+      "hoje": "今日待办与提醒。",
+      "vender": "销售、收银与客户。",
+      "abastecer": "采购单、收货、标签与供应商。",
+      "dinheiro": "应收应付、对账、税务与佣金。",
+      "analises": "销售、损益、商品、客户与审计报告。",
+      "lojaEquipe": "店铺资料、员工、财务类别与暂停销售。"
     },
     "dashboard": {
       "pageTitle": {
@@ -1892,6 +1923,7 @@
         "cn": "调整时间范围，或前往销售页查看完整历史。",
         "pt": "Ajuste o período ou abra Vendas para ver o histórico completo."
       },
+      "tableEmptyCta": { "cn": "查看销售", "pt": "Abrir Vendas" },
       "openOrdersAria": { "cn": "打开销售页", "pt": "Abrir página de vendas" },
       "footer": {
         "cn": "生意兴隆 · 财源广进",
@@ -1918,6 +1950,13 @@
         "pt": "Estoque baixo"
       },
       "metricStockHint": { "cn": "点击查看库存", "pt": "Clique para abrir Estoque" },
+      "detalheVendasTitulo": { "cn": "本期销售", "pt": "Vendas do período" },
+      "detalhePedidosTitulo": { "cn": "本期订单", "pt": "Pedidos do período" },
+      "detalhePorPeriodo": { "cn": "按时间", "pt": "Por dia ou hora" },
+      "detalhePorPagamento": { "cn": "按支付方式", "pt": "Por forma de pagamento" },
+      "detalheVazio": { "cn": "此期间没有数据。", "pt": "Sem dados neste período." },
+      "detalhePedidosParcial": { "cn": "显示 {{total}} 笔中最近的 {{n}} 笔。", "pt": "Mostrando os {{n}} mais recentes de {{total}}." },
+      "detalheVerTodos": { "cn": "在销售页查看全部", "pt": "Ver todos em Vendas" },
       "trendNew": { "cn": "新增", "pt": "novo" },
       "trendStockOk": {
         "cn": "正常",
@@ -2204,7 +2243,11 @@
     "filtro_todos": "全部",
     "filtro_situacao_todos": "全部",
     "col_nome": "名称",
-    "col_tipo": "类型"
+    "col_tipo": "类型",
+    "subtitulo": "记账时使用的收入和支出分类",
+    "status_ativa": "启用",
+    "status_inativa": "停用",
+    "paginacao_resumo": "第 {{pagina}} / {{paginas}} 页 · 共 {{total}} 个分类"
   },
   "funcionarios": {
     "titulo": "员工",
@@ -2390,6 +2433,9 @@
     "aberto_label": "未付",
     "registrar_pagamento": "登记付款",
     "btn_pagar": "付款",
+    "btn_pagar_caixa": "从收银台付款",
+    "btn_pagar_conta": "从财务账户付款",
+    "hint_somente_caixa": "此表单使用收银台现金付款。如需从店铺账户扣款，请使用从财务账户付款。",
     "cancelar": "取消账款",
     "vazio_titulo": "未找到账款",
     "vazio_sub": "请调整筛选条件。应付账款在导入采购 NF-e 时自动生成。",
@@ -2842,6 +2888,28 @@
     "financeiro_acao_confirmar_receber": "确认收款",
     "financeiro_acao_confirmar_pagar": "确认付款",
     "financeiro_acao_confirmar_transferir": "确认转账",
+    "financeiro_linha_receber_caixa": "在收银台收款",
+    "financeiro_linha_receber_conta": "在财务账户收款",
+    "financeiro_receber_caixa_hint": "此表单在收银台收取现金。如需记入店铺账户，请使用",
+    "financeiro_receber_caixa_hint_fim": "并选择目标账户。",
+    "financeiro_conta_origem": "付款账户",
+    "financeiro_conta_destino": "收款账户",
+    "financeiro_data_efetiva": "实际日期",
+    "financeiro_classificar_titulo": "分类账款",
+    "financeiro_nova_despesa": "新费用",
+    "financeiro_selecione": "请选择",
+    "financeiro_selecione_conta": "请选择账户",
+    "financeiro_titulo_campo": "账款",
+    "financeiro_titulo_receber": "应收账款",
+    "financeiro_titulo_pagar": "应付账款",
+    "financeiro_registrando": "登记中…",
+    "financeiro_operacao_ok": "操作已登记。",
+    "financeiro_dados_invalidos": "数据无效。",
+    "financeiro_falha_comunicacao": "通信失败。请重试；操作不会重复入账。",
+    "financeiro_valor_mensal": "总金额或每月金额（R$）",
+    "financeiro_primeiro_vencimento": "首次到期日",
+    "financeiro_competencia": "归属期",
+    "financeiro_competencia_inicial": "起始归属期",
     "estoque_acoes_aria": "库存快捷操作",
     "estoque_acao_entrada": "商品入库",
     "estoque_acao_retirar": "出库",
@@ -2891,8 +2959,14 @@
     "hub_pessoas_clientes": "客户",
     "hub_pessoas_funcionarios": "员工",
     "hub_aria_vendas": "销售分区",
-    "hub_aria_compras": "采购分区",
+    "hub_aria_compras": "补货分区",
     "hub_aria_pessoas": "人员分区",
+    "hub_compras_recebimento": "收货",
+    "hub_compras_etiquetas": "标签",
+    "hub_loja_dados": "店铺资料",
+    "hub_loja_categorias_financeiras": "财务类别",
+    "hub_loja_suspensao": "暂停销售",
+    "hub_aria_loja": "店铺与团队分区",
     "command_palette_placeholder": "搜索页面和操作…",
     "command_palette_vazio": "没有找到结果",
     "command_palette_aria": "搜索页面和操作",

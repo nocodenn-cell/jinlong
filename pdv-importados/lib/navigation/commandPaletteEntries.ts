@@ -92,6 +92,19 @@ const FINANCEIRO_LABEL_KEY: Record<FinanceiroTabId, keyof AdminUi> = {
   fiscal: 'hub_financeiro_fiscal',
 }
 
+/**
+ * Nomes de menu anteriores à IA por jornada (2026-10-15): quem digita "financeiro" ou
+ * "relatórios" continua achando as telas, agora em Dinheiro/Análises.
+ */
+const NOMES_ANTIGOS_DO_GRUPO: Readonly<Record<string, string>> = {
+  inicio: 'inicio dashboard',
+  vender: 'vendas pessoas',
+  abastecer: 'compras estoque entradas',
+  dinheiro: 'financeiro',
+  analises: 'relatorios',
+  loja: 'configuracoes pessoas',
+}
+
 export function buildCommandEntries(input: BuildEntriesInput): CommandEntry[] {
   const { adminUi: ui, showAdminOnlyItems } = input
   const entries: CommandEntry[] = []
@@ -101,7 +114,8 @@ export function buildCommandEntries(input: BuildEntriesInput): CommandEntry[] {
   // "estoque" deve achar as abas do Estoque do mesmo jeito.
   const groupPt = (destId: string): string => {
     const d = ADMIN_V2_DESTINATIONS.find((x) => x.id === destId)
-    return d ? resolveNavLabels(d, { ...input, chineseLanguage: false }).primary : ''
+    const nome = d ? resolveNavLabels(d, { ...input, chineseLanguage: false }).primary : ''
+    return `${nome} ${NOMES_ANTIGOS_DO_GRUPO[destId] ?? ''}`
   }
   const push = (e: Omit<CommandEntry, 'keywords'>, groupAlt = '') => {
     if (seen.has(e.href)) return
@@ -138,16 +152,15 @@ export function buildCommandEntries(input: BuildEntriesInput): CommandEntry[] {
   for (const t of buildCatalogoHubTabs(hubLabelsFromAdminUi(ui))) tab(`hub-catalogo-${t.id}`, t.href, t.label, 'produtos')
   for (const t of buildEstoqueHubTabs(hubLabelsFromAdminUi(ui))) tab(`hub-estoque-${t.id}`, t.href, t.label, 'estoque')
   const opLabels = operationalHubLabelsFromAdminUi(ui)
-  const hubDest = { vendas: 'vendas', compras: 'compras', pessoas: 'pessoas' } as const
+  const hubDest = { vendas: 'vender', compras: 'abastecer', loja: 'loja' } as const
   for (const hub of OPERATIONAL_HUB_IDS) {
     for (const t of buildOperationalHubTabs(hub, opLabels)) tab(`hub-${hub}-${t.id}`, t.href, t.label, hubDest[hub])
   }
   for (const id of FINANCEIRO_TAB_ORDER) {
-    tab(`hub-financeiro-${id}`, financeiroHrefForTab(id, new URLSearchParams()), ui[FINANCEIRO_LABEL_KEY[id]] as string, 'financeiro')
+    tab(`hub-financeiro-${id}`, financeiroHrefForTab(id, new URLSearchParams()), ui[FINANCEIRO_LABEL_KEY[id]] as string, 'dinheiro')
   }
-  tab('hub-financeiro-comissoes', ROUTES.admin.comissoes, ui.hub_financeiro_comissoes, 'financeiro')
-  tab('hub-financeiro-categorias', ROUTES.admin.categoriasFinanceiras, ui.hub_financeiro_categorias, 'financeiro')
-  tab('hub-estoque-importar-nfe', ROUTES.admin.importNfe, ui.hub_estoque_importar_nfe, 'estoque')
+  tab('hub-financeiro-comissoes', ROUTES.admin.comissoes, ui.hub_financeiro_comissoes, 'dinheiro')
+  tab('hub-abastecer-importar-nfe', ROUTES.admin.importNfe, ui.hub_estoque_importar_nfe, 'abastecer')
 
   // 3) Ações de navegação (abrem a tela já no ponto de partida da tarefa).
   push(

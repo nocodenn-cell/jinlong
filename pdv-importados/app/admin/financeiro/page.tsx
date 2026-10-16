@@ -184,39 +184,44 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
   if (filters.ate) chips.push({ key: 'ate', label: ui.financeiro_chip_ate.replace('{{data}}', filters.ate) })
   if (filters.opcao !== 'mix') chips.push({ key: 'opcao', label: statusChipLabel[filters.opcao] ?? filters.opcao })
 
+  // Hierarquia: valores em dinheiro (principal) acima; contagens e fila fiscal (apoio) abaixo.
   const kpiSection = (
-    <div className="admin-v2-grid-kpi">
-      <MetricCard label={ui.financeiro_kpi_titulos} value={String(kpisRes.titulosAbertosCount)} icon="wallet-cards" tone="gold" />
-      <MetricCard
-        label={ui.financeiro_kpi_valor_aberto}
-        value={formatBRL(kpisRes.valorAbertoTotal)}
-        icon="dollar-sign"
-        tone="gold"
-        hint={
-          kpisRes.kpiValorTruncado
-            ? ui.financeiro_kpi_hint_capped.replace('{{n}}', String(kpisRes.titulosAbertosCount))
-            : undefined
-        }
-      />
-      <MetricCard
-        label={ui.financeiro_kpi_registros}
-        value={listaRes.capped ? `${contas.length}+` : String(contas.length)}
-        icon="list-filter"
-        tone="gold"
-        hint={listaRes.capped ? ui.financeiro_kpi_truncado : undefined}
-      />
-      <MetricCard
-        label={ui.financeiro_kpi_vencidos}
-        value={formatBRL(kpisRes.valorVencidoTotal)}
-        icon="alert-circle"
-        tone="danger"
-        hint={
-          kpisRes.titulosVencidosCount > 0
-            ? ui.financeiro_kpi_hint_vencidos.replace('{{n}}', String(kpisRes.titulosVencidosCount))
-            : undefined
-        }
-      />
-      <MetricCard label={ui.financeiro_kpi_docs_fiscais} value={String(fiscal.length)} icon="file-check-2" tone="warning" />
+    <div className="admin-v2-stack">
+      <div className="admin-v2-grid-kpi">
+        <MetricCard
+          label={ui.financeiro_kpi_valor_aberto}
+          value={formatBRL(kpisRes.valorAbertoTotal)}
+          icon="dollar-sign"
+          tone="gold"
+          hint={
+            kpisRes.kpiValorTruncado
+              ? ui.financeiro_kpi_hint_capped.replace('{{n}}', String(kpisRes.titulosAbertosCount))
+              : undefined
+          }
+        />
+        <MetricCard
+          label={ui.financeiro_kpi_vencidos}
+          value={formatBRL(kpisRes.valorVencidoTotal)}
+          icon="alert-circle"
+          tone="danger"
+          hint={
+            kpisRes.titulosVencidosCount > 0
+              ? ui.financeiro_kpi_hint_vencidos.replace('{{n}}', String(kpisRes.titulosVencidosCount))
+              : undefined
+          }
+        />
+      </div>
+      <div className="admin-v2-grid-kpi">
+        <MetricCard label={ui.financeiro_kpi_titulos} value={String(kpisRes.titulosAbertosCount)} icon="wallet-cards" tone="gold" />
+        <MetricCard
+          label={ui.financeiro_kpi_registros}
+          value={listaRes.capped ? `${contas.length}+` : String(contas.length)}
+          icon="list-filter"
+          tone="gold"
+          hint={listaRes.capped ? ui.financeiro_kpi_truncado : undefined}
+        />
+        <MetricCard label={ui.financeiro_kpi_docs_fiscais} value={String(fiscal.length)} icon="file-check-2" tone="warning" />
+      </div>
     </div>
   )
 
@@ -260,6 +265,7 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
           contas={contas}
           fiscal={fiscal}
           actorLojaId={session.lojaId}
+          perfil={session.perfil}
           clientesOpts={clientesOpts}
           caixasAbertos={(caixasRes.data ?? []).map((c) => ({
             id: c.id,

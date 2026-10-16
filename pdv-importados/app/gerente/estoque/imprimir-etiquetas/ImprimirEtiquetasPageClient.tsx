@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Printer, Package, Layers } from 'lucide-react'
+import { useState, useEffect, type ReactNode } from 'react'
+import { Download, Printer, Package, Layers } from 'lucide-react'
 import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import { Button } from '@/components/ui/button'
 import { Field, Input, Select } from '@/components/ui/forms'
@@ -17,7 +17,7 @@ import {
 import { listarCategoriasProdutos } from '@/app/gerente/categorias-produtos/actions'
 import type { CategoriaProdutoRow } from '@/app/gerente/categorias-produtos/categoriasProdutosTypes'
 import { emitGerenteToast } from '@/lib/gerente/toast'
-import { baixarPdfEtiquetas } from '@/lib/etiqueta/gerarPdf'
+import { baixarPdfEtiquetas, imprimirPdfEtiquetas } from '@/lib/etiqueta/gerarPdf'
 import {
   ETIQUETA_CONFIGS,
   ETIQUETA_PADRAO,
@@ -37,6 +37,8 @@ type Props = {
   initialCodigo?: string
   initialProdutoId?: string
   embeddedInAdminHub?: boolean
+  /** Abas do hub admin, renderizadas logo abaixo do título. */
+  hubNav?: ReactNode
 }
 
 type ModeloKey = keyof typeof ETIQUETA_CONFIGS
@@ -59,7 +61,8 @@ const LABELS = {
     semCategoria: 'Nenhuma categoria disponível',
     escolhaCat: 'Escolha a categoria',
     selecionar: '— Selecionar —',
-    gerarPdf: 'Gerar PDF',
+    imprimir: 'Imprimir etiquetas',
+    gerarPdf: 'Baixar PDF',
     modelos: 'Tamanho da etiqueta',
     modelo40: '40×25 mm',
     modelo40Hint: 'Prateleira / caixa',
@@ -92,7 +95,8 @@ const LABELS = {
     semCategoria: '没有可用类别',
     escolhaCat: '选择类别',
     selecionar: '— 选择 —',
-    gerarPdf: '生成PDF',
+    imprimir: '打印标签',
+    gerarPdf: '下载PDF',
     modelos: '标签尺寸',
     modelo40: '40×25 mm',
     modelo40Hint: '货架 / 箱标',
@@ -120,6 +124,7 @@ export function ImprimirEtiquetasPageClient({
   initialCodigo,
   initialProdutoId,
   embeddedInAdminHub = false,
+  hubNav,
 }: Props) {
   const t = LABELS[idioma]
   const [carrinho, setCarrinho] = useState<ItemCarrinho[]>([])
@@ -276,15 +281,19 @@ export function ImprimirEtiquetasPageClient({
     }
   }
 
-  const handleGerarPdf = async () => {
+  const handlePdf = async (acao: 'imprimir' | 'baixar') => {
     if (carrinho.length === 0 || acimaDoLimite) return
 
     setGerandoPdf(true)
     try {
-      await baixarPdfEtiquetas(carrinho, {
-        config,
-        nomeArquivo: `etiquetas-${modelo}-${Date.now()}.pdf`,
-      })
+      if (acao === 'imprimir') {
+        await imprimirPdfEtiquetas(carrinho, { config })
+      } else {
+        await baixarPdfEtiquetas(carrinho, {
+          config,
+          nomeArquivo: `etiquetas-${modelo}-${Date.now()}.pdf`,
+        })
+      }
     } catch (e) {
       emitGerenteToast({
         kind: 'error',
@@ -305,6 +314,7 @@ export function ImprimirEtiquetasPageClient({
       }
     >
       <PageHeader title={t.titulo} subtitle={t.subtitulo} />
+      {hubNav}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-6">
@@ -393,19 +403,29 @@ export function ImprimirEtiquetasPageClient({
           <SectionCard className="h-auto">
             <Button
               type="button"
-              variant="success"
+              variant="primary"
               className="w-full"
-              onClick={() => void handleGerarPdf()}
+              onClick={() => void handlePdf('imprimir')}
               disabled={carrinho.length === 0 || gerandoPdf || acimaDoLimite}
               loading={gerandoPdf}
             >
               <Printer className="h-5 w-5" />
-              <span className="font-medium">{t.gerarPdf}</span>
+              <span className="font-medium">{t.imprimir}</span>
               {totalEtiquetas > 0 ? (
-                <span className="rounded-full bg-[var(--color-surface)]/20 px-2 py-0.5 text-caption">
+                <span className="rounded-full bg-[color-mix(in_srgb,var(--color-surface)_20%,transparent)] px-2 py-0.5 text-caption">
                   {totalEtiquetas}
                 </span>
               ) : null}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="mt-2 w-full"
+              onClick={() => void handlePdf('baixar')}
+              disabled={carrinho.length === 0 || gerandoPdf || acimaDoLimite}
+            >
+              <Download className="h-4 w-4" />
+              <span>{t.gerarPdf}</span>
             </Button>
             {acimaDoLimite ? (
               <p role="alert" className="mt-2 text-caption text-[var(--color-danger)]">

@@ -15,6 +15,7 @@ import { DataTable, type Column } from '@/components/ui/DataTable'
 import { formatBRL } from '@/lib/format/money'
 import { formatarDataCivilNumerica } from '@/lib/relatorios/periodoRelatorio'
 import { cn } from '@/lib/utils'
+import { baixasAutorizadas, mesmaLojaDaBaixa } from './baixaLinha'
 
 export type ContaLinha = {
   id: string
@@ -45,6 +46,19 @@ export type ContasLabels = {
   verVenda: string
   locale: string
   receber?: string
+  receberCaixa?: string
+  receberConta?: string
+  /** Nome acessível da tabela, igual ao título da seção (ex.: "Títulos em aberto"). */
+  tabela?: string
+}
+
+type TabelaProps = {
+  contas: ContaLinha[]
+  labels: ContasLabels
+  perfil?: string | null
+  actorLojaId?: string | null
+  onReceberCaixa?: (row: ContaLinha) => void
+  onReceberConta?: (row: ContaLinha) => void
 }
 
 function StatusPill({ status, labels }: { status: string; labels: ContasLabels }) {
@@ -61,7 +75,70 @@ function StatusPill({ status, labels }: { status: string; labels: ContasLabels }
   )
 }
 
-export function ContasReceberTable({ contas, labels }: { contas: ContaLinha[]; labels: ContasLabels }) {
+function AcoesReceberLinha({
+  row,
+  labels,
+  perfil,
+  actorLojaId,
+  onReceberCaixa,
+  onReceberConta,
+}: Omit<TabelaProps, 'contas'> & { row: ContaLinha }) {
+  if (row.valor_aberto <= 0) return null
+  if (!mesmaLojaDaBaixa(actorLojaId, row.loja_id)) {
+    return <span className="text-caption text-jl-fg-3">Outra loja</span>
+  }
+  const auth = perfil === undefined ? { caixa: true, conta: true } : baixasAutorizadas(perfil)
+  if (!onReceberCaixa && !onReceberConta) {
+    return (
+      <a
+        href="#baixa-conta-financeira"
+        className="admin-v2-btn-secondary inline-flex min-h-10 items-center px-3 text-small font-semibold"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {labels.receber ?? 'Receber'}
+      </a>
+    )
+  }
+  return (
+    <div className="flex flex-wrap items-center justify-end gap-1">
+      {auth.caixa && onReceberCaixa ? (
+        <button
+          type="button"
+          className="admin-v2-btn-secondary inline-flex min-h-10 items-center px-3 text-small font-semibold"
+          aria-label={`${labels.receberCaixa ?? 'Receber no caixa'} — ${row.cliente_nome}`}
+          onClick={(e) => {
+            e.stopPropagation()
+            onReceberCaixa(row)
+          }}
+        >
+          {labels.receberCaixa ?? 'Receber no caixa'}
+        </button>
+      ) : null}
+      {auth.conta && onReceberConta ? (
+        <button
+          type="button"
+          className="admin-v2-btn-primary inline-flex min-h-10 items-center px-3 text-small font-semibold"
+          aria-label={`${labels.receberConta ?? 'Receber na conta financeira'} — ${row.cliente_nome}`}
+          onClick={(e) => {
+            e.stopPropagation()
+            onReceberConta(row)
+          }}
+        >
+          {labels.receberConta ?? 'Receber na conta financeira'}
+        </button>
+      ) : null}
+    </div>
+  )
+}
+
+export function ContasReceberTable({
+  contas,
+  labels,
+  perfil,
+  actorLojaId,
+  onReceberCaixa,
+  onReceberConta,
+}: TabelaProps) {
   const columns: Column<ContaLinha>[] = [
     {
       key: 'cliente',
@@ -135,16 +212,16 @@ export function ContasReceberTable({ contas, labels }: { contas: ContaLinha[]; l
       key: 'acoes',
       header: labels.receber ?? 'Receber',
       align: 'right',
-      cell: (r) =>
-        r.valor_aberto > 0 ? (
-          <a
-            href="#baixa-conta-financeira"
-            className="admin-v2-btn-secondary inline-flex min-h-10 items-center px-3 text-small font-semibold"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {labels.receber ?? 'Receber'}
-          </a>
-        ) : null,
+      cell: (r) => (
+        <AcoesReceberLinha
+          row={r}
+          labels={labels}
+          perfil={perfil}
+          actorLojaId={actorLojaId}
+          onReceberCaixa={onReceberCaixa}
+          onReceberConta={onReceberConta}
+        />
+      ),
     },
   ]
 
@@ -153,6 +230,7 @@ export function ContasReceberTable({ contas, labels }: { contas: ContaLinha[]; l
       data={contas}
       columns={columns}
       rowKey={(r) => r.id}
+      caption={labels.tabela}
       emptyState={
         <div className="flex flex-col items-center gap-2 py-16 text-center">
           <span className="text-4xl text-jl-fg-3" aria-hidden>📋</span>

@@ -18,11 +18,11 @@ function OperationalHubNavInner({ hub }: { hub: OperationalHubId }) {
     [hub, ui],
   )
   const ariaLabel =
-    hub === 'vendas' ? ui.hub_aria_vendas : hub === 'compras' ? ui.hub_aria_compras : ui.hub_aria_pessoas
+    hub === 'vendas' ? ui.hub_aria_vendas : hub === 'compras' ? ui.hub_aria_compras : ui.hub_aria_loja
   return <AdminHubTabNav tabs={tabs} ariaLabel={ariaLabel} />
 }
 
-/** Barra de abas dos hubs Vendas, Compras e Pessoas (mesmo padrão visual de Catálogo/Estoque). */
+/** Barra de abas dos hubs Vender, Abastecer e Loja e equipe (mesmo padrão visual de Catálogo/Estoque). */
 export function OperationalHubNav({ hub }: { hub: OperationalHubId }) {
   return (
     <Suspense fallback={<div className="mb-4 h-9 animate-pulse rounded-lg bg-[var(--color-surface-soft)]" />}>

@@ -2,8 +2,10 @@
 #
 # Job migration-remote-drift (Ubuntu + Node):
 # - Secrets obrigatórios em contexto interno: SUPABASE_ACCESS_TOKEN (token de conta) e
-#   SUPABASE_MIGRATION_CHECK_PROJECT_REF (ref do projeto staging/homolog).
+#   SUPABASE_MIGRATION_CHECK_PROJECT_REF (ref do homolog jinlong-homolog-palm — NUNCA produção).
 # - Falha se secrets ausentes (interno) ou se Local≠Remote.
+# - Em PR, migrations novas do próprio PR (ausentes na base) não bloqueiam: são aplicadas
+#   no homolog após o merge. Migration da base ausente no homolog continua bloqueando.
 # - PR de fork: job é pulado (secrets do base não são injetados).
 #
 # Job anti-replay (Windows + PowerShell):
@@ -84,6 +86,12 @@ jobs:
 
       - name: Fiscal RPC store isolation (PostgreSQL in memory)
         run: npm run test:fiscal-rpc-authz -w fastproduct-backend
+
+      - name: Fiscal cancel category CHECK regression (PostgreSQL in memory)
+        run: npm run test:fiscal-cancelamento-categoria -w fastproduct-backend
+
+      - name: Residual RLS/search_path hardening (PostgreSQL in memory)
+        run: npm run test:hardening-residual -w fastproduct-backend
 
       - name: Enforce seed password secret for internal PRs
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
@@ -391,10 +399,15 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_MIGRATION_CHECK_PROJECT_REF: ${{ secrets.SUPABASE_MIGRATION_CHECK_PROJECT_REF }}
+          BASE_REF: ${{ github.base_ref }}
         run: |
           set -euo pipefail
           cd backend
           npx supabase link --project-ref "${SUPABASE_MIGRATION_CHECK_PROJECT_REF}"
+          if [ -n "${BASE_REF:-}" ]; then
+            git fetch --no-tags --depth=1 origin "${BASE_REF}"
+            export MIGRATION_DRIFT_BASE_REF="origin/${BASE_REF}"
+          fi
           node scripts/p0-migration-status.mjs
 
   anti-replay-diagnostic-gate:

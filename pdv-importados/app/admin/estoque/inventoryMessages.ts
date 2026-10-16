@@ -19,6 +19,7 @@ const CODE_TO_KEY: Record<InventoryErrorCode, string> = {
   [INVENTORY_ERROR_CODES.QTY_INVALID]: 'estoque.err_qtd_invalida',
   [INVENTORY_ERROR_CODES.MIN_INVALID]: 'estoque.err_min_invalido',
   [INVENTORY_ERROR_CODES.REASON_INVALID]: 'estoque.err_motivo_invalido',
+  [INVENTORY_ERROR_CODES.REASON_SIGN_MISMATCH]: 'estoque.err_motivo_sinal',
   [INVENTORY_ERROR_CODES.OBS_REQUIRED]: 'estoque.err_obs_obrigatoria',
   [INVENTORY_ERROR_CODES.PROFILE_DENIED]: 'estoque.err_perfil',
   [INVENTORY_ERROR_CODES.INSUFFICIENT]: 'estoque.err_insuficiente',

@@ -8,8 +8,22 @@ const sharedResolveAlias = {
   '@shared-core': path.resolve(__dirname, '../shared-core'),
 };
 
+/**
+ * Cabeçalhos de segurança em todas as respostas (auditoria Vercel 2026-10-15, item B).
+ * SAMEORIGIN (e não DENY) mantém o iframe oculto de impressão (lib/print/imprimirNoIframe.ts).
+ * CSP fica fora de propósito: exige inventário de scripts (Sentry, Vercel Analytics) antes.
+ */
+const securityHeaders = [
+  { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+];
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  async headers() {
+    return [{ source: '/:path*', headers: securityHeaders }];
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: '3mb',

@@ -13,6 +13,9 @@ const refreshMock = vi.fn()
 vi.mock('@/app/gerente/suspensao/actions', () => ({
   atualizarSuspensaoVendas: (...a: unknown[]) => atualizarMock(...a),
 }))
+vi.mock('@/components/ui/admin-v2/OperationalHubNav', () => ({
+  OperationalHubNav: ({ hub }: { hub: string }) => <nav data-testid="operational-hub-nav" data-hub={hub} />,
+}))
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: refreshMock }) }))
 
 ;(globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
@@ -154,5 +157,14 @@ describe('SuspensaoContent (UX-012)', () => {
       await Promise.resolve()
     })
     expect(refreshMock).toHaveBeenCalled()
+  })
+})
+
+describe('SuspensaoContent — hub Loja e equipe', () => {
+  it('mostra as abas do hub "loja" logo após o título', () => {
+    render({ suspensas: false, motivo: '' })
+    const hubNav = container.querySelector('[data-testid="operational-hub-nav"]')
+    expect(hubNav?.getAttribute('data-hub')).toBe('loja')
+    expect(hubNav?.previousElementSibling?.textContent).toContain('Suspensão de Vendas')
   })
 })

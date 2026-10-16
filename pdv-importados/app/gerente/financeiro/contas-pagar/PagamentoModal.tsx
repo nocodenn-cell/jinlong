@@ -333,7 +333,7 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
                   </button>
                 ))}
               </div>
-              {somenteCaixa ? <p className="mt-2 text-xs text-jl-fg-3">Este formulário paga em dinheiro pelo caixa físico. Para PIX, boleto, cartão ou transferência, feche esta janela e use Pagar pela conta financeira, selecionando a conta de origem.</p> : null}
+              {somenteCaixa ? <p className="mt-2 text-xs text-jl-fg-3">{m.contas_pagar.hint_somente_caixa}</p> : null}
             </div>
 
             {forma === 'DINHEIRO' ? (

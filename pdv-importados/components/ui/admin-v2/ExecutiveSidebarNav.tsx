@@ -26,14 +26,18 @@ export type ExecutiveSidebarNavProps = {
 
 const resolveLabels = resolveNavLabels
 
+// Cores (hover/ativo) vêm só de `.admin-v2-nav-link` em styles/admin-v2.css (tokens
+// `--admin-v2-active-*`) e o foco do anel global `a:focus-visible`; aqui fica só o layout.
 const LINK_BASE =
-  'admin-v2-nav-link flex items-center gap-3 rounded-full border border-transparent px-3 py-2.5 ' +
-  'data-[active=true]:border-[rgba(251,191,36,0.35)] data-[active=true]:bg-[rgba(251,191,36,0.1)] data-[active=true]:text-[var(--color-brand-primary)]'
+  'admin-v2-nav-link flex items-center gap-3 rounded-full border border-transparent px-3 py-2.5'
+
+const matchesPath = (pathname: string, p: string) => pathname === p || pathname.startsWith(`${p}/`)
 
 function isItemActive(item: AdminV2NavItem, pathname: string, search: string): boolean {
+  if ((item.notActivePaths ?? []).some((p) => matchesPath(pathname, p))) return false
   return (
     isAdminNavActive(pathname, search, item.href) ||
-    (item.alsoActivePaths ?? []).some((p) => pathname === p || pathname.startsWith(`${p}/`))
+    (item.alsoActivePaths ?? []).some((p) => matchesPath(pathname, p))
   )
 }
 
@@ -122,7 +126,7 @@ function DestinationGroup({
 }
 
 /**
- * ExecutiveSidebarNav — Admin V2: "Abrir PDV" em destaque + 9 destinos por tarefa
+ * ExecutiveSidebarNav — Admin V2: "Abrir PDV" em destaque + 8 destinos pela jornada da loja
  * (sub-links só no grupo aberto) + grupo Interno (ADMIN).
  */
 export function ExecutiveSidebarNav({
@@ -149,8 +153,7 @@ export function ExecutiveSidebarNav({
         title={pdv.hintText}
         className={cn(
           'flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold',
-          'bg-[var(--color-brand-primary)] text-[#1c1917] transition-opacity hover:opacity-90',
-          'outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-background-primary)]',
+          'bg-primary text-primary-foreground transition-opacity hover:opacity-90',
         )}
       >
         <PdvIcon className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />

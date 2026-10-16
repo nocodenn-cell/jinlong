@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input, SearchInput, Select } from '@/components/ui/forms'
 import { emitGerenteToast } from '@/lib/gerente/toast'
+import { baixasAutorizadas } from '@/app/admin/financeiro/_components/baixaLinha'
 import { downloadCsvBrowser } from '@/lib/gerente/gerenteCadastroUi'
 import { fmtGerenteBRL, fmtGerenteDateTime } from '@/lib/format/gerenteValues'
 import { getMessages } from '@/i18n/getMessages'
@@ -45,6 +46,10 @@ type Props = Readonly<{
   fornecedorInicial?: string
   /** Loja do ator autenticado — `registrar_pagamento_contas_pagar` rejeita pagamento cross-loja para todos os perfis. */
   actorLojaId?: string | null
+  /** Quando informado, esconde baixas que o perfil não pode executar. */
+  perfil?: string | null
+  /** Abre o formulário BAIXAR_AP já com este título. Ausente: só o caixa. */
+  onPagarConta?: (conta: ContaPagarRow) => void
   somenteCaixa?: boolean
 }>
 
@@ -100,6 +105,8 @@ export function ContasPagarListClient({
   periodoInicial,
   fornecedorInicial = '',
   actorLojaId = null,
+  perfil,
+  onPagarConta,
   somenteCaixa = false,
 }: Props) {
   const m = getMessages(idioma)
@@ -299,8 +306,8 @@ export function ContasPagarListClient({
   const algumFiltroAtivo = termo || status !== 'todos' || fornecedorId || periodo
 
   const chipBase =
-    'rounded-full px-2.5 py-1 text-caption font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]'
-  const chipActive = 'bg-[var(--color-brand)] text-[var(--color-brand-fg)]'
+    'rounded-full px-2.5 py-1 text-caption font-medium transition-colors fp-focus-ring'
+  const chipActive = 'bg-[var(--color-brand)] text-[var(--color-fg-on-brand)]'
   const chipInactive =
     'border border-[var(--color-border)] bg-[var(--color-surface-soft)] text-fg-muted hover:bg-[var(--color-surface)]'
 
@@ -428,7 +435,7 @@ export function ContasPagarListClient({
 
   const emptyState = (
     <div className="py-12 text-center">
-      <div className="text-5xl text-[var(--color-warning-strong)]/60" style={{ fontFamily: 'var(--font-serif-han)' }}>
+      <div className="text-5xl text-[color-mix(in_srgb,var(--color-warning-strong)_60%,transparent)]" style={{ fontFamily: 'var(--font-serif-han)' }}>
         应
       </div>
       <div className="mt-3 text-body font-semibold text-fg">{m.contas_pagar.vazio_titulo}</div>
@@ -438,7 +445,7 @@ export function ContasPagarListClient({
 
   return (
     <>
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <MetricCard
           label={m.contas_pagar.kpi_em_aberto}
           value={fmtGerenteBRL(kpis.totalAbertos, locale)}
@@ -460,14 +467,8 @@ export function ContasPagarListClient({
           icon="list-filter"
           tone="gold"
         />
-        <MetricCard
-          label={m.contas_pagar.acoes_rapidas}
-          value="—"
-          hint={m.contas_pagar.origem_nfe_hint}
-          icon="file-check-2"
-          tone="gold"
-        />
       </div>
+      <p className="-mt-3 mb-6 text-small text-jl-fg-3">{m.contas_pagar.origem_nfe_hint}</p>
 
       <CrudListShell
         className="mb-6"
@@ -554,6 +555,7 @@ export function ContasPagarListClient({
           columns={columns}
           data={contas}
           rowKey={(c) => c.id}
+          caption={m.contas_pagar.titulo}
           loading={loading}
           emptyState={emptyState}
           className="rounded-none border-x-0 border-b-0 [&_table]:min-w-[760px] [&_td]:text-sm [&_th]:text-sm [&_td]:py-4"
@@ -570,19 +572,34 @@ export function ContasPagarListClient({
                 </span>
               )
             }
+            const auth = perfil === undefined ? { caixa: true, conta: Boolean(onPagarConta) } : baixasAutorizadas(perfil)
+            if (!auth.caixa && !auth.conta) return null
             return (
-              <div className="flex items-center justify-end gap-1">
+              <div className="flex flex-wrap items-center justify-end gap-1">
+                {auth.caixa ? (
                 <Button
                   type="button"
                   size="sm"
                   variant="primary"
                   onClick={() => setEmPagamento(c)}
                   className="gap-1"
-                  aria-label={`${m.contas_pagar.registrar_pagamento} — ${c.descricao}`}
+                  aria-label={`${m.contas_pagar.btn_pagar_caixa} — ${c.descricao}`}
                 >
                   <DollarSign className="h-3 w-3" aria-hidden />
-                  {m.contas_pagar.btn_pagar}
+                  {m.contas_pagar.btn_pagar_caixa}
                 </Button>
+                ) : null}
+                {auth.conta && onPagarConta ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onPagarConta(c)}
+                  aria-label={`${m.contas_pagar.btn_pagar_conta} — ${c.descricao}`}
+                >
+                  {m.contas_pagar.btn_pagar_conta}
+                </Button>
+                ) : null}
                 <Button
                   type="button"
                   size="icon"

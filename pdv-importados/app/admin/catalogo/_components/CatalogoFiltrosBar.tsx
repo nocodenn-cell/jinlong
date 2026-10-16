@@ -42,6 +42,7 @@ export function CatalogoFiltrosBar({
     <div className="flex flex-col gap-2.5">
       <div className="flex flex-wrap items-center gap-2">
         <FilterBar
+          layout="grid"
           filters={primaryFilters}
           extraClearKeys={advancedFilters.map((filter) => filter.key)}
           resetPageOnChange
@@ -67,6 +68,7 @@ export function CatalogoFiltrosBar({
       {open ? (
         <div id="catalogo-filtros-avancados">
           <FilterBar
+            layout="grid"
             filters={advancedFilters}
             resetPageOnChange
             clearable={false}

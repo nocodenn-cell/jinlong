@@ -148,3 +148,36 @@ export async function baixarPdfEtiquetas(
   document.body.removeChild(link)
   URL.revokeObjectURL(url)
 }
+
+/**
+ * Abre o PDF num iframe oculto e chama o diálogo de impressão do navegador —
+ * o operador não precisa baixar e abrir o arquivo. O iframe/URL são liberados
+ * depois (o diálogo é modal na maioria dos navegadores; a folga cobre os que não são).
+ */
+export function imprimirBlobPdf(blob: Blob, doc: Document = document): void {
+  const url = URL.createObjectURL(blob)
+  const iframe = doc.createElement('iframe')
+  iframe.setAttribute('aria-hidden', 'true')
+  iframe.style.position = 'fixed'
+  iframe.style.width = '0'
+  iframe.style.height = '0'
+  iframe.style.border = '0'
+  iframe.src = url
+  iframe.onload = () => {
+    iframe.contentWindow?.focus()
+    iframe.contentWindow?.print()
+    setTimeout(() => {
+      iframe.remove()
+      URL.revokeObjectURL(url)
+    }, 60_000)
+  }
+  doc.body.appendChild(iframe)
+}
+
+/** Gera PDF e abre direto o diálogo de impressão. */
+export async function imprimirPdfEtiquetas(
+  itens: ItemCarrinho[],
+  options: GerarPdfOptions
+): Promise<void> {
+  imprimirBlobPdf(await gerarPdfEtiquetas(itens, options))
+}

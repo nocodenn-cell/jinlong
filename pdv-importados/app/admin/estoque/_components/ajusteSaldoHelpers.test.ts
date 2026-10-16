@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   diferencaAjuste,
+  motivosParaDelta,
   previaAjuste,
   previaRetirada,
   saldoAposRetirada,
@@ -68,5 +69,25 @@ describe('Kardex tipo_codigo (contrato RPC)', () => {
     expect(tipoCodigoAjuste(-3, 'QUEBRA')).toBe('SAIDA_AVARIA')
     expect(tipoCodigoAjuste(-3, 'ACERTO_INVENTARIO')).toBe('SAIDA_AJUSTE')
     expect(tipoCodigoAjuste(3, 'ACERTO_INVENTARIO')).toBe('ENTRADA_AJUSTE')
+  })
+})
+
+describe('motivosParaDelta', () => {
+  const motivos = ['COMPRA', 'PERDA', 'QUEBRA', 'ACERTO_INVENTARIO', 'OUTRO'].map((value) => ({
+    value,
+    label: value,
+  }))
+  const valores = (delta: number) => motivosParaDelta(motivos, delta).map((m) => m.value)
+
+  it('saldo subindo esconde PERDA e QUEBRA', () => {
+    expect(valores(2)).toEqual(['COMPRA', 'ACERTO_INVENTARIO', 'OUTRO'])
+  })
+
+  it('saldo caindo esconde COMPRA', () => {
+    expect(valores(-1)).toEqual(['PERDA', 'QUEBRA', 'ACERTO_INVENTARIO', 'OUTRO'])
+  })
+
+  it('sem diferença mostra todos', () => {
+    expect(valores(0)).toEqual(motivos.map((m) => m.value))
   })
 })

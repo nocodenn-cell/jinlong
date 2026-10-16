@@ -27,12 +27,13 @@ vi.mock('next/link', () => ({
     React.createElement('a', { href, className, ...rest }, children),
 }))
 
+const { OperationalHubNav } = await import('@/components/ui/admin-v2/OperationalHubNav')
 const { EstoqueHubNav } = await import('@/components/ui/admin-v2/EstoqueHubNav')
 const { CatalogoHubNav } = await import('@/components/ui/admin-v2/CatalogoHubNav')
 
 ;(globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
-describe('HubNav — Etiquetas visível (pt/zh)', () => {
+describe('HubNav — Etiquetas visível em Abastecer (pt/zh)', () => {
   let container: HTMLDivElement
   let root: Root
 
@@ -47,35 +48,28 @@ describe('HubNav — Etiquetas visível (pt/zh)', () => {
     container.remove()
   })
 
-  it.each([
-    { idioma: 'pt' as const, label: 'Imprimir Etiquetas' },
-    { idioma: 'zh' as const, label: '打印标签' },
-  ])('EstoqueHubNav expõe $label → rota canônica ($idioma)', ({ idioma, label }) => {
+  function renderCom(idioma: 'pt' | 'zh', nav: React.ReactNode) {
     act(() => {
-      root.render(
-        <AdminV2SessionProvider idioma={idioma}>
-          <EstoqueHubNav />
-        </AdminV2SessionProvider>,
-      )
+      root.render(<AdminV2SessionProvider idioma={idioma}>{nav}</AdminV2SessionProvider>)
     })
+  }
+
+  it.each([
+    { idioma: 'pt' as const, label: 'Etiquetas' },
+    { idioma: 'zh' as const, label: '标签' },
+  ])('hub Abastecer expõe $label → rota canônica ($idioma)', ({ idioma, label }) => {
+    renderCom(idioma, <OperationalHubNav hub="compras" />)
     const link = Array.from(container.querySelectorAll('a')).find((a) => a.textContent === label)
     expect(link).toBeTruthy()
     expect(link!.getAttribute('href')).toBe(ROUTES.admin.estoqueImprimirEtiquetas)
   })
 
   it.each([
-    { idioma: 'pt' as const, label: 'Imprimir Etiquetas' },
-    { idioma: 'zh' as const, label: '打印标签' },
-  ])('CatalogoHubNav expõe $label → mesma rota ($idioma)', ({ idioma, label }) => {
-    act(() => {
-      root.render(
-        <AdminV2SessionProvider idioma={idioma}>
-          <CatalogoHubNav />
-        </AdminV2SessionProvider>,
-      )
-    })
-    const link = Array.from(container.querySelectorAll('a')).find((a) => a.textContent === label)
-    expect(link).toBeTruthy()
-    expect(link!.getAttribute('href')).toBe(ROUTES.admin.estoqueImprimirEtiquetas)
+    { nome: 'Estoque', nav: <EstoqueHubNav /> },
+    { nome: 'Catálogo', nav: <CatalogoHubNav /> },
+  ])('hub $nome não repete a aba de etiquetas', ({ nav }) => {
+    renderCom('pt', nav)
+    const hrefs = Array.from(container.querySelectorAll('a')).map((a) => a.getAttribute('href'))
+    expect(hrefs).not.toContain(ROUTES.admin.estoqueImprimirEtiquetas)
   })
 })
