@@ -20,6 +20,8 @@ import { DashboardChart } from './_components/DashboardChart'
 import { CaixaShortcut } from './_components/CaixaShortcut'
 import { DashboardFilters } from './_components/DashboardFilters'
 import { DashboardOrdersTable } from './_components/DashboardOrdersTable'
+import { DashboardKpiDrawer } from './_components/DashboardKpiDrawer'
+import { dashboardHref, normalizeDetalhe } from './dashboardDetalhe'
 import {
   agruparVendasPorDia,
   agruparVendasPorHora,
@@ -36,7 +38,7 @@ import { formatDateTimeLocaleDefault, formatDayMonthInLocale } from '@/lib/forma
 import { formatBRL, formatNumberLocale } from '@/lib/format/money'
 import { calcularMetricasVendas } from '@/lib/vendas/metricasVendas'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
-import { ROUTES } from '@/lib/navigation/routes'
+import { ROUTES, adminVendaDetalheQuery, pathWithQuery } from '@/lib/navigation/routes'
 import { getMessages } from '@/i18n/getMessages'
 import { labelFormaPagamentoVenda } from '@/lib/format/vendaLabels'
 import { contarSituacoesEstoque } from '@/lib/estoque/classificarEstoque'
@@ -57,9 +59,13 @@ type Metric = {
   deltaPositiveIsGood?: boolean
   hint?: string
   href?: string
+  scroll?: boolean
   labelWrap?: boolean
   sparkAriaLabel?: string
 }
+
+/** Pedidos listados na gaveta de drill-down; o resto fica a um link de Vendas. */
+const DETALHE_PEDIDOS_MAX = 50
 
 function fillTemplate(template: string, vars: Record<string, string>): string {
   return Object.entries(vars).reduce(
@@ -110,6 +116,7 @@ type PageProps = {
   searchParams?: Promise<{
     period?: string
     status?: string
+    detalhe?: string
   }>
 }
 
@@ -131,6 +138,12 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   const period = normalizePeriod(params?.period)
   const status = normalizeStatus(params?.status)
   const statusDb = status === 'ALL' ? null : status
+  // Drill-down dos KPIs (Tarefa 7): o detalhe aberto vive na URL; os links preservam período/status.
+  const detalhe = normalizeDetalhe(params?.detalhe)
+  const linkParams = {
+    period: params?.period ? period : undefined,
+    status: params?.status ? status : undefined,
+  }
   const supabase = await createClient()
   const now = new Date()
 
@@ -389,6 +402,8 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
       tone: 'gold',
       labelWrap: true,
       sparkAriaLabel: sparkAria,
+      href: dashboardHref(linkParams, 'vendas'),
+      scroll: false,
       // Faturamento = vendas registradas (accrual), não dinheiro efetivamente
       // recebido — soma total_liquido bruto, inclusive a parte que ficou em
       // contas_receber como pendente. Ver achado FIN-3/FIN-298-07 (auditoria
@@ -406,6 +421,8 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
       tone: 'success',
       labelWrap: true,
       sparkAriaLabel: sparkAria,
+      href: dashboardHref(linkParams, 'pedidos'),
+      scroll: false,
     },
     {
       label: L.metricTicket[lk],
@@ -418,6 +435,8 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
       tone: 'gold',
       labelWrap: true,
       sparkAriaLabel: sparkAria,
+      href: dashboardHref(linkParams, 'vendas'),
+      scroll: false,
     },
     {
       label: L.metricStock[lk],
@@ -489,6 +508,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     tone: metric.tone,
     hint: metric.hint,
     href: metric.href,
+    scroll: metric.scroll,
     labelWrap: metric.labelWrap,
     sparkAriaLabel: metric.sparkAriaLabel,
   }))
@@ -645,27 +665,29 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     </>
   )
 
+  const ordersTableLabels = {
+    colId: L.tableColId[lk],
+    colOperador: L.tableColOperador[lk],
+    colData: L.tableColData[lk],
+    colValor: L.tableColValor[lk],
+    colPagamento: L.tableColPagamento[lk],
+    colStatus: L.tableColStatus[lk],
+    statusDone: L.statusDone[lk],
+    statusCancelled: L.statusCancelled[lk],
+    empty: L.tableEmpty[lk],
+    emptyDescription: L.tableEmptyDescription[lk],
+    emptyActionLabel: L.tableEmptyCta[lk],
+    openOrdersAria: L.openOrdersAria[lk],
+    loadFailed: adminUi.errors.tableLoadFailed[lk],
+  }
+
   const footerBlock = (
     <>
       <SectionCard title={L.tableTitle[lk]}>
         <DashboardOrdersTable
           orders={latestOrders}
           loadFailed={tableLoadFailed}
-          labels={{
-            colId: L.tableColId[lk],
-            colOperador: L.tableColOperador[lk],
-            colData: L.tableColData[lk],
-            colValor: L.tableColValor[lk],
-            colPagamento: L.tableColPagamento[lk],
-            colStatus: L.tableColStatus[lk],
-            statusDone: L.statusDone[lk],
-            statusCancelled: L.statusCancelled[lk],
-            empty: L.tableEmpty[lk],
-            emptyDescription: L.tableEmptyDescription[lk],
-            emptyActionLabel: L.tableEmptyCta[lk],
-            openOrdersAria: L.openOrdersAria[lk],
-            loadFailed: adminUi.errors.tableLoadFailed[lk],
-          }}
+          labels={ordersTableLabels}
         />
       </SectionCard>
       <footer className="text-center text-fg-subtle">
@@ -674,23 +696,129 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     </>
   )
 
-  return (
-    <ExecutiveVisaoGeralStub
-      title={L.pageTitle[lk]}
-      subtitle={L.pageSubtitle[lk]}
-      filters={(
-        <DashboardFilters
-          options={periodOptions}
-          ariaLabel={ui.filtros_regiao_aria}
-          clearAriaLabel={ui.filtros_limpar_aria}
-        />
-      )}
-      kpis={kpiItems}
-      alertRows={alertRows}
-      idioma={idioma}
-      main={mainCharts}
-      side={sidePanel}
-      footer={footerBlock}
+  // Drill-down: tudo sai da mesma população dos KPIs (`vendasRange`: concluídas no período).
+  const porPeriodo =
+    period === 'TODAY'
+      ? hourlySeries.filter((p) => p.total > 0)
+      : chartData
+  const pedidosDoPeriodo = [...vendasRange].sort((x, y) => (x.data < y.data ? 1 : x.data > y.data ? -1 : 0))
+  const pedidosNaGaveta = pedidosDoPeriodo.slice(0, DETALHE_PEDIDOS_MAX)
+  const vendasDoPeriodoHref = pathWithQuery(
+    ROUTES.admin.vendas,
+    new URLSearchParams({ periodo: period === 'TODAY' ? 'hoje' : period === '7D' ? '7d' : '30d' }),
+  )
+
+  const detalheConteudo = periodSalesFailed ? (
+    <ErrorState
+      title={adminUi.errors.criticalSalesTitle[lk]}
+      description={adminUi.errors.criticalSalesBody[lk]}
     />
+  ) : detalhe === 'pedidos' ? (
+    <div className="flex flex-col gap-3">
+      <DetalheLista
+        titulo={L.detalhePedidosTitulo[lk]}
+        vazio={L.detalheVazio[lk]}
+        linhas={pedidosNaGaveta.map((v) => ({
+          key: v.id,
+          label: `${formatDateTimeLocaleDefault(v.data, locale, relatorioTz)} · ${labelFormaPagamentoVenda(v.forma_pagamento, m)}`,
+          valor: formatBRL(Number(v.total_liquido ?? 0), locale),
+          href: adminVendaDetalheQuery(v.id),
+        }))}
+      />
+      {pedidosDoPeriodo.length > pedidosNaGaveta.length ? (
+        <p className="text-caption text-jl-fg-3">
+          {fillTemplate(L.detalhePedidosParcial[lk], {
+            n: formatNumberLocale(pedidosNaGaveta.length, locale),
+            total: formatNumberLocale(pedidosDoPeriodo.length, locale),
+          })}{' '}
+          <Link href={vendasDoPeriodoHref} className="font-medium text-brand underline-offset-2 hover:underline">
+            {L.detalheVerTodos[lk]}
+          </Link>
+        </p>
+      ) : null}
+    </div>
+  ) : (
+    <div className="flex flex-col gap-5">
+      <DetalheLista
+        titulo={L.detalhePorPeriodo[lk]}
+        vazio={L.detalheVazio[lk]}
+        linhas={porPeriodo.map((p) => ({ label: p.label, valor: formatBRL(p.total, locale) }))}
+      />
+      <DetalheLista
+        titulo={L.detalhePorPagamento[lk]}
+        vazio={L.detalheVazio[lk]}
+        linhas={paymentDonutData.map((p) => ({ label: p.name, valor: formatBRL(p.value, locale) }))}
+      />
+    </div>
+  )
+
+  return (
+    <>
+      <ExecutiveVisaoGeralStub
+        title={L.pageTitle[lk]}
+        subtitle={L.pageSubtitle[lk]}
+        filters={(
+          <DashboardFilters
+            options={periodOptions}
+            ariaLabel={ui.filtros_regiao_aria}
+            clearAriaLabel={ui.filtros_limpar_aria}
+          />
+        )}
+        kpis={kpiItems}
+        alertRows={alertRows}
+        idioma={idioma}
+        main={mainCharts}
+        side={sidePanel}
+        footer={footerBlock}
+      />
+      <DashboardKpiDrawer
+        open={detalhe !== null}
+        title={detalhe === 'pedidos' ? L.detalhePedidosTitulo[lk] : L.detalheVendasTitulo[lk]}
+        closeHref={dashboardHref(linkParams, null)}
+        closeLabel={m.comum.fechar}
+      >
+        {detalheConteudo}
+      </DashboardKpiDrawer>
+    </>
+  )
+}
+
+/** Lista rótulo → valor da gaveta de drill-down (dados já carregados pela página). */
+function DetalheLista({
+  titulo,
+  vazio,
+  linhas,
+}: {
+  titulo: string
+  vazio: string
+  linhas: Array<{ key?: string; label: string; valor: string; href?: string }>
+}) {
+  return (
+    <section>
+      <h3 className="mb-2 text-caption font-semibold uppercase tracking-[0.06em] text-jl-fg-3">{titulo}</h3>
+      {linhas.length === 0 ? (
+        <p className="text-small text-jl-fg-3">{vazio}</p>
+      ) : (
+        <dl className="flex flex-col">
+          {linhas.map((linha) => (
+            <div
+              key={linha.key ?? linha.label}
+              className="flex items-center justify-between gap-3 border-t border-jl-border-1 py-2 text-small"
+            >
+              <dt className="min-w-0 truncate text-jl-fg-2">
+                {linha.href ? (
+                  <Link href={linha.href} className="hover:text-jl-fg-1 hover:underline">
+                    {linha.label}
+                  </Link>
+                ) : (
+                  linha.label
+                )}
+              </dt>
+              <dd className="font-medium tabular-nums text-jl-fg-1">{linha.valor}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </section>
   )
 }

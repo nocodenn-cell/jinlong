@@ -300,7 +300,7 @@ function CaixaPdvOperacoesMenuImpl({
                         data-testid="caixa-pendencia-resolver"
                         className={cn(
                           "flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-sm font-medium",
-                          "text-[var(--color-warning-strong)] hover:bg-[var(--color-warning)]/20",
+                          "text-[var(--color-warning-strong)] hover:bg-[color-mix(in_srgb,var(--color-warning)_20%,transparent)]",
                           "disabled:cursor-not-allowed disabled:opacity-40",
                         )}
                         onClick={() => runAndClose(() => onResolverPendencia(mov))}
@@ -380,7 +380,7 @@ function CaixaPdvOperacoesMenuImpl({
           "inline-flex min-h-11 w-full items-center justify-center gap-2",
           classic
             ? "border border-primary/50 bg-primary/10 text-primary hover:bg-primary/20"
-            : "border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] text-[var(--color-warning-strong)] hover:bg-[var(--color-warning)]/20",
+            : "border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] text-[var(--color-warning-strong)] hover:bg-[color-mix(in_srgb,var(--color-warning)_20%,transparent)]",
         )}
         onClick={onValidarGerente}
         disabled={validandoGerente || movimentandoCaixa}

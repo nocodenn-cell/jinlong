@@ -428,7 +428,7 @@ export function ContasPagarListClient({
 
   const emptyState = (
     <div className="py-12 text-center">
-      <div className="text-5xl text-[var(--color-warning-strong)]/60" style={{ fontFamily: 'var(--font-serif-han)' }}>
+      <div className="text-5xl text-[color-mix(in_srgb,var(--color-warning-strong)_60%,transparent)]" style={{ fontFamily: 'var(--font-serif-han)' }}>
         应
       </div>
       <div className="mt-3 text-body font-semibold text-fg">{m.contas_pagar.vazio_titulo}</div>

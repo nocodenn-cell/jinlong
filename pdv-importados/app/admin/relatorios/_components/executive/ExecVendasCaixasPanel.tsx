@@ -129,7 +129,7 @@ export function ExecVendasCaixasPanel({
                     {buckets.map((b) => (
                       <li key={b.hour} className="flex min-w-0 flex-1 flex-col items-center gap-1">
                         <div
-                          className="w-full rounded-t bg-[var(--color-brand-primary)]/80"
+                          className="w-full rounded-t bg-[color-mix(in_srgb,var(--color-brand-primary)_80%,transparent)]"
                           style={{ height: `${Math.max(4, (b.total / maxHourTotal) * 100)}%` }}
                           title={`${b.label}: ${formatBRL(b.total, locale)}`}
                         />
