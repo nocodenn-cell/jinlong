@@ -116,10 +116,30 @@ Legenda de risco: 🔴 alto · 🟠 médio · 🟡 baixo.
 
 ## Registro de execução
 
-| Tarefa | Status | Commit | Testes |
-|---|---|---|---|
-| 0 | Bloqueada (stash inexistente) | — | — |
-| 1 | Integrada (PR #553) | `b169cfe6` | behavior test vermelho→verde (4/5 → 5/5); typecheck ✅; eslint ✅; vitest completo ✅; CI ✅ |
-| 2 | PR #561 | `93612b75`, `6505cb30` | guarda de tokens vermelho→verde (13 usos → 0); fix da revisão Codex (/95 → color-mix) |
-| 3 | Em andamento | — | — |
-| 10 | Pendente | — | — |
+Sprint encerrada em 2026-10-16. Cada PR foi integrado só com os 6 checks obrigatórios da
+`main` **e** os 2 E2E (`e2e-playwright`, `E2E crítico`) verdes, branch atualizada, revisão do
+Codex sem apontamento aberto e `main` revalidada após o merge (typecheck, vitest completo e
+deploy de produção da Vercel).
+
+| Tarefa | PR | Merge na `main` | Revisão | Testes |
+|---|---|---|---|---|
+| 0 — Financeiro (stash) | — | — | — | **Bloqueada**: `stash@{0}` e o commit `aafd653` não existem; não reconstruir por suposição |
+| 1 — `ExecutiveSidebarNav` por tokens | #553 | `100181b1` | Codex 👍 | behavior test (4/5 vermelho → 5/5) |
+| 2 — tokens CSS inexistentes | #561 | `d390415b` | 1 apontamento corrigido (`/95` → `color-mix`) | guarda de tokens (13 usos → 0) |
+| 3 — `FilterBar` (300 ms + grid) | #562 | `0b9012aa` | Codex 👍 | 11 behavior tests + regressão do layout inline |
+| 4 — gaveta `DragonModal placement="drawer"` | #563 | `aaf396e3` | Codex 👍 | 8 behavior tests (6 vermelhos sem a mudança) |
+| 6 — skeleton + empty-state do Dashboard | #564 | `fc2027da` | 2 apontamentos corrigidos (grid do KPI, `periodo=tudo`) | 7 behavior tests |
+| 10 — `/opacidade` sobre `var()` (8 legados) | #565 | `b1fcfc62` | Codex 👍 | guarda sem allowlist + compilação Tailwind por classe |
+| 5 — detalhe da venda na gaveta | #568 | `994a9ef7` | Codex 👍 | 4 + 3 (pilha de diálogos) behavior tests |
+| 7 — drill-down dos KPIs | #570 | `fcc96038` | 4 apontamentos corrigidos (população do KPI, por hora, erro, rótulo) | 15 testes (helper, gaveta, página) |
+| 9 — detalhe da OC na gaveta | #569 | `54425928` | 2 apontamentos corrigidos (confirmação visível, X em 2 níveis) | 7 behavior tests |
+| 8 — filtros de Estoque/Catálogo/Movimentações | #567 | `698a4add` | Codex 👍 | 11 testes (filtros, período no kardex, grid) |
+
+### Pendências e observações reais
+- **Tarefa 0** segue bloqueada até existir fonte íntegra do trabalho do Financeiro.
+- **Teste local `productUpdater.semRpc.integracao`** falha só em máquina com outro Supabase
+  local na porta 54321 (usa a chave placeholder). Não é regressão; no CI roda limpo.
+- **`next.config.js`** tem 4 erros de `no-unused-vars` quando se roda `eslint .` sem `--ext`;
+  fica fora do lint oficial (`npm run lint` = `--ext .ts,.tsx`, verde) e já existia antes da sprint.
+- **Verificação visual** não foi feita localmente (worktree sem env do Supabase); a cobertura é
+  por behavior tests, E2E do CI e preview da Vercel.
