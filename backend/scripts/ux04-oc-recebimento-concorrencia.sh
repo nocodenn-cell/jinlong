@@ -44,6 +44,7 @@ delete from public.produtos where loja_id = '$LOJA';
 delete from public.categorias where id = '$CAT';
 delete from public.usuarios where id in ('$U1', '$U2');
 delete from auth.users where id in ('$U1', '$U2');
+delete from public.formas_pagamento where loja_id = '$LOJA';
 delete from public.lojas where id = '$LOJA';
 SQL
   rm -rf "$TMP"

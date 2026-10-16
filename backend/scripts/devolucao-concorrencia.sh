@@ -39,7 +39,7 @@ INSERT INTO public.usuarios (id, nome, perfil, ativo, loja_id) VALUES ('$GER', '
 INSERT INTO public.produtos (id, codigo_barras, nome, categoria_id, preco_varejo, origem, tem_nf, ativo, loja_id)
 VALUES ('$PROD', '7899$SUF', 'conc prod', '$CAT', 25.00, 'brasil_nf', false, true, '$LOJA');
 INSERT INTO public.estoque (produto_id, loja_id, quantidade_atual, estoque_minimo) VALUES ('$PROD', '$LOJA', 1000, 0);
-INSERT INTO public.formas_pagamento (loja_id, codigo, nome, ativo) VALUES ('$LOJA', 'DINHEIRO', 'Dinheiro', true);
+INSERT INTO public.formas_pagamento (loja_id, codigo, nome, ativo) VALUES ('$LOJA', 'DINHEIRO', 'Dinheiro', true) ON CONFLICT (loja_id, codigo) DO UPDATE SET ativo = true;
 SQL
 
 CAIXA="$($P -c "SELECT set_config('request.jwt.claim.sub','$OP',false)" -c "INSERT INTO public.caixas (operador_id, status, data_abertura, valor_inicial, loja_id) VALUES ('$OP','ABERTO',now(),50,'$LOJA') RETURNING id" | tail -1)"

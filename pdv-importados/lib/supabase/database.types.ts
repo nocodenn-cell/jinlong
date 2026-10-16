@@ -7061,6 +7061,10 @@ export type Database = {
         Args: { p_documento_id: string }
         Returns: undefined
       }
+      garantir_formas_pagamento_padrao: {
+        Args: { p_loja_id: string }
+        Returns: number
+      }
       gerente_estoque_list_page: {
         Args: {
           p_busca?: string
