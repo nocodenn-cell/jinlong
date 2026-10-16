@@ -9,6 +9,7 @@ import {
   parseMigrationListOutput,
   parseMigrationListTable,
   parseHumanGateRegistry,
+  separatePrPendingMigrations,
 } from "./p0-migration-status.mjs";
 
 test("interpreta JSON atual do Supabase CLI, inclusive linhas remote-only", () => {
@@ -182,4 +183,42 @@ test("registro HUMAN_GATE inválido falha explicitamente", () => {
     () => parseHumanGateRegistry('{"pairs":[{"gitOnlyVersion":"1","remoteOnlyVersion":"abc","reason":"x","decisionDoc":"x"}]}'),
     /remoteOnlyVersion deve ser numérica/,
   );
+});
+
+test("migration nova do PR (ausente na base) não bloqueia; a que já está na base bloqueia", () => {
+  const result = separatePrPendingMigrations(
+    {
+      blocking: [
+        { version: "20261006120000", reason: "remote_ausente", remote: null },
+        { version: "20261015120000", reason: "remote_ausente", remote: null },
+      ],
+      missingInList: ["20261015130000"],
+    },
+    ["001", "20261006120000"],
+  );
+  assert.deepEqual(result.blocking.map((d) => d.version), ["20261006120000"]);
+  assert.deepEqual(result.missingInList, []);
+  assert.deepEqual(result.prPending, ["20261015120000", "20261015130000"]);
+});
+
+test("sem ref de base o gate continua estrito", () => {
+  const blocking = [{ version: "20261015120000", reason: "remote_ausente", remote: null }];
+  const result = separatePrPendingMigrations({ blocking, missingInList: [] }, null);
+  assert.deepEqual(result.blocking, blocking);
+  assert.deepEqual(result.prPending, []);
+});
+
+test("divergência local≠remote não é tratada como pendência do PR", () => {
+  const blocking = [{ version: "20261015120000", reason: "local_remote_diferentes", remote: "x" }];
+  const result = separatePrPendingMigrations({ blocking, missingInList: [] }, ["001"]);
+  assert.deepEqual(result.blocking, blocking);
+  assert.deepEqual(result.prPending, []);
+});
+
+test("ignora o aviso de nova versão do CLI impresso após o JSON", () => {
+  const parsed = parseMigrationListOutput(
+    'Connecting...\n{"migrations":[{"local":"001","remote":"001","time":""}],"message":"ok"}\n' +
+      "A new version of Supabase CLI is available: v9 (currently installed v1)\n",
+  );
+  assert.deepEqual(parsed.rows, [{ local: "001", remote: "001" }]);
 });
