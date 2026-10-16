@@ -6,7 +6,7 @@ import type { FinanceiroPainel } from '../financeiroLojaTypes'
 import { FinanceiroTitulosOperations } from './FinanceiroTitulosOperations'
 import { FinanceiroPaginacao } from './FinanceiroWorkspace'
 import { FinanceiroPrimeiroUso } from './FinanceiroPrimeiroUso'
-import { FinanceiroAcoesRapidas, type FinanceiroAcaoRapida } from './FinanceiroAcoesRapidas'
+import { FinanceiroAcoesRapidas, useFinanceiroAcoesLabels, type FinanceiroAcaoRapida } from './FinanceiroAcoesRapidas'
 import { SectionCard } from '@/components/ui/admin-v2'
 import { EmptyState } from '@/components/ui/feedback'
 import { formatDateTimeOrDash } from '@/lib/format/datetime'
@@ -130,24 +130,7 @@ export function FinanceiroContent({
   const { idioma } = useAdminV2Session()
   const mensagens = getMessages(idioma)
   const ui = mensagens.admin_ui
-  const acoesLabels = {
-    faixaAria: ui.financeiro_acoes_aria,
-    registrarVenda: ui.financeiro_acao_registrar_venda,
-    receber: ui.financeiro_acao_receber,
-    pagar: ui.financeiro_acao_pagar,
-    transferir: ui.financeiro_acao_transferir,
-    vendaTitulo: ui.financeiro_acao_venda_titulo,
-    vendaTexto: ui.financeiro_acao_venda_texto,
-    vendaPdv: ui.financeiro_acao_venda_pdv,
-    vendaBuscar: ui.financeiro_acao_venda_buscar,
-    receberTitulo: ui.financeiro_acao_receber_titulo,
-    pagarTitulo: ui.financeiro_acao_pagar_titulo,
-    transferirTitulo: ui.financeiro_acao_transferir_titulo,
-    avulsoHint: ui.financeiro_acao_avulso_hint,
-    confirmarReceber: ui.financeiro_acao_confirmar_receber,
-    confirmarPagar: ui.financeiro_acao_confirmar_pagar,
-    confirmarTransferir: ui.financeiro_acao_confirmar_transferir,
-  }
+  const acoesLabels = useFinanceiroAcoesLabels()
 
   /** Abre um modal de operação; sem título de linha, o modal começa vazio. */
   function abrirAcao(proxima: FinanceiroAcaoRapida) {

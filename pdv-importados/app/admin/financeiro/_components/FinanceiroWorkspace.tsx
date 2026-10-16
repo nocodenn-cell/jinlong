@@ -13,7 +13,7 @@ import { FinanceiroContas } from './FinanceiroContas'
 import { FinanceiroRecebiveis } from './FinanceiroRecebiveis'
 import { FinanceiroConciliacao } from './FinanceiroConciliacao'
 import { FinanceiroPrimeiroUso } from './FinanceiroPrimeiroUso'
-import { FinanceiroAcoesRapidas, type FinanceiroAcaoRapida } from './FinanceiroAcoesRapidas'
+import { FinanceiroAcoesRapidas, useFinanceiroAcoesLabels, type FinanceiroAcaoRapida } from './FinanceiroAcoesRapidas'
 import { useAdminV2Session } from '@/components/ui/admin-v2/AdminV2SessionContext'
 import { getMessages } from '@/i18n/getMessages'
 
@@ -107,24 +107,7 @@ export function FinanceiroWorkspace({ data, tab, de, ate }: { data:FinanceiroPai
   origemDoc: ui.financeiro_origem_doc,
   semMovimentos: ui.financeiro_sem_movimentos,
  }
- const acoesLabels = {
-  faixaAria: ui.financeiro_acoes_aria,
-  registrarVenda: ui.financeiro_acao_registrar_venda,
-  receber: ui.financeiro_acao_receber,
-  pagar: ui.financeiro_acao_pagar,
-  transferir: ui.financeiro_acao_transferir,
-  vendaTitulo: ui.financeiro_acao_venda_titulo,
-  vendaTexto: ui.financeiro_acao_venda_texto,
-  vendaPdv: ui.financeiro_acao_venda_pdv,
-  vendaBuscar: ui.financeiro_acao_venda_buscar,
-  receberTitulo: ui.financeiro_acao_receber_titulo,
-  pagarTitulo: ui.financeiro_acao_pagar_titulo,
-  transferirTitulo: ui.financeiro_acao_transferir_titulo,
-  avulsoHint: ui.financeiro_acao_avulso_hint,
-  confirmarReceber: ui.financeiro_acao_confirmar_receber,
-  confirmarPagar: ui.financeiro_acao_confirmar_pagar,
-  confirmarTransferir: ui.financeiro_acao_confirmar_transferir,
- }
+ const acoesLabels = useFinanceiroAcoesLabels()
  return <div className="admin-v2-stack">
   <FinanceiroPeriodo de={de} ate={ate} />
   {(tab==='resumo' || tab==='contas') ? <FinanceiroPrimeiroUso semContas={data.contas.length === 0} /> : null}

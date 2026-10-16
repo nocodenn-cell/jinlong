@@ -19,10 +19,12 @@ import { ROUTES } from '@/lib/navigation/routes'
 import type { FinanceiroPainel } from '../financeiroLojaTypes'
 import { FinanceiroForm, FinanceiroField as Field } from './FinanceiroForm'
 import { ContaOptions, CategoriaOptions } from './FinanceiroOptions'
-import { FinanceiroDespesaForm } from './FinanceiroTitulosOperations'
+import { FinanceiroDespesaForm } from './FinanceiroDespesaForm'
 import { formatBRL } from '@/lib/format/money'
 import { opcoesComFoco, type FocoTituloConta } from './baixaLinha'
 import { useTextosBaixaForm } from './textosBaixaForm'
+import { useAdminV2Session } from '@/components/ui/admin-v2/AdminV2SessionContext'
+import { getMessages } from '@/i18n/getMessages'
 
 export type FinanceiroAcaoRapida = 'venda' | 'receber' | 'pagar' | 'transferir' | null
 
@@ -76,6 +78,30 @@ function PainelShell({
       <div className="admin-v2-stack max-h-[70vh] overflow-y-auto p-1">{children}</div>
     </DragonModal>
   )
+}
+
+/** Rótulos das operações no idioma da sessão. Fonte única para as abas que usam este componente. */
+export function useFinanceiroAcoesLabels(): Labels {
+  const { idioma } = useAdminV2Session()
+  const ui = getMessages(idioma).admin_ui
+  return {
+    faixaAria: ui.financeiro_acoes_aria,
+    registrarVenda: ui.financeiro_acao_registrar_venda,
+    receber: ui.financeiro_acao_receber,
+    pagar: ui.financeiro_acao_pagar,
+    transferir: ui.financeiro_acao_transferir,
+    vendaTitulo: ui.financeiro_acao_venda_titulo,
+    vendaTexto: ui.financeiro_acao_venda_texto,
+    vendaPdv: ui.financeiro_acao_venda_pdv,
+    vendaBuscar: ui.financeiro_acao_venda_buscar,
+    receberTitulo: ui.financeiro_acao_receber_titulo,
+    pagarTitulo: ui.financeiro_acao_pagar_titulo,
+    transferirTitulo: ui.financeiro_acao_transferir_titulo,
+    avulsoHint: ui.financeiro_acao_avulso_hint,
+    confirmarReceber: ui.financeiro_acao_confirmar_receber,
+    confirmarPagar: ui.financeiro_acao_confirmar_pagar,
+    confirmarTransferir: ui.financeiro_acao_confirmar_transferir,
+  }
 }
 
 export function FinanceiroAcoesRapidas({ data, labels, mostrar, acao: acaoProp, onAcao, foco = null }: Props) {
