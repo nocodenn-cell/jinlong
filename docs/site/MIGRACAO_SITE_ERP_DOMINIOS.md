@@ -24,6 +24,8 @@ O que mudou no código do site (o ERP **não** foi alterado):
 
 Estado verificado em 2026-10-16 (somente leitura): `jinlong.app` → 307 → `www.jinlong.app`; `www.jinlong.app` → 307 → `/login` (ERP, projeto `pdv-importados`); `app.jinlong.app` resolve no DNS (curinga) mas não responde HTTP (não vinculado); `jinlong-site` só tem `jinlong-site.vercel.app`.
 
+**Fase 2 — domínio executado em 2026-10-16 (autorizado):** `app.jinlong.app` vinculado ao `pdv-importados` (`vercel domains add`, verificado; certificado TLS `CN=app.jinlong.app`). `www.jinlong.app` mantido. Verificado: `app.jinlong.app/` → 307 `/login`; `/login` 200; `/admin`, `/caixa`, `/gerente` sem sessão → 307 `/login?next=…`, idêntico ao `www`. **Pendentes (Supabase, pelo responsável):** Redirect URLs e secret `VALIDAR_GERENTE_ALLOWED_ORIGINS`; depois, homologação. Rollback: `vercel domains rm app.jinlong.app --scope jinlong` (remove só o `app`; `www` não é afetado).
+
 ### Ordem obrigatória (cada passo de produção exige autorização)
 1. **Merge do PR** — sem efeito em produção: o site não tem domínio próprio; o ERP não muda.
 2. **Fase 2:** vincular `app.jinlong.app` ao `pdv-importados` (sem remover `www`); Supabase *Redirect URLs* += `https://app.jinlong.app/**`; secret `VALIDAR_GERENTE_ALLOWED_ORIGINS` += `https://app.jinlong.app`; homologar (`HOMOLOGACAO_APP_JINLONG_APP.md`). Até aqui o "Entrar" do site (só em Preview) aponta para um host que ainda não responde — esperado.
