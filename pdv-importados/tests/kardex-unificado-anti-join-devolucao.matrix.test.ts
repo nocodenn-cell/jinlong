@@ -3,7 +3,8 @@
  *
  * 20260821110000 restaurou INSERT em movimentos_estoque_log; a view 291
  * ainda fazia UNION ALL com estoque_reposicoes_devolucao sem anti-join.
- * Canônico: 20260828110000.
+ * Corrigido em 20260828110000; o ramo de cancelamento (erc) ganhou o mesmo
+ * anti-join em 20261015120000, que é a definição vigente.
  */
 import fs from 'node:fs'
 import path from 'node:path'
@@ -15,6 +16,7 @@ const MIGRATIONS = path.resolve(ROOT, '../backend/supabase/migrations')
 const LEGACY = '20260805185445_291_estoque_baixas_integridade.sql'
 const WRITE_SIDE = '20260821110000_restore_devolver_ou_trocar_venda_kardex_ssot04.sql'
 const FIX = '20260828110000_fix_v_kardex_unificado_anti_join_devolucao.sql'
+const CURRENT = '20261015120000_fix_v_kardex_unificado_anti_join_cancelamento.sql'
 const CREATE_VIEW_RE = /CREATE(?: OR REPLACE)? VIEW public\.v_kardex_unificado/i
 
 function latestKardexViewMigration(): string {
@@ -44,12 +46,21 @@ describe('v_kardex_unificado anti-join devolução', () => {
     expect(files.indexOf(FIX)).toBeGreaterThan(files.indexOf(WRITE_SIDE))
   })
 
-  it('a definição vigente da view é a migration corretiva', () => {
-    expect(latestKardexViewMigration()).toBe(FIX)
+  it('a definição vigente da view é a migration corretiva do cancelamento', () => {
+    expect(latestKardexViewMigration()).toBe(CURRENT)
+  })
+
+  it('ramo erc (cancelamento) omite o estorno já lançado no log como "cancelamento de venda"', () => {
+    const src = fs.readFileSync(path.join(MIGRATIONS, CURRENT), 'utf8')
+    const erc = src.split(/UNION ALL/i).find((p) => /FROM\s+estoque_reposicoes_cancelamento\b/i.test(p))
+    expect(erc).toBeDefined()
+    expect(erc).toMatch(/NOT EXISTS/i)
+    expect(erc).toContain("mel.tipo_codigo = 'ENTRADA_DEVOLUCAO_CLIENTE'")
+    expect(erc).toContain("LIKE 'cancelamento de venda%'")
   })
 
   it('ramo erd omite linhas já lançadas em movimentos_estoque_log', () => {
-    const src = fs.readFileSync(path.join(MIGRATIONS, FIX), 'utf8')
+    const src = fs.readFileSync(path.join(MIGRATIONS, CURRENT), 'utf8')
     const erd = erdUnionBranch(src)
     expect(erd).toMatch(/NOT EXISTS/i)
     expect(erd).toContain("mel.tipo_codigo = 'ENTRADA_DEVOLUCAO_CLIENTE'")
@@ -59,7 +70,7 @@ describe('v_kardex_unificado anti-join devolução', () => {
   })
 
   it('preserva anti-join de baixas (DAT-01) e o fallback erd para legado', () => {
-    const src = fs.readFileSync(path.join(MIGRATIONS, FIX), 'utf8')
+    const src = fs.readFileSync(path.join(MIGRATIONS, CURRENT), 'utf8')
     expect(src).toContain('NULLIF(eb.quantidade, 0)')
     expect(src).toContain("mel.tipo_codigo = 'SAIDA_VENDA'")
     expect(src).toContain('estoque_reposicoes_devolucao')
