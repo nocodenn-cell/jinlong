@@ -402,7 +402,7 @@ export function ImprimirEtiquetasPageClient({
               <Printer className="h-5 w-5" />
               <span className="font-medium">{t.gerarPdf}</span>
               {totalEtiquetas > 0 ? (
-                <span className="rounded-full bg-[var(--color-surface)]/20 px-2 py-0.5 text-caption">
+                <span className="rounded-full bg-[color-mix(in_srgb,var(--color-surface)_20%,transparent)] px-2 py-0.5 text-caption">
                   {totalEtiquetas}
                 </span>
               ) : null}
