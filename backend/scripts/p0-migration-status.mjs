@@ -329,9 +329,11 @@ function parseMigrationListJson(stdout) {
   const jsonStart = stdout.indexOf("{");
   if (jsonStart < 0) return null;
 
+  // CLIs desatualizados imprimem o aviso "A new version ... is available" DEPOIS do JSON.
+  const jsonEnd = stdout.lastIndexOf("}");
   let payload;
   try {
-    payload = JSON.parse(stdout.slice(jsonStart).trim());
+    payload = JSON.parse(stdout.slice(jsonStart, jsonEnd + 1));
   } catch {
     return null;
   }

@@ -214,3 +214,11 @@ test("divergência local≠remote não é tratada como pendência do PR", () => 
   assert.deepEqual(result.blocking, blocking);
   assert.deepEqual(result.prPending, []);
 });
+
+test("ignora o aviso de nova versão do CLI impresso após o JSON", () => {
+  const parsed = parseMigrationListOutput(
+    'Connecting...\n{"migrations":[{"local":"001","remote":"001","time":""}],"message":"ok"}\n' +
+      "A new version of Supabase CLI is available: v9 (currently installed v1)\n",
+  );
+  assert.deepEqual(parsed.rows, [{ local: "001", remote: "001" }]);
+});
