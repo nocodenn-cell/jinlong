@@ -1,5 +1,7 @@
 /** Helpers puros do modal Retirar / Ajustar — testáveis sem React. */
 
+import { motivoCompativelComDelta } from '@shared-core/src/inventory/errorCodes'
+
 export function fmtQtd(n: number): string {
   return n.toLocaleString('pt-BR', { maximumFractionDigits: 3 })
 }
@@ -57,4 +59,12 @@ export function validarRetirada(atual: number, raw: string): ValidacaoRetirada {
   if (!Number.isFinite(n) || n <= 0) return { ok: false, erro: 'invalido' }
   if (n > atual) return { ok: false, erro: 'excede' }
   return { ok: true, qtd: n, novoSaldo: saldoAposRetirada(atual, n) }
+}
+
+/**
+ * Motivos oferecidos para a diferença digitada — mesma regra da RPC
+ * (PERDA/QUEBRA só reduzem, COMPRA só aumenta; delta 0 mostra todos).
+ */
+export function motivosParaDelta<T extends { value: string }>(motivos: T[], delta: number): T[] {
+  return motivos.filter((m) => motivoCompativelComDelta(m.value, delta))
 }

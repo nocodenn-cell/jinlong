@@ -41,6 +41,8 @@ const CODE_TO_PT: Record<InventoryErrorCode, string> = {
   [INVENTORY_ERROR_CODES.QTY_INVALID]: 'Quantidade de estoque inválida.',
   [INVENTORY_ERROR_CODES.MIN_INVALID]: 'Estoque mínimo inválido.',
   [INVENTORY_ERROR_CODES.REASON_INVALID]: 'Motivo de ajuste de estoque inválido.',
+  [INVENTORY_ERROR_CODES.REASON_SIGN_MISMATCH]:
+    'Esse motivo não combina com a direção do ajuste: Perda e Quebra só reduzem o saldo, Compra só aumenta.',
   [INVENTORY_ERROR_CODES.OBS_REQUIRED]: 'Informe uma observação para este ajuste.',
   [INVENTORY_ERROR_CODES.PROFILE_DENIED]:
     'Seu perfil não pode ajustar estoque. Use uma conta de gerente, dono ou administrador.',

@@ -912,6 +912,7 @@
     "err_qtd_invalida": "库存数量无效。",
     "err_min_invalido": "最低库存无效。",
     "err_motivo_invalido": "库存调整原因无效。",
+    "err_motivo_sinal": "该原因与调整方向不符：损耗和破损只能减少库存，采购只能增加库存。请选择其他原因。",
     "err_obs_obrigatoria": "请填写本次调整的说明。",
     "err_perfil": "当前角色无法调整库存。请使用经理、店主或管理员账号。",
     "err_insuficiente": "库存不足，无法完成本操作。",

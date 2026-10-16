@@ -915,6 +915,7 @@
     "err_qtd_invalida": "Quantidade de estoque inválida.",
     "err_min_invalido": "Estoque mínimo inválido.",
     "err_motivo_invalido": "Motivo de ajuste de estoque inválido.",
+    "err_motivo_sinal": "Esse motivo não combina com a direção do ajuste: Perda e Quebra só reduzem o saldo, Compra só aumenta. Escolha outro motivo.",
     "err_obs_obrigatoria": "Informe uma observação para este ajuste.",
     "err_perfil": "Seu perfil não pode ajustar estoque. Use uma conta de gerente, dono ou administrador.",
     "err_insuficiente": "Estoque insuficiente para esta operação.",

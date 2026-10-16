@@ -172,6 +172,12 @@ describe('inventory — contracts (split de leitura)', () => {
     expect(mapAjusteRpcMessageToCode('AJUSTE_ESTOQUE_SALDO_ALTERADO')).toBe(
       INVENTORY_ERROR_CODES.STALE_BALANCE,
     )
+    expect(mapAjusteRpcMessageToCode('AJUSTE_ESTOQUE_MOTIVO_SINAL_INVALIDO')).toBe(
+      INVENTORY_ERROR_CODES.REASON_SIGN_MISMATCH,
+    )
+    expect(mapAjusteRpcMessageToCode('AJUSTE_ESTOQUE_MOTIVO_INVALIDO')).toBe(
+      INVENTORY_ERROR_CODES.REASON_INVALID,
+    )
     expect(validateAdjustInventoryCommand({
       productId: 'p1',
       lojaId: 'l1',
@@ -191,6 +197,7 @@ describe('inventory — barrel exports', () => {
     )
     expect(fns.sort()).toEqual([
       'mapAjusteRpcMessageToCode',
+      'motivoCompativelComDelta',
       'validateAdjustInventoryCommand',
     ])
   })

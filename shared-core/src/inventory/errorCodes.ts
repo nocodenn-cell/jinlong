@@ -12,6 +12,7 @@ export const INVENTORY_ERROR_CODES = {
   QTY_INVALID: 'INVENTORY_QTY_INVALID',
   MIN_INVALID: 'INVENTORY_MIN_INVALID',
   REASON_INVALID: 'INVENTORY_REASON_INVALID',
+  REASON_SIGN_MISMATCH: 'INVENTORY_REASON_SIGN_MISMATCH',
   OBS_REQUIRED: 'INVENTORY_OBS_REQUIRED',
   PROFILE_DENIED: 'INVENTORY_PROFILE_DENIED',
   INSUFFICIENT: 'INVENTORY_INSUFFICIENT',
@@ -50,6 +51,16 @@ export const INVENTORY_ADJUST_REASONS = [
 
 export type InventoryAdjustReason = (typeof INVENTORY_ADJUST_REASONS)[number]
 
+/**
+ * Motivo coerente com o sinal do ajuste (espelho da RPC): PERDA/QUEBRA só
+ * reduzem saldo; COMPRA só aumenta. Delta 0 (só mínimo) aceita qualquer motivo.
+ */
+export function motivoCompativelComDelta(reason: string, delta: number): boolean {
+  if (!Number.isFinite(delta) || delta === 0) return true
+  if (delta > 0) return reason !== 'PERDA' && reason !== 'QUEBRA'
+  return reason !== 'COMPRA'
+}
+
 /** Mapeia fragmento de erro RPC → code de domínio. */
 export function mapAjusteRpcMessageToCode(detalhe: string): InventoryErrorCode {
   const raw = (detalhe ?? '').trim()
@@ -61,6 +72,9 @@ export function mapAjusteRpcMessageToCode(detalhe: string): InventoryErrorCode {
   if (raw.includes('AJUSTE_ESTOQUE_LOJA_INVALIDA')) return INVENTORY_ERROR_CODES.LOJA_MISMATCH
   if (raw.includes('AJUSTE_ESTOQUE_QTD_INVALIDA')) return INVENTORY_ERROR_CODES.QTY_INVALID
   if (raw.includes('AJUSTE_ESTOQUE_MIN_INVALIDO')) return INVENTORY_ERROR_CODES.MIN_INVALID
+  if (raw.includes('AJUSTE_ESTOQUE_MOTIVO_SINAL_INVALIDO')) {
+    return INVENTORY_ERROR_CODES.REASON_SIGN_MISMATCH
+  }
   if (raw.includes('AJUSTE_ESTOQUE_MOTIVO_INVALIDO')) return INVENTORY_ERROR_CODES.REASON_INVALID
   if (raw.includes('AJUSTE_ESTOQUE_OBSERVACAO_OBRIGATORIA')) {
     return INVENTORY_ERROR_CODES.OBS_REQUIRED

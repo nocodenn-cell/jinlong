@@ -27,6 +27,7 @@ export {
   INVENTORY_ADJUST_REASONS,
   INVENTORY_ERROR_CODES,
   mapAjusteRpcMessageToCode,
+  motivoCompativelComDelta,
 } from './errorCodes'
 
 export type {
