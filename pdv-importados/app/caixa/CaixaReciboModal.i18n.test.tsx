@@ -57,6 +57,7 @@ const thermal: UseThermalPrinterReturn = {
   errorMsg: null,
   connect: vi.fn(async () => {}),
   printRecibo: vi.fn(async () => {}),
+  abrirGaveta: vi.fn(async () => true),
   disconnect: vi.fn(async () => {}),
 }
 
