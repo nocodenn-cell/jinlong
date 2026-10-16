@@ -50,6 +50,7 @@ export function CaixaReciboModal({
   thermal,
 }: Props) {
   const printRef = useRef<HTMLDivElement>(null)
+  const gavetaSolicitadaRef = useRef(false)
   const supportsWebUSB = typeof navigator !== "undefined" && "usb" in navigator
   const labels = buildReciboLabels(m)
   const venda = useMemo<ReciboVenda>(
@@ -57,6 +58,15 @@ export function CaixaReciboModal({
     [vendaBase, lojaNome, segundaVia],
   )
   const termicaEmUso = thermal.status === "connected" || thermal.status === "printing"
+
+  // Só primeira via, apresentada após confirmação da venda. A reimpressão
+  // não aciona a gaveta e a falha do hardware nunca desfaz uma venda.
+  useEffect(() => {
+    if (gavetaSolicitadaRef.current || segundaVia) return
+    if (!venda.pagamentos.some((p) => p.formaPagamento === "DINHEIRO" && p.valor > 0)) return
+    gavetaSolicitadaRef.current = true
+    void thermal.abrirGaveta()
+  }, [segundaVia, venda.vendaId, venda.pagamentos, thermal.abrirGaveta])
 
   const handleThermalPrint = async () => {
     if (!thermal.deviceInfo) {
