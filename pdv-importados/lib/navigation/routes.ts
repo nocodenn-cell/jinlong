@@ -123,6 +123,11 @@ export function adminVendaDetalheQuery(vendaId: string): string {
   return pathWithQuery(ROUTES.admin.vendas, q)
 }
 
+/** Abre Vendas com o histórico completo (sem `periodo`, a tela abre só "hoje"). */
+export function adminVendasHistoricoCompletoHref(): string {
+  return pathWithQuery(ROUTES.admin.vendas, new URLSearchParams({ periodo: 'tudo' }))
+}
+
 /** Abre Comissões já com o detalhe de um funcionário/operador (ex.: a partir de Funcionários). */
 export function adminComissoesOperadorQuery(operadorId: string): string {
   const q = new URLSearchParams()

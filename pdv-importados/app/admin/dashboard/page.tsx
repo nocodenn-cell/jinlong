@@ -662,6 +662,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
             statusCancelled: L.statusCancelled[lk],
             empty: L.tableEmpty[lk],
             emptyDescription: L.tableEmptyDescription[lk],
+            emptyActionLabel: L.tableEmptyCta[lk],
             openOrdersAria: L.openOrdersAria[lk],
             loadFailed: adminUi.errors.tableLoadFailed[lk],
           }}
