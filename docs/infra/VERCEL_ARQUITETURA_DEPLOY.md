@@ -44,7 +44,7 @@ O site **não autentica** e nunca chama o Supabase. A navegação site → ERP �
 |---|---|---|
 | Cookies de sessão | Não para funcionar; sim se quiser sessão compartilhada | `@supabase/ssr` sem `domain` → cookies *host-only*. Em `app.jinlong.app` o usuário faz **um novo login** uma vez (decisão aprovada em 2026-10-08). Compartilhar sessão entre hosts exigiria `domain=.jinlong.app` — mudança de auth, não recomendada (o site não precisa de sessão) |
 | Callback de recuperação de senha | Sim (configuração, não código) | `redirectTo` = `window.location.origin + /auth/callback` → funciona em qualquer host, mas o Supabase precisa permitir `https://app.jinlong.app/**` nas *Redirect URLs*. `site_url` só muda no corte |
-| CORS da Edge `validar-gerente` | Sim (secret) | `VALIDAR_GERENTE_ALLOWED_ORIGINS` precisa incluir `https://app.jinlong.app` |
+| CORS da Edge `validar-gerente` | Não | chamada por server action (sem `Origin`), então a allowlist não se aplica; o `www` também não está na lista hoje (verificado em 2026-10-17) |
 | Middleware do ERP | Não | sem lógica por host; nenhum domínio fixo no código do ERP |
 | Redirects de links antigos | Sim, no corte | site com `ERP_REDIRECT_ORIGIN=https://app.jinlong.app` redireciona `/login`, `/admin/*`, `/caixa/*`, `/gerente/*`, `/api/*`, `/auth/*` com **307** (preserva método e query) — já implementado em `site/lib/erpRedirects.ts` |
 | Estado local do PDV | Atenção operacional | carrinho (`pdv-carrinho`) e identificador do terminal ficam no `localStorage` por origem → **corte com caixas fechados** |

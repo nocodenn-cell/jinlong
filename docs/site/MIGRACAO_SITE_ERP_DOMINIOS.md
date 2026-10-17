@@ -24,11 +24,18 @@ O que mudou no código do site (o ERP **não** foi alterado):
 
 Estado verificado em 2026-10-16 (somente leitura): `jinlong.app` → 307 → `www.jinlong.app`; `www.jinlong.app` → 307 → `/login` (ERP, projeto `pdv-importados`); `app.jinlong.app` resolve no DNS (curinga) mas não responde HTTP (não vinculado); `jinlong-site` só tem `jinlong-site.vercel.app`.
 
-**Fase 2 — domínio executado em 2026-10-16 (autorizado):** `app.jinlong.app` vinculado ao `pdv-importados` (`vercel domains add`, verificado; certificado TLS `CN=app.jinlong.app`). `www.jinlong.app` mantido. Verificado: `app.jinlong.app/` → 307 `/login`; `/login` 200; `/admin`, `/caixa`, `/gerente` sem sessão → 307 `/login?next=…`, idêntico ao `www`. **Pendentes (Supabase, pelo responsável):** Redirect URLs e secret `VALIDAR_GERENTE_ALLOWED_ORIGINS`; depois, homologação. Rollback: `vercel domains rm app.jinlong.app --scope jinlong` (remove só o `app`; `www` não é afetado).
+**Fase 2 — domínio executado em 2026-10-16 (autorizado):** `app.jinlong.app` vinculado ao `pdv-importados` (`vercel domains add`, verificado; certificado TLS `CN=app.jinlong.app`). `www.jinlong.app` mantido. Verificado: `app.jinlong.app/` → 307 `/login`; `/login` 200; `/admin`, `/caixa`, `/gerente` sem sessão → 307 `/login?next=…`, idêntico ao `www`. **Pendente (Supabase, pelo responsável):** Redirect URLs; depois, homologação. O secret `VALIDAR_GERENTE_ALLOWED_ORIGINS` **não precisa mudar** (ver abaixo).
+
+**`VALIDAR_GERENTE_ALLOWED_ORIGINS` — verificado em 2026-10-17 (somente leitura):**
+- O ERP só chama a Edge `validar-gerente` pelo servidor: `app/caixa/actions.ts` (`'use server'`) → `caixaGerenteDesconto.impl.ts` → `fetch` no Node da Vercel, **sem cabeçalho `Origin`**. A Edge só bloqueia por CORS requisições **com** `Origin` (`corsOriginForbidden`). `CaixaPageClient` e `PagamentoModal` usam a server action; nenhum código de navegador nem o desktop (Tauri) chama a Edge diretamente.
+- Preflight `OPTIONS` em produção: `http://localhost:3000` → 204; `https://www.jinlong.app`, `https://app.jinlong.app`, `https://jinlong.app`, os três aliases `*.vercel.app` e uma origem estranha → 403; sem `Origin` → 204. Ou seja, o `www` **já não está** na lista hoje e o desconto com gerente funciona em produção mesmo assim.
+- `supabase secrets list` (só nomes e digests): o secret existe e foi atualizado pela última vez em 2026-04-17; `VALIDAR_GERENTE_CORS_STRICT` **não** está definido.
+- Conclusão: o domínio `app` não depende desse secret. Alterá-lo agora não traz benefício e arrisca perder entradas desconhecidas. Se no futuro houver chamada direta do navegador, definir o valor completo com quem conhece a configuração e repetir o teste de preflight antes e depois.
+- Observação de segurança (fora do escopo): `http://localhost:3000` está liberado em produção. O risco é baixo (exige JWT e senha do gerente), mas a remoção pode ser avaliada à parte. Rollback: `vercel domains rm app.jinlong.app --scope jinlong` (remove só o `app`; `www` não é afetado).
 
 ### Ordem obrigatória (cada passo de produção exige autorização)
 1. **Merge do PR** — sem efeito em produção: o site não tem domínio próprio; o ERP não muda.
-2. **Fase 2:** vincular `app.jinlong.app` ao `pdv-importados` (sem remover `www`); Supabase *Redirect URLs* += `https://app.jinlong.app/**`; secret `VALIDAR_GERENTE_ALLOWED_ORIGINS` += `https://app.jinlong.app`; homologar (`HOMOLOGACAO_APP_JINLONG_APP.md`). Até aqui o "Entrar" do site (só em Preview) aponta para um host que ainda não responde — esperado.
+2. **Fase 2:** vincular `app.jinlong.app` ao `pdv-importados` (sem remover `www`); Supabase *Redirect URLs* += `https://app.jinlong.app/**`; secret `VALIDAR_GERENTE_ALLOWED_ORIGINS` sem mudança (a chamada é feita pelo servidor, sem `Origin`); homologar (`HOMOLOGACAO_APP_JINLONG_APP.md`). Até aqui o "Entrar" do site (só em Preview) aponta para um host que ainda não responde — esperado.
 3. **Fase 4 (corte, caixas fechados):** no `jinlong-site`, `ERP_REDIRECT_ORIGIN=https://app.jinlong.app` (e `NEXT_PUBLIC_SITE_URL` vazio ou `https://jinlong.app`; **nunca** `www`, senão o redirect www→apex fica inerte) → redeploy → mover `jinlong.app` e `www.jinlong.app` do `pdv-importados` para o `jinlong-site` (ambos como domínios normais, ou `www` como redirect de domínio da Vercel para `jinlong.app`) → Supabase `site_url = https://app.jinlong.app`.
 4. Verificação pós-corte (`curl -sI`): `jinlong.app/pt-BR` 200; `www.jinlong.app/` → `jinlong.app/`; `www.jinlong.app/login?next=/caixa` e `jinlong.app/login` → `app.jinlong.app/login…`; `POST /api/*` → 307; `app.jinlong.app/login` 200.
 
@@ -74,7 +81,7 @@ Redirects são 307 de propósito: navegadores não os fixam, então o rollback n
 - Em `app.jinlong.app`, os dois começam vazios: carrinho vazio e um **novo** identificador de terminal.
 
 ### CORS, CSP e cabeçalhos
-- Edge `validar-gerente`: allowlist em `VALIDAR_GERENTE_ALLOWED_ORIGINS` (secret remoto) → **precisa incluir `https://app.jinlong.app`**.
+- Edge `validar-gerente`: allowlist em `VALIDAR_GERENTE_ALLOWED_ORIGINS` (secret remoto). *Corrigido em 2026-10-17:* **não** precisa incluir `https://app.jinlong.app`, porque o ERP chama a Edge pelo servidor, sem `Origin` (ver "Atualização 2026-10-16").
 - Edge `sync-outbox`: reflete qualquer `Origin` (não muda com o domínio; observação de segurança fora deste escopo).
 - ERP: sem CSP nem `X-Frame-Options` (observação, fora do escopo). Site: CSP restrita, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`.
 

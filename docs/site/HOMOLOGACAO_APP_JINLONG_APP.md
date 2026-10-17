@@ -30,7 +30,7 @@
 ## Configurações remotas necessárias (não autorizadas ainda)
 
 1. Supabase Auth → *Redirect URLs*: adicionar `https://app.jinlong.app/**`, mantendo as de `www`.
-2. Secret da Edge `validar-gerente`: acrescentar `https://app.jinlong.app` a `VALIDAR_GERENTE_ALLOWED_ORIGINS`, mantendo as atuais.
+2. ~~Secret da Edge `validar-gerente`~~: **não é necessário** (verificado em 2026-10-17). A Edge é chamada por server action, sem `Origin`; o `www` também não está na lista e funciona. Ver `MIGRACAO_SITE_ERP_DOMINIOS.md`.
 3. Vercel: vincular `app.jinlong.app` ao projeto `pdv-importados` (sem remover `www`).
 4. Variável do ERP `NEXT_PUBLIC_APP_URL` (usada no SSR, `lib/auth/appOrigin.ts`): revisar se está definida; no navegador vale `window.location.origin`.
 
@@ -56,7 +56,7 @@
 | P2 | Venda varejo (Pix) | recibo; estoque −1 |
 | P3 | Venda atacado (qtd ≥ mínimo) | preço de atacado |
 | P4 | Pagamento parcial com cliente | conta a receber gerada |
-| P5 | Desconto com autorização de gerente | `validar-gerente` responde (CORS ok, sem erro de origem) |
+| P5 | Desconto com autorização de gerente | token emitido (a chamada é feita pelo servidor; nenhum `ORIGIN_NOT_ALLOWED`) |
 | P6 | Venda em espera, recarregar a página | carrinho recuperado na **mesma** origem |
 | P7 | Fechamento de caixa | fecha sem erro; conferência igual à de `www` |
 | P8 | Comparar com `www` no mesmo dia | vendas e saldos coincidem (mesmo banco) |
