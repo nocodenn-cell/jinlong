@@ -1,7 +1,36 @@
 # Plano de homologação — ERP em app.jinlong.app
 
-**Status:** plano. Nada deste documento foi executado. Cada etapa remota exige autorização própria.
+**Status (2026-10-17):** pré-requisitos concluídos (domínio vinculado em 2026-10-16; Redirect URLs `https://app.jinlong.app/**` e `https://www.jinlong.app/**` cadastradas pelo responsável). **Parte sem login: aprovada. Parte com login: pendente (bloqueio abaixo).**
 **Pré-requisito:** Fase 2 do runbook (`MIGRACAO_SITE_ERP_DOMINIOS.md`): domínio `app.jinlong.app` vinculado ao `pdv-importados`, mantendo `www.jinlong.app` ativo.
+
+## Resultado — parte sem login (2026-10-17, sem gravar dados)
+
+Método: `curl` contra `www` e `app` lado a lado, navegador integrado em `https://app.jinlong.app/login`, leitura do código e Sentry. Nenhum login, venda, movimentação ou envio de e-mail.
+
+| # | Verificação | `www` | `app` | Resultado |
+|---|---|---|---|---|
+| H1 | Mesmo deploy | `dpl_AzdCk3JMkCqSaMH3HnNY8Rx8uXaA` | idem (HTML e `/api/health`) | ✅ código idêntico |
+| H2 | Cabeçalhos (HSTS, `nosniff`, `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy`, `Cache-Control: no-store`) | presentes | idênticos | ✅ |
+| H3 | TLS | — | `CN=app.jinlong.app`, válido até 2027-01-14 | ✅ |
+| H4 | `/login`, `/auth/esqueci-senha`, `/auth/redefinir-senha` | 200 | 200 | ✅ |
+| H5 | `/admin/estoque`, `/caixa`, `/gerente/recebimento`, `/auth/alterar-senha` sem sessão | 307 → `/login?next=…` no próprio host | idem | ✅ permissões barram anônimo |
+| H6 | `/auth/callback` sem código / código inválido | 307 → `esqueci-senha?erro=link_invalido` / `link_expirado` | idem, no próprio host | ✅ fluxo PKCE trata erro na origem certa |
+| H7 | APIs `/api/gerente/{health,fila/status,notificacoes/count,atividades/recent}` sem sessão | 401 | 401 | ✅ (o middleware não cobre `/api`; as rotas se protegem sozinhas) |
+| H8 | `/api/health` | 200 `ok` | 200 `ok` | ✅ |
+| H9 | Open redirect `?next=https://evil.example` | — | — | ✅ por código: `LoginForm.destinoAposLogin` e `auth/callback.safeNextPath` aceitam só caminhos internos (`/admin`, `/caixa`, `/gerente`…) |
+| H10 | Navegador: login renderiza, assets 200 no próprio host, console sem erros | — | ✅ | ✅ |
+| H11 | Troca de idioma pt ↔ zh (só cookie) | — | ✅ e voltou para pt | ✅ |
+| H12 | Sentry 24 h | — | nenhum erro novo; só `caixa.finalizar_venda.sucesso` (evento informativo, não erro) | ✅ |
+| H13 | `validar-gerente` | chamada pelo servidor, sem `Origin`; secret inalterado | idem | ✅ não depende do domínio |
+
+## Bloqueio — parte com login
+
+O agente não digita senhas em produção (regra de segurança), e os testes de caixa, estoque e desconto movimentam dados reais se feitos em loja de produção. Por isso A1–A9, P1–P6 e os blocos de estoque ficam **com o responsável**, usando contas e loja de teste:
+1. A2/A4/A7: entrar em `app` com um perfil de cada (admin, gerente, caixa), conferir a rota de destino, sair; repetir com `www` aberto em outra aba (sessões independentes).
+2. A9: `https://app.jinlong.app/login?next=/caixa` e depois `?next=https://evil.example` (deve cair na rota padrão do perfil).
+3. Estoque (somente leitura): abrir `/admin/estoque` e `/admin/estoque/movimentacoes` e conferir os mesmos saldos vistos no `www`.
+4. Caixa e desconto: **só em loja de teste** (ou sem finalizar). Abrir o caixa, montar o carrinho, pedir desconto com senha de gerente (P5: o token deve ser emitido) e cancelar a venda antes de finalizar. Se não houver loja de teste, P1–P4 ficam para o piloto (Fase 3), com um caixa real e supervisão.
+5. A5 (opcional): "esqueci a senha" com uma conta de teste; o link do e-mail deve abrir em `app.jinlong.app/auth/callback` e levar a `redefinir-senha`.
 
 ## Decisão de migração (aprovada em 2026-10-08)
 
