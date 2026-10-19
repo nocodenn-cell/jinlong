@@ -153,6 +153,8 @@ test('links legais e de login apontam para o ERP', async ({ page }) => {
   await openHome(page, 'pt-BR')
   const privacy = await page.locator('footer a[href$="/privacidade"]').getAttribute('href')
   expect(privacy).toMatch(/^https:\/\/[^/]+\/privacidade$/)
+  const login = await page.locator('footer a[href$="/login"]').getAttribute('href')
+  expect(login).toMatch(/^https:\/\/[^/]+\/login$/)
 })
 
 test('cabeçalhos de segurança presentes', async ({ page }) => {

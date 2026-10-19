@@ -18,7 +18,7 @@ Runbook de migração de domínios já existente (mantido como fonte detalhada):
 
 O site tem uma entrada clara para o sistema ("Entrar" / "Acessar o sistema") apontando para `https://app.jinlong.app/login`, controlada por `NEXT_PUBLIC_ERP_URL` (já suportado em `site/lib/erpLinks.ts`).
 
-> **Diferença em relação ao runbook de 2026-10-08:** lá o domínio canônico do site era `www.jinlong.app` (apex → `www`). O pedido atual inverte (`www` → apex). Tecnicamente as duas formas funcionam na Vercel; a escolha é de marca/SEO e **precisa de aprovação** antes da Fase 4. O código do site só precisa de `NEXT_PUBLIC_SITE_URL` coerente com a escolha.
+> **Diferença em relação ao runbook de 2026-10-08:** lá o domínio canônico do site era `www.jinlong.app` (apex → `www`). **Decidido em 2026-10-16: canônico no apex (`www` → `jinlong.app`).** O código do site já usa esse padrão (`feat/jinlong-site-erp-integration`); ordem do corte e rollback em `docs/site/MIGRACAO_SITE_ERP_DOMINIOS.md`.
 
 ## 2. Por que não unificar o frontend
 
@@ -44,7 +44,7 @@ O site **não autentica** e nunca chama o Supabase. A navegação site → ERP �
 |---|---|---|
 | Cookies de sessão | Não para funcionar; sim se quiser sessão compartilhada | `@supabase/ssr` sem `domain` → cookies *host-only*. Em `app.jinlong.app` o usuário faz **um novo login** uma vez (decisão aprovada em 2026-10-08). Compartilhar sessão entre hosts exigiria `domain=.jinlong.app` — mudança de auth, não recomendada (o site não precisa de sessão) |
 | Callback de recuperação de senha | Sim (configuração, não código) | `redirectTo` = `window.location.origin + /auth/callback` → funciona em qualquer host, mas o Supabase precisa permitir `https://app.jinlong.app/**` nas *Redirect URLs*. `site_url` só muda no corte |
-| CORS da Edge `validar-gerente` | Sim (secret) | `VALIDAR_GERENTE_ALLOWED_ORIGINS` precisa incluir `https://app.jinlong.app` |
+| CORS da Edge `validar-gerente` | Não | chamada por server action (sem `Origin`), então a allowlist não se aplica; o `www` também não está na lista hoje (verificado em 2026-10-17) |
 | Middleware do ERP | Não | sem lógica por host; nenhum domínio fixo no código do ERP |
 | Redirects de links antigos | Sim, no corte | site com `ERP_REDIRECT_ORIGIN=https://app.jinlong.app` redireciona `/login`, `/admin/*`, `/caixa/*`, `/gerente/*`, `/api/*`, `/auth/*` com **307** (preserva método e query) — já implementado em `site/lib/erpRedirects.ts` |
 | Estado local do PDV | Atenção operacional | carrinho (`pdv-carrinho`) e identificador do terminal ficam no `localStorage` por origem → **corte com caixas fechados** |

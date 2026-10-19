@@ -1,12 +1,13 @@
 /**
  * Endereço público do ERP. O site só cria links para ele (nunca chama APIs).
- * Hoje o ERP responde em www.jinlong.app; após a migração de domínios,
- * NEXT_PUBLIC_ERP_URL passa a ser https://app.jinlong.app.
+ * Arquitetura-alvo: o ERP responde em app.jinlong.app e o site em jinlong.app.
+ * NEXT_PUBLIC_ERP_URL sobrescreve o padrão (ex.: https://www.jinlong.app como
+ * rollback enquanto app.jinlong.app não estiver vinculado ao projeto do ERP).
  */
 
 type SiteEnv = Readonly<Record<string, string | undefined>>
 
-export const CURRENT_ERP_URL = 'https://www.jinlong.app'
+export const DEFAULT_ERP_URL = 'https://app.jinlong.app'
 
 const LOCAL_HTTP = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/
 
@@ -23,7 +24,7 @@ export function parseErpUrl(raw: string | undefined): string | null {
 }
 
 export function getErpUrl(env: SiteEnv = process.env): string {
-  return parseErpUrl(env.NEXT_PUBLIC_ERP_URL) ?? CURRENT_ERP_URL
+  return parseErpUrl(env.NEXT_PUBLIC_ERP_URL) ?? DEFAULT_ERP_URL
 }
 
 export function erpHref(path: `/${string}`, env: SiteEnv = process.env): string {

@@ -25,8 +25,8 @@ node site/scripts/measure-vitals.mjs --label depois --runs 7 http://localhost:31
 
 | Variável | Uso | Padrão |
 |---|---|---|
-| `NEXT_PUBLIC_SITE_URL` | canonical, sitemap, Open Graph | `https://www.jinlong.app` |
-| `NEXT_PUBLIC_ERP_URL` | links "Entrar", Privacidade, Termos | `https://www.jinlong.app` (após o corte: `https://app.jinlong.app`) |
+| `NEXT_PUBLIC_SITE_URL` | canonical, sitemap, Open Graph; quando é apex, ativa o redirect `www.<apex>` → apex | `https://jinlong.app` |
+| `NEXT_PUBLIC_ERP_URL` | links "Entrar", Privacidade, Termos | `https://app.jinlong.app` (rollback: `https://www.jinlong.app`) |
 | `NEXT_PUBLIC_SITE_WHATSAPP_URL` | canal WhatsApp (`https://wa.me/<dígitos>`) | ausente → canal oculto |
 | `NEXT_PUBLIC_SITE_WECHAT_ID` | canal WeChat (ID) | ausente → canal oculto |
 | `NEXT_PUBLIC_SITE_ZH_REVIEWED` | `true` publica o zh-CN em produção após revisão nativa | ausente → zh é rascunho (noindex; 404 em produção) |
