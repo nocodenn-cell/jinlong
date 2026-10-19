@@ -65,6 +65,8 @@ export type EstoqueLabels = {
   situacaoZerado: string
   situacaoAbaixoMinimo: string
   situacaoNoMinimo: string
+  situacaoSemMinimo: string
+  situacaoSemLinha: string
 }
 
 const ORIGEM_BADGE: Record<string, string> = {
@@ -123,7 +125,11 @@ export function EstoqueTable({ linhas, labels, ordem = 'nome', direcao = 'asc', 
               ? labels.situacaoAbaixoMinimo
               : situacao === 'NO_MINIMO'
                 ? labels.situacaoNoMinimo
-                : null
+                : situacao === 'SEM_MINIMO'
+                  ? labels.situacaoSemMinimo
+                  : situacao === 'SEM_LINHA'
+                    ? labels.situacaoSemLinha
+                    : null
         return (
           <div className="flex flex-col items-end">
             <QuantityCell value={r.quantidade_atual} threshold={r.estoque_minimo} />
