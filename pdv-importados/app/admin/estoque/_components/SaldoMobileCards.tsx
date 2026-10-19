@@ -5,6 +5,7 @@ import { SlidersHorizontal, History, PackagePlus, Printer } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/feedback'
 import type { EstoqueLabels, EstoqueLinha } from './EstoqueTable'
+import { classificarEstoque } from '@/lib/estoque/classificarEstoque'
 import {
   adminEstoqueRecebimentoProdutoQuery,
   adminEtiquetasProdutoQuery,
@@ -21,6 +22,7 @@ export function SaldoMobileCards({ linhas, labels, onAjustar, onKardex }: {
     {linhas.map((row) => <article key={row.id} className="space-y-2 rounded-lg border border-[var(--color-border)] p-3">
       <h3 className="break-words text-body font-semibold">{row.nome}</h3>
       <p className="text-caption text-fg-muted">{row.codigo_barras ?? '—'}</p>
+      <p className="text-caption text-fg-muted">{classificarEstoque(row.quantidade_atual, row.estoque_minimo) === 'SEM_MINIMO' ? labels.situacaoSemMinimo : classificarEstoque(row.quantidade_atual, row.estoque_minimo) === 'SEM_LINHA' ? labels.situacaoSemLinha : null}</p>
       <dl className="flex flex-wrap gap-x-5 gap-y-1 text-body">
         <div><dt className="text-caption text-fg-muted">{labels.saldo}</dt><dd>{row.quantidade_atual ?? '—'} {row.unidade_medida}</dd></div>
         <div><dt className="text-caption text-fg-muted">{labels.minimo}</dt><dd>{row.estoque_minimo ?? '—'}</dd></div>
