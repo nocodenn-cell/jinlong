@@ -11,7 +11,8 @@ import {
   adminEtiquetasProdutoQuery,
 } from '@/lib/navigation/routes'
 
-export function SaldoMobileCards({ linhas, labels, onAjustar, onKardex }: {
+export function SaldoMobileCards({ linhas, labels, onAjustar, onKardex, idioma = 'pt' }: {
+  idioma?: 'pt' | 'zh'
   linhas: EstoqueLinha[]
   labels: EstoqueLabels
   onAjustar: (row: EstoqueLinha) => void
@@ -22,7 +23,7 @@ export function SaldoMobileCards({ linhas, labels, onAjustar, onKardex }: {
     {linhas.map((row) => <article key={row.id} className="space-y-2 rounded-lg border border-[var(--color-border)] p-3">
       <h3 className="break-words text-body font-semibold">{row.nome}</h3>
       <p className="text-caption text-fg-muted">{row.codigo_barras ?? '—'}</p>
-      <p className="text-caption text-fg-muted">{classificarEstoque(row.quantidade_atual, row.estoque_minimo) === 'SEM_MINIMO' ? labels.situacaoSemMinimo : classificarEstoque(row.quantidade_atual, row.estoque_minimo) === 'SEM_LINHA' ? labels.situacaoSemLinha : null}</p>
+      <p className="text-caption text-fg-muted">{classificarEstoque(row.quantidade_atual, row.estoque_minimo) === 'SEM_MINIMO' ? (labels.situacaoSemMinimo ?? (idioma === 'zh' ? '未设置最低库存' : 'Sem mínimo definido')) : classificarEstoque(row.quantidade_atual, row.estoque_minimo) === 'SEM_LINHA' ? (labels.situacaoSemLinha ?? (idioma === 'zh' ? '尚未登记库存' : 'Saldo não cadastrado')) : null}</p>
       <dl className="flex flex-wrap gap-x-5 gap-y-1 text-body">
         <div><dt className="text-caption text-fg-muted">{labels.saldo}</dt><dd>{row.quantidade_atual ?? '—'} {row.unidade_medida}</dd></div>
         <div><dt className="text-caption text-fg-muted">{labels.minimo}</dt><dd>{row.estoque_minimo ?? '—'}</dd></div>
