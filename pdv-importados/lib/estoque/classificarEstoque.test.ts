@@ -16,15 +16,15 @@ describe('classificarEstoque (UX-006)', () => {
     expect(classificarEstoque(10, 10)).toBe('NO_MINIMO')
   })
 
-  it('acima do mínimo, ou sem mínimo cadastrado, é OK', () => {
+  it('acima do mínimo é OK; sem mínimo configurado exige atenção', () => {
     expect(classificarEstoque(11, 10)).toBe('OK')
-    expect(classificarEstoque(5, 0)).toBe('OK')
-    expect(classificarEstoque(5, null)).toBe('OK')
+    expect(classificarEstoque(5, 0)).toBe('SEM_MINIMO')
+    expect(classificarEstoque(5, null)).toBe('SEM_MINIMO')
   })
 
   it('nulos e inválidos não quebram', () => {
-    expect(classificarEstoque(null, null)).toBe('ZERADO')
-    expect(classificarEstoque(Number.NaN, 3)).toBe('OK')
+    expect(classificarEstoque(null, null)).toBe('SEM_LINHA')
+    expect(classificarEstoque(Number.NaN, 3)).toBe('SEM_LINHA')
   })
 
   it('contagem separa as três situações a partir das linhas da view de alerta', () => {
