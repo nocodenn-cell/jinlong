@@ -65,8 +65,8 @@ export type EstoqueLabels = {
   situacaoZerado: string
   situacaoAbaixoMinimo: string
   situacaoNoMinimo: string
-  situacaoSemMinimo: string
-  situacaoSemLinha: string
+  situacaoSemMinimo?: string
+  situacaoSemLinha?: string
 }
 
 const ORIGEM_BADGE: Record<string, string> = {
@@ -126,9 +126,9 @@ export function EstoqueTable({ linhas, labels, ordem = 'nome', direcao = 'asc', 
               : situacao === 'NO_MINIMO'
                 ? labels.situacaoNoMinimo
                 : situacao === 'SEM_MINIMO'
-                  ? labels.situacaoSemMinimo
+                  ? (labels.situacaoSemMinimo ?? (idioma === 'zh' ? '未设置最低库存' : 'Sem mínimo definido'))
                   : situacao === 'SEM_LINHA'
-                    ? labels.situacaoSemLinha
+                    ? (labels.situacaoSemLinha ?? (idioma === 'zh' ? '尚未登记库存' : 'Saldo não cadastrado'))
                     : null
         return (
           <div className="flex flex-col items-end">
@@ -194,6 +194,7 @@ export function EstoqueTable({ linhas, labels, ordem = 'nome', direcao = 'asc', 
   return (
     <>
       <SaldoMobileCards
+        idioma={idioma}
         linhas={linhas}
         labels={labels}
         onAjustar={(row) =>
