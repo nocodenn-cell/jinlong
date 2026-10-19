@@ -321,6 +321,7 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
                   situacaoZerado: m.estoque.situacao_zerado,
                   situacaoAbaixoMinimo: m.estoque.situacao_abaixo_minimo,
                   situacaoNoMinimo: m.estoque.situacao_no_minimo,
+                  situacaoSemMinimo: session.idioma === 'zh' ? '未设置最低库存' : 'Sem mínimo definido',
                 }}
                 quick={{
                   faixaAria: ui.estoque_acoes_aria,
