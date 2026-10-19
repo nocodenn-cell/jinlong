@@ -21,6 +21,17 @@ export type RawUsuarioRow = {
   loja_id: string | null | undefined
   /** `false` bloqueia o acesso; `null`/ausente é tratado como ativo (compat com linhas antigas). */
   ativo?: boolean | null
+  /**
+   * Vínculos ativos (multiempresa, ESPEC_MULTIEMPRESA_V1 §9). `undefined` = não lidos
+   * (tabela ainda não existe no ambiente) ⇒ compatibilidade, sem bloqueio novo.
+   */
+  vinculos?: RawVinculo[]
+}
+
+export type RawVinculo = {
+  empresa_id: string
+  loja_id: string | null
+  papel: 'DONO' | 'GERENTE' | 'OPERADOR'
 }
 
 export type RawSession =
@@ -73,6 +84,8 @@ function buildAdminSession(raw: Extract<RawSession, { status: 'authenticated' }>
     perfil,
     idioma: normalizeIdioma(raw.usuario?.idioma_preferido),
     lojaId: (raw.usuario?.loja_id as string | null | undefined) ?? null,
+    empresaId: raw.usuario?.vinculos?.[0]?.empresa_id ?? null,
+    vinculos: raw.usuario?.vinculos ?? null,
   }
 }
 
@@ -119,6 +132,24 @@ function lerPerfilUsuario(supabase: SupabaseClient, userId: string) {
 }
 
 /**
+ * Vínculos ativos do usuário. Qualquer falha (tabela inexistente antes da migration,
+ * client de teste sem a tabela) devolve `undefined` = modo compatibilidade.
+ */
+async function lerVinculos(supabase: SupabaseClient, userId: string): Promise<RawVinculo[] | undefined> {
+  try {
+    const q = supabase.from('usuario_vinculos') as unknown as {
+      select?: (c: string) => { eq: (c: string, v: unknown) => { eq: (c: string, v: unknown) => PromiseLike<{ data: unknown; error: unknown }> } }
+    }
+    if (typeof q?.select !== 'function') return undefined
+    const { data, error } = await q.select('empresa_id, loja_id, papel').eq('usuario_id', userId).eq('ativo', true)
+    if (error || !Array.isArray(data)) return undefined
+    return data as RawVinculo[]
+  } catch {
+    return undefined
+  }
+}
+
+/**
  * Única leitura Supabase de auth + perfil (cookies já vinculados ao client).
  * Retorna apenas dados brutos — sem interpretação de role/permissão.
  *
@@ -150,6 +181,7 @@ export async function fetchRawSession(supabase: SupabaseClient): Promise<RawSess
 
   if (!user) return { status: 'anonymous' }
 
+  const vinculosPromise = lerVinculos(supabase, user.id)
   const antecipado = perfilAntecipado && dicaUserId === user.id ? await perfilAntecipado : null
   const { data: usuario, error: dbError } =
     antecipado && !antecipado.error ? antecipado : await lerPerfilUsuario(supabase, user.id)
@@ -158,7 +190,9 @@ export async function fetchRawSession(supabase: SupabaseClient): Promise<RawSess
     return { status: 'db_error', user, error: dbError }
   }
 
-  return { status: 'authenticated', user, usuario }
+  const vinculos = await vinculosPromise
+  if (!usuario || vinculos === undefined) return { status: 'authenticated', user, usuario }
+  return { status: 'authenticated', user, usuario: { ...(usuario as RawUsuarioRow), vinculos } }
 }
 
 /** Bloqueio de identidade: conta desativada ou sem loja vinculada não entra em rota protegida. */
@@ -166,6 +200,13 @@ function resolveBlockedReason(raw: RawSession): SessionBlockedReason | null {
   if (raw.status !== 'authenticated') return null
   if (raw.usuario?.ativo === false) return 'inativo'
   if (!raw.usuario?.loja_id) return 'sem_loja'
+  const vinculos = raw.usuario.vinculos
+  // Multiempresa: só decide quando os vínculos foram lidos. ADMIN legado não tem vínculo (D9).
+  if (vinculos !== undefined && normalizePerfilUsuario(raw.usuario.perfil ?? null) !== 'ADMIN') {
+    const empresas = new Set(vinculos.map((v) => v.empresa_id))
+    if (empresas.size === 0) return 'sem_empresa'
+    if (empresas.size > 1) return 'multi_empresa' // sem seletor de empresa ⇒ falha fechada (§4/§9)
+  }
   return null
 }
 

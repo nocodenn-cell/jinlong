@@ -18,9 +18,13 @@ const dispA = { id: "d1", loja_id: LOJA_A, empresa_id: "eA", sync_secret: "s".re
 const ctxA: SyncContext = { mode: "dispositivo", lojaId: LOJA_A, empresaId: "eA", dispositivoId: "d1" };
 const caixas: Record<string, string> = { [CAIXA_A]: LOJA_A, [CAIXA_B]: LOJA_B };
 const produtos: Record<string, string> = { [PROD_A]: LOJA_A, [PROD_B]: LOJA_B };
+const OP_A = "0a000000-0000-4000-8000-00000000000a";
+const OP_B = "0b000000-0000-4000-8000-00000000000b";
+const operadores: Record<string, string> = { [OP_A]: LOJA_A, [OP_B]: LOJA_B };
 const lookups = {
   caixaLoja: (id: string) => Promise.resolve(caixas[id] ?? null),
   produtosForaDaLoja: (ids: string[], loja: string) => Promise.resolve(ids.filter((i) => produtos[i] !== loja).length),
+  operadorPodeLoja: (op: string, loja: string) => Promise.resolve(operadores[op] === loja),
 };
 const ev = (tipo: string, p: unknown) => ({ tipo, payload_json: JSON.stringify(p) });
 
@@ -74,4 +78,16 @@ Deno.test("código de ativação: normalização", () => {
   assertEquals(normalizarCodigoAtivacao("curto"), null);
   assertEquals(normalizarCodigoAtivacao("drop table;--x"), null);
   assertEquals(normalizarCodigoAtivacao(42), null);
+});
+
+Deno.test("operador da venda/caixa precisa de vínculo ativo na loja do dispositivo", async () => {
+  await assertEventoNoEscopo(ev("VENDA_REGISTRADA", { caixa_id: CAIXA_A, loja_id: LOJA_A, operador_id: OP_A, itens: [] }), ctxA, lookups);
+  for (const tipo of ["VENDA_REGISTRADA", "CAIXA_ABERTO", "MOVIMENTO_CAIXA"]) {
+    const p = tipo === "CAIXA_ABERTO"
+      ? { id: CAIXA_A, loja_id: LOJA_A, operador_id: OP_B }
+      : { id: "m", caixa_id: CAIXA_A, loja_id: LOJA_A, operador_id: OP_B, itens: [] };
+    await assertRejects(() => assertEventoNoEscopo(ev(tipo, p), ctxA, lookups), Error, "EVENTO_OPERADOR_SEM_VINCULO");
+  }
+  // modo legado (cliente 1 sem ativação): sem mudança
+  await assertEventoNoEscopo(ev("VENDA_REGISTRADA", { caixa_id: CAIXA_B, operador_id: OP_B }), { mode: "legado", lojaId: null }, lookups);
 });

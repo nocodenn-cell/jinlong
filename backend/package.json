@@ -34,7 +34,8 @@
     "test:fiscal-p0-pre-req": "node scripts/fiscal-p0-pre-req.test.mjs",
     "test:fiscal-drill-plano": "node scripts/fiscal-drill-plano.test.mjs",
     "test:backup-age": "node scripts/backup-age-postgres.test.mjs",
-    "test:pdv-caixa-financeiro": "node scripts/test-pdv-caixa-financeiro-fluxo.mjs"
+    "test:pdv-caixa-financeiro": "node scripts/test-pdv-caixa-financeiro-fluxo.mjs",
+    "test:multiempresa-fase2": "node scripts/multiempresa-fase2-cobertura.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.104.0",

@@ -22,6 +22,9 @@ function tokenComSub(sub: string): string {
 
 type Resultado = { data: unknown; error: unknown }
 
+// Vínculos multiempresa: tabela ausente neste cenário ⇒ modo compatibilidade (não interfere na contagem).
+const semVinculos = { select: () => ({ eq: () => ({ eq: async () => ({ data: null, error: { code: '42P01' } }) }) }) }
+
 function buildClient(options: {
   sub?: string | null
   getSessionThrows?: boolean
@@ -46,7 +49,7 @@ function buildClient(options: {
       }),
       signOut: vi.fn(async () => ({ error: null })),
     },
-    from: vi.fn(() => ({
+    from: vi.fn((tabela: string) => tabela === 'usuario_vinculos' ? semVinculos : ({
       select: vi.fn(() => ({
         eq: vi.fn((_col: string, id: string) => {
           eqCalls.push(id)

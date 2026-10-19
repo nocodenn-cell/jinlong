@@ -23,6 +23,8 @@ export type ScopeLookups = {
   caixaLoja: (caixaId: string) => Promise<string | null>;
   /** quantos produtos da lista NÃO pertencem à loja. */
   produtosForaDaLoja: (produtoIds: string[], lojaId: string) => Promise<number>;
+  /** O operador tem vínculo ativo que cobre a loja (fp_usuario_pode_loja)? */
+  operadorPodeLoja: (operadorId: string, lojaId: string) => Promise<boolean>;
 };
 
 export function legacyKeysEnabled(raw: string | undefined | null): boolean {
@@ -85,6 +87,13 @@ export async function assertEventoNoEscopo(
 
   const lojaPayload = str(p.loja_id);
   if (lojaPayload && lojaPayload !== loja) throw new Error("EVENTO_LOJA_FORA_DO_DISPOSITIVO");
+
+ // Operador informado precisa ter vínculo ativo na loja do dispositivo (§10: venda de operador de
+  // outra empresa/loja, ou desligado, não entra — inclusive em replay offline).
+  const operador = str(p.operador_id);
+  if (operador && (ev.tipo === "VENDA_REGISTRADA" || ev.tipo === "CAIXA_ABERTO" || ev.tipo === "MOVIMENTO_CAIXA")) {
+    if (!(await lookups.operadorPodeLoja(operador, loja))) throw new Error("EVENTO_OPERADOR_SEM_VINCULO");
+  }
 
   const caixaId = ev.tipo === "CAIXA_ABERTO" || ev.tipo === "CAIXA_FECHADO" ? str(p.id) : str(p.caixa_id);
 

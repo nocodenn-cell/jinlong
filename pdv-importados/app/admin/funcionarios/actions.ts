@@ -168,6 +168,25 @@ export async function criarFuncionarioAction(input: {
       return fail(dbErr.message)
     }
 
+    // Multiempresa (§11): grava o vínculo validando, no servidor, que o ATOR pode a loja.
+    // Função ausente (migration fase 2 ainda não aplicada) ⇒ segue como antes (o trigger legado cobre).
+    const { error: vincErr } = await (
+      admin as unknown as {
+        rpc: (fn: string, args: Record<string, unknown>) => Promise<{ error: { code?: string; message?: string } | null }>
+      }
+    ).rpc('vincular_usuario_loja', {
+      p_usuario: created.user.id,
+      p_loja: gate.session.lojaId!,
+      p_papel: parsed.data.perfil,
+      p_ator: gate.session.userId,
+    })
+    if (vincErr && !isFuncaoAusente(vincErr)) {
+      await admin.from('usuarios').delete().eq('id', created.user.id)
+      await admin.auth.admin.deleteUser(created.user.id)
+      createdUserId = null
+      return fail('Não foi possível vincular o funcionário a esta loja.')
+    }
+
     revalidateFuncionarios()
     const row = await mapRow(admin, {
       id: created.user.id,
@@ -335,4 +354,8 @@ export async function definirAtivoFuncionarioAction(
   } catch (e) {
     return fail(e instanceof Error ? e.message : 'Erro ao alterar status.')
   }
+}
+
+function isFuncaoAusente(err: { code?: string; message?: string }): boolean {
+  return err.code === 'PGRST202' || err.code === '42883' || /could not find the function|does not exist/i.test(err.message ?? '')
 }

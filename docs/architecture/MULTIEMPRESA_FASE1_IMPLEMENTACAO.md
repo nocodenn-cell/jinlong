@@ -54,3 +54,32 @@ O token usado para abrir este PR não tem escopo `workflow`, então as mudanças
 `docs/architecture/multiempresa-fase1/ci-workflows.patch` (novos passos no `ci-backend-supabase.yml` para
 `test:multiempresa-fase1` e `tenantScope.test.ts`, e o workflow manual `release-pdv-desktop.yml`). Aplicar com
 `git apply docs/architecture/multiempresa-fase1/ci-workflows.patch` e commitar com uma credencial que tenha `workflow`.
+
+---
+
+## Fase 2 — guardas em todo o tenant (migration `20261019140000_multiempresa_fase2_guardas.sql`)
+
+Aditiva e reversível (`backend/supabase/rollback/20261019140000_multiempresa_fase2_guardas.rollback.sql`).
+Tolera drift: tabela/coluna ausente vira NOTICE e fica registrada como `aplicada = false` em `internal.fp_tenant_guardas`.
+
+| Peça | O que faz |
+|---|---|
+| Guardas RESTRICTIVE `tenant_guard` | 78 tabelas (registro em `internal.fp_tenant_guardas`) + 3 da fase 1. Classes: **L** loja direta (`fp_pode_loja`), **L?** loja nulável (NULL = legado da Empresa 1), **J** loja pela entidade-pai via `fp_loja_de(tipo, id)` (vendas por caixa, itens/pagamentos/devoluções/fiscal por venda, comissões, NF-e, OC, remessas, histórico por produto), **E** empresa (`fp_pode_empresa`), **R** `lojas`, **V** `usuarios`. |
+| `empresa_id` no catálogo/config | categorias, marcas, regras_preco, categorias_financeiras, pricing_config_versions, configuracoes_gerais, relatorio_settings — backfill Empresa 1; trigger preenche com a empresa do usuário; servidor com 2+ empresas sem `empresa_id` ⇒ erro `EMPRESA_ID_OBRIGATORIA` (nunca linha órfã). |
+| Envelopes de RPC (§8) | 42 RPCs SECURITY DEFINER expostas a `authenticated` que recebem loja/caixa/venda/produto/documento/OC/NF-e/remessa/conta/operador: corpo original movido intacto para `internal`, wrapper em `public` com a mesma assinatura e grants chama `fp_assert_loja` antes. `transferir_estoque_seguro` também exige `fp_assert_mesma_empresa(origem, destino)`. `p_loja_id NULL` (“todas as lojas”) só com uma empresa ou ADMIN legado. service_role/cron passam direto. Registro em `internal.fp_rpc_envelopes` (usado pelo rollback). |
+| `vincular_usuario_loja` | cadastro de funcionário grava o vínculo validando que o **ator** pode a loja e que o usuário não é de outra empresa. Chamado por `app/admin/funcionarios/actions.ts` (função ausente ⇒ compat). |
+| `fp_usuario_pode_loja` | sync valida `operador_id` de VENDA_REGISTRADA / CAIXA_ABERTO / MOVIMENTO_CAIXA contra vínculo ativo da loja do dispositivo (`EVENTO_OPERADOR_SEM_VINCULO`). |
+| `ativar_dispositivo_pdv_v2` | registra tentativas em `pdv_ativacao_tentativas`; 10 falhas/15 min por computador **ou** IP ⇒ `ATIVACAO_PDV_BLOQUEADA` (HTTP 429 no sync-outbox). |
+| Sessão web | `fetchRawSession` lê `usuario_vinculos`; `AdminSession` ganha `empresaId`/`vinculos`. Sem vínculo ⇒ `blocked: sem_empresa`; vínculos em 2 empresas ⇒ `blocked: multi_empresa` (falha fechada). Tabela ausente ⇒ compat. ADMIN legado segue. |
+
+### Teste de cobertura (`npm run test:multiempresa-fase2`)
+Aplica **todas** as 414 migrations em PGlite e: (1) falha se qualquer tabela de `public` não tiver `tenant_guard` (RESTRICTIVE, FOR ALL, authenticated, USING/CHECK via `fp_*`) nem isenção com motivo; (2) falha se uma tabela com `loja_id`/`empresa_id` escapar; (3) falha se uma RPC SECURITY DEFINER exposta a `authenticated` não estiver envelopada nem na lista de pendências com motivo; (4) A×B comportamental (leitura, escrita, update/delete cruzado, troca de loja, catálogo, RPCs, transferência entre empresas, ADMIN legado); (5) vínculo, operador, limite de ativação; (6) rollback e reaplicação.
+
+### Pendências (antes do cliente 2 em produção)
+1. **Configuração global** (D12/D13): `configuracoes_gerais` tem `UNIQUE(chave)`, `pricing_config_versions` tem índice de versão ativa global, `relatorio_settings` é linha única; as RPCs `configuracoes_para_caixa_web`, `pdv_config_*`, `obter_limite_sangria_sem_gerente`, `obter_pricing_version_ativa` leem a config global. Cliente 2 hoje vê só defaults e não consegue salvar config que colida com a chave da Empresa 1. Precisa de troca de unicidade para `(empresa_id, chave)` + RPCs por empresa.
+2. **RPCs com loja no payload/derivada** (`financeiro_comando*`, `financeiro_painel`, `listar_caixas_elegiveis_desembolso`, `listar_vendas_em_espera`, `pdv_diagnostico_pre_producao`): revisar uma a uma com A×B.
+3. **Suites em Postgres real** (`test:financial`, `test:rls-scope`, `test:rls-policies`) exigem Supabase local (docker) e não rodaram aqui — rodar no CI/staging com esta migration antes do merge.
+4. **Desempenho**: guardas J chamam `fp_loja_de` por linha; medir em staging (EXPLAIN em vendas/itens_venda) e, se preciso, materializar `loja_id` nas tabelas J quentes.
+5. Seletor de empresa na UI para usuário com vínculo em 2 empresas (hoje bloqueado).
+6. Desativar `SYNC_LEGACY_KEYS_ENABLED` depois de ativar todos os PDVs do cliente 1; rotacionar o `SYNC_KEY` vazado na branch `loop/ux-caixa-gold-token`.
+7. Build/assinatura do instalador Tauri (Rust não validado neste ambiente) e workflow de CI (patch em `docs/architecture/multiempresa-fase1/ci-workflows.patch`, precisa de token com escopo `workflow`).

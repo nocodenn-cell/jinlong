@@ -905,6 +905,11 @@ function scopeLookups(supabase: SupabaseAdmin): ScopeLookups {
         .filter((r) => String(r.loja_id) === lojaId).map((r) => String(r.id)));
       return ids.filter((id) => !daLoja.has(id)).length;
     },
+    operadorPodeLoja: async (operadorId: string, lojaId: string) => {
+      const { data, error } = await supabase.rpc("fp_usuario_pode_loja", { p_usuario: operadorId, p_loja: lojaId });
+      if (error) throw new Error(`ESCOPO_OPERADOR_LOOKUP: ${error.message}`);
+      return data === true;
+    },
   };
 }
 
@@ -1093,7 +1098,13 @@ const ATIVACAO_ERROS_PUBLICOS = new Set([
   "ATIVACAO_PDV_CODIGO_INVALIDO",
   "ATIVACAO_PDV_FINGERPRINT_INVALIDO",
   "EMPRESA_NAO_OPERACIONAL",
+  "ATIVACAO_PDV_BLOQUEADA",
 ]);
+
+function ipDaRequisicao(req: Request): string | null {
+  const fwd = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  return (fwd || req.headers.get("x-real-ip")?.trim() || null)?.slice(0, 64) ?? null;
+}
 
 async function handleAtivarDispositivo(
   req: Request,
@@ -1115,11 +1126,18 @@ async function handleAtivarDispositivo(
     return jsonResponse(req, 400, { ok: false, error: "ATIVACAO_PDV_FINGERPRINT_INVALIDO", request_id: requestId });
   }
   const nome = typeof body.nome === "string" ? body.nome.trim().slice(0, 80) : null;
-  const { data, error } = await supabase.rpc("ativar_dispositivo_pdv", {
+  // v2: registra a tentativa e bloqueia após 10 falhas/15 min por computador ou IP (anti força-bruta).
+  const { data, error } = await supabase.rpc("ativar_dispositivo_pdv_v2", {
     p_codigo: codigo,
     p_device_fingerprint: fp,
     p_nome: nome,
+    p_ip: ipDaRequisicao(req),
   });
+  if (!error && data && data.ok === false) {
+    const code = ATIVACAO_ERROS_PUBLICOS.has(String(data.error)) ? String(data.error) : "ATIVACAO_PDV_CODIGO_INVALIDO";
+    log({ level: "warn", stage: "ativar_pdv", request_id: requestId, error: code });
+    return jsonResponse(req, code === "ATIVACAO_PDV_BLOQUEADA" ? 429 : 400, { ok: false, error: code, request_id: requestId });
+  }
   if (error) {
     const code = [...ATIVACAO_ERROS_PUBLICOS].find((c) => String(error.message).includes(c)) ?? "ATIVACAO_PDV_FALHOU";
     log({ level: "warn", stage: "ativar_pdv", request_id: requestId, error: code });
