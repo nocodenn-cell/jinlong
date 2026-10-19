@@ -94,3 +94,12 @@ Aplica **todas** as 414 migrations em PGlite e: (1) falha se qualquer tabela de 
 - SEC-04: `validar-gerente` só aceita loja permitida ao token e valida a senha da empresa da loja (antes a senha do gerente da empresa 1 valia para todas).
 - sync-outbox: catálogo (`regras_preco`) e `pdv_config` pela empresa do dispositivo.
 - Testes: `npm run test:multiempresa-fase3` (18). Rollback: `rollback/20261019150000_...` ANTES do rollback da fase 2.
+
+## Fase 4 — desempenho das guardas (20261019160000) e homologação
+
+Homolog `jinlong-homolog-palm` (yvdilcmxyjafnnsfdtam), 19/10/2026:
+- Drift de versões: nenhum (412 migrations iguais ao repo; só as 3 da PR faltavam). As 23 reescritas da fase 3 aplicaram (`NOT aplicada` vazio); 75 guardas iguais ao esquema local.
+- A×B em homolog (`scripts/homolog/multiempresa_ab_homolog.py`, transação sempre desfeita): 33 verificações ok.
+- Desempenho (dono, 3.000 vendas sintéticas, EXPLAIN ANALYZE): guardas originais da fase 2 = 1,3–4,9 s por consulta (chamada SECURITY DEFINER por linha); fase 4 = 4–19 ms (baseline sem RLS 1–3 ms; "sem guarda", só policies legadas, 1–21 ms).
+- Fase 4: permitidas como array em InitPlan; loja pai de caixa/venda por semi-join hash em `fp_guarda.*` (views sem RLS aninhada, schema não exposto); `itens_venda` mantém semântica estrita. Rollback testado em homolog (78 guardas originais restauradas) e reaplicado.
+- Ordem de rollback: fase 4 → fase 3 → fase 2.
