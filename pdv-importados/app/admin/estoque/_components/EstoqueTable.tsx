@@ -94,6 +94,20 @@ export function EstoqueTable({ linhas, labels, ordem = 'nome', direcao = 'asc', 
   const [ajusteAlvo, setAjusteAlvo] = useState<AjusteAlvo | null>(null)
   const [kardexAlvo, setKardexAlvo] = useState<KardexAlvo | null>(null)
 
+  const contagem = linhas.reduce((acc, row) => {
+    const status = classificarEstoque(row.quantidade_atual, row.estoque_minimo)
+    acc[status] += 1
+    return acc
+  }, { SEM_LINHA: 0, ZERADO: 0, ABAIXO_MINIMO: 0, NO_MINIMO: 0, SEM_MINIMO: 0, OK: 0 })
+
+  const indicadores = [
+    { key: 'ZERADO', rotulo: labels.situacaoZerado, total: contagem.ZERADO },
+    { key: 'ABAIXO_MINIMO', rotulo: labels.situacaoAbaixoMinimo, total: contagem.ABAIXO_MINIMO },
+    { key: 'NO_MINIMO', rotulo: labels.situacaoNoMinimo, total: contagem.NO_MINIMO },
+    { key: 'SEM_MINIMO', rotulo: labels.situacaoSemMinimo ?? (idioma === 'zh' ? '未设置最低库存' : 'Sem mínimo definido'), total: contagem.SEM_MINIMO },
+    { key: 'SEM_LINHA', rotulo: labels.situacaoSemLinha ?? (idioma === 'zh' ? '尚未登记库存' : 'Saldo não cadastrado'), total: contagem.SEM_LINHA },
+  ]
+
   const columns: Column<EstoqueLinha>[] = [
     {
       key: 'produto',
@@ -193,6 +207,14 @@ export function EstoqueTable({ linhas, labels, ordem = 'nome', direcao = 'asc', 
 
   return (
     <>
+      <section aria-label={idioma === 'zh' ? '本页库存状态' : 'Situações nesta página'} className="grid grid-cols-2 gap-2 px-3 py-3 sm:grid-cols-3 lg:grid-cols-5">
+        {indicadores.map((indicador) => (
+          <div key={indicador.key} className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-soft)] px-3 py-2">
+            <span className="block text-caption text-fg-muted">{indicador.rotulo}</span>
+            <strong className="block text-xl tabular-nums text-fg">{indicador.total}</strong>
+          </div>
+        ))}
+      </section>
       <SaldoMobileCards
         idioma={idioma}
         linhas={linhas}
