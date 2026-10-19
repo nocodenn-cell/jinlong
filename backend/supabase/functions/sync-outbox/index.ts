@@ -442,6 +442,7 @@ async function handleValidarGerentePdvSync(
   supabase: SupabaseAdmin,
   rawBody: string,
   req: Request,
+  ctx?: SyncContext,
 ): Promise<Response> {
   let body: unknown;
   try {
@@ -464,7 +465,9 @@ async function handleValidarGerentePdvSync(
   const result = await validateGerenteAndIssueToken({
     supabase,
     senha: senhaNormalizada,
-    lojaId: null,
+    // Dispositivo ativado: senha de gerente e token presos à loja/empresa do dispositivo (não à Empresa 1).
+    lojaId: ctx?.mode === "dispositivo" ? ctx.lojaId : null,
+    empresaId: ctx?.mode === "dispositivo" ? ctx.empresaId ?? null : null,
     userId: null,
     req,
     logStage: "validar_gerente_pdv",
@@ -791,17 +794,25 @@ async function handleCatalogoSync(req: Request, supabase: SupabaseAdmin, ctx: Sy
       "id,nome,codigo_barras,preco_varejo,preco_atacado,categoria_id,ativo,status_publicacao,origem,tem_nf,imagem_url",
     );
   if (ctx.mode === "dispositivo") produtosQuery = produtosQuery.eq("loja_id", ctx.lojaId);
+  const REGRAS_COLS =
+    "id,tipo_regra,produto_id,categoria_id,quantidade_minima,quantidade_maxima,tipo_desconto,valor_desconto,data_validade,ativo";
+  const regrasDaEmpresa = async () => {
+    // Fase 2+: regras_preco tem empresa_id ⇒ dispositivo recebe só as da própria empresa (inclui regras gerais).
+    if (ctx.mode !== "dispositivo" || !ctx.empresaId) {
+      return await supabase.from("regras_preco").select(REGRAS_COLS).eq("ativo", true).limit(100000);
+    }
+    const r = await supabase.from("regras_preco").select(`${REGRAS_COLS},empresa_id`).eq("ativo", true)
+      .eq("empresa_id", ctx.empresaId).limit(100000);
+    if (r.error && /empresa_id/.test(r.error.message)) {
+      return await supabase.from("regras_preco").select(REGRAS_COLS).eq("ativo", true).limit(100000);
+    }
+    return r;
+  };
   const [produtosRes, regrasRes, atacadoRes] = await Promise.all([
     produtosQuery
       .order("nome", { ascending: true })
       .limit(100000),
-    supabase
-      .from("regras_preco")
-      .select(
-        "id,tipo_regra,produto_id,categoria_id,quantidade_minima,quantidade_maxima,tipo_desconto,valor_desconto,data_validade,ativo",
-      )
-      .eq("ativo", true)
-      .limit(100000),
+    regrasDaEmpresa(),
     supabase
       .from("precos_atacado")
       .select("id,produto_id,loja_id,quantidade_minima,preco_unitario,ativo")
@@ -833,10 +844,16 @@ async function handleCatalogoSync(req: Request, supabase: SupabaseAdmin, ctx: Sy
     // da loja. Regra sem produto e sem categoria (global) não é enviada a dispositivos de tenant.
     const prodIds = new Set(produtos.map((p) => p.id));
     const catIds = new Set(produtos.map((p) => p.categoria_id).filter((c): c is string => !!c));
+    const porEmpresa = regras.length > 0 && regras.every((r) => "empresa_id" in r);
     regras = regras.filter((r) =>
       (r.produto_id != null && prodIds.has(r.produto_id)) ||
-      (r.produto_id == null && r.categoria_id != null && catIds.has(r.categoria_id))
-    );
+      (r.produto_id == null && r.categoria_id != null && catIds.has(r.categoria_id)) ||
+      // regra geral (sem produto/categoria) só quando já veio filtrada pela empresa do dispositivo
+      (porEmpresa && r.produto_id == null && r.categoria_id == null)
+    ).map((r) => {
+      const { empresa_id: _e, ...resto } = r as Record<string, unknown>;
+      return resto as typeof r;
+    });
     atacadoFiltrado = precosAtacado.filter((r) => prodIds.has(r.produto_id));
   }
 
@@ -855,9 +872,19 @@ async function handlePdvConfigSync(req: Request, supabase: SupabaseAdmin, ctx: S
     .from("pdv_config")
     .select("gerente_id, max_desconto_gerente_percentual, quantidade_minima_atacado_padrao");
   // legado: linha id=1 (cliente 1, inalterado). Dispositivo: config da própria loja.
-  const { data, error, status } = await (ctx.mode === "dispositivo"
+  let { data, error, status } = await (ctx.mode === "dispositivo"
     ? base.eq("loja_id", ctx.lojaId)
     : base.eq("id", 1)).maybeSingle();
+  // Dispositivo sem linha própria da loja ⇒ linha padrão da EMPRESA do dispositivo (fase 3), nunca a de outra.
+  if (!error && !data && ctx.mode === "dispositivo" && ctx.empresaId) {
+    const padrao = await supabase
+      .from("pdv_config")
+      .select("gerente_id, max_desconto_gerente_percentual, quantidade_minima_atacado_padrao")
+      .is("loja_id", null)
+      .eq("empresa_id", ctx.empresaId)
+      .maybeSingle();
+    if (!padrao.error) data = padrao.data;
+  }
 
   if (error) {
     if (status === 404 || status === 400) return jsonResponse(req, 200, { ok: true, config: null });
@@ -1053,6 +1080,7 @@ Deno.serve(async (req) => {
           supabase,
           rawBody,
           req,
+          auth.ctx,
         );
       }
       return await handlePostOutboxBatch(

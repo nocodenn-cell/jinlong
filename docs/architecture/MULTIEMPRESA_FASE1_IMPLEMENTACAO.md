@@ -83,3 +83,14 @@ Aplica **todas** as 414 migrations em PGlite e: (1) falha se qualquer tabela de 
 5. Seletor de empresa na UI para usuário com vínculo em 2 empresas (hoje bloqueado).
 6. Desativar `SYNC_LEGACY_KEYS_ENABLED` depois de ativar todos os PDVs do cliente 1; rotacionar o `SYNC_KEY` vazado na branch `loop/ux-caixa-gold-token`.
 7. Build/assinatura do instalador Tauri (Rust não validado neste ambiente) e workflow de CI (patch em `docs/architecture/multiempresa-fase1/ci-workflows.patch`, precisa de token com escopo `workflow`).
+
+## Fase 3 — configuração por empresa, seletor e SEC-04 (20261019150000)
+
+- `configuracoes_gerais` única por `(empresa_id, chave)`; `pricing_config_versions` com 1 versão ativa por empresa; `relatorio_settings` 1 linha por empresa; `pdv_config` com `empresa_id` e linha padrão por empresa (`loja_id` NULL). Backfill: tudo da Empresa 1 (cliente 1 lê exatamente as mesmas linhas, `pdv_config.id = 1`).
+- Empresa nova recebe padrões automaticamente (trigger `trg_empresa_semear_config`).
+- `fp_empresa_contexto(p_loja)` resolve a empresa da operação; 23 funções reescritas por `internal.fp_reescrever` (original guardado em `internal.fp_funcoes_reescritas`). Em staging/produção conferir `SELECT * FROM internal.fp_funcoes_reescritas WHERE NOT aplicada` — drift do repo ⇒ reescrita não aplicada.
+- Revisadas e cobertas por teste A×B: `financeiro_comando*`, `financeiro_painel`, `listar_caixas_elegiveis_desembolso`, `listar_vendas_em_espera`, `pdv_diagnostico_pre_producao`. `RPC_PENDENTES` vazio: o teste enumerador exige envelope ou revisão para toda RPC.
+- Seletor de empresa: `/selecionar-empresa` grava cookie `fp_empresa` + loja ativa (`usuarios.loja_id`); clientes Supabase mandam `x-fp-empresa`, que só ESTREITA o escopo.
+- SEC-04: `validar-gerente` só aceita loja permitida ao token e valida a senha da empresa da loja (antes a senha do gerente da empresa 1 valia para todas).
+- sync-outbox: catálogo (`regras_preco`) e `pdv_config` pela empresa do dispositivo.
+- Testes: `npm run test:multiempresa-fase3` (18). Rollback: `rollback/20261019150000_...` ANTES do rollback da fase 2.

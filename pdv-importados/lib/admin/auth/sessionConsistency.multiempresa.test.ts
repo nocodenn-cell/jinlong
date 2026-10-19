@@ -27,6 +27,18 @@ describe('sessão multiempresa (ESPEC §9)', () => {
     const n = normalizeAdminSession(row('DONO', [v('e1'), v('e2', 'GERENTE')]), 'ssr')
     expect(n.blockedReason).toBe('multi_empresa')
   })
+  it('duas empresas + seleção válida ⇒ entra só na escolhida', () => {
+    const r = row('DONO', [v('e1'), v('e2', 'GERENTE')])
+    const n = normalizeAdminSession({ ...r, usuario: { ...r.usuario, empresaSelecionada: 'e2' } }, 'ssr')
+    expect(n.authState).toBe('authenticated')
+    expect(n.session?.empresaId).toBe('e2')
+    expect(n.session?.vinculos).toEqual([v('e2', 'GERENTE')])
+  })
+  it('seleção de empresa sem vínculo não desbloqueia', () => {
+    const r = row('DONO', [v('e1'), v('e2')])
+    const n = normalizeAdminSession({ ...r, usuario: { ...r.usuario, empresaSelecionada: 'e9' } }, 'ssr')
+    expect(n.blockedReason).toBe('multi_empresa')
+  })
   it('vínculos não lidos (ambiente sem a migration) ⇒ compatibilidade', () => {
     const n = normalizeAdminSession(row('GERENTE', undefined), 'ssr')
     expect(n.authState).toBe('authenticated')

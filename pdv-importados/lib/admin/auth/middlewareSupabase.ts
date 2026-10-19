@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { COOKIE_EMPRESA, headersEmpresa } from '@/lib/multiempresa/empresaSelecionada'
 
 function supabaseConfigOk(url: string | undefined, anonKey: string | undefined): boolean {
   if (!url?.trim() || !anonKey?.trim()) return false
@@ -29,6 +30,7 @@ export function createMiddlewareSupabase(request: NextRequest): {
   const response = NextResponse.next({ request })
 
   const supabase = createServerClient(supabaseUrl, supabaseKey, {
+    global: { headers: headersEmpresa(request.cookies.get(COOKIE_EMPRESA)?.value) },
     cookies: {
       getAll() {
         return request.cookies.getAll()

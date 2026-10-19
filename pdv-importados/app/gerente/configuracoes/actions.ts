@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
+import { empresaContextoId, filtrarEmpresa } from '@/lib/multiempresa/empresaContexto'
 
 export type ConfiguracaoGeralRow = {
   chave: string
@@ -19,10 +20,12 @@ export async function atualizarConfiguracao(
   if (!auth.ok) return { success: false, error: auth.error }
 
   const supabase = await createClient()
-  const { error } = await supabase
-    .from('configuracoes_gerais')
-    .update({ valor: input.valor.trim() })
-    .eq('chave', input.chave)
+  // Multiempresa: grava só a chave da empresa da operação (ADMIN legado vê todas as empresas).
+  const empresaId = await empresaContextoId(supabase)
+  const { error } = await filtrarEmpresa(
+    supabase.from('configuracoes_gerais').update({ valor: input.valor.trim() }).eq('chave', input.chave),
+    empresaId,
+  )
   if (error) return { success: false, error: mensagemErroComSecao('Configuração', error.message) }
 
   revalidatePath('/gerente/configuracoes')

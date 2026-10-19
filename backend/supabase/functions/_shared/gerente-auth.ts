@@ -52,6 +52,8 @@ type ValidateOptions = {
   supabase: any;
   senha: string;
   lojaId: string | null;
+  /** Empresa da operação (multiempresa): escolhe a linha padrão de pdv_config DA EMPRESA (senha de gerente). */
+  empresaId?: string | null;
   userId?: string | null;
   req: Request;
   logStage: string;
@@ -247,12 +249,18 @@ async function loadGerenteConfigBundle(
   supabase: any,
   logStage: string,
   log: LoggerFn,
+  empresaId: string | null = null,
 ): Promise<GerenteConfigBundle | ValidateResult> {
-  const { data: config, error: configError } = await supabase
-    .from("pdv_config")
-    .select("gerente_id, gerente_senha_bcrypt, max_desconto_gerente_percentual")
-    .eq("id", 1)
-    .maybeSingle();
+  const COLS = "gerente_id, gerente_senha_bcrypt, max_desconto_gerente_percentual";
+  // Multiempresa: senha de gerente é da EMPRESA da operação (linha padrão loja_id NULL da empresa).
+  // Sem empresa (legado) ou coluna ainda inexistente ⇒ linha id=1, como antes (cliente 1).
+  let res = empresaId
+    ? await supabase.from("pdv_config").select(COLS).is("loja_id", null).eq("empresa_id", empresaId).maybeSingle()
+    : await supabase.from("pdv_config").select(COLS).eq("id", 1).maybeSingle();
+  if (empresaId && res.error && /empresa_id/.test(String(res.error.message))) {
+    res = await supabase.from("pdv_config").select(COLS).eq("id", 1).maybeSingle();
+  }
+  const { data: config, error: configError } = res;
 
   if (configError) {
     log({ level: "error", stage: logStage, error: configError.message });
@@ -427,6 +435,7 @@ export async function validateGerenteAndIssueToken(
     supabase,
     senha,
     lojaId,
+    empresaId,
     userId,
     req,
     logStage,
@@ -458,7 +467,7 @@ export async function validateGerenteAndIssueToken(
     const locked = await precheckRateLimitLocks(supabase, rateContexts, nowMs, logStage, log);
     if (locked) return locked;
 
-    const bundleOrErr = await loadGerenteConfigBundle(supabase, logStage, log);
+    const bundleOrErr = await loadGerenteConfigBundle(supabase, logStage, log, empresaId ?? null);
     if ("ok" in bundleOrErr) return bundleOrErr;
     const { config, gerenteIdRaw } = bundleOrErr;
 

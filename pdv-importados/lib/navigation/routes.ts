@@ -5,6 +5,7 @@
 export const ROUTES = {
   auth: {
     login: '/login',
+    selecionarEmpresa: '/selecionar-empresa',
     signOut: '/auth/signout',
     forgotPassword: '/auth/esqueci-senha',
     resetPassword: '/auth/redefinir-senha',

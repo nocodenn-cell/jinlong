@@ -100,7 +100,22 @@ async function nextPdvConfigId(admin: AdminClient): Promise<number> {
   return max + 1
 }
 
+/**
+ * Multiempresa (fase 3): a linha padrão da empresa (pdv_config.loja_id NULL, semeada pelo banco)
+ * é a que o validar-gerente lê. Aponta o dono como gerente. Coluna/linha ausente ⇒ ignora (pré-fase 3).
+ */
+async function apontarGerentePadraoEmpresa(admin: AdminClient, lojaId: string, donoId: string) {
+  const { data: loja } = await fromLoose(admin, 'lojas').select('empresa_id').eq('id', lojaId).maybeSingle()
+  const empresaId = (loja as { empresa_id?: string } | null)?.empresa_id
+  if (!empresaId) return
+  await fromLoose(admin, 'pdv_config')
+    .update({ gerente_id: donoId })
+    .eq('empresa_id', empresaId)
+    .eq('gerente_id', `empresa-${empresaId.slice(0, 8)}`) // só a linha semeada (loja_id NULL)
+}
+
 async function ensurePdvConfig(admin: AdminClient, lojaId: string, donoId: string, idioma: 'pt' | 'zh') {
+  await apontarGerentePadraoEmpresa(admin, lojaId, donoId).catch(() => undefined)
   const defaults = {
     loja_id: lojaId,
     gerente_id: donoId,

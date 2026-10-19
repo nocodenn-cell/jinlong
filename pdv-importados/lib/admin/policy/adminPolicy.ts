@@ -1,6 +1,7 @@
 import { isPerfilPainelGerencial } from '@/lib/auth/painelGerencial'
 import type { PerfilUsuario } from '@/idioma/normalizePerfilUsuario'
 import type { AdminSession, SessionNormalization } from '@/lib/admin/auth/types'
+import { ROUTES } from '@/lib/navigation/routes'
 
 /** Escopo da decisão — única fonte de verdade para autorização /admin e /gerente. */
 export type DecisionScope = 'edge' | 'api' | 'action' | 'resource' | 'gerente'
@@ -165,6 +166,12 @@ export function middlewareAdminDecision(
     return isProtectedRoute(pathname)
       ? redirect(loginPath(pathname), 'db_error', 'edge')
       : allow('db_error_public_route', 'edge')
+  }
+  if (authState === 'blocked' && normalized.blockedReason === 'multi_empresa') {
+    // Vínculo em 2+ empresas sem escolha: seletor de empresa (rota pública ao middleware).
+    return isProtectedRoute(pathname)
+      ? redirect(`${ROUTES.auth.selecionarEmpresa}?${new URLSearchParams({ next: pathname })}`, 'multi_empresa', 'edge')
+      : allow('blocked_public_route', 'edge')
   }
   if (authState === 'blocked') {
     // Conta desativada (usuarios.ativo = false) ou sem loja vinculada: não entra

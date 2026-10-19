@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
+import { empresaContextoId, filtrarEmpresa } from '@/lib/multiempresa/empresaContexto'
 
 type ActionResult<T = null> =
   | { success: true; data: T }
@@ -18,10 +19,11 @@ export async function carregarSuspensaoVendas(): Promise<ActionResult<SuspensaoS
   if (!auth.ok) return { success: false, error: auth.error }
 
   const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('configuracoes_gerais')
-    .select('chave, valor')
-    .in('chave', ['vendas_suspensas', 'motivo_suspensao'])
+  const empresaId = await empresaContextoId(supabase)
+  const { data, error } = await filtrarEmpresa(
+    supabase.from('configuracoes_gerais').select('chave, valor').in('chave', ['vendas_suspensas', 'motivo_suspensao']),
+    empresaId,
+  )
 
   if (error) return { success: false, error: error.message }
 
@@ -43,6 +45,7 @@ export async function atualizarSuspensaoVendas(
   if (!auth.ok) return { success: false, error: auth.error }
 
   const supabase = await createClient()
+  const empresaId = await empresaContextoId(supabase)
 
   const updates = [
     { chave: 'vendas_suspensas', valor: suspensas ? 'true' : 'false' },
@@ -52,11 +55,10 @@ export async function atualizarSuspensaoVendas(
   for (const [i, u] of updates.entries()) {
     // `.select('chave')` devolve as linhas afetadas: UPDATE sem erro mas com 0 linhas
     // (linha ausente ou RLS negando) não pode virar "sucesso".
-    const { data, error } = await supabase
-      .from('configuracoes_gerais')
-      .update({ valor: u.valor })
-      .eq('chave', u.chave)
-      .select('chave')
+    const { data, error } = await filtrarEmpresa(
+      supabase.from('configuracoes_gerais').update({ valor: u.valor }).eq('chave', u.chave),
+      empresaId,
+    ).select('chave')
     if (error) return { success: false, error: error.message }
     if (data?.length !== 1) {
       return {

@@ -26,21 +26,9 @@ const ISENTAS = {
   caixa_scan_telemetry_events: 'telemetria técnica do próprio usuário (sem loja_id)',
 }
 
-// RPCs DEF sem argumento de loja/entidade: escopo deriva internamente ou leem configuração global.
-const RPC_PENDENTES = {
-  configuracoes_para_caixa_web: 'lê configuracoes_gerais global (D12: configuração por empresa — pendente)',
-  pdv_config_para_caixa_web: 'lê pdv_config global/NULL (D12 — pendente)',
-  pdv_config_flags_visuais: 'lê pdv_config global/NULL (D12 — pendente)',
-  obter_limite_sangria_sem_gerente: 'lê configuração global (D12 — pendente)',
-  obter_pricing_version_ativa: 'versão de pricing ativa é global (índice único global; D13 — pendente)',
-  is_feature_enabled: 'flag global da plataforma',
-  financeiro_comando: 'loja vem do payload; validada internamente por financeiro_loja_* + auth.uid (revisar com A×B)',
-  financeiro_comando_operacional: 'idem financeiro_comando',
-  financeiro_painel: 'loja derivada de auth.uid internamente (revisar com A×B)',
-  listar_caixas_elegiveis_desembolso: 'loja derivada de auth.uid internamente',
-  listar_vendas_em_espera: 'filtra por auth.uid internamente',
-  pdv_diagnostico_pre_producao: 'diagnóstico por auth.uid; revisar',
-}
+// RPCs DEF sem argumento de loja/entidade: revisadas uma a uma na fase 3 e marcadas com
+// COMMENT 'Multiempresa revisado (...)'. Pendência nova aqui = decisão consciente com motivo.
+const RPC_PENDENTES = {}
 
 const E1 = 'e0000001-0000-4000-8000-000000000001'
 const E2 = 'e0000002-0000-4000-8000-000000000002'
@@ -94,12 +82,13 @@ await t('enumeração: nenhuma tabela com loja_id/empresa_id fica fora da guarda
   assert.deepEqual(soltas, [])
 })
 
-await t('enumeração: RPC SECURITY DEFINER exposta a authenticated está envelopada ou em pendência com motivo', async () => {
+await t('enumeração: RPC SECURITY DEFINER exposta a authenticated está envelopada ou revisada (sem pendências)', async () => {
   const r = await db.query(`SELECT p.proname, coalesce(obj_description(p.oid, 'pg_proc'), '') AS c, p.prosrc
     FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
     WHERE n.nspname = 'public' AND p.prokind = 'f' AND p.prosecdef
       AND has_function_privilege('authenticated', p.oid, 'EXECUTE') AND p.proname !~ '^(fp_|auth_)'`)
-  const soltas = r.rows.filter((x) => !x.c.startsWith('Envelope multiempresa') && !RPC_PENDENTES[x.proname]).map((x) => x.proname)
+  const soltas = r.rows.filter((x) => !x.c.startsWith('Envelope multiempresa') && !x.c.startsWith('Multiempresa revisado')
+    && !RPC_PENDENTES[x.proname]).map((x) => x.proname)
   assert.deepEqual(soltas, [], `RPCs sem envelope nem pendência: ${soltas.join(', ')}`)
   for (const x of r.rows.filter((y) => y.c.startsWith('Envelope multiempresa'))) {
     assert.match(x.prosrc, /fp_assert_loja/, `${x.proname}: envelope sem asserção`)
@@ -234,7 +223,10 @@ await t('ativação v2: 10 falhas em 15 min bloqueiam o computador', async () =>
 await t('rollback remove guardas/envelopes, devolve as RPCs originais, e a migration reaplica', async () => {
   const rb = await readFile(new URL('../supabase/rollback/20261019140000_multiempresa_fase2_guardas.rollback.sql', import.meta.url), 'utf8')
   const mig = await readFile(new URL('../supabase/migrations/20261019140000_multiempresa_fase2_guardas.sql', import.meta.url), 'utf8')
+  const rb3 = await readFile(new URL('../supabase/rollback/20261019150000_multiempresa_fase3_config.rollback.sql', import.meta.url), 'utf8')
+  const mig3 = await readFile(new URL('../supabase/migrations/20261019150000_multiempresa_fase3_config.sql', import.meta.url), 'utf8')
   const nEnv = (await db.query(`SELECT count(*)::int n FROM internal.fp_rpc_envelopes`)).rows[0].n
+  await db.exec(rb3) // fase 3 sai antes da fase 2
   await db.exec(rb)
   const g = (await db.query(`SELECT count(*)::int n FROM pg_policy WHERE polname = 'tenant_guard' AND polrelid::regclass::text NOT IN ('fornecedores','contas_receber','itens_venda')`)).rows[0].n
   assert.equal(g, 0)
@@ -244,6 +236,7 @@ await t('rollback remove guardas/envelopes, devolve as RPCs originais, e a migra
   assert.equal(intern, 0)
   assert.equal((await db.query(`SELECT count(*)::int n FROM information_schema.columns WHERE table_name = 'categorias' AND column_name = 'empresa_id'`)).rows[0].n, 0)
   await db.exec(mig)
+  await db.exec(mig3)
   assert.equal((await db.query(`SELECT count(*)::int n FROM internal.fp_rpc_envelopes`)).rows[0].n, nEnv)
 })
 

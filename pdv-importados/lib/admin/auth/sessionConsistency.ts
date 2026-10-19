@@ -26,6 +26,8 @@ export type RawUsuarioRow = {
    * (tabela ainda não existe no ambiente) ⇒ compatibilidade, sem bloqueio novo.
    */
   vinculos?: RawVinculo[]
+  /** Empresa escolhida (cookie fp_empresa), validada contra os vínculos na normalização. */
+  empresaSelecionada?: string | null
 }
 
 export type RawVinculo = {
@@ -75,6 +77,14 @@ function perfilToRole(perfil: PerfilUsuario): AdminRole | null {
   }
 }
 
+function empresaEVinculos(u: RawUsuarioRow | null | undefined): Pick<AdminSession, 'empresaId' | 'vinculos'> {
+  const vinculos = u?.vinculos
+  if (!vinculos) return { empresaId: null, vinculos: null }
+  const sel = u?.empresaSelecionada
+  const empresaId = sel && vinculos.some((v) => v.empresa_id === sel) ? sel : (vinculos[0]?.empresa_id ?? null)
+  return { empresaId, vinculos: vinculos.filter((v) => v.empresa_id === empresaId) }
+}
+
 function buildAdminSession(raw: Extract<RawSession, { status: 'authenticated' }>): AdminSession | null {
   const perfil = normalizePerfilUsuario(raw.usuario?.perfil ?? null)
   if (!isPerfilPainelGerencial(perfil)) return null
@@ -84,8 +94,7 @@ function buildAdminSession(raw: Extract<RawSession, { status: 'authenticated' }>
     perfil,
     idioma: normalizeIdioma(raw.usuario?.idioma_preferido),
     lojaId: (raw.usuario?.loja_id as string | null | undefined) ?? null,
-    empresaId: raw.usuario?.vinculos?.[0]?.empresa_id ?? null,
-    vinculos: raw.usuario?.vinculos ?? null,
+    ...empresaEVinculos(raw.usuario),
   }
 }
 
@@ -158,7 +167,10 @@ async function lerVinculos(supabase: SupabaseClient, userId: string): Promise<Ra
  * cada request (middleware e RSC). A regra de acesso não muda — sem `getUser()`
  * válido não há sessão, e perfil lido para outro id é descartado e relido.
  */
-export async function fetchRawSession(supabase: SupabaseClient): Promise<RawSession> {
+export async function fetchRawSession(
+  supabase: SupabaseClient,
+  opts: { empresaSelecionada?: string | null } = {},
+): Promise<RawSession> {
   const dicaUserId = await lerDicaUserIdNaoVerificada(supabase)
   const perfilAntecipado = dicaUserId
     ? Promise.resolve(lerPerfilUsuario(supabase, dicaUserId)).then(
@@ -192,7 +204,11 @@ export async function fetchRawSession(supabase: SupabaseClient): Promise<RawSess
 
   const vinculos = await vinculosPromise
   if (!usuario || vinculos === undefined) return { status: 'authenticated', user, usuario }
-  return { status: 'authenticated', user, usuario: { ...(usuario as RawUsuarioRow), vinculos } }
+  return {
+    status: 'authenticated',
+    user,
+    usuario: { ...(usuario as RawUsuarioRow), vinculos, empresaSelecionada: opts.empresaSelecionada ?? null },
+  }
 }
 
 /** Bloqueio de identidade: conta desativada ou sem loja vinculada não entra em rota protegida. */
@@ -205,7 +221,8 @@ function resolveBlockedReason(raw: RawSession): SessionBlockedReason | null {
   if (vinculos !== undefined && normalizePerfilUsuario(raw.usuario.perfil ?? null) !== 'ADMIN') {
     const empresas = new Set(vinculos.map((v) => v.empresa_id))
     if (empresas.size === 0) return 'sem_empresa'
-    if (empresas.size > 1) return 'multi_empresa' // sem seletor de empresa ⇒ falha fechada (§4/§9)
+    // 2+ empresas: precisa ter escolhido UMA delas (seletor /selecionar-empresa); senão falha fechada (§4/§9).
+    if (empresas.size > 1 && !empresas.has(raw.usuario.empresaSelecionada ?? '')) return 'multi_empresa'
   }
   return null
 }
@@ -254,7 +271,15 @@ export function resolvePerfilFromRaw(raw: RawSession): PerfilUsuario {
 
 async function readRawSessionSsr(): Promise<RawSession> {
   const { createClient } = await import('@/lib/supabase/server')
-  return fetchRawSession(await createClient())
+  const { cookies } = await import('next/headers')
+  const { COOKIE_EMPRESA, normalizarEmpresaId } = await import('@/lib/multiempresa/empresaSelecionada')
+  let empresaSelecionada: string | null = null
+  try {
+    empresaSelecionada = normalizarEmpresaId((await cookies()).get(COOKIE_EMPRESA)?.value)
+  } catch {
+    // fora de request (testes/scripts): sem seleção
+  }
+  return fetchRawSession(await createClient(), { empresaSelecionada })
 }
 
 type CachedFn<T> = () => Promise<T>
