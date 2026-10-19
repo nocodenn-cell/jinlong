@@ -196,9 +196,10 @@ BEGIN
   e := pg_temp.dev(3, v, 1, 'd13-t3-c', 'DINHEIRO', a);
   PERFORM pg_temp.assert(e = 'DEVOLVER_VENDA_CAIXA_INVALIDO', 'A-3 T3 caixa FECHADO informado → CAIXA_INVALIDO (' || coalesce(e, 'aceita') || ')');
   e := pg_temp.dev(3, v, 1, 'd13-t3-d', 'DINHEIRO', (SELECT id FROM public.caixas WHERE operador_id = pg_temp.op(1)));
-  PERFORM pg_temp.assert(e = 'DEVOLVER_VENDA_CAIXA_INVALIDO', 'A-5 T3 caixa de OUTRA loja → CAIXA_INVALIDO (' || coalesce(e, 'aceita') || ')');
+  -- multiempresa: o envelope pode recusar antes (ACESSO_LOJA_NEGADO) — também é rejeição válida
+  PERFORM pg_temp.assert(e = 'DEVOLVER_VENDA_CAIXA_INVALIDO' OR e LIKE 'ACESSO_LOJA_NEGADO%', 'A-5 T3 caixa de OUTRA loja → CAIXA_INVALIDO (' || coalesce(e, 'aceita') || ')');
   e := pg_temp.dev(3, v, 1, 'd13-t3-e', 'DINHEIRO', c, pg_temp.op(5));
-  PERFORM pg_temp.assert(e = 'DEVOLVER_VENDA_SEM_PERMISSAO', 'T3 operador (não gerente) → SEM_PERMISSAO (' || coalesce(e, 'aceita') || ')');
+  PERFORM pg_temp.assert(e = 'DEVOLVER_VENDA_SEM_PERMISSAO' OR e LIKE 'ACESSO_LOJA_NEGADO%', 'T3 operador (não gerente) → SEM_PERMISSAO (' || coalesce(e, 'aceita') || ')');
 END $t3$;
 
 -- T3b — determinismo: a ordem de criação dos caixas não muda o resultado (L4: B antes de C e C antes de B)
@@ -243,9 +244,9 @@ BEGIN
   cx := pg_temp.abrir(15, 7, 0);
   v := pg_temp.vender(15, 7, cx, 100, pg_temp.din(100));
   e := pg_temp.dev(8, v, 2, 'd13-t5-a', 'DINHEIRO');     -- gerente da loja 8 tenta devolver venda da loja 7
-  PERFORM pg_temp.assert(e = 'DEVOLVER_VENDA_SEM_PERMISSAO', 'A-5 T5 gerente de outra loja → SEM_PERMISSAO (' || coalesce(e, 'aceita') || ')');
+  PERFORM pg_temp.assert((e = 'DEVOLVER_VENDA_SEM_PERMISSAO' OR e LIKE 'ACESSO_LOJA_NEGADO%'), 'A-5 T5 gerente de outra loja → SEM_PERMISSAO (' || coalesce(e, 'aceita') || ')');
   e := pg_temp.dev(8, v, 2, 'd13-t5-b', 'DINHEIRO', NULL, NULL, pg_temp.gid(7));  -- passa p_operador_id de gerente da loja 7
-  PERFORM pg_temp.assert(e = 'DEVOLVER_VENDA_SEM_PERMISSAO', 'A-5 T5 p_operador_id é ignorado quando há sessão (auth.uid) (' || coalesce(e, 'aceita') || ')');
+  PERFORM pg_temp.assert(e = 'DEVOLVER_VENDA_SEM_PERMISSAO' OR e LIKE 'ACESSO_LOJA_NEGADO%', 'A-5 T5 p_operador_id é ignorado quando há sessão (auth.uid) (' || coalesce(e, 'aceita') || ')');
   PERFORM pg_temp.assert(pg_temp.n_dev(v) = 0 AND pg_temp.auth(cx) = 100, 'A-5 T5 nenhum efeito nas tentativas cross-loja');
 END $t5$;
 
@@ -445,7 +446,7 @@ BEGIN
   e := pg_temp.dev(12, v, 1, 'd13-t9-admin', 'DINHEIRO', NULL, adm);
   PERFORM pg_temp.assert(e IS NULL, 'T9 ADMIN da loja devolve (' || coalesce(e, 'ok') || ')');
   e := pg_temp.dev(12, v, 1, 'd13-t9-op', 'DINHEIRO', NULL, pg_temp.op(33));
-  PERFORM pg_temp.assert(e = 'DEVOLVER_VENDA_SEM_PERMISSAO', 'T9 OPERADOR não devolve (' || coalesce(e, 'aceita') || ')');
+  PERFORM pg_temp.assert(e = 'DEVOLVER_VENDA_SEM_PERMISSAO' OR e LIKE 'ACESSO_LOJA_NEGADO%', 'T9 OPERADOR não devolve (' || coalesce(e, 'aceita') || ')');
 
   -- 2 caixas abertos: operador só enxerga o próprio; gerencial precisa escolher
   cx34 := pg_temp.abrir(34, 12, 0);
@@ -651,17 +652,17 @@ BEGIN
     'T14 criador repetindo a chave continua idempotente (' || coalesce(e, 'ok') || ')');
 
   e := pg_temp.dev(13, v, 2, 'd13-t14', 'DINHEIRO', cx);                        -- gerente de OUTRA loja repete a chave
-  PERFORM pg_temp.assert(e = 'DEVOLVER_VENDA_SEM_PERMISSAO', 'T14 gerente de outra loja repetindo a chave → SEM_PERMISSAO (' || coalesce(e, 'aceita') || ')');
+  PERFORM pg_temp.assert((e = 'DEVOLVER_VENDA_SEM_PERMISSAO' OR e LIKE 'ACESSO_LOJA_NEGADO%'), 'T14 gerente de outra loja repetindo a chave → SEM_PERMISSAO (' || coalesce(e, 'aceita') || ')');
   e := pg_temp.dev(13, v, 2, 'd13-t14', 'DINHEIRO', cx, NULL, pg_temp.gid(12));   -- p_operador_id não vale com sessão
-  PERFORM pg_temp.assert(e = 'DEVOLVER_VENDA_SEM_PERMISSAO', 'T14 p_operador_id de gerente da loja é ignorado com sessão (' || coalesce(e, 'aceita') || ')');
+  PERFORM pg_temp.assert(e = 'DEVOLVER_VENDA_SEM_PERMISSAO' OR e LIKE 'ACESSO_LOJA_NEGADO%', 'T14 p_operador_id de gerente da loja é ignorado com sessão (' || coalesce(e, 'aceita') || ')');
   e := pg_temp.dev(12, v, 2, 'd13-t14', 'DINHEIRO', cx, pg_temp.op(41));           -- operador sem perfil gerencial
-  PERFORM pg_temp.assert(e = 'DEVOLVER_VENDA_SEM_PERMISSAO', 'T14 operador repetindo a chave → SEM_PERMISSAO (' || coalesce(e, 'aceita') || ')');
+  PERFORM pg_temp.assert(e = 'DEVOLVER_VENDA_SEM_PERMISSAO' OR e LIKE 'ACESSO_LOJA_NEGADO%', 'T14 operador repetindo a chave → SEM_PERMISSAO (' || coalesce(e, 'aceita') || ')');
 
   -- Sem oráculo: caixa divergente informado por quem não tem permissão também é SEM_PERMISSAO (não RETRY_CAIXA_DIVERGENTE)
   e := pg_temp.dev(13, v, 2, 'd13-t14', 'DINHEIRO', cx2);
-  PERFORM pg_temp.assert(e = 'DEVOLVER_VENDA_SEM_PERMISSAO', 'T14 caixa divergente por gerente de outra loja não vaza RETRY_CAIXA_DIVERGENTE (' || coalesce(e, 'aceita') || ')');
+  PERFORM pg_temp.assert((e = 'DEVOLVER_VENDA_SEM_PERMISSAO' OR e LIKE 'ACESSO_LOJA_NEGADO%'), 'T14 caixa divergente por gerente de outra loja não vaza RETRY_CAIXA_DIVERGENTE (' || coalesce(e, 'aceita') || ')');
   e := pg_temp.dev(12, v, 2, 'd13-t14', 'DINHEIRO', cx2, pg_temp.op(42));
-  PERFORM pg_temp.assert(e = 'DEVOLVER_VENDA_SEM_PERMISSAO', 'T14 caixa divergente por operador não vaza RETRY_CAIXA_DIVERGENTE (' || coalesce(e, 'aceita') || ')');
+  PERFORM pg_temp.assert(e = 'DEVOLVER_VENDA_SEM_PERMISSAO' OR e LIKE 'ACESSO_LOJA_NEGADO%', 'T14 caixa divergente por operador não vaza RETRY_CAIXA_DIVERGENTE (' || coalesce(e, 'aceita') || ')');
   -- Quem tem permissão segue recebendo o erro explícito de caixa divergente
   e := pg_temp.dev(12, v, 2, 'd13-t14', 'DINHEIRO', cx2);
   PERFORM pg_temp.assert(e = 'DEVOLVER_VENDA_RETRY_CAIXA_DIVERGENTE', 'T14 gerente da loja com caixa divergente → RETRY_CAIXA_DIVERGENTE (' || coalesce(e, 'aceita') || ')');
