@@ -28,6 +28,7 @@
     "test:fiscal-rpc-authz": "node scripts/fiscal-rpc-loja-authz.test.mjs",
     "test:fiscal-cancelamento-categoria": "node scripts/fiscal-cancelamento-categoria.test.mjs",
     "test:hardening-residual": "node scripts/hardening-rls-search-path-residual.test.mjs",
+    "test:multiempresa-fase1": "node scripts/multiempresa-fase1-isolamento.test.mjs",
     "test:go-live-01-isolamento": "node scripts/go-live-01-isolamento.test.mjs",
     "test:backup-restore-isolado": "node scripts/backup-restore-isolado.test.mjs",
     "test:fiscal-p0-pre-req": "node scripts/fiscal-p0-pre-req.test.mjs",

@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod ativacao;
 mod db;
 
 use db::{
@@ -127,6 +128,23 @@ fn sync_pdv_config_real_cmd(
 }
 
 #[tauri::command]
+fn ativacao_status_cmd() -> ativacao::AtivacaoStatusDto {
+    ativacao::status()
+}
+
+#[tauri::command]
+fn ativar_pdv_cmd(
+    app: tauri::AppHandle,
+    codigo: String,
+    endpoint: Option<String>,
+    nome: Option<String>,
+) -> Result<ativacao::AtivacaoStatusDto, String> {
+    // fingerprint calculado ANTES de existir ativação (hostname/usuário ou DEVICE_FINGERPRINT).
+    let fp = db::device_fingerprint_local();
+    ativacao::ativar(&app, endpoint, codigo, nome, fp)
+}
+
+#[tauri::command]
 fn validar_gerente_sync_cmd(senha: String) -> Result<ValidarGerentePdvDto, String> {
     validar_gerente_sync(senha)
 }
@@ -135,6 +153,7 @@ fn main() {
     tauri::Builder::default()
         .setup(|app| {
             load_env_files();
+            ativacao::carregar(app.handle());
             if let Err(e) = init_db(app.handle()) {
                 eprintln!("Erro ao inicializar banco local: {e}");
             }
@@ -158,7 +177,10 @@ fn main() {
             sync_catalogo_real_cmd,
             pdv_config_local_get_cmd,
             sync_pdv_config_real_cmd,
-            validar_gerente_sync_cmd
+            validar_gerente_sync_cmd,
+            // Ativação por código
+            ativacao_status_cmd,
+            ativar_pdv_cmd
         ])
         .run(tauri::generate_context!())
         .expect("erro ao rodar aplicação Tauri");

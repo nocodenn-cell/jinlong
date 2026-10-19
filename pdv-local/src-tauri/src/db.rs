@@ -913,7 +913,11 @@ fn endpoint_with_op(endpoint: &str, op: &str) -> String {
     }
 }
 
+/// Credenciais de sync: ativação por código (preferida) ou `.env` legado (SYNC_ENDPOINT + SYNC_KEY).
 fn sync_endpoint_and_key() -> Result<(String, String), String> {
+    if let Some(a) = crate::ativacao::atual() {
+        return Ok((a.endpoint, a.sync_key));
+    }
     let endpoint = std::env::var("SYNC_ENDPOINT")
         .map_err(|_| "Falta SYNC_ENDPOINT no ambiente do app".to_string())?;
     let sync_key =
@@ -984,7 +988,9 @@ fn signed_headers_for_request(
         "X-SYNC-SIGNATURE",
         reqwest::header::HeaderValue::from_str(&signature).map_err(|e| e.to_string())?,
     );
-    if let Ok(loja) = std::env::var("PDV_LOJA_ID") {
+    // Ativado: a loja é a do dispositivo (o servidor ignora/recusa qualquer outra).
+    let loja_ativacao = crate::ativacao::atual().map(|a| a.loja_id);
+    if let Some(loja) = loja_ativacao.or_else(|| std::env::var("PDV_LOJA_ID").ok()) {
         let loja = loja.trim();
         if !loja.is_empty() {
             headers.insert(
@@ -1334,8 +1340,8 @@ pub fn diagnostics(app: &tauri::AppHandle) -> Result<Diagnostics, String> {
     let resumo = outbox_resumo(app)?;
     Ok(Diagnostics {
         db_path: db.to_string_lossy().to_string(),
-        sync_endpoint_set: std::env::var("SYNC_ENDPOINT").is_ok(),
-        sync_key_set: std::env::var("SYNC_KEY").is_ok(),
+        sync_endpoint_set: crate::ativacao::atual().is_some() || std::env::var("SYNC_ENDPOINT").is_ok(),
+        sync_key_set: crate::ativacao::atual().is_some() || std::env::var("SYNC_KEY").is_ok(),
         outbox_pendentes: resumo.pendentes_total,
         outbox_prontos_sync: resumo.prontos_sync,
         outbox_em_backoff: resumo.em_backoff,
@@ -1516,7 +1522,10 @@ struct SyncFailed {
 /// - SYNC_ENDPOINT: ex. https://<project>.supabase.co/functions/v1/sync-outbox
 /// - SYNC_KEY: segredo compartilhado (header X-SYNC-KEY)
 /// - DEVICE_FINGERPRINT: opcional (fallback automático quando ausente)
-fn device_fingerprint_local() -> String {
+pub fn device_fingerprint_local() -> String {
+    if let Some(a) = crate::ativacao::atual() {
+        return a.device_fingerprint;
+    }
     if let Ok(v) = std::env::var("DEVICE_FINGERPRINT") {
         let normalized = v.trim().to_lowercase();
         if !normalized.is_empty() {
@@ -1541,10 +1550,7 @@ fn device_fingerprint_local() -> String {
 }
 
 pub fn sync_outbox_real(app: &tauri::AppHandle, limite: i64) -> Result<i64, String> {
-    let endpoint = std::env::var("SYNC_ENDPOINT")
-        .map_err(|_| "Falta SYNC_ENDPOINT no ambiente do app".to_string())?;
-    let sync_key =
-        std::env::var("SYNC_KEY").map_err(|_| "Falta SYNC_KEY no ambiente do app".to_string())?;
+    let (endpoint, sync_key) = sync_endpoint_and_key()?;
 
     let events = outbox_listar_pendentes(app, limite)?;
     if events.is_empty() {

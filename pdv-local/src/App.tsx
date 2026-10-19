@@ -467,12 +467,10 @@ export function App() {
             borderBottom: '1px solid #fbbf24',
           }}
         >
-          <strong>Catálogo vazio.</strong> Copie{' '}
-          <code style={{ fontSize: 12 }}>pdv-local/.env.example</code> para{' '}
-          <code style={{ fontSize: 12 }}>.env</code>, preencha{' '}
-          <code style={{ fontSize: 12 }}>SYNC_ENDPOINT</code> e{' '}
-          <code style={{ fontSize: 12 }}>SYNC_KEY</code>, reinicie o
-          app e clique em <strong>Sincronizar catálogo</strong>.
+          <strong>Catálogo vazio.</strong> Clique em <strong>Sincronizar catálogo</strong>. Se o
+          caixa ainda não foi ativado, gere um código em Admin → Provisionamento (ou, no modo
+          legado, preencha <code style={{ fontSize: 12 }}>SYNC_ENDPOINT</code> e{' '}
+          <code style={{ fontSize: 12 }}>SYNC_KEY</code> no <code style={{ fontSize: 12 }}>.env</code>).
           {ultimoErroSincCatalogo && (
             <div style={{ marginTop: 6, fontSize: 12, color: '#b45309' }}>
               Motivo: {ultimoErroSincCatalogo}
