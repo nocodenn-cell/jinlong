@@ -231,7 +231,7 @@ export function EstoqueAcoesRapidas({ linhas, labels, quick }: Props) {
             aria-label={quick.buscarPlaceholder}
           />
         </label>
-        {buscando ? <p role="status" className="mt-3 text-caption text-jl-fg-3">{labels.situacaoSemLinha ? '' : ''}{quick.buscarPlaceholder}…</p> : null}
+        {buscando ? <p role="status" className="mt-3 text-caption text-jl-fg-3">{quick.buscarPlaceholder}…</p> : null}
         {erroBusca ? <p role="alert" className="mt-3 text-caption text-[var(--color-warning-strong)]">{quick.selecionarProduto}</p> : null}
         <ul aria-busy={buscando} className="mt-3 max-h-72 space-y-2 overflow-y-auto">
           {filtrados.map((l) => (
