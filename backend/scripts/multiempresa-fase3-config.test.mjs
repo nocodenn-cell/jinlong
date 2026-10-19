@@ -182,12 +182,16 @@ await t('seleção de empresa (x-fp-empresa + loja ativa): estreita, nunca ampli
 await t('rollback da fase 3 volta a config global e a migration reaplica', async () => {
   const rb = await readFile(new URL('../supabase/rollback/20261019150000_multiempresa_fase3_config.rollback.sql', import.meta.url), 'utf8')
   const mig = await readFile(new URL('../supabase/migrations/20261019150000_multiempresa_fase3_config.sql', import.meta.url), 'utf8')
+  const rb4 = await readFile(new URL('../supabase/rollback/20261019160000_multiempresa_fase4_desempenho_guardas.rollback.sql', import.meta.url), 'utf8')
+  const mig4 = await readFile(new URL('../supabase/migrations/20261019160000_multiempresa_fase4_desempenho_guardas.sql', import.meta.url), 'utf8')
+  await db.exec(rb4) // ordem obrigatória: fase 4 sai antes
   await db.exec(rb)
   const src = (await db.query(`SELECT prosrc FROM pg_proc WHERE proname = 'obter_limite_sangria_sem_gerente'`)).rows[0].prosrc
   assert.match(src, /pc\.id = 1/)
   assert.equal((await db.query(`SELECT count(*)::int n FROM pg_constraint WHERE conname = 'configuracoes_gerais_chave_key'`)).rows[0].n, 1)
   assert.equal((await db.query(`SELECT count(*)::int n FROM information_schema.columns WHERE table_name = 'pdv_config' AND column_name = 'empresa_id'`)).rows[0].n, 0)
   await db.exec(mig)
+  await db.exec(mig4)
   assert.equal((await db.query(`SELECT count(*)::int n FROM internal.fp_funcoes_reescritas WHERE NOT aplicada`)).rows[0].n, 0)
   assert.equal((await db.query(`SELECT count(*)::int n FROM public.configuracoes_gerais WHERE empresa_id = '${E2}'`)).rows[0].n, 8)
 })

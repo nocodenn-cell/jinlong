@@ -77,38 +77,55 @@ BEGIN
   RETURN e;
 END $$;
 
-DO $$
+-- Otimiza a guarda de UMA tabela (idempotente: guarda já rápida ⇒ nada muda, original preservado).
+CREATE OR REPLACE FUNCTION internal.fp_otimizar_guarda(p_tabela text)
+RETURNS boolean LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
 DECLARE r record; nq text; nc text; resto text;
 BEGIN
-  FOR r IN
-    SELECT p.tablename AS tabela, p.qual, p.with_check
-      FROM pg_policies p
-     WHERE p.schemaname = 'public' AND p.policyname = 'tenant_guard'
-       AND NOT EXISTS (SELECT 1 FROM internal.fp_guardas_originais o WHERE o.tabela = p.tablename AND o.aplicada)
-  LOOP
-    nq := internal.fp_guarda_rapida(r.tabela, r.qual);
-    nc := internal.fp_guarda_rapida(r.tabela, r.with_check);
-    resto := concat_ws(' ', nq, nc);
-    -- Sobra de chamada por linha (padrão não reconhecido) ⇒ não mexe (seguro), registra.
-    IF regexp_replace(resto, 'fp_pode_loja_nula\(NULL::uuid\)', '', 'g') ~ 'fp_pode_(loja|loja_nula|empresa)\(' THEN
-      INSERT INTO internal.fp_guardas_originais (tabela, qual, with_check, aplicada, motivo)
-      VALUES (r.tabela, r.qual, r.with_check, false, 'padrão não reconhecido')
-      ON CONFLICT (tabela) DO UPDATE SET aplicada = false, motivo = excluded.motivo;
-      RAISE NOTICE 'fase4: guarda de % não otimizada (padrão não reconhecido)', r.tabela;
-      CONTINUE;
-    END IF;
-    INSERT INTO internal.fp_guardas_originais (tabela, qual, with_check, aplicada)
-    VALUES (r.tabela, r.qual, r.with_check, true)
-    ON CONFLICT (tabela) DO UPDATE SET qual = excluded.qual, with_check = excluded.with_check, aplicada = true, motivo = NULL;
-    IF nq IS NOT NULL AND nc IS NOT NULL THEN
-      EXECUTE format('ALTER POLICY tenant_guard ON public.%I USING (%s) WITH CHECK (%s)', r.tabela, nq, nc);
-    ELSIF nq IS NOT NULL THEN
-      EXECUTE format('ALTER POLICY tenant_guard ON public.%I USING (%s)', r.tabela, nq);
-    ELSIF nc IS NOT NULL THEN
-      EXECUTE format('ALTER POLICY tenant_guard ON public.%I WITH CHECK (%s)', r.tabela, nc);
-    END IF;
-  END LOOP;
+  SELECT p.qual, p.with_check INTO r
+    FROM pg_policies p WHERE p.schemaname = 'public' AND p.tablename = p_tabela AND p.policyname = 'tenant_guard';
+  IF NOT FOUND THEN RETURN false; END IF;
+  nq := internal.fp_guarda_rapida(p_tabela, r.qual);
+  nc := internal.fp_guarda_rapida(p_tabela, r.with_check);
+  IF nq IS NOT DISTINCT FROM r.qual AND nc IS NOT DISTINCT FROM r.with_check THEN
+    RETURN false; -- já otimizada (ou sem padrão aplicável)
+  END IF;
+  resto := concat_ws(' ', nq, nc);
+  -- Sobra de chamada por linha (padrão não reconhecido) ⇒ não mexe (seguro), registra.
+  IF regexp_replace(resto, 'fp_pode_loja_nula\(NULL::uuid\)', '', 'g') ~ 'fp_pode_(loja|loja_nula|empresa)\(' THEN
+    INSERT INTO internal.fp_guardas_originais (tabela, qual, with_check, aplicada, motivo)
+    VALUES (p_tabela, r.qual, r.with_check, false, 'padrão não reconhecido')
+    ON CONFLICT (tabela) DO UPDATE SET qual = excluded.qual, with_check = excluded.with_check, aplicada = false, motivo = excluded.motivo;
+    RAISE NOTICE 'fase4: guarda de % não otimizada (padrão não reconhecido)', p_tabela;
+    RETURN false;
+  END IF;
+  INSERT INTO internal.fp_guardas_originais (tabela, qual, with_check, aplicada)
+  VALUES (p_tabela, r.qual, r.with_check, true)
+  ON CONFLICT (tabela) DO UPDATE SET qual = excluded.qual, with_check = excluded.with_check, aplicada = true, motivo = NULL;
+  IF nq IS NOT NULL AND nc IS NOT NULL THEN
+    EXECUTE format('ALTER POLICY tenant_guard ON public.%I USING (%s) WITH CHECK (%s)', p_tabela, nq, nc);
+  ELSIF nq IS NOT NULL THEN
+    EXECUTE format('ALTER POLICY tenant_guard ON public.%I USING (%s)', p_tabela, nq);
+  ELSIF nc IS NOT NULL THEN
+    EXECUTE format('ALTER POLICY tenant_guard ON public.%I WITH CHECK (%s)', p_tabela, nc);
+  END IF;
+  RETURN true;
 END $$;
+REVOKE ALL ON FUNCTION internal.fp_otimizar_guarda(text) FROM PUBLIC;
+
+SELECT internal.fp_otimizar_guarda(p.tablename)
+  FROM pg_policies p WHERE p.schemaname = 'public' AND p.policyname = 'tenant_guard';
+
+-- Guardas criadas DEPOIS (novas tabelas via internal.fp_aplicar_guarda) já nascem otimizadas.
+-- Reescrita reversível (original em internal.fp_funcoes_reescritas; o rollback da fase 4 restaura).
+SELECT internal.fp_reescrever('internal.fp_aplicar_guarda(text, text, text, text)', jsonb_build_array(jsonb_build_array(
+'    ON CONFLICT (tabela) DO UPDATE SET classe = EXCLUDED.classe, expressao = EXCLUDED.expressao, aplicada = true;
+END',
+'    ON CONFLICT (tabela) DO UPDATE SET classe = EXCLUDED.classe, expressao = EXCLUDED.expressao, aplicada = true;
+  IF to_regprocedure(''internal.fp_otimizar_guarda(text)'') IS NOT NULL THEN
+    PERFORM internal.fp_otimizar_guarda(p_tabela);
+  END IF;
+END')));
 
 -- Índices de FK apontados pelo advisor (vínculos são lidos em toda guarda).
 CREATE INDEX IF NOT EXISTS usuario_vinculos_empresa_idx ON public.usuario_vinculos (empresa_id);

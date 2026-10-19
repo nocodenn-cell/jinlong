@@ -1,4 +1,15 @@
 -- Rollback da Fase 4 (desempenho das guardas). Rodar ANTES dos rollbacks das fases 3 e 2.
+-- 1) fp_aplicar_guarda volta à definição original (sem o gancho de otimização).
+DO $$
+DECLARE r record;
+BEGIN
+  IF to_regclass('internal.fp_funcoes_reescritas') IS NULL THEN RETURN; END IF;
+  FOR r IN SELECT * FROM internal.fp_funcoes_reescritas WHERE assinatura = 'internal.fp_aplicar_guarda(text, text, text, text)' LOOP
+    IF r.aplicada THEN EXECUTE r.definicao_original; END IF;
+    DELETE FROM internal.fp_funcoes_reescritas WHERE assinatura = r.assinatura;
+  END LOOP;
+END $$;
+-- 2) guardas voltam à expressão original.
 DO $$
 DECLARE r record;
 BEGIN
@@ -16,6 +27,7 @@ BEGIN
   END LOOP;
 END $$;
 DROP TABLE IF EXISTS internal.fp_guardas_originais;
+DROP FUNCTION IF EXISTS internal.fp_otimizar_guarda(text);
 DROP FUNCTION IF EXISTS internal.fp_guarda_rapida(text, text);
 DROP VIEW IF EXISTS fp_guarda.caixa, fp_guarda.venda, fp_guarda.produto;
 DROP SCHEMA IF EXISTS fp_guarda;

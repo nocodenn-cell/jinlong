@@ -185,7 +185,7 @@ function setupFixture() {
   `)
   runOnce(`
     INSERT INTO public.configuracoes_gerais(chave, valor, tipo_dado) VALUES ('comissao_padrao_percentual','5','percent')
-    ON CONFLICT (chave) DO UPDATE SET valor='5';
+    ON CONFLICT (empresa_id, chave) DO UPDATE SET valor='5';
   `)
 
   return { loja, operador, gerente, dono, produto, preco, caixa }

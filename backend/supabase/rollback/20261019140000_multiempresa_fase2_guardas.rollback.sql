@@ -4,6 +4,12 @@
 -- tiver dados, NÃO rodar sem antes exportar/isolar esses dados (o vínculo de empresa se perde).
 -- As guardas da fase 1 (fornecedores, contas_receber, itens_venda) são preservadas.
 BEGIN;
+DO $$
+BEGIN
+  IF to_regclass('internal.fp_guardas_originais') IS NOT NULL THEN
+    RAISE EXCEPTION 'Rode antes o rollback da fase 4 (20261019160000_multiempresa_fase4_desempenho_guardas.rollback.sql).';
+  END IF;
+END $$;
 
 DO $$
 DECLARE r record; g text;

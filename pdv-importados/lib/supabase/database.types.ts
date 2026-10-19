@@ -271,6 +271,7 @@ export type Database = {
           ativo: boolean
           categoria_pai_id: string | null
           created_at: string
+          empresa_id: string | null
           id: string
           nome: string
           nome_sem_acento: string | null
@@ -279,6 +280,7 @@ export type Database = {
           ativo?: boolean
           categoria_pai_id?: string | null
           created_at?: string
+          empresa_id?: string | null
           id?: string
           nome: string
           nome_sem_acento?: string | null
@@ -287,6 +289,7 @@ export type Database = {
           ativo?: boolean
           categoria_pai_id?: string | null
           created_at?: string
+          empresa_id?: string | null
           id?: string
           nome?: string
           nome_sem_acento?: string | null
@@ -299,12 +302,20 @@ export type Database = {
             referencedRelation: "categorias"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "categorias_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
         ]
       }
       categorias_financeiras: {
         Row: {
           ativo: boolean
           created_at: string
+          empresa_id: string | null
           id: string
           nome: string
           tipo: Database["public"]["Enums"]["categoria_financeira_tipo"]
@@ -312,6 +323,7 @@ export type Database = {
         Insert: {
           ativo?: boolean
           created_at?: string
+          empresa_id?: string | null
           id?: string
           nome: string
           tipo?: Database["public"]["Enums"]["categoria_financeira_tipo"]
@@ -319,11 +331,20 @@ export type Database = {
         Update: {
           ativo?: boolean
           created_at?: string
+          empresa_id?: string | null
           id?: string
           nome?: string
           tipo?: Database["public"]["Enums"]["categoria_financeira_tipo"]
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "categorias_financeiras_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       clientes: {
         Row: {
@@ -1085,6 +1106,7 @@ export type Database = {
           chave: string
           criado_em: string
           descricao: string | null
+          empresa_id: string
           id: string
           tipo_dado: string
           valor: string
@@ -1095,6 +1117,7 @@ export type Database = {
           chave: string
           criado_em?: string
           descricao?: string | null
+          empresa_id: string
           id?: string
           tipo_dado: string
           valor: string
@@ -1105,6 +1128,7 @@ export type Database = {
           chave?: string
           criado_em?: string
           descricao?: string | null
+          empresa_id?: string
           id?: string
           tipo_dado?: string
           valor?: string
@@ -1115,6 +1139,13 @@ export type Database = {
             columns: ["atualizado_por"]
             isOneToOne: false
             referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "configuracoes_gerais_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
             referencedColumns: ["id"]
           },
         ]
@@ -1865,6 +1896,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      empresas: {
+        Row: {
+          cnpj: string | null
+          created_at: string
+          id: string
+          max_lojas: number | null
+          max_usuarios: number | null
+          nome: string
+          plano: string
+          razao_social: string | null
+          status: string
+          updated_at: string
+          vigencia_fim: string | null
+          vigencia_inicio: string
+        }
+        Insert: {
+          cnpj?: string | null
+          created_at?: string
+          id?: string
+          max_lojas?: number | null
+          max_usuarios?: number | null
+          nome: string
+          plano?: string
+          razao_social?: string | null
+          status?: string
+          updated_at?: string
+          vigencia_fim?: string | null
+          vigencia_inicio?: string
+        }
+        Update: {
+          cnpj?: string | null
+          created_at?: string
+          id?: string
+          max_lojas?: number | null
+          max_usuarios?: number | null
+          nome?: string
+          plano?: string
+          razao_social?: string | null
+          status?: string
+          updated_at?: string
+          vigencia_fim?: string | null
+          vigencia_inicio?: string
+        }
+        Relationships: []
       }
       entrada_documentos: {
         Row: {
@@ -3499,6 +3575,7 @@ export type Database = {
           codigo: string | null
           created_at: string
           email: string | null
+          empresa_id: string | null
           endereco_bairro: string | null
           endereco_cep: string | null
           endereco_cidade: string | null
@@ -3523,6 +3600,7 @@ export type Database = {
           codigo?: string | null
           created_at?: string
           email?: string | null
+          empresa_id?: string | null
           endereco_bairro?: string | null
           endereco_cep?: string | null
           endereco_cidade?: string | null
@@ -3547,6 +3625,7 @@ export type Database = {
           codigo?: string | null
           created_at?: string
           email?: string | null
+          empresa_id?: string | null
           endereco_bairro?: string | null
           endereco_cep?: string | null
           endereco_cidade?: string | null
@@ -3564,12 +3643,21 @@ export type Database = {
           razao_social?: string | null
           telefone?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "lojas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       marcas: {
         Row: {
           ativo: boolean
           created_at: string
+          empresa_id: string | null
           id: string
           nome: string
           updated_at: string
@@ -3577,6 +3665,7 @@ export type Database = {
         Insert: {
           ativo?: boolean
           created_at?: string
+          empresa_id?: string | null
           id?: string
           nome: string
           updated_at?: string
@@ -3584,11 +3673,20 @@ export type Database = {
         Update: {
           ativo?: boolean
           created_at?: string
+          empresa_id?: string | null
           id?: string
           nome?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "marcas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       movimentacoes_caixa: {
         Row: {
@@ -4265,6 +4363,84 @@ export type Database = {
           },
         ]
       }
+      pdv_ativacao_tentativas: {
+        Row: {
+          created_at: string
+          device_fingerprint: string
+          erro: string | null
+          id: number
+          ip: string | null
+          ok: boolean
+        }
+        Insert: {
+          created_at?: string
+          device_fingerprint: string
+          erro?: string | null
+          id?: never
+          ip?: string | null
+          ok: boolean
+        }
+        Update: {
+          created_at?: string
+          device_fingerprint?: string
+          erro?: string | null
+          id?: never
+          ip?: string | null
+          ok?: boolean
+        }
+        Relationships: []
+      }
+      pdv_codigos_ativacao: {
+        Row: {
+          codigo_hash: string
+          created_at: string
+          criado_por: string | null
+          dispositivo_id: string | null
+          empresa_id: string
+          expira_em: string
+          id: string
+          loja_id: string
+          usado_em: string | null
+        }
+        Insert: {
+          codigo_hash: string
+          created_at?: string
+          criado_por?: string | null
+          dispositivo_id?: string | null
+          empresa_id: string
+          expira_em: string
+          id?: string
+          loja_id: string
+          usado_em?: string | null
+        }
+        Update: {
+          codigo_hash?: string
+          created_at?: string
+          criado_por?: string | null
+          dispositivo_id?: string | null
+          empresa_id?: string
+          expira_em?: string
+          id?: string
+          loja_id?: string
+          usado_em?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_codigos_ativacao_dispositivo_id_fkey"
+            columns: ["dispositivo_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_dispositivos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_codigos_loja_empresa_fk"
+            columns: ["loja_id", "empresa_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id", "empresa_id"]
+          },
+        ]
+      }
       pdv_config: {
         Row: {
           alertas_leves_ativos: boolean
@@ -4272,6 +4448,7 @@ export type Database = {
           blind_closure: boolean
           cfop_padrao: string
           cst_padrao: string
+          empresa_id: string | null
           formato_impressao: string
           gerente_id: string
           gerente_senha_bcrypt: string | null
@@ -4299,6 +4476,7 @@ export type Database = {
           blind_closure?: boolean
           cfop_padrao?: string
           cst_padrao?: string
+          empresa_id?: string | null
           formato_impressao?: string
           gerente_id: string
           gerente_senha_bcrypt?: string | null
@@ -4326,6 +4504,7 @@ export type Database = {
           blind_closure?: boolean
           cfop_padrao?: string
           cst_padrao?: string
+          empresa_id?: string | null
           formato_impressao?: string
           gerente_id?: string
           gerente_senha_bcrypt?: string | null
@@ -4349,6 +4528,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "pdv_config_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "pdv_config_loja_id_fkey"
             columns: ["loja_id"]
             isOneToOne: false
@@ -4361,6 +4547,85 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_estoque_baixo"
             referencedColumns: ["loja_id"]
+          },
+        ]
+      }
+      pdv_dispositivos: {
+        Row: {
+          ativado_em: string
+          ativo: boolean
+          device_fingerprint: string
+          empresa_id: string
+          id: string
+          loja_id: string
+          nome: string | null
+          revogado_em: string | null
+          sync_secret: string
+          ultimo_sync_em: string | null
+        }
+        Insert: {
+          ativado_em?: string
+          ativo?: boolean
+          device_fingerprint: string
+          empresa_id: string
+          id?: string
+          loja_id: string
+          nome?: string | null
+          revogado_em?: string | null
+          sync_secret: string
+          ultimo_sync_em?: string | null
+        }
+        Update: {
+          ativado_em?: string
+          ativo?: boolean
+          device_fingerprint?: string
+          empresa_id?: string
+          id?: string
+          loja_id?: string
+          nome?: string | null
+          revogado_em?: string | null
+          sync_secret?: string
+          ultimo_sync_em?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_dispositivos_loja_empresa_fk"
+            columns: ["loja_id", "empresa_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id", "empresa_id"]
+          },
+        ]
+      }
+      plataforma_admins: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          created_by: string | null
+          motivo: string | null
+          usuario_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          created_by?: string | null
+          motivo?: string | null
+          usuario_id: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          created_by?: string | null
+          motivo?: string | null
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plataforma_admins_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: true
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -4447,6 +4712,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string | null
+          empresa_id: string
           id: string
           is_active: boolean
           label: string
@@ -4457,6 +4723,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          empresa_id: string
           id?: string
           is_active?: boolean
           label: string
@@ -4467,11 +4734,20 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          empresa_id?: string
           id?: string
           is_active?: boolean
           label?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "pricing_config_versions_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       produto_create_requests: {
         Row: {
@@ -4722,6 +4998,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           data_validade: string | null
+          empresa_id: string | null
           id: string
           nome: string | null
           permitir_abaixo_custo: boolean
@@ -4738,6 +5015,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           data_validade?: string | null
+          empresa_id?: string | null
           id?: string
           nome?: string | null
           permitir_abaixo_custo?: boolean
@@ -4754,6 +5032,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           data_validade?: string | null
+          empresa_id?: string | null
           id?: string
           nome?: string | null
           permitir_abaixo_custo?: boolean
@@ -4777,6 +5056,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "regras_preco_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
             referencedColumns: ["id"]
           },
           {
@@ -4811,18 +5097,29 @@ export type Database = {
       }
       relatorio_settings: {
         Row: {
+          empresa_id: string
           id: number
           timezone: string
         }
         Insert: {
+          empresa_id: string
           id?: number
           timezone?: string
         }
         Update: {
+          empresa_id?: string
           id?: number
           timezone?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "relatorio_settings_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       remessa_itens: {
         Row: {
@@ -5235,6 +5532,61 @@ export type Database = {
           },
           {
             foreignKeyName: "transferencias_idempotencia_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      usuario_vinculos: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          created_by: string | null
+          empresa_id: string
+          id: string
+          loja_id: string | null
+          papel: string
+          usuario_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          created_by?: string | null
+          empresa_id: string
+          id?: string
+          loja_id?: string | null
+          papel: string
+          usuario_id: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          created_by?: string | null
+          empresa_id?: string
+          id?: string
+          loja_id?: string | null
+          papel?: string
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usuario_vinculos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "usuario_vinculos_loja_da_empresa_fk"
+            columns: ["loja_id", "empresa_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id", "empresa_id"]
+          },
+          {
+            foreignKeyName: "usuario_vinculos_usuario_id_fkey"
             columns: ["usuario_id"]
             isOneToOne: false
             referencedRelation: "usuarios"
@@ -6455,6 +6807,23 @@ export type Database = {
         Args: { p_importacao: string; p_remessa: string }
         Returns: undefined
       }
+      ativar_dispositivo_pdv: {
+        Args: {
+          p_codigo: string
+          p_device_fingerprint: string
+          p_nome?: string
+        }
+        Returns: Json
+      }
+      ativar_dispositivo_pdv_v2: {
+        Args: {
+          p_codigo: string
+          p_device_fingerprint: string
+          p_ip?: string
+          p_nome?: string
+        }
+        Returns: Json
+      }
       atualizar_preco_varejo_produto: {
         Args: { p_preco: number; p_produto_id: string }
         Returns: undefined
@@ -7061,6 +7430,41 @@ export type Database = {
         Args: { p_documento_id: string }
         Returns: undefined
       }
+      fp_admin_legado: { Args: never; Returns: boolean }
+      fp_assert_loja: {
+        Args: { p_direta: boolean; p_loja: string; p_rotulo: string }
+        Returns: boolean
+      }
+      fp_assert_mesma_empresa: {
+        Args: { p_a: string; p_b: string; p_rotulo: string }
+        Returns: boolean
+      }
+      fp_eh_plataforma: { Args: never; Returns: boolean }
+      fp_empresa_contexto: { Args: { p_loja?: string }; Returns: string }
+      fp_empresa_da_loja: { Args: { p_loja: string }; Returns: string }
+      fp_empresa_operacional: { Args: { p_empresa: string }; Returns: boolean }
+      fp_empresas_arr: { Args: never; Returns: string[] }
+      fp_empresas_do_usuario: { Args: never; Returns: string[] }
+      fp_empresas_do_usuario_como_dono: { Args: never; Returns: string[] }
+      fp_loja_de: { Args: { p_id: string; p_tipo: string }; Returns: string }
+      fp_lojas_permitidas: { Args: { p_papeis?: string[] }; Returns: string[] }
+      fp_lojas_permitidas_arr: { Args: never; Returns: string[] }
+      fp_mesma_empresa: {
+        Args: { p_loja_a: string; p_loja_b: string }
+        Returns: boolean
+      }
+      fp_pdv_config_id: { Args: { p_loja?: string }; Returns: number }
+      fp_pode_empresa: { Args: { p_empresa: string }; Returns: boolean }
+      fp_pode_loja: {
+        Args: { p_loja: string; p_papeis?: string[] }
+        Returns: boolean
+      }
+      fp_pode_loja_nula: { Args: { p_loja: string }; Returns: boolean }
+      fp_usuario_ativo: { Args: never; Returns: boolean }
+      fp_usuario_pode_loja: {
+        Args: { p_loja: string; p_papeis?: string[]; p_usuario: string }
+        Returns: boolean
+      }
       garantir_formas_pagamento_padrao: {
         Args: { p_loja_id: string }
         Returns: number
@@ -7306,6 +7710,19 @@ export type Database = {
       pdv_registrar_alertas_margem_venda: {
         Args: { p_venda_id: string }
         Returns: undefined
+      }
+      plataforma_provisionar_empresa: {
+        Args: { p: Json; p_ator?: string }
+        Returns: Json
+      }
+      plataforma_registrar_codigo_ativacao_pdv: {
+        Args: {
+          p_codigo_hash: string
+          p_criado_por?: string
+          p_loja_id: string
+          p_validade_horas?: number
+        }
+        Returns: Json
       }
       processar_ajuste_comissao_venda: {
         Args: { p_origem_id: string; p_tipo: string; p_venda_id: string }
@@ -7658,6 +8075,15 @@ export type Database = {
       vincular_importacao_nfe_ordem_compra: {
         Args: { p_importacao_id: string; p_oc_id?: string }
         Returns: undefined
+      }
+      vincular_usuario_loja: {
+        Args: {
+          p_ator: string
+          p_loja: string
+          p_papel: string
+          p_usuario: string
+        }
+        Returns: string
       }
     }
     Enums: {

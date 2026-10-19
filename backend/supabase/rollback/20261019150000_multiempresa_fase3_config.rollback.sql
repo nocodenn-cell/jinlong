@@ -4,6 +4,12 @@
 -- são APAGADAS/desativadas — exportar antes se a Empresa 2 já estiver configurada.
 -- Rodar ANTES do rollback da fase 2.
 BEGIN;
+DO $$
+BEGIN
+  IF to_regclass('internal.fp_guardas_originais') IS NOT NULL THEN
+    RAISE EXCEPTION 'Rode antes o rollback da fase 4 (20261019160000_multiempresa_fase4_desempenho_guardas.rollback.sql).';
+  END IF;
+END $$;
 
 DO $$
 DECLARE r record;
