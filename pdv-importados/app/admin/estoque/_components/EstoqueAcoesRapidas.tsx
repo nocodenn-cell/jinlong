@@ -5,11 +5,12 @@
  * Reutiliza recebimento, importação NF-e e ajuste existing — sem gerar pagamento automático.
  */
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { PackageMinus, PackagePlus, SlidersHorizontal } from 'lucide-react'
 import { DragonModal } from '@/components/ui/DragonModal'
 import { ROUTES } from '@/lib/navigation/routes'
+import { obterListaEstoqueGerente } from '@/app/gerente/estoque/actions'
 import { AjusteSaldoModal, type AjusteAlvo, type AjusteModo } from './AjusteSaldoModal'
 import type { EstoqueLinha, EstoqueLabels } from './EstoqueTable'
 
@@ -88,8 +89,31 @@ export function EstoqueAcoesRapidas({ linhas, labels, quick }: Props) {
   const [painel, setPainel] = useState<'entrada' | 'retirar' | 'ajustar' | null>(null)
   const [busca, setBusca] = useState('')
   const [ajusteAlvo, setAjusteAlvo] = useState<AjusteAlvo | null>(null)
+  const [buscaRemota, setBuscaRemota] = useState<{ q: string; linhas: EstoqueLinha[] } | null>(null)
+  const [buscando, setBuscando] = useState(false)
+  const [erroBusca, setErroBusca] = useState(false)
 
-  const filtrados = linhas
+  // A lista principal é paginada: a busca da operação deve consultar TODOS os produtos da loja.
+  useEffect(() => {
+    if (painel !== 'retirar' && painel !== 'ajustar') return
+    let ativo = true
+    const q = busca.trim().slice(0, 200)
+    setBuscando(true)
+    setErroBusca(false)
+    const timer = setTimeout(async () => {
+      try {
+        const resultado = await obterListaEstoqueGerente({ visao: 'geral', busca: q, limite: 12, offset: 0 })
+        if (ativo) setBuscaRemota({ q, linhas: resultado.rows })
+      } catch {
+        if (ativo) setErroBusca(true)
+      } finally {
+        if (ativo) setBuscando(false)
+      }
+    }, 250)
+    return () => { ativo = false; clearTimeout(timer) }
+  }, [painel, busca])
+
+  const filtrados = buscaRemota?.q === busca.trim().slice(0, 200) ? buscaRemota.linhas : linhas
     .filter((l) => {
       const q = busca.trim().toLowerCase()
       if (!q) return true
@@ -207,7 +231,9 @@ export function EstoqueAcoesRapidas({ linhas, labels, quick }: Props) {
             aria-label={quick.buscarPlaceholder}
           />
         </label>
-        <ul className="mt-3 max-h-72 space-y-2 overflow-y-auto">
+        {buscando ? <p role="status" className="mt-3 text-caption text-jl-fg-3">{labels.situacaoSemLinha ? '' : ''}{quick.buscarPlaceholder}…</p> : null}
+        {erroBusca ? <p role="alert" className="mt-3 text-caption text-[var(--color-warning-strong)]">{quick.selecionarProduto}</p> : null}
+        <ul aria-busy={buscando} className="mt-3 max-h-72 space-y-2 overflow-y-auto">
           {filtrados.map((l) => (
             <li key={l.id}>
               <button
