@@ -7,16 +7,18 @@
  * muda quem entra no alerta, então contagens do Dashboard, badge da sidebar e filtro do Estoque seguem
  * batendo entre si.
  */
-export type EstoqueSituacao = 'ZERADO' | 'ABAIXO_MINIMO' | 'NO_MINIMO' | 'OK'
+export type EstoqueSituacao = 'SEM_LINHA' | 'ZERADO' | 'ABAIXO_MINIMO' | 'NO_MINIMO' | 'SEM_MINIMO' | 'OK'
 
 export function classificarEstoque(
   saldo: number | null | undefined,
   minimo: number | null | undefined,
 ): EstoqueSituacao {
-  const s = Number(saldo ?? 0)
+  if (saldo === null || saldo === undefined) return 'SEM_LINHA'
+  const s = Number(saldo)
   const min = Number(minimo ?? 0)
-  if (!Number.isFinite(s)) return 'OK'
+  if (!Number.isFinite(s)) return 'SEM_LINHA'
   if (s <= 0) return 'ZERADO'
+  if (!Number.isFinite(min) || min <= 0) return 'SEM_MINIMO'
   if (min > 0 && s < min) return 'ABAIXO_MINIMO'
   if (min > 0 && s === min) return 'NO_MINIMO'
   return 'OK'
