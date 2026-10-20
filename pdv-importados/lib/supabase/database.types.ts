@@ -7439,6 +7439,10 @@ export type Database = {
         Args: { p_a: string; p_b: string; p_rotulo: string }
         Returns: boolean
       }
+      fp_assert_produto: {
+        Args: { p_produto: string; p_rotulo: string }
+        Returns: boolean
+      }
       fp_eh_plataforma: { Args: never; Returns: boolean }
       fp_empresa_contexto: { Args: { p_loja?: string }; Returns: string }
       fp_empresa_da_loja: { Args: { p_loja: string }; Returns: string }
