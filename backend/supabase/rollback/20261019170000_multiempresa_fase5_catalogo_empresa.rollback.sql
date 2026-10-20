@@ -16,5 +16,6 @@ END $$;
 DROP TABLE IF EXISTS internal.fp_fase5_envelopes;
 DROP TABLE IF EXISTS internal.fp_fase5_guardas;
 DROP FUNCTION IF EXISTS public.fp_assert_produto(uuid, text);
+DROP FUNCTION IF EXISTS internal.fp_empresa_usuario_legado();
 DROP VIEW IF EXISTS fp_guarda.produto_empresa;
 COMMIT;

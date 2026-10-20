@@ -137,7 +137,9 @@ function firstRow(text) {
   const line = text
     .split('\n')
     .map((l) => l.trim())
-    .find((l) => l && !l.startsWith('ERROR:') && !l.startsWith('CONTEXT:') && !l.startsWith('LINE ') && !l.startsWith('HINT:') && !/^\(\d+ rows?\)$/.test(l) && !/^\^\s*$/.test(l))
+    .find((l) => l && !l.startsWith('ERROR:') && !l.startsWith('CONTEXT:') && !l.startsWith('LINE ') && !l.startsWith('HINT:') && !/^\(\d+ rows?\)$/.test(l) && !/^\^\s*$/.test(l)
+      // continuação do CONTEXT (envelope multiempresa: "SQL function ... statement N" / PL/pgSQL)
+      && !/^(SQL function|PL\/pgSQL function|SQL statement)\b/.test(l))
   return line ?? ''
 }
 
