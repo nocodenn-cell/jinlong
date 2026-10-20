@@ -10,7 +10,7 @@
   "scripts": {
     "check": "npm run check:edge",
     "typecheck": "npm run check:edge",
-    "check:edge": "deno check supabase/functions/sync-outbox/index.ts && deno check supabase/functions/validar-gerente/index.ts && deno check --config supabase/functions/fiscal-worker/deno.json supabase/functions/fiscal-worker/index.ts",
+    "check:edge": "deno check supabase/functions/sync-outbox/index.ts && deno check supabase/functions/validar-gerente/index.ts && deno check --config supabase/functions/fiscal-worker/deno.json supabase/functions/fiscal-worker/index.ts && deno check supabase/functions/asaas-webhook/index.ts",
     "check:venda-finance-context-retirement": "node supabase/scripts/validate-venda-finance-context-retirement.mjs",
     "check:types-drift": "node scripts/check-types-drift.mjs",
     "smoke:rls-rest": "node scripts/p0-rls-rest-smoke.mjs",
@@ -38,7 +38,9 @@
     "test:multiempresa-fase2": "node scripts/multiempresa-fase2-cobertura.test.mjs",
     "test:multiempresa-fase3": "node scripts/multiempresa-fase3-config.test.mjs",
     "test:multiempresa-fase4": "node scripts/multiempresa-fase4-desempenho.test.mjs",
-    "test:multiempresa-fase5": "node scripts/multiempresa-fase5-catalogo.test.mjs"
+    "test:multiempresa-fase5": "node scripts/multiempresa-fase5-catalogo.test.mjs",
+    "test:cobranca": "node scripts/cobranca-planos-trial.test.mjs",
+    "test:asaas-webhook": "deno test --allow-env supabase/functions/asaas-webhook/handler.test.ts supabase/functions/sync-outbox/planGate.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.104.0",

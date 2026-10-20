@@ -5,6 +5,7 @@
  * UI local: filtros URL + KPIs + tabela + sheet de detalhe.
  */
 
+import { bloqueioPorPlano } from '@/lib/cobranca/bloqueioPorPlano'
 import { Suspense } from 'react'
 import { PageHeader } from '@/components/ui/admin-v2'
 import { FinanceiroHubNavShell } from '@/components/ui/admin-v2/FinanceiroHubNavShell'
@@ -55,6 +56,8 @@ function resolveActivePreset(
 }
 
 export default async function AdminComissoesPage({ searchParams }: PageProps) {
+  const bloqueio = await bloqueioPorPlano('comissoes')
+  if (bloqueio) return bloqueio
   const { session } = await loadAdminContext({
     pathname: ROUTES.admin.comissoes,
     resource: `route:${ROUTES.admin.comissoes}`,

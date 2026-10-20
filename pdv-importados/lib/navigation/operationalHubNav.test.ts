@@ -4,6 +4,7 @@ import { resolveActiveHubTabId } from './hubNavModel'
 import {
   OPERATIONAL_HUB_IDS,
   buildOperationalHubTabs,
+  operationalHubLabelsFromAdminUi,
   type OperationalHubLabelSet,
 } from './operationalHubNav'
 
@@ -60,5 +61,17 @@ describe('hubs operacionais por jornada (Vender, Abastecer, Loja e equipe)', () 
   it('nenhuma rota pertence a dois hubs operacionais', () => {
     const hrefs = OPERATIONAL_HUB_IDS.flatMap((h) => buildOperationalHubTabs(h, L).map((t) => t.href))
     expect(new Set(hrefs).size).toBe(hrefs.length)
+  })
+})
+
+import { describe as d2, expect as e2, it as i2 } from 'vitest'
+d2('hub loja — assinatura', () => {
+  i2('expõe a aba Assinatura (rota admin.assinatura)', () => {
+    const abas = buildOperationalHubTabs('loja', operationalHubLabelsFromAdminUi({
+      hub_vendas_vendas: '', hub_vendas_caixas: '', hub_pessoas_clientes: '', hub_compras_pedidos: '',
+      hub_compras_recebimento: '', hub_compras_etiquetas: '', hub_compras_fornecedores: '', hub_loja_dados: '',
+      hub_pessoas_funcionarios: '', hub_loja_categorias_financeiras: '', hub_loja_suspensao: '', hub_loja_assinatura: 'Assinatura',
+    }))
+    e2(abas.find((a) => a.id === 'assinatura')).toMatchObject({ href: ROUTES.admin.assinatura, label: 'Assinatura' })
   })
 })

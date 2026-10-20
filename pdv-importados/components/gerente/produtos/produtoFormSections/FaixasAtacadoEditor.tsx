@@ -7,6 +7,7 @@ import {
   criarFaixaAtacado,
   atualizarFaixaAtacado,
   inativarFaixaAtacado,
+  faixasPermitidasNoPlano,
   type FaixaAtacado,
 } from '@/app/gerente/produtos/precosAtacadoActions'
 import type { Mensagens } from '@/i18n/getMessages'
@@ -136,6 +137,13 @@ export function FaixasAtacadoEditor({ produtoId, p, precoAtacadoCatalogo }: Prop
   const [editandoId, setEditandoId] = useState<string | null>(null)
   const [mostrandoNova, setMostrandoNova] = useState(false)
   const [removendoId, setRemovendoId] = useState<string | null>(null)
+  // Plano sem `faixas_preco` (Básico): esconde a criação/edição; o servidor também recusa.
+  const [permitido, setPermitido] = useState(true)
+  useEffect(() => {
+    let vivo = true
+    faixasPermitidasNoPlano().then((ok) => { if (vivo) setPermitido(ok) }).catch(() => {})
+    return () => { vivo = false }
+  }, [])
 
   const carregar = useCallback(async () => {
     setCarregando(true)
@@ -227,14 +235,14 @@ export function FaixasAtacadoEditor({ produtoId, p, precoAtacadoCatalogo }: Prop
               <span className="text-xs font-mono text-jl-fg-1">{f.quantidade_minima}+ {p.faixa_unidades}</span>
               <span className="text-xs font-mono text-jl-fg-1">{formatBRL(f.preco_unitario)}</span>
               <div className="flex gap-1">
-                <button
+                {permitido ? <button
                   type="button"
                   onClick={() => setEditandoId(f.id)}
                   className="flex h-8 w-8 items-center justify-center rounded-md text-jl-fg-3 hover:bg-white/10"
                   title={p.faixa_editar}
                 >
                   <Pencil size={13} />
-                </button>
+                </button> : null}
                 <button
                   type="button"
                   onClick={() => void remover(f.id)}
@@ -260,7 +268,11 @@ export function FaixasAtacadoEditor({ produtoId, p, precoAtacadoCatalogo }: Prop
         ) : null}
       </div>
 
-      {!mostrandoNova ? (
+      {!permitido ? (
+        <p className="mt-2 text-xs text-jl-fg-3" data-testid="faixas-plano-bloqueado">
+          Faixas de preço não inclusas no seu plano — faça upgrade em Assinatura. / 您的方案不包含阶梯价格。
+        </p>
+      ) : !mostrandoNova ? (
         <button
           type="button"
           onClick={() => setMostrandoNova(true)}

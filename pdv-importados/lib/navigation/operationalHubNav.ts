@@ -22,6 +22,8 @@ export type OperationalHubLabelSet = {
   lojaFuncionarios: string
   lojaCategoriasFinanceiras: string
   lojaSuspensao: string
+  /** Assinatura da Jinlong (plano, faturas) — o DONO gerencia; demais perfis só consultam. */
+  lojaAssinatura?: string
 }
 
 export function buildOperationalHubTabs(
@@ -74,6 +76,7 @@ export function buildOperationalHubTabs(
           match: 'prefix',
         },
         { id: 'suspensao', label: labels.lojaSuspensao, href: ROUTES.admin.suspensao, match: 'prefix' },
+        { id: 'assinatura', label: labels.lojaAssinatura ?? 'Assinatura', href: ROUTES.admin.assinatura, match: 'prefix' },
       ]
   }
 }
@@ -90,6 +93,7 @@ export function operationalHubLabelsFromAdminUi(ui: {
   hub_pessoas_funcionarios: string
   hub_loja_categorias_financeiras: string
   hub_loja_suspensao: string
+  hub_loja_assinatura?: string
 }): OperationalHubLabelSet {
   return {
     vendasVendas: ui.hub_vendas_vendas,
@@ -103,6 +107,7 @@ export function operationalHubLabelsFromAdminUi(ui: {
     lojaFuncionarios: ui.hub_pessoas_funcionarios,
     lojaCategoriasFinanceiras: ui.hub_loja_categorias_financeiras,
     lojaSuspensao: ui.hub_loja_suspensao,
+    lojaAssinatura: ui.hub_loja_assinatura,
   }
 }
 

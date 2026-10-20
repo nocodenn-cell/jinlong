@@ -1,3 +1,4 @@
+import { bloqueioPorPlano } from '@/lib/cobranca/bloqueioPorPlano'
 import { createClient } from '@/lib/supabase/server'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { ROUTES } from '@/lib/navigation/routes'
@@ -9,6 +10,8 @@ import {
 } from '@/app/gerente/transferencias/TransferenciasGerentePageClient'
 
 export default async function AdminEstoqueTransferenciasPage() {
+  const bloqueio = await bloqueioPorPlano('transferencias')
+  if (bloqueio) return bloqueio
   const { session } = await loadAdminContext({
     pathname: ROUTES.admin.estoqueTransferencias,
     resource: `route:${ROUTES.admin.estoqueTransferencias}`,
