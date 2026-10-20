@@ -3,7 +3,8 @@
 import Link from 'next/link'
 import { Download } from 'lucide-react'
 import { useMemo } from 'react'
-import { defaultUltimosDiasNoFuso } from '@/lib/relatorios/periodoRelatorio'
+import { defaultUltimosDiasNoFuso, formatarDataCivilNumerica } from '@/lib/relatorios/periodoRelatorio'
+import { FiltrosAtivosChips } from '@/components/ui/admin-v2/FiltrosAtivosChips'
 import { ROUTES } from '@/lib/navigation/routes'
 
 export type RelatoriosFiltrosLabels = {
@@ -18,6 +19,11 @@ export type RelatoriosFiltrosLabels = {
   preset30: string
   presetsAria: string
   imprimir: string
+  /** Marcadores de filtro ativo (A3). Opcionais: sem eles, mantém só o link "Limpar". */
+  chipPeriodo?: string
+  chipRemover?: string
+  filtrosAtivos?: string
+  locale?: string
 }
 
 type RelatoriosPeriodFiltersProps = {
@@ -116,7 +122,23 @@ export function RelatoriosPeriodFilters({
             </Link>
           ))}
         </div>
-        {!isPresetActive(30, de, ate) ? (
+        {!isPresetActive(30, de, ate) && labels.chipPeriodo && labels.chipRemover && labels.filtrosAtivos && de && ate ? (
+          <FiltrosAtivosChips
+            chips={[
+              {
+                key: 'periodo',
+                label: labels.chipPeriodo.replace(
+                  '{{label}}',
+                  presets.find((p) => isPresetActive(p.dias, de, ate))?.label ??
+                    `${formatarDataCivilNumerica(de, labels.locale ?? 'pt-BR')} – ${formatarDataCivilNumerica(ate, labels.locale ?? 'pt-BR')}`,
+                ),
+                href: limparHref(tab, view),
+              },
+            ]}
+            limparHref={limparHref(tab, view)}
+            labels={{ regiao: labels.filtrosAtivos, remover: labels.chipRemover, limpar: labels.limpar }}
+          />
+        ) : !isPresetActive(30, de, ate) ? (
           <Link
             href={limparHref(tab, view)}
             className="text-caption font-medium text-jl-fg-3 underline-offset-2 hover:text-jl-fg-1 hover:underline"
