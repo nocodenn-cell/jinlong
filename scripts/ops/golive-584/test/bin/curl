@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+S=${STUB_STATE:?}; echo "curl $*" >> "$S/curl.calls"
+if [[ " $* " == *" -X POST "* ]]; then printf 401; else printf 200; fi

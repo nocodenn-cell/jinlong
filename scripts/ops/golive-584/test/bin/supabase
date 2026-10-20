@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+S=${STUB_STATE:?}; echo "supabase $*" >> "$S/supabase.calls"
+case "$1 $2" in
+ "functions list") jq -n --argjson a "$(cat $S/sync.v)" --argjson b "$(cat $S/vg.v)" '[{slug:"sync-outbox",version:$a},{slug:"validar-gerente",version:$b}]';;
+ "functions deploy") [ -f "$S/deploy_fail" ] && exit 1; f=$3; [ $f = sync-outbox ] && echo $(( $(cat $S/sync.v)+1 )) > $S/sync.v; [ $f = validar-gerente ] && echo $(( $(cat $S/vg.v)+1 )) > $S/vg.v; echo "Deployed $f";;
+ *) exit 1;; esac

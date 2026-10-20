@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# stub de teste do gh (NÃO fala com o GitHub)
+S=${STUB_STATE:?}; args=("$@"); jqq=""; for ((i=0;i<${#args[@]};i++)); do [ "${args[$i]}" = -q ] && jqq=${args[$((i+1))]}; done
+out(){ if [ -n "$jqq" ]; then jq -r "$jqq"; else cat; fi; }
+echo "gh $*" >> "$S/gh.calls"
+case "$1 $2" in
+ "pr view") cat "$S/pr.json" | out;;
+ "pr merge") [[ " $* " == *" --merge "* && " $* " == *"--match-head-commit $(jq -r .headRefOid "$S/pr.json")"* ]] || { echo "merge recusado" >&2; exit 1; }
+   jq '.state="MERGED"|.mergeCommit={oid:"m3rge000000000000000000000000000000000001"}' "$S/pr.json" > "$S/p2" && mv "$S/p2" "$S/pr.json";;
+ api*) case "$2" in
+   */commits/main) echo "{\"sha\":\"$(cat $S/main_sha)\"}" | out;;
+   */check-runs*) cat "$S/ci.json" | out;;
+   */actions/runs/*) cat "$S/backup.json" | out;;
+   */deployments\?sha=*) echo '[{"id":7,"environment":"Production – pdv-importados"},{"id":8,"environment":"Production – jinlong-site"}]' | out;;
+   */deployments/7/statuses) cat "$S/deploy_status.json" | out;;
+   */deployments/8/statuses) echo '[{"state":"success","description":"Deployment has completed","environment_url":"https://site.example"}]' | out;;
+   *) echo "stub gh: api desconhecida $2" >&2; exit 1;; esac;;
+ *) echo "stub gh: $*" >&2; exit 1;;
+esac
