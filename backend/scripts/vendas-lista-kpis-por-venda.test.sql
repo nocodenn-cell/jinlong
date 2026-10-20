@@ -47,6 +47,12 @@ BEGIN
     (c_loja_a, 'Onda A Loja A', 'ONDAA-A', true),
     (c_loja_b, 'Onda A Loja B', 'ONDAA-B', true)
   ON CONFLICT DO NOTHING;
+  -- multiempresa: com triggers desligados (replica) a loja nasce sem empresa; em produção toda loja
+  -- tem empresa (fase 1). Loja sem empresa é recusada pelo envelope (fail closed).
+  IF to_regclass('public.empresas') IS NOT NULL THEN
+    EXECUTE 'UPDATE public.lojas SET empresa_id = (SELECT id FROM public.empresas ORDER BY created_at, id LIMIT 1)
+              WHERE id = ANY ($1) AND empresa_id IS NULL' USING ARRAY[c_loja_a, c_loja_b];
+  END IF;
   INSERT INTO public.usuarios (id, nome, perfil, ativo, loja_id) VALUES
     (c_ger_a, 'Onda A Gerente A', 'GERENTE',  true, c_loja_a),
     (c_ger_b, 'Onda A Gerente B', 'GERENTE',  true, c_loja_b),
