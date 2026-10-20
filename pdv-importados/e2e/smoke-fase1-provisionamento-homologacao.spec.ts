@@ -185,8 +185,12 @@ test.describe('Smoke Fase 1 — provisionamento → venda → dashboard', () => 
     await expect(page.getByTestId('prov-step-dono-next')).toBeEnabled({ timeout: 10_000 })
     await page.getByTestId('prov-step-dono-next').click()
 
-    // Confirmar
-    await expect(page.getByText(lojaNome)).toBeVisible()
+    // Step Equipe (multiempresa fase 1): opcional — segue sem membros extras
+    await expect(page.getByTestId('prov-step-equipe-next')).toBeEnabled({ timeout: 10_000 })
+    await page.getByTestId('prov-step-equipe-next').click()
+
+    // Confirmar — o nome da loja aparece como nome da empresa (padrão) e da loja
+    await expect(page.getByText(lojaNome).first()).toBeVisible()
     await page.getByTestId('prov-submit').click()
 
     // `getByText(/Loja pronta/)` casa o `<li>` do wizard E o toast `role=status`
