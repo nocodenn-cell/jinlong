@@ -13,6 +13,8 @@ import { usePdvLocalVendaCaixaFlow } from './hooks/usePdvLocalVendaCaixaFlow'
 import { parseQuantidadeCaixaInput } from '@shared/format/quantidadeCaixa'
 import { recalcularPrecoItemLocal } from './lib/recalcularPrecoItemLocal'
 import { resolverPrecoCanonicoLocal } from './lib/resolverPrecoCanonicoLocal'
+import { formatarBRL } from './lib/formatarMoeda'
+import { existeModalAberto, resolverAtalhoPdv } from './lib/atalhosPdv'
 
 function bindLojaCarrinhoDesktop(lojaId: string | null) {
   useDesktopCartStore.getState().setCartLojaForSession(lojaId)
@@ -253,6 +255,64 @@ export function App() {
   }
 
   const ultimoItemAdicionado = itens.length > 0 ? itens[itens.length - 1] : null
+
+
+  // "Novo Cupom": mesma lógica para o botão e para Esc. Exige 2º toque em até 2s
+  // (nunca descarta a venda no primeiro toque).
+  function novoCupom() {
+    if (itens.length === 0) return
+    const agora = Date.now()
+    if (confirmarLimparAte < agora) {
+      setConfirmarLimparAte(agora + 2200)
+      setMensagem('Toque novamente em "Novo Cupom (Esc)" em até 2s para confirmar limpeza.')
+      return
+    }
+    limparCarrinho()
+    setConfirmarLimparAte(0)
+    setMensagem('Cupom limpo.')
+    focarInputLeitura()
+  }
+
+  // Atalhos globais F2/F3/F4/F10/Esc: um único listener, mesmas ações dos botões.
+  const atalhoRef = useRef<(e: KeyboardEvent) => void>(() => {})
+  atalhoRef.current = (e: KeyboardEvent) => {
+    const { acao, prevenirPadrao } = resolverAtalhoPdv(
+      e.key,
+      {
+        caixaAberto: Boolean(caixaAtualId),
+        temItens: itens.length > 0,
+        finalizando: isFinalizandoVenda,
+        modalAberto: existeModalAberto(),
+      },
+      { repeticao: e.repeat, jaTratado: e.defaultPrevented },
+    )
+    if (prevenirPadrao) e.preventDefault()
+    if (!acao) return
+    const depois = () => focarInputLeitura()
+    switch (acao) {
+      case 'abrirCaixa':
+        void Promise.resolve(abrirCaixa()).finally(depois)
+        return
+      case 'fecharCaixa':
+        void Promise.resolve(fecharCaixa()).finally(depois)
+        return
+      case 'movimentoCaixa':
+        void Promise.resolve(registrarMovimentoCaixa()).finally(depois)
+        return
+      case 'finalizar':
+        void Promise.resolve(finalizarVenda()).finally(depois)
+        return
+      case 'novoCupom':
+        novoCupom()
+        focarInputLeitura()
+        return
+    }
+  }
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => atalhoRef.current(e)
+    globalThis.addEventListener('keydown', onKeyDown)
+    return () => globalThis.removeEventListener('keydown', onKeyDown)
+  }, [])
 
   return (
     <div
@@ -549,19 +609,7 @@ export function App() {
               Adicionar
             </button>
             <button
-              onClick={() => {
-                if (itens.length === 0) return
-                const agora = Date.now()
-                if (confirmarLimparAte < agora) {
-                  setConfirmarLimparAte(agora + 2200)
-                  setMensagem('Toque novamente em "Novo Cupom (Esc)" em até 2s para confirmar limpeza.')
-                  return
-                }
-                limparCarrinho()
-                setConfirmarLimparAte(0)
-                setMensagem('Cupom limpo.')
-                focarInputLeitura()
-              }}
+              onClick={novoCupom}
               disabled={itens.length === 0}
               style={{
                 minHeight: 44,
@@ -770,12 +818,10 @@ export function App() {
                       </button>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      R$ {' '}
-                      {item.resultado.precoOriginal.toFixed(2)}
+                      {formatarBRL(item.resultado.precoOriginal)}
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      R$ {' '}
-                      {(item.resultado.precoUnitario * item.quantidade).toFixed(2)}
+                      {formatarBRL(item.resultado.precoUnitario * item.quantidade)}
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       {item.resultado.tipoPreco === 'ATACADO' ? (
@@ -850,7 +896,7 @@ export function App() {
             >
               <span>Bruto</span>
               <span>
-                R$ {totalBruto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                {formatarBRL(totalBruto)}
               </span>
             </div>
             <div
@@ -865,7 +911,7 @@ export function App() {
                 Descontos automáticos (atacado)
               </span>
               <span>
-                - R$ {totalDesconto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                - {formatarBRL(totalDesconto)}
               </span>
             </div>
             {descontoGerentePercentual > 0 && (
@@ -879,10 +925,7 @@ export function App() {
               >
                 <span>Desconto gerente ({descontoGerentePercentual.toFixed(1)}%)</span>
                 <span>
-                  - R${' '}
-                  {descontoGerenteValor.toLocaleString('pt-BR', {
-                    minimumFractionDigits: 2,
-                  })}
+                  - {formatarBRL(descontoGerenteValor)}
                 </span>
               </div>
             )}
@@ -919,7 +962,7 @@ export function App() {
             >
               <span>Total a pagar</span>
               <span>
-                R$ {totalLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                {formatarBRL(totalLiquido)}
               </span>
             </div>
           </div>
@@ -1088,7 +1131,7 @@ export function App() {
                 color: '#9ca3af',
               }}
             >
-              Atalhos: Esc Novo Cupom · F10 Finalizar.
+              Atalhos: F2 Abrir caixa · F3 Fechar caixa · F4 Sangria/Suprimento · F10 Finalizar · Esc Novo Cupom.
             </div>
           </div>
         </section>
