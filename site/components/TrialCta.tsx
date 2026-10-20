@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { getContactChannels } from '@/lib/contactChannels'
 import type { SiteLocale } from '@/lib/locales'
 
@@ -7,27 +8,26 @@ export function hasContactChannel(locale: SiteLocale): boolean {
 
 interface TrialCtaProps {
   locale: SiteLocale
-  label: string
-  className?: string
+  className: string
+  children: ReactNode
 }
 
 /**
- * CTA de teste: só existe com canal de contato válido configurado (nunca link vazio).
- * WhatsApp abre a conversa; só WeChat leva à seção de contato, que mostra o ID.
+ * CTA de teste. Com WhatsApp configurado abre a conversa; caso contrário leva à seção de
+ * contato do rodapé (que mostra o ID do WeChat ou o aviso de canais em breve). Nunca link vazio.
  */
-export function TrialCta({ locale, label, className = 'jl-btn jl-btn--secondary' }: TrialCtaProps) {
+export function TrialCta({ locale, className, children }: TrialCtaProps) {
   const [first] = getContactChannels(locale)
-  if (!first) return null
-  if (first.id === 'whatsapp') {
+  if (first?.id === 'whatsapp') {
     return (
       <a className={className} href={first.href} target="_blank" rel="noopener noreferrer">
-        {label}
+        {children}
       </a>
     )
   }
   return (
     <a className={className} href="#contato">
-      {label}
+      {children}
     </a>
   )
 }

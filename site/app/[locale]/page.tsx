@@ -1,16 +1,12 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { Benefits } from '@/components/Benefits'
-import { Faq } from '@/components/Faq'
+import { Dashboard } from '@/components/Dashboard'
 import { FinalCta } from '@/components/FinalCta'
 import { Hero } from '@/components/Hero'
-import { LanguageCompare } from '@/components/LanguageCompare'
-import { Screens } from '@/components/Screens'
 import { SiteFooter } from '@/components/SiteFooter'
 import { SiteHeader } from '@/components/SiteHeader'
 import { Steps } from '@/components/Steps'
-import { hasContactChannel } from '@/components/TrialCta'
-import { WholesaleSection } from '@/components/WholesaleSection'
 import { getHomeContent } from '@/lib/content'
 import { isSiteLocale, otherSiteLocale, sitePath, type SiteLocale } from '@/lib/locales'
 import { isLocaleDraft, isLocalePublic, isZhReviewed } from '@/lib/publication'
@@ -55,20 +51,12 @@ export default async function HomePage({ params }: HomePageProps) {
           {content.draftBanner}
         </p>
       )}
-      <SiteHeader
-        locale={locale}
-        content={content}
-        showSwitch={isLocalePublic(otherSiteLocale(locale))}
-        hasContact={hasContactChannel(locale)}
-      />
+      <SiteHeader locale={locale} content={content} showSwitch={isLocalePublic(otherSiteLocale(locale))} />
       <main id="main-content">
         <Hero locale={locale} content={content} />
-        <Benefits locale={locale} content={content} />
+        <Benefits content={content} />
         <Steps content={content} />
-        <Screens locale={locale} content={content} />
-        <WholesaleSection locale={locale} content={content} />
-        <LanguageCompare locale={locale} content={content} />
-        <Faq content={content} />
+        <Dashboard content={content} />
         <FinalCta locale={locale} content={content} />
       </main>
       <SiteFooter locale={locale} content={content} />

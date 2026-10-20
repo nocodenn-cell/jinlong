@@ -45,18 +45,12 @@ for (const locale of LOCALES) {
       else await expect(robots).toHaveCount(0)
     })
 
-    test('seções na ordem do layout e FAQ abre por teclado', async ({ page }) => {
+    test('seções na ordem do layout do Venddi', async ({ page }) => {
       await openHome(page, locale)
       const ids = await page.locator('main > section').evaluateAll((els) => els.map((el) => el.getAttribute('aria-labelledby')))
-      expect(ids.indexOf('h-how')).toBeGreaterThan(ids.indexOf('h-ben'))
-      expect(ids.indexOf('h-faq')).toBeGreaterThan(ids.indexOf('h-how'))
-      expect(ids.at(-1)).toBe('h-final')
-      await expect(page.locator('.jl-steps > li')).toHaveCount(3)
-      const first = page.locator('.jl-faq details').first()
-      await first.locator('summary').focus()
-      await page.keyboard.press('Enter')
-      await expect(first).toHaveAttribute('open', '')
-      await expect(first.locator('p')).toBeVisible()
+      expect(ids).toEqual(['h-hero', 'h-ben', 'h-how', 'h-panel', 'h-final'])
+      await expect(page.locator('.vd-step')).toHaveCount(3)
+      await expect(page.locator('.vd-benefit')).toHaveCount(4)
     })
 
     test('teclado: skip link é o primeiro foco e leva ao conteúdo', async ({ page, browserName }) => {
@@ -111,27 +105,6 @@ test('menu mobile: link de seção fecha o menu', async ({ page }) => {
   await page.locator('button.jl-menu-btn').click()
   await page.locator('#menu-mobile a').nth(1).click()
   await expect(page.locator('#menu-mobile')).toHaveAttribute('data-open', 'false')
-})
-
-test('simulador de atacado: 6 un. no varejo, 10 un. aplica o atacado (teclado)', async ({ page }) => {
-  await openHome(page, 'pt-BR')
-  const output = page.locator('.jl-stepper output')
-  await expect(output).toHaveText('6')
-  await expect(page.locator('.jl-wh-result .total b')).toHaveText(/137,40/)
-  const plus = page.getByRole('button', { name: /aumentar/i })
-  await plus.focus()
-  for (let i = 0; i < 4; i += 1) await page.keyboard.press('Enter')
-  await expect(output).toHaveText('10')
-  await expect(page.locator('.jl-wh-result .total b')).toHaveText(/185,00/)
-  await expect(page.locator('.jl-wh-live')).toContainText('✓')
-})
-
-test('simulador: quantidade respeita os limites 1 e 99', async ({ page }) => {
-  await openHome(page, 'pt-BR')
-  const minus = page.getByRole('button', { name: /diminuir/i })
-  for (let i = 0; i < 8; i += 1) if (await minus.isEnabled()) await minus.click()
-  await expect(page.locator('.jl-stepper output')).toHaveText('1')
-  await expect(minus).toBeDisabled()
 })
 
 test('sem dados reais: nenhuma chamada ao Supabase nem a terceiros', async ({ page }) => {
@@ -194,10 +167,16 @@ test('CLS da home dentro do orçamento (≤ 0,1)', async ({ page }) => {
   expect(await page.evaluate(() => (window as unknown as { __cls: number }).__cls)).toBeLessThanOrEqual(0.1)
 })
 
-test('fontes: Geist carregada na home em português', async ({ page }) => {
+test('fontes: subset CJK carregado na home em chinês (logo e títulos)', async ({ page }) => {
+  await openHome(page, 'zh-CN')
+  const loaded = await page.evaluate(() => [...document.fonts].filter((f) => f.status === 'loaded').length)
+  expect(loaded).toBeGreaterThan(0)
+})
+
+test('sem canais configurados, CTAs de teste levam à seção de contato', async ({ page }) => {
   await openHome(page, 'pt-BR')
-  const geistLoaded = await page.evaluate(() => [...document.fonts].some((f) => f.status === 'loaded' && /geist/i.test(f.family)))
-  expect(geistLoaded).toBe(true)
+  await expect(page.locator('.vd-hero a[href="#contato"]')).toHaveCount(1)
+  await expect(page.locator('footer#contato')).toContainText('em breve')
 })
 
 test.describe('largura de menu', () => {

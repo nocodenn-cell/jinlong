@@ -62,18 +62,28 @@ describe('paridade de conteúdo pt-BR / zh-CN', () => {
 
   it('o chinês só aparece em campos previstos na página em português', () => {
     const allowed =
-      /^(hero\.signature|hero\.proof\[0\]|hero\.chipSecond\.text|langSwitch\.(group|zh|zhShort)|benefits\.items\[4\]\.what|languages\.title|languages\.zh\..*|footer\.zhTagline|brandLabel|footer\.tagline)$/
+      /^(langSwitch\.(group|zh|zhShort)|brandLabel)$/
     const unexpected = pt.filter(([key, value]) => CJK.test(value) && !allowed.test(key))
     expect(unexpected).toEqual([])
   })
 
-  it('hierarquia de seções: 3 passos e FAQ com as mesmas perguntas nas duas línguas', () => {
+  it('hierarquia de seções igual ao Venddi: 4 benefícios, 3 passos, 3 indicadores', () => {
     for (const locale of ['pt-BR', 'zh-CN'] as const) {
       const content = getHomeContent(locale)
+      expect(content.benefits.items).toHaveLength(4)
       expect(content.steps.items).toHaveLength(3)
-      expect(content.faq.items.length).toBeGreaterThanOrEqual(4)
+      expect(content.panel.stats).toHaveLength(3)
+      expect(content.final.checks).toHaveLength(3)
     }
-    expect(getHomeContent('zh-CN').faq.items).toHaveLength(getHomeContent('pt-BR').faq.items.length)
+  })
+
+  it('mockup: total fictício igual à soma dos itens', () => {
+    const brl = (v: string) => Number(v.replace(/[^\d,]/g, '').replace(',', '.'))
+    for (const locale of ['pt-BR', 'zh-CN'] as const) {
+      const { mock } = getHomeContent(locale)
+      const sum = mock.items.reduce((acc, item) => acc + brl(item.price), 0)
+      expect(sum.toFixed(2)).toBe(brl(mock.total).toFixed(2))
+    }
   })
 
   it('a página em chinês é chinesa e o aviso de rascunho existe só nela', () => {
@@ -86,12 +96,8 @@ describe('paridade de conteúdo pt-BR / zh-CN', () => {
 
   it('termos de operação em chinês seguem o próprio ERP', () => {
     const zhContent = getHomeContent('zh-CN')
-    expect(zhContent.pdv.finish).toBe('完成销售')
-    expect(zhContent.screens.stock.colWholesale).toBe('批发价')
-    expect(zhContent.screens.stock.colRetail).toBe('零售价')
-    expect(zhContent.screens.close.cash).toBe('现金')
-    expect(zhContent.screens.close.debit).toBe('借记卡')
-    expect(zhContent.screens.close.credit).toBe('信用卡')
+    expect(zhContent.mock.finish).toBe('完成销售')
+    expect(zhContent.mock.items[0].sku).toContain('批发')
   })
 })
 

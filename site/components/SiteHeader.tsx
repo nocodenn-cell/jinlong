@@ -4,55 +4,51 @@ import type { SiteLocale } from '@/lib/locales'
 import { Brand } from './Brand'
 import { LanguageSwitch } from './LanguageSwitch'
 import { MobileMenu, type MenuLink } from './MobileMenu'
+import { TrialCta } from './TrialCta'
 
 interface SiteHeaderProps {
   locale: SiteLocale
   content: HomeContent
   showSwitch: boolean
-  hasContact: boolean
 }
 
-function buildLinks(content: HomeContent, hasContact: boolean): MenuLink[] {
+export function SiteHeader({ locale, content, showSwitch }: SiteHeaderProps) {
   const { nav } = content
   const links: MenuLink[] = [
-    { href: '#inicio', label: nav.home },
-    { href: '#funcionalidades', label: nav.features },
-    { href: '#demonstracao', label: nav.demo },
+    { href: '#beneficios', label: nav.benefits },
     { href: '#como-funciona', label: nav.how },
+    { href: '#painel', label: nav.panel },
   ]
-  return hasContact ? [...links, { href: '#contato', label: nav.contact }] : links
-}
-
-export function SiteHeader({ locale, content, showSwitch, hasContact }: SiteHeaderProps) {
-  const { nav } = content
-  const links = buildLinks(content, hasContact)
   const loginHref = erpHref('/login')
   return (
     <header className="jl-nav">
-      <Brand locale={locale} label={content.brandLabel} />
-      <nav aria-label={nav.label}>
-        <ul>
-          {links.map((link, index) => (
-            <li key={link.href}>
-              <a href={link.href} aria-current={index === 0 ? 'page' : undefined}>
-                {link.label}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </nav>
-      <div className="jl-nav-right">
-        {showSwitch && <LanguageSwitch current={locale} copy={content.langSwitch} />}
-        <a className="jl-btn jl-btn--ghost" href={loginHref}>
-          {nav.login}
-        </a>
-        <MobileMenu
-          links={links}
-          loginHref={loginHref}
-          loginLabel={nav.login}
-          openLabel={nav.menuOpen}
-          closeLabel={nav.menuClose}
-        />
+      <div className="vd-container vd-nav-row">
+        <Brand locale={locale} label={content.brandLabel} />
+        <nav aria-label={nav.label}>
+          <ul>
+            {links.map((link) => (
+              <li key={link.href}>
+                <a href={link.href}>{link.label}</a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        <div className="jl-nav-right">
+          {showSwitch && <LanguageSwitch current={locale} copy={content.langSwitch} />}
+          <a className="vd-btn vd-btn--ghost vd-btn--sm vd-hide-mobile" href={loginHref}>
+            {nav.login}
+          </a>
+          <TrialCta locale={locale} className="vd-btn vd-btn--primary vd-btn--sm vd-hide-mobile">
+            {nav.cta}
+          </TrialCta>
+          <MobileMenu
+            links={links}
+            loginHref={loginHref}
+            loginLabel={nav.login}
+            openLabel={nav.menuOpen}
+            closeLabel={nav.menuClose}
+          />
+        </div>
       </div>
     </header>
   )

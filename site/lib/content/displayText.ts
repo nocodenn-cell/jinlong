@@ -6,8 +6,8 @@ import type { HomeContent } from './types'
  * Caracteres chineses por papel tipográfico. O site só baixa fonte CJK da web para estes papéis;
  * o resto do texto chinês usa a fonte do sistema (PingFang SC / Microsoft YaHei).
  *
- *  - 900 (marca):       bloco 金龙 e o ícone 中
- *  - 500 (interface):   linha-assinatura, nomes de idioma, chip bilíngue, 金龙 do CTA final
+ *  - 900 (marca):       logo 金 e o nome 金龙
+ *  - 500 (interface):   nomes de idioma e 金龙 do rodapé
  *  - 700 (títulos zh):  h1/h2/h3 da página em chinês
  */
 export type CjkWeight = 500 | 700 | 900
@@ -17,33 +17,26 @@ export const CJK_WEIGHTS: readonly CjkWeight[] = [500, 700, 900]
 const CJK = /[　-〿㐀-鿿＀-￯]/g
 
 function headingStrings(content: HomeContent): string[] {
-  const { hero, benefits, screens, wholesale, languages, steps, faq, final } = content
+  const { hero, benefits, steps, panel, final, footer } = content
   return [
     hero.h1.line1,
     hero.h1.line2,
-    hero.h1.emphasis,
-    hero.h1.rest,
     benefits.title,
     ...benefits.items.map((item) => item.title),
-    screens.title,
-    screens.stock.captionTitle,
-    screens.close.captionTitle,
-    screens.panel.captionTitle,
-    wholesale.title,
-    wholesale.product,
-    languages.title,
     steps.title,
     ...steps.items.map((item) => item.title),
-    faq.title,
-    ...faq.items.map((item) => item.q),
+    panel.title,
+    panel.topTitle,
     final.title,
+    footer.productTitle,
+    footer.companyTitle,
+    footer.legalTitle,
   ]
 }
 
 function interfaceStrings(content: HomeContent): string[] {
-  const { hero, langSwitch, languages } = content
-  const chip = [hero.chipFirst, hero.chipSecond].filter((part) => part.lang === 'zh-CN').map((part) => part.text)
-  return [hero.signature, hero.badge, langSwitch.zh, langSwitch.zhShort, ...chip, '金龙', languages.title]
+  const { langSwitch } = content
+  return [langSwitch.zh, langSwitch.zhShort, '金龙']
 }
 
 function uniqueCjk(strings: readonly string[]): string {
