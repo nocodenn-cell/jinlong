@@ -19,7 +19,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { isTokenFinalidade, validateGerenteAndIssueToken } from "../_shared/gerente-auth.ts";
 import { resolverEscopoGerente } from "../_shared/escopoGerente.ts";
-import { logJson } from "../../../../shared/logger.ts";
+import { logJson } from "../_shared/unified-logger.ts";
 
 const USER_LIMIT = 5;
 const IP_LIMIT = 20;
