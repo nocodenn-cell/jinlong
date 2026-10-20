@@ -48,7 +48,7 @@ for (const locale of LOCALES) {
     test('ordem das seções do briefing, sem banner de rascunho', async ({ page }) => {
       await openHome(page, locale)
       const ids = await page.locator('main > section').evaluateAll((els) => els.map((el) => el.getAttribute('aria-labelledby')))
-      expect(ids).toEqual(['h-hero', 'h-niches', 'h-pains', 'h-ben', 'h-lang', 'h-how', 'h-in', 'h-panel', 'h-wh', 'h-price', 'h-faq', 'h-final'])
+      expect(ids).toEqual(['h-hero', 'h-niches', 'h-pains', 'h-ben', 'h-lang', 'h-how', 'h-in', 'h-panel', 'h-wh', 'h-price', 'h-int', 'h-faq', 'h-final'])
       await expect(page.locator('.jl-draft')).toHaveCount(0)
       await expect(page.locator('.jl-lang')).toBeVisible()
     })
@@ -59,13 +59,15 @@ for (const locale of LOCALES) {
       await first.locator('summary').focus()
       await page.keyboard.press('Enter')
       await expect(first).toHaveAttribute('open', '')
-      await expect(page.locator('.jl-price .jl-ph')).toHaveText('[PREÇO]')
+      await expect(page.locator('.jl-price .jl-ph')).toHaveCount(0)
+      await expect(page.locator('.jl-hero')).not.toContainText(/NFC-e|NF-e|发票|grátis|免费/)
     })
 
-    test('formulário de teste: 8 campos, obrigatórios validados', async ({ page }) => {
+    test('formulário de demonstração: 12 campos, obrigatórios validados', async ({ page }) => {
       await openHome(page, locale)
       const form = page.locator('form.jl-form')
-      await expect(form.locator('input')).toHaveCount(8)
+      await expect(form.locator('input')).toHaveCount(12)
+      await expect(form.locator('input[name="preferred"]')).toHaveCount(4)
       expect(await form.evaluate((el) => (el as HTMLFormElement).checkValidity())).toBe(false)
       await form.locator('input[name="name"]').fill('Teste')
       await form.locator('input[name="store"]').fill('Loja Teste')

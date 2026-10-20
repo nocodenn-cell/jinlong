@@ -12,7 +12,7 @@ interface TrialFormProps {
 type Field = 'name' | 'store' | 'city' | 'wechat' | 'whatsapp'
 
 /**
- * Pedido de teste. Não há backend: o envio monta a mensagem e abre o e-mail (mailto) ou o
+ * Agendamento de demonstração (sem teste automático). Não há backend: o envio monta a mensagem e abre o e-mail (mailto) ou o
  * WhatsApp do visitante com o texto pronto. Nenhum dado sai do navegador sem ação do visitante.
  * [CONFIRMAR: destino do formulário] — trocar por um endpoint quando houver.
  */
@@ -32,6 +32,7 @@ export function TrialForm({ copy, email, whatsappHref }: TrialFormProps) {
     const lines = [
       ...fields.map((f) => `${f.label}: ${String(data.get(f.id) ?? '').trim()}`),
       `${copy.type}: ${String(data.get('type') ?? '')}`,
+      `${copy.preferred}: ${String(data.get('preferred') ?? '')}`,
     ]
     const text = `${copy.mailSubject}\n\n${lines.join('\n')}`
     if (via === 'whatsapp' && whatsappHref) {
@@ -59,6 +60,15 @@ export function TrialForm({ copy, email, whatsappHref }: TrialFormProps) {
           {[copy.typeRetail, copy.typeWholesale, copy.typeBoth].map((option, index) => (
             <label key={option} className="jl-radio">
               <input type="radio" name="type" value={option} defaultChecked={index === 2} />
+              <span>{option}</span>
+            </label>
+          ))}
+        </fieldset>
+        <fieldset>
+          <legend>{copy.preferred}</legend>
+          {[copy.prefEmail, copy.prefWhatsapp, copy.prefWechat, copy.prefPhone].map((option, index) => (
+            <label key={option} className="jl-radio">
+              <input type="radio" name="preferred" value={option} defaultChecked={index === 0} />
               <span>{option}</span>
             </label>
           ))}

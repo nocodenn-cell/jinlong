@@ -78,17 +78,24 @@ describe('paridade de conteúdo pt-BR / zh-CN', () => {
       expect(content.steps.items).toHaveLength(3)
       expect(content.niches.items).toHaveLength(6)
       expect(content.pains.items).toHaveLength(3)
-      expect(content.faq.items).toHaveLength(5)
+      expect(content.faq.items).toHaveLength(4)
     }
   })
 
-  it('não inventa preço nem nota fiscal: placeholders explícitos', () => {
+  it('direção comercial: demonstração agendada, sem teste grátis, sem destaque fiscal', () => {
     for (const locale of ['pt-BR', 'zh-CN'] as const) {
       const content = getHomeContent(locale)
-      expect(content.price.value).toBe('[PREÇO]')
-      expect(content.faq.items[2]?.a).toContain('[CONFIRMAR: NFC-e?]')
-      expect(JSON.stringify(content)).not.toMatch(/R\$ ?\d+\s*\/\s*m[eê]s/)
+      const all = JSON.stringify(content)
+      expect(all).not.toMatch(/grátis|gratis|免费|试用|15 dias|15天|\[PREÇO\]|\[CONFIRMAR: NFC-e\?\]/i)
+      const prominent = JSON.stringify([content.hero, content.pains, content.benefits, content.faq, content.final, content.price])
+      expect(prominent).not.toMatch(/NFC-e|NF-e|nota fiscal|发票/i)
+      expect(content.integrations.note).toMatch(/NFC-e/)
+      expect(content.integrations.note).not.toMatch(/emite|homologad|已开通|支持开具/i)
     }
+    expect(getHomeContent('pt-BR').hero.ctaTrial).toBe('Agendar demonstração')
+    expect(getHomeContent('zh-CN').hero.ctaTrial).toBe('预约演示')
+    expect(getHomeContent('pt-BR').price.value).toBe('Condições sob consulta')
+    expect(getHomeContent('zh-CN').price.value).toBe('价格按需沟通')
   })
 
   it('termos de operação em chinês seguem o próprio ERP', () => {

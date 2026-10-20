@@ -5,6 +5,7 @@ import { ContactFab } from '@/components/ContactFab'
 import { Dashboard } from '@/components/Dashboard'
 import { Faq } from '@/components/Faq'
 import { FinalCta } from '@/components/FinalCta'
+import { Integrations } from '@/components/Integrations'
 import { Hero } from '@/components/Hero'
 import { LanguageCompare } from '@/components/LanguageCompare'
 import { Niches } from '@/components/Niches'
@@ -67,6 +68,7 @@ export default async function HomePage({ params }: HomePageProps) {
         <WholesaleSection locale={locale} content={content} />
         <Price content={content} />
         {/* Prova social: oculta até existir depoimento real ([DEPOIMENTO REAL]). */}
+        <Integrations content={content} />
         <Faq content={content} />
         <FinalCta locale={locale} content={content} />
       </main>

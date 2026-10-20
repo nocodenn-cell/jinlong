@@ -26,8 +26,8 @@ export function parseWhatsappUrl(raw: string | undefined): string | null {
 }
 
 const MAIL_SUBJECT: Record<SiteLocale, string> = {
-  'pt-BR': 'Jinlong: demonstração ou teste de 15 dias',
-  'zh-CN': '金龙：预约演示或15天试用',
+  'pt-BR': 'Jinlong: agendar demonstração',
+  'zh-CN': '金龙：预约演示',
 }
 
 export function emailHref(locale: SiteLocale): string {

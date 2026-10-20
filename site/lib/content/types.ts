@@ -150,6 +150,11 @@ export interface TrialFormCopy {
   typeRetail: string
   typeWholesale: string
   typeBoth: string
+  preferred: string
+  prefEmail: string
+  prefWhatsapp: string
+  prefWechat: string
+  prefPhone: string
   sendEmail: string
   sendWhatsapp: string
   note: string
@@ -207,6 +212,7 @@ export interface HomeContent {
     top: readonly TopProduct[]
   }
   price: { title: string; plan: string; value: string; includes: readonly string[]; cta: string }
+  integrations: { title: string; items: readonly string[]; note: string }
   faq: { title: string; items: readonly FaqItem[] }
   form: TrialFormCopy
   final: { title: string; lead: string }
