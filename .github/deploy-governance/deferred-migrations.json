@@ -1,0 +1,11 @@
+{
+  "_doc": "docs/ops/deploy-governance.md",
+  "deferred": [
+    {
+      "version": "20261010120000",
+      "file": "backend/supabase/migrations/20261010120000_caixa_sem_loja_padrao.sql",
+      "reason": "Remove o DEFAULT de caixas.loja_id, ainda necessario ao PDV legado (Build A, sem loja_id). Aplicar somente apos validacao presencial do PDV novo (#590) com fila de sync zerada.",
+      "releaseCondition": "Validacao presencial do PDV registrada + autorizacao explicita do Damatta + label deploy-prod:aprovado no PR que remove esta entrada."
+    }
+  ]
+}
