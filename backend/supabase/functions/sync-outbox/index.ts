@@ -23,7 +23,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { timingSafeEqualSecret, timingSafeEqualStr } from "../_shared/crypto.ts";
 import { validateGerenteAndIssueToken } from "../_shared/gerente-auth.ts";
 import { logJson } from "../_shared/logger.ts";
-import { assertMesmaLoja, caixaInsertForLoja, requireExplicitLojaId } from "./caixaLoja.ts";
+import { aplicarLojaLegado, assertMesmaLoja, caixaInsertForLoja, requireExplicitLojaId } from "./caixaLoja.ts";
 import { maybeEnqueueFiscalDocumentAfterSyncedVenda } from "./fiscal_enqueue_after_venda_sync.ts";
 import { captureEdgeException } from "../_shared/sentryEdge.ts";
 import {
@@ -945,6 +945,20 @@ async function dispatchOutboxEvent(
   ev: OutboxEvent,
   ctx: SyncContext,
 ): Promise<void> {
+  if (ctx.mode === "legado") {
+    const r = await aplicarLojaLegado(ev, ctx.lojaId, {
+      caixaLoja: scopeLookups(supabase).caixaLoja,
+      lojasAtivas: async () => {
+        const { data, error } = await supabase.from("lojas").select("id").eq("ativo", true).limit(2);
+        if (error) throw new Error(`LOJA_LEGADO_LOOKUP: ${error.message}`);
+        return ((data ?? []) as Array<{ id: string }>).map((l) => String(l.id));
+      },
+    });
+    if (r.auditoria) {
+      log({ level: "warn", stage: "loja_legado_resolvida", event_id: (ev as { id?: string }).id, event_type: ev.tipo, ...r.auditoria });
+      ev = r.ev;
+    }
+  }
   await assertEventoNoEscopo(ev, ctx, scopeLookups(supabase));
   if (ev.tipo === "VENDA_REGISTRADA") await processVenda(supabase, ev);
   else if (ev.tipo === "CAIXA_ABERTO") await processCaixaAberto(supabase, ev);
