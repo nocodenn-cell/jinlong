@@ -539,11 +539,13 @@ RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, saa
     'preco_loja_centavos', preco_loja_centavos, 'preco_caixa_adicional_centavos', preco_caixa_adicional_centavos,
     'caixas_inclusos_por_loja', caixas_inclusos_por_loja, 'max_lojas', max_lojas, 'preco_placeholder', preco_placeholder)
     ORDER BY ordem), '[]'::jsonb)
-  FROM saas.planos WHERE ativo;
+  FROM saas.planos WHERE ativo
+   -- catálogo sem dado de empresa, mas só para sessão identificada (saas segue fechado para authenticated)
+   AND (auth.uid() IS NOT NULL OR auth.role() = 'service_role');
 $$;
 
 COMMENT ON FUNCTION public.planos_catalogo() IS
-  'Multiempresa revisado: catálogo de planos da plataforma (sem dados de empresa; leitura para authenticated).';
+  'Multiempresa revisado: catálogo de planos da plataforma (sem dados de empresa; exige sessão identificada).';
 
 CREATE OR REPLACE FUNCTION public.fp_minhas_faturas(p_limite int DEFAULT 24)
 RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, saas, pg_temp AS $$
@@ -597,13 +599,14 @@ BEGIN
     'public.cobranca_registrar_assinatura(uuid, text, text[], int, int, text, int, text, text, date)',
     'public.cobranca_cancelar(uuid)', 'public.trial_registrar_tentativa(text, text, int)',
     'public.plataforma_iniciar_trial(jsonb, int)', 'public.cobranca_conciliar_pagamento(jsonb)',
-    'public.cobranca_estado_empresa(uuid)', 'public.cobranca_assinaturas_para_conciliar()'
+    'public.cobranca_estado_empresa(uuid)', 'public.cobranca_assinaturas_para_conciliar()',
+    -- recursos de QUALQUER empresa por id: só servidor/sync (a sessão usa fp_minha_assinatura, escopada)
+    'public.fp_recursos_empresa(uuid)', 'public.fp_empresa_tem_recurso(uuid, text)'
   ] LOOP
     EXECUTE format('REVOKE ALL ON FUNCTION %s FROM PUBLIC, anon, authenticated', f);
     EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO service_role', f);
   END LOOP;
-  FOREACH f IN ARRAY ARRAY['public.fp_recursos_empresa(uuid)', 'public.fp_empresa_tem_recurso(uuid, text)', 'public.fp_minha_assinatura()',
-    'public.fp_minhas_faturas(int)', 'public.planos_catalogo()'] LOOP
+  FOREACH f IN ARRAY ARRAY['public.fp_minha_assinatura()', 'public.fp_minhas_faturas(int)', 'public.planos_catalogo()'] LOOP
     EXECUTE format('REVOKE ALL ON FUNCTION %s FROM PUBLIC, anon', f);
     EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO authenticated, service_role', f);
   END LOOP;

@@ -305,7 +305,7 @@ await t('acesso não autorizado: anon não executa nada de cobrança', async () 
 const SQL_MIG = (await readFile(new URL('../supabase/migrations/20261020100000_cobranca_planos_trial.sql', import.meta.url), 'utf8'))
   + (await readFile(new URL('../supabase/migrations/20261020110000_cobranca_venda_offline_suspensao.sql', import.meta.url), 'utf8'))
 const FUNCS = [...new Set([...SQL_MIG.matchAll(/CREATE OR REPLACE FUNCTION ([a-z_]+)\.([a-z_]+)\(/g)].map((m) => `${m[1]}.${m[2]}`))]
-const LEITURA_DONO = new Set(['public.fp_recursos_empresa', 'public.fp_empresa_tem_recurso', 'public.fp_minha_assinatura', 'public.fp_minhas_faturas', 'public.planos_catalogo'])
+const LEITURA_DONO = new Set(['public.fp_minha_assinatura', 'public.fp_minhas_faturas', 'public.planos_catalogo'])
 
 await t(`segurança: ${FUNCS.length} funções da cobrança — search_path fixo, sem PUBLIC/anon, escrita só service_role`, async () => {
   assert.ok(FUNCS.length >= 15, FUNCS.join(','))

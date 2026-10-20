@@ -1,6 +1,6 @@
 import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { linhasFormasPagamentoPadrao, PDV_CONFIG_DEFAULTS } from '@/app/admin/provisionamento/provisionamentoDefaults'
+import { linhasFormasPagamentoPadrao, PDV_CONFIG_DEFAULTS } from '@/lib/provisionamento/provisionamentoDefaults'
 
 type Loose = {
   from: (t: string) => {
