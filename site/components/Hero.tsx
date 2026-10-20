@@ -1,72 +1,80 @@
 import type { HomeContent } from '@/lib/content'
+import { isDraftChineseVisible } from '@/lib/publication'
 import type { SiteLocale } from '@/lib/locales'
-import { IconArrowRight, IconPackage, IconZap } from './Icons'
+import { PdvWindow } from './PdvWindow'
+import { Mixed } from './Mixed'
 import { TrialCta } from './TrialCta'
 
-function PosMockup({ content }: { content: HomeContent }) {
-  const { mock } = content
+interface HeroProps {
+  locale: SiteLocale
+  content: HomeContent
+}
+
+function Chip({ content }: { content: HomeContent }) {
+  const { chipFirst, chipSecond } = content.hero
   return (
-    <div className="vd-mock" role="img" aria-label={mock.aria}>
-      <div className="vd-dots" aria-hidden="true">
-        <i className="r" />
-        <i className="y" />
-        <i className="g" />
-      </div>
-      <div className="vd-stack" aria-hidden="true">
-        {mock.items.map((item) => (
-          <div key={item.sku} className="vd-mock-row">
-            <div className="vd-row-left">
-              <span className="vd-ic-sm">
-                <IconPackage size={20} />
-              </span>
-              <div>
-                <p className="vd-row-name">{item.name}</p>
-                <p className="vd-row-sub">{item.sku}</p>
-              </div>
-            </div>
-            <p className="vd-row-price">{item.price}</p>
-          </div>
-        ))}
-        <div className="vd-mock-total">
-          <div className="vd-total-line">
-            <span>{mock.totalLabel}</span>
-            <b>{mock.total}</b>
-          </div>
-          <span className="vd-mock-finish">{mock.finish}</span>
-        </div>
-      </div>
-    </div>
+    <span className="jl-chip">
+      <span lang={chipFirst.lang}>{chipFirst.text}</span>
+      <span className="x" aria-hidden="true">
+        ⇄
+      </span>
+      <span lang={chipSecond.lang}>{chipSecond.text}</span>
+    </span>
   )
 }
 
-export function Hero({ locale, content }: { locale: SiteLocale; content: HomeContent }) {
+export function Hero({ locale, content }: HeroProps) {
   const { hero } = content
+  const showChinese = isDraftChineseVisible()
   return (
-    <section className="vd-hero" id="inicio" aria-labelledby="h-hero">
-      <div className="vd-container vd-hero-grid">
-        <div>
-          <span className="vd-pill">
-            <IconZap />
-            {hero.badge}
+    <section className="jl-hero" id="inicio" aria-labelledby="h-hero">
+      <div className="jl-hero-copy">
+        {showChinese && (
+          <span className="jl-sig" lang="zh-CN">
+            {hero.signature}
           </span>
-          <h1 id="h-hero">
-            {hero.h1.line1}
-            <br />
-            <span className="vd-brand">{hero.h1.line2}</span>
-          </h1>
-          <p className="vd-hero-lead">{hero.lead}</p>
-          <div className="vd-hero-ctas">
-            <TrialCta locale={locale} className="vd-btn vd-btn--primary vd-btn--lg">
-              {hero.ctaPrimary}
-              <IconArrowRight />
-            </TrialCta>
-            <a className="vd-btn vd-btn--outline vd-btn--lg" href="#como-funciona">
-              {hero.ctaSecondary}
-            </a>
-          </div>
-          <p className="vd-micro">{hero.microcopy}</p>
+        )}
+        <h1 id="h-hero">
+          {hero.h1.line1}
+          <br />
+          <span className="light">{hero.h1.line2}</span>
+          <br />
+          <em>{hero.h1.emphasis}</em>
+          {hero.h1.rest}
+        </h1>
+        <p className="jl-lead">{hero.lead}</p>
+        <div className="jl-hero-ctas">
+          <a className="jl-btn jl-btn--primary" href="#shiyong">
+            {hero.ctaTrial}
+            <span className="jl-arrow" aria-hidden="true">
+              →
+            </span>
+          </a>
+          <TrialCta locale={locale} label={hero.ctaContact} />
+          <a className="jl-btn jl-btn--link" href="#demonstracao">
+            {hero.ctaDemo}
+          </a>
         </div>
-        <PosMockup content={content} />
+        <span className="jl-btn-note">{hero.trialNote}</span>
+        <ul className="jl-proof">
+          {hero.proof.map((item) => (
+            <li key={item}>
+              <Mixed text={item} locale={locale} />
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className="jl-hero-stage">
+        {showChinese && <Chip content={content} />}
+        <PdvWindow locale={locale} copy={content.pdv} />
+        <div className="jl-float" aria-hidden="true">
+          <div className="k">{hero.floatTitle}</div>
+          <div className="v">
+            <b>R$ 18,50</b>
+            <s>R$ 22,90</s>
+          </div>
+          <p>{hero.floatNote}</p>
+        </div>
       </div>
     </section>
   )

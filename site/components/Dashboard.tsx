@@ -1,63 +1,36 @@
 import type { HomeContent } from '@/lib/content'
-import { IconCart, IconPackage, IconTrend } from './Icons'
 
+/** Demo do painel: indicadores do dia e mais vendidos (dados fictícios, sinalizados). */
 export function Dashboard({ content }: { content: HomeContent }) {
   const { panel } = content
-  const [sales, ticket, low] = panel.stats
   return (
-    <section className="vd-section" id="painel" aria-labelledby="h-panel">
-      <div className="vd-container">
-        <div className="vd-head vd-head--sm">
-          <h2 id="h-panel">{panel.title}</h2>
-          <p>{panel.subtitle}</p>
-        </div>
-        <div className="vd-board">
-          <div className="vd-stats">
-            <div className="vd-card">
-              <div className="vd-stat-top">
-                <span>{sales.label}</span>
-                <IconTrend size={16} className="vd-brand" />
+    <section className="jl-section jl-section--tight" id="kanban" aria-labelledby="h-panel">
+      <div className="jl-wrap">
+        <h2 className="jl-h2" id="h-panel">{panel.title}</h2>
+        <p className="jl-lead">{panel.lead}</p>
+        <div className="jl-board">
+          <div className="jl-board-stats">
+            {panel.stats.map((stat) => (
+              <div key={stat.label} className="jl-board-card">
+                <span className="k">{stat.label}</span>
+                <b className="n">{stat.value}</b>
+                <small>{stat.note}</small>
               </div>
-              <p className="vd-stat-value">{sales.value}</p>
-              <p className="vd-stat-note vd-brand-text">{sales.note}</p>
-            </div>
-            <div className="vd-card">
-              <div className="vd-stat-top">
-                <span>{ticket.label}</span>
-                <IconCart size={16} className="vd-brand" />
-              </div>
-              <p className="vd-stat-value">{ticket.value}</p>
-              <p className="vd-stat-note">{ticket.note}</p>
-            </div>
-            <div className="vd-card">
-              <div className="vd-stat-top">
-                <span>{low.label}</span>
-                <IconPackage size={16} className="vd-amber" />
-              </div>
-              <p className="vd-stat-value">{low.value}</p>
-              <p className="vd-stat-note vd-amber-text">{low.note}</p>
-            </div>
+            ))}
           </div>
-          <div className="vd-card">
-            <h3 className="vd-top-title">
-              {panel.topTitle} <span className="vd-sample">· {panel.sample}</span>
+          <div className="jl-board-card">
+            <h3>
+              {panel.topTitle} <span className="jl-demo-tag">{panel.sample}</span>
             </h3>
-            <div className="vd-stack">
+            <ol className="jl-top">
               {panel.top.map((row) => (
-                <div key={row.name} className="vd-top-row">
-                  <div className="vd-row-left">
-                    <span className="vd-ic-sm">
-                      <IconPackage size={20} />
-                    </span>
-                    <div>
-                      <p className="vd-row-name">{row.name}</p>
-                      <p className="vd-row-sub">{row.sales}</p>
-                    </div>
-                  </div>
-                  <p className="vd-row-price">{row.total}</p>
-                </div>
+                <li key={row.name}>
+                  <span className="p">{row.name}</span>
+                  <span className="q">{row.sales}</span>
+                  <b className="n">{row.total}</b>
+                </li>
               ))}
-            </div>
+            </ol>
           </div>
         </div>
       </div>

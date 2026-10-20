@@ -45,12 +45,38 @@ for (const locale of LOCALES) {
       else await expect(robots).toHaveCount(0)
     })
 
-    test('seções na ordem do layout do Venddi', async ({ page }) => {
+    test('ordem das seções do briefing, sem banner de rascunho', async ({ page }) => {
       await openHome(page, locale)
       const ids = await page.locator('main > section').evaluateAll((els) => els.map((el) => el.getAttribute('aria-labelledby')))
-      expect(ids).toEqual(['h-hero', 'h-ben', 'h-how', 'h-panel', 'h-final'])
-      await expect(page.locator('.vd-step')).toHaveCount(3)
-      await expect(page.locator('.vd-benefit')).toHaveCount(4)
+      expect(ids).toEqual(['h-hero', 'h-niches', 'h-pains', 'h-ben', 'h-lang', 'h-how', 'h-in', 'h-panel', 'h-wh', 'h-price', 'h-faq', 'h-final'])
+      await expect(page.locator('.jl-draft')).toHaveCount(0)
+      await expect(page.locator('.jl-lang')).toBeVisible()
+    })
+
+    test('FAQ abre por teclado; placeholders ficam destacados', async ({ page }) => {
+      await openHome(page, locale)
+      const first = page.locator('.jl-faq details').first()
+      await first.locator('summary').focus()
+      await page.keyboard.press('Enter')
+      await expect(first).toHaveAttribute('open', '')
+      await expect(page.locator('.jl-price .jl-ph')).toHaveText('[PREÇO]')
+    })
+
+    test('formulário de teste: 8 campos, obrigatórios validados', async ({ page }) => {
+      await openHome(page, locale)
+      const form = page.locator('form.jl-form')
+      await expect(form.locator('input')).toHaveCount(8)
+      expect(await form.evaluate((el) => (el as HTMLFormElement).checkValidity())).toBe(false)
+      await form.locator('input[name="name"]').fill('Teste')
+      await form.locator('input[name="store"]').fill('Loja Teste')
+      await form.locator('input[name="city"]').fill('São Paulo')
+      expect(await form.evaluate((el) => (el as HTMLFormElement).checkValidity())).toBe(true)
+    })
+
+    test('botão flutuante de contato abre e-mail', async ({ page }) => {
+      await openHome(page, locale)
+      await page.locator('.jl-fab summary').click()
+      await expect(page.locator('.jl-fab a[href^="mailto:naturalcodedevelop@gmail.com"]')).toBeVisible()
     })
 
     test('teclado: skip link é o primeiro foco e leva ao conteúdo', async ({ page, browserName }) => {
@@ -105,6 +131,27 @@ test('menu mobile: link de seção fecha o menu', async ({ page }) => {
   await page.locator('button.jl-menu-btn').click()
   await page.locator('#menu-mobile a').nth(1).click()
   await expect(page.locator('#menu-mobile')).toHaveAttribute('data-open', 'false')
+})
+
+test('simulador de atacado: 6 un. no varejo, 10 un. aplica o atacado (teclado)', async ({ page }) => {
+  await openHome(page, 'pt-BR')
+  const output = page.locator('.jl-stepper output')
+  await expect(output).toHaveText('6')
+  await expect(page.locator('.jl-wh-result .total b')).toHaveText(/137,40/)
+  const plus = page.getByRole('button', { name: /aumentar/i })
+  await plus.focus()
+  for (let i = 0; i < 4; i += 1) await page.keyboard.press('Enter')
+  await expect(output).toHaveText('10')
+  await expect(page.locator('.jl-wh-result .total b')).toHaveText(/185,00/)
+  await expect(page.locator('.jl-wh-live')).toContainText('✓')
+})
+
+test('simulador: quantidade respeita os limites 1 e 99', async ({ page }) => {
+  await openHome(page, 'pt-BR')
+  const minus = page.getByRole('button', { name: /diminuir/i })
+  for (let i = 0; i < 8; i += 1) if (await minus.isEnabled()) await minus.click()
+  await expect(page.locator('.jl-stepper output')).toHaveText('1')
+  await expect(minus).toBeDisabled()
 })
 
 test('sem dados reais: nenhuma chamada ao Supabase nem a terceiros', async ({ page }) => {
@@ -167,25 +214,26 @@ test('CLS da home dentro do orçamento (≤ 0,1)', async ({ page }) => {
   expect(await page.evaluate(() => (window as unknown as { __cls: number }).__cls)).toBeLessThanOrEqual(0.1)
 })
 
-test('fontes: subset CJK carregado na home em chinês (logo e títulos)', async ({ page }) => {
-  await openHome(page, 'zh-CN')
-  const loaded = await page.evaluate(() => [...document.fonts].filter((f) => f.status === 'loaded').length)
-  expect(loaded).toBeGreaterThan(0)
-})
-
-test('sem WhatsApp configurado, CTAs de teste usam o e-mail (mailto) e não há WeChat', async ({ page }) => {
-  await openHome(page, 'pt-BR')
-  await expect(page.locator('.vd-hero a[href^="mailto:naturalcodedevelop@gmail.com"]')).toHaveCount(1)
-  await expect(page.locator('footer#contato')).toContainText('naturalcodedevelop@gmail.com')
-  await expect(page.locator('body')).not.toContainText(/WeChat|微信/)
-})
-
 test('logo oficial no cabeçalho e no rodapé, favicon presente', async ({ page }) => {
   await openHome(page, 'pt-BR')
-  await expect(page.locator('header .vd-logo img')).toBeVisible()
-  await expect(page.locator('footer .vd-logo img')).toBeVisible()
-  expect(await page.locator('header .vd-logo img').evaluate((img) => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(0)
+  await expect(page.locator('header .jl-logo img')).toBeVisible()
+  await expect(page.locator('footer .jl-logo img')).toBeVisible()
+  expect(await page.locator('header .jl-logo img').evaluate((img) => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(0)
   expect((await page.request.get('/icon.png')).status()).toBe(200)
+})
+
+test('raiz sem preferência abre em chinês', async ({ browser }) => {
+  const context = await browser.newContext({ locale: 'pt-BR' })
+  const page = await context.newPage()
+  await page.goto('/')
+  await expect(page).toHaveURL(/\/zh-CN$/)
+  await context.close()
+})
+
+test('fontes: Geist carregada na home em português', async ({ page }) => {
+  await openHome(page, 'pt-BR')
+  const geistLoaded = await page.evaluate(() => [...document.fonts].some((f) => f.status === 'loaded' && /geist/i.test(f.family)))
+  expect(geistLoaded).toBe(true)
 })
 
 test.describe('largura de menu', () => {

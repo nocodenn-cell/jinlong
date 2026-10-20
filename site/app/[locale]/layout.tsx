@@ -9,6 +9,26 @@ import { getSiteUrl } from '@/lib/siteUrl'
 import '@/styles/site.css'
 
 /**
+ * Fontes versionadas no repositório (sem depender do Google Fonts no build).
+ * Geist e Geist Mono: SIL OFL 1.1 (app/fonts/OFL-Geist.txt), apenas o subconjunto latino.
+ */
+const geist = localFont({
+  src: '../fonts/geist-latin.woff2',
+  weight: '300 700',
+  variable: '--f-geist',
+  display: 'swap',
+  adjustFontFallback: 'Arial',
+})
+
+const geistMono = localFont({
+  src: '../fonts/geist-mono-latin.woff2',
+  weight: '500 600',
+  variable: '--f-geist-mono',
+  display: 'swap',
+  adjustFontFallback: 'Arial',
+})
+
+/**
  * Noto Sans SC (SIL OFL 1.1, app/fonts/OFL-NotoSansSC.txt) em subsets por papel: marca (900),
  * interface (500) e títulos em chinês (700). Regerar com `npm run fonts:subset`.
  */
@@ -48,7 +68,7 @@ export default async function RootLayout({ children, params }: RootLayoutProps) 
 
   const { skipLink } = getHomeContent(locale)
   return (
-    <html lang={locale} className={cjk.variable}>
+    <html lang={locale} className={`${geist.variable} ${geistMono.variable} ${cjk.variable}`}>
       <body className="jl">
         <a href="#main-content" className="jl-skip">
           {skipLink}

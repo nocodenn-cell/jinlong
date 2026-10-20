@@ -100,8 +100,10 @@ describe('negociação de idioma na raiz', () => {
     expect(negotiateLocale({ cookie: 'zh', acceptLanguage: 'pt-BR', zhPublic: true })).toBe('zh-CN')
     expect(negotiateLocale({ cookie: 'pt', acceptLanguage: 'zh-CN', zhPublic: true })).toBe('pt-BR')
     expect(negotiateLocale({ cookie: undefined, acceptLanguage: 'zh-CN,zh;q=0.9', zhPublic: true })).toBe('zh-CN')
+    expect(negotiateLocale({ cookie: undefined, acceptLanguage: 'pt-BR', zhPublic: true })).toBe('zh-CN')
     expect(negotiateLocale({ cookie: 'zh', acceptLanguage: 'zh-CN', zhPublic: false })).toBe('pt-BR')
-    expect(negotiateLocale({ cookie: undefined, acceptLanguage: null, zhPublic: true })).toBe('pt-BR')
+    expect(negotiateLocale({ cookie: undefined, acceptLanguage: null, zhPublic: true })).toBe('zh-CN')
+    expect(negotiateLocale({ cookie: undefined, acceptLanguage: null, zhPublic: false })).toBe('pt-BR')
   })
 })
 
