@@ -38,7 +38,7 @@ describe('AdminV2SidebarFrame', () => {
     expect(aside().getAttribute('role')).toBe('complementary')
     expect(aside().getAttribute('aria-label')).toBe('Navegação')
     expect(aside().getAttribute('data-collapsed')).toBe('false')
-    expect(aside().className).toContain('lg:w-72')
+    expect(aside().className).toContain('lg:w-64')
     expect(toggle().getAttribute('aria-expanded')).toBe('true')
     expect(toggle().getAttribute('aria-label')).toBe('Recolher menu')
   })
@@ -47,7 +47,7 @@ describe('AdminV2SidebarFrame', () => {
     mount()
     act(() => toggle().click())
     expect(aside().getAttribute('data-collapsed')).toBe('true')
-    expect(aside().className).not.toContain('lg:w-72')
+    expect(aside().className).not.toContain('lg:w-64')
     expect(toggle().getAttribute('aria-label')).toBe('Expandir menu')
     expect(window.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY)).toBe('1')
     // rótulo continua no DOM (acessível); só o CSS o oculta

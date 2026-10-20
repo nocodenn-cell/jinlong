@@ -1,6 +1,7 @@
 import { Suspense, type ReactNode } from 'react'
 import Link from 'next/link'
 import '@/styles/admin-v2.css'
+import '@/styles/admin-theme.css'
 import { SessionIdleLogout } from '@/components/security/SessionIdleLogout'
 import { ROUTES } from '@/lib/navigation/routes'
 import { getMessages, type Mensagens } from '@/i18n/getMessages'
@@ -76,7 +77,7 @@ export function AdminV2Shell({ session, children, stockAlertCount, topbar }: Adm
           labelRecolher={m.admin_ui.sidebar_recolher}
           labelExpandir={m.admin_ui.sidebar_expandir}
         >
-          <div className="admin-v2-sidebar-brand flex items-center justify-center border-b border-[var(--admin-v2-border)] pb-6 pt-2 px-4">
+          <div className="admin-v2-sidebar-brand flex items-center justify-center border-b border-[var(--admin-v2-border)] pb-4 pt-1 px-4">
             <Link
               href={ROUTES.admin.dashboard}
               aria-label={m.login.nav_marca}
@@ -86,7 +87,7 @@ export function AdminV2Shell({ session, children, stockAlertCount, topbar }: Adm
               <img
                 src="/branding/brand-double-dragon.png"
                 alt="Jīn Lóng"
-                className="admin-v2-sidebar-logo h-28 w-auto drop-shadow-[0_0_12px_rgba(251,191,36,0.25)]"
+                className="admin-v2-sidebar-logo h-20 w-auto"
                 draggable={false}
               />
             </Link>

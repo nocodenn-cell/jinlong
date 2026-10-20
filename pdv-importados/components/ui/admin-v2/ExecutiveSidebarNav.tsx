@@ -29,7 +29,7 @@ const resolveLabels = resolveNavLabels
 // Cores (hover/ativo) vêm só de `.admin-v2-nav-link` em styles/admin-v2.css (tokens
 // `--admin-v2-active-*`) e o foco do anel global `a:focus-visible`; aqui fica só o layout.
 const LINK_BASE =
-  'admin-v2-nav-link flex items-center gap-3 rounded-full border border-transparent px-3 py-2.5'
+  'admin-v2-nav-link flex items-center gap-3 rounded-lg border border-transparent px-3 py-2'
 
 const matchesPath = (pathname: string, p: string) => pathname === p || pathname.startsWith(`${p}/`)
 
@@ -153,7 +153,7 @@ export function ExecutiveSidebarNav({
         title={pdv.hintText ?? pdv.primary}
         aria-label={pdv.primary}
         className={cn(
-          'flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold',
+          'flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold',
           'bg-primary text-primary-foreground transition-opacity hover:opacity-90',
         )}
       >

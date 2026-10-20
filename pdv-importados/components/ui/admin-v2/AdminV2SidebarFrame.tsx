@@ -51,7 +51,7 @@ export function AdminV2SidebarFrame({ children, labelRecolher, labelExpandir }: 
       data-testid="admin-v2-sidebar"
       className={cn(
         'admin-v2-sidebar sticky top-0 hidden h-dvh shrink-0 flex-col overflow-y-auto border-[var(--admin-v2-border)] transition-[width] duration-200 lg:flex lg:border-r',
-        collapsed ? 'lg:w-[4.5rem]' : 'lg:w-72',
+        collapsed ? 'lg:w-16' : 'lg:w-64',
       )}
     >
       <div className="flex justify-end px-2 pt-2">
