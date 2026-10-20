@@ -1,6 +1,12 @@
 -- Rollback da Fase 4 (desempenho das guardas). Rodar ANTES dos rollbacks das fases 3 e 2.
 -- 1) fp_aplicar_guarda volta à definição original (sem o gancho de otimização).
 DO $$
+BEGIN
+  IF to_regclass('internal.fp_fase5_guardas') IS NOT NULL THEN
+    RAISE EXCEPTION 'Rode antes o rollback da fase 5 (20261019170000_multiempresa_fase5_catalogo_empresa.rollback.sql).';
+  END IF;
+END $$;
+DO $$
 DECLARE r record;
 BEGIN
   IF to_regclass('internal.fp_funcoes_reescritas') IS NULL THEN RETURN; END IF;
