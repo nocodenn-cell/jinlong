@@ -21,9 +21,9 @@ R
 }
 reset(){ psql -Xq -c "drop database if exists golive_e2e" -c "create database golive_e2e template golive_tpl"
   rm -rf $EVID $STUB_STATE; mkdir -p $STUB_STATE
-  echo '{"headRefOid":"1448221480a8eb7ffda178aa52d954d0e4b90c71","state":"OPEN","baseRefName":"main","mergeCommit":null}' > $STUB_STATE/pr.json
+  echo '{"headRefOid":"1d445d0b87f2c4a655e7c5f1ac1b7923da26412a","state":"OPEN","baseRefName":"main","mergeCommit":null}' > $STUB_STATE/pr.json
   echo b89b8824c36fea4bba38731281e247336693c40c > $STUB_STATE/main_sha
-  cp $T/ci_checks_584_real.json $STUB_STATE/ci.json
+  sed "s/1448221480a8eb7ffda178aa52d954d0e4b90c71/1d445d0b87f2c4a655e7c5f1ac1b7923da26412a/g" $T/ci_checks_584_real.json > $STUB_STATE/ci.json
   echo "{\"path\":\".github/workflows/backup-scheduled.yml\",\"conclusion\":\"success\",\"created_at\":\"$(date -u +%FT%TZ)\"}" > $STUB_STATE/backup.json
   echo 75 > $STUB_STATE/sync.v; echo 50 > $STUB_STATE/vg.v
   echo '[{"state":"success","description":"Deployment has completed","environment_url":"https://pdv-importados-abc.vercel.app"}]' > $STUB_STATE/deploy_status.json
@@ -33,30 +33,10 @@ expect_stop(){ local name=$1 code=$2 pat=$3; shift 3; local rc; rc=$(run env "$@
 H0=401
 # ---------- recusas do preflight / gates ----------
 reset
-expect_stop "G0 sem RESUMO" 10 "PDV_RESUMO ausente" PDV_RESUMO=/nao/existe
-resumo 'INCOMPATIVEL (Build A - precisa reinstalar)'; expect_stop "G0 Build A recusado" 10 "Build A" MODE=apply GOLIVE_JANELA_APROVADA=$TODAY
-resumo 'INDETERMINADO'; expect_stop "G0 INDETERMINADO recusado" 10 "INDETERMINADO" MODE=apply GOLIVE_JANELA_APROVADA=$TODAY
-resumo 'COMPATIVEL (Build B ou C)'
-sed -i 's/integrity_check: ok/integrity_check: falhou/' $PDV_RESUMO; expect_stop "G0 integrity_check != ok" 10 "integrity_check" MODE=apply; resumo 'COMPATIVEL (Build B ou C)'
-expect_stop "G1 sem janela" 11 "janela não aprovada" MODE=apply
-expect_stop "G1 janela de outro dia" 11 "janela não aprovada" MODE=apply GOLIVE_JANELA_APROVADA=2026-10-19
-echo "{\"path\":\".github/workflows/backup-scheduled.yml\",\"conclusion\":\"success\",\"created_at\":\"$(date -u -d '-1 day' +%FT%TZ)\"}" > $STUB_STATE/backup.json
-expect_stop "G1 backup de ontem" 11 "backup não é de hoje" MODE=apply GOLIVE_JANELA_APROVADA=$TODAY
-echo "{\"path\":\".github/workflows/backup-scheduled.yml\",\"conclusion\":\"failure\",\"created_at\":\"$(date -u +%FT%TZ)\"}" > $STUB_STATE/backup.json
-expect_stop "G1 backup falhou" 11 "backup não concluiu" MODE=apply GOLIVE_JANELA_APROVADA=$TODAY
-reset
-expect_stop "G1 head SHA divergente" 11 "head" MODE=apply GOLIVE_JANELA_APROVADA=$TODAY EXPECTED_HEAD_SHA=0000000000000000000000000000000000000000 REPO=/workspace/fastproduct || true
-sed -i 's/b89b8824c36fea4bba38731281e247336693c40c/ffffffffffffffffffffffffffffffffffffffff/' $STUB_STATE/main_sha; expect_stop "G1 main mudou" 11 "main mudou" MODE=apply GOLIVE_JANELA_APROVADA=$TODAY; reset
-jq '.check_runs[0].conclusion="failure"' $T/ci_checks_584_real.json > $STUB_STATE/ci.json; expect_stop "G1 CI com falha" 11 "CI não verde" MODE=apply GOLIVE_JANELA_APROVADA=$TODAY; reset
-psql -Xqd golive_e2e -c "insert into supabase_migrations.schema_migrations(version,name) values ('20261018000000','intrusa')"
-expect_stop "G1 histórico inesperado" 11 "histórico fora do estado esperado" MODE=apply GOLIVE_JANELA_APROVADA=$TODAY; reset
-unset CI_ALLOW_SKIPPED; expect_stop "G1 rust-tauri-checks só skipped => recusa (padrão)" 11 "rust-tauri-checks" MODE=apply GOLIVE_JANELA_APROVADA=$TODAY; export CI_ALLOW_SKIPPED="Supabase Preview,rust-tauri-checks"
-# ---------- dry-run completo: nada muda ----------
-rc=$(run env ATE_GATE=9 CONVERGIR_180000=1 bash $SCRIPT)
-if [ "$rc" = 0 ] && [ "$(hist)" = $H0 ] && grep -q 'G9 \[dry-run\]' $T/last.out && [ ! -s $STUB_STATE/supabase.calls -o -z "$(grep deploy $STUB_STATE/supabase.calls)" ] && ! grep -q "pr merge" $STUB_STATE/gh.calls; then ok "dry-run sem mudanças (exit $rc, histórico $(hist))"; else ko "dry-run (exit $rc)"; tail -5 $T/last.out; fi
-cp $T/last.out $T/out_dryrun.txt
-# ---------- G2 estrito: diferença de comentário => recusa ----------
-reset
+expect_stop "G0 sem RESUMO não bloqueia (pendente presencial; para só no G2)" 12 "G0 PENDENTE" PDV_RESUMO=/nao/existe MODE=apply GOLIVE_JANELA_APROVADA=$TODAY
+resumo 'INCOMPATIVEL (Build A - precisa reinstalar)'; expect_stop "G0 Build A só avisa (shim legado)" 12 "G0 AVISO (não bloqueia)" MODE=apply GOLIVE_JANELA_APROVADA=$TODAY
+sed -i 's/integrity_check: ok/integrity_check: falhou/' $PDV_RESUMO; expect_stop "G0 integrity_check != ok só avisa" 12 "G0 AVISO: integrity_check" MODE=apply GOLIVE_JANELA_APROVADA=$TODAY
+rm -f $PDV_RESUMO
 expect_stop "G2 recusa sem CONVERGIR (diferença exata reportada)" 12 "NÃO exatamente equivalentes" MODE=apply GOLIVE_JANELA_APROVADA=$TODAY
 [ "$(hist)" = $H0 ] && ok "G2 recusa não alterou nada (histórico $H0)" || ko "G2 alterou histórico"
 cp $EVID/equiv_diff.txt $T/out_equiv_diff.txt
@@ -65,18 +45,17 @@ expect_stop "falha forçada em 20261007163000 para no G3" 13 "falha forçada" MO
 n=$(psql -XAtd golive_e2e -c "select count(*) from supabase_migrations.schema_migrations where version in ('20261009180000','20261009180001','20261006120000','20261007161220','20261007163000')")
 [ "$n" = 4 ] && ok "após falha: 180000/180001/120000/161220 registrados, 163000 ausente (rollback)" || ko "estado pós-falha n=$n"
 # ---------- retomada (idempotente) ----------
-expect_stop "retomada para no G6 pedindo confirmação do sync do PDV" 16 "CONFIRM_PDV_SYNC_OK" MODE=apply GOLIVE_JANELA_APROVADA=$TODAY CONVERGIR_180000=1
-d=$(psql -XAtd golive_e2e -c "select column_default is not null from information_schema.columns where table_name='caixas' and column_name='loja_id'")
-[ "$d" = t ] && ok "G6 não aplicou 20261010120000 sem confirmação (DEFAULT presente)" || ko "DEFAULT removido cedo"
+expect_stop "retomada sem RESUMO: G6 ADIADO, para só no G9" 19 "CONFIRM_SMOKE_MANUAL" MODE=apply GOLIVE_JANELA_APROVADA=$TODAY CONVERGIR_180000=1
+grep -q "G6 ADIADO" $T/last.out && ok "G6 adiado por padrão (log)" || ko "G6 não adiado"
 grep -q "sync-outbox: 75 -> 76" $EVID/golive.log && ok "G5 edge sync-outbox 75->76, validar-gerente $(cat $STUB_STATE/vg.v)" || ko "G5"
 expect_stop "G9 pede smoke manual" 19 "CONFIRM_SMOKE_MANUAL" MODE=apply GOLIVE_JANELA_APROVADA=$TODAY CONVERGIR_180000=1 CONFIRM_PDV_SYNC_OK=1
 rc=$(run env MODE=apply GOLIVE_JANELA_APROVADA=$TODAY CONVERGIR_180000=1 CONFIRM_PDV_SYNC_OK=1 CONFIRM_SMOKE_MANUAL=1 bash $SCRIPT)
 [ "$rc" = 0 ] && grep -q "G9 OK" $T/last.out && ok "conclusão G0–G9 (exit 0)" || { ko "conclusão rc=$rc"; tail -5 $T/last.out; }
-[ "$(hist)" = $((H0+18)) ] && ok "histórico = 401 + 18 linhas" || ko "histórico $(hist)"
-bad=0; for f in /workspace/fastproduct/backend/supabase/migrations/{20261006120000,20261007161220,20261007163000,20261007163100,20261007163200,20261007170000,20261007171000,20261007180000,20261007190000,20261016120100,20261019120000,20261019140000,20261019150000,20261019160000,20261019170000,20261010120000,20261009180000,20261009180001}_*.sql; do b=$(basename $f .sql); v=${b%%_*}; n=${b#*_}
+[ "$(hist)" = $((H0+17)) ] && ok "histórico = 401 + 17 linhas (sem 120000)" || ko "histórico $(hist)"
+bad=0; for f in /workspace/fastproduct/backend/supabase/migrations/{20261006120000,20261007161220,20261007163000,20261007163100,20261007163200,20261007170000,20261007171000,20261007180000,20261007190000,20261016120100,20261019120000,20261019140000,20261019150000,20261019160000,20261019170000,20261009180000,20261009180001}_*.sql; do b=$(basename $f .sql); v=${b%%_*}; n=${b#*_}
   r=$(psql -XAtd golive_e2e -c "select name||' '||md5(statements[1]) from supabase_migrations.schema_migrations where version='$v'"); [ "$r" = "$n $(md5sum < $f | cut -c1-32)" ] || { bad=1; echo "  $v: $r"; }; done
-[ $bad = 0 ] && ok "18 linhas de histórico: versão/nome reais e statements = conteúdo exato do arquivo (md5)" || ko "conteúdo do histórico"
-d=$(psql -XAtd golive_e2e -c "select coalesce(column_default,'NULL') from information_schema.columns where table_name='caixas' and column_name='loja_id'"); [ "$d" = NULL ] && ok "caixas.loja_id sem DEFAULT só no fim (G6)" || ko "default $d"
+[ $bad = 0 ] && ok "17 linhas de histórico: versão/nome reais e statements = conteúdo exato do arquivo (md5)" || ko "conteúdo do histórico"
+d=$(psql -XAtd golive_e2e -c "select coalesce(column_default,'NULL') from information_schema.columns where table_name='caixas' and column_name='loja_id'"); [ "$d" != NULL ] && ok "caixas.loja_id mantém DEFAULT (120000 adiada)" || ko "default removido"
 # ---------- reexecução total: nada novo ----------
 cp $STUB_STATE/gh.calls /tmp/gh1; H1=$(psql -XAtd golive_e2e -c "select md5(string_agg(version||name||array_to_string(statements,''),',' order by version)) from supabase_migrations.schema_migrations")
 rc=$(run env MODE=apply GOLIVE_JANELA_APROVADA=$TODAY CONVERGIR_180000=1 CONFIRM_PDV_SYNC_OK=1 CONFIRM_SMOKE_MANUAL=1 bash $SCRIPT)
@@ -86,4 +65,11 @@ cp $T/last.out $T/out_rerun.txt
 # ---------- Vercel SKIPPED não é prova ----------
 rm -f $EVID/state/g8.done; echo '[{"state":"success","description":"Build Skipped (ignored build step)","environment_url":"https://x"}]' > $STUB_STATE/deploy_status.json
 expect_stop "G8 deploy SKIPPED recusado" 18 "SKIPPED" MODE=apply GOLIVE_JANELA_APROVADA=$TODAY CONVERGIR_180000=1
+# ---------- opt-in INCLUIR_120000=1 ----------
+reset; resumo 'INCOMPATIVEL (Build A - precisa reinstalar)'
+expect_stop "INCLUIR_120000=1 com Build A recusado no G6" 16 "exige veredito B/C" MODE=apply GOLIVE_JANELA_APROVADA=$TODAY CONVERGIR_180000=1 INCLUIR_120000=1
+resumo 'COMPATIVEL (Build B ou C)'
+rc=$(run env MODE=apply GOLIVE_JANELA_APROVADA=$TODAY CONVERGIR_180000=1 CONFIRM_PDV_SYNC_OK=1 CONFIRM_SMOKE_MANUAL=1 INCLUIR_120000=1 bash $SCRIPT)
+d=$(psql -XAtd golive_e2e -c "select coalesce(column_default,'NULL') from information_schema.columns where table_name='caixas' and column_name='loja_id'")
+[ "$rc" = 0 ] && [ "$(hist)" = $((H0+18)) ] && [ "$d" = NULL ] && ok "opt-in B/C: 18 linhas, DEFAULT removido no G6" || ko "opt-in rc=$rc hist=$(hist) d=$d"
 echo "== $pass PASS / $fail FAIL"

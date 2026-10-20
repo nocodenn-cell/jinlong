@@ -1,0 +1,20 @@
+PASS  colunas = esquema congelado
+PASS  histórico esperado (401/7e47b7f0)
+PASS  0 órfãs
+01_colunas.sql 02_historico.sql 03_orfas.sql 04_baseline.sql 05_equiv_22.sql 06_equiv_deps.sql 07_caixas_default.sql 10_g2_equivalentes.sql 20_g3_20261006120000.sql 21_g3_20261007161220.sql 22_g3_20261007163000.sql 23_g3_20261007163100.sql 24_g3_20261007163200.sql 25_g3_20261007170000.sql 26_g3_20261007171000.sql 27_g3_20261007180000.sql 28_g3_20261007190000.sql 29_g3_20261016120100.sql 40_g4_20261019120000.sql 41_g4_20261019140000.sql 42_g4_20261019150000.sql 43_g4_20261019160000.sql 44_g4_20261019170000.sql 50_edge_sync-outbox.json 50_edge_validar-gerente.json SHA256SUMS 
+PASS  G2 via 1 chamada: registrado
+PASS  CONVERGIR: corpo = repo (0f6b1bdf), ACL/dono/deps rechecados na transação
+PASS  G2 2ª execução recusada (guarda de histórico)
+PASS  falha forçada em 1 chamada: rollback total (sem coluna, sem histórico)
+PASS  G2–G4 via MCP: 17 linhas, sem 20261010120000
+PASS  DEFAULT caixas.loja_id intacto antes do G6
+PASS  reexecução de migration já aplicada recusada (guarda)
+PASS  padrão: 20261010120000 adiada (sem 60_g6 no emit)
+PASS  G6 opt-in (INCLUIR_120000=1) via MCP
+PASS  DEFAULT removido só no G6 opt-in
+PASS  histórico final 401+18, nada fora dos alvos
+PASS  histórico idêntico ao do modo psql (e2e opt-in)
+PASS  funções idênticas MCP x psql
+  sync-outbox 9 ['../_shared/crypto.ts', '../_shared/gerente-auth.ts', '../_shared/logger.ts', '../_shared/sentryEdge.ts', 'caixaLoja.ts', 'deno.json', 'fiscal_enqueue_after_venda_sync.ts', 'index.ts', 'tenantScope.ts']
+  validar-gerente 6 ['../_shared/escopoGerente.ts', '../_shared/gerente-auth.ts', 'deno.json', 'index.ts', '../../../../shared/logger.ts', '../../../../shared/unified-logger.ts']
+== 16 PASS / 0 FAIL

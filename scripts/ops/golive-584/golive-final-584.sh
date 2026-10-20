@@ -14,7 +14,7 @@ REPO=${REPO:-/workspace/fastproduct}        # checkout do repo no head do #584
 PROJECT_REF=${PROJECT_REF:-kbabmewnahysfvlybiak}
 GH_REPO=${GH_REPO:-nocodenn-cell/fastproduct}
 PR=${PR:-584}
-EXPECTED_HEAD_SHA=${EXPECTED_HEAD_SHA:-1448221480a8eb7ffda178aa52d954d0e4b90c71}
+EXPECTED_HEAD_SHA=${EXPECTED_HEAD_SHA:-1d445d0b87f2c4a655e7c5f1ac1b7923da26412a}
 EXPECTED_MAIN_SHA=${EXPECTED_MAIN_SHA:-b89b8824c36fea4bba38731281e247336693c40c}
 HIST_BASE_N=${HIST_BASE_N:-401}             # histórico de prod lido em 2026-10-20 (somente leitura)
 HIST_BASE_MD5=${HIST_BASE_MD5:-7e47b7f041715f5426e6dc3e64f08019}
@@ -35,7 +35,8 @@ M="$REPO/backend/supabase/migrations"
 G2_PAIRS="20261009180000:20261009135940 20261009180001:20261009140739"
 G3_LIST="20261006120000 20261007161220 20261007163000 20261007163100 20261007163200 20261007170000 20261007171000 20261007180000 20261007190000 20261016120100"
 G4_LIST="20261019120000 20261019140000 20261019150000 20261019160000 20261019170000"
-G6_LIST="20261010120000"
+INCLUIR_120000=${INCLUIR_120000:-0}       # 20261010120000 ADIADA deste rollout (opt-in: 1, exige G0 B/C presencial)
+G6_LIST=""; [ "$INCLUIR_120000" = 1 ] && G6_LIST="20261010120000"
 TARGETS="20261009180000 20261009180001 $G3_LIST $G4_LIST $G6_LIST"
 HASH_TABLES="vendas itens_venda vendas_pagamentos caixas movimentacoes_caixa estoque produtos usuarios clientes lojas formas_pagamento contas_financeiras contas_pagar contas_receber pdv_config documentos_fiscais_pendentes"
 # tabelas cujas linhas a migration altera DE PROPÓSITO (backfill), validadas na réplica; demais devem ficar idênticas
@@ -178,7 +179,7 @@ if [ "$MODE" = emit ]; then
     cp "$(build_g2 "$CONVERGIR_180000")" "$D/10_g2_equivalentes.sql"; i=20
     for v in $G3_LIST; do cp "$(build_txn 3 "$v")" "$D/${i}_g3_$v.sql"; i=$((i+1)); done; i=40
     for v in $G4_LIST; do cp "$(build_txn 4 "$v")" "$D/${i}_g4_$v.sql"; i=$((i+1)); done
-    cp "$(build_txn 6 20261010120000)" "$D/60_g6_20261010120000.sql"
+    [ -n "$G6_LIST" ] && cp "$(build_txn 6 20261010120000)" "$D/60_g6_20261010120000.sql"
   fi
   for fn in $EDGE_FUNCS; do edge_manifest "$fn" "$D/50_edge_$fn.json" | tee -a "$LOG" >&2; done
   ( cd "$D" && sha256sum ./*.sql ./*.json > SHA256SUMS )
@@ -186,17 +187,20 @@ if [ "$MODE" = emit ]; then
   exit 0
 fi
 
-# ================= GATE 0 — veredito do PDV =================
+# ================= GATE 0 — veredito do PDV (INFORMATIVO; pendente — acesso presencial) =================
+# Não bloqueia: a sync-outbox do #584 tem shim legado (Build A sem loja_id => loja resolvida no servidor).
+# Só é exigido (B/C) se INCLUIR_120000=1 (Gate 6).
 if [ "$ATE_GATE" -ge 0 ]; then
-  [ -n "$PDV_RESUMO" ] && [ -f "$PDV_RESUMO" ] || stop 0 "PDV_RESUMO ausente (rodar pdv-diagnostico-backup.ps1 no PDV)"
-  R=$(tr -d '\r' < "$PDV_RESUMO")
-  grep -q '^Arquivos copiados: .* - SHA256 OK' <<<"$R" || stop 0 "backup do PDV sem 'SHA256 OK'"
-  grep -q '^integrity_check: ok$' <<<"$R" || stop 0 "integrity_check do SQLite não é 'ok'"
-  V=$(grep -m1 '^VEREDITO: ' <<<"$R" | cut -d' ' -f2-)
-  case "$V" in
-    "COMPATIVEL (Build B"*|"COMPATIVEL (Build C"*) cp "$PDV_RESUMO" "$EVID/RESUMO-pdv.txt"; echo "$V" > "$EVID/state/pdv_veredito"; log "G0 OK: $V";;
-    *) stop 0 "veredito do PDV '$V' — Build A: reinstalar o PDV e rodar o diagnóstico de novo; INDETERMINADO: resolver antes";;
-  esac
+  if [ -n "$PDV_RESUMO" ] && [ -f "$PDV_RESUMO" ]; then
+    R=$(tr -d '\r' < "$PDV_RESUMO"); V=$(grep -m1 '^VEREDITO: ' <<<"$R" | cut -d' ' -f2-)
+    grep -q '^Arquivos copiados: .* - SHA256 OK' <<<"$R" || log "G0 AVISO: backup do PDV sem 'SHA256 OK'"
+    grep -q '^integrity_check: ok$' <<<"$R" || log "G0 AVISO: integrity_check do SQLite não é 'ok'"
+    cp "$PDV_RESUMO" "$EVID/RESUMO-pdv.txt"
+    case "$V" in
+      "COMPATIVEL (Build B"*|"COMPATIVEL (Build C"*) echo "$V" > "$EVID/state/pdv_veredito"; log "G0 OK: $V";;
+      *) log "G0 AVISO (não bloqueia): veredito '$V' — shim legado da sync-outbox cobre Build A; 20261010120000 permanece adiada";;
+    esac
+  else log "G0 PENDENTE (acesso presencial) — não bloqueia; shim legado ativo; 20261010120000 adiada"; fi
 fi
 
 # ================= GATE 1 — preflight =================
@@ -296,15 +300,18 @@ if [ "$ATE_GATE" -ge 5 ]; then
   fi
 fi
 
-# ================= GATE 6 — 20261010120000 (DROP DEFAULT caixas.loja_id) =================
+# ================= GATE 6 — 20261010120000 (DROP DEFAULT caixas.loja_id) — ADIADA por padrão =================
 if [ "$ATE_GATE" -ge 6 ]; then
-  if ! in_hist 20261010120000 && apply_only; then
-    [ -f "$EVID/state/pdv_veredito" ] || stop 6 "sem veredito B/C do PDV (Gate 0)"
-    done_ 5 || stop 6 "sync-outbox nova não publicada/verificada (Gate 5)"
-    [ "${CONFIRM_PDV_SYNC_OK:-}" = 1 ] || stop 6 "confirme CONFIRM_PDV_SYNC_OK=1: PDV aberto, status de sync verde e fila pendente=0 com a edge nova"
+  if [ -z "$G6_LIST" ]; then log "G6 ADIADO: 20261010120000 fora deste rollout (arquivo mantido; INCLUIR_120000=1 só após G0 B/C presencial)"
+  else
+    if ! in_hist 20261010120000 && apply_only; then
+      [ -f "$EVID/state/pdv_veredito" ] || stop 6 "INCLUIR_120000=1 exige veredito B/C do PDV (Gate 0, presencial)"
+      done_ 5 || stop 6 "sync-outbox nova não publicada/verificada (Gate 5)"
+      [ "${CONFIRM_PDV_SYNC_OK:-}" = 1 ] || stop 6 "confirme CONFIRM_PDV_SYNC_OK=1: PDV aberto, status de sync verde e fila pendente=0 com a edge nova"
+    fi
+    for v in $G6_LIST; do apply_mig 6 "$v"; done
+    if apply_only; then d=$(q "SELECT coalesce(column_default,'NULL') FROM information_schema.columns WHERE table_schema='public' AND table_name='caixas' AND column_name='loja_id'"); [ "$d" = NULL ] || stop 6 "DEFAULT ainda presente"; mark 6 ok; fi
   fi
-  for v in $G6_LIST; do apply_mig 6 "$v"; done
-  if apply_only; then d=$(q "SELECT coalesce(column_default,'NULL') FROM information_schema.columns WHERE table_schema='public' AND table_name='caixas' AND column_name='loja_id'"); [ "$d" = NULL ] || stop 6 "DEFAULT ainda presente"; mark 6 ok; fi
 fi
 
 # ================= GATE 7 — merge do #584 (merge commit) =================

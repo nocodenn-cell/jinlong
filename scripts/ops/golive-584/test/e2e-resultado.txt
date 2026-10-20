@@ -1,0 +1,20 @@
+PASS  G0 sem RESUMO não bloqueia (pendente presencial; para só no G2) (exit 12)
+PASS  G0 Build A só avisa (shim legado) (exit 12)
+PASS  G0 integrity_check != ok só avisa (exit 12)
+PASS  G2 recusa sem CONVERGIR (diferença exata reportada) (exit 12)
+PASS  G2 recusa não alterou nada (histórico 401)
+PASS  falha forçada em 20261007163000 para no G3 (exit 13)
+PASS  após falha: 180000/180001/120000/161220 registrados, 163000 ausente (rollback)
+PASS  retomada sem RESUMO: G6 ADIADO, para só no G9 (exit 19)
+PASS  G6 adiado por padrão (log)
+PASS  G5 edge sync-outbox 75->76, validar-gerente 51
+PASS  G9 pede smoke manual (exit 19)
+PASS  conclusão G0–G9 (exit 0)
+PASS  histórico = 401 + 17 linhas (sem 120000)
+PASS  17 linhas de histórico: versão/nome reais e statements = conteúdo exato do arquivo (md5)
+PASS  caixas.loja_id mantém DEFAULT (120000 adiada)
+PASS  reexecução idempotente (0 migrations, 0 deploy, 0 merge novos)
+PASS  G8 deploy SKIPPED recusado (exit 18)
+PASS  INCLUIR_120000=1 com Build A recusado no G6 (exit 16)
+PASS  opt-in B/C: 18 linhas, DEFAULT removido no G6
+== 19 PASS / 0 FAIL

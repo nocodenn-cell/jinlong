@@ -1,0 +1,48 @@
+584|pre_1|Build B (chave, loja_id)|caixa HTTP 200 1ok|venda HTTP 200 1ok
+584|pre_1|Build C (dispositivo, loja_id)|caixa HTTP 200 1ok|venda HTTP 200 1ok
+584|pre_1|Build A (sem loja_id, sem header)|caixa HTTP 200 0ok ["CAIXA_LOJA_OBRIGATORIA"]|venda HTTP 200 0ok ["CAIXA_LOJA_OBRIGATORIA"]
+584|pre_1|Build A (sem loja_id, header da loja)|caixa HTTP 200 0ok ["CAIXA_LOJA_OBRIGATORIA"]|venda HTTP 200 0ok ["CAIXA_LOJA_OBRIGATORIA"]
+584|pre_1|conflito: caixa B + venda A (sem loja) + venda com OUTRA loja|caixa HTTP 200 1ok|vendaA HTTP 200 0ok ["CAIXA_LOJA_OBRIGATORIA"]|venda-outra HTTP 200 0ok ["CAIXA_LOJA_DIVERGENTE"]
+584|pre_1|conflito: Build A com header de OUTRA loja|caixa HTTP 200 0ok ["CAIXA_LOJA_OBRIGATORIA"]|venda HTTP 200 0ok ["CAIXA_LOJA_OBRIGATORIA"]
+584s|pre_1|Build B (chave, loja_id)|caixa HTTP 200 1ok|venda HTTP 200 1ok
+584s|pre_1|Build C (dispositivo, loja_id)|caixa HTTP 200 1ok|venda HTTP 200 1ok
+584s|pre_1|Build A (sem loja_id, sem header)|caixa HTTP 200 1ok|venda HTTP 200 1ok
+584s|pre_1|Build A (sem loja_id, header da loja)|caixa HTTP 200 1ok|venda HTTP 200 1ok
+584s|pre_1|conflito: caixa B + venda A (sem loja) + venda com OUTRA loja|caixa HTTP 200 1ok|vendaA HTTP 200 1ok|venda-outra HTTP 200 0ok ["CAIXA_LOJA_DIVERGENTE"]
+584s|pre_1|conflito: Build A com header de OUTRA loja|caixa HTTP 200 0ok ["LOJA_LEGADO_DIVERGENTE_DO_HEADER"]|venda HTTP 200 0ok ["LOJA_LEGADO_DIVERGENTE_DO_HEADER"]
+584|post_1|Build B (chave, loja_id)|caixa HTTP 200 1ok|venda HTTP 200 1ok
+584|post_1|Build C (dispositivo, loja_id)|caixa HTTP 200 1ok|venda HTTP 200 1ok
+584|post_1|Build A (sem loja_id, sem header)|caixa HTTP 200 0ok ["CAIXA_LOJA_OBRIGATORIA"]|venda HTTP 200 0ok ["CAIXA_LOJA_OBRIGATORIA"]
+584|post_1|Build A (sem loja_id, header da loja)|caixa HTTP 200 0ok ["CAIXA_LOJA_OBRIGATORIA"]|venda HTTP 200 0ok ["CAIXA_LOJA_OBRIGATORIA"]
+584|post_1|conflito: caixa B + venda A (sem loja) + venda com OUTRA loja|caixa HTTP 200 1ok|vendaA HTTP 200 0ok ["CAIXA_LOJA_OBRIGATORIA"]|venda-outra HTTP 200 0ok ["CAIXA_LOJA_DIVERGENTE"]
+584|post_1|conflito: Build A com header de OUTRA loja|caixa HTTP 200 0ok ["CAIXA_LOJA_OBRIGATORIA"]|venda HTTP 200 0ok ["CAIXA_LOJA_OBRIGATORIA"]
+584s|post_1|Build B (chave, loja_id)|caixa HTTP 200 1ok|venda HTTP 200 1ok
+584s|post_1|Build C (dispositivo, loja_id)|caixa HTTP 200 1ok|venda HTTP 200 1ok
+584s|post_1|Build A (sem loja_id, sem header)|caixa HTTP 200 1ok|venda HTTP 200 1ok
+584s|post_1|Build A (sem loja_id, header da loja)|caixa HTTP 200 1ok|venda HTTP 200 1ok
+584s|post_1|conflito: caixa B + venda A (sem loja) + venda com OUTRA loja|caixa HTTP 200 1ok|vendaA HTTP 200 1ok|venda-outra HTTP 200 0ok ["CAIXA_LOJA_DIVERGENTE"]
+584s|post_1|conflito: Build A com header de OUTRA loja|caixa HTTP 200 0ok ["LOJA_LEGADO_DIVERGENTE_DO_HEADER"]|venda HTTP 200 0ok ["LOJA_LEGADO_DIVERGENTE_DO_HEADER"]
+584|pre_multi|Build B (chave, loja_id)|caixa HTTP 200 1ok|venda HTTP 200 1ok
+584|pre_multi|Build C (dispositivo, loja_id)|caixa HTTP 200 1ok|venda HTTP 200 1ok
+584|pre_multi|Build A (sem loja_id, sem header)|caixa HTTP 200 0ok ["CAIXA_LOJA_OBRIGATORIA"]|venda HTTP 200 0ok ["CAIXA_LOJA_OBRIGATORIA"]
+584|pre_multi|Build A (sem loja_id, header da loja)|caixa HTTP 200 0ok ["CAIXA_LOJA_OBRIGATORIA"]|venda HTTP 200 0ok ["CAIXA_LOJA_OBRIGATORIA"]
+584|pre_multi|conflito: caixa B + venda A (sem loja) + venda com OUTRA loja|caixa HTTP 200 1ok|vendaA HTTP 200 0ok ["CAIXA_LOJA_OBRIGATORIA"]|venda-outra HTTP 200 0ok ["CAIXA_LOJA_DIVERGENTE"]
+584|pre_multi|conflito: Build A com header de OUTRA loja|caixa HTTP 200 0ok ["CAIXA_LOJA_OBRIGATORIA"]|venda HTTP 200 0ok ["CAIXA_LOJA_OBRIGATORIA"]
+584s|pre_multi|Build B (chave, loja_id)|caixa HTTP 200 1ok|venda HTTP 200 1ok
+584s|pre_multi|Build C (dispositivo, loja_id)|caixa HTTP 200 1ok|venda HTTP 200 1ok
+584s|pre_multi|Build A (sem loja_id, sem header)|caixa HTTP 200 0ok ["LOJA_LEGADO_AMBIGUA"]|venda HTTP 200 0ok ["LOJA_LEGADO_AMBIGUA"]
+584s|pre_multi|Build A (sem loja_id, header da loja)|caixa HTTP 200 0ok ["LOJA_LEGADO_AMBIGUA"]|venda HTTP 200 0ok ["LOJA_LEGADO_AMBIGUA"]
+584s|pre_multi|conflito: caixa B + venda A (sem loja) + venda com OUTRA loja|caixa HTTP 200 1ok|vendaA HTTP 200 1ok|venda-outra HTTP 200 0ok ["CAIXA_LOJA_DIVERGENTE"]
+584s|pre_multi|conflito: Build A com header de OUTRA loja|caixa HTTP 200 0ok ["LOJA_LEGADO_AMBIGUA"]|venda HTTP 200 0ok ["LOJA_LEGADO_AMBIGUA"]
+584|post_multi|Build B (chave, loja_id)|caixa HTTP 200 1ok|venda HTTP 200 1ok
+584|post_multi|Build C (dispositivo, loja_id)|caixa HTTP 200 1ok|venda HTTP 200 1ok
+584|post_multi|Build A (sem loja_id, sem header)|caixa HTTP 200 0ok ["CAIXA_LOJA_OBRIGATORIA"]|venda HTTP 200 0ok ["CAIXA_LOJA_OBRIGATORIA"]
+584|post_multi|Build A (sem loja_id, header da loja)|caixa HTTP 200 0ok ["CAIXA_LOJA_OBRIGATORIA"]|venda HTTP 200 0ok ["CAIXA_LOJA_OBRIGATORIA"]
+584|post_multi|conflito: caixa B + venda A (sem loja) + venda com OUTRA loja|caixa HTTP 200 1ok|vendaA HTTP 200 0ok ["CAIXA_LOJA_OBRIGATORIA"]|venda-outra HTTP 200 0ok ["CAIXA_LOJA_DIVERGENTE"]
+584|post_multi|conflito: Build A com header de OUTRA loja|caixa HTTP 200 0ok ["CAIXA_LOJA_OBRIGATORIA"]|venda HTTP 200 0ok ["CAIXA_LOJA_OBRIGATORIA"]
+584s|post_multi|Build B (chave, loja_id)|caixa HTTP 200 1ok|venda HTTP 200 1ok
+584s|post_multi|Build C (dispositivo, loja_id)|caixa HTTP 200 1ok|venda HTTP 200 1ok
+584s|post_multi|Build A (sem loja_id, sem header)|caixa HTTP 200 0ok ["LOJA_LEGADO_AMBIGUA"]|venda HTTP 200 0ok ["LOJA_LEGADO_AMBIGUA"]
+584s|post_multi|Build A (sem loja_id, header da loja)|caixa HTTP 200 0ok ["LOJA_LEGADO_AMBIGUA"]|venda HTTP 200 0ok ["LOJA_LEGADO_AMBIGUA"]
+584s|post_multi|conflito: caixa B + venda A (sem loja) + venda com OUTRA loja|caixa HTTP 200 1ok|vendaA HTTP 200 1ok|venda-outra HTTP 200 0ok ["CAIXA_LOJA_DIVERGENTE"]
+584s|post_multi|conflito: Build A com header de OUTRA loja|caixa HTTP 200 0ok ["LOJA_LEGADO_AMBIGUA"]|venda HTTP 200 0ok ["LOJA_LEGADO_AMBIGUA"]

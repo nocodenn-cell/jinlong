@@ -28,12 +28,14 @@ for f in $E/mcp/2*_g3_*.sql $E/mcp/4*_g4_*.sql; do mcp $f >/dev/null 2>$E/e || {
 [ "$(psql -XAtd $DB -c "select count(*) from supabase_migrations.schema_migrations")" = $((H0+17)) ] && ok "G2–G4 via MCP: 17 linhas, sem 20261010120000" || ko "contagem"
 [ "$(mcp $E/mcp/07_caixas_default.sql)" != NULL ] && ok "DEFAULT caixas.loja_id intacto antes do G6" || ko "default"
 mcp $E/mcp/20_g3_20261006120000.sql >/dev/null 2>$E/e && ko "reaplicou" || { grep -q "já no histórico" $E/e && ok "reexecução de migration já aplicada recusada (guarda)"; }
-mcp $E/mcp/60_g6_20261010120000.sql >/dev/null 2>$E/e && ok "G6 via MCP" || ko "G6 $(head -c 200 $E/e)"
-[ "$(mcp $E/mcp/07_caixas_default.sql)" = NULL ] && ok "DEFAULT removido só no G6" || ko "g6 default"
+[ ! -e $E/mcp/60_g6_20261010120000.sql ] && ok "padrão: 20261010120000 adiada (sem 60_g6 no emit)" || ko "60_g6 emitido sem opt-in"
+EVID=$E MODE=emit CONVERGIR_180000=1 INCLUIR_120000=1 bash $S >/dev/null 2>&1
+mcp $E/mcp/60_g6_20261010120000.sql >/dev/null 2>$E/e && ok "G6 opt-in (INCLUIR_120000=1) via MCP" || ko "G6 $(head -c 200 $E/e)"
+[ "$(mcp $E/mcp/07_caixas_default.sql)" = NULL ] && ok "DEFAULT removido só no G6 opt-in" || ko "g6 default"
 [ "$(mcp $E/mcp/02_historico.sql)" = "401 7e47b7f041715f5426e6dc3e64f08019" ] && [ "$(psql -XAtd $DB -c "select count(*) from supabase_migrations.schema_migrations")" = $((H0+18)) ] && ok "histórico final 401+18, nada fora dos alvos" || ko "hist final"
 # mesmo estado final que o modo psql (e2e)
 q='select md5(string_agg(version||name||md5(array_to_string(statements,chr(10))),$$,$$ order by version)) from supabase_migrations.schema_migrations'
-[ "$(psql -XAtd $DB -c "$q")" = "$(psql -XAtd golive_e2e -c "$q")" ] && ok "histórico idêntico ao do modo psql (e2e)" || ko "hist != e2e"
+[ "$(psql -XAtd $DB -c "$q")" = "$(psql -XAtd golive_e2e -c "$q")" ] && ok "histórico idêntico ao do modo psql (e2e opt-in)" || ko "hist != e2e"
 for d in $DB golive_e2e; do psql -XAtd $d -c "select md5(string_agg(p.oid::regprocedure::text||md5(prosrc)||coalesce(array_to_string(proconfig,','),'')||coalesce(proacl::text,''),',' order by p.oid::regprocedure::text)) from pg_proc p where pronamespace='public'::regnamespace"; done | uniq | wc -l | grep -q '^1$' && ok "funções idênticas MCP x psql" || ko "funções diferem"
 python3 -c "import json;[print(' ',x['name'],len(x['files']),[f['name'] for f in x['files']]) for x in [json.load(open('$E/mcp/50_edge_'+n+'.json')) for n in ('sync-outbox','validar-gerente')]]"
 echo "== $pass PASS / $fail FAIL"
