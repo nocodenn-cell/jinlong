@@ -21,9 +21,9 @@ R
 }
 reset(){ psql -Xq -c "drop database if exists golive_e2e" -c "create database golive_e2e template golive_tpl"
   rm -rf $EVID $STUB_STATE; mkdir -p $STUB_STATE
-  echo '{"headRefOid":"1d445d0b87f2c4a655e7c5f1ac1b7923da26412a","state":"OPEN","baseRefName":"main","mergeCommit":null}' > $STUB_STATE/pr.json
-  echo b89b8824c36fea4bba38731281e247336693c40c > $STUB_STATE/main_sha
-  sed "s/1448221480a8eb7ffda178aa52d954d0e4b90c71/1d445d0b87f2c4a655e7c5f1ac1b7923da26412a/g" $T/ci_checks_584_real.json > $STUB_STATE/ci.json
+  echo '{"headRefOid":"978fb2b98667be03e8dbcbd97da171fe4d60c7cc","state":"OPEN","baseRefName":"main","mergeCommit":null}' > $STUB_STATE/pr.json
+  echo 2449c46d81b94a8d641dde991e18fb641d53ac76 > $STUB_STATE/main_sha
+  cp $T/ci_checks_588_real.json $STUB_STATE/ci.json
   echo "{\"path\":\".github/workflows/backup-scheduled.yml\",\"conclusion\":\"success\",\"created_at\":\"$(date -u +%FT%TZ)\"}" > $STUB_STATE/backup.json
   echo 75 > $STUB_STATE/sync.v; echo 50 > $STUB_STATE/vg.v
   echo '[{"state":"success","description":"Deployment has completed","environment_url":"https://pdv-importados-abc.vercel.app"}]' > $STUB_STATE/deploy_status.json

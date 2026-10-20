@@ -13,9 +13,10 @@ MODE=${MODE:-dry-run}                       # dry-run | apply | emit (gera os SQ
 REPO=${REPO:-/workspace/fastproduct}        # checkout do repo no head do #584
 PROJECT_REF=${PROJECT_REF:-kbabmewnahysfvlybiak}
 GH_REPO=${GH_REPO:-nocodenn-cell/fastproduct}
-PR=${PR:-584}
-EXPECTED_HEAD_SHA=${EXPECTED_HEAD_SHA:-1d445d0b87f2c4a655e7c5f1ac1b7923da26412a}
-EXPECTED_MAIN_SHA=${EXPECTED_MAIN_SHA:-b89b8824c36fea4bba38731281e247336693c40c}
+PR=${PR:-588}                               # PR do shim (roll-forward; #584 já mergeado em 2449c46d)
+EXPECTED_HEAD_SHA=${EXPECTED_HEAD_SHA:-978fb2b98667be03e8dbcbd97da171fe4d60c7cc}
+EXPECTED_MAIN_SHA=${EXPECTED_MAIN_SHA:-2449c46d81b94a8d641dde991e18fb641d53ac76}
+FRONTEND_SHA=${FRONTEND_SHA:-2449c46d81b94a8d641dde991e18fb641d53ac76}  # merge do #584: frontend já em produção (Vercel 2026-10-20 10:08 BRT)
 HIST_BASE_N=${HIST_BASE_N:-401}             # histórico de prod lido em 2026-10-20 (somente leitura)
 HIST_BASE_MD5=${HIST_BASE_MD5:-7e47b7f041715f5426e6dc3e64f08019}
 EVID=${EVID:-$PWD/golive-evidencias}
@@ -314,7 +315,7 @@ if [ "$ATE_GATE" -ge 6 ]; then
   fi
 fi
 
-# ================= GATE 7 — merge do #584 (merge commit) =================
+# ================= GATE 7 — merge do PR do shim (#588, merge commit) depois do G5/G6: main = o que está publicado em prod =================
 if [ "$ATE_GATE" -ge 7 ]; then
   st=$(gh pr view "$PR" -R "$GH_REPO" --json state -q .state)
   if [ "$st" = MERGED ]; then log "G7: #$PR já mergeado — pulado"
@@ -325,10 +326,10 @@ if [ "$ATE_GATE" -ge 7 ]; then
   if apply_only; then MSHA=$(gh pr view "$PR" -R "$GH_REPO" --json mergeCommit -q .mergeCommit.oid); [ -n "$MSHA" ] || stop 7 "sem merge commit"; echo "$MSHA" > "$EVID/state/merge_sha"; mark 7 "$MSHA"; log "G7 OK: merge $MSHA"; fi
 fi
 
-# ================= GATE 8 — deploy real na Vercel =================
+# ================= GATE 8 — deploy real na Vercel (frontend = FRONTEND_SHA; o #588 só mexe em backend/supabase/functions, o build do merge é ignorado pela Vercel) =================
 if [ "$ATE_GATE" -ge 8 ] && apply_only && done_ 8; then log "G8: já verificado ($(cat "$EVID/state/g8.done")) — pulado"
 elif [ "$ATE_GATE" -ge 8 ] && apply_only; then
-  MSHA=$(cat "$EVID/state/merge_sha"); ok=""
+  MSHA=$FRONTEND_SHA; ok=""
   for i in $(seq 1 ${VERCEL_POLL:-30}); do
     DEPS=$(gh api "repos/$GH_REPO/deployments?sha=$MSHA&per_page=50") || stop 8 "não li deployments"
     for id in $(jq -r --arg re "$VERCEL_ENV_RE" '.[]|select(.environment|test($re))|.id' <<<"$DEPS"); do
