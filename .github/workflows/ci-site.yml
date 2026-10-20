@@ -1,0 +1,58 @@
+name: CI site
+
+# Gate do site institucional (site/). Antes deste workflow, PRs que mexiam só em site/
+# (ex.: #582) não tinham nenhum CI no GitHub: o build da Vercel é ignorado pelo
+# Ignored Build Step quando o commit não muda o site, e nenhum outro workflow
+# cobria site/**. Não faz deploy, não usa secrets e não acessa produção.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'site/**'
+      - 'scripts/vercel-site-ignore.test.mjs'
+      - 'pdv-importados/app/*'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/ci-site.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ci-site-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  site:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install (workspaces na raiz)
+        run: npm ci
+      - name: Ignored Build Step do site (teste)
+        run: node --test scripts/vercel-site-ignore.test.mjs
+      - name: Typecheck, lint e unit tests
+        working-directory: site
+        run: |
+          npm run typecheck
+          npm run lint
+          npm test
+      - name: Build de produção
+        working-directory: site
+        run: npm run build
+      - name: Instalar Chromium (Playwright)
+        working-directory: site
+        run: npx playwright install --with-deps chromium
+      - name: E2E (chromium, localhost)
+        working-directory: site
+        run: |
+          npm run start > /tmp/site.log 2>&1 &
+          npx --yes wait-on@8 -t 60000 http://localhost:3100/pt-BR
+          npx playwright test --project=chromium

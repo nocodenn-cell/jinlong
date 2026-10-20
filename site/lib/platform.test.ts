@@ -71,6 +71,25 @@ describe('redirecionamentos de compatibilidade', () => {
   })
 })
 
+describe('cobertura das rotas antigas do ERP', () => {
+  // Toda rota de topo do ERP precisa ser redirecionada pelo site após o corte, ou estar
+  // listada aqui com o motivo. Evita que um link antigo (www/apex) caia em 404 no site.
+  const NAO_REDIRECIONADAS: Record<string, string> = {
+    'teste-gratis': 'cadastro de trial (#585) ainda não decidido para o site; ver docs/site/MIGRACAO_SITE_ERP_DOMINIOS.md',
+  }
+
+  it('cada rota de topo de pdv-importados/app está coberta ou justificada', () => {
+    const appDir = path.join(__dirname, '..', '..', 'pdv-importados', 'app')
+    const rotas = fs
+      .readdirSync(appDir, { withFileTypes: true })
+      .filter((d) => d.isDirectory() && !d.name.startsWith('(') && !d.name.startsWith('_') && !d.name.startsWith('['))
+      .map((d) => d.name)
+    const cobertas = new Set(ERP_PATH_PATTERNS.map((p) => p.split('/')[1]))
+    const faltando = rotas.filter((r) => !cobertas.has(r) && !(r in NAO_REDIRECIONADAS))
+    expect(faltando).toEqual([])
+  })
+})
+
 describe('domínio canônico do site', () => {
   it('é o apex jinlong.app', () => {
     expect(DEFAULT_SITE_URL).toBe('https://jinlong.app')

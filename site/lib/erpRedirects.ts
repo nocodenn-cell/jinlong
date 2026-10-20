@@ -15,6 +15,7 @@ export const ERP_PATH_PATTERNS = [
   '/admin/:path*',
   '/gerente/:path*',
   '/caixa/:path*',
+  '/selecionar-empresa',
   '/api/:path*',
   '/demo-fluxo',
   '/privacidade',
