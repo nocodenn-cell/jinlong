@@ -4,11 +4,11 @@ import React, { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { calcularValorMensal, formatarBRL, type PlanoCatalogo } from '@/lib/cobranca/planos'
 import { tc, type ChaveTexto } from '@/lib/cobranca/textos'
-import { assinarPlanoAction, cancelarAssinaturaAction, pixDaFaturaAction, type MinhaAssinatura } from '../actions'
+import { assinarPlanoAction, cancelarAssinaturaAction, pixDaFaturaAction, type Fatura, type MinhaAssinatura } from '../actions'
 
-type Props = { idioma: string; assinatura: MinhaAssinatura | null; planos: PlanoCatalogo[]; podeGerenciar: boolean }
+type Props = { idioma: string; assinatura: MinhaAssinatura | null; planos: PlanoCatalogo[]; faturas: Fatura[]; podeGerenciar: boolean }
 
-export function AssinaturaContent({ idioma, assinatura, planos, podeGerenciar }: Props) {
+export function AssinaturaContent({ idioma, assinatura, planos, faturas, podeGerenciar }: Props) {
   const t = (k: ChaveTexto) => tc(idioma, k)
   const router = useRouter()
   const [pend, start] = useTransition()
@@ -41,7 +41,14 @@ export function AssinaturaContent({ idioma, assinatura, planos, podeGerenciar }:
         <div><b>{t('status')}:</b> {assinatura?.status ? t(`status_${assinatura.status}` as ChaveTexto) : '—'}</div>
         {assinatura?.status === 'TRIAL' ? <div><b>{t('trialAte')}:</b> {fmtData(assinatura.trial_fim)}</div> : null}
         {assinatura?.valor_mensal_centavos != null ? <div><b>{t('total')}:</b> {formatarBRL(assinatura.valor_mensal_centavos)}</div> : null}
+        <div><b>{t('lojasPermitidas')}:</b> {assinatura?.lojas_ativas ?? '—'} / {assinatura?.qtd_lojas ?? '—'}</div>
+        <div><b>{t('proximaCobranca')}:</b> {fmtData(assinatura?.proximo_vencimento ?? null)}</div>
       </section>
+      {assinatura?.aviso_vencimento ? (
+        <p role="alert" className="rounded border border-amber-400 bg-amber-50 p-2 text-sm text-amber-900">
+          {t('avisoSuspensao')}: {fmtData(assinatura.suspensao_prevista_em)} · {t('somenteLeitura')}
+        </p>
+      ) : null}
 
       <section className="rounded border p-4 text-sm">
         <h2 className="font-semibold">{t('proximaFatura')}</h2>
@@ -67,6 +74,24 @@ export function AssinaturaContent({ idioma, assinatura, planos, podeGerenciar }:
         ) : <p className="mt-2 text-gray-600">{t('semFatura')}</p>}
       </section>
 
+
+      <section className="rounded border p-4 text-sm">
+        <h2 className="font-semibold">{t('historico')}</h2>
+        {faturas.length === 0 ? <p className="mt-2 text-gray-600">{t('semFatura')}</p> : (
+          <table className="mt-2 w-full text-left">
+            <tbody>
+              {faturas.map((x) => (
+                <tr key={x.id} className="border-t">
+                  <td className="py-1">{fmtData(x.vencimento)}</td>
+                  <td>{formatarBRL(x.valor_centavos)}</td>
+                  <td>{t(({ PAGA: 'pago', PENDENTE: 'pendente', VENCIDA: 'vencida', CANCELADA: 'cancelada', ESTORNADA: 'estornada' } as Record<string, ChaveTexto>)[x.status] ?? 'pendente')}</td>
+                  <td>{x.link_pagamento && x.status !== 'PAGA' ? <a className="underline" href={x.link_pagamento} target="_blank" rel="noreferrer">{t('regularizar')}</a> : null}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
       {podeGerenciar ? (
         <section className="space-y-3 rounded border p-4 text-sm">
           <h2 className="font-semibold">{assinatura?.status === 'ATIVA' ? t('trocarPlano') : t('assinar')}</h2>

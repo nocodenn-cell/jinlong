@@ -59,3 +59,14 @@ Deno.test("falha no banco: 500 genérico (Asaas reenvia)", async () => {
   assertEquals(r.status, 500);
   assertEquals(r.body.error, "FALHA_AO_APLICAR");
 });
+
+Deno.test("allowlist de IP opcional: fora da lista ⇒ 403; vazia ⇒ não filtra", async () => {
+  const { aplicar } = fakeDb();
+  const ev = body({ id: "evt_ip", event: "PAYMENT_RECEIVED" });
+  const r1 = await tratarWebhookAsaas({ ...base, tokenHeader: "segredo-webhook", rawBody: ev, aplicar, ipCliente: "1.2.3.4", ipAllowlist: "52.67.12.206, 18.230.8.159" });
+  assertEquals(r1.status, 403);
+  const r2 = await tratarWebhookAsaas({ ...base, tokenHeader: "segredo-webhook", rawBody: ev, aplicar, ipCliente: "18.230.8.159", ipAllowlist: "52.67.12.206, 18.230.8.159" });
+  assertEquals(r2.status, 200);
+  const r3 = await tratarWebhookAsaas({ ...base, tokenHeader: "segredo-webhook", rawBody: body({ id: "evt_ip2", event: "PAYMENT_RECEIVED" }), aplicar, ipCliente: "9.9.9.9", ipAllowlist: "" });
+  assertEquals(r3.status, 200);
+});

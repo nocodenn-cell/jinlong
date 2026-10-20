@@ -4,9 +4,26 @@ Sprint "vender o produto". Depende do multiempresa (PR #584). Migration aditiva
 `backend/supabase/migrations/20261020100000_cobranca_planos_trial.sql`, rollback em
 `backend/supabase/rollback/20261020100000_cobranca_planos_trial.rollback.sql`.
 
+## 0. Arquitetura (separação e segurança)
+
+- **Schema próprio `saas`** (planos, assinaturas, faturas, webhook_eventos, trial_tentativas, parametros,
+  assinatura_auditoria). Separado do financeiro operacional dos lojistas (`contas_pagar`, `movimentos_financeiros`…).
+  Não é exposto pela API REST; `anon`/`authenticated` não têm permissão em nenhuma tabela. Leitura do dono só por
+  RPC (`fp_minha_assinatura`, `fp_minhas_faturas`, `planos_catalogo`), sempre filtrada pela empresa da sessão.
+- **Direitos comerciais (entitlements) ≠ permissões de papel**: o plano diz O QUE a empresa contratou
+  (`fp_recursos_empresa`, `lib/cobranca/planos.ts#temRecurso`); o papel (DONO/GERENTE/OPERADOR) continua dizendo QUEM pode.
+- **Pagamento só é confirmado pelo servidor** (webhook com token + conciliação no Asaas). O retorno do navegador
+  nunca muda status.
+- **Falha do Asaas não suspende**: a suspensão por inadimplência exige fatura `VENCIDA` confirmada + carência.
+  Aviso na tela/faixa antes (data prevista de suspensão).
+- **Suspensão não apaga nada**: só liga `vendas_suspensas` (novas vendas bloqueadas); dados, documentos fiscais,
+  relatórios e consultas continuam acessíveis.
+- **Auditoria**: toda mudança em `saas.assinaturas` grava antes/depois, ator e origem (webhook/conciliação/sistema).
+- **Parâmetros** (`saas.parametros`): `trial_dias` (15), `carencia_dias` (5), `aviso_dias_antes` (3), `trial_max_por_ip_24h` (3).
+
 ## 1. Preços (DECISÃO DO DONO DO PRODUTO)
 
-Os preços ficam na tabela `public.planos` (editável sem deploy). **Os valores semeados são PLACEHOLDER**
+Os preços ficam na tabela `saas.planos` (editável sem deploy). **Os valores semeados são PLACEHOLDER**
 (`preco_placeholder = true`, a tela mostra o aviso "Preços provisórios"):
 
 | Plano | Recursos | R$/loja/mês | Caixa adicional | Lojas |
@@ -19,7 +36,7 @@ Os preços ficam na tabela `public.planos` (editável sem deploy). **Os valores 
 Cada loja inclui 1 caixa. Para definir os preços reais:
 
 ```sql
-UPDATE public.planos SET preco_loja_centavos = 14900, preco_caixa_adicional_centavos = 2900,
+UPDATE saas.planos SET preco_loja_centavos = 14900, preco_caixa_adicional_centavos = 2900,
   preco_placeholder = false, updated_at = now() WHERE codigo = 'BASICO';
 ```
 
@@ -37,11 +54,14 @@ Assinaturas já existentes só mudam de valor quando o dono trocar de plano (ou 
    - Eventos: Cobranças (PAYMENT_*) e Assinaturas (SUBSCRIPTION_DELETED). Fila: sequencial.
 4. Supabase (secrets das edge functions): `ASAAS_WEBHOOK_TOKEN` = o mesmo token.
    Deploy: `supabase functions deploy asaas-webhook` (verify_jwt=false, a autenticação é o token).
+   Opcional: `ASAAS_WEBHOOK_IP_ALLOWLIST` = IPs oficiais do Asaas (lista na documentação do Asaas), separados por vírgula.
 
 Sem `ASAAS_API_KEY`, fora de produção o código usa um **mock em memória** (`lib/cobranca/asaas.ts`);
 em produção sem chave ele falha explicitamente (nunca "cobra de mentira"). `ASAAS_MOCK=1` força o mock.
 
-## 3. Job diário (trial, carência, cancelamento)
+## 3. Job diário (conciliação + trial, carência, cancelamento)
+
+A rota primeiro **concilia** (consulta no Asaas as cobranças de cada assinatura e aplica o status como evento idempotente `recon:<id>:<status>`, recuperando webhook perdido/fora de ordem) e depois processa os prazos.
 
 `public.cobranca_processar_vencimentos()` — escolha UM:
 - Vercel Cron → `GET /api/cobranca/vencimentos` com `CRON_SECRET` configurado (Vercel envia `Authorization: Bearer`).
@@ -66,7 +86,7 @@ Pagamento ⇒ `ATIVA` e devolve o valor anterior de `vendas_suspensas` (não des
 Trial vencido sem assinatura ⇒ `SUSPENSA` (`TRIAL_EXPIRADO`) e o painel mostra a faixa "escolha um plano".
 Cancelamento ⇒ `CANCELADA`, usa até o próximo vencimento, depois suspende.
 
-Empresa **sem linha em `assinaturas`** (cliente 1/piloto) = todos os recursos, sem cobrança, nada muda.
+Empresa **sem linha em `saas.assinaturas`** (cliente 1/piloto) = todos os recursos, sem cobrança, nada muda.
 
 ## 6. Gating por plano
 
@@ -77,3 +97,8 @@ Empresa **sem linha em `assinaturas`** (cliente 1/piloto) = todos os recursos, s
 ## 7. CI
 
 O token do bot não tem escopo `workflow`: aplicar `docs/cobranca/ci-workflows.patch` (`git apply`) para rodar `test:cobranca` no CI.
+
+## 8. Limite de lojas
+
+Trigger `tg_saas_limite_lojas` em `public.lojas` barra loja ativa além de `qtd_lojas` da assinatura
+(`LOJA_LIMITE_PLANO`). Empresas sem assinatura (cliente 1) não têm limite.

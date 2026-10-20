@@ -12,10 +12,16 @@ import { dataVencimento, formaParaAsaas, getAsaas } from '@/lib/cobranca/asaas'
 
 type R<T> = { ok: true; data: T } | { ok: false; error: string }
 type Rpc = { rpc: (fn: string, a?: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }> }
-type Loose = { from: (t: string) => any } // eslint-disable-line @typescript-eslint/no-explicit-any
+type Assin = { status: string; trial_fim: string | null; asaas_customer_id: string | null; asaas_subscription_id: string | null; proximo_vencimento: string | null }
+type Estado = { empresa: { nome: string; cnpj: string | null } | null; lojas_ativas: number; assinatura: Assin | null }
+
+async function estadoEmpresa(admin: unknown, empresaId: string): Promise<Estado | null> {
+  const { data, error } = await (admin as Rpc).rpc('cobranca_estado_empresa', { p_empresa: empresaId })
+  return error ? null : (data as Estado)
+}
 
 export type Fatura = {
-  id: string; asaas_payment_id: string; valor_centavos: number; vencimento: string | null; status: string
+  id: string; pago_em?: string | null; asaas_payment_id: string; valor_centavos: number; vencimento: string | null; status: string
   link_pagamento: string | null; boleto_url: string | null
 }
 export type MinhaAssinatura = {
@@ -23,12 +29,13 @@ export type MinhaAssinatura = {
   motivo_status: string | null; trial_fim: string | null; proximo_vencimento: string | null
   qtd_lojas: number | null; qtd_caixas: number | null; forma_pagamento: string | null
   valor_mensal_centavos: number | null; acesso_ate: string | null; recursos: string[] | null; proxima_fatura: Fatura | null
+  suspensao_prevista_em: string | null; aviso_vencimento: boolean | null; lojas_ativas: number | null
 }
 
 async function catalogo(): Promise<PlanoCatalogo[]> {
   const supabase = await createClient()
-  const { data, error } = await (supabase as unknown as Loose).from('planos').select('*').eq('ativo', true).order('ordem')
-  if (error || !data?.length) return PLANOS_FALLBACK
+  const { data, error } = await (supabase as unknown as Rpc).rpc('planos_catalogo')
+  if (error || !Array.isArray(data) || data.length === 0) return PLANOS_FALLBACK
   return data as PlanoCatalogo[]
 }
 
@@ -45,7 +52,7 @@ async function gateDono() {
   return { ok: true as const, session: auth.session, email: u.user?.email ?? '', empresaId, supabase }
 }
 
-export async function carregarAssinaturaAction(): Promise<R<{ assinatura: MinhaAssinatura | null; planos: PlanoCatalogo[]; podeGerenciar: boolean }>> {
+export async function carregarAssinaturaAction(): Promise<R<{ assinatura: MinhaAssinatura | null; planos: PlanoCatalogo[]; faturas: Fatura[]; podeGerenciar: boolean }>> {
   const auth = await assertGerenteSession()
   if (!auth.ok) return { ok: false, error: auth.error }
   const supabase = await createClient()
@@ -56,6 +63,10 @@ export async function carregarAssinaturaAction(): Promise<R<{ assinatura: MinhaA
     data: {
       assinatura: (data ?? null) as MinhaAssinatura | null,
       planos: await catalogo(),
+      faturas: await (async () => {
+        const { data: fs } = await (supabase as unknown as Rpc).rpc('fp_minhas_faturas', { p_limite: 24 })
+        return Array.isArray(fs) ? (fs as Fatura[]) : []
+      })(),
       podeGerenciar: auth.session.perfil === 'DONO' || auth.session.perfil === 'ADMIN',
     },
   }
@@ -85,16 +96,18 @@ export async function assinarPlanoAction(input: z.input<typeof AssinarSchema>): 
   }
 
   const admin = createAdminClient()
-  const { data: atual } = await (admin as unknown as Loose).from('assinaturas').select('*').eq('empresa_id', g.empresaId).maybeSingle()
-  const { data: emp } = await (admin as unknown as Loose).from('empresas').select('nome, cnpj').eq('id', g.empresaId).maybeSingle()
-  const { count: lojasReais } = await (admin as unknown as Loose).from('lojas').select('id', { count: 'exact', head: true }).eq('empresa_id', g.empresaId).eq('ativo', true)
+  const estado = await estadoEmpresa(admin, g.empresaId)
+  if (!estado) return { ok: false, error: 'Não foi possível ler a assinatura. / 无法读取订阅。' }
+  const atual = estado.assinatura
+  const emp = estado.empresa
+  const lojasReais = estado.lojas_ativas
   if ((lojasReais ?? 0) > d.qtdLojas) return { ok: false, error: `Sua empresa já tem ${lojasReais} lojas ativas. / 已有 ${lojasReais} 家营业门店。` }
 
   const asaas = getAsaas()
   const descricao = `Jinlong ${d.plano}${d.addons.length ? ' + ' + d.addons.join('+') : ''} (${d.qtdLojas} loja/${d.qtdCaixas} caixa)`
   const trialAtivo = atual?.status === 'TRIAL' && atual?.trial_fim && new Date(atual.trial_fim) > new Date()
   // 1ª cobrança: no fim do trial (se ainda ativo) ou amanhã
-  const proximo = trialAtivo ? new Date(atual.trial_fim).toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }) : dataVencimento(1)
+  const proximo = trialAtivo ? new Date(atual!.trial_fim as string).toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }) : dataVencimento(1)
 
   try {
     let customer: string | null = atual?.asaas_customer_id ?? null
@@ -133,7 +146,7 @@ export async function cancelarAssinaturaAction(): Promise<R<null>> {
   const g = await gateDono()
   if (!g.ok) return { ok: false, error: g.error }
   const admin = createAdminClient()
-  const { data: atual } = await (admin as unknown as Loose).from('assinaturas').select('asaas_subscription_id, status').eq('empresa_id', g.empresaId).maybeSingle()
+  const atual = (await estadoEmpresa(admin, g.empresaId))?.assinatura
   if (!atual || atual.status === 'CANCELADA') return { ok: false, error: 'Não há assinatura ativa. / 没有有效订阅。' }
   try {
     if (atual.asaas_subscription_id) await getAsaas().cancelarAssinatura(atual.asaas_subscription_id)
@@ -151,8 +164,9 @@ export async function cancelarAssinaturaAction(): Promise<R<null>> {
 export async function pixDaFaturaAction(asaasPaymentId: string): Promise<R<{ payload: string; imagemBase64: string }>> {
   const g = await gateDono()
   if (!g.ok) return { ok: false, error: g.error }
-  const { data: f } = await (g.supabase as unknown as Loose).from('faturas').select('asaas_payment_id, empresa_id, status')
-    .eq('asaas_payment_id', asaasPaymentId).eq('empresa_id', g.empresaId).maybeSingle()
+  // fp_minhas_faturas já filtra pela empresa da sessão (fp_pode_empresa)
+  const { data: lista } = await (g.supabase as unknown as Rpc).rpc('fp_minhas_faturas', { p_limite: 100 })
+  const f = (Array.isArray(lista) ? (lista as Fatura[]) : []).find((x) => x.asaas_payment_id === asaasPaymentId)
   if (!f || !['PENDENTE', 'VENCIDA'].includes(f.status)) return { ok: false, error: 'Fatura não encontrada. / 未找到账单。' }
   try {
     const pix = await getAsaas().pixQrCode(asaasPaymentId)

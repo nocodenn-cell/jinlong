@@ -51,7 +51,7 @@ const cfg = async (emp, chave) => (await q(`SELECT valor FROM public.configuraco
 const evento = (id, ev, payload) => q(`SELECT public.cobranca_aplicar_evento($1, $2, $3::jsonb) r`, [id, ev, JSON.stringify(payload)]).then((r) => r[0].r)
 
 await t('catálogo: 3 planos + add-on Fiscal, preços marcados como placeholder', async () => {
-  const r = await q(`SELECT codigo, tipo, preco_placeholder FROM public.planos ORDER BY ordem`)
+  const r = await q(`SELECT codigo, tipo, preco_placeholder FROM saas.planos ORDER BY ordem`)
   assert.deepEqual(r.map((x) => x.codigo), ['BASICO', 'ATACADO', 'REDE', 'FISCAL'])
   assert.ok(r.every((x) => x.preco_placeholder))
 })
@@ -77,30 +77,34 @@ await t('webhook: PAYMENT_CREATED cria fatura; mesmo evento 2× é idempotente',
   const r1 = await evento('evt_1', 'PAYMENT_CREATED', { event: 'PAYMENT_CREATED', payment: pay })
   const r2 = await evento('evt_1', 'PAYMENT_CREATED', { event: 'PAYMENT_CREATED', payment: pay })
   assert.equal(r1.duplicado, false); assert.equal(r2.duplicado, true)
-  const f = await q(`SELECT valor_centavos, status FROM public.faturas WHERE empresa_id = '${E2}'`)
+  const f = await q(`SELECT valor_centavos, status FROM saas.faturas WHERE empresa_id = '${E2}'`)
   assert.deepEqual(f, [{ valor_centavos: 15800, status: 'PENDENTE' }])
-  assert.equal((await q(`SELECT count(*)::int n FROM public.cobranca_webhook_eventos WHERE evento_id = 'evt_1'`))[0].n, 1)
+  assert.equal((await q(`SELECT count(*)::int n FROM saas.webhook_eventos WHERE evento_id = 'evt_1'`))[0].n, 1)
 })
 
 await t('isolamento A×B: dono/operador de A não veem assinatura/faturas de B; ninguém grava direto', async () => {
-  assert.equal((await comoQ(U.donoA, `SELECT count(*)::int n FROM public.assinaturas`))[0].n, 0)
-  assert.equal((await comoQ(U.opA, `SELECT count(*)::int n FROM public.faturas`))[0].n, 0)
-  assert.equal((await comoQ(U.donoB, `SELECT count(*)::int n FROM public.faturas`))[0].n, 1)
+  assert.deepEqual((await comoQ(U.donoA, `SELECT public.fp_minhas_faturas(50) r`))[0].r, [])
+  assert.deepEqual((await comoQ(U.opA, `SELECT public.fp_minhas_faturas(50) r`))[0].r, [])
+  assert.equal((await comoQ(U.donoB, `SELECT public.fp_minhas_faturas(50) r`))[0].r.length, 1)
+  // schema saas inacessível direto (nem leitura) para authenticated
+  await assert.rejects(como(U.donoB, () => db.query(`SELECT * FROM saas.assinaturas`)), /permission denied/)
+  await assert.rejects(como(U.donoB, () => db.query(`SELECT * FROM saas.faturas`)), /permission denied/)
+  await assert.rejects(como(U.donoB, () => db.query(`SELECT public.cobranca_estado_empresa('${E1}')`)), /permission denied/)
   const minhaA = (await comoQ(U.donoA, `SELECT public.fp_minha_assinatura() r`))[0].r
   assert.equal(minhaA.empresa_id, E1); assert.equal(minhaA.legado, true)
   const minhaB = (await comoQ(U.donoB, `SELECT public.fp_minha_assinatura() r`))[0].r
   assert.equal(minhaB.plano, 'BASICO'); assert.equal(minhaB.proxima_fatura.asaas_payment_id, 'pay_1')
-  await assert.rejects(como(U.donoB, () => db.query(`UPDATE public.assinaturas SET status = 'ATIVA'`)), /permission denied/)
-  await assert.rejects(como(U.donoB, () => db.query(`INSERT INTO public.faturas (empresa_id, asaas_payment_id, valor_centavos) VALUES ('${E2}', 'x', 0)`)), /permission denied/)
+  await assert.rejects(como(U.donoB, () => db.query(`UPDATE saas.assinaturas SET status = 'ATIVA'`)), /permission denied/)
+  await assert.rejects(como(U.donoB, () => db.query(`INSERT INTO saas.faturas (empresa_id, asaas_payment_id, valor_centavos) VALUES ('${E2}', 'x', 0)`)), /permission denied/)
   await assert.rejects(como(U.donoB, () => db.query(`SELECT public.cobranca_aplicar_evento('e', 'PAYMENT_RECEIVED', '{}')`)), /permission denied/)
-  await assert.rejects(como(U.donoA, () => db.query(`SELECT * FROM public.cobranca_webhook_eventos`)), /permission denied/)
+  await assert.rejects(como(U.donoA, () => db.query(`SELECT * FROM saas.webhook_eventos`)), /permission denied/)
   await assert.rejects(como(U.donoA, () => db.query(`SELECT public.plataforma_iniciar_trial('{}'::jsonb, 15)`)), /permission denied/)
 })
 
 await t('evento com empresa desconhecida não altera nada', async () => {
   const r = await evento('evt_x', 'PAYMENT_RECEIVED', { payment: { id: 'pay_x', subscription: 'sub_zz', value: 1 } })
   assert.equal(r.resultado, 'empresa_desconhecida')
-  assert.equal((await q(`SELECT count(*)::int n FROM public.faturas WHERE asaas_payment_id = 'pay_x'`))[0].n, 0)
+  assert.equal((await q(`SELECT count(*)::int n FROM saas.faturas WHERE asaas_payment_id = 'pay_x'`))[0].n, 0)
 })
 
 await t('vencida → inadimplente → carência → suspensão usa vendas_suspensas da empresa (A intacta)', async () => {
@@ -116,7 +120,7 @@ await t('vencida → inadimplente → carência → suspensão usa vendas_suspen
   assert.equal((await q(`SELECT public.fp_empresa_tem_recurso('${E2}', 'pdv') r`))[0].r, false)
   // repetir o job não suspende de novo nem perde o valor anterior
   await q(`SELECT public.cobranca_processar_vencimentos(now() + interval '7 days')`)
-  assert.equal((await q(`SELECT motivo_suspensao_antes m FROM public.assinaturas WHERE empresa_id = '${E2}'`))[0].m, 'motivo manual antigo')
+  assert.equal((await q(`SELECT motivo_suspensao_antes m FROM saas.assinaturas WHERE empresa_id = '${E2}'`))[0].m, 'motivo manual antigo')
 })
 
 await t('pagamento reativa e devolve a config anterior; OVERDUE atrasado não desfaz', async () => {
@@ -124,10 +128,10 @@ await t('pagamento reativa e devolve a config anterior; OVERDUE atrasado não de
   assert.equal(r.resultado, 'ativada')
   assert.equal(await cfg(E2, 'vendas_suspensas'), 'false')
   assert.equal(await cfg(E2, 'motivo_suspensao'), 'motivo manual antigo')
-  assert.equal((await q(`SELECT status FROM public.assinaturas WHERE empresa_id = '${E2}'`))[0].status, 'ATIVA')
+  assert.equal((await q(`SELECT status FROM saas.assinaturas WHERE empresa_id = '${E2}'`))[0].status, 'ATIVA')
   await evento('evt_2b', 'PAYMENT_OVERDUE', { payment: { id: 'pay_1', subscription: 'sub_B', value: 158 } })
-  assert.equal((await q(`SELECT status FROM public.faturas WHERE asaas_payment_id = 'pay_1'`))[0].status, 'PAGA')
-  assert.equal((await q(`SELECT status FROM public.assinaturas WHERE empresa_id = '${E2}'`))[0].status, 'ATIVA')
+  assert.equal((await q(`SELECT status FROM saas.faturas WHERE asaas_payment_id = 'pay_1'`))[0].status, 'PAGA')
+  assert.equal((await q(`SELECT status FROM saas.assinaturas WHERE empresa_id = '${E2}'`))[0].status, 'ATIVA')
   // reenvio do RECEIVED (retry do Asaas) é no-op
   assert.equal((await evento('evt_3', 'PAYMENT_RECEIVED', {})).duplicado, true)
 })
@@ -143,7 +147,7 @@ await t('suspensão manual do gerente não é desfeita pela reativação da cobr
 
 await t('cancelamento: acesso até o fim do período, depois suspende', async () => {
   await q(`SELECT public.cobranca_cancelar('${E2}')`)
-  const a = (await q(`SELECT status, acesso_ate > now() futuro FROM public.assinaturas WHERE empresa_id = '${E2}'`))[0]
+  const a = (await q(`SELECT status, acesso_ate > now() futuro FROM saas.assinaturas WHERE empresa_id = '${E2}'`))[0]
   assert.equal(a.status, 'CANCELADA'); assert.equal(a.futuro, true)
   assert.equal((await q(`SELECT public.fp_empresa_tem_recurso('${E2}', 'pdv') r`))[0].r, true)
   await q(`SELECT public.cobranca_processar_vencimentos(now() + interval '40 days')`)
@@ -158,7 +162,7 @@ await t('trial: cria empresa + loja + dono + assinatura TRIAL 15 dias + produtos
     empresa: { nome: 'Loja Trial' }, lojas: [{ chave: 'l1', nome: 'Loja Trial', codigo: 'TRIAL1' }],
     usuarios: [{ id: U.trial, nome: 'Dona Trial', papel: 'DONO' }],
   })]))[0].r
-  const a = (await q(`SELECT status, plano_codigo, (trial_fim - now()) > interval '14 days' ok FROM public.assinaturas WHERE empresa_id = $1`, [trial.empresa_id]))[0]
+  const a = (await q(`SELECT status, plano_codigo, (trial_fim - now()) > interval '14 days' ok FROM saas.assinaturas WHERE empresa_id = $1`, [trial.empresa_id]))[0]
   assert.deepEqual(a, { status: 'TRIAL', plano_codigo: 'ATACADO', ok: true })
   assert.equal(trial.produtos_demo, 6)
   assert.equal((await q(`SELECT max_lojas FROM public.empresas WHERE id = $1`, [trial.empresa_id]))[0].max_lojas, 1)
@@ -190,13 +194,123 @@ await t('rate limit do trial: 3 por IP em 24h', async () => {
   assert.equal((await q(`SELECT public.trial_registrar_tentativa('outro-ip', 'e9') ok`))[0].ok, true)
 })
 
+// ── requisitos adicionais ─────────────────────────────────────────────────────
+await t('cobrança SaaS fora do public (separada do financeiro dos lojistas)', async () => {
+  const r = await q(`SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'
+    AND table_name IN ('planos','assinaturas','faturas','webhook_eventos','assinatura_auditoria')`)
+  assert.deepEqual(r, [])
+  assert.equal((await q(`SELECT count(*)::int n FROM information_schema.tables WHERE table_schema = 'saas'`))[0].n >= 7, true)
+})
+
+const E3 = 'e0000003-0000-4000-8000-000000000003'
+const LC = 'c0000003-0000-4000-8000-000000000001'
+await db.exec(`INSERT INTO public.empresas (id, nome) VALUES ('${E3}', 'Empresa C');
+  INSERT INTO public.lojas (id, nome, empresa_id) VALUES ('${LC}', 'Loja C', '${E3}');`)
+await q(`SELECT public.cobranca_registrar_assinatura('${E3}', 'ATACADO', '{}', 1, 1, 'PIX', 17900, 'cus_C', 'sub_C', current_date + 30)`)
+
+await t('pagamento duplicado (CONFIRMED e depois RECEIVED do mesmo pagamento) = 1 fatura PAGA, sem efeito duplo', async () => {
+  await evento('c1', 'PAYMENT_CONFIRMED', { payment: { id: 'payC1', subscription: 'sub_C', value: 179 } })
+  await evento('c2', 'PAYMENT_RECEIVED', { payment: { id: 'payC1', subscription: 'sub_C', value: 179 } })
+  assert.deepEqual(await q(`SELECT status FROM saas.faturas WHERE empresa_id = '${E3}'`), [{ status: 'PAGA' }])
+  assert.equal((await q(`SELECT status FROM saas.assinaturas WHERE empresa_id = '${E3}'`))[0].status, 'ATIVA')
+})
+
+await t('fora de ordem: RECEIVED antes do CREATED não volta a fatura para PENDENTE', async () => {
+  await evento('c3', 'PAYMENT_RECEIVED', { payment: { id: 'payC2', subscription: 'sub_C', value: 179 } })
+  await evento('c4', 'PAYMENT_CREATED', { payment: { id: 'payC2', subscription: 'sub_C', value: 179 } })
+  assert.equal((await q(`SELECT status FROM saas.faturas WHERE asaas_payment_id = 'payC2'`))[0].status, 'PAGA')
+})
+
+await t('conciliação: webhook perdido é recuperado pelo polling; repetir é idempotente', async () => {
+  // Asaas diz que payC3 venceu, mas o webhook nunca chegou
+  const r1 = (await q(`SELECT public.cobranca_conciliar_pagamento($1::jsonb) r`, [JSON.stringify({ id: 'payC3', subscription: 'sub_C', status: 'OVERDUE', value: 179 })]))[0].r
+  assert.equal(r1.resultado, 'inadimplente')
+  const r2 = (await q(`SELECT public.cobranca_conciliar_pagamento($1::jsonb) r`, [JSON.stringify({ id: 'payC3', subscription: 'sub_C', status: 'OVERDUE', value: 179 })]))[0].r
+  assert.equal(r2.duplicado, true)
+  const r3 = (await q(`SELECT public.cobranca_conciliar_pagamento($1::jsonb) r`, [JSON.stringify({ id: 'payC3', subscription: 'sub_C', status: 'RECEIVED', value: 179 })]))[0].r
+  assert.equal(r3.resultado, 'ativada')
+})
+
+await t('falha transitória do Asaas: inadimplente sem fatura VENCIDA confirmada não é suspensa', async () => {
+  // simula status INADIMPLENTE "sem prova" (ex.: erro de leitura); job não suspende
+  await db.exec(`UPDATE saas.assinaturas SET status = 'INADIMPLENTE', inadimplente_desde = now() - interval '30 days' WHERE empresa_id = '${E3}'`)
+  const j = (await q(`SELECT public.cobranca_processar_vencimentos(now()) r`))[0].r
+  assert.equal(j.suspensas_inadimplencia, 0)
+  assert.equal(await cfg(E3, 'vendas_suspensas'), 'false')
+  await db.exec(`UPDATE saas.assinaturas SET status = 'ATIVA', inadimplente_desde = NULL WHERE empresa_id = '${E3}'`)
+})
+
+await t('aviso antes da suspensão: minha_assinatura informa data prevista e aviso', async () => {
+  await evento('c5', 'PAYMENT_OVERDUE', { payment: { id: 'payC4', subscription: 'sub_C', value: 179 } })
+  await db.exec(`INSERT INTO auth.users (id) VALUES ('50000000-0000-4000-8000-000000000001');
+    INSERT INTO public.usuarios (id, nome, perfil, loja_id) VALUES ('50000000-0000-4000-8000-000000000001', 'Dono C', 'DONO', '${LC}')`)
+  const m = (await comoQ('50000000-0000-4000-8000-000000000001', `SELECT public.fp_minha_assinatura() r`))[0].r
+  assert.equal(m.status, 'INADIMPLENTE'); assert.equal(m.aviso_vencimento, true); assert.ok(m.suspensao_prevista_em)
+  assert.equal(await cfg(E3, 'vendas_suspensas'), 'false', 'ainda na carência')
+  // suspensão preserva dados: nada é apagado
+  await q(`SELECT public.cobranca_processar_vencimentos(now() + interval '10 days')`)
+  assert.equal(await cfg(E3, 'vendas_suspensas'), 'true')
+  assert.equal((await q(`SELECT count(*)::int n FROM public.lojas WHERE empresa_id = '${E3}'`))[0].n, 1)
+  assert.ok((await q(`SELECT count(*)::int n FROM saas.faturas WHERE empresa_id = '${E3}'`))[0].n >= 4)
+  await evento('c6', 'PAYMENT_RECEIVED', { payment: { id: 'payC4', subscription: 'sub_C', value: 179 } })
+  assert.equal(await cfg(E3, 'vendas_suspensas'), 'false')
+})
+
+await t('troca de plano: recursos mudam e auditoria registra antes/depois', async () => {
+  assert.equal((await q(`SELECT public.fp_empresa_tem_recurso('${E3}', 'transferencias') r`))[0].r, false)
+  await q(`SELECT public.cobranca_registrar_assinatura('${E3}', 'REDE', '{FISCAL}', 3, 4, 'BOLETO', 99999, NULL, NULL, NULL)`)
+  assert.equal((await q(`SELECT public.fp_empresa_tem_recurso('${E3}', 'transferencias') r`))[0].r, true)
+  assert.equal((await q(`SELECT public.fp_empresa_tem_recurso('${E3}', 'fiscal') r`))[0].r, true)
+  const a = await q(`SELECT antes->>'plano_codigo' a, depois->>'plano_codigo' d FROM saas.assinatura_auditoria
+    WHERE empresa_id = '${E3}' ORDER BY id DESC LIMIT 1`)
+  assert.deepEqual(a, [{ a: 'ATACADO', d: 'REDE' }])
+  assert.ok((await q(`SELECT count(*)::int n FROM saas.assinatura_auditoria WHERE empresa_id = '${E3}' AND origem = 'webhook'`))[0].n >= 1)
+})
+
+await t('limite de lojas do plano (cliente 1 sem limite)', async () => {
+  await q(`INSERT INTO public.lojas (nome, empresa_id) VALUES ('C2', '${E3}'), ('C3', '${E3}')`)
+  await assert.rejects(q(`INSERT INTO public.lojas (nome, empresa_id) VALUES ('C4', '${E3}')`), /LOJA_LIMITE_PLANO/)
+  await q(`INSERT INTO public.lojas (nome, empresa_id) VALUES ('Filial extra E1', '${E1}')`)
+})
+
+await t('trial: duração configurável em saas.parametros', async () => {
+  await db.exec(`UPDATE saas.parametros SET valor = '7' WHERE chave = 'trial_dias';
+    INSERT INTO auth.users (id) VALUES ('60000000-0000-4000-8000-000000000001')`)
+  const r = (await q(`SELECT public.plataforma_iniciar_trial($1::jsonb) r`, [JSON.stringify({
+    empresa: { nome: 'Trial 7' }, lojas: [{ nome: 'Trial 7' }], usuarios: [{ id: '60000000-0000-4000-8000-000000000001', nome: 'X', papel: 'DONO' }] })]))[0].r
+  const d = (await q(`SELECT round(extract(epoch FROM trial_fim - now()) / 86400)::int d FROM saas.assinaturas WHERE empresa_id = $1`, [r.empresa_id]))[0].d
+  assert.equal(d, 7)
+  await db.exec(`UPDATE saas.parametros SET valor = '15' WHERE chave = 'trial_dias'`)
+})
+
+await t('compatibilidade: Empresa 1 continua sem assinatura, sem bloqueio, config intacta', async () => {
+  assert.equal((await q(`SELECT count(*)::int n FROM saas.assinaturas WHERE empresa_id = '${E1}'`))[0].n, 0)
+  assert.equal((await q(`SELECT public.fp_recursos_empresa('${E1}') r`))[0].r, null)
+  assert.equal(await cfg(E1, 'vendas_suspensas'), 'false')
+  assert.equal((await comoQ(U.donoA, `SELECT public.fp_minha_assinatura() r`))[0].r.legado, true)
+})
+
+await t('acesso não autorizado: anon não executa nada de cobrança', async () => {
+  await db.exec('BEGIN'); await db.exec('SET LOCAL ROLE anon')
+  try {
+    await assert.rejects(db.query(`SELECT public.fp_minha_assinatura()`), /permission denied/)
+  } finally { await db.exec('ROLLBACK') }
+  await db.exec('BEGIN'); await db.exec('SET LOCAL ROLE anon')
+  try {
+    await assert.rejects(db.query(`SELECT public.trial_registrar_tentativa('a','b',3)`), /permission denied/)
+  } finally { await db.exec('ROLLBACK') }
+})
+
 await t('rollback limpa (e reativa vendas suspensas pela cobrança); migration reaplica', async () => {
   await q(`SELECT public.cobranca_processar_vencimentos(now() + interval '400 days')`)
   await db.exec(await readFile(new URL('../supabase/rollback/20261020100000_cobranca_planos_trial.rollback.sql', import.meta.url), 'utf8'))
-  assert.equal((await q(`SELECT to_regclass('public.assinaturas') r`))[0].r, null)
+  assert.equal((await q(`SELECT to_regclass('saas.assinaturas') r`))[0].r, null)
+  assert.equal((await q(`SELECT count(*)::int n FROM pg_namespace WHERE nspname = 'saas'`))[0].n, 0)
   assert.equal(await cfg(E2, 'vendas_suspensas'), 'false')
   await db.exec(await readFile(new URL('../supabase/migrations/20261020100000_cobranca_planos_trial.sql', import.meta.url), 'utf8'))
-  assert.equal((await q(`SELECT count(*)::int n FROM public.planos`))[0].n, 4)
+  assert.equal((await q(`SELECT count(*)::int n FROM saas.planos`))[0].n, 4)
 })
+
+
 
 console.log(`\n${pass} ok`)

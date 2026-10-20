@@ -27,8 +27,15 @@ export async function tratarWebhookAsaas(input: {
   tokenEsperado: string | null | undefined;
   rawBody: string;
   aplicar: AplicarEvento;
+  /** IP do cliente (x-forwarded-for) e allowlist opcional (ASAAS_WEBHOOK_IP_ALLOWLIST, separada por vírgula). */
+  ipCliente?: string | null;
+  ipAllowlist?: string | null;
 }): Promise<WebhookResposta> {
   if (input.method !== "POST") return { status: 405, body: { ok: false, error: "METHOD_NOT_ALLOWED" } };
+  const allow = (input.ipAllowlist ?? "").split(",").map((x) => x.trim()).filter(Boolean);
+  if (allow.length > 0 && !allow.includes((input.ipCliente ?? "").trim())) {
+    return { status: 403, body: { ok: false, error: "IP_NAO_PERMITIDO" } };
+  }
   const esperado = (input.tokenEsperado ?? "").trim();
   if (!esperado) return { status: 503, body: { ok: false, error: "WEBHOOK_TOKEN_NAO_CONFIGURADO" } };
   const recebido = (input.tokenHeader ?? "").trim();

@@ -15,6 +15,8 @@ Deno.serve(async (req: Request) => {
     method: req.method,
     tokenHeader: req.headers.get("asaas-access-token"),
     tokenEsperado: Deno.env.get("ASAAS_WEBHOOK_TOKEN"),
+    ipCliente: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
+    ipAllowlist: Deno.env.get("ASAAS_WEBHOOK_IP_ALLOWLIST") ?? null,
     rawBody: req.method === "POST" ? await req.text() : "",
     aplicar: async (eventoId, evento, payload) => {
       const { data, error } = await supabase.rpc("cobranca_aplicar_evento", {
