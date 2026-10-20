@@ -92,7 +92,8 @@ Empresa **sem linha em `saas.assinaturas`** (cliente 1/piloto) = todos os recurs
 
 - Banco: `fp_recursos_empresa(empresa)` / `fp_empresa_tem_recurso(empresa, recurso)`.
 - Web: `/admin/financeiro`, `/admin/comissoes`, `/admin/estoque/transferencias` mostram "recurso não incluso" (`lib/cobranca/bloqueioPorPlano.tsx`).
-- Sync (PDV ativado por código): sem recurso `pdv` não abre caixa novo. Fechamento/movimento não são barrados pelo plano. **Venda offline feita antes da suspensão e sincronizada durante ela é recusada pelo servidor (VENDAS_SUSPENSAS)** e fica na outbox do PDV (retry com backoff; após 12 falhas, ~4 h, vai para a DLQ local, reprocessável em "reprocessar DLQ"). Após o pagamento/reativação o replay é aceito. Nada é perdido, mas o dono deve reprocessar a DLQ se a suspensão passou de ~4 h.
+- Sync (PDV ativado por código): sem recurso `pdv` não abre caixa novo. Fechamento/movimento não são barrados pelo plano.
+- **Venda offline x suspensão por cobrança** (migration `20261020110000`): venda feita offline **antes** da suspensão é aceita mesmo sincronizada depois, se: (1) a hora da venda é <= hora da suspensão no servidor; (2) não é mais antiga que `offline_janela_horas` (72 h) antes da suspensão; (3) a autorização offline do dispositivo (último contato autenticado antes da suspensão) ainda valia na hora da venda (+72 h); (4) chega até `offline_envio_min` (60 min) depois que o PDV recebeu a suspensão (primeiro contato após ela). Venda depois da suspensão, venda web e qualquer venda com suspensão **manual** continuam bloqueadas. O que for recusado fica na outbox do PDV e entra após a reativação. Parâmetros em `saas.parametros`.
 
 ## 7. CI
 

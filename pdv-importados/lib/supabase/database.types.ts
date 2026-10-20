@@ -6922,6 +6922,10 @@ export type Database = {
       cobranca_cancelar: { Args: { p_empresa: string }; Returns: undefined }
       cobranca_conciliar_pagamento: { Args: { p_payment: Json }; Returns: Json }
       cobranca_estado_empresa: { Args: { p_empresa: string }; Returns: Json }
+      cobranca_liberar_venda_offline: {
+        Args: { p_dispositivo: string; p_venda_em: string; p_venda_id: string }
+        Returns: Json
+      }
       cobranca_processar_vencimentos: {
         Args: { p_agora?: string }
         Returns: Json

@@ -302,7 +302,8 @@ await t('acesso não autorizado: anon não executa nada de cobrança', async () 
 })
 
 // ── segurança das funções SECURITY DEFINER da cobrança ─────────────────────────
-const SQL_MIG = await readFile(new URL('../supabase/migrations/20261020100000_cobranca_planos_trial.sql', import.meta.url), 'utf8')
+const SQL_MIG = (await readFile(new URL('../supabase/migrations/20261020100000_cobranca_planos_trial.sql', import.meta.url), 'utf8'))
+  + (await readFile(new URL('../supabase/migrations/20261020110000_cobranca_venda_offline_suspensao.sql', import.meta.url), 'utf8'))
 const FUNCS = [...new Set([...SQL_MIG.matchAll(/CREATE OR REPLACE FUNCTION ([a-z_]+)\.([a-z_]+)\(/g)].map((m) => `${m[1]}.${m[2]}`))]
 const LEITURA_DONO = new Set(['public.fp_recursos_empresa', 'public.fp_empresa_tem_recurso', 'public.fp_minha_assinatura', 'public.fp_minhas_faturas', 'public.planos_catalogo'])
 
@@ -402,6 +403,71 @@ await t('suspensão por inadimplência bloqueia venda web E replay offline (sync
   await vendaSR(CXC)                          // reativada: o mesmo replay agora entra
 })
 
+// ── venda offline feita ANTES da suspensão (política de autorização offline) ───
+const DEV_C = 'dd000003-0000-4000-8000-000000000001'
+const DEV_A = 'dd000001-0000-4000-8000-000000000001'
+await db.exec(`INSERT INTO public.pdv_dispositivos (id, empresa_id, loja_id, device_fingerprint, sync_secret, ativado_em, ultimo_sync_em) VALUES
+  ('${DEV_C}', '${E3}', '${LC}', 'fp-dev-c', repeat('s', 48), now() - interval '10 days', now() - interval '2 hours'),
+  ('${DEV_A}', '${E1}', '${LA}', 'fp-dev-a', repeat('s', 48), now() - interval '10 days', now() - interval '2 hours')`)
+const liberar = (dev, venda, em) => q(`SELECT public.cobranca_liberar_venda_offline($1, $2, ${em}) r`, [dev, venda]).then((r) => r[0].r)
+const vendaId = (n) => `ee000000-0000-4000-8000-${String(n).padStart(12, '0')}`
+const vendaSRid = (id, cx) => (async () => {
+  await db.exec('BEGIN'); await db.exec('SET LOCAL ROLE service_role')
+  try { await db.query(`INSERT INTO public.vendas (id, caixa_id, total_bruto, total_liquido, forma_pagamento) VALUES ($1, $2, 1, 1, 'DINHEIRO')`, [id, cx]) }
+  finally { await db.exec('ROLLBACK') }
+})()
+
+await t('offline: venda ANTES da suspensão é aceita no sync; depois da suspensão, retroagida além da janela, autorização vencida ou após o prazo de envio é recusada', async () => {
+  await evento('o1', 'PAYMENT_OVERDUE', { payment: { id: 'payOff', subscription: 'sub_C', value: 179 } })
+  await q(`SELECT public.cobranca_processar_vencimentos(now() + interval '10 days')`)
+  assert.equal(await cfg(E3, 'vendas_suspensas'), 'true')
+  assert.ok((await q(`SELECT suspensa_em FROM saas.assinaturas WHERE empresa_id = '${E3}'`))[0].suspensa_em, 'suspensa_em marcada')
+  // PDV volta a falar com o servidor (touch do sync-outbox) ⇒ ciência da suspensão registrada
+  await db.exec(`UPDATE public.pdv_dispositivos SET ultimo_sync_em = clock_timestamp() + interval '1 second' WHERE id = '${DEV_C}'`)
+  const c = (await q(`SELECT ultimo_contato_antes < now() - interval '1 hour' ok FROM saas.dispositivo_ciencia_suspensao WHERE dispositivo_id = '${DEV_C}'`))[0]
+  assert.equal(c.ok, true)
+
+  // 1) feita 1h antes da suspensão: liberada e o gatilho aceita
+  assert.deepEqual(await liberar(DEV_C, vendaId(1), `now() - interval '1 hour'`), { liberada: true })
+  await vendaSRid(vendaId(1), CXC)
+  // 2) feita depois da suspensão: recusada
+  assert.equal((await liberar(DEV_C, vendaId(2), `now() + interval '1 minute'`)).motivo, 'VENDA_APOS_SUSPENSAO')
+  await assert.rejects(vendaSRid(vendaId(2), CXC), /VENDAS_SUSPENSAS/)
+  // 3) retroagida além da janela offline (72h): recusada
+  assert.equal((await liberar(DEV_C, vendaId(3), `now() - interval '100 hours'`)).motivo, 'VENDA_FORA_DA_JANELA_OFFLINE')
+  await assert.rejects(vendaSRid(vendaId(3), CXC), /VENDAS_SUSPENSAS/)
+  // 4) autorização offline já vencida quando vendeu (último contato 90h antes; validade 72h)
+  await db.exec(`UPDATE saas.dispositivo_ciencia_suspensao SET ultimo_contato_antes = now() - interval '90 hours' WHERE dispositivo_id = '${DEV_C}'`)
+  assert.equal((await liberar(DEV_C, vendaId(4), `now() - interval '10 hours'`)).motivo, 'AUTORIZACAO_OFFLINE_EXPIRADA')
+  await db.exec(`UPDATE saas.dispositivo_ciencia_suspensao SET ultimo_contato_antes = now() - interval '2 hours' WHERE dispositivo_id = '${DEV_C}'`)
+  // 5) dispositivo já sabia da suspensão há mais que o prazo de envio (60 min): relógio adulterado não ajuda
+  await db.exec(`UPDATE saas.dispositivo_ciencia_suspensao SET ciente_em = now() - interval '2 hours' WHERE dispositivo_id = '${DEV_C}'`)
+  assert.equal((await liberar(DEV_C, vendaId(5), `now() - interval '1 hour'`)).motivo, 'PRAZO_DE_ENVIO_EXPIRADO')
+  await assert.rejects(vendaSRid(vendaId(5), CXC), /VENDAS_SUSPENSAS/)
+  // 6) venda web continua bloqueada; liberação não vale para caixa de outra empresa
+  await assert.rejects(vendaWeb(DONO_C, CXC), /VENDAS_SUSPENSAS|permission denied|row-level/)
+  await db.exec(`INSERT INTO saas.vendas_offline_liberadas (venda_id, empresa_id, dispositivo_id, venda_em) VALUES ('${vendaId(6)}', '${E1}', '${DEV_A}', now())`)
+  await assert.rejects(vendaSRid(vendaId(6), CXC), /VENDAS_SUSPENSAS/)
+  // dispositivo revogado não libera
+  await db.exec(`UPDATE public.pdv_dispositivos SET ativo = false WHERE id = '${DEV_C}'`)
+  assert.equal((await liberar(DEV_C, vendaId(7), `now() - interval '1 hour'`)).motivo, 'DISPOSITIVO_INATIVO')
+  await db.exec(`UPDATE public.pdv_dispositivos SET ativo = true WHERE id = '${DEV_C}'`)
+  // pagamento reativa: suspensa_em limpa e venda nova entra
+  await evento('o2', 'PAYMENT_RECEIVED', { payment: { id: 'payOff', subscription: 'sub_C', value: 179 } })
+  assert.equal((await q(`SELECT suspensa_em FROM saas.assinaturas WHERE empresa_id = '${E3}'`))[0].suspensa_em, null)
+  await vendaSRid(vendaId(8), CXC)
+})
+
+await t('offline: suspensão MANUAL do gerente não ganha exceção; Empresa 1 (sem assinatura) nunca é afetada', async () => {
+  await q(`UPDATE public.configuracoes_gerais SET valor = 'true' WHERE empresa_id = '${E3}' AND chave = 'vendas_suspensas'`)
+  assert.equal((await liberar(DEV_C, vendaId(9), `now() - interval '1 hour'`)).motivo, 'SEM_SUSPENSAO_COBRANCA')
+  await assert.rejects(vendaSRid(vendaId(9), CXC), /VENDAS_SUSPENSAS/)
+  await q(`UPDATE public.configuracoes_gerais SET valor = 'false' WHERE empresa_id = '${E3}' AND chave = 'vendas_suspensas'`)
+  assert.equal((await liberar(DEV_A, vendaId(10), `now() - interval '1 hour'`)).motivo, 'SEM_SUSPENSAO_COBRANCA')
+  await vendaSRid(vendaId(10), CXA1)
+  await vendaSRid(vendaId(11), CXA1)
+})
+
 await t('falha transitória do Asaas (conciliação sem resposta) não suspende ninguém', async () => {
   // a rota de conciliação só chama cobranca_conciliar_pagamento com resposta válida do Asaas;
   // sem resposta não há evento — o job de vencimentos sozinho não suspende ATIVA nem INADIMPLENTE sem fatura VENCIDA.
@@ -412,6 +478,9 @@ await t('falha transitória do Asaas (conciliação sem resposta) não suspende 
 })
 
 await t('rollback limpa (e reativa vendas suspensas pela cobrança); migration reaplica', async () => {
+  await db.exec(await readFile(new URL('../supabase/rollback/20261020110000_cobranca_venda_offline_suspensao.rollback.sql', import.meta.url), 'utf8'))
+  assert.ok(!(await q(`SELECT pg_get_functiondef('public.trg_fn_vendas_caixa_aberto()'::regprocedure) d`))[0].d.includes('cobranca_venda_offline'))
+  await db.exec(await readFile(new URL('../supabase/migrations/20261020110000_cobranca_venda_offline_suspensao.sql', import.meta.url), 'utf8'))
   await q(`SELECT public.cobranca_processar_vencimentos(now() + interval '400 days')`)
   await db.exec(await readFile(new URL('../supabase/rollback/20261020100000_cobranca_planos_trial.rollback.sql', import.meta.url), 'utf8'))
   assert.equal((await q(`SELECT to_regclass('saas.assinaturas') r`))[0].r, null)
@@ -419,6 +488,10 @@ await t('rollback limpa (e reativa vendas suspensas pela cobrança); migration r
   assert.equal(await cfg(E2, 'vendas_suspensas'), 'false')
   await db.exec(await readFile(new URL('../supabase/migrations/20261020100000_cobranca_planos_trial.sql', import.meta.url), 'utf8'))
   assert.equal((await q(`SELECT count(*)::int n FROM saas.planos`))[0].n, 4)
+  // gatilho de vendas voltou ao original (sem referência à função removida) e segue funcionando
+  assert.ok(!(await q(`SELECT pg_get_functiondef('public.trg_fn_vendas_caixa_aberto()'::regprocedure) d`))[0].d.includes('cobranca_venda_offline'))
+  await vendaSRid(vendaId(12), CXA1)
+  await db.exec(await readFile(new URL('../supabase/migrations/20261020110000_cobranca_venda_offline_suspensao.sql', import.meta.url), 'utf8'))
 })
 
 

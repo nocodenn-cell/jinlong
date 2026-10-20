@@ -4,11 +4,11 @@
 // (trial expirado, suspensa, cancelada após o período). Fechamento, sangria/suprimento e venda não
 // são recusados AQUI.
 //
-// Atenção — venda offline com a empresa SUSPENSA: a suspensão grava `vendas_suspensas = true` e o
-// trigger de vendas (trg_fn_vendas_caixa_aberto) recusa QUALQUER INSERT em vendas, inclusive o replay
-// do sync (VENDAS_SUSPENSAS). A venda não se perde: fica na outbox do PDV com retry/backoff (até
-// OUTBOX_MAX_SYNC_FAILURES, padrão 12 ≈ 4 h) e depois na DLQ local, reprocessável; após a reativação
-// (pagamento) o replay é aceito. Coberto em backend/scripts/cobranca-planos-trial.test.mjs.
+// Venda offline com a empresa SUSPENSA pela cobrança: o trigger de vendas recusa (VENDAS_SUSPENSAS),
+// EXCETO venda liberada por `cobranca_liberar_venda_offline` (migration 20261020110000): feita antes da
+// suspensão, dentro da validade da autorização offline do dispositivo e enviada logo após o PDV saber
+// da suspensão. Fora disso fica na outbox do PDV (retry/backoff → DLQ local) e entra após a reativação.
+// Suspensão manual do gerente não tem exceção.
 //
 // `recursos === null` ⇒ empresa sem assinatura (cliente 1 / legado) ⇒ tudo liberado.
 
