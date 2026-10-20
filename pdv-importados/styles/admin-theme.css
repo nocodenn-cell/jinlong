@@ -1,19 +1,19 @@
 /**
  * Tema do Admin (ERP) — camada única de tokens de marca, escopo [data-admin-v2].
- * Paleta/tipografia idênticas ao app interno Venddi (docs/BRAND_GUIDELINES.md do Venddi).
+ * Layout/tipografia do app interno Venddi; paleta da marca Jinlong (vermelho + dourado, neutros navy/cinza).
  * Trocar a marca = editar só este arquivo. Não afeta PDV/caixa (fora do escopo [data-admin-v2]).
  */
 [data-admin-v2] {
   /* Marca */
-  --brand-500: #0ea572;
-  --brand-600: #087a54;
-  --brand-100: #d1fae5;
-  --brand-50: #f0fdf4;
-  --brand-orange: #f59e0b;
-  --brand-blue: #3b82f6;
+  --brand-500: #b3262e; /* vermelho Jinlong — branco sobre ele: 6.3:1 (AA) */
+  --brand-600: #8a1c23; /* hover/texto ativo — 8.9:1 sobre branco */
+  --brand-100: #fbe4e5;
+  --brand-50: #fdf2f2;
+  --brand-gold: #b8913f; /* acento dourado (ícones/detalhes, não texto pequeno) */
+  --navy-900: #0f1b2d;
 
   /* Neutros (escala gray do Tailwind, como no Venddi) */
-  --gray-900: #111827;
+  --gray-900: #0f1b2d;
   --gray-700: #374151;
   --gray-600: #4b5563;
   --gray-500: #6b7280;
@@ -28,9 +28,9 @@
   --color-info-bg: var(--brand-100);
   --color-brand-primary: var(--brand-500);
   --color-brand-strong: var(--brand-600);
-  --primary: 158 84% 35%;
+  --primary: 357 65% 43%;
   --primary-foreground: 0 0% 100%;
-  --ring: 158 84% 35%;
+  --ring: 357 65% 43%;
   --jl-surface-base: var(--gray-50);
   --jl-surface-elev: #ffffff;
   --jl-border-1: var(--gray-200);
