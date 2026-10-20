@@ -1,0 +1,39 @@
+# Guarda de governança de deploy — ver docs/ops/deploy-governance.md.
+# A integração GitHub->Supabase publica em produção a cada push na main
+# (migrations pendentes + Edge Functions). Este check impede que um PR que toque
+# esses caminhos entre na main sem o label explícito deploy-prod:aprovado e
+# protege as migrations adiadas (ex.: 20261010120000) contra edição/remoção.
+name: Deploy governance
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy-governance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Testes do guard
+        run: node --test scripts/ops/deploy-governance-guard.test.mjs
+      - name: Guard (caminhos de produção + migrations adiadas)
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || 'origin/main' }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || 'HEAD' }}
+          PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: node scripts/ops/deploy-governance-guard.mjs
