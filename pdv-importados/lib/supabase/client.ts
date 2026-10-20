@@ -1,5 +1,6 @@
 import { createBrowserClient } from '@supabase/ssr'
 import { getDeviceFingerprint } from '@/lib/security/deviceFingerprint'
+import { empresaDoDocumentCookie, headersEmpresa } from '@/lib/multiempresa/empresaSelecionada'
 
 export function createClient() {
   // Garante que está usando as variáveis corretas do Vercel
@@ -10,6 +11,7 @@ export function createClient() {
     global: {
       headers: {
         'x-device-fingerprint': getDeviceFingerprint(),
+        ...headersEmpresa(empresaDoDocumentCookie(typeof document === 'undefined' ? undefined : document.cookie)),
       },
     },
   })

@@ -89,3 +89,8 @@ pdv-importados/scripts/_audit_f1_probe.mjs
 /backups/
 /.codex/
 /opencode.json
+
+# Worktrees/rascunhos locais (ex.: _wt-ci-repro*, synckey.txt) — já vazaram segredo uma vez.
+/_wt-*
+/*synckey*
+/_stash-*.patch

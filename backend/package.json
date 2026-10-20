@@ -28,12 +28,17 @@
     "test:fiscal-rpc-authz": "node scripts/fiscal-rpc-loja-authz.test.mjs",
     "test:fiscal-cancelamento-categoria": "node scripts/fiscal-cancelamento-categoria.test.mjs",
     "test:hardening-residual": "node scripts/hardening-rls-search-path-residual.test.mjs",
+    "test:multiempresa-fase1": "node scripts/multiempresa-fase1-isolamento.test.mjs",
     "test:go-live-01-isolamento": "node scripts/go-live-01-isolamento.test.mjs",
     "test:backup-restore-isolado": "node scripts/backup-restore-isolado.test.mjs",
     "test:fiscal-p0-pre-req": "node scripts/fiscal-p0-pre-req.test.mjs",
     "test:fiscal-drill-plano": "node scripts/fiscal-drill-plano.test.mjs",
     "test:backup-age": "node scripts/backup-age-postgres.test.mjs",
-    "test:pdv-caixa-financeiro": "node scripts/test-pdv-caixa-financeiro-fluxo.mjs"
+    "test:pdv-caixa-financeiro": "node scripts/test-pdv-caixa-financeiro-fluxo.mjs",
+    "test:multiempresa-fase2": "node scripts/multiempresa-fase2-cobertura.test.mjs",
+    "test:multiempresa-fase3": "node scripts/multiempresa-fase3-config.test.mjs",
+    "test:multiempresa-fase4": "node scripts/multiempresa-fase4-desempenho.test.mjs",
+    "test:multiempresa-fase5": "node scripts/multiempresa-fase5-catalogo.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.104.0",

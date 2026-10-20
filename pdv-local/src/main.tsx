@@ -1,13 +1,16 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { App } from './App'
+import { AtivacaoPdvGate } from './ativacao/AtivacaoPdvGate'
 import { initSentry } from './lib/sentry'
 
 initSentry()
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
-    <App />
+    <AtivacaoPdvGate>
+      <App />
+    </AtivacaoPdvGate>
   </React.StrictMode>
 )
 

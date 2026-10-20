@@ -909,7 +909,7 @@ DECLARE
 BEGIN
   INSERT INTO public.configuracoes_gerais(chave, valor, tipo_dado)
   VALUES ('comissao_padrao_percentual', '5', 'percent')
-  ON CONFLICT (chave) DO UPDATE SET valor = '5';
+  ON CONFLICT (empresa_id, chave) DO UPDATE SET valor = '5';
 
   v_itens := jsonb_build_array(jsonb_build_object('item_id', gen_random_uuid(),
     'produto_id', v_prod, 'quantidade', 1,
@@ -1026,7 +1026,7 @@ DECLARE
 BEGIN
   INSERT INTO public.configuracoes_gerais(chave, valor, tipo_dado)
   VALUES ('comissao_padrao_percentual', '5', 'percent')
-  ON CONFLICT (chave) DO UPDATE SET valor = '5';
+  ON CONFLICT (empresa_id, chave) DO UPDATE SET valor = '5';
 
   -- ---------------------------------------------------------------- devolução parcial
   v_v := gen_random_uuid(); v_item := gen_random_uuid(); v_oper := gen_random_uuid();
@@ -1185,7 +1185,7 @@ BEGIN
   VALUES (v_op,'Teste isolado GATE19','OPERADOR',true,v_loja);
   INSERT INTO public.configuracoes_gerais(chave, valor, tipo_dado)
   VALUES ('comissao_padrao_percentual', '5', 'percent')
-  ON CONFLICT (chave) DO UPDATE SET valor = '5';
+  ON CONFLICT (empresa_id, chave) DO UPDATE SET valor = '5';
   PERFORM set_config('request.jwt.claim.sub', v_ger::text, true);
 
   PERFORM public.registrar_venda_com_itens(v_v1, v_caixa, v_op, 'DINHEIRO',
@@ -1273,7 +1273,7 @@ DECLARE
 BEGIN
   INSERT INTO public.configuracoes_gerais(chave, valor, tipo_dado)
   VALUES ('comissao_padrao_percentual', '5', 'percent')
-  ON CONFLICT (chave) DO UPDATE SET valor = '5';
+  ON CONFLICT (empresa_id, chave) DO UPDATE SET valor = '5';
 
   -- dois produtos distintos, sem faixa de atacado, para isolar o multi-item
   SELECT id INTO v_pa FROM public.produtos WHERE loja_id = v_loja AND preco_varejo > 0 ORDER BY id LIMIT 1;
@@ -1476,7 +1476,7 @@ BEGIN
   UPDATE public.usuarios SET funcionario_id = NULL WHERE id = v_op;
   INSERT INTO public.configuracoes_gerais(chave, valor, tipo_dado)
   VALUES ('comissao_padrao_percentual', '5', 'percent')
-  ON CONFLICT (chave) DO UPDATE SET valor = '5';
+  ON CONFLICT (empresa_id, chave) DO UPDATE SET valor = '5';
 
   v_v := gen_random_uuid(); v_item := gen_random_uuid(); v_oper := gen_random_uuid();
   PERFORM public.registrar_venda_com_itens(v_v, v_caixa, v_op, 'DINHEIRO',
@@ -1564,7 +1564,7 @@ DECLARE
 BEGIN
   INSERT INTO public.configuracoes_gerais(chave, valor, tipo_dado)
   VALUES ('comissao_padrao_percentual', '5', 'percent')
-  ON CONFLICT (chave) DO UPDATE SET valor = '5';
+  ON CONFLICT (empresa_id, chave) DO UPDATE SET valor = '5';
 
   -- ---------------------------------------------------------- Ordem A
   -- venda -> comissão (criada automaticamente pelo gatilho de itens,
@@ -1728,7 +1728,7 @@ DECLARE
 BEGIN
   INSERT INTO public.configuracoes_gerais(chave, valor, tipo_dado)
   VALUES ('comissao_padrao_percentual', '5', 'percent')
-  ON CONFLICT (chave) DO UPDATE SET valor = '5';
+  ON CONFLICT (empresa_id, chave) DO UPDATE SET valor = '5';
 
   -- ---------------------------------------------------------- 1: DELETE de comissão com ajustes
   v_v := gen_random_uuid(); v_i := gen_random_uuid();

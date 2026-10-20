@@ -1,0 +1,89 @@
+diff --git a/.github/workflows/ci-backend-supabase.yml b/.github/workflows/ci-backend-supabase.yml
+index 8f321474..069ba2e0 100644
+--- a/.github/workflows/ci-backend-supabase.yml
++++ b/.github/workflows/ci-backend-supabase.yml
+@@ -93,6 +93,9 @@ jobs:
+       - name: Residual RLS/search_path hardening (PostgreSQL in memory)
+         run: npm run test:hardening-residual -w fastproduct-backend
+ 
++      - name: Multiempresa fase 1 — isolamento A×B, provisionamento, ativação PDV (PostgreSQL in memory)
++        run: npm run test:multiempresa-fase1 -w fastproduct-backend
++
+       - name: Enforce seed password secret for internal PRs
+         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+         env:
+@@ -361,6 +364,9 @@ jobs:
+         # lock e criaria churn/quebra por efeito colateral.
+         run: deno test --no-lock --no-check --allow-net backend/supabase/functions/_shared/
+ 
++      - name: sync-outbox escopo de tenant (replay offline entre lojas)
++        run: deno test --no-lock --no-check backend/supabase/functions/sync-outbox/tenantScope.test.ts
++
+   outbox-contract:
+     runs-on: ubuntu-latest
+     timeout-minutes: 10
+diff --git a/.github/workflows/release-pdv-desktop.yml b/.github/workflows/release-pdv-desktop.yml
+new file mode 100644
+index 00000000..315707dc
+--- /dev/null
++++ b/.github/workflows/release-pdv-desktop.yml
+@@ -0,0 +1,59 @@
++# Instalador Windows (NSIS) do PDV desktop + artefatos do updater do Tauri.
++# SÓ roda manualmente (workflow_dispatch). Não publica release nem toca no Supabase:
++# gera os arquivos como artefato do workflow para homologação.
++#
++# Secrets necessários (Settings → Secrets → Actions):
++#   PDV_SYNC_ENDPOINT_DEFAULT          URL da Edge sync-outbox embutida no binário (o cliente só digita o código)
++#   TAURI_SIGNING_PRIVATE_KEY          chave privada do updater (npx tauri signer generate)
++#   TAURI_SIGNING_PRIVATE_KEY_PASSWORD senha da chave
++# E substituir `pubkey` em pdv-local/src-tauri/tauri.updater.conf.json pela chave pública.
++name: Release PDV desktop (Windows)
++
++permissions:
++  contents: read
++
++on:
++  workflow_dispatch:
++    inputs:
++      updater:
++        description: 'Gerar artefatos assinados do updater (exige secrets e pubkey configurados)'
++        type: boolean
++        default: false
++
++jobs:
++  windows-installer:
++    runs-on: windows-latest
++    timeout-minutes: 40
++    steps:
++      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
++      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
++        with:
++          node-version: '22'
++          cache: npm
++          cache-dependency-path: package-lock.json
++      - name: Rust stable
++        uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable
++      - uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae # v2
++        with:
++          workspaces: pdv-local/src-tauri
++      - run: npm ci
++      - name: Build instalador
++        working-directory: pdv-local
++        shell: bash
++        env:
++          PDV_SYNC_ENDPOINT_DEFAULT: ${{ secrets.PDV_SYNC_ENDPOINT_DEFAULT }}
++          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
++          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
++        run: |
++          if [ "${{ inputs.updater }}" = "true" ]; then
++            npx tauri build --config src-tauri/tauri.updater.conf.json
++          else
++            npx tauri build
++          fi
++      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
++        with:
++          name: jinlong-pdv-windows
++          path: |
++            pdv-local/src-tauri/target/release/bundle/nsis/*.exe
++            pdv-local/src-tauri/target/release/bundle/nsis/*.sig
++          if-no-files-found: error
