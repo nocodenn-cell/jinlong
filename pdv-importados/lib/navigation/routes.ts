@@ -68,10 +68,14 @@ export const ROUTES = {
     marcasProdutos: '/admin/marcas-produtos',
     categoriasFinanceiras: '/admin/categorias-financeiras',
     compras: '/admin/compras',
+    assinatura: '/admin/assinatura',
   },
   catalogoPublic: {
     produtos: '/catalogo/produtos',
     produtosNovo: '/catalogo/produtos/novo',
+  },
+  cobranca: {
+    testeGratis: '/teste-gratis',
   },
   legal: {
     termos: '/termos',

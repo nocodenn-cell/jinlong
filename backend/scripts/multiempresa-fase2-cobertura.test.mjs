@@ -24,6 +24,9 @@ const ISENTAS = {
   gerente_auth_attempts: 'rate-limit técnico por usuário',
   gerente_auth_rate_limits: 'rate-limit técnico por usuário',
   caixa_scan_telemetry_events: 'telemetria técnica do próprio usuário (sem loja_id)',
+  planos: 'catálogo global de planos/preços (cobrança), sem dado de cliente; leitura pública',
+  cobranca_webhook_eventos: 'log de idempotência do webhook Asaas, só service_role',
+  trial_signup_tentativas: 'rate-limit técnico do cadastro de trial (hashes), só service_role',
 }
 
 // RPCs DEF sem argumento de loja/entidade: revisadas uma a uma na fase 3 e marcadas com

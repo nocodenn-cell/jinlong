@@ -5,6 +5,7 @@ import { resolveAdminSession } from '@/lib/admin/auth/resolveAdminSession'
 import type { AdminSession } from '@/lib/admin/auth/types'
 import { AdminToastViewport, AdminV2Shell } from '@/components/ui/admin-v2'
 import { contarEstoqueBaixo, lerFlagsVisuaisPdv } from '@/lib/admin/sinaisVisuaisAdmin'
+import { AvisoAssinatura } from '@/lib/cobranca/AvisoAssinatura'
 
 export const dynamic = 'force-dynamic'
 export const fetchCache = 'force-no-store'
@@ -46,6 +47,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   return (
     <>
       <AdminV2Shell session={adminContext.session} stockAlertCount={stockAlertCount}>
+        <AvisoAssinatura />
         {children}
       </AdminV2Shell>
       <AdminToastViewport />

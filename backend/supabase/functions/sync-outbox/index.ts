@@ -26,6 +26,7 @@ import { logJson } from "../_shared/logger.ts";
 import { assertMesmaLoja, caixaInsertForLoja, requireExplicitLojaId } from "./caixaLoja.ts";
 import { maybeEnqueueFiscalDocumentAfterSyncedVenda } from "./fiscal_enqueue_after_venda_sync.ts";
 import { captureEdgeException } from "../_shared/sentryEdge.ts";
+import { avaliarEventoNoPlano } from "./planGate.ts";
 import {
   assertEventoNoEscopo,
   type DispositivoPdv,
@@ -946,6 +947,14 @@ async function dispatchOutboxEvent(
   ctx: SyncContext,
 ): Promise<void> {
   await assertEventoNoEscopo(ev, ctx, scopeLookups(supabase));
+  if (ctx.mode === "dispositivo" && ctx.empresaId) {
+    const { data: recursos, error: recErr } = await supabase.rpc("fp_recursos_empresa", { p_empresa: ctx.empresaId });
+    // função ausente (migration de cobrança não aplicada) ⇒ comportamento antigo
+    if (!recErr) {
+      const gate = avaliarEventoNoPlano(ev.tipo, (recursos ?? null) as string[] | null);
+      if (!gate.ok) throw new Error(gate.error);
+    }
+  }
   if (ev.tipo === "VENDA_REGISTRADA") await processVenda(supabase, ev);
   else if (ev.tipo === "CAIXA_ABERTO") await processCaixaAberto(supabase, ev);
   else if (ev.tipo === "CAIXA_FECHADO") await processCaixaFechado(supabase, ev);
