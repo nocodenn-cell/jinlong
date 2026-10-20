@@ -12,6 +12,8 @@ import { SidebarUserFooter } from './SidebarUserFooter'
 import { CommandPalette } from './CommandPalette'
 import { CommandPaletteTrigger } from './CommandPaletteTrigger'
 import { AdminV2UtilityBar } from './AdminV2UtilityBar'
+import { AdminV2SidebarFrame } from './AdminV2SidebarFrame'
+import { AdminV2Topbar, type AdminV2TopbarContext } from './AdminV2Topbar'
 
 function SidebarNavFallback() {
   return <nav className="flex flex-col gap-6 p-3 lg:p-4" aria-busy="true" aria-label="Navegação" />
@@ -22,9 +24,11 @@ type AdminV2ShellProps = {
   children: ReactNode
   /** Observabilidade visual (flag `pdv_config.show_stock_alerts`): contagem de itens em estoque baixo. */
   stockAlertCount?: number
+  /** Empresa ativa para a barra superior (best-effort, opcional). */
+  topbar?: AdminV2TopbarContext
 }
 
-export function AdminV2Shell({ session, children, stockAlertCount }: AdminV2ShellProps) {
+export function AdminV2Shell({ session, children, stockAlertCount, topbar }: AdminV2ShellProps) {
   const { idioma } = session
   const chineseLanguage = idioma !== 'pt'
   const m: Mensagens = getMessages(idioma)
@@ -67,13 +71,12 @@ export function AdminV2Shell({ session, children, stockAlertCount }: AdminV2Shel
       </div>
 
       <div className="mx-auto flex min-h-dvh max-w-[1600px] flex-col lg:flex-row">
-        {/* ARIA landmark: complementary (sidebar navigation) — só >= lg; < lg usa AdminV2MobileNavDrawer */}
-        <aside
-          role="complementary"
-          aria-label="Navegação"
-          className="admin-v2-sidebar hidden shrink-0 flex-col border-[var(--admin-v2-border)] lg:flex lg:w-72 lg:border-r"
+        {/* ARIA landmark: complementary (sidebar navigation, recolhível) — só >= lg; < lg usa AdminV2MobileNavDrawer */}
+        <AdminV2SidebarFrame
+          labelRecolher={m.admin_ui.sidebar_recolher}
+          labelExpandir={m.admin_ui.sidebar_expandir}
         >
-          <div className="flex items-center justify-center border-b border-[var(--admin-v2-border)] py-6 px-4">
+          <div className="admin-v2-sidebar-brand flex items-center justify-center border-b border-[var(--admin-v2-border)] pb-6 pt-2 px-4">
             <Link
               href={ROUTES.admin.dashboard}
               aria-label={m.login.nav_marca}
@@ -83,13 +86,10 @@ export function AdminV2Shell({ session, children, stockAlertCount }: AdminV2Shel
               <img
                 src="/branding/brand-double-dragon.png"
                 alt="Jīn Lóng"
-                className="h-28 w-auto drop-shadow-[0_0_12px_rgba(251,191,36,0.25)]"
+                className="admin-v2-sidebar-logo h-28 w-auto drop-shadow-[0_0_12px_rgba(251,191,36,0.25)]"
                 draggable={false}
               />
             </Link>
-          </div>
-          <div className="px-3 pt-3 lg:px-4">
-            <CommandPaletteTrigger label={m.admin_ui.command_palette_trigger} />
           </div>
           <Suspense fallback={<SidebarNavFallback />}>
             <SidebarNav
@@ -99,11 +99,19 @@ export function AdminV2Shell({ session, children, stockAlertCount }: AdminV2Shel
               showAdminOnlyItems={session.perfil === 'ADMIN'}
             />
           </Suspense>
-          <SidebarUserFooter session={session} />
-        </aside>
+          <div className="admin-v2-sidebar-footer mt-auto">
+            <SidebarUserFooter session={session} showUtilityBar={false} />
+          </div>
+        </AdminV2SidebarFrame>
 
         {/* ARIA landmark: main content area */}
         <main id="main-content" className="admin-v2-main relative min-w-0 flex-1">
+          <AdminV2Topbar
+            ui={m.admin_ui}
+            stockAlertCount={stockAlertCount}
+            empresaNome={topbar?.empresaNome}
+            podeTrocarEmpresa={topbar?.podeTrocarEmpresa}
+          />
           <div className="relative z-[1] min-h-full">{children}</div>
         </main>
       </div>
