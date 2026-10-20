@@ -17,7 +17,7 @@ export const CJK_WEIGHTS: readonly CjkWeight[] = [500, 700, 900]
 const CJK = /[　-〿㐀-鿿＀-￯]/g
 
 function headingStrings(content: HomeContent): string[] {
-  const { hero, benefits, screens, wholesale, languages, steps, final } = content
+  const { hero, benefits, screens, wholesale, languages, steps, faq, final } = content
   return [
     hero.h1.line1,
     hero.h1.line2,
@@ -34,6 +34,8 @@ function headingStrings(content: HomeContent): string[] {
     languages.title,
     steps.title,
     ...steps.items.map((item) => item.title),
+    faq.title,
+    ...faq.items.map((item) => item.q),
     final.title,
   ]
 }
@@ -41,7 +43,7 @@ function headingStrings(content: HomeContent): string[] {
 function interfaceStrings(content: HomeContent): string[] {
   const { hero, langSwitch, languages } = content
   const chip = [hero.chipFirst, hero.chipSecond].filter((part) => part.lang === 'zh-CN').map((part) => part.text)
-  return [hero.signature, langSwitch.zh, langSwitch.zhShort, ...chip, '金龙', languages.title]
+  return [hero.signature, hero.badge, langSwitch.zh, langSwitch.zhShort, ...chip, '金龙', languages.title]
 }
 
 function uniqueCjk(strings: readonly string[]): string {

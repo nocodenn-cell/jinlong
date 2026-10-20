@@ -28,11 +28,13 @@ export const homeZh: HomeContent = {
   langSwitch: { group: '语言 / Idioma', pt: 'PT-BR', ptShort: 'PT', zh: '简体中文', zhShort: '中文' },
   hero: {
     signature: '收银更快 · 管理更稳 · 生意更旺',
+    badge: '双语收银与管理系统',
     h1: { line1: '收银更快。', line2: '门店尽在掌握。', emphasis: '稳步', rest: '成长。' },
     lead: '面向零售与批发的收银与管理系统，支持葡萄牙语和简体中文。销售、库存与经营，一套系统全搞定。',
     ctaDemo: '查看演示',
     ctaTrial: '申请15天试用',
     trialNote: '试用需申请，我们将与您联系开通。',
+    microcopy: '中文和葡语 · 零售与批发，一套系统',
     proof: ['葡萄牙语与简体中文', '零售与批发', '收银、库存与财务'],
     chipFirst: { text: '销售合计', lang: 'zh-CN' },
     chipSecond: { text: 'Total da venda', lang: 'pt-BR' },
@@ -125,10 +127,19 @@ export const homeZh: HomeContent = {
     eyebrow: '如何开始',
     title: '从咨询到第一笔销售',
     items: [
-      { title: '了解系统', body: '查看界面，使用批发价模拟（虚构数据）。' },
-      { title: '商定演示或试用', body: '联系我们的团队，一起约定演示或15天试用。' },
+      { title: '了解并联系我们', body: '查看界面，使用批发价模拟，并约定演示或15天试用。' },
       { title: '在指导下设置门店', body: '商品、零售/批发价及付款方式。' },
       { title: '开始营业', body: '开班并完成第一笔销售。' },
+    ],
+  },
+  faq: {
+    eyebrow: '常见问题',
+    title: '常见问题',
+    items: [
+      { q: '系统支持中文吗？', a: '支持。金龙提供巴西葡语和简体中文，团队里每个人都可以用自己最熟悉的语言。' },
+      { q: '适合零售和批发吗？', a: '适合。每件商品可设定从多少件起按批发价，收银时自动使用正确价格。' },
+      { q: '可以管理哪些内容？', a: '收银、开班与交班、商品资料、库存、财务管理和报表。' },
+      { q: '怎样申请试用？', a: '15天试用需要申请。请联系我们的团队，约定演示或开通试用。' },
     ],
   },
   final: {

@@ -23,11 +23,13 @@ export const homePt: HomeContent = {
   langSwitch: { group: 'Idioma / 语言', pt: 'PT-BR', ptShort: 'PT', zh: '简体中文', zhShort: '中文' },
   hero: {
     signature: '收银更快 · 管理更稳 · 生意更旺',
+    badge: 'PDV e gestão bilíngue',
     h1: { line1: 'Venda mais rápido.', line2: 'Controle sua loja.', emphasis: 'Cresça', rest: ' com segurança.' },
     lead: 'PDV e gestão para varejo e atacado, em português e chinês. Venda, controle seu estoque e acompanhe seu negócio em um só sistema.',
     ctaDemo: 'Ver demonstração',
     ctaTrial: 'Solicitar 15 dias de teste',
     trialNote: 'Teste mediante solicitação · a liberação é combinada com nossa equipe',
+    microcopy: 'Português e chinês · varejo e atacado no mesmo sistema',
     proof: ['Português e 简体中文', 'Varejo e atacado', 'Caixa, estoque e financeiro'],
     chipFirst: { text: 'Total da venda', lang: 'pt-BR' },
     chipSecond: { text: '销售合计', lang: 'zh-CN' },
@@ -140,10 +142,19 @@ export const homePt: HomeContent = {
     eyebrow: 'Como começar',
     title: 'Do primeiro contato à primeira venda',
     items: [
-      { title: 'Conheça o sistema', body: 'Veja as telas e use a simulação de atacado, com dados fictícios.' },
-      { title: 'Combine uma demonstração ou teste', body: 'Fale com a nossa equipe. Combinamos juntos a demonstração ou o teste de 15 dias.' },
+      { title: 'Conheça e fale com a gente', body: 'Veja as telas, use a simulação de atacado e combine uma demonstração ou o teste de 15 dias.' },
       { title: 'Configure sua loja com orientação', body: 'Produtos, preços de varejo e atacado e formas de pagamento.' },
       { title: 'Comece a operar', body: 'Abra o caixa e faça a primeira venda.' },
+    ],
+  },
+  faq: {
+    eyebrow: 'Perguntas frequentes',
+    title: 'Dúvidas comuns',
+    items: [
+      { q: 'O sistema funciona em chinês?', a: 'Sim. O Jinlong funciona em português (Brasil) e em chinês simplificado, e cada pessoa da equipe usa o idioma em que trabalha melhor.' },
+      { q: 'Serve para varejo e atacado?', a: 'Sim. Cada produto define a partir de qual quantidade vale o preço de atacado, e o caixa aplica o preço certo automaticamente.' },
+      { q: 'O que dá para controlar?', a: 'Frente de caixa, abertura e fechamento de caixa, cadastro de produtos, estoque, controle financeiro e relatórios.' },
+      { q: 'Como faço para testar?', a: 'O teste de 15 dias é feito mediante solicitação. Fale com a nossa equipe para combinar a demonstração ou a liberação do teste.' },
     ],
   },
   final: {

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { Benefits } from '@/components/Benefits'
+import { Faq } from '@/components/Faq'
 import { FinalCta } from '@/components/FinalCta'
 import { Hero } from '@/components/Hero'
 import { LanguageCompare } from '@/components/LanguageCompare'
@@ -63,10 +64,11 @@ export default async function HomePage({ params }: HomePageProps) {
       <main id="main-content">
         <Hero locale={locale} content={content} />
         <Benefits locale={locale} content={content} />
+        <Steps content={content} />
         <Screens locale={locale} content={content} />
         <WholesaleSection locale={locale} content={content} />
         <LanguageCompare locale={locale} content={content} />
-        <Steps content={content} />
+        <Faq content={content} />
         <FinalCta locale={locale} content={content} />
       </main>
       <SiteFooter locale={locale} content={content} />

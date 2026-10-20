@@ -45,6 +45,20 @@ for (const locale of LOCALES) {
       else await expect(robots).toHaveCount(0)
     })
 
+    test('seções na ordem do layout e FAQ abre por teclado', async ({ page }) => {
+      await openHome(page, locale)
+      const ids = await page.locator('main > section').evaluateAll((els) => els.map((el) => el.getAttribute('aria-labelledby')))
+      expect(ids.indexOf('h-how')).toBeGreaterThan(ids.indexOf('h-ben'))
+      expect(ids.indexOf('h-faq')).toBeGreaterThan(ids.indexOf('h-how'))
+      expect(ids.at(-1)).toBe('h-final')
+      await expect(page.locator('.jl-steps > li')).toHaveCount(3)
+      const first = page.locator('.jl-faq details').first()
+      await first.locator('summary').focus()
+      await page.keyboard.press('Enter')
+      await expect(first).toHaveAttribute('open', '')
+      await expect(first.locator('p')).toBeVisible()
+    })
+
     test('teclado: skip link é o primeiro foco e leva ao conteúdo', async ({ page, browserName }) => {
       test.skip(browserName === 'webkit', 'Safari não tabula links por padrão')
       await openHome(page, locale)

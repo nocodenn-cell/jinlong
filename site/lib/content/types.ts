@@ -14,6 +14,11 @@ export interface BenefitItem {
   what: string
 }
 
+export interface FaqItem {
+  q: string
+  a: string
+}
+
 export interface StepItem {
   title: string
   body: string
@@ -128,11 +133,13 @@ export interface HomeContent {
   langSwitch: { group: string; pt: string; ptShort: string; zh: string; zhShort: string }
   hero: {
     signature: string
+    badge: string
     h1: { line1: string; line2: string; emphasis: string; rest: string }
     lead: string
     ctaDemo: string
     ctaTrial: string
     trialNote: string
+    microcopy: string
     proof: readonly [string, string, string]
     chipFirst: TextWithLang
     chipSecond: TextWithLang
@@ -145,6 +152,7 @@ export interface HomeContent {
   wholesale: WholesaleCopy
   languages: LanguagesCopy
   steps: { eyebrow: string; title: string; items: readonly StepItem[] }
+  faq: { eyebrow: string; title: string; items: readonly FaqItem[] }
   final: { title: string; lead: string }
   contact: ContactCopy
   footer: {

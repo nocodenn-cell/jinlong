@@ -67,6 +67,15 @@ describe('paridade de conteúdo pt-BR / zh-CN', () => {
     expect(unexpected).toEqual([])
   })
 
+  it('hierarquia de seções: 3 passos e FAQ com as mesmas perguntas nas duas línguas', () => {
+    for (const locale of ['pt-BR', 'zh-CN'] as const) {
+      const content = getHomeContent(locale)
+      expect(content.steps.items).toHaveLength(3)
+      expect(content.faq.items.length).toBeGreaterThanOrEqual(4)
+    }
+    expect(getHomeContent('zh-CN').faq.items).toHaveLength(getHomeContent('pt-BR').faq.items.length)
+  })
+
   it('a página em chinês é chinesa e o aviso de rascunho existe só nela', () => {
     const zhContent = getHomeContent('zh-CN')
     expect(CJK.test(zhContent.hero.h1.line1)).toBe(true)

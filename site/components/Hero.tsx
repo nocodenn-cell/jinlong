@@ -35,6 +35,10 @@ export function Hero({ locale, content }: HeroProps) {
             {hero.signature}
           </span>
         )}
+        <span className="jl-badge" lang={locale}>
+          <i aria-hidden="true" />
+          {hero.badge}
+        </span>
         <h1 id="h-hero">
           {hero.h1.line1}
           <br />
@@ -54,6 +58,7 @@ export function Hero({ locale, content }: HeroProps) {
           <TrialCta locale={locale} label={hero.ctaTrial} />
         </div>
         {hasTrial && <span className="jl-btn-note">{hero.trialNote}</span>}
+        <p className="jl-microcopy">{hero.microcopy}</p>
         <ul className="jl-proof">
           {hero.proof.map((item) => (
             <li key={item}>
