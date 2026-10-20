@@ -16,6 +16,8 @@ import { FinanceiroPrimeiroUso } from './FinanceiroPrimeiroUso'
 import { FinanceiroAcoesRapidas, useFinanceiroAcoesLabels, type FinanceiroAcaoRapida } from './FinanceiroAcoesRapidas'
 import { useAdminV2Session } from '@/components/ui/admin-v2/AdminV2SessionContext'
 import { getMessages } from '@/i18n/getMessages'
+import { PeriodoCivilFilter, periodoCivilLabelsAdmin } from '@/components/ui/admin-v2/PeriodoCivilFilter'
+import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 
 export type FinanceiroWorkspaceTab = 'resumo' | 'contas' | 'recebiveis' | 'conciliacao' | 'resultado'
 
@@ -56,18 +58,13 @@ function FinanceiroResultado({ data }: { data: FinanceiroPainel }) {
  </div>
 }
 
-export function FinanceiroPeriodo({ de, ate }: { de:string; ate:string }) {
- const router = useRouter(); const search = useSearchParams()
- return <form className="mb-4 flex flex-wrap items-end gap-3" onSubmit={e => { e.preventDefault(); const fd=new FormData(e.currentTarget); const p=new URLSearchParams(search.toString()); p.set('de',String(fd.get('de')));p.set('ate',String(fd.get('ate')));p.delete('pagina');router.push(`${ROUTES.admin.financeiro}?${p}`) }}><Field name="de" label="De" type="date" value={de} /><Field name="ate" label="Até" type="date" value={ate} /><button className="admin-v2-btn-secondary">Aplicar período</button></form>
-}
-
 export function FinanceiroPaginacao({ data, countKey }: { data:FinanceiroPainel; countKey:keyof FinanceiroPainel['contagens'] }) {
  const router = useRouter(); const search=useSearchParams(); const total=data.contagens[countKey]; const pages=Math.max(1,Math.ceil(total/50))
  function go(pagina:number) {const p=new URLSearchParams(search.toString());p.set('pagina',String(pagina));router.push(`${ROUTES.admin.financeiro}?${p}`)}
  return <div className="my-4 flex items-center gap-3 text-small"><button className="admin-v2-btn-secondary" disabled={data.pagina<=1} onClick={() => go(data.pagina-1)}>Anterior</button><span>Página {data.pagina} de {pages} · {total} registros</span><button className="admin-v2-btn-secondary" disabled={data.pagina>=pages} onClick={() => go(data.pagina+1)}>Próxima</button></div>
 }
 
-export function FinanceiroWorkspace({ data, tab, de, ate }: { data:FinanceiroPainel; tab:FinanceiroWorkspaceTab; de:string; ate:string }) {
+export function FinanceiroWorkspace({ data, tab, de, ate, hoje }: { data:FinanceiroPainel; tab:FinanceiroWorkspaceTab; de:string; ate:string; hoje?:string }) {
  const [acao, setAcao] = useState<FinanceiroAcaoRapida>(null)
  const { idioma } = useAdminV2Session()
  const ui = getMessages(idioma).admin_ui
@@ -109,7 +106,7 @@ export function FinanceiroWorkspace({ data, tab, de, ate }: { data:FinanceiroPai
  }
  const acoesLabels = useFinanceiroAcoesLabels()
  return <div className="admin-v2-stack">
-  <FinanceiroPeriodo de={de} ate={ate} />
+  <PeriodoCivilFilter de={de} ate={ate} hoje={hoje ?? data.hoje} locale={localeFromIdioma(idioma)} labels={periodoCivilLabelsAdmin(ui as unknown as Record<string, string>)} pathname={ROUTES.admin.financeiro} />
   {(tab==='resumo' || tab==='contas') ? <FinanceiroPrimeiroUso semContas={data.contas.length === 0} /> : null}
   {tab==='resumo' ? <FinanceiroResumo data={data} /> : null}
   {tab==='contas' ? <>
