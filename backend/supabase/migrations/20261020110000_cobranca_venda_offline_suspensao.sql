@@ -122,6 +122,10 @@ BEGIN
   IF NOT FOUND OR NOT a.suspensao_aplicada OR a.suspensa_em IS NULL THEN
     RETURN jsonb_build_object('liberada', false, 'motivo', 'SEM_SUSPENSAO_COBRANCA'); -- o gatilho decide como sempre
   END IF;
+  -- prazo de envio começa no 1º contato após a suspensão; se o "touch" do sync falhou, começa AGORA
+  -- (nunca fica sem prazo). Chave (dispositivo, suspensão): re-sync não reinicia a contagem.
+  INSERT INTO saas.dispositivo_ciencia_suspensao (dispositivo_id, suspensa_em, ultimo_contato_antes, ciente_em)
+  VALUES (d.id, a.suspensa_em, d.ultimo_sync_em, now()) ON CONFLICT DO NOTHING;
   SELECT * INTO c FROM saas.dispositivo_ciencia_suspensao WHERE dispositivo_id = d.id AND suspensa_em = a.suspensa_em;
   SELECT * INTO aut FROM saas.pdv_autorizacoes_offline x
    WHERE x.dispositivo_id = d.id AND x.empresa_id = d.empresa_id AND x.emitida_em <= a.suspensa_em
@@ -131,7 +135,7 @@ BEGIN
    WHERE v.dispositivo_id = d.id AND v.liberada_em >= a.suspensa_em;
   r := CASE
     WHEN p_venda_em IS NULL THEN 'VENDA_SEM_HORA'
-    WHEN c.dispositivo_id IS NOT NULL AND now() > c.ciente_em + g THEN 'PRAZO_DE_ENVIO_EXPIRADO'
+    WHEN now() > c.ciente_em + g THEN 'PRAZO_DE_ENVIO_EXPIRADO'
     WHEN p_venda_em > a.suspensa_em OR p_venda_em > now() THEN 'VENDA_APOS_SUSPENSAO'
     WHEN aut.id IS NULL THEN 'SEM_AUTORIZACAO_OFFLINE_VALIDA'
     WHEN v_hwm IS NOT NULL AND p_venda_em < v_hwm THEN 'VENDA_FORA_DE_ORDEM'

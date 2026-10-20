@@ -22,6 +22,16 @@ BEGIN
   IF (SELECT valor FROM public.configuracoes_gerais WHERE empresa_id = e AND chave = 'vendas_suspensas') = 'true' THEN ok := ok || 'suspensa'::text; END IF;
   UPDATE public.pdv_dispositivos SET ultimo_sync_em = now() WHERE id = dv;  -- PDV recebe a suspensão
   IF EXISTS (SELECT 1 FROM saas.dispositivo_ciencia_suspensao WHERE dispositivo_id = dv) THEN ok := ok || 'ciencia'::text; END IF;
+  -- prazo não depende do touch: sem ciência registrada, o 1º pedido abre o prazo; re-sync não reinicia
+  DELETE FROM saas.dispositivo_ciencia_suspensao WHERE dispositivo_id = dv;
+  PERFORM public.cobranca_liberar_venda_offline(dv, gen_random_uuid(), now() + interval '1 day');
+  UPDATE public.pdv_dispositivos SET ultimo_sync_em = now() WHERE id = dv;
+  IF (SELECT count(*) FROM saas.dispositivo_ciencia_suspensao WHERE dispositivo_id = dv) = 1 THEN ok := ok || 'prazo_sem_touch_e_sem_reinicio'::text; END IF;
+  IF NOT EXISTS (SELECT 1 FROM saas.pdv_autorizacoes_offline x JOIN saas.assinaturas a ON a.empresa_id = e WHERE x.dispositivo_id = dv AND x.emitida_em > now() - interval '1 hour') THEN ok := ok || 'sem_autorizacao_nova_suspensa'::text; END IF;
+  -- spoofing: authenticated não executa a liberação
+  IF NOT has_function_privilege('authenticated', 'public.cobranca_liberar_venda_offline(uuid,uuid,timestamptz)', 'EXECUTE')
+     AND NOT has_function_privilege('anon', 'public.cobranca_liberar_venda_offline(uuid,uuid,timestamptz)', 'EXECUTE')
+     AND NOT has_table_privilege('authenticated', 'public.pdv_dispositivos', 'UPDATE') THEN ok := ok || 'cliente_nao_forja'::text; END IF;
   -- pré-suspensão: aceita e entra; idempotente
   r := public.cobranca_liberar_venda_offline(dv, v1, now() - interval '1 hour');
   IF (r->>'liberada')::boolean THEN ok := ok || 'pre_liberada'::text; END IF;
