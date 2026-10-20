@@ -11,12 +11,15 @@ e a opção **Deploy to production** ativa. Pela documentação oficial
 Evidência: 25 s após o merge do #589 (14:48:47 BRT) foram publicadas `sync-outbox` v77 e `validar-gerente` v52,
 idênticas às versões anteriores.
 
-`20261010120000_caixa_sem_loja_padrao.sql` **não** foi aplicada até agora porque o passo `migrate` falha
-antes de aplicar qualquer coisa: o histórico de produção tem 37 versões sem arquivo correspondente no repo
-(aplicadas via MCP com o timestamp real; ver `backend/supabase/migration-human-gates.json`), e a documentação
-diz que "uma versão no histórico sem arquivo correspondente faz o passo falhar". **Isso é uma proteção acidental.**
-Se alguém reconciliar o histórico (adicionar esses arquivos ou fazer `migration repair`), o próximo merge
-aplica 20261010120000 automaticamente e quebra o PDV legado.
+`20261010120000_caixa_sem_loja_padrao.sql` **não** foi aplicada até agora, embora o check "Supabase Preview"
+do merge do #589 (commit 962bd219, 14:48:40–14:48:56 BRT) tenha concluído com **success**. A documentação atual
+diz que arquivos com timestamp anterior à última migration aplicada ainda rodam (com warning); na prática, ela
+foi ignorada porque é *out-of-order* (20261010 < 20261019…, já aplicadas) — comportamento equivalente ao
+`db push` sem `--include-all`. Além disso o histórico de prod tem 37 versões sem arquivo no repo (aplicadas via
+MCP; ver `backend/supabase/migration-human-gates.json`). O log detalhado do passo `migrate` só é visível no
+Dashboard (não acessível por MCP/GitHub). **Conclusão: é uma proteção acidental e não documentada.** Qualquer
+mudança de comportamento da integração, reset/reconciliação do histórico ou renomeação do arquivo para um
+timestamp novo faria o próximo merge aplicá-la automaticamente e quebrar o PDV legado.
 
 ## Processos separados
 | Processo | Gatilho | Controle |
