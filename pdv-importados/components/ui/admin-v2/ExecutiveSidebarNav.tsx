@@ -29,7 +29,7 @@ const resolveLabels = resolveNavLabels
 // Cores (hover/ativo) vêm só de `.admin-v2-nav-link` em styles/admin-v2.css (tokens
 // `--admin-v2-active-*`) e o foco do anel global `a:focus-visible`; aqui fica só o layout.
 const LINK_BASE =
-  'admin-v2-nav-link flex items-center gap-3 rounded-full border border-transparent px-3 py-2.5'
+  'admin-v2-nav-link flex items-center gap-3 rounded-lg border border-transparent px-3 py-2'
 
 const matchesPath = (pathname: string, p: string) => pathname === p || pathname.startsWith(`${p}/`)
 
@@ -72,7 +72,7 @@ function NavItemLink({
         className={cn(LINK_BASE, nested && 'py-1.5 pl-3 text-[13px]')}
       >
         {Icon ? <Icon className="h-4 w-4 shrink-0 opacity-80" strokeWidth={1.75} aria-hidden /> : null}
-        <div className="min-w-0 flex-1">
+        <div className="admin-v2-nav-label min-w-0 flex-1">
           <div className={cn('truncate font-medium leading-tight', nested ? 'text-[13px]' : 'text-sm')}>
             {primary}
           </div>
@@ -150,14 +150,15 @@ export function ExecutiveSidebarNav({
       <Link
         href={ADMIN_V2_PDV_ITEM.href}
         data-nav-id={ADMIN_V2_PDV_ITEM.id}
-        title={pdv.hintText}
+        title={pdv.hintText ?? pdv.primary}
+        aria-label={pdv.primary}
         className={cn(
-          'flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold',
+          'flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold',
           'bg-primary text-primary-foreground transition-opacity hover:opacity-90',
         )}
       >
         <PdvIcon className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
-        <span className="truncate">{pdv.primary}</span>
+        <span className="admin-v2-nav-label truncate">{pdv.primary}</span>
       </Link>
 
       <ul className="flex flex-col gap-1">

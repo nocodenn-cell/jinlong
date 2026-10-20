@@ -120,7 +120,7 @@ export function AdminV2MobileNavDrawer({
               >
                 {/* eslint-disable-next-line @next/next/no-img-element -- brand logo estático; dimensões fixas no CSS */}
                 <img
-                  src="/branding/brand-double-dragon.png"
+                  src="/branding/jinlong-logo-256.png"
                   alt="Jīn Lóng"
                   className="h-9 w-auto"
                   draggable={false}

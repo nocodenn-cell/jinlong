@@ -1,0 +1,81 @@
+/**
+ * Tema do Admin (ERP) — camada única de tokens de marca, escopo [data-admin-v2].
+ * Layout/tipografia do app interno Venddi; paleta da marca Jinlong (vermelho + dourado, neutros navy/cinza).
+ * Trocar a marca = editar só este arquivo. Não afeta PDV/caixa (fora do escopo [data-admin-v2]).
+ */
+[data-admin-v2] {
+  /* Marca */
+  --brand-500: #b3262e; /* vermelho Jinlong — branco sobre ele: 6.3:1 (AA) */
+  --brand-600: #8a1c23; /* hover/texto ativo — 8.9:1 sobre branco */
+  --brand-100: #fbe4e5;
+  --brand-50: #fdf2f2;
+  --brand-gold: #b8913f; /* acento dourado (ícones/detalhes, não texto pequeno) */
+  --navy-900: #0f1b2d;
+
+  /* Neutros (escala gray do Tailwind, como no Venddi) */
+  --gray-900: #0f1b2d;
+  --gray-700: #374151;
+  --gray-600: #4b5563;
+  --gray-500: #6b7280;
+  --gray-300: #d1d5db;
+  --gray-200: #e5e7eb;
+  --gray-100: #f3f4f6;
+  --gray-50: #f9fafb;
+
+  /* Mapeamento para os tokens já consumidos pelo ERP */
+  --color-brand: var(--brand-500);
+  --color-brand-soft: var(--brand-500);
+  --color-info-bg: var(--brand-100);
+  --color-brand-primary: var(--brand-500);
+  --color-brand-strong: var(--brand-600);
+  --primary: 357 65% 43%;
+  --primary-foreground: 0 0% 100%;
+  --ring: 357 65% 43%;
+  --jl-surface-base: var(--gray-50);
+  --jl-surface-elev: #ffffff;
+  --jl-border-1: var(--gray-200);
+  --jl-border-2: var(--gray-200);
+  --jl-fg-1: var(--gray-900);
+  --jl-fg-2: var(--gray-600);
+  --jl-fg-3: var(--gray-500);
+  --color-background-primary: var(--gray-50);
+  --color-background-secondary: #ffffff;
+  --color-background-tertiary: var(--gray-100);
+  --color-background-surface: #ffffff;
+  --color-success-500: #10b981;
+
+  --admin-v2-bg: var(--gray-50);
+  --admin-v2-sidebar: #ffffff;
+  --admin-v2-border: var(--gray-200);
+  --admin-v2-radius-card: 12px;
+  --admin-v2-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --admin-v2-active-bg: var(--brand-50);
+  --admin-v2-active-border: transparent;
+  --admin-v2-active-text: var(--brand-600);
+
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Sidebar estilo Venddi: itens retangulares (rounded-lg), ícone verde no ativo */
+[data-admin-v2] .admin-v2-nav-link {
+  border-radius: 8px;
+  color: var(--gray-700);
+}
+[data-admin-v2] .admin-v2-nav-link:hover {
+  background-color: var(--gray-100);
+  color: var(--gray-900);
+}
+[data-admin-v2] .admin-v2-nav-link[data-active='true'] svg {
+  color: var(--brand-500);
+  opacity: 1;
+}
+[data-admin-v2] .admin-v2-nav-group-label {
+  color: #9ca3af;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+[data-admin-v2] .admin-v2-topbar {
+  background-color: #ffffff;
+}
