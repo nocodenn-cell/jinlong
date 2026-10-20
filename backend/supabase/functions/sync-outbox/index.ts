@@ -26,6 +26,7 @@ import { logJson } from "../_shared/logger.ts";
 import { aplicarLojaLegado, assertMesmaLoja, caixaInsertForLoja, requireExplicitLojaId } from "./caixaLoja.ts";
 import { maybeEnqueueFiscalDocumentAfterSyncedVenda } from "./fiscal_enqueue_after_venda_sync.ts";
 import { captureEdgeException } from "../_shared/sentryEdge.ts";
+import { avaliarEventoNoPlano } from "./planGate.ts";
 import {
   assertEventoNoEscopo,
   type DispositivoPdv,
@@ -694,9 +695,11 @@ async function aplicarBaixaEstoquePorItem(
 async function processVenda(
   supabase: SupabaseAdmin,
   ev: OutboxEvent,
+  ctx?: SyncContext,
 ) {
   const parsedJson = JSON.parse(ev.payload_json);
   const payload = parseVendaPayload(parsedJson);
+  await liberarVendaOfflineSeSuspensa(supabase, ev, payload.venda_id, ctx);
   const strictManagerDiscountAuth = Deno.env.get("STRICT_MANAGER_DISCOUNT_AUTH") === "true";
   const _t0 = Date.now();
 
@@ -940,6 +943,34 @@ function scopeLookups(supabase: SupabaseAdmin): ScopeLookups {
   };
 }
 
+/**
+ * Cobrança: venda feita offline ANTES da suspensão por cobrança é liberada (política no banco,
+ * `cobranca_liberar_venda_offline`); fora da política o gatilho de vendas recusa como sempre.
+ * Sem efeito fora do modo dispositivo, sem suspensão de cobrança ou sem a migration.
+ */
+async function liberarVendaOfflineSeSuspensa(
+  supabase: SupabaseAdmin,
+  ev: OutboxEvent,
+  vendaId: string,
+  ctx?: SyncContext,
+): Promise<void> {
+  if (ctx?.mode !== "dispositivo" || !ctx.dispositivoId) return;
+  const vendaEm = ev.created_at && !Number.isNaN(Date.parse(ev.created_at)) ? ev.created_at : null;
+  const { data, error } = await supabase.rpc("cobranca_liberar_venda_offline", {
+    p_dispositivo: ctx.dispositivoId,
+    p_venda_id: vendaId,
+    p_venda_em: vendaEm,
+  });
+  if (error) {
+    log({ level: "warn", stage: "venda_offline_liberacao", venda_id: vendaId, error: error.message });
+    return;
+  }
+  const r = data as { liberada?: boolean; motivo?: string } | null;
+  if (r && r.liberada === false && r.motivo !== "SEM_SUSPENSAO_COBRANCA") {
+    log({ level: "info", stage: "venda_offline_nao_liberada", venda_id: vendaId, motivo: r.motivo });
+  }
+}
+
 async function dispatchOutboxEvent(
   supabase: SupabaseAdmin,
   ev: OutboxEvent,
@@ -960,7 +991,15 @@ async function dispatchOutboxEvent(
     }
   }
   await assertEventoNoEscopo(ev, ctx, scopeLookups(supabase));
-  if (ev.tipo === "VENDA_REGISTRADA") await processVenda(supabase, ev);
+  if (ctx.mode === "dispositivo" && ctx.empresaId) {
+    const { data: recursos, error: recErr } = await supabase.rpc("fp_recursos_empresa", { p_empresa: ctx.empresaId });
+    // função ausente (migration de cobrança não aplicada) ⇒ comportamento antigo
+    if (!recErr) {
+      const gate = avaliarEventoNoPlano(ev.tipo, (recursos ?? null) as string[] | null);
+      if (!gate.ok) throw new Error(gate.error);
+    }
+  }
+  if (ev.tipo === "VENDA_REGISTRADA") await processVenda(supabase, ev, ctx);
   else if (ev.tipo === "CAIXA_ABERTO") await processCaixaAberto(supabase, ev);
   else if (ev.tipo === "CAIXA_FECHADO") await processCaixaFechado(supabase, ev);
   else if (ev.tipo === "MOVIMENTO_CAIXA") await processMovimentoCaixa(supabase, ev);

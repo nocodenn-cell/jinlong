@@ -163,8 +163,9 @@ export const ADMIN_V2_DESTINATIONS: readonly AdminV2NavDestination[] = [
       ROUTES.admin.funcionarios,
       ROUTES.admin.categoriasFinanceiras,
       ROUTES.admin.suspensao,
+      ROUTES.admin.assinatura,
     ],
-    hint: 'Dados da loja, funcionários, categorias financeiras e suspensão de vendas (abas na página).',
+    hint: 'Dados da loja, funcionários, categorias financeiras, suspensão de vendas e assinatura (abas na página).',
   },
 ] as const
 

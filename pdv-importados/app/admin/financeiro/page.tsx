@@ -2,6 +2,7 @@
  * FastProduct Admin — Financeiro unificado (Receber + Pagar + Fiscal)
  */
 
+import { bloqueioPorPlano } from '@/lib/cobranca/bloqueioPorPlano'
 import { Suspense } from 'react'
 import { carregarFinanceiroLoja } from './financeiroLojaActions'
 import { FinanceiroHubNavShell } from '@/components/ui/admin-v2/FinanceiroHubNavShell'
@@ -49,6 +50,8 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 type PageProps = { searchParams?: Promise<SearchParams> }
 
 export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
+  const bloqueio = await bloqueioPorPlano('financeiro')
+  if (bloqueio) return bloqueio
   const { session } = await loadAdminContext({
     pathname: ROUTES.admin.financeiro,
     resource: `route:${ROUTES.admin.financeiro}`,
