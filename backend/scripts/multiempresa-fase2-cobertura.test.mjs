@@ -91,7 +91,7 @@ await t('enumeração: RPC SECURITY DEFINER exposta a authenticated está envelo
     && !RPC_PENDENTES[x.proname]).map((x) => x.proname)
   assert.deepEqual(soltas, [], `RPCs sem envelope nem pendência: ${soltas.join(', ')}`)
   for (const x of r.rows.filter((y) => y.c.startsWith('Envelope multiempresa'))) {
-    assert.match(x.prosrc, /fp_assert_loja/, `${x.proname}: envelope sem asserção`)
+    assert.match(x.prosrc, /fp_assert_(loja|produto)/, `${x.proname}: envelope sem asserção`)
   }
   const nInternas = (await db.query(`SELECT count(*)::int n FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
     WHERE n.nspname = 'internal' AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
@@ -228,7 +228,8 @@ await t('rollback remove guardas/envelopes, devolve as RPCs originais, e a migra
   const rb4 = await readFile(new URL('../supabase/rollback/20261019160000_multiempresa_fase4_desempenho_guardas.rollback.sql', import.meta.url), 'utf8')
   const mig4 = await readFile(new URL('../supabase/migrations/20261019160000_multiempresa_fase4_desempenho_guardas.sql', import.meta.url), 'utf8')
   const nEnv = (await db.query(`SELECT count(*)::int n FROM internal.fp_rpc_envelopes`)).rows[0].n
-  await db.exec(rb4) // fase 4 sai primeiro
+  await db.exec(await readFile(new URL('../supabase/rollback/20261019170000_multiempresa_fase5_catalogo_empresa.rollback.sql', import.meta.url), 'utf8')) // fase 5 sai primeiro
+  await db.exec(rb4) // depois a fase 4
   await db.exec(rb3) // fase 3 sai antes da fase 2
   await db.exec(rb)
   const g = (await db.query(`SELECT count(*)::int n FROM pg_policy WHERE polname = 'tenant_guard' AND polrelid::regclass::text NOT IN ('fornecedores','contas_receber','itens_venda')`)).rows[0].n
@@ -241,6 +242,7 @@ await t('rollback remove guardas/envelopes, devolve as RPCs originais, e a migra
   await db.exec(mig)
   await db.exec(mig3)
   await db.exec(mig4)
+  await db.exec(await readFile(new URL('../supabase/migrations/20261019170000_multiempresa_fase5_catalogo_empresa.sql', import.meta.url), 'utf8'))
   assert.equal((await db.query(`SELECT count(*)::int n FROM internal.fp_rpc_envelopes`)).rows[0].n, nEnv)
 })
 

@@ -11,6 +11,8 @@
 --  * guardas de produtos, precos_atacado, historico_precos_produto, historico_tiers_crud;
 --  * envelopes de RPC com p_produto_id passam a usar public.fp_assert_produto;
 --  * transferir_estoque_seguro: exige origem + mesma empresa (destino não precisa estar no escopo).
+--  * fp_assert_loja (envelopes): só recusa loja de OUTRA EMPRESA. Dentro da mesma empresa o corpo
+--    original decide, com os mesmos códigos de erro de antes (cliente 1 inalterado).
 -- Originais guardados em internal.fp_fase5_guardas / internal.fp_fase5_envelopes.
 
 CREATE OR REPLACE VIEW fp_guarda.produto_empresa AS
@@ -36,6 +38,31 @@ CREATE TABLE IF NOT EXISTS internal.fp_fase5_guardas (
   tabela text PRIMARY KEY, qual text, with_check text, em timestamptz NOT NULL DEFAULT now());
 CREATE TABLE IF NOT EXISTS internal.fp_fase5_envelopes (
   assinatura text PRIMARY KEY, definicao_original text NOT NULL, em timestamptz NOT NULL DEFAULT now());
+
+INSERT INTO internal.fp_fase5_envelopes (assinatura, definicao_original)
+  SELECT 'public.fp_assert_loja(uuid, boolean, text)', pg_get_functiondef('public.fp_assert_loja(uuid, boolean, text)'::regprocedure)
+  ON CONFLICT (assinatura) DO NOTHING;
+
+CREATE OR REPLACE FUNCTION public.fp_assert_loja(p_loja uuid, p_direta boolean, p_rotulo text)
+RETURNS boolean LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $fn$
+BEGIN
+  IF internal.fp_contexto_servidor() THEN RETURN true; END IF;
+  IF p_loja IS NULL THEN
+    IF NOT p_direta THEN RETURN true; END IF; -- entidade inexistente: o corpo original decide (não-encontrado)
+    IF public.fp_admin_legado() OR ((SELECT count(*) FROM public.empresas) <= 1 AND public.fp_pode_loja_nula(NULL)) THEN
+      RETURN true;
+    END IF;
+    RAISE EXCEPTION 'ACESSO_LOJA_OBRIGATORIA: %', p_rotulo USING ERRCODE = '42501';
+  END IF;
+  -- loja no escopo, ADMIN legado, ou loja da MESMA empresa (o corpo original aplica as regras por loja)
+  IF public.fp_pode_loja(p_loja, NULL)
+     OR public.fp_empresa_da_loja(p_loja) = ANY (public.fp_empresas_arr()) THEN
+    RETURN true;
+  END IF;
+  -- loja inexistente: o corpo original decide (não-encontrado), como antes
+  IF NOT EXISTS (SELECT 1 FROM public.lojas WHERE id = p_loja) THEN RETURN true; END IF;
+  RAISE EXCEPTION 'ACESSO_LOJA_NEGADO: %', p_rotulo USING ERRCODE = '42501';
+END $fn$;
 
 DO $$
 DECLARE

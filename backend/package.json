@@ -38,6 +38,7 @@
     "test:multiempresa-fase2": "node scripts/multiempresa-fase2-cobertura.test.mjs",
     "test:multiempresa-fase3": "node scripts/multiempresa-fase3-config.test.mjs",
     "test:multiempresa-fase4": "node scripts/multiempresa-fase4-desempenho.test.mjs",
+    "test:multiempresa-fase5": "node scripts/multiempresa-fase5-catalogo.test.mjs",
     "test:cobranca": "node scripts/cobranca-planos-trial.test.mjs",
     "test:asaas-webhook": "deno test --allow-env supabase/functions/asaas-webhook/handler.test.ts supabase/functions/sync-outbox/planGate.test.ts"
   },
