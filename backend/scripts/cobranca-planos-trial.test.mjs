@@ -407,7 +407,7 @@ await t('suspensão por inadimplência bloqueia venda web E replay offline (sync
 const DEV_C = 'dd000003-0000-4000-8000-000000000001'
 const DEV_A = 'dd000001-0000-4000-8000-000000000001'
 await db.exec(`INSERT INTO public.pdv_dispositivos (id, empresa_id, loja_id, device_fingerprint, sync_secret, ativado_em, ultimo_sync_em) VALUES
-  ('${DEV_C}', '${E3}', '${LC}', 'fp-dev-c', repeat('s', 48), now() - interval '10 days', now() - interval '2 hours'),
+  ('${DEV_C}', '${E3}', '${LC}', 'fp-dev-c', repeat('s', 48), now() - interval '10 days', NULL),
   ('${DEV_A}', '${E1}', '${LA}', 'fp-dev-a', repeat('s', 48), now() - interval '10 days', now() - interval '2 hours')`)
 const liberar = (dev, venda, em) => q(`SELECT public.cobranca_liberar_venda_offline($1, $2, ${em}) r`, [dev, venda]).then((r) => r[0].r)
 const vendaId = (n) => `ee000000-0000-4000-8000-${String(n).padStart(12, '0')}`
@@ -417,45 +417,71 @@ const vendaSRid = (id, cx) => (async () => {
   finally { await db.exec('ROLLBACK') }
 })()
 
-await t('offline: venda ANTES da suspensão é aceita no sync; depois da suspensão, retroagida além da janela, autorização vencida ou após o prazo de envio é recusada', async () => {
+const toque = (dev) => db.exec(`UPDATE public.pdv_dispositivos SET ultimo_sync_em = clock_timestamp() WHERE id = '${dev}'`)
+const ts = async (sql) => (await q(`SELECT (${sql})::text t`))[0].t
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
+await t('offline: autorização emitida pelo SERVIDOR a cada sync (relógio do servidor, 1 por intervalo, nenhuma com a empresa suspensa)', async () => {
+  await toque(DEV_C); await toque(DEV_C)
+  const r = await q(`SELECT count(*)::int n, bool_and(expira_em - emitida_em = interval '72 hours') ok FROM saas.pdv_autorizacoes_offline WHERE dispositivo_id = '${DEV_C}'`)
+  assert.deepEqual(r[0], { n: 1, ok: true })
+})
+
+await t('offline: venda ANTES da suspensão é aceita (idempotente); depois da suspensão, antes da autorização, fora de ordem, id reaproveitado ou após o prazo de envio é recusada', async () => {
+  const autEm = await ts(`SELECT emitida_em FROM saas.pdv_autorizacoes_offline WHERE dispositivo_id = '${DEV_C}'`)
+  await sleep(30)
+  const vendaAntes1 = await ts('clock_timestamp()'); await sleep(20)
+  const vendaAntes2 = await ts('clock_timestamp()'); await sleep(20)
   await evento('o1', 'PAYMENT_OVERDUE', { payment: { id: 'payOff', subscription: 'sub_C', value: 179 } })
   await q(`SELECT public.cobranca_processar_vencimentos(now() + interval '10 days')`)
   assert.equal(await cfg(E3, 'vendas_suspensas'), 'true')
-  assert.ok((await q(`SELECT suspensa_em FROM saas.assinaturas WHERE empresa_id = '${E3}'`))[0].suspensa_em, 'suspensa_em marcada')
-  // PDV volta a falar com o servidor (touch do sync-outbox) ⇒ ciência da suspensão registrada
-  await db.exec(`UPDATE public.pdv_dispositivos SET ultimo_sync_em = clock_timestamp() + interval '1 second' WHERE id = '${DEV_C}'`)
-  const c = (await q(`SELECT ultimo_contato_antes < now() - interval '1 hour' ok FROM saas.dispositivo_ciencia_suspensao WHERE dispositivo_id = '${DEV_C}'`))[0]
-  assert.equal(c.ok, true)
+  const tS = await ts(`SELECT suspensa_em FROM saas.assinaturas WHERE empresa_id = '${E3}'`)
+  assert.ok(tS > vendaAntes2)
+  // PDV volta a falar com o servidor: ciência registrada e NENHUMA autorização nova
+  await sleep(20); await toque(DEV_C)
+  assert.equal((await q(`SELECT count(*)::int n FROM saas.dispositivo_ciencia_suspensao WHERE dispositivo_id = '${DEV_C}'`))[0].n, 1)
+  assert.equal((await q(`SELECT count(*)::int n FROM saas.pdv_autorizacoes_offline WHERE dispositivo_id = '${DEV_C}' AND emitida_em > '${tS}'`))[0].n, 0)
+  const lib = (id, em) => liberar(DEV_C, id, `'${em}'::timestamptz`)
 
-  // 1) feita 1h antes da suspensão: liberada e o gatilho aceita
-  assert.deepEqual(await liberar(DEV_C, vendaId(1), `now() - interval '1 hour'`), { liberada: true })
-  await vendaSRid(vendaId(1), CXC)
-  // 2) feita depois da suspensão: recusada
-  assert.equal((await liberar(DEV_C, vendaId(2), `now() + interval '1 minute'`)).motivo, 'VENDA_APOS_SUSPENSAO')
+  // 1) pré-suspensão, dentro da autorização: aceita; repetir = idempotente (1 venda só)
+  assert.equal((await lib(vendaId(1), vendaAntes1)).liberada, true)
+  assert.deepEqual(await lib(vendaId(1), vendaAntes1), { liberada: true, idempotente: true })
+  await db.exec(`INSERT INTO public.vendas (id, caixa_id, total_bruto, total_liquido, forma_pagamento) VALUES ('${vendaId(1)}', '${CXC}', 1, 1, 'DINHEIRO')`)
+  assert.equal((await q(`SELECT count(*)::int n FROM public.vendas WHERE id = '${vendaId(1)}'`))[0].n, 1)
+  // 2) id reaproveitado com outra hora (adulteração) ou por outro dispositivo: recusado
+  assert.equal((await lib(vendaId(1), vendaAntes2)).motivo, 'VENDA_ID_REUTILIZADO')
+  assert.equal((await liberar(DEV_A, vendaId(1), `'${vendaAntes1}'::timestamptz`)).motivo, 'VENDA_ID_REUTILIZADO')
+  // 3) depois da suspensão (relógio do PC adiantado ou venda nova): recusada
+  assert.equal((await lib(vendaId(2), await ts(`'${tS}'::timestamptz + interval '1 second'`))).motivo, 'VENDA_APOS_SUSPENSAO')
   await assert.rejects(vendaSRid(vendaId(2), CXC), /VENDAS_SUSPENSAS/)
-  // 3) retroagida além da janela offline (72h): recusada
-  assert.equal((await liberar(DEV_C, vendaId(3), `now() - interval '100 hours'`)).motivo, 'VENDA_FORA_DA_JANELA_OFFLINE')
+  // 4) retroagida para antes da autorização do servidor (relógio do PC atrasado): recusada
+  assert.equal((await lib(vendaId(3), await ts(`'${autEm}'::timestamptz - interval '1 hour'`))).motivo, 'SEM_AUTORIZACAO_OFFLINE_VALIDA')
   await assert.rejects(vendaSRid(vendaId(3), CXC), /VENDAS_SUSPENSAS/)
-  // 4) autorização offline já vencida quando vendeu (último contato 90h antes; validade 72h)
-  await db.exec(`UPDATE saas.dispositivo_ciencia_suspensao SET ultimo_contato_antes = now() - interval '90 hours' WHERE dispositivo_id = '${DEV_C}'`)
-  assert.equal((await liberar(DEV_C, vendaId(4), `now() - interval '10 hours'`)).motivo, 'AUTORIZACAO_OFFLINE_EXPIRADA')
-  await db.exec(`UPDATE saas.dispositivo_ciencia_suspensao SET ultimo_contato_antes = now() - interval '2 hours' WHERE dispositivo_id = '${DEV_C}'`)
-  // 5) dispositivo já sabia da suspensão há mais que o prazo de envio (60 min): relógio adulterado não ajuda
+  // 5) autorização vencida na hora da venda
+  await db.exec(`UPDATE saas.pdv_autorizacoes_offline SET emitida_em = emitida_em - interval '100 hours', expira_em = emitida_em - interval '28 hours' WHERE dispositivo_id = '${DEV_C}'`)
+  assert.equal((await lib(vendaId(4), vendaAntes2)).motivo, 'SEM_AUTORIZACAO_OFFLINE_VALIDA')
+  await db.exec(`UPDATE saas.pdv_autorizacoes_offline SET emitida_em = '${autEm}', expira_em = '${autEm}'::timestamptz + interval '72 hours' WHERE dispositivo_id = '${DEV_C}'`)
+  // 6) monotonia: depois de liberar a venda das t2, uma "inserida no passado" (t1+) é recusada
+  assert.equal((await lib(vendaId(5), vendaAntes2)).liberada, true)
+  await vendaSRid(vendaId(5), CXC)
+  assert.equal((await lib(vendaId(6), vendaAntes1)).motivo, 'VENDA_FORA_DE_ORDEM')
+  // 7) PDV sabia da suspensão há mais que o prazo de envio (60 min): nada mais entra
   await db.exec(`UPDATE saas.dispositivo_ciencia_suspensao SET ciente_em = now() - interval '2 hours' WHERE dispositivo_id = '${DEV_C}'`)
-  assert.equal((await liberar(DEV_C, vendaId(5), `now() - interval '1 hour'`)).motivo, 'PRAZO_DE_ENVIO_EXPIRADO')
-  await assert.rejects(vendaSRid(vendaId(5), CXC), /VENDAS_SUSPENSAS/)
-  // 6) venda web continua bloqueada; liberação não vale para caixa de outra empresa
+  assert.equal((await lib(vendaId(7), vendaAntes2)).motivo, 'PRAZO_DE_ENVIO_EXPIRADO')
+  await assert.rejects(vendaSRid(vendaId(7), CXC), /VENDAS_SUSPENSAS/)
+  // 8) venda web continua bloqueada; liberação de outra empresa não vale neste caixa; dispositivo revogado não libera
   await assert.rejects(vendaWeb(DONO_C, CXC), /VENDAS_SUSPENSAS|permission denied|row-level/)
-  await db.exec(`INSERT INTO saas.vendas_offline_liberadas (venda_id, empresa_id, dispositivo_id, venda_em) VALUES ('${vendaId(6)}', '${E1}', '${DEV_A}', now())`)
-  await assert.rejects(vendaSRid(vendaId(6), CXC), /VENDAS_SUSPENSAS/)
-  // dispositivo revogado não libera
+  await db.exec(`INSERT INTO saas.vendas_offline_liberadas (venda_id, empresa_id, dispositivo_id, venda_em) VALUES ('${vendaId(8)}', '${E1}', '${DEV_A}', now())`)
+  await assert.rejects(vendaSRid(vendaId(8), CXC), /VENDAS_SUSPENSAS/)
   await db.exec(`UPDATE public.pdv_dispositivos SET ativo = false WHERE id = '${DEV_C}'`)
-  assert.equal((await liberar(DEV_C, vendaId(7), `now() - interval '1 hour'`)).motivo, 'DISPOSITIVO_INATIVO')
+  assert.equal((await lib(vendaId(9), vendaAntes2)).motivo, 'DISPOSITIVO_INATIVO')
   await db.exec(`UPDATE public.pdv_dispositivos SET ativo = true WHERE id = '${DEV_C}'`)
-  // pagamento reativa: suspensa_em limpa e venda nova entra
+  // pagamento reativa: suspensa_em limpa, venda nova entra e o próximo sync volta a emitir autorização
   await evento('o2', 'PAYMENT_RECEIVED', { payment: { id: 'payOff', subscription: 'sub_C', value: 179 } })
   assert.equal((await q(`SELECT suspensa_em FROM saas.assinaturas WHERE empresa_id = '${E3}'`))[0].suspensa_em, null)
-  await vendaSRid(vendaId(8), CXC)
+  await vendaSRid(vendaId(13), CXC)
+  await db.exec(`DELETE FROM saas.pdv_autorizacoes_offline WHERE dispositivo_id = '${DEV_C}'`); await toque(DEV_C)
+  assert.equal((await q(`SELECT count(*)::int n FROM saas.pdv_autorizacoes_offline WHERE dispositivo_id = '${DEV_C}'`))[0].n, 1)
 })
 
 await t('offline: suspensão MANUAL do gerente não ganha exceção; Empresa 1 (sem assinatura) nunca é afetada', async () => {
