@@ -9,6 +9,7 @@ const LF = 'a0000009-0000-4000-8000-000000000009' // filial da Empresa 1
 const LB = 'b0000001-0000-4000-8000-000000000001'
 const PA = 'c5000001-0000-4000-8000-000000000001'
 const PB = 'c5000002-0000-4000-8000-000000000002'
+const PF = 'c5000003-0000-4000-8000-000000000003' // produto cadastrado na filial (modelo legado: catálogo por loja)
 const U = {
   gerA: '50000000-0000-4000-8000-000000000001', gerF: '50000000-0000-4000-8000-000000000002',
   opF: '50000000-0000-4000-8000-000000000003', gerB: '50000000-0000-4000-8000-000000000004',
@@ -30,6 +31,8 @@ await db.exec(`
     ('${U.opF}', 'Op Filial', 'OPERADOR', '${LF}'), ('${U.gerB}', 'Ger B', 'GERENTE', '${LB}');
   INSERT INTO public.produtos (id, nome, preco_varejo, origem, codigo_barras) VALUES ('${PA}', 'Prod catálogo A', 10, 'china_manual', '7895000000001');
   INSERT INTO public.produtos (id, nome, preco_varejo, origem, loja_id, codigo_barras) VALUES ('${PB}', 'Prod B', 20, 'china_manual', '${LB}', '7895000000002');
+  INSERT INTO public.produtos (id, nome, preco_varejo, origem, loja_id, codigo_barras) VALUES ('${PF}', 'Prod filial', 15, 'china_manual', '${LF}', '7895000000003');
+  INSERT INTO public.estoque (produto_id, loja_id, quantidade_atual) VALUES ('${PF}', '${LF}', 8);
   INSERT INTO public.estoque (produto_id, loja_id, quantidade_atual) VALUES ('${PA}', '${LA}', 50), ('${PA}', '${LF}', 10), ('${PB}', '${LB}', 5);
 `).catch((e) => { console.error('semente falhou:', e.message); process.exit(1) })
 
@@ -83,6 +86,29 @@ await t('fp_assert_loja: loja de outra empresa é negada; mesma empresa delega a
   assert.match(await erro(U.gerF, `SELECT public.fp_assert_loja($1, true, 't')`, [LB]) ?? 'aceito', /ACESSO_LOJA_NEGADO/)
   assert.equal(await erro(U.gerF, `SELECT public.fp_assert_loja($1, true, 't')`, [LA]), null)
   assert.match(await transf(U.gerB, LB, LA, PB, 'f5-z') ?? 'aceito', /ACESSO|EMPRESA/, 'Empresa B não transfere para a Empresa A')
+})
+await t('OPERADOR da filial: caminhos do PDV (catálogo eq loja_id, estoque, calcular_preco_produto, baixa)', async () => {
+  const cat = await q(U.opF, `SELECT id FROM public.produtos WHERE loja_id = $1`, [LF]) // caixaCatalogo.impl.ts
+  assert.deepEqual(cat.map((r) => r.id), [PF])
+  const est = await q(U.opF, `SELECT quantidade_atual FROM public.estoque WHERE loja_id = $1 AND produto_id = $2`, [LF, PF])
+  assert.equal(Number(est[0]?.quantidade_atual), 8)
+  const preco = await erro(U.opF, `SELECT public.calcular_preco_produto(p_produto_id => $1, p_loja_id => $2, p_quantidade => 1)`, [PF, LF])
+  assert.doesNotMatch(preco ?? '', /ACESSO_LOJA/, `preço: ${preco}`) // caixaPrecoProduto.impl.ts
+  assert.equal(await assertProd(U.opF, PF), null)
+  assert.notEqual((await como(U.opF, async () => (await db.query(`SELECT * FROM public.decrementar_estoque_seguro(p_produto_id => $1, p_quantidade => 1, p_venda_id => NULL)`, [PF])).rows))[0]?.mensagem, 'ACESSO_LOJA_NEGADO')
+})
+await t('Empresa B não lê nem opera produto/estoque da Empresa A (SELECT e RPC)', async () => {
+  assert.equal((await q(U.gerB, `SELECT count(*)::int n FROM public.produtos WHERE id IN ($1, $2)`, [PA, PF]))[0].n, 0)
+  assert.equal((await q(U.gerB, `SELECT count(*)::int n FROM public.estoque WHERE loja_id IN ($1, $2)`, [LA, LF]))[0].n, 0)
+  assert.match(await decr(U.gerB, PF) ?? 'aceito', /ACESSO_LOJA_NEGADO/)
+})
+await t('usuário INATIVO: corpo original recusa na própria empresa; outra empresa segue negada no envelope', async () => {
+  await db.exec(`UPDATE public.usuarios SET ativo = false WHERE id = '${U.gerB}'`)
+  try {
+    assert.match(await assertProd(U.gerB, PF) ?? 'aceito', /ACESSO_LOJA_NEGADO/)
+    assert.match(await erro(U.gerB, `SELECT public.fp_assert_loja($1, true, 't')`, [LA]) ?? 'aceito', /ACESSO_LOJA_NEGADO/)
+    assert.equal(await erro(U.gerB, `SELECT public.fp_assert_loja($1, true, 't')`, [LB]), null)
+  } finally { await db.exec(`UPDATE public.usuarios SET ativo = true WHERE id = '${U.gerB}'`) }
 })
 await t('rollback da fase 4 se recusa com a fase 5 instalada; rollback 5 restaura e reaplica', async () => {
   const rd = (f) => readFile(new URL(f, import.meta.url), 'utf8')

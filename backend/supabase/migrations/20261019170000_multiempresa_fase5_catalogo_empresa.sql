@@ -20,6 +20,16 @@ CREATE OR REPLACE VIEW fp_guarda.produto_empresa AS
 REVOKE ALL ON fp_guarda.produto_empresa FROM PUBLIC;
 GRANT SELECT ON fp_guarda.produto_empresa TO authenticated;
 
+CREATE OR REPLACE FUNCTION internal.fp_empresa_usuario_inativo()
+RETURNS uuid LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $fn$
+  -- usuário INATIVO: empresa da sua loja legada. Envelopes deixam o corpo original recusá-lo com o
+  -- código de antes (ex.: LIQUIDACAO_PERFIL), sem abrir outra empresa.
+  SELECT l.empresa_id FROM public.usuarios u JOIN public.lojas l ON l.id = u.loja_id
+   WHERE u.id = (SELECT auth.uid()) AND NOT u.ativo;
+$fn$;
+REVOKE ALL ON FUNCTION internal.fp_empresa_usuario_inativo() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION internal.fp_empresa_usuario_inativo() TO authenticated, service_role;
+
 CREATE OR REPLACE FUNCTION public.fp_assert_produto(p_produto uuid, p_rotulo text)
 RETURNS boolean LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE v_empresa uuid; v_existe boolean;
@@ -28,7 +38,8 @@ BEGIN
   SELECT true, l.empresa_id INTO v_existe, v_empresa
     FROM public.produtos p LEFT JOIN public.lojas l ON l.id = p.loja_id WHERE p.id = p_produto;
   IF v_existe IS NULL THEN RETURN true; END IF; -- inexistente: o corpo original decide
-  IF public.fp_admin_legado() OR v_empresa = ANY (public.fp_empresas_arr()) THEN RETURN true; END IF;
+  IF public.fp_admin_legado() OR v_empresa = ANY (public.fp_empresas_arr())
+     OR v_empresa = internal.fp_empresa_usuario_inativo() THEN RETURN true; END IF;
   RAISE EXCEPTION 'ACESSO_LOJA_NEGADO: %', p_rotulo USING ERRCODE = '42501';
 END $$;
 REVOKE ALL ON FUNCTION public.fp_assert_produto(uuid, text) FROM PUBLIC, anon;
@@ -56,7 +67,8 @@ BEGIN
   END IF;
   -- loja no escopo, ADMIN legado, ou loja da MESMA empresa (o corpo original aplica as regras por loja)
   IF public.fp_pode_loja(p_loja, NULL)
-     OR public.fp_empresa_da_loja(p_loja) = ANY (public.fp_empresas_arr()) THEN
+     OR public.fp_empresa_da_loja(p_loja) = ANY (public.fp_empresas_arr())
+     OR public.fp_empresa_da_loja(p_loja) = internal.fp_empresa_usuario_inativo() THEN
     RETURN true;
   END IF;
   -- loja inexistente: o corpo original decide (não-encontrado), como antes
