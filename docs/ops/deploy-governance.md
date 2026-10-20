@@ -36,8 +36,8 @@ timestamp novo faria o próximo merge aplicá-la automaticamente e quebrar o PDV
   `backend/supabase/config.toml` ou o manifesto exige o label `deploy-prod:aprovado`.
 - CODEOWNERS para `config.toml`, o manifesto e este documento.
 
-## Configurações externas (exigem autorização; NÃO aplicadas)
-1. **Supabase → Project Settings → Integrations → GitHub → desligar "Deploy to production"** (manter a
+## Configurações externas
+1. ✅ **Feito pelo usuário em 2026-10-20 ~16:10 BRT.** **Supabase → Project Settings → Integrations → GitHub → desligar "Deploy to production"** (manter a
    integração conectada, se quiser os checks em PR). Esta é a única medida que impede tecnicamente
    o deploy automático de migrations e de Edge Functions em merges. Com ela, a liberação de 20261010120000 e
    a publicação de edges passam a ser exclusivamente manuais.
