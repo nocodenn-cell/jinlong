@@ -184,6 +184,7 @@ await t('rollback da fase 3 volta a config global e a migration reaplica', async
   const mig = await readFile(new URL('../supabase/migrations/20261019150000_multiempresa_fase3_config.sql', import.meta.url), 'utf8')
   const rb4 = await readFile(new URL('../supabase/rollback/20261019160000_multiempresa_fase4_desempenho_guardas.rollback.sql', import.meta.url), 'utf8')
   const mig4 = await readFile(new URL('../supabase/migrations/20261019160000_multiempresa_fase4_desempenho_guardas.sql', import.meta.url), 'utf8')
+  await db.exec(await readFile(new URL('../supabase/rollback/20261019170000_multiempresa_fase5_catalogo_empresa.rollback.sql', import.meta.url), 'utf8')) // fase 5 sai antes da 4
   await db.exec(rb4) // ordem obrigatória: fase 4 sai antes
   await db.exec(rb)
   const src = (await db.query(`SELECT prosrc FROM pg_proc WHERE proname = 'obter_limite_sangria_sem_gerente'`)).rows[0].prosrc
@@ -192,6 +193,7 @@ await t('rollback da fase 3 volta a config global e a migration reaplica', async
   assert.equal((await db.query(`SELECT count(*)::int n FROM information_schema.columns WHERE table_name = 'pdv_config' AND column_name = 'empresa_id'`)).rows[0].n, 0)
   await db.exec(mig)
   await db.exec(mig4)
+  await db.exec(await readFile(new URL('../supabase/migrations/20261019170000_multiempresa_fase5_catalogo_empresa.sql', import.meta.url), 'utf8'))
   assert.equal((await db.query(`SELECT count(*)::int n FROM internal.fp_funcoes_reescritas WHERE NOT aplicada`)).rows[0].n, 0)
   assert.equal((await db.query(`SELECT count(*)::int n FROM public.configuracoes_gerais WHERE empresa_id = '${E2}'`)).rows[0].n, 8)
 })

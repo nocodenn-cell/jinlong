@@ -55,7 +55,7 @@ await t('guarda criada depois por fp_aplicar_guarda já nasce otimizada (e o rol
 await t('rollback das fases 3/2 se recusa a rodar com a fase 4 instalada', async () => {
   for (const f of ['20261019150000_multiempresa_fase3_config', '20261019140000_multiempresa_fase2_guardas']) {
     const rb = await readFile(new URL(`../supabase/rollback/${f}.rollback.sql`, import.meta.url), 'utf8')
-    await assert.rejects(db.exec(rb), /rollback da fase 4/)
+    await assert.rejects(db.exec(rb), /rollback da fase [45]/)
     await db.exec('ROLLBACK').catch(() => {})
   }
   assert.ok((await db.query(`SELECT to_regclass('internal.fp_guardas_originais') r`)).rows[0].r)
@@ -63,6 +63,7 @@ await t('rollback das fases 3/2 se recusa a rodar com a fase 4 instalada', async
 await t('rollback restaura as guardas originais e a migration reaplica', async () => {
   const rb = await readFile(new URL('../supabase/rollback/20261019160000_multiempresa_fase4_desempenho_guardas.rollback.sql', import.meta.url), 'utf8')
   const mig = await readFile(new URL('../supabase/migrations/20261019160000_multiempresa_fase4_desempenho_guardas.sql', import.meta.url), 'utf8')
+  await db.exec(await readFile(new URL('../supabase/rollback/20261019170000_multiempresa_fase5_catalogo_empresa.rollback.sql', import.meta.url), 'utf8')) // fase 5 sai antes da 4
   await db.exec(rb)
   assert.ok((await lentas()).length >= 70)
   assert.ok((await lentas()).includes('fp_t_nova'), 'guarda criada depois também volta à forma original')
@@ -70,6 +71,7 @@ await t('rollback restaura as guardas originais e a migration reaplica', async (
   assert.doesNotMatch(def, /fp_otimizar_guarda/, 'fp_aplicar_guarda restaurada')
   assert.equal((await db.query(`SELECT count(*)::int n FROM pg_namespace WHERE nspname='fp_guarda'`)).rows[0].n, 0)
   await db.exec(mig)
+  await db.exec(await readFile(new URL('../supabase/migrations/20261019170000_multiempresa_fase5_catalogo_empresa.sql', import.meta.url), 'utf8'))
   assert.deepEqual(await lentas(), [])
 })
 console.log(`\n${pass} testes ok${process.exitCode ? ' — HÁ FALHAS' : ''}`)
