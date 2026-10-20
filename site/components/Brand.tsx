@@ -1,11 +1,14 @@
 import Link from 'next/link'
 import { sitePath, type SiteLocale } from '@/lib/locales'
 
-/** Logo: quadrado verde arredondado (mesma forma do Venddi) com o 金 da marca Jinlong. */
+/** Logo oficial: emblema dourado 金龍 (fundo transparente; lê sobre branco e sobre o rodapé escuro). */
 export function Seal() {
   return (
     <span className="vd-logo" aria-hidden="true">
-      <span lang="zh-CN">金</span>
+      <picture>
+      <source srcSet="/brand/jinlong-logo-64.webp 1x, /brand/jinlong-logo-128.webp 2x" type="image/webp" />
+      <img src="/brand/jinlong-logo-64.png" srcSet="/brand/jinlong-logo-128.png 2x" alt="" width={36} height={36} />
+      </picture>
     </span>
   )
 }

@@ -79,10 +79,8 @@ export const homePt: HomeContent = {
   },
   contact: {
     whatsapp: 'Falar no WhatsApp',
-    wechat: 'Falar no WeChat',
-    wechatIdLabel: 'ID do WeChat',
+    emailLabel: 'E-mail',
     opensNewTab: 'abre em nova aba',
-    soon: 'Canais de contato em breve',
   },
   footer: {
     tagline: 'Seu caixa simples. Sua loja sob controle.',

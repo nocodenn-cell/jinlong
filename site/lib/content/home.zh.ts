@@ -79,10 +79,8 @@ export const homeZh: HomeContent = {
   },
   contact: {
     whatsapp: '通过 WhatsApp 联系',
-    wechat: '通过微信联系',
-    wechatIdLabel: '微信号',
+    emailLabel: '电子邮件',
     opensNewTab: '在新标签页打开',
-    soon: '联系方式即将公布',
   },
   footer: {
     tagline: '收银更简单，门店尽在掌握。',

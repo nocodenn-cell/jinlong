@@ -52,7 +52,7 @@ export function Hero({ locale, content }: { locale: SiteLocale; content: HomeCon
           <h1 id="h-hero">
             {hero.h1.line1}
             <br />
-            <span className="vd-green">{hero.h1.line2}</span>
+            <span className="vd-brand">{hero.h1.line2}</span>
           </h1>
           <p className="vd-hero-lead">{hero.lead}</p>
           <div className="vd-hero-ctas">

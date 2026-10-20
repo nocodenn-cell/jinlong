@@ -28,10 +28,8 @@ export interface TopProduct {
 
 export interface ContactCopy {
   whatsapp: string
-  wechat: string
-  wechatIdLabel: string
+  emailLabel: string
   opensNewTab: string
-  soon: string
 }
 
 export interface HomeContent {

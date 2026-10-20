@@ -16,15 +16,15 @@ export function Dashboard({ content }: { content: HomeContent }) {
             <div className="vd-card">
               <div className="vd-stat-top">
                 <span>{sales.label}</span>
-                <IconTrend size={16} className="vd-green" />
+                <IconTrend size={16} className="vd-brand" />
               </div>
               <p className="vd-stat-value">{sales.value}</p>
-              <p className="vd-stat-note vd-green-text">{sales.note}</p>
+              <p className="vd-stat-note vd-brand-text">{sales.note}</p>
             </div>
             <div className="vd-card">
               <div className="vd-stat-top">
                 <span>{ticket.label}</span>
-                <IconCart size={16} className="vd-green" />
+                <IconCart size={16} className="vd-brand" />
               </div>
               <p className="vd-stat-value">{ticket.value}</p>
               <p className="vd-stat-note">{ticket.note}</p>

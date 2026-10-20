@@ -173,10 +173,19 @@ test('fontes: subset CJK carregado na home em chinês (logo e títulos)', async 
   expect(loaded).toBeGreaterThan(0)
 })
 
-test('sem canais configurados, CTAs de teste levam à seção de contato', async ({ page }) => {
+test('sem WhatsApp configurado, CTAs de teste usam o e-mail (mailto) e não há WeChat', async ({ page }) => {
   await openHome(page, 'pt-BR')
-  await expect(page.locator('.vd-hero a[href="#contato"]')).toHaveCount(1)
-  await expect(page.locator('footer#contato')).toContainText('em breve')
+  await expect(page.locator('.vd-hero a[href^="mailto:naturalcodedevelop@gmail.com"]')).toHaveCount(1)
+  await expect(page.locator('footer#contato')).toContainText('naturalcodedevelop@gmail.com')
+  await expect(page.locator('body')).not.toContainText(/WeChat|微信/)
+})
+
+test('logo oficial no cabeçalho e no rodapé, favicon presente', async ({ page }) => {
+  await openHome(page, 'pt-BR')
+  await expect(page.locator('header .vd-logo img')).toBeVisible()
+  await expect(page.locator('footer .vd-logo img')).toBeVisible()
+  expect(await page.locator('header .vd-logo img').evaluate((img) => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(0)
+  expect((await page.request.get('/icon.png')).status()).toBe(200)
 })
 
 test.describe('largura de menu', () => {

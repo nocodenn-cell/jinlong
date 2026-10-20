@@ -1,48 +1,44 @@
 import type { SiteLocale } from './locales'
 
 /**
- * Canais de atendimento vêm exclusivamente de variáveis de ambiente.
- * Nunca há número, conta ou link embutido no código; valor ausente ou
- * inválido simplesmente não gera canal.
+ * Canais de atendimento.
+ *  - E-mail: endereço oficial definido pelo dono do negócio (sempre presente).
+ *  - WhatsApp: só por variável de ambiente (NEXT_PUBLIC_SITE_WHATSAPP_URL); valor ausente
+ *    ou inválido não gera canal.
+ * WeChat não é usado no site.
  */
 
-export type ContactChannelId = 'whatsapp' | 'wechat'
+export const CONTACT_EMAIL = 'naturalcodedevelop@gmail.com'
+
+export type ContactChannelId = 'whatsapp' | 'email'
 
 export type ContactChannel =
   | { id: 'whatsapp'; href: string }
-  | { id: 'wechat'; wechatId: string }
+  | { id: 'email'; href: string; address: string }
 
 type SiteEnv = Readonly<Record<string, string | undefined>>
 
 const WHATSAPP_URL = /^https:\/\/(wa\.me\/\d{8,15}|api\.whatsapp\.com\/send\?phone=\d{8,15})([?&][\w=%.+-]*)?$/
-const WECHAT_ID = /^[A-Za-z][-_A-Za-z0-9]{5,19}$/
 
 export function parseWhatsappUrl(raw: string | undefined): string | null {
   const value = raw?.trim()
   return value && WHATSAPP_URL.test(value) ? value : null
 }
 
-export function parseWechatId(raw: string | undefined): string | null {
-  const value = raw?.trim()
-  return value && WECHAT_ID.test(value) ? value : null
+const MAIL_SUBJECT: Record<SiteLocale, string> = {
+  'pt-BR': 'Jinlong: demonstração ou teste de 15 dias',
+  'zh-CN': '金龙：预约演示或15天试用',
 }
 
-function readChannels(env: SiteEnv): ContactChannel[] {
+export function emailHref(locale: SiteLocale): string {
+  return `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(MAIL_SUBJECT[locale])}`
+}
+
+/** WhatsApp (quando configurado) primeiro; e-mail sempre disponível como alternativa. */
+export function getContactChannels(locale: SiteLocale, env: SiteEnv = process.env): ContactChannel[] {
   const channels: ContactChannel[] = []
   const href = parseWhatsappUrl(env.NEXT_PUBLIC_SITE_WHATSAPP_URL)
   if (href) channels.push({ id: 'whatsapp', href })
-  const wechatId = parseWechatId(env.NEXT_PUBLIC_SITE_WECHAT_ID)
-  if (wechatId) channels.push({ id: 'wechat', wechatId })
+  channels.push({ id: 'email', href: emailHref(locale), address: CONTACT_EMAIL })
   return channels
-}
-
-/** Canal principal do idioma primeiro: WhatsApp em pt-BR, WeChat em zh-CN. */
-export function getContactChannels(
-  locale: SiteLocale,
-  env: SiteEnv = process.env
-): ContactChannel[] {
-  const preferred: ContactChannelId = locale === 'zh-CN' ? 'wechat' : 'whatsapp'
-  return readChannels(env).sort(
-    (a, b) => Number(b.id === preferred) - Number(a.id === preferred)
-  )
 }

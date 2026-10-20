@@ -3,7 +3,7 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { getHomeContent } from './content'
 import { CJK_WEIGHTS, cjkCharsByWeight } from './content/displayText'
-import { getContactChannels, parseWechatId, parseWhatsappUrl } from './contactChannels'
+import { CONTACT_EMAIL, getContactChannels, parseWhatsappUrl } from './contactChannels'
 import { isSiteLocale, otherSiteLocale, SITE_LOCALES } from './locales'
 import {
   CLOSING_FIGURES,
@@ -127,27 +127,26 @@ describe('publicação do chinês', () => {
 })
 
 describe('canais de contato', () => {
-  const env = {
-    NEXT_PUBLIC_SITE_WHATSAPP_URL: 'https://wa.me/550000000000',
-    NEXT_PUBLIC_SITE_WECHAT_ID: 'ficticio_teste',
-  }
+  const env = { NEXT_PUBLIC_SITE_WHATSAPP_URL: 'https://wa.me/550000000000' }
 
-  it('sem variáveis não há canais (nada embutido no código)', () => {
-    expect(getContactChannels('pt-BR', {})).toEqual([])
+  it('sem variáveis só há o e-mail oficial (mailto)', () => {
+    const channels = getContactChannels('pt-BR', {})
+    expect(channels.map((c) => c.id)).toEqual(['email'])
+    expect(channels[0]).toMatchObject({ address: CONTACT_EMAIL })
+    expect(channels[0]?.href.startsWith(`mailto:${CONTACT_EMAIL}?subject=`)).toBe(true)
   })
 
-  it('ordena o canal principal conforme o idioma', () => {
-    expect(getContactChannels('pt-BR', env)[0]?.id).toBe('whatsapp')
-    expect(getContactChannels('zh-CN', env)[0]?.id).toBe('wechat')
+  it('WhatsApp configurado vem primeiro; e-mail continua disponível; sem WeChat', () => {
+    for (const locale of ['pt-BR', 'zh-CN'] as const) {
+      const ids = getContactChannels(locale, { ...env, NEXT_PUBLIC_SITE_WECHAT_ID: 'ficticio_teste' }).map((c) => c.id)
+      expect(ids).toEqual(['whatsapp', 'email'])
+    }
   })
 
   it('rejeita URLs e IDs inválidos', () => {
     expect(parseWhatsappUrl('http://wa.me/550000000000')).toBeNull()
     expect(parseWhatsappUrl('https://evil.example/wa.me/550000000000')).toBeNull()
     expect(parseWhatsappUrl('javascript:alert(1)')).toBeNull()
-    expect(parseWechatId('<script>')).toBeNull()
-    expect(parseWechatId('ab')).toBeNull()
-    expect(parseWechatId(undefined)).toBeNull()
   })
 })
 

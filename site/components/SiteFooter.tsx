@@ -6,12 +6,9 @@ import { Brand } from './Brand'
 
 function ContactList({ locale, content }: { locale: SiteLocale; content: HomeContent }) {
   const { contact } = content
-  const channels = getContactChannels(locale)
-  // TODO(contato): WhatsApp/WeChat só aparecem com NEXT_PUBLIC_SITE_WHATSAPP_URL / NEXT_PUBLIC_SITE_WECHAT_ID.
-  if (channels.length === 0) return <li>{contact.soon}</li>
   return (
     <>
-      {channels.map((channel) =>
+      {getContactChannels(locale).map((channel) =>
         channel.id === 'whatsapp' ? (
           <li key="whatsapp">
             <a className="jl-contact-link" href={channel.href} target="_blank" rel="noopener noreferrer">
@@ -20,9 +17,11 @@ function ContactList({ locale, content }: { locale: SiteLocale; content: HomeCon
             </a>
           </li>
         ) : (
-          <li key="wechat">
-            <span className="jl-wechat-label">{contact.wechatIdLabel}</span>
-            <span className="jl-wechat-id">{channel.wechatId}</span>
+          <li key="email">
+            <span className="jl-contact-label">{contact.emailLabel}</span>
+            <a className="jl-contact-link" href={channel.href}>
+              {channel.address}
+            </a>
           </li>
         )
       )}

@@ -1,17 +1,18 @@
 /**
  * Site comercial Jinlong — layout unificado com o Venddi (mesma empresa).
  * Valores portados das classes Tailwind do Venddi (src/pages/HomePage.tsx) para CSS puro,
- * sem dependência nova. Marca: logo 金 Jinlong. Paleta verde do Venddi.
- * Ajuste de acessibilidade (WCAG AA): texto branco pequeno usa --green-aa em vez de #0EA572.
+ * sem dependência nova. Marca Jinlong: emblema dourado 金龍 e paleta vermelha
+ * (#DC2626 com branco = 4,8:1, WCAG AA); detalhes em dourado.
  */
 
 :root {
-  --green: #0EA572;
-  --green-dark: #087A54;
-  --green-aa: #0A875D;
-  --green-light: #D1FAE5;
-  --mint-from: #F0FDF4;
-  --mint-to: #ECFDF5;
+  --brand: #DC2626;
+  --brand-dark: #991B1B;
+  --brand-text: #B91C1C;
+  --brand-light: #FEE2E2;
+  --tint-from: #FEF2F2;
+  --tint-to: #FFF7ED;
+  --gold: #F5B82E;
   --amber: #F59E0B;
   --amber-text: #B45309;
   --white: #ffffff;
@@ -52,19 +53,21 @@ body.jl { margin: 0; min-height: 100dvh; font-family: var(--font-sans); color: v
 .vd-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 8px; font-weight: 500; white-space: nowrap; transition: all .15s; border: 1px solid transparent; cursor: pointer; }
 .vd-btn--sm { height: 32px; padding: 0 12px; font-size: 12px; line-height: 16px; }
 .vd-btn--lg { height: 48px; padding: 0 24px; font-size: 16px; line-height: 24px; }
-.vd-btn--primary { background: var(--green-aa); color: var(--white); box-shadow: 0 1px 2px rgba(0,0,0,.05); }
-.vd-btn--primary:hover { background: var(--green-dark); }
+.vd-btn--primary { background: var(--brand); color: var(--white); box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+.vd-btn--primary:hover { background: var(--brand-dark); }
 .vd-btn--ghost { color: var(--gray-700); background: transparent; }
 .vd-btn--ghost:hover { background: var(--gray-100); }
 .vd-btn--outline { border-color: var(--gray-300); background: var(--white); color: var(--gray-700); }
 .vd-btn--outline:hover { background: var(--gray-50); }
-.vd-btn--white { background: var(--white); color: var(--green-dark); font-weight: 500; }
+.vd-btn--white { background: var(--white); color: var(--brand-dark); font-weight: 500; }
 .vd-btn--white:hover { background: var(--gray-100); }
 
 /* ---------- Marca ---------- */
 .jl-brand { display: inline-flex; align-items: center; gap: 8px; }
-.vd-logo { width: 32px; height: 32px; border-radius: 8px; background: var(--green); color: var(--white); display: inline-flex; align-items: center; justify-content: center; flex: none; }
-.vd-logo span { font: 900 18px/1 var(--font-cjk); }
+.vd-logo { display: inline-flex; width: 36px; height: 36px; flex: none; }
+.vd-logo picture { display: contents; }
+.vd-logo img { width: 36px; height: 36px; display: block; }
+.vd-footer .vd-logo, .vd-footer .vd-logo img { width: 40px; height: 40px; }
 .vd-wordmark { font-size: 20px; line-height: 28px; font-weight: 700; color: var(--gray-900); }
 
 /* ---------- Cabeçalho ---------- */
@@ -91,12 +94,12 @@ body.jl { margin: 0; min-height: 100dvh; font-family: var(--font-sans); color: v
 .jl-lang .short { display: none; }
 
 /* ---------- Hero ---------- */
-.vd-hero { padding: 80px 0; background: linear-gradient(to bottom right, var(--mint-from), var(--white), var(--mint-to)); }
+.vd-hero { padding: 80px 0; background: linear-gradient(to bottom right, var(--tint-from), var(--white), var(--tint-to)); }
 .vd-hero-grid { display: grid; gap: 48px; align-items: center; }
-.vd-pill { display: inline-flex; align-items: center; gap: 8px; background: var(--green-light); color: var(--green-dark); padding: 8px 16px; border-radius: 999px; font-size: 14px; line-height: 20px; font-weight: 500; margin-bottom: 24px; }
+.vd-pill { display: inline-flex; align-items: center; gap: 8px; background: var(--brand-light); color: var(--brand-dark); padding: 8px 16px; border-radius: 999px; font-size: 14px; line-height: 20px; font-weight: 500; margin-bottom: 24px; }
 .vd-hero h1 { font-size: 36px; line-height: 1.25; font-weight: 700; color: var(--gray-900); margin-bottom: 24px; }
-.vd-green { color: var(--green); }
-.vd-green-text { color: var(--green-dark); }
+.vd-brand { color: var(--brand); }
+.vd-brand-text { color: var(--brand-text); }
 .vd-amber { color: var(--amber); }
 .vd-amber-text { color: var(--amber-text); }
 .vd-hero-lead { font-size: 18px; line-height: 1.625; color: var(--gray-600); margin-bottom: 32px !important; }
@@ -117,15 +120,15 @@ body.jl { margin: 0; min-height: 100dvh; font-family: var(--font-sans); color: v
 .vd-stack { display: grid; gap: 12px; }
 .vd-mock-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; background: var(--gray-50); border-radius: 8px; }
 .vd-row-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.vd-ic-sm { width: 40px; height: 40px; flex: none; border-radius: 8px; background: var(--green-light); color: var(--green); display: flex; align-items: center; justify-content: center; }
+.vd-ic-sm { width: 40px; height: 40px; flex: none; border-radius: 8px; background: var(--brand-light); color: var(--brand); display: flex; align-items: center; justify-content: center; }
 .vd-row-name { font-size: 14px; line-height: 20px; font-weight: 500; color: var(--gray-900); }
 .vd-row-sub { font-size: 12px; line-height: 16px; color: var(--gray-500); }
 .vd-row-price { font-size: 14px; line-height: 20px; font-weight: 600; color: var(--gray-900); white-space: nowrap; }
 .vd-mock-total { border-top: 1px solid var(--gray-200); padding-top: 12px; margin-top: 0; }
 .vd-total-line { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .vd-total-line span { font-size: 14px; color: var(--gray-600); }
-.vd-total-line b { font-size: 24px; line-height: 32px; font-weight: 700; color: var(--green); }
-.vd-mock-finish { display: block; width: 100%; text-align: center; background: var(--green-aa); color: var(--white); padding: 12px 0; border-radius: 8px; font-weight: 600; }
+.vd-total-line b { font-size: 24px; line-height: 32px; font-weight: 700; color: var(--brand); }
+.vd-mock-finish { display: block; width: 100%; text-align: center; background: var(--brand); color: var(--white); padding: 12px 0; border-radius: 8px; font-weight: 600; }
 
 /* ---------- Seções ---------- */
 .vd-section { padding: 80px 0; background: var(--white); }
@@ -138,7 +141,7 @@ body.jl { margin: 0; min-height: 100dvh; font-family: var(--font-sans); color: v
 
 .vd-benefits { display: grid; gap: 32px; }
 .vd-benefit { text-align: center; }
-.vd-ic-lg { width: 64px; height: 64px; border-radius: 16px; background: var(--green-light); color: var(--green); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
+.vd-ic-lg { width: 64px; height: 64px; border-radius: 16px; background: var(--brand-light); color: var(--brand); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
 .vd-benefit h3 { font-size: 18px; line-height: 28px; font-weight: 600; color: var(--gray-900); margin-bottom: 8px; }
 .vd-benefit p { font-size: 14px; line-height: 20px; color: var(--gray-600); }
 @media (min-width: 768px) { .vd-benefits { grid-template-columns: repeat(2, 1fr); } }
@@ -146,7 +149,7 @@ body.jl { margin: 0; min-height: 100dvh; font-family: var(--font-sans); color: v
 
 .vd-steps { display: grid; gap: 32px; list-style: none; margin: 0; padding: 0; }
 .vd-step { background: var(--white); border-radius: 16px; padding: 32px; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
-.vd-num { width: 48px; height: 48px; border-radius: 999px; background: var(--green); color: var(--white); display: flex; align-items: center; justify-content: center; font-size: 20px; line-height: 28px; font-weight: 700; margin-bottom: 16px; }
+.vd-num { width: 48px; height: 48px; border-radius: 999px; background: var(--brand); color: var(--white); display: flex; align-items: center; justify-content: center; font-size: 20px; line-height: 28px; font-weight: 700; margin-bottom: 16px; }
 .vd-step h3 { font-size: 20px; line-height: 28px; font-weight: 600; color: var(--gray-900); margin-bottom: 12px; }
 .vd-step p { color: var(--gray-600); }
 @media (min-width: 768px) { .vd-steps { grid-template-columns: repeat(3, 1fr); } }
@@ -164,11 +167,12 @@ body.jl { margin: 0; min-height: 100dvh; font-family: var(--font-sans); color: v
 .vd-top-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 
 /* ---------- CTA final (gradiente verde) ---------- */
-.vd-final { padding: 80px 0; background: linear-gradient(to bottom right, var(--green-aa), var(--green-dark)); color: var(--white); }
+.vd-final { padding: 80px 0; background: linear-gradient(to bottom right, var(--brand), var(--brand-dark)); color: var(--white); }
 .vd-final h2 { color: var(--white); }
 .vd-final p { font-size: 18px; line-height: 28px; color: var(--white); margin-bottom: 32px !important; }
 .vd-checks { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 24px; margin: 32px 0 0; padding: 0; list-style: none; font-size: 14px; line-height: 20px; color: var(--white); }
 .vd-checks li { display: flex; align-items: center; gap: 8px; }
+.vd-checks svg { color: var(--gold); }
 .vd-final :focus-visible { outline-color: var(--white); }
 
 /* ---------- Rodapé ---------- */
@@ -183,8 +187,7 @@ body.jl { margin: 0; min-height: 100dvh; font-family: var(--font-sans); color: v
 .vd-footer-bottom { border-top: 1px solid var(--gray-800); margin-top: 32px; padding-top: 32px; text-align: center; font-size: 14px; line-height: 20px; color: var(--gray-400); }
 .vd-footer :focus-visible { outline-color: #8fb6ff; }
 .jl-contact-link { color: var(--white); font-weight: 500; }
-.jl-wechat-label { display: block; font-size: 12px; }
-.jl-wechat-id { font-family: ui-monospace, Menlo, Consolas, monospace; color: var(--white); user-select: all; }
+.jl-contact-label { display: block; font-size: 12px; }
 
 /* ---------- Responsivo do cabeçalho ---------- */
 @media (max-width: 899px) {
