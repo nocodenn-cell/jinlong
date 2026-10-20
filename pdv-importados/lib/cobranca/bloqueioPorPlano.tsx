@@ -21,6 +21,13 @@ export async function recursosDaSessao(): Promise<string[] | null> {
   }
 }
 
+export const ERRO_RECURSO_PLANO = 'RECURSO_NAO_INCLUSO_NO_PLANO: faça upgrade em Assinatura. / 您的方案不包含此功能'
+
+/** Gating de server actions: null quando liberado, mensagem de erro quando o plano não inclui. */
+export async function erroSeSemRecurso(recurso: Recurso): Promise<string | null> {
+  return temRecurso(await recursosDaSessao(), recurso) ? null : ERRO_RECURSO_PLANO
+}
+
 /** Gating web: devolve a tela de "recurso não incluso no plano" ou null quando liberado. */
 export async function bloqueioPorPlano(recurso: Recurso): Promise<React.ReactElement | null> {
   if (temRecurso(await recursosDaSessao(), recurso)) return null

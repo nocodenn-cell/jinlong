@@ -30,9 +30,14 @@ export function emailDescartavel(email: string): boolean {
   return DESCARTAVEIS.has(email.split('@')[1]?.toLowerCase() ?? '')
 }
 
+/** Turnstile só fica ativo com chave do site E chave secreta (evita travar o cadastro com só uma delas). */
+export function captchaAtivo(env: Record<string, string | undefined> = process.env): boolean {
+  return Boolean(env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim() && env.TRIAL_CAPTCHA_SECRET?.trim())
+}
+
 /**
- * CAPTCHA (placeholder pronto para Cloudflare Turnstile).
- * TRIAL_CAPTCHA_SECRET ausente ⇒ desligado (dev/homolog) — em produção configurar antes de divulgar.
+ * CAPTCHA Cloudflare Turnstile (verificação no servidor, siteverify).
+ * Sem as duas chaves ⇒ desligado (dev/homolog) — em produção configurar antes de divulgar.
  */
 export async function verificarCaptcha(
   token: string | undefined,
@@ -40,8 +45,8 @@ export async function verificarCaptcha(
   env: Record<string, string | undefined> = process.env,
   fetchImpl: typeof fetch = fetch,
 ): Promise<boolean> {
-  const secret = env.TRIAL_CAPTCHA_SECRET?.trim()
-  if (!secret) return true
+  if (!captchaAtivo(env)) return true
+  const secret = env.TRIAL_CAPTCHA_SECRET!.trim()
   if (!token) return false
   const body = new URLSearchParams({ secret, response: token })
   if (ip) body.set('remoteip', ip)
@@ -67,6 +72,6 @@ export function montarPayloadTrial(d: z.output<typeof TrialSignupSchema>, donoId
 
 export function mensagemErroTrial(raw: string): string {
   if (/TRIAL_LIMITE/.test(raw)) return 'Muitos cadastros a partir desta rede. Tente amanhã ou fale com a gente. / 该网络注册次数过多，请明天再试。'
-  if (/PROVISIONAR_USUARIO_DE_OUTRA_EMPRESA|already|registered/i.test(raw)) return 'Este e-mail já tem cadastro. Faça login. / 该邮箱已注册，请登录。'
+  if (/PROVISIONAR_USUARIO_DE_OUTRA_EMPRESA|TRIAL_USUARIO_JA_EXISTE|already|registered/i.test(raw)) return 'Este e-mail já tem cadastro. Faça login. / 该邮箱已注册，请登录。'
   return 'Não foi possível criar o teste agora. Tente de novo. / 暂时无法创建试用，请重试。'
 }

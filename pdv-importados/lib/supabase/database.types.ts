@@ -6908,6 +6908,39 @@ export type Database = {
           venda_id: string
         }[]
       }
+      cobranca_aplicar_evento: {
+        Args: { p_evento: string; p_evento_id: string; p_payload: Json }
+        Returns: Json
+      }
+      cobranca_assinaturas_para_conciliar: {
+        Args: never
+        Returns: {
+          asaas_subscription_id: string
+          empresa_id: string
+        }[]
+      }
+      cobranca_cancelar: { Args: { p_empresa: string }; Returns: undefined }
+      cobranca_conciliar_pagamento: { Args: { p_payment: Json }; Returns: Json }
+      cobranca_estado_empresa: { Args: { p_empresa: string }; Returns: Json }
+      cobranca_processar_vencimentos: {
+        Args: { p_agora?: string }
+        Returns: Json
+      }
+      cobranca_registrar_assinatura: {
+        Args: {
+          p_addons: string[]
+          p_asaas_customer: string
+          p_asaas_subscription: string
+          p_empresa: string
+          p_forma: string
+          p_plano: string
+          p_proximo_vencimento: string
+          p_qtd_caixas: number
+          p_qtd_lojas: number
+          p_valor_centavos: number
+        }
+        Returns: undefined
+      }
       colocar_venda_em_espera: {
         Args: {
           p_caixa_id?: string
@@ -7447,6 +7480,10 @@ export type Database = {
       fp_empresa_contexto: { Args: { p_loja?: string }; Returns: string }
       fp_empresa_da_loja: { Args: { p_loja: string }; Returns: string }
       fp_empresa_operacional: { Args: { p_empresa: string }; Returns: boolean }
+      fp_empresa_tem_recurso: {
+        Args: { p_empresa: string; p_recurso: string }
+        Returns: boolean
+      }
       fp_empresas_arr: { Args: never; Returns: string[] }
       fp_empresas_do_usuario: { Args: never; Returns: string[] }
       fp_empresas_do_usuario_como_dono: { Args: never; Returns: string[] }
@@ -7457,6 +7494,8 @@ export type Database = {
         Args: { p_loja_a: string; p_loja_b: string }
         Returns: boolean
       }
+      fp_minha_assinatura: { Args: never; Returns: Json }
+      fp_minhas_faturas: { Args: { p_limite?: number }; Returns: Json }
       fp_pdv_config_id: { Args: { p_loja?: string }; Returns: number }
       fp_pode_empresa: { Args: { p_empresa: string }; Returns: boolean }
       fp_pode_loja: {
@@ -7464,6 +7503,7 @@ export type Database = {
         Returns: boolean
       }
       fp_pode_loja_nula: { Args: { p_loja: string }; Returns: boolean }
+      fp_recursos_empresa: { Args: { p_empresa: string }; Returns: string[] }
       fp_usuario_ativo: { Args: never; Returns: boolean }
       fp_usuario_pode_loja: {
         Args: { p_loja: string; p_papeis?: string[]; p_usuario: string }
@@ -7714,6 +7754,11 @@ export type Database = {
       pdv_registrar_alertas_margem_venda: {
         Args: { p_venda_id: string }
         Returns: undefined
+      }
+      planos_catalogo: { Args: never; Returns: Json }
+      plataforma_iniciar_trial: {
+        Args: { p: Json; p_dias?: number }
+        Returns: Json
       }
       plataforma_provisionar_empresa: {
         Args: { p: Json; p_ator?: string }
@@ -8053,6 +8098,14 @@ export type Database = {
           p_saldo_esperado?: number
         }
         Returns: string
+      }
+      trial_registrar_tentativa: {
+        Args: {
+          p_email_hash: string
+          p_ip_hash: string
+          p_max_por_ip_24h?: number
+        }
+        Returns: boolean
       }
       venda_evento_idempotency_key: {
         Args: { p_cancelled?: boolean; p_sale_id: string; p_source: string }

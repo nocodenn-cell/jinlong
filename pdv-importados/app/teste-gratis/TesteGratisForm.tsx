@@ -32,7 +32,12 @@ export function TesteGratisForm({ turnstileSiteKey }: { turnstileSiteKey: string
             site: String(fd.get('site') ?? ''),
             captchaToken: String(fd.get('cf-turnstile-response') ?? '') || undefined,
           })
-          if (r.ok) setEnviado(r.email); else setErro(r.error)
+          if (r.ok) setEnviado(r.email)
+          else {
+            setErro(r.error)
+            // token do Turnstile é de uso único: renova o widget após erro
+            ;(window as unknown as { turnstile?: { reset: () => void } }).turnstile?.reset()
+          }
         })
       }}
     >
@@ -56,7 +61,7 @@ export function TesteGratisForm({ turnstileSiteKey }: { turnstileSiteKey: string
       </label>
       {/* honeypot anti-robô: invisível para pessoas */}
       <input name="site" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
-      {turnstileSiteKey ? <div className="cf-turnstile" data-sitekey={turnstileSiteKey} /> : null}
+      {turnstileSiteKey ? <div className="cf-turnstile" data-sitekey={turnstileSiteKey} data-language={idioma === 'zh' ? 'zh-cn' : 'pt-br'} /> : null}
       <label className="flex items-start gap-2 text-sm">
         <input type="checkbox" name="aceite" required />
         <span>{t('aceite')} (<Link className="underline" href={ROUTES.legal.termos}>termos</Link> · <Link className="underline" href={ROUTES.legal.privacidade}>privacidade</Link>)</span>

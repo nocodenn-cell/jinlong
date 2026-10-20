@@ -173,7 +173,7 @@ await t('trial: cria empresa + loja + dono + assinatura TRIAL 15 dias + produtos
 await t('trial: falha no meio não deixa nada (usuário de outra empresa)', async () => {
   const antes = (await q(`SELECT count(*)::int n FROM public.empresas`))[0].n
   await assert.rejects(q(`SELECT public.plataforma_iniciar_trial($1::jsonb, 15)`, [JSON.stringify({
-    empresa: { nome: 'Abuso' }, lojas: [{ nome: 'X' }], usuarios: [{ id: U.donoB, nome: 'B', papel: 'DONO' }] })]), /PROVISIONAR_USUARIO_DE_OUTRA_EMPRESA/)
+    empresa: { nome: 'Abuso' }, lojas: [{ nome: 'X' }], usuarios: [{ id: U.donoB, nome: 'B', papel: 'DONO' }] })]), /TRIAL_USUARIO_JA_EXISTE/)
   assert.equal((await q(`SELECT count(*)::int n FROM public.empresas`))[0].n, antes)
 })
 
@@ -299,6 +299,116 @@ await t('acesso não autorizado: anon não executa nada de cobrança', async () 
   try {
     await assert.rejects(db.query(`SELECT public.trial_registrar_tentativa('a','b',3)`), /permission denied/)
   } finally { await db.exec('ROLLBACK') }
+})
+
+// ── segurança das funções SECURITY DEFINER da cobrança ─────────────────────────
+const SQL_MIG = await readFile(new URL('../supabase/migrations/20261020100000_cobranca_planos_trial.sql', import.meta.url), 'utf8')
+const FUNCS = [...new Set([...SQL_MIG.matchAll(/CREATE OR REPLACE FUNCTION ([a-z_]+)\.([a-z_]+)\(/g)].map((m) => `${m[1]}.${m[2]}`))]
+const LEITURA_DONO = new Set(['public.fp_recursos_empresa', 'public.fp_empresa_tem_recurso', 'public.fp_minha_assinatura', 'public.fp_minhas_faturas', 'public.planos_catalogo'])
+
+await t(`segurança: ${FUNCS.length} funções da cobrança — search_path fixo, sem PUBLIC/anon, escrita só service_role`, async () => {
+  assert.ok(FUNCS.length >= 15, FUNCS.join(','))
+  for (const f of FUNCS) {
+    const [sch, nome] = f.split('.')
+    const rows = await q(`SELECT p.oid, p.prosecdef, p.proconfig, p.prorettype = 'trigger'::regtype trg,
+        coalesce(array_to_string(p.proacl, ','), '') acl,
+        has_function_privilege('anon', p.oid, 'EXECUTE') anon,
+        has_function_privilege('authenticated', p.oid, 'EXECUTE') auth
+      FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = $1 AND p.proname = $2`, [sch, nome])
+    assert.ok(rows.length >= 1, `${f} não existe`)
+    for (const r of rows) {
+      if (r.prosecdef) assert.ok((r.proconfig ?? []).some((c) => /^search_path=/.test(c) && /pg_temp/.test(c)), `${f} sem search_path fixo`)
+      assert.ok(!/(^|,)=X/.test(r.acl), `${f} executável por PUBLIC (${r.acl})`)
+      assert.equal(r.anon, false, `${f} executável por anon`)
+      if (sch === 'public' && !LEITURA_DONO.has(f)) assert.equal(r.auth, false, `${f} executável por authenticated`)
+    }
+  }
+})
+
+await t('segurança: leituras do dono são escopadas à empresa da sessão (B não vê C)', async () => {
+  const mB = (await comoQ(U.donoB, `SELECT public.fp_minha_assinatura() r`))[0].r
+  assert.notEqual(mB?.empresa_id, E3)
+  const fB = (await comoQ(U.donoB, `SELECT public.fp_minhas_faturas() r`))[0].r
+  assert.ok(!JSON.stringify(fB).includes('payC'), 'faturas de C vazaram para B')
+  await assert.rejects(como(U.donoB, () => db.query(`SELECT * FROM saas.faturas`)), /permission denied/)
+})
+
+await t('segurança: entradas inválidas são recusadas (plano, dias, payload)', async () => {
+  await assert.rejects(q(`SELECT public.plataforma_iniciar_trial('{"plano":"FISCAL","empresa":{"nome":"x"},"lojas":[{"nome":"x"}],"usuarios":[{"id":"70000000-0000-4000-8000-000000000009","nome":"x"}]}'::jsonb, 15)`), /COBRANCA_PLANO_INVALIDO/)
+  await assert.rejects(q(`SELECT public.plataforma_iniciar_trial('{"empresa":{"nome":"x"},"lojas":[{"nome":"x"}],"usuarios":[{"id":"70000000-0000-4000-8000-000000000009","nome":"x"}]}'::jsonb, 999)`), /TRIAL_DIAS_INVALIDO/)
+  await assert.rejects(q(`SELECT public.plataforma_iniciar_trial('{"empresa":{"nome":"x"},"lojas":[{"nome":"a"},{"nome":"b"}],"usuarios":[{"id":"70000000-0000-4000-8000-000000000009","nome":"x"}]}'::jsonb, 15)`), /TRIAL_PAYLOAD_INVALIDO/)
+})
+
+// ── trial não concede acesso a outra empresa ─────────────────────────────────
+await t('trial: empresa.id / loja.id / empresa_id / papel no payload são ignorados (sempre empresa nova)', async () => {
+  const uid = '70000000-0000-4000-8000-000000000001'
+  await db.exec(`INSERT INTO auth.users (id) VALUES ('${uid}')`)
+  const lojasE1 = (await q(`SELECT count(*)::int n FROM public.lojas WHERE empresa_id = '${E1}'`))[0].n
+  const r = (await q(`SELECT public.plataforma_iniciar_trial($1::jsonb, 15) r`, [JSON.stringify({
+    empresa: { id: E1, nome: 'Invasor' }, empresa_id: E1,
+    lojas: [{ id: LA, empresa_id: E1, nome: 'Invasor', codigo: 'X1' }],
+    usuarios: [{ id: uid, nome: 'Inv', papel: 'GERENTE', lojas: [LA], empresa_id: E1 }] })]))[0].r
+  assert.notEqual(r.empresa_id, E1); assert.notEqual(r.loja_id, LA)
+  assert.equal((await q(`SELECT count(*)::int n FROM public.lojas WHERE empresa_id = '${E1}'`))[0].n, lojasE1)
+  assert.deepEqual(await q(`SELECT DISTINCT empresa_id::text e, papel FROM public.usuario_vinculos WHERE usuario_id = $1`, [uid]),
+    [{ e: r.empresa_id, papel: 'DONO' }])
+  // o dono do trial não enxerga nada da Empresa 1
+  assert.equal((await comoQ(uid, `SELECT count(*)::int n FROM public.lojas WHERE id = '${LA}'`))[0].n, 0)
+  assert.equal((await comoQ(uid, `SELECT count(*)::int n FROM public.produtos WHERE observacao IS DISTINCT FROM 'DEMO_TRIAL'`))[0].n, 0)
+})
+
+await t('trial: código de loja já usado vira outro código, em outra loja', async () => {
+  const uid = '70000000-0000-4000-8000-000000000002'
+  await db.exec(`INSERT INTO auth.users (id) VALUES ('${uid}')`)
+  const cod = (await q(`SELECT codigo FROM public.lojas WHERE codigo IS NOT NULL LIMIT 1`))[0]?.codigo ?? 'TRIAL1'
+  const r = (await q(`SELECT public.plataforma_iniciar_trial($1::jsonb, 15) r`, [JSON.stringify({
+    empresa: { nome: 'Cod dup' }, lojas: [{ nome: 'Cod dup', codigo: cod }], usuarios: [{ id: uid, nome: 'D', papel: 'DONO' }] })]))[0].r
+  const l = (await q(`SELECT codigo, empresa_id::text e FROM public.lojas WHERE id = $1`, [r.loja_id]))[0]
+  assert.notEqual(l.codigo, cod); assert.equal(l.e, r.empresa_id)
+})
+
+await t('trial: dono existente / usuário de outra empresa / Empresa 1 é recusado sem efeito', async () => {
+  const antes = (await q(`SELECT count(*)::int n FROM public.empresas`))[0].n
+  for (const uid of [U.trial, U.donoA, U.opB]) {
+    await assert.rejects(q(`SELECT public.plataforma_iniciar_trial($1::jsonb, 15)`, [JSON.stringify({
+      empresa: { nome: 'Reuso' }, lojas: [{ nome: 'R' }], usuarios: [{ id: uid, nome: 'R', papel: 'DONO' }] })]), /TRIAL_USUARIO_JA_EXISTE/)
+  }
+  assert.equal((await q(`SELECT count(*)::int n FROM public.empresas`))[0].n, antes)
+  assert.equal((await q(`SELECT perfil FROM public.usuarios WHERE id = '${U.donoA}'`))[0].perfil, 'DONO')
+})
+
+// ── suspensão: venda online (web) e replay offline (sync) ─────────────────────
+const CXC = 'cc000003-0000-4000-8000-000000000001'
+const CXA1 = 'cc000001-0000-4000-8000-000000000001'
+await db.exec(`INSERT INTO public.caixas (id, loja_id, status) VALUES ('${CXC}', '${LC}', 'ABERTO'), ('${CXA1}', '${LA}', 'ABERTO')`)
+const DONO_C = '50000000-0000-4000-8000-000000000001'
+const vendaSR = (cx) => (async () => {
+  await db.exec('BEGIN'); await db.exec('SET LOCAL ROLE service_role')
+  try { await db.query(`INSERT INTO public.vendas (caixa_id, total_bruto, total_liquido, forma_pagamento) VALUES ($1, 1, 1, 'DINHEIRO')`, [cx]) }
+  finally { await db.exec('ROLLBACK') }
+})()
+const vendaWeb = (uid, cx) => como(uid, () => db.query(`INSERT INTO public.vendas (caixa_id, total_bruto, total_liquido, forma_pagamento) VALUES ($1, 1, 1, 'DINHEIRO')`, [cx]))
+
+await t('suspensão por inadimplência bloqueia venda web E replay offline (sync/service_role); pagamento libera; Empresa 1 nunca bloqueia', async () => {
+  await vendaSR(CXC)                          // ativa: replay aceito
+  await evento('s1', 'PAYMENT_OVERDUE', { payment: { id: 'paySusp', subscription: 'sub_C', value: 179 } })
+  await q(`SELECT public.cobranca_processar_vencimentos(now() + interval '10 days')`)
+  assert.equal(await cfg(E3, 'vendas_suspensas'), 'true')
+  await assert.rejects(vendaSR(CXC), /VENDAS_SUSPENSAS/)          // replay do PDV: recusado ⇒ fica na outbox (retry/backoff)
+  await assert.rejects(vendaWeb(DONO_C, CXC), /VENDAS_SUSPENSAS|permission denied|row-level/) // web
+  await vendaSR(CXA1)                          // Empresa 1 intacta durante a suspensão de C
+  await evento('s2', 'PAYMENT_RECEIVED', { payment: { id: 'paySusp', subscription: 'sub_C', value: 179 } })
+  assert.equal(await cfg(E3, 'vendas_suspensas'), 'false')
+  await vendaSR(CXC)                          // reativada: o mesmo replay agora entra
+})
+
+await t('falha transitória do Asaas (conciliação sem resposta) não suspende ninguém', async () => {
+  // a rota de conciliação só chama cobranca_conciliar_pagamento com resposta válida do Asaas;
+  // sem resposta não há evento — o job de vencimentos sozinho não suspende ATIVA nem INADIMPLENTE sem fatura VENCIDA.
+  const j = (await q(`SELECT public.cobranca_processar_vencimentos(now()) r`))[0].r
+  assert.equal(j.suspensas_inadimplencia, 0)
+  assert.equal(await cfg(E3, 'vendas_suspensas'), 'false')
+  assert.equal(await cfg(E1, 'vendas_suspensas'), 'false')
 })
 
 await t('rollback limpa (e reativa vendas suspensas pela cobrança); migration reaplica', async () => {

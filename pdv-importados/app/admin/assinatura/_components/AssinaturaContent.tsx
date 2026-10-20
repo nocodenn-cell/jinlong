@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { OperationalHubNav } from '@/components/ui/admin-v2/OperationalHubNav'
 import { calcularValorMensal, formatarBRL, type PlanoCatalogo } from '@/lib/cobranca/planos'
 import { tc, type ChaveTexto } from '@/lib/cobranca/textos'
 import { assinarPlanoAction, cancelarAssinaturaAction, pixDaFaturaAction, type Fatura, type MinhaAssinatura } from '../actions'
@@ -28,11 +29,12 @@ export function AssinaturaContent({ idioma, assinatura, planos, faturas, podeGer
   const fmtData = (s: string | null) => (s ? new Date(s).toLocaleDateString(idioma === 'zh' ? 'zh-CN' : 'pt-BR', { timeZone: 'America/Sao_Paulo' }) : '—')
 
   if (assinatura?.legado) {
-    return <main className="mx-auto max-w-2xl p-6"><h1 className="text-xl font-semibold">{t('titulo')}</h1><p className="mt-2 text-sm">{t('legado')}</p></main>
+    return <main className="mx-auto max-w-2xl p-6"><OperationalHubNav hub="loja" /><h1 className="text-xl font-semibold">{t('titulo')}</h1><p className="mt-2 text-sm">{t('legado')}</p></main>
   }
 
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-6">
+      <OperationalHubNav hub="loja" />
       <h1 className="text-xl font-semibold">{t('titulo')}</h1>
       {msg ? <p role="status" className="rounded border bg-gray-50 p-2 text-sm">{msg}</p> : null}
 

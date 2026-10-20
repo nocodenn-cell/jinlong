@@ -493,15 +493,34 @@ REVOKE ALL ON FUNCTION internal.cobranca_seed_demo(uuid) FROM PUBLIC, anon, auth
 CREATE OR REPLACE FUNCTION public.plataforma_iniciar_trial(p jsonb, p_dias int DEFAULT NULL)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, saas, pg_temp AS $$
 DECLARE r jsonb; v_emp uuid; v_loja uuid; v_plano text := coalesce(nullif(p->>'plano', ''), 'ATACADO'); n int := 0;
+  v_uid uuid; v_seguro jsonb;
 BEGIN
   p_dias := coalesce(p_dias, saas.param_int('trial_dias', 15));
+  -- Trial é autoatendimento: exatamente 1 loja e 1 DONO recém-criado. Ids/campos extras do payload
+  -- (empresa.id, loja.id, empresa_id, papéis, lojas do usuário) são descartados — nunca reaproveita
+  -- empresa, loja ou usuário existente.
+  IF jsonb_typeof(p->'lojas') <> 'array' OR jsonb_array_length(p->'lojas') <> 1
+     OR jsonb_typeof(p->'usuarios') <> 'array' OR jsonb_array_length(p->'usuarios') <> 1 THEN
+    RAISE EXCEPTION 'TRIAL_PAYLOAD_INVALIDO';
+  END IF;
+  v_uid := nullif(p->'usuarios'->0->>'id', '')::uuid;
+  IF v_uid IS NULL OR EXISTS (SELECT 1 FROM public.usuarios WHERE id = v_uid)
+     OR EXISTS (SELECT 1 FROM public.usuario_vinculos WHERE usuario_id = v_uid) THEN
+    RAISE EXCEPTION 'TRIAL_USUARIO_JA_EXISTE';
+  END IF;
+  v_seguro := jsonb_build_object(
+    'empresa', jsonb_build_object('nome', p->'empresa'->>'nome', 'cnpj', p->'empresa'->>'cnpj'),
+    'lojas', jsonb_build_array(jsonb_build_object('chave', 'l1', 'nome', coalesce(p->'lojas'->0->>'nome', p->'empresa'->>'nome'),
+                                                  'codigo', p->'lojas'->0->>'codigo')),
+    'usuarios', jsonb_build_array(jsonb_build_object('id', v_uid, 'nome', p->'usuarios'->0->>'nome', 'papel', 'DONO',
+                                                     'idioma', p->'usuarios'->0->>'idioma')));
   IF NOT EXISTS (SELECT 1 FROM saas.planos WHERE codigo = v_plano AND tipo = 'PLANO' AND ativo) THEN
     RAISE EXCEPTION 'COBRANCA_PLANO_INVALIDO';
   END IF;
   IF p_dias NOT BETWEEN 1 AND 60 THEN RAISE EXCEPTION 'TRIAL_DIAS_INVALIDO'; END IF;
   -- trial = 1 loja, só o dono (equipe vem depois); mesma RPC transacional do wizard (PR #584)
   r := public.plataforma_provisionar_empresa(
-         jsonb_set(jsonb_set(p, '{empresa,plano}', to_jsonb(v_plano)), '{empresa,max_lojas}', '1'::jsonb), NULL);
+         jsonb_set(jsonb_set(v_seguro, '{empresa,plano}', to_jsonb(v_plano)), '{empresa,max_lojas}', '1'::jsonb), NULL);
   v_emp := (r->>'empresa_id')::uuid;
   SELECT id INTO v_loja FROM public.lojas WHERE empresa_id = v_emp ORDER BY created_at NULLS LAST, id LIMIT 1;
   INSERT INTO saas.assinaturas (empresa_id, plano_codigo, status, trial_fim, qtd_lojas, qtd_caixas, carencia_dias)
@@ -522,6 +541,9 @@ RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, saa
     ORDER BY ordem), '[]'::jsonb)
   FROM saas.planos WHERE ativo;
 $$;
+
+COMMENT ON FUNCTION public.planos_catalogo() IS
+  'Multiempresa revisado: catálogo de planos da plataforma (sem dados de empresa; leitura para authenticated).';
 
 CREATE OR REPLACE FUNCTION public.fp_minhas_faturas(p_limite int DEFAULT 24)
 RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, saas, pg_temp AS $$

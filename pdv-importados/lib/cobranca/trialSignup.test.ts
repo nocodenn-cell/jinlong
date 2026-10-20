@@ -43,7 +43,17 @@ describe('verificarCaptcha', () => {
   })
   it('com segredo: sem token falha; token válido passa', async () => {
     const f = vi.fn().mockResolvedValue({ json: async () => ({ success: true }) })
-    expect(await verificarCaptcha(undefined, null, { TRIAL_CAPTCHA_SECRET: 's' }, f)).toBe(false)
-    expect(await verificarCaptcha('tok', '1.1.1.1', { TRIAL_CAPTCHA_SECRET: 's' }, f)).toBe(true)
+    expect(await verificarCaptcha(undefined, null, { TRIAL_CAPTCHA_SECRET: 's', NEXT_PUBLIC_TURNSTILE_SITE_KEY: 'k' }, f)).toBe(false)
+    expect(await verificarCaptcha('tok', '1.1.1.1', { TRIAL_CAPTCHA_SECRET: 's', NEXT_PUBLIC_TURNSTILE_SITE_KEY: 'k' }, f)).toBe(true)
   })
+})
+
+it('só segredo sem chave do site ⇒ captcha desligado (não trava o cadastro)', async () => {
+  expect(await verificarCaptcha(undefined, null, { TRIAL_CAPTCHA_SECRET: 's' })).toBe(true)
+})
+it('verificação envia secret, token e IP ao siteverify; resposta falsa recusa', async () => {
+  const f = vi.fn().mockResolvedValue({ json: async () => ({ success: false }) })
+  expect(await verificarCaptcha('tok', '1.1.1.1', { TRIAL_CAPTCHA_SECRET: 's', NEXT_PUBLIC_TURNSTILE_SITE_KEY: 'k' }, f)).toBe(false)
+  const body = f.mock.calls[0][1].body as URLSearchParams
+  expect([body.get('secret'), body.get('response'), body.get('remoteip')]).toEqual(['s', 'tok', '1.1.1.1'])
 })

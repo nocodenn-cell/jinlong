@@ -8,7 +8,7 @@ import { buildAuthCallbackUrl } from '@/lib/auth/appOrigin'
 import { ROUTES } from '@/lib/navigation/routes'
 import { bootstrapLojaTrial } from '@/lib/cobranca/trialBootstrap'
 import {
-  TRIAL_DIAS, TrialSignupSchema, emailDescartavel, hashAntiAbuso, mensagemErroTrial, montarPayloadTrial,
+  TrialSignupSchema, emailDescartavel, hashAntiAbuso, mensagemErroTrial, montarPayloadTrial,
   verificarCaptcha, type TrialSignupInput,
 } from '@/lib/cobranca/trialSignup'
 
@@ -39,7 +39,7 @@ export async function iniciarTesteGratisAction(input: TrialSignupInput): Promise
   const admin = createAdminClient()
   const rpc = admin as unknown as Rpc
   const { data: permitido, error: rlErr } = await rpc.rpc('trial_registrar_tentativa', {
-    p_ip_hash: hashAntiAbuso(ip, sal), p_email_hash: hashAntiAbuso(d.email, sal), p_max_por_ip_24h: 3,
+    p_ip_hash: hashAntiAbuso(ip, sal), p_email_hash: hashAntiAbuso(d.email, sal), // limite por IP vem de saas.parametros
   })
   if (rlErr) return { ok: false, error: mensagemErroTrial(rlErr.message) }
   if (permitido !== true) return { ok: false, error: mensagemErroTrial('TRIAL_LIMITE_IP') }
@@ -61,7 +61,7 @@ export async function iniciarTesteGratisAction(input: TrialSignupInput): Promise
   const userId = su.user.id
 
   try {
-    const { data, error } = await rpc.rpc('plataforma_iniciar_trial', { p: montarPayloadTrial(d, userId), p_dias: TRIAL_DIAS })
+    const { data, error } = await rpc.rpc('plataforma_iniciar_trial', { p: montarPayloadTrial(d, userId) }) // duração: saas.parametros.trial_dias
     if (error) throw new Error(error.message)
     const r = data as { loja_id: string; trial_fim: string }
     await bootstrapLojaTrial(admin, r.loja_id, userId, d.idioma).catch((e) => {
