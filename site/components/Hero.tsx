@@ -3,7 +3,7 @@ import { isDraftChineseVisible } from '@/lib/publication'
 import type { SiteLocale } from '@/lib/locales'
 import { PdvWindow } from './PdvWindow'
 import { Mixed } from './Mixed'
-import { TrialCta, hasContactChannel } from './TrialCta'
+import { TrialCta } from './TrialCta'
 
 interface HeroProps {
   locale: SiteLocale
@@ -26,7 +26,6 @@ function Chip({ content }: { content: HomeContent }) {
 export function Hero({ locale, content }: HeroProps) {
   const { hero } = content
   const showChinese = isDraftChineseVisible()
-  const hasTrial = hasContactChannel(locale)
   return (
     <section className="jl-hero" id="inicio" aria-labelledby="h-hero">
       <div className="jl-hero-copy">
@@ -45,15 +44,18 @@ export function Hero({ locale, content }: HeroProps) {
         </h1>
         <p className="jl-lead">{hero.lead}</p>
         <div className="jl-hero-ctas">
-          <a className="jl-btn jl-btn--primary" href="#demonstracao">
-            {hero.ctaDemo}
+          <a className="jl-btn jl-btn--primary" href="#shiyong">
+            {hero.ctaTrial}
             <span className="jl-arrow" aria-hidden="true">
               →
             </span>
           </a>
-          <TrialCta locale={locale} label={hero.ctaTrial} />
+          <TrialCta locale={locale} label={hero.ctaContact} />
+          <a className="jl-btn jl-btn--link" href="#demonstracao">
+            {hero.ctaDemo}
+          </a>
         </div>
-        {hasTrial && <span className="jl-btn-note">{hero.trialNote}</span>}
+        <span className="jl-btn-note">{hero.trialNote}</span>
         <ul className="jl-proof">
           {hero.proof.map((item) => (
             <li key={item}>

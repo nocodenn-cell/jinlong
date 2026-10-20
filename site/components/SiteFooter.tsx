@@ -20,9 +20,11 @@ function ContactColumn({ locale, content }: { locale: SiteLocale; content: HomeC
               </a>
             </li>
           ) : (
-            <li key="wechat">
-              <span className="jl-wechat-label">{contact.wechatIdLabel}</span>
-              <span className="jl-wechat-id">{channel.wechatId}</span>
+            <li key="email">
+              <span className="jl-contact-label">{contact.emailLabel}</span>
+              <a className="jl-contact-link" href={channel.href}>
+                {channel.address}
+              </a>
             </li>
           )
         )}

@@ -45,6 +45,40 @@ for (const locale of LOCALES) {
       else await expect(robots).toHaveCount(0)
     })
 
+    test('ordem das seções do briefing, sem banner de rascunho', async ({ page }) => {
+      await openHome(page, locale)
+      const ids = await page.locator('main > section').evaluateAll((els) => els.map((el) => el.getAttribute('aria-labelledby')))
+      expect(ids).toEqual(['h-hero', 'h-niches', 'h-pains', 'h-ben', 'h-lang', 'h-how', 'h-in', 'h-panel', 'h-wh', 'h-price', 'h-faq', 'h-final'])
+      await expect(page.locator('.jl-draft')).toHaveCount(0)
+      await expect(page.locator('.jl-lang')).toBeVisible()
+    })
+
+    test('FAQ abre por teclado; placeholders ficam destacados', async ({ page }) => {
+      await openHome(page, locale)
+      const first = page.locator('.jl-faq details').first()
+      await first.locator('summary').focus()
+      await page.keyboard.press('Enter')
+      await expect(first).toHaveAttribute('open', '')
+      await expect(page.locator('.jl-price .jl-ph')).toHaveText('[PREÇO]')
+    })
+
+    test('formulário de teste: 8 campos, obrigatórios validados', async ({ page }) => {
+      await openHome(page, locale)
+      const form = page.locator('form.jl-form')
+      await expect(form.locator('input')).toHaveCount(8)
+      expect(await form.evaluate((el) => (el as HTMLFormElement).checkValidity())).toBe(false)
+      await form.locator('input[name="name"]').fill('Teste')
+      await form.locator('input[name="store"]').fill('Loja Teste')
+      await form.locator('input[name="city"]').fill('São Paulo')
+      expect(await form.evaluate((el) => (el as HTMLFormElement).checkValidity())).toBe(true)
+    })
+
+    test('botão flutuante de contato abre e-mail', async ({ page }) => {
+      await openHome(page, locale)
+      await page.locator('.jl-fab summary').click()
+      await expect(page.locator('.jl-fab a[href^="mailto:naturalcodedevelop@gmail.com"]')).toBeVisible()
+    })
+
     test('teclado: skip link é o primeiro foco e leva ao conteúdo', async ({ page, browserName }) => {
       test.skip(browserName === 'webkit', 'Safari não tabula links por padrão')
       await openHome(page, locale)
@@ -178,6 +212,22 @@ test('CLS da home dentro do orçamento (≤ 0,1)', async ({ page }) => {
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
   await page.waitForTimeout(500)
   expect(await page.evaluate(() => (window as unknown as { __cls: number }).__cls)).toBeLessThanOrEqual(0.1)
+})
+
+test('logo oficial no cabeçalho e no rodapé, favicon presente', async ({ page }) => {
+  await openHome(page, 'pt-BR')
+  await expect(page.locator('header .jl-logo img')).toBeVisible()
+  await expect(page.locator('footer .jl-logo img')).toBeVisible()
+  expect(await page.locator('header .jl-logo img').evaluate((img) => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(0)
+  expect((await page.request.get('/icon.png')).status()).toBe(200)
+})
+
+test('raiz sem preferência abre em chinês', async ({ browser }) => {
+  const context = await browser.newContext({ locale: 'pt-BR' })
+  const page = await context.newPage()
+  await page.goto('/')
+  await expect(page).toHaveURL(/\/zh-CN$/)
+  await context.close()
 })
 
 test('fontes: Geist carregada na home em português', async ({ page }) => {

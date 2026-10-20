@@ -3,7 +3,7 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { getHomeContent } from './content'
 import { CJK_WEIGHTS, cjkCharsByWeight } from './content/displayText'
-import { getContactChannels, parseWechatId, parseWhatsappUrl } from './contactChannels'
+import { CONTACT_EMAIL, getContactChannels, parseWhatsappUrl } from './contactChannels'
 import { isSiteLocale, otherSiteLocale, SITE_LOCALES } from './locales'
 import {
   CLOSING_FIGURES,
@@ -50,7 +50,7 @@ describe('locales', () => {
 describe('paridade de conteúdo pt-BR / zh-CN', () => {
   const pt = collectStrings(getHomeContent('pt-BR'))
   const zh = collectStrings(getHomeContent('zh-CN'))
-  const optionalEmpty = new Set(['footer.ptOnly', 'draftBanner'])
+  const optionalEmpty = new Set(['footer.ptOnly'])
 
   it('mesmas chaves nas duas línguas', () => {
     expect(zh.map(([key]) => key)).toEqual(pt.map(([key]) => key))
@@ -62,17 +62,33 @@ describe('paridade de conteúdo pt-BR / zh-CN', () => {
 
   it('o chinês só aparece em campos previstos na página em português', () => {
     const allowed =
-      /^(hero\.signature|hero\.proof\[0\]|hero\.chipSecond\.text|langSwitch\.(group|zh|zhShort)|benefits\.items\[4\]\.what|languages\.title|languages\.zh\..*|footer\.zhTagline|brandLabel|footer\.tagline)$/
+      /^(hero\.signature|hero\.proof\[0\]|hero\.chipSecond\.text|langSwitch\.(group|zh|zhShort)|benefits\.items\[4\]\.what|languages\.title|languages\.zh\..*|footer\.zhTagline|brandLabel|footer\.tagline|meta\.title)$/
     const unexpected = pt.filter(([key, value]) => CJK.test(value) && !allowed.test(key))
     expect(unexpected).toEqual([])
   })
 
-  it('a página em chinês é chinesa e o aviso de rascunho existe só nela', () => {
+  it('a página em chinês é chinesa e segue o briefing (H1, proposta central, 3 passos)', () => {
     const zhContent = getHomeContent('zh-CN')
     expect(CJK.test(zhContent.hero.h1.line1)).toBe(true)
     expect(CJK.test(zhContent.meta.description)).toBe(true)
-    expect(getHomeContent('pt-BR').draftBanner).toBe('')
-    expect(zhContent.draftBanner).not.toBe('')
+    expect(Object.values(zhContent.hero.h1).join('')).toBe('在巴西开店，收银和库存一手掌握。')
+    expect(zhContent.hero.signature).toBe('老板用中文，员工用葡语，同一套系统。')
+    for (const locale of ['pt-BR', 'zh-CN'] as const) {
+      const content = getHomeContent(locale)
+      expect(content.steps.items).toHaveLength(3)
+      expect(content.niches.items).toHaveLength(6)
+      expect(content.pains.items).toHaveLength(3)
+      expect(content.faq.items).toHaveLength(5)
+    }
+  })
+
+  it('não inventa preço nem nota fiscal: placeholders explícitos', () => {
+    for (const locale of ['pt-BR', 'zh-CN'] as const) {
+      const content = getHomeContent(locale)
+      expect(content.price.value).toBe('[PREÇO]')
+      expect(content.faq.items[2]?.a).toContain('[CONFIRMAR: NFC-e?]')
+      expect(JSON.stringify(content)).not.toMatch(/R\$ ?\d+\s*\/\s*m[eê]s/)
+    }
   })
 
   it('termos de operação em chinês seguem o próprio ERP', () => {
@@ -112,27 +128,26 @@ describe('publicação do chinês', () => {
 })
 
 describe('canais de contato', () => {
-  const env = {
-    NEXT_PUBLIC_SITE_WHATSAPP_URL: 'https://wa.me/550000000000',
-    NEXT_PUBLIC_SITE_WECHAT_ID: 'ficticio_teste',
-  }
+  const env = { NEXT_PUBLIC_SITE_WHATSAPP_URL: 'https://wa.me/550000000000' }
 
-  it('sem variáveis não há canais (nada embutido no código)', () => {
-    expect(getContactChannels('pt-BR', {})).toEqual([])
+  it('sem variáveis só há o e-mail oficial (mailto)', () => {
+    const channels = getContactChannels('pt-BR', {})
+    expect(channels.map((c) => c.id)).toEqual(['email'])
+    expect(channels[0]).toMatchObject({ address: CONTACT_EMAIL })
+    expect(channels[0]?.href.startsWith(`mailto:${CONTACT_EMAIL}?subject=`)).toBe(true)
   })
 
-  it('ordena o canal principal conforme o idioma', () => {
-    expect(getContactChannels('pt-BR', env)[0]?.id).toBe('whatsapp')
-    expect(getContactChannels('zh-CN', env)[0]?.id).toBe('wechat')
+  it('WhatsApp configurado vem primeiro; e-mail continua; WeChat não é canal', () => {
+    for (const locale of ['pt-BR', 'zh-CN'] as const) {
+      const ids = getContactChannels(locale, { ...env, NEXT_PUBLIC_SITE_WECHAT_ID: 'ficticio_teste' }).map((c) => c.id)
+      expect(ids).toEqual(['whatsapp', 'email'])
+    }
   })
 
   it('rejeita URLs e IDs inválidos', () => {
     expect(parseWhatsappUrl('http://wa.me/550000000000')).toBeNull()
     expect(parseWhatsappUrl('https://evil.example/wa.me/550000000000')).toBeNull()
     expect(parseWhatsappUrl('javascript:alert(1)')).toBeNull()
-    expect(parseWechatId('<script>')).toBeNull()
-    expect(parseWechatId('ab')).toBeNull()
-    expect(parseWechatId(undefined)).toBeNull()
   })
 })
 

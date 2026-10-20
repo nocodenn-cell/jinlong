@@ -104,10 +104,56 @@ export interface LanguagesCopy {
 }
 
 export interface ContactCopy {
+  fab: string
   whatsapp: string
-  wechat: string
-  wechatIdLabel: string
+  emailLabel: string
+  email: string
   opensNewTab: string
+}
+
+export interface TitledPlain {
+  title: string
+  body: string
+}
+
+export interface PainItem {
+  pain: string
+  answer: string
+}
+
+export interface StatCard {
+  label: string
+  value: string
+  note: string
+}
+
+export interface TopProduct {
+  name: string
+  sales: string
+  total: string
+}
+
+export interface FaqItem {
+  q: string
+  a: string
+}
+
+export interface TrialFormCopy {
+  title: string
+  lead: string
+  name: string
+  store: string
+  city: string
+  wechat: string
+  whatsapp: string
+  type: string
+  typeRetail: string
+  typeWholesale: string
+  typeBoth: string
+  sendEmail: string
+  sendWhatsapp: string
+  note: string
+  mailSubject: string
 }
 
 export interface HomeContent {
@@ -120,6 +166,10 @@ export interface HomeContent {
     features: string
     demo: string
     how: string
+    niches: string
+    price: string
+    faq: string
+    cta: string
     contact: string
     login: string
     menuOpen: string
@@ -130,6 +180,7 @@ export interface HomeContent {
     signature: string
     h1: { line1: string; line2: string; emphasis: string; rest: string }
     lead: string
+    ctaContact: string
     ctaDemo: string
     ctaTrial: string
     trialNote: string
@@ -145,6 +196,19 @@ export interface HomeContent {
   wholesale: WholesaleCopy
   languages: LanguagesCopy
   steps: { eyebrow: string; title: string; items: readonly StepItem[] }
+  niches: { title: string; lead: string; items: readonly TitledPlain[] }
+  pains: { title: string; items: readonly PainItem[] }
+  panel: {
+    title: string
+    lead: string
+    sample: string
+    stats: readonly [StatCard, StatCard, StatCard]
+    topTitle: string
+    top: readonly TopProduct[]
+  }
+  price: { title: string; plan: string; value: string; includes: readonly string[]; cta: string }
+  faq: { title: string; items: readonly FaqItem[] }
+  form: TrialFormCopy
   final: { title: string; lead: string }
   contact: ContactCopy
   footer: {
@@ -157,5 +221,4 @@ export interface HomeContent {
     login: string
     ptOnly: string
   }
-  draftBanner: string
 }

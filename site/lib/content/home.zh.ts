@@ -2,15 +2,15 @@ import { PT_SAMPLE, ZH_SAMPLE } from './samples'
 import type { HomeContent } from './types'
 
 /**
- * RASCUNHO preparado com IA. Termos de operação (完成销售, 批发价, 零售价, 现金, 借记卡, 信用卡,
+ * RASCUNHO (revisão nativa pendente). Termos de operação (完成销售, 批发价, 零售价, 现金, 借记卡, 信用卡,
  * 商品, 数量, 库存, 备用金) vêm do próprio ERP (src/lib/i18n/zh.json). Publicação em produção
  * condicionada à revisão de falante nativo com conhecimento do comércio brasileiro
  * (NEXT_PUBLIC_SITE_ZH_REVIEWED, ver lib/publication.ts).
  */
 export const homeZh: HomeContent = {
   meta: {
-    title: '金龙 Jinlong · 面向零售与批发的收银与管理系统',
-    description: '面向零售与批发的收银与管理系统，支持葡萄牙语和简体中文。销售、库存与经营，一套系统全搞定。',
+    title: '金龙 Jinlong · 巴西华人门店收银与库存系统｜中文、葡语双语',
+    description: '在巴西开店，收银和库存一手掌握。老板用中文，员工用葡语，同一套系统；零售、批发价格分开设置。',
   },
   skipLink: '跳到主要内容',
   brandLabel: '金龙 Jinlong — 首页',
@@ -20,6 +20,10 @@ export const homeZh: HomeContent = {
     features: '功能',
     demo: '演示',
     how: '使用流程',
+    niches: '适用门店',
+    price: '价格',
+    faq: '常见问题',
+    cta: '申请试用',
     contact: '联系我们',
     login: '登录金龙',
     menuOpen: '打开菜单',
@@ -27,12 +31,13 @@ export const homeZh: HomeContent = {
   },
   langSwitch: { group: '语言 / Idioma', pt: 'PT-BR', ptShort: 'PT', zh: '简体中文', zhShort: '中文' },
   hero: {
-    signature: '收银更快 · 管理更稳 · 生意更旺',
-    h1: { line1: '收银更快。', line2: '门店尽在掌握。', emphasis: '稳步', rest: '成长。' },
-    lead: '面向零售与批发的收银与管理系统，支持葡萄牙语和简体中文。销售、库存与经营，一套系统全搞定。',
+    signature: '老板用中文，员工用葡语，同一套系统。',
+    h1: { line1: '在巴西开店，', line2: '收银和库存', emphasis: '一手掌握', rest: '。' },
+    lead: '进口百货、电子配件、服装、文具……各类门店都适用。中文操作，葡语员工也能用；零售、批发价格分开设置。',
+    ctaContact: '在线咨询',
     ctaDemo: '查看演示',
-    ctaTrial: '申请15天试用',
-    trialNote: '试用需申请，我们将与您联系开通。',
+    ctaTrial: '申请15天免费试用',
+    trialNote: '试用需申请，由我们的团队为您开通。',
     proof: ['葡萄牙语与简体中文', '零售与批发', '收银、库存与财务'],
     chipFirst: { text: '销售合计', lang: 'zh-CN' },
     chipSecond: { text: 'Total da venda', lang: 'pt-BR' },
@@ -125,20 +130,90 @@ export const homeZh: HomeContent = {
     eyebrow: '如何开始',
     title: '从咨询到第一笔销售',
     items: [
-      { title: '了解系统', body: '查看界面，使用批发价模拟（虚构数据）。' },
-      { title: '商定演示或试用', body: '联系我们的团队，一起约定演示或15天试用。' },
-      { title: '在指导下设置门店', body: '商品、零售/批发价及付款方式。' },
-      { title: '开始营业', body: '开班并完成第一笔销售。' },
+      { title: '提交试用申请', body: '填写下方表格，我们的团队会联系您，开通15天试用。' },
+      { title: '录入商品和价格', body: '商品、零售价、批发价、库存，按指导一步步设置。' },
+      { title: '开班收银', body: '员工用葡语，老板用中文，从第一笔销售开始。' },
     ],
   },
+  niches: {
+    title: '适用门店',
+    lead: '不只是进口百货，各类零售、批发门店都能用。',
+    items: [
+      { title: '进口百货', body: '商品多、进出快，库存随时查。' },
+      { title: '电子配件', body: '小件商品多，按商品清楚记录数量和价格。' },
+      { title: '服装鞋包', body: '商品、价格和库存统一管理。[CONFIRMAR: variações (尺码/颜色) existem?]' },
+      { title: '文具礼品', body: '零售散客、批量采购，两种价格都能设。' },
+      { title: '美妆个护', body: '热销商品一眼看到，快卖完了及时补货。' },
+      { title: '超市 / 杂货', body: '收银快，每天结束对账清楚。' },
+    ],
+  },
+  pains: {
+    title: '这些问题，您是不是也遇到过？',
+    items: [
+      { pain: '语言不通，员工不会用', answer: '每个用户可以选择自己的语言：老板看中文，巴西员工用葡语，操作的是同一套系统。' },
+      { pain: '批发、零售价格混乱', answer: '每件商品分别设零售价和批发价，以及从多少件起按批发价；收银时按数量自动使用正确的价格。' },
+      { pain: '不知道哪些货卖得好、哪些快没了', answer: '看板显示今日销售、客单价、库存不足和畅销商品，补货心里有数。' },
+    ],
+  },
+  panel: {
+    title: '经营情况，一屏看清',
+    lead: '以下为看板示例，数据均为虚构。',
+    sample: '虚构数据',
+    stats: [
+      { label: '今日销售', value: 'R$ 3.180,40', note: '41笔销售' },
+      { label: '客单价', value: 'R$ 77,57', note: '今日平均' },
+      { label: '库存不足', value: '6', note: '件商品需补货' },
+    ],
+    topTitle: '畅销商品',
+    top: [
+      { name: '蓝牙耳机', sales: '32件', total: 'R$ 1.596,80' },
+      { name: '保温水壶 500 毫升', sales: '27件', total: 'R$ 807,30' },
+      { name: 'A5 笔记本', sales: '45件', total: 'R$ 400,50' },
+    ],
+  },
+  price: {
+    title: '价格',
+    plan: '金龙收银与管理',
+    value: '[PREÇO]',
+    includes: ['快速收银、库存管理、经营看板', '零售价与批发价', '中文、葡语双语界面', '15天试用（需申请）'],
+    cta: '申请15天免费试用',
+  },
+  faq: {
+    title: '常见问题',
+    items: [
+      { q: '员工不会中文，能用吗？', a: '可以。每个用户自己选择界面语言，巴西员工用葡语操作，老板用中文查看，数据是同一套。' },
+      { q: '支持批发价吗？', a: '支持。每件商品可以分别设置零售价、批发价，以及从多少件起按批发价，收银时自动适用。' },
+      { q: '能开巴西发票吗？', a: '[CONFIRMAR: NFC-e?]' },
+      { q: '价格多少？', a: '[PREÇO]。目前可以先申请15天试用，由我们的团队为您开通。' },
+      { q: '数据安全吗？', a: '必须登录才能使用，每家门店的数据彼此独立。[CONFIRMAR: backup e política de dados]' },
+    ],
+  },
+  form: {
+    title: '申请15天免费试用',
+    lead: '填写以下信息，提交后会打开您的邮件或 WhatsApp，把申请发给我们。',
+    name: '您的姓名',
+    store: '店铺名称',
+    city: '所在城市',
+    wechat: '微信号（选填）',
+    whatsapp: 'WhatsApp（选填）',
+    type: '经营类型',
+    typeRetail: '零售',
+    typeWholesale: '批发',
+    typeBoth: '零售 + 批发',
+    sendEmail: '通过邮件提交',
+    sendWhatsapp: '通过 WhatsApp 提交',
+    note: '我们只用这些信息联系您开通试用。',
+    mailSubject: '金龙：申请15天试用',
+  },
   final: {
-    title: '您的门店，值得一套跟得上节奏的系统。',
-    lead: '预约演示，或申请15天试用，了解金龙。',
+    title: '准备好了吗？先免费试用15天。',
+    lead: '留下联系方式，我们用中文和您沟通。[CONFIRMAR: suporte humano em chinês?]',
   },
   contact: {
-    whatsapp: '通过 WhatsApp 联系',
-    wechat: '通过微信联系',
-    wechatIdLabel: '微信号',
+    fab: '咨询',
+    whatsapp: 'WhatsApp 咨询',
+    emailLabel: '电子邮件',
+    email: '邮件咨询',
     opensNewTab: '在新标签页打开',
   },
   footer: {
@@ -151,5 +226,4 @@ export const homeZh: HomeContent = {
     login: '登录金龙',
     ptOnly: '（仅葡语）',
   },
-  draftBanner: '中文版草稿：正在等待母语审校，暂不对外发布。',
 }

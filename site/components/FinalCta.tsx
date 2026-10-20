@@ -1,25 +1,20 @@
 import type { HomeContent } from '@/lib/content'
+import { CONTACT_EMAIL, getContactChannels } from '@/lib/contactChannels'
 import type { SiteLocale } from '@/lib/locales'
-import { TrialCta } from './TrialCta'
+import { Ph } from './Placeholder'
+import { TrialForm } from './TrialForm'
 
 export function FinalCta({ locale, content }: { locale: SiteLocale; content: HomeContent }) {
-  const { final, hero } = content
+  const { final, form } = content
+  const whatsapp = getContactChannels(locale).find((c) => c.id === 'whatsapp')
   return (
-    <section className="jl-final" aria-labelledby="h-final">
+    <section className="jl-final" id="shiyong" aria-labelledby="h-final">
       <span className="jl-sig" lang="zh-CN">
         金龙
       </span>
       <h2 id="h-final">{final.title}</h2>
-      <p>{final.lead}</p>
-      <div className="jl-hero-ctas">
-        <a className="jl-btn jl-btn--primary" href="#demonstracao">
-          {hero.ctaDemo}
-          <span className="jl-arrow" aria-hidden="true">
-            →
-          </span>
-        </a>
-        <TrialCta locale={locale} label={hero.ctaTrial} />
-      </div>
+      <p><Ph text={final.lead} /></p>
+      <TrialForm copy={form} email={CONTACT_EMAIL} whatsappHref={whatsapp?.href ?? null} />
     </section>
   )
 }
