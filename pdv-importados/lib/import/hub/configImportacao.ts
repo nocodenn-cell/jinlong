@@ -21,7 +21,7 @@ export async function carregarCatalogoEmpresa(client: ClienteImport, empresaId: 
   try {
     const [cfg, ovr, tab] = await Promise.all([
       c.from<Record<string, string | null>>('empresa_parametros_importacao')
-        .select('uf_importador,porto_padrao,modal_padrao,icms_efetivo_pct::text,regime_incentivo_nome,aviso_aceito_em')
+        .select('uf_importador,porto_padrao,modal_padrao,icms_efetivo_pct::text,regime_incentivo_nome,regime_tributario,aviso_aceito_em')
         .eq('empresa_id', empresaId).maybeSingle(),
       c.from<{ id: string; tributo: TributoImportacao; ncm_prefixo: string; aliquota_pct: string; nota: string | null }>('empresa_tributos_override')
         .select('id,tributo,ncm_prefixo,aliquota_pct::text,nota').eq('empresa_id', empresaId).order('tributo'),
@@ -37,7 +37,7 @@ export async function carregarCatalogoEmpresa(client: ClienteImport, empresaId: 
     return {
       config: r ? {
         uf_importador: String(r.uf_importador), porto_padrao: r.porto_padrao, modal_padrao: (r.modal_padrao as ModalTransporte | null) ?? null,
-        icms_efetivo_pct: r.icms_efetivo_pct, regime_incentivo_nome: r.regime_incentivo_nome, aviso_aceito_em: r.aviso_aceito_em,
+        icms_efetivo_pct: r.icms_efetivo_pct, regime_incentivo_nome: r.regime_incentivo_nome, regime_tributario: r.regime_tributario ?? null, aviso_aceito_em: r.aviso_aceito_em,
       } : null,
       overrides: (ovr.data ?? []).map((o) => ({ ...o, aliquota_pct: fmt4(o.aliquota_pct) })),
       tabela,

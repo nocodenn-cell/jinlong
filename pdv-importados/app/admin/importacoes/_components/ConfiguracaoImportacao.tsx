@@ -26,6 +26,7 @@ export function ConfiguracaoImportacao(props: { t: TextosImport; catalogo: Dados
   const [modal, setModal] = useState<string>(cfg?.modal_padrao ?? 'MARITIMO')
   const [efetivo, setEfetivo] = useState(cfg?.icms_efetivo_pct ? formatarDecimal(cfg.icms_efetivo_pct) : '')
   const [regime, setRegime] = useState(cfg?.regime_incentivo_nome ?? '')
+  const [regTrib, setRegTrib] = useState<string>(cfg?.regime_tributario ?? 'SIMPLES')
   const [aceite, setAceite] = useState(Boolean(cfg?.aviso_aceito_em))
   const linhaUf = tabela.find((a) => a.uf === uf) ?? null
 
@@ -72,6 +73,8 @@ export function ConfiguracaoImportacao(props: { t: TextosImport; catalogo: Dados
         <div className="mt-3 grid gap-3 md:grid-cols-3">
           <Texto rotulo={t.cfg_icms_efetivo} dica={t.cfg_icms_efetivo_dica} valor={efetivo} onChange={setEfetivo} modoNumerico maxLength={7} testId="cfg-icms-efetivo" desabilitado={!props.podeEditar} />
           <Texto rotulo={t.cfg_regime} valor={regime} onChange={setRegime} maxLength={120} testId="cfg-regime" desabilitado={!props.podeEditar} />
+          <Selecao rotulo={tk('cfg_regime_tributario')} dica={tk('cfg_regime_tributario_dica')} valor={regTrib} onChange={setRegTrib} testId="cfg-regime-tributario" desabilitado={!props.podeEditar}
+            opcoes={['SIMPLES', 'PRESUMIDO', 'REAL'].map((m) => ({ valor: m, rotulo: tk(`regime_${m}`) }))} />
         </div>
         <label className="mt-3 flex items-start gap-2 text-small">
           <input type="checkbox" checked={aceite} onChange={(e) => setAceite(e.target.checked)} data-testid="cfg-aceite" disabled={!props.podeEditar} />
@@ -81,7 +84,7 @@ export function ConfiguracaoImportacao(props: { t: TextosImport; catalogo: Dados
         <div className="mt-3">
           <Button type="button" disabled={!props.podeEditar || !valido || pendente} data-testid="cfg-salvar"
             onClick={() => executar(() => salvarConfigImportacaoAction({ uf_importador: uf, porto_padrao: porto || null, modal_padrao: modal,
-              icms_efetivo_pct: efetivo || null, regime_incentivo_nome: regime || null, aviso_aceito: true }), undefined, t.cfg_salvo)}>
+              icms_efetivo_pct: efetivo || null, regime_incentivo_nome: regime || null, regime_tributario: regTrib, aviso_aceito: true }), undefined, t.cfg_salvo)}>
             {pendente ? t.salvando : t.cfg_salvar}
           </Button>
         </div>

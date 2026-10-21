@@ -5,9 +5,9 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { SectionCard, StatusBadge } from '@/components/ui/admin-v2'
 import { formatarDecimal } from '@/lib/import/hub/decimais'
-import type { Cambio, Item, Tributo } from '@/lib/import/hub/dadosImportacoes'
+import type { Cambio, Despesa, Item, Tributo } from '@/lib/import/hub/dadosImportacoes'
 import { sugerirTributos } from '@/lib/import/hub/inteligencia'
-import { parametrosDaEmpresa, type DadosCatalogoEmpresa } from '@/lib/import/hub/catalogoEmpresa'
+import { opcoesNacionais, parametrosDaEmpresa, type DadosCatalogoEmpresa } from '@/lib/import/hub/catalogoEmpresa'
 import { aliquotaDaUf } from '@shared-core/src/import'
 import { ROUTES } from '@/lib/navigation/routes'
 import { registrarTributosSugeridosAction } from '../actions-inteligencia'
@@ -23,6 +23,7 @@ export function TributosSecao(props: {
   itens: Item[]
   cambios: Cambio[]
   tributos: Tributo[]
+  despesas?: Despesa[]
   dataPadrao: string
   editavel: boolean
   /** Configuração nacional da empresa (null ⇒ catálogo de demonstração, como antes). */
@@ -35,11 +36,11 @@ export function TributosSecao(props: {
   const tk = (k: string) => (t as Record<string, string>)[k] ?? k
   const r = useMemo(() => {
     try {
-      return /^[A-Z]{2}$/.test(uf) && /^\d{4}-\d{2}-\d{2}$/.test(data) ? (() => { const c = parametrosDaEmpresa(props.catalogo ?? null, uf); return sugerirTributos(props.itens, props.cambios, uf, data, c.parametros, c.versao) })() : null
+      return /^[A-Z]{2}$/.test(uf) && /^\d{4}-\d{2}-\d{2}$/.test(data) ? (() => { const c = parametrosDaEmpresa(props.catalogo ?? null, uf); return sugerirTributos(props.itens, props.cambios, uf, data, c.parametros, c.versao, opcoesNacionais(props.catalogo ?? null, props.despesas ?? [])) })() : null
     } catch {
       return null
     }
-  }, [props.itens, props.cambios, props.catalogo, uf, data])
+  }, [props.itens, props.cambios, props.catalogo, props.despesas, uf, data])
   const jaRegistrado = (itemId: string, trib: string) => props.tributos.some((x) => x.item_id === itemId && x.tributo_codigo === trib)
   const calculaveis = r?.sugestoes.filter((s) => s.status === 'CALCULADO' && !jaRegistrado(s.item_id, s.tributo)) ?? []
   const [marcados, setMarcados] = useState<Set<string> | null>(null)

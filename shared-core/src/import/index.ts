@@ -74,3 +74,4 @@ export type {
 export { simularPreco, compararEstimadoReal, PrecificacaoErro, simularFaixasAtacado, arredondarComercial, repricoSugerido } from './precificacao'
 export type { CanalVenda, ModoPreco, CenarioPreco, PrecoSimulado, ComparacaoCusto, FaixaAtacado, PrecoFaixa, FinalPreco } from './precificacao'
 export { sugerirCriterioRateio } from './sugestaoCriterio'
+export * from './regime'

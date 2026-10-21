@@ -75,6 +75,7 @@ CREATE TABLE IF NOT EXISTS public.empresa_parametros_importacao (
   modal_padrao           text        CHECK (modal_padrao IS NULL OR modal_padrao IN ('MARITIMO', 'AEREO', 'RODOVIARIO')),
   icms_efetivo_pct       numeric(7,4) CHECK (icms_efetivo_pct IS NULL OR (icms_efetivo_pct >= 0 AND icms_efetivo_pct < 100)),
   regime_incentivo_nome  text        CHECK (regime_incentivo_nome IS NULL OR length(regime_incentivo_nome) <= 120),
+  regime_tributario      text        NOT NULL DEFAULT 'SIMPLES' CHECK (regime_tributario IN ('SIMPLES', 'PRESUMIDO', 'REAL')),
   aviso_aceito_em        timestamptz,
   atualizado_por         uuid,
   atualizado_em          timestamptz NOT NULL DEFAULT now()
@@ -128,14 +129,15 @@ BEGIN
     RAISE EXCEPTION 'IMPORT_VALOR_INVALIDO' USING ERRCODE = '22023';
   END IF;
   INSERT INTO public.empresa_parametros_importacao AS e
-    (empresa_id, uf_importador, porto_padrao, modal_padrao, icms_efetivo_pct, regime_incentivo_nome, aviso_aceito_em, atualizado_por, atualizado_em)
+    (empresa_id, uf_importador, porto_padrao, modal_padrao, icms_efetivo_pct, regime_incentivo_nome, regime_tributario, aviso_aceito_em, atualizado_por, atualizado_em)
   VALUES (v_emp, upper(p_dados->>'uf_importador'), nullif(btrim(coalesce(p_dados->>'porto_padrao', '')), ''),
           nullif(p_dados->>'modal_padrao', ''), nullif(p_dados->>'icms_efetivo_pct', '')::numeric,
           nullif(btrim(coalesce(p_dados->>'regime_incentivo_nome', '')), ''),
+          coalesce(nullif(p_dados->>'regime_tributario', ''), 'SIMPLES'),
           CASE WHEN (p_dados->>'aviso_aceito')::boolean THEN now() END, auth.uid(), now())
   ON CONFLICT (empresa_id) DO UPDATE SET
     uf_importador = EXCLUDED.uf_importador, porto_padrao = EXCLUDED.porto_padrao, modal_padrao = EXCLUDED.modal_padrao,
-    icms_efetivo_pct = EXCLUDED.icms_efetivo_pct, regime_incentivo_nome = EXCLUDED.regime_incentivo_nome,
+    icms_efetivo_pct = EXCLUDED.icms_efetivo_pct, regime_incentivo_nome = EXCLUDED.regime_incentivo_nome, regime_tributario = EXCLUDED.regime_tributario,
     aviso_aceito_em = coalesce(e.aviso_aceito_em, EXCLUDED.aviso_aceito_em),
     atualizado_por = auth.uid(), atualizado_em = now();
 END $$;

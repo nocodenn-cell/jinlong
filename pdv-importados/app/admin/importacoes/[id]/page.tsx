@@ -137,7 +137,7 @@ export default async function ImportacaoDetalhePage({ params, searchParams }: Pa
         </div>
       ) : null}
       {aba === 'tributos' ? (
-        <TributosSecao t={t} operacaoId={id} itens={dados.itens} cambios={dados.cambios} tributos={dados.tributos}
+        <TributosSecao t={t} operacaoId={id} itens={dados.itens} cambios={dados.cambios} tributos={dados.tributos} despesas={dados.despesas}
           dataPadrao={o.data_desembaraco ?? new Date().toISOString().slice(0, 10)} editavel={editavel}
           catalogo={await carregarCatalogoEmpresa(ctx.client, ctx.empresaId)} />
       ) : null}

@@ -5,7 +5,7 @@
  */
 import {
   CATALOGO_NACIONAL_VERSAO, CATALOGO_TRIBUTARIO_DEMO, CATALOGO_TRIBUTARIO_VERSAO, montarCatalogoNacional,
-  type AliquotaUf, type ModalTransporte, type OverrideCliente, type ParametroTributario,
+  regimeOuPadrao, type AliquotaUf, type ModalTransporte, type OverrideCliente, type ParametroTributario,
 } from '@shared-core/src/import'
 
 export type ConfigImportacao = {
@@ -14,6 +14,8 @@ export type ConfigImportacao = {
   modal_padrao: ModalTransporte | null
   icms_efetivo_pct: string | null
   regime_incentivo_nome: string | null
+  /** SIMPLES | PRESUMIDO | REAL; nulo ⇒ SIMPLES. */
+  regime_tributario?: string | null
   aviso_aceito_em: string | null
 }
 
@@ -34,4 +36,10 @@ export function parametrosDaEmpresa(d: DadosCatalogoEmpresa | null, uf?: string 
     versao: CATALOGO_NACIONAL_VERSAO,
     nacional: true,
   }
+}
+
+/** Opções do modo nacional (regime, modal, despesas); null ⇒ sem configuração ⇒ comportamento demo. */
+export function opcoesNacionais<D>(d: DadosCatalogoEmpresa | null, despesas: readonly D[]) {
+  if (!d?.config) return null
+  return { despesas, maritimo: (d.config.modal_padrao ?? 'MARITIMO') === 'MARITIMO', regime: regimeOuPadrao(d.config.regime_tributario) }
 }

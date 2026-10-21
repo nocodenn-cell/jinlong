@@ -23,6 +23,7 @@ const Config = z.object({
   modal_padrao: z.enum(['MARITIMO', 'AEREO', 'RODOVIARIO']).or(z.literal('')).optional().nullable(),
   icms_efetivo_pct: Pct.or(z.literal('')).optional().nullable(),
   regime_incentivo_nome: z.string().max(120).optional().nullable(),
+  regime_tributario: z.enum(['SIMPLES', 'PRESUMIDO', 'REAL']).optional().nullable(),
   aviso_aceito: z.literal(true),
 })
 const Override = z.object({
@@ -48,6 +49,7 @@ export async function salvarConfigImportacaoAction(input: unknown): Promise<Resu
   return chamar('import_salvar_parametros_empresa', { p_dados: {
     uf_importador: d.uf_importador, porto_padrao: d.porto_padrao ?? null, modal_padrao: d.modal_padrao || null,
     icms_efetivo_pct: d.icms_efetivo_pct ? norm(d.icms_efetivo_pct) : null, regime_incentivo_nome: d.regime_incentivo_nome ?? null,
+    regime_tributario: d.regime_tributario ?? 'SIMPLES',
     aviso_aceito: true,
   } })
 }
