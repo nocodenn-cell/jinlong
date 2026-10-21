@@ -102,7 +102,7 @@ function CambiosCard({ t, operacaoId, cambios, editavel }: { t: TextosImport; op
           </thead>
           <tbody>
             {cambios.map((c) => (
-              <tr key={c.id} className="border-t border-[var(--color-border)]/60">
+              <tr key={c.id} className="border-t border-[var(--color-border)]">
                 <td className="py-1.5 font-medium">{c.moeda}</td>
                 <td className="py-1.5 text-right tabular-nums">{formatarDecimal(c.taxa)}</td>
                 <td className="py-1.5">{t[`fonte_${c.fonte}` as keyof TextosImport] ?? c.fonte}</td>

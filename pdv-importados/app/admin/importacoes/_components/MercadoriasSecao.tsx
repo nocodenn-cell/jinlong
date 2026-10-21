@@ -97,7 +97,7 @@ export function MercadoriasSecao(props: {
             </thead>
             <tbody>
               {itens.map((i) => (
-                <tr key={i.id} className="border-t border-[var(--color-border)]/60">
+                <tr key={i.id} className="border-t border-[var(--color-border)]">
                   <td className="px-2 py-1.5 font-medium">{i.descricao}</td>
                   <td className="px-2 py-1.5 font-mono" data-testid="imp-item-codigo">{i.codigo_fornecedor ?? '—'}</td>
                   <td className="px-2 py-1.5 font-mono">{i.ncm ?? '—'}</td>

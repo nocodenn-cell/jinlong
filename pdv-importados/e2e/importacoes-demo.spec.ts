@@ -19,6 +19,7 @@ const REF = `DEMO-${Date.now().toString(36).toUpperCase()}`
 const LENTO = { timeout: 60_000 }
 
 test.describe.configure({ mode: 'serial', timeout: 300_000 })
+test.use({ actionTimeout: 60_000 })
 test.skip(!LOCAL || !SERVICE, 'demo exige Supabase LOCAL e E2E_SERVICE_ROLE_KEY')
 
 async function entrar(browser: Browser, email: string): Promise<Page> {
@@ -44,11 +45,14 @@ async function fotoErp() {
   return JSON.stringify({ estoque, produtos, ap })
 }
 async function conferirTodos(page: Page, tipo: 'despesa' | 'tributo') {
-  const pend = page.getByTestId(`imp-conferir-${tipo}`).filter({ hasText: /^Conferir$/ })
-  for (let n = await pend.count(); n > 0; n--) {
+  const pend = page.getByTestId(`imp-conferir-${tipo}`).and(page.getByRole('button', { name: 'Marcar conferido', exact: true }))
+  for (let tentativa = 0; tentativa < 40; tentativa++) {
+    const n = await pend.count()
+    if (n === 0) return
     await pend.first().click()
-    await expect(pend).toHaveCount(n - 1, LENTO)
+    await expect(pend).not.toHaveCount(n, { timeout: 15_000 }).catch(() => undefined)
   }
+  await expect(pend).toHaveCount(0)
 }
 
 let opUrl = ''
@@ -60,6 +64,8 @@ test('fluxo pt: 100 unidades → custo unitário revisado e aprovado', async ({ 
   const page = await entrar(browser, 'dono.a@demo.test')
   await page.goto('/admin/importacoes')
   await expect(page.getByTestId('importacoes-hub')).toBeVisible(LENTO)
+  const pt = page.getByRole('button', { name: 'PT', exact: true }).first()
+  if (await pt.isEnabled()) { await pt.click(); await expect(pt).toBeDisabled(LENTO) }
   await foto(page, '01-hub')
   await page.getByTestId('imp-nova').click()
   const form = page.getByTestId('imp-nova-form')
@@ -69,6 +75,13 @@ test('fluxo pt: 100 unidades → custo unitário revisado e aprovado', async ({ 
   await page.waitForURL(/\/admin\/importacoes\/[0-9a-f-]{36}/, LENTO)
   opUrl = page.url().split('?')[0]
   await expect(page.getByTestId('imp-estado-custo')).toHaveText('Custo provisório')
+
+  // câmbio da operação (moeda da invoice = USD); fictício
+  await page.goto(opUrl)
+  await page.getByTestId('imp-cambio-taxa').fill('5,0000000000'); passos.push('taxa de câmbio')
+  await page.getByLabel('Data do câmbio').fill('2026-10-01'); passos.push('data do câmbio')
+  await page.getByTestId('imp-cambio-salvar').click(); passos.push('salvar câmbio')
+  await expect(page.getByTestId('imp-cambios').getByText('5,0000000000')).toBeVisible(LENTO)
 
   // XML NF-e de importação → itens
   await page.goto(`${opUrl}?aba=documentos`)
@@ -96,15 +109,17 @@ test('fluxo pt: 100 unidades → custo unitário revisado e aprovado', async ({ 
   await page.goto(`${opUrl}?aba=lancamentos`)
   await page.getByTestId('imp-desp-adicionar').click()
   const fd = page.getByTestId('imp-form-despesa')
-  await fd.getByTestId('imp-desp-tipo').fill('Honorários do despachante'); passos.push('tipo despesa')
+  await fd.getByTestId('imp-desp-tipo').fill('Courier de documentos'); passos.push('tipo despesa')
   await fd.getByTestId('imp-desp-valor').fill('500'); passos.push('valor despesa')
-  await expect(page.getByTestId('imp-desp-sugestao')).toBeVisible(LENTO)
+  await expect(page.getByTestId('imp-desp-sugestao')).toContainText('Partes iguais', LENTO)
   await page.getByTestId('imp-desp-usar-sugestao').click(); passos.push('usar critério sugerido')
-  await fd.getByTestId('imp-desp-justificativa').fill('Nota do despachante fictícia'); passos.push('justificativa')
+  await fd.getByTestId('imp-lanc-documento').selectOption({ index: 1 }); passos.push('documento de origem')
+  await fd.getByTestId('imp-desp-justificativa').fill('Recibo de courier fictício'); passos.push('justificativa')
   await fd.getByTestId('imp-lanc-salvar').click(); passos.push('salvar despesa')
-  await expect(page.getByTestId('imp-desp-rateio').getByText('Honorários do despachante')).toBeVisible(LENTO)
+  await expect(page.getByTestId('imp-desp-rateio').getByText('Courier de documentos')).toBeVisible(LENTO)
   await conferirTodos(page, 'despesa')
   await conferirTodos(page, 'tributo'); passos.push('conferir lançamentos')
+  await expect(page.getByRole('button', { name: 'Marcar conferido', exact: true })).toHaveCount(0)
   await foto(page, '05-lancamentos-conferidos')
 
   // estimado (simulação) e real (cálculo)
@@ -122,7 +137,7 @@ test('fluxo pt: 100 unidades → custo unitário revisado e aprovado', async ({ 
 
   // aprovação formal (só registra custo aprovado)
   await page.goto(`${opUrl}?aba=versoes`)
-  await page.getByTestId('imp-aprovar-motivo').fill('Conferido com NF-e e nota do despachante fictícias'); passos.push('motivo')
+  await page.getByTestId('imp-aprovar-motivo').fill('Conferido com NF-e e recibo de courier fictícios'); passos.push('motivo')
   await page.getByTestId('imp-aprovar').click(); passos.push('aprovar')
   await expect(page.getByTestId('imp-aprovada')).toBeVisible(LENTO)
   await expect(page.getByTestId('imp-estado-custo')).toHaveText('Custo aprovado', LENTO)
@@ -144,7 +159,7 @@ test('zh: mesma operação em chinês', async ({ browser }) => {
   await expect(page.getByRole('heading', { name: '进口管理' })).toBeVisible(LENTO)
   await page.goto(`${opUrl}?aba=precificacao`)
   await expect(page.getByTestId('imp-estado-custo')).toHaveText('已审批成本', LENTO)
-  await expect(page.getByText('按数量分级的批发价')).toBeVisible()
+  await expect(page.getByRole('heading', { name: '按数量分级的批发价' })).toBeVisible()
   await foto(page, '09-precificacao-zh')
   await page.goto(`${opUrl}?aba=apuracao`)
   await foto(page, '10-apuracao-zh')

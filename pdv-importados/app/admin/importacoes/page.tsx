@@ -132,7 +132,7 @@ export default async function ImportacoesPage({ searchParams }: PageProps) {
                   const custo = aprovado ? o.aprovada_custo_total : o.ultima_apuracao_status === 'OK' ? o.ultima_apuracao_custo_total : null
                   const pend = rotuloPendencia(o)
                   return (
-                    <tr key={o.id} className="border-b border-[var(--color-border)]/60 last:border-0">
+                    <tr key={o.id} className="border-b border-[var(--color-border)] last:border-0">
                       <td className="px-2 py-2 font-medium">
                         <Link href={adminImportacaoHref(o.id)} className="text-[var(--color-brand-primary)] underline-offset-4 hover:underline">
                           {o.referencia}

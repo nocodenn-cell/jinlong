@@ -97,7 +97,7 @@ export function PrecificacaoSecao(props: { t: TextosImport; nomes: Record<string
                 </thead>
                 <tbody>
                   {linhas.map((l) => (
-                    <tr key={l.id} className="border-t border-[var(--color-border)]/60">
+                    <tr key={l.id} className="border-t border-[var(--color-border)]">
                       <td className="px-2 py-1.5">{props.nomes[l.id] ?? '—'}</td>
                       <td className="px-2 py-1.5 text-right tabular-nums">R$ {formatarDecimal(l.custo)}</td>
                       <td className="px-2 py-1.5 text-right" data-testid="imp-prec-varejo">{celula(l.v)}</td>
@@ -133,7 +133,7 @@ export function PrecificacaoSecao(props: { t: TextosImport; nomes: Record<string
               </thead>
               <tbody>
                 {faixasCalc.map((l) => (
-                  <tr key={l.id} className="border-t border-[var(--color-border)]/60">
+                  <tr key={l.id} className="border-t border-[var(--color-border)]">
                     <td className="px-2 py-1.5">{props.nomes[l.id] ?? '—'}</td>
                     {typeof l.r === 'string' ? (
                       <td colSpan={faixas.length} className="px-2 py-1.5 text-xs text-[var(--color-warning-strong)]">{l.r}</td>
@@ -168,7 +168,7 @@ export function PrecificacaoSecao(props: { t: TextosImport; nomes: Record<string
               </thead>
               <tbody>
                 {comparacao.map((c) => (
-                  <tr key={c.item_id} className="border-t border-[var(--color-border)]/60">
+                  <tr key={c.item_id} className="border-t border-[var(--color-border)]">
                     <td className="px-2 py-1.5">{props.nomes[c.item_id] ?? '—'}</td>
                     <td className="px-2 py-1.5 text-right tabular-nums">{formatarDecimal(c.estimado_brl)}</td>
                     <td className="px-2 py-1.5 text-right tabular-nums">{formatarDecimal(c.real_brl)}</td>

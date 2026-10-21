@@ -57,7 +57,7 @@ export function VersoesSecao(props: {
               </thead>
               <tbody>
                 {props.apuracoes.map((a) => (
-                  <tr key={a.id} className="border-t border-[var(--color-border)]/60" aria-current={sel?.id === a.id ? 'true' : undefined}>
+                  <tr key={a.id} className="border-t border-[var(--color-border)]" aria-current={sel?.id === a.id ? 'true' : undefined}>
                     <td className="px-2 py-1.5 font-semibold">v{a.versao}</td>
                     <td className="px-2 py-1.5">
                       <div className="flex flex-wrap gap-1">
@@ -109,7 +109,7 @@ export function VersoesSecao(props: {
                 const a = props.comparada!.saida.itens.find((i) => i.item_id === id)
                 const b = sel.saida.itens.find((i) => i.item_id === id)
                 return (
-                  <tr key={id} className="border-t border-[var(--color-border)]/60">
+                  <tr key={id} className="border-t border-[var(--color-border)]">
                     <td className="px-2 py-1.5">{nomeItem(id)}</td>
                     <td className="px-2 py-1.5 text-right tabular-nums">{formatarDecimal(a?.custo_unitario_brl)}</td>
                     <td className="px-2 py-1.5 text-right tabular-nums">{formatarDecimal(b?.custo_unitario_brl)}</td>
@@ -153,7 +153,7 @@ export function VersoesSecao(props: {
             <h3 className="mb-1 text-small font-semibold">{t.aprov_historico}</h3>
             <ul className="text-small" data-testid="imp-decisoes">
               {props.aprovacoes.map((a) => (
-                <li key={a.id} className="border-t border-[var(--color-border)]/60 py-1.5">
+                <li key={a.id} className="border-t border-[var(--color-border)] py-1.5">
                   <StatusBadge tone={a.decisao === 'APROVADA' ? 'success' : 'neutral'}>{tk(`dec_${a.decisao}`)}</StatusBadge>{' '}
                   {quem(a.por)} · {new Date(a.em).toLocaleString()} — {a.motivo}
                 </li>
@@ -169,7 +169,7 @@ export function VersoesSecao(props: {
         ) : (
           <ul className="text-small" data-testid="imp-auditoria">
             {props.auditoria.map((a) => (
-              <li key={a.id} className="flex gap-3 border-t border-[var(--color-border)]/60 py-1">
+              <li key={a.id} className="flex gap-3 border-t border-[var(--color-border)] py-1">
                 <span className="tabular-nums text-fg-subtle">{new Date(a.em).toLocaleString()}</span>
                 <span>{quem(a.por)}</span>
                 <code className="text-xs">{a.acao} · {a.entidade}</code>

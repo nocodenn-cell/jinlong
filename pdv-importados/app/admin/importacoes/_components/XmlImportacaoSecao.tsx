@@ -54,7 +54,7 @@ export function XmlImportacaoSecao(props: { t: TextosImport; operacaoId: string;
               </thead>
               <tbody>
                 {proposta.itens.map((it, i) => (
-                  <tr key={i} className="border-t border-[var(--color-border)]/60">
+                  <tr key={i} className="border-t border-[var(--color-border)]">
                     <td className="px-2 py-1.5"><input type="checkbox" aria-label={it.descricao} checked={sel.has(i)}
                       onChange={(e) => { const n = new Set(sel); if (e.target.checked) n.add(i); else n.delete(i); setSel(n) }} /></td>
                     <td className="px-2 py-1.5">{it.descricao}</td>

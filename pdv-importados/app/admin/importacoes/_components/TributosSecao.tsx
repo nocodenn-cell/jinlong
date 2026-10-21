@@ -43,7 +43,7 @@ export function TributosSecao(props: {
 
   return (
     <SectionCard title={t.trib_ncm_titulo} subtitle={t.trib_ncm_subtitulo}>
-      <p role="note" className="mb-3 rounded-md border border-[var(--color-warning-strong)]/40 bg-[var(--color-surface-soft)] px-3 py-2 text-small" data-testid="imp-trib-ficticio">
+      <p role="note" className="mb-3 rounded-md border border-[var(--color-warning-strong)] bg-[var(--color-surface-soft)] px-3 py-2 text-small" data-testid="imp-trib-ficticio">
         {t.trib_ncm_aviso_ficticio}
       </p>
       <div className="mb-4 grid gap-3 md:grid-cols-4">
@@ -75,7 +75,7 @@ export function TributosSecao(props: {
                 const k = `${s.item_id}:${s.tributo}`
                 const reg = jaRegistrado(s.item_id, s.tributo)
                 return (
-                  <tr key={k} className="border-t border-[var(--color-border)]/60">
+                  <tr key={k} className="border-t border-[var(--color-border)]">
                     <td className="px-2 py-1.5">
                       {s.status === 'CALCULADO' && !reg && props.editavel ? (
                         <input type="checkbox" aria-label={`${nomeItem(s.item_id)} ${s.tributo}`} checked={sel.has(k)}

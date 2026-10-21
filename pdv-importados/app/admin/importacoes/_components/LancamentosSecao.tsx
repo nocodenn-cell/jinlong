@@ -98,7 +98,7 @@ export function LancamentosSecao(props: Props) {
       </thead>
       <tbody>
         {lista.map((x) => (
-          <tr key={x.id} className="border-t border-[var(--color-border)]/60">
+          <tr key={x.id} className="border-t border-[var(--color-border)]">
             <td className="px-2 py-1.5 font-medium">{x.tributo_codigo}</td>
             <td className="px-2 py-1.5">{tk(`rec_${x.status_recuperabilidade}`)}</td>
             <td className="px-2 py-1.5 text-right tabular-nums">{formatarDecimal(x.valor_apurado_brl)}</td>
@@ -130,7 +130,7 @@ export function LancamentosSecao(props: Props) {
       </thead>
       <tbody>
         {lista.map((x) => (
-          <tr key={x.id} className="border-t border-[var(--color-border)]/60">
+          <tr key={x.id} className="border-t border-[var(--color-border)]">
             <td className="px-2 py-1.5 font-medium">{x.tipo}</td>
             <td className="px-2 py-1.5 text-right tabular-nums">{x.moeda} {formatarDecimal(x.valor)}</td>
             <td className="px-2 py-1.5">{tk(`inc_${x.incorporavel}`)}</td>
@@ -188,7 +188,7 @@ export function LancamentosSecao(props: Props) {
         <Grupo titulo={t.lanc_descontos} vazio={t.lanc_vazio} n={props.descontos.length} testId="imp-descontos">
           <tbody>
             {props.descontos.map((x) => (
-              <tr key={x.id} className="border-t border-[var(--color-border)]/60">
+              <tr key={x.id} className="border-t border-[var(--color-border)]">
                 <td className="px-2 py-1.5">{tk(`esc_${x.escopo}`)}</td>
                 <td className="px-2 py-1.5 text-right tabular-nums">{x.moeda} {formatarDecimal(x.valor)}</td>
                 <td className="px-2 py-1.5">{x.escopo === 'ITEM' ? nomeItem(x.item_id) : tk(`crit_${x.criterio}`)}</td>

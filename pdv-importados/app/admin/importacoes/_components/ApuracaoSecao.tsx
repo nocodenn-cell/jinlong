@@ -167,7 +167,7 @@ export function ApuracaoSecao(props: {
             </thead>
             <tbody>
               {s.itens.map((i) => (
-                <tr key={i.item_id} className="border-t border-[var(--color-border)]/60">
+                <tr key={i.item_id} className="border-t border-[var(--color-border)]">
                   <td className="px-2 py-1.5 font-medium">{nomeItem(i.item_id)}</td>
                   <td className="px-2 py-1.5 text-right tabular-nums">{formatarDecimal(i.quantidade_estoque)}</td>
                   <td className="px-2 py-1.5 text-right tabular-nums">{formatarDecimal(i.componentes_brl.mercadoria)}</td>
@@ -203,13 +203,13 @@ export function ApuracaoSecao(props: {
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="border-t border-[var(--color-border)]/60">
+                    <tr className="border-t border-[var(--color-border)]">
                       <td className="px-2 py-1.5">{t.apu_mercadoria}</td><td className="px-2 py-1.5">—</td><td className="px-2 py-1.5">{t.comp_direto}</td>
                       <td className="px-2 py-1.5 text-right tabular-nums">{formatarDecimal(i.componentes_brl.mercadoria)}</td>
                       <td className="px-2 py-1.5 text-right tabular-nums">{unit(i.componentes_brl.mercadoria, i.quantidade_estoque)}</td>
                     </tr>
                     {linhas.map((l, k) => (
-                      <tr key={k} className="border-t border-[var(--color-border)]/60">
+                      <tr key={k} className="border-t border-[var(--color-border)]">
                         <td className="px-2 py-1.5">{l.nome}</td>
                         <td className="px-2 py-1.5 text-xs">{l.documento ? (
                           <a href={`?aba=documentos#doc-${l.documento.id}`} className="underline underline-offset-2" data-testid="imp-comp-doc-link" title={t.comp_abrir_documento}>{l.documento.nome}</a>
@@ -261,7 +261,7 @@ export function ApuracaoSecao(props: {
               </thead>
               <tbody>
                 {s.rateios.map((r, k) => (
-                  <tr key={`${r.origem_id}-${r.item_id}-${k}`} className="border-t border-[var(--color-border)]/60">
+                  <tr key={`${r.origem_id}-${r.item_id}-${k}`} className="border-t border-[var(--color-border)]">
                     <td className="px-2 py-1.5">
                       {r.componente === 'despesas' ? t.apu_despesas : r.componente === 'descontos' ? t.apu_descontos : t.apu_tributos}
                     </td>
