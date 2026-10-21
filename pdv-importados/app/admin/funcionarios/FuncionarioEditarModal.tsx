@@ -4,15 +4,17 @@ import { useEffect, useRef, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DragonModal } from '@/components/ui/DragonModal'
-import { Field, Input, Select } from '@/components/ui/forms'
+import { Field, Input, Select, Textarea } from '@/components/ui/forms'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { PASSWORD_MIN_LENGTH } from '@/lib/auth/passwordPolicy'
 import {
   atualizarFuncionarioAction,
   criarFuncionarioAction,
+  obterDadosFuncionarioAction,
   verificarEmailDisponiveAction,
   type FuncionarioListRow,
 } from './actions'
+import { cpfValido, formatarCpf, formatarTelefone, somenteDigitos } from './funcionarioDados'
 import {
   perfisAtribuiveisPorAtor,
   type PerfilFuncionarioUi,
@@ -32,6 +34,7 @@ export type FuncionarioModalLabels = {
   nome: string
   email: string
   emailHint: string
+  emailHintNovo: string
   perfil: string
   idioma: string
   senha: string
@@ -44,6 +47,17 @@ export type FuncionarioModalLabels = {
   perfilGerente: string
   idiomaPt: string
   idiomaZh: string
+  secaoDados: string
+  secaoDadosSub: string
+  telefone: string
+  telefonePlaceholder: string
+  cpf: string
+  cpfHint: string
+  cpfInvalido: string
+  cargo: string
+  cargoPlaceholder: string
+  admissao: string
+  observacoes: string
 }
 
 type Props = {
@@ -52,6 +66,8 @@ type Props = {
   funcionario: FuncionarioListRow | null
   onClose: () => void
   onSalvo: (row: FuncionarioListRow) => void
+  /** false enquanto a migration de dados complementares não estiver aplicada. */
+  dadosDisponiveis?: boolean
 }
 
 export function FuncionarioEditarModal({
@@ -60,6 +76,7 @@ export function FuncionarioEditarModal({
   funcionario,
   onClose,
   onSalvo,
+  dadosDisponiveis = false,
 }: Props) {
   const editando = !!funcionario
   const perfis = perfisAtribuiveisPorAtor(atorPerfil)
@@ -80,6 +97,38 @@ export function FuncionarioEditarModal({
     erro: null,
   })
   const [salvando, setSalvando] = useState(false)
+  const [telefone, setTelefone] = useState('')
+  const [cpf, setCpf] = useState('')
+  const [cargo, setCargo] = useState('')
+  const [admissao, setAdmissao] = useState('')
+  const [observacoes, setObservacoes] = useState('')
+  const [carregandoDados, setCarregandoDados] = useState(editando && dadosDisponiveis)
+  const cpfDigitos = somenteDigitos(cpf)
+  const cpfErro = cpfDigitos.length > 0 && (cpfDigitos.length === 11 ? !cpfValido(cpfDigitos) : false)
+  const cpfIncompleto = cpfDigitos.length > 0 && cpfDigitos.length < 11
+
+  useEffect(() => {
+    if (!editando || !funcionario || !dadosDisponiveis) return
+    let vivo = true
+    void obterDadosFuncionarioAction(funcionario.id).then((r) => {
+      if (!vivo) return
+      if (r.ok && r.data) {
+        setTelefone(formatarTelefone(r.data.telefone))
+        setCpf(r.data.cpf ? formatarCpf(r.data.cpf) : '')
+        setCargo(r.data.cargo ?? '')
+        setAdmissao(r.data.data_admissao ?? '')
+        setObservacoes(r.data.observacoes ?? '')
+      }
+      setCarregandoDados(false)
+    })
+    return () => {
+      vivo = false
+    }
+  }, [editando, funcionario, dadosDisponiveis])
+
+  const dados = dadosDisponiveis
+    ? { telefone, cpf, cargo, data_admissao: admissao, observacoes }
+    : undefined
 
   useEffect(() => {
     const t = setTimeout(() => nomeRef.current?.focus(), 30)
@@ -105,6 +154,11 @@ export function FuncionarioEditarModal({
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
+
+    if (dadosDisponiveis && (cpfErro || cpfIncompleto)) {
+      emitGerenteToast({ kind: 'error', message: L.cpfInvalido })
+      return
+    }
 
     // Validar email se houver erro pendente de validação
     if (!editando && emailValidacao.erro) {
@@ -140,6 +194,7 @@ export function FuncionarioEditarModal({
           perfil,
           idioma_preferido: idioma,
           senhaNova: senha.trim() || undefined,
+          dados: carregandoDados ? undefined : dados,
         })
         if (!r.ok) {
           emitGerenteToast({ kind: 'error', message: r.error })
@@ -156,6 +211,7 @@ export function FuncionarioEditarModal({
         perfil,
         idioma_preferido: idioma,
         senha,
+        dados,
       })
       if (!r.ok) {
         emitGerenteToast({ kind: 'error', message: r.error })
@@ -213,7 +269,7 @@ export function FuncionarioEditarModal({
             hint={
               editando
                 ? L.emailHint
-                : 'O email não poderá ser alterado depois. Verifique antes de salvar.'
+                : L.emailHintNovo
             }
           >
             <Input
@@ -285,6 +341,70 @@ export function FuncionarioEditarModal({
             disabled={salvando}
           />
         </Field>
+
+        {dadosDisponiveis ? (
+          <fieldset
+            className="flex flex-col gap-3 border-t border-[var(--color-border-secondary)] pt-4"
+            data-testid="funcionario-dados-complementares"
+            disabled={salvando || carregandoDados}
+          >
+            <legend className="sr-only">{L.secaoDados}</legend>
+            <div aria-hidden>
+              <p className="text-small font-semibold text-fg">{L.secaoDados}</p>
+              <p className="text-caption text-fg-subtle">{L.secaoDadosSub}</p>
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Field id="func-telefone" label={L.telefone}>
+                <Input
+                  type="tel"
+                  inputMode="tel"
+                  value={telefone}
+                  onChange={(ev) => setTelefone(ev.target.value)}
+                  onBlur={() => setTelefone((t) => formatarTelefone(t.trim()) || t)}
+                  placeholder={L.telefonePlaceholder}
+                  autoComplete="off"
+                  maxLength={20}
+                />
+              </Field>
+              <Field
+                id="func-cpf"
+                label={L.cpf}
+                hint={cpfErro || cpfIncompleto ? undefined : L.cpfHint}
+                error={cpfErro ? L.cpfInvalido : undefined}
+              >
+                <Input
+                  inputMode="numeric"
+                  value={cpf}
+                  onChange={(ev) => setCpf(formatarCpf(ev.target.value))}
+                  placeholder="000.000.000-00"
+                  autoComplete="off"
+                  maxLength={14}
+                  aria-invalid={cpfErro || undefined}
+                />
+              </Field>
+              <Field id="func-cargo" label={L.cargo}>
+                <Input
+                  value={cargo}
+                  onChange={(ev) => setCargo(ev.target.value)}
+                  placeholder={L.cargoPlaceholder}
+                  maxLength={80}
+                  autoComplete="organization-title"
+                />
+              </Field>
+              <Field id="func-admissao" label={L.admissao}>
+                <Input type="date" value={admissao} onChange={(ev) => setAdmissao(ev.target.value)} />
+              </Field>
+            </div>
+            <Field id="func-observacoes" label={L.observacoes}>
+              <Textarea
+                value={observacoes}
+                onChange={(ev) => setObservacoes(ev.target.value)}
+                rows={2}
+                maxLength={1000}
+              />
+            </Field>
+          </fieldset>
+        ) : null}
       </form>
     </DragonModal>
   )
