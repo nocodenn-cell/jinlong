@@ -1,7 +1,6 @@
 import type { HomeContent } from '@/lib/content'
 import { CONTACT_EMAIL, getContactChannels } from '@/lib/contactChannels'
 import type { SiteLocale } from '@/lib/locales'
-import { Ph } from './Placeholder'
 import { TrialForm } from './TrialForm'
 
 export function FinalCta({ locale, content }: { locale: SiteLocale; content: HomeContent }) {
@@ -13,8 +12,8 @@ export function FinalCta({ locale, content }: { locale: SiteLocale; content: Hom
         金龙
       </span>
       <h2 id="h-final">{final.title}</h2>
-      <p><Ph text={final.lead} /></p>
-      <TrialForm copy={form} email={CONTACT_EMAIL} whatsappHref={whatsapp?.href ?? null} />
+      <p>{final.lead}</p>
+      <TrialForm copy={form} email={CONTACT_EMAIL} whatsappHref={whatsapp?.href ?? null} locale={locale} />
     </section>
   )
 }

@@ -1017,6 +1017,154 @@ export type Database = {
           },
         ]
       }
+      commercial_admins: {
+        Row: {
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      commercial_customers: {
+        Row: {
+          contact: string | null
+          contracted_at: string
+          created_at: string
+          id: string
+          lead_id: string | null
+          monthly_value: number | null
+          notes: string | null
+          plan: string | null
+          product: string
+          store_name: string
+          subscription_status: string
+        }
+        Insert: {
+          contact?: string | null
+          contracted_at?: string
+          created_at?: string
+          id?: string
+          lead_id?: string | null
+          monthly_value?: number | null
+          notes?: string | null
+          plan?: string | null
+          product: string
+          store_name: string
+          subscription_status?: string
+        }
+        Update: {
+          contact?: string | null
+          contracted_at?: string
+          created_at?: string
+          id?: string
+          lead_id?: string | null
+          monthly_value?: number | null
+          notes?: string | null
+          plan?: string | null
+          product?: string
+          store_name?: string
+          subscription_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_customers_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
+            referencedRelation: "commercial_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commercial_lead_events: {
+        Row: {
+          author: string | null
+          body: string | null
+          created_at: string
+          from_status: string | null
+          id: string
+          kind: string
+          lead_id: string
+          to_status: string | null
+        }
+        Insert: {
+          author?: string | null
+          body?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          kind: string
+          lead_id: string
+          to_status?: string | null
+        }
+        Update: {
+          author?: string | null
+          body?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          kind?: string
+          lead_id?: string
+          to_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_lead_events_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commercial_leads: {
+        Row: {
+          channel: string
+          contact: string
+          created_at: string
+          id: string
+          locale: string
+          name: string
+          product: string
+          protocol: string
+          status: string
+          store: string
+          updated_at: string
+        }
+        Insert: {
+          channel: string
+          contact: string
+          created_at?: string
+          id?: string
+          locale: string
+          name: string
+          product: string
+          protocol: string
+          status?: string
+          store: string
+          updated_at?: string
+        }
+        Update: {
+          channel?: string
+          contact?: string
+          created_at?: string
+          id?: string
+          locale?: string
+          name?: string
+          product?: string
+          protocol?: string
+          status?: string
+          store?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       conciliacoes_financeiras: {
         Row: {
           created_at: string
@@ -7544,6 +7692,7 @@ export type Database = {
         }
         Returns: Json
       }
+      is_commercial_admin: { Args: never; Returns: boolean }
       is_feature_enabled: { Args: { flag_name: string }; Returns: boolean }
       kpis_venda_eventos_gerente: {
         Args: {

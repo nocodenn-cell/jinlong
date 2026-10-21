@@ -524,7 +524,7 @@ body.jl { margin: 0; min-height: 100dvh; }
 .jl-form-lead, .jl-form-note { margin: 6px 0 0; color: var(--text-muted); font-size: 15px; }
 .jl-form-grid { margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
 .jl-form label { display: grid; gap: 6px; font-size: 15px; font-weight: 600; }
-.jl-form input[type="text"], .jl-form input[type="tel"] { min-height: 46px; padding: 0 12px; border: 1px solid var(--border-control); border-radius: 10px; font: 400 16px/20px var(--font-sans); color: var(--text); background: var(--white); }
+.jl-form input[type="text"], .jl-form input[type="tel"] { width: 100%; box-sizing: border-box; min-height: 46px; padding: 0 12px; border: 1px solid var(--border-control); border-radius: 10px; font: 400 16px/20px var(--font-sans); color: var(--text); background: var(--white); }
 .jl-form fieldset { grid-column: 1 / -1; border: 1px solid var(--line-strong); border-radius: 10px; padding: 10px 14px; display: flex; flex-wrap: wrap; gap: 8px 20px; }
 .jl-form legend { font-size: 15px; font-weight: 600; padding: 0 4px; }
 .jl-form .jl-radio { display: inline-flex; align-items: center; gap: 8px; font-weight: 500; min-height: 44px; }
@@ -555,3 +555,23 @@ body.jl { margin: 0; min-height: 100dvh; }
   .jl-fab summary { width: 52px; padding: 0; justify-content: center; }
 }
 .jl-final .jl-form p { font-size: 15px; line-height: 1.6; margin: 6px 0 0; max-width: none; color: var(--text-muted); }
+
+/* Funcionalidades e integrações (seção discreta) */
+.jl-integrations { padding-top: 48px; padding-bottom: 48px; border-top: 1px solid var(--line); }
+.jl-integrations .jl-h3 { margin: 0; font: 600 20px/28px var(--font-sans); color: var(--graphite-900); }
+.jl-integrations ul { margin: 16px 0 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 24px; color: var(--text-soft); font-size: 16px; }
+.jl-integrations li::before { content: "·"; color: var(--brand); font-weight: 700; margin-right: 8px; }
+.jl-int-note { margin: 16px 0 0; font-size: 14px; color: var(--text-muted); }
+@media (max-width: 767px) { .jl-integrations ul { grid-template-columns: 1fr; } }
+
+/* Formulário de demonstração: estados */
+.jl-form .jl-span { grid-column: 1 / -1; }
+.jl-form .jl-hint { font-weight: 400; font-size: 14px; color: var(--text-muted); }
+.jl-form .jl-err { font-weight: 600; font-size: 14px; color: var(--brand); }
+.jl-form input[aria-invalid="true"] { border-color: var(--brand); border-width: 2px; }
+.jl-hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+.jl-form-fail { scroll-margin: 96px; margin-top: 16px; padding: 14px 16px; border: 1px solid var(--brand); border-radius: 10px; background: var(--white); }
+.jl-form-done { scroll-margin: 96px; }
+.jl-form-done:focus, .jl-form-fail:focus { outline: none; }
+.jl-protocol { font-size: 18px; color: var(--text); }
+.jl-protocol strong { font-family: ui-monospace, monospace; letter-spacing: 0.04em; color: var(--brand); }

@@ -48,7 +48,7 @@ for (const locale of LOCALES) {
     test('ordem das seções do briefing, sem banner de rascunho', async ({ page }) => {
       await openHome(page, locale)
       const ids = await page.locator('main > section').evaluateAll((els) => els.map((el) => el.getAttribute('aria-labelledby')))
-      expect(ids).toEqual(['h-hero', 'h-niches', 'h-pains', 'h-ben', 'h-lang', 'h-how', 'h-in', 'h-panel', 'h-wh', 'h-price', 'h-faq', 'h-final'])
+      expect(ids).toEqual(['h-hero', 'h-niches', 'h-pains', 'h-ben', 'h-lang', 'h-how', 'h-in', 'h-panel', 'h-wh', 'h-price', 'h-int', 'h-faq', 'h-final'])
       await expect(page.locator('.jl-draft')).toHaveCount(0)
       await expect(page.locator('.jl-lang')).toBeVisible()
     })
@@ -59,18 +59,78 @@ for (const locale of LOCALES) {
       await first.locator('summary').focus()
       await page.keyboard.press('Enter')
       await expect(first).toHaveAttribute('open', '')
-      await expect(page.locator('.jl-price .jl-ph')).toHaveText('[PREÇO]')
+      await expect(page.locator('.jl-price .jl-ph')).toHaveCount(0)
+      await expect(page.locator('.jl-hero')).not.toContainText(/NFC-e|NF-e|发票|grátis|免费/)
     })
 
-    test('formulário de teste: 8 campos, obrigatórios validados', async ({ page }) => {
+    test('formulário de demonstração: nome, loja, contato + canal; validação no cliente', async ({ page }) => {
       await openHome(page, locale)
       const form = page.locator('form.jl-form')
-      await expect(form.locator('input')).toHaveCount(8)
-      expect(await form.evaluate((el) => (el as HTMLFormElement).checkValidity())).toBe(false)
-      await form.locator('input[name="name"]').fill('Teste')
-      await form.locator('input[name="store"]').fill('Loja Teste')
-      await form.locator('input[name="city"]').fill('São Paulo')
-      expect(await form.evaluate((el) => (el as HTMLFormElement).checkValidity())).toBe(true)
+      await expect(form.locator('input:not([name="website"])')).toHaveCount(5)
+      await expect(form.locator('input[name="channel"]')).toHaveCount(2)
+      for (const gone of ['city', 'type', 'preferred', 'wechat', 'whatsapp']) await expect(form.locator(`[name="${gone}"]`)).toHaveCount(0)
+      let posted = false
+      await page.route('**/api/demo', (route) => { posted = true; return route.fulfill({ status: 500 }) })
+      await form.locator('button[type="submit"]').click()
+      await expect(form.locator('input[name="name"]')).toHaveAttribute('aria-invalid', 'true')
+      await expect(form.locator('.jl-err')).toHaveCount(3)
+      await expect(form.locator('input[name="name"]')).toBeFocused()
+      expect(posted).toBe(false)
+    })
+
+    test('formulário: envio com sucesso mostra protocolo e WhatsApp', async ({ page }) => {
+      await openHome(page, locale)
+      let payload: Record<string, unknown> = {}
+      await page.route('**/api/demo', async (route) => {
+        payload = route.request().postDataJSON()
+        await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ ok: true, protocol: 'JL-261020-ABCDEF' }) })
+      })
+      const form = page.locator('form.jl-form')
+      await form.locator('input[name="name"]').fill('Li Wei')
+      await form.locator('input[name="store"]').fill('Loja Dragão')
+      await form.locator('input[name="contact"]').fill('11 91234-5678')
+      await form.locator('button[type="submit"]').click()
+      const done = page.locator('.jl-form-done')
+      await expect(done).toBeVisible()
+      await expect(done.getByTestId('protocol')).toHaveText('JL-261020-ABCDEF')
+      expect(payload).toMatchObject({ name: 'Li Wei', store: 'Loja Dragão', contact: '11 91234-5678', channel: 'whatsapp', locale, website: '' })
+      const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).include('.jl-final').analyze()
+      expect(results.violations).toEqual([])
+    })
+
+    test('formulário: falha no registro mostra e-mail/WhatsApp (sem perda silenciosa)', async ({ page }) => {
+      await openHome(page, locale)
+      await page.route('**/api/demo', (route) =>
+        route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'not_configured' }) }))
+      const form = page.locator('form.jl-form')
+      await form.locator('input[name="channel"][value="wechat"]').check()
+      await form.locator('input[name="name"]').fill('Li Wei')
+      await form.locator('input[name="store"]').fill('Loja Dragão')
+      await form.locator('input[name="contact"]').fill('liwei_88')
+      await form.locator('button[type="submit"]').click()
+      const fail = page.locator('.jl-form-fail[role="alert"]')
+      await expect(fail).toBeVisible()
+      const mail = fail.locator('a[href^="mailto:naturalcodedevelop@gmail.com"]')
+      await expect(mail).toBeVisible()
+      expect(decodeURIComponent((await mail.getAttribute('href')) ?? '')).toContain('liwei_88')
+      await expect(form.locator('input[name="contact"]')).toHaveValue('liwei_88')
+      const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).include('.jl-final').analyze()
+      expect(results.violations).toEqual([])
+    })
+
+    test('servidor real sem configuração: /api/demo responde 503 not_configured e valida', async ({ request }) => {
+      const ok = await request.post('/api/demo', { data: { name: 'Li Wei', store: 'Loja', contact: '11912345678', channel: 'whatsapp', locale } })
+      expect([503, 429]).toContain(ok.status())
+      const bad = await request.post('/api/demo', { data: { name: '', channel: 'x' }, headers: { 'x-forwarded-for': `10.0.0.${Math.floor(Math.random() * 250)}` } })
+      expect([400, 429]).toContain(bad.status())
+    })
+
+    test('nenhuma nota interna visível (placeholders, CONFIRMAR, TODO, em breve)', async ({ page }) => {
+      await openHome(page, locale)
+      const text = await page.locator('body').innerText()
+      expect(text).not.toMatch(/\[|\]|em breve|即将/i)
+      expect(text).not.toMatch(/CONFIRMAR|TODO|DEPOIMENTO/)
+      await expect(page.locator('.jl-ph')).toHaveCount(0)
     })
 
     test('botão flutuante de contato abre e-mail', async ({ page }) => {
