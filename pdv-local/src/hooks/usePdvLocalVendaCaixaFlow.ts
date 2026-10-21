@@ -46,6 +46,8 @@ type Params = {
    * `pagamentos` no payload — idêntico ao comportamento anterior.
    */
   pagamentos?: LinhaPagamentoDesktop[]
+  /** Comissão: vendedor escolhido. null/ausente = operador do caixa (payload idêntico ao antigo). */
+  vendedorId?: string | null
   onSetCaixaAtualId: (id: string | null) => void
   onSetMensagem: (msg: string) => void
   onLimparCarrinho: () => void
@@ -58,6 +60,7 @@ type Params = {
 
 export function usePdvLocalVendaCaixaFlow({
   tauriDisponivel,
+  vendedorId,
   caixaAtualId,
   itens,
   totalBruto,
@@ -234,6 +237,7 @@ export function usePdvLocalVendaCaixaFlow({
         venda: {
           caixa_id: caixaId,
           operador_id: null,
+          ...(vendedorId ? { vendedor_id: vendedorId } : {}),
           forma_pagamento: formaEscalar,
           ...(pagamentosOutbox ? { pagamentos: pagamentosOutbox } : {}),
           total_bruto: totalBruto,
@@ -300,6 +304,7 @@ export function usePdvLocalVendaCaixaFlow({
     onRefreshOutboxResumo,
     logError,
     onFinalizarElapsedMs,
+    vendedorId,
   ])
 
   return {

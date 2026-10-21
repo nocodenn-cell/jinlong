@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00"><NFe><infNFe Id="NFe35261000000000000191550010000012341000012345" versao="4.00">
+<ide><nNF>1234</nNF><dhEmi>2026-10-15T10:00:00-03:00</dhEmi></ide>
+<emit><CNPJ>00000000000191</CNPJ><xNome>IMPORTADORA FICTICIA LTDA</xNome></emit>
+<det nItem="1"><prod><cProd>00123</cProd><xProd>Chaleira eletrica 1,7L (ficticio)</xProd><NCM>85161000</NCM><uCom>UN</uCom><qCom>100.0000</qCom><vProd>5000.00</vProd>
+<DI><nDI>2612345678</nDI><dDI>2026-10-14</dDI></DI></prod>
+<imposto><ICMS><ICMS00><vICMS>1200.50</vICMS></ICMS00></ICMS><II><vBC>5000.00</vBC><vII>900.00</vII></II><IPI><IPITrib><vIPI>295.00</vIPI></IPITrib></IPI>
+<PIS><PISAliq><vPIS>105.00</vPIS></PISAliq></PIS><COFINS><COFINSAliq><vCOFINS>482.50</vCOFINS></COFINSAliq></COFINS></imposto></det>
+<det nItem="2"><prod><cProd>00456</cProd><xProd>Pote plastico (ficticio)</xProd><NCM>39249000</NCM><uCom>CX</uCom><qCom>20.0000</qCom><vProd>800.00</vProd></prod>
+<imposto><II><vII>80.00</vII></II></imposto></det>
+</infNFe></NFe></nfeProc>

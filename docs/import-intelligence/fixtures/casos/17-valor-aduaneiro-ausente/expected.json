@@ -1,0 +1,55 @@
+{
+  "schema_version": "1",
+  "engine_version": "landed-cost-ref/0.1.0",
+  "input_hash": "sha256:eb0263f87b375626727b4149eb277e0a52da7de6fcfd525fe57fb8f4d38a51b8",
+  "status": "BLOQUEADO",
+  "divergencias": [
+    {
+      "codigo": "VALOR_ADUANEIRO_AUSENTE",
+      "severidade": "BLOQUEANTE",
+      "referencia": "item-002",
+      "mensagem": "valor aduaneiro do item não informado"
+    }
+  ],
+  "itens": [
+    {
+      "item_id": "item-001",
+      "produto_id": "prod-001",
+      "quantidade_estoque": "1.000",
+      "componentes_brl": {
+        "mercadoria": "50.0000",
+        "despesas_incorporadas": "0.0000",
+        "tributos_nao_recuperaveis": "0.0000",
+        "descontos": "0.0000"
+      },
+      "custo_total_brl": "50.0000",
+      "custo_unitario_brl": "50.000000",
+      "residuo_unitario_brl": "0.0000000000",
+      "residuo_total_brl": "0.0000000000"
+    },
+    {
+      "item_id": "item-002",
+      "produto_id": "prod-002",
+      "quantidade_estoque": "1.000",
+      "componentes_brl": {
+        "mercadoria": "50.0000",
+        "despesas_incorporadas": "0.0000",
+        "tributos_nao_recuperaveis": "0.0000",
+        "descontos": "0.0000"
+      },
+      "custo_total_brl": "50.0000",
+      "custo_unitario_brl": "50.000000",
+      "residuo_unitario_brl": "0.0000000000",
+      "residuo_total_brl": "0.0000000000"
+    }
+  ],
+  "rateios": [],
+  "despesas_nao_incorporadas": [],
+  "conservacao": {
+    "entradas_brl": "100.0000",
+    "descontos_brl": "0.0000",
+    "saidas_brl": "100.0000",
+    "diferenca_brl": "0.0000000000",
+    "ok": true
+  }
+}

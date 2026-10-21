@@ -83,6 +83,11 @@ const RESOURCE_PROFILES: Readonly<Record<string, readonly PerfilUsuario[]>> = {
    * ATENÇÃO: a policy só decide; a página e a Server Action precisam checar (loadAdminContext não bloqueia).
    */
   'route:/admin/diagnostico-caixa': ['DONO', 'ADMIN'] as const,
+  /**
+   * Import Intelligence: perfil é só a 1ª barreira. Página e actions exigem, no servidor,
+   * licença ativa da empresa + vínculo + papel (requireModulo / fp_pode_modulo).
+   */
+  'route:/admin/importacoes': ['DONO', 'GERENTE'] as const,
   'api:gerente:health': ALL_ADMIN_PROFILES,
   'api:gerente:atividades:recent': ALL_ADMIN_PROFILES,
   'api:gerente:atividades:history': ALL_ADMIN_PROFILES,

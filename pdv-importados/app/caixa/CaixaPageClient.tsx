@@ -11,6 +11,8 @@ import {
   validarGerenteDesconto,
   obterDetalheHistoricoVendaCaixa,
   converterVendaEmEsperaCaixa,
+  definirVendedorVendaCaixa,
+  listarVendedoresCaixa,
   devolverVendaEmEsperaCaixa,
   obterResumoVendasTurno,
   obterNomeLojaAtual,
@@ -97,6 +99,8 @@ import { focarBuscaCaixa } from "@/app/caixa/caixaFocoBusca"
 import "@/styles/caixa-operacional.css"
 import { CaixaPdvOperadorTabs } from "@/app/caixa/CaixaPdvOperadorTabs"
 import { CaixaSelecionarClienteModal } from "@/app/caixa/CaixaSelecionarClienteModal"  // ✅ NOVO (Fase 5b)
+import { CaixaVendedorSelect } from "@/app/caixa/CaixaVendedorSelect"
+import { lembrarVendedor, aplicarVendedorAposVenda, vendedorInicial, type VendedorOpcao } from "@/app/caixa/caixaVendedor"
 
 function newCupomSessionId(): string {
   return crypto.randomUUID()
@@ -364,6 +368,18 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const [clienteId, setClienteId] = useState<string | null>(null)  // ✅ NOVO (Fase 5b)
   const [clienteNome, setClienteNome] = useState<string | null>(null)  // ✅ NOVO (Fase 5b) - para exibição
   const [selecionarClienteModalAberto, setSelecionarClienteModalAberto] = useState(false)  // ✅ NOVO (Fase 5b)
+  // Comissão P0: vendedor da venda (padrão = operador; lembrado por operador neste navegador).
+  const [vendedores, setVendedores] = useState<VendedorOpcao[]>([])
+  const [vendedorId, setVendedorId] = useState<string | null>(null)
+  useEffect(() => {
+    let vivo = true
+    void listarVendedoresCaixa().then((r) => {
+      if (!vivo || !r.ok) return
+      setVendedores(r.vendedores)
+      setVendedorId(vendedorInicial(userId, r.vendedores, typeof window === "undefined" ? null : window.localStorage))
+    })
+    return () => { vivo = false }
+  }, [userId])
   /** F1 alterna a referência de atalhos (renderizada no topbar). */
   const [atalhosReferenciaAberta, setAtalhosReferenciaAberta] = useState(false)
 
@@ -1251,6 +1267,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           { kind: "success" },
         )
         tocarFeedback("ok")
+        if (!(await aplicarVendedorAposVenda(res.vendaId, userId, vendedorId, definirVendedorVendaCaixa))) {
+          setCaixaMensagem(m.caixa.vendedor_nao_aplicado, { kind: "warning" })
+        }
         await recarregarStatusCaixa()
       } else if (res === timeoutResult) {
         // Desfecho DESCONHECIDO: o servidor pode ter concluído a venda depois do
@@ -1312,6 +1331,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       setFinalizando(false)
     }
   }, [
+    userId,
+    vendedorId,
     configCaixaWeb,
     caixaStatus,
     descontoGerentePercentualEfetivo,
@@ -1384,6 +1405,10 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           { kind: "success" },
         )
         tocarFeedback("ok")
+        // Comissão: a venda recuperada após timeout também recebe o vendedor escolhido.
+        if (!(await aplicarVendedorAposVenda(res.detalhe.id, userId, vendedorId, definirVendedorVendaCaixa))) {
+          setCaixaMensagem(m.caixa.vendedor_nao_aplicado, { kind: "warning" })
+        }
         await recarregarStatusCaixa()
         return
       }
@@ -1412,6 +1437,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     setCaixaMensagemVendaOk,
     tocarFeedback,
     m,
+    userId,
+    vendedorId,
   ])
 
   /**
@@ -1723,6 +1750,20 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                   onAdicionarMaisItens={() => {
                     focarBuscaCaixa()
                     buscaInputRef.current?.focus()
+                  }}
+                />
+              </div>
+              <div className="shrink-0 px-3 pt-2 sm:px-4">
+                <CaixaVendedorSelect
+                  label={m.caixa.vendedor_label}
+                  operadorSufixo={m.caixa.vendedor_operador_sufixo}
+                  operadorId={userId}
+                  vendedores={vendedores}
+                  value={vendedorId}
+                  disabled={finalizando}
+                  onChange={(id) => {
+                    setVendedorId(id)
+                    lembrarVendedor(userId, id, typeof window === "undefined" ? null : window.localStorage)
                   }}
                 />
               </div>

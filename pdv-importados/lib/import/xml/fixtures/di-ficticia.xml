@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListaDeclaracoes><declaracaoImportacao>
+<numeroDI>2612345678</numeroDI><dataRegistro>20261014</dataRegistro>
+<adicao><numeroAdicao>001</numeroAdicao><dadosMercadoriaCodigoNcm>85161000</dadosMercadoriaCodigoNcm>
+<condicaoVendaValorReais>000000000500000</condicaoVendaValorReais>
+<iiAliquotaValorDevido>000000000090000</iiAliquotaValorDevido><ipiAliquotaValorDevido>000000000029500</ipiAliquotaValorDevido>
+<pisPasepAliquotaValorDevido>000000000010500</pisPasepAliquotaValorDevido><cofinsAliquotaValorDevido>000000000048250</cofinsAliquotaValorDevido>
+<mercadoria><descricaoMercadoria>CHALEIRA ELETRICA 1,7L (FICTICIO)</descricaoMercadoria><quantidade>00000010000000</quantidade><unidadeMedida>UNIDADE</unidadeMedida><valorUnitario>00000000100000000</valorUnitario></mercadoria>
+</adicao>
+</declaracaoImportacao></ListaDeclaracoes>

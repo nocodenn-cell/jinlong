@@ -90,6 +90,9 @@ export function App() {
 
   const [gerenteId, setGerenteId] = useState(defaultPdvConfig.gerenteId)
   const [caixaAtualId, setCaixaAtualId] = useState<string | null>(null)
+  // Comissão P0: "Vendedor / 销售员" — null = operador do caixa (padrão).
+  const [vendedores, setVendedores] = useState<Array<{ id: string; nome: string }>>([])
+  const [vendedorId, setVendedorId] = useState<string | null>(null)
 
   const {
     tauriDisponivel,
@@ -107,6 +110,7 @@ export function App() {
     setCaixaAtualId,
     setMensagem,
     setLojaId: bindLojaCarrinhoDesktop,
+    setVendedores,
   })
 
   const handleAlterarQuantidadeLocal = useCallback(
@@ -184,6 +188,7 @@ export function App() {
     maxDescontoGerentePercentual,
     gerenteId,
     formaPagamento,
+    vendedorId,
     pagamentos: dividirPagamento
       ? linhasPagamento
       : formaPagamento === 'CARTAO_CREDITO' && parcelasCredito > 1
@@ -1126,6 +1131,24 @@ export function App() {
                 F4 · Sangria/Suprimento
               </button>
             )}
+            {vendedores.length > 0 ? (
+              <label data-testid="pdv-vendedor" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600 }}>
+                <span>Vendedor / 销售员</span>
+                <select
+                  aria-label="Vendedor / 销售员"
+                  data-testid="pdv-vendedor-select"
+                  value={vendedorId ?? ''}
+                  disabled={isFinalizandoVenda}
+                  onChange={(e) => setVendedorId(e.target.value || null)}
+                  style={{ flex: 1, minHeight: 32, borderRadius: 8 }}
+                >
+                  <option value="">Operador do caixa / 收银员</option>
+                  {vendedores.map((v) => (
+                    <option key={v.id} value={v.id}>{v.nome}</option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
             <div
               role="radiogroup"
               aria-label="Forma de pagamento / 付款方式"

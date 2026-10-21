@@ -412,6 +412,7 @@ export type Database = {
       comissoes_ajustes: {
         Row: {
           comissao_id: string
+          competencia: string | null
           created_at: string
           id: string
           idempotency_key: string
@@ -424,6 +425,7 @@ export type Database = {
         }
         Insert: {
           comissao_id: string
+          competencia?: string | null
           created_at?: string
           id?: string
           idempotency_key: string
@@ -436,6 +438,7 @@ export type Database = {
         }
         Update: {
           comissao_id?: string
+          competencia?: string | null
           created_at?: string
           id?: string
           idempotency_key?: string
@@ -505,11 +508,203 @@ export type Database = {
           },
         ]
       }
+      comissoes_config: {
+        Row: {
+          base: string
+          empresa_id: string
+          liberacao: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          base?: string
+          empresa_id: string
+          liberacao?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          base?: string
+          empresa_id?: string
+          liberacao?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comissoes_config_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: true
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_config_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comissoes_divisoes: {
+        Row: {
+          created_at: string
+          criado_por: string | null
+          loja_id: string
+          operador_secundario_id: string
+          percentual: number
+          venda_id: string
+        }
+        Insert: {
+          created_at?: string
+          criado_por?: string | null
+          loja_id: string
+          operador_secundario_id: string
+          percentual: number
+          venda_id: string
+        }
+        Update: {
+          created_at?: string
+          criado_por?: string | null
+          loja_id?: string
+          operador_secundario_id?: string
+          percentual?: number
+          venda_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comissoes_divisoes_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_divisoes_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_divisoes_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["loja_id"]
+          },
+          {
+            foreignKeyName: "comissoes_divisoes_operador_secundario_id_fkey"
+            columns: ["operador_secundario_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_divisoes_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: true
+            referencedRelation: "v_venda_consistencia_anomalias"
+            referencedColumns: ["venda_id"]
+          },
+          {
+            foreignKeyName: "comissoes_divisoes_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: true
+            referencedRelation: "vendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comissoes_falhas: {
+        Row: {
+          contexto: Json | null
+          created_at: string
+          etapa: string
+          id: string
+          loja_id: string | null
+          motivo: string
+          resolvida_em: string | null
+          resolvida_por: string | null
+          sqlstate: string | null
+          tentativas: number
+          ultima_tentativa_em: string
+          venda_id: string
+        }
+        Insert: {
+          contexto?: Json | null
+          created_at?: string
+          etapa: string
+          id?: string
+          loja_id?: string | null
+          motivo: string
+          resolvida_em?: string | null
+          resolvida_por?: string | null
+          sqlstate?: string | null
+          tentativas?: number
+          ultima_tentativa_em?: string
+          venda_id: string
+        }
+        Update: {
+          contexto?: Json | null
+          created_at?: string
+          etapa?: string
+          id?: string
+          loja_id?: string | null
+          motivo?: string
+          resolvida_em?: string | null
+          resolvida_por?: string | null
+          sqlstate?: string | null
+          tentativas?: number
+          ultima_tentativa_em?: string
+          venda_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comissoes_falhas_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_falhas_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["loja_id"]
+          },
+          {
+            foreignKeyName: "comissoes_falhas_resolvida_por_fkey"
+            columns: ["resolvida_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_falhas_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "v_venda_consistencia_anomalias"
+            referencedColumns: ["venda_id"]
+          },
+          {
+            foreignKeyName: "comissoes_falhas_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "vendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comissoes_itens: {
         Row: {
           apurado_em: string
           base_elegivel: number
+          canal: string | null
           comissao_id: string
+          desconto_rateado: number
           id: string
           item_venda_id: string
           origem_regra: string
@@ -517,6 +712,7 @@ export type Database = {
           preco_unitario: number
           produto_id: string
           quantidade: number
+          regra_empresa_id: string | null
           regra_id: string | null
           tipo_calculo: string
           valor_comissao: number
@@ -526,7 +722,9 @@ export type Database = {
         Insert: {
           apurado_em?: string
           base_elegivel: number
+          canal?: string | null
           comissao_id: string
+          desconto_rateado?: number
           id?: string
           item_venda_id: string
           origem_regra: string
@@ -534,6 +732,7 @@ export type Database = {
           preco_unitario: number
           produto_id: string
           quantidade: number
+          regra_empresa_id?: string | null
           regra_id?: string | null
           tipo_calculo: string
           valor_comissao: number
@@ -543,7 +742,9 @@ export type Database = {
         Update: {
           apurado_em?: string
           base_elegivel?: number
+          canal?: string | null
           comissao_id?: string
+          desconto_rateado?: number
           id?: string
           item_venda_id?: string
           origem_regra?: string
@@ -551,6 +752,7 @@ export type Database = {
           preco_unitario?: number
           produto_id?: string
           quantidade?: number
+          regra_empresa_id?: string | null
           regra_id?: string | null
           tipo_calculo?: string
           valor_comissao?: number
@@ -633,6 +835,87 @@ export type Database = {
             columns: ["venda_id"]
             isOneToOne: false
             referencedRelation: "vendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comissoes_metas: {
+        Row: {
+          ativo: boolean
+          cargo: string | null
+          competencia_fim: string | null
+          competencia_inicio: string
+          created_at: string
+          created_by: string | null
+          descricao: string | null
+          empresa_id: string
+          faixas: Json
+          id: string
+          loja_id: string | null
+          usuario_id: string | null
+        }
+        Insert: {
+          ativo?: boolean
+          cargo?: string | null
+          competencia_fim?: string | null
+          competencia_inicio: string
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          empresa_id: string
+          faixas: Json
+          id?: string
+          loja_id?: string | null
+          usuario_id?: string | null
+        }
+        Update: {
+          ativo?: boolean
+          cargo?: string | null
+          competencia_fim?: string | null
+          competencia_inicio?: string
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          empresa_id?: string
+          faixas?: Json
+          id?: string
+          loja_id?: string | null
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comissoes_metas_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_metas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_metas_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_metas_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["loja_id"]
+          },
+          {
+            foreignKeyName: "comissoes_metas_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
             referencedColumns: ["id"]
           },
         ]
@@ -738,6 +1021,276 @@ export type Database = {
             columns: ["pagamento_id"]
             isOneToOne: false
             referencedRelation: "comissoes_pagamentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comissoes_periodo_vendedores: {
+        Row: {
+          ajustes: number
+          base: number
+          bonus_meta: number
+          comissao: number
+          operador_id: string
+          periodo_id: string
+          total: number
+          vendas: number
+        }
+        Insert: {
+          ajustes?: number
+          base?: number
+          bonus_meta?: number
+          comissao?: number
+          operador_id: string
+          periodo_id: string
+          total?: number
+          vendas?: number
+        }
+        Update: {
+          ajustes?: number
+          base?: number
+          bonus_meta?: number
+          comissao?: number
+          operador_id?: string
+          periodo_id?: string
+          total?: number
+          vendas?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comissoes_periodo_vendedores_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_periodo_vendedores_periodo_id_fkey"
+            columns: ["periodo_id"]
+            isOneToOne: false
+            referencedRelation: "comissoes_periodos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comissoes_periodos: {
+        Row: {
+          aprovado_em: string | null
+          aprovado_por: string | null
+          competencia: string
+          created_at: string
+          empresa_id: string
+          id: string
+          loja_id: string
+          pago_em: string | null
+          pago_por: string | null
+          revisado_em: string | null
+          revisado_por: string | null
+          status: string
+          total: number
+        }
+        Insert: {
+          aprovado_em?: string | null
+          aprovado_por?: string | null
+          competencia: string
+          created_at?: string
+          empresa_id: string
+          id?: string
+          loja_id: string
+          pago_em?: string | null
+          pago_por?: string | null
+          revisado_em?: string | null
+          revisado_por?: string | null
+          status?: string
+          total?: number
+        }
+        Update: {
+          aprovado_em?: string | null
+          aprovado_por?: string | null
+          competencia?: string
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          loja_id?: string
+          pago_em?: string | null
+          pago_por?: string | null
+          revisado_em?: string | null
+          revisado_por?: string | null
+          status?: string
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comissoes_periodos_aprovado_por_fkey"
+            columns: ["aprovado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_periodos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_periodos_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_periodos_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["loja_id"]
+          },
+          {
+            foreignKeyName: "comissoes_periodos_pago_por_fkey"
+            columns: ["pago_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_periodos_revisado_por_fkey"
+            columns: ["revisado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comissoes_regras: {
+        Row: {
+          ativo: boolean
+          canal: string | null
+          cargo: string | null
+          categoria_id: string | null
+          created_at: string
+          created_by: string | null
+          descricao: string | null
+          empresa_id: string
+          id: string
+          loja_id: string | null
+          produto_id: string | null
+          tipo_calculo: string
+          updated_at: string
+          usuario_id: string | null
+          valor: number
+          vigencia_fim: string | null
+          vigencia_inicio: string
+        }
+        Insert: {
+          ativo?: boolean
+          canal?: string | null
+          cargo?: string | null
+          categoria_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          empresa_id: string
+          id?: string
+          loja_id?: string | null
+          produto_id?: string | null
+          tipo_calculo: string
+          updated_at?: string
+          usuario_id?: string | null
+          valor: number
+          vigencia_fim?: string | null
+          vigencia_inicio?: string
+        }
+        Update: {
+          ativo?: boolean
+          canal?: string | null
+          cargo?: string | null
+          categoria_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          empresa_id?: string
+          id?: string
+          loja_id?: string | null
+          produto_id?: string | null
+          tipo_calculo?: string
+          updated_at?: string
+          usuario_id?: string | null
+          valor?: number
+          vigencia_fim?: string | null
+          vigencia_inicio?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comissoes_regras_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "categorias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_regras_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_regras_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_regras_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_regras_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["loja_id"]
+          },
+          {
+            foreignKeyName: "comissoes_regras_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_regras_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos_custos"
+            referencedColumns: ["produto_id"]
+          },
+          {
+            foreignKeyName: "comissoes_regras_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_regras_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_regras_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
             referencedColumns: ["id"]
           },
         ]
@@ -912,9 +1465,40 @@ export type Database = {
           },
         ]
       }
+      comissoes_regras_log: {
+        Row: {
+          acao: string
+          dados: Json
+          em: string
+          empresa_id: string
+          id: number
+          por: string | null
+          regra_id: string
+        }
+        Insert: {
+          acao: string
+          dados: Json
+          em?: string
+          empresa_id: string
+          id?: number
+          por?: string | null
+          regra_id: string
+        }
+        Update: {
+          acao?: string
+          dados?: Json
+          em?: string
+          empresa_id?: string
+          id?: number
+          por?: string | null
+          regra_id?: string
+        }
+        Relationships: []
+      }
       comissoes_vendedores: {
         Row: {
           base_calculo: number
+          competencia: string | null
           created_at: string
           id: string
           loja_id: string
@@ -924,12 +1508,14 @@ export type Database = {
           pago_por: string | null
           percentual_aplicado: number | null
           regra_id: string | null
+          regra_mista: boolean
           status: string
           valor_comissao: number
           venda_id: string
         }
         Insert: {
           base_calculo?: number
+          competencia?: string | null
           created_at?: string
           id?: string
           loja_id: string
@@ -939,12 +1525,14 @@ export type Database = {
           pago_por?: string | null
           percentual_aplicado?: number | null
           regra_id?: string | null
+          regra_mista?: boolean
           status?: string
           valor_comissao?: number
           venda_id: string
         }
         Update: {
           base_calculo?: number
+          competencia?: string | null
           created_at?: string
           id?: string
           loja_id?: string
@@ -954,6 +1542,7 @@ export type Database = {
           pago_por?: string | null
           percentual_aplicado?: number | null
           regra_id?: string | null
+          regra_mista?: boolean
           status?: string
           valor_comissao?: number
           venda_id?: string
@@ -2042,6 +2631,99 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vendas"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      empresa_modulos: {
+        Row: {
+          alterado_em: string
+          autorizado_por: string | null
+          empresa_id: string
+          habilitado: boolean
+          modulo_codigo: string
+          vigencia_fim: string | null
+          vigencia_inicio: string | null
+        }
+        Insert: {
+          alterado_em?: string
+          autorizado_por?: string | null
+          empresa_id: string
+          habilitado?: boolean
+          modulo_codigo: string
+          vigencia_fim?: string | null
+          vigencia_inicio?: string | null
+        }
+        Update: {
+          alterado_em?: string
+          autorizado_por?: string | null
+          empresa_id?: string
+          habilitado?: boolean
+          modulo_codigo?: string
+          vigencia_fim?: string | null
+          vigencia_inicio?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "empresa_modulos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "empresa_modulos_modulo_codigo_fkey"
+            columns: ["modulo_codigo"]
+            isOneToOne: false
+            referencedRelation: "modulos_catalogo"
+            referencedColumns: ["codigo"]
+          },
+        ]
+      }
+      empresa_modulos_historico: {
+        Row: {
+          acao: string
+          autorizado_por: string | null
+          empresa_id: string
+          id: number
+          modulo_codigo: string
+          motivo: string
+          origem: string
+          registrado_em: string
+        }
+        Insert: {
+          acao: string
+          autorizado_por?: string | null
+          empresa_id: string
+          id?: number
+          modulo_codigo: string
+          motivo: string
+          origem: string
+          registrado_em?: string
+        }
+        Update: {
+          acao?: string
+          autorizado_por?: string | null
+          empresa_id?: string
+          id?: number
+          modulo_codigo?: string
+          motivo?: string
+          origem?: string
+          registrado_em?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "empresa_modulos_historico_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "empresa_modulos_historico_modulo_codigo_fkey"
+            columns: ["modulo_codigo"]
+            isOneToOne: false
+            referencedRelation: "modulos_catalogo"
+            referencedColumns: ["codigo"]
           },
         ]
       }
@@ -3363,6 +4045,851 @@ export type Database = {
           },
         ]
       }
+      import_aprovacoes: {
+        Row: {
+          apuracao_id: string | null
+          decisao: string
+          em: string
+          empresa_id: string
+          id: string
+          motivo: string
+          operacao_id: string
+          por: string
+          verificacao: Json
+        }
+        Insert: {
+          apuracao_id?: string | null
+          decisao: string
+          em?: string
+          empresa_id: string
+          id?: string
+          motivo: string
+          operacao_id: string
+          por: string
+          verificacao?: Json
+        }
+        Update: {
+          apuracao_id?: string | null
+          decisao?: string
+          em?: string
+          empresa_id?: string
+          id?: string
+          motivo?: string
+          operacao_id?: string
+          por?: string
+          verificacao?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_aprovacoes_apuracao_id_fkey"
+            columns: ["apuracao_id"]
+            isOneToOne: false
+            referencedRelation: "import_apuracoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_aprovacoes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_aprovacoes_operacao_id_fkey"
+            columns: ["operacao_id"]
+            isOneToOne: false
+            referencedRelation: "import_operacoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_apuracao_itens: {
+        Row: {
+          apuracao_id: string
+          componentes_brl: Json
+          custo_total_brl: number
+          custo_unitario_brl: number
+          empresa_id: string
+          item_id: string
+          memoria: Json
+          produto_id: string | null
+          quantidade_estoque: number
+          residuo_total_brl: number
+          residuo_unitario_brl: number
+        }
+        Insert: {
+          apuracao_id: string
+          componentes_brl: Json
+          custo_total_brl: number
+          custo_unitario_brl: number
+          empresa_id: string
+          item_id: string
+          memoria: Json
+          produto_id?: string | null
+          quantidade_estoque: number
+          residuo_total_brl: number
+          residuo_unitario_brl: number
+        }
+        Update: {
+          apuracao_id?: string
+          componentes_brl?: Json
+          custo_total_brl?: number
+          custo_unitario_brl?: number
+          empresa_id?: string
+          item_id?: string
+          memoria?: Json
+          produto_id?: string | null
+          quantidade_estoque?: number
+          residuo_total_brl?: number
+          residuo_unitario_brl?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_apuracao_itens_apuracao_id_fkey"
+            columns: ["apuracao_id"]
+            isOneToOne: false
+            referencedRelation: "import_apuracoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_apuracao_itens_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_apuracao_itens_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "import_itens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_apuracao_rateios: {
+        Row: {
+          apuracao_id: string
+          base_item: number
+          base_total: number
+          componente: string
+          criterio: string
+          empresa_id: string
+          id: string
+          item_id: string
+          justificativa: string
+          origem_id: string
+          valor_alocado_brl: number
+        }
+        Insert: {
+          apuracao_id: string
+          base_item: number
+          base_total: number
+          componente: string
+          criterio: string
+          empresa_id: string
+          id?: string
+          item_id: string
+          justificativa: string
+          origem_id: string
+          valor_alocado_brl: number
+        }
+        Update: {
+          apuracao_id?: string
+          base_item?: number
+          base_total?: number
+          componente?: string
+          criterio?: string
+          empresa_id?: string
+          id?: string
+          item_id?: string
+          justificativa?: string
+          origem_id?: string
+          valor_alocado_brl?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_apuracao_rateios_apuracao_id_fkey"
+            columns: ["apuracao_id"]
+            isOneToOne: false
+            referencedRelation: "import_apuracoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_apuracao_rateios_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_apuracoes: {
+        Row: {
+          conservacao_ok: boolean
+          criado_em: string
+          criado_por: string
+          empresa_id: string
+          engine_version: string
+          entrada: Json
+          entrada_sha256: string
+          id: string
+          operacao_id: string
+          saida: Json
+          saida_sha256: string
+          status_calculo: string
+          tipo: string
+          versao: number
+          versao_dados: number
+        }
+        Insert: {
+          conservacao_ok: boolean
+          criado_em?: string
+          criado_por: string
+          empresa_id: string
+          engine_version: string
+          entrada: Json
+          entrada_sha256: string
+          id?: string
+          operacao_id: string
+          saida: Json
+          saida_sha256: string
+          status_calculo: string
+          tipo: string
+          versao: number
+          versao_dados: number
+        }
+        Update: {
+          conservacao_ok?: boolean
+          criado_em?: string
+          criado_por?: string
+          empresa_id?: string
+          engine_version?: string
+          entrada?: Json
+          entrada_sha256?: string
+          id?: string
+          operacao_id?: string
+          saida?: Json
+          saida_sha256?: string
+          status_calculo?: string
+          tipo?: string
+          versao?: number
+          versao_dados?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_apuracoes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_apuracoes_operacao_id_fkey"
+            columns: ["operacao_id"]
+            isOneToOne: false
+            referencedRelation: "import_operacoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_auditoria: {
+        Row: {
+          acao: string
+          detalhe: Json
+          em: string
+          empresa_id: string
+          entidade: string
+          entidade_id: string | null
+          id: number
+          operacao_id: string | null
+          por: string | null
+        }
+        Insert: {
+          acao: string
+          detalhe?: Json
+          em?: string
+          empresa_id: string
+          entidade: string
+          entidade_id?: string | null
+          id?: number
+          operacao_id?: string | null
+          por?: string | null
+        }
+        Update: {
+          acao?: string
+          detalhe?: Json
+          em?: string
+          empresa_id?: string
+          entidade?: string
+          entidade_id?: string | null
+          id?: number
+          operacao_id?: string | null
+          por?: string | null
+        }
+        Relationships: []
+      }
+      import_cambios: {
+        Row: {
+          data: string
+          documento_id: string | null
+          empresa_id: string
+          fonte: string
+          id: string
+          moeda: string
+          operacao_id: string
+          taxa: number
+        }
+        Insert: {
+          data: string
+          documento_id?: string | null
+          empresa_id: string
+          fonte: string
+          id?: string
+          moeda: string
+          operacao_id: string
+          taxa: number
+        }
+        Update: {
+          data?: string
+          documento_id?: string | null
+          empresa_id?: string
+          fonte?: string
+          id?: string
+          moeda?: string
+          operacao_id?: string
+          taxa?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_cambios_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_cambios_operacao_id_fkey"
+            columns: ["operacao_id"]
+            isOneToOne: false
+            referencedRelation: "import_operacoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_descontos: {
+        Row: {
+          criterio: string | null
+          documento_id: string | null
+          empresa_id: string
+          escopo: string
+          id: string
+          item_id: string | null
+          justificativa: string
+          moeda: string
+          operacao_id: string
+          valor: number
+        }
+        Insert: {
+          criterio?: string | null
+          documento_id?: string | null
+          empresa_id: string
+          escopo: string
+          id?: string
+          item_id?: string | null
+          justificativa: string
+          moeda: string
+          operacao_id: string
+          valor: number
+        }
+        Update: {
+          criterio?: string | null
+          documento_id?: string | null
+          empresa_id?: string
+          escopo?: string
+          id?: string
+          item_id?: string | null
+          justificativa?: string
+          moeda?: string
+          operacao_id?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_descontos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_descontos_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "import_itens"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_descontos_operacao_id_fkey"
+            columns: ["operacao_id"]
+            isOneToOne: false
+            referencedRelation: "import_operacoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_despesas: {
+        Row: {
+          atribuicao_modo: string
+          criterio: string | null
+          documento_id: string | null
+          empresa_id: string
+          id: string
+          incorporavel: string
+          item_id: string | null
+          justificativa: string
+          moeda: string
+          operacao_id: string
+          status_conferencia: string
+          tipo: string
+          valor: number
+        }
+        Insert: {
+          atribuicao_modo: string
+          criterio?: string | null
+          documento_id?: string | null
+          empresa_id: string
+          id?: string
+          incorporavel: string
+          item_id?: string | null
+          justificativa: string
+          moeda: string
+          operacao_id: string
+          status_conferencia?: string
+          tipo: string
+          valor: number
+        }
+        Update: {
+          atribuicao_modo?: string
+          criterio?: string | null
+          documento_id?: string | null
+          empresa_id?: string
+          id?: string
+          incorporavel?: string
+          item_id?: string | null
+          justificativa?: string
+          moeda?: string
+          operacao_id?: string
+          status_conferencia?: string
+          tipo?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_despesas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_despesas_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "import_itens"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_despesas_operacao_id_fkey"
+            columns: ["operacao_id"]
+            isOneToOne: false
+            referencedRelation: "import_operacoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_divergencias: {
+        Row: {
+          apuracao_id: string
+          codigo: string
+          empresa_id: string
+          id: string
+          mensagem: string
+          referencia: string
+          severidade: string
+        }
+        Insert: {
+          apuracao_id: string
+          codigo: string
+          empresa_id: string
+          id?: string
+          mensagem: string
+          referencia: string
+          severidade: string
+        }
+        Update: {
+          apuracao_id?: string
+          codigo?: string
+          empresa_id?: string
+          id?: string
+          mensagem?: string
+          referencia?: string
+          severidade?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_divergencias_apuracao_id_fkey"
+            columns: ["apuracao_id"]
+            isOneToOne: false
+            referencedRelation: "import_apuracoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_divergencias_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_documentos: {
+        Row: {
+          data_documento: string | null
+          empresa_id: string
+          enviado_em: string
+          enviado_por: string
+          id: string
+          mime_type: string | null
+          numero: string | null
+          operacao_id: string
+          sha256: string | null
+          storage_bucket: string | null
+          storage_path: string | null
+          substitui_documento_id: string | null
+          tamanho_bytes: number | null
+          tipo: string
+          versao: number
+        }
+        Insert: {
+          data_documento?: string | null
+          empresa_id: string
+          enviado_em?: string
+          enviado_por: string
+          id?: string
+          mime_type?: string | null
+          numero?: string | null
+          operacao_id: string
+          sha256?: string | null
+          storage_bucket?: string | null
+          storage_path?: string | null
+          substitui_documento_id?: string | null
+          tamanho_bytes?: number | null
+          tipo: string
+          versao?: number
+        }
+        Update: {
+          data_documento?: string | null
+          empresa_id?: string
+          enviado_em?: string
+          enviado_por?: string
+          id?: string
+          mime_type?: string | null
+          numero?: string | null
+          operacao_id?: string
+          sha256?: string | null
+          storage_bucket?: string | null
+          storage_path?: string | null
+          substitui_documento_id?: string | null
+          tamanho_bytes?: number | null
+          tipo?: string
+          versao?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_documentos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_documentos_operacao_id_fkey"
+            columns: ["operacao_id"]
+            isOneToOne: false
+            referencedRelation: "import_operacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_documentos_substitui_documento_id_fkey"
+            columns: ["substitui_documento_id"]
+            isOneToOne: false
+            referencedRelation: "import_documentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_itens: {
+        Row: {
+          codigo_fornecedor: string | null
+          descricao: string
+          documento_id: string | null
+          empresa_id: string
+          fator_para_estoque: number
+          id: string
+          moeda: string
+          ncm: string | null
+          operacao_id: string
+          peso_bruto_kg: number | null
+          peso_liquido_kg: number | null
+          produto_id: string | null
+          quantidade_comercial: number
+          quantidade_estoque: number
+          unidade_comercial: string
+          valor_aduaneiro_brl: number | null
+          valor_mercadoria_moeda: number
+          volume_m3: number | null
+        }
+        Insert: {
+          codigo_fornecedor?: string | null
+          descricao: string
+          documento_id?: string | null
+          empresa_id: string
+          fator_para_estoque: number
+          id?: string
+          moeda: string
+          ncm?: string | null
+          operacao_id: string
+          peso_bruto_kg?: number | null
+          peso_liquido_kg?: number | null
+          produto_id?: string | null
+          quantidade_comercial: number
+          quantidade_estoque: number
+          unidade_comercial: string
+          valor_aduaneiro_brl?: number | null
+          valor_mercadoria_moeda: number
+          volume_m3?: number | null
+        }
+        Update: {
+          codigo_fornecedor?: string | null
+          descricao?: string
+          documento_id?: string | null
+          empresa_id?: string
+          fator_para_estoque?: number
+          id?: string
+          moeda?: string
+          ncm?: string | null
+          operacao_id?: string
+          peso_bruto_kg?: number | null
+          peso_liquido_kg?: number | null
+          produto_id?: string | null
+          quantidade_comercial?: number
+          quantidade_estoque?: number
+          unidade_comercial?: string
+          valor_aduaneiro_brl?: number | null
+          valor_mercadoria_moeda?: number
+          volume_m3?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_itens_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_itens_operacao_id_fkey"
+            columns: ["operacao_id"]
+            isOneToOne: false
+            referencedRelation: "import_operacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_itens_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_itens_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos_custos"
+            referencedColumns: ["produto_id"]
+          },
+          {
+            foreignKeyName: "import_itens_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_itens_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_operacoes: {
+        Row: {
+          apuracao_aprovada_id: string | null
+          atualizado_em: string
+          criado_em: string
+          criado_por: string
+          data_desembaraco: string | null
+          data_embarque: string | null
+          data_invoice: string | null
+          descricao: string | null
+          empresa_id: string
+          fornecedor_id: string | null
+          id: string
+          loja_importadora_id: string
+          moeda: string | null
+          referencia: string
+          status: string
+          versao_dados: number
+        }
+        Insert: {
+          apuracao_aprovada_id?: string | null
+          atualizado_em?: string
+          criado_em?: string
+          criado_por: string
+          data_desembaraco?: string | null
+          data_embarque?: string | null
+          data_invoice?: string | null
+          descricao?: string | null
+          empresa_id: string
+          fornecedor_id?: string | null
+          id?: string
+          loja_importadora_id: string
+          moeda?: string | null
+          referencia: string
+          status?: string
+          versao_dados?: number
+        }
+        Update: {
+          apuracao_aprovada_id?: string | null
+          atualizado_em?: string
+          criado_em?: string
+          criado_por?: string
+          data_desembaraco?: string | null
+          data_embarque?: string | null
+          data_invoice?: string | null
+          descricao?: string | null
+          empresa_id?: string
+          fornecedor_id?: string | null
+          id?: string
+          loja_importadora_id?: string
+          moeda?: string | null
+          referencia?: string
+          status?: string
+          versao_dados?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_operacoes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_operacoes_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_operacoes_loja_empresa_fk"
+            columns: ["loja_importadora_id", "empresa_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id", "empresa_id"]
+          },
+        ]
+      }
+      import_tributos: {
+        Row: {
+          data_fato_gerador: string | null
+          documento_id: string | null
+          empresa_id: string
+          id: string
+          item_id: string | null
+          operacao_id: string
+          regra_id: string | null
+          regra_incorpora_custo: boolean | null
+          regra_vigencia_fim: string | null
+          regra_vigencia_inicio: string | null
+          status_conferencia: string
+          status_recuperabilidade: string
+          tributo_codigo: string
+          validado_por: string | null
+          valor_apurado_brl: number
+        }
+        Insert: {
+          data_fato_gerador?: string | null
+          documento_id?: string | null
+          empresa_id: string
+          id?: string
+          item_id?: string | null
+          operacao_id: string
+          regra_id?: string | null
+          regra_incorpora_custo?: boolean | null
+          regra_vigencia_fim?: string | null
+          regra_vigencia_inicio?: string | null
+          status_conferencia?: string
+          status_recuperabilidade: string
+          tributo_codigo: string
+          validado_por?: string | null
+          valor_apurado_brl: number
+        }
+        Update: {
+          data_fato_gerador?: string | null
+          documento_id?: string | null
+          empresa_id?: string
+          id?: string
+          item_id?: string | null
+          operacao_id?: string
+          regra_id?: string | null
+          regra_incorpora_custo?: boolean | null
+          regra_vigencia_fim?: string | null
+          regra_vigencia_inicio?: string | null
+          status_conferencia?: string
+          status_recuperabilidade?: string
+          tributo_codigo?: string
+          validado_por?: string | null
+          valor_apurado_brl?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_tributos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_tributos_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "import_itens"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_tributos_operacao_id_fkey"
+            columns: ["operacao_id"]
+            isOneToOne: false
+            referencedRelation: "import_operacoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       importacoes_nfe: {
         Row: {
           chave_acesso: string
@@ -3886,6 +5413,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      modulos_catalogo: {
+        Row: {
+          codigo: string
+          created_at: string
+          descricao: string
+        }
+        Insert: {
+          codigo: string
+          created_at?: string
+          descricao: string
+        }
+        Update: {
+          codigo?: string
+          created_at?: string
+          descricao?: string
+        }
+        Relationships: []
       }
       movimentacoes_caixa: {
         Row: {
@@ -6094,6 +7639,7 @@ export type Database = {
           total_bruto: number
           total_desconto: number
           total_liquido: number
+          vendedor_id: string | null
         }
         Insert: {
           caixa_id?: string | null
@@ -6111,6 +7657,7 @@ export type Database = {
           total_bruto: number
           total_desconto?: number
           total_liquido: number
+          vendedor_id?: string | null
         }
         Update: {
           caixa_id?: string | null
@@ -6128,6 +7675,7 @@ export type Database = {
           total_bruto?: number
           total_desconto?: number
           total_liquido?: number
+          vendedor_id?: string | null
         }
         Relationships: [
           {
@@ -6154,6 +7702,13 @@ export type Database = {
           {
             foreignKeyName: "vendas_operador_id_fkey"
             columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendas_vendedor_id_fkey"
+            columns: ["vendedor_id"]
             isOneToOne: false
             referencedRelation: "usuarios"
             referencedColumns: ["id"]
@@ -6908,6 +8463,53 @@ export type Database = {
       }
     }
     Functions: {
+      _fp_import_usuario_pode: {
+        Args: { p_operacao: string; p_papeis: string[]; p_usuario: string }
+        Returns: boolean
+      }
+      _import_auditar: {
+        Args: {
+          p_acao: string
+          p_detalhe: Json
+          p_empresa: string
+          p_entidade: string
+          p_entidade_id: string
+          p_operacao: string
+        }
+        Returns: undefined
+      }
+      _import_fornecedor_da_empresa: {
+        Args: { p_empresa: string; p_fornecedor: string }
+        Returns: boolean
+      }
+      _import_montar_entrada: { Args: { p_operacao: string }; Returns: Json }
+      _import_operacao_para_escrita: {
+        Args: { p_operacao: string }
+        Returns: {
+          apuracao_aprovada_id: string | null
+          atualizado_em: string
+          criado_em: string
+          criado_por: string
+          data_desembaraco: string | null
+          data_embarque: string | null
+          data_invoice: string | null
+          descricao: string | null
+          empresa_id: string
+          fornecedor_id: string | null
+          id: string
+          loja_importadora_id: string
+          moeda: string | null
+          referencia: string
+          status: string
+          versao_dados: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "import_operacoes"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       _oc_abater_por_produto: {
         Args: {
           p_entrada_id: string
@@ -7159,6 +8761,81 @@ export type Database = {
         }
         Returns: Json
       }
+      comissao_export_contabil: {
+        Args: { p_competencia: string; p_loja_id: string }
+        Returns: {
+          ajustes: number
+          aprovado_em: string
+          base: number
+          bonus_meta: number
+          comissao: number
+          competencia: string
+          loja_codigo: string
+          loja_nome: string
+          operador_id: string
+          operador_nome: string
+          status_periodo: string
+          total: number
+        }[]
+      }
+      comissao_periodo_transicionar: {
+        Args: { p_competencia: string; p_loja_id: string; p_para: string }
+        Returns: Json
+      }
+      comissao_relatorio_itens: {
+        Args: {
+          p_competencia: string
+          p_loja_id: string
+          p_operador_id: string
+        }
+        Returns: {
+          base: number
+          comissao: number
+          data: string
+          origem_regra: string
+          percentual: number
+          produto: string
+          quantidade: number
+          tipo_calculo: string
+          valor_fixo: number
+          venda_id: string
+        }[]
+      }
+      comissao_relatorio_vendedores: {
+        Args: { p_competencia: string; p_loja_id: string }
+        Returns: {
+          ajustes: number
+          base: number
+          bonus_meta: number
+          comissao: number
+          operador_id: string
+          operador_nome: string
+          status_periodo: string
+          total: number
+          vendas: number
+        }[]
+      }
+      comissao_salvar_config: {
+        Args: { p_base?: string; p_liberacao?: string; p_loja_id: string }
+        Returns: Json
+      }
+      comissao_simular_regra: {
+        Args: {
+          p_canal?: string
+          p_data?: string
+          p_loja_id: string
+          p_produto_id: string
+          p_vendedor_id: string
+        }
+        Returns: {
+          cargo: string
+          nivel: number
+          origem: string
+          regra_id: string
+          tipo_calculo: string
+          valor: number
+        }[]
+      }
       configuracoes_para_caixa_web: { Args: never; Returns: Json }
       confirmar_importacao_nfe: {
         Args: { p_importacao_id: string }
@@ -7208,6 +8885,22 @@ export type Database = {
           mensagem: string
           sucesso: boolean
         }[]
+      }
+      definir_divisao_comissao: {
+        Args: {
+          p_percentual?: number
+          p_segundo_id: string
+          p_venda_id: string
+        }
+        Returns: Json
+      }
+      definir_vendedor_venda: {
+        Args: { p_venda_id: string; p_vendedor_id: string }
+        Returns: Json
+      }
+      definir_vendedor_venda_pdv: {
+        Args: { p_venda_id: string; p_vendedor_id: string }
+        Returns: Json
       }
       descartar_venda_em_espera: {
         Args: { p_id: string; p_motivo?: string }
@@ -7684,6 +9377,10 @@ export type Database = {
       }
       fp_eh_plataforma: { Args: never; Returns: boolean }
       fp_empresa_contexto: { Args: { p_loja?: string }; Returns: string }
+      fp_empresa_contexto_modulo: {
+        Args: { p_empresa?: string; p_modulo: string; p_papeis?: string[] }
+        Returns: string
+      }
       fp_empresa_da_loja: { Args: { p_loja: string }; Returns: string }
       fp_empresa_operacional: { Args: { p_empresa: string }; Returns: boolean }
       fp_empresa_tem_recurso: {
@@ -7694,7 +9391,16 @@ export type Database = {
       fp_empresas_do_usuario: { Args: never; Returns: string[] }
       fp_empresas_do_usuario_como_dono: { Args: never; Returns: string[] }
       fp_empresas_gerenciais_do_usuario: { Args: never; Returns: string[] }
+      fp_import_pode_objeto: {
+        Args: { p_bucket: string; p_nome: string; p_papeis?: string[] }
+        Returns: boolean
+      }
+      fp_import_pode_operacao: {
+        Args: { p_operacao: string; p_papeis?: string[] }
+        Returns: boolean
+      }
       fp_loja_de: { Args: { p_id: string; p_tipo: string }; Returns: string }
+      fp_lojas_cerca: { Args: never; Returns: string[] }
       fp_lojas_permitidas: { Args: { p_papeis?: string[] }; Returns: string[] }
       fp_lojas_permitidas_arr: { Args: never; Returns: string[] }
       fp_mesma_empresa: {
@@ -7703,6 +9409,10 @@ export type Database = {
       }
       fp_minha_assinatura: { Args: never; Returns: Json }
       fp_minhas_faturas: { Args: { p_limite?: number }; Returns: Json }
+      fp_modulo_ativo: {
+        Args: { p_empresa: string; p_modulo: string }
+        Returns: boolean
+      }
       fp_pdv_config_id: { Args: { p_loja?: string }; Returns: number }
       fp_pode_empresa: { Args: { p_empresa: string }; Returns: boolean }
       fp_pode_loja: {
@@ -7710,6 +9420,14 @@ export type Database = {
         Returns: boolean
       }
       fp_pode_loja_nula: { Args: { p_loja: string }; Returns: boolean }
+      fp_pode_modulo: {
+        Args: { p_empresa: string; p_modulo: string; p_papeis?: string[] }
+        Returns: boolean
+      }
+      fp_pode_operar_loja: {
+        Args: { p_loja: string; p_papeis?: string[] }
+        Returns: boolean
+      }
       fp_recursos_empresa: { Args: { p_empresa: string }; Returns: string[] }
       fp_usuario_ativo: { Args: never; Returns: boolean }
       fp_usuario_pode_loja: {
@@ -7733,6 +9451,109 @@ export type Database = {
           p_visao?: string
         }
         Returns: Json
+      }
+      import_aprovar_apuracao: {
+        Args: {
+          p_apuracao: string
+          p_ator: string
+          p_motivo: string
+          p_verificacao: Json
+        }
+        Returns: undefined
+      }
+      import_atualizar_operacao: {
+        Args: { p_dados: Json; p_operacao: string }
+        Returns: undefined
+      }
+      import_buscar_produtos: {
+        Args: { p_ids?: string[]; p_termo?: string }
+        Returns: {
+          id: string
+          nome: string
+        }[]
+      }
+      import_conferir_lancamento: {
+        Args: {
+          p_id: string
+          p_operacao: string
+          p_status: string
+          p_tipo: string
+        }
+        Returns: undefined
+      }
+      import_criar_operacao: {
+        Args: {
+          p_descricao?: string
+          p_loja_importadora: string
+          p_referencia: string
+        }
+        Returns: string
+      }
+      import_listar_operacoes: {
+        Args: never
+        Returns: {
+          aprovada_custo_total: string
+          atualizado_em: string
+          criado_em: string
+          data_invoice: string
+          fornecedor_id: string
+          fornecedor_nome: string
+          id: string
+          loja_importadora_id: string
+          moeda: string
+          n_itens: number
+          referencia: string
+          status: string
+          ultima_apuracao_atual: boolean
+          ultima_apuracao_bloqueantes: number
+          ultima_apuracao_custo_total: string
+          ultima_apuracao_id: string
+          ultima_apuracao_status: string
+          ultima_apuracao_tipo: string
+          ultima_apuracao_versao: number
+        }[]
+      }
+      import_montar_entrada: { Args: { p_operacao: string }; Returns: Json }
+      import_mudar_estado: {
+        Args: { p_acao: string; p_motivo: string; p_operacao: string }
+        Returns: undefined
+      }
+      import_registrar_apuracao: {
+        Args: {
+          p_entrada_sha256: string
+          p_operacao: string
+          p_saida: Json
+          p_saida_sha256: string
+          p_tipo: string
+          p_versao_dados: number
+        }
+        Returns: string
+      }
+      import_registrar_documento: {
+        Args: {
+          p_data: string
+          p_mime: string
+          p_numero: string
+          p_operacao: string
+          p_sha256: string
+          p_storage_path: string
+          p_substitui?: string
+          p_tamanho: number
+          p_tipo: string
+        }
+        Returns: string
+      }
+      import_remover_rascunho: {
+        Args: { p_id: string; p_operacao: string; p_tipo: string }
+        Returns: undefined
+      }
+      import_salvar_item: {
+        Args: { p_item: Json; p_operacao: string }
+        Returns: string
+      }
+      import_salvar_lancamento: {
+        Args: { p_dados: Json; p_operacao: string; p_tipo: string }
+        Returns: string
       }
       importar_nfe_transacao: {
         Args: {
@@ -7912,9 +9733,31 @@ export type Database = {
           venda_id: string
         }[]
       }
+      listar_vendedores_loja: {
+        Args: { p_loja_id: string }
+        Returns: {
+          id: string
+          nome: string
+        }[]
+      }
       marcar_comissoes_pagas: {
         Args: { p_ids: string[]; p_loja_id: string; p_operador_id: string }
         Returns: number
+      }
+      minhas_comissoes: {
+        Args: { p_meses?: number }
+        Returns: {
+          ajustes: number
+          base: number
+          bonus_meta: number
+          comissao: number
+          competencia: string
+          loja_id: string
+          loja_nome: string
+          status_periodo: string
+          total: number
+          vendas: number
+        }[]
       }
       obter_estoque_disponivel_transferencia: {
         Args: { p_loja_id: string; p_produto_id: string }
@@ -7937,6 +9780,17 @@ export type Database = {
           valor_inicial: number
           valor_sistema_dinheiro: number
         }[]
+      }
+      ops_definir_modulo_empresa: {
+        Args: {
+          p_autorizado_por: string
+          p_empresa: string
+          p_habilitado: boolean
+          p_modulo: string
+          p_motivo: string
+          p_origem?: string
+        }
+        Returns: undefined
       }
       pdv_config_flags_visuais: {
         Args: never
@@ -8266,6 +10120,10 @@ export type Database = {
           total_desconto: number
           total_liquido: number
         }[]
+      }
+      reprocessar_comissao_venda: {
+        Args: { p_venda_id: string }
+        Returns: Json
       }
       resumo_comissoes_por_operador: {
         Args: {

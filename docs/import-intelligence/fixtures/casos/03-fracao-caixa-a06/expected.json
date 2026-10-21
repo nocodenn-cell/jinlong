@@ -1,0 +1,33 @@
+{
+  "schema_version": "1",
+  "engine_version": "landed-cost-ref/0.1.0",
+  "input_hash": "sha256:1601b66697dcd74195068c7f7188e919a5e7e4600397637853029d73d7155895",
+  "status": "OK",
+  "divergencias": [],
+  "itens": [
+    {
+      "item_id": "item-001",
+      "produto_id": "prod-001",
+      "quantidade_estoque": "12.000",
+      "componentes_brl": {
+        "mercadoria": "3.3333",
+        "despesas_incorporadas": "0.0000",
+        "tributos_nao_recuperaveis": "0.0000",
+        "descontos": "0.0000"
+      },
+      "custo_total_brl": "3.3333",
+      "custo_unitario_brl": "0.277778",
+      "residuo_unitario_brl": "-0.0000060000",
+      "residuo_total_brl": "0.0000300000"
+    }
+  ],
+  "rateios": [],
+  "despesas_nao_incorporadas": [],
+  "conservacao": {
+    "entradas_brl": "3.3333",
+    "descontos_brl": "0.0000",
+    "saidas_brl": "3.3333",
+    "diferenca_brl": "0.0000000000",
+    "ok": true
+  }
+}

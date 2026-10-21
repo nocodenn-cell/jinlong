@@ -1,0 +1,89 @@
+{
+  "schema_version": "1",
+  "engine_version": "landed-cost-ref/0.1.0",
+  "input_hash": "sha256:0bd52c8d5020ef3253e04a814f3346725dae3ce9194d4542e5f857b4615c6d5a",
+  "status": "OK",
+  "divergencias": [],
+  "itens": [
+    {
+      "item_id": "item-001",
+      "produto_id": "prod-001",
+      "quantidade_estoque": "6.000",
+      "componentes_brl": {
+        "mercadoria": "30.0000",
+        "despesas_incorporadas": "49.2857",
+        "tributos_nao_recuperaveis": "0.0000",
+        "descontos": "0.0000"
+      },
+      "custo_total_brl": "79.2857",
+      "custo_unitario_brl": "13.214286",
+      "residuo_unitario_brl": "-0.0000017143",
+      "residuo_total_brl": "0.0000142857"
+    },
+    {
+      "item_id": "item-002",
+      "produto_id": "prod-002",
+      "quantidade_estoque": "1.000",
+      "componentes_brl": {
+        "mercadoria": "70.0000",
+        "despesas_incorporadas": "50.7143",
+        "tributos_nao_recuperaveis": "0.0000",
+        "descontos": "0.0000"
+      },
+      "custo_total_brl": "120.7143",
+      "custo_unitario_brl": "120.714286",
+      "residuo_unitario_brl": "-0.0000002857",
+      "residuo_total_brl": "-0.0000142857"
+    }
+  ],
+  "rateios": [
+    {
+      "origem_id": "desp-01",
+      "componente": "despesas",
+      "criterio": "VOLUME",
+      "base_total": "0.400",
+      "item_id": "item-001",
+      "base_item": "0.100",
+      "valor_alocado_brl": "15.0000000000",
+      "justificativa": "Armazenagem cobrada por volume ocupado"
+    },
+    {
+      "origem_id": "desp-01",
+      "componente": "despesas",
+      "criterio": "VOLUME",
+      "base_total": "0.400",
+      "item_id": "item-002",
+      "base_item": "0.300",
+      "valor_alocado_brl": "45.0000000000",
+      "justificativa": "Armazenagem cobrada por volume ocupado"
+    },
+    {
+      "origem_id": "desp-02",
+      "componente": "despesas",
+      "criterio": "QUANTIDADE_ESTOQUE",
+      "base_total": "7.000",
+      "item_id": "item-001",
+      "base_item": "6.000",
+      "valor_alocado_brl": "34.2857142857",
+      "justificativa": "Despesa de conferencia por unidade de estoque"
+    },
+    {
+      "origem_id": "desp-02",
+      "componente": "despesas",
+      "criterio": "QUANTIDADE_ESTOQUE",
+      "base_total": "7.000",
+      "item_id": "item-002",
+      "base_item": "1.000",
+      "valor_alocado_brl": "5.7142857143",
+      "justificativa": "Despesa de conferencia por unidade de estoque"
+    }
+  ],
+  "despesas_nao_incorporadas": [],
+  "conservacao": {
+    "entradas_brl": "200.0000",
+    "descontos_brl": "0.0000",
+    "saidas_brl": "200.0000",
+    "diferenca_brl": "0.0000000000",
+    "ok": true
+  }
+}
