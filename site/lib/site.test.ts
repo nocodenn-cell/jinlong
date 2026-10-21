@@ -96,7 +96,7 @@ describe('paridade de conteúdo pt-BR / zh-CN', () => {
     expect(getHomeContent('pt-BR').hero.ctaTrial).toBe('Agendar demonstração')
     expect(getHomeContent('zh-CN').hero.ctaTrial).toBe('预约演示')
     expect(getHomeContent('pt-BR').price.value).toBe('Condições sob consulta')
-    expect(getHomeContent('zh-CN').price.value).toBe('价格按需沟通')
+    expect(getHomeContent('zh-CN').price.value).toBe('价格面议')
   })
 
   it('termos de operação em chinês seguem o próprio ERP', () => {

@@ -26,7 +26,10 @@ interface HomePageProps {
 
 function buildAlternates(locale: SiteLocale): Metadata['alternates'] {
   const languages: Record<string, string> = { 'pt-BR': sitePath('pt-BR') }
-  if (isZhReviewed()) languages['zh-CN'] = sitePath('zh-CN')
+  if (isZhReviewed()) {
+    languages['zh-CN'] = sitePath('zh-CN')
+    languages['x-default'] = sitePath('zh-CN')
+  }
   return { canonical: sitePath(locale), languages }
 }
 
