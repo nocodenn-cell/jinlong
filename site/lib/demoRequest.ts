@@ -1,5 +1,5 @@
 /**
- * Pedido de demonstração (POST /api/demo): validação, honeypot, limite de taxa e persistência.
+ * Pedido de demonstração (POST /pedido-demo): validação, honeypot, limite de taxa e persistência.
  * Persistência: tabela public.commercial_leads (product='jinlong') no Supabase existente, via REST com a chave anon
  * (RLS permite só INSERT; ninguém lê com anon). Sem configuração, responde 503 "not_configured" e a UI
  * mostra WhatsApp/e-mail — o pedido nunca se perde em silêncio.

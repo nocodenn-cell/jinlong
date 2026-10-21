@@ -18,7 +18,7 @@ type State =
   | { kind: 'fail'; rate: boolean }
 
 /**
- * Agendamento de demonstração: POST /api/demo registra o pedido e devolve um protocolo.
+ * Agendamento de demonstração: POST /pedido-demo registra o pedido e devolve um protocolo.
  * Se o registro falhar (sem configuração, indisponível, limite), mostra e-mail/WhatsApp com o texto pronto —
  * o pedido nunca se perde em silêncio.
  */
@@ -60,7 +60,7 @@ export function TrialForm({ copy, email, whatsappHref, locale }: TrialFormProps)
     }
     setState({ kind: 'sending' })
     try {
-      const res = await fetch('/api/demo', {
+      const res = await fetch('/pedido-demo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...v, channel, locale, website: String(data.get('website') ?? '') }),
