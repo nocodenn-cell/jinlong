@@ -6,7 +6,10 @@ import { captureDesktopException, VENDA_EVENTS } from '../lib/sentry'
 import {
   descontoGerenteCompativel,
   isFormaPagamentoDesktop,
+  normalizarPagamentos,
   type FormaPagamentoDesktop,
+  type LinhaPagamentoDesktop,
+  type PagamentoOutbox,
 } from '../lib/formaPagamento'
 
 type ItemVenda = {
@@ -38,6 +41,11 @@ type Params = {
   gerenteId: string
   /** Forma escolhida no cupom. Ausente = DINHEIRO (comportamento histórico). */
   formaPagamento?: FormaPagamentoDesktop
+  /**
+   * Pagamento combinado e/ou crédito parcelado. Ausente/vazio = forma única (`formaPagamento`), sem
+   * `pagamentos` no payload — idêntico ao comportamento anterior.
+   */
+  pagamentos?: LinhaPagamentoDesktop[]
   onSetCaixaAtualId: (id: string | null) => void
   onSetMensagem: (msg: string) => void
   onLimparCarrinho: () => void
@@ -61,6 +69,7 @@ export function usePdvLocalVendaCaixaFlow({
   maxDescontoGerentePercentual,
   gerenteId,
   formaPagamento = 'DINHEIRO',
+  pagamentos,
   onSetCaixaAtualId,
   onSetMensagem,
   onLimparCarrinho,
@@ -155,7 +164,24 @@ export function usePdvLocalVendaCaixaFlow({
       setIsFinalizandoVenda(false)
       return
     }
-    if (!descontoGerenteCompativel(formaPagamento, descontoGerentePercentual)) {
+    let pagamentosOutbox: PagamentoOutbox[] | undefined
+    let formaEscalar: FormaPagamentoDesktop = formaPagamento
+    if (pagamentos && pagamentos.length > 0) {
+      const r = normalizarPagamentos(pagamentos, totalLiquido)
+      if (!r.ok) {
+        onSetMensagem(r.erro)
+        setIsFinalizandoVenda(false)
+        return
+      }
+      pagamentosOutbox = r.pagamentos
+      formaEscalar = r.pagamentos[0].forma_pagamento
+      if (descontoGerentePercentual > 0 && r.pagamentos.some((p) => p.forma_pagamento !== 'DINHEIRO')) {
+        onSetMensagem('Desconto de gerente só vale para venda paga em dinheiro. Troque a forma ou remova o desconto.')
+        setIsFinalizandoVenda(false)
+        return
+      }
+    }
+    if (!descontoGerenteCompativel(formaEscalar, descontoGerentePercentual)) {
       onSetMensagem('Desconto de gerente só vale para venda paga em dinheiro. Troque a forma ou remova o desconto.')
       setIsFinalizandoVenda(false)
       return
@@ -208,7 +234,8 @@ export function usePdvLocalVendaCaixaFlow({
         venda: {
           caixa_id: caixaId,
           operador_id: null,
-          forma_pagamento: formaPagamento,
+          forma_pagamento: formaEscalar,
+          ...(pagamentosOutbox ? { pagamentos: pagamentosOutbox } : {}),
           total_bruto: totalBruto,
           total_desconto: totalDesconto,
           total_liquido: totalLiquido,
@@ -252,6 +279,7 @@ export function usePdvLocalVendaCaixaFlow({
     }
   }, [
     formaPagamento,
+    pagamentos,
     itens,
     isFinalizandoVenda,
     tauriDisponivel,

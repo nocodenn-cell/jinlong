@@ -310,6 +310,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     adicionarParcela,
     removerParcela,
     atualizarForma,
+    atualizarParcelas,
     atualizarValor,
     autoCompletarUltima,
     resetPagamentos,
@@ -1082,6 +1083,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     const parcelasNormalizadas = pagamentos.map((p) => ({
       formaPagamento: p.formaPagamento,
       valor: p.valor,
+      ...(p.formaPagamento === "CARTAO_CREDITO" && (p.parcelas ?? 1) > 1 ? { parcelas: p.parcelas } : {}),
     }))
     const excesso = roundMoney2(totalPagamentos - totalLiquidoComGerente)
     if (excesso > EXCESSO_PAGAMENTO_EPS) {
@@ -1637,6 +1639,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 onAdicionarParcela={adicionarParcela}
                 onRemoverParcela={removerParcela}
                 onAtualizarForma={atualizarForma}
+                onAtualizarParcelas={atualizarParcelas}
                 onAtualizarValor={atualizarValor}
                 onAutoCompletar={autoCompletarUltima}
                 onDescontoDinheiro={abrirGerenteModal}

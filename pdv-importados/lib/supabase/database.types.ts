@@ -6259,6 +6259,7 @@ export type Database = {
           created_at: string
           forma_pagamento: string
           id: string
+          parcelas: number
           valor: number
           venda_id: string
         }
@@ -6266,6 +6267,7 @@ export type Database = {
           created_at?: string
           forma_pagamento: string
           id?: string
+          parcelas?: number
           valor: number
           venda_id: string
         }
@@ -6273,6 +6275,7 @@ export type Database = {
           created_at?: string
           forma_pagamento?: string
           id?: string
+          parcelas?: number
           valor?: number
           venda_id?: string
         }
@@ -8041,6 +8044,23 @@ export type Database = {
         Returns: undefined
       }
       registrar_venda_com_itens: {
+        Args: {
+          p_caixa_id: string
+          p_desconto_gerente_percentual?: number
+          p_desconto_gerente_valor?: number
+          p_forma_pagamento: string
+          p_gerente_id?: string
+          p_itens: Json
+          p_operador_id: string
+          p_pagamentos?: Json
+          p_total_bruto: number
+          p_total_desconto: number
+          p_total_liquido: number
+          p_venda_id: string
+        }
+        Returns: undefined
+      }
+      registrar_venda_com_itens_v2: {
         Args: {
           p_caixa_id: string
           p_desconto_gerente_percentual?: number

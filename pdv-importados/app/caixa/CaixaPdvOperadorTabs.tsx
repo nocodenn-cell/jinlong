@@ -3,7 +3,7 @@
 import type { ReactNode } from "react"
 import { forwardRef } from "react"
 import type { Mensagens } from "@/i18n/getMessages"
-import type { FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
+import { MAX_PARCELAS_CREDITO, type FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
 import { labelFormaPagamentoVenda } from "@/lib/format/vendaLabels"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { enterVoltaParaBusca } from "@/app/caixa/caixaFocoBusca"
@@ -24,7 +24,10 @@ export type CaixaPdvOperadorTabId = "produto"
 type PagamentoLinha = {
   formaPagamento: FinalizarVendaInput["formaPagamento"]
   valor: number
+  parcelas?: number
 }
+
+const OPCOES_PARCELAS = Array.from({ length: MAX_PARCELAS_CREDITO }, (_, i) => i + 1)
 
 type PagamentoPanelProps = {
   m: Mensagens
@@ -39,6 +42,8 @@ type PagamentoPanelProps = {
   onRemoverParcela: (index: number) => void
   onAtualizarForma: (index: number, forma: FormaPagamento) => void
   onAtualizarValor: (index: number, valor: number) => void
+  /** Parcelas do crédito (opcional: sem handler, o seletor não aparece). */
+  onAtualizarParcelas?: (index: number, parcelas: number) => void
   onAutoCompletar: () => void
   /** Abre autorização de gerente para desconto % acima do comercial do operador. */
   onDescontoDinheiro?: () => void
@@ -65,6 +70,7 @@ const PagamentoPanelImpl = forwardRef(function PagamentoPanelImpl(
     onRemoverParcela,
     onAtualizarForma,
     onAtualizarValor,
+    onAtualizarParcelas,
     onAutoCompletar,
     onDescontoDinheiro,
     descontoComercialPanel,
@@ -147,8 +153,24 @@ const PagamentoPanelImpl = forwardRef(function PagamentoPanelImpl(
       ) : null}
 
       {!dividido && !pedeValorRecebido ? (
-        <div className="flex justify-between gap-3 rounded border p-2 font-semibold">
+        <div className="flex items-center justify-between gap-3 rounded border p-2 font-semibold">
           <span>{labelFormaPagamentoVenda(formaUnica ?? "PIX", m)}</span>
+          {formaUnica === "CARTAO_CREDITO" && onAtualizarParcelas ? (
+              <Select
+                disabled={disabled}
+                value={String(pagamentos[0].parcelas ?? 1)}
+                onChange={(e) => onAtualizarParcelas(0, Number(e.target.value))}
+                aria-label={caixaFmt(m.caixa.aria_parcela_parcelas, { n: 0 + 1 })}
+                data-testid="caixa-parcelas-credito"
+                className="h-auto w-24 rounded-md border border-border bg-background px-2 py-1.5 text-xs font-medium text-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
+              >
+                {OPCOES_PARCELAS.map((n) => (
+                  <option key={n} value={n}>
+                    {n === 1 ? m.caixa.pdv_pgto_a_vista : caixaFmt(m.caixa.pdv_pgto_parcelas_n, { n })}
+                  </option>
+                ))}
+              </Select>
+          ) : null}
           <span>{moedaPrefixo} {formatDecimalBRL(totalLiquidoComGerente)}</span>
         </div>
       ) : null}
@@ -185,6 +207,22 @@ const PagamentoPanelImpl = forwardRef(function PagamentoPanelImpl(
                 data-caixa-atalho-bloqueado="true"
                 className="w-28 rounded-md border border-border bg-background px-2 py-1.5 text-right text-sm font-semibold tabular-nums text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
               />
+              {p.formaPagamento === "CARTAO_CREDITO" && onAtualizarParcelas ? (
+              <Select
+                disabled={disabled}
+                value={String(p.parcelas ?? 1)}
+                onChange={(e) => onAtualizarParcelas(idx, Number(e.target.value))}
+                aria-label={caixaFmt(m.caixa.aria_parcela_parcelas, { n: idx + 1 })}
+                data-testid="caixa-parcelas-credito"
+                className="h-auto w-24 rounded-md border border-border bg-background px-2 py-1.5 text-xs font-medium text-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
+              >
+                {OPCOES_PARCELAS.map((n) => (
+                  <option key={n} value={n}>
+                    {n === 1 ? m.caixa.pdv_pgto_a_vista : caixaFmt(m.caixa.pdv_pgto_parcelas_n, { n })}
+                  </option>
+                ))}
+              </Select>
+              ) : null}
               <button
                 disabled={disabled}
                 type="button"
@@ -303,6 +341,7 @@ export function CaixaPdvOperadorTabs({
   onRemoverParcela,
   onAtualizarForma,
   onAtualizarValor,
+  onAtualizarParcelas,
   onAutoCompletar,
   onDescontoDinheiro,
   descontoComercialPanel,
@@ -326,6 +365,7 @@ export function CaixaPdvOperadorTabs({
         onRemoverParcela={onRemoverParcela}
         onAtualizarForma={onAtualizarForma}
         onAtualizarValor={onAtualizarValor}
+        onAtualizarParcelas={onAtualizarParcelas}
         onAutoCompletar={onAutoCompletar}
         onDescontoDinheiro={onDescontoDinheiro}
         descontoComercialPanel={descontoComercialPanel}

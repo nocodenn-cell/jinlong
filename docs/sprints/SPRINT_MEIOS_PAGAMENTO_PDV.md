@@ -51,3 +51,17 @@ PDV desktop: seletor das 4 formas (Dinheiro 现金 / PIX / Crédito 信用卡 / 
 1. Pagamento combinado e nº de parcelas no PDV desktop: exige coluna nova no SQLite (Rust), payload `pagamentos[]` na outbox (a edge já aceita) e novo instalador — validar no PDV do cliente (acesso presencial).
 2. Capturar parcelas do crédito no caixa web: exige alteração da RPC canônica + migration (label `deploy-prod:aprovado`).
 3. Confirmar em produção (leitura) se as migrations de conferência por forma (20261007180000/190000) e financeiro (20261006120000) estão aplicadas.
+
+## 5. Fase 2 — pagamento combinado no desktop + parcelas do crédito (web e desktop)
+
+- Migration **20261021120000_vendas_pagamentos_parcelas_credito.sql** (só arquivo; NÃO aplicada em produção):
+  `vendas_pagamentos.parcelas smallint NOT NULL DEFAULT 1` (CHECK 1..24, >1 só crédito); campo opcional `parcelas`
+  em `p_pagamentos`; wrapper v4 com assinatura/grants inalterados; `registrar_venda_com_itens_v2` (service_role) para a outbox.
+  Rollback em `backend/supabase/rollback/20261021120000_…rollback.sql` (testado: rollback + reaplicação).
+- Edge `sync-outbox` (só código; NÃO publicada): repassa `parcelas` e usa a v2 apenas quando há parcelas > 1.
+- PDV desktop: botão "Dividir pagamento / 组合付款" (até 4 formas, troco só do dinheiro, centavos inteiros),
+  parcelas do crédito (1..24); SQLite ganha `vendas_pagamentos` (CREATE TABLE IF NOT EXISTS — aditivo);
+  outbox só leva `pagamentos` em vendas novas com pagamento combinado/parcelado (itens antigos idênticos).
+- Caixa web: seletor de parcelas no crédito (forma única e dividido), pt/zh.
+- Ordem segura de implantação: qualquer ordem funciona para vendas 1x. Parcelas só passam a ser gravadas
+  quando migration **e** (web deploy | edge publicada) estiverem no ar; antes disso ficam 1x, sem erro.

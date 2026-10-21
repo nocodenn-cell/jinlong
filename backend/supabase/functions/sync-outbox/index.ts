@@ -36,6 +36,7 @@ import {
   type ScopeLookups,
   type SyncContext,
 } from "./tenantScope.ts";
+import { parseParcelasOpcional, temParcelamento, type PagamentoComParcelas } from "./pagamentosParcelas.ts";
 
 type OutboxEvent = {
   id: string;
@@ -126,7 +127,7 @@ type VendaItemPayload = {
   preco_unitario: number;
 };
 
-type VendaPagamentoPayload = { forma_pagamento: string; valor: number };
+type VendaPagamentoPayload = PagamentoComParcelas;
 
 type VendaPayload = {
   venda_id: string;
@@ -290,7 +291,10 @@ function setPagamentosFromPayload(raw: Record<string, unknown>, payload: VendaPa
     const valor = p.valor;
     if (typeof forma !== "string" || !forma.trim()) throw new Error("PAYLOAD_PAGAMENTOS_INVALIDO");
     if (typeof valor !== "number" || !Number.isFinite(valor) || valor <= 0) throw new Error("PAYLOAD_PAGAMENTOS_INVALIDO");
-    return { forma_pagamento: forma.trim(), valor };
+    const parcelas = parseParcelasOpcional(p, forma.trim());
+    return parcelas === undefined
+      ? { forma_pagamento: forma.trim(), valor }
+      : { forma_pagamento: forma.trim(), valor, parcelas };
   });
   payload.pagamentos = pagamentos;
 }
@@ -717,7 +721,8 @@ async function processVenda(
     throw new Error("GERENTE_TOKEN_OBRIGATORIO");
   }
 
-  const { error: rpcVendaErr } = await supabase.rpc("registrar_venda_com_itens", {
+  const rpcVenda = temParcelamento(payload.pagamentos) ? "registrar_venda_com_itens_v2" : "registrar_venda_com_itens";
+  const rpcVendaArgs = {
     p_venda_id: payload.venda_id,
     p_caixa_id: payload.caixa_id,
     p_operador_id: payload.operador_id,
@@ -732,7 +737,11 @@ async function processVenda(
     // Sprint C2.10 (P0-5): null em todo tráfego real hoje (pdv-local não
     // envia) -> RPC cai no comportamento escalar de sempre, sem mudança.
     p_pagamentos: payload.pagamentos ?? null,
-  });
+  };
+  // Parcelas > 1 (migration 20261021120000) => v2; todo o resto segue na v1 de sempre.
+  const { error: rpcVendaErr } = rpcVenda === "registrar_venda_com_itens"
+    ? await supabase.rpc("registrar_venda_com_itens", rpcVendaArgs)
+    : await supabase.rpc("registrar_venda_com_itens_v2", rpcVendaArgs);
 
   if (rpcVendaErr) {
     await captureEdgeException(new Error(rpcVendaErr.message), {
@@ -740,7 +749,7 @@ async function processVenda(
       venda_id: payload.venda_id,
       caixa_id: payload.caixa_id ?? undefined,
       evento: "erro_rpc_venda",
-      rpc: "registrar_venda_com_itens",
+      rpc: rpcVenda,
       event_type: "VENDA_REGISTRADA",
     });
     throw new Error(`ERRO_RPC_REGISTRAR_VENDA: ${rpcVendaErr.message}`);
@@ -768,7 +777,7 @@ async function processVenda(
     level: "info",
     stage: "venda_registrada",
     path: "sync_outbox",
-    rpc: "registrar_venda_com_itens",
+    rpc: rpcVenda,
     venda_id: payload.venda_id,
     steps: {
       rpc_ms: _t1 - _t0,
