@@ -3951,7 +3951,7 @@
     "crit_revisar": "保存前请核对",
     "trib_ncm_titulo": "按NCM的税务智能",
     "trib_ncm_subtitulo": "根据有版本和日期的参数，确定性地建议 II、IPI、PIS/Cofins进口税、ICMS 以及 CBS/IBS（税制改革）。",
-    "trib_ncm_aviso_ficticio": "演示：目录中的税率为虚构且可配置。实际业务请使用会计师核准的参数。建议不能替代 DI/Duimp。",
+    "trib_ncm_aviso_ficticio": "税率依据官方公开来源（PE州）调研，尚待会计师审核。实际业务使用前请与会计师核对。II 和 IPI 取决于 NCM。建议不能替代 DI/Duimp。",
     "trib_ncm_uf": "目的州",
     "trib_ncm_sem_itens": "请先登记商品（含NCM）以查看建议。",
     "trib_ncm_sem_cambio": "缺少该币种汇率，无法计算完税价格",

@@ -3714,7 +3714,7 @@
     "crit_revisar": "revise antes de salvar",
     "trib_ncm_titulo": "Inteligência tributária por NCM",
     "trib_ncm_subtitulo": "Sugestão determinística de II, IPI, PIS/Cofins-Importação, ICMS e CBS/IBS (Reforma Tributária) a partir de parâmetros versionados e datados.",
-    "trib_ncm_aviso_ficticio": "Demonstração: as alíquotas do catálogo são FICTÍCIAS e configuráveis. Em operação real, use parâmetros validados pelo seu contador. A sugestão não substitui a DI/Duimp.",
+    "trib_ncm_aviso_ficticio": "Alíquotas PESQUISADAS em fontes oficiais (PE) e PENDENTES DE REVISÃO DO CONTADOR. Confira com seu contador antes de usar em operação real. II e IPI dependem do NCM. A sugestão não substitui a DI/Duimp.",
     "trib_ncm_uf": "UF de destino",
     "trib_ncm_sem_itens": "Cadastre as mercadorias (com NCM) para ver a sugestão.",
     "trib_ncm_sem_cambio": "Sem câmbio da moeda para calcular o valor aduaneiro",
