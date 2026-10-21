@@ -8,6 +8,8 @@ import { carregarOperacao } from '@/lib/import/hub/dadosImportacoes'
 import { chaveErro } from '@/lib/import/hub/elegibilidade'
 import { normalizarDecimal } from '@/lib/import/hub/decimais'
 import { sugerirTributos, sugestaoParaLancamento } from '@/lib/import/hub/inteligencia'
+import { carregarCatalogoEmpresa } from '@/lib/import/hub/configImportacao'
+import { parametrosDaEmpresa } from '@/lib/import/hub/catalogoEmpresa'
 import { XmlImportacaoErro, lerXmlImportacao, type PropostaXml } from '@/lib/import/xml/lerXmlImportacao'
 import type { ResultadoAcao } from './actions'
 
@@ -127,7 +129,9 @@ export async function registrarTributosSugeridosAction(
     || !Array.isArray(input.chaves)) return falha('erro_valor_invalido')
   const dados = await carregarOperacao(gate.ctx.client, operacaoId)
   if (!dados) return falha('erro_nao_autorizado')
-  const r = sugerirTributos(dados.itens, dados.cambios, input.uf, input.data)
+  // Mesmo catálogo da tela: sem configuração ⇒ demonstração (como antes); com ⇒ nacional + cliente.
+  const cat = parametrosDaEmpresa(await carregarCatalogoEmpresa(gate.ctx.client, gate.ctx.empresaId), input.uf)
+  const r = sugerirTributos(dados.itens, dados.cambios, input.uf, input.data, cat.parametros, cat.versao)
   const chaves = new Set(input.chaves)
   let n = 0
   for (const s of r.sugestoes) {

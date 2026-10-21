@@ -56,7 +56,16 @@ export type {
 // Inteligência tributária (parâmetros versionados; sugestão com revisão humana)
 export {
   calcularTributosImportacao, resolverParametro, CATALOGO_TRIBUTARIO_DEMO, CATALOGO_TRIBUTARIO_VERSAO, TRIBUTOS_IMPORTACAO,
+  CATALOGO_TRIBUTARIO_PESQUISADO_PE, CATALOGO_TRIBUTARIO_PESQUISADO_PE_VERSAO,
 } from './tributacao'
+// Catálogo nacional (27 UFs + federais; II/IPI informados pelo cliente)
+export {
+  ALIQUOTAS_UF, UFS, CATALOGO_FEDERAL_NACIONAL, CATALOGO_NACIONAL_VERSAO, FONTES_CATALOGO_UF, CONSULTADO_EM, DESPESAS_FEDERAIS_INFO,
+  aplicaAfrmm, aliquotaDaUf, parametroIcmsUf, montarCatalogoNacional, aliquotaInterestadualGeral, simularRevendaInterestadual,
+} from './catalogoNacional'
+export type {
+  AliquotaUf, StatusCatalogoUf, ModalTransporte, OverrideCliente, ConfigImportacaoEmpresa, EntradaRevenda, ResultadoRevenda, AvisoRevenda,
+} from './catalogoNacional'
 export type {
   TributoImportacao, ParametroTributario, FonteParametro, ItemTributavel, EntradaTributacao, SugestaoTributo,
   ResultadoTributacao, StatusSugestao,

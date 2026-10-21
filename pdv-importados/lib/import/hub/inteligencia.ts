@@ -28,9 +28,10 @@ export function basesTributaveis(itens: readonly Item[], cambios: readonly Cambi
 export function sugerirTributos(
   itens: readonly Item[], cambios: readonly Cambio[], uf: string | null, data: string,
   parametros: readonly ParametroTributario[] = CATALOGO_TRIBUTARIO_DEMO,
+  catalogoVersao?: string,
 ): ResultadoTributacao & { semBase: ItemSemBase[] } {
   const { ok, semBase } = basesTributaveis(itens, cambios)
-  return { ...calcularTributosImportacao({ data_fato_gerador: data, uf_destino: uf, itens: ok, parametros }), semBase }
+  return { ...calcularTributosImportacao({ data_fato_gerador: data, uf_destino: uf, itens: ok, parametros, catalogo_versao: catalogoVersao }), semBase }
 }
 
 /** Sugestão CALCULADA → dados do lançamento TRIBUTO (fica PENDENTE de conferência humana). */

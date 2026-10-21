@@ -1,11 +1,15 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { SectionCard, StatusBadge } from '@/components/ui/admin-v2'
 import { formatarDecimal } from '@/lib/import/hub/decimais'
 import type { Cambio, Item, Tributo } from '@/lib/import/hub/dadosImportacoes'
 import { sugerirTributos } from '@/lib/import/hub/inteligencia'
+import { parametrosDaEmpresa, type DadosCatalogoEmpresa } from '@/lib/import/hub/catalogoEmpresa'
+import { aliquotaDaUf } from '@shared-core/src/import'
+import { ROUTES } from '@/lib/navigation/routes'
 import { registrarTributosSugeridosAction } from '../actions-inteligencia'
 import { ErroFormulario, Texto, useAcao, type TextosImport } from './campos'
 
@@ -21,31 +25,57 @@ export function TributosSecao(props: {
   tributos: Tributo[]
   dataPadrao: string
   editavel: boolean
+  /** Configuração nacional da empresa (null ⇒ catálogo de demonstração, como antes). */
+  catalogo?: DadosCatalogoEmpresa | null
 }) {
   const { t } = props
   const { executar, pendente, erro } = useAcao(t)
-  const [uf, setUf] = useState('SP')
+  const [uf, setUf] = useState(props.catalogo?.config?.uf_importador ?? 'SP')
   const [data, setData] = useState(props.dataPadrao)
   const tk = (k: string) => (t as Record<string, string>)[k] ?? k
   const r = useMemo(() => {
     try {
-      return /^[A-Z]{2}$/.test(uf) && /^\d{4}-\d{2}-\d{2}$/.test(data) ? sugerirTributos(props.itens, props.cambios, uf, data) : null
+      return /^[A-Z]{2}$/.test(uf) && /^\d{4}-\d{2}-\d{2}$/.test(data) ? (() => { const c = parametrosDaEmpresa(props.catalogo ?? null, uf); return sugerirTributos(props.itens, props.cambios, uf, data, c.parametros, c.versao) })() : null
     } catch {
       return null
     }
-  }, [props.itens, props.cambios, uf, data])
+  }, [props.itens, props.cambios, props.catalogo, uf, data])
   const jaRegistrado = (itemId: string, trib: string) => props.tributos.some((x) => x.item_id === itemId && x.tributo_codigo === trib)
   const calculaveis = r?.sugestoes.filter((s) => s.status === 'CALCULADO' && !jaRegistrado(s.item_id, s.tributo)) ?? []
   const [marcados, setMarcados] = useState<Set<string> | null>(null)
-  const sel = marcados ?? new Set(calculaveis.map((s) => `${s.item_id}:${s.tributo}`))
+  // Valor zero (ex.: CBS/IBS 2026, não cobrados) não vem pré-selecionado para registro.
+  const sel = marcados ?? new Set(calculaveis.filter((s) => s.valor_brl !== '0.00').map((s) => `${s.item_id}:${s.tributo}`))
   const nomeItem = (id: string) => props.itens.find((i) => i.id === id)?.descricao ?? '—'
+  const nacional = Boolean(props.catalogo?.config)
+  const ufInfo = nacional ? aliquotaDaUf(uf, props.catalogo?.tabela?.length ? props.catalogo.tabela : undefined) : null
   const tom = (st: string) => (st === 'CALCULADO' ? 'success' : st === 'PENDENTE_ALIQUOTA' ? 'warning' : 'neutral') as 'success' | 'warning' | 'neutral'
 
   return (
     <SectionCard title={t.trib_ncm_titulo} subtitle={t.trib_ncm_subtitulo}>
-      <p role="note" className="mb-3 rounded-md border border-[var(--color-warning-strong)] bg-[var(--color-surface-soft)] px-3 py-2 text-small" data-testid="imp-trib-ficticio">
-        {t.trib_ncm_aviso_ficticio}
-      </p>
+      {nacional ? (
+        <div role="note" className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-[var(--color-warning-strong)] bg-[var(--color-surface-soft)] px-3 py-2 text-small" data-testid="imp-trib-nacional">
+          <strong>{t.nac_aviso}</strong>
+          {ufInfo ? (
+            <span title={t.nac_badge_dica} data-testid="imp-trib-badge-uf">
+              <StatusBadge tone={ufInfo.status === 'VERIFICADO' ? 'success' : 'warning'}>{uf} · {tk(`nac_badge_${ufInfo.status}`)}</StatusBadge>
+            </span>
+          ) : null}
+          <span>{t.nac_sem_ii}</span>
+          <Link className="font-medium text-[var(--color-brand-primary)] underline" href={`${ROUTES.admin.importacoes}/configuracao`}>{t.nac_configurar}</Link>
+        </div>
+      ) : (
+        <>
+          <p role="note" className="mb-3 rounded-md border border-[var(--color-warning-strong)] bg-[var(--color-surface-soft)] px-3 py-2 text-small" data-testid="imp-trib-ficticio">
+            {t.trib_ncm_aviso_ficticio}
+          </p>
+          {props.catalogo !== undefined ? (
+            <p className="mb-3 text-small" data-testid="imp-trib-onboarding">
+              {t.nac_catalogo_demo}{' '}
+              <Link className="font-medium text-[var(--color-brand-primary)] underline" href={`${ROUTES.admin.importacoes}/configuracao`}>{t.nac_configurar}</Link>
+            </p>
+          ) : null}
+        </>
+      )}
       <div className="mb-4 grid gap-3 md:grid-cols-4">
         <Texto rotulo={t.trib_ncm_uf} valor={uf} onChange={(x) => setUf(x.toUpperCase().slice(0, 2))} maxLength={2} testId="imp-trib-uf" />
         <Texto rotulo={t.trib_fato_gerador} valor={data} onChange={setData} tipo="date" testId="imp-trib-data" />
