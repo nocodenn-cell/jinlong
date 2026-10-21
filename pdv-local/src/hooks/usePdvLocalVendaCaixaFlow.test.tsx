@@ -132,4 +132,69 @@ describe('usePdvLocalVendaCaixaFlow', () => {
     )
     expect(result.current.isFinalizandoVenda).toBe(false)
   })
+  it('sem forma informada mantém DINHEIRO (compatível com o comportamento anterior)', async () => {
+    invokeMock.mockResolvedValue(null)
+    const { result } = renderHook(() => usePdvLocalVendaCaixaFlow(criarParams()))
+    await act(async () => {
+      await result.current.finalizarVenda()
+    })
+    expect(invokeMock).toHaveBeenCalledWith(
+      'registrar_venda',
+      expect.objectContaining({ venda: expect.objectContaining({ forma_pagamento: 'DINHEIRO' }) }),
+    )
+  })
+
+  it.each(['PIX', 'CARTAO_CREDITO', 'CARTAO_DEBITO', 'DINHEIRO'] as const)(
+    'envia a forma escolhida (%s) no registrar_venda',
+    async (forma) => {
+      invokeMock.mockResolvedValue(null)
+      const { result } = renderHook(() =>
+        usePdvLocalVendaCaixaFlow(criarParams({ formaPagamento: forma })),
+      )
+      await act(async () => {
+        await result.current.finalizarVenda()
+      })
+      expect(invokeMock).toHaveBeenCalledWith(
+        'registrar_venda',
+        expect.objectContaining({ venda: expect.objectContaining({ forma_pagamento: forma }) }),
+      )
+    },
+  )
+
+  it('bloqueia desconto de gerente fora de dinheiro antes de gravar (servidor recusaria na sync)', async () => {
+    const onSetMensagem = vi.fn()
+    const { result } = renderHook(() =>
+      usePdvLocalVendaCaixaFlow(
+        criarParams({
+          formaPagamento: 'PIX',
+          descontoGerentePercentual: 5,
+          descontoGerenteValor: 0.5,
+          descontoGerenteToken: 'tok',
+          onSetMensagem,
+        }),
+      ),
+    )
+    await act(async () => {
+      await result.current.finalizarVenda()
+    })
+    expect(invokeMock).not.toHaveBeenCalled()
+    expect(onSetMensagem).toHaveBeenCalledWith(
+      'Desconto de gerente só vale para venda paga em dinheiro. Troque a forma ou remova o desconto.',
+    )
+    expect(result.current.isFinalizandoVenda).toBe(false)
+  })
+
+  it('recusa forma desconhecida sem gravar', async () => {
+    const onSetMensagem = vi.fn()
+    const { result } = renderHook(() =>
+      usePdvLocalVendaCaixaFlow(
+        criarParams({ formaPagamento: 'BOLETO' as unknown as 'PIX', onSetMensagem }),
+      ),
+    )
+    await act(async () => {
+      await result.current.finalizarVenda()
+    })
+    expect(invokeMock).not.toHaveBeenCalled()
+    expect(onSetMensagem).toHaveBeenCalledWith('Forma de pagamento inválida. Escolha Dinheiro, PIX, Crédito ou Débito.')
+  })
 })

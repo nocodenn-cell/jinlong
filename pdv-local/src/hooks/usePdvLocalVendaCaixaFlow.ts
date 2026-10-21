@@ -3,6 +3,11 @@ import { invoke } from '@tauri-apps/api/core'
 import { validarPercentualPermitido } from '@core/managerDiscount/policy'
 import type { CaixaSessaoInvoke } from './usePdvLocalCatalogo'
 import { captureDesktopException, VENDA_EVENTS } from '../lib/sentry'
+import {
+  descontoGerenteCompativel,
+  isFormaPagamentoDesktop,
+  type FormaPagamentoDesktop,
+} from '../lib/formaPagamento'
 
 type ItemVenda = {
   produtoId: string
@@ -31,6 +36,8 @@ type Params = {
    */
   maxDescontoGerentePercentual?: number
   gerenteId: string
+  /** Forma escolhida no cupom. Ausente = DINHEIRO (comportamento histórico). */
+  formaPagamento?: FormaPagamentoDesktop
   onSetCaixaAtualId: (id: string | null) => void
   onSetMensagem: (msg: string) => void
   onLimparCarrinho: () => void
@@ -53,6 +60,7 @@ export function usePdvLocalVendaCaixaFlow({
   descontoGerenteToken,
   maxDescontoGerentePercentual,
   gerenteId,
+  formaPagamento = 'DINHEIRO',
   onSetCaixaAtualId,
   onSetMensagem,
   onLimparCarrinho,
@@ -142,6 +150,17 @@ export function usePdvLocalVendaCaixaFlow({
       return
     }
 
+    if (!isFormaPagamentoDesktop(formaPagamento)) {
+      onSetMensagem('Forma de pagamento inválida. Escolha Dinheiro, PIX, Crédito ou Débito.')
+      setIsFinalizandoVenda(false)
+      return
+    }
+    if (!descontoGerenteCompativel(formaPagamento, descontoGerentePercentual)) {
+      onSetMensagem('Desconto de gerente só vale para venda paga em dinheiro. Troque a forma ou remova o desconto.')
+      setIsFinalizandoVenda(false)
+      return
+    }
+
     if (descontoGerentePercentual > 0) {
       if (!descontoGerenteToken) {
         onSetMensagem('Desconto de gerente sem autorização. Repita a validação antes de finalizar.')
@@ -189,7 +208,7 @@ export function usePdvLocalVendaCaixaFlow({
         venda: {
           caixa_id: caixaId,
           operador_id: null,
-          forma_pagamento: 'DINHEIRO',
+          forma_pagamento: formaPagamento,
           total_bruto: totalBruto,
           total_desconto: totalDesconto,
           total_liquido: totalLiquido,
@@ -232,6 +251,7 @@ export function usePdvLocalVendaCaixaFlow({
       setIsFinalizandoVenda(false)
     }
   }, [
+    formaPagamento,
     itens,
     isFinalizandoVenda,
     tauriDisponivel,

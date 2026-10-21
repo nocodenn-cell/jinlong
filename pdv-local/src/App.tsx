@@ -15,6 +15,11 @@ import { recalcularPrecoItemLocal } from './lib/recalcularPrecoItemLocal'
 import { resolverPrecoCanonicoLocal } from './lib/resolverPrecoCanonicoLocal'
 import { formatarBRL } from './lib/formatarMoeda'
 import { existeModalAberto, resolverAtalhoPdv } from './lib/atalhosPdv'
+import {
+  FORMAS_PAGAMENTO_DESKTOP,
+  ROTULO_FORMA_PAGAMENTO,
+  type FormaPagamentoDesktop,
+} from './lib/formaPagamento'
 
 function bindLojaCarrinhoDesktop(lojaId: string | null) {
   useDesktopCartStore.getState().setCartLojaForSession(lojaId)
@@ -117,6 +122,11 @@ export function App() {
   const inputLeituraRef = useRef<HTMLInputElement | null>(null)
   const [metricaAddItemMs, setMetricaAddItemMs] = useState<number | null>(null)
   const [metricaFinalizarMs, setMetricaFinalizarMs] = useState<number | null>(null)
+  const [formaPagamento, setFormaPagamento] = useState<FormaPagamentoDesktop>('DINHEIRO')
+  const limparCarrinhoEForma = useCallback(() => {
+    limparCarrinho()
+    setFormaPagamento('DINHEIRO')
+  }, [limparCarrinho])
   const [metricaSyncMs, setMetricaSyncMs] = useState<number | null>(null)
 
   const atualizarMediaMs = (atual: number | null, nova: number) => {
@@ -165,9 +175,10 @@ export function App() {
     descontoGerenteToken,
     maxDescontoGerentePercentual,
     gerenteId,
+    formaPagamento,
     onSetCaixaAtualId: setCaixaAtualId,
     onSetMensagem: setMensagem,
-    onLimparCarrinho: limparCarrinho,
+    onLimparCarrinho: limparCarrinhoEForma,
     onSyncOutbox: executarSyncOutboxComMetrica,
     onRefreshOutboxResumo: refreshOutboxResumo,
     onFinalizarElapsedMs: (elapsed) =>
@@ -267,7 +278,7 @@ export function App() {
       setMensagem('Toque novamente em "Novo Cupom (Esc)" em até 2s para confirmar limpeza.')
       return
     }
-    limparCarrinho()
+    limparCarrinhoEForma()
     setConfirmarLimparAte(0)
     setMensagem('Cupom limpo.')
     focarInputLeitura()
@@ -1102,6 +1113,41 @@ export function App() {
                 F4 · Sangria/Suprimento
               </button>
             )}
+            <div
+              role="radiogroup"
+              aria-label="Forma de pagamento / 付款方式"
+              data-testid="pdv-forma-pagamento"
+              style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}
+            >
+              {FORMAS_PAGAMENTO_DESKTOP.map((f) => {
+                const sel = formaPagamento === f
+                return (
+                  <button
+                    key={f}
+                    type="button"
+                    role="radio"
+                    aria-checked={sel}
+                    disabled={isFinalizandoVenda}
+                    onClick={() => setFormaPagamento(f)}
+                    style={{
+                      minHeight: 44,
+                      borderRadius: 10,
+                      border: sel ? '2px solid #059669' : '1px solid #d1d5db',
+                      background: sel ? '#ecfdf5' : '#ffffff',
+                      color: sel ? '#065f46' : '#374151',
+                      fontWeight: 700,
+                      fontSize: 13,
+                      lineHeight: 1.2,
+                      cursor: isFinalizandoVenda ? 'default' : 'pointer',
+                    }}
+                  >
+                    {ROTULO_FORMA_PAGAMENTO[f].pt}
+                    <br />
+                    <span style={{ fontSize: 11, fontWeight: 500 }}>{ROTULO_FORMA_PAGAMENTO[f].zh}</span>
+                  </button>
+                )
+              })}
+            </div>
             <button
               disabled={itens.length === 0 || isFinalizandoVenda}
               style={{
