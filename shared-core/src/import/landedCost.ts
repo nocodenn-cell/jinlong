@@ -52,7 +52,7 @@ const ESC_IMPOSTO = 2
 const LIMITE_UNIDADES = 10n ** 12n
 
 const CRITERIOS: readonly CriterioRateio[] = [
-  'VALOR_ADUANEIRO', 'PESO_LIQUIDO', 'PESO_BRUTO', 'VOLUME', 'QUANTIDADE_ESTOQUE',
+  'VALOR_ADUANEIRO', 'PESO_LIQUIDO', 'PESO_BRUTO', 'VOLUME', 'QUANTIDADE_ESTOQUE', 'IGUAL',
 ]
 
 const STATUS_VALIDOS: readonly StatusRecuperabilidade[] = [
@@ -277,6 +277,9 @@ function calcula(input: LandedCostInput): LandedCostOutput {
         return it.volume
       case 'QUANTIDADE_ESTOQUE':
         return it.qtdEstoque
+      case 'IGUAL':
+        // partes iguais por item (base 1 na escala de quantidade); resíduo pelo rateio determinístico
+        return potencia10(ESC_QTD)
     }
   }
 

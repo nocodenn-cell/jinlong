@@ -3580,6 +3580,7 @@
     "crit_PESO_BRUTO": "Peso bruto",
     "crit_VOLUME": "Volume",
     "crit_QUANTIDADE_ESTOQUE": "Quantidade em estoque",
+    "crit_IGUAL": "Partes iguais por item",
     "desp_justificativa": "Justificativa (origem e motivo)",
     "desc_adicionar": "Adicionar desconto",
     "desc_escopo": "Escopo",
@@ -3793,6 +3794,20 @@
     "comp_direto": "Direto",
     "comp_sem_documento": "sem documento",
     "comp_ver_memoria": "ver memória (moeda estrangeira)",
-    "comp_nao_entra_custo": "não entra no custo"
+    "comp_nao_entra_custo": "não entra no custo",
+    "prec_faixas_titulo": "Atacado por faixa de quantidade",
+    "prec_faixas_subtitulo": "Markup por faixa, com arredondamento comercial. O preço não pode subir com a quantidade.",
+    "prec_faixa": "Faixa",
+    "prec_qtd_min": "qtd. mínima",
+    "prec_arredondamento": "Arredondar para",
+    "prec_arred_nenhum": "Sem arredondamento",
+    "prec_repreco": "Repreço sugerido (varejo)",
+    "prec_FAIXA_INVALIDA": "Quantidade mínima inválida",
+    "prec_FAIXA_DUPLICADA": "Faixas com a mesma quantidade",
+    "prec_FAIXA_PRECO_CRESCENTE": "O preço da faixa maior não pode ser maior que o da anterior",
+    "custo_provisorio": "Custo provisório",
+    "custo_aprovado": "Custo aprovado",
+    "custo_estado_hint": "A aprovação só registra o custo aprovado; não altera estoque, PDV nem preços oficiais nesta versão.",
+    "comp_abrir_documento": "Abrir documento de origem"
   }
 }

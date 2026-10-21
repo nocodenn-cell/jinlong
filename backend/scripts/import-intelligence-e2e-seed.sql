@@ -35,3 +35,14 @@ BEGIN
   PERFORM public.ops_definir_modulo_empresa(ea, 'IMPORT_INTELLIGENCE', true, 'demo local', 'E2E local com dados fictícios', 'e2e-seed');
   PERFORM public.ops_definir_modulo_empresa(eb, 'IMPORT_INTELLIGENCE', true, 'demo local', 'E2E local com dados fictícios', 'e2e-seed');
 END $$;
+-- ERP fictício da loja A (só para provar ausência de efeito: estoque/preço não mudam)
+DO $$
+DECLARE c uuid; p uuid;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM public.produtos WHERE codigo_barras = '7890000099001') THEN
+    INSERT INTO public.categorias (nome, empresa_id) VALUES ('Demo importados', 'a0000000-0000-4000-8000-00000000000a') RETURNING id INTO c;
+    INSERT INTO public.produtos (codigo_barras, nome, categoria_id, preco_varejo, preco_custo, origem, tem_nf, ativo, status_publicacao, loja_id)
+      VALUES ('7890000099001', 'Chaleira demo (ERP)', c, 99.90, 40, 'brasil_nf', true, true, 'PUBLICADO', 'a1000000-0000-4000-8000-0000000000a1') RETURNING id INTO p;
+    INSERT INTO public.estoque (produto_id, loja_id, quantidade_atual, estoque_minimo, version) VALUES (p, 'a1000000-0000-4000-8000-0000000000a1', 12, 0, 0);
+  END IF;
+END $$;

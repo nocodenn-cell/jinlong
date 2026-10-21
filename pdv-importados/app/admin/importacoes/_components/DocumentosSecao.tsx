@@ -51,7 +51,7 @@ export function DocumentosSecao(props: {
             </thead>
             <tbody>
               {props.documentos.map((d) => (
-                <tr key={d.id} className="border-t border-[var(--color-border)]/60">
+                <tr key={d.id} id={`doc-${d.id}`} className="border-t border-[var(--color-border)]/60 target:bg-[var(--color-surface-soft)]">
                   <td className="px-2 py-1.5">{tk(`tipo_${d.tipo}`)}</td>
                   <td className="px-2 py-1.5 font-mono">{d.numero ?? '—'}</td>
                   <td className="px-2 py-1.5 tabular-nums">{d.data_documento ?? '—'}</td>

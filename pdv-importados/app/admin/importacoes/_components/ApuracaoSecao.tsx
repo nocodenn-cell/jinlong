@@ -52,7 +52,7 @@ export function ApuracaoSecao(props: {
   const s = a.saida
   const nomeDoc = (id: string | null | undefined) => {
     const d = id ? props.documentos?.find((x) => x.id === id) : undefined
-    return d ? `${tk(`tipo_${d.tipo}`)}${d.numero ? ` ${d.numero}` : ''}` : null
+    return d ? { id: d.id, nome: `${tk(`tipo_${d.tipo}`)}${d.numero ? ` ${d.numero}` : ''} v${d.versao}` } : null
   }
   const unit = (valor: string, qtd: string) => {
     try {
@@ -63,7 +63,7 @@ export function ApuracaoSecao(props: {
   }
   /** Linhas de composição: rateios do motor (valor alocado exato) + lançamentos diretos registrados. */
   const composicaoItem = (itemId: string, qtd: string) => {
-    const out: { nome: string; documento: string | null; criterio: string; valor: string; unitario: string }[] = []
+    const out: { nome: string; documento: { id: string; nome: string } | null; criterio: string; valor: string; unitario: string }[] = []
     for (const r of s.rateios.filter((x) => x.item_id === itemId)) {
       const desp = props.despesas?.find((x) => x.id === r.origem_id)
       const trib = props.tributos?.find((x) => x.id === r.origem_id)
@@ -211,7 +211,9 @@ export function ApuracaoSecao(props: {
                     {linhas.map((l, k) => (
                       <tr key={k} className="border-t border-[var(--color-border)]/60">
                         <td className="px-2 py-1.5">{l.nome}</td>
-                        <td className="px-2 py-1.5 text-xs">{l.documento ?? <span className="text-[var(--color-warning-strong)]">{t.comp_sem_documento}</span>}</td>
+                        <td className="px-2 py-1.5 text-xs">{l.documento ? (
+                          <a href={`?aba=documentos#doc-${l.documento.id}`} className="underline underline-offset-2" data-testid="imp-comp-doc-link" title={t.comp_abrir_documento}>{l.documento.nome}</a>
+                        ) : <span className="text-[var(--color-warning-strong)]">{t.comp_sem_documento}</span>}</td>
                         <td className="px-2 py-1.5">{l.criterio}</td>
                         <td className="px-2 py-1.5 text-right tabular-nums">{l.valor}</td>
                         <td className="px-2 py-1.5 text-right tabular-nums font-medium">{l.unitario}</td>

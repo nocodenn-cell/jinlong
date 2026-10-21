@@ -86,3 +86,59 @@ export function compararEstimadoReal(
     }
   })
 }
+
+/** Arredondamento comercial do preço: para cima até o final de centavos escolhido. */
+export type FinalPreco = 'NENHUM' | '90' | '99' | '00'
+
+export function arredondarComercial(preco: string, final: FinalPreco): string {
+  const c = parseDecimal(preco, 2)
+  if (final === 'NENHUM') return formataDecimal(c, 2)
+  const alvo = BigInt(final) // centavos finais desejados
+  const inteiro = c / 100n
+  let r = inteiro * 100n + alvo
+  if (r < c) r += 100n
+  return formataDecimal(r, 2)
+}
+
+export interface FaixaAtacado {
+  /** Quantidade mínima (inteiro) para a faixa. */
+  readonly quantidade_minima: number
+  readonly modo: ModoPreco
+  readonly percentual: string
+}
+
+export interface PrecoFaixa extends PrecoSimulado {
+  readonly quantidade_minima: number
+  readonly preco_arredondado_brl: string
+}
+
+/**
+ * Simulador de atacado por faixas de quantidade (ordenadas pela quantidade mínima), com
+ * arredondamento comercial. Recusa faixas duplicadas ou com preço que SOBE com a quantidade.
+ */
+export function simularFaixasAtacado(
+  custoUnitario: string, faixas: readonly FaixaAtacado[], final: FinalPreco = 'NENHUM', despesasVendaPct?: string | null,
+): PrecoFaixa[] {
+  const ord = [...faixas].sort((a, b) => a.quantidade_minima - b.quantidade_minima)
+  const out: PrecoFaixa[] = []
+  for (const f of ord) {
+    if (!Number.isInteger(f.quantidade_minima) || f.quantidade_minima < 1) throw new PrecificacaoErro('FAIXA_INVALIDA')
+    if (out.some((x) => x.quantidade_minima === f.quantidade_minima)) throw new PrecificacaoErro('FAIXA_DUPLICADA')
+    const p = simularPreco(custoUnitario, { canal: 'ATACADO', modo: f.modo, percentual: f.percentual, despesas_venda_pct: despesasVendaPct })
+    const arred = arredondarComercial(p.preco_brl, final)
+    const ant = out[out.length - 1]
+    if (ant && parseDecimal(arred, 2) > parseDecimal(ant.preco_arredondado_brl, 2)) throw new PrecificacaoErro('FAIXA_PRECO_CRESCENTE')
+    out.push({ ...p, quantidade_minima: f.quantidade_minima, preco_arredondado_brl: arred })
+  }
+  return out
+}
+
+/** Repreço sugerido: mantém a margem resultante do preço estimado sobre o custo real. */
+export function repricoSugerido(precoEstimado: string, custoEstimado: string, custoReal: string): { preco_brl: string; margem_mantida_pct: string } {
+  const pe = parseDecimal(precoEstimado, 2)
+  const ce = divide(parseDecimal(custoEstimado, 6), 6, 1n, 0, 2)
+  if (pe <= 0n) throw new PrecificacaoErro('PRECO_INVALIDO')
+  const margem4 = divide((pe - ce) * 100n, 2, pe, 2, 4) // % escala 4
+  const p = simularPreco(custoReal, { canal: 'VAREJO', modo: 'MARGEM', percentual: formataDecimal(margem4 < 0n ? 0n : margem4, 4) })
+  return { preco_brl: p.preco_brl, margem_mantida_pct: formataDecimal(margem4, 4) }
+}

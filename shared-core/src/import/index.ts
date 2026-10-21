@@ -62,6 +62,6 @@ export type {
   ResultadoTributacao, StatusSugestao,
 } from './tributacao'
 // Precificação simulada (não altera preços oficiais)
-export { simularPreco, compararEstimadoReal, PrecificacaoErro } from './precificacao'
-export type { CanalVenda, ModoPreco, CenarioPreco, PrecoSimulado, ComparacaoCusto } from './precificacao'
+export { simularPreco, compararEstimadoReal, PrecificacaoErro, simularFaixasAtacado, arredondarComercial, repricoSugerido } from './precificacao'
+export type { CanalVenda, ModoPreco, CenarioPreco, PrecoSimulado, ComparacaoCusto, FaixaAtacado, PrecoFaixa, FinalPreco } from './precificacao'
 export { sugerirCriterioRateio } from './sugestaoCriterio'

@@ -17,7 +17,7 @@ export type Moeda = string
 /** Fonte do câmbio, para auditoria. Não altera o cálculo (DECISÃO-04). */
 export type FonteCambio = 'DECLARADA_DI' | 'MANUAL' | 'OUTRA'
 
-export type CriterioRateio = 'VALOR_ADUANEIRO' | 'PESO_LIQUIDO' | 'PESO_BRUTO' | 'VOLUME' | 'QUANTIDADE_ESTOQUE'
+export type CriterioRateio = 'VALOR_ADUANEIRO' | 'PESO_LIQUIDO' | 'PESO_BRUTO' | 'VOLUME' | 'QUANTIDADE_ESTOQUE' | 'IGUAL'
 
 /**
  * Status de recuperabilidade classificado pela contabilidade (`03-MATRIZ-FISCAL.md` §3).

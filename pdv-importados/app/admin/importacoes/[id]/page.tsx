@@ -81,7 +81,14 @@ export default async function ImportacaoDetalhePage({ params, searchParams }: Pa
       <PageHeader
         title={o.referencia}
         subtitle={`${dados.lojaNome ?? ''}${dados.fornecedorNome ? ` · ${dados.fornecedorNome}` : ''}`}
-        actions={<StatusBadge tone={TOM[o.status]}>{t[`status_${o.status}`]}</StatusBadge>}
+        actions={
+          <span className="flex flex-wrap items-center gap-2">
+            <StatusBadge tone={o.apuracao_aprovada_id ? 'success' : 'warning'}>
+              <span data-testid="imp-estado-custo" title={t.custo_estado_hint}>{o.apuracao_aprovada_id ? t.custo_aprovado : t.custo_provisorio}</span>
+            </StatusBadge>
+            <StatusBadge tone={TOM[o.status]}>{t[`status_${o.status}`]}</StatusBadge>
+          </span>
+        }
       />
       <p className="mb-3 text-small">
         <Link href={ROUTES.admin.importacoes} className="underline-offset-4 hover:underline">← {t.voltar_lista}</Link>

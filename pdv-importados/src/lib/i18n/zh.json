@@ -3817,6 +3817,7 @@
     "crit_PESO_BRUTO": "毛重",
     "crit_VOLUME": "体积",
     "crit_QUANTIDADE_ESTOQUE": "库存数量",
+    "crit_IGUAL": "按商品平均分摊",
     "desp_justificativa": "说明（来源与原因）",
     "desc_adicionar": "添加折扣",
     "desc_escopo": "范围",
@@ -4030,6 +4031,20 @@
     "comp_direto": "直接",
     "comp_sem_documento": "无单据",
     "comp_ver_memoria": "见计算说明（外币）",
-    "comp_nao_entra_custo": "不计入成本"
+    "comp_nao_entra_custo": "不计入成本",
+    "prec_faixas_titulo": "按数量分级的批发价",
+    "prec_faixas_subtitulo": "每级加成率，含商业取整。数量越大价格不能越高。",
+    "prec_faixa": "级别",
+    "prec_qtd_min": "最低数量",
+    "prec_arredondamento": "取整到",
+    "prec_arred_nenhum": "不取整",
+    "prec_repreco": "建议调价（零售）",
+    "prec_FAIXA_INVALIDA": "最低数量无效",
+    "prec_FAIXA_DUPLICADA": "级别数量重复",
+    "prec_FAIXA_PRECO_CRESCENTE": "较高级别的价格不能高于前一级",
+    "custo_provisorio": "暂定成本",
+    "custo_aprovado": "已审批成本",
+    "custo_estado_hint": "审批仅记录已审批成本；本版本不会更改库存、收银台或正式价格。",
+    "comp_abrir_documento": "打开来源单据"
   }
 }

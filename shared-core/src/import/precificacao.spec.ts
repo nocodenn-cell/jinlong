@@ -34,3 +34,40 @@ describe('precificação simulada', () => {
     expect(sugerirCriterioRateio('xyz').criterio).toBe('VALOR_ADUANEIRO')
   })
 })
+
+import { arredondarComercial, repricoSugerido, simularFaixasAtacado } from './precificacao'
+import { calcularLandedCost } from './landedCost'
+
+describe('atacado por faixas, arredondamento e repreço', () => {
+  it('arredondamento comercial para cima', () => {
+    expect(arredondarComercial('14.29', '90')).toBe('14.90')
+    expect(arredondarComercial('14.95', '90')).toBe('15.90')
+    expect(arredondarComercial('14.29', '99')).toBe('14.99')
+    expect(arredondarComercial('14.01', '00')).toBe('15.00')
+    expect(arredondarComercial('14.00', '00')).toBe('14.00')
+  })
+  it('faixas ordenadas, preço não cresce com a quantidade', () => {
+    const f = simularFaixasAtacado('10', [{ quantidade_minima: 50, modo: 'MARKUP', percentual: '20' }, { quantidade_minima: 10, modo: 'MARKUP', percentual: '30' }], '90')
+    expect(f.map((x) => [x.quantidade_minima, x.preco_brl, x.preco_arredondado_brl])).toEqual([[10, '13.00', '13.90'], [50, '12.00', '12.90']])
+    expect(() => simularFaixasAtacado('10', [{ quantidade_minima: 10, modo: 'MARKUP', percentual: '10' }, { quantidade_minima: 50, modo: 'MARKUP', percentual: '30' }])).toThrow('FAIXA_PRECO_CRESCENTE')
+    expect(() => simularFaixasAtacado('10', [{ quantidade_minima: 10, modo: 'MARKUP', percentual: '10' }, { quantidade_minima: 10, modo: 'MARKUP', percentual: '5' }])).toThrow('FAIXA_DUPLICADA')
+  })
+  it('repreço mantém a margem do estimado sobre o custo real', () => {
+    // estimado: custo 10, preço 20 (margem 50%); real 12 → 24
+    expect(repricoSugerido('20.00', '10', '12')).toEqual({ preco_brl: '24.00', margem_mantida_pct: '50.0000' })
+  })
+})
+
+describe('critério IGUAL no motor existente', () => {
+  it('divide a despesa em partes iguais por item, conservando centavos', () => {
+    const base = JSON.parse(JSON.stringify(require('../../../docs/import-intelligence/fixtures/casos/04-rateio-valor-aduaneiro-3-itens/input.json')))
+    const desp = base.despesas.find((d: { atribuicao: { modo: string } }) => d.atribuicao.modo === 'RATEIO')
+    desp.atribuicao.criterio = 'IGUAL'
+    const r = calcularLandedCost(base)
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    const partes = r.value.rateios.filter((x) => x.origem_id === desp.id).map((x) => x.base_item)
+    expect(new Set(partes).size).toBe(1)
+    expect(r.value.conservacao.ok).toBe(true)
+  })
+})

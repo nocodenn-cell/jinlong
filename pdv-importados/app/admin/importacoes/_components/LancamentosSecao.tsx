@@ -9,7 +9,7 @@ import { sugerirCriterioRateio } from '@shared-core/src/import/sugestaoCriterio'
 import { conferirLancamentoAction, removerRascunhoAction, salvarLancamentoAction, type TipoLancamento } from '../actions'
 import { ErroFormulario, Selecao, Texto, useAcao, type TextosImport } from './campos'
 
-const CRITERIOS = ['VALOR_ADUANEIRO', 'PESO_LIQUIDO', 'PESO_BRUTO', 'VOLUME', 'QUANTIDADE_ESTOQUE'] as const
+const CRITERIOS = ['VALOR_ADUANEIRO', 'PESO_LIQUIDO', 'PESO_BRUTO', 'VOLUME', 'QUANTIDADE_ESTOQUE', 'IGUAL'] as const
 const RECUPERABILIDADE = [
   'PENDENTE_VALIDACAO', 'NAO_RECUPERAVEL', 'RECUPERAVEL_POTENCIAL', 'RECUPERAVEL_RECONHECIDO', 'GLOSADO', 'NAO_APLICAVEL',
 ] as const

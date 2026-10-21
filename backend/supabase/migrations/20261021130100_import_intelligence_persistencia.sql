@@ -20,6 +20,7 @@
 --  * Documentos (D8): metadados imutáveis (sha256, quem, quando, versão por substituição);
 --    arquivo em bucket privado por empresa/operação; sem exclusão.
 --
+-- Portado do PR #537 (F4); acrescenta o critério de rateio IGUAL (partes iguais por item).
 -- Portado do PR #537 (F4). Rollback: backend/supabase/rollback/20261021130100_import_intelligence_persistencia.rollback.sql
 -- ============================================================================
 BEGIN;
@@ -86,7 +87,7 @@ CREATE TABLE IF NOT EXISTS public.import_despesas (
   incorporavel     text        NOT NULL CHECK (incorporavel IN ('SIM', 'NAO', 'DECISAO_03')),
   atribuicao_modo  text        NOT NULL CHECK (atribuicao_modo IN ('DIRETA', 'RATEIO')),
   item_id          uuid        REFERENCES public.import_itens (id),
-  criterio         text        CHECK (criterio IN ('VALOR_ADUANEIRO', 'PESO_LIQUIDO', 'PESO_BRUTO', 'VOLUME', 'QUANTIDADE_ESTOQUE')),
+  criterio         text        CHECK (criterio IN ('VALOR_ADUANEIRO', 'PESO_LIQUIDO', 'PESO_BRUTO', 'VOLUME', 'QUANTIDADE_ESTOQUE', 'IGUAL')),
   justificativa    text        NOT NULL,
   documento_id     uuid,
   CONSTRAINT import_despesas_atribuicao_check CHECK (
@@ -102,7 +103,7 @@ CREATE TABLE IF NOT EXISTS public.import_descontos (
   moeda          text        NOT NULL CHECK (moeda ~ '^[A-Z]{3}$'),
   valor          numeric(24,6) NOT NULL CHECK (valor > 0),
   item_id        uuid        REFERENCES public.import_itens (id),
-  criterio       text        CHECK (criterio IN ('VALOR_ADUANEIRO', 'PESO_LIQUIDO', 'PESO_BRUTO', 'VOLUME', 'QUANTIDADE_ESTOQUE')),
+  criterio       text        CHECK (criterio IN ('VALOR_ADUANEIRO', 'PESO_LIQUIDO', 'PESO_BRUTO', 'VOLUME', 'QUANTIDADE_ESTOQUE', 'IGUAL')),
   justificativa  text        NOT NULL,
   documento_id   uuid,
   CONSTRAINT import_descontos_escopo_item_check CHECK (
