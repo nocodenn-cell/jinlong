@@ -36,6 +36,9 @@ pub struct PagamentoVendaInput {
 pub struct RegistrarVendaInput {
     pub caixa_id: Option<String>,
     pub operador_id: Option<String>,
+    /// Comissão: quem atendeu. Ausente/inválido = operador (comportamento histórico).
+    #[serde(default)]
+    pub vendedor_id: Option<String>,
     pub forma_pagamento: String,
     pub total_bruto: f64,
     pub total_desconto: f64,
@@ -212,6 +215,28 @@ pub struct PdvConfigCacheDto {
     pub quantidade_minima_atacado_padrao: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub loja_id: Option<String>,
+    /// Vendedores da loja (id+nome) para o seletor "Vendedor / 销售员". Vazio = seletor oculto.
+    #[serde(default)]
+    pub vendedores: Vec<VendedorDto>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct VendedorDto {
+    pub id: String,
+    pub nome: String,
+}
+
+/// vendedor_id só entra no payload quando é UUID válido e diferente do operador.
+pub(crate) fn vendedor_id_payload(vendedor: &Option<String>, operador: &Option<String>) -> Option<String> {
+    let v = vendedor.as_deref().map(str::trim).filter(|s| Uuid::parse_str(s).is_ok())?;
+    if operador.as_deref().map(str::trim) == Some(v) {
+        return None;
+    }
+    Some(v.to_string())
+}
+
+fn vendedores_de_json(raw: Option<String>) -> Vec<VendedorDto> {
+    raw.and_then(|s| serde_json::from_str::<Vec<VendedorDto>>(&s).ok()).unwrap_or_default()
 }
 
 #[derive(Serialize)]
@@ -396,6 +421,7 @@ pub fn init_db(app: &tauri::AppHandle) -> Result<(), String> {
         [],
     );
     let _ = conn.execute("ALTER TABLE pdv_config_cache ADD COLUMN loja_id TEXT", []);
+    let _ = conn.execute("ALTER TABLE pdv_config_cache ADD COLUMN vendedores_json TEXT", []);
     let _ = conn.execute_batch(
         "CREATE TABLE IF NOT EXISTS precos_atacado_cache (
           id TEXT PRIMARY KEY,
@@ -578,6 +604,15 @@ pub fn registrar_venda_local(
       "loja_id": loja_id,
       "itens": itens_payload
     });
+    // Comissão: `vendedor_id` só quando escolhido e diferente do operador (payload antigo fica idêntico).
+    let payload = match vendedor_id_payload(&input.vendedor_id, &operador_gravado) {
+        Some(v) => {
+            let mut obj = payload;
+            obj["vendedor_id"] = json!(v);
+            obj
+        }
+        None => payload,
+    };
     // Só eventos novos com pagamento combinado levam `pagamentos` — itens antigos da outbox ficam idênticos.
     let payload = match pagamentos_payload {
         Some(p) => {
@@ -811,7 +846,7 @@ pub fn pdv_config_local_get(app: &tauri::AppHandle) -> Result<Option<PdvConfigCa
     let mut stmt = conn
         .prepare(
             "SELECT gerente_id, max_desconto_gerente_percentual,
-                    quantidade_minima_atacado_padrao, loja_id
+                    quantidade_minima_atacado_padrao, loja_id, vendedores_json
              FROM pdv_config_cache
              WHERE id = 1",
         )
@@ -824,6 +859,7 @@ pub fn pdv_config_local_get(app: &tauri::AppHandle) -> Result<Option<PdvConfigCa
                 max_desconto_gerente_percentual: row.get(1)?,
                 quantidade_minima_atacado_padrao: row.get(2)?,
                 loja_id: row.get(3)?,
+                vendedores: vendedores_de_json(row.get(4)?),
             })
         })
         .optional();
@@ -990,6 +1026,8 @@ struct PdvConfigSupabaseRow {
     quantidade_minima_atacado_padrao: Option<f64>,
     #[serde(default)]
     loja_id: Option<String>,
+    #[serde(default)]
+    vendedores: Option<Vec<VendedorDto>>,
 }
 
 #[derive(Deserialize)]
@@ -1360,13 +1398,14 @@ pub fn sync_pdv_config_real(app: &tauri::AppHandle) -> Result<Option<PdvConfigCa
     conn.execute(
         "INSERT OR REPLACE INTO pdv_config_cache
          (id, gerente_id, gerente_senha_sha256, max_desconto_gerente_percentual,
-          quantidade_minima_atacado_padrao, loja_id)
-         VALUES (1, ?1, '', ?2, ?3, ?4)",
+          quantidade_minima_atacado_padrao, loja_id, vendedores_json)
+         VALUES (1, ?1, '', ?2, ?3, ?4, ?5)",
         params![
             row.gerente_id,
             row.max_desconto_gerente_percentual,
             row.quantidade_minima_atacado_padrao,
-            row.loja_id
+            row.loja_id,
+            serde_json::to_string(&row.vendedores.clone().unwrap_or_default()).unwrap_or_else(|_| "[]".into())
         ],
     )
     .map_err(|e| e.to_string())?;
@@ -1376,6 +1415,7 @@ pub fn sync_pdv_config_real(app: &tauri::AppHandle) -> Result<Option<PdvConfigCa
         max_desconto_gerente_percentual: row.max_desconto_gerente_percentual,
         quantidade_minima_atacado_padrao: row.quantidade_minima_atacado_padrao,
         loja_id: row.loja_id,
+        vendedores: row.vendedores.unwrap_or_default(),
     }))
 }
 
@@ -1770,6 +1810,16 @@ mod tests_existentes {
 
     #[test]
     fn endpoint_with_op_adiciona_query_param_corretamente() {
+        let op = Some("11111111-1111-4111-8111-111111111111".to_string());
+        assert_eq!(vendedor_id_payload(&None, &op), None);
+        assert_eq!(vendedor_id_payload(&Some("nao-uuid".into()), &op), None);
+        assert_eq!(vendedor_id_payload(&op.clone(), &op), None);
+        assert_eq!(
+            vendedor_id_payload(&Some(" 22222222-2222-4222-8222-222222222222 ".into()), &op),
+            Some("22222222-2222-4222-8222-222222222222".to_string())
+        );
+        assert!(vendedores_de_json(None).is_empty());
+        assert_eq!(vendedores_de_json(Some("[{\"id\":\"a\",\"nome\":\"Ana\"}]".into())).len(), 1);
         let base = "https://example.supabase.co/functions/v1/sync-outbox";
         assert_eq!(
             endpoint_with_op(base, "catalogo"),

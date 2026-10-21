@@ -505,11 +505,113 @@ export type Database = {
           },
         ]
       }
+      comissoes_config: {
+        Row: {
+          base: string
+          empresa_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          base?: string
+          empresa_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          base?: string
+          empresa_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comissoes_config_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_config_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comissoes_falhas: {
+        Row: {
+          created_at: string
+          etapa: string
+          id: string
+          loja_id: string | null
+          motivo: string
+          resolvida_em: string | null
+          resolvida_por: string | null
+          sqlstate: string | null
+          tentativas: number
+          ultima_tentativa_em: string
+          venda_id: string
+        }
+        Insert: {
+          created_at?: string
+          etapa: string
+          id?: string
+          loja_id?: string | null
+          motivo: string
+          resolvida_em?: string | null
+          resolvida_por?: string | null
+          sqlstate?: string | null
+          tentativas?: number
+          ultima_tentativa_em?: string
+          venda_id: string
+        }
+        Update: {
+          created_at?: string
+          etapa?: string
+          id?: string
+          loja_id?: string | null
+          motivo?: string
+          resolvida_em?: string | null
+          resolvida_por?: string | null
+          sqlstate?: string | null
+          tentativas?: number
+          ultima_tentativa_em?: string
+          venda_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comissoes_falhas_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_falhas_resolvida_por_fkey"
+            columns: ["resolvida_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_falhas_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "vendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comissoes_itens: {
         Row: {
           apurado_em: string
           base_elegivel: number
+          canal: string | null
           comissao_id: string
+          desconto_rateado: number
           id: string
           item_venda_id: string
           origem_regra: string
@@ -517,6 +619,7 @@ export type Database = {
           preco_unitario: number
           produto_id: string
           quantidade: number
+          regra_empresa_id: string | null
           regra_id: string | null
           tipo_calculo: string
           valor_comissao: number
@@ -526,7 +629,9 @@ export type Database = {
         Insert: {
           apurado_em?: string
           base_elegivel: number
+          canal?: string | null
           comissao_id: string
+          desconto_rateado?: number
           id?: string
           item_venda_id: string
           origem_regra: string
@@ -534,6 +639,7 @@ export type Database = {
           preco_unitario: number
           produto_id: string
           quantidade: number
+          regra_empresa_id?: string | null
           regra_id?: string | null
           tipo_calculo: string
           valor_comissao: number
@@ -543,7 +649,9 @@ export type Database = {
         Update: {
           apurado_em?: string
           base_elegivel?: number
+          canal?: string | null
           comissao_id?: string
+          desconto_rateado?: number
           id?: string
           item_venda_id?: string
           origem_regra?: string
@@ -551,6 +659,7 @@ export type Database = {
           preco_unitario?: number
           produto_id?: string
           quantidade?: number
+          regra_empresa_id?: string | null
           regra_id?: string | null
           tipo_calculo?: string
           valor_comissao?: number
@@ -924,6 +1033,7 @@ export type Database = {
           pago_por: string | null
           percentual_aplicado: number | null
           regra_id: string | null
+          regra_mista: boolean
           status: string
           valor_comissao: number
           venda_id: string
@@ -939,6 +1049,7 @@ export type Database = {
           pago_por?: string | null
           percentual_aplicado?: number | null
           regra_id?: string | null
+          regra_mista?: boolean
           status?: string
           valor_comissao?: number
           venda_id: string
@@ -954,6 +1065,7 @@ export type Database = {
           pago_por?: string | null
           percentual_aplicado?: number | null
           regra_id?: string | null
+          regra_mista?: boolean
           status?: string
           valor_comissao?: number
           venda_id?: string
@@ -6043,6 +6155,7 @@ export type Database = {
           total_bruto: number
           total_desconto: number
           total_liquido: number
+          vendedor_id: string | null
         }
         Insert: {
           caixa_id?: string | null
@@ -6060,6 +6173,7 @@ export type Database = {
           total_bruto: number
           total_desconto?: number
           total_liquido: number
+          vendedor_id?: string | null
         }
         Update: {
           caixa_id?: string | null
@@ -6077,6 +6191,7 @@ export type Database = {
           total_bruto?: number
           total_desconto?: number
           total_liquido?: number
+          vendedor_id?: string | null
         }
         Relationships: [
           {
@@ -7158,6 +7273,20 @@ export type Database = {
           sucesso: boolean
         }[]
       }
+      definir_vendedor_venda: {
+        Args: {
+          p_venda_id: string
+          p_vendedor_id: string
+        }
+        Returns: Json
+      }
+      definir_vendedor_venda_pdv: {
+        Args: {
+          p_venda_id: string
+          p_vendedor_id: string
+        }
+        Returns: Json
+      }
       descartar_venda_em_espera: {
         Args: { p_id: string; p_motivo?: string }
         Returns: Json
@@ -7860,6 +7989,15 @@ export type Database = {
           venda_id: string
         }[]
       }
+      listar_vendedores_loja: {
+        Args: {
+          p_loja_id: string
+        }
+        Returns: {
+          id: string
+          nome: string
+        }[]
+      }
       marcar_comissoes_pagas: {
         Args: { p_ids: string[]; p_loja_id: string; p_operador_id: string }
         Returns: number
@@ -8214,6 +8352,12 @@ export type Database = {
           total_desconto: number
           total_liquido: number
         }[]
+      }
+      reprocessar_comissao_venda: {
+        Args: {
+          p_venda_id: string
+        }
+        Returns: Json
       }
       resumo_comissoes_por_operador: {
         Args: {

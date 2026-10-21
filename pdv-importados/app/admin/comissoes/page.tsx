@@ -15,6 +15,8 @@ import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import { carregarResumoComissoes } from '@/app/gerente/comissoes/actions'
 import { ROUTES } from '@/lib/navigation/routes'
 import { ComissoesContent } from './_components/ComissoesContent'
+import { ComissoesModuloNav } from './_modulo/ComissoesModuloNav'
+import { rotulosAbasComissao } from './_modulo/abas'
 import {
   ComissoesFilters,
   type PeriodoPreset,
@@ -90,6 +92,7 @@ export default async function AdminComissoesPage({ searchParams }: PageProps) {
       />
 
       <FinanceiroHubNavShell />
+      <ComissoesModuloNav ativa="resumo" rotulos={rotulosAbasComissao(m)} />
 
       <ComissoesFilters
         filtro={filtro}

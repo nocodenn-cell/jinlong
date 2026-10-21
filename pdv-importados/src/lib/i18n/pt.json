@@ -1670,7 +1670,10 @@
       "rodape_nao_fiscal": "Este não é um documento fiscal.",
       "atacado": "atacado",
       "segunda_via": "2ª VIA"
-    }
+    },
+    "vendedor_label": "Vendedor / 销售员",
+    "vendedor_operador_sufixo": "(operador)",
+    "vendedor_nao_aplicado": "Venda concluída, mas o vendedor não foi gravado. A comissão ficou com o operador; o gerente pode corrigir em Comissões."
   },
   "pdv": {
     "scan_placeholder": "Escanear código ou digitar nome...",
@@ -3365,7 +3368,20 @@
     "configuracoes_enum_tema_noturno": "Noturno",
     "configuracoes_enum_tema_novem": "Novembro",
     "configuracoes_enum_formato_termica": "Térmica",
-    "configuracoes_enum_formato_a4": "A4"
+    "configuracoes_enum_formato_a4": "A4",
+    "comissoes_falhas_titulo": "Falhas de apuração",
+    "comissoes_falhas_sub": "Vendas cuja comissão não pôde ser calculada. Corrija a causa e reprocesse.",
+    "comissoes_falhas_vazio": "Nenhuma falha aberta.",
+    "comissoes_falhas_col_venda": "Venda",
+    "comissoes_falhas_col_etapa": "Etapa",
+    "comissoes_falhas_col_motivo": "Motivo",
+    "comissoes_falhas_col_tentativas": "Tentativas",
+    "comissoes_falhas_col_quando": "Última tentativa",
+    "comissoes_falhas_reprocessar": "Reprocessar",
+    "comissoes_falhas_reprocessado": "Comissão apurada.",
+    "comissoes_falhas_ainda_falha": "Ainda falhando: {{motivo}}",
+    "comissoes_aba_resumo": "Resumo",
+    "comissoes_aba_falhas": "Falhas"
   },
   "cobranca": {
     "titulo": "Assinatura",

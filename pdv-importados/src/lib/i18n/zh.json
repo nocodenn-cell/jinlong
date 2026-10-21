@@ -1670,7 +1670,10 @@
       "rodape_nao_fiscal": "本单据非正式财务凭证。",
       "atacado": "批发",
       "segunda_via": "补打副本"
-    }
+    },
+    "vendedor_label": "销售员 / Vendedor",
+    "vendedor_operador_sufixo": "（收银员）",
+    "vendedor_nao_aplicado": "销售已完成，但未能保存销售员。佣金暂归收银员，经理可在“佣金”中更正。"
   },
   "pdv": {
     "scan_placeholder": "扫描条形码或输入商品名...",
@@ -3602,7 +3605,20 @@
     "configuracoes_enum_tema_noturno": "夜间模式",
     "configuracoes_enum_tema_novem": "十一月",
     "configuracoes_enum_formato_termica": "热敏纸",
-    "configuracoes_enum_formato_a4": "A4"
+    "configuracoes_enum_formato_a4": "A4",
+    "comissoes_falhas_titulo": "核算失败",
+    "comissoes_falhas_sub": "无法计算佣金的销售。请修正原因后重新处理。",
+    "comissoes_falhas_vazio": "没有未处理的失败。",
+    "comissoes_falhas_col_venda": "销售",
+    "comissoes_falhas_col_etapa": "阶段",
+    "comissoes_falhas_col_motivo": "原因",
+    "comissoes_falhas_col_tentativas": "尝试次数",
+    "comissoes_falhas_col_quando": "最后尝试",
+    "comissoes_falhas_reprocessar": "重新处理",
+    "comissoes_falhas_reprocessado": "佣金已核算。",
+    "comissoes_falhas_ainda_falha": "仍然失败：{{motivo}}",
+    "comissoes_aba_resumo": "汇总",
+    "comissoes_aba_falhas": "失败"
   },
   "cobranca": {
     "titulo": "订阅",
