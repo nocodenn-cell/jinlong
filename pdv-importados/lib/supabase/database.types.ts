@@ -2727,6 +2727,94 @@ export type Database = {
           },
         ]
       }
+      empresa_parametros_importacao: {
+        Row: {
+          atualizado_em: string
+          atualizado_por: string | null
+          aviso_aceito_em: string | null
+          empresa_id: string
+          icms_efetivo_pct: number | null
+          modal_padrao: string | null
+          porto_padrao: string | null
+          regime_incentivo_nome: string | null
+          regime_tributario: string
+          uf_importador: string
+        }
+        Insert: {
+          atualizado_em?: string
+          atualizado_por?: string | null
+          aviso_aceito_em?: string | null
+          empresa_id: string
+          icms_efetivo_pct?: number | null
+          modal_padrao?: string | null
+          porto_padrao?: string | null
+          regime_incentivo_nome?: string | null
+          regime_tributario?: string
+          uf_importador: string
+        }
+        Update: {
+          atualizado_em?: string
+          atualizado_por?: string | null
+          aviso_aceito_em?: string | null
+          empresa_id?: string
+          icms_efetivo_pct?: number | null
+          modal_padrao?: string | null
+          porto_padrao?: string | null
+          regime_incentivo_nome?: string | null
+          regime_tributario?: string
+          uf_importador?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "empresa_parametros_importacao_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: true
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      empresa_tributos_override: {
+        Row: {
+          aliquota_pct: number
+          atualizado_em: string
+          atualizado_por: string | null
+          empresa_id: string
+          id: string
+          ncm_prefixo: string
+          nota: string | null
+          tributo: string
+        }
+        Insert: {
+          aliquota_pct: number
+          atualizado_em?: string
+          atualizado_por?: string | null
+          empresa_id: string
+          id?: string
+          ncm_prefixo?: string
+          nota?: string | null
+          tributo: string
+        }
+        Update: {
+          aliquota_pct?: number
+          atualizado_em?: string
+          atualizado_por?: string | null
+          empresa_id?: string
+          id?: string
+          ncm_prefixo?: string
+          nota?: string | null
+          tributo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "empresa_tributos_override_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       empresas: {
         Row: {
           cnpj: string | null
@@ -7283,6 +7371,54 @@ export type Database = {
           },
         ]
       }
+      tributos_catalogo_uf: {
+        Row: {
+          base_legal: string
+          consultado_em: string
+          criado_em: string
+          fcp_geral_pct: number
+          fonte_urls: string[]
+          icms_modal_pct: number
+          id: string
+          nota: string | null
+          status: string
+          uf: string
+          versao_catalogo: string
+          vigencia_fim: string | null
+          vigencia_inicio: string
+        }
+        Insert: {
+          base_legal: string
+          consultado_em: string
+          criado_em?: string
+          fcp_geral_pct?: number
+          fonte_urls?: string[]
+          icms_modal_pct: number
+          id: string
+          nota?: string | null
+          status: string
+          uf: string
+          versao_catalogo: string
+          vigencia_fim?: string | null
+          vigencia_inicio: string
+        }
+        Update: {
+          base_legal?: string
+          consultado_em?: string
+          criado_em?: string
+          fcp_geral_pct?: number
+          fonte_urls?: string[]
+          icms_modal_pct?: number
+          id?: string
+          nota?: string | null
+          status?: string
+          uf?: string
+          versao_catalogo?: string
+          vigencia_fim?: string | null
+          vigencia_inicio?: string
+        }
+        Relationships: []
+      }
       usuario_vinculos: {
         Row: {
           ativo: boolean
@@ -8478,6 +8614,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      _import_empresa_contexto: { Args: never; Returns: string }
       _import_fornecedor_da_empresa: {
         Args: { p_empresa: string; p_fornecedor: string }
         Returns: boolean
@@ -9543,6 +9680,10 @@ export type Database = {
         }
         Returns: string
       }
+      import_remover_override_tributo: {
+        Args: { p_id: string }
+        Returns: undefined
+      }
       import_remover_rascunho: {
         Args: { p_id: string; p_operacao: string; p_tipo: string }
         Returns: undefined
@@ -9554,6 +9695,14 @@ export type Database = {
       import_salvar_lancamento: {
         Args: { p_dados: Json; p_operacao: string; p_tipo: string }
         Returns: string
+      }
+      import_salvar_override_tributo: {
+        Args: { p_dados: Json }
+        Returns: string
+      }
+      import_salvar_parametros_empresa: {
+        Args: { p_dados: Json }
+        Returns: undefined
       }
       importar_nfe_transacao: {
         Args: {

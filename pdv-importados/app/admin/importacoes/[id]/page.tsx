@@ -4,6 +4,7 @@ import { PageHeader, StatusBadge, type StatusBadgeTone } from '@/components/ui/a
 import { getMessages } from '@/i18n/getMessages'
 import { IMPORTACAO_ABAS, ROUTES, adminImportacaoHref, type ImportacaoAba } from '@/lib/navigation/routes'
 import { paginaImportacoes } from '@/lib/import/hub/gateImportacoes'
+import { carregarCatalogoEmpresa } from '@/lib/import/hub/configImportacao'
 import { carregarApuracao, carregarOperacao, opcoesCadastro } from '@/lib/import/hub/dadosImportacoes'
 import { cn } from '@/lib/utils'
 import { ResumoSecao } from '../_components/ResumoSecao'
@@ -136,8 +137,9 @@ export default async function ImportacaoDetalhePage({ params, searchParams }: Pa
         </div>
       ) : null}
       {aba === 'tributos' ? (
-        <TributosSecao t={t} operacaoId={id} itens={dados.itens} cambios={dados.cambios} tributos={dados.tributos}
-          dataPadrao={o.data_desembaraco ?? new Date().toISOString().slice(0, 10)} editavel={editavel} />
+        <TributosSecao t={t} operacaoId={id} itens={dados.itens} cambios={dados.cambios} tributos={dados.tributos} despesas={dados.despesas}
+          dataPadrao={o.data_desembaraco ?? new Date().toISOString().slice(0, 10)} editavel={editavel}
+          catalogo={await carregarCatalogoEmpresa(ctx.client, ctx.empresaId)} />
       ) : null}
       {aba === 'precificacao' ? (
         <PrecificacaoSecao t={t} nomes={Object.fromEntries(dados.itens.map((i) => [i.id, i.descricao]))} estimado={basePreco(precEst)} real={basePreco(precReal)} />
