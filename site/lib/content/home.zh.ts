@@ -2,14 +2,15 @@ import { PT_SAMPLE, ZH_SAMPLE } from './samples'
 import type { HomeContent } from './types'
 
 /**
- * RASCUNHO (revisão nativa pendente). Termos de operação (完成销售, 批发价, 零售价, 现金, 借记卡, 信用卡,
+ * Revisão assistida por ferramentas (OpenCC t2s, terminologia do ERP) em 21/10/2026; publicação
+ * autorizada pelo responsável sem revisão nativa (pode ser refinada depois). Termos de operação (完成销售, 批发价, 零售价, 现金, 借记卡, 信用卡,
  * 商品, 数量, 库存, 备用金) vêm do próprio ERP (src/lib/i18n/zh.json). Publicação em produção
  * condicionada à revisão de falante nativo com conhecimento do comércio brasileiro
  * (NEXT_PUBLIC_SITE_ZH_REVIEWED, ver lib/publication.ts).
  */
 export const homeZh: HomeContent = {
   meta: {
-    title: '金龙 Jinlong · 巴西华人门店收银与库存系统｜中文、葡语双语',
+    title: '金龙 Jinlong · 巴西华人门店收银（POS）与库存系统｜中文、葡语双语',
     description: '在巴西开店，收银和库存一手掌握。老板用中文，员工用葡语，同一套系统；零售、批发价格分开设置。',
   },
   skipLink: '跳到主要内容',
@@ -37,7 +38,7 @@ export const homeZh: HomeContent = {
     ctaContact: '在线咨询',
     ctaDemo: '查看演示',
     ctaTrial: '预约演示',
-    trialNote: '先与商务团队沟通，再安排受控的使用评估；具体条件会在洽谈时清楚说明。',
+    trialNote: '先与商务团队沟通，再根据门店情况安排使用评估；具体条件在洽谈时说明清楚。',
     proof: ['葡萄牙语与简体中文', '零售与批发', '收银、库存与财务'],
     chipFirst: { text: '销售合计', lang: 'zh-CN' },
     chipSecond: { text: 'Total da venda', lang: 'pt-BR' },
@@ -67,7 +68,7 @@ export const homeZh: HomeContent = {
     ],
   },
   screens: {
-    eyebrow: '走进系统',
+    eyebrow: '系统界面',
     title: '走进金龙系统',
     lead: '从收银台到日结，系统界面示意。商品与数值均为虚构。',
     represent: '示意图',
@@ -174,7 +175,7 @@ export const homeZh: HomeContent = {
   price: {
     title: '价格',
     plan: '金龙收银与管理',
-    value: '价格按需沟通',
+    value: '价格面议',
     includes: ['快速收银、库存管理、经营看板', '零售价与批发价', '中文、葡语双语界面', '由团队一对一演示'],
     cta: '预约演示',
   },
@@ -188,7 +189,7 @@ export const homeZh: HomeContent = {
     items: [
       { q: '员工不会中文，能用吗？', a: '可以。每个用户自己选择界面语言，巴西员工用葡语操作，老板用中文查看，数据是同一套。' },
       { q: '支持批发价吗？', a: '支持。每件商品可以分别设置零售价、批发价，以及从多少件起按批发价，收银时自动适用。' },
-      { q: '价格多少？', a: '价格按需沟通。请联系我们的商务团队，了解适合您门店的具体条件。' },
+      { q: '价格多少？', a: '价格面议。请联系我们的商务团队，了解适合您门店的具体条件。' },
       { q: '数据安全吗？', a: '必须登录才能使用，每家门店的数据彼此独立。' },
     ],
   },
