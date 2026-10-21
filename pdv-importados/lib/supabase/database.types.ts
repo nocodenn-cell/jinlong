@@ -8761,7 +8761,6 @@ export type Database = {
         }
         Returns: Json
       }
-      configuracoes_para_caixa_web: { Args: never; Returns: Json }
       comissao_export_contabil: {
         Args: { p_competencia: string; p_loja_id: string }
         Returns: {
@@ -8837,6 +8836,7 @@ export type Database = {
           valor: number
         }[]
       }
+      configuracoes_para_caixa_web: { Args: never; Returns: Json }
       confirmar_importacao_nfe: {
         Args: { p_importacao_id: string }
         Returns: undefined
