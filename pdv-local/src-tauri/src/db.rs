@@ -1788,7 +1788,7 @@ mod tests {
 mod tests_existentes {
     use super::{
         backoff_segundos_apos_falha, build_request_signature, canonical_path_with_query,
-        endpoint_with_op, validar_caixa_id_obrigatorio,
+        endpoint_with_op, validar_caixa_id_obrigatorio, vendedor_id_payload, vendedores_de_json,
     };
 
     #[test]
