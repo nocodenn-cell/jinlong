@@ -534,7 +534,7 @@ export type Database = {
           {
             foreignKeyName: "comissoes_config_empresa_id_fkey"
             columns: ["empresa_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "empresas"
             referencedColumns: ["id"]
           },
@@ -588,6 +588,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "comissoes_divisoes_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["loja_id"]
+          },
+          {
             foreignKeyName: "comissoes_divisoes_operador_secundario_id_fkey"
             columns: ["operador_secundario_id"]
             isOneToOne: false
@@ -597,7 +604,14 @@ export type Database = {
           {
             foreignKeyName: "comissoes_divisoes_venda_id_fkey"
             columns: ["venda_id"]
-            isOneToOne: false
+            isOneToOne: true
+            referencedRelation: "v_venda_consistencia_anomalias"
+            referencedColumns: ["venda_id"]
+          },
+          {
+            foreignKeyName: "comissoes_divisoes_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: true
             referencedRelation: "vendas"
             referencedColumns: ["id"]
           },
@@ -605,6 +619,7 @@ export type Database = {
       }
       comissoes_falhas: {
         Row: {
+          contexto: Json | null
           created_at: string
           etapa: string
           id: string
@@ -618,6 +633,7 @@ export type Database = {
           venda_id: string
         }
         Insert: {
+          contexto?: Json | null
           created_at?: string
           etapa: string
           id?: string
@@ -631,6 +647,7 @@ export type Database = {
           venda_id: string
         }
         Update: {
+          contexto?: Json | null
           created_at?: string
           etapa?: string
           id?: string
@@ -652,11 +669,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "comissoes_falhas_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["loja_id"]
+          },
+          {
             foreignKeyName: "comissoes_falhas_resolvida_por_fkey"
             columns: ["resolvida_por"]
             isOneToOne: false
             referencedRelation: "usuarios"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_falhas_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "v_venda_consistencia_anomalias"
+            referencedColumns: ["venda_id"]
           },
           {
             foreignKeyName: "comissoes_falhas_venda_id_fkey"
@@ -872,6 +903,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "lojas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_metas_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["loja_id"]
           },
           {
             foreignKeyName: "comissoes_metas_usuario_id_fkey"
@@ -1104,6 +1142,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "comissoes_periodos_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["loja_id"]
+          },
+          {
             foreignKeyName: "comissoes_periodos_pago_por_fkey"
             columns: ["pago_por"]
             isOneToOne: false
@@ -1207,10 +1252,38 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "comissoes_regras_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["loja_id"]
+          },
+          {
             foreignKeyName: "comissoes_regras_produto_id_fkey"
             columns: ["produto_id"]
             isOneToOne: false
             referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_regras_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos_custos"
+            referencedColumns: ["produto_id"]
+          },
+          {
+            foreignKeyName: "comissoes_regras_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_regras_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_produtos"
             referencedColumns: ["id"]
           },
           {
@@ -1420,8 +1493,7 @@ export type Database = {
           por?: string | null
           regra_id?: string
         }
-        Relationships: [
-        ]
+        Relationships: []
       }
       comissoes_vendedores: {
         Row: {
@@ -7634,6 +7706,13 @@ export type Database = {
             referencedRelation: "usuarios"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "vendas_vendedor_id_fkey"
+            columns: ["vendedor_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
         ]
       }
       vendas_canceladas_auditoria: {
@@ -8684,10 +8763,7 @@ export type Database = {
       }
       configuracoes_para_caixa_web: { Args: never; Returns: Json }
       comissao_export_contabil: {
-        Args: {
-          p_competencia: string
-          p_loja_id: string
-        }
+        Args: { p_competencia: string; p_loja_id: string }
         Returns: {
           ajustes: number
           aprovado_em: string
@@ -8704,11 +8780,7 @@ export type Database = {
         }[]
       }
       comissao_periodo_transicionar: {
-        Args: {
-          p_competencia: string
-          p_loja_id: string
-          p_para: string
-        }
+        Args: { p_competencia: string; p_loja_id: string; p_para: string }
         Returns: Json
       }
       comissao_relatorio_itens: {
@@ -8731,10 +8803,7 @@ export type Database = {
         }[]
       }
       comissao_relatorio_vendedores: {
-        Args: {
-          p_competencia: string
-          p_loja_id: string
-        }
+        Args: { p_competencia: string; p_loja_id: string }
         Returns: {
           ajustes: number
           base: number
@@ -8748,11 +8817,7 @@ export type Database = {
         }[]
       }
       comissao_salvar_config: {
-        Args: {
-          p_base?: string
-          p_liberacao?: string
-          p_loja_id: string
-        }
+        Args: { p_base?: string; p_liberacao?: string; p_loja_id: string }
         Returns: Json
       }
       comissao_simular_regra: {
@@ -8830,17 +8895,11 @@ export type Database = {
         Returns: Json
       }
       definir_vendedor_venda: {
-        Args: {
-          p_venda_id: string
-          p_vendedor_id: string
-        }
+        Args: { p_venda_id: string; p_vendedor_id: string }
         Returns: Json
       }
       definir_vendedor_venda_pdv: {
-        Args: {
-          p_venda_id: string
-          p_vendedor_id: string
-        }
+        Args: { p_venda_id: string; p_vendedor_id: string }
         Returns: Json
       }
       descartar_venda_em_espera: {
@@ -9675,9 +9734,7 @@ export type Database = {
         }[]
       }
       listar_vendedores_loja: {
-        Args: {
-          p_loja_id: string
-        }
+        Args: { p_loja_id: string }
         Returns: {
           id: string
           nome: string
@@ -9688,9 +9745,7 @@ export type Database = {
         Returns: number
       }
       minhas_comissoes: {
-        Args: {
-          p_meses?: number
-        }
+        Args: { p_meses?: number }
         Returns: {
           ajustes: number
           base: number
@@ -10067,9 +10122,7 @@ export type Database = {
         }[]
       }
       reprocessar_comissao_venda: {
-        Args: {
-          p_venda_id: string
-        }
+        Args: { p_venda_id: string }
         Returns: Json
       }
       resumo_comissoes_por_operador: {
