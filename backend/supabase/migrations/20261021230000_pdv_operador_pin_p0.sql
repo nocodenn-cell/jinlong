@@ -16,7 +16,9 @@ CREATE TABLE IF NOT EXISTS public.usuario_pin (
   pin_tentativas integer NOT NULL DEFAULT 0 CHECK (pin_tentativas >= 0),
   pin_bloqueado_ate timestamptz NULL,
   definido_em timestamptz NOT NULL DEFAULT now(),
-  definido_por uuid NULL
+  definido_por uuid NULL,
+  -- PIN definido por gerente/dono para outra pessoa ⇒ o funcionário deve trocar em "Meu PIN do caixa".
+  trocar_no_primeiro_uso boolean NOT NULL DEFAULT false
 );
 ALTER TABLE public.usuario_pin ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.usuario_pin FROM PUBLIC, anon, authenticated;
@@ -33,7 +35,7 @@ CREATE TABLE IF NOT EXISTS public.pdv_operador_eventos (
   dispositivo_id uuid NULL REFERENCES public.pdv_dispositivos(id),
   usuario_id uuid NULL REFERENCES public.usuarios(id) ON DELETE SET NULL,
   tipo text NOT NULL CHECK (tipo IN ('ENTROU', 'SAIU', 'BLOQUEIO_AUTO', 'PIN_ERRADO', 'BLOQUEADO',
-                                     'OVERRIDE_GERENTE', 'PIN_DEFINIDO', 'PIN_RESETADO')),
+                                     'OVERRIDE_GERENTE', 'PIN_DEFINIDO', 'PIN_RESETADO', 'PIN_DESBLOQUEADO')),
   origem text NOT NULL DEFAULT 'online' CHECK (origem IN ('online', 'offline', 'admin')),
   detalhe jsonb NOT NULL DEFAULT '{}'::jsonb,
   ocorrido_em timestamptz NOT NULL DEFAULT now(),
@@ -63,11 +65,11 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM public.usuarios WHERE id = v_uid AND ativo) THEN
     RAISE EXCEPTION 'USUARIO_INATIVO' USING ERRCODE = '42501';
   END IF;
-  INSERT INTO public.usuario_pin (usuario_id, pin_hash, pin_salt, pin_iteracoes, pin_tentativas, pin_bloqueado_ate, definido_em, definido_por)
-  VALUES (v_uid, p_hash, p_salt, p_iteracoes, 0, NULL, now(), v_uid)
+  INSERT INTO public.usuario_pin (usuario_id, pin_hash, pin_salt, pin_iteracoes, pin_tentativas, pin_bloqueado_ate, definido_em, definido_por, trocar_no_primeiro_uso)
+  VALUES (v_uid, p_hash, p_salt, p_iteracoes, 0, NULL, now(), v_uid, false)
   ON CONFLICT (usuario_id) DO UPDATE SET pin_hash = EXCLUDED.pin_hash, pin_salt = EXCLUDED.pin_salt,
     pin_iteracoes = EXCLUDED.pin_iteracoes, pin_tentativas = 0, pin_bloqueado_ate = NULL,
-    definido_em = now(), definido_por = v_uid;
+    definido_em = now(), definido_por = v_uid, trocar_no_primeiro_uso = false;
   SELECT v.loja_id INTO v_loja FROM public.usuario_vinculos v WHERE v.usuario_id = v_uid AND v.ativo AND v.loja_id IS NOT NULL LIMIT 1;
   IF v_loja IS NOT NULL THEN
     INSERT INTO public.pdv_operador_eventos (id, loja_id, usuario_id, tipo, origem)
@@ -159,4 +161,56 @@ BEGIN
   GRANT EXECUTE ON FUNCTION public.pdv_operadores_da_loja(uuid) TO service_role;
   REVOKE ALL ON FUNCTION public.pdv_pin_registrar_tentativa(uuid, boolean) FROM PUBLIC, anon, authenticated;
   GRANT EXECUTE ON FUNCTION public.pdv_pin_registrar_tentativa(uuid, boolean) TO service_role;
+END $$;
+
+-- Tela Funcionários (server action com service_role; o ATOR vem da sessão validada no servidor).
+-- Loja do alvo que o ator gerencia; GERENTE só mexe em OPERADOR, DONO também em GERENTE; nunca em DONO/ADMIN/si mesmo.
+CREATE OR REPLACE FUNCTION public.pdv_pin_loja_gerida(p_usuario uuid, p_ator uuid)
+RETURNS uuid LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+  SELECT l.id
+    FROM public.usuario_vinculos alvo
+    JOIN public.usuarios u ON u.id = alvo.usuario_id AND u.ativo
+    JOIN public.lojas l ON l.empresa_id = alvo.empresa_id AND alvo.loja_id = l.id
+   WHERE alvo.usuario_id = p_usuario AND alvo.ativo AND p_ator IS NOT NULL AND p_ator <> p_usuario
+     AND (   (alvo.papel = 'OPERADOR' AND public.fp_usuario_pode_loja(p_ator, l.id, ARRAY['DONO','GERENTE']))
+          OR (alvo.papel = 'GERENTE'  AND public.fp_usuario_pode_loja(p_ator, l.id, ARRAY['DONO'])))
+   LIMIT 1;
+$$;
+
+-- Gerente/dono define o PIN inicial (ou troca) de um funcionário. Hash derivado no servidor; o funcionário
+-- fica marcado para trocar em "Meu PIN do caixa".
+CREATE OR REPLACE FUNCTION public.definir_pin_operador_pdv(p_usuario uuid, p_hash text, p_salt text, p_iteracoes integer, p_ator uuid)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE v_loja uuid := public.pdv_pin_loja_gerida(p_usuario, p_ator);
+BEGIN
+  IF v_loja IS NULL THEN RAISE EXCEPTION 'SEM_PERMISSAO' USING ERRCODE = '42501'; END IF;
+  INSERT INTO public.usuario_pin (usuario_id, pin_hash, pin_salt, pin_iteracoes, pin_tentativas, pin_bloqueado_ate, definido_em, definido_por, trocar_no_primeiro_uso)
+  VALUES (p_usuario, p_hash, p_salt, p_iteracoes, 0, NULL, now(), p_ator, true)
+  ON CONFLICT (usuario_id) DO UPDATE SET pin_hash = EXCLUDED.pin_hash, pin_salt = EXCLUDED.pin_salt,
+    pin_iteracoes = EXCLUDED.pin_iteracoes, pin_tentativas = 0, pin_bloqueado_ate = NULL,
+    definido_em = now(), definido_por = p_ator, trocar_no_primeiro_uso = true;
+  INSERT INTO public.pdv_operador_eventos (id, loja_id, usuario_id, tipo, origem, detalhe)
+  VALUES (gen_random_uuid(), v_loja, p_usuario, 'PIN_DEFINIDO', 'admin', jsonb_build_object('por', p_ator));
+END $$;
+
+-- Desbloqueia (zera tentativas) sem apagar o PIN.
+CREATE OR REPLACE FUNCTION public.desbloquear_pin_operador_pdv(p_usuario uuid, p_ator uuid)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE v_loja uuid := public.pdv_pin_loja_gerida(p_usuario, p_ator);
+BEGIN
+  IF v_loja IS NULL THEN RAISE EXCEPTION 'SEM_PERMISSAO' USING ERRCODE = '42501'; END IF;
+  UPDATE public.usuario_pin SET pin_tentativas = 0, pin_bloqueado_ate = NULL WHERE usuario_id = p_usuario;
+  IF NOT FOUND THEN RAISE EXCEPTION 'SEM_PIN' USING ERRCODE = 'P0002'; END IF;
+  INSERT INTO public.pdv_operador_eventos (id, loja_id, usuario_id, tipo, origem, detalhe)
+  VALUES (gen_random_uuid(), v_loja, p_usuario, 'PIN_DESBLOQUEADO', 'admin', jsonb_build_object('por', p_ator));
+END $$;
+
+DO $$
+BEGIN
+  REVOKE ALL ON FUNCTION public.pdv_pin_loja_gerida(uuid, uuid) FROM PUBLIC, anon, authenticated;
+  GRANT EXECUTE ON FUNCTION public.pdv_pin_loja_gerida(uuid, uuid) TO service_role;
+  REVOKE ALL ON FUNCTION public.definir_pin_operador_pdv(uuid, text, text, integer, uuid) FROM PUBLIC, anon, authenticated;
+  GRANT EXECUTE ON FUNCTION public.definir_pin_operador_pdv(uuid, text, text, integer, uuid) TO service_role;
+  REVOKE ALL ON FUNCTION public.desbloquear_pin_operador_pdv(uuid, uuid) FROM PUBLIC, anon, authenticated;
+  GRANT EXECUTE ON FUNCTION public.desbloquear_pin_operador_pdv(uuid, uuid) TO service_role;
 END $$;

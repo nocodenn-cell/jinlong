@@ -78,4 +78,32 @@ SELECT public.resetar_pin_operador_pdv(pg_temp.c('opa'));
 SELECT pg_temp.ok(NOT (SELECT tem_pin FROM public.status_pin_equipe_pdv() WHERE usuario_id = pg_temp.c('opa')), 'reset do gerente apaga PIN e bloqueio');
 RESET ROLE;
 SELECT pg_temp.ok((SELECT count(*) FROM public.pdv_operador_eventos WHERE usuario_id = pg_temp.c('opa') AND tipo IN ('PIN_DEFINIDO','PIN_RESETADO')) = 2, 'auditoria PIN_DEFINIDO + PIN_RESETADO');
+-- Funcionários: gerente/dono define PIN de outro, desbloqueia; escopo e hierarquia.
+RESET ROLE;
+SET LOCAL ROLE service_role;
+SELECT public.definir_pin_operador_pdv(pg_temp.c('opa'), repeat('c',64), repeat('d',32), 150000, pg_temp.c('gea'));
+SELECT pg_temp.ok((SELECT trocar_no_primeiro_uso AND definido_por = pg_temp.c('gea') FROM public.usuario_pin WHERE usuario_id = pg_temp.c('opa')), 'gerente define PIN do operador ⇒ trocar no 1º uso');
+SELECT pg_temp.ok(EXISTS (SELECT 1 FROM public.pdv_operador_eventos WHERE usuario_id = pg_temp.c('opa') AND tipo='PIN_DEFINIDO' AND detalhe->>'por' = pg_temp.c('gea')::text), 'evento PIN_DEFINIDO com autor');
+DO $t$ BEGIN PERFORM public.definir_pin_operador_pdv(pg_temp.c('opb'), repeat('c',64), repeat('d',32), 150000, pg_temp.c('gea')); RAISE EXCEPTION 'FALHOU: outra loja';
+EXCEPTION WHEN insufficient_privilege THEN RAISE NOTICE 'ok: gerente A não define PIN na loja B'; END $t$;
+DO $t$ BEGIN PERFORM public.definir_pin_operador_pdv(pg_temp.c('dona'), repeat('c',64), repeat('d',32), 150000, pg_temp.c('gea')); RAISE EXCEPTION 'FALHOU: dono';
+EXCEPTION WHEN insufficient_privilege THEN RAISE NOTICE 'ok: gerente não define PIN da dona'; END $t$;
+DO $t$ BEGIN PERFORM public.definir_pin_operador_pdv(pg_temp.c('gea'), repeat('c',64), repeat('d',32), 150000, pg_temp.c('gea')); RAISE EXCEPTION 'FALHOU: si mesmo';
+EXCEPTION WHEN insufficient_privilege THEN RAISE NOTICE 'ok: nem o próprio por esta via'; END $t$;
+SELECT public.definir_pin_operador_pdv(pg_temp.c('gea'), repeat('e',64), repeat('d',32), 150000, pg_temp.c('dona'));
+SELECT pg_temp.ok(EXISTS (SELECT 1 FROM public.usuario_pin WHERE usuario_id = pg_temp.c('gea')), 'dona define PIN da gerente');
+UPDATE public.usuario_pin SET pin_tentativas = 10, pin_bloqueado_ate = 'infinity' WHERE usuario_id = pg_temp.c('opa');
+SELECT public.desbloquear_pin_operador_pdv(pg_temp.c('opa'), pg_temp.c('gea'));
+SELECT pg_temp.ok((SELECT pin_tentativas = 0 AND pin_bloqueado_ate IS NULL AND pin_hash = repeat('c',64) FROM public.usuario_pin WHERE usuario_id = pg_temp.c('opa')), 'desbloquear zera tentativas e mantém o PIN');
+SELECT pg_temp.ok(EXISTS (SELECT 1 FROM public.pdv_operador_eventos WHERE usuario_id = pg_temp.c('opa') AND tipo='PIN_DESBLOQUEADO'), 'evento PIN_DESBLOQUEADO');
+RESET ROLE;
+SELECT pg_temp.ok(NOT has_function_privilege('authenticated', 'public.definir_pin_operador_pdv(uuid,text,text,integer,uuid)', 'EXECUTE')
+              AND NOT has_function_privilege('anon', 'public.desbloquear_pin_operador_pdv(uuid,uuid)', 'EXECUTE')
+              AND NOT has_function_privilege('authenticated', 'public.pdv_pin_loja_gerida(uuid,uuid)', 'EXECUTE'), 'funções com p_ator só para service_role');
+SELECT pg_temp.como('opa');
+SET LOCAL ROLE authenticated;
+SELECT public.definir_meu_pin_pdv(repeat('f',64), repeat('d',32), 150000);
+RESET ROLE;
+SELECT pg_temp.ok((SELECT NOT trocar_no_primeiro_uso FROM public.usuario_pin WHERE usuario_id = pg_temp.c('opa')), 'trocar o próprio PIN limpa a marca');
+
 ROLLBACK;

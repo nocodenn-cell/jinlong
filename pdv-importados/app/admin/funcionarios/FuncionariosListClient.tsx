@@ -14,10 +14,12 @@ import { emitGerenteToast } from '@/lib/gerente/toast'
 import { cn } from '@/lib/utils'
 import {
   definirAtivoFuncionarioAction,
+  desbloquearPinFuncionarioAction,
   type FuncionarioListRow,
 } from './actions'
 import { FuncionarioEditarModal, type FuncionarioModalLabels } from './FuncionarioEditarModal'
 import { FuncionarioRowActions } from './FuncionarioRowActions'
+import { FuncionarioPinModal, PinBadge, type FuncionarioPinLabels } from './FuncionarioPinModal'
 import { podeDesativarAlvo } from './funcionarioPolicies'
 import { formatarTelefone } from './funcionarioDados'
 import {
@@ -73,6 +75,7 @@ export type FuncionariosListLabels = {
   grupoProtegido: string
   grupoProtegidoSub: string
   modal: FuncionarioModalLabels
+  pin: FuncionarioPinLabels
 }
 
 type Props = {
@@ -129,6 +132,8 @@ export function FuncionariosListClient({
   const [emEdicao, setEmEdicao] = useState<FuncionarioListRow | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [confirmRow, setConfirmRow] = useState<FuncionarioListRow | null>(null)
+  const [pinRow, setPinRow] = useState<FuncionarioListRow | null>(null)
+  const pinDisponivel = rows.some((r) => r.pin_status != null)
   const searchRef = useRef<HTMLInputElement>(null)
 
   const filtrados = useMemo(() => {
@@ -196,6 +201,25 @@ export function FuncionariosListClient({
     }
   }
 
+  function patchRow(id: string, patch: Partial<FuncionarioListRow>) {
+    setRows((cur) => cur.map((x) => (x.id === id ? { ...x, ...patch } : x)))
+  }
+
+  async function desbloquearPin(row: FuncionarioListRow) {
+    setBusyId(row.id)
+    try {
+      const r = await desbloquearPinFuncionarioAction(row.id)
+      if (!r.ok) {
+        emitGerenteToast({ kind: 'error', message: r.error })
+        return
+      }
+      patchRow(row.id, { pin_status: r.data.pin_status })
+      emitGerenteToast({ kind: 'success', message: L.pin.desbloqueado })
+    } finally {
+      setBusyId(null)
+    }
+  }
+
   function pedirToggle(row: FuncionarioListRow) {
     const bloqueio = motivoBloqueioToggle(ator, row, L)
     if (bloqueio) {
@@ -207,7 +231,7 @@ export function FuncionariosListClient({
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (modalAberto || confirmRow) return
+      if (modalAberto || confirmRow || pinRow) return
       if (e.key === '/' && !isTypingTarget(e.target)) {
         e.preventDefault()
         searchRef.current?.focus()
@@ -222,7 +246,7 @@ export function FuncionariosListClient({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [modalAberto, confirmRow])
+  }, [modalAberto, confirmRow, pinRow])
 
   const filtroLabel = (s: StatusFiltro) => {
     if (s === 'ativos') return L.filtroAtivos
@@ -280,6 +304,16 @@ export function FuncionariosListClient({
         <Badge className={perfilBadgeClass(row.perfil)}>{labelPerfil(row.perfil, L)}</Badge>
       ),
     },
+    ...(pinDisponivel
+      ? [
+          {
+            key: 'pin',
+            header: L.pin.colPin,
+            width: '150px',
+            cell: (row: FuncionarioListRow) => <PinBadge row={row} labels={L.pin} />,
+          } satisfies Column<FuncionarioListRow>,
+        ]
+      : []),
     {
       key: 'status',
       header: L.colStatus,
@@ -308,9 +342,11 @@ export function FuncionariosListClient({
 
   const actionsProps = {
     ator,
-    labels: L,
+    labels: { ...L, pinDefinir: L.pin.definir, pinTrocar: L.pin.trocar, pinDesbloquear: L.pin.desbloquear },
     onEditar: abrirEditar,
     onToggle: pedirToggle,
+    onPin: (row: FuncionarioListRow) => setPinRow(row),
+    onDesbloquearPin: (row: FuncionarioListRow) => void desbloquearPin(row),
   }
 
   const confirmTitle = confirmRow
@@ -480,6 +516,7 @@ export function FuncionariosListClient({
                                     {labelPerfil(row.perfil, L)}
                                   </Badge>
                                   {renderStatusChip(row.ativo, L)}
+                                  {pinDisponivel ? <PinBadge row={row} labels={L.pin} /> : null}
                                 </div>
                               </div>
                               <FuncionarioRowActions
@@ -515,10 +552,19 @@ export function FuncionariosListClient({
               const idx = cur.findIndex((x) => x.id === row.id)
               if (idx < 0) return [...cur, row].sort((a, b) => a.nome.localeCompare(b.nome))
               const next = [...cur]
-              next[idx] = row
+              next[idx] = { ...cur[idx], ...row }
               return next
             })
           }}
+        />
+      ) : null}
+
+      {pinRow ? (
+        <FuncionarioPinModal
+          row={pinRow}
+          labels={L.pin}
+          onClose={() => setPinRow(null)}
+          onSalvo={(patch) => patchRow(pinRow.id, patch)}
         />
       ) : null}
 

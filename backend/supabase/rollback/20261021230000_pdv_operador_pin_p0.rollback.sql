@@ -1,4 +1,7 @@
 -- Rollback de 20261021230000_pdv_operador_pin_p0 (apaga PINs e auditoria de operador; nada mais depende deles).
+DROP FUNCTION IF EXISTS public.desbloquear_pin_operador_pdv(uuid, uuid);
+DROP FUNCTION IF EXISTS public.definir_pin_operador_pdv(uuid, text, text, integer, uuid);
+DROP FUNCTION IF EXISTS public.pdv_pin_loja_gerida(uuid, uuid);
 DROP FUNCTION IF EXISTS public.pdv_pin_registrar_tentativa(uuid, boolean);
 DROP FUNCTION IF EXISTS public.pdv_operadores_da_loja(uuid);
 DROP FUNCTION IF EXISTS public.status_pin_equipe_pdv();
