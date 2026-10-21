@@ -93,7 +93,8 @@ jobs:
 
       - name: Cargo test (core local sync/db)
         working-directory: pdv-local/src-tauri
-        run: cargo test --lib --verbose
+        # Os testes vivem no alvo binário (src/lib.rs é vazio): `--lib` rodava 0 testes.
+        run: cargo test --bin pdv-local --verbose
 
       - name: Cargo build mínimo (Tauri binary)
         working-directory: pdv-local/src-tauri
