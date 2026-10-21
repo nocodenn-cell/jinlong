@@ -1,0 +1,74 @@
+{
+  "schema_version": "1",
+  "processo": {
+    "id": "proc-001",
+    "loja_importadora_id": "loja-0000-0001",
+    "moeda_base": "BRL"
+  },
+  "politica": {
+    "escala_intermediaria": 10,
+    "escala_persistencia": 4,
+    "escala_unitario": 6,
+    "arredondamento": "HALF_UP",
+    "ordem_residuo": "MAIOR_RESTO_ITEM_ID_ASC"
+  },
+  "cambios": [],
+  "itens": [
+    {
+      "id": "item-001",
+      "produto_id": "prod-001",
+      "moeda": "BRL",
+      "valor_mercadoria_moeda": "30.000000",
+      "valor_aduaneiro_brl": null,
+      "quantidade_comercial": "2.000",
+      "unidade_comercial": "CX",
+      "fator_para_estoque": "3.000000",
+      "quantidade_estoque": "6.000",
+      "peso_liquido_kg": "1.000",
+      "peso_bruto_kg": "1.000",
+      "volume_m3": "0.100"
+    },
+    {
+      "id": "item-002",
+      "produto_id": "prod-002",
+      "moeda": "BRL",
+      "valor_mercadoria_moeda": "70.000000",
+      "valor_aduaneiro_brl": null,
+      "quantidade_comercial": "1.000",
+      "unidade_comercial": "UN",
+      "fator_para_estoque": "1.000000",
+      "quantidade_estoque": "1.000",
+      "peso_liquido_kg": "1.000",
+      "peso_bruto_kg": "1.000",
+      "volume_m3": "0.300"
+    }
+  ],
+  "despesas": [
+    {
+      "id": "desp-01",
+      "tipo": "ARMAZENAGEM",
+      "moeda": "BRL",
+      "valor": "60.00",
+      "incorporavel": true,
+      "atribuicao": {
+        "modo": "RATEIO",
+        "criterio": "VOLUME",
+        "justificativa": "Armazenagem cobrada por volume ocupado"
+      }
+    },
+    {
+      "id": "desp-02",
+      "tipo": "OUTRA",
+      "moeda": "BRL",
+      "valor": "40.00",
+      "incorporavel": true,
+      "atribuicao": {
+        "modo": "RATEIO",
+        "criterio": "QUANTIDADE_ESTOQUE",
+        "justificativa": "Despesa de conferencia por unidade de estoque"
+      }
+    }
+  ],
+  "descontos": [],
+  "tributos": []
+}

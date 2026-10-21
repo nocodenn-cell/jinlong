@@ -6,6 +6,7 @@ import {
   ADMIN_V2_DESTINATIONS,
   ADMIN_V2_INTERNO_ITEMS,
   ADMIN_V2_PDV_ITEM,
+  modulosVisiveis,
   type AdminV2NavDestination,
   type AdminV2NavItem,
 } from '@/lib/navigation/adminV2SidebarNav'
@@ -22,6 +23,8 @@ export type ExecutiveSidebarNavProps = {
   stockAlertCount?: number
   /** Exibe itens `adminOnly` (grupo Interno: provisionamento, implantação, diagnóstico). */
   showAdminOnlyItems?: boolean
+  /** Módulos com licença ativa para a empresa do usuário (resolvido no servidor). */
+  modulosAtivos?: readonly string[]
 }
 
 const resolveLabels = resolveNavLabels
@@ -134,6 +137,7 @@ export function ExecutiveSidebarNav({
   chineseLanguage,
   stockAlertCount,
   showAdminOnlyItems = false,
+  modulosAtivos,
 }: ExecutiveSidebarNavProps) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -144,6 +148,8 @@ export function ExecutiveSidebarNav({
   const PdvIcon = ADMIN_V2_PDV_ITEM.icon
   const internoLabel = admin.nav.interno
   const internoText = chineseLanguage ? internoLabel.cn : internoLabel.pt
+  const modulos = modulosVisiveis(modulosAtivos)
+  const modulosText = chineseLanguage ? admin.nav.modulos.cn : admin.nav.modulos.pt
 
   return (
     <nav className="flex flex-col gap-4 p-3 lg:p-4" data-testid="executive-sidebar-nav">
@@ -173,6 +179,17 @@ export function ExecutiveSidebarNav({
           />
         ))}
       </ul>
+
+      {modulos.length > 0 ? (
+        <div data-nav-group="modulos">
+          <div className="admin-v2-nav-group-label mb-2 px-3">{modulosText}</div>
+          <ul className="flex flex-col gap-1">
+            {modulos.map((item) => (
+              <NavItemLink key={item.id} item={item} ctx={ctx} pathname={pathname} search={search} />
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       {internos.length > 0 ? (
         <div data-nav-group="interno">

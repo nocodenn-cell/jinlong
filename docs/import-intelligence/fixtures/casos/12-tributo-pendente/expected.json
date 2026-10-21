@@ -1,0 +1,40 @@
+{
+  "schema_version": "1",
+  "engine_version": "landed-cost-ref/0.1.0",
+  "input_hash": "sha256:a681da9a17e697f7951175078221ecc3baa63331f100d017751b74db2d7a6fa5",
+  "status": "BLOQUEADO",
+  "divergencias": [
+    {
+      "codigo": "TRIBUTO_PENDENTE",
+      "severidade": "BLOQUEANTE",
+      "referencia": "trib-01",
+      "mensagem": "tributo sem status de recuperabilidade validado"
+    }
+  ],
+  "itens": [
+    {
+      "item_id": "item-001",
+      "produto_id": "prod-001",
+      "quantidade_estoque": "1.000",
+      "componentes_brl": {
+        "mercadoria": "100.0000",
+        "despesas_incorporadas": "0.0000",
+        "tributos_nao_recuperaveis": "0.0000",
+        "descontos": "0.0000"
+      },
+      "custo_total_brl": "100.0000",
+      "custo_unitario_brl": "100.000000",
+      "residuo_unitario_brl": "0.0000000000",
+      "residuo_total_brl": "0.0000000000"
+    }
+  ],
+  "rateios": [],
+  "despesas_nao_incorporadas": [],
+  "conservacao": {
+    "entradas_brl": "100.0000",
+    "descontos_brl": "0.0000",
+    "saidas_brl": "100.0000",
+    "diferenca_brl": "0.0000000000",
+    "ok": true
+  }
+}
