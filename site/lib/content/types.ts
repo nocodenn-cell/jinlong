@@ -143,21 +143,30 @@ export interface TrialFormCopy {
   lead: string
   name: string
   store: string
-  city: string
-  wechat: string
-  whatsapp: string
-  type: string
-  typeRetail: string
-  typeWholesale: string
-  typeBoth: string
-  preferred: string
-  prefEmail: string
-  prefWhatsapp: string
-  prefWechat: string
-  prefPhone: string
-  sendEmail: string
-  sendWhatsapp: string
+  contact: string
+  contactHintWhatsapp: string
+  contactHintWechat: string
+  channel: string
+  channelWhatsapp: string
+  channelWechat: string
+  submit: string
+  sending: string
   note: string
+  errName: string
+  errStore: string
+  errContactWhatsapp: string
+  errContactWechat: string
+  errRate: string
+  okTitle: string
+  okBody: string
+  okProtocol: string
+  okKeep: string
+  okWhatsapp: string
+  failTitle: string
+  failBody: string
+  failEmail: string
+  failWhatsapp: string
+  retry: string
   mailSubject: string
 }
 

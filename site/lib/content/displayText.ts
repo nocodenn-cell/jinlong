@@ -47,6 +47,7 @@ function headingStrings(content: HomeContent): string[] {
     content.integrations.title,
     ...faq.items.map((item) => item.q),
     form.title,
+    form.okTitle,
   ]
 }
 

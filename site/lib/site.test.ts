@@ -85,8 +85,9 @@ describe('paridade de conteúdo pt-BR / zh-CN', () => {
   it('direção comercial: demonstração agendada, sem teste grátis, sem destaque fiscal', () => {
     for (const locale of ['pt-BR', 'zh-CN'] as const) {
       const content = getHomeContent(locale)
-      const all = JSON.stringify(content)
-      expect(all).not.toMatch(/grátis|gratis|免费|试用|15 dias|15天|\[PREÇO\]|\[CONFIRMAR: NFC-e\?\]/i)
+      const all = collectStrings(content).map(([, v]) => v).join('\n')
+      expect(all).not.toMatch(/grátis|gratis|免费|试用|15 dias|15天|\[|em breve|即将/i)
+      expect(all).not.toMatch(/CONFIRMAR|TODO|DEPOIMENTO|PREÇO\]/)
       const prominent = JSON.stringify([content.hero, content.pains, content.benefits, content.faq, content.final, content.price])
       expect(prominent).not.toMatch(/NFC-e|NF-e|nota fiscal|发票/i)
       expect(content.integrations.note).toMatch(/NFC-e/)
