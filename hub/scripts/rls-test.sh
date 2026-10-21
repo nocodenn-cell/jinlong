@@ -5,6 +5,6 @@ set -euo pipefail
 DIR="$(cd "$(dirname "$0")/.." && pwd)"
 : "${PGURL:?PGURL obrigatório (banco descartável)}"
 psql "$PGURL" -v ON_ERROR_STOP=1 -q -f "$DIR/supabase/test/auth_stub.sql"
-psql "$PGURL" -v ON_ERROR_STOP=1 -q -f "$DIR/supabase/20261021100000_nature_code_commercial_hub.sql"
+psql "$PGURL" -v ON_ERROR_STOP=1 -q -f "$DIR/supabase/20261021115705_nature_code_commercial_hub.sql"
 psql "$PGURL" -v ON_ERROR_STOP=1 -q -f "$DIR/supabase/test/rls_test.sql"
 echo "RLS OK"

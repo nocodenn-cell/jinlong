@@ -1,10 +1,9 @@
--- Nature Code · Hub comercial (leads de Jinlong e Venddi). PREPARADO, NÃO APLICADO.
--- Para aplicar (exige autorização): copiar para backend/supabase/migrations/ num PR com label
--- deploy-prod:aprovado, ou executar manualmente no SQL editor do projeto Supabase.
+-- Nature Code · Hub comercial (leads de Jinlong e Venddi). APLICADO.
+-- APLICADO em produção em 2026-10-21 (versão 20261021115705, autorizado). Cópia versionada em backend/supabase/migrations/.
+-- (sem alterações após a aplicação)
 -- Impacto: só objetos novos com prefixo commercial_. Nenhuma tabela/função do ERP/PDV é lida ou alterada;
 -- as políticas não referenciam dados operacionais de lojas.
 
-create extension if not exists pgcrypto;
 
 -- Administradores do hub (cadastro manual: insert into public.commercial_admins(user_id) values ('<uuid do auth.users>')).
 create table if not exists public.commercial_admins (
