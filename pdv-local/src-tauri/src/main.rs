@@ -68,7 +68,8 @@ fn load_caixa_atual_cmd(app: tauri::AppHandle) -> Result<Option<db::CaixaSessaoD
     get_caixa_atual(&app)
 }
 
-#[tauri::command]
+// Frontend envia chaves snake_case (ex.: troco_inicial); no Tauri 2 o padrão é camelCase.
+#[tauri::command(rename_all = "snake_case")]
 fn abrir_caixa_cmd(
     app: tauri::AppHandle,
     operador_id: Option<String>,
@@ -77,7 +78,8 @@ fn abrir_caixa_cmd(
     abrir_caixa_local(&app, operador_id, troco_inicial)
 }
 
-#[tauri::command]
+// Frontend envia chaves snake_case (ex.: troco_inicial); no Tauri 2 o padrão é camelCase.
+#[tauri::command(rename_all = "snake_case")]
 fn registrar_movimento_caixa_cmd(
     app: tauri::AppHandle,
     caixa_id: String,
@@ -88,7 +90,8 @@ fn registrar_movimento_caixa_cmd(
     registrar_movimento_caixa_local(&app, caixa_id, tipo, valor, observacao)
 }
 
-#[tauri::command]
+// Frontend envia chaves snake_case (ex.: troco_inicial); no Tauri 2 o padrão é camelCase.
+#[tauri::command(rename_all = "snake_case")]
 fn fechar_caixa_cmd(
     app: tauri::AppHandle,
     caixa_id: String,
