@@ -69,7 +69,8 @@ fn load_caixa_atual_cmd(app: tauri::AppHandle) -> Result<Option<db::CaixaSessaoD
     get_caixa_atual(&app)
 }
 
-#[tauri::command]
+// O front envia snake_case (`troco_inicial`…); o padrão do Tauri 2 é camelCase e recusava a chamada.
+#[tauri::command(rename_all = "snake_case")]
 fn abrir_caixa_cmd(
     app: tauri::AppHandle,
     operador_id: Option<String>,
@@ -78,7 +79,8 @@ fn abrir_caixa_cmd(
     abrir_caixa_local(&app, operador_id, troco_inicial)
 }
 
-#[tauri::command]
+// O front envia snake_case (`troco_inicial`…); o padrão do Tauri 2 é camelCase e recusava a chamada.
+#[tauri::command(rename_all = "snake_case")]
 fn registrar_movimento_caixa_cmd(
     app: tauri::AppHandle,
     caixa_id: String,
@@ -89,7 +91,8 @@ fn registrar_movimento_caixa_cmd(
     registrar_movimento_caixa_local(&app, caixa_id, tipo, valor, observacao)
 }
 
-#[tauri::command]
+// O front envia snake_case (`troco_inicial`…); o padrão do Tauri 2 é camelCase e recusava a chamada.
+#[tauri::command(rename_all = "snake_case")]
 fn fechar_caixa_cmd(
     app: tauri::AppHandle,
     caixa_id: String,
@@ -217,4 +220,30 @@ fn main() {
         ])
         .run(tauri::generate_context!())
         .expect("erro ao rodar aplicação Tauri");
+}
+
+#[cfg(test)]
+mod tests_contrato_invoke {
+    /// O front chama `invoke('x_cmd', { troco_inicial, caixa_id, ... })` em snake_case. No Tauri 2 o padrão é
+    /// camelCase: sem `rename_all = "snake_case"` a chamada falha ("missing required key trocoInicial") —
+    /// bug real achado no E2E com tauri-driver (abrir caixa não funcionava no PDV desktop).
+    #[test]
+    fn comandos_com_argumento_composto_aceitam_snake_case() {
+        let completo = include_str!("main.rs");
+        let src = &completo[..completo.find("#[cfg(test)]").unwrap()];
+        let partes: Vec<&str> = src.split("#[tauri::command").skip(1).collect();
+        assert!(partes.len() > 10);
+        for p in partes {
+            let attr = &p[..p.find(']').unwrap()];
+            let sig = &p[p.find("fn ").unwrap()..p.find('{').unwrap()];
+            let composto = sig
+                .split(|c| c == '(' || c == ',' || c == ')')
+                .filter_map(|a| a.split(':').next())
+                .map(str::trim)
+                .any(|a| a.contains('_') && a != "app" && !a.starts_with("fn "));
+            if composto {
+                assert!(attr.contains("rename_all = \"snake_case\""), "comando sem snake_case: {sig}");
+            }
+        }
+    }
 }

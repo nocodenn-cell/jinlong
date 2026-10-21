@@ -476,6 +476,8 @@ struct EdgeValidarResponse {
     nome: Option<String>,
     papel: Option<String>,
     evento_id: Option<String>,
+    #[serde(default)]
+    bloqueado_ate: Option<String>,
 }
 
 /// Ok(None) = sem rede/servidor indisponível ⇒ cair para offline.
@@ -504,7 +506,12 @@ fn validar_online(usuario_id: &str, pin: &str, para_gerente: bool, acao: Option<
     Some(if parsed.ok {
         ValidarPinDto { ok: true, offline: false, usuario_id: parsed.usuario_id, nome: parsed.nome, papel: parsed.papel, erro: None, bloqueado_ate_unix: None, evento_id: parsed.evento_id }
     } else {
-        falha(parsed.error.as_deref().unwrap_or("PIN_INCORRETO"), false, None)
+        let ate = match parsed.bloqueado_ate.as_deref() {
+            Some("infinity") => Some(i64::MAX),
+            Some(x) => iso_para_unix(x),
+            None => None,
+        };
+        falha(parsed.error.as_deref().unwrap_or("PIN_INCORRETO"), false, ate)
     })
 }
 

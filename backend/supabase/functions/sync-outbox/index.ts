@@ -47,6 +47,7 @@ import {
   type OperadorDaLoja,
   parseOperadorEvento,
   PIN_RE,
+  erroBloqueio,
 } from "./operadorPin.ts";
 
 type OutboxEvent = {
@@ -1448,7 +1449,7 @@ async function handleValidarOperadorSync(supabase: SupabaseAdmin, rawBody: strin
     return jsonResponse(req, 200, { ok: false, error: "PIN_INCORRETO" });
   }
   if (bloqueadoAgora(op.pin_bloqueado_ate)) {
-    return jsonResponse(req, 200, { ok: false, error: "PIN_BLOQUEADO", bloqueado_ate: op.pin_bloqueado_ate });
+    return jsonResponse(req, 200, { ok: false, error: erroBloqueio(op.pin_bloqueado_ate), bloqueado_ate: op.pin_bloqueado_ate });
   }
   const calc = await derivarPinHash(pin, op.pin_salt, op.pin_iteracoes);
   const ok = timingSafeEqualStr(calc, op.pin_hash);
@@ -1466,7 +1467,7 @@ async function handleValidarOperadorSync(supabase: SupabaseAdmin, rawBody: strin
   await registrarEventoOperador(supabase, ctx, usuarioId, bloqueou ? "BLOQUEADO" : "PIN_ERRADO");
   return jsonResponse(req, 200, {
     ok: false,
-    error: bloqueou ? "PIN_BLOQUEADO" : "PIN_INCORRETO",
+    error: bloqueou ? erroBloqueio(estado?.bloqueado_ate ?? null) : "PIN_INCORRETO",
     bloqueado_ate: bloqueou ? estado?.bloqueado_ate ?? null : null,
   });
 }

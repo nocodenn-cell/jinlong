@@ -1,5 +1,5 @@
 import { assert, assertEquals, assertThrows } from "https://deno.land/std@0.208.0/assert/mod.ts";
-import { bloqueadoAgora, derivarPinHash, hashDispositivo, montarCacheOperadores, parseOperadorEvento } from "./operadorPin.ts";
+import { bloqueadoAgora, erroBloqueio, derivarPinHash, hashDispositivo, montarCacheOperadores, parseOperadorEvento } from "./operadorPin.ts";
 
 const U = "d2000000-0000-4000-8000-000000000003";
 const L = "d1000000-0000-4000-8000-00000000000a";
@@ -42,4 +42,9 @@ Deno.test("evento de operador: valida e descarta campos desconhecidos", () => {
   assertEquals(e.detalhe, { motivo: "x" });
   assertThrows(() => parseOperadorEvento({ id: U, loja_id: L, tipo: "QUALQUER" }));
   assertThrows(() => parseOperadorEvento({ id: "x", loja_id: L, tipo: "SAIU" }));
+});
+
+Deno.test("erroBloqueio: infinity (10 erros) exige gerente; data = bloqueio temporário", () => {
+  if (erroBloqueio("infinity") !== "PIN_BLOQUEADO_GERENTE") throw new Error("infinity");
+  if (erroBloqueio("2026-10-21T23:05:00+00:00") !== "PIN_BLOQUEADO") throw new Error("temp");
 });

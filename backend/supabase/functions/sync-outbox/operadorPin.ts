@@ -130,3 +130,8 @@ export function parseOperadorEvento(raw: unknown): OperadorEventoPayload {
   if (typeof d.caixa_id === "string" && UUID.test(d.caixa_id)) detalhe.caixa_id = d.caixa_id;
   return { id, loja_id: loja, usuario_id: usuario, tipo, origem: p.origem === "offline" ? "offline" : "online", ocorrido_em: em, detalhe };
 }
+
+/** 10 erros ⇒ 'infinity' no banco ⇒ só o gerente libera (mensagem diferente do bloqueio de 5 min). */
+export function erroBloqueio(ate: string | null): string {
+  return ate === "infinity" ? "PIN_BLOQUEADO_GERENTE" : "PIN_BLOQUEADO";
+}

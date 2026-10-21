@@ -105,6 +105,14 @@ export function usePdvLocalOutboxSync({
     return () => globalThis.clearInterval(id)
   }, [tauriDisponivel, refreshOutboxResumo])
 
+  // Funções mais recentes em refs: o intervalo NÃO pode depender da identidade delas. `onSyncElapsedMs` vem
+  // inline do App (nova a cada render) e o resumo re-renderiza a cada 12s — com elas nas deps o intervalo de 15s
+  // era recriado antes de disparar e a fila só sincronizava após venda (achado no E2E com tauri-driver).
+  const executarRef = useRef(executarSyncOutboxComMetrica)
+  const refreshRef = useRef(refreshOutboxResumo)
+  executarRef.current = executarSyncOutboxComMetrica
+  refreshRef.current = refreshOutboxResumo
+
   useEffect(() => {
     if (!tauriDisponivel || !caixaAtualId) return
 
@@ -112,15 +120,15 @@ export function usePdvLocalOutboxSync({
     const t = globalThis.setInterval(() => {
       if (running) return
       running = true
-      void executarSyncOutboxComMetrica(50, { suppressThrow: true })
+      void executarRef.current(50, { suppressThrow: true })
         .finally(() => {
-          void refreshOutboxResumo()
+          void refreshRef.current()
           running = false
         })
     }, 15000)
 
     return () => globalThis.clearInterval(t)
-  }, [tauriDisponivel, caixaAtualId, refreshOutboxResumo, executarSyncOutboxComMetrica])
+  }, [tauriDisponivel, caixaAtualId])
 
   const statusSync: StatusSync = !tauriDisponivel
     ? 'offline'
