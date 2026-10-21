@@ -1,18 +1,26 @@
 /**
  * Design System — Z-Index (SSOT)
  * Fase 2 · Onda 2
+ *
+ * Escala alinhada às camadas reais do app (classes Tailwind z-10…z-[70]):
+ *   colunas fixas de tabela (10) < cabeçalho sticky de tabela (15)
+ *   < barras sticky da página (20–30: AdminHubTabNav, GerenteStickyToolbar, GerenteHeaderNav)
+ *   < dropdowns (40) < painéis laterais fixos (45)
+ *   < modais/diálogos/drawers (50–70) < toasts (110).
+ * Antes o cabeçalho sticky usava 1020 (escala Bootstrap) e ficava POR CIMA dos modais (z-50),
+ * cobrindo campos do formulário "Novo funcionário". Ver tests/z-index-camadas.test.ts.
  */
 
 :root {
   --z-base: 0;
   --z-raised: 10;
-  --z-dropdown: 1000;
-  --z-sticky: 1020;
-  --z-fixed: 1030;
-  --z-modal-backdrop: 1040;
-  --z-modal: 1050;
-  --z-popover: 1060;
-  --z-tooltip: 1070;
-  --z-toast: 1080;
+  --z-sticky: 15;
+  --z-dropdown: 40;
+  --z-fixed: 45;
+  --z-modal-backdrop: 50;
+  --z-modal: 50;
+  --z-popover: 80;
+  --z-tooltip: 90;
+  --z-toast: 110;
   --z-max: 9999;
 }

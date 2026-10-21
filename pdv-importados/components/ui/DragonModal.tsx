@@ -173,7 +173,7 @@ export function DragonModal({
   return (
     <div
       className={cn(
-        'fixed inset-0 z-50 flex',
+        'fixed inset-0 z-modal flex',
         drawer
           ? 'justify-end'
           : cn('justify-center', sheet ? 'items-end p-0 sm:items-center sm:p-4' : 'items-center p-4'),

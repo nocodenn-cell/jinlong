@@ -19,6 +19,7 @@ import {
 import { FuncionarioEditarModal, type FuncionarioModalLabels } from './FuncionarioEditarModal'
 import { FuncionarioRowActions } from './FuncionarioRowActions'
 import { podeDesativarAlvo } from './funcionarioPolicies'
+import { formatarTelefone } from './funcionarioDados'
 import {
   agruparFuncionarios,
   isTypingTarget,
@@ -36,6 +37,7 @@ export type FuncionariosListLabels = {
   colPerfil: string
   colStatus: string
   colAcoes: string
+  colContato: string
   ativo: string
   inativo: string
   vazioTitulo: string
@@ -78,6 +80,7 @@ type Props = {
   atorPerfil: string
   iniciais: FuncionarioListRow[]
   labels: FuncionariosListLabels
+  dadosDisponiveis?: boolean
 }
 
 type StatusFiltro = 'todos' | 'ativos' | 'inativos'
@@ -112,7 +115,13 @@ function grupoSub(id: FuncionarioGrupoId, L: FuncionariosListLabels): string {
   return id === 'equipe' ? L.grupoEquipeSub : L.grupoProtegidoSub
 }
 
-export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L }: Props) {
+export function FuncionariosListClient({
+  atorId,
+  atorPerfil,
+  iniciais,
+  labels: L,
+  dadosDisponiveis = false,
+}: Props) {
   const [rows, setRows] = useState(iniciais)
   const [termo, setTermo] = useState('')
   const [statusF, setStatusF] = useState<StatusFiltro>('todos')
@@ -131,6 +140,8 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
       return (
         r.nome.toLowerCase().includes(q) ||
         (r.email ?? '').toLowerCase().includes(q) ||
+        (r.cargo ?? '').toLowerCase().includes(q) ||
+        (r.telefone ?? '').includes(q.replace(/\D/g, '') || '\u0000') ||
         r.perfil.toLowerCase().includes(q) ||
         labelPerfil(r.perfil, L).toLowerCase().includes(q)
       )
@@ -226,7 +237,10 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
       priority: 'primary',
       sortValue: (row) => row.nome.toLocaleLowerCase(),
       cell: (row) => (
-        <span className={cn('font-medium text-fg', !row.ativo && 'text-fg-subtle')}>{row.nome}</span>
+        <div className="min-w-0">
+          <span className={cn('font-medium text-fg', !row.ativo && 'text-fg-subtle')}>{row.nome}</span>
+          {row.cargo ? <p className="truncate text-caption text-fg-subtle">{row.cargo}</p> : null}
+        </div>
       ),
     },
     {
@@ -235,6 +249,28 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
       sortValue: (row) => (row.email ?? '').toLocaleLowerCase(),
       cell: (row) => <span className="text-caption text-fg-muted">{row.email ?? '—'}</span>,
     },
+    ...(dadosDisponiveis
+      ? [
+          {
+            key: 'contato',
+            header: L.colContato,
+            width: '170px',
+            cell: (row: FuncionarioListRow) =>
+              row.telefone || row.cpf_mascarado ? (
+                <div className="text-caption leading-tight text-fg-muted">
+                  {row.telefone ? <p>{formatarTelefone(row.telefone)}</p> : null}
+                  {row.cpf_mascarado ? (
+                    <p className="font-mono text-fg-subtle" data-testid="funcionario-cpf-mascarado">
+                      {row.cpf_mascarado}
+                    </p>
+                  ) : null}
+                </div>
+              ) : (
+                <span className="text-caption text-fg-subtle">—</span>
+              ),
+          } satisfies Column<FuncionarioListRow>,
+        ]
+      : []),
     {
       key: 'perfil',
       header: L.colPerfil,
@@ -432,6 +468,13 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
                                 <p className="truncate text-caption text-fg-muted">
                                   {row.email ?? '—'}
                                 </p>
+                                {row.cargo || row.telefone ? (
+                                  <p className="truncate text-caption text-fg-subtle">
+                                    {[row.cargo, row.telefone ? formatarTelefone(row.telefone) : null]
+                                      .filter(Boolean)
+                                      .join(' · ')}
+                                  </p>
+                                ) : null}
                                 <div className="mt-2 flex flex-wrap gap-1">
                                   <Badge className={perfilBadgeClass(row.perfil)}>
                                     {labelPerfil(row.perfil, L)}
@@ -462,6 +505,7 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
           labels={L.modal}
           atorPerfil={atorPerfil}
           funcionario={emEdicao}
+          dadosDisponiveis={dadosDisponiveis}
           onClose={() => {
             setModalAberto(false)
             setEmEdicao(null)
