@@ -412,6 +412,7 @@ export type Database = {
       comissoes_ajustes: {
         Row: {
           comissao_id: string
+          competencia: string | null
           created_at: string
           id: string
           idempotency_key: string
@@ -424,6 +425,7 @@ export type Database = {
         }
         Insert: {
           comissao_id: string
+          competencia?: string | null
           created_at?: string
           id?: string
           idempotency_key: string
@@ -436,6 +438,7 @@ export type Database = {
         }
         Update: {
           comissao_id?: string
+          competencia?: string | null
           created_at?: string
           id?: string
           idempotency_key?: string
@@ -851,6 +854,241 @@ export type Database = {
           },
         ]
       }
+      comissoes_periodo_vendedores: {
+        Row: {
+          ajustes: number
+          base: number
+          bonus_meta: number
+          comissao: number
+          operador_id: string
+          periodo_id: string
+          total: number
+          vendas: number
+        }
+        Insert: {
+          ajustes?: number
+          base?: number
+          bonus_meta?: number
+          comissao?: number
+          operador_id: string
+          periodo_id: string
+          total?: number
+          vendas?: number
+        }
+        Update: {
+          ajustes?: number
+          base?: number
+          bonus_meta?: number
+          comissao?: number
+          operador_id?: string
+          periodo_id?: string
+          total?: number
+          vendas?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comissoes_periodo_vendedores_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_periodo_vendedores_periodo_id_fkey"
+            columns: ["periodo_id"]
+            isOneToOne: false
+            referencedRelation: "comissoes_periodos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comissoes_periodos: {
+        Row: {
+          aprovado_em: string | null
+          aprovado_por: string | null
+          competencia: string
+          created_at: string
+          empresa_id: string
+          id: string
+          loja_id: string
+          pago_em: string | null
+          pago_por: string | null
+          revisado_em: string | null
+          revisado_por: string | null
+          status: string
+          total: number
+        }
+        Insert: {
+          aprovado_em?: string | null
+          aprovado_por?: string | null
+          competencia: string
+          created_at?: string
+          empresa_id: string
+          id?: string
+          loja_id: string
+          pago_em?: string | null
+          pago_por?: string | null
+          revisado_em?: string | null
+          revisado_por?: string | null
+          status?: string
+          total?: number
+        }
+        Update: {
+          aprovado_em?: string | null
+          aprovado_por?: string | null
+          competencia?: string
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          loja_id?: string
+          pago_em?: string | null
+          pago_por?: string | null
+          revisado_em?: string | null
+          revisado_por?: string | null
+          status?: string
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comissoes_periodos_aprovado_por_fkey"
+            columns: ["aprovado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_periodos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_periodos_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_periodos_pago_por_fkey"
+            columns: ["pago_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_periodos_revisado_por_fkey"
+            columns: ["revisado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comissoes_regras: {
+        Row: {
+          ativo: boolean
+          canal: string | null
+          cargo: string | null
+          categoria_id: string | null
+          created_at: string
+          created_by: string | null
+          descricao: string | null
+          empresa_id: string
+          id: string
+          loja_id: string | null
+          produto_id: string | null
+          tipo_calculo: string
+          updated_at: string
+          usuario_id: string | null
+          valor: number
+          vigencia_fim: string | null
+          vigencia_inicio: string
+        }
+        Insert: {
+          ativo?: boolean
+          canal?: string | null
+          cargo?: string | null
+          categoria_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          empresa_id: string
+          id?: string
+          loja_id?: string | null
+          produto_id?: string | null
+          tipo_calculo: string
+          updated_at?: string
+          usuario_id?: string | null
+          valor: number
+          vigencia_fim?: string | null
+          vigencia_inicio?: string
+        }
+        Update: {
+          ativo?: boolean
+          canal?: string | null
+          cargo?: string | null
+          categoria_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          empresa_id?: string
+          id?: string
+          loja_id?: string | null
+          produto_id?: string | null
+          tipo_calculo?: string
+          updated_at?: string
+          usuario_id?: string | null
+          valor?: number
+          vigencia_fim?: string | null
+          vigencia_inicio?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comissoes_regras_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "categorias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_regras_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_regras_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_regras_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_regras_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_regras_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comissoes_regras_funcionario: {
         Row: {
           ativo: boolean
@@ -1021,9 +1259,41 @@ export type Database = {
           },
         ]
       }
+      comissoes_regras_log: {
+        Row: {
+          acao: string
+          dados: Json
+          em: string
+          empresa_id: string
+          id: number
+          por: string | null
+          regra_id: string
+        }
+        Insert: {
+          acao: string
+          dados: Json
+          em?: string
+          empresa_id: string
+          id?: number
+          por?: string | null
+          regra_id: string
+        }
+        Update: {
+          acao?: string
+          dados?: Json
+          em?: string
+          empresa_id?: string
+          id?: number
+          por?: string | null
+          regra_id?: string
+        }
+        Relationships: [
+        ]
+      }
       comissoes_vendedores: {
         Row: {
           base_calculo: number
+          competencia: string | null
           created_at: string
           id: string
           loja_id: string
@@ -1040,6 +1310,7 @@ export type Database = {
         }
         Insert: {
           base_calculo?: number
+          competencia?: string | null
           created_at?: string
           id?: string
           loja_id: string
@@ -1056,6 +1327,7 @@ export type Database = {
         }
         Update: {
           base_calculo?: number
+          competencia?: string | null
           created_at?: string
           id?: string
           loja_id?: string
@@ -7224,6 +7496,67 @@ export type Database = {
         Returns: Json
       }
       configuracoes_para_caixa_web: { Args: never; Returns: Json }
+      comissao_periodo_transicionar: {
+        Args: {
+          p_competencia: string
+          p_loja_id: string
+          p_para: string
+        }
+        Returns: Json
+      }
+      comissao_relatorio_itens: {
+        Args: {
+          p_competencia: string
+          p_loja_id: string
+          p_operador_id: string
+        }
+        Returns: {
+          base: number
+          comissao: number
+          data: string
+          origem_regra: string
+          percentual: number
+          produto: string
+          quantidade: number
+          tipo_calculo: string
+          valor_fixo: number
+          venda_id: string
+        }[]
+      }
+      comissao_relatorio_vendedores: {
+        Args: {
+          p_competencia: string
+          p_loja_id: string
+        }
+        Returns: {
+          ajustes: number
+          base: number
+          bonus_meta: number
+          comissao: number
+          operador_id: string
+          operador_nome: string
+          status_periodo: string
+          total: number
+          vendas: number
+        }[]
+      }
+      comissao_simular_regra: {
+        Args: {
+          p_canal?: string
+          p_data?: string
+          p_loja_id: string
+          p_produto_id: string
+          p_vendedor_id: string
+        }
+        Returns: {
+          cargo: string
+          nivel: number
+          origem: string
+          regra_id: string
+          tipo_calculo: string
+          valor: number
+        }[]
+      }
       confirmar_importacao_nfe: {
         Args: { p_importacao_id: string }
         Returns: undefined
