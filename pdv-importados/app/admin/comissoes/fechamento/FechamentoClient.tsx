@@ -1,7 +1,8 @@
 'use client'
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { transicionarPeriodoComissao, type LinhaVendedorPeriodo, type StatusPeriodo } from '@/app/gerente/comissoes/moduloActions'
+import { exportContabilComissao, transicionarPeriodoComissao, type LinhaVendedorPeriodo, type StatusPeriodo } from '@/app/gerente/comissoes/moduloActions'
+import { gerarCsvContabil } from '@/lib/comissao/relatorio'
 import { SeletorMes } from '../_modulo/SeletorMes'
 import { StatusPeriodoBadge } from '../_modulo/StatusPeriodoBadge'
 import { TabelaVendedores } from '../_modulo/TabelaVendedores'
@@ -42,6 +43,18 @@ export function FechamentoClient({ competencia, status, linhas, t }: { competenc
               {t[a.chave]}
             </button>
           ))}
+          {status === 'APROVADO' || status === 'PAGO' ? (
+            <button type="button" data-testid="fech-export-contabil" disabled={pendente} className="rounded-md border border-jl-border-1 px-3 py-1.5 text-sm font-semibold"
+              onClick={() => start(async () => {
+                const r = await exportContabilComissao(competencia)
+                if (!r.success) { setMsg(r.error); return }
+                const url = URL.createObjectURL(new Blob([gerarCsvContabil(r.data)], { type: 'text/csv;charset=utf-8' }))
+                const a = document.createElement('a'); a.href = url; a.download = `comissoes-contabil-${competencia}.csv`; a.click()
+                setTimeout(() => URL.revokeObjectURL(url), 1000)
+              })}>
+              {t.fech_export_contabil}
+            </button>
+          ) : null}
         </div>
       </div>
       <p className="text-xs text-jl-fg-2">{t.fech_aviso}</p>

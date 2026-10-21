@@ -18,3 +18,14 @@ describe('relatório de comissão', () => {
     expect(csv.trim().split('\r\n').at(-1)).toBe('Total geral;3;200,09;10,20;-1,10;0,10;9,20')
   })
 })
+
+describe('exportação contábil', () => {
+  it('colunas fixas, decimal com vírgula', async () => {
+    const { gerarCsvContabil } = await import('./relatorio')
+    const csv = gerarCsvContabil([{ competencia: '2026-10', lojaCodigo: 'L1', lojaNome: 'Loja Centro', operadorId: 'u1', operadorNome: 'Ana', status: 'APROVADO',
+      base: 1000, comissao: 50, ajustes: -5, bonusMeta: 10, total: 55, aprovadoEm: '2026-11-01T12:00:00Z' }])
+    const [cab, l1] = csv.replace('\uFEFF', '').trim().split('\r\n')
+    expect(cab).toBe('competencia;loja_codigo;loja;colaborador_id;colaborador;status;base;comissao;ajustes;bonus_meta;total_a_pagar;aprovado_em')
+    expect(l1).toBe('2026-10;L1;Loja Centro;u1;Ana;APROVADO;1000,00;50,00;-5,00;10,00;55,00;2026-11-01T12:00:00Z')
+  })
+})

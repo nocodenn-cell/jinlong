@@ -50,3 +50,16 @@ export async function gerarPdfRelatorio(linhas: LinhaRelatorio[], h: CabecalhoRe
   linha([rotuloTotal, String(t.vendas), brl(t.base), brl(t.comissao), brl(t.ajustes), brl(t.bonusMeta), brl(t.total)], true)
   return doc.output('blob')
 }
+
+/** Arquivo para contabilidade/folha (somente arquivo; nada é lançado em sistema nenhum). */
+export type LinhaContabil = {
+  competencia: string; lojaCodigo: string | null; lojaNome: string; operadorId: string; operadorNome: string; status: string
+  base: number; comissao: number; ajustes: number; bonusMeta: number; total: number; aprovadoEm: string | null
+}
+export function gerarCsvContabil(linhas: LinhaContabil[]): string {
+  const cab = ['competencia', 'loja_codigo', 'loja', 'colaborador_id', 'colaborador', 'status', 'base', 'comissao', 'ajustes', 'bonus_meta', 'total_a_pagar', 'aprovado_em']
+  const out = [cab.join(';')]
+  for (const l of linhas)
+    out.push([l.competencia, l.lojaCodigo ?? '', l.lojaNome, l.operadorId, l.operadorNome, l.status, brl(l.base), brl(l.comissao), brl(l.ajustes), brl(l.bonusMeta), brl(l.total), l.aprovadoEm ?? ''].map((v) => esc(String(v))).join(';'))
+  return '\uFEFF' + out.join('\r\n') + '\r\n'
+}

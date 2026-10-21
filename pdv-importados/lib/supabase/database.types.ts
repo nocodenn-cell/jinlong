@@ -512,18 +512,21 @@ export type Database = {
         Row: {
           base: string
           empresa_id: string
+          liberacao: string
           updated_at: string
           updated_by: string | null
         }
         Insert: {
           base?: string
           empresa_id: string
+          liberacao?: string
           updated_at?: string
           updated_by?: string | null
         }
         Update: {
           base?: string
           empresa_id?: string
+          liberacao?: string
           updated_at?: string
           updated_by?: string | null
         }
@@ -540,6 +543,62 @@ export type Database = {
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comissoes_divisoes: {
+        Row: {
+          created_at: string
+          criado_por: string | null
+          loja_id: string
+          operador_secundario_id: string
+          percentual: number
+          venda_id: string
+        }
+        Insert: {
+          created_at?: string
+          criado_por?: string | null
+          loja_id: string
+          operador_secundario_id: string
+          percentual: number
+          venda_id: string
+        }
+        Update: {
+          created_at?: string
+          criado_por?: string | null
+          loja_id?: string
+          operador_secundario_id?: string
+          percentual?: number
+          venda_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comissoes_divisoes_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_divisoes_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_divisoes_operador_secundario_id_fkey"
+            columns: ["operador_secundario_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_divisoes_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "vendas"
             referencedColumns: ["id"]
           },
         ]
@@ -745,6 +804,80 @@ export type Database = {
             columns: ["venda_id"]
             isOneToOne: false
             referencedRelation: "vendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comissoes_metas: {
+        Row: {
+          ativo: boolean
+          cargo: string | null
+          competencia_fim: string | null
+          competencia_inicio: string
+          created_at: string
+          created_by: string | null
+          descricao: string | null
+          empresa_id: string
+          faixas: Json
+          id: string
+          loja_id: string | null
+          usuario_id: string | null
+        }
+        Insert: {
+          ativo?: boolean
+          cargo?: string | null
+          competencia_fim?: string | null
+          competencia_inicio: string
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          empresa_id: string
+          faixas: Json
+          id?: string
+          loja_id?: string | null
+          usuario_id?: string | null
+        }
+        Update: {
+          ativo?: boolean
+          cargo?: string | null
+          competencia_fim?: string | null
+          competencia_inicio?: string
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          empresa_id?: string
+          faixas?: Json
+          id?: string
+          loja_id?: string | null
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comissoes_metas_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_metas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_metas_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_metas_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
             referencedColumns: ["id"]
           },
         ]
@@ -7496,6 +7629,26 @@ export type Database = {
         Returns: Json
       }
       configuracoes_para_caixa_web: { Args: never; Returns: Json }
+      comissao_export_contabil: {
+        Args: {
+          p_competencia: string
+          p_loja_id: string
+        }
+        Returns: {
+          ajustes: number
+          aprovado_em: string
+          base: number
+          bonus_meta: number
+          comissao: number
+          competencia: string
+          loja_codigo: string
+          loja_nome: string
+          operador_id: string
+          operador_nome: string
+          status_periodo: string
+          total: number
+        }[]
+      }
       comissao_periodo_transicionar: {
         Args: {
           p_competencia: string
@@ -7539,6 +7692,14 @@ export type Database = {
           total: number
           vendas: number
         }[]
+      }
+      comissao_salvar_config: {
+        Args: {
+          p_base?: string
+          p_liberacao?: string
+          p_loja_id: string
+        }
+        Returns: Json
       }
       comissao_simular_regra: {
         Args: {
@@ -7605,6 +7766,14 @@ export type Database = {
           mensagem: string
           sucesso: boolean
         }[]
+      }
+      definir_divisao_comissao: {
+        Args: {
+          p_percentual?: number
+          p_segundo_id: string
+          p_venda_id: string
+        }
+        Returns: Json
       }
       definir_vendedor_venda: {
         Args: {
@@ -8334,6 +8503,23 @@ export type Database = {
       marcar_comissoes_pagas: {
         Args: { p_ids: string[]; p_loja_id: string; p_operador_id: string }
         Returns: number
+      }
+      minhas_comissoes: {
+        Args: {
+          p_meses?: number
+        }
+        Returns: {
+          ajustes: number
+          base: number
+          bonus_meta: number
+          comissao: number
+          competencia: string
+          loja_id: string
+          loja_nome: string
+          status_periodo: string
+          total: number
+          vendas: number
+        }[]
       }
       obter_estoque_disponivel_transferencia: {
         Args: { p_loja_id: string; p_produto_id: string }

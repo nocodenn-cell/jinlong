@@ -275,3 +275,167 @@ export async function transicionarPeriodoComissao(competencia: string, para: Sta
   revalidatePath('/admin/comissoes/fechamento')
   return { success: true, data: { status: ((data as { status?: StatusPeriodo } | null)?.status ?? para) } }
 }
+
+// ── P2: configuração, metas, divisão, exportação, autoatendimento ─────────────
+export type ConfigComissao = { base: 'LIQUIDA' | 'BRUTA'; liberacao: 'VENDA' | 'RECEBIMENTO' }
+export type FaixaMeta = { aPartirDe: number; bonusPct: number }
+export type MetaComissao = {
+  id: string; usuarioId: string | null; usuarioNome: string | null; cargo: string | null
+  competenciaInicio: string; competenciaFim: string | null; faixas: FaixaMeta[]; ativo: boolean; descricao: string | null
+}
+export type VendaDivisao = {
+  vendaId: string; data: string; operadorNome: string; valorComissao: number
+  secundarioId: string | null; secundarioNome: string | null; percentual: number | null
+}
+
+export async function painelMetasComissao(): Promise<ModuloResult<{
+  config: ConfigComissao; metas: MetaComissao[]; vendas: VendaDivisao[]; vendedores: { id: string; nome: string }[]
+}>> {
+  const c = await ctxGestor()
+  if (!c.ok) return { success: false, error: c.error }
+  const empresaId = await empresaDaLoja(c)
+  if (!empresaId) return { success: false, error: 'Empresa não encontrada.' }
+  const [cfg, metas, cvs, vend] = await Promise.all([
+    c.supabase.from('comissoes_config').select('base, liberacao').eq('empresa_id', empresaId).maybeSingle(),
+    c.supabase.from('comissoes_metas').select('*, usuarios:usuario_id(nome)').eq('empresa_id', empresaId).order('competencia_inicio', { ascending: false }),
+    c.supabase.from('comissoes_vendedores').select('venda_id, valor_comissao, created_at, usuarios:operador_id(nome)')
+      .eq('loja_id', c.lojaId).order('created_at', { ascending: false }).limit(50),
+    c.supabase.rpc('listar_vendedores_loja', { p_loja_id: c.lojaId }),
+  ])
+  if (metas.error) return { success: false, error: mensagemErroComSecao('Metas', metas.error.message) }
+  const ids = (cvs.data ?? []).map((r) => r.venda_id)
+  const divs = ids.length
+    ? await c.supabase.from('comissoes_divisoes').select('venda_id, percentual, operador_secundario_id, usuarios:operador_secundario_id(nome)').in('venda_id', ids)
+    : { data: [] as never[] }
+  type Div = { venda_id: string; percentual: number; operador_secundario_id: string; usuarios?: { nome: string } | null }
+  const porVenda = new Map(((divs.data ?? []) as unknown as Div[]).map((d) => [d.venda_id, d]))
+  type MetaRow = { id: string; usuario_id: string | null; cargo: string | null; competencia_inicio: string; competencia_fim: string | null; faixas: unknown; ativo: boolean; descricao: string | null; usuarios?: { nome: string } | null }
+  return {
+    success: true,
+    data: {
+      config: { base: (cfg.data?.base as ConfigComissao['base']) ?? 'LIQUIDA', liberacao: (cfg.data?.liberacao as ConfigComissao['liberacao']) ?? 'VENDA' },
+      metas: ((metas.data ?? []) as unknown as MetaRow[]).map((m) => ({
+        id: m.id, usuarioId: m.usuario_id, usuarioNome: m.usuarios?.nome ?? null, cargo: m.cargo,
+        competenciaInicio: m.competencia_inicio.slice(0, 7), competenciaFim: m.competencia_fim?.slice(0, 7) ?? null,
+        faixas: ((m.faixas as Array<{ a_partir_de: number; bonus_pct: number }>) ?? []).map((f) => ({ aPartirDe: Number(f.a_partir_de), bonusPct: Number(f.bonus_pct) })),
+        ativo: m.ativo, descricao: m.descricao,
+      })),
+      vendas: ((cvs.data ?? []) as unknown as Array<{ venda_id: string; valor_comissao: number; created_at: string; usuarios?: { nome: string } | null }>).map((r) => {
+        const d = porVenda.get(r.venda_id)
+        return {
+          vendaId: r.venda_id, data: r.created_at, operadorNome: r.usuarios?.nome ?? '—', valorComissao: Number(r.valor_comissao),
+          secundarioId: d?.operador_secundario_id ?? null, secundarioNome: d?.usuarios?.nome ?? null, percentual: d ? Number(d.percentual) : null,
+        }
+      }),
+      vendedores: ((vend.data ?? []) as Array<{ id: string | null; nome: string | null }>).filter((v): v is { id: string; nome: string | null } => !!v.id).map((v) => ({ id: v.id, nome: v.nome ?? '—' })),
+    },
+  }
+}
+
+export async function salvarConfigComissao(cfg: ConfigComissao): Promise<ModuloResult<ConfigComissao>> {
+  const p = z.object({ base: z.enum(['LIQUIDA', 'BRUTA']), liberacao: z.enum(['VENDA', 'RECEBIMENTO']) }).safeParse(cfg)
+  if (!p.success) return { success: false, error: 'Configuração inválida.' }
+  const c = await ctxGestor()
+  if (!c.ok) return { success: false, error: c.error }
+  const { error } = await c.supabase.rpc('comissao_salvar_config', { p_loja_id: c.lojaId, p_base: p.data.base, p_liberacao: p.data.liberacao })
+  if (error) return { success: false, error: mensagemErroComSecao('Configuração de comissão', error.message) }
+  revalidatePath('/admin/comissoes/metas')
+  return { success: true, data: p.data }
+}
+
+const metaSchema = z.object({
+  id: z.string().uuid().optional(),
+  usuarioId: z.string().uuid().nullable(),
+  cargo: z.string().trim().max(80).nullable(),
+  competenciaInicio: compSchema,
+  competenciaFim: compSchema.nullable(),
+  faixas: z.array(z.object({ aPartirDe: z.number().finite().min(0), bonusPct: z.number().finite().min(0).max(100) })).min(1).max(10)
+    .refine((fs) => fs.every((f, i) => i === 0 || f.aPartirDe > fs[i - 1].aPartirDe), { message: 'Faixas devem estar em ordem crescente.' }),
+  ativo: z.boolean(),
+  descricao: z.string().trim().max(200).nullable(),
+}).refine((m) => !(m.usuarioId && m.cargo), { message: 'Escolha funcionário OU cargo.' })
+  .refine((m) => !m.competenciaFim || m.competenciaFim >= m.competenciaInicio, { message: 'Fim antes do início.' })
+export type MetaInput = z.input<typeof metaSchema>
+
+export async function salvarMetaComissao(input: MetaInput): Promise<ModuloResult<{ id: string }>> {
+  const p = metaSchema.safeParse(input)
+  if (!p.success) return { success: false, error: p.error.issues[0]?.message ?? 'Dados inválidos.' }
+  const c = await ctxGestor()
+  if (!c.ok) return { success: false, error: c.error }
+  const empresaId = await empresaDaLoja(c)
+  if (!empresaId) return { success: false, error: 'Empresa não encontrada.' }
+  const m = p.data
+  const row = {
+    empresa_id: empresaId, usuario_id: m.usuarioId, cargo: m.cargo ? m.cargo.toLowerCase() : null,
+    competencia_inicio: `${m.competenciaInicio}-01`, competencia_fim: m.competenciaFim ? `${m.competenciaFim}-01` : null,
+    faixas: m.faixas.map((f) => ({ a_partir_de: f.aPartirDe, bonus_pct: f.bonusPct })), ativo: m.ativo, descricao: m.descricao || null,
+  }
+  const { data, error } = m.id
+    ? await c.supabase.from('comissoes_metas').update(row).eq('id', m.id).select('id').single()
+    : await c.supabase.from('comissoes_metas').insert(row).select('id').single()
+  if (error) return { success: false, error: mensagemErroComSecao('Metas', error.message) }
+  revalidatePath('/admin/comissoes/metas')
+  return { success: true, data: { id: data.id } }
+}
+
+export async function excluirMetaComissao(id: string): Promise<ModuloResult<null>> {
+  if (!z.string().uuid().safeParse(id).success) return { success: false, error: 'Meta inválida.' }
+  const c = await ctxGestor()
+  if (!c.ok) return { success: false, error: c.error }
+  const { error } = await c.supabase.from('comissoes_metas').delete().eq('id', id)
+  if (error) return { success: false, error: mensagemErroComSecao('Metas', error.message) }
+  revalidatePath('/admin/comissoes/metas')
+  return { success: true, data: null }
+}
+
+export async function definirDivisaoComissao(vendaId: string, segundoId: string | null, percentual: number): Promise<ModuloResult<null>> {
+  if (!z.string().uuid().safeParse(vendaId).success || (segundoId !== null && !z.string().uuid().safeParse(segundoId).success))
+    return { success: false, error: 'Dados inválidos.' }
+  if (!(percentual > 0 && percentual < 100)) return { success: false, error: 'Percentual entre 1 e 99.' }
+  const c = await ctxGestor()
+  if (!c.ok) return { success: false, error: c.error }
+  const { error } = await c.supabase.rpc('definir_divisao_comissao', { p_venda_id: vendaId, p_segundo_id: segundoId as string, p_percentual: percentual })
+  if (error) return { success: false, error: mensagemErroComSecao('Divisão de comissão', error.message) }
+  revalidatePath('/admin/comissoes/metas')
+  return { success: true, data: null }
+}
+
+export type LinhaExportContabil = {
+  competencia: string; lojaCodigo: string | null; lojaNome: string; operadorId: string; operadorNome: string; status: string
+  base: number; comissao: number; ajustes: number; bonusMeta: number; total: number; aprovadoEm: string | null
+}
+export async function exportContabilComissao(competencia: string): Promise<ModuloResult<LinhaExportContabil[]>> {
+  if (!compSchema.safeParse(competencia).success) return { success: false, error: 'Competência inválida.' }
+  const c = await ctxGestor()
+  if (!c.ok) return { success: false, error: c.error }
+  const { data, error } = await c.supabase.rpc('comissao_export_contabil', { p_loja_id: c.lojaId, p_competencia: `${competencia}-01` })
+  if (error) return { success: false, error: mensagemErroComSecao('Exportação contábil', error.message) }
+  return {
+    success: true,
+    data: ((data ?? []) as Array<Record<string, unknown>>).map((r) => ({
+      competencia: String(r.competencia).slice(0, 7), lojaCodigo: (r.loja_codigo as string | null) ?? null, lojaNome: String(r.loja_nome),
+      operadorId: String(r.operador_id), operadorNome: String(r.operador_nome), status: String(r.status_periodo),
+      base: Number(r.base), comissao: Number(r.comissao), ajustes: Number(r.ajustes), bonusMeta: Number(r.bonus_meta), total: Number(r.total),
+      aprovadoEm: (r.aprovado_em as string | null) ?? null,
+    })),
+  }
+}
+
+/** Autoatendimento: qualquer usuário logado vê SÓ as próprias comissões (RPC filtra por auth.uid()). */
+export type MinhaComissaoMes = {
+  lojaNome: string; competencia: string; status: StatusPeriodo; vendas: number; base: number; comissao: number; ajustes: number; bonusMeta: number; total: number
+}
+export async function minhasComissoes(meses = 6): Promise<ModuloResult<MinhaComissaoMes[]>> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Sessão expirada.' }
+  const { data, error } = await supabase.rpc('minhas_comissoes', { p_meses: Math.min(Math.max(Math.trunc(meses), 1), 24) })
+  if (error) return { success: false, error: mensagemErroComSecao('Minhas comissões', error.message) }
+  return {
+    success: true,
+    data: ((data ?? []) as Array<Record<string, unknown>>).map((r) => ({
+      lojaNome: String(r.loja_nome), competencia: String(r.competencia).slice(0, 7), status: r.status_periodo as StatusPeriodo,
+      vendas: Number(r.vendas), base: Number(r.base), comissao: Number(r.comissao), ajustes: Number(r.ajustes), bonusMeta: Number(r.bonus_meta), total: Number(r.total),
+    })),
+  }
+}
