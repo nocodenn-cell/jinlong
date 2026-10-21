@@ -2,7 +2,7 @@
   "name": "nature-code-hub",
   "private": true,
   "version": "0.1.0",
-  "description": "Nature Code · hub comercial privado (leads Jinlong/Venddi). App separado do ERP/PDV e do site.",
+  "description": "Nature Code \u00b7 hub comercial privado (leads Jinlong/Venddi). App separado do ERP/PDV e do site.",
   "scripts": {
     "dev": "next dev -p 3200",
     "build": "next build",
@@ -16,5 +16,11 @@
     "react": "19.2.5",
     "react-dom": "19.2.5",
     "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "typescript": "^5"
   }
 }
