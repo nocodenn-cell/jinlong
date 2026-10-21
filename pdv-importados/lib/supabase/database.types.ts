@@ -2562,6 +2562,99 @@ export type Database = {
           },
         ]
       }
+      empresa_modulos: {
+        Row: {
+          alterado_em: string
+          autorizado_por: string | null
+          empresa_id: string
+          habilitado: boolean
+          modulo_codigo: string
+          vigencia_fim: string | null
+          vigencia_inicio: string | null
+        }
+        Insert: {
+          alterado_em?: string
+          autorizado_por?: string | null
+          empresa_id: string
+          habilitado?: boolean
+          modulo_codigo: string
+          vigencia_fim?: string | null
+          vigencia_inicio?: string | null
+        }
+        Update: {
+          alterado_em?: string
+          autorizado_por?: string | null
+          empresa_id?: string
+          habilitado?: boolean
+          modulo_codigo?: string
+          vigencia_fim?: string | null
+          vigencia_inicio?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "empresa_modulos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "empresa_modulos_modulo_codigo_fkey"
+            columns: ["modulo_codigo"]
+            isOneToOne: false
+            referencedRelation: "modulos_catalogo"
+            referencedColumns: ["codigo"]
+          },
+        ]
+      }
+      empresa_modulos_historico: {
+        Row: {
+          acao: string
+          autorizado_por: string | null
+          empresa_id: string
+          id: number
+          modulo_codigo: string
+          motivo: string
+          origem: string
+          registrado_em: string
+        }
+        Insert: {
+          acao: string
+          autorizado_por?: string | null
+          empresa_id: string
+          id?: number
+          modulo_codigo: string
+          motivo: string
+          origem: string
+          registrado_em?: string
+        }
+        Update: {
+          acao?: string
+          autorizado_por?: string | null
+          empresa_id?: string
+          id?: number
+          modulo_codigo?: string
+          motivo?: string
+          origem?: string
+          registrado_em?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "empresa_modulos_historico_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "empresa_modulos_historico_modulo_codigo_fkey"
+            columns: ["modulo_codigo"]
+            isOneToOne: false
+            referencedRelation: "modulos_catalogo"
+            referencedColumns: ["codigo"]
+          },
+        ]
+      }
       empresas: {
         Row: {
           cnpj: string | null
@@ -3880,6 +3973,851 @@ export type Database = {
           },
         ]
       }
+      import_aprovacoes: {
+        Row: {
+          apuracao_id: string | null
+          decisao: string
+          em: string
+          empresa_id: string
+          id: string
+          motivo: string
+          operacao_id: string
+          por: string
+          verificacao: Json
+        }
+        Insert: {
+          apuracao_id?: string | null
+          decisao: string
+          em?: string
+          empresa_id: string
+          id?: string
+          motivo: string
+          operacao_id: string
+          por: string
+          verificacao?: Json
+        }
+        Update: {
+          apuracao_id?: string | null
+          decisao?: string
+          em?: string
+          empresa_id?: string
+          id?: string
+          motivo?: string
+          operacao_id?: string
+          por?: string
+          verificacao?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_aprovacoes_apuracao_id_fkey"
+            columns: ["apuracao_id"]
+            isOneToOne: false
+            referencedRelation: "import_apuracoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_aprovacoes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_aprovacoes_operacao_id_fkey"
+            columns: ["operacao_id"]
+            isOneToOne: false
+            referencedRelation: "import_operacoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_apuracao_itens: {
+        Row: {
+          apuracao_id: string
+          componentes_brl: Json
+          custo_total_brl: number
+          custo_unitario_brl: number
+          empresa_id: string
+          item_id: string
+          memoria: Json
+          produto_id: string | null
+          quantidade_estoque: number
+          residuo_total_brl: number
+          residuo_unitario_brl: number
+        }
+        Insert: {
+          apuracao_id: string
+          componentes_brl: Json
+          custo_total_brl: number
+          custo_unitario_brl: number
+          empresa_id: string
+          item_id: string
+          memoria: Json
+          produto_id?: string | null
+          quantidade_estoque: number
+          residuo_total_brl: number
+          residuo_unitario_brl: number
+        }
+        Update: {
+          apuracao_id?: string
+          componentes_brl?: Json
+          custo_total_brl?: number
+          custo_unitario_brl?: number
+          empresa_id?: string
+          item_id?: string
+          memoria?: Json
+          produto_id?: string | null
+          quantidade_estoque?: number
+          residuo_total_brl?: number
+          residuo_unitario_brl?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_apuracao_itens_apuracao_id_fkey"
+            columns: ["apuracao_id"]
+            isOneToOne: false
+            referencedRelation: "import_apuracoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_apuracao_itens_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_apuracao_itens_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "import_itens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_apuracao_rateios: {
+        Row: {
+          apuracao_id: string
+          base_item: number
+          base_total: number
+          componente: string
+          criterio: string
+          empresa_id: string
+          id: string
+          item_id: string
+          justificativa: string
+          origem_id: string
+          valor_alocado_brl: number
+        }
+        Insert: {
+          apuracao_id: string
+          base_item: number
+          base_total: number
+          componente: string
+          criterio: string
+          empresa_id: string
+          id?: string
+          item_id: string
+          justificativa: string
+          origem_id: string
+          valor_alocado_brl: number
+        }
+        Update: {
+          apuracao_id?: string
+          base_item?: number
+          base_total?: number
+          componente?: string
+          criterio?: string
+          empresa_id?: string
+          id?: string
+          item_id?: string
+          justificativa?: string
+          origem_id?: string
+          valor_alocado_brl?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_apuracao_rateios_apuracao_id_fkey"
+            columns: ["apuracao_id"]
+            isOneToOne: false
+            referencedRelation: "import_apuracoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_apuracao_rateios_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_apuracoes: {
+        Row: {
+          conservacao_ok: boolean
+          criado_em: string
+          criado_por: string
+          empresa_id: string
+          engine_version: string
+          entrada: Json
+          entrada_sha256: string
+          id: string
+          operacao_id: string
+          saida: Json
+          saida_sha256: string
+          status_calculo: string
+          tipo: string
+          versao: number
+          versao_dados: number
+        }
+        Insert: {
+          conservacao_ok: boolean
+          criado_em?: string
+          criado_por: string
+          empresa_id: string
+          engine_version: string
+          entrada: Json
+          entrada_sha256: string
+          id?: string
+          operacao_id: string
+          saida: Json
+          saida_sha256: string
+          status_calculo: string
+          tipo: string
+          versao: number
+          versao_dados: number
+        }
+        Update: {
+          conservacao_ok?: boolean
+          criado_em?: string
+          criado_por?: string
+          empresa_id?: string
+          engine_version?: string
+          entrada?: Json
+          entrada_sha256?: string
+          id?: string
+          operacao_id?: string
+          saida?: Json
+          saida_sha256?: string
+          status_calculo?: string
+          tipo?: string
+          versao?: number
+          versao_dados?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_apuracoes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_apuracoes_operacao_id_fkey"
+            columns: ["operacao_id"]
+            isOneToOne: false
+            referencedRelation: "import_operacoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_auditoria: {
+        Row: {
+          acao: string
+          detalhe: Json
+          em: string
+          empresa_id: string
+          entidade: string
+          entidade_id: string | null
+          id: number
+          operacao_id: string | null
+          por: string | null
+        }
+        Insert: {
+          acao: string
+          detalhe?: Json
+          em?: string
+          empresa_id: string
+          entidade: string
+          entidade_id?: string | null
+          id?: number
+          operacao_id?: string | null
+          por?: string | null
+        }
+        Update: {
+          acao?: string
+          detalhe?: Json
+          em?: string
+          empresa_id?: string
+          entidade?: string
+          entidade_id?: string | null
+          id?: number
+          operacao_id?: string | null
+          por?: string | null
+        }
+        Relationships: []
+      }
+      import_cambios: {
+        Row: {
+          data: string
+          documento_id: string | null
+          empresa_id: string
+          fonte: string
+          id: string
+          moeda: string
+          operacao_id: string
+          taxa: number
+        }
+        Insert: {
+          data: string
+          documento_id?: string | null
+          empresa_id: string
+          fonte: string
+          id?: string
+          moeda: string
+          operacao_id: string
+          taxa: number
+        }
+        Update: {
+          data?: string
+          documento_id?: string | null
+          empresa_id?: string
+          fonte?: string
+          id?: string
+          moeda?: string
+          operacao_id?: string
+          taxa?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_cambios_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_cambios_operacao_id_fkey"
+            columns: ["operacao_id"]
+            isOneToOne: false
+            referencedRelation: "import_operacoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_descontos: {
+        Row: {
+          criterio: string | null
+          documento_id: string | null
+          empresa_id: string
+          escopo: string
+          id: string
+          item_id: string | null
+          justificativa: string
+          moeda: string
+          operacao_id: string
+          valor: number
+        }
+        Insert: {
+          criterio?: string | null
+          documento_id?: string | null
+          empresa_id: string
+          escopo: string
+          id?: string
+          item_id?: string | null
+          justificativa: string
+          moeda: string
+          operacao_id: string
+          valor: number
+        }
+        Update: {
+          criterio?: string | null
+          documento_id?: string | null
+          empresa_id?: string
+          escopo?: string
+          id?: string
+          item_id?: string | null
+          justificativa?: string
+          moeda?: string
+          operacao_id?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_descontos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_descontos_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "import_itens"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_descontos_operacao_id_fkey"
+            columns: ["operacao_id"]
+            isOneToOne: false
+            referencedRelation: "import_operacoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_despesas: {
+        Row: {
+          atribuicao_modo: string
+          criterio: string | null
+          documento_id: string | null
+          empresa_id: string
+          id: string
+          incorporavel: string
+          item_id: string | null
+          justificativa: string
+          moeda: string
+          operacao_id: string
+          status_conferencia: string
+          tipo: string
+          valor: number
+        }
+        Insert: {
+          atribuicao_modo: string
+          criterio?: string | null
+          documento_id?: string | null
+          empresa_id: string
+          id?: string
+          incorporavel: string
+          item_id?: string | null
+          justificativa: string
+          moeda: string
+          operacao_id: string
+          status_conferencia?: string
+          tipo: string
+          valor: number
+        }
+        Update: {
+          atribuicao_modo?: string
+          criterio?: string | null
+          documento_id?: string | null
+          empresa_id?: string
+          id?: string
+          incorporavel?: string
+          item_id?: string | null
+          justificativa?: string
+          moeda?: string
+          operacao_id?: string
+          status_conferencia?: string
+          tipo?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_despesas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_despesas_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "import_itens"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_despesas_operacao_id_fkey"
+            columns: ["operacao_id"]
+            isOneToOne: false
+            referencedRelation: "import_operacoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_divergencias: {
+        Row: {
+          apuracao_id: string
+          codigo: string
+          empresa_id: string
+          id: string
+          mensagem: string
+          referencia: string
+          severidade: string
+        }
+        Insert: {
+          apuracao_id: string
+          codigo: string
+          empresa_id: string
+          id?: string
+          mensagem: string
+          referencia: string
+          severidade: string
+        }
+        Update: {
+          apuracao_id?: string
+          codigo?: string
+          empresa_id?: string
+          id?: string
+          mensagem?: string
+          referencia?: string
+          severidade?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_divergencias_apuracao_id_fkey"
+            columns: ["apuracao_id"]
+            isOneToOne: false
+            referencedRelation: "import_apuracoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_divergencias_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_documentos: {
+        Row: {
+          data_documento: string | null
+          empresa_id: string
+          enviado_em: string
+          enviado_por: string
+          id: string
+          mime_type: string | null
+          numero: string | null
+          operacao_id: string
+          sha256: string | null
+          storage_bucket: string | null
+          storage_path: string | null
+          substitui_documento_id: string | null
+          tamanho_bytes: number | null
+          tipo: string
+          versao: number
+        }
+        Insert: {
+          data_documento?: string | null
+          empresa_id: string
+          enviado_em?: string
+          enviado_por: string
+          id?: string
+          mime_type?: string | null
+          numero?: string | null
+          operacao_id: string
+          sha256?: string | null
+          storage_bucket?: string | null
+          storage_path?: string | null
+          substitui_documento_id?: string | null
+          tamanho_bytes?: number | null
+          tipo: string
+          versao?: number
+        }
+        Update: {
+          data_documento?: string | null
+          empresa_id?: string
+          enviado_em?: string
+          enviado_por?: string
+          id?: string
+          mime_type?: string | null
+          numero?: string | null
+          operacao_id?: string
+          sha256?: string | null
+          storage_bucket?: string | null
+          storage_path?: string | null
+          substitui_documento_id?: string | null
+          tamanho_bytes?: number | null
+          tipo?: string
+          versao?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_documentos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_documentos_operacao_id_fkey"
+            columns: ["operacao_id"]
+            isOneToOne: false
+            referencedRelation: "import_operacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_documentos_substitui_documento_id_fkey"
+            columns: ["substitui_documento_id"]
+            isOneToOne: false
+            referencedRelation: "import_documentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_itens: {
+        Row: {
+          codigo_fornecedor: string | null
+          descricao: string
+          documento_id: string | null
+          empresa_id: string
+          fator_para_estoque: number
+          id: string
+          moeda: string
+          ncm: string | null
+          operacao_id: string
+          peso_bruto_kg: number | null
+          peso_liquido_kg: number | null
+          produto_id: string | null
+          quantidade_comercial: number
+          quantidade_estoque: number
+          unidade_comercial: string
+          valor_aduaneiro_brl: number | null
+          valor_mercadoria_moeda: number
+          volume_m3: number | null
+        }
+        Insert: {
+          codigo_fornecedor?: string | null
+          descricao: string
+          documento_id?: string | null
+          empresa_id: string
+          fator_para_estoque: number
+          id?: string
+          moeda: string
+          ncm?: string | null
+          operacao_id: string
+          peso_bruto_kg?: number | null
+          peso_liquido_kg?: number | null
+          produto_id?: string | null
+          quantidade_comercial: number
+          quantidade_estoque: number
+          unidade_comercial: string
+          valor_aduaneiro_brl?: number | null
+          valor_mercadoria_moeda: number
+          volume_m3?: number | null
+        }
+        Update: {
+          codigo_fornecedor?: string | null
+          descricao?: string
+          documento_id?: string | null
+          empresa_id?: string
+          fator_para_estoque?: number
+          id?: string
+          moeda?: string
+          ncm?: string | null
+          operacao_id?: string
+          peso_bruto_kg?: number | null
+          peso_liquido_kg?: number | null
+          produto_id?: string | null
+          quantidade_comercial?: number
+          quantidade_estoque?: number
+          unidade_comercial?: string
+          valor_aduaneiro_brl?: number | null
+          valor_mercadoria_moeda?: number
+          volume_m3?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_itens_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_itens_operacao_id_fkey"
+            columns: ["operacao_id"]
+            isOneToOne: false
+            referencedRelation: "import_operacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_itens_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_itens_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos_custos"
+            referencedColumns: ["produto_id"]
+          },
+          {
+            foreignKeyName: "import_itens_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_itens_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_operacoes: {
+        Row: {
+          apuracao_aprovada_id: string | null
+          atualizado_em: string
+          criado_em: string
+          criado_por: string
+          data_desembaraco: string | null
+          data_embarque: string | null
+          data_invoice: string | null
+          descricao: string | null
+          empresa_id: string
+          fornecedor_id: string | null
+          id: string
+          loja_importadora_id: string
+          moeda: string | null
+          referencia: string
+          status: string
+          versao_dados: number
+        }
+        Insert: {
+          apuracao_aprovada_id?: string | null
+          atualizado_em?: string
+          criado_em?: string
+          criado_por: string
+          data_desembaraco?: string | null
+          data_embarque?: string | null
+          data_invoice?: string | null
+          descricao?: string | null
+          empresa_id: string
+          fornecedor_id?: string | null
+          id?: string
+          loja_importadora_id: string
+          moeda?: string | null
+          referencia: string
+          status?: string
+          versao_dados?: number
+        }
+        Update: {
+          apuracao_aprovada_id?: string | null
+          atualizado_em?: string
+          criado_em?: string
+          criado_por?: string
+          data_desembaraco?: string | null
+          data_embarque?: string | null
+          data_invoice?: string | null
+          descricao?: string | null
+          empresa_id?: string
+          fornecedor_id?: string | null
+          id?: string
+          loja_importadora_id?: string
+          moeda?: string | null
+          referencia?: string
+          status?: string
+          versao_dados?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_operacoes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_operacoes_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_operacoes_loja_empresa_fk"
+            columns: ["loja_importadora_id", "empresa_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id", "empresa_id"]
+          },
+        ]
+      }
+      import_tributos: {
+        Row: {
+          data_fato_gerador: string | null
+          documento_id: string | null
+          empresa_id: string
+          id: string
+          item_id: string | null
+          operacao_id: string
+          regra_id: string | null
+          regra_incorpora_custo: boolean | null
+          regra_vigencia_fim: string | null
+          regra_vigencia_inicio: string | null
+          status_conferencia: string
+          status_recuperabilidade: string
+          tributo_codigo: string
+          validado_por: string | null
+          valor_apurado_brl: number
+        }
+        Insert: {
+          data_fato_gerador?: string | null
+          documento_id?: string | null
+          empresa_id: string
+          id?: string
+          item_id?: string | null
+          operacao_id: string
+          regra_id?: string | null
+          regra_incorpora_custo?: boolean | null
+          regra_vigencia_fim?: string | null
+          regra_vigencia_inicio?: string | null
+          status_conferencia?: string
+          status_recuperabilidade: string
+          tributo_codigo: string
+          validado_por?: string | null
+          valor_apurado_brl: number
+        }
+        Update: {
+          data_fato_gerador?: string | null
+          documento_id?: string | null
+          empresa_id?: string
+          id?: string
+          item_id?: string | null
+          operacao_id?: string
+          regra_id?: string | null
+          regra_incorpora_custo?: boolean | null
+          regra_vigencia_fim?: string | null
+          regra_vigencia_inicio?: string | null
+          status_conferencia?: string
+          status_recuperabilidade?: string
+          tributo_codigo?: string
+          validado_por?: string | null
+          valor_apurado_brl?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_tributos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_tributos_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "import_itens"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_tributos_operacao_id_fkey"
+            columns: ["operacao_id"]
+            isOneToOne: false
+            referencedRelation: "import_operacoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       importacoes_nfe: {
         Row: {
           chave_acesso: string
@@ -4403,6 +5341,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      modulos_catalogo: {
+        Row: {
+          codigo: string
+          created_at: string
+          descricao: string
+        }
+        Insert: {
+          codigo: string
+          created_at?: string
+          descricao: string
+        }
+        Update: {
+          codigo?: string
+          created_at?: string
+          descricao?: string
+        }
+        Relationships: []
       }
       movimentacoes_caixa: {
         Row: {
@@ -7428,6 +8384,53 @@ export type Database = {
       }
     }
     Functions: {
+      _fp_import_usuario_pode: {
+        Args: { p_operacao: string; p_papeis: string[]; p_usuario: string }
+        Returns: boolean
+      }
+      _import_auditar: {
+        Args: {
+          p_acao: string
+          p_detalhe: Json
+          p_empresa: string
+          p_entidade: string
+          p_entidade_id: string
+          p_operacao: string
+        }
+        Returns: undefined
+      }
+      _import_fornecedor_da_empresa: {
+        Args: { p_empresa: string; p_fornecedor: string }
+        Returns: boolean
+      }
+      _import_montar_entrada: { Args: { p_operacao: string }; Returns: Json }
+      _import_operacao_para_escrita: {
+        Args: { p_operacao: string }
+        Returns: {
+          apuracao_aprovada_id: string | null
+          atualizado_em: string
+          criado_em: string
+          criado_por: string
+          data_desembaraco: string | null
+          data_embarque: string | null
+          data_invoice: string | null
+          descricao: string | null
+          empresa_id: string
+          fornecedor_id: string | null
+          id: string
+          loja_importadora_id: string
+          moeda: string | null
+          referencia: string
+          status: string
+          versao_dados: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "import_operacoes"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       _oc_abater_por_produto: {
         Args: {
           p_entrada_id: string
@@ -8315,6 +9318,10 @@ export type Database = {
       }
       fp_eh_plataforma: { Args: never; Returns: boolean }
       fp_empresa_contexto: { Args: { p_loja?: string }; Returns: string }
+      fp_empresa_contexto_modulo: {
+        Args: { p_empresa?: string; p_modulo: string; p_papeis?: string[] }
+        Returns: string
+      }
       fp_empresa_da_loja: { Args: { p_loja: string }; Returns: string }
       fp_empresa_operacional: { Args: { p_empresa: string }; Returns: boolean }
       fp_empresa_tem_recurso: {
@@ -8325,7 +9332,16 @@ export type Database = {
       fp_empresas_do_usuario: { Args: never; Returns: string[] }
       fp_empresas_do_usuario_como_dono: { Args: never; Returns: string[] }
       fp_empresas_gerenciais_do_usuario: { Args: never; Returns: string[] }
+      fp_import_pode_objeto: {
+        Args: { p_bucket: string; p_nome: string; p_papeis?: string[] }
+        Returns: boolean
+      }
+      fp_import_pode_operacao: {
+        Args: { p_operacao: string; p_papeis?: string[] }
+        Returns: boolean
+      }
       fp_loja_de: { Args: { p_id: string; p_tipo: string }; Returns: string }
+      fp_lojas_cerca: { Args: never; Returns: string[] }
       fp_lojas_permitidas: { Args: { p_papeis?: string[] }; Returns: string[] }
       fp_lojas_permitidas_arr: { Args: never; Returns: string[] }
       fp_mesma_empresa: {
@@ -8334,6 +9350,10 @@ export type Database = {
       }
       fp_minha_assinatura: { Args: never; Returns: Json }
       fp_minhas_faturas: { Args: { p_limite?: number }; Returns: Json }
+      fp_modulo_ativo: {
+        Args: { p_empresa: string; p_modulo: string }
+        Returns: boolean
+      }
       fp_pdv_config_id: { Args: { p_loja?: string }; Returns: number }
       fp_pode_empresa: { Args: { p_empresa: string }; Returns: boolean }
       fp_pode_loja: {
@@ -8341,6 +9361,14 @@ export type Database = {
         Returns: boolean
       }
       fp_pode_loja_nula: { Args: { p_loja: string }; Returns: boolean }
+      fp_pode_modulo: {
+        Args: { p_empresa: string; p_modulo: string; p_papeis?: string[] }
+        Returns: boolean
+      }
+      fp_pode_operar_loja: {
+        Args: { p_loja: string; p_papeis?: string[] }
+        Returns: boolean
+      }
       fp_recursos_empresa: { Args: { p_empresa: string }; Returns: string[] }
       fp_usuario_ativo: { Args: never; Returns: boolean }
       fp_usuario_pode_loja: {
@@ -8364,6 +9392,109 @@ export type Database = {
           p_visao?: string
         }
         Returns: Json
+      }
+      import_aprovar_apuracao: {
+        Args: {
+          p_apuracao: string
+          p_ator: string
+          p_motivo: string
+          p_verificacao: Json
+        }
+        Returns: undefined
+      }
+      import_atualizar_operacao: {
+        Args: { p_dados: Json; p_operacao: string }
+        Returns: undefined
+      }
+      import_buscar_produtos: {
+        Args: { p_ids?: string[]; p_termo?: string }
+        Returns: {
+          id: string
+          nome: string
+        }[]
+      }
+      import_conferir_lancamento: {
+        Args: {
+          p_id: string
+          p_operacao: string
+          p_status: string
+          p_tipo: string
+        }
+        Returns: undefined
+      }
+      import_criar_operacao: {
+        Args: {
+          p_descricao?: string
+          p_loja_importadora: string
+          p_referencia: string
+        }
+        Returns: string
+      }
+      import_listar_operacoes: {
+        Args: never
+        Returns: {
+          aprovada_custo_total: string
+          atualizado_em: string
+          criado_em: string
+          data_invoice: string
+          fornecedor_id: string
+          fornecedor_nome: string
+          id: string
+          loja_importadora_id: string
+          moeda: string
+          n_itens: number
+          referencia: string
+          status: string
+          ultima_apuracao_atual: boolean
+          ultima_apuracao_bloqueantes: number
+          ultima_apuracao_custo_total: string
+          ultima_apuracao_id: string
+          ultima_apuracao_status: string
+          ultima_apuracao_tipo: string
+          ultima_apuracao_versao: number
+        }[]
+      }
+      import_montar_entrada: { Args: { p_operacao: string }; Returns: Json }
+      import_mudar_estado: {
+        Args: { p_acao: string; p_motivo: string; p_operacao: string }
+        Returns: undefined
+      }
+      import_registrar_apuracao: {
+        Args: {
+          p_entrada_sha256: string
+          p_operacao: string
+          p_saida: Json
+          p_saida_sha256: string
+          p_tipo: string
+          p_versao_dados: number
+        }
+        Returns: string
+      }
+      import_registrar_documento: {
+        Args: {
+          p_data: string
+          p_mime: string
+          p_numero: string
+          p_operacao: string
+          p_sha256: string
+          p_storage_path: string
+          p_substitui?: string
+          p_tamanho: number
+          p_tipo: string
+        }
+        Returns: string
+      }
+      import_remover_rascunho: {
+        Args: { p_id: string; p_operacao: string; p_tipo: string }
+        Returns: undefined
+      }
+      import_salvar_item: {
+        Args: { p_item: Json; p_operacao: string }
+        Returns: string
+      }
+      import_salvar_lancamento: {
+        Args: { p_dados: Json; p_operacao: string; p_tipo: string }
+        Returns: string
       }
       importar_nfe_transacao: {
         Args: {
@@ -8594,6 +9725,17 @@ export type Database = {
           valor_inicial: number
           valor_sistema_dinheiro: number
         }[]
+      }
+      ops_definir_modulo_empresa: {
+        Args: {
+          p_autorizado_por: string
+          p_empresa: string
+          p_habilitado: boolean
+          p_modulo: string
+          p_motivo: string
+          p_origem?: string
+        }
+        Returns: undefined
       }
       pdv_config_flags_visuais: {
         Args: never
