@@ -3368,6 +3368,57 @@ export type Database = {
           },
         ]
       }
+      funcionario_dados: {
+        Row: {
+          cargo: string | null
+          cpf: string | null
+          created_at: string
+          data_admissao: string | null
+          empresa_id: string
+          observacoes: string | null
+          telefone: string | null
+          updated_at: string
+          usuario_id: string
+        }
+        Insert: {
+          cargo?: string | null
+          cpf?: string | null
+          created_at?: string
+          data_admissao?: string | null
+          empresa_id: string
+          observacoes?: string | null
+          telefone?: string | null
+          updated_at?: string
+          usuario_id: string
+        }
+        Update: {
+          cargo?: string | null
+          cpf?: string | null
+          created_at?: string
+          data_admissao?: string | null
+          empresa_id?: string
+          observacoes?: string | null
+          telefone?: string | null
+          updated_at?: string
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funcionario_dados_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "funcionario_dados_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: true
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       funcionarios: {
         Row: {
           ativo: boolean
@@ -8273,6 +8324,7 @@ export type Database = {
       fp_empresas_arr: { Args: never; Returns: string[] }
       fp_empresas_do_usuario: { Args: never; Returns: string[] }
       fp_empresas_do_usuario_como_dono: { Args: never; Returns: string[] }
+      fp_empresas_gerenciais_do_usuario: { Args: never; Returns: string[] }
       fp_loja_de: { Args: { p_id: string; p_tipo: string }; Returns: string }
       fp_lojas_permitidas: { Args: { p_papeis?: string[] }; Returns: string[] }
       fp_lojas_permitidas_arr: { Args: never; Returns: string[] }

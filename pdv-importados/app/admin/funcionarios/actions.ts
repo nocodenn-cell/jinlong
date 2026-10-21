@@ -13,6 +13,14 @@ import {
   podeEditarAlvo,
   type PerfilFuncionarioUi,
 } from './funcionarioPolicies'
+import {
+  mascararCpf,
+  normalizarDados,
+  temAlgumDado,
+  type DadosEntrada,
+  type DadosErro,
+  type FuncionarioDados,
+} from './funcionarioDados'
 
 export type FuncionarioListRow = {
   id: string
@@ -22,6 +30,11 @@ export type FuncionarioListRow = {
   idioma_preferido: string
   ativo: boolean
   created_at: string
+  /** Dados complementares resumidos para a lista. CPF sempre mascarado aqui. */
+  cargo: string | null
+  telefone: string | null
+  cpf_mascarado: string | null
+  data_admissao: string | null
 }
 
 export type ActionOk<T> = { ok: true; data: T }
@@ -46,6 +59,78 @@ const UpdateSchema = z.object({
 
 function fail(error: string): ActionErr {
   return { ok: false, error }
+}
+
+const DADOS_ERRO_MSG: Record<DadosErro, string> = {
+  cpf: 'CPF inválido. Confira os dígitos.',
+  telefone: 'Telefone/WhatsApp inválido. Use DDD + número.',
+  cargo: 'Cargo/função muito longo (máx. 80 caracteres).',
+  data_admissao: 'Data de admissão inválida.',
+  observacoes: 'Observações muito longas (máx. 1000 caracteres).',
+}
+
+type AdminClient = ReturnType<typeof createAdminClient>
+type DadosRow = FuncionarioDados & { usuario_id: string }
+
+/** Tabela ainda não criada (migration 20261021190000 não aplicada) ⇒ recurso fica oculto, sem quebrar nada. */
+function isTabelaAusente(err: { code?: string; message?: string } | null): boolean {
+  if (!err) return false
+  return err.code === '42P01' || err.code === 'PGRST205' || /funcionario_dados/i.test(err.message ?? '') && /not find|does not exist|schema cache/i.test(err.message ?? '')
+}
+
+async function carregarDados(
+  admin: AdminClient,
+  ids: string[],
+): Promise<{ disponivel: boolean; porId: Map<string, DadosRow> }> {
+  const porId = new Map<string, DadosRow>()
+  if (ids.length === 0) {
+    const probe = await admin.from('funcionario_dados').select('usuario_id').limit(1)
+    return { disponivel: !isTabelaAusente(probe.error), porId }
+  }
+  const { data, error } = await admin
+    .from('funcionario_dados')
+    .select('usuario_id, telefone, cpf, cargo, data_admissao, observacoes')
+    .in('usuario_id', ids)
+  if (error) {
+    if (!isTabelaAusente(error)) console.error('[funcionarios.dados.load]', error.message)
+    return { disponivel: !isTabelaAusente(error), porId }
+  }
+  for (const r of data ?? []) porId.set(r.usuario_id, r)
+  return { disponivel: true, porId }
+}
+
+async function empresaDaLoja(admin: AdminClient, lojaId: string): Promise<string | null> {
+  const { data } = await admin.from('lojas').select('empresa_id').eq('id', lojaId).maybeSingle()
+  return (data as { empresa_id?: string | null } | null)?.empresa_id ?? null
+}
+
+/** Grava (upsert) os dados complementares. Retorna mensagem de erro amigável ou null. */
+async function salvarDados(
+  admin: AdminClient,
+  usuarioId: string,
+  lojaId: string,
+  dados: FuncionarioDados,
+  existia: boolean,
+): Promise<string | null> {
+  if (!existia && !temAlgumDado(dados)) return null
+  const empresaId = await empresaDaLoja(admin, lojaId)
+  if (!empresaId) return 'Loja sem empresa vinculada.'
+  const { error } = await admin
+    .from('funcionario_dados')
+    .upsert({ usuario_id: usuarioId, empresa_id: empresaId, ...dados }, { onConflict: 'usuario_id' })
+  if (!error) return null
+  if (isTabelaAusente(error)) return 'Dados complementares ainda não estão disponíveis nesta instalação.'
+  if (error.code === '23505') return 'Já existe um funcionário com este CPF nesta empresa.'
+  return error.message
+}
+
+function resumoDados(d: DadosRow | undefined) {
+  return {
+    cargo: d?.cargo ?? null,
+    telefone: d?.telefone ?? null,
+    cpf_mascarado: mascararCpf(d?.cpf),
+    data_admissao: d?.data_admissao ?? null,
+  }
 }
 
 function revalidateFuncionarios(): void {
@@ -80,6 +165,7 @@ async function mapRow(
     ativo: boolean | null
     created_at: string
   },
+  dados?: DadosRow,
 ): Promise<FuncionarioListRow> {
   return {
     id: row.id,
@@ -89,6 +175,7 @@ async function mapRow(
     idioma_preferido: row.idioma_preferido,
     ativo: row.ativo !== false,
     created_at: row.created_at,
+    ...resumoDados(dados),
   }
 }
 
@@ -107,10 +194,49 @@ export async function listarFuncionariosAction(): Promise<ActionResult<Funcionar
 
     if (error) return fail(error.message)
 
-    const rows = await Promise.all((data ?? []).map((r) => mapRow(admin, r)))
+    const { porId } = await carregarDados(admin, (data ?? []).map((r) => r.id))
+    const rows = await Promise.all((data ?? []).map((r) => mapRow(admin, r, porId.get(r.id))))
     return { ok: true, data: rows }
   } catch (e) {
     return fail(e instanceof Error ? e.message : 'Erro ao listar funcionários.')
+  }
+}
+
+/** Indica se a tabela de dados complementares existe (migration aplicada). */
+export async function dadosComplementaresDisponiveisAction(): Promise<boolean> {
+  const gate = await requireLojaSession()
+  if (!gate.ok) return false
+  try {
+    return (await carregarDados(createAdminClient(), [])).disponivel
+  } catch {
+    return false
+  }
+}
+
+/** Dados completos (CPF sem máscara) para o formulário de edição. Só DONO/GERENTE (gate) da mesma loja. */
+export async function obterDadosFuncionarioAction(id: string): Promise<ActionResult<FuncionarioDados | null>> {
+  const gate = await requireLojaSession()
+  if (!gate.ok) return fail(gate.error)
+  if (!z.string().uuid().safeParse(id).success) return fail('Identificador inválido.')
+  try {
+    const admin = createAdminClient()
+    const { data: alvo } = await admin.from('usuarios').select('id, loja_id').eq('id', id).maybeSingle()
+    if (!alvo || alvo.loja_id !== gate.session.lojaId) return fail('Funcionário não encontrado.')
+    const { disponivel, porId } = await carregarDados(admin, [id])
+    if (!disponivel) return { ok: true, data: null }
+    const d = porId.get(id)
+    return {
+      ok: true,
+      data: {
+        telefone: d?.telefone ?? null,
+        cpf: d?.cpf ?? null,
+        cargo: d?.cargo ?? null,
+        data_admissao: d?.data_admissao ?? null,
+        observacoes: d?.observacoes ?? null,
+      },
+    }
+  } catch (e) {
+    return fail(e instanceof Error ? e.message : 'Erro ao carregar dados.')
   }
 }
 
@@ -120,6 +246,7 @@ export async function criarFuncionarioAction(input: {
   perfil: PerfilFuncionarioUi
   idioma_preferido: 'pt' | 'zh'
   senha: string
+  dados?: DadosEntrada
 }): Promise<ActionResult<FuncionarioListRow>> {
   const gate = await requireLojaSession()
   if (!gate.ok) return fail(gate.error)
@@ -133,6 +260,9 @@ export async function criarFuncionarioAction(input: {
 
   const senhaCheck = validateNewPassword(parsed.data.senha, parsed.data.senha)
   if (!senhaCheck.ok) return fail(`A senha deve ter pelo menos ${PASSWORD_MIN_LENGTH} caracteres.`)
+
+  const dadosNorm = normalizarDados(input.dados)
+  if (!dadosNorm.ok) return fail(DADOS_ERRO_MSG[dadosNorm.campo])
 
   let createdUserId: string | null = null
   try {
@@ -187,7 +317,15 @@ export async function criarFuncionarioAction(input: {
       return fail('Não foi possível vincular o funcionário a esta loja.')
     }
 
+    // Dados complementares são opcionais: falha aqui não desfaz a conta (login já funciona),
+    // mas é reportada para o gestor corrigir na edição.
+    let avisoDados: string | null = null
+    if (temAlgumDado(dadosNorm.data)) {
+      avisoDados = await salvarDados(admin, created.user.id, gate.session.lojaId!, dadosNorm.data, false)
+    }
+
     revalidateFuncionarios()
+    if (avisoDados) return fail(`Funcionário criado, mas os dados complementares não foram salvos: ${avisoDados}`)
     const row = await mapRow(admin, {
       id: created.user.id,
       nome: parsed.data.nome,
@@ -195,7 +333,7 @@ export async function criarFuncionarioAction(input: {
       idioma_preferido: parsed.data.idioma_preferido,
       ativo: true,
       created_at: new Date().toISOString(),
-    })
+    }, { usuario_id: created.user.id, ...dadosNorm.data })
     return { ok: true, data: row }
   } catch (e) {
     if (createdUserId) {
@@ -216,12 +354,17 @@ export async function atualizarFuncionarioAction(input: {
   perfil: PerfilFuncionarioUi
   idioma_preferido: 'pt' | 'zh'
   senhaNova?: string
+  /** Ausente = não mexe nos dados complementares (compatível com chamadas antigas). */
+  dados?: DadosEntrada
 }): Promise<ActionResult<FuncionarioListRow>> {
   const gate = await requireLojaSession()
   if (!gate.ok) return fail(gate.error)
 
   const parsed = UpdateSchema.safeParse(input)
   if (!parsed.success) return fail('Dados inválidos.')
+
+  const dadosNorm = input.dados ? normalizarDados(input.dados) : null
+  if (dadosNorm && !dadosNorm.ok) return fail(DADOS_ERRO_MSG[dadosNorm.campo])
 
   try {
     const admin = createAdminClient()
@@ -258,6 +401,14 @@ export async function atualizarFuncionarioAction(input: {
 
     if (updErr) return fail(updErr.message)
 
+    const atual = (await carregarDados(admin, [alvo.id])).porId.get(alvo.id)
+    let dadosFinais: DadosRow | undefined = atual
+    if (dadosNorm?.ok) {
+      const erroDados = await salvarDados(admin, alvo.id, gate.session.lojaId!, dadosNorm.data, !!atual)
+      if (erroDados) return fail(erroDados)
+      dadosFinais = { usuario_id: alvo.id, ...dadosNorm.data }
+    }
+
     const senhaNova = parsed.data.senhaNova?.trim()
     if (senhaNova) {
       const check = validateNewPassword(senhaNova, senhaNova)
@@ -288,7 +439,7 @@ export async function atualizarFuncionarioAction(input: {
         idioma_preferido: parsed.data.idioma_preferido,
         ativo: alvo.ativo,
         created_at: alvo.created_at,
-      }),
+      }, dadosFinais),
     }
   } catch (e) {
     return fail(e instanceof Error ? e.message : 'Erro ao atualizar funcionário.')
