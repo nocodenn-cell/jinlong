@@ -160,6 +160,7 @@ CREATE OR REPLACE FUNCTION public.import_remover_override_tributo(p_id uuid)
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE v_emp uuid := public._import_empresa_contexto();
 BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'IMPORT_NAO_AUTORIZADO' USING ERRCODE = '42501'; END IF;
   DELETE FROM public.empresa_tributos_override WHERE id = p_id AND empresa_id = v_emp;
   IF NOT FOUND THEN RAISE EXCEPTION 'IMPORT_NAO_AUTORIZADO' USING ERRCODE = '42501'; END IF;
 END $$;
