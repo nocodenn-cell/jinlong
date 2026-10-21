@@ -54,3 +54,23 @@ describe('tributação de importação (determinística, parâmetros versionados
     expect(() => calcularTributosImportacao({ ...base, data_fato_gerador: '21/10/2026', itens: [] })).toThrow('DATA_FATO_GERADOR_INVALIDA')
   })
 })
+
+describe('catálogo pesquisado PE (pendente validação do contador)', () => {
+  it('calcula ICMS PE 20,5% por dentro e CBS/IBS 2026 com fonte PESQUISADO_PENDENTE_CONTADOR', async () => {
+    const m = await import('./tributacao')
+    const r = m.calcularTributosImportacao({ data_fato_gerador: '2026-10-21', uf_destino: 'PE', parametros: m.CATALOGO_TRIBUTARIO_PESQUISADO_PE,
+      itens: [{ item_id: 'a', ncm: '85167100', valor_aduaneiro_brl: '1000.00' }] })
+    const by = (t: string) => r.sugestoes.find((s) => s.tributo === t)!
+    expect(by('II').status).toBe('SEM_PARAMETRO')
+    expect(by('PIS_IMPORTACAO').valor_brl).toBe('21.00')
+    expect(by('COFINS_IMPORTACAO').valor_brl).toBe('96.50')
+    expect(by('ICMS').aliquota_pct).toBe('20.5000')
+    expect(by('ICMS').fonte).toBe('PESQUISADO_PENDENTE_CONTADOR')
+    expect(by('CBS').valor_brl).toBe('9.00')
+    expect(by('IBS').valor_brl).toBe('1.00')
+    expect(r.usa_parametro_ficticio).toBe(false)
+    const r27 = m.calcularTributosImportacao({ data_fato_gerador: '2027-01-02', uf_destino: 'PE', parametros: m.CATALOGO_TRIBUTARIO_PESQUISADO_PE,
+      itens: [{ item_id: 'a', ncm: '85167100', valor_aduaneiro_brl: '1000.00' }], tributos: ['CBS'] })
+    expect(r27.sugestoes[0].status).toBe('SEM_PARAMETRO')
+  })
+})

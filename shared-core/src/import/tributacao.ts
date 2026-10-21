@@ -20,7 +20,8 @@ import { divide, formataDecimal, multiplica, parseDecimal } from './decimal'
 export type TributoImportacao = 'II' | 'IPI' | 'PIS_IMPORTACAO' | 'COFINS_IMPORTACAO' | 'ICMS' | 'CBS' | 'IBS' | 'IS'
 export const TRIBUTOS_IMPORTACAO: readonly TributoImportacao[] = ['II', 'IPI', 'PIS_IMPORTACAO', 'COFINS_IMPORTACAO', 'ICMS', 'CBS', 'IBS', 'IS']
 
-export type FonteParametro = 'FICTICIO_DEMO' | 'CONFIGURADO_CLIENTE' | 'VALIDADO_CONTADOR'
+/** PESQUISADO_PENDENTE_CONTADOR: valor de fonte pública oficial, ainda NÃO validado por contador. */
+export type FonteParametro = 'FICTICIO_DEMO' | 'PESQUISADO_PENDENTE_CONTADOR' | 'CONFIGURADO_CLIENTE' | 'VALIDADO_CONTADOR'
 
 export interface ParametroTributario {
   readonly id: string
@@ -39,7 +40,7 @@ export interface ParametroTributario {
   readonly nota: string
 }
 
-const PRIORIDADE_FONTE: Record<FonteParametro, number> = { VALIDADO_CONTADOR: 3, CONFIGURADO_CLIENTE: 2, FICTICIO_DEMO: 1 }
+const PRIORIDADE_FONTE: Record<FonteParametro, number> = { VALIDADO_CONTADOR: 4, CONFIGURADO_CLIENTE: 3, PESQUISADO_PENDENTE_CONTADOR: 2, FICTICIO_DEMO: 1 }
 
 /** Percentual escrito com vírgula no catálogo (sem literal decimal no motor). */
 const pct = (v: string): string => v.replace(',', '.')
@@ -62,6 +63,20 @@ export const CATALOGO_TRIBUTARIO_DEMO: readonly ParametroTributario[] = [
   // Reforma Tributária: marcos datados SEM alíquota (o cliente/contador informa a vigente)
   { id: 'rt-cbs-2026', tributo: 'CBS', ncm_prefixo: '', uf: null, aliquota_pct: null, vigencia_inicio: '2026-01-01', vigencia_fim: null, fonte: 'FICTICIO_DEMO', incorpora_custo_sugerido: false, nota: 'Reforma Tributária (LC 214/2025): informar alíquota vigente na data do fato gerador' },
   { id: 'rt-ibs-2026', tributo: 'IBS', ncm_prefixo: '', uf: null, aliquota_pct: null, vigencia_inicio: '2026-01-01', vigencia_fim: null, fonte: 'FICTICIO_DEMO', incorpora_custo_sugerido: false, nota: 'Reforma Tributária (LC 214/2025): informar alíquota vigente na data do fato gerador' },
+]
+
+/**
+ * Catálogo PESQUISADO (fontes oficiais, acesso 2026-10-21) para importador comercial em PE.
+ * Status: pesquisado, pendente validação do contador. II e IPI NÃO entram aqui: dependem do NCM (TEC/TIPI).
+ * Relatório: aliquotas-importacao-PE.md.
+ */
+export const CATALOGO_TRIBUTARIO_PESQUISADO_PE_VERSAO = 'pesquisado-pe-2026-10-21'
+export const CATALOGO_TRIBUTARIO_PESQUISADO_PE: readonly ParametroTributario[] = [
+  { id: 'pesq-pis-imp-geral', tributo: 'PIS_IMPORTACAO', ncm_prefixo: '', uf: null, aliquota_pct: pct('2,1000'), vigencia_inicio: '2015-05-01', vigencia_fim: null, fonte: 'PESQUISADO_PENDENTE_CONTADOR', incorpora_custo_sugerido: false, nota: 'Lei nº 10865/2004 art. 8º I (redação Lei 13137/2015); base = valor aduaneiro; há alíquotas diferenciadas por NCM — pendente validação do contador' },
+  { id: 'pesq-cofins-imp-geral', tributo: 'COFINS_IMPORTACAO', ncm_prefixo: '', uf: null, aliquota_pct: pct('9,6500'), vigencia_inicio: '2015-05-01', vigencia_fim: null, fonte: 'PESQUISADO_PENDENTE_CONTADOR', incorpora_custo_sugerido: false, nota: 'Lei nº 10865/2004 art. 8º II (redação Lei 13137/2015); possível adicional por NCM (§21) — pendente validação do contador' },
+  { id: 'pesq-icms-pe-modal', tributo: 'ICMS', ncm_prefixo: '', uf: 'PE', aliquota_pct: pct('20,5000'), vigencia_inicio: '2024-01-01', vigencia_fim: null, fonte: 'PESQUISADO_PENDENTE_CONTADOR', incorpora_custo_sugerido: false, nota: 'Lei PE 15730/2016 art. 15 VII (Lei 18305/2023); base por dentro; sem FECEP; benefícios (PRODEPE etc.) — pendente validação do contador' },
+  { id: 'pesq-cbs-2026', tributo: 'CBS', ncm_prefixo: '', uf: null, aliquota_pct: pct('0,9000'), vigencia_inicio: '2026-01-01', vigencia_fim: '2026-12-31', fonte: 'PESQUISADO_PENDENTE_CONTADOR', incorpora_custo_sugerido: false, nota: 'LC 214/2025 art. 346 (teste 2026); compensável com PIS/COFINS e dispensável se cumpridas obrigações acessórias (art. 348) — pendente validação do contador' },
+  { id: 'pesq-ibs-2026', tributo: 'IBS', ncm_prefixo: '', uf: null, aliquota_pct: pct('0,1000'), vigencia_inicio: '2026-01-01', vigencia_fim: '2026-12-31', fonte: 'PESQUISADO_PENDENTE_CONTADOR', incorpora_custo_sugerido: false, nota: 'LC 214/2025 art. 343 (teste 2026); compensável/dispensável (art. 348) — pendente validação do contador' },
 ]
 
 export interface ItemTributavel {
