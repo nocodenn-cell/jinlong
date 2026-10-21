@@ -70,7 +70,7 @@ for (const locale of LOCALES) {
       await expect(form.locator('input[name="channel"]')).toHaveCount(2)
       for (const gone of ['city', 'type', 'preferred', 'wechat', 'whatsapp']) await expect(form.locator(`[name="${gone}"]`)).toHaveCount(0)
       let posted = false
-      await page.route('**/api/demo', (route) => { posted = true; return route.fulfill({ status: 500 }) })
+      await page.route('**/pedido-demo', (route) => { posted = true; return route.fulfill({ status: 500 }) })
       await form.locator('button[type="submit"]').click()
       await expect(form.locator('input[name="name"]')).toHaveAttribute('aria-invalid', 'true')
       await expect(form.locator('.jl-err')).toHaveCount(3)
@@ -81,7 +81,7 @@ for (const locale of LOCALES) {
     test('formulário: envio com sucesso mostra protocolo e WhatsApp', async ({ page }) => {
       await openHome(page, locale)
       let payload: Record<string, unknown> = {}
-      await page.route('**/api/demo', async (route) => {
+      await page.route('**/pedido-demo', async (route) => {
         payload = route.request().postDataJSON()
         await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ ok: true, protocol: 'JL-261020-ABCDEF' }) })
       })
@@ -100,7 +100,7 @@ for (const locale of LOCALES) {
 
     test('formulário: falha no registro mostra e-mail/WhatsApp (sem perda silenciosa)', async ({ page }) => {
       await openHome(page, locale)
-      await page.route('**/api/demo', (route) =>
+      await page.route('**/pedido-demo', (route) =>
         route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'not_configured' }) }))
       const form = page.locator('form.jl-form')
       await form.locator('input[name="channel"][value="wechat"]').check()
@@ -118,10 +118,10 @@ for (const locale of LOCALES) {
       expect(results.violations).toEqual([])
     })
 
-    test('servidor real sem configuração: /api/demo responde 503 not_configured e valida', async ({ request }) => {
-      const ok = await request.post('/api/demo', { data: { name: 'Li Wei', store: 'Loja', contact: '11912345678', channel: 'whatsapp', locale } })
+    test('servidor real sem configuração: /pedido-demo responde 503 not_configured e valida', async ({ request }) => {
+      const ok = await request.post('/pedido-demo', { data: { name: 'Li Wei', store: 'Loja', contact: '11912345678', channel: 'whatsapp', locale } })
       expect([503, 429]).toContain(ok.status())
-      const bad = await request.post('/api/demo', { data: { name: '', channel: 'x' }, headers: { 'x-forwarded-for': `10.0.0.${Math.floor(Math.random() * 250)}` } })
+      const bad = await request.post('/pedido-demo', { data: { name: '', channel: 'x' }, headers: { 'x-forwarded-for': `10.0.0.${Math.floor(Math.random() * 250)}` } })
       expect([400, 429]).toContain(bad.status())
     })
 
