@@ -27,9 +27,11 @@ type AdminV2ShellProps = {
   stockAlertCount?: number
   /** Empresa ativa para a barra superior (best-effort, opcional). */
   topbar?: AdminV2TopbarContext
+  /** Módulos opcionais com licença ativa para a empresa do usuário (resolvido no servidor). */
+  modulosAtivos?: readonly string[]
 }
 
-export function AdminV2Shell({ session, children, stockAlertCount, topbar }: AdminV2ShellProps) {
+export function AdminV2Shell({ session, children, stockAlertCount, topbar, modulosAtivos }: AdminV2ShellProps) {
   const { idioma } = session
   const chineseLanguage = idioma !== 'pt'
   const m: Mensagens = getMessages(idioma)
@@ -67,6 +69,7 @@ export function AdminV2Shell({ session, children, stockAlertCount, topbar }: Adm
           chineseLanguage={chineseLanguage}
           stockAlertCount={stockAlertCount}
           showAdminOnlyItems={session.perfil === 'ADMIN'}
+          modulosAtivos={modulosAtivos}
         />
         </div>
       </div>
@@ -99,6 +102,7 @@ export function AdminV2Shell({ session, children, stockAlertCount, topbar }: Adm
               chineseLanguage={chineseLanguage}
               stockAlertCount={stockAlertCount}
               showAdminOnlyItems={session.perfil === 'ADMIN'}
+              modulosAtivos={modulosAtivos}
             />
           </Suspense>
           <div className="admin-v2-sidebar-footer mt-auto">

@@ -1,0 +1,44 @@
+{
+  "schema_version": "1",
+  "engine_version": "landed-cost-ref/0.1.0",
+  "input_hash": "sha256:8f24a838c4f0b17925d5335ec60ae30190fd68e978d44bf68dee8007efc8d069",
+  "status": "OK",
+  "divergencias": [],
+  "itens": [
+    {
+      "item_id": "item-001",
+      "produto_id": "prod-001",
+      "quantidade_estoque": "1.000",
+      "componentes_brl": {
+        "mercadoria": "6518.5200",
+        "despesas_incorporadas": "0.0000",
+        "tributos_nao_recuperaveis": "0.0000",
+        "descontos": "-271.6050"
+      },
+      "custo_total_brl": "6246.9150",
+      "custo_unitario_brl": "6246.915000",
+      "residuo_unitario_brl": "0.0000000000",
+      "residuo_total_brl": "0.0000000000"
+    }
+  ],
+  "rateios": [
+    {
+      "origem_id": "desc-01",
+      "componente": "descontos",
+      "criterio": "VALOR_ADUANEIRO",
+      "base_total": "6518.5200000000",
+      "item_id": "item-001",
+      "base_item": "6518.5200000000",
+      "valor_alocado_brl": "-271.6050000000",
+      "justificativa": "Desconto comercial documentado na invoice"
+    }
+  ],
+  "despesas_nao_incorporadas": [],
+  "conservacao": {
+    "entradas_brl": "6518.5200",
+    "descontos_brl": "271.6050",
+    "saidas_brl": "6246.9150",
+    "diferenca_brl": "0.0000000000",
+    "ok": true
+  }
+}

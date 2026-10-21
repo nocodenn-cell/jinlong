@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/server'
 import { listarEmpresasDoUsuario } from '@/lib/multiempresa/selecionarEmpresa'
 import { resolverTopbarEmpresa } from '@/lib/admin/topbarEmpresa'
 import type { AdminV2TopbarContext } from '@/components/ui/admin-v2/AdminV2Topbar'
+import { modulosAtivosDaSessao } from '@/lib/import/hub/gateImportacoes'
 
 export const dynamic = 'force-dynamic'
 export const fetchCache = 'force-no-store'
@@ -59,9 +60,12 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     topbar = undefined
   }
 
+  // Módulos opcionais (licença por empresa): best-effort; falha = nenhum módulo no menu.
+  const modulosAtivos = await modulosAtivosDaSessao()
+
   return (
     <>
-      <AdminV2Shell session={adminContext.session} stockAlertCount={stockAlertCount} topbar={topbar}>
+      <AdminV2Shell session={adminContext.session} stockAlertCount={stockAlertCount} topbar={topbar} modulosAtivos={modulosAtivos}>
         <AvisoAssinatura />
         {children}
       </AdminV2Shell>

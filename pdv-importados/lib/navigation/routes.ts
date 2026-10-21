@@ -69,6 +69,8 @@ export const ROUTES = {
     categoriasFinanceiras: '/admin/categorias-financeiras',
     compras: '/admin/compras',
     assinatura: '/admin/assinatura',
+    /** Import Intelligence (módulo opcional por cliente). */
+    importacoes: '/admin/importacoes',
   },
   catalogoPublic: {
     produtos: '/catalogo/produtos',
@@ -163,6 +165,22 @@ export function adminEtiquetasProdutoQuery(opts: {
   if (opts.codigo?.trim()) q.set('codigo', opts.codigo.trim())
   if (opts.produtoId?.trim()) q.set('produto', opts.produtoId.trim())
   return pathWithQuery(ROUTES.admin.estoqueImprimirEtiquetas, q)
+}
+
+/** Abas do detalhe de uma importação (Import Intelligence). */
+export const IMPORTACAO_ABAS = ['resumo', 'mercadorias', 'lancamentos', 'documentos', 'apuracao', 'versoes'] as const
+export type ImportacaoAba = (typeof IMPORTACAO_ABAS)[number]
+
+/** Detalhe de uma importação, opcionalmente numa aba e numa versão de apuração. */
+export function adminImportacaoHref(
+  id: string,
+  opts: { aba?: ImportacaoAba; apuracao?: string; comparar?: string } = {},
+): string {
+  const q = new URLSearchParams()
+  if (opts.aba && opts.aba !== 'resumo') q.set('aba', opts.aba)
+  if (opts.apuracao) q.set('apuracao', opts.apuracao)
+  if (opts.comparar) q.set('comparar', opts.comparar)
+  return pathWithQuery(`${ROUTES.admin.importacoes}/${encodeURIComponent(id)}`, q)
 }
 
 export function catalogoPublicProduto(id: string): string {
