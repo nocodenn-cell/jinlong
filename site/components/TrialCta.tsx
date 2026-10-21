@@ -12,7 +12,7 @@ interface TrialCtaProps {
 }
 
 /**
- * CTA de teste: só existe com canal de contato válido configurado (nunca link vazio).
+ * CTA de contato comercial: só existe com canal de contato válido configurado (nunca link vazio).
  * WhatsApp (quando configurado) abre a conversa; senão, e-mail (mailto) para a equipe.
  */
 export function TrialCta({ locale, label, className = 'jl-btn jl-btn--secondary' }: TrialCtaProps) {

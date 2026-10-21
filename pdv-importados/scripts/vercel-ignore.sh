@@ -59,10 +59,15 @@ fi
 #   docs/      documentação
 #   .github/   workflows do GitHub Actions (não rodam na Vercel)
 #   *.md na raiz do repositório
-relevant=$(printf '%s\n' "$changed" | grep -v -E '^(site/|docs/|\.github/)|^[^/]+\.md$')
+#   pdv-local/ PDV desktop (Tauri); o ERP não importa nada dele (só testes/scripts locais citam o caminho)
+#   backend/   migrations/edges Supabase; o build do ERP não lê (só testes vitest leem os .sql)
+#   Exceção: pdv-local/package.json e backend/package.json continuam construindo (workspaces do npm ci).
+#   shared/ e shared-core/ continuam construindo (aliases @shared e @shared-core do ERP).
+relevant=$(printf '%s\n' "$changed" | grep -v -E '^(site/|docs/|\.github/)|^[^/]+\.md$|^(pdv-local|backend)/' ; printf '%s\n' "$changed" | grep -E '^(pdv-local|backend)/package\.json$')
+relevant=$(printf '%s\n' "$relevant" | sed '/^$/d')
 
 if [ -z "$relevant" ]; then
-  echo "[ignore-step] só site/, docs/, .github/ ou *.md da raiz mudaram desde ${previous}: ignorando build"
+  echo "[ignore-step] só site/, docs/, .github/, pdv-local/, backend/ ou *.md da raiz mudaram desde ${previous}: ignorando build"
   exit 0
 fi
 

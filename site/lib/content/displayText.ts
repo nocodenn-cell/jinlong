@@ -44,8 +44,10 @@ function headingStrings(content: HomeContent): string[] {
     price.title,
     price.plan,
     faq.title,
+    content.integrations.title,
     ...faq.items.map((item) => item.q),
     form.title,
+    form.okTitle,
   ]
 }
 

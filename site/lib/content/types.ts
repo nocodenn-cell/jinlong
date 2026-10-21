@@ -143,16 +143,30 @@ export interface TrialFormCopy {
   lead: string
   name: string
   store: string
-  city: string
-  wechat: string
-  whatsapp: string
-  type: string
-  typeRetail: string
-  typeWholesale: string
-  typeBoth: string
-  sendEmail: string
-  sendWhatsapp: string
+  contact: string
+  contactHintWhatsapp: string
+  contactHintWechat: string
+  channel: string
+  channelWhatsapp: string
+  channelWechat: string
+  submit: string
+  sending: string
   note: string
+  errName: string
+  errStore: string
+  errContactWhatsapp: string
+  errContactWechat: string
+  errRate: string
+  okTitle: string
+  okBody: string
+  okProtocol: string
+  okKeep: string
+  okWhatsapp: string
+  failTitle: string
+  failBody: string
+  failEmail: string
+  failWhatsapp: string
+  retry: string
   mailSubject: string
 }
 
@@ -207,6 +221,7 @@ export interface HomeContent {
     top: readonly TopProduct[]
   }
   price: { title: string; plan: string; value: string; includes: readonly string[]; cta: string }
+  integrations: { title: string; items: readonly string[]; note: string }
   faq: { title: string; items: readonly FaqItem[] }
   form: TrialFormCopy
   final: { title: string; lead: string }
