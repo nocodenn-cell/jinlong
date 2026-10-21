@@ -12,6 +12,10 @@ import { LancamentosSecao } from '../_components/LancamentosSecao'
 import { DocumentosSecao } from '../_components/DocumentosSecao'
 import { ApuracaoSecao } from '../_components/ApuracaoSecao'
 import { VersoesSecao } from '../_components/VersoesSecao'
+import { TributosSecao } from '../_components/TributosSecao'
+import { XmlImportacaoSecao } from '../_components/XmlImportacaoSecao'
+import { DossieSecao } from '../_components/DossieSecao'
+import { PrecificacaoSecao } from '../_components/PrecificacaoSecao'
 
 export const dynamic = 'force-dynamic'
 
@@ -41,6 +45,19 @@ export default async function ImportacaoDetalhePage({ params, searchParams }: Pa
     (sp.apuracao && UUID_RE.test(sp.apuracao) && dados.apuracoes.some((a) => a.id === sp.apuracao) ? sp.apuracao : null) ??
     (aba === 'versoes' && o.apuracao_aprovada_id ? o.apuracao_aprovada_id : dados.apuracoes[0]?.id ?? null)
   const precisaApuracao = aba === 'apuracao' || aba === 'versoes'
+  // Precificação: estimado = última SIMULAÇÃO OK; real = apuração aprovada (ou última APURAÇÃO OK)
+  const ultimaSim = dados.apuracoes.find((x) => x.tipo === 'SIMULACAO' && x.status_calculo === 'OK')
+  const ultimaReal = (o.apuracao_aprovada_id ? dados.apuracoes.find((x) => x.id === o.apuracao_aprovada_id) : undefined)
+    ?? dados.apuracoes.find((x) => x.tipo === 'APURACAO' && x.status_calculo === 'OK')
+  const [precEst, precReal] = aba === 'precificacao'
+    ? await Promise.all([
+        ultimaSim ? carregarApuracao(ctx.client, id, ultimaSim.id) : Promise.resolve(null),
+        ultimaReal ? carregarApuracao(ctx.client, id, ultimaReal.id) : Promise.resolve(null),
+      ])
+    : [null, null]
+  const basePreco = (x: typeof precEst) =>
+    x ? { versao: x.versao, tipo: x.tipo, aprovada: x.id === o.apuracao_aprovada_id, itens: x.saida.itens.map((i) => ({ item_id: i.item_id, custo_unitario_brl: i.custo_unitario_brl })) } : null
+
   const [selecionada, comparada, opcoes] = await Promise.all([
     precisaApuracao && idSel ? carregarApuracao(ctx.client, id, idSel) : Promise.resolve(null),
     aba === 'versoes' && sp.comparar && UUID_RE.test(sp.comparar) ? carregarApuracao(ctx.client, id, sp.comparar) : Promise.resolve(null),
@@ -54,6 +71,8 @@ export default async function ImportacaoDetalhePage({ params, searchParams }: Pa
     documentos: t.aba_documentos,
     apuracao: t.aba_apuracao,
     versoes: t.aba_versoes,
+    tributos: t.aba_tributos,
+    precificacao: t.aba_precificacao,
   }
   const moedaPadrao = o.moeda ?? 'USD'
 
@@ -101,14 +120,28 @@ export default async function ImportacaoDetalhePage({ params, searchParams }: Pa
       ) : null}
       {aba === 'lancamentos' ? (
         <LancamentosSecao t={t} operacaoId={id} itens={dados.itens} tributos={dados.tributos} despesas={dados.despesas}
-          descontos={dados.descontos} moedaPadrao={moedaPadrao} editavel={editavel} />
+          descontos={dados.descontos} documentos={dados.documentos} moedaPadrao={moedaPadrao} editavel={editavel} />
+      ) : null}
+      {aba === 'documentos' ? (
+        <div className="mb-4 flex flex-col gap-4">
+          <DossieSecao t={t} dados={{ documentos: dados.documentos, itens: dados.itens, despesas: dados.despesas, tributos: dados.tributos, descontos: dados.descontos }} />
+          <XmlImportacaoSecao t={t} operacaoId={id} editavel={editavel} />
+        </div>
+      ) : null}
+      {aba === 'tributos' ? (
+        <TributosSecao t={t} operacaoId={id} itens={dados.itens} cambios={dados.cambios} tributos={dados.tributos}
+          dataPadrao={o.data_desembaraco ?? new Date().toISOString().slice(0, 10)} editavel={editavel} />
+      ) : null}
+      {aba === 'precificacao' ? (
+        <PrecificacaoSecao t={t} nomes={Object.fromEntries(dados.itens.map((i) => [i.id, i.descricao]))} estimado={basePreco(precEst)} real={basePreco(precReal)} />
       ) : null}
       {aba === 'documentos' ? (
         <DocumentosSecao t={t} operacaoId={id} documentos={dados.documentos} usuarios={dados.usuarios} podeRegistrar={o.status !== 'CANCELADA'} />
       ) : null}
       {aba === 'apuracao' ? (
         <ApuracaoSecao t={t} operacaoId={id} apuracao={selecionada} itens={dados.itens} versaoDadosOperacao={o.versao_dados}
-          usuarios={dados.usuarios} podeCalcular={editavel} />
+          usuarios={dados.usuarios} podeCalcular={editavel} despesas={dados.despesas} tributos={dados.tributos}
+          descontos={dados.descontos} documentos={dados.documentos} />
       ) : null}
       {aba === 'versoes' ? (
         <VersoesSecao t={t} operacao={o} apuracoes={dados.apuracoes} selecionada={selecionada} comparada={comparada}

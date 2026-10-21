@@ -4,7 +4,8 @@ import { useState, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { SectionCard, StatusBadge } from '@/components/ui/admin-v2'
 import { formatarDecimal } from '@/lib/import/hub/decimais'
-import type { Desconto, Despesa, Item, Tributo } from '@/lib/import/hub/dadosImportacoes'
+import type { Desconto, Despesa, Documento, Item, Tributo } from '@/lib/import/hub/dadosImportacoes'
+import { sugerirCriterioRateio } from '@shared-core/src/import/sugestaoCriterio'
 import { conferirLancamentoAction, removerRascunhoAction, salvarLancamentoAction, type TipoLancamento } from '../actions'
 import { ErroFormulario, Selecao, Texto, useAcao, type TextosImport } from './campos'
 
@@ -20,6 +21,7 @@ type Props = {
   tributos: Tributo[]
   despesas: Despesa[]
   descontos: Desconto[]
+  documentos?: Documento[]
   moedaPadrao: string
   editavel: boolean
 }
@@ -69,14 +71,16 @@ export function LancamentosSecao(props: Props) {
     valor_apurado_brl: x.valor_apurado_brl, item_id: x.item_id ?? '', regra_id: x.regra_id ?? '',
     regra_incorpora_custo: String(x.regra_incorpora_custo ?? false), regra_vigencia_inicio: x.regra_vigencia_inicio ?? '',
     regra_vigencia_fim: x.regra_vigencia_fim ?? '', data_fato_gerador: x.data_fato_gerador ?? '', validado_por: x.validado_por ?? '',
+    documento_id: x.documento_id ?? '',
   })
   const despDados = (x: Despesa): Record<string, string> => ({
     id: x.id, tipo: x.tipo, moeda: x.moeda, valor: x.valor, incorporavel: x.incorporavel, atribuicao_modo: x.atribuicao_modo,
     item_id: x.item_id ?? '', criterio: x.criterio ?? 'VALOR_ADUANEIRO', justificativa: x.justificativa,
+    documento_id: x.documento_id ?? '',
   })
   const descDados = (x: Desconto): Record<string, string> => ({
     id: x.id, escopo: x.escopo, moeda: x.moeda, valor: x.valor, item_id: x.item_id ?? '', criterio: x.criterio ?? 'VALOR_ADUANEIRO',
-    justificativa: x.justificativa,
+    justificativa: x.justificativa, documento_id: x.documento_id ?? '',
   })
 
   const tabelaTributos = (lista: Tributo[], titulo: string, testId: string) => (
@@ -202,6 +206,7 @@ export function LancamentosSecao(props: Props) {
           t={t}
           form={form}
           itens={itensOpcoes}
+          documentos={(props.documentos ?? []).map((d) => ({ valor: d.id, rotulo: `${d.tipo}${d.numero ? ` ${d.numero}` : ''} v${d.versao}` }))}
           pendente={pendente}
           erro={erro}
           onCancelar={() => setForm(null)}
@@ -234,6 +239,7 @@ function FormLancamento(props: {
   t: TextosImport
   form: Form
   itens: { valor: string; rotulo: string }[]
+  documentos: { valor: string; rotulo: string }[]
   pendente: boolean
   erro: string | null
   onCancelar: () => void
@@ -271,6 +277,8 @@ function FormLancamento(props: {
               <Texto rotulo={t.trib_vig_fim} valor={v('regra_vigencia_fim')} onChange={set('regra_vigencia_fim')} tipo="date" />
               <Texto rotulo={t.trib_fato_gerador} valor={v('data_fato_gerador')} onChange={set('data_fato_gerador')} tipo="date" testId="imp-trib-fato" />
               <Texto rotulo={t.trib_validado_por} valor={v('validado_por')} onChange={set('validado_por')} maxLength={120} />
+              <Selecao rotulo={t.lanc_documento} valor={v('documento_id')} onChange={set('documento_id')}
+                opcoes={[{ valor: '', rotulo: t.lanc_documento_nenhum }, ...props.documentos]} testId="imp-lanc-documento" />
             </>
           ) : null}
           {form.tipo === 'DESPESA' ? (
@@ -287,6 +295,19 @@ function FormLancamento(props: {
               ) : (
                 <Selecao rotulo={t.desp_criterio} valor={v('criterio')} onChange={set('criterio')} opcoes={criterios} testId="imp-desp-criterio" />
               )}
+              <Selecao rotulo={t.lanc_documento} valor={v('documento_id')} onChange={set('documento_id')}
+                opcoes={[{ valor: '', rotulo: t.lanc_documento_nenhum }, ...props.documentos]} testId="imp-lanc-documento" />
+              {v('atribuicao_modo') !== 'DIRETA' && v('tipo').trim() ? (() => {
+                const sug = sugerirCriterioRateio(v('tipo'))
+                return (
+                  <p className="flex flex-wrap items-center gap-2 text-xs md:col-span-3" data-testid="imp-desp-sugestao">
+                    <span>{t.crit_sugerido}: <strong>{tk(`crit_${sug.criterio}`)}</strong> — {sug.motivo}</span>
+                    {v('criterio') !== sug.criterio ? (
+                      <Button type="button" size="sm" variant="outline" onClick={() => set('criterio')(sug.criterio)} data-testid="imp-desp-usar-sugestao">{t.crit_usar_sugestao}</Button>
+                    ) : <span className="text-fg-subtle">({t.crit_revisar})</span>}
+                  </p>
+                )
+              })() : null}
               <Texto className="flex flex-col gap-1 md:col-span-3" rotulo={t.desp_justificativa} valor={v('justificativa')} onChange={set('justificativa')} obrigatorio maxLength={300} testId="imp-desp-justificativa" />
             </>
           ) : null}
@@ -301,6 +322,8 @@ function FormLancamento(props: {
               ) : (
                 <Selecao rotulo={t.desp_criterio} valor={v('criterio')} onChange={set('criterio')} opcoes={criterios} />
               )}
+              <Selecao rotulo={t.lanc_documento} valor={v('documento_id')} onChange={set('documento_id')}
+                opcoes={[{ valor: '', rotulo: t.lanc_documento_nenhum }, ...props.documentos]} testId="imp-lanc-documento" />
               <Texto className="flex flex-col gap-1 md:col-span-3" rotulo={t.desp_justificativa} valor={v('justificativa')} onChange={set('justificativa')} obrigatorio maxLength={300} />
             </>
           ) : null}

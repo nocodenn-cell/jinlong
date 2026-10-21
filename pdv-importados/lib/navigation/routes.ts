@@ -168,7 +168,7 @@ export function adminEtiquetasProdutoQuery(opts: {
 }
 
 /** Abas do detalhe de uma importação (Import Intelligence). */
-export const IMPORTACAO_ABAS = ['resumo', 'mercadorias', 'lancamentos', 'documentos', 'apuracao', 'versoes'] as const
+export const IMPORTACAO_ABAS = ['resumo', 'mercadorias', 'documentos', 'lancamentos', 'tributos', 'apuracao', 'precificacao', 'versoes'] as const
 export type ImportacaoAba = (typeof IMPORTACAO_ABAS)[number]
 
 /** Detalhe de uma importação, opcionalmente numa aba e numa versão de apuração. */

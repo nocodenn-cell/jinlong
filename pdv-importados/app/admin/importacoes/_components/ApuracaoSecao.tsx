@@ -1,6 +1,7 @@
 import { SectionCard, StatusBadge } from '@/components/ui/admin-v2'
 import { formatarDecimal, somarExato } from '@/lib/import/hub/decimais'
-import type { ApuracaoDetalhe, Item } from '@/lib/import/hub/dadosImportacoes'
+import type { ApuracaoDetalhe, Desconto, Despesa, Documento, Item, Tributo } from '@/lib/import/hub/dadosImportacoes'
+import { divide, formataDecimal, parseDecimal } from '@shared-core/src/import/decimal'
 import type { TextosImport } from './campos'
 import { ApurarBotoes } from './ApurarBotoes'
 
@@ -16,6 +17,10 @@ export function ApuracaoSecao(props: {
   versaoDadosOperacao: number
   usuarios: Record<string, string>
   podeCalcular: boolean
+  despesas?: Despesa[]
+  tributos?: Tributo[]
+  descontos?: Desconto[]
+  documentos?: Documento[]
 }) {
   const { t, apuracao: a } = props
   const tk = (k: string) => (t as Record<string, string>)[k] ?? k
@@ -45,6 +50,39 @@ export function ApuracaoSecao(props: {
   if (!a) return cabecalho
 
   const s = a.saida
+  const nomeDoc = (id: string | null | undefined) => {
+    const d = id ? props.documentos?.find((x) => x.id === id) : undefined
+    return d ? `${tk(`tipo_${d.tipo}`)}${d.numero ? ` ${d.numero}` : ''}` : null
+  }
+  const unit = (valor: string, qtd: string) => {
+    try {
+      return formatarDecimal(formataDecimal(divide(parseDecimal(valor, 10), 10, parseDecimal(qtd, 3), 3, 6), 6))
+    } catch {
+      return '—'
+    }
+  }
+  /** Linhas de composição: rateios do motor (valor alocado exato) + lançamentos diretos registrados. */
+  const composicaoItem = (itemId: string, qtd: string) => {
+    const out: { nome: string; documento: string | null; criterio: string; valor: string; unitario: string }[] = []
+    for (const r of s.rateios.filter((x) => x.item_id === itemId)) {
+      const desp = props.despesas?.find((x) => x.id === r.origem_id)
+      const trib = props.tributos?.find((x) => x.id === r.origem_id)
+      const desc = props.descontos?.find((x) => x.id === r.origem_id)
+      const nome = desp ? desp.tipo : trib ? trib.tributo_codigo : desc ? t.apu_descontos : r.componente
+      const doc = nomeDoc(desp?.documento_id ?? trib?.documento_id ?? desc?.documento_id)
+      const valor = r.componente === 'descontos' ? `-${r.valor_alocado_brl.replace(/^-/, '')}` : r.valor_alocado_brl
+      out.push({ nome, documento: doc, criterio: `${tk(`crit_${r.criterio}`)} (${formatarDecimal(r.base_item)} / ${formatarDecimal(r.base_total)})`, valor: formatarDecimal(valor), unitario: unit(valor, qtd) })
+    }
+    for (const d of props.despesas?.filter((x) => x.atribuicao_modo === 'DIRETA' && x.item_id === itemId && x.incorporavel === 'SIM') ?? []) {
+      out.push({ nome: d.tipo, documento: nomeDoc(d.documento_id), criterio: t.comp_direto, valor: `${d.moeda} ${formatarDecimal(d.valor)}`, unitario: d.moeda === 'BRL' ? unit(d.valor, qtd) : t.comp_ver_memoria })
+    }
+    for (const x of props.tributos?.filter((y) => y.item_id === itemId) ?? []) {
+      const entra = (x.status_recuperabilidade === 'NAO_RECUPERAVEL' || x.status_recuperabilidade === 'GLOSADO') && x.regra_incorpora_custo === true
+      out.push({ nome: `${x.tributo_codigo} (${tk(`rec_${x.status_recuperabilidade}`)})`, documento: nomeDoc(x.documento_id), criterio: t.comp_direto,
+        valor: formatarDecimal(x.valor_apurado_brl), unitario: entra ? unit(x.valor_apurado_brl, qtd) : t.comp_nao_entra_custo })
+    }
+    return out
+  }
   const soma = (k: 'mercadoria' | 'despesas_incorporadas' | 'tributos_nao_recuperaveis' | 'descontos') =>
     somarExato(s.itens.map((i) => i.componentes_brl[k]))
   const total = somarExato(s.itens.map((i) => i.custo_total_brl))
@@ -143,6 +181,47 @@ export function ApuracaoSecao(props: {
               ))}
             </tbody>
           </table>
+        </div>
+      </SectionCard>
+
+      <SectionCard title={t.comp_titulo} subtitle={t.comp_subtitulo}>
+        <div className="flex flex-col gap-4" data-testid="imp-composicao">
+          {s.itens.map((i) => {
+            const linhas = composicaoItem(i.item_id, i.quantidade_estoque)
+            return (
+              <div key={i.item_id} className="overflow-x-auto">
+                <p className="mb-1 font-semibold">{nomeItem(i.item_id)} — R$ {formatarDecimal(i.custo_unitario_brl)} / un.</p>
+                <table className="w-full text-small">
+                  <caption className="sr-only">{t.comp_titulo} {nomeItem(i.item_id)}</caption>
+                  <thead>
+                    <tr className="text-left text-[11px] uppercase text-fg-subtle">
+                      <th scope="col" className="px-2 py-1">{t.comp_lancamento}</th>
+                      <th scope="col" className="px-2 py-1">{t.comp_documento}</th>
+                      <th scope="col" className="px-2 py-1">{t.apu_rateio_criterio}</th>
+                      <th scope="col" className="px-2 py-1 text-right">{t.apu_rateio_valor}</th>
+                      <th scope="col" className="px-2 py-1 text-right">{t.comp_impacto_unitario}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-t border-[var(--color-border)]/60">
+                      <td className="px-2 py-1.5">{t.apu_mercadoria}</td><td className="px-2 py-1.5">—</td><td className="px-2 py-1.5">{t.comp_direto}</td>
+                      <td className="px-2 py-1.5 text-right tabular-nums">{formatarDecimal(i.componentes_brl.mercadoria)}</td>
+                      <td className="px-2 py-1.5 text-right tabular-nums">{unit(i.componentes_brl.mercadoria, i.quantidade_estoque)}</td>
+                    </tr>
+                    {linhas.map((l, k) => (
+                      <tr key={k} className="border-t border-[var(--color-border)]/60">
+                        <td className="px-2 py-1.5">{l.nome}</td>
+                        <td className="px-2 py-1.5 text-xs">{l.documento ?? <span className="text-[var(--color-warning-strong)]">{t.comp_sem_documento}</span>}</td>
+                        <td className="px-2 py-1.5">{l.criterio}</td>
+                        <td className="px-2 py-1.5 text-right tabular-nums">{l.valor}</td>
+                        <td className="px-2 py-1.5 text-right tabular-nums font-medium">{l.unitario}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
+          })}
         </div>
       </SectionCard>
 

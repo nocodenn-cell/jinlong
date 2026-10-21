@@ -52,3 +52,16 @@ export type {
   ConciliacaoMotivo,
   ConciliacaoResultado,
 } from './conciliacaoObrigacoes'
+
+// Inteligência tributária (parâmetros versionados; sugestão com revisão humana)
+export {
+  calcularTributosImportacao, resolverParametro, CATALOGO_TRIBUTARIO_DEMO, CATALOGO_TRIBUTARIO_VERSAO, TRIBUTOS_IMPORTACAO,
+} from './tributacao'
+export type {
+  TributoImportacao, ParametroTributario, FonteParametro, ItemTributavel, EntradaTributacao, SugestaoTributo,
+  ResultadoTributacao, StatusSugestao,
+} from './tributacao'
+// Precificação simulada (não altera preços oficiais)
+export { simularPreco, compararEstimadoReal, PrecificacaoErro } from './precificacao'
+export type { CanalVenda, ModoPreco, CenarioPreco, PrecoSimulado, ComparacaoCusto } from './precificacao'
+export { sugerirCriterioRateio } from './sugestaoCriterio'

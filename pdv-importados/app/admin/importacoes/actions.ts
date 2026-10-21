@@ -212,8 +212,16 @@ export async function salvarLancamentoAction(
     }
   }
   const id = idOpc('id')
+  // documento de origem (opcional): precisa ser um documento DESTA operação, visível sob RLS
+  const documentoId = idOpc('documento_id')
+  if (documentoId === 'INVALIDO') return falha('erro_valor_invalido')
+  if (documentoId) {
+    const { data: doc } = await (gate.ctx.client as unknown as { from: (t: string) => { select: (c: string) => { eq: (a: string, b: string) => { eq: (a: string, b: string) => { maybeSingle: () => PromiseLike<{ data: unknown }> } } } } })
+      .from('import_documentos').select('id').eq('id', documentoId).eq('operacao_id', op.data).maybeSingle()
+    if (!doc) return falha('erro_valor_invalido', 'documento')
+  }
   const r = await chamar(gate.ctx.client, 'import_salvar_lancamento', {
-    p_operacao: op.data, p_tipo: tipo, p_dados: { ...(id ? { id } : {}), ...dados },
+    p_operacao: op.data, p_tipo: tipo, p_dados: { ...(id ? { id } : {}), ...dados, documento_id: documentoId },
   })
   if (!r.ok) return falha(r.erro)
   revalidar(op.data)
