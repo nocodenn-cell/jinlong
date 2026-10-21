@@ -107,9 +107,23 @@ describe('Ignored Build Step do pdv-importados', () => {
     assert.equal(production({ 'pdv-importados/vercel.json': '{"regions":["gru1"]}' }), BUILD)
   })
 
-  it('produção: backend/, pdv-local/ e vercel.json da raiz → executa (não estão na lista de exclusão)', () => {
-    assert.equal(production({ 'backend/supabase/migrations/002.sql': 'select 2;' }), BUILD)
-    assert.equal(production({ 'pdv-local/src/main.ts': 'export {}' }), BUILD)
+  it('produção: só backend/ e/ou pdv-local/ → ignora (o ERP não importa nada deles)', () => {
+    assert.equal(production({ 'backend/supabase/migrations/002.sql': 'select 2;' }), IGNORE)
+    assert.equal(production({ 'pdv-local/src/main.ts': 'export {}' }), IGNORE)
+    assert.equal(production({ 'pdv-local/src/main.ts': 'export {}', 'backend/x.sql': 'select 3;', 'docs/a.md': '# a' }), IGNORE)
+  })
+
+  it('produção: package.json de pdv-local/ ou backend/ (workspaces do npm ci) → executa', () => {
+    assert.equal(production({ 'pdv-local/package.json': '{"name":"pdv-local","v":2}' }), BUILD)
+    assert.equal(production({ 'backend/package.json': '{"name":"b","v":2}' }), BUILD)
+  })
+
+  it('produção: backend/ junto com ERP ou shared-core/ → executa', () => {
+    assert.equal(production({ 'backend/x.sql': 'select 4;', 'pdv-importados/app/page.tsx': 'export default 9' }), BUILD)
+    assert.equal(production({ 'pdv-local/src/main.ts': 'export {}', 'shared-core/src/index.ts': 'export const y = 2' }), BUILD)
+  })
+
+  it('produção: vercel.json da raiz (novo) → executa (fora da lista de exclusão)', () => {
     assert.equal(production({ 'vercel.json': '{"framework":"nextjs"}' }), BUILD)
   })
 

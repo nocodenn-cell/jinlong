@@ -20,7 +20,7 @@
 # Relevante ao site: tudo em site/ (inclui site/vercel.json) e o que o install do monorepo lê na
 # raiz (package.json, package-lock.json, .npmrc). backend/, docs/, pdv-importados/, pdv-local/
 # e shared-core/ não alteram o site (o site não importa nada deles; ver site/lib/platform.test.ts).
-# O vercel.json da raiz não é lido por este projeto (Root Directory = site).
+# Não há vercel.json na raiz (removido: nenhum projeto usa Root Directory = .).
 #
 # Teste: node --test scripts/vercel-site-ignore.test.mjs
 
