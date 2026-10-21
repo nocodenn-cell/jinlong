@@ -22,7 +22,7 @@ export function XmlImportacaoSecao(props: { t: TextosImport; operacaoId: string;
     if (!f) return
     const texto = await f.text()
     setXml(texto)
-    executar(() => lerXmlAction(props.operacaoId, texto), (p) => { setProposta(p); setSel(new Set(p.itens.map((_, i) => i))) })
+    executar(() => lerXmlAction(props.operacaoId, texto), (p) => { setProposta(p); setSel(new Set(p.itens.map((_, i) => i))) }, undefined, { atualizar: false })
   }
 
   return (

@@ -14,7 +14,7 @@ export function useAcao(t: TextosImport) {
   const [pendente, iniciar] = useTransition()
   const [erro, setErro] = useState<string | null>(null)
 
-  function executar<T>(fn: () => Promise<ResultadoAcao<T>>, aoSucesso?: (data: T) => void, msgSucesso?: string) {
+  function executar<T>(fn: () => Promise<ResultadoAcao<T>>, aoSucesso?: (data: T) => void, msgSucesso?: string, opcoes?: { atualizar?: boolean }) {
     setErro(null)
     iniciar(async () => {
       const r = await fn()
@@ -27,7 +27,8 @@ export function useAcao(t: TextosImport) {
       }
       if (msgSucesso) emitGerenteToast({ kind: 'success', message: msgSucesso })
       aoSucesso?.(r.data)
-      router.refresh()
+      // leitura pura (ex.: proposta de XML) não recarrega: o refresh remontaria a seção e perderia a proposta
+      if (opcoes?.atualizar !== false) router.refresh()
     })
   }
   return { executar, pendente, erro, setErro }
