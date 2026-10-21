@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { lembrarVendedor, precisaDefinirVendedor, vendedorInicial } from './caixaVendedor'
+import { describe, expect, it, vi } from 'vitest'
+import { aplicarVendedorAposVenda, lembrarVendedor, precisaDefinirVendedor, vendedorInicial } from './caixaVendedor'
 
 function mem() {
   const m = new Map<string, string>()
@@ -27,5 +27,33 @@ describe('caixaVendedor', () => {
     expect(precisaDefinirVendedor('op', 'op')).toBe(false)
     expect(precisaDefinirVendedor('op', null)).toBe(false)
     expect(precisaDefinirVendedor('op', 'v1')).toBe(true)
+  })
+})
+
+describe('aplicarVendedorAposVenda (venda normal e recuperada após timeout)', () => {
+  it('aplica o vendedor escolhido na venda recuperada', async () => {
+    const definir = vi.fn().mockResolvedValue({ ok: true })
+    expect(await aplicarVendedorAposVenda('v-1', 'op-1', 'vend-2', definir)).toBe(true)
+    expect(definir).toHaveBeenCalledWith('v-1', 'vend-2')
+  })
+  it('vendedor = operador ou nenhum: não chama', async () => {
+    const definir = vi.fn()
+    expect(await aplicarVendedorAposVenda('v-1', 'op-1', 'op-1', definir)).toBe(true)
+    expect(await aplicarVendedorAposVenda('v-1', 'op-1', null, definir)).toBe(true)
+    expect(definir).not.toHaveBeenCalled()
+  })
+  it('falha/erro vira false sem lançar', async () => {
+    expect(await aplicarVendedorAposVenda('v-1', 'op-1', 'vend-2', vi.fn().mockResolvedValue({ ok: false }))).toBe(false)
+    expect(await aplicarVendedorAposVenda('v-1', 'op-1', 'vend-2', vi.fn().mockRejectedValue(new Error('rede')))).toBe(false)
+  })
+})
+
+describe('CaixaPageClient: recuperação após timeout aplica o vendedor', () => {
+  it('handleVerificarVendaPendente chama aplicarVendedorAposVenda com a venda recuperada', async () => {
+    const { readFileSync } = await import('node:fs')
+    const src = readFileSync(new URL('./CaixaPageClient.tsx', import.meta.url), 'utf8')
+    const ini = src.indexOf('const handleVerificarVendaPendente')
+    const corpo = src.slice(ini, src.indexOf("res.code === 'VENDA_NAO_ENCONTRADA'", ini))
+    expect(corpo).toContain('aplicarVendedorAposVenda(res.detalhe.id, userId, vendedorId, definirVendedorVendaCaixa)')
   })
 })

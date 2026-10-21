@@ -11,6 +11,7 @@ import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
+import { compSchema, metaSchema, regraSchema } from '@/lib/comissao/schemas'
 
 export type ModuloResult<T> = { success: true; data: T } | { success: false; error: string }
 
@@ -157,28 +158,6 @@ export async function listarRegrasComissao(): Promise<ModuloResult<{ regras: Reg
   }
 }
 
-const uuidOpt = z.string().uuid().nullable()
-const regraSchema = z
-  .object({
-    id: z.string().uuid().optional(),
-    somenteEstaLoja: z.boolean(),
-    usuarioId: uuidOpt,
-    cargo: z.string().trim().max(80).nullable(),
-    produtoId: uuidOpt,
-    categoriaId: uuidOpt,
-    canal: z.enum(['VAREJO', 'ATACADO']).nullable(),
-    tipoCalculo: z.enum(['percentual', 'fixo']),
-    valor: z.number().finite().min(0),
-    vigenciaInicio: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    vigenciaFim: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
-    ativo: z.boolean(),
-    descricao: z.string().trim().max(200).nullable(),
-  })
-  .refine((r) => !(r.usuarioId && r.cargo), { message: 'Escolha funcionário OU cargo.' })
-  .refine((r) => !(r.produtoId && r.categoriaId), { message: 'Escolha produto OU categoria.' })
-  .refine((r) => r.tipoCalculo === 'fixo' || r.valor <= 100, { message: 'Percentual acima de 100%.' })
-  .refine((r) => !r.vigenciaFim || r.vigenciaFim >= r.vigenciaInicio, { message: 'Fim da vigência antes do início.' })
-
 export type RegraInput = z.input<typeof regraSchema>
 
 export async function salvarRegraComissao(input: RegraInput): Promise<ModuloResult<{ id: string }>> {
@@ -244,7 +223,6 @@ export type StatusPeriodo = 'ABERTO' | 'EM_REVISAO' | 'APROVADO' | 'PAGO'
 export type LinhaVendedorPeriodo = {
   operadorId: string; nome: string; vendas: number; base: number; comissao: number; ajustes: number; bonusMeta: number; total: number
 }
-const compSchema = z.string().regex(/^\d{4}-\d{2}$/)
 
 export async function relatorioComissaoMes(competencia: string): Promise<ModuloResult<{ status: StatusPeriodo; linhas: LinhaVendedorPeriodo[] }>> {
   if (!compSchema.safeParse(competencia).success) return { success: false, error: 'Competência inválida.' }
@@ -343,18 +321,6 @@ export async function salvarConfigComissao(cfg: ConfigComissao): Promise<ModuloR
   return { success: true, data: p.data }
 }
 
-const metaSchema = z.object({
-  id: z.string().uuid().optional(),
-  usuarioId: z.string().uuid().nullable(),
-  cargo: z.string().trim().max(80).nullable(),
-  competenciaInicio: compSchema,
-  competenciaFim: compSchema.nullable(),
-  faixas: z.array(z.object({ aPartirDe: z.number().finite().min(0), bonusPct: z.number().finite().min(0).max(100) })).min(1).max(10)
-    .refine((fs) => fs.every((f, i) => i === 0 || f.aPartirDe > fs[i - 1].aPartirDe), { message: 'Faixas devem estar em ordem crescente.' }),
-  ativo: z.boolean(),
-  descricao: z.string().trim().max(200).nullable(),
-}).refine((m) => !(m.usuarioId && m.cargo), { message: 'Escolha funcionário OU cargo.' })
-  .refine((m) => !m.competenciaFim || m.competenciaFim >= m.competenciaInicio, { message: 'Fim antes do início.' })
 export type MetaInput = z.input<typeof metaSchema>
 
 export async function salvarMetaComissao(input: MetaInput): Promise<ModuloResult<{ id: string }>> {

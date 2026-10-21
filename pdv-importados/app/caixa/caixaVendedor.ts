@@ -24,3 +24,21 @@ export function lembrarVendedor(operadorId: string | null, vendedorId: string, s
 export function precisaDefinirVendedor(operadorId: string | null, vendedorId: string | null): vendedorId is string {
   return !!vendedorId && !!operadorId && vendedorId !== operadorId
 }
+
+/**
+ * Aplica o vendedor numa venda JÁ gravada (caminho normal e recuperação após timeout).
+ * Nunca lança: falha vira `false` e a comissão fica com o operador (o gerente corrige em Falhas).
+ */
+export async function aplicarVendedorAposVenda(
+  vendaId: string,
+  operadorId: string | null,
+  vendedorId: string | null,
+  definir: (vendaId: string, vendedorId: string) => Promise<{ ok: boolean }>,
+): Promise<boolean> {
+  if (!precisaDefinirVendedor(operadorId, vendedorId)) return true
+  try {
+    return (await definir(vendaId, vendedorId)).ok
+  } catch {
+    return false
+  }
+}

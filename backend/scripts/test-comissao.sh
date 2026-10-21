@@ -13,7 +13,7 @@ T=$ROOT/tests/comissao
 ANTES="com_antes_$$"; DEPOIS="com_depois_$$"
 trap '$DROPDB --if-exists "$ANTES" >/dev/null 2>&1; $DROPDB --if-exists "$DEPOIS" >/dev/null 2>&1' EXIT
 $CREATEDB -T "$BASE_DB" "$ANTES"; $CREATEDB -T "$BASE_DB" "$DEPOIS"
-MIGS=$(ls "$ROOT"/migrations/2026102120*_comissao_*.sql | sort)
+MIGS=$(ls "$ROOT"/migrations/202610212*_comissao_*.sql | sort)
 for m in $MIGS; do echo ">> $(basename "$m")"; $PSQL -X -q -v ON_ERROR_STOP=1 -d "$DEPOIS" -f "$m" >/dev/null 2>&1 || { $PSQL -X -v ON_ERROR_STOP=1 -d "$DEPOIS" -f "$m"; exit 1; }; done
 cd "$T"
 for t in $(ls p*_*.test.sql | sort); do

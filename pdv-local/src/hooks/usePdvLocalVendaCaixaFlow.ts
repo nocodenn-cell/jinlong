@@ -304,6 +304,7 @@ export function usePdvLocalVendaCaixaFlow({
     onRefreshOutboxResumo,
     logError,
     onFinalizarElapsedMs,
+    vendedorId,
   ])
 
   return {

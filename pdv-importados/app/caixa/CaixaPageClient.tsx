@@ -100,7 +100,7 @@ import "@/styles/caixa-operacional.css"
 import { CaixaPdvOperadorTabs } from "@/app/caixa/CaixaPdvOperadorTabs"
 import { CaixaSelecionarClienteModal } from "@/app/caixa/CaixaSelecionarClienteModal"  // ✅ NOVO (Fase 5b)
 import { CaixaVendedorSelect } from "@/app/caixa/CaixaVendedorSelect"
-import { lembrarVendedor, precisaDefinirVendedor, vendedorInicial, type VendedorOpcao } from "@/app/caixa/caixaVendedor"
+import { lembrarVendedor, aplicarVendedorAposVenda, vendedorInicial, type VendedorOpcao } from "@/app/caixa/caixaVendedor"
 
 function newCupomSessionId(): string {
   return crypto.randomUUID()
@@ -1260,9 +1260,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           { kind: "success" },
         )
         tocarFeedback("ok")
-        if (precisaDefinirVendedor(userId, vendedorId)) {
-          const rv = await definirVendedorVendaCaixa(res.vendaId, vendedorId)
-          if (!rv.ok) setCaixaMensagem(m.caixa.vendedor_nao_aplicado, { kind: "warning" })
+        if (!(await aplicarVendedorAposVenda(res.vendaId, userId, vendedorId, definirVendedorVendaCaixa))) {
+          setCaixaMensagem(m.caixa.vendedor_nao_aplicado, { kind: "warning" })
         }
         await recarregarStatusCaixa()
       } else if (res === timeoutResult) {
@@ -1399,6 +1398,10 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           { kind: "success" },
         )
         tocarFeedback("ok")
+        // Comissão: a venda recuperada após timeout também recebe o vendedor escolhido.
+        if (!(await aplicarVendedorAposVenda(res.detalhe.id, userId, vendedorId, definirVendedorVendaCaixa))) {
+          setCaixaMensagem(m.caixa.vendedor_nao_aplicado, { kind: "warning" })
+        }
         await recarregarStatusCaixa()
         return
       }
@@ -1427,6 +1430,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     setCaixaMensagemVendaOk,
     tocarFeedback,
     m,
+    userId,
+    vendedorId,
   ])
 
   /**
