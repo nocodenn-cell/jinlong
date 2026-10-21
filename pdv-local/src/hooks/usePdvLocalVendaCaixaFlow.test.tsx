@@ -228,6 +228,20 @@ describe('usePdvLocalVendaCaixaFlow', () => {
     )
   })
 
+  it('trocar só o vendedor no seletor vale para a próxima venda (callback não fica com valor antigo)', async () => {
+    invokeMock.mockResolvedValue(null)
+    const base = criarParams()
+    const { result, rerender } = renderHook((p: { vendedorId: string | null }) => usePdvLocalVendaCaixaFlow({ ...base, vendedorId: p.vendedorId }), {
+      initialProps: { vendedorId: null },
+    })
+    rerender({ vendedorId: '22222222-2222-4222-8222-222222222222' })
+    await act(async () => {
+      await result.current.finalizarVenda()
+    })
+    const venda = (invokeMock.mock.calls.find((c) => c[0] === 'registrar_venda')![1] as { venda: Record<string, unknown> }).venda
+    expect(venda.vendedor_id).toBe('22222222-2222-4222-8222-222222222222')
+  })
+
   it('sem pagamentos combinados o payload não ganha o campo (outbox idêntica à anterior)', async () => {
     invokeMock.mockResolvedValue(null)
     const { result } = renderHook(() => usePdvLocalVendaCaixaFlow(criarParams({ formaPagamento: 'PIX' })))
