@@ -1,0 +1,72 @@
+# Instalador Windows (NSIS) do PDV desktop (pdv-local, Tauri 2).
+# Gera o instalador como ARTEFATO do workflow para homologação/instalação presencial.
+# Não publica release, não tem auto-update, não faz deploy e não toca no Supabase.
+# Sem certificado de assinatura de código: o instalador sai SEM assinatura (o Windows SmartScreen avisa).
+# Endpoint de sync embutido: secret PDV_SYNC_ENDPOINT_DEFAULT se existir; senão a URL pública da edge
+# sync-outbox de produção (não é credencial — o PDV ainda exige o código de ativação).
+name: Release PDV desktop (Windows)
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'pdv-v*'
+
+jobs:
+  windows-installer:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Rust stable
+        uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable
+
+      - uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae # v2
+        with:
+          workspaces: pdv-local/src-tauri
+
+      - name: Install (workspaces na raiz)
+        run: npm ci
+
+      - name: Testes do app desktop (front + Rust)
+        shell: bash
+        run: |
+          npm run typecheck -w pdv-local
+          npm run test -w pdv-local
+          cd pdv-local/src-tauri && cargo test --bin pdv-local
+
+      - name: Build do instalador (NSIS, sem assinatura)
+        working-directory: pdv-local
+        shell: bash
+        env:
+          PDV_SYNC_ENDPOINT_DEFAULT: ${{ secrets.PDV_SYNC_ENDPOINT_DEFAULT || 'https://kbabmewnahysfvlybiak.supabase.co/functions/v1/sync-outbox' }}
+        run: npx tauri build --bundles nsis
+
+      - name: SHA-256 do instalador
+        shell: bash
+        run: |
+          cd pdv-local/src-tauri/target/release/bundle/nsis
+          sha256sum *.exe | tee SHA256SUMS.txt
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: jinlong-pdv-windows-${{ github.sha }}
+          path: |
+            pdv-local/src-tauri/target/release/bundle/nsis/*.exe
+            pdv-local/src-tauri/target/release/bundle/nsis/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30
