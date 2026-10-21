@@ -5,6 +5,9 @@ import { roundAbnt } from '@/core/money/roundAbnt'
 
 export { roundMoney2 }
 
+/** Teto de parcelas do crédito — igual ao CHECK de `vendas_pagamentos.parcelas` (migration 20261021120000). */
+export const MAX_PARCELAS_CREDITO = 24
+
 export const FORMAS_PAGAMENTO_CAIXA = [
   'DINHEIRO',
   'PIX',
@@ -51,6 +54,11 @@ export const pagamentoParcelaSchema = z.object({
     errorMap: () => ({ message: 'Forma de pagamento inválida.' }),
   }),
   valor: z.number().positive('O valor da parcela deve ser maior que zero.'),
+  /** Nº de parcelas do crédito (1..24). Opcional: ausente = 1x (contrato anterior). */
+  parcelas: z.number().int().min(1).max(MAX_PARCELAS_CREDITO).optional(),
+}).refine((p) => (p.parcelas ?? 1) === 1 || p.formaPagamento === 'CARTAO_CREDITO', {
+  message: 'Parcelamento só existe no cartão de crédito.',
+  path: ['parcelas'],
 })
 
 /** true quando a forma da venda e todas as parcelas são DINHEIRO (pré-condição do desconto de gerente). */

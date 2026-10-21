@@ -17,8 +17,10 @@ import { formatarBRL } from './lib/formatarMoeda'
 import { existeModalAberto, resolverAtalhoPdv } from './lib/atalhosPdv'
 import {
   FORMAS_PAGAMENTO_DESKTOP,
+  MAX_PARCELAS_CREDITO,
   ROTULO_FORMA_PAGAMENTO,
   type FormaPagamentoDesktop,
+  type LinhaPagamentoDesktop,
 } from './lib/formaPagamento'
 
 function bindLojaCarrinhoDesktop(lojaId: string | null) {
@@ -123,9 +125,15 @@ export function App() {
   const [metricaAddItemMs, setMetricaAddItemMs] = useState<number | null>(null)
   const [metricaFinalizarMs, setMetricaFinalizarMs] = useState<number | null>(null)
   const [formaPagamento, setFormaPagamento] = useState<FormaPagamentoDesktop>('DINHEIRO')
+  const [parcelasCredito, setParcelasCredito] = useState(1)
+  const [dividirPagamento, setDividirPagamento] = useState(false)
+  const [linhasPagamento, setLinhasPagamento] = useState<LinhaPagamentoDesktop[]>([])
   const limparCarrinhoEForma = useCallback(() => {
     limparCarrinho()
     setFormaPagamento('DINHEIRO')
+    setParcelasCredito(1)
+    setDividirPagamento(false)
+    setLinhasPagamento([])
   }, [limparCarrinho])
   const [metricaSyncMs, setMetricaSyncMs] = useState<number | null>(null)
 
@@ -176,6 +184,11 @@ export function App() {
     maxDescontoGerentePercentual,
     gerenteId,
     formaPagamento,
+    pagamentos: dividirPagamento
+      ? linhasPagamento
+      : formaPagamento === 'CARTAO_CREDITO' && parcelasCredito > 1
+        ? [{ formaPagamento: 'CARTAO_CREDITO', valor: totalLiquido, parcelas: parcelasCredito }]
+        : undefined,
     onSetCaixaAtualId: setCaixaAtualId,
     onSetMensagem: setMensagem,
     onLimparCarrinho: limparCarrinhoEForma,
@@ -1148,6 +1161,108 @@ export function App() {
                 )
               })}
             </div>
+            {formaPagamento === 'CARTAO_CREDITO' && !dividirPagamento ? (
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#374151' }}>
+                Parcelas / 分期
+                <select
+                  data-testid="pdv-parcelas-credito"
+                  value={parcelasCredito}
+                  disabled={isFinalizandoVenda}
+                  onChange={(e) => setParcelasCredito(Number(e.target.value))}
+                  style={{ minHeight: 36, borderRadius: 8, border: '1px solid #d1d5db', padding: '0 8px' }}
+                >
+                  {Array.from({ length: MAX_PARCELAS_CREDITO }, (_, i) => i + 1).map((n) => (
+                    <option key={n} value={n}>{n === 1 ? 'À vista / 一次付清' : `${n}x`}</option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+            <button
+              type="button"
+              data-testid="pdv-dividir-pagamento"
+              disabled={isFinalizandoVenda}
+              onClick={() => {
+                if (dividirPagamento) {
+                  setDividirPagamento(false)
+                  setLinhasPagamento([])
+                } else {
+                  setDividirPagamento(true)
+                  setLinhasPagamento([{ formaPagamento, valor: totalLiquido }])
+                }
+              }}
+              style={{ minHeight: 36, borderRadius: 8, border: '1px dashed #9ca3af', background: 'transparent', color: '#374151', fontSize: 13, cursor: 'pointer' }}
+            >
+              {dividirPagamento ? 'Voltar para uma forma / 单一付款' : 'Dividir pagamento / 组合付款'}
+            </button>
+            {dividirPagamento ? (
+              <div data-testid="pdv-pagamento-combinado" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {linhasPagamento.map((l, idx) => (
+                  <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr 0.8fr auto', gap: 6 }}>
+                    <select
+                      aria-label={`Forma ${idx + 1}`}
+                      value={l.formaPagamento}
+                      onChange={(e) => {
+                        const f = e.target.value as FormaPagamentoDesktop
+                        setLinhasPagamento((ls) => ls.map((x, i) => (i === idx ? { ...x, formaPagamento: f, parcelas: f === 'CARTAO_CREDITO' ? x.parcelas : undefined } : x)))
+                      }}
+                      style={{ minHeight: 36, borderRadius: 8, border: '1px solid #d1d5db' }}
+                    >
+                      {FORMAS_PAGAMENTO_DESKTOP.map((f) => (
+                        <option key={f} value={f}>{ROTULO_FORMA_PAGAMENTO[f].pt} / {ROTULO_FORMA_PAGAMENTO[f].zh}</option>
+                      ))}
+                    </select>
+                    <input
+                      aria-label={`Valor ${idx + 1}`}
+                      inputMode="decimal"
+                      defaultValue={l.valor ? l.valor.toFixed(2).replace('.', ',') : ''}
+                      onChange={(e) => {
+                        const v = Number(e.target.value.replace(/\./g, '').replace(',', '.'))
+                        setLinhasPagamento((ls) => ls.map((x, i) => (i === idx ? { ...x, valor: Number.isFinite(v) ? v : 0 } : x)))
+                      }}
+                      style={{ minHeight: 36, borderRadius: 8, border: '1px solid #d1d5db', padding: '0 8px', textAlign: 'right' }}
+                    />
+                    <select
+                      aria-label={`Parcelas ${idx + 1}`}
+                      value={l.parcelas ?? 1}
+                      disabled={l.formaPagamento !== 'CARTAO_CREDITO'}
+                      onChange={(e) => {
+                        const n = Number(e.target.value)
+                        setLinhasPagamento((ls) => ls.map((x, i) => (i === idx ? { ...x, parcelas: n } : x)))
+                      }}
+                      style={{ minHeight: 36, borderRadius: 8, border: '1px solid #d1d5db' }}
+                    >
+                      {Array.from({ length: MAX_PARCELAS_CREDITO }, (_, i) => i + 1).map((n) => (
+                        <option key={n} value={n}>{n}x</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      aria-label={`Remover forma ${idx + 1}`}
+                      onClick={() => setLinhasPagamento((ls) => ls.filter((_, i) => i !== idx))}
+                      style={{ minHeight: 36, borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', padding: '0 10px' }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+                {linhasPagamento.length < FORMAS_PAGAMENTO_DESKTOP.length ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const livre = FORMAS_PAGAMENTO_DESKTOP.find((f) => !linhasPagamento.some((l) => l.formaPagamento === f))
+                      if (livre) setLinhasPagamento((ls) => [...ls, { formaPagamento: livre, valor: 0 }])
+                    }}
+                    style={{ minHeight: 34, borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', fontSize: 13 }}
+                  >
+                    + Forma / 添加付款方式
+                  </button>
+                ) : null}
+                <div style={{ fontSize: 12, color: '#6b7280' }}>
+                  Soma / 合计: {formatarBRL(linhasPagamento.reduce((a, l) => a + (l.valor || 0), 0))} · Total: {formatarBRL(totalLiquido)}
+                  {' '}· Troco só em dinheiro / 仅现金找零
+                </div>
+              </div>
+            ) : null}
             <button
               disabled={itens.length === 0 || isFinalizandoVenda}
               style={{

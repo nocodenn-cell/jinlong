@@ -197,4 +197,76 @@ describe('usePdvLocalVendaCaixaFlow', () => {
     expect(invokeMock).not.toHaveBeenCalled()
     expect(onSetMensagem).toHaveBeenCalledWith('Forma de pagamento inválida. Escolha Dinheiro, PIX, Crédito ou Débito.')
   })
+
+  it('pagamento combinado + crédito parcelado vai no payload (troco descontado do dinheiro)', async () => {
+    invokeMock.mockResolvedValue(null)
+    const { result } = renderHook(() =>
+      usePdvLocalVendaCaixaFlow(
+        criarParams({
+          totalLiquido: 9,
+          pagamentos: [
+            { formaPagamento: 'DINHEIRO', valor: 5 },
+            { formaPagamento: 'CARTAO_CREDITO', valor: 6, parcelas: 3 },
+          ],
+        }),
+      ),
+    )
+    await act(async () => {
+      await result.current.finalizarVenda()
+    })
+    expect(invokeMock).toHaveBeenCalledWith(
+      'registrar_venda',
+      expect.objectContaining({
+        venda: expect.objectContaining({
+          forma_pagamento: 'DINHEIRO',
+          pagamentos: [
+            { forma_pagamento: 'DINHEIRO', valor: 3 },
+            { forma_pagamento: 'CARTAO_CREDITO', valor: 6, parcelas: 3 },
+          ],
+        }),
+      }),
+    )
+  })
+
+  it('sem pagamentos combinados o payload não ganha o campo (outbox idêntica à anterior)', async () => {
+    invokeMock.mockResolvedValue(null)
+    const { result } = renderHook(() => usePdvLocalVendaCaixaFlow(criarParams({ formaPagamento: 'PIX' })))
+    await act(async () => {
+      await result.current.finalizarVenda()
+    })
+    const venda = (invokeMock.mock.calls[0][1] as { venda: Record<string, unknown> }).venda
+    expect('pagamentos' in venda).toBe(false)
+  })
+
+  it('recusa combinado inválido sem gravar', async () => {
+    const onSetMensagem = vi.fn()
+    const { result } = renderHook(() =>
+      usePdvLocalVendaCaixaFlow(
+        criarParams({ totalLiquido: 9, onSetMensagem, pagamentos: [{ formaPagamento: 'PIX', valor: 20 }] }),
+      ),
+    )
+    await act(async () => {
+      await result.current.finalizarVenda()
+    })
+    expect(invokeMock).not.toHaveBeenCalled()
+    expect(onSetMensagem).toHaveBeenCalledWith(
+      'Valor acima do total em cartão/PIX. Troco só existe em dinheiro: corrija os valores.',
+    )
+  })
+
+  it('combinado com cartão + desconto de gerente é bloqueado', async () => {
+    const onSetMensagem = vi.fn()
+    const { result } = renderHook(() =>
+      usePdvLocalVendaCaixaFlow(
+        criarParams({
+          totalLiquido: 9, descontoGerentePercentual: 5, descontoGerenteToken: 't', onSetMensagem,
+          pagamentos: [{ formaPagamento: 'DINHEIRO', valor: 4 }, { formaPagamento: 'PIX', valor: 5 }],
+        }),
+      ),
+    )
+    await act(async () => {
+      await result.current.finalizarVenda()
+    })
+    expect(invokeMock).not.toHaveBeenCalled()
+  })
 })

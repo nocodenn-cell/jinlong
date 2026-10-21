@@ -45,6 +45,7 @@ import {
 type PagamentoParcelaRpc = {
   forma_pagamento: FinalizarVendaInput['formaPagamento']
   valor: number
+  parcelas?: number
 }
 
 type RpcCancelarVendaRow = { venda_id?: unknown; valor_estornado?: unknown }
@@ -309,6 +310,8 @@ export async function finalizarVendaCaixaImpl(
         (p): PagamentoParcelaRpc => ({
           forma_pagamento: p.formaPagamento,
           valor: roundMoney2(p.valor),
+          // Só envia quando > 1: banco sem a migration 20261021120000 ignora a chave (fica 1x), nunca falha.
+          ...((p.parcelas ?? 1) > 1 ? { parcelas: p.parcelas } : {}),
         }),
       ),
       p_itens: itensRpc,

@@ -22,6 +22,16 @@ pub struct ItemVendaInput {
     pub preco_unitario: f64,
 }
 
+/// Uma parcela do pagamento combinado (opcional; ausente = venda de forma única, como antes).
+#[derive(Deserialize, Clone, Debug)]
+pub struct PagamentoVendaInput {
+    pub forma_pagamento: String,
+    pub valor: f64,
+    /// Só CARTAO_CREDITO pode ser > 1 (1..24). Ausente = 1x.
+    #[serde(default)]
+    pub parcelas: Option<i64>,
+}
+
 #[derive(Deserialize)]
 pub struct RegistrarVendaInput {
     pub caixa_id: Option<String>,
@@ -35,6 +45,62 @@ pub struct RegistrarVendaInput {
     pub desconto_gerente_valor: Option<f64>,
     pub gerente_id: Option<String>,
     pub desconto_gerente_token: Option<String>,
+    /// Pagamento combinado / parcelas do crédito. `None` = comportamento histórico (forma escalar).
+    #[serde(default)]
+    pub pagamentos: Option<Vec<PagamentoVendaInput>>,
+}
+
+const FORMAS_PAGAMENTO_VALIDAS: [&str; 4] = ["DINHEIRO", "PIX", "CARTAO_CREDITO", "CARTAO_DEBITO"];
+
+fn centavos(v: f64) -> Option<i64> {
+    if !v.is_finite() {
+        return None;
+    }
+    let c = (v * 100.0).round();
+    if (v * 100.0 - c).abs() > 1e-6 {
+        return None; // mais de 2 casas decimais
+    }
+    Some(c as i64)
+}
+
+/// Valida o pagamento combinado no mesmo contrato do servidor (`registrar_venda_com_itens[_v2]`):
+/// formas conhecidas, valor > 0 com 2 casas, soma == total líquido (troco já descontado do dinheiro),
+/// parcelas 1..24 só no crédito, no máximo uma linha por forma.
+pub fn validar_pagamentos_venda(
+    pagamentos: &Option<Vec<PagamentoVendaInput>>,
+    total_liquido: f64,
+) -> Result<(), String> {
+    let Some(lista) = pagamentos else { return Ok(()) };
+    if lista.is_empty() {
+        return Err("Informe ao menos uma forma de pagamento.".to_string());
+    }
+    let total = centavos(total_liquido).ok_or("Total da venda inválido.")?;
+    let mut soma: i64 = 0;
+    let mut vistas: Vec<&str> = Vec::new();
+    for p in lista {
+        let forma = p.forma_pagamento.as_str();
+        if !FORMAS_PAGAMENTO_VALIDAS.contains(&forma) {
+            return Err(format!("Forma de pagamento inválida: {forma}."));
+        }
+        if vistas.contains(&forma) {
+            return Err("Use cada forma de pagamento uma única vez.".to_string());
+        }
+        vistas.push(forma);
+        let c = centavos(p.valor).ok_or("Valor de pagamento inválido.")?;
+        if c <= 0 {
+            return Err("Cada pagamento precisa ser maior que zero.".to_string());
+        }
+        if let Some(n) = p.parcelas {
+            if !(1..=24).contains(&n) || (n > 1 && forma != "CARTAO_CREDITO") {
+                return Err("Parcelas só no crédito, de 1 a 24.".to_string());
+            }
+        }
+        soma += c;
+    }
+    if soma != total {
+        return Err("A soma dos pagamentos precisa ser igual ao total da venda.".to_string());
+    }
+    Ok(())
 }
 
 #[derive(Serialize)]
@@ -208,6 +274,17 @@ pub fn init_db(app: &tauri::AppHandle) -> Result<(), String> {
           FOREIGN KEY (venda_id) REFERENCES vendas(id)
         );
 
+        -- Pagamento combinado / parcelas (aditivo: bancos antigos ganham a tabela vazia; vendas antigas
+        -- continuam só com vendas.forma_pagamento).
+        CREATE TABLE IF NOT EXISTS vendas_pagamentos (
+          id TEXT PRIMARY KEY,
+          venda_id TEXT NOT NULL,
+          forma_pagamento TEXT NOT NULL,
+          valor_centavos INTEGER NOT NULL CHECK (valor_centavos > 0),
+          parcelas INTEGER NOT NULL DEFAULT 1 CHECK (parcelas BETWEEN 1 AND 24),
+          FOREIGN KEY (venda_id) REFERENCES vendas(id)
+        );
+
         CREATE TABLE IF NOT EXISTS descontos_venda (
           venda_id TEXT PRIMARY KEY,
           gerente_id TEXT,
@@ -376,6 +453,7 @@ pub fn registrar_venda_local(
     input: RegistrarVendaInput,
 ) -> Result<String, String> {
     validar_caixa_id_obrigatorio(&input.caixa_id)?;
+    validar_pagamentos_venda(&input.pagamentos, input.total_liquido)?;
 
     // Garantir schema sempre (seguro e evita falha caso init não rode por qualquer motivo).
     init_db(app)?;
@@ -447,6 +525,27 @@ pub fn registrar_venda_local(
         }));
     }
 
+    let mut pagamentos_payload: Option<Vec<serde_json::Value>> = None;
+    if let Some(lista) = &input.pagamentos {
+        let mut v = Vec::new();
+        for p in lista {
+            let c = centavos(p.valor).ok_or("Valor de pagamento inválido.")?;
+            let parcelas = p.parcelas.unwrap_or(1);
+            tx.execute(
+                "INSERT INTO vendas_pagamentos (id, venda_id, forma_pagamento, valor_centavos, parcelas)
+                 VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![Uuid::new_v4().to_string(), venda_id, p.forma_pagamento, c, parcelas],
+            )
+            .map_err(|e| e.to_string())?;
+            let mut j = json!({ "forma_pagamento": p.forma_pagamento, "valor": (c as f64) / 100.0 });
+            if parcelas > 1 {
+                j["parcelas"] = json!(parcelas);
+            }
+            v.push(j);
+        }
+        pagamentos_payload = Some(v);
+    }
+
     // Registrar, se houver, informações de desconto especial de gerente
     if let (Some(p), Some(v), Some(gerente_id)) = (
         input.desconto_gerente_percentual,
@@ -478,7 +577,16 @@ pub fn registrar_venda_local(
       "desconto_gerente_token": input.desconto_gerente_token,
       "loja_id": loja_id,
       "itens": itens_payload
-    })
+    });
+    // Só eventos novos com pagamento combinado levam `pagamentos` — itens antigos da outbox ficam idênticos.
+    let payload = match pagamentos_payload {
+        Some(p) => {
+            let mut obj = payload;
+            obj["pagamentos"] = json!(p);
+            obj
+        }
+        None => payload,
+    }
     .to_string();
 
     tx.execute(
@@ -1598,6 +1706,46 @@ pub fn sync_outbox_real(app: &tauri::AppHandle, limite: i64) -> Result<i64, Stri
 
 #[cfg(test)]
 mod tests {
+    use super::{validar_pagamentos_venda, PagamentoVendaInput};
+
+    fn pg(forma: &str, valor: f64, parcelas: Option<i64>) -> PagamentoVendaInput {
+        PagamentoVendaInput { forma_pagamento: forma.to_string(), valor, parcelas }
+    }
+
+    #[test]
+    fn pagamentos_ausentes_mantem_comportamento_antigo() {
+        assert!(validar_pagamentos_venda(&None, 10.0).is_ok());
+    }
+
+    #[test]
+    fn pagamento_combinado_valido_e_soma_em_centavos() {
+        let l = Some(vec![pg("DINHEIRO", 0.1, None), pg("PIX", 0.2, None), pg("CARTAO_CREDITO", 99.7, Some(3))]);
+        assert!(validar_pagamentos_venda(&l, 100.0).is_ok());
+    }
+
+    #[test]
+    fn pagamento_combinado_rejeita_soma_divergente_forma_repetida_e_invalida() {
+        assert!(validar_pagamentos_venda(&Some(vec![pg("PIX", 50.0, None)]), 100.0).is_err());
+        assert!(validar_pagamentos_venda(&Some(vec![pg("PIX", 150.0, None)]), 100.0).is_err());
+        assert!(validar_pagamentos_venda(&Some(vec![pg("PIX", 50.0, None), pg("PIX", 50.0, None)]), 100.0).is_err());
+        assert!(validar_pagamentos_venda(&Some(vec![pg("BOLETO", 100.0, None)]), 100.0).is_err());
+        assert!(validar_pagamentos_venda(&Some(vec![pg("PIX", 100.001, None)]), 100.001).is_err());
+        assert!(validar_pagamentos_venda(&Some(vec![pg("PIX", -1.0, None), pg("DINHEIRO", 101.0, None)]), 100.0).is_err());
+        assert!(validar_pagamentos_venda(&Some(vec![]), 100.0).is_err());
+    }
+
+    #[test]
+    fn parcelas_so_no_credito_de_1_a_24() {
+        assert!(validar_pagamentos_venda(&Some(vec![pg("CARTAO_CREDITO", 100.0, Some(24))]), 100.0).is_ok());
+        assert!(validar_pagamentos_venda(&Some(vec![pg("CARTAO_CREDITO", 100.0, Some(25))]), 100.0).is_err());
+        assert!(validar_pagamentos_venda(&Some(vec![pg("CARTAO_CREDITO", 100.0, Some(0))]), 100.0).is_err());
+        assert!(validar_pagamentos_venda(&Some(vec![pg("CARTAO_DEBITO", 100.0, Some(2))]), 100.0).is_err());
+        assert!(validar_pagamentos_venda(&Some(vec![pg("PIX", 100.0, Some(1))]), 100.0).is_ok());
+    }
+}
+
+#[cfg(test)]
+mod tests_existentes {
     use super::{
         backoff_segundos_apos_falha, build_request_signature, canonical_path_with_query,
         endpoint_with_op, validar_caixa_id_obrigatorio,

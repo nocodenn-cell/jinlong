@@ -40,6 +40,7 @@
     "test:multiempresa-fase4": "node scripts/multiempresa-fase4-desempenho.test.mjs",
     "test:multiempresa-fase5": "node scripts/multiempresa-fase5-catalogo.test.mjs",
     "test:cobranca": "node scripts/cobranca-planos-trial.test.mjs",
+    "test:sync-outbox-parcelas": "deno test supabase/functions/sync-outbox/pagamentosParcelas.test.ts",
     "test:asaas-webhook": "deno test --allow-env supabase/functions/asaas-webhook/handler.test.ts supabase/functions/sync-outbox/planGate.test.ts"
   },
   "dependencies": {
