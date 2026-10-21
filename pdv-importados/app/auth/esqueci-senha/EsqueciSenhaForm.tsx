@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { DragonOuroLoader } from '@/components/branding/DragonOuroLoader'
 import { AuthShell } from '@/components/auth/AuthShell'
 import { buildAuthCallbackUrl } from '@/lib/auth/appOrigin'
+import { erroDoFragmento } from '@/lib/auth/emailLink'
 import { ROUTES } from '@/lib/navigation/routes'
 import type { AppLocale } from '@shared-core/src/i18n'
 
@@ -42,6 +43,12 @@ export function EsqueciSenhaForm({ labels: L, locale, initialError }: Props) {
   const [erro, setErro] = useState(() => mapQueryError(initialError, L))
   const [ok, setOk] = useState(false)
   const [loading, setLoading] = useState(false)
+
+  // Supabase devolve o motivo real (ex.: otp_expired) no #fragmento, invisível ao servidor.
+  useEffect(() => {
+    const codigo = erroDoFragmento(window.location.hash)
+    if (codigo) setErro(mapQueryError(codigo, L))
+  }, [L])
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
