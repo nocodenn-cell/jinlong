@@ -98,7 +98,7 @@ export function CaixaDescontoComercialDinheiro({
       <fieldset disabled={disabled} className="mt-3 grid gap-2">
         <button
           type="button"
-          className="min-h-[56px] rounded-lg bg-blue-800 px-3 text-[18px] font-semibold text-white disabled:opacity-50"
+          className="min-h-[56px] rounded-lg bg-brand-strong px-3 text-[18px] font-semibold text-white disabled:opacity-50"
           onClick={aplicarRapido}
         >
           {t.quick}
@@ -125,7 +125,7 @@ export function CaixaDescontoComercialDinheiro({
         </label>
         <dl className="grid gap-1 rounded border border-slate-300 bg-slate-50 p-2 text-[16px]">
           <div className="flex justify-between gap-2"><dt>{t.subtotal}</dt><dd>R$ {formatDecimalBRL(subtotal)}</dd></div>
-          <div className="flex justify-between gap-2 font-semibold text-blue-900">
+          <div className="flex justify-between gap-2 font-semibold text-brand-strong">
             <dt>{t.desconto}</dt>
             <dd>R$ {formatDecimalBRL(preview.descontoValor)} ({preview.percentual.toFixed(2)}%)</dd>
           </div>
@@ -146,7 +146,7 @@ export function CaixaDescontoComercialDinheiro({
         </div>
         {feedback ? <p role="alert" className="text-sm font-semibold text-red-700">{feedback}</p> : null}
         {!feedback && descontoPercentualAtual > 0 ? (
-          <p role="status" className="text-sm font-semibold text-blue-900">{t.applied}</p>
+          <p role="status" className="text-sm font-semibold text-brand-strong">{t.applied}</p>
         ) : null}
       </fieldset>
     </details>
