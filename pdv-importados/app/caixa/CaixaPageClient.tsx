@@ -334,6 +334,13 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   // tocar a lógica operacional do ref (guard de scan stale) — só atrasa a
   // exibição no painel de debug até depois do mount.
   const [pipelineDebugMounted, setPipelineDebugMounted] = useState(false)
+  // Marca Jinlong (vermelho do Admin) também nos modais em portal do caixa.
+  useEffect(() => {
+    document.body.classList.add('pdv-marca-jinlong')
+    return () => {
+      document.body.classList.remove('pdv-marca-jinlong')
+    }
+  }, [])
   useEffect(() => {
     setPipelineDebugMounted(true)
   }, [])
