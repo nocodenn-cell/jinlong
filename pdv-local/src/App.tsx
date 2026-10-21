@@ -15,6 +15,10 @@ import { recalcularPrecoItemLocal } from './lib/recalcularPrecoItemLocal'
 import { resolverPrecoCanonicoLocal } from './lib/resolverPrecoCanonicoLocal'
 import { formatarBRL } from './lib/formatarMoeda'
 import { existeModalAberto, resolverAtalhoPdv } from './lib/atalhosPdv'
+import { useOperadorPin } from './operador/useOperadorPin'
+import { LockScreen } from './operador/LockScreen'
+import { GerentePinDialog } from './operador/GerentePinDialog'
+import { gerentesComPin, T as TPin } from './operador/operadorPin'
 import {
   FORMAS_PAGAMENTO_DESKTOP,
   MAX_PARCELAS_CREDITO,
@@ -90,6 +94,9 @@ export function App() {
 
   const [gerenteId, setGerenteId] = useState(defaultPdvConfig.gerenteId)
   const [caixaAtualId, setCaixaAtualId] = useState<string | null>(null)
+  // Login por PIN: desconto autorizado por PIN do gerente (id do gerente + evento de auditoria do cupom atual).
+  const [gerentePin, setGerentePin] = useState<{ gerenteId: string; eventoId: string | null } | null>(null)
+  const [dialogoGerentePin, setDialogoGerentePin] = useState(false)
 
   const {
     tauriDisponivel,
@@ -108,6 +115,9 @@ export function App() {
     setMensagem,
     setLojaId: bindLojaCarrinhoDesktop,
   })
+
+  const operadorPin = useOperadorPin({ tauriDisponivel })
+  const gerentesPin = gerentesComPin(operadorPin.status)
 
   const handleAlterarQuantidadeLocal = useCallback(
     (item: ItemCarrinhoStore, novaQuantidade: number) => {
@@ -134,6 +144,7 @@ export function App() {
     setParcelasCredito(1)
     setDividirPagamento(false)
     setLinhasPagamento([])
+    setGerentePin(null)
   }, [limparCarrinho])
   const [metricaSyncMs, setMetricaSyncMs] = useState<number | null>(null)
 
@@ -182,7 +193,10 @@ export function App() {
     descontoGerenteValor,
     descontoGerenteToken,
     maxDescontoGerentePercentual,
-    gerenteId,
+    gerenteId: gerentePin?.gerenteId ?? gerenteId,
+    gerentePinEventoId: gerentePin?.eventoId ?? null,
+    // PIN ligado: venda e abertura carimbadas com quem está no caixa. Desligado: null, como sempre.
+    operadorId: operadorPin.ativo ? operadorPin.operadorAtual?.usuario_id ?? null : null,
     formaPagamento,
     pagamentos: dividirPagamento
       ? linhasPagamento
@@ -307,6 +321,7 @@ export function App() {
         temItens: itens.length > 0,
         finalizando: isFinalizandoVenda,
         modalAberto: existeModalAberto(),
+        pinAtivo: operadorPin.ativo,
       },
       { repeticao: e.repeat, jaTratado: e.defaultPrevented },
     )
@@ -325,6 +340,9 @@ export function App() {
         return
       case 'finalizar':
         void Promise.resolve(finalizarVenda()).finally(depois)
+        return
+      case 'trocarOperador':
+        void operadorPin.sair('troca')
         return
       case 'novoCupom':
         novoCupom()
@@ -361,7 +379,7 @@ export function App() {
       >
         <div>
           <div style={{ fontSize: '1rem', fontWeight: 600, color: '#111827' }}>
-            PDV Local · Caixa 01 · Operador
+            PDV Local · Caixa 01 · {operadorPin.ativo && operadorPin.operadorAtual ? operadorPin.operadorAtual.nome : 'Operador'}
           </div>
           <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
             Tela clara, otimizada para frente de caixa
@@ -381,6 +399,27 @@ export function App() {
             justifyContent: 'flex-end',
           }}
         >
+          {operadorPin.ativo ? (
+            <button
+              type="button"
+              data-testid="pdv-trocar-operador"
+              onClick={() => void operadorPin.sair('troca')}
+              disabled={isFinalizandoVenda}
+              title="F12"
+              style={{
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                padding: '0.35rem 0.75rem',
+                borderRadius: 999,
+                border: '1px solid #1d4ed8',
+                background: '#eff6ff',
+                color: '#1d4ed8',
+                cursor: 'pointer',
+              }}
+            >
+              {TPin.trocar} · F12
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() => void sincronizarCatalogoManual()}
@@ -1008,6 +1047,11 @@ export function App() {
               }}
               onClick={async () => {
                 if (!itens.length) return
+                // Login por PIN ligado e há gerente com PIN: autoriza por PIN (funciona offline).
+                if (operadorPin.ativo && gerentesPin.length > 0) {
+                  setDialogoGerentePin(true)
+                  return
+                }
                 const senha = globalThis.prompt('Senha do gerente para aplicar desconto especial:')
                 if (!senha) return
 
@@ -1297,6 +1341,40 @@ export function App() {
           </div>
         </section>
       </main>
+      {dialogoGerentePin ? (
+        <GerentePinDialog
+          gerentes={gerentesPin}
+          acao="desconto_especial"
+          percentual={{
+            max: maxDescontoGerentePercentual,
+            inicial: descontoGerentePercentual > 0 ? descontoGerentePercentual : 5,
+          }}
+          onAutorizar={operadorPin.autorizarGerente}
+          onCancelar={() => {
+            setDialogoGerentePin(false)
+            focarInputLeitura()
+          }}
+          onConcluir={(a) => {
+            setDialogoGerentePin(false)
+            const valor = a.percentual ?? 0
+            setGerentePin({ gerenteId: a.gerenteId, eventoId: a.eventoId })
+            aplicarDescontoGerente(valor, null, null)
+            setMensagem(`Desconto especial de ${valor.toFixed(1)}% aplicado por ${a.nome}${a.offline ? ` (${TPin.offline})` : ''}.`)
+            focarInputLeitura()
+          }}
+        />
+      ) : null}
+      {operadorPin.telaBloqueio && operadorPin.status ? (
+        <LockScreen
+          operadores={operadorPin.status.operadores}
+          temCarrinho={itens.length > 0}
+          onEntrar={async (usuario, pin) => {
+            const r = await operadorPin.entrar(usuario, pin)
+            if (r.ok) focarInputLeitura()
+            return r
+          }}
+        />
+      ) : null}
     </div>
   )
 }

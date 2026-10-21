@@ -2106,6 +2106,31 @@
   "brand": {
     "logo_subtitle": "金龍"
   },
+  "meu_pin": {
+    "titulo": "我的收银PIN",
+    "subtitulo": "4位数字PIN，用于在收银台快速登录和切换操作员，无需邮箱和密码。",
+    "definir_meu": "创建我的PIN",
+    "trocar_meu": "更改我的PIN",
+    "regra": "4位数字。不接受连续或重复数字（1234、0000）。请勿将PIN告诉他人。",
+    "novo_pin": "新PIN",
+    "confirmar_pin": "再次输入PIN",
+    "salvar": "保存PIN",
+    "salvo": "PIN已保存。收银台下次同步后生效。",
+    "equipe_titulo": "团队PIN",
+    "equipe_sub": "解锁会删除PIN和错误锁定；员工需在此重新创建。",
+    "status_com_pin": "已设置",
+    "status_sem_pin": "未设置",
+    "status_bloqueado": "已锁定",
+    "resetar": "解锁/删除PIN",
+    "resetar_confirmar": "删除{nome}的PIN？对方需要重新创建。",
+    "resetado": "PIN已删除，对方可以重新创建。",
+    "erro_formato": "PIN必须是4位数字。",
+    "erro_obvio": "PIN太简单，请避免连续或重复数字。",
+    "erro_confirmacao": "两次输入的PIN不一致。",
+    "erro_sessao": "登录已过期，请重新登录。",
+    "erro_permissao": "您没有权限执行此操作。",
+    "erro_indisponivel": "收银PIN暂不可用，请稍后再试。"
+  },
   "login": {
     "subtitulo": "请登录以继续",
     "tagline": "进口贸易 · 安全运营",

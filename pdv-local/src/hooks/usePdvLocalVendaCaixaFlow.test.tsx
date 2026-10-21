@@ -269,4 +269,46 @@ describe('usePdvLocalVendaCaixaFlow', () => {
     })
     expect(invokeMock).not.toHaveBeenCalled()
   })
+
+  it('login por PIN: carimba operador na abertura e na venda; desconto por PIN do gerente sem token', async () => {
+    vi.spyOn(window, 'prompt').mockReturnValue('0')
+    invokeMock.mockImplementation(async (cmd: string) => {
+      if (cmd === 'abrir_caixa_cmd') return 'cx-77'
+      if (cmd === 'registrar_venda') return null
+      throw new Error(`Comando inesperado: ${cmd}`)
+    })
+    const params = criarParams({
+      operadorId: 'op-pin',
+      descontoGerentePercentual: 5,
+      descontoGerenteValor: 0.5,
+      descontoGerenteToken: null,
+      gerenteId: 'ger-pin',
+      gerentePinEventoId: 'ev-1',
+    })
+    const { result } = renderHook(() => usePdvLocalVendaCaixaFlow(params))
+    await act(async () => {
+      await result.current.abrirCaixa()
+    })
+    expect(invokeMock).toHaveBeenCalledWith('abrir_caixa_cmd', { operador_id: 'op-pin', troco_inicial: 0 })
+    await act(async () => {
+      await result.current.finalizarVenda()
+    })
+    expect(invokeMock).toHaveBeenCalledWith(
+      'registrar_venda',
+      expect.objectContaining({
+        venda: expect.objectContaining({ operador_id: 'op-pin', gerente_id: 'ger-pin', gerente_pin_evento_id: 'ev-1' }),
+      }),
+    )
+  })
+
+  it('sem PIN: payload idêntico ao antigo (operador null, sem gerente_pin_evento_id)', async () => {
+    invokeMock.mockResolvedValue(null)
+    const { result } = renderHook(() => usePdvLocalVendaCaixaFlow(criarParams()))
+    await act(async () => {
+      await result.current.finalizarVenda()
+    })
+    const venda = (invokeMock.mock.calls.find((c) => c[0] === 'registrar_venda')?.[1] as { venda: Record<string, unknown> }).venda
+    expect(venda.operador_id).toBeNull()
+    expect('gerente_pin_evento_id' in venda).toBe(false)
+  })
 })

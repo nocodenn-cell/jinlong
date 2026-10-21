@@ -46,6 +46,13 @@ type Params = {
    * `pagamentos` no payload — idêntico ao comportamento anterior.
    */
   pagamentos?: LinhaPagamentoDesktop[]
+  /**
+   * Login por PIN: operador no caixa agora (carimba venda/abertura). null/ausente = payload antigo (null).
+   * O caixa é do terminal (opção A): a troca de operador não fecha nem reabre o caixa.
+   */
+  operadorId?: string | null
+  /** Desconto autorizado por PIN do gerente: evento OVERRIDE_GERENTE (servidor aceita sem token de senha). */
+  gerentePinEventoId?: string | null
   onSetCaixaAtualId: (id: string | null) => void
   onSetMensagem: (msg: string) => void
   onLimparCarrinho: () => void
@@ -70,6 +77,8 @@ export function usePdvLocalVendaCaixaFlow({
   gerenteId,
   formaPagamento = 'DINHEIRO',
   pagamentos,
+  operadorId = null,
+  gerentePinEventoId = null,
   onSetCaixaAtualId,
   onSetMensagem,
   onLimparCarrinho,
@@ -90,7 +99,7 @@ export function usePdvLocalVendaCaixaFlow({
       const trocoRaw = globalThis.prompt('Troco inicial do caixa (R$):', '0')
       const troco = trocoRaw ? Number(trocoRaw.replace(',', '.')) : 0
       const novoCaixaId = await invoke('abrir_caixa_cmd', {
-        operador_id: null,
+        operador_id: operadorId,
         troco_inicial: Number.isFinite(troco) ? troco : 0,
       })
       onSetCaixaAtualId(String(novoCaixaId))
@@ -98,7 +107,7 @@ export function usePdvLocalVendaCaixaFlow({
     } catch (e) {
       onSetMensagem(formatarErro(e, 'Não foi possível abrir o caixa. Tente de novo.'))
     }
-  }, [tauriDisponivel, onSetMensagem, onSetCaixaAtualId, formatarErro])
+  }, [tauriDisponivel, onSetMensagem, onSetCaixaAtualId, formatarErro, operadorId])
 
   const fecharCaixa = useCallback(async () => {
     if (!caixaAtualId) return
@@ -188,7 +197,7 @@ export function usePdvLocalVendaCaixaFlow({
     }
 
     if (descontoGerentePercentual > 0) {
-      if (!descontoGerenteToken) {
+      if (!descontoGerenteToken && !gerentePinEventoId) {
         onSetMensagem('Desconto de gerente sem autorização. Repita a validação antes de finalizar.')
         setIsFinalizandoVenda(false)
         return
@@ -217,7 +226,7 @@ export function usePdvLocalVendaCaixaFlow({
           onSetCaixaAtualId(caixaId)
         } else {
           caixaId = await invoke('abrir_caixa_cmd', {
-            operador_id: null,
+            operador_id: operadorId,
             troco_inicial: 0,
           })
           onSetCaixaAtualId(String(caixaId))
@@ -233,7 +242,7 @@ export function usePdvLocalVendaCaixaFlow({
       await invoke('registrar_venda', {
         venda: {
           caixa_id: caixaId,
-          operador_id: null,
+          operador_id: operadorId,
           forma_pagamento: formaEscalar,
           ...(pagamentosOutbox ? { pagamentos: pagamentosOutbox } : {}),
           total_bruto: totalBruto,
@@ -243,6 +252,7 @@ export function usePdvLocalVendaCaixaFlow({
           desconto_gerente_valor: descontoGerentePercentual > 0 ? descontoGerenteValor : null,
           gerente_id: descontoGerentePercentual > 0 ? gerenteId : null,
           desconto_gerente_token: descontoGerentePercentual > 0 ? descontoGerenteToken : null,
+          ...(descontoGerentePercentual > 0 && gerentePinEventoId ? { gerente_pin_evento_id: gerentePinEventoId } : {}),
           itens: itens.map((i) => ({
             produto_id: i.produtoId,
             nome: i.nome,
@@ -300,6 +310,8 @@ export function usePdvLocalVendaCaixaFlow({
     onRefreshOutboxResumo,
     logError,
     onFinalizarElapsedMs,
+    operadorId,
+    gerentePinEventoId,
   ])
 
   return {

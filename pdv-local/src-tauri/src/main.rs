@@ -2,6 +2,7 @@
 
 mod ativacao;
 mod db;
+mod operador;
 
 use db::{
     abrir_caixa_local, catalogo_local_get, diagnostics, fechar_caixa_local, get_caixa_atual,
@@ -149,6 +150,33 @@ fn validar_gerente_sync_cmd(senha: String) -> Result<ValidarGerentePdvDto, Strin
     validar_gerente_sync(senha)
 }
 
+#[tauri::command]
+fn operadores_local_cmd(app: tauri::AppHandle) -> Result<operador::OperadoresStatusDto, String> {
+    operador::operadores_local(&app)
+}
+
+#[tauri::command]
+fn operadores_sync_cmd(app: tauri::AppHandle) -> Result<operador::OperadoresStatusDto, String> {
+    operador::operadores_sync(&app)
+}
+
+#[tauri::command]
+fn operador_validar_pin_cmd(
+    app: tauri::AppHandle,
+    // nomes de uma palavra: iguais em camelCase/snake_case no invoke do Tauri
+    usuario: String,
+    pin: String,
+    gerente: Option<bool>,
+    acao: Option<String>,
+) -> Result<operador::ValidarPinDto, String> {
+    operador::validar_pin(&app, usuario, pin, gerente.unwrap_or(false), acao)
+}
+
+#[tauri::command]
+fn operador_sair_cmd(app: tauri::AppHandle, motivo: Option<String>) -> Result<(), String> {
+    operador::sair(&app, motivo.unwrap_or_else(|| "troca".into()))
+}
+
 fn main() {
     tauri::Builder::default()
         .setup(|app| {
@@ -180,7 +208,12 @@ fn main() {
             validar_gerente_sync_cmd,
             // Ativação por código
             ativacao_status_cmd,
-            ativar_pdv_cmd
+            ativar_pdv_cmd,
+            // Login rápido por PIN
+            operadores_local_cmd,
+            operadores_sync_cmd,
+            operador_validar_pin_cmd,
+            operador_sair_cmd
         ])
         .run(tauri::generate_context!())
         .expect("erro ao rodar aplicação Tauri");

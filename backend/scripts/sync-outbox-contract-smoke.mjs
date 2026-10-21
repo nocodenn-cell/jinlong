@@ -10,6 +10,7 @@ const EVENT_TYPES = new Set([
   "CAIXA_ABERTO",
   "CAIXA_FECHADO",
   "MOVIMENTO_CAIXA",
+  "OPERADOR_EVENTO",
 ]);
 
 function isRecord(x) {
@@ -113,6 +114,13 @@ function validateNormalizedEvent(event) {
   if (event.tipo === "VENDA_REGISTRADA") return validateVendaPayload(event.payload);
   if (event.tipo === "CAIXA_ABERTO") return validateCaixaAbertoPayload(event.payload);
   if (event.tipo === "CAIXA_FECHADO") return validateCaixaFechadoPayload(event.payload);
+  if (event.tipo === "OPERADOR_EVENTO") {
+    const p = event.payload;
+    if (!isUuid(p.id) || !isUuid(p.loja_id)) return asError("operador_evento inválido");
+    if (p.usuario_id != null && !isUuid(p.usuario_id)) return asError("operador_evento.usuario_id inválido");
+    if ("pin" in p) return asError("operador_evento não pode levar PIN");
+    return { ok: true };
+  }
   return validateMovimentoPayload(event.payload);
 }
 

@@ -1869,6 +1869,31 @@
   "brand": {
     "logo_subtitle": "金龍"
   },
+  "meu_pin": {
+    "titulo": "Meu PIN do caixa",
+    "subtitulo": "PIN de 4 números para entrar e trocar de operador no PDV sem e-mail e senha.",
+    "definir_meu": "Criar meu PIN",
+    "trocar_meu": "Trocar meu PIN",
+    "regra": "4 números. Sequências e repetidos (1234, 0000) não são aceitos. Não conte seu PIN a ninguém.",
+    "novo_pin": "Novo PIN",
+    "confirmar_pin": "Repita o PIN",
+    "salvar": "Salvar PIN",
+    "salvo": "PIN salvo. Ele vale no caixa após a próxima sincronização do PDV.",
+    "equipe_titulo": "PINs da equipe",
+    "equipe_sub": "Liberar apaga o PIN e o bloqueio por tentativas; a pessoa cria um novo aqui.",
+    "status_com_pin": "Com PIN",
+    "status_sem_pin": "Sem PIN",
+    "status_bloqueado": "Bloqueado",
+    "resetar": "Liberar / apagar PIN",
+    "resetar_confirmar": "Apagar o PIN de {nome}? A pessoa precisará criar outro.",
+    "resetado": "PIN apagado. A pessoa já pode criar um novo.",
+    "erro_formato": "O PIN precisa ter exatamente 4 números.",
+    "erro_obvio": "PIN fácil demais. Evite sequências e números repetidos.",
+    "erro_confirmacao": "Os dois PINs não são iguais.",
+    "erro_sessao": "Sua sessão expirou. Entre de novo.",
+    "erro_permissao": "Você não tem permissão para isso.",
+    "erro_indisponivel": "PIN do caixa ainda não está disponível. Tente mais tarde."
+  },
   "login": {
     "subtitulo": "Faça login para continuar",
     "tagline": "Importados · operações seguras",
