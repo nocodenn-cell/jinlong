@@ -20,7 +20,9 @@ import type { ResultadoAcao } from './actions'
  * Regras: gate de servidor; recálculo a partir do banco (carregarOperacao: itens, câmbios, despesas)
  * pela fonte canônica (shared-core comporValorAduaneiro, critério fiscal VALOR_FOB — pendente de
  * validação); NUNCA sobrescreve VA informado; nada vem do navegador além do id da operação; com
- * qualquer pendência (sem câmbio, frete sem câmbio...) não grava nada (sem preenchimento parcial).
+ * qualquer pendência de cálculo (sem câmbio, frete sem câmbio...) não grava nada. A gravação é item a item
+ * (sem transação): falha de RPC no meio deixa os n primeiros itens gravados — a ação informa "n/total" e a
+ * reexecução é segura (só preenche itens ainda sem VA).
  * Grava pelo mesmo RPC do salvarItemAction (import_salvar_item), com 6 casas (escala do campo).
  */
 
