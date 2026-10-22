@@ -476,9 +476,16 @@ async function handleValidarGerentePdvSync(
     return jsonResponse(req, 400, { ok: false, error: "SENHA_INVALIDA_FORMATO" });
   }
 
+  // Dispositivo sem empresa/loja: recusa (nunca cai na pdv_config id=1 da Empresa 1).
+  if (ctx?.mode === "dispositivo" && (!ctx.empresaId?.trim() || !ctx.lojaId?.trim())) {
+    log({ level: "warn", stage: "validar_gerente_pdv", error: "ESCOPO_GERENTE_SEM_EMPRESA" });
+    return jsonResponse(req, 403, { ok: false, error: "ESCOPO_GERENTE_SEM_EMPRESA" });
+  }
   const result = await validateGerenteAndIssueToken({
     supabase,
     senha: senhaNormalizada,
+    // Só o modo legado explícito (chave compartilhada do cliente 1) pode usar a linha id=1.
+    escopoLegadoEmpresa1: ctx?.mode === "legado",
     // Dispositivo ativado: senha de gerente e token presos à loja/empresa do dispositivo (não à Empresa 1).
     lojaId: ctx?.mode === "dispositivo" ? ctx.lojaId : null,
     empresaId: ctx?.mode === "dispositivo" ? ctx.empresaId ?? null : null,

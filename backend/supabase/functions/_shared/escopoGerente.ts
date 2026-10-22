@@ -1,6 +1,8 @@
 // Multiempresa / SEC-04 (ESPEC_MULTIEMPRESA_V1 §8, tabela de Edges): a loja do token de gerente é decidida
 // no servidor. O corpo só pode ESCOLHER entre as lojas permitidas do usuário; nunca indicar outra.
 
+export const ESCOPO_SEM_EMPRESA = "ESCOPO_GERENTE_SEM_EMPRESA" as const;
+
 export type DecisaoLoja =
   | { ok: true; lojaId: string | null }
   | { ok: false; error: "LOJA_NAO_PERMITIDA" };
@@ -26,12 +28,15 @@ type Admin = {
 /**
  * Lê loja do usuário + vínculos (DONO ⇒ todas as lojas da empresa) e decide a loja do token e a empresa
  * (para escolher a senha de gerente DA EMPRESA). Tabelas multiempresa ausentes ⇒ comportamento antigo.
+ *
+ * Fail-closed: sem loja OU sem empresa resolvida no servidor ⇒ recusa (ESCOPO_GERENTE_SEM_EMPRESA).
+ * Nunca cair na pdv_config id=1 (senha de gerente da Empresa 1) nem emitir token com loja nula.
  */
 export async function resolverEscopoGerente(
   supabase: Admin,
   userId: string,
   lojaBody: string | null,
-): Promise<{ ok: true; lojaId: string | null; empresaId: string | null } | { ok: false; error: string }> {
+): Promise<{ ok: true; lojaId: string; empresaId: string } | { ok: false; error: string }> {
   const { data: u } = await supabase.from("usuarios").select("loja_id, perfil, ativo").eq("id", userId).maybeSingle();
   const lojaUsuario = (u?.loja_id as string | null) ?? null;
   let permitidas: string[] = lojaUsuario ? [lojaUsuario] : [];
@@ -53,5 +58,6 @@ export async function resolverEscopoGerente(
     const l = await supabase.from("lojas").select("empresa_id").eq("id", d.lojaId).maybeSingle();
     if (!l.error) empresaId = (l.data?.empresa_id as string | null) ?? null;
   }
+  if (!d.lojaId || !empresaId) return { ok: false, error: ESCOPO_SEM_EMPRESA };
   return { ok: true, lojaId: d.lojaId, empresaId };
 }

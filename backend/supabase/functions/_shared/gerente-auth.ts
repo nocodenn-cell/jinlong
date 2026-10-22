@@ -54,6 +54,11 @@ type ValidateOptions = {
   lojaId: string | null;
   /** Empresa da operação (multiempresa): escolhe a linha padrão de pdv_config DA EMPRESA (senha de gerente). */
   empresaId?: string | null;
+  /**
+   * Somente o emissor legado do PDV desktop (sync-outbox, modo "legado", chave compartilhada do
+   * cliente 1) pode usar a linha pdv_config id=1. Qualquer outro chamador sem empresa é recusado (403).
+   */
+  escopoLegadoEmpresa1?: boolean;
   userId?: string | null;
   req: Request;
   logStage: string;
@@ -245,21 +250,36 @@ type GerenteConfigBundle = {
   gerenteIdRaw: string;
 };
 
+/** Decide qual linha de pdv_config pode ser usada; nunca cai em id=1 implicitamente. */
+export function resolverConsultaConfigGerente(
+  empresaId: string | null,
+  escopoLegadoEmpresa1 = false,
+): { tipo: "empresa"; empresaId: string } | { tipo: "legado_id1" } | { tipo: "recusar" } {
+  const emp = typeof empresaId === "string" ? empresaId.trim() : "";
+  if (emp) return { tipo: "empresa", empresaId: emp };
+  if (escopoLegadoEmpresa1) return { tipo: "legado_id1" };
+  return { tipo: "recusar" };
+}
+
 async function loadGerenteConfigBundle(
   supabase: any,
   logStage: string,
   log: LoggerFn,
   empresaId: string | null = null,
+  escopoLegadoEmpresa1 = false,
 ): Promise<GerenteConfigBundle | ValidateResult> {
   const COLS = "gerente_id, gerente_senha_bcrypt, max_desconto_gerente_percentual";
   // Multiempresa: senha de gerente é da EMPRESA da operação (linha padrão loja_id NULL da empresa).
-  // Sem empresa (legado) ou coluna ainda inexistente ⇒ linha id=1, como antes (cliente 1).
-  let res = empresaId
-    ? await supabase.from("pdv_config").select(COLS).is("loja_id", null).eq("empresa_id", empresaId).maybeSingle()
-    : await supabase.from("pdv_config").select(COLS).eq("id", 1).maybeSingle();
-  if (empresaId && res.error && /empresa_id/.test(String(res.error.message))) {
-    res = await supabase.from("pdv_config").select(COLS).eq("id", 1).maybeSingle();
+  // Sem empresa ⇒ recusa (403), exceto o emissor legado explícito do cliente 1 (linha id=1).
+  // Coluna empresa_id ausente em pedido com empresa ⇒ erro, nunca a linha da Empresa 1.
+  const consulta = resolverConsultaConfigGerente(empresaId, escopoLegadoEmpresa1);
+  if (consulta.tipo === "recusar") {
+    log({ level: "warn", stage: logStage, error: "ESCOPO_GERENTE_SEM_EMPRESA" });
+    return { ok: false, status: 403, body: { ok: false, error: "ESCOPO_GERENTE_SEM_EMPRESA" } };
   }
+  const res = consulta.tipo === "empresa"
+    ? await supabase.from("pdv_config").select(COLS).is("loja_id", null).eq("empresa_id", consulta.empresaId).maybeSingle()
+    : await supabase.from("pdv_config").select(COLS).eq("id", 1).maybeSingle();
   const { data: config, error: configError } = res;
 
   if (configError) {
@@ -436,6 +456,7 @@ export async function validateGerenteAndIssueToken(
     senha,
     lojaId,
     empresaId,
+    escopoLegadoEmpresa1,
     userId,
     req,
     logStage,
@@ -467,7 +488,7 @@ export async function validateGerenteAndIssueToken(
     const locked = await precheckRateLimitLocks(supabase, rateContexts, nowMs, logStage, log);
     if (locked) return locked;
 
-    const bundleOrErr = await loadGerenteConfigBundle(supabase, logStage, log, empresaId ?? null);
+    const bundleOrErr = await loadGerenteConfigBundle(supabase, logStage, log, empresaId ?? null, escopoLegadoEmpresa1 === true);
     if ("ok" in bundleOrErr) return bundleOrErr;
     const { config, gerenteIdRaw } = bundleOrErr;
 
