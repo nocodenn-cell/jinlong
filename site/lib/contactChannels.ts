@@ -4,7 +4,7 @@ import type { SiteLocale } from './locales'
  * Canais de atendimento.
  *  - E-mail: endereço oficial definido pelo dono do negócio (sempre presente).
  *  - WhatsApp: só por variável de ambiente (NEXT_PUBLIC_SITE_WHATSAPP_URL); valor ausente
- *    ou inválido não gera canal.
+ *    ou inválido não gera canal. Produção/Preview (Vercel jinlong-site): https://wa.me/5581988659993.
  * WeChat não é usado no site.
  */
 
