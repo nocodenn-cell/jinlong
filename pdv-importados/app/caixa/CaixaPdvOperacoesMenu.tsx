@@ -387,6 +387,17 @@ function CaixaPdvOperacoesMenuImpl({
                   </Link>
                 </li>
               ) : null}
+              <li>
+                <Link
+                  href="/caixa/meu-pin"
+                  role="menuitem"
+                  data-testid="caixa-menu-meu-pin"
+                  className={itemClass({ id: "meu-pin", label: "", onClick: fecharMenu })}
+                  onClick={() => setMenuAberto(false)}
+                >
+                  <span>{m.meu_pin.titulo}</span>
+                </Link>
+              </li>
             </ul>
           </div>
         ) : null}

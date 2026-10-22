@@ -21,6 +21,7 @@ import {
   type DadosErro,
   type FuncionarioDados,
 } from './funcionarioDados'
+import { derivarPinHash, statusPin, validarPinNovo, type ErroPin, type StatusPin } from '@/lib/pdv/pinOperador'
 
 export type FuncionarioListRow = {
   id: string
@@ -35,6 +36,10 @@ export type FuncionarioListRow = {
   telefone: string | null
   cpf_mascarado: string | null
   data_admissao: string | null
+  /** null = recurso de PIN indisponível (migration não aplicada). */
+  pin_status?: StatusPin | null
+  /** PIN definido pelo gestor: o funcionário deve trocar em "Meu PIN do caixa". */
+  pin_trocar?: boolean
 }
 
 export type ActionOk<T> = { ok: true; data: T }
@@ -47,7 +52,51 @@ const CreateSchema = z.object({
   perfil: z.enum(['OPERADOR', 'GERENTE']),
   idioma_preferido: z.enum(['pt', 'zh']),
   senha: z.string().min(PASSWORD_MIN_LENGTH).max(128),
+  pin: z.string().max(8).optional(),
+  pinConfirmacao: z.string().max(8).optional(),
 })
+
+const PIN_ERRO_MSG: Record<ErroPin, string> = {
+  formato: 'O PIN deve ter exatamente 4 dígitos.',
+  obvio: 'PIN muito fácil (sequência ou repetição). Escolha outro.',
+  confirmacao: 'A confirmação do PIN não confere.',
+}
+
+type PinRow = { usuario_id: string; pin_bloqueado_ate: string | null; trocar_no_primeiro_uso: boolean }
+type RpcLivre = (fn: string, args: Record<string, unknown>) => Promise<{ error: { code?: string; message?: string } | null }>
+
+/** Status de PIN (sem hash). Tabela ausente ⇒ null (recurso oculto). */
+async function carregarPins(admin: AdminClient, ids: string[]): Promise<Map<string, PinRow> | null> {
+  if (ids.length === 0) return new Map()
+  const { data, error } = await (admin as unknown as {
+    from: (t: string) => { select: (c: string) => { in: (c: string, v: string[]) => Promise<{ data: PinRow[] | null; error: { code?: string; message?: string } | null }> } }
+  })
+    .from('usuario_pin')
+    .select('usuario_id, pin_bloqueado_ate, trocar_no_primeiro_uso')
+    .in('usuario_id', ids)
+  if (error) return null
+  return new Map((data ?? []).map((r) => [r.usuario_id, r]))
+}
+
+function resumoPin(pins: Map<string, PinRow> | null, id: string) {
+  if (!pins) return { pin_status: null, pin_trocar: false }
+  const p = pins.get(id)
+  return { pin_status: statusPin(p), pin_trocar: !!p?.trocar_no_primeiro_uso }
+}
+
+async function gravarPinPorGestor(admin: AdminClient, alvoId: string, atorId: string, pin: string): Promise<string | null> {
+  const h = derivarPinHash(pin)
+  const { error } = await (admin as unknown as { rpc: RpcLivre }).rpc('definir_pin_operador_pdv', {
+    p_usuario: alvoId,
+    p_hash: h.hash,
+    p_salt: h.salt,
+    p_iteracoes: h.iteracoes,
+    p_ator: atorId,
+  })
+  if (!error) return null
+  if (error.code === '42501') return 'Você não tem permissão para definir o PIN deste funcionário.'
+  return 'PIN do caixa indisponível nesta instalação.'
+}
 
 const UpdateSchema = z.object({
   id: z.string().uuid(),
@@ -194,8 +243,11 @@ export async function listarFuncionariosAction(): Promise<ActionResult<Funcionar
 
     if (error) return fail(error.message)
 
-    const { porId } = await carregarDados(admin, (data ?? []).map((r) => r.id))
-    const rows = await Promise.all((data ?? []).map((r) => mapRow(admin, r, porId.get(r.id))))
+    const ids = (data ?? []).map((r) => r.id)
+    const [{ porId }, pins] = await Promise.all([carregarDados(admin, ids), carregarPins(admin, ids)])
+    const rows = await Promise.all(
+      (data ?? []).map(async (r) => ({ ...(await mapRow(admin, r, porId.get(r.id))), ...resumoPin(pins, r.id) })),
+    )
     return { ok: true, data: rows }
   } catch (e) {
     return fail(e instanceof Error ? e.message : 'Erro ao listar funcionários.')
@@ -264,6 +316,12 @@ export async function criarFuncionarioAction(input: {
   const dadosNorm = normalizarDados(input.dados)
   if (!dadosNorm.ok) return fail(DADOS_ERRO_MSG[dadosNorm.campo])
 
+  const pinInicial = (parsed.data.pin ?? '').trim()
+  if (pinInicial) {
+    const erroPin = validarPinNovo(pinInicial, (parsed.data.pinConfirmacao ?? '').trim())
+    if (erroPin) return fail(PIN_ERRO_MSG[erroPin])
+  }
+
   let createdUserId: string | null = null
   try {
     const admin = createAdminClient()
@@ -324,8 +382,13 @@ export async function criarFuncionarioAction(input: {
       avisoDados = await salvarDados(admin, created.user.id, gate.session.lojaId!, dadosNorm.data, false)
     }
 
+    // PIN inicial opcional: falha não desfaz a conta; o gestor define depois pela lista.
+    let avisoPin: string | null = null
+    if (pinInicial) avisoPin = await gravarPinPorGestor(admin, created.user.id, gate.session.userId, pinInicial)
+
     revalidateFuncionarios()
     if (avisoDados) return fail(`Funcionário criado, mas os dados complementares não foram salvos: ${avisoDados}`)
+    if (avisoPin) return fail(`Funcionário criado, mas o PIN não foi salvo: ${avisoPin}`)
     const row = await mapRow(admin, {
       id: created.user.id,
       nome: parsed.data.nome,
@@ -334,7 +397,10 @@ export async function criarFuncionarioAction(input: {
       ativo: true,
       created_at: new Date().toISOString(),
     }, { usuario_id: created.user.id, ...dadosNorm.data })
-    return { ok: true, data: row }
+    return {
+      ok: true,
+      data: { ...row, pin_status: pinInicial ? 'ativo' : 'sem', pin_trocar: !!pinInicial },
+    }
   } catch (e) {
     if (createdUserId) {
       try {
@@ -509,4 +575,63 @@ export async function definirAtivoFuncionarioAction(
 
 function isFuncaoAusente(err: { code?: string; message?: string }): boolean {
   return err.code === 'PGRST202' || err.code === '42883' || /could not find the function|does not exist/i.test(err.message ?? '')
+}
+
+/** Alvo da mesma loja que o ator pode editar (mesma regra da tela). */
+async function alvoGerenciavel(admin: AdminClient, id: string, ator: { id: string; perfil: string }, lojaId: string) {
+  if (!z.string().uuid().safeParse(id).success) return null
+  const { data } = await admin.from('usuarios').select('id, perfil, loja_id').eq('id', id).maybeSingle()
+  if (!data || data.loja_id !== lojaId) return null
+  if (data.id === ator.id || !podeEditarAlvo(ator, data)) return null
+  return data
+}
+
+export async function definirPinFuncionarioAction(
+  id: string,
+  pin: string,
+  confirmacao: string,
+): Promise<ActionResult<{ pin_status: StatusPin; pin_trocar: boolean }>> {
+  const gate = await requireLojaSession()
+  if (!gate.ok) return fail(gate.error)
+  const p = String(pin ?? '').trim()
+  const erroPin = validarPinNovo(p, String(confirmacao ?? '').trim())
+  if (erroPin) return fail(PIN_ERRO_MSG[erroPin])
+  try {
+    const admin = createAdminClient()
+    const ator = { id: gate.session.userId, perfil: gate.session.perfil }
+    if (!(await alvoGerenciavel(admin, id, ator, gate.session.lojaId!))) {
+      return fail('Você não tem permissão para definir o PIN deste funcionário.')
+    }
+    const erro = await gravarPinPorGestor(admin, id, ator.id, p)
+    if (erro) return fail(erro)
+    revalidateFuncionarios()
+    return { ok: true, data: { pin_status: 'ativo', pin_trocar: true } }
+  } catch {
+    return fail('Erro ao definir o PIN.')
+  }
+}
+
+export async function desbloquearPinFuncionarioAction(id: string): Promise<ActionResult<{ pin_status: StatusPin }>> {
+  const gate = await requireLojaSession()
+  if (!gate.ok) return fail(gate.error)
+  try {
+    const admin = createAdminClient()
+    const ator = { id: gate.session.userId, perfil: gate.session.perfil }
+    if (!(await alvoGerenciavel(admin, id, ator, gate.session.lojaId!))) {
+      return fail('Você não tem permissão para desbloquear este funcionário.')
+    }
+    const { error } = await (admin as unknown as { rpc: RpcLivre }).rpc('desbloquear_pin_operador_pdv', {
+      p_usuario: id,
+      p_ator: ator.id,
+    })
+    if (error) {
+      if (error.code === '42501') return fail('Você não tem permissão para desbloquear este funcionário.')
+      if (error.code === 'P0002') return fail('Este funcionário ainda não tem PIN.')
+      return fail('PIN do caixa indisponível nesta instalação.')
+    }
+    revalidateFuncionarios()
+    return { ok: true, data: { pin_status: 'ativo' } }
+  } catch {
+    return fail('Erro ao desbloquear o PIN.')
+  }
 }

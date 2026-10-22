@@ -3,7 +3,7 @@
  * o App registra um único listener de keydown e despacha a ação devolvida
  * aqui, chamando as mesmas funções dos botões.
  */
-export type AcaoAtalhoPdv = 'abrirCaixa' | 'fecharCaixa' | 'movimentoCaixa' | 'finalizar' | 'novoCupom'
+export type AcaoAtalhoPdv = 'abrirCaixa' | 'fecharCaixa' | 'movimentoCaixa' | 'finalizar' | 'novoCupom' | 'trocarOperador'
 
 export type EstadoAtalhosPdv = {
   caixaAberto: boolean
@@ -11,6 +11,8 @@ export type EstadoAtalhosPdv = {
   finalizando: boolean
   /** Um modal/diálogo aberto trata as próprias teclas: atalhos globais ficam inativos. */
   modalAberto: boolean
+  /** Login por PIN ligado na loja: F12 = Trocar operador. Ausente/false = F12 não é atalho (como antes). */
+  pinAtivo?: boolean
 }
 
 export type ResultadoAtalhoPdv = {
@@ -28,6 +30,10 @@ export function resolverAtalhoPdv(
   opcoes: { repeticao?: boolean; jaTratado?: boolean } = {},
 ): ResultadoAtalhoPdv {
   if (estado.modalAberto || opcoes.jaTratado) return NADA
+  if (tecla === 'F12') {
+    if (!estado.pinAtivo) return NADA
+    return { acao: opcoes.repeticao || estado.finalizando ? null : 'trocarOperador', prevenirPadrao: true }
+  }
   const ehTeclaF = tecla === 'F2' || tecla === 'F3' || tecla === 'F4' || tecla === 'F10'
   if (!ehTeclaF && tecla !== 'Escape') return NADA
   const bloqueado: ResultadoAtalhoPdv = { acao: null, prevenirPadrao: ehTeclaF }

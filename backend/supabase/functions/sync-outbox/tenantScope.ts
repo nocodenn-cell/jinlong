@@ -95,6 +95,14 @@ export async function assertEventoNoEscopo(
     if (!(await lookups.operadorPodeLoja(operador, loja))) throw new Error("EVENTO_OPERADOR_SEM_VINCULO");
   }
 
+  // Auditoria de login por PIN: loja do dispositivo e, se houver usuário, vínculo ativo nela.
+  if (ev.tipo === "OPERADOR_EVENTO") {
+    if (!lojaPayload) throw new Error("EVENTO_LOJA_OBRIGATORIA");
+    const usuario = str(p.usuario_id);
+    if (usuario && !(await lookups.operadorPodeLoja(usuario, loja))) throw new Error("EVENTO_OPERADOR_SEM_VINCULO");
+    return;
+  }
+
   const caixaId = ev.tipo === "CAIXA_ABERTO" || ev.tipo === "CAIXA_FECHADO" ? str(p.id) : str(p.caixa_id);
 
   if (ev.tipo === "CAIXA_ABERTO") {

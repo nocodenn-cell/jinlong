@@ -13,6 +13,8 @@ export const EVENT_TYPES = new Set([
   'CAIXA_ABERTO',
   'CAIXA_FECHADO',
   'MOVIMENTO_CAIXA',
+  // Login por PIN: auditoria (entrou/saiu/bloqueio/PIN errado/override do gerente). Payload validado na Edge.
+  'OPERADOR_EVENTO',
 ])
 
 export function isRecord(x: unknown): x is Record<string, unknown> {
@@ -116,6 +118,15 @@ export type NormalizedOutboxEvent = {
   payload: Record<string, unknown>
 }
 
+export function validateOperadorEventoPayload(payload: Record<string, unknown>): { ok: true } | { ok: false; error: string } {
+  if (!isUuid(payload.id)) return { ok: false, error: 'operador_evento.id inválido' }
+  if (!isUuid(payload.loja_id)) return { ok: false, error: 'operador_evento.loja_id inválido' }
+  if (payload.usuario_id != null && !isUuid(payload.usuario_id)) return { ok: false, error: 'operador_evento.usuario_id inválido' }
+  if (typeof payload.tipo !== 'string' || !payload.tipo.trim()) return { ok: false, error: 'operador_evento.tipo inválido' }
+  if ('pin' in payload) return { ok: false, error: 'operador_evento não pode levar PIN' }
+  return { ok: true }
+}
+
 export function validateNormalizedEvent(
   event: unknown,
 ): { ok: true } | { ok: false; error: string } {
@@ -131,6 +142,7 @@ export function validateNormalizedEvent(
   if (tipo === 'VENDA_REGISTRADA') return validateVendaPayload(event.payload)
   if (tipo === 'CAIXA_ABERTO') return validateCaixaAbertoPayload(event.payload)
   if (tipo === 'CAIXA_FECHADO') return validateCaixaFechadoPayload(event.payload)
+  if (tipo === 'OPERADOR_EVENTO') return validateOperadorEventoPayload(event.payload)
   return validateMovimentoPayload(event.payload)
 }
 
