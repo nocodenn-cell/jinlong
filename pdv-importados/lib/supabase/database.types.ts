@@ -6278,9 +6278,11 @@ export type Database = {
           alertas_leves_ativos: boolean
           auto_enqueue_fiscal: boolean
           blind_closure: boolean
+          bloqueio_inatividade_min: number
           cfop_padrao: string
           cst_padrao: string
           empresa_id: string | null
+          exigir_pin_operador: boolean
           formato_impressao: string
           gerente_id: string
           gerente_senha_bcrypt: string | null
@@ -6306,9 +6308,11 @@ export type Database = {
           alertas_leves_ativos?: boolean
           auto_enqueue_fiscal?: boolean
           blind_closure?: boolean
+          bloqueio_inatividade_min?: number
           cfop_padrao?: string
           cst_padrao?: string
           empresa_id?: string | null
+          exigir_pin_operador?: boolean
           formato_impressao?: string
           gerente_id: string
           gerente_senha_bcrypt?: string | null
@@ -6334,9 +6338,11 @@ export type Database = {
           alertas_leves_ativos?: boolean
           auto_enqueue_fiscal?: boolean
           blind_closure?: boolean
+          bloqueio_inatividade_min?: number
           cfop_padrao?: string
           cst_padrao?: string
           empresa_id?: string | null
+          exigir_pin_operador?: boolean
           formato_impressao?: string
           gerente_id?: string
           gerente_senha_bcrypt?: string | null
@@ -6426,6 +6432,74 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "lojas"
             referencedColumns: ["id", "empresa_id"]
+          },
+        ]
+      }
+      pdv_operador_eventos: {
+        Row: {
+          detalhe: Json
+          dispositivo_id: string | null
+          empresa_id: string | null
+          id: string
+          loja_id: string
+          ocorrido_em: string
+          origem: string
+          recebido_em: string
+          tipo: string
+          usuario_id: string | null
+        }
+        Insert: {
+          detalhe?: Json
+          dispositivo_id?: string | null
+          empresa_id?: string | null
+          id: string
+          loja_id: string
+          ocorrido_em?: string
+          origem?: string
+          recebido_em?: string
+          tipo: string
+          usuario_id?: string | null
+        }
+        Update: {
+          detalhe?: Json
+          dispositivo_id?: string | null
+          empresa_id?: string | null
+          id?: string
+          loja_id?: string
+          ocorrido_em?: string
+          origem?: string
+          recebido_em?: string
+          tipo?: string
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_operador_eventos_dispositivo_id_fkey"
+            columns: ["dispositivo_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_dispositivos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_operador_eventos_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_operador_eventos_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["loja_id"]
+          },
+          {
+            foreignKeyName: "pdv_operador_eventos_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -7418,6 +7492,50 @@ export type Database = {
           vigencia_inicio?: string
         }
         Relationships: []
+      }
+      usuario_pin: {
+        Row: {
+          definido_em: string
+          definido_por: string | null
+          pin_bloqueado_ate: string | null
+          pin_hash: string
+          pin_iteracoes: number
+          pin_salt: string
+          pin_tentativas: number
+          trocar_no_primeiro_uso: boolean
+          usuario_id: string
+        }
+        Insert: {
+          definido_em?: string
+          definido_por?: string | null
+          pin_bloqueado_ate?: string | null
+          pin_hash: string
+          pin_iteracoes: number
+          pin_salt: string
+          pin_tentativas?: number
+          trocar_no_primeiro_uso?: boolean
+          usuario_id: string
+        }
+        Update: {
+          definido_em?: string
+          definido_por?: string | null
+          pin_bloqueado_ate?: string | null
+          pin_hash?: string
+          pin_iteracoes?: number
+          pin_salt?: string
+          pin_tentativas?: number
+          trocar_no_primeiro_uso?: boolean
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usuario_pin_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: true
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       usuario_vinculos: {
         Row: {
@@ -9031,6 +9149,20 @@ export type Database = {
         }
         Returns: Json
       }
+      definir_pin_operador_pdv: {
+        Args: {
+          p_ator: string
+          p_hash: string
+          p_iteracoes: number
+          p_salt: string
+          p_usuario: string
+        }
+        Returns: undefined
+      }
+      definir_meu_pin_pdv: {
+        Args: { p_hash: string; p_iteracoes: number; p_salt: string }
+        Returns: undefined
+      }
       definir_vendedor_venda: {
         Args: { p_venda_id: string; p_vendedor_id: string }
         Returns: Json
@@ -9038,6 +9170,10 @@ export type Database = {
       definir_vendedor_venda_pdv: {
         Args: { p_venda_id: string; p_vendedor_id: string }
         Returns: Json
+      }
+      desbloquear_pin_operador_pdv: {
+        Args: { p_ator: string; p_usuario: string }
+        Returns: undefined
       }
       descartar_venda_em_espera: {
         Args: { p_id: string; p_motivo?: string }
@@ -9962,6 +10098,31 @@ export type Database = {
         Args: { p_produto_codigo?: string }
         Returns: Json
       }
+      pdv_pin_registrar_tentativa: {
+        Args: { p_ok: boolean; p_usuario: string }
+        Returns: {
+          bloqueado_ate: string
+          tentativas: number
+        }[]
+      }
+      pdv_pin_obvio: { Args: { p_pin: string }; Returns: boolean }
+      pdv_pin_loja_gerida: {
+        Args: { p_ator: string; p_usuario: string }
+        Returns: string
+      }
+      pdv_operadores_da_loja: {
+        Args: { p_loja: string }
+        Returns: {
+          idioma: string
+          nome: string
+          papel: string
+          pin_bloqueado_ate: string
+          pin_hash: string
+          pin_iteracoes: number
+          pin_salt: string
+          usuario_id: string
+        }[]
+      }
       pdv_registrar_alertas_margem_venda: {
         Args: { p_venda_id: string }
         Returns: undefined
@@ -10274,6 +10435,10 @@ export type Database = {
         Args: { p_venda_id: string }
         Returns: Json
       }
+      resetar_pin_operador_pdv: {
+        Args: { p_usuario: string }
+        Returns: undefined
+      }
       resumo_comissoes_por_operador: {
         Args: {
           p_ate?: string
@@ -10307,6 +10472,17 @@ export type Database = {
       round_abnt: {
         Args: { p_scale?: number; p_value: number }
         Returns: number
+      }
+      status_pin_equipe_pdv: {
+        Args: never
+        Returns: {
+          bloqueado: boolean
+          eu: boolean
+          nome: string
+          papel: string
+          tem_pin: boolean
+          usuario_id: string
+        }[]
       }
       texto_sem_acento: { Args: { texto: string }; Returns: string }
       transferir_estoque_entre_lojas: {
