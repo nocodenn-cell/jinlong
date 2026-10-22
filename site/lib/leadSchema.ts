@@ -7,7 +7,7 @@ const opt = (max: number) =>
 /** Campos extras do lead (validados com zod no cliente e no servidor). */
 export const leadExtrasSchema = z.object({
   city: txt(2, 80),
-  segment: txt(2, 80),
+  segment: txt(2, 60),
   wechat: z.preprocess(
     (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
     z.string().trim().regex(/^[\w.+@-]{3,40}$/).optional(),
