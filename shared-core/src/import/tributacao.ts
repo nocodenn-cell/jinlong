@@ -95,6 +95,8 @@ export interface EntradaTributacao {
   readonly parametros: readonly ParametroTributario[]
   /** Tributos a sugerir (padrão: todos). */
   readonly tributos?: readonly TributoImportacao[]
+  /** Versão do catálogo usado (auditoria). Padrão: CATALOGO_TRIBUTARIO_VERSAO. */
+  readonly catalogo_versao?: string
 }
 
 export type StatusSugestao = 'CALCULADO' | 'PENDENTE_ALIQUOTA' | 'SEM_PARAMETRO' | 'NCM_INVALIDO'
@@ -217,7 +219,7 @@ export function calcularTributosImportacao(e: EntradaTributacao): ResultadoTribu
   }
 
   return {
-    catalogo_versao: CATALOGO_TRIBUTARIO_VERSAO,
+    catalogo_versao: e.catalogo_versao ?? CATALOGO_TRIBUTARIO_VERSAO,
     sugestoes,
     totais: Object.fromEntries([...totais].map(([k, v]) => [k, formataDecimal(v, 2)])),
     usa_parametro_ficticio: ficticio,

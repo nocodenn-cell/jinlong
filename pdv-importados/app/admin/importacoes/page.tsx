@@ -8,6 +8,7 @@ import { listarOperacoes, opcoesCadastro, type OperacaoLista } from '@/lib/impor
 import { formatarDecimal, resumoMonetario, somarDecimais } from '@/lib/import/hub/decimais'
 import { pendenciasDaLista } from '@/lib/import/hub/elegibilidade'
 import { NovaImportacaoForm } from './_components/NovaImportacaoForm'
+import { carregarCatalogoEmpresa } from '@/lib/import/hub/configImportacao'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,7 +30,7 @@ export default async function ImportacoesPage({ searchParams }: PageProps) {
   const busca = (sp.q ?? '').trim().toLowerCase()
   const status = STATUS.includes(sp.status as (typeof STATUS)[number]) ? sp.status! : ''
 
-  const [todas, opcoes] = await Promise.all([listarOperacoes(ctx.client), opcoesCadastro(ctx.client)])
+  const [todas, opcoes, catalogo] = await Promise.all([listarOperacoes(ctx.client), opcoesCadastro(ctx.client), carregarCatalogoEmpresa(ctx.client, ctx.empresaId)])
 
   const emConferencia = todas.filter((o) => o.status === 'RASCUNHO')
   const comPendencia = emConferencia.filter((o) => pendenciasDaLista(o).length > 0)
@@ -64,6 +65,14 @@ export default async function ImportacoesPage({ searchParams }: PageProps) {
     <div className="admin-v2-page" data-testid="importacoes-hub">
       <PageHeader title={t.titulo} subtitle={t.subtitulo} />
       <p className="mb-4 text-small text-fg-subtle">{t.aviso_modulo}</p>
+      {catalogo && !catalogo.config ? (
+        <SectionCard title={t.nac_onboarding_titulo} className="mb-5">
+          <p className="text-small" data-testid="importacoes-onboarding-uf">{t.nac_onboarding_texto}</p>
+          <Link className="mt-2 inline-block font-medium text-[var(--color-brand-primary)] underline" href={`${ROUTES.admin.importacoes}/configuracao`}>{t.nac_configurar}</Link>
+        </SectionCard>
+      ) : catalogo?.config ? (
+        <p className="mb-4 text-small"><Link className="font-medium text-[var(--color-brand-primary)] underline" href={`${ROUTES.admin.importacoes}/configuracao`} data-testid="importacoes-link-config">{t.nac_configurar}</Link> · {catalogo.config.uf_importador}</p>
+      ) : null}
 
       <section aria-label={t.visao_geral} className="mb-5">
         <KpiStrip items={kpis} />

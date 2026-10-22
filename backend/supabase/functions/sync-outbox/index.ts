@@ -145,6 +145,8 @@ type VendaPayload = {
   venda_id: string;
   caixa_id?: string | null;
   operador_id?: string | null;
+  /** Comissão P0: quem atendeu. Opcional — PDV desktop antigo não envia (comissão fica com o operador). */
+  vendedor_id?: string | null;
   troco_inicial_caixa?: number | null;
   forma_pagamento: string;
   total_bruto: number;
@@ -232,6 +234,12 @@ function setOperadorIdFromPayload(raw: Record<string, unknown>, payload: VendaPa
   else throw new Error("PAYLOAD_OPERADOR_ID_INVALIDO");
 }
 
+function setVendedorIdFromPayload(raw: Record<string, unknown>, payload: VendaPayload): void {
+  const v = raw.vendedor_id;
+  // Campo opcional e tolerante: valor ausente/inválido é ignorado (nunca derruba o sync da venda).
+  if (typeof v === "string" && isUuid(v.trim())) payload.vendedor_id = v.trim();
+}
+
 function setTrocoInicialFromPayload(raw: Record<string, unknown>, payload: VendaPayload): void {
   const troco = raw.troco_inicial_caixa;
   if (troco === null || troco === undefined) {
@@ -316,6 +324,7 @@ function setPagamentosFromPayload(raw: Record<string, unknown>, payload: VendaPa
 function applyVendaOptionalFields(raw: Record<string, unknown>, payload: VendaPayload): void {
   setCaixaIdFromPayload(raw, payload);
   setOperadorIdFromPayload(raw, payload);
+  setVendedorIdFromPayload(raw, payload);
   setTrocoInicialFromPayload(raw, payload);
   setDescontoGerenteFromPayload(raw, payload);
   setGerenteIdFromPayload(raw, payload);
@@ -780,6 +789,14 @@ async function processVenda(
   if (ledgerErr) {
     throw new Error(`ERRO_RPC_REGISTRAR_VENDA_EVENTO: ${ledgerErr.message}`);
   }
+  // Comissão P0: vendedor opcional. Erro/RPC ausente (banco sem a migration) só vira log — a venda já está gravada.
+  if (payload.vendedor_id && payload.vendedor_id !== payload.operador_id) {
+    const { error: vendErr } = await supabase.rpc("definir_vendedor_venda_pdv", {
+      p_venda_id: payload.venda_id,
+      p_vendedor_id: payload.vendedor_id,
+    });
+    if (vendErr) log({ level: "warn", stage: "vendedor_nao_aplicado", venda_id: payload.venda_id, error: vendErr.message });
+  }
   const _t1 = Date.now();
 
   await aplicarBaixaEstoquePorItem(
@@ -929,7 +946,13 @@ async function handlePdvConfigSync(req: Request, supabase: SupabaseAdmin, ctx: S
     }
     : null;
 
-  return jsonResponse(req, 200, { ok: true, config: configComFlag });
+  // Comissão P0: vendedores da loja para o seletor do PDV desktop (só id+nome). Ausente se a RPC não existir.
+  let vendedores: Array<{ id: string; nome: string }> | undefined;
+  if (configComFlag && lojaId) {
+    const vend = await supabase.rpc("listar_vendedores_loja", { p_loja_id: lojaId });
+    if (!vend.error && Array.isArray(vend.data)) vendedores = vend.data as Array<{ id: string; nome: string }>;
+  }
+  return jsonResponse(req, 200, { ok: true, config: configComFlag ? { ...configComFlag, vendedores } : null });
 }
 
 async function handleGetByOp(

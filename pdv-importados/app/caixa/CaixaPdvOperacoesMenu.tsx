@@ -348,6 +348,25 @@ function CaixaPdvOperacoesMenuImpl({
                   </button>
                 </li>
               ))}
+              <li
+                className={cn(
+                  "mt-1 border-t pt-1",
+                  classic ? "border-border" : "border-jl-border-1",
+                )}
+              >
+                {/* Comissão: todo operador/vendedor consulta as próprias comissões (nova aba: não interrompe a venda). */}
+                <Link
+                  href="/caixa/minhas-comissoes"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  role="menuitem"
+                  data-testid="caixa-menu-minhas-comissoes"
+                  className={itemClass({ id: "minhas-comissoes", label: "", onClick: fecharMenu })}
+                  onClick={() => setMenuAberto(false)}
+                >
+                  <span>{m.caixa.minhas_comissoes_link}</span>
+                </Link>
+              </li>
               {painelGestaoHref ? (
                 <li
                   className={cn(

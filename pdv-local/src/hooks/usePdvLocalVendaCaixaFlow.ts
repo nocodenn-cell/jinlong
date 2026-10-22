@@ -53,6 +53,8 @@ type Params = {
   operadorId?: string | null
   /** Desconto autorizado por PIN do gerente: evento OVERRIDE_GERENTE (servidor aceita sem token de senha). */
   gerentePinEventoId?: string | null
+  /** Comissão: vendedor escolhido. null/ausente = operador do caixa (payload idêntico ao antigo). */
+  vendedorId?: string | null
   onSetCaixaAtualId: (id: string | null) => void
   onSetMensagem: (msg: string) => void
   onLimparCarrinho: () => void
@@ -65,6 +67,7 @@ type Params = {
 
 export function usePdvLocalVendaCaixaFlow({
   tauriDisponivel,
+  vendedorId,
   caixaAtualId,
   itens,
   totalBruto,
@@ -243,6 +246,7 @@ export function usePdvLocalVendaCaixaFlow({
         venda: {
           caixa_id: caixaId,
           operador_id: operadorId,
+          ...(vendedorId ? { vendedor_id: vendedorId } : {}),
           forma_pagamento: formaEscalar,
           ...(pagamentosOutbox ? { pagamentos: pagamentosOutbox } : {}),
           total_bruto: totalBruto,
@@ -312,6 +316,7 @@ export function usePdvLocalVendaCaixaFlow({
     onFinalizarElapsedMs,
     operadorId,
     gerentePinEventoId,
+    vendedorId,
   ])
 
   return {

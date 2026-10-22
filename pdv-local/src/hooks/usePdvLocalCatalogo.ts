@@ -35,6 +35,8 @@ type PdvConfigLocalInvoke = {
   max_desconto_gerente_percentual: number
   quantidade_minima_atacado_padrao?: number | null
   loja_id?: string | null
+  /** Comissão: vendedores da loja (edge nova). Ausente = seletor oculto. */
+  vendedores?: Array<{ id: string; nome: string }>
 }
 
 export type CaixaSessaoInvoke = {
@@ -49,6 +51,7 @@ type Params = {
   setMensagem: (msg: string | null) => void
   setQuantidadeMinimaAtacadoPadrao?: (n: number | null) => void
   setLojaId?: (id: string | null) => void
+  setVendedores?: (v: Array<{ id: string; nome: string }>) => void
 }
 
 export function usePdvLocalCatalogo({
@@ -58,6 +61,7 @@ export function usePdvLocalCatalogo({
   setCaixaAtualId,
   setMensagem,
   setQuantidadeMinimaAtacadoPadrao,
+  setVendedores,
   setLojaId,
 }: Params) {
   const [tauriDisponivel, setTauriDisponivel] = useState(false)
@@ -119,12 +123,14 @@ export function usePdvLocalCatalogo({
       }
       setQuantidadeMinimaAtacadoPadrao?.(minPadrao)
       setLojaId?.(loja)
+      setVendedores?.(Array.isArray(cfg.vendedores) ? cfg.vendedores : [])
     },
     [
       setGerenteId,
       setMaxDescontoGerentePercentual,
       setQuantidadeMinimaAtacadoPadrao,
       setLojaId,
+      setVendedores,
     ],
   )
 
