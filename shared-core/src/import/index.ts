@@ -6,7 +6,7 @@
  * Não há dependência de I/O neste módulo.
  */
 
-export { calcularLandedCost, ENGINE_VERSION } from './landedCost'
+export { calcularLandedCost, ENGINE_VERSION, quantidadeEstoqueConsistente } from './landedCost'
 export { serializarCanonico } from './canonico'
 export { LANDED_ERROR_CODES, LANDED_DIVERGENCIA_CODES } from './errorCodes'
 export type { LandedErroCodigo, LandedDivergenciaCodigo } from './errorCodes'

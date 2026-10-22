@@ -8,7 +8,9 @@ import { actionImportacoes } from '@/lib/import/hub/gateImportacoes'
 import { buscarProdutos, type Opcao } from '@/lib/import/hub/dadosImportacoes'
 import { normalizarDecimal } from '@/lib/import/hub/decimais'
 import { chaveErro } from '@/lib/import/hub/elegibilidade'
+import { erroEntradaLegivel } from '@/lib/import/hub/mensagensMotor'
 import { aprovarApuracao, apurarOperacao, type ClienteServico } from '@/lib/import/importIntelligence'
+import { quantidadeEstoqueConsistente } from '@shared-core/src/import'
 
 /**
  * Server actions do hub de Importações (Import Intelligence).
@@ -39,6 +41,20 @@ async function chamar(client: unknown, fn: string, args: Record<string, unknown>
   const { data, error } = await (client as Rpc).rpc(fn, args)
   if (error) return { ok: false, erro: chaveErro(error.message) }
   return { ok: true, data }
+}
+
+type LeituraItens = {
+  from: (t: string) => { select: (c: string) => { eq: (c: string, v: string) => PromiseLike<{ data: { id: string; descricao: string }[] | null }> } }
+}
+
+/** Nomes dos itens (RLS da sessão) para trocar UUID por descrição nas mensagens do motor. */
+async function itensDaOperacao(client: unknown, operacaoId: string): Promise<{ id: string; descricao: string }[]> {
+  try {
+    const { data } = await (client as LeituraItens).from('import_itens').select('id, descricao').eq('operacao_id', operacaoId)
+    return data ?? []
+  } catch {
+    return []
+  }
 }
 
 /** Decimal obrigatório/opcional com a escala do motor; null = inválido. */
@@ -138,6 +154,9 @@ export async function salvarItemAction(operacaoId: string, input: ItemInput): Pr
   }
   const invalido = Object.entries(campos).find(([, v]) => v === null)
   if (!moeda.success || !descricao || !unidade || invalido) return falha('erro_valor_invalido', invalido?.[0])
+  // mesma regra do motor (LANDED_QTD_FATOR_INCONSISTENTE): barra no save, não só na simulação
+  const { quantidade_comercial: qc, fator_para_estoque: fe, quantidade_estoque: qe } = campos as Record<string, string>
+  if (!quantidadeEstoqueConsistente(qc, fe, qe)) return falha('erro_qtd_fator', `"${descricao}": ${qc} × ${fe} ≠ ${qe}`)
 
   const item = {
     ...(input.id ? { id: input.id } : {}),
@@ -296,7 +315,10 @@ export async function apurarAction(
   // motor existente (shared-core) sobre a entrada montada pelo banco
   const r = await apurarOperacao(gate.ctx.client, operacaoId, tipo)
   if (!r.ok) {
-    if (r.motivo === 'ENTRADA_INVALIDA') return falha('erro_entrada_invalida', r.detalhe)
+    if (r.motivo === 'ENTRADA_INVALIDA') {
+      const e = erroEntradaLegivel(r.detalhe, await itensDaOperacao(gate.ctx.client, operacaoId))
+      return falha(e.erro, e.detalhe)
+    }
     return falha(r.motivo === 'MODULO_NEGADO' ? 'erro_nao_autorizado' : chaveErro(r.detalhe))
   }
   revalidar(operacaoId)
