@@ -38,9 +38,6 @@ export async function assertProdutoDaLojaSessao(
   produtoId: string,
   session: { lojaId: string | null; perfil: PerfilUsuario },
 ): Promise<ProdutoTenantResult> {
-  // ADMIN é o único perfil global (espelha auth_usuario_gerencial_loja).
-  if (session.perfil === 'ADMIN') return { ok: true }
-
   if (!session.lojaId) return { ok: false, error: MSG_PRODUTO_SEM_LOJA_SESSAO }
 
   const { data, error } = await supabase

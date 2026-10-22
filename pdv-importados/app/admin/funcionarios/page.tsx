@@ -58,7 +58,6 @@ export default async function AdminFuncionariosPage() {
           perfilOperador: f.perfil_operador,
           perfilGerente: f.perfil_gerente,
           perfilDono: f.perfil_dono,
-          perfilAdmin: f.perfil_admin,
           filtroStatusLabel: f.filtro_status_label,
           filtroTodos: f.filtro_todos,
           filtroAtivos: f.filtro_ativos,

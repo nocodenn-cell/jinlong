@@ -18,7 +18,7 @@ export function isPerfilFuncionarioUi(perfil: string): perfil is PerfilFuncionar
 
 /** Perfis que o ator pode atribuir a novos/editados funcionários. */
 export function perfisAtribuiveisPorAtor(atorPerfil: string): readonly PerfilFuncionarioUi[] {
-  if (atorPerfil === 'DONO' || atorPerfil === 'ADMIN') return PERFIS_FUNCIONARIO_UI
+  if (atorPerfil === 'DONO') return PERFIS_FUNCIONARIO_UI
   if (atorPerfil === 'GERENTE') return ['OPERADOR']
   return []
 }
@@ -28,14 +28,14 @@ export function podeAtribuirPerfil(atorPerfil: string, novoPerfil: string): bool
 }
 
 /**
- * GERENTE só mexe em OPERADOR; DONO/ADMIN em OPERADOR e GERENTE.
+ * GERENTE só mexe em OPERADOR; DONO em OPERADOR e GERENTE. Linhas legadas ADMIN ficam protegidas.
  * DONO/ADMIN nunca são editados por esta tela (DONO via /admin/provisionamento; ADMIN via runbook).
  */
 export function podeEditarAlvo(ator: AtorFuncionario, alvo: AlvoFuncionario): boolean {
   if (alvo.perfil === 'ADMIN' || alvo.perfil === 'DONO') return false
-  if (alvo.perfil === 'GERENTE') return ator.perfil === 'DONO' || ator.perfil === 'ADMIN'
+  if (alvo.perfil === 'GERENTE') return ator.perfil === 'DONO'
   if (alvo.perfil === 'OPERADOR') {
-    return ator.perfil === 'DONO' || ator.perfil === 'ADMIN' || ator.perfil === 'GERENTE'
+    return ator.perfil === 'DONO' || ator.perfil === 'GERENTE'
   }
   return false
 }

@@ -141,7 +141,8 @@ const MATRIZ: Record<Cenario, Record<keyof typeof AREAS, Esperado>> = {
   operador: { admin: '/caixa', gerente: '/caixa', caixa: 'allow' },
   gerente: { admin: 'allow', gerente: 'allow', caixa: 'allow' },
   dono: { admin: 'allow', gerente: 'allow', caixa: 'allow' },
-  admin: { admin: 'allow', gerente: 'allow', caixa: 'allow' },
+  // ADMIN global legado foi descontinuado: sem acesso de loja em nenhuma área.
+  admin: { admin: 'login', gerente: 'login', caixa: 'login' },
   inativo: { admin: 'login', gerente: 'login', caixa: 'login' },
   sem_loja: { admin: 'login', gerente: 'login', caixa: 'login' },
 }

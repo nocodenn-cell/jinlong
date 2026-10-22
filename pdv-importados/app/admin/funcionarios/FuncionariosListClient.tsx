@@ -52,7 +52,6 @@ export type FuncionariosListLabels = {
   perfilOperador: string
   perfilGerente: string
   perfilDono: string
-  perfilAdmin: string
   filtroStatusLabel: string
   filtroTodos: string
   filtroAtivos: string
@@ -89,7 +88,6 @@ function labelPerfil(perfil: string, L: FuncionariosListLabels): string {
   if (perfil === 'OPERADOR') return L.perfilOperador
   if (perfil === 'GERENTE') return L.perfilGerente
   if (perfil === 'DONO') return L.perfilDono
-  if (perfil === 'ADMIN') return L.perfilAdmin
   return perfil
 }
 

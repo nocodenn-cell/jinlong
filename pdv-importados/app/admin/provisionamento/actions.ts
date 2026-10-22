@@ -72,13 +72,16 @@ function fromLoose(admin: AdminClient, table: string): LooseQuery {
   return (admin as unknown as { from: (t: string) => LooseQuery }).from(table)
 }
 
-async function requireAdminSession() {
+type GateProvisionamento =
+  | { ok: false; error: string }
+  | { ok: true; session: Extract<Awaited<ReturnType<typeof assertGerenteSession>>, { ok: true }>['session'] }
+
+async function requireAdminSession(): Promise<GateProvisionamento> {
   const auth = await assertGerenteSession()
   if (!auth.ok) return { ok: false as const, error: auth.error }
-  if (auth.session.perfil !== 'ADMIN') {
-    return { ok: false as const, error: 'Somente a equipe FastProduct (ADMIN) pode provisionar lojas.' }
-  }
-  return { ok: true as const, session: auth.session }
+  // Perfil ADMIN removido do app das lojas: o provisionamento fica fechado aqui (falha fechada) e
+  // passa a ser feito pela equipe da plataforma fora do sistema operacional das lojas.
+  return { ok: false as const, error: 'O provisionamento de lojas não está disponível no app das lojas.' }
 }
 
 async function findAuthUserByEmail(admin: AdminClient, email: string) {

@@ -66,8 +66,6 @@ function rawToAuthState(raw: RawSession): SessionAuthState {
 
 function perfilToRole(perfil: PerfilUsuario): AdminRole | null {
   switch (perfil) {
-    case 'ADMIN':
-      return 'admin'
     case 'GERENTE':
       return 'gerente'
     case 'DONO':
@@ -217,8 +215,10 @@ function resolveBlockedReason(raw: RawSession): SessionBlockedReason | null {
   if (raw.usuario?.ativo === false) return 'inativo'
   if (!raw.usuario?.loja_id) return 'sem_loja'
   const vinculos = raw.usuario.vinculos
-  // Multiempresa: só decide quando os vínculos foram lidos. ADMIN legado não tem vínculo (D9).
-  if (vinculos !== undefined && normalizePerfilUsuario(raw.usuario.perfil ?? null) !== 'ADMIN') {
+  // ADMIN global legado não tem acesso de loja/empresa (papéis do cliente: DONO/GERENTE/OPERADOR).
+  if (normalizePerfilUsuario(raw.usuario.perfil ?? null) === 'ADMIN') return 'sem_empresa'
+  // Multiempresa: só decide quando os vínculos foram lidos.
+  if (vinculos !== undefined) {
     const empresas = new Set(vinculos.map((v) => v.empresa_id))
     if (empresas.size === 0) return 'sem_empresa'
     // 2+ empresas: precisa ter escolhido UMA delas (seletor /selecionar-empresa); senão falha fechada (§4/§9).

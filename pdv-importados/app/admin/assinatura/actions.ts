@@ -50,13 +50,13 @@ async function souDonoDaEmpresa(supabase: unknown, empresaId: string): Promise<b
 async function gateDono() {
   const auth = await assertGerenteSession()
   if (!auth.ok) return { ok: false as const, error: auth.error }
-  if (auth.session.perfil !== 'DONO' && auth.session.perfil !== 'ADMIN') {
+  if (auth.session.perfil !== 'DONO') {
     return { ok: false as const, error: ERRO_SO_DONO }
   }
   const supabase = await createClient()
   const empresaId = await empresaContextoId(supabase)
   if (!empresaId) return { ok: false as const, error: 'Empresa não identificada. / 无法识别公司。' }
-  // fp_empresa_contexto resolve a empresa selecionada/da loja/única; o perfil global (inclusive ADMIN)
+  // fp_empresa_contexto resolve a empresa selecionada/da loja/única; o perfil
   // não prova que o usuário é DONO DESSA empresa — confere o papel na empresa no banco.
   if (!(await souDonoDaEmpresa(supabase, empresaId))) return { ok: false as const, error: ERRO_SO_DONO }
   const { data: u } = await supabase.auth.getUser()
@@ -78,7 +78,7 @@ export async function carregarAssinaturaAction(): Promise<R<{ assinatura: MinhaA
         const { data: fs } = await (supabase as unknown as Rpc).rpc('fp_minhas_faturas', { p_limite: 24 })
         return Array.isArray(fs) ? (fs as Fatura[]) : []
       })(),
-      podeGerenciar: (auth.session.perfil === 'DONO' || auth.session.perfil === 'ADMIN')
+      podeGerenciar: auth.session.perfil === 'DONO'
         && typeof (data as MinhaAssinatura | null)?.empresa_id === 'string'
         && (await souDonoDaEmpresa(supabase, (data as MinhaAssinatura).empresa_id)),
     },

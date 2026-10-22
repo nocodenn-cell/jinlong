@@ -307,7 +307,7 @@ async function loadGerenteConfigBundle(
   }
   const perfilOk =
     gerenteUser?.ativo === true &&
-    (gerenteUser.perfil === "GERENTE" || gerenteUser.perfil === "DONO" || gerenteUser.perfil === "ADMIN");
+    (gerenteUser.perfil === "GERENTE" || gerenteUser.perfil === "DONO");
   if (!perfilOk) {
     log({ level: "error", stage: logStage, error: "CONFIG_GERENTE_INVALIDA" });
     return { ok: false, status: 500, body: { ok: false, error: "CONFIG_GERENTE_INVALIDA" } };

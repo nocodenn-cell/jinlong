@@ -21,7 +21,7 @@ describe('adminPolicy', () => {
   it('canAccessAdmin aceita perfis gerenciais', () => {
     expect(canAccessAdmin(session)).toBe(true)
     expect(canAccessAdmin({ ...session, perfil: 'DONO' })).toBe(true)
-    expect(canAccessAdmin({ ...session, perfil: 'ADMIN' })).toBe(true)
+    expect(canAccessAdmin({ ...session, perfil: 'ADMIN' })).toBe(false)
   })
 
   it('canExecuteAction valida actions registradas', () => {
@@ -36,13 +36,13 @@ describe('adminPolicy', () => {
     expect(canAccessResource(session, 'sensitive:financeiro')).toBe(true)
   })
 
-  describe('Diagnóstico do Caixa — só DONO/ADMIN (UX-IA-01 A1/A2)', () => {
+  describe('Diagnóstico do Caixa — só DONO (UX-IA-01 A1/A2)', () => {
     const RECURSO = 'route:/admin/diagnostico-caixa'
 
-    it('GERENTE não acessa; DONO e ADMIN acessam', () => {
+    it('GERENTE e ADMIN legado não acessam; DONO acessa', () => {
       expect(canAccessResource(session, RECURSO)).toBe(false)
       expect(canAccessResource({ ...session, perfil: 'DONO' }, RECURSO)).toBe(true)
-      expect(canAccessResource({ ...session, perfil: 'ADMIN' }, RECURSO)).toBe(true)
+      expect(canAccessResource({ ...session, perfil: 'ADMIN' }, RECURSO)).toBe(false)
     })
 
     it('a decisão de API nega o recurso a GERENTE (usada por assertGerenteSession)', () => {

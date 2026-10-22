@@ -42,7 +42,7 @@ export function AdminV2Shell({ session, children, stockAlertCount, topbar, modul
     <AdminV2SessionProvider idioma={idioma}>
     <div data-admin-v2 className="isolate min-h-dvh min-h-screen bg-[var(--color-background-primary)] text-jl-fg-1">
       <SessionIdleLogout />
-      <CommandPalette idioma={idioma} showAdminOnlyItems={session.perfil === 'ADMIN'} />
+      <CommandPalette idioma={idioma} showAdminOnlyItems={false} />
 
       {/* Top bar só < lg: marca compacta + hamburger, já que o <aside> fica oculto nesse breakpoint. */}
       <div className="flex items-center justify-between border-b border-[var(--admin-v2-border)] px-4 py-2.5 lg:hidden">
@@ -68,7 +68,7 @@ export function AdminV2Shell({ session, children, stockAlertCount, topbar, modul
           m={m}
           chineseLanguage={chineseLanguage}
           stockAlertCount={stockAlertCount}
-          showAdminOnlyItems={session.perfil === 'ADMIN'}
+          showAdminOnlyItems={false}
           modulosAtivos={modulosAtivos}
         />
         </div>
@@ -101,7 +101,7 @@ export function AdminV2Shell({ session, children, stockAlertCount, topbar, modul
               admin={admin}
               chineseLanguage={chineseLanguage}
               stockAlertCount={stockAlertCount}
-              showAdminOnlyItems={session.perfil === 'ADMIN'}
+              showAdminOnlyItems={false}
               modulosAtivos={modulosAtivos}
             />
           </Suspense>
