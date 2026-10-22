@@ -75,3 +75,9 @@ export { simularPreco, compararEstimadoReal, PrecificacaoErro, simularFaixasAtac
 export type { CanalVenda, ModoPreco, CenarioPreco, PrecoSimulado, ComparacaoCusto, FaixaAtacado, PrecoFaixa, FinalPreco } from './precificacao'
 export { sugerirCriterioRateio } from './sugestaoCriterio'
 export * from './regime'
+// Valor aduaneiro (FOB + frete + seguro) por item — fonte canônica (memória e persistência explícita)
+export { comporValorAduaneiro, valorEmBrl } from './valorAduaneiro'
+export type {
+  CriterioRateioVa, ItemValorAduaneiro, CambioValorAduaneiro, ValorEmMoeda, EntradaValorAduaneiro,
+  ItemValorAduaneiroSaida, PendenciaValorAduaneiro, ResultadoValorAduaneiro,
+} from './valorAduaneiro'
