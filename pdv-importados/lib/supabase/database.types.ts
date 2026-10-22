@@ -1715,42 +1715,63 @@ export type Database = {
       commercial_leads: {
         Row: {
           channel: string
+          city: string | null
           contact: string
           created_at: string
           id: string
+          idioma: string | null
           locale: string
           name: string
           product: string
           protocol: string
+          segment: string | null
           status: string
           store: string
           updated_at: string
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          wechat: string | null
         }
         Insert: {
           channel: string
+          city?: string | null
           contact: string
           created_at?: string
           id?: string
+          idioma?: string | null
           locale: string
           name: string
           product: string
           protocol: string
+          segment?: string | null
           status?: string
           store: string
           updated_at?: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          wechat?: string | null
         }
         Update: {
           channel?: string
+          city?: string | null
           contact?: string
           created_at?: string
           id?: string
+          idioma?: string | null
           locale?: string
           name?: string
           product?: string
           protocol?: string
+          segment?: string | null
           status?: string
           store?: string
           updated_at?: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          wechat?: string | null
         }
         Relationships: []
       }

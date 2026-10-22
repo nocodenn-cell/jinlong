@@ -7,6 +7,7 @@ import { isSiteLocale, SITE_LOCALES } from '@/lib/locales'
 import { isLocalePublic } from '@/lib/publication'
 import { getSiteUrl } from '@/lib/siteUrl'
 import '@/styles/site.css'
+import Tracking from '@/components/Tracking'
 
 /**
  * Fontes versionadas no repositório (sem depender do Google Fonts no build).
@@ -49,6 +50,8 @@ export function generateStaticParams() {
 
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
+  // Google Search Console (meta tag), opcional.
+  ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ? { verification: { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION } } : {}),
 }
 
 export const viewport: Viewport = {
@@ -74,6 +77,7 @@ export default async function RootLayout({ children, params }: RootLayoutProps) 
           {skipLink}
         </a>
         {children}
+        <Tracking />
       </body>
     </html>
   )

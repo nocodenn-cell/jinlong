@@ -168,6 +168,15 @@ export interface TrialFormCopy {
   failWhatsapp: string
   retry: string
   mailSubject: string
+  city: string
+  segment: string
+  wechatOptional: string
+  idioma: string
+  errCity: string
+  errSegment: string
+  thanksTitle: string
+  thanksBody: string
+  thanksWaText: string
 }
 
 export interface HomeContent {

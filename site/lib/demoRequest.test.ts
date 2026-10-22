@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { handleDemoRequest, isValidContact, makeProtocol, RateLimiter, supabaseDemoStore, validateDemoRequest, type DemoStore } from './demoRequest'
 
-const good = { name: 'Li Wei', store: 'Loja Dragão', contact: '11 91234-5678', channel: 'whatsapp', locale: 'zh-CN' }
+const good = { name: 'Li Wei', store: 'Loja Dragão', contact: '11 91234-5678', channel: 'whatsapp', locale: 'zh-CN', city: 'Recife', segment: 'Importados', idioma: 'zh-CN' }
 const memStore = () => {
   const rows: unknown[] = []
   const store: DemoStore = { insert: async (r) => void rows.push(r) }
@@ -14,7 +14,7 @@ describe('validateDemoRequest', () => {
     expect(r).toMatchObject({ ok: true, honeypot: false, data: { name: 'Li Wei', channel: 'whatsapp', locale: 'zh-CN' } })
   })
   it('rejeita campos ausentes, curtos, longos e com HTML', () => {
-    expect(validateDemoRequest({})).toEqual({ ok: false, errors: ['name', 'store', 'channel'] })
+    expect(validateDemoRequest({})).toEqual({ ok: false, errors: ['name', 'store', 'channel', 'city', 'segment'] })
     expect(validateDemoRequest({ ...good, name: 'A' })).toMatchObject({ ok: false, errors: ['name'] })
     expect(validateDemoRequest({ ...good, store: 'x'.repeat(121) })).toMatchObject({ ok: false, errors: ['store'] })
     expect(validateDemoRequest({ ...good, name: '<script>' })).toMatchObject({ ok: false, errors: ['name'] })
@@ -56,7 +56,7 @@ describe('handleDemoRequest', () => {
     const { rows, store } = memStore()
     const r = await handleDemoRequest(good, '1.1.1.1', { store, limiter: new RateLimiter(), protocol: () => 'JL-261020-ABCDEF' })
     expect(r).toEqual({ status: 201, body: { ok: true, protocol: 'JL-261020-ABCDEF' } })
-    expect(rows).toEqual([{ name: 'Li Wei', store: 'Loja Dragão', contact: '11 91234-5678', channel: 'whatsapp', locale: 'zh-CN', protocol: 'JL-261020-ABCDEF', product: 'jinlong' }])
+    expect(rows).toEqual([{ name: 'Li Wei', store: 'Loja Dragão', contact: '11 91234-5678', channel: 'whatsapp', locale: 'zh-CN', protocol: 'JL-261020-ABCDEF', product: 'jinlong', city: 'Recife', segment: 'Importados', idioma: 'zh-CN' }])
   })
   it('honeypot: responde sucesso e não grava', async () => {
     const { rows, store } = memStore()
@@ -89,7 +89,7 @@ describe('supabaseDemoStore', () => {
   it('faz POST insert-only (return=minimal) na tabela do site', async () => {
     const fetchImpl = vi.fn(async () => new Response(null, { status: 201 }))
     const s = supabaseDemoStore({ SITE_DEMO_SUPABASE_URL: 'https://abc.supabase.co/', SITE_DEMO_SUPABASE_ANON_KEY: 'k' }, fetchImpl as unknown as typeof fetch)
-    await s!.insert({ name: 'a', store: 'b', contact: 'c', channel: 'wechat', locale: 'pt-BR', protocol: 'p', product: 'jinlong' })
+    await s!.insert({ name: 'a', store: 'b', contact: 'c', channel: 'wechat', locale: 'pt-BR', city: 'Recife', segment: 'x1', idioma: 'pt-BR' as const, protocol: 'p', product: 'jinlong' })
     const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit]
     expect(url).toBe('https://abc.supabase.co/rest/v1/commercial_leads')
     expect(init.method).toBe('POST')
@@ -97,7 +97,7 @@ describe('supabaseDemoStore', () => {
   })
   it('erro HTTP vira exceção', async () => {
     const s = supabaseDemoStore({ SITE_DEMO_SUPABASE_URL: 'https://abc.supabase.co', SITE_DEMO_SUPABASE_ANON_KEY: 'k' }, (async () => new Response(null, { status: 401 })) as unknown as typeof fetch)
-    await expect(s!.insert({ name: 'a', store: 'b', contact: 'c', channel: 'wechat', locale: 'pt-BR', protocol: 'p', product: 'jinlong' })).rejects.toThrow('401')
+    await expect(s!.insert({ name: 'a', store: 'b', contact: 'c', channel: 'wechat', locale: 'pt-BR', city: 'Recife', segment: 'x1', idioma: 'pt-BR' as const, protocol: 'p', product: 'jinlong' })).rejects.toThrow('401')
   })
 })
 
@@ -111,5 +111,14 @@ describe('confirmação só após gravação', () => {
     expect(settled).toBe(false)
     release()
     expect((await pending).status).toBe(201)
+  })
+})
+
+describe('campos extras do lead (zod)', () => {
+  it('exige cidade/segmento, aceita WeChat vazio e guarda UTMs', () => {
+    expect(validateDemoRequest({ ...good, city: '' })).toMatchObject({ ok: false, errors: ['city'] })
+    const r = validateDemoRequest({ ...good, wechat: '', utm_source: 'ig' })
+    expect(r).toMatchObject({ ok: true, data: { utm_source: 'ig', idioma: 'zh-CN' } })
+    expect(validateDemoRequest({ ...good, wechat: 'a b' })).toMatchObject({ ok: false, errors: ['wechat'] })
   })
 })
