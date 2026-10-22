@@ -2,6 +2,7 @@
 
 import { useRef, useState, type FormEvent } from 'react'
 import { leadExtrasSchema, readUtms } from '@/lib/leadSchema'
+import { trackLead } from '@/lib/track'
 import type { TrialFormCopy } from '@/lib/content/types'
 import { isValidContact, type DemoChannel, type DemoFieldError, type DemoLocale } from '@/lib/demoRequest'
 
@@ -74,6 +75,7 @@ export function TrialForm({ copy, email, whatsappHref, locale }: TrialFormProps)
       })
       const body = (await res.json().catch(() => null)) as { ok?: boolean; protocol?: string; error?: string; fields?: DemoFieldError[] } | null
       if (res.ok && body?.ok && body.protocol) {
+        trackLead()
         setState({ kind: 'ok', protocol: body.protocol })
         const target = v.idioma === 'zh-CN' ? 'zh-CN' : 'pt-BR'
         window.location.assign(`/${target}/obrigado?p=${encodeURIComponent(body.protocol)}`)
@@ -198,6 +200,7 @@ export function TrialForm({ copy, email, whatsappHref, locale }: TrialFormProps)
           </div>
         </div>
       )}
+      <p className="jl-muted"><small>{locale === 'zh-CN' ? '您的信息仅用于联系演示事宜。我们可能使用统计 Cookie（Google/Meta）改进广告。' : 'Usamos seus dados só para contato sobre a demonstração. Podemos usar cookies de medição (Google/Meta) para melhorar nossos anúncios.'}</small></p>
     </form>
   )
 }
