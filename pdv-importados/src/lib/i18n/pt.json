@@ -3957,7 +3957,7 @@
     "va_calculado": "VA calculado (R$)",
     "va_informado": "VA informado (R$)",
     "va_total": "Total",
-    "va_pendencias": "Composição incompleta (câmbio ou peso ausente): corrija antes de usar o valor aduaneiro calculado.",
+    "va_pendencias": "Composição incompleta (câmbio, peso ausente ou despesa ambígua de frete/seguro): corrija antes de usar o valor aduaneiro calculado.",
     "va_usar_calculado": "Usar valor aduaneiro calculado nos {n} itens sem valor informado",
     "va_usar_explicacao": "Grava o VA calculado só nos itens sem valor; valores informados não mudam. Elimina o bloqueio VALOR_ADUANEIRO_AUSENTE na apuração.",
     "va_preenchidos": "Valores aduaneiros preenchidos.",

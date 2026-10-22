@@ -4194,7 +4194,7 @@
     "va_calculado": "计算完税价格（雷亚尔）",
     "va_informado": "已填写完税价格（雷亚尔）",
     "va_total": "合计",
-    "va_pendencias": "组成不完整（缺少汇率或重量）：请先修正再使用计算出的完税价格。",
+    "va_pendencias": "组成不完整（缺少汇率、重量，或运费/保险费归类不明确）：请先修正再使用计算出的完税价格。",
     "va_usar_calculado": "对 {n} 个未填写的商品使用计算出的完税价格",
     "va_usar_explicacao": "仅为未填写的商品保存计算出的完税价格；已填写的值不变。可消除核算中的 VALOR_ADUANEIRO_AUSENTE 阻断。",
     "va_preenchidos": "已填写完税价格。",

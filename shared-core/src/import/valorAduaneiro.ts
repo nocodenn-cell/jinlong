@@ -61,6 +61,8 @@ export interface ItemValorAduaneiroSaida {
 
 export type PendenciaValorAduaneiro =
   | 'FRETE_SEM_CAMBIO' | 'SEGURO_SEM_CAMBIO' | 'RATEIO_PARCIAL' | 'PESO_AUSENTE' | 'BASE_RATEIO_ZERO'
+  /** Despesa cujo nome casa frete E seguro: o valor não pode ser atribuído a um dos dois sem confirmação. */
+  | 'DESPESA_MISTA'
 
 export interface ResultadoValorAduaneiro {
   readonly itens: readonly ItemValorAduaneiroSaida[]

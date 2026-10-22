@@ -25,6 +25,8 @@ const RE_SEGURO = /seguro|insurance|保险/i
 const RE_SISCOMEX = /siscomex/i
 const RE_AFRMM = /afrmm|marinha mercante/i
 const ehSeguro = (t: string) => RE_SEGURO.test(t)
+/** Nome que casa frete E seguro (ex.: "Freight insurance"): ambíguo, não atribuível sem confirmação. */
+const ehMista = (t: string) => RE_FRETE.test(t) && RE_SEGURO.test(t)
 /**
  * Frete internacional: exclui frete local, encargos que CITAM frete (AFRMM "8% do frete", Siscomex) e
  * seguro ("Freight insurance", "Frete + seguro"): cada despesa entra em UMA parcela só (sem dupla contagem).
@@ -79,14 +81,15 @@ export function composicaoValorAduaneiro(
   const r = comporValorAduaneiro({
     itens, cambios,
     frete: parcelas(despesas, ehFreteInternacional),
-    seguro: parcelas(despesas, ehSeguro),
+    seguro: parcelas(despesas, (t) => ehSeguro(t) && !ehMista(t)),
     criterio_frete: criterio.frete ?? CRITERIO_VA_PADRAO,
     criterio_seguro: criterio.seguro ?? CRITERIO_VA_PADRAO,
   })
+  const mistas = despesas.some((d) => ehMista(d.tipo))
   const informado = new Map(itens.map((i) => [i.id, i.valor_aduaneiro_brl || null]))
   const comp = r.itens.map((x) => ({ ...x, informado_brl: informado.get(x.item_id) ?? null }))
   return {
-    itens: comp, semBase: [...r.semBase], pendencias: [...r.pendencias], totais: r.totais,
+    itens: comp, semBase: [...r.semBase], pendencias: mistas ? [...r.pendencias, 'DESPESA_MISTA'] : [...r.pendencias], totais: r.totais,
     semValorInformado: comp.filter((x) => x.informado_brl === null).map((x) => x.item_id),
   }
 }
