@@ -17,7 +17,10 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     // Ordem importa: caminhos do ERP primeiro (www/login → app em um salto), depois www → apex.
-    return [...buildErpRedirects(), ...buildWwwToApexRedirect(getSiteUrl())]
+    return [
+      { source: '/pt', destination: '/pt-BR', permanent: true },
+      { source: '/zh', destination: '/zh-CN', permanent: true },
+      ...buildErpRedirects(), ...buildWwwToApexRedirect(getSiteUrl())]
   },
 }
 

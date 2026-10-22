@@ -8,7 +8,9 @@
 export type DemoChannel = 'whatsapp' | 'wechat'
 export type DemoLocale = 'pt-BR' | 'zh-CN'
 
-export interface DemoRequest {
+import { leadExtrasSchema, type LeadExtraField, type LeadExtras } from './leadSchema'
+
+export interface DemoRequest extends LeadExtras {
   name: string
   store: string
   contact: string
@@ -16,7 +18,7 @@ export interface DemoRequest {
   locale: DemoLocale
 }
 
-export type DemoFieldError = 'name' | 'store' | 'contact' | 'channel'
+export type DemoFieldError = 'name' | 'store' | 'contact' | 'channel' | LeadExtraField
 
 export type ValidationResult =
   | { ok: true; data: DemoRequest; honeypot: boolean }
@@ -46,11 +48,26 @@ export function validateDemoRequest(input: unknown): ValidationResult {
   if (store.length < 2 || store.length > 120 || CONTROL.test(store)) errors.push('store')
   if (channel !== 'whatsapp' && channel !== 'wechat') errors.push('channel')
   else if (contact.length > 60 || !isValidContact(contact, channel)) errors.push('contact')
-  if (errors.length) return { ok: false, errors }
+  const extras = leadExtrasSchema.safeParse({
+    city: clean(body.city),
+    segment: clean(body.segment),
+    wechat: clean(body.wechat),
+    idioma: body.idioma ?? locale,
+    utm_source: body.utm_source,
+    utm_medium: body.utm_medium,
+    utm_campaign: body.utm_campaign,
+  })
+  if (!extras.success) {
+    for (const issue of extras.error.issues) {
+      const f = issue.path[0]
+      if ((f === 'city' || f === 'segment' || f === 'wechat' || f === 'idioma') && !errors.includes(f)) errors.push(f)
+    }
+  }
+  if (errors.length || !extras.success) return { ok: false, errors }
   return {
     ok: true,
     honeypot: clean(body.website) !== '',
-    data: { name, store, contact, channel: channel as DemoChannel, locale },
+    data: { name, store, contact, channel: channel as DemoChannel, locale, ...extras.data },
   }
 }
 
@@ -129,7 +146,8 @@ export async function handleDemoRequest(
   if (!deps.store) return { status: 503, body: { ok: false, error: 'not_configured' } }
   try {
     await deps.store.insert({ ...result.data, protocol, product: 'jinlong' })
-  } catch {
+  } catch (err) {
+    console.error('[pedido-demo] insert falhou:', err instanceof Error ? err.message : String(err))
     return { status: 503, body: { ok: false, error: 'unavailable' } }
   }
   return { status: 201, body: { ok: true, protocol } }

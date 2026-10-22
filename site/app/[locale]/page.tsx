@@ -17,6 +17,8 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { Steps } from '@/components/Steps'
 import { WholesaleSection } from '@/components/WholesaleSection'
 import { getHomeContent } from '@/lib/content'
+import { SEO_KEYWORDS } from '@/lib/siteConfig'
+import { getSiteUrl } from '@/lib/siteUrl'
 import { isSiteLocale, otherSiteLocale, sitePath, type SiteLocale } from '@/lib/locales'
 import { isLocaleDraft, isLocalePublic, isZhReviewed } from '@/lib/publication'
 
@@ -40,6 +42,7 @@ export async function generateMetadata({ params }: HomePageProps): Promise<Metad
   return {
     title: { absolute: meta.title },
     description: meta.description,
+    keywords: [...SEO_KEYWORDS[locale]],
     alternates: buildAlternates(locale),
     robots: isLocaleDraft(locale) ? { index: false, follow: false } : undefined,
     openGraph: {
@@ -56,8 +59,20 @@ export default async function HomePage({ params }: HomePageProps) {
   if (!isSiteLocale(locale)) notFound()
 
   const content = getHomeContent(locale)
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: locale === 'zh-CN' ? '金龙 Jinlong' : 'Jinlong',
+    applicationCategory: 'BusinessApplication',
+    operatingSystem: 'Web, Windows',
+    inLanguage: ['pt-BR', 'zh-CN'],
+    description: content.meta.description,
+    keywords: SEO_KEYWORDS[locale].join(', '),
+    url: `${getSiteUrl()}${sitePath(locale)}`,
+  }
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }} />
       <SiteHeader locale={locale} content={content} showSwitch={isLocalePublic(otherSiteLocale(locale))} />
       <main id="main-content">
         <Hero locale={locale} content={content} />
@@ -69,7 +84,7 @@ export default async function HomePage({ params }: HomePageProps) {
         <Screens locale={locale} content={content} />
         <Dashboard content={content} />
         <WholesaleSection locale={locale} content={content} />
-        <Price content={content} />
+        <Price content={content} locale={locale} />
         {/* Prova social: oculta até existir depoimento real ([DEPOIMENTO REAL]). */}
         <Integrations content={content} />
         <Faq content={content} />

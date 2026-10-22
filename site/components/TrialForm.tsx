@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState, type FormEvent } from 'react'
+import { leadExtrasSchema, readUtms } from '@/lib/leadSchema'
 import type { TrialFormCopy } from '@/lib/content/types'
 import { isValidContact, type DemoChannel, type DemoFieldError, type DemoLocale } from '@/lib/demoRequest'
 
@@ -24,9 +25,9 @@ type State =
  */
 export function TrialForm({ copy, email, whatsappHref, locale }: TrialFormProps) {
   const [state, setState] = useState<State>({ kind: 'idle' })
-  const [channel, setChannel] = useState<DemoChannel>('whatsapp')
+  const channel: DemoChannel = 'whatsapp'
   const [errors, setErrors] = useState<DemoFieldError[]>([])
-  const [values, setValues] = useState({ name: '', store: '', contact: '' })
+  const [values, setValues] = useState({ name: '', store: '', contact: '', city: '', segment: '', wechat: '', idioma: locale as string })
   const statusRef = useRef<HTMLDivElement>(null)
 
   const summary = `${copy.mailSubject}\n\n${copy.name}: ${values.name}\n${copy.store}: ${values.store}\n${copy.contact} (${channel === 'whatsapp' ? copy.channelWhatsapp : copy.channelWechat}): ${values.contact}`
@@ -43,13 +44,19 @@ export function TrialForm({ copy, email, whatsappHref, locale }: TrialFormProps)
     if (v.name.trim().length < 2) out.push('name')
     if (v.store.trim().length < 2) out.push('store')
     if (!isValidContact(v.contact.trim(), channel)) out.push('contact')
+    const extras = leadExtrasSchema.safeParse({ city: v.city, segment: v.segment, wechat: v.wechat, idioma: v.idioma })
+    if (!extras.success) for (const i of extras.error.issues) {
+      const f = i.path[0] as DemoFieldError
+      if (!out.includes(f)) out.push(f)
+    }
     return out
   }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const data = new FormData(event.currentTarget)
-    const v = { name: String(data.get('name') ?? ''), store: String(data.get('store') ?? ''), contact: String(data.get('contact') ?? '') }
+    const g = (k: string) => String(data.get(k) ?? '')
+    const v = { name: g('name'), store: g('store'), contact: g('contact'), city: g('city'), segment: g('segment'), wechat: g('wechat'), idioma: g('idioma') || locale }
     setValues(v)
     const local = localErrors(v)
     setErrors(local)
@@ -63,19 +70,24 @@ export function TrialForm({ copy, email, whatsappHref, locale }: TrialFormProps)
       const res = await fetch('/pedido-demo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...v, channel, locale, website: String(data.get('website') ?? '') }),
+        body: JSON.stringify({ ...v, channel, locale, ...readUtms(window.location.search), website: g('website') }),
       })
       const body = (await res.json().catch(() => null)) as { ok?: boolean; protocol?: string; error?: string; fields?: DemoFieldError[] } | null
       if (res.ok && body?.ok && body.protocol) {
         setState({ kind: 'ok', protocol: body.protocol })
+        const target = v.idioma === 'zh-CN' ? 'zh-CN' : 'pt-BR'
+        window.location.assign(`/${target}/obrigado?p=${encodeURIComponent(body.protocol)}`)
+        return
       } else if (res.status === 400 && body?.fields?.length) {
         setErrors(body.fields)
         setState({ kind: 'idle' })
         return
       } else {
+        console.error(`[Jinlong lead] envio falhou: HTTP ${res.status} (${body?.error ?? 'sem detalhe'})`)
         setState({ kind: 'fail', rate: res.status === 429 })
       }
-    } catch {
+    } catch (err) {
+      console.error('[Jinlong lead] erro de rede ao enviar:', err instanceof Error ? err.message : err)
       setState({ kind: 'fail', rate: false })
     }
     focusStatus()
@@ -107,8 +119,12 @@ export function TrialForm({ copy, email, whatsappHref, locale }: TrialFormProps)
     store: copy.errStore,
     contact: channel === 'whatsapp' ? copy.errContactWhatsapp : copy.errContactWechat,
     channel: copy.errContactWechat,
+    city: copy.errCity,
+    segment: copy.errSegment,
+    wechat: copy.errContactWechat,
+    idioma: copy.errCity,
   }
-  const field = (id: 'name' | 'store' | 'contact', label: string, type: string, auto: string, hint?: string) => {
+  const field = (id: 'name' | 'store' | 'contact' | 'city' | 'segment' | 'wechat', label: string, type: string, auto: string, hint?: string) => {
     const invalid = errors.includes(id)
     const describedBy = [hint ? `${id}-hint` : '', invalid ? `${id}-err` : ''].filter(Boolean).join(' ') || undefined
     return (
@@ -117,9 +133,9 @@ export function TrialForm({ copy, email, whatsappHref, locale }: TrialFormProps)
         <input
           name={id}
           type={type}
-          required
-          minLength={id === 'contact' ? 3 : 2}
-          maxLength={id === 'contact' ? 60 : id === 'name' ? 80 : 120}
+          required={id !== 'wechat'}
+          minLength={id === 'contact' || id === 'wechat' ? 3 : 2}
+          maxLength={id === 'contact' ? 60 : id === 'wechat' ? 40 : id === 'store' ? 120 : 80}
           autoComplete={auto}
           inputMode={id === 'contact' && channel === 'whatsapp' ? 'tel' : undefined}
           aria-invalid={invalid || undefined}
@@ -141,17 +157,18 @@ export function TrialForm({ copy, email, whatsappHref, locale }: TrialFormProps)
       <div className="jl-form-grid">
         {field('name', copy.name, 'text', 'name')}
         {field('store', copy.store, 'text', 'organization')}
-        <fieldset className="jl-span">
-          <legend>{copy.channel}</legend>
-          {(['whatsapp', 'wechat'] as const).map((c) => (
-            <label key={c} className="jl-radio">
-              <input type="radio" name="channel" value={c} checked={channel === c} onChange={() => setChannel(c)} />
-              <span>{c === 'whatsapp' ? copy.channelWhatsapp : copy.channelWechat}</span>
-            </label>
-          ))}
-        </fieldset>
         {field('contact', copy.contact, channel === 'whatsapp' ? 'tel' : 'text', channel === 'whatsapp' ? 'tel' : 'off',
-          channel === 'whatsapp' ? copy.contactHintWhatsapp : copy.contactHintWechat)}
+          copy.contactHintWhatsapp)}
+        {field('wechat', copy.wechatOptional, 'text', 'off', copy.contactHintWechat)}
+        {field('city', copy.city, 'text', 'address-level2')}
+        {field('segment', copy.segment, 'text', 'off')}
+        <label>
+          <span>{copy.idioma}</span>
+          <select name="idioma" defaultValue={values.idioma}>
+            <option value="pt-BR">Português</option>
+            <option value="zh-CN">简体中文</option>
+          </select>
+        </label>
         <div className="jl-hp" aria-hidden="true">
           <label>
             Website
