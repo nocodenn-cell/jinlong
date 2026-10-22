@@ -8,7 +8,7 @@ import { buildAuthCallbackUrl } from '@/lib/auth/appOrigin'
 import { ROUTES } from '@/lib/navigation/routes'
 import { bootstrapLojaTrial } from '@/lib/cobranca/trialBootstrap'
 import {
-  TrialSignupSchema, emailDescartavel, hashAntiAbuso, mensagemErroTrial, montarPayloadTrial,
+  TrialSignupSchema, emailDescartavel, hashAntiAbuso, saltAntiAbuso, mensagemErroTrial, montarPayloadTrial,
   verificarCaptcha, type TrialSignupInput,
 } from '@/lib/cobranca/trialSignup'
 
@@ -35,7 +35,11 @@ export async function iniciarTesteGratisAction(input: TrialSignupInput): Promise
   const ip = h.get('x-forwarded-for')?.split(',')[0]?.trim() || h.get('x-real-ip') || 'desconhecido'
   if (!(await verificarCaptcha(d.captchaToken, ip))) return { ok: false, error: 'Verificação anti-robô falhou. / 人机验证失败。' }
 
-  const sal = process.env.TRIAL_HASH_SALT?.trim() || process.env.SUPABASE_SERVICE_ROLE_KEY?.slice(-16) || 'fp'
+  const sal = saltAntiAbuso()
+  if (!sal) {
+    console.error('[trial] TRIAL_HASH_SALT ausente em produção: cadastro de trial bloqueado (fail closed).')
+    return { ok: false, error: 'Teste grátis indisponível no momento. / 暂时无法开通试用。' }
+  }
   const admin = createAdminClient()
   const rpc = admin as unknown as Rpc
   const { data: permitido, error: rlErr } = await rpc.rpc('trial_registrar_tentativa', {

@@ -13,6 +13,21 @@ describe('getAsaas', () => {
   })
 })
 
+describe('getAsaas — URL explícita em produção (fail closed)', () => {
+  it('VERCEL_ENV=production sem ASAAS_BASE_URL ⇒ erro', () => {
+    expect(() => getAsaas({ NODE_ENV: 'production', VERCEL_ENV: 'production', ASAAS_API_KEY: 'k' })).toThrow(/ASAAS_BASE_URL/)
+  })
+  it('chave de produção sem URL ⇒ erro', () => {
+    expect(() => getAsaas({ NODE_ENV: 'production', ASAAS_API_KEY: '$aact_prod_x' })).toThrow(/ASAAS_BASE_URL/)
+  })
+  it('chave de produção com URL sandbox ⇒ erro', () => {
+    expect(() => getAsaas({ ASAAS_API_KEY: '$aact_prod_x', ASAAS_BASE_URL: 'https://api-sandbox.asaas.com/v3' })).toThrow(/não corresponde/)
+  })
+  it('produção com URL explícita ⇒ producao', () => {
+    expect(getAsaas({ VERCEL_ENV: 'production', ASAAS_API_KEY: '$aact_prod_x', ASAAS_BASE_URL: 'https://api.asaas.com/v3' }).modo).toBe('producao')
+  })
+})
+
 describe('cliente HTTP', () => {
   it('envia access_token e corpo da assinatura mensal', async () => {
     const fetchImpl = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ id: 'sub_1', nextDueDate: '2026-11-03', value: 99, billingType: 'PIX' }) })

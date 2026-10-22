@@ -39,15 +39,26 @@ async function catalogo(): Promise<PlanoCatalogo[]> {
   return data as PlanoCatalogo[]
 }
 
+const ERRO_SO_DONO = 'Somente o DONO gerencia a assinatura. / 仅老板可管理订阅。'
+
+/** DONO da empresa do contexto (vínculo/papel na empresa), não só o perfil global. Falha fechada. */
+async function souDonoDaEmpresa(supabase: unknown, empresaId: string): Promise<boolean> {
+  const { data, error } = await (supabase as Rpc).rpc('fp_sou_dono_da_empresa', { p_empresa: empresaId })
+  return !error && data === true
+}
+
 async function gateDono() {
   const auth = await assertGerenteSession()
   if (!auth.ok) return { ok: false as const, error: auth.error }
   if (auth.session.perfil !== 'DONO' && auth.session.perfil !== 'ADMIN') {
-    return { ok: false as const, error: 'Somente o DONO gerencia a assinatura. / 仅老板可管理订阅。' }
+    return { ok: false as const, error: ERRO_SO_DONO }
   }
   const supabase = await createClient()
   const empresaId = await empresaContextoId(supabase)
   if (!empresaId) return { ok: false as const, error: 'Empresa não identificada. / 无法识别公司。' }
+  // fp_empresa_contexto resolve a empresa selecionada/da loja/única; o perfil global (inclusive ADMIN)
+  // não prova que o usuário é DONO DESSA empresa — confere o papel na empresa no banco.
+  if (!(await souDonoDaEmpresa(supabase, empresaId))) return { ok: false as const, error: ERRO_SO_DONO }
   const { data: u } = await supabase.auth.getUser()
   return { ok: true as const, session: auth.session, email: u.user?.email ?? '', empresaId, supabase }
 }
@@ -67,7 +78,9 @@ export async function carregarAssinaturaAction(): Promise<R<{ assinatura: MinhaA
         const { data: fs } = await (supabase as unknown as Rpc).rpc('fp_minhas_faturas', { p_limite: 24 })
         return Array.isArray(fs) ? (fs as Fatura[]) : []
       })(),
-      podeGerenciar: auth.session.perfil === 'DONO' || auth.session.perfil === 'ADMIN',
+      podeGerenciar: (auth.session.perfil === 'DONO' || auth.session.perfil === 'ADMIN')
+        && typeof (data as MinhaAssinatura | null)?.empresa_id === 'string'
+        && (await souDonoDaEmpresa(supabase, (data as MinhaAssinatura).empresa_id)),
     },
   }
 }
@@ -96,6 +109,25 @@ export async function assinarPlanoAction(input: z.input<typeof AssinarSchema>): 
   }
 
   const admin = createAdminClient()
+  // Idempotência: lock curto por empresa no banco. Dois cliques/abas ⇒ só um chega ao Asaas.
+  const { data: reservado, error: lockErr } = await (admin as unknown as Rpc).rpc('cobranca_reservar_assinar', { p_empresa: g.empresaId })
+  if (lockErr || reservado !== true) {
+    return { ok: false, error: 'Já existe uma assinatura sendo processada. Aguarde alguns segundos. / 订阅正在处理中，请稍候。' }
+  }
+  try {
+    return await assinarComLock(admin, g, d, valor)
+  } finally {
+    await (admin as unknown as Rpc).rpc('cobranca_liberar_assinar', { p_empresa: g.empresaId })
+  }
+}
+
+async function assinarComLock(
+  admin: unknown,
+  g: { empresaId: string; email: string },
+  d: z.output<typeof AssinarSchema>,
+  valor: { totalCentavos: number },
+): Promise<R<{ valorCentavos: number; proximoVencimento: string }>> {
+  // Estado relido DEPOIS do lock: se outro clique já criou cliente/assinatura, reaproveita (atualiza).
   const estado = await estadoEmpresa(admin, g.empresaId)
   if (!estado) return { ok: false, error: 'Não foi possível ler a assinatura. / 无法读取订阅。' }
   const atual = estado.assinatura
@@ -128,6 +160,7 @@ export async function assinarPlanoAction(input: z.input<typeof AssinarSchema>): 
       sub = s.id
       venc = s.nextDueDate
     }
+    if (!customer || !sub) throw new Error('ASAAS_SEM_IDS')
     const { error } = await (admin as unknown as Rpc).rpc('cobranca_registrar_assinatura', {
       p_empresa: g.empresaId, p_plano: d.plano, p_addons: d.addons, p_qtd_lojas: d.qtdLojas, p_qtd_caixas: d.qtdCaixas,
       p_forma: d.forma, p_valor_centavos: valor.totalCentavos, p_asaas_customer: customer, p_asaas_subscription: sub,
