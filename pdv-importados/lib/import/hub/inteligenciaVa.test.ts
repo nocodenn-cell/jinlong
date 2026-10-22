@@ -56,3 +56,16 @@ describe('P2 — conciliação AFRMM/Siscomex (base do ICMS × despesas lançada
     expect(r.ausente_no_custo_brl).toBe('115.67')
   })
 })
+
+describe('revisão PR #624 — despesa que casa frete E seguro não entra duas vezes', () => {
+  // FOB USD 1000 × câmbio 5,0 = R$ 5000. Despesa única de USD 20 (= R$ 100) "Freight insurance".
+  // Esperado: é seguro (R$ 100), não frete. VA = 5000 + 100 = 5100. Contagem dupla daria 5200.
+  const cam5 = [{ id: 'c5', moeda: 'USD', taxa: '5.0', fonte: 'PTAX', data: '2026-10-21' }]
+  const um = [item('u1', '1000')]
+  it.each(['Freight insurance', 'Frete + seguro internacional', 'Seguro do frete internacional'])('"%s" → só seguro', (tipo) => {
+    const c = composicaoValorAduaneiro(um, cam5, [d('x', tipo, '20')])
+    expect(Number(c.totais.frete_brl)).toBe(0)
+    expect(Number(c.totais.seguro_brl)).toBe(100)
+    expect(Number(c.totais.valor_aduaneiro_brl)).toBe(5100)
+  })
+})

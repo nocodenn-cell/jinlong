@@ -24,9 +24,13 @@ const RE_FRETE_LOCAL = /(?<!inter)nacional|interno|rodovi|local|国内/i
 const RE_SEGURO = /seguro|insurance|保险/i
 const RE_SISCOMEX = /siscomex/i
 const RE_AFRMM = /afrmm|marinha mercante/i
-/** Frete internacional: exclui frete local e encargos que CITAM frete (AFRMM "8% do frete", Siscomex). */
-const ehFreteInternacional = (t: string) => RE_FRETE.test(t) && !RE_FRETE_LOCAL.test(t) && !RE_AFRMM.test(t) && !RE_SISCOMEX.test(t)
 const ehSeguro = (t: string) => RE_SEGURO.test(t)
+/**
+ * Frete internacional: exclui frete local, encargos que CITAM frete (AFRMM "8% do frete", Siscomex) e
+ * seguro ("Freight insurance", "Frete + seguro"): cada despesa entra em UMA parcela só (sem dupla contagem).
+ */
+const ehFreteInternacional = (t: string) =>
+  RE_FRETE.test(t) && !RE_FRETE_LOCAL.test(t) && !RE_AFRMM.test(t) && !RE_SISCOMEX.test(t) && !ehSeguro(t)
 
 export type ItemSemBase = { item_id: string; motivo: 'SEM_CAMBIO' }
 
