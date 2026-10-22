@@ -43,6 +43,18 @@ async function chamar(client: unknown, fn: string, args: Record<string, unknown>
   return { ok: true, data }
 }
 
+/** Vínculo item↔documento atual (RLS da sessão). Erro de leitura é reportado, nunca tratado como "sem vínculo". */
+async function documentoDoItem(client: unknown, itemId: string): Promise<{ ok: true; documento_id: string | null } | { ok: false }> {
+  const { data, error } = await (client as LeituraDocumento)
+    .from('import_itens').select('id, documento_id').eq('id', itemId).maybeSingle()
+  if (error) return { ok: false }
+  return { ok: true, documento_id: data?.documento_id ?? null }
+}
+
+type LeituraDocumento = {
+  from: (t: string) => { select: (c: string) => { eq: (c: string, v: string) => { maybeSingle: () => PromiseLike<{ data: { documento_id: string | null } | null; error: { message: string } | null }> } } }
+}
+
 type LeituraItens = {
   from: (t: string) => { select: (c: string) => { eq: (c: string, v: string) => PromiseLike<{ data: { id: string; descricao: string }[] | null }> } }
 }
@@ -169,7 +181,10 @@ export async function salvarItemAction(operacaoId: string, input: ItemInput): Pr
     unidade_comercial: unidade,
     ...Object.fromEntries(Object.entries(campos).map(([k, v]) => [k, v ?? null])),
   }
-  const r = await chamar(gate.ctx.client, 'import_salvar_item', { p_operacao: op.data, p_item: item })
+  // import_salvar_item regrava documento_id a partir de p_item: sem reenviar o vínculo atual, a edição o apagaria.
+  const doc = input.id ? await documentoDoItem(gate.ctx.client, input.id) : { ok: true as const, documento_id: null }
+  if (!doc.ok) return falha('erro_generico')
+  const r = await chamar(gate.ctx.client, 'import_salvar_item', { p_operacao: op.data, p_item: { ...item, documento_id: doc.documento_id } })
   if (!r.ok) return falha(r.erro)
   revalidar(op.data)
   return { ok: true, data: { id: String(r.data) } }
