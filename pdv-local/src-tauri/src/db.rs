@@ -51,6 +51,9 @@ pub struct RegistrarVendaInput {
     /// Pagamento combinado / parcelas do crédito. `None` = comportamento histórico (forma escalar).
     #[serde(default)]
     pub pagamentos: Option<Vec<PagamentoVendaInput>>,
+    /// Desconto autorizado por PIN do gerente: id do evento OVERRIDE_GERENTE. `None` = payload antigo.
+    #[serde(default)]
+    pub gerente_pin_evento_id: Option<String>,
 }
 
 const FORMAS_PAGAMENTO_VALIDAS: [&str; 4] = ["DINHEIRO", "PIX", "CARTAO_CREDITO", "CARTAO_DEBITO"];
@@ -443,6 +446,12 @@ fn operador_id_efetivo(input: &RegistrarVendaInput) -> Option<String> {
             return Some(s.trim().to_string());
         }
     }
+    // Login por PIN: operador que está no caixa agora.
+    if let Some(op) = crate::operador::operador_atual() {
+        if Uuid::parse_str(op.usuario_id.trim()).is_ok() {
+            return Some(op.usuario_id);
+        }
+    }
     std::env::var("PDV_OPERADOR_ID")
         .ok()
         .map(|s| s.trim().to_string())
@@ -452,7 +461,7 @@ fn operador_id_efetivo(input: &RegistrarVendaInput) -> Option<String> {
 /// registrar_venda_com_itens (backend) exige p_caixa_id desde a migration
 /// 20260814105031 — rejeitar aqui, antes de qualquer escrita local, em vez de
 /// gravar e enfileirar uma venda que só vai falhar no sync (Edge/RPC).
-fn loja_id_configurada(conn: &Connection) -> Result<String, String> {
+pub(crate) fn loja_id_configurada(conn: &Connection) -> Result<String, String> {
     let loja = conn
         .query_row(
             "SELECT loja_id FROM pdv_config_cache WHERE id = 1",
@@ -621,6 +630,14 @@ pub fn registrar_venda_local(
             obj
         }
         None => payload,
+    };
+    let payload = match input.gerente_pin_evento_id.as_deref().map(str::trim).filter(|s| Uuid::parse_str(s).is_ok()) {
+        Some(ev) => {
+            let mut obj = payload;
+            obj["gerente_pin_evento_id"] = json!(ev);
+            obj
+        }
+        None => payload,
     }
     .to_string();
 
@@ -695,6 +712,10 @@ pub fn abrir_caixa_local(
     operador_id: Option<String>,
     troco_inicial: f64,
 ) -> Result<String, String> {
+    // Login por PIN: sem operador explícito, usa quem está no caixa (None se o PIN estiver desligado).
+    let operador_id = operador_id
+        .filter(|s| Uuid::parse_str(s.trim()).is_ok())
+        .or_else(|| crate::operador::operador_atual().map(|o| o.usuario_id));
     init_db(app)?;
     if troco_inicial < 0.0 {
         return Err("Troco inicial inválido".to_string());
@@ -1051,7 +1072,7 @@ struct EdgePdvConfigResponse {
     error: Option<String>,
 }
 
-fn endpoint_with_op(endpoint: &str, op: &str) -> String {
+pub(crate) fn endpoint_with_op(endpoint: &str, op: &str) -> String {
     if endpoint.contains('?') {
         format!("{endpoint}&op={op}")
     } else {
@@ -1060,7 +1081,7 @@ fn endpoint_with_op(endpoint: &str, op: &str) -> String {
 }
 
 /// Credenciais de sync: ativação por código (preferida) ou `.env` legado (SYNC_ENDPOINT + SYNC_KEY).
-fn sync_endpoint_and_key() -> Result<(String, String), String> {
+pub(crate) fn sync_endpoint_and_key() -> Result<(String, String), String> {
     if let Some(a) = crate::ativacao::atual() {
         return Ok((a.endpoint, a.sync_key));
     }
@@ -1104,7 +1125,7 @@ fn build_request_signature(
     Ok(hex::encode(bytes))
 }
 
-fn signed_headers_for_request(
+pub(crate) fn signed_headers_for_request(
     sync_key: &str,
     body: &str,
     device_fingerprint: &str,
@@ -1153,7 +1174,7 @@ fn signed_headers_for_request(
 /// instável isso trava o comando Tauri indefinidamente (e o intervalo de 15s
 /// do sync da outbox nunca se recupera) em vez de falhar rápido para o
 /// backoff/DLQ existente.
-fn http_client_with_timeout() -> Result<reqwest::blocking::Client, String> {
+pub(crate) fn http_client_with_timeout() -> Result<reqwest::blocking::Client, String> {
     reqwest::blocking::Client::builder()
         .timeout(std::time::Duration::from_secs(30))
         .build()

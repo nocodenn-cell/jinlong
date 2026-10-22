@@ -22,7 +22,8 @@
         "VENDA_REGISTRADA",
         "CAIXA_ABERTO",
         "CAIXA_FECHADO",
-        "MOVIMENTO_CAIXA"
+        "MOVIMENTO_CAIXA",
+        "OPERADOR_EVENTO"
       ]
     },
     "created_at": {
