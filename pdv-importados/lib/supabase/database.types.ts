@@ -9149,6 +9149,10 @@ export type Database = {
         }
         Returns: Json
       }
+      definir_meu_pin_pdv: {
+        Args: { p_hash: string; p_iteracoes: number; p_salt: string }
+        Returns: undefined
+      }
       definir_pin_operador_pdv: {
         Args: {
           p_ator: string
@@ -9157,10 +9161,6 @@ export type Database = {
           p_salt: string
           p_usuario: string
         }
-        Returns: undefined
-      }
-      definir_meu_pin_pdv: {
-        Args: { p_hash: string; p_iteracoes: number; p_salt: string }
         Returns: undefined
       }
       definir_vendedor_venda: {
@@ -10098,18 +10098,6 @@ export type Database = {
         Args: { p_produto_codigo?: string }
         Returns: Json
       }
-      pdv_pin_registrar_tentativa: {
-        Args: { p_ok: boolean; p_usuario: string }
-        Returns: {
-          bloqueado_ate: string
-          tentativas: number
-        }[]
-      }
-      pdv_pin_obvio: { Args: { p_pin: string }; Returns: boolean }
-      pdv_pin_loja_gerida: {
-        Args: { p_ator: string; p_usuario: string }
-        Returns: string
-      }
       pdv_operadores_da_loja: {
         Args: { p_loja: string }
         Returns: {
@@ -10121,6 +10109,18 @@ export type Database = {
           pin_iteracoes: number
           pin_salt: string
           usuario_id: string
+        }[]
+      }
+      pdv_pin_loja_gerida: {
+        Args: { p_ator: string; p_usuario: string }
+        Returns: string
+      }
+      pdv_pin_obvio: { Args: { p_pin: string }; Returns: boolean }
+      pdv_pin_registrar_tentativa: {
+        Args: { p_ok: boolean; p_usuario: string }
+        Returns: {
+          bloqueado_ate: string
+          tentativas: number
         }[]
       }
       pdv_registrar_alertas_margem_venda: {
