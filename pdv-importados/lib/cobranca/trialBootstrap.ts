@@ -23,7 +23,7 @@ export async function bootstrapLojaTrial(admin: SupabaseClient, lojaId: string, 
     if (idErr) throw new Error(idErr.message)
     const id = (ids ?? []).reduce((acc, r) => Math.max(acc, Number(r.id) || 0), 0) + 1
     const { error } = await db.from('pdv_config').insert({
-      id, loja_id: lojaId, gerente_id: donoId, ...PDV_CONFIG_DEFAULTS, idioma_padrao: idioma, gerente_senha_sha256: '',
+      id, loja_id: lojaId, gerente_id: donoId, ...PDV_CONFIG_DEFAULTS, idioma_padrao: idioma,
     })
     if (error && !/duplicate|unique/i.test(error.message)) throw new Error(error.message)
   }
