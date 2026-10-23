@@ -27,12 +27,12 @@ Escopo: os 43 PRs e a issue abertos no início da missão (`nocodenn-cell/fastpr
 |---|---|---|---|---|---|
 | #618 | Alerta `security_definer_view` em `produtos_custos` | P0 | Mock de `rpc` nos testes; tipos regenerados (`check:types-drift`); matriz de acesso validada no banco representativo (ADMIN 2 lojas, GERENTE/DONO só a própria, OPERADOR e inativo 0, anon sem acesso, coluna de custo bloqueada); idempotência e rollback testados | **Mergeado** (pelo dono) | Nenhuma: migration já estava em produção; advisor confirma o alerta resolvido |
 | #621 | Recursão infinita na RLS de `perfis` | P0 | Guarda `to_regclass` (a tabela só existe em produção); validado em PGlite (recursão some, regras mantidas, idempotente) | **Mergeado** (pelo dono) | Nenhuma: migration já em produção, efeito idêntico |
-| #625 | `pdv_config.gerente_senha_sha256 NOT NULL` quebra provisionamento e e2e | P0 | Migration validada: vermelho→verde, aplicação dupla idempotente; simulado o schema de produção, onde **a coluna não existe** e a migration é no-op | Aberto, checks obrigatórios e e2e **verdes** | Aprovação específica (tem migration). Produção não é afetada pelo bug: ele só quebra bancos criados pelo git (CI/e2e) |
+| #625 | `pdv_config.gerente_senha_sha256 NOT NULL` quebra provisionamento e e2e | P0 | Migration validada: vermelho→verde, aplicação dupla idempotente; no schema de produção (**a coluna não existe**) é no-op. Merge autorizado sob condição, mas **não executado**: o PR altera `pdv-importados` e todo merge que toca esse app gera deploy de **produção** na Vercel (#618 e #621 geraram) | Aberto, checks obrigatórios e e2e **verdes** | Decisão do dono sobre o deploy de frontend. Em produção, o código atual envia `gerente_senha_sha256: ''` via PostgREST para uma coluna que não existe: provável falha no provisionamento de loja e no trial (não reproduzido, para não escrever em produção) |
 | #624 | CALC-001.1 importação (landed cost etc.) | P1 | Revisado: sem migrations; `shared-core/src/import` com 203 testes OK | Aberto | e2e falha só pelo bug do #625; rerodar depois do merge do #625 |
 | #629 *(novo)* | Issue #586: kardex sem vínculo SAÍDA↔ENTRADA | P1 | Coluna `transferencia_id` + reescrita só dos 2 INSERTs (corpo idêntico ao de produção, md5); teste vermelho→verde; rollback restaura o corpo byte a byte; tipos regenerados; teste no CI | Aberto | Aprovação específica (migration); e2e falha pelo bug do #625 |
 | Issue #586 | Idem | P1 | Implementada em #629; comentário na issue | **Aberta** (correto) | Fechar só depois da aplicação e verificação em produção |
-| #620 | Escopo de gerente por empresa + correções Asaas | P0 | Não alterado: o autor marcou NO-GO até revisão e homologação | Aberto (draft) | Revisão do dono; validação em homologação (homolog está vazio) |
-| #623 | Remover ADMIN do escopo das lojas | P0 | Não alterado; depende de #620 | Aberto (draft) | Idem #620 |
+| #620 | Escopo de gerente por empresa + correções Asaas | P0 | **Corrigido.** A migration `20261022120000` tratava qualquer `loja_id` nulo como fora e quebrava casos legítimos (falha do CI no sec04). Nova regra: mantém o corpo de produção e acrescenta só a fronteira de empresa para token de DONO/ADMIN (empresa da loja do emissor, vínculo DONO ativo ou vínculo na própria loja). sec04 ganhou os casos entre empresas. Validado: a lógica atual de produção **vaza entre empresas** (reproduzido); a nova passa sec04, c1, fase1 e fase2 | Aberto (draft) | Revisão do dono. Produção tem 1 empresa, então o vazamento ainda não é explorável. Vercel "couldn't verify an account" vem de commits antigos do PR (autor), não de código |
+| #623 | Remover ADMIN do escopo das lojas | P0 | **Corrigido.** Recebeu a correção do #620. Sua migration reescrevia a mesma função com o mesmo defeito, e agora está alinhada (mesma regra, sem ADMIN). `fp_admin_legado`/`auth_usuario_eh_admin` (corpo constante `false`) viraram SECURITY INVOKER, resolvendo a falha do `c1-secdef`. Validado no contexto das 3 migrations | Aberto (draft) | Revisão do dono (migração de dados de ADMIN; rollback no PR) |
 | #627 | Reconciliação de migrations, Fase 1 (docs) | P0 | Não alterado (ativo em outro worktree) | Aberto (draft) | Atualizar: #618 e #621 já estão na main |
 | #546 | Sentry 10→11 (major) | P2 | `withSentryConfig` passou para `@sentry/nextjs/config` na v11 (conferido no tarball, sem executar); corrigidos os dois `next.config.js`; merge da main (o projeto Vercel `hub` não existia na base antiga); lockfile normalizado | Aberto, CI rodando | Avaliar CI; outros pontos da v11 só aparecem em runtime |
 | #583 | Grupo dev-minor-patch | P2 | Dependência fantasma: `pdv-importados` usava `@testing-library/react` sem declarar; declarada (lockfile só com isso). Fixture de Storage sem `ON CONFLICT (bucket_id, name)` (o CLI 2.121 mudou o índice); reproduzido e corrigido no banco representativo | Aberto, CI rodando | Também sobe pglite 0.3→0.5 (testes em PGlite dirão) |
@@ -51,6 +51,17 @@ Escopo: os 43 PRs e a issue abertos no início da missão (`nocodenn-cell/fastpr
 | #508 | Auditoria 360° (doc) | P2 | Avaliado: doc único | Aberto (draft) | Decidir se vira histórico em `docs/` |
 | #529, #530, #532, #533, #534 | Capacidade/carga (k6, STG-01) | P2 | Avaliado: pilha cumulativa com conteúdo único | Abertos | Consolidar num só (provavelmente #534) depois de confirmar a inclusão |
 | #541, #542, #550 | UX (hub de estoque, ficha de clientes, tokens) | P2 | Avaliado: conflitos com a main; componentes únicos (12 e 13 arquivos ausentes); #550 sem arquivos únicos | Abertos (draft) | Rebase e decisão de produto; #550 provavelmente superado pelo loop UX (#561–#563), mas não verificado em detalhe |
+
+## Atualização 2026-10-23 14:40 UTC
+
+- **#625 não mergeado.** Condição do dono: o merge não pode acionar deploy em produção. A Vercel publica `pdv-importados` em produção a cada merge que toca o app, e o #625 toca. Migrations não seriam aplicadas (integração com deploy desligado; conferido de novo às 14:23 UTC).
+- **#620/#623:** bloqueios de segurança corrigidos e validados (tabela acima). Merge só com aprovação específica.
+- **Runbook de `20261023120000`:**
+  - plano final para aprovação;
+  - scripts únicos `ops/aplicar_20261023120000.sql` e `ops/rollback_20261023120000.sql`, testados;
+  - restore drill obrigatório;
+  - as 4 revisões do Codex atendidas.
+- Pré-checagem de produção às 14:33 UTC: `true/true/true`.
 
 ## Dependabot e secrets (sem secret criado)
 

@@ -3,8 +3,8 @@
 ## P0 — Quebrado/travado
 
 - Aplicar em produção (janela manual) a migration 20261023120000 do #628, já na main, seguindo `docs/runbooks/APLICAR_20261023120000_REVOKE_ESTOQUE.md` (pré-checagem, backup, rollback e regressão testados em 2026-10-23)
-- e2e-playwright falha em main (`gerente_senha_sha256` NOT NULL em `pdv_config`): #625 corrige, CI verde, aguarda aprovação (migration). Produção não é afetada (a coluna não existe lá). Depois do merge, rerodar e2e de #624 e #629
-- Revisar #620 e #623 (escopo de gerente por empresa e remoção do ADMIN): P0 de isolamento, marcados NO-GO pelo autor até revisão/homologação
+- #625 (`gerente_senha_sha256`): CI verde; merge segurado porque gera deploy de produção do `pdv-importados` na Vercel, e o dono vetou deploy. Em produção a coluna não existe e o código atual a envia: provável falha no provisionamento de loja e no trial. Decidir o deploy; depois rerodar e2e de #624 e #629
+- Revisar e aprovar #620 e #623: bloqueios de CI corrigidos em 2026-10-23 (fronteira de empresa no token de gerente; c1-secdef). A lógica atual de produção aceita token de DONO de outra empresa; não explorável com 1 empresa, bloqueia a 2ª empresa
 - Reconciliar drift de migrations main × produção: em 2026-10-23 toda migration da main a partir de 20261019 está em produção com a mesma versão; restam 20261010120000 (adiada pela governança) e 20261023120000 (aplicação manual pendente). O check `migration-remote-drift` acusa como ausentes versões que existem em produção (ex.: 20261020100000–20261022010000); verificar para qual projeto aponta `SUPABASE_MIGRATION_CHECK_PROJECT_REF`
 - Decidir módulos marcados DRAFT já aplicados em produção (comissão #607, import intelligence #601): validar ou esconder do cliente
 - Congelar features até o corte do primeiro cliente (só hotfix P0 em produção)
