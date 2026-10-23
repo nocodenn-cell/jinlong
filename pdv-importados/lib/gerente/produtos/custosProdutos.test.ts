@@ -6,24 +6,20 @@ import { anexarCustosProdutos, carregarCustosProdutos } from './custosProdutos'
 function clienteFalso(rows: unknown[], error: { message: string } | null = null) {
   const consultas: { tabela: string; colunas: string; ids: string[] }[] = []
   const client = {
-    from: (tabela: string) => ({
-      select: (colunas: string) => ({
-        in: async (_col: string, ids: string[]) => {
-          consultas.push({ tabela, colunas, ids })
-          return { data: error ? null : rows, error }
-        },
-      }),
-    }),
+    rpc: async (tabela: string, args: { p_produto_ids: string[] }) => {
+      consultas.push({ tabela, colunas: '*', ids: args.p_produto_ids })
+      return { data: error ? null : rows, error }
+    },
   } as unknown as SupabaseClient
   return { client, consultas }
 }
 
 describe('custosProdutos (N1)', () => {
-  it('lê o custo SOMENTE da view produtos_custos, nunca de produtos', async () => {
+  it('lê o custo SOMENTE da RPC produtos_custos_autorizados, nunca de produtos', async () => {
     const { client, consultas } = clienteFalso([{ produto_id: 'p1', preco_custo: '12.5', preco_custo_medio: 0 }])
     const mapa = await carregarCustosProdutos(client, ['p1'])
     expect(consultas).toHaveLength(1)
-    expect(consultas[0].tabela).toBe('produtos_custos')
+    expect(consultas[0].tabela).toBe('produtos_custos_autorizados')
     expect(mapa.get('p1')).toEqual({ preco_custo: 12.5, preco_custo_medio: 0 })
   })
 
