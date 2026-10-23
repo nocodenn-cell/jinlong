@@ -2,7 +2,7 @@
 
 ## P0 — Quebrado/travado
 
-- Fase 1: refazer a comparação main × produção (entraram novas migrations na main: 20261022020000 e 20261023120000), reexecutar migration-remote-drift e fixar o SHA do corte (ops/corte/CORTE.md)
+- Fase 1: autorizar e executar a janela de 20261022020000 e 20261023120000 (roteiro pronto em ops/corte/janela-migrations-2026-10/ROTEIRO.md); depois reexecutar migration-remote-drift e fixar o SHA do corte
 - Decidir módulos marcados DRAFT já aplicados em produção (comissão #607, import intelligence #601): validar ou esconder do cliente
 - Congelar features até o corte do primeiro cliente (só hotfix P0 em produção)
 
@@ -27,6 +27,7 @@
 
 ## Feito
 
+- 2026-10-23 — Roteiro da janela de migrations preparado e ensaiado localmente (sem aplicar em produção)
 - 2026-10-23 — PRs #618 e #621 mergeados na main: migrations já aplicadas em produção agora versionadas; view produtos_custos com security_invoker
 - 2026-10-23 — Fase 1 preparada: drift main × produção mapeado e verificação somente leitura (ops/corte/CORTE.md)
 - 2026-10-23 — Checklist de corte mergeado na main (PR #626, 8217acfc)
