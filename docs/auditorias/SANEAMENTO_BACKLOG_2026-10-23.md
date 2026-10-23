@@ -1,0 +1,73 @@
+# Saneamento do backlog de PRs e issues — 2026-10-23
+
+Escopo: os 43 PRs e a issue abertos no início da missão (`nocodenn-cell/fastproduct`), mais o PR #629 criado durante ela. Nenhuma alteração em produção, nenhuma migration aplicada, nenhum secret criado, nenhuma branch apagada. Produção só foi consultada em modo somente leitura.
+
+## Como foi verificado
+
+- **Banco representativo:** container isolado `supabase/postgres:17.6.1.084` (a versão de produção) com as 437 migrations da `main` aplicadas em ordem, uma transação por arquivo, como no CLI. Storage e `auth.jwt()` foram criados como stubs mínimos, porque esses serviços não sobem num container só de Postgres. Calibração: os tipos gerados desse banco são idênticos, byte a byte, ao `database.types.ts` versionado.
+- **Produção (somente leitura):** `schema_migrations` (com `created_by`), privilégios, definições de função (md5 do corpo normalizado), versões das Edge Functions e advisor de segurança.
+- **"Já está na main?":** existência com `git cat-file -e origin/main:<path>` e conteúdo por hash de blob.
+  - **Erro meu, corrigido:** a primeira rodada usou `git rev-parse ref:path`, que ecoa o caminho quando o arquivo não existe. Isso me levou a encerrar #537 e #491 como "absorvidos" com afirmação falsa. Os dois foram **reabertos** com comentário de correção, e todas as contagens abaixo são da rodada corrigida.
+
+## Pipeline de produção (P0)
+
+- A integração GitHub→Supabase **não publica nada no merge**. Evidências:
+  - `validar-gerente` não é republicada desde o merge #589 (2026-10-20 17:48Z), apesar de 29 merges depois.
+  - Toda migration desde 10-20 tem `created_by` = e-mail do dono, ou seja, foi aplicada à mão.
+  - A adiada `20261010120000` segue sem aplicar.
+  - Conferido de novo 30 s após o merge do #628: nada mudou.
+- **`20261023120000` (#628):** está na main e **não aplicada** em produção. Pré-condições conferidas em 2026-10-23 13:08Z. Runbook com pré-checagem, backup, aplicação, pós-checagem e rollback **testados**: `docs/runbooks/APLICAR_20261023120000_REVOKE_ESTOQUE.md`.
+- **Advisor de produção depois do merge e da aplicação de #618:**
+  - **resolvidos:** `security_definer_view`, `function_search_path_mutable` e RLS desligado;
+  - **seguem abertos:** leaked password protection, `authenticated_security_definer_function_executable` (135, cresceu com a multiempresa) e `rls_enabled_no_policy` (25).
+
+## Tabela
+
+| PR/Issue | Problema | Prioridade | Ação executada | Estado final | Pendência |
+|---|---|---|---|---|---|
+| #618 | Alerta `security_definer_view` em `produtos_custos` | P0 | Mock de `rpc` nos testes; tipos regenerados (`check:types-drift`); matriz de acesso validada no banco representativo (ADMIN 2 lojas, GERENTE/DONO só a própria, OPERADOR e inativo 0, anon sem acesso, coluna de custo bloqueada); idempotência e rollback testados | **Mergeado** (pelo dono) | Nenhuma: migration já estava em produção; advisor confirma o alerta resolvido |
+| #621 | Recursão infinita na RLS de `perfis` | P0 | Guarda `to_regclass` (a tabela só existe em produção); validado em PGlite (recursão some, regras mantidas, idempotente) | **Mergeado** (pelo dono) | Nenhuma: migration já em produção, efeito idêntico |
+| #625 | `pdv_config.gerente_senha_sha256 NOT NULL` quebra provisionamento e e2e | P0 | Migration validada: vermelho→verde, aplicação dupla idempotente; simulado o schema de produção, onde **a coluna não existe** e a migration é no-op | Aberto, checks obrigatórios e e2e **verdes** | Aprovação específica (tem migration). Produção não é afetada pelo bug: ele só quebra bancos criados pelo git (CI/e2e) |
+| #624 | CALC-001.1 importação (landed cost etc.) | P1 | Revisado: sem migrations; `shared-core/src/import` com 203 testes OK | Aberto | e2e falha só pelo bug do #625; rerodar depois do merge do #625 |
+| #629 *(novo)* | Issue #586: kardex sem vínculo SAÍDA↔ENTRADA | P1 | Coluna `transferencia_id` + reescrita só dos 2 INSERTs (corpo idêntico ao de produção, md5); teste vermelho→verde; rollback restaura o corpo byte a byte; tipos regenerados; teste no CI | Aberto | Aprovação específica (migration); e2e falha pelo bug do #625 |
+| Issue #586 | Idem | P1 | Implementada em #629; comentário na issue | **Aberta** (correto) | Fechar só depois da aplicação e verificação em produção |
+| #620 | Escopo de gerente por empresa + correções Asaas | P0 | Não alterado: o autor marcou NO-GO até revisão e homologação | Aberto (draft) | Revisão do dono; validação em homologação (homolog está vazio) |
+| #623 | Remover ADMIN do escopo das lojas | P0 | Não alterado; depende de #620 | Aberto (draft) | Idem #620 |
+| #627 | Reconciliação de migrations, Fase 1 (docs) | P0 | Não alterado (ativo em outro worktree) | Aberto (draft) | Atualizar: #618 e #621 já estão na main |
+| #546 | Sentry 10→11 (major) | P2 | `withSentryConfig` passou para `@sentry/nextjs/config` na v11 (conferido no tarball, sem executar); corrigidos os dois `next.config.js`; merge da main (o projeto Vercel `hub` não existia na base antiga); lockfile normalizado | Aberto, CI rodando | Avaliar CI; outros pontos da v11 só aparecem em runtime |
+| #583 | Grupo dev-minor-patch | P2 | Dependência fantasma: `pdv-importados` usava `@testing-library/react` sem declarar; declarada (lockfile só com isso). Fixture de Storage sem `ON CONFLICT (bucket_id, name)` (o CLI 2.121 mudou o índice); reproduzido e corrigido no banco representativo | Aberto, CI rodando | Também sobe pglite 0.3→0.5 (testes em PGlite dirão) |
+| #544, #547, #548, #549 | Falha de secret em execuções do Dependabot | P2 | Diagnóstico (ver abaixo). Nenhum secret criado | Abertos | Decisão sobre a política de CI para Dependabot; #547/#549 são majors de ESLint, não avaliados a fundo |
+| #543 | `produtos_custos` com fronteira privada (alternativa ao #618) | P0 | **Encerrado**: substituído por #618 (aplicado em produção); migration `20261013080436` nunca aplicada | Fechado | Teste SQL da branch reaproveitável (branch preservada) |
+| #446 | Multiempresa Fase 1 aditiva | P0 | **Encerrado**: substituído por `20261019120000`…`170000` (main e produção); `20261003090000` nunca aplicada; scripts só servem à migration descartada | Fechado | Branch preservada |
+| #497 | Diagnóstico de reconciliação de 10-08 | P2 | **Encerrado**: superado por `docs/MIGRATIONS_RECONCILIACAO_2026-10-16.md` e #627; o lote citado está aplicado; e2e passa hoje | Fechado | Branch preservada |
+| #537 | Import Intelligence/multiempresa ("NÃO FAZER MERGE") | P1 | Encerrado e **reaberto** (erro meu de método); 28 arquivos ausentes da main, incluindo testes `f1/f3/f4/f5/m1` | Aberto | Consolidar: portar testes úteis; migrations alternativas superadas (uma colide com a versão `20261010120000`) |
+| #491 | Site bilíngue | P2 | Encerrado e **reaberto** (mesmo erro); site absorvido, mas 5 arquivos ausentes (3 skills `.claude`, `.gitattributes`, `site/app/icon.svg`) | Aberto | Portar skills e ícone ou descartá-los explicitamente |
+| #490 | Vercel Speed Insights (bot) | P2 | Avaliado: base no branch do site; Speed Insights não está ligado na main | Aberto | Não integrar sem confirmar que não gera cobrança na Vercel (orçamento R$ 0) |
+| #487, #488, #498, #499, #500 | Pilha "forbidden migrations" para bloquear `20261006120000` | P1 | Avaliado: a migration alvo já foi aplicada e a guarda foi substituída por `deploy-governance`; mas há **testes únicos fora da main** (`test-fiscal-insert-auth`, `test-financeiro-comportamental-p1`, `integridade-financeira-pos-ops02`, `ssot-004-insert-fiscal-negativo`) | Abertos | Consolidar os testes num PR novo e então encerrar a pilha |
+| #492, #493, #495, #496 | Experimentos multiempresa M1/M2 | P1 | Avaliado: a main implementou de outro jeito (`fp_empresa_selecionada`, fases 1–5); restam **testes negativos e docs únicos** (`test-m1-matriz-negativa`, `test-m2b-tenant-resolver`…) | Abertos (draft) | Portar os testes negativos de isolamento (valor P0 para multiempresa) e então encerrar |
+| #448 | Fiscal Focus NFC-e, Sprint P0 | P1 | Avaliado: fiscal segue stub; migration `20261003120000` não aplicada; 7 arquivos únicos | Aberto (draft) | Retomar na fase fiscal (antes do 2º cliente) |
+| #485, #486, #506 | Diagnóstico e guarda do backup via JIT | P2 | Avaliado: backup diário funciona pelo método CLI (token); o JIT ficou só como fallback no workflow | Abertos | Decidir: remover o fallback JIT (e encerrar) ou manter e integrar a guarda |
+| #484, #489 | Checklists ops / restore sintético / smoke presencial | P2 | Avaliado: conteúdo único (scripts e checklists) | Abertos | Consolidar com `docs/runbooks/` atuais |
+| #508 | Auditoria 360° (doc) | P2 | Avaliado: doc único | Aberto (draft) | Decidir se vira histórico em `docs/` |
+| #529, #530, #532, #533, #534 | Capacidade/carga (k6, STG-01) | P2 | Avaliado: pilha cumulativa com conteúdo único | Abertos | Consolidar num só (provavelmente #534) depois de confirmar a inclusão |
+| #541, #542, #550 | UX (hub de estoque, ficha de clientes, tokens) | P2 | Avaliado: conflitos com a main; componentes únicos (12 e 13 arquivos ausentes); #550 sem arquivos únicos | Abertos (draft) | Rebase e decisão de produto; #550 provavelmente superado pelo loop UX (#561–#563), mas não verificado em detalhe |
+
+## Dependabot e secrets (sem secret criado)
+
+- **Build (`pdv-importados`):**
+  - O build só exige `NEXT_PUBLIC_SUPABASE_ANON_KEY` não vazia; a URL já cai em `example.supabase.co`.
+  - A anon key é pública por desenho (vai no bundle do navegador), então replicá-la nos secrets de Dependabot tem risco ~nulo.
+- **Supabase local gates:** exigem `PLAYWRIGHT_TEST_PASSWORD`, e `migration-remote-drift` usa `SUPABASE_ACCESS_TOKEN`.
+  - **Não** replicar esses dois para Dependabot: PRs de Dependabot rodam `npm ci` de versões novas de terceiros, e qualquer script de instalação lê o ambiente.
+  - Recomendação: no workflow, tratar `github.actor == 'dependabot[bot]'` como fork (senha aleatória de uso único para a stack local). É mudança de política de CI e precisa de aprovação.
+- **Observação:** depois que pushei commits em #546 e #583, as execuções passaram a usar os secrets de Actions (gatilho humano). Por isso o `build-and-test` desses dois já não falha por secret.
+
+## Números
+
+- **PRs corrigidos (código empurrado):** 4 (#618, #621, #546, #583) + 1 novo (#629). #625 validado sem precisar de mudança.
+- **Encerrados:** 3 (#543 substituído; #446 substituído; #497 superado). 2 encerramentos desfeitos por erro meu de método (#537, #491).
+- **Mergeados durante a missão (pelo dono):** #621 e #618.
+- **Continuam úteis/abertos:** 39 (38 do backlog original + #629).
+- **Prontos para merge** (obrigatórios verdes, sem regressão conhecida): #625. #546 e #583 aguardam o CI; #624 e #629, o merge do #625.
+- **Dependem de aprovação humana:** #625 e #629 (migrations); #620 e #623 (autenticação e permissões); aplicação manual de `20261023120000`; política de CI para Dependabot.
+- **Impedem o go-live:** aplicar `20261023120000`; #620/#623 (isolamento de gerente entre empresas); leaked password protection; itens do `CHECKLIST_CORTE_PRIMEIRO_CLIENTE_PAGANTE.md` (preço, termos, smoke presencial, cobrança manual). O e2e quebrado (#625) afeta CI e bancos novos, **não** produção.
