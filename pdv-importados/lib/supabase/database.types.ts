@@ -6202,7 +6202,7 @@ export type Database = {
           formato_impressao: string
           gerente_id: string
           gerente_senha_bcrypt: string | null
-          gerente_senha_sha256: string
+          gerente_senha_sha256: string | null
           id: number
           idioma_padrao: string
           imprimir_cupom_auto: boolean
@@ -6232,7 +6232,7 @@ export type Database = {
           formato_impressao?: string
           gerente_id: string
           gerente_senha_bcrypt?: string | null
-          gerente_senha_sha256: string
+          gerente_senha_sha256?: string | null
           id?: number
           idioma_padrao?: string
           imprimir_cupom_auto?: boolean
@@ -6262,7 +6262,7 @@ export type Database = {
           formato_impressao?: string
           gerente_id?: string
           gerente_senha_bcrypt?: string | null
-          gerente_senha_sha256?: string
+          gerente_senha_sha256?: string | null
           id?: number
           idioma_padrao?: string
           imprimir_cupom_auto?: boolean
