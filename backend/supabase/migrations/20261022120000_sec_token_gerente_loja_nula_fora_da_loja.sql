@@ -5,8 +5,8 @@
 --
 -- Correção mínima: mantém exatamente as regras anteriores (emissor ausente ⇒ fora; não-DONO/ADMIN de outra loja
 -- ⇒ fora; loja_id gravado divergente ⇒ fora) e acrescenta só a fronteira de empresa: um token emitido por
--- DONO/ADMIN só vale numa loja cuja empresa é a da loja do emissor ou uma empresa com vínculo ativo dele em
--- usuario_vinculos. Preserva o "Padrão A" (DONO autoriza em outra loja da MESMA empresa) e o token sem loja_id
+-- DONO/ADMIN só vale numa loja cuja empresa é a da loja do emissor ou uma empresa onde ele tem vínculo DONO
+-- ativo em usuario_vinculos (ou vínculo ativo na própria loja). Preserva o "Padrão A" (DONO autoriza em outra loja da MESMA empresa) e o token sem loja_id
 -- emitido por usuário da própria loja — os dois casos legítimos que o sec04 cobre.
 --
 -- (Versão anterior desta migration tratava QUALQUER loja_id nulo como fora da loja; quebrava os dois casos
@@ -51,6 +51,7 @@ AS $function$
                        WHERE v.usuario_id = u.id
                          AND v.ativo
                          AND v.empresa_id = public.fp_empresa_da_loja(p_loja_id)
+                         AND (v.papel = 'DONO' OR v.loja_id = p_loja_id)
                     )
                   )
              ))

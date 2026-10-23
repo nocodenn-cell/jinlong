@@ -73,13 +73,15 @@ CREATE TRIGGER trg_fp_bloquear_perfil_admin
   FOR EACH ROW EXECUTE FUNCTION internal.fp_bloquear_perfil_admin();
 
 -- 4. Helpers sem ramo ADMIN -------------------------------------------------------------------------
+-- Corpo constante: SECURITY INVOKER (não precisa de privilégio do dono; c1-secdef-sem-identidade
+-- reprova SECURITY DEFINER executável por authenticated sem checagem de identidade).
 CREATE OR REPLACE FUNCTION public.fp_admin_legado()
-RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+RETURNS boolean LANGUAGE sql STABLE SECURITY INVOKER SET search_path = public, pg_temp AS $$
   SELECT false; -- Corte ADMIN: nenhum perfil global dentro das lojas
 $$;
 
 CREATE OR REPLACE FUNCTION public.auth_usuario_eh_admin()
-RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+RETURNS boolean LANGUAGE sql STABLE SECURITY INVOKER SET search_path = public AS $$
   SELECT false; -- Corte ADMIN
 $$;
 COMMENT ON FUNCTION public.auth_usuario_eh_admin() IS
@@ -119,7 +121,10 @@ END $$;
 REVOKE ALL ON FUNCTION public.vincular_usuario_loja(uuid, uuid, text, uuid) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.vincular_usuario_loja(uuid, uuid, text, uuid) TO service_role;
 
--- Token de gerente: só o emissor DONO (vínculo DONO ativo na empresa da loja) vale fora da própria loja_id.
+-- Token de gerente: mesma regra de 20261022120000 (#620), sem o perfil ADMIN. Emissor ausente ⇒ fora; emissor
+-- não-DONO só vale na própria loja; loja_id gravado divergente ⇒ fora; emissor DONO só vale em loja da empresa da
+-- loja dele ou de empresa onde tem vínculo DONO ativo (ou vínculo ativo na própria loja). Preserva o token sem
+-- loja_id do próprio usuário da loja e o Padrão A (DONO em outra loja da MESMA empresa) — casos do sec04.
 CREATE OR REPLACE FUNCTION internal.token_gerente_fora_da_loja(p_token text, p_loja_id uuid)
 RETURNS boolean
 LANGUAGE sql
@@ -133,18 +138,29 @@ AS $function$
      WHERE t.token = p_token
        AND (
          u.id IS NULL
-         OR t.loja_id IS NULL
-         OR btrim(t.loja_id::text) = ''
-         OR p_loja_id IS NULL
-         OR (u.loja_id IS DISTINCT FROM p_loja_id AND NOT (
-               u.perfil = 'DONO' AND EXISTS (
-                 SELECT 1 FROM public.usuario_vinculos v JOIN public.lojas l ON l.empresa_id = v.empresa_id
-                  WHERE v.usuario_id = u.id AND v.ativo AND v.papel = 'DONO' AND l.id = p_loja_id)))
-         OR lower(btrim(t.loja_id::text)) IS DISTINCT FROM p_loja_id::text
+         OR (u.perfil <> 'DONO' AND u.loja_id IS DISTINCT FROM p_loja_id)
+         OR (t.loja_id IS NOT NULL
+             AND lower(btrim(t.loja_id)) IS DISTINCT FROM p_loja_id::text)
+         OR (u.perfil = 'DONO'
+             AND NOT EXISTS (
+               SELECT 1
+                WHERE public.fp_empresa_da_loja(p_loja_id) IS NOT NULL
+                  AND (
+                    public.fp_empresa_da_loja(u.loja_id) = public.fp_empresa_da_loja(p_loja_id)
+                    OR EXISTS (
+                      SELECT 1
+                        FROM public.usuario_vinculos v
+                       WHERE v.usuario_id = u.id
+                         AND v.ativo
+                         AND v.empresa_id = public.fp_empresa_da_loja(p_loja_id)
+                         AND (v.papel = 'DONO' OR v.loja_id = p_loja_id)
+                    )
+                  )
+             ))
        )
   );
 $function$;
 COMMENT ON FUNCTION internal.token_gerente_fora_da_loja(text, uuid) IS
-  'SEC-04 + loja nula + Corte ADMIN: true quando o token existe e NÃO pertence à loja. Fora da loja_id do emissor só vale se ele for DONO (vínculo ativo) da empresa da loja. Token inexistente = false.';
+  'SEC-04 + empresa + Corte ADMIN: true quando o token existe e NÃO vale na loja (emissor ausente; emissor não-DONO de outra loja; loja_id do token divergente; ou DONO sem vínculo com a empresa da loja). Token inexistente = false.';
 
 COMMIT;
