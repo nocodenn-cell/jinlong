@@ -1,5 +1,5 @@
 const path = require('path');
-const { withSentryConfig } = require('@sentry/nextjs');
+const { withSentryConfig } = require('@sentry/nextjs/config');
 
 /** Aliases compartilhados entre Turbopack e Webpack para evitar duplicação. */
 const sharedResolveAlias = {
