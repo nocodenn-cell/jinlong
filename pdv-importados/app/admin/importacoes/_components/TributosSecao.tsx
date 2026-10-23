@@ -6,12 +6,17 @@ import { Button } from '@/components/ui/button'
 import { SectionCard, StatusBadge } from '@/components/ui/admin-v2'
 import { formatarDecimal } from '@/lib/import/hub/decimais'
 import type { Cambio, Despesa, Item, Tributo } from '@/lib/import/hub/dadosImportacoes'
-import { sugerirTributos } from '@/lib/import/hub/inteligencia'
+import { composicaoValorAduaneiro, conciliarEncargosAduaneiros, sugerirTributos } from '@/lib/import/hub/inteligencia'
 import { opcoesNacionais, parametrosDaEmpresa, type DadosCatalogoEmpresa } from '@/lib/import/hub/catalogoEmpresa'
 import { aliquotaDaUf } from '@shared-core/src/import'
+import { divide, formataDecimal, parseDecimal } from '@shared-core/src/import/decimal'
 import { ROUTES } from '@/lib/navigation/routes'
 import { registrarTributosSugeridosAction } from '../actions-inteligencia'
+import { preencherValoresAduaneirosAction } from '../actions-valor-aduaneiro'
 import { ErroFormulario, Texto, useAcao, type TextosImport } from './campos'
+
+/** Micro-reais (escala 6) → centavos HALF_UP, só para exibição. */
+const c2 = (v: string) => formataDecimal(divide(parseDecimal(v, 6), 6, 1n, 0, 2), 2)
 
 /**
  * Inteligência tributária por NCM: SUGESTÃO determinística a partir de parâmetros versionados.
@@ -41,6 +46,17 @@ export function TributosSecao(props: {
       return null
     }
   }, [props.itens, props.cambios, props.catalogo, props.despesas, uf, data])
+  // Textos novos (CALC-001.1): chave i18n com fallback pt até as chaves entrarem em pt.json/zh.json.
+  const tx = (k: string, pt: string) => (t as Record<string, string>)[k] ?? pt
+  const va = useMemo(() => {
+    try { return composicaoValorAduaneiro(props.itens, props.cambios, props.despesas ?? []) } catch { return null }
+  }, [props.itens, props.cambios, props.despesas])
+  const conc = useMemo(() => {
+    const o = opcoesNacionais(props.catalogo ?? null, props.despesas ?? [])
+    try { return o ? conciliarEncargosAduaneiros(o.despesas, props.cambios, o.maritimo) : null } catch { return null }
+  }, [props.catalogo, props.despesas, props.cambios])
+  const vaPendente = !va || va.semBase.length > 0 || va.pendencias.length > 0
+  const nSemVa = va?.semValorInformado.length ?? 0
   const jaRegistrado = (itemId: string, trib: string) => props.tributos.some((x) => x.item_id === itemId && x.tributo_codigo === trib)
   const calculaveis = r?.sugestoes.filter((s) => s.status === 'CALCULADO' && !jaRegistrado(s.item_id, s.tributo)) ?? []
   const [marcados, setMarcados] = useState<Set<string> | null>(null)
@@ -128,6 +144,77 @@ export function TributosSecao(props: {
             </tbody>
           </table>
         </div>
+      ) : null}
+      {va && va.itens.length > 0 ? (
+        <div className="mb-4" data-testid="imp-va-memoria">
+          <h3 className="mb-1 text-small font-semibold">{tx('va_titulo', 'Memória do valor aduaneiro (VA) por item')}</h3>
+          <p role="note" className="mb-2 rounded-md border border-[var(--color-warning-strong)] bg-[var(--color-surface-soft)] px-3 py-1.5 text-xs" data-testid="imp-va-criterio">
+            {tx('va_criterio', 'Critério fiscal de rateio de frete e seguro: valor FOB — pendente de validação (despachante/contador).')}
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-small">
+              <caption className="sr-only">{tx('va_titulo', 'Memória do valor aduaneiro (VA) por item')}</caption>
+              <thead>
+                <tr className="text-left text-[11px] uppercase text-fg-subtle">
+                  <th scope="col" className="px-2 py-1">{t.apu_item}</th>
+                  <th scope="col" className="px-2 py-1 text-right">{tx('va_fob', 'FOB (R$)')}</th>
+                  <th scope="col" className="px-2 py-1 text-right">{tx('va_frete', 'Frete (R$)')}</th>
+                  <th scope="col" className="px-2 py-1 text-right">{tx('va_seguro', 'Seguro (R$)')}</th>
+                  <th scope="col" className="px-2 py-1">{tx('va_criterio_col', 'Critério')}</th>
+                  <th scope="col" className="px-2 py-1 text-right">{tx('va_calculado', 'VA calculado (R$)')}</th>
+                  <th scope="col" className="px-2 py-1 text-right">{tx('va_informado', 'VA informado (R$)')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {va.itens.map((x) => (
+                  <tr key={x.item_id} className="border-t border-[var(--color-border)]">
+                    <td className="px-2 py-1.5">{nomeItem(x.item_id)}</td>
+                    <td className="px-2 py-1.5 text-right tabular-nums">{formatarDecimal(c2(x.fob_brl))}</td>
+                    <td className="px-2 py-1.5 text-right tabular-nums">{formatarDecimal(c2(x.frete_brl))}</td>
+                    <td className="px-2 py-1.5 text-right tabular-nums">{formatarDecimal(c2(x.seguro_brl))}</td>
+                    <td className="px-2 py-1.5 text-xs">{tx(`va_criterio_${x.criterio_frete}`, 'Valor FOB')}</td>
+                    <td className="px-2 py-1.5 text-right tabular-nums font-semibold">{formatarDecimal(x.valor_aduaneiro_brl_2)}</td>
+                    <td className="px-2 py-1.5 text-right tabular-nums">{x.informado_brl ? formatarDecimal(x.informado_brl) : '—'}</td>
+                  </tr>
+                ))}
+                <tr className="border-t border-[var(--color-border)] font-semibold">
+                  <td className="px-2 py-1.5">{tx('va_total', 'Total')}</td>
+                  <td className="px-2 py-1.5 text-right tabular-nums">{formatarDecimal(c2(va.totais.fob_brl))}</td>
+                  <td className="px-2 py-1.5 text-right tabular-nums">{formatarDecimal(c2(va.totais.frete_brl))}</td>
+                  <td className="px-2 py-1.5 text-right tabular-nums">{formatarDecimal(c2(va.totais.seguro_brl))}</td>
+                  <td />
+                  <td className="px-2 py-1.5 text-right tabular-nums">{formatarDecimal(c2(va.totais.valor_aduaneiro_brl))}</td>
+                  <td />
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          {vaPendente ? (
+            <p role="status" className="mt-1 text-xs text-[var(--color-warning-strong)]" data-testid="imp-va-pendencias">
+              {tx('va_pendencias', 'Composição incompleta (câmbio ou peso ausente): corrija antes de usar o valor aduaneiro calculado.')}
+            </p>
+          ) : null}
+          {props.editavel && nSemVa > 0 ? (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <Button type="button" variant="secondary" disabled={pendente || vaPendente} data-testid="imp-va-usar-calculado"
+                onClick={() => executar(() => preencherValoresAduaneirosAction(props.operacaoId), undefined, tx('va_preenchidos', 'Valores aduaneiros preenchidos.'))}>
+                {pendente ? t.salvando : tx('va_usar_calculado', 'Usar valor aduaneiro calculado nos {n} itens sem valor informado').replace('{n}', String(nSemVa))}
+              </Button>
+              <span className="text-xs text-fg-subtle">{tx('va_usar_explicacao', 'Grava o VA calculado só nos itens sem valor; valores informados não mudam. Elimina o bloqueio VALOR_ADUANEIRO_AUSENTE na apuração.')}</span>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+      {conc && conc.ausente_no_custo_brl !== '0.00' ? (
+        <p role="note" className="mb-2 rounded-md border border-[var(--color-warning-strong)] bg-[var(--color-surface-soft)] px-3 py-2 text-small" data-testid="imp-enc-ausente">
+          {tx('enc_ausente', 'Encargos considerados na base do ICMS e não lançados no custo: R$ {v} — decisão fiscal F-05 pendente; lance como despesa incorporável se aplicável.').replace('{v}', formatarDecimal(conc.ausente_no_custo_brl))}
+          {' '}<span className="text-xs text-fg-subtle">(AFRMM {formatarDecimal(conc.afrmm_icms)} · Siscomex {formatarDecimal(conc.siscomex_icms)})</span>
+        </p>
+      ) : null}
+      {conc?.duplicado ? (
+        <p role="alert" className="mb-2 rounded-md border border-[var(--color-warning-strong)] bg-[var(--color-surface-soft)] px-3 py-2 text-small" data-testid="imp-enc-duplicado">
+          {tx('enc_duplicado', 'Há mais de um lançamento de AFRMM ou de Siscomex nesta operação — verifique se há duplicidade.')}
+        </p>
       ) : null}
       <ErroFormulario mensagem={erro} />
       {props.editavel && calculaveis.length > 0 ? (

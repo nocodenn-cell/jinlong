@@ -63,7 +63,7 @@ export function PrecificacaoSecao(props: { t: TextosImport; nomes: Record<string
   const celula = (x: PrecoSimulado | string) =>
     typeof x === 'string' ? <span className="text-xs text-[var(--color-warning-strong)]">{x}</span> : (
       <span className="tabular-nums"><strong>R$ {formatarDecimal(x.preco_brl)}</strong>
-        <span className="block text-xs text-fg-subtle">{t.prec_margem} {formatarDecimal(x.margem_resultante_pct)}% · {t.prec_markup} {formatarDecimal(x.markup_resultante_pct)}%</span></span>
+        <span className="block text-xs text-fg-subtle">{t.prec_margem_bruta} {formatarDecimal(x.margem_resultante_pct)}% · {t.prec_markup} {formatarDecimal(x.markup_resultante_pct)}%</span></span>
     )
 
   return (
@@ -140,7 +140,8 @@ export function PrecificacaoSecao(props: { t: TextosImport; nomes: Record<string
                     ) : l.r.map((p) => (
                       <td key={p.quantidade_minima} className="px-2 py-1.5 text-right tabular-nums">
                         <strong>R$ {formatarDecimal(p.preco_arredondado_brl)}</strong>
-                        <span className="block text-xs text-fg-subtle">{t.prec_margem} {formatarDecimal(p.margem_resultante_pct)}%</span>
+                        <span className="block text-xs" data-testid="imp-faixa-margem-efetiva">{t.prec_margem_efetiva} {formatarDecimal(p.margem_efetiva_pct)}%</span>
+                        <span className="block text-[11px] text-fg-subtle">{t.prec_margem_alvo} {formatarDecimal(p.margem_resultante_pct)}%</span>
                       </td>
                     ))}
                   </tr>

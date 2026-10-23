@@ -20,6 +20,9 @@
 
 ## P2 — Melhoria
 
+- Site Premium 2.0: liberar push da branch feat/jinlong-premium-commercial-2 (gera 1 Preview protegido do jinlong-site) e abrir PR
+- Site Premium 2.0: configurar SITE_DEMO_SUPABASE_URL/ANON_KEY no Preview para homologar o formulário com gravação real
+- Site Premium 2.0: revisão nativa do chinês antes de NEXT_PUBLIC_SITE_ZH_REVIEWED=true
 - Ativar cobrança Asaas depois do primeiro ciclo manual (sandbox, depois produção com prova ponta a ponta: deploy asaas-webhook, secrets, cron de vencimentos)
 - Fase fiscal Focus NFC-e antes do segundo cliente
 - Contas a receber: pré-preencher o parcelamento do recebível de crédito a partir de vendas_pagamentos.parcelas (hoje é configuração manual)
@@ -28,5 +31,5 @@
 ## Feito
 
 - 2026-10-23 — PDV web: seletor de parcelas do crédito mostra "3x de R$ 33,33 (última R$ 33,34)" em vez de "{n}x" e o cupom mostra "Crédito 3x" (PR pendente de revisão)
-
+- 2026-10-23 — Site comercial Premium 2.0 implementado localmente (branch feat/jinlong-premium-commercial-2, sem push)
 - 2026-10-22 — Análise de prontidão para cliente pagante e checklist de corte (docs/runbooks/CHECKLIST_CORTE_PRIMEIRO_CLIENTE_PAGANTE.md)
