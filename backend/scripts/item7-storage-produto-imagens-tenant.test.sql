@@ -80,9 +80,11 @@ BEGIN
   -- Semente do objeto (como se já existisse, gravado por outra sessão) —
   -- via role postgres, sem RLS, só para existir uma linha para tentar
   -- UPDATE/DELETE.
+  -- Sem ON CONFLICT: o índice único de storage.objects muda entre versões do Storage
+  -- (na stack do CLI 2.121 não há mais índice em (bucket_id, name)); NOT EXISTS vale para todas.
   INSERT INTO storage.objects (bucket_id, name, owner)
-  VALUES ('produto-imagens', v_path, v_produto_b)
-  ON CONFLICT (bucket_id, name) DO NOTHING;
+  SELECT 'produto-imagens', v_path, v_produto_b
+  WHERE NOT EXISTS (SELECT 1 FROM storage.objects o WHERE o.bucket_id = 'produto-imagens' AND o.name = v_path);
 
   PERFORM set_config('request.jwt.claim.sub', v_gerente_a::text, true);
   PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
@@ -157,9 +159,11 @@ DECLARE
   v_path text := v_produto_b::text || '/foto-admin.jpg';
   v_linhas int;
 BEGIN
+  -- Sem ON CONFLICT: o índice único de storage.objects muda entre versões do Storage
+  -- (na stack do CLI 2.121 não há mais índice em (bucket_id, name)); NOT EXISTS vale para todas.
   INSERT INTO storage.objects (bucket_id, name, owner)
-  VALUES ('produto-imagens', v_path, v_produto_b)
-  ON CONFLICT (bucket_id, name) DO NOTHING;
+  SELECT 'produto-imagens', v_path, v_produto_b
+  WHERE NOT EXISTS (SELECT 1 FROM storage.objects o WHERE o.bucket_id = 'produto-imagens' AND o.name = v_path);
 
   PERFORM set_config('request.jwt.claim.sub', v_admin::text, true);
   PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
