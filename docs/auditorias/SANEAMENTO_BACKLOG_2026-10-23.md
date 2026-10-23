@@ -63,6 +63,18 @@ Escopo: os 43 PRs e a issue abertos no início da missão (`nocodenn-cell/fastpr
   - as 4 revisões do Codex atendidas.
 - Pré-checagem de produção às 14:33 UTC: `true/true/true`.
 
+## Atualização 2026-10-23 14:50 UTC — #625 integrado
+
+- **Merge autorizado pelo dono e executado** às 14:39 UTC (`ed3dee81`), preso ao head verificado `f9375d3e`. Antes do merge: 6/6 checks obrigatórios verdes, 0 threads abertas, nenhum comentário novo desde 2026-10-22.
+- **Banco de produção inalterado pelo merge:** 438 versões, última `20261022110000`, `20261022020000` não aplicada, conferido 25 s depois. A migration do #625 é no-op em produção (a coluna não existe).
+- **Deploy de frontend:** `dpl_A76Fy7VBAawRjgfpypEGcng5ej94` `READY` (build de 3 min). `app.jinlong.app` responde 200 em `/login` e `/teste-gratis`; `/admin/provisionamento` redireciona para o login. Nenhum erro de runtime na Vercel na última hora. Rollback instantâneo disponível: `dpl_9bhzzmZ555diWngsHbW5Yisob24d` (#618).
+- **Provisionamento testado em produção sem gravar nada:** um bloco `DO` que sempre termina em exceção (rollback total) criou uma loja temporária e tentou os dois payloads do app.
+  - o **antigo** falha com `42703 column "gerente_senha_sha256" of relation "pdv_config" does not exist`: o bug **existia em produção**, provisionamento de loja nova e trial quebrados;
+  - o **novo** grava a linha.
+  - Depois, 0 lojas de teste e 0 `pdv_config` órfãos.
+  - Não foi feito provisionamento ponta a ponta pela interface em produção, porque criaria empresa, loja e usuário reais.
+- **#624 e #629** atualizados com a main (`a8729ecf`, `7e578f7a`). No #629, os tipos auto-mesclados são idênticos aos gerados (main + `20261023130000`) e o teste do kardex passa. e2e e demais checks rodando de novo.
+
 ## Dependabot e secrets (sem secret criado)
 
 - **Build (`pdv-importados`):**

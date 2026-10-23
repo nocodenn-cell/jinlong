@@ -3,7 +3,8 @@
 ## P0 — Quebrado/travado
 
 - Aplicar em produção (janela manual) a migration 20261023120000 do #628, já na main, seguindo `docs/runbooks/APLICAR_20261023120000_REVOKE_ESTOQUE.md` (pré-checagem, backup, rollback e regressão testados em 2026-10-23)
-- #625 (`gerente_senha_sha256`): CI verde; merge segurado porque gera deploy de produção do `pdv-importados` na Vercel, e o dono vetou deploy. Em produção a coluna não existe e o código atual a envia: provável falha no provisionamento de loja e no trial. Decidir o deploy; depois rerodar e2e de #624 e #629
+- Smoke de provisionamento pela interface em produção (wizard ou /teste-gratis), já com o deploy do #625. O bug de produção (`42703` ao inserir `pdv_config`) foi confirmado e o payload novo validado sem gravar dados; falta o fluxo ponta a ponta, que cria registros reais
+- Acompanhar o CI de #624 e #629 (rodando de novo com o #625 na main) e aprovar o merge de #629 (migration)
 - Revisar e aprovar #620 e #623: bloqueios de CI corrigidos em 2026-10-23 (fronteira de empresa no token de gerente; c1-secdef). A lógica atual de produção aceita token de DONO de outra empresa; não explorável com 1 empresa, bloqueia a 2ª empresa
 - Reconciliar drift de migrations main × produção: em 2026-10-23 toda migration da main a partir de 20261019 está em produção com a mesma versão; restam 20261010120000 (adiada pela governança) e 20261023120000 (aplicação manual pendente). O check `migration-remote-drift` acusa como ausentes versões que existem em produção (ex.: 20261020100000–20261022010000); verificar para qual projeto aponta `SUPABASE_MIGRATION_CHECK_PROJECT_REF`
 - Decidir módulos marcados DRAFT já aplicados em produção (comissão #607, import intelligence #601): validar ou esconder do cliente
@@ -36,6 +37,7 @@
 
 ## Feito
 
+- 2026-10-23 — #625 mergeado com autorização (ed3dee81): deploy do pdv-importados READY, banco de produção inalterado, provisionamento de loja/trial deixa de falhar com 42703
 - 2026-10-23 — Saneamento do backlog: 43 PRs e 1 issue auditados; #543, #446, #497 encerrados com justificativa; #546, #583 corrigidos; #586 implementada em #629; relatório em `docs/auditorias/SANEAMENTO_BACKLOG_2026-10-23.md`
 - 2026-10-23 — #618 e #621 mergeados (migrations já em produção); alerta `security_definer_view` resolvido no advisor
 - 2026-10-23 — #621: migration de perfis com guarda para banco novo (Codex P1); #618: mock de rpc nos testes do productReader
