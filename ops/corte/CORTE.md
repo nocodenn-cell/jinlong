@@ -18,15 +18,16 @@ Fase 1 em preparação. Verificação de 2026-10-23 contra `main` = `8217acfc`, 
 |---|---|---|---|
 | Em prod e na main | 310 versões de 2026 + legado `001`–`127` | ok | nenhuma |
 | Mesmo arquivo aplicado com outra versão (MCP `apply_migration`) | 37 em prod / 35 na main | pareadas em `backend/supabase/migration-human-gates.json` (74 pares) | nenhuma |
-| Em prod e ausentes na main | `20261022100000_produtos_custos_rpc` (PR #618), `20261022110000_perfis_rls_sem_recursao` (PR #621) | aplicadas em prod antes do merge; o conteúdo em prod é **idêntico** ao arquivo do PR (md5 de `statements` = md5 do arquivo: `d839f0c9…`, `442ec12e…`) | mergear #618 e #621 (só arquivo; nada a aplicar). Ambos com CI vermelho (`migration-remote-drift`, gates locais) a rever antes |
+| Em prod e ausentes na main | `20261022100000_produtos_custos_rpc` (PR #618), `20261022110000_perfis_rls_sem_recursao` (PR #621) | **resolvido em 2026-10-23**: #621 (`d3847b00`) e #618 (`ee9f8f96`) mergeados. Conteúdo em prod idêntico ao arquivo (md5 `d839f0c9…`, `442ec12e…`) | nenhuma |
 | Na main e ausente em prod | `20261010120000_caixa_sem_loja_padrao` | **adiada de propósito** (`.github/deploy-governance/deferred-migrations.json`); prod ainda tem `DEFAULT 'a0000001-…'` em `caixas.loja_id` | não aplicar. Condição de liberação no JSON: validação presencial do PDV novo (#590), fila de sync zerada, autorização do Damatta e label `deploy-prod:aprovado` |
+| Na main e ausentes em prod (novas, 2026-10-23) | `20261022020000_pdv_config_gerente_senha_sha256_nullable` (#625), `20261023120000_revoga_decrementar_estoque_seguro_authenticated` (#628) | mergeadas sem aplicação em prod. A 1.ª é **pré-requisito do provisionamento de empresa nova** (item 4.1 do checklist: sem ela a semeadura de `pdv_config` viola NOT NULL). A 2.ª fecha a baixa de estoque direta via `/rest/v1/rpc` por OPERADOR | aplicar em prod **só com autorização específica**, na ordem das versões, com backup recente; conferir com `fase1-verificacao-somente-leitura.sql` |
 
 - `#609` e `#614` já estão na main: as 3 versões que faltavam em 2026-10-21 (`20261021230000`, `20261022000000`, `20261022001000`) foram resolvidas.
 - O último log de `migration-remote-drift` lido (PR #621, run 39765545736) listava `20261020100000`…`20261022010000` como `remote_ausente`. Hoje todas estão em prod: o log é anterior à aplicação. Reexecutar o job depois do merge de #618/#621 para obter o estado oficial.
 - Em 2026-10-23 havia 1 caixa `ABERTO` em prod: qualquer janela que toque `caixas` exige zero caixas abertos.
 
 ### Procedimento seguro (quando houver autorização)
-1. Revisar e mergear #618 e #621 (arquivos já aplicados; o `db push` não reaplica versões presentes em `schema_migrations`).
+1. ~~Revisar e mergear #618 e #621~~ — feito em 2026-10-23. Pendente: autorização para aplicar `20261022020000` e `20261023120000` em prod.
 2. Rodar `ops/corte/fase1-verificacao-somente-leitura.sql`: resultado esperado é zero versões sem par, md5 iguais e o DEFAULT ainda presente.
 3. Reexecutar `migration-remote-drift` na main; esperado: só `20261010120000` pendente (adiada).
 4. Fixar o novo SHA de corte com CI obrigatório verde.

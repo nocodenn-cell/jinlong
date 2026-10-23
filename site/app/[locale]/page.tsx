@@ -1,21 +1,16 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { Benefits } from '@/components/Benefits'
 import { ContactFab } from '@/components/ContactFab'
-import { Dashboard } from '@/components/Dashboard'
+import { Difference } from '@/components/Difference'
 import { Faq } from '@/components/Faq'
 import { FinalCta } from '@/components/FinalCta'
-import { Integrations } from '@/components/Integrations'
 import { Hero } from '@/components/Hero'
-import { LanguageCompare } from '@/components/LanguageCompare'
-import { Niches } from '@/components/Niches'
-import { Pains } from '@/components/Pains'
-import { Price } from '@/components/Price'
-import { Screens } from '@/components/Screens'
+import { Journey } from '@/components/Journey'
+import { NextStep } from '@/components/NextStep'
+import { Showcase } from '@/components/Showcase'
 import { SiteFooter } from '@/components/SiteFooter'
 import { SiteHeader } from '@/components/SiteHeader'
-import { Steps } from '@/components/Steps'
-import { WholesaleSection } from '@/components/WholesaleSection'
+import { Statement } from '@/components/Statement'
 import { getHomeContent } from '@/lib/content'
 import { SEO_KEYWORDS } from '@/lib/siteConfig'
 import { getSiteUrl } from '@/lib/siteUrl'
@@ -50,7 +45,10 @@ export async function generateMetadata({ params }: HomePageProps): Promise<Metad
       description: meta.description,
       locale: locale.replace('-', '_'),
       type: 'website',
+      url: sitePath(locale),
+      siteName: 'Jinlong 金龙',
     },
+    twitter: { card: 'summary_large_image', title: meta.title, description: meta.description },
   }
 }
 
@@ -75,18 +73,12 @@ export default async function HomePage({ params }: HomePageProps) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }} />
       <SiteHeader locale={locale} content={content} showSwitch={isLocalePublic(otherSiteLocale(locale))} />
       <main id="main-content">
-        <Hero locale={locale} content={content} />
-        <Niches content={content} />
-        <Pains content={content} />
-        <Benefits locale={locale} content={content} />
-        <LanguageCompare locale={locale} content={content} />
-        <Steps content={content} />
-        <Screens locale={locale} content={content} />
-        <Dashboard content={content} />
-        <WholesaleSection locale={locale} content={content} />
-        <Price content={content} locale={locale} />
-        {/* Prova social: oculta até existir depoimento real ([DEPOIMENTO REAL]). */}
-        <Integrations content={content} />
+        <Hero content={content} />
+        <Statement content={content} />
+        <Showcase locale={locale} content={content} />
+        <Difference locale={locale} content={content} />
+        <Journey locale={locale} content={content} />
+        <NextStep content={content} />
         <Faq content={content} />
         <FinalCta locale={locale} content={content} />
       </main>

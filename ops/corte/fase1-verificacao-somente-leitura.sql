@@ -3,6 +3,7 @@
 -- Referência e resultados esperados: ops/corte/CORTE.md, seção "Reconciliação de migrations".
 
 -- 1. Migrations aplicadas em prod a partir de 2026-10-16 (comparar com backend/supabase/migrations).
+--    Pendentes em 2026-10-23: 20261010120000 (adiada), 20261022020000 e 20261023120000 (aguardam autorização).
 SELECT version, name
 FROM supabase_migrations.schema_migrations
 WHERE version >= '20261016000000'

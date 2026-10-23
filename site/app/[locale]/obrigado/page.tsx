@@ -10,7 +10,11 @@ interface Props {
 }
 
 export const dynamic = 'force-dynamic'
-export const metadata: Metadata = { robots: { index: false, follow: false } }
+export async function generateMetadata({ params }: Pick<Props, 'params'>): Promise<Metadata> {
+  const { locale } = await params
+  const title = isSiteLocale(locale) ? `${getHomeContent(locale).form.thanksTitle} · Jinlong 金龙` : 'Jinlong 金龙'
+  return { title: { absolute: title }, robots: { index: false, follow: false } }
+}
 
 export default async function ThanksPage({ params, searchParams }: Props) {
   const { locale } = await params
@@ -26,23 +30,28 @@ export default async function ThanksPage({ params, searchParams }: Props) {
     waHref = url.toString()
   }
   return (
-    <main id="main-content" className="jl-section">
-      <div className="jl-wrap jl-form jl-form-done" role="status">
-        <h1 className="jl-h2">{form.thanksTitle}</h1>
+    <main id="main-content" className="jl-thanks">
+      <div className="jl-form-card jl-form-done" role="status">
+        <p className="jl-form-top">
+          <span>{form.top}</span>
+          <span aria-hidden="true">✓</span>
+        </p>
+        <h1>{form.thanksTitle}</h1>
         <p>{form.thanksBody}</p>
         {protocol && (
           <p className="jl-protocol">
             {form.okProtocol}: <strong data-testid="protocol">{protocol}</strong>
           </p>
         )}
-        <div className="jl-form-actions">
+        <p>{form.okKeep}</p>
+        <div className="jl-thanks-actions">
           {waHref && (
-            <a className="jl-btn jl-btn--primary" href={waHref} target="_blank" rel="noopener noreferrer">
-              {form.okWhatsapp}
+            <a className="jl-form-action" href={waHref} target="_blank" rel="noopener noreferrer">
+              {form.okWhatsapp} <span aria-hidden="true">↗</span>
             </a>
           )}
-          <a className="jl-btn jl-btn--secondary" href={sitePath(locale)}>
-            ← Jinlong
+          <a className="jl-quiet-link" href={sitePath(locale)}>
+            ← {form.back}
           </a>
         </div>
       </div>

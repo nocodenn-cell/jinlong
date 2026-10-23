@@ -91,11 +91,8 @@ export async function consultarProdutoRapidoCaixaImpl(
     let custo: number | null = null
     if (mostrarMargem) {
       const { data: custoView } = await supabase
-        .from('produtos_custos')
-        .select('preco_custo')
-        .eq('produto_id', produtoId)
-        .maybeSingle()
-      const custoRaw = (custoView as { preco_custo: number | string | null } | null)?.preco_custo
+        .rpc('produtos_custos_autorizados', { p_produto_ids: [produtoId] })
+      const custoRaw = ((custoView ?? []) as { preco_custo: number | string | null }[])[0]?.preco_custo
       custo = custoRaw == null ? null : Number(custoRaw)
     }
     const preco = busca.precoCalculado

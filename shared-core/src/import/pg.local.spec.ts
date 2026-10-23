@@ -17,6 +17,8 @@ import { describe, expect, it } from 'vitest'
 import { divide, multiplica, reescala } from './decimal'
 
 const CONTAINER = process.env.IMPORT_PG_LOCAL_CONTAINER ?? ''
+/** Banco-alvo no container. Padrão `postgres`; use um banco descartável (ex.: calc0011_test) para não tocar no principal. */
+const DB = process.env.IMPORT_PG_LOCAL_DB ?? 'postgres'
 
 interface Caso {
   readonly id: number
@@ -68,7 +70,7 @@ function casos(): Caso[] {
 }
 
 const psql = (sql: string): string =>
-  execFileSync('docker', ['exec', '-i', CONTAINER, 'psql', '-U', 'postgres', '-At', '-F', '|', '-q', '-v', 'ON_ERROR_STOP=1'], {
+  execFileSync('docker', ['exec', '-i', CONTAINER, 'psql', '-U', 'postgres', '-d', DB, '-At', '-F', '|', '-q', '-v', 'ON_ERROR_STOP=1'], {
     input: sql, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024,
   })
 

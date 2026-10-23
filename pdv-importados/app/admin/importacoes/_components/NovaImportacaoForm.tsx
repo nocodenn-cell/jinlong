@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { adminImportacaoHref } from '@/lib/navigation/routes'
 import { criarImportacaoAction } from '../actions'
+import { opcoesMoeda } from '@/lib/import/hub/formImportacao'
 import { ErroFormulario, Selecao, Texto, useAcao, type TextosImport } from './campos'
 
 type Opcao = { id: string; nome: string }
@@ -59,7 +60,7 @@ export function NovaImportacaoForm({ t, lojas, fornecedores }: { t: TextosImport
           onChange={set('fornecedor_id')}
           opcoes={[{ valor: '', rotulo: t.campo_fornecedor_nenhum }, ...fornecedores.map((x) => ({ valor: x.id, rotulo: x.nome }))]}
         />
-        <Texto rotulo={t.campo_moeda} valor={f.moeda} onChange={(v) => set('moeda')(v.toUpperCase())} maxLength={3} />
+        <Selecao rotulo={t.campo_moeda} valor={f.moeda} onChange={set('moeda')} opcoes={opcoesMoeda(f.moeda)} testId="imp-moeda" />
         <Texto rotulo={t.campo_data_invoice} valor={f.data_invoice} onChange={set('data_invoice')} tipo="date" />
         <Texto rotulo={t.campo_observacoes} valor={f.observacoes} onChange={set('observacoes')} maxLength={500} />
       </div>

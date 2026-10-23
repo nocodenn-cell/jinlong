@@ -469,16 +469,18 @@ async function main() {
     });
   });
 
-  await run("RPC decrementar_estoque_seguro", async () => {
-    const { data, error } = await operador.rpc("decrementar_estoque_seguro", {
+  // Migration 20261023120000: a baixa de estoque só acontece dentro da finalização
+  // da venda (SECURITY DEFINER) ou via sync-outbox (service_role). Chamada direta
+  // pelo operador permitia baixar qualquer quantidade sobre uma venda própria.
+  await run("RPC decrementar_estoque_seguro (negado ao operador)", async () => {
+    const { error } = await operador.rpc("decrementar_estoque_seguro", {
       p_produto_id: IDS.produto,
       p_quantidade: 0.01,
       p_venda_id: IDS.vendaOperador,
     });
-    if (error) throw new Error(error.message);
-    const row = Array.isArray(data) ? data[0] : data;
-    if (!row || row.sucesso !== true) {
-      throw new Error(`decrementar_estoque_seguro inesperado: ${JSON.stringify(data)}`);
+    const msg = error?.message ?? "";
+    if (!/permission denied|could not find the function/i.test(msg)) {
+      throw new Error(`decrementar_estoque_seguro deveria ser negado ao operador: ${msg || "sem erro"}`);
     }
   });
 

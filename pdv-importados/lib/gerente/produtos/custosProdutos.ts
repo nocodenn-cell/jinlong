@@ -2,7 +2,7 @@
  * Leitura do custo de aquisição (`preco_custo`, `preco_custo_medio`) — N1.
  *
  * A coluna `produtos.preco_custo` NÃO é legível por usuários autenticados (privilégio de coluna revogado na
- * migration 20261009180000). O único caminho é a view `produtos_custos`, que devolve linhas apenas para
+ * migration 20261009180000). O único caminho é a RPC `produtos_custos_autorizados` (antes: view `produtos_custos`), que devolve linhas apenas para
  * GERENTE/DONO da loja e ADMIN; para OPERADOR devolve 0 linhas (custo ausente → `null`).
  *
  * NÃO selecione `preco_custo` em `from('produtos')`: falha com 42501. Use estas funções.
@@ -36,9 +36,7 @@ export async function carregarCustosProdutos(
   for (let i = 0; i < unicos.length; i += LOTE) {
     const parte = unicos.slice(i, i + LOTE)
     const { data, error } = await supabase
-      .from('produtos_custos')
-      .select('produto_id, preco_custo, preco_custo_medio')
-      .in('produto_id', parte)
+      .rpc('produtos_custos_autorizados', { p_produto_ids: parte })
     if (error) throw new Error(`custo_produtos_indisponivel: ${error.message}`)
     for (const r of (data ?? []) as {
       produto_id: string
