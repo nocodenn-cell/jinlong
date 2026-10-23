@@ -146,12 +146,15 @@ describe('productReader — getById inexistente', () => {
 })
 
 describe('productReader — paginação', () => {
+  // listPaginados busca o custo pela RPC `produtos_custos_autorizados`; sem linhas = custo ausente (OPERADOR).
+  const semCustos = vi.fn(async () => ({ data: [], error: null }))
+
   it('listPaginados sinaliza hasMore quando há pageSize+1 linhas', async () => {
     const rows = Array.from({ length: PRODUTOS_PAGE_SIZE + 1 }, (_, i) =>
       baseRow({ id: `p${i}`, nome: `Item ${i}` }),
     )
     const qb = mockQuery({ data: rows, error: null })
-    const supabase = { from: vi.fn(() => qb) } as never
+    const supabase = { from: vi.fn(() => qb), rpc: semCustos } as never
     const reader = createProductReader(supabase)
 
     const r = await reader.listPaginados({ lojaId: 'loja-1', page: 1 })
@@ -165,7 +168,7 @@ describe('productReader — paginação', () => {
 
   it('listPaginados hasMore=false na última página', async () => {
     const qb = mockQuery({ data: [baseRow()], error: null })
-    const supabase = { from: vi.fn(() => qb) } as never
+    const supabase = { from: vi.fn(() => qb), rpc: semCustos } as never
     const reader = createProductReader(supabase)
 
     const r = await reader.listPaginados({ lojaId: 'loja-1', page: 1, pageSize: 20 })
