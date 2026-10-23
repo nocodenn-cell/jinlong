@@ -6,7 +6,9 @@
 --      sob `SET LOCAL ROLE authenticated` → 42501); service_role continua executando.
 --   2. search_path fixo nas 8 funções, e cada uma continua com o comportamento de antes (valores
 --      calculados, stubs legados ainda abortam, gatilhos de imutabilidade ainda bloqueiam).
---   3. RLS habilitado nas duas tabelas internas, sem grant para anon/authenticated.
+--   3. RLS habilitado nas duas tabelas internas e efetivo para authenticated (não vê nem insere linhas,
+--      com ou sem o grant baseline da 255).
+--   4. `pdv_diagnostico_pre_producao` passa a exigir a negação do grant (veredito não fica BLOQUEADO).
 
 \set ON_ERROR_STOP on
 BEGIN;
@@ -119,6 +121,14 @@ BEGIN
   END;
 
   -- ═══ 3. RLS nas tabelas internas ═════════════════════════════════════════
+  -- Comportamental, não de catálogo: num banco novo a migration `255` concede DML a `authenticated` em todas as
+  -- tabelas de public (inclusive sync_request_nonces), e o hardening de #577 conta justamente com RLS deny-all
+  -- negando mesmo com grant. Então o que se prova é: authenticated não vê linhas e não insere.
+  IF to_regclass('public.sync_request_nonces') IS NOT NULL THEN
+    INSERT INTO public.sync_request_nonces (nonce, device_fingerprint, request_ts, expires_at)
+    VALUES ('onda1-probe-' || gen_random_uuid(), 'onda1', 0, now() + interval '1 minute');
+  END IF;
+
   FOREACH v_tbl IN ARRAY ARRAY['public.sync_request_nonces', 'public.venda_engine_shadow_runs']
   LOOP
     -- `venda_engine_shadow_runs` só existe em produção (criada fora das migrations).
@@ -126,13 +136,38 @@ BEGIN
     IF NOT (SELECT relrowsecurity FROM pg_class WHERE oid = to_regclass(v_tbl)) THEN
       v_fail := array_append(v_fail, v_tbl || ': RLS deveria estar habilitado');
     END IF;
-    IF has_table_privilege('anon', v_tbl, 'SELECT,INSERT,UPDATE,DELETE') THEN
-      v_fail := array_append(v_fail, v_tbl || ': anon não deveria ter DML');
-    END IF;
-    IF has_table_privilege('authenticated', v_tbl, 'SELECT,INSERT,UPDATE,DELETE') THEN
-      v_fail := array_append(v_fail, v_tbl || ': authenticated não deveria ter DML');
-    END IF;
+
+    BEGIN
+      SET LOCAL ROLE authenticated;
+      EXECUTE format('SELECT count(*) FROM %s', v_tbl) INTO v_num;
+      RESET ROLE;
+      IF v_num > 0 THEN
+        v_fail := array_append(v_fail, v_tbl || ': authenticated enxerga ' || v_num || ' linha(s); RLS deveria negar');
+      END IF;
+    EXCEPTION WHEN insufficient_privilege THEN
+      RESET ROLE;  -- sem grant: também negado
+    END;
   END LOOP;
+
+  IF to_regclass('public.sync_request_nonces') IS NOT NULL THEN
+    BEGIN
+      SET LOCAL ROLE authenticated;
+      INSERT INTO public.sync_request_nonces (nonce, device_fingerprint, request_ts, expires_at)
+      VALUES ('onda1-auth-' || gen_random_uuid(), 'onda1', 0, now() + interval '1 minute');
+      RESET ROLE;
+      v_fail := array_append(v_fail, 'public.sync_request_nonces: INSERT como authenticated deveria falhar com 42501');
+    EXCEPTION WHEN insufficient_privilege THEN
+      RESET ROLE;
+    END;
+  END IF;
+
+  -- ═══ 4. Diagnóstico ao vivo alinhado ao revoke ═══════════════════════════
+  IF to_regprocedure('public.pdv_diagnostico_pre_producao(text)') IS NOT NULL THEN
+    v_txt := pg_get_functiondef('public.pdv_diagnostico_pre_producao(text)'::regprocedure);
+    IF v_txt !~ 'v_ok\s*:=\s*NOT\s+has_function_privilege\(\s*''authenticated''\s*,\s*''public\.decrementar_estoque_seguro' THEN
+      v_fail := array_append(v_fail, 'pdv_diagnostico_pre_producao: check grant_estoque_seguro ainda exige o grant de authenticated');
+    END IF;
+  END IF;
 
   IF cardinality(v_fail) > 0 THEN
     RAISE EXCEPTION 'advisor-seguranca-onda1: % falha(s):%', cardinality(v_fail), E'\n  - ' || array_to_string(v_fail, E'\n  - ');
