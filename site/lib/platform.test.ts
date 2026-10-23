@@ -28,7 +28,7 @@ describe('isolamento: o site não acessa dados reais nem credenciais', () => {
   const DEMO_LEAD_FILES = new Set(['lib/demoRequest.ts', 'lib/demoRequest.test.ts', 'app/pedido-demo/route.ts'])
 
   it('nenhum arquivo de código referencia Supabase, service role ou variáveis privadas', () => {
-    const hits = files.filter((file) => !DEMO_LEAD_FILES.has(path.relative(SITE_ROOT, file)) && forbidden.test(fs.readFileSync(file, 'utf8')))
+    const hits = files.filter((file) => !DEMO_LEAD_FILES.has(path.relative(SITE_ROOT, file).split(path.sep).join('/')) && forbidden.test(fs.readFileSync(file, 'utf8')))
     expect(hits.map((f) => path.relative(SITE_ROOT, f))).toEqual([])
   })
 
