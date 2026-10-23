@@ -49,3 +49,14 @@ describe('existeModalAberto', () => {
     expect(existeModalAberto(undefined)).toBe(false)
   })
 })
+
+describe('F12 trocar operador (login por PIN)', () => {
+  const e = { caixaAberto: true, temItens: true, finalizando: false, modalAberto: false }
+  it('só com PIN ligado; nunca com modal aberto ou finalizando', () => {
+    expect(resolverAtalhoPdv('F12', e)).toEqual({ acao: null, prevenirPadrao: false })
+    expect(resolverAtalhoPdv('F12', { ...e, pinAtivo: true })).toEqual({ acao: 'trocarOperador', prevenirPadrao: true })
+    expect(resolverAtalhoPdv('F12', { ...e, pinAtivo: true, finalizando: true }).acao).toBeNull()
+    expect(resolverAtalhoPdv('F12', { ...e, pinAtivo: true, modalAberto: true }).acao).toBeNull()
+    expect(resolverAtalhoPdv('F12', { ...e, pinAtivo: true }, { repeticao: true }).acao).toBeNull()
+  })
+})

@@ -107,9 +107,9 @@ SELECT * FROM (
       'public.finalizar_venda_transacional_canonica_v4(uuid, uuid, uuid, uuid, text, numeric, numeric, numeric, jsonb, jsonb, text, numeric, boolean, boolean, text, text, text, text)',
       'EXECUTE'),
     'EXECUTE finalizar_venda v4 → authenticated.')
-  UNION ALL SELECT * FROM pg_temp.diag_check(31, 'grants', 'grant_decrementar_estoque_seguro_authenticated',
-    has_function_privilege('authenticated', 'public.decrementar_estoque_seguro(uuid, numeric, uuid)', 'EXECUTE'),
-    'EXECUTE decrementar_estoque_seguro → authenticated.')
+  UNION ALL SELECT * FROM pg_temp.diag_check(31, 'grants', 'grant_decrementar_estoque_seguro_negado_authenticated',
+    NOT has_function_privilege('authenticated', 'public.decrementar_estoque_seguro(uuid, numeric, uuid)', 'EXECUTE'),
+    'authenticated NÃO executa decrementar_estoque_seguro (só v4 SECURITY DEFINER e sync-outbox/service_role; 20261023120000).')
   UNION ALL SELECT * FROM pg_temp.diag_check(32, 'grants', 'grant_calcular_preco_authenticated',
     has_function_privilege('authenticated', 'public.calcular_preco_produto(uuid, integer, uuid)', 'EXECUTE'),
     'EXECUTE calcular_preco_produto → authenticated.')

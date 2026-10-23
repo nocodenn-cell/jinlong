@@ -575,3 +575,31 @@ body.jl { margin: 0; min-height: 100dvh; }
 .jl-form-done:focus, .jl-form-fail:focus { outline: none; }
 .jl-protocol { font-size: 18px; color: var(--text); }
 .jl-protocol strong { font-family: ui-monospace, monospace; letter-spacing: 0.04em; color: var(--brand); }
+
+/* Simulador Simples puro x híbrido */
+.jl-hs-wrap { max-width: 1040px; margin: 0 auto; padding: 0 20px; }
+.jl-hs-eyebrow { color: var(--brand); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; font-size: 14px; }
+.jl-hs-wrap h1 { font-size: clamp(30px, 4vw, 46px); line-height: 1.1; margin: 8px 0 12px; }
+.jl-hs-lead { font-size: 18px; max-width: 720px; }
+.jl-hs-deadline { background: var(--ivory-100); border-left: 4px solid var(--brand); padding: 12px 16px; border-radius: 8px; font-weight: 600; margin: 20px 0; }
+.jl-hs-disclaimer { background: #fff4e5; border: 1.5px solid #e0a03a; color: #6b3d00; padding: 12px 16px; border-radius: 10px; font-weight: 700; font-size: 17px; }
+.jl-hs-disclaimer--small { font-size: 14px; font-weight: 600; margin-top: 16px; }
+.jl-hs-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 28px; margin-top: 20px; }
+@media (max-width: 860px) { .jl-hs-grid { grid-template-columns: 1fr; } }
+.jl-hs-form { display: grid; gap: 14px; }
+.jl-hs-field { display: grid; gap: 4px; font-weight: 600; }
+.jl-hs-field input, .jl-hs-field select { min-height: 46px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 10px; font: 500 17px var(--font-sans); }
+.jl-hs-field small { font-weight: 400; color: var(--graphite-500); font-size: 13px; }
+.jl-hs-privacy { font-size: 13px; color: var(--graphite-500); }
+.jl-hs-out { border: 1px solid var(--line-strong); border-radius: 14px; padding: 20px; background: var(--white); }
+.jl-hs-table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+.jl-hs-table caption { text-align: left; font-weight: 700; padding-bottom: 6px; }
+.jl-hs-table th, .jl-hs-table td { padding: 10px 8px; border-bottom: 1px solid var(--line-strong); text-align: right; }
+.jl-hs-table th[scope="row"] { text-align: left; font-weight: 500; }
+.jl-hs-table tr.tot td, .jl-hs-table tr.tot th { font-weight: 700; }
+.jl-hs-meta { font-size: 15px; color: var(--graphite-500); }
+.jl-hs-rec { font-size: 17px; font-weight: 600; padding: 12px 14px; border-radius: 10px; background: var(--ivory-100); }
+.jl-hs-cta { text-align: center; margin: 48px 0 32px; }
+.jl-hs-sources { font-size: 13px; color: var(--graphite-500); border-top: 1px solid var(--line-strong); padding-top: 16px; margin-bottom: 40px; }
+.jl-hs-sources h2 { font-size: 15px; }
+.jl-hs-sources a { color: inherit; }
