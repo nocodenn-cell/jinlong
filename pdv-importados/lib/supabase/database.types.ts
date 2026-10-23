@@ -8826,6 +8826,10 @@ export type Database = {
       cobranca_cancelar: { Args: { p_empresa: string }; Returns: undefined }
       cobranca_conciliar_pagamento: { Args: { p_payment: Json }; Returns: Json }
       cobranca_estado_empresa: { Args: { p_empresa: string }; Returns: Json }
+      cobranca_liberar_assinar: {
+        Args: { p_empresa: string }
+        Returns: undefined
+      }
       cobranca_liberar_venda_offline: {
         Args: { p_dispositivo: string; p_venda_em: string; p_venda_id: string }
         Returns: Json
@@ -8848,6 +8852,10 @@ export type Database = {
           p_valor_centavos: number
         }
         Returns: undefined
+      }
+      cobranca_reservar_assinar: {
+        Args: { p_empresa: string; p_segundos?: number }
+        Returns: boolean
       }
       colocar_venda_em_espera: {
         Args: {
@@ -9547,6 +9555,7 @@ export type Database = {
         Returns: boolean
       }
       fp_recursos_empresa: { Args: { p_empresa: string }; Returns: string[] }
+      fp_sou_dono_da_empresa: { Args: { p_empresa: string }; Returns: boolean }
       fp_usuario_ativo: { Args: never; Returns: boolean }
       fp_usuario_pode_loja: {
         Args: { p_loja: string; p_papeis?: string[]; p_usuario: string }
