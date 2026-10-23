@@ -2,7 +2,7 @@
 
 ## P0 — Quebrado/travado
 
-- Reconciliar drift de migrations main × produção (20261021230000_pdv_operador_pin_p0, 20261022000000 e 20261022001000 em produção sem arquivo na main)
+- Fase 1: revisar e mergear #618 e #621 (migrations já aplicadas em produção, conteúdo idêntico); depois reexecutar migration-remote-drift e fixar o SHA do corte (ops/corte/CORTE.md)
 - Decidir módulos marcados DRAFT já aplicados em produção (comissão #607, import intelligence #601): validar ou esconder do cliente
 - Congelar features até o corte do primeiro cliente (só hotfix P0 em produção)
 
@@ -24,4 +24,6 @@
 
 ## Feito
 
+- 2026-10-23 — Fase 1 preparada: drift main × produção mapeado e verificação somente leitura (ops/corte/CORTE.md)
+- 2026-10-23 — Checklist de corte mergeado na main (PR #626, 8217acfc)
 - 2026-10-22 — Análise de prontidão para cliente pagante e checklist de corte (docs/runbooks/CHECKLIST_CORTE_PRIMEIRO_CLIENTE_PAGANTE.md)
