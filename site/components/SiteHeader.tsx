@@ -9,32 +9,32 @@ interface SiteHeaderProps {
   locale: SiteLocale
   content: HomeContent
   showSwitch: boolean
-  hasContact: boolean
 }
 
-function buildLinks(content: HomeContent, hasContact: boolean): MenuLink[] {
+function buildLinks(content: HomeContent): MenuLink[] {
   const { nav } = content
-  const links: MenuLink[] = [
-    { href: '#inicio', label: nav.home },
+  return [
+    { href: '#mendian', label: nav.niches },
     { href: '#funcionalidades', label: nav.features },
     { href: '#demonstracao', label: nav.demo },
-    { href: '#como-funciona', label: nav.how },
+    { href: '#jiage', label: nav.price },
+    { href: '#wenti', label: nav.faq },
+    { href: '#contato', label: nav.contact },
   ]
-  return hasContact ? [...links, { href: '#contato', label: nav.contact }] : links
 }
 
-export function SiteHeader({ locale, content, showSwitch, hasContact }: SiteHeaderProps) {
+export function SiteHeader({ locale, content, showSwitch }: SiteHeaderProps) {
   const { nav } = content
-  const links = buildLinks(content, hasContact)
+  const links = buildLinks(content)
   const loginHref = erpHref('/login')
   return (
     <header className="jl-nav">
       <Brand locale={locale} label={content.brandLabel} />
       <nav aria-label={nav.label}>
         <ul>
-          {links.map((link, index) => (
+          {links.map((link) => (
             <li key={link.href}>
-              <a href={link.href} aria-current={index === 0 ? 'page' : undefined}>
+              <a href={link.href} >
                 {link.label}
               </a>
             </li>
@@ -45,6 +45,9 @@ export function SiteHeader({ locale, content, showSwitch, hasContact }: SiteHead
         {showSwitch && <LanguageSwitch current={locale} copy={content.langSwitch} />}
         <a className="jl-btn jl-btn--ghost" href={loginHref}>
           {nav.login}
+        </a>
+        <a className="jl-btn jl-btn--primary jl-btn--sm jl-hide-m" href="#shiyong">
+          {nav.cta}
         </a>
         <MobileMenu
           links={links}

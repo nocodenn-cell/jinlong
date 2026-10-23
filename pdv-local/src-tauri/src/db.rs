@@ -22,10 +22,23 @@ pub struct ItemVendaInput {
     pub preco_unitario: f64,
 }
 
+/// Uma parcela do pagamento combinado (opcional; ausente = venda de forma única, como antes).
+#[derive(Deserialize, Clone, Debug)]
+pub struct PagamentoVendaInput {
+    pub forma_pagamento: String,
+    pub valor: f64,
+    /// Só CARTAO_CREDITO pode ser > 1 (1..24). Ausente = 1x.
+    #[serde(default)]
+    pub parcelas: Option<i64>,
+}
+
 #[derive(Deserialize)]
 pub struct RegistrarVendaInput {
     pub caixa_id: Option<String>,
     pub operador_id: Option<String>,
+    /// Comissão: quem atendeu. Ausente/inválido = operador (comportamento histórico).
+    #[serde(default)]
+    pub vendedor_id: Option<String>,
     pub forma_pagamento: String,
     pub total_bruto: f64,
     pub total_desconto: f64,
@@ -35,6 +48,65 @@ pub struct RegistrarVendaInput {
     pub desconto_gerente_valor: Option<f64>,
     pub gerente_id: Option<String>,
     pub desconto_gerente_token: Option<String>,
+    /// Pagamento combinado / parcelas do crédito. `None` = comportamento histórico (forma escalar).
+    #[serde(default)]
+    pub pagamentos: Option<Vec<PagamentoVendaInput>>,
+    /// Desconto autorizado por PIN do gerente: id do evento OVERRIDE_GERENTE. `None` = payload antigo.
+    #[serde(default)]
+    pub gerente_pin_evento_id: Option<String>,
+}
+
+const FORMAS_PAGAMENTO_VALIDAS: [&str; 4] = ["DINHEIRO", "PIX", "CARTAO_CREDITO", "CARTAO_DEBITO"];
+
+fn centavos(v: f64) -> Option<i64> {
+    if !v.is_finite() {
+        return None;
+    }
+    let c = (v * 100.0).round();
+    if (v * 100.0 - c).abs() > 1e-6 {
+        return None; // mais de 2 casas decimais
+    }
+    Some(c as i64)
+}
+
+/// Valida o pagamento combinado no mesmo contrato do servidor (`registrar_venda_com_itens[_v2]`):
+/// formas conhecidas, valor > 0 com 2 casas, soma == total líquido (troco já descontado do dinheiro),
+/// parcelas 1..24 só no crédito, no máximo uma linha por forma.
+pub fn validar_pagamentos_venda(
+    pagamentos: &Option<Vec<PagamentoVendaInput>>,
+    total_liquido: f64,
+) -> Result<(), String> {
+    let Some(lista) = pagamentos else { return Ok(()) };
+    if lista.is_empty() {
+        return Err("Informe ao menos uma forma de pagamento.".to_string());
+    }
+    let total = centavos(total_liquido).ok_or("Total da venda inválido.")?;
+    let mut soma: i64 = 0;
+    let mut vistas: Vec<&str> = Vec::new();
+    for p in lista {
+        let forma = p.forma_pagamento.as_str();
+        if !FORMAS_PAGAMENTO_VALIDAS.contains(&forma) {
+            return Err(format!("Forma de pagamento inválida: {forma}."));
+        }
+        if vistas.contains(&forma) {
+            return Err("Use cada forma de pagamento uma única vez.".to_string());
+        }
+        vistas.push(forma);
+        let c = centavos(p.valor).ok_or("Valor de pagamento inválido.")?;
+        if c <= 0 {
+            return Err("Cada pagamento precisa ser maior que zero.".to_string());
+        }
+        if let Some(n) = p.parcelas {
+            if !(1..=24).contains(&n) || (n > 1 && forma != "CARTAO_CREDITO") {
+                return Err("Parcelas só no crédito, de 1 a 24.".to_string());
+            }
+        }
+        soma += c;
+    }
+    if soma != total {
+        return Err("A soma dos pagamentos precisa ser igual ao total da venda.".to_string());
+    }
+    Ok(())
 }
 
 #[derive(Serialize)]
@@ -146,6 +218,28 @@ pub struct PdvConfigCacheDto {
     pub quantidade_minima_atacado_padrao: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub loja_id: Option<String>,
+    /// Vendedores da loja (id+nome) para o seletor "Vendedor / 销售员". Vazio = seletor oculto.
+    #[serde(default)]
+    pub vendedores: Vec<VendedorDto>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct VendedorDto {
+    pub id: String,
+    pub nome: String,
+}
+
+/// vendedor_id só entra no payload quando é UUID válido e diferente do operador.
+pub(crate) fn vendedor_id_payload(vendedor: &Option<String>, operador: &Option<String>) -> Option<String> {
+    let v = vendedor.as_deref().map(str::trim).filter(|s| Uuid::parse_str(s).is_ok())?;
+    if operador.as_deref().map(str::trim) == Some(v) {
+        return None;
+    }
+    Some(v.to_string())
+}
+
+fn vendedores_de_json(raw: Option<String>) -> Vec<VendedorDto> {
+    raw.and_then(|s| serde_json::from_str::<Vec<VendedorDto>>(&s).ok()).unwrap_or_default()
 }
 
 #[derive(Serialize)]
@@ -205,6 +299,17 @@ pub fn init_db(app: &tauri::AppHandle) -> Result<(), String> {
           quantidade INTEGER NOT NULL,
           preco_original REAL NOT NULL,
           preco_unitario REAL NOT NULL,
+          FOREIGN KEY (venda_id) REFERENCES vendas(id)
+        );
+
+        -- Pagamento combinado / parcelas (aditivo: bancos antigos ganham a tabela vazia; vendas antigas
+        -- continuam só com vendas.forma_pagamento).
+        CREATE TABLE IF NOT EXISTS vendas_pagamentos (
+          id TEXT PRIMARY KEY,
+          venda_id TEXT NOT NULL,
+          forma_pagamento TEXT NOT NULL,
+          valor_centavos INTEGER NOT NULL CHECK (valor_centavos > 0),
+          parcelas INTEGER NOT NULL DEFAULT 1 CHECK (parcelas BETWEEN 1 AND 24),
           FOREIGN KEY (venda_id) REFERENCES vendas(id)
         );
 
@@ -319,6 +424,7 @@ pub fn init_db(app: &tauri::AppHandle) -> Result<(), String> {
         [],
     );
     let _ = conn.execute("ALTER TABLE pdv_config_cache ADD COLUMN loja_id TEXT", []);
+    let _ = conn.execute("ALTER TABLE pdv_config_cache ADD COLUMN vendedores_json TEXT", []);
     let _ = conn.execute_batch(
         "CREATE TABLE IF NOT EXISTS precos_atacado_cache (
           id TEXT PRIMARY KEY,
@@ -340,6 +446,12 @@ fn operador_id_efetivo(input: &RegistrarVendaInput) -> Option<String> {
             return Some(s.trim().to_string());
         }
     }
+    // Login por PIN: operador que está no caixa agora.
+    if let Some(op) = crate::operador::operador_atual() {
+        if Uuid::parse_str(op.usuario_id.trim()).is_ok() {
+            return Some(op.usuario_id);
+        }
+    }
     std::env::var("PDV_OPERADOR_ID")
         .ok()
         .map(|s| s.trim().to_string())
@@ -349,7 +461,7 @@ fn operador_id_efetivo(input: &RegistrarVendaInput) -> Option<String> {
 /// registrar_venda_com_itens (backend) exige p_caixa_id desde a migration
 /// 20260814105031 — rejeitar aqui, antes de qualquer escrita local, em vez de
 /// gravar e enfileirar uma venda que só vai falhar no sync (Edge/RPC).
-fn loja_id_configurada(conn: &Connection) -> Result<String, String> {
+pub(crate) fn loja_id_configurada(conn: &Connection) -> Result<String, String> {
     let loja = conn
         .query_row(
             "SELECT loja_id FROM pdv_config_cache WHERE id = 1",
@@ -376,6 +488,7 @@ pub fn registrar_venda_local(
     input: RegistrarVendaInput,
 ) -> Result<String, String> {
     validar_caixa_id_obrigatorio(&input.caixa_id)?;
+    validar_pagamentos_venda(&input.pagamentos, input.total_liquido)?;
 
     // Garantir schema sempre (seguro e evita falha caso init não rode por qualquer motivo).
     init_db(app)?;
@@ -447,6 +560,27 @@ pub fn registrar_venda_local(
         }));
     }
 
+    let mut pagamentos_payload: Option<Vec<serde_json::Value>> = None;
+    if let Some(lista) = &input.pagamentos {
+        let mut v = Vec::new();
+        for p in lista {
+            let c = centavos(p.valor).ok_or("Valor de pagamento inválido.")?;
+            let parcelas = p.parcelas.unwrap_or(1);
+            tx.execute(
+                "INSERT INTO vendas_pagamentos (id, venda_id, forma_pagamento, valor_centavos, parcelas)
+                 VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![Uuid::new_v4().to_string(), venda_id, p.forma_pagamento, c, parcelas],
+            )
+            .map_err(|e| e.to_string())?;
+            let mut j = json!({ "forma_pagamento": p.forma_pagamento, "valor": (c as f64) / 100.0 });
+            if parcelas > 1 {
+                j["parcelas"] = json!(parcelas);
+            }
+            v.push(j);
+        }
+        pagamentos_payload = Some(v);
+    }
+
     // Registrar, se houver, informações de desconto especial de gerente
     if let (Some(p), Some(v), Some(gerente_id)) = (
         input.desconto_gerente_percentual,
@@ -478,7 +612,33 @@ pub fn registrar_venda_local(
       "desconto_gerente_token": input.desconto_gerente_token,
       "loja_id": loja_id,
       "itens": itens_payload
-    })
+    });
+    // Comissão: `vendedor_id` só quando escolhido e diferente do operador (payload antigo fica idêntico).
+    let payload = match vendedor_id_payload(&input.vendedor_id, &operador_gravado) {
+        Some(v) => {
+            let mut obj = payload;
+            obj["vendedor_id"] = json!(v);
+            obj
+        }
+        None => payload,
+    };
+    // Só eventos novos com pagamento combinado levam `pagamentos` — itens antigos da outbox ficam idênticos.
+    let payload = match pagamentos_payload {
+        Some(p) => {
+            let mut obj = payload;
+            obj["pagamentos"] = json!(p);
+            obj
+        }
+        None => payload,
+    };
+    let payload = match input.gerente_pin_evento_id.as_deref().map(str::trim).filter(|s| Uuid::parse_str(s).is_ok()) {
+        Some(ev) => {
+            let mut obj = payload;
+            obj["gerente_pin_evento_id"] = json!(ev);
+            obj
+        }
+        None => payload,
+    }
     .to_string();
 
     tx.execute(
@@ -552,6 +712,10 @@ pub fn abrir_caixa_local(
     operador_id: Option<String>,
     troco_inicial: f64,
 ) -> Result<String, String> {
+    // Login por PIN: sem operador explícito, usa quem está no caixa (None se o PIN estiver desligado).
+    let operador_id = operador_id
+        .filter(|s| Uuid::parse_str(s.trim()).is_ok())
+        .or_else(|| crate::operador::operador_atual().map(|o| o.usuario_id));
     init_db(app)?;
     if troco_inicial < 0.0 {
         return Err("Troco inicial inválido".to_string());
@@ -703,7 +867,7 @@ pub fn pdv_config_local_get(app: &tauri::AppHandle) -> Result<Option<PdvConfigCa
     let mut stmt = conn
         .prepare(
             "SELECT gerente_id, max_desconto_gerente_percentual,
-                    quantidade_minima_atacado_padrao, loja_id
+                    quantidade_minima_atacado_padrao, loja_id, vendedores_json
              FROM pdv_config_cache
              WHERE id = 1",
         )
@@ -716,6 +880,7 @@ pub fn pdv_config_local_get(app: &tauri::AppHandle) -> Result<Option<PdvConfigCa
                 max_desconto_gerente_percentual: row.get(1)?,
                 quantidade_minima_atacado_padrao: row.get(2)?,
                 loja_id: row.get(3)?,
+                vendedores: vendedores_de_json(row.get(4)?),
             })
         })
         .optional();
@@ -882,6 +1047,8 @@ struct PdvConfigSupabaseRow {
     quantidade_minima_atacado_padrao: Option<f64>,
     #[serde(default)]
     loja_id: Option<String>,
+    #[serde(default)]
+    vendedores: Option<Vec<VendedorDto>>,
 }
 
 #[derive(Deserialize)]
@@ -905,7 +1072,7 @@ struct EdgePdvConfigResponse {
     error: Option<String>,
 }
 
-fn endpoint_with_op(endpoint: &str, op: &str) -> String {
+pub(crate) fn endpoint_with_op(endpoint: &str, op: &str) -> String {
     if endpoint.contains('?') {
         format!("{endpoint}&op={op}")
     } else {
@@ -913,7 +1080,11 @@ fn endpoint_with_op(endpoint: &str, op: &str) -> String {
     }
 }
 
-fn sync_endpoint_and_key() -> Result<(String, String), String> {
+/// Credenciais de sync: ativação por código (preferida) ou `.env` legado (SYNC_ENDPOINT + SYNC_KEY).
+pub(crate) fn sync_endpoint_and_key() -> Result<(String, String), String> {
+    if let Some(a) = crate::ativacao::atual() {
+        return Ok((a.endpoint, a.sync_key));
+    }
     let endpoint = std::env::var("SYNC_ENDPOINT")
         .map_err(|_| "Falta SYNC_ENDPOINT no ambiente do app".to_string())?;
     let sync_key =
@@ -954,7 +1125,7 @@ fn build_request_signature(
     Ok(hex::encode(bytes))
 }
 
-fn signed_headers_for_request(
+pub(crate) fn signed_headers_for_request(
     sync_key: &str,
     body: &str,
     device_fingerprint: &str,
@@ -984,7 +1155,9 @@ fn signed_headers_for_request(
         "X-SYNC-SIGNATURE",
         reqwest::header::HeaderValue::from_str(&signature).map_err(|e| e.to_string())?,
     );
-    if let Ok(loja) = std::env::var("PDV_LOJA_ID") {
+    // Ativado: a loja é a do dispositivo (o servidor ignora/recusa qualquer outra).
+    let loja_ativacao = crate::ativacao::atual().map(|a| a.loja_id);
+    if let Some(loja) = loja_ativacao.or_else(|| std::env::var("PDV_LOJA_ID").ok()) {
         let loja = loja.trim();
         if !loja.is_empty() {
             headers.insert(
@@ -1001,7 +1174,7 @@ fn signed_headers_for_request(
 /// instável isso trava o comando Tauri indefinidamente (e o intervalo de 15s
 /// do sync da outbox nunca se recupera) em vez de falhar rápido para o
 /// backoff/DLQ existente.
-fn http_client_with_timeout() -> Result<reqwest::blocking::Client, String> {
+pub(crate) fn http_client_with_timeout() -> Result<reqwest::blocking::Client, String> {
     reqwest::blocking::Client::builder()
         .timeout(std::time::Duration::from_secs(30))
         .build()
@@ -1246,13 +1419,14 @@ pub fn sync_pdv_config_real(app: &tauri::AppHandle) -> Result<Option<PdvConfigCa
     conn.execute(
         "INSERT OR REPLACE INTO pdv_config_cache
          (id, gerente_id, gerente_senha_sha256, max_desconto_gerente_percentual,
-          quantidade_minima_atacado_padrao, loja_id)
-         VALUES (1, ?1, '', ?2, ?3, ?4)",
+          quantidade_minima_atacado_padrao, loja_id, vendedores_json)
+         VALUES (1, ?1, '', ?2, ?3, ?4, ?5)",
         params![
             row.gerente_id,
             row.max_desconto_gerente_percentual,
             row.quantidade_minima_atacado_padrao,
-            row.loja_id
+            row.loja_id,
+            serde_json::to_string(&row.vendedores.clone().unwrap_or_default()).unwrap_or_else(|_| "[]".into())
         ],
     )
     .map_err(|e| e.to_string())?;
@@ -1262,6 +1436,7 @@ pub fn sync_pdv_config_real(app: &tauri::AppHandle) -> Result<Option<PdvConfigCa
         max_desconto_gerente_percentual: row.max_desconto_gerente_percentual,
         quantidade_minima_atacado_padrao: row.quantidade_minima_atacado_padrao,
         loja_id: row.loja_id,
+        vendedores: row.vendedores.unwrap_or_default(),
     }))
 }
 
@@ -1334,8 +1509,8 @@ pub fn diagnostics(app: &tauri::AppHandle) -> Result<Diagnostics, String> {
     let resumo = outbox_resumo(app)?;
     Ok(Diagnostics {
         db_path: db.to_string_lossy().to_string(),
-        sync_endpoint_set: std::env::var("SYNC_ENDPOINT").is_ok(),
-        sync_key_set: std::env::var("SYNC_KEY").is_ok(),
+        sync_endpoint_set: crate::ativacao::atual().is_some() || std::env::var("SYNC_ENDPOINT").is_ok(),
+        sync_key_set: crate::ativacao::atual().is_some() || std::env::var("SYNC_KEY").is_ok(),
         outbox_pendentes: resumo.pendentes_total,
         outbox_prontos_sync: resumo.prontos_sync,
         outbox_em_backoff: resumo.em_backoff,
@@ -1516,7 +1691,10 @@ struct SyncFailed {
 /// - SYNC_ENDPOINT: ex. https://<project>.supabase.co/functions/v1/sync-outbox
 /// - SYNC_KEY: segredo compartilhado (header X-SYNC-KEY)
 /// - DEVICE_FINGERPRINT: opcional (fallback automático quando ausente)
-fn device_fingerprint_local() -> String {
+pub fn device_fingerprint_local() -> String {
+    if let Some(a) = crate::ativacao::atual() {
+        return a.device_fingerprint;
+    }
     if let Ok(v) = std::env::var("DEVICE_FINGERPRINT") {
         let normalized = v.trim().to_lowercase();
         if !normalized.is_empty() {
@@ -1541,10 +1719,7 @@ fn device_fingerprint_local() -> String {
 }
 
 pub fn sync_outbox_real(app: &tauri::AppHandle, limite: i64) -> Result<i64, String> {
-    let endpoint = std::env::var("SYNC_ENDPOINT")
-        .map_err(|_| "Falta SYNC_ENDPOINT no ambiente do app".to_string())?;
-    let sync_key =
-        std::env::var("SYNC_KEY").map_err(|_| "Falta SYNC_KEY no ambiente do app".to_string())?;
+    let (endpoint, sync_key) = sync_endpoint_and_key()?;
 
     let events = outbox_listar_pendentes(app, limite)?;
     if events.is_empty() {
@@ -1592,9 +1767,49 @@ pub fn sync_outbox_real(app: &tauri::AppHandle, limite: i64) -> Result<i64, Stri
 
 #[cfg(test)]
 mod tests {
+    use super::{validar_pagamentos_venda, PagamentoVendaInput};
+
+    fn pg(forma: &str, valor: f64, parcelas: Option<i64>) -> PagamentoVendaInput {
+        PagamentoVendaInput { forma_pagamento: forma.to_string(), valor, parcelas }
+    }
+
+    #[test]
+    fn pagamentos_ausentes_mantem_comportamento_antigo() {
+        assert!(validar_pagamentos_venda(&None, 10.0).is_ok());
+    }
+
+    #[test]
+    fn pagamento_combinado_valido_e_soma_em_centavos() {
+        let l = Some(vec![pg("DINHEIRO", 0.1, None), pg("PIX", 0.2, None), pg("CARTAO_CREDITO", 99.7, Some(3))]);
+        assert!(validar_pagamentos_venda(&l, 100.0).is_ok());
+    }
+
+    #[test]
+    fn pagamento_combinado_rejeita_soma_divergente_forma_repetida_e_invalida() {
+        assert!(validar_pagamentos_venda(&Some(vec![pg("PIX", 50.0, None)]), 100.0).is_err());
+        assert!(validar_pagamentos_venda(&Some(vec![pg("PIX", 150.0, None)]), 100.0).is_err());
+        assert!(validar_pagamentos_venda(&Some(vec![pg("PIX", 50.0, None), pg("PIX", 50.0, None)]), 100.0).is_err());
+        assert!(validar_pagamentos_venda(&Some(vec![pg("BOLETO", 100.0, None)]), 100.0).is_err());
+        assert!(validar_pagamentos_venda(&Some(vec![pg("PIX", 100.001, None)]), 100.001).is_err());
+        assert!(validar_pagamentos_venda(&Some(vec![pg("PIX", -1.0, None), pg("DINHEIRO", 101.0, None)]), 100.0).is_err());
+        assert!(validar_pagamentos_venda(&Some(vec![]), 100.0).is_err());
+    }
+
+    #[test]
+    fn parcelas_so_no_credito_de_1_a_24() {
+        assert!(validar_pagamentos_venda(&Some(vec![pg("CARTAO_CREDITO", 100.0, Some(24))]), 100.0).is_ok());
+        assert!(validar_pagamentos_venda(&Some(vec![pg("CARTAO_CREDITO", 100.0, Some(25))]), 100.0).is_err());
+        assert!(validar_pagamentos_venda(&Some(vec![pg("CARTAO_CREDITO", 100.0, Some(0))]), 100.0).is_err());
+        assert!(validar_pagamentos_venda(&Some(vec![pg("CARTAO_DEBITO", 100.0, Some(2))]), 100.0).is_err());
+        assert!(validar_pagamentos_venda(&Some(vec![pg("PIX", 100.0, Some(1))]), 100.0).is_ok());
+    }
+}
+
+#[cfg(test)]
+mod tests_existentes {
     use super::{
         backoff_segundos_apos_falha, build_request_signature, canonical_path_with_query,
-        endpoint_with_op, validar_caixa_id_obrigatorio,
+        endpoint_with_op, validar_caixa_id_obrigatorio, vendedor_id_payload, vendedores_de_json,
     };
 
     #[test]
@@ -1616,6 +1831,16 @@ mod tests {
 
     #[test]
     fn endpoint_with_op_adiciona_query_param_corretamente() {
+        let op = Some("11111111-1111-4111-8111-111111111111".to_string());
+        assert_eq!(vendedor_id_payload(&None, &op), None);
+        assert_eq!(vendedor_id_payload(&Some("nao-uuid".into()), &op), None);
+        assert_eq!(vendedor_id_payload(&op.clone(), &op), None);
+        assert_eq!(
+            vendedor_id_payload(&Some(" 22222222-2222-4222-8222-222222222222 ".into()), &op),
+            Some("22222222-2222-4222-8222-222222222222".to_string())
+        );
+        assert!(vendedores_de_json(None).is_empty());
+        assert_eq!(vendedores_de_json(Some("[{\"id\":\"a\",\"nome\":\"Ana\"}]".into())).len(), 1);
         let base = "https://example.supabase.co/functions/v1/sync-outbox";
         assert_eq!(
             endpoint_with_op(base, "catalogo"),

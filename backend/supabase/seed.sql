@@ -171,6 +171,6 @@ ON CONFLICT (produto_id, loja_id) DO UPDATE
 -- ---------------------------------------------------------------------------
 INSERT INTO public.configuracoes_gerais (chave, valor, tipo_dado)
 VALUES ('comissao_padrao_percentual', '5', 'percent')
-ON CONFLICT (chave) DO UPDATE SET valor = EXCLUDED.valor;
+ON CONFLICT (empresa_id, chave) DO UPDATE SET valor = EXCLUDED.valor; -- multiempresa: única por empresa (empresa_id preenchido pelo trigger)
 
 COMMIT;

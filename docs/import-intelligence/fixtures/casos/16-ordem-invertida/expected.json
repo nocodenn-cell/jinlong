@@ -1,0 +1,61 @@
+{
+  "schema_version": "1",
+  "engine_version": "landed-cost-ref/0.1.0",
+  "input_hash": "sha256:3f29315b61df2e3d6698f1f677b4f86f90f741d25ec31490f1b3e8872a897511",
+  "status": "BLOQUEADO",
+  "divergencias": [
+    {
+      "codigo": "TRIBUTO_PENDENTE",
+      "severidade": "BLOQUEANTE",
+      "referencia": "trib-01",
+      "mensagem": "tributo sem status de recuperabilidade validado"
+    }
+  ],
+  "itens": [
+    {
+      "item_id": "item-001",
+      "produto_id": "prod-001",
+      "quantidade_estoque": "1440.000",
+      "componentes_brl": {
+        "mercadoria": "6518.5200",
+        "despesas_incorporadas": "1809.6300",
+        "tributos_nao_recuperaveis": "0.0000",
+        "descontos": "-271.6050"
+      },
+      "custo_total_brl": "8056.5450",
+      "custo_unitario_brl": "5.594823",
+      "residuo_unitario_brl": "-0.0001200000",
+      "residuo_total_brl": "0.0000000000"
+    }
+  ],
+  "rateios": [
+    {
+      "origem_id": "desp-01",
+      "componente": "despesas",
+      "criterio": "PESO_BRUTO",
+      "base_total": "104.000",
+      "item_id": "item-001",
+      "base_item": "104.000",
+      "valor_alocado_brl": "1629.6300000000",
+      "justificativa": "Frete aéreo cobrado por peso bruto no conhecimento"
+    },
+    {
+      "origem_id": "desc-01",
+      "componente": "descontos",
+      "criterio": "VALOR_ADUANEIRO",
+      "base_total": "6518.5200000000",
+      "item_id": "item-001",
+      "base_item": "6518.5200000000",
+      "valor_alocado_brl": "-271.6050000000",
+      "justificativa": "Desconto comercial documentado na invoice"
+    }
+  ],
+  "despesas_nao_incorporadas": [],
+  "conservacao": {
+    "entradas_brl": "8328.1500",
+    "descontos_brl": "271.6050",
+    "saidas_brl": "8056.5450",
+    "diferenca_brl": "0.0000000000",
+    "ok": true
+  }
+}

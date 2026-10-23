@@ -311,3 +311,17 @@ export async function buscarClientesCaixa(termo: string) {
 export async function obterClienteCaixa(clienteId: string) {
   return obterClienteCaixaImpl(clienteId)
 }
+
+// ── Módulo Comissão P0: vendedor da venda (fora do core transacional) ─────────
+import {
+  definirVendedorVendaCaixaImpl,
+  listarVendedoresCaixaImpl,
+} from '@/app/caixa/server/caixaVendedor.impl'
+
+export async function listarVendedoresCaixa() {
+  return listarVendedoresCaixaImpl()
+}
+
+export async function definirVendedorVendaCaixa(vendaId: string, vendedorId: string) {
+  return definirVendedorVendaCaixaImpl(vendaId, vendedorId)
+}

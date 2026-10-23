@@ -13,6 +13,19 @@ import { usePdvLocalVendaCaixaFlow } from './hooks/usePdvLocalVendaCaixaFlow'
 import { parseQuantidadeCaixaInput } from '@shared/format/quantidadeCaixa'
 import { recalcularPrecoItemLocal } from './lib/recalcularPrecoItemLocal'
 import { resolverPrecoCanonicoLocal } from './lib/resolverPrecoCanonicoLocal'
+import { formatarBRL } from './lib/formatarMoeda'
+import { existeModalAberto, resolverAtalhoPdv } from './lib/atalhosPdv'
+import { useOperadorPin } from './operador/useOperadorPin'
+import { LockScreen } from './operador/LockScreen'
+import { GerentePinDialog } from './operador/GerentePinDialog'
+import { gerentesComPin, T as TPin } from './operador/operadorPin'
+import {
+  FORMAS_PAGAMENTO_DESKTOP,
+  MAX_PARCELAS_CREDITO,
+  ROTULO_FORMA_PAGAMENTO,
+  type FormaPagamentoDesktop,
+  type LinhaPagamentoDesktop,
+} from './lib/formaPagamento'
 
 function bindLojaCarrinhoDesktop(lojaId: string | null) {
   useDesktopCartStore.getState().setCartLojaForSession(lojaId)
@@ -81,6 +94,12 @@ export function App() {
 
   const [gerenteId, setGerenteId] = useState(defaultPdvConfig.gerenteId)
   const [caixaAtualId, setCaixaAtualId] = useState<string | null>(null)
+  // Login por PIN: desconto autorizado por PIN do gerente (id do gerente + evento de auditoria do cupom atual).
+  const [gerentePin, setGerentePin] = useState<{ gerenteId: string; eventoId: string | null } | null>(null)
+  const [dialogoGerentePin, setDialogoGerentePin] = useState(false)
+  // Comissão P0: "Vendedor / 销售员" — null = operador do caixa (padrão).
+  const [vendedores, setVendedores] = useState<Array<{ id: string; nome: string }>>([])
+  const [vendedorId, setVendedorId] = useState<string | null>(null)
 
   const {
     tauriDisponivel,
@@ -98,7 +117,11 @@ export function App() {
     setCaixaAtualId,
     setMensagem,
     setLojaId: bindLojaCarrinhoDesktop,
+    setVendedores,
   })
+
+  const operadorPin = useOperadorPin({ tauriDisponivel })
+  const gerentesPin = gerentesComPin(operadorPin.status)
 
   const handleAlterarQuantidadeLocal = useCallback(
     (item: ItemCarrinhoStore, novaQuantidade: number) => {
@@ -115,6 +138,18 @@ export function App() {
   const inputLeituraRef = useRef<HTMLInputElement | null>(null)
   const [metricaAddItemMs, setMetricaAddItemMs] = useState<number | null>(null)
   const [metricaFinalizarMs, setMetricaFinalizarMs] = useState<number | null>(null)
+  const [formaPagamento, setFormaPagamento] = useState<FormaPagamentoDesktop>('DINHEIRO')
+  const [parcelasCredito, setParcelasCredito] = useState(1)
+  const [dividirPagamento, setDividirPagamento] = useState(false)
+  const [linhasPagamento, setLinhasPagamento] = useState<LinhaPagamentoDesktop[]>([])
+  const limparCarrinhoEForma = useCallback(() => {
+    limparCarrinho()
+    setFormaPagamento('DINHEIRO')
+    setParcelasCredito(1)
+    setDividirPagamento(false)
+    setLinhasPagamento([])
+    setGerentePin(null)
+  }, [limparCarrinho])
   const [metricaSyncMs, setMetricaSyncMs] = useState<number | null>(null)
 
   const atualizarMediaMs = (atual: number | null, nova: number) => {
@@ -162,10 +197,20 @@ export function App() {
     descontoGerenteValor,
     descontoGerenteToken,
     maxDescontoGerentePercentual,
-    gerenteId,
+    gerenteId: gerentePin?.gerenteId ?? gerenteId,
+    gerentePinEventoId: gerentePin?.eventoId ?? null,
+    // PIN ligado: venda e abertura carimbadas com quem está no caixa. Desligado: null, como sempre.
+    operadorId: operadorPin.ativo ? operadorPin.operadorAtual?.usuario_id ?? null : null,
+    formaPagamento,
+    vendedorId,
+    pagamentos: dividirPagamento
+      ? linhasPagamento
+      : formaPagamento === 'CARTAO_CREDITO' && parcelasCredito > 1
+        ? [{ formaPagamento: 'CARTAO_CREDITO', valor: totalLiquido, parcelas: parcelasCredito }]
+        : undefined,
     onSetCaixaAtualId: setCaixaAtualId,
     onSetMensagem: setMensagem,
-    onLimparCarrinho: limparCarrinho,
+    onLimparCarrinho: limparCarrinhoEForma,
     onSyncOutbox: executarSyncOutboxComMetrica,
     onRefreshOutboxResumo: refreshOutboxResumo,
     onFinalizarElapsedMs: (elapsed) =>
@@ -254,6 +299,68 @@ export function App() {
 
   const ultimoItemAdicionado = itens.length > 0 ? itens[itens.length - 1] : null
 
+
+  // "Novo Cupom": mesma lógica para o botão e para Esc. Exige 2º toque em até 2s
+  // (nunca descarta a venda no primeiro toque).
+  function novoCupom() {
+    if (itens.length === 0) return
+    const agora = Date.now()
+    if (confirmarLimparAte < agora) {
+      setConfirmarLimparAte(agora + 2200)
+      setMensagem('Toque novamente em "Novo Cupom (Esc)" em até 2s para confirmar limpeza.')
+      return
+    }
+    limparCarrinhoEForma()
+    setConfirmarLimparAte(0)
+    setMensagem('Cupom limpo.')
+    focarInputLeitura()
+  }
+
+  // Atalhos globais F2/F3/F4/F10/Esc: um único listener, mesmas ações dos botões.
+  const atalhoRef = useRef<(e: KeyboardEvent) => void>(() => {})
+  atalhoRef.current = (e: KeyboardEvent) => {
+    const { acao, prevenirPadrao } = resolverAtalhoPdv(
+      e.key,
+      {
+        caixaAberto: Boolean(caixaAtualId),
+        temItens: itens.length > 0,
+        finalizando: isFinalizandoVenda,
+        modalAberto: existeModalAberto(),
+        pinAtivo: operadorPin.ativo,
+      },
+      { repeticao: e.repeat, jaTratado: e.defaultPrevented },
+    )
+    if (prevenirPadrao) e.preventDefault()
+    if (!acao) return
+    const depois = () => focarInputLeitura()
+    switch (acao) {
+      case 'abrirCaixa':
+        void Promise.resolve(abrirCaixa()).finally(depois)
+        return
+      case 'fecharCaixa':
+        void Promise.resolve(fecharCaixa()).finally(depois)
+        return
+      case 'movimentoCaixa':
+        void Promise.resolve(registrarMovimentoCaixa()).finally(depois)
+        return
+      case 'finalizar':
+        void Promise.resolve(finalizarVenda()).finally(depois)
+        return
+      case 'trocarOperador':
+        void operadorPin.sair('troca')
+        return
+      case 'novoCupom':
+        novoCupom()
+        focarInputLeitura()
+        return
+    }
+  }
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => atalhoRef.current(e)
+    globalThis.addEventListener('keydown', onKeyDown)
+    return () => globalThis.removeEventListener('keydown', onKeyDown)
+  }, [])
+
   return (
     <div
       style={{
@@ -277,7 +384,7 @@ export function App() {
       >
         <div>
           <div style={{ fontSize: '1rem', fontWeight: 600, color: '#111827' }}>
-            PDV Local · Caixa 01 · Operador
+            PDV Local · Caixa 01 · {operadorPin.ativo && operadorPin.operadorAtual ? operadorPin.operadorAtual.nome : 'Operador'}
           </div>
           <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
             Tela clara, otimizada para frente de caixa
@@ -297,6 +404,27 @@ export function App() {
             justifyContent: 'flex-end',
           }}
         >
+          {operadorPin.ativo ? (
+            <button
+              type="button"
+              data-testid="pdv-trocar-operador"
+              onClick={() => void operadorPin.sair('troca')}
+              disabled={isFinalizandoVenda}
+              title="F12"
+              style={{
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                padding: '0.35rem 0.75rem',
+                borderRadius: 999,
+                border: '1px solid #1d4ed8',
+                background: '#eff6ff',
+                color: '#1d4ed8',
+                cursor: 'pointer',
+              }}
+            >
+              {TPin.trocar} · F12
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() => void sincronizarCatalogoManual()}
@@ -467,12 +595,10 @@ export function App() {
             borderBottom: '1px solid #fbbf24',
           }}
         >
-          <strong>Catálogo vazio.</strong> Copie{' '}
-          <code style={{ fontSize: 12 }}>pdv-local/.env.example</code> para{' '}
-          <code style={{ fontSize: 12 }}>.env</code>, preencha{' '}
-          <code style={{ fontSize: 12 }}>SYNC_ENDPOINT</code> e{' '}
-          <code style={{ fontSize: 12 }}>SYNC_KEY</code>, reinicie o
-          app e clique em <strong>Sincronizar catálogo</strong>.
+          <strong>Catálogo vazio.</strong> Clique em <strong>Sincronizar catálogo</strong>. Se o
+          caixa ainda não foi ativado, gere um código em Admin → Provisionamento (ou, no modo
+          legado, preencha <code style={{ fontSize: 12 }}>SYNC_ENDPOINT</code> e{' '}
+          <code style={{ fontSize: 12 }}>SYNC_KEY</code> no <code style={{ fontSize: 12 }}>.env</code>).
           {ultimoErroSincCatalogo && (
             <div style={{ marginTop: 6, fontSize: 12, color: '#b45309' }}>
               Motivo: {ultimoErroSincCatalogo}
@@ -551,19 +677,7 @@ export function App() {
               Adicionar
             </button>
             <button
-              onClick={() => {
-                if (itens.length === 0) return
-                const agora = Date.now()
-                if (confirmarLimparAte < agora) {
-                  setConfirmarLimparAte(agora + 2200)
-                  setMensagem('Toque novamente em "Novo Cupom (Esc)" em até 2s para confirmar limpeza.')
-                  return
-                }
-                limparCarrinho()
-                setConfirmarLimparAte(0)
-                setMensagem('Cupom limpo.')
-                focarInputLeitura()
-              }}
+              onClick={novoCupom}
               disabled={itens.length === 0}
               style={{
                 minHeight: 44,
@@ -772,12 +886,10 @@ export function App() {
                       </button>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      R$ {' '}
-                      {item.resultado.precoOriginal.toFixed(2)}
+                      {formatarBRL(item.resultado.precoOriginal)}
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      R$ {' '}
-                      {(item.resultado.precoUnitario * item.quantidade).toFixed(2)}
+                      {formatarBRL(item.resultado.precoUnitario * item.quantidade)}
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       {item.resultado.tipoPreco === 'ATACADO' ? (
@@ -852,7 +964,7 @@ export function App() {
             >
               <span>Bruto</span>
               <span>
-                R$ {totalBruto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                {formatarBRL(totalBruto)}
               </span>
             </div>
             <div
@@ -867,7 +979,7 @@ export function App() {
                 Descontos automáticos (atacado)
               </span>
               <span>
-                - R$ {totalDesconto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                - {formatarBRL(totalDesconto)}
               </span>
             </div>
             {descontoGerentePercentual > 0 && (
@@ -881,10 +993,7 @@ export function App() {
               >
                 <span>Desconto gerente ({descontoGerentePercentual.toFixed(1)}%)</span>
                 <span>
-                  - R${' '}
-                  {descontoGerenteValor.toLocaleString('pt-BR', {
-                    minimumFractionDigits: 2,
-                  })}
+                  - {formatarBRL(descontoGerenteValor)}
                 </span>
               </div>
             )}
@@ -921,7 +1030,7 @@ export function App() {
             >
               <span>Total a pagar</span>
               <span>
-                R$ {totalLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                {formatarBRL(totalLiquido)}
               </span>
             </div>
           </div>
@@ -943,6 +1052,11 @@ export function App() {
               }}
               onClick={async () => {
                 if (!itens.length) return
+                // Login por PIN ligado e há gerente com PIN: autoriza por PIN (funciona offline).
+                if (operadorPin.ativo && gerentesPin.length > 0) {
+                  setDialogoGerentePin(true)
+                  return
+                }
                 const senha = globalThis.prompt('Senha do gerente para aplicar desconto especial:')
                 if (!senha) return
 
@@ -1061,6 +1175,161 @@ export function App() {
                 F4 · Sangria/Suprimento
               </button>
             )}
+            {vendedores.length > 0 ? (
+              <label data-testid="pdv-vendedor" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600 }}>
+                <span>Vendedor / 销售员</span>
+                <select
+                  aria-label="Vendedor / 销售员"
+                  data-testid="pdv-vendedor-select"
+                  value={vendedorId ?? ''}
+                  disabled={isFinalizandoVenda}
+                  onChange={(e) => setVendedorId(e.target.value || null)}
+                  style={{ flex: 1, minHeight: 32, borderRadius: 8 }}
+                >
+                  <option value="">Operador do caixa / 收银员</option>
+                  {vendedores.map((v) => (
+                    <option key={v.id} value={v.id}>{v.nome}</option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+            <div
+              role="radiogroup"
+              aria-label="Forma de pagamento / 付款方式"
+              data-testid="pdv-forma-pagamento"
+              style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}
+            >
+              {FORMAS_PAGAMENTO_DESKTOP.map((f) => {
+                const sel = formaPagamento === f
+                return (
+                  <button
+                    key={f}
+                    type="button"
+                    role="radio"
+                    aria-checked={sel}
+                    disabled={isFinalizandoVenda}
+                    onClick={() => setFormaPagamento(f)}
+                    style={{
+                      minHeight: 44,
+                      borderRadius: 10,
+                      border: sel ? '2px solid #059669' : '1px solid #d1d5db',
+                      background: sel ? '#ecfdf5' : '#ffffff',
+                      color: sel ? '#065f46' : '#374151',
+                      fontWeight: 700,
+                      fontSize: 13,
+                      lineHeight: 1.2,
+                      cursor: isFinalizandoVenda ? 'default' : 'pointer',
+                    }}
+                  >
+                    {ROTULO_FORMA_PAGAMENTO[f].pt}
+                    <br />
+                    <span style={{ fontSize: 11, fontWeight: 500 }}>{ROTULO_FORMA_PAGAMENTO[f].zh}</span>
+                  </button>
+                )
+              })}
+            </div>
+            {formaPagamento === 'CARTAO_CREDITO' && !dividirPagamento ? (
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#374151' }}>
+                Parcelas / 分期
+                <select
+                  data-testid="pdv-parcelas-credito"
+                  value={parcelasCredito}
+                  disabled={isFinalizandoVenda}
+                  onChange={(e) => setParcelasCredito(Number(e.target.value))}
+                  style={{ minHeight: 36, borderRadius: 8, border: '1px solid #d1d5db', padding: '0 8px' }}
+                >
+                  {Array.from({ length: MAX_PARCELAS_CREDITO }, (_, i) => i + 1).map((n) => (
+                    <option key={n} value={n}>{n === 1 ? 'À vista / 一次付清' : `${n}x`}</option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+            <button
+              type="button"
+              data-testid="pdv-dividir-pagamento"
+              disabled={isFinalizandoVenda}
+              onClick={() => {
+                if (dividirPagamento) {
+                  setDividirPagamento(false)
+                  setLinhasPagamento([])
+                } else {
+                  setDividirPagamento(true)
+                  setLinhasPagamento([{ formaPagamento, valor: totalLiquido }])
+                }
+              }}
+              style={{ minHeight: 36, borderRadius: 8, border: '1px dashed #9ca3af', background: 'transparent', color: '#374151', fontSize: 13, cursor: 'pointer' }}
+            >
+              {dividirPagamento ? 'Voltar para uma forma / 单一付款' : 'Dividir pagamento / 组合付款'}
+            </button>
+            {dividirPagamento ? (
+              <div data-testid="pdv-pagamento-combinado" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {linhasPagamento.map((l, idx) => (
+                  <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr 0.8fr auto', gap: 6 }}>
+                    <select
+                      aria-label={`Forma ${idx + 1}`}
+                      value={l.formaPagamento}
+                      onChange={(e) => {
+                        const f = e.target.value as FormaPagamentoDesktop
+                        setLinhasPagamento((ls) => ls.map((x, i) => (i === idx ? { ...x, formaPagamento: f, parcelas: f === 'CARTAO_CREDITO' ? x.parcelas : undefined } : x)))
+                      }}
+                      style={{ minHeight: 36, borderRadius: 8, border: '1px solid #d1d5db' }}
+                    >
+                      {FORMAS_PAGAMENTO_DESKTOP.map((f) => (
+                        <option key={f} value={f}>{ROTULO_FORMA_PAGAMENTO[f].pt} / {ROTULO_FORMA_PAGAMENTO[f].zh}</option>
+                      ))}
+                    </select>
+                    <input
+                      aria-label={`Valor ${idx + 1}`}
+                      inputMode="decimal"
+                      defaultValue={l.valor ? l.valor.toFixed(2).replace('.', ',') : ''}
+                      onChange={(e) => {
+                        const v = Number(e.target.value.replace(/\./g, '').replace(',', '.'))
+                        setLinhasPagamento((ls) => ls.map((x, i) => (i === idx ? { ...x, valor: Number.isFinite(v) ? v : 0 } : x)))
+                      }}
+                      style={{ minHeight: 36, borderRadius: 8, border: '1px solid #d1d5db', padding: '0 8px', textAlign: 'right' }}
+                    />
+                    <select
+                      aria-label={`Parcelas ${idx + 1}`}
+                      value={l.parcelas ?? 1}
+                      disabled={l.formaPagamento !== 'CARTAO_CREDITO'}
+                      onChange={(e) => {
+                        const n = Number(e.target.value)
+                        setLinhasPagamento((ls) => ls.map((x, i) => (i === idx ? { ...x, parcelas: n } : x)))
+                      }}
+                      style={{ minHeight: 36, borderRadius: 8, border: '1px solid #d1d5db' }}
+                    >
+                      {Array.from({ length: MAX_PARCELAS_CREDITO }, (_, i) => i + 1).map((n) => (
+                        <option key={n} value={n}>{n}x</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      aria-label={`Remover forma ${idx + 1}`}
+                      onClick={() => setLinhasPagamento((ls) => ls.filter((_, i) => i !== idx))}
+                      style={{ minHeight: 36, borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', padding: '0 10px' }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+                {linhasPagamento.length < FORMAS_PAGAMENTO_DESKTOP.length ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const livre = FORMAS_PAGAMENTO_DESKTOP.find((f) => !linhasPagamento.some((l) => l.formaPagamento === f))
+                      if (livre) setLinhasPagamento((ls) => [...ls, { formaPagamento: livre, valor: 0 }])
+                    }}
+                    style={{ minHeight: 34, borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', fontSize: 13 }}
+                  >
+                    + Forma / 添加付款方式
+                  </button>
+                ) : null}
+                <div style={{ fontSize: 12, color: '#6b7280' }}>
+                  Soma / 合计: {formatarBRL(linhasPagamento.reduce((a, l) => a + (l.valor || 0), 0))} · Total: {formatarBRL(totalLiquido)}
+                  {' '}· Troco só em dinheiro / 仅现金找零
+                </div>
+              </div>
+            ) : null}
             <button
               disabled={itens.length === 0 || isFinalizandoVenda}
               style={{
@@ -1090,11 +1359,45 @@ export function App() {
                 color: '#9ca3af',
               }}
             >
-              Atalhos: Esc Novo Cupom · F10 Finalizar.
+              Atalhos: F2 Abrir caixa · F3 Fechar caixa · F4 Sangria/Suprimento · F10 Finalizar · Esc Novo Cupom.
             </div>
           </div>
         </section>
       </main>
+      {dialogoGerentePin ? (
+        <GerentePinDialog
+          gerentes={gerentesPin}
+          acao="desconto_especial"
+          percentual={{
+            max: maxDescontoGerentePercentual,
+            inicial: descontoGerentePercentual > 0 ? descontoGerentePercentual : 5,
+          }}
+          onAutorizar={operadorPin.autorizarGerente}
+          onCancelar={() => {
+            setDialogoGerentePin(false)
+            focarInputLeitura()
+          }}
+          onConcluir={(a) => {
+            setDialogoGerentePin(false)
+            const valor = a.percentual ?? 0
+            setGerentePin({ gerenteId: a.gerenteId, eventoId: a.eventoId })
+            aplicarDescontoGerente(valor, null, null)
+            setMensagem(`Desconto especial de ${valor.toFixed(1)}% aplicado por ${a.nome}${a.offline ? ` (${TPin.offline})` : ''}.`)
+            focarInputLeitura()
+          }}
+        />
+      ) : null}
+      {operadorPin.telaBloqueio && operadorPin.status ? (
+        <LockScreen
+          operadores={operadorPin.status.operadores}
+          temCarrinho={itens.length > 0}
+          onEntrar={async (usuario, pin) => {
+            const r = await operadorPin.entrar(usuario, pin)
+            if (r.ok) focarInputLeitura()
+            return r
+          }}
+        />
+      ) : null}
     </div>
   )
 }

@@ -28,6 +28,7 @@ vi.mock('@/app/gerente/produtos/precosAtacadoActions', () => ({
   listarFaixasAtacado: vi.fn().mockResolvedValue({ success: true, data: [] }),
   atualizarFaixaAtacado: vi.fn().mockResolvedValue({ success: true, data: null }),
   inativarFaixaAtacado: vi.fn().mockResolvedValue({ success: true, data: null }),
+  faixasPermitidasNoPlano: vi.fn().mockResolvedValue(true),
 }))
 
 vi.mock('@/app/gerente/produtos/historicoPrecosActions', () => ({

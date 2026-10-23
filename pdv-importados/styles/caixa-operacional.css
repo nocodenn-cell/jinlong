@@ -24,3 +24,20 @@
 .caixa-oriental-root #caixa-pdv-panel-pgto { border-color: #94a3b8; background: #fff; }
 .caixa-oriental-root [role="group"] input,
 .caixa-oriental-root [role="group"] button { min-height: 42px; }
+
+/*
+ * Marca Jinlong no PDV/caixa: mesmo vermelho do Admin (styles/admin-theme.css,
+ * --brand-500 / --brand-600). Ícones, links e destaques "primary/brand" do caixa
+ * deixam de ser azuis. Branco sobre #b3262e = 6.3:1 (AA).
+ * `.pdv-marca-jinlong` é aplicada no <body> enquanto o caixa está montado para
+ * cobrir também modais em portal. Teste: tests/pdv-marca-vermelha.test.ts.
+ */
+.caixa-oriental-root,
+.pdv-marca-jinlong {
+  --color-brand: #b3262e;
+  --color-brand-strong: #8a1c23;
+  --color-brand-primary: #b3262e;
+  --primary: 357 65% 43%;
+  --primary-foreground: 0 0% 100%;
+  --ring: 357 65% 43%;
+}

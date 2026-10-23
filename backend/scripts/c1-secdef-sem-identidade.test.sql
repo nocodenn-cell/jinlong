@@ -60,7 +60,14 @@ BEGIN
     WHERE n.nspname = 'public'
       AND p.prosecdef
       AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
-      AND p.prosrc !~* '(auth\.uid|auth\.jwt|auth\.role|current_setting|auth_usuario_)'
+      -- multiempresa (20261019140000+): envelopes e guardas derivam a identidade
+      -- via helpers fp_* (que usam auth.uid()); contam como checagem.
+      AND p.prosrc !~* '(auth\.uid|auth\.jwt|auth\.role|current_setting|auth_usuario_|fp_assert_loja|fp_assert_produto|fp_pode_loja|fp_pode_empresa|fp_lojas_permitidas|fp_empresas_arr|fp_empresa_operacional|fp_admin_legado|fp_empresas_do_usuario)'
+      -- helpers de lookup puros usados nas expressões de RLS (precisam de EXECUTE
+      -- para authenticated; não decidem acesso sozinhos — só mapeiam id → loja/empresa)
+      AND NOT (p.proname = ANY (ARRAY['fp_loja_de', 'fp_empresa_da_loja', 'fp_mesma_empresa',
+                                      'fp_assert_mesma_empresa', 'fp_pdv_config_id',
+                                      'fp_empresa_operacional']))
       AND NOT (p.proname = ANY (v_allow))
     ORDER BY p.proname
   LOOP

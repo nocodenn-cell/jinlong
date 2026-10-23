@@ -7,15 +7,12 @@ interface NegotiationInput {
   zhPublic: boolean
 }
 
-function prefersChinese(acceptLanguage: string | null): boolean {
-  const first = acceptLanguage?.split(',')[0]?.trim().toLowerCase() ?? ''
-  return first.startsWith('zh')
-}
-
-/** Escolha explícita do visitante vence; depois, o idioma principal do navegador. */
-export function negotiateLocale({ cookie, acceptLanguage, zhPublic }: NegotiationInput): SiteLocale {
+/** Escolha explícita do visitante (cookie) vence; sem ela, chinês (público principal). */
+export function negotiateLocale({ cookie, zhPublic }: NegotiationInput): SiteLocale {
   if (!zhPublic) return DEFAULT_SITE_LOCALE
   if (cookie === 'zh') return 'zh-CN'
   if (cookie === 'pt') return 'pt-BR'
-  return prefersChinese(acceptLanguage) ? 'zh-CN' : DEFAULT_SITE_LOCALE
+  // Público principal: comerciantes chineses. Sem escolha explícita, chinês é o padrão
+  // (enquanto o zh estiver publicado; em produção depende da revisão nativa).
+  return 'zh-CN'
 }

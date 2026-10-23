@@ -2,6 +2,7 @@
  * FastProduct Admin — Financeiro unificado (Receber + Pagar + Fiscal)
  */
 
+import { bloqueioPorPlano } from '@/lib/cobranca/bloqueioPorPlano'
 import { Suspense } from 'react'
 import { carregarFinanceiroLoja } from './financeiroLojaActions'
 import { FinanceiroHubNavShell } from '@/components/ui/admin-v2/FinanceiroHubNavShell'
@@ -21,6 +22,8 @@ import { formatBRL } from '@/lib/format/money'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
+import { ymdHojeNoFusoRelatorio } from '@/lib/relatorios/periodoRelatorio'
+import { resolverPeriodoCivil } from '@/lib/admin/periodoCivil'
 import { ROUTES, pathWithQuery } from '@/lib/navigation/routes'
 import Link from 'next/link'
 import { type ContaLinha } from './_components/ContasReceberTable'
@@ -47,6 +50,8 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 type PageProps = { searchParams?: Promise<SearchParams> }
 
 export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
+  const bloqueio = await bloqueioPorPlano('financeiro')
+  if (bloqueio) return bloqueio
   const { session } = await loadAdminContext({
     pathname: ROUTES.admin.financeiro,
     resource: `route:${ROUTES.admin.financeiro}`,
@@ -57,13 +62,13 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
 
   const sp = (searchParams ? await searchParams : {}) ?? {}
   const activeTab = parseFinanceiroTab(sp.tab)
-  const today = new Intl.DateTimeFormat('en-CA', { timeZone:'America/Sao_Paulo', year:'numeric', month:'2-digit', day:'2-digit' }).format(new Date())
-  const de = sp.de || today.slice(0,7) + '-01'
-  const ate = sp.ate || today
+  // Período padrão (Mês atual) em datas civis de Brasília; datas inválidas/invertidas são normalizadas.
+  const today = ymdHojeNoFusoRelatorio()
+  const { de, ate } = resolverPeriodoCivil(sp.de, sp.ate, today, 'mes')
   const pagina = Number(sp.pagina || 1)
   const financeiro = activeTab === 'fiscal' ? null : await carregarFinanceiroLoja(de, ate, pagina)
   if (['resumo','contas','recebiveis','conciliacao','resultado'].includes(activeTab)) {
-    return <div className="admin-v2-page"><PageHeader title={ui.financeiro_titulo} subtitle={ui.financeiro_subtitulo} /><FinanceiroHubNavShell activeTab={activeTab} />{financeiro?.ok ? <FinanceiroWorkspace data={financeiro.data} tab={activeTab as FinanceiroWorkspaceTab} de={de} ate={ate} /> : <p role="alert">{financeiro && !financeiro.ok ? financeiro.error : 'Não foi possível carregar o financeiro.'}</p>}</div>
+    return <div className="admin-v2-page"><PageHeader title={ui.financeiro_titulo} subtitle={ui.financeiro_subtitulo} /><FinanceiroHubNavShell activeTab={activeTab} />{financeiro?.ok ? <FinanceiroWorkspace data={financeiro.data} tab={activeTab as FinanceiroWorkspaceTab} de={de} ate={ate} hoje={today} /> : <p role="alert">{financeiro && !financeiro.ok ? financeiro.error : 'Não foi possível carregar o financeiro.'}</p>}</div>
   }
   const parsed = parseTituloFiltersFromSearchParams(sp as Record<string, string | string[] | undefined>)
   const { limite, ...filters } = parsed

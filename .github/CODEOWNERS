@@ -68,6 +68,11 @@
 # Database policies (RLS security)
 /backend/supabase/migrations/*rls* @nocodenn-cell/security @nocodenn-cell/backend-lead
 
+# Governança de deploy (integração Supabase publica estes caminhos na main)
+/backend/supabase/config.toml      @nocodenn-cell/tech-lead @nocodenn-cell/ops
+/.github/deploy-governance/        @nocodenn-cell/tech-lead @nocodenn-cell/ops
+/docs/ops/deploy-governance.md     @nocodenn-cell/tech-lead @nocodenn-cell/ops
+
 # ==================== DOCUMENTATION ====================
 # Operational runbooks
 /docs/GO-LIVE-RUNBOOK.md           @nocodenn-cell/ops @nocodenn-cell/tech-lead

@@ -3,6 +3,14 @@ import { invoke } from '@tauri-apps/api/core'
 import { validarPercentualPermitido } from '@core/managerDiscount/policy'
 import type { CaixaSessaoInvoke } from './usePdvLocalCatalogo'
 import { captureDesktopException, VENDA_EVENTS } from '../lib/sentry'
+import {
+  descontoGerenteCompativel,
+  isFormaPagamentoDesktop,
+  normalizarPagamentos,
+  type FormaPagamentoDesktop,
+  type LinhaPagamentoDesktop,
+  type PagamentoOutbox,
+} from '../lib/formaPagamento'
 
 type ItemVenda = {
   produtoId: string
@@ -31,6 +39,22 @@ type Params = {
    */
   maxDescontoGerentePercentual?: number
   gerenteId: string
+  /** Forma escolhida no cupom. Ausente = DINHEIRO (comportamento histórico). */
+  formaPagamento?: FormaPagamentoDesktop
+  /**
+   * Pagamento combinado e/ou crédito parcelado. Ausente/vazio = forma única (`formaPagamento`), sem
+   * `pagamentos` no payload — idêntico ao comportamento anterior.
+   */
+  pagamentos?: LinhaPagamentoDesktop[]
+  /**
+   * Login por PIN: operador no caixa agora (carimba venda/abertura). null/ausente = payload antigo (null).
+   * O caixa é do terminal (opção A): a troca de operador não fecha nem reabre o caixa.
+   */
+  operadorId?: string | null
+  /** Desconto autorizado por PIN do gerente: evento OVERRIDE_GERENTE (servidor aceita sem token de senha). */
+  gerentePinEventoId?: string | null
+  /** Comissão: vendedor escolhido. null/ausente = operador do caixa (payload idêntico ao antigo). */
+  vendedorId?: string | null
   onSetCaixaAtualId: (id: string | null) => void
   onSetMensagem: (msg: string) => void
   onLimparCarrinho: () => void
@@ -43,6 +67,7 @@ type Params = {
 
 export function usePdvLocalVendaCaixaFlow({
   tauriDisponivel,
+  vendedorId,
   caixaAtualId,
   itens,
   totalBruto,
@@ -53,6 +78,10 @@ export function usePdvLocalVendaCaixaFlow({
   descontoGerenteToken,
   maxDescontoGerentePercentual,
   gerenteId,
+  formaPagamento = 'DINHEIRO',
+  pagamentos,
+  operadorId = null,
+  gerentePinEventoId = null,
   onSetCaixaAtualId,
   onSetMensagem,
   onLimparCarrinho,
@@ -73,7 +102,7 @@ export function usePdvLocalVendaCaixaFlow({
       const trocoRaw = globalThis.prompt('Troco inicial do caixa (R$):', '0')
       const troco = trocoRaw ? Number(trocoRaw.replace(',', '.')) : 0
       const novoCaixaId = await invoke('abrir_caixa_cmd', {
-        operador_id: null,
+        operador_id: operadorId,
         troco_inicial: Number.isFinite(troco) ? troco : 0,
       })
       onSetCaixaAtualId(String(novoCaixaId))
@@ -81,7 +110,7 @@ export function usePdvLocalVendaCaixaFlow({
     } catch (e) {
       onSetMensagem(formatarErro(e, 'Não foi possível abrir o caixa. Tente de novo.'))
     }
-  }, [tauriDisponivel, onSetMensagem, onSetCaixaAtualId, formatarErro])
+  }, [tauriDisponivel, onSetMensagem, onSetCaixaAtualId, formatarErro, operadorId])
 
   const fecharCaixa = useCallback(async () => {
     if (!caixaAtualId) return
@@ -142,8 +171,36 @@ export function usePdvLocalVendaCaixaFlow({
       return
     }
 
+    if (!isFormaPagamentoDesktop(formaPagamento)) {
+      onSetMensagem('Forma de pagamento inválida. Escolha Dinheiro, PIX, Crédito ou Débito.')
+      setIsFinalizandoVenda(false)
+      return
+    }
+    let pagamentosOutbox: PagamentoOutbox[] | undefined
+    let formaEscalar: FormaPagamentoDesktop = formaPagamento
+    if (pagamentos && pagamentos.length > 0) {
+      const r = normalizarPagamentos(pagamentos, totalLiquido)
+      if (!r.ok) {
+        onSetMensagem(r.erro)
+        setIsFinalizandoVenda(false)
+        return
+      }
+      pagamentosOutbox = r.pagamentos
+      formaEscalar = r.pagamentos[0].forma_pagamento
+      if (descontoGerentePercentual > 0 && r.pagamentos.some((p) => p.forma_pagamento !== 'DINHEIRO')) {
+        onSetMensagem('Desconto de gerente só vale para venda paga em dinheiro. Troque a forma ou remova o desconto.')
+        setIsFinalizandoVenda(false)
+        return
+      }
+    }
+    if (!descontoGerenteCompativel(formaEscalar, descontoGerentePercentual)) {
+      onSetMensagem('Desconto de gerente só vale para venda paga em dinheiro. Troque a forma ou remova o desconto.')
+      setIsFinalizandoVenda(false)
+      return
+    }
+
     if (descontoGerentePercentual > 0) {
-      if (!descontoGerenteToken) {
+      if (!descontoGerenteToken && !gerentePinEventoId) {
         onSetMensagem('Desconto de gerente sem autorização. Repita a validação antes de finalizar.')
         setIsFinalizandoVenda(false)
         return
@@ -172,7 +229,7 @@ export function usePdvLocalVendaCaixaFlow({
           onSetCaixaAtualId(caixaId)
         } else {
           caixaId = await invoke('abrir_caixa_cmd', {
-            operador_id: null,
+            operador_id: operadorId,
             troco_inicial: 0,
           })
           onSetCaixaAtualId(String(caixaId))
@@ -188,8 +245,10 @@ export function usePdvLocalVendaCaixaFlow({
       await invoke('registrar_venda', {
         venda: {
           caixa_id: caixaId,
-          operador_id: null,
-          forma_pagamento: 'DINHEIRO',
+          operador_id: operadorId,
+          ...(vendedorId ? { vendedor_id: vendedorId } : {}),
+          forma_pagamento: formaEscalar,
+          ...(pagamentosOutbox ? { pagamentos: pagamentosOutbox } : {}),
           total_bruto: totalBruto,
           total_desconto: totalDesconto,
           total_liquido: totalLiquido,
@@ -197,6 +256,7 @@ export function usePdvLocalVendaCaixaFlow({
           desconto_gerente_valor: descontoGerentePercentual > 0 ? descontoGerenteValor : null,
           gerente_id: descontoGerentePercentual > 0 ? gerenteId : null,
           desconto_gerente_token: descontoGerentePercentual > 0 ? descontoGerenteToken : null,
+          ...(descontoGerentePercentual > 0 && gerentePinEventoId ? { gerente_pin_evento_id: gerentePinEventoId } : {}),
           itens: itens.map((i) => ({
             produto_id: i.produtoId,
             nome: i.nome,
@@ -232,6 +292,8 @@ export function usePdvLocalVendaCaixaFlow({
       setIsFinalizandoVenda(false)
     }
   }, [
+    formaPagamento,
+    pagamentos,
     itens,
     isFinalizandoVenda,
     tauriDisponivel,
@@ -252,6 +314,9 @@ export function usePdvLocalVendaCaixaFlow({
     onRefreshOutboxResumo,
     logError,
     onFinalizarElapsedMs,
+    operadorId,
+    gerentePinEventoId,
+    vendedorId,
   ])
 
   return {

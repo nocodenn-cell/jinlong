@@ -13,7 +13,15 @@ import {
   PDV_CONFIG_DEFAULTS,
   slugCodigoLoja,
 } from './provisionamentoDefaults'
-import { getDonoReuseError } from './provisionamentoPolicies'
+import {
+  gerarCodigoAtivacao,
+  hashCodigoAtivacao,
+  mensagemErroProvisionamento,
+  montarPayloadRpc,
+  validarEntradaProvisionamento,
+  type PapelEquipe,
+  type ProvisionEmpresaInput,
+} from './provisionamentoEmpresa'
 
 export type ActionOk<T> = { ok: true; data: T }
 export type ActionErr = { ok: false; error: string }
@@ -73,21 +81,6 @@ async function requireAdminSession() {
   return { ok: true as const, session: auth.session }
 }
 
-const ProvisionSchema = z.object({
-  lojaNome: z.string().trim().min(2).max(120),
-  lojaCodigo: z
-    .string()
-    .trim()
-    .max(32)
-    .regex(/^[A-Za-z0-9_-]*$/, 'Código inválido')
-    .optional()
-    .nullable(),
-  donoNome: z.string().trim().min(2).max(120),
-  donoEmail: z.string().trim().email().max(254),
-  donoSenha: z.string().min(PASSWORD_MIN_LENGTH).max(128),
-  idiomaPreferido: z.enum(['pt', 'zh']),
-})
-
 async function findAuthUserByEmail(admin: AdminClient, email: string) {
   const target = email.toLowerCase()
   for (let page = 1; page <= 10; page += 1) {
@@ -100,154 +93,6 @@ async function findAuthUserByEmail(admin: AdminClient, email: string) {
   return null
 }
 
-async function ensureLoja(
-  admin: AdminClient,
-  nome: string,
-  codigoInput: string | null | undefined,
-): Promise<{ lojaId: string; nome: string; codigo: string | null; nova: boolean }> {
-  const codigo = (codigoInput?.trim() || slugCodigoLoja(nome)).toUpperCase()
-
-  const { data: porCodigo } = await fromLoose(admin, 'lojas')
-    .select('id, nome, codigo')
-    .eq('codigo', codigo)
-    .maybeSingle()
-
-  if (porCodigo) {
-    return {
-      lojaId: String(porCodigo.id),
-      nome: String(porCodigo.nome),
-      codigo: (porCodigo.codigo as string | null) ?? codigo,
-      nova: false,
-    }
-  }
-
-  const { data: inserted, error } = await fromLoose(admin, 'lojas')
-    .insert({ nome, codigo, ativo: true })
-    .select('id, nome, codigo')
-    .single()
-
-  if (error) {
-    if (/duplicate|unique|already/i.test(error.message)) {
-      const { data: again } = await fromLoose(admin, 'lojas')
-        .select('id, nome, codigo')
-        .eq('codigo', codigo)
-        .maybeSingle()
-      if (again) {
-        return {
-          lojaId: String(again.id),
-          nome: String(again.nome),
-          codigo: (again.codigo as string | null) ?? codigo,
-          nova: false,
-        }
-      }
-    }
-    throw new Error(error.message)
-  }
-
-  return {
-    lojaId: String(inserted.id),
-    nome: String(inserted.nome),
-    codigo: (inserted.codigo as string | null) ?? codigo,
-    nova: true,
-  }
-}
-
-async function ensureDono(input: {
-  admin: AdminClient
-  lojaId: string
-  nome: string
-  email: string
-  senha: string
-  idioma: 'pt' | 'zh'
-}): Promise<{ donoId: string; novo: boolean }> {
-  const { admin, lojaId, nome, email, senha, idioma } = input
-  const emailNorm = email.toLowerCase()
-
-  const existingAuth = await findAuthUserByEmail(admin, emailNorm)
-  if (existingAuth) {
-    const { data: row } = await fromLoose(admin, 'usuarios')
-      .select('id, perfil, loja_id, ativo')
-      .eq('id', existingAuth.id)
-      .maybeSingle()
-
-    if (row) {
-      const rowLoja = row.loja_id as string | null
-      const rowPerfil = String(row.perfil)
-      if (rowLoja && rowLoja !== lojaId) {
-        throw new Error('Este e-mail já está vinculado a outra loja.')
-      }
-      const reuseError = getDonoReuseError(rowPerfil)
-      if (reuseError) throw new Error(reuseError)
-      if (rowLoja !== lojaId || rowPerfil !== 'DONO') {
-        const { error: updErr } = await fromLoose(admin, 'usuarios')
-          .update({
-            nome,
-            perfil: 'DONO',
-            idioma_preferido: idioma,
-            loja_id: lojaId,
-            ativo: true,
-          })
-          .eq('id', existingAuth.id)
-        if (updErr) throw new Error(updErr.message)
-      }
-      return { donoId: existingAuth.id, novo: false }
-    }
-
-    const { error: insErr } = await fromLoose(admin, 'usuarios').insert({
-      id: existingAuth.id,
-      nome,
-      perfil: 'DONO',
-      idioma_preferido: idioma,
-      loja_id: lojaId,
-      ativo: true,
-    })
-    if (insErr) throw new Error(insErr.message)
-    return { donoId: existingAuth.id, novo: false }
-  }
-
-  const { data: created, error: authErr } = await admin.auth.admin.createUser({
-    email: emailNorm,
-    password: senha,
-    email_confirm: true,
-    user_metadata: { full_name: nome },
-  })
-
-  if (authErr || !created.user) {
-    const msg = authErr?.message ?? 'Falha ao criar usuário no Auth.'
-    if (/already|registered|exists|duplicate/i.test(msg)) {
-      const again = await findAuthUserByEmail(admin, emailNorm)
-      if (again) {
-        return ensureDono({ ...input, email: emailNorm })
-      }
-    }
-    throw new Error(msg)
-  }
-
-  const userId = created.user.id
-  try {
-    const { error: dbErr } = await fromLoose(admin, 'usuarios').insert({
-      id: userId,
-      nome,
-      perfil: 'DONO',
-      idioma_preferido: idioma,
-      loja_id: lojaId,
-      ativo: true,
-    })
-    if (dbErr) {
-      await admin.auth.admin.deleteUser(userId)
-      throw new Error(dbErr.message)
-    }
-    return { donoId: userId, novo: true }
-  } catch (e) {
-    try {
-      await admin.auth.admin.deleteUser(userId)
-    } catch {
-      // compensação best-effort
-    }
-    throw e
-  }
-}
-
 async function nextPdvConfigId(admin: AdminClient): Promise<number> {
   const { data, error } = await fromLoose(admin, 'pdv_config').select('id')
   if (error) throw new Error(error.message)
@@ -255,7 +100,22 @@ async function nextPdvConfigId(admin: AdminClient): Promise<number> {
   return max + 1
 }
 
+/**
+ * Multiempresa (fase 3): a linha padrão da empresa (pdv_config.loja_id NULL, semeada pelo banco)
+ * é a que o validar-gerente lê. Aponta o dono como gerente. Coluna/linha ausente ⇒ ignora (pré-fase 3).
+ */
+async function apontarGerentePadraoEmpresa(admin: AdminClient, lojaId: string, donoId: string) {
+  const { data: loja } = await fromLoose(admin, 'lojas').select('empresa_id').eq('id', lojaId).maybeSingle()
+  const empresaId = (loja as { empresa_id?: string } | null)?.empresa_id
+  if (!empresaId) return
+  await fromLoose(admin, 'pdv_config')
+    .update({ gerente_id: donoId })
+    .eq('empresa_id', empresaId)
+    .eq('gerente_id', `empresa-${empresaId.slice(0, 8)}`) // só a linha semeada (loja_id NULL)
+}
+
 async function ensurePdvConfig(admin: AdminClient, lojaId: string, donoId: string, idioma: 'pt' | 'zh') {
+  await apontarGerentePadraoEmpresa(admin, lojaId, donoId).catch(() => undefined)
   const defaults = {
     loja_id: lojaId,
     gerente_id: donoId,
@@ -394,9 +254,174 @@ async function validarProvisionamento(
 }
 
 /**
- * Provisiona loja + DONO + config PDV + checklist (idempotente).
- * Service Role somente neste módulo (server). Sem Admin API no browser.
+ * Usuário do Auth para uma pessoa da equipe: reaproveita se o e-mail já existe
+ * (a RPC recusa quem pertence a outra empresa ou é ADMIN), senão cria.
  */
+async function ensureAuthUser(
+  admin: AdminClient,
+  p: { nome: string; email: string; senha: string },
+): Promise<{ id: string; novo: boolean }> {
+  const email = p.email.trim().toLowerCase()
+  const existing = await findAuthUserByEmail(admin, email)
+  if (existing) return { id: existing.id, novo: false }
+  const { data, error } = await admin.auth.admin.createUser({
+    email,
+    password: p.senha,
+    email_confirm: true,
+    user_metadata: { full_name: p.nome.trim() },
+  })
+  if (error || !data.user) {
+    const msg = error?.message ?? 'Falha ao criar usuário no Auth.'
+    if (/already|registered|exists|duplicate/i.test(msg)) {
+      const again = await findAuthUserByEmail(admin, email)
+      if (again) return { id: again.id, novo: false }
+    }
+    throw new Error(msg)
+  }
+  return { id: data.user.id, novo: true }
+}
+
+const EmpresaSchema = z.object({
+  empresaNome: z.string().trim().min(2).max(120),
+  empresaCnpj: z.string().trim().max(18).optional().nullable(),
+  lojas: z
+    .array(
+      z.object({
+        nome: z.string().trim().min(2).max(120),
+        codigo: z.string().trim().max(32).regex(/^[A-Za-z0-9_-]*$/, 'Código inválido').optional().nullable(),
+      }),
+    )
+    .min(1)
+    .max(20),
+  dono: z.object({
+    nome: z.string().trim().min(2).max(120),
+    email: z.string().trim().email().max(254),
+    senha: z.string().min(PASSWORD_MIN_LENGTH).max(128),
+  }),
+  equipe: z
+    .array(
+      z.object({
+        nome: z.string().trim().min(2).max(120),
+        email: z.string().trim().email().max(254),
+        senha: z.string().min(PASSWORD_MIN_LENGTH).max(128),
+        papel: z.enum(['GERENTE', 'OPERADOR']),
+        lojas: z.array(z.number().int().min(0)).min(1),
+      }),
+    )
+    .max(50)
+    .default([]),
+  idiomaPreferido: z.enum(['pt', 'zh']),
+})
+
+export type ProvisionamentoEmpresaResult = ProvisionamentoResult & {
+  empresaId: string
+  lojas: { id: string; nome: string }[]
+  equipe: { email: string; papel: PapelEquipe; novo: boolean }[]
+}
+
+/**
+ * Provisiona EMPRESA + lojas + DONO + equipe (GERENTE/OPERADOR) sem SQL manual.
+ * 1) cria/reaproveita usuários no Auth (Admin API, só no servidor);
+ * 2) empresa, lojas, usuarios e vínculos numa ÚNICA transação (RPC plataforma_provisionar_empresa);
+ * 3) config PDV, formas de pagamento e checklist por loja (idempotentes).
+ * Falha em (2) ⇒ nada fica no banco e os usuários do Auth criados agora são apagados.
+ */
+export async function provisionarEmpresaAction(
+  input: ProvisionEmpresaInput,
+): Promise<ActionResult<ProvisionamentoEmpresaResult>> {
+  const gate = await requireAdminSession()
+  if (!gate.ok) return fail(gate.error)
+
+  const parsed = EmpresaSchema.safeParse(input)
+  if (!parsed.success) return fail('Dados inválidos. Verifique empresa, lojas, e-mails e senhas.')
+  const data: ProvisionEmpresaInput = {
+    ...(parsed.data as ProvisionEmpresaInput),
+    lojas: parsed.data.lojas.map((l) => ({ nome: l.nome, codigo: l.codigo?.trim() || slugCodigoLoja(l.nome) })),
+  }
+  const regra = validarEntradaProvisionamento(data, PASSWORD_MIN_LENGTH)
+  if (regra) return fail(regra)
+  for (const p of [data.dono, ...data.equipe]) {
+    if (!validateNewPassword(p.senha, p.senha).ok) {
+      return fail(`A senha de ${p.nome} deve ter pelo menos ${PASSWORD_MIN_LENGTH} caracteres.`)
+    }
+  }
+
+  const admin = createAdminClient()
+  const criados: string[] = []
+  let empresaCriada = false
+  try {
+    const dono = await ensureAuthUser(admin, data.dono)
+    if (dono.novo) criados.push(dono.id)
+    const equipe: { id: string; novo: boolean }[] = []
+    for (const m of data.equipe) {
+      const u = await ensureAuthUser(admin, m)
+      if (u.novo) criados.push(u.id)
+      equipe.push(u)
+    }
+
+    const payload = montarPayloadRpc(data, { dono: dono.id, equipe: equipe.map((e) => e.id) })
+    const { data: rpcData, error: rpcErr } = await (
+      admin as unknown as {
+        rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>
+      }
+    ).rpc('plataforma_provisionar_empresa', { p: payload, p_ator: gate.session.userId })
+    if (rpcErr) throw new Error(mensagemErroProvisionamento(rpcErr.message))
+    empresaCriada = true
+    const r = rpcData as { empresa_id: string; lojas: Record<string, string> }
+
+    const lojas = payload.lojas.map((l) => ({ id: r.lojas[l.chave], nome: l.nome }))
+    let itensMarcados: string[] = []
+    for (const [i, loja] of lojas.entries()) {
+      await ensurePdvConfig(admin, loja.id, dono.id, data.idiomaPreferido)
+      await ensureFormasPagamento(admin, loja.id)
+      const marcados = await ensureChecklistBootstrap(admin, loja.id, gate.session.userId)
+      if (i === 0) itensMarcados = marcados
+    }
+    const validacao = await validarProvisionamento(admin, lojas[0].id, dono.id)
+    if (!validacao.lojaOk || !validacao.donoOk || !validacao.configOk || !validacao.checklistOk) {
+      return fail(
+        `Empresa criada, mas a configuração ficou incompleta (loja=${validacao.lojaOk} dono=${validacao.donoOk} config=${validacao.configOk} checklist=${validacao.checklistOk}). Abra a implantação da loja para concluir.`,
+      )
+    }
+
+    revalidatePath(ROUTES.admin.provisionamento)
+    revalidatePath(ROUTES.admin.implantacao)
+    return {
+      ok: true,
+      data: {
+        empresaId: r.empresa_id,
+        lojas,
+        equipe: data.equipe.map((m, i) => ({ email: m.email.toLowerCase(), papel: m.papel, novo: equipe[i].novo })),
+        lojaId: lojas[0].id,
+        lojaNome: lojas[0].nome,
+        lojaCodigo: payload.lojas[0].codigo,
+        lojaNova: true,
+        donoId: dono.id,
+        donoEmail: data.dono.email.toLowerCase(),
+        donoNovo: dono.novo,
+        configInicializada: true,
+        checklistPronto: true,
+        itensMarcados,
+        validacao,
+        implantacaoHref: `${ROUTES.admin.implantacao}?lojaId=${encodeURIComponent(lojas[0].id)}`,
+      },
+    }
+  } catch (e) {
+    // compensação: só apaga usuários do Auth criados agora e só se a transação do banco não ocorreu.
+    if (!empresaCriada) {
+      for (const id of criados) {
+        try {
+          await admin.auth.admin.deleteUser(id)
+        } catch {
+          // best-effort
+        }
+      }
+    }
+    return fail(e instanceof Error ? e.message : 'Erro ao provisionar empresa.')
+  }
+}
+
+/** Compatibilidade com o wizard antigo: 1 empresa = 1 loja + DONO. */
 export async function provisionarLojaAction(input: {
   lojaNome: string
   lojaCodigo?: string | null
@@ -405,82 +430,41 @@ export async function provisionarLojaAction(input: {
   donoSenha: string
   idiomaPreferido: 'pt' | 'zh'
 }): Promise<ActionResult<ProvisionamentoResult>> {
+  return provisionarEmpresaAction({
+    empresaNome: input.lojaNome,
+    lojas: [{ nome: input.lojaNome, codigo: input.lojaCodigo ?? null }],
+    dono: { nome: input.donoNome, email: input.donoEmail, senha: input.donoSenha },
+    equipe: [],
+    idiomaPreferido: input.idiomaPreferido,
+  })
+}
+
+/**
+ * Gera código de ativação de uso único (24h) para um PDV desktop da loja.
+ * Só o hash vai para o banco; o código em claro é mostrado uma única vez.
+ */
+export async function gerarCodigoAtivacaoPdvAction(
+  lojaId: string,
+): Promise<ActionResult<{ codigo: string; expiraEm: string }>> {
   const gate = await requireAdminSession()
   if (!gate.ok) return fail(gate.error)
-
-  const parsed = ProvisionSchema.safeParse(input)
-  if (!parsed.success) return fail('Dados inválidos. Verifique nome da loja, e-mail e senha do DONO.')
-
-  const senhaCheck = validateNewPassword(parsed.data.donoSenha, parsed.data.donoSenha)
-  if (!senhaCheck.ok) {
-    return fail(`A senha do DONO deve ter pelo menos ${PASSWORD_MIN_LENGTH} caracteres.`)
-  }
-
-  const email = parsed.data.donoEmail.toLowerCase()
-  if (/@(localhost\.test|example\.com|exemplo\.com)$/i.test(email)) {
-    return fail('Use um e-mail real do cliente (não use domínios de teste).')
-  }
-
-  let createdAuthUserId: string | null = null
-
-  try {
-    const admin = createAdminClient()
-
-    const loja = await ensureLoja(admin, parsed.data.lojaNome, parsed.data.lojaCodigo)
-
-    const beforeAuth = await findAuthUserByEmail(admin, email)
-    const dono = await ensureDono({
-      admin,
-      lojaId: loja.lojaId,
-      nome: parsed.data.donoNome,
-      email,
-      senha: parsed.data.donoSenha,
-      idioma: parsed.data.idiomaPreferido,
-    })
-    if (dono.novo && !beforeAuth) createdAuthUserId = dono.donoId
-
-    await ensurePdvConfig(admin, loja.lojaId, dono.donoId, parsed.data.idiomaPreferido)
-    await ensureFormasPagamento(admin, loja.lojaId)
-    const itensMarcados = await ensureChecklistBootstrap(admin, loja.lojaId, gate.session.userId)
-    const validacao = await validarProvisionamento(admin, loja.lojaId, dono.donoId)
-
-    if (!validacao.lojaOk || !validacao.donoOk || !validacao.configOk || !validacao.checklistOk) {
-      return fail(
-        `Provisionamento incompleto: loja=${validacao.lojaOk} dono=${validacao.donoOk} config=${validacao.configOk} checklist=${validacao.checklistOk}`,
-      )
+  if (!z.string().uuid().safeParse(lojaId).success) return fail('Loja inválida.')
+  const { exibicao } = gerarCodigoAtivacao()
+  const admin = createAdminClient()
+  const { data, error } = await (
+    admin as unknown as {
+      rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>
     }
-
-    const implantacaoHref = `${ROUTES.admin.implantacao}?lojaId=${encodeURIComponent(loja.lojaId)}`
-
-    revalidatePath(ROUTES.admin.provisionamento)
-    revalidatePath(ROUTES.admin.implantacao)
-
-    return {
-      ok: true,
-      data: {
-        lojaId: loja.lojaId,
-        lojaNome: loja.nome,
-        lojaCodigo: loja.codigo,
-        lojaNova: loja.nova,
-        donoId: dono.donoId,
-        donoEmail: email,
-        donoNovo: dono.novo,
-        configInicializada: true,
-        checklistPronto: true,
-        itensMarcados,
-        validacao,
-        implantacaoHref,
-      },
-    }
-  } catch (e) {
-    if (createdAuthUserId) {
-      try {
-        const admin = createAdminClient()
-        await admin.auth.admin.deleteUser(createdAuthUserId)
-      } catch {
-        // best-effort
-      }
-    }
-    return fail(e instanceof Error ? e.message : 'Erro ao provisionar loja.')
+  ).rpc('plataforma_registrar_codigo_ativacao_pdv', {
+    p_loja_id: lojaId,
+    p_codigo_hash: hashCodigoAtivacao(exibicao),
+    p_validade_horas: 24,
+    p_criado_por: gate.session.userId,
+  })
+  if (error) {
+    if (error.message.includes('EMPRESA_NAO_OPERACIONAL')) return fail('Empresa suspensa ou fora da vigência.')
+    if (error.message.includes('ATIVACAO_PDV_LOJA_INVALIDA')) return fail('Loja inexistente, inativa ou sem empresa.')
+    return fail(error.message)
   }
+  return { ok: true, data: { codigo: exibicao, expiraEm: String((data as { expira_em: string }).expira_em) } }
 }

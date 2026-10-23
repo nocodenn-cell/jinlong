@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef } from "react"
 import {
   roundMoney2,
   FORMAS_PAGAMENTO_CAIXA,
+  MAX_PARCELAS_CREDITO,
   type FinalizarVendaInput,
 } from "@/app/caixa/finalizarVendaValidation"
 import { calcularResumoParcelas } from "@/app/caixa/caixaPagamentoSaldo"
@@ -13,6 +14,8 @@ export type FormaPagamento = FinalizarVendaInput["formaPagamento"]
 export type ParcelaPagamento = {
   formaPagamento: FormaPagamento
   valor: number
+  /** Só crédito; ausente = 1x. */
+  parcelas?: number
 }
 
 const MAX_PARCELAS = 4
@@ -37,7 +40,7 @@ export function useCaixaPagamentos(
       prevFormaRef.current = formaPagamento
       setParcelas((old) => {
         if (old.length === 1) {
-          return [{ ...old[0], formaPagamento, valor: formaPagamento === "DINHEIRO" ? old[0].valor : roundMoney2(totalLiquidoComGerente) }]
+          return [{ formaPagamento, valor: formaPagamento === "DINHEIRO" ? old[0].valor : roundMoney2(totalLiquidoComGerente) }]
         }
         return old
       })
@@ -87,7 +90,22 @@ export function useCaixaPagamentos(
 
   const atualizarForma = useCallback((index: number, forma: FormaPagamento) => {
     setParcelas((old) =>
-      old.map((p, i) => (i === index ? { ...p, formaPagamento: forma } : p)),
+      old.map((p, i) =>
+        i === index
+          ? { formaPagamento: forma, valor: p.valor, ...(forma === "CARTAO_CREDITO" && p.parcelas ? { parcelas: p.parcelas } : {}) }
+          : p,
+      ),
+    )
+  }, [])
+
+  const atualizarParcelas = useCallback((index: number, n: number) => {
+    setParcelas((old) =>
+      old.map((p, i) => {
+        if (i !== index || p.formaPagamento !== "CARTAO_CREDITO") return p
+        const v = Math.min(MAX_PARCELAS_CREDITO, Math.max(1, Math.trunc(n) || 1))
+        if (v === 1) return { formaPagamento: p.formaPagamento, valor: p.valor }
+        return { ...p, parcelas: v }
+      }),
     )
   }, [])
 
@@ -152,6 +170,7 @@ export function useCaixaPagamentos(
     removerParcela,
     atualizarForma,
     atualizarValor,
+    atualizarParcelas,
     autoCompletarUltima,
     resetPagamentos,
   }

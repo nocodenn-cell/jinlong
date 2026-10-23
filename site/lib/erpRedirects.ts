@@ -25,6 +25,30 @@ export interface SiteRedirect {
   source: string
   destination: string
   permanent: false
+  has?: Array<{ type: 'host'; value: string }>
+}
+
+/**
+ * www → apex do site (ex.: www.jinlong.app/x → jinlong.app/x), preservando caminho e query.
+ * Só atua quando o site recebe o host www; antes do corte o www pertence ao ERP e isto fica inerte.
+ * Deve vir depois dos redirecionamentos do ERP para que www/login vá direto ao ERP (um salto só).
+ */
+export function buildWwwToApexRedirect(siteUrl: string): SiteRedirect[] {
+  let url: URL
+  try {
+    url = new URL(siteUrl)
+  } catch {
+    return []
+  }
+  if (url.protocol !== 'https:' || url.hostname.startsWith('www.') || !url.hostname.includes('.')) return []
+  return [
+    {
+      source: '/:path*',
+      has: [{ type: 'host', value: `www.${url.hostname}` }],
+      destination: `${url.origin}/:path*`,
+      permanent: false,
+    },
+  ]
 }
 
 export function buildErpRedirects(env: SiteEnv = process.env): SiteRedirect[] {

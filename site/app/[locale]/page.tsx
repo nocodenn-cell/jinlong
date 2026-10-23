@@ -1,16 +1,24 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { Benefits } from '@/components/Benefits'
+import { ContactFab } from '@/components/ContactFab'
+import { Dashboard } from '@/components/Dashboard'
+import { Faq } from '@/components/Faq'
 import { FinalCta } from '@/components/FinalCta'
+import { Integrations } from '@/components/Integrations'
 import { Hero } from '@/components/Hero'
 import { LanguageCompare } from '@/components/LanguageCompare'
+import { Niches } from '@/components/Niches'
+import { Pains } from '@/components/Pains'
+import { Price } from '@/components/Price'
 import { Screens } from '@/components/Screens'
 import { SiteFooter } from '@/components/SiteFooter'
 import { SiteHeader } from '@/components/SiteHeader'
 import { Steps } from '@/components/Steps'
-import { hasContactChannel } from '@/components/TrialCta'
 import { WholesaleSection } from '@/components/WholesaleSection'
 import { getHomeContent } from '@/lib/content'
+import { SEO_KEYWORDS } from '@/lib/siteConfig'
+import { getSiteUrl } from '@/lib/siteUrl'
 import { isSiteLocale, otherSiteLocale, sitePath, type SiteLocale } from '@/lib/locales'
 import { isLocaleDraft, isLocalePublic, isZhReviewed } from '@/lib/publication'
 
@@ -20,7 +28,10 @@ interface HomePageProps {
 
 function buildAlternates(locale: SiteLocale): Metadata['alternates'] {
   const languages: Record<string, string> = { 'pt-BR': sitePath('pt-BR') }
-  if (isZhReviewed()) languages['zh-CN'] = sitePath('zh-CN')
+  if (isZhReviewed()) {
+    languages['zh-CN'] = sitePath('zh-CN')
+    languages['x-default'] = sitePath('zh-CN')
+  }
   return { canonical: sitePath(locale), languages }
 }
 
@@ -31,6 +42,7 @@ export async function generateMetadata({ params }: HomePageProps): Promise<Metad
   return {
     title: { absolute: meta.title },
     description: meta.description,
+    keywords: [...SEO_KEYWORDS[locale]],
     alternates: buildAlternates(locale),
     robots: isLocaleDraft(locale) ? { index: false, follow: false } : undefined,
     openGraph: {
@@ -47,29 +59,39 @@ export default async function HomePage({ params }: HomePageProps) {
   if (!isSiteLocale(locale)) notFound()
 
   const content = getHomeContent(locale)
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: locale === 'zh-CN' ? '金龙 Jinlong' : 'Jinlong',
+    applicationCategory: 'BusinessApplication',
+    operatingSystem: 'Web, Windows',
+    inLanguage: ['pt-BR', 'zh-CN'],
+    description: content.meta.description,
+    keywords: SEO_KEYWORDS[locale].join(', '),
+    url: `${getSiteUrl()}${sitePath(locale)}`,
+  }
   return (
     <>
-      {isLocaleDraft(locale) && (
-        <p className="jl-draft" role="note">
-          {content.draftBanner}
-        </p>
-      )}
-      <SiteHeader
-        locale={locale}
-        content={content}
-        showSwitch={isLocalePublic(otherSiteLocale(locale))}
-        hasContact={hasContactChannel(locale)}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }} />
+      <SiteHeader locale={locale} content={content} showSwitch={isLocalePublic(otherSiteLocale(locale))} />
       <main id="main-content">
         <Hero locale={locale} content={content} />
+        <Niches content={content} />
+        <Pains content={content} />
         <Benefits locale={locale} content={content} />
-        <Screens locale={locale} content={content} />
-        <WholesaleSection locale={locale} content={content} />
         <LanguageCompare locale={locale} content={content} />
         <Steps content={content} />
+        <Screens locale={locale} content={content} />
+        <Dashboard content={content} />
+        <WholesaleSection locale={locale} content={content} />
+        <Price content={content} locale={locale} />
+        {/* Prova social: oculta até existir depoimento real ([DEPOIMENTO REAL]). */}
+        <Integrations content={content} />
+        <Faq content={content} />
         <FinalCta locale={locale} content={content} />
       </main>
       <SiteFooter locale={locale} content={content} />
+      <ContactFab locale={locale} content={content} />
     </>
   )
 }

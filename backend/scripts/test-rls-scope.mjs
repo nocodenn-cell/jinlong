@@ -65,8 +65,10 @@ async function assertRpcOk(client, name, args = {}) {
 async function assertRpcErrorContains(client, name, args, substring) {
   const { error } = await client.rpc(name, args);
   const msg = error?.message ?? "";
-  if (!msg.includes(substring)) {
-    throw new Error(`Esperava mensagem contendo "${substring}" em ${name}; obtido: ${msg || "(sem erro)"}`);
+  // Multiempresa: o envelope de escopo pode recusar antes do corpo (ACESSO_LOJA_*).
+  const aceitos = Array.isArray(substring) ? substring : [substring];
+  if (!aceitos.some((s) => msg.includes(s))) {
+    throw new Error(`Esperava mensagem contendo "${aceitos.join('" ou "')}" em ${name}; obtido: ${msg || "(sem erro)"}`);
   }
 }
 
@@ -402,7 +404,7 @@ async function main() {
       p_operador_id: authByPerfil.OPERADOR,
       p_loja_id: IDS.loja2,
       p_itens: [],
-    }, "FINALIZAR_VENDA_CANONICA_LOJA_INVALIDA");
+    }, ["FINALIZAR_VENDA_CANONICA_LOJA_INVALIDA", "ACESSO_LOJA_NEGADO"]);
   });
 
   await run("RPC finalizar v4 preserva validação após escopo autorizado", async () => {
@@ -440,7 +442,7 @@ async function main() {
     await assertRpcErrorContains(operador, "registrar_pricing_version_venda", {
       p_venda_id: IDS.vendaFilial,
       p_version_id: IDS.pricingVersion,
-    }, "PRICING_VERSION_VENDA_SEM_PERMISSAO");
+    }, ["PRICING_VERSION_VENDA_SEM_PERMISSAO", "ACESSO_LOJA_NEGADO"]);
   });
 
   // Legacy finalizar_venda_transacional: EXECUTE revogado de authenticated (hardening).
@@ -467,16 +469,18 @@ async function main() {
     });
   });
 
-  await run("RPC decrementar_estoque_seguro", async () => {
-    const { data, error } = await operador.rpc("decrementar_estoque_seguro", {
+  // Migration 20261023120000: a baixa de estoque só acontece dentro da finalização
+  // da venda (SECURITY DEFINER) ou via sync-outbox (service_role). Chamada direta
+  // pelo operador permitia baixar qualquer quantidade sobre uma venda própria.
+  await run("RPC decrementar_estoque_seguro (negado ao operador)", async () => {
+    const { error } = await operador.rpc("decrementar_estoque_seguro", {
       p_produto_id: IDS.produto,
       p_quantidade: 0.01,
       p_venda_id: IDS.vendaOperador,
     });
-    if (error) throw new Error(error.message);
-    const row = Array.isArray(data) ? data[0] : data;
-    if (!row || row.sucesso !== true) {
-      throw new Error(`decrementar_estoque_seguro inesperado: ${JSON.stringify(data)}`);
+    const msg = error?.message ?? "";
+    if (!/permission denied|could not find the function/i.test(msg)) {
+      throw new Error(`decrementar_estoque_seguro deveria ser negado ao operador: ${msg || "sem erro"}`);
     }
   });
 

@@ -1,0 +1,14 @@
+diff --git a/.github/workflows/ci-backend-supabase.yml b/.github/workflows/ci-backend-supabase.yml
+index 8f321474..cf24c306 100644
+--- a/.github/workflows/ci-backend-supabase.yml
++++ b/.github/workflows/ci-backend-supabase.yml
+@@ -93,6 +93,9 @@ jobs:
+       - name: Residual RLS/search_path hardening (PostgreSQL in memory)
+         run: npm run test:hardening-residual -w fastproduct-backend
+ 
++      - name: Billing/plans/trial A×B + webhook idempotency (PostgreSQL in memory)
++        run: npm run test:cobranca -w fastproduct-backend
++
+       - name: Enforce seed password secret for internal PRs
+         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+         env:

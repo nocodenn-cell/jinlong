@@ -17,7 +17,7 @@ export const CJK_WEIGHTS: readonly CjkWeight[] = [500, 700, 900]
 const CJK = /[　-〿㐀-鿿＀-￯]/g
 
 function headingStrings(content: HomeContent): string[] {
-  const { hero, benefits, screens, wholesale, languages, steps, final } = content
+  const { hero, benefits, screens, wholesale, languages, steps, final, niches, pains, panel, price, faq, form } = content
   return [
     hero.h1.line1,
     hero.h1.line2,
@@ -35,6 +35,19 @@ function headingStrings(content: HomeContent): string[] {
     steps.title,
     ...steps.items.map((item) => item.title),
     final.title,
+    niches.title,
+    ...niches.items.map((item) => item.title),
+    pains.title,
+    ...pains.items.map((item) => item.pain),
+    panel.title,
+    panel.topTitle,
+    price.title,
+    price.plan,
+    faq.title,
+    content.integrations.title,
+    ...faq.items.map((item) => item.q),
+    form.title,
+    form.okTitle,
   ]
 }
 

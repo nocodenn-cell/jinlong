@@ -534,8 +534,8 @@ $tenant_negative$;
 
 DO $lock_presente$
 DECLARE
-  v_def_registrar text := pg_get_functiondef('public.registrar_conferencia_nfe(uuid,jsonb)'::regprocedure);
-  v_def_confirmar text := pg_get_functiondef('public.confirmar_importacao_nfe(uuid)'::regprocedure);
+  v_def_registrar text := pg_get_functiondef(coalesce(to_regprocedure('internal.registrar_conferencia_nfe(uuid,jsonb)'), 'public.registrar_conferencia_nfe(uuid,jsonb)'::regprocedure));
+  v_def_confirmar text := pg_get_functiondef(coalesce(to_regprocedure('internal.confirmar_importacao_nfe(uuid)'), 'public.confirmar_importacao_nfe(uuid)'::regprocedure));
 BEGIN
   IF position('FOR UPDATE' IN v_def_registrar) = 0 THEN
     RAISE EXCEPTION 'FLX05_FALHOU (BLOCKER): registrar_conferencia_nfe sem FOR UPDATE — condição de corrida com confirmar_importacao_nfe reaberta.';

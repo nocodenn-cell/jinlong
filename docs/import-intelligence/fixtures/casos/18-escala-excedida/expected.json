@@ -1,0 +1,5 @@
+{
+  "status": "ERRO_ENTRADA",
+  "erro": "LANDED_DECIMAL_ESCALA_EXCEDIDA",
+  "detalhe": "item.item-001.valor_mercadoria_moeda"
+}

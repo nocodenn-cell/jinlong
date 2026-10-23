@@ -1,14 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { ROUTES } from '@/lib/navigation/routes'
+import { safeAuthNextPath } from '@/lib/auth/emailLink'
 
-function safeNextPath(raw: string | null): string {
-  if (!raw || !raw.startsWith('/') || raw.startsWith('//')) {
-    return ROUTES.auth.resetPassword
-  }
-  if (/^\/(auth|login|admin|caixa|gerente)(\/|$)/.test(raw)) return raw
-  return ROUTES.auth.resetPassword
-}
+const safeNextPath = (raw: string | null) => safeAuthNextPath(raw, ROUTES.auth.resetPassword)
 
 /** Troca o code PKCE do e-mail de recuperação por sessão e redireciona. */
 export async function GET(request: NextRequest) {
@@ -17,6 +12,8 @@ export async function GET(request: NextRequest) {
   const next = safeNextPath(searchParams.get('next'))
 
   if (!code) {
+    // Sem code (ex.: erro do Supabase no #fragmento ou link antigo de fluxo implícito):
+    // o navegador preserva o fragmento no redirect e /auth/esqueci-senha o interpreta.
     return NextResponse.redirect(`${origin}${ROUTES.auth.forgotPassword}?erro=link_invalido`)
   }
 
