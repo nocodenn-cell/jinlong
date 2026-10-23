@@ -24,6 +24,7 @@ export interface PrecoSimulado {
   readonly custo_unitario_brl: string
   readonly preco_brl: string
   readonly lucro_unitario_brl: string
+  /** Margem BRUTA sobre `preco_brl` (antes das despesas de venda e de qualquer arredondamento). */
   readonly margem_resultante_pct: string
   readonly markup_resultante_pct: string
 }
@@ -46,15 +47,27 @@ export function simularPreco(custoUnitario: string, c: CenarioPreco): PrecoSimul
     const bruto = divide(multiplica(custo6, 6, fator4, 4, 6), 6, 100n, 0, 6)
     preco2 = dv4 > 0n ? divide(bruto * 100n, 6, 1000000n - dv4, 4, 2) : divide(bruto, 6, 1n, 0, 2)
   }
-  const custo2 = divide(custo6, 6, 1n, 0, 2)
-  const lucro2 = preco2 - custo2
+  const r = resultadoSobrePreco(custo6, preco2, dv4)
   return {
     canal: c.canal, modo: c.modo, percentual: c.percentual,
     custo_unitario_brl: formataDecimal(custo6, 6),
     preco_brl: formataDecimal(preco2, 2),
-    lucro_unitario_brl: formataDecimal(lucro2, 2),
-    margem_resultante_pct: formataDecimal(divide(lucro2 * 100n, 2, preco2, 2, 2), 2),
-    markup_resultante_pct: formataDecimal(divide(lucro2 * 100n, 2, custo2, 2, 2), 2),
+    lucro_unitario_brl: r.lucro, margem_resultante_pct: r.margem, markup_resultante_pct: r.markup,
+  }
+}
+
+/**
+ * Lucro/margem/markup de um preço DADO (escala 2) sobre o custo (escala 6, levado a centavos).
+ * Margem líquida = (lucro − despesas_venda × preço) / preço, sem arredondamento intermediário.
+ */
+function resultadoSobrePreco(custo6: bigint, preco2: bigint, dv4: bigint) {
+  const custo2 = divide(custo6, 6, 1n, 0, 2)
+  const lucro2 = preco2 - custo2
+  return {
+    lucro: formataDecimal(lucro2, 2),
+    margem: formataDecimal(divide(lucro2 * 100n, 2, preco2, 2, 2), 2),
+    markup: formataDecimal(divide(lucro2 * 100n, 2, custo2, 2, 2), 2),
+    margemLiquida: formataDecimal(divide(lucro2 * 1000000n - preco2 * dv4, 6, preco2, 2, 2), 2), // % escala 6 ÷ preço
   }
 }
 
@@ -107,9 +120,20 @@ export interface FaixaAtacado {
   readonly percentual: string
 }
 
+/**
+ * `margem_resultante_pct`/`markup_resultante_pct`/`lucro_unitario_brl` (herdados) são a margem-ALVO,
+ * teórica, sobre `preco_brl` antes do arredondamento. Os campos `*_efetivo*` são recalculados
+ * sobre `preco_arredondado_brl` — o preço que de fato será praticado.
+ */
 export interface PrecoFaixa extends PrecoSimulado {
   readonly quantidade_minima: number
   readonly preco_arredondado_brl: string
+  readonly lucro_efetivo_brl: string
+  /** Margem bruta sobre o preço arredondado (antes das despesas de venda). */
+  readonly margem_efetiva_pct: string
+  readonly markup_efetivo_pct: string
+  /** Margem sobre o preço arredondado já descontadas as despesas variáveis de venda. */
+  readonly margem_liquida_efetiva_pct: string
 }
 
 /**
@@ -128,7 +152,12 @@ export function simularFaixasAtacado(
     const arred = arredondarComercial(p.preco_brl, final)
     const ant = out[out.length - 1]
     if (ant && parseDecimal(arred, 2) > parseDecimal(ant.preco_arredondado_brl, 2)) throw new PrecificacaoErro('FAIXA_PRECO_CRESCENTE')
-    out.push({ ...p, quantidade_minima: f.quantidade_minima, preco_arredondado_brl: arred })
+    // Entradas já validadas por simularPreco acima.
+    const ef = resultadoSobrePreco(parseDecimal(custoUnitario, 6), parseDecimal(arred, 2), despesasVendaPct ? parseDecimal(despesasVendaPct, 4) : 0n)
+    out.push({
+      ...p, quantidade_minima: f.quantidade_minima, preco_arredondado_brl: arred,
+      lucro_efetivo_brl: ef.lucro, margem_efetiva_pct: ef.margem, markup_efetivo_pct: ef.markup, margem_liquida_efetiva_pct: ef.margemLiquida,
+    })
   }
   return out
 }

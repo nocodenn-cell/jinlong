@@ -1,79 +1,57 @@
 import type { HomeContent } from '@/lib/content'
-import { isDraftChineseVisible } from '@/lib/publication'
-import type { SiteLocale } from '@/lib/locales'
-import { PdvWindow } from './PdvWindow'
-import { Mixed } from './Mixed'
-import { TrialCta } from './TrialCta'
 
-interface HeroProps {
-  locale: SiteLocale
-  content: HomeContent
-}
-
-function Chip({ content }: { content: HomeContent }) {
-  const { chipFirst, chipSecond } = content.hero
-  return (
-    <span className="jl-chip">
-      <span lang={chipFirst.lang}>{chipFirst.text}</span>
-      <span className="x" aria-hidden="true">
-        ⇄
-      </span>
-      <span lang={chipSecond.lang}>{chipSecond.text}</span>
-    </span>
-  )
-}
-
-export function Hero({ locale, content }: HeroProps) {
+/** Abertura cinematográfica: tudo decorativo é CSS (sem imagens nem JavaScript). */
+export function Hero({ content }: { content: HomeContent }) {
   const { hero } = content
-  const showChinese = isDraftChineseVisible()
   return (
     <section className="jl-hero" id="inicio" aria-labelledby="h-hero">
-      <div className="jl-hero-copy">
-        {showChinese && (
-          <span className="jl-sig" lang="zh-CN">
-            {hero.signature}
-          </span>
-        )}
-        <h1 id="h-hero">
-          {hero.h1.line1}
-          <br />
-          <span className="light">{hero.h1.line2}</span>
-          <br />
-          <em>{hero.h1.emphasis}</em>
-          {hero.h1.rest}
-        </h1>
-        <p className="jl-lead">{hero.lead}</p>
-        <div className="jl-hero-ctas">
-          <a className="jl-btn jl-btn--primary" href="#shiyong">
-            {hero.ctaTrial}
-            <span className="jl-arrow" aria-hidden="true">
-              →
-            </span>
-          </a>
-          <TrialCta locale={locale} label={hero.ctaContact} />
-          <a className="jl-btn jl-btn--link" href="#demonstracao">
-            {hero.ctaDemo}
-          </a>
-        </div>
-        <span className="jl-btn-note">{hero.trialNote}</span>
-        <ul className="jl-proof">
-          {hero.proof.map((item) => (
-            <li key={item}>
-              <Mixed text={item} locale={locale} />
-            </li>
-          ))}
-        </ul>
+      <div className="jl-hero-fx" aria-hidden="true">
+        <span className="jl-hero-noise" />
+        <span className="jl-hero-beam" />
+        <span className="jl-hero-glyph" lang="zh-CN">
+          龍
+        </span>
+        <span className="jl-orbit jl-orbit--1" />
+        <span className="jl-orbit jl-orbit--2" />
       </div>
-      <div className="jl-hero-stage">
-        {showChinese && <Chip content={content} />}
-        <PdvWindow locale={locale} copy={content.pdv} />
-        <div className="jl-float" aria-hidden="true">
-          <div className="k">{hero.floatTitle}</div>
-          <div className="v">
-            <b>R$ 18,50</b>
-            <s>R$ 22,90</s>
+      <div className="jl-wrap jl-hero-content">
+        <p className="jl-hero-label">
+          <span className="jl-gold-line" aria-hidden="true" />
+          {hero.label}
+          <span className="jl-hero-index" aria-hidden="true">
+            01 / 05
+          </span>
+        </p>
+        <div className="jl-hero-headline">
+          <h1 id="h-hero">
+            <span>{hero.h1.line1}</span>
+            <i>{hero.h1.line2}</i>
+            <span>{hero.h1.line3}</span>
+          </h1>
+          <div className="jl-hero-side">
+            <span className="jl-vline" aria-hidden="true" />
+            <p>{hero.lead}</p>
+            <a className="jl-cta-gold" href="#contato">
+              <span>{hero.ctaPrimary}</span>
+              <b aria-hidden="true">↗</b>
+            </a>
+            <a className="jl-quiet-link" href="#experiencia">
+              {hero.ctaSecondary} <span aria-hidden="true">↓</span>
+            </a>
           </div>
-          <p>{hero.floatNote}</p>
+        </div>
+        <p className="jl-hero-statement">
+          <span className="jl-hero-kanji" lang="zh-CN" aria-hidden="true">
+            金
+          </span>
+          {hero.statement}
+        </p>
+      </div>
+      <div className="jl-hero-bottom" aria-hidden="true">
+        <div className="jl-wrap">
+          {hero.bottom.map((item) => (
+            <span key={item}>{item}</span>
+          ))}
         </div>
       </div>
     </section>
