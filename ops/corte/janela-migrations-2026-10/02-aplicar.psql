@@ -1,0 +1,35 @@
+-- APLICAÇÃO — janela 20261022020000 + 20261023120000. ALTERA PRODUÇÃO.
+-- Só executar com autorização específica registrada em ROTEIRO.md e pré-checagem aprovada.
+-- Rodar da raiz do repositório (main atualizada):
+--   psql "$PROD_DB_URL" -v ON_ERROR_STOP=1 -f ops/corte/janela-migrations-2026-10/02-aplicar.psql
+-- Cada migration roda em sua própria transação e registra a versão REAL do arquivo.
+
+\set ON_ERROR_STOP 1
+
+-- ── 1/2: 20261022020000 (no-op em produção: a coluna não existe) ─────────────────
+\set v1 '20261022020000'
+\set n1 'pdv_config_gerente_senha_sha256_nullable'
+\set f1 `tr -d '\r' < backend/supabase/migrations/20261022020000_pdv_config_gerente_senha_sha256_nullable.sql`
+
+BEGIN;
+SELECT 1 / (CASE WHEN EXISTS (SELECT 1 FROM supabase_migrations.schema_migrations WHERE version = :'v1')
+                 THEN 0 ELSE 1 END) AS versao_1_ainda_ausente;
+:f1
+INSERT INTO supabase_migrations.schema_migrations (version, name, statements)
+VALUES (:'v1', :'n1', ARRAY[:'f1']);
+COMMIT;
+\echo 'OK 20261022020000'
+
+-- ── 2/2: 20261023120000 (REVOKE + ajuste do diagnóstico) ────────────────────────
+\set v2 '20261023120000'
+\set n2 'revoga_decrementar_estoque_seguro_authenticated'
+\set f2 `tr -d '\r' < backend/supabase/migrations/20261023120000_revoga_decrementar_estoque_seguro_authenticated.sql`
+
+BEGIN;
+SELECT 1 / (CASE WHEN EXISTS (SELECT 1 FROM supabase_migrations.schema_migrations WHERE version = :'v2')
+                 THEN 0 ELSE 1 END) AS versao_2_ainda_ausente;
+:f2
+INSERT INTO supabase_migrations.schema_migrations (version, name, statements)
+VALUES (:'v2', :'n2', ARRAY[:'f2']);
+COMMIT;
+\echo 'OK 20261023120000'
