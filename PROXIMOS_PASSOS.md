@@ -19,9 +19,11 @@
 
 ## P2 — Melhoria
 
+- Entrada única Jinlong: publicar o hub, cadastrar commercial_admins e definir NEXT_PUBLIC_HUB_URL no ERP (docs/AUDITORIA_ENTRADA_UNICA_JINLONG.md)
 - Ativar cobrança Asaas depois do primeiro ciclo manual (sandbox, depois produção com prova ponta a ponta: deploy asaas-webhook, secrets, cron de vencimentos)
 - Fase fiscal Focus NFC-e antes do segundo cliente
 
 ## Feito
 
+- 2026-10-23 — Entrada única "Entrar no Jinlong": admin da plataforma sem loja vai do login do ERP ao painel gerencial (inerte até configurar o hub)
 - 2026-10-22 — Análise de prontidão para cliente pagante e checklist de corte (docs/runbooks/CHECKLIST_CORTE_PRIMEIRO_CLIENTE_PAGANTE.md)
