@@ -6,7 +6,8 @@ import { SectionCard } from '@/components/ui/admin-v2'
 import { formatarDecimal } from '@/lib/import/hub/decimais'
 import type { Item } from '@/lib/import/hub/dadosImportacoes'
 import { buscarProdutosAction, removerRascunhoAction, salvarItemAction, type ItemInput } from '../actions'
-import { Campo, ErroFormulario, Texto, useAcao, type TextosImport } from './campos'
+import { opcoesMoeda } from '@/lib/import/hub/formImportacao'
+import { Campo, ErroFormulario, Selecao, Texto, useAcao, type TextosImport } from './campos'
 
 const vazio = (moeda: string): Required<{ [K in keyof ItemInput]: string }> => ({
   id: '',
@@ -191,11 +192,11 @@ export function MercadoriasSecao(props: {
                 </div>
               )}
             </Campo>
-            <Texto rotulo={t.merc_moeda} valor={form.moeda} onChange={(v) => set('moeda')(v.toUpperCase())} maxLength={3} obrigatorio />
+            <Selecao rotulo={t.merc_moeda} valor={form.moeda} onChange={set('moeda')} opcoes={opcoesMoeda(form.moeda)} obrigatorio testId="imp-item-moeda" />
             <Texto rotulo={t.merc_valor} valor={form.valor_mercadoria_moeda} onChange={set('valor_mercadoria_moeda')} modoNumerico obrigatorio testId="imp-item-valor" />
             <Texto rotulo={t.merc_valor_aduaneiro} valor={form.valor_aduaneiro_brl} onChange={set('valor_aduaneiro_brl')} modoNumerico />
             <Texto rotulo={t.merc_qtd_comercial} valor={form.quantidade_comercial} onChange={set('quantidade_comercial')} modoNumerico obrigatorio testId="imp-item-qtd" />
-            <Texto rotulo={t.merc_unidade} valor={form.unidade_comercial} onChange={set('unidade_comercial')} maxLength={10} obrigatorio />
+            <Texto rotulo={t.merc_unidade} valor={form.unidade_comercial} onChange={set('unidade_comercial')} maxLength={10} obrigatorio selecionarAoFocar />
             <Texto rotulo={t.merc_fator} valor={form.fator_para_estoque} onChange={set('fator_para_estoque')} modoNumerico obrigatorio testId="imp-item-fator" />
             <Texto rotulo={t.merc_qtd_estoque} dica={t.merc_qtd_estoque_hint} valor={form.quantidade_estoque} onChange={set('quantidade_estoque')} modoNumerico obrigatorio testId="imp-item-qtd-estoque" />
             <Texto rotulo={t.merc_peso_liquido} valor={form.peso_liquido_kg} onChange={set('peso_liquido_kg')} modoNumerico />
