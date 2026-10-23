@@ -16,12 +16,17 @@
 - Cobrar o primeiro ciclo manualmente (PIX/boleto)
 - Smoke presencial na máquina da loja (docs/runbooks/CHECKLIST_SMOKE_MAQUINA_LOJA.md)
 - Executar docs/runbooks/CHECKLIST_CORTE_PRIMEIRO_CLIENTE_PAGANTE.md
+- Aplicar a migration 20261023200000 (troca de operador) em homologação e testar com dois usuários reais antes de produção
 
 ## P2 — Melhoria
 
+- Histórico de operadores do caixa (caixa_operadores / pdv_operador_eventos) em /admin/auditoria
+- Troca de operador F4 (PDV desktop) e F5 (transferência formal com conferência de numerário)
 - Ativar cobrança Asaas depois do primeiro ciclo manual (sandbox, depois produção com prova ponta a ponta: deploy asaas-webhook, secrets, cron de vencimentos)
 - Fase fiscal Focus NFC-e antes do segundo cliente
 
 ## Feito
 
+- 2026-10-23 — Troca Segura de Operador F0–F3 no PDV web (gaveta do turno), migration e testes locais, sem aplicar em ambiente remoto
+- 2026-10-23 — Auditoria do operador de caixa e proposta de Troca Segura (AUDITORIA_OPERADOR_TROCA_SEGURA_2026-10-23.md)
 - 2026-10-22 — Análise de prontidão para cliente pagante e checklist de corte (docs/runbooks/CHECKLIST_CORTE_PRIMEIRO_CLIENTE_PAGANTE.md)

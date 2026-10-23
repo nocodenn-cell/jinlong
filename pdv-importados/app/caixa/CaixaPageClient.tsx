@@ -101,6 +101,13 @@ import { CaixaPdvOperadorTabs } from "@/app/caixa/CaixaPdvOperadorTabs"
 import { CaixaSelecionarClienteModal } from "@/app/caixa/CaixaSelecionarClienteModal"  // ✅ NOVO (Fase 5b)
 import { CaixaVendedorSelect } from "@/app/caixa/CaixaVendedorSelect"
 import { lembrarVendedor, aplicarVendedorAposVenda, vendedorInicial, type VendedorOpcao } from "@/app/caixa/caixaVendedor"
+import {
+  CaixaTrocaAvisos,
+  CaixaTrocaControles,
+  CaixaTrocaModais,
+  useCaixaTrocaOperador,
+} from "@/app/caixa/CaixaTrocaOperador"
+import { motivoTrocaBloqueada } from "@/app/caixa/caixaTrocaOperadorRegras"
 
 function newCupomSessionId(): string {
   return crypto.randomUUID()
@@ -249,6 +256,15 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const totalBruto = cartMounted ? totalBrutoStore : 0
   const totalDesconto = cartMounted ? totalDescontoStore : 0
   const totalLiquido = cartMounted ? totalLiquidoStore : 0
+
+  // Troca Segura de Operador (gaveta do turno): barra, avisos de turno liberado e tela de bloqueio por PIN.
+  const trocaOperador = useCaixaTrocaOperador({
+    m,
+    statusKey: `${caixaStatus?.status ?? ""}:${isCaixaAberto(caixaStatus) ? caixaStatus.caixaId : ""}`,
+    motivoBloqueada: motivoTrocaBloqueada({ itensNoCarrinho: itens.length, finalizando, processandoCaixa }),
+    onMudou: recarregarStatusCaixa,
+    aviso: setCaixaMensagem,
+  })
   // Ações têm referência estável no zustand — selecionadas individualmente, nunca causam re-render.
   const setRegras = useCarrinhoStore((s) => s.setRegras)
   const setCartOwnerForSession = useCarrinhoStore((s) => s.setCartOwnerForSession)
@@ -1657,7 +1673,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           printerDeviceName={thermal.deviceInfo?.name ?? thermal.savedInfo?.name}
           atalhosAbertos={atalhosReferenciaAberta}
           onAtalhosOpenChange={setAtalhosReferenciaAberta}
+          trocaSlot={<CaixaTrocaControles m={m} troca={trocaOperador} userId={userId} />}
         />
+        <CaixaTrocaAvisos m={m} troca={trocaOperador} />
         <div className="flex-1 flex flex-col min-h-0">
           <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[auto_minmax(0,1fr)] gap-3 px-4 sm:px-6 pt-4 pb-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(11.5rem,15rem)] md:grid-rows-[minmax(0,1fr)]">
             <div className="min-h-0 flex flex-col md:min-h-0">
@@ -2085,6 +2103,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         parseValor={parseValorMonetario}
         onConfirm={handleConfirmarAbrirTurno}
       />
+      <CaixaTrocaModais m={m} troca={trocaOperador} operadorLabel={operadorLabel} />
       {/* ✅ NOVO (Fase 5b): Modal para seleção de cliente */}
       <CaixaSelecionarClienteModal
         aberto={selecionarClienteModalAberto}
