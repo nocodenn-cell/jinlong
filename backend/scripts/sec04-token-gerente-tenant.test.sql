@@ -144,7 +144,16 @@ BEGIN
   IF NOT internal.token_gerente_fora_da_loja('sec04-test-dono-emp2-sem-loja', v_loja_a) THEN
     RAISE EXCEPTION 'SEC04_FALHOU: vínculo inativo ainda libera token entre empresas';
   END IF;
-  RAISE NOTICE 'Fronteira de empresa OK: DONO de outra empresa negado; própria empresa e vínculo ativo liberam.';
+  -- Vínculo GERENTE numa loja da empresa não libera as demais lojas dela; só a própria loja do vínculo.
+  INSERT INTO public.usuario_vinculos (usuario_id, empresa_id, loja_id, papel, ativo)
+  VALUES (v_dono_c, public.fp_empresa_da_loja(v_loja_a), 'f3000001-0000-4000-8000-00000000000b', 'GERENTE', true);
+  IF NOT internal.token_gerente_fora_da_loja('sec04-test-dono-emp2-sem-loja', v_loja_a) THEN
+    RAISE EXCEPTION 'SEC04_FALHOU: vínculo GERENTE em outra loja liberou a loja A';
+  END IF;
+  IF internal.token_gerente_fora_da_loja('sec04-test-dono-emp2-sem-loja', 'f3000001-0000-4000-8000-00000000000b') THEN
+    RAISE EXCEPTION 'SEC04_FALHOU: vínculo ativo na própria loja recusado';
+  END IF;
+  RAISE NOTICE 'Fronteira de empresa OK: DONO de outra empresa negado; própria empresa, vínculo DONO e vínculo na loja liberam.';
 END
 $empresa$;
 
