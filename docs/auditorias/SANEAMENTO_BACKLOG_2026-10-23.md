@@ -75,6 +75,41 @@ Escopo: os 43 PRs e a issue abertos no início da missão (`nocodenn-cell/fastpr
   - Não foi feito provisionamento ponta a ponta pela interface em produção, porque criaria empresa, loja e usuário reais.
 - **#624 e #629** atualizados com a main (`a8729ecf`, `7e578f7a`). No #629, os tipos auto-mesclados são idênticos aos gerados (main + `20261023130000`) e o teste do kardex passa. e2e e demais checks rodando de novo.
 
+## Atualização 2026-10-23 15:10 UTC — provisionamento, #629, #620/#623
+
+**Homologação não reproduz produção.**
+- `jinlong-homolog-palm` foi populado desde de manhã, mas parou em `20261019170000` (417 migrations contra 438 em produção).
+- Não tem as RPCs do trial nem o schema `saas`, nem a tabela `perfis`.
+- Tem `gerente_senha_sha256 NOT NULL`, o oposto de produção.
+- Não tem usuários nem app apontando para ele.
+- Tabela completa e plano de teste controlado em `docs/runbooks/TESTE_CONTROLADO_PROVISIONAMENTO_PRODUCAO.md`, **para aprovação**. Nenhuma empresa, loja ou usuário foi criado em produção.
+
+**Provisionamento ponta a ponta (lado banco) no banco representativo:** `backend/scripts/provisionamento-wizard-trial.test.sql`, OK.
+- **Wizard:** empresa + loja + `pdv_config` + 4 formas + 36 itens (3 concluídos) + 3 vínculos.
+- **Trial:** limite de 3 por IP em 24 h respeitado, `trial_fim` +15 dias, bootstrap completo, vínculo DONO.
+- **Permissões:** RPCs só `service_role`; DONO, GERENTE e OPERADOR do wizard e DONO do trial veem só a própria empresa.
+- Nenhum erro no log do Postgres.
+- **Fidelidade:** as 4 RPCs são byte a byte iguais às de produção (md5).
+- **Duas falhas de *harness* corrigidas no próprio teste**, nenhuma no produto:
+  - comparação de vínculos feita sob RLS dava falso positivo;
+  - `auth.role()` da imagem local só lê `request.jwt.claim.role`. Em produção lê também o JSON `claims` (conferido), então o OPERADOR vê a loja.
+- **Achado:** `bootstrapLojaTrial` engole erros (`.catch(console.error)`). Antes do #625, um trial em produção teria criado loja sem `pdv_config` sem avisar. Produção tem 1 loja, então nenhum trial foi afetado.
+
+**#629: validação completa** (comentário no PR):
+- segurança idêntica antes e depois (dono, SECURITY DEFINER, `search_path`, ACL, wrapper, policies, grants);
+- `authenticated` não consegue forjar o vínculo;
+- concorrência 3×10: 30/30 pares corretos e saldos consistentes;
+- rollback byte a byte;
+- tipos idênticos aos gerados.
+- **Continua sem merge** até aprovação específica.
+
+**#620:** `check:types-drift` falhava porque `20261022121000` cria `cobranca_liberar_assinar`, `cobranca_reservar_assinar` e `fp_sou_dono_da_empresa`. Branch atualizada com a main e tipos regenerados (diff = só as 3 funções) em `a86edfad`.
+- **Observação de deploy:** as mudanças de Edge Functions (`validar-gerente`, `sync-outbox`, `_shared/gerente-auth`) precisam de deploy manual depois do merge (integração desligada). O fallback para `pdv_config id=1` só vira vazamento entre empresas a partir da 2ª empresa.
+
+**#623:** a falha atual é de testes, não do produto. O trigger novo `PERFIL_ADMIN_DESCONTINUADO` bloqueia corretamente fixtures que ainda criam `ADMIN` em cerca de 20 arquivos de teste (ex.: `devolucao-d13`, `financial-adversarial-gates`, `item7-storage`, `fase1-hardening`, `test-rls-scope`). Vários deles testam comportamento **específico de ADMIN** ("ADMIN atualiza imagem de outra loja"), então reescrevê-los exige decidir o comportamento esperado sem ADMIN, caso a caso.
+- **Decisão de produto do dono/autor**, não correção mecânica.
+- Depois disso, os tipos também precisarão ser regenerados (herdam as 3 funções do #620).
+
 ## Dependabot e secrets (sem secret criado)
 
 - **Build (`pdv-importados`):**

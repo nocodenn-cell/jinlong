@@ -3,9 +3,9 @@
 ## P0 — Quebrado/travado
 
 - Aplicar em produção (janela manual) a migration 20261023120000 do #628, já na main, seguindo `docs/runbooks/APLICAR_20261023120000_REVOKE_ESTOQUE.md` (pré-checagem, backup, rollback e regressão testados em 2026-10-23)
-- Smoke de provisionamento pela interface em produção (wizard ou /teste-gratis), já com o deploy do #625. O bug de produção (`42703` ao inserir `pdv_config`) foi confirmado e o payload novo validado sem gravar dados; falta o fluxo ponta a ponta, que cria registros reais
-- Acompanhar o CI de #624 e #629 (rodando de novo com o #625 na main) e aprovar o merge de #629 (migration)
-- Revisar e aprovar #620 e #623: bloqueios de CI corrigidos em 2026-10-23 (fronteira de empresa no token de gerente; c1-secdef). A lógica atual de produção aceita token de DONO de outra empresa; não explorável com 1 empresa, bloqueia a 2ª empresa
+- Aprovar (ou ajustar) o teste controlado de provisionamento em produção: `docs/runbooks/TESTE_CONTROLADO_PROVISIONAMENTO_PRODUCAO.md`. Homologação não reproduz produção (parou em 20261019170000, sem RPCs do trial). O lado banco já está validado em `backend/scripts/provisionamento-wizard-trial.test.sql`
+- Aprovar o merge de #629 (migration validada: segurança, concorrência, rollback). #624 aguarda só o e2e
+- #620: CI corrigido (token entre empresas e tipos); revisar e aprovar; após merge, deploy manual das Edge Functions alteradas. #623: decidir o comportamento esperado sem ADMIN nos ~20 testes que ainda criam ADMIN; depois regenerar tipos
 - Reconciliar drift de migrations main × produção: em 2026-10-23 toda migration da main a partir de 20261019 está em produção com a mesma versão; restam 20261010120000 (adiada pela governança) e 20261023120000 (aplicação manual pendente). O check `migration-remote-drift` acusa como ausentes versões que existem em produção (ex.: 20261020100000–20261022010000); verificar para qual projeto aponta `SUPABASE_MIGRATION_CHECK_PROJECT_REF`
 - Decidir módulos marcados DRAFT já aplicados em produção (comissão #607, import intelligence #601): validar ou esconder do cliente
 - Congelar features até o corte do primeiro cliente (só hotfix P0 em produção)
