@@ -3,7 +3,7 @@
  * Generates a Uint8Array ready to be sent via WebUSB or serial.
  */
 
-import type { ReciboVenda, ReciboLabels } from "@/lib/caixa/reciboTypes"
+import { rotuloPagamentoRecibo, type ReciboVenda, type ReciboLabels } from "@/lib/caixa/reciboTypes"
 import { descontoProdutosLiquido } from "@/lib/caixa/reciboTotais"
 
 // ── ESC/POS command bytes ────────────────────────────────────────────────────
@@ -139,7 +139,7 @@ export function buildReciboEscPos(venda: ReciboVenda, labels: ReciboLabels, cols
 
   // ── Payments ──
   for (const p of venda.pagamentos) {
-    b.cols2(labels.formas[p.formaPagamento] ?? p.formaPagamento, brl(p.valor))
+    b.cols2(rotuloPagamentoRecibo(p, labels), brl(p.valor))
   }
 
   // ── Footer ──
