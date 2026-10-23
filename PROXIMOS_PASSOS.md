@@ -11,13 +11,15 @@
 - Corrigir view SECURITY DEFINER (Security Advisor ERROR) e ligar leaked password protection no Supabase Auth
 - Definir preço real em saas.planos (hoje placeholder) e contrato de piloto sem NFC-e/SLA
 - Revisar Termos e Privacidade (prometem emissão fiscal; fiscal é stub)
-- Registrar restore drill com RTO e limpar dados de teste se o cliente usar a loja existente
+- Provisionar empresa/loja nova para o cliente pelo wizard e validar o isolamento multiempresa (nenhum dado de outra loja visível); não usar o script de limpeza, que apaga dados de todos os tenants
+- Registrar restore drill com RTO a partir de um backup novo, tirado após a reconciliação de migrations
+- Cobrar o primeiro ciclo manualmente (PIX/boleto)
 - Smoke presencial na máquina da loja (docs/runbooks/CHECKLIST_SMOKE_MAQUINA_LOJA.md)
 - Executar docs/runbooks/CHECKLIST_CORTE_PRIMEIRO_CLIENTE_PAGANTE.md
 
 ## P2 — Melhoria
 
-- Ativar cobrança Asaas em produção (deploy asaas-webhook, secrets, cron de vencimentos)
+- Ativar cobrança Asaas depois do primeiro ciclo manual (sandbox, depois produção com prova ponta a ponta: deploy asaas-webhook, secrets, cron de vencimentos)
 - Fase fiscal Focus NFC-e antes do segundo cliente
 
 ## Feito
