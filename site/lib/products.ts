@@ -42,7 +42,7 @@ export interface SaleLine {
   wholesale: boolean
 }
 
-/** Venda de exemplo do hero: 2 + 12 + 1 itens = R$ 321,70 (conferido no teste). */
+/** Venda de exemplo do caixa (centro de comando): 2 + 12 + 1 itens = R$ 321,70 (conferido no teste). */
 export const HERO_SALE: readonly SaleLine[] = [
   { productId: 'garrafa', qty: 2, wholesale: false },
   { productId: 'kit', qty: 12, wholesale: true },
@@ -77,5 +77,19 @@ export function closingTotalCents(): number {
   return cashCents + pixCents + debitCents + creditCents
 }
 
-export const PANEL_KPIS = { itemsSold: 212, criticalItems: 3 } as const
-export const PANEL_BARS: readonly number[] = [40, 62, 48, 75, 58, 88, 70]
+/** Visão geral fictícia do centro de comando. */
+export const OVERVIEW_FIGURES = { salesCents: 318000, salesCount: 41, lowStockItems: 6 } as const
+
+/** Altura relativa (%) das barras do movimento do dia, por faixa horária. */
+export const DAY_BARS: readonly number[] = [34, 52, 42, 76, 62, 93, 69, 81]
+
+/** Mais vendidos do dia (quantidades fictícias). */
+export const TOP_SELLERS: ReadonlyArray<{ productId: string; qty: number }> = [
+  { productId: 'organizador', qty: 45 },
+  { productId: 'kit', qty: 32 },
+  { productId: 'garrafa', qty: 27 },
+]
+
+export function averageTicketCents(): number {
+  return Math.round(OVERVIEW_FIGURES.salesCents / OVERVIEW_FIGURES.salesCount)
+}

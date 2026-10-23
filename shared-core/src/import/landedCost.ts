@@ -94,6 +94,29 @@ export function calcularLandedCost(input: LandedCostInput): LandedResult {
   }
 }
 
+// ---------- quantidade comercial × fator ----------
+
+/** comercial (3) × fator (6) = escala 9; estoque (3) reescalado para 9. Igualdade exata, sem tolerância. */
+function estoqueConfere(qtdComercial: bigint, fator: bigint, qtdEstoque: bigint): boolean {
+  return qtdComercial * fator === qtdEstoque * potencia10(ESC_FATOR)
+}
+
+/**
+ * Mesma regra do `LANDED_QTD_FATOR_INCONSISTENTE`, exposta para validar o item ANTES de salvar.
+ * Entrada inválida (formato, escala, não positiva) → false; nunca lança.
+ */
+export function quantidadeEstoqueConsistente(qtdComercial: string, fator: string, qtdEstoque: string): boolean {
+  try {
+    const q = parseDecimal(qtdComercial, ESC_QTD)
+    const f = parseDecimal(fator, ESC_FATOR)
+    const e = parseDecimal(qtdEstoque, ESC_QTD)
+    return q > 0n && f > 0n && e > 0n && estoqueConfere(q, f, e)
+  } catch (err) {
+    if (err instanceof DecimalErro) return false
+    throw err
+  }
+}
+
 // ---------- leitura de valores ----------
 
 /** Lê decimal com escala máxima. Converte erro de formato em erro do motor com o campo informado. */
@@ -209,8 +232,7 @@ function calcula(input: LandedCostInput): LandedCostOutput {
     if (fator <= 0n) falha(LANDED_ERROR_CODES.FATOR_INVALIDO, it.id)
     const qtdEstoque = lerDecimal(it.quantidade_estoque, ESC_QTD, `item.${it.id}.quantidade_estoque`)
     if (qtdEstoque <= 0n) falha(LANDED_ERROR_CODES.QTD_INVALIDA, it.id)
-    // comercial (3) × fator (6) = escala 9; estoque (3) reescalado para 9
-    if (qtdComercial * fator !== qtdEstoque * potencia10(ESC_FATOR)) {
+    if (!estoqueConfere(qtdComercial, fator, qtdEstoque)) {
       falha(LANDED_ERROR_CODES.QTD_FATOR_INCONSISTENTE, it.id)
     }
 
