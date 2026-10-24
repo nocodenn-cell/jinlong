@@ -8,7 +8,7 @@ import {
   responsavelDiferente,
 } from '@/app/caixa/caixaTrocaOperadorRegras'
 
-const PIN = { ativo: false, minutos: 3 }
+const PIN = { exigido: false, minutos: 3 }
 
 describe('troca de operador — regras puras', () => {
   it('contexto vazio/inválido vira estado neutro (PDV igual ao de hoje)', () => {
@@ -25,7 +25,7 @@ describe('troca de operador — regras puras', () => {
         proprio_em_uso: { caixa_id: 'c2', operador_nome: 'Bruno', liberado: false, bloqueado: true },
         liberados: [{ caixa_id: 'c3', responsavel_nome: 'Carla', data_abertura: '2026-10-23T08:02:00Z' }],
       },
-      { ativo: true, minutos: 5 },
+      { exigido: true, minutos: 5 },
     )
     expect(c.operando).toEqual({ caixaId: 'c1', responsavelId: 'ana', responsavelNome: 'Ana' })
     expect(c.bloqueado).toEqual({ caixaId: 'c1' })

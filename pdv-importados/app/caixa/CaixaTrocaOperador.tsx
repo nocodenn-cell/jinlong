@@ -173,12 +173,12 @@ export function useCaixaTrocaOperador({
 
   // Bloqueio automático por inatividade: só com PIN exigido pela loja e o usuário operando o caixa.
   const operandoId = ctx?.operando?.caixaId ?? null
-  const pinAtivo = ctx?.pin.ativo === true
+  const pinExigido = ctx?.pin.exigido === true
   const minutos = minutosBloqueio(ctx?.pin.minutos)
   const bloquearRef = useRef(bloquear)
   bloquearRef.current = bloquear
   useEffect(() => {
-    if (!pinAtivo || !operandoId) return
+    if (!pinExigido || !operandoId) return
     let timer: ReturnType<typeof setTimeout> | null = null
     const armar = () => {
       if (timer) clearTimeout(timer)
@@ -190,7 +190,7 @@ export function useCaixaTrocaOperador({
       if (timer) clearTimeout(timer)
       for (const ev of EVENTOS_ATIVIDADE) globalThis.removeEventListener(ev, armar)
     }
-  }, [pinAtivo, operandoId, minutos])
+  }, [pinExigido, operandoId, minutos])
 
   return { ctx, confirmando, setConfirmando, processando, pedirTroca, confirmarTroca, assumir, bloquear, desbloquear }
 }
@@ -213,7 +213,7 @@ export function CaixaTrocaControles({ m, troca, userId }: { m: Mensagens; troca:
           {caixaFmt(m.caixa.topbar_turno_de, { nome: responsavel })}
         </span>
       ) : null}
-      {ctx.pin.ativo ? (
+      {ctx.pin.exigido ? (
         <Button
           type="button"
           size="sm"

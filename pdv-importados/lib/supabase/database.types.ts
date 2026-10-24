@@ -76,6 +76,68 @@ export type Database = {
         }
         Relationships: []
       }
+      caixa_operadores: {
+        Row: {
+          bloqueado_em: string | null
+          caixa_id: string
+          fim: string | null
+          id: string
+          inicio: string
+          loja_id: string
+          motivo_fim: string | null
+          usuario_id: string
+        }
+        Insert: {
+          bloqueado_em?: string | null
+          caixa_id: string
+          fim?: string | null
+          id?: string
+          inicio?: string
+          loja_id: string
+          motivo_fim?: string | null
+          usuario_id: string
+        }
+        Update: {
+          bloqueado_em?: string | null
+          caixa_id?: string
+          fim?: string | null
+          id?: string
+          inicio?: string
+          loja_id?: string
+          motivo_fim?: string | null
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "caixa_operadores_caixa_id_fkey"
+            columns: ["caixa_id"]
+            isOneToOne: false
+            referencedRelation: "caixas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "caixa_operadores_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "caixa_operadores_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["loja_id"]
+          },
+          {
+            foreignKeyName: "caixa_operadores_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       caixa_scan_telemetry_events: {
         Row: {
           correlation_id: string | null
@@ -8711,6 +8773,10 @@ export type Database = {
         Args: { p_importacao: string; p_remessa: string }
         Returns: undefined
       }
+      assumir_caixa_operador: {
+        Args: { p_caixa_id: string }
+        Returns: undefined
+      }
       ativar_dispositivo_pdv: {
         Args: {
           p_codigo: string
@@ -8752,6 +8818,7 @@ export type Database = {
         Returns: boolean
       }
       auth_usuario_loja_id: { Args: never; Returns: string }
+      bloquear_caixa_operador: { Args: { p_motivo?: string }; Returns: string }
       calcular_preco_produto: {
         Args: { p_loja_id?: string; p_produto_id: string; p_quantidade: number }
         Returns: Json
@@ -9015,6 +9082,10 @@ export type Database = {
       definir_vendedor_venda_pdv: {
         Args: { p_venda_id: string; p_vendedor_id: string }
         Returns: Json
+      }
+      desbloquear_caixa_operador: {
+        Args: { p_usuario: string }
+        Returns: string
       }
       desbloquear_pin_operador_pdv: {
         Args: { p_ator: string; p_usuario: string }
@@ -9531,6 +9602,7 @@ export type Database = {
         Args: { p_empresa: string; p_modulo: string }
         Returns: boolean
       }
+      fp_participa_caixa: { Args: { p_caixa_id: string }; Returns: boolean }
       fp_pdv_config_id: { Args: { p_loja?: string }; Returns: number }
       fp_pode_empresa: { Args: { p_empresa: string }; Returns: boolean }
       fp_pode_loja: {
@@ -9733,6 +9805,10 @@ export type Database = {
           vendas_concluidas: number
           vendas_registradas: number
         }[]
+      }
+      liberar_caixa_operador: {
+        Args: { p_caixa_id: string }
+        Returns: undefined
       }
       liquidar_comissoes: {
         Args: {
@@ -9972,6 +10048,7 @@ export type Database = {
         Args: { p_venda_id: string }
         Returns: undefined
       }
+      pdv_troca_contexto: { Args: never; Returns: Json }
       planos_catalogo: { Args: never; Returns: Json }
       plataforma_iniciar_trial: {
         Args: { p: Json; p_dias?: number }

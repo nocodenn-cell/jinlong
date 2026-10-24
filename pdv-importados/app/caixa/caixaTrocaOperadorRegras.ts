@@ -47,7 +47,7 @@ export type TrocaContexto = {
   proprioEmUso: { caixaId: string; operadorNome: string | null; liberado: boolean; bloqueado: boolean } | null
   /** Turnos da loja liberados para alguém assumir. */
   liberados: CaixaLiberado[]
-  pin: { ativo: boolean; minutos: number }
+  pin: { exigido: boolean; minutos: number }
 }
 
 const texto = (v: unknown): string | null => (typeof v === 'string' && v.trim() ? v : null)

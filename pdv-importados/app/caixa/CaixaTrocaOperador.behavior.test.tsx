@@ -30,7 +30,7 @@ const m = getMessages("pt")
 let container: HTMLDivElement
 let root: Root
 
-const base: TrocaContexto = { operando: null, bloqueado: null, proprioEmUso: null, liberados: [], pin: { ativo: false, minutos: 3 } }
+const base: TrocaContexto = { operando: null, bloqueado: null, proprioEmUso: null, liberados: [], pin: { exigido: false, minutos: 3 } }
 
 function Tela({ userId, motivo = null, aviso, onMudou }: { userId: string; motivo?: MotivoTrocaBloqueada; aviso: (t: string) => void; onMudou: () => void }) {
   const troca = useCaixaTrocaOperador({ m, statusKey: "k", motivoBloqueada: motivo, onMudou, aviso })
@@ -124,7 +124,7 @@ describe("Troca Segura de Operador — tela do caixa", () => {
 
   it("bloqueado: tela de PIN; PIN errado mostra erro; 4 dígitos certos desbloqueiam", async () => {
     actions.desbloquearCaixaComPin.mockResolvedValueOnce({ ok: false, erro: "pin_incorreto" })
-    await montar({ ...base, bloqueado: { caixaId: "c1" }, pin: { ativo: true, minutos: 3 } })
+    await montar({ ...base, bloqueado: { caixaId: "c1" }, pin: { exigido: true, minutos: 3 } })
     const input = q("caixa-bloqueio-pin") as HTMLInputElement
     expect(q("caixa-tela-bloqueio")).toBeTruthy()
     const digitar = async (v: string) => {
@@ -146,7 +146,7 @@ describe("Troca Segura de Operador — tela do caixa", () => {
   it("com PIN exigido, inatividade bloqueia o caixa no servidor", async () => {
     vi.useFakeTimers()
     actions.bloquearCaixaOperador.mockResolvedValue({ ok: true, data: undefined })
-    await montar({ ...base, operando: { caixaId: "c1", responsavelId: "bruno", responsavelNome: "Bruno" }, pin: { ativo: true, minutos: 1 } })
+    await montar({ ...base, operando: { caixaId: "c1", responsavelId: "bruno", responsavelNome: "Bruno" }, pin: { exigido: true, minutos: 1 } })
     expect(q("caixa-btn-bloquear")).toBeTruthy()
     await act(async () => {
       vi.advanceTimersByTime(60_000)

@@ -26,7 +26,7 @@ async function sessao() {
 
 /** Flags do PIN da loja (mesma regra da Edge sync-outbox: loja, depois padrão da empresa). */
 async function pinDaLoja(lojaId: string | null, usuarioId: string) {
-  if (!lojaId) return { ativo: false, minutos: BLOQUEIO_PADRAO_MIN }
+  if (!lojaId) return { exigido: false, minutos: BLOQUEIO_PADRAO_MIN }
   try {
     const admin = createAdminClient()
     const cols = 'exigir_pin_operador, bloqueio_inatividade_min'
@@ -41,11 +41,11 @@ async function pinDaLoja(lojaId: string | null, usuarioId: string) {
     }
     const cfg = (data ?? {}) as { exigir_pin_operador?: boolean; bloqueio_inatividade_min?: number }
     const minutos = Number(cfg.bloqueio_inatividade_min) > 0 ? Number(cfg.bloqueio_inatividade_min) : BLOQUEIO_PADRAO_MIN
-    if (cfg.exigir_pin_operador !== true) return { ativo: false, minutos }
+    if (cfg.exigir_pin_operador !== true) return { exigido: false, minutos }
     const { data: pin } = await admin.from('usuario_pin').select('usuario_id').eq('usuario_id', usuarioId).maybeSingle()
-    return { ativo: !!pin, minutos }
+    return { exigido: !!pin, minutos }
   } catch {
-    return { ativo: false, minutos: BLOQUEIO_PADRAO_MIN }
+    return { exigido: false, minutos: BLOQUEIO_PADRAO_MIN }
   }
 }
 
