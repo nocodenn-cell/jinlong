@@ -19,7 +19,7 @@
 
 ## P2 — Melhoria
 
-- Site Premium 2.0: liberar push da branch feat/jinlong-premium-commercial-2 (gera 1 Preview protegido do jinlong-site) e abrir PR
+- Ativar hub.jinlong.app: merge do #632, primeiro deploy Production do hub e smoke (docs/runbooks/PUBLICACAO_HUB_JINLONG.md)
 - Site Premium 2.0: configurar SITE_DEMO_SUPABASE_URL/ANON_KEY no Preview para homologar o formulário com gravação real
 - Site Premium 2.0: revisão nativa do chinês antes de NEXT_PUBLIC_SITE_ZH_REVIEWED=true
 - Ativar cobrança Asaas depois do primeiro ciclo manual (sandbox, depois produção com prova ponta a ponta: deploy asaas-webhook, secrets, cron de vencimentos)
@@ -31,5 +31,8 @@
 - 2026-10-23 — PRs #618 e #621 mergeados na main: migrations já aplicadas em produção agora versionadas; view produtos_custos com security_invoker
 - 2026-10-23 — Fase 1 preparada: drift main × produção mapeado e verificação somente leitura (ops/corte/CORTE.md)
 - 2026-10-23 — Checklist de corte mergeado na main (PR #626, 8217acfc)
-- 2026-10-23 — Site comercial Premium 2.0 implementado localmente (branch feat/jinlong-premium-commercial-2, sem push)
+- 2026-10-23 — Hub preparado para hub.jinlong.app: domínio no projeto, env de Preview, isolamento e bloqueio de não-admin validados
+- 2026-10-23 — Merge dos PRs #529, #624 e #631
+- 2026-10-23 — Entrada única "Entrar no Jinlong": admin da plataforma sem loja vai do login do ERP ao painel gerencial (inerte até configurar o hub)
+- 2026-10-23 — Site comercial Premium 2.0 implementado e mesclado (#631)
 - 2026-10-22 — Análise de prontidão para cliente pagante e checklist de corte (docs/runbooks/CHECKLIST_CORTE_PRIMEIRO_CLIENTE_PAGANTE.md)
