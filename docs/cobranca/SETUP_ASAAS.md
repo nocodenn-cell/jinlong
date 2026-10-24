@@ -79,6 +79,11 @@ A rota primeiro **concilia** (consulta no Asaas as cobranças de cada assinatura
 
 ## 5. Ciclo de status
 
+**GROWTH-001 (padrão):** a contratação passa pelo comercial. Em `/admin/assinatura` o dono só **solicita** a
+contratação (`commercial_solicitar_contratacao`); a conversão `TRIAL`/`TRIAL_EXPIRADO` ⇒ `ATIVA` é feita manualmente na
+Central de Conversão do hub (`commercial_converter_trial`, motivo `CONVERSAO_MANUAL`, sem Asaas). O fluxo abaixo
+(autoatendimento com cobrança no Asaas) só vale com `COBRANCA_AUTOATENDIMENTO=1` no servidor.
+
 `TRIAL` (15 dias) → dono assina em `/admin/assinatura` (1ª cobrança no fim do trial) → `PAYMENT_RECEIVED` ⇒ `ATIVA`.
 Fatura vencida ⇒ `INADIMPLENTE`; após `carencia_dias` (5) ⇒ `SUSPENSA`: grava `vendas_suspensas=true` + motivo
 na config da empresa (mesmo módulo de suspensão do gerente — caixa web e trigger de vendas bloqueiam).

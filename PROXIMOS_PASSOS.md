@@ -10,18 +10,21 @@
 
 - Corrigir view SECURITY DEFINER (Security Advisor ERROR) e ligar leaked password protection no Supabase Auth
 - Definir preço real em saas.planos (hoje placeholder) e contrato de piloto sem NFC-e/SLA
-- Revisar Termos e Privacidade (prometem emissão fiscal; fiscal é stub)
+- Revisar Termos e Privacidade (prometem emissão fiscal; fiscal é stub) e incluir o uso do contato do teste grátis pelo comercial (LGPD)
 - Provisionar empresa/loja nova para o cliente pelo wizard e validar o isolamento multiempresa (nenhum dado de outra loja visível); não usar o script de limpeza, que apaga dados de todos os tenants
 - Registrar restore drill com RTO a partir de um backup novo, tirado após a reconciliação de migrations
 - Cobrar o primeiro ciclo manualmente (PIX/boleto)
 - Smoke presencial na máquina da loja (docs/runbooks/CHECKLIST_SMOKE_MAQUINA_LOJA.md)
 - Executar docs/runbooks/CHECKLIST_CORTE_PRIMEIRO_CLIENTE_PAGANTE.md
+- GROWTH-001: revisar e aprovar o PR da Central de Conversão; com autorização, aplicar a migration 20261023130000 e só depois publicar o hub (deploy do ERP deixa o autoatendimento de assinatura desligado)
 
 ## P2 — Melhoria
 
 - Ativar cobrança Asaas depois do primeiro ciclo manual (sandbox, depois produção com prova ponta a ponta: deploy asaas-webhook, secrets, cron de vencimentos)
 - Fase fiscal Focus NFC-e antes do segundo cliente
+- Central de Conversão: botão de anonimizar/excluir dados do lead (direito de exclusão LGPD) e aviso por e-mail ao comercial quando um dono pedir contratação
 
 ## Feito
 
+- 2026-10-23 — GROWTH-001: Central de Conversão no hub (testes grátis, uso, interesse, contatos, prioridade e conversão manual sem cobrança automática); pedido de contratação no ERP
 - 2026-10-22 — Análise de prontidão para cliente pagante e checklist de corte (docs/runbooks/CHECKLIST_CORTE_PRIMEIRO_CLIENTE_PAGANTE.md)
