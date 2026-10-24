@@ -20,6 +20,9 @@
 
 ## P2 — Melhoria
 
+- Site Premium 2.0: liberar push da branch feat/jinlong-premium-commercial-2 (gera 1 Preview protegido do jinlong-site) e abrir PR
+- Site Premium 2.0: configurar SITE_DEMO_SUPABASE_URL/ANON_KEY no Preview para homologar o formulário com gravação real
+- Site Premium 2.0: revisão nativa do chinês antes de NEXT_PUBLIC_SITE_ZH_REVIEWED=true
 - Ativar cobrança Asaas depois do primeiro ciclo manual (sandbox, depois produção com prova ponta a ponta: deploy asaas-webhook, secrets, cron de vencimentos)
 - Fase fiscal Focus NFC-e antes do segundo cliente
 - Central de Conversão: botão de anonimizar/excluir dados do lead (direito de exclusão LGPD) e aviso por e-mail ao comercial quando um dono pedir contratação
@@ -27,4 +30,5 @@
 ## Feito
 
 - 2026-10-23 — GROWTH-001: Central de Conversão no hub (testes grátis, uso, interesse, contatos, prioridade e conversão manual sem cobrança automática); pedido de contratação no ERP
+- 2026-10-23 — Site comercial Premium 2.0 implementado localmente (branch feat/jinlong-premium-commercial-2, sem push)
 - 2026-10-22 — Análise de prontidão para cliente pagante e checklist de corte (docs/runbooks/CHECKLIST_CORTE_PRIMEIRO_CLIENTE_PAGANTE.md)
