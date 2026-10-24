@@ -12,6 +12,7 @@ import type { Mensagens } from '@/i18n/getMessages'
 import type { AppLocale } from '@shared-core/src/i18n'
 import { ROUTES } from '@/lib/navigation/routes'
 import { destinoPosLoginPorPerfil } from '@/lib/auth/painelGerencial'
+import { hubLoginUrl } from '@/lib/auth/painelPlataforma'
 import { isContaDesativada } from '@/core/auth/contaUsuario'
 import { fmtTemplate } from '@/i18n/fmtTemplate'
 import { toLegacyIdioma } from '@shared-core/src/i18n'
@@ -131,6 +132,16 @@ export function LoginForm({ messages: m, locale }: Props) {
       }
 
       if (!u) {
+        // Administrador da plataforma (sem loja no ERP) → painel gerencial (hub).
+        const hub = hubLoginUrl()
+        if (hub) {
+          const { data: admin } = await supabase.rpc('is_commercial_admin')
+          if (admin === true) {
+            await supabase.auth.signOut()
+            window.location.assign(hub)
+            return
+          }
+        }
         setErro(L.erro_conta_nao_vinculada)
         return
       }
