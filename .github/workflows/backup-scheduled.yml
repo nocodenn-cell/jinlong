@@ -67,7 +67,7 @@ jobs:
           sudo apt-get install -y age postgresql-client
 
       - name: Checkout (scripts de backup)
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
         with:
           sparse-checkout: backend/scripts
       - name: Selecionar metodo de acesso ao banco
