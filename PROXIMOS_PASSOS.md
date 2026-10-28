@@ -2,6 +2,7 @@
 
 ## P0 — Quebrado/travado
 
+- Aplicar `20261028120000` (revoke dos 4 helpers de tenant, auditoria SECDEF) em produção pelo runbook `docs/runbooks/APLICAR_20261028120000_REVOKE_HELPERS_TENANT.md`; até lá o `migration-remote-drift` falha em todo PR atualizado com a main
 - Smoke de venda real após a aplicação de 20261023120000 (#628): pós-checagem de catálogo OK em 2026-10-28, mas nenhuma venda desde 2026-10-16 para provar a baixa de estoque online/offline sob o novo privilégio
 - Aprovar (ou ajustar) o teste controlado de provisionamento em produção: `docs/runbooks/TESTE_CONTROLADO_PROVISIONAMENTO_PRODUCAO.md`. Homologação não reproduz produção (parou em 20261019170000, sem RPCs do trial). O lado banco já está validado em `backend/scripts/provisionamento-wizard-trial.test.sql`
 - Aprovar o merge de #629 (migration validada: segurança, concorrência, rollback)
