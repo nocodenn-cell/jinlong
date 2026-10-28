@@ -16,13 +16,13 @@
 - Cobrar o primeiro ciclo manualmente (PIX/boleto)
 - Smoke presencial na máquina da loja (docs/runbooks/CHECKLIST_SMOKE_MAQUINA_LOJA.md)
 - Executar docs/runbooks/CHECKLIST_CORTE_PRIMEIRO_CLIENTE_PAGANTE.md
-- Aplicar a migration 20261023200000 (troca de operador) em homologação e testar com dois usuários reais antes de produção
+- Testar a troca de operador na homologação com dois usuários reais (trocar, assumir, bloquear com PIN, fechar) antes do label deploy-prod:aprovado no #634
 
 ## P2 — Melhoria
 
 - Histórico de operadores do caixa (caixa_operadores / pdv_operador_eventos) em /admin/auditoria
 - Troca de operador F4 (PDV desktop) e F5 (transferência formal com conferência de numerário)
-- Site Premium 2.0: liberar push da branch feat/jinlong-premium-commercial-2 (gera 1 Preview protegido do jinlong-site) e abrir PR
+- Ativar hub.jinlong.app: merge do #632, primeiro deploy Production do hub e smoke (docs/runbooks/PUBLICACAO_HUB_JINLONG.md)
 - Site Premium 2.0: configurar SITE_DEMO_SUPABASE_URL/ANON_KEY no Preview para homologar o formulário com gravação real
 - Site Premium 2.0: revisão nativa do chinês antes de NEXT_PUBLIC_SITE_ZH_REVIEWED=true
 - Ativar cobrança Asaas depois do primeiro ciclo manual (sandbox, depois produção com prova ponta a ponta: deploy asaas-webhook, secrets, cron de vencimentos)
@@ -30,7 +30,11 @@
 
 ## Feito
 
-- 2026-10-23 — Troca Segura de Operador F0–F3 no PDV web (gaveta do turno), migration e testes locais, sem aplicar em ambiente remoto
+- 2026-10-28 — Migrations 20261021230000 (PIN) e 20261023200000 (troca de operador) aplicadas na homologação jinlong-homolog-palm, com a versão do repositório
+- 2026-10-23 — Troca Segura de Operador F0–F3 no PDV web (gaveta do turno), PR #634
 - 2026-10-23 — Auditoria do operador de caixa e proposta de Troca Segura (AUDITORIA_OPERADOR_TROCA_SEGURA_2026-10-23.md)
-- 2026-10-23 — Site comercial Premium 2.0 implementado localmente (branch feat/jinlong-premium-commercial-2, sem push)
+- 2026-10-23 — Hub preparado para hub.jinlong.app: domínio no projeto, env de Preview, isolamento e bloqueio de não-admin validados
+- 2026-10-23 — Merge dos PRs #529, #624 e #631
+- 2026-10-23 — Entrada única "Entrar no Jinlong": admin da plataforma sem loja vai do login do ERP ao painel gerencial (inerte até configurar o hub)
+- 2026-10-23 — Site comercial Premium 2.0 implementado e mesclado (#631)
 - 2026-10-22 — Análise de prontidão para cliente pagante e checklist de corte (docs/runbooks/CHECKLIST_CORTE_PRIMEIRO_CLIENTE_PAGANTE.md)
