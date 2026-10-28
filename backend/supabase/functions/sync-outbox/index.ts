@@ -754,6 +754,15 @@ async function processVenda(
     !(await descontoAutorizadoPorPinGerente(supabase, payload, ctx))) {
     throw new Error("GERENTE_TOKEN_OBRIGATORIO");
   }
+  // 20261028120000: em dispositivo ativado, o token informado precisa existir, ser da loja do dispositivo e ter
+  // emissor/aprovador ATIVOS e vinculados agora (usuário inativado ⇒ token revogado). Fail closed.
+  if (strictManagerDiscountAuth && hasManagerDiscount && payload.desconto_gerente_token && ctx?.mode === "dispositivo") {
+    const { data: vale, error: valeErr } = await supabase.rpc("fp_token_gerente_vale_na_loja", {
+      p_token: payload.desconto_gerente_token,
+      p_loja_id: ctx.lojaId,
+    });
+    if (valeErr || vale !== true) throw new Error("GERENTE_TOKEN_INVALIDO_OU_REVOGADO");
+  }
 
   const rpcVenda = temParcelamento(payload.pagamentos) ? "registrar_venda_com_itens_v2" : "registrar_venda_com_itens";
   const rpcVendaArgs = {

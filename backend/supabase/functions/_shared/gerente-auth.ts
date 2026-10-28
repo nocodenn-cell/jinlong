@@ -383,6 +383,28 @@ async function respondSenhaGerenteInvalida(
   return { ok: false, status: 401, body: { ok: false, error: "SENHA_INVALIDA" } };
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Insere o token legado com `aprovador_id`. Compatibilidade de implantação: se o banco ainda não tem a coluna
+ * (migration 20261028120000 não aplicada), repete sem ela e registra aviso — a ordem correta é migration antes
+ * da Edge (ver RELATORIO_HOMOLOGACAO / checklist).
+ */
+export async function inserirTokenGerente(
+  supabase: any,
+  row: Record<string, unknown>,
+  log: LoggerFn,
+  logStage: string,
+): Promise<{ error: { message: string } | null }> {
+  const r = await supabase.from("tokens_desconto_gerente").insert(row);
+  if (r?.error && /aprovador_id/.test(String(r.error.message ?? ""))) {
+    log({ level: "warn", stage: logStage, error: "TOKEN_APROVADOR_COLUNA_AUSENTE" });
+    const { aprovador_id: _ignorado, ...semAprovador } = row;
+    return await supabase.from("tokens_desconto_gerente").insert(semAprovador);
+  }
+  return r;
+}
+
 async function persistTokenAndResetLimits(
   supabase: any,
   token: string,
@@ -421,13 +443,15 @@ async function persistTokenAndResetLimits(
       expira_em: expiraEm,
       usado: false,
     })
-    : await supabase.from("tokens_desconto_gerente").insert({
+    : await inserirTokenGerente(supabase, {
       token,
       expira_em: expiraEm,
       usado: false,
       loja_id: lojaId,
       criado_por: tokenCreatedBy,
-    });
+      // 20261028120000: o banco confere o aprovador (ativo + vínculo na empresa) no CONSUMO.
+      aprovador_id: UUID_RE.test(gerenteAprovadorId) ? gerenteAprovadorId : null,
+    }, log, logStage);
   const { error: insertError } = insertResult;
   if (insertError) {
     log({ level: "error", stage: logStage, error: insertError.message });

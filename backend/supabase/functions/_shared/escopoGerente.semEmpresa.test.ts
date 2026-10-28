@@ -39,13 +39,13 @@ Deno.test("SEC-04b: sem loja/vínculo e sem loja_id ⇒ recusa (sem empresa)", a
 });
 
 Deno.test("SEC-04b: loja sem empresa resolvível ⇒ recusa (nunca empresaId null)", async () => {
-  const db = fake({ usuarios: [{ id: "u", loja_id: LA }], lojas: [{ id: LA, empresa_id: null }] }, { semVinculos: true });
+  const db = fake({ usuarios: [{ id: "u", loja_id: LA, perfil: "GERENTE", ativo: true }], lojas: [{ id: LA, empresa_id: null }] }, { semVinculos: true });
   assertEquals(await resolverEscopoGerente(db, "u", null), { ok: false, error: ESCOPO_SEM_EMPRESA });
 });
 
 Deno.test("SEC-04b: empresa válida ⇒ usa a empresa da loja (config dessa empresa)", async () => {
   const db = fake({
-    usuarios: [{ id: "u", loja_id: LB }],
+    usuarios: [{ id: "u", loja_id: LB, perfil: "GERENTE", ativo: true }],
     usuario_vinculos: [{ usuario_id: "u", empresa_id: "E2", loja_id: LB, papel: "GERENTE", ativo: true }],
     lojas: [{ id: LA, empresa_id: "E1" }, { id: LB, empresa_id: "E2" }],
   });

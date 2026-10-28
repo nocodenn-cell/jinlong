@@ -147,10 +147,17 @@ BEGIN
   -- Vínculo GERENTE numa loja da empresa não libera as demais lojas dela; só a própria loja do vínculo.
   INSERT INTO public.usuario_vinculos (usuario_id, empresa_id, loja_id, papel, ativo)
   VALUES (v_dono_c, public.fp_empresa_da_loja(v_loja_a), 'f3000001-0000-4000-8000-00000000000b', 'GERENTE', true);
-  IF NOT internal.token_gerente_fora_da_loja('sec04-test-dono-emp2-sem-loja', v_loja_a) THEN
+  -- #623 (20261028120000): desativar um vínculo REVOGA os tokens pendentes do emissor (fail closed). O token
+  -- anterior foi revogado no UPDATE acima; a matriz de vínculo segue provada com um token novo.
+  IF NOT EXISTS (SELECT 1 FROM public.tokens_desconto_gerente WHERE token = 'sec04-test-dono-emp2-sem-loja' AND revogado_em IS NOT NULL) THEN
+    RAISE EXCEPTION 'SEC04_FALHOU: desativar vínculo não revogou o token pendente do emissor';
+  END IF;
+  INSERT INTO public.tokens_desconto_gerente (token, expira_em, usado, loja_id, criado_por)
+  VALUES ('sec04-test-dono-emp2-sem-loja-2', now() + interval '5 min', false, NULL, v_dono_c);
+  IF NOT internal.token_gerente_fora_da_loja('sec04-test-dono-emp2-sem-loja-2', v_loja_a) THEN
     RAISE EXCEPTION 'SEC04_FALHOU: vínculo GERENTE em outra loja liberou a loja A';
   END IF;
-  IF internal.token_gerente_fora_da_loja('sec04-test-dono-emp2-sem-loja', 'f3000001-0000-4000-8000-00000000000b') THEN
+  IF internal.token_gerente_fora_da_loja('sec04-test-dono-emp2-sem-loja-2', 'f3000001-0000-4000-8000-00000000000b') THEN
     RAISE EXCEPTION 'SEC04_FALHOU: vínculo ativo na própria loja recusado';
   END IF;
   RAISE NOTICE 'Fronteira de empresa OK: DONO de outra empresa negado; própria empresa, vínculo DONO e vínculo na loja liberam.';

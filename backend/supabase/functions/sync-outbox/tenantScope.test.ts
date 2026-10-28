@@ -99,3 +99,13 @@ Deno.test("OPERADOR_EVENTO (PIN): loja do dispositivo e usuário com vínculo", 
   await assertRejects(() => assertEventoNoEscopo(ev("OPERADOR_EVENTO", { id: "e", loja_id: LOJA_A, usuario_id: OP_B }), ctxA, lookups), Error, "EVENTO_OPERADOR_SEM_VINCULO");
   await assertRejects(() => assertEventoNoEscopo(ev("OPERADOR_EVENTO", { id: "e", usuario_id: OP_A }), ctxA, lookups), Error, "EVENTO_LOJA_OBRIGATORIA");
 });
+
+// 20261028 (decisão do dono, item 3): operador inativado/sem vínculo não fecha caixa nem em replay offline.
+Deno.test("CAIXA_FECHADO com operador sem vínculo ativo na loja ⇒ EVENTO_OPERADOR_SEM_VINCULO", async () => {
+  await assertRejects(
+    () => assertEventoNoEscopo(ev("CAIXA_FECHADO", { id: CAIXA_A, operador_id: OP_B }), ctxA, lookups),
+    Error,
+    "EVENTO_OPERADOR_SEM_VINCULO",
+  );
+  await assertEventoNoEscopo(ev("CAIXA_FECHADO", { id: CAIXA_A, operador_id: OP_A }), ctxA, lookups);
+});
