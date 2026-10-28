@@ -1,6 +1,6 @@
 -- Rollback de 20261028120000_sec_tokens_usuario_inativo_revogacao.sql (somente com autorização do dono).
 -- Remove gatilhos/helpers novos e devolve token_gerente_fora_da_loja e consumir_token_autorizacao_operacao às
--- definições vigentes após 20261022130000_corte_admin_papeis.sql (copiadas abaixo, extraídas do banco de homologação). Colunas novas e a trilha
+-- definições vigentes após 20261028110000_corte_admin_papeis.sql (copiadas abaixo, extraídas do banco de homologação). Colunas novas e a trilha
 -- internal.tokens_revogacao_log ficam (aditivas, sem efeito sem os gatilhos) — preservam a auditoria.
 BEGIN;
 DROP TRIGGER IF EXISTS trg_token_gerente_consumo ON public.tokens_desconto_gerente;

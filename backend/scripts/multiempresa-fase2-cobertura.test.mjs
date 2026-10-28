@@ -177,7 +177,7 @@ await t('servidor sem empresa_id com 2+ empresas: erro explícito (sem linha ór
   await assert.rejects(db.query(`INSERT INTO public.marcas (nome) VALUES ('órfã')`), /EMPRESA_ID_OBRIGATORIA/)
 })
 
-// #623 (20261022130000): ADMIN descontinuado — não há mais perfil global (substitui o antigo "compat D9").
+// #623 (20261028110000): ADMIN descontinuado — não há mais perfil global (substitui o antigo "compat D9").
 await t('ADMIN descontinuado: perfil recusado e usuário sem vínculo não vê nada de A nem de B', async () => {
   await assert.rejects(db.query(`INSERT INTO public.usuarios (id, nome, perfil, loja_id) VALUES ('${U.admin}', 'Admin', 'ADMIN', '${LA}')`),
     /PERFIL_ADMIN_DESCONTINUADO/)

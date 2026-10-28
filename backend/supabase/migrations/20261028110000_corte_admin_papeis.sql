@@ -1,10 +1,12 @@
--- 20261022130000_corte_admin_papeis.sql
+-- 20261028110000_corte_admin_papeis.sql
+-- Versão renomeada em 28/10/2026 (era 20261022130000_…) para ficar depois da 20261023120000 da main, já aplicada em
+-- produção; SQL inalterado (só referências de versão em comentários). Nunca foi aplicada em produção (schema_migrations conferido, somente leitura).
 -- Fase "Corte ADMIN" (ESPEC_MULTIEMPRESA_V1 §6, etapa 11): o perfil global legado ADMIN deixa de ter
 -- qualquer poder dentro das lojas/empresas. Papéis do cliente: DONO, GERENTE, OPERADOR.
 -- Acesso da equipe da plataforma (Nature Code) fica fora do sistema das lojas (hub comercial) — nada novo aqui.
 --
 -- NÃO APLICAR no Supabase remoto sem revisão do dono e validação em homologação. Depende do PR #620
--- (20261022120000_sec_token_gerente_loja_nula_fora_da_loja e 20261022121000_cobranca_correcoes_revisao_585).
+-- (20261028100000_sec_token_gerente_loja_nula_fora_da_loja e 20261028101000_cobranca_correcoes_revisao_585).
 --
 -- O que faz (aditivo; não remove valor de CHECK nem apaga linhas):
 --  1. backup dos usuários ADMIN (perfil, ativo, loja cadastral) e de TODOS os vínculos deles (rollback);
@@ -20,7 +22,7 @@
 --
 -- Pré-checagem (somente leitura), 22/10/2026 em produção: 1 usuário ADMIN, já inativo, sem vínculo.
 --   SELECT perfil, ativo, count(*) FROM public.usuarios WHERE perfil = 'ADMIN' GROUP BY 1, 2;
--- Rollback: backend/supabase/rollback/20261022130000_corte_admin_papeis.rollback.sql
+-- Rollback: backend/supabase/rollback/20261028110000_corte_admin_papeis.rollback.sql
 
 BEGIN;
 
@@ -131,7 +133,7 @@ RETURNS boolean LANGUAGE sql STABLE SECURITY INVOKER SET search_path = public AS
   SELECT false; -- Corte ADMIN
 $$;
 COMMENT ON FUNCTION public.auth_usuario_eh_admin() IS
-  'Descontinuado (Corte ADMIN 20261022130000): sempre false. Mantido para as policies antigas que o chamam.';
+  'Descontinuado (Corte ADMIN 20261028110000): sempre false. Mantido para as policies antigas que o chamam.';
 
 CREATE OR REPLACE FUNCTION public.fp_pode_loja(p_loja uuid, p_papeis text[] DEFAULT NULL)
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
@@ -167,7 +169,7 @@ END $$;
 REVOKE ALL ON FUNCTION public.vincular_usuario_loja(uuid, uuid, text, uuid) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.vincular_usuario_loja(uuid, uuid, text, uuid) TO service_role;
 
--- Token de gerente: mesma regra de 20261022120000 (#620), sem o perfil ADMIN. Emissor ausente ⇒ fora; emissor
+-- Token de gerente: mesma regra de 20261028100000 (#620), sem o perfil ADMIN. Emissor ausente ⇒ fora; emissor
 -- não-DONO só vale na própria loja; loja_id gravado divergente ⇒ fora; emissor DONO só vale em loja da empresa da
 -- loja dele ou de empresa onde tem vínculo DONO ativo (ou vínculo ativo na própria loja). Preserva o token sem
 -- loja_id do próprio usuário da loja e o Padrão A (DONO em outra loja da MESMA empresa) — casos do sec04.

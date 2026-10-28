@@ -2,8 +2,8 @@
 -- Decisão do dono (28/10/2026, item 3 "Tokens de usuários inativos — corrigir antes do GO"):
 -- usuário inativado ou sem vínculo NÃO pode continuar executando operações protegidas com tokens antigos.
 --
--- NÃO APLICAR no Supabase remoto sem autorização expressa. Depende de #620 (20261022120000, 20261022121000)
--- e #623 (20261022130000_corte_admin_papeis). Aditivo; rollback em
+-- NÃO APLICAR no Supabase remoto sem autorização expressa. Depende de #620 (20261028100000, 20261028101000)
+-- e #623 (20261028110000_corte_admin_papeis). Aditivo; rollback em
 -- backend/supabase/rollback/20261028120000_sec_tokens_usuario_inativo_revogacao.rollback.sql
 --
 -- Regra única, verificada NO USO (não na emissão):

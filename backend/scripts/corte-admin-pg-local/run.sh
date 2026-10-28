@@ -19,8 +19,8 @@ for f in fp_admin_legado fp_usuario_pode_loja; do
   awk "/CREATE OR REPLACE FUNCTION public.$f\\(/,/^\\\$\\\$;/" "$M/20261019140000_multiempresa_fase2_guardas.sql"
 done | $P -d t
 $P -d t -f "$DIR/seed.sql"
-$P -d t -f "$M/20261022120000_sec_token_gerente_loja_nula_fora_da_loja.sql"
+$P -d t -f "$M/20261028100000_sec_token_gerente_loja_nula_fora_da_loja.sql"
 $P -d t -f "$DIR/antes.sql"
-$P -d t -f "$M/20261022130000_corte_admin_papeis.sql"
+$P -d t -f "$M/20261028110000_corte_admin_papeis.sql"
 OUT="$($P -d t -f "$DIR/test.sql")"; echo "$OUT"
 ! echo "$OUT" | grep -q FALHOU
