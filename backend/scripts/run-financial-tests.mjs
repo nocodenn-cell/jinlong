@@ -69,6 +69,8 @@ const SQL_SUITES = [
   'sec-tokens-usuario-inativo.test.sql',
   // 20261028130000: sync-outbox legado validado + fila de revisão de vendas offline de inativado.
   'sync-outbox-revisao-offline.test.sql',
+  // 20261028140000: caixas.loja_id explícito e da mesma empresa do operador.
+  'caixas-loja-mesma-empresa.test.sql',
 ]
 
 /** `psql` está de fato instalado e executável neste host? */
