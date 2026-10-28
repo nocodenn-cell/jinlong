@@ -7064,6 +7064,84 @@ export type Database = {
           },
         ]
       }
+      sync_eventos_revisao: {
+        Row: {
+          caixa_id: string | null
+          classificacao: string
+          decidido_em: string | null
+          decidido_por: string | null
+          decisao_motivo: string | null
+          device_fingerprint: string | null
+          dispositivo_id: string | null
+          empresa_id: string
+          event_id: string
+          evidencias: Json
+          horario_dispositivo: string | null
+          id: string
+          loja_id: string
+          motivo: string
+          operador_id: string | null
+          origem: string
+          payload: Json
+          payload_sha256: string
+          recebido_em: string
+          seq: number
+          status: string
+          tipo: string
+          venda_id: string | null
+        }
+        Insert: {
+          caixa_id?: string | null
+          classificacao: string
+          decidido_em?: string | null
+          decidido_por?: string | null
+          decisao_motivo?: string | null
+          device_fingerprint?: string | null
+          dispositivo_id?: string | null
+          empresa_id: string
+          event_id: string
+          evidencias?: Json
+          horario_dispositivo?: string | null
+          id?: string
+          loja_id: string
+          motivo: string
+          operador_id?: string | null
+          origem: string
+          payload: Json
+          payload_sha256: string
+          recebido_em?: string
+          seq?: number
+          status?: string
+          tipo: string
+          venda_id?: string | null
+        }
+        Update: {
+          caixa_id?: string | null
+          classificacao?: string
+          decidido_em?: string | null
+          decidido_por?: string | null
+          decisao_motivo?: string | null
+          device_fingerprint?: string | null
+          dispositivo_id?: string | null
+          empresa_id?: string
+          event_id?: string
+          evidencias?: Json
+          horario_dispositivo?: string | null
+          id?: string
+          loja_id?: string
+          motivo?: string
+          operador_id?: string | null
+          origem?: string
+          payload?: Json
+          payload_sha256?: string
+          recebido_em?: string
+          seq?: number
+          status?: string
+          tipo?: string
+          venda_id?: string | null
+        }
+        Relationships: []
+      }
       sync_request_nonces: {
         Row: {
           created_at: string
@@ -10351,6 +10429,10 @@ export type Database = {
         }[]
       }
       retomar_venda_em_espera: { Args: { p_id: string }; Returns: Json }
+      revisar_evento_offline: {
+        Args: { p_decisao: string; p_id: string; p_motivo: string }
+        Returns: Json
+      }
       round_abnt: {
         Args: { p_scale?: number; p_value: number }
         Returns: number
@@ -10365,6 +10447,19 @@ export type Database = {
           tem_pin: boolean
           usuario_id: string
         }[]
+      }
+      sync_avaliar_evento: { Args: { p: Json }; Returns: Json }
+      sync_enfileirar_revisao: { Args: { p: Json }; Returns: Json }
+      sync_registrar_recebimento: {
+        Args: {
+          p_dispositivo: string
+          p_event_id: string
+          p_fingerprint: string
+          p_origem: string
+          p_payload_sha256: string
+          p_tipo: string
+        }
+        Returns: undefined
       }
       texto_sem_acento: { Args: { texto: string }; Returns: string }
       transferir_estoque_entre_lojas: {
