@@ -22,6 +22,7 @@
 - Cobrar o primeiro ciclo manualmente (PIX/boleto)
 - Smoke presencial na máquina da loja (docs/runbooks/CHECKLIST_SMOKE_MAQUINA_LOJA.md)
 - Executar docs/runbooks/CHECKLIST_CORTE_PRIMEIRO_CLIENTE_PAGANTE.md
+- Aplicar na homologação (jinlong-homolog-palm) a migration 20261021120000_vendas_pagamentos_parcelas_credito (coluna vendas_pagamentos.parcelas) antes de exibir parcelas no detalhe admin e na 2ª via do cupom
 
 ## P2 — Melhoria
 
@@ -37,9 +38,12 @@
 - Advisor onda 3: auditar as SECURITY DEFINER executáveis por authenticated e criar guarda de CI para novas sem `auth.uid()`
 - Corrigir fixture de `pr1b-kardex-imutavel.test.sql` (loja sem empresa → `LOJA_SEM_EMPRESA`) e check 30 de `verify_p0_producao.sql` (assinatura antiga da v4)
 - Atualizar o homolog `jinlong-homolog-palm` (parou em 20261019170000: sem RPCs do trial, sem `perfis`, sem usuários) para testar migrations antes de produção
+- Contas a receber: pré-preencher o parcelamento do recebível de crédito a partir de vendas_pagamentos.parcelas (hoje é configuração manual)
+- Mostrar as parcelas do crédito no detalhe da venda (admin) e na 2ª via, depois da coluna existir na homologação
 
 ## Feito
 
+- 2026-10-23 — PDV web: seletor de parcelas do crédito mostra "3x de R$ 33,33 (última R$ 33,34)" em vez de "{n}x" e o cupom mostra "Crédito 3x" (PR pendente de revisão)
 - 2026-10-23 — #625 mergeado com autorização (ed3dee81): deploy do pdv-importados READY, banco de produção inalterado, provisionamento de loja/trial deixa de falhar com 42703
 - 2026-10-23 — Saneamento do backlog: 43 PRs e 1 issue auditados; #543, #446, #497 encerrados com justificativa; #546, #583 corrigidos; #586 implementada em #629; relatório em `docs/auditorias/SANEAMENTO_BACKLOG_2026-10-23.md`
 - 2026-10-23 — #618 e #621 mergeados (migrations já em produção); alerta `security_definer_view` resolvido no advisor
@@ -49,4 +53,3 @@
 - 2026-10-23 — Merge dos PRs #529, #624 e #631
 - 2026-10-23 — Entrada única "Entrar no Jinlong": admin da plataforma sem loja vai do login do ERP ao painel gerencial (inerte até configurar o hub)
 - 2026-10-23 — Site comercial Premium 2.0 implementado e mesclado (#631)
-- 2026-10-22 — Análise de prontidão para cliente pagante e checklist de corte (docs/runbooks/CHECKLIST_CORTE_PRIMEIRO_CLIENTE_PAGANTE.md)
