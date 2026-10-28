@@ -659,6 +659,7 @@ function main() {
     missingInCliTable: missingInList,
     blockingMissingInCliTable: blockingMissingInList,
     extraInCliTableNotOnDisk: extraInList,
+    extraBlockingRemoteOnly: extraBlocking,
   };
 
   if (opts.json) {
@@ -706,6 +707,11 @@ function main() {
     }
     if (!blocking.length && drift.length) {
       console.log("(Nenhum drift bloqueante; ver categorias informativas acima.)\n");
+    }
+    if (extraBlocking.length) {
+      console.log("Drift bloqueante — versões só no remoto sem par HUMAN_GATE completo:");
+      console.log(`  ${extraBlocking.join(", ")}
+`);
     }
     if (missingInList.length) {
       console.log("Versões no disco que não apareceram na tabela do CLI:");
