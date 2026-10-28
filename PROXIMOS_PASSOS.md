@@ -5,6 +5,8 @@
 - Reconciliar drift de migrations main × produção (20261021230000_pdv_operador_pin_p0, 20261022000000 e 20261022001000 em produção sem arquivo na main)
 - Decidir módulos marcados DRAFT já aplicados em produção (comissão #607, import intelligence #601): validar ou esconder do cliente
 - Congelar features até o corte do primeiro cliente (só hotfix P0 em produção)
+- CI `migration-remote-drift` bloqueado: o projeto `jinlong-homolog-palm` (ref do secret SUPABASE_MIGRATION_CHECK_PROJECT_REF) está INACTIVE/pausado; um admin precisa reativá-lo no dashboard do Supabase
+- PR #635 (Central de conversão, GROWTH-001) bloqueado por `deploy-governance`: altera migration de produção e exige o label `deploy-prod:aprovado` (aprovação humana)
 
 ## P1 — Falta para lançar (MVP)
 
@@ -14,6 +16,7 @@
 - Provisionar empresa/loja nova para o cliente pelo wizard e validar o isolamento multiempresa (nenhum dado de outra loja visível); não usar o script de limpeza, que apaga dados de todos os tenants
 - Registrar restore drill com RTO a partir de um backup novo, tirado após a reconciliação de migrations
 - Cobrar o primeiro ciclo manualmente (PIX/boleto)
+- PR #634 (troca de operador): aplicar a migration 20261023200000 em `jinlong-homolog-palm` (pausado) e homologar com dois usuários reais (assumir caixa, trocar operador, PIN, vendas, sangria, fechamento); `deploy-governance` exige o label `deploy-prod:aprovado`; decisão de negócio pendente (gaveta do turno × por operador)
 - Smoke presencial na máquina da loja (docs/runbooks/CHECKLIST_SMOKE_MAQUINA_LOJA.md)
 - Executar docs/runbooks/CHECKLIST_CORTE_PRIMEIRO_CLIENTE_PAGANTE.md
 
@@ -27,6 +30,7 @@
 
 ## Feito
 
+- 2026-10-28 — Merge do PR #633: rótulos das parcelas do crédito no PDV web (CI verde, sem regressão)
 - 2026-10-23 — Hub preparado para hub.jinlong.app: domínio no projeto, env de Preview, isolamento e bloqueio de não-admin validados
 - 2026-10-23 — Merge dos PRs #529, #624 e #631
 - 2026-10-23 — Entrada única "Entrar no Jinlong": admin da plataforma sem loja vai do login do ERP ao painel gerencial (inerte até configurar o hub)
