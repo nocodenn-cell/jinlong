@@ -34,7 +34,12 @@ export type ReciboVenda = {
   /** Cliente vinculado à venda (ex.: venda fiado) — `null` quando anônima ou indisponível (reimpressão). */
   clienteNome: string | null
   itens: ReciboItem[]
-  pagamentos: Array<{ formaPagamento: FinalizarVendaInput["formaPagamento"]; valor: number }>
+  pagamentos: Array<{
+    formaPagamento: FinalizarVendaInput["formaPagamento"]
+    valor: number
+    /** Só crédito; ausente ou 1 = à vista (sem sufixo no cupom). */
+    parcelas?: number
+  }>
   totalBruto: number
   /** Desconto total da venda — INCLUI `valorDescontoGerente` (ver `descontoProdutosLiquido`). */
   totalDesconto: number
@@ -61,6 +66,8 @@ export type ReciboLabels = {
   rodapeNaoFiscal: string
   atacado: string
   segundaVia: string
+  /** Sufixo das parcelas do crédito, com {{n}} (ex.: "{{n}}x"). */
+  parcelasN: string
   /** Forma de pagamento (DINHEIRO/PIX/CARTAO_DEBITO/CARTAO_CREDITO) → rótulo traduzido. */
   formas: Record<string, string>
 }
@@ -80,6 +87,7 @@ export function buildReciboLabels(m: Mensagens): ReciboLabels {
     rodapeNaoFiscal: r.rodape_nao_fiscal,
     atacado: r.atacado,
     segundaVia: r.segunda_via,
+    parcelasN: r.parcelas_n,
     formas: {
       DINHEIRO: m.caixa.pdv_metodo_pagamento_dinheiro,
       PIX: m.caixa.pdv_metodo_pagamento_pix,
@@ -87,4 +95,15 @@ export function buildReciboLabels(m: Mensagens): ReciboLabels {
       CARTAO_CREDITO: m.caixa.pdv_metodo_pagamento_credito,
     },
   }
+}
+
+/** Rótulo da forma no cupom; crédito parcelado ganha o sufixo ("Crédito 3x"). */
+export function rotuloPagamentoRecibo(
+  p: ReciboVenda["pagamentos"][number],
+  labels: ReciboLabels,
+): string {
+  const forma = labels.formas[p.formaPagamento] ?? p.formaPagamento
+  const n = p.parcelas ?? 1
+  if (p.formaPagamento !== "CARTAO_CREDITO" || n <= 1) return forma
+  return `${forma} ${labels.parcelasN.replace(/\{\{n\}\}/g, String(n))}`
 }
