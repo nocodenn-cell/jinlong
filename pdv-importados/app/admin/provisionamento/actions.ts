@@ -124,13 +124,6 @@ async function ensurePdvConfig(admin: AdminClient, lojaId: string, donoId: strin
     gerente_id: donoId,
     ...PDV_CONFIG_DEFAULTS,
     idioma_padrao: idioma,
-    // `gerente_senha_sha256` é NOT NULL (005_mvp_pdv_config.sql) mas está
-    // LEGADO desde a migração para bcrypt (067_pdv_config_bcrypt_gerente.sql)
-    // — nenhum código de runtime (web ou pdv-local, que sempre grava '' no
-    // seu cache local) lê este valor para autenticar. Sem preenchê-lo aqui,
-    // todo provisionamento de loja nova quebra com "violates not-null
-    // constraint" — comprovado via smoke-fase1-provisionamento-homologacao.
-    gerente_senha_sha256: '',
   }
 
   const { data: existing } = await fromLoose(admin, 'pdv_config')

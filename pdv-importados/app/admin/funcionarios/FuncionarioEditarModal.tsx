@@ -7,6 +7,7 @@ import { DragonModal } from '@/components/ui/DragonModal'
 import { Field, Input, Select, Textarea } from '@/components/ui/forms'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { PASSWORD_MIN_LENGTH } from '@/lib/auth/passwordPolicy'
+import { validarPinNovo, type ErroPin } from '@/lib/pdv/pinRegras'
 import {
   atualizarFuncionarioAction,
   criarFuncionarioAction,
@@ -40,6 +41,10 @@ export type FuncionarioModalLabels = {
   senha: string
   senhaNovaOpcional: string
   senhaHint: string
+  pin: string
+  pinHint: string
+  pinConfirmar: string
+  pinErros: Record<ErroPin, string>
   salvar: string
   salvando: string
   cancelar: string
@@ -91,6 +96,8 @@ export function FuncionarioEditarModal({
     funcionario?.idioma_preferido === 'zh' ? 'zh' : 'pt',
   )
   const [senha, setSenha] = useState('')
+  const [pin, setPin] = useState('')
+  const [pinConf, setPinConf] = useState('')
   const [senhaValidacao, setSenhaValidacao] = useState(validarSenha(''))
   const [emailValidacao, setEmailValidacao] = useState<{ validando: boolean; erro: string | null }>({
     validando: false,
@@ -205,6 +212,13 @@ export function FuncionarioEditarModal({
         return
       }
 
+      if (pin) {
+        const erroPin = validarPinNovo(pin, pinConf)
+        if (erroPin) {
+          emitGerenteToast({ kind: 'error', message: L.pinErros[erroPin] })
+          return
+        }
+      }
       const r = await criarFuncionarioAction({
         nome: nome.trim(),
         email: email.trim(),
@@ -212,6 +226,7 @@ export function FuncionarioEditarModal({
         idioma_preferido: idioma,
         senha,
         dados,
+        ...(pin ? { pin, pinConfirmacao: pinConf } : {}),
       })
       if (!r.ok) {
         emitGerenteToast({ kind: 'error', message: r.error })
@@ -341,6 +356,37 @@ export function FuncionarioEditarModal({
             disabled={salvando}
           />
         </Field>
+
+        {!editando ? (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2" data-testid="funcionario-pin-inicial">
+            <Field id="func-pin" label={L.pin} hint={pin && validarPinNovo(pin, pin) ? L.pinErros[validarPinNovo(pin, pin)!] : L.pinHint}>
+              <Input
+                type="password"
+                inputMode="numeric"
+                pattern="[0-9]{4}"
+                maxLength={4}
+                value={pin}
+                onChange={(ev) => setPin(ev.target.value.replace(/\D/g, '').slice(0, 4))}
+                autoComplete="off"
+                disabled={salvando}
+                data-testid="funcionario-pin"
+              />
+            </Field>
+            <Field id="func-pin-conf" label={L.pinConfirmar}>
+              <Input
+                type="password"
+                inputMode="numeric"
+                maxLength={4}
+                value={pinConf}
+                onChange={(ev) => setPinConf(ev.target.value.replace(/\D/g, '').slice(0, 4))}
+                autoComplete="off"
+                disabled={salvando || !pin}
+                required={!!pin}
+                data-testid="funcionario-pin-confirmar"
+              />
+            </Field>
+          </div>
+        ) : null}
 
         {dadosDisponiveis ? (
           <fieldset

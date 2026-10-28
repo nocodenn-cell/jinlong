@@ -2,6 +2,7 @@
 
 mod ativacao;
 mod db;
+mod operador;
 
 use db::{
     abrir_caixa_local, catalogo_local_get, diagnostics, fechar_caixa_local, get_caixa_atual,
@@ -68,7 +69,8 @@ fn load_caixa_atual_cmd(app: tauri::AppHandle) -> Result<Option<db::CaixaSessaoD
     get_caixa_atual(&app)
 }
 
-#[tauri::command]
+// O front envia snake_case (`troco_inicial`…); o padrão do Tauri 2 é camelCase e recusava a chamada.
+#[tauri::command(rename_all = "snake_case")]
 fn abrir_caixa_cmd(
     app: tauri::AppHandle,
     operador_id: Option<String>,
@@ -77,7 +79,8 @@ fn abrir_caixa_cmd(
     abrir_caixa_local(&app, operador_id, troco_inicial)
 }
 
-#[tauri::command]
+// O front envia snake_case (`troco_inicial`…); o padrão do Tauri 2 é camelCase e recusava a chamada.
+#[tauri::command(rename_all = "snake_case")]
 fn registrar_movimento_caixa_cmd(
     app: tauri::AppHandle,
     caixa_id: String,
@@ -88,7 +91,8 @@ fn registrar_movimento_caixa_cmd(
     registrar_movimento_caixa_local(&app, caixa_id, tipo, valor, observacao)
 }
 
-#[tauri::command]
+// O front envia snake_case (`troco_inicial`…); o padrão do Tauri 2 é camelCase e recusava a chamada.
+#[tauri::command(rename_all = "snake_case")]
 fn fechar_caixa_cmd(
     app: tauri::AppHandle,
     caixa_id: String,
@@ -149,6 +153,33 @@ fn validar_gerente_sync_cmd(senha: String) -> Result<ValidarGerentePdvDto, Strin
     validar_gerente_sync(senha)
 }
 
+#[tauri::command]
+fn operadores_local_cmd(app: tauri::AppHandle) -> Result<operador::OperadoresStatusDto, String> {
+    operador::operadores_local(&app)
+}
+
+#[tauri::command]
+fn operadores_sync_cmd(app: tauri::AppHandle) -> Result<operador::OperadoresStatusDto, String> {
+    operador::operadores_sync(&app)
+}
+
+#[tauri::command]
+fn operador_validar_pin_cmd(
+    app: tauri::AppHandle,
+    // nomes de uma palavra: iguais em camelCase/snake_case no invoke do Tauri
+    usuario: String,
+    pin: String,
+    gerente: Option<bool>,
+    acao: Option<String>,
+) -> Result<operador::ValidarPinDto, String> {
+    operador::validar_pin(&app, usuario, pin, gerente.unwrap_or(false), acao)
+}
+
+#[tauri::command]
+fn operador_sair_cmd(app: tauri::AppHandle, motivo: Option<String>) -> Result<(), String> {
+    operador::sair(&app, motivo.unwrap_or_else(|| "troca".into()))
+}
+
 fn main() {
     tauri::Builder::default()
         .setup(|app| {
@@ -180,8 +211,39 @@ fn main() {
             validar_gerente_sync_cmd,
             // Ativação por código
             ativacao_status_cmd,
-            ativar_pdv_cmd
+            ativar_pdv_cmd,
+            // Login rápido por PIN
+            operadores_local_cmd,
+            operadores_sync_cmd,
+            operador_validar_pin_cmd,
+            operador_sair_cmd
         ])
         .run(tauri::generate_context!())
         .expect("erro ao rodar aplicação Tauri");
+}
+
+#[cfg(test)]
+mod tests_contrato_invoke {
+    /// O front chama `invoke('x_cmd', { troco_inicial, caixa_id, ... })` em snake_case. No Tauri 2 o padrão é
+    /// camelCase: sem `rename_all = "snake_case"` a chamada falha ("missing required key trocoInicial") —
+    /// bug real achado no E2E com tauri-driver (abrir caixa não funcionava no PDV desktop).
+    #[test]
+    fn comandos_com_argumento_composto_aceitam_snake_case() {
+        let completo = include_str!("main.rs");
+        let src = &completo[..completo.find("#[cfg(test)]").unwrap()];
+        let partes: Vec<&str> = src.split("#[tauri::command").skip(1).collect();
+        assert!(partes.len() > 10);
+        for p in partes {
+            let attr = &p[..p.find(']').unwrap()];
+            let sig = &p[p.find("fn ").unwrap()..p.find('{').unwrap()];
+            let composto = sig
+                .split(|c| c == '(' || c == ',' || c == ')')
+                .filter_map(|a| a.split(':').next())
+                .map(str::trim)
+                .any(|a| a.contains('_') && a != "app" && !a.starts_with("fn "));
+            if composto {
+                assert!(attr.contains("rename_all = \"snake_case\""), "comando sem snake_case: {sig}");
+            }
+        }
+    }
 }

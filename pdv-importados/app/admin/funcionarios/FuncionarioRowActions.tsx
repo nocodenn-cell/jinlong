@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Pencil, Percent } from 'lucide-react'
+import { KeyRound, LockOpen, Pencil, Percent } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { adminComissoesOperadorQuery } from '@/lib/navigation/routes'
@@ -17,6 +17,9 @@ type Labels = {
   bloqueioDonoAdmin: string
   bloqueioSemPermissao: string
   bloqueioSiMesmo: string
+  pinDefinir?: string
+  pinTrocar?: string
+  pinDesbloquear?: string
 }
 
 type Props = {
@@ -27,6 +30,8 @@ type Props = {
   compactLabels?: boolean
   onEditar: (row: FuncionarioListRow) => void
   onToggle: (row: FuncionarioListRow) => void
+  onPin?: (row: FuncionarioListRow) => void
+  onDesbloquearPin?: (row: FuncionarioListRow) => void
 }
 
 export function FuncionarioRowActions({
@@ -37,12 +42,17 @@ export function FuncionarioRowActions({
   compactLabels = false,
   onEditar,
   onToggle,
+  onPin,
+  onDesbloquearPin,
 }: Props) {
   const bloqueioEditar = motivoBloqueioEditar(ator, row, L)
   const bloqueioToggle = motivoBloqueioToggle(ator, row, L)
   const podeEditar = !bloqueioEditar
   const podeToggle = !bloqueioToggle
   const toggleLabel = row.ativo ? L.desativar : L.ativar
+  // PIN do caixa: mesma regra de edição, nunca o próprio (esse usa "Meu PIN do caixa"), só ativos, recurso disponível.
+  const podePin = podeEditar && row.id !== ator.id && row.ativo && row.pin_status != null
+  const pinLabel = row.pin_status === 'sem' ? L.pinDefinir : L.pinTrocar
   // Comissão só existe para quem vende (operador/gerente); DONO/ADMIN não têm.
   const temComissao = row.perfil === 'OPERADOR' || row.perfil === 'GERENTE'
   const linkComissoes = temComissao ? (
@@ -95,6 +105,36 @@ export function FuncionarioRowActions({
         <span className={cn(compactLabels && 'hidden sm:inline')}>{L.editar}</span>
       </Button>
       {linkComissoes}
+      {podePin && onPin ? (
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          disabled={busy}
+          onClick={() => onPin(row)}
+          className="gap-1"
+          aria-label={`${pinLabel} — ${row.nome}`}
+          data-testid="funcionario-pin-definir"
+        >
+          <KeyRound className="h-3.5 w-3.5" aria-hidden />
+          <span className={cn(compactLabels && 'hidden sm:inline')}>{pinLabel}</span>
+        </Button>
+      ) : null}
+      {podePin && onDesbloquearPin && row.pin_status === 'bloqueado' ? (
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          disabled={busy}
+          onClick={() => onDesbloquearPin(row)}
+          className="gap-1 text-[var(--color-warning-strong)]"
+          aria-label={`${L.pinDesbloquear} — ${row.nome}`}
+          data-testid="funcionario-pin-desbloquear"
+        >
+          <LockOpen className="h-3.5 w-3.5" aria-hidden />
+          <span className={cn(compactLabels && 'hidden sm:inline')}>{L.pinDesbloquear}</span>
+        </Button>
+      ) : null}
       <Button
         type="button"
         size="sm"

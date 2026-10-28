@@ -13,6 +13,7 @@ export default async function AdminFuncionariosPage() {
   })
   const m = getMessages(session.idioma)
   const f = m.funcionarios
+  const pinErros = { formato: f.pin_err_formato, obvio: f.pin_err_obvio, confirmacao: f.pin_err_confirmacao }
 
   const [list, dadosDisponiveis] = await Promise.all([
     listarFuncionariosAction(),
@@ -35,6 +36,26 @@ export default async function AdminFuncionariosPage() {
         iniciais={iniciais}
         dadosDisponiveis={dadosDisponiveis}
         labels={{
+          pin: {
+            colPin: f.col_pin,
+            sem: f.pin_sem,
+            ativo: f.pin_ativo,
+            bloqueado: f.pin_bloqueado,
+            trocarBadge: f.pin_trocar_badge,
+            definir: f.pin_definir,
+            trocar: f.pin_trocar,
+            desbloquear: f.pin_desbloquear,
+            modalTitulo: f.pin_modal_titulo,
+            modalSub: f.pin_modal_sub,
+            pin: f.field_pin.replace(/\s*\(.*\)\s*$/, ''),
+            pinConfirmar: f.field_pin_confirmar,
+            salvo: f.pin_salvo,
+            desbloqueado: f.pin_desbloqueado,
+            salvar: f.salvar,
+            salvando: f.salvando,
+            cancelar: f.cancelar,
+            erros: pinErros,
+          },
           contagem: f.contagem,
           novo: f.novo,
           buscaPlaceholder: f.busca_placeholder,
@@ -89,6 +110,10 @@ export default async function AdminFuncionariosPage() {
             senha: f.field_senha,
             senhaNovaOpcional: f.field_senha_nova,
             senhaHint: f.field_senha_hint,
+            pin: f.field_pin,
+            pinHint: f.field_pin_hint,
+            pinConfirmar: f.field_pin_confirmar,
+            pinErros: pinErros,
             salvar: f.salvar,
             salvando: f.salvando,
             cancelar: f.cancelar,

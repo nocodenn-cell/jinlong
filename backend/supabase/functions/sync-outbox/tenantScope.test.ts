@@ -91,3 +91,11 @@ Deno.test("operador da venda/caixa precisa de vínculo ativo na loja do disposit
   // modo legado (cliente 1 sem ativação): sem mudança
   await assertEventoNoEscopo(ev("VENDA_REGISTRADA", { caixa_id: CAIXA_B, operador_id: OP_B }), { mode: "legado", lojaId: null }, lookups);
 });
+
+Deno.test("OPERADOR_EVENTO (PIN): loja do dispositivo e usuário com vínculo", async () => {
+  await assertEventoNoEscopo(ev("OPERADOR_EVENTO", { id: "e", loja_id: LOJA_A, usuario_id: OP_A, tipo: "ENTROU" }), ctxA, lookups);
+  await assertEventoNoEscopo(ev("OPERADOR_EVENTO", { id: "e", loja_id: LOJA_A, usuario_id: null, tipo: "BLOQUEIO_AUTO" }), ctxA, lookups);
+  await assertRejects(() => assertEventoNoEscopo(ev("OPERADOR_EVENTO", { id: "e", loja_id: LOJA_B, usuario_id: OP_B }), ctxA, lookups), Error, "EVENTO_LOJA_FORA_DO_DISPOSITIVO");
+  await assertRejects(() => assertEventoNoEscopo(ev("OPERADOR_EVENTO", { id: "e", loja_id: LOJA_A, usuario_id: OP_B }), ctxA, lookups), Error, "EVENTO_OPERADOR_SEM_VINCULO");
+  await assertRejects(() => assertEventoNoEscopo(ev("OPERADOR_EVENTO", { id: "e", usuario_id: OP_A }), ctxA, lookups), Error, "EVENTO_LOJA_OBRIGATORIA");
+});

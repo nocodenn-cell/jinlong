@@ -125,4 +125,29 @@ describe('usePdvLocalOutboxSync', () => {
     })
     unmount()
   })
+
+  it('sincroniza a cada 15s mesmo com re-render frequente e callback inline novo (bug do E2E)', async () => {
+    vi.useFakeTimers()
+    invokeMock.mockImplementation(async (cmd: string) => {
+      if (cmd === 'outbox_resumo_cmd') return { pendentes_total: 1, prontos_sync: 1, em_backoff: 0, dlq: 0 }
+      if (cmd === 'sync_outbox_real_cmd') return 1
+      throw new Error(`Comando inesperado: ${cmd}`)
+    })
+    const { rerender, unmount } = renderHook(() =>
+      usePdvLocalOutboxSync({
+        tauriDisponivel: true,
+        caixaAtualId: 'cx-1',
+        onSyncElapsedMs: () => {}, // nova a cada render, como no App
+        onMensagem: () => {},
+        formatarErro: (_e, f) => f,
+      }),
+    )
+    for (let i = 0; i < 4; i++) {
+      await vi.advanceTimersByTimeAsync(5000)
+      rerender()
+    }
+    expect(invokeMock.mock.calls.filter((c) => c[0] === 'sync_outbox_real_cmd').length).toBeGreaterThanOrEqual(1)
+    unmount()
+    vi.useRealTimers()
+  })
 })

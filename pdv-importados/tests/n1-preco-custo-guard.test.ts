@@ -90,9 +90,11 @@ describe('N1 — nenhum código lê o custo direto de `produtos`', () => {
     expect(violacoes, violacoes.join('\n')).toEqual([])
   })
 
-  it('o custo só é lido pela view produtos_custos (helper e consulta rápida)', () => {
-    const leitores = FONTES.filter((f) => /from\(\s*'produtos_custos'\s*\)/.test(readFileSync(f, 'utf8'))).map(rel).sort()
+  it('o custo só é lido pela RPC produtos_custos_autorizados (helper e consulta rápida)', () => {
+    const leitores = FONTES.filter((f) => /rpc\(\s*'produtos_custos_autorizados'/.test(readFileSync(f, 'utf8'))).map(rel).sort()
     expect(leitores).toEqual(['app/caixa/server/caixaConsultaRapida.impl.ts', 'lib/gerente/produtos/custosProdutos.ts'])
+    const viaView = FONTES.filter((f) => /from\(\s*'produtos_custos'\s*\)/.test(readFileSync(f, 'utf8'))).map(rel)
+    expect(viaView).toEqual([])
   })
 
   it('o PDV (app/caixa) só toca preco_custo ao consultar a view gerencial', () => {
