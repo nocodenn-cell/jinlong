@@ -26,10 +26,13 @@ const USERS = [
   { perfil: "OPERADOR", email: process.env.RLS_OPERADOR_EMAIL ?? "test_operador@example.com", password: process.env.RLS_OPERADOR_PASSWORD ?? "Test@123456" },
   { perfil: "GERENTE", email: process.env.RLS_GERENTE_EMAIL ?? "test_gerente@example.com", password: process.env.RLS_GERENTE_PASSWORD ?? "Test@123456" },
   { perfil: "DONO", email: process.env.RLS_DONO_EMAIL ?? "test_dono@example.com", password: process.env.RLS_DONO_PASSWORD ?? "Test@123456" },
-  { perfil: "ADMIN", email: process.env.RLS_ADMIN_EMAIL ?? "test_admin@example.com", password: process.env.RLS_ADMIN_PASSWORD ?? "Test@123456" },
+  // 20261028110000 (corte ADMIN): papéis válidos são DONO/GERENTE/OPERADOR. O 4º usuário é um GERENTE da FILIAL
+  // (loja2), para provar o escopo por loja entre gerentes da mesma empresa.
+  { perfil: "GERENTE_FILIAL", papel: "GERENTE", email: process.env.RLS_GERENTE_FILIAL_EMAIL ?? "test_gerente_filial@example.com", password: process.env.RLS_GERENTE_FILIAL_PASSWORD ?? "Test@123456" },
 ];
 
 const IDS = {
+  empresa: "e0000001-0000-4000-8000-000000000001",
   loja: "b0000001-0000-4000-8000-000000000001",
   loja2: "c0000001-0000-4000-8000-000000000001",
   categoria: "b0000002-0000-4000-8000-000000000001",
@@ -106,7 +109,7 @@ async function ensureUsersAndSeed() {
       email: u.email,
       password: u.password,
       email_confirm: true,
-      user_metadata: { perfil: u.perfil },
+      user_metadata: { perfil: u.papel ?? u.perfil },
     });
     if (createRes.error && !String(createRes.error.message).toLowerCase().includes("already")) {
       throw new Error(`Falha ao criar user ${u.perfil}: ${createRes.error.message}`);
@@ -126,12 +129,13 @@ async function ensureUsersAndSeed() {
   // para o PID do processo (gerando `syntax error at or near "<pid>"`). Como o seed
   // não usa nenhum recurso plpgsql, rodamos as instruções como script SQL simples.
   const sql = `
-  INSERT INTO public.lojas (id, nome, codigo, ativo)
-  VALUES ('${IDS.loja}'::uuid, 'Loja Teste RLS', 'LOJA-RLS', true)
+  -- Multiempresa: loja exige empresa_id (EMPRESA_ID_OBRIGATORIA). Lojas do teste ficam na Empresa 1.
+  INSERT INTO public.lojas (id, nome, codigo, ativo, empresa_id)
+  VALUES ('${IDS.loja}'::uuid, 'Loja Teste RLS', 'LOJA-RLS', true, '${IDS.empresa}'::uuid)
   ON CONFLICT (id) DO UPDATE SET nome = EXCLUDED.nome, codigo = EXCLUDED.codigo, ativo = true;
 
-  INSERT INTO public.lojas (id, nome, codigo, ativo)
-  VALUES ('${IDS.loja2}'::uuid, 'Loja Teste RLS Filial', 'LOJA-RLS-B', true)
+  INSERT INTO public.lojas (id, nome, codigo, ativo, empresa_id)
+  VALUES ('${IDS.loja2}'::uuid, 'Loja Teste RLS Filial', 'LOJA-RLS-B', true, '${IDS.empresa}'::uuid)
   ON CONFLICT (id) DO UPDATE SET nome = EXCLUDED.nome, codigo = EXCLUDED.codigo, ativo = true;
 
   INSERT INTO public.categorias (id, nome)
@@ -147,7 +151,7 @@ async function ensureUsersAndSeed() {
     ('${authByPerfil.OPERADOR}'::uuid, 'Operador RLS', 'OPERADOR', 'pt', true, '${IDS.loja}'::uuid),
     ('${authByPerfil.GERENTE}'::uuid,  'Gerente RLS',  'GERENTE',  'pt', true, '${IDS.loja}'::uuid),
     ('${authByPerfil.DONO}'::uuid,     'Dono RLS',     'DONO',     'pt', true, '${IDS.loja}'::uuid),
-    ('${authByPerfil.ADMIN}'::uuid,    'Admin RLS',    'ADMIN',    'pt', true, '${IDS.loja}'::uuid)
+    ('${authByPerfil.GERENTE_FILIAL}'::uuid, 'Gerente Filial RLS', 'GERENTE', 'pt', true, '${IDS.loja2}'::uuid)
   ON CONFLICT (id) DO UPDATE SET
     nome = EXCLUDED.nome,
     perfil = EXCLUDED.perfil,
@@ -194,7 +198,7 @@ async function ensureUsersAndSeed() {
   VALUES
     ('${IDS.caixaOperador}'::uuid, '${authByPerfil.OPERADOR}'::uuid, 100, 'ABERTO', '${IDS.loja}'::uuid),
     ('${IDS.caixaGerente}'::uuid, '${authByPerfil.GERENTE}'::uuid, 100, 'ABERTO', '${IDS.loja}'::uuid),
-    ('${IDS.caixaFilial}'::uuid, '${authByPerfil.ADMIN}'::uuid, 100, 'ABERTO', '${IDS.loja2}'::uuid)
+    ('${IDS.caixaFilial}'::uuid, '${authByPerfil.GERENTE_FILIAL}'::uuid, 100, 'ABERTO', '${IDS.loja2}'::uuid)
   ON CONFLICT (id) DO UPDATE SET operador_id = EXCLUDED.operador_id, loja_id = EXCLUDED.loja_id, status = 'ABERTO';
 
   UPDATE public.pricing_config_versions
@@ -297,7 +301,7 @@ async function main() {
   const operador = await login(USERS[0].email, USERS[0].password);
   const gerente = await login(USERS[1].email, USERS[1].password);
   const dono = await login(USERS[2].email, USERS[2].password);
-  const admin = await login(USERS[3].email, USERS[3].password);
+  const gerenteFilial = await login(USERS[3].email, USERS[3].password);
 
   await run("OPERADOR only_own em vendas", async () => {
     const { data, error } = await operador.from("vendas").select("id,operador_id").limit(20);
@@ -325,12 +329,29 @@ async function main() {
     }
   });
 
-  await run("ADMIN pode SELECT vendas da loja", async () => {
-    const { data, error } = await admin.from("vendas").select("id").limit(20);
+  await run("GERENTE da filial vê a venda da filial e NÃO as da matriz", async () => {
+    const { data, error } = await gerenteFilial.from("vendas").select("id").limit(50);
     if (error) throw new Error(error.message);
-    if (!Array.isArray(data) || data.length < 2) {
-      throw new Error("ADMIN não enxergou vendas esperadas da loja");
+    const ids = new Set((data ?? []).map((r) => r.id));
+    if (!ids.has(IDS.vendaFilial)) throw new Error("GERENTE da filial não enxergou a venda da filial");
+    if (ids.has(IDS.vendaOperador) || ids.has(IDS.vendaGerente)) throw new Error("GERENTE da filial enxergou venda da matriz");
+  });
+
+  await run("GERENTE da matriz NÃO vê a venda da filial", async () => {
+    const { data, error } = await gerente.from("vendas").select("id").limit(50);
+    if (error) throw new Error(error.message);
+    if ((data ?? []).some((r) => r.id === IDS.vendaFilial)) throw new Error("GERENTE da matriz enxergou venda da filial");
+  });
+
+  await run("papel ADMIN não existe mais (cadastro recusado)", async () => {
+    let msg = "";
+    try {
+      execFileSync("psql", [POSTGRES_URL, "-v", "ON_ERROR_STOP=1", "-Xqc",
+        `UPDATE public.usuarios SET perfil = 'ADMIN' WHERE id = '${authByPerfil.GERENTE_FILIAL}'`], { stdio: "pipe" });
+    } catch (e) {
+      msg = String(e.stderr ?? e.message);
     }
+    if (!msg) throw new Error("UPDATE para perfil ADMIN foi aceito");
   });
 
   await run("DONO pode SELECT macro de estoque/vendas", async () => {
@@ -593,7 +614,7 @@ async function main() {
   });
 
   // ajustar_estoque_manual e service_role-only: o server action gerente/estoque/actions.ts
-  // a chama via admin client. Nenhuma role JWT (OPERADOR/ADMIN/GERENTE) pode chama-la direto.
+  // a chama via admin client. Nenhuma role JWT (OPERADOR/GERENTE/DONO) pode chama-la direto.
   // p_ator_id desambigua overload 6 vs 7 args no PostgREST (ambas service_role-only).
   const ajustarEstoqueArgs = {
     p_produto_id: IDS.produto,
@@ -609,8 +630,8 @@ async function main() {
     await assertRpcDenied(operador, "ajustar_estoque_manual", ajustarEstoqueArgs);
   });
 
-  await run("RPC ajustar_estoque_manual negado a ADMIN", async () => {
-    await assertRpcDenied(admin, "ajustar_estoque_manual", ajustarEstoqueArgs);
+  await run("RPC ajustar_estoque_manual negado a DONO direto (usa service_role)", async () => {
+    await assertRpcDenied(dono, "ajustar_estoque_manual", ajustarEstoqueArgs);
   });
 
   await run("RPC ajustar_estoque_manual negado a GERENTE direto (usa service_role)", async () => {
@@ -624,7 +645,7 @@ async function main() {
   });
 
   await run("RPC confirmar_remessa_entrada (id inexistente)", async () => {
-    await assertRpcErrorContains(admin, "confirmar_remessa_entrada", {
+    await assertRpcErrorContains(dono, "confirmar_remessa_entrada", {
       p_remessa_id: randomUUID(),
     }, "RECEBIMENTO_NAO_ENCONTRADO");
   });
@@ -645,7 +666,7 @@ async function main() {
     if (ee0) throw new Error(ee0.message);
     const qAntes = Number(e0.quantidade_atual);
 
-    await assertRpcOk(admin, "confirmar_remessa_entrada", { p_remessa_id: IDS.remessaConferencia });
+    await assertRpcOk(gerenteFilial, "confirmar_remessa_entrada", { p_remessa_id: IDS.remessaConferencia });
 
     const { data: r1, error: er1 } = await dono.from("remessas").select("status").eq("id", IDS.remessaConferencia).single();
     if (er1) throw new Error(er1.message);
@@ -669,7 +690,7 @@ async function main() {
   // API (20260916120200). As 3 regras que o exercitavam agora cobrem a função
   // canônica usada pelo app; a regra final prova que o legado ficou fechado.
   await run("RPC transferir_estoque_seguro (lojas iguais)", async () => {
-    await assertRpcErrorContains(admin, "transferir_estoque_seguro", {
+    await assertRpcErrorContains(dono, "transferir_estoque_seguro", {
       p_loja_origem: IDS.loja,
       p_loja_destino: IDS.loja,
       p_produto_id: IDS.produto,
@@ -753,7 +774,7 @@ async function main() {
     operador.auth.signOut(),
     gerente.auth.signOut(),
     dono.auth.signOut(),
-    admin.auth.signOut(),
+    gerenteFilial.auth.signOut(),
   ]);
 
   const failed = results.filter((r) => !r.ok);
