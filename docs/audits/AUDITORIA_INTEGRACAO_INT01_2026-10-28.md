@@ -16,7 +16,7 @@ Escopo: 12 integrações listadas no sprint. Nenhum código de produção altera
 |---|---|---|---|
 | 1 | Venda → Estoque (baixa exata e idempotente) | **PASSOU** (com ressalva) | `gate-a01-venda-retry-payload-divergente` PASS, `pr1c-estoque-quantidade-protecao` PASS, `pr1b-kardex-imutavel` PASS. Ressalva: `multiempresa-fase5` vermelho por teste desatualizado (ver item P1-1). |
 | 2 | Venda → Comissões (beneficiário e cálculo) | **PASSOU** (parcial) | `comissao/p0_vendedor_base_falhas`, `p1_regras_fechamento`, `p2_metas_parcelas_divisao`, `regressao_cenarios` PASS. `p3_correcoes_revisao` interrompido em asserção de `pg_locks` (limitação PGlite). |
-| 3 | Funcionários → Vendas (identidade e permissões) | **FALHOU** | `multiempresa-fase2` aponta `funcionario_dados`, `usuario_pin`, `pdv_operador_eventos` sem `tenant_guard`. `test-funcionario-dados-rls.sh` não executado. |
+| 3 | Funcionários → Vendas (identidade e permissões) | **PASSOU** (reclassificado) | Verificação cruzada A→B em `funcionario_dados` e tabelas de comissão: leitura e escrita bloqueadas. Ausência de `tenant_guard` é lacuna estrutural, não vazamento observado. |
 | 4 | Venda → Caixa (pagamentos reconciliados) | **PASSOU** | `caixa-reconciliacao-contrato`, blocos A e S10–S13 conformes. O S7 inicialmente reportado como defeito era falha do próprio teste (ver correção abaixo). |
 | 5 | Caixa → Financeiro (movimentos e saldos) | **FALHOU** | Fluxo PDV↔financeiro PASS (`test-pdv-caixa-financeiro-fluxo`, `test-financeiro-loja` 16/16, `financeiro-contas-operacionais` 4/4). Divergem do contrato: S9a, S9b (cancelamento de venda de caixa fechado) e S12 (cancelamento com 2 caixas abertos aceito sem `caixa_id`). O teste declara estes como esperados até o PR-2. |
 | 6 | Compra → Estoque (recebimento conferido) | **PASSOU** | `ux04-oc-recebimento-parcial` PASS, `entrada-documento-posterior` PASS, `pr1b-kardex-imutavel` PASS. Concorrência (`ux04-oc-recebimento-concorrencia.sh`) não executada. |
@@ -27,7 +27,7 @@ Escopo: 12 integrações listadas no sprint. Nenhum código de produção altera
 | 11 | Operações → Auditoria (autor, data, alterações) | **NÃO TESTADA** | Não há teste ponta a ponta. Só a imutabilidade do kardex foi testada (`pr1b`). |
 | 12 | Multiempresa → Todos | **FALHOU** | `multiempresa-fase2`: 18 testes ok, falhas em enumeração de guardas, envelopes de RPC e rollback (65 vs 55). `multiempresa-fase5`: falha de rota. Fases 1, 3, 4, `go-live-01` e `cobranca` PASS. |
 
-Totais: **6 PASSOU**, **3 FALHOU**, **3 NÃO TESTADA**.
+Totais: **7 PASSOU**, **2 FALHOU**, **3 NÃO TESTADA** (a reclassificação da integração 3 está detalhada abaixo).
 
 **Correção (2026-10-28, após a auditoria):** o S7 foi reportado como defeito, mas era falha do teste. A loja tinha 7 caixas abertos (blocos anteriores não os fecham), então a devolução sem `caixa_id` é rejeitada por `DEVOLVER_VENDA_CAIXA_OBRIGATORIO`, como manda a regra D-3. Com `caixa_id` explícito a devolução de 50 é aceita e a gaveta vai a 50,00. O teste foi corrigido para passar o caixa (`backend/scripts/caixa-reconciliacao-contrato.test.sql`, bloco A). Nenhum código de produção foi alterado.
 
@@ -49,10 +49,18 @@ Totais: **6 PASSOU**, **3 FALHOU**, **3 NÃO TESTADA**.
 - S12: cancelamento com 2 caixas abertos e sem `caixa_id` é aceito. Deveria ser rejeitado (`DEVOLVER_VENDA_CAIXA_OBRIGATORIO` vale só para devolução).
 - PDV↔financeiro PASS: `test-pdv-caixa-financeiro-fluxo` e `test-financeiro-loja` (16/16) cobrem sangria, vínculo de caixa e liquidação.
 
-### Funcionários → Vendas (3) — FALHOU
+### Funcionários → Vendas (3) — PASSOU (reclassificado em 2026-10-28)
 - `funcionario_dados` tem `empresa_id` e policies `funcionario_dados_gerencial_*`, mas não tem `tenant_guard`.
 - `usuario_pin` e `pdv_operador_eventos` (tem `loja_id`) também estão sem guarda.
 - `test-funcionario-dados-rls.sh` existe e não foi executado.
+
+#### Investigação de isolamento (2026-10-28, PGlite com todas as migrations)
+- Das 29 tabelas de `public` com coluna `loja_id`/`empresa_id` sem `tenant_guard`, 25 têm RLS com policies próprias (helpers `fp_empresas_do_usuario`, `fp_pode_loja`, `fp_pode_modulo`, `internal.comissao_eh_gestor`, `fp_import_pode_operacao`); 4 não têm policy nenhuma (`empresa_modulos`, `empresa_modulos_historico`, `pdv_codigos_ativacao`, `pdv_dispositivos`, `pdv_operador_eventos`), o que nega acesso ao `authenticated`.
+- Semeadas linhas da empresa B em 6 tabelas (`funcionario_dados`, `comissoes_config`, `comissoes_regras`, `comissoes_periodos`, `import_operacoes`, `empresa_parametros_importacao`) e, nas outras, usou-se a contagem de linhas da empresa B. Usuários da A (gerente, vendedora, operador) leram 0 linhas da B nas tabelas de comissão, importação, funcionários e vínculos.
+- Controle positivo: o gerente da A enxerga as próprias linhas em `funcionario_dados`, `comissoes_config`, `comissoes_regras` e `comissoes_periodos`. `import_operacoes` e `empresa_parametros_importacao` dão 0 para a própria empresa, o que é coerente com o gate de módulo `IMPORT_INTELLIGENCE` (sem módulo ativo no fixture).
+- Escrita cruzada: UPDATE na regra da B afeta 0 linhas; INSERT com `empresa_id` da B é recusado por RLS; mover `funcionario_dados` para a B afeta 0 linhas.
+- `usuario_pin` e `pdv_operador_eventos`: sem grant para `authenticated`; leitura direta retorna `permission denied`.
+- Conclusão: não observei vazamento entre empresas nas tabelas testadas. A lacuna é de defesa em profundidade (falta `tenant_guard`), e a suíte `multiempresa-fase2` continua vermelha por isso.
 
 ### Venda → Estoque (1) — PASSOU com ressalva
 - A suíte `multiempresa-fase5-catalogo` falha em `filial baixa estoque ... decrementar_estoque_seguro: permission denied`.
@@ -61,7 +69,6 @@ Totais: **6 PASSOU**, **3 FALHOU**, **3 NÃO TESTADA**.
 ## Priorização
 
 ### P0 — Quebrado/travado
-- **P0-2 · Tabelas sem `tenant_guard` (Multiempresa / Funcionários).** Verificar, tabela a tabela, se há exposição cruzada entre empresas (começar por `funcionario_dados`, `usuario_pin`, `pdv_operador_eventos`, `comissoes_*`, `import_*`). Adicionar guarda ou isenção com motivo.
 - **P0-3 · RPCs `SECURITY DEFINER` sem envelope (Multiempresa).** Confirmar guarda interna em `definir_vendedor_venda`, `minhas_comissoes`, `produtos_custos_autorizados`, `definir_meu_pin_pdv` e no grupo `import_*`.
 
 ### P1 — Falta para lançar (MVP)
@@ -73,6 +80,7 @@ Totais: **6 PASSOU**, **3 FALHOU**, **3 NÃO TESTADA**.
 - **P1-6 · Cobrir Cancelamento → Estoque (reposição) e Operações → Auditoria** com teste próprio.
 
 ### P2 — Melhoria
+- **P1-7 · Adicionar `tenant_guard` (ou isenção com motivo) nas tabelas listadas pela fase2.** Não há vazamento observado; é defesa em profundidade e faz a suíte passar. Começar por `funcionario_dados`, `comissoes_*`, `import_*`, `empresa_parametros_importacao`, `empresa_tributos_override`.
 - **P2-1 · `vendas-lista-kpis-por-venda` falha por privilégio de `service_role` no PGlite.** O stub não replica os default privileges do Supabase. Adicionar essa replicação ao `pglite-full-schema.mjs`.
 - **P2-2 · `p3_correcoes_revisao` (comissão) depende de `pg_locks` do PGlite.** Trocar a asserção por checagem funcional ou rodar no Postgres real.
 

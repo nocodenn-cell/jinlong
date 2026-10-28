@@ -2,7 +2,6 @@
 
 ## P0 — Quebrado/travado
 
-- Tabelas com dados de loja/empresa sem tenant_guard (funcionario_dados, usuario_pin, pdv_operador_eventos, comissoes_*, import_*): verificar exposição cruzada e fechar (fase2 vermelha)
 - RPCs SECURITY DEFINER expostas a authenticated sem envelope (comissao_*, definir_vendedor_venda, minhas_comissoes, produtos_custos_autorizados, import_*): confirmar guarda interna
 - Reconciliar drift de migrations main × produção (20261021230000_pdv_operador_pin_p0, 20261022000000 e 20261022001000 em produção sem arquivo na main)
 - Decidir módulos marcados DRAFT já aplicados em produção (comissão #607, import intelligence #601): validar ou esconder do cliente
@@ -10,6 +9,7 @@
 
 ## P1 — Falta para lançar (MVP)
 
+- Adicionar tenant_guard (ou isenção com motivo) nas tabelas da multiempresa-fase2 (funcionario_dados, comissoes_*, import_*); a verificação cruzada não achou vazamento, então é defesa em profundidade
 - Reescrever multiempresa-fase5 (espera EXECUTE de authenticated em decrementar_estoque_seguro, revogado de propósito em 20261023120000) e corrigir a contagem de RPCs do rollback da fase2 (65 vs 55)
 - Caixa: cancelamento de venda de caixa fechado não reflete no caixa aberto (S9b) e cancelamento com 2 caixas abertos sem caixa_id é aceito (S12); fechar no PR-2
 - Rodar as suítes de psql (ap-payments, ar-receipts, sale-totals, financeiro-hardening, financial-adversarial, ux04, funcionario-dados-rls) num banco de homologação migrado, via npm run test:financial
