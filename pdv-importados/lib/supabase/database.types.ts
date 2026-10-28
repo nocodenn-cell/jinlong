@@ -1697,12 +1697,17 @@ export type Database = {
           city: string | null
           contact: string
           created_at: string
+          email: string | null
+          empresa_id: string | null
           id: string
           idioma: string | null
+          interesse: string | null
           locale: string
           name: string
+          origem: string
           product: string
           protocol: string
+          proximo_contato: string | null
           segment: string | null
           status: string
           store: string
@@ -1717,12 +1722,17 @@ export type Database = {
           city?: string | null
           contact: string
           created_at?: string
+          email?: string | null
+          empresa_id?: string | null
           id?: string
           idioma?: string | null
+          interesse?: string | null
           locale: string
           name: string
+          origem?: string
           product: string
           protocol: string
+          proximo_contato?: string | null
           segment?: string | null
           status?: string
           store: string
@@ -1737,12 +1747,17 @@ export type Database = {
           city?: string | null
           contact?: string
           created_at?: string
+          email?: string | null
+          empresa_id?: string | null
           id?: string
           idioma?: string | null
+          interesse?: string | null
           locale?: string
           name?: string
+          origem?: string
           product?: string
           protocol?: string
+          proximo_contato?: string | null
           segment?: string | null
           status?: string
           store?: string
@@ -1752,7 +1767,15 @@ export type Database = {
           utm_source?: string | null
           wechat?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "commercial_leads_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       conciliacoes_financeiras: {
         Row: {
@@ -8936,6 +8959,29 @@ export type Database = {
           valor: number
         }[]
       }
+      commercial_converter_trial: {
+        Args: {
+          p_addons: string[]
+          p_empresa: string
+          p_forma: string
+          p_observacao: string
+          p_plano: string
+          p_qtd_caixas: number
+          p_qtd_lojas: number
+          p_valor_centavos: number
+        }
+        Returns: Json
+      }
+      commercial_planos: { Args: never; Returns: Json }
+      commercial_solicitar_contratacao: {
+        Args: { p_mensagem?: string; p_plano: string }
+        Returns: boolean
+      }
+      commercial_trial_garantir_lead: {
+        Args: { p_empresa: string; p_telefone?: string }
+        Returns: string
+      }
+      commercial_trials_listar: { Args: { p_empresa?: string }; Returns: Json }
       configuracoes_para_caixa_web: { Args: never; Returns: Json }
       confirmar_importacao_nfe: {
         Args: { p_importacao_id: string }
