@@ -1,3 +1,7 @@
+-- Versão renomeada em 28/10/2026 (era 20261022120000_…): a main já tinha 20261023120000 aplicada em produção, e
+-- uma versão anterior à última aplicada faz o `supabase db push` recusar (ou exigir --include-all). Conteúdo inalterado.
+-- Nunca foi aplicada em produção (conferido em supabase_migrations.schema_migrations, somente leitura).
+--
 -- SEC: token de gerente de DONO/ADMIN deixa de valer fora da(s) empresa(s) do emissor.
 --
 -- Antes (20260916120000), um token sem loja_id emitido por DONO/ADMIN passava em qualquer loja — inclusive de

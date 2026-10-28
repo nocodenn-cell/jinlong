@@ -15,7 +15,8 @@ describe('ponte hub ↔ tributação', () => {
       [item({}), item({ id: 'i2', moeda: 'BRL', valor_mercadoria_moeda: '50' }), item({ id: 'i3', valor_aduaneiro_brl: '7' }), item({ id: 'i4', moeda: 'CNY' })],
       [{ id: 'c', moeda: 'USD', taxa: '5.4321098765', fonte: 'MANUAL', data: '2026-10-01' }],
     )
-    expect(r.ok.map((x) => x.valor_aduaneiro_brl)).toEqual(['1086.421975', '50', '7'])
+    // BRL passa pela conversão canônica (escala 6): mesmo valor numérico, formatado com 6 casas
+    expect(r.ok.map((x) => x.valor_aduaneiro_brl)).toEqual(['1086.421975', '50.000000', '7'])
     expect(r.semBase).toEqual([{ item_id: 'i4', motivo: 'SEM_CAMBIO' }])
   })
   it('100 unidades: II 18% fictício sobre VA; lançamento pendente com regra e vigência', () => {

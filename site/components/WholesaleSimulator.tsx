@@ -23,9 +23,7 @@ interface WholesaleSimulatorProps {
 }
 
 function liveMessage(qty: number, locale: SiteLocale, copy: WholesaleCopy): string {
-  if (isWholesale(qty)) {
-    return fillTemplate(copy.applied, { valor: formatBrl(savingsCents(qty), locale) })
-  }
+  if (isWholesale(qty)) return fillTemplate(copy.applied, { valor: formatBrl(savingsCents(qty), locale) })
   const missing = missingUnits(qty)
   return missing === 1 ? copy.missingOne : fillTemplate(copy.missingMany, { n: missing })
 }
@@ -34,47 +32,45 @@ function liveMessage(qty: number, locale: SiteLocale, copy: WholesaleCopy): stri
 export function WholesaleSimulator({ locale, copy }: WholesaleSimulatorProps) {
   const [qty, setQty] = useState(EXAMPLE.initialQty)
   const wholesale = isWholesale(qty)
-  const tier = wholesale ? copy.unitWholesale : copy.unitRetail
   return (
-    <div className="jl-wh-card">
-      <div className="jl-wh-prod">
-        <h3>{copy.product}</h3>
-        <span className="jl-demo-tag">{copy.tag}</span>
+    <div className="jl-widget">
+      <div className="jl-widget-top">
+        <span>{copy.widgetTitle}</span>
+        <span className="jl-dot" aria-hidden="true" />
       </div>
-      <div className="jl-wh-rule">
-        <div className="r">
-          <span>{copy.retailRule}</span>
-          <b>{formatBrl(EXAMPLE.retailCents, locale)}</b>
-        </div>
-        <div className="w">
-          <span>{copy.wholesaleRule}</span>
-          <b>{formatBrl(EXAMPLE.wholesaleCents, locale)}</b>
-        </div>
-      </div>
-      <div className="jl-track" aria-hidden="true">
-        <i style={{ width: `${progressPercent(qty)}%`, backgroundColor: wholesale ? 'var(--green-700)' : 'var(--graphite-700)' }} />
-        <span className="mark" style={{ left: `${markPercent()}%` }} />
-      </div>
-      <div className="jl-wh-result">
-        <div className="jl-stepper">
+      <div className="jl-widget-status">
+        <span id="wh-qty-label">{copy.quantity}</span>
+        <div className="jl-stepper" role="group" aria-labelledby="wh-qty-label">
           <button type="button" aria-label={copy.decrease} disabled={qty <= 1} onClick={() => setQty(clampQty(qty - 1))}>
             −
           </button>
-          <output aria-label={copy.quantity}>{qty}</output>
+          <output aria-labelledby="wh-qty-label">{qty}</output>
           <button type="button" aria-label={copy.increase} disabled={qty >= EXAMPLE.maxQty} onClick={() => setQty(clampQty(qty + 1))}>
             +
           </button>
         </div>
-        <div className="total" style={{ textAlign: 'right' }}>
-          <span>{`${qty} × ${formatBrl(unitCents(qty), locale)} (${tier})`}</span>
-          <b>{formatBrl(totalCents(qty), locale)}</b>
+      </div>
+      <div className="jl-meter" aria-hidden="true">
+        <i style={{ transform: `scaleX(${progressPercent(qty) / 100})` }} />
+        <span style={{ left: `${markPercent()}%` }} />
+      </div>
+      <div className="jl-widget-values">
+        <div>
+          <small>{copy.unitPrice}</small>
+          <strong data-testid="unit-price">{formatBrl(unitCents(qty), locale)}</strong>
+          <span className={wholesale ? 'is-wholesale' : undefined}>{wholesale ? copy.wholesale : copy.retail}</span>
+        </div>
+        <div>
+          <small>{copy.total}</small>
+          <strong data-testid="total-price">{formatBrl(totalCents(qty), locale)}</strong>
+          <span>{copy.simulated}</span>
         </div>
       </div>
-      <p className="jl-wh-live" aria-live="polite" style={{ color: wholesale ? 'var(--green-700)' : 'var(--graphite-700)' }}>
+      <p className={wholesale ? 'jl-widget-msg is-active' : 'jl-widget-msg'} aria-live="polite">
         {wholesale ? '✓ ' : ''}
         {liveMessage(qty, locale, copy)}
       </p>
-      <p className="jl-wh-note">{copy.disclaimer}</p>
+      <p className="jl-widget-note">{copy.disclaimer}</p>
     </div>
   )
 }

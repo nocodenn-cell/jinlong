@@ -80,7 +80,7 @@ export function MobileMenu({ links, loginHref, loginLabel, openLabel, closeLabel
             </li>
           ))}
         </ul>
-        <a className="jl-btn jl-btn--ghost" href={loginHref}>
+        <a className="jl-menu-login" href={loginHref}>
           {loginLabel}
         </a>
       </div>

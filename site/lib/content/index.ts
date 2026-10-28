@@ -15,10 +15,8 @@ export function getHomeContent(locale: SiteLocale): HomeContent {
   const cta = CTA_LABEL.trial[locale]
   return {
     ...base,
-    nav: { ...base.nav, cta },
-    hero: { ...base.hero, ctaTrial: cta },
-    price: { ...base.price, cta },
-    form: { ...base.form, title: cta, submit: cta },
+    nav: { ...base.nav, demo: cta },
+    form: { ...base.form, submit: cta },
   }
 }
 
