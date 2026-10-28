@@ -2,11 +2,11 @@
 
 ## P0 — Quebrado/travado
 
-- Aplicar em produção (janela manual) a migration 20261023120000 do #628, já na main, seguindo `docs/runbooks/APLICAR_20261023120000_REVOKE_ESTOQUE.md` (pré-checagem, backup, rollback e regressão testados em 2026-10-23)
+- Smoke de venda real após a aplicação de 20261023120000 (#628): pós-checagem de catálogo OK em 2026-10-28, mas nenhuma venda desde 2026-10-16 para provar a baixa de estoque online/offline sob o novo privilégio
 - Aprovar (ou ajustar) o teste controlado de provisionamento em produção: `docs/runbooks/TESTE_CONTROLADO_PROVISIONAMENTO_PRODUCAO.md`. Homologação não reproduz produção (parou em 20261019170000, sem RPCs do trial). O lado banco já está validado em `backend/scripts/provisionamento-wizard-trial.test.sql`
 - Aprovar o merge de #629 (migration validada: segurança, concorrência, rollback)
 - #620: CI corrigido (token entre empresas e tipos); revisar e aprovar; após merge, deploy manual das Edge Functions alteradas. #623: decidir o comportamento esperado sem ADMIN nos ~20 testes que ainda criam ADMIN; depois regenerar tipos
-- Reconciliar drift de migrations main × produção: em 2026-10-23 toda migration da main a partir de 20261019 está em produção com a mesma versão; restam 20261010120000 (adiada pela governança) e 20261023120000 (aplicação manual pendente). O check `migration-remote-drift` não compara com produção: faz `supabase link` no projeto de `SUPABASE_MIGRATION_CHECK_PROJECT_REF`, que está **pausado** (log de 2026-10-28: "project is paused"; os únicos projetos pausados da organização são `jinlong-staging` e `ageguard`). Por isso acusava ausentes versões que existem em produção e agora falha sempre. Decidir: apontar o secret para produção (só leitura do histórico) ou reativar o staging
+- Drift main × produção (check `migration-remote-drift`, agora apontado para produção em 2026-10-28): só 2 bloqueantes reais. `20261010120000` (adiada pela governança; o script do check não lê `deferred-migrations.json`) e `20261022020000` (#625; no-op em produção, porque a coluna não existe). Decidir: aplicar `20261022020000` como no-op registrado ou registrá-la como human gate; ensinar o check a respeitar o manifesto de adiadas
 - Decidir módulos marcados DRAFT já aplicados em produção (comissão #607, import intelligence #601): validar ou esconder do cliente
 - Congelar features até o corte do primeiro cliente (só hotfix P0 em produção)
 
@@ -43,6 +43,8 @@
 
 ## Feito
 
+- 2026-10-28 — `20261023120000` (#628) aplicada em produção pelo dono (versão real, SQL idêntico ao arquivo por md5); pós-checagem: revogado para authenticated/anon, service_role mantido, diagnóstico ajustado, nenhum `permission denied` nos logs
+- 2026-10-28 — `SUPABASE_MIGRATION_CHECK_PROJECT_REF` apontado para produção (o projeto anterior estava pausado); o check é só leitura (`supabase migration list`) e não roda para PRs de fork
 - 2026-10-23 — PDV web: seletor de parcelas do crédito mostra "3x de R$ 33,33 (última R$ 33,34)" em vez de "{n}x" e o cupom mostra "Crédito 3x" (PR pendente de revisão)
 - 2026-10-23 — #625 mergeado com autorização (ed3dee81): deploy do pdv-importados READY, banco de produção inalterado, provisionamento de loja/trial deixa de falhar com 42703
 - 2026-10-23 — Saneamento do backlog: 43 PRs e 1 issue auditados; #543, #446, #497 encerrados com justificativa; #546, #583 corrigidos; #586 implementada em #629; relatório em `docs/auditorias/SANEAMENTO_BACKLOG_2026-10-23.md`
@@ -51,5 +53,3 @@
 - 2026-10-23 — PR #628 mergeado (8bbf5120) sem efeito em produção; revoke de `decrementar_estoque_seguro` para authenticated, diagnóstico alinhado e teste de regressão no CI
 - 2026-10-23 — Hub preparado para hub.jinlong.app: domínio no projeto, env de Preview, isolamento e bloqueio de não-admin validados
 - 2026-10-23 — Merge dos PRs #529, #624 e #631
-- 2026-10-23 — Entrada única "Entrar no Jinlong": admin da plataforma sem loja vai do login do ERP ao painel gerencial (inerte até configurar o hub)
-- 2026-10-23 — Site comercial Premium 2.0 implementado e mesclado (#631)
