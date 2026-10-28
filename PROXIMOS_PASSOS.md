@@ -14,6 +14,14 @@
 - Ligar leaked password protection no Supabase Auth (a view SECURITY DEFINER foi resolvida pelo #618; advisor confirma em 2026-10-23)
 - Aprovar e aplicar #629 (issue #586: vínculo SAÍDA↔ENTRADA de transferência no kardex); fechar a issue só depois da verificação em produção
 - Consolidar testes únicos de PRs antigos antes de encerrá-los: pilha #487/#488/#498/#499/#500 (fiscal/financeiro) e experimentos multiempresa #492–#496 (matriz negativa de isolamento)
+- Corte ADMIN: o perfil ADMIN legado tem escopo global em fp_pode_loja e em dezenas de RPCs (docs/audits/AUDITORIA_RPC_SECDEF_2026-10-28.md). Confirmar que nenhum caminho de tenant atribui ADMIN e planejar a remoção
+- Fechar as 7 RPCs NÃO VALIDADAS da auditoria SECDEF criando objetos da empresa B no fixture (vendas em espera, movimentações, documento fiscal)
+- Adicionar tenant_guard (ou isenção com motivo) nas tabelas da multiempresa-fase2 (funcionario_dados, comissoes_*, import_*); a verificação cruzada não achou vazamento, então é defesa em profundidade
+- Reescrever multiempresa-fase5 (espera EXECUTE de authenticated em decrementar_estoque_seguro, revogado de propósito em 20261023120000) e corrigir a contagem de RPCs do rollback da fase2 (65 vs 55)
+- Caixa: cancelamento de venda de caixa fechado não reflete no caixa aberto (S9b) e cancelamento com 2 caixas abertos sem caixa_id é aceito (S12); fechar no PR-2
+- Rodar as suítes de psql (ap-payments, ar-receipts, sale-totals, financeiro-hardening, financial-adversarial, ux04, funcionario-dados-rls) num banco de homologação migrado, via npm run test:financial
+- Alinhar o Supabase local (supabase_db_fastproduct tem 412 de 439 migrations) antes de rodar testes contra ele
+- Criar teste de reposição de estoque no cancelamento e teste ponta a ponta de auditoria (autor, data, alteração)
 - Definir preço real em saas.planos (hoje placeholder) e contrato de piloto sem NFC-e/SLA
 - Revisar Termos e Privacidade (prometem emissão fiscal; fiscal é stub)
 - Provisionar empresa/loja nova para o cliente pelo wizard e validar o isolamento multiempresa (nenhum dado de outra loja visível); não usar o script de limpeza, que apaga dados de todos os tenants
@@ -45,10 +53,10 @@
 - 2026-10-28 — Drift main × produção zerado: `20261022020000` (#625) registrada em produção como no-op (script do #641, SQL idêntico ao arquivo); #641 mergeado (598efcf0): o check respeita `deferred-migrations.json` e aceita duplicatas de pares com git alinhado. `migration-remote-drift` contra produção = HUMAN_GATE (só `20261010120000`, adiada)
 - 2026-10-28 — `20261023120000` (#628) aplicada em produção pelo dono (versão real, SQL idêntico ao arquivo por md5); pós-checagem: revogado para authenticated/anon, service_role mantido, diagnóstico ajustado, nenhum `permission denied` nos logs
 - 2026-10-28 — `SUPABASE_MIGRATION_CHECK_PROJECT_REF` apontado para produção (o projeto anterior estava pausado); o check é só leitura (`supabase migration list`) e não roda para PRs de fork
+- 2026-10-28 — Auditoria SECDEF: 4 helpers que revelavam dados da empresa B foram revogados de authenticated (migration 20261028120000; docs/audits/AUDITORIA_RPC_SECDEF_2026-10-28.md)
+- 2026-10-28 — Auditoria INT-01 das 12 integrações: 6 PASSOU, 3 FALHOU, 3 NÃO TESTADA (docs/audits/AUDITORIA_INTEGRACAO_INT01_2026-10-28.md); o "S7" da devolução era falha do teste (caixa_id omitido com 7 caixas abertos), corrigido
 - 2026-10-23 — PDV web: seletor de parcelas do crédito mostra "3x de R$ 33,33 (última R$ 33,34)" em vez de "{n}x" e o cupom mostra "Crédito 3x" (PR pendente de revisão)
 - 2026-10-23 — #625 mergeado com autorização (ed3dee81): deploy do pdv-importados READY, banco de produção inalterado, provisionamento de loja/trial deixa de falhar com 42703
 - 2026-10-23 — Saneamento do backlog: 43 PRs e 1 issue auditados; #543, #446, #497 encerrados com justificativa; #546, #583 corrigidos; #586 implementada em #629; relatório em `docs/auditorias/SANEAMENTO_BACKLOG_2026-10-23.md`
 - 2026-10-23 — #618 e #621 mergeados (migrations já em produção); alerta `security_definer_view` resolvido no advisor
 - 2026-10-23 — #621: migration de perfis com guarda para banco novo (Codex P1); #618: mock de rpc nos testes do productReader
-- 2026-10-23 — PR #628 mergeado (8bbf5120) sem efeito em produção; revoke de `decrementar_estoque_seguro` para authenticated, diagnóstico alinhado e teste de regressão no CI
-- 2026-10-23 — Hub preparado para hub.jinlong.app: domínio no projeto, env de Preview, isolamento e bloqueio de não-admin validados
