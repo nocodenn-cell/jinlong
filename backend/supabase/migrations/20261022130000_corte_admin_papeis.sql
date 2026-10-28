@@ -7,7 +7,7 @@
 -- (20261022120000_sec_token_gerente_loja_nula_fora_da_loja e 20261022121000_cobranca_correcoes_revisao_585).
 --
 -- O que faz (aditivo; não remove valor de CHECK nem apaga linhas):
---  1. backup dos usuários ADMIN em internal.usuarios_admin_corte_backup (rollback);
+--  1. backup dos usuários ADMIN (perfil, ativo, loja cadastral) e de TODOS os vínculos deles (rollback);
 --  2. ADMIN com vínculo DONO ativo numa empresa ⇒ perfil DONO (só nessa empresa, pelo vínculo);
 --     ADMIN sem vínculo DONO ⇒ ativo = false (sem acesso de loja). Perfil ADMIN mantido na linha;
 --  3. trigger impede criar ADMIN novo, promover alguém a ADMIN ou reativar um ADMIN (exceto contexto de servidor);
@@ -25,6 +25,7 @@
 BEGIN;
 
 -- 1. Backup -------------------------------------------------------------------------------------------
+-- Backup completo para rollback: perfil/ativo/loja cadastral e TODOS os vínculos dos usuários ADMIN.
 CREATE TABLE IF NOT EXISTS internal.usuarios_admin_corte_backup (
   usuario_id uuid PRIMARY KEY,
   perfil_antes text NOT NULL,
@@ -32,18 +33,51 @@ CREATE TABLE IF NOT EXISTS internal.usuarios_admin_corte_backup (
   acao text NOT NULL,
   em timestamptz NOT NULL DEFAULT now()
 );
+ALTER TABLE internal.usuarios_admin_corte_backup ADD COLUMN IF NOT EXISTS loja_id_antes uuid NULL;
 REVOKE ALL ON internal.usuarios_admin_corte_backup FROM PUBLIC;
 
-INSERT INTO internal.usuarios_admin_corte_backup (usuario_id, perfil_antes, ativo_antes, acao)
+CREATE TABLE IF NOT EXISTS internal.usuarios_admin_corte_vinculos_backup (
+  vinculo_id uuid PRIMARY KEY,
+  usuario_id uuid NOT NULL,
+  empresa_id uuid NOT NULL,
+  loja_id uuid NULL,
+  papel text NOT NULL,
+  ativo_antes boolean NOT NULL,
+  em timestamptz NOT NULL DEFAULT now()
+);
+REVOKE ALL ON internal.usuarios_admin_corte_vinculos_backup FROM PUBLIC;
+
+INSERT INTO internal.usuarios_admin_corte_backup (usuario_id, perfil_antes, ativo_antes, acao, loja_id_antes)
 SELECT u.id, u.perfil, u.ativo,
        CASE WHEN EXISTS (SELECT 1 FROM public.usuario_vinculos v
                           WHERE v.usuario_id = u.id AND v.ativo AND v.papel = 'DONO')
-            THEN 'VIROU_DONO' ELSE 'DESATIVADO' END
+            THEN 'VIROU_DONO' ELSE 'DESATIVADO' END,
+       u.loja_id
   FROM public.usuarios u
  WHERE u.perfil = 'ADMIN'
 ON CONFLICT (usuario_id) DO NOTHING;
 
+INSERT INTO internal.usuarios_admin_corte_vinculos_backup (vinculo_id, usuario_id, empresa_id, loja_id, papel, ativo_antes)
+SELECT v.id, v.usuario_id, v.empresa_id, v.loja_id, v.papel, v.ativo
+  FROM public.usuario_vinculos v
+  JOIN internal.usuarios_admin_corte_backup b ON b.usuario_id = v.usuario_id
+ON CONFLICT (vinculo_id) DO NOTHING;
+
 -- 2. Remapeamento ------------------------------------------------------------------------------------
+-- Homologação 28/10/2026: ao virar DONO, o gatilho trg_usuarios_sync_vinculo cria vínculo DONO na empresa da
+-- loja CADASTRAL (usuarios.loja_id). Se essa loja for de OUTRA empresa (ex.: default = Matriz da Empresa 1), o
+-- ex-ADMIN ganharia DONO numa empresa onde nunca foi dono (escalada entre empresas). Antes de trocar o perfil,
+-- a loja cadastral passa para uma loja de uma empresa onde ele JÁ é DONO (com o perfil ainda ADMIN o gatilho
+-- não cria vínculo). Loja anterior fica no backup.
+UPDATE public.usuarios u
+   SET loja_id = (SELECT l.id FROM public.usuario_vinculos v JOIN public.lojas l ON l.empresa_id = v.empresa_id
+                   WHERE v.usuario_id = u.id AND v.ativo AND v.papel = 'DONO'
+                   ORDER BY l.ativo DESC, l.created_at, l.id LIMIT 1)
+  FROM internal.usuarios_admin_corte_backup b
+ WHERE b.usuario_id = u.id AND b.acao = 'VIROU_DONO' AND u.perfil = 'ADMIN'
+   AND NOT EXISTS (SELECT 1 FROM public.usuario_vinculos v JOIN public.lojas l ON l.id = u.loja_id
+                    WHERE v.usuario_id = u.id AND v.ativo AND v.papel = 'DONO' AND v.empresa_id = l.empresa_id);
+
 UPDATE public.usuarios u SET perfil = 'DONO'
   FROM internal.usuarios_admin_corte_backup b
  WHERE b.usuario_id = u.id AND b.acao = 'VIROU_DONO' AND u.perfil = 'ADMIN';
@@ -51,6 +85,18 @@ UPDATE public.usuarios u SET perfil = 'DONO'
 UPDATE public.usuarios u SET ativo = false
   FROM internal.usuarios_admin_corte_backup b
  WHERE b.usuario_id = u.id AND b.acao = 'DESATIVADO' AND u.perfil = 'ADMIN' AND u.ativo IS DISTINCT FROM false;
+
+-- Prova (aborta a migration inteira se falhar): nenhum ex-ADMIN tem vínculo ativo que não tinha antes.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM public.usuario_vinculos v
+               JOIN internal.usuarios_admin_corte_backup b ON b.usuario_id = v.usuario_id
+              WHERE v.ativo
+                AND NOT EXISTS (SELECT 1 FROM internal.usuarios_admin_corte_vinculos_backup k
+                                 WHERE k.vinculo_id = v.id AND k.ativo_antes)) THEN
+    RAISE EXCEPTION 'CORTE_ADMIN_VINCULO_NOVO_DETECTADO';
+  END IF;
+END $$;
 
 -- 3. Bloqueio de ADMIN novo/reativado --------------------------------------------------------------
 CREATE OR REPLACE FUNCTION internal.fp_bloquear_perfil_admin()
