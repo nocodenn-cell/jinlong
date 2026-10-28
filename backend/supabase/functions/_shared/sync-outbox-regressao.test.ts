@@ -3,3 +3,4 @@
 // offline (20261028130000). Sem mudar workflow: o Deno registra os Deno.test dos módulos importados.
 import "../sync-outbox/tenantScope.test.ts";
 import "../sync-outbox/revisaoOffline.test.ts";
+import "../sync-outbox/descontoGerente.test.ts";

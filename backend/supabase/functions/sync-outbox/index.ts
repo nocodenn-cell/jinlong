@@ -21,6 +21,7 @@
 // |        |                | pós-venda fiscal (opcional) | Se `AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE=true`, chama RPC `fiscal_enfileirar_documento_venda`. Falha intermediária rejeita o evento para retry idempotente (venda já registrada retorna; baixa `BAIXA_JA_EXISTE`; fiscal faz upsert). |
 // ---
 
+import { descontoSemValidacao, type InfoDesconto, infoDescontoVenda, strictManagerDiscountAuth } from "./descontoGerente.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { timingSafeEqualSecret, timingSafeEqualStr } from "../_shared/crypto.ts";
 import { validateGerenteAndIssueToken } from "../_shared/gerente-auth.ts";
@@ -742,7 +743,7 @@ async function processVenda(
   const parsedJson = JSON.parse(ev.payload_json);
   const payload = parseVendaPayload(parsedJson);
   await liberarVendaOfflineSeSuspensa(supabase, ev, payload.venda_id, ctx);
-  const strictManagerDiscountAuth = Deno.env.get("STRICT_MANAGER_DISCOUNT_AUTH") === "true";
+  const strictManagerDiscount = strictManagerDiscountAuth();
   const _t0 = Date.now();
 
   await ensureCaixaPdv(
@@ -753,9 +754,9 @@ async function processVenda(
     payload.loja_id,
   );
 
-  const hasManagerDiscount = (payload.desconto_gerente_percentual ?? 0) > 0 ||
-    (payload.desconto_gerente_valor ?? 0) > 0;
-  if (strictManagerDiscountAuth && hasManagerDiscount && !payload.desconto_gerente_token &&
+  // Seguro por padrão: sem a secret (ou com valor inválido) o modo é estrito.
+  const info = infoDescontoVenda(ev.tipo, ev.payload_json);
+  if (descontoSemValidacao(info, strictManagerDiscount, false) &&
     !(await descontoAutorizadoPorPinGerente(supabase, payload, ctx))) {
     throw new Error("GERENTE_TOKEN_OBRIGATORIO");
   }
@@ -974,7 +975,7 @@ async function handlePdvConfigSync(req: Request, supabase: SupabaseAdmin, ctx: S
     ? {
       ...data,
       loja_id: lojaId,
-      strict_manager_auth: Deno.env.get("STRICT_MANAGER_DISCOUNT_AUTH") === "true",
+      strict_manager_auth: strictManagerDiscountAuth(),
     }
     : null;
 
@@ -1064,19 +1065,8 @@ async function liberarVendaOfflineSeSuspensa(
   }
 }
 
-function infoDesconto(ev: OutboxEvent): { token: string | null; exigeToken: boolean; vendaId: string | null } {
-  if (ev.tipo !== "VENDA_REGISTRADA") return { token: null, exigeToken: false, vendaId: null };
-  let p: Record<string, unknown> = {};
-  try {
-    p = JSON.parse(ev.payload_json) as Record<string, unknown>;
-  } catch {
-    return { token: null, exigeToken: false, vendaId: null };
-  }
-  const token = typeof p.desconto_gerente_token === "string" && p.desconto_gerente_token.trim() ? p.desconto_gerente_token.trim() : null;
-  const temDesconto = Number(p.desconto_gerente_percentual ?? 0) > 0 || Number(p.desconto_gerente_valor ?? 0) > 0;
-  const strict = Deno.env.get("STRICT_MANAGER_DISCOUNT_AUTH") === "true";
-  const vendaId = typeof p.venda_id === "string" && isUuid(p.venda_id) ? p.venda_id.trim() : null;
-  return { token, exigeToken: strict && temDesconto && !!token, vendaId };
+function infoDesconto(ev: OutboxEvent): InfoDesconto {
+  return infoDescontoVenda(ev.tipo, ev.payload_json);
 }
 
 async function gravarEvento(supabase: SupabaseAdmin, ev: OutboxEvent, ctx: SyncContext): Promise<void> {
