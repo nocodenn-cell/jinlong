@@ -3,12 +3,16 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { getHomeContent } from './content'
 import { CJK_WEIGHTS, cjkCharsByWeight } from './content/displayText'
+import { SEGMENT_VALUES } from './leadSchema'
 import { CONTACT_EMAIL, getContactChannels, parseWhatsappUrl } from './contactChannels'
 import { isSiteLocale, otherSiteLocale, SITE_LOCALES } from './locales'
 import {
   CLOSING_FIGURES,
   DEMO_PRODUCTS,
   HERO_SALE,
+  OVERVIEW_FIGURES,
+  TOP_SELLERS,
+  averageTicketCents,
   closingTotalCents,
   saleItemCount,
   saleTotalCents,
@@ -62,51 +66,53 @@ describe('paridade de conteúdo pt-BR / zh-CN', () => {
 
   it('o chinês só aparece em campos previstos na página em português', () => {
     const allowed =
-      /^(hero\.signature|hero\.proof\[0\]|hero\.chipSecond\.text|langSwitch\.(group|zh|zhShort)|benefits\.items\[4\]\.what|languages\.title|languages\.zh\..*|footer\.zhTagline|brandLabel|footer\.tagline|meta\.title)$/
+      /^(langSwitch\.(group|zh|zhShort)|statement\.railZh\[\d\]|difference\.artZh|final\.lines\[0\]|footer\.zhTagline|brandLabel|meta\.title|hero\.bottom\[0\])$/
     const unexpected = pt.filter(([key, value]) => CJK.test(value) && !allowed.test(key))
     expect(unexpected).toEqual([])
   })
 
-  it('a página em chinês é chinesa e segue o briefing (H1, proposta central, 3 passos)', () => {
+  it('abertura aprovada e página chinesa em chinês', () => {
+    const ptHero = getHomeContent('pt-BR').hero
+    expect(Object.values(ptHero.h1).join(' ')).toBe('Sua loja. Seu ritmo. Seu controle.')
+    expect(ptHero.lead).toBe('Uma operação conectada do balcão à gestão. Varejo, atacado e estoque no mesmo sistema — em português e chinês.')
+    expect([ptHero.ctaPrimary, ptHero.ctaSecondary]).toEqual(['Conhecer o Jinlong', 'Explorar a experiência'])
     const zhContent = getHomeContent('zh-CN')
     expect(CJK.test(zhContent.hero.h1.line1)).toBe(true)
     expect(CJK.test(zhContent.meta.description)).toBe(true)
-    expect(Object.values(zhContent.hero.h1).join('')).toBe('在巴西开店，收银和库存一手掌握。')
-    expect(zhContent.hero.signature).toBe('老板用中文，员工用葡语，同一套系统。')
     for (const locale of ['pt-BR', 'zh-CN'] as const) {
       const content = getHomeContent(locale)
-      expect(content.steps.items).toHaveLength(3)
-      expect(content.niches.items).toHaveLength(6)
-      expect(content.pains.items).toHaveLength(3)
-      expect(content.faq.items).toHaveLength(4)
+      expect(Object.keys(content.commandCenter.scenes)).toEqual(['overview', 'pos', 'stock', 'wholesale', 'reports'])
+      expect(content.process.steps).toHaveLength(3)
+      expect(content.statement.problems).toHaveLength(3)
+      expect(content.form.segments.map((s) => s.value)).toEqual([...SEGMENT_VALUES])
     }
   })
 
-  it('direção comercial: demonstração agendada, sem teste grátis, sem destaque fiscal', () => {
+  it('direção comercial: demonstração, sem teste grátis, sem promessa fiscal nem superlativos', () => {
     for (const locale of ['pt-BR', 'zh-CN'] as const) {
       const content = getHomeContent(locale)
       const all = collectStrings(content).map(([, v]) => v).join('\n')
       expect(all).not.toMatch(/grátis|gratis|免费|试用|15 dias|15天|\[|em breve|即将/i)
-      expect(all).not.toMatch(/CONFIRMAR|TODO|DEPOIMENTO|PREÇO\]/)
-      const prominent = JSON.stringify([content.hero, content.pains, content.benefits, content.faq, content.final, content.price])
+      expect(all).not.toMatch(/CONFIRMAR|TODO|DEPOIMENTO|PREÇO\]|R\$ ?149|R\$ ?299/)
+      expect(all).not.toMatch(/melhor (ERP|sistema)|n[ºo] ?1|aumente (seu|o) faturamento|最好的|第一/i)
+      const prominent = JSON.stringify([content.hero, content.statement, content.commandCenter, content.difference, content.final])
       expect(prominent).not.toMatch(/NFC-e|NF-e|nota fiscal|发票/i)
-      expect(content.integrations.note).toMatch(/NFC-e/)
-      expect(content.integrations.note).not.toMatch(/emite|homologad|已开通|支持开具/i)
+      const fiscal = content.faq.items.find((item) => /NFC-e/.test(item.q))
+      expect(fiscal?.a).not.toMatch(/emite|homologad|已开通|支持开具/i)
+      expect(content.commandCenter.illustrative).toMatch(/fictícios|虚构/)
     }
-    expect(getHomeContent('pt-BR').hero.ctaTrial).toBe('Agendar demonstração')
-    expect(getHomeContent('zh-CN').hero.ctaTrial).toBe('预约演示')
-    expect(getHomeContent('pt-BR').price.value).toBe('Condições sob consulta')
-    expect(getHomeContent('zh-CN').price.value).toBe('价格面议')
+    expect(getHomeContent('pt-BR').form.submit).toBe('Agendar demonstração')
+    expect(getHomeContent('zh-CN').form.submit).toBe('预约演示')
   })
 
   it('termos de operação em chinês seguem o próprio ERP', () => {
-    const zhContent = getHomeContent('zh-CN')
-    expect(zhContent.pdv.finish).toBe('完成销售')
-    expect(zhContent.screens.stock.colWholesale).toBe('批发价')
-    expect(zhContent.screens.stock.colRetail).toBe('零售价')
-    expect(zhContent.screens.close.cash).toBe('现金')
-    expect(zhContent.screens.close.debit).toBe('借记卡')
-    expect(zhContent.screens.close.credit).toBe('信用卡')
+    const cc = getHomeContent('zh-CN').commandCenter
+    expect(cc.pos.finish).toBe('完成销售')
+    expect(cc.stock.wholesale).toBe('批发价')
+    expect(cc.stock.retail).toBe('零售价')
+    expect(cc.reports.cash).toBe('现金')
+    expect(cc.reports.debit).toBe('借记卡')
+    expect(cc.reports.credit).toBe('信用卡')
   })
 })
 
@@ -190,8 +196,8 @@ describe('simulação de atacado (ilustrativa, dados fictícios)', () => {
   })
 })
 
-describe('dados fictícios das telas', () => {
-  it('venda do hero: 15 itens e R$ 321,70', () => {
+describe('dados fictícios do centro de comando', () => {
+  it('venda do caixa: 15 itens e R$ 321,70', () => {
     expect(saleItemCount(HERO_SALE)).toBe(15)
     expect(saleTotalCents(HERO_SALE)).toBe(32170)
   })
@@ -201,6 +207,11 @@ describe('dados fictícios das telas', () => {
       CLOSING_FIGURES.cashCents + CLOSING_FIGURES.pixCents + CLOSING_FIGURES.debitCents + CLOSING_FIGURES.creditCents
     )
     expect(closingTotalCents()).toBe(383300)
+  })
+
+  it('visão geral: ticket médio derivado das vendas, mais vendidos existem no catálogo', () => {
+    expect(averageTicketCents()).toBe(Math.round(OVERVIEW_FIGURES.salesCents / OVERVIEW_FIGURES.salesCount))
+    for (const item of TOP_SELLERS) expect(DEMO_PRODUCTS.some((p) => p.id === item.productId)).toBe(true)
   })
 
   it('todo produto com atacado informa a faixa, e vice-versa', () => {

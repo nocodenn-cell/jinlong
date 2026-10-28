@@ -1,21 +1,16 @@
 import Link from 'next/link'
 import { sitePath, type SiteLocale } from '@/lib/locales'
 
-/** Marca provisória: bloco vermelho 金龙. A decisão de identidade corporativa está pendente. */
-export function Seal({ small = false }: { small?: boolean }) {
-  return (
-    <span className={small ? 'jl-seal jl-seal--sm' : 'jl-seal'} aria-hidden="true">
-      <span lang="zh-CN">金龙</span>
-    </span>
-  )
-}
-
-export function Brand({ locale, label }: { locale: SiteLocale; label: string }) {
+/** Marca: emblema oficial 金龍 + JINLONG / 金龙 · linha de apoio. */
+export function Brand({ locale, label, tagline }: { locale: SiteLocale; label: string; tagline: string }) {
   return (
     <Link className="jl-brand" href={sitePath(locale)} aria-label={label}>
       <Logo />
       <span className="jl-wordmark" aria-hidden="true">
-        <b>Jinlong</b>
+        <b>JINLONG</b>
+        <small>
+          <span lang="zh-CN">金龙</span> · {tagline}
+        </small>
       </span>
     </Link>
   )
@@ -27,7 +22,7 @@ export function Logo() {
     <span className="jl-logo" aria-hidden="true">
       <picture>
         <source srcSet="/brand/jinlong-logo-64.webp 1x, /brand/jinlong-logo-128.webp 2x" type="image/webp" />
-        <img src="/brand/jinlong-logo-64.png" srcSet="/brand/jinlong-logo-128.png 2x" alt="" width={40} height={40} />
+        <img src="/brand/jinlong-logo-64.png" srcSet="/brand/jinlong-logo-128.png 2x" alt="" width={44} height={44} />
       </picture>
     </span>
   )

@@ -6,6 +6,7 @@ import type { Mensagens } from "@/i18n/getMessages"
 import { MAX_PARCELAS_CREDITO, type FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
 import { labelFormaPagamentoVenda } from "@/lib/format/vendaLabels"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
+import { rotuloOpcaoParcelasCredito } from "@/app/caixa/caixaParcelasCredito"
 import { enterVoltaParaBusca } from "@/app/caixa/caixaFocoBusca"
 import type { FormaPagamento } from "@/app/caixa/hooks/useCaixaPagamentos"
 import { formatDecimalBRL } from "@/lib/format/money"
@@ -153,6 +154,7 @@ const PagamentoPanelImpl = forwardRef(function PagamentoPanelImpl(
       ) : null}
 
       {!dividido && !pedeValorRecebido ? (
+        <>
         <div className="flex items-center justify-between gap-3 rounded border p-2 font-semibold">
           <span>{labelFormaPagamentoVenda(formaUnica ?? "PIX", m)}</span>
           {formaUnica === "CARTAO_CREDITO" && onAtualizarParcelas ? (
@@ -162,17 +164,28 @@ const PagamentoPanelImpl = forwardRef(function PagamentoPanelImpl(
                 onChange={(e) => onAtualizarParcelas(0, Number(e.target.value))}
                 aria-label={caixaFmt(m.caixa.aria_parcela_parcelas, { n: 0 + 1 })}
                 data-testid="caixa-parcelas-credito"
-                className="h-auto w-24 rounded-md border border-border bg-background px-2 py-1.5 text-xs font-medium text-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
+                className="h-auto w-auto max-w-[16rem] rounded-md border border-border bg-background px-2 py-1.5 text-xs font-medium text-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
               >
                 {OPCOES_PARCELAS.map((n) => (
                   <option key={n} value={n}>
-                    {n === 1 ? m.caixa.pdv_pgto_a_vista : caixaFmt(m.caixa.pdv_pgto_parcelas_n, { n })}
+                    {rotuloOpcaoParcelasCredito(n, totalLiquidoComGerente, m.caixa, moedaPrefixo)}
                   </option>
                 ))}
               </Select>
           ) : null}
           <span>{moedaPrefixo} {formatDecimalBRL(totalLiquidoComGerente)}</span>
         </div>
+        {formaUnica === "CARTAO_CREDITO" && (pagamentos[0].parcelas ?? 1) > 1 ? (
+          <p data-testid="caixa-parcelas-resumo" className="text-caption text-muted-foreground">
+            {caixaFmt(m.caixa.pdv_pgto_parcelas_resumo, {
+              total: `${moedaPrefixo} ${formatDecimalBRL(totalLiquidoComGerente)}`,
+              n: pagamentos[0].parcelas ?? 1,
+            })}
+            {" · "}
+            {rotuloOpcaoParcelasCredito(pagamentos[0].parcelas ?? 1, totalLiquidoComGerente, m.caixa, moedaPrefixo)}
+          </p>
+        ) : null}
+        </>
       ) : null}
 
       {dividido ? (
@@ -214,11 +227,11 @@ const PagamentoPanelImpl = forwardRef(function PagamentoPanelImpl(
                 onChange={(e) => onAtualizarParcelas(idx, Number(e.target.value))}
                 aria-label={caixaFmt(m.caixa.aria_parcela_parcelas, { n: idx + 1 })}
                 data-testid="caixa-parcelas-credito"
-                className="h-auto w-24 rounded-md border border-border bg-background px-2 py-1.5 text-xs font-medium text-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
+                className="h-auto w-auto max-w-[12rem] rounded-md border border-border bg-background px-2 py-1.5 text-xs font-medium text-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
               >
                 {OPCOES_PARCELAS.map((n) => (
                   <option key={n} value={n}>
-                    {n === 1 ? m.caixa.pdv_pgto_a_vista : caixaFmt(m.caixa.pdv_pgto_parcelas_n, { n })}
+                    {rotuloOpcaoParcelasCredito(n, p.valor, m.caixa, moedaPrefixo)}
                   </option>
                 ))}
               </Select>

@@ -8,6 +8,7 @@ import {
 } from '@shared-core/src/import'
 import { formatarDecimal } from '@/lib/import/hub/decimais'
 import type { DadosCatalogoEmpresa } from '@/lib/import/hub/catalogoEmpresa'
+import { existeOverride, percentualOverrideValido } from '@/lib/import/hub/formImportacao'
 import { removerOverrideTributoAction, salvarConfigImportacaoAction, salvarOverrideTributoAction } from '../actions-configuracao'
 import { Campo, ErroFormulario, Selecao, Texto, useAcao, type TextosImport } from './campos'
 
@@ -20,6 +21,8 @@ export function ConfiguracaoImportacao(props: { t: TextosImport; catalogo: Dados
   const tabela: readonly AliquotaUf[] = props.catalogo?.tabela?.length ? props.catalogo.tabela : ALIQUOTAS_UF
   const cfg = props.catalogo?.config ?? null
   const { executar, pendente, erro } = useAcao(t)
+  // ação própria das alíquotas: erro aparece junto ao formulário delas e o pendente bloqueia só esta seção
+  const ovr = useAcao(t)
 
   const [uf, setUf] = useState(cfg?.uf_importador ?? '')
   const [porto, setPorto] = useState(cfg?.porto_padrao ?? '')
@@ -34,6 +37,8 @@ export function ConfiguracaoImportacao(props: { t: TextosImport; catalogo: Dados
   const [oNcm, setONcm] = useState('')
   const [oPct, setOPct] = useState('')
   const [oNota, setONota] = useState('')
+  // upsert ON CONFLICT (empresa, tributo, ncm_prefixo): mesma chave substitui a alíquota atual
+  const oExistente = existeOverride(props.catalogo?.overrides, oTrib, oNcm)
 
   const [rDest, setRDest] = useState('SP')
   const [rPreco, setRPreco] = useState('1000')
@@ -105,8 +110,8 @@ export function ConfiguracaoImportacao(props: { t: TextosImport; catalogo: Dados
                   <td className="px-2 py-1.5 text-right tabular-nums">{formatarDecimal(o.aliquota_pct)}%</td>
                   <td className="px-2 py-1.5">{o.nota ?? ''}</td>
                   <td className="px-2 py-1.5 text-right">
-                    <Button type="button" variant="outline" disabled={pendente || !cfg}
-                      onClick={() => executar(() => removerOverrideTributoAction(o.id), undefined, t.ovr_removido)}>{t.ovr_remover}</Button>
+                    <Button type="button" variant="outline" disabled={ovr.pendente || !cfg}
+                      onClick={() => ovr.executar(() => removerOverrideTributoAction(o.id), undefined, t.ovr_removido)}>{t.ovr_remover}</Button>
                   </td>
                 </tr>
               ))}
@@ -114,16 +119,22 @@ export function ConfiguracaoImportacao(props: { t: TextosImport; catalogo: Dados
           </table>
         )}
         <div className="grid gap-3 md:grid-cols-5">
-          <Selecao rotulo={t.ovr_tributo} valor={oTrib} onChange={setOTrib} opcoes={TRIBUTOS.map((x) => ({ valor: x, rotulo: x }))} testId="ovr-tributo" />
-          <Texto rotulo={t.ovr_ncm} valor={oNcm} onChange={(v) => setONcm(v.replace(/\D/g, '').slice(0, 8))} maxLength={8} testId="ovr-ncm" />
-          <Texto rotulo={t.ovr_aliquota} valor={oPct} onChange={setOPct} modoNumerico maxLength={7} testId="ovr-aliquota" />
-          <Texto rotulo={t.ovr_nota} valor={oNota} onChange={setONota} maxLength={200} testId="ovr-nota" className="md:col-span-2" />
+          <Selecao rotulo={t.ovr_tributo} valor={oTrib} onChange={setOTrib} opcoes={TRIBUTOS.map((x) => ({ valor: x, rotulo: x }))} testId="ovr-tributo" desabilitado={ovr.pendente} />
+          <Texto rotulo={t.ovr_ncm} valor={oNcm} onChange={(v) => setONcm(v.replace(/\D/g, '').slice(0, 8))} maxLength={8} testId="ovr-ncm" desabilitado={ovr.pendente} selecionarAoFocar />
+          <Texto rotulo={t.ovr_aliquota} valor={oPct} onChange={setOPct} modoNumerico maxLength={7} testId="ovr-aliquota" desabilitado={ovr.pendente} />
+          <Texto rotulo={t.ovr_nota} valor={oNota} onChange={setONota} maxLength={200} testId="ovr-nota" className="md:col-span-2" desabilitado={ovr.pendente} />
         </div>
+        {oExistente ? (
+          <p role="status" className="mt-3 rounded-md border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] px-3 py-2 text-small text-[var(--color-warning-strong)]" data-testid="ovr-aviso-substituir">
+            {tk('ovr_aviso_substituir').replace('{{pct}}', formatarDecimal(oExistente.aliquota_pct))}
+          </p>
+        ) : null}
+        {ovr.erro ? <div className="mt-3"><ErroFormulario mensagem={ovr.erro} /></div> : null}
         <div className="mt-3">
-          <Button type="button" variant="outline" disabled={!cfg || pendente || !PCT_RE.test(oPct)} data-testid="ovr-adicionar"
-            onClick={() => executar(() => salvarOverrideTributoAction({ tributo: oTrib, ncm_prefixo: oNcm, aliquota_pct: oPct, nota: oNota || null }),
-              () => { setOPct(''); setONota('') }, t.ovr_salvo)}>
-            {t.ovr_adicionar}
+          <Button type="button" variant="outline" disabled={!cfg || ovr.pendente || !percentualOverrideValido(oPct)} data-testid="ovr-adicionar"
+            onClick={() => ovr.executar(() => salvarOverrideTributoAction({ tributo: oTrib, ncm_prefixo: oNcm, aliquota_pct: oPct, nota: oNota || null }),
+              () => { setOPct(''); setONota(''); setONcm('') }, t.ovr_salvo)}>
+            {ovr.pendente ? t.salvando : oExistente ? tk('ovr_atualizar') : t.ovr_adicionar}
           </Button>
         </div>
       </SectionCard>

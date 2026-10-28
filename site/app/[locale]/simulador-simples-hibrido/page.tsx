@@ -40,7 +40,7 @@ export default async function SimuladorPage({ params }: PageProps) {
   const copy = getSimuladorCopy(locale)
   return (
     <>
-      <SiteHeader locale={locale} content={content} showSwitch={isLocalePublic(otherSiteLocale(locale))} />
+      <SiteHeader locale={locale} content={content} showSwitch={isLocalePublic(otherSiteLocale(locale))} anchorsOnHome />
       <main id="main-content" className="jl-hs-page">
         <section className="jl-section" aria-labelledby="h-hs">
           <div className="jl-hs-wrap">
@@ -52,8 +52,9 @@ export default async function SimuladorPage({ params }: PageProps) {
             <div className="jl-hs-cta">
               <h2>{copy.ctaTitle}</h2>
               <p>{copy.ctaLead}</p>
-              <a className="jl-btn jl-btn--primary" href={`${sitePath(locale)}#shiyong`}>
-                {copy.cta}
+              <a className="jl-cta-gold" href={`${sitePath(locale)}#contato`}>
+                <span>{copy.cta}</span>
+                <b aria-hidden="true">↗</b>
               </a>
             </div>
             <aside className="jl-hs-sources" aria-labelledby="h-hs-src">
