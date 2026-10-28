@@ -211,7 +211,11 @@ BEGIN
 
   v_cx := pg_temp.abrir(7, 0);
   v_v := pg_temp.vender(7, v_cx, 100, pg_temp.din(100));
-  v_err := pg_temp.devolver(1, v_v, 50, 'recon-dev-7');
+  -- Há sete caixas abertos na loja 1: o contrato 0/1/N exige escolher o pagador.
+  v_err := pg_temp.devolver(1, v_v, 50, 'recon-dev-7', v_cx);
+  IF v_err IS NOT NULL THEN
+    RAISE EXCEPTION 'S7_DEVOLUCAO_REJEITADA: %', v_err;
+  END IF;
   PERFORM pg_temp.medir('S7 devolução 50 dinheiro, caixa da venda aberto', v_cx, 50);
 END
 $bloco_a$;
