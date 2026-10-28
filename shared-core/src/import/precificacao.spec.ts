@@ -56,6 +56,27 @@ describe('atacado por faixas, arredondamento e repreço', () => {
     // estimado: custo 10, preço 20 (margem 50%); real 12 → 24
     expect(repricoSugerido('20.00', '10', '12')).toEqual({ preco_brl: '24.00', margem_mantida_pct: '50.0000' })
   })
+  it('margem efetiva recalculada sobre o preço ARREDONDADO (CALC-001.1 P6)', () => {
+    // custo 4,50; despesas 10%: markup 30 → 6,50 e markup 20 → 6,00; ambas arredondam para 6,90.
+    // lucro 2,40 → margem 2,40/6,90 = 34,78%; markup 2,40/4,50 = 53,33%; líquida (2,40 − 0,69)/6,90 = 24,78%.
+    const f = simularFaixasAtacado('4.50', [{ quantidade_minima: 10, modo: 'MARKUP', percentual: '30' }, { quantidade_minima: 50, modo: 'MARKUP', percentual: '20' }], '90', '10')
+    expect(f.map((x) => [x.margem_resultante_pct, x.preco_arredondado_brl])).toEqual([['30.77', '6.90'], ['25.00', '6.90']]) // alvo preservado
+    for (const x of f) {
+      expect(x).toMatchObject({ preco_arredondado_brl: '6.90', lucro_efetivo_brl: '2.40', margem_efetiva_pct: '34.78', markup_efetivo_pct: '53.33', margem_liquida_efetiva_pct: '24.78' })
+    }
+  })
+  it('margem efetiva sem despesas: custo 5,00 → 6,90', () => {
+    // 5 × 1,3 = 6,50 → 6,90; lucro 1,90 → 27,54% s/ preço; 38,00% s/ custo
+    const [x] = simularFaixasAtacado('5.00', [{ quantidade_minima: 10, modo: 'MARKUP', percentual: '30' }], '90')
+    expect(x).toMatchObject({ preco_arredondado_brl: '6.90', margem_efetiva_pct: '27.54', markup_efetivo_pct: '38.00', margem_liquida_efetiva_pct: '27.54' })
+  })
+  it('sem arredondamento, margem efetiva = margem-alvo', () => {
+    const f = simularFaixasAtacado('4.50', [{ quantidade_minima: 10, modo: 'MARKUP', percentual: '30' }, { quantidade_minima: 50, modo: 'MARKUP', percentual: '20' }], 'NENHUM', '10')
+    for (const x of f) {
+      expect(x.margem_efetiva_pct).toBe(x.margem_resultante_pct)
+      expect(x.markup_efetivo_pct).toBe(x.markup_resultante_pct)
+    }
+  })
 })
 
 describe('critério IGUAL no motor existente', () => {

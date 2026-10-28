@@ -72,9 +72,12 @@ export function Texto(props: {
   modoNumerico?: boolean
   maxLength?: number
   desabilitado?: boolean
+  /** Seleciona o conteúdo ao focar: digitar substitui o valor (evita concatenar, ex. "9,75" + "18"). Padrão: igual a `modoNumerico`. */
+  selecionarAoFocar?: boolean
   testId?: string
   className?: string
 }) {
+  const selecionar = props.selecionarAoFocar ?? props.modoNumerico ?? false
   return (
     <Campo rotulo={props.rotulo} dica={props.dica} obrigatorio={props.obrigatorio} className={props.className}>
       {(id, describedBy) => (
@@ -85,6 +88,7 @@ export function Texto(props: {
           className={`fp-control w-full text-small${props.modoNumerico ? ' tabular-nums text-right' : ''}`}
           value={props.valor}
           onChange={(e) => props.onChange(e.target.value)}
+          onFocus={selecionar ? (e) => e.currentTarget.select() : undefined}
           aria-describedby={describedBy}
           aria-required={props.obrigatorio || undefined}
           maxLength={props.maxLength}
@@ -142,4 +146,4 @@ export function ErroFormulario({ mensagem }: { mensagem: string | null }) {
   )
 }
 
-export const MOEDAS_COMUNS = ['USD', 'CNY', 'EUR', 'BRL', 'HKD', 'JPY'] as const
+export { MOEDAS_COMUNS } from '@/lib/import/hub/formImportacao'
