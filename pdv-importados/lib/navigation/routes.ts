@@ -62,6 +62,8 @@ export const ROUTES = {
     implantacao: '/admin/implantacao',
     provisionamento: '/admin/provisionamento',
     suspensao: '/admin/suspensao',
+    /** Fila de revisão de eventos offline do PDV (funcionário inativado, sem prova). DONO/GERENTE. */
+    revisaoOffline: '/admin/revisao-offline',
     caixas: '/admin/caixas',
     diagnosticoCaixa: '/admin/diagnostico-caixa',
     categoriasProdutos: '/admin/categorias-produtos',
