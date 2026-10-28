@@ -5,6 +5,8 @@
 -- Correções da revisão de segurança do PR #585 (cobrança Asaas).
 --
 -- NÃO APLICAR no Supabase remoto sem revisão do dono e validação em homologação.
+-- ROLLBACK: backend/supabase/rollback/20261028101000_cobranca_correcoes_revisao_585.rollback.sql (reverter o app antes;
+-- descarta upgrades pendentes não pagos).
 --
 -- 1) Upgrade de plano não libera recursos antes do pagamento: o pedido fica em colunas *_pendente
 --    e só é aplicado em PAYMENT_CONFIRMED/RECEIVED/RECEIVED_IN_CASH. Upgrade = plano de `ordem` maior,
