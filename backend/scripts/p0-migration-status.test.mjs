@@ -277,3 +277,30 @@ test("manifesto de adiadas: lê versões válidas e falha fechado quando malform
   assert.throws(() => parseDeferredManifest(JSON.stringify({})), /deferred/);
   assert.throws(() => parseDeferredManifest(JSON.stringify({ deferred: [{ version: "abc" }] })), /inválida/);
 });
+
+test("par com git JÁ alinhado aceita a duplicata remote_only (registro antigo com timestamp MCP)", () => {
+  const rows = [
+    { local: "20261009180000", remote: "20261009180000" },
+    { local: null, remote: "20261009135940" },
+  ];
+  const { drift, extraInList } = analyze(rows, ["20261009180000"]);
+  const pairs = parseHumanGateRegistry(JSON.stringify({ pairs: [{
+    gitOnlyVersion: "20261009180000", remoteOnlyVersion: "20261009135940", reason: "fase A via MCP", decisionDoc: "docs/x.md",
+  }] }));
+  const sem = applyHumanGateRegistry({ blocking: drift, missingInList: [], extraBlocking: extraInList }, pairs);
+  assert.deepEqual(sem.extraBlocking, ["20261009135940"], "sem as versões alinhadas continua estrito");
+  const com = applyHumanGateRegistry({ blocking: drift, missingInList: [], extraBlocking: extraInList }, pairs, ["20261009180000"]);
+  assert.deepEqual(com.extraBlocking, []);
+  assert.deepEqual(com.humanGate.map((g) => g.divergence), ["duplicata_git_alinhado"]);
+});
+
+test("git alinhado NÃO justifica remote_only de outro par nem remote-only sem par", () => {
+  const pairs = parseHumanGateRegistry(JSON.stringify({ pairs: [{
+    gitOnlyVersion: "20261009180000", remoteOnlyVersion: "20261009135940", reason: "fase A", decisionDoc: "docs/x.md",
+  }] }));
+  const r = applyHumanGateRegistry(
+    { blocking: [], missingInList: [], extraBlocking: ["20261009999999"] }, pairs, ["20261009180000"],
+  );
+  assert.deepEqual(r.extraBlocking, ["20261009999999"]);
+  assert.deepEqual(r.humanGate, []);
+});

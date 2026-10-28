@@ -145,7 +145,9 @@ function loadHumanGateRegistry() {
   return parseHumanGateRegistry(fs.readFileSync(HUMAN_GATES_FILE, "utf8"));
 }
 
-export function applyHumanGateRegistry({ blocking, missingInList, extraBlocking }, pairs) {
+export function applyHumanGateRegistry({ blocking, missingInList, extraBlocking }, pairs, alignedVersions = []) {
+  // Versões cujo arquivo local já consta no remoto com a MESMA version (local = remote).
+  const alignedSet = new Set(alignedVersions);
   const blockingByVersion = new Map(blocking.map((entry) => [entry.version, entry]));
   const missingSet = new Set(missingInList);
   const extraSet = new Set(extraBlocking);
@@ -157,7 +159,23 @@ export function applyHumanGateRegistry({ blocking, missingInList, extraBlocking 
   for (const pair of pairs) {
     const gitEntry = blockingByVersion.get(pair.gitOnlyVersion);
     const gitPresent = Boolean(gitEntry) || missingSet.has(pair.gitOnlyVersion);
+    const gitAligned = !gitPresent && alignedSet.has(pair.gitOnlyVersion);
     const remotePresent = extraSet.has(pair.remoteOnlyVersion);
+
+    // Git ALINHADO + lado remote_only ainda presente: a migration foi registrada de novo com a version do arquivo
+    // (ex.: reconciliação) e a linha antiga com timestamp MCP ficou como duplicata. É prova AINDA MAIS forte de que
+    // foi aplicada neste ambiente, então a duplicata é justificada pelo par — não é remote-only órfão.
+    if (gitAligned && remotePresent) {
+      acceptedRemoteOnly.add(pair.remoteOnlyVersion);
+      humanGate.push({
+        version: pair.remoteOnlyVersion,
+        direction: "remote_only",
+        reason: pair.reason,
+        decisionDoc: pair.decisionDoc,
+        divergence: "duplicata_git_alinhado",
+      });
+      continue;
+    }
 
     // ATÔMICO: só aceita o par quando os DOIS lados aparecem como
     // divergência no ambiente atual sendo avaliado. Um ambiente onde a
@@ -573,6 +591,7 @@ function main() {
   } = applyHumanGateRegistry(
     { blocking: initiallyBlocking, missingInList, extraBlocking: initiallyExtraBlocking },
     gates,
+    rows.filter((r) => r.local !== null && r.local === r.remote).map((r) => r.local),
   );
   let deferredVersions;
   try {
