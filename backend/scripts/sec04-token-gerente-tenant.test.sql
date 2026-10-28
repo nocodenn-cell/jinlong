@@ -92,7 +92,7 @@ END
 $helper$;
 
 -- ═══════════════════════════════════════════════════════════════════════════
--- Fronteira de empresa (20261022120000): token de DONO só vale nas empresas dele
+-- Fronteira de empresa (20261028100000): token de DONO só vale nas empresas dele
 -- ═══════════════════════════════════════════════════════════════════════════
 
 DO $empresa$

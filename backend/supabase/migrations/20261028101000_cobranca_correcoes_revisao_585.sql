@@ -1,3 +1,7 @@
+-- Versão renomeada em 28/10/2026 (era 20261022121000_…): a main já tinha 20261023120000 aplicada em produção, e
+-- uma versão anterior à última aplicada faz o `supabase db push` recusar (ou exigir --include-all). Conteúdo inalterado.
+-- Nunca foi aplicada em produção (conferido em supabase_migrations.schema_migrations, somente leitura).
+--
 -- Correções da revisão de segurança do PR #585 (cobrança Asaas).
 --
 -- NÃO APLICAR no Supabase remoto sem revisão do dono e validação em homologação.

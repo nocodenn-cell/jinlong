@@ -13,7 +13,7 @@ $P -c "create database t"
 $P -d t -f "$DIR/stubs.sql"
 PGOPTIONS='-c check_function_bodies=off' $P -d t -f "$M/20261020100000_cobranca_planos_trial.sql"
 (sed -n '/^BEGIN;/,/^COMMIT;/p' "$M/20260916120000_sec04_token_gerente_vinculo_loja_v4.sql" | awk '/CREATE OR REPLACE FUNCTION public.finalizar/{exit} {print}'; echo 'COMMIT;') | $P -d t
-$P -d t -f "$M/20261022120000_sec_token_gerente_loja_nula_fora_da_loja.sql"
-$P -d t -f "$M/20261022121000_cobranca_correcoes_revisao_585.sql"
+$P -d t -f "$M/20261028100000_sec_token_gerente_loja_nula_fora_da_loja.sql"
+$P -d t -f "$M/20261028101000_cobranca_correcoes_revisao_585.sql"
 OUT="$($P -d t -f "$DIR/test.sql")"; echo "$OUT"
 ! echo "$OUT" | grep -q FALHOU
