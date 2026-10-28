@@ -108,7 +108,8 @@ CREATE OR REPLACE FUNCTION public.commercial_trials_listar(p_empresa uuid DEFAUL
 RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public, saas, pg_temp AS $$
 DECLARE r jsonb;
 BEGIN
-  IF NOT public.is_commercial_admin() THEN RAISE EXCEPTION 'COMMERCIAL_ACESSO_NEGADO' USING ERRCODE = '42501'; END IF;
+  -- identidade explícita (guarda c1-secdef): sem sessão nega antes de consultar o papel
+  IF auth.uid() IS NULL OR NOT public.is_commercial_admin() THEN RAISE EXCEPTION 'COMMERCIAL_ACESSO_NEGADO' USING ERRCODE = '42501'; END IF;
   SELECT coalesce(jsonb_agg(t ORDER BY t.criado_em DESC), '[]'::jsonb) INTO r FROM (
     SELECT
       a.empresa_id, e.nome AS empresa_nome, a.created_at AS criado_em, a.trial_fim,
@@ -155,7 +156,8 @@ END $$;
 CREATE OR REPLACE FUNCTION public.commercial_planos()
 RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public, saas, pg_temp AS $$
 BEGIN
-  IF NOT public.is_commercial_admin() THEN RAISE EXCEPTION 'COMMERCIAL_ACESSO_NEGADO' USING ERRCODE = '42501'; END IF;
+  -- identidade explícita (guarda c1-secdef): sem sessão nega antes de consultar o papel
+  IF auth.uid() IS NULL OR NOT public.is_commercial_admin() THEN RAISE EXCEPTION 'COMMERCIAL_ACESSO_NEGADO' USING ERRCODE = '42501'; END IF;
   RETURN (SELECT coalesce(jsonb_agg(jsonb_build_object('codigo', codigo, 'nome', nome, 'tipo', tipo,
             'preco_loja_centavos', preco_loja_centavos, 'preco_caixa_adicional_centavos', preco_caixa_adicional_centavos,
             'caixas_inclusos_por_loja', caixas_inclusos_por_loja, 'max_lojas', max_lojas,
@@ -195,7 +197,8 @@ RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, saas, 
 DECLARE a saas.assinaturas; v_tabela int; v_valor int; v_lojas_ativas int; v_lead uuid; v_status_ant text;
   v_obs text := btrim(coalesce(p_observacao, '')); v_addons text[] := coalesce(p_addons, '{}');
 BEGIN
-  IF NOT public.is_commercial_admin() THEN RAISE EXCEPTION 'COMMERCIAL_ACESSO_NEGADO' USING ERRCODE = '42501'; END IF;
+  -- identidade explícita (guarda c1-secdef): sem sessão nega antes de consultar o papel
+  IF auth.uid() IS NULL OR NOT public.is_commercial_admin() THEN RAISE EXCEPTION 'COMMERCIAL_ACESSO_NEGADO' USING ERRCODE = '42501'; END IF;
   IF char_length(v_obs) NOT BETWEEN 5 AND 1000 THEN RAISE EXCEPTION 'COMMERCIAL_OBSERVACAO_OBRIGATORIA'; END IF;
   IF p_forma NOT IN ('PIX', 'BOLETO', 'CARTAO', 'UNDEFINED') THEN RAISE EXCEPTION 'COMMERCIAL_FORMA_INVALIDA'; END IF;
   IF p_qtd_lojas IS NULL OR p_qtd_lojas < 1 OR p_qtd_lojas > 200 OR p_qtd_caixas IS NULL OR p_qtd_caixas < p_qtd_lojas OR p_qtd_caixas > 1000 THEN
