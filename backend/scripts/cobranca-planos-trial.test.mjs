@@ -50,6 +50,21 @@ const comoQ = (uid, sql) => como(uid, async () => (await db.query(sql)).rows)
 const cfg = async (emp, chave) => (await q(`SELECT valor FROM public.configuracoes_gerais WHERE empresa_id = $1 AND chave = $2`, [emp, chave]))[0]?.valor
 const evento = (id, ev, payload) => q(`SELECT public.cobranca_aplicar_evento($1, $2, $3::jsonb) r`, [id, ev, JSON.stringify(payload)]).then((r) => r[0].r)
 
+// 20261028121000: provisionamento automático (trial) nasce BLOQUEADO até o hub ser homologado.
+await t('provisionamento automático bloqueado por padrão (fail closed); núcleo fora do alcance do service_role', async () => {
+  assert.equal((await q(`SELECT valor FROM saas.parametros WHERE chave = 'provisionamento_automatico'`))[0]?.valor, 'bloqueado')
+  await db.exec(`INSERT INTO auth.users (id) VALUES ('7b100000-0000-4000-8000-0000000b10c0')`)
+  const antes = (await q(`SELECT count(*)::int n FROM public.empresas`))[0].n
+  await assert.rejects(q(`SELECT public.plataforma_iniciar_trial($1::jsonb)`, [JSON.stringify({
+    empresa: { nome: 'Bloqueada' }, lojas: [{ nome: 'B' }], usuarios: [{ id: '7b100000-0000-4000-8000-0000000b10c0', nome: 'X', papel: 'DONO' }] })]),
+    /PROVISIONAMENTO_AUTOMATICO_BLOQUEADO/)
+  assert.equal((await q(`SELECT count(*)::int n FROM public.empresas`))[0].n, antes)
+  const g = await q(`SELECT has_function_privilege('service_role', 'internal.plataforma_provisionar_empresa_nucleo(jsonb, uuid)', 'EXECUTE') s`)
+  assert.equal(g[0].s, false)
+})
+// Os testes de trial abaixo exercitam o fluxo como ficará DEPOIS da homologação do hub.
+await db.exec(`UPDATE saas.parametros SET valor = 'habilitado' WHERE chave = 'provisionamento_automatico'`)
+
 await t('catálogo: 3 planos + add-on Fiscal, preços marcados como placeholder', async () => {
   const r = await q(`SELECT codigo, tipo, preco_placeholder FROM saas.planos ORDER BY ordem`)
   assert.deepEqual(r.map((x) => x.codigo), ['BASICO', 'ATACADO', 'REDE', 'FISCAL'])
@@ -68,6 +83,10 @@ await t('gating por plano: Básico não tem faixas de preço/transferências; ad
   assert.equal((await q(`SELECT public.fp_empresa_tem_recurso('${E2}', 'faixas_preco') r`))[0].r, false)
   assert.equal((await q(`SELECT public.fp_empresa_tem_recurso('${E2}', 'fiscal') r`))[0].r, false)
   await q(`SELECT public.cobranca_registrar_assinatura('${E2}', 'BASICO', '{FISCAL}', 1, 1, 'PIX', 15800, NULL, NULL, NULL)`)
+  // #620 (revisão #585): add-on é upgrade ⇒ fica pendente até o pagamento confirmado.
+  assert.equal((await q(`SELECT public.fp_empresa_tem_recurso('${E2}', 'fiscal') r`))[0].r, false)
+  // aplica o pendente como o webhook faria no pagamento (o caminho via webhook é coberto em "troca de plano").
+  assert.equal((await q(`SELECT internal.cobranca_aplicar_plano_pendente('${E2}') r`))[0].r, true)
   assert.equal((await q(`SELECT public.fp_empresa_tem_recurso('${E2}', 'fiscal') r`))[0].r, true)
   await assert.rejects(q(`SELECT public.cobranca_registrar_assinatura('${E2}', 'FISCAL', '{}', 1, 1, 'PIX', 1, NULL, NULL, NULL)`), /COBRANCA_PLANO_INVALIDO/)
 })
@@ -259,6 +278,9 @@ await t('aviso antes da suspensão: minha_assinatura informa data prevista e avi
 await t('troca de plano: recursos mudam e auditoria registra antes/depois', async () => {
   assert.equal((await q(`SELECT public.fp_empresa_tem_recurso('${E3}', 'transferencias') r`))[0].r, false)
   await q(`SELECT public.cobranca_registrar_assinatura('${E3}', 'REDE', '{FISCAL}', 3, 4, 'BOLETO', 99999, NULL, NULL, NULL)`)
+  // #620: upgrade só vale depois do pagamento confirmado.
+  assert.equal((await q(`SELECT public.fp_empresa_tem_recurso('${E3}', 'transferencias') r`))[0].r, false)
+  await evento('evt_troca_rede', 'PAYMENT_RECEIVED', { payment: { id: 'pay_troca_rede', subscription: 'sub_C', value: 999.99 } })
   assert.equal((await q(`SELECT public.fp_empresa_tem_recurso('${E3}', 'transferencias') r`))[0].r, true)
   assert.equal((await q(`SELECT public.fp_empresa_tem_recurso('${E3}', 'fiscal') r`))[0].r, true)
   const a = await q(`SELECT antes->>'plano_codigo' a, depois->>'plano_codigo' d FROM saas.assinatura_auditoria
@@ -342,7 +364,7 @@ await t('segurança: entradas inválidas são recusadas (plano, dias, payload)',
 
 // ── trial não concede acesso a outra empresa ─────────────────────────────────
 await t('trial: empresa.id / loja.id / empresa_id / papel no payload são ignorados (sempre empresa nova)', async () => {
-  const uid = '70000000-0000-4000-8000-000000000001'
+  const uid = '7a000000-0000-4000-8000-0000000000f1'
   await db.exec(`INSERT INTO auth.users (id) VALUES ('${uid}')`)
   const lojasE1 = (await q(`SELECT count(*)::int n FROM public.lojas WHERE empresa_id = '${E1}'`))[0].n
   const r = (await q(`SELECT public.plataforma_iniciar_trial($1::jsonb, 15) r`, [JSON.stringify({

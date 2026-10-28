@@ -18,6 +18,7 @@ const base = { empresaNome: 'Loja X', donoNome: 'Dona X', email: 'a@exemplo.com.
 
 describe('teste grátis — não concede acesso a outra empresa', () => {
   beforeEach(() => {
+    vi.stubEnv('PROVISIONAMENTO_AUTOMATICO_HABILITADO', 'true')
     st.rpc.mockReset(); st.signUp.mockReset(); st.deleteUser.mockClear()
     st.rpc.mockImplementation(async (fn: string) => fn === 'trial_registrar_tentativa'
       ? { data: true, error: null }
@@ -50,5 +51,17 @@ describe('teste grátis — não concede acesso a outra empresa', () => {
     const r = await iniciarTesteGratisAction(base)
     expect(r.ok).toBe(false)
     expect(st.deleteUser).toHaveBeenCalledWith('u-novo')
+  })
+})
+
+describe('teste grátis — provisionamento automático bloqueado (hub não homologado)', () => {
+  beforeEach(() => { st.rpc.mockReset(); st.signUp.mockReset(); vi.unstubAllEnvs() })
+
+  it('sem PROVISIONAMENTO_AUTOMATICO_HABILITADO=true: recusa antes de criar usuário ou chamar RPC', async () => {
+    vi.stubEnv('PROVISIONAMENTO_AUTOMATICO_HABILITADO', '')
+    const r = await iniciarTesteGratisAction(base)
+    expect(r).toMatchObject({ ok: false, error: expect.stringContaining('indisponível') })
+    expect(st.signUp).not.toHaveBeenCalled()
+    expect(st.rpc).not.toHaveBeenCalled()
   })
 })

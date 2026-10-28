@@ -7,6 +7,7 @@ import { assertSupabasePublicEnv } from '@/lib/supabase/env'
 import { buildAuthCallbackUrl } from '@/lib/auth/appOrigin'
 import { ROUTES } from '@/lib/navigation/routes'
 import { bootstrapLojaTrial } from '@/lib/cobranca/trialBootstrap'
+import { MSG_PROVISIONAMENTO_BLOQUEADO, provisionamentoAutomaticoHabilitado } from '@/lib/provisionamento/provisionamentoAutomatico'
 import {
   TrialSignupSchema, emailDescartavel, hashAntiAbuso, saltAntiAbuso, mensagemErroTrial, montarPayloadTrial,
   verificarCaptcha, type TrialSignupInput,
@@ -18,6 +19,7 @@ type Rpc = { rpc: (fn: string, a: Record<string, unknown>) => Promise<{ data: un
 
 /**
  * Cadastro self-service de teste grátis (público).
+ * 0) provisionamento automático bloqueado salvo PROVISIONAMENTO_AUTOMATICO_HABILITADO=true (hub não homologado);
  * 1) validação + honeypot + captcha (Turnstile, se configurado) + e-mail descartável;
  * 2) rate limit por IP (hash com sal) no banco;
  * 3) Supabase Auth signUp ⇒ e-mail de verificação (login só depois de confirmar);
@@ -29,6 +31,9 @@ export async function iniciarTesteGratisAction(input: TrialSignupInput): Promise
   if (!parsed.success) return { ok: false, error: 'Confira os campos e aceite os termos. / 请检查表单并同意条款。' }
   const d = parsed.data
   if (d.site) return { ok: true, email: d.email, trialFim: '' } // honeypot: finge sucesso
+  // Hub comercial ainda não homologado ⇒ provisionamento automático bloqueado (fail closed), antes de criar
+  // qualquer usuário no Auth. O banco tem a mesma porta (20261028121000).
+  if (!provisionamentoAutomaticoHabilitado()) return { ok: false, error: MSG_PROVISIONAMENTO_BLOQUEADO }
   if (emailDescartavel(d.email)) return { ok: false, error: 'Use um e-mail permanente. / 请使用常用邮箱。' }
 
   const h = await headers()
