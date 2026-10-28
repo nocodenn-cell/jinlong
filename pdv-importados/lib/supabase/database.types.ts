@@ -9918,6 +9918,37 @@ export type Database = {
           valor_sistema_snapshot: number
         }[]
       }
+      listar_revisoes_offline: {
+        Args: { p_limite?: number; p_status?: string }
+        Returns: {
+          anteriores_pendentes: number
+          caixa_id: string
+          classificacao: string
+          decidido_em: string
+          decidido_por: string
+          decidido_por_nome: string
+          decisao_motivo: string
+          e_meu_evento: boolean
+          empresa_id: string
+          event_id: string
+          evidencias: Json
+          horario_dispositivo: string
+          id: string
+          loja_id: string
+          loja_nome: string
+          motivo: string
+          operador_ativo: boolean
+          operador_id: string
+          operador_nome: string
+          origem: string
+          recebido_em: string
+          resumo: Json
+          seq: number
+          status: string
+          tipo: string
+          venda_id: string
+        }[]
+      }
       listar_venda_eventos_gerente: {
         Args: {
           p_event_types?: string[]
