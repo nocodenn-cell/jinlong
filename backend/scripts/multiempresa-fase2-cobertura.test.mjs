@@ -26,6 +26,80 @@ const ISENTAS = {
   caixa_scan_telemetry_events: 'telemetria técnica do próprio usuário (sem loja_id)',
 }
 
+// Tabelas criadas DEPOIS das fases 1–5 (comissões, importação, módulos, PIN, comercial). Não recebem tenant_guard
+// porque já nasceram com policy própria escopada por empresa/loja (ou sem acesso de authenticated). A isenção
+// NÃO é só nome + motivo: o teste "isenções pós-fase 5" abaixo confere a política real de cada uma, então tirar a
+// checagem de escopo de uma policy (ou abrir grant) quebra o teste.
+//   sem_acesso: authenticated/anon sem nenhum privilégio de tabela (só RPC/service_role);
+//   escopo:     RLS ligada, ≥1 policy, e TODA policy de authenticated/public usa a função de escopo (USING e CHECK);
+//   global:     RLS ligada; leitura pode ser pública (catálogo), escrita só por policy com a função de escopo.
+const ESC_COMISSAO = /fp_pode_loja|fp_empresas_do_usuario|comissao_eh_gestor|auth\.uid\(\)/
+const ESC_IMPORT = /fp_import_pode_operacao|fp_pode_modulo/
+const ISENTAS_POS_FASE5 = {
+  comissoes_config: { tipo: 'escopo', re: ESC_COMISSAO, motivo: 'SELECT por fp_empresas_do_usuario; escrita só via comissao_salvar_config' },
+  comissoes_divisoes: { tipo: 'escopo', re: ESC_COMISSAO, motivo: 'SELECT por fp_pode_loja(DONO/GERENTE) ou participante; escrita via definir_divisao_comissao' },
+  comissoes_falhas: { tipo: 'escopo', re: ESC_COMISSAO, motivo: 'SELECT gerencial por fp_pode_loja; escrita só servidor' },
+  comissoes_metas: { tipo: 'escopo', re: ESC_COMISSAO, motivo: 'CRUD por comissao_eh_gestor(empresa_id) + trg_comissoes_metas_valida (loja/usuário da mesma empresa)' },
+  comissoes_periodo_vendedores: { tipo: 'escopo', re: ESC_COMISSAO, motivo: 'sem loja_id: próprio operador ou gestor da loja do período' },
+  comissoes_periodos: { tipo: 'escopo', re: ESC_COMISSAO, motivo: 'SELECT gerencial por fp_pode_loja; transição via comissao_periodo_transicionar' },
+  comissoes_regras: { tipo: 'escopo', re: ESC_COMISSAO, motivo: 'CRUD por comissao_eh_gestor + trg_comissoes_regras_valida (loja/usuário/produto/categoria da mesma empresa)' },
+  comissoes_regras_log: { tipo: 'escopo', re: ESC_COMISSAO, motivo: 'SELECT por comissao_eh_gestor; escrita só pelo trigger de log' },
+  funcionario_dados: { tipo: 'escopo', re: /fp_empresas_gerenciais_do_usuario/, motivo: 'CRUD por fp_empresas_gerenciais_do_usuario (DONO/GERENTE da empresa)' },
+  empresa_parametros_importacao: { tipo: 'escopo', re: ESC_IMPORT, motivo: 'SELECT por fp_pode_modulo(IMPORT_INTELLIGENCE, DONO/GERENTE); escrita via import_salvar_parametros_empresa' },
+  empresa_tributos_override: { tipo: 'escopo', re: ESC_IMPORT, motivo: 'SELECT por fp_pode_modulo; escrita via import_salvar/remover_override_tributo' },
+  ...Object.fromEntries(['import_aprovacoes', 'import_apuracao_itens', 'import_apuracao_rateios', 'import_apuracoes', 'import_auditoria',
+    'import_cambios', 'import_descontos', 'import_despesas', 'import_divergencias', 'import_documentos', 'import_itens',
+    'import_operacoes', 'import_tributos'].map((t) => [t, { tipo: 'escopo', re: ESC_IMPORT,
+    motivo: 'SELECT por fp_import_pode_operacao (empresa + módulo); escrita só pelas RPCs import_* (_import_operacao_para_escrita)' }])),
+  empresa_modulos: { tipo: 'sem_acesso', motivo: 'contratação de módulos: só service_role/RPC de plataforma' },
+  empresa_modulos_historico: { tipo: 'sem_acesso', motivo: 'histórico de módulos: só service_role' },
+  modulos_catalogo: { tipo: 'sem_acesso', motivo: 'catálogo de módulos da plataforma: só service_role/RPC' },
+  pdv_operador_eventos: { tipo: 'sem_acesso', motivo: 'auditoria de PIN do PDV: só sync-outbox (service_role)' },
+  usuario_pin: { tipo: 'sem_acesso', motivo: 'hash de PIN: só RPCs definir_meu_pin_pdv/resetar_pin_operador_pdv' },
+  commercial_admins: { tipo: 'sem_acesso', motivo: 'CRM comercial do Jinlong (plataforma): só service_role' },
+  commercial_customers: { tipo: 'global', re: /is_commercial_admin/, motivo: 'CRM comercial do Jinlong, sem dado de tenant; só is_commercial_admin' },
+  commercial_lead_events: { tipo: 'global', re: /is_commercial_admin/, motivo: 'CRM comercial do Jinlong, sem dado de tenant; só is_commercial_admin' },
+  commercial_leads: { tipo: 'global', re: /is_commercial_admin|status = 'novo'/, motivo: 'CRM comercial: formulário público só INSERT status novo; leitura/edição is_commercial_admin' },
+  tributos_catalogo_uf: { tipo: 'global', re: /^$/, motivo: 'catálogo fiscal público por UF: leitura para authenticated, sem policy de escrita' },
+}
+for (const [k, v] of Object.entries(ISENTAS_POS_FASE5)) ISENTAS[k] = v.motivo
+
+// RPCs SECURITY DEFINER criadas depois da fase 3 (comissões, importação, PIN, custos). Revisadas uma a uma:
+// cada uma tem a checagem de escopo no corpo, e o teste confere que a checagem CONTINUA lá (regex no prosrc).
+const RPC_REVISADAS_POS_FASE3 = {
+  comissao_export_contabil: /fp_pode_loja\(p_loja_id, ARRAY\['DONO','GERENTE'\]\)/,
+  comissao_periodo_transicionar: /fp_pode_loja/,
+  comissao_relatorio_itens: /fp_pode_loja/,
+  comissao_relatorio_vendedores: /fp_pode_loja/,
+  comissao_salvar_config: /comissao_eh_gestor/,
+  comissao_simular_regra: /fp_pode_loja/,
+  definir_divisao_comissao: /fp_pode_loja/,
+  definir_vendedor_venda: /fp_pode_loja/,
+  reprocessar_comissao_venda: /fp_pode_loja/,
+  listar_vendedores_loja: /fp_pode_loja\(p_loja_id\)/,
+  minhas_comissoes: /auth\.uid\(\)/,
+  definir_meu_pin_pdv: /auth\.uid\(\)/,
+  resetar_pin_operador_pdv: /fp_usuario_pode_loja/,
+  status_pin_equipe_pdv: /fp_usuario_pode_loja/,
+  produtos_custos_autorizados: /fp_usuario_ativo_com_papel\(u\.id, p\.loja_id, ARRAY\['DONO', 'GERENTE'\]\)/,
+  is_commercial_admin: /auth\.uid\(\)/,
+  import_criar_operacao: /fp_pode_modulo[\s\S]*fp_pode_operar_loja|fp_pode_operar_loja[\s\S]*fp_pode_modulo/,
+  import_listar_operacoes: /fp_import_pode_operacao/,
+  import_buscar_produtos: /fp_empresa_contexto_modulo/,
+  import_conferir_lancamento: /fp_import_pode_operacao/,
+  import_montar_entrada: /fp_import_pode_operacao/,
+  import_mudar_estado: /fp_import_pode_operacao/,
+  import_registrar_apuracao: /fp_import_pode_operacao/,
+  import_registrar_documento: /fp_import_pode_operacao/,
+  import_atualizar_operacao: /_import_operacao_para_escrita/,
+  import_remover_rascunho: /_import_operacao_para_escrita/,
+  import_salvar_item: /_import_operacao_para_escrita/,
+  import_salvar_lancamento: /_import_operacao_para_escrita/,
+  import_salvar_override_tributo: /_import_empresa_contexto/,
+  import_remover_override_tributo: /_import_empresa_contexto\(\)[\s\S]*empresa_id = v_emp/,
+  import_salvar_parametros_empresa: /_import_empresa_contexto/,
+}
+
 // RPCs DEF sem argumento de loja/entidade: revisadas uma a uma na fase 3 e marcadas com
 // COMMENT 'Multiempresa revisado (...)'. Pendência nova aqui = decisão consciente com motivo.
 const RPC_PENDENTES = {}
@@ -82,14 +156,57 @@ await t('enumeração: nenhuma tabela com loja_id/empresa_id fica fora da guarda
   assert.deepEqual(soltas, [])
 })
 
+await t('isenções pós-fase 5: a política real de cada tabela confirma o motivo (sem grant aberto, escopo em toda policy)', async () => {
+  const pol = (await db.query(`SELECT c.relname AS t, c.relrowsecurity AS rls, p.polname, p.polcmd, p.polpermissive,
+      p.polroles::regrole[]::text[] AS roles, coalesce(pg_get_expr(p.polqual, p.polrelid), '') AS q,
+      coalesce(pg_get_expr(p.polwithcheck, p.polrelid), '') AS w,
+      has_table_privilege('authenticated', c.oid, 'SELECT,INSERT,UPDATE,DELETE') AS priv_auth,
+      has_table_privilege('anon', c.oid, 'SELECT,INSERT,UPDATE,DELETE') AS priv_anon
+    FROM pg_class c LEFT JOIN pg_policy p ON p.polrelid = c.oid
+    WHERE c.relnamespace = 'public'::regnamespace AND c.relname = ANY($1)`, [Object.keys(ISENTAS_POS_FASE5)])).rows
+  const problemas = []
+  for (const [tab, cfg] of Object.entries(ISENTAS_POS_FASE5)) {
+    const ps = pol.filter((x) => x.t === tab)
+    if (!ps.length) { problemas.push(`${tab}: inexistente`); continue }
+    if (!ps[0].rls) problemas.push(`${tab}: RLS desligada`)
+    const doApp = ps.filter((x) => x.polname && x.roles.some((r) => ['authenticated', 'public', '-'].includes(r)))
+    if (cfg.tipo === 'sem_acesso') {
+      if (ps[0].priv_auth || ps[0].priv_anon) problemas.push(`${tab}: grant para authenticated/anon`)
+      continue
+    }
+    if (cfg.tipo === 'escopo' && !doApp.length) problemas.push(`${tab}: sem policy`)
+    for (const x of doApp) {
+      const escrita = x.polcmd !== 'r'
+      if (!x.polpermissive) continue // RESTRICTIVE só restringe
+      if (cfg.tipo === 'global' && !escrita) continue // leitura pública de catálogo
+      if (x.q && !cfg.re.test(x.q)) problemas.push(`${tab}.${x.polname}: USING sem escopo`)
+      if (escrita && x.polcmd !== 'd' && !cfg.re.test(x.w)) problemas.push(`${tab}.${x.polname}: CHECK sem escopo`)
+      if (escrita && !x.q && !x.w) problemas.push(`${tab}.${x.polname}: escrita sem condição`)
+    }
+    const anonEscrita = ps.filter((x) => x.polname && x.roles.includes('anon') && x.polcmd !== 'r')
+    for (const x of anonEscrita) if (!cfg.re.test(x.w)) problemas.push(`${tab}.${x.polname}: anon escreve sem condição`)
+  }
+  assert.deepEqual(problemas, [])
+})
+
 await t('enumeração: RPC SECURITY DEFINER exposta a authenticated está envelopada ou revisada (sem pendências)', async () => {
   const r = await db.query(`SELECT p.proname, coalesce(obj_description(p.oid, 'pg_proc'), '') AS c, p.prosrc
     FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
     WHERE n.nspname = 'public' AND p.prokind = 'f' AND p.prosecdef
       AND has_function_privilege('authenticated', p.oid, 'EXECUTE') AND p.proname !~ '^(fp_|auth_)'`)
   const soltas = r.rows.filter((x) => !x.c.startsWith('Envelope multiempresa') && !x.c.startsWith('Multiempresa revisado')
-    && !RPC_PENDENTES[x.proname]).map((x) => x.proname)
+    && !RPC_PENDENTES[x.proname] && !RPC_REVISADAS_POS_FASE3[x.proname]).map((x) => x.proname)
   assert.deepEqual(soltas, [], `RPCs sem envelope nem pendência: ${soltas.join(', ')}`)
+  // revisada pós-fase 3: a checagem de escopo tem de continuar no corpo (as helpers _import_* também são conferidas)
+  for (const x of r.rows.filter((y) => RPC_REVISADAS_POS_FASE3[y.proname])) {
+    assert.match(x.prosrc, RPC_REVISADAS_POS_FASE3[x.proname], `${x.proname}: checagem de escopo sumiu do corpo`)
+  }
+  const inexistentes = Object.keys(RPC_REVISADAS_POS_FASE3).filter((k) => !r.rows.some((x) => x.proname === k))
+  assert.deepEqual(inexistentes, [], 'revisão para RPC inexistente/não exposta (limpar lista)')
+  const helpers = (await db.query(`SELECT proname, prosrc FROM pg_proc WHERE pronamespace = 'public'::regnamespace
+    AND proname IN ('_import_operacao_para_escrita', '_import_empresa_contexto')`)).rows
+  assert.equal(helpers.length, 2, 'helpers de escopo da importação')
+  for (const h of helpers) assert.match(h.prosrc, /fp_import_pode_operacao[\s\S]*fp_pode_operar_loja|fp_empresa_contexto_modulo/, `${h.proname}: escopo`)
   for (const x of r.rows.filter((y) => y.c.startsWith('Envelope multiempresa'))) {
     assert.match(x.prosrc, /fp_assert_(loja|produto)/, `${x.proname}: envelope sem asserção`)
   }
@@ -228,7 +345,9 @@ await t('rollback remove guardas/envelopes, devolve as RPCs originais, e a migra
   const mig3 = await readFile(new URL('../supabase/migrations/20261019150000_multiempresa_fase3_config.sql', import.meta.url), 'utf8')
   const rb4 = await readFile(new URL('../supabase/rollback/20261019160000_multiempresa_fase4_desempenho_guardas.rollback.sql', import.meta.url), 'utf8')
   const mig4 = await readFile(new URL('../supabase/migrations/20261019160000_multiempresa_fase4_desempenho_guardas.sql', import.meta.url), 'utf8')
-  const nEnv = (await db.query(`SELECT count(*)::int n FROM internal.fp_rpc_envelopes`)).rows[0].n
+  const envelopes = async () => (await db.query(`SELECT nome FROM internal.fp_rpc_envelopes ORDER BY 1`)).rows.map((r) => r.nome)
+  const envAntes = await envelopes()
+  const nEnv = envAntes.length
   await db.exec(await readFile(new URL('../supabase/rollback/20261019170000_multiempresa_fase5_catalogo_empresa.rollback.sql', import.meta.url), 'utf8')) // fase 5 sai primeiro
   await db.exec(rb4) // depois a fase 4
   await db.exec(rb3) // fase 3 sai antes da fase 2
@@ -244,7 +363,12 @@ await t('rollback remove guardas/envelopes, devolve as RPCs originais, e a migra
   await db.exec(mig3)
   await db.exec(mig4)
   await db.exec(await readFile(new URL('../supabase/migrations/20261019170000_multiempresa_fase5_catalogo_empresa.sql', import.meta.url), 'utf8'))
-  assert.equal((await db.query(`SELECT count(*)::int n FROM internal.fp_rpc_envelopes`)).rows[0].n, nEnv)
+  const envDepois = await envelopes()
+  // Nenhum envelope some. Os que aparecem a mais são RPCs criadas DEPOIS da fase 2 (comissões) que a fase 2,
+  // reaplicada hoje, envelopa por ter argumento de loja/entidade; cada uma está revisada em RPC_REVISADAS_POS_FASE3.
+  const aMais = envDepois.filter((x) => !envAntes.includes(x))
+  assert.deepEqual(envAntes.filter((x) => !envDepois.includes(x)), [], 'envelope perdido no rollback+reaplicação')
+  assert.deepEqual(aMais.filter((x) => !RPC_REVISADAS_POS_FASE3[x]), [], `envelopes novos sem revisão: ${aMais.join(', ')}`)
 })
 
 console.log(`\n${pass} testes ok${process.exitCode ? ' — HÁ FALHAS' : ''}`)
