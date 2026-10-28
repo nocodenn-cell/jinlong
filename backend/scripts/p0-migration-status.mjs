@@ -20,6 +20,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const BACKEND_ROOT = path.resolve(__dirname, "..");
 const MIGRATIONS_DIR = path.join(BACKEND_ROOT, "supabase", "migrations");
 const HUMAN_GATES_FILE = path.join(BACKEND_ROOT, "supabase", "migration-human-gates.json");
+/** Migrations adiadas pela governança de deploy (docs/ops/deploy-governance.md). */
+const DEFERRED_MANIFEST_FILE = path.join(BACKEND_ROOT, "..", ".github", "deploy-governance", "deferred-migrations.json");
 
 function readArgs(argv) {
   return {
@@ -143,7 +145,9 @@ function loadHumanGateRegistry() {
   return parseHumanGateRegistry(fs.readFileSync(HUMAN_GATES_FILE, "utf8"));
 }
 
-export function applyHumanGateRegistry({ blocking, missingInList, extraBlocking }, pairs) {
+export function applyHumanGateRegistry({ blocking, missingInList, extraBlocking }, pairs, alignedVersions = []) {
+  // Versões cujo arquivo local já consta no remoto com a MESMA version (local = remote).
+  const alignedSet = new Set(alignedVersions);
   const blockingByVersion = new Map(blocking.map((entry) => [entry.version, entry]));
   const missingSet = new Set(missingInList);
   const extraSet = new Set(extraBlocking);
@@ -155,7 +159,23 @@ export function applyHumanGateRegistry({ blocking, missingInList, extraBlocking 
   for (const pair of pairs) {
     const gitEntry = blockingByVersion.get(pair.gitOnlyVersion);
     const gitPresent = Boolean(gitEntry) || missingSet.has(pair.gitOnlyVersion);
+    const gitAligned = !gitPresent && alignedSet.has(pair.gitOnlyVersion);
     const remotePresent = extraSet.has(pair.remoteOnlyVersion);
+
+    // Git ALINHADO + lado remote_only ainda presente: a migration foi registrada de novo com a version do arquivo
+    // (ex.: reconciliação) e a linha antiga com timestamp MCP ficou como duplicata. É prova AINDA MAIS forte de que
+    // foi aplicada neste ambiente, então a duplicata é justificada pelo par — não é remote-only órfão.
+    if (gitAligned && remotePresent) {
+      acceptedRemoteOnly.add(pair.remoteOnlyVersion);
+      humanGate.push({
+        version: pair.remoteOnlyVersion,
+        direction: "remote_only",
+        reason: pair.reason,
+        decisionDoc: pair.decisionDoc,
+        divergence: "duplicata_git_alinhado",
+      });
+      continue;
+    }
 
     // ATÔMICO: só aceita o par quando os DOIS lados aparecem como
     // divergência no ambiente atual sendo avaliado. Um ambiente onde a
@@ -225,6 +245,61 @@ export function separatePrPendingMigrations({ blocking, missingInList }, baseVer
   return { blocking: keptBlocking, missingInList: keptMissing, prPending };
 }
 
+/**
+ * Manifesto de migrations ADIADAS (`.github/deploy-governance/deferred-migrations.json`): decisão de governança
+ * de NÃO aplicar ainda uma migration que já está na main. Fail-closed: JSON malformado ou versão inválida aborta.
+ */
+export function parseDeferredManifest(raw) {
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (error) {
+    throw new Error(`Manifesto de migrations adiadas inválido (JSON): ${String(error.message ?? error)}`);
+  }
+  if (!parsed || !Array.isArray(parsed.deferred)) {
+    throw new Error("Manifesto de migrations adiadas inválido: campo `deferred` (array) ausente.");
+  }
+  return parsed.deferred.map((entry, i) => {
+    const version = String(entry?.version ?? "").trim();
+    if (!/^\d+$/.test(version)) throw new Error(`Manifesto de migrations adiadas: deferred[${i}].version inválida.`);
+    return version.padStart(3, "0");
+  });
+}
+
+/** Sem manifesto = nenhuma adiada (comportamento estrito). */
+function loadDeferredVersions() {
+  if (!fs.existsSync(DEFERRED_MANIFEST_FILE)) return [];
+  return parseDeferredManifest(fs.readFileSync(DEFERRED_MANIFEST_FILE, "utf8"));
+}
+
+/**
+ * Migrations adiadas pela governança ficam de fora do remoto DE PROPÓSITO: `remote_ausente` (ou ausência na tabela
+ * do CLI) delas não bloqueia e é listado à parte. O inverso é violação de governança e BLOQUEIA: uma adiada que
+ * aparece aplicada no remoto (`adiada_aplicada`).
+ */
+export function separateDeferredMigrations({ blocking, missingInList }, rows, deferredVersions) {
+  const deferred = new Set(deferredVersions ?? []);
+  if (deferred.size === 0) return { blocking, missingInList, deferredPending: [], deferredApplied: [] };
+  const deferredPending = [];
+  const keptBlocking = [];
+  for (const entry of blocking) {
+    if (entry.reason === "remote_ausente" && deferred.has(entry.version)) deferredPending.push(entry.version);
+    else keptBlocking.push(entry);
+  }
+  const keptMissing = [];
+  for (const version of missingInList) {
+    if (deferred.has(version)) {
+      if (!deferredPending.includes(version)) deferredPending.push(version);
+    } else keptMissing.push(version);
+  }
+  const deferredApplied = [...new Set((rows ?? []).map((r) => r.remote).filter((v) => v && deferred.has(v)))];
+  for (const version of deferredApplied) {
+    keptBlocking.push({ version, reason: "adiada_aplicada", remote: version });
+  }
+  deferredPending.sort((a, b) => Number(a) - Number(b));
+  return { blocking: keptBlocking, missingInList: keptMissing, deferredPending, deferredApplied };
+}
+
 /** Versões de migration presentes no ref git de base (ex.: origin/main). Fail-closed. */
 function listBaseMigrationVersions(ref) {
   const out = execFileSync("git", ["ls-tree", "--name-only", "--full-name", ref, "--", "supabase/migrations/"], {
@@ -246,13 +321,14 @@ function listBaseMigrationVersions(ref) {
 export function deriveOverallStatus({
   blocking,
   humanGate = [],
+  deferred = [],
   missingInList,
   extraBlocking,
 }) {
   if (blocking.length > 0 || missingInList.length > 0 || extraBlocking.length > 0) {
     return "BLOCKING_DRIFT";
   }
-  if (humanGate.length > 0) return "HUMAN_GATE";
+  if (humanGate.length > 0 || deferred.length > 0) return "HUMAN_GATE";
   return "ALIGNED";
 }
 
@@ -515,6 +591,26 @@ function main() {
   } = applyHumanGateRegistry(
     { blocking: initiallyBlocking, missingInList, extraBlocking: initiallyExtraBlocking },
     gates,
+    rows.filter((r) => r.local !== null && r.local === r.remote).map((r) => r.local),
+  );
+  let deferredVersions;
+  try {
+    deferredVersions = loadDeferredVersions();
+  } catch (error) {
+    const message = String(error.message ?? error);
+    if (opts.json) console.log(JSON.stringify({ ok: false, error: "deferred_manifest_invalid", message }, null, 2));
+    else console.error(message);
+    process.exit(2);
+  }
+  const {
+    blocking: deferredFilteredBlocking,
+    missingInList: deferredFilteredMissing,
+    deferredPending,
+    deferredApplied,
+  } = separateDeferredMigrations(
+    { blocking: gatedBlocking, missingInList: gatedMissingInList },
+    rows,
+    deferredVersions,
   );
   const baseRef = (process.env.MIGRATION_DRIFT_BASE_REF ?? "").trim();
   let baseVersions = null;
@@ -533,12 +629,13 @@ function main() {
     missingInList: blockingMissingInList,
     prPending,
   } = separatePrPendingMigrations(
-    { blocking: gatedBlocking, missingInList: gatedMissingInList },
+    { blocking: deferredFilteredBlocking, missingInList: deferredFilteredMissing },
     baseVersions,
   );
   const status = deriveOverallStatus({
     blocking,
     humanGate,
+    deferred: deferredPending,
     missingInList: blockingMissingInList,
     extraBlocking,
   });
@@ -563,6 +660,8 @@ function main() {
       remote: d.remote,
     })),
     humanGates: humanGate,
+    deferredByGovernance: deferredPending,
+    deferredAppliedViolation: deferredApplied,
     baseRef: baseRef || null,
     prPendingNotOnBase: prPending,
     driftLegacyNumericMirror: legacyNumericMirror.map((d) => ({
@@ -579,6 +678,7 @@ function main() {
     missingInCliTable: missingInList,
     blockingMissingInCliTable: blockingMissingInList,
     extraInCliTableNotOnDisk: extraInList,
+    extraBlockingRemoteOnly: extraBlocking,
   };
 
   if (opts.json) {
@@ -603,6 +703,10 @@ function main() {
       }
       console.log("");
     }
+    if (deferredPending.length) {
+      console.log("Adiadas pela governança (deferred-migrations.json; fora do remoto de propósito; não bloqueia):");
+      console.log(`  ${deferredPending.join(", ")}\n`);
+    }
     if (prPending.length) {
       console.log(`Migrations novas deste PR (ausentes em ${baseRef}; aplicar no remoto após o merge; não bloqueia):`);
       console.log(`  ${prPending.join(", ")}\n`);
@@ -622,6 +726,11 @@ function main() {
     }
     if (!blocking.length && drift.length) {
       console.log("(Nenhum drift bloqueante; ver categorias informativas acima.)\n");
+    }
+    if (extraBlocking.length) {
+      console.log("Drift bloqueante — versões só no remoto sem par HUMAN_GATE completo:");
+      console.log(`  ${extraBlocking.join(", ")}
+`);
     }
     if (missingInList.length) {
       console.log("Versões no disco que não apareceram na tabela do CLI:");
