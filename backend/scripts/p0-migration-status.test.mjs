@@ -8,7 +8,9 @@ import {
   deriveOverallStatus,
   parseMigrationListOutput,
   parseMigrationListTable,
+  parseDeferredManifest,
   parseHumanGateRegistry,
+  separateDeferredMigrations,
   separatePrPendingMigrations,
 } from "./p0-migration-status.mjs";
 
@@ -221,4 +223,84 @@ test("ignora o aviso de nova versão do CLI impresso após o JSON", () => {
       "A new version of Supabase CLI is available: v9 (currently installed v1)\n",
   );
   assert.deepEqual(parsed.rows, [{ local: "001", remote: "001" }]);
+});
+
+test("migration adiada pela governança com remote_ausente não bloqueia e vira HUMAN_GATE", () => {
+  const rows = [
+    { local: "20261009000000", remote: "20261009000000" },
+    { local: "20261010120000", remote: null },
+  ];
+  const { drift } = analyze(rows, ["20261009000000", "20261010120000"]);
+  const r = separateDeferredMigrations({ blocking: drift, missingInList: [] }, rows, ["20261010120000"]);
+  assert.deepEqual(r.blocking, []);
+  assert.deepEqual(r.deferredPending, ["20261010120000"]);
+  assert.deepEqual(r.deferredApplied, []);
+  const status = deriveOverallStatus({ blocking: r.blocking, deferred: r.deferredPending, missingInList: r.missingInList, extraBlocking: [] });
+  assert.equal(status, "HUMAN_GATE");
+  assert.equal(deriveExitCode(status), 0);
+});
+
+test("migration adiada que aparece aplicada no remoto é violação e BLOQUEIA", () => {
+  const rows = [{ local: "20261010120000", remote: "20261010120000" }];
+  const { drift } = analyze(rows, ["20261010120000"]);
+  const r = separateDeferredMigrations({ blocking: drift, missingInList: [] }, rows, ["20261010120000"]);
+  assert.deepEqual(r.deferredApplied, ["20261010120000"]);
+  assert.deepEqual(r.blocking.map((b) => b.reason), ["adiada_aplicada"]);
+  const status = deriveOverallStatus({ blocking: r.blocking, deferred: r.deferredPending, missingInList: r.missingInList, extraBlocking: [] });
+  assert.equal(status, "BLOCKING_DRIFT");
+  assert.equal(deriveExitCode(status), 1);
+});
+
+test("migration não adiada com remote_ausente continua bloqueando; adiada fora da tabela do CLI não", () => {
+  const rows = [{ local: "20261022020000", remote: null }];
+  const { drift } = analyze(rows, ["20261010120000", "20261022020000"]);
+  const r = separateDeferredMigrations({ blocking: drift, missingInList: ["20261010120000"] }, rows, ["20261010120000"]);
+  assert.deepEqual(r.blocking.map((b) => b.version), ["20261022020000"]);
+  assert.deepEqual(r.missingInList, []);
+  assert.deepEqual(r.deferredPending, ["20261010120000"]);
+});
+
+test("sem manifesto (lista vazia) o comportamento é o estrito de antes", () => {
+  const rows = [{ local: "20261010120000", remote: null }];
+  const { drift } = analyze(rows, ["20261010120000"]);
+  const r = separateDeferredMigrations({ blocking: drift, missingInList: [] }, rows, []);
+  assert.deepEqual(r.blocking.map((b) => b.version), ["20261010120000"]);
+  assert.deepEqual(r.deferredPending, []);
+});
+
+test("manifesto de adiadas: lê versões válidas e falha fechado quando malformado", () => {
+  assert.deepEqual(
+    parseDeferredManifest(JSON.stringify({ deferred: [{ version: "20261010120000", file: "x.sql" }] })),
+    ["20261010120000"],
+  );
+  assert.throws(() => parseDeferredManifest("{"), /JSON/);
+  assert.throws(() => parseDeferredManifest(JSON.stringify({})), /deferred/);
+  assert.throws(() => parseDeferredManifest(JSON.stringify({ deferred: [{ version: "abc" }] })), /inválida/);
+});
+
+test("par com git JÁ alinhado aceita a duplicata remote_only (registro antigo com timestamp MCP)", () => {
+  const rows = [
+    { local: "20261009180000", remote: "20261009180000" },
+    { local: null, remote: "20261009135940" },
+  ];
+  const { drift, extraInList } = analyze(rows, ["20261009180000"]);
+  const pairs = parseHumanGateRegistry(JSON.stringify({ pairs: [{
+    gitOnlyVersion: "20261009180000", remoteOnlyVersion: "20261009135940", reason: "fase A via MCP", decisionDoc: "docs/x.md",
+  }] }));
+  const sem = applyHumanGateRegistry({ blocking: drift, missingInList: [], extraBlocking: extraInList }, pairs);
+  assert.deepEqual(sem.extraBlocking, ["20261009135940"], "sem as versões alinhadas continua estrito");
+  const com = applyHumanGateRegistry({ blocking: drift, missingInList: [], extraBlocking: extraInList }, pairs, ["20261009180000"]);
+  assert.deepEqual(com.extraBlocking, []);
+  assert.deepEqual(com.humanGate.map((g) => g.divergence), ["duplicata_git_alinhado"]);
+});
+
+test("git alinhado NÃO justifica remote_only de outro par nem remote-only sem par", () => {
+  const pairs = parseHumanGateRegistry(JSON.stringify({ pairs: [{
+    gitOnlyVersion: "20261009180000", remoteOnlyVersion: "20261009135940", reason: "fase A", decisionDoc: "docs/x.md",
+  }] }));
+  const r = applyHumanGateRegistry(
+    { blocking: [], missingInList: [], extraBlocking: ["20261009999999"] }, pairs, ["20261009180000"],
+  );
+  assert.deepEqual(r.extraBlocking, ["20261009999999"]);
+  assert.deepEqual(r.humanGate, []);
 });
