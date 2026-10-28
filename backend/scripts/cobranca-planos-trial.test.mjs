@@ -68,6 +68,10 @@ await t('gating por plano: Básico não tem faixas de preço/transferências; ad
   assert.equal((await q(`SELECT public.fp_empresa_tem_recurso('${E2}', 'faixas_preco') r`))[0].r, false)
   assert.equal((await q(`SELECT public.fp_empresa_tem_recurso('${E2}', 'fiscal') r`))[0].r, false)
   await q(`SELECT public.cobranca_registrar_assinatura('${E2}', 'BASICO', '{FISCAL}', 1, 1, 'PIX', 15800, NULL, NULL, NULL)`)
+  // #620 (revisão #585): add-on é upgrade ⇒ fica pendente até o pagamento confirmado.
+  assert.equal((await q(`SELECT public.fp_empresa_tem_recurso('${E2}', 'fiscal') r`))[0].r, false)
+  // aplica o pendente como o webhook faria no pagamento (o caminho via webhook é coberto em "troca de plano").
+  assert.equal((await q(`SELECT internal.cobranca_aplicar_plano_pendente('${E2}') r`))[0].r, true)
   assert.equal((await q(`SELECT public.fp_empresa_tem_recurso('${E2}', 'fiscal') r`))[0].r, true)
   await assert.rejects(q(`SELECT public.cobranca_registrar_assinatura('${E2}', 'FISCAL', '{}', 1, 1, 'PIX', 1, NULL, NULL, NULL)`), /COBRANCA_PLANO_INVALIDO/)
 })
@@ -259,6 +263,9 @@ await t('aviso antes da suspensão: minha_assinatura informa data prevista e avi
 await t('troca de plano: recursos mudam e auditoria registra antes/depois', async () => {
   assert.equal((await q(`SELECT public.fp_empresa_tem_recurso('${E3}', 'transferencias') r`))[0].r, false)
   await q(`SELECT public.cobranca_registrar_assinatura('${E3}', 'REDE', '{FISCAL}', 3, 4, 'BOLETO', 99999, NULL, NULL, NULL)`)
+  // #620: upgrade só vale depois do pagamento confirmado.
+  assert.equal((await q(`SELECT public.fp_empresa_tem_recurso('${E3}', 'transferencias') r`))[0].r, false)
+  await evento('evt_troca_rede', 'PAYMENT_RECEIVED', { payment: { id: 'pay_troca_rede', subscription: 'sub_C', value: 999.99 } })
   assert.equal((await q(`SELECT public.fp_empresa_tem_recurso('${E3}', 'transferencias') r`))[0].r, true)
   assert.equal((await q(`SELECT public.fp_empresa_tem_recurso('${E3}', 'fiscal') r`))[0].r, true)
   const a = await q(`SELECT antes->>'plano_codigo' a, depois->>'plano_codigo' d FROM saas.assinatura_auditoria
