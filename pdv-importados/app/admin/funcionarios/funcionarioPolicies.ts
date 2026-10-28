@@ -44,3 +44,11 @@ export function podeDesativarAlvo(ator: AtorFuncionario, alvo: AlvoFuncionario):
   if (ator.id === alvo.id) return false
   return podeEditarAlvo(ator, alvo)
 }
+
+/**
+ * 20261028 (revogação após inativação): duração de bloqueio no Supabase Auth ao (des)ativar funcionário.
+ * Inativo ⇒ bloqueio longo (sem login nem refresh de sessão); reativado ⇒ 'none'.
+ */
+export function banDurationParaAtivo(ativo: boolean): string {
+  return ativo ? 'none' : '876000h'
+}
