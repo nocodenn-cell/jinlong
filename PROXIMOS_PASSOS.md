@@ -3,7 +3,7 @@
 ## P0 — Quebrado/travado
 
 - Decisões P1–P8 da auditoria de importação registradas (2026-10-29). Pendente de contador: validar P3 (tributos no custo por regime) antes de IM-F02. P1 exige atualizar D1 por escrito. P9–P12 seguem abertos
-- Duas migrations com a versão `20261023130000` na main (`growth001_central_conversao` e `movimentos_estoque_log_transferencia_id`): o ledger do Supabase guarda uma versão só. Decidir qual renomear antes de aplicar qualquer uma em produção
+- Migration `20261023130000_movimentos_estoque_log_transferencia_id` (da main) ausente em produção bloqueia o `migration-remote-drift` do #634. Decidir: aplicar em produção ou adiar em `.github/deploy-governance/deferred-migrations.json`
 - Custo truncado a 2 casas na NF-e: `preco_custo`, `custo_unitario` (itens e conferência) são `numeric(10,2)` e a importação arredonda com `ROUND(…,2)`. Resolver a escala (P1 do plano: D1 diz 4 casas, o requisito pede 6) e migrar (IM-F01, `docs/audits/PLANO_CONSOLIDADO_IMPORTACAO_IM-F01_F05_2026-10-29.md`)
 - Custo médio não existe: `preco_custo_medio` nunca é gravado e `preco_custo` guarda o último custo da NF-e. Implementar função central de movimento de estoque e média ponderada por loja (IM-F01)
 - Aplicar em produção o pacote S1 → S1c → S1b → G14 (merge do #648 já está em `origin/main`, `a9579e6a`). Exige o label `deploy-prod:aprovado` na janela de produção; seguir `docs/regras-negocio/PLANO_APLICACAO_S1_PRODUCAO.md`
@@ -44,7 +44,7 @@
 - Smoke presencial na máquina da loja (docs/runbooks/CHECKLIST_SMOKE_MAQUINA_LOJA.md)
 - Executar docs/runbooks/CHECKLIST_CORTE_PRIMEIRO_CLIENTE_PAGANTE.md
 - Testar a troca de operador na homologação com dois usuários reais (trocar, assumir, bloquear com PIN, fechar) antes do label deploy-prod:aprovado no #634
-- GROWTH-001: revisar e aprovar o PR da Central de Conversão; com autorização, aplicar a migration 20261023130000 e só depois publicar o hub (deploy do ERP deixa o autoatendimento de assinatura desligado)
+- GROWTH-001: revisar e aprovar o PR da Central de Conversão; com autorização, aplicar a migration 20261023130100 e só depois publicar o hub (deploy do ERP deixa o autoatendimento de assinatura desligado)
 - Aplicar na homologação (jinlong-homolog-palm) a migration 20261021120000_vendas_pagamentos_parcelas_credito (coluna vendas_pagamentos.parcelas) antes de exibir parcelas no detalhe admin e na 2ª via do cupom
 
 ## P2 — Melhoria
@@ -68,7 +68,7 @@
 - Mostrar as parcelas do crédito no detalhe da venda (admin) e na 2ª via, depois da coluna existir na homologação
 
 ## Feito
-
+- 2026-10-29 — Migration growth001 (Central de Conversão) renomeada para `20261023130100` para resolver a versão duplicada com `movimentos_estoque_log`; não aplicada em produção
 - 2026-10-29 — Auditoria do Bloco de Importação (NF-e de entrada e pipeline internacional): 45% por critério explícito, 0 funcionalidades comprovadas, recomendação NO-GO. Relatório em `docs/audits/AUDITORIA_BLOCO_IMPORTACAO_2026-10-29.md`; sem alteração de código
 - 2026-10-29 — S1 validada em homologação (`yvdilcmxyjafnnsfdtam`): matriz de permissões final, testes do DONO, ciclos de rollback do S1b, S1c, G14 e S1; PR #648 aberto com o pacote (S1, S1c, S1b, G14), CI verde exceto o guard de governança. Não aplicado em produção
 - 2026-10-29 — Decisões D1–D14 registradas em `docs/regras-negocio/DECISOES_JINLONG_S1.md`
@@ -78,4 +78,3 @@
 - 2026-10-28 — `20261023120000` (#628) aplicada em produção pelo dono (versão real, SQL idêntico ao arquivo por md5); pós-checagem: revogado para authenticated/anon, service_role mantido, diagnóstico ajustado, nenhum `permission denied` nos logs
 - 2026-10-28 — `SUPABASE_MIGRATION_CHECK_PROJECT_REF` apontado para produção (o projeto anterior estava pausado); o check é só leitura (`supabase migration list`) e não roda para PRs de fork
 - 2026-10-28 — Auditoria SECDEF: 4 helpers que revelavam dados da empresa B foram revogados de authenticated (migration 20261028120000; docs/audits/AUDITORIA_RPC_SECDEF_2026-10-28.md)
-- 2026-10-28 — Auditoria INT-01 das 12 integrações: 6 PASSOU, 3 FALHOU, 3 NÃO TESTADA (docs/audits/AUDITORIA_INTEGRACAO_INT01_2026-10-28.md); o "S7" da devolução era falha do teste (caixa_id omitido com 7 caixas abertos), corrigido
