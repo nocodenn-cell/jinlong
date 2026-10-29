@@ -106,6 +106,10 @@ function mapRpcImportNfe(message: string): string {
   if (message.includes('IMPORT_NFE_STATUS_INVALIDO')) {
     return 'Esta importação já foi confirmada anteriormente.'
   }
+  // SSOT-003: nota com valor e sem duplicatas não gera estoque nem contas a pagar.
+  if (message.includes('IMPORT_NFE_OBRIGACAO_SEM_DUPLICATA')) {
+    return 'Esta NF-e tem valor, mas não traz duplicatas (parcelas a pagar), então o estoque não pode ser confirmado por aqui. Nada foi lançado no estoque nem em contas a pagar. Use a entrada pelo pedido de compra ou pela remessa.'
+  }
   if (
     message.includes('PRODUTO_VAREJO_ABAIXO_CUSTO') ||
     message.includes('PRODUTO_ATACADO_ABAIXO_CUSTO')
@@ -492,6 +496,8 @@ export type ConferenciaImportacaoNfe = {
   itens: ItemConferenciaNfe[]
   ordem_compra: OrdemCompraVinculadaNfe | null
   entrega_anterior_id?: string | null
+  /** Parcelas (duplicatas) registradas na nota. Zero com valor > 0 bloqueia a confirmação (SSOT-003). */
+  duplicatas_total: number
 }
 
 /** Lê uma importação (aberta ou já concluída) com seus itens para a tela de conferência. */
@@ -589,6 +595,12 @@ export async function obterConferenciaImportacaoNfe(
   const entrega = await supabase.from('entrada_documentos').select('remessa_id').eq('importacao_id', importacaoId).eq('loja_id', lojaId).maybeSingle()
   if (entrega.error) return { success: false, error: mensagemErroComSecao('Entradas', entrega.error.message) }
 
+  const { count: duplicatasTotal, error: duplicatasError } = await supabase
+    .from('importacoes_nfe_duplicatas')
+    .select('id', { count: 'exact', head: true })
+    .eq('importacao_nfe_id', importacaoId)
+  if (duplicatasError) return { success: false, error: mensagemErroComSecao('Contas a pagar', duplicatasError.message) }
+
   return {
     success: true,
     data: {
@@ -600,6 +612,7 @@ export async function obterConferenciaImportacaoNfe(
       created_at: imp.created_at as string,
       itens: linhas,
       ordem_compra: ordemCompra,
+      duplicatas_total: duplicatasTotal ?? 0,
     },
   }
 }

@@ -1048,6 +1048,8 @@
       "conferencia_nenhum_item_preenchido": "Preencha a quantidade recebida de ao menos um item antes de registrar.",
       "confirmar_estoque_ok": "Entrada confirmada. Confira o estoque, o custo aplicado e as contas a pagar nos detalhes.",
       "confirmar_estoque_pendente": "Registre a conferência de todos os itens antes de confirmar o estoque.",
+      "previa_sem_duplicata_bloqueio": "Esta NF-e tem valor, mas não traz duplicatas (parcelas a pagar): a confirmação do estoque será bloqueada. Use a entrada pelo pedido de compra ou pela remessa.",
+      "confirmar_estoque_sem_duplicata": "Esta NF-e tem valor, mas não traz duplicatas (parcelas a pagar). O estoque não pode ser confirmado por aqui.",
       "pendentes_titulo": "Importações aguardando conferência",
       "pendentes_hint": "XML já processado e catálogo atualizado — falta conferir a quantidade recebida para creditar o estoque.",
       "pendentes_sem_numero": "NF-e sem número",
