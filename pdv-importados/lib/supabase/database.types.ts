@@ -6654,6 +6654,113 @@ export type Database = {
           },
         ]
       }
+      produto_equivalencias: {
+        Row: {
+          ativo: boolean
+          confirmado_em: string
+          confirmado_por: string
+          criterio: string
+          empresa_id: string
+          id: string
+          loja_destino_id: string
+          produto_destino_id: string
+          produto_origem_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          confirmado_em?: string
+          confirmado_por: string
+          criterio: string
+          empresa_id: string
+          id?: string
+          loja_destino_id: string
+          produto_destino_id: string
+          produto_origem_id: string
+        }
+        Update: {
+          ativo?: boolean
+          confirmado_em?: string
+          confirmado_por?: string
+          criterio?: string
+          empresa_id?: string
+          id?: string
+          loja_destino_id?: string
+          produto_destino_id?: string
+          produto_origem_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "produto_equivalencias_confirmado_por_fkey"
+            columns: ["confirmado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produto_equivalencias_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produto_equivalencias_loja_destino_id_fkey"
+            columns: ["loja_destino_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produto_equivalencias_loja_destino_id_fkey"
+            columns: ["loja_destino_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["loja_id"]
+          },
+          {
+            foreignKeyName: "produto_equivalencias_produto_destino_id_fkey"
+            columns: ["produto_destino_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produto_equivalencias_produto_destino_id_fkey"
+            columns: ["produto_destino_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produto_equivalencias_produto_destino_id_fkey"
+            columns: ["produto_destino_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produto_equivalencias_produto_origem_id_fkey"
+            columns: ["produto_origem_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produto_equivalencias_produto_origem_id_fkey"
+            columns: ["produto_origem_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produto_equivalencias_produto_origem_id_fkey"
+            columns: ["produto_origem_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       produtos: {
         Row: {
           ativo: boolean
@@ -9005,6 +9112,7 @@ export type Database = {
         Args: {
           p_idempotency_key: string
           p_itens: Json
+          p_loja_id?: string
           p_observacao: string
           p_ordem_compra_id?: string
           p_origem: string
@@ -10043,6 +10151,14 @@ export type Database = {
       processar_comissao_venda: {
         Args: { p_venda_id: string }
         Returns: undefined
+      }
+      produto_equivalencia_registrar: {
+        Args: {
+          p_loja_destino: string
+          p_produto_destino: string
+          p_produto_origem: string
+        }
+        Returns: string
       }
       produtos_custos_autorizados: {
         Args: { p_produto_ids?: string[] }
