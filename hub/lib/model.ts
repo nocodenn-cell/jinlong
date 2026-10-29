@@ -29,9 +29,12 @@ export interface Lead {
   name: string
   store: string
   contact: string
-  channel: 'whatsapp' | 'wechat'
+  channel: 'whatsapp' | 'wechat' | 'email'
   locale: 'pt-BR' | 'zh-CN'
   status: LeadStatus
+  /** 'teste_gratis' = cadastro do /teste-gratis (ligado à empresa); conversão só pela Central. */
+  origem: 'site' | 'teste_gratis'
+  empresa_id: string | null
   created_at: string
   updated_at: string
 }
@@ -39,7 +42,7 @@ export interface Lead {
 export interface LeadEvent {
   id: string
   lead_id: string
-  kind: 'nota' | 'contato' | 'status'
+  kind: 'nota' | 'contato' | 'status' | 'solicitacao' | 'conversao'
   body: string | null
   from_status: LeadStatus | null
   to_status: LeadStatus | null
@@ -89,7 +92,7 @@ export function sanitizeSearch(q: string): string {
   return q.replace(/[,()*%\\:."']/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
-export const LEAD_COLUMNS = 'id,protocol,product,name,store,contact,channel,locale,status,created_at,updated_at'
+export const LEAD_COLUMNS = 'id,protocol,product,name,store,contact,channel,locale,status,origem,empresa_id,created_at,updated_at'
 
 export function leadsQuery(f: LeadFilters, now: Date = new Date()): string {
   const p = new URLSearchParams({ select: LEAD_COLUMNS, order: 'created_at.desc', limit: '500' })
@@ -173,4 +176,11 @@ export function parseCustomerUpdate(form: FormData): Parsed<{ id: string; plan: 
 
 export function formatDate(iso: string): string {
   return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Sao_Paulo' }).format(new Date(iso))
+}
+
+export const CHANNEL_LABEL: Record<Lead['channel'], string> = { whatsapp: 'WhatsApp', wechat: 'WeChat', email: 'E-mail' }
+
+export const EVENT_LABEL: Record<LeadEvent['kind'], string> = {
+  nota: 'Nota', contato: 'Contato realizado', status: 'Mudança de status',
+  solicitacao: 'Pedido de contratação (pelo cliente)', conversao: 'Conversão em cliente pagante',
 }

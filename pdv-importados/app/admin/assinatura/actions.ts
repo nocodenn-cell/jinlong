@@ -9,6 +9,7 @@ import { empresaContextoId } from '@/lib/multiempresa/empresaContexto'
 import { ROUTES } from '@/lib/navigation/routes'
 import { calcularValorMensal, PLANOS_FALLBACK, type PlanoCatalogo } from '@/lib/cobranca/planos'
 import { dataVencimento, formaParaAsaas, getAsaas } from '@/lib/cobranca/asaas'
+import { autoatendimentoAtivo } from '@/lib/cobranca/autoatendimento'
 
 type R<T> = { ok: true; data: T } | { ok: false; error: string }
 type Rpc = { rpc: (fn: string, a?: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }> }
@@ -52,7 +53,7 @@ async function gateDono() {
   return { ok: true as const, session: auth.session, email: u.user?.email ?? '', empresaId, supabase }
 }
 
-export async function carregarAssinaturaAction(): Promise<R<{ assinatura: MinhaAssinatura | null; planos: PlanoCatalogo[]; faturas: Fatura[]; podeGerenciar: boolean }>> {
+export async function carregarAssinaturaAction(): Promise<R<{ assinatura: MinhaAssinatura | null; planos: PlanoCatalogo[]; faturas: Fatura[]; podeGerenciar: boolean; autoatendimento: boolean }>> {
   const auth = await assertGerenteSession()
   if (!auth.ok) return { ok: false, error: auth.error }
   const supabase = await createClient()
@@ -68,8 +69,31 @@ export async function carregarAssinaturaAction(): Promise<R<{ assinatura: MinhaA
         return Array.isArray(fs) ? (fs as Fatura[]) : []
       })(),
       podeGerenciar: auth.session.perfil === 'DONO' || auth.session.perfil === 'ADMIN',
+      autoatendimento: autoatendimentoAtivo(),
     },
   }
+}
+
+const SolicitarSchema = z.object({
+  plano: z.enum(['BASICO', 'ATACADO', 'REDE']),
+  mensagem: z.string().trim().max(500).optional(),
+})
+
+/** Pedido de contratação: cai na Central de Conversão do hub. Não cria cobrança nem altera a assinatura. */
+export async function solicitarContratacaoAction(input: z.input<typeof SolicitarSchema>): Promise<R<null>> {
+  const g = await gateDono()
+  if (!g.ok) return { ok: false, error: g.error }
+  const p = SolicitarSchema.safeParse(input)
+  if (!p.success) return { ok: false, error: 'Dados do pedido inválidos. / 申请信息无效。' }
+  // sessão do próprio DONO: a RPC confere o vínculo DONO da empresa do contexto
+  const { error } = await (g.supabase as unknown as Rpc).rpc('commercial_solicitar_contratacao', {
+    p_plano: p.data.plano, p_mensagem: p.data.mensagem || null,
+  })
+  if (error) {
+    console.error('[cobranca] solicitar contratação', error.message)
+    return { ok: false, error: 'Não foi possível enviar o pedido agora. Tente de novo. / 暂时无法提交，请重试。' }
+  }
+  return { ok: true, data: null }
 }
 
 const AssinarSchema = z.object({
@@ -84,6 +108,8 @@ const AssinarSchema = z.object({
 export async function assinarPlanoAction(input: z.input<typeof AssinarSchema>): Promise<R<{ valorCentavos: number; proximoVencimento: string }>> {
   const g = await gateDono()
   if (!g.ok) return { ok: false, error: g.error }
+  // GROWTH-001: contratação passa pelo comercial; sem a flag, nada é criado no Asaas
+  if (!autoatendimentoAtivo()) return { ok: false, error: 'A contratação é feita com a nossa equipe: use “Solicitar contratação”. / 请使用“申请开通”。' }
   const p = AssinarSchema.safeParse(input)
   if (!p.success) return { ok: false, error: 'Dados do plano inválidos.' }
   const d = p.data

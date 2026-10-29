@@ -5,11 +5,15 @@ import { useRouter } from 'next/navigation'
 import { OperationalHubNav } from '@/components/ui/admin-v2/OperationalHubNav'
 import { calcularValorMensal, formatarBRL, type PlanoCatalogo } from '@/lib/cobranca/planos'
 import { tc, type ChaveTexto } from '@/lib/cobranca/textos'
-import { assinarPlanoAction, cancelarAssinaturaAction, pixDaFaturaAction, type Fatura, type MinhaAssinatura } from '../actions'
+import { assinarPlanoAction, cancelarAssinaturaAction, pixDaFaturaAction, solicitarContratacaoAction, type Fatura, type MinhaAssinatura } from '../actions'
 
-type Props = { idioma: string; assinatura: MinhaAssinatura | null; planos: PlanoCatalogo[]; faturas: Fatura[]; podeGerenciar: boolean }
+type Props = {
+  idioma: string; assinatura: MinhaAssinatura | null; planos: PlanoCatalogo[]; faturas: Fatura[]; podeGerenciar: boolean
+  /** false (padrão, GROWTH-001): o dono só pede a contratação; quem aprova é o comercial. */
+  autoatendimento?: boolean
+}
 
-export function AssinaturaContent({ idioma, assinatura, planos, faturas, podeGerenciar }: Props) {
+export function AssinaturaContent({ idioma, assinatura, planos, faturas, podeGerenciar, autoatendimento = false }: Props) {
   const t = (k: ChaveTexto) => tc(idioma, k)
   const router = useRouter()
   const [pend, start] = useTransition()
@@ -20,6 +24,7 @@ export function AssinaturaContent({ idioma, assinatura, planos, faturas, podeGer
   const [lojas, setLojas] = useState(assinatura?.qtd_lojas ?? 1)
   const [caixas, setCaixas] = useState(assinatura?.qtd_caixas ?? 1)
   const [forma, setForma] = useState<'PIX' | 'BOLETO' | 'CARTAO'>((assinatura?.forma_pagamento as 'PIX') ?? 'PIX')
+  const [mensagem, setMensagem] = useState('')
 
   const calc = useMemo(() => {
     try { return calcularValorMensal(planos, plano, fiscal ? ['FISCAL'] : [], lojas, caixas) } catch { return null }
@@ -96,7 +101,8 @@ export function AssinaturaContent({ idioma, assinatura, planos, faturas, podeGer
       </section>
       {podeGerenciar ? (
         <section className="space-y-3 rounded border p-4 text-sm">
-          <h2 className="font-semibold">{assinatura?.status === 'ATIVA' ? t('trocarPlano') : t('assinar')}</h2>
+          <h2 className="font-semibold">{!autoatendimento ? t('solicitarContratacao') : assinatura?.status === 'ATIVA' ? t('trocarPlano') : t('assinar')}</h2>
+          {!autoatendimento ? <p className="text-gray-700">{t('solicitarAviso')}</p> : null}
           {placeholder ? <p className="text-xs text-amber-700">{t('precoProvisorio')}</p> : null}
           <div className="grid gap-2 sm:grid-cols-3">
             {planos.filter((p) => p.tipo === 'PLANO').map((p) => (
@@ -112,20 +118,39 @@ export function AssinaturaContent({ idioma, assinatura, planos, faturas, podeGer
           <div className="flex flex-wrap gap-4">
             <label>{t('lojas')} <input type="number" min={1} className="ml-1 w-20 rounded border p-1" value={lojas} onChange={(e) => setLojas(Number(e.target.value) || 1)} /></label>
             <label>{t('caixas')} <input type="number" min={1} className="ml-1 w-20 rounded border p-1" value={caixas} onChange={(e) => setCaixas(Number(e.target.value) || 1)} /></label>
-            <label>{t('forma')} <select className="ml-1 rounded border p-1" value={forma} onChange={(e) => setForma(e.target.value as 'PIX')}>
-              <option value="PIX">Pix</option><option value="BOLETO">Boleto</option><option value="CARTAO">Cartão / 信用卡</option>
-            </select></label>
+            {autoatendimento ? (
+              <label>{t('forma')} <select className="ml-1 rounded border p-1" value={forma} onChange={(e) => setForma(e.target.value as 'PIX')}>
+                <option value="PIX">Pix</option><option value="BOLETO">Boleto</option><option value="CARTAO">Cartão / 信用卡</option>
+              </select></label>
+            ) : null}
           </div>
           <div><b>{t('total')}:</b> {calc ? formatarBRL(calc.totalCentavos) : '—'}</div>
+          {!autoatendimento ? (
+            <label className="block">{t('solicitarMensagem')}
+              <textarea className="mt-1 w-full rounded border p-2" rows={2} maxLength={500} value={mensagem} onChange={(e) => setMensagem(e.target.value)} />
+            </label>
+          ) : null}
           <div className="flex flex-wrap gap-2">
-            <button type="button" disabled={pend || !calc} className="rounded bg-red-700 px-4 py-2 text-white disabled:opacity-50"
-              onClick={() => start(async () => {
-                const r = await assinarPlanoAction({ plano: plano as 'BASICO', addons: fiscal ? ['FISCAL'] : [], qtdLojas: lojas, qtdCaixas: caixas, forma })
-                setMsg(r.ok ? `OK · ${formatarBRL(r.data.valorCentavos)} · ${t('vencimento')}: ${fmtData(r.data.proximoVencimento)}` : r.error)
-                router.refresh()
-              })}>
-              {assinatura?.status === 'ATIVA' ? t('trocarPlano') : t('assinar')}
-            </button>
+            {autoatendimento ? (
+              <button type="button" disabled={pend || !calc} className="rounded bg-red-700 px-4 py-2 text-white disabled:opacity-50"
+                onClick={() => start(async () => {
+                  const r = await assinarPlanoAction({ plano: plano as 'BASICO', addons: fiscal ? ['FISCAL'] : [], qtdLojas: lojas, qtdCaixas: caixas, forma })
+                  setMsg(r.ok ? `OK · ${formatarBRL(r.data.valorCentavos)} · ${t('vencimento')}: ${fmtData(r.data.proximoVencimento)}` : r.error)
+                  router.refresh()
+                })}>
+                {assinatura?.status === 'ATIVA' ? t('trocarPlano') : t('assinar')}
+              </button>
+            ) : (
+              <button type="button" disabled={pend} className="rounded bg-red-700 px-4 py-2 text-white disabled:opacity-50"
+                onClick={() => start(async () => {
+                  const resumo = `${lojas} loja(s), ${caixas} caixa(s)${fiscal ? ', Fiscal' : ''}${calc ? `, ${formatarBRL(calc.totalCentavos)}/mês` : ''}`
+                  const r = await solicitarContratacaoAction({ plano: plano as 'BASICO', mensagem: `${resumo}${mensagem.trim() ? ` · ${mensagem.trim()}` : ''}`.slice(0, 500) })
+                  setMsg(r.ok ? t('solicitacaoEnviada') : r.error)
+                  if (r.ok) setMensagem('')
+                })}>
+                {t('solicitarContratacao')}
+              </button>
+            )}
             {assinatura?.status && assinatura.status !== 'CANCELADA' ? (
               <button type="button" disabled={pend} className="rounded border border-red-700 px-4 py-2 text-red-700"
                 onClick={() => { if (!window.confirm(t('confirmarCancelar'))) return; start(async () => { const r = await cancelarAssinaturaAction(); setMsg(r.ok ? 'OK' : r.error); router.refresh() }) }}>

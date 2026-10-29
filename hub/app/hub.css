@@ -71,3 +71,19 @@ input, select, textarea { min-height: 44px; padding: 8px 10px; border: 1px solid
   .hub-funnel li { grid-template-columns: 120px 1fr 30px; }
 }
 .hub-table td > .hub-badge { justify-self: start; }
+/* Central de Conversão */
+.hub-card--link { text-decoration: none; color: inherit; } .hub-card--link:hover { border-color: var(--brand); }
+.hub-prio { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 13px; font-weight: 700; }
+.hub-prio--alta { background: var(--brand); color: var(--white); }
+.hub-prio--media { background: #fff4d6; color: #5c4400; }
+.hub-prio--baixa { background: #eef0f2; color: #4a5058; }
+.hub-why { display: block; color: var(--muted); font-size: 13px; margin-top: 4px; }
+.hub-alert { color: var(--brand); }
+.hub-mt { margin-top: 16px; }
+.hub-timeline li.hub-timeline--destaque { border-left-color: var(--brand); }
+.hub-conv { display: grid; gap: 14px; }
+.hub-fieldset { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; display: grid; gap: 2px; }
+.hub-choice { display: flex; gap: 10px; align-items: center; min-height: 44px; font-weight: 500; }
+.hub-choice input { width: auto; min-height: 0; }
+.hub-block { display: grid; gap: 4px; font-weight: 600; font-size: 14px; }
+.hub-conv .hub-btn { justify-self: start; }
