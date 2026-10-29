@@ -86,22 +86,18 @@ jobs:
       - name: Subir Postgres efemero (imagem Supabase, com roles/auth base)
         run: |
           set -euo pipefail
-          # Imagem fixada por digest: é a mesma da tag 17.6.1.165 (digest verificado em 2026-10-28,
-          # sha256:28f0e16a...), sem trocar de versão. Digest impede que a tag seja movida.
-          IMAGE=public.ecr.aws/supabase/postgres@sha256:28f0e16a019e648089fc1a6d333549a55548f6019c15ae4bd7cd58b989027518
-          # O registro público limita downloads por IP compartilhado (toomanyrequests). Retry com backoff.
-          delay=30
-          for attempt in 1 2 3 4 5; do
-            if docker pull "$IMAGE"; then break; fi
-            if [ "$attempt" -eq 5 ]; then
-              echo "::error::pull da imagem falhou após 5 tentativas (limite do registro público)"
-              exit 1
-            fi
-            echo "pull falhou (tentativa $attempt); nova tentativa em ${delay}s"
-            sleep "$delay"
-            delay=$((delay * 2))
+          # Docker Hub primeiro: o ECR público estourou o limite anônimo (toomanyrequests) em 2026-10-28/29.
+          # Mesma imagem e tag nos dois registros; o ECR fica como alternativa.
+          IMG=""
+          for cand in docker.io/supabase/postgres:17.6.1.165 public.ecr.aws/supabase/postgres:17.6.1.165; do
+            for t in 1 2 3; do
+              if docker pull -q "$cand"; then IMG="$cand"; break 2; fi
+              sleep $((t * 15))
+            done
           done
-          docker run -d --name restore-drill             -e POSTGRES_PASSWORD=restore-drill-local-only -e PGPASSWORD=restore-drill-local-only             -e JWT_SECRET=restore-drill-local-only-secret-0123456789 -e JWT_EXP=3600             "$IMAGE" docker-entrypoint.sh postgres -D /etc/postgresql
+          [ -n "$IMG" ] || { echo "::error::imagem supabase/postgres:17.6.1.165 indisponível nos dois registros"; exit 1; }
+          echo "Imagem do drill: $IMG"
+          docker run -d --name restore-drill             -e POSTGRES_PASSWORD=restore-drill-local-only -e PGPASSWORD=restore-drill-local-only             -e JWT_SECRET=restore-drill-local-only-secret-0123456789 -e JWT_EXP=3600             "$IMG" docker-entrypoint.sh postgres -D /etc/postgresql
           for i in $(seq 1 60); do
             docker exec restore-drill pg_isready -h 127.0.0.1 -U postgres && break
             sleep 2
