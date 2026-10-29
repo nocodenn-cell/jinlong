@@ -10,6 +10,7 @@ import {
   isPerfilFuncionarioUi,
   podeAtribuirPerfil,
   podeDesativarAlvo,
+  banDurationParaAtivo,
   podeEditarAlvo,
   type PerfilFuncionarioUi,
 } from './funcionarioPolicies'
@@ -565,6 +566,11 @@ export async function definirAtivoFuncionarioAction(
       .eq('loja_id', gate.session.lojaId!)
 
     if (error) return fail(error.message)
+
+    // 20261028 (decisão do dono, item 3): inativar também bloqueia o login/refresh no Auth; reativar desbloqueia.
+    // O banco já nega tudo ao inativo (RLS + revogação de tokens); isto corta a sessão na origem.
+    const { error: banErr } = await admin.auth.admin.updateUserById(id, { ban_duration: banDurationParaAtivo(ativo) })
+    if (banErr) console.error('[funcionarios] ban/unban no Auth falhou', banErr.message)
 
     revalidateFuncionarios()
     return { ok: true, data: { id, ativo } }

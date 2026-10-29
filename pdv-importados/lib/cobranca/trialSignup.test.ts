@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { emailDescartavel, hashAntiAbuso, montarPayloadTrial, TrialSignupSchema, verificarCaptcha } from './trialSignup'
+import { emailDescartavel, hashAntiAbuso, montarPayloadTrial, TrialSignupSchema, verificarCaptcha, saltAntiAbuso } from './trialSignup'
 
 const base = { empresaNome: 'Loja da Ana', donoNome: 'Ana', email: 'Ana@Exemplo.com', senha: '12345678', aceiteTermos: true as const }
 
@@ -56,4 +56,20 @@ it('verificação envia secret, token e IP ao siteverify; resposta falsa recusa'
   expect(await verificarCaptcha('tok', '1.1.1.1', { TRIAL_CAPTCHA_SECRET: 's', NEXT_PUBLIC_TURNSTILE_SITE_KEY: 'k' }, f)).toBe(false)
   const body = f.mock.calls[0][1].body as URLSearchParams
   expect([body.get('secret'), body.get('response'), body.get('remoteip')]).toEqual(['s', 'tok', '1.1.1.1'])
+})
+
+describe('saltAntiAbuso', () => {
+  it('produção sem TRIAL_HASH_SALT ⇒ null (nunca deriva da service role)', () => {
+    expect(saltAntiAbuso({ VERCEL_ENV: 'production', SUPABASE_SERVICE_ROLE_KEY: 'segredo-service-role-1234567890' })).toBeNull()
+    expect(saltAntiAbuso({ NODE_ENV: 'production' })).toBeNull()
+  })
+  it('sal curto é recusado em produção', () => {
+    expect(saltAntiAbuso({ VERCEL_ENV: 'production', TRIAL_HASH_SALT: 'curto' })).toBeNull()
+  })
+  it('usa TRIAL_HASH_SALT quando configurado', () => {
+    expect(saltAntiAbuso({ VERCEL_ENV: 'production', TRIAL_HASH_SALT: 'sal-forte-de-teste-123456' })).toBe('sal-forte-de-teste-123456')
+  })
+  it('fora de produção usa sal de dev fixo', () => {
+    expect(saltAntiAbuso({ NODE_ENV: 'test' })).toMatch(/dev/)
+  })
 })

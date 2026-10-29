@@ -425,7 +425,7 @@ BEGIN
   PERFORM pg_temp.assert(pg_temp.n_dev(v) = 0 AND pg_temp.auth(cx) = 100, 'A-3 T8 sem efeito');
 END $t8$;
 
--- ═══ T9 — autorização: GERENTE/DONO/ADMIN seguem o contrato; operador só usa o próprio caixa ═══════════
+-- ═══ T9 — autorização: GERENTE/DONO seguem o contrato; operador só usa o próprio caixa ═══════════
 CREATE FUNCTION pg_temp.resolver(p_caixa uuid, p_uid uuid) RETURNS text LANGUAGE plpgsql AS
 $$ BEGIN RETURN internal.resolver_caixa_pagador(p_caixa, p_uid, 'X')::text;
 EXCEPTION WHEN OTHERS THEN RETURN SQLERRM; END $$;
@@ -435,7 +435,7 @@ DECLARE cx33 uuid; cx34 uuid; v uuid; e text; dono uuid := pg_temp.op(37); adm u
 BEGIN
   INSERT INTO auth.users (id) VALUES (dono), (adm) ON CONFLICT (id) DO NOTHING;
   INSERT INTO public.usuarios (id, nome, perfil, ativo, loja_id) VALUES
-    (dono, 'D13 Dono', 'DONO', true, pg_temp.lid(12)), (adm, 'D13 Admin', 'ADMIN', true, pg_temp.lid(12))
+    (dono, 'D13 Dono', 'DONO', true, pg_temp.lid(12)), (adm, 'D13 Dono 2 (ex-ADMIN; #623 descontinuou ADMIN)', 'DONO', true, pg_temp.lid(12))
   ON CONFLICT (id) DO UPDATE SET perfil = EXCLUDED.perfil, ativo = true, loja_id = EXCLUDED.loja_id;
 
   cx33 := pg_temp.abrir(33, 12, 0);
@@ -444,7 +444,7 @@ BEGIN
   e := pg_temp.dev(12, v, 1, 'd13-t9-dono', 'DINHEIRO', NULL, dono);
   PERFORM pg_temp.assert(e IS NULL, 'T9 DONO da loja devolve (' || coalesce(e, 'ok') || ')');
   e := pg_temp.dev(12, v, 1, 'd13-t9-admin', 'DINHEIRO', NULL, adm);
-  PERFORM pg_temp.assert(e IS NULL, 'T9 ADMIN da loja devolve (' || coalesce(e, 'ok') || ')');
+  PERFORM pg_temp.assert(e IS NULL, 'T9 segundo DONO da loja devolve (' || coalesce(e, 'ok') || ')');
   e := pg_temp.dev(12, v, 1, 'd13-t9-op', 'DINHEIRO', NULL, pg_temp.op(33));
   PERFORM pg_temp.assert(e = 'DEVOLVER_VENDA_SEM_PERMISSAO' OR e LIKE 'ACESSO_LOJA_NEGADO%', 'T9 OPERADOR não devolve (' || coalesce(e, 'aceita') || ')');
 
@@ -455,7 +455,7 @@ BEGIN
   PERFORM pg_temp.assert(pg_temp.resolver(cx34, pg_temp.op(34)) = cx34::text, 'T9 resolvedor: operador usa o próprio caixa');
   PERFORM pg_temp.assert(pg_temp.resolver(NULL, pg_temp.gid(12)) = 'X_CAIXA_OBRIGATORIO', 'T9 resolvedor: GERENTE com 2 abertos sem p_caixa_id → CAIXA_OBRIGATORIO');
   PERFORM pg_temp.assert(pg_temp.resolver(cx34, pg_temp.gid(12)) = cx34::text, 'T9 resolvedor: GERENTE escolhe qualquer caixa aberto da loja (D-8b)');
-  PERFORM pg_temp.assert(pg_temp.resolver(cx34, dono) = cx34::text AND pg_temp.resolver(cx33, adm) = cx33::text, 'T9 resolvedor: DONO e ADMIN da loja escolhem qualquer caixa aberto da loja');
+  PERFORM pg_temp.assert(pg_temp.resolver(cx34, dono) = cx34::text AND pg_temp.resolver(cx33, adm) = cx33::text, 'T9 resolvedor: DONOs da loja escolhem qualquer caixa aberto da loja');
   PERFORM pg_temp.assert(pg_temp.resolver(cx34, pg_temp.gid(13)) IN ('X_CAIXA_INVALIDO', 'X_SEM_CAIXA_ABERTO'), 'A-5 T9 resolvedor: gerente de OUTRA loja é bloqueado e nunca recebe o caixa alheio');
   PERFORM pg_temp.assert(pg_temp.resolver(NULL, NULL) = 'X_AUTH', 'T9 resolvedor: sem identidade → bloqueia');
 END $t9$;

@@ -103,3 +103,11 @@ O token do bot não tem escopo `workflow`: aplicar `docs/cobranca/ci-workflows.p
 
 Trigger `tg_saas_limite_lojas` em `public.lojas` barra loja ativa além de `qtd_lojas` da assinatura
 (`LOJA_LIMITE_PLANO`). Empresas sem assinatura (cliente 1) não têm limite.
+
+## Revisão de segurança do #585 (out/2026)
+
+- `ASAAS_BASE_URL` agora é **obrigatória** quando `VERCEL_ENV=production` ou a chave é `$aact_prod_`; chave de produção com URL sandbox (ou o contrário) é recusada.
+- `TRIAL_HASH_SALT` (>= 16 caracteres) é **obrigatório** em produção; sem ele o cadastro de trial é recusado. O sal não deriva mais da service role key.
+- Upgrade de plano fica em `plano_pendente` até `PAYMENT_CONFIRMED/RECEIVED`; downgrade vale na hora.
+- Estorno/chargeback ⇒ assinatura `SUSPENSA` (motivo `ESTORNO`/`CHARGEBACK`) e vendas suspensas; reativa no próximo pagamento.
+- Follow-ups (não feitos): retenção/expurgo de `saas.webhook_eventos.payload` (CPF/e-mail, LGPD); reconsultar valor/status no Asaas antes de aplicar o webhook; idempotência do lado Asaas (a API não documenta chave de idempotência — hoje a proteção é o lock por empresa).

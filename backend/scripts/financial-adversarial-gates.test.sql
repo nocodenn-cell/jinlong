@@ -107,7 +107,16 @@ DECLARE
   v_ator text;
   v_uid uuid;
 BEGIN
-  FOREACH v_ator IN ARRAY ARRAY['OPERADOR', 'GERENTE', 'DONO', 'ADMIN'] LOOP
+  -- #623 (20261028110000): o perfil ADMIN foi descontinuado e não pode mais ser gravado.
+  -- Antes este laço também testava ADMIN; agora a prova equivalente é que nem existe
+  -- caminho para um usuário virar ADMIN (abaixo), e os 3 perfis reais seguem sem escrita.
+  BEGIN
+    UPDATE public.usuarios SET perfil = 'ADMIN' WHERE id = current_setting('t.dono')::uuid;
+    RAISE EXCEPTION 'GATE1_FALHOU perfil ADMIN ainda pode ser gravado';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT LIKE '%PERFIL_ADMIN_DESCONTINUADO%' THEN RAISE; END IF;
+  END;
+  FOREACH v_ator IN ARRAY ARRAY['OPERADOR', 'GERENTE', 'DONO'] LOOP
     v_uid := CASE WHEN v_ator = 'OPERADOR' THEN current_setting('t.operador')::uuid
                   ELSE current_setting('t.dono')::uuid END;
     UPDATE public.usuarios SET perfil = v_ator WHERE id = v_uid;
@@ -280,8 +289,8 @@ DECLARE
   v_ok boolean;
   v_msg text;
 BEGIN
-  -- mesma loja: GERENTE, DONO e ADMIN podem
-  FOREACH v_perfil IN ARRAY ARRAY['GERENTE', 'DONO', 'ADMIN'] LOOP
+  -- mesma loja: GERENTE e DONO podem (ADMIN descontinuado no #623; ver GATE 1)
+  FOREACH v_perfil IN ARRAY ARRAY['GERENTE', 'DONO'] LOOP
     UPDATE public.usuarios SET perfil = v_perfil, loja_id = current_setting('t.loja')::uuid,
            ativo = true WHERE id = v_uid;
     PERFORM set_config('request.jwt.claim.sub', v_uid::text, true);
@@ -292,7 +301,7 @@ BEGIN
   END LOOP;
 
   -- outra loja: NINGUÉM pode
-  FOREACH v_perfil IN ARRAY ARRAY['GERENTE', 'DONO', 'ADMIN'] LOOP
+  FOREACH v_perfil IN ARRAY ARRAY['GERENTE', 'DONO'] LOOP
     UPDATE public.usuarios SET perfil = v_perfil, loja_id = current_setting('t.outra_loja')::uuid,
            ativo = true WHERE id = v_uid;
     PERFORM set_config('request.jwt.claim.sub', v_uid::text, true);
@@ -312,7 +321,8 @@ BEGIN
   END LOOP;
 
   -- usuário inativo: rejeitado
-  UPDATE public.usuarios SET perfil = 'ADMIN', loja_id = current_setting('t.loja')::uuid,
+  -- (antes: ADMIN inativo; ADMIN não existe mais, o perfil mais amplo restante é DONO)
+  UPDATE public.usuarios SET perfil = 'DONO', loja_id = current_setting('t.loja')::uuid,
          ativo = false WHERE id = v_uid;
   PERFORM set_config('request.jwt.claim.sub', v_uid::text, true);
   v_ok := false;

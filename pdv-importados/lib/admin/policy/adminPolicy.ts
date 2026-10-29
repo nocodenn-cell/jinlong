@@ -53,7 +53,7 @@ function isPainelWeb(pathname: string): boolean {
   return pathname.startsWith('/admin') || pathname.startsWith('/gerente')
 }
 
-const ALL_ADMIN_PROFILES: readonly PerfilUsuario[] = ['GERENTE', 'DONO', 'ADMIN']
+const ALL_ADMIN_PROFILES: readonly PerfilUsuario[] = ['GERENTE', 'DONO']
 
 /** Actions registradas no painel /admin (server actions). */
 const ACTION_PROFILES: Readonly<Record<string, readonly PerfilUsuario[]>> = {
@@ -71,8 +71,8 @@ const RESOURCE_PROFILES: Readonly<Record<string, readonly PerfilUsuario[]>> = {
   'route:/admin/clientes': ALL_ADMIN_PROFILES,
   'route:/admin/funcionarios': ALL_ADMIN_PROFILES,
   'route:/admin/implantacao': ALL_ADMIN_PROFILES,
-  /** Wizard interno FastProduct — somente perfil ADMIN. */
-  'route:/admin/provisionamento': ['ADMIN'] as const,
+  /** Wizard interno: fechado no app das lojas (equipe da plataforma usa o hub comercial). */
+  'route:/admin/provisionamento': [] as const,
   'route:/admin/fornecedores': ALL_ADMIN_PROFILES,
   'route:/admin/financeiro': ALL_ADMIN_PROFILES,
   'route:/admin/vendas': ALL_ADMIN_PROFILES,
@@ -82,7 +82,7 @@ const RESOURCE_PROFILES: Readonly<Record<string, readonly PerfilUsuario[]>> = {
    * Ferramenta de equipe/dono (estado técnico do PDV): GERENTE não acessa.
    * ATENÇÃO: a policy só decide; a página e a Server Action precisam checar (loadAdminContext não bloqueia).
    */
-  'route:/admin/diagnostico-caixa': ['DONO', 'ADMIN'] as const,
+  'route:/admin/diagnostico-caixa': ['DONO'] as const,
   /**
    * Import Intelligence: perfil é só a 1ª barreira. Página e actions exigem, no servidor,
    * licença ativa da empresa + vínculo + papel (requireModulo / fp_pode_modulo).
@@ -198,7 +198,7 @@ export function middlewareAdminDecision(
     if (isPainelWeb(pathname) && !painelAllowed) {
       return redirect('/caixa', 'perfil_nao_gerencial', 'edge')
     }
-    // GERENTE/DONO/ADMIN podem abrir o PDV (/caixa) — "Ir para PDV" sempre funciona.
+    // GERENTE/DONO podem abrir o PDV (/caixa) — "Ir para PDV" sempre funciona.
     // Antes havia um redirect `gerente_em_caixa` para /gerente que bloqueava o acesso.
     return allow('authorized', 'edge')
   }

@@ -2,7 +2,8 @@
  * Cliente Asaas (API v3) — SOMENTE SERVIDOR.
  * Env:
  *   ASAAS_API_KEY   chave da conta (sandbox: começa com `$aact_hmlg_`, produção: `$aact_prod_`).
- *   ASAAS_BASE_URL  opcional; padrão sandbox https://api-sandbox.asaas.com/v3 (produção: https://api.asaas.com/v3).
+ *   ASAAS_BASE_URL  obrigatório em produção (VERCEL_ENV=production) ou com chave `$aact_prod_`; fora disso,
+ *                   padrão sandbox https://api-sandbox.asaas.com/v3 (produção: https://api.asaas.com/v3).
  *   ASAAS_MOCK=1    força o mock (dev/teste). Sem ASAAS_API_KEY o mock é usado fora de produção.
  * Em produção sem chave ⇒ erro explícito (nunca cobrar "de mentira" em produção).
  */
@@ -97,7 +98,15 @@ export function getAsaas(env: Record<string, string | undefined> = process.env):
     return mockSingleton
   }
   if (!key) throw new Error('ASAAS_API_KEY não configurada (ver docs/cobranca/SETUP_ASAAS.md).')
-  return criarAsaasHttp(key, env.ASAAS_BASE_URL?.trim() || 'https://api-sandbox.asaas.com/v3')
+  const base = env.ASAAS_BASE_URL?.trim()
+  const chaveProducao = key.startsWith('$aact_prod_')
+  if (!base && (env.VERCEL_ENV === 'production' || chaveProducao)) {
+    throw new Error('ASAAS_BASE_URL obrigatória em produção (ver docs/cobranca/SETUP_ASAAS.md).')
+  }
+  if (base && chaveProducao !== /\/\/api\.asaas\.com/.test(base)) {
+    throw new Error('ASAAS_BASE_URL não corresponde ao tipo da ASAAS_API_KEY (produção × sandbox).')
+  }
+  return criarAsaasHttp(key, base || 'https://api-sandbox.asaas.com/v3')
 }
 
 export function formaParaAsaas(f: 'PIX' | 'BOLETO' | 'CARTAO'): BillingType {

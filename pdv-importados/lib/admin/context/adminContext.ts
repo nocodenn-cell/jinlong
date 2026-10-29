@@ -87,7 +87,7 @@ function buildFeatureFlags(session: AdminSession): Record<string, boolean> {
   return {
     painelGerencial: canAccessAdmin(session),
     perfilDono: session.perfil === 'DONO',
-    perfilAdmin: session.perfil === 'ADMIN',
+    perfilAdmin: false,
     perfilGerente: session.perfil === 'GERENTE',
   }
 }

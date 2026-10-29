@@ -7,12 +7,31 @@
  * Após cancelar:
  *   estoque 11 | caixa R$ 450 | venda CANCELADA | devolução registrada
  *
- * Rodar (Supabase local + sessão autenticada gerente/dono):
+ * Rodar (Supabase LOCAL; `supabase status -o env` exportado como SUPABASE_URL/ANON/SERVICE_ROLE):
  *   npm run test:integration:cancelamento
+ *
+ * O impl é server-only e lê `cookies()`/`headers()`; fora do Next não há request scope. O teste cria um
+ * GERENTE sintético (e-mail único), faz login real no GoTrue local e injeta esse client como o
+ * `createClient` do servidor. Sem env local: skip. Nunca aponta para host remoto.
  */
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { createClient } from '@/lib/supabase/server'
+import { randomUUID } from 'node:crypto'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js'
+
+const estado = vi.hoisted(() => ({ client: null as unknown }))
+vi.mock('next/headers', () => ({
+  headers: async () => new Headers(),
+  cookies: async () => ({ get: () => undefined, getAll: () => [], set: () => undefined }),
+}))
+vi.mock('next/cache', () => ({ revalidatePath: vi.fn(), revalidateTag: vi.fn() }))
+vi.mock('@/lib/supabase/server', () => ({ createClient: async () => estado.client }))
+
 import { cancelarVendaImpl, finalizarVendaCaixaImpl } from './caixaVendas.impl'
+
+const URL_BASE = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
+const ANON = process.env.SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''
+const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
+const habilitado = /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(URL_BASE) && !!ANON && !!SERVICE
 
 const LOJA_MATRIZ = 'a0000001-0000-4000-8000-000000000001'
 const SALDO_CAIXA_ANTES_VENDA = 450
@@ -21,8 +40,27 @@ const ESTOQUE_APOS_VENDA = 10
 const ESTOQUE_APOS_CANCELAMENTO = 11
 const VALOR_VENDA = 50
 
-describe('Contrato RPC cancelar_venda_transacional', () => {
-  let supabase: Awaited<ReturnType<typeof createClient>>
+describe.skipIf(!habilitado)('Contrato RPC cancelar_venda_transacional', () => {
+  let supabase: SupabaseClient
+  // Fixture de catálogo/estoque via service role: o app cria produto pela RPC criar_produto_com_estoque_inicial;
+  // INSERT direto de `authenticated` em produtos é barrado pelo tenant_guard (fase 5), por desenho.
+  let admin: SupabaseClient
+
+  beforeAll(async () => {
+    admin = createSupabaseClient(URL_BASE, SERVICE, { auth: { persistSession: false, autoRefreshToken: false } })
+    const email = `contrato-cancelamento.${randomUUID().slice(0, 8)}@integracao.test`
+    const senha = `Int-${randomUUID()}`
+    const { data, error } = await admin.auth.admin.createUser({ email, password: senha, email_confirm: true })
+    if (error || !data.user) throw new Error(`createUser: ${error?.message}`)
+    const ins = await admin.from('usuarios').insert({
+      id: data.user.id, nome: 'Gerente contrato cancelamento', perfil: 'GERENTE', loja_id: LOJA_MATRIZ, ativo: true,
+    })
+    if (ins.error) throw new Error(`usuarios: ${ins.error.message}`)
+    const c = createSupabaseClient(URL_BASE, ANON, { auth: { persistSession: false, autoRefreshToken: false } })
+    const login = await c.auth.signInWithPassword({ email, password: senha })
+    if (login.error) throw new Error(`login: ${login.error.message}`)
+    estado.client = c
+  }, 30_000)
   let caixaId: string
   let operadorId: string
   let produtoId: string
@@ -30,7 +68,7 @@ describe('Contrato RPC cancelar_venda_transacional', () => {
   let vendaCancelada = false
 
   beforeEach(async () => {
-    supabase = await createClient()
+    supabase = estado.client as SupabaseClient
     vendaId = null
     vendaCancelada = false
 
@@ -44,6 +82,7 @@ describe('Contrato RPC cancelar_venda_transacional', () => {
       .from('caixas')
       .insert({
         operador_id: user.id,
+        loja_id: LOJA_MATRIZ,
         status: 'ABERTO',
         data_abertura: new Date().toISOString(),
         valor_inicial: SALDO_CAIXA_ANTES_VENDA,
@@ -58,25 +97,27 @@ describe('Contrato RPC cancelar_venda_transacional', () => {
     // deixa o contador em `valor_inicial` via trigger, que é exatamente o
     // SALDO_CAIXA_ANTES_VENDA esperado por este contrato.
 
-    const { data: produto, error: pe } = await supabase
+    const { data: produto, error: pe } = await admin
       .from('produtos')
       .insert({
         nome: 'Produto contrato cancelamento',
         preco_varejo: VALOR_VENDA,
         origem: 'brasil_sem_nf',
         tem_nf: false,
+        loja_id: LOJA_MATRIZ,
       })
       .select('id')
       .single()
     if (pe || !produto) throw new Error(pe?.message ?? 'insert produto')
     produtoId = produto.id
 
-    await supabase.from('estoque').insert({
+    const est = await admin.from('estoque').upsert({
       produto_id: produtoId,
       loja_id: LOJA_MATRIZ,
       quantidade_atual: ESTOQUE_APOS_CANCELAMENTO,
       estoque_minimo: 0,
-    })
+    }, { onConflict: 'loja_id,produto_id' })
+    if (est.error) throw new Error(`estoque: ${est.error.message}`)
   })
 
   afterEach(async () => {

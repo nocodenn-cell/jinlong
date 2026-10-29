@@ -12,7 +12,8 @@ export default async function AdminProvisionamentoPage() {
   const m = getMessages(session.idioma)
   const ui = m.provisionamento
 
-  if (session.perfil !== 'ADMIN') {
+  // Fechado no app das lojas (perfil ADMIN removido). Mantido só como aviso.
+  if (session) {
     return (
       <div className="admin-v2-page">
         <PageHeader title={ui.titulo} subtitle={ui.subtitulo} />

@@ -31,7 +31,6 @@ function resolveUserName(session: AdminSession): string {
 
 function resolveCargo(session: AdminSession): string {
   if (session.perfil === 'DONO') return 'Dono'
-  if (session.perfil === 'ADMIN') return 'Administrador'
   if (session.perfil === 'GERENTE') return 'Gerente'
   return 'Operador'
 }

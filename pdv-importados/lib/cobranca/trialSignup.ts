@@ -75,3 +75,14 @@ export function mensagemErroTrial(raw: string): string {
   if (/PROVISIONAR_USUARIO_DE_OUTRA_EMPRESA|TRIAL_USUARIO_JA_EXISTE|already|registered/i.test(raw)) return 'Este e-mail já tem cadastro. Faça login. / 该邮箱已注册，请登录。'
   return 'Não foi possível criar o teste agora. Tente de novo. / 暂时无法创建试用，请重试。'
 }
+
+/**
+ * Sal do hash anti-abuso do trial. Nunca deriva de credencial (ex.: service role key).
+ * Produção sem TRIAL_HASH_SALT (>= 16 caracteres) ⇒ null (o chamador recusa: fail closed).
+ */
+export function saltAntiAbuso(env: Record<string, string | undefined> = process.env): string | null {
+  const sal = env.TRIAL_HASH_SALT?.trim()
+  if (sal && sal.length >= 16) return sal
+  const producao = env.VERCEL_ENV === 'production' || (env.NODE_ENV === 'production' && !env.VERCEL_ENV)
+  return producao ? null : 'fp-dev-trial-salt-nao-usar-em-producao'
+}

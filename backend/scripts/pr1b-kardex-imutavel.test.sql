@@ -2,11 +2,11 @@
 -- (achado P0 #2 da auditoria Jīn Lóng: movimentos_estoque_log editável/
 -- apagável via API apesar de descrito como imutável).
 --
--- Prova, com dados sintéticos (1 loja, 1 GERENTE, 1 ADMIN, 1 produto), os
+-- Prova, com dados sintéticos (1 loja, 1 GERENTE, 1 DONO ex-ADMIN, 1 produto), os
 -- cenários exigidos:
 --   1. GERENTE UPDATE no kardex -> NEGADO.
 --   2. GERENTE DELETE no kardex -> NEGADO.
---   3. ADMIN UPDATE/DELETE no kardex -> NEGADO.
+--   3. DONO (ex-ADMIN; ADMIN descontinuado no #623) UPDATE/DELETE no kardex -> NEGADO.
 --   4. service_role também não consegue UPDATE/DELETE (bloqueado pelo
 --      trigger, não pelo grant — grant não foi tocado para este papel).
 --   5. GERENTE INSERT direto (fora de RPC) -> NEGADO (nenhum caminho
@@ -43,7 +43,7 @@ BEGIN
 
   INSERT INTO public.usuarios (id, nome, perfil, ativo, loja_id, idioma_preferido) VALUES
     (v_gerente, 'PR1B Gerente', 'GERENTE', true, v_loja, 'pt'),
-    (v_admin, 'PR1B Admin', 'ADMIN', true, v_loja, 'pt')
+    (v_admin, 'PR1B Ex-Admin (agora DONO)', 'DONO', true, v_loja, 'pt')
   ON CONFLICT (id) DO UPDATE SET perfil = EXCLUDED.perfil, ativo = true, loja_id = EXCLUDED.loja_id;
 
   INSERT INTO public.categorias (id, nome) VALUES (v_categoria, 'PR1B Categoria')
@@ -65,6 +65,20 @@ BEGIN
   ON CONFLICT (id) DO UPDATE SET observacao = 'PR1B semente';
 END
 $setup$;
+
+-- #623 (20261028110000): o perfil ADMIN foi descontinuado. O usuário que antes era ADMIN
+-- vira DONO (o perfil mais amplo que restou) e esta prova garante que ADMIN não volta.
+DO $sem_admin$
+BEGIN
+  BEGIN
+    UPDATE public.usuarios SET perfil = 'ADMIN' WHERE id = 'f000000a-0000-4000-8000-00000000000c';
+    RAISE EXCEPTION 'PR1B_FALHOU: perfil ADMIN ainda pode ser gravado';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT LIKE '%PERFIL_ADMIN_DESCONTINUADO%' THEN RAISE; END IF;
+    RAISE NOTICE 'OK: perfil ADMIN recusado (%).', SQLERRM;
+  END;
+END
+$sem_admin$;
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- Negativo 1 — GERENTE tenta UPDATE na linha semente
@@ -117,7 +131,7 @@ END
 $neg_gerente_delete$;
 
 -- ═══════════════════════════════════════════════════════════════════════════
--- Negativo 3 — ADMIN tenta UPDATE e DELETE na linha semente
+-- Negativo 3 — DONO (antes ADMIN, descontinuado no #623) tenta UPDATE e DELETE na linha semente
 -- ═══════════════════════════════════════════════════════════════════════════
 
 DO $neg_admin$
@@ -131,18 +145,18 @@ BEGIN
 
   BEGIN
     UPDATE public.movimentos_estoque_log SET quantidade_delta = 999 WHERE id = v_seed;
-    RAISE EXCEPTION 'PR1B_FALHOU: ADMIN conseguiu UPDATE no kardex';
+    RAISE EXCEPTION 'PR1B_FALHOU: DONO (ex-ADMIN) conseguiu UPDATE no kardex';
   EXCEPTION
     WHEN insufficient_privilege THEN
-      RAISE NOTICE 'Negativo 3a OK: ADMIN UPDATE negado por grant (%).', SQLERRM;
+      RAISE NOTICE 'Negativo 3a OK: DONO (ex-ADMIN) UPDATE negado por grant (%).', SQLERRM;
   END;
 
   BEGIN
     DELETE FROM public.movimentos_estoque_log WHERE id = v_seed;
-    RAISE EXCEPTION 'PR1B_FALHOU: ADMIN conseguiu DELETE no kardex';
+    RAISE EXCEPTION 'PR1B_FALHOU: DONO (ex-ADMIN) conseguiu DELETE no kardex';
   EXCEPTION
     WHEN insufficient_privilege THEN
-      RAISE NOTICE 'Negativo 3b OK: ADMIN DELETE negado por grant (%).', SQLERRM;
+      RAISE NOTICE 'Negativo 3b OK: DONO (ex-ADMIN) DELETE negado por grant (%).', SQLERRM;
   END;
 
   RESET ROLE;

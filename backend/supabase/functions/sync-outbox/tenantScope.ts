@@ -90,8 +90,10 @@ export async function assertEventoNoEscopo(
 
  // Operador informado precisa ter vínculo ativo na loja do dispositivo (§10: venda de operador de
   // outra empresa/loja, ou desligado, não entra — inclusive em replay offline).
+  // 20261028: fechamento de caixa também exige operador ativo e vinculado (revogação após inativação).
   const operador = str(p.operador_id);
-  if (operador && (ev.tipo === "VENDA_REGISTRADA" || ev.tipo === "CAIXA_ABERTO" || ev.tipo === "MOVIMENTO_CAIXA")) {
+  if (operador && (ev.tipo === "VENDA_REGISTRADA" || ev.tipo === "CAIXA_ABERTO" || ev.tipo === "MOVIMENTO_CAIXA" ||
+    ev.tipo === "CAIXA_FECHADO")) {
     if (!(await lookups.operadorPodeLoja(operador, loja))) throw new Error("EVENTO_OPERADOR_SEM_VINCULO");
   }
 
