@@ -1,5 +1,7 @@
 # Auditoria de conclusão — Bloco de Importação (NF-e de entrada)
 
+> **Revisão 2026-10-29 (pós-feedback):** o percentual de 45% deste relatório foi calculado sobre 10 de 13 linhas e com eixo único. Foi substituído por 49% (19/39, três eixos: implementada, testada, homologada) e a estimativa de sprints foi revista para 56 dias-dev. Correções completas e plano consolidado em [PLANO_CONSOLIDADO_IMPORTACAO_IM-F01_F05_2026-10-29.md](./PLANO_CONSOLIDADO_IMPORTACAO_IM-F01_F05_2026-10-29.md).
+
 - **Data:** 2026-10-29
 - **Base:** `origin/main` @ `02af24a0` (inclui #647 e #649); branch de trabalho `claude/jinlong-import-block-audit-6a5135` @ `ff76b326`
 - **Modo:** somente leitura. Nenhum código, migration, commit, merge ou deploy. Nenhuma operação de escrita em produção.
