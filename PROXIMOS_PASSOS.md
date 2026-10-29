@@ -2,7 +2,9 @@
 
 ## P0 — Quebrado/travado
 
-- Merge do PR #648 (S1, S1c, S1b, G14) bloqueado pelo guard `deploy-governance`: exige o label `deploy-prod:aprovado` na janela de produção. Aplicar em produção na ordem S1 → S1c → S1b → G14 seguindo `docs/regras-negocio/PLANO_APLICACAO_S1_PRODUCAO.md`
+- Custo truncado a 2 casas na NF-e: `preco_custo`, `custo_unitario` (itens e conferência) são `numeric(10,2)` e a importação arredonda com `ROUND(…,2)`. Decidir DECISÃO-06 e migrar para `numeric(14,6)` (S-A em `docs/audits/AUDITORIA_BLOCO_IMPORTACAO_2026-10-29.md`)
+- Custo médio não existe: `preco_custo_medio` nunca é gravado e `preco_custo` guarda o último custo da NF-e. Implementar média ponderada por loja (S-B, decisão D1)
+- Aplicar em produção o pacote S1 → S1c → S1b → G14 (merge do #648 já está em `origin/main`, `a9579e6a`). Exige o label `deploy-prod:aprovado` na janela de produção; seguir `docs/regras-negocio/PLANO_APLICACAO_S1_PRODUCAO.md`
 - Smoke de venda real após a aplicação de 20261023120000 (#628): pós-checagem de catálogo OK em 2026-10-28, mas nenhuma venda desde 2026-10-16 para provar a baixa de estoque online/offline sob o novo privilégio
 - Aprovar (ou ajustar) o teste controlado de provisionamento em produção: `docs/runbooks/TESTE_CONTROLADO_PROVISIONAMENTO_PRODUCAO.md`. Homologação não reproduz produção (parou em 20261019170000, sem RPCs do trial). O lado banco já está validado em `backend/scripts/provisionamento-wizard-trial.test.sql`
 - Aprovar o merge de #629 (migration validada: segurança, concorrência, rollback)
@@ -12,6 +14,10 @@
 
 ## P1 — Falta para lançar (MVP)
 
+- Estorno de NF-e confirmada não existe: nada reverte kardex nem AP não paga (S-C da auditoria do Bloco de Importação)
+- XML da NF-e não é guardado (sem `sha256` nem bucket privado); depende de DOC-01..05 (S-C)
+- Regra ×1,5 aplicada automaticamente ao `preco_varejo` no import (`20261005173427`): remover e exigir ação do usuário (S-D)
+- Pipeline de importação internacional (`import_*`) não grava em estoque, custo, AP nem preço: manter desligado e decidir pós-MVP
 - S2 (recebimento): identidade canônica por recebimento e item, com vínculos OC ↔ remessa ↔ NF-e, recebimento parcial e bloqueio de dupla creditação entre origens (D12: recebimento físico é a origem do crédito)
 - S4 (contas a pagar): UNIQUE em `(nfe_importacao_id, numero_duplicata)` e reconciliação duplicatas × valor da NF-e com tolerância de R$ 0,01 (D3). Checar duplicidades existentes antes da migration
 - S3 (custo médio): média ponderada móvel por loja (D1), centralização dos escritores de estoque em `estoque_aplicar_movimento` por migração incremental (modo sombra e regressão por escritor)
@@ -57,6 +63,7 @@
 
 ## Feito
 
+- 2026-10-29 — Auditoria do Bloco de Importação (NF-e de entrada e pipeline internacional): 45% por critério explícito, 0 funcionalidades comprovadas, recomendação NO-GO. Relatório em `docs/audits/AUDITORIA_BLOCO_IMPORTACAO_2026-10-29.md`; sem alteração de código
 - 2026-10-29 — S1 validada em homologação (`yvdilcmxyjafnnsfdtam`): matriz de permissões final, testes do DONO, ciclos de rollback do S1b, S1c, G14 e S1; PR #648 aberto com o pacote (S1, S1c, S1b, G14), CI verde exceto o guard de governança. Não aplicado em produção
 - 2026-10-29 — Decisões D1–D14 registradas em `docs/regras-negocio/DECISOES_JINLONG_S1.md`
 - 2026-10-29 — NF-e de entrada com valor e sem duplicatas: mensagem operacional para `IMPORT_NFE_OBRIGACAO_SEM_DUPLICATA`, aviso na prévia e confirmação bloqueada na conferência (`notaObrigacao.ts`); sem alteração de migration/RPC. Não deployado
@@ -66,4 +73,3 @@
 - 2026-10-28 — `SUPABASE_MIGRATION_CHECK_PROJECT_REF` apontado para produção (o projeto anterior estava pausado); o check é só leitura (`supabase migration list`) e não roda para PRs de fork
 - 2026-10-28 — Auditoria SECDEF: 4 helpers que revelavam dados da empresa B foram revogados de authenticated (migration 20261028120000; docs/audits/AUDITORIA_RPC_SECDEF_2026-10-28.md)
 - 2026-10-28 — Auditoria INT-01 das 12 integrações: 6 PASSOU, 3 FALHOU, 3 NÃO TESTADA (docs/audits/AUDITORIA_INTEGRACAO_INT01_2026-10-28.md); o "S7" da devolução era falha do teste (caixa_id omitido com 7 caixas abertos), corrigido
-- 2026-10-23 — GROWTH-001: Central de Conversão no hub (testes grátis, uso, interesse, contatos, prioridade e conversão manual sem cobrança automática); pedido de contratação no ERP
