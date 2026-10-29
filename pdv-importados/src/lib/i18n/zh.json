@@ -1048,6 +1048,8 @@
       "conferencia_nenhum_item_preenchido": "请至少填写一项实收数量后再登记。",
       "confirmar_estoque_ok": "入库已确认。请查看库存、实际成本及应付款详情。",
       "confirmar_estoque_pendente": "请先登记所有明细的核对，再确认库存。",
+      "previa_sem_duplicata_bloqueio": "此 NF-e 有金额，但没有重复款项（应付分期）。确认库存将被阻止：请通过采购订单或收货单办理入库。",
+      "confirmar_estoque_sem_duplicata": "此 NF-e 有金额，但没有重复款项（应付分期），无法在此确认库存。",
       "pendentes_titulo": "待核对的进货单",
       "pendentes_hint": "XML 已处理，目录已更新 — 还需核对实收数量才能计入库存。",
       "pendentes_sem_numero": "无发票号",
