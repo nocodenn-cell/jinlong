@@ -2,6 +2,7 @@
 
 ## P0 — Quebrado/travado
 
+- Merge do PR #648 (S1, S1c, S1b, G14) bloqueado pelo guard `deploy-governance`: exige o label `deploy-prod:aprovado` na janela de produção. Aplicar em produção na ordem S1 → S1c → S1b → G14 seguindo `docs/regras-negocio/PLANO_APLICACAO_S1_PRODUCAO.md`
 - Smoke de venda real após a aplicação de 20261023120000 (#628): pós-checagem de catálogo OK em 2026-10-28, mas nenhuma venda desde 2026-10-16 para provar a baixa de estoque online/offline sob o novo privilégio
 - Aprovar (ou ajustar) o teste controlado de provisionamento em produção: `docs/runbooks/TESTE_CONTROLADO_PROVISIONAMENTO_PRODUCAO.md`. Homologação não reproduz produção (parou em 20261019170000, sem RPCs do trial). O lado banco já está validado em `backend/scripts/provisionamento-wizard-trial.test.sql`
 - Aprovar o merge de #629 (migration validada: segurança, concorrência, rollback)
@@ -11,6 +12,10 @@
 
 ## P1 — Falta para lançar (MVP)
 
+- S2 (recebimento): identidade canônica por recebimento e item, com vínculos OC ↔ remessa ↔ NF-e, recebimento parcial e bloqueio de dupla creditação entre origens (D12: recebimento físico é a origem do crédito)
+- S4 (contas a pagar): UNIQUE em `(nfe_importacao_id, numero_duplicata)` e reconciliação duplicatas × valor da NF-e com tolerância de R$ 0,01 (D3). Checar duplicidades existentes antes da migration
+- S3 (custo médio): média ponderada móvel por loja (D1), centralização dos escritores de estoque em `estoque_aplicar_movimento` por migração incremental (modo sombra e regressão por escritor)
+- S5 (planos): mapear planos → módulos e bloquear Importação Internacional para clientes sem o módulo (D5) antes de vendê-la
 - Ligar leaked password protection no Supabase Auth (a view SECURITY DEFINER foi resolvida pelo #618; advisor confirma em 2026-10-23)
 - Aprovar e aplicar #629 (issue #586: vínculo SAÍDA↔ENTRADA de transferência no kardex); fechar a issue só depois da verificação em produção
 - Consolidar testes únicos de PRs antigos antes de encerrá-los: pilha #487/#488/#498/#499/#500 (fiscal/financeiro) e experimentos multiempresa #492–#496 (matriz negativa de isolamento)
@@ -53,6 +58,8 @@
 
 ## Feito
 
+- 2026-10-29 — S1 validada em homologação (`yvdilcmxyjafnnsfdtam`): matriz de permissões final, testes do DONO, ciclos de rollback do S1b, S1c, G14 e S1; PR #648 aberto com o pacote (S1, S1c, S1b, G14), CI verde exceto o guard de governança. Não aplicado em produção
+- 2026-10-29 — Decisões D1–D14 registradas em `docs/regras-negocio/DECISOES_JINLONG_S1.md`
 - 2026-10-29 — NF-e de entrada com valor e sem duplicatas: mensagem operacional para `IMPORT_NFE_OBRIGACAO_SEM_DUPLICATA`, aviso na prévia e confirmação bloqueada na conferência (`notaObrigacao.ts`); sem alteração de migration/RPC. Não deployado
 - 2026-10-29 — `20261028120000` aplicada em produção (revoke dos 4 helpers de tenant): drill em main com success (backup 40776152513, checksum OK, contagens validadas); pré-checagem true/true/true; pós-checagem revogados e service_role_ok, md5 2fc3a718…; sem `permission denied` nos logs; drift do #630 verde
 - 2026-10-28 — Drift main × produção zerado: `20261022020000` (#625) registrada em produção como no-op (script do #641, SQL idêntico ao arquivo); #641 mergeado (598efcf0): o check respeita `deferred-migrations.json` e aceita duplicatas de pares com git alinhado. `migration-remote-drift` contra produção = HUMAN_GATE (só `20261010120000`, adiada)
@@ -61,5 +68,3 @@
 - 2026-10-28 — Auditoria SECDEF: 4 helpers que revelavam dados da empresa B foram revogados de authenticated (migration 20261028120000; docs/audits/AUDITORIA_RPC_SECDEF_2026-10-28.md)
 - 2026-10-28 — Auditoria INT-01 das 12 integrações: 6 PASSOU, 3 FALHOU, 3 NÃO TESTADA (docs/audits/AUDITORIA_INTEGRACAO_INT01_2026-10-28.md); o "S7" da devolução era falha do teste (caixa_id omitido com 7 caixas abertos), corrigido
 - 2026-10-28 — Migrations 20261021230000 (PIN) e 20261023200000 (troca de operador) aplicadas na homologação jinlong-homolog-palm, com a versão do repositório
-- 2026-10-23 — Troca Segura de Operador F0–F3 no PDV web (gaveta do turno), PR #634
-- 2026-10-23 — Auditoria do operador de caixa e proposta de Troca Segura (AUDITORIA_OPERADOR_TROCA_SEGURA_2026-10-23.md)
