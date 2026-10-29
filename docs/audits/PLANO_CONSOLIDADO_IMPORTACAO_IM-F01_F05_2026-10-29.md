@@ -160,7 +160,7 @@ IM-F03 pode começar a parte de AP (chave única, reconciliação) em paralelo a
 ### IM-F01 — Precisão e custo médio
 
 - **Escopo:** precisão de custo com seis casas (salvo decisão diferente em P1); função `internal.estoque_movimentar`; migração dos escritores de estoque; `preco_custo_medio` deixa de ser gravado; log com custo e saldo antes/depois; modo sombra (calcula o novo médio em paralelo e compara com o escritor antigo, sem persistir) antes da troca.
-- **Dependências:** P1 (escala), P2 (semente), P8 (abertura). Inventário confirmado (M00).
+- **Dependências:** P1 (escala), P8 (semente do custo médio). Inventário confirmado (M00).
 - **Migrations propostas** (nomes indicativos):
   - `M00_inventario_escritores_estoque` — só consulta; gera lista no relatório.
   - `M01_custo_precisao_6_casas` — `ALTER` de `produtos.preco_custo`, `importacoes_nfe_itens.custo_unitario`, `itens_venda.custo_unitario_snap`, `nfe_conferencia` (se separado). Exige `DROP VIEW produtos_custos` e `DROP TRIGGER trg_produtos_margem_bu` antes e recriação depois, como no plano anterior (`13-PLANO`, Fase 2). Impacto: reescrita de `itens_venda` (medir lock em clone).
