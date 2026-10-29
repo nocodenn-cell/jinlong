@@ -2,7 +2,7 @@
 
 ## P0 — Quebrado/travado
 
-- Merge do PR #648 (S1, S1c, S1b, G14) bloqueado pelo guard `deploy-governance`: exige o label `deploy-prod:aprovado` na janela de produção. Aplicar em produção na ordem S1 → S1c → S1b → G14 seguindo `docs/regras-negocio/PLANO_APLICACAO_S1_PRODUCAO.md`
+- Merge do PR #648 bloqueado pelo guard `deploy-governance`: falta só o label `deploy-prod:aprovado` no PR (S1, S1c, S1b e G14 já estão aplicadas em produção desde 2026-10-29)
 - Smoke de venda real após a aplicação de 20261023120000 (#628): pós-checagem de catálogo OK em 2026-10-28, mas nenhuma venda desde 2026-10-16 para provar a baixa de estoque online/offline sob o novo privilégio
 - Aprovar (ou ajustar) o teste controlado de provisionamento em produção: `docs/runbooks/TESTE_CONTROLADO_PROVISIONAMENTO_PRODUCAO.md`. Homologação não reproduz produção (parou em 20261019170000, sem RPCs do trial). O lado banco já está validado em `backend/scripts/provisionamento-wizard-trial.test.sql`
 - Aprovar o merge de #629 (migration validada: segurança, concorrência, rollback)
@@ -57,6 +57,7 @@
 
 ## Feito
 
+- 2026-10-29 — S1, S1c, S1b e G14 aplicadas em produção com autorização do responsável, na ordem do plano (`PLANO_APLICACAO_S1_PRODUCAO.md`): ledger com md5 igual ao arquivo; S2 (`20261029202813`) já estava lá; registro do par S2 em `migration-human-gates.json`
 - 2026-10-29 — S1 validada em homologação (`yvdilcmxyjafnnsfdtam`): matriz de permissões final, testes do DONO, ciclos de rollback do S1b, S1c, G14 e S1; PR #648 aberto com o pacote (S1, S1c, S1b, G14), CI verde exceto o guard de governança. Não aplicado em produção
 - 2026-10-29 — Decisões D1–D14 registradas em `docs/regras-negocio/DECISOES_JINLONG_S1.md`
 - 2026-10-29 — NF-e de entrada com valor e sem duplicatas: mensagem operacional para `IMPORT_NFE_OBRIGACAO_SEM_DUPLICATA`, aviso na prévia e confirmação bloqueada na conferência (`notaObrigacao.ts`); sem alteração de migration/RPC. Não deployado
@@ -66,4 +67,3 @@
 - 2026-10-28 — `SUPABASE_MIGRATION_CHECK_PROJECT_REF` apontado para produção (o projeto anterior estava pausado); o check é só leitura (`supabase migration list`) e não roda para PRs de fork
 - 2026-10-28 — Auditoria SECDEF: 4 helpers que revelavam dados da empresa B foram revogados de authenticated (migration 20261028120000; docs/audits/AUDITORIA_RPC_SECDEF_2026-10-28.md)
 - 2026-10-28 — Auditoria INT-01 das 12 integrações: 6 PASSOU, 3 FALHOU, 3 NÃO TESTADA (docs/audits/AUDITORIA_INTEGRACAO_INT01_2026-10-28.md); o "S7" da devolução era falha do teste (caixa_id omitido com 7 caixas abertos), corrigido
-- 2026-10-23 — GROWTH-001: Central de Conversão no hub (testes grátis, uso, interesse, contatos, prioridade e conversão manual sem cobrança automática); pedido de contratação no ERP
