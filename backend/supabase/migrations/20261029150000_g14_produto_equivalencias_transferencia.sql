@@ -1,20 +1,23 @@
 -- ============================================================================
 -- G14 — Transferência entre lojas só move produto equivalente confirmado.
 --
--- PROBLEMA: internal.transferir_estoque_seguro usava o mesmo produto_id na origem
--- e no destino. Produtos são cadastrados por loja (produtos.loja_id), então o
--- destino podia receber estoque de um produto de outra loja.
+-- PROBLEMA: transferir_estoque_seguro usava o mesmo produto_id na origem e no destino.
+-- Produtos cadastrados em duplicidade por loja (mesmo item, ids diferentes) podiam
+-- gerar estoque no destino com um produto de outra loja.
 --
--- SOLUÇÃO:
---  1. produto_equivalencias: vínculo explícito (origem -> produto da loja destino),
---     criado só por DONO/GERENTE com vínculo às duas lojas (critério MANUAL).
+-- SOLUÇÃO (ajustada no PR #648 após revisão: a regra anterior bloqueava o catálogo da
+-- empresa da fase 5, em que o mesmo produto_id vale em todas as lojas):
+--  1. produto_equivalencias: tradução explícita (produto da origem -> produto da loja
+--     destino), criada só por DONO/GERENTE com vínculo às duas lojas (critério MANUAL).
 --     Sem vínculo automático por código de barras (só sugestão futura).
 --  2. Trigger valida: produtos existem, produto destino é da loja destino, lojas
 --     distintas, mesma empresa.
---  3. Transferência: produto da origem é obrigatório; destino usa produto_destino_id.
---     Sem equivalência ⇒ TRANSFERENCIA_PRODUTO_SEM_EQUIVALENTE.
+--  3. Transferência: sem equivalência, o destino usa o mesmo produto_id (catálogo da
+--     empresa, já limitado a mesma empresa por fp_assert_produto/fp_assert_mesma_empresa).
+--     Com equivalência confirmada, o destino usa produto_destino_id.
 --
--- Impacto: transferências já feitas (dados) não são corrigidas. Só as novas.
+-- Impacto: sem mudança de dados. Transferências existentes e o catálogo compartilhado
+-- seguem como antes. Só a duplicidade por loja precisa de equivalência cadastrada.
 -- Rollback: 20261029150000_g14_..._rollback.sql
 -- ============================================================================
 
@@ -137,17 +140,12 @@ DECLARE
   v_n int;
   v_ancora_decl text := E'  v_dummy numeric;\n';
   v_ancora_lock text := E'  -- Lock deterministico para reduzir risco de deadlock entre concorrencias cruzadas.\n';
-  v_guarda text := E'  -- G14: o produto precisa ser da loja de origem\n'
-    || E'  IF NOT EXISTS (SELECT 1 FROM public.produtos p WHERE p.id = p_produto_id AND p.loja_id = p_loja_origem) THEN\n'
-    || E'    RAISE EXCEPTION \'TRANSFERENCIA_PRODUTO_NAO_DA_ORIGEM\';\n'
-    || E'  END IF;\n'
-    || E'  -- G14: o destino só recebe por equivalência confirmada\n'
+  v_guarda text := E'  -- G14: catálogo da empresa usa o mesmo produto_id nas lojas (fase 5). Equivalência\n'
+    || E'  -- confirmada só traduz produto cadastrado em duplicidade numa loja; sem ela, vale o mesmo id.\n'
     || E'  SELECT pe.produto_destino_id INTO v_produto_destino\n'
     || E'    FROM public.produto_equivalencias pe\n'
     || E'   WHERE pe.produto_origem_id = p_produto_id AND pe.loja_destino_id = p_loja_destino AND pe.ativo;\n'
-    || E'  IF v_produto_destino IS NULL THEN\n'
-    || E'    RAISE EXCEPTION \'TRANSFERENCIA_PRODUTO_SEM_EQUIVALENTE\';\n'
-    || E'  END IF;\n\n';
+    || E'  v_produto_destino := COALESCE(v_produto_destino, p_produto_id);\n\n';
 BEGIN
   v_def := pg_get_functiondef('internal.transferir_estoque_seguro(uuid,uuid,uuid,numeric,text,text,numeric)'::regprocedure);
 
@@ -180,7 +178,7 @@ $g14$;
 
 DO $prova$
 BEGIN
-  IF position('TRANSFERENCIA_PRODUTO_SEM_EQUIVALENTE' IN pg_get_functiondef('internal.transferir_estoque_seguro(uuid,uuid,uuid,numeric,text,text,numeric)'::regprocedure)) = 0 THEN
+  IF position('G14: catálogo da empresa usa o mesmo produto_id' IN pg_get_functiondef('internal.transferir_estoque_seguro(uuid,uuid,uuid,numeric,text,text,numeric)'::regprocedure)) = 0 THEN
     RAISE EXCEPTION 'G14 PROVA FAIL';
   END IF;
 END

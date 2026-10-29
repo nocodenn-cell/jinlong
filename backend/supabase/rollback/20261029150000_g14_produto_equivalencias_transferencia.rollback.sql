@@ -6,17 +6,12 @@ DO $rb$
 DECLARE
   v_def text;
   v_n int;
-  v_guarda text := E'  -- G14: o produto precisa ser da loja de origem\n'
-    || E'  IF NOT EXISTS (SELECT 1 FROM public.produtos p WHERE p.id = p_produto_id AND p.loja_id = p_loja_origem) THEN\n'
-    || E'    RAISE EXCEPTION \'TRANSFERENCIA_PRODUTO_NAO_DA_ORIGEM\';\n'
-    || E'  END IF;\n'
-    || E'  -- G14: o destino só recebe por equivalência confirmada\n'
+  v_guarda text := E'  -- G14: catálogo da empresa usa o mesmo produto_id nas lojas (fase 5). Equivalência\n'
+    || E'  -- confirmada só traduz produto cadastrado em duplicidade numa loja; sem ela, vale o mesmo id.\n'
     || E'  SELECT pe.produto_destino_id INTO v_produto_destino\n'
     || E'    FROM public.produto_equivalencias pe\n'
     || E'   WHERE pe.produto_origem_id = p_produto_id AND pe.loja_destino_id = p_loja_destino AND pe.ativo;\n'
-    || E'  IF v_produto_destino IS NULL THEN\n'
-    || E'    RAISE EXCEPTION \'TRANSFERENCIA_PRODUTO_SEM_EQUIVALENTE\';\n'
-    || E'  END IF;\n\n';
+    || E'  v_produto_destino := COALESCE(v_produto_destino, p_produto_id);\n\n';
 BEGIN
   v_def := pg_get_functiondef('internal.transferir_estoque_seguro(uuid,uuid,uuid,numeric,text,text,numeric)'::regprocedure);
 
