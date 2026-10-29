@@ -63,6 +63,34 @@ describe('repositório REST', () => {
   })
 })
 
+describe('Central de Conversão (repositório)', () => {
+  it('lê e converte só por RPCs commercial_* com o JWT do admin', async () => {
+    const calls: Array<[string, RequestInit]> = []
+    const f = (async (u: string, i: RequestInit) => { calls.push([u, i]); return Response.json(u.includes('converter') ? { valor_mensal_centavos: 1 } : []) }) as unknown as typeof fetch
+    const repo = restRepo(cfg, 'user-jwt', f)
+    await repo.listTrials()
+    await repo.listPlanos()
+    await repo.convertTrial({ empresaId: 'E', plano: 'REDE', addons: [], qtdLojas: 1, qtdCaixas: 1, forma: 'PIX', valorCentavos: null, observacao: 'ok ok' })
+    expect(calls.map(([u]) => u.split('/rest/v1/')[1])).toEqual(['rpc/commercial_trials_listar', 'rpc/commercial_planos', 'rpc/commercial_converter_trial'])
+    for (const [, i] of calls) expect((i.headers as Record<string, string>).Authorization).toBe('Bearer user-jwt')
+    expect(JSON.parse(String(calls[2]?.[1].body))).toMatchObject({ p_empresa: 'E', p_plano: 'REDE', p_valor_centavos: null, p_observacao: 'ok ok' })
+  })
+  it('erro de regra do banco chega com código (para mensagem amigável)', async () => {
+    const f = (async () => Response.json({ message: 'COMMERCIAL_JA_CLIENTE' }, { status: 400 })) as unknown as typeof fetch
+    await expect(restRepo(cfg, 't', f).convertTrial({ empresaId: 'E', plano: 'REDE', addons: [], qtdLojas: 1, qtdCaixas: 1, forma: 'PIX', valorCentavos: null, observacao: 'ok ok' }))
+      .rejects.toMatchObject({ code: 'COMMERCIAL_JA_CLIENTE' })
+    const g = (async () => Response.json({ message: 'relation "x" does not exist' }, { status: 400 })) as unknown as typeof fetch
+    await expect(restRepo(cfg, 't', g).listTrials()).rejects.toMatchObject({ code: undefined })
+  })
+  it('lead de teste grátis não vira “contratado” pelo funil comum (só pela conversão)', async () => {
+    const calls: string[] = []
+    const lead = { id: 'L', status: 'proposta', origem: 'teste_gratis', product: 'jinlong', store: 'S', contact: 'C' }
+    const f = (async (u: string, i: RequestInit = {}) => { calls.push(i.method ?? 'GET'); return Response.json([lead]) }) as unknown as typeof fetch
+    await expect(restRepo(cfg, 't', f).changeStatus('L', 'contratado')).rejects.toThrow(/Central de Conversão/)
+    expect(calls).toEqual(['GET'])
+  })
+})
+
 describe('isolamento', () => {
   const files = (dir: string): string[] => fs.readdirSync(dir, { withFileTypes: true }).flatMap((d) => {
     const p = path.join(dir, d.name)

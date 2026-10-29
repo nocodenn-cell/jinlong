@@ -63,10 +63,16 @@ export async function iniciarTesteGratisAction(input: TrialSignupInput): Promise
   try {
     const { data, error } = await rpc.rpc('plataforma_iniciar_trial', { p: montarPayloadTrial(d, userId) }) // duração: saas.parametros.trial_dias
     if (error) throw new Error(error.message)
-    const r = data as { loja_id: string; trial_fim: string }
+    const r = data as { empresa_id?: string; loja_id: string; trial_fim: string }
     await bootstrapLojaTrial(admin, r.loja_id, userId, d.idioma).catch((e) => {
       console.error('[trial] bootstrap da loja incompleto', e instanceof Error ? e.message : e)
     })
+    // ficha na Central de Conversão do hub (com o telefone informado); falha não bloqueia o teste
+    if (r.empresa_id) {
+      await rpc.rpc('commercial_trial_garantir_lead', { p_empresa: r.empresa_id, p_telefone: d.telefone || null })
+        .then(({ error }) => { if (error) throw new Error(error.message) })
+        .catch((e) => console.error('[trial] ficha comercial não criada', e instanceof Error ? e.message : e))
+    }
     return { ok: true, email: d.email, trialFim: r.trial_fim }
   } catch (e) {
     await admin.auth.admin.deleteUser(userId).catch(() => undefined)
