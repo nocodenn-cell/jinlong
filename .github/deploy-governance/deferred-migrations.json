@@ -6,6 +6,12 @@
       "file": "backend/supabase/migrations/20261010120000_caixa_sem_loja_padrao.sql",
       "reason": "Remove o DEFAULT de caixas.loja_id, ainda necessario ao PDV legado (Build A, sem loja_id). Aplicar somente apos validacao presencial do PDV novo (#590) com fila de sync zerada.",
       "releaseCondition": "Validacao presencial do PDV registrada + autorizacao explicita do Damatta + label deploy-prod:aprovado no PR que remove esta entrada."
+    },
+    {
+      "version": "20261023130000",
+      "file": "backend/supabase/migrations/20261023130000_movimentos_estoque_log_transferencia_id.sql",
+      "reason": "Adiada na versão 20261023130000 (vinda da main, issue #586). Aplicar só com autorização explícita do responsável e depois de validar o kardex de transferência em homologação. A versão dividia o nome com growth001 até o rename para 20261023130100.",
+      "releaseCondition": "Validação do kardex de transferência em homologação + autorização explícita do Damatta + label deploy-prod:aprovado no PR que remove esta entrada."
     }
   ]
 }
