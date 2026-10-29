@@ -6,7 +6,9 @@
 export type ItemValorNota = { quantidade: number; custo_unitario: number }
 
 export function valorEconomicoNota(itens: ItemValorNota[]): number {
-  return itens.reduce((total, item) => total + (item.quantidade || 0) * (item.custo_unitario || 0), 0)
+  const total = itens.reduce((soma, item) => soma + (item.quantidade || 0) * (item.custo_unitario || 0), 0)
+  // Mesmo arredondamento de `numeric(14,2)` do banco: valor que arredonda para zero não bloqueia.
+  return Math.round(total * 100) / 100
 }
 
 /** `true` quando a confirmação será recusada por falta de duplicatas. */
