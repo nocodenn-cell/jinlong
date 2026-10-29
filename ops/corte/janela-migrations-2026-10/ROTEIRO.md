@@ -1,16 +1,10 @@
 # Roteiro — janela de aplicação de `20261022020000` e `20261023120000` em produção
 
-> **Status: PREPARADO, NÃO EXECUTADO.** Nada aqui foi aplicado. A execução exige autorização específica do
-> Damatta para esta janela (data, hora e executor), conforme `docs/ops/deploy-governance.md`
-> ("migrations de produção: manual, transação + `schema_migrations` com a versão real; nunca `db push`").
-
-| Campo | Valor |
-|---|---|
-| Projeto | `kbabmewnahysfvlybiak` (produção) |
-| Base | `main` com #625 e #628 mergeados; arquivos conferidos em 2026-10-23 |
-| Executor | _______________ · Conferente: _______________ |
-| Data/hora da janela | _______________ (fora do horário da loja) |
-| Autorização | _______________ (link/mensagem) |
+> **Status: EXECUTADO em 2026-10-28** pelo dono, por outro caminho (script do #641 para `20261022020000`; aplicação
+> manual de `20261023120000`). Verificação somente leitura em 2026-10-29 (V1–V5 abaixo): V2 `false`, V3 `true`,
+> V4 `false`, V5 `true`. O md5 de `statements` ficou igual ao do arquivo **com** a quebra de linha final
+> (`463e6e94…`, `64a1cda5…`, valores de P9), não aos de V1, porque não passou pelo `02-aplicar.psql`; o SQL é o
+> mesmo do arquivo. Os scripts desta pasta ficam como referência; não reexecutar.
 
 ## 1. O que cada migration faz em produção
 
