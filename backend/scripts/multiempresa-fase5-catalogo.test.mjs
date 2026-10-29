@@ -36,6 +36,18 @@ await db.exec(`
   INSERT INTO public.estoque (produto_id, loja_id, quantidade_atual) VALUES ('${PA}', '${LA}', 50), ('${PA}', '${LF}', 10), ('${PB}', '${LB}', 5);
 `).catch((e) => { console.error('semente falhou:', e.message); process.exit(1) })
 
+// 20261023120000 revogou EXECUTE de authenticated em decrementar_estoque_seguro: hoje só consumidores SECURITY
+// DEFINER (finalizar_venda_transacional_canonica_v4_unscoped etc., dono postgres) e o sync-outbox (service_role) a
+// chamam. O envelope multiempresa continua valendo nesse caminho porque decide pelo JWT (auth.uid()/claims), não pelo
+// papel de banco. Este consumidor de teste reproduz exatamente isso: SECURITY DEFINER, dono postgres, executável por
+// authenticated, repassando a chamada com o JWT do usuário.
+const retDecr = (await db.query(`SELECT pg_get_function_result('public.decrementar_estoque_seguro(uuid,numeric,uuid)'::regprocedure) r`)).rows[0].r
+await db.exec(`CREATE FUNCTION public._t5_baixa_via_consumidor(p_produto uuid)
+  RETURNS ${retDecr} LANGUAGE sql SECURITY DEFINER SET search_path = public AS
+  $f$ SELECT * FROM public.decrementar_estoque_seguro(p_produto_id => p_produto, p_quantidade => 1, p_venda_id => NULL) $f$;
+  REVOKE ALL ON FUNCTION public._t5_baixa_via_consumidor(uuid) FROM PUBLIC;
+  GRANT EXECUTE ON FUNCTION public._t5_baixa_via_consumidor(uuid) TO authenticated;`)
+
 async function como(uid, fn) {
   await db.exec('BEGIN')
   try {
@@ -55,7 +67,7 @@ await t('produto da matriz tem loja_id = matriz (pré-condição do cliente 1)',
 // Obs.: a policy PERMISSIVE legada `produtos_select` (loja_id = auth_usuario_loja_id()) continua limitando o SELECT
 // direto — comportamento anterior ao PR. A fase 5 corrige a guarda RESTRICTIVE e os envelopes de RPC.
 const assertProd = (uid, id) => erro(uid, `SELECT public.fp_assert_produto($1, 't')`, [id])
-const decr = (uid, id) => erro(uid, `SELECT * FROM public.decrementar_estoque_seguro(p_produto_id => $1, p_quantidade => 1, p_venda_id => NULL)`, [id])
+const decr = (uid, id) => erro(uid, `SELECT * FROM public._t5_baixa_via_consumidor($1)`, [id])
 await t('fp_assert_produto: filial passa no catálogo da empresa; Empresa B é negada', async () => {
   assert.equal(await assertProd(U.opF, PA), null)
   assert.match(await assertProd(U.opF, PB) ?? 'aceito', /ACESSO_LOJA_NEGADO/)
@@ -66,12 +78,17 @@ await t('guarda RESTRICTIVE de produtos não barra a filial (catálogo por empre
   const qual = (await db.query(`SELECT qual FROM pg_policies WHERE policyname='tenant_guard' AND tablename='produtos'`)).rows[0].qual
   assert.match(qual, /produto_empresa/)
 })
-await t('filial baixa estoque do produto do catálogo: envelope passa (decrementar_estoque_seguro)', async () => {
-  const r = await como(U.opF, async () => (await db.query(`SELECT * FROM public.decrementar_estoque_seguro(p_produto_id => $1, p_quantidade => 1, p_venda_id => NULL)`, [PA])).rows)
+await t('20261023120000: authenticated não chama decrementar_estoque_seguro direto (nem na própria loja)', async () => {
+  for (const [uid, prod] of [[U.opF, PF], [U.opF, PA], [U.gerB, PB]]) {
+    assert.match(await erro(uid, `SELECT * FROM public.decrementar_estoque_seguro(p_produto_id => $1, p_quantidade => 1, p_venda_id => NULL)`, [prod]) ?? 'aceito', /permission denied/)
+  }
+})
+await t('filial baixa estoque do produto do catálogo: envelope passa (decrementar_estoque_seguro via consumidor DEFINER)', async () => {
+  const r = await como(U.opF, async () => (await db.query(`SELECT * FROM public._t5_baixa_via_consumidor($1)`, [PA])).rows)
   assert.notEqual(r[0]?.mensagem ?? '', 'ACESSO_LOJA_NEGADO')  // corpo original decide (aqui: sem venda)
 })
 await t('cross-empresa: decrementar produto da Empresa B é negado', async () => {
-  assert.match(await erro(U.opF, `SELECT * FROM public.decrementar_estoque_seguro(p_produto_id => $1, p_quantidade => 1, p_venda_id => NULL)`, [PB]) ?? 'aceito', /ACESSO_LOJA_NEGADO/)
+  assert.match(await erro(U.opF, `SELECT * FROM public._t5_baixa_via_consumidor($1)`, [PB]) ?? 'aceito', /ACESSO_LOJA_NEGADO/)
 })
 const transf = (uid, de, para, prod, k) => erro(uid,
   `SELECT public.transferir_estoque_seguro(p_loja_origem => $1, p_loja_destino => $2, p_produto_id => $3, p_quantidade => 1, p_idempotency_key => $4)`,
@@ -95,7 +112,7 @@ await t('OPERADOR da filial: caminhos do PDV (catálogo eq loja_id, estoque, cal
   const preco = await erro(U.opF, `SELECT public.calcular_preco_produto(p_produto_id => $1, p_loja_id => $2, p_quantidade => 1)`, [PF, LF])
   assert.doesNotMatch(preco ?? '', /ACESSO_LOJA/, `preço: ${preco}`) // caixaPrecoProduto.impl.ts
   assert.equal(await assertProd(U.opF, PF), null)
-  assert.notEqual((await como(U.opF, async () => (await db.query(`SELECT * FROM public.decrementar_estoque_seguro(p_produto_id => $1, p_quantidade => 1, p_venda_id => NULL)`, [PF])).rows))[0]?.mensagem, 'ACESSO_LOJA_NEGADO')
+  assert.notEqual((await como(U.opF, async () => (await db.query(`SELECT * FROM public._t5_baixa_via_consumidor($1)`, [PF])).rows))[0]?.mensagem, 'ACESSO_LOJA_NEGADO')
 })
 await t('Empresa B não lê nem opera produto/estoque da Empresa A (SELECT e RPC)', async () => {
   assert.equal((await q(U.gerB, `SELECT count(*)::int n FROM public.produtos WHERE id IN ($1, $2)`, [PA, PF]))[0].n, 0)

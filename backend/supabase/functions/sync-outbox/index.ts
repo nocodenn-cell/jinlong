@@ -21,6 +21,7 @@
 // |        |                | pós-venda fiscal (opcional) | Se `AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE=true`, chama RPC `fiscal_enfileirar_documento_venda`. Falha intermediária rejeita o evento para retry idempotente (venda já registrada retorna; baixa `BAIXA_JA_EXISTE`; fiscal faz upsert). |
 // ---
 
+import { descontoSemValidacao, type InfoDesconto, infoDescontoVenda, strictManagerDiscountAuth } from "./descontoGerente.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { timingSafeEqualSecret, timingSafeEqualStr } from "../_shared/crypto.ts";
 import { validateGerenteAndIssueToken } from "../_shared/gerente-auth.ts";
@@ -32,12 +33,15 @@ import { avaliarEventoNoPlano } from "./planGate.ts";
 import {
   assertEventoNoEscopo,
   type DispositivoPdv,
+  type EscopoEvento,
   legacyKeysEnabled,
   normalizarCodigoAtivacao,
   resolveAuthContext,
   type ScopeLookups,
   type SyncContext,
+  TIPOS_OPERACIONAIS,
 } from "./tenantScope.ts";
+import { aplicarDecisao, horarioDispositivo, type ResultadoEvento, sha256Hex } from "./revisaoOffline.ts";
 import { parseParcelasOpcional, temParcelamento, type PagamentoComParcelas } from "./pagamentosParcelas.ts";
 import {
   bloqueadoAgora,
@@ -65,6 +69,8 @@ type SyncResponse = {
   ok: boolean;
   processed: string[];
   failed: { id: string; error: string }[];
+  /** 20261028130000: eventos guardados no servidor para revisão de DONO/GERENTE (também listados em processed). */
+  em_revisao?: { id: string; classificacao: string; motivo: string }[];
 };
 
 function isRecord(x: unknown): x is Record<string, unknown> {
@@ -737,7 +743,7 @@ async function processVenda(
   const parsedJson = JSON.parse(ev.payload_json);
   const payload = parseVendaPayload(parsedJson);
   await liberarVendaOfflineSeSuspensa(supabase, ev, payload.venda_id, ctx);
-  const strictManagerDiscountAuth = Deno.env.get("STRICT_MANAGER_DISCOUNT_AUTH") === "true";
+  const strictManagerDiscount = strictManagerDiscountAuth();
   const _t0 = Date.now();
 
   await ensureCaixaPdv(
@@ -748,21 +754,14 @@ async function processVenda(
     payload.loja_id,
   );
 
-  const hasManagerDiscount = (payload.desconto_gerente_percentual ?? 0) > 0 ||
-    (payload.desconto_gerente_valor ?? 0) > 0;
-  if (strictManagerDiscountAuth && hasManagerDiscount && !payload.desconto_gerente_token &&
+  // Seguro por padrão: sem a secret (ou com valor inválido) o modo é estrito.
+  const info = infoDescontoVenda(ev.tipo, ev.payload_json);
+  if (descontoSemValidacao(info, strictManagerDiscount, false) &&
     !(await descontoAutorizadoPorPinGerente(supabase, payload, ctx))) {
     throw new Error("GERENTE_TOKEN_OBRIGATORIO");
   }
-  // 20261028120000: em dispositivo ativado, o token informado precisa existir, ser da loja do dispositivo e ter
-  // emissor/aprovador ATIVOS e vinculados agora (usuário inativado ⇒ token revogado). Fail closed.
-  if (strictManagerDiscountAuth && hasManagerDiscount && payload.desconto_gerente_token && ctx?.mode === "dispositivo") {
-    const { data: vale, error: valeErr } = await supabase.rpc("fp_token_gerente_vale_na_loja", {
-      p_token: payload.desconto_gerente_token,
-      p_loja_id: ctx.lojaId,
-    });
-    if (valeErr || vale !== true) throw new Error("GERENTE_TOKEN_INVALIDO_OU_REVOGADO");
-  }
+  // 20261028120000/20261028130000: o token informado (dispositivo E legado) já foi conferido em
+  // public.sync_avaliar_evento antes de chegar aqui (existe, é da loja/empresa, emissor/aprovador ativos e vinculados).
 
   const rpcVenda = temParcelamento(payload.pagamentos) ? "registrar_venda_com_itens_v2" : "registrar_venda_com_itens";
   const rpcVendaArgs = {
@@ -847,9 +846,19 @@ function parseLojaIdHeader(req: Request): string | null {
   return raw;
 }
 
+/** Lojas da empresa legada que o PDV legado pode ler: a do header (se da empresa) ou todas as da empresa. */
+async function lojasDoLegado(supabase: SupabaseAdmin, ctx: SyncContext & { mode: "legado" }, lojaHeader: string | null) {
+  let q = supabase.from("lojas").select("id").eq("empresa_id", ctx.empresaId);
+  if (lojaHeader) q = q.eq("id", lojaHeader);
+  const { data, error } = await q.limit(1000);
+  if (error) throw new Error(`LOJA_LEGADO_LOOKUP: ${error.message}`);
+  return ((data ?? []) as Array<{ id: string }>).map((l) => String(l.id));
+}
+
 async function handleCatalogoSync(req: Request, supabase: SupabaseAdmin, ctx: SyncContext) {
   // Aut#1: precos_atacado como array canônico (não projetar em regras_preco).
   // Multiempresa: dispositivo ativado ⇒ catálogo SÓ da loja do dispositivo (loja vinda do servidor).
+  // 20261028130000: legado ⇒ só lojas da empresa legada (antes: catálogo de TODAS as empresas).
   const lojaId = ctx.mode === "dispositivo" ? ctx.lojaId : parseLojaIdHeader(req);
   let produtosQuery = supabase
     .from("produtos")
@@ -857,15 +866,21 @@ async function handleCatalogoSync(req: Request, supabase: SupabaseAdmin, ctx: Sy
       "id,nome,codigo_barras,preco_varejo,preco_atacado,categoria_id,ativo,status_publicacao,origem,tem_nf,imagem_url",
     );
   if (ctx.mode === "dispositivo") produtosQuery = produtosQuery.eq("loja_id", ctx.lojaId);
+  else {
+    const lojas = await lojasDoLegado(supabase, ctx, lojaId);
+    if (lojas.length === 0) return jsonResponse(req, 403, { ok: false, error: "LOJA_FORA_DA_EMPRESA_LEGADO" });
+    produtosQuery = produtosQuery.in("loja_id", lojas);
+  }
+  const empresaCatalogo = ctx.empresaId;
   const REGRAS_COLS =
     "id,tipo_regra,produto_id,categoria_id,quantidade_minima,quantidade_maxima,tipo_desconto,valor_desconto,data_validade,ativo";
   const regrasDaEmpresa = async () => {
-    // Fase 2+: regras_preco tem empresa_id ⇒ dispositivo recebe só as da própria empresa (inclui regras gerais).
-    if (ctx.mode !== "dispositivo" || !ctx.empresaId) {
+    // Fase 2+: regras_preco tem empresa_id ⇒ dispositivo E legado recebem só as da própria empresa (inclui gerais).
+    if (!empresaCatalogo) {
       return await supabase.from("regras_preco").select(REGRAS_COLS).eq("ativo", true).limit(100000);
     }
     const r = await supabase.from("regras_preco").select(`${REGRAS_COLS},empresa_id`).eq("ativo", true)
-      .eq("empresa_id", ctx.empresaId).limit(100000);
+      .eq("empresa_id", empresaCatalogo).limit(100000);
     if (r.error && /empresa_id/.test(r.error.message)) {
       return await supabase.from("regras_preco").select(REGRAS_COLS).eq("ativo", true).limit(100000);
     }
@@ -902,7 +917,7 @@ async function handleCatalogoSync(req: Request, supabase: SupabaseAdmin, ctx: Sy
   const produtos = (produtosRes.data ?? []) as Array<{ id: string; categoria_id?: string | null }>;
   let regras = (regrasRes.data ?? []) as Array<{ produto_id?: string | null; categoria_id?: string | null }>;
   let atacadoFiltrado = precosAtacado;
-  if (ctx.mode === "dispositivo") {
+  {
     // regras_preco/precos_atacado ainda não têm empresa_id (D12, etapa 6): restringe pelos produtos/categorias
     // da loja. Regra sem produto e sem categoria (global) não é enviada a dispositivos de tenant.
     const prodIds = new Set(produtos.map((p) => p.id));
@@ -930,7 +945,9 @@ async function handleCatalogoSync(req: Request, supabase: SupabaseAdmin, ctx: Sy
 }
 
 async function handlePdvConfigSync(req: Request, supabase: SupabaseAdmin, ctx: SyncContext) {
-  const lojaId = ctx.mode === "dispositivo" ? ctx.lojaId : parseLojaIdHeader(req);
+  let lojaId = ctx.mode === "dispositivo" ? ctx.lojaId : parseLojaIdHeader(req);
+  // legado: loja do header só vale se for da empresa legada (senão não devolve vendedores de outra empresa).
+  if (ctx.mode === "legado" && lojaId && (await lojasDoLegado(supabase, ctx, lojaId)).length === 0) lojaId = null;
   const base = supabase
     .from("pdv_config")
     .select("gerente_id, max_desconto_gerente_percentual, quantidade_minima_atacado_padrao");
@@ -958,7 +975,7 @@ async function handlePdvConfigSync(req: Request, supabase: SupabaseAdmin, ctx: S
     ? {
       ...data,
       loja_id: lojaId,
-      strict_manager_auth: Deno.env.get("STRICT_MANAGER_DISCOUNT_AUTH") === "true",
+      strict_manager_auth: strictManagerDiscountAuth(),
     }
     : null;
 
@@ -1007,6 +1024,16 @@ function scopeLookups(supabase: SupabaseAdmin): ScopeLookups {
       if (error) throw new Error(`ESCOPO_OPERADOR_LOOKUP: ${error.message}`);
       return data === true;
     },
+    lojaEmpresa: async (lojaId: string) => {
+      const { data, error } = await supabase.from("lojas").select("empresa_id").eq("id", lojaId).maybeSingle();
+      if (error) throw new Error(`ESCOPO_LOJA_LOOKUP: ${error.message}`);
+      return data?.empresa_id == null ? null : String(data.empresa_id);
+    },
+    caixaOperador: async (caixaId: string) => {
+      const { data, error } = await supabase.from("caixas").select("operador_id").eq("id", caixaId).maybeSingle();
+      if (error) throw new Error(`ESCOPO_CAIXA_LOOKUP: ${error.message}`);
+      return data?.operador_id == null ? null : String(data.operador_id);
+    },
   };
 }
 
@@ -1038,16 +1065,42 @@ async function liberarVendaOfflineSeSuspensa(
   }
 }
 
+function infoDesconto(ev: OutboxEvent): InfoDesconto {
+  return infoDescontoVenda(ev.tipo, ev.payload_json);
+}
+
+async function gravarEvento(supabase: SupabaseAdmin, ev: OutboxEvent, ctx: SyncContext): Promise<void> {
+  if (ev.tipo === "VENDA_REGISTRADA") await processVenda(supabase, ev, ctx);
+  else if (ev.tipo === "CAIXA_ABERTO") await processCaixaAberto(supabase, ev);
+  else if (ev.tipo === "CAIXA_FECHADO") await processCaixaFechado(supabase, ev);
+  else if (ev.tipo === "MOVIMENTO_CAIXA") await processMovimentoCaixa(supabase, ev);
+  else throw new Error(`TIPO_DESCONHECIDO: ${ev.tipo}`);
+}
+
 async function dispatchOutboxEvent(
   supabase: SupabaseAdmin,
   ev: OutboxEvent,
   ctx: SyncContext,
-): Promise<void> {
+  deviceFingerprint: string,
+): Promise<ResultadoEvento> {
+  // Recibo do servidor ANTES de qualquer decisão: é a prova de existência usada na reconciliação offline.
+  const sha = await sha256Hex(ev.payload_json);
+  const origem = ctx.mode;
+  const dispositivoId = ctx.mode === "dispositivo" ? ctx.dispositivoId : null;
+  if (TIPOS_OPERACIONAIS.has(ev.tipo)) {
+    const { error: recErr } = await supabase.rpc("sync_registrar_recebimento", {
+      p_event_id: ev.id, p_tipo: ev.tipo, p_payload_sha256: sha, p_origem: origem, p_dispositivo: dispositivoId,
+      p_fingerprint: deviceFingerprint,
+    });
+    // Fail closed: sem o recibo (ou sem a migration) o evento não entra; o PDV reenvia depois.
+    if (recErr) throw new Error(`SYNC_RECIBO_INDISPONIVEL: ${recErr.message}`);
+  }
   if (ctx.mode === "legado") {
     const r = await aplicarLojaLegado(ev, ctx.lojaId, {
       caixaLoja: scopeLookups(supabase).caixaLoja,
+      // só lojas da EMPRESA LEGADA contam para "loja única" (antes: qualquer empresa)
       lojasAtivas: async () => {
-        const { data, error } = await supabase.from("lojas").select("id").eq("ativo", true).limit(2);
+        const { data, error } = await supabase.from("lojas").select("id").eq("ativo", true).eq("empresa_id", ctx.empresaId).limit(2);
         if (error) throw new Error(`LOJA_LEGADO_LOOKUP: ${error.message}`);
         return ((data ?? []) as Array<{ id: string }>).map((l) => String(l.id));
       },
@@ -1057,7 +1110,7 @@ async function dispatchOutboxEvent(
       ev = r.ev;
     }
   }
-  await assertEventoNoEscopo(ev, ctx, scopeLookups(supabase));
+  const escopo: EscopoEvento | null = await assertEventoNoEscopo(ev, ctx, scopeLookups(supabase));
   if (ctx.mode === "dispositivo" && ctx.empresaId) {
     const { data: recursos, error: recErr } = await supabase.rpc("fp_recursos_empresa", { p_empresa: ctx.empresaId });
     // função ausente (migration de cobrança não aplicada) ⇒ comportamento antigo
@@ -1066,12 +1119,41 @@ async function dispatchOutboxEvent(
       if (!gate.ok) throw new Error(gate.error);
     }
   }
-  if (ev.tipo === "VENDA_REGISTRADA") await processVenda(supabase, ev, ctx);
-  else if (ev.tipo === "CAIXA_ABERTO") await processCaixaAberto(supabase, ev);
-  else if (ev.tipo === "CAIXA_FECHADO") await processCaixaFechado(supabase, ev);
-  else if (ev.tipo === "MOVIMENTO_CAIXA") await processMovimentoCaixa(supabase, ev);
-  else if (ev.tipo === "OPERADOR_EVENTO") await processOperadorEvento(supabase, ev, ctx);
-  else throw new Error(`TIPO_DESCONHECIDO: ${ev.tipo}`);
+  if (ev.tipo === "OPERADOR_EVENTO") {
+    await processOperadorEvento(supabase, ev, ctx);
+    return { resultado: "PROCESSADO" };
+  }
+  if (!escopo) throw new Error(`TIPO_DESCONHECIDO: ${ev.tipo}`);
+
+  // Operador ativo + vínculo + papel atual (e token de gerente) — mesma regra nos dois modos, no banco.
+  const desconto = infoDesconto(ev);
+  const horario = horarioDispositivo(ev.created_at);
+  const { data: decisao, error: avErr } = await supabase.rpc("sync_avaliar_evento", {
+    p: {
+      event_id: ev.id, tipo: ev.tipo, payload_sha256: sha, device_fingerprint: deviceFingerprint,
+      loja_id: escopo.lojaId, caixa_id: escopo.caixaId, operador_id: escopo.operadorId, horario_dispositivo: horario,
+      desconto_token: desconto.token, exige_token: desconto.exigeToken,
+      empresa_legado: ctx.mode === "legado" ? ctx.empresaId : null,
+    },
+  });
+  if (avErr) throw new Error(`SYNC_AVALIACAO_INDISPONIVEL: ${avErr.message}`);
+  return await aplicarDecisao(decisao, {
+    processar: () => gravarEvento(supabase, ev, ctx),
+    enfileirar: async (status, d) => {
+      const { error } = await supabase.rpc("sync_enfileirar_revisao", {
+        p: {
+          event_id: ev.id, tipo: ev.tipo, payload: ev.payload_json, payload_sha256: sha, origem,
+          dispositivo_id: dispositivoId, device_fingerprint: deviceFingerprint, loja_id: escopo.lojaId,
+          caixa_id: escopo.caixaId, venda_id: desconto.vendaId, operador_id: escopo.operadorId,
+          horario_dispositivo: horario, classificacao: d.classificacao, motivo: d.motivo ?? "", evidencias: d.evidencias ?? {},
+          status,
+        },
+      });
+      if (error) throw new Error(`SYNC_REVISAO_INDISPONIVEL: ${error.message}`);
+      log({ level: "warn", stage: status === "PENDENTE" ? "evento_em_revisao" : "evento_reconciliado", event_id: ev.id,
+        event_type: ev.tipo, classificacao: d.classificacao, motivo: d.motivo, loja_id: escopo.lojaId });
+    },
+  });
 }
 
 async function handlePostOutboxBatch(
@@ -1083,6 +1165,7 @@ async function handlePostOutboxBatch(
   exposeInternalErrors: boolean,
   ctx: SyncContext,
 ): Promise<Response> {
+  const deviceFingerprint = (req.headers.get("x-device-fingerprint") ?? "").trim().toLowerCase();
   let body: SyncRequest;
   try {
     body = parseSyncRequest(JSON.parse(rawBody));
@@ -1093,6 +1176,7 @@ async function handlePostOutboxBatch(
 
   const processed: string[] = [];
   const failed: { id: string; error: string }[] = [];
+  const emRevisao: { id: string; classificacao: string; motivo: string }[] = [];
   log({
     level: "info",
     stage: "sync_start",
@@ -1102,8 +1186,10 @@ async function handlePostOutboxBatch(
 
   for (const ev of body.events) {
     try {
-      await dispatchOutboxEvent(supabase, ev, ctx);
+      const r = await dispatchOutboxEvent(supabase, ev, ctx, deviceFingerprint);
+      // Em revisão: o servidor GUARDOU o evento (fila), então o PDV recebe ack e não reenvia em loop.
       processed.push(ev.id);
+      if (r.resultado === "EM_REVISAO") emRevisao.push({ id: ev.id, classificacao: r.classificacao, motivo: r.motivo });
       log({
         level: "info",
         stage: "event_processed",
@@ -1141,7 +1227,7 @@ async function handlePostOutboxBatch(
     failed_count: failed.length,
     duration_ms: Date.now() - reqStart,
   });
-  return jsonResponse(req, 200, { ok: true, processed, failed, request_id: requestId });
+  return jsonResponse(req, 200, { ok: true, processed, failed, em_revisao: emRevisao, request_id: requestId });
 }
 
 Deno.serve(async (req) => {
@@ -1347,6 +1433,7 @@ async function authorizeSync(
     headerLojaId: (req.headers.get("x-loja-id") ?? "").trim() || null,
     legacyEnabled: legacyKeysEnabled(Deno.env.get("SYNC_LEGACY_KEYS_ENABLED")),
     legacyKey,
+    legacyEmpresaId: Deno.env.get("SYNC_LEGACY_EMPRESA_ID"),
   });
   if (!resolved.ok) return { ok: false, error: resolved.error };
   const expectedKey = resolved.expectedKey;
@@ -1378,6 +1465,14 @@ async function authorizeSync(
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     log({ level: "warn", stage: "nonce_prune_fatal", error: msg });
+  }
+
+  // 20261028130000: no legado, header x-loja-id só vale se a loja for da empresa legada.
+  if (resolved.ctx.mode === "legado" && resolved.ctx.lojaId) {
+    const { data: lj, error: ljErr } = await supabase.from("lojas").select("empresa_id").eq("id", resolved.ctx.lojaId).maybeSingle();
+    if (ljErr || !lj || String(lj.empresa_id).toLowerCase() !== resolved.ctx.empresaId.toLowerCase()) {
+      return { ok: false, error: "LOJA_FORA_DA_EMPRESA_LEGADO" };
+    }
   }
 
   if (resolved.ctx.mode === "dispositivo") {
