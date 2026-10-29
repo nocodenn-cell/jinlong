@@ -5695,6 +5695,7 @@ export type Database = {
           quantidade_delta: number
           remessa_id: string | null
           tipo_codigo: string
+          transferencia_id: string | null
           usuario_id: string
           venda_id: string | null
         }
@@ -5708,6 +5709,7 @@ export type Database = {
           quantidade_delta: number
           remessa_id?: string | null
           tipo_codigo: string
+          transferencia_id?: string | null
           usuario_id: string
           venda_id?: string | null
         }
@@ -5721,6 +5723,7 @@ export type Database = {
           quantidade_delta?: number
           remessa_id?: string | null
           tipo_codigo?: string
+          transferencia_id?: string | null
           usuario_id?: string
           venda_id?: string | null
         }
