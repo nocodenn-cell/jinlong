@@ -3,7 +3,7 @@ import type { HubTabDef } from './hubNavModel'
 
 /**
  * Hubs operacionais, organizados pela jornada da loja (IA por jornada, 2026-10-15):
- *   Vender     → vendas, caixas, clientes
+ *   Vender     → vendas, caixas, clientes, revisão offline
  *   Abastecer  → pedido de compra → recebimento → etiquetas, + fornecedores
  *   Loja/equipe→ dados da loja, funcionários, categorias financeiras, suspensão
  * Cada rota pertence a um único hub. Rotas e SSOT das entidades não mudam.
@@ -14,6 +14,8 @@ export type OperationalHubLabelSet = {
   vendasVendas: string
   vendasCaixas: string
   vendasClientes: string
+  /** Fila de revisão de vendas offline (DONO/GERENTE). */
+  vendasRevisaoOffline?: string
   comprasPedidos: string
   comprasRecebimento: string
   comprasEtiquetas: string
@@ -36,6 +38,12 @@ export function buildOperationalHubTabs(
         { id: 'vendas', label: labels.vendasVendas, href: ROUTES.admin.vendas, match: 'prefix' },
         { id: 'caixas', label: labels.vendasCaixas, href: ROUTES.admin.caixas, match: 'prefix' },
         { id: 'clientes', label: labels.vendasClientes, href: ROUTES.admin.clientes, match: 'prefix' },
+        {
+          id: 'revisao-offline',
+          label: labels.vendasRevisaoOffline ?? 'Revisão offline',
+          href: ROUTES.admin.revisaoOffline,
+          match: 'prefix',
+        },
       ]
     case 'compras':
       return [
@@ -84,6 +92,7 @@ export function buildOperationalHubTabs(
 export function operationalHubLabelsFromAdminUi(ui: {
   hub_vendas_vendas: string
   hub_vendas_caixas: string
+  hub_vendas_revisao_offline?: string
   hub_pessoas_clientes: string
   hub_compras_pedidos: string
   hub_compras_recebimento: string
@@ -99,6 +108,7 @@ export function operationalHubLabelsFromAdminUi(ui: {
     vendasVendas: ui.hub_vendas_vendas,
     vendasCaixas: ui.hub_vendas_caixas,
     vendasClientes: ui.hub_pessoas_clientes,
+    vendasRevisaoOffline: ui.hub_vendas_revisao_offline,
     comprasPedidos: ui.hub_compras_pedidos,
     comprasRecebimento: ui.hub_compras_recebimento,
     comprasEtiquetas: ui.hub_compras_etiquetas,

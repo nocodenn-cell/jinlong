@@ -68,8 +68,8 @@ export const ADMIN_V2_DESTINATIONS: readonly AdminV2NavDestination[] = [
     icon: ShoppingCart,
     labelOverridePt: 'Vender',
     dictKey: 'vender',
-    alsoActivePaths: [ROUTES.admin.caixas, ROUTES.admin.clientes],
-    hint: 'Vendas, caixas e clientes (abas na página).',
+    alsoActivePaths: [ROUTES.admin.caixas, ROUTES.admin.clientes, ROUTES.admin.revisaoOffline],
+    hint: 'Vendas, caixas, clientes e revisão offline (abas na página).',
   },
   {
     id: 'abastecer',

@@ -71,6 +71,8 @@ const SQL_SUITES = [
   'sync-outbox-revisao-offline.test.sql',
   // 20261028140000: caixas.loja_id explícito e da mesma empresa do operador.
   'caixas-loja-mesma-empresa.test.sql',
+  // 20261028150000: leitura da tela da fila de revisão offline + decisão idempotente.
+  'revisao-offline-tela.test.sql',
 ]
 
 /** `psql` está de fato instalado e executável neste host? */
