@@ -32,6 +32,7 @@ BEGIN
     RAISE EXCEPTION 'IMPORT_NFE_AUTH';$a$,
        $b$  v_credito numeric;
   v_recebido_fisico numeric;
+  v_consumido jsonb := '{}'::jsonb;
 BEGIN
   IF v_uid IS NULL THEN
     RAISE EXCEPTION 'IMPORT_NFE_AUTH';$b$),
@@ -40,13 +41,17 @@ BEGIN
 $a$,
        $b$    v_credito := v_it.quantidade_conferida;
     IF v_remessa IS NULL AND v_imp.ordem_compra_id IS NOT NULL AND v_credito IS NOT NULL THEN
-      -- S2 (D12): recebimento físico do item na OC não gera crédito de novo
+      -- S2 (D12): recebimento físico do item na OC não gera crédito de novo. Entre linhas do
+      -- mesmo produto na NF-e, o recebimento disponível é consumido em ordem (sem dupla contagem).
       SELECT coalesce(sum(r.quantidade), 0) INTO v_recebido_fisico
         FROM public.ordens_compra_recebimentos r
         JOIN public.ordens_compra_itens oci ON oci.id = r.ordem_item_id
        WHERE r.ordem_id = v_imp.ordem_compra_id
          AND oci.produto_id = v_it.produto_id
          AND r.origem IN ('ORDEM_COMPRA', 'REMESSA');
+      v_recebido_fisico := greatest(0, v_recebido_fisico - coalesce((v_consumido ->> v_it.produto_id::text)::numeric, 0));
+      v_consumido := jsonb_set(v_consumido, array[v_it.produto_id::text],
+        to_jsonb(coalesce((v_consumido ->> v_it.produto_id::text)::numeric, 0) + least(v_credito, v_recebido_fisico)), true);
       v_credito := greatest(0, v_credito - v_recebido_fisico);
     END IF;
     IF v_remessa IS NULL AND v_credito IS NOT NULL AND v_credito > 0 THEN
