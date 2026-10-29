@@ -443,6 +443,12 @@
       "remoteOnlyVersion": "20261009140739",
       "reason": "N1 fase B aplicada em produção via MCP apply_migration (autorização expressa do responsável, 2026-10-09, após deploy READY do app novo): version gravada = timestamp de aplicação (20261009140739), name=revoga_leitura_direta_preco_custo_fase_b; conteúdo idêntico ao arquivo 20261009180001_revoga_leitura_direta_preco_custo.sql. Revoga SELECT de produtos.preco_custo/preco_custo_medio para anon/authenticated (39 colunas sem custo com grant). Verificação: 0 grants de SELECT em colunas de custo; service_role mantém; OPERADOR recebe 42501 ao ler preco_custo; GERENTE lê 155 linhas pela view. Rollback: GRANT SELECT ON public.produtos TO anon, authenticated.",
       "decisionDoc": "backend/supabase/README.md#migrations-aplicadas-via-mcp-apply_migration--versão--nome-do-arquivo"
+    },
+    {
+      "gitOnlyVersion": "20261029160000",
+      "remoteOnlyVersion": "20261029202813",
+      "reason": "S2 (D12) aplicada em produção via MCP apply_migration em 2026-10-29 (autorização explícita do responsável): schema_migrations.version gravado = timestamp real de aplicação (20261029202813); name=s2_nfe_vinculada_oc_sem_dupla_creditacao; conteúdo idêntico ao arquivo 20261029160000_s2_nfe_vinculada_oc_sem_dupla_creditacao.sql. Altera somente internal.confirmar_importacao_nfe(uuid). Pré-checagem: md5 do corpo 81896eeeee5c79aca84f240edb2b8b65 (5888 caracteres), nenhuma NF-e de produção vinculada a OC. Pós-aplicação (leitura): corpo com marcador S2 (D12), grants inalterados (EXECUTE de authenticated/service_role na wrapper pública; internal postgres/service_role).",
+      "decisionDoc": "docs/regras-negocio/PLANO_APLICACAO_S2_PRODUCAO.md"
     }
   ]
 }

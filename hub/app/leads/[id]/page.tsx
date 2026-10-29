@@ -1,13 +1,11 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { requireAdmin } from '@/lib/session'
-import { formatDate, isUuid, PRODUCT_LABEL, STATUS_LABEL, STATUSES } from '@/lib/model'
+import { CHANNEL_LABEL, EVENT_LABEL, formatDate, isUuid, PRODUCT_LABEL, STATUS_LABEL, STATUSES } from '@/lib/model'
 import { Shell, StatusBadge } from '../../Shell'
 import { addEvent, changeStatus } from '../actions'
 
 export const dynamic = 'force-dynamic'
-
-const KIND_LABEL = { nota: 'Nota', contato: 'Contato realizado', status: 'Mudança de status' } as const
 
 export default async function LeadPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ msg?: string }> }) {
   const { id } = await params
@@ -27,7 +25,8 @@ export default async function LeadPage({ params, searchParams }: { params: Promi
           <h2 id="h-dados">Dados do pedido</h2>
           <dl className="hub-dl">
             <dt>Nome</dt><dd>{lead.name}</dd>
-            <dt>Contato</dt><dd>{lead.channel === 'whatsapp' ? 'WhatsApp' : 'WeChat'}: {lead.contact}</dd>
+            <dt>Contato</dt><dd>{CHANNEL_LABEL[lead.channel]}: {lead.contact}</dd>
+            {lead.origem === 'teste_gratis' && lead.empresa_id && (<><dt>Origem</dt><dd><Link href={`/conversao/${lead.empresa_id}`}>Teste grátis · abrir na Central de Conversão</Link></dd></>)}
             <dt>Produto</dt><dd>{PRODUCT_LABEL[lead.product]}</dd>
             <dt>Idioma</dt><dd>{lead.locale === 'zh-CN' ? 'Chinês' : 'Português'}</dd>
             <dt>Protocolo</dt><dd><code>{lead.protocol}</code></dd>
@@ -45,7 +44,11 @@ export default async function LeadPage({ params, searchParams }: { params: Promi
             </label>
             <button type="submit" className="hub-btn">Salvar status</button>
           </form>
-          <p className="hub-help">Ao marcar “Contratado”, a loja entra automaticamente em “Lojas contratadas”.</p>
+          <p className="hub-help">
+            {lead.origem === 'teste_gratis'
+              ? 'Teste grátis: a contratação é feita na Central de Conversão (ajusta plano e assinatura).'
+              : 'Ao marcar “Contratado”, a loja entra automaticamente em “Lojas contratadas”.'}
+          </p>
         </section>
         <section className="hub-panel" aria-labelledby="h-hist">
           <h2 id="h-hist">Histórico de contatos e notas</h2>
@@ -65,7 +68,7 @@ export default async function LeadPage({ params, searchParams }: { params: Promi
           <ol className="hub-timeline">
             {events.map((e) => (
               <li key={e.id}>
-                <span className="hub-when">{formatDate(e.created_at)} · {KIND_LABEL[e.kind]}</span>
+                <span className="hub-when">{formatDate(e.created_at)} · {EVENT_LABEL[e.kind]}</span>
                 {e.kind === 'status' && e.from_status && e.to_status
                   ? <span>{STATUS_LABEL[e.from_status]} → {STATUS_LABEL[e.to_status]}</span>
                   : <span>{e.body}</span>}
