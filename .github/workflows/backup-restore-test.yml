@@ -86,7 +86,18 @@ jobs:
       - name: Subir Postgres efemero (imagem Supabase, com roles/auth base)
         run: |
           set -euo pipefail
-          docker run -d --name restore-drill             -e POSTGRES_PASSWORD=restore-drill-local-only -e PGPASSWORD=restore-drill-local-only             -e JWT_SECRET=restore-drill-local-only-secret-0123456789 -e JWT_EXP=3600             public.ecr.aws/supabase/postgres:17.6.1.165 docker-entrypoint.sh postgres -D /etc/postgresql
+          # Docker Hub primeiro: o ECR público estourou o limite anônimo (toomanyrequests) em 2026-10-28/29.
+          # Mesma imagem e tag nos dois registros; o ECR fica como alternativa.
+          IMG=""
+          for cand in docker.io/supabase/postgres:17.6.1.165 public.ecr.aws/supabase/postgres:17.6.1.165; do
+            for t in 1 2 3; do
+              if docker pull -q "$cand"; then IMG="$cand"; break 2; fi
+              sleep $((t * 15))
+            done
+          done
+          [ -n "$IMG" ] || { echo "::error::imagem supabase/postgres:17.6.1.165 indisponível nos dois registros"; exit 1; }
+          echo "Imagem do drill: $IMG"
+          docker run -d --name restore-drill             -e POSTGRES_PASSWORD=restore-drill-local-only -e PGPASSWORD=restore-drill-local-only             -e JWT_SECRET=restore-drill-local-only-secret-0123456789 -e JWT_EXP=3600             "$IMG" docker-entrypoint.sh postgres -D /etc/postgresql
           for i in $(seq 1 60); do
             docker exec restore-drill pg_isready -h 127.0.0.1 -U postgres && break
             sleep 2
