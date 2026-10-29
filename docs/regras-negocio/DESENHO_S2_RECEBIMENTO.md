@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Status | **Aprovado. Migration `20261029160000_s2_…` escrita e testada em homologação (T1 a T4 passam). Produção: sem casos legados (6 NF-es, nenhuma vinculada a OC). Aguarda plano de aplicação em produção e autorização.** |
+| Status | **Desenho para aprovação. Nenhuma migration escrita.** |
 | Decisões | D12 (recebimento físico é a origem do crédito; NF-e posterior é vinculada sem novo crédito), D3, D14 |
 | Evidência | Reprodução em homologação `yvdilcmxyjafnnsfdtam` (fixture `FX-S1`/`FX-S2`) |
 
