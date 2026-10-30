@@ -27,14 +27,16 @@ DECLARE
 BEGIN
   INSERT INTO auth.users (id) VALUES (v_gerente) ON CONFLICT (id) DO NOTHING;
 
-  INSERT INTO public.lojas (id, nome, codigo, ativo) VALUES (v_loja, 'FLX05 Loja', 'FLX05-A', true)
+  -- Multiempresa: lojas e categorias exigem empresa_id (trigger tg_preenche_empresa_id).
+  -- Empresa 1 da FIXTURE-S1 (dados de teste de homologação).
+  INSERT INTO public.lojas (id, nome, codigo, ativo, empresa_id) VALUES (v_loja, 'FLX05 Loja', 'FLX05-A', true, 'f5100000-0000-4000-8000-0000000000e1')
   ON CONFLICT (id) DO UPDATE SET ativo = true;
 
   INSERT INTO public.usuarios (id, nome, perfil, ativo, loja_id)
   VALUES (v_gerente, 'FLX05 Gerente', 'GERENTE', true, v_loja)
   ON CONFLICT (id) DO UPDATE SET perfil = EXCLUDED.perfil, ativo = true, loja_id = EXCLUDED.loja_id;
 
-  INSERT INTO public.categorias (id, nome) VALUES (v_categoria, 'FLX05 Categoria')
+  INSERT INTO public.categorias (id, nome, empresa_id) VALUES (v_categoria, 'FLX05 Categoria', 'f5100000-0000-4000-8000-0000000000e1')
   ON CONFLICT (id) DO UPDATE SET nome = EXCLUDED.nome;
 
   -- Produto pré-existente com custo desatualizado — prova que
@@ -105,7 +107,9 @@ BEGIN
     ),
     p_atualizar_custo => true,
     p_duplicatas      => jsonb_build_array(
-      jsonb_build_object('numero', 'DUP-1', 'data_vencimento', (current_date + 30)::text, 'valor', 1350.00)
+      -- Exigível = Σ conferido × custo = 10×120,00 (novo, conferido 10) + 8×150,00 (existente, conferido 8) = 2400,00.
+      -- Duplicata deve somar esse valor (conciliação: 20261030120000); 1350,00 seria recusada.
+      jsonb_build_object('numero', 'DUP-1', 'data_vencimento', (current_date + 30)::text, 'valor', 2400.00)
     )
   );
 
@@ -297,8 +301,8 @@ BEGIN
   IF v_cp_valor IS NULL THEN
     RAISE EXCEPTION 'FLX05_FALHOU: contas_pagar não foi gerada a partir da duplicata';
   END IF;
-  IF v_cp_valor <> 1350.00 THEN
-    RAISE EXCEPTION 'FLX05_FALHOU: valor de contas_pagar deveria ser 1350.00, veio %', v_cp_valor;
+  IF v_cp_valor <> 2400.00 THEN
+    RAISE EXCEPTION 'FLX05_FALHOU: valor de contas_pagar deveria ser 2400.00, veio %', v_cp_valor;
   END IF;
 
   RAISE NOTICE 'Passo 4 OK: estoque creditado pela quantidade CONFERIDA, custo atualizado, kardex e contas_pagar gravados.';
@@ -373,7 +377,7 @@ DECLARE
 BEGIN
   INSERT INTO auth.users (id) VALUES (v_gerente_b) ON CONFLICT (id) DO NOTHING;
 
-  INSERT INTO public.lojas (id, nome, codigo, ativo) VALUES (v_loja_b, 'FLX05 Loja B', 'FLX05-B', true)
+  INSERT INTO public.lojas (id, nome, codigo, ativo, empresa_id) VALUES (v_loja_b, 'FLX05 Loja B', 'FLX05-B', true, 'f5100000-0000-4000-8000-0000000000e2')
   ON CONFLICT (id) DO UPDATE SET ativo = true;
 
   INSERT INTO public.usuarios (id, nome, perfil, ativo, loja_id)
@@ -490,7 +494,7 @@ BEGIN
       jsonb_build_array(jsonb_build_object('item_id', v_item_id_2, 'quantidade_conferida', 5, 'divergencia_obs', null))
     );
   EXCEPTION WHEN OTHERS THEN
-    IF SQLERRM = 'IMPORT_NFE_LOJA' THEN v_falhou_conferir := true;
+    IF SQLERRM LIKE 'ACESSO_LOJA_NEGADO%' THEN v_falhou_conferir := true;
     ELSE RAISE EXCEPTION 'FLX05_FALHOU (BLOCKER): GERENTE de outra loja recebeu erro inesperado (não IMPORT_NFE_LOJA) ao tentar conferir importação alheia: %', SQLERRM; END IF;
   END;
   IF NOT v_falhou_conferir THEN
@@ -500,7 +504,7 @@ BEGIN
   BEGIN
     PERFORM public.confirmar_importacao_nfe(v_imp_id_2);
   EXCEPTION WHEN OTHERS THEN
-    IF SQLERRM = 'IMPORT_NFE_LOJA' THEN v_falhou_confirmar := true;
+    IF SQLERRM LIKE 'ACESSO_LOJA_NEGADO%' THEN v_falhou_confirmar := true;
     ELSE RAISE EXCEPTION 'FLX05_FALHOU (BLOCKER): GERENTE de outra loja recebeu erro inesperado (não IMPORT_NFE_LOJA) ao tentar confirmar importação alheia: %', SQLERRM; END IF;
   END;
   IF NOT v_falhou_confirmar THEN
