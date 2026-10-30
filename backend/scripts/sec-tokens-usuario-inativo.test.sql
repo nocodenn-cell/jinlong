@@ -1,4 +1,4 @@
--- Homologação/CI (20261028120000 + 20261028121000 + 20261028122000 + corte ADMIN): tokens de usuário inativo, revogação por
+-- Homologação/CI (20261028120100 + 20261028121000 + 20261028122000 + corte ADMIN): tokens de usuário inativo, revogação por
 -- inativação/remoção de vínculo, isolamento entre empresas, RLS imediata e provisionamento fail-closed.
 -- Fixture SINTÉTICA própria, numa transação com ROLLBACK (não deixa dados). Rodar: psql "$DB_URL" -v ON_ERROR_STOP=1 -f
 \set ON_ERROR_STOP on

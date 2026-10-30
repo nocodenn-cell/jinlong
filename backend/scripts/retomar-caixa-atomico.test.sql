@@ -50,7 +50,7 @@ BEGIN
     (v_gerente_c, 'RETC Gerente C', 'GERENTE', true, v_loja_a)
   ON CONFLICT (id) DO UPDATE SET perfil = EXCLUDED.perfil, ativo = EXCLUDED.ativo, loja_id = EXCLUDED.loja_id;
 
-  -- #623 (20261028120000): token de gerente só vale com emissor/ator ativo E com vínculo ativo
+  -- #623 (20261028120100): token de gerente só vale com emissor/ator ativo E com vínculo ativo
   -- na empresa da loja (como em produção, onde todo usuário ativo tem vínculo). Os usuários
   -- sintéticos ganham o vínculo correspondente ao perfil; o inativo fica com vínculo inativo.
   INSERT INTO public.usuario_vinculos (usuario_id, empresa_id, loja_id, papel, ativo)
@@ -156,7 +156,7 @@ BEGIN
     PERFORM public.retomar_caixa_atomico(v_caixa_fechado, v_token, 'motivo qualquer');
     RAISE EXCEPTION 'RETC_FALHOU: GERENTE de outra loja nao deveria autorizar';
   EXCEPTION WHEN OTHERS THEN
-    -- Desde o #623 (20261028120000) a recusa chega antes, no consumo do token: o ator (GERENTE da
+    -- Desde o #623 (20261028120100) a recusa chega antes, no consumo do token: o ator (GERENTE da
     -- loja A) não tem vínculo na loja do token (B) => TOKEN_GERENTE_REVOGADO / ATOR_INATIVO_OU_SEM_VINCULO.
     -- Continua exigindo recusa por loja; qualquer outro erro falha o teste.
     GET STACKED DIAGNOSTICS v_detalhe = PG_EXCEPTION_DETAIL;
@@ -247,7 +247,7 @@ BEGIN
     PERFORM public.retomar_caixa_atomico(v_caixa_fechado, v_token, 'motivo qualquer');
     RAISE EXCEPTION 'RETC_FALHOU: aprovador inativo nao deveria autorizar';
   EXCEPTION WHEN OTHERS THEN
-    -- Desde o #623 (20261028120000) o token emitido por gerente inativo é recusado já no consumo
+    -- Desde o #623 (20261028120100) o token emitido por gerente inativo é recusado já no consumo
     -- (TOKEN_GERENTE_REVOGADO / EMISSOR_INATIVO_OU_SEM_VINCULO). Só essas duas recusas valem.
     GET STACKED DIAGNOSTICS v_detalhe = PG_EXCEPTION_DETAIL;
     IF NOT (SQLERRM LIKE 'RETOMAR_CAIXA_APROVADOR_INATIVO%'

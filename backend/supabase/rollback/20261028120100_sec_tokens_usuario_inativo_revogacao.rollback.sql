@@ -1,4 +1,4 @@
--- Rollback de 20261028120000_sec_tokens_usuario_inativo_revogacao.sql (somente com autorização do dono).
+-- Rollback de 20261028120100_sec_tokens_usuario_inativo_revogacao.sql (somente com autorização do dono).
 -- Remove gatilhos/helpers novos e devolve token_gerente_fora_da_loja e consumir_token_autorizacao_operacao às
 -- definições vigentes após 20261028110000_corte_admin_papeis.sql (copiadas abaixo, extraídas do banco de homologação). Colunas novas e a trilha
 -- internal.tokens_revogacao_log ficam (aditivas, sem efeito sem os gatilhos) — preservam a auditoria.
@@ -12,7 +12,7 @@ DROP FUNCTION IF EXISTS internal.tg_revogar_tokens_usuario();
 DROP FUNCTION IF EXISTS internal.fp_revogar_tokens_usuario(uuid, text, uuid);
 DROP FUNCTION IF EXISTS public.fp_token_gerente_vale_na_loja(text, uuid);
 
--- Definições anteriores (pós-corte ADMIN, pré-20261028120000):
+-- Definições anteriores (pós-corte ADMIN, pré-20261028120100):
 CREATE OR REPLACE FUNCTION internal.token_gerente_fora_da_loja(p_token text, p_loja_id uuid)
  RETURNS boolean
  LANGUAGE sql

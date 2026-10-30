@@ -9,8 +9,8 @@
 --   * public.listar_caixas_elegiveis_desembolso()    — ADMIN listava caixas e não exigia `ativo`.
 -- Regra nova (conservadora = interseção com a regra antiga, sem ampliar acesso de ninguém):
 --   perfil atual DONO/GERENTE (OPERADOR só o próprio caixa), usuário ATIVO, mesma loja cadastral (regra antiga) E
---   vínculo ATIVO na empresa da loja (internal.fp_usuario_ativo_com_papel, migration 20261028120000).
--- Depende de: 20261028110000 (corte ADMIN) e 20261028120000. Rollback:
+--   vínculo ATIVO na empresa da loja (internal.fp_usuario_ativo_com_papel, migration 20261028120100).
+-- Depende de: 20261028110000 (corte ADMIN) e 20261028120100. Rollback:
 --   backend/supabase/rollback/20261028122000_admin_residual_escopo_ativo.rollback.sql
 
 CREATE OR REPLACE FUNCTION public.auth_usuario_gerencial_loja(p_loja_id uuid)

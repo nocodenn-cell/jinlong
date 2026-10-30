@@ -754,7 +754,7 @@ async function processVenda(
     !(await descontoAutorizadoPorPinGerente(supabase, payload, ctx))) {
     throw new Error("GERENTE_TOKEN_OBRIGATORIO");
   }
-  // 20261028120000: em dispositivo ativado, o token informado precisa existir, ser da loja do dispositivo e ter
+  // 20261028120100: em dispositivo ativado, o token informado precisa existir, ser da loja do dispositivo e ter
   // emissor/aprovador ATIVOS e vinculados agora (usuário inativado ⇒ token revogado). Fail closed.
   if (strictManagerDiscountAuth && hasManagerDiscount && payload.desconto_gerente_token && ctx?.mode === "dispositivo") {
     const { data: vale, error: valeErr } = await supabase.rpc("fp_token_gerente_vale_na_loja", {

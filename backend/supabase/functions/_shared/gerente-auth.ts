@@ -387,7 +387,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 /**
  * Insere o token legado com `aprovador_id`. Compatibilidade de implantação: se o banco ainda não tem a coluna
- * (migration 20261028120000 não aplicada), repete sem ela e registra aviso — a ordem correta é migration antes
+ * (migration 20261028120100 não aplicada), repete sem ela e registra aviso — a ordem correta é migration antes
  * da Edge (ver RELATORIO_HOMOLOGACAO / checklist).
  */
 export async function inserirTokenGerente(
@@ -449,7 +449,7 @@ async function persistTokenAndResetLimits(
       usado: false,
       loja_id: lojaId,
       criado_por: tokenCreatedBy,
-      // 20261028120000: o banco confere o aprovador (ativo + vínculo na empresa) no CONSUMO.
+      // 20261028120100: o banco confere o aprovador (ativo + vínculo na empresa) no CONSUMO.
       aprovador_id: UUID_RE.test(gerenteAprovadorId) ? gerenteAprovadorId : null,
     }, log, logStage);
   const { error: insertError } = insertResult;

@@ -1,10 +1,10 @@
--- 20261028120000_sec_tokens_usuario_inativo_revogacao.sql
+-- 20261028120100_sec_tokens_usuario_inativo_revogacao.sql
 -- Decisão do dono (28/10/2026, item 3 "Tokens de usuários inativos — corrigir antes do GO"):
 -- usuário inativado ou sem vínculo NÃO pode continuar executando operações protegidas com tokens antigos.
 --
 -- NÃO APLICAR no Supabase remoto sem autorização expressa. Depende de #620 (20261028100000, 20261028101000)
 -- e #623 (20261028110000_corte_admin_papeis). Aditivo; rollback em
--- backend/supabase/rollback/20261028120000_sec_tokens_usuario_inativo_revogacao.rollback.sql
+-- backend/supabase/rollback/20261028120100_sec_tokens_usuario_inativo_revogacao.rollback.sql
 --
 -- Regra única, verificada NO USO (não na emissão):
 --   * internal.fp_usuario_ativo_com_papel(usuario, loja, papeis): usuarios.ativo = true, perfil atual ∈ papeis e
@@ -246,7 +246,7 @@ AS $function$
                     )
                   )
              ))
-         -- 20261028120000: emissor e aprovador precisam estar ativos, com papel e vínculo na loja AGORA.
+         -- 20261028120100: emissor e aprovador precisam estar ativos, com papel e vínculo na loja AGORA.
          OR NOT internal.fp_usuario_ativo_com_papel(t.criado_por, p_loja_id, ARRAY['DONO', 'GERENTE', 'OPERADOR'])
          OR (t.aprovador_id IS NOT NULL
              AND NOT internal.fp_aprovador_ativo_na_empresa(t.aprovador_id, p_loja_id))
@@ -254,7 +254,7 @@ AS $function$
   );
 $function$;
 COMMENT ON FUNCTION internal.token_gerente_fora_da_loja(text, uuid) IS
-  'SEC-04 + empresa + Corte ADMIN + revogação (20261028120000): true quando o token existe e NÃO vale na loja (emissor ausente/inativo/sem vínculo; aprovador inativo/sem vínculo; revogado; loja divergente; DONO sem vínculo com a empresa). Token inexistente = false.';
+  'SEC-04 + empresa + Corte ADMIN + revogação (20261028120100): true quando o token existe e NÃO vale na loja (emissor ausente/inativo/sem vínculo; aprovador inativo/sem vínculo; revogado; loja divergente; DONO sem vínculo com a empresa). Token inexistente = false.';
 
 -- Leitura para o sync-outbox (venda offline em modo estrito): token existe, é da loja e emissor/aprovador valem.
 CREATE OR REPLACE FUNCTION public.fp_token_gerente_vale_na_loja(p_token text, p_loja_id uuid)
@@ -309,7 +309,7 @@ BEGIN
   END IF;
 
   -- Aprovador: ativo, perfil GERENTE/DONO (ADMIN descontinuado), loja cadastral = loja da operação
-  -- (regra anterior) E vínculo ativo com papel aprovador na empresa da loja (20261028120000).
+  -- (regra anterior) E vínculo ativo com papel aprovador na empresa da loja (20261028120100).
   IF NOT EXISTS (
     SELECT 1 FROM public.usuarios g
     WHERE g.id = v_gerente

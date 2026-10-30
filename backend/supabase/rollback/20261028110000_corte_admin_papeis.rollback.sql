@@ -5,7 +5,7 @@
 --   20261019120000_multiempresa_fase1_base.sql (fp_pode_loja), 20261019140000_multiempresa_fase2_guardas.sql
 --   (fp_admin_legado, vincular_usuario_loja), 20260816140000_rls_produtos_historico_isolamento_por_loja.sql
 --   (auth_usuario_eh_admin) e 20261028100000_sec_token_gerente_loja_nula_fora_da_loja.sql (token).
--- Pré-requisito: reverter antes 20261028122000, 20261028121000 e 20261028120000 (nessa ordem), se aplicadas (rollbacks próprios).
+-- Pré-requisito: reverter antes 20261028122000, 20261028121000 e 20261028120100 (nessa ordem), se aplicadas (rollbacks próprios).
 BEGIN;
 DROP TRIGGER IF EXISTS trg_fp_bloquear_perfil_admin ON public.usuarios;
 DROP FUNCTION IF EXISTS internal.fp_bloquear_perfil_admin();

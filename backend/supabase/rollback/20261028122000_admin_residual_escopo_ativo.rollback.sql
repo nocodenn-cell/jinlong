@@ -1,5 +1,5 @@
 -- Rollback de 20261028122000_admin_residual_escopo_ativo.sql: restaura as definições anteriores (extraídas do
--- banco local homologado com main+#620+#623 antes desta migration). Rodar ANTES do rollback de 20261028120000.
+-- banco local homologado com main+#620+#623 antes desta migration). Rodar ANTES do rollback de 20261028120100.
 BEGIN;
 CREATE OR REPLACE FUNCTION public.auth_usuario_gerencial_loja(p_loja_id uuid)
  RETURNS boolean

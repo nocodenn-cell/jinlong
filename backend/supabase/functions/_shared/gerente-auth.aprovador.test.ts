@@ -1,7 +1,7 @@
 import { assertEquals } from "https://deno.land/std@0.208.0/assert/mod.ts";
 import { inserirTokenGerente } from "./gerente-auth.ts";
 
-// 20261028120000: token legado grava o aprovador (pdv_config.gerente_id) para o banco conferir no consumo.
+// 20261028120100: token legado grava o aprovador (pdv_config.gerente_id) para o banco conferir no consumo.
 function fakeDb(colunaExiste: boolean) {
   const inserts: Array<Record<string, unknown>> = [];
   return {
