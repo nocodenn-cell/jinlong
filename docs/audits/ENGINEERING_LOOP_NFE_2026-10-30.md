@@ -183,3 +183,39 @@ Commits: `bb867091` (correção de ordem G14/#629), `1c39548f` (política de qCo
 - Resíduos após os testes: NFs sintéticas 0, NFs de teste 0, AP 0, produtos de teste 0, `movimentos_estoque_log` = 51 (inalterado).
 - Projeto desvinculado do CLI após os testes.
 - Não aplicado: rollback (disponível em `backend/supabase/rollback/20261030140000_nfe_qtd_precisao_rollback.sql`), caso seja necessário.
+
+## 14. Preparação do PR (draft)
+
+- **Base:** `origin/main` (`7a75473f`); sem commits novos na main desde a base da branch, então o rebase não teve conflitos.
+- **Sequência de migrations:** sem versões duplicadas. Ordem verificada: `20261029140000` (S1c) → `20261029150000` (G14) → `20261029155000` (#629, após G14) → `20261029160000` (S2) → `20261030120000` (conciliação) → `20261030130000` (precisão documental) → `20261030140000` (qCom).
+- **Checks locais:** typecheck `pdv-importados` sem erros; vitest do módulo de importação 24 arquivos / 160 testes passando.
+- **SQL local:** reconstrução completa do repositório (450 migrations, G14 intacto) e suíte NF-e passando. Correção de fixture em `transferencia-id-kardex.test.sql` (lojas exigem `empresa_id`), que estava falhando por ser anterior à multiempresa.
+
+### Homologação não representa integralmente a sequência corrigida
+
+- Homologação **ainda não tem a #629** (`transferencia_id`). Ela tem a função de transferência com o G14, mas sem a coluna nem o índice da #629. A sequência corrigida (#629 após o G14) não foi aplicada lá.
+- Homologação registra duas migrations de outros branches (`20261023200000` e `20261030002520`), que não estão nesta branch.
+- Portanto, os resultados de homologação valem para o núcleo NF-e, não para a sequência completa.
+
+### Aplicação de qCom em homologação (registrada)
+
+- `20261030140000_nfe_qtd_precisao` aplicada, em transação, com prova interna OK e registrada em `schema_migrations`.
+- Três testes aprovados em homologação, cada um com rollback: `nfe-quantidade-precisao`, `nfe-precisao-documental`, `nfe-conciliacao-exigivel`.
+- Resíduos zerados (NFs, AP e produtos de teste); `movimentos_estoque_log` = 51, inalterado.
+- Rollback disponível e **não executado**.
+
+### Riscos conhecidos e pendências
+
+1. Homologação sem #629: a validação da sequência corrigida foi feita em cópia local, não em homologação.
+2. Migrations de outros branches em homologação: divergência de governança a regularizar.
+3. Produção sem conciliação, precisão documental nem política de qCom. Deploy exige autorização separada.
+4. Concorrência validada só em cópias locais (dados comitados são vedados em homologação).
+5. Renomeação de `20261023130000` → `20261023130100` (growth-001) e `20261029155000` (#629): ambas são arquivos já presentes na main, mas não aplicados em nenhum ambiente.
+6. `ops/rollback_20261029155000_…` foi renomeado; referências atualizadas.
+
+### Critérios pendentes para merge
+
+- Regularizar a homologação (aplicar #629 na posição corrigida, ou decidir o tratamento das migrations de outros branches).
+- Revisão de segurança multiempresa (sem alteração de RLS/grants nesta branch, mas revisão humana pendente).
+- Decisão do time sobre a política de qCom (bloqueio explícito adotado).
+- Autorização separada para deploy em produção.

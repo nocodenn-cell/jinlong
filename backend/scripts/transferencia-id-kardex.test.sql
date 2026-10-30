@@ -10,9 +10,10 @@
 \set ON_ERROR_STOP on
 BEGIN;
 
-INSERT INTO public.lojas (id, nome) VALUES
-  ('d0000000-0000-0000-0000-0000000000a1', 'T586 Origem'),
-  ('d0000000-0000-0000-0000-0000000000b2', 'T586 Destino');
+-- Multiempresa: lojas exigem empresa_id (trigger tg_preenche_empresa_id). Empresa 1 da FIXTURE-S1.
+INSERT INTO public.lojas (id, nome, empresa_id) VALUES
+  ('d0000000-0000-0000-0000-0000000000a1', 'T586 Origem', 'f5100000-0000-4000-8000-0000000000e1'),
+  ('d0000000-0000-0000-0000-0000000000b2', 'T586 Destino', 'f5100000-0000-4000-8000-0000000000e1');
 INSERT INTO public.produtos (id, nome, preco_varejo, origem, loja_id)
 VALUES ('d0000000-0000-0000-0000-0000000000c3', 'T586 Produto', 10, 'brasil_nf', 'd0000000-0000-0000-0000-0000000000a1');
 INSERT INTO public.estoque (loja_id, produto_id, quantidade_atual, estoque_minimo)
