@@ -18,7 +18,11 @@
 -- 026c228b9e9511e11e509a1e2dfb68bd, 2026-10-23). Se o trecho não for encontrado, a migration aborta (drift).
 --
 -- Regressão: backend/scripts/transferencia-id-kardex.test.sql
--- ROLLBACK: ops/rollback_20261023130000_movimentos_estoque_log_transferencia_id.sql
+-- ORDEM: esta migration era 20261023130000 (duplicada com growth-001). Foi movida para depois do G14
+-- (20261029150000), que reescreve a mesma função com o INSERT de entrada em `v_produto_destino`. A âncora
+-- de entrada aceita `p_produto_id` (estado anterior ao G14) e `v_produto_destino` (estado posterior).
+-- Ainda não aplicada em nenhum ambiente, então renomear é seguro.
+-- ROLLBACK: ops/rollback_20261029155000_movimentos_estoque_log_transferencia_id.sql
 
 ALTER TABLE public.movimentos_estoque_log ADD COLUMN IF NOT EXISTS transferencia_id uuid NULL;
 
@@ -51,7 +55,7 @@ BEGIN
   c_saida := 'INSERT INTO public\.movimentos_estoque_log\s*' || c_cols
     || $s$\s*VALUES\s*\(\s*p_loja_origem\s*,\s*p_produto_id\s*,\s*'TRANSFERENCIA_SAIDA'\s*,\s*-p_quantidade\s*,\s*NULL\s*,\s*v_uid\s*,\s*p_observacao\s*\)\s*RETURNING id INTO v_transferencia_id\s*;$s$;
   c_entrada := 'INSERT INTO public\.movimentos_estoque_log\s*' || c_cols
-    || $e$\s*VALUES\s*\(\s*p_loja_destino\s*,\s*p_produto_id\s*,\s*'TRANSFERENCIA_ENTRADA'\s*,\s*p_quantidade\s*,\s*NULL\s*,\s*v_uid\s*,\s*p_observacao\s*\)\s*;$e$;
+    || $e$\s*VALUES\s*\(\s*p_loja_destino\s*,\s*(p_produto_id|v_produto_destino)\s*,\s*'TRANSFERENCIA_ENTRADA'\s*,\s*p_quantidade\s*,\s*NULL\s*,\s*v_uid\s*,\s*p_observacao\s*\)\s*;$e$;
 
   IF v_def !~ c_saida OR v_def !~ c_entrada THEN
     RAISE EXCEPTION 'internal.transferir_estoque_seguro: INSERTs de TRANSFERENCIA_SAIDA/ENTRADA não encontrados — drift, ajuste manual necessário';
@@ -68,7 +72,7 @@ BEGIN
     $r$INSERT INTO public.movimentos_estoque_log (
     loja_id, produto_id, tipo_codigo, quantidade_delta, remessa_id, usuario_id, observacao, transferencia_id
   ) VALUES (
-    p_loja_destino, p_produto_id, 'TRANSFERENCIA_ENTRADA', p_quantidade, NULL, v_uid, p_observacao, v_transferencia_id
+    p_loja_destino, \1, 'TRANSFERENCIA_ENTRADA', p_quantidade, NULL, v_uid, p_observacao, v_transferencia_id
   );$r$);
   EXECUTE v_nova;
 END

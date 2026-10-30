@@ -1,4 +1,4 @@
--- Regressão da migration 20261023130000_movimentos_estoque_log_transferencia_id.sql (issue #586).
+-- Regressão da migration 20261029155000_movimentos_estoque_log_transferencia_id.sql (issue #586).
 --
 -- Uma transação com ROLLBACK no final — não persiste nada. Chama a RPC pública real como DONO e prova:
 --   1. a transferência gera exatamente 2 linhas no kardex com o mesmo transferencia_id;
