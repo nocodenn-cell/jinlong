@@ -46,8 +46,10 @@ BEGIN
     IF SQLERRM = 'IMPORT_NFE_DUPLICATAS_DIVERGENTES' THEN v_falhou := true; ELSE RAISE; END IF;
   END;
   -- Resultado esperado HOJE: recusado (limite conhecido). Se algum dia aceito, revisar a tolerância.
-  IF NOT v_falhou THEN RAISE EXCEPTION 'CNC T1: esperado recusa por arredondamento do custo'; END IF;
-  RAISE NOTICE 'CNC T1 OK (limite documentado: divergência falsa por arredondamento do custo)';
+  -- Com a regra documental (20261030130000) o exigível por unidade é ROUND(3,335 × 7, 2) = 23,35:
+  -- a divergência artificial desaparece e a duplicata 23,35 é aceita. Ver nfe-precisao-documental.test.sql.
+  IF v_falhou THEN RAISE EXCEPTION 'CNC T1: divergência artificial voltou (arredondamento do custo)'; END IF;
+  RAISE NOTICE 'CNC T1 OK (sem divergência artificial)';
 
   -- T2: parcial 6 de 10 com duplicata do documento (100): deve recusar, AP inexistente.
   v_res := public.importar_nfe_transacao(
