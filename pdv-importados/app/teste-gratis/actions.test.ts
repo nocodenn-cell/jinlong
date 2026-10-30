@@ -44,6 +44,19 @@ describe('teste grátis — não concede acesso a outra empresa', () => {
     expect(rl).not.toHaveProperty('p_max_por_ip_24h')
   })
 
+  it('cria a ficha da Central de Conversão com o telefone; falha nela não desfaz o teste', async () => {
+    st.signUp.mockResolvedValue({ data: { user: { id: 'u-novo', identities: [{}] } }, error: null })
+    st.rpc.mockImplementation(async (fn: string) => {
+      if (fn === 'trial_registrar_tentativa') return { data: true, error: null }
+      if (fn === 'commercial_trial_garantir_lead') throw new Error('rede caiu')
+      return { data: { empresa_id: 'emp-1', loja_id: 'l', trial_fim: '2026-11-03' }, error: null }
+    })
+    const r = await iniciarTesteGratisAction({ ...base, telefone: '11 98888-7777' })
+    expect(r.ok).toBe(true)
+    expect(st.rpc).toHaveBeenCalledWith('commercial_trial_garantir_lead', { p_empresa: 'emp-1', p_telefone: '11 98888-7777' })
+    expect(st.deleteUser).not.toHaveBeenCalled()
+  })
+
   it('RPC recusa (usuário já existe) ⇒ usuário recém-criado no Auth é apagado (compensação)', async () => {
     st.signUp.mockResolvedValue({ data: { user: { id: 'u-novo', identities: [{}] } }, error: null })
     st.rpc.mockImplementation(async (fn: string) => fn === 'trial_registrar_tentativa'

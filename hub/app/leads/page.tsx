@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { requireAdmin } from '@/lib/session'
-import { formatDate, parseFilters, PERIOD_LABEL, PERIODS, PRODUCT_LABEL, PRODUCTS, STATUS_LABEL, STATUSES } from '@/lib/model'
+import { CHANNEL_LABEL, formatDate, parseFilters, PERIOD_LABEL, PERIODS, PRODUCT_LABEL, PRODUCTS, STATUS_LABEL, STATUSES } from '@/lib/model'
 import { Shell, StatusBadge } from '../Shell'
 
 export const dynamic = 'force-dynamic'
@@ -53,7 +53,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
                 <td data-label="Recebido">{formatDate(l.created_at)}</td>
                 <td data-label="Loja"><Link href={`/leads/${l.id}`}><strong>{l.store}</strong></Link></td>
                 <td data-label="Nome">{l.name}</td>
-                <td data-label="Contato">{l.channel === 'whatsapp' ? 'WhatsApp' : 'WeChat'}: {l.contact}</td>
+                <td data-label="Contato">{CHANNEL_LABEL[l.channel]}: {l.contact}</td>
                 <td data-label="Produto">{PRODUCT_LABEL[l.product]}</td>
                 <td data-label="Status"><StatusBadge status={l.status} label={STATUS_LABEL[l.status]} /></td>
                 <td data-label="Protocolo"><code>{l.protocol}</code></td>

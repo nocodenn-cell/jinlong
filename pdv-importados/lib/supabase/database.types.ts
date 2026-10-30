@@ -1697,12 +1697,17 @@ export type Database = {
           city: string | null
           contact: string
           created_at: string
+          email: string | null
+          empresa_id: string | null
           id: string
           idioma: string | null
+          interesse: string | null
           locale: string
           name: string
+          origem: string
           product: string
           protocol: string
+          proximo_contato: string | null
           segment: string | null
           status: string
           store: string
@@ -1717,12 +1722,17 @@ export type Database = {
           city?: string | null
           contact: string
           created_at?: string
+          email?: string | null
+          empresa_id?: string | null
           id?: string
           idioma?: string | null
+          interesse?: string | null
           locale: string
           name: string
+          origem?: string
           product: string
           protocol: string
+          proximo_contato?: string | null
           segment?: string | null
           status?: string
           store: string
@@ -1737,12 +1747,17 @@ export type Database = {
           city?: string | null
           contact?: string
           created_at?: string
+          email?: string | null
+          empresa_id?: string | null
           id?: string
           idioma?: string | null
+          interesse?: string | null
           locale?: string
           name?: string
+          origem?: string
           product?: string
           protocol?: string
+          proximo_contato?: string | null
           segment?: string | null
           status?: string
           store?: string
@@ -1752,7 +1767,15 @@ export type Database = {
           utm_source?: string | null
           wechat?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "commercial_leads_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       conciliacoes_financeiras: {
         Row: {
@@ -5610,6 +5633,7 @@ export type Database = {
           quantidade_delta: number
           remessa_id: string | null
           tipo_codigo: string
+          transferencia_id: string | null
           usuario_id: string
           venda_id: string | null
         }
@@ -5623,6 +5647,7 @@ export type Database = {
           quantidade_delta: number
           remessa_id?: string | null
           tipo_codigo: string
+          transferencia_id?: string | null
           usuario_id: string
           venda_id?: string | null
         }
@@ -5636,6 +5661,7 @@ export type Database = {
           quantidade_delta?: number
           remessa_id?: string | null
           tipo_codigo?: string
+          transferencia_id?: string | null
           usuario_id?: string
           venda_id?: string | null
         }
@@ -6625,6 +6651,113 @@ export type Database = {
           {
             foreignKeyName: "produto_create_requests_produto_id_fkey"
             columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      produto_equivalencias: {
+        Row: {
+          ativo: boolean
+          confirmado_em: string
+          confirmado_por: string
+          criterio: string
+          empresa_id: string
+          id: string
+          loja_destino_id: string
+          produto_destino_id: string
+          produto_origem_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          confirmado_em?: string
+          confirmado_por: string
+          criterio: string
+          empresa_id: string
+          id?: string
+          loja_destino_id: string
+          produto_destino_id: string
+          produto_origem_id: string
+        }
+        Update: {
+          ativo?: boolean
+          confirmado_em?: string
+          confirmado_por?: string
+          criterio?: string
+          empresa_id?: string
+          id?: string
+          loja_destino_id?: string
+          produto_destino_id?: string
+          produto_origem_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "produto_equivalencias_confirmado_por_fkey"
+            columns: ["confirmado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produto_equivalencias_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produto_equivalencias_loja_destino_id_fkey"
+            columns: ["loja_destino_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produto_equivalencias_loja_destino_id_fkey"
+            columns: ["loja_destino_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["loja_id"]
+          },
+          {
+            foreignKeyName: "produto_equivalencias_produto_destino_id_fkey"
+            columns: ["produto_destino_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produto_equivalencias_produto_destino_id_fkey"
+            columns: ["produto_destino_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produto_equivalencias_produto_destino_id_fkey"
+            columns: ["produto_destino_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produto_equivalencias_produto_origem_id_fkey"
+            columns: ["produto_origem_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produto_equivalencias_produto_origem_id_fkey"
+            columns: ["produto_origem_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produto_equivalencias_produto_origem_id_fkey"
+            columns: ["produto_origem_id"]
             isOneToOne: false
             referencedRelation: "v_top_produtos"
             referencedColumns: ["id"]
@@ -8959,6 +9092,29 @@ export type Database = {
           valor: number
         }[]
       }
+      commercial_converter_trial: {
+        Args: {
+          p_addons: string[]
+          p_empresa: string
+          p_forma: string
+          p_observacao: string
+          p_plano: string
+          p_qtd_caixas: number
+          p_qtd_lojas: number
+          p_valor_centavos: number
+        }
+        Returns: Json
+      }
+      commercial_planos: { Args: never; Returns: Json }
+      commercial_solicitar_contratacao: {
+        Args: { p_mensagem?: string; p_plano: string }
+        Returns: boolean
+      }
+      commercial_trial_garantir_lead: {
+        Args: { p_empresa: string; p_telefone?: string }
+        Returns: string
+      }
+      commercial_trials_listar: { Args: { p_empresa?: string }; Returns: Json }
       configuracoes_para_caixa_web: { Args: never; Returns: Json }
       confirmar_importacao_nfe: {
         Args: { p_importacao_id: string }
@@ -8982,6 +9138,7 @@ export type Database = {
         Args: {
           p_idempotency_key: string
           p_itens: Json
+          p_loja_id?: string
           p_observacao: string
           p_ordem_compra_id?: string
           p_origem: string
@@ -10025,6 +10182,14 @@ export type Database = {
       processar_comissao_venda: {
         Args: { p_venda_id: string }
         Returns: undefined
+      }
+      produto_equivalencia_registrar: {
+        Args: {
+          p_loja_destino: string
+          p_produto_destino: string
+          p_produto_origem: string
+        }
+        Returns: string
       }
       produtos_custos_autorizados: {
         Args: { p_produto_ids?: string[] }

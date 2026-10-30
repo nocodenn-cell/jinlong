@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef } from "react"
 import type { UseThermalPrinterReturn } from "@/hooks/useThermalPrinter"
 import type { Mensagens } from "@/i18n/getMessages"
-import { buildReciboLabels, type ReciboVenda } from "@/lib/caixa/reciboTypes"
+import { buildReciboLabels, rotuloPagamentoRecibo, type ReciboVenda } from "@/lib/caixa/reciboTypes"
 import { Button } from "@/components/ui/button"
 import { ErrorState } from "@/components/ui/feedback"
 import { cn } from "@/lib/utils"
@@ -266,7 +266,7 @@ export function CaixaReciboModal({
               </p>
               {venda.pagamentos.map((p, i) => (
                 <div key={i} className="recibo-linha flex justify-between">
-                  <span>{labels.formas[p.formaPagamento] ?? p.formaPagamento}</span>
+                  <span>{rotuloPagamentoRecibo(p, labels)}</span>
                   <span>{fmtBRL(p.valor, venda.moeda)}</span>
                 </div>
               ))}

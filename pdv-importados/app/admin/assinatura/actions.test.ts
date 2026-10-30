@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const st = vi.hoisted(() => ({
   perfil: 'DONO' as string,
@@ -37,11 +37,13 @@ vi.mock('@/lib/cobranca/asaas', async (orig) => {
   }
 })
 
-import { assinarPlanoAction } from './actions'
+import { assinarPlanoAction, solicitarContratacaoAction } from './actions'
 
 const input = { plano: 'BASICO' as const, addons: [], qtdLojas: 1, qtdCaixas: 1, forma: 'PIX' as const }
 
 beforeEach(() => {
+  // autoatendimento (GROWTH-001) é desligado por padrão: estes testes cobrem o fluxo ligado
+  vi.stubEnv('COBRANCA_AUTOATENDIMENTO', '1')
   st.perfil = 'DONO'
   st.souDono = true
   st.lockLivre = true
@@ -53,6 +55,10 @@ beforeEach(() => {
   })
 })
 
+afterEach(() => {
+  vi.unstubAllEnvs()
+})
+
 describe('assinarPlanoAction — gate de DONO por empresa', () => {
   it('ADMIN global que não é DONO da empresa do contexto ⇒ recusado, sem tocar no Asaas', async () => {
     st.perfil = 'ADMIN'
@@ -62,11 +68,47 @@ describe('assinarPlanoAction — gate de DONO por empresa', () => {
     expect(st.criarAssinatura).not.toHaveBeenCalled()
     expect(st.rpcAdmin).not.toHaveBeenCalled()
   })
+  it('GERENTE (mesmo com vínculo) não assina: operação reservada ao DONO', async () => {
+    st.perfil = 'GERENTE'
+    const r = await assinarPlanoAction(input)
+    expect(r.ok).toBe(false)
+    expect(st.criarAssinatura).not.toHaveBeenCalled()
+    expect(st.rpcAdmin).not.toHaveBeenCalled()
+  })
+  it('DONO de outra empresa (sem papel DONO na empresa do contexto) ⇒ recusado', async () => {
+    st.souDono = false
+    const r = await assinarPlanoAction(input)
+    expect(r.ok).toBe(false)
+    expect(st.criarAssinatura).not.toHaveBeenCalled()
+  })
   it('DONO da empresa ⇒ cria assinatura e libera o lock', async () => {
     const r = await assinarPlanoAction(input)
     expect(r.ok).toBe(true)
     expect(st.criarAssinatura).toHaveBeenCalledTimes(1)
     expect(st.rpcAdmin).toHaveBeenCalledWith('cobranca_liberar_assinar', { p_empresa: 'emp-b' })
+  })
+})
+
+describe('solicitarContratacaoAction — gate de DONO', () => {
+  it('GERENTE e ADMIN legado não solicitam contratação', async () => {
+    st.perfil = 'GERENTE'
+    expect((await solicitarContratacaoAction({ plano: 'BASICO' })).ok).toBe(false)
+    st.perfil = 'ADMIN'
+    expect((await solicitarContratacaoAction({ plano: 'BASICO' })).ok).toBe(false)
+  })
+  it('DONO sem papel na empresa do contexto ⇒ recusado', async () => {
+    st.souDono = false
+    expect((await solicitarContratacaoAction({ plano: 'BASICO' })).ok).toBe(false)
+  })
+})
+
+describe('assinarPlanoAction — autoatendimento desligado (GROWTH-001)', () => {
+  it('flag desligada ⇒ recusa antes de qualquer chamada ao Asaas ou ao banco', async () => {
+    vi.stubEnv('COBRANCA_AUTOATENDIMENTO', '0')
+    const r = await assinarPlanoAction(input)
+    expect(r.ok).toBe(false)
+    expect(st.criarAssinatura).not.toHaveBeenCalled()
+    expect(st.rpcAdmin).not.toHaveBeenCalled()
   })
 })
 

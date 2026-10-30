@@ -1,8 +1,9 @@
 import Link from 'next/link'
 
-export function Shell({ demo, active, children }: { demo: boolean; active: 'painel' | 'leads' | 'clientes'; children: React.ReactNode }) {
+export function Shell({ demo, active, children }: { demo: boolean; active: 'painel' | 'conversao' | 'leads' | 'clientes'; children: React.ReactNode }) {
   const nav = [
     ['painel', '/', 'Painel'],
+    ['conversao', '/conversao', 'Central de Conversão'],
     ['leads', '/leads', 'Leads'],
     ['clientes', '/clientes', 'Lojas contratadas'],
   ] as const

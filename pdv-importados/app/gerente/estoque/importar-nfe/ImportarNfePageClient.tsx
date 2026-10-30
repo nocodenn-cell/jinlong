@@ -43,6 +43,7 @@ import {
 } from './actions'
 import { OrdemCompraVinculoAutocomplete } from '@/app/gerente/recebimento/OrdemCompraVinculoAutocomplete'
 import { fmtQtd } from '@/app/gerente/compras/ocRecebimento'
+import { notaSemObrigacao, valorEconomicoNota } from './notaObrigacao'
 import { fmtGerenteDateTime, fmtGerenteIdCurto } from '@/lib/format/gerenteValues'
 
 type Props = Readonly<{
@@ -391,7 +392,7 @@ export function ImportarNfePageClient({
 
   const { mutate: confirmarMut, loading: confirmarLoading } = useGerenteMutation(
     async (importacaoId: string) => {
-      if (!podeConfirmarEstoque) throw new Error(mi.confirmar_estoque_pendente)
+      if (!podeConfirmarEstoque) throw new Error(semObrigacaoConfirmacao ? mi.confirmar_estoque_sem_duplicata : mi.confirmar_estoque_pendente)
       const r = await confirmarImportacaoNfe({ importacao_id: importacaoId })
       if (!r.success) throw new Error(r.error)
       return r.data
@@ -535,7 +536,17 @@ export function ImportarNfePageClient({
     !registrarLoading &&
     !confirmarLoading
 
-  const podeConfirmarEstoque = conferenciaPronta && (!associarEntrega || !!conferencia?.entrega_anterior_id)
+  // SSOT-003: valor > 0 sem duplicatas é recusado pelo banco; a tela não libera a ação.
+  const semObrigacaoConfirmacao =
+    !!conferencia &&
+    notaSemObrigacao(
+      valorEconomicoNota((conferencia.itens ?? []).map((i) => ({ quantidade: i.quantidade_conferida ?? 0, custo_unitario: i.custo_unitario }))),
+      conferencia.duplicatas_total,
+    )
+  const motivoSemObrigacao = conferenciaPronta && semObrigacaoConfirmacao
+
+  const podeConfirmarEstoque =
+    conferenciaPronta && !semObrigacaoConfirmacao && (!associarEntrega || !!conferencia?.entrega_anterior_id)
 
   const divergeDaNota = (item: ItemConferenciaNfe): boolean => {
     const raw = qtdConferida[item.item_id]
@@ -929,6 +940,10 @@ export function ImportarNfePageClient({
               {parsed.duplicatas.length} {parsed.duplicatas.length === 1 ? 'parcela' : 'parcelas'} ·{' '}
               {formatBRL(parsed.duplicatas.reduce((t, d) => t + d.valor, 0))}
             </p>
+          ) : notaSemObrigacao(valorEconomicoNota(parsed.itens.map((i) => ({ quantidade: i.q_com, custo_unitario: i.v_un_com }))), 0) ? (
+            <p className="text-body text-[var(--color-warning-strong)]" data-testid="previa-sem-obrigacao">
+              {mi.previa_sem_duplicata_bloqueio}
+            </p>
           ) : (
             <p className="text-body text-[var(--color-warning-strong)]">
               Esta nota não tem parcelas: nenhuma conta a pagar será gerada.
@@ -1207,8 +1222,8 @@ export function ImportarNfePageClient({
             ) : (
               <>
                 {!podeConfirmarEstoque ? (
-                  <p className="text-caption font-medium text-[var(--color-warning-strong)]">
-                    {mi.confirmar_estoque_pendente}
+                  <p className="text-caption font-medium text-[var(--color-warning-strong)]" data-testid="confirmar-estoque-motivo">
+                    {motivoSemObrigacao ? mi.confirmar_estoque_sem_duplicata : mi.confirmar_estoque_pendente}
                   </p>
                 ) : null}
                 <div className="flex gap-2">
