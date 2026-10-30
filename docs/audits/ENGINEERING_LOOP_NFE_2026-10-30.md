@@ -174,3 +174,12 @@ Commits: `bb867091` (correção de ordem G14/#629), `1c39548f` (política de qCo
 - A migration `20261030140000` ainda **não está em homologação**; aplicá-la exige autorização específica.
 - `20261030130000` (precisão documental) e `20261030120000` (conciliação) já estão em homologação, mas a cadeia de homologação ainda não reflete a ordem corrigida de #629 (#629 não foi aplicada lá).
 - Recomendação de PR: GO para draft depois de rebasear sobre `origin/main` e documentar a divergência de homologação; NO-GO para merge até a homologação ser regularizada. Deploy em produção: NO-GO, requer autorização separada.
+
+## 13. Aplicação da política de qCom em homologação (autorizada)
+
+- Pré-condição verificada: `internal.importar_nfe_transacao` no estado da precisão documental (md5 `0e8d6b4a…`); migration não registrada; coluna inexistente.
+- Aplicada `20261030140000_nfe_qtd_precisao` em `yvdilcmxyjafnnsfdtam`, em transação, com a prova interna OK; registrada em `schema_migrations`. md5 resultante da função: `89c56ce9…`.
+- Testes em homologação via CLI linkado, cada um em transação com rollback: `nfe-quantidade-precisao`, `nfe-precisao-documental`, `nfe-conciliacao-exigivel` — **PASSOU** (0 erros).
+- Resíduos após os testes: NFs sintéticas 0, NFs de teste 0, AP 0, produtos de teste 0, `movimentos_estoque_log` = 51 (inalterado).
+- Projeto desvinculado do CLI após os testes.
+- Não aplicado: rollback (disponível em `backend/supabase/rollback/20261030140000_nfe_qtd_precisao_rollback.sql`), caso seja necessário.
