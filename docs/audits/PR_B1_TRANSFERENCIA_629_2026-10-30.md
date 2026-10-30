@@ -25,3 +25,13 @@ A migration original tinha a mesma versão de `growth-001` (`20261023130000`) e 
 
 ## Rollback
 `ops/rollback_20261029155000_movimentos_estoque_log_transferencia_id.sql`. Não executado.
+
+## Comportamento da integração Supabase (documentação oficial, consultada em 2026-10-30)
+Fonte: https://supabase.com/docs/guides/deployment/branching/github-integration
+- Com a opção **Deploy to production** habilitada, o merge na branch de produção dispara o deploy, que inclui novas migrations.
+- O passo de migrate "aplica todo arquivo sem entrada no histórico". Migrations já aplicadas são puladas.
+- Migration com timestamp mais antigo que a última aplicada **ainda roda**, com aviso. A #629 (`20261029155000`) e as NF-e (`20261030120000`–`140000`) estão abaixo de `20261029202813` (S2 em produção) e entram nessa situação.
+- A documentação **não trata de versões duplicadas** nem diz se a opção de produção é obrigatória.
+
+## Consequência para este PR
+Growth-001 (`20261023130000`) está em `origin/main` sem entrada no histórico de produção. Qualquer merge em `main` que dispare deploy pode aplicá-la em produção. Este PR não resolve isso: a #629 renomeada também seria aplicada no mesmo deploy. **Não mergear** antes da decisão sobre growth-001 e da confirmação de se a opção "Deploy to production" está ativa.
