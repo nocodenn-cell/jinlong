@@ -1,4 +1,4 @@
--- Regressão da migration 20261023130000_movimentos_estoque_log_transferencia_id.sql (issue #586).
+-- Regressão da migration 20261029155000_movimentos_estoque_log_transferencia_id.sql (issue #586).
 --
 -- Uma transação com ROLLBACK no final — não persiste nada. Chama a RPC pública real como DONO e prova:
 --   1. a transferência gera exatamente 2 linhas no kardex com o mesmo transferencia_id;
@@ -10,9 +10,14 @@
 \set ON_ERROR_STOP on
 BEGIN;
 
-INSERT INTO public.lojas (id, nome) VALUES
-  ('d0000000-0000-0000-0000-0000000000a1', 'T586 Origem'),
-  ('d0000000-0000-0000-0000-0000000000b2', 'T586 Destino');
+-- Multiempresa: a empresa da fixture é criada dentro desta transação (o ROLLBACK a remove), para
+-- que o teste não dependa de dados pré-existentes no banco de CI.
+INSERT INTO public.empresas (id, nome, status) VALUES
+  ('f5100000-0000-4000-8000-0000000000e1', 'FIXTURE-S1 Empresa 1', 'ATIVA')
+ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.lojas (id, nome, empresa_id) VALUES
+  ('d0000000-0000-0000-0000-0000000000a1', 'T586 Origem', 'f5100000-0000-4000-8000-0000000000e1'),
+  ('d0000000-0000-0000-0000-0000000000b2', 'T586 Destino', 'f5100000-0000-4000-8000-0000000000e1');
 INSERT INTO public.produtos (id, nome, preco_varejo, origem, loja_id)
 VALUES ('d0000000-0000-0000-0000-0000000000c3', 'T586 Produto', 10, 'brasil_nf', 'd0000000-0000-0000-0000-0000000000a1');
 INSERT INTO public.estoque (loja_id, produto_id, quantidade_atual, estoque_minimo)
