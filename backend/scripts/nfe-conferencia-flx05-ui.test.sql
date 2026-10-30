@@ -29,6 +29,8 @@ BEGIN
 
   -- Multiempresa: lojas e categorias exigem empresa_id (trigger tg_preenche_empresa_id).
   -- Empresa 1 da FIXTURE-S1 (dados de teste de homologação).
+  -- Empresa da fixture criada nesta transação (CI não tem empresas pré-existentes).
+  INSERT INTO public.empresas (id, nome, status) VALUES ('f5100000-0000-4000-8000-0000000000e1', 'FIXTURE-S1 Empresa 1', 'ATIVA') ON CONFLICT (id) DO NOTHING;
   INSERT INTO public.lojas (id, nome, codigo, ativo, empresa_id) VALUES (v_loja, 'FLX05 Loja', 'FLX05-A', true, 'f5100000-0000-4000-8000-0000000000e1')
   ON CONFLICT (id) DO UPDATE SET ativo = true;
 
@@ -377,6 +379,7 @@ DECLARE
 BEGIN
   INSERT INTO auth.users (id) VALUES (v_gerente_b) ON CONFLICT (id) DO NOTHING;
 
+  INSERT INTO public.empresas (id, nome, status) VALUES ('f5100000-0000-4000-8000-0000000000e2', 'FIXTURE-S1 Empresa 2', 'ATIVA') ON CONFLICT (id) DO NOTHING;
   INSERT INTO public.lojas (id, nome, codigo, ativo, empresa_id) VALUES (v_loja_b, 'FLX05 Loja B', 'FLX05-B', true, 'f5100000-0000-4000-8000-0000000000e2')
   ON CONFLICT (id) DO UPDATE SET ativo = true;
 

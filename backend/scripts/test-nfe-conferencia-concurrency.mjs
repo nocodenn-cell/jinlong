@@ -213,6 +213,7 @@ function setupFixture() {
   const codigo = ('NFE' + loja.replace(/-/g, '')).slice(0, 20)
 
   runOnce(`INSERT INTO auth.users (id) VALUES ('${gerente}') ON CONFLICT (id) DO NOTHING;`)
+  runOnce(`INSERT INTO public.empresas (id, nome, status) VALUES ('f5100000-0000-4000-8000-0000000000e1', 'FIXTURE-S1 Empresa 1', 'ATIVA') ON CONFLICT (id) DO NOTHING;`)
   runOnce(
     `INSERT INTO public.lojas (id, nome, codigo, ativo, empresa_id) VALUES ('${loja}', 'NFE-CONC Loja', '${codigo}', true, 'f5100000-0000-4000-8000-0000000000e1') ON CONFLICT (id) DO UPDATE SET ativo = true;`,
   )
