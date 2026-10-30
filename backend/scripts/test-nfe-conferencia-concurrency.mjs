@@ -214,13 +214,13 @@ function setupFixture() {
 
   runOnce(`INSERT INTO auth.users (id) VALUES ('${gerente}') ON CONFLICT (id) DO NOTHING;`)
   runOnce(
-    `INSERT INTO public.lojas (id, nome, codigo, ativo) VALUES ('${loja}', 'NFE-CONC Loja', '${codigo}', true) ON CONFLICT (id) DO UPDATE SET ativo = true;`,
+    `INSERT INTO public.lojas (id, nome, codigo, ativo, empresa_id) VALUES ('${loja}', 'NFE-CONC Loja', '${codigo}', true, 'f5100000-0000-4000-8000-0000000000e1') ON CONFLICT (id) DO UPDATE SET ativo = true;`,
   )
   runOnce(
     `INSERT INTO public.usuarios (id, nome, perfil, ativo, loja_id) VALUES ('${gerente}', 'NFE-CONC Gerente', 'GERENTE', true, '${loja}') ON CONFLICT (id) DO UPDATE SET perfil='GERENTE', ativo=true, loja_id='${loja}';`,
   )
   runOnce(
-    `INSERT INTO public.categorias (id, nome) VALUES ('${categoria}', 'NFE-CONC Categoria') ON CONFLICT (id) DO UPDATE SET nome=EXCLUDED.nome;`,
+    `INSERT INTO public.categorias (id, nome, empresa_id) VALUES ('${categoria}', 'NFE-CONC Categoria', 'f5100000-0000-4000-8000-0000000000e1') ON CONFLICT (id) DO UPDATE SET nome=EXCLUDED.nome;`,
   )
 
   return { loja, gerente, categoria }

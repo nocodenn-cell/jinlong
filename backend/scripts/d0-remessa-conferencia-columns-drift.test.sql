@@ -17,7 +17,7 @@ BEGIN;
 SELECT p.id AS produto, p.loja_id AS loja, u.id AS gerente
 FROM public.produtos p
 JOIN public.usuarios u ON u.loja_id = p.loja_id
-WHERE p.ativo AND u.ativo AND u.perfil IN ('GERENTE', 'DONO', 'ADMIN')
+WHERE p.id = 'f5100000-0000-4000-8000-0000000000f1' AND p.ativo AND u.ativo AND u.perfil IN ('GERENTE', 'DONO', 'ADMIN')
 ORDER BY p.id, u.id
 LIMIT 1 \gset
 
@@ -69,7 +69,7 @@ DECLARE
   v_gerente uuid := current_setting('request.jwt.claim.sub')::uuid;
   v_produto uuid;
 BEGIN
-  SELECT p.id INTO v_produto FROM public.produtos p WHERE p.ativo LIMIT 1;
+  SELECT p.id INTO v_produto FROM public.produtos p WHERE p.id = 'f5100000-0000-4000-8000-0000000000f1' AND p.ativo;
 
   v_id := public.criar_confirmar_remessa_entrada(
     'D0 drift verde', NULL,

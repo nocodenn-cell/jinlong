@@ -30,9 +30,10 @@ BEGIN
     ('f4000002-0000-4000-8000-00000000000c')
   ON CONFLICT (id) DO NOTHING;
 
-  INSERT INTO public.lojas (id, nome, codigo, ativo) VALUES
-    (v_loja_a, 'UX04 Loja A', 'UX04-A', true),
-    (v_loja_b, 'UX04 Loja B', 'UX04-B', true)
+  -- Multiempresa: lojas e categorias exigem empresa_id (trigger tg_preenche_empresa_id).
+  INSERT INTO public.lojas (id, nome, codigo, ativo, empresa_id) VALUES
+    (v_loja_a, 'UX04 Loja A', 'UX04-A', true, 'f5100000-0000-4000-8000-0000000000e1'),
+    (v_loja_b, 'UX04 Loja B', 'UX04-B', true, 'f5100000-0000-4000-8000-0000000000e1')
   ON CONFLICT (id) DO UPDATE SET ativo = true;
 
   INSERT INTO public.usuarios (id, nome, perfil, ativo, loja_id) VALUES
@@ -41,7 +42,7 @@ BEGIN
     ('f4000002-0000-4000-8000-00000000000c', 'UX04 Operador A', 'OPERADOR', true, v_loja_a)
   ON CONFLICT (id) DO UPDATE SET perfil = EXCLUDED.perfil, ativo = true, loja_id = EXCLUDED.loja_id;
 
-  INSERT INTO public.categorias (id, nome) VALUES ('f4000003-0000-4000-8000-000000000001', 'UX04 Categoria')
+  INSERT INTO public.categorias (id, nome, empresa_id) VALUES ('f4000003-0000-4000-8000-000000000001', 'UX04 Categoria', 'f5100000-0000-4000-8000-0000000000e1')
   ON CONFLICT (id) DO UPDATE SET nome = EXCLUDED.nome;
 
   INSERT INTO public.fornecedores (id, cnpj, nome, loja_id)
@@ -480,7 +481,9 @@ END $t9b$;
 -- ═══════════════════════════════════════════════════════════════════════════
 -- 10) NF-e + OC (vínculo escolhido pelo operador; custo e contas a pagar como antes)
 -- ═══════════════════════════════════════════════════════════════════════════
-CREATE FUNCTION pg_temp.mk_nfe(p_loja uuid, p_itens jsonb, p_parcelas numeric DEFAULT 90) RETURNS uuid LANGUAGE plpgsql AS $$
+-- Duplicata padrão = valor exigível do conferido (Σ conferida × custo), regra SSOT-003 + conciliação
+-- (20261030120000). Valor fixo só quando informado explicitamente.
+CREATE FUNCTION pg_temp.mk_nfe(p_loja uuid, p_itens jsonb, p_parcelas numeric DEFAULT NULL) RETURNS uuid LANGUAGE plpgsql AS $$
 DECLARE v uuid := gen_random_uuid(); el jsonb;
 BEGIN
   INSERT INTO public.importacoes_nfe (id, chave_acesso, numero_nf, fornecedor_id, loja_id, usuario_id, status)
@@ -492,7 +495,9 @@ BEGIN
             true, (el->>'conferida')::numeric, 'CONFERIDO');
   END LOOP;
   INSERT INTO public.importacoes_nfe_duplicatas (importacao_nfe_id, numero_duplicata, data_vencimento, valor)
-  VALUES (v, '001', current_date + 30, p_parcelas);
+  VALUES (v, '001', current_date + 30, COALESCE(p_parcelas,
+    (SELECT coalesce(sum((x->>'conferida')::numeric * COALESCE((x->>'custo')::numeric, 6)), 0)
+       FROM jsonb_array_elements(p_itens) AS x)));
   RETURN v;
 END $$;
 
@@ -644,7 +649,7 @@ BEGIN
   IF pg_temp.estoque_de(a, v_p) <> 0 THEN RAISE EXCEPTION 'T12: nenhuma tentativa não autorizada pode creditar'; END IF;
   IF has_function_privilege('anon', 'public.receber_ordem_compra(uuid,jsonb,text,text)', 'EXECUTE')
      OR has_function_privilege('anon', 'public.encerrar_ordem_compra_com_falta(uuid,text)', 'EXECUTE')
-     OR has_function_privilege('anon', 'public.criar_confirmar_remessa_entrada(text,text,jsonb,text,uuid)', 'EXECUTE')
+     OR has_function_privilege('anon', 'public.criar_confirmar_remessa_entrada(text,text,jsonb,text,uuid,uuid)', 'EXECUTE')
      OR has_function_privilege('anon', 'public.vincular_importacao_nfe_ordem_compra(uuid,uuid)', 'EXECUTE') THEN
     RAISE EXCEPTION 'T12: anon não pode executar as RPCs';
   END IF;

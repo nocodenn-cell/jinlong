@@ -20,7 +20,8 @@ DECLARE
 BEGIN
   INSERT INTO auth.users (id) VALUES (v_gerente) ON CONFLICT (id) DO NOTHING;
 
-  INSERT INTO public.lojas (id, nome, codigo, ativo) VALUES (v_loja, 'NFEDup Loja', 'NFEDUP-A', true)
+  -- Multiempresa: lojas exigem empresa_id (trigger tg_preenche_empresa_id).
+  INSERT INTO public.lojas (id, nome, codigo, ativo, empresa_id) VALUES (v_loja, 'NFEDup Loja', 'NFEDUP-A', true, 'f5100000-0000-4000-8000-0000000000e1')
   ON CONFLICT (id) DO UPDATE SET ativo = true;
 
   INSERT INTO public.usuarios (id, nome, perfil, ativo, loja_id)

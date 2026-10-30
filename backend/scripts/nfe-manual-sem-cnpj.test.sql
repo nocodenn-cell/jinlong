@@ -16,10 +16,11 @@ DECLARE
   falhou boolean := false;
 BEGIN
   INSERT INTO auth.users(id) VALUES (gerente) ON CONFLICT DO NOTHING;
-  INSERT INTO public.lojas(id,nome,codigo,ativo) VALUES(loja,'Teste sem CNPJ','SEM-CNPJ',true) ON CONFLICT(id) DO NOTHING;
+  -- Multiempresa: lojas e categorias exigem empresa_id (trigger tg_preenche_empresa_id).
+  INSERT INTO public.lojas(id,nome,codigo,ativo,empresa_id) VALUES(loja,'Teste sem CNPJ','SEM-CNPJ',true,'f5100000-0000-4000-8000-0000000000e1') ON CONFLICT(id) DO NOTHING;
   INSERT INTO public.usuarios(id,nome,perfil,ativo,loja_id) VALUES(gerente,'Teste','GERENTE',true,loja)
     ON CONFLICT(id) DO UPDATE SET perfil='GERENTE',loja_id=EXCLUDED.loja_id;
-  INSERT INTO public.categorias(id,nome) VALUES(categoria,'Teste') ON CONFLICT DO NOTHING;
+  INSERT INTO public.categorias(id,nome,empresa_id) VALUES(categoria,'Teste','f5100000-0000-4000-8000-0000000000e1') ON CONFLICT DO NOTHING;
   INSERT INTO public.produtos(id,codigo_barras,nome,categoria_id,preco_varejo,preco_custo,origem,tem_nf,ativo,status_publicacao,loja_id)
     VALUES(produto,'7899999990099','Teste sem CNPJ',categoria,300,10,'brasil_nf',true,true,'PUBLICADO',loja)
     ON CONFLICT(id) DO UPDATE SET preco_varejo=300,preco_custo=10,loja_id=EXCLUDED.loja_id;
