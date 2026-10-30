@@ -543,7 +543,7 @@ export async function definirAtivoFuncionarioAction(
     const admin = createAdminClient()
     const { data: alvo, error: loadErr } = await admin
       .from('usuarios')
-      .select('id, perfil, loja_id')
+      .select('id, perfil, loja_id, ativo')
       .eq('id', id)
       .maybeSingle()
 
@@ -570,7 +570,13 @@ export async function definirAtivoFuncionarioAction(
     // 20261028 (decisão do dono, item 3): inativar também bloqueia o login/refresh no Auth; reativar desbloqueia.
     // O banco já nega tudo ao inativo (RLS + revogação de tokens); isto corta a sessão na origem.
     const { error: banErr } = await admin.auth.admin.updateUserById(id, { ban_duration: banDurationParaAtivo(ativo) })
-    if (banErr) console.error('[funcionarios] ban/unban no Auth falhou', banErr.message)
+    if (banErr) {
+      // Sem o Auth alinhado, o login continuaria bloqueado (ou liberado) após a mudança: desfaz o status
+      // no banco para o funcionário seguir no estado anterior e a ação poder ser repetida.
+      console.error('[funcionarios] ban/unban no Auth falhou', banErr.message)
+      await admin.from('usuarios').update({ ativo: alvo.ativo }).eq('id', id).eq('loja_id', gate.session.lojaId!)
+      return fail('Não foi possível atualizar o acesso no Auth. Tente novamente. / 无法更新登录权限，请重试。')
+    }
 
     revalidateFuncionarios()
     return { ok: true, data: { id, ativo } }
