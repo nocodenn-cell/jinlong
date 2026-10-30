@@ -154,3 +154,23 @@ Não rodam em homologação (dados comitados; vedado pela decisão 4). Os cenár
   4. Rebasear a branch sobre `origin/main` e resolver a duplicidade de versão já na main.
 - **GO para PR em draft:** possível após o item 1, com a divergência de homologação documentada.
 - **Deploy em produção: NO-GO.** Depende do PR e de autorização separada sua.
+
+## 12. Atualização após autorização (correção de ordem e política de qCom implementadas)
+
+Commits: `bb867091` (correção de ordem G14/#629), `1c39548f` (política de qCom).
+
+**Reconstrução completa do repositório, com G14 intacto** (`fp-rb-full`, sem remover nenhuma migration): **PASSOU**. 450 migrations aplicadas, última `20261030140000`. `transferir_estoque_seguro` contém G14 e `transferencia_id`; `importar_nfe_transacao` contém a validação `IMPORT_NFE_QTD_PRECISAO`.
+
+**Suíte na reconstrução completa:**
+| Suíte | Resultado |
+|---|---|
+| flx05-ui, margem-não-bloqueia, duplicata-inválida, manual-sem-cnpj, ux04-parcial, d0 | PASSOU |
+| conciliacao-exigivel, precisao-documental | PASSOU |
+| quantidade-precisao (agora com asserções: Q1/Q2 recusados com IMPORT_NFE_QTD_PRECISAO; Q3–Q5 aceitos e preservados) | PASSOU |
+| Concorrência: confirmação dupla, OC (4 cenários), lock real entre sessões | PASSOU |
+| entrada-documento-posterior, margem-contract (PGlite) | PASSOU |
+
+**Pendências:**
+- A migration `20261030140000` ainda **não está em homologação**; aplicá-la exige autorização específica.
+- `20261030130000` (precisão documental) e `20261030120000` (conciliação) já estão em homologação, mas a cadeia de homologação ainda não reflete a ordem corrigida de #629 (#629 não foi aplicada lá).
+- Recomendação de PR: GO para draft depois de rebasear sobre `origin/main` e documentar a divergência de homologação; NO-GO para merge até a homologação ser regularizada. Deploy em produção: NO-GO, requer autorização separada.
