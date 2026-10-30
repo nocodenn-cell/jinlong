@@ -224,3 +224,31 @@ Ajustes feitos nos scripts: `empresa_id` em lojas e categorias (multiempresa); d
 - Não rodei `tsc`/vitest do front-end (`pdv-importados`): dependências não instaladas. A alteração TS (parser, `actions.ts`, página) está **não testada** por compilação.
 - Diagnóstico de produção (rodada anterior) continua válido; a regra nova não foi consultada contra dados de produção.
 - Ainda não há teste de idempotência por UNIQUE; a decisão sobre `importacao_duplicata_id` segue pendente.
+
+### 9.8 Passos 1, 2 e 3 (executados após aprovação)
+
+**Passo 1 — front-end.** `npm ci` em `pdv-importados` e `tsc --noEmit -p tsconfig.typecheck.json` falhou em 2 pontos da minha alteração (campo `v_prod` ausente nos schemas zod). Corrigido em `be9d3290`. Depois: typecheck sem erros; vitest do módulo de importação NF-e: 24 arquivos e 160 testes passando (2 pulados, como no baseline).
+
+**Passo 2a — versão duplicada.** `20261023130000` tinha dois arquivos de funcionalidades distintas (Central de Conversão, growth-001, e `transferencia_id`, #629). Verificado que nenhum ambiente registra a versão: produção não tem a coluna `transferencia_id` nem `commercial_planos`; homologação e local também não. Renomeada a growth-001 para `20261023130100` (commit `256a7a8e`, com referências em `hub/`). Duplicidade no repositório: zero.
+
+**Passo 2b — homologação.**
+- Pré-condição: `confirmar_importacao_nfe` tinha md5 `464587b0…` (a conciliação v1). Registrada a versão `20261030120000` em `supabase_migrations.schema_migrations` (sem reexecutar a função).
+- Aplicada a `20261030130000` em homologação, em transação, com as mesmas substituições textuais testadas localmente. Colunas e constraints criadas, funções atualizadas, prova interna OK. Registrada a versão `20261030130000`.
+- Ressalva: o corpo aplicado foi o executável do arquivo; os comentários de cabeçalho não foram enviados (não alteram a execução).
+
+**Passo 3 — suíte em homologação (rollback, sem resíduo).** Executada via `supabase db query --linked -f` (após `supabase link` explícito ao projeto de homologação e `unlink` ao final). Controle negativo confirmou que erros aparecem.
+
+| Script | Homologação |
+|---|---|
+| `nfe-conferencia-flx05-ui` | PASSOU (sem erro) |
+| `nfe-conferencia-margem-nao-bloqueia-estoque` | PASSOU |
+| `nfe-duplicata-invalida-aborta` | PASSOU |
+| `nfe-manual-sem-cnpj` | PASSOU |
+| `ux04-oc-recebimento-parcial` | PASSOU |
+| `nfe-conciliacao-exigivel` | PASSOU |
+| `nfe-precisao-documental` (8 casos) | PASSOU |
+| `d0-remessa-conferencia-columns-drift` | **NÃO EXECUTADO em homologação**: altera estrutura (DROP COLUMN) dentro de transação, e não foi possível confirmar que a API não confirmaria o DDL. Passou localmente |
+| `ux04-oc-recebimento-concorrencia.sh`, `test-nfe-conferencia-concurrency.mjs`, `nfe-concorrencia-confirmacao.sh` | **NÃO EXECUTADOS em homologação**: comitam dados. Decisão 4 veda resíduos no banco compartilhado. Passaram localmente |
+| `nfe-conferencia-margem-contract.test.mjs`, `entrada-documento-posterior.test.mjs` | Sem banco (PGlite); passaram localmente |
+
+**Resíduos.** Depois da suíte: NFs sintéticas 0, AP de teste 0, produtos e lojas de teste 0, `movimentos_estoque_log` = 51 (igual ao início), coluna `conferido_por` intacta, `valor_total_documento` presente.
