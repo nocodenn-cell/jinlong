@@ -10,7 +10,11 @@
 \set ON_ERROR_STOP on
 BEGIN;
 
--- Multiempresa: lojas exigem empresa_id (trigger tg_preenche_empresa_id). Empresa 1 da FIXTURE-S1.
+-- Multiempresa: a empresa da fixture é criada dentro desta transação (o ROLLBACK a remove), para
+-- que o teste não dependa de dados pré-existentes no banco de CI.
+INSERT INTO public.empresas (id, nome, status) VALUES
+  ('f5100000-0000-4000-8000-0000000000e1', 'FIXTURE-S1 Empresa 1', 'ATIVA')
+ON CONFLICT (id) DO NOTHING;
 INSERT INTO public.lojas (id, nome, empresa_id) VALUES
   ('d0000000-0000-0000-0000-0000000000a1', 'T586 Origem', 'f5100000-0000-4000-8000-0000000000e1'),
   ('d0000000-0000-0000-0000-0000000000b2', 'T586 Destino', 'f5100000-0000-4000-8000-0000000000e1');
