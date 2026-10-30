@@ -213,15 +213,19 @@ function setupFixture() {
   const codigo = ('NFE' + loja.replace(/-/g, '')).slice(0, 20)
 
   runOnce(`INSERT INTO auth.users (id) VALUES ('${gerente}') ON CONFLICT (id) DO NOTHING;`)
-  runOnce(`INSERT INTO public.empresas (id, nome, status) VALUES ('f5100000-0000-4000-8000-0000000000e1', 'FIXTURE-S1 Empresa 1', 'ATIVA') ON CONFLICT (id) DO NOTHING;`)
+  // Não cria empresa: o harness roda no banco compartilhado do gate financeiro, e uma empresa
+  // persistida passaria a exigir empresa_id em TODA loja dos testes seguintes (EMPRESA_ID_OBRIGATORIA).
+  // Usa a empresa já existente, se houver; sem empresa, a loja fica sem empresa_id (trigger permite).
+  const empresa = runOnce(`SELECT id FROM public.empresas ORDER BY id LIMIT 1;`).trim()
+  const empresaSql = empresa ? `'${empresa}'` : 'NULL'
   runOnce(
-    `INSERT INTO public.lojas (id, nome, codigo, ativo, empresa_id) VALUES ('${loja}', 'NFE-CONC Loja', '${codigo}', true, 'f5100000-0000-4000-8000-0000000000e1') ON CONFLICT (id) DO UPDATE SET ativo = true;`,
+    `INSERT INTO public.lojas (id, nome, codigo, ativo, empresa_id) VALUES ('${loja}', 'NFE-CONC Loja', '${codigo}', true, ${empresaSql}) ON CONFLICT (id) DO UPDATE SET ativo = true;`,
   )
   runOnce(
     `INSERT INTO public.usuarios (id, nome, perfil, ativo, loja_id) VALUES ('${gerente}', 'NFE-CONC Gerente', 'GERENTE', true, '${loja}') ON CONFLICT (id) DO UPDATE SET perfil='GERENTE', ativo=true, loja_id='${loja}';`,
   )
   runOnce(
-    `INSERT INTO public.categorias (id, nome, empresa_id) VALUES ('${categoria}', 'NFE-CONC Categoria', 'f5100000-0000-4000-8000-0000000000e1') ON CONFLICT (id) DO UPDATE SET nome=EXCLUDED.nome;`,
+    `INSERT INTO public.categorias (id, nome, empresa_id) VALUES ('${categoria}', 'NFE-CONC Categoria', ${empresaSql}) ON CONFLICT (id) DO UPDATE SET nome=EXCLUDED.nome;`,
   )
 
   return { loja, gerente, categoria }
