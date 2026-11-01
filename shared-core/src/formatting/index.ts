@@ -16,9 +16,17 @@ export { formatNumber } from './number'
 export { formatDate, formatDateTime } from './date'
 
 export {
-  MOEDA_ENTRADA_MAX,
-  QUANTIDADE_INTEIRA_ENTRADA_MAX,
+  CASAS_MAX_CUSTO_CONFIGURAVEL,
+  INTEIRO_MAX_INT4,
+  MOEDA_MAX_NUMERIC_10_2,
+  QUANTIDADE_MAX_NUMERIC_10_3,
   parseMoedaEntrada,
+  parseQuantidadeEntrada,
   parseQuantidadeInteiraEntrada,
+  parseValorEntrada,
 } from './entradaNumerica'
-export type { MotivoEntradaNumerica, ResultadoEntradaNumerica } from './entradaNumerica'
+export type {
+  MotivoEntradaNumerica,
+  OpcoesEntradaNumerica,
+  ResultadoEntradaNumerica,
+} from './entradaNumerica'

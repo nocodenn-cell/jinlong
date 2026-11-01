@@ -1,16 +1,25 @@
 /**
- * Parsers estritos de entrada numérica digitada ou colada pelo operador.
+ * Parsers estritos de entrada numérica digitada ou colada pelo operador (pt-BR).
  *
  * Regra: entrada inválida vira `motivo`, nunca um valor "corrigido" em silêncio
- * ("10.50" não vira 1050, "-10" não vira 10, "1e5" não vira 15).
+ * ("10.50" não vira 1050, "-10" não vira 10, "1e5" não vira 15, "0,500" não vira 500).
  * Vazio retorna `value: null` (campo opcional). Sem React e sem I/O.
+ *
+ * Limites: quem chama passa `max` e `casas` do contrato da coluna destino. Não há
+ * teto de negócio embutido aqui; tetos técnicos vêm do schema (ver constantes).
  */
 
-/** Teto de dinheiro: espelha `numeric(10,2)` de `produtos.preco_*`. */
-export const MOEDA_ENTRADA_MAX = 99_999_999.99
+/** Teto técnico de `numeric(10,2)` (preço de venda, atacado e custo hoje). */
+export const MOEDA_MAX_NUMERIC_10_2 = 99_999_999.99
 
-/** Teto de quantidade inteira digitada (estoque, mínimo, gatilho de atacado). */
-export const QUANTIDADE_INTEIRA_ENTRADA_MAX = 9_999_999
+/** Teto técnico de `numeric(10,3)` (estoque, movimentos, itens de venda). */
+export const QUANTIDADE_MAX_NUMERIC_10_3 = 9_999_999.999
+
+/** Teto técnico de `integer` (ex.: `precos_atacado.quantidade_minima`). */
+export const INTEIRO_MAX_INT4 = 2_147_483_647
+
+/** Casas máximas que o parser aceita para custo, quando a coluna permitir (alinhado ao IM-F01). */
+export const CASAS_MAX_CUSTO_CONFIGURAVEL = 6
 
 export type MotivoEntradaNumerica =
   | 'formato'
@@ -24,45 +33,79 @@ export type ResultadoEntradaNumerica =
   | { ok: true; value: number | null }
   | { ok: false; motivo: MotivoEntradaNumerica }
 
-/** `1234`, `1.234`, `1.234.567`, opcionalmente com `,` e 1 ou 2 casas. */
-const MOEDA_PT_BR = /^(\d{1,3}(?:\.\d{3})+|\d+)(?:,(\d{1,2}))?$/
+export type OpcoesEntradaNumerica = Readonly<{
+  /** Casas decimais aceitas (0 = inteiro). */
+  casas: number
+  /** Teto técnico do campo de destino. */
+  max: number
+}>
+
+const PARTE_INTEIRA = '\\d{1,3}(?:\\.\\d{3})+|\\d+'
 
 /**
- * Moeda em pt-BR: `10,50`, `1.234,56`, `R$ 1.234,56`, `1234`.
- * `10.50` é recusado (ponto não é decimal em pt-BR; evita confundir com milhar).
+ * Núcleo do parser pt-BR: inteiro com milhar opcional, vírgula e até `casas` decimais.
+ * `10.50` não casa (ponto só é milhar com 3 dígitos) e é classificado à parte.
  */
-export function parseMoedaEntrada(raw: string): ResultadoEntradaNumerica {
-  const t = raw.trim().replace(/^R\$\s*/i, '')
-  if (t === '') return { ok: true, value: null }
-  if (t.startsWith('-')) return { ok: false, motivo: 'negativo' }
-
-  const m = MOEDA_PT_BR.exec(t)
-  if (!m) {
-    if (/^\d+\.\d+$/.test(t)) return { ok: false, motivo: 'separador_decimal' }
-    if (/^\d+,\d{3,}$/.test(t)) return { ok: false, motivo: 'casas_decimais' }
-    return { ok: false, motivo: 'formato' }
-  }
-
-  const inteiro = m[1].replace(/\./g, '')
-  const centavos = (m[2] ?? '').padEnd(2, '0')
-  const value = Number(`${inteiro}.${centavos}`)
-  if (value > MOEDA_ENTRADA_MAX) return { ok: false, motivo: 'faixa' }
-  return { ok: true, value }
-}
-
-/** Quantidade inteira: `12`, `1.000`. Decimal (`0,500`, `10.5`) é recusado. */
-export function parseQuantidadeInteiraEntrada(raw: string): ResultadoEntradaNumerica {
+function parsePtBR(raw: string, { casas, max }: OpcoesEntradaNumerica): ResultadoEntradaNumerica {
   const t = raw.trim()
   if (t === '') return { ok: true, value: null }
   if (t.startsWith('-')) return { ok: false, motivo: 'negativo' }
 
-  const m = /^(\d{1,3}(?:\.\d{3})+|\d+)$/.exec(t)
+  const decimal = casas > 0 ? `(?:,(\\d{1,${casas}}))?` : ''
+  const m = new RegExp(`^(${PARTE_INTEIRA})${decimal}$`).exec(t)
   if (!m) {
-    if (/^\d+[.,]\d+$/.test(t)) return { ok: false, motivo: 'fracionada' }
+    if (casas === 0) {
+      if (/^\d+[.,]\d+$/.test(t)) return { ok: false, motivo: 'fracionada' }
+    } else {
+      if (/^\d+\.\d+$/.test(t)) return { ok: false, motivo: 'separador_decimal' }
+      if (new RegExp(`^\\d+,\\d{${casas + 1},}$`).test(t)) {
+        return { ok: false, motivo: 'casas_decimais' }
+      }
+    }
     return { ok: false, motivo: 'formato' }
   }
 
-  const value = Number(m[1].replace(/\./g, ''))
-  if (value > QUANTIDADE_INTEIRA_ENTRADA_MAX) return { ok: false, motivo: 'faixa' }
+  const inteiro = m[1].replace(/\./g, '')
+  const decimais = (m[2] ?? '').padEnd(casas, '0')
+  const value = Number(casas > 0 ? `${inteiro}.${decimais}` : inteiro)
+  if (value > max) return { ok: false, motivo: 'faixa' }
   return { ok: true, value }
+}
+
+/** Moeda pt-BR com 2 casas e teto de `numeric(10,2)` (padrão de preço de venda). */
+export function parseMoedaEntrada(raw: string): ResultadoEntradaNumerica {
+  return parsePtBR(raw.trim().replace(/^R\$\s*/i, ''), {
+    casas: 2,
+    max: MOEDA_MAX_NUMERIC_10_2,
+  })
+}
+
+/**
+ * Valor monetário com casas e teto explícitos (ex.: custo com até 6 casas no futuro).
+ * O chamador é responsável por `casas` coincidir com a coluna destino.
+ */
+export function parseValorEntrada(raw: string, opcoes: OpcoesEntradaNumerica): ResultadoEntradaNumerica {
+  return parsePtBR(raw.trim().replace(/^R\$\s*/i, ''), opcoes)
+}
+
+/**
+ * Quantidade: fracionada (até 3 casas, ex.: `0,500`) para unidades de peso ou
+ * medida; inteira para unidades contáveis. Sem arredondamento: 0,5 continua 0,5.
+ */
+export function parseQuantidadeEntrada(
+  raw: string,
+  opcoes: Readonly<{ fracionada: boolean; max?: number }>,
+): ResultadoEntradaNumerica {
+  return parsePtBR(raw, {
+    casas: opcoes.fracionada ? 3 : 0,
+    max: opcoes.max ?? QUANTIDADE_MAX_NUMERIC_10_3,
+  })
+}
+
+/** Quantidade inteira (estoque de unidade contável, gatilho e faixa de atacado). */
+export function parseQuantidadeInteiraEntrada(
+  raw: string,
+  opcoes: Readonly<{ max?: number }> = {},
+): ResultadoEntradaNumerica {
+  return parseQuantidadeEntrada(raw, { fracionada: false, max: opcoes.max })
 }

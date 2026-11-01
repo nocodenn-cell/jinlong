@@ -243,3 +243,22 @@ describe('executarCriarProdutoComEstoqueInicial — Onda 2 · Bloco 4 (faixa de 
     }
   })
 })
+
+describe('mensagemErroCriarProdutoRpc — códigos novos da validação de entrada (VAL-01)', () => {
+  it.each([
+    ['CRIAR_PRODUTO_PRECO_CASAS', 'no máximo 2 casas'],
+    ['CRIAR_PRODUTO_PRECO_LIMITE', 'acima do limite'],
+    ['CRIAR_PRODUTO_CUSTO_CASAS', 'Custo aceita'],
+    ['CRIAR_PRODUTO_ESTOQUE_FRACAO_UNIDADE', 'contada em inteiros'],
+    ['CRIAR_PRODUTO_ESTOQUE_CASAS', '3 casas decimais'],
+    ['CRIAR_PRODUTO_GATILHO_INVALIDO', 'número inteiro'],
+  ])('%s não cai no código genérico CRIAR_PRODUTO_PRECO', (codigo, trecho) => {
+    const msg = mensagemErroCriarProdutoRpc(`ERROR: ${codigo}`)
+    expect(msg).toContain(trecho)
+    expect(msg).not.toBe('Preço de varejo inválido.')
+  })
+
+  it('CRIAR_PRODUTO_PRECO continua mapeando para preço inválido', () => {
+    expect(mensagemErroCriarProdutoRpc('CRIAR_PRODUTO_PRECO')).toBe('Preço de varejo inválido.')
+  })
+})

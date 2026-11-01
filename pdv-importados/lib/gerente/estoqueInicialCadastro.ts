@@ -4,7 +4,8 @@
  * Mensagens PT espelham `estoque.err_*` (borda inventory); paths novos usam inventoryMessages.
  */
 
-import { parseQuantidadeInteiraEntrada } from '@shared-core/src/formatting'
+import { parseQuantidadeEntrada } from '@shared-core/src/formatting'
+import { unidadeAceitaFracao } from '@shared-core/src/products/unidadesMedida'
 import {
   INVENTORY_ERROR_CODES,
   mapAjusteRpcMessageToCode,
@@ -20,11 +21,17 @@ export type EstoqueInicialIntent = {
 
 /**
  * Entrada já validada pelo formulário (`primeiroErroEntradasProduto`). Texto
- * inválido aqui vira 0 — nunca um número parcial como "1.5" → 1.
+ * inválido aqui vira 0, nunca um número parcial como "1.5" virando 1.
+ * Fração só para unidade de peso/medida (KG, M); as demais são inteiras.
  */
-export function parseEstoqueInicialIntent(qtyRaw: string, minRaw: string): EstoqueInicialIntent {
-  const q = parseQuantidadeInteiraEntrada(qtyRaw)
-  const m = parseQuantidadeInteiraEntrada(minRaw)
+export function parseEstoqueInicialIntent(
+  qtyRaw: string,
+  minRaw: string,
+  unidadeMedida?: string,
+): EstoqueInicialIntent {
+  const fracionada = unidadeAceitaFracao(unidadeMedida)
+  const q = parseQuantidadeEntrada(qtyRaw, { fracionada })
+  const m = parseQuantidadeEntrada(minRaw, { fracionada })
   const quantidade = q.ok && q.value != null ? q.value : 0
   const minimo = m.ok && m.value != null ? m.value : 0
   const qtyOk = quantidade > 0

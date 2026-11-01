@@ -298,12 +298,13 @@ export function useProdutoFormOrchestration({
       // motivo no campo, em vez de virar outro valor.
       const erroEntrada = primeiroErroEntradasProduto(
         {
-          precoVarejo: form.precoVarejoInput.validar(),
-          precoAtacado: form.precoAtacadoInput.validar(),
-          precoCusto: form.precoCustoInput.validar(),
+          precoVarejo: form.precoVarejoInput.display,
+          precoAtacado: form.precoAtacadoInput.display,
+          precoCusto: form.precoCustoInput.display,
           estoqueInicial: form.estoqueInicialQty,
           estoqueMinimo: form.estoqueInicialMin,
           quantidadeGatilho: form.quantidadeGatilho,
+          unidadeMedida: form.unidadeMedida,
         },
         p,
       )
@@ -337,6 +338,7 @@ export function useProdutoFormOrchestration({
       const estoqueIntent = parseEstoqueInicialIntent(
         form.estoqueInicialQty,
         form.estoqueInicialMin,
+        form.unidadeMedida,
       )
       const clientRequestId =
         typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : null

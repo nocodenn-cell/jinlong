@@ -36,6 +36,7 @@ const mockMensagens = {
     col_tipo: "Tipo",
     remover: "remover",
     aria_qtde_item: "Quantidade — {{nome}}",
+    qtd_formato_invalido: "Quantidade inválida. Use números, com vírgula para decimais. Ex.: 0,500",
     aria_qtde_aumentar: "Aumentar 1 unidade — {{nome}}",
     aria_qtde_diminuir: "Diminuir 1 unidade — {{nome}}",
     sku_label: "Código",
@@ -153,21 +154,117 @@ describe("CaixaCartList — stepper de quantidade", () => {
     expect(onAlterarQuantidade).not.toHaveBeenCalled()
   })
 
-  it("campo de quantidade permite casas decimais (min/step 0.001)", () => {
-    const onAlterarQuantidade = vi.fn()
-    const onRemover = vi.fn()
+  it("campo de quantidade aceita fração em pt-BR (texto, teclado decimal)", () => {
     const item = buildItem({ quantidade: 0.125 })
 
-    renderList(root, [item], onAlterarQuantidade, onRemover)
+    renderList(root, [item], vi.fn(), vi.fn())
 
-    const input = container.querySelector('input[type="number"]') as HTMLInputElement | null
-    expect(input).not.toBeNull()
-    expect(input!.getAttribute("min")).toBe("0.001")
-    expect(input!.getAttribute("step")).toBe("0.001")
-    expect(input!.getAttribute("inputmode")).toBe("decimal")
-    expect(input!.value).toBe("0.125")
+    const input = quantidadeInput(container)
+    expect(input.getAttribute("type")).toBe("text")
+    expect(input.getAttribute("inputmode")).toBe("decimal")
+    expect(input.value).toBe("0,125")
+  })
+
+  it("digitar '0,' (estado intermediário) não altera a quantidade nem remove a linha", () => {
+    const onAlterarQuantidade = vi.fn()
+    const onRemover = vi.fn()
+    renderList(root, [buildItem({ quantidade: 2 })], onAlterarQuantidade, onRemover)
+
+    const input = quantidadeInput(container)
+    digitar(input, "0,")
+    blur(input)
+
+    expect(onRemover).not.toHaveBeenCalled()
+    expect(onAlterarQuantidade).not.toHaveBeenCalled()
+  })
+
+  it("digitar 0,5 e confirmar com Enter vende fração (0,5 kg)", () => {
+    const onAlterarQuantidade = vi.fn()
+    renderList(root, [buildItem({ id: "l1", quantidade: 2 })], onAlterarQuantidade, vi.fn())
+
+    const input = quantidadeInput(container)
+    digitar(input, "0,5")
+    tecla(input, "Enter")
+
+    expect(onAlterarQuantidade).toHaveBeenCalledTimes(1)
+    expect(onAlterarQuantidade).toHaveBeenCalledWith("l1", 0.5)
+  })
+
+  it("0,500 é confirmado como 0,5 (até 3 casas, sem arredondar)", () => {
+    const onAlterarQuantidade = vi.fn()
+    renderList(root, [buildItem({ id: "l1", quantidade: 2 })], onAlterarQuantidade, vi.fn())
+
+    const input = quantidadeInput(container)
+    digitar(input, "0,500")
+    blur(input)
+
+    expect(onAlterarQuantidade).toHaveBeenCalledWith("l1", 0.5)
+  })
+
+  it("entrada inválida (10.50) não é confirmada e mostra o motivo", () => {
+    const onAlterarQuantidade = vi.fn()
+    renderList(root, [buildItem({ quantidade: 2 })], onAlterarQuantidade, vi.fn())
+
+    const input = quantidadeInput(container)
+    digitar(input, "10.50")
+    blur(input)
+
+    expect(onAlterarQuantidade).not.toHaveBeenCalled()
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe(
+      mockMensagens.caixa.qtd_formato_invalido,
+    )
+  })
+
+  it("apagar o campo e sair não remove a linha (mantém rascunho para correção)", () => {
+    const onAlterarQuantidade = vi.fn()
+    const onRemover = vi.fn()
+    renderList(root, [buildItem({ quantidade: 2 })], onAlterarQuantidade, onRemover)
+
+    const input = quantidadeInput(container)
+    digitar(input, "")
+    blur(input)
+
+    expect(onRemover).not.toHaveBeenCalled()
+    expect(onAlterarQuantidade).not.toHaveBeenCalled()
+  })
+
+  it("0 confirmado explicitamente continua removendo a linha (regra existente)", () => {
+    const onAlterarQuantidade = vi.fn()
+    renderList(root, [buildItem({ id: "l1", quantidade: 2 })], onAlterarQuantidade, vi.fn())
+
+    const input = quantidadeInput(container)
+    digitar(input, "0")
+    tecla(input, "Enter")
+
+    expect(onAlterarQuantidade).toHaveBeenCalledWith("l1", 0)
   })
 })
+
+function quantidadeInput(container: HTMLElement): HTMLInputElement {
+  const input = container.querySelector('input[aria-label^="Quantidade"]') as HTMLInputElement | null
+  if (!input) throw new Error("campo de quantidade não encontrado")
+  return input
+}
+
+function digitar(input: HTMLInputElement, valor: string) {
+  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!
+  flushSync(() => {
+    setter.call(input, valor)
+    input.dispatchEvent(new Event("input", { bubbles: true }))
+  })
+}
+
+function blur(input: HTMLInputElement) {
+  flushSync(() => {
+    input.dispatchEvent(new FocusEvent("focusout", { bubbles: true }))
+  })
+}
+
+function tecla(input: HTMLInputElement, key: string) {
+  flushSync(() => {
+    input.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }))
+  })
+}
 
 // Onda 2 · Bloco 2 — a linha do carrinho precisa preservar identificação
 // suficiente pra distinguir produtos semelhantes (não só o ID truncado).

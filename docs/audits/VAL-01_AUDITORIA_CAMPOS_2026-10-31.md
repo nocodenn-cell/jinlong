@@ -124,6 +124,8 @@ Arquivos alterados: ver `git status` do branch. Nenhuma migration foi criada nem
 
 ## 6. Decisões que dependem de aprovação (não alteradas por mim)
 
+> **Nota da rodada 2:** D-Q1, D-M1, D-C1 e D-T1 foram decididos pelo dono e aplicados. Ver a seção "Rodada 2" no fim deste documento. D-B1 e D-PDV1 foram tratados na rodada 2.
+
 - **D-Q1 — Estoque inicial inteiro.** A regra atual (inteiro) foi preservada. Produtos vendidos por peso
   (KG) podem precisar de estoque inicial fracionário. A coluna de estoque aceita 3 casas. Definir por unidade de medida.
 - **D-M1 — Ponto como separador.** `10.50` é recusado com mensagem; `1.234` é lido como 1234 (milhar).
@@ -161,3 +163,100 @@ Arquivos alterados: ver `git status` do branch. Nenhuma migration foi criada nem
 - Edição de produto existente: o valor carregado é formatado com `formatDecimalBRL` (`1.234,50`), que o
   parser estrito aceita. Coberto por teste de parser, não por teste de tela.
 - Dados existentes não foram alterados. Nenhuma migração, nenhum UPDATE.
+
+## Rodada 2 (2026-10-31): decisões do dono, PDV e RPC
+
+Status geral: **VAL-01 NÃO ENCERRADA.** Ver gate na seção 9.
+
+### Decisões aplicadas
+- **Moeda pt-BR estrito.** `10,50` válido; `10.50` recusado com mensagem. Nunca convertido em `1050`.
+- **Frações por unidade.** `KG` e `M` aceitam até 3 casas (`0,500`), inclusive estoque inicial e mínimo. `UN`, `CX` e `FD` aceitam só inteiro. Unidades existentes no código: `UN, KG, CX, FD, M` (`shared-core/src/products/unidadesMedida.ts`). Em homologação, todos os 19 produtos estão em `UN`.
+- **Precisão.** `parseMoedaEntrada` fixa 2 casas (preço de venda, contrato atual). `parseValorEntrada({casas, max})` aceita até 6 para custo, mas o cadastro usa `CASAS_CUSTO_CADASTRO = 2`, alinhado a `produtos.preco_custo numeric(10,2)`. Schema e cálculos de custo **não** foram alterados.
+- **Limites.** Só limites técnicos (vindos do schema). Não há teto de negócio. Os tetos de 9.999.999 usados antes eram de negócio e foram removidos. O teto real de quantidade é o de `numeric(10,3)`.
+
+### Limites reais das colunas (homologação, `information_schema`)
+
+| Coluna | Tipo | Limite técnico | Uso |
+|---|---|---|---|
+| `produtos.preco_varejo`, `preco_atacado`, `preco_custo`, `preco_custo_medio` | `numeric(10,2)` | 99.999.999,99 | moeda |
+| `precos_atacado.preco_unitario`, `itens_venda.preco_unitario` | `numeric(10,2)` | 99.999.999,99 | moeda |
+| `estoque.quantidade_atual`, `estoque.estoque_minimo`, `itens_venda.quantidade`, `estoque_baixas.quantidade` | `numeric(10,3)` | 9.999.999,999 | quantidade |
+| `produtos.estoque_minimo` | `integer` | 2.147.483.647 | coluna legada; a RPC não grava aqui |
+| `produtos.quantidade_gatilho_atacado`, `precos_atacado.quantidade_minima` | `integer` | 2.147.483.647 | inteiro |
+
+### RPC `criar_produto_com_estoque_inicial` (pendência bloqueante, item 7)
+
+Contrato antes: aceitava qualquer `numeric` e gravava em `numeric(10,2)`, `numeric(10,3)` ou `integer` por cast, sem erro.
+
+Evidência (transação com `ROLLBACK` em homologação):
+
+| Caso | Antes | Depois |
+|---|---|---|
+| preço `10,50` | OK | OK |
+| preço `2.005` | OK (gravado como 2,01 pelo cast) | `CRIAR_PRODUTO_PRECO_CASAS` |
+| preço `1e8` | `numeric field overflow` (erro cru) | `CRIAR_PRODUTO_PRECO_LIMITE` |
+| custo `3.333` | OK (gravado como 3,33) | `CRIAR_PRODUTO_CUSTO_CASAS` |
+| UN, estoque `0,5` | OK (aceito) | `CRIAR_PRODUTO_ESTOQUE_FRACAO_UNIDADE` |
+| KG, estoque `0,5` | OK | OK |
+| KG, estoque `0,0005` | OK (gravado como 0,001) | `CRIAR_PRODUTO_ESTOQUE_CASAS` |
+| estoque `1e7` | `numeric field overflow` | `CRIAR_PRODUTO_ESTOQUE_LIMITE` |
+| gatilho `2,5` | `invalid input syntax for type integer` | `CRIAR_PRODUTO_GATILHO_INVALIDO` |
+| gatilho `3` | OK | OK |
+| faixa qtd `2,7` | `invalid input syntax for type integer` | `CRIAR_PRODUTO_FAIXA_QTD_INVALIDA` |
+| faixa qtd `2` | OK | OK |
+| KG, preço `10,50` e estoque `1,25` | OK | OK |
+
+- **Migration:** `backend/supabase/migrations/20261031120000_criar_produto_valida_entrada_numerica.sql`. Mesma assinatura, `SECURITY DEFINER`, `search_path`, owner e GRANTs (`CREATE OR REPLACE`). Perfil, loja, idempotência por `request_id` e isolamento multiempresa inalterados.
+- **Aplicada em homologação: não.** O teste foi feito em transação com `ROLLBACK`. Depois do teste: `md5` da função igual ao original e zero produtos de teste restantes.
+- **Drift de homologação:** homologação tem as migrations `20261030002520`, `20261030120000`, `20261030130000` e `20261030140000`, que não estão neste repositório (nem em `main`). Antes de aplicar a nova migration é preciso alinhar o repositório com homologação.
+- **Mensagens:** os códigos novos foram mapeados em `criarProdutoComEstoqueInicialRpc.ts`. Os mais longos vêm antes do prefixo `CRIAR_PRODUTO_PRECO`, porque a busca usa `includes`. Há teste de regressão para isso. Essa tabela é só PT, como as demais do arquivo.
+
+### PDV: `0,5` removia o item (item 6)
+
+- **Causa raiz (inferida pela leitura do código; não reproduzida em navegador).** O campo era `<input type="number">` e cada tecla chamava `onAlterarQuantidade`. Durante a digitação o navegador entrega valor vazio (ex.: `0,` em pt-BR). O parser devolvia `0`, e `CaixaPageClient.handleAlterarQuantidade` trata `0` como "remover linha". A linha era removida na primeira tecla intermediária.
+- **Correção.** `QuantidadeInput` em `app/caixa/CaixaCartList.tsx`: texto com `inputMode="decimal"`, rascunho local, confirmação no Enter ou ao sair do campo. Estados intermediários não viram quantidade. Confirmar `0` continua removendo a linha (regra existente). Entrada inválida mostra mensagem e não é aplicada.
+- **Testes.** `CaixaCartList.behavior.test.tsx`: 13 casos, 13 passam. Inclui `0,` sem remoção, `0,5` por Enter, `0,500` virando `0,5`, `10.50` recusado, campo vazio sem remoção e `0` explícito removendo.
+- **Pendência do PDV (item 2):** o carrinho não recebe `unidade_medida`. Um produto `UN` ainda aceita `0,5` no PDV. Corrigir exige incluir a unidade na busca do PDV e no `ItemCarrinho`. Não feito nesta rodada.
+- **Golden flow** (venda fracionada `0,500`, pagamento dividido, estoque, recibo): E2E **não executado** (ver seção 9).
+
+### Traduções (item 8): mensagens que precisam de revisão nativa
+
+Chaves novas no zh.json, com texto em chinês que escrevi e **não foi revisado**:
+- `produtos.entrada_moeda_formato`, `entrada_moeda_separador`, `entrada_moeda_casas`, `entrada_moeda_faixa`
+- `produtos.entrada_qtd_formato`, `entrada_qtd_separador`, `entrada_qtd_casas`, `entrada_qtd_fracionada`, `entrada_qtd_faixa`
+- `produtos.entrada_negativo`
+- `caixa.qtd_formato_invalido`
+
+Sem tradução Zh: as 9 mensagens de RPC em `criarProdutoComEstoqueInicialRpc.ts`, que seguem a tabela só PT do arquivo.
+
+**A localização não está validada sem essa revisão.**
+
+### Testes executados nesta rodada
+
+| Suíte | Resultado |
+|---|---|
+| `shared-core` (todo `src`) | 470 passam, 5 pulados (já existiam), 0 falhas. `tsc` OK |
+| `pdv-importados` `tsc --noEmit` | OK |
+| `pdv-importados` vitest: produtos, estoque inicial, RPC, PDV `CaixaCartList` | 163 passam, 7 pulados (integração sem `SUPABASE_SERVICE_ROLE_KEY`) |
+| Guards do repo: `migration-sequence`, `rpc-gate`, `pricing-rpc` | OK |
+| Integração SQL com homologação (transação + `ROLLBACK`) | OK (tabela acima) |
+| E2E Playwright (`caixa-venda`, `caixa-fluxos-criticos`, `sync-fluxo-gerente`) | **NÃO TESTADO** (seção 9) |
+
+### Financeiro, ajuste de estoque e demais campos
+
+Ver `VAL-01_BACKLOG_PRIORIZADO_2026-10-31.md`, com evidência por arquivo e linha. Correção à seção 3 deste documento: o "strip de dígitos" aparece sobretudo em **identificadores** (CNPJ, CEP, PIN, telefone). O risco monetário está nos `type="number"` do Financeiro, e o risco de quantidade está no ajuste de estoque.
+
+## 9. Gate GO / NO-GO para merge
+
+**Veredito: NO-GO para merge.** GO apenas para o checkpoint local (já commitado) e para continuar no branch.
+
+Bloqueios:
+1. **E2E crítico não executado.** O Playwright precisa de credenciais de operador e gerente de homologação (`PLAYWRIGHT_CAIXA_TEST_EMAIL/PASSWORD`, `PLAYWRIGHT_TEST_EMAIL/PASSWORD`) e de `.env.local` apontando para homologação. Não tenho essas credenciais e não criei contas em homologação sem autorização. Preciso de credenciais de teste de homologação, ou autorização para criar um usuário de teste dedicado nela.
+2. **Migration da RPC não aplicada em homologação.** Depende de aprovação e do alinhamento do drift acima.
+3. **PDV: unidade no carrinho** (item 2 do backlog), para respeitar a regra de `UN` no caixa.
+4. **Traduções ZH** pendentes de revisão nativa.
+5. **Financeiro e ajuste de estoque** (backlog P0, itens 3 e 4) ainda usam entrada não estrita. Estão fora do escopo do VAL-01A, mas são P0 no backlog.
+
+Riscos aceitos e registrados:
+- O CSV de importação de produtos passa pela mesma RPC. Linhas com mais de 2 casas agora são recusadas (antes eram arredondadas em silêncio). É o comportamento pedido, mas pode aparecer como erro para quem importa planilhas.
+- A migration nova não foi validada pelo `supabase db` local (Docker não disponível nesta sessão).

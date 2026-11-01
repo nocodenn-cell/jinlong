@@ -22,6 +22,19 @@ const CRIAR_MSGS: Record<string, string> = {
     'Seu perfil não pode cadastrar produto. Use operador (PDV relâmpago) ou gerente/dono/admin.',
   CRIAR_PRODUTO_LOJA: 'Não foi possível identificar a loja da sessão.',
   CRIAR_PRODUTO_NOME: 'Informe um nome de produto válido (mín. 2 caracteres).',
+  // Códigos com prefixo igual a outro (CRIAR_PRODUTO_PRECO) vêm ANTES dele:
+  // a busca usa `includes`, e a primeira chave que casar vence.
+  CRIAR_PRODUTO_PRECO_LIMITE: 'Preço de varejo acima do limite permitido (99.999.999,99).',
+  CRIAR_PRODUTO_PRECO_CASAS: 'Preço de varejo aceita no máximo 2 casas decimais. Ex.: 10,50.',
+  CRIAR_PRODUTO_ATACADO_LIMITE: 'Preço de atacado acima do limite permitido (99.999.999,99).',
+  CRIAR_PRODUTO_ATACADO_CASAS: 'Preço de atacado aceita no máximo 2 casas decimais.',
+  CRIAR_PRODUTO_CUSTO_LIMITE: 'Custo acima do limite permitido (99.999.999,99).',
+  CRIAR_PRODUTO_CUSTO_CASAS: 'Custo aceita no máximo 2 casas decimais.',
+  CRIAR_PRODUTO_ESTOQUE_LIMITE: 'Estoque inicial ou mínimo acima do limite permitido.',
+  CRIAR_PRODUTO_ESTOQUE_CASAS: 'Estoque inicial ou mínimo aceita no máximo 3 casas decimais.',
+  CRIAR_PRODUTO_ESTOQUE_FRACAO_UNIDADE:
+    'Esta unidade é contada em inteiros. Fração só é aceita para KG ou M.',
+  CRIAR_PRODUTO_GATILHO_INVALIDO: 'Quantidade de gatilho do atacado deve ser um número inteiro.',
   CRIAR_PRODUTO_PRECO: 'Preço de varejo inválido.',
   CRIAR_PRODUTO_ORIGEM: 'Origem do produto inválida.',
   CRIAR_PRODUTO_STATUS: 'Status de publicação inválido.',

@@ -173,3 +173,34 @@ describe('limites de moeda e estoque (camada de domínio)', () => {
     ).toEqual({ ok: false, code: PRODUCT_ERROR_CODES.ESTOQUE_INVALID })
   })
 })
+
+describe('estoque inicial por unidade de medida', () => {
+  const base = { nome: 'Ok', precoVarejo: 1, lojaId: 'l1', atorId: 'u1' }
+
+  it('UN aceita só inteiro: 0,5 é rejeitado', () => {
+    expect(
+      validateCreateProductCommand({
+        ...base,
+        input: { nome: 'Ok', precoVarejo: 1, estoqueInicial: 0.5, unidadeMedida: 'UN' },
+      }),
+    ).toEqual({ ok: false, code: PRODUCT_ERROR_CODES.ESTOQUE_INVALID })
+  })
+
+  it('KG aceita fração de até 3 casas (0,500)', () => {
+    expect(
+      validateCreateProductCommand({
+        ...base,
+        input: { nome: 'Ok', precoVarejo: 1, estoqueInicial: 0.5, unidadeMedida: 'KG' },
+      }),
+    ).toEqual({ ok: true })
+  })
+
+  it('KG rejeita mais de 3 casas', () => {
+    expect(
+      validateCreateProductCommand({
+        ...base,
+        input: { nome: 'Ok', precoVarejo: 1, estoqueInicial: 0.0005, unidadeMedida: 'KG' },
+      }),
+    ).toEqual({ ok: false, code: PRODUCT_ERROR_CODES.ESTOQUE_INVALID })
+  })
+})

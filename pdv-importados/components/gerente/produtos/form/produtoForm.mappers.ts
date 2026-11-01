@@ -1,4 +1,4 @@
-import { parseQuantidadeInteiraEntrada } from '@shared-core/src/formatting'
+import { INTEIRO_MAX_INT4, parseQuantidadeInteiraEntrada } from '@shared-core/src/formatting'
 import type { ProdutoFormBaseValues } from '@/app/gerente/produtos/produtoFormSchema'
 import type { ProdutoGerenteRow } from '@/lib/gerente/produtos/produtoGerenteTypes'
 import type { OrigemCode, UnidadeCode } from './produtoForm.types'
@@ -20,7 +20,7 @@ export function parseGatilhoDisplay(value: number | null | undefined): string {
 }
 
 export function parseGatilhoSubmit(raw: string): number | null {
-  const r = parseQuantidadeInteiraEntrada(raw)
+  const r = parseQuantidadeInteiraEntrada(raw, { max: INTEIRO_MAX_INT4 })
   return r.ok && r.value != null && r.value >= 1 ? r.value : null
 }
 

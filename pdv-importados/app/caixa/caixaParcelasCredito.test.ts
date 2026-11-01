@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from "vitest"
-import { act, renderHook } from "@testing-library/react"
+import React from "react"
+import { createRoot, type Root } from "react-dom/client"
+import { flushSync } from "react-dom"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { pagamentoParcelaSchema, finalizarVendaInputSchema } from "@/app/caixa/finalizarVendaValidation"
 import { useCaixaPagamentos } from "@/app/caixa/hooks/useCaixaPagamentos"
 
@@ -33,17 +35,36 @@ describe("parcelas do crédito — contrato do caixa web", () => {
     expect(r.success).toBe(true)
   })
   it("hook: define parcelas só no crédito e limpa ao trocar de forma", () => {
-    const { result } = renderHook(() => useCaixaPagamentos(100, "CARTAO_CREDITO"))
-    act(() => result.current.atualizarParcelas(0, 3))
+    const { result } = renderHookSemTestingLibrary(() => useCaixaPagamentos(100, "CARTAO_CREDITO"))
+    flushSync(() => result.current.atualizarParcelas(0, 3))
     expect(result.current.pagamentos[0]).toEqual({ formaPagamento: "CARTAO_CREDITO", valor: 100, parcelas: 3 })
-    act(() => result.current.atualizarParcelas(0, 99))
+    flushSync(() => result.current.atualizarParcelas(0, 99))
     expect(result.current.pagamentos[0].parcelas).toBe(24)
-    act(() => result.current.atualizarParcelas(0, 1))
+    flushSync(() => result.current.atualizarParcelas(0, 1))
     expect(result.current.pagamentos[0]).toEqual({ formaPagamento: "CARTAO_CREDITO", valor: 100 })
-    act(() => result.current.atualizarParcelas(0, 4))
-    act(() => result.current.atualizarForma(0, "PIX"))
+    flushSync(() => result.current.atualizarParcelas(0, 4))
+    flushSync(() => result.current.atualizarForma(0, "PIX"))
     expect(result.current.pagamentos[0]).toEqual({ formaPagamento: "PIX", valor: 100 })
-    act(() => result.current.atualizarParcelas(0, 4))
+    flushSync(() => result.current.atualizarParcelas(0, 4))
     expect(result.current.pagamentos[0].parcelas).toBeUndefined()
   })
 })
+
+/**
+ * Renderiza um hook com `react-dom` da própria árvore, como os demais testes de hook do
+ * repositório. Não usa `@testing-library/react`: esse pacote não é dependência de
+ * `pdv-importados`, e na árvore do worktree é resolvido para o checkout pai, com uma
+ * segunda cópia de React (o hook chama `useState` com dispatcher nulo).
+ */
+function renderHookSemTestingLibrary<T>(hook: () => T): { result: { current: T } } {
+  const result = { current: undefined as unknown as T }
+  function Harness() {
+    result.current = hook()
+    return null
+  }
+  const container = document.createElement("div")
+  document.body.appendChild(container)
+  const root: Root = createRoot(container)
+  flushSync(() => root.render(React.createElement(Harness)))
+  return { result }
+}

@@ -1,6 +1,6 @@
 'use client'
 
-import { parseQuantidadeInteiraEntrada } from '@shared-core/src/formatting'
+import { INTEIRO_MAX_INT4, parseQuantidadeInteiraEntrada } from '@shared-core/src/formatting'
 import { mensagemErroEntrada } from '../form/produtoForm.entrada'
 import { useCallback, useEffect, useState } from 'react'
 import { Pencil, Plus, Trash2, X, Check } from 'lucide-react'
@@ -68,7 +68,7 @@ function FaixaFormRow({
   const [salvando, setSalvando] = useState(false)
 
   const confirmar = useCallback(async () => {
-    const qtdEntrada = parseQuantidadeInteiraEntrada(quantidadeTexto)
+    const qtdEntrada = parseQuantidadeInteiraEntrada(quantidadeTexto, { max: INTEIRO_MAX_INT4 })
     const precoEntrada = precoInput.validar()
     const erroEntrada =
       mensagemErroEntrada(qtdEntrada, 'quantidade', p) ??

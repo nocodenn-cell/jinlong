@@ -1,7 +1,8 @@
 # Próximos passos
 ## P0 — Quebrado/travado
-- PDV: quantidade fracionada no carrinho remove o item (`CaixaCartList` com `type="number"`; `0,` vira 0 e `CaixaPageClient` apaga a linha). Quebra a venda fracionada (VAL-01 D-PDV1, precisa de aprovação e E2E antes de mudar)
-- Financeiro e ajuste de estoque ainda filtram dígitos (`replace(/\D/g)`) e usam `type="number"` em valores monetários e quantidades (`AjusteSaldoModal`, `Financeiro*`): `10.50` pode virar 1050. Migrar para `parseMoedaEntrada`/`parseQuantidadeInteiraEntrada` (VAL-01C, docs/audits/VAL-01_AUDITORIA_CAMPOS_2026-10-31.md)
+
+- VAL-01 (PDV): unidade de medida não chega ao carrinho; produto UN aceita `0,5` no caixa. Incluir `unidade_medida` na busca do PDV e no `ItemCarrinho` (docs/audits/VAL-01_BACKLOG_PRIORIZADO_2026-10-31.md, item 2)
+- VAL-01 (valores): `AjusteSaldoModal` (quantidade) e campos `type="number"` do Financeiro (valores em R$) não usam entrada estrita (backlog, itens 3 e 4)
 
 - Decisões P1–P8 da auditoria de importação registradas (2026-10-29). Pendente de contador: validar P3 (tributos no custo por regime) antes de IM-F02. P1 exige atualizar D1 por escrito. P9–P12 seguem abertos
 - Custo truncado a 2 casas na NF-e: `preco_custo`, `custo_unitario` (itens e conferência) são `numeric(10,2)` e a importação arredonda com `ROUND(…,2)`. Resolver a escala (P1 do plano: D1 diz 4 casas, o requisito pede 6) e migrar (IM-F01, `docs/audits/PLANO_CONSOLIDADO_IMPORTACAO_IM-F01_F05_2026-10-29.md`)
@@ -13,12 +14,15 @@
 - #620: CI corrigido (token entre empresas e tipos); revisar e aprovar; após merge, deploy manual das Edge Functions alteradas. #623: decidir o comportamento esperado sem ADMIN nos ~20 testes que ainda criam ADMIN; depois regenerar tipos
 - Decidir módulos marcados DRAFT já aplicados em produção (comissão #607, import intelligence #601): validar ou esconder do cliente
 - Congelar features até o corte do primeiro cliente (só hotfix P0 em produção)
-## P1 — Falta para lançar (MVP)
-- VAL-01 D-B1: RPC `criar_produto_com_estoque_inicial` e as de ajuste aceitam mais de 2 casas e valores acima de numeric(10,2) quando chamadas direto; corrigir por migration após revisão (não criada)
-- VAL-01 D-C1: precisão do custo (2 casas hoje; IM-F01 pede 4 a 6). Decidir antes de mudar `parseMoedaEntrada` e `preco_custo`
-- VAL-01 D-Q1/D-M1/D-T1: decidir estoque inicial fracionário por unidade (KG), a regra de `10.50` x milhar e os tetos (99.999.999,99 e 9.999.999)
 
+## P1 — Falta para lançar (MVP)
+
+- VAL-01 GO/NO-GO: falta E2E crítico em homologação (caixa-venda, caixa-fluxos-criticos, golden flow com `0,500`). Precisa de credenciais de teste de homologação ou autorização para criar usuário de teste dedicado
+- VAL-01 RPC: aplicar `20261031120000_criar_produto_valida_entrada_numerica.sql` em homologação só depois de alinhar o repositório com 4 migrations de 2026-10-30 que existem em homologação e não no repo
+- VAL-01 i18n: revisão nativa das mensagens ZH novas (`entrada_*` e `caixa.qtd_formato_invalido`) antes de declarar a localização validada
+- VAL-01 decisões: teto de negócio para estoque e quantidade (hoje só técnico); regra de percentual de comissão por tipo (backlog, item 8); precisão do custo (IM-F01, 2 casas hoje)
 - Estorno de NF-e confirmada não existe: nada reverte kardex nem AP não paga (IM-F03)
+
 - XML da NF-e não é guardado (sem `sha256` nem bucket privado); depende de DOC-01..05 e da decisão P11 (IM-F04)
 - Regra ×1,5 aplicada automaticamente ao `preco_varejo` no import (`20261005173427`) viola D7: remover e exigir ação do usuário (IM-F04)
 - Custos complementares da NF-e (frete, seguro, outras despesas, descontos) não são lidos pelo parser (IM-F02)
@@ -47,6 +51,7 @@
 - Executar docs/runbooks/CHECKLIST_CORTE_PRIMEIRO_CLIENTE_PAGANTE.md
 - GROWTH-001: revisar e aprovar o PR da Central de Conversão; com autorização, aplicar a migration 20261023130000 e só depois publicar o hub (deploy do ERP deixa o autoatendimento de assinatura desligado)
 - Aplicar na homologação (jinlong-homolog-palm) a migration 20261021120000_vendas_pagamentos_parcelas_credito (coluna vendas_pagamentos.parcelas) antes de exibir parcelas no detalhe admin e na 2ª via do cupom
+
 ## P2 — Melhoria
 
 - Dependabot (#544, #547, #548, #549): decidir a política de CI. A anon key é pública e pode ir para os secrets de Dependabot; `PLAYWRIGHT_TEST_PASSWORD` e `SUPABASE_ACCESS_TOKEN` não devem ir (risco de exfiltração por pacote de terceiro). Alternativa: tratar Dependabot como fork no workflow
@@ -64,8 +69,10 @@
 - Central de Conversão: botão de anonimizar/excluir dados do lead (direito de exclusão LGPD) e aviso por e-mail ao comercial quando um dono pedir contratação
 - Contas a receber: pré-preencher o parcelamento do recebível de crédito a partir de vendas_pagamentos.parcelas (hoje é configuração manual)
 - Mostrar as parcelas do crédito no detalhe da venda (admin) e na 2ª via, depois da coluna existir na homologação
+
 ## Feito
 
+- 2026-10-31 — VAL-01 checkpoint local `628929e4` (VAL-01A parcial, sprint ainda incompleta); RPC de criação validada em transação de homologação com ROLLBACK (`20261031120000`, não aplicada); PDV: `0,5` não remove mais o item (causa: input type=number confirmando cada tecla)
 - 2026-10-31 — VAL-01A: cadastro de produto rejeita letras, `10.50`, negativos e decimais em quantidade (sem strip silencioso); validador de domínio com teto e 2 casas. Testes shared-core e pdv-importados passam; E2E não executado
 - 2026-10-29 — Auditoria do Bloco de Importação (NF-e de entrada e pipeline internacional): 45% por critério explícito, 0 funcionalidades comprovadas, recomendação NO-GO. Relatório em `docs/audits/AUDITORIA_BLOCO_IMPORTACAO_2026-10-29.md`; sem alteração de código
 - 2026-10-29 — S1 validada em homologação (`yvdilcmxyjafnnsfdtam`): matriz de permissões final, testes do DONO, ciclos de rollback do S1b, S1c, G14 e S1; PR #648 aberto com o pacote (S1, S1c, S1b, G14), CI verde exceto o guard de governança. Não aplicado em produção
@@ -75,4 +82,3 @@
 - 2026-10-28 — Drift main × produção zerado: `20261022020000` (#625) registrada em produção como no-op (script do #641, SQL idêntico ao arquivo); #641 mergeado (598efcf0): o check respeita `deferred-migrations.json` e aceita duplicatas de pares com git alinhado. `migration-remote-drift` contra produção = HUMAN_GATE (só `20261010120000`, adiada)
 - 2026-10-28 — `20261023120000` (#628) aplicada em produção pelo dono (versão real, SQL idêntico ao arquivo por md5); pós-checagem: revogado para authenticated/anon, service_role mantido, diagnóstico ajustado, nenhum `permission denied` nos logs
 - 2026-10-28 — `SUPABASE_MIGRATION_CHECK_PROJECT_REF` apontado para produção (o projeto anterior estava pausado); o check é só leitura (`supabase migration list`) e não roda para PRs de fork
-- 2026-10-28 — Auditoria SECDEF: 4 helpers que revelavam dados da empresa B foram revogados de authenticated (migration 20261028120000; docs/audits/AUDITORIA_RPC_SECDEF_2026-10-28.md)

@@ -6,9 +6,10 @@
 import type { CreateProductCommand, UpdateProductCommand } from '../contracts'
 import { PRODUCT_ERROR_CODES, type ProductErrorCode } from '../errorCodes'
 import {
-  MOEDA_ENTRADA_MAX,
-  QUANTIDADE_INTEIRA_ENTRADA_MAX,
+  MOEDA_MAX_NUMERIC_10_2,
+  QUANTIDADE_MAX_NUMERIC_10_3,
 } from '../../formatting/entradaNumerica'
+import { UNIDADES_FRACIONADAS } from '../unidadesMedida'
 
 export type ValidateProductResult =
   | { ok: true }
@@ -20,13 +21,19 @@ function nomeInvalido(nome: string | undefined): boolean {
 
 /** Moeda válida no banco: finita, até 2 casas e dentro de numeric(10,2). */
 function moedaInvalida(valor: number): boolean {
-  if (!Number.isFinite(valor) || valor > MOEDA_ENTRADA_MAX) return true
+  if (!Number.isFinite(valor) || valor > MOEDA_MAX_NUMERIC_10_2) return true
   return Math.abs(valor * 100 - Math.round(valor * 100)) > 1e-6
 }
 
-/** Quantidade de estoque dentro do teto de entrada (não arredonda). */
-function quantidadeInvalida(valor: number): boolean {
-  return !Number.isFinite(valor) || valor < 0 || valor > QUANTIDADE_INTEIRA_ENTRADA_MAX
+/**
+ * Estoque: até 3 casas (numeric(10,3)), dentro do teto técnico. Unidade contável
+ * (UN, CX, FD) exige inteiro; unidade de peso/medida (KG, M) aceita fração.
+ */
+function quantidadeInvalida(valor: number, unidade: string | undefined): boolean {
+  if (!Number.isFinite(valor) || valor < 0 || valor > QUANTIDADE_MAX_NUMERIC_10_3) return true
+  if (Math.abs(valor * 1000 - Math.round(valor * 1000)) > 1e-6) return true
+  const fracionada = UNIDADES_FRACIONADAS.includes(unidade as never)
+  return !fracionada && !Number.isInteger(valor)
 }
 
 /**
@@ -64,7 +71,7 @@ export function validateCreateProductCommand(
 
   const estoque = command.input.estoqueInicial
   if (estoque !== undefined && estoque !== null) {
-    if (quantidadeInvalida(Number(estoque))) {
+    if (quantidadeInvalida(Number(estoque), command.input.unidadeMedida)) {
       return { ok: false, code: PRODUCT_ERROR_CODES.ESTOQUE_INVALID }
     }
   }

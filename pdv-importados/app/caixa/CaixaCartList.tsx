@@ -1,10 +1,9 @@
 "use client"
 
-import React, { memo } from "react"
+import React, { memo, useEffect, useState } from "react"
 import { Minus, Plus } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import type { ItemCarrinhoComPreco } from "@/stores/carrinhoStore"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
@@ -13,6 +12,7 @@ import {
   parseQuantidadeCaixaFromString,
   QUANTIDADE_CAIXA_MIN,
 } from "@/lib/format/quantidadeCaixa"
+import { parseQuantidadeEntrada } from "@shared-core/src/formatting"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { enterVoltaParaBusca } from "@/app/caixa/caixaFocoBusca"
 import { DragonIcon } from "@/components/icons/DragonIcon"
@@ -57,8 +57,9 @@ function listLocale(idioma: Idioma) {
   return "zh-CN"
 }
 
-function parseQuantidadeInput(raw: string): number {
-  return parseQuantidadeCaixaFromString(raw)
+/** Rascunho pt-BR da quantidade (0.5 vira "0,5"). */
+function quantidadeParaRascunho(quantidade: number): string {
+  return String(quantidade).replace(".", ",")
 }
 
 function resultadoLinha(item: ItemCarrinhoComPreco) {
@@ -79,6 +80,79 @@ type StepperProps = {
   onAlterarQuantidade: (itemId: string, quantidade: number) => void
   onRemover: (itemId: string) => void
 }
+
+type QuantidadeInputProps = {
+  m: Mensagens
+  item: ItemCarrinhoComPreco
+  className: string
+  onAlterarQuantidade: (itemId: string, quantidade: number) => void
+}
+
+/**
+ * Campo de quantidade da linha do carrinho.
+ *
+ * Causa do defeito "digitar 0,5 remove o item": o campo era `type="number"` e
+ * cada tecla chamava `onAlterarQuantidade`. Durante a digitação o navegador
+ * entrega valor vazio ("0," em pt-BR) e o parser devolvia 0, que o caixa trata
+ * como "quantidade zero, remover linha". Agora a digitação fica em rascunho
+ * local e só é confirmada no Enter ou ao sair do campo. Estados intermediários
+ * nunca viram quantidade. Um "0" confirmado continua removendo a linha, como antes.
+ */
+const QuantidadeInput = memo(function QuantidadeInput({
+  m,
+  item,
+  className,
+  onAlterarQuantidade,
+}: QuantidadeInputProps) {
+  const [rascunho, setRascunho] = useState(() => quantidadeParaRascunho(item.quantidade))
+  const [erro, setErro] = useState<string | null>(null)
+
+  // Quantidade alterada fora do campo (botões +/−, reprecificação): reflete no rascunho.
+  useEffect(() => {
+    setRascunho(quantidadeParaRascunho(item.quantidade))
+    setErro(null)
+  }, [item.quantidade])
+
+  const confirmar = () => {
+    const r = parseQuantidadeEntrada(rascunho, { fracionada: true })
+    if (!r.ok || r.value == null) {
+      setErro(m.caixa.qtd_formato_invalido)
+      return
+    }
+    setErro(null)
+    if (r.value !== item.quantidade) onAlterarQuantidade(item.id, r.value)
+  }
+
+  return (
+    <>
+      <input
+        type="text"
+        inputMode="decimal"
+        className={className}
+        value={rascunho}
+        aria-label={caixaFmt(m.caixa.aria_qtde_item, { nome: item.nome })}
+        aria-invalid={erro ? true : undefined}
+        onChange={(e) => {
+          setRascunho(e.target.value.replace(/[^\d.,]/g, ""))
+          setErro(null)
+        }}
+        onBlur={confirmar}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") confirmar()
+          enterVoltaParaBusca(e)
+        }}
+      />
+      {erro ? (
+        <span
+          role="alert"
+          className="absolute left-0 top-full z-10 mt-0.5 whitespace-nowrap text-caption font-semibold text-[var(--color-danger-strong)]"
+        >
+          {erro}
+        </span>
+      ) : null}
+    </>
+  )
+})
 
 const QuantidadeStepper = memo(function QuantidadeStepper({
   m,
@@ -111,7 +185,7 @@ const QuantidadeStepper = memo(function QuantidadeStepper({
 
   return (
     <div
-      className="inline-flex items-center rounded-md border border-border bg-background overflow-hidden"
+      className="relative inline-flex items-center rounded-md border border-border bg-background"
       role="group"
       aria-label={caixaFmt(m.caixa.aria_qtde_item, { nome: item.nome })}
     >
@@ -125,18 +199,11 @@ const QuantidadeStepper = memo(function QuantidadeStepper({
       >
         <Minus className={iconClass} strokeWidth={3} aria-hidden="true" />
       </Button>
-      <Input
-        type="number"
-        inputMode="decimal"
-        min={QUANTIDADE_CAIXA_MIN}
-        step={QUANTIDADE_CAIXA_MIN}
-        value={item.quantidade}
-        aria-label={caixaFmt(m.caixa.aria_qtde_item, { nome: item.nome })}
-        onChange={(e) =>
-          onAlterarQuantidade(item.id, parseQuantidadeInput(e.target.value))
-        }
-        onKeyDown={enterVoltaParaBusca}
+      <QuantidadeInput
+        m={m}
+        item={item}
         className={`${inputSizeClass} rounded-none border-0 text-center font-semibold tabular-nums px-1 bg-background focus-visible:ring-1 focus-visible:ring-primary/40`}
+        onAlterarQuantidade={onAlterarQuantidade}
       />
       <Button
         type="button"

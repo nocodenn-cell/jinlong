@@ -2,6 +2,7 @@
 
 import type { RefObject } from 'react'
 import Link from 'next/link'
+import { unidadeAceitaFracao } from '@shared-core/src/products/unidadesMedida'
 import { ROUTES } from '@/lib/navigation/routes'
 import { ProdutoFormSectionHeading } from '../ProdutoFormSectionHeading'
 import { useProdutoFormContext } from '../ProdutoFormContext'
@@ -60,7 +61,7 @@ export function EstoqueSection({ estoqueInicialRef, onEnterSubmit }: Props) {
               <input
                 ref={estoqueInicialRef}
                 type="text"
-                inputMode="numeric"
+                inputMode={unidadeAceitaFracao(ctx.unidadeMedida) ? 'decimal' : 'numeric'}
                 className={`${inputMonoClassName} mt-1 ${erroEstoqueInicial ? CAMPO_INVALIDO_CLASS : ''}`}
                 value={ctx.estoqueInicialQty}
                 onChange={(e) => ctx.setEstoqueInicialQty(e.target.value)}
@@ -87,7 +88,7 @@ export function EstoqueSection({ estoqueInicialRef, onEnterSubmit }: Props) {
               {p.estoque_minimo_label}
               <input
                 type="text"
-                inputMode="numeric"
+                inputMode={unidadeAceitaFracao(ctx.unidadeMedida) ? 'decimal' : 'numeric'}
                 className={`${inputMonoClassName} mt-1 ${erroEstoqueMinimo ? CAMPO_INVALIDO_CLASS : ''}`}
                 value={ctx.estoqueInicialMin}
                 onChange={(e) => ctx.setEstoqueInicialMin(e.target.value)}
