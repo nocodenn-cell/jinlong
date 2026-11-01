@@ -17,6 +17,7 @@ DECLARE
 BEGIN
   INSERT INTO auth.users(id) VALUES (gerente) ON CONFLICT DO NOTHING;
   -- Multiempresa: lojas e categorias exigem empresa_id (trigger tg_preenche_empresa_id).
+  INSERT INTO public.empresas (id, nome, status) VALUES ('f5100000-0000-4000-8000-0000000000e1', 'FIXTURE-S1 Empresa 1', 'ATIVA') ON CONFLICT (id) DO NOTHING;
   INSERT INTO public.lojas(id,nome,codigo,ativo,empresa_id) VALUES(loja,'Teste sem CNPJ','SEM-CNPJ',true,'f5100000-0000-4000-8000-0000000000e1') ON CONFLICT(id) DO NOTHING;
   INSERT INTO public.usuarios(id,nome,perfil,ativo,loja_id) VALUES(gerente,'Teste','GERENTE',true,loja)
     ON CONFLICT(id) DO UPDATE SET perfil='GERENTE',loja_id=EXCLUDED.loja_id;

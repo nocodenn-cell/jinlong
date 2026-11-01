@@ -31,6 +31,7 @@ BEGIN
   ON CONFLICT (id) DO NOTHING;
 
   -- Multiempresa: lojas e categorias exigem empresa_id (trigger tg_preenche_empresa_id).
+  INSERT INTO public.empresas (id, nome, status) VALUES ('f5100000-0000-4000-8000-0000000000e1', 'FIXTURE-S1 Empresa 1', 'ATIVA') ON CONFLICT (id) DO NOTHING;
   INSERT INTO public.lojas (id, nome, codigo, ativo, empresa_id) VALUES
     (v_loja_a, 'UX04 Loja A', 'UX04-A', true, 'f5100000-0000-4000-8000-0000000000e1'),
     (v_loja_b, 'UX04 Loja B', 'UX04-B', true, 'f5100000-0000-4000-8000-0000000000e1')

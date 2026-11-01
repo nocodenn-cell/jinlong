@@ -13,6 +13,11 @@
 \set ON_ERROR_STOP on
 BEGIN;
 
+-- Fixture própria desta transação (o CI não tem empresa, loja nem gerente pré-existentes).
+INSERT INTO auth.users (id) VALUES ('f5100000-0000-4000-8000-000000000002') ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.empresas (id, nome, status) VALUES ('f5100000-0000-4000-8000-0000000000e1', 'FIXTURE-S1 Empresa 1', 'ATIVA') ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.lojas (id, nome, codigo, ativo, empresa_id) VALUES ('f5100000-0000-4000-8000-0000000000a1', 'FIXTURE-S1 Loja A', 'FS1-A', true, 'f5100000-0000-4000-8000-0000000000e1') ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.usuarios (id, nome, perfil, ativo, loja_id) VALUES ('f5100000-0000-4000-8000-000000000002', 'FIXTURE-S1 Gerente A', 'GERENTE', true, 'f5100000-0000-4000-8000-0000000000a1') ON CONFLICT (id) DO UPDATE SET perfil = EXCLUDED.perfil, ativo = true, loja_id = EXCLUDED.loja_id;
 DO $t$
 DECLARE
   v_loja uuid := 'f5100000-0000-4000-8000-0000000000a1';
