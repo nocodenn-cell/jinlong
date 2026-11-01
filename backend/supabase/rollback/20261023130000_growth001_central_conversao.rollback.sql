@@ -1,4 +1,4 @@
--- Rollback de 20261023130100_growth001_central_conversao (Central de Conversão do hub).
+-- Rollback de 20261023130000_growth001_central_conversao (Central de Conversão do hub).
 -- Conversões já feitas NÃO são desfeitas (saas.assinaturas fica como está; histórico em saas.assinatura_auditoria).
 -- Leads de teste grátis criados pelo backfill são apagados junto com o histórico deles.
 BEGIN;

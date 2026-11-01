@@ -1,4 +1,4 @@
--- Central de Conversão (GROWTH-001). Roda depois de rls_test.sql + erp_stub.sql + migration 20261023130100.
+-- Central de Conversão (GROWTH-001). Roda depois de rls_test.sql + erp_stub.sql + migration 20261023130000.
 -- a = admin do hub, b = autenticado comum, d1/d2 = donos de testes grátis. Cada bloco falha (raise) se a regra não valer.
 
 -- backfill: 1 lead por teste grátis (empresa paga sem trial fica de fora)
