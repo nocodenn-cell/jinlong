@@ -6,7 +6,7 @@
 --   acima do saldo · idempotência (replay/duplo clique) · duplicidade OC↔entrada (P0) ·
 --   Kardex (+60, +40; nunca +100) · estoque · custo inalterado · NF-e + OC · entrada sem nota
 --   com/sem OC · guardas de integridade · tenant/perfil.
--- Concorrência (duas sessões reais): ux04-oc-recebimento-concorrencia.sh.
+-- Concorrência (duas sessões reais): backend/scripts/backlog-redesign/ux04-oc-recebimento-concorrencia.sh (fora da esteira; ver backlog-redesign).
 --
 -- Dados sintéticos, tudo em UMA transação com ROLLBACK.
 --   docker exec -i supabase_db_fastproduct psql -U postgres -d postgres -v ON_ERROR_STOP=1 \
