@@ -2,7 +2,7 @@
 import React from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { flushSync } from "react-dom"
-import { afterEach, beforeEach, describe, expect, it } from "vitest"
+import { describe, expect, it } from "vitest"
 import { pagamentoParcelaSchema, finalizarVendaInputSchema } from "@/app/caixa/finalizarVendaValidation"
 import { useCaixaPagamentos } from "@/app/caixa/hooks/useCaixaPagamentos"
 
