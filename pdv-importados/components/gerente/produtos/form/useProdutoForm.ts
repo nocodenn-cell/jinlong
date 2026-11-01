@@ -203,9 +203,9 @@ export function useProdutoForm(
   const [estoqueInicialQty, setEstoqueInicialQty] = useState('')
   const [estoqueInicialMin, setEstoqueInicialMin] = useState('')
 
-  const precoVarejoInput = useMoneyInput()
-  const precoAtacadoInput = useMoneyInput()
-  const precoCustoInput = useMoneyInput()
+  const precoVarejoInput = useMoneyInput(undefined, { estrito: true })
+  const precoAtacadoInput = useMoneyInput(undefined, { estrito: true })
+  const precoCustoInput = useMoneyInput(undefined, { estrito: true })
 
   /**
    * Snapshot dos valores logo após o reset — comparado ao estado atual pra

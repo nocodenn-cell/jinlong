@@ -123,3 +123,53 @@ describe('validateUpdateProductCommand', () => {
     ).toEqual({ ok: false, code: PRODUCT_ERROR_CODES.UPDATE_WITHOUT_ID })
   })
 })
+
+describe('limites de moeda e estoque (camada de domínio)', () => {
+  const base = { nome: 'Ok', lojaId: 'l1', atorId: 'u1' }
+
+  it('rejeita preço com mais de 2 casas (não arredonda no banco)', () => {
+    expect(
+      validateCreateProductCommand({ ...base, input: { nome: 'Ok', precoVarejo: 2.005 } }),
+    ).toEqual({ ok: false, code: PRODUCT_ERROR_CODES.PRICE_INVALID })
+    expect(
+      validateUpdateProductCommand({
+        id: 'p1',
+        lojaId: 'l1',
+        input: { nome: 'Ok', precoVarejo: 10.999 },
+      }),
+    ).toEqual({ ok: false, code: PRODUCT_ERROR_CODES.PRICE_NOT_POSITIVE })
+  })
+
+  it('rejeita preço acima de numeric(10,2)', () => {
+    expect(
+      validateCreateProductCommand({ ...base, input: { nome: 'Ok', precoVarejo: 1e8 } }),
+    ).toEqual({ ok: false, code: PRODUCT_ERROR_CODES.PRICE_INVALID })
+  })
+
+  it('rejeita NaN e Infinity em preço e atacado', () => {
+    expect(
+      validateCreateProductCommand({ ...base, input: { nome: 'Ok', precoVarejo: Number.NaN } }),
+    ).toEqual({ ok: false, code: PRODUCT_ERROR_CODES.PRICE_INVALID })
+    expect(
+      validateCreateProductCommand({
+        ...base,
+        input: { nome: 'Ok', precoVarejo: 10, precoAtacado: Number.POSITIVE_INFINITY },
+      }),
+    ).toEqual({ ok: false, code: PRODUCT_ERROR_CODES.PRICE_INVALID })
+  })
+
+  it('aceita preço com 2 casas no limite', () => {
+    expect(
+      validateCreateProductCommand({ ...base, input: { nome: 'Ok', precoVarejo: 99999999.99 } }),
+    ).toEqual({ ok: true })
+  })
+
+  it('rejeita estoque inicial acima do teto de entrada', () => {
+    expect(
+      validateCreateProductCommand({
+        ...base,
+        input: { nome: 'Ok', precoVarejo: 1, estoqueInicial: 10_000_000 },
+      }),
+    ).toEqual({ ok: false, code: PRODUCT_ERROR_CODES.ESTOQUE_INVALID })
+  })
+})

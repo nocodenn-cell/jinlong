@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ROUTES } from '@/lib/navigation/routes'
 import { ProdutoFormSectionHeading } from '../ProdutoFormSectionHeading'
 import { useProdutoFormContext } from '../ProdutoFormContext'
+import { CAMPO_INVALIDO_CLASS, CampoErroMsg, erroDoCampo } from '../CampoErro'
 
 function LeituraCampo({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
@@ -26,6 +27,8 @@ export function EstoqueSection({ estoqueInicialRef, onEnterSubmit }: Props) {
   const p = ctx.m.produtos
   const { disabled, inputClassName, inputMonoClassName, readOnly } = ctx
   const isCreate = readOnly.produtoId === null
+  const erroEstoqueInicial = erroDoCampo(ctx.erro, 'estoque_inicial')
+  const erroEstoqueMinimo = erroDoCampo(ctx.erro, 'estoque_minimo')
   const estoqueZero =
     !isCreate && readOnly.estoqueAtual !== null && readOnly.estoqueAtual <= 0
 
@@ -58,14 +61,13 @@ export function EstoqueSection({ estoqueInicialRef, onEnterSubmit }: Props) {
                 ref={estoqueInicialRef}
                 type="text"
                 inputMode="numeric"
-                className={`${inputMonoClassName} mt-1`}
+                className={`${inputMonoClassName} mt-1 ${erroEstoqueInicial ? CAMPO_INVALIDO_CLASS : ''}`}
                 value={ctx.estoqueInicialQty}
-                onChange={(e) =>
-                  ctx.setEstoqueInicialQty(e.target.value.replace(/\D/g, ''))
-                }
+                onChange={(e) => ctx.setEstoqueInicialQty(e.target.value)}
                 disabled={disabled}
                 placeholder="0"
                 data-field="estoque_inicial"
+                aria-invalid={erroEstoqueInicial ? true : undefined}
                 onKeyDown={
                   onEnterSubmit
                     ? (e) => {
@@ -79,20 +81,22 @@ export function EstoqueSection({ estoqueInicialRef, onEnterSubmit }: Props) {
               <span className="mt-0.5 block text-caption text-jl-fg-3">
                 {p.hint_estoque_inicial}
               </span>
+              <CampoErroMsg mensagem={erroEstoqueInicial} />
             </label>
             <label className="block text-xs font-medium text-jl-fg-3">
               {p.estoque_minimo_label}
               <input
                 type="text"
                 inputMode="numeric"
-                className={`${inputMonoClassName} mt-1`}
+                className={`${inputMonoClassName} mt-1 ${erroEstoqueMinimo ? CAMPO_INVALIDO_CLASS : ''}`}
                 value={ctx.estoqueInicialMin}
-                onChange={(e) =>
-                  ctx.setEstoqueInicialMin(e.target.value.replace(/\D/g, ''))
-                }
+                onChange={(e) => ctx.setEstoqueInicialMin(e.target.value)}
                 disabled={disabled}
                 placeholder="0"
+                data-field="estoque_minimo"
+                aria-invalid={erroEstoqueMinimo ? true : undefined}
               />
+              <CampoErroMsg mensagem={erroEstoqueMinimo} />
             </label>
           </div>
         ) : (

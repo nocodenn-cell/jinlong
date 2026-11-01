@@ -26,6 +26,10 @@ export type ProdutoFormCampoErro =
   | 'codigo_barras'
   | 'preco_varejo'
   | 'preco_atacado'
+  | 'preco_custo'
+  | 'estoque_inicial'
+  | 'estoque_minimo'
+  | 'quantidade_gatilho'
 
 export type ProdutoFormErro = Readonly<{
   campo: ProdutoFormCampoErro

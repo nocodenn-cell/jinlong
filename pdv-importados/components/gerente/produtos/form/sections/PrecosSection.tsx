@@ -41,6 +41,8 @@ export function PrecosSection({
 
   const erroVarejo = erroDoCampo(ctx.erro, 'preco_varejo')
   const erroAtacado = erroDoCampo(ctx.erro, 'preco_atacado')
+  const erroCusto = erroDoCampo(ctx.erro, 'preco_custo')
+  const erroGatilho = erroDoCampo(ctx.erro, 'quantidade_gatilho')
 
   const varejo = ctx.precoVarejoInput.parse()
   const custo = ctx.precoCustoInput.parse()
@@ -65,14 +67,16 @@ export function PrecosSection({
               ref={precoCustoRef}
               type="text"
               inputMode="decimal"
-              className={`${inputMonoClassName} mt-1`}
               value={ctx.precoCustoInput.display}
               onChange={ctx.precoCustoInput.onChange}
               disabled={disabled}
               placeholder="0,00"
               data-field="preco_custo"
+              aria-invalid={erroCusto ? true : undefined}
+              className={`${inputMonoClassName} mt-1 ${erroCusto ? CAMPO_INVALIDO_CLASS : ''}`}
               onKeyDown={(e) => focusOnEnter(e, precoVarejoRef?.current)}
             />
+            <CampoErroMsg mensagem={erroCusto} />
           </label>
           <label className="block text-xs font-medium text-jl-fg-3">
             {p.preco_varejo} *
@@ -195,12 +199,15 @@ export function PrecosSection({
                   <input
                     type="text"
                     inputMode="numeric"
-                    className={`${inputMonoClassName} mt-1`}
                     value={ctx.quantidadeGatilho}
-                    onChange={(e) => ctx.setQuantidadeGatilho(e.target.value.replace(/\D/g, ''))}
+                    onChange={(e) => ctx.setQuantidadeGatilho(e.target.value)}
                     disabled={disabled}
                     placeholder="0"
+                    data-field="quantidade_gatilho"
+                    aria-invalid={erroGatilho ? true : undefined}
+                    className={`${inputMonoClassName} mt-1 ${erroGatilho ? CAMPO_INVALIDO_CLASS : ''}`}
                   />
+                  <CampoErroMsg mensagem={erroGatilho} />
                 </label>
               </div>
               <p className="text-caption text-jl-fg-3">{p.hint_faixas_apos_salvar}</p>

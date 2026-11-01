@@ -4,6 +4,7 @@
  * Mensagens PT espelham `estoque.err_*` (borda inventory); paths novos usam inventoryMessages.
  */
 
+import { parseQuantidadeInteiraEntrada } from '@shared-core/src/formatting'
 import {
   INVENTORY_ERROR_CODES,
   mapAjusteRpcMessageToCode,
@@ -17,11 +18,17 @@ export type EstoqueInicialIntent = {
   deveAplicar: boolean
 }
 
+/**
+ * Entrada já validada pelo formulário (`primeiroErroEntradasProduto`). Texto
+ * inválido aqui vira 0 — nunca um número parcial como "1.5" → 1.
+ */
 export function parseEstoqueInicialIntent(qtyRaw: string, minRaw: string): EstoqueInicialIntent {
-  const quantidade = Number.parseInt(qtyRaw || '0', 10)
-  const minimo = Number.parseInt(minRaw || '0', 10)
-  const qtyOk = Number.isFinite(quantidade) && quantidade > 0
-  const minOk = Number.isFinite(minimo) && minimo > 0
+  const q = parseQuantidadeInteiraEntrada(qtyRaw)
+  const m = parseQuantidadeInteiraEntrada(minRaw)
+  const quantidade = q.ok && q.value != null ? q.value : 0
+  const minimo = m.ok && m.value != null ? m.value : 0
+  const qtyOk = quantidade > 0
+  const minOk = minimo > 0
   return {
     quantidade: qtyOk ? quantidade : 0,
     minimo: minOk ? minimo : 0,

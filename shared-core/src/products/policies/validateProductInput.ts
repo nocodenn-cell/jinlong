@@ -5,6 +5,10 @@
 
 import type { CreateProductCommand, UpdateProductCommand } from '../contracts'
 import { PRODUCT_ERROR_CODES, type ProductErrorCode } from '../errorCodes'
+import {
+  MOEDA_ENTRADA_MAX,
+  QUANTIDADE_INTEIRA_ENTRADA_MAX,
+} from '../../formatting/entradaNumerica'
 
 export type ValidateProductResult =
   | { ok: true }
@@ -12,6 +16,17 @@ export type ValidateProductResult =
 
 function nomeInvalido(nome: string | undefined): boolean {
   return (nome ?? '').trim().length < 2
+}
+
+/** Moeda válida no banco: finita, até 2 casas e dentro de numeric(10,2). */
+function moedaInvalida(valor: number): boolean {
+  if (!Number.isFinite(valor) || valor > MOEDA_ENTRADA_MAX) return true
+  return Math.abs(valor * 100 - Math.round(valor * 100)) > 1e-6
+}
+
+/** Quantidade de estoque dentro do teto de entrada (não arredonda). */
+function quantidadeInvalida(valor: number): boolean {
+  return !Number.isFinite(valor) || valor < 0 || valor > QUANTIDADE_INTEIRA_ENTRADA_MAX
 }
 
 /**
@@ -32,22 +47,24 @@ export function validateCreateProductCommand(
   }
 
   const preco = Number(command.input.precoVarejo)
-  if (!Number.isFinite(preco) || preco < 0) {
+  if (moedaInvalida(preco) || preco < 0) {
     return { ok: false, code: PRODUCT_ERROR_CODES.PRICE_INVALID }
   }
 
   const atacado = command.input.precoAtacado
   if (atacado !== undefined && atacado !== null) {
     const a = Number(atacado)
-    if (Number.isFinite(a) && a >= preco) {
+    if (moedaInvalida(a) || a < 0) {
+      return { ok: false, code: PRODUCT_ERROR_CODES.PRICE_INVALID }
+    }
+    if (a >= preco) {
       return { ok: false, code: PRODUCT_ERROR_CODES.ATACADO_INVALID }
     }
   }
 
   const estoque = command.input.estoqueInicial
   if (estoque !== undefined && estoque !== null) {
-    const q = Number(estoque)
-    if (!Number.isFinite(q) || q < 0) {
+    if (quantidadeInvalida(Number(estoque))) {
       return { ok: false, code: PRODUCT_ERROR_CODES.ESTOQUE_INVALID }
     }
   }
@@ -73,7 +90,7 @@ export function validateUpdateProductCommand(
   }
 
   const preco = Number(command.input.precoVarejo)
-  if (!Number.isFinite(preco) || preco <= 0) {
+  if (moedaInvalida(preco) || preco <= 0) {
     return { ok: false, code: PRODUCT_ERROR_CODES.PRICE_NOT_POSITIVE }
   }
 
@@ -85,7 +102,10 @@ export function validateUpdateProductCommand(
   const atacado = command.input.precoAtacado
   if (atacado !== undefined && atacado !== null) {
     const a = Number(atacado)
-    if (Number.isFinite(a) && a >= preco) {
+    if (moedaInvalida(a) || a < 0) {
+      return { ok: false, code: PRODUCT_ERROR_CODES.PRICE_INVALID }
+    }
+    if (a >= preco) {
       return { ok: false, code: PRODUCT_ERROR_CODES.ATACADO_INVALID }
     }
   }

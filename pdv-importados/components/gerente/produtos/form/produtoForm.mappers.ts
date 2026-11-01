@@ -1,3 +1,4 @@
+import { parseQuantidadeInteiraEntrada } from '@shared-core/src/formatting'
 import type { ProdutoFormBaseValues } from '@/app/gerente/produtos/produtoFormSchema'
 import type { ProdutoGerenteRow } from '@/lib/gerente/produtos/produtoGerenteTypes'
 import type { OrigemCode, UnidadeCode } from './produtoForm.types'
@@ -19,10 +20,8 @@ export function parseGatilhoDisplay(value: number | null | undefined): string {
 }
 
 export function parseGatilhoSubmit(raw: string): number | null {
-  const t = raw.trim()
-  if (!t) return null
-  const n = Number.parseInt(t, 10)
-  return Number.isInteger(n) && n >= 1 ? n : null
+  const r = parseQuantidadeInteiraEntrada(raw)
+  return r.ok && r.value != null && r.value >= 1 ? r.value : null
 }
 
 export function buildSubmitPayload(

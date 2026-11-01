@@ -1,5 +1,7 @@
 'use client'
 
+import { parseQuantidadeInteiraEntrada } from '@shared-core/src/formatting'
+import { mensagemErroEntrada } from '../form/produtoForm.entrada'
 import { useCallback, useEffect, useState } from 'react'
 import { Pencil, Plus, Trash2, X, Check } from 'lucide-react'
 import {
@@ -62,11 +64,20 @@ function FaixaFormRow({
   const [quantidadeTexto, setQuantidadeTexto] = useState(
     inicial ? String(inicial.quantidade_minima) : '',
   )
-  const precoInput = useMoneyInput(inicial?.preco_unitario ?? null)
+  const precoInput = useMoneyInput(inicial?.preco_unitario ?? null, { estrito: true })
   const [salvando, setSalvando] = useState(false)
 
   const confirmar = useCallback(async () => {
-    const quantidade = quantidadeTexto.trim() === '' ? null : Number(quantidadeTexto)
+    const qtdEntrada = parseQuantidadeInteiraEntrada(quantidadeTexto)
+    const precoEntrada = precoInput.validar()
+    const erroEntrada =
+      mensagemErroEntrada(qtdEntrada, 'quantidade', p) ??
+      mensagemErroEntrada(precoEntrada, 'moeda', p)
+    if (erroEntrada) {
+      emitGerenteToast({ kind: 'error', message: erroEntrada })
+      return
+    }
+    const quantidade = qtdEntrada.ok ? qtdEntrada.value : null
     const preco = precoInput.parse()
     const erro = validarFaixa(quantidade, preco, faixasExistentes, ignorarId, p)
     if (erro) {
@@ -84,9 +95,8 @@ function FaixaFormRow({
   return (
     <div className="grid grid-cols-[1fr_1fr_auto] items-center gap-2 rounded-md border border-jl-accent/40 bg-white/[.03] p-2">
       <input
-        type="number"
-        min={1}
-        step={1}
+        type="text"
+        inputMode="numeric"
         className={IN}
         placeholder={p.faixa_quantidade_placeholder}
         value={quantidadeTexto}

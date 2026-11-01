@@ -22,6 +22,7 @@ import {
   podeSalvarComoRascunho,
 } from '@/core/catalog/statusPublicacao'
 import { buildSubmitPayload } from './produtoForm.mappers'
+import { primeiroErroEntradasProduto } from './produtoForm.entrada'
 import { validarProdutoFormClient, type ProdutoFormErro } from './produtoForm.clientValidation'
 import { localizarCampo } from './produtoForm.campoFoco'
 import { useProdutoForm } from './useProdutoForm'
@@ -292,6 +293,25 @@ export function useProdutoFormOrchestration({
       const precoVarejo = form.precoVarejoInput.parse()
       const precoAtacado = form.precoAtacadoInput.parse()
       const comoRascunho = opts?.rascunho === true
+
+      // Entrada inválida (letras, "10.50", negativos) bloqueia o salvar com o
+      // motivo no campo, em vez de virar outro valor.
+      const erroEntrada = primeiroErroEntradasProduto(
+        {
+          precoVarejo: form.precoVarejoInput.validar(),
+          precoAtacado: form.precoAtacadoInput.validar(),
+          precoCusto: form.precoCustoInput.validar(),
+          estoqueInicial: form.estoqueInicialQty,
+          estoqueMinimo: form.estoqueInicialMin,
+          quantidadeGatilho: form.quantidadeGatilho,
+        },
+        p,
+      )
+      if (erroEntrada) {
+        setErroCampo(erroEntrada)
+        emitGerenteToast({ kind: 'error', message: erroEntrada.mensagem })
+        return
+      }
 
       const erro = validarProdutoFormClient({
         nome: form.nome,
