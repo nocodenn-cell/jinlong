@@ -11,6 +11,6 @@ psql "$PGURL" -v ON_ERROR_STOP=1 -q -f "$DIR/supabase/test/rls_test.sql"
 echo "RLS hub OK"
 # GROWTH-001 · Central de Conversão: stub do ERP + migration + regras de conversão manual
 psql "$PGURL" -v ON_ERROR_STOP=1 -q -f "$DIR/supabase/test/erp_stub.sql"
-psql "$PGURL" -v ON_ERROR_STOP=1 -q -f "$MIG/20261023130000_growth001_central_conversao.sql"
+psql "$PGURL" -v ON_ERROR_STOP=1 -q -f "$MIG/20261101120000_growth001_central_conversao.sql"
 psql "$PGURL" -v ON_ERROR_STOP=1 -q -f "$DIR/supabase/test/central_conversao_test.sql"
 echo "Central de Conversão OK"

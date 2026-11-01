@@ -24,7 +24,7 @@ Acompanha quem se cadastrou pelo `/teste-gratis` do Jinlong: dados do dono, per�
   envia um **pedido de contratação**, que aparece aqui como prioridade.
 - Prioridade (alta/média/baixa) = pedido de contratação + uso real + prazo do teste + interesse; os motivos aparecem na tela.
 - Acesso ao ERP só por RPCs `commercial_*` (SECURITY DEFINER, exigem `is_commercial_admin()`); o hub segue sem service role
-  e sem ler tabelas operacionais. Migration: `backend/supabase/migrations/20261023130000_growth001_central_conversao.sql`
+  e sem ler tabelas operacionais. Migration: `backend/supabase/migrations/20261101120000_growth001_central_conversao.sql`
   (rollback em `backend/supabase/rollback/`). **Ordem de deploy: migration antes do hub** (o hub passa a ler `origem`/`empresa_id` dos leads).
 - LGPD: só contato do dono (nome, e-mail, telefone do cadastro) e indicadores agregados; nenhum valor de venda ou dado de cliente final.
 

@@ -13,7 +13,7 @@
 -- LGPD: o hub vê só dados de contato do DONO (nome, e-mail, telefone informado no cadastro) e
 -- indicadores AGREGADOS de uso (contagens/datas). Nenhum valor de venda, cliente final ou produto.
 --
--- ADITIVA. Rollback: backend/supabase/rollback/20261023130000_growth001_central_conversao.rollback.sql
+-- ADITIVA. Rollback: backend/supabase/rollback/20261101120000_growth001_central_conversao.rollback.sql
 BEGIN;
 
 -- ─────────────────────────────────────────────────────────────────────────────
