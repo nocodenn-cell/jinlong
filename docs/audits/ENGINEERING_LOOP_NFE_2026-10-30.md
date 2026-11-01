@@ -65,6 +65,7 @@ Não rodam em homologação (dados comitados; vedado pela decisão 4). Os cenár
 
 ## 5. P5 — renomeação de `20261023130000` (growth-001 → `20261023130100`)
 
+- **Estado atual (2026-11-01):** a renomeação foi desfeita em `dfdf9e41`. Growth-001 voltou a `20261023130000` e #629 está em `20261029155000`. Detalhes em `docs/audits/CONSOLIDACAO_NFE_2026-11-01.md`. O texto abaixo é o registro da decisão de 2026-10-30.
 - **Origem:** `origin/main` (7a75473f) contém **dois** arquivos com versão `20261023130000`. Duplicidade real na main, que faz `supabase db reset` falhar.
 - **Ambientes:** produção não tem `transferencia_id` nem `commercial_planos`; homologação e local não registram nenhuma das duas versões. A renomeação não invalida registro existente.
 - **Referências:** atualizadas em `hub/README.md`, `hub/scripts/rls-test.sh` e `PROXIMOS_PASSOS.md`. `ops/rollback_20261023130000_…` continua correto (refere-se ao arquivo de #629).
@@ -210,7 +211,7 @@ Commits: `bb867091` (correção de ordem G14/#629), `1c39548f` (política de qCo
 2. Migrations de outros branches em homologação: divergência de governança a regularizar.
 3. Produção sem conciliação, precisão documental nem política de qCom. Deploy exige autorização separada.
 4. Concorrência validada só em cópias locais (dados comitados são vedados em homologação).
-5. Renomeação de `20261023130000` → `20261023130100` (growth-001) e `20261029155000` (#629): ambas são arquivos já presentes na main, mas não aplicados em nenhum ambiente.
+5. Growth-001 (`20261023130000`, restaurada em 2026-11-01; antes renomeada para `20261023130100`) e `20261029155000` (#629): ambas são arquivos já presentes na main, mas não aplicados em nenhum ambiente.
 6. `ops/rollback_20261029155000_…` foi renomeado; referências atualizadas.
 
 ### Critérios pendentes para merge
