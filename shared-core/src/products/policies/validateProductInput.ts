@@ -8,7 +8,7 @@ import { PRODUCT_ERROR_CODES, type ProductErrorCode } from '../errorCodes'
 import {
   MOEDA_MAX_NUMERIC_10_2,
   QUANTIDADE_MAX_NUMERIC_10_3,
-} from '../../formatting/entradaNumerica'
+} from '../../formatting'
 import { UNIDADES_FRACIONADAS } from '../unidadesMedida'
 
 export type ValidateProductResult =
