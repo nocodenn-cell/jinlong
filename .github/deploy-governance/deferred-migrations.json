@@ -12,6 +12,45 @@
       "file": "backend/supabase/migrations/20261023130000_growth001_central_conversao.sql",
       "reason": "Growth-001 (Central de Conversao) pendente em producao: decisao do proprietario de 2026-11-01 (postergacao documentada; nao e protecao de deploy). Versao canonica mantida; nao aplicar sem autorizacao explicita.",
       "releaseCondition": "Autorizacao explicita do proprietario para aplicar em producao (runbook manual com transacao e schema_migrations) + PR que remove esta entrada com label deploy-prod:aprovado."
+    },
+    {
+      "version": "20261029155000",
+      "file": "backend/supabase/migrations/20261029155000_movimentos_estoque_log_transferencia_id.sql",
+      "reason": "Adiada: vincula SAIDA e ENTRADA da transferencia no kardex (issue #586, PR #629). Adiciona movimentos_estoque_log.transferencia_id e reescreve internal.transferir_estoque_seguro. Ausente em producao (verificado por leitura em 2026-11-02: nenhuma coluna, indice ou versao no historico).",
+      "dependencies": [
+        "20261029150000 (G14, ja aplicada em producao via lote de 2026-10-29; a migration foi reordenada para depois dela)",
+        "20261029120000 (S1, ja aplicada)"
+      ],
+      "releaseCondition": "Teste de transferencia com transferencia_id validado em homologacao (kardex com SAIDA e ENTRADA vinculadas) + autorizacao explicita do responsavel + label deploy-prod:aprovado no PR que remove esta entrada."
+    },
+    {
+      "version": "20261030120000",
+      "file": "backend/supabase/migrations/20261030120000_nfe_conciliacao_duplicatas.sql",
+      "reason": "Adiada: conciliacao financeira da NF-e de entrada. Sem ela, uma NF de R$ 100,00 com duplicata de R$ 60,00 e confirmada (reproduzido em homologacao em 2026-10-30). Altera internal.confirmar_importacao_nfe por substituicao textual. Ausente em producao (verificado em 2026-11-02: funcao sem IMPORT_NFE_DUPLICATAS_DIVERGENTES).",
+      "dependencies": [
+        "internal.confirmar_importacao_nfe (existente em producao, com a S2 aplicada como 20261029202813)"
+      ],
+      "releaseCondition": "Testes de conciliacao (duplicatas x valor exigivel, tolerancia R$ 0,01) adaptados ao esquema atual e passando em homologacao (os scripts de NF-e de 2026-10-30 nao rodam no esquema atual) + autorizacao explicita do responsavel + label deploy-prod:aprovado no PR que remove esta entrada."
+    },
+    {
+      "version": "20261030130000",
+      "file": "backend/supabase/migrations/20261030130000_nfe_precisao_documental.sql",
+      "reason": "Adiada: adiciona colunas de precisao documental em importacoes_nfe_itens (valor_unitario_documento, fator_conversao, valor_total_documento) com CHECKs. Ausente em producao (verificado em 2026-11-02: nenhuma das colunas nem constraints chk_nfe_item_*).",
+      "dependencies": [
+        "public.importacoes_nfe_itens (existente em producao)",
+        "Base da 20261030140000 (usa as colunas criadas aqui)"
+      ],
+      "releaseCondition": "Testes de precisao documental passando em homologacao com o esquema atual + autorizacao explicita do responsavel + label deploy-prod:aprovado no PR que remove esta entrada."
+    },
+    {
+      "version": "20261030140000",
+      "file": "backend/supabase/migrations/20261030140000_nfe_qtd_precisao.sql",
+      "reason": "Adiada: adiciona quantidade_comercial_documento e unidade_comercial em importacoes_nfe_itens com CHECK. Ausente em producao (verificado em 2026-11-02).",
+      "dependencies": [
+        "20261030130000 (deve ser aplicada antes: usa as colunas de precisao documental)",
+        "public.importacoes_nfe_itens (existente em producao)"
+      ],
+      "releaseCondition": "Aplicar somente depois da 20261030130000, com os testes de quantidade comercial passando em homologacao + autorizacao explicita do responsavel + label deploy-prod:aprovado no PR que remove esta entrada."
     }
   ]
 }
