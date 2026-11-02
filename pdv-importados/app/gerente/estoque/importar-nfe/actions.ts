@@ -130,6 +130,8 @@ export type LinhaPreviewNfe = {
   u_com: string | null
   q_com: number
   v_un_com: number
+  /** vProd da NF-e (valor total do item, 2 casas). Ausente em entrada manual. */
+  v_prod?: number | null
   status_produto: StatusItemNfe
   /** Produto do catálogo já reconhecido (De-Para ou GTIN); null se desconhecido. */
   produto_id: string | null
@@ -208,6 +210,7 @@ export async function previewNotaManualNfe(
       u_com: i.u_com || 'UN',
       q_com: i.q_com,
       v_un_com: i.v_un_com,
+      v_prod: i.v_prod ?? null,
     })),
     duplicatas: n.duplicatas.map((d) => ({
       numero: d.numero || null,
@@ -317,6 +320,7 @@ async function montarLinhasPreview(
       u_com: item.u_com,
       q_com: item.q_com,
       v_un_com: item.v_un_com,
+      v_prod: item.v_prod ?? null,
       status_produto: status,
       produto_id: produtoId,
       produto_nome: produtoNome,
@@ -417,6 +421,7 @@ export async function executarImportacaoNfe(
     u_com: linha.u_com,
     q_com: linha.q_com,
     v_un_com: linha.v_un_com,
+    v_prod: linha.v_prod ?? null,
     fator: linha.fator,
     atualizar_custo: linha.atualizar_custo,
     acao: linha.acao,

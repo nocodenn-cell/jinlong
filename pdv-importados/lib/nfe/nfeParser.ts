@@ -11,6 +11,8 @@ export type NfeItemParsed = {
   u_com: string | null
   q_com: number
   v_un_com: number
+  /** vProd da NF-e (valor total do item, 2 casas). Ausente em entrada manual. */
+  v_prod?: number | null
 }
 
 export type NfeEmitenteParsed = {
@@ -155,6 +157,7 @@ export function parseNfeXml(xmlString: string): NfeParsed {
       u_com: str(prod.uCom) || null,
       q_com: num(prod.qCom),
       v_un_com: num(prod.vUnCom),
+      v_prod: prod.vProd != null ? num(prod.vProd) : null,
     }
     itens.push(item)
   }

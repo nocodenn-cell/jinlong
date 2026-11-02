@@ -168,16 +168,9 @@ BEGIN
   IF v_n <> 1 THEN RAISE EXCEPTION 'G14: insert do destino encontrado % vezes', v_n; END IF;
   v_def := replace(v_def, 'VALUES (p_loja_destino, p_produto_id, p_quantidade, 0)', 'VALUES (p_loja_destino, v_produto_destino, p_quantidade, 0)');
 
-  -- Movimento de entrada: a forma em linhas (sem a migration de movimentos_estoque_log) ou a forma em uma linha
-  -- (com ela, que grava transferencia_id). Só uma das duas pode existir na função.
   v_n := (length(v_def) - length(replace(v_def, E'    p_loja_destino,\n    p_produto_id,\n', ''))) / length(E'    p_loja_destino,\n    p_produto_id,\n');
-  IF v_n = 1 THEN
-    v_def := replace(v_def, E'    p_loja_destino,\n    p_produto_id,\n', E'    p_loja_destino,\n    v_produto_destino,\n');
-  ELSE
-    v_n := (length(v_def) - length(replace(v_def, 'p_loja_destino, p_produto_id, ''TRANSFERENCIA_ENTRADA''', ''))) / length('p_loja_destino, p_produto_id, ''TRANSFERENCIA_ENTRADA''');
-    IF v_n <> 1 THEN RAISE EXCEPTION 'G14: movimento de entrada do destino encontrado % vezes', v_n; END IF;
-    v_def := replace(v_def, 'p_loja_destino, p_produto_id, ''TRANSFERENCIA_ENTRADA''', 'p_loja_destino, v_produto_destino, ''TRANSFERENCIA_ENTRADA''');
-  END IF;
+  IF v_n <> 1 THEN RAISE EXCEPTION 'G14: movimento de entrada do destino encontrado % vezes', v_n; END IF;
+  v_def := replace(v_def, E'    p_loja_destino,\n    p_produto_id,\n', E'    p_loja_destino,\n    v_produto_destino,\n');
 
   EXECUTE v_def;
 END

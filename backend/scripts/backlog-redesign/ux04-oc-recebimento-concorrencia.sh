@@ -53,10 +53,10 @@ trap cleanup EXIT
 
 pg <<SQL
 insert into auth.users (id) values ('$U1'), ('$U2');
-insert into public.lojas (id, nome, codigo, ativo) values ('$LOJA', 'UX04 conc', 'UX04C-' || substr('$LOJA', 1, 8), true);
+insert into public.lojas (id, nome, codigo, ativo, empresa_id) values ('$LOJA', 'UX04 conc', 'UX04C-' || substr('$LOJA', 1, 8), true, 'f5100000-0000-4000-8000-0000000000e1');
 insert into public.usuarios (id, nome, perfil, ativo, loja_id) values
   ('$U1', 'conc 1', 'GERENTE', true, '$LOJA'), ('$U2', 'conc 2', 'GERENTE', true, '$LOJA');
-insert into public.categorias (id, nome) values ('$CAT', 'UX04 conc');
+insert into public.categorias (id, nome, empresa_id) values ('$CAT', 'UX04 conc', 'f5100000-0000-4000-8000-0000000000e1');
 insert into public.produtos (id, codigo_barras, nome, categoria_id, preco_varejo, preco_custo, origem, tem_nf, ativo, loja_id)
 values ('$PROD', '789' || lpad((random() * 1e9)::bigint::text, 10, '0'), 'UX04 conc prod', '$CAT', 10, 5, 'china_manual', false, true, '$LOJA');
 SQL

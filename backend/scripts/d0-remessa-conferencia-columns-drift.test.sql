@@ -14,10 +14,17 @@
 \set ON_ERROR_STOP on
 BEGIN;
 
+-- Fixture própria desta transação (o CI não tem produtos nem gerentes pré-existentes).
+INSERT INTO auth.users (id) VALUES ('f5100000-0000-4000-8000-000000000002') ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.empresas (id, nome, status) VALUES ('f5100000-0000-4000-8000-0000000000e1', 'FIXTURE-S1 Empresa 1', 'ATIVA') ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.lojas (id, nome, codigo, ativo, empresa_id) VALUES ('f5100000-0000-4000-8000-0000000000a1', 'FIXTURE-S1 Loja A', 'FS1-A', true, 'f5100000-0000-4000-8000-0000000000e1') ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.usuarios (id, nome, perfil, ativo, loja_id) VALUES ('f5100000-0000-4000-8000-000000000002', 'FIXTURE-S1 Gerente A', 'GERENTE', true, 'f5100000-0000-4000-8000-0000000000a1') ON CONFLICT (id) DO UPDATE SET perfil = EXCLUDED.perfil, ativo = true, loja_id = EXCLUDED.loja_id;
+INSERT INTO public.categorias (id, nome, empresa_id) VALUES ('f5100000-0000-4000-8000-0000000000c0', 'FIXTURE-S1 Categoria', 'f5100000-0000-4000-8000-0000000000e1') ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.produtos (id, nome, categoria_id, preco_varejo, preco_custo, origem, tem_nf, ativo, status_publicacao, loja_id, codigo_barras) VALUES ('f5100000-0000-4000-8000-0000000000f1', 'FIXTURE-S1 Produto A', 'f5100000-0000-4000-8000-0000000000c0', 30, 10, 'brasil_nf', true, true, 'PUBLICADO', 'f5100000-0000-4000-8000-0000000000a1', '7898000000011') ON CONFLICT (id) DO NOTHING;
 SELECT p.id AS produto, p.loja_id AS loja, u.id AS gerente
 FROM public.produtos p
 JOIN public.usuarios u ON u.loja_id = p.loja_id
-WHERE p.ativo AND u.ativo AND u.perfil IN ('GERENTE', 'DONO', 'ADMIN')
+WHERE p.id = 'f5100000-0000-4000-8000-0000000000f1' AND p.ativo AND u.ativo AND u.perfil IN ('GERENTE', 'DONO', 'ADMIN')
 ORDER BY p.id, u.id
 LIMIT 1 \gset
 
@@ -69,7 +76,7 @@ DECLARE
   v_gerente uuid := current_setting('request.jwt.claim.sub')::uuid;
   v_produto uuid;
 BEGIN
-  SELECT p.id INTO v_produto FROM public.produtos p WHERE p.ativo LIMIT 1;
+  SELECT p.id INTO v_produto FROM public.produtos p WHERE p.id = 'f5100000-0000-4000-8000-0000000000f1' AND p.ativo;
 
   v_id := public.criar_confirmar_remessa_entrada(
     'D0 drift verde', NULL,
