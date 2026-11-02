@@ -50,6 +50,15 @@ BEGIN
     (v_gerente_c, 'RETC Gerente C', 'GERENTE', true, v_loja_a)
   ON CONFLICT (id) DO UPDATE SET perfil = EXCLUDED.perfil, ativo = EXCLUDED.ativo, loja_id = EXCLUDED.loja_id;
 
+  -- #623 (20261028120100): token de gerente só vale com emissor/ator ativo E com vínculo ativo
+  -- na empresa da loja (como em produção, onde todo usuário ativo tem vínculo). Os usuários
+  -- sintéticos ganham o vínculo correspondente ao perfil; o inativo fica com vínculo inativo.
+  INSERT INTO public.usuario_vinculos (usuario_id, empresa_id, loja_id, papel, ativo)
+  SELECT u.id, l.empresa_id, CASE WHEN u.perfil = 'DONO' THEN NULL ELSE u.loja_id END, u.perfil, u.ativo
+    FROM public.usuarios u JOIN public.lojas l ON l.id = u.loja_id
+   WHERE u.id IN (v_gerente_a, v_gerente_b, v_dono, v_operador, v_operador2, v_gerente_inativo, v_gerente_c)
+  ON CONFLICT DO NOTHING;
+
   DELETE FROM public.caixas WHERE id IN (v_caixa_fechado, v_caixa_aberto, v_caixa_fechado2, v_caixa_gerentec);
   INSERT INTO public.caixas (id, loja_id, operador_id, status, valor_inicial, data_abertura, data_fechamento, valor_fechamento, fechamento_diferenca)
   VALUES
@@ -137,6 +146,7 @@ DECLARE
   v_gerente_b uuid := 'f2000002-0000-4000-8000-000000000002';
   v_caixa_fechado uuid := 'f2000003-0000-4000-8000-000000000001';
   v_token text := 'retc-test-token-neg4';
+  v_detalhe text;
 BEGIN
   INSERT INTO public.tokens_desconto_gerente (token, expira_em, usado, criado_por)
   VALUES (v_token, now() + interval '5 minutes', false, v_gerente_b);
@@ -146,8 +156,13 @@ BEGIN
     PERFORM public.retomar_caixa_atomico(v_caixa_fechado, v_token, 'motivo qualquer');
     RAISE EXCEPTION 'RETC_FALHOU: GERENTE de outra loja nao deveria autorizar';
   EXCEPTION WHEN OTHERS THEN
-    IF SQLERRM NOT LIKE 'RETOMAR_CAIXA_LOJA_INVALIDA%' THEN RAISE; END IF;
-    RAISE NOTICE 'Negativo 4 OK: GERENTE cross-loja negado (%).', SQLERRM;
+    -- Desde o #623 (20261028120100) a recusa chega antes, no consumo do token: o ator (GERENTE da
+    -- loja A) não tem vínculo na loja do token (B) => TOKEN_GERENTE_REVOGADO / ATOR_INATIVO_OU_SEM_VINCULO.
+    -- Continua exigindo recusa por loja; qualquer outro erro falha o teste.
+    GET STACKED DIAGNOSTICS v_detalhe = PG_EXCEPTION_DETAIL;
+    IF NOT (SQLERRM LIKE 'RETOMAR_CAIXA_LOJA_INVALIDA%'
+            OR (SQLERRM = 'TOKEN_GERENTE_REVOGADO' AND v_detalhe = 'ATOR_INATIVO_OU_SEM_VINCULO')) THEN RAISE; END IF;
+    RAISE NOTICE 'Negativo 4 OK: GERENTE cross-loja negado (% %).', SQLERRM, coalesce(v_detalhe, '');
   END;
 END
 $neg4$;
@@ -222,6 +237,7 @@ DECLARE
   v_gerente_inativo uuid := 'f2000002-0000-4000-8000-000000000006';
   v_caixa_fechado   uuid := 'f2000003-0000-4000-8000-000000000001';
   v_token text := 'retc-test-token-neg7';
+  v_detalhe text;
 BEGIN
   INSERT INTO public.tokens_desconto_gerente (token, expira_em, usado, criado_por)
   VALUES (v_token, now() + interval '5 minutes', false, v_gerente_inativo);
@@ -231,8 +247,12 @@ BEGIN
     PERFORM public.retomar_caixa_atomico(v_caixa_fechado, v_token, 'motivo qualquer');
     RAISE EXCEPTION 'RETC_FALHOU: aprovador inativo nao deveria autorizar';
   EXCEPTION WHEN OTHERS THEN
-    IF SQLERRM NOT LIKE 'RETOMAR_CAIXA_APROVADOR_INATIVO%' THEN RAISE; END IF;
-    RAISE NOTICE 'Negativo 7 OK (Codex #3): aprovador inativo negado (%).', SQLERRM;
+    -- Desde o #623 (20261028120100) o token emitido por gerente inativo é recusado já no consumo
+    -- (TOKEN_GERENTE_REVOGADO / EMISSOR_INATIVO_OU_SEM_VINCULO). Só essas duas recusas valem.
+    GET STACKED DIAGNOSTICS v_detalhe = PG_EXCEPTION_DETAIL;
+    IF NOT (SQLERRM LIKE 'RETOMAR_CAIXA_APROVADOR_INATIVO%'
+            OR (SQLERRM = 'TOKEN_GERENTE_REVOGADO' AND v_detalhe = 'EMISSOR_INATIVO_OU_SEM_VINCULO')) THEN RAISE; END IF;
+    RAISE NOTICE 'Negativo 7 OK (Codex #3): aprovador inativo negado (% %).', SQLERRM, coalesce(v_detalhe, '');
   END;
 END
 $neg7$;

@@ -8,9 +8,9 @@ describe('perfilPodeCancelarVenda (BA-013)', () => {
     expect(perfilPodeCancelarVenda(undefined)).toBe(false)
   })
 
-  it('permite GERENTE DONO ADMIN', () => {
+  it('permite GERENTE e DONO; ADMIN legado não', () => {
     expect(perfilPodeCancelarVenda('GERENTE')).toBe(true)
     expect(perfilPodeCancelarVenda('DONO')).toBe(true)
-    expect(perfilPodeCancelarVenda('ADMIN')).toBe(true)
+    expect(perfilPodeCancelarVenda('ADMIN')).toBe(false)
   })
 })

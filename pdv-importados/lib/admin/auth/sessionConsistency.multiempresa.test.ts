@@ -44,8 +44,8 @@ describe('sessão multiempresa (ESPEC §9)', () => {
     expect(n.authState).toBe('authenticated')
     expect(n.session?.empresaId).toBeNull()
   })
-  it('ADMIN legado sem vínculo continua entrando (D9)', () => {
-    expect(normalizeAdminSession(row('ADMIN', []), 'ssr').authState).toBe('authenticated')
+  it('ADMIN legado (descontinuado) não entra, mesmo com loja', () => {
+    expect(normalizeAdminSession(row('ADMIN', []), 'ssr').authState).not.toBe('authenticated')
   })
   it('fetchRawSession lê usuario_vinculos e tolera falha da tabela', async () => {
     const mk = (vincResult: { data: unknown; error: unknown }) =>

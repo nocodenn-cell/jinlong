@@ -18,12 +18,12 @@ export default async function AdminImplantacaoPage({ searchParams }: PageProps) 
   const m = getMessages(session.idioma)
   const ui = m.implantacao
 
-  const params = searchParams ? await searchParams : undefined
-  const lojaIdOverride =
-    session.perfil === 'ADMIN' && params?.lojaId?.trim() ? params.lojaId.trim() : null
+  // Sem perfil global: o checklist é sempre o da loja da sessão (o ?lojaId= era exclusivo do ADMIN).
+  void searchParams
+  const lojaIdOverride = null
 
   const loaded = await carregarChecklistImplantacaoAction(lojaIdOverride)
-  const podeAutorizarGo = session.perfil === 'DONO' || session.perfil === 'ADMIN'
+  const podeAutorizarGo = session.perfil === 'DONO'
 
   const secoes = Object.fromEntries(
     (['ambiente', 'loja', 'usuarios', 'cadastro', 'operacao', 'financeiro', 'fiscal', 'homologacao'] as ImplantacaoSecao[]).map(

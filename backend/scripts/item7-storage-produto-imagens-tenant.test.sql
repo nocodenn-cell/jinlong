@@ -11,7 +11,7 @@
 -- teste prova os dois lados: INSERT (já protegido, sem mudança) e
 -- UPDATE/DELETE (corrigidos nesta migration).
 --
--- Prova, com dados sintéticos (2 lojas, 1 GERENTE por loja, 1 ADMIN,
+-- Prova, com dados sintéticos (2 lojas, 1 GERENTE por loja, 1 DONO ex-ADMIN,
 -- 1 produto por loja), os cenários:
 --   1. GERENTE loja A tenta INSERT em objeto de produto da loja B -> NEGADO
 --      (proteção pré-existente, via RLS de produtos).
@@ -21,9 +21,9 @@
 --      (proteção NOVA desta migration).
 --   4. GERENTE loja A consegue INSERT em objeto do produto da própria
 --      loja -> PERMITIDO (fluxo real não pode quebrar).
---   5. ADMIN consegue UPDATE cross-loja -> PERMITIDO (produtos_leitura já
---      trata ADMIN como global — não é uma regra nova desta migration,
---      é o mesmo padrão de visibilidade que produtos sempre teve).
+--   5. Antes: ADMIN global atualizava cross-loja. Após o #623 (ADMIN
+--      descontinuado) o ex-ADMIN é DONO da loja A: atualiza a imagem do
+--      próprio produto -> PERMITIDO; a de outra loja -> NEGADO.
 -- Tudo dentro de uma transação com ROLLBACK final — nada persiste (nem
 -- linha em storage.objects, nem arquivo real — não é upload de verdade).
 
@@ -52,7 +52,7 @@ BEGIN
   INSERT INTO public.usuarios (id, nome, perfil, ativo, loja_id, idioma_preferido) VALUES
     (v_gerente_a, 'Item7 Gerente A', 'GERENTE', true, v_loja_a, 'pt'),
     (v_gerente_b, 'Item7 Gerente B', 'GERENTE', true, v_loja_b, 'pt'),
-    (v_admin, 'Item7 Admin', 'ADMIN', true, v_loja_a, 'pt')
+    (v_admin, 'Item7 Ex-Admin (agora DONO)', 'DONO', true, v_loja_a, 'pt')
   ON CONFLICT (id) DO UPDATE SET perfil = EXCLUDED.perfil, ativo = true, loja_id = EXCLUDED.loja_id;
 
   INSERT INTO public.categorias (id, nome) VALUES (v_categoria, 'Item7 Categoria')
@@ -65,6 +65,20 @@ BEGIN
   ON CONFLICT (id) DO UPDATE SET ativo = true, loja_id = EXCLUDED.loja_id;
 END
 $setup$;
+
+-- #623 (20261028110000): o perfil ADMIN foi descontinuado. O usuário que antes era ADMIN
+-- vira DONO (o perfil mais amplo que restou) e esta prova garante que ADMIN não volta.
+DO $sem_admin$
+BEGIN
+  BEGIN
+    UPDATE public.usuarios SET perfil = 'ADMIN' WHERE id = 'f000000c-0000-4000-8000-0000000000ad';
+    RAISE EXCEPTION 'ITEM7_FALHOU: perfil ADMIN ainda pode ser gravado';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT LIKE '%PERFIL_ADMIN_DESCONTINUADO%' THEN RAISE; END IF;
+    RAISE NOTICE 'OK: perfil ADMIN recusado (%).', SQLERRM;
+  END;
+END
+$sem_admin$;
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- Negativo 1/2/3 — GERENTE loja A tenta INSERT/UPDATE/DELETE em objeto do
@@ -146,34 +160,48 @@ END
 $pos_mesma_loja$;
 
 -- ═══════════════════════════════════════════════════════════════════════════
--- Positivo 2 — ADMIN consegue UPDATE cross-loja (produtos_leitura já
--- trata ADMIN como global — padrão pré-existente, não introduzido aqui)
+-- Positivo 2 / Negativo 4 — antes: "ADMIN consegue UPDATE cross-loja", porque
+-- produtos_leitura tratava ADMIN como global (auth_usuario_eh_admin()). O #623
+-- descontinuou ADMIN; não sobrou perfil global em produtos_leitura
+-- (loja_id = auth_usuario_loja_id()). O usuário que era ADMIN agora é DONO da loja A:
+--   Positivo 2: atualiza a imagem do produto da PRÓPRIA loja -> PERMITIDO;
+--   Negativo 4: atualiza a imagem do produto da loja B -> NEGADO (0 linhas).
 -- ═══════════════════════════════════════════════════════════════════════════
 
 DO $pos_admin_cross_loja$
 DECLARE
   v_admin uuid := 'f000000c-0000-4000-8000-0000000000ad';
+  v_produto_a uuid := 'f000000c-0000-4000-8000-000000000004';
   v_produto_b uuid := 'f000000c-0000-4000-8000-000000000005';
+  v_path_a text := v_produto_a::text || '/foto-dono.jpg';
   v_path text := v_produto_b::text || '/foto-admin.jpg';
   v_linhas int;
 BEGIN
   INSERT INTO storage.objects (bucket_id, name, owner)
-  VALUES ('produto-imagens', v_path, v_produto_b)
+  VALUES ('produto-imagens', v_path, v_produto_b), ('produto-imagens', v_path_a, v_produto_a)
   ON CONFLICT (bucket_id, name) DO NOTHING;
 
   PERFORM set_config('request.jwt.claim.sub', v_admin::text, true);
   PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
   SET LOCAL ROLE authenticated;
 
+  UPDATE storage.objects SET metadata = '{"ok":1}'::jsonb WHERE bucket_id = 'produto-imagens' AND name = v_path_a;
+  GET DIAGNOSTICS v_linhas = ROW_COUNT;
+  IF v_linhas <> 1 THEN
+    RESET ROLE;
+    RAISE EXCEPTION 'ITEM7_FALHOU: DONO (ex-ADMIN) não conseguiu UPDATE na imagem do produto da própria loja (linhas=%)', v_linhas;
+  END IF;
+
   UPDATE storage.objects SET metadata = '{"ok":1}'::jsonb WHERE bucket_id = 'produto-imagens' AND name = v_path;
   GET DIAGNOSTICS v_linhas = ROW_COUNT;
 
   RESET ROLE;
 
-  IF v_linhas <> 1 THEN
-    RAISE EXCEPTION 'ITEM7_FALHOU: ADMIN não conseguiu UPDATE cross-loja (linhas=%)', v_linhas;
+  IF v_linhas <> 0 THEN
+    RAISE EXCEPTION 'ITEM7_FALHOU: DONO (ex-ADMIN) atualizou imagem de produto de outra loja (linhas=%) — escopo global de ADMIN não pode sobreviver ao #623', v_linhas;
   END IF;
-  RAISE NOTICE 'Positivo 2 OK: ADMIN atualiza imagem de produto de outra loja normalmente (mesmo padrão de produtos_leitura).';
+  RAISE NOTICE 'Positivo 2 OK: DONO (ex-ADMIN) atualiza imagem do produto da própria loja.';
+  RAISE NOTICE 'Negativo 4 OK: DONO (ex-ADMIN) não atualiza imagem de produto de outra loja (sem perfil global após o #623).';
 END
 $pos_admin_cross_loja$;
 

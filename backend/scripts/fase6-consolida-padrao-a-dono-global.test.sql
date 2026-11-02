@@ -6,7 +6,7 @@
 -- restringi-la quebraria o fluxo existente sem substituto).
 --
 -- Prova, para cada uma das 2 superfícies: GERENTE de uma loja continua
--- bloqueado ao mexer em outra loja; DONO (e ADMIN, sanity check) agora
+-- bloqueado ao mexer em outra loja; DONO (e o ex-ADMIN, agora DONO) agora
 -- consegue, onde antes não conseguia. Dados sintéticos, tudo dentro de uma
 -- transação com ROLLBACK — não persiste nada em produção.
 
@@ -34,7 +34,7 @@ BEGIN
   INSERT INTO public.usuarios (id, nome, perfil, ativo, loja_id) VALUES
     (v_gerente_a, 'Fase6 Gerente A', 'GERENTE', true, v_loja_a),
     (v_dono, 'Fase6 Dono', 'DONO', true, v_loja_a),
-    (v_admin, 'Fase6 Admin', 'ADMIN', true, v_loja_a)
+    (v_admin, 'Fase6 Ex-Admin (agora DONO)', 'DONO', true, v_loja_a)
   ON CONFLICT (id) DO UPDATE SET perfil = EXCLUDED.perfil, ativo = true, loja_id = EXCLUDED.loja_id;
 
   INSERT INTO public.categorias (id, nome) VALUES (v_categoria, 'Fase6 Categoria')
@@ -58,6 +58,20 @@ BEGIN
   DELETE FROM public.precos_atacado WHERE produto_id IN (v_produto_a, v_produto_b);
 END
 $setup$;
+
+-- #623 (20261028110000): o perfil ADMIN foi descontinuado. O usuário que antes era ADMIN
+-- vira DONO (o perfil mais amplo que restou) e esta prova garante que ADMIN não volta.
+DO $sem_admin$
+BEGIN
+  BEGIN
+    UPDATE public.usuarios SET perfil = 'ADMIN' WHERE id = 'a0000002-0000-4000-8000-000000000003';
+    RAISE EXCEPTION 'FASE6_FALHOU: perfil ADMIN ainda pode ser gravado';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT LIKE '%PERFIL_ADMIN_DESCONTINUADO%' THEN RAISE; END IF;
+    RAISE NOTICE 'OK: perfil ADMIN recusado (%).', SQLERRM;
+  END;
+END
+$sem_admin$;
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- 1) ajustar_estoque_manual — GERENTE bloqueado fora da própria loja; DONO e
@@ -95,16 +109,16 @@ BEGIN
     RAISE EXCEPTION 'FASE6_FALHOU: DONO deveria ter conseguido ajustar estoque cross-loja (Padrão A).';
   END IF;
 
-  -- ADMIN (sanity — já era global antes, continua): mesmo teste.
+  -- Ex-ADMIN (agora DONO; ADMIN descontinuado no #623): mesmo teste, mesmo resultado esperado.
   PERFORM set_config('request.jwt.claim.sub', v_admin::text, true);
   PERFORM public.ajustar_estoque_manual_seguro(
     v_produto_b, v_loja_b, 30, 0, 'ACERTO_INVENTARIO', null, null, 25, 0);
   PERFORM 1 FROM public.estoque WHERE produto_id = v_produto_b AND loja_id = v_loja_b AND quantidade_atual = 30;
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'FASE6_FALHOU: ADMIN deveria continuar conseguindo ajustar estoque cross-loja.';
+    RAISE EXCEPTION 'FASE6_FALHOU: o ex-ADMIN (agora DONO) deveria conseguir ajustar estoque cross-loja.';
   END IF;
 
-  RAISE NOTICE 'Passo 1 OK: ajustar_estoque_manual_seguro — GERENTE bloqueado, DONO e ADMIN globais.';
+  RAISE NOTICE 'Passo 1 OK: ajustar_estoque_manual_seguro — GERENTE bloqueado, DONO global (ADMIN descontinuado).';
 END
 $ajuste$;
 

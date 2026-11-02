@@ -70,3 +70,13 @@ Deno.test("allowlist de IP opcional: fora da lista ⇒ 403; vazia ⇒ não filtr
   const r3 = await tratarWebhookAsaas({ ...base, tokenHeader: "segredo-webhook", rawBody: body({ id: "evt_ip2", event: "PAYMENT_RECEIVED" }), aplicar, ipCliente: "9.9.9.9", ipAllowlist: "" });
   assertEquals(r3.status, 200);
 });
+
+Deno.test("estornos e chargeback tratados pelo SQL chegam ao aplicar (não são ignorados)", async () => {
+  for (const event of ["PAYMENT_PARTIALLY_REFUNDED", "PAYMENT_CHARGEBACK_DISPUTE", "PAYMENT_AWAITING_CHARGEBACK_REVERSAL"]) {
+    const { aplicar, chamadas } = fakeDb();
+    const r = await tratarWebhookAsaas({
+      ...base, tokenHeader: "segredo-webhook", rawBody: body({ id: `evt_${event}`, event, payment: { id: "pay_1" } }), aplicar,
+    });
+    assertEquals([event, r.status, r.body.ignorado, chamadas.length], [event, 200, undefined, 1]);
+  }
+});

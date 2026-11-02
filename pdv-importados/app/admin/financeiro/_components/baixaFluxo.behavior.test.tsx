@@ -164,10 +164,11 @@ function definir(el: HTMLInputElement | HTMLSelectElement, valor: string) {
 }
 
 describe('autorização da linha', () => {
-  it('OPERADOR não recebe caixa nem conta; GERENTE, DONO e ADMIN recebem os dois', () => {
+  it('OPERADOR não recebe caixa nem conta; GERENTE e DONO recebem os dois; ADMIN legado não', () => {
     expect(baixasAutorizadas('OPERADOR')).toEqual({ caixa: false, conta: false })
     expect(baixasAutorizadas(null)).toEqual({ caixa: false, conta: false })
-    for (const perfil of ['GERENTE', 'DONO', 'ADMIN']) {
+    expect(baixasAutorizadas('ADMIN')).toEqual({ caixa: false, conta: false })
+    for (const perfil of ['GERENTE', 'DONO']) {
       expect(baixasAutorizadas(perfil)).toEqual({ caixa: true, conta: true })
     }
   })

@@ -242,6 +242,11 @@ Deno.serve(async (req) => {
       log({ level: "warn", stage: "auth", error: escopo.error });
       return jsonResponse(403, { ok: false, error: escopo.error }, req, corsMode);
     }
+    // Defesa em profundidade: nunca seguir sem empresa/loja (evita fallback pdv_config id=1).
+    if (!escopo.empresaId || !escopo.lojaId) {
+      log({ level: "warn", stage: "auth", error: "ESCOPO_GERENTE_SEM_EMPRESA" });
+      return jsonResponse(403, { ok: false, error: "ESCOPO_GERENTE_SEM_EMPRESA" }, req, corsMode);
+    }
 
     const result = await validateGerenteAndIssueToken({
       supabase,

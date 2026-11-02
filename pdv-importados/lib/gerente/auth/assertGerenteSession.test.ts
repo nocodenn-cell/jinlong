@@ -26,8 +26,8 @@ describe('assertGerenteSession — mensagens de erro', () => {
     }
   })
 
-  it('DONO e ADMIN passam no mesmo recurso', async () => {
-    for (const p of ['DONO', 'ADMIN'] as const) {
+  it('DONO passa no mesmo recurso', async () => {
+    for (const p of ['DONO'] as const) {
       norm.mockResolvedValue({ authState: 'authenticated', session: sessao(p) })
       expect((await assertGerenteSession(RECURSO)).ok, p).toBe(true)
     }

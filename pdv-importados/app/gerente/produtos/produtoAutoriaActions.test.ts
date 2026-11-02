@@ -127,29 +127,15 @@ describe('obterAutoriaProduto', () => {
       expect(produtosMaybeSingleMock).not.toHaveBeenCalled()
     })
 
-    it('ADMIN é global: passa o gate sem consultar loja do produto', async () => {
+    it('ADMIN legado não é global: sem loja na sessão, recusa sem consultar o produto', async () => {
       assertGerenteSessionMock.mockResolvedValue({
         ok: true,
         session: { userId: 'adm-1', lojaId: null, perfil: 'ADMIN', idioma: 'pt' },
       })
-      produtosMaybeSingleMock.mockResolvedValueOnce({
-        data: {
-          criado_por: 'user-a',
-          atualizado_por: 'user-a',
-          created_at: '2026-01-01T00:00:00Z',
-          updated_at: '2026-01-01T00:00:00Z',
-        },
-        error: null,
-      })
-      usuariosInMock.mockResolvedValue({ data: [{ id: 'user-a', nome: 'Admin' }], error: null })
-
       const { obterAutoriaProduto } = await import('./produtoAutoriaActions')
       const r = await obterAutoriaProduto(PRODUTO_ID)
-
-      expect(r.success).toBe(true)
-      // Uma única consulta: a de autoria. O gate não precisou ler loja_id.
-      expect(produtosSelectSpy).toHaveBeenCalledTimes(1)
-      expect(produtosSelectSpy).not.toHaveBeenCalledWith('loja_id')
+      expect(r.success).toBe(false)
+      expect(produtosMaybeSingleMock).not.toHaveBeenCalled()
     })
   })
 

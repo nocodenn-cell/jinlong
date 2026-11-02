@@ -19,6 +19,7 @@
 
 ## P1 — Falta para lançar (MVP)
 
+- Autorizar o merge do PR #623 (remover ADMIN): conflito com a main resolvido na branch do PR (commit 193293d7, local, sem push); validação pendente de revisão
 - Kardex sem valor: `movimentos_estoque_log` só tem `quantidade_delta`. Criar `estoque_aplicar_movimento` como único escritor, com `custo_unitario` e `valor_total` (auditoria 2026-10-30, item 3 do backlog)
 - Tela de produto mostra `preco_custo_medio` = 0 (campo nunca gravado) e `atualizar_preco_varejo_produto` persiste preço sem aprovação nem simulação (auditoria 2026-10-30, Parte 2, itens 1 e 7)
 - Custo de reposição e fluxo de aprovação de preço não existem (auditoria 2026-10-30, itens 9–10 do backlog). Decidir o modelo antes de expor margem ao gerente
@@ -75,10 +76,10 @@
 - 2026-11-01 — Consolidação NF-e: #654 integrada à #653 por merge (`0176677f`), Growth-001 restaurada em `20261023130000` (`dfdf9e41`), cinco testes SQL da PR-A adotados (`0a00201d`) e scripts de concorrência movidos para `backend/scripts/backlog-redesign/` (`99dbcaea`). Registro em `docs/audits/CONSOLIDACAO_NFE_2026-11-01.md`; não mergeado
 - 2026-10-30 — Validação em homologação (`jinlong-homolog-palm`, rollback): confirmação, repetição e reimportação passaram; conciliação de duplicatas e AP sem UNIQUE reproduzidos como defeito. Os 13 scripts `.test.sql`/`.mjs` de NF-e não executam no esquema atual (sem `empresa_id`). Relatório em `docs/audits/VALIDACAO_TESTES_NFE_HOMOLOG_2026-10-30.md`
 - 2026-10-30 — Auditoria de capacidades do ciclo de custos (16 etapas, somente leitura): nenhuma capacidade VALIDADA; motor de custo, rateio e precificação existem em `shared-core` sem ligação ao caminho NF-e; kardex sem valor. Relatório e backlog em `docs/audits/AUDITORIA_CUSTOS_RENTABILIDADE_2026-10-30.md`; sem alteração de código
+- 2026-10-30 — Conflito do PR #623 com a main resolvido em `assinatura/actions.ts` (DONO-only + flag GROWTH-001 preservados; testes e typecheck ok)
 - 2026-10-29 — Auditoria do Bloco de Importação (NF-e de entrada e pipeline internacional): 45% por critério explícito, 0 funcionalidades comprovadas, recomendação NO-GO. Relatório em `docs/audits/AUDITORIA_BLOCO_IMPORTACAO_2026-10-29.md`; sem alteração de código
 - 2026-10-29 — S1 validada em homologação (`yvdilcmxyjafnnsfdtam`): matriz de permissões final, testes do DONO, ciclos de rollback do S1b, S1c, G14 e S1; PR #648 aberto com o pacote (S1, S1c, S1b, G14), CI verde exceto o guard de governança. Não aplicado em produção
 - 2026-10-29 — Decisões D1–D14 registradas em `docs/regras-negocio/DECISOES_JINLONG_S1.md`
 - 2026-10-29 — NF-e de entrada com valor e sem duplicatas: mensagem operacional para `IMPORT_NFE_OBRIGACAO_SEM_DUPLICATA`, aviso na prévia e confirmação bloqueada na conferência (`notaObrigacao.ts`); sem alteração de migration/RPC. Não deployado
 - 2026-10-29 — `20261028120000` aplicada em produção (revoke dos 4 helpers de tenant): drill em main com success (backup 40776152513, checksum OK, contagens validadas); pré-checagem true/true/true; pós-checagem revogados e service_role_ok, md5 2fc3a718…; sem `permission denied` nos logs; drift do #630 verde
 - 2026-10-28 — Drift main × produção zerado: `20261022020000` (#625) registrada em produção como no-op (script do #641, SQL idêntico ao arquivo); #641 mergeado (598efcf0): o check respeita `deferred-migrations.json` e aceita duplicatas de pares com git alinhado. `migration-remote-drift` contra produção = HUMAN_GATE (só `20261010120000`, adiada)
-- 2026-10-28 — `20261023120000` (#628) aplicada em produção pelo dono (versão real, SQL idêntico ao arquivo por md5); pós-checagem: revogado para authenticated/anon, service_role mantido, diagnóstico ajustado, nenhum `permission denied` nos logs

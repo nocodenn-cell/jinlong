@@ -92,7 +92,7 @@ describe('assertProdutoDaLojaSessao', () => {
     expect(r.ok).toBe(false)
   })
 
-  it('ADMIN é global: autoriza sem consultar o banco', async () => {
+  it('ADMIN legado não é global: sem loja na sessão, recusa sem consultar o banco', async () => {
     const consultou = vi.fn()
     const builder = {
       from: () => {
@@ -104,7 +104,7 @@ describe('assertProdutoDaLojaSessao', () => {
       lojaId: null,
       perfil: 'ADMIN',
     })
-    expect(r.ok).toBe(true)
+    expect(r.ok).toBe(false)
     expect(consultou).not.toHaveBeenCalled()
   })
 })

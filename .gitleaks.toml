@@ -15,6 +15,8 @@ paths = [
   # Test files cujas chaves de idempotência (UUIDs) casam com generic-api-key.
   # Allowlist por caminho (durável) substitui os fingerprints por SHA em
   # .gitleaksignore, que quebram a cada rebase e deixavam o scan vermelho.
+  # Token de gerente de teste SQL (literal sec04-test-*): placeholder, não é credencial.
+  '''backend/scripts/sec04-token-gerente-tenant\.test\.sql''',
   '''pdv-importados/app/caixa/finalizarVendaValidation\.test\.ts''',
   '''pdv-importados/lib/caixa/resolveVendaIdForFinalize\.test\.ts''',
   '''backend/scripts/fase4-remessa-idempotencia-payload-hash\.test\.sql''',

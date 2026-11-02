@@ -493,9 +493,16 @@ async function handleValidarGerentePdvSync(
     return jsonResponse(req, 400, { ok: false, error: "SENHA_INVALIDA_FORMATO" });
   }
 
+  // Dispositivo sem empresa/loja: recusa (nunca cai na pdv_config id=1 da Empresa 1).
+  if (ctx?.mode === "dispositivo" && (!ctx.empresaId?.trim() || !ctx.lojaId?.trim())) {
+    log({ level: "warn", stage: "validar_gerente_pdv", error: "ESCOPO_GERENTE_SEM_EMPRESA" });
+    return jsonResponse(req, 403, { ok: false, error: "ESCOPO_GERENTE_SEM_EMPRESA" });
+  }
   const result = await validateGerenteAndIssueToken({
     supabase,
     senha: senhaNormalizada,
+    // Só o modo legado explícito (chave compartilhada do cliente 1) pode usar a linha id=1.
+    escopoLegadoEmpresa1: ctx?.mode === "legado",
     // Dispositivo ativado: senha de gerente e token presos à loja/empresa do dispositivo (não à Empresa 1).
     lojaId: ctx?.mode === "dispositivo" ? ctx.lojaId : null,
     empresaId: ctx?.mode === "dispositivo" ? ctx.empresaId ?? null : null,
@@ -746,6 +753,15 @@ async function processVenda(
   if (strictManagerDiscountAuth && hasManagerDiscount && !payload.desconto_gerente_token &&
     !(await descontoAutorizadoPorPinGerente(supabase, payload, ctx))) {
     throw new Error("GERENTE_TOKEN_OBRIGATORIO");
+  }
+  // 20261028120100: em dispositivo ativado, o token informado precisa existir, ser da loja do dispositivo e ter
+  // emissor/aprovador ATIVOS e vinculados agora (usuário inativado ⇒ token revogado). Fail closed.
+  if (strictManagerDiscountAuth && hasManagerDiscount && payload.desconto_gerente_token && ctx?.mode === "dispositivo") {
+    const { data: vale, error: valeErr } = await supabase.rpc("fp_token_gerente_vale_na_loja", {
+      p_token: payload.desconto_gerente_token,
+      p_loja_id: ctx.lojaId,
+    });
+    if (valeErr || vale !== true) throw new Error("GERENTE_TOKEN_INVALIDO_OU_REVOGADO");
   }
 
   const rpcVenda = temParcelamento(payload.pagamentos) ? "registrar_venda_com_itens_v2" : "registrar_venda_com_itens";
