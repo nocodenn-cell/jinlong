@@ -159,6 +159,12 @@ await t('bloqueio de tela: bloqueado não vende; só o servidor (service_role) d
   await guardaAceita(U.opB, C1)
 })
 
+await t('sessão sem JWT válido (ausente ou expirada): assumir, liberar e bloquear recusam', async () => {
+  await assert.rejects(como(null, 'SELECT public.assumir_caixa_operador($1::uuid)', [C1]), /TROCA_NAO_AUTENTICADO/)
+  await assert.rejects(como(null, 'SELECT public.liberar_caixa_operador($1::uuid)', [C1]), /TROCA_NAO_AUTENTICADO/)
+  await assert.rejects(como(null, 'SELECT public.bloquear_caixa_operador($1::text)', ['INATIVIDADE']), /TROCA_NAO_AUTENTICADO/)
+})
+
 await t('isolamento: usuário de outra empresa não vê nem assume', async () => {
   await assert.rejects(como(U.fora, 'SELECT public.assumir_caixa_operador($1::uuid)', [C1]), /TROCA_CAIXA_NAO_ENCONTRADO/)
   const c = await ctx(U.fora)
