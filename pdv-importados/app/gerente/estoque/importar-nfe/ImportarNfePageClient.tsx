@@ -490,6 +490,7 @@ export function ImportarNfePageClient({
         u_com: l.u_com,
         q_com: l.q_com,
         v_un_com: l.v_un_com,
+        v_prod: l.v_prod ?? null,
         fator: l.fator,
         atualizar_custo: l.atualizar_custo,
         acao: (l.acao ?? 'CRIAR') as 'VINCULAR' | 'CRIAR',

@@ -5067,12 +5067,17 @@ export type Database = {
           created_at: string
           custo_unitario: number
           divergencia_obs: string | null
+          fator_conversao: number | null
           id: string
           importacao_nfe_id: string
           produto_id: string
+          quantidade_comercial_documento: number | null
           quantidade_conferida: number | null
           quantidade_nfe: number
           status_conferencia: string
+          unidade_comercial: string | null
+          valor_total_documento: number | null
+          valor_unitario_documento: number | null
         }
         Insert: {
           atualizar_custo?: boolean
@@ -5081,12 +5086,17 @@ export type Database = {
           created_at?: string
           custo_unitario: number
           divergencia_obs?: string | null
+          fator_conversao?: number | null
           id?: string
           importacao_nfe_id: string
           produto_id: string
+          quantidade_comercial_documento?: number | null
           quantidade_conferida?: number | null
           quantidade_nfe: number
           status_conferencia?: string
+          unidade_comercial?: string | null
+          valor_total_documento?: number | null
+          valor_unitario_documento?: number | null
         }
         Update: {
           atualizar_custo?: boolean
@@ -5095,12 +5105,17 @@ export type Database = {
           created_at?: string
           custo_unitario?: number
           divergencia_obs?: string | null
+          fator_conversao?: number | null
           id?: string
           importacao_nfe_id?: string
           produto_id?: string
+          quantidade_comercial_documento?: number | null
           quantidade_conferida?: number | null
           quantidade_nfe?: number
           status_conferencia?: string
+          unidade_comercial?: string | null
+          valor_total_documento?: number | null
+          valor_unitario_documento?: number | null
         }
         Relationships: [
           {

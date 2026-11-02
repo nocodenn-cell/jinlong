@@ -17,15 +17,18 @@ DECLARE
 BEGIN
   INSERT INTO auth.users (id) VALUES (v_gerente) ON CONFLICT (id) DO NOTHING;
 
-  INSERT INTO public.lojas (id, nome, codigo, ativo)
-  VALUES (v_loja, 'FLX05 Margem Loja', 'FLX05-M', true)
+  -- Multiempresa: lojas e categorias exigem empresa_id (trigger tg_preenche_empresa_id).
+  -- Empresa da fixture criada nesta transação (CI não tem empresas pré-existentes).
+  INSERT INTO public.empresas (id, nome, status) VALUES ('f5100000-0000-4000-8000-0000000000e1', 'FIXTURE-S1 Empresa 1', 'ATIVA') ON CONFLICT (id) DO NOTHING;
+  INSERT INTO public.lojas (id, nome, codigo, ativo, empresa_id)
+  VALUES (v_loja, 'FLX05 Margem Loja', 'FLX05-M', true, 'f5100000-0000-4000-8000-0000000000e1')
   ON CONFLICT (id) DO UPDATE SET ativo = true;
 
   INSERT INTO public.usuarios (id, nome, perfil, ativo, loja_id)
   VALUES (v_gerente, 'FLX05 Margem Gerente', 'GERENTE', true, v_loja)
   ON CONFLICT (id) DO UPDATE SET perfil = EXCLUDED.perfil, ativo = true, loja_id = EXCLUDED.loja_id;
 
-  INSERT INTO public.categorias (id, nome) VALUES (v_categoria, 'FLX05 Margem')
+  INSERT INTO public.categorias (id, nome, empresa_id) VALUES (v_categoria, 'FLX05 Margem', 'f5100000-0000-4000-8000-0000000000e1')
   ON CONFLICT (id) DO UPDATE SET nome = EXCLUDED.nome;
 
   -- Atacado 60 entre custo antigo 50 e custo da nota 80 — o caso real do PDV.

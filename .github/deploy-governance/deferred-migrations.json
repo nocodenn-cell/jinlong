@@ -6,6 +6,12 @@
       "file": "backend/supabase/migrations/20261010120000_caixa_sem_loja_padrao.sql",
       "reason": "Remove o DEFAULT de caixas.loja_id, ainda necessario ao PDV legado (Build A, sem loja_id). Aplicar somente apos validacao presencial do PDV novo (#590) com fila de sync zerada.",
       "releaseCondition": "Validacao presencial do PDV registrada + autorizacao explicita do Damatta + label deploy-prod:aprovado no PR que remove esta entrada."
+    },
+    {
+      "version": "20261023130000",
+      "file": "backend/supabase/migrations/20261023130000_growth001_central_conversao.sql",
+      "reason": "Growth-001 (Central de Conversao) pendente em producao: decisao do proprietario de 2026-11-01 (postergacao documentada; nao e protecao de deploy). Versao canonica mantida; nao aplicar sem autorizacao explicita.",
+      "releaseCondition": "Autorizacao explicita do proprietario para aplicar em producao (runbook manual com transacao e schema_migrations) + PR que remove esta entrada com label deploy-prod:aprovado."
     }
   ]
 }

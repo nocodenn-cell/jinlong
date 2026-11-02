@@ -1,4 +1,4 @@
--- Rollback de 20261023130000_movimentos_estoque_log_transferencia_id.sql (issue #586).
+-- Rollback de 20261029155000_movimentos_estoque_log_transferencia_id.sql (issue #586).
 -- Restaura os dois INSERTs originais de internal.transferir_estoque_seguro e remove a coluna.
 -- ATENÇÃO: DROP COLUMN apaga o vínculo das transferências feitas depois da migration (os movimentos em si ficam).
 BEGIN;
@@ -22,11 +22,11 @@ BEGIN
   );$r$);
   -- Só os trechos que a migration introduz (transferencias_idempotencia também tem "transferencia_id ) VALUES").
   IF v_def ~ 'gen_random_uuid\(\)' OR v_def ~ 'p_observacao\s*,\s*v_transferencia_id' THEN
-    RAISE EXCEPTION 'rollback 20261023130000: função não reconhecida — revisar manualmente';
+    RAISE EXCEPTION 'rollback 20261029155000: função não reconhecida — revisar manualmente';
   END IF;
   EXECUTE v_def;
 END $rb$;
 DROP INDEX IF EXISTS public.idx_movimentos_estoque_log_transferencia_id;
 ALTER TABLE public.movimentos_estoque_log DROP COLUMN IF EXISTS transferencia_id;
-DELETE FROM supabase_migrations.schema_migrations WHERE version = '20261023130000';
+DELETE FROM supabase_migrations.schema_migrations WHERE version = '20261029155000';
 COMMIT;
