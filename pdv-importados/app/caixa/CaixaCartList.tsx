@@ -1,6 +1,6 @@
 "use client"
 
-import React, { memo } from "react"
+import React, { memo, useState } from "react"
 import { Minus, Plus } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -91,6 +91,9 @@ const QuantidadeStepper = memo(function QuantidadeStepper({
   const buttonSizeClass = isCompact ? "h-12 w-12 min-h-[48px] min-w-[48px]" : "h-14 w-14 min-h-[56px] min-w-[56px]"
   const inputSizeClass = isCompact ? "h-12 w-16 text-base" : "h-14 w-20 text-lg"
   const iconClass = isCompact ? "h-6 w-6" : "h-7 w-7"
+  // Rascunho enquanto o operador digita: sem ele, cada tecla re-normaliza o campo
+  // (ex.: "1," vira "1" e o que vem depois é concatenado) e apagar tudo remove a linha.
+  const [rascunho, setRascunho] = useState<string | null>(null)
 
   const handleDecrement = () => {
     if (item.quantidade <= 1) {
@@ -130,11 +133,16 @@ const QuantidadeStepper = memo(function QuantidadeStepper({
         inputMode="decimal"
         min={QUANTIDADE_CAIXA_MIN}
         step={QUANTIDADE_CAIXA_MIN}
-        value={item.quantidade}
+        value={rascunho ?? item.quantidade}
         aria-label={caixaFmt(m.caixa.aria_qtde_item, { nome: item.nome })}
-        onChange={(e) =>
-          onAlterarQuantidade(item.id, parseQuantidadeInput(e.target.value))
-        }
+        onChange={(e) => {
+          const raw = e.target.value
+          setRascunho(raw)
+          // Vazio/0 não remove a linha durante a digitação: remover é ação explícita (remover / −).
+          const quantidade = parseQuantidadeInput(raw)
+          if (quantidade > 0) onAlterarQuantidade(item.id, quantidade)
+        }}
+        onBlur={() => setRascunho(null)}
         onKeyDown={enterVoltaParaBusca}
         className={`${inputSizeClass} rounded-none border-0 text-center font-semibold tabular-nums px-1 bg-background focus-visible:ring-1 focus-visible:ring-primary/40`}
       />

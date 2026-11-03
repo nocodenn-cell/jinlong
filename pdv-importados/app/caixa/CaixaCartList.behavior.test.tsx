@@ -167,7 +167,50 @@ describe("CaixaCartList — stepper de quantidade", () => {
     expect(input!.getAttribute("inputmode")).toBe("decimal")
     expect(input!.value).toBe("0.125")
   })
+
+  it("apagar o campo durante a digitação não remove a linha nem zera a quantidade", () => {
+    const onAlterarQuantidade = vi.fn()
+    const onRemover = vi.fn()
+    const item = buildItem({ quantidade: 35 })
+
+    renderList(root, [item], onAlterarQuantidade, onRemover)
+
+    const input = container.querySelector('input[type="number"]') as HTMLInputElement
+    digitar(input, "")
+
+    expect(onRemover).not.toHaveBeenCalled()
+    expect(onAlterarQuantidade).not.toHaveBeenCalled()
+    expect(input.value).toBe("")
+  })
+
+  it("digitar uma nova quantidade confirma só valores válidos e volta ao valor do item ao sair do campo", () => {
+    const onAlterarQuantidade = vi.fn()
+    const onRemover = vi.fn()
+    const item = buildItem({ quantidade: 35 })
+
+    renderList(root, [item], onAlterarQuantidade, onRemover)
+
+    const input = container.querySelector('input[type="number"]') as HTMLInputElement
+    digitar(input, "3")
+    expect(onAlterarQuantidade).toHaveBeenLastCalledWith(item.id, 3)
+    expect(input.value).toBe("3")
+
+    flushSync(() => {
+      input.dispatchEvent(new FocusEvent("focusout", { bubbles: true }))
+    })
+    expect(input.value).toBe("35")
+    expect(onRemover).not.toHaveBeenCalled()
+  })
 })
+
+/** Simula a digitação do operador num input controlado pelo React. */
+function digitar(input: HTMLInputElement, valor: string) {
+  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!
+  flushSync(() => {
+    setter.call(input, valor)
+    input.dispatchEvent(new Event("input", { bubbles: true }))
+  })
+}
 
 // Onda 2 · Bloco 2 — a linha do carrinho precisa preservar identificação
 // suficiente pra distinguir produtos semelhantes (não só o ID truncado).
