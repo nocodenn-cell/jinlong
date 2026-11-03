@@ -19,7 +19,10 @@
 
 ## P1 — Falta para lançar (MVP)
 
-- Import Intelligence, D-04/D-06 (implementado em `20261103120000`, não commitado): antes de publicar, aplicar a migration na homologação e checar apurações duplicadas na mesma identidade (`operacao_id, tipo, versao_dados, engine_version`). Conferir também que o registro de apuração não é mais executável por `authenticated` no ambiente real
+- Import Intelligence: `pdv-importados` validado em worktree isolado (`eead9194` + correção do `zh.json`, ainda não commitada): typecheck OK; vitest 2846 passam, 9 pulados, 2 arquivos falham (`caixaParcelasCredito.test.ts` importa `@testing-library/react`, que não está no `package.json`; o arquivo e a dependência estão fora do diff deste trabalho); integração contra o Supabase local isolado: 8/8. O `node_modules` do checkout principal segue corrompido e está preservado para investigação
+- Import Intelligence, S4/S5: decidir se o custo médio entra no escritor canônico. `docs/adr/ADR-008-inventory-domain-boundary.md` deixa valoração fora do escopo do inventory; é preciso emendar o ADR antes de qualquer escrita em `preco_custo_medio`
+- Import Intelligence: preparar a aplicação em homologação de `20261103120000` e `20261103121000` só com aprovação. Antes, checar apurações e despesas duplicadas em leitura
+- Import Intelligence, D-04/D-06 (implementado em `20261103120000`, commit `eead9194`): antes de publicar, checar apurações duplicadas na mesma identidade (`operacao_id, tipo, versao_dados, engine_version`) no ambiente real. Conferir também que o registro de apuração não é mais executável por `authenticated`
 - Import Intelligence, D-05 (implementado em `20261103121000`, não commitado): avaliar aviso não bloqueante de possível duplicidade operacional (mesmo documento, tipo, item, valor e moeda com chave diferente). Ainda não implementado
 - Import Intelligence, D-05: a UI gera `idempotency_key` por formulário novo. Antes de usar em produção, confirmar que nenhuma tela antiga envia lançamentos sem essa chave
 - Import Intelligence: catálogos tributários "demo" e "pesquisado" estão embutidos em `shared-core/src/import/tributacao.ts`. Remover e carregar só alíquotas validadas por vigência (D-09)

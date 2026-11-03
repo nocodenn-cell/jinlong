@@ -4185,6 +4185,7 @@
     "erro_nao_autorizado": "您没有执行此操作的权限。",
     "erro_nao_editavel": "批次不在核对中：请先重新打开再编辑。",
     "erro_dados_alterados": "计算期间数据已变更。请重新计算。",
+    "erro_conflito_conteudo": "此记录已用其他数据保存。请刷新页面并核对后再次保存。",
     "erro_produto_fora": "该商品不属于您的企业。",
     "erro_fornecedor_fora": "该供应商不属于您的企业。",
     "erro_motivo": "请填写至少 10 个字符的原因。",
