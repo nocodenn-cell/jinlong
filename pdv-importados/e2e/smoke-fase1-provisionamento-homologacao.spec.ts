@@ -10,7 +10,7 @@ import { test, expect, type Page } from '@playwright/test'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { loginWithRetry } from './helpers/login'
-import { gotoApp, E2E_GOTO_DOMCONTENTLOADED, LOGIN_PATH, esperarHidratacao } from './helpers/url'
+import { gotoApp, E2E_GOTO_DOMCONTENTLOADED, esperarHidratacao } from './helpers/url'
 import { ensureCaixaAberto, BTN_FECHAR_CAIXA } from './helpers/ensureCaixaAberto'
 import {
   adicionarProdutoDemo,
@@ -61,32 +61,11 @@ function hasSmokeEnv(): boolean {
 }
 
 
-async function logoutViaUi(page: Page): Promise<void> {
-  const sair = page.getByRole('link', { name: /^Sair$/ }).or(page.getByRole('button', { name: /^Sair$/ }))
-  if (await sair.first().isVisible().catch(() => false)) {
-    await sair.first().click()
-    await page.waitForURL(/\/login/, { timeout: 30_000 })
-    return
-  }
-  await gotoApp(page, '/auth/signout', E2E_GOTO_DOMCONTENTLOADED)
-  await page.waitForURL(/\/login/, { timeout: 30_000 }).catch(async () => {
-    await gotoApp(page, LOGIN_PATH, E2E_GOTO_DOMCONTENTLOADED)
-  })
-}
-
 async function loginAs(page: Page, email: string, password: string, post: RegExp): Promise<void> {
   await loginWithRetry(page, email, password, post, 90_000)
 }
 
 /** Digitação real — dispara onChange do React em inputs controlados. */
-async function typeInto(page: Page, testId: string, value: string) {
-  const locator = page.getByTestId(testId)
-  await locator.click()
-  await locator.fill('')
-  await page.keyboard.type(value, { delay: 20 })
-  await expect(locator).toHaveValue(value)
-}
-
 test.describe.configure({ mode: 'serial', timeout: 240_000 })
 
 test.describe('Smoke Fase 1 — contrato de provisionamento -> venda -> dashboard', () => {
