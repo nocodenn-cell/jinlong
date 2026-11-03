@@ -143,14 +143,6 @@ export function PrecosSection({
               </label>
               <p className="mt-0.5 text-caption text-jl-fg-3">{p.permitir_abaixo_custo_hint}</p>
             </div>
-
-            <div className="rounded-md border border-[var(--color-border-secondary)] bg-white/[.04] p-3">
-              <p className="text-xs font-medium text-jl-fg-3">{p.custo_medio_label}</p>
-              <p className="mt-1 text-sm font-medium text-jl-fg-1">
-                {readOnly.custoMedio !== null ? formatBRL(readOnly.custoMedio) : '—'}
-              </p>
-              <p className="mt-0.5 text-caption text-jl-fg-3">{p.custo_medio_hint}</p>
-            </div>
           </div>
         ) : null}
 

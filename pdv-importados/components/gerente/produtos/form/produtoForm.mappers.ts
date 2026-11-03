@@ -88,7 +88,6 @@ export function readOnlyFromProduto(produto: ProdutoGerenteRow | null): {
   produtoId: string | null
   estoqueAtual: number | null
   estoqueMinimo: number | null
-  custoMedio: number | null
   temNf: boolean
 } {
   if (!produto) {
@@ -96,7 +95,6 @@ export function readOnlyFromProduto(produto: ProdutoGerenteRow | null): {
       produtoId: null,
       estoqueAtual: null,
       estoqueMinimo: null,
-      custoMedio: null,
       temNf: false,
     }
   }
@@ -104,7 +102,6 @@ export function readOnlyFromProduto(produto: ProdutoGerenteRow | null): {
     produtoId: produto.id,
     estoqueAtual: produto.quantidade_atual,
     estoqueMinimo: produto.estoque_minimo,
-    custoMedio: produto.preco_custo_medio,
     temNf: produto.tem_nf,
   }
 }

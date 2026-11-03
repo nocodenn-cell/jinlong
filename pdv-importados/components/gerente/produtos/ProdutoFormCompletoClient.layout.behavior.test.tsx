@@ -119,14 +119,13 @@ function montar() {
 }
 
 describe('ProdutoFormCompletoClient — UX-017', () => {
-  it('abaixo do custo e custo médio ficam DENTRO da seção de precificação', () => {
+  it('abaixo do custo fica DENTRO da seção de precificação, sem custo médio exibido', () => {
     montar()
     const precos = container.querySelector('#produto-secao-precos') as HTMLElement
     const bloco = precos.querySelector('[data-testid="precos-compra"]') as HTMLElement
     expect(bloco).toBeTruthy()
     expect(bloco.textContent).toContain(m.produtos.permitir_abaixo_custo)
-    expect(bloco.textContent).toContain(m.produtos.custo_medio_label)
-    expect(bloco.textContent).toContain('R$')
+    expect(bloco.textContent).not.toContain('Custo médio')
   })
 
   it('não existe mais a seção "Compra" separada', () => {

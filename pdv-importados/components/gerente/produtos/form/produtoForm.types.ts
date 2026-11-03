@@ -11,7 +11,6 @@ export type ProdutoFormReadOnly = Readonly<{
   produtoId: string | null
   estoqueAtual: number | null
   estoqueMinimo: number | null
-  custoMedio: number | null
   temNf: boolean
 }>
 
