@@ -19,9 +19,9 @@
 
 ## P1 — Falta para lançar (MVP)
 
-- Import Intelligence: `import_registrar_apuracao` não é idempotente, e reenvio com o mesmo `entrada_sha256` cria versão nova com o mesmo conteúdo. Corrigir antes de qualquer publicação (`docs/import-intelligence/22-AUDITORIA-IM-ETAPAS-1-4-2026-11-02.md`, D-04)
-- Import Intelligence: `import_despesas` não tem unicidade por documento de origem. Com o parser lendo `vFrete` (S1b), o frete pode entrar duas vezes (D-05)
-- Import Intelligence: `import_aprovar_apuracao` aceita `recalculo_confere` informado pelo chamador. O recálculo tem de ser confirmado no servidor antes da aprovação (D-06)
+- Import Intelligence, D-04/D-06 (implementado em `20261103120000`, não commitado): antes de publicar, aplicar a migration na homologação e checar apurações duplicadas na mesma identidade (`operacao_id, tipo, versao_dados, engine_version`). Conferir também que o registro de apuração não é mais executável por `authenticated` no ambiente real
+- Import Intelligence, D-05 (implementado em `20261103121000`, não commitado): avaliar aviso não bloqueante de possível duplicidade operacional (mesmo documento, tipo, item, valor e moeda com chave diferente). Ainda não implementado
+- Import Intelligence, D-05: a UI gera `idempotency_key` por formulário novo. Antes de usar em produção, confirmar que nenhuma tela antiga envia lançamentos sem essa chave
 - Import Intelligence: catálogos tributários "demo" e "pesquisado" estão embutidos em `shared-core/src/import/tributacao.ts`. Remover e carregar só alíquotas validadas por vigência (D-09)
 - Import Intelligence: `import_cambios` aceita uma taxa por moeda por operação. Trocar por taxa com fonte, data e fatura, e registrar diferença cambial (D-08). PTAX (BCB, OData, gratuito) entra depois, por consulta server-side
 - Autorizar o merge do PR #623 (remover ADMIN): conflito com a main resolvido na branch do PR (commit 193293d7, local, sem push); validação pendente de revisão

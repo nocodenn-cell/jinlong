@@ -3948,6 +3948,7 @@
     "erro_nao_autorizado": "Você não tem permissão para esta ação.",
     "erro_nao_editavel": "A operação não está em conferência: reabra antes de editar.",
     "erro_dados_alterados": "Os dados mudaram durante o cálculo. Calcule novamente.",
+    "erro_conflito_conteudo": "Este registro já foi gravado com outros dados. Atualize a tela e confira antes de salvar de novo.",
     "erro_produto_fora": "O produto não pertence à sua empresa.",
     "erro_fornecedor_fora": "O fornecedor não pertence à sua empresa.",
     "erro_motivo": "Informe um motivo com pelo menos 10 caracteres.",

@@ -168,7 +168,7 @@ export function LancamentosSecao(props: Props) {
         title={t.lanc_despesas_compartilhadas}
         action={editavel ? (
           <Button type="button" variant="outline" data-testid="imp-desp-adicionar"
-            onClick={() => setForm({ tipo: 'DESPESA', dados: { moeda: props.moedaPadrao, incorporavel: 'SIM', atribuicao_modo: 'RATEIO', criterio: 'VALOR_ADUANEIRO' } })}>
+            onClick={() => setForm({ tipo: 'DESPESA', dados: { moeda: props.moedaPadrao, incorporavel: 'SIM', atribuicao_modo: 'RATEIO', criterio: 'VALOR_ADUANEIRO', idempotency_key: crypto.randomUUID() } })}>
             {t.desp_adicionar}
           </Button>
         ) : null}

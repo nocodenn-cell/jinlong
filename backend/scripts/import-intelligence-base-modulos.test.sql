@@ -9,7 +9,11 @@ INSERT INTO public.lojas (nome, codigo, empresa_id) VALUES ('BM A1', 'BM-A1', :'
 INSERT INTO public.lojas (nome, codigo, empresa_id) VALUES ('BM B1', 'BM-B1', :'eb') RETURNING id AS lb \gset
 INSERT INTO auth.users (id, email) VALUES (gen_random_uuid(), 'bm.dono.a@t') RETURNING id AS da \gset
 INSERT INTO auth.users (id, email) VALUES (gen_random_uuid(), 'bm.admin@t') RETURNING id AS adm \gset
+-- ADMIN foi descontinuado (20261028110000, internal.fp_bloquear_perfil_admin). O fixture de ADMIN legado
+-- usa o bypass de manutenção documentado na própria migration, só dentro desta transação.
+SELECT set_config('fp.permitir_admin_legado', 'on', true);
 INSERT INTO public.usuarios (id, nome, perfil, loja_id, ativo) VALUES (:'da', 'BM Dono A', 'DONO', :'la', true), (:'adm', 'BM Admin legado', 'ADMIN', :'lb', true);
+SELECT set_config('fp.permitir_admin_legado', 'off', true);
 
 SELECT set_config('request.jwt.claim.sub', :'da', true) \gset
 SELECT pg_temp.ok(NOT public.fp_pode_modulo(:'ea', 'IMPORT_INTELLIGENCE', ARRAY['DONO']), 'módulo desabilitado por padrão');

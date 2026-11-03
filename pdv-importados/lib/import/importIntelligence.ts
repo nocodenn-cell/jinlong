@@ -45,17 +45,25 @@ export function sha256Canonico(valor: unknown): string {
   return createHash('sha256').update(serializarCanonico(valor), 'utf8').digest('hex')
 }
 
-/** Calcula com o motor sobre a entrada montada pelo banco e registra a apuração (imutável). */
+/**
+ * Calcula com o motor sobre a entrada montada pelo banco e registra a apuração (imutável).
+ * O registro é feito pelo client de serviço (D-06): a sessão do usuário não grava saída. O ator é
+ * o usuário da sessão e é reautorizado no banco (DONO/GERENTE da empresa e loja, módulo ativo).
+ */
 export async function apurarOperacao(
   client: ClienteImport,
+  servico: ClienteServico,
   operacaoId: string,
   tipo: 'SIMULACAO' | 'APURACAO',
 ): Promise<
-  | { ok: true; apuracaoId: string; status: 'OK' | 'BLOQUEADO'; entradaSha256: string; saidaSha256: string; saida: LandedCostOutput }
+  | { ok: true; apuracaoId: string; status: 'OK' | 'BLOQUEADO'; saidaSha256: string; saida: LandedCostOutput }
   | FalhaImport
 > {
   const gate = await requireModulo(client, 'IMPORT_INTELLIGENCE', { papeis: ['DONO', 'GERENTE'] })
   if (!gate.ok) return { ok: false, motivo: 'MODULO_NEGADO', detalhe: gate.motivo }
+  const { data: u } = await client.auth.getUser()
+  const atorId = u.user?.id
+  if (!atorId) return { ok: false, motivo: 'MODULO_NEGADO', detalhe: 'SEM_SESSAO' }
 
   const montada = await client.rpc('import_montar_entrada', { p_operacao: operacaoId })
   if (montada.error || !montada.data) return { ok: false, motivo: 'ERRO_BANCO', detalhe: montada.error?.message }
@@ -66,19 +74,19 @@ export async function apurarOperacao(
     return { ok: false, motivo: 'ENTRADA_INVALIDA', detalhe: `${resultado.error.codigo}: ${resultado.error.detalhe ?? ''}` }
   }
 
-  const entradaSha256 = sha256Canonico(entrada)
+  // Entrada e hash de entrada são calculados no banco (D-04/D-06); aqui só a saída do motor.
   const saidaSha256 = sha256Canonico(resultado.value)
-  const reg = await client.rpc('import_registrar_apuracao', {
+  const reg = await servico.rpc('import_registrar_apuracao', {
     p_operacao: operacaoId,
+    p_ator: atorId,
     p_tipo: tipo,
     p_versao_dados: versaoDados,
-    p_entrada_sha256: entradaSha256,
     p_saida: resultado.value,
     p_saida_sha256: saidaSha256,
   })
   if (reg.error || typeof reg.data !== 'string') return { ok: false, motivo: 'ERRO_BANCO', detalhe: reg.error?.message }
 
-  return { ok: true, apuracaoId: reg.data, status: resultado.value.status, entradaSha256, saidaSha256, saida: resultado.value }
+  return { ok: true, apuracaoId: reg.data, status: resultado.value.status, saidaSha256, saida: resultado.value }
 }
 
 /**
@@ -91,18 +99,18 @@ export async function verificarApuracaoGuardada(
 ): Promise<{ ok: true; aprovavel: boolean; confere: boolean; motivos: string[]; saidaSha256: string } | FalhaImport> {
   const { data, error } = await client
     .from('import_apuracoes')
-    .select('id, entrada, entrada_sha256, saida_sha256')
+    .select('id, entrada, saida_sha256')
     .eq('id', apuracaoId)
     .maybeSingle()
   if (error) return { ok: false, motivo: 'ERRO_BANCO', detalhe: error.message }
   if (!data) return { ok: false, motivo: 'NAO_ENCONTRADA' }
 
+  // A entrada guardada é a do banco no instante do registro (o banco também grava seu hash).
   const entrada = data.entrada as LandedCostInput
   const recalculo = calcularLandedCost(entrada)
   const verificacao = verificarAprovacao(recalculo)
   const saidaSha256 = recalculo.ok ? sha256Canonico(recalculo.value) : ''
-  const confere =
-    recalculo.ok && saidaSha256 === data.saida_sha256 && sha256Canonico(entrada) === data.entrada_sha256
+  const confere = recalculo.ok && saidaSha256 === data.saida_sha256
   return { ok: true, aprovavel: verificacao.aprovavel, confere, motivos: [...verificacao.motivos], saidaSha256 }
 }
 

@@ -60,6 +60,7 @@ export function chaveErro(mensagem: string | null | undefined): string {
     [/IMPORT_NAO_AUTORIZADO|NAO_AUTORIZADO|IMPORT_AUTH|MODULO_NEGADO|permission denied|42501/, 'erro_nao_autorizado'],
     [/IMPORT_OPERACAO_NAO_EDITAVEL/, 'erro_nao_editavel'],
     [/IMPORT_DADOS_ALTERADOS/, 'erro_dados_alterados'],
+    [/IMPORT_IDEMPOTENCIA_CONFLITO|IMPORT_APURACAO_CONFLITO_CONTEUDO/, 'erro_conflito_conteudo'],
     [/IMPORT_PRODUTO_FORA_DA_EMPRESA/, 'erro_produto_fora'],
     [/IMPORT_FORNECEDOR_FORA_DA_EMPRESA/, 'erro_fornecedor_fora'],
     [/IMPORT_MOTIVO_OBRIGATORIO|MOTIVO/, 'erro_motivo'],

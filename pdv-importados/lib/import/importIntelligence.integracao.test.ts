@@ -107,7 +107,7 @@ describe.skipIf(!habilitado)('Import Intelligence — integração real (F4)', (
       criterio: 'VALOR_ADUANEIRO', justificativa: 'Honorários do despachante pelo valor aduaneiro' })
 
     // 2. Apuração com o motor real
-    const ap = await apurarOperacao(comoImport(gerenteA), op, 'APURACAO')
+    const ap = await apurarOperacao(comoImport(gerenteA), admin, op, 'APURACAO')
     if (!ap.ok) throw new Error(`apurar: ${ap.motivo} ${ap.detalhe ?? ''}`)
     expect(ap.status).toBe('OK')
     expect(ap.saida.conservacao.ok).toBe(true)

@@ -94,8 +94,10 @@ SELECT jsonb_build_object('schema_version', '1', 'engine_version', 'landed-cost/
   'itens', jsonb_build_array(jsonb_build_object('item_id', :'item', 'produto_id', null, 'quantidade_estoque', '1.000',
     'custo_total_brl', '5432.1099', 'custo_unitario_brl', '5432.109900', 'residuo_unitario_brl', '0', 'residuo_total_brl', '0',
     'componentes_brl', '{}'::jsonb, 'memoria', '[]'::jsonb))) AS saida \gset
-SET LOCAL ROLE authenticated;
-SELECT public.import_registrar_apuracao(:'op', 'APURACAO', :vd, repeat('a', 64), :'saida', repeat('b', 64)) AS apu \gset
+-- D-06: o registro é do servidor (service_role), com o ator identificado e reautorizado no banco
+SELECT set_config('request.jwt.claim.sub', '', true) \gset
+SET LOCAL ROLE service_role;
+SELECT public.import_registrar_apuracao(:'op', :'dono_a', 'APURACAO', :vd, :'saida', repeat('b', 64)) AS apu \gset
 RESET ROLE;
 SELECT set_config('request.jwt.claim.sub', '', true) \gset
 SET LOCAL ROLE service_role;
@@ -108,7 +110,7 @@ SELECT public.import_conferir_lancamento(:'op', 'DESPESA', :'desp', 'CONFERIDO')
 RESET ROLE;
 SELECT set_config('request.jwt.claim.sub', '', true) \gset
 SET LOCAL ROLE service_role;
-SELECT public.import_aprovar_apuracao(:'apu', :'dono_a', 'aprovação após conferência', '{"recalculo_confere":true}');
+SELECT public.import_aprovar_apuracao(:'apu', :'dono_a', 'aprovação após conferência', format('{"recalculo_confere":true,"saida_sha256":"%s"}', repeat('b', 64))::jsonb);
 RESET ROLE;
 SELECT pg_temp.f5_check((:'bloq_conf')::boolean AND (SELECT status = 'APROVADA' FROM public.import_operacoes WHERE id = :'op'),
   'F5-04 aprovação recusada com lançamento a conferir; aceita depois da conferência (versão continua válida)');

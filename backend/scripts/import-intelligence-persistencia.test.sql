@@ -141,20 +141,31 @@ SELECT jsonb_build_object('schema_version', '1', 'engine_version', 'landed-cost/
              'memoria', '[]'::jsonb)) FROM public.import_itens i WHERE i.operacao_id = :'op')) AS saida \gset
 SELECT repeat('a', 64) AS sha_e, repeat('b', 64) AS sha_s \gset
 
+-- D-06: sessão de usuário não registra apuração (nem o DONO); só o servidor (service_role) registra.
 SELECT set_config('request.jwt.claim.sub', :'ger_a1', true) \gset
 SET LOCAL ROLE authenticated;
-SELECT pg_temp.espera_erro(format('SELECT public.import_registrar_apuracao(%L, %L, %s, %L, %L::jsonb, %L)', :'op', 'APURACAO', 5, :'sha_e', :'saida', :'sha_s'),
+SELECT pg_temp.espera_erro(format('SELECT public.import_registrar_apuracao(%L, %L, %L, %s, %L::jsonb, %L)', :'op', :'ger_a1', 'APURACAO', 6, :'saida', :'sha_s'),
+         'permission denied') AS sessao_bloqueada \gset
+RESET ROLE;
+-- service_role sem identidade de sessão: o ator é o parâmetro, autorizado no banco
+SELECT set_config('request.jwt.claim.sub', '', true) \gset
+SET LOCAL ROLE service_role;
+SELECT pg_temp.espera_erro(format('SELECT public.import_registrar_apuracao(%L, %L, %L, %s, %L::jsonb, %L)', :'op', :'ger_a1', 'APURACAO', 5, :'saida', :'sha_s'),
          'IMPORT_DADOS_ALTERADOS_DURANTE_CALCULO') AS conc,
-       pg_temp.espera_erro(format('SELECT public.import_registrar_apuracao(%L, %L, %s, %L, %L::jsonb, %L)', :'op', 'APURACAO', 6, :'sha_e',
-         jsonb_set(:'saida'::jsonb, '{itens}', ((:'saida'::jsonb) -> 'itens') - 0)::text, :'sha_s'), 'IMPORT_SAIDA_NAO_CORRESPONDE_AOS_ITENS') AS itens_div \gset
-SELECT public.import_registrar_apuracao(:'op', 'SIMULACAO', 6, :'sha_e', :'saida', :'sha_s') AS sim \gset
-SELECT public.import_registrar_apuracao(:'op', 'APURACAO', 6, :'sha_e', :'saida', :'sha_s') AS apu \gset
+       pg_temp.espera_erro(format('SELECT public.import_registrar_apuracao(%L, %L, %L, %s, %L::jsonb, %L)', :'op', :'ger_a1', 'APURACAO', 6,
+         jsonb_set(:'saida'::jsonb, '{itens}', ((:'saida'::jsonb) -> 'itens') - 0)::text, :'sha_s'), 'IMPORT_SAIDA_NAO_CORRESPONDE_AOS_ITENS') AS itens_div,
+       pg_temp.espera_erro(format('SELECT public.import_registrar_apuracao(%L, %L, %L, %s, %L::jsonb, %L)', :'op', :'op_a1', 'APURACAO', 6, :'saida', :'sha_s'),
+         'IMPORT_NAO_AUTORIZADO') AS ator_sem_papel \gset
+SELECT public.import_registrar_apuracao(:'op', :'ger_a1', 'SIMULACAO', 6, :'saida', :'sha_s') AS sim \gset
+SELECT public.import_registrar_apuracao(:'op', :'ger_a1', 'APURACAO', 6, :'saida', :'sha_s') AS apu \gset
+RESET ROLE;
 SELECT (SELECT count(*) FROM public.import_apuracao_itens WHERE apuracao_id = :'apu') AS apu_itens,
        (SELECT versao FROM public.import_apuracoes WHERE id = :'apu') AS apu_versao,
-       (SELECT entrada = public.import_montar_entrada(:'op') -> 'entrada' FROM public.import_apuracoes WHERE id = :'apu') AS apu_entrada_igual \gset
+       (SELECT entrada = public._import_montar_entrada(:'op') FROM public.import_apuracoes WHERE id = :'apu') AS apu_entrada_igual \gset
 RESET ROLE;
-SELECT pg_temp.f4_check((:'conc')::boolean AND (:'itens_div')::boolean AND :apu_itens = 2 AND :apu_versao = 2 AND (:'apu_entrada_igual')::boolean,
-  'F4-05 apuração versionada; entrada guardada = entrada do banco; concorrência e itens divergentes recusados');
+SELECT pg_temp.f4_check((:'sessao_bloqueada')::boolean AND (:'conc')::boolean AND (:'itens_div')::boolean AND (:'ator_sem_papel')::boolean
+  AND :apu_itens = 2 AND :apu_versao = 2 AND (:'apu_entrada_igual')::boolean,
+  'F4-05 apuração versionada; entrada guardada = entrada do banco; sessão de usuário, concorrência, itens divergentes e ator sem papel recusados');
 
 SELECT pg_temp.f4_check(
   pg_temp.espera_erro(format('UPDATE public.import_apuracoes SET status_calculo = %L WHERE id = %L', 'OK', :'apu'), 'HISTORICO_IMUTAVEL')
@@ -192,7 +203,7 @@ SELECT pg_temp.espera_erro(format('SELECT public.import_aprovar_apuracao(%L, %L,
          'IMPORT_RECALCULO_NAO_CONFERIDO') AS ap_sem_rec,
        pg_temp.espera_erro(format('SELECT public.import_aprovar_apuracao(%L, %L, %L, %L::jsonb)', :'sim', :'dono_a', 'aprovar uma simulação', '{"recalculo_confere":true}'),
          'IMPORT_SIMULACAO_NAO_APROVAVEL') AS ap_sim \gset
-SELECT public.import_aprovar_apuracao(:'apu', :'dono_a', 'Custos conferidos com DI e invoice', '{"recalculo_confere":true,"saida_sha256":"b"}');
+SELECT public.import_aprovar_apuracao(:'apu', :'dono_a', 'Custos conferidos com DI e invoice', format('{"recalculo_confere":true,"saida_sha256":"%s"}', :'sha_s')::jsonb);
 RESET ROLE;
 SELECT pg_temp.f4_check((:'ap_auth')::boolean AND (:'ap_ident')::boolean AND (:'ap_ger')::boolean AND (:'ap_b')::boolean
   AND (:'ap_sem_rec')::boolean AND (:'ap_sim')::boolean

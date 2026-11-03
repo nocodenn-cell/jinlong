@@ -218,10 +218,14 @@ export async function salvarLancamentoAction(
     const valor = dec(s('valor'), 6, { negativo: true })
     if (!valor || !Moeda.safeParse(s('moeda')).success || !s('tipo')) return falha('erro_valor_invalido')
     const modo = s('atribuicao_modo')
+    // D-05: a chave identifica a submissão (gerada pelo formulário); retries reenviam a mesma chave
+    const chave = idOpc('idempotency_key')
+    if (chave === 'INVALIDO') return falha('erro_valor_invalido')
     dados = {
       tipo: s('tipo'), moeda: s('moeda').toUpperCase(), valor, incorporavel: s('incorporavel'),
       atribuicao_modo: modo, item_id: modo === 'DIRETA' ? idOpc('item_id') : null,
       criterio: modo === 'RATEIO' ? s('criterio') : null, justificativa: s('justificativa'),
+      ...(chave ? { idempotency_key: chave } : {}),
     }
   } else if (tipo === 'DESCONTO') {
     const valor = dec(s('valor'), 6)
@@ -328,7 +332,7 @@ export async function apurarAction(
   if (!gate.ok) return falha('erro_nao_autorizado')
   if (!Uuid.safeParse(operacaoId).success || !['SIMULACAO', 'APURACAO'].includes(tipo)) return falha('erro_valor_invalido')
   // motor existente (shared-core) sobre a entrada montada pelo banco
-  const r = await apurarOperacao(gate.ctx.client, operacaoId, tipo)
+  const r = await apurarOperacao(gate.ctx.client, createAdminClient() as unknown as ClienteServico, operacaoId, tipo)
   if (!r.ok) {
     if (r.motivo === 'ENTRADA_INVALIDA') {
       const e = erroEntradaLegivel(r.detalhe, await itensDaOperacao(gate.ctx.client, operacaoId))
