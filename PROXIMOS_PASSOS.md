@@ -61,7 +61,6 @@
 ## P2 — Melhoria
 
 - `docs/import-intelligence/fixtures/referencia/landed-cost-referencia.mjs` compara texto byte a byte e falha 0/21 em Windows com `core.autocrlf=true`. Normalizar `\r\n` dentro do script (D-07)
-- Rodar a suíte `shared-core/src/import` (Vitest) em ambiente com `npm ci`. Não executada na auditoria de 2026-11-02 por falta de `node_modules` (D-17)
 - Dependabot (#544, #547, #548, #549): decidir a política de CI. A anon key é pública e pode ir para os secrets de Dependabot; `PLAYWRIGHT_TEST_PASSWORD` e `SUPABASE_ACCESS_TOKEN` não devem ir (risco de exfiltração por pacote de terceiro). Alternativa: tratar Dependabot como fork no workflow
 - Dependabot #546 (Sentry 11): import corrigido para `@sentry/nextjs/config` e branch atualizada com a main; validar CI e smoke de captura de erro
 - Dependabot #583: dependência fantasma `@testing-library/react` declarada e fixture de Storage corrigida; validar CI (inclui pglite 0.3→0.5)

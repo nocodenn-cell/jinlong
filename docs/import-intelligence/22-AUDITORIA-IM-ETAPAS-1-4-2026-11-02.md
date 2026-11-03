@@ -308,7 +308,7 @@ Sequência alinhada ao `05-PLANO-DE-SPRINTS.md` (S0–S6). As estimativas são *
 
 ### Verificações não executadas e motivo
 
-- **Suíte `shared-core/src/import` (Vitest):** não executada. `shared-core` não tem `node_modules`. Tentei instalar `vitest`, `zustand` e `typescript` em uma cópia de trabalho na pasta de scratchpad. A instalação foi negada pela política de execução desta sessão e não tentei contorná-la. Para executar: `npm ci` em `shared-core` e depois `npm test` ali, em ambiente com acesso à rede.
+- **Suíte `shared-core` (Vitest), executada em 2026-11-03 após aprovação:** `npm ci` e `npm test` em `shared-core`. Resultado: 47 arquivos passaram e 1 foi pulado; 431 testes passaram e 5 foram pulados. Os 16 `*.spec.ts` de `src/import/` passaram. Os pulados não foram identificados nesta rodada.
 - **Testes SQL (`import-intelligence-*.test.sql`):** não executados. Exigem banco local migrado.
 - **Testes de `pdv-importados`:** não executados nesta rodada.
 
