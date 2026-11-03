@@ -488,7 +488,7 @@ function runMigrationListWithRetry(maxAttempts) {
   let lastErr;
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
-      return execSync("npx supabase migration list 2>&1", {
+      return execSync("npx supabase migration list --remote 2>&1", {
         cwd: BACKEND_ROOT,
         encoding: "utf8",
         stdio: ["ignore", "pipe", "pipe"],
