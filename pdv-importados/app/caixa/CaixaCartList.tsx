@@ -16,6 +16,11 @@ import {
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { enterVoltaParaBusca } from "@/app/caixa/caixaFocoBusca"
 import { DragonIcon } from "@/components/icons/DragonIcon"
+import {
+  ajustarQuantidadeUnidade,
+  normalizarUnidadeMedida,
+  quantidadeValidaParaUnidade,
+} from "@shared/format/unidadeMedida"
 import { labelOrigemCaixa } from "@/lib/caixa/metaProdutoUi"
 import type { OrigemProdutoCaixa } from "@/app/caixa/caixaActionTypes"
 
@@ -94,13 +99,14 @@ const QuantidadeStepper = memo(function QuantidadeStepper({
   // Rascunho enquanto o operador digita: sem ele, cada tecla re-normaliza o campo
   // (ex.: "1," vira "1" e o que vem depois é concatenado) e apagar tudo remove a linha.
   const [rascunho, setRascunho] = useState<string | null>(null)
+  const unidadeDoItem = normalizarUnidadeMedida(item.metaPdv?.unidadeMedida)
 
   const handleDecrement = () => {
     if (item.quantidade <= 1) {
       onRemover(item.id)
       return
     }
-    const next = parseQuantidadeCaixaFromString(String(item.quantidade - 1))
+    const next = ajustarQuantidadeUnidade(item.quantidade, unidadeDoItem, -1)
     if (next < QUANTIDADE_CAIXA_MIN) {
       onRemover(item.id)
       return
@@ -109,7 +115,7 @@ const QuantidadeStepper = memo(function QuantidadeStepper({
   }
 
   const handleIncrement = () => {
-    onAlterarQuantidade(item.id, parseQuantidadeCaixaFromString(String(item.quantidade + 1)))
+    onAlterarQuantidade(item.id, ajustarQuantidadeUnidade(item.quantidade, unidadeDoItem, 1))
   }
 
   return (
@@ -139,8 +145,11 @@ const QuantidadeStepper = memo(function QuantidadeStepper({
           const raw = e.target.value
           setRascunho(raw)
           // Vazio/0 não remove a linha durante a digitação: remover é ação explícita (remover / −).
+          // Quantidade que a unidade do produto não aceita (ex.: 2,5 de UN) não é confirmada.
           const quantidade = parseQuantidadeInput(raw)
-          if (quantidade > 0) onAlterarQuantidade(item.id, quantidade)
+          if (quantidade > 0 && quantidadeValidaParaUnidade(quantidade, unidadeDoItem)) {
+            onAlterarQuantidade(item.id, quantidade)
+          }
         }}
         onBlur={() => setRascunho(null)}
         onKeyDown={enterVoltaParaBusca}

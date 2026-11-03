@@ -7,6 +7,7 @@ import {
   filtrarSomenteProdutosVendaveis,
 } from '@/lib/catalog/aplicarFiltroProdutoVendavel'
 import { quantidadeParaRpcPreco } from '@/lib/format/quantidadeCaixa'
+import { primeiroItemComQuantidadeInvalida } from '@/app/caixa/server/validacaoQuantidadeUnidade'
 import { captureMessage } from '@/lib/sentry/vendaSentry'
 import { isPricingVersionRpcAusente } from '@/app/caixa/server/pricingVersionRpcError'
 
@@ -169,21 +170,33 @@ export async function recalcularItensNoServidor(
   const produtosIds = Array.from(new Set(itensInput.map((i) => i.produtoId)))
   const { data: produtosRows, error: prodErr } = await supabase
     .from('produtos')
-    .select('id, preco_varejo, ativo, status_publicacao')
+    .select('id, nome, preco_varejo, ativo, status_publicacao, unidade_medida')
     .in('id', produtosIds)
 
   if (prodErr) return { ok: false, error: mensagemErroComSecao('Produtos', prodErr.message, await idiomaOperadorParaErro()) }
   const vendaveis = filtrarSomenteProdutosVendaveis(
     (produtosRows ?? []) as {
       id: string
+      nome: string
       preco_varejo: number
       ativo: boolean
       status_publicacao: string | null
+      unidade_medida: string | null
     }[],
   )
   const produtos = new Map(vendaveis.map((p) => [p.id as string, p]))
   if (produtos.size !== produtosIds.length) {
     return { ok: false, error: caixaMsgServidor(await idiomaOperadorParaErro(), 'err_srv_itens_carrinho_invalidos') }
+  }
+
+  // Quantidade tem que respeitar a unidade do produto (SSoT: @shared/format/unidadeMedida).
+  // Não confiamos na quantidade do cliente para unidades inteiras (UN/CX/FD).
+  const invalida = primeiroItemComQuantidadeInvalida(itensInput, [...produtos.values()])
+  if (invalida) {
+    return {
+      ok: false,
+      error: caixaMsgServidor(await idiomaOperadorParaErro(), 'err_srv_quantidade_unidade', invalida),
+    }
   }
 
   /**
@@ -226,7 +239,10 @@ export async function recalcularItensNoServidor(
     const varejo = roundMoney2(Number(p.preco_varejo))
 
     if (i.tipoPreco === 'MANUAL' || i.tipoPreco === 'PROMOCAO') {
-      const precoOriginal = roundMoney2(i.precoOriginal)
+      // Referência do desconto = varejo vigente NO SERVIDOR. O `precoOriginal` do cliente não
+      // é confiável: se ele fosse usado, o operador zeraria o desconto medido (original = unitário)
+      // e a alçada de desconto sem autorização seria contornada (PDV-100.1, D-11/segurança).
+      const precoOriginal = varejo
       const precoUnitario = roundMoney2(i.precoUnitario)
       if (precoUnitario > precoOriginal + EPS_PRECO) {
         return {

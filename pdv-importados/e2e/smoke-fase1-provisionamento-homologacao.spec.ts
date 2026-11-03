@@ -1,14 +1,16 @@
 /**
- * Smoke homologação Fase 1 — fluxo único sem intervenção manual:
- * ADMIN → provisionar loja+DONO → checklist → logout →
- * DONO → produto → abrir caixa → venda → fechar caixa → dashboard.
+ * Smoke homologação Fase 1 — contrato atual (PDV-100.1, decisão 1):
+ * - Perfil ADMIN descontinuado (migration 20261028110000). Não é criado nem usado aqui.
+ * - Provisionamento de empresa não é feito pelo app das lojas: fica fechado (fail-closed,
+ *   migration 20261028121000). O caminho oficial é o hub comercial; o manual é contingência.
+ * - Fixture de homologação: DONO e loja Matriz criados pelo seed local (npm run seed:dev-users).
+ * Fluxo: (1) contrato: o app das lojas não provisiona; (2) DONO -> produto -> caixa -> venda -> fechar -> dashboard.
  */
-import { createClient } from '@supabase/supabase-js'
 import { test, expect, type Page } from '@playwright/test'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { loginWithRetry } from './helpers/login'
-import { gotoApp, E2E_GOTO_DOMCONTENTLOADED, LOGIN_PATH } from './helpers/url'
+import { gotoApp, E2E_GOTO_DOMCONTENTLOADED, LOGIN_PATH, esperarHidratacao } from './helpers/url'
 import { ensureCaixaAberto, BTN_FECHAR_CAIXA } from './helpers/ensureCaixaAberto'
 import {
   adicionarProdutoDemo,
@@ -22,7 +24,6 @@ import {
   MODAL_TITULO_FECHAR,
   MODAL_TITULO_MOTIVO_DIF,
 } from './helpers/caixaModais'
-import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 
 function loadEnvLocal(): void {
   const p = path.join(process.cwd(), '.env.local')
@@ -46,76 +47,19 @@ function loadEnvLocal(): void {
 
 loadEnvLocal()
 
-const ADMIN_EMAIL =
-  process.env.PLAYWRIGHT_ADMIN_EMAIL?.trim() || 'e2e-admin@fastproduct.dev'
-const ADMIN_PASSWORD =
-  process.env.PLAYWRIGHT_ADMIN_PASSWORD?.trim() ||
-  process.env.SEED_DEV_PASSWORD?.trim() ||
-  process.env.PLAYWRIGHT_TEST_PASSWORD?.trim() ||
-  ''
+// Fixture de homologação (seed local): DONO da empresa piloto, loja Matriz.
+const DONO_EMAIL = process.env.SEED_DONO_EMAIL?.trim() || 'e2e-dono@localhost.test'
+const DONO_PASSWORD =
+  process.env.SEED_DEV_PASSWORD?.trim() || process.env.PLAYWRIGHT_TEST_PASSWORD?.trim() || ''
 
 function hasSmokeEnv(): boolean {
   return Boolean(
     process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() &&
       process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() &&
-      ADMIN_PASSWORD,
+      DONO_PASSWORD,
   )
 }
 
-function adminClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!.trim(),
-    process.env.SUPABASE_SERVICE_ROLE_KEY!.trim(),
-    { auth: { persistSession: false, autoRefreshToken: false } },
-  )
-}
-
-async function findAuthUserByEmail(email: string) {
-  const admin = adminClient()
-  const target = email.toLowerCase()
-  for (let page = 1; page <= 10; page += 1) {
-    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 200 })
-    if (error) throw error
-    const hit = data.users.find((u) => u.email?.toLowerCase() === target)
-    if (hit) return hit
-    if (data.users.length < 200) break
-  }
-  return null
-}
-
-/** Garante usuário ADMIN interno (equipe FastProduct) para o wizard. */
-async function ensureAdminUser(): Promise<void> {
-  const admin = adminClient()
-  let user = await findAuthUserByEmail(ADMIN_EMAIL)
-  if (!user) {
-    const { data, error } = await admin.auth.admin.createUser({
-      email: ADMIN_EMAIL,
-      password: ADMIN_PASSWORD,
-      email_confirm: true,
-      user_metadata: { full_name: 'E2E Admin FastProduct' },
-    })
-    if (error || !data.user) throw new Error(error?.message ?? 'create ADMIN falhou')
-    user = data.user
-  } else {
-    await admin.auth.admin.updateUserById(user.id, {
-      password: ADMIN_PASSWORD,
-      email_confirm: true,
-    })
-  }
-
-  const { error } = await admin.from('usuarios').upsert(
-    {
-      id: user.id,
-      nome: 'E2E Admin FastProduct',
-      perfil: 'ADMIN',
-      idioma_preferido: 'pt',
-      ativo: true,
-      loja_id: LOJA_MATRIZ_ID,
-    },
-    { onConflict: 'id' },
-  )
-  if (error) throw new Error(`usuarios ADMIN: ${error.message}`)
-}
 
 async function logoutViaUi(page: Page): Promise<void> {
   const sair = page.getByRole('link', { name: /^Sair$/ }).or(page.getByRole('button', { name: /^Sair$/ }))
@@ -145,113 +89,33 @@ async function typeInto(page: Page, testId: string, value: string) {
 
 test.describe.configure({ mode: 'serial', timeout: 240_000 })
 
-test.describe('Smoke Fase 1 — provisionamento → venda → dashboard', () => {
+test.describe('Smoke Fase 1 — contrato de provisionamento -> venda -> dashboard', () => {
   const stamp = Date.now()
-  const lojaNome = `Smoke Homolog ${stamp}`
-  const lojaCodigo = `SMOKE_${stamp}`
-  const donoNome = `Dono Smoke ${stamp}`
-  const donoEmail = `smoke.dono.${stamp}@fp-homolog.com`
-  const donoSenha = ADMIN_PASSWORD.length >= 8 ? ADMIN_PASSWORD : 'SmokeHomolog1!'
   const produtoNome = `Produto Smoke ${stamp}`
   const produtoCodigo = `SMK${String(stamp).slice(-10)}`
   const produtoPreco = '10,00'
 
-  let lojaId = ''
-
   test.beforeAll(async () => {
-    test.skip(!hasSmokeEnv(), 'Exige SUPABASE + senha ADMIN/SEED no .env.local')
-    await ensureAdminUser()
+    test.skip(!hasSmokeEnv(), 'Exige SUPABASE e SEED_DEV_PASSWORD no .env.local')
   })
 
-  test('1 — Login ADMIN e provisionar loja + DONO', async ({ page }) => {
-    await loginAs(page, ADMIN_EMAIL, ADMIN_PASSWORD, /\/(admin|gerente|caixa)/)
-
+  test('1 — App das lojas não provisiona empresa (contrato fail-closed)', async ({ page }) => {
+    await loginAs(page, DONO_EMAIL, DONO_PASSWORD, /\/(admin|gerente)/)
     await gotoApp(page, '/admin/provisionamento', E2E_GOTO_DOMCONTENTLOADED)
-    await expect(page.getByRole('heading', { name: /Provisionamento/i })).toBeVisible({
+    await expect(page.getByTestId('prov-loja-nome')).toHaveCount(0)
+    await expect(page.getByText(/não está disponível no app das lojas/i)).toBeVisible({
       timeout: 60_000,
     })
-
-    // Step loja
-    await typeInto(page, 'prov-loja-nome', lojaNome)
-    await typeInto(page, 'prov-loja-codigo', lojaCodigo)
-    await expect(page.getByTestId('prov-step-loja-next')).toBeEnabled({ timeout: 10_000 })
-    await page.getByTestId('prov-step-loja-next').click()
-
-    // Step DONO
-    await typeInto(page, 'prov-dono-nome', donoNome)
-    await typeInto(page, 'prov-dono-email', donoEmail)
-    await typeInto(page, 'prov-dono-senha', donoSenha)
-    await page.getByTestId('prov-dono-idioma').selectOption('pt')
-    await expect(page.getByTestId('prov-step-dono-next')).toBeEnabled({ timeout: 10_000 })
-    await page.getByTestId('prov-step-dono-next').click()
-
-    // Step Equipe (multiempresa fase 1): opcional — segue sem membros extras
-    await expect(page.getByTestId('prov-step-equipe-next')).toBeEnabled({ timeout: 10_000 })
-    await page.getByTestId('prov-step-equipe-next').click()
-
-    // Confirmar — o nome da loja aparece como nome da empresa (padrão) e da loja
-    await expect(page.getByText(lojaNome).first()).toBeVisible()
-    await page.getByTestId('prov-submit').click()
-
-    // `getByText(/Loja pronta/)` casa o `<li>` do wizard E o toast `role=status`
-    // ao mesmo tempo → strict mode violation (CI #1226). O sinal estável de
-    // sucesso é `prov-loja-id` (UUID renderizado só no step 3).
-    const sucesso = page.getByTestId('prov-loja-id')
-    const toastErro = page.locator('[aria-live="polite"], [role="status"], [data-sonner-toast]').filter({
-      hasText: /erro|falha|inválid|Could not|duplicate|violates/i,
-    })
-
-    await Promise.race([
-      sucesso.waitFor({ state: 'visible', timeout: 90_000 }),
-      toastErro
-        .first()
-        .waitFor({ state: 'visible', timeout: 90_000 })
-        .then(async () => {
-          throw new Error(`Provisionamento falhou: ${(await toastErro.first().innerText()).trim()}`)
-        }),
-    ])
-
-    await expect(sucesso).toBeVisible()
-    const lojaCode = sucesso
-    lojaId = (await lojaCode.innerText()).trim()
-    expect(lojaId).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
-    )
   })
 
-  test('2 — Abrir checklist da loja provisionada', async ({ page }) => {
-    await loginAs(page, ADMIN_EMAIL, ADMIN_PASSWORD, /\/(admin|gerente|caixa)/)
-    await gotoApp(
-      page,
-      `/admin/implantacao?lojaId=${encodeURIComponent(lojaId)}`,
-      E2E_GOTO_DOMCONTENTLOADED,
-    )
-
-    await expect(page.getByRole('heading', { name: /Implantação|GO-LIVE|上线/i })).toBeVisible({
-      timeout: 60_000,
-    })
-    // CI #1228: `getByText(/Loja criada/)` casa o item da timeline E um
-    // segundo bloco na página → strict mode. Escopo: `implantacao-timeline`.
-    const timeline = page.getByTestId('implantacao-timeline')
-    await expect(timeline.getByText(/Loja criada|门店已创建/i)).toBeVisible()
-    await expect(timeline.getByText(/DONO criado|店主已创建/i)).toBeVisible()
-    // Status concluído na linha da loja criada. O status é um `<select>` por
-    // linha: `getByText('Concluído')` casava a `<option>` selecionada, que nunca
-    // é "visível" para o Playwright — o valor do select é o contrato real.
-    const rowLoja = page.getByRole('row').filter({ hasText: /Loja criada|门店已创建/i })
-    await expect(rowLoja.getByRole('combobox')).toHaveValue('CONCLUIDO')
-  })
-
-  test('3 — Logout ADMIN → login DONO → cadastrar produto', async ({ page }) => {
-    await loginAs(page, ADMIN_EMAIL, ADMIN_PASSWORD, /\/(admin|gerente|caixa)/)
-    await logoutViaUi(page)
-
-    await loginAs(page, donoEmail, donoSenha, /\/(admin|gerente)/)
+  test('2 — DONO cadastra produto no catálogo', async ({ page }) => {
+    await loginAs(page, DONO_EMAIL, DONO_PASSWORD, /\/(admin|gerente)/)
     await gotoApp(page, '/admin/catalogo', E2E_GOTO_DOMCONTENTLOADED)
     await expect(page.getByRole('heading', { name: /Catálogo|Produtos|商品/i }).first()).toBeVisible({
       timeout: 60_000,
     })
 
+    await esperarHidratacao(page)
     const novo = page
       .getByRole('button', { name: /Cadastro rápido|Novo produto|创建商品|快速/i })
       .first()
@@ -292,8 +156,8 @@ test.describe('Smoke Fase 1 — provisionamento → venda → dashboard', () => 
   // Depende das formas de pagamento semeadas pelo provisionamento
   // (`ensureFormasPagamento`): sem elas a RPC de venda recusa a loja nova
   // (FINALIZAR_VENDA_CANONICA_FORMA_PAGAMENTO_INVALIDA, achado no CI do #556).
-  test('4 — Abrir caixa → venda → fechar caixa', async ({ page }) => {
-    await loginAs(page, donoEmail, donoSenha, /\/(admin|gerente)/)
+  test('3 — DONO abre caixa → venda → fecha caixa', async ({ page }) => {
+    await loginAs(page, DONO_EMAIL, DONO_PASSWORD, /\/(admin|gerente)/)
     await gotoApp(page, '/caixa', E2E_GOTO_DOMCONTENTLOADED)
 
     await ensureCaixaAberto(page, '300')
@@ -316,8 +180,8 @@ test.describe('Smoke Fase 1 — provisionamento → venda → dashboard', () => 
     })
   })
 
-  test('5 — Confirmar dashboard do DONO', async ({ page }) => {
-    await loginAs(page, donoEmail, donoSenha, /\/(admin|gerente)/)
+  test('4 — Confirmar dashboard do DONO', async ({ page }) => {
+    await loginAs(page, DONO_EMAIL, DONO_PASSWORD, /\/(admin|gerente)/)
     await gotoApp(page, '/admin/dashboard', E2E_GOTO_DOMCONTENTLOADED)
 
     await expect(

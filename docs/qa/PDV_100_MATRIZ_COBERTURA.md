@@ -185,3 +185,32 @@ Resumo: **98 cenários · PASSOU 41 · FALHOU 1 (corrigido) · NÃO TESTADO 56 �
 | D-08 Enter antes da lista | B1 | Não corrigido | — |
 | D-09 Recebido residual | D1 | Não corrigido | — |
 | D-10 consultas repetidas a `usuarios` | — | Não confirmado | — |
+
+---
+
+## Atualização PDV-100.1 (2026-11-03)
+
+Os status acima são da rodada PDV-100. Esta seção registra o que mudou depois.
+
+| ID | Cenário | Novo status | Evidência |
+|---|---|---|---|
+| A6 | Permissões negativas (operador) | NÃO TESTADO | pendente |
+| B6 | Quantidade fracionada em UN | PASSOU (regra D-04) | `CaixaCartList.behavior.test.tsx`, `caixa-golden-flow-cycle5.spec.ts` ("quantidade fracionada em produto UN é recusada") |
+| B13 | Produto fracionado (KG/M) | PASSOU (unitário) | `lib/format/unidadeMedida.test.ts`; sem produto KG no seed |
+| C3 | Regra de atacado com faixa | PASSOU (E2E, faixa criada pelo teste) | `caixa-atacado-quantidade-minima.spec.ts` |
+| C6–C8 | Desconto manual/alçada | PASSOU (unitário, segurança) | `caixaPrecoAutoritativoServer.test.ts`: desconto medido contra o varejo do servidor |
+| D2–D3 | PIX e débito individuais | PASSOU (financeiro, homolog) | 5 recebíveis PIX/débito configurados e recebidos pelo contrato; 5 movimentos, soma 244,50 |
+| D6 | Pagamento em 3 modalidades | PASSOU | Venda 135,00 = DINHEIRO 50 + PIX 45 + DÉBITO 40 (`vendas_pagamentos`) |
+| D4 | Crédito de cliente | NÃO TESTADO | Forma "crédito de cliente" não existe no caixa; saldo devedor vai a contas a receber |
+| E5 | Recuperar após refresh | PASSOU (E2E) | `caixa-venda-em-espera.spec.ts` |
+| F-único | Finalização repetida | NÃO TESTADO | pendente |
+| G1–G6 | Cancelamentos e devoluções | NÃO TESTADO | pendente |
+| H4–H5 | Suprimento e sangria | PASSOU (E2E) | `caixa-fluxos-criticos.spec.ts` (abrir → sangria → fechar) |
+| H8 | Histórico do fechamento | NÃO TESTADO (UI) | conferido no banco |
+| H9 | Restrição de reabertura | NÃO TESTADO | pendente |
+| H-pend | Fechamento com venda em espera | PASSOU | migration 20261103120000; UI com 2 esperas bloqueou e, após descartar, fechou |
+| I7 | Financeiro conciliado | PARCIAL | recebíveis conciliados por recebimento (1:1); extrato/conciliação bancária não testada |
+| R1–R9 | Concorrência, cliques, perda de conexão, expiração de sessão | NÃO TESTADO | pendente |
+| T1 | Vitest `app/caixa` + `lib/format` + `shared` | PASSOU | 73 arquivos, 524 testes (antes das últimas adições) |
+| T2 | Playwright `e2e/caixa*.spec.ts` | PARCIAL | 23 passaram + 14 passaram na reexecução; 1 falha de estado compartilhado (ver `PDV_100_1_DEFEITOS_E_DECISOES.md`) |
+| T3 | Smoke de provisionamento (contrato) | PASSOU | 4/4 em `smoke-fase1-provisionamento-homologacao.spec.ts` |

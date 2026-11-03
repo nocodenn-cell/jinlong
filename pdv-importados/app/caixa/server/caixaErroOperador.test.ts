@@ -91,4 +91,11 @@ describe('caixaErroOperador', () => {
     expect(pt).not.toContain('Tente novamente')
     expect(caixaErroOperador('FINALIZAR_VENDA_VENDAS_SUSPENSAS', 'zh')).toContain('暂停销售')
   })
+
+  it("mapeia fechamento com vendas em espera (D-06) — PT e 中文, sem vazar o código", () => {
+    const pt = caixaErroOperador("FECHAR_CAIXA_VENDAS_EM_ESPERA", "pt")
+    expect(pt).toContain("vendas em espera")
+    expect(pt).not.toContain("FECHAR_CAIXA")
+    expect(caixaErroOperador("FECHAR_CAIXA_VENDAS_EM_ESPERA", "zh")).toContain("挂起的销售")
+  })
 })

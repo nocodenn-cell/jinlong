@@ -2,8 +2,9 @@
 
 ## P0 — Quebrado/travado
 
-- PDV-100 D-03: na 1ª tentativa, o login do operador (auth 200) ficou em `/login` e não foi para `/caixa`. Reproduzir e corrigir se confirmado (`pdv-importados/app/login/LoginForm.tsx`, `docs/qa/PDV_100_RELATORIO_VALIDACAO.md`)
-- PDV-100 D-07: após vendas em dinheiro e PIX, `movimentos_financeiros`, `contas_receber` e `movimentos_caixa` ficaram vazios. Confirmar com o módulo financeiro se é desenho ou falha de conciliação antes de liberar o caixa
+- PDV-100 D-07: PIX e cartão geram recebível PENDENTE sem conta, porque a loja não tem `contas_financeiras` nem `financeiro_contas_forma` configurados. Configurar contas no ambiente e decidir se a venda deve bloquear sem conta (`docs/qa/PDV_100_1_DEFEITOS_E_DECISOES.md`)
+- PDV-100 D-11 (decisão): `produtos.preco_atacado` (17,90) é ignorado na venda; só as faixas de `precos_atacado` contam. Escolher a fonte oficial do atacado antes de liberar
+- PDV-100 D-05 (decisão): o troco e o valor recebido não são persistidos. Proposta com coluna nova em `vendas_pagamentos` e mudança no RPC v4 em `docs/qa/PDV_100_1_DEFEITOS_E_DECISOES.md`; depende de aprovação (migration + SSoT do fechamento)
 - Merge da PR #653 (consolidação NF-e com #654) bloqueado até o dono confirmar o registro de produção; decidir sobre o label `deploy-prod:aprovado`, que não foi aplicado (`docs/audits/CONSOLIDACAO_NFE_2026-11-01.md`)
 - Conta a pagar de NF-e sem conciliação: confirmação aceita duplicatas que não somam o valor da NF (NF 100,00 com duplicata 60,00 gera AP de 60,00). Reproduzido em homologação em 2026-10-30. Correção em `20261030120000` (commit 81daca66), aplicada em homologação fora do histórico de migrations; pendente registrar/aplicar formalmente e validar em produção antes de liberar (D-1)
 - Suíte de NF-e inexecutável no esquema atual: os 13 scripts `.test.sql`/`.mjs` não criam `empresa_id` (trigger `EMPRESA_ID_OBRIGATORIA`), e `nfe-conferencia-flx05-ui` espera `IMPORT_NFE_LOJA` enquanto o código retorna `ACESSO_LOJA_NEGADO`. Corrigir fixtures antes de qualquer PASSOU novo (D-4, D-5)
@@ -62,9 +63,8 @@
 
 ## P2 — Melhoria
 
-- PDV-100 D-08: após digitar código e apertar Enter antes da lista carregar, o item não entra (é preciso repetir). Lista ambígua exige escolha. Melhorar o feedback do campo de busca
-- PDV-100 D-09: o campo "Recebido" mantém o valor da venda anterior depois de esvaziar o carrinho
-- PDV-100 D-10: confirmar se as consultas repetidas a `rest/v1/usuarios?select=loja_id` (16 em ~2,5 min) são um loop; corrigir se for
+- PDV-100 D-08: a falha de "Enter antes da lista carregar" não foi reproduzida na 2ª rodada. Monitorar; sem reprodução não há correção
+- PDV-100 D-10: não é loop (contagem estável em idle). Nenhuma ação; manter monitoramento
 - PDV-100: salvar capturas de tela e vídeo dos fluxos em `docs/qa/evidencias/` (hoje só existem na sessão)
 - Dependabot (#544, #547, #548, #549): decidir a política de CI. A anon key é pública e pode ir para os secrets de Dependabot; `PLAYWRIGHT_TEST_PASSWORD` e `SUPABASE_ACCESS_TOKEN` não devem ir (risco de exfiltração por pacote de terceiro). Alternativa: tratar Dependabot como fork no workflow
 - Dependabot #546 (Sentry 11): import corrigido para `@sentry/nextjs/config` e branch atualizada com a main; validar CI e smoke de captura de erro

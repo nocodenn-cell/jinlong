@@ -15,6 +15,7 @@ function buildItem(overrides: Partial<ItemCarrinhoComPreco> = {}): ItemCarrinhoC
     produtoId: overrides.produtoId ?? "11111111-1111-1111-1111-111111111111",
     nome: overrides.nome ?? "Pacote snacks picantes",
     sku: overrides.sku,
+    metaPdv: overrides.metaPdv,
     quantidade,
     precoUnitario,
     precoOriginal: overrides.precoOriginal ?? precoUnitario,
@@ -200,6 +201,48 @@ describe("CaixaCartList — stepper de quantidade", () => {
     })
     expect(input.value).toBe("35")
     expect(onRemover).not.toHaveBeenCalled()
+  })
+  it("unidade inteira (UN) não confirma quantidade fracionada digitada", () => {
+    const onAlterarQuantidade = vi.fn()
+    const onRemover = vi.fn()
+    const item = buildItem({ quantidade: 1, metaPdv: { unidadeMedida: "UN" } })
+
+    renderList(root, [item], onAlterarQuantidade, onRemover)
+
+    const input = container.querySelector('input[type="number"]') as HTMLInputElement
+    digitar(input, "2.5")
+
+    expect(onAlterarQuantidade).not.toHaveBeenCalled()
+    expect(onRemover).not.toHaveBeenCalled()
+    expect(input.value).toBe("2.5")
+  })
+
+  it("botão + em unidade inteira com quantidade fracionada vai ao inteiro seguinte", () => {
+    const onAlterarQuantidade = vi.fn()
+    const onRemover = vi.fn()
+    const item = buildItem({ quantidade: 2.5, metaPdv: { unidadeMedida: "UN" } })
+
+    renderList(root, [item], onAlterarQuantidade, onRemover)
+
+    const btnAumentar = findButtonByAriaPrefix(container, "Aumentar 1 unidade")
+    flushSync(() => {
+      btnAumentar!.click()
+    })
+
+    expect(onAlterarQuantidade).toHaveBeenCalledWith(item.id, 3)
+  })
+
+  it("unidade fracionável (KG) confirma quantidade com 3 casas", () => {
+    const onAlterarQuantidade = vi.fn()
+    const onRemover = vi.fn()
+    const item = buildItem({ quantidade: 1, metaPdv: { unidadeMedida: "KG" } })
+
+    renderList(root, [item], onAlterarQuantidade, onRemover)
+
+    const input = container.querySelector('input[type="number"]') as HTMLInputElement
+    digitar(input, "2.125")
+
+    expect(onAlterarQuantidade).toHaveBeenLastCalledWith(item.id, 2.125)
   })
 })
 
