@@ -394,3 +394,87 @@ Limite de taxa (por instância): 5 envios inválidos do mesmo IP passam para a v
 2. **Idempotência:** proposta: chave de idempotência gerada no formulário, guardada em coluna única; a função devolve o protocolo existente em repetição. Exige migration e autorização próprias.
 3. **Policy `commercial_leads_anon_insert`:** sem grant de INSERT para `anon`, a policy não tem efeito. Proposta: `DROP POLICY` em migration futura, depois de confirmar que nenhum caminho depende dela.
 4. **`pg_stat_statements` e `net`:** o impacto e a compatibilidade foram checados sem executar nada. `net` é usado pelo cron fiscal, que roda como `postgres` dentro de função `SECURITY DEFINER`, então revogar `anon` e `PUBLIC` não quebra esse fluxo. `pg_stat_statements` é lido pelo painel do Supabase com o papel do administrador. Ambos são de propriedade do `supabase_admin`, que o `postgres` não altera. Quem administra o projeto precisa executar a revogação, e antes deve confirmar a compatibilidade na documentação do Supabase.
+
+## 17. JL-COM-03: idempotência e limite de taxa compartilhado do formulário (2026-11-04)
+
+Autorizado para desenvolvimento e testes locais. **Nada foi aplicado no homolog nem na produção** nesta sprint.
+
+### Causa raiz
+1. **Duplicidade:** cada `POST /pedido-demo` gerava um protocolo novo e inseria uma linha nova. Reenvio do mesmo formulário (duplo clique, retry após falha de rede) criava lead duplicado. Confirmado no E2E do homolog: 2 linhas para uma tentativa.
+2. **Limite não compartilhado:** o limite era um `Map` em memória por instância. Com várias instâncias, ou um serverless que recria o processo, o limite não vale; e chamadas diretas à RPC nem passavam pela rota.
+
+### Arquitetura escolhida
+- **Idempotência:** o navegador gera um UUID v4 por tentativa (chave nova quando o conteúdo muda). O banco guarda `idempotency_key` com índice único parcial e `request_hash` (sha256 dos campos, usado só para detectar reutilização com outro conteúdo; não é chave de deduplicação). `INSERT ... ON CONFLICT DO NOTHING` resolve a concorrência: reenvio idêntico devolve o protocolo original; reutilização com conteúdo diferente gera `LEAD_CHAVE_REUTILIZADA` (409).
+- **Limite de taxa:** tabela `commercial_lead_rate_limit` com `bucket = 'ip:' || sha256(salt || IP)`. O IP vem do último item de `X-Forwarded-For` em `request.headers` (o que o edge da plataforma acrescenta); os itens anteriores, enviados pelo cliente, são ignorados. Contagem atômica por bucket (`INSERT ... ON CONFLICT DO UPDATE`). Janela de 10 minutos, máximo de 10 tentativas aceitas. Quando o limite é atingido, a transação inteira é revertida, então tentativas recusadas não estendem a janela. Retenção: buckets com janela vencida há mais de 1 dia são apagados (até 200 por chamada). O salt fica numa tabela sem grants e é gerado na migração.
+- **Onde fica o limite:** dentro da própria função de registro, então vale para todas as instâncias e para chamadas diretas à RPC.
+- **Falha do mecanismo:** salt ausente ou erro na tabela gera `LEAD_RATE_INDISPONIVEL` e nada é gravado (fail-closed). A rota responde 503 genérico.
+
+### Alternativas descartadas
+- **Redis, Upstash ou Vercel KV:** serviço externo, com custo e dependência nova. Descartado pela restrição de não contratar serviços pagos, e porque o PostgreSQL já existente resolve.
+- **Limite em memória ou em cache da instância:** não é compartilhado. É o problema original.
+- **Limite só na rota Next:** chamadas diretas à RPC contornam. Descartado.
+- **IP em texto puro na tabela de controle:** dado pessoal sem necessidade. Descartado: usa-se hash com salt.
+- **Confiar no primeiro item de X-Forwarded-For:** o cliente forja. Descartado: usa-se o último item.
+- **Deduplicar por contato ou e-mail:** dado pessoal como chave, e bloqueia uma nova tentativa legítima do mesmo contato. Descartado.
+- **service_role no site:** contorna o RLS. Descartado: o guard do site proíbe e não é necessário.
+
+### Arquivos
+- Migrations: `backend/supabase/migrations/20261104160000_commercial_leads_idempotencia.sql` e `20261104170000_commercial_leads_rate_limit.sql`.
+- Rollbacks: `backend/supabase/rollback/20261104160000_commercial_leads_idempotencia.rollback.sql` e `20261104170000_commercial_leads_rate_limit.rollback.sql`.
+- Testes SQL: `backend/scripts/sec03-commercial-leads.test.sql` (11 blocos). Concorrência: `backend/scripts/sec03-commercial-leads-concorrencia.sh`.
+- Site: `site/lib/demoRequest.ts`, `site/app/pedido-demo/route.ts`, `site/components/TrialForm.tsx`, `site/lib/demoRequest.test.ts` (27 testes).
+- Evidências: `docs/qa/evidencias/sec03_*`.
+
+### Testes
+| Teste | Status | Evidência |
+|---|---|---|
+| Primeiro envio válido | PASSOU | T1 (banco descartável) |
+| Reenvio idêntico (mesma chave) sem duplicar | PASSOU | T2; concorrência (a): 10 sessões simultâneas, 1 linha, 1 protocolo |
+| Reenvio concorrente | PASSOU | concorrência (a) |
+| Chave reutilizada com conteúdo diferente | PASSOU | T3 (LEAD_CHAVE_REUTILIZADA, nada gravado) |
+| Nova tentativa legítima | PASSOU | T4 |
+| Payload inválido (8 casos) | PASSOU | T5 |
+| Rate limit atingido | PASSOU | T6 (10 aceitas, 11ª recusada); concorrência (b): 20 simultâneas → 10 aceitas, 10 recusadas, contador 10 |
+| Janela expirada libera | PASSOU | T8 |
+| Retenção | PASSOU | T9 |
+| X-Forwarded-For forjado no primeiro item | PASSOU | T7 |
+| Bucket é hash, sem IP em texto puro | PASSOU | T6 |
+| Falha do mecanismo (salt ausente) | PASSOU | T10 (fail-closed) |
+| Permissões de anon (ler, alterar, apagar, tabela de limite, checagem) | PASSOU | T11 |
+| search_path fixo e SECURITY DEFINER | PASSOU | T11 |
+| Múltiplas instâncias (limite compartilhado) | PASSOU (simulado) | Vitest com banco fake compartilhado entre instâncias; concorrência (b) com sessões independentes |
+| Falha de conexão (fetch) | PASSOU | Vitest: NETWORK vira 503 |
+| Compatibilidade (cliente antigo sem chave) | PASSOU | Vitest: o servidor gera a chave |
+| Rollback das migrations | PASSOU | Rollback B e A na base descartável: estado idêntico ao de `20261104150000`; reaplicação e suíte 9/9 OK |
+| Formulário no navegador (geração e reenvio da chave na UI) | NÃO TESTADO | Não há teste de componente; ver riscos |
+| Caminho HTTP real com a nova função (PostgREST e Kong) | NÃO TESTADO | Sem permissão para aplicar no stack local nesta sprint; o homolog não recebeu esta sprint |
+| Limite com IP real atrás do edge (XFF de produção) | NÃO TESTADO | Depende da configuração do edge em produção |
+
+Testes automatizados: suíte do site 73/73 (`npx vitest run`) e `tsc --noEmit` sem erros.
+
+### Impacto no banco
+- Tabelas novas: `commercial_lead_rate_limit` (uma linha por IP-hash na janela) e `commercial_lead_rate_config` (uma linha, com o salt). Sem grants para anon, authenticated ou PUBLIC.
+- `commercial_leads`: colunas `idempotency_key` e `request_hash` (nulas para leads antigos) e índice único parcial.
+- Função `registrar_lead_comercial` com a nova assinatura (13 argumentos, devolve text); a antiga (12 argumentos) é removida. Função interna `internal.commercial_lead_rate_check()`.
+- Volume: uma linha de bucket por IP ativo na janela; a retenção mantém o volume baixo.
+
+### Impacto na UX
+- Reenvio do mesmo formulário devolve o mesmo protocolo, sem lead duplicado.
+- Editar um campo e reenviar gera chave nova, sem erro para o visitante.
+- Escritórios atrás do mesmo IP compartilham o limite de 10 envios a cada 10 minutos. Quem exceder vê a mensagem de limite já existente na UI.
+- Em indisponibilidade, o visitante vê o mesmo aviso de "indisponível" e pode usar WhatsApp ou e-mail.
+
+### Riscos residuais
+1. **Confiança no edge:** o IP correto depende de o edge da plataforma acrescentar o IP do cliente ao final de `X-Forwarded-For`. Confirmar em produção antes de liberar.
+2. **Limite por IP:** um IP compartilhado por muitos usuários pode bloquear uns aos outros acima de 10 envios a cada 10 minutos.
+3. **Idempotência opcional:** só vale para clientes que enviam a chave. Clientes antigos continuam sem deduplicação de reenvios.
+4. **Formulário no navegador:** a geração e o reenvio da chave na UI não têm teste automatizado de componente.
+5. **Recusas não estendem a janela:** comportamento intencional, mas a janela só cresce com envios aceitos.
+6. **Policy `commercial_leads_anon_insert`:** continua sem efeito (sem grant de INSERT para anon).
+
+### Plano de implantação coordenada
+1. Confirmar com o administrador do projeto que o edge acrescenta o IP do cliente ao final de `X-Forwarded-For` (teste em homolog com um envio real).
+2. Aprovar a aplicação de `20261104160000` e `20261104170000` no homolog. Executar o teste HTTP ponta a ponta e os testes SQL no homolog, com lead marcado como teste e remoção por ID.
+3. Publicar o site novo no mesmo intervalo em que as migrations entram em produção. Entre as duas publicações, o site antigo chama a assinatura de 12 argumentos, que deixa de existir: a janela de erro deve ser curta, ou deve-se manter um wrapper de compatibilidade (decisão a tomar antes).
+4. Monitorar `LEAD_RATE_LIMIT`, `LEAD_RATE_INDISPONIVEL` e 409 nos logs durante a primeira semana.
+5. Só depois, avaliar a remoção da policy sem efeito, em migration própria.
