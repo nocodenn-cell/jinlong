@@ -578,3 +578,32 @@ Etapa 1 da decisão do proprietário. Nenhum código de segurança foi alterado 
 
 ### Veredito
 - **GO-LIVE-01: NO-GO continua.** O vazamento de existência por código de erro é um risco real, com correção clara para ar, ap e produto, e uma decisão de contrato pendente para o GATE6.
+
+## 21. JL-GO-LIVE-01: correção dos quatro gates e gate financeiro 35/35 na cópia (2026-11-04)
+
+Decisão do proprietário: corrigir os quatro gates sem alterar expectativas para aceitar erro de acesso. Regras: GERENTE fora da loja autorizada é negado; recurso sem autorização não revela existência; códigos de erro coerentes com o contrato público; ordem de guardas preserva segurança; RLS, RBAC e validações intactos.
+
+### Correção de produto (migration `20261104180000`, commit `7d35133c`)
+- Título de outra loja ou caixa de outra loja respondem igual a inexistente: `LIQUIDACAO_TITULO`, `LIQUIDACAO_CAIXA_INVALIDO`, `PAGAMENTO_CONTA_NAO_ENCONTRADA`, `PAGAMENTO_CAIXA_INVALIDO`.
+- Produto de outra empresa responde `ATUALIZAR_PRODUTO_NAO_ENCONTRADO`. Para GERENTE de outra loja da mesma empresa, a regra de loja continua no corpo interno, que já responde igual.
+- Perfil continua decidido antes do recurso. Sem identidade ou em contexto de servidor, o comportamento anterior é mantido.
+- Helper novo `internal.fp_recurso_no_escopo` (SECURITY DEFINER, sem grants a `anon` e `authenticated`).
+- Rollback `20261104180000_go_live01_titulo_caixa_fora_do_escopo.rollback.sql` verificado em cópia: aplica sem erro e restaura as três funções com definição idêntica à original.
+
+### Correções de teste (commit `b41ca18a`), com causa comprovada
+- `fase6`: usuários sem `usuario_vinculos`. Sem vínculo, o usuário não pertence a empresa nenhuma e o guard nega tudo. Vínculos reais por empresa. Expectativa de DONO global mantida.
+- `ap-payments`: o teste alterava `pdv_config` na linha `id = 1`, mas o limite é resolvido pela empresa da loja (`fp_pdv_config_id`). A operação era aprovada sem token. Asserção trocada para `IS DISTINCT FROM`: gerente NULL não passava pela comparação, e isso mascarava a falha.
+- `financial-adversarial` GATE6: contrato `LIQUIDACAO_TITULO`, conforme decisão do proprietário.
+- `financial-adversarial` GATE15: o invariante global incluía vendas históricas de 2026-10-29 sem operador. Pela regra do produto (`apurar_comissao_original`), essas vendas não são comissionáveis. O invariante passou a valer só para vendas comissionáveis (vendedor ou operador e loja).
+- `financial-adversarial` GATE23 8/9: a liquidação compensa ajustes pendentes do mesmo operador, por comportamento correto do produto. Pendências de blocos anteriores de `v_dono` entravam no pagamento de 50 e deixavam 42. Cenário isolado com operador próprio.
+
+### Resultado
+- `npm run test:financial` na cópia `sec_gl01` (`homolog_real` + migration `20261104180000`): **35 de 35 suítes passam**. Saída em `docs/qa/evidencias/go-live-01_gate_financeiro_35_35.txt`.
+- Não foi aplicado no homolog nem na produção.
+
+### Não executado
+- Golden flow operacional completo na cópia (abertura de caixa, venda, desconto, fracionado, pagamento dividido, espera, cancelamento, devolução com estorno, transferência, ajuste, fechamento com diferença, concorrência).
+- E2E de interface.
+
+### Veredito
+- **GO-LIVE-01: NO-GO continua** até o golden flow e o E2E serem provados. O gate financeiro está verde na cópia, mas não cobre o fluxo completo de tela.
