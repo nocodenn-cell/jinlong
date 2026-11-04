@@ -501,3 +501,41 @@ Escopo do passo desta sessão: rodar o gate financeiro do repositório contra o 
 4. Só então rodar o gate e os cenários operacionais (venda com desconto e pagamento dividido, fechamento, vendas em espera, cancelamento e devolução, transferência e ajuste de estoque, liquidação de recebível) na cópia descartável.
 
 Recomendação: aprovar os passos 1 a 3 como uma sprint própria. Não tratar o gate como verde antes disso.
+
+## 19. JL-GO-LIVE-01: correção dos fixtures e validação do gate financeiro (2026-11-04)
+
+Escopo: corrigir os fixtures que falhavam pela regra multiempresa e rodar o gate financeiro na cópia descartável de `jinlong-homolog-palm`, com os grants reais. Nenhuma escrita no homolog ou na produção.
+
+### Causa da maior parte das falhas (corrigida)
+- Os fixtures criavam `lojas`, `categorias`, `marcas`, `regras_preco`, `configuracoes_gerais` sem `empresa_id`. O trigger `tg_preenche_empresa_id` exige o campo quando a base tem mais de uma empresa, e a cópia tem quatro. A regra é correta; os fixtures foram escritos antes da multiempresa.
+- Correção: cada fixture cria uma empresa própria (`fa5e0000-…-f1`) e informa `empresa_id`. As asserções não mudaram.
+- Duas causas de ambiente, também corrigidas: `storage.objects` da plataforma atual tem unicidade por `(bucket_id, name, version)`, e o `ON CONFLICT (bucket_id, name)` do fixture deixou de casar (agora `ON CONFLICT` sem alvo, só no fixture); o adversarial dependia de um produto de seed inexistente no homolog (agora o fixture cria um produto de margem 80%).
+
+### Resultado do gate (`npm run test:financial`, cópia `homolog_real`)
+- **31 de 35 suítes passam** (antes desta correção: 16 de 35).
+- Os três scripts de concorrência (comissão, tier de varejo, decremento de estoque) passam após a correção do fixture.
+- **4 falham, todas pelo mesmo ponto:** um GERENTE de outra loja da mesma empresa é recusado com `ACESSO_LOJA_NEGADO`, e o teste espera outro código:
+
+| Suíte | Esperado pelo teste | Obtido |
+|---|---|---|
+| `ar-receipts-reconciliation` | `LIQUIDACAO_CAIXA_INVALIDO` (caixa de outra loja) | `ACESSO_LOJA_NEGADO` |
+| `ap-payments-reconciliation` | equivalente para pagamento de conta a pagar | `ACESSO_LOJA_NEGADO` |
+| `financial-adversarial-gates` (GATE6) | `LIQUIDACAO_PERFIL` | `ACESSO_LOJA_NEGADO` |
+| `fase6-consolida-padrao-a-dono-global` | `ATUALIZAR_PRODUTO_NAO_ENCONTRADO` (sem revelar produto alheio) | `ACESSO_LOJA_NEGADO` |
+
+**Análise:** em todos os casos a operação é recusada, então a regra de isolamento vale. O que diverge é o código e a ordem das guardas: a guarda de loja (`ACESSO_LOJA_NEGADO`) roda antes da regra específica. No caso de `atualizar_produto_com_faixa_atacado`, a mensagem diferente de "não encontrado" revela que o produto existe em outra loja. Isso é um achado de segurança de baixa severidade.
+
+**Não alterei as expectativas dos testes**, para não mascarar a divergência. Precisa de decisão de produto: qual código é o contrato. Recomendação: padronizar a resposta de produto alheio como "não encontrado" (sem vazar existência) e definir qual código a guarda de loja devolve para caixa e conta de outra loja. Depois disso, ajustar a função ou o teste, conforme a decisão.
+
+### Não executado nesta sprint
+- Cenários operacionais além do gate: venda com desconto e pagamento dividido, vendas em espera, cancelamento e devolução com estoque, transferência e ajuste de estoque, fechamento de caixa com diferença. O gate cobre parte deles na forma de testes de lógica, não o fluxo completo de tela.
+- Testes de tela (navegador) do PDV.
+
+### Artefatos
+- Commits locais: `26d8b346` (fixtures SQL), `baa362d5` (concorrência), `b8fd1e3c` (saída do gate).
+- Evidência: `docs/qa/evidencias/go-live-01_gate_financeiro_final.txt`.
+- Efeito colateral na cópia: a empresa fixture `fa5e0000-…-f1` permanece criada (as suítes de concorrência confirmam). Não afeta o homolog.
+
+### Veredito
+- **GO-LIVE-01: NO-GO continua.** Gate em 31/35, com quatro divergências de contrato de erro que precisam de decisão de produto. Cenários operacionais completos ainda não validados.
+- Próximo passo: decidir o contrato de erro das guardas de loja e autorizar a rodada de cenários operacionais na cópia descartável.
