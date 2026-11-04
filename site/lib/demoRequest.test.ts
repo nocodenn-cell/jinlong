@@ -86,14 +86,16 @@ describe('supabaseDemoStore', () => {
     expect(supabaseDemoStore({})).toBeNull()
     expect(supabaseDemoStore({ SITE_DEMO_SUPABASE_URL: 'https://evil.example', SITE_DEMO_SUPABASE_ANON_KEY: 'k' })).toBeNull()
   })
-  it('faz POST insert-only (return=minimal) na tabela do site', async () => {
-    const fetchImpl = vi.fn(async () => new Response(null, { status: 201 }))
+  it('grava só pela função registrar_lead_comercial (RPC), nunca por INSERT direto na tabela', async () => {
+    const fetchImpl = vi.fn(async () => new Response(null, { status: 200 }))
     const s = supabaseDemoStore({ SITE_DEMO_SUPABASE_URL: 'https://abc.supabase.co/', SITE_DEMO_SUPABASE_ANON_KEY: 'k' }, fetchImpl as unknown as typeof fetch)
-    await s!.insert({ name: 'a', store: 'b', contact: 'c', channel: 'wechat', locale: 'pt-BR', segment: 'outro', idioma: 'pt-BR' as const, protocol: 'p', product: 'jinlong' })
+    await s!.insert({ name: 'a', store: 'b', contact: 'c', channel: 'wechat', locale: 'pt-BR', segment: 'outro', idioma: 'pt-BR' as const, protocol: 'p', product: 'jinlong', utm_source: 'g' })
     const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit]
-    expect(url).toBe('https://abc.supabase.co/rest/v1/commercial_leads')
+    expect(url).toBe('https://abc.supabase.co/rest/v1/rpc/registrar_lead_comercial')
+    expect(url).not.toMatch(/commercial_leads/)
     expect(init.method).toBe('POST')
-    expect((init.headers as Record<string, string>).Prefer).toBe('return=minimal')
+    expect(JSON.parse(init.body as string)).toMatchObject({ p_protocol: 'p', p_name: 'a', p_channel: 'wechat', p_utm_source: 'g', p_utm_medium: null })
+    expect(JSON.parse(init.body as string)).not.toHaveProperty('product')
   })
   it('erro HTTP vira exceção', async () => {
     const s = supabaseDemoStore({ SITE_DEMO_SUPABASE_URL: 'https://abc.supabase.co', SITE_DEMO_SUPABASE_ANON_KEY: 'k' }, (async () => new Response(null, { status: 401 })) as unknown as typeof fetch)

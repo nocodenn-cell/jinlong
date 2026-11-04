@@ -107,18 +107,32 @@ export interface DemoStore {
 
 type Env = Readonly<Record<string, string | undefined>>
 
-/** Confirmação/protocolo só voltam ao visitante DEPOIS que o insert respondeu 2xx.
- * Persistência no Supabase via REST (anon + RLS insert-only). null = não configurado. */
+/** Confirmação/protocolo só voltam ao visitante DEPOIS que a função respondeu 2xx.
+ * Gravação só pela função public.registrar_lead_comercial (RPC via REST, chave anon). Sem INSERT direto na tabela:
+ * a função valida os campos no banco e insere com os privilégios do dono. null = não configurado. */
 export function supabaseDemoStore(env: Env = process.env, fetchImpl: typeof fetch = fetch): DemoStore | null {
   const url = env.SITE_DEMO_SUPABASE_URL?.trim()
   const key = env.SITE_DEMO_SUPABASE_ANON_KEY?.trim()
   if (!url || !key || !/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/.test(url)) return null
   return {
     async insert(row) {
-      const res = await fetchImpl(`${url.replace(/\/$/, '')}/rest/v1/commercial_leads`, {
+      const res = await fetchImpl(`${url.replace(/\/$/, '')}/rest/v1/rpc/registrar_lead_comercial`, {
         method: 'POST',
-        headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-        body: JSON.stringify(row),
+        headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          p_protocol: row.protocol,
+          p_name: row.name,
+          p_store: row.store,
+          p_contact: row.contact,
+          p_channel: row.channel,
+          p_locale: row.locale,
+          p_city: row.city ?? null,
+          p_segment: row.segment ?? null,
+          p_wechat: row.wechat ?? null,
+          p_utm_source: row.utm_source ?? null,
+          p_utm_medium: row.utm_medium ?? null,
+          p_utm_campaign: row.utm_campaign ?? null,
+        }),
         signal: AbortSignal.timeout(8000),
       })
       if (!res.ok) throw new Error(`insert failed: ${res.status}`)

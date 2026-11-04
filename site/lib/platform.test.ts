@@ -23,8 +23,8 @@ describe('isolamento: o site não acessa dados reais nem credenciais', () => {
   const files = [...SOURCE_DIRS.flatMap((d) => sourceFiles(path.join(SITE_ROOT, d))), path.join(SITE_ROOT, 'middleware.ts'), path.join(SITE_ROOT, 'next.config.ts')]
   const forbidden = /supabase|SERVICE_ROLE|SYNC_KEY|createClient|process\.env\.(?!NEXT_PUBLIC_|NODE_ENV|VERCEL_ENV|ERP_REDIRECT_ORIGIN)/i
 
-  // Única exceção: o registro de pedidos de demonstração (POST /pedido-demo) grava, só no servidor e só por INSERT
-  // com a chave anon (RLS insert-only), na tabela isolada public.commercial_leads. Nunca service role.
+  // Única exceção: o registro de pedidos de demonstração (POST /pedido-demo) grava, só no servidor e só pela função
+  // public.registrar_lead_comercial (RPC com a chave anon; anon não tem INSERT direto na tabela). Nunca service role.
   const DEMO_LEAD_FILES = new Set(['lib/demoRequest.ts', 'lib/demoRequest.test.ts', 'app/pedido-demo/route.ts'])
 
   it('nenhum arquivo de código referencia Supabase, service role ou variáveis privadas', () => {
@@ -32,13 +32,13 @@ describe('isolamento: o site não acessa dados reais nem credenciais', () => {
     expect(hits.map((f) => path.relative(SITE_ROOT, f))).toEqual([])
   })
 
-  it('registro de demonstração: só anon + tabela do site, nunca service role nem outras tabelas', () => {
+  it('registro de demonstração: só anon + a função de registro do site, nunca service role nem outras tabelas', () => {
     const src = fs.readFileSync(path.join(SITE_ROOT, 'lib/demoRequest.ts'), 'utf8')
     expect(src).not.toMatch(/SERVICE_ROLE|service_role|createClient/)
     expect([...src.matchAll(/process\.env\.(\w+)|env\.(\w+)/g)].map((m) => m[1] ?? m[2]).filter((n) => n !== 'env')).toEqual(
       expect.arrayContaining(['SITE_DEMO_SUPABASE_URL', 'SITE_DEMO_SUPABASE_ANON_KEY']),
     )
-    expect([...src.matchAll(/rest\/v1\/(\w+)/g)].map((m) => m[1])).toEqual(['commercial_leads'])
+    expect([...src.matchAll(/rest\/v1\/([\w/]+)/g)].map((m) => m[1])).toEqual(['rpc/registrar_lead_comercial'])
   })
 
   it('package.json não depende de Supabase, Sentry ou do ERP', () => {
