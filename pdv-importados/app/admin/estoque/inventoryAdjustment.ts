@@ -48,8 +48,10 @@ function defaultDeps(supabase: SupabaseClient, lojaId: string): InventoryAdjustm
     },
     reader: createInventoryReader(supabase, lojaId),
     unidadeDoProduto: async (productId) => {
-      const { data } = await supabase.from('produtos').select('nome, unidade_medida').eq('id', productId).maybeSingle()
-      return (data as { nome: string; unidade_medida: string | null } | null) ?? null
+      // RPC existente (tenant-safe: fp_assert_loja/fp_assert_produto): não lê a tabela produtos diretamente.
+      const { data } = await supabase.rpc('obter_estoque_disponivel_transferencia', { p_loja_id: lojaId, p_produto_id: productId })
+      const linha = (Array.isArray(data) ? data[0] : data) as { unidade_medida: string | null } | null | undefined
+      return linha ? { nome: 'produto', unidade_medida: linha.unidade_medida ?? null } : null
     },
   }
 }
