@@ -2,6 +2,7 @@
 
 ## P0 — Quebrado/travado
 
+- Hub comercial em produção (`hub.jinlong.app`) sem a migration `20261023130000` (Growth-001): `/leads` e o painel pedem `origem`/`empresa_id` e `/conversao` chama RPCs `commercial_trials_*` inexistentes no banco `kbabmewnahysfvlybiak`. Aplicar a migration (com autorização) antes de usar o painel (verificado por SELECT em 2026-11-04)
 - Merge da PR #653 (consolidação NF-e com #654) bloqueado até o dono confirmar o registro de produção; decidir sobre o label `deploy-prod:aprovado`, que não foi aplicado (`docs/audits/CONSOLIDACAO_NFE_2026-11-01.md`)
 - Conta a pagar de NF-e sem conciliação: confirmação aceita duplicatas que não somam o valor da NF (NF 100,00 com duplicata 60,00 gera AP de 60,00). Reproduzido em homologação em 2026-10-30. Correção em `20261030120000` (commit 81daca66), aplicada em homologação fora do histórico de migrations; pendente registrar/aplicar formalmente e validar em produção antes de liberar (D-1)
 - Suíte de NF-e inexecutável no esquema atual: os 13 scripts `.test.sql`/`.mjs` não criam `empresa_id` (trigger `EMPRESA_ID_OBRIGATORIA`), e `nfe-conferencia-flx05-ui` espera `IMPORT_NFE_LOJA` enquanto o código retorna `ACESSO_LOJA_NEGADO`. Corrigir fixtures antes de qualquer PASSOU novo (D-4, D-5)
