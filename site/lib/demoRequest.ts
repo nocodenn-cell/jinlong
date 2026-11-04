@@ -1,8 +1,8 @@
 /**
- * Pedido de demonstração (POST /pedido-demo): validação, honeypot, limite de taxa e persistência.
- * Persistência: tabela public.commercial_leads (product='jinlong') no Supabase existente, via REST com a chave anon
- * (RLS permite só INSERT; ninguém lê com anon). Sem configuração, responde 503 "not_configured" e a UI
- * mostra WhatsApp/e-mail — o pedido nunca se perde em silêncio.
+ * Pedido de demonstração (POST /pedido-demo): validação, honeypot, idempotência e persistência.
+ * Persistência: função public.registrar_lead_comercial no Supabase (RPC via REST, chave anon). A função valida os
+ * campos, aplica o limite de taxa compartilhado (por IP, no banco) e grava com unicidade por chave de idempotência.
+ * Sem configuração, responde 503 "not_configured" e a UI mostra WhatsApp/e-mail: o pedido nunca se perde em silêncio.
  */
 
 export type DemoChannel = 'whatsapp' | 'wechat'
@@ -26,6 +26,7 @@ export type ValidationResult =
 
 const clean = (v: unknown): string => (typeof v === 'string' ? v.replace(/\s+/g, ' ').trim() : '')
 const CONTROL = /[\u0000-\u001f\u007f<>]/
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 export function isValidContact(contact: string, channel: DemoChannel): boolean {
   if (channel === 'whatsapp') {
@@ -73,7 +74,7 @@ export function validateDemoRequest(input: unknown): ValidationResult {
 
 const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
 
-/** Protocolo legível: JL-AAMMDD-XXXXXX (sem caracteres ambíguos). */
+/** Protocolo legível: JL-AAMMDD-XXXXXX (sem caracteres ambíguos). O banco pode devolver o protocolo original. */
 export function makeProtocol(now: Date = new Date(), random: (n: number) => Uint8Array = randomBytes): string {
   const ymd = now.toISOString().slice(2, 10).replace(/-/g, '')
   const suffix = Array.from(random(6), (b) => ALPHABET[b % ALPHABET.length]).join('')
@@ -84,58 +85,71 @@ function randomBytes(n: number): Uint8Array {
   return crypto.getRandomValues(new Uint8Array(n))
 }
 
-/** Limite de taxa simples em memória (por instância): N pedidos por janela, por IP. */
-export class RateLimiter {
-  private hits = new Map<string, number[]>()
-  constructor(private readonly max = 5, private readonly windowMs = 10 * 60_000) {}
-  allow(key: string, now = Date.now()): boolean {
-    const recent = (this.hits.get(key) ?? []).filter((t) => now - t < this.windowMs)
-    if (recent.length >= this.max) {
-      this.hits.set(key, recent)
-      return false
-    }
-    recent.push(now)
-    this.hits.set(key, recent)
-    if (this.hits.size > 5000) this.hits.clear()
-    return true
+/** Chave de idempotência por tentativa (UUID v4). Não contém dado pessoal. */
+export function isIdempotencyKey(value: unknown): value is string {
+  return typeof value === 'string' && UUID.test(value)
+}
+
+/** Erro devolvido pela persistência, com o código da função do banco (ex.: LEAD_RATE_LIMIT) ou de rede. */
+export class DemoStoreError extends Error {
+  constructor(readonly code: string) {
+    super(code)
   }
 }
 
+export interface DemoStoreRow extends DemoRequest {
+  protocol: string
+  product: 'jinlong'
+  idempotencyKey: string
+}
+
 export interface DemoStore {
-  insert(row: DemoRequest & { protocol: string; product: 'jinlong' }): Promise<void>
+  /** Devolve o protocolo gravado (o original, em caso de reenvio com a mesma chave). */
+  insert(row: DemoStoreRow): Promise<string>
 }
 
 type Env = Readonly<Record<string, string | undefined>>
 
 /** Confirmação/protocolo só voltam ao visitante DEPOIS que a função respondeu 2xx.
- * Gravação só pela função public.registrar_lead_comercial (RPC via REST, chave anon). Sem INSERT direto na tabela:
- * a função valida os campos no banco e insere com os privilégios do dono. null = não configurado. */
+ * Gravação só pela função public.registrar_lead_comercial (RPC via REST, chave anon). Sem INSERT direto na tabela. */
 export function supabaseDemoStore(env: Env = process.env, fetchImpl: typeof fetch = fetch): DemoStore | null {
   const url = env.SITE_DEMO_SUPABASE_URL?.trim()
   const key = env.SITE_DEMO_SUPABASE_ANON_KEY?.trim()
   if (!url || !key || !/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/.test(url)) return null
   return {
     async insert(row) {
-      const res = await fetchImpl(`${url.replace(/\/$/, '')}/rest/v1/rpc/registrar_lead_comercial`, {
-        method: 'POST',
-        headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          p_protocol: row.protocol,
-          p_name: row.name,
-          p_store: row.store,
-          p_contact: row.contact,
-          p_channel: row.channel,
-          p_locale: row.locale,
-          p_city: row.city ?? null,
-          p_segment: row.segment ?? null,
-          p_wechat: row.wechat ?? null,
-          p_utm_source: row.utm_source ?? null,
-          p_utm_medium: row.utm_medium ?? null,
-          p_utm_campaign: row.utm_campaign ?? null,
-        }),
-        signal: AbortSignal.timeout(8000),
-      })
-      if (!res.ok) throw new Error(`insert failed: ${res.status}`)
+      let res: Response
+      try {
+        res = await fetchImpl(`${url.replace(/\/$/, '')}/rest/v1/rpc/registrar_lead_comercial`, {
+          method: 'POST',
+          headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            p_idempotency_key: row.idempotencyKey,
+            p_protocol: row.protocol,
+            p_name: row.name,
+            p_store: row.store,
+            p_contact: row.contact,
+            p_channel: row.channel,
+            p_locale: row.locale,
+            p_city: row.city ?? null,
+            p_segment: row.segment ?? null,
+            p_wechat: row.wechat ?? null,
+            p_utm_source: row.utm_source ?? null,
+            p_utm_medium: row.utm_medium ?? null,
+            p_utm_campaign: row.utm_campaign ?? null,
+          }),
+          signal: AbortSignal.timeout(8000),
+        })
+      } catch {
+        throw new DemoStoreError('NETWORK')
+      }
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { message?: unknown } | null
+        throw new DemoStoreError(typeof body?.message === 'string' ? body.message : `HTTP_${res.status}`)
+      }
+      const protocolo = (await res.json().catch(() => null)) as unknown
+      if (typeof protocolo !== 'string' || !/^JL-[0-9]{6}-[A-Z2-9]{6}$/.test(protocolo)) throw new DemoStoreError('RESPOSTA_INVALIDA')
+      return protocolo
     },
   }
 }
@@ -143,26 +157,38 @@ export function supabaseDemoStore(env: Env = process.env, fetchImpl: typeof fetc
 export type DemoResponse =
   | { status: 201; body: { ok: true; protocol: string } }
   | { status: 400; body: { ok: false; error: 'invalid'; fields: DemoFieldError[] } }
+  | { status: 409; body: { ok: false; error: 'key_reused' } }
   | { status: 429; body: { ok: false; error: 'rate_limited' } }
   | { status: 503; body: { ok: false; error: 'not_configured' | 'unavailable' } }
 
+/** Traduz o erro da persistência para a resposta HTTP. Erros de validação do banco viram 400 sem campos,
+ * porque a validação local já passou e o banco é a última barreira. Qualquer outra falha vira 503 (fail-closed). */
+function respostaDeErroDaPersistencia(err: unknown): DemoResponse {
+  const code = err instanceof DemoStoreError ? err.code : 'UNKNOWN'
+  if (code === 'LEAD_RATE_LIMIT') return { status: 429, body: { ok: false, error: 'rate_limited' } }
+  if (code === 'LEAD_CHAVE_REUTILIZADA') return { status: 409, body: { ok: false, error: 'key_reused' } }
+  if (code.startsWith('LEAD_') && code !== 'LEAD_RATE_INDISPONIVEL') return { status: 400, body: { ok: false, error: 'invalid', fields: [] } }
+  console.error('[pedido-demo] persistência falhou:', code)
+  return { status: 503, body: { ok: false, error: 'unavailable' } }
+}
+
 export async function handleDemoRequest(
   input: unknown,
-  ip: string,
-  deps: { store: DemoStore | null; limiter: RateLimiter; protocol?: () => string },
+  deps: { store: DemoStore | null; protocol?: () => string; newKey?: () => string },
 ): Promise<DemoResponse> {
-  if (!deps.limiter.allow(ip)) return { status: 429, body: { ok: false, error: 'rate_limited' } }
   const result = validateDemoRequest(input)
   if (!result.ok) return { status: 400, body: { ok: false, error: 'invalid', fields: result.errors } }
   const protocol = (deps.protocol ?? makeProtocol)()
   // Honeypot preenchido: responde como sucesso (o robô não aprende nada) e não grava.
   if (result.honeypot) return { status: 201, body: { ok: true, protocol } }
   if (!deps.store) return { status: 503, body: { ok: false, error: 'not_configured' } }
+  // Clientes antigos, sem chave: a chave é gerada aqui. Sem chave do cliente não há deduplicação de reenvios.
+  const raw = (input as Record<string, unknown> | null)?.idempotency_key
+  const idempotencyKey = isIdempotencyKey(raw) ? raw : (deps.newKey ?? (() => crypto.randomUUID()))()
   try {
-    await deps.store.insert({ ...result.data, protocol, product: 'jinlong' })
+    const gravado = await deps.store.insert({ ...result.data, protocol, product: 'jinlong', idempotencyKey })
+    return { status: 201, body: { ok: true, protocol: gravado } }
   } catch (err) {
-    console.error('[pedido-demo] insert falhou:', err instanceof Error ? err.message : String(err))
-    return { status: 503, body: { ok: false, error: 'unavailable' } }
+    return respostaDeErroDaPersistencia(err)
   }
-  return { status: 201, body: { ok: true, protocol } }
 }
