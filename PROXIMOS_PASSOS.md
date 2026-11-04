@@ -95,4 +95,3 @@
 - 2026-10-29 — Auditoria do Bloco de Importação (NF-e de entrada e pipeline internacional): 45% por critério explícito, 0 funcionalidades comprovadas, recomendação NO-GO. Relatório em `docs/audits/AUDITORIA_BLOCO_IMPORTACAO_2026-10-29.md`; sem alteração de código
 - 2026-10-29 — S1 validada em homologação (`yvdilcmxyjafnnsfdtam`): matriz de permissões final, testes do DONO, ciclos de rollback do S1b, S1c, G14 e S1; PR #648 aberto com o pacote (S1, S1c, S1b, G14), CI verde exceto o guard de governança. Não aplicado em produção
 - 2026-10-29 — Decisões D1–D14 registradas em `docs/regras-negocio/DECISOES_JINLONG_S1.md`
-- 2026-10-29 — NF-e de entrada com valor e sem duplicatas: mensagem operacional para `IMPORT_NFE_OBRIGACAO_SEM_DUPLICATA`, aviso na prévia e confirmação bloqueada na conferência (`notaObrigacao.ts`); sem alteração de migration/RPC. Não deployado
