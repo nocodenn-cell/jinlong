@@ -11,7 +11,15 @@
 
 \set ON_ERROR_STOP on
 BEGIN;
+INSERT INTO public.empresas (id, nome) VALUES ('fa5e0000-0000-4000-8000-0000000000f1', 'Fixture empresa (suite SQL)') ON CONFLICT (id) DO NOTHING;
 
+-- Fixture (JL-GO-LIVE-01): produto de margem 80% nas lojas com os três perfis, para não depender do seed de dev.
+INSERT INTO public.produtos (id, nome, preco_varejo, preco_custo, origem, tem_nf, ativo, loja_id)
+SELECT gen_random_uuid(), 'FAG Produto margem fixture', 100.00, 20.00, 'china_manual', false, true, l.id
+FROM public.lojas l
+WHERE EXISTS (SELECT 1 FROM public.usuarios u WHERE u.loja_id = l.id AND u.ativo AND u.perfil = 'GERENTE')
+  AND EXISTS (SELECT 1 FROM public.usuarios u WHERE u.loja_id = l.id AND u.ativo AND u.perfil = 'OPERADOR')
+  AND EXISTS (SELECT 1 FROM public.usuarios u WHERE u.loja_id = l.id AND u.ativo AND u.perfil = 'DONO');
 -- Loja determinística: a que tem produto precificado E os três perfis ativos.
 -- Escolher "o primeiro GERENTE" torna a suíte dependente da ordem do seed --
 -- `test:rls-scope` cria usuários numa loja sem produtos, e a suíte caía nela.
@@ -53,8 +61,8 @@ SELECT gen_random_uuid() AS caixa, gen_random_uuid() AS outra_loja,
 -- ABERTO para o mesmo operador, e o seed já abre um para o OPERADOR.
 INSERT INTO public.caixas(id, operador_id, loja_id, status, valor_inicial)
 VALUES (:'caixa', NULL, :'loja', 'ABERTO', 1000);
-INSERT INTO public.lojas(id, nome, codigo)
-VALUES (:'outra_loja', 'Loja adversarial', 'ADV-' || left(:'outra_loja', 8));
+INSERT INTO public.lojas(empresa_id, id, nome, codigo)
+VALUES ('fa5e0000-0000-4000-8000-0000000000f1', :'outra_loja', 'Loja adversarial', 'ADV-' || left(:'outra_loja', 8));
 INSERT INTO public.clientes(id, nome, loja_id) VALUES (:'cliente', 'Cliente adversarial', :'loja');
 INSERT INTO public.contas_receber(id, cliente_id, valor_total, valor_aberto, status, loja_id)
 VALUES (:'titulo', :'cliente', 500, 500, 'ABERTO', :'loja');
