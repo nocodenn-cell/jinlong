@@ -304,3 +304,12 @@ Colunas: objeto | tipo | privilégios (anon direto · PUBLIC) | RLS | leitura pe
 | storage.s3_multipart_uploads_parts | tabela | anon: SELECT | sim | linhas=0 | DESNECESSÁRIO (DML sem uso público; policies só authenticated) | PLATAFORMA: revogar DML de anon; fora da migration |
 | storage.s3_multipart_uploads | tabela | anon: SELECT | sim | linhas=0 | DESNECESSÁRIO (DML sem uso público; policies só authenticated) | PLATAFORMA: revogar DML de anon; fora da migration |
 | storage.vector_indexes | tabela | anon: SELECT | sim | linhas=0 | DESNECESSÁRIO (DML sem uso público; policies só authenticated) | PLATAFORMA: revogar DML de anon; fora da migration |
+
+## 13. Aplicação da correção de privilégios do anon no homolog (2026-11-04)
+
+- **Antes:** `anon` lia 1 linha de `v_vendas_dia` (4 vendas, R$ 20.040,00) no homolog.
+- **Aplicação:** migration `20261104120000_sec_anon_privilegios_minimos.sql`, em uma transação, com a verificação embutida (`DO $verify$`) passando. Executada no projeto `yvdilcmxyjafnnsfdtam` (homolog), nunca em `kbabmewnahysfvlybiak`.
+- **Registro:** versão `20261104120000` gravada em `supabase_migrations.schema_migrations` com o identificador do arquivo, no mesmo formato das anteriores. Total: 482 versões.
+- **Depois:** `anon` recebe `permission denied for view v_vendas_dia`. Nenhum privilégio de `anon` nas relações de `public` (0). As três views têm `security_invoker=true`. `texto_sem_acento` executável por `authenticated` e não por `anon`.
+- **Não alterado:** itens de plataforma (`pg_stat_statements`, `net`, `graphql_public`, `storage`, `realtime`) e `commercial_leads` (INSERT de `anon` continua ausente, decisão pendente).
+- **Produção:** não alterada.
