@@ -91,3 +91,57 @@ A validação de fluxos (autenticação, provisionamento, PDV, estoque, NF-e, fi
 - **Registro de histórico:** `supabase_migrations.schema_migrations` continua com 450 versões. O `psql` não grava o histórico, e não foi inserido manualmente para não equivaler a `migration repair`. Decisão pendente do responsável.
 - **Não validado nesta rodada:** fluxos de PDV, caixa, estoque, NF-e, financeiro, RLS e isolamento multiempresa. A matriz de fluxos continua pendente.
 - **Produção:** não alterada. O drift de produção (11 migrations sem registro) e o check `migration-remote-drift` seguem como estavam.
+
+## 11. Sprint JL-HML-02: reconciliação do histórico e validação (2026-11-04)
+
+### Etapa 1: auditoria prévia
+- **Projeto e banco:** `yvdilcmxyjafnnsfdtam` (`jinlong-homolog-palm`), `current_database() = postgres`, PostgreSQL 17.11. Não é `kbabmewnahysfvlybiak`.
+- **Integridade das 31 migrations:** fingerprint do catálogo (funções pelo corpo, colunas, constraints, triggers, policies, índices, views, enums) entre o homolog e a cópia restaurada que recebeu as mesmas 31. Todos os componentes batem. Contagens de linhas de 149 tabelas batem (mesmo md5).
+- **Funções:** 437 funções, corpo idêntico (`md5(pg_get_functiondef)`).
+- **Limite da prova:** ACLs de tabela e de função não são comparáveis, porque o dump foi feito com `--no-privileges`. Os privilégios críticos foram verificados diretamente no homolog (Etapa 4).
+- **Três NF-e (`20261030120000/130000/140000`):** já registradas, sem `statements`. Verificadas por marcadores e estrutura: colunas com tipo e precisão, checks, comentários e marcadores das funções. Não foram alteradas.
+- **Formato do registro:** `supabase_migrations.schema_migrations` tem `version`, `statements`, `name`, `created_by`, `idempotency_key`, `rollback`. As linhas existentes sem `statements` seguem o padrão das NF-e.
+
+### Etapa 2: reconciliação
+- **Mecanismo:** `supabase migration repair` não foi usado. A CLI não está logada e não há token, e o comando exigiria autenticação que não temos. Inseri 31 linhas (`version` e `name` do arquivo, `statements` e `created_by` nulos), no mesmo formato das NF-e já registradas. Única escrita: `INSERT` em `supabase_migrations.schema_migrations`, numa transação.
+- **Resultado:** 450 → 481 versões. Nenhuma linha existente foi alterada, nada foi reaplicado.
+
+### Etapa 3: validação do histórico
+- **Arquivos do repositório (457):** todos registrados. Sem versão duplicada.
+- **Registros sem arquivo (24):** `20261023200000` (`pdv_troca_operador_caixa`) e 23 versões de timestamp (`20261029153523` a `20261030002520`), reaplicações de migrations que já existem com outro número. Drift residual, o mesmo padrão de produção.
+- **Reconhecimento:** `list_migrations` do Supabase lista as 31 novas com os nomes dos arquivos.
+- **Divergência de governança:** `20261023130000` (growth001) está em `deferred-migrations.json` como adiada em produção, mas foi aplicada no homolog. É um dado para a decisão de produção, não uma correção feita aqui.
+
+### Etapa 4: homologação funcional
+Testes sem senha, com papel e JWT simulados, em transações com `ROLLBACK`. Rodaram na cópia restaurada, que tem os mesmos dados do homolog (hashes iguais). A cópia recebeu grants de superconjunto para `anon` e `authenticated`, para que só o RLS decida. Script em `docs/qa/evidencias/homolog_2026-11-04_isolamento_rls.sql`.
+
+### Etapa 5: matriz
+
+| FLUXO | STATUS | EVIDÊNCIA | DEFEITO | PRÓXIMA AÇÃO |
+|---|---|---|---|---|
+| Login real por perfil | NÃO TESTADO | Não há senhas de teste disponíveis; produção não foi usada | — | Fornecer contas de teste autenticáveis ou criar fixtures de teste no homolog, com aprovação |
+| Autorização por perfil (JWT simulado) | PASSOU | OPERADOR vê 1 estoque (própria loja); GERENTE de outra empresa vê 0 de `e1`; DONO vê 6 de `e1` | — | Repetir com login real |
+| Isolamento multiempresa | PASSOU | GERENTE da `e2` vê só a loja da `e2`; DONO da `e1` não vê estoque da Matriz (`e0`) | — | Ampliar a matriz com mais tabelas |
+| Isolamento multiloja (OPERADOR) | PASSOU | OPERADOR vê estoque só da loja `a1`; vê as 4 lojas da própria `e1` (nome, sem estoque) e a loja de outra empresa pelo vínculo cadastrado | Observação: vínculo cadastrado do OPERADOR com loja de outra empresa (`TESTE JL01`) | Confirmar se o vínculo é intencional |
+| `anon` sem JWT | PASSOU | 0 linhas em `vendas`, `estoque`, `caixas`, `usuarios`, `lojas`, `produtos`, `importacoes_nfe` | Risco: `anon` tem `SELECT` em 70 objetos de `public` | Revogar `SELECT` de `anon` onde não há uso público (ação futura, não feita) |
+| PDV: abertura, venda, desconto, pagamento dividido, fechamento | NÃO TESTADO | Exige caixa aberto e escrita operacional | — | Teste com caixa de teste autorizado |
+| Vendas em espera | NÃO TESTADO | Exige escrita | — | Idem |
+| Estoque: entradas, saídas, transferências, ajustes | NÃO TESTADO | Exige escrita | — | Idem |
+| Importação NF-e | NÃO TESTADO | Estrutura das 3 NF-e verificada; fluxo não executado | Suíte de NF-e inexecutável (D-4/D-5 em `PROXIMOS_PASSOS.md`) | Corrigir fixtures antes do teste |
+| Contas a pagar e financeiro | PARCIAL | `contas_pagar` tem 0 linhas; OPERADOR vê 0 | — | Teste de baixa e recebível com dados de teste |
+| Cancelamentos e devoluções | NÃO TESTADO | Exige escrita | — | Teste com venda de teste |
+| Concorrência e idempotência | NÃO TESTADO | Exige escrita concorrente | — | Teste com duas sessões em homolog |
+| RPCs: privilégios críticos | PASSOU | No homolog: `anon` sem EXECUTE nas 12 funções verificadas; provisionamento, cobrança e `consumir_token_autorizacao_operacao` só para `service_role`; `internal.token_gerente_fora_da_loja` sem `service_role` | — | — |
+| RPCs ADMIN legado | PASSOU (com observação) | `fp_admin_legado()` retorna `false` (`SELECT false`); `auth_usuario_eh_admin` sem ADMIN; `usuarios` sem perfil ADMIN | `authenticated` ainda tem EXECUTE nas duas (inofensivo, retornam false) | Remover EXECUTE em ação futura |
+| Segredos e dados | Observação | O dump e o registro têm dados e `vault.secrets` | — | Manter a pasta de backup restrita |
+
+### Drift residual e riscos
+1. **Produção:** o drift de 11 migrations sem registro continua. A reconciliação de produção precisa de decisão e autorização próprias.
+2. **Homolog, ACL:** as ACLs de tabela e função não puderam ser comparadas pelo dump. Os privilégios críticos estão verificados, não todos.
+3. **Homolog, histórico:** 24 registros sem arquivo, herdados de antes.
+4. **Segurança:** `anon` tem `SELECT` em 70 objetos de `public`. O RLS bloqueia nos testes, mas a superfície é desnecessária.
+5. **Fluxos de escrita:** a maioria dos fluxos do PDV, estoque, financeiro e NF-e não foi executada. Sem essa validação, não há parecer de GO para produção.
+
+### Parecer
+- **Homolog:** histórico consistente para as 31 migrations. Validação funcional parcial (isolamento e privilégios).
+- **Produção:** NO-GO para reconciliação. Faltam login real com contas de teste, fluxos de escrita e a decisão sobre o drift.
