@@ -2,6 +2,7 @@
 
 ## P0 — Quebrado/travado
 
+- Drift de migrations: o homolog (`yvdilcmxyjafnnsfdtam`) não tem 23 migrations do repositório (de `20261020100000` a `20261028120000`, inclui a base `saas`), então as 11 do PR #655 não aplicam lá. Produção tem as 11 sem registro e o check `migration-remote-drift` segue vermelho até reconciliação autorizada. Matriz, rollbacks e plano em `docs/runbooks/RECONCILIACAO_HOMOLOG_2026-11-04.md`
 - PDV-100 D-07: PIX e cartão geram recebível PENDENTE sem conta, porque a loja não tem `contas_financeiras` nem `financeiro_contas_forma` configurados. Configurar contas no ambiente e decidir se a venda deve bloquear sem conta (`docs/qa/PDV_100_1_DEFEITOS_E_DECISOES.md`)
 - PDV-100 D-11 (decisão): `produtos.preco_atacado` (17,90) é ignorado na venda; só as faixas de `precos_atacado` contam. Escolher a fonte oficial do atacado antes de liberar
 - PDV-100 D-05 (decisão): o troco e o valor recebido não são persistidos. Proposta com coluna nova em `vendas_pagamentos` e mudança no RPC v4 em `docs/qa/PDV_100_1_DEFEITOS_E_DECISOES.md`; depende de aprovação (migration + SSoT do fechamento)
@@ -84,6 +85,7 @@
 
 ## Feito
 
+- 2026-11-04 — Rollbacks de `20261028100000` e `20261028101000` escritos em `backend/supabase/rollback/` e testados em transação com ROLLBACK no banco local; rollback de `20261029155000` (em `ops/`) corrigido e testado. Homolog não alterado: aplicação interrompida por drift pré-existente
 - 2026-11-03 — PDV-100: a quantidade digitada no carrinho não corrompe mais o valor e apagar o campo não remove o item (`CaixaCartList.tsx`, 2 testes de regressão; `app/caixa` 393/393). Validação operacional em `docs/qa/PDV_100_RELATORIO_VALIDACAO.md`: NO-GO
 - 2026-11-03 — Supabase local com as 457 migrations aplicadas (7 fora de ordem entraram com `--include-all`; só no stack local)
 - 2026-11-01 — Consolidação NF-e: #654 integrada à #653 por merge (`0176677f`), Growth-001 restaurada em `20261023130000` (`dfdf9e41`), cinco testes SQL da PR-A adotados (`0a00201d`) e scripts de concorrência movidos para `backend/scripts/backlog-redesign/` (`99dbcaea`). Registro em `docs/audits/CONSOLIDACAO_NFE_2026-11-01.md`; não mergeado
