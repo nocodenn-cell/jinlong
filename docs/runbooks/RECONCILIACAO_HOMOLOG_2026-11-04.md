@@ -362,3 +362,14 @@ Sondas com `anon` em transação revertida. Efeito demonstrado = resultado obtid
 2. Decidir se o limite de taxa do formulário precisa ser persistente.
 3. Decidir sobre a policy `commercial_leads_anon_insert`: sem grant de INSERT ela não tem efeito; pode ser removida em migration futura.
 4. Pedir ao administrador do projeto a revogação de `pg_stat_statements` e de `net` para `anon`/`PUBLIC`.
+
+## 15. Aplicação de 20261104150000 (registrar_lead_comercial) no homolog (2026-11-04)
+
+- **Aplicação:** SQL exato do arquivo, em transação, com a verificação embutida. Versão registrada em `schema_migrations` (total: 483).
+- **Estado depois:** `anon` tem EXECUTE em `registrar_lead_comercial` e nenhum privilégio direto em `commercial_leads`.
+- **Teste HTTP no homolog (com a chave anon, sem gravar dados):**
+  - RPC com protocolo inválido: HTTP 400, `LEAD_PROTOCOLO_INVALIDO`. PASSOU.
+  - `GET` em `commercial_leads` por `anon`: HTTP 401, `permission denied`. PASSOU.
+  - `INSERT` direto em `commercial_leads` por `anon`: HTTP 401, `permission denied`. PASSOU.
+- **Caminho válido (RPC com dados corretos):** validado na cópia de banco com o mesmo SQL (ver `docs/qa/evidencias/sec02_formulario_rpc_saida.txt`). NÃO executado no homolog, para não gravar um lead de teste no CRM. Fica como NÃO TESTADO até um teste com aprovação.
+- **Produção:** não alterada.
