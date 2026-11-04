@@ -1,0 +1,147 @@
+
+> test:financial
+> node scripts/run-financial-tests.mjs
+
+Gate financeiro — conexão: docker exec -i supabase_db_fastproduct psql -U postgres -d homolog_real
+
+              set_config              
+--------------------------------------
+ f5100000-0000-4000-8000-000000000002
+(1 row)
+
+              set_config              
+--------------------------------------
+ f5100000-0000-4000-8000-0000000000a1
+(1 row)
+
+              set_config              
+--------------------------------------
+ fd56721a-2332-46e6-a20d-b8ef39ff87a0
+(1 row)
+
+              set_config              
+--------------------------------------
+ e05809ac-4ea5-423a-a4a1-eb306b3ee6e7
+(1 row)
+
+              set_config              
+--------------------------------------
+ f5100000-0000-4000-8000-000000000004
+(1 row)
+
+              set_config              
+--------------------------------------
+ 5c048584-4795-44fc-a1a8-b0775c1d6f68
+(1 row)
+
+              set_config              
+--------------------------------------
+ 7c30b717-ea98-4fa6-afaf-ec90a4b01866
+(1 row)
+
+              set_config              
+--------------------------------------
+ 93392fcc-d807-4e19-994c-0c9f2d911266
+(1 row)
+
+psql:<stdin>:171: ERROR:  ACESSO_LOJA_NEGADO: registrar_liquidacao_receber.p_caixa_id
+CONTEXT:  PL/pgSQL function fp_assert_loja(uuid,boolean,text) line 21 at RAISE
+SQL function "registrar_liquidacao_receber" statement 1
+SQL statement "SELECT * FROM public.registrar_liquidacao_receber(v_multi, 1, 'DINHEIRO', NULL, 'cross-store', current_setting('test.other_cash')::uuid, 'TESTE_DB')"
+PL/pgSQL function inline_code_block line 91 at PERFORM
+              set_config              
+--------------------------------------
+ f5100000-0000-4000-8000-000000000002
+(1 row)
+
+              set_config              
+--------------------------------------
+ f5100000-0000-4000-8000-0000000000a1
+(1 row)
+
+              set_config              
+--------------------------------------
+ 12b3ebbc-7624-4d13-8427-b9d39d52db2a
+(1 row)
+
+              set_config              
+--------------------------------------
+ 702da662-c2b1-490e-b8c6-12bae12bd32f
+(1 row)
+
+              set_config              
+--------------------------------------
+ 43b0d907-41b9-4a4a-8c8b-cbb056e6a394
+(1 row)
+
+              set_config              
+--------------------------------------
+ f68a8060-f13f-495f-a8e7-d6addba4b0b2
+(1 row)
+
+              set_config              |              set_config              |              set_config              |              set_config              |              set_config              |              set_config              
+--------------------------------------+--------------------------------------+--------------------------------------+--------------------------------------+--------------------------------------+--------------------------------------
+ 854d044f-75f8-40b4-a0eb-db1a3fd781ee | b3f17384-ddb9-4b72-a7db-e2f6b5aa72fb | 479e86a2-f184-4eaf-97c8-64087afbf972 | e4161900-241d-4432-b4e6-2d8942eb8f42 | 8fc3512e-3220-4812-a012-65ce9b5f10a0 | ecd1862a-00f8-4290-a0bd-23345264b3bb
+(1 row)
+
+psql:<stdin>:202: ERROR:  ACESSO_LOJA_NEGADO: registrar_pagamento_contas_pagar.p_caixa_id
+CONTEXT:  PL/pgSQL function fp_assert_loja(uuid,boolean,text) line 21 at RAISE
+SQL function "registrar_pagamento_contas_pagar" statement 1
+SQL statement "SELECT * FROM public.registrar_pagamento_contas_pagar(v_retry, 1, 'DINHEIRO', now(), NULL, 'other', current_setting('test.other_cash')::uuid, 'TESTE_DB', NULL)"
+PL/pgSQL function inline_code_block line 80 at PERFORM
+              set_config              |              set_config              |              set_config              |              set_config              |              set_config              |              set_config              |              set_config              |              set_config              | set_config 
+--------------------------------------+--------------------------------------+--------------------------------------+--------------------------------------+--------------------------------------+--------------------------------------+--------------------------------------+--------------------------------------+------------
+ 39f2ba02-0b51-4a8e-a304-6a66cad60d16 | 8952bf44-fca2-4558-bbfb-7250aadab976 | a97f3594-b268-41ec-8c99-99d683b26d86 | f5100000-0000-4000-8000-0000000000a1 | 95538288-0fed-4972-a819-09601e5f4154 | f5100000-0000-4000-8000-000000000002 | f5100000-0000-4000-8000-000000000004 | f5100000-0000-4000-8000-000000000001 | 100.00
+(1 row)
+
+psql:<stdin>:359: ERROR:  GATE6_CROSS_LOJA_GERENTE permitido (msg=ACESSO_LOJA_NEGADO: registrar_liquidacao_receber.p_titulo_id)
+CONTEXT:  PL/pgSQL function inline_code_block line 36 at RAISE
+psql:<stdin>:75: NOTICE:  OK: perfil ADMIN recusado (PERFIL_ADMIN_DESCONTINUADO).
+psql:<stdin>:124: NOTICE:  Passo 1 OK: ajustar_estoque_manual_seguro — GERENTE bloqueado, DONO global (ADMIN descontinuado).
+psql:<stdin>:170: ERROR:  FASE6_FALHOU: GERENTE cross-loja recebeu erro inesperado em atualizar_produto_com_faixa_atacado: ACESSO_LOJA_NEGADO: atualizar_produto_com_faixa_atacado.p_produto_id
+CONTEXT:  PL/pgSQL function inline_code_block line 18 at RAISE
+
+  PASS  financial-idempotency-correlation-contract.test.mjs
+  PASS  nfe-conferencia-margem-contract.test.mjs
+  PASS  test-financeiro-loja.mjs
+  PASS  test-pdv-caixa-financeiro-fluxo.mjs
+  PASS  financeiro-hardening-full-schema.test.sql
+  PASS  sale-totals-invariant.test.sql
+  FAIL  ar-receipts-reconciliation.test.sql  — ACESSO_LOJA_NEGADO: registrar_liquidacao_receber.p_caixa_id
+  FAIL  ap-payments-reconciliation.test.sql  — ACESSO_LOJA_NEGADO: registrar_pagamento_contas_pagar.p_caixa_id
+  FAIL  financial-adversarial-gates.test.sql  — GATE6_CROSS_LOJA_GERENTE permitido (msg=ACESSO_LOJA_NEGADO: registrar_liquidacao_receber.p_titulo_id)
+  PASS  d0-pricing-tiers-ssot.test.sql
+  PASS  d0-remessa-positive-and-inventory-zero.test.sql
+  PASS  d0-remessa-conferencia-columns-drift.test.sql
+  PASS  fase1-hardening-grants-residuais.test.sql
+  PASS  fase3-tenant-isolation-transferencias-remessas.test.sql
+  PASS  fase4-remessa-idempotencia-payload-hash.test.sql
+  PASS  residual-grants-3-tabelas.test.sql
+  PASS  nfe-conferencia-flx05-ui.test.sql
+  FAIL  fase6-consolida-padrao-a-dono-global.test.sql  — FASE6_FALHOU: GERENTE cross-loja recebeu erro inesperado em atualizar_produto_com_faixa_atacado: ACESSO_LOJA_NEGADO: atualizar_produto_com_faixa_atacado.p_produto_id
+  PASS  nfe-conferencia-margem-nao-bloqueia-estoque.test.sql
+  PASS  gate-a01-venda-retry-payload-divergente.test.sql
+  PASS  gate-a04-varejo-menor-que-tier-ativo.test.sql
+  PASS  gate-a02-fechamento-repeticao-valor-divergente.test.sql
+  PASS  gate-a05-cancelamento-saldo-caixa-insuficiente.test.sql
+  PASS  pr1b-kardex-imutavel.test.sql
+  PASS  pr1c-estoque-quantidade-protecao.test.sql
+  PASS  item7-storage-produto-imagens-tenant.test.sql
+  PASS  nfe-duplicata-invalida-aborta.test.sql
+  PASS  relatorio-consistencia-vendas-gerente.test.sql
+  PASS  retomar-caixa-atomico.test.sql
+  PASS  sec04-token-gerente-tenant.test.sql
+  PASS  sec-tokens-usuario-inativo.test.sql
+  PASS  test-commission-concurrency.mjs  — 6 cenários
+  PASS  test-nfe-conferencia-concurrency.mjs  — 2 cenários
+  PASS  test-varejo-tier-concurrency.mjs  — 3 cenários
+  PASS  test-estoque-decremento-concurrency.mjs  — 1 cenários
+
+Gate financeiro FALHOU: 4/35 suíte(s).
+npm error Lifecycle script `test:financial` failed with error:
+npm error code 1
+npm error path C:\Naturecode\fastproduct\.claude\worktrees\e2e-docs-sprints-3fa0d7\backend
+npm error workspace fastproduct-backend
+npm error location C:\Naturecode\fastproduct\.claude\worktrees\e2e-docs-sprints-3fa0d7\backend
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c node scripts/run-financial-tests.mjs
