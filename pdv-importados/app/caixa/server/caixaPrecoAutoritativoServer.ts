@@ -215,9 +215,6 @@ export async function recalcularItensNoServidor(
     itensInput,
     PRECO_REVALIDACAO_CONCORRENCIA,
     async (i): Promise<PrecoPrefetch> => {
-      if (i.tipoPreco === 'MANUAL' || i.tipoPreco === 'PROMOCAO') {
-        return { kind: 'snapshot' }
-      }
       const qRpc = quantidadeParaRpcPreco(i.quantidade)
       if (qRpc < 1) {
         return { kind: 'qty_invalid' }
@@ -239,10 +236,19 @@ export async function recalcularItensNoServidor(
     const varejo = roundMoney2(Number(p.preco_varejo))
 
     if (i.tipoPreco === 'MANUAL' || i.tipoPreco === 'PROMOCAO') {
-      // Referência do desconto = varejo vigente NO SERVIDOR. O `precoOriginal` do cliente não
-      // é confiável: se ele fosse usado, o operador zeraria o desconto medido (original = unitário)
-      // e a alçada de desconto sem autorização seria contornada (PDV-100.1, D-11/segurança).
-      const precoOriginal = varejo
+      // RN-05: a base do desconto é o preço comercial EFETIVO calculado pelo servidor para a
+      // quantidade (varejo ou faixa de atacado aplicável). O `precoOriginal` do cliente nunca é
+      // referência de autorização. O desconto automático de atacado não entra aqui: só a diferença
+      // entre a base e o preço manual consome a alçada do operador.
+      const prefetchBase = precoPrefetch[idx]
+      const base =
+        prefetchBase.kind === 'rpc' && !prefetchBase.error
+          ? parseCalcularPrecoProdutoRpc(prefetchBase.data)
+          : null
+      if (!base) {
+        return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_validar_preco') }
+      }
+      const precoOriginal = roundMoney2(base.preco)
       const precoUnitario = roundMoney2(i.precoUnitario)
       if (precoUnitario > precoOriginal + EPS_PRECO) {
         return {
