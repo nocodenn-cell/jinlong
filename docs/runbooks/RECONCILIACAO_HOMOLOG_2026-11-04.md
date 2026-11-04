@@ -82,3 +82,12 @@ Banco local `supabase_db_fastproduct` com as 459 versões aplicadas. Cada teste 
 ## 9. Validação dos fluxos (não realizada)
 
 A validação de fluxos (autenticação, provisionamento, PDV, estoque, NF-e, financeiro, RLS) não foi feita, porque nenhuma migration da cadeia foi aplicada no homolog. Os fluxos continuam validados apenas pelas rodadas anteriores (ver `docs/qa/`).
+
+## 10. Resultado da aplicação no homolog (2026-11-04)
+
+- **Backup:** `pg_dump` 17.11 do `yvdilcmxyjafnnsfdtam` gerado fora do repositório (`C:\Users\aoliv\Backups\jinlong-homolog\`, 2,4 MB), listado com `pg_restore --list` (2.387 entradas) e restaurado em `homolog_restore` (container local). Contagens batem com o remoto, exceto 2 policies de `cron.*` (extensão da plataforma, ausente no local).
+- **Ensaio:** as 31 migrations rodaram sem erro, em ordem de versão, no banco restaurado (`ON_ERROR_STOP`).
+- **Aplicação no homolog:** as 31 migrations aplicadas via `psql` em uma única execução com `ON_ERROR_STOP`, sem erro. Efeitos conferidos por consulta somente leitura: schema `saas` com 11 tabelas, 5 colunas `*_pendente`, `saas.assinar_locks`, `fp_sou_dono_da_empresa`, função de token com fronteira de empresa, `movimentos_estoque_log.transferencia_id`, `internal.usuarios_admin_corte_backup` e `internal.provisionamento_contingencia_log`. Contagens de dados não mudaram (usuarios 5, vendas 4, produtos 19).
+- **Registro de histórico:** `supabase_migrations.schema_migrations` continua com 450 versões. O `psql` não grava o histórico, e não foi inserido manualmente para não equivaler a `migration repair`. Decisão pendente do responsável.
+- **Não validado nesta rodada:** fluxos de PDV, caixa, estoque, NF-e, financeiro, RLS e isolamento multiempresa. A matriz de fluxos continua pendente.
+- **Produção:** não alterada. O drift de produção (11 migrations sem registro) e o check `migration-remote-drift` seguem como estavam.
