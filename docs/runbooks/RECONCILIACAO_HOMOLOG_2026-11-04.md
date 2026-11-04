@@ -478,3 +478,26 @@ Testes automatizados: suíte do site 73/73 (`npx vitest run`) e `tsc --noEmit` s
 3. Publicar o site novo no mesmo intervalo em que as migrations entram em produção. Entre as duas publicações, o site antigo chama a assinatura de 12 argumentos, que deixa de existir: a janela de erro deve ser curta, ou deve-se manter um wrapper de compatibilidade (decisão a tomar antes).
 4. Monitorar `LEAD_RATE_LIMIT`, `LEAD_RATE_INDISPONIVEL` e 409 nos logs durante a primeira semana.
 5. Só depois, avaliar a remoção da policy sem efeito, em migration própria.
+
+## 18. JL-GO-LIVE-01: validação operacional de PDV, caixa, estoque e financeiro (2026-11-04)
+
+Escopo do passo desta sessão: rodar o gate financeiro do repositório contra o esquema real (cópia descartável de `jinlong-homolog-palm`, com os grants reais). Nenhuma escrita no homolog ou na produção.
+
+### Resultado do gate (`npm run test:financial`, `FINANCIAL_TEST_PSQL` apontando para a cópia)
+- **16 de 35 suítes passam**, incluindo: `financial-idempotency-correlation-contract`, `test-financeiro-loja`, `test-pdv-caixa-financeiro-fluxo`, `financeiro-hardening-full-schema`, `sale-totals-invariant`, `nfe-duplicata-invalida-aborta`, `sec-tokens-usuario-inativo`, `residual-grants-3-tabelas`, `fase1-hardening-grants-residuais`, `test-nfe-conferencia-concurrency`.
+- **19 falham.** Causas comprovadas:
+  1. **15 suítes SQL + 1 concorrência de estoque: fixture sem `empresa_id`.** O trigger `internal.tg_preenche_empresa_id` exige `empresa_id` em `lojas` quando há mais de uma empresa (regra da multiempresa, `EMPRESA_ID_OBRIGATORIA`). Os fixtures foram escritos antes da multiempresa e nunca rodaram no gate. A regra está certa; o teste precisa criar a empresa e informá-la. Não é defeito do produto.
+  2. **`financial-adversarial-gates`: dependência de seed.** O teste exige um produto com margem entre 50% e 100% já existente na loja. Esse dado vem do seed de desenvolvimento e não existe no homolog.
+  3. **`test-commission-concurrency`, `test-varejo-tier-concurrency`: causa não investigada** nesta sessão.
+
+### Implicação para a validação operacional
+- O gate financeiro **não é um sinal confiável hoje**: 19 falhas são de fixture, e as suítes que passam cobrem lógica, não o fluxo completo na base real.
+- Os fluxos PDV, caixa, estoque e financeiro **não estão validados de ponta a ponta no esquema real**. A cobertura real depende de corrigir os fixtures e de criar cenários com venda, caixa aberto e estoque reais na cópia descartável.
+
+### Próximo passo proposto (precisa de autorização de escopo)
+1. Corrigir os 15 fixtures SQL: criar a empresa e informar `empresa_id` nas lojas. Sem enfraquecer nenhuma asserção.
+2. Substituir a dependência de seed do `financial-adversarial-gates` por um produto criado no próprio fixture.
+3. Investigar as duas suítes de concorrência de comissão e de tier.
+4. Só então rodar o gate e os cenários operacionais (venda com desconto e pagamento dividido, fechamento, vendas em espera, cancelamento e devolução, transferência e ajuste de estoque, liquidação de recebível) na cópia descartável.
+
+Recomendação: aprovar os passos 1 a 3 como uma sprint própria. Não tratar o gate como verde antes disso.
