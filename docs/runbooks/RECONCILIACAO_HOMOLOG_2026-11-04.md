@@ -145,3 +145,162 @@ Testes sem senha, com papel e JWT simulados, em transações com `ROLLBACK`. Rod
 ### Parecer
 - **Homolog:** histórico consistente para as 31 migrations. Validação funcional parcial (isolamento e privilégios).
 - **Produção:** NO-GO para reconciliação. Faltam login real com contas de teste, fluxos de escrita e a decisão sobre o drift.
+
+## 12. Sprint JL-SEC-ANON: auditoria de privilégios do papel anon (2026-11-04)
+
+### Método
+- Inventário no homolog (`yvdilcmxyjafnnsfdtam`) com `aclexplode`, `has_table_privilege` e `has_function_privilege`, sem alterar nada.
+- Cópia `homolog_real`: restaurada de dump **com privilégios** (`--no-owner`, sem `--no-privileges`), não com GRANTs artificiais. Fingerprint de ACL das schemas `public`, `internal` e `saas` (relações, funções e schemas) comparado com a fonte: funções e schemas idênticos. Relações: 6 objetos de `internal` diferem só em grants de `service_role` (não afetam `anon` nem `authenticated`; verificado).
+- Sondas em transação com `ROLLBACK`, com `SET LOCAL ROLE anon` ou `authenticated` e JWT simulado (sem senha).
+
+### Etapa 1: inventário
+- **88 objetos** com qualquer privilégio de `anon` nas schemas de aplicação e de plataforma: 75 em `public` (63 tabelas e 12 views) e 13 de plataforma (`extensions`, `net`, `realtime`, `storage`).
+- O "70" da análise anterior conta só `SELECT` em `public` e nas views; esta matriz usa o universo completo.
+- **Origem dos privilégios:** os de `public` são grants diretos a `anon` (default privileges do Supabase). Os de plataforma são `PUBLIC` (herdado por `anon`).
+- **RLS:** ligado em todas as tabelas de `public` com privilégio de `anon`. As views de `public` não têm RLS próprio; o efeito depende de `security_invoker`.
+- **Funções acessíveis a `anon`:** nenhuma função de aplicação com `SECURITY DEFINER`. Funções de `public` acessíveis: `texto_sem_acento` e duas funções de trigger. Funções de `internal`: `fp_contexto_servidor` e `fp_empresa_selecionada`, bloqueadas por falta de `USAGE` no schema. O restante é de plataforma (`auth`, `extensions`, `net`, `realtime`, `storage`, `graphql_public`, `cron`).
+- **Dados sensíveis expostos a `anon` (antes):**
+  - `v_vendas_dia`: 1 linha, agregado de **4 vendas e R$ 20.040,00** de todas as empresas.
+  - `v_top_produtos`: 1 linha. `v_venda_consistencia_anomalias`: 2 linhas.
+  - `pg_stat_statements`: 4.783 linhas com texto de consultas de todos os usuários.
+
+### Etapa 2: classificação
+| Classe | Quantidade | Exemplos |
+|---|---|---|
+| NECESSÁRIO (uso público legítimo comprovado) | 0 no banco | o formulário comercial (`commercial_leads`) usa `INSERT` de `anon`, mas o grant não existe hoje (ver Etapa 5) |
+| DESNECESSÁRIO — CRÍTICO | 3 | `v_vendas_dia`, `v_top_produtos`, `v_venda_consistencia_anomalias` (views sem `security_invoker`, rodam como `postgres`) |
+| DESNECESSÁRIO | 72 em `public` | tabelas e views com RLS, sem uso público; RLS impede linhas |
+| DESNECESSÁRIO (plataforma) | 12 | `pg_stat_statements`, `net`, `realtime.subscription`, `storage` |
+| INDETERMINADO | 2 | `realtime.messages` (uso por realtime autenticado); `graphql_public.graphql` (app não usa GraphQL) |
+| BLOQUEADO | — | `cron` e `internal` (schema sem `USAGE` para `anon`) |
+
+Usos públicos verificados no código (fora de `node_modules`, `.next` e docs): o site (`site/lib/demoRequest.ts`) grava em `commercial_leads` com a chave `anon`; o hub (`hub/`) usa o token do usuário logado; nenhuma página consulta as três views. Nenhuma leitura pública legítima de `public` foi encontrada.
+
+### Etapa 3: correção
+- **Migration** `backend/supabase/migrations/20261104120000_sec_anon_privilegios_minimos.sql`:
+  1. `security_invoker = true` nas três views que contornavam o RLS;
+  2. `REVOKE ALL` de `anon` nas 75 relações de `public` (lista explícita, gerada do estado capturado);
+  3. `texto_sem_acento`: EXECUTE só para `authenticated` e `service_role`; as duas funções de trigger sem EXECUTE para ninguém (o disparo do trigger não depende de EXECUTE, verificado); `internal.fp_*`: sem EXECUTE para `anon`.
+  - Um bloco `DO` de verificação aborta a migration se qualquer garantia falhar.
+- **Rollback** `backend/supabase/rollback/20261104120000_sec_anon_privilegios_minimos.rollback.sql`: restaura as views (`RESET security_invoker`), os mesmos privilégios de `anon` nas 75 relações e o EXECUTE das funções.
+- **Fora da migration (plataforma):** `pg_stat_statements` e `net`, `graphql_public`, `storage` e `realtime`. Os donos são `supabase_admin` e `postgres` não os altera de forma confiável. Precisam de ação do Supabase ou de um papel privilegiado.
+
+### Etapa 4: testes (cópia `homolog_real`, antes e depois)
+| # | Teste | Antes | Depois | Status |
+|---|---|---|---|---|
+| 1 | Leitura anônima de dados sensíveis | `v_vendas_dia` 1 linha (4 vendas, R$ 20.040); `v_top_produtos` 1; anomalias 2; `pg_stat_statements` 4.783 | views: `permission denied`; `pg_stat_statements` continua legível (plataforma) | PASSOU nas views; **FALHOU** em `pg_stat_statements` (fora da migration) |
+| 2 | INSERT, UPDATE e DELETE por anon | 0 tabelas de `public` com INSERT, UPDATE ou DELETE; DELETE sobre tabelas retorna 0 linhas (RLS) | igual; storage bloqueia DELETE direto | PASSOU |
+| 3 | RPCs sensíveis | nenhuma RPC de aplicação executável por anon | `texto_sem_acento` e triggers bloqueados para anon; `net.http_get` continua enfileirando HTTP (plataforma) | PASSOU em `public`; **FALHOU** em `net` (fora da migration) |
+| 4 | `authenticated` com perfis distintos | OPERADOR, GERENTE (`e2`) e DONO (`e1`) viam o agregado de vendas de todas as empresas | OPERADOR e GERENTE da `e2` veem 0 linhas nas views; DONO `e1` vê 0 vendas (as 4 vendas são de outra empresa) | PASSOU |
+| 5 | Isolamento entre empresas e lojas | estoque e lojas já isolados | OPERADOR vê só o estoque de `a1` (1); GERENTE `e2` vê 0 do estoque `e1`; DONO `e1` vê 6 do estoque `e1` e 4 lojas da própria empresa | PASSOU |
+| 6 | Regressão de funcionalidades | — | `texto_sem_acento` funciona para `authenticated`; trigger de caixa fechado dispara para `authenticated` com `CAIXA_FECHADO_STATUS_IMUTAVEL` (não erro de permissão); estoque e vendas de `authenticated` iguais | PASSOU |
+
+Evidências: `docs/qa/evidencias/sec_anon_*.sql` e saídas em `docs/qa/evidencias/sec_anon_*.txt`.
+
+### Etapa 5: riscos e parecer
+**Riscos comprovados e não corrigidos nesta migration:**
+1. **`pg_stat_statements`** (plataforma): `PUBLIC` lê o texto das consultas de todos os usuários. Ação: pedir ao Supabase, ou a um papel com privilégio, para revogar `SELECT` de `PUBLIC`.
+2. **`net`** (plataforma): `anon` e `PUBLIC` têm `USAGE` e DML no schema. Confirmado: `anon` enfileira `net.http_get` (fila cresceu para 1). Permite chamadas HTTP de dentro do banco. Ação: revogar de `anon` e `PUBLIC`. Não há uso legítimo no código: o cron fiscal roda como `postgres` e não depende disso.
+3. **`commercial_leads`** (regressão **preexistente**, não causada pela migration): a policy `commercial_leads_anon_insert` existe, mas `anon` não tem grant de `INSERT`. O formulário público do site deve falhar com `permission denied`. Não testado contra o site real. Decisão necessária: conceder `INSERT` só nessa tabela (com a policy já existente, `status = 'novo'`) ou desativar o formulário.
+4. **`graphql_public.graphql`** (plataforma, INDETERMINADO): anon executa. O app não usa GraphQL. Ação: decidir se desliga a API GraphQL.
+5. **Login, recuperação de senha e hub**: não testados com login real. O auth é feito pela API do Supabase (GoTrue), não por grants de `public`, e o hub usa token de usuário; por isso não devem ser afetados, mas a prova fica como NÃO TESTADO.
+
+**Parecer:**
+- **GO para aplicar a migration em homologação**, depois de aprovação do responsável, porque: a correção fecha o vazamento confirmado nas views; o rollback restaura exatamente o estado anterior (fingerprint de ACL igual antes e depois); os testes de regressão passaram.
+- **Condição:** decidir sobre `commercial_leads` antes de aplicar, porque a migration não altera esse ponto.
+- **NO-GO para produção** até: (a) validar a migration em homologação com login real; (b) resolver os itens de plataforma (1, 2 e 4); (c) decidir `commercial_leads`; (d) a reconciliação de produção (11 migrations sem registro) continuar pendente.
+
+### Matriz dos 88 objetos (antes da migration)
+
+Colunas: objeto | tipo | privilégios (anon direto · PUBLIC) | RLS | leitura pela sonda antes | classificação | ação. Saída completa em `docs/qa/evidencias/sec_anon_matriz_88_objetos.md`.
+
+| Objeto | Tipo | Privilégios | RLS | Sonda (antes) | Classificação | Ação |
+|---|---|---|---|---|---|---|
+| extensions.pg_stat_statements_info | view | anon: - · PUBLIC: SELECT | nao | linhas=1 | DESNECESSÁRIO (vaza texto de consultas de todos os usuários) | PLATAFORMA: revogar de PUBLIC/anon (owner supabase_admin); fora da migration |
+| extensions.pg_stat_statements | view | anon: - · PUBLIC: SELECT | nao | linhas=4783 | DESNECESSÁRIO (vaza texto de consultas de todos os usuários) | PLATAFORMA: revogar de PUBLIC/anon (owner supabase_admin); fora da migration |
+| net._http_response | tabela | anon: - · PUBLIC: INSERT,SELECT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER,MAINTAIN | nao | linhas=0 · delete=0 | DESNECESSÁRIO (anon enfileira requisições HTTP) | PLATAFORMA: revogar de anon e PUBLIC (owner supabase_admin); fora da migration |
+| net.http_request_queue | tabela | anon: - · PUBLIC: INSERT,SELECT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER,MAINTAIN | nao | linhas=0 · delete=0 | DESNECESSÁRIO (anon enfileira requisições HTTP) | PLATAFORMA: revogar de anon e PUBLIC (owner supabase_admin); fora da migration |
+| public.caixas | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.categorias_financeiras | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | bloqueado (permissao/RLS) | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.categorias | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | bloqueado (permissao/RLS) | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.clientes | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.comissoes_ajustes_auditoria | view | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | nao | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.comissoes_ajustes | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.comissoes_itens | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.comissoes_pagamentos_ajustes | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.comissoes_pagamentos | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.comissoes_reconstrucao_auditoria | view | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | nao | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.comissoes_regras_funcionario | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.comissoes_regras_historico | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.comissoes_saldo_operador | view | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | nao | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.comissoes_vendedores_liquidas | view | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | nao | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.comissoes_vendedores | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.configuracoes_gerais | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.descontos_venda | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.devolucoes | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.documentos_fiscais_dlq | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.documentos_fiscais_eventos | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.documentos_fiscais_pendentes | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.estoque_baixas | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | bloqueado (permissao/RLS) | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.estoque_reposicoes_cancelamento | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.estoque_reposicoes_devolucao | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.estoque | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.feature_flags | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.fiscal_provider_config | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.formas_pagamento | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.fornecedores | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | bloqueado (permissao/RLS) | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.funcionarios_meta | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | bloqueado (permissao/RLS) | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.funcionarios | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.gerente_auth_attempts | tabela | anon: MAINTAIN,REFERENCES,TRIGGER | sim | bloqueado (permissao/RLS) | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.gerente_auth_rate_limits | tabela | anon: MAINTAIN,REFERENCES,TRIGGER | sim | bloqueado (permissao/RLS) | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.historico_precos_produto | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.historico_tiers_crud | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | bloqueado (permissao/RLS) | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.implantacao_checklist_itens | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | bloqueado (permissao/RLS) | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.implantacao_checklists | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | bloqueado (permissao/RLS) | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.importacoes_nfe_duplicatas | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | bloqueado (permissao/RLS) | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.importacoes_nfe_itens | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | bloqueado (permissao/RLS) | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.importacoes_nfe | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | bloqueado (permissao/RLS) | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.itens_venda | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | bloqueado (permissao/RLS) | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.lojas | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | bloqueado (permissao/RLS) | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.marcas | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.movimentacoes_caixa | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.movimentos_caixa | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | bloqueado (permissao/RLS) | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.movimentos_estoque_log | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | bloqueado (permissao/RLS) | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.ordens_compra_itens | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.ordens_compra | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.pdv_config | tabela | anon: MAINTAIN,REFERENCES,TRIGGER | sim | bloqueado (permissao/RLS) | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.precos_atacado | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | bloqueado (permissao/RLS) | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.pricing_config_versions | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | bloqueado (permissao/RLS) | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.produto_create_requests | tabela | anon: MAINTAIN,REFERENCES,TRIGGER | sim | bloqueado (permissao/RLS) | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.produtos | tabela | anon: MAINTAIN,REFERENCES,TRIGGER | sim | bloqueado (permissao/RLS) | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.regras_preco | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | bloqueado (permissao/RLS) | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.relatorio_settings | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | bloqueado (permissao/RLS) | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.remessa_itens | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | bloqueado (permissao/RLS) | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.remessas | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | bloqueado (permissao/RLS) | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.tipos_movimento_estoque | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.tokens_desconto_gerente | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.transferencias_idempotencia | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.usuarios | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | bloqueado (permissao/RLS) | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.v_clientes_gerente | view | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | nao | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.v_estoque_baixo | view | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | nao | bloqueado (permissao/RLS) | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.v_estoque_ledger_divergencia | view | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | nao | bloqueado (permissao/RLS) | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.v_fiscal_doc_status_event_mismatch | view | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | nao | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.v_kardex_unificado | view | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | nao | bloqueado (permissao/RLS) | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.v_top_produtos | view | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | nao | linhas=1 | DESNECESSÁRIO — CRÍTICO (view contorna RLS; vazamento entre empresas) | MIGRATION: security_invoker=true + REVOKE de anon |
+| public.v_venda_consistencia_anomalias | view | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | nao | linhas=2 | DESNECESSÁRIO — CRÍTICO (view contorna RLS; vazamento entre empresas) | MIGRATION: security_invoker=true + REVOKE de anon |
+| public.v_vendas_dia | view | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | nao | linhas=1 | DESNECESSÁRIO — CRÍTICO (view contorna RLS; vazamento entre empresas) | MIGRATION: security_invoker=true + REVOKE de anon |
+| public.venda_pos_venda_itens | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.venda_pos_venda_operacoes | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.vendas_canceladas_auditoria | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.vendas_pagamentos | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.vendas | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| public.vinculos_fornecedor_produto | tabela | anon: MAINTAIN,REFERENCES,SELECT,TRIGGER | sim | linhas=0 | DESNECESSÁRIO (sem uso público; RLS impede linhas) | MIGRATION: REVOKE de anon |
+| realtime.messages | tabela | anon: INSERT,SELECT,UPDATE | sim | linhas=0 | INDETERMINADO (realtime autenticado) | PLATAFORMA: investigar |
+| realtime.subscription | tabela | anon: SELECT | nao | linhas=0 | DESNECESSÁRIO (metadado de assinaturas) | PLATAFORMA: revogar; probe bloqueou |
+| storage.buckets_analytics | tabela | anon: DELETE,INSERT,SELECT,UPDATE | sim | linhas=0 · delete=0 | DESNECESSÁRIO (DML sem uso público; policies só authenticated) | PLATAFORMA: revogar DML de anon; fora da migration |
+| storage.buckets_vectors | tabela | anon: SELECT | sim | linhas=0 | DESNECESSÁRIO (DML sem uso público; policies só authenticated) | PLATAFORMA: revogar DML de anon; fora da migration |
+| storage.buckets | tabela | anon: DELETE,INSERT,SELECT,UPDATE | sim | linhas=0 | DESNECESSÁRIO (DML sem uso público; policies só authenticated) | PLATAFORMA: revogar DML de anon; fora da migration |
+| storage.objects | tabela | anon: DELETE,INSERT,SELECT,UPDATE | sim | linhas=0 | DESNECESSÁRIO (DML sem uso público; policies só authenticated) | PLATAFORMA: revogar DML de anon; fora da migration |
+| storage.s3_multipart_uploads_parts | tabela | anon: SELECT | sim | linhas=0 | DESNECESSÁRIO (DML sem uso público; policies só authenticated) | PLATAFORMA: revogar DML de anon; fora da migration |
+| storage.s3_multipart_uploads | tabela | anon: SELECT | sim | linhas=0 | DESNECESSÁRIO (DML sem uso público; policies só authenticated) | PLATAFORMA: revogar DML de anon; fora da migration |
+| storage.vector_indexes | tabela | anon: SELECT | sim | linhas=0 | DESNECESSÁRIO (DML sem uso público; policies só authenticated) | PLATAFORMA: revogar DML de anon; fora da migration |
