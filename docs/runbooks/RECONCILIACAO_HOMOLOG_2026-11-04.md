@@ -313,3 +313,52 @@ Colunas: objeto | tipo | privilégios (anon direto · PUBLIC) | RLS | leitura pe
 - **Depois:** `anon` recebe `permission denied for view v_vendas_dia`. Nenhum privilégio de `anon` nas relações de `public` (0). As três views têm `security_invoker=true`. `texto_sem_acento` executável por `authenticated` e não por `anon`.
 - **Não alterado:** itens de plataforma (`pg_stat_statements`, `net`, `graphql_public`, `storage`, `realtime`) e `commercial_leads` (INSERT de `anon` continua ausente, decisão pendente).
 - **Produção:** não alterada.
+
+## 14. Sprint JL-SEC-02: formulário comercial e segurança de plataforma (2026-11-04)
+
+### Etapa 1: fluxo do formulário (auditado)
+1. Formulário `components/TrialForm.tsx` faz `POST /pedido-demo` (JSON, sem dados sensíveis além de nome, loja e contato).
+2. `app/pedido-demo/route.ts` (reutilizada, sem API nova): exige `application/json` e corpo até 4 KB, lê o IP, aplica limite de taxa (5 pedidos por IP em 10 min, em memória por instância), valida tudo com `validateDemoRequest` (`lib/demoRequest.ts`), descarta robôs pelo campo honeypot `website`, e só depois persiste.
+3. **Achado (antes):** persistência via REST em `commercial_leads` com a chave anon. Com a decisão 4 (sem INSERT direto), esse caminho quebrava.
+4. **Solução escolhida:** função `public.registrar_lead_comercial(...)` (SECURITY DEFINER, `search_path` fixo), que valida cada campo no banco e insere com os privilégios do dono. Único EXECUTE: `anon`. Nenhum INSERT para `anon` na tabela.
+5. **Por que não service role:** o guard `lib/platform.test.ts` proíbe `service_role` no site, e uma credencial que contorna o RLS é desproporcional para um formulário. A função é o menor privilégio que funciona.
+
+### Etapa 2: segurança (migration `20261104120000` e nova `20261104150000`)
+Testes na cópia `homolog_real` (ACL real do homolog, com as duas migrations aplicadas), com `ROLLBACK`. Saídas em `docs/qa/evidencias/sec02_*`.
+
+### Etapa 3: objetos Supabase (somente leitura)
+Sondas com `anon` em transação revertida. Efeito demonstrado = resultado obtido com o papel `anon`.
+
+### Etapa 4: matriz
+
+| Fluxo | Status | Evidência | Defeito | Próxima ação |
+|---|---|---|---|---|
+| Formulário: validação no servidor | PASSOU | 16 testes unitários (`demoRequest.test.ts`) + validação no banco: protocolo, nome, loja, contato, canal, idioma, segmento, cidade, WeChat e UTM inválidos rejeitados (`sec02_formulario_rpc_saida.txt`) | — | — |
+| Formulário: persistência só pelo backend (sem INSERT de anon na tabela) | PASSOU | `anon` recebe `permission denied` em INSERT e SELECT direto de `commercial_leads`; a função insere uma linha com `origem=site`, `idioma`, `status=novo`, `product=jinlong` | — | — |
+| Formulário: gravação via RPC pela API REST (caminho HTTP) | NÃO TESTADO | A permissão para aplicar a migration no stack local foi negada pelo classificador de ações; o teste HTTP ponta a ponta não rodou | — | Aplicar `20261104150000` no stack local (ou homolog, com aprovação) e testar `POST /rest/v1/rpc/registrar_lead_comercial` com a chave anon |
+| Formulário: proteção contra envios abusivos | PASSOU (com limite) | honeypot, limite de 5 por IP em 10 min, corpo até 4 KB, `Content-Type` obrigatório (`route.ts`) | O limite é em memória por instância: em produção sem estado compartilhado, o limite é aproximado. A função não tem limite próprio | Aceitar como risco baixo ou adicionar limite persistente (decisão) |
+| Formulário: mensagens sem informação interna | PASSOU | erro de banco é só logado; o visitante recebe `unavailable`/`invalid` genéricos (`route.ts`, `handleDemoRequest`) | — | — |
+| Formulário: coleta mínima | PASSOU | campos do formulário: nome, loja, contato, canal, segmento e idioma; cidade, WeChat e UTM são opcionais | — | — |
+| Credenciais | PASSOU | nenhuma credencial nova; a chave anon é a mesma já usada, e o guard de isolamento do site continua valendo | — | — |
+| `anon` sem acesso a vendas e dados internos | PASSOU | sonda: 0 linhas de domínio; `v_vendas_dia` negada (`sec02_sonda_anon_depois.txt`) | — | — |
+| `authenticated` com acesso legítimo preservado | PASSOU (parcial) | OPERADOR vê estoque da própria loja (1); DONO `e1` vê o estoque da `e1` (6) e as 4 lojas da empresa; `texto_sem_acento` funciona | Não há fixture positiva de view: o DONO da empresa das vendas não existe na base de teste | Criar fixture de DONO da empresa com vendas |
+| Isolamento entre empresas e lojas | PASSOU | GERENTE da `e2` vê 0 do estoque da `e1` e 0 vendas por views; DONO `e1` não vê vendas da outra empresa | — | — |
+| Views com `security_invoker` | PASSOU | `reloptions = security_invoker=true` nas três views; `anon` negado | — | — |
+| Regressões: trigger de caixa fechado | PASSOU | `CAIXA_FECHADO_STATUS_IMUTAVEL` para `authenticated` (não erro de permissão) | — | — |
+| Regressões: testes do site | PASSOU | `npx vitest run` no site: 62/62 (após `npm ci` pela raiz do monorepo, lockfile sem alteração) | — | — |
+| Regressões: testes do banco e do PDV | NÃO TESTADO | Não rodados nesta sprint | — | Rodar a suíte do PDV antes de aplicar em produção |
+| `storage` | PASSOU (sem risco demonstrado) | INSERT em `storage.objects` por `anon`: RLS nega; UPDATE em `storage.buckets`: 0 linhas; DELETE direto: bloqueado por trigger | Privilégios DML amplos para `anon` no papel (configuração de plataforma) | Revisão de plataforma; sem ação demonstrável |
+| `realtime` | NÃO DEMONSTRADO | `realtime.subscription` e `realtime.messages`: SELECT de `anon` retorna 0 linhas; INSERT falhou por falta de partição, então não provou nada | Privilégios amplos de `anon` no papel | Revisão de plataforma |
+| `net` | FALHOU (demonstrado) | `anon` executa `net.http_get` e obtém um id de requisição (enfileirada em `net.http_request_queue`) | Anônimo consegue disparar requisições HTTP de dentro do banco | Revogar de `anon` e `PUBLIC` pelo administrador do projeto (não feito, conforme decisão 6) |
+| `graphql_public` | NÃO TESTADO | Na cópia, `anon` não tem `USAGE` em `graphql_public`; no homolog o catálogo indica que tem. As duas fontes divergem | Divergência de ambiente, não resolvida | Testar no homolog com aprovação |
+| `pg_stat_statements` | FALHOU (demonstrado) | `anon` lê 4.854 linhas de `extensions.pg_stat_statements` (texto de consultas de todos os usuários) | Vazamento de texto de consultas | Revogar `SELECT` de `PUBLIC` pelo administrador do projeto (não feito, decisão 6) |
+
+### Migrations desta sprint
+- `20261104150000_commercial_leads_registro_rpc.sql`: cria `registrar_lead_comercial`, EXECUTE só para `anon`, verifica que `anon` não tem privilégio direto na tabela. Rollback: `backend/supabase/rollback/20261104150000_commercial_leads_registro_rpc.rollback.sql` (remove a função).
+- Não aplicada no homolog nesta sprint: falta a autorização específica para esta migration. A migration `20261104120000` já está aplicada no homolog.
+
+### Pendências de decisão
+1. Aprovar a aplicação de `20261104150000` no homolog e o teste HTTP ponta a ponta.
+2. Decidir se o limite de taxa do formulário precisa ser persistente.
+3. Decidir sobre a policy `commercial_leads_anon_insert`: sem grant de INSERT ela não tem efeito; pode ser removida em migration futura.
+4. Pedir ao administrador do projeto a revogação de `pg_stat_statements` e de `net` para `anon`/`PUBLIC`.
