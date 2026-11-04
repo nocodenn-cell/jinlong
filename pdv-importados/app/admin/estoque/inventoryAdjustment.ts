@@ -17,7 +17,7 @@ import {
 } from '@shared-core/src/inventory'
 import { createInventoryReader } from '@/app/admin/estoque/inventoryReader'
 import { resolveInventoryMessage } from '@/app/admin/estoque/inventoryMessages'
-import { primeiroItemComQuantidadeInvalida } from '@/app/caixa/server/validacaoQuantidadeUnidade'
+import { primeiroItemComQuantidadeInvalida } from '@shared/format/unidadeMedida'
 
 export type AdjustEstoqueRpcFn = (args: {
   p_produto_id: string

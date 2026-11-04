@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { mensagemErroDevolverVenda } from '@/app/gerente/vendas/devolverVendaErro'
 import type { DevolverVendaInput } from '@/app/gerente/vendas/parseDevolverVendaForm'
-import { primeiroItemComQuantidadeInvalida } from '@/app/caixa/server/validacaoQuantidadeUnidade'
+import { primeiroItemComQuantidadeInvalida } from '@shared/format/unidadeMedida'
 
 type RpcDevolverItem = {
   nome?: unknown

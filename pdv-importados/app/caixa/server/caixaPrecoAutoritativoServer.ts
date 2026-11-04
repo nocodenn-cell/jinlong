@@ -7,7 +7,7 @@ import {
   filtrarSomenteProdutosVendaveis,
 } from '@/lib/catalog/aplicarFiltroProdutoVendavel'
 import { quantidadeParaRpcPreco } from '@/lib/format/quantidadeCaixa'
-import { primeiroItemComQuantidadeInvalida } from '@/app/caixa/server/validacaoQuantidadeUnidade'
+import { primeiroItemComQuantidadeInvalida } from '@shared/format/unidadeMedida'
 import { captureMessage } from '@/lib/sentry/vendaSentry'
 import { isPricingVersionRpcAusente } from '@/app/caixa/server/pricingVersionRpcError'
 

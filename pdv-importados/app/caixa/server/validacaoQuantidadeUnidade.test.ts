@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { primeiroItemComQuantidadeInvalida } from './validacaoQuantidadeUnidade'
+import { primeiroItemComQuantidadeInvalida } from '@shared/format/unidadeMedida'
 
 const UN_ID = '11111111-1111-4111-8111-111111111111'
 const KG_ID = '22222222-2222-4222-8222-222222222222'
