@@ -373,3 +373,24 @@ Sondas com `anon` em transação revertida. Efeito demonstrado = resultado obtid
   - `INSERT` direto em `commercial_leads` por `anon`: HTTP 401, `permission denied`. PASSOU.
 - **Caminho válido (RPC com dados corretos):** validado na cópia de banco com o mesmo SQL (ver `docs/qa/evidencias/sec02_formulario_rpc_saida.txt`). NÃO executado no homolog, para não gravar um lead de teste no CRM. Fica como NÃO TESTADO até um teste com aprovação.
 - **Produção:** não alterada.
+
+## 16. Teste E2E do formulário comercial no homolog (2026-11-04)
+
+Autorizado pelo responsável, só no homolog `jinlong-homolog-palm` (`yvdilcmxyjafnnsfdtam`). Produção não foi usada; a URL e a chave vieram do próprio projeto de homolog.
+
+| Item | Status | Evidência |
+|---|---|---|
+| Formulário: envio HTTP real (`POST /pedido-demo` do site, servidor de desenvolvimento apontado ao homolog, chave pública) | PASSOU | HTTP 201 com protocolo (`sec02_e2e_homolog_envio_1.txt`) |
+| Persistência em `commercial_leads` | PASSOU | linha com `origem=site`, `status=novo`, `product=jinlong`, idioma e canal corretos |
+| Visualização no CRM (hub) | NÃO TESTADO | `commercial_admins` tem 0 linhas no homolog: não há administrador do CRM. Um usuário autenticado comum vê 0 leads (PASSOU nesse caso). Criar um admin de teste exige autorização |
+| Idempotência | FALHOU | a mesma solicitação gerou **dois** leads (protocolos `JL-261104-GWNBGY` e `JL-261104-BDT52J`). Não há chave de idempotência no contrato |
+| Limpeza | PASSOU | DELETE por IDs exatos (2 removidos), com filtros de protocolo e de `utm_source`. Total de leads: 0, igual ao estado anterior |
+| Efeitos externos (e-mail, notificação, integração) | PASSOU (não há) | a rota só grava na tabela; nenhum trigger em `commercial_leads` |
+
+Limite de taxa (por instância): 5 envios inválidos do mesmo IP passam para a validação e o sexto retorna 429. Confirmado.
+
+### Pendências adicionais (propostas, nada executado)
+1. **Rate limit compartilhado, baixo custo:** o limite atual é em memória, por instância. Proposta sem serviço pago: tabela `commercial_lead_rate` com hash do IP e janela, e uma função `SECURITY DEFINER` que conta e recusa acima do limite, chamada pela rota antes da gravação. Exige migration e autorização próprias.
+2. **Idempotência:** proposta: chave de idempotência gerada no formulário, guardada em coluna única; a função devolve o protocolo existente em repetição. Exige migration e autorização próprias.
+3. **Policy `commercial_leads_anon_insert`:** sem grant de INSERT para `anon`, a policy não tem efeito. Proposta: `DROP POLICY` em migration futura, depois de confirmar que nenhum caminho depende dela.
+4. **`pg_stat_statements` e `net`:** o impacto e a compatibilidade foram checados sem executar nada. `net` é usado pelo cron fiscal, que roda como `postgres` dentro de função `SECURITY DEFINER`, então revogar `anon` e `PUBLIC` não quebra esse fluxo. `pg_stat_statements` é lido pelo painel do Supabase com o papel do administrador. Ambos são de propriedade do `supabase_admin`, que o `postgres` não altera. Quem administra o projeto precisa executar a revogação, e antes deve confirmar a compatibilidade na documentação do Supabase.
