@@ -539,3 +539,42 @@ Escopo: corrigir os fixtures que falhavam pela regra multiempresa e rodar o gate
 ### Veredito
 - **GO-LIVE-01: NO-GO continua.** Gate em 31/35, com quatro divergências de contrato de erro que precisam de decisão de produto. Cenários operacionais completos ainda não validados.
 - Próximo passo: decidir o contrato de erro das guardas de loja e autorizar a rodada de cenários operacionais na cópia descartável.
+
+## 20. JL-GO-LIVE-01: investigação dos quatro gates (2026-11-04)
+
+Etapa 1 da decisão do proprietário. Nenhum código de segurança foi alterado nesta rodada. Os gates 35/35 e o golden flow ainda não foram executados.
+
+### Mecanismo comum
+- As RPCs públicas (`registrar_liquidacao_receber`, `registrar_pagamento_contas_pagar`, `atualizar_produto_com_faixa_atacado`, `ajustar_estoque_manual_seguro`) chamam `public.fp_assert_loja(loja_do_recurso, p_direta, rotulo)` **antes** da regra interna.
+- `fp_loja_de(tipo, id)` resolve a loja do recurso pelo ID. Se o recurso não existe, devolve `NULL`, e `fp_assert_loja` deixa a regra interna responder "não encontrado".
+- Se o recurso existe numa loja fora do escopo, `fp_assert_loja` lança `ACESSO_LOJA_NEGADO: <rotulo>` **antes** da regra interna.
+- **Vazamento:** a diferença de código entre "existe em outra loja" e "não existe" permite inferir existência. A regra 2 do proprietário proíbe isso.
+
+### Por caso
+
+| Gate | Operação | Perfil / loja do usuário | Recurso | Esperado | Retornado | Ordem | Inferência de existência | Contrato da UI |
+|---|---|---|---|---|---|---|---|---|
+| ar-receipts | `registrar_liquidacao_receber` | GERENTE da loja A | caixa da loja B (`p_caixa_id`) | `LIQUIDACAO_CAIXA_INVALIDO` | `ACESSO_LOJA_NEGADO` (pré-check do caixa) | pré-check antes da regra | **Sim**: caixa de outra loja existe | a regra interna já devolve `LIQUIDACAO_CAIXA_INVALIDO` para caixa de outra loja e para caixa inexistente |
+| ap-payments | `registrar_pagamento_contas_pagar` | GERENTE da loja A | caixa da loja B (`p_caixa_id`) | equivalente ao ar | `ACESSO_LOJA_NEGADO` (pré-check do caixa) | pré-check antes da regra | **Sim** | a verificar (mesmo padrão) |
+| GATE6 | `registrar_liquidacao_receber` | GERENTE/DONO da loja B | título da loja A (`p_titulo_id`) | `LIQUIDACAO_LOJA_DIVERGENTE` | `ACESSO_LOJA_NEGADO` (pré-check do título) | pré-check antes da regra | **Sim** nos dois sentidos | **Conflito**: a própria regra interna `LIQUIDACAO_LOJA_DIVERGENTE` também revela que o título existe, enquanto título inexistente devolve `LIQUIDACAO_TITULO` |
+| fase6 | `atualizar_produto_com_faixa_atacado` | GERENTE da loja A | produto da loja B | `ATUALIZAR_PRODUTO_NAO_ENCONTRADO` (comentário do teste: sem revelar produto alheio) | `ACESSO_LOJA_NEGADO` | pré-check antes da regra | **Sim** | o próprio teste define o contrato de não revelar |
+| fase6 (segunda asserção) | `ajustar_estoque_manual_seguro` | GERENTE da loja A | `p_loja_id` explicitamente da loja B | `AJUSTE_ESTOQUE_LOJA_INVALIDA` | `ACESSO_LOJA_NEGADO` | pré-check por loja explícita | não (o parâmetro é a própria loja) | aceitável, pelo item "operação explicitamente vinculada a loja não autorizada" da regra |
+
+### Diagnóstico por caso
+- **ar-receipts e ap-payments:** a expectativa atual é compatível com a regra 2. A correção sugerida é remover o pré-check do **caixa** no wrapper e deixar a regra interna decidir. A regra interna já exige que o caixa seja da loja do título (`LIQUIDACAO_CAIXA_INVALIDO`), então a segurança não piora, e a resposta fica igual à de caixa inexistente. Precisa confirmar no `ap` que a regra interna faz o mesmo.
+- **fase6 (produto):** a expectativa atual é compatível com a regra 2 e com o comentário do próprio teste. A correção é fazer o wrapper responder `ATUALIZAR_PRODUTO_NAO_ENCONTRADO` quando o produto está fora do escopo, sem `ACESSO_LOJA_NEGADO`. Não exige mudar o teste.
+- **fase6 (ajuste de estoque com loja explícita):** a expectativa `AJUSTE_ESTOQUE_LOJA_INVALIDA` precisa ser revista. Pela regra 1 e pelo item de operação explicitamente vinculada a loja, `ACESSO_LOJA_NEGADO` é o erro adequado. Para mudar a expectativa, é preciso justificar o contrato, como pede a regra.
+- **GATE6:** é o caso que exige **decisão de contrato**. A expectativa `LIQUIDACAO_LOJA_DIVERGENTE` revela existência de título em outra loja, o que a regra 2 proíbe. A alternativa uniforme é `LIQUIDACAO_TITULO` para título de outra loja e para título inexistente. Isso altera um código existente, que a UI pode mapear. Não implementei sem sua confirmação.
+
+### Decisões que preciso de você
+1. **GATE6:** confirma que, para título de outra loja, a resposta deve ser `LIQUIDACAO_TITULO` (igual a inexistente), e que `LIQUIDACAO_LOJA_DIVERGENTE` deixa de ser devolvido a quem não é da loja?
+2. **Escopo do vazamento:** a mesma correção (resposta indistinguível para recurso por ID fora da loja) vale para todas as RPCs que usam `fp_assert_loja` com `fp_loja_de`? Isso afeta bem mais que os quatro gates (conta a pagar, venda, produto, comissão, NF-e, remessa). Recomendo tratar como sprint própria, com inventário de todas as RPCs afetadas.
+3. **Ajuste com loja explícita:** aceitar `ACESSO_LOJA_NEGADO` como contrato, atualizando a expectativa do fase6?
+
+### O que não foi feito nesta rodada
+- Etapa 2 (correções): não implementada, pela decisão 1 e pelo escopo da decisão 2.
+- Etapa 3 (35/35): não rodada de novo. O último resultado registrado é 31/35.
+- Etapa 4 (golden flow operacional e E2E de interface): não executada nesta rodada.
+
+### Veredito
+- **GO-LIVE-01: NO-GO continua.** O vazamento de existência por código de erro é um risco real, com correção clara para ar, ap e produto, e uma decisão de contrato pendente para o GATE6.
