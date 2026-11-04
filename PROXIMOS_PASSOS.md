@@ -2,7 +2,9 @@
 
 ## P0 — Quebrado/travado
 
-- Drift de migrations: o homolog (`yvdilcmxyjafnnsfdtam`) não tem 23 migrations do repositório (de `20261020100000` a `20261028120000`, inclui a base `saas`), então as 11 do PR #655 não aplicam lá. Produção tem as 11 sem registro e o check `migration-remote-drift` segue vermelho até reconciliação autorizada. Matriz, rollbacks e plano em `docs/runbooks/RECONCILIACAO_HOMOLOG_2026-11-04.md`
+- Drift de migrations em produção: `jinlong` (`kbabmewnahysfvlybiak`) continua com 11 migrations sem registro e o check `migration-remote-drift` vermelho. Homolog já está reconciliado (481 versões, 31 aplicadas e registradas em 2026-11-04). Produção só com decisão e autorização próprias. Detalhes e matriz em `docs/runbooks/RECONCILIACAO_HOMOLOG_2026-11-04.md`
+- Homologação funcional incompleta: falta login real com contas de teste e os fluxos de escrita (PDV, vendas em espera, estoque, NF-e, financeiro, cancelamentos, concorrência). Só isolamento RLS e privilégios foram verificados (`docs/runbooks/RECONCILIACAO_HOMOLOG_2026-11-04.md`, seção 11)
+- Segurança: `anon` tem `SELECT` em 70 objetos de `public` no homolog; o RLS bloqueia, mas a superfície deve ser revogada onde não há uso público
 - PDV-100 D-07: PIX e cartão geram recebível PENDENTE sem conta, porque a loja não tem `contas_financeiras` nem `financeiro_contas_forma` configurados. Configurar contas no ambiente e decidir se a venda deve bloquear sem conta (`docs/qa/PDV_100_1_DEFEITOS_E_DECISOES.md`)
 - PDV-100 D-11 (decisão): `produtos.preco_atacado` (17,90) é ignorado na venda; só as faixas de `precos_atacado` contam. Escolher a fonte oficial do atacado antes de liberar
 - PDV-100 D-05 (decisão): o troco e o valor recebido não são persistidos. Proposta com coluna nova em `vendas_pagamentos` e mudança no RPC v4 em `docs/qa/PDV_100_1_DEFEITOS_E_DECISOES.md`; depende de aprovação (migration + SSoT do fechamento)
