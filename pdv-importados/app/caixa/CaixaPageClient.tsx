@@ -1834,7 +1834,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 vendas={vendasEmEspera}
                 carregando={carregandoEmEspera}
                 onRetomar={(id) => void handleRetomarEmEspera(id)}
-                onDescartar={(id) => void handleDescartarEmEspera(id)}
+                onDescartar={(id, motivo) => void handleDescartarEmEspera(id, motivo)}
               />
               <div className="mt-auto border-t pt-2">
                 <CaixaRailTurnoSummary
