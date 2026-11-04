@@ -38,6 +38,22 @@ BEGIN
     (v_admin, 'Fase6 Ex-Admin (agora DONO)', 'DONO', true, v_loja_a)
   ON CONFLICT (id) DO UPDATE SET perfil = EXCLUDED.perfil, ativo = true, loja_id = EXCLUDED.loja_id;
 
+  -- Vínculos de empresa (modelo multiempresa): sem eles o usuário não pertence a empresa nenhuma e o guard
+  -- de produto nega tudo. DONO = papel de empresa (sem loja), na empresa dos produtos da loja B (fa5e...);
+  -- GERENTE = papel restrito à loja A, na empresa real da loja A (a loja já existe na base com outra empresa).
+  INSERT INTO public.usuario_vinculos (usuario_id, empresa_id, loja_id, papel, ativo)
+  SELECT v.usuario_id, v.empresa_id, v.loja_id, v.papel, true
+    FROM (VALUES
+      (v_gerente_a, (SELECT l.empresa_id FROM public.lojas l WHERE l.id = v_loja_a), v_loja_a, 'GERENTE'),
+      (v_dono, 'fa5e0000-0000-4000-8000-0000000000f1'::uuid, NULL::uuid, 'DONO'),
+      (v_admin, 'fa5e0000-0000-4000-8000-0000000000f1'::uuid, NULL::uuid, 'DONO')
+    ) AS v(usuario_id, empresa_id, loja_id, papel)
+   WHERE NOT EXISTS (
+      SELECT 1 FROM public.usuario_vinculos x
+       WHERE x.usuario_id = v.usuario_id AND x.empresa_id = v.empresa_id
+         AND x.papel = v.papel AND x.ativo
+   );
+
   INSERT INTO public.categorias (empresa_id, id, nome) VALUES ('fa5e0000-0000-4000-8000-0000000000f1', v_categoria, 'Fase6 Categoria')
   ON CONFLICT (id) DO UPDATE SET nome = EXCLUDED.nome;
 
