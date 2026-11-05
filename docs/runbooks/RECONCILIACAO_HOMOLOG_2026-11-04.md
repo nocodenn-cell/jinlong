@@ -607,3 +607,13 @@ Decisão do proprietário: corrigir os quatro gates sem alterar expectativas par
 
 ### Veredito
 - **GO-LIVE-01: NO-GO continua** até o golden flow e o E2E serem provados. O gate financeiro está verde na cópia, mas não cobre o fluxo completo de tela.
+
+## 22. JL-GO-LIVE-01: golden flow operacional na cópia (2026-11-05)
+
+- Roteiro: `backend/scripts/go-live-01-golden-flow.test.sql`, executado em `sec_gf01_run` (cópia de `sec_gf01`, que é de `homolog_real` com a migration `20261104180000`). Saída: `docs/qa/evidencias/go-live-01_golden_flow_run.txt`, 34 asserções OK.
+- Cobertos com efeito persistido verificado no banco: login/status do operador, abertura, busca por nome e código de barras, venda simples, fracionado 0,500 kg, desconto permitido (manual e com token do gerente) e bloqueado, pagamento dividido DINHEIRO+PIX, venda em espera e retomada, cancelamento com estorno, devolução com estoque e caixa, transferência entre lojas, ajuste manual autorizado, fechamento com diferença, reabertura, histórico e isolamento entre empresas. Idempotência e falha sem resíduo também.
+- Não suportado nesta versão: venda a prazo (FIADO recusado pelo servidor, `FINALIZAR_VENDA_CANONICA_FIADO_DESABILITADO`).
+- Não testado: comprovante, crédito de cliente, estorno financeiro com contas a receber, concorrência de duas sessões.
+- E2E de interface: BLOQUEADO. Sem leitura dos `.env` do `pdv-importados` nesta sessão e a API local (`supabase_kong_fastproduct`) serve o banco `postgres`, não `sec_gf01`. Solução descrita na matriz.
+- Matriz completa, defeitos e observações de comportamento: `docs/qa/GO_LIVE_01_GOLDEN_FLOW.md`.
+- Veredito: GO-LIVE-01 segue NO-GO.
