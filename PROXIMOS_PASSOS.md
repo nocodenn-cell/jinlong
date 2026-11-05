@@ -19,6 +19,12 @@
 
 ## P1 — Falta para lançar (MVP)
 
+- Verificar backup e PITR do projeto `jinlong` no painel (Database → Backups): PITR habilitado? retenção? último backup? Não presumir. Pré-requisito para pedir autorização de produção da tranche
+- Tranche de segurança (PR #660): atualizar `provisionamento-wizard-trial.test.sql` para o bloqueio da `20261028121000`; corrigir fixtures de `listar-caixas-elegiveis-desembolso` e `tokens-autorizacao-*` (mesma classe do SEC-04); remover duplicidade de vínculo em `sec-token-dispositivo-vale-na-loja`
+- Ambiente local de teste: `c1-secdef` e `fase1-hardening-grants` falham no contêiner por ACL padrão e grants que diferem de produção (produção verificada: OK). Alinhar o snapshot de teste
+- `multiempresa-fase2-cobertura`: tabelas `comissoes_*` sem `tenant_guard` nem isenção (falha pré-existente, fora da tranche)
+- Homologação isolada e confirmada antes de qualquer pedido de produção da tranche (o homologação atual não é limpo; ver docs/ops/TRANCHE_VALIDACAO_2026-11-05.md)
+- Revogação de tokens (120100) é irreversível por SQL: plano operacional de reemissão antes da aceitação definitiva
 - Autorizar o merge do PR #623 (remover ADMIN): conflito com a main resolvido na branch do PR (commit 193293d7, local, sem push); validação pendente de revisão
 - Kardex sem valor: `movimentos_estoque_log` só tem `quantidade_delta`. Criar `estoque_aplicar_movimento` como único escritor, com `custo_unitario` e `valor_total` (auditoria 2026-10-30, item 3 do backlog)
 - Tela de produto mostra `preco_custo_medio` = 0 (campo nunca gravado) e `atualizar_preco_varejo_produto` persiste preço sem aprovação nem simulação (auditoria 2026-10-30, Parte 2, itens 1 e 7)
@@ -73,6 +79,7 @@
 
 ## Feito
 
+- 2026-11-05 — Tranche de segurança validada em banco descartável: SEC-04 corrigido (passa), rollbacks de 100000 e 110000 (cadeia idêntica ao baseline), definições de produção conferidas por md5; PR #660 atualizado
 - 2026-11-01 — Consolidação NF-e: #654 integrada à #653 por merge (`0176677f`), Growth-001 restaurada em `20261023130000` (`dfdf9e41`), cinco testes SQL da PR-A adotados (`0a00201d`) e scripts de concorrência movidos para `backend/scripts/backlog-redesign/` (`99dbcaea`). Registro em `docs/audits/CONSOLIDACAO_NFE_2026-11-01.md`; não mergeado
 - 2026-10-30 — Validação em homologação (`jinlong-homolog-palm`, rollback): confirmação, repetição e reimportação passaram; conciliação de duplicatas e AP sem UNIQUE reproduzidos como defeito. Os 13 scripts `.test.sql`/`.mjs` de NF-e não executam no esquema atual (sem `empresa_id`). Relatório em `docs/audits/VALIDACAO_TESTES_NFE_HOMOLOG_2026-10-30.md`
 - 2026-10-30 — Auditoria de capacidades do ciclo de custos (16 etapas, somente leitura): nenhuma capacidade VALIDADA; motor de custo, rateio e precificação existem em `shared-core` sem ligação ao caminho NF-e; kardex sem valor. Relatório e backlog em `docs/audits/AUDITORIA_CUSTOS_RENTABILIDADE_2026-10-30.md`; sem alteração de código
@@ -82,4 +89,3 @@
 - 2026-10-29 — Decisões D1–D14 registradas em `docs/regras-negocio/DECISOES_JINLONG_S1.md`
 - 2026-10-29 — NF-e de entrada com valor e sem duplicatas: mensagem operacional para `IMPORT_NFE_OBRIGACAO_SEM_DUPLICATA`, aviso na prévia e confirmação bloqueada na conferência (`notaObrigacao.ts`); sem alteração de migration/RPC. Não deployado
 - 2026-10-29 — `20261028120000` aplicada em produção (revoke dos 4 helpers de tenant): drill em main com success (backup 40776152513, checksum OK, contagens validadas); pré-checagem true/true/true; pós-checagem revogados e service_role_ok, md5 2fc3a718…; sem `permission denied` nos logs; drift do #630 verde
-- 2026-10-28 — Drift main × produção zerado: `20261022020000` (#625) registrada em produção como no-op (script do #641, SQL idêntico ao arquivo); #641 mergeado (598efcf0): o check respeita `deferred-migrations.json` e aceita duplicatas de pares com git alinhado. `migration-remote-drift` contra produção = HUMAN_GATE (só `20261010120000`, adiada)

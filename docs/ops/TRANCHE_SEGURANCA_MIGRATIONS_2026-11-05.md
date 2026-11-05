@@ -61,7 +61,7 @@ Ordem: 100000 → 110000 → 120100 → 121000 → 122000.
 
 - Testes do repositório, executados em banco descartável (não em produção):
   - `backend/scripts/sec-tokens-usuario-inativo.test.sql`: 48 casos, todos ok (ver seção 6).
-  - `backend/scripts/sec04-token-gerente-tenant.test.sql`: **não executável** com o estado atual de fixtures (falha ao inserir loja sem `empresa_id`, por trigger de multiempresa). Falha pré-existente, não causada pela tranche. Não usar como evidência.
+  - `backend/scripts/sec04-token-gerente-tenant.test.sql`: **passa** após correção da fixture (lojas com `empresa_id`, exigido pela multiempresa). Resultado: `SEC04 TOKEN GERENTE TENANT: OK`. Ver `TRANCHE_VALIDACAO_2026-11-05.md`.
 - Consultas de conferência: `to_regprocedure` das funções da seção 6 não nulo; `select` de `public.usuarios` e `public.usuario_vinculos` sem erro; login de um DONO e de um OPERADOR de teste ainda funcionando.
 - Operacional (com contas de teste em homologação, não produção): operador inativado perde o caixa na hora; DONO de outra empresa não vê produtos da empresa; ADMIN ativo sem vínculo não lista caixas nem custos.
 
