@@ -122,3 +122,12 @@ Cada arquivo está em `backend/supabase/rollback/` e deve ser executado por SQL,
 
 - **Homologação:** GO, em ambiente isolado e confirmado.
 - **Produção:** **NO-GO** até as decisões da seção 9 e a confirmação de backup/PITR.
+
+## 11. Documentos e validação relacionados (atualizados em 2026-11-05)
+
+- `docs/ops/TRANCHE_VALIDACAO_2026-11-05.md`: matriz PASSOU / FALHOU / NÃO TESTADO, dependência 110000 × 101000, falhas pré-existentes.
+- `docs/ops/RECUPERACAO_ACESSO_TOKENS.md`: recuperação de gerente, operador e sincronização offline.
+- `docs/ops/BACKUP_RESTAURACAO_SEM_PITR.md`: backup lógico e restauração testada, sem presumir PITR.
+- `backend/scripts/tranche-seguranca-validar.sh`: reprodução completa em contêiner descartável (aplica, testa, reverte e compara).
+
+**Pré-requisitos adicionais para produção:** PITR (ou dump lógico) confirmado; decisão do dono sobre a `20261028101000` (a gestão de assinatura do DONO depende dela); PDV testado com sincronização offline; procedimento de contingência de cadastro executado uma vez em homologação.
