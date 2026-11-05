@@ -38,6 +38,8 @@ if (!existsSync(SNAP)) {
 }
 
 // 2) recria o banco E2E a partir do snapshot
+// senhas das roles internas da imagem: reaplicadas a cada provisionamento (um restart do container pode repor a autenticação)
+must(run('node', [join(dir, 'e2e-db.mjs'), '--user', 'supabase_admin', '--set-role-passwords', '--db', 'postgres']), 'senhas das roles internas')
 must(compose('stop', 'e2e_rest', 'e2e_auth'), 'stop rest/auth')
 must(psql('postgres', 'DROP DATABASE IF EXISTS sec_gf01; CREATE DATABASE sec_gf01;', 'supabase_admin'), 'recriar sec_gf01 (E2E)')
 const restore = spawnSync('docker', ['exec', '-i', 'fp_e2e_db', 'pg_restore', '-U', 'supabase_admin', '-d', 'sec_gf01', '--no-owner'], { input: readFileSync(SNAP) })

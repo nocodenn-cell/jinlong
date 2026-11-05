@@ -100,6 +100,26 @@ function lower(raw: string): string {
   return raw.toLowerCase()
 }
 
+/**
+ * Fallback genérico ("Não foi possível concluir"): o operador não recebe o motivo, então o detalhe bruto vai
+ * para o log do servidor. Só registra quando não há `document` (o mapeador também é importado por componentes
+ * cliente, que não devem logar). Sem efeito na mensagem exibida.
+ */
+function padraoRegistrado(motivo: 'vazio' | 'nao_mapeado', raw: string, idioma: IdiomaErro): string {
+  if (typeof document === 'undefined') {
+    console.error(
+      JSON.stringify({
+        evento: 'caixa.erro_operador.fallback',
+        motivo,
+        idioma,
+        detalhe: raw.slice(0, 500),
+        em: new Date().toISOString(),
+      }),
+    )
+  }
+  return MSG_PADRAO[idioma]
+}
+
 /** Boundary operador: nunca expõe rpcErr, SQL, migrations ou códigos internos. */
 export function caixaErroOperador(
   detalheTecnico: string | undefined | null,
@@ -107,7 +127,7 @@ export function caixaErroOperador(
 ): string {
   const idioma = idiomaSeguro(idiomaInput)
   const raw = (detalheTecnico ?? '').trim()
-  if (!raw) return MSG_PADRAO[idioma]
+  if (!raw) return padraoRegistrado('vazio', '', idioma)
 
   const l = lower(raw)
 
@@ -166,10 +186,10 @@ export function caixaErroOperador(
     return MSG_CAIXA_INDISPONIVEL[idioma]
   }
   if (l.includes('fetch_failed') || l.includes('rpcerr') || l.includes('ok: false')) {
-    return MSG_PADRAO[idioma]
+    return padraoRegistrado('nao_mapeado', raw, idioma)
   }
 
-  return MSG_PADRAO[idioma]
+  return padraoRegistrado('nao_mapeado', raw, idioma)
 }
 
 export const CAIXA_MSG = {
