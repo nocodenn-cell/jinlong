@@ -90,3 +90,13 @@ Consequência: o label é um **gate de merge na `main`**, não uma autorização
    - Criar `CODEOWNERS` para o manifesto e `config.toml` (já previsto em `docs/ops/deploy-governance.md`, ainda não confirmado no repositório).
 
 Nada disso foi alterado nesta etapa. O label não foi aplicado.
+
+## 7. Custo de produto de adiar a `20261028101000` (verificado em 2026-11-05)
+
+Adiar a cobrança não é neutro para o lançamento:
+
+- A tela de assinatura do DONO (`pdv-importados/app/admin/assinatura/actions.ts`) confere o papel chamando `fp_sou_dono_da_empresa`, que só existe na `20261028101000`. Sem ela, a gestão de assinatura falha fechada ("Somente o DONO gerencia a assinatura").
+- Em produção (somente leitura): `fp_sou_dono_da_empresa`, `cobranca_registrar_assinatura` e `cobranca_reservar_assinar` **não existem** hoje. A gestão de assinatura pelo DONO já está indisponível.
+- A `20261028110000` (corte ADMIN) não altera essa cobrança, porque o gate é por DONO, não por ADMIN.
+
+**Decisão do dono:** a revisão de segurança da cobrança (condição (a) acima) é pré-requisito para o primeiro cliente pagante contratar pelo app. Priorizar a revisão, sem pular as condições de liberação.
