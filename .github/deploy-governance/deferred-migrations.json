@@ -12,6 +12,54 @@
       "file": "backend/supabase/migrations/20261023130000_growth001_central_conversao.sql",
       "reason": "Growth-001 (Central de Conversao) pendente em producao: decisao do proprietario de 2026-11-01 (postergacao documentada; nao e protecao de deploy). Versao canonica mantida; nao aplicar sem autorizacao explicita.",
       "releaseCondition": "Autorizacao explicita do proprietario para aplicar em producao (runbook manual com transacao e schema_migrations) + PR que remove esta entrada com label deploy-prod:aprovado."
+    },
+    {
+      "version": "20261028101000",
+      "file": "backend/supabase/migrations/20261028101000_cobranca_correcoes_revisao_585.sql",
+      "reason": "Correcoes da revisao de seguranca do PR #585 (cobranca Asaas): upgrade so libera recurso apos pagamento confirmado. O proprio arquivo exige revisao do dono e homologacao antes de aplicar. Sem arquivo de rollback.",
+      "owner": "Damatta (dono do produto)",
+      "releaseCondition": "(a) revisao do dono registrada no decisionDoc; (b) arquivo de rollback criado e testado em banco descartavel; (c) homologacao com webhook Asaas em sandbox, com upgrade pendente confirmado e liberado somente apos pagamento; (d) PR que remove esta entrada com label deploy-prod:aprovado.",
+      "decisionDoc": "docs/ops/MIGRATIONS_ADIADAS_2026-11-05.md"
+    },
+    {
+      "version": "20261029155000",
+      "file": "backend/supabase/migrations/20261029155000_movimentos_estoque_log_transferencia_id.sql",
+      "reason": "Rastreabilidade de transferencias no kardex (issue #586). Altera internal.transferir_estoque_seguro, que move saldo entre lojas. Sem arquivo de rollback.",
+      "owner": "Damatta (dono do produto)",
+      "releaseCondition": "(a) arquivo de rollback criado e testado (remove coluna e restaura a funcao anterior) em banco descartavel; (b) testes de transferencia (saida e entrada com mesmo transferencia_id, saldo e idempotencia inalterados) verdes em homologacao; (c) PR que remove esta entrada com label deploy-prod:aprovado.",
+      "decisionDoc": "docs/ops/MIGRATIONS_ADIADAS_2026-11-05.md"
+    },
+    {
+      "version": "20261030100000",
+      "file": "backend/supabase/migrations/20261030100000_sec_token_dispositivo_vale_na_loja.sql",
+      "reason": "Token emitido pelo dispositivo do PDV (validar_gerente) passa a valer na loja. Corrige bloqueio indevido do sync-outbox, mas muda regra de autorizacao de desconto. Depende de 20261028120100 (ja na mesma tranche de seguranca).",
+      "owner": "Damatta (dono do produto)",
+      "releaseCondition": "(a) aprovacao especifica do dono sobre a regra de token de dispositivo, registrada no decisionDoc; (b) validacao presencial no PDV com token de dispositivo e com token de gerente fora da loja (deve recusar); (c) 20261028120100 aplicada antes; (d) PR que remove esta entrada com label deploy-prod:aprovado.",
+      "decisionDoc": "docs/ops/MIGRATIONS_ADIADAS_2026-11-05.md"
+    },
+    {
+      "version": "20261030120000",
+      "file": "backend/supabase/migrations/20261030120000_nfe_conciliacao_duplicatas.sql",
+      "reason": "Conciliacao financeira da NF-e: duplicatas que nao somam o valor da NF geram conta a pagar errada (NF 100,00 com duplicata 60,00). Depende da consolidacao da NF-e (PR #653), ainda nao mergeada, e da S2 ja aplicada.",
+      "owner": "Damatta (dono do produto)",
+      "releaseCondition": "(a) decisao do dono sobre o PR #653 registrada no decisionDoc; (b) teste SQL de conciliacao (duplicata menor, maior e dentro da tolerancia de 0,01) verde em homologacao; (c) confirmacao de que nenhuma NF-e em producao ficaria pendente sem duplicatas; (d) PR que remove esta entrada com label deploy-prod:aprovado.",
+      "decisionDoc": "docs/ops/MIGRATIONS_ADIADAS_2026-11-05.md"
+    },
+    {
+      "version": "20261030130000",
+      "file": "backend/supabase/migrations/20261030130000_nfe_precisao_documental.sql",
+      "reason": "Precisao documental da NF-e: altera importar_nfe_transacao e o custo unitario (caso 7 x 3,335). Depende do parser (pdv-importados/lib/nfe/nfeParser.ts) ler vProd; banco sem o parser novo gera divergencia artificial.",
+      "owner": "Damatta (dono do produto)",
+      "releaseCondition": "(a) app pdv-importados com o parser que le vProd publicado e validado; (b) teste do caso 7 x 3,335 (custo sem arredondamento previo) verde em homologacao; (c) teste de importacao existente sem regressao; (d) PR que remove esta entrada com label deploy-prod:aprovado.",
+      "decisionDoc": "docs/ops/MIGRATIONS_ADIADAS_2026-11-05.md"
+    },
+    {
+      "version": "20261030140000",
+      "file": "backend/supabase/migrations/20261030140000_nfe_qtd_precisao.sql",
+      "reason": "Politica de quantidade comercial da NF-e: recusa importacao quando qCom x fator nao cabe em 3 casas de estoque (IMPORT_NFE_QTD_PRECISAO). A mensagem orientando o usuario depende do codigo da app; a app ainda nao foi verificada contra esta migration.",
+      "owner": "Damatta (dono do produto)",
+      "releaseCondition": "(a) app pdv-importados com a mensagem IMPORT_NFE_QTD_PRECISAO publicada e validada; (b) teste de qCom 1,0004 x 1000,00 recusado e de qCom comum aceito, em homologacao; (c) PR que remove esta entrada com label deploy-prod:aprovado.",
+      "decisionDoc": "docs/ops/MIGRATIONS_ADIADAS_2026-11-05.md"
     }
   ]
 }
