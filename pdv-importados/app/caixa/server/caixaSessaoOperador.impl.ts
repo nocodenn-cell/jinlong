@@ -81,6 +81,9 @@ export async function abrirCaixaOperadorImpl(valorInicial: number): Promise<Abri
       valorInicial: valorInicialSanitizado,
     })
     if (!opened.ok) {
+      // "Caixa já aberto" já vem localizado pelo servidor (err_srv_caixa_ja_aberto). Reprocessar pelo mapeador
+      // devolveria o fallback genérico "Não foi possível concluir", que induz nova tentativa mesmo com o caixa aberto.
+      if (opened.code === CASH_ERROR_CODES.SESSION_ALREADY_OPEN) return { ok: false, error: opened.error }
       return { ok: false, error: caixaErroOperador(opened.error, await idiomaOperadorParaErro()) }
     }
     revalidatePath('/caixa')
