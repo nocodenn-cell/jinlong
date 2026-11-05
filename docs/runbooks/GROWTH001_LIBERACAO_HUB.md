@@ -46,9 +46,9 @@ Não cria policy nem trigger. A RLS existente continua valendo.
 - Migration aplicada sem erro (`ON_ERROR_STOP=1`) sobre base com 2 leads de site e 1 teste grátis.
 - Permissões: admin vê a Central; dono é negado (`COMMERCIAL_ACESSO_NEGADO`) e não vê leads (RLS); `anon` negado.
 - Fluxo: pedido do dono → conversão manual → assinatura `ATIVA`, auditoria registrada, cliente criado, sem Asaas.
-- Rollback original (`20261023130000_growth001_rollback.sql`): **destrutivo**. Apagou o lead de teste grátis, os eventos `solicitacao`/`conversao` e desvinculou o cliente (`lead_id` nulo). Reaplicar recriou o lead como `novo`, sem histórico.
+- Rollback original (`backend/supabase/rollback/20261023130000_growth001_central_conversao.rollback.sql`): **destrutivo**. Apagou o lead de teste grátis, os eventos `solicitacao`/`conversao` e desvinculou o cliente (`lead_id` nulo). Reaplicar recriou o lead como `novo`, sem histórico.
 - **Rollback seguro** (`rollback/20261023130000_growth001_rollback_seguro.sql`): antes e depois idênticos (leads 3, teste 1, eventos 3, clientes 1 com lead, assinatura ATIVA, auditoria 2). Consulta de leads do hub continua funcionando. Funções removidas (0 restantes). Reaplicar a migration funciona.
-- **Rollback de colunas** (`rollback/20261023130000_growth001_rollback_colunas_guardado.sql`): aborta corretamente quando há dados da Central (`ROLLBACK_COLUNAS_ABORTADO`).
+- **Rollback de colunas** (`rollback/20261023130000_growth001_rollback_colunas_guardado.sql`): aborta corretamente quando há dados da Central (`ROLLBACK_COLUNAS_ABORTADO`). A guarda cobre teste grátis, empresa vinculada, e-mail, interesse, próximo contato, canal `email` e eventos de solicitação/conversão. Esta guarda foi revisada após o teste local; **reexecutar o teste de aborto** antes de liberar (ver pendências).
 
 ## 4. Riscos
 
