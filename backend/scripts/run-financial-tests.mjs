@@ -65,6 +65,8 @@ const SQL_SUITES = [
   'relatorio-consistencia-vendas-gerente.test.sql',
   'retomar-caixa-atomico.test.sql',
   'sec04-token-gerente-tenant.test.sql',
+  // #623 (20261028120100): tokens de usuário inativo/sem vínculo são revogados e recusados.
+  'sec-tokens-usuario-inativo.test.sql',
 ]
 
 /** `psql` está de fato instalado e executável neste host? */

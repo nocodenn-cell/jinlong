@@ -29,13 +29,14 @@ END $$;
 DO $setup$
 DECLARE l int;
 BEGIN
+  -- Fixture: o trigger de multiempresa exige empresa_id nas lojas (migration 20261019120000).
+  INSERT INTO public.empresas (id, nome) VALUES ('f3000005-0000-4000-8000-0000000000e1', 'LCE Empresa') ON CONFLICT (id) DO NOTHING;
   FOR l IN 1..3 LOOP
-    INSERT INTO public.lojas (id, nome, codigo, ativo) VALUES (pg_temp.lid(l), 'LCE Loja ' || l, 'LCEL' || l, true)
-    ON CONFLICT (id) DO UPDATE SET ativo = true;
+    INSERT INTO public.lojas (id, nome, codigo, ativo, empresa_id) VALUES (pg_temp.lid(l), 'LCE Loja ' || l, 'LCEL' || l, true, 'f3000005-0000-4000-8000-0000000000e1')
+    ON CONFLICT (id) DO UPDATE SET ativo = true, empresa_id = EXCLUDED.empresa_id;
   END LOOP;
   PERFORM pg_temp.mk_user(1,  'LCE Gerente 1',  'GERENTE',  1);
   PERFORM pg_temp.mk_user(2,  'LCE Dono 1',     'DONO',     1);
-  PERFORM pg_temp.mk_user(3,  'LCE Admin 1',    'ADMIN',    1);
   PERFORM pg_temp.mk_user(11, 'LCE Op 11',      'OPERADOR', 1);
   PERFORM pg_temp.mk_user(12, 'LCE Op 12',      'OPERADOR', 1);
   PERFORM pg_temp.mk_user(13, 'LCE Op 13',      'OPERADOR', 1);
@@ -94,7 +95,17 @@ SELECT pg_temp.assert(pg_temp.lista(1) = pg_temp.ord(ARRAY[pg_temp.cx(11), pg_te
 
 -- 3) DONO/ADMIN respeitam a loja do usuário
 SELECT pg_temp.assert(pg_temp.lista(2) = pg_temp.lista(1), '3. DONO da loja 1 vê exatamente o conjunto da loja 1');
-SELECT pg_temp.assert(pg_temp.lista(3) = pg_temp.lista(1), '3. ADMIN da loja 1 vê exatamente o conjunto da loja 1');
+-- #623: perfil ADMIN descontinuado (PERFIL_ADMIN_DESCONTINUADO) — não há mais caminho ADMIN nesta função.
+DO $adm$
+BEGIN
+  BEGIN
+    PERFORM pg_temp.mk_user(3, 'LCE Admin 1', 'ADMIN', 1);
+    RAISE EXCEPTION 'FALHOU: perfil ADMIN ainda pode ser criado';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT LIKE 'PERFIL_ADMIN_DESCONTINUADO%' THEN RAISE; END IF;
+  END;
+END $adm$;
+SELECT pg_temp.assert(pg_temp.lista(3) IS NULL OR cardinality(pg_temp.lista(3)) = 0, '3. sem usuário ADMIN: nenhum caixa listado para o id (perfil descontinuado)');
 
 -- 4) outra loja nunca aparece
 SELECT pg_temp.assert(NOT (pg_temp.cx(24) = ANY (pg_temp.lista(1))), '4. caixa da loja 2 nunca aparece para a loja 1');

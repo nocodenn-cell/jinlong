@@ -74,7 +74,7 @@ describe.skipIf(!habilitado)('Import Intelligence — integração real (F4)', (
     for (const emp of [empA.id, empB.id]) {
       await ok(admin.rpc('ops_definir_modulo_empresa', {
         p_empresa: emp, p_modulo: 'IMPORT_INTELLIGENCE', p_habilitado: true,
-        p_autorizado_por: `contrato fictício ${RUN}`, p_motivo: 'integração F4 (homologação local)', p_responsavel: 'teste-integracao-f4',
+        p_autorizado_por: `contrato fictício ${RUN}`, p_motivo: 'integração F4 (homologação local)', p_origem: 'teste-integracao-f4',
       }), 'habilitar módulo')
     }
   }, 60_000)

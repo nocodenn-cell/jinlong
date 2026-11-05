@@ -1,11 +1,44 @@
 import { describe, expect, it, vi } from 'vitest'
-import { handleDemoRequest, isValidContact, makeProtocol, RateLimiter, supabaseDemoStore, validateDemoRequest, type DemoStore } from './demoRequest'
+import {
+  DemoStoreError,
+  handleDemoRequest,
+  isIdempotencyKey,
+  isValidContact,
+  makeProtocol,
+  supabaseDemoStore,
+  validateDemoRequest,
+  type DemoStore,
+  type DemoStoreRow,
+} from './demoRequest'
 
 const good = { name: 'Li Wei', store: 'Loja Dragão', contact: '11 91234-5678', channel: 'whatsapp', locale: 'zh-CN', segment: 'importados', idioma: 'zh-CN' }
-const memStore = () => {
-  const rows: unknown[] = []
-  const store: DemoStore = { insert: async (r) => void rows.push(r) }
-  return { rows, store }
+const K1 = '11111111-1111-4111-8111-111111111111'
+const K2 = '22222222-2222-4222-8222-222222222222'
+
+/** Banco fake que reproduz as regras de registrar_lead_comercial: unicidade por chave, reenvio idêntico devolve o
+ * protocolo original, conteúdo diferente com a mesma chave é recusado e o limite por IP é compartilhado. */
+function bancoFake(limite = 10) {
+  const linhas = new Map<string, { hash: string; protocolo: string }>()
+  const contadores = new Map<string, number>()
+  const protocolos = new Set<string>()
+  const hashDe = (r: DemoStoreRow) => JSON.stringify([r.name, r.store, r.contact, r.channel, r.locale, r.city, r.segment, r.wechat, r.utm_source, r.utm_medium, r.utm_campaign])
+  const storePara = (ip: string): DemoStore => ({
+    async insert(r) {
+      const n = (contadores.get(ip) ?? 0) + 1
+      contadores.set(ip, n)
+      if (n > limite) throw new DemoStoreError('LEAD_RATE_LIMIT')
+      const existente = linhas.get(r.idempotencyKey)
+      if (existente) {
+        if (existente.hash !== hashDe(r)) throw new DemoStoreError('LEAD_CHAVE_REUTILIZADA')
+        return existente.protocolo
+      }
+      if (protocolos.has(r.protocol)) throw new DemoStoreError('UNIQUE_PROTOCOLO')
+      protocolos.add(r.protocol)
+      linhas.set(r.idempotencyKey, { hash: hashDe(r), protocolo: r.protocol })
+      return r.protocol
+    },
+  })
+  return { linhas, contadores, storePara }
 }
 
 describe('validateDemoRequest', () => {
@@ -40,73 +73,160 @@ describe('makeProtocol', () => {
   })
 })
 
-describe('RateLimiter', () => {
-  it('limita por chave dentro da janela e libera depois', () => {
-    const rl = new RateLimiter(2, 1000)
-    expect(rl.allow('a', 0)).toBe(true)
-    expect(rl.allow('a', 10)).toBe(true)
-    expect(rl.allow('a', 20)).toBe(false)
-    expect(rl.allow('b', 20)).toBe(true)
-    expect(rl.allow('a', 1500)).toBe(true)
+describe('isIdempotencyKey', () => {
+  it('aceita UUID v4 e recusa o resto', () => {
+    expect(isIdempotencyKey(K1)).toBe(true)
+    expect(isIdempotencyKey('nao-e-uuid')).toBe(false)
+    expect(isIdempotencyKey('11111111-1111-1111-1111-111111111111')).toBe(false)
+    expect(isIdempotencyKey(undefined)).toBe(false)
   })
 })
 
-describe('handleDemoRequest', () => {
-  it('grava e devolve protocolo', async () => {
-    const { rows, store } = memStore()
-    const r = await handleDemoRequest(good, '1.1.1.1', { store, limiter: new RateLimiter(), protocol: () => 'JL-261020-ABCDEF' })
-    expect(r).toEqual({ status: 201, body: { ok: true, protocol: 'JL-261020-ABCDEF' } })
-    expect(rows).toEqual([{ name: 'Li Wei', store: 'Loja Dragão', contact: '11 91234-5678', channel: 'whatsapp', locale: 'zh-CN', protocol: 'JL-261020-ABCDEF', product: 'jinlong', segment: 'importados', idioma: 'zh-CN' }])
+describe('idempotência e concorrência (banco fake)', () => {
+  it('primeiro envio válido grava e devolve o protocolo gravado', async () => {
+    const db = bancoFake()
+    const r = await handleDemoRequest({ ...good, idempotency_key: K1 }, { store: db.storePara('198.51.100.1'), protocol: () => 'JL-261104-AAAAAA' })
+    expect(r).toEqual({ status: 201, body: { ok: true, protocol: 'JL-261104-AAAAAA' } })
+    expect(db.linhas.size).toBe(1)
+  })
+  it('reenvio idêntico (mesma chave, mesmo conteúdo) devolve o protocolo original sem nova linha', async () => {
+    const db = bancoFake()
+    const store = db.storePara('198.51.100.2')
+    const primeiro = await handleDemoRequest({ ...good, idempotency_key: K1 }, { store, protocol: () => 'JL-261104-AAAAAA' })
+    const reenvio = await handleDemoRequest({ ...good, idempotency_key: K1 }, { store, protocol: () => 'JL-261104-BBBBBB' })
+    expect(reenvio).toEqual(primeiro)
+    expect(db.linhas.size).toBe(1)
+  })
+  it('reenvios concorrentes com a mesma chave geram uma linha e um protocolo', async () => {
+    const db = bancoFake(100)
+    const store = db.storePara('198.51.100.3')
+    const respostas = await Promise.all(
+      Array.from({ length: 10 }, (_, i) => handleDemoRequest({ ...good, idempotency_key: K1 }, { store, protocol: () => `JL-261104-CCCCC${i}` })),
+    )
+    const protocolos = new Set(respostas.map((r) => (r.status === 201 ? r.body.protocol : 'erro')))
+    expect(protocolos.size).toBe(1)
+    expect(db.linhas.size).toBe(1)
+  })
+  it('chave reutilizada com conteúdo diferente é recusada (409) e não grava nada', async () => {
+    const db = bancoFake()
+    const store = db.storePara('198.51.100.4')
+    await handleDemoRequest({ ...good, idempotency_key: K1 }, { store })
+    const r = await handleDemoRequest({ ...good, name: 'Outro Nome', idempotency_key: K1 }, { store })
+    expect(r).toEqual({ status: 409, body: { ok: false, error: 'key_reused' } })
+    expect(db.linhas.size).toBe(1)
+  })
+  it('nova tentativa legítima (chave nova, mesmo conteúdo) grava outra linha', async () => {
+    const db = bancoFake()
+    const store = db.storePara('198.51.100.5')
+    await handleDemoRequest({ ...good, idempotency_key: K1 }, { store })
+    const r = await handleDemoRequest({ ...good, idempotency_key: K2 }, { store })
+    expect(r.status).toBe(201)
+    expect(db.linhas.size).toBe(2)
+  })
+  it('cliente antigo sem chave: o servidor gera a chave (sem deduplicação de reenvios)', async () => {
+    const db = bancoFake()
+    const store = db.storePara('198.51.100.6')
+    const gerada = vi.fn(() => K2)
+    const r = await handleDemoRequest(good, { store, newKey: gerada })
+    expect(r.status).toBe(201)
+    expect(gerada).toHaveBeenCalledOnce()
+    expect(db.linhas.has(K2)).toBe(true)
+  })
+})
+
+describe('limite de taxa compartilhado (banco fake, múltiplas instâncias)', () => {
+  it('o limite vale entre instâncias: o 11º envio do mesmo IP é recusado em qualquer instância', async () => {
+    const db = bancoFake(10)
+    const instanciaA = db.storePara('203.0.113.9')
+    const instanciaB = db.storePara('203.0.113.9')
+    const respostas: number[] = []
+    for (let i = 0; i < 10; i++) {
+      const store = i % 2 === 0 ? instanciaA : instanciaB
+      respostas.push((await handleDemoRequest({ ...good, name: `Lead ${i}`, idempotency_key: `00000000-0000-4000-8000-${String(i).padStart(12, '0')}` }, { store })).status)
+    }
+    expect(respostas.every((s) => s === 201)).toBe(true)
+    const r = await handleDemoRequest({ ...good, name: 'Lead 11', idempotency_key: '00000000-0000-4000-8000-000000000099' }, { store: instanciaB })
+    expect(r).toEqual({ status: 429, body: { ok: false, error: 'rate_limited' } })
+    expect(db.linhas.size).toBe(10)
+  })
+  it('IPs diferentes têm limites independentes', async () => {
+    const db = bancoFake(1)
+    expect((await handleDemoRequest({ ...good, idempotency_key: K1 }, { store: db.storePara('198.51.100.20') })).status).toBe(201)
+    expect((await handleDemoRequest({ ...good, name: 'Outra Pessoa', idempotency_key: K2 }, { store: db.storePara('198.51.100.21') })).status).toBe(201)
+  })
+})
+
+describe('erros e falhas', () => {
+  it('payload inválido: 400 com campos e sem chamar a persistência', async () => {
+    const insert = vi.fn()
+    const r = await handleDemoRequest({ ...good, contact: '1', idempotency_key: K1 }, { store: { insert } })
+    expect(r).toEqual({ status: 400, body: { ok: false, error: 'invalid', fields: ['contact'] } })
+    expect(insert).not.toHaveBeenCalled()
   })
   it('honeypot: responde sucesso e não grava', async () => {
-    const { rows, store } = memStore()
-    const r = await handleDemoRequest({ ...good, website: 'http://spam' }, 'x', { store, limiter: new RateLimiter() })
+    const insert = vi.fn()
+    const r = await handleDemoRequest({ ...good, website: 'http://spam', idempotency_key: K1 }, { store: { insert } })
     expect(r.status).toBe(201)
-    expect(rows).toHaveLength(0)
+    expect(insert).not.toHaveBeenCalled()
   })
-  it('400 com campos inválidos', async () => {
-    const r = await handleDemoRequest({ ...good, contact: '1' }, 'x', { store: memStore().store, limiter: new RateLimiter() })
-    expect(r).toEqual({ status: 400, body: { ok: false, error: 'invalid', fields: ['contact'] } })
+  it('falha de conexão com o banco: 503 unavailable (fail-closed)', async () => {
+    const failing: DemoStore = { insert: async () => { throw new DemoStoreError('NETWORK') } }
+    expect(await handleDemoRequest({ ...good, idempotency_key: K1 }, { store: failing })).toEqual({ status: 503, body: { ok: false, error: 'unavailable' } })
   })
-  it('429 quando excede o limite', async () => {
-    const limiter = new RateLimiter(1, 60_000)
-    const deps = { store: memStore().store, limiter }
-    expect((await handleDemoRequest(good, 'ip', deps)).status).toBe(201)
-    expect(await handleDemoRequest(good, 'ip', deps)).toEqual({ status: 429, body: { ok: false, error: 'rate_limited' } })
+  it('erro interno da função vira 503 genérico (sem detalhe ao visitante)', async () => {
+    const failing: DemoStore = { insert: async () => { throw new DemoStoreError('LEAD_RATE_INDISPONIVEL') } }
+    const r = await handleDemoRequest({ ...good, idempotency_key: K1 }, { store: failing })
+    expect(r).toEqual({ status: 503, body: { ok: false, error: 'unavailable' } })
+    expect(JSON.stringify(r)).not.toMatch(/LEAD_|RATE/)
   })
-  it('503 not_configured sem persistência; 503 unavailable se o insert falha', async () => {
-    expect(await handleDemoRequest(good, 'x', { store: null, limiter: new RateLimiter() })).toEqual({ status: 503, body: { ok: false, error: 'not_configured' } })
-    const failing: DemoStore = { insert: async () => { throw new Error('down') } }
-    expect(await handleDemoRequest(good, 'x', { store: failing, limiter: new RateLimiter() })).toEqual({ status: 503, body: { ok: false, error: 'unavailable' } })
+  it('503 not_configured sem persistência configurada', async () => {
+    expect(await handleDemoRequest({ ...good, idempotency_key: K1 }, { store: null })).toEqual({ status: 503, body: { ok: false, error: 'not_configured' } })
+  })
+  it('a 429 da função não expõe o detalhe ao visitante', async () => {
+    const limitado: DemoStore = { insert: async () => { throw new DemoStoreError('LEAD_RATE_LIMIT') } }
+    expect(await handleDemoRequest({ ...good, idempotency_key: K1 }, { store: limitado })).toEqual({ status: 429, body: { ok: false, error: 'rate_limited' } })
   })
 })
 
-describe('supabaseDemoStore', () => {
+describe('supabaseDemoStore (cliente REST)', () => {
+  const env = { SITE_DEMO_SUPABASE_URL: 'https://abc.supabase.co/', SITE_DEMO_SUPABASE_ANON_KEY: 'k' }
+  const row: DemoStoreRow = { name: 'a', store: 'b', contact: 'c', channel: 'wechat', locale: 'pt-BR', segment: 'outro', idioma: 'pt-BR' as const, protocol: 'JL-261104-AAAAAA', product: 'jinlong', idempotencyKey: K1, utm_source: 'g' }
+
   it('null sem env ou com URL fora do supabase.co', () => {
     expect(supabaseDemoStore({})).toBeNull()
     expect(supabaseDemoStore({ SITE_DEMO_SUPABASE_URL: 'https://evil.example', SITE_DEMO_SUPABASE_ANON_KEY: 'k' })).toBeNull()
   })
-  it('faz POST insert-only (return=minimal) na tabela do site', async () => {
-    const fetchImpl = vi.fn(async () => new Response(null, { status: 201 }))
-    const s = supabaseDemoStore({ SITE_DEMO_SUPABASE_URL: 'https://abc.supabase.co/', SITE_DEMO_SUPABASE_ANON_KEY: 'k' }, fetchImpl as unknown as typeof fetch)
-    await s!.insert({ name: 'a', store: 'b', contact: 'c', channel: 'wechat', locale: 'pt-BR', segment: 'outro', idioma: 'pt-BR' as const, protocol: 'p', product: 'jinlong' })
+  it('chama a função (nunca a tabela) com a chave de idempotência e devolve o protocolo gravado', async () => {
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify('JL-261104-AAAAAA'), { status: 200 }))
+    const s = supabaseDemoStore(env, fetchImpl as unknown as typeof fetch)
+    const protocolo = await s!.insert(row)
     const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit]
-    expect(url).toBe('https://abc.supabase.co/rest/v1/commercial_leads')
-    expect(init.method).toBe('POST')
-    expect((init.headers as Record<string, string>).Prefer).toBe('return=minimal')
+    expect(url).toBe('https://abc.supabase.co/rest/v1/rpc/registrar_lead_comercial')
+    expect(url).not.toMatch(/commercial_leads/)
+    expect(JSON.parse(init.body as string)).toMatchObject({ p_idempotency_key: K1, p_protocol: 'JL-261104-AAAAAA', p_utm_source: 'g', p_utm_medium: null })
+    expect(JSON.parse(init.body as string)).not.toHaveProperty('product')
+    expect(protocolo).toBe('JL-261104-AAAAAA')
   })
-  it('erro HTTP vira exceção', async () => {
-    const s = supabaseDemoStore({ SITE_DEMO_SUPABASE_URL: 'https://abc.supabase.co', SITE_DEMO_SUPABASE_ANON_KEY: 'k' }, (async () => new Response(null, { status: 401 })) as unknown as typeof fetch)
-    await expect(s!.insert({ name: 'a', store: 'b', contact: 'c', channel: 'wechat', locale: 'pt-BR', segment: 'outro', idioma: 'pt-BR' as const, protocol: 'p', product: 'jinlong' })).rejects.toThrow('401')
+  it('mensagem de erro da função vira código do DemoStoreError', async () => {
+    const s = supabaseDemoStore(env, (async () => new Response(JSON.stringify({ message: 'LEAD_CHAVE_REUTILIZADA' }), { status: 400 })) as unknown as typeof fetch)
+    await expect(s!.insert(row)).rejects.toMatchObject({ code: 'LEAD_CHAVE_REUTILIZADA' })
+  })
+  it('falha de rede vira NETWORK', async () => {
+    const s = supabaseDemoStore(env, (async () => { throw new TypeError('fetch failed') }) as unknown as typeof fetch)
+    await expect(s!.insert(row)).rejects.toMatchObject({ code: 'NETWORK' })
+  })
+  it('resposta fora do formato vira RESPOSTA_INVALIDA', async () => {
+    const s = supabaseDemoStore(env, (async () => new Response('{"x":1}', { status: 200 })) as unknown as typeof fetch)
+    await expect(s!.insert(row)).rejects.toMatchObject({ code: 'RESPOSTA_INVALIDA' })
   })
 })
 
 describe('confirmação só após gravação', () => {
   it('não devolve protocolo antes do insert terminar com sucesso', async () => {
     let release!: () => void
-    const store: DemoStore = { insert: () => new Promise<void>((r) => { release = r }) }
+    const store: DemoStore = { insert: (r) => new Promise<string>((resolve) => { release = () => resolve(r.protocol) }) }
     let settled = false
-    const pending = handleDemoRequest(good, 'z', { store, limiter: new RateLimiter() }).then((r) => { settled = true; return r })
+    const pending = handleDemoRequest({ ...good, idempotency_key: K1 }, { store }).then((r) => { settled = true; return r })
     await new Promise((r) => setTimeout(r, 10))
     expect(settled).toBe(false)
     release()

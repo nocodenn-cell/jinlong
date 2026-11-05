@@ -107,7 +107,7 @@ describe('P0 servidor — Server Action buscarContasPagarAction', () => {
     })
   }
 
-  for (const perfil of ['GERENTE', 'DONO', 'ADMIN'] as const) {
+  for (const perfil of ['GERENTE', 'DONO'] as const) {
     it(`${perfil}: permitido`, async () => {
       mockNormalization.mockResolvedValue(sessao(perfil))
       const { buscarContasPagarAction } = await import('../app/gerente/financeiro/contas-pagar/actions')
@@ -153,7 +153,13 @@ describe('P0 servidor — página /caixa sem depender do middleware', () => {
     expect(await render()).toBe('/login?next=%2Fcaixa')
   })
 
-  for (const perfil of ['OPERADOR', 'GERENTE', 'DONO', 'ADMIN']) {
+  it('ADMIN legado (descontinuado) com loja: não abre o PDV', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u-1', email: 'u@test.local' } }, error: null })
+    mockMaybeSingle.mockResolvedValue({ data: { perfil: 'ADMIN', nome: 'Fulano', ativo: true, loja_id: 'loja-1' } })
+    expect(await render()).toBe('/login?next=%2Fcaixa')
+  })
+
+  for (const perfil of ['OPERADOR', 'GERENTE', 'DONO']) {
     it(`${perfil} ativo com loja: renderiza o PDV`, async () => {
       mockGetUser.mockResolvedValue({ data: { user: { id: 'u-1', email: 'u@test.local' } }, error: null })
       mockMaybeSingle.mockResolvedValue({ data: { perfil, nome: 'Fulano', ativo: true, loja_id: 'loja-1' } })

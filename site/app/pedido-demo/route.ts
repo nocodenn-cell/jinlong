@@ -1,10 +1,9 @@
-import { handleDemoRequest, RateLimiter, supabaseDemoStore } from '@/lib/demoRequest'
+import { handleDemoRequest, supabaseDemoStore } from '@/lib/demoRequest'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-const limiter = new RateLimiter()
-
+/** Limite de taxa e idempotência ficam no banco (função registrar_lead_comercial), compartilhados por todas as instâncias. */
 export async function POST(request: Request): Promise<Response> {
   const type = request.headers.get('content-type') ?? ''
   const length = Number(request.headers.get('content-length') ?? '0')
@@ -17,7 +16,6 @@ export async function POST(request: Request): Promise<Response> {
   } catch {
     return Response.json({ ok: false, error: 'invalid', fields: [] }, { status: 400 })
   }
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || 'unknown'
-  const res = await handleDemoRequest(input, ip, { store: supabaseDemoStore(), limiter })
+  const res = await handleDemoRequest(input, { store: supabaseDemoStore() })
   return Response.json(res.body, { status: res.status, headers: { 'Cache-Control': 'no-store' } })
 }

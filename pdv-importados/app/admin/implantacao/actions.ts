@@ -59,9 +59,9 @@ async function requireLoja(lojaIdOverride?: string | null) {
     if (!z.string().uuid().safeParse(override).success) {
       return { ok: false as const, error: 'Identificador de loja inválido.' }
     }
-    // Mesma loja da sessão: qualquer gerencial; outra loja: só ADMIN.
-    if (override !== auth.session.lojaId && auth.session.perfil !== 'ADMIN') {
-      return { ok: false as const, error: 'Somente ADMIN pode operar o checklist de outra loja.' }
+    // Só a loja da sessão: não existe mais perfil global (ADMIN) que opere outra loja.
+    if (override !== auth.session.lojaId) {
+      return { ok: false as const, error: 'O checklist só pode ser operado na loja da sessão.' }
     }
     return { ok: true as const, session: auth.session, lojaId: override }
   }
@@ -280,8 +280,8 @@ export async function autorizarGoLiveAction(
 ): Promise<ActionResult<ChecklistSnapshot>> {
   const gate = await requireLoja(lojaIdOverride)
   if (!gate.ok) return fail(gate.error)
-  if (gate.session.perfil !== 'DONO' && gate.session.perfil !== 'ADMIN') {
-    return fail('Somente DONO ou ADMIN pode autorizar o GO-LIVE.')
+  if (gate.session.perfil !== 'DONO') {
+    return fail('Somente o DONO pode autorizar o GO-LIVE.')
   }
 
   const lojaId = gate.lojaId
@@ -386,8 +386,8 @@ export async function revogarGoLiveAction(
 ): Promise<ActionResult<ChecklistSnapshot>> {
   const gate = await requireLoja(lojaIdOverride)
   if (!gate.ok) return fail(gate.error)
-  if (gate.session.perfil !== 'DONO' && gate.session.perfil !== 'ADMIN') {
-    return fail('Somente DONO ou ADMIN pode revogar o GO-LIVE.')
+  if (gate.session.perfil !== 'DONO') {
+    return fail('Somente o DONO pode revogar o GO-LIVE.')
   }
   if (!motivo.trim() || motivo.trim().length < 3) {
     return fail('Informe o motivo da revogação (mín. 3 caracteres).')

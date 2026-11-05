@@ -1,0 +1,23 @@
+CREATE FUNCTION
+GRANT
+DO
+psql:/tmp/sec03test.sql:41: NOTICE:  OK T1+T2: primeiro envio grava 1 linha; reenvio idêntico devolve o protocolo original sem duplicar
+DO
+psql:/tmp/sec03test.sql:63: NOTICE:  OK T3: chave reutilizada com conteúdo diferente é recusada e não grava nada
+DO
+psql:/tmp/sec03test.sql:79: NOTICE:  OK T4: nova tentativa legítima (chave nova) grava normalmente
+DO
+DO
+psql:/tmp/sec03test.sql:118: NOTICE:  OK T5: 8 payloads inválidos recusados com o código esperado e nenhuma linha gravada
+psql:/tmp/sec03test.sql:151: NOTICE:  OK T6+T7: 10 tentativas aceitas, a 11ª recusada; X-Forwarded-For forjado no primeiro item não escapa; bucket é hash
+DO
+psql:/tmp/sec03test.sql:167: NOTICE:  OK T8: janela de 10 minutos vencida libera nova tentativa
+DO
+psql:/tmp/sec03test.sql:183: NOTICE:  OK T9: retenção remove buckets com janela vencida há mais de 1 dia
+DO
+psql:/tmp/sec03test.sql:207: NOTICE:  OK T10: falha do mecanismo de limite recusa a gravação (fail-closed)
+DO
+DO
+psql:/tmp/sec03test.sql:228: NOTICE:  OK T11: anon não lê, não altera e não apaga leads; não acessa tabelas de limite nem a checagem; search_path fixo
+DELETE 14
+DELETE 3

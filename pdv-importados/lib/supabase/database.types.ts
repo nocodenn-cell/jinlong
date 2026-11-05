@@ -1753,6 +1753,39 @@ export type Database = {
           },
         ]
       }
+      commercial_lead_rate_config: {
+        Row: {
+          id: number
+          salt: string
+        }
+        Insert: {
+          id: number
+          salt: string
+        }
+        Update: {
+          id?: number
+          salt?: string
+        }
+        Relationships: []
+      }
+      commercial_lead_rate_limit: {
+        Row: {
+          bucket: string
+          janela_inicio: string
+          tentativas: number
+        }
+        Insert: {
+          bucket: string
+          janela_inicio: string
+          tentativas: number
+        }
+        Update: {
+          bucket?: string
+          janela_inicio?: string
+          tentativas?: number
+        }
+        Relationships: []
+      }
       commercial_leads: {
         Row: {
           channel: string
@@ -1762,6 +1795,7 @@ export type Database = {
           email: string | null
           empresa_id: string | null
           id: string
+          idempotency_key: string | null
           idioma: string | null
           interesse: string | null
           locale: string
@@ -1770,6 +1804,7 @@ export type Database = {
           product: string
           protocol: string
           proximo_contato: string | null
+          request_hash: string | null
           segment: string | null
           status: string
           store: string
@@ -1787,6 +1822,7 @@ export type Database = {
           email?: string | null
           empresa_id?: string | null
           id?: string
+          idempotency_key?: string | null
           idioma?: string | null
           interesse?: string | null
           locale: string
@@ -1795,6 +1831,7 @@ export type Database = {
           product: string
           protocol: string
           proximo_contato?: string | null
+          request_hash?: string | null
           segment?: string | null
           status?: string
           store: string
@@ -1812,6 +1849,7 @@ export type Database = {
           email?: string | null
           empresa_id?: string | null
           id?: string
+          idempotency_key?: string | null
           idioma?: string | null
           interesse?: string | null
           locale?: string
@@ -1820,6 +1858,7 @@ export type Database = {
           product?: string
           protocol?: string
           proximo_contato?: string | null
+          request_hash?: string | null
           segment?: string | null
           status?: string
           store?: string
@@ -7410,6 +7449,8 @@ export type Database = {
           finalidade: string
           gerente_id: string
           loja_id: string
+          revogado_em: string | null
+          revogado_motivo: string | null
           solicitante_id: string | null
           token: string
           usado: boolean
@@ -7422,6 +7463,8 @@ export type Database = {
           finalidade: string
           gerente_id: string
           loja_id: string
+          revogado_em?: string | null
+          revogado_motivo?: string | null
           solicitante_id?: string | null
           token: string
           usado?: boolean
@@ -7434,6 +7477,8 @@ export type Database = {
           finalidade?: string
           gerente_id?: string
           loja_id?: string
+          revogado_em?: string | null
+          revogado_motivo?: string | null
           solicitante_id?: string | null
           token?: string
           usado?: boolean
@@ -7472,26 +7517,35 @@ export type Database = {
       }
       tokens_desconto_gerente: {
         Row: {
+          aprovador_id: string | null
           created_at: string
           criado_por: string | null
           expira_em: string
           loja_id: string | null
+          revogado_em: string | null
+          revogado_motivo: string | null
           token: string
           usado: boolean
         }
         Insert: {
+          aprovador_id?: string | null
           created_at?: string
           criado_por?: string | null
           expira_em: string
           loja_id?: string | null
+          revogado_em?: string | null
+          revogado_motivo?: string | null
           token: string
           usado?: boolean
         }
         Update: {
+          aprovador_id?: string | null
           created_at?: string
           criado_por?: string | null
           expira_em?: string
           loja_id?: string | null
+          revogado_em?: string | null
+          revogado_motivo?: string | null
           token?: string
           usado?: boolean
         }
@@ -9041,6 +9095,10 @@ export type Database = {
       cobranca_cancelar: { Args: { p_empresa: string }; Returns: undefined }
       cobranca_conciliar_pagamento: { Args: { p_payment: Json }; Returns: Json }
       cobranca_estado_empresa: { Args: { p_empresa: string }; Returns: Json }
+      cobranca_liberar_assinar: {
+        Args: { p_empresa: string }
+        Returns: undefined
+      }
       cobranca_liberar_venda_offline: {
         Args: { p_dispositivo: string; p_venda_em: string; p_venda_id: string }
         Returns: Json
@@ -9063,6 +9121,10 @@ export type Database = {
           p_valor_centavos: number
         }
         Returns: undefined
+      }
+      cobranca_reservar_assinar: {
+        Args: { p_empresa: string; p_segundos?: number }
+        Returns: boolean
       }
       colocar_venda_em_espera: {
         Args: {
@@ -9791,6 +9853,11 @@ export type Database = {
         Returns: boolean
       }
       fp_recursos_empresa: { Args: { p_empresa: string }; Returns: string[] }
+      fp_sou_dono_da_empresa: { Args: { p_empresa: string }; Returns: boolean }
+      fp_token_gerente_vale_na_loja: {
+        Args: { p_loja_id: string; p_token: string }
+        Returns: boolean
+      }
       fp_usuario_ativo: { Args: never; Returns: boolean }
       fp_usuario_pode_loja: {
         Args: { p_loja: string; p_papeis?: string[]; p_usuario: string }
@@ -10288,6 +10355,24 @@ export type Database = {
       registrar_conferencia_ordem_compra: {
         Args: { p_itens: Json; p_oc_id: string }
         Returns: Json
+      }
+      registrar_lead_comercial: {
+        Args: {
+          p_channel: string
+          p_city?: string
+          p_contact: string
+          p_idempotency_key: string
+          p_locale: string
+          p_name: string
+          p_protocol: string
+          p_segment?: string
+          p_store: string
+          p_utm_campaign?: string
+          p_utm_medium?: string
+          p_utm_source?: string
+          p_wechat?: string
+        }
+        Returns: string
       }
       registrar_liquidacao_receber: {
         Args: {

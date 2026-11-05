@@ -112,7 +112,6 @@ await db.exec(`
   INSERT INTO auth.users (id) SELECT unnest(ARRAY['${Object.values(U).join("','")}']::uuid[]);
   INSERT INTO public.usuarios (id, nome, perfil, loja_id) VALUES
     ('${U.donoA}', 'Dono A', 'DONO', '${LA}'), ('${U.gerA}', 'Ger A', 'GERENTE', '${LA}'), ('${U.opA}', 'Op A', 'OPERADOR', '${LA}'),
-    ('${U.admin}', 'Admin', 'ADMIN', '${LA}'),
     ('${U.donoB}', 'Dono B', 'DONO', '${LB}'), ('${U.gerB}', 'Ger B', 'GERENTE', '${LB}'), ('${U.opB}', 'Op B', 'OPERADOR', '${LB}');
   INSERT INTO public.produtos (id, nome, preco_varejo, origem, loja_id) VALUES
     ('c0000001-0000-4000-8000-000000000001', 'Prod A', 10, 'china_manual', '${LA}'),
@@ -178,9 +177,11 @@ await t('servidor sem empresa_id com 2+ empresas: erro explícito (sem linha ór
   await assert.rejects(db.query(`INSERT INTO public.marcas (nome) VALUES ('órfã')`), /EMPRESA_ID_OBRIGATORIA/)
 })
 
-await t('ADMIN legado continua global (compat D9)', async () => {
-  const v = await nomes(U.admin, 'clientes')
-  assert.ok(v.includes('Cli A') && v.includes('Cli B'))
+// #623 (20261028110000): ADMIN descontinuado — não há mais perfil global (substitui o antigo "compat D9").
+await t('ADMIN descontinuado: perfil recusado e usuário sem vínculo não vê nada de A nem de B', async () => {
+  await assert.rejects(db.query(`INSERT INTO public.usuarios (id, nome, perfil, loja_id) VALUES ('${U.admin}', 'Admin', 'ADMIN', '${LA}')`),
+    /PERFIL_ADMIN_DESCONTINUADO/)
+  assert.deepEqual(await nomes(U.admin, 'clientes'), [])
 })
 
 await t('RPC: B não consulta/opera loja de A (envelopes)', async () => {

@@ -493,9 +493,16 @@ async function handleValidarGerentePdvSync(
     return jsonResponse(req, 400, { ok: false, error: "SENHA_INVALIDA_FORMATO" });
   }
 
+  // Dispositivo sem empresa/loja: recusa (nunca cai na pdv_config id=1 da Empresa 1).
+  if (ctx?.mode === "dispositivo" && (!ctx.empresaId?.trim() || !ctx.lojaId?.trim())) {
+    log({ level: "warn", stage: "validar_gerente_pdv", error: "ESCOPO_GERENTE_SEM_EMPRESA" });
+    return jsonResponse(req, 403, { ok: false, error: "ESCOPO_GERENTE_SEM_EMPRESA" });
+  }
   const result = await validateGerenteAndIssueToken({
     supabase,
     senha: senhaNormalizada,
+    // Só o modo legado explícito (chave compartilhada do cliente 1) pode usar a linha id=1.
+    escopoLegadoEmpresa1: ctx?.mode === "legado",
     // Dispositivo ativado: senha de gerente e token presos à loja/empresa do dispositivo (não à Empresa 1).
     lojaId: ctx?.mode === "dispositivo" ? ctx.lojaId : null,
     empresaId: ctx?.mode === "dispositivo" ? ctx.empresaId ?? null : null,
@@ -747,6 +754,11 @@ async function processVenda(
     !(await descontoAutorizadoPorPinGerente(supabase, payload, ctx))) {
     throw new Error("GERENTE_TOKEN_OBRIGATORIO");
   }
+  // Dispositivo ativado com token de gerente: o consumo único do token e a gravação da venda acontecem na MESMA
+  // transação (public.registrar_venda_offline_com_token, proposta fase31). O banco confere loja, validade,
+  // revogação, emissor/aprovador ativos e uso único. Qualquer recusa desfaz a venda e o consumo (fail closed).
+  const tokenDispositivo = strictManagerDiscountAuth && hasManagerDiscount && !!payload.desconto_gerente_token &&
+    ctx?.mode === "dispositivo" && !!ctx?.lojaId;
 
   const rpcVenda = temParcelamento(payload.pagamentos) ? "registrar_venda_com_itens_v2" : "registrar_venda_com_itens";
   const rpcVendaArgs = {
@@ -766,7 +778,14 @@ async function processVenda(
     p_pagamentos: payload.pagamentos ?? null,
   };
   // Parcelas > 1 (migration 20261021120000) => v2; todo o resto segue na v1 de sempre.
-  const { error: rpcVendaErr } = rpcVenda === "registrar_venda_com_itens"
+  const { error: rpcVendaErr } = tokenDispositivo
+    ? await supabase.rpc("registrar_venda_offline_com_token", {
+      ...rpcVendaArgs,
+      p_token: payload.desconto_gerente_token,
+      p_loja: ctx?.lojaId ?? null,
+      p_v2: rpcVenda === "registrar_venda_com_itens_v2",
+    })
+    : rpcVenda === "registrar_venda_com_itens"
     ? await supabase.rpc("registrar_venda_com_itens", rpcVendaArgs)
     : await supabase.rpc("registrar_venda_com_itens_v2", rpcVendaArgs);
 

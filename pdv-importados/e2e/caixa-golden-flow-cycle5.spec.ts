@@ -87,7 +87,7 @@ test.describe('Caixa — Golden Flow Cycle 5 (browser)', () => {
     )
   })
 
-  test('venda fracionada (qty 0,5) finaliza e limpa cupom', async ({ page }) => {
+  test('quantidade fracionada em produto UN é recusada (D-04): total não muda e linha permanece', async ({ page }) => {
     test.setTimeout(120_000)
     await gotoApp(page, '/caixa')
     await expectCaixaShellVisible(page)
@@ -97,28 +97,14 @@ test.describe('Caixa — Golden Flow Cycle 5 (browser)', () => {
 
     const qty = page.getByRole('spinbutton', { name: /Quantidade —/i }).first()
     await expect(qty).toBeVisible({ timeout: 10_000 })
+    const totalAntes = await readTotalLiquidoFooter(page)
+    // Produto demo é UN (inteira): 0,5 não é confirmado; ao sair do campo volta ao valor real (1).
     await qty.fill('0.5')
     await qty.blur()
-
-    await expect
-      .poll(async () => Number(await page.getByTestId('caixa-total-liquido').getAttribute('data-total-liquido')), {
-        timeout: 15_000,
-      })
-      .toBeGreaterThan(0)
-
-    const totalFrac = await readTotalLiquidoFooter(page)
-    // Mesmo motivo documentado no teste anterior: campo real é "Recebido"
-    // (#caixa-valor-recebido), não "Valor (R$) da parcela".
-    const recebido = page.locator('#caixa-valor-recebido')
-    if (await recebido.isVisible().catch(() => false)) {
-      await recebido.fill(String(totalFrac))
-      await recebido.blur()
-    }
-
-    await finalizarVenda(page)
-    await expect(page.getByTestId('caixa-msg-venda-ok')).toBeVisible({ timeout: 35_000 })
-    await expect(page.getByTestId('caixa-total-liquido')).toHaveAttribute('data-total-liquido', '0.00', {
-      timeout: 15_000,
-    })
+    await expect(qty).toHaveValue('1')
+    await expect(page.getByTestId('caixa-total-liquido')).toHaveAttribute(
+      'data-total-liquido',
+      Number(totalAntes).toFixed(2),
+    )
   })
 })

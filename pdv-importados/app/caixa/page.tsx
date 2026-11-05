@@ -33,8 +33,9 @@ export default async function CaixaPage() {
     .select('perfil, nome, ativo, loja_id')
     .eq('id', user.id)
     .maybeSingle()
-  // Mesma regra de bloqueio do middleware (adminPolicy): conta desativada ou sem loja não opera o PDV.
-  if (usuarioData?.ativo === false || !usuarioData?.loja_id) {
+  // Mesma regra de bloqueio do middleware (adminPolicy): conta desativada, sem loja ou perfil global
+  // legado ADMIN (descontinuado: sem acesso de loja) não opera o PDV.
+  if (usuarioData?.ativo === false || !usuarioData?.loja_id || usuarioData?.perfil === 'ADMIN') {
     redirect('/login?next=%2Fcaixa')
   }
   const perfil = usuarioData?.perfil ?? null

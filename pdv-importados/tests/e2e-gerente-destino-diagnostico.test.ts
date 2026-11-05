@@ -44,8 +44,8 @@ describe('destino do GERENTE em /gerente/vendas', () => {
     expect(d.type).toBe('allow')
   })
 
-  it('DONO e ADMIN também passam', () => {
-    for (const perfil of ['DONO', 'ADMIN']) {
+  it('DONO também passa', () => {
+    for (const perfil of ['DONO']) {
       expect(decidir(autenticado({ ...linhaSeed, perfil })).type).toBe('allow')
     }
   })

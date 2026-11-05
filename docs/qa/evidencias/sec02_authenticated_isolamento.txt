@@ -1,0 +1,18 @@
+== anon v_vendas_dia (esperado: sem privilegio)
+psql:<stdin>:7: ERROR:  permission denied for view v_vendas_dia
+psql:<stdin>:8: ERROR:  permission denied for table vendas
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.vendas TO anon;
+== OPERADOR a1 (user 4)
+op estoque (esperado 1 a1)|1|f5100000-0000-4000-8000-0000000000a1
+op v_vendas_dia (esperado 0 linhas de outra empresa)|0|0
+op v_top_produtos (esperado 0)|0
+op v_venda_consistencia (esperado 0)|0
+op texto_sem_acento (esperado acao)|acao
+psql:<stdin>:18: ERROR:  permission denied for function trg_caixas_fechado_imutavel
+== DONO e1 (user 1)
+dono estoque (esperado 6)|6
+dono v_vendas_dia (esperado so e1)|0|0
+dono lojas|4|f5100000-0000-4000-8000-0000000000e1
+== GERENTE e2 (user 5)
+g5 v_vendas_dia (esperado 0 da e1)|0|0
+g5 estoque e1 (esperado 0)|0

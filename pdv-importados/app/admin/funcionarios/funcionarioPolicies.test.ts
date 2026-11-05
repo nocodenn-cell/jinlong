@@ -37,3 +37,11 @@ describe('funcionarioPolicies', () => {
     expect(podeDesativarAlvo(dono, { id: 'o1', perfil: 'OPERADOR' })).toBe(true)
   })
 })
+
+describe('banDurationParaAtivo (revogação de sessão ao inativar)', () => {
+  it('inativar bloqueia no Auth; reativar desbloqueia', async () => {
+    const { banDurationParaAtivo } = await import('./funcionarioPolicies')
+    expect(banDurationParaAtivo(false)).toBe('876000h')
+    expect(banDurationParaAtivo(true)).toBe('none')
+  })
+})

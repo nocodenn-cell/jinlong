@@ -13,7 +13,7 @@ export async function executarDiagnosticoCaixaAction(): Promise<ExecutarDiagnost
   // Tudo dentro do try: se a sessão não puder ser resolvida (config/Supabase indisponível), o
   // chamador recebe `{ ok:false, error }` (o contrato declarado) em vez de uma rejeição sem tratamento.
   try {
-    // Guarda na própria action (não só na página): Server Actions são endpoints. Só DONO/ADMIN
+    // Guarda na própria action (não só na página): Server Actions são endpoints. Só DONO
     // (policy `route:/admin/diagnostico-caixa`); antes, só a RPC no banco barrava OPERADOR/anon.
     const auth = await assertGerenteSession({ resource: `route:${ROUTES.admin.diagnosticoCaixa}` })
     if (!auth.ok) return { ok: false, error: auth.error }

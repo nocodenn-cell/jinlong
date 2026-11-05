@@ -11,7 +11,15 @@
 
 \set ON_ERROR_STOP on
 BEGIN;
+INSERT INTO public.empresas (id, nome) VALUES ('fa5e0000-0000-4000-8000-0000000000f1', 'Fixture empresa (suite SQL)') ON CONFLICT (id) DO NOTHING;
 
+-- Fixture (JL-GO-LIVE-01): produto de margem 80% nas lojas com os três perfis, para não depender do seed de dev.
+INSERT INTO public.produtos (id, nome, preco_varejo, preco_custo, origem, tem_nf, ativo, loja_id)
+SELECT gen_random_uuid(), 'FAG Produto margem fixture', 100.00, 20.00, 'china_manual', false, true, l.id
+FROM public.lojas l
+WHERE EXISTS (SELECT 1 FROM public.usuarios u WHERE u.loja_id = l.id AND u.ativo AND u.perfil = 'GERENTE')
+  AND EXISTS (SELECT 1 FROM public.usuarios u WHERE u.loja_id = l.id AND u.ativo AND u.perfil = 'OPERADOR')
+  AND EXISTS (SELECT 1 FROM public.usuarios u WHERE u.loja_id = l.id AND u.ativo AND u.perfil = 'DONO');
 -- Loja determinística: a que tem produto precificado E os três perfis ativos.
 -- Escolher "o primeiro GERENTE" torna a suíte dependente da ordem do seed --
 -- `test:rls-scope` cria usuários numa loja sem produtos, e a suíte caía nela.
@@ -53,8 +61,8 @@ SELECT gen_random_uuid() AS caixa, gen_random_uuid() AS outra_loja,
 -- ABERTO para o mesmo operador, e o seed já abre um para o OPERADOR.
 INSERT INTO public.caixas(id, operador_id, loja_id, status, valor_inicial)
 VALUES (:'caixa', NULL, :'loja', 'ABERTO', 1000);
-INSERT INTO public.lojas(id, nome, codigo)
-VALUES (:'outra_loja', 'Loja adversarial', 'ADV-' || left(:'outra_loja', 8));
+INSERT INTO public.lojas(empresa_id, id, nome, codigo)
+VALUES ('fa5e0000-0000-4000-8000-0000000000f1', :'outra_loja', 'Loja adversarial', 'ADV-' || left(:'outra_loja', 8));
 INSERT INTO public.clientes(id, nome, loja_id) VALUES (:'cliente', 'Cliente adversarial', :'loja');
 INSERT INTO public.contas_receber(id, cliente_id, valor_total, valor_aberto, status, loja_id)
 VALUES (:'titulo', :'cliente', 500, 500, 'ABERTO', :'loja');
@@ -107,7 +115,16 @@ DECLARE
   v_ator text;
   v_uid uuid;
 BEGIN
-  FOREACH v_ator IN ARRAY ARRAY['OPERADOR', 'GERENTE', 'DONO', 'ADMIN'] LOOP
+  -- #623 (20261028110000): o perfil ADMIN foi descontinuado e não pode mais ser gravado.
+  -- Antes este laço também testava ADMIN; agora a prova equivalente é que nem existe
+  -- caminho para um usuário virar ADMIN (abaixo), e os 3 perfis reais seguem sem escrita.
+  BEGIN
+    UPDATE public.usuarios SET perfil = 'ADMIN' WHERE id = current_setting('t.dono')::uuid;
+    RAISE EXCEPTION 'GATE1_FALHOU perfil ADMIN ainda pode ser gravado';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT LIKE '%PERFIL_ADMIN_DESCONTINUADO%' THEN RAISE; END IF;
+  END;
+  FOREACH v_ator IN ARRAY ARRAY['OPERADOR', 'GERENTE', 'DONO'] LOOP
     v_uid := CASE WHEN v_ator = 'OPERADOR' THEN current_setting('t.operador')::uuid
                   ELSE current_setting('t.dono')::uuid END;
     UPDATE public.usuarios SET perfil = v_ator WHERE id = v_uid;
@@ -280,8 +297,8 @@ DECLARE
   v_ok boolean;
   v_msg text;
 BEGIN
-  -- mesma loja: GERENTE, DONO e ADMIN podem
-  FOREACH v_perfil IN ARRAY ARRAY['GERENTE', 'DONO', 'ADMIN'] LOOP
+  -- mesma loja: GERENTE e DONO podem (ADMIN descontinuado no #623; ver GATE 1)
+  FOREACH v_perfil IN ARRAY ARRAY['GERENTE', 'DONO'] LOOP
     UPDATE public.usuarios SET perfil = v_perfil, loja_id = current_setting('t.loja')::uuid,
            ativo = true WHERE id = v_uid;
     PERFORM set_config('request.jwt.claim.sub', v_uid::text, true);
@@ -292,7 +309,7 @@ BEGIN
   END LOOP;
 
   -- outra loja: NINGUÉM pode
-  FOREACH v_perfil IN ARRAY ARRAY['GERENTE', 'DONO', 'ADMIN'] LOOP
+  FOREACH v_perfil IN ARRAY ARRAY['GERENTE', 'DONO'] LOOP
     UPDATE public.usuarios SET perfil = v_perfil, loja_id = current_setting('t.outra_loja')::uuid,
            ativo = true WHERE id = v_uid;
     PERFORM set_config('request.jwt.claim.sub', v_uid::text, true);
@@ -304,7 +321,8 @@ BEGIN
       RESET ROLE;
     EXCEPTION WHEN OTHERS THEN
       RESET ROLE; v_msg := SQLERRM;
-      v_ok := v_msg LIKE '%LIQUIDACAO_LOJA_DIVERGENTE%';
+      -- Contrato (JL-GO-LIVE-01, decisão do proprietário): título de outra loja responde igual a inexistente.
+      v_ok := v_msg LIKE '%LIQUIDACAO_TITULO%';
     END;
     IF NOT v_ok THEN
       RAISE EXCEPTION 'GATE6_CROSS_LOJA_% permitido (msg=%)', v_perfil, COALESCE(v_msg, 'sem erro');
@@ -312,7 +330,8 @@ BEGIN
   END LOOP;
 
   -- usuário inativo: rejeitado
-  UPDATE public.usuarios SET perfil = 'ADMIN', loja_id = current_setting('t.loja')::uuid,
+  -- (antes: ADMIN inativo; ADMIN não existe mais, o perfil mais amplo restante é DONO)
+  UPDATE public.usuarios SET perfil = 'DONO', loja_id = current_setting('t.loja')::uuid,
          ativo = false WHERE id = v_uid;
   PERFORM set_config('request.jwt.claim.sub', v_uid::text, true);
   v_ok := false;
@@ -907,8 +926,8 @@ DECLARE
   v_itens jsonb;
   v_n integer;
 BEGIN
-  INSERT INTO public.configuracoes_gerais(chave, valor, tipo_dado)
-  VALUES ('comissao_padrao_percentual', '5', 'percent')
+  INSERT INTO public.configuracoes_gerais (empresa_id, chave, valor, tipo_dado)
+  VALUES ('fa5e0000-0000-4000-8000-0000000000f1', 'comissao_padrao_percentual', '5', 'percent')
   ON CONFLICT (empresa_id, chave) DO UPDATE SET valor = '5';
 
   v_itens := jsonb_build_array(jsonb_build_object('item_id', gen_random_uuid(),
@@ -951,10 +970,16 @@ BEGIN
   SELECT count(*) INTO v_n FROM public.comissoes_vendedores WHERE venda_id = v_vtrans;
   IF v_n <> 1 THEN RAISE EXCEPTION 'GATE15_SEGUNDO_UPDATE_DUPLICOU comissoes=%', v_n; END IF;
 
-  -- invariante global: 1 venda concluída com itens = 1 comissão
+  -- invariante global: 1 venda concluída COMISSIONÁVEL com itens = 1 comissão.
+  -- Comissionável = tem vendedor (ou operador) e loja, os pré-requisitos de internal.apurar_comissao_original.
+  -- Venda sem vendedor/loja não gera comissão por contrato (registra falha SEM_VENDEDOR/SEM_LOJA), e a base
+  -- homolog tem vendas históricas de 2026-10-29 sem operador, anteriores ao motor de comissão.
   SELECT count(*) INTO v_n
   FROM public.vendas v
+  LEFT JOIN public.caixas cx ON cx.id = v.caixa_id
   WHERE v.status = 'CONCLUIDA'
+    AND coalesce(v.vendedor_id, v.operador_id) IS NOT NULL
+    AND cx.loja_id IS NOT NULL
     AND EXISTS (SELECT 1 FROM public.itens_venda i WHERE i.venda_id = v.id)
     AND NOT EXISTS (SELECT 1 FROM public.comissoes_vendedores c WHERE c.venda_id = v.id);
   IF v_n <> 0 THEN
@@ -1024,8 +1049,8 @@ DECLARE
     current_setting('t.produto')::uuid, 10, current_setting('t.loja')::uuid)->>'preco')::numeric;
   v_liquido numeric := round(v_unit * 10, 2);
 BEGIN
-  INSERT INTO public.configuracoes_gerais(chave, valor, tipo_dado)
-  VALUES ('comissao_padrao_percentual', '5', 'percent')
+  INSERT INTO public.configuracoes_gerais (empresa_id, chave, valor, tipo_dado)
+  VALUES ('fa5e0000-0000-4000-8000-0000000000f1', 'comissao_padrao_percentual', '5', 'percent')
   ON CONFLICT (empresa_id, chave) DO UPDATE SET valor = '5';
 
   -- ---------------------------------------------------------------- devolução parcial
@@ -1183,8 +1208,8 @@ BEGIN
   INSERT INTO auth.users(id) VALUES (v_op);
   INSERT INTO public.usuarios(id,nome,perfil,ativo,loja_id)
   VALUES (v_op,'Teste isolado GATE19','OPERADOR',true,v_loja);
-  INSERT INTO public.configuracoes_gerais(chave, valor, tipo_dado)
-  VALUES ('comissao_padrao_percentual', '5', 'percent')
+  INSERT INTO public.configuracoes_gerais (empresa_id, chave, valor, tipo_dado)
+  VALUES ('fa5e0000-0000-4000-8000-0000000000f1', 'comissao_padrao_percentual', '5', 'percent')
   ON CONFLICT (empresa_id, chave) DO UPDATE SET valor = '5';
   PERFORM set_config('request.jwt.claim.sub', v_ger::text, true);
 
@@ -1271,8 +1296,8 @@ DECLARE
   v_com numeric; v_aj numeric; v_liq numeric; v_n integer;
   v_pa_preco numeric; v_pb_preco numeric; v_bruto numeric;
 BEGIN
-  INSERT INTO public.configuracoes_gerais(chave, valor, tipo_dado)
-  VALUES ('comissao_padrao_percentual', '5', 'percent')
+  INSERT INTO public.configuracoes_gerais (empresa_id, chave, valor, tipo_dado)
+  VALUES ('fa5e0000-0000-4000-8000-0000000000f1', 'comissao_padrao_percentual', '5', 'percent')
   ON CONFLICT (empresa_id, chave) DO UPDATE SET valor = '5';
 
   -- dois produtos distintos, sem faixa de atacado, para isolar o multi-item
@@ -1474,8 +1499,8 @@ BEGIN
   -- ---------------------------------------------------------------- 21c: percentual global
   -- Desvincula o funcionário para cair no fallback global nesta venda.
   UPDATE public.usuarios SET funcionario_id = NULL WHERE id = v_op;
-  INSERT INTO public.configuracoes_gerais(chave, valor, tipo_dado)
-  VALUES ('comissao_padrao_percentual', '5', 'percent')
+  INSERT INTO public.configuracoes_gerais (empresa_id, chave, valor, tipo_dado)
+  VALUES ('fa5e0000-0000-4000-8000-0000000000f1', 'comissao_padrao_percentual', '5', 'percent')
   ON CONFLICT (empresa_id, chave) DO UPDATE SET valor = '5';
 
   v_v := gen_random_uuid(); v_item := gen_random_uuid(); v_oper := gen_random_uuid();
@@ -1562,8 +1587,8 @@ DECLARE
   v_com_b numeric; v_aj_b numeric; v_n_com_b integer; v_n_aj_b integer;
   v_n integer; v_ok boolean;
 BEGIN
-  INSERT INTO public.configuracoes_gerais(chave, valor, tipo_dado)
-  VALUES ('comissao_padrao_percentual', '5', 'percent')
+  INSERT INTO public.configuracoes_gerais (empresa_id, chave, valor, tipo_dado)
+  VALUES ('fa5e0000-0000-4000-8000-0000000000f1', 'comissao_padrao_percentual', '5', 'percent')
   ON CONFLICT (empresa_id, chave) DO UPDATE SET valor = '5';
 
   -- ---------------------------------------------------------- Ordem A
@@ -1722,12 +1747,13 @@ DECLARE
   v_preco numeric := current_setting('t.preco')::numeric;
   v_v uuid; v_i uuid; v_com uuid; v_oper uuid;
   v_v2 uuid; v_i2 uuid; v_c2 uuid;
+  v_iso uuid := gen_random_uuid(); -- operador isolado do cenário 8/9 (sem pendências de blocos anteriores)
   v_n integer; v_ok boolean; v_tipo text; v_ator uuid; v_origem_id uuid;
   v_valor numeric; v_consumido numeric; v_pendente numeric;
   v_com_orig numeric; v_ajustado numeric; v_compensado numeric; v_pago numeric; v_saldo numeric;
 BEGIN
-  INSERT INTO public.configuracoes_gerais(chave, valor, tipo_dado)
-  VALUES ('comissao_padrao_percentual', '5', 'percent')
+  INSERT INTO public.configuracoes_gerais (empresa_id, chave, valor, tipo_dado)
+  VALUES ('fa5e0000-0000-4000-8000-0000000000f1', 'comissao_padrao_percentual', '5', 'percent')
   ON CONFLICT (empresa_id, chave) DO UPDATE SET valor = '5';
 
   -- ---------------------------------------------------------- 1: DELETE de comissão com ajustes
@@ -1873,15 +1899,23 @@ BEGIN
   -- original = 5% de 10 unidades ao preço canônico da loja, devolução de 4
   -- unidades (40%) gera o ajuste, nova venda idêntica gera a segunda
   -- comissão, e o segundo pagamento tem de compensar o ajuste da primeira.
+  -- Operador próprio do cenário: os blocos anteriores deste GATE deixam ajustes pendentes para v_dono, e a
+  -- liquidação compensa ajustes pendentes do mesmo operador (correto pelo produto). Isolar evita que essa
+  -- compensação de outra venda entre no pagamento da comissão original deste cenário.
+  INSERT INTO auth.users(id) VALUES (v_iso) ON CONFLICT (id) DO NOTHING;
+  INSERT INTO public.usuarios(id, nome, perfil, ativo, loja_id)
+  VALUES (v_iso, 'Gate23 operador isolado 8/9', 'OPERADOR', true, v_loja)
+  ON CONFLICT (id) DO NOTHING;
+
   v_v := gen_random_uuid(); v_i := gen_random_uuid();
-  PERFORM public.registrar_venda_com_itens(v_v, v_caixa, v_dono, 'PIX',
+  PERFORM public.registrar_venda_com_itens(v_v, v_caixa, v_iso, 'PIX',
     round(v_preco * 10, 2), 0, round(v_preco * 10, 2),
     jsonb_build_array(jsonb_build_object('item_id', v_i, 'produto_id', v_prod,
       'quantidade', 10, 'preco_original', v_preco, 'preco_unitario', v_preco)), NULL, NULL, NULL);
   SELECT id, valor_comissao INTO v_com, v_com_orig FROM public.comissoes_vendedores WHERE venda_id = v_v;
 
   PERFORM set_config('request.jwt.claim.sub', v_ger::text, true);
-  PERFORM public.liquidar_comissoes(v_loja, v_dono, ARRAY[v_com], 'gate23-lote1-' || v_v::text);
+  PERFORM public.liquidar_comissoes(v_loja, v_iso, ARRAY[v_com], 'gate23-lote1-' || v_v::text);
 
   v_oper := gen_random_uuid();
   SET CONSTRAINTS ALL DEFERRED;
@@ -1895,13 +1929,13 @@ BEGIN
   SET CONSTRAINTS ALL IMMEDIATE;
 
   v_v2 := gen_random_uuid(); v_i2 := gen_random_uuid();
-  PERFORM public.registrar_venda_com_itens(v_v2, v_caixa, v_dono, 'PIX',
+  PERFORM public.registrar_venda_com_itens(v_v2, v_caixa, v_iso, 'PIX',
     round(v_preco * 10, 2), 0, round(v_preco * 10, 2),
     jsonb_build_array(jsonb_build_object('item_id', v_i2, 'produto_id', v_prod,
       'quantidade', 10, 'preco_original', v_preco, 'preco_unitario', v_preco)), NULL, NULL, NULL);
   SELECT id INTO v_c2 FROM public.comissoes_vendedores WHERE venda_id = v_v2;
 
-  PERFORM public.liquidar_comissoes(v_loja, v_dono, ARRAY[v_c2], 'gate23-lote2-' || v_v2::text);
+  PERFORM public.liquidar_comissoes(v_loja, v_iso, ARRAY[v_c2], 'gate23-lote2-' || v_v2::text);
 
   -- por ajuste: quanto foi consumido e quanto resta
   SELECT valor, valor_consumido, valor_pendente INTO v_valor, v_consumido, v_pendente
@@ -1926,7 +1960,7 @@ BEGIN
   IF v_saldo <> 0 THEN RAISE EXCEPTION 'GATE23_9_SALDO_FINAL_INCORRETO saldo=%', v_saldo; END IF;
 
   -- ---------------------------------------------------------- 10: retry do pagamento não cria novo fato
-  PERFORM public.liquidar_comissoes(v_loja, v_dono, ARRAY[v_c2], 'gate23-lote2-' || v_v2::text);
+  PERFORM public.liquidar_comissoes(v_loja, v_iso, ARRAY[v_c2], 'gate23-lote2-' || v_v2::text);
   IF (SELECT count(*) FROM public.comissoes_pagamentos WHERE idempotency_key = 'gate23-lote2-' || v_v2::text) <> 1 THEN
     RAISE EXCEPTION 'GATE23_10_RETRY_PAGAMENTO_DUPLICOU';
   END IF;
