@@ -61,3 +61,32 @@ As condições completas estão no manifesto. Em resumo, cada entrada só sai do
 ## 5. Situação do drift
 
 Com estas entradas adiadas, o check deixa de bloquear pelas 6 migrations acima, mas **continua bloqueando** pelas 5 de segurança enquanto não forem aplicadas ou adiadas formalmente. Não foram adicionadas ao manifesto para tornar o CI verde.
+
+## 6. O que o label `deploy-prod:aprovado` libera (verificado em 2026-11-05)
+
+Busca no repositório (workflows, scripts e docs). O label é lido **em um único lugar**:
+
+| Onde | O que faz |
+|---|---|
+| `.github/workflows/deploy-governance.yml` | Job `deploy-governance` roda `scripts/ops/deploy-governance-guard.mjs` em PRs para `main`. |
+| `scripts/ops/deploy-governance-guard.mjs` | Falha se o PR tocar `backend/supabase/migrations/`, `backend/supabase/functions/`, `backend/supabase/config.toml` ou o manifesto de adiadas, **sem** o label. Também falha se uma migration adiada for alterada, removida ou renomeada, mesmo com label. |
+
+O label **não**:
+
+- aplica migration em nenhum banco;
+- faz deploy de Edge Function ou de app;
+- habilita a integração GitHub→Supabase (que, segundo `docs/ops/deploy-governance.md`, foi desligada manualmente em 2026-10-20 e não pode ser verificada por este repositório);
+- substitui o runbook manual de produção.
+
+Consequência: o label é um **gate de merge na `main`**, não uma autorização de produção. A aplicação em produção continua manual, por SQL, com autorização expressa do dono.
+
+### Separação proposta (sem enfraquecer controles)
+
+1. **Aprovação de governança (merge):** label `deploy-prod:aprovado`, aplicado pelo dono depois da revisão deste documento. Já é o comportamento atual.
+2. **Autorização de produção:** registrada no `decisionDoc` de cada migration, com data, responsável e escopo, e executada manualmente conforme `docs/ops/TRANCHE_SEGURANCA_MIGRATIONS_2026-11-05.md`. Não depende de label.
+3. **Fortalecimento (ação do dono nas configurações do GitHub, não feita aqui):**
+   - *Settings → Branches → regra da `main`:* exigir revisão de Code Owner e o check `deploy-governance`.
+   - *Settings → Code and automation → Labels:* restringir quem pode aplicar labels, se o plano permitir. Qualquer pessoa com escrita pode hoje aplicar o label, o que é um controle fraco.
+   - Criar `CODEOWNERS` para o manifesto e `config.toml` (já previsto em `docs/ops/deploy-governance.md`, ainda não confirmado no repositório).
+
+Nada disso foi alterado nesta etapa. O label não foi aplicado.
