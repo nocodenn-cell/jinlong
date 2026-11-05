@@ -36,6 +36,12 @@
 - PDV-100: cenários ainda não testados na validação operacional: cancelamento e devolução (G1–G6), permissões negativas (A6, I9, R9), concorrência e cliques repetidos (Etapa 4), cliente e crédito, atacado, desconto e pagamento insuficiente. Ver `docs/qa/PDV_100_MATRIZ_COBERTURA.md`
 - PDV-100: rodar os specs Playwright `e2e/caixa-*.spec.ts` contra `http://localhost:3002` (fixar a porta no `playwright.config`; hoje o baseURL não foi confirmado)
 - PDV-100: testar leitor de código de barras, impressora térmica e Tauri. Nenhum equipamento foi usado na validação
+- Fase 3 (segurança): reconciliar o ledger de migrations (repo × produção) antes de aplicar qualquer SQL; depois homologar e aplicar `003_perfis` e `004_feature_flags`; homologar `002_vendas_dml_direto` com a matriz completa (`docs/security/MATRIZ_TESTES_HOMOLOGACAO_FASE3.md`) e só então aplicar em produção. Não aplicar `001_caixas` (o trigger `trg_caixas_fechado_imutavel` já está em produção). Ver `docs/security/PLANO_REMEDIACAO_VULNERABILIDADES.md`
+- Fase 3 (decisões do dono): reabertura de caixa via `retomar_caixa_atomico` (há RPC, sem tela), se `perfis` deve continuar existindo, se feature flags precisam de tela, teto de `valor_inicial` na abertura de caixa (N1)
+- Fase 3 (performance): promover a migration `20260913090000` (validação de fuso sem `pg_timezone_names`, existe no repo e não está em produção) após reconciliação; medir antes/depois. Ver `docs/performance/DIAGNOSTICO_TIMEOUTS_E_PERFORMANCE.md`
+- Fase 3 (PDV offline): remover ou proteger o comando Tauri `sync_outbox` simulado (`pdv-local/src-tauri/src/main.rs:43`), que marca registros como ENVIADO sem enviar
+- Fase 3 (backup): rotina diária com `backend/scripts/backup-ro-postgres.sh` + `age` + SHA-256 + alerta + restauração mensal; RPO 24 h e RTO medidos. Ver `docs/backup/PLANO_OPERACIONAL_BACKUP_RESTAURACAO.md`
+
 - Verificar backup e PITR no painel (projeto `jinlong`, Database → Backups) e registrar retenção e último backup. Pré-requisito de qualquer autorização de produção (`docs/ops/BACKUP_RESTAURACAO_SEM_PITR.md`)
 - Cobrança do DONO indisponível em produção: `fp_sou_dono_da_empresa` e `cobranca_*` só existem após a `20261028101000` (adiada). Decidir a revisão da cobrança com esse custo de produto visível (`docs/ops/TRANCHE_VALIDACAO_2026-11-05.md` §4)
 - Recuperação de vendas offline com token revogado: não há reenvio com token novo no PDV (`pdv-local`). Itens em ERRO exigem tratamento manual com autorização do DONO (`docs/ops/RECUPERACAO_ACESSO_TOKENS.md` §4)
@@ -103,6 +109,7 @@
 ## Feito
 
 - 2026-11-05 — PR #655: types drift corrigido (`823142b6`, regenerado do artefato do CI); merge com a main (`24ba7082`) e push na branch do PR. Restam os gates de governança (label `deploy-prod:aprovado` e migrations `remote_ausente`)
+- 2026-11-05 — Diagnóstico Fase 3 entregue, sem alterar produção: fluxos de escrita mapeados, catálogo de produção lido (A2 mitigada por trigger; `perfis` tem 3 linhas), plano de remediação, roadmap, matriz de testes, plano de backup. Entrada em `docs/FASE3_RELATORIO_EXECUTIVO.md`
 - 2026-11-05 — Estabilização da tranche: fixtures de 4 suítes corrigidas (todas passam), provisionamento reescrito para o contrato da 121000 (cadastro autorizado por contingência comprovado), teste de recuperação de acesso (REC-1 a REC-7), validação reproduzível em contêiner (`backend/scripts/tranche-seguranca-validar.sh`)
 - 2026-11-05 — Tranche de segurança validada em banco descartável: SEC-04 corrigido (passa), rollbacks de 100000 e 110000 (cadeia idêntica ao baseline), definições de produção conferidas por md5; PR #660 atualizado
 - 2026-11-05 — GO-LIVE-01: golden flow operacional executado na cópia `sec_gf01` (roteiro `backend/scripts/go-live-01-golden-flow.test.sql`, 34 asserções OK). Matriz e veredito NO-GO em `docs/qa/GO_LIVE_01_GOLDEN_FLOW.md`; E2E de interface bloqueado
