@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from 'vitest'
 import { caixaErroOperador } from '@/app/caixa/server/caixaErroOperador'
 
@@ -97,5 +98,54 @@ describe('caixaErroOperador', () => {
     expect(pt).toContain("vendas em espera")
     expect(pt).not.toContain("FECHAR_CAIXA")
     expect(caixaErroOperador("FECHAR_CAIXA_VENDAS_EM_ESPERA", "zh")).toContain("挂起的销售")
+  })
+})
+
+describe('caixaErroOperador: registro do fallback genérico', () => {
+  it('registra no servidor o detalhe bruto quando cai no fallback, sem alterar a mensagem', () => {
+    const logs: string[] = []
+    const original = console.error
+    console.error = (msg: unknown) => {
+      logs.push(String(msg))
+    }
+    try {
+      const texto = caixaErroOperador('Database connection error.')
+      expect(texto).toBe('Não foi possível concluir. Tente novamente.')
+      expect(logs).toHaveLength(1)
+      const evento = JSON.parse(logs[0])
+      expect(evento.evento).toBe('caixa.erro_operador.fallback')
+      expect(evento.motivo).toBe('nao_mapeado')
+      expect(evento.detalhe).toBe('Database connection error.')
+    } finally {
+      console.error = original
+    }
+  })
+
+  it('registra motivo "vazio" quando não há detalhe', () => {
+    const logs: string[] = []
+    const original = console.error
+    console.error = (msg: unknown) => {
+      logs.push(String(msg))
+    }
+    try {
+      expect(caixaErroOperador(null)).toBe('Não foi possível concluir. Tente novamente.')
+      expect(JSON.parse(logs[0]).motivo).toBe('vazio')
+    } finally {
+      console.error = original
+    }
+  })
+
+  it('não registra quando a mensagem é mapeada', () => {
+    const logs: string[] = []
+    const original = console.error
+    console.error = (msg: unknown) => {
+      logs.push(String(msg))
+    }
+    try {
+      caixaErroOperador('fechar_caixa_movimentacoes_pendentes')
+      expect(logs).toHaveLength(0)
+    } finally {
+      console.error = original
+    }
   })
 })

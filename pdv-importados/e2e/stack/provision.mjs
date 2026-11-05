@@ -50,6 +50,12 @@ DO $$ DECLARE r record; BEGIN
   FOR r IN SELECT sequencename FROM pg_sequences WHERE schemaname='auth' LOOP
     EXECUTE format('ALTER SEQUENCE auth.%I OWNER TO supabase_auth_admin', r.sequencename); END LOOP;
 END $$;`), 'ajuste de donos do auth')
+// senhas das roles internas no cluster E2E (a imagem reduzida não as define): sem isso o GoTrue não conecta.
+// Só altera o cluster fp_e2e_db da stack; a imagem não tem os roles de plataforma.
+const pwRole = env.E2E_DB_PASSWORD.replace(/'/g, "''")
+const rolesSql = ['authenticator', 'supabase_auth_admin', 'supabase_storage_admin'].map((r) =>
+  `DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='${r}') THEN EXECUTE format('ALTER ROLE %I PASSWORD %L', '${r}', '${pwRole}'); END IF; END $$;`).join('\n')
+must(psql('postgres', rolesSql, 'supabase_admin'), 'senhas das roles internas (E2E)')
 must(compose('up', '-d', 'e2e_rest', 'e2e_auth'), 'subir rest/auth')
 // o Kong resolve upstreams na inicialização: reinicia após recriar rest/auth (evita 502 com IP antigo)
 must(compose('restart', 'e2e_kong'), 'reiniciar kong')

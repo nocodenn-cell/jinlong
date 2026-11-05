@@ -61,10 +61,21 @@ if (prod) {
   if (b.status !== 0) { console.error(`next build falhou (exit ${b.status}); ver ${join(logDir, 'next-build.log')}`); process.exit(1) }
   console.log('next build: OK')
 }
-const next = spawn('npx', prod ? ['next', 'start', '-p', port] : ['next', 'dev', '-p', port], { cwd: pdv, env, shell: true, stdio: ['ignore', nextLog, nextLog] })
+// Porta precisa estar livre: um servidor antigo responderia no lugar do novo (build diferente, chunks inconsistentes).
+try {
+  const ocupada = await fetch(`http://localhost:${port}/login`, { redirect: 'manual' })
+  throw new Error(`porta ${port} já está em uso (HTTP ${ocupada.status}); encerre o servidor anterior antes de rodar`)
+} catch (err) {
+  if (String(err.message).includes('já está em uso')) throw err
+}
+// Executa o binário do Next direto: o PID é o próprio servidor, e taskkill /T encerra a árvore inteira.
+const nextBin = join(pdv, 'node_modules', 'next', 'dist', 'bin', 'next')
+const next = spawn(process.execPath, [nextBin, prod ? 'start' : 'dev', '-p', port], { cwd: pdv, env, stdio: ['ignore', nextLog, nextLog] })
 let status = 1
 try {
   console.log('aquecimento /login:', JSON.stringify(await aguardar('/login', 600_000)))
+  const logAtual = readFileSync(join(logDir, 'next-dev.log'), 'utf8')
+  if (logAtual.includes('EADDRINUSE')) throw new Error('servidor não conseguiu escutar na porta (EADDRINUSE)')
   console.log('aquecimento /caixa:', JSON.stringify(await aguardar('/caixa', 900_000)))
   const r = spawnSync('npx', ['playwright', 'test', ...specs, '--project=chromium', '--reporter=list',
     '--trace=on', `--output=${evidence}`], { cwd: pdv, env, stdio: 'inherit', shell: true })
