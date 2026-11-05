@@ -2,6 +2,8 @@
 
 ## P0 — Quebrado/travado
 
+- Recuperação de senha do ERP falhava sem mensagem clara (validação silenciosa e erro do Supabase em inglês). Correção em PR Draft; validar em produção após revisão. Conferir no Supabase (Authentication → URL Configuration) que o domínio do ERP está em Redirect URLs
+- Admin do Hub sem acesso à senha (`hub.jinlong.app/login`): o Hub não tem fluxo de recuperação. Usar o ERP em `/auth/esqueci-senha` (mesmo projeto Supabase `kbabmewnahysfvlybiak`, mesmo `auth.users`) e confirmar a conta em `commercial_admins`. Aguarda autorização explícita do dono para enviar o e-mail e redefinir
 - Merge da PR #653 (consolidação NF-e com #654) bloqueado até o dono confirmar o registro de produção; decidir sobre o label `deploy-prod:aprovado`, que não foi aplicado (`docs/audits/CONSOLIDACAO_NFE_2026-11-01.md`)
 - Conta a pagar de NF-e sem conciliação: confirmação aceita duplicatas que não somam o valor da NF (NF 100,00 com duplicata 60,00 gera AP de 60,00). Reproduzido em homologação em 2026-10-30. Correção em `20261030120000` (commit 81daca66), aplicada em homologação fora do histórico de migrations; pendente registrar/aplicar formalmente e validar em produção antes de liberar (D-1)
 - Suíte de NF-e inexecutável no esquema atual: os 13 scripts `.test.sql`/`.mjs` não criam `empresa_id` (trigger `EMPRESA_ID_OBRIGATORIA`), e `nfe-conferencia-flx05-ui` espera `IMPORT_NFE_LOJA` enquanto o código retorna `ACESSO_LOJA_NEGADO`. Corrigir fixtures antes de qualquer PASSOU novo (D-4, D-5)
@@ -73,6 +75,8 @@
 
 ## Feito
 
+- 2026-11-05 — Recuperação de senha: causa comprovada em Supabase local (validação nativa bloqueava o envio sem aviso; erro do Supabase exibido em inglês). Correção com testes unitários e E2E em branch; PR Draft pendente
+- 2026-11-05 — Diagnóstico somente leitura da recuperação de senha do Hub: Hub sem fluxo de recuperação; recuperação deve ser feita pelo ERP; nada alterado no Supabase
 - 2026-11-01 — Consolidação NF-e: #654 integrada à #653 por merge (`0176677f`), Growth-001 restaurada em `20261023130000` (`dfdf9e41`), cinco testes SQL da PR-A adotados (`0a00201d`) e scripts de concorrência movidos para `backend/scripts/backlog-redesign/` (`99dbcaea`). Registro em `docs/audits/CONSOLIDACAO_NFE_2026-11-01.md`; não mergeado
 - 2026-10-30 — Validação em homologação (`jinlong-homolog-palm`, rollback): confirmação, repetição e reimportação passaram; conciliação de duplicatas e AP sem UNIQUE reproduzidos como defeito. Os 13 scripts `.test.sql`/`.mjs` de NF-e não executam no esquema atual (sem `empresa_id`). Relatório em `docs/audits/VALIDACAO_TESTES_NFE_HOMOLOG_2026-10-30.md`
 - 2026-10-30 — Auditoria de capacidades do ciclo de custos (16 etapas, somente leitura): nenhuma capacidade VALIDADA; motor de custo, rateio e precificação existem em `shared-core` sem ligação ao caminho NF-e; kardex sem valor. Relatório e backlog em `docs/audits/AUDITORIA_CUSTOS_RENTABILIDADE_2026-10-30.md`; sem alteração de código
@@ -81,5 +85,3 @@
 - 2026-10-29 — S1 validada em homologação (`yvdilcmxyjafnnsfdtam`): matriz de permissões final, testes do DONO, ciclos de rollback do S1b, S1c, G14 e S1; PR #648 aberto com o pacote (S1, S1c, S1b, G14), CI verde exceto o guard de governança. Não aplicado em produção
 - 2026-10-29 — Decisões D1–D14 registradas em `docs/regras-negocio/DECISOES_JINLONG_S1.md`
 - 2026-10-29 — NF-e de entrada com valor e sem duplicatas: mensagem operacional para `IMPORT_NFE_OBRIGACAO_SEM_DUPLICATA`, aviso na prévia e confirmação bloqueada na conferência (`notaObrigacao.ts`); sem alteração de migration/RPC. Não deployado
-- 2026-10-29 — `20261028120000` aplicada em produção (revoke dos 4 helpers de tenant): drill em main com success (backup 40776152513, checksum OK, contagens validadas); pré-checagem true/true/true; pós-checagem revogados e service_role_ok, md5 2fc3a718…; sem `permission denied` nos logs; drift do #630 verde
-- 2026-10-28 — Drift main × produção zerado: `20261022020000` (#625) registrada em produção como no-op (script do #641, SQL idêntico ao arquivo); #641 mergeado (598efcf0): o check respeita `deferred-migrations.json` e aceita duplicatas de pares com git alinhado. `migration-remote-drift` contra produção = HUMAN_GATE (só `20261010120000`, adiada)
