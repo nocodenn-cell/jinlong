@@ -1,0 +1,81 @@
+# Stack E2E isolada do PDV (JL-GO-LIVE-01). Projeto, containers, rede e volume próprios.
+# Não usa nem altera os containers supabase_* compartilhados. Banco: sec_gf01 (cópia descartável).
+name: fastproduct-e2e
+
+services:
+  e2e_db:
+    image: public.ecr.aws/supabase/postgres:17.6.1.165
+    container_name: fp_e2e_db
+    environment:
+      POSTGRES_PASSWORD: ${E2E_DB_PASSWORD}
+      JWT_SECRET: ${E2E_JWT_SECRET}
+      JWT_EXP: "3600"
+    ports:
+      - "127.0.0.1:${E2E_DB_PORT}:5432"
+    volumes:
+      - fp_e2e_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -h localhost"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+    networks: [fp_e2e_net]
+
+  e2e_rest:
+    image: public.ecr.aws/supabase/postgrest:v16.1
+    container_name: fp_e2e_rest
+    depends_on:
+      e2e_db:
+        condition: service_healthy
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${E2E_DB_PASSWORD}@e2e_db:5432/sec_gf01
+      PGRST_DB_SCHEMAS: public,storage
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${E2E_JWT_SECRET}
+    networks: [fp_e2e_net]
+
+  e2e_auth:
+    image: public.ecr.aws/supabase/gotrue:v2.196.0
+    container_name: fp_e2e_auth
+    depends_on:
+      e2e_db:
+        condition: service_healthy
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: "9999"
+      API_EXTERNAL_URL: http://localhost:${E2E_API_PORT}
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${E2E_DB_PASSWORD}@e2e_db:5432/sec_gf01
+      GOTRUE_SITE_URL: http://localhost:${E2E_APP_PORT}
+      GOTRUE_URI_ALLOW_LIST: http://localhost:${E2E_APP_PORT}
+      GOTRUE_DISABLE_SIGNUP: "true"
+      GOTRUE_JWT_ADMIN_ROLES: service_role
+      GOTRUE_JWT_AUD: authenticated
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_JWT_EXP: "3600"
+      GOTRUE_JWT_SECRET: ${E2E_JWT_SECRET}
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+      GOTRUE_MAILER_AUTOCONFIRM: "true"
+    networks: [fp_e2e_net]
+
+  e2e_kong:
+    image: public.ecr.aws/supabase/kong:2.8.1
+    container_name: fp_e2e_kong
+    depends_on: [e2e_rest, e2e_auth]
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /home/kong/kong.yml
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+    volumes:
+      - ./kong.yml:/home/kong/kong.yml:ro
+    ports:
+      - "127.0.0.1:${E2E_API_PORT}:8000"
+    networks: [fp_e2e_net]
+
+networks:
+  fp_e2e_net:
+    name: fp_e2e_net
+
+volumes:
+  fp_e2e_db_data:
+    name: fp_e2e_db_data
