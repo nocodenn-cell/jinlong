@@ -28,7 +28,7 @@ Interpretação: o timeout que o usuário vê é do **PostgREST (request)**, nã
 
 ## 3. Achado de maior ganho com menor risco: validação de fuso
 
-- A migration **`20260913090000_relatorio_tz_validado_sem_pg_timezone_names.sql` existe no repositório, mas não está no ledger de produção** (consulta direta: `mig_20260913_aplicada = 0`).
+- A migration **`20260913090000_relatorio_tz_validado_sem_pg_timezone_names.sql` existe no repositório e não tem a mesma versão no ledger de produção** (`mig_20260913_aplicada = 0`). **Atenção:** o ledger tem a entrada `20261005151721` com o mesmo nome, mas a função em produção ainda usa `pg_timezone_names`. Ver `docs/security/RECONCILIACAO_MIGRATIONS_2026-11-05.md`.
 - O próprio comentário da migration mede **745 ms** para `SELECT EXISTS (SELECT 1 FROM pg_timezone_names …)` e afirma que cada conexão nova de PostgREST paga esse custo na primeira RPC.
 - Produção ainda usa a versão antiga (`relatorio_tz_validado` com `pg_timezone_names`).
 - **Hipótese forte:** aplicar essa migration reduz o custo das RPCs de relatório e do dashboard. **A validar** em homologação: medir antes/depois com a mesma carga.
