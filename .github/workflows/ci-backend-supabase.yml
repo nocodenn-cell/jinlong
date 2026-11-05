@@ -397,6 +397,15 @@ jobs:
             exit 1
           fi
 
+      # Sem isto, `npx supabase` baixa a última CLI (v3), que recusa [inbucket] em config.toml.
+      # Instala só o workspace backend pelo lockfile, que fixa supabase 2.116.0 (mesma versão do script).
+      - name: Install pinned Supabase CLI (backend workspace)
+        run: |
+          set -euo pipefail
+          npm ci --workspace backend --ignore-scripts --no-audit --no-fund
+          cd backend
+          npx --no-install supabase --version
+
       - name: Link + compare Local vs Remote
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
