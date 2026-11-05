@@ -2,7 +2,7 @@
 
 ## P0 — Quebrado/travado
 
-- PR #655 bloqueado: dono decide o label `deploy-prod:aprovado` (o guard de governança exige para as 5 migrations `20261104120000`–`180000`) e as migrations `remote_ausente` (`20261028100000`–`20261030140000`, no `migration-remote-drift`). Types drift já corrigido em `823142b6`
+- PR #655: label `deploy-prod:aprovado` aplicado pelo dono (2026-11-05). Pendente: migrations `remote_ausente` (`migration-remote-drift` continua vermelho) (`20261028100000`–`20261030140000`, no `migration-remote-drift`). Types drift já corrigido em `823142b6`
 - Drift de migrations em produção: `jinlong` (`kbabmewnahysfvlybiak`) continua com 11 migrations sem registro e o check `migration-remote-drift` vermelho. Homolog já está reconciliado (481 versões, 31 aplicadas e registradas em 2026-11-04). Produção só com decisão e autorização próprias. Detalhes e matriz em `docs/runbooks/RECONCILIACAO_HOMOLOG_2026-11-04.md`
 - Homologação funcional incompleta: falta login real com contas de teste e os fluxos de escrita (PDV, vendas em espera, estoque, NF-e, financeiro, cancelamentos, concorrência). Só isolamento RLS e privilégios foram verificados (`docs/runbooks/RECONCILIACAO_HOMOLOG_2026-11-04.md`, seção 11)
 - Segurança (vazamento): as views `v_vendas_dia`, `v_top_produtos` e `v_venda_consistencia_anomalias` contornam o RLS e expõem vendas de todas as empresas para qualquer logado e para `anon` (confirmado no homolog com privilégios reais). Correção `20261104120000_sec_anon_privilegios_minimos.sql` aplicada no homolog em 2026-11-04 (confirmado: `anon` sem acesso). Falta aplicar em produção com decisão própria
