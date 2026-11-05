@@ -1,12 +1,13 @@
 -- Rollback de 20261028100000_sec_token_gerente_loja_nula_fora_da_loja.sql.
--- Restaura internal.token_gerente_fora_da_loja(text, uuid) ao corpo de 20260916120000_sec04_token_gerente_vinculo_loja_v4.sql
--- (sem o ramo DONO/ADMIN por empresa). Efeito: volta a aceitar token de DONO/ADMIN emitido em outra empresa.
--- Não há dados a restaurar: a migration só substitui a função e o comentário.
--- Pré-requisito: reverter ANTES, nesta ordem, as migrations posteriores que reescrevem esta mesma função
--- (se aplicadas): 20261030100000, 20261028122000, 20261028121000, 20261028120100, 20261028110000 (cada uma tem rollback próprio).
--- Sem esse passo, o rollback derruba as guardas de revogação/Corte ADMIN que dependem desta função.
--- Permissões: a migration faz REVOKE ALL FROM PUBLIC, anon, authenticated; o rollback mantém o mesmo REVOKE.
-
+-- STATUS: PREPARADO PARA HOMOLOGAÇÃO. NÃO APLICADO EM PRODUÇÃO. Executar só com autorização do dono.
+--
+-- Restaura internal.token_gerente_fora_da_loja à definição anterior à 20261028100000, copiada de
+-- 20260916120000_sec04_token_gerente_vinculo_loja_v4.sql (única definição anterior no repositório).
+-- Não toca dados nem outras funções.
+--
+-- ORDEM OBRIGATÓRIA: se 20261028110000 ou 20261028120100 estiverem aplicadas, reverter ANTES os rollbacks
+-- delas (120100 → 110000 → esta), porque elas redefinem a mesma função.
+-- Execução prevista: psql "$DB_URL" -v ON_ERROR_STOP=1 -f <este arquivo>
 BEGIN;
 
 CREATE OR REPLACE FUNCTION internal.token_gerente_fora_da_loja(
@@ -31,9 +32,6 @@ AS $function$
        )
   );
 $function$;
-
-COMMENT ON FUNCTION internal.token_gerente_fora_da_loja(text, uuid) IS
-  'SEC-04: true quando o token de gerente existe e NÃO pertence à loja (emissor criado_por fora da loja e sem perfil DONO/ADMIN, ou loja_id gravado divergente). Token inexistente = false (existência/uso/expiração ficam com a v4_unscoped).';
 
 REVOKE ALL ON FUNCTION internal.token_gerente_fora_da_loja(text, uuid) FROM PUBLIC, anon, authenticated;
 

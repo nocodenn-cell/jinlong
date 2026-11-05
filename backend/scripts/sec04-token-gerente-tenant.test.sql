@@ -15,7 +15,6 @@
 
 \set ON_ERROR_STOP on
 BEGIN;
-INSERT INTO public.empresas (id, nome) VALUES ('fa5e0000-0000-4000-8000-0000000000f1', 'Fixture empresa (suite SQL)') ON CONFLICT (id) DO NOTHING;
 
 DO $setup$
 DECLARE
@@ -25,14 +24,17 @@ DECLARE
   v_op_b     uuid := 'f3000002-0000-4000-8000-00000000000b';
   v_dono_b   uuid := 'f3000002-0000-4000-8000-0000000000d0';
   v_caixa_a  uuid := 'f3000003-0000-4000-8000-00000000000a';
+  v_emp1    uuid := 'f3000004-0000-4000-8000-0000000000e1';
 BEGIN
   INSERT INTO auth.users (id) VALUES (v_op_a), (v_op_b), (v_dono_b)
   ON CONFLICT (id) DO NOTHING;
 
-  INSERT INTO public.lojas (empresa_id, id, nome, codigo, ativo) VALUES
-    ('fa5e0000-0000-4000-8000-0000000000f1', v_loja_a, 'SEC04 Loja A', 'SEC04-A', true),
-    ('fa5e0000-0000-4000-8000-0000000000f1', v_loja_b, 'SEC04 Loja B', 'SEC04-B', true)
-  ON CONFLICT (id) DO UPDATE SET ativo = true;
+  -- Fixture: trigger de multiempresa exige empresa_id nas lojas (migration 20261019120000).
+  INSERT INTO public.empresas (id, nome) VALUES (v_emp1, 'SEC04 Empresa 1') ON CONFLICT (id) DO NOTHING;
+  INSERT INTO public.lojas (id, nome, codigo, ativo, empresa_id) VALUES
+    (v_loja_a, 'SEC04 Loja A', 'SEC04-A', true, v_emp1),
+    (v_loja_b, 'SEC04 Loja B', 'SEC04-B', true, v_emp1)
+  ON CONFLICT (id) DO UPDATE SET ativo = true, empresa_id = EXCLUDED.empresa_id;
 
   INSERT INTO public.usuarios (id, nome, perfil, ativo, loja_id) VALUES
     (v_op_a, 'SEC04 Operador A', 'OPERADOR', true, v_loja_a),
