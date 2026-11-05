@@ -1633,6 +1633,7 @@
     "err_srv_preco_qtd_invalida": "Quantidade inválida para cálculo de preço.",
     "err_srv_busca_ambigua": "Vários produtos batem com \"{{frag}}\" (nome ou categoria). Escolha um da lista ou refine a busca.",
     "err_srv_busca_sku_ambigua": "Vários produtos batem com o SKU \"{{frag}}\". Escolha um da lista ou refine a busca.",
+    "err_srv_quantidade_unidade": "A quantidade de \"{{nome}}\" deve ser inteira (unidade {{unidade}}). Ajuste o item e tente novamente.",
     "err_srv_status_caixa_indisponivel": "Status de caixa indisponível.",
     "err_srv_cancelar_venda": "Não foi possível cancelar a venda.",
     "err_srv_calcular_preco": "Não foi possível calcular o preço do produto.",

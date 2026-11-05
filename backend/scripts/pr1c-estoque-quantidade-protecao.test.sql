@@ -25,6 +25,7 @@
 
 \set ON_ERROR_STOP on
 BEGIN;
+INSERT INTO public.empresas (id, nome) VALUES ('fa5e0000-0000-4000-8000-0000000000f1', 'Fixture empresa (suite SQL)') ON CONFLICT (id) DO NOTHING;
 
 DO $setup$
 DECLARE
@@ -36,15 +37,15 @@ DECLARE
 BEGIN
   INSERT INTO auth.users (id) VALUES (v_gerente) ON CONFLICT (id) DO NOTHING;
 
-  INSERT INTO public.lojas (id, nome, codigo, ativo) VALUES
-    (v_loja, 'PR1C Loja', 'PR1C-A', true)
+  INSERT INTO public.lojas (empresa_id, id, nome, codigo, ativo) VALUES
+    ('fa5e0000-0000-4000-8000-0000000000f1', v_loja, 'PR1C Loja', 'PR1C-A', true)
   ON CONFLICT (id) DO UPDATE SET ativo = true;
 
   INSERT INTO public.usuarios (id, nome, perfil, ativo, loja_id, idioma_preferido) VALUES
     (v_gerente, 'PR1C Gerente', 'GERENTE', true, v_loja, 'pt')
   ON CONFLICT (id) DO UPDATE SET perfil = EXCLUDED.perfil, ativo = true, loja_id = EXCLUDED.loja_id;
 
-  INSERT INTO public.categorias (id, nome) VALUES (v_categoria, 'PR1C Categoria')
+  INSERT INTO public.categorias (empresa_id, id, nome) VALUES ('fa5e0000-0000-4000-8000-0000000000f1', v_categoria, 'PR1C Categoria')
   ON CONFLICT (id) DO UPDATE SET nome = EXCLUDED.nome;
 
   INSERT INTO public.produtos (id, codigo_barras, nome, categoria_id, preco_varejo, origem, tem_nf, ativo, loja_id)
@@ -207,7 +208,7 @@ DECLARE
   v_produto uuid := 'f000000b-0000-4000-8000-000000000004';
 BEGIN
   INSERT INTO auth.users (id) VALUES (v_gerente_outro) ON CONFLICT (id) DO NOTHING;
-  INSERT INTO public.lojas (id, nome, codigo, ativo) VALUES (v_loja_outra, 'PR1C Loja Outra', 'PR1C-FE', true)
+  INSERT INTO public.lojas (empresa_id, id, nome, codigo, ativo) VALUES ('fa5e0000-0000-4000-8000-0000000000f1', v_loja_outra, 'PR1C Loja Outra', 'PR1C-FE', true)
     ON CONFLICT (id) DO UPDATE SET ativo = true;
   INSERT INTO public.usuarios (id, nome, perfil, ativo, loja_id, idioma_preferido)
     VALUES (v_gerente_outro, 'PR1C Gerente Outro', 'GERENTE', true, v_loja_outra, 'pt')

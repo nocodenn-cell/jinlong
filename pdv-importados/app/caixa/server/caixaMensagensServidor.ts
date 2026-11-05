@@ -35,6 +35,7 @@ export type CaixaServidorMsgKey =
   | 'err_srv_valor_invalido'
   | 'err_srv_busca_cliente_min'
   | 'err_srv_itens_carrinho_invalidos'
+  | 'err_srv_quantidade_unidade'
   | 'err_srv_concluir'
   | 'err_srv_cancelamento_sem_id'
   | 'err_srv_aprovacao_sem_id'

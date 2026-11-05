@@ -1691,6 +1691,39 @@ export type Database = {
           },
         ]
       }
+      commercial_lead_rate_config: {
+        Row: {
+          id: number
+          salt: string
+        }
+        Insert: {
+          id: number
+          salt: string
+        }
+        Update: {
+          id?: number
+          salt?: string
+        }
+        Relationships: []
+      }
+      commercial_lead_rate_limit: {
+        Row: {
+          bucket: string
+          janela_inicio: string
+          tentativas: number
+        }
+        Insert: {
+          bucket: string
+          janela_inicio: string
+          tentativas: number
+        }
+        Update: {
+          bucket?: string
+          janela_inicio?: string
+          tentativas?: number
+        }
+        Relationships: []
+      }
       commercial_leads: {
         Row: {
           channel: string
@@ -1700,6 +1733,7 @@ export type Database = {
           email: string | null
           empresa_id: string | null
           id: string
+          idempotency_key: string | null
           idioma: string | null
           interesse: string | null
           locale: string
@@ -1708,6 +1742,7 @@ export type Database = {
           product: string
           protocol: string
           proximo_contato: string | null
+          request_hash: string | null
           segment: string | null
           status: string
           store: string
@@ -1725,6 +1760,7 @@ export type Database = {
           email?: string | null
           empresa_id?: string | null
           id?: string
+          idempotency_key?: string | null
           idioma?: string | null
           interesse?: string | null
           locale: string
@@ -1733,6 +1769,7 @@ export type Database = {
           product: string
           protocol: string
           proximo_contato?: string | null
+          request_hash?: string | null
           segment?: string | null
           status?: string
           store: string
@@ -1750,6 +1787,7 @@ export type Database = {
           email?: string | null
           empresa_id?: string | null
           id?: string
+          idempotency_key?: string | null
           idioma?: string | null
           interesse?: string | null
           locale?: string
@@ -1758,6 +1796,7 @@ export type Database = {
           product?: string
           protocol?: string
           proximo_contato?: string | null
+          request_hash?: string | null
           segment?: string | null
           status?: string
           store?: string
@@ -10239,6 +10278,24 @@ export type Database = {
       registrar_conferencia_ordem_compra: {
         Args: { p_itens: Json; p_oc_id: string }
         Returns: Json
+      }
+      registrar_lead_comercial: {
+        Args: {
+          p_channel: string
+          p_city?: string
+          p_contact: string
+          p_idempotency_key: string
+          p_locale: string
+          p_name: string
+          p_protocol: string
+          p_segment?: string
+          p_store: string
+          p_utm_campaign?: string
+          p_utm_medium?: string
+          p_utm_source?: string
+          p_wechat?: string
+        }
+        Returns: string
       }
       registrar_liquidacao_receber: {
         Args: {

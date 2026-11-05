@@ -1633,6 +1633,7 @@
     "err_srv_preco_qtd_invalida": "用于计价的数量无效。",
     "err_srv_busca_ambigua": "多个商品匹配「{{frag}}」（名称或分类）。请从列表中选择或缩小搜索范围。",
     "err_srv_busca_sku_ambigua": "多个商品匹配 SKU「{{frag}}」。请从列表中选择或缩小搜索范围。",
+    "err_srv_quantidade_unidade": "「{{nome}}」的数量必须为整数（单位 {{unidade}}）。请调整商品后重试。",
     "err_srv_status_caixa_indisponivel": "收银台状态不可用。",
     "err_srv_cancelar_venda": "无法取消销售。",
     "err_srv_calcular_preco": "无法计算商品价格。",
