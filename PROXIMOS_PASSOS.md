@@ -20,7 +20,8 @@
 
 ## P1 — Falta para lançar (MVP)
 
-- PR #658 (draft, docs Growth-001): check `migration-remote-drift` falha antes de checar o drift, porque `npx supabase migration list` recusa `[inbucket]` no `backend/supabase/config.toml` (CLI atual exige `[local_smtp]`). Corrigir a configuração e rodar o check antes de marcar como pronto (não é bloqueio de conteúdo)
+- Drift real de produção (bloqueia `migration-remote-drift`): 11 migrations do repositório não aplicadas no remoto `kbabmewnahysfvlybiak` (`20261028100000`–`20261030140000`). A causa da falha anterior era a CLI não fixada (`npx` baixava v3, que recusa `[inbucket]`); o workflow agora instala a CLI 2.116.0 pelo lockfile. Decidir: aplicar, adiar via `deferred-migrations.json` ou registrar par no `migration-human-gates.json`. Não desabilitar o check
+- Config local incompatível com a CLI v3: `[inbucket]` em `backend/supabase/config.toml` (trocar por `[local_smtp]` quando o projeto subir para a CLI 3)
 - Autorizar o merge do PR #623 (remover ADMIN): conflito com a main resolvido na branch do PR (commit 193293d7, local, sem push); validação pendente de revisão
 - Kardex sem valor: `movimentos_estoque_log` só tem `quantidade_delta`. Criar `estoque_aplicar_movimento` como único escritor, com `custo_unitario` e `valor_total` (auditoria 2026-10-30, item 3 do backlog)
 - Tela de produto mostra `preco_custo_medio` = 0 (campo nunca gravado) e `atualizar_preco_varejo_produto` persiste preço sem aprovação nem simulação (auditoria 2026-10-30, Parte 2, itens 1 e 7)
