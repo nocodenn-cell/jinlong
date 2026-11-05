@@ -51,6 +51,111 @@
         "public.importacoes_nfe_itens (existente em producao)"
       ],
       "releaseCondition": "Aplicar somente depois da 20261030130000, com os testes de quantidade comercial passando em homologacao + autorizacao explicita do responsavel + label deploy-prod:aprovado no PR que remove esta entrada."
+    },
+    {
+      "version": "20261028100000",
+      "file": "backend/supabase/migrations/20261028100000_sec_token_gerente_loja_nula_fora_da_loja.sql",
+      "reason": "SEGURANÇA (prioridade de decisão do dono). Token de gerente de DONO/ADMIN sem loja_id passava em qualquer loja, inclusive de outra empresa (vazamento entre tenants). Nunca aplicada em produção.",
+      "dependencies": [],
+      "releaseCondition": "Autorização explícita do dono para aplicar o lote de segurança em produção (runbook manual, janela autorizada, schema_migrations com a versão real), após validação em homologação; depois PR que remove a entrada com label deploy-prod:aprovado."
+    },
+    {
+      "version": "20261028101000",
+      "file": "backend/supabase/migrations/20261028101000_cobranca_correcoes_revisao_585.sql",
+      "reason": "FUNCIONALIDADE. Correções da revisão de segurança do PR #585 (cobrança Asaas). Cobrança ainda não ativa (P2). Arquivo diz NÃO APLICAR sem revisão do dono.",
+      "dependencies": [
+        "20261028100000 (ordem)"
+      ],
+      "releaseCondition": "Autorização explícita do dono + validação em homologação + PR que remove a entrada com label deploy-prod:aprovado."
+    },
+    {
+      "version": "20261028110000",
+      "file": "backend/supabase/migrations/20261028110000_corte_admin_papeis.sql",
+      "reason": "SEGURANÇA (prioridade de decisão do dono). Corte do perfil ADMIN legado: deixa de ter poder dentro das lojas e empresas. Cria tabelas de backup internal.usuarios_admin_corte_*.",
+      "dependencies": [
+        "PR #620 (citado no cabeçalho)",
+        "20261028100000 (ordem)"
+      ],
+      "releaseCondition": "Autorização explícita do dono para aplicar o lote de segurança em produção (runbook manual, janela autorizada, schema_migrations com a versão real), após validação em homologação; depois PR que remove a entrada com label deploy-prod:aprovado."
+    },
+    {
+      "version": "20261028120100",
+      "file": "backend/supabase/migrations/20261028120100_sec_tokens_usuario_inativo_revogacao.sql",
+      "reason": "SEGURANÇA (prioridade de decisão do dono). Usuário inativado ou sem vínculo não pode mais executar operações protegidas com tokens antigos. Decisão do dono de 2026-10-28.",
+      "dependencies": [
+        "20261028100000",
+        "20261028110000 (citados no cabeçalho)"
+      ],
+      "releaseCondition": "Autorização explícita do dono para aplicar o lote de segurança em produção (runbook manual, janela autorizada, schema_migrations com a versão real), após validação em homologação; depois PR que remove a entrada com label deploy-prod:aprovado."
+    },
+    {
+      "version": "20261028121000",
+      "file": "backend/supabase/migrations/20261028121000_provisionamento_automatico_bloqueado.sql",
+      "reason": "SEGURANÇA (prioridade de decisão do dono). Bloqueia o provisionamento automático de empresas pelo app; o hub comercial é o ponto oficial (decisão do dono de 2026-10-28).",
+      "dependencies": [],
+      "releaseCondition": "Autorização explícita do dono para aplicar o lote de segurança em produção (runbook manual, janela autorizada, schema_migrations com a versão real), após validação em homologação; depois PR que remove a entrada com label deploy-prod:aprovado."
+    },
+    {
+      "version": "20261028122000",
+      "file": "backend/supabase/migrations/20261028122000_admin_residual_escopo_ativo.sql",
+      "reason": "SEGURANÇA (prioridade de decisão do dono). Três funções SECURITY DEFINER ainda davam acesso global ao ADMIN forçado (ativo, sem vínculo): vazamento de custos entre empresas (18 linhas de outra empresa visíveis).",
+      "dependencies": [
+        "20261028110000 (ordem)"
+      ],
+      "releaseCondition": "Autorização explícita do dono para aplicar o lote de segurança em produção (runbook manual, janela autorizada, schema_migrations com a versão real), após validação em homologação; depois PR que remove a entrada com label deploy-prod:aprovado."
+    },
+    {
+      "version": "20261030100000",
+      "file": "backend/supabase/migrations/20261030100000_sec_token_dispositivo_vale_na_loja.sql",
+      "reason": "SEGURANÇA (prioridade de decisão do dono). Corrige a regra do token emitido pelo dispositivo (PDV), que recusava todo token de dispositivo, e mantém o fail closed quando o aprovador está inativo.",
+      "dependencies": [
+        "20261028100000 (mesma função internal.token_gerente_fora_da_loja)"
+      ],
+      "releaseCondition": "Autorização explícita do dono para aplicar o lote de segurança em produção (runbook manual, janela autorizada, schema_migrations com a versão real), após validação em homologação; depois PR que remove a entrada com label deploy-prod:aprovado."
+    },
+    {
+      "version": "20261104120000",
+      "file": "backend/supabase/migrations/20261104120000_sec_anon_privilegios_minimos.sql",
+      "reason": "SEGURANÇA (prioridade de decisão do dono). CRÍTICO: privilégios mínimos para anon. Confirmado que anon lia agregados de vendas de todas as empresas (v_vendas_dia). Remove grants de anon em 63 tabelas e 12 views.",
+      "dependencies": [],
+      "releaseCondition": "Autorização explícita do dono para aplicar o lote de segurança em produção (runbook manual, janela autorizada, schema_migrations com a versão real), após validação em homologação; depois PR que remove a entrada com label deploy-prod:aprovado."
+    },
+    {
+      "version": "20261104150000",
+      "file": "backend/supabase/migrations/20261104150000_commercial_leads_registro_rpc.sql",
+      "reason": "SEGURANÇA (prioridade de decisão do dono). SEC-02: registro de leads do site sem INSERT direto para anon; único caminho público é a RPC registrar_lead_comercial. Depende de a 20261104120000 ser aplicada antes e de o site usar a RPC.",
+      "dependencies": [
+        "20261104120000"
+      ],
+      "releaseCondition": "Autorização explícita do dono para aplicar o lote de segurança em produção (runbook manual, janela autorizada, schema_migrations com a versão real), após validação em homologação; depois PR que remove a entrada com label deploy-prod:aprovado."
+    },
+    {
+      "version": "20261104160000",
+      "file": "backend/supabase/migrations/20261104160000_commercial_leads_idempotencia.sql",
+      "reason": "FUNCIONALIDADE. JL-COM-03: idempotência do registro de leads (evita leads duplicados em reenvio). Altera a mesma RPC da 20261104150000.",
+      "dependencies": [
+        "20261104150000"
+      ],
+      "releaseCondition": "Autorização explícita do dono + validação em homologação + PR que remove a entrada com label deploy-prod:aprovado."
+    },
+    {
+      "version": "20261104170000",
+      "file": "backend/supabase/migrations/20261104170000_commercial_leads_rate_limit.sql",
+      "reason": "SEGURANÇA (prioridade de decisão do dono). JL-COM-03: rate limit compartilhado no registro de leads (hash de IP, sem IP em texto puro). Altera a mesma RPC; dentro da cadeia de leads.",
+      "dependencies": [
+        "20261104150000",
+        "20261104160000"
+      ],
+      "releaseCondition": "Autorização explícita do dono para aplicar o lote de segurança em produção (runbook manual, janela autorizada, schema_migrations com a versão real), após validação em homologação; depois PR que remove a entrada com label deploy-prod:aprovado."
+    },
+    {
+      "version": "20261104180000",
+      "file": "backend/supabase/migrations/20261104180000_go_live01_titulo_caixa_fora_do_escopo.sql",
+      "reason": "SEGURANÇA (prioridade de decisão do dono). GO-LIVE-01: título ou caixa fora do escopo responde igual a inexistente (evita revelar existência de recurso de outra loja).",
+      "dependencies": [
+        "20261104120000 (ordem)"
+      ],
+      "releaseCondition": "Autorização explícita do dono para aplicar o lote de segurança em produção (runbook manual, janela autorizada, schema_migrations com a versão real), após validação em homologação; depois PR que remove a entrada com label deploy-prod:aprovado."
     }
   ]
 }

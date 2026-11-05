@@ -27,6 +27,7 @@
 - #620: CI corrigido (token entre empresas e tipos); revisar e aprovar; após merge, deploy manual das Edge Functions alteradas. #623: decidir o comportamento esperado sem ADMIN nos ~20 testes que ainda criam ADMIN; depois regenerar tipos
 - Decidir módulos marcados DRAFT já aplicados em produção (comissão #607, import intelligence #601): validar ou esconder do cliente
 - Congelar features até o corte do primeiro cliente (só hotfix P0 em produção)
+- Decidir o lote de segurança das migrations 20261028100000–20261104180000 (adiadas no manifesto): a 20261104120000 (privilégios de anon) está aberta em produção e é a prioridade; depois 20261028110000, 20261028122000 e a cadeia de leads
 
 ## P1 — Falta para lançar (MVP)
 
@@ -108,6 +109,7 @@
 - Mostrar as parcelas do crédito no detalhe da venda (admin) e na 2ª via, depois da coluna existir na homologação
 
 ## Feito
+- 2026-11-05 — 12 migrations da main (20261028100000 a 20261104180000) adiadas no manifesto: 8 de segurança (prioridade do dono) e 4 de funcionalidade; nenhuma aplicada em produção
 - 2026-11-02 — 4 migrations (`20261029155000`, `20261030120000`, `20261030130000`, `20261030140000`) adiadas no manifesto, com dependências e condição de aplicação; verificado em produção por leitura: ausentes, sem aplicação parcial. Teste de sessão sem JWT adicionado à troca de operador (17 testes)
 - 2026-11-05 — PR #655: types drift corrigido (`823142b6`, regenerado do artefato do CI); merge com a main (`24ba7082`) e push na branch do PR. Restam os gates de governança (label `deploy-prod:aprovado` e migrations `remote_ausente`)
 - 2026-11-05 — Diagnóstico Fase 3 entregue, sem alterar produção: fluxos de escrita mapeados, catálogo de produção lido (A2 mitigada por trigger; `perfis` tem 3 linhas), plano de remediação, roadmap, matriz de testes, plano de backup. Entrada em `docs/FASE3_RELATORIO_EXECUTIVO.md`
@@ -117,4 +119,3 @@
 - 2026-11-04 — GO-LIVE-01: gate financeiro 35/35 na cópia `sec_gl01` com a migration `20261104180000` (títulos, caixa e produto fora do escopo respondem como inexistente). Commits locais `7d35133c` (fix) e `b41ca18a` (fixtures). Evidência em `docs/qa/evidencias/go-live-01_gate_financeiro_35_35.txt`
 - 2026-11-04 — Rollbacks de `20261028100000` e `20261028101000` escritos em `backend/supabase/rollback/` e testados em transação com ROLLBACK no banco local; rollback de `20261029155000` (em `ops/`) corrigido e testado. Homolog não alterado: aplicação interrompida por drift pré-existente
 - 2026-11-03 — PDV-100: a quantidade digitada no carrinho não corrompe mais o valor e apagar o campo não remove o item (`CaixaCartList.tsx`, 2 testes de regressão; `app/caixa` 393/393). Validação operacional em `docs/qa/PDV_100_RELATORIO_VALIDACAO.md`: NO-GO
-- 2026-11-03 — Supabase local com as 457 migrations aplicadas (7 fora de ordem entraram com `--include-all`; só no stack local)
