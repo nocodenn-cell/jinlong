@@ -1,16 +1,14 @@
 /**
- * Smoke homologação Fase 1 — contrato atual (PDV-100.1, decisão 1):
- * - Perfil ADMIN descontinuado (migration 20261028110000). Não é criado nem usado aqui.
- * - Provisionamento de empresa não é feito pelo app das lojas: fica fechado (fail-closed,
- *   migration 20261028121000). O caminho oficial é o hub comercial; o manual é contingência.
- * - Fixture de homologação: DONO e loja Matriz criados pelo seed local (npm run seed:dev-users).
- * Fluxo: (1) contrato: o app das lojas não provisiona; (2) DONO -> produto -> caixa -> venda -> fechar -> dashboard.
+ * Smoke homologação Fase 1 — fluxo único sem intervenção manual:
+ * DONO (seed) → checklist → produto → abrir caixa → venda → fechar caixa → dashboard.
+ * Sem perfil ADMIN: descontinuado pelo corte de papéis (20261028110000).
  */
+import { createClient } from '@supabase/supabase-js'
 import { test, expect, type Page } from '@playwright/test'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { loginWithRetry } from './helpers/login'
-import { gotoApp, E2E_GOTO_DOMCONTENTLOADED, esperarHidratacao } from './helpers/url'
+import { gotoApp, E2E_GOTO_DOMCONTENTLOADED } from './helpers/url'
 import { ensureCaixaAberto, BTN_FECHAR_CAIXA } from './helpers/ensureCaixaAberto'
 import {
   adicionarProdutoDemo,
@@ -47,10 +45,14 @@ function loadEnvLocal(): void {
 
 loadEnvLocal()
 
-// Fixture de homologação (seed local): DONO da empresa piloto, loja Matriz.
+// Fixture oficial do E2E (scripts/seed-dev-users.mjs): DONO da loja Matriz.
+// O provisionamento de lojas não existe mais no app das lojas e não há perfil ADMIN.
 const DONO_EMAIL = process.env.SEED_DONO_EMAIL?.trim() || 'e2e-dono@localhost.test'
 const DONO_PASSWORD =
-  process.env.SEED_DEV_PASSWORD?.trim() || process.env.PLAYWRIGHT_TEST_PASSWORD?.trim() || ''
+  process.env.SEED_DEV_PASSWORD?.trim() ||
+  process.env.PLAYWRIGHT_CAIXA_TEST_PASSWORD?.trim() ||
+  process.env.PLAYWRIGHT_TEST_PASSWORD?.trim() ||
+  ''
 
 function hasSmokeEnv(): boolean {
   return Boolean(
@@ -60,41 +62,56 @@ function hasSmokeEnv(): boolean {
   )
 }
 
+function adminClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!.trim(),
+    process.env.SUPABASE_SERVICE_ROLE_KEY!.trim(),
+    { auth: { persistSession: false, autoRefreshToken: false } },
+  )
+}
 
 async function loginAs(page: Page, email: string, password: string, post: RegExp): Promise<void> {
   await loginWithRetry(page, email, password, post, 90_000)
 }
 
-/** Digitação real — dispara onChange do React em inputs controlados. */
 test.describe.configure({ mode: 'serial', timeout: 240_000 })
 
-test.describe('Smoke Fase 1 — contrato de provisionamento -> venda -> dashboard', () => {
+test.describe('Smoke Fase 1 — DONO → produto → caixa → dashboard', () => {
   const stamp = Date.now()
   const produtoNome = `Produto Smoke ${stamp}`
   const produtoCodigo = `SMK${String(stamp).slice(-10)}`
   const produtoPreco = '10,00'
 
-  test.beforeAll(async () => {
-    test.skip(!hasSmokeEnv(), 'Exige SUPABASE e SEED_DEV_PASSWORD no .env.local')
+  test.beforeAll(() => {
+    test.skip(!hasSmokeEnv(), 'Exige SUPABASE + senha da seed (SEED_DEV_PASSWORD) no .env.local')
   })
 
-  test('1 — App das lojas não provisiona empresa (contrato fail-closed)', async ({ page }) => {
-    await loginAs(page, DONO_EMAIL, DONO_PASSWORD, /\/(admin|gerente)/)
-    await gotoApp(page, '/admin/provisionamento', E2E_GOTO_DOMCONTENTLOADED)
-    await expect(page.getByTestId('prov-loja-nome')).toHaveCount(0)
-    await expect(page.getByText(/não está disponível no app das lojas/i)).toBeVisible({
+  // Regra atual: provisionar loja é tarefa da equipe da plataforma, fora do app das lojas.
+  // O banco bloqueia `plataforma_provisionar_empresa` sem habilitação ou contingência
+  // registrada (20261028121000). O smoke não cria loja: usa a Matriz da seed.
+  test('1 — Provisionamento fechado no banco (sem ADMIN e sem wizard)', async () => {
+    const { error } = await adminClient().rpc('plataforma_provisionar_empresa', { p: {}, p_ator: null })
+    expect(error?.message ?? '').toContain('PROVISIONAMENTO_AUTOMATICO_BLOQUEADO')
+  })
+
+  test('2 — Checklist de implantação da loja do DONO', async ({ page }) => {
+    await loginAs(page, DONO_EMAIL, DONO_PASSWORD, /\/(admin|gerente|caixa)/)
+    await gotoApp(page, '/admin/implantacao', E2E_GOTO_DOMCONTENTLOADED)
+    await expect(page.getByRole('heading', { name: /Implantação|GO-LIVE|上线/i })).toBeVisible({
       timeout: 60_000,
     })
   })
 
-  test('2 — DONO cadastra produto no catálogo', async ({ page }) => {
+  test('3 — Login DONO → cadastrar produto', async ({ page }) => {
     await loginAs(page, DONO_EMAIL, DONO_PASSWORD, /\/(admin|gerente)/)
     await gotoApp(page, '/admin/catalogo', E2E_GOTO_DOMCONTENTLOADED)
     await expect(page.getByRole('heading', { name: /Catálogo|Produtos|商品/i }).first()).toBeVisible({
       timeout: 60_000,
     })
+    // Hidratação antes do clique: com `domcontentloaded` o botão existe, mas o React ainda
+    // não ligou o onClick, e o modal de cadastro não abre (confirmado no ambiente local).
+    await page.waitForLoadState('networkidle')
 
-    await esperarHidratacao(page)
     const novo = page
       .getByRole('button', { name: /Cadastro rápido|Novo produto|创建商品|快速/i })
       .first()
@@ -132,10 +149,9 @@ test.describe('Smoke Fase 1 — contrato de provisionamento -> venda -> dashboar
     await expect(page.getByText(produtoNome, { exact: true })).toBeVisible({ timeout: 30_000 })
   })
 
-  // Depende das formas de pagamento semeadas pelo provisionamento
-  // (`ensureFormasPagamento`): sem elas a RPC de venda recusa a loja nova
+  // Depende das formas de pagamento da loja Matriz (seed): sem elas a RPC de venda recusa a loja
   // (FINALIZAR_VENDA_CANONICA_FORMA_PAGAMENTO_INVALIDA, achado no CI do #556).
-  test('3 — DONO abre caixa → venda → fecha caixa', async ({ page }) => {
+  test('4 — Abrir caixa → venda → fechar caixa', async ({ page }) => {
     await loginAs(page, DONO_EMAIL, DONO_PASSWORD, /\/(admin|gerente)/)
     await gotoApp(page, '/caixa', E2E_GOTO_DOMCONTENTLOADED)
 
@@ -159,7 +175,7 @@ test.describe('Smoke Fase 1 — contrato de provisionamento -> venda -> dashboar
     })
   })
 
-  test('4 — Confirmar dashboard do DONO', async ({ page }) => {
+  test('5 — Confirmar dashboard do DONO', async ({ page }) => {
     await loginAs(page, DONO_EMAIL, DONO_PASSWORD, /\/(admin|gerente)/)
     await gotoApp(page, '/admin/dashboard', E2E_GOTO_DOMCONTENTLOADED)
 
