@@ -43,6 +43,12 @@ const MSG_CAIXA_FECHADO: Record<IdiomaErro, string> = {
   pt: 'Caixa fechado. Abra o caixa antes de finalizar a venda.',
   zh: '收银台已关闭。请先开启收银台再完成销售。',
 }
+// Abertura recusada porque o operador já tem caixa aberto (índice único uq_caixas_operador_aberto). Não é falha
+// de operação: o caixa existe. A tela é atualizada para mostrar o estado real.
+const MSG_JA_ABERTO: Record<IdiomaErro, string> = {
+  pt: 'Você já tem um caixa aberto. A tela foi atualizada.',
+  zh: '您已有已开启的收银台。页面已更新。',
+}
 const MSG_NAO_HA_CAIXA_ABERTO: Record<IdiomaErro, string> = {
   pt: 'Não há caixa aberto para fechar.',
   zh: '没有已开启的收银台可关闭。',
@@ -145,6 +151,13 @@ export function caixaErroOperador(
   }
   if (l.includes('caixa fechado') || l.includes('não há caixa aberto') || l.includes('nao ha caixa aberto')) {
     return l.includes('finalizar') ? MSG_CAIXA_FECHADO[idioma] : MSG_NAO_HA_CAIXA_ABERTO[idioma]
+  }
+  if (
+    l.includes('já existe um caixa aberto') ||
+    l.includes('ja existe um caixa aberto') ||
+    l.includes('uq_caixas_operador_aberto')
+  ) {
+    return MSG_JA_ABERTO[idioma]
   }
   // Antes do teste genérico de estoque: a string contém "insuficiente", mas o
   // que falta é dinheiro na gaveta, não produto.

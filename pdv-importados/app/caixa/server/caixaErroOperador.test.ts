@@ -12,6 +12,16 @@ describe('caixaErroOperador', () => {
     )
   })
 
+  // Abertura recusada porque o operador já tem caixa aberto: não é alerta genérico (o caixa existe).
+  it('abertura com caixa já aberto vira mensagem específica, não o alerta genérico', () => {
+    expect(caixaErroOperador('Já existe um caixa aberto para este operador.')).toBe(
+      'Você já tem um caixa aberto. A tela foi atualizada.',
+    )
+    expect(caixaErroOperador('duplicate key value violates unique constraint "uq_caixas_operador_aberto"')).toBe(
+      'Você já tem um caixa aberto. A tela foi atualizada.',
+    )
+  })
+
   it('mapeia movimentações pendentes', () => {
     expect(caixaErroOperador('FECHAR_CAIXA_MOVIMENTACOES_PENDENTES')).toBe(
       'Há movimentações de caixa pendentes. Resolva as pendências antes de fechar.',

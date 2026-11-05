@@ -2,7 +2,7 @@
 // Uso: node e2e/stack/run-specs.mjs [--evidence <pasta fora do repo>]
 // Aquecimento: o next dev compila cada rota na primeira visita (pode passar de 45 s, o limite de navegação do login).
 // Sobe o servidor, pré-compila /login e /caixa e o Playwright reutiliza esse mesmo servidor.
-import { readFileSync, existsSync, mkdirSync, openSync, writeFileSync } from 'node:fs'
+import { readFileSync, existsSync, mkdirSync, openSync, writeFileSync, unlinkSync } from 'node:fs'
 import { spawnSync, spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { createRequire } from 'node:module'
@@ -49,6 +49,22 @@ async function aguardar(path, limiteMs) {
   throw new Error(`servidor não respondeu em ${path}`)
 }
 
+// Lock da stack: duas execuções não podem reprovisionar/usar o mesmo banco ao mesmo tempo.
+const LOCK = join(here, '.stack.lock')
+function acquireLock() {
+  if (existsSync(LOCK)) {
+    const pid = Number(readFileSync(LOCK, 'utf8').trim())
+    let vivo = false
+    try { process.kill(pid, 0); vivo = true } catch { vivo = false }
+    if (vivo) throw new Error(`outra execução da stack E2E está em andamento (pid ${pid}); aguarde ou encerre-a`)
+  }
+  writeFileSync(LOCK, String(process.pid))
+}
+function releaseLock() {
+  try { if (readFileSync(LOCK, 'utf8').trim() === String(process.pid)) unlinkSync(LOCK) } catch { /* já liberado */ }
+}
+acquireLock()
+
 // log do servidor em pasta separada: o Playwright apaga o diretório de --output ao iniciar
 const logDir = evidence + '-server';
 mkdirSync(logDir, { recursive: true });
@@ -74,15 +90,45 @@ try {
 const nextBin = createRequire(join(pdv, 'package.json')).resolve('next/dist/bin/next')
 const next = spawn(process.execPath, [nextBin, prod ? 'start' : 'dev', '-p', port], { cwd: pdv, env, stdio: ['ignore', nextLog, nextLog] })
 let status = 1
+const jsonReport = evidence + '-results.json'
+const playwrightLog = evidence + '-playwright.log'
 try {
   console.log('aquecimento /login:', JSON.stringify(await aguardar('/login', 600_000)))
   const logAtual = readFileSync(join(logDir, 'next-dev.log'), 'utf8')
   if (logAtual.includes('EADDRINUSE')) throw new Error('servidor não conseguiu escutar na porta (EADDRINUSE)')
   console.log('aquecimento /caixa:', JSON.stringify(await aguardar('/caixa', 900_000)))
-  const r = spawnSync('npx', ['playwright', 'test', ...specs, '--project=chromium', '--reporter=list',
-    '--trace=on', `--output=${evidence}`], { cwd: pdv, env, stdio: 'inherit', shell: true })
+  // Relatório estruturado (JSON) fora do --output: o Playwright apaga esse diretório ao iniciar.
+  // Log do Playwright também fora dele, para não se perder.
+  const plog = openSync(playwrightLog, 'w')
+  // --workers=1: todos os specs compartilham o mesmo operador, loja e caixa aberto (um por operador). Em paralelo,
+  // um spec abre o caixa e o outro recebe "Já existe um caixa aberto" (recusa correta do produto, falso FAIL do teste).
+  const r = spawnSync('npx', ['playwright', 'test', ...specs, '--project=chromium', '--workers=1', '--reporter=list,json',
+    '--trace=on', `--output=${evidence}`], {
+    cwd: pdv, env: { ...env, PLAYWRIGHT_JSON_OUTPUT_NAME: jsonReport }, stdio: ['ignore', plog, plog], shell: true,
+  })
   status = r.status ?? 1
 } finally {
   spawnSync('taskkill', ['/pid', String(next.pid), '/T', '/F'], { stdio: 'ignore' })
+  releaseLock()
+}
+// Resumo com contagens exatas, a partir do relatório JSON do Playwright (não a partir do exit code).
+try {
+  const rel = JSON.parse(readFileSync(jsonReport, 'utf8'))
+  const st = rel.stats ?? {}
+  const resumo = {
+    aprovados: st.expected ?? 0,
+    falhos: st.unexpected ?? 0,
+    ignorados: st.skipped ?? 0,
+    instaveis: st.flaky ?? 0,
+    duracao_ms: Math.round(st.duration ?? 0),
+    exit_playwright: status,
+    relatorio: jsonReport,
+  }
+  writeFileSync(evidence + '-resumo.json', JSON.stringify(resumo, null, 2))
+  console.log('RESUMO:', JSON.stringify(resumo))
+  if (resumo.falhos > 0 || resumo.instaveis > 0 || resumo.aprovados === 0) status = 1
+} catch (err) {
+  console.error('relatório JSON ausente ou ilegível:', String(err.message ?? err))
+  status = 1
 }
 process.exit(status)

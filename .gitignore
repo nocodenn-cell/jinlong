@@ -98,3 +98,4 @@ pdv-importados/scripts/_audit_f1_probe.mjs
 # Stack E2E isolada (JL-GO-LIVE-01): segredos locais, nunca versionar
 pdv-importados/e2e/stack/.env.e2e
 pdv-importados/e2e/stack/.secrets*
+pdv-importados/e2e/stack/.stack.lock

@@ -945,6 +945,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           if (!res.ok) {
             setCaixaMensagem(res.error, { kind: "error" })
             tocarFeedback("erro")
+            // Falha não significa que o caixa não abriu (resposta perdida, ou já aberto em outra aba): a tela
+            // precisa refletir o estado do servidor, não o anterior.
+            await recarregarStatusCaixa()
             return
           }
           setCaixaMensagem(
