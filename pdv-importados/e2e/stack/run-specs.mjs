@@ -5,6 +5,7 @@
 import { readFileSync, existsSync, mkdirSync, openSync, writeFileSync } from 'node:fs'
 import { spawnSync, spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
+import { createRequire } from 'node:module'
 import { dirname, join, resolve } from 'node:path'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -69,7 +70,8 @@ try {
   if (String(err.message).includes('já está em uso')) throw err
 }
 // Executa o binário do Next direto: o PID é o próprio servidor, e taskkill /T encerra a árvore inteira.
-const nextBin = join(pdv, 'node_modules', 'next', 'dist', 'bin', 'next')
+// O `next` pode estar hoisted na raiz do monorepo (npm ci do workspace): resolve como o próprio npx faz.
+const nextBin = createRequire(join(pdv, 'package.json')).resolve('next/dist/bin/next')
 const next = spawn(process.execPath, [nextBin, prod ? 'start' : 'dev', '-p', port], { cwd: pdv, env, stdio: ['ignore', nextLog, nextLog] })
 let status = 1
 try {

@@ -56,7 +56,9 @@ const pwRole = env.E2E_DB_PASSWORD.replace(/'/g, "''")
 const rolesSql = ['authenticator', 'supabase_auth_admin', 'supabase_storage_admin'].map((r) =>
   `DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='${r}') THEN EXECUTE format('ALTER ROLE %I PASSWORD %L', '${r}', '${pwRole}'); END IF; END $$;`).join('\n')
 must(psql('postgres', rolesSql, 'supabase_admin'), 'senhas das roles internas (E2E)')
-must(compose('up', '-d', 'e2e_rest', 'e2e_auth'), 'subir rest/auth')
+// --force-recreate: rest/auth precisam ler o .env.e2e atual (JWT secret). Sem isso, após um gen-env novo, o GoTrue
+// mantém o segredo antigo, a chave de serviço é recusada (403) e o login do usuário de teste falha.
+must(compose('up', '-d', '--force-recreate', 'e2e_rest', 'e2e_auth'), 'subir rest/auth')
 // o Kong resolve upstreams na inicialização: reinicia após recriar rest/auth (evita 502 com IP antigo)
 must(compose('restart', 'e2e_kong'), 'reiniciar kong')
 
