@@ -23,6 +23,12 @@
 
 ## P1 — Falta para lançar (MVP)
 
+- Fase 3 (segurança): reconciliar o ledger de migrations (repo × produção) antes de aplicar qualquer SQL; depois homologar e aplicar `003_perfis` e `004_feature_flags`; homologar `002_vendas_dml_direto` com a matriz completa (`docs/security/MATRIZ_TESTES_HOMOLOGACAO_FASE3.md`) e só então aplicar em produção. Não aplicar `001_caixas` (o trigger `trg_caixas_fechado_imutavel` já está em produção). Ver `docs/security/PLANO_REMEDIACAO_VULNERABILIDADES.md`
+- Fase 3 (decisões do dono): reabertura de caixa via `retomar_caixa_atomico` (há RPC, sem tela), se `perfis` deve continuar existindo, se feature flags precisam de tela, teto de `valor_inicial` na abertura de caixa (N1)
+- Fase 3 (performance): promover a migration `20260913090000` (validação de fuso sem `pg_timezone_names`, existe no repo e não está em produção) após reconciliação; medir antes/depois. Ver `docs/performance/DIAGNOSTICO_TIMEOUTS_E_PERFORMANCE.md`
+- Fase 3 (PDV offline): remover ou proteger o comando Tauri `sync_outbox` simulado (`pdv-local/src-tauri/src/main.rs:43`), que marca registros como ENVIADO sem enviar
+- Fase 3 (backup): rotina diária com `backend/scripts/backup-ro-postgres.sh` + `age` + SHA-256 + alerta + restauração mensal; RPO 24 h e RTO medidos. Ver `docs/backup/PLANO_OPERACIONAL_BACKUP_RESTAURACAO.md`
+
 - Verificar backup e PITR no painel (projeto `jinlong`, Database → Backups) e registrar retenção e último backup. Pré-requisito de qualquer autorização de produção (`docs/ops/BACKUP_RESTAURACAO_SEM_PITR.md`)
 - Cobrança do DONO indisponível em produção: `fp_sou_dono_da_empresa` e `cobranca_*` só existem após a `20261028101000` (adiada). Decidir a revisão da cobrança com esse custo de produto visível (`docs/ops/TRANCHE_VALIDACAO_2026-11-05.md` §4)
 - Recuperação de vendas offline com token revogado: não há reenvio com token novo no PDV (`pdv-local`). Itens em ERRO exigem tratamento manual com autorização do DONO (`docs/ops/RECUPERACAO_ACESSO_TOKENS.md` §4)
@@ -87,6 +93,7 @@
 
 - 2026-11-05 — Recuperação de senha: causa comprovada em Supabase local (validação nativa bloqueava o envio sem aviso; erro do Supabase exibido em inglês). Correção com testes unitários e E2E em branch; PR Draft pendente
 - 2026-11-05 — Diagnóstico somente leitura da recuperação de senha do Hub: Hub sem fluxo de recuperação; recuperação deve ser feita pelo ERP; nada alterado no Supabase
+- 2026-11-05 — Diagnóstico Fase 3 entregue, sem alterar produção: fluxos de escrita mapeados, catálogo de produção lido (A2 mitigada por trigger; `perfis` tem 3 linhas), plano de remediação, roadmap, matriz de testes, plano de backup. Entrada em `docs/FASE3_RELATORIO_EXECUTIVO.md`
 - 2026-11-05 — Estabilização da tranche: fixtures de 4 suítes corrigidas (todas passam), provisionamento reescrito para o contrato da 121000 (cadastro autorizado por contingência comprovado), teste de recuperação de acesso (REC-1 a REC-7), validação reproduzível em contêiner (`backend/scripts/tranche-seguranca-validar.sh`)
 - 2026-11-05 — Tranche de segurança validada em banco descartável: SEC-04 corrigido (passa), rollbacks de 100000 e 110000 (cadeia idêntica ao baseline), definições de produção conferidas por md5; PR #660 atualizado
 - 2026-11-01 — Consolidação NF-e: #654 integrada à #653 por merge (`0176677f`), Growth-001 restaurada em `20261023130000` (`dfdf9e41`), cinco testes SQL da PR-A adotados (`0a00201d`) e scripts de concorrência movidos para `backend/scripts/backlog-redesign/` (`99dbcaea`). Registro em `docs/audits/CONSOLIDACAO_NFE_2026-11-01.md`; não mergeado
@@ -94,4 +101,3 @@
 - 2026-10-30 — Auditoria de capacidades do ciclo de custos (16 etapas, somente leitura): nenhuma capacidade VALIDADA; motor de custo, rateio e precificação existem em `shared-core` sem ligação ao caminho NF-e; kardex sem valor. Relatório e backlog em `docs/audits/AUDITORIA_CUSTOS_RENTABILIDADE_2026-10-30.md`; sem alteração de código
 - 2026-10-30 — Conflito do PR #623 com a main resolvido em `assinatura/actions.ts` (DONO-only + flag GROWTH-001 preservados; testes e typecheck ok)
 - 2026-10-29 — Auditoria do Bloco de Importação (NF-e de entrada e pipeline internacional): 45% por critério explícito, 0 funcionalidades comprovadas, recomendação NO-GO. Relatório em `docs/audits/AUDITORIA_BLOCO_IMPORTACAO_2026-10-29.md`; sem alteração de código
-- 2026-10-29 — S1 validada em homologação (`yvdilcmxyjafnnsfdtam`): matriz de permissões final, testes do DONO, ciclos de rollback do S1b, S1c, G14 e S1; PR #648 aberto com o pacote (S1, S1c, S1b, G14), CI verde exceto o guard de governança. Não aplicado em produção
