@@ -1,0 +1,27 @@
+== 1 anon INSERT direto (esperado: permission denied)
+psql:<stdin>:7: ERROR:  permission denied for table commercial_leads
+HINT:  Grant the required privileges to the current role with: GRANT INSERT ON public.commercial_leads TO anon;
+== 2 anon SELECT direto (esperado: permission denied)
+psql:<stdin>:11: ERROR:  permission denied for table commercial_leads
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.commercial_leads TO anon;
+== 3 anon RPC valida (esperado: ok, 1 linha inserida)
+
+psql:<stdin>:16: ERROR:  permission denied for table commercial_leads
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.commercial_leads TO anon;
+== 4 invalidos (esperado: erro LEAD_*)
+psql:<stdin>:20: ERROR:  LEAD_PROTOCOLO_INVALIDO
+CONTEXT:  PL/pgSQL function registrar_lead_comercial(text,text,text,text,text,text,text,text,text,text,text,text) line 4 at RAISE
+psql:<stdin>:21: ERROR:  LEAD_NOME_INVALIDO
+CONTEXT:  PL/pgSQL function registrar_lead_comercial(text,text,text,text,text,text,text,text,text,text,text,text) line 7 at RAISE
+psql:<stdin>:22: ERROR:  LEAD_CANAL_INVALIDO
+CONTEXT:  PL/pgSQL function registrar_lead_comercial(text,text,text,text,text,text,text,text,text,text,text,text) line 16 at RAISE
+psql:<stdin>:23: ERROR:  LEAD_NOME_INVALIDO
+CONTEXT:  PL/pgSQL function registrar_lead_comercial(text,text,text,text,text,text,text,text,text,text,text,text) line 7 at RAISE
+psql:<stdin>:24: ERROR:  LEAD_CIDADE_INVALIDA
+CONTEXT:  PL/pgSQL function registrar_lead_comercial(text,text,text,text,text,text,text,text,text,text,text,text) line 25 at RAISE
+psql:<stdin>:25: ERROR:  LEAD_SEGMENTO_INVALIDO
+CONTEXT:  PL/pgSQL function registrar_lead_comercial(text,text,text,text,text,text,text,text,text,text,text,text) line 22 at RAISE
+psql:<stdin>:26: ERROR:  LEAD_WECHAT_INVALIDO
+CONTEXT:  PL/pgSQL function registrar_lead_comercial(text,text,text,text,text,text,text,text,text,text,text,text) line 28 at RAISE
+== 5 authenticated sem JWT nao lista leads de outros (tabela sem grant ou RLS)
+auth_select_leads|0

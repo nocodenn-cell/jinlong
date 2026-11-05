@@ -29,6 +29,7 @@
 
 \set ON_ERROR_STOP on
 BEGIN;
+INSERT INTO public.empresas (id, nome) VALUES ('fa5e0000-0000-4000-8000-0000000000f1', 'Fixture empresa (suite SQL)') ON CONFLICT (id) DO NOTHING;
 
 DO $setup$
 DECLARE
@@ -44,9 +45,9 @@ BEGIN
   INSERT INTO auth.users (id) VALUES (v_gerente_a), (v_gerente_b), (v_admin)
   ON CONFLICT (id) DO NOTHING;
 
-  INSERT INTO public.lojas (id, nome, codigo, ativo) VALUES
-    (v_loja_a, 'Item7 Loja A', 'ITEM7-A', true),
-    (v_loja_b, 'Item7 Loja B', 'ITEM7-B', true)
+  INSERT INTO public.lojas (empresa_id, id, nome, codigo, ativo) VALUES
+    ('fa5e0000-0000-4000-8000-0000000000f1', v_loja_a, 'Item7 Loja A', 'ITEM7-A', true),
+    ('fa5e0000-0000-4000-8000-0000000000f1', v_loja_b, 'Item7 Loja B', 'ITEM7-B', true)
   ON CONFLICT (id) DO UPDATE SET ativo = true;
 
   INSERT INTO public.usuarios (id, nome, perfil, ativo, loja_id, idioma_preferido) VALUES
@@ -55,7 +56,7 @@ BEGIN
     (v_admin, 'Item7 Ex-Admin (agora DONO)', 'DONO', true, v_loja_a, 'pt')
   ON CONFLICT (id) DO UPDATE SET perfil = EXCLUDED.perfil, ativo = true, loja_id = EXCLUDED.loja_id;
 
-  INSERT INTO public.categorias (id, nome) VALUES (v_categoria, 'Item7 Categoria')
+  INSERT INTO public.categorias (empresa_id, id, nome) VALUES ('fa5e0000-0000-4000-8000-0000000000f1', v_categoria, 'Item7 Categoria')
   ON CONFLICT (id) DO UPDATE SET nome = EXCLUDED.nome;
 
   INSERT INTO public.produtos (id, codigo_barras, nome, categoria_id, preco_varejo, origem, tem_nf, ativo, loja_id)
@@ -96,7 +97,7 @@ BEGIN
   -- UPDATE/DELETE.
   INSERT INTO storage.objects (bucket_id, name, owner)
   VALUES ('produto-imagens', v_path, v_produto_b)
-  ON CONFLICT (bucket_id, name) DO NOTHING;
+  ON CONFLICT DO NOTHING;
 
   PERFORM set_config('request.jwt.claim.sub', v_gerente_a::text, true);
   PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
@@ -179,7 +180,7 @@ DECLARE
 BEGIN
   INSERT INTO storage.objects (bucket_id, name, owner)
   VALUES ('produto-imagens', v_path, v_produto_b), ('produto-imagens', v_path_a, v_produto_a)
-  ON CONFLICT (bucket_id, name) DO NOTHING;
+  ON CONFLICT DO NOTHING;
 
   PERFORM set_config('request.jwt.claim.sub', v_admin::text, true);
   PERFORM set_config('request.jwt.claim.role', 'authenticated', true);

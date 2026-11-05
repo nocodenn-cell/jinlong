@@ -2,13 +2,26 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const rpc = vi.fn()
 const maybeSingle = vi.fn()
+// Linhas de itens_venda com a unidade do produto (RN-04: validada antes da RPC).
+const LINHAS_ITENS = [
+  {
+    id: '22222222-2222-4222-8222-222222222222',
+    produto_id: 'p-1',
+    produtos: { nome: 'Chaleira', unidade_medida: 'UN' },
+  },
+]
 
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
 vi.mock('@/lib/supabase/server', () => ({
   createClient: async () => ({
     auth: { getUser: async () => ({ data: { user: { id: 'user-1' } } }) },
     rpc,
-    from: () => ({ select: () => ({ eq: () => ({ maybeSingle }) }) }),
+    from: () => ({
+      select: () => ({
+        eq: () => ({ maybeSingle }),
+        in: async () => ({ data: LINHAS_ITENS, error: null }),
+      }),
+    }),
   }),
 }))
 
@@ -65,5 +78,23 @@ describe('devolverOuTrocarVendaImpl — p_caixa_id (PR-2D)', () => {
     const r = await devolverOuTrocarVendaImpl(BASE)
     expect(r.ok).toBe(false)
     if (!r.ok) expect(r.error).toContain(trecho)
+  })
+})
+
+describe('devolverOuTrocarVendaImpl — unidade do produto (RN-04)', () => {
+  beforeEach(() => {
+    rpc.mockReset()
+    maybeSingle.mockReset()
+    maybeSingle.mockResolvedValue({ data: { nome: 'Gerente' } })
+  })
+
+  it('recusa devolução fracionada de produto UN antes de chamar a RPC', async () => {
+    rpc.mockResolvedValue({ data: [LINHA_OK], error: null })
+    const r = await devolverOuTrocarVendaImpl({
+      ...BASE,
+      itens: [{ itemVendaId: '22222222-2222-4222-8222-222222222222', quantidade: 1.5 }],
+    })
+    expect(r.ok).toBe(false)
+    expect(rpc).not.toHaveBeenCalled()
   })
 })

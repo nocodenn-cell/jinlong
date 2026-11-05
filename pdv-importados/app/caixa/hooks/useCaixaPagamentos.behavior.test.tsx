@@ -82,6 +82,15 @@ describe("useCaixaPagamentos — reajuste ao mudar o total", () => {
   })
 })
 
+describe("useCaixaPagamentos — carrinho esvaziado zera o recebido (D-09)", () => {
+  it("recebido digitado não sobrevive quando o total cai a zero", () => {
+    render(79)
+    act(() => api?.atualizarValor(0, 79))
+    render(0)
+    expect(valores()).toEqual([0])
+  })
+})
+
 describe("useCaixaPagamentos — resetPagamentos encerra o cupom", () => {
   /**
    * Reproduz a sequência real do caixa: os chamadores de `resetPagamentos`
