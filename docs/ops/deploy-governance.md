@@ -1,6 +1,14 @@
 # Governança de deploy
 
-## Causa raiz (2026-10-20)
+## Status atual (2026-11-06) — atualização
+- **"Deploy to production" está DESATIVADO** na integração GitHub→Supabase do projeto de produção
+  (`kbabmewnahysfvlybiak`). Confirmado visualmente pelo dono no painel, com a alteração salva.
+- Consequência: a publicação automática de migrations e Edge Functions em merges **não é mais tratada como
+  risco ativo**. Migrations de produção continuam sendo aplicadas manualmente, por runbook.
+- Esta atualização **não afirma** que nenhuma migration foi aplicada ou revertida em produção.
+- O restante deste documento preserva o histórico da investigação de 2026-10-20 e não foi reescrito.
+
+## Causa raiz (2026-10-20) — histórico
 A integração GitHub→Supabase do projeto de produção está ligada à `main`, com working directory `backend`
 e a opção **Deploy to production** ativa. Pela documentação oficial
 (<https://supabase.com/docs/guides/deployment/branching/github-integration>), **cada push/merge na main**:

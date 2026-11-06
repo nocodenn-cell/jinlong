@@ -1,0 +1,58 @@
+# Drift de migrations em PUSH para main: BLOQUEANTE, sem filtro de caminhos.
+#
+# Separado do ci-backend-supabase.yml de propósito: o filtro `paths` daquele workflow impediria a execução
+# em pushes que não tocam backend/** (ex.: um merge que só altera a documentação). Este workflow roda em todo
+# push para main, mas só executa o job de drift (sem os jobs pesados de Supabase local e Edge).
+#
+# Não aplica migrations. Só compara o histórico de migrations (`supabase migration list`) com os arquivos.
+# Secrets: SUPABASE_ACCESS_TOKEN e SUPABASE_MIGRATION_CHECK_PROJECT_REF (projeto de homologação, NUNCA produção
+# por este fluxo; ver docs/ops/deploy-governance.md).
+#
+# Modo: sempre bloqueante. Não usa --warn-only. adiada_aplicada e demais divergências bloqueiam.
+name: Migration drift (main)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  migration-remote-drift-main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # Mesmo SHA de ação usado em ci-backend-supabase.yml (fixado por SHA).
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+
+      - name: Enforce required secrets for drift gate
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_MIGRATION_CHECK_PROJECT_REF: ${{ secrets.SUPABASE_MIGRATION_CHECK_PROJECT_REF }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_ACCESS_TOKEN:-}" ] || [ -z "${SUPABASE_MIGRATION_CHECK_PROJECT_REF:-}" ]; then
+            echo "Secrets obrigatórios ausentes: SUPABASE_ACCESS_TOKEN e/ou SUPABASE_MIGRATION_CHECK_PROJECT_REF."
+            exit 1
+          fi
+
+      - name: Link + compare Local vs Remote (bloqueante)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_MIGRATION_CHECK_PROJECT_REF: ${{ secrets.SUPABASE_MIGRATION_CHECK_PROJECT_REF }}
+        run: |
+          set -euo pipefail
+          cd backend
+          npx supabase link --project-ref "${SUPABASE_MIGRATION_CHECK_PROJECT_REF}"
+          # Sem MIGRATION_DRIFT_BASE_REF: em push não há PR, então nenhuma migration é "pendente de PR".
+          node scripts/p0-migration-status.mjs
