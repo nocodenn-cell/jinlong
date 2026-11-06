@@ -32,7 +32,6 @@
 
 ## P1 — Falta para lançar (MVP)
 
-- Produção: a migration `20261019140000_multiempresa_fase2_guardas` está registrada como aplicada, mas a função com a mensagem `EMPRESA_ID_OBRIGATORIA` não existe no `prosrc` de produção (o trigger `trg_preenche_empresa_id` existe em `lojas`). Confirmar a divergência entre migration e função antes de qualquer decisão
 - PDV-100 D-04 (decisão de produto): o carrinho aceita quantidade fracionada em qualquer produto, inclusive `unidade_medida = UN` (ex.: 2,5 chaleiras). Decidir se bloqueia por unidade ou mantém (balança)
 - PDV-100 D-05: `vendas_pagamentos` grava só o valor líquido. Persistir valor recebido e troco para auditar o dinheiro
 - PDV-100 D-06: venda em espera (EM_ESPERA) sobrevive ao fechamento do caixa sem aviso. Definir regra: bloquear, transferir ou descartar
@@ -111,6 +110,7 @@
 - Mostrar as parcelas do crédito no detalhe da venda (admin) e na 2ª via, depois da coluna existir na homologação
 
 ## Feito
+- 2026-11-05 — Investigada a suposta divergência da `20261019140000` em produção: não existe. As 13 funções da migration estão no remoto (a função de trigger fica no schema `internal`, que a checagem anterior não cobria). Pendência retirada
 - 2026-11-05 — Suíte NF-e verificada no banco local: 8 scripts `.test.sql` passam sem alteração de fixture; a suposta inexecutabilidade não se reproduziu
 - 2026-11-05 — `verify_p0_producao.sql`: checks 30 e 34 apontavam assinaturas antigas da v4 (19 e 18 argumentos) e de `registrar_venda_com_itens` (11 argumentos); corrigidas para as assinaturas de produção. Script roda até o fim no banco local. `pr1b-kardex-imutavel.test.sql` já passa no local (PR-1B OK), nenhuma mudança
 - 2026-11-05 — PDV local: removidos o comando Tauri `sync_outbox` e `sync_outbox_simulado`, que marcavam eventos como ENVIADO sem enviar (`pdv-local/src-tauri/src/main.rs`, `db.rs`). `cargo check` e `cargo test` (19/19) passaram
@@ -120,4 +120,3 @@
 - 2026-11-05 — PR #655: types drift corrigido (`823142b6`, regenerado do artefato do CI); merge com a main (`24ba7082`) e push na branch do PR. Restam os gates de governança (label `deploy-prod:aprovado` e migrations `remote_ausente`)
 - 2026-11-05 — Diagnóstico Fase 3 entregue, sem alterar produção: fluxos de escrita mapeados, catálogo de produção lido (A2 mitigada por trigger; `perfis` tem 3 linhas), plano de remediação, roadmap, matriz de testes, plano de backup. Entrada em `docs/FASE3_RELATORIO_EXECUTIVO.md`
 - 2026-11-05 — Estabilização da tranche: fixtures de 4 suítes corrigidas (todas passam), provisionamento reescrito para o contrato da 121000 (cadastro autorizado por contingência comprovado), teste de recuperação de acesso (REC-1 a REC-7), validação reproduzível em contêiner (`backend/scripts/tranche-seguranca-validar.sh`)
-- 2026-11-05 — Tranche de segurança validada em banco descartável: SEC-04 corrigido (passa), rollbacks de 100000 e 110000 (cadeia idêntica ao baseline), definições de produção conferidas por md5; PR #660 atualizado
