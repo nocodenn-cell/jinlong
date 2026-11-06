@@ -48,6 +48,7 @@ export function LoginForm({ messages: m, locale }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const avisoInatividade = searchParams.get('reason') === 'sessao_inatividade'
+  const avisoTrocaOperador = searchParams.get('reason') === 'troca_operador'
 
   useEffect(() => {
     setHydrated(true)
@@ -222,6 +223,11 @@ export function LoginForm({ messages: m, locale }: Props) {
           {avisoInatividade ? (
             <p className="login-inactivity mb-6 px-3 py-2.5 text-center" role="status">
               {L.sessao_inatividade}
+            </p>
+          ) : null}
+          {avisoTrocaOperador ? (
+            <p className="login-inactivity mb-6 px-3 py-2.5 text-center" role="status" data-testid="login-aviso-troca-operador">
+              {L.troca_operador}
             </p>
           ) : null}
 

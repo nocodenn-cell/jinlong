@@ -102,6 +102,21 @@ export function createCashSessionReader(supabase: SupabaseClient): CashSessionRe
   }
 }
 
+/**
+ * Caixa ABERTO que o usuário opera agora (troca de operador: pode ser o turno de outro responsável).
+ * Mesma autoridade do status (`obter_status_caixa_operador`), em vez de `caixas.operador_id = usuário`.
+ */
+export async function obterCaixaOperadoId(
+  supabase: SupabaseClient,
+  operadorId: OperadorId,
+): Promise<{ caixaId: string | null; error: string | null }> {
+  const { data, error } = await supabase.rpc('obter_status_caixa_operador', { p_operador_id: operadorId })
+  if (error) return { caixaId: null, error: error.message }
+  const row = (Array.isArray(data) ? data[0] : data) as RpcStatusRow | undefined
+  if (row?.status === 'ERRO') return { caixaId: null, error: row.mensagem_operador ?? 'status do caixa indisponível' }
+  return { caixaId: row?.status === 'ABERTO' && row.caixa_id ? String(row.caixa_id) : null, error: null }
+}
+
 export function createCashSessionWriter(supabase: SupabaseClient): CashSessionWriter {
   const reader = createCashSessionReader(supabase)
   return {
