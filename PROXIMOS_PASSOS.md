@@ -33,7 +33,7 @@
 ## P1 — Falta para lançar (MVP)
 
 - PR #623: colisão de versão de migration com produção. A branch chama `20261028120000` de `sec_tokens_usuario_inativo_revogacao`; no ledger de produção essa versão é `revoga_helpers_tenant_authenticated`, e a `20261028120100` não existe na branch. Não publicar sem renomear. Escopo misturado (inclui #639/#640). Ver `docs/ops/RECONCILIACAO_PRS_2026-11-05.md` §5.2
-- PR #620: versão reduzida validada localmente em `fix/620-reduzido` (commits `bd20e9f4` e `4f1ee03a`): ida e volta do rollback de 20261028100000 restaura o corpo de produção (md5 836023d6, igual ao lido no remoto); test.sql 24/24; rollback de 20261028101000 OK. Não publicada. Recomendação: fechar #620 e publicar só a versão reduzida, após decisão do dono. Ver docs/ops/RECONCILIACAO_PRS_2026-11-05.md §5.1
+- PR #665 (https://github.com/nocodenn-cell/jinlong/pull/665): versão reduzida de #620, aberta contra a main, aguardando revisão e CI (3 passando, 1 pendente). Não mesclar sem decisão do dono. #620 original continua aberto, a fechar após o #665 ser integrado. Ver docs/ops/RECONCILIACAO_PRS_2026-11-05.md §5.1
 - PRs abertos (42; 21 com conflito com a main, 24 rascunhos): reconciliação em `docs/ops/RECONCILIACAO_PRS_2026-11-05.md`. Só 6 foram analisados por checks; nenhum teve diff lido e comparado à main. Triagem de obsolescência (22 PRs atualizados antes de 2026-10-20) pendente
 - CI do gate `Supabase local gates` (PR #657): falha de ambiente (rate limit do Docker Hub, apt sem `postgresql-client`, secret `DB_URL`/`POSTGRES_URL` ausente). Exige ação do dono no repositório. Não há correção de código
 - PR #623: a resolução de conflito está no commit local `193293d7` (`merge: main em #623`), não publicada. Publicar só após revisão e decisão do dono
@@ -115,6 +115,7 @@
 - Mostrar as parcelas do crédito no detalhe da venda (admin) e na 2ª via, depois da coluna existir na homologação
 
 ## Feito
+- 2026-11-05 — PR #665 aberto com a versão reduzida de #620 (branch `fix/620-reduzido`), após aprovação do dono. Sem merge
 - 2026-11-05 — Validação do PR reduzido de #620: rollback não falhava sem o ledger (corrigido, `4f1ee03a`); ida e volta do corpo de produção confirmada em Postgres 17 descartável
 - 2026-11-05 — PR reduzido de #620 preparado localmente (`fix/620-reduzido`, `bd20e9f4`) e rollback de 20261028101000 executado sem erro em transação com ROLLBACK
 - 2026-11-05 — Análise de diff de #620 e #623 contra a main: testes locais de #623 passaram (Deno 60/60; SQL 50/50, 25/25 e 13 ok), mas há colisão de versão de migration com o ledger de produção. Detalhes em `docs/ops/RECONCILIACAO_PRS_2026-11-05.md` §5
@@ -124,4 +125,3 @@
 - 2026-11-05 — `verify_p0_producao.sql`: checks 30 e 34 apontavam assinaturas antigas da v4 (19 e 18 argumentos) e de `registrar_venda_com_itens` (11 argumentos); corrigidas para as assinaturas de produção. Script roda até o fim no banco local. `pr1b-kardex-imutavel.test.sql` já passa no local (PR-1B OK), nenhuma mudança
 - 2026-11-05 — PDV local: removidos o comando Tauri `sync_outbox` e `sync_outbox_simulado`, que marcavam eventos como ENVIADO sem enviar (`pdv-local/src-tauri/src/main.rs`, `db.rs`). `cargo check` e `cargo test` (19/19) passaram
 - 2026-11-05 — Conflito `sync-outbox` investigado: sem marcadores; caminho B preparado (migration `20261105120000`, não aplicada), guard e doc atualizados; 41/41 testes Deno e testes SQL fase 3.1 em transação com ROLLBACK no banco local
-- 2026-11-05 — 12 migrations da main (20261028100000 a 20261104180000) adiadas no manifesto: 8 de segurança (prioridade do dono) e 4 de funcionalidade; nenhuma aplicada em produção
