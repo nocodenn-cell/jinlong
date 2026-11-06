@@ -32,6 +32,9 @@
 
 ## P1 — Falta para lançar (MVP)
 
+- PRs abertos (42; 21 com conflito com a main, 24 rascunhos): reconciliação em `docs/ops/RECONCILIACAO_PRS_2026-11-05.md`. Só 6 foram analisados por checks; nenhum teve diff lido e comparado à main. Triagem de obsolescência (22 PRs atualizados antes de 2026-10-20) pendente
+- CI do gate `Supabase local gates` (PR #657): falha de ambiente (rate limit do Docker Hub, apt sem `postgresql-client`, secret `DB_URL`/`POSTGRES_URL` ausente). Exige ação do dono no repositório. Não há correção de código
+- PR #623: a resolução de conflito está no commit local `193293d7` (`merge: main em #623`), não publicada. Publicar só após revisão e decisão do dono
 - PDV-100 D-04 (decisão de produto): o carrinho aceita quantidade fracionada em qualquer produto, inclusive `unidade_medida = UN` (ex.: 2,5 chaleiras). Decidir se bloqueia por unidade ou mantém (balança)
 - PDV-100 D-05: `vendas_pagamentos` grava só o valor líquido. Persistir valor recebido e troco para auditar o dinheiro
 - PDV-100 D-06: venda em espera (EM_ESPERA) sobrevive ao fechamento do caixa sem aviso. Definir regra: bloquear, transferir ou descartar
@@ -110,6 +113,7 @@
 - Mostrar as parcelas do crédito no detalhe da venda (admin) e na 2ª via, depois da coluna existir na homologação
 
 ## Feito
+- 2026-11-05 — Reconciliação dos 42 PRs abertos (triagem por estado, checks e logs de CI): `docs/ops/RECONCILIACAO_PRS_2026-11-05.md`. Causa do gate Supabase local identificada como ambiente de CI
 - 2026-11-05 — Investigada a suposta divergência da `20261019140000` em produção: não existe. As 13 funções da migration estão no remoto (a função de trigger fica no schema `internal`, que a checagem anterior não cobria). Pendência retirada
 - 2026-11-05 — Suíte NF-e verificada no banco local: 8 scripts `.test.sql` passam sem alteração de fixture; a suposta inexecutabilidade não se reproduziu
 - 2026-11-05 — `verify_p0_producao.sql`: checks 30 e 34 apontavam assinaturas antigas da v4 (19 e 18 argumentos) e de `registrar_venda_com_itens` (11 argumentos); corrigidas para as assinaturas de produção. Script roda até o fim no banco local. `pr1b-kardex-imutavel.test.sql` já passa no local (PR-1B OK), nenhuma mudança
@@ -119,4 +123,3 @@
 - 2026-11-02 — 4 migrations (`20261029155000`, `20261030120000`, `20261030130000`, `20261030140000`) adiadas no manifesto, com dependências e condição de aplicação; verificado em produção por leitura: ausentes, sem aplicação parcial. Teste de sessão sem JWT adicionado à troca de operador (17 testes)
 - 2026-11-05 — PR #655: types drift corrigido (`823142b6`, regenerado do artefato do CI); merge com a main (`24ba7082`) e push na branch do PR. Restam os gates de governança (label `deploy-prod:aprovado` e migrations `remote_ausente`)
 - 2026-11-05 — Diagnóstico Fase 3 entregue, sem alterar produção: fluxos de escrita mapeados, catálogo de produção lido (A2 mitigada por trigger; `perfis` tem 3 linhas), plano de remediação, roadmap, matriz de testes, plano de backup. Entrada em `docs/FASE3_RELATORIO_EXECUTIVO.md`
-- 2026-11-05 — Estabilização da tranche: fixtures de 4 suítes corrigidas (todas passam), provisionamento reescrito para o contrato da 121000 (cadastro autorizado por contingência comprovado), teste de recuperação de acesso (REC-1 a REC-7), validação reproduzível em contêiner (`backend/scripts/tranche-seguranca-validar.sh`)
