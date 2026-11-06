@@ -100,11 +100,9 @@ SELECT * FROM (
     pg_temp.funcao_existe('ensure_venda_evento_registrado'), 'Ledger pós-venda.')
 
   UNION ALL SELECT * FROM pg_temp.diag_check(30, 'grants', 'grant_finalizar_venda_v4_authenticated',
+    -- Assinatura única em produção (22 argumentos, com p_cliente_id), conferida por leitura em 2026-11-05.
     has_function_privilege('authenticated',
-      'public.finalizar_venda_transacional_canonica_v4(uuid, uuid, uuid, uuid, text, numeric, numeric, numeric, jsonb, jsonb, text, numeric, boolean, boolean, text, text, text, text, uuid)',
-      'EXECUTE')
-    OR has_function_privilege('authenticated',
-      'public.finalizar_venda_transacional_canonica_v4(uuid, uuid, uuid, uuid, text, numeric, numeric, numeric, jsonb, jsonb, text, numeric, boolean, boolean, text, text, text, text)',
+      'public.finalizar_venda_transacional_canonica_v4(uuid, uuid, uuid, uuid, text, numeric, numeric, numeric, jsonb, jsonb, text, numeric, boolean, boolean, text, text, text, text, uuid, motivo_desconto_enum_tipo, text, text)',
       'EXECUTE'),
     'EXECUTE finalizar_venda v4 → authenticated.')
   UNION ALL SELECT * FROM pg_temp.diag_check(31, 'grants', 'grant_decrementar_estoque_seguro_negado_authenticated',
@@ -118,7 +116,7 @@ SELECT * FROM (
     'EXECUTE obter_status_caixa_operador → authenticated.')
   UNION ALL SELECT * FROM pg_temp.diag_check(34, 'grants', 'grant_sync_venda_negado_authenticated',
     NOT has_function_privilege('authenticated',
-      'public.registrar_venda_com_itens(uuid, uuid, uuid, text, numeric, numeric, numeric, jsonb, numeric, numeric, text)',
+      'public.registrar_venda_com_itens(uuid, uuid, uuid, text, numeric, numeric, numeric, jsonb, numeric, numeric, text, jsonb)',
       'EXECUTE'),
     'authenticated NÃO executa registrar_venda_com_itens (sync only).')
 
