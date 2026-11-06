@@ -20,8 +20,7 @@
 -- loja_id nulo. O corpo atual em produção é idêntico ao da main (difere só em CRLF).
 --
 -- NÃO APLICAR no Supabase remoto sem revisão do dono.
--- ROLLBACK: backend/supabase/rollback/20261028100000_sec_token_gerente_loja_nula_fora_da_loja.rollback.sql
--- (corpo exato de produção antes do #620, testado: md5 normalizado volta ao de produção).
+-- ROLLBACK: recriar a função com o corpo de 20260916120000_sec04_token_gerente_vinculo_loja_v4.sql.
 
 BEGIN;
 
