@@ -16,7 +16,7 @@
 - Inventário: 55 worktrees e ~280 branches locais; muitos trabalhos sem upstream (ex.: `feat/pr2d-caixas-elegiveis-rpc` +32, `codex/pdv-pagamentos-desconto` +2, `claude/troca-reposicao-caixa-gerente` +1). Consolidar em uma solução por tema antes de novas implementações; não apagar worktrees de outros trabalhos
 - Merge da PR #653 (consolidação NF-e com #654) bloqueado até o dono confirmar o registro de produção; decidir sobre o label `deploy-prod:aprovado`, que não foi aplicado (`docs/audits/CONSOLIDACAO_NFE_2026-11-01.md`)
 - Conta a pagar de NF-e sem conciliação: confirmação aceita duplicatas que não somam o valor da NF (NF 100,00 com duplicata 60,00 gera AP de 60,00). Reproduzido em homologação em 2026-10-30. Correção em `20261030120000` (commit 81daca66), aplicada em homologação fora do histórico de migrations; pendente registrar/aplicar formalmente e validar em produção antes de liberar (D-1)
-- Suíte de NF-e inexecutável no esquema atual: os 13 scripts `.test.sql`/`.mjs` não criam `empresa_id` (trigger `EMPRESA_ID_OBRIGATORIA`), e `nfe-conferencia-flx05-ui` espera `IMPORT_NFE_LOJA` enquanto o código retorna `ACESSO_LOJA_NEGADO`. Corrigir fixtures antes de qualquer PASSOU novo (D-4, D-5)
+- Suíte de NF-e (D-4, D-5): NÃO reproduzida no banco local. Os 8 scripts `.test.sql` de NF-e passam (exit 0). Pendente: rodar os 2 `.mjs` (`nfe-conferencia-margem-contract.test.mjs`, `test-nfe-conferencia-concurrency.mjs`, NÃO TESTADOS) e confirmar em homologação. O código de erro `IMPORT_NFE_LOJA` × `ACESSO_LOJA_NEGADO` não apareceu localmente
 - Nenhuma NF-e confirmada pode ser estornada: a única função de estorno é `estornar_pagamento_contas_pagar` (pagamento). Decidir regra para AP paga antes de implementar (D-3)
 - Decisões P1–P8 da auditoria de importação registradas (2026-10-29). Pendente de contador: validar P3 (tributos no custo por regime) antes de IM-F02. P1 exige atualizar D1 por escrito. P9–P12 seguem abertos
 - Custo truncado a 2 casas na NF-e: `preco_custo`, `custo_unitario` (itens e conferência) são `numeric(10,2)` e a importação arredonda com `ROUND(…,2)`. Resolver a escala (P1 do plano: D1 diz 4 casas, o requisito pede 6) e migrar (IM-F01, `docs/audits/PLANO_CONSOLIDADO_IMPORTACAO_IM-F01_F05_2026-10-29.md`)
@@ -32,6 +32,7 @@
 
 ## P1 — Falta para lançar (MVP)
 
+- Produção: a migration `20261019140000_multiempresa_fase2_guardas` está registrada como aplicada, mas a função com a mensagem `EMPRESA_ID_OBRIGATORIA` não existe no `prosrc` de produção (o trigger `trg_preenche_empresa_id` existe em `lojas`). Confirmar a divergência entre migration e função antes de qualquer decisão
 - PDV-100 D-04 (decisão de produto): o carrinho aceita quantidade fracionada em qualquer produto, inclusive `unidade_medida = UN` (ex.: 2,5 chaleiras). Decidir se bloqueia por unidade ou mantém (balança)
 - PDV-100 D-05: `vendas_pagamentos` grava só o valor líquido. Persistir valor recebido e troco para auditar o dinheiro
 - PDV-100 D-06: venda em espera (EM_ESPERA) sobrevive ao fechamento do caixa sem aviso. Definir regra: bloquear, transferir ou descartar
@@ -110,6 +111,7 @@
 - Mostrar as parcelas do crédito no detalhe da venda (admin) e na 2ª via, depois da coluna existir na homologação
 
 ## Feito
+- 2026-11-05 — Suíte NF-e verificada no banco local: 8 scripts `.test.sql` passam sem alteração de fixture; a suposta inexecutabilidade não se reproduziu
 - 2026-11-05 — `verify_p0_producao.sql`: checks 30 e 34 apontavam assinaturas antigas da v4 (19 e 18 argumentos) e de `registrar_venda_com_itens` (11 argumentos); corrigidas para as assinaturas de produção. Script roda até o fim no banco local. `pr1b-kardex-imutavel.test.sql` já passa no local (PR-1B OK), nenhuma mudança
 - 2026-11-05 — PDV local: removidos o comando Tauri `sync_outbox` e `sync_outbox_simulado`, que marcavam eventos como ENVIADO sem enviar (`pdv-local/src-tauri/src/main.rs`, `db.rs`). `cargo check` e `cargo test` (19/19) passaram
 - 2026-11-05 — Conflito `sync-outbox` investigado: sem marcadores; caminho B preparado (migration `20261105120000`, não aplicada), guard e doc atualizados; 41/41 testes Deno e testes SQL fase 3.1 em transação com ROLLBACK no banco local
@@ -119,4 +121,3 @@
 - 2026-11-05 — Diagnóstico Fase 3 entregue, sem alterar produção: fluxos de escrita mapeados, catálogo de produção lido (A2 mitigada por trigger; `perfis` tem 3 linhas), plano de remediação, roadmap, matriz de testes, plano de backup. Entrada em `docs/FASE3_RELATORIO_EXECUTIVO.md`
 - 2026-11-05 — Estabilização da tranche: fixtures de 4 suítes corrigidas (todas passam), provisionamento reescrito para o contrato da 121000 (cadastro autorizado por contingência comprovado), teste de recuperação de acesso (REC-1 a REC-7), validação reproduzível em contêiner (`backend/scripts/tranche-seguranca-validar.sh`)
 - 2026-11-05 — Tranche de segurança validada em banco descartável: SEC-04 corrigido (passa), rollbacks de 100000 e 110000 (cadeia idêntica ao baseline), definições de produção conferidas por md5; PR #660 atualizado
-- 2026-11-05 — GO-LIVE-01: golden flow operacional executado na cópia `sec_gf01` (roteiro `backend/scripts/go-live-01-golden-flow.test.sql`, 34 asserções OK). Matriz e veredito NO-GO em `docs/qa/GO_LIVE_01_GOLDEN_FLOW.md`; E2E de interface bloqueado
