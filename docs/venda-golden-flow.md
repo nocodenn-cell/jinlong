@@ -73,6 +73,8 @@ PDV Local → POST /sync-outbox (edge function)
 |---|---|---|
 | `finalizar_venda_transacional_canonica_v4` | **ATIVA** | `caixaVendas.impl.ts` somente |
 | `registrar_venda_com_itens` | **ATIVA** | `sync-outbox/index.ts` somente |
+| `registrar_venda_com_itens_v2` | **ATIVA** (parcelamento > 1, migration 20261021120000) | `sync-outbox/index.ts` somente |
+| `registrar_venda_offline_com_token` | **PREPARADA — não aplicada** (migration 20261105120000; pré-requisito 20261028120100). Envolve `registrar_venda_com_itens(_v2)` com consumo único do token na mesma transação. | `sync-outbox/index.ts` somente |
 | `finalizar_venda_transacional_canonica_v3` (qualquer overload) | `LEGACY_DISABLED_USE_V4` | — |
 | `finalizar_venda_transacional_canonica_v2` (qualquer overload) | `LEGACY_DISABLED_USE_V4` | — |
 

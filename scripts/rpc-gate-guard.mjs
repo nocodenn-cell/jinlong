@@ -42,6 +42,9 @@ const SINGLE_CALLER = {
     'pdv-importados/app/caixa/server/caixaVendas.impl.ts',
   'registrar_venda_com_itens':
     'backend/supabase/functions/sync-outbox/index.ts',
+  // Fase 3.1: consumo único do token de gerente + gravação da venda na mesma transação (venda offline com token).
+  'registrar_venda_offline_com_token':
+    'backend/supabase/functions/sync-outbox/index.ts',
 }
 
 /**

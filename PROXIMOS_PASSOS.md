@@ -2,6 +2,7 @@
 
 ## P0 — Quebrado/travado
 
+- Venda offline do PDV com token de gerente: `sync-outbox/index.ts` chama `registrar_venda_offline_com_token`, que NÃO existe no banco remoto (verificado por SELECT em `pg_proc`). Até a aplicação, venda de dispositivo com token de gerente falha fechado. Migration preparada em `backend/supabase/migrations/20261105120000_fase31_venda_offline_token_gerente_atomico.sql`, não aplicada. Exige `20261028120100` aplicada antes e decisão do dono
 - PR #655: label `deploy-prod:aprovado` aplicado pelo dono (2026-11-05). Pendente: migrations `remote_ausente` (`migration-remote-drift` continua vermelho) (`20261028100000`–`20261030140000`, no `migration-remote-drift`). Types drift já corrigido em `823142b6`
 - Drift de migrations em produção: `jinlong` (`kbabmewnahysfvlybiak`) continua com 11 migrations sem registro e o check `migration-remote-drift` vermelho. Homolog já está reconciliado (481 versões, 31 aplicadas e registradas em 2026-11-04). Produção só com decisão e autorização próprias. Detalhes e matriz em `docs/runbooks/RECONCILIACAO_HOMOLOG_2026-11-04.md`
 - Homologação funcional incompleta: falta login real com contas de teste e os fluxos de escrita (PDV, vendas em espera, estoque, NF-e, financeiro, cancelamentos, concorrência). Só isolamento RLS e privilégios foram verificados (`docs/runbooks/RECONCILIACAO_HOMOLOG_2026-11-04.md`, seção 11)
@@ -109,6 +110,7 @@
 - Mostrar as parcelas do crédito no detalhe da venda (admin) e na 2ª via, depois da coluna existir na homologação
 
 ## Feito
+- 2026-11-05 — Conflito `sync-outbox` investigado: sem marcadores; caminho B preparado (migration `20261105120000`, não aplicada), guard e doc atualizados; 41/41 testes Deno e testes SQL fase 3.1 em transação com ROLLBACK no banco local
 - 2026-11-05 — 12 migrations da main (20261028100000 a 20261104180000) adiadas no manifesto: 8 de segurança (prioridade do dono) e 4 de funcionalidade; nenhuma aplicada em produção
 - 2026-11-02 — 4 migrations (`20261029155000`, `20261030120000`, `20261030130000`, `20261030140000`) adiadas no manifesto, com dependências e condição de aplicação; verificado em produção por leitura: ausentes, sem aplicação parcial. Teste de sessão sem JWT adicionado à troca de operador (17 testes)
 - 2026-11-05 — PR #655: types drift corrigido (`823142b6`, regenerado do artefato do CI); merge com a main (`24ba7082`) e push na branch do PR. Restam os gates de governança (label `deploy-prod:aprovado` e migrations `remote_ausente`)
@@ -118,4 +120,3 @@
 - 2026-11-05 — GO-LIVE-01: golden flow operacional executado na cópia `sec_gf01` (roteiro `backend/scripts/go-live-01-golden-flow.test.sql`, 34 asserções OK). Matriz e veredito NO-GO em `docs/qa/GO_LIVE_01_GOLDEN_FLOW.md`; E2E de interface bloqueado
 - 2026-11-04 — GO-LIVE-01: gate financeiro 35/35 na cópia `sec_gl01` com a migration `20261104180000` (títulos, caixa e produto fora do escopo respondem como inexistente). Commits locais `7d35133c` (fix) e `b41ca18a` (fixtures). Evidência em `docs/qa/evidencias/go-live-01_gate_financeiro_35_35.txt`
 - 2026-11-04 — Rollbacks de `20261028100000` e `20261028101000` escritos em `backend/supabase/rollback/` e testados em transação com ROLLBACK no banco local; rollback de `20261029155000` (em `ops/`) corrigido e testado. Homolog não alterado: aplicação interrompida por drift pré-existente
-- 2026-11-03 — PDV-100: a quantidade digitada no carrinho não corrompe mais o valor e apagar o campo não remove o item (`CaixaCartList.tsx`, 2 testes de regressão; `app/caixa` 393/393). Validação operacional em `docs/qa/PDV_100_RELATORIO_VALIDACAO.md`: NO-GO
