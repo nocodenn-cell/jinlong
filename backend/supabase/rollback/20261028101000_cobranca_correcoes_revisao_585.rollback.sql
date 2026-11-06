@@ -144,6 +144,10 @@ ALTER TABLE saas.assinaturas
   DROP COLUMN IF EXISTS qtd_lojas_pendente,
   DROP COLUMN IF EXISTS qtd_caixas_pendente,
   DROP COLUMN IF EXISTS pendente_desde;
-DELETE FROM supabase_migrations.schema_migrations WHERE version = '20261028101000';
+DO $ledger$ BEGIN
+  IF to_regclass('supabase_migrations.schema_migrations') IS NOT NULL THEN
+    DELETE FROM supabase_migrations.schema_migrations WHERE version = '20261028101000';
+  END IF;
+END $ledger$;
 
 COMMIT;

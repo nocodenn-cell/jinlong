@@ -22,5 +22,9 @@ AS $function$
   );
 $function$;
 REVOKE ALL ON FUNCTION internal.token_gerente_fora_da_loja(text, uuid) FROM PUBLIC, anon, authenticated;
-DELETE FROM supabase_migrations.schema_migrations WHERE version = '20261028100000';
+DO $ledger$ BEGIN
+  IF to_regclass('supabase_migrations.schema_migrations') IS NOT NULL THEN
+    DELETE FROM supabase_migrations.schema_migrations WHERE version = '20261028100000';
+  END IF;
+END $ledger$;
 COMMIT;
