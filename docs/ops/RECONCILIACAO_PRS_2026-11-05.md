@@ -81,3 +81,38 @@ Não alterei a configuração de CI para mascarar isso. Corrigir exige ação do
 - Atualizados antes de 2026-10-20: **22** (candidatos a revisão de obsolescência; nenhum encerrado nesta rodada).
 - PRs com diff lido e comparado à `main`: **0 de 42** (os 6 da seção 2 foram vistos só pelos checks).
 - Nenhum PR foi mesclado, fechado, rebaseado ou publicado nesta rodada.
+
+## 5. Análise de diff dos PRs de segurança (#620 e #623) — 2026-11-05
+
+Comparação com `origin/main` (21d3e79c… → `main` atual 1ade0bbe e posteriores). Somente leitura; nenhum push.
+
+### 5.1 PR #620 (`fix/seguranca-gerente-escopo-e-cobranca`, head `4009eb2a`)
+
+- Está **1 commit à frente** da base antiga e **233 atrás** da `main`.
+- O conteúdo principal (migrations `20261028100000` e `20261028101000`) **já está na `main`**. O commit restante (`4009eb2a`) só:
+  - adiciona `backend/scripts/revisao-585-pg-local/stubs.sql` com `fp_empresa_da_loja` (stub para o teste isolado; a função real está em `20261019120000`, já na `main`);
+  - reescreve os arquivos `backend/supabase/rollback/20261028100000_*.rollback.sql` e `20261028101000_*.rollback.sql`, que a `main` já tem (commit `1ade0bbe`). É esse conflito que deixa o PR `DIRTY`.
+- Rollback de `20261028100000`: o corpo da função de restauração coincide com o corpo de produção (`internal.token_gerente_fora_da_loja`, lido por SELECT). O **md5 declarado no PR (`caac7528…`) não foi reproduzido** com a normalização usada aqui (`ee5dcec4…` em produção). Por isso a equivalência do md5 fica **NÃO COMPROVADA**. A equivalência textual do corpo está comprovada.
+- Executado localmente em transação com `ROLLBACK`: o rollback roda sem erro. Não é prova de restauração, porque o banco local já estava no mesmo corpo antes e depois.
+- **Classificação:** OBSOLETO OU SUBSTITUÍDO em grande parte. O que sobra (stub e versão do rollback) vale só como ajuste pequeno.
+- **Próxima ação (proposta):** encerrar #620 e abrir um PR pequeno só com o stub e a versão revisada do rollback, depois de rebase na `main`.
+
+### 5.2 PR #623 (`refactor/remover-admin-papeis`, head `ec50f9d9`)
+
+- Está **15 commits à frente** e **215 atrás** da `main`. A branch já absorveu os PRs #639 e #640 (fila de revisão offline, tela `/admin/revisao-offline`). O título do PR (“remover ADMIN do escopo das lojas”) **não descreve mais o diff**: são 34 arquivos e 3668 inserções.
+- **Divergência de migrations com a `main` (grave):**
+  - A branch tem `20261028120000_sec_tokens_usuario_inativo_revogacao.sql`.
+  - A `main` tem `20261028120000_revoga_helpers_tenant_authenticated.sql` e `20261028120100_sec_tokens_usuario_inativo_revogacao.sql`.
+  - Em produção, o ledger registra a versão `20261028120000` como `revoga_helpers_tenant_authenticated` (SELECT em `supabase_migrations.schema_migrations`). Aplicar o arquivo de #623 com esse nome **colidiria com a versão já registrada** e deixaria a `120100` sem arquivo na branch.
+- **Sync-outbox:** o `index.ts` da branch usa `sync_avaliar_evento` antes da gravação (“Implementação A” do conflito original). Não há marcador de conflito na branch. A função depende de `20261028130000`, que só existe nesta branch.
+- **Testes executados localmente** (migrations `20261028130000`, `20261028140000`, `20261028150000` aplicadas em transação com `ROLLBACK`, sobre o banco local):
+  - `sync-outbox-revisao-offline.test.sql`: **50 passou / 0 falhou** — PASSOU.
+  - `caixas-loja-mesma-empresa.test.sql`: 13 verificações `ok`, sem falha — PASSOU.
+  - `revisao-offline-tela.test.sql`: 25 `ok`, 0 falhas — PASSOU.
+  - Deno `sync-outbox` (arquivo extraído com `git archive`): **60 passou / 0 falhou** — PASSOU.
+  - Limite: os testes rodaram sobre o banco local, não sobre homologação. Os PRs `#620`/`#623` não foram revalidados em CI.
+- **Classificação:** IMPLEMENTADO, MAS NÃO INTEGRADO. Funcionalidade verificada localmente; integração bloqueada pelo conflito de versão de migration e pelo escopo misturado.
+- **Próxima ação (proposta):**
+  1. Dividir #623 em: (a) corte de ADMIN (migrations `20261028110000`/`120000`/`120100` com nomes da `main`); (b) fila de revisão offline (`20261028130000`, `140000`, `150000`) em PR próprio; (c) UI de revisão.
+  2. Renomear a migration de (a) para não colidir com a versão `20261028120000` já registrada em produção.
+  3. Publicar só com decisão do dono e label `deploy-prod:aprovado`.
