@@ -8,7 +8,7 @@ use db::{
     abrir_caixa_local, catalogo_local_get, diagnostics, fechar_caixa_local, get_caixa_atual,
     init_db, outbox_pendentes, outbox_reprocessar_dlq, outbox_resumo, pdv_config_local_get,
     registrar_movimento_caixa_local, registrar_venda_local, sync_catalogo_real, sync_outbox_real,
-    sync_outbox_simulado, sync_pdv_config_real, validar_gerente_sync, Diagnostics, OutboxResumo,
+    sync_pdv_config_real, validar_gerente_sync, Diagnostics, OutboxResumo,
     RegistrarVendaInput, ValidarGerentePdvDto,
 };
 
@@ -37,11 +37,6 @@ fn registrar_venda(app: tauri::AppHandle, venda: RegistrarVendaInput) -> Result<
 #[tauri::command]
 fn outbox_count(app: tauri::AppHandle) -> Result<i64, String> {
     outbox_pendentes(&app)
-}
-
-#[tauri::command]
-fn sync_outbox(app: tauri::AppHandle, limite: Option<i64>) -> Result<i64, String> {
-    sync_outbox_simulado(&app, limite.unwrap_or(50))
 }
 
 #[tauri::command]
@@ -193,7 +188,6 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             registrar_venda,
             outbox_count,
-            sync_outbox,
             sync_outbox_real_cmd,
             get_diagnostics,
             outbox_resumo_cmd,

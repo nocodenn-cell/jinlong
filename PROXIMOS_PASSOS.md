@@ -41,7 +41,6 @@
 - Fase 3 (segurança): reconciliar o ledger de migrations (repo × produção) antes de aplicar qualquer SQL; depois homologar e aplicar `003_perfis` e `004_feature_flags`; homologar `002_vendas_dml_direto` com a matriz completa (`docs/security/MATRIZ_TESTES_HOMOLOGACAO_FASE3.md`) e só então aplicar em produção. Não aplicar `001_caixas` (o trigger `trg_caixas_fechado_imutavel` já está em produção). Ver `docs/security/PLANO_REMEDIACAO_VULNERABILIDADES.md`
 - Fase 3 (decisões do dono): reabertura de caixa via `retomar_caixa_atomico` (há RPC, sem tela), se `perfis` deve continuar existindo, se feature flags precisam de tela, teto de `valor_inicial` na abertura de caixa (N1)
 - Fase 3 (performance): promover a migration `20260913090000` (validação de fuso sem `pg_timezone_names`, existe no repo e não está em produção) após reconciliação; medir antes/depois. Ver `docs/performance/DIAGNOSTICO_TIMEOUTS_E_PERFORMANCE.md`
-- Fase 3 (PDV offline): remover ou proteger o comando Tauri `sync_outbox` simulado (`pdv-local/src-tauri/src/main.rs:43`), que marca registros como ENVIADO sem enviar
 - Fase 3 (backup): rotina diária com `backend/scripts/backup-ro-postgres.sh` + `age` + SHA-256 + alerta + restauração mensal; RPO 24 h e RTO medidos. Ver `docs/backup/PLANO_OPERACIONAL_BACKUP_RESTAURACAO.md`
 
 - Verificar backup e PITR no painel (projeto `jinlong`, Database → Backups) e registrar retenção e último backup. Pré-requisito de qualquer autorização de produção (`docs/ops/BACKUP_RESTAURACAO_SEM_PITR.md`)
@@ -110,6 +109,7 @@
 - Mostrar as parcelas do crédito no detalhe da venda (admin) e na 2ª via, depois da coluna existir na homologação
 
 ## Feito
+- 2026-11-05 — PDV local: removidos o comando Tauri `sync_outbox` e `sync_outbox_simulado`, que marcavam eventos como ENVIADO sem enviar (`pdv-local/src-tauri/src/main.rs`, `db.rs`). `cargo check` e `cargo test` (19/19) passaram
 - 2026-11-05 — Conflito `sync-outbox` investigado: sem marcadores; caminho B preparado (migration `20261105120000`, não aplicada), guard e doc atualizados; 41/41 testes Deno e testes SQL fase 3.1 em transação com ROLLBACK no banco local
 - 2026-11-05 — 12 migrations da main (20261028100000 a 20261104180000) adiadas no manifesto: 8 de segurança (prioridade do dono) e 4 de funcionalidade; nenhuma aplicada em produção
 - 2026-11-02 — 4 migrations (`20261029155000`, `20261030120000`, `20261030130000`, `20261030140000`) adiadas no manifesto, com dependências e condição de aplicação; verificado em produção por leitura: ausentes, sem aplicação parcial. Teste de sessão sem JWT adicionado à troca de operador (17 testes)
@@ -119,4 +119,3 @@
 - 2026-11-05 — Tranche de segurança validada em banco descartável: SEC-04 corrigido (passa), rollbacks de 100000 e 110000 (cadeia idêntica ao baseline), definições de produção conferidas por md5; PR #660 atualizado
 - 2026-11-05 — GO-LIVE-01: golden flow operacional executado na cópia `sec_gf01` (roteiro `backend/scripts/go-live-01-golden-flow.test.sql`, 34 asserções OK). Matriz e veredito NO-GO em `docs/qa/GO_LIVE_01_GOLDEN_FLOW.md`; E2E de interface bloqueado
 - 2026-11-04 — GO-LIVE-01: gate financeiro 35/35 na cópia `sec_gl01` com a migration `20261104180000` (títulos, caixa e produto fora do escopo respondem como inexistente). Commits locais `7d35133c` (fix) e `b41ca18a` (fixtures). Evidência em `docs/qa/evidencias/go-live-01_gate_financeiro_35_35.txt`
-- 2026-11-04 — Rollbacks de `20261028100000` e `20261028101000` escritos em `backend/supabase/rollback/` e testados em transação com ROLLBACK no banco local; rollback de `20261029155000` (em `ops/`) corrigido e testado. Homolog não alterado: aplicação interrompida por drift pré-existente

@@ -1631,42 +1631,8 @@ pub fn outbox_marcar_falha_item_sync(
     Ok(())
 }
 
-/// Sincronização simulada: marca registros pendentes como ENVIADO.
-/// Próximo passo: substituir por envio real para Supabase (Edge Function).
-pub fn sync_outbox_simulado(app: &tauri::AppHandle, limite: i64) -> Result<i64, String> {
-    init_db(app)?;
-    let path = db_path(app)?;
-    let mut conn = Connection::open(path).map_err(|e| e.to_string())?;
-    let tx = conn.transaction().map_err(|e| e.to_string())?;
-
-    // Seleciona pendentes (precisa coletar em memória para não segurar borrow do tx até o commit)
-    let ids: Vec<String> = {
-        let mut stmt = tx
-            .prepare(
-                "SELECT id FROM outbox WHERE status = 'PENDENTE' ORDER BY created_at ASC, id ASC LIMIT ?1",
-            )
-            .map_err(|e| e.to_string())?;
-        let rows = stmt
-            .query_map(params![limite], |row| row.get::<_, String>(0))
-            .map_err(|e| e.to_string())?;
-        rows.map(|r| r.map_err(|e| e.to_string()))
-            .collect::<Result<Vec<_>, String>>()?
-    };
-
-    let mut enviados: i64 = 0;
-    for id in ids {
-        tx.execute(
-            "UPDATE outbox SET status = 'ENVIADO', tentativas = tentativas + 1, last_error = NULL, \
-             falhas_consecutivas = 0, next_retry_at = NULL WHERE id = ?1",
-            params![id],
-        )
-        .map_err(|e| e.to_string())?;
-        enviados += 1;
-    }
-
-    tx.commit().map_err(|e| e.to_string())?;
-    Ok(enviados)
-}
+// Sincronização simulada (sync_outbox_simulado) removida: marcava registros como ENVIADO sem enviar nada,
+// o que apagava da fila eventos nunca recebidos pelo servidor. O envio real é sync_outbox_real.
 
 #[derive(Serialize)]
 struct SyncRequest {
