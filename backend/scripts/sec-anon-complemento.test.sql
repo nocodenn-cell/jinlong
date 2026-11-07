@@ -68,11 +68,20 @@ BEGIN
   END IF;
 
   -- D. formulário comercial: caminho legítimo é a RPC, sem privilégio direto na tabela
-  IF to_regprocedure('public.registrar_lead_comercial(text,text,text,text,text,text,text,text,text,text,text,text)') IS NOT NULL THEN
-    IF NOT has_function_privilege('anon',
-         'public.registrar_lead_comercial(text,text,text,text,text,text,text,text,text,text,text,text)', 'EXECUTE') THEN
-      RAISE EXCEPTION 'SEC_ANON_COMPL D: anon sem EXECUTE em registrar_lead_comercial (formulário quebrado)';
-    END IF;
+  -- A RPC ativa é a de 13 argumentos (uuid + 12 textos), criada por 20261104160000. Ausente = falha, nunca pulo.
+  IF to_regprocedure('public.registrar_lead_comercial(uuid,text,text,text,text,text,text,text,text,text,text,text,text)') IS NULL THEN
+    RAISE EXCEPTION 'SEC_ANON_COMPL D: RPC ativa registrar_lead_comercial(uuid,...) não encontrada';
+  END IF;
+  IF NOT has_function_privilege('anon',
+       'public.registrar_lead_comercial(uuid,text,text,text,text,text,text,text,text,text,text,text,text)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'SEC_ANON_COMPL D: anon sem EXECUTE em registrar_lead_comercial (formulário quebrado)';
+  END IF;
+  -- Grants de COLUNA também precisam sumir (produtos tinha SELECT por coluna para anon via 20261009180001).
+  SELECT count(*) INTO n
+    FROM information_schema.column_privileges
+   WHERE table_schema = 'public' AND grantee = 'anon';
+  IF n > 0 THEN
+    RAISE EXCEPTION 'SEC_ANON_COMPL A: anon ainda tem % grant(s) de coluna em public', n;
   END IF;
   IF to_regclass('public.commercial_leads') IS NOT NULL
      AND has_table_privilege('anon', 'public.commercial_leads', 'SELECT,INSERT,UPDATE,DELETE') THEN

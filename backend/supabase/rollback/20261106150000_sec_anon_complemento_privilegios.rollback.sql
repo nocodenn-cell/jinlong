@@ -68,6 +68,21 @@ BEGIN
 END
 $rb_sequencias$;
 
+-- Grants de COLUNA de produtos (produção, lido em 2026-11-06; origem: 20261009180001). A REVOKE da migration
+-- também remove esses grants; o rollback precisa devolvê-los. Sem preco_custo e preco_custo_medio no SELECT.
+GRANT SELECT (ativo, atualizado_por, categoria_id, cest, cfop_produto, codigo_barras, codigo_interno,
+  comissao_tipo, comissao_valor, created_at, criado_por, csosn, cst_cofins, cst_pis, estoque_minimo,
+  fornecedor_id, icms_origem, id, imagem_url, limite_transferencia_sem_observacao, localizacao_prateleira,
+  loja_id, marca_id, ncm, nome, nome_reduzido_pdv, nome_sem_acento, observacao, origem,
+  permitir_abaixo_custo, preco_atacado, preco_varejo, quantidade_gatilho_atacado, referencia_fornecedor,
+  status_publicacao, tags, tem_nf, unidade_medida, updated_at) ON public.produtos TO anon;
+GRANT REFERENCES (ativo, atualizado_por, categoria_id, cest, cfop_produto, codigo_barras, codigo_interno,
+  comissao_tipo, comissao_valor, created_at, criado_por, csosn, cst_cofins, cst_pis, estoque_minimo,
+  fornecedor_id, icms_origem, id, imagem_url, limite_transferencia_sem_observacao, localizacao_prateleira,
+  loja_id, marca_id, ncm, nome, nome_reduzido_pdv, nome_sem_acento, observacao, origem,
+  permitir_abaixo_custo, preco_atacado, preco_varejo, quantidade_gatilho_atacado, referencia_fornecedor,
+  status_publicacao, tags, tem_nf, unidade_medida, updated_at, preco_custo, preco_custo_medio) ON public.produtos TO anon;
+
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT, REFERENCES, TRIGGER, MAINTAIN ON TABLES TO anon;
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT, UPDATE, USAGE ON SEQUENCES TO anon;
 

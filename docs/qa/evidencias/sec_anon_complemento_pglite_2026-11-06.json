@@ -44,5 +44,13 @@
     }
   ],
   "default_acl_postgres_public_depois": [],
-  "teste_regressao_repo": "OK"
+  "teste_regressao_repo": "OK",
+  "colunas_produtos": {
+    "colunas_no_schema": 41,
+    "grants_coluna_anon_antes": 80,
+    "grants_coluna_anon_depois_migracao": 0,
+    "grants_coluna_anon_apos_rollback": 80,
+    "rollback_restaura_identico_ao_antes": true,
+    "preco_custo_anon_depois_migracao": []
+  }
 }
