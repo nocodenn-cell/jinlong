@@ -136,9 +136,18 @@ test.describe('Fase 5b: Contas Receber Automático (RPC)', () => {
 
     // Segunda loja + cliente vinculado a ela, exclusivamente para o teste V8
     // (cliente existe mas pertence a loja diferente da venda).
+    // EMPRESA_ID_OBRIGATORIA: a loja secundária herda a empresa da loja da venda.
+    const { data: lojaBase, error: lojaBaseErr } = await supabase
+      .from('lojas')
+      .select('empresa_id')
+      .eq('id', lojaId)
+      .single()
+    if (lojaBaseErr || !lojaBase?.empresa_id) {
+      throw new Error(`Fixture ausente: empresa_id da loja ${lojaId} (${lojaBaseErr?.message ?? 'sem linha'}).`)
+    }
     const { data: outraLoja, error: outraLojaErr } = await supabase
       .from('lojas')
-      .insert({ nome: `E2E Fase5b Outra Loja ${sufixo}`, codigo: `E2E${sufixo}` })
+      .insert({ nome: `E2E Fase5b Outra Loja ${sufixo}`, codigo: `E2E${sufixo}`, empresa_id: lojaBase.empresa_id })
       .select('id')
       .single()
     if (outraLojaErr || !outraLoja) {

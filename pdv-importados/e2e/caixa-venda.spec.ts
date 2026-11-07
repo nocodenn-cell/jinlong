@@ -32,7 +32,11 @@ test.describe('Caixa — finalizar venda (catálogo seed)', () => {
     await busca.fill(codigo)
     await busca.press('Enter')
 
-    const adicionadoOuErro = page.getByRole('status')
+    // Há vários toasts `role=status` (ex.: "Caixa aberto"); o resultado da busca é o que menciona o produto/erro.
+    const adicionadoOuErro = page
+      .getByRole('status')
+      .filter({ hasText: /adicionad|added|não encontrad|not found|找不到|已添加|加入/i })
+      .first()
     await expect(adicionadoOuErro).toBeVisible({ timeout: 20_000 })
     const statusTxt = (await adicionadoOuErro.innerText()).toLowerCase()
     if (statusTxt.includes('não encontrad') || statusTxt.includes('not found') || statusTxt.includes('找不到')) {
