@@ -1,284 +1,212 @@
-# Manual do Operador — Referência Rápida
+# Manual do Operador — Referência Rápida (piloto)
 
-**Imprima e cole ao lado da tela do PDV.**
+**Imprima e cole ao lado da tela do PDV.** Só descreve o que está no sistema neste piloto.
 
----
-
-## Tela Principal (PDV)
-
-```
-┌─ JĪNLÓNG PDV ─────────────────────────┐
-│ [Buscar produto ou código]             │ ← Digite aqui ou escaneia código
-│                                         │
-│ ┌─ CARRINHO ─────────────────────────┐ │
-│ │ Produto A          1x    R$ 29.90  │ │
-│ │ Produto B          2x    R$ 14.90  │ │
-│ │ [desconto: -R$ 5.00]                │ │
-│ └─────────────────────────────────────┘ │
-│                                         │
-│           🟢 FINALIZAR (R$ 59.70)       │ ← Clique aqui para pagar
-└─────────────────────────────────────────┘
-```
+> **Escopo deste piloto:** uma loja, um caixa, venda presencial no navegador.
+> Formas aceitas: **Dinheiro, PIX, Cartão débito e Cartão crédito**.
+> **Não existe fiado (venda a prazo) e o sistema não emite nota fiscal.**
 
 ---
 
-## Passo-a-passo de uma Venda
+## Antes de vender
 
-### 1️⃣ **Adicionar Produtos**
-
-- **Opção A:** Escaneia código de barras (gun ou app)
-- **Opção B:** Digita nome no campo "Buscar produto"
-- **Opção C:** Digita código manualmente
-
-**Resultado:** Produto aparece no carrinho
+1. Abra o endereço do PDV no navegador e entre com **seu e-mail e senha** (`[ENDEREÇO DO PDV — preencher na instalação]`).
+2. Você vai direto para a tela do caixa.
+3. Se o caixa estiver fechado, clique em **Abrir caixa**, confirme o operador e informe o **valor inicial (fundo)** que está na gaveta.
 
 ---
 
-### 2️⃣ **Verificar Preços**
+## Passo a passo de uma venda
 
-- Olha a coluna "Valor unitário" de cada linha
-- Se o preço está **em amarelo** = foi aplicado desconto automático (bem-vindo!)
-- Se o preço está **vermelho ou ilegível** = avisa o gerente
+### 1. Adicionar produtos
 
----
+- Digite o **código de barras**, o **código** ou o **nome** no campo de busca (atalho **F2** ou **Ctrl+B**).
+- Adicione o produto ao cupom.
+- Se o produto não aparecer, **não tente cadastrar**: o cadastro é do gerente. Chame o gerente.
 
-### 3️⃣ **Corrigir Quantidade**
+### 2. Conferir quantidades e preços
 
-Clica no **número** de quantidade (ex.: "1x"):
-- Digita novo número
-- Teclado `Enter` confirma
+- Para mudar a quantidade ou remover um item, use os controles da linha do produto no cupom.
+- **Ctrl+Z** desfaz a última remoção.
+- Confira o total antes de cobrar.
 
-**Resultado:** Total atualiza sozinho
+### 3. Desconto
 
----
+- Desconto **só com o gerente**. Clique em **Desconto gerente**, digite a **senha do gerente** e o percentual (o máximo aparece na tela).
+- O desconto do gerente **só vale para venda paga totalmente em dinheiro**. Em outra forma, a tela não aplica.
 
-### 4️⃣ **Remover Produto**
+### 4. Cobrar
 
-Clica no **X** na linha do produto
+1. Pressione **F4** ou **F9** para finalizar.
+2. Escolha a forma: **1** = Dinheiro, **2** = PIX, **3** = Crédito, **4** = Débito (ou clique nela).
+3. Informe o valor recebido, se for dinheiro. Se houver troco, a tela mostra **"Troco p/ cliente"**.
+4. Para dividir o pagamento em mais de uma forma, clique em **Dividir pagamento** (até 4 formas). O campo **"Falta"** mostra quanto ainda não foi coberto.
+5. Confirme a venda **somente quando "Falta" estiver em 0,00**.
 
-**Resultado:** Produto sai; total recalcula
-
----
-
-### 5️⃣ **Aplicar Desconto (Gerente)**
-
-Se o gerente autorizar desconto maior:
-
-1. Clica em "Descontos" (amarelo, embaixo)
-2. Insere percentual (ex.: 10%)
-3. Digita **senha do gerente**
-4. Confirma
-
-**Resultado:** Desconto aparece no carrinho
-
----
-
-### 6️⃣ **Pagar (Finalizar Venda)**
-
-Clica no botão **FINALIZAR**
-
-**Modal abre:**
-
-```
-┌─ FINALIZAR VENDA ──────────────────┐
-│ Total: R$ 59.70                    │
-│                                    │
-│ Forma de pagamento:                │
-│  ☐ DINHEIRO                        │
-│  ☐ PIX                             │
-│  ☐ CARTÃO DÉBITO                   │
-│  ☐ CARTÃO CRÉDITO                  │
-│                                    │
-│ [  Troco / Valor ]                 │
-│                                    │
-│  [ + Dividir ]      Restante: 0,00 │
-│                                    │
-│           ✅ CONFIRMAR             │
-└────────────────────────────────────┘
-```
-
-**Seleciona forma de pagamento:**
-- DINHEIRO: Cliente paga em notas
-- PIX: Você gera QR code no app da loja
-- CARTÃO: Máquina de cartão (máquina faz tudo)
-
-**Digita valor de pagamento** (se não for exato):
-- Teclado numérico → Enter
-
-#### Cliente quer pagar com mais de uma forma
-
-Clica em **Dividir** e lança uma parcela por forma. Exemplo: R$ 40 no cartão e
-R$ 19,70 em dinheiro. O campo **Restante** mostra quanto ainda falta.
-
-> ### ⚠️ O campo "Restante" tem que chegar a **0,00**
+> ### ⚠️ Regra do piloto: nunca finalize com "Falta" acima de zero
 >
-> Se você confirmar com Restante **maior que zero**, a venda vira **crédito do
-> cliente** — uma dívida a receber, que exige escolher o cliente e **não está
-> habilitada nesta fase**.
->
-> **Durante o piloto: nunca finalize com Restante acima de zero.** Se o cliente
-> não tem o valor todo, chame o gerente antes de confirmar.
+> Se o cliente não tem o valor todo, **não confirme**. Se aparecer a mensagem **"Pagamento parcial requer seleção de cliente"**, **cancele** e chame o gerente.
+> Essa tela ainda existe no sistema, mas no piloto **não há fiado**: não escolha cliente para cobrir o saldo.
 
-**Clica ✅ CONFIRMAR**
+Se a soma das formas passar do total e não houver dinheiro para o troco, o sistema mostra **"A soma das parcelas passa do total e não há dinheiro suficiente para dar troco"**. Ajuste os valores.
 
-**Resultado:** 🟢 "Venda finalizada!" → Comprovante impresso (térmica)
+### 5. Erro ao finalizar
 
----
-
-## Situações Comuns
-
-### ❌ **"Produto não encontrado"**
-→ Verifica código de barras (errado?)  
-→ Busca por **nome ou SKU** no campo de busca  
-→ Se o produto realmente não existe, **peça o cadastro ao gerente** (menu Produtos)
-
-> **O PDV não cadastra produto.** Isso é de propósito: o caixa vende, o gerente
-> cadastra. Não existe mais botão de cadastro rápido nesta tela.
+- A tela mostra uma mensagem de erro. **Anote o texto exato.**
+- Confira se a venda já aparece no caixa antes de tentar de novo.
+- Se a mensagem continuar, **chame o gerente**. Não repita a venda várias vezes.
 
 ---
 
-### ❌ **"Erro ao finalizar"**
-**Mensagem vermelha aparece → anota exatamente o que diz**
+## Situações comuns
 
-Opções:
-1. Tira um item do carrinho e tenta novamente
-2. Muda forma de pagamento
-3. Se persistir → **liga para o gerente / suporte**
+### "Produto não encontrado"
+→ Confira o código de barras ou busque pelo nome.
+→ Se o produto não existe no cadastro, chame o gerente.
 
----
+### "Estoque insuficiente"
+→ Reduza a quantidade ou ofereça outro produto.
 
-### ❌ **"Estoque insuficiente"**
-→ Cliente quer 5, mas tem só 3  
-→ Você reduz quantidade para 3 ou oferece produto alternativo
+### "PIX ou cartão não aceito" (venda não conclui na forma escolhida)
+→ Chame o gerente. A loja precisa ter a conta de PIX e cartão configurada antes de vender nessas formas.
 
----
+### "O cliente quer pagar depois" (fiado)
+→ **Não existe neste piloto.** Chame o gerente antes de finalizar.
 
-### ❓ **"O cliente quer pagar em duas formas"**
-→ **Isso o PDV faz:** botão **Dividir** no modal de finalização  
-→ Só não pode sobrar **Restante** acima de zero (ver passo 6️⃣)
+### "O cliente quer desconto"
+→ Desconto é do gerente. Chame o gerente **antes** de finalizar.
 
----
-
-### ❓ **"O cliente quer levar fiado / pagar depois"**
-→ **NÃO existe** — venda a prazo está desligada nesta fase  
-→ Fala com o gerente ANTES de finalizar
+### "Fechar caixa" não funciona: venda em espera
+→ Antes de fechar o caixa, finalize ou coloque em espera e resolva as vendas em espera do seu turno. Se a mensagem continuar, chame o gerente.
 
 ---
 
-### ❓ **"O cliente quer desconto"**
-→ **NÃO é decisão do caixa**  
-→ Fala com o gerente ANTES de finalizar (ver passo 5️⃣)
+## Atalhos de teclado
+
+| Tecla | O que faz |
+|---|---|
+| **F1** | Mostra a lista de atalhos |
+| **F2** ou **Ctrl+B** | Foca a busca de produto |
+| **F3** | Consulta rápida |
+| **F4** ou **F9** | Finalizar venda |
+| **F6** | Fechar caixa |
+| **F8** | Novo cupom (limpa o cupom atual **sem** finalizar) |
+| **F12** | Reimprimir o último comprovante |
+| **1, 2, 3, 4** | Escolher a forma: Dinheiro, PIX, Crédito, Débito |
+| **Ctrl+Z** | Desfazer remoção de item |
+| **Ctrl+Shift+S** | Suprimento (entrada de dinheiro no caixa) |
+| **Ctrl+Shift+R** | Sangria (retirada de dinheiro do caixa) |
+| **Esc** | Fecha janela ou cancela ação |
+
+> Os atalhos **Alt+Z**, **Alt+C**, **Alt+B** e **Alt+Q** só existem no layout clássico do PDV. Confirme na instalação se ele está ativo.
 
 ---
 
-## Teclas de Atalho
+## Sangria e suprimento
 
-### 🎯 **Venda**
-| Atalho | O que faz |
-|--------|-----------|
-| **F4 / F9** | Finalizar venda (sempre disponível) |
-| **F8** | Novo cupom / Limpar carrinho (caixa aberto) |
+### Sangria (tirar dinheiro do caixa)
+1. **Ctrl+Shift+R**.
+2. Escolha o motivo: **Troco inicial**, **Pagamento de fornecedor**, **Retirada para depósito** ou **Outro**.
+3. Digite o valor.
+4. **Acima do limite de sangria sem gerente** (valor configurado pela loja), o sistema pede a **senha do gerente**.
+5. Confirme.
 
-### 🔍 **Navegação**
-| Atalho | O que faz |
-|--------|-----------|
-| **F1** | Abrir ajuda (lista completa de atalhos) |
-| **F2 / Ctrl+B** | Buscar produto |
-| **Alt+Z** | Ir para aba de produtos |
-| **Alt+B / Alt+C** | Ir para método de pagamento |
-| **F3** | Consulta rápida / Operações |
-| **F6** | Fechar caixa (fim do dia) |
-
-### ⚙️ **Operações**
-| Atalho | O que faz |
-|--------|-----------|
-| **Ctrl+Shift+S** | Suprimento (caixa aberto) |
-| **Ctrl+Shift+R** | Sangria (caixa aberto) |
-| **F12** | Reimprimir recibo (após finalizar venda) |
-
-### ✏️ **Edição**
-| Atalho | O que faz |
-|--------|-----------|
-| **Ctrl+Z** | Desfazer remoção (item removido do carrinho) |
-| **Enter** no campo de busca | Adiciona produto |
-| **Enter** no campo de valor | Confirma desconto / movimento |
-| **Enter** no modal de pagamento | Finaliza venda (se valor OK) |
-| **Esc** | Fecha modal / Cancela ação |
-
-**💡 Dica:** Pressione **F1** no PDV para ver a lista completa atualizada com seus atalhos!
+### Suprimento (colocar dinheiro no caixa)
+1. **Ctrl+Shift+S**.
+2. Escolha o motivo, digite o valor e confirme.
 
 ---
 
-## Movimentações de Caixa (Sangria e Suprimento)
+## Troca de operador
 
-### 💰 **Sangria** (tirar dinheiro do caixa)
-- **Quando:** retirada para depósito, pagamento de fornecedor, etc.
-- **Atalho:** `Ctrl+Shift+R` ou Menu → Operações → Sangria
-- **Processo:**
-  1. Seleciona motivo (Troco Inicial, Pagamento, Retirada, Outro)
-  2. Digita valor
-  3. Se acima do limite (varia por loja), pede **senha do gerente**
-  4. Confirma
-  5. ✅ Recibo impresso automaticamente
+Use quando outro operador vai assumir o mesmo caixa (o turno continua aberto).
 
-### 📥 **Suprimento** (colocar dinheiro no caixa)
-- **Quando:** reposição de troco, retorno de depósito, etc.
-- **Atalho:** `Ctrl+Shift+S` ou Menu → Operações → Suprimento
-- **Processo:**
-  1. Seleciona motivo
-  2. Digita valor
-  3. Confirma
-  4. ✅ Recibo impresso automaticamente
+1. Feche ou coloque em espera a venda atual. **Não é possível trocar com venda no cupom ou em finalização.**
+2. Clique em **Trocar operador** e confirme.
+3. O sistema volta para a tela de login. O próximo operador entra com o **próprio e-mail e senha**.
+4. Ao entrar, clique em **Assumir este caixa** para continuar o turno.
+
+Se o caixa estiver em uso por outro operador, só um gerente pode assumir.
+
+### Bloqueio com PIN (se a loja usar)
+
+Algumas lojas pedem um **PIN de 4 números** para desbloquear o caixa depois de um tempo parado. O botão **Bloquear** só aparece quando essa regra está ligada.
+
+- Digite o **seu** PIN. Errar 5 vezes bloqueia por **5 minutos**. Errar 10 vezes exige o **gerente**.
+- Seu PIN não pode ser sequência (1234) nem repetido (1111).
+- O PIN não substitui o login: você entra com e-mail e senha.
 
 ---
 
-## Final do Dia
+## Fechamento do caixa (fim do dia)
 
-**Ao fim do expediente:**
+1. Finalize ou coloque em espera as últimas vendas.
+2. Clique em **Fechar caixa** (ou **F6**).
+3. Conte o dinheiro físico e informe o **saldo contado (dinheiro)**.
+4. Confirme. Antes de confirmar, confira com o sistema.
+5. Saia do sistema.
 
-1. ✅ Termina últimas vendas (antes das 18:00)
-2. ✅ Menu "Operações" → "Fechar caixa" (ou **F6**)
-3. ✅ Insere saldo físico do caixa (conta dinheiro)
-4. ✅ Confirma encerramento
-5. ✅ Faz logout
-
-**Resultado:** Sistema salva tudo; você pode ir embora.
-
-**⚠️ IMPORTANTE:** Não feche o caixa sem contar o dinheiro físico e conferir com o sistema!
+> Não feche o caixa sem contar o dinheiro físico.
 
 ---
 
-## ☎️ Quando Ligar para Suporte
+## Quando chamar o gerente
 
-- Operador não consegue fazer login
-- Página está em branco / carregando eternamente (> 30s)
-- Venda não finaliza depois de 3 tentativas
-- Qualquer mensagem de erro que não some
+- Você não consegue entrar, ou a tela fica carregando por muito tempo.
+- Uma venda não finaliza depois de 2 tentativas.
+- Aparece qualquer mensagem de erro que não some.
+- Um cliente quer desconto, fiado, ou pagar parte do valor.
+- Você precisa de um produto que não está cadastrado.
 
-**Número:** `(81) 98865-9993`  
-**Horário:** 9h-20h (seg-sábado), 10h-18h (domingo)
-
----
-
-## 💡 Dicas de Ouro
-
-- ✅ **Escaneia código** = mais rápido que digitar
-- ✅ **Verifica preço** antes de finalizar (amarelo = desconto OK)
-- ✅ **Vê o total** na tela — é grande, em preto, não pode errar
-- ✅ **Desconto sempre com gerente** — sem exceção
-- ✅ **Restante sempre 0,00** ao confirmar — se sobrar, chama o gerente
+**Contato do suporte:** `[CONTATO DO SUPORTE — preencher na instalação]`
+**Horário de atendimento:** `[HORÁRIO — preencher na instalação]`
 
 ---
 
-**Versão:** 1.1  
-**Data:** 2026-08-19  
-**Impressão recomendada:** A4, laminado (resistente à umidade/tinta)
+**Versão:** 1.2 (piloto)
+**Data:** 2026-11-07
+**Impressão recomendada:** A4, laminado.
 
-### Mudanças da 1.0 → 1.1
+### Mudanças da 1.1 → 1.2
 
 | O que | Por quê |
 |---|---|
-| Removido o "+ Cadastro rápido" em *Produto não encontrado* | A superfície de cadastro **saiu do PDV em 2026-07-30** (decisão de produto: o caixa vende, o gerente cadastra). O manual mandava clicar num botão que não existe mais. |
-| Adicionado **Dividir** / **Restante** no passo 6️⃣ | O caixa faz pagamento em várias formas desde as ondas #270–#280; o manual descrevia só escolha única. |
-| Adicionado o aviso de **Restante > 0** | Confirmar com saldo pendente gera **crédito do cliente** (conta a receber). O módulo financeiro está **desligado no piloto** — o operador precisa saber que esse caminho não é para usar. |
-| *"Cliente quer parcelar ou desconto"* separado em três casos | A entrada antiga dizia que parcelar "não é pelo PDV", o que virou meia-verdade: **dividir formas de pagamento** o PDV faz; **fiado** não existe; **desconto** é do gerente. Juntar os três num "não" ensinava o operador errado. |
+| Escopo do piloto no topo: sem fiado, sem nota fiscal | Alinha ao contrato do primeiro cliente (plano de liberação, fase F) |
+| Botão de dividir passou a ser **"Dividir pagamento"** e o campo de saldo passou a ser **"Falta"** | Rótulos reais da tela (`src/lib/i18n/pt.json`, `pdv_pgto_dividir` e `pdv_pgto_diferenca`). A versão 1.1 dizia "Restante" |
+| Regra "Falta acima de zero" reescrita | A versão 1.1 dizia que a venda vira "crédito do cliente". A tela pede cliente e registra o saldo como contas a receber. Por isso o operador não pode finalizar com saldo |
+| Desconto gerente: só em venda 100% dinheiro | Regra da tela (`pt.json`, `desconto_gerente_so_dinheiro`) |
+| Atalho **Alt+B** corrigido (era "método de pagamento"; é a aba de pagamento no layout clássico), **Alt+C** é cliente | `app/caixa/caixaAtalhos.ts:59-60` |
+| Atalhos 1 a 4 (formas) incluídos | `app/caixa/caixaAtalhos.ts:63-64` |
+| Telefone e horário de suporte removidos | Não incluir contatos reais no repositório. Preencher na instalação |
+| Removidos passos que não foram confirmados no código (ex.: "Comprovante impresso", "Enter no campo de valor") | Ver origem abaixo |
+
+---
+
+## Origem das afirmações (para quem instala)
+
+Caminhos relativos a `pdv-importados/` quando não indicados. "pt.json" = `src/lib/i18n/pt.json`.
+
+| # | Afirmação | Origem |
+|---|---|---|
+| O1 | Login com e-mail e senha | `app/login/LoginForm.tsx:241-277` |
+| O2 | Operador cai em `/caixa` | `lib/admin/policy/adminPolicy.ts:195-200` |
+| O3 | Atalhos F1–F12, Ctrl+B, Ctrl+Z, Ctrl+Shift+S/R | `app/caixa/caixaAtalhos.ts:44-56` |
+| O4 | Alt+Z, Alt+C, Alt+B, Alt+Q, Alt+S só no layout clássico | `app/caixa/caixaAtalhos.ts:57-62`; `pt.json` `layout_preview_banner` |
+| O5 | Formas 1–4 na ordem Dinheiro, PIX, Crédito, Débito | `app/caixa/caixaAtalhos.ts:63-64`; `pt.json` `pdv_metodo_pagamento_*` |
+| O6 | "Dividir pagamento", "Recebido", "Falta", "Troco p/ cliente", máx. 4 formas | `pt.json` `pdv_pgto_*` (1302–1311) |
+| O7 | Pagamento parcial pede seleção de cliente | `app/caixa/CaixaPageClient.tsx:1113-1120`, `:1184`; `pt.json` `msg_pagamento_parcial_requer_cliente` |
+| O8 | Soma passa do total sem dinheiro para troco | `app/caixa/CaixaPageClient.tsx:1128-1145`; `pt.json` `msg_pagamento_excesso_sem_dinheiro` |
+| O9 | Desconto gerente: "Desconto gerente", só venda 100% dinheiro, senha e percentual | `pt.json` `validar_gerente` (1409), `desconto_gerente_so_dinheiro` (1419), `modal_gerente_*` (1446–1456); `app/caixa/CaixaGerenteModal.tsx:183` |
+| O10 | Limite de sangria sem gerente e senha do gerente acima dele | `app/caixa/CaixaPageClient.tsx:175` (padrão 200, origem da atualização NÃO COMPROVADA); `app/caixa/CaixaMovimentacaoModal.tsx:71` |
+| O11 | Motivos de sangria/suprimento | `app/caixa/CaixaMovimentacaoModal.tsx:37-41`; `pt.json` `motivo_*` (1481–1484) |
+| O12 | Abrir caixa: operador e "Valor inicial (fundo)" | `pt.json` `abrir_turno_*` (1241–1244); `app/caixa/CaixaAbrirTurnoModal.tsx` |
+| O13 | Fechar caixa com F6; "Saldo contado (dinheiro)" | `app/caixa/caixaAtalhos.ts:49`; `pt.json` `comprovante_fechamento_saldo_contado` (1533) |
+| O14 | Venda em espera bloqueia fechamento | `backend/supabase/migrations/20261106100000_d1_fechamento_bloqueia_vendas_em_espera.sql`; `app/caixa/server/caixaErroOperador.ts:140-142` |
+| O15 | Troca de operador: bloqueia com venda no cupom ou em finalização; volta ao login; "Assumir este caixa" | `pt.json` `troca_bloqueada_carrinho` (1180), `troca_bloqueada_finalizando` (1181), `troca_btn` (1176), `troca_assumir_btn` (1185); `app/caixa/CaixaTrocaOperador.tsx:121` |
+| O16 | Bloquear só aparece com PIN exigido | `app/caixa/CaixaTrocaOperador.tsx:216` |
+| O17 | PIN 4 números; sem sequência nem repetido | `lib/pdv/pinRegras.ts:1-18`; `pt.json` `meu_pin.regra` (1933) |
+| O18 | 5 erros = 5 min; 10 = gerente libera | `backend/supabase/migrations/20261021230000_pdv_operador_pin_p0.sql:131-147`; `pt.json` `troca_erro_pin_bloqueado` (1201), `troca_erro_pin_bloqueado_gerente` (1202) |
+| O19 | F8 limpa o cupom sem finalizar | `pt.json` `cart_bar_excluir_title` (texto "atalho: F8 Novo cupom"); `app/caixa/caixaAtalhos.ts:50` |
+| O20 | Erro de venda: mensagem genérica quando o código não é mapeado | `app/caixa/server/caixaErroOperador.ts:189-192` |
+
+**Não incluído por não ser confirmado no código:** "Comprovante impresso automaticamente", "Enter no campo de valor confirma", "Enter no campo de busca adiciona produto", o gesto exato de alterar quantidade na linha (NÃO COMPROVADO; confirmar na instalação), "cadastro de produto só pelo gerente" (procedimento do piloto, não verificado em tela), cores de preço (amarelo/vermelho), "Descontos (amarelo)", a mensagem "Erro ao finalizar", horários de atendimento e telefone.

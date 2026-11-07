@@ -32,6 +32,11 @@
 
 ## P1 — Falta para lançar (MVP)
 
+- Fiado no caixa: a tela aceita finalizar com saldo pendente, pede cliente e cria contas a receber (`pdv-importados/app/caixa/CaixaPageClient.tsx:1113-1120`). O escopo do primeiro cliente é sem fiado: bloquear no caixa ou no RPC (`docs/ops/INSTALACAO_PRIMEIRO_CLIENTE_CHECKLIST.md`, L-F2)
+- Senha do gerente (`pdv_config.gerente_senha_bcrypt`), `exigir_pin_operador` e `bloqueio_inatividade_min` são lidos pelo sistema, mas não há tela que os grave. Definir o procedimento de instalação ou criar a tela (`docs/ops/INSTALACAO_USUARIOS_PIN_TROCA_OPERADOR.md`, L1)
+- Gate de implantação: o grupo fiscal exige item `CONCLUIDO` mesmo sem fiscal, e não há item de contas e formas de pagamento (`pdv-importados/app/admin/implantacao/implantacaoCatalog.ts:74-75`; checklist, L-F1 e L-F5)
+- Plano do primeiro cliente: confirmar se inclui o recurso `financeiro` e o conteúdo real de `saas.planos`. Sem ele, a conta de PIX e cartão não pode ser criada pela tela (`docs/ops/INSTALACAO_CONTAS_FINANCEIRAS_FORMAS_PAGAMENTO.md`, R1)
+- Rollback de D4 apaga `valor_recebido` e `troco`: tirar snapshot (consulta §3.5) antes de qualquer rollback. Ensaiar a ordem D2 → D5 → D4 → D3 → D1 em homologação com backup lógico (`docs/ops/PLAYBOOK_ROLLBACK_E_SUPORTE_PRIMEIRO_CLIENTE.md`, §1 e §4)
 - PDV-100 D-04 (decisão de produto): o carrinho aceita quantidade fracionada em qualquer produto, inclusive `unidade_medida = UN` (ex.: 2,5 chaleiras). Decidir se bloqueia por unidade ou mantém (balança)
 - PDV-100 D-05: `vendas_pagamentos` grava só o valor líquido. Persistir valor recebido e troco para auditar o dinheiro
 - PDV-100 D-06: venda em espera (EM_ESPERA) sobrevive ao fechamento do caixa sem aviso. Definir regra: bloquear, transferir ou descartar
@@ -78,6 +83,17 @@
 - Rodar as suítes de psql (ap-payments, ar-receipts, sale-totals, financeiro-hardening, financial-adversarial, ux04, funcionario-dados-rls) num banco de homologação migrado, via npm run test:financial
 - Criar teste de reposição de estoque no cancelamento e teste ponta a ponta de auditoria (autor, data, alteração)
 - Definir preço real em saas.planos (hoje placeholder) e contrato de piloto sem NFC-e/SLA
+
+## P2 — Melhoria
+
+- Mensagens genéricas no caixa para `PAGAMENTO_SEM_CONTA_FINANCEIRA`, `CANCELAR_VENDA_CAIXA_ABERTO_AMBIGUO` e `CANCELAR_VENDA_CAIXA_FECHADO_SEM_CAIXA_ABERTO` (`pdv-importados/app/caixa/server/caixaErroOperador.ts`)
+- Texto de "Meu PIN do caixa" diz que o PIN serve para entrar, mas o código só o usa para desbloquear (`pdv-importados/src/lib/i18n/pt.json`, `meu_pin.subtitulo`)
+- Troca de PIN no primeiro uso (`trocar_no_primeiro_uso`) não comprovada na tela de bloqueio
+- Manual do operador: confirmar os gestos marcados como não verificados (quantidade na linha, Enter na busca, comprovante automático) e se o layout clássico está ativo (`MANUAL_OPERADOR_RESUMIDO.md`, seção de origem)
+
+## Feito
+
+- 2026-11-07 — Documentação de instalação do primeiro cliente em `docs/ops/` (checklist F1, contas F2, usuários e PIN F3, playbook F6) e manual do operador 1.2 (F4). Nenhum código de produção alterado
 - Revisar Termos e Privacidade (prometem emissão fiscal; fiscal é stub) e incluir o uso do contato do teste grátis pelo comercial (LGPD)
 - Provisionar empresa/loja nova para o cliente pelo wizard e validar o isolamento multiempresa (nenhum dado de outra loja visível); não usar o script de limpeza, que apaga dados de todos os tenants
 - Registrar restore drill com RTO a partir de um backup novo, tirado após a reconciliação de migrations
