@@ -45,14 +45,17 @@ CREATE FUNCTION pg_temp.g(k text) RETURNS uuid LANGUAGE sql AS $f$ SELECT v FROM
 
 -- Venda em DINHEIRO 10,00 no caixa indicado (operador do caixa).
 CREATE FUNCTION pg_temp.venda(p_caixa uuid, p_op uuid) RETURNS uuid LANGUAGE plpgsql AS $f$
-DECLARE v uuid := gen_random_uuid(); r record;
+DECLARE v uuid := gen_random_uuid(); r record; v_jwt_antes text := current_setting('request.jwt.claim.sub', true);
 BEGIN
+  -- A RPC de venda exige que o operador seja o usuário autenticado.
+  PERFORM set_config('request.jwt.claim.sub', p_op::text, true);
   SELECT * INTO r FROM public.finalizar_venda_transacional_canonica_v4(
     p_venda_id => v, p_caixa_id => p_caixa, p_operador_id => p_op, p_loja_id => pg_temp.g('la'),
     p_forma_pagamento => 'DINHEIRO', p_total_bruto => 10, p_total_desconto => 0, p_total_liquido => 10,
     p_pagamentos => jsonb_build_array(jsonb_build_object('forma_pagamento', 'DINHEIRO', 'valor', 10)),
     p_itens => jsonb_build_array(jsonb_build_object('item_id', gen_random_uuid(), 'produto_id', pg_temp.g('p1'),
       'quantidade', 1, 'preco_original', 10, 'preco_unitario', 10, 'tipo_preco', 'VAREJO')));
+  PERFORM set_config('request.jwt.claim.sub', COALESCE(v_jwt_antes, ''), true);
   IF r.status IS DISTINCT FROM 'CONCLUIDA' THEN RAISE EXCEPTION 'venda de teste não concluída: %', r.status; END IF;
   RETURN v;
 END $f$;

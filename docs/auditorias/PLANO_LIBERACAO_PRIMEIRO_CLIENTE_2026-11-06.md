@@ -346,3 +346,22 @@ Até lá: **NÃO PODE ENTRAR**. Com 1–5 completos e 6–7 pendentes, o veredit
 | Comportamento de D1, D2 e D3 nos triggers (PGlite, tabelas-stub) | OK. D2 expôs um bug real (`MIN(uuid)` inexistente), corrigido na migration |
 
 **Não verificado:** os testes `d1-d3-...`, `d2-...` e `d4-d5-...` (fluxo completo pela RPC `finalizar_venda_transacional_canonica_v4` e pela RPC de cancelamento). Exigem o schema completo de homologação, que não reproduzo sem Docker. A RPC da venda e o wrapper de D4 não foram executados.
+
+### Validação com Docker — 2026-11-07
+
+Banco de trabalho: `d16_base` (cópia de `sec_gf01`, descartável, no contêiner local `supabase_db_fastproduct`). Nada em produção ou homologação.
+
+| Verificação | Resultado |
+|---|---|
+| Docker operacional | PASSOU |
+| Migrations D1, D3, D4, D5, D2 aplicadas em ordem | PASSOU |
+| Rollbacks D2 → D5 → D4 → D3 → D1 em cópia `d16_rb` | PASSOU: triggers e colunas removidos; wrapper da v4 idêntico ao original (só diferença de fim de linha CRLF) |
+| `d1-d3-fechamento-espera-quantidade-un.test.sql` | PASSOU (D1-1..4, D3-5..6) |
+| `d2-estorno-dinheiro-caixa-aberto.test.sql` | PASSOU (D2-1..4). Corrigido: operador de venda precisa ser o usuário autenticado no teste |
+| `d4-d5-troco-conta-pagamento.test.sql` | PASSOU (D5-1..3, D4-1..4). Corrigido: teste de conta inativa usava quantidade fracionada em produto UN |
+| `go-live-01-golden-flow.test.sql` (regressão do PDV) | PASSOU (blocos 1–19). Falhava por design com D5: o fixture não tinha conta para PIX/cartão. Fixture ajustado com conta da loja A |
+| Pré-checagem D3 (itens fracionados em UN) | 0 linhas no local |
+| Pré-checagem D6 (preço de atacado sem gatilho) | 0 linhas no local |
+| Pré-checagem D5 (lojas vendendo PIX/cartão sem conta ativa) | 1 loja no local (dados de teste). Produção: **NÃO TESTADO** (exige autorização) |
+| Pré-checagem D4 (venda em dinheiro sem linha de pagamento) | 0 linhas no local (informativa) |
+| E2E (Playwright, fase E) | **NÃO TESTADO**. Motivo: o GoTrue isolado (`auth`) não sobe sobre a cópia do banco (erro do migrador: `schema_migrations already exists`). Rodar contra o banco de desenvolvimento `postgres` alteraria o ambiente local compartilhado; não foi feito sem decisão |

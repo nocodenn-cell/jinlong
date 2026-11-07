@@ -92,7 +92,7 @@ BEGIN
   -- D5-3: conta INATIVA não serve
   UPDATE public.contas_financeiras SET ativo = false WHERE id = conta;
   BEGIN
-    PERFORM pg_temp.venda(gen_random_uuid(), jsonb_build_array(jsonb_build_object('forma_pagamento','PIX','valor',5)), 0.5, 10);
+    PERFORM pg_temp.venda(gen_random_uuid(), jsonb_build_array(jsonb_build_object('forma_pagamento','PIX','valor',10)), 1, 10);
     RAISE EXCEPTION 'D5-3 FALHOU: conta inativa deveria bloquear';
   EXCEPTION WHEN OTHERS THEN
     IF SQLERRM NOT LIKE 'PAGAMENTO_SEM_CONTA_FINANCEIRA%' THEN
