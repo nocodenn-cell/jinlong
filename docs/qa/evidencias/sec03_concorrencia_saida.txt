@@ -1,0 +1,3 @@
+(a) mesma chave x10: protocolos distintos=1 (esperado 1); erros=0 (esperado 0); linhas=1 (esperado 1)
+(b) 20 do mesmo IP: aceitas=10 (esperado 10); recusadas=10 (esperado 10); contador=10 (esperado 10: a recusa reverte o incremento, então não estende a janela)
+limpeza feita (somente marcadores sec03-conc)

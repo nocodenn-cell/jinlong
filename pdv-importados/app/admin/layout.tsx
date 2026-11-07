@@ -5,6 +5,12 @@ import { resolveAdminSession } from '@/lib/admin/auth/resolveAdminSession'
 import type { AdminSession } from '@/lib/admin/auth/types'
 import { AdminToastViewport, AdminV2Shell } from '@/components/ui/admin-v2'
 import { contarEstoqueBaixo, lerFlagsVisuaisPdv } from '@/lib/admin/sinaisVisuaisAdmin'
+import { AvisoAssinatura } from '@/lib/cobranca/AvisoAssinatura'
+import { createClient } from '@/lib/supabase/server'
+import { listarEmpresasDoUsuario } from '@/lib/multiempresa/selecionarEmpresa'
+import { resolverTopbarEmpresa } from '@/lib/admin/topbarEmpresa'
+import type { AdminV2TopbarContext } from '@/components/ui/admin-v2/AdminV2Topbar'
+import { modulosAtivosDaSessao } from '@/lib/import/hub/gateImportacoes'
 
 export const dynamic = 'force-dynamic'
 export const fetchCache = 'force-no-store'
@@ -43,9 +49,24 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     stockAlertCount = undefined
   }
 
+  // Barra superior: nome da empresa ativa (mesma leitura RLS da tela /selecionar-empresa).
+  // Best-effort — falha ⇒ barra sem o bloco da empresa.
+  let topbar: AdminV2TopbarContext | undefined
+  try {
+    const supabase = await createClient()
+    const empresas = await listarEmpresasDoUsuario(supabase, session.userId)
+    topbar = resolverTopbarEmpresa(empresas, session.empresaId ?? null)
+  } catch {
+    topbar = undefined
+  }
+
+  // Módulos opcionais (licença por empresa): best-effort; falha = nenhum módulo no menu.
+  const modulosAtivos = await modulosAtivosDaSessao()
+
   return (
     <>
-      <AdminV2Shell session={adminContext.session} stockAlertCount={stockAlertCount}>
+      <AdminV2Shell session={adminContext.session} stockAlertCount={stockAlertCount} topbar={topbar} modulosAtivos={modulosAtivos}>
+        <AvisoAssinatura />
         {children}
       </AdminV2Shell>
       <AdminToastViewport />

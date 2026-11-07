@@ -6,6 +6,8 @@ import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { mensagemErroComSecao, mensagemErroValidacaoZod } from '@/lib/errors/mensagemErroUsuario'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
+import { erroSeSemRecurso, recursosDaSessao } from '@/lib/cobranca/bloqueioPorPlano'
+import { temRecurso } from '@/lib/cobranca/planos'
 
 /**
  * CRUD de faixas de preço atacado (tabela `precos_atacado`, já usada pela RPC
@@ -32,6 +34,12 @@ function revalidateFaixasPaths(produtoId: string) {
   revalidatePath('/gerente/produtos')
   revalidatePath('/admin/catalogo')
   revalidatePath(`/admin/catalogo/${produtoId}`)
+}
+
+/** Faixas extras são recurso de plano (`faixas_preco`; Básico não inclui). Listar e inativar
+ *  continuam livres para quem fez downgrade poder limpar. Empresa sem assinatura ⇒ liberado. */
+export async function faixasPermitidasNoPlano(): Promise<boolean> {
+  return temRecurso(await recursosDaSessao(), 'faixas_preco')
 }
 
 const FaixaInputSchema = z.object({
@@ -89,6 +97,8 @@ export async function listarFaixasAtacado(produtoId: string): Promise<ActionResu
 export async function criarFaixaAtacado(input: unknown): Promise<ActionResult<FaixaAtacado>> {
   const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
+  const semPlano = await erroSeSemRecurso('faixas_preco')
+  if (semPlano) return { success: false, error: semPlano }
 
   const parsed = FaixaInputSchema.safeParse(input)
   if (!parsed.success) {
@@ -133,6 +143,8 @@ const AtualizarFaixaSchema = FaixaInputSchema.extend({
 export async function atualizarFaixaAtacado(input: unknown): Promise<ActionResult<null>> {
   const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
+  const semPlano = await erroSeSemRecurso('faixas_preco')
+  if (semPlano) return { success: false, error: semPlano }
 
   const parsed = AtualizarFaixaSchema.safeParse(input)
   if (!parsed.success) {

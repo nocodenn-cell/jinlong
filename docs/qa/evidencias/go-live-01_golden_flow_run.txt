@@ -1,0 +1,55 @@
+BEGIN
+CREATE TABLE
+DO
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+NOTICE:  ESTADO INICIAL: saldo_caixa=100.00 estoque=100.000 vendas_no_caixa=0 parcelas_no_caixa=0
+NOTICE:  OK 1 login/status do operador: caixa ABERTO resolvido
+NOTICE:  OK 2 abertura: saldo inicial = valor_inicial = 100
+NOTICE:  OK 3 busca por código de barras e por nome encontra GF Arroz
+NOTICE:  OK 4 venda simples: total 20, estoque -2, caixa +20 (persistido)
+NOTICE:  OK 5 fracionado 0,500 kg: estoque -0,5, PIX não entra no saldo em dinheiro
+NOTICE:  OK 6a desconto manual 10% permitido: desconto 1,00 gravado, caixa +9
+NOTICE:  OK 6b desconto 25% sem gerente recusado: DESCONTO_MANUAL_EXCESSIVO
+NOTICE:  OK 6c desconto 25% com token do gerente: gravado, caixa +7,50, token consumido
+NOTICE:  OK 7 pagamento dividido: 2 parcelas somando 30; caixa +10 (dinheiro), PIX +20 fora do caixa
+NOTICE:  OK 7b replay da mesma venda: sem parcela duplicada, sem baixa dupla de estoque ou caixa
+NOTICE:  OK GF-8 retomada dupla -> recusado: venda_em_espera_em_uso
+NOTICE:  OK 8 venda em espera: nada baixado ao salvar; retomada exclusiva; conversão baixa 1 vez
+NOTICE:  OK GF-9 venda a prazo -> recusado: FINALIZAR_VENDA_CANONICA_FIADO_DESABILITADO
+NOTICE:  OK 9 pagamento a prazo: FIADO recusado pelo servidor (FIADO_DESABILITADO), sem título gravado (NÃO SUPORTADO nesta versão)
+NOTICE:  OK GF-11 cancelamento repetido -> recusado: CANCELAR_VENDA_JA_CANCELADA
+NOTICE:  OK GF-11 operador sem permissão -> recusado: CANCELAR_VENDA_SEM_PERMISSAO
+NOTICE:  OK 11 cancelamento: CANCELADA, estoque +2, caixa -20, auditoria e devolução gravadas; repetição e operador recusados
+NOTICE:  OK GF-12 operador sem permissão -> recusado: DEVOLVER_VENDA_SEM_PERMISSAO
+NOTICE:  OK 12 devolução parcial: estoque +1, caixa -9 (dinheiro), repetição com mesma chave sem efeito duplo
+NOTICE:  OK GF-13 saldo esperado divergente -> recusado: TRANSFERENCIA_CONCORRENCIA: saldo mudou (atual=90.000, esperado=999).
+NOTICE:  OK GF-13 destino de outra empresa -> recusado: ACESSO_EMPRESA_INVALIDA: transferir_estoque_seguro
+NOTICE:  OK 13 transferência A->B: A-5, B+5; repetição sem duplicar; saldo divergente e destino de outra empresa recusados
+NOTICE:  OK GF-14 operador sem permissão -> recusado: AJUSTE_ESTOQUE_PERFIL
+NOTICE:  OK GF-14 saldo esperado defasado -> recusado: AJUSTE_ESTOQUE_SALDO_ALTERADO
+NOTICE:  OK 14 ajuste manual: gerente ajusta com log; operador e saldo defasado recusados
+NOTICE:  OK GF-15 venda em caixa fechado -> recusado: FINALIZAR_VENDA_CANONICA_CAIXA_FECHADO
+NOTICE:  OK 15 fechamento: diferença -5,00 gravada, caixa FECHADO, venda em caixa fechado recusada
+NOTICE:  OK GF-16 token reutilizado -> recusado: RETOMAR_CAIXA_TOKEN_INVALIDO
+NOTICE:  OK 16a reabertura com token do gerente: turno novo ABERTO, caixa anterior FECHADO preservado, token consumido, reuso recusado
+NOTICE:  OK GF-18 venda no caixa de outra empresa -> recusado: ACESSO_LOJA_NEGADO: finalizar_venda_transacional_canonica_v4.p_caixa_id
+NOTICE:  OK GF-18 transferência de loja alheia -> recusado: ACESSO_LOJA_NEGADO: transferir_estoque_seguro.p_loja_origem
+NOTICE:  OK GF-18 histórico de loja alheia -> recusado: ACESSO_LOJA_NEGADO: listar_vendas_gerente.p_loja_id
+NOTICE:  OK 18 isolamento: venda, transferência e histórico de outra empresa recusados/vazios
+NOTICE:  OK 19 falha no meio da venda: rollback total, sem resíduo
+NOTICE:  ESTADO FINAL: saldo_caixa=127.50 estoque=87.000 vendas_no_caixa=6 parcelas_no_caixa=7
+NOTICE:  GOLDEN FLOW PASSOU: blocos de asserção 1 a 19 (com subcasos)
+DO
+ROLLBACK
+
+real	0m1.696s
+user	0m0.154s
+sys	0m0.230s

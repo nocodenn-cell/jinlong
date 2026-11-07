@@ -1,112 +1,133 @@
 /**
- * Contrato único de conteúdo da home (direção D — Tecnologia com Identidade).
+ * Contrato único de conteúdo da home (Premium 2.0 — grafite, dourado e vermelho institucional).
  * pt-BR e zh-CN implementam a mesma forma; textos em chinês são rascunho até a revisão nativa.
  */
 
-export interface TextWithLang {
-  text: string
-  lang: 'pt-BR' | 'zh-CN'
-}
-
-export interface BenefitItem {
-  title: string
-  body: string
-  what: string
-}
-
-export interface StepItem {
+export interface TitledPlain {
   title: string
   body: string
 }
 
-export interface PdvWindowCopy {
-  top: string
-  sample: string
-  colProduct: string
-  colQty: string
-  colSubtotal: string
-  wholesaleBadge: string
-  total: string
-  finish: string
-  aria: string
+export interface FaqItem {
+  q: string
+  a: string
 }
 
-export interface ScreensCopy {
+export interface SegmentOption {
+  value: string
+  label: string
+}
+
+/** Uma cena do centro de comando (representação ilustrativa, dados fictícios). */
+export interface SceneCopy {
+  tab: string
+  crumb: string
+  title: string
+  insightTitle: string
+  insightBody: string
+}
+
+export interface CommandCenterCopy {
   eyebrow: string
   title: string
+  emphasis: string
   lead: string
-  represent: string
-  stock: {
-    bar: string
-    colProduct: string
-    colRetail: string
-    colWholesale: string
-    colStock: string
-    captionTitle: string
-    captionBody: string
+  tabsLabel: string
+  demoBadge: string
+  insightLabel: string
+  illustrative: string
+  hint: string
+  prev: string
+  next: string
+  scenes: {
+    overview: SceneCopy
+    pos: SceneCopy
+    stock: SceneCopy
+    wholesale: SceneCopy
+    reports: SceneCopy
   }
-  close: {
-    bar: string
-    opening: string
-    cash: string
-    pix: string
-    debit: string
-    credit: string
-    total: string
-    captionTitle: string
-    captionBody: string
+  overview: {
+    sales: string
+    salesNote: string
+    ticket: string
+    ticketNote: string
+    low: string
+    lowNote: string
+    movement: string
+    top: string
+    unit: string
   }
-  panel: {
-    bar: string
-    kpiSales: string
-    kpiItems: string
-    kpiCritical: string
-    captionTitle: string
-    captionBody: string
-  }
+  pos: { sale: string; open: string; wholesaleBadge: string; perUnit: string; total: string; finish: string }
+  stock: { product: string; retail: string; wholesale: string; stock: string; unit: string; from: string }
+  wholesale: { retailTier: string; wholesaleTier: string; unitPrice: string; note: string }
+  reports: { title: string; opening: string; cash: string; pix: string; debit: string; credit: string; total: string; status: string }
 }
 
 export interface WholesaleCopy {
   eyebrow: string
   title: string
+  emphasis: string
   lead: string
-  hint: string
+  ruleLabel: string
   product: string
-  tag: string
-  retailRule: string
-  wholesaleRule: string
+  ruleNote: string
+  widgetTitle: string
+  quantity: string
   decrease: string
   increase: string
-  quantity: string
-  unitRetail: string
-  unitWholesale: string
+  unitPrice: string
+  total: string
+  retail: string
+  wholesale: string
+  simulated: string
   missingOne: string
   missingMany: string
   applied: string
   disclaimer: string
 }
 
-export interface LanguageSample {
-  code: string
-  name: string
-  title: string
-  rows: ReadonlyArray<readonly [string, string]>
-  total: readonly [string, string]
-  button: string
-}
-
-export interface LanguagesCopy {
-  eyebrow: string
+export interface TrialFormCopy {
+  top: string
   title: string
   lead: string
-  pt: LanguageSample
-  zh: LanguageSample
+  name: string
+  store: string
+  contact: string
+  contactHint: string
+  segment: string
+  segmentPlaceholder: string
+  segments: readonly SegmentOption[]
+  idioma: string
+  submit: string
+  sending: string
+  note: string
+  privacy: string
+  errName: string
+  errStore: string
+  errContact: string
+  errSegment: string
+  errRate: string
+  okTitle: string
+  okBody: string
+  okProtocol: string
+  okKeep: string
+  okWhatsapp: string
+  failTitle: string
+  failBody: string
+  failEmail: string
+  failWhatsapp: string
+  mailSubject: string
+  thanksTitle: string
+  thanksBody: string
+  thanksWaText: string
+  back: string
 }
 
 export interface ContactCopy {
+  fab: string
   whatsapp: string
-  wechat: string
-  wechatIdLabel: string
+  emailLabel: string
+  email: string
   opensNewTab: string
 }
 
@@ -114,42 +135,79 @@ export interface HomeContent {
   meta: { title: string; description: string }
   skipLink: string
   brandLabel: string
+  brandTagline: string
   nav: {
     label: string
-    home: string
-    features: string
+    vision: string
+    experience: string
+    operation: string
+    faq: string
+    cta: string
     demo: string
-    how: string
-    contact: string
     login: string
     menuOpen: string
     menuClose: string
   }
   langSwitch: { group: string; pt: string; ptShort: string; zh: string; zhShort: string }
   hero: {
-    signature: string
-    h1: { line1: string; line2: string; emphasis: string; rest: string }
+    label: string
+    h1: { line1: string; line2: string; line3: string }
     lead: string
-    ctaDemo: string
-    ctaTrial: string
-    trialNote: string
-    proof: readonly [string, string, string]
-    chipFirst: TextWithLang
-    chipSecond: TextWithLang
-    floatTitle: string
-    floatNote: string
+    ctaPrimary: string
+    ctaSecondary: string
+    statement: string
+    bottom: readonly [string, string, string]
   }
-  pdv: PdvWindowCopy
-  benefits: { eyebrow: string; title: string; items: readonly BenefitItem[] }
-  screens: ScreensCopy
+  statement: {
+    eyebrow: string
+    title: string
+    emphasis: string
+    body: string
+    problemsTitle: string
+    problems: readonly TitledPlain[]
+    audienceTitle: string
+    audience: readonly string[]
+    audienceNote: string
+    rail: readonly string[]
+    railZh: readonly string[]
+  }
+  commandCenter: CommandCenterCopy
+  difference: {
+    eyebrow: string
+    title: readonly [string, string]
+    emphasis: string
+    body: string
+    items: readonly TitledPlain[]
+    link: string
+    artCoordinate: readonly [string, string]
+    artLabel: string
+    artPt: string
+    artZh: string
+    artNote: string
+  }
   wholesale: WholesaleCopy
-  languages: LanguagesCopy
-  steps: { eyebrow: string; title: string; items: readonly StepItem[] }
-  final: { title: string; lead: string }
+  process: {
+    eyebrow: string
+    title: string
+    emphasis: string
+    lead: string
+    cta: string
+    steps: readonly TitledPlain[]
+  }
+  faq: { eyebrow: string; title: string; items: readonly FaqItem[] }
+  final: {
+    eyebrow: string
+    title: string
+    emphasis: string
+    lead: string
+    lines: readonly [string, string]
+  }
+  form: TrialFormCopy
   contact: ContactCopy
   footer: {
     tagline: string
     zhTagline: string
+    exploreTitle: string
     contactTitle: string
     legalTitle: string
     privacy: string
@@ -157,5 +215,4 @@ export interface HomeContent {
     login: string
     ptOnly: string
   }
-  draftBanner: string
 }

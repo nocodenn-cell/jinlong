@@ -1,11 +1,12 @@
 'use client'
 
 import { Suspense, useState } from 'react'
+import type { FocoTituloConta } from './baixaLinha'
 import type { FinanceiroPainel } from '../financeiroLojaTypes'
 import { FinanceiroTitulosOperations } from './FinanceiroTitulosOperations'
 import { FinanceiroPaginacao } from './FinanceiroWorkspace'
 import { FinanceiroPrimeiroUso } from './FinanceiroPrimeiroUso'
-import { FinanceiroAcoesRapidas } from './FinanceiroAcoesRapidas'
+import { FinanceiroAcoesRapidas, useFinanceiroAcoesLabels, type FinanceiroAcaoRapida } from './FinanceiroAcoesRapidas'
 import { SectionCard } from '@/components/ui/admin-v2'
 import { EmptyState } from '@/components/ui/feedback'
 import { formatDateTimeOrDash } from '@/lib/format/datetime'
@@ -63,6 +64,8 @@ type Props = {
   }
   filterSection: ReactNode
   kpiSection: ReactNode
+  /** Perfil da sessão. Sem ele, a linha trata o ator como autorizado (chamadas antigas). */
+  perfil?: string | null
 }
 
 function FiscalList({
@@ -118,28 +121,21 @@ export function FinanceiroContent({
   contasPagar,
   filterSection,
   kpiSection,
+  perfil,
 }: Props) {
   const [fiscalDetalheId, setFiscalDetalheId] = useState<string | null>(null)
+  const [focoConta, setFocoConta] = useState<FocoTituloConta | null>(null)
+  const [acao, setAcao] = useState<FinanceiroAcaoRapida>(null)
+  const [focoCaixaAr, setFocoCaixaAr] = useState<string | null>(null)
   const { idioma } = useAdminV2Session()
-  const ui = getMessages(idioma).admin_ui
-  const acoesLabels = {
-    faixaAria: ui.financeiro_acoes_aria,
-    registrarVenda: ui.financeiro_acao_registrar_venda,
-    receber: ui.financeiro_acao_receber,
-    pagar: ui.financeiro_acao_pagar,
-    transferir: ui.financeiro_acao_transferir,
-    vendaTitulo: ui.financeiro_acao_venda_titulo,
-    vendaTexto: ui.financeiro_acao_venda_texto,
-    vendaPdv: ui.financeiro_acao_venda_pdv,
-    vendaBuscar: ui.financeiro_acao_venda_buscar,
-    receberTitulo: ui.financeiro_acao_receber_titulo,
-    pagarTitulo: ui.financeiro_acao_pagar_titulo,
-    transferirTitulo: ui.financeiro_acao_transferir_titulo,
-    avulsoHint: ui.financeiro_acao_avulso_hint,
-    confirmarReceber: ui.financeiro_acao_confirmar_receber,
-    confirmarPagar: ui.financeiro_acao_confirmar_pagar,
-    confirmarTransferir: ui.financeiro_acao_confirmar_transferir,
-    saldoRegistrado: ui.financeiro_saldo_registrado_hint,
+  const mensagens = getMessages(idioma)
+  const ui = mensagens.admin_ui
+  const acoesLabels = useFinanceiroAcoesLabels()
+
+  /** Abre um modal de operação; sem título de linha, o modal começa vazio. */
+  function abrirAcao(proxima: FinanceiroAcaoRapida) {
+    setFocoConta(null)
+    setAcao(proxima)
   }
 
   return (
@@ -148,22 +144,49 @@ export function FinanceiroContent({
         <FinanceiroHubNavShell activeTab={activeTab} />
       </Suspense>
 
-      <FinanceiroAcoesRapidas data={financeiroData} labels={acoesLabels} />
-
       {activeTab === 'receber' ? (
         <>
           {financeiroData ? <FinanceiroPrimeiroUso semContas={financeiroData.contas.length === 0} /> : null}
+          <FinanceiroAcoesRapidas
+            data={financeiroData}
+            labels={acoesLabels}
+            mostrar={['venda', 'receber']}
+            acao={acao}
+            onAcao={abrirAcao}
+            foco={focoConta}
+          />
           {kpiSection}
           {filterSection}
           <div className="admin-v2-stack">
             <SectionCard title={panelLabels.titulosEmAberto}>
-              <ContasReceberTable contas={contas} labels={contasLabels} />
+              <ContasReceberTable
+                contas={contas}
+                labels={{
+                  ...contasLabels,
+                  tabela: panelLabels.titulosEmAberto,
+                  receberCaixa: ui.financeiro_linha_receber_caixa,
+                  receberConta: ui.financeiro_linha_receber_conta,
+                }}
+                perfil={perfil}
+                actorLojaId={actorLojaId}
+                onReceberCaixa={(row) => setFocoCaixaAr(row.id)}
+                onReceberConta={(row) => {
+                  setFocoConta({
+                    tipo: 'AR',
+                    id: row.id,
+                    rotulo: `${row.cliente_nome} · ${row.descricao ?? ''}`.replace(/\s·\s$/, ''),
+                  })
+                  setAcao('receber')
+                }}
+              />
               <FinanceiroReceberExtras
                 financeiroData={financeiroData}
                 contas={contas}
                 clientesIniciais={clientesOpts}
                 caixasAbertos={caixasAbertos}
                 actorLojaId={actorLojaId}
+                destaqueId={focoCaixaAr}
+                onReceberConta={() => abrirAcao('receber')}
               />
             </SectionCard>
           </div>
@@ -171,6 +194,15 @@ export function FinanceiroContent({
       ) : null}
 
       {activeTab === 'pagar' ? (
+        <>
+          <FinanceiroAcoesRapidas
+            data={financeiroData}
+            labels={acoesLabels}
+            mostrar={['pagar']}
+            acao={acao}
+            onAcao={abrirAcao}
+            foco={focoConta}
+          />
         <ContasPagarListClient
           somenteCaixa
           idioma={contasPagar.idioma}
@@ -182,7 +214,17 @@ export function FinanceiroContent({
           periodoInicial={contasPagar.periodoInicial}
           fornecedorInicial={contasPagar.fornecedorInicial}
           actorLojaId={actorLojaId}
+          perfil={perfil}
+          onPagarConta={(conta) => {
+            setFocoConta({
+              tipo: 'AP',
+              id: conta.id,
+              rotulo: `${conta.fornecedor_nome ?? ''} · ${conta.descricao}`.trim(),
+            })
+            setAcao('pagar')
+          }}
         />
+        </>
       ) : null}
 
       {activeTab === 'fiscal' ? (

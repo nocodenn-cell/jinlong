@@ -1,0 +1,17 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "bundle": {
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "SUBSTITUIR_PELA_CHAVE_PUBLICA_GERADA_COM_tauri_signer_generate",
+      "endpoints": [
+        "https://github.com/nocodenn-cell/fastproduct/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
+}

@@ -14,7 +14,15 @@ const MOBILE_MAX = 900
 async function openHome(page: Page, locale: string) {
   await page.goto(`/${locale}`, { waitUntil: 'networkidle' })
   await page.evaluate(() => document.fonts.ready)
-  await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)))
+  // Só animações finitas (entrada da abertura); o trilho de palavras e as órbitas giram sem fim.
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((a) => Number.isFinite(Number(a.effect?.getComputedTiming().endTime)))
+        .map((a) => a.finished)
+    )
+  )
 }
 
 async function horizontalOverflow(page: Page) {
@@ -40,9 +48,105 @@ for (const locale of LOCALES) {
       await expect(page.locator('h1')).toHaveCount(1)
       await expect(page).toHaveTitle(/Jinlong|金龙/)
       await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', new RegExp(`/${locale}$`))
+      await expect(page.locator('meta[property="og:title"]')).toHaveCount(1)
       const robots = page.locator('meta[name="robots"]')
       if (locale === 'zh-CN') await expect(robots).toHaveAttribute('content', /noindex/)
       else await expect(robots).toHaveCount(0)
+    })
+
+    test('ordem das seções do protótipo Premium 2.0, sem banner de rascunho', async ({ page }) => {
+      await openHome(page, locale)
+      const ids = await page.locator('main > section').evaluateAll((els) => els.map((el) => el.getAttribute('aria-labelledby')))
+      expect(ids).toEqual(['h-hero', 'h-statement', 'h-showcase', 'h-difference', 'h-journey', 'h-next', 'h-faq', 'h-final'])
+      await expect(page.locator('.jl-draft')).toHaveCount(0)
+      await expect(page.locator('.jl-lang')).toBeVisible()
+    })
+
+    test('FAQ abre por teclado; abertura sem promessa fiscal', async ({ page }) => {
+      await openHome(page, locale)
+      const second = page.locator('.jl-accordion details').nth(1)
+      await second.locator('summary').focus()
+      await page.keyboard.press('Enter')
+      await expect(second).toHaveAttribute('open', '')
+      await expect(page.locator('.jl-hero')).not.toContainText(/NFC-e|NF-e|发票|grátis|免费/)
+    })
+
+    test('formulário curto: nome, loja, WhatsApp, segmento e idioma; validação no cliente', async ({ page }) => {
+      await openHome(page, locale)
+      const form = page.locator('form.jl-form')
+      await expect(form.locator('input:not([name="website"])')).toHaveCount(3)
+      await expect(form.locator('select')).toHaveCount(2)
+      await expect(form.locator('select[name="idioma"]')).toHaveValue(locale)
+      for (const gone of ['city', 'channel', 'wechat', 'whatsapp']) await expect(form.locator(`[name="${gone}"]`)).toHaveCount(0)
+      let posted = false
+      await page.route('**/pedido-demo', (route) => { posted = true; return route.fulfill({ status: 500 }) })
+      await form.locator('button[type="submit"]').click()
+      await expect(form.locator('input[name="name"]')).toHaveAttribute('aria-invalid', 'true')
+      await expect(form.locator('.jl-err')).toHaveCount(4)
+      await expect(form.locator('input[name="name"]')).toBeFocused()
+      expect(posted).toBe(false)
+    })
+
+    test('formulário: envio com sucesso registra e leva ao protocolo', async ({ page }) => {
+      await openHome(page, locale)
+      let payload: Record<string, unknown> = {}
+      await page.route('**/pedido-demo', async (route) => {
+        payload = route.request().postDataJSON()
+        await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ ok: true, protocol: 'JL-261020-ABCDEF' }) })
+      })
+      const form = page.locator('form.jl-form')
+      await form.locator('input[name="name"]').fill('Li Wei')
+      await form.locator('input[name="store"]').fill('Loja Dragão')
+      await form.locator('input[name="contact"]').fill('11 91234-5678')
+      await form.locator('select[name="segment"]').selectOption('importados')
+      await form.locator('button[type="submit"]').click()
+      await page.waitForURL(`**/${locale}/obrigado?p=JL-261020-ABCDEF`)
+      await expect(page.getByTestId('protocol')).toHaveText('JL-261020-ABCDEF')
+      expect(payload).toMatchObject({ name: 'Li Wei', store: 'Loja Dragão', contact: '11 91234-5678', segment: 'importados', idioma: locale, channel: 'whatsapp', locale, website: '' })
+      expect(JSON.stringify(payload)).not.toContain('city')
+      const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze()
+      expect(results.violations).toEqual([])
+    })
+
+    test('formulário: falha no registro mostra e-mail/WhatsApp (sem perda silenciosa)', async ({ page }) => {
+      await openHome(page, locale)
+      await page.route('**/pedido-demo', (route) =>
+        route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'not_configured' }) }))
+      const form = page.locator('form.jl-form')
+      await form.locator('input[name="name"]').fill('Li Wei')
+      await form.locator('input[name="store"]').fill('Loja Dragão')
+      await form.locator('input[name="contact"]').fill('11 91234-5678')
+      await form.locator('select[name="segment"]').selectOption('eletronicos')
+      await form.locator('button[type="submit"]').click()
+      const fail = page.locator('.jl-form-fail[role="alert"]')
+      await expect(fail).toBeVisible()
+      const mail = fail.locator('a[href^="mailto:naturalcodedevelop@gmail.com"]')
+      await expect(mail).toBeVisible()
+      expect(decodeURIComponent((await mail.getAttribute('href')) ?? '')).toContain('Loja Dragão')
+      await expect(form.locator('input[name="contact"]')).toHaveValue('11 91234-5678')
+      const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).include('.jl-final').analyze()
+      expect(results.violations).toEqual([])
+    })
+
+    test('servidor real sem configuração: /pedido-demo responde 503 not_configured e valida', async ({ request }) => {
+      const ok = await request.post('/pedido-demo', { data: { name: 'Li Wei', store: 'Loja', contact: '11912345678', channel: 'whatsapp', segment: 'importados', idioma: locale, locale } })
+      expect([503, 429]).toContain(ok.status())
+      const bad = await request.post('/pedido-demo', { data: { name: '', channel: 'x' }, headers: { 'x-forwarded-for': `10.0.0.${Math.floor(Math.random() * 250)}` } })
+      expect([400, 429]).toContain(bad.status())
+    })
+
+    test('nenhuma nota interna visível (placeholders, CONFIRMAR, TODO, em breve)', async ({ page }) => {
+      await openHome(page, locale)
+      const text = await page.locator('body').innerText()
+      expect(text).not.toMatch(/\[|\]|em breve|即将/i)
+      expect(text).not.toMatch(/CONFIRMAR|TODO|DEPOIMENTO/)
+      await expect(page.locator('.jl-ph')).toHaveCount(0)
+    })
+
+    test('botão flutuante de contato abre e-mail', async ({ page }) => {
+      await openHome(page, locale)
+      await page.locator('.jl-fab summary').click()
+      await expect(page.locator('.jl-fab a[href^="mailto:naturalcodedevelop@gmail.com"]')).toBeVisible()
     })
 
     test('teclado: skip link é o primeiro foco e leva ao conteúdo', async ({ page, browserName }) => {
@@ -99,17 +203,37 @@ test('menu mobile: link de seção fecha o menu', async ({ page }) => {
   await expect(page.locator('#menu-mobile')).toHaveAttribute('data-open', 'false')
 })
 
+test('centro de comando: abas por teclado (setas, Home/End) e botões anterior/próximo', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await openHome(page, 'pt-BR')
+  const tabs = page.getByRole('tab')
+  await expect(tabs).toHaveCount(5)
+  await expect(tabs.first()).toHaveAttribute('aria-selected', 'true')
+  await tabs.first().focus()
+  await page.keyboard.press('ArrowDown')
+  await expect(tabs.nth(1)).toBeFocused()
+  await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true')
+  await expect(page.locator('#cc-panel')).toContainText('321,70')
+  await page.keyboard.press('End')
+  await expect(tabs.nth(4)).toHaveAttribute('aria-selected', 'true')
+  await expect(page.locator('#cc-panel')).toContainText('3.833,00')
+  await page.getByRole('button', { name: 'Próximo ambiente' }).click()
+  await expect(tabs.first()).toHaveAttribute('aria-selected', 'true')
+  await expect(page.locator('.jl-cc-insight')).toContainText('fictícios')
+})
+
 test('simulador de atacado: 6 un. no varejo, 10 un. aplica o atacado (teclado)', async ({ page }) => {
   await openHome(page, 'pt-BR')
   const output = page.locator('.jl-stepper output')
   await expect(output).toHaveText('6')
-  await expect(page.locator('.jl-wh-result .total b')).toHaveText(/137,40/)
+  await expect(page.getByTestId('total-price')).toHaveText(/137,40/)
   const plus = page.getByRole('button', { name: /aumentar/i })
   await plus.focus()
   for (let i = 0; i < 4; i += 1) await page.keyboard.press('Enter')
   await expect(output).toHaveText('10')
-  await expect(page.locator('.jl-wh-result .total b')).toHaveText(/185,00/)
-  await expect(page.locator('.jl-wh-live')).toContainText('✓')
+  await expect(page.getByTestId('total-price')).toHaveText(/185,00/)
+  await expect(page.getByTestId('unit-price')).toHaveText(/18,50/)
+  await expect(page.locator('.jl-widget-msg')).toContainText('✓')
 })
 
 test('simulador: quantidade respeita os limites 1 e 99', async ({ page }) => {
@@ -153,6 +277,8 @@ test('links legais e de login apontam para o ERP', async ({ page }) => {
   await openHome(page, 'pt-BR')
   const privacy = await page.locator('footer a[href$="/privacidade"]').getAttribute('href')
   expect(privacy).toMatch(/^https:\/\/[^/]+\/privacidade$/)
+  const login = await page.locator('footer a[href$="/login"]').getAttribute('href')
+  expect(login).toMatch(/^https:\/\/[^/]+\/login$/)
 })
 
 test('cabeçalhos de segurança presentes', async ({ page }) => {
@@ -176,6 +302,22 @@ test('CLS da home dentro do orçamento (≤ 0,1)', async ({ page }) => {
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
   await page.waitForTimeout(500)
   expect(await page.evaluate(() => (window as unknown as { __cls: number }).__cls)).toBeLessThanOrEqual(0.1)
+})
+
+test('logo oficial no cabeçalho e no rodapé, favicon presente', async ({ page }) => {
+  await openHome(page, 'pt-BR')
+  await expect(page.locator('header .jl-logo img')).toBeVisible()
+  await expect(page.locator('footer .jl-logo img')).toBeVisible()
+  expect(await page.locator('header .jl-logo img').evaluate((img) => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(0)
+  expect((await page.request.get('/icon.png')).status()).toBe(200)
+})
+
+test('raiz sem preferência abre em chinês', async ({ browser }) => {
+  const context = await browser.newContext({ locale: 'pt-BR' })
+  const page = await context.newPage()
+  await page.goto('/')
+  await expect(page).toHaveURL(/\/zh-CN$/)
+  await context.close()
 })
 
 test('fontes: Geist carregada na home em português', async ({ page }) => {

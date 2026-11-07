@@ -20,19 +20,30 @@ export default async function CaixaPage() {
     }
     throw authError
   }
+  // Defesa em profundidade: não depende do middleware para negar acesso sem sessão.
+  if (!user) {
+    redirect('/login?next=%2Fcaixa')
+  }
   const metaNome =
     typeof user?.user_metadata?.full_name === "string" ? user.user_metadata.full_name.trim() : ""
   const emailLocalPart = user?.email?.trim()?.split("@")[0]?.trim() ?? ""
 
-  const { data: usuarioData } = user
-    ? await supabase.from('usuarios').select('perfil, nome').eq('id', user.id).maybeSingle()
-    : { data: null }
+  const { data: usuarioData } = await supabase
+    .from('usuarios')
+    .select('perfil, nome, ativo, loja_id')
+    .eq('id', user.id)
+    .maybeSingle()
+  // Mesma regra de bloqueio do middleware (adminPolicy): conta desativada, sem loja ou perfil global
+  // legado ADMIN (descontinuado: sem acesso de loja) não opera o PDV.
+  if (usuarioData?.ativo === false || !usuarioData?.loja_id || usuarioData?.perfil === 'ADMIN') {
+    redirect('/login?next=%2Fcaixa')
+  }
   const perfil = usuarioData?.perfil ?? null
-  // Nome do funcionário (cadastro) antes do login: quem abre o caixa é identificado pelo nome.
+  // Nome do funcionário (cadastro) primeiro: `user_metadata` é editável pelo próprio usuário, o cadastro não.
   const nomeCadastro = typeof usuarioData?.nome === "string" ? usuarioData.nome.trim() : ""
   const operadorLabel =
-    (metaNome.length > 0 ? metaNome : null) ||
     (nomeCadastro.length > 0 ? nomeCadastro : null) ||
+    (metaNome.length > 0 ? metaNome : null) ||
     (emailLocalPart.length > 0 ? emailLocalPart : null) ||
     (user?.id ? user.id.slice(0, 8) : null) ||
     "—"

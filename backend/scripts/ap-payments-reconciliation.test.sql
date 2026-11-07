@@ -1,5 +1,6 @@
 \set ON_ERROR_STOP on
 BEGIN;
+INSERT INTO public.empresas (id, nome) VALUES ('fa5e0000-0000-4000-8000-0000000000f1', 'Fixture empresa (suite SQL)') ON CONFLICT (id) DO NOTHING;
 
 -- Loja determinística: precisa ter produto precificado e GERENTE+OPERADOR
 -- ativos. Escolher "o primeiro GERENTE" fazia a suíte cair na loja criada por
@@ -34,8 +35,8 @@ SELECT gen_random_uuid() AS fornecedor, gen_random_uuid() AS other_store,
        gen_random_uuid() AS other_cash, gen_random_uuid() AS permission_account \gset
 INSERT INTO public.fornecedores(id, cnpj, nome, loja_id)
 VALUES (:'fornecedor', 'T2B-' || left(:'fornecedor', 10), 'Fornecedor teste AP 2B', :'loja');
-INSERT INTO public.lojas(id, nome, codigo)
-VALUES (:'other_store', 'Outra loja AP 2B', 'AP2B-' || left(:'other_store', 8));
+INSERT INTO public.lojas (empresa_id, id, nome, codigo)
+VALUES ('fa5e0000-0000-4000-8000-0000000000f1', :'other_store', 'Outra loja AP 2B', 'AP2B-' || left(:'other_store', 8));
 INSERT INTO public.fornecedores(id, cnpj, nome, loja_id)
 VALUES (:'other_supplier', 'T2O-' || left(:'other_supplier', 10), 'Fornecedor outra loja', :'other_store');
 INSERT INTO public.caixas(id, operador_id, loja_id, status, valor_inicial, data_fechamento, valor_fechamento, fechamento_diferenca)
@@ -248,12 +249,13 @@ DO $test$ BEGIN
   BEGIN
     PERFORM * FROM public.registrar_pagamento_contas_pagar(current_setting('test.cross_account')::uuid, 1, 'PIX', now(), NULL, 'cross-title', NULL, 'TESTE_DB', NULL);
     RAISE EXCEPTION 'cross_title_accepted';
-  EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE '%PAGAMENTO_LOJA%' THEN RAISE; END IF; END;
+  EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE '%PAGAMENTO_CONTA_NAO_ENCONTRADA%' THEN RAISE; END IF; END; -- contrato JL-GO-LIVE-01: conta de outra loja = inexistente
 END $test$;
 
 -- High-value sangria consumes the existing manager token inside the AP transaction.
 RESET ROLE;
-UPDATE public.pdv_config SET limite_sangria_sem_gerente = 1 WHERE id = 1;
+-- O limite é resolvido pela configuração da empresa da loja da operação (fp_pdv_config_id), não pela linha id = 1.
+UPDATE public.pdv_config SET limite_sangria_sem_gerente = 1 WHERE id = public.fp_pdv_config_id(:'loja'::uuid);
 SELECT gen_random_uuid() AS auth_account \gset
 INSERT INTO public.contas_pagar(id, fornecedor_id, loja_id, vencimento, valor_total, valor_pago, descricao)
 VALUES (:'auth_account', :'fornecedor', :'loja', current_date, 2, 0, 'Autorizada');
@@ -272,8 +274,9 @@ SET LOCAL ROLE authenticated;
 DO $test$ DECLARE v_r record; BEGIN
   SELECT * INTO v_r FROM public.registrar_pagamento_contas_pagar(
     current_setting('test.auth_account')::uuid, 2, 'DINHEIRO', '2026-08-13T13:00:00Z', NULL, 'authorized-cash', current_setting('test.caixa')::uuid, 'TESTE_DB', 'token-ap-2b');
-  IF (SELECT status FROM public.movimentacoes_caixa WHERE id = v_r.movimentacao_caixa_id) <> 'aprovado'
-     OR (SELECT gerente_id FROM public.movimentacoes_caixa WHERE id = v_r.movimentacao_caixa_id) <> current_setting('test.gerente_id')::uuid THEN
+  -- IS DISTINCT FROM: gerente NULL (aprovação sem gerente) também precisa reprovar o teste.
+  IF (SELECT status FROM public.movimentacoes_caixa WHERE id = v_r.movimentacao_caixa_id) IS DISTINCT FROM 'aprovado'
+     OR (SELECT gerente_id FROM public.movimentacoes_caixa WHERE id = v_r.movimentacao_caixa_id) IS DISTINCT FROM current_setting('test.gerente_id')::uuid THEN
     RAISE EXCEPTION 'authorization_not_proven';
   END IF;
 END $test$;

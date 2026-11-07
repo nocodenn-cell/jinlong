@@ -10,6 +10,8 @@ export const ImportNfeLinhaSchema = z
     u_com: z.string().nullable(),
     q_com: z.number().nonnegative(),
     v_un_com: z.number().nonnegative(),
+    // vProd da NF-e (valor total do item). Opcional: entrada manual não informa.
+    v_prod: z.number().nonnegative().nullable().optional(),
     fator: z.number().positive(),
     atualizar_custo: z.boolean(),
     // Resolução decidida na conferência: VINCULAR usa produto_id_destino;
@@ -121,6 +123,7 @@ export const NotaManualSchema = z.object({
         u_com: z.string().trim().max(6).optional(),
         q_com: z.number().positive('Quantidade deve ser maior que zero.').finite(),
         v_un_com: z.number().positive('Valor unitário deve ser maior que zero.').finite(),
+        v_prod: z.number().nonnegative().nullable().optional(),
       }),
     )
     .min(1, 'Adicione ao menos um item.'),

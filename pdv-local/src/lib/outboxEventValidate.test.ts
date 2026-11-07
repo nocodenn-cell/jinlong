@@ -158,3 +158,17 @@ describe('validateNormalizedEvent — idempotência de regras do contrato v1', (
     if (!r.ok) expect(r.error).toContain('500')
   })
 })
+
+describe('OPERADOR_EVENTO (login por PIN)', () => {
+  const ok = {
+    id: '11111111-1111-4111-8111-111111111111',
+    tipo: 'OPERADOR_EVENTO',
+    created_at: '2026-10-21T12:00:00Z',
+    payload: { id: '22222222-2222-4222-8222-222222222222', loja_id: '33333333-3333-4333-8333-333333333333', usuario_id: null, tipo: 'SAIU' },
+  }
+  it('aceita evento válido e recusa PIN no payload', () => {
+    expect(validateNormalizedEvent(ok)).toEqual({ ok: true })
+    expect(validateNormalizedEvent({ ...ok, payload: { ...ok.payload, pin: '7391' } }).ok).toBe(false)
+    expect(validateNormalizedEvent({ ...ok, payload: { ...ok.payload, loja_id: 'x' } }).ok).toBe(false)
+  })
+})

@@ -14,6 +14,8 @@ let currentPathname = '/admin/catalogo'
 vi.mock('next/navigation', () => ({
   usePathname: () => currentPathname,
   useSearchParams: () => new URLSearchParams(''),
+  // Rodapé do menu tem idioma/Sair (AdminV2UtilityBar), que usam o router.
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn(), replace: vi.fn() }),
 }))
 
 vi.mock('next/link', () => ({
@@ -32,6 +34,7 @@ vi.mock('next/link', () => ({
 
 const { AdminV2MobileNavDrawer } = await import('./AdminV2MobileNavDrawer')
 const { getMessages } = await import('@/i18n/getMessages')
+const { AdminV2SessionProvider } = await import('./AdminV2SessionContext')
 
 const fakeSession = {
   userId: 'user-1',
@@ -61,11 +64,15 @@ function render() {
   const m = getMessages('pt')
   act(() => {
     root.render(
-      React.createElement(AdminV2MobileNavDrawer, {
-        session: fakeSession,
-        m,
-        chineseLanguage: false,
-      }),
+      React.createElement(
+        AdminV2SessionProvider,
+        { idioma: 'pt' },
+        React.createElement(AdminV2MobileNavDrawer, {
+          session: fakeSession,
+          m,
+          chineseLanguage: false,
+        }),
+      ),
     )
   })
 }

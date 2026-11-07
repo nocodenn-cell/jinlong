@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { ROUTES } from '@/lib/navigation/routes'
-import { EstoqueHubNav } from '@/components/ui/admin-v2/EstoqueHubNav'
+import { OperationalHubNav } from '@/components/ui/admin-v2/OperationalHubNav'
 import { ImportarNfePageClient } from '@/app/gerente/estoque/importar-nfe/ImportarNfePageClient'
 
 type PageProps = { searchParams?: Promise<{ importacao?: string }> }
@@ -19,9 +19,13 @@ export default async function AdminEstoqueImportarNfePage({ searchParams }: Page
 
   return (
     <div className="admin-v2-page">
-      <EstoqueHubNav />
-      <Link href={`${ROUTES.admin.estoqueRecebimento}?modo=historico`} className="text-body underline">{session.idioma === 'pt' ? 'Ver histórico de entradas' : '查看入库记录'}</Link>
       <ImportarNfePageClient
+        hubNav={
+          <>
+            <OperationalHubNav hub="compras" />
+            <Link href={`${ROUTES.admin.estoqueRecebimento}?modo=historico`} className="text-body underline">{session.idioma === 'pt' ? 'Ver histórico de entradas' : '查看入库记录'}</Link>
+          </>
+        }
         idioma={session.idioma}
         embeddedInAdminHub
         importacaoInicialId={importacaoInicialId}

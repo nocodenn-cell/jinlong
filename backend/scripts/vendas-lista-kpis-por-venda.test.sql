@@ -47,11 +47,27 @@ BEGIN
     (c_loja_a, 'Onda A Loja A', 'ONDAA-A', true),
     (c_loja_b, 'Onda A Loja B', 'ONDAA-B', true)
   ON CONFLICT DO NOTHING;
+  -- multiempresa: com triggers desligados (replica) a loja nasce sem empresa; em produção toda loja
+  -- tem empresa (fase 1). Loja sem empresa é recusada pelo envelope (fail closed).
+  IF to_regclass('public.empresas') IS NOT NULL THEN
+    EXECUTE 'UPDATE public.lojas SET empresa_id = (SELECT id FROM public.empresas ORDER BY created_at, id LIMIT 1)
+              WHERE id = ANY ($1) AND empresa_id IS NULL' USING ARRAY[c_loja_a, c_loja_b];
+  END IF;
   INSERT INTO public.usuarios (id, nome, perfil, ativo, loja_id) VALUES
     (c_ger_a, 'Onda A Gerente A', 'GERENTE',  true, c_loja_a),
     (c_ger_b, 'Onda A Gerente B', 'GERENTE',  true, c_loja_b),
     (c_op_b,  'Onda A Operador B', 'OPERADOR', true, c_loja_b)
   ON CONFLICT (id) DO UPDATE SET perfil = EXCLUDED.perfil, ativo = true, loja_id = EXCLUDED.loja_id;
+  -- #623 (20261028122000): a autorização gerencial exige vínculo ATIVO (como em produção, onde todo usuário ativo
+  -- tem vínculo). Com triggers em modo replica o vínculo não nasce sozinho: cria-se aqui, só se faltar.
+  IF to_regclass('public.usuario_vinculos') IS NOT NULL THEN
+    EXECUTE 'INSERT INTO public.usuario_vinculos (usuario_id, empresa_id, loja_id, papel, ativo)
+             SELECT u.id, l.empresa_id, u.loja_id, u.perfil, true
+               FROM public.usuarios u JOIN public.lojas l ON l.id = u.loja_id
+              WHERE u.id = ANY ($1) AND l.empresa_id IS NOT NULL
+                AND NOT EXISTS (SELECT 1 FROM public.usuario_vinculos v WHERE v.usuario_id = u.id AND v.ativo)'
+      USING ARRAY[c_ger_a, c_ger_b, c_op_b];
+  END IF;
 
   SELECT c.id INTO v_caixa FROM public.caixas c WHERE c.loja_id = c_loja_a LIMIT 1;
   IF v_caixa IS NULL THEN

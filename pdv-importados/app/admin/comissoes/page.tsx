@@ -5,6 +5,7 @@
  * UI local: filtros URL + KPIs + tabela + sheet de detalhe.
  */
 
+import { bloqueioPorPlano } from '@/lib/cobranca/bloqueioPorPlano'
 import { Suspense } from 'react'
 import { PageHeader } from '@/components/ui/admin-v2'
 import { FinanceiroHubNavShell } from '@/components/ui/admin-v2/FinanceiroHubNavShell'
@@ -14,6 +15,8 @@ import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import { carregarResumoComissoes } from '@/app/gerente/comissoes/actions'
 import { ROUTES } from '@/lib/navigation/routes'
 import { ComissoesContent } from './_components/ComissoesContent'
+import { ComissoesModuloNav } from './_modulo/ComissoesModuloNav'
+import { rotulosAbasComissao } from './_modulo/abas'
 import {
   ComissoesFilters,
   type PeriodoPreset,
@@ -55,6 +58,8 @@ function resolveActivePreset(
 }
 
 export default async function AdminComissoesPage({ searchParams }: PageProps) {
+  const bloqueio = await bloqueioPorPlano('comissoes')
+  if (bloqueio) return bloqueio
   const { session } = await loadAdminContext({
     pathname: ROUTES.admin.comissoes,
     resource: `route:${ROUTES.admin.comissoes}`,
@@ -87,6 +92,7 @@ export default async function AdminComissoesPage({ searchParams }: PageProps) {
       />
 
       <FinanceiroHubNavShell />
+      <ComissoesModuloNav ativa="resumo" rotulos={rotulosAbasComissao(m)} />
 
       <ComissoesFilters
         filtro={filtro}

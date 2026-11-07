@@ -42,4 +42,23 @@ describe('validateAdjustInventoryCommand', () => {
     })
     expect(r.ok).toBe(true)
   })
+
+  it('PERDA/QUEBRA não podem aumentar o saldo', () => {
+    for (const reason of ['PERDA', 'QUEBRA']) {
+      const r = validateAdjustInventoryCommand({ ...base, reason, quantity: 7, expectedQuantity: 5 })
+      expect(r).toEqual({ ok: false, code: INVENTORY_ERROR_CODES.REASON_SIGN_MISMATCH })
+    }
+  })
+
+  it('COMPRA não pode reduzir o saldo', () => {
+    const r = validateAdjustInventoryCommand({ ...base, reason: 'COMPRA', quantity: 3, expectedQuantity: 5 })
+    expect(r).toEqual({ ok: false, code: INVENTORY_ERROR_CODES.REASON_SIGN_MISMATCH })
+  })
+
+  it('motivo coerente com o sinal passa; sem diferença aceita qualquer motivo', () => {
+    expect(validateAdjustInventoryCommand({ ...base, reason: 'PERDA', quantity: 3, expectedQuantity: 5 }).ok).toBe(true)
+    expect(validateAdjustInventoryCommand({ ...base, reason: 'COMPRA', quantity: 7, expectedQuantity: 5 }).ok).toBe(true)
+    expect(validateAdjustInventoryCommand({ ...base, reason: 'PERDA', quantity: 5, expectedQuantity: 5 }).ok).toBe(true)
+    expect(validateAdjustInventoryCommand({ ...base, reason: 'ACERTO_INVENTARIO', quantity: 9, expectedQuantity: 5 }).ok).toBe(true)
+  })
 })

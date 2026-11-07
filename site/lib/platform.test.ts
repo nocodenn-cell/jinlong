@@ -1,8 +1,9 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { CURRENT_ERP_URL, erpHref, getErpUrl, parseErpUrl } from './erpLinks'
-import { buildErpRedirects, ERP_PATH_PATTERNS } from './erpRedirects'
+import { DEFAULT_ERP_URL, erpHref, getErpUrl, parseErpUrl } from './erpLinks'
+import { buildErpRedirects, buildWwwToApexRedirect, ERP_PATH_PATTERNS } from './erpRedirects'
+import { DEFAULT_SITE_URL } from './siteUrl'
 import { negotiateLocale } from './negotiateLocale'
 import { buildContentSecurityPolicy, buildSecurityHeaders } from './securityHeaders'
 
@@ -22,9 +23,22 @@ describe('isolamento: o site não acessa dados reais nem credenciais', () => {
   const files = [...SOURCE_DIRS.flatMap((d) => sourceFiles(path.join(SITE_ROOT, d))), path.join(SITE_ROOT, 'middleware.ts'), path.join(SITE_ROOT, 'next.config.ts')]
   const forbidden = /supabase|SERVICE_ROLE|SYNC_KEY|createClient|process\.env\.(?!NEXT_PUBLIC_|NODE_ENV|VERCEL_ENV|ERP_REDIRECT_ORIGIN)/i
 
+  // Única exceção: o registro de pedidos de demonstração (POST /pedido-demo) grava, só no servidor e só pela função
+  // public.registrar_lead_comercial (RPC com a chave anon; anon não tem INSERT direto na tabela). Nunca service role.
+  const DEMO_LEAD_FILES = new Set(['lib/demoRequest.ts', 'lib/demoRequest.test.ts', 'app/pedido-demo/route.ts'])
+
   it('nenhum arquivo de código referencia Supabase, service role ou variáveis privadas', () => {
-    const hits = files.filter((file) => forbidden.test(fs.readFileSync(file, 'utf8')))
+    const hits = files.filter((file) => !DEMO_LEAD_FILES.has(path.relative(SITE_ROOT, file).split(path.sep).join('/')) && forbidden.test(fs.readFileSync(file, 'utf8')))
     expect(hits.map((f) => path.relative(SITE_ROOT, f))).toEqual([])
+  })
+
+  it('registro de demonstração: só anon + a função de registro do site, nunca service role nem outras tabelas', () => {
+    const src = fs.readFileSync(path.join(SITE_ROOT, 'lib/demoRequest.ts'), 'utf8')
+    expect(src).not.toMatch(/SERVICE_ROLE|service_role|createClient/)
+    expect([...src.matchAll(/process\.env\.(\w+)|env\.(\w+)/g)].map((m) => m[1] ?? m[2]).filter((n) => n !== 'env')).toEqual(
+      expect.arrayContaining(['SITE_DEMO_SUPABASE_URL', 'SITE_DEMO_SUPABASE_ANON_KEY']),
+    )
+    expect([...src.matchAll(/rest\/v1\/([\w/]+)/g)].map((m) => m[1])).toEqual(['rpc/registrar_lead_comercial'])
   })
 
   it('package.json não depende de Supabase, Sentry ou do ERP', () => {
@@ -35,8 +49,15 @@ describe('isolamento: o site não acessa dados reais nem credenciais', () => {
 })
 
 describe('links para o ERP', () => {
-  it('usa o ERP atual por padrão e aceita só origens https (ou localhost)', () => {
-    expect(getErpUrl({})).toBe(CURRENT_ERP_URL)
+  it('"Entrar" aponta para app.jinlong.app/login por padrão', () => {
+    expect(DEFAULT_ERP_URL).toBe('https://app.jinlong.app')
+    expect(erpHref('/login', {})).toBe('https://app.jinlong.app/login')
+  })
+
+  it('a variável permite voltar ao www (rollback) e aceita só origens https (ou localhost)', () => {
+    expect(getErpUrl({})).toBe(DEFAULT_ERP_URL)
+    expect(erpHref('/login', { NEXT_PUBLIC_ERP_URL: 'https://www.jinlong.app' })).toBe('https://www.jinlong.app/login')
+    expect(getErpUrl({ NEXT_PUBLIC_ERP_URL: 'https://evil.example/x' })).toBe(DEFAULT_ERP_URL)
     expect(getErpUrl({ NEXT_PUBLIC_ERP_URL: 'https://app.jinlong.app/' })).toBe('https://app.jinlong.app')
     expect(parseErpUrl('http://app.jinlong.app')).toBeNull()
     expect(parseErpUrl('https://app.jinlong.app/login')).toBeNull()
@@ -63,13 +84,39 @@ describe('redirecionamentos de compatibilidade', () => {
   })
 })
 
+describe('domínio canônico do site', () => {
+  it('é o apex jinlong.app', () => {
+    expect(DEFAULT_SITE_URL).toBe('https://jinlong.app')
+  })
+
+  it('www.jinlong.app redireciona (307) para jinlong.app preservando o caminho', () => {
+    expect(buildWwwToApexRedirect(DEFAULT_SITE_URL)).toEqual([
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'www.jinlong.app' }],
+        destination: 'https://jinlong.app/:path*',
+        permanent: false,
+      },
+    ])
+  })
+
+  it('fica inerte se o canônico for www, http ou inválido', () => {
+    expect(buildWwwToApexRedirect('https://www.jinlong.app')).toEqual([])
+    expect(buildWwwToApexRedirect('http://jinlong.app')).toEqual([])
+    expect(buildWwwToApexRedirect('não é url')).toEqual([])
+    expect(buildWwwToApexRedirect('http://localhost:3100')).toEqual([])
+  })
+})
+
 describe('negociação de idioma na raiz', () => {
   it('cookie vence o navegador; zh só quando publicado', () => {
     expect(negotiateLocale({ cookie: 'zh', acceptLanguage: 'pt-BR', zhPublic: true })).toBe('zh-CN')
     expect(negotiateLocale({ cookie: 'pt', acceptLanguage: 'zh-CN', zhPublic: true })).toBe('pt-BR')
     expect(negotiateLocale({ cookie: undefined, acceptLanguage: 'zh-CN,zh;q=0.9', zhPublic: true })).toBe('zh-CN')
+    expect(negotiateLocale({ cookie: undefined, acceptLanguage: 'pt-BR', zhPublic: true })).toBe('zh-CN')
     expect(negotiateLocale({ cookie: 'zh', acceptLanguage: 'zh-CN', zhPublic: false })).toBe('pt-BR')
-    expect(negotiateLocale({ cookie: undefined, acceptLanguage: null, zhPublic: true })).toBe('pt-BR')
+    expect(negotiateLocale({ cookie: undefined, acceptLanguage: null, zhPublic: true })).toBe('zh-CN')
+    expect(negotiateLocale({ cookie: undefined, acceptLanguage: null, zhPublic: false })).toBe('pt-BR')
   })
 })
 
@@ -87,5 +134,14 @@ describe('cabeçalhos de segurança', () => {
     expect(keys).toEqual(
       expect.arrayContaining(['Content-Security-Policy', 'X-Content-Type-Options', 'X-Frame-Options', 'Permissions-Policy'])
     )
+  })
+})
+
+describe('endpoint do formulário fora dos redirects do ERP', () => {
+  it('/pedido-demo não casa com nenhum caminho redirecionado ao app (ex.: /api/* vai para app.jinlong.app)', async () => {
+    const { ERP_PATH_PATTERNS } = await import('./erpRedirects')
+    const toRe = (p: string) => new RegExp(`^${p.replace(/:path\*/g, '.*')}$`)
+    expect(ERP_PATH_PATTERNS.filter((p) => toRe(p).test('/pedido-demo'))).toEqual([])
+    expect(ERP_PATH_PATTERNS.some((p) => toRe(p).test('/api/demo'))).toBe(true)
   })
 })

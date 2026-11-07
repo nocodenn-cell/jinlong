@@ -1,0 +1,85 @@
+{
+  "schema_version": "1",
+  "processo": {
+    "id": "proc-001",
+    "loja_importadora_id": "loja-0000-0001",
+    "moeda_base": "BRL"
+  },
+  "politica": {
+    "escala_intermediaria": 10,
+    "escala_persistencia": 4,
+    "escala_unitario": 6,
+    "arredondamento": "HALF_UP",
+    "ordem_residuo": "MAIOR_RESTO_ITEM_ID_ASC"
+  },
+  "cambios": [
+    {
+      "moeda": "USD",
+      "taxa": "5.4321000000",
+      "fonte": "DECLARADA_DI",
+      "data": "2026-09-30"
+    }
+  ],
+  "itens": [
+    {
+      "id": "item-001",
+      "produto_id": "prod-001",
+      "moeda": "USD",
+      "valor_mercadoria_moeda": "1200.000000",
+      "valor_aduaneiro_brl": "6518.520000",
+      "quantidade_comercial": "120.000",
+      "unidade_comercial": "CX",
+      "fator_para_estoque": "12.000000",
+      "quantidade_estoque": "1440.000",
+      "peso_liquido_kg": "96.000",
+      "peso_bruto_kg": "104.000",
+      "volume_m3": "0.420"
+    }
+  ],
+  "despesas": [
+    {
+      "id": "desp-02",
+      "tipo": "ARMAZENAGEM",
+      "moeda": "BRL",
+      "valor": "180.00",
+      "incorporavel": true,
+      "atribuicao": {
+        "modo": "DIRETA",
+        "item_id": "item-001",
+        "justificativa": "Armazenagem exclusiva deste item, conforme recibo"
+      }
+    },
+    {
+      "id": "desp-01",
+      "tipo": "FRETE_INTERNACIONAL",
+      "moeda": "USD",
+      "valor": "300.000000",
+      "incorporavel": true,
+      "atribuicao": {
+        "modo": "RATEIO",
+        "criterio": "PESO_BRUTO",
+        "justificativa": "Frete aéreo cobrado por peso bruto no conhecimento"
+      }
+    }
+  ],
+  "descontos": [
+    {
+      "id": "desc-01",
+      "escopo": "PROCESSO",
+      "moeda": "USD",
+      "valor": "50.000000",
+      "criterio": "VALOR_ADUANEIRO",
+      "justificativa": "Desconto comercial documentado na invoice"
+    }
+  ],
+  "tributos": [
+    {
+      "id": "trib-01",
+      "tributo_codigo": "CATALOGO_NAO_CLASSIFICADO",
+      "status_recuperabilidade": "PENDENTE_VALIDACAO",
+      "valor_apurado_brl": "0.00",
+      "item_id": null,
+      "regra": null
+    }
+  ]
+}

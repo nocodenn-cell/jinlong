@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { SectionCard, MetricCard } from '@/components/ui/admin-v2'
@@ -12,9 +13,11 @@ import { FinanceiroContas } from './FinanceiroContas'
 import { FinanceiroRecebiveis } from './FinanceiroRecebiveis'
 import { FinanceiroConciliacao } from './FinanceiroConciliacao'
 import { FinanceiroPrimeiroUso } from './FinanceiroPrimeiroUso'
-import { FinanceiroAcoesRapidas } from './FinanceiroAcoesRapidas'
+import { FinanceiroAcoesRapidas, useFinanceiroAcoesLabels, type FinanceiroAcaoRapida } from './FinanceiroAcoesRapidas'
 import { useAdminV2Session } from '@/components/ui/admin-v2/AdminV2SessionContext'
 import { getMessages } from '@/i18n/getMessages'
+import { PeriodoCivilFilter, periodoCivilLabelsAdmin } from '@/components/ui/admin-v2/PeriodoCivilFilter'
+import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 
 export type FinanceiroWorkspaceTab = 'resumo' | 'contas' | 'recebiveis' | 'conciliacao' | 'resultado'
 
@@ -55,18 +58,14 @@ function FinanceiroResultado({ data }: { data: FinanceiroPainel }) {
  </div>
 }
 
-export function FinanceiroPeriodo({ de, ate }: { de:string; ate:string }) {
- const router = useRouter(); const search = useSearchParams()
- return <form className="mb-4 flex flex-wrap items-end gap-3" onSubmit={e => { e.preventDefault(); const fd=new FormData(e.currentTarget); const p=new URLSearchParams(search.toString()); p.set('de',String(fd.get('de')));p.set('ate',String(fd.get('ate')));p.delete('pagina');router.push(`${ROUTES.admin.financeiro}?${p}`) }}><Field name="de" label="De" type="date" value={de} /><Field name="ate" label="Até" type="date" value={ate} /><button className="admin-v2-btn-secondary">Aplicar período</button></form>
-}
-
 export function FinanceiroPaginacao({ data, countKey }: { data:FinanceiroPainel; countKey:keyof FinanceiroPainel['contagens'] }) {
  const router = useRouter(); const search=useSearchParams(); const total=data.contagens[countKey]; const pages=Math.max(1,Math.ceil(total/50))
  function go(pagina:number) {const p=new URLSearchParams(search.toString());p.set('pagina',String(pagina));router.push(`${ROUTES.admin.financeiro}?${p}`)}
  return <div className="my-4 flex items-center gap-3 text-small"><button className="admin-v2-btn-secondary" disabled={data.pagina<=1} onClick={() => go(data.pagina-1)}>Anterior</button><span>Página {data.pagina} de {pages} · {total} registros</span><button className="admin-v2-btn-secondary" disabled={data.pagina>=pages} onClick={() => go(data.pagina+1)}>Próxima</button></div>
 }
 
-export function FinanceiroWorkspace({ data, tab, de, ate }: { data:FinanceiroPainel; tab:FinanceiroWorkspaceTab; de:string; ate:string }) {
+export function FinanceiroWorkspace({ data, tab, de, ate, hoje }: { data:FinanceiroPainel; tab:FinanceiroWorkspaceTab; de:string; ate:string; hoje?:string }) {
+ const [acao, setAcao] = useState<FinanceiroAcaoRapida>(null)
  const { idioma } = useAdminV2Session()
  const ui = getMessages(idioma).admin_ui
  const contasLabels = {
@@ -90,7 +89,6 @@ export function FinanceiroWorkspace({ data, tab, de, ate }: { data:FinanceiroPai
   tipoConta: ui.financeiro_tipo_conta,
   dataInicial: ui.financeiro_data_inicial,
   saldoInicial: ui.financeiro_saldo_inicial,
-  transferirTitulo: ui.financeiro_transferir_titulo,
   vincularPdv: ui.financeiro_vincular_pdv,
   vincularPdvHint: ui.financeiro_vincular_pdv_hint,
   movimentoAvulso: ui.financeiro_movimento_avulso,
@@ -106,31 +104,17 @@ export function FinanceiroWorkspace({ data, tab, de, ate }: { data:FinanceiroPai
   origemDoc: ui.financeiro_origem_doc,
   semMovimentos: ui.financeiro_sem_movimentos,
  }
- const acoesLabels = {
-  faixaAria: ui.financeiro_acoes_aria,
-  registrarVenda: ui.financeiro_acao_registrar_venda,
-  receber: ui.financeiro_acao_receber,
-  pagar: ui.financeiro_acao_pagar,
-  transferir: ui.financeiro_acao_transferir,
-  vendaTitulo: ui.financeiro_acao_venda_titulo,
-  vendaTexto: ui.financeiro_acao_venda_texto,
-  vendaPdv: ui.financeiro_acao_venda_pdv,
-  vendaBuscar: ui.financeiro_acao_venda_buscar,
-  receberTitulo: ui.financeiro_acao_receber_titulo,
-  pagarTitulo: ui.financeiro_acao_pagar_titulo,
-  transferirTitulo: ui.financeiro_acao_transferir_titulo,
-  avulsoHint: ui.financeiro_acao_avulso_hint,
-  confirmarReceber: ui.financeiro_acao_confirmar_receber,
-  confirmarPagar: ui.financeiro_acao_confirmar_pagar,
-  confirmarTransferir: ui.financeiro_acao_confirmar_transferir,
-  saldoRegistrado: ui.financeiro_saldo_registrado_hint,
- }
+ const acoesLabels = useFinanceiroAcoesLabels()
  return <div className="admin-v2-stack">
-  <FinanceiroAcoesRapidas data={data} labels={acoesLabels} />
-  <FinanceiroPeriodo de={de} ate={ate} />
+  <PeriodoCivilFilter de={de} ate={ate} hoje={hoje ?? data.hoje} locale={localeFromIdioma(idioma)} labels={periodoCivilLabelsAdmin(ui as unknown as Record<string, string>)} pathname={ROUTES.admin.financeiro} />
   {(tab==='resumo' || tab==='contas') ? <FinanceiroPrimeiroUso semContas={data.contas.length === 0} /> : null}
   {tab==='resumo' ? <FinanceiroResumo data={data} /> : null}
-  {tab==='contas' ? <><FinanceiroContas data={data} labels={contasLabels} /><FinanceiroMovimentos data={data} /><FinanceiroPaginacao data={data} countKey="movimentos" /></> : null}
+  {tab==='contas' ? <>
+    <FinanceiroAcoesRapidas data={data} labels={acoesLabels} mostrar={['transferir']} acao={acao} onAcao={setAcao} />
+    <FinanceiroContas data={data} labels={contasLabels} />
+    <FinanceiroMovimentos data={data} />
+    <FinanceiroPaginacao data={data} countKey="movimentos" />
+  </> : null}
   {tab==='recebiveis' ? <><FinanceiroRecebiveis data={data} /><FinanceiroPaginacao data={data} countKey="recebiveis" /></> : null}
   {tab==='conciliacao' ? <><FinanceiroConciliacao data={data} /><FinanceiroPaginacao data={data} countKey="extratos" /></> : null}
   {tab==='resultado' ? <FinanceiroResultado data={data} /> : null}

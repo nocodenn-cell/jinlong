@@ -25,24 +25,28 @@ node site/scripts/measure-vitals.mjs --label depois --runs 7 http://localhost:31
 
 | Variável | Uso | Padrão |
 |---|---|---|
-| `NEXT_PUBLIC_SITE_URL` | canonical, sitemap, Open Graph | `https://www.jinlong.app` |
-| `NEXT_PUBLIC_ERP_URL` | links "Entrar", Privacidade, Termos | `https://www.jinlong.app` (após o corte: `https://app.jinlong.app`) |
+| `NEXT_PUBLIC_SITE_URL` | canonical, sitemap, Open Graph; quando é apex, ativa o redirect `www.<apex>` → apex | `https://jinlong.app` |
+| `NEXT_PUBLIC_ERP_URL` | links "Entrar", Privacidade, Termos | `https://app.jinlong.app` (rollback: `https://www.jinlong.app`) |
 | `NEXT_PUBLIC_SITE_WHATSAPP_URL` | canal WhatsApp (`https://wa.me/<dígitos>`) | ausente → canal oculto |
 | `NEXT_PUBLIC_SITE_WECHAT_ID` | canal WeChat (ID) | ausente → canal oculto |
 | `NEXT_PUBLIC_SITE_ZH_REVIEWED` | `true` publica o zh-CN em produção após revisão nativa | ausente → zh é rascunho (noindex; 404 em produção) |
 | `ERP_REDIRECT_ORIGIN` | após o corte de domínios, redireciona caminhos antigos do ERP (`/login`, `/auth/*`, `/admin/*`, `/caixa/*`, `/gerente/*`, `/api/*`…) com 307 | ausente → nenhum redirecionamento |
 
-## Fonte dos títulos em chinês
+## Fontes em chinês
 
-`app/fonts/noto-serif-sc-600-subset.woff2` é um subset (SIL OFL 1.1, ver `app/fonts/OFL.txt`)
-com apenas os caracteres dos títulos zh-CN. Depois de alterar qualquer título em chinês:
+`app/fonts/noto-sans-sc-<500|700|900>-subset.woff2` são subsets (SIL OFL 1.1, ver `app/fonts/OFL-NotoSansSC.txt`)
+só com os caracteres de cada papel (`lib/content/displayText.ts`). Depois de alterar títulos em chinês:
 
 ```bash
-# requer fonttools + brotli em ambiente Python isolado (não é dependência do projeto)
+# requer fonttools + brotli em ambiente Python isolado e @fontsource/noto-sans-sc fora do repositório
 npm run fonts:subset -w jinlong-site
 ```
 
-O teste `lib/content/displayText.test.ts` falha se algum caractere ficar de fora.
+O teste `lib/site.test.ts` falha se algum caractere ficar de fora.
+
+## Design
+
+Premium 2.0 (grafite, dourado e vermelho institucional): ver [docs/site/PREMIUM_2_0.md](../docs/site/PREMIUM_2_0.md).
 
 ## Migração de domínios
 

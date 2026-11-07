@@ -15,6 +15,7 @@ import { montarObservacaoComDoc } from './ajusteObservacaoDoc'
 import {
   diferencaAjuste,
   fmtQtd,
+  motivosParaDelta,
   previaAjuste,
   previaRetirada,
   validarRetirada,
@@ -129,6 +130,10 @@ export function AjusteSaldoModal({
   const qtdValida = qtdRaw.trim() !== '' && Number.isFinite(qtdNum)
   const contada = modo === 'ajustar' && qtdValida ? qtdNum : null
   const retirada = modo === 'retirar' && qtdValida ? qtdNum : null
+  // Retirar sempre reduz; nos outros modos o sinal vem da quantidade digitada.
+  const deltaPrevisto =
+    modo === 'retirar' ? -1 : qtdValida ? diferencaAjuste(saldoBase, qtdNum) : 0
+  const motivosVisiveis = motivosParaDelta(labels.motivos, deltaPrevisto)
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -317,8 +322,13 @@ export function AjusteSaldoModal({
         )}
 
         <Field id="ajuste-motivo" label={labels.motivo} required>
-          <Select name="motivo" required defaultValue={motivoPadrao(modo, labels.motivos)}>
-            {labels.motivos.map((m) => (
+          <Select
+            key={motivosVisiveis.map((m) => m.value).join('|')}
+            name="motivo"
+            required
+            defaultValue={motivoPadrao(modo, motivosVisiveis)}
+          >
+            {motivosVisiveis.map((m) => (
               <option key={m.value} value={m.value}>
                 {m.label}
               </option>

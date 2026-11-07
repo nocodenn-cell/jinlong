@@ -3,7 +3,7 @@ import { OperationalHubNav } from '@/components/ui/admin-v2/OperationalHubNav'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
 import { ROUTES } from '@/lib/navigation/routes'
-import { listarFuncionariosAction } from './actions'
+import { dadosComplementaresDisponiveisAction, listarFuncionariosAction } from './actions'
 import { FuncionariosListClient } from './FuncionariosListClient'
 
 export default async function AdminFuncionariosPage() {
@@ -13,14 +13,18 @@ export default async function AdminFuncionariosPage() {
   })
   const m = getMessages(session.idioma)
   const f = m.funcionarios
+  const pinErros = { formato: f.pin_err_formato, obvio: f.pin_err_obvio, confirmacao: f.pin_err_confirmacao }
 
-  const list = await listarFuncionariosAction()
+  const [list, dadosDisponiveis] = await Promise.all([
+    listarFuncionariosAction(),
+    dadosComplementaresDisponiveisAction(),
+  ])
   const iniciais = list.ok ? list.data : []
 
   return (
     <div className="admin-v2-page">
       <PageHeader title={f.titulo} subtitle={f.subtitulo} />
-      <OperationalHubNav hub="pessoas" />
+      <OperationalHubNav hub="loja" />
       {!list.ok ? (
         <p className="mb-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {list.error}
@@ -30,7 +34,28 @@ export default async function AdminFuncionariosPage() {
         atorId={session.userId}
         atorPerfil={session.perfil}
         iniciais={iniciais}
+        dadosDisponiveis={dadosDisponiveis}
         labels={{
+          pin: {
+            colPin: f.col_pin,
+            sem: f.pin_sem,
+            ativo: f.pin_ativo,
+            bloqueado: f.pin_bloqueado,
+            trocarBadge: f.pin_trocar_badge,
+            definir: f.pin_definir,
+            trocar: f.pin_trocar,
+            desbloquear: f.pin_desbloquear,
+            modalTitulo: f.pin_modal_titulo,
+            modalSub: f.pin_modal_sub,
+            pin: f.field_pin.replace(/\s*\(.*\)\s*$/, ''),
+            pinConfirmar: f.field_pin_confirmar,
+            salvo: f.pin_salvo,
+            desbloqueado: f.pin_desbloqueado,
+            salvar: f.salvar,
+            salvando: f.salvando,
+            cancelar: f.cancelar,
+            erros: pinErros,
+          },
           contagem: f.contagem,
           novo: f.novo,
           buscaPlaceholder: f.busca_placeholder,
@@ -39,6 +64,7 @@ export default async function AdminFuncionariosPage() {
           colPerfil: f.col_perfil,
           colStatus: f.col_status,
           colAcoes: f.col_acoes,
+          colContato: f.col_contato,
           ativo: f.ativo,
           inativo: f.inativo,
           vazioTitulo: f.vazio_titulo,
@@ -53,7 +79,6 @@ export default async function AdminFuncionariosPage() {
           perfilOperador: f.perfil_operador,
           perfilGerente: f.perfil_gerente,
           perfilDono: f.perfil_dono,
-          perfilAdmin: f.perfil_admin,
           filtroStatusLabel: f.filtro_status_label,
           filtroTodos: f.filtro_todos,
           filtroAtivos: f.filtro_ativos,
@@ -79,11 +104,16 @@ export default async function AdminFuncionariosPage() {
             nome: f.field_nome,
             email: f.field_email,
             emailHint: f.field_email_hint,
+            emailHintNovo: f.field_email_hint_novo,
             perfil: f.field_perfil,
             idioma: f.field_idioma,
             senha: f.field_senha,
             senhaNovaOpcional: f.field_senha_nova,
             senhaHint: f.field_senha_hint,
+            pin: f.field_pin,
+            pinHint: f.field_pin_hint,
+            pinConfirmar: f.field_pin_confirmar,
+            pinErros: pinErros,
             salvar: f.salvar,
             salvando: f.salvando,
             cancelar: f.cancelar,
@@ -91,6 +121,17 @@ export default async function AdminFuncionariosPage() {
             perfilGerente: f.perfil_gerente,
             idiomaPt: f.idioma_pt,
             idiomaZh: f.idioma_zh,
+            secaoDados: f.secao_dados,
+            secaoDadosSub: f.secao_dados_sub,
+            telefone: f.field_telefone,
+            telefonePlaceholder: f.field_telefone_ph,
+            cpf: f.field_cpf,
+            cpfHint: f.field_cpf_hint,
+            cpfInvalido: f.cpf_invalido,
+            cargo: f.field_cargo,
+            cargoPlaceholder: f.field_cargo_ph,
+            admissao: f.field_admissao,
+            observacoes: f.field_observacoes,
           },
         }}
       />

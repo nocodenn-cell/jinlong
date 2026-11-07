@@ -18,7 +18,7 @@ export function isPerfilFuncionarioUi(perfil: string): perfil is PerfilFuncionar
 
 /** Perfis que o ator pode atribuir a novos/editados funcionários. */
 export function perfisAtribuiveisPorAtor(atorPerfil: string): readonly PerfilFuncionarioUi[] {
-  if (atorPerfil === 'DONO' || atorPerfil === 'ADMIN') return PERFIS_FUNCIONARIO_UI
+  if (atorPerfil === 'DONO') return PERFIS_FUNCIONARIO_UI
   if (atorPerfil === 'GERENTE') return ['OPERADOR']
   return []
 }
@@ -28,14 +28,14 @@ export function podeAtribuirPerfil(atorPerfil: string, novoPerfil: string): bool
 }
 
 /**
- * GERENTE só mexe em OPERADOR; DONO/ADMIN em OPERADOR e GERENTE.
+ * GERENTE só mexe em OPERADOR; DONO em OPERADOR e GERENTE. Linhas legadas ADMIN ficam protegidas.
  * DONO/ADMIN nunca são editados por esta tela (DONO via /admin/provisionamento; ADMIN via runbook).
  */
 export function podeEditarAlvo(ator: AtorFuncionario, alvo: AlvoFuncionario): boolean {
   if (alvo.perfil === 'ADMIN' || alvo.perfil === 'DONO') return false
-  if (alvo.perfil === 'GERENTE') return ator.perfil === 'DONO' || ator.perfil === 'ADMIN'
+  if (alvo.perfil === 'GERENTE') return ator.perfil === 'DONO'
   if (alvo.perfil === 'OPERADOR') {
-    return ator.perfil === 'DONO' || ator.perfil === 'ADMIN' || ator.perfil === 'GERENTE'
+    return ator.perfil === 'DONO' || ator.perfil === 'GERENTE'
   }
   return false
 }
@@ -43,4 +43,12 @@ export function podeEditarAlvo(ator: AtorFuncionario, alvo: AlvoFuncionario): bo
 export function podeDesativarAlvo(ator: AtorFuncionario, alvo: AlvoFuncionario): boolean {
   if (ator.id === alvo.id) return false
   return podeEditarAlvo(ator, alvo)
+}
+
+/**
+ * 20261028 (revogação após inativação): duração de bloqueio no Supabase Auth ao (des)ativar funcionário.
+ * Inativo ⇒ bloqueio longo (sem login nem refresh de sessão); reativado ⇒ 'none'.
+ */
+export function banDurationParaAtivo(ativo: boolean): string {
+  return ativo ? 'none' : '876000h'
 }

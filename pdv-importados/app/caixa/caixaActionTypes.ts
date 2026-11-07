@@ -1,3 +1,4 @@
+import type { UnidadeMedidaCode } from '@shared/format/unidadeMedida'
 import type { RegraPreco } from '@shared/pricing/types'
 import type { PricingContext } from '@shared/pricing/types'
 
@@ -15,6 +16,8 @@ export type ProdutoCaixaDTO = {
   origem: OrigemProdutoCaixa
   tem_nf: boolean
   observacao: string | null
+  /** Unidade de medida (SSoT em `@shared/format/unidadeMedida`). Define se a quantidade pode ser fracionada. */
+  unidade_medida: UnidadeMedidaCode
   /** Estoque atual (se houver linha em `estoque`) */
   quantidade_estoque: number | null
   /** Mínimo cadastrado na mesma loja, quando houver linha de estoque */

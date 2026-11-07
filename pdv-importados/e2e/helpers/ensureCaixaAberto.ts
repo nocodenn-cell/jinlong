@@ -6,14 +6,33 @@ export const BTN_ABRIR_CAIXA = /Abrir caixa|开启收银台/i
 /** Botão topbar — fechar turno (pt + zh 结算). */
 export const BTN_FECHAR_CAIXA = /Fechar caixa|结算收银台|关闭收银|關閉收銀/i
 
-type TurnoUi = 'loading' | 'aberto' | 'fechado'
+/** Botão "Tentar novamente" da topbar quando o status do turno volta ERRO (pt + zh). */
+const BTN_TENTAR_NOVAMENTE = /Tentar novamente|重试/i
+
+type TurnoUi = 'loading' | 'aberto' | 'fechado' | 'erro'
+
+/**
+ * Botões de turno SEMPRE pela topbar (`<header>` = landmark `banner` do
+ * `CaixaPdvTopBar`). Desde a UX-011 (2d8d1eec) a faixa "Caixa fechado — abra o
+ * caixa para vender" do rodapé do cupom tem um SEGUNDO botão "Abrir caixa".
+ * Com dois matches, `isEnabled()`/`isVisible()` lançam strict mode violation,
+ * o `.catch(() => false)` engolia o erro e o turno ficava "loading" para
+ * sempre — 40s de poll e falha em todo golden flow do caixa.
+ */
+function botoesTurno(page: Page) {
+  const topbar = page.getByRole('banner')
+  return {
+    abrir: topbar.getByRole('button', { name: BTN_ABRIR_CAIXA }),
+    fechar: topbar.getByRole('button', { name: BTN_FECHAR_CAIXA }),
+    tentarNovamente: topbar.getByRole('button', { name: BTN_TENTAR_NOVAMENTE }),
+  }
+}
 
 async function lerTurnoUi(page: Page): Promise<TurnoUi> {
-  const abrir = page.getByRole('button', { name: BTN_ABRIR_CAIXA })
-  const fechar = page.getByRole('button', { name: BTN_FECHAR_CAIXA })
+  const { abrir, fechar, tentarNovamente } = botoesTurno(page)
   if (await fechar.isVisible().catch(() => false)) return 'aberto'
   if (await abrir.isEnabled().catch(() => false)) return 'fechado'
-  if (await abrir.isVisible().catch(() => false)) return 'loading'
+  if (await tentarNovamente.isVisible().catch(() => false)) return 'erro'
   return 'loading'
 }
 
@@ -27,8 +46,7 @@ export async function ensureCaixaAberto(
   page: Page,
   valorFundo = '300',
 ): Promise<'ja_aberto' | 'abriu'> {
-  const abrir = page.getByRole('button', { name: BTN_ABRIR_CAIXA })
-  const fechar = page.getByRole('button', { name: BTN_FECHAR_CAIXA })
+  const { abrir, fechar } = botoesTurno(page)
 
   const fecharDialog = page.getByRole('dialog', {
     name: /Fechar caixa|结算收银台|关闭收银|關閉收銀/i,
@@ -42,8 +60,15 @@ export async function ensureCaixaAberto(
     .poll(async () => lerTurnoUi(page), { timeout: 40_000 })
     .not.toBe('loading')
 
-  if ((await lerTurnoUi(page)) === 'aberto') {
+  const turno = await lerTurnoUi(page)
+  if (turno === 'aberto') {
     return 'ja_aberto'
+  }
+  if (turno === 'erro') {
+    // Status do turno indisponível (RPC/sessão): falha com a causa visível em
+    // vez de clicar em "Tentar novamente" achando que é "Abrir caixa".
+    const alerta = await page.getByRole('alert').first().textContent({ timeout: 1_000 }).catch(() => null)
+    throw new Error(`ensureCaixaAberto: status do caixa voltou ERRO (${alerta?.trim() || 'sem mensagem'})`)
   }
 
   await expect(abrir).toBeEnabled({ timeout: 10_000 })

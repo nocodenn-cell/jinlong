@@ -1,5 +1,6 @@
 \set ON_ERROR_STOP on
 BEGIN;
+INSERT INTO public.empresas (id, nome) VALUES ('fa5e0000-0000-4000-8000-0000000000f1', 'Fixture empresa (suite SQL)') ON CONFLICT (id) DO NOTHING;
 
 -- Loja determinística: precisa ter produto precificado e GERENTE+OPERADOR
 -- ativos. Escolher "o primeiro GERENTE" fazia a suíte cair na loja criada por
@@ -34,8 +35,8 @@ SELECT gen_random_uuid() AS closed_cash, gen_random_uuid() AS other_store,
 \gset
 INSERT INTO public.caixas(id, operador_id, loja_id, status, saldo_atual, data_fechamento, valor_fechamento, fechamento_diferenca)
 VALUES (:'closed_cash', :'operador_id', :'loja', 'FECHADO', 0, now(), 0, 0);
-INSERT INTO public.lojas(id, nome, codigo)
-VALUES (:'other_store', 'Teste outra loja', 'T2A-' || left(:'other_store', 8));
+INSERT INTO public.lojas (empresa_id, id, nome, codigo)
+VALUES ('fa5e0000-0000-4000-8000-0000000000f1', :'other_store', 'Teste outra loja', 'T2A-' || left(:'other_store', 8));
 INSERT INTO public.caixas(id, operador_id, loja_id, status, saldo_atual, data_fechamento, valor_fechamento, fechamento_diferenca)
 VALUES (:'other_cash', :'operador_id', :'other_store', 'FECHADO', 0, now(), 0, 0);
 INSERT INTO public.contas_receber(id, cliente_id, valor_total, valor_aberto, loja_id)

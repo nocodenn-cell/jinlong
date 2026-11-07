@@ -11,6 +11,8 @@ import {
   validarGerenteDesconto,
   obterDetalheHistoricoVendaCaixa,
   converterVendaEmEsperaCaixa,
+  definirVendedorVendaCaixa,
+  listarVendedoresCaixa,
   devolverVendaEmEsperaCaixa,
   obterResumoVendasTurno,
   obterNomeLojaAtual,
@@ -97,6 +99,15 @@ import { focarBuscaCaixa } from "@/app/caixa/caixaFocoBusca"
 import "@/styles/caixa-operacional.css"
 import { CaixaPdvOperadorTabs } from "@/app/caixa/CaixaPdvOperadorTabs"
 import { CaixaSelecionarClienteModal } from "@/app/caixa/CaixaSelecionarClienteModal"  // ✅ NOVO (Fase 5b)
+import { CaixaVendedorSelect } from "@/app/caixa/CaixaVendedorSelect"
+import { lembrarVendedor, aplicarVendedorAposVenda, vendedorInicial, type VendedorOpcao } from "@/app/caixa/caixaVendedor"
+import {
+  CaixaTrocaAvisos,
+  CaixaTrocaControles,
+  CaixaTrocaModais,
+  useCaixaTrocaOperador,
+} from "@/app/caixa/CaixaTrocaOperador"
+import { motivoTrocaBloqueada } from "@/app/caixa/caixaTrocaOperadorRegras"
 
 function newCupomSessionId(): string {
   return crypto.randomUUID()
@@ -245,6 +256,15 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const totalBruto = cartMounted ? totalBrutoStore : 0
   const totalDesconto = cartMounted ? totalDescontoStore : 0
   const totalLiquido = cartMounted ? totalLiquidoStore : 0
+
+  // Troca Segura de Operador (gaveta do turno): barra, avisos de turno liberado e tela de bloqueio por PIN.
+  const trocaOperador = useCaixaTrocaOperador({
+    m,
+    statusKey: `${caixaStatus?.status ?? ""}:${isCaixaAberto(caixaStatus) ? caixaStatus.caixaId : ""}`,
+    motivoBloqueada: motivoTrocaBloqueada({ itensNoCarrinho: itens.length, finalizando, processandoCaixa }),
+    onMudou: recarregarStatusCaixa,
+    aviso: setCaixaMensagem,
+  })
   // Ações têm referência estável no zustand — selecionadas individualmente, nunca causam re-render.
   const setRegras = useCarrinhoStore((s) => s.setRegras)
   const setCartOwnerForSession = useCarrinhoStore((s) => s.setCartOwnerForSession)
@@ -310,6 +330,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     adicionarParcela,
     removerParcela,
     atualizarForma,
+    atualizarParcelas,
     atualizarValor,
     autoCompletarUltima,
     resetPagamentos,
@@ -333,6 +354,13 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   // tocar a lógica operacional do ref (guard de scan stale) — só atrasa a
   // exibição no painel de debug até depois do mount.
   const [pipelineDebugMounted, setPipelineDebugMounted] = useState(false)
+  // Marca Jinlong (vermelho do Admin) também nos modais em portal do caixa.
+  useEffect(() => {
+    document.body.classList.add('pdv-marca-jinlong')
+    return () => {
+      document.body.classList.remove('pdv-marca-jinlong')
+    }
+  }, [])
   useEffect(() => {
     setPipelineDebugMounted(true)
   }, [])
@@ -356,6 +384,18 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const [clienteId, setClienteId] = useState<string | null>(null)  // ✅ NOVO (Fase 5b)
   const [clienteNome, setClienteNome] = useState<string | null>(null)  // ✅ NOVO (Fase 5b) - para exibição
   const [selecionarClienteModalAberto, setSelecionarClienteModalAberto] = useState(false)  // ✅ NOVO (Fase 5b)
+  // Comissão P0: vendedor da venda (padrão = operador; lembrado por operador neste navegador).
+  const [vendedores, setVendedores] = useState<VendedorOpcao[]>([])
+  const [vendedorId, setVendedorId] = useState<string | null>(null)
+  useEffect(() => {
+    let vivo = true
+    void listarVendedoresCaixa().then((r) => {
+      if (!vivo || !r.ok) return
+      setVendedores(r.vendedores)
+      setVendedorId(vendedorInicial(userId, r.vendedores, typeof window === "undefined" ? null : window.localStorage))
+    })
+    return () => { vivo = false }
+  }, [userId])
   /** F1 alterna a referência de atalhos (renderizada no topbar). */
   const [atalhosReferenciaAberta, setAtalhosReferenciaAberta] = useState(false)
 
@@ -1038,6 +1078,20 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       setCaixaMensagem(m.caixa.msg_venda_pendente_bloqueio, { kind: "warning" })
       return
     }
+    // F4/F9 chegam aqui sem passar pelo botão. O servidor recusa caixa fechado,
+    // mas só depois de marcar a finalização como pendente — então só seguimos
+    // com o caixa CONFIRMADO aberto (status ainda carregando ou em erro também barra).
+    if (!isCaixaAberto(caixaStatus)) {
+      setCaixaMensagem(
+        caixaStatus?.status === "FECHADO"
+          ? m.caixa.caixa_fechado_faixa
+          : caixaStatus?.status === "ERRO"
+            ? m.caixa.err_srv_status_caixa_indisponivel
+            : m.caixa.status_carregando,
+        { kind: "warning" },
+      )
+      return
+    }
     // A regra vive no banco (trigger de `vendas`); aqui é só UX para não gastar a viagem.
     if (configCaixaWeb.vendas_suspensas === 'true') {
       const motivo = configCaixaWeb.motivo_suspensao?.trim()
@@ -1068,6 +1122,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     const parcelasNormalizadas = pagamentos.map((p) => ({
       formaPagamento: p.formaPagamento,
       valor: p.valor,
+      ...(p.formaPagamento === "CARTAO_CREDITO" && (p.parcelas ?? 1) > 1 ? { parcelas: p.parcelas } : {}),
     }))
     const excesso = roundMoney2(totalPagamentos - totalLiquidoComGerente)
     if (excesso > EXCESSO_PAGAMENTO_EPS) {
@@ -1228,6 +1283,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           { kind: "success" },
         )
         tocarFeedback("ok")
+        if (!(await aplicarVendedorAposVenda(res.vendaId, userId, vendedorId, definirVendedorVendaCaixa))) {
+          setCaixaMensagem(m.caixa.vendedor_nao_aplicado, { kind: "warning" })
+        }
         await recarregarStatusCaixa()
       } else if (res === timeoutResult) {
         // Desfecho DESCONHECIDO: o servidor pode ter concluído a venda depois do
@@ -1289,7 +1347,10 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       setFinalizando(false)
     }
   }, [
+    userId,
+    vendedorId,
     configCaixaWeb,
+    caixaStatus,
     descontoGerentePercentualEfetivo,
     valorDescontoGerente,
     finalizando,
@@ -1360,6 +1421,10 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           { kind: "success" },
         )
         tocarFeedback("ok")
+        // Comissão: a venda recuperada após timeout também recebe o vendedor escolhido.
+        if (!(await aplicarVendedorAposVenda(res.detalhe.id, userId, vendedorId, definirVendedorVendaCaixa))) {
+          setCaixaMensagem(m.caixa.vendedor_nao_aplicado, { kind: "warning" })
+        }
         await recarregarStatusCaixa()
         return
       }
@@ -1388,6 +1453,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     setCaixaMensagemVendaOk,
     tocarFeedback,
     m,
+    userId,
+    vendedorId,
   ])
 
   /**
@@ -1606,7 +1673,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           printerDeviceName={thermal.deviceInfo?.name ?? thermal.savedInfo?.name}
           atalhosAbertos={atalhosReferenciaAberta}
           onAtalhosOpenChange={setAtalhosReferenciaAberta}
+          trocaSlot={<CaixaTrocaControles m={m} troca={trocaOperador} userId={userId} />}
         />
+        <CaixaTrocaAvisos m={m} troca={trocaOperador} />
         <div className="flex-1 flex flex-col min-h-0">
           <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[auto_minmax(0,1fr)] gap-3 px-4 sm:px-6 pt-4 pb-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(11.5rem,15rem)] md:grid-rows-[minmax(0,1fr)]">
             <div className="min-h-0 flex flex-col md:min-h-0">
@@ -1622,6 +1691,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 onAdicionarParcela={adicionarParcela}
                 onRemoverParcela={removerParcela}
                 onAtualizarForma={atualizarForma}
+                onAtualizarParcelas={atualizarParcelas}
                 onAtualizarValor={atualizarValor}
                 onAutoCompletar={autoCompletarUltima}
                 onDescontoDinheiro={abrirGerenteModal}
@@ -1698,6 +1768,20 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                   onAdicionarMaisItens={() => {
                     focarBuscaCaixa()
                     buscaInputRef.current?.focus()
+                  }}
+                />
+              </div>
+              <div className="shrink-0 px-3 pt-2 sm:px-4">
+                <CaixaVendedorSelect
+                  label={m.caixa.vendedor_label}
+                  operadorSufixo={m.caixa.vendedor_operador_sufixo}
+                  operadorId={userId}
+                  vendedores={vendedores}
+                  value={vendedorId}
+                  disabled={finalizando}
+                  onChange={(id) => {
+                    setVendedorId(id)
+                    lembrarVendedor(userId, id, typeof window === "undefined" ? null : window.localStorage)
                   }}
                 />
               </div>
@@ -2019,6 +2103,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         parseValor={parseValorMonetario}
         onConfirm={handleConfirmarAbrirTurno}
       />
+      <CaixaTrocaModais m={m} troca={trocaOperador} operadorLabel={operadorLabel} />
       {/* ✅ NOVO (Fase 5b): Modal para seleção de cliente */}
       <CaixaSelecionarClienteModal
         aberto={selecionarClienteModalAberto}

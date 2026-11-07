@@ -14,11 +14,14 @@ import { emitGerenteToast } from '@/lib/gerente/toast'
 import { cn } from '@/lib/utils'
 import {
   definirAtivoFuncionarioAction,
+  desbloquearPinFuncionarioAction,
   type FuncionarioListRow,
 } from './actions'
 import { FuncionarioEditarModal, type FuncionarioModalLabels } from './FuncionarioEditarModal'
 import { FuncionarioRowActions } from './FuncionarioRowActions'
+import { FuncionarioPinModal, PinBadge, type FuncionarioPinLabels } from './FuncionarioPinModal'
 import { podeDesativarAlvo } from './funcionarioPolicies'
+import { formatarTelefone } from './funcionarioDados'
 import {
   agruparFuncionarios,
   isTypingTarget,
@@ -36,6 +39,7 @@ export type FuncionariosListLabels = {
   colPerfil: string
   colStatus: string
   colAcoes: string
+  colContato: string
   ativo: string
   inativo: string
   vazioTitulo: string
@@ -50,7 +54,6 @@ export type FuncionariosListLabels = {
   perfilOperador: string
   perfilGerente: string
   perfilDono: string
-  perfilAdmin: string
   filtroStatusLabel: string
   filtroTodos: string
   filtroAtivos: string
@@ -71,6 +74,7 @@ export type FuncionariosListLabels = {
   grupoProtegido: string
   grupoProtegidoSub: string
   modal: FuncionarioModalLabels
+  pin: FuncionarioPinLabels
 }
 
 type Props = {
@@ -78,6 +82,7 @@ type Props = {
   atorPerfil: string
   iniciais: FuncionarioListRow[]
   labels: FuncionariosListLabels
+  dadosDisponiveis?: boolean
 }
 
 type StatusFiltro = 'todos' | 'ativos' | 'inativos'
@@ -86,7 +91,6 @@ function labelPerfil(perfil: string, L: FuncionariosListLabels): string {
   if (perfil === 'OPERADOR') return L.perfilOperador
   if (perfil === 'GERENTE') return L.perfilGerente
   if (perfil === 'DONO') return L.perfilDono
-  if (perfil === 'ADMIN') return L.perfilAdmin
   return perfil
 }
 
@@ -112,7 +116,13 @@ function grupoSub(id: FuncionarioGrupoId, L: FuncionariosListLabels): string {
   return id === 'equipe' ? L.grupoEquipeSub : L.grupoProtegidoSub
 }
 
-export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L }: Props) {
+export function FuncionariosListClient({
+  atorId,
+  atorPerfil,
+  iniciais,
+  labels: L,
+  dadosDisponiveis = false,
+}: Props) {
   const [rows, setRows] = useState(iniciais)
   const [termo, setTermo] = useState('')
   const [statusF, setStatusF] = useState<StatusFiltro>('todos')
@@ -120,6 +130,8 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
   const [emEdicao, setEmEdicao] = useState<FuncionarioListRow | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [confirmRow, setConfirmRow] = useState<FuncionarioListRow | null>(null)
+  const [pinRow, setPinRow] = useState<FuncionarioListRow | null>(null)
+  const pinDisponivel = rows.some((r) => r.pin_status != null)
   const searchRef = useRef<HTMLInputElement>(null)
 
   const filtrados = useMemo(() => {
@@ -131,6 +143,8 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
       return (
         r.nome.toLowerCase().includes(q) ||
         (r.email ?? '').toLowerCase().includes(q) ||
+        (r.cargo ?? '').toLowerCase().includes(q) ||
+        (r.telefone ?? '').includes(q.replace(/\D/g, '') || '\u0000') ||
         r.perfil.toLowerCase().includes(q) ||
         labelPerfil(r.perfil, L).toLowerCase().includes(q)
       )
@@ -185,6 +199,25 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
     }
   }
 
+  function patchRow(id: string, patch: Partial<FuncionarioListRow>) {
+    setRows((cur) => cur.map((x) => (x.id === id ? { ...x, ...patch } : x)))
+  }
+
+  async function desbloquearPin(row: FuncionarioListRow) {
+    setBusyId(row.id)
+    try {
+      const r = await desbloquearPinFuncionarioAction(row.id)
+      if (!r.ok) {
+        emitGerenteToast({ kind: 'error', message: r.error })
+        return
+      }
+      patchRow(row.id, { pin_status: r.data.pin_status })
+      emitGerenteToast({ kind: 'success', message: L.pin.desbloqueado })
+    } finally {
+      setBusyId(null)
+    }
+  }
+
   function pedirToggle(row: FuncionarioListRow) {
     const bloqueio = motivoBloqueioToggle(ator, row, L)
     if (bloqueio) {
@@ -196,7 +229,7 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (modalAberto || confirmRow) return
+      if (modalAberto || confirmRow || pinRow) return
       if (e.key === '/' && !isTypingTarget(e.target)) {
         e.preventDefault()
         searchRef.current?.focus()
@@ -211,7 +244,7 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [modalAberto, confirmRow])
+  }, [modalAberto, confirmRow, pinRow])
 
   const filtroLabel = (s: StatusFiltro) => {
     if (s === 'ativos') return L.filtroAtivos
@@ -226,7 +259,10 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
       priority: 'primary',
       sortValue: (row) => row.nome.toLocaleLowerCase(),
       cell: (row) => (
-        <span className={cn('font-medium text-fg', !row.ativo && 'text-fg-subtle')}>{row.nome}</span>
+        <div className="min-w-0">
+          <span className={cn('font-medium text-fg', !row.ativo && 'text-fg-subtle')}>{row.nome}</span>
+          {row.cargo ? <p className="truncate text-caption text-fg-subtle">{row.cargo}</p> : null}
+        </div>
       ),
     },
     {
@@ -235,6 +271,28 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
       sortValue: (row) => (row.email ?? '').toLocaleLowerCase(),
       cell: (row) => <span className="text-caption text-fg-muted">{row.email ?? '—'}</span>,
     },
+    ...(dadosDisponiveis
+      ? [
+          {
+            key: 'contato',
+            header: L.colContato,
+            width: '170px',
+            cell: (row: FuncionarioListRow) =>
+              row.telefone || row.cpf_mascarado ? (
+                <div className="text-caption leading-tight text-fg-muted">
+                  {row.telefone ? <p>{formatarTelefone(row.telefone)}</p> : null}
+                  {row.cpf_mascarado ? (
+                    <p className="font-mono text-fg-subtle" data-testid="funcionario-cpf-mascarado">
+                      {row.cpf_mascarado}
+                    </p>
+                  ) : null}
+                </div>
+              ) : (
+                <span className="text-caption text-fg-subtle">—</span>
+              ),
+          } satisfies Column<FuncionarioListRow>,
+        ]
+      : []),
     {
       key: 'perfil',
       header: L.colPerfil,
@@ -244,6 +302,16 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
         <Badge className={perfilBadgeClass(row.perfil)}>{labelPerfil(row.perfil, L)}</Badge>
       ),
     },
+    ...(pinDisponivel
+      ? [
+          {
+            key: 'pin',
+            header: L.pin.colPin,
+            width: '150px',
+            cell: (row: FuncionarioListRow) => <PinBadge row={row} labels={L.pin} />,
+          } satisfies Column<FuncionarioListRow>,
+        ]
+      : []),
     {
       key: 'status',
       header: L.colStatus,
@@ -272,9 +340,11 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
 
   const actionsProps = {
     ator,
-    labels: L,
+    labels: { ...L, pinDefinir: L.pin.definir, pinTrocar: L.pin.trocar, pinDesbloquear: L.pin.desbloquear },
     onEditar: abrirEditar,
     onToggle: pedirToggle,
+    onPin: (row: FuncionarioListRow) => setPinRow(row),
+    onDesbloquearPin: (row: FuncionarioListRow) => void desbloquearPin(row),
   }
 
   const confirmTitle = confirmRow
@@ -432,11 +502,19 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
                                 <p className="truncate text-caption text-fg-muted">
                                   {row.email ?? '—'}
                                 </p>
+                                {row.cargo || row.telefone ? (
+                                  <p className="truncate text-caption text-fg-subtle">
+                                    {[row.cargo, row.telefone ? formatarTelefone(row.telefone) : null]
+                                      .filter(Boolean)
+                                      .join(' · ')}
+                                  </p>
+                                ) : null}
                                 <div className="mt-2 flex flex-wrap gap-1">
                                   <Badge className={perfilBadgeClass(row.perfil)}>
                                     {labelPerfil(row.perfil, L)}
                                   </Badge>
                                   {renderStatusChip(row.ativo, L)}
+                                  {pinDisponivel ? <PinBadge row={row} labels={L.pin} /> : null}
                                 </div>
                               </div>
                               <FuncionarioRowActions
@@ -462,6 +540,7 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
           labels={L.modal}
           atorPerfil={atorPerfil}
           funcionario={emEdicao}
+          dadosDisponiveis={dadosDisponiveis}
           onClose={() => {
             setModalAberto(false)
             setEmEdicao(null)
@@ -471,10 +550,19 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
               const idx = cur.findIndex((x) => x.id === row.id)
               if (idx < 0) return [...cur, row].sort((a, b) => a.nome.localeCompare(b.nome))
               const next = [...cur]
-              next[idx] = row
+              next[idx] = { ...cur[idx], ...row }
               return next
             })
           }}
+        />
+      ) : null}
+
+      {pinRow ? (
+        <FuncionarioPinModal
+          row={pinRow}
+          labels={L.pin}
+          onClose={() => setPinRow(null)}
+          onSalvo={(patch) => patchRow(pinRow.id, patch)}
         />
       ) : null}
 

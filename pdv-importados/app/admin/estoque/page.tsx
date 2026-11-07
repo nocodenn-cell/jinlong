@@ -221,6 +221,7 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
           <div className="flex w-full flex-col gap-2.5">
             <Suspense fallback={<div className="h-9" />}>
               <FilterBar
+                layout="grid"
                 filters={filters}
                 resetPageOnChange
                 ariaLabel={ui.filtros_regiao_aria}

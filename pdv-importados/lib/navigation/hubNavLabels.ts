@@ -27,25 +27,12 @@ export function buildCatalogoHubTabs(labels: HubNavLabelSet): readonly HubTabDef
       match: 'prefix',
     },
     { id: 'marcas', label: labels.catalogoMarcas, href: ROUTES.admin.marcasProdutos, match: 'prefix' },
-    {
-      id: 'etiquetas',
-      label: labels.estoqueEtiquetas,
-      href: ROUTES.admin.estoqueImprimirEtiquetas,
-      match: 'prefix',
-    },
   ]
 }
 
 export function buildEstoqueHubTabs(labels: HubNavLabelSet): readonly HubTabDef[] {
   return [
     { id: 'saldos', label: labels.estoqueSaldos, href: ROUTES.admin.estoque, match: 'exact' },
-    {
-      id: 'recebimento',
-      label: labels.estoqueRecebimento,
-      href: ROUTES.admin.estoqueRecebimento,
-      aliases: [ROUTES.admin.importNfe],
-      match: 'prefix',
-    },
     {
       id: 'movimentacoes',
       label: labels.estoqueMovimentacoes ?? 'Movimentações',
@@ -56,12 +43,6 @@ export function buildEstoqueHubTabs(labels: HubNavLabelSet): readonly HubTabDef[
       id: 'transferencias',
       label: labels.estoqueTransferencias,
       href: ROUTES.admin.estoqueTransferencias,
-      match: 'prefix',
-    },
-    {
-      id: 'etiquetas',
-      label: labels.estoqueEtiquetas,
-      href: ROUTES.admin.estoqueImprimirEtiquetas,
       match: 'prefix',
     },
   ]

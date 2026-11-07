@@ -16,17 +16,19 @@ BEGIN;
 --   loja B  = loja criada aqui, só para provar isolamento de tenant
 -- Para o caso "gerente de outra loja" basta um token com loja_id = loja B e
 -- aprovador da loja A: no consumo o gerente não pertence à loja da operação.
-SELECT l.id AS loja_a FROM public.lojas l
-WHERE EXISTS (SELECT 1 FROM public.usuarios u WHERE u.loja_id=l.id AND u.ativo AND u.perfil='GERENTE')
-  AND EXISTS (SELECT 1 FROM public.usuarios u WHERE u.loja_id=l.id AND u.ativo AND u.perfil='OPERADOR')
-ORDER BY l.id LIMIT 1 \gset
-SELECT id AS gerente_a FROM public.usuarios
-WHERE perfil='GERENTE' AND ativo AND loja_id=:'loja_a' ORDER BY id LIMIT 1 \gset
-SELECT id AS operador_a FROM public.usuarios
-WHERE perfil='OPERADOR' AND ativo AND loja_id=:'loja_a' ORDER BY id LIMIT 1 \gset
+-- Fixture explícita (não depende do estado do banco): empresa, loja A, GERENTE e OPERADOR ativos na loja A.
+\set loja_a 'a0f00001-0000-4000-8000-0000000000a1'
+\set gerente_a 'a0f00002-0000-4000-8000-0000000000a1'
+\set operador_a 'a0f00002-0000-4000-8000-0000000000a2'
+INSERT INTO public.empresas (id, nome) VALUES ('a0f00000-0000-4000-8000-0000000000e1', 'TKN Empresa') ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.lojas (id, nome, codigo, empresa_id) VALUES (:'loja_a', 'Loja A (teste tokens)', 'TKA', 'a0f00000-0000-4000-8000-0000000000e1') ON CONFLICT (id) DO NOTHING;
+INSERT INTO auth.users (id, aud, role, email) VALUES (:'gerente_a', 'authenticated', 'authenticated', 'tkn-ger@t.local'), (:'operador_a', 'authenticated', 'authenticated', 'tkn-op@t.local') ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.usuarios (id, nome, perfil, ativo, loja_id) VALUES (:'gerente_a', 'TKN Gerente', 'GERENTE', true, :'loja_a'), (:'operador_a', 'TKN Operador', 'OPERADOR', true, :'loja_a') ON CONFLICT (id) DO UPDATE SET ativo = true, perfil = EXCLUDED.perfil, loja_id = EXCLUDED.loja_id;
 SELECT gen_random_uuid() AS loja_b \gset
-INSERT INTO public.lojas(id, nome, codigo)
-VALUES (:'loja_b', 'Loja B (teste tokens)', 'TKB-' || left(:'loja_b', 8));
+-- Loja B em OUTRA empresa (isolamento de tenant de verdade)
+INSERT INTO public.empresas (id, nome) VALUES ('a0f00000-0000-4000-8000-0000000000e2', 'TKN Empresa B') ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.lojas(id, nome, codigo, empresa_id)
+VALUES (:'loja_b', 'Loja B (teste tokens)', 'TKB-' || left(:'loja_b', 8), 'a0f00000-0000-4000-8000-0000000000e2');
 
 CREATE TEMP TABLE fx AS SELECT
   :'loja_a'::uuid    AS loja_a,
@@ -142,6 +144,12 @@ BEGIN
   UPDATE public.usuarios SET ativo = false WHERE id = f.gerente_a;
   PERFORM pg_temp.deny('gerente inativo no consumo', 'tk_sangria_2', 'SANGRIA', 'mov-2', f.loja_a);
   UPDATE public.usuarios SET ativo = true WHERE id = f.gerente_a;
+  -- 20261028120100: inativar o gerente revoga os tokens PENDENTES dele. Recria o token de replay para o caso seguinte.
+  DELETE FROM public.tokens_autorizacao_operacao WHERE token IN ('tk_replay', 'tk_atomicidade');
+  INSERT INTO public.tokens_autorizacao_operacao (token, finalidade, alvo_id, loja_id, gerente_id, solicitante_id, expira_em)
+  SELECT * FROM (
+    SELECT 'tk_replay', 'SANGRIA', 'mov-replay', loja_a, gerente_a, operador_a, now() + interval '5 min' FROM fx
+    UNION ALL SELECT 'tk_atomicidade', 'SANGRIA', 'mov-atom', loja_a, gerente_a, operador_a, now() + interval '5 min' FROM fx) t;
 
   -- Solicitante e aprovador ficam separados na linha do token
   PERFORM 1 FROM public.tokens_autorizacao_operacao

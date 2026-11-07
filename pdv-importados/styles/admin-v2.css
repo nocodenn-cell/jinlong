@@ -388,3 +388,23 @@
     color: #000 !important;
   }
 }
+
+/* Menu lateral recolhível (>= lg): só ícones; rótulos continuam no DOM (title/aria). */
+[data-admin-v2] .admin-v2-sidebar[data-collapsed='true'] .admin-v2-nav-label,
+[data-admin-v2] .admin-v2-sidebar[data-collapsed='true'] .admin-v2-nav-group-label,
+[data-admin-v2] .admin-v2-sidebar[data-collapsed='true'] [data-nav-children-of],
+[data-admin-v2] .admin-v2-sidebar[data-collapsed='true'] .admin-v2-sidebar-footer {
+  display: none;
+}
+[data-admin-v2] .admin-v2-sidebar[data-collapsed='true'] .admin-v2-sidebar-logo {
+  height: 2.5rem;
+}
+[data-admin-v2] .admin-v2-sidebar[data-collapsed='true'] .admin-v2-sidebar-brand {
+  padding: 0.5rem 0.25rem 1rem;
+}
+[data-admin-v2] .admin-v2-sidebar[data-collapsed='true'] .admin-v2-nav-link {
+  justify-content: center;
+}
+[data-admin-v2] .admin-v2-topbar {
+  background-color: var(--admin-v2-sidebar);
+}

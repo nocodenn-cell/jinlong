@@ -12,7 +12,8 @@ export default async function AdminProvisionamentoPage() {
   const m = getMessages(session.idioma)
   const ui = m.provisionamento
 
-  if (session.perfil !== 'ADMIN') {
+  // Fechado no app das lojas (perfil ADMIN removido). Mantido só como aviso.
+  if (session) {
     return (
       <div className="admin-v2-page">
         <PageHeader title={ui.titulo} subtitle={ui.subtitulo} />
@@ -57,6 +58,27 @@ export default async function AdminProvisionamentoPage() {
           linkImplantacao: ui.link_implantacao,
           reutilizado: ui.reutilizado,
           criado: ui.criado,
+          stepEquipe: ui.step_equipe,
+          fieldEmpresaNome: ui.field_empresa_nome,
+          fieldEmpresaCnpj: ui.field_empresa_cnpj,
+          lojasExtrasTitulo: ui.lojas_extras_titulo,
+          btnAddLoja: ui.btn_add_loja,
+          btnRemover: ui.btn_remover,
+          equipeTitulo: ui.equipe_titulo,
+          equipeHint: ui.equipe_hint,
+          btnAddPessoa: ui.btn_add_pessoa,
+          papelGerente: ui.papel_gerente,
+          papelOperador: ui.papel_operador,
+          fieldPessoaNome: ui.field_pessoa_nome,
+          fieldPessoaEmail: ui.field_pessoa_email,
+          fieldPessoaSenha: ui.field_pessoa_senha,
+          fieldPessoaLojas: ui.field_pessoa_lojas,
+          okEmpresa: ui.ok_empresa,
+          okEquipe: ui.ok_equipe,
+          ativacaoTitulo: ui.ativacao_titulo,
+          ativacaoHint: ui.ativacao_hint,
+          btnGerarCodigo: ui.btn_gerar_codigo,
+          codigoValidoAte: ui.codigo_valido_ate,
         }}
       />
     </div>

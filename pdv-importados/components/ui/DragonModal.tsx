@@ -6,6 +6,12 @@ import { cn } from '@/lib/utils'
 
 export type DragonModalVariant = 'default' | 'danger'
 export type DragonModalSize = 'sm' | 'md' | 'lg' | 'xl'
+/**
+ * `center`: diálogo centralizado (default).
+ * `drawer`: gaveta lateral à direita para detalhes — tela cheia no mobile; a partir de
+ * `sm`, 480 px (sm/md) ou 640 px (lg/xl). Header e footer fixos, só o corpo rola.
+ */
+export type DragonModalPlacement = 'center' | 'drawer'
 
 type Props = Readonly<{
   open: boolean
@@ -22,6 +28,8 @@ type Props = Readonly<{
    * Ideal p/ formulários longos no mobile. Default false (sempre centralizado).
    */
   sheet?: boolean
+  /** Ver `DragonModalPlacement`. Com `drawer`, `sheet` é ignorado. */
+  placement?: DragonModalPlacement
   /** Slot de ações no rodapé (botões). Sem footer, o rodapé não é renderizado. */
   footer?: ReactNode
   children: ReactNode
@@ -52,6 +60,13 @@ const sheetSizeClass: Record<DragonModalSize, string> = {
   xl: 'sm:max-w-6xl',
 }
 
+const drawerSizeClass: Record<DragonModalSize, string> = {
+  sm: 'sm:max-w-[480px]',
+  md: 'sm:max-w-[480px]',
+  lg: 'sm:max-w-[640px]',
+  xl: 'sm:max-w-[640px]',
+}
+
 function isFocusable(el: Element): el is HTMLElement {
   return el instanceof HTMLElement && !el.hasAttribute('disabled') && el.tabIndex !== -1
 }
@@ -61,7 +76,8 @@ function isFocusable(el: Element): el is HTMLElement {
  * Backdrop glass + cartão `dragon-elev-2`, header com ícone âmbar (imperial-red
  * no `variant="danger"`) + título + subtítulo + X, e slot de footer para ações.
  * Cuida de Escape, clique no backdrop, trava de scroll e foco (move ao abrir,
- * restaura ao fechar, ciclo de Tab contido). É o único caminho aceito p/ dialog.
+ * restaura ao fechar, ciclo de Tab contido). É o único caminho aceito p/ dialog —
+ * inclusive gavetas de detalhe (`placement="drawer"`).
  */
 export function DragonModal({
   open,
@@ -72,6 +88,7 @@ export function DragonModal({
   variant = 'default',
   size = 'md',
   sheet = false,
+  placement = 'center',
   footer,
   children,
   dismissable = true,
@@ -151,12 +168,17 @@ export function DragonModal({
       ? 'text-destructive bg-destructive/10'
       : 'text-amber-400 bg-amber-400/10'
 
+  const drawer = placement === 'drawer'
+
   return (
     <div
       className={cn(
-        'fixed inset-0 z-50 flex justify-center',
-        sheet ? 'items-end p-0 sm:items-center sm:p-4' : 'items-center p-4',
+        'fixed inset-0 z-modal flex',
+        drawer
+          ? 'justify-end'
+          : cn('justify-center', sheet ? 'items-end p-0 sm:items-center sm:p-4' : 'items-center p-4'),
       )}
+      data-placement={placement}
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
@@ -171,13 +193,22 @@ export function DragonModal({
       <div
         ref={cardRef}
         tabIndex={-1}
+        data-dragon-panel
         className={cn(
-          'dragon-elev-2 relative z-10 flex max-h-[90vh] w-full flex-col outline-none',
-          // sheet: largura total + cantos só no topo no mobile; vira diálogo em sm+
-          sheet ? cn('rounded-t-2xl sm:rounded-2xl', sheetSizeClass[size]) : cn('rounded-2xl', sizeClass[size]),
+          'dragon-elev-2 relative z-10 flex w-full flex-col outline-none',
+          drawer
+            ? cn('h-full border-l border-jl-border-1', drawerSizeClass[size])
+            : cn(
+                'max-h-[90vh]',
+                // sheet: largura total + cantos só no topo no mobile; vira diálogo em sm+
+                sheet ? cn('rounded-t-2xl sm:rounded-2xl', sheetSizeClass[size]) : cn('rounded-2xl', sizeClass[size]),
+              ),
         )}
       >
-        <div className="flex items-start gap-3 px-6 pb-4 pt-6">
+        <div
+          data-dragon-header
+          className={cn('flex items-start gap-3 px-6 pb-4 pt-6', drawer && 'border-b border-jl-border-1')}
+        >
           {Icon && (
             <span className={cn('mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg', accent)}>
               <Icon className="h-5 w-5" aria-hidden />
@@ -203,10 +234,18 @@ export function DragonModal({
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-6">{children}</div>
+        <div data-dragon-body className={cn('min-h-0 flex-1 overflow-y-auto px-6', drawer && 'py-4')}>
+          {children}
+        </div>
 
         {footer && (
-          <div className="flex flex-wrap items-center justify-end gap-3 px-6 pb-6 pt-5">
+          <div
+            data-dragon-footer
+            className={cn(
+              'flex flex-wrap items-center justify-end gap-3 px-6 pb-6 pt-5',
+              drawer && 'border-t border-jl-border-1 pb-5 pt-4',
+            )}
+          >
             {footer}
           </div>
         )}

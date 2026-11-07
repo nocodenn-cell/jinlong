@@ -3,7 +3,7 @@ import type { Idioma } from '@/idioma/normalizeIdioma'
 import type { PerfilUsuario } from '@/idioma/normalizePerfilUsuario'
 
 /** Papel canônico consumido por adminPolicy — independente de runtime. */
-export type AdminRole = 'admin' | 'gerente' | 'owner'
+export type AdminRole = 'gerente' | 'owner'
 
 /** Origem da leitura de sessão (apenas metadado; não altera decisão). */
 export type SessionSource = 'edge' | 'ssr'
@@ -29,7 +29,7 @@ export type SessionAuthState =
   | 'blocked'
 
 /** Motivo de bloqueio de usuário autenticado (authState === 'blocked'). */
-export type SessionBlockedReason = 'inativo' | 'sem_loja'
+export type SessionBlockedReason = 'inativo' | 'sem_loja' | 'sem_empresa' | 'multi_empresa'
 
 /**
  * Resultado completo da normalização: contrato policy + sessão legada + metadados.
@@ -51,4 +51,8 @@ export type AdminSession = {
   perfil: PerfilUsuario
   idioma: Idioma
   lojaId: string | null
+  /** Empresa ativa (única) do usuário; `null` = ambiente sem multiempresa. */
+  empresaId?: string | null
+  /** Vínculos ativos; `null` = não lidos (compatibilidade). */
+  vinculos?: { empresa_id: string; loja_id: string | null; papel: 'DONO' | 'GERENTE' | 'OPERADOR' }[] | null
 }

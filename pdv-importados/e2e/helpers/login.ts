@@ -72,11 +72,17 @@ async function waitPostLogin(page: Page, postLoginUrl: RegExp, timeout: number):
   try {
     await page.waitForURL(postLoginUrl, { timeout, waitUntil: 'commit' })
   } catch (err) {
-    const alertTxt = (await page.getByRole('alert').first().textContent().catch(() => null))?.trim()
+    // Leituras de diagnóstico com timeout curto: sem ele o Playwright usa
+    // `timeout: 0` (sem limite). Quando o login NAVEGA para outra rota (ex.:
+    // OPERADOR em /caixa no contrato de perfil), o botão "Entrar" e o
+    // `#login-email` não existem mais e o `textContent()` esperava para
+    // sempre — o teste estourava os 150s em vez de propagar este erro.
+    const diag = { timeout: 1_000 }
+    const alertTxt = (await page.getByRole('alert').first().textContent(diag).catch(() => null))?.trim()
     const btn = (
-      await page.getByRole('button', { name: /Entrar|Entrando/i }).textContent().catch(() => null)
+      await page.getByRole('button', { name: /Entrar|Entrando/i }).textContent(diag).catch(() => null)
     )?.trim()
-    const emailVal = await page.locator('#login-email').inputValue().catch(() => '')
+    const emailVal = await page.locator('#login-email').inputValue(diag).catch(() => '')
     const detail = [
       alertTxt && `alert=${alertTxt}`,
       btn && `btn=${btn}`,
@@ -116,7 +122,9 @@ export async function loginWithRetry(
   // Nunca negativo: item 8 do contrato — um orçamento negativo não deve virar
   // "ainda dá tempo" por acidente em nenhuma comparação abaixo.
   const orcamentoRestante = () => Math.max(0, timeout - (Date.now() - startedAt))
-  const timeoutRedirect = () => Math.min(POST_LOGIN_REDIRECT_TIMEOUT_MS, orcamentoRestante())
+  // Piso de 1s pelo mesmo motivo de `timeoutFillLogin`: `waitForURL({ timeout: 0 })`
+  // espera para sempre, o oposto de "orçamento esgotado".
+  const timeoutRedirect = () => Math.max(1_000, Math.min(POST_LOGIN_REDIRECT_TIMEOUT_MS, orcamentoRestante()))
   // Nunca 0: `.waitFor({ timeout: 0 })` do Playwright significa "sem timeout"
   // (espera para sempre), o oposto de "orçamento esgotado". `1_000` é só um
   // piso de segurança — na prática nunca é atingido, porque os pontos de

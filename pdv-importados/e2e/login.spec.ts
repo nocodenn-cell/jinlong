@@ -37,6 +37,9 @@ test.describe('Página de login — autenticação Supabase', () => {
     }
 
     await gotoApp(page, LOGIN_PATH)
+    // Mesmo cuidado de helpers/login.ts: preencher antes da hidratação faz o clique enviar o <form> nativo
+    // (recarrega a página com os campos vazios) e a mensagem nunca aparece.
+    await page.locator('[data-testid="login-form"][data-login-hydrated="1"]').waitFor({ timeout: 30_000 })
     await page.getByPlaceholder('Email').fill('invalido@teste.com')
     await page.getByPlaceholder('Senha').fill('errada123')
     await page.getByRole('button', { name: /^Entrar$/ }).click()

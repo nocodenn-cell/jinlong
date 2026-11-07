@@ -445,7 +445,7 @@ function PageLink({
   return (
     <Link
       href={href}
-      className="rounded-lg border border-[var(--color-border-secondary)] px-2.5 py-1 text-caption text-fg-muted transition-colors hover:bg-[var(--color-surface-elevated)] hover:text-fg"
+      className="rounded-lg border border-[var(--color-border-secondary)] px-2.5 py-1 text-caption text-fg-muted transition-colors hover:bg-[var(--color-surface-soft)] hover:text-fg"
     >
       {children}
     </Link>
@@ -469,7 +469,7 @@ function PageNumber({
         'flex h-7 min-w-[28px] items-center justify-center rounded-lg px-1 text-caption font-medium transition-colors ' +
         (active
           ? 'border border-brand/35 bg-[var(--color-info-bg)] text-brand'
-          : 'border border-[var(--color-border-secondary)] text-fg-subtle hover:bg-[var(--color-surface-elevated)] hover:text-fg')
+          : 'border border-[var(--color-border-secondary)] text-fg-subtle hover:bg-[var(--color-surface-soft)] hover:text-fg')
       }
     >
       {children}

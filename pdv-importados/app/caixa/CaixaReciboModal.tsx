@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef } from "react"
 import type { UseThermalPrinterReturn } from "@/hooks/useThermalPrinter"
 import type { Mensagens } from "@/i18n/getMessages"
-import { buildReciboLabels, type ReciboVenda } from "@/lib/caixa/reciboTypes"
+import { buildReciboLabels, rotuloPagamentoRecibo, type ReciboVenda } from "@/lib/caixa/reciboTypes"
 import { Button } from "@/components/ui/button"
 import { ErrorState } from "@/components/ui/feedback"
 import { cn } from "@/lib/utils"
@@ -50,6 +50,8 @@ export function CaixaReciboModal({
   thermal,
 }: Props) {
   const printRef = useRef<HTMLDivElement>(null)
+  const gavetaAbertaRef = useRef(false)
+  const gavetaEmAndamentoRef = useRef(false)
   const supportsWebUSB = typeof navigator !== "undefined" && "usb" in navigator
   const labels = buildReciboLabels(m)
   const venda = useMemo<ReciboVenda>(
@@ -57,6 +59,20 @@ export function CaixaReciboModal({
     [vendaBase, lojaNome, segundaVia],
   )
   const termicaEmUso = thermal.status === "connected" || thermal.status === "printing"
+
+  // Só primeira via, apresentada após confirmação da venda. A reimpressão
+  // não aciona a gaveta e a falha do hardware nunca desfaz uma venda.
+  // A gaveta só é marcada como aberta após pulso bem-sucedido; se a impressora
+  // ainda não estiver conectada, tenta de novo quando o status da térmica muda.
+  useEffect(() => {
+    if (gavetaAbertaRef.current || gavetaEmAndamentoRef.current || segundaVia) return
+    if (!venda.pagamentos.some((p) => p.formaPagamento === "DINHEIRO" && p.valor > 0)) return
+    gavetaEmAndamentoRef.current = true
+    void thermal.abrirGaveta().then((ok) => {
+      gavetaEmAndamentoRef.current = false
+      if (ok) gavetaAbertaRef.current = true
+    })
+  }, [segundaVia, venda.vendaId, venda.pagamentos, thermal.abrirGaveta, thermal.status])
 
   const handleThermalPrint = async () => {
     if (!thermal.deviceInfo) {
@@ -250,7 +266,7 @@ export function CaixaReciboModal({
               </p>
               {venda.pagamentos.map((p, i) => (
                 <div key={i} className="recibo-linha flex justify-between">
-                  <span>{labels.formas[p.formaPagamento] ?? p.formaPagamento}</span>
+                  <span>{rotuloPagamentoRecibo(p, labels)}</span>
                   <span>{fmtBRL(p.valor, venda.moeda)}</span>
                 </div>
               ))}

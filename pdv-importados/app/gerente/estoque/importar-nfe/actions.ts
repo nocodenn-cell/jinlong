@@ -106,6 +106,10 @@ function mapRpcImportNfe(message: string): string {
   if (message.includes('IMPORT_NFE_STATUS_INVALIDO')) {
     return 'Esta importação já foi confirmada anteriormente.'
   }
+  // SSOT-003: nota com valor e sem duplicatas não gera estoque nem contas a pagar.
+  if (message.includes('IMPORT_NFE_OBRIGACAO_SEM_DUPLICATA')) {
+    return 'Esta NF-e tem valor, mas não traz duplicatas (parcelas a pagar), então o estoque não pode ser confirmado por aqui. Nada foi lançado no estoque nem em contas a pagar. Use a entrada pelo pedido de compra ou pela remessa.'
+  }
   if (
     message.includes('PRODUTO_VAREJO_ABAIXO_CUSTO') ||
     message.includes('PRODUTO_ATACADO_ABAIXO_CUSTO')
@@ -126,6 +130,8 @@ export type LinhaPreviewNfe = {
   u_com: string | null
   q_com: number
   v_un_com: number
+  /** vProd da NF-e (valor total do item, 2 casas). Ausente em entrada manual. */
+  v_prod?: number | null
   status_produto: StatusItemNfe
   /** Produto do catálogo já reconhecido (De-Para ou GTIN); null se desconhecido. */
   produto_id: string | null
@@ -204,6 +210,7 @@ export async function previewNotaManualNfe(
       u_com: i.u_com || 'UN',
       q_com: i.q_com,
       v_un_com: i.v_un_com,
+      v_prod: i.v_prod ?? null,
     })),
     duplicatas: n.duplicatas.map((d) => ({
       numero: d.numero || null,
@@ -313,6 +320,7 @@ async function montarLinhasPreview(
       u_com: item.u_com,
       q_com: item.q_com,
       v_un_com: item.v_un_com,
+      v_prod: item.v_prod ?? null,
       status_produto: status,
       produto_id: produtoId,
       produto_nome: produtoNome,
@@ -413,6 +421,7 @@ export async function executarImportacaoNfe(
     u_com: linha.u_com,
     q_com: linha.q_com,
     v_un_com: linha.v_un_com,
+    v_prod: linha.v_prod ?? null,
     fator: linha.fator,
     atualizar_custo: linha.atualizar_custo,
     acao: linha.acao,
@@ -492,6 +501,8 @@ export type ConferenciaImportacaoNfe = {
   itens: ItemConferenciaNfe[]
   ordem_compra: OrdemCompraVinculadaNfe | null
   entrega_anterior_id?: string | null
+  /** Parcelas (duplicatas) registradas na nota. Zero com valor > 0 bloqueia a confirmação (SSOT-003). */
+  duplicatas_total: number
 }
 
 /** Lê uma importação (aberta ou já concluída) com seus itens para a tela de conferência. */
@@ -589,6 +600,12 @@ export async function obterConferenciaImportacaoNfe(
   const entrega = await supabase.from('entrada_documentos').select('remessa_id').eq('importacao_id', importacaoId).eq('loja_id', lojaId).maybeSingle()
   if (entrega.error) return { success: false, error: mensagemErroComSecao('Entradas', entrega.error.message) }
 
+  const { count: duplicatasTotal, error: duplicatasError } = await supabase
+    .from('importacoes_nfe_duplicatas')
+    .select('id', { count: 'exact', head: true })
+    .eq('importacao_nfe_id', importacaoId)
+  if (duplicatasError) return { success: false, error: mensagemErroComSecao('Contas a pagar', duplicatasError.message) }
+
   return {
     success: true,
     data: {
@@ -600,6 +617,7 @@ export async function obterConferenciaImportacaoNfe(
       created_at: imp.created_at as string,
       itens: linhas,
       ordem_compra: ordemCompra,
+      duplicatas_total: duplicatasTotal ?? 0,
     },
   }
 }

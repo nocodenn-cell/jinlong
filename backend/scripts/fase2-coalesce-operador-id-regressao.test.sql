@@ -50,16 +50,30 @@ DECLARE
   v_checked int := 0;
 BEGIN
   FOR v_rec IN
-    SELECT p.oid, p.proname, pg_get_function_identity_arguments(p.oid) AS args
+    -- Multiempresa (20261019140000): RPCs com escopo viram um envelope em
+    -- public que delega para o corpo original movido para internal. O corpo
+    -- (com o padrão) fica em internal; a superfície chamável é o envelope
+    -- public de mesmo nome/identidade. Checa os dois.
+    SELECT p.oid, p.proname, pg_get_function_identity_arguments(p.oid) AS args,
+           (SELECT e.oid FROM pg_proc e
+             WHERE e.pronamespace = 'public'::regnamespace
+               AND e.proname = p.proname AND e.proargtypes = p.proargtypes
+               AND n.nspname = 'internal') AS envelope
     FROM pg_proc p
     JOIN pg_namespace n ON n.oid = p.pronamespace
-    WHERE n.nspname = 'public'
+    WHERE (n.nspname = 'public'
+           OR (n.nspname = 'internal'
+               AND to_regclass('internal.fp_rpc_envelopes') IS NOT NULL
+               AND EXISTS (SELECT 1 FROM pg_proc e
+                            WHERE e.pronamespace = 'public'::regnamespace
+                              AND e.proname = p.proname AND e.proargtypes = p.proargtypes)))
       AND p.prosrc ILIKE '%auth.uid()%'
       AND p.prosrc ILIKE '%p_operador_id%'
   LOOP
     v_checked := v_checked + 1;
 
-    IF has_function_privilege('anon', v_rec.oid, 'EXECUTE') THEN
+    IF has_function_privilege('anon', v_rec.oid, 'EXECUTE')
+       OR (v_rec.envelope IS NOT NULL AND has_function_privilege('anon', v_rec.envelope, 'EXECUTE')) THEN
       v_fail := array_append(
         v_fail,
         format('%s(%s)', v_rec.proname, v_rec.args) ||

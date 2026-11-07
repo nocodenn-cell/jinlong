@@ -300,7 +300,7 @@ function CaixaPdvOperacoesMenuImpl({
                         data-testid="caixa-pendencia-resolver"
                         className={cn(
                           "flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-sm font-medium",
-                          "text-[var(--color-warning-strong)] hover:bg-[var(--color-warning)]/20",
+                          "text-[var(--color-warning-strong)] hover:bg-[color-mix(in_srgb,var(--color-warning)_20%,transparent)]",
                           "disabled:cursor-not-allowed disabled:opacity-40",
                         )}
                         onClick={() => runAndClose(() => onResolverPendencia(mov))}
@@ -348,6 +348,25 @@ function CaixaPdvOperacoesMenuImpl({
                   </button>
                 </li>
               ))}
+              <li
+                className={cn(
+                  "mt-1 border-t pt-1",
+                  classic ? "border-border" : "border-jl-border-1",
+                )}
+              >
+                {/* Comissão: todo operador/vendedor consulta as próprias comissões (nova aba: não interrompe a venda). */}
+                <Link
+                  href="/caixa/minhas-comissoes"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  role="menuitem"
+                  data-testid="caixa-menu-minhas-comissoes"
+                  className={itemClass({ id: "minhas-comissoes", label: "", onClick: fecharMenu })}
+                  onClick={() => setMenuAberto(false)}
+                >
+                  <span>{m.caixa.minhas_comissoes_link}</span>
+                </Link>
+              </li>
               {painelGestaoHref ? (
                 <li
                   className={cn(
@@ -368,6 +387,17 @@ function CaixaPdvOperacoesMenuImpl({
                   </Link>
                 </li>
               ) : null}
+              <li>
+                <Link
+                  href="/caixa/meu-pin"
+                  role="menuitem"
+                  data-testid="caixa-menu-meu-pin"
+                  className={itemClass({ id: "meu-pin", label: "", onClick: fecharMenu })}
+                  onClick={() => setMenuAberto(false)}
+                >
+                  <span>{m.meu_pin.titulo}</span>
+                </Link>
+              </li>
             </ul>
           </div>
         ) : null}
@@ -380,7 +410,7 @@ function CaixaPdvOperacoesMenuImpl({
           "inline-flex min-h-11 w-full items-center justify-center gap-2",
           classic
             ? "border border-primary/50 bg-primary/10 text-primary hover:bg-primary/20"
-            : "border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] text-[var(--color-warning-strong)] hover:bg-[var(--color-warning)]/20",
+            : "border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] text-[var(--color-warning-strong)] hover:bg-[color-mix(in_srgb,var(--color-warning)_20%,transparent)]",
         )}
         onClick={onValidarGerente}
         disabled={validandoGerente || movimentandoCaixa}

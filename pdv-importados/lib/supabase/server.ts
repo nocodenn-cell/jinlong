@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { assertSupabasePublicEnv } from '@/lib/supabase/env'
+import { COOKIE_EMPRESA, headersEmpresa } from '@/lib/multiempresa/empresaSelecionada'
 
 export async function createClient() {
   const { url, key } = assertSupabasePublicEnv()
@@ -11,6 +12,8 @@ export async function createClient() {
     url,
     key,
     {
+      // Multiempresa: empresa escolhida (só estreita o escopo no banco).
+      global: { headers: headersEmpresa(cookieStore.get(COOKIE_EMPRESA)?.value) },
       cookies: {
         getAll() {
           return cookieStore.getAll()

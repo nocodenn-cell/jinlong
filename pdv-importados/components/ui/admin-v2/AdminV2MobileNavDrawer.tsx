@@ -18,6 +18,8 @@ type Props = Readonly<{
   stockAlertCount?: number
   /** Exibe itens `adminOnly` (wizard de provisionamento, etc.). */
   showAdminOnlyItems?: boolean
+  /** Módulos com licença ativa (resolvido no servidor). */
+  modulosAtivos?: readonly string[]
 }>
 
 /**
@@ -32,6 +34,7 @@ export function AdminV2MobileNavDrawer({
   chineseLanguage,
   stockAlertCount,
   showAdminOnlyItems = false,
+  modulosAtivos,
 }: Props) {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
@@ -120,7 +123,7 @@ export function AdminV2MobileNavDrawer({
               >
                 {/* eslint-disable-next-line @next/next/no-img-element -- brand logo estático; dimensões fixas no CSS */}
                 <img
-                  src="/branding/brand-double-dragon.png"
+                  src="/branding/jinlong-logo-256.png"
                   alt="Jīn Lóng"
                   className="h-9 w-auto"
                   draggable={false}
@@ -151,10 +154,12 @@ export function AdminV2MobileNavDrawer({
                   chineseLanguage={chineseLanguage}
                   stockAlertCount={stockAlertCount}
                   showAdminOnlyItems={showAdminOnlyItems}
+                  modulosAtivos={modulosAtivos}
                 />
               </Suspense>
             </div>
-            <SidebarUserFooter session={session} />
+            {/* Idioma/Sair já ficam na barra superior mobile (AdminV2Shell): não duplicar no drawer. */}
+            <SidebarUserFooter session={session} showUtilityBar={false} />
           </div>
         </div>
       )}

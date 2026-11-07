@@ -1,5 +1,11 @@
 # Sprint 0 — evidências (2026-10-08)
 
+> **Atualização 2026-10-15** (o corpo abaixo é o registro de 2026-10-08 e foi mantido):
+>
+> - **Risco residual nº 1 (backup vermelho / RPO não garantido): superado.** `Backup automatico (item 19)` roda com sucesso diariamente de 2026-10-09 a 2026-10-15 e o `Backup freshness monitor` passa de 2026-10-10 a 2026-10-15. Evidência e ressalvas em `docs/audits/ENCERRAMENTO_SPRINT_BACKUP_JIT_ITENS_18_21.md`. Restore drill em CI ainda não tem execução registrada.
+> - **§6 (E2E bloqueado): causa raiz encontrada.** O "loading por 40 s" em `ensureCaixaAberto` vinha de dois botões "Abrir caixa" (topbar + faixa do rodapé, UX-011 `2d8d1eec`) que violavam o strict mode do Playwright, com o `.catch(() => false)` escondendo o erro; não era dado/config de loja ausente. Diagnóstico e correções nos PRs [#556](https://github.com/nocodenn-cell/fastproduct/pull/556) e [#557](https://github.com/nocodenn-cell/fastproduct/pull/557) (abertos; o #557 é subconjunto do #556). Até estes PRs entrarem, o job `e2e-playwright` continua vermelho.
+> - **Continuam pendentes:** limpeza de dados de teste em produção; migrations `20261007*` (não aplicadas em produção); smoke na máquina da loja.
+
 > Escopo: código + documentação. **Nada foi aplicado, limpo ou alterado no Supabase de produção**
 > (`jinlong.app`). O único acesso a produção foi **leitura** (dump e consultas de catálogo).
 

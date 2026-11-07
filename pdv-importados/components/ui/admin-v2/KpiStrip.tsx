@@ -15,6 +15,8 @@ export type KpiStripItem = {
   tone?: SparkTone
   hint?: string
   href?: string
+  /** `false` para links que só mudam a query da mesma página (ex.: abrir um drill-down). */
+  scroll?: boolean
   labelWrap?: boolean
   sparkAriaLabel?: string
 }
@@ -59,6 +61,7 @@ export function KpiStrip({ items, className, trailing }: KpiStripProps) {
           <Link
             key={item.id}
             href={item.href}
+            scroll={item.scroll}
             className="block rounded-card focus-visible:outline-none focus-visible:shadow-focus"
             aria-label={`${item.label}: ${item.value}. ${item.hint ?? ''}`.trim()}
           >

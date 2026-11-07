@@ -8,6 +8,19 @@
       "port": 3000
     },
     {
+      "name": "pdv-validacao-local",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "pdv-importados", "--", "-p", "3002"],
+      "port": 3002
+    },
+    {
+      "name": "hub-demo",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "start", "--prefix", "hub"],
+      "env": { "HUB_DEMO_DATA": "ficticio" },
+      "port": 3200
+    },
+    {
       "name": "pdv-local-dev",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--prefix", "pdv-local"],

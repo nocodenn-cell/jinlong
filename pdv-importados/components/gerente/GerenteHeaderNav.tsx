@@ -95,13 +95,11 @@ const FILA_ZERO: FilaStatusPayload = { fiscal: { pendente: 0, erro: 0 }, aprovac
 
 function roleLabel(perfil: PerfilUsuario, m: Mensagens): string {
   if (perfil === 'DONO') return m.gerente.badge_dono
-  if (perfil === 'ADMIN') return m.gerente.badge_admin
   return m.gerente.badge_gerente
 }
 
 function roleInitials(perfil: PerfilUsuario): string {
   if (perfil === 'DONO') return 'DO'
-  if (perfil === 'ADMIN') return 'AD'
   return 'GR'
 }
 

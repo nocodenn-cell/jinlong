@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
-import { AdminV2UtilityBar } from './AdminV2UtilityBar'
 
 type PageHeaderProps = {
   title: string
@@ -36,7 +35,6 @@ export function PageHeader({ title, subtitle, filters, actions, className }: Pag
         <div className="flex flex-wrap items-center gap-2 lg:justify-end">
           {filters}
           {actions}
-          <AdminV2UtilityBar />
         </div>
       </div>
     </header>

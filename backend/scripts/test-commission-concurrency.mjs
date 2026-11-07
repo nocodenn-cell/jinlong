@@ -137,7 +137,9 @@ function firstRow(text) {
   const line = text
     .split('\n')
     .map((l) => l.trim())
-    .find((l) => l && !l.startsWith('ERROR:') && !l.startsWith('CONTEXT:') && !l.startsWith('LINE ') && !l.startsWith('HINT:') && !/^\(\d+ rows?\)$/.test(l) && !/^\^\s*$/.test(l))
+    .find((l) => l && !l.startsWith('ERROR:') && !l.startsWith('CONTEXT:') && !l.startsWith('LINE ') && !l.startsWith('HINT:') && !/^\(\d+ rows?\)$/.test(l) && !/^\^\s*$/.test(l)
+      // continuação do CONTEXT (envelope multiempresa: "SQL function ... statement N" / PL/pgSQL)
+      && !/^(SQL function|PL\/pgSQL function|SQL statement)\b/.test(l))
   return line ?? ''
 }
 
@@ -184,8 +186,9 @@ function setupFixture() {
     ON CONFLICT (produto_id, loja_id) DO UPDATE SET quantidade_atual = 100000;
   `)
   runOnce(`
-    INSERT INTO public.configuracoes_gerais(chave, valor, tipo_dado) VALUES ('comissao_padrao_percentual','5','percent')
-    ON CONFLICT (chave) DO UPDATE SET valor='5';
+    INSERT INTO public.empresas (id, nome) VALUES ('fa5e0000-0000-4000-8000-0000000000f1', 'Fixture empresa (concorrencia)') ON CONFLICT (id) DO NOTHING;
+    INSERT INTO public.configuracoes_gerais(empresa_id, chave, valor, tipo_dado) VALUES ('fa5e0000-0000-4000-8000-0000000000f1', 'comissao_padrao_percentual','5','percent')
+    ON CONFLICT (empresa_id, chave) DO UPDATE SET valor='5';
   `)
 
   return { loja, operador, gerente, dono, produto, preco, caixa }

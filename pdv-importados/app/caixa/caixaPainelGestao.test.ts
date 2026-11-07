@@ -3,7 +3,7 @@ import { ROUTES } from '@/lib/navigation/routes'
 import { painelGestaoHrefParaPerfil } from './caixaPainelGestao'
 
 describe('painelGestaoHrefParaPerfil (PDV → painel)', () => {
-  it.each(['GERENTE', 'DONO', 'ADMIN'])('%s recebe o atalho para o painel', (perfil) => {
+  it.each(['GERENTE', 'DONO'])('%s recebe o atalho para o painel', (perfil) => {
     expect(painelGestaoHrefParaPerfil(perfil)).toBe(ROUTES.admin.dashboard)
   })
 

@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { StatusChip } from '@/components/ui/StatusChip'
@@ -43,6 +43,7 @@ import {
 } from './actions'
 import { OrdemCompraVinculoAutocomplete } from '@/app/gerente/recebimento/OrdemCompraVinculoAutocomplete'
 import { fmtQtd } from '@/app/gerente/compras/ocRecebimento'
+import { notaSemObrigacao, valorEconomicoNota } from './notaObrigacao'
 import { fmtGerenteDateTime, fmtGerenteIdCurto } from '@/lib/format/gerenteValues'
 
 type Props = Readonly<{
@@ -53,6 +54,8 @@ type Props = Readonly<{
   historicoOnly?: boolean
   /** Deep-link `?importacao=<id>`: abre essa importação (aberta ou concluída) ao montar. */
   importacaoInicialId?: string | null
+  /** Abas do hub admin, renderizadas logo abaixo do título. */
+  hubNav?: ReactNode
 }>
 
 type LinhaEditavel = LinhaPreviewNfe & {
@@ -143,6 +146,7 @@ export function ImportarNfePageClient({
   importacaoInicialId = null,
   semDocumento = false,
   produtoInicial = null,
+  hubNav,
 }: Props) {
   const m = getMessages(idioma)
   const mi = useMemo(() => semDocumento ? {
@@ -388,7 +392,7 @@ export function ImportarNfePageClient({
 
   const { mutate: confirmarMut, loading: confirmarLoading } = useGerenteMutation(
     async (importacaoId: string) => {
-      if (!podeConfirmarEstoque) throw new Error(mi.confirmar_estoque_pendente)
+      if (!podeConfirmarEstoque) throw new Error(semObrigacaoConfirmacao ? mi.confirmar_estoque_sem_duplicata : mi.confirmar_estoque_pendente)
       const r = await confirmarImportacaoNfe({ importacao_id: importacaoId })
       if (!r.success) throw new Error(r.error)
       return r.data
@@ -486,6 +490,7 @@ export function ImportarNfePageClient({
         u_com: l.u_com,
         q_com: l.q_com,
         v_un_com: l.v_un_com,
+        v_prod: l.v_prod ?? null,
         fator: l.fator,
         atualizar_custo: l.atualizar_custo,
         acao: (l.acao ?? 'CRIAR') as 'VINCULAR' | 'CRIAR',
@@ -532,7 +537,17 @@ export function ImportarNfePageClient({
     !registrarLoading &&
     !confirmarLoading
 
-  const podeConfirmarEstoque = conferenciaPronta && (!associarEntrega || !!conferencia?.entrega_anterior_id)
+  // SSOT-003: valor > 0 sem duplicatas é recusado pelo banco; a tela não libera a ação.
+  const semObrigacaoConfirmacao =
+    !!conferencia &&
+    notaSemObrigacao(
+      valorEconomicoNota((conferencia.itens ?? []).map((i) => ({ quantidade: i.quantidade_conferida ?? 0, custo_unitario: i.custo_unitario }))),
+      conferencia.duplicatas_total,
+    )
+  const motivoSemObrigacao = conferenciaPronta && semObrigacaoConfirmacao
+
+  const podeConfirmarEstoque =
+    conferenciaPronta && !semObrigacaoConfirmacao && (!associarEntrega || !!conferencia?.entrega_anterior_id)
 
   const divergeDaNota = (item: ItemConferenciaNfe): boolean => {
     const raw = qtdConferida[item.item_id]
@@ -750,7 +765,12 @@ export function ImportarNfePageClient({
           : `admin-v2-page space-y-4 ${fontClass}`
       }
     >
-      {!semDocumento ? <PageHeader title={mi.titulo} subtitle={mi.subtitulo} /> : null}
+      {!semDocumento ? (
+        <>
+          <PageHeader title={mi.titulo} subtitle={mi.subtitulo} />
+          {hubNav}
+        </>
+      ) : null}
 
       {!embeddedInAdminHub ? (
         <Link href={ROUTES.admin.estoque} className="gerente-nav-back text-sm font-medium hover:underline">
@@ -920,6 +940,10 @@ export function ImportarNfePageClient({
               <span className="text-fg-muted">Contas a pagar que serão geradas: </span>
               {parsed.duplicatas.length} {parsed.duplicatas.length === 1 ? 'parcela' : 'parcelas'} ·{' '}
               {formatBRL(parsed.duplicatas.reduce((t, d) => t + d.valor, 0))}
+            </p>
+          ) : notaSemObrigacao(valorEconomicoNota(parsed.itens.map((i) => ({ quantidade: i.q_com, custo_unitario: i.v_un_com }))), 0) ? (
+            <p className="text-body text-[var(--color-warning-strong)]" data-testid="previa-sem-obrigacao">
+              {mi.previa_sem_duplicata_bloqueio}
             </p>
           ) : (
             <p className="text-body text-[var(--color-warning-strong)]">
@@ -1199,8 +1223,8 @@ export function ImportarNfePageClient({
             ) : (
               <>
                 {!podeConfirmarEstoque ? (
-                  <p className="text-caption font-medium text-[var(--color-warning-strong)]">
-                    {mi.confirmar_estoque_pendente}
+                  <p className="text-caption font-medium text-[var(--color-warning-strong)]" data-testid="confirmar-estoque-motivo">
+                    {motivoSemObrigacao ? mi.confirmar_estoque_sem_duplicata : mi.confirmar_estoque_pendente}
                   </p>
                 ) : null}
                 <div className="flex gap-2">

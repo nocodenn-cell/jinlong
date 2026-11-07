@@ -86,7 +86,18 @@ jobs:
       - name: Subir Postgres efemero (imagem Supabase, com roles/auth base)
         run: |
           set -euo pipefail
-          docker run -d --name restore-drill             -e POSTGRES_PASSWORD=restore-drill-local-only -e PGPASSWORD=restore-drill-local-only             -e JWT_SECRET=restore-drill-local-only-secret-0123456789 -e JWT_EXP=3600             public.ecr.aws/supabase/postgres:17.6.1.165 docker-entrypoint.sh postgres -D /etc/postgresql
+          # Docker Hub primeiro: o ECR público estourou o limite anônimo (toomanyrequests) em 2026-10-28/29.
+          # Mesma imagem e tag nos dois registros; o ECR fica como alternativa.
+          IMG=""
+          for cand in docker.io/supabase/postgres:17.6.1.165 public.ecr.aws/supabase/postgres:17.6.1.165; do
+            for t in 1 2 3; do
+              if docker pull -q "$cand"; then IMG="$cand"; break 2; fi
+              sleep $((t * 15))
+            done
+          done
+          [ -n "$IMG" ] || { echo "::error::imagem supabase/postgres:17.6.1.165 indisponível nos dois registros"; exit 1; }
+          echo "Imagem do drill: $IMG"
+          docker run -d --name restore-drill             -e POSTGRES_PASSWORD=restore-drill-local-only -e PGPASSWORD=restore-drill-local-only             -e JWT_SECRET=restore-drill-local-only-secret-0123456789 -e JWT_EXP=3600             "$IMG" docker-entrypoint.sh postgres -D /etc/postgresql
           for i in $(seq 1 60); do
             docker exec restore-drill pg_isready -h 127.0.0.1 -U postgres && break
             sleep 2
@@ -99,7 +110,9 @@ jobs:
           start_ts=$(date -u +%s)
           echo "restore_start_iso=$(date -u -d "@$start_ts" '+%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
 
-          node backend/scripts/filter-data-dump.mjs /tmp/restore-plain/data.sql /tmp/restore-plain/data.filtered.sql
+          # Colunas que o destino (imagem Supabase do drill) de fato tem; o filtro projeta o COPY nelas.
+          docker exec restore-drill psql -U supabase_admin -d postgres -Atq -c "select table_schema||'.'||table_name||'.'||column_name from information_schema.columns where table_schema in ('public','auth')" > /tmp/restore-plain/target-columns.txt
+          node backend/scripts/filter-data-dump.mjs /tmp/restore-plain/data.sql /tmp/restore-plain/data.filtered.sql '^(public\.[a-z0-9_]+|auth\.(users|identities))$' /tmp/restore-plain/target-columns.txt
           docker exec restore-drill mkdir -p /tmp/dump
           for f in roles schema data data.filtered; do
             docker cp "/tmp/restore-plain/$f.sql" "restore-drill:/tmp/dump/$f.sql"
@@ -137,3 +150,4 @@ jobs:
             echo "- Fim do restore: ${{ steps.restore.outputs.restore_end_iso }}"
             echo "- **Duracao (RTO medido): ${{ steps.restore.outputs.restore_duration_seconds }}s**"
           } >> "$GITHUB_STEP_SUMMARY"
+

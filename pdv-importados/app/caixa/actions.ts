@@ -311,3 +311,46 @@ export async function buscarClientesCaixa(termo: string) {
 export async function obterClienteCaixa(clienteId: string) {
   return obterClienteCaixaImpl(clienteId)
 }
+
+// ── Módulo Comissão P0: vendedor da venda (fora do core transacional) ─────────
+import {
+  definirVendedorVendaCaixaImpl,
+  listarVendedoresCaixaImpl,
+} from '@/app/caixa/server/caixaVendedor.impl'
+
+export async function listarVendedoresCaixa() {
+  return listarVendedoresCaixaImpl()
+}
+
+export async function definirVendedorVendaCaixa(vendaId: string, vendedorId: string) {
+  return definirVendedorVendaCaixaImpl(vendaId, vendedorId)
+}
+
+// ── Troca Segura de Operador (gaveta do turno; migration 20261023200000) ──────
+import {
+  assumirCaixaOperadorImpl,
+  bloquearCaixaOperadorImpl,
+  desbloquearCaixaComPinImpl,
+  liberarCaixaOperadorImpl,
+  obterContextoTrocaImpl,
+} from '@/app/caixa/server/caixaTrocaOperador.impl'
+
+export async function obterContextoTrocaOperador() {
+  return obterContextoTrocaImpl()
+}
+
+export async function liberarCaixaParaTroca(caixaId: string) {
+  return liberarCaixaOperadorImpl(caixaId)
+}
+
+export async function assumirCaixaLiberado(caixaId: string) {
+  return assumirCaixaOperadorImpl(caixaId)
+}
+
+export async function bloquearCaixaOperador(motivo: 'INATIVIDADE' | 'MANUAL') {
+  return bloquearCaixaOperadorImpl(motivo === 'MANUAL' ? 'MANUAL' : 'INATIVIDADE')
+}
+
+export async function desbloquearCaixaComPin(pin: string) {
+  return desbloquearCaixaComPinImpl(pin)
+}

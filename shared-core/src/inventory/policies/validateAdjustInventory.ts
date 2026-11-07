@@ -6,6 +6,7 @@
 import {
   INVENTORY_ADJUST_REASONS,
   INVENTORY_ERROR_CODES,
+  motivoCompativelComDelta,
   type InventoryAdjustReason,
   type InventoryErrorCode,
 } from '../errorCodes'
@@ -21,7 +22,8 @@ function isAdjustReason(value: string): value is InventoryAdjustReason {
 
 /**
  * Valida comando de ajuste antes do adapter chamar `ajustar_estoque_manual`.
- * Congela: qty/min ≥ 0; motivo do catálogo; OUTRO exige observação.
+ * Congela: qty/min ≥ 0; motivo do catálogo; OUTRO exige observação;
+ * motivo coerente com o sinal (contra o snapshot `expectedQuantity`).
  */
 export function validateAdjustInventoryCommand(
   command: AdjustInventoryCommand,
@@ -47,6 +49,13 @@ export function validateAdjustInventoryCommand(
   }
   if (reason === 'OUTRO' && !(command.observacao ?? '').trim()) {
     return { ok: false, code: INVENTORY_ERROR_CODES.OBS_REQUIRED }
+  }
+  if (
+    command.expectedQuantity !== undefined &&
+    Number.isFinite(command.expectedQuantity) &&
+    !motivoCompativelComDelta(reason, command.quantity - command.expectedQuantity)
+  ) {
+    return { ok: false, code: INVENTORY_ERROR_CODES.REASON_SIGN_MISMATCH }
   }
   return {
     ok: true,

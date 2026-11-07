@@ -1,6 +1,7 @@
 import { isPerfilPainelGerencial } from '@/lib/auth/painelGerencial'
 import type { PerfilUsuario } from '@/idioma/normalizePerfilUsuario'
 import type { AdminSession, SessionNormalization } from '@/lib/admin/auth/types'
+import { ROUTES } from '@/lib/navigation/routes'
 
 /** Escopo da decisão — única fonte de verdade para autorização /admin e /gerente. */
 export type DecisionScope = 'edge' | 'api' | 'action' | 'resource' | 'gerente'
@@ -52,7 +53,7 @@ function isPainelWeb(pathname: string): boolean {
   return pathname.startsWith('/admin') || pathname.startsWith('/gerente')
 }
 
-const ALL_ADMIN_PROFILES: readonly PerfilUsuario[] = ['GERENTE', 'DONO', 'ADMIN']
+const ALL_ADMIN_PROFILES: readonly PerfilUsuario[] = ['GERENTE', 'DONO']
 
 /** Actions registradas no painel /admin (server actions). */
 const ACTION_PROFILES: Readonly<Record<string, readonly PerfilUsuario[]>> = {
@@ -70,8 +71,8 @@ const RESOURCE_PROFILES: Readonly<Record<string, readonly PerfilUsuario[]>> = {
   'route:/admin/clientes': ALL_ADMIN_PROFILES,
   'route:/admin/funcionarios': ALL_ADMIN_PROFILES,
   'route:/admin/implantacao': ALL_ADMIN_PROFILES,
-  /** Wizard interno FastProduct — somente perfil ADMIN. */
-  'route:/admin/provisionamento': ['ADMIN'] as const,
+  /** Wizard interno: fechado no app das lojas (equipe da plataforma usa o hub comercial). */
+  'route:/admin/provisionamento': [] as const,
   'route:/admin/fornecedores': ALL_ADMIN_PROFILES,
   'route:/admin/financeiro': ALL_ADMIN_PROFILES,
   'route:/admin/vendas': ALL_ADMIN_PROFILES,
@@ -81,7 +82,12 @@ const RESOURCE_PROFILES: Readonly<Record<string, readonly PerfilUsuario[]>> = {
    * Ferramenta de equipe/dono (estado técnico do PDV): GERENTE não acessa.
    * ATENÇÃO: a policy só decide; a página e a Server Action precisam checar (loadAdminContext não bloqueia).
    */
-  'route:/admin/diagnostico-caixa': ['DONO', 'ADMIN'] as const,
+  'route:/admin/diagnostico-caixa': ['DONO'] as const,
+  /**
+   * Import Intelligence: perfil é só a 1ª barreira. Página e actions exigem, no servidor,
+   * licença ativa da empresa + vínculo + papel (requireModulo / fp_pode_modulo).
+   */
+  'route:/admin/importacoes': ['DONO', 'GERENTE'] as const,
   'api:gerente:health': ALL_ADMIN_PROFILES,
   'api:gerente:atividades:recent': ALL_ADMIN_PROFILES,
   'api:gerente:atividades:history': ALL_ADMIN_PROFILES,
@@ -166,6 +172,12 @@ export function middlewareAdminDecision(
       ? redirect(loginPath(pathname), 'db_error', 'edge')
       : allow('db_error_public_route', 'edge')
   }
+  if (authState === 'blocked' && normalized.blockedReason === 'multi_empresa') {
+    // Vínculo em 2+ empresas sem escolha: seletor de empresa (rota pública ao middleware).
+    return isProtectedRoute(pathname)
+      ? redirect(`${ROUTES.auth.selecionarEmpresa}?${new URLSearchParams({ next: pathname })}`, 'multi_empresa', 'edge')
+      : allow('blocked_public_route', 'edge')
+  }
   if (authState === 'blocked') {
     // Conta desativada (usuarios.ativo = false) ou sem loja vinculada: não entra
     // em nenhuma rota protegida — nem painel, nem /caixa.
@@ -186,7 +198,7 @@ export function middlewareAdminDecision(
     if (isPainelWeb(pathname) && !painelAllowed) {
       return redirect('/caixa', 'perfil_nao_gerencial', 'edge')
     }
-    // GERENTE/DONO/ADMIN podem abrir o PDV (/caixa) — "Ir para PDV" sempre funciona.
+    // GERENTE/DONO podem abrir o PDV (/caixa) — "Ir para PDV" sempre funciona.
     // Antes havia um redirect `gerente_em_caixa` para /gerente que bloqueava o acesso.
     return allow('authorized', 'edge')
   }

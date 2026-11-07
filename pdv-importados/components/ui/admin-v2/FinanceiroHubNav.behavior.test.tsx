@@ -29,7 +29,6 @@ const L: FinanceiroHubLabels = {
   conciliacao: 'Conciliação',
   fiscal: 'Fiscal',
   comissoes: 'Comissões',
-  categorias: 'Categorias',
 }
 
 let container: HTMLDivElement
@@ -55,10 +54,10 @@ const principal = () => Array.from(container.querySelectorAll('nav[aria-label="S
 const secundaria = () => Array.from(container.querySelectorAll('nav[aria-label="Vistas"] a'))
 
 describe('FinanceiroHubNav (PR 5)', () => {
-  it('renderiza 7 controles e marca o grupo da aba atual', () => {
+  it('renderiza 6 controles e marca o grupo da aba atual', () => {
     search = 'tab=conciliacao'
     render('conciliacao')
-    expect(principal()).toHaveLength(7)
+    expect(principal()).toHaveLength(6)
     expect(principal().find((a) => a.getAttribute('aria-current'))?.textContent).toBe('Contas e conciliação')
   })
 

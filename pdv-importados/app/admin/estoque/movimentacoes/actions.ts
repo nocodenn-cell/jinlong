@@ -3,10 +3,18 @@
 import { createClient } from '@/lib/supabase/server'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { ROUTES } from '@/lib/navigation/routes'
+import { periodoInicio } from '@/lib/admin/periodo'
+import { getRelatorioTimezone } from '@/lib/relatorios/getRelatorioTimezone'
+import type { PeriodoMovimentacao } from './movimentacoesFiltros'
 
 export type MovimentoLinha = { evento_id: string; ocorrido_em: string; tipo_codigo: string; quantidade_delta: number; observacao: string | null; produto_id: string; produto_nome: string }
 
-export async function listarMovimentacoesEstoque(busca = '', sentido = '', pagina = 1) {
+export async function listarMovimentacoesEstoque(
+  busca = '',
+  sentido = '',
+  pagina = 1,
+  periodo: PeriodoMovimentacao = 'tudo',
+) {
   const { session } = await loadAdminContext({ pathname: ROUTES.admin.estoque, resource: `route:${ROUTES.admin.estoque}` })
   if (!session.lojaId) throw new Error('Loja não identificada.')
   const db = await createClient()
@@ -19,6 +27,11 @@ export async function listarMovimentacoesEstoque(busca = '', sentido = '', pagin
   if (produtos) query = query.in('produto_id', (produtos.data ?? []).map((item) => item.id))
   if (sentido === 'entrada') query = query.gt('quantidade_delta', 0)
   if (sentido === 'saida') query = query.lt('quantidade_delta', 0)
+  // Preset de período: recorte de leitura no fuso da loja (mesma regra de Vendas). "tudo" não recorta.
+  if (periodo !== 'tudo') {
+    const inicio = periodoInicio(periodo, new Date(), await getRelatorioTimezone(db))
+    if (inicio) query = query.gte('ocorrido_em', inicio)
+  }
   const page = Number.isFinite(pagina) ? Math.max(1, Math.floor(pagina)) : 1
   const result = await query.order('ocorrido_em', { ascending: false }).order('evento_id', { ascending: false }).range((page - 1) * 50, page * 50 - 1)
   if (result.error) throw new Error(result.error.message)

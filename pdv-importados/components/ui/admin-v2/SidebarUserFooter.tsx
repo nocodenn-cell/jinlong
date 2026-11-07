@@ -2,9 +2,12 @@ import Link from 'next/link'
 import type { AdminSession } from '@/lib/admin/auth/types'
 import { getMessages } from '@/i18n/getMessages'
 import { ROUTES } from '@/lib/navigation/routes'
+import { AdminV2UtilityBar } from './AdminV2UtilityBar'
 
 type SidebarUserFooterProps = {
   session: AdminSession
+  /** Idioma/Sair. Falso no drawer mobile, onde já estão na barra superior. */
+  showUtilityBar?: boolean
 }
 
 function initialsFromName(name: string): string {
@@ -28,12 +31,11 @@ function resolveUserName(session: AdminSession): string {
 
 function resolveCargo(session: AdminSession): string {
   if (session.perfil === 'DONO') return 'Dono'
-  if (session.perfil === 'ADMIN') return 'Administrador'
   if (session.perfil === 'GERENTE') return 'Gerente'
   return 'Operador'
 }
 
-export function SidebarUserFooter({ session }: SidebarUserFooterProps) {
+export function SidebarUserFooter({ session, showUtilityBar = true }: SidebarUserFooterProps) {
   const name = resolveUserName(session)
   const cargo = resolveCargo(session)
   const initials = initialsFromName(name)
@@ -56,6 +58,8 @@ export function SidebarUserFooter({ session }: SidebarUserFooterProps) {
           </Link>
         </div>
       </div>
+      {/* Idioma e Sair moram aqui (lugar fixo), não no cabeçalho de cada página. */}
+      {showUtilityBar ? <AdminV2UtilityBar className="mt-3 justify-between" /> : null}
     </footer>
   )
 }

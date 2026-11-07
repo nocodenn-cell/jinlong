@@ -41,6 +41,7 @@ export function montarItemCarrinhoCaixa(
       categoriaId: produto.categoria_id,
       precoAtacado: produto.preco_atacado,
       precoVarejoReferencia: produto.preco_varejo,
+      unidadeMedida: produto.unidade_medida,
     },
   }
 }

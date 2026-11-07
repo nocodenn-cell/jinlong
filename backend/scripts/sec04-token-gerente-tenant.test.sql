@@ -24,14 +24,17 @@ DECLARE
   v_op_b     uuid := 'f3000002-0000-4000-8000-00000000000b';
   v_dono_b   uuid := 'f3000002-0000-4000-8000-0000000000d0';
   v_caixa_a  uuid := 'f3000003-0000-4000-8000-00000000000a';
+  v_emp1    uuid := 'f3000004-0000-4000-8000-0000000000e1';
 BEGIN
   INSERT INTO auth.users (id) VALUES (v_op_a), (v_op_b), (v_dono_b)
   ON CONFLICT (id) DO NOTHING;
 
-  INSERT INTO public.lojas (id, nome, codigo, ativo) VALUES
-    (v_loja_a, 'SEC04 Loja A', 'SEC04-A', true),
-    (v_loja_b, 'SEC04 Loja B', 'SEC04-B', true)
-  ON CONFLICT (id) DO UPDATE SET ativo = true;
+  -- Fixture: trigger de multiempresa exige empresa_id nas lojas (migration 20261019120000).
+  INSERT INTO public.empresas (id, nome) VALUES (v_emp1, 'SEC04 Empresa 1') ON CONFLICT (id) DO NOTHING;
+  INSERT INTO public.lojas (id, nome, codigo, ativo, empresa_id) VALUES
+    (v_loja_a, 'SEC04 Loja A', 'SEC04-A', true, v_emp1),
+    (v_loja_b, 'SEC04 Loja B', 'SEC04-B', true, v_emp1)
+  ON CONFLICT (id) DO UPDATE SET ativo = true, empresa_id = EXCLUDED.empresa_id;
 
   INSERT INTO public.usuarios (id, nome, perfil, ativo, loja_id) VALUES
     (v_op_a, 'SEC04 Operador A', 'OPERADOR', true, v_loja_a),
@@ -90,6 +93,79 @@ BEGIN
   RAISE NOTICE 'Helper OK: matriz token x loja.';
 END
 $helper$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Fronteira de empresa (20261028100000): token de DONO só vale nas empresas dele
+-- ═══════════════════════════════════════════════════════════════════════════
+
+DO $empresa$
+DECLARE
+  v_loja_a  uuid := 'f3000001-0000-4000-8000-00000000000a';
+  v_emp2    uuid := 'f3000004-0000-4000-8000-0000000000e2';
+  v_loja_c  uuid := 'f3000001-0000-4000-8000-00000000000c';
+  v_dono_c  uuid := 'f3000002-0000-4000-8000-0000000000dc';
+BEGIN
+  -- Empresa nova semeia pdv_config sem a coluna legada gerente_senha_sha256 (NOT NULL até #625 /
+  -- 20261022020000). Só dentro desta transação (ROLLBACK no fim), para o teste não depender da ordem dos merges.
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_schema = 'public' AND table_name = 'pdv_config'
+               AND column_name = 'gerente_senha_sha256' AND is_nullable = 'NO') THEN
+    ALTER TABLE public.pdv_config ALTER COLUMN gerente_senha_sha256 DROP NOT NULL;
+  END IF;
+  INSERT INTO public.empresas (id, nome) VALUES (v_emp2, 'SEC04 Empresa 2') ON CONFLICT (id) DO NOTHING;
+  INSERT INTO public.lojas (id, nome, codigo, ativo, empresa_id)
+  VALUES (v_loja_c, 'SEC04 Loja C (empresa 2)', 'SEC04-C', true, v_emp2)
+  ON CONFLICT (id) DO UPDATE SET ativo = true, empresa_id = EXCLUDED.empresa_id;
+  INSERT INTO auth.users (id) VALUES (v_dono_c) ON CONFLICT (id) DO NOTHING;
+  INSERT INTO public.usuarios (id, nome, perfil, ativo, loja_id)
+  VALUES (v_dono_c, 'SEC04 Dono empresa 2', 'DONO', true, v_loja_c)
+  ON CONFLICT (id) DO UPDATE SET perfil = EXCLUDED.perfil, ativo = true, loja_id = EXCLUDED.loja_id;
+  INSERT INTO public.tokens_desconto_gerente (token, expira_em, usado, loja_id, criado_por) VALUES
+    ('sec04-test-dono-emp2-sem-loja',   now() + interval '5 min', false, NULL,           v_dono_c),
+    ('sec04-test-dono-emp2-forja-loja', now() + interval '5 min', false, v_loja_a::text, v_dono_c);
+
+  IF public.fp_empresa_da_loja(v_loja_a) IS NOT DISTINCT FROM v_emp2 THEN
+    RAISE EXCEPTION 'SEC04_SETUP: loja A não deveria pertencer à empresa 2';
+  END IF;
+  IF NOT internal.token_gerente_fora_da_loja('sec04-test-dono-emp2-sem-loja', v_loja_a) THEN
+    RAISE EXCEPTION 'SEC04_FALHOU: token sem loja de DONO de outra empresa aceito (vazamento entre tenants)';
+  END IF;
+  IF NOT internal.token_gerente_fora_da_loja('sec04-test-dono-emp2-forja-loja', v_loja_a) THEN
+    RAISE EXCEPTION 'SEC04_FALHOU: token de DONO de outra empresa com loja_id forjado aceito';
+  END IF;
+  IF internal.token_gerente_fora_da_loja('sec04-test-dono-emp2-sem-loja', v_loja_c) THEN
+    RAISE EXCEPTION 'SEC04_FALHOU: token de DONO recusado na própria empresa';
+  END IF;
+
+  -- Vínculo ativo do DONO com a empresa da loja A libera (DONO de várias empresas).
+  INSERT INTO public.usuario_vinculos (usuario_id, empresa_id, loja_id, papel, ativo)
+  VALUES (v_dono_c, public.fp_empresa_da_loja(v_loja_a), NULL, 'DONO', true);
+  IF internal.token_gerente_fora_da_loja('sec04-test-dono-emp2-sem-loja', v_loja_a) THEN
+    RAISE EXCEPTION 'SEC04_FALHOU: DONO com vínculo ativo na empresa da loja recusado';
+  END IF;
+  UPDATE public.usuario_vinculos SET ativo = false WHERE usuario_id = v_dono_c;
+  IF NOT internal.token_gerente_fora_da_loja('sec04-test-dono-emp2-sem-loja', v_loja_a) THEN
+    RAISE EXCEPTION 'SEC04_FALHOU: vínculo inativo ainda libera token entre empresas';
+  END IF;
+  -- Vínculo GERENTE numa loja da empresa não libera as demais lojas dela; só a própria loja do vínculo.
+  INSERT INTO public.usuario_vinculos (usuario_id, empresa_id, loja_id, papel, ativo)
+  VALUES (v_dono_c, public.fp_empresa_da_loja(v_loja_a), 'f3000001-0000-4000-8000-00000000000b', 'GERENTE', true);
+  -- #623 (20261028120100): desativar um vínculo REVOGA os tokens pendentes do emissor (fail closed). O token
+  -- anterior foi revogado no UPDATE acima; a matriz de vínculo segue provada com um token novo.
+  IF NOT EXISTS (SELECT 1 FROM public.tokens_desconto_gerente WHERE token = 'sec04-test-dono-emp2-sem-loja' AND revogado_em IS NOT NULL) THEN
+    RAISE EXCEPTION 'SEC04_FALHOU: desativar vínculo não revogou o token pendente do emissor';
+  END IF;
+  INSERT INTO public.tokens_desconto_gerente (token, expira_em, usado, loja_id, criado_por)
+  VALUES ('sec04-test-dono-emp2-sem-loja-2', now() + interval '5 min', false, NULL, v_dono_c);
+  IF NOT internal.token_gerente_fora_da_loja('sec04-test-dono-emp2-sem-loja-2', v_loja_a) THEN
+    RAISE EXCEPTION 'SEC04_FALHOU: vínculo GERENTE em outra loja liberou a loja A';
+  END IF;
+  IF internal.token_gerente_fora_da_loja('sec04-test-dono-emp2-sem-loja-2', 'f3000001-0000-4000-8000-00000000000b') THEN
+    RAISE EXCEPTION 'SEC04_FALHOU: vínculo ativo na própria loja recusado';
+  END IF;
+  RAISE NOTICE 'Fronteira de empresa OK: DONO de outra empresa negado; própria empresa, vínculo DONO e vínculo na loja liberam.';
+END
+$empresa$;
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- Wrapper v4: token de desconto de outra loja -> TOKEN_GERENTE_INVALIDO

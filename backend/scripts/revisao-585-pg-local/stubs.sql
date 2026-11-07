@@ -1,0 +1,17 @@
+CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role;
+CREATE SCHEMA auth; CREATE SCHEMA internal;
+CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('request.jwt.claim.sub', true),'')::uuid $$;
+CREATE FUNCTION auth.role() RETURNS text LANGUAGE sql STABLE AS $$ SELECT current_setting('request.jwt.claim.role', true) $$;
+CREATE TABLE public.empresas (id uuid PRIMARY KEY, nome text, cnpj text, plano text, max_lojas int, updated_at timestamptz);
+CREATE TABLE public.lojas (id uuid PRIMARY KEY, empresa_id uuid REFERENCES public.empresas(id), ativo boolean DEFAULT true, created_at timestamptz DEFAULT now(), UNIQUE (id, empresa_id));
+CREATE TABLE public.usuarios (id uuid PRIMARY KEY, loja_id uuid, perfil text, ativo boolean DEFAULT true);
+CREATE TABLE public.usuario_vinculos (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), usuario_id uuid, empresa_id uuid, loja_id uuid, papel text, ativo boolean DEFAULT true);
+CREATE TABLE public.configuracoes_gerais (empresa_id uuid, chave text, valor text, tipo_dado text, descricao text, PRIMARY KEY (empresa_id, chave));
+CREATE TABLE public.tokens_desconto_gerente (token text PRIMARY KEY, loja_id text, criado_por uuid, usado boolean, expira_em timestamptz);
+CREATE TABLE public.produtos (id uuid DEFAULT gen_random_uuid(), nome text, preco_varejo numeric, preco_custo numeric, origem text, loja_id uuid, ativo boolean, observacao text);
+CREATE FUNCTION public.fp_pode_empresa(uuid) RETURNS boolean LANGUAGE sql AS $$ SELECT true $$;
+CREATE FUNCTION public.fp_empresa_contexto(uuid DEFAULT NULL) RETURNS uuid LANGUAGE sql AS $$ SELECT NULL::uuid $$;
+CREATE FUNCTION public.plataforma_provisionar_empresa(jsonb, uuid) RETURNS jsonb LANGUAGE sql AS $$ SELECT '{}'::jsonb $$;
+-- usado por internal.token_gerente_fora_da_loja (fronteira de empresa, 20261028100000)
+CREATE OR REPLACE FUNCTION public.fp_empresa_da_loja(p_loja uuid) RETURNS uuid LANGUAGE sql STABLE SECURITY DEFINER
+  SET search_path = public, pg_temp AS $$ SELECT l.empresa_id FROM public.lojas l WHERE l.id = p_loja $$;

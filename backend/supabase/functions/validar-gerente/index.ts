@@ -18,7 +18,8 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { isTokenFinalidade, validateGerenteAndIssueToken } from "../_shared/gerente-auth.ts";
-import { logJson } from "../../../../shared/logger.ts";
+import { resolverEscopoGerente } from "../_shared/escopoGerente.ts";
+import { logJson } from "../_shared/unified-logger.ts";
 
 const USER_LIMIT = 5;
 const IP_LIMIT = 20;
@@ -231,10 +232,27 @@ Deno.serve(async (req) => {
       return jsonResponse(401, { ok: false, error: "UNAUTHORIZED" }, req, corsMode);
     }
 
+    // SEC-04 (multiempresa): loja decidida no servidor; o corpo só escolhe entre as lojas permitidas.
+    const escopo = await resolverEscopoGerente(
+      supabase,
+      authData.user.id,
+      typeof loja_id === "string" ? loja_id : null,
+    );
+    if (!escopo.ok) {
+      log({ level: "warn", stage: "auth", error: escopo.error });
+      return jsonResponse(403, { ok: false, error: escopo.error }, req, corsMode);
+    }
+    // Defesa em profundidade: nunca seguir sem empresa/loja (evita fallback pdv_config id=1).
+    if (!escopo.empresaId || !escopo.lojaId) {
+      log({ level: "warn", stage: "auth", error: "ESCOPO_GERENTE_SEM_EMPRESA" });
+      return jsonResponse(403, { ok: false, error: "ESCOPO_GERENTE_SEM_EMPRESA" }, req, corsMode);
+    }
+
     const result = await validateGerenteAndIssueToken({
       supabase,
       senha: senhaNormalizada,
-      lojaId: typeof loja_id === "string" ? loja_id : null,
+      lojaId: escopo.lojaId,
+      empresaId: escopo.empresaId,
       userId: authData.user.id,
       req,
       logStage: "auth",

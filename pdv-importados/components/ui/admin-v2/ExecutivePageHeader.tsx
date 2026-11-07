@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
-import { AdminV2UtilityBar } from './AdminV2UtilityBar'
 import { PageActions, type PageActionSecondaryItem } from './PageActions'
 
 type ExecutivePageHeaderProps = {
@@ -49,7 +48,6 @@ export function ExecutivePageHeader({
           <PageActions secondary={secondaryActions} secondaryLabel={secondaryActionsLabel}>
             {primary}
           </PageActions>
-          <AdminV2UtilityBar />
         </div>
       </div>
     </header>

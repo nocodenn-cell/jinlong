@@ -1,5 +1,6 @@
 "use client"
 
+import type { ReactNode } from "react"
 import { Printer } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SignOutButton } from "@/components/auth/SignOutButton"
@@ -28,6 +29,8 @@ type Props = {
   /** Referência de atalhos — estado no CaixaPageClient para o F1 poder alternar. */
   atalhosAbertos: boolean
   onAtalhosOpenChange: (open: boolean) => void
+  /** Troca de operador (Turno de / Bloquear / Trocar operador), montada pelo CaixaPageClient. */
+  trocaSlot?: ReactNode
 }
 
 export function CaixaPdvTopBar({
@@ -43,6 +46,7 @@ export function CaixaPdvTopBar({
   printerDeviceName,
   atalhosAbertos,
   onAtalhosOpenChange,
+  trocaSlot,
 }: Props) {
   const fontStack =
     idioma === "zh"
@@ -127,7 +131,8 @@ export function CaixaPdvTopBar({
           )}
         </div>
 
-        <div className="flex shrink-0 items-center gap-1.5 border-l pl-2 sm:pl-3 border-jl-border-1">
+        <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-l pl-2 sm:pl-3 border-jl-border-1">
+          {trocaSlot}
           {aberto ? (
             <Button
               type="button"
