@@ -38,6 +38,7 @@ import {
   type ScopeLookups,
   type SyncContext,
 } from "./tenantScope.ts";
+import { escolherGravacaoVendaDispositivo } from "./gravacaoVendaDispositivo.ts";
 import { parseParcelasOpcional, temParcelamento, type PagamentoComParcelas } from "./pagamentosParcelas.ts";
 import {
   bloqueadoAgora,
@@ -754,13 +755,28 @@ async function processVenda(
     !(await descontoAutorizadoPorPinGerente(supabase, payload, ctx))) {
     throw new Error("GERENTE_TOKEN_OBRIGATORIO");
   }
-  // Dispositivo ativado com token de gerente: o consumo único do token e a gravação da venda acontecem na MESMA
-  // transação (public.registrar_venda_offline_com_token, proposta fase31). O banco confere loja, validade,
-  // revogação, emissor/aprovador ativos e uso único. Qualquer recusa desfaz a venda e o consumo (fail closed).
-  const tokenDispositivo = strictManagerDiscountAuth && hasManagerDiscount && !!payload.desconto_gerente_token &&
-    ctx?.mode === "dispositivo" && !!ctx?.lojaId;
+  // A proposta registrar_venda_offline_com_token não é migration. Grava sempre na RPC publicada.
+  // No dispositivo ativado, o token é conferido antes (fp_token_gerente_vale_na_loja, 20261028120100).
+  const gravacao = escolherGravacaoVendaDispositivo({
+    strictManagerDiscountAuth,
+    hasManagerDiscount,
+    temTokenGerente: !!payload.desconto_gerente_token,
+    modo: ctx?.mode,
+    lojaId: ctx?.lojaId,
+    parcelado: temParcelamento(payload.pagamentos),
+  });
+  if (gravacao.conferirTokenNaLoja) {
+    const lojaId = ctx?.mode === "dispositivo" ? ctx.lojaId : null;
+    const token = payload.desconto_gerente_token;
+    if (!lojaId || !token) throw new Error("GERENTE_TOKEN_INVALIDO_OU_REVOGADO");
+    const { data: vale, error: valeErr } = await supabase.rpc("fp_token_gerente_vale_na_loja", {
+      p_token: token,
+      p_loja_id: lojaId,
+    });
+    if (valeErr || vale !== true) throw new Error("GERENTE_TOKEN_INVALIDO_OU_REVOGADO");
+  }
 
-  const rpcVenda = temParcelamento(payload.pagamentos) ? "registrar_venda_com_itens_v2" : "registrar_venda_com_itens";
+  const rpcVenda = gravacao.rpc;
   const rpcVendaArgs = {
     p_venda_id: payload.venda_id,
     p_caixa_id: payload.caixa_id,
@@ -778,16 +794,7 @@ async function processVenda(
     p_pagamentos: payload.pagamentos ?? null,
   };
   // Parcelas > 1 (migration 20261021120000) => v2; todo o resto segue na v1 de sempre.
-  const { error: rpcVendaErr } = tokenDispositivo
-    ? await supabase.rpc("registrar_venda_offline_com_token", {
-      ...rpcVendaArgs,
-      p_token: payload.desconto_gerente_token,
-      p_loja: ctx?.lojaId ?? null,
-      p_v2: rpcVenda === "registrar_venda_com_itens_v2",
-    })
-    : rpcVenda === "registrar_venda_com_itens"
-    ? await supabase.rpc("registrar_venda_com_itens", rpcVendaArgs)
-    : await supabase.rpc("registrar_venda_com_itens_v2", rpcVendaArgs);
+  const { error: rpcVendaErr } = await supabase.rpc(rpcVenda, rpcVendaArgs);
 
   if (rpcVendaErr) {
     await captureEdgeException(new Error(rpcVendaErr.message), {
