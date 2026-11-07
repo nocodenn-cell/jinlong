@@ -156,25 +156,6 @@
         "20261104120000 (ordem)"
       ],
       "releaseCondition": "Autorização explícita do dono para aplicar o lote de segurança em produção (runbook manual, janela autorizada, schema_migrations com a versão real), após validação em homologação; depois PR que remove a entrada com label deploy-prod:aprovado."
-    },
-    {
-      "version": "20261107120000",
-      "file": "backend/supabase/migrations/20261107120000_commercial_leads_remove_anon_insert_policy.sql",
-      "reason": "SEGURANÇA (defesa em profundidade). Remove a policy commercial_leads_anon_insert (INSERT para anon). Inerte hoje, porque anon não tem privilégio de INSERT; fecha a tabela se esse privilégio for concedido no futuro.",
-      "dependencies": [
-        "20261104120000 (ordem)"
-      ],
-      "releaseCondition": "Autorização explícita do dono + validação em homologação + PR que remove a entrada com label deploy-prod:aprovado."
-    },
-    {
-      "version": "20261107130000",
-      "file": "backend/supabase/migrations/20261107130000_commercial_leads_servico_e_ip.sql",
-      "reason": "SEGURANÇA (prioridade de decisão do dono). Registro de leads só pelo servidor: RPC com p_client_ip, EXECUTE só para service_role, anon sem acesso à RPC nem à checagem. Corrige as migrations 20261104150000/160000/170000 sem alterá-las (guarda de governança).",
-      "dependencies": [
-        "20261104170000 (cadeia original)",
-        "20261107120000 (ordem)"
-      ],
-      "releaseCondition": "Autorização explícita do dono + validação em homologação + deploy conjunto com o site (que envia p_client_ip com service_role) + PR que remove a entrada com label deploy-prod:aprovado."
     }
   ]
 }
