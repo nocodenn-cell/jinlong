@@ -14,8 +14,10 @@ DECLARE
   n integer;
   alvo text;
   leu boolean;
+  -- Tabelas em que authenticated tem SELECT em produção e em homologação (lido em 2026-11-06).
+  -- produtos NÃO entra: authenticated não tem SELECT direto (o catálogo é lido por RPC).
   tabelas_auth text[] := ARRAY[
-    'vendas','itens_venda','vendas_pagamentos','estoque','caixas','produtos','lojas','usuarios','clientes','precos_atacado'
+    'vendas','itens_venda','vendas_pagamentos','estoque','caixas','lojas','usuarios','clientes','precos_atacado'
   ];
   verificadas integer := 0;
 BEGIN
