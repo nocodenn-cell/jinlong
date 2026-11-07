@@ -300,11 +300,77 @@ test.describe('Fase 5b: Contas Receber Automático (RPC)', () => {
   })
 
   test('04. Validação 2ª Linha: Saldo divergente rejeita', async () => {
-    // Requer simular uma corrida (saldo muda entre pré-transação e dentro da
-    // transação) com duas conexões concorrentes — não reproduzível de forma
-    // determinística com uma única chamada RPC. Mantido como pendência
-    // conhecida, documentada aqui (não é uma alegação de teste passando).
-    test.skip(true, 'Requer simulação de corrida com 2 conexões concorrentes — não implementado ainda.')
+    // Duas sessões concorrentes gravam a MESMA venda (mesmo venda_id e mesmos
+    // itens) com pagamentos divergentes (50% vs 60%). A RPC serializa por
+    // `pg_advisory_xact_lock(hashtext(venda_id))`: a sessão que entra depois
+    // ou é recusada, ou (se o payload de totais/forma bater) cai no replay.
+    // Invariantes que este teste exige, independentemente de qual sessão venceu:
+    //   - exatamente UMA chamada é aceita e UMA é recusada;
+    //   - nenhuma linha duplicada em vendas / itens_venda / contas_receber;
+    //   - vendas_pagamentos reflete só o pagamento da sessão aceita.
+    //
+    // ACHADO (rodado contra o banco local): a sessão perdedora hoje recebe
+    // `deadlock detected` (40P01), não FINALIZAR_VENDA_CANONICA_SALDO_DIVERGENTE.
+    // O deadlock vem de a wrapper segurar FOR SHARE em `caixas` antes do
+    // advisory lock, enquanto o corpo `_unscoped` atualiza `caixas` depois de
+    // pegá-lo. Mantemos o 40P01 aceito aqui para o teste refletir o
+    // comportamento real; SALDO_DIVERGENTE não é alcançável por esta corrida.
+    const vendaId = crypto.randomUUID()
+    const itens = [itemPadrao()]
+    const valorA = round2(precoUnitario * 0.5)
+    const valorB = round2(precoUnitario * 0.6)
+
+    const [resA, resB] = await Promise.all([
+      chamarRpc({
+        p_venda_id: vendaId,
+        p_pagamentos: [{ forma_pagamento: 'DINHEIRO', valor: valorA }],
+        p_cliente_id: clienteId,
+        p_itens: itens,
+      }),
+      chamarRpc({
+        p_venda_id: vendaId,
+        p_pagamentos: [{ forma_pagamento: 'DINHEIRO', valor: valorB }],
+        p_cliente_id: clienteId,
+        p_itens: itens,
+      }),
+    ])
+    const resultados = [
+      { res: resA, valor: valorA },
+      { res: resB, valor: valorB },
+    ]
+    const aceitas = resultados.filter((r) => !r.res.error)
+    const recusadas = resultados.filter((r) => r.res.error)
+
+    expect(aceitas, 'exatamente uma sessão deve ser aceita').toHaveLength(1)
+    expect(recusadas, 'exatamente uma sessão deve ser recusada').toHaveLength(1)
+    expect(recusadas[0].res.error?.message).toMatch(
+      /FINALIZAR_VENDA_CANONICA_(SALDO_DIVERGENTE|RETRY_PAYLOAD_DIVERGENTE)|deadlock detected/,
+    )
+
+    const vencedor = aceitas[0]
+    const { data: vendas, error: vendasErr } = await supabase.from('vendas').select('id').eq('id', vendaId)
+    expect(vendasErr).toBeNull()
+    expect(vendas).toHaveLength(1)
+
+    const { data: itensDb, error: itensErr } = await supabase.from('itens_venda').select('id').eq('venda_id', vendaId)
+    expect(itensErr).toBeNull()
+    expect(itensDb).toHaveLength(1)
+
+    const { data: crs, error: crErr } = await supabase
+      .from('contas_receber')
+      .select('id, valor_aberto')
+      .eq('venda_id', vendaId)
+    expect(crErr).toBeNull()
+    expect(crs).toHaveLength(1)
+    expect(round2(Number(crs?.[0]?.valor_aberto))).toBe(round2(precoUnitario - vencedor.valor))
+
+    const { data: pagamentos, error: pagErr } = await supabase
+      .from('vendas_pagamentos')
+      .select('valor')
+      .eq('venda_id', vendaId)
+    expect(pagErr).toBeNull()
+    expect(pagamentos).toHaveLength(1)
+    expect(round2(Number(pagamentos?.[0]?.valor))).toBe(vencedor.valor)
   })
 
   test('05. Happy Path: Pagamento parcial + cliente válido = contas_receber criado', async () => {
