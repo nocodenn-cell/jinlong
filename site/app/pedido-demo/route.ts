@@ -1,4 +1,5 @@
 import { handleDemoRequest, supabaseDemoStore } from '@/lib/demoRequest'
+import { clientIpFrom } from '@/lib/pedidoDemoGuards'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -16,6 +17,6 @@ export async function POST(request: Request): Promise<Response> {
   } catch {
     return Response.json({ ok: false, error: 'invalid', fields: [] }, { status: 400 })
   }
-  const res = await handleDemoRequest(input, { store: supabaseDemoStore() })
+  const res = await handleDemoRequest(input, { store: supabaseDemoStore(), clientIp: clientIpFrom(request.headers) })
   return Response.json(res.body, { status: res.status, headers: { 'Cache-Control': 'no-store' } })
 }

@@ -189,12 +189,26 @@ describe('erros e falhas', () => {
 })
 
 describe('supabaseDemoStore (cliente REST)', () => {
-  const env = { SITE_DEMO_SUPABASE_URL: 'https://abc.supabase.co/', SITE_DEMO_SUPABASE_ANON_KEY: 'k' }
+  const base = { SITE_DEMO_SUPABASE_URL: 'https://abc.supabase.co/', SITE_DEMO_SUPABASE_SERVICE_ROLE_KEY: 'k' }
+  const env = { ...base, SITE_DEMO_FORM_ATIVO: 'true' }
   const row: DemoStoreRow = { name: 'a', store: 'b', contact: 'c', channel: 'wechat', locale: 'pt-BR', segment: 'outro', idioma: 'pt-BR' as const, protocol: 'JL-261104-AAAAAA', product: 'jinlong', idempotencyKey: K1, utm_source: 'g' }
 
   it('null sem env ou com URL fora do supabase.co', () => {
     expect(supabaseDemoStore({})).toBeNull()
-    expect(supabaseDemoStore({ SITE_DEMO_SUPABASE_URL: 'https://evil.example', SITE_DEMO_SUPABASE_ANON_KEY: 'k' })).toBeNull()
+    expect(supabaseDemoStore({ SITE_DEMO_FORM_ATIVO: 'true', SITE_DEMO_SUPABASE_URL: 'https://evil.example', SITE_DEMO_SUPABASE_SERVICE_ROLE_KEY: 'k' })).toBeNull()
+    // Chave anon não serve mais: sem service_role o cliente não é criado.
+    expect(supabaseDemoStore({ SITE_DEMO_FORM_ATIVO: 'true', SITE_DEMO_SUPABASE_URL: 'https://abc.supabase.co', SITE_DEMO_SUPABASE_ANON_KEY: 'k' })).toBeNull()
+  })
+  it('flag desligada (ausente, "1" ou "false") devolve null e não chama o banco', async () => {
+    for (const valor of [undefined, '1', 'false', '', 'TRUE ', 'yes']) {
+      const fetchImpl = vi.fn(async () => new Response(JSON.stringify('JL-261104-AAAAAA'), { status: 200 }))
+      const e = valor === undefined ? { ...base } : { ...base, SITE_DEMO_FORM_ATIVO: valor }
+      expect(supabaseDemoStore(e, fetchImpl as unknown as typeof fetch)).toBeNull()
+      expect(fetchImpl).not.toHaveBeenCalled()
+    }
+  })
+  it('flag com espaços ao redor de "true" é aceita', () => {
+    expect(supabaseDemoStore({ ...base, SITE_DEMO_FORM_ATIVO: '  true  ' }, vi.fn() as unknown as typeof fetch)).not.toBeNull()
   })
   it('chama a função (nunca a tabela) com a chave de idempotência e devolve o protocolo gravado', async () => {
     const fetchImpl = vi.fn(async () => new Response(JSON.stringify('JL-261104-AAAAAA'), { status: 200 }))
@@ -206,6 +220,22 @@ describe('supabaseDemoStore (cliente REST)', () => {
     expect(JSON.parse(init.body as string)).toMatchObject({ p_idempotency_key: K1, p_protocol: 'JL-261104-AAAAAA', p_utm_source: 'g', p_utm_medium: null })
     expect(JSON.parse(init.body as string)).not.toHaveProperty('product')
     expect(protocolo).toBe('JL-261104-AAAAAA')
+  })
+  it('usa a chave service_role nos cabeçalhos e envia o IP do visitante como p_client_ip', async () => {
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify('JL-261104-AAAAAA'), { status: 200 }))
+    const s = supabaseDemoStore(env, fetchImpl as unknown as typeof fetch)
+    await s!.insert({ ...row, clientIp: '198.51.100.7' })
+    const [, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit]
+    const headers = init.headers as Record<string, string>
+    expect(headers.apikey).toBe('k')
+    expect(headers.Authorization).toBe('Bearer k')
+    expect(JSON.parse(init.body as string)).toMatchObject({ p_client_ip: '198.51.100.7' })
+  })
+  it('sem IP do visitante, envia p_client_ip nulo (o banco usa sem-ip)', async () => {
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify('JL-261104-AAAAAA'), { status: 200 }))
+    await supabaseDemoStore(env, fetchImpl as unknown as typeof fetch)!.insert(row)
+    const [, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit]
+    expect(JSON.parse(init.body as string)).toMatchObject({ p_client_ip: null })
   })
   it('mensagem de erro da função vira código do DemoStoreError', async () => {
     const s = supabaseDemoStore(env, (async () => new Response(JSON.stringify({ message: 'LEAD_CHAVE_REUTILIZADA' }), { status: 400 })) as unknown as typeof fetch)
