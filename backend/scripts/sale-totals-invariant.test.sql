@@ -15,6 +15,16 @@ INSERT INTO public.usuarios(id,nome,perfil,ativo,loja_id)
 VALUES (:'fixture_operador','Teste totais online','OPERADOR',true,:'fixture_loja');
 INSERT INTO public.caixas(operador_id,loja_id,status,valor_inicial)
 VALUES (:'fixture_operador',:'fixture_loja','ABERTO',0);
+-- D5 (20261107110000): PIX exige conta financeira vinculada à forma na loja.
+WITH c AS (
+  INSERT INTO public.contas_financeiras (id, loja_id, nome, tipo, ativo, data_inicial, criado_por)
+  SELECT gen_random_uuid(), :'fixture_loja', 'Fixture conta D5', 'BANCO', true, current_date, :'fixture_operador'
+  WHERE NOT EXISTS (SELECT 1 FROM public.financeiro_contas_forma WHERE loja_id = :'fixture_loja' AND forma_pagamento = 'PIX')
+  RETURNING id
+)
+INSERT INTO public.financeiro_contas_forma (loja_id, forma_pagamento, conta_financeira_id)
+SELECT :'fixture_loja', f.forma, c.id FROM c CROSS JOIN unnest(ARRAY['PIX','CARTAO_DEBITO','CARTAO_CREDITO']) AS f(forma)
+ON CONFLICT (loja_id, forma_pagamento) DO NOTHING;
 
 DO $test$
 DECLARE
