@@ -82,6 +82,7 @@ describe('Operacional — Web RPC ≡ Local canônico (fixtures produção)', ()
         ativo: true,
         precoVarejo: SMOKE.preco_varejo,
         precoAtacado: SMOKE.preco_atacado,
+        quantidadeGatilhoAtacado: null,
         quantidade: qty,
         lojaId: null,
         quantidadeMinimaAtacadoPadrao: MIN_PADRAO,

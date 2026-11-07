@@ -17,6 +17,8 @@ export type ProdutoPrecoCanonico = {
   ativo: boolean
   preco_varejo: number
   preco_atacado: number | null
+  /** produtos.quantidade_gatilho_atacado (D-11). Ausente/null: regra do cadastro não aplica. */
+  quantidade_gatilho_atacado?: number | null
 }
 
 export function resolverPrecoCanonicoLocal(
@@ -29,6 +31,7 @@ export function resolverPrecoCanonicoLocal(
     ativo: produto.ativo,
     precoVarejo: produto.preco_varejo,
     precoAtacado: produto.preco_atacado,
+    quantidadeGatilhoAtacado: produto.quantidade_gatilho_atacado ?? null,
     quantidade,
     lojaId: snap.lojaId,
     quantidadeMinimaAtacadoPadrao: snap.quantidadeMinimaAtacadoPadrao,

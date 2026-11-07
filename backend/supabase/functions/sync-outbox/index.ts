@@ -857,7 +857,7 @@ async function handleCatalogoSync(req: Request, supabase: SupabaseAdmin, ctx: Sy
   let produtosQuery = supabase
     .from("produtos")
     .select(
-      "id,nome,codigo_barras,preco_varejo,preco_atacado,categoria_id,ativo,status_publicacao,origem,tem_nf,imagem_url",
+      "id,nome,codigo_barras,preco_varejo,preco_atacado,quantidade_gatilho_atacado,categoria_id,ativo,status_publicacao,origem,tem_nf,imagem_url",
     );
   if (ctx.mode === "dispositivo") produtosQuery = produtosQuery.eq("loja_id", ctx.lojaId);
   const REGRAS_COLS =

@@ -156,6 +156,15 @@
         "20261104120000 (ordem)"
       ],
       "releaseCondition": "Autorização explícita do dono para aplicar o lote de segurança em produção (runbook manual, janela autorizada, schema_migrations com a versão real), após validação em homologação; depois PR que remove a entrada com label deploy-prod:aprovado."
+    },
+    {
+      "version": "20261107120000",
+      "file": "backend/supabase/migrations/20261107120000_d11_atacado_fonte_unica_produto.sql",
+      "reason": "D-11 (fonte unica de atacado): cria regras de cadastro, auditoria, plano e execucao da migracao de faixas e selecao manual. Nao move dados. A execucao das faixas (d11_executar_migracao_faixas_atacado) depende do inventario de producao, ainda nao autorizado (docs/planos/D11_ATACADO_FONTE_UNICA.md).",
+      "dependencies": [
+        "20261104180000 (ordem)"
+      ],
+      "releaseCondition": "Inventario de producao autorizado pelo dono + plano d11_plano_migracao_faixas_atacado revisado e aprovado + testes backend/scripts/d11-atacado-fonte-unica.test.mjs passando em homologacao + 6 produtos com gatilho=0 corrigidos ou aceitos + autorizacao explicita do dono + label deploy-prod:aprovado no PR que remove esta entrada."
     }
   ]
 }

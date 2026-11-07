@@ -20,6 +20,8 @@ export type ProdutoCacheLite = {
   preco_varejo: number
   /** Catálogo atacado (RPC fallback). */
   preco_atacado?: number | null
+  /** Quantidade mínima do atacado do cadastro (D-11). */
+  quantidade_gatilho_atacado?: number | null
   categoria_id: string | null | undefined
   ativo: boolean
   status_publicacao?: StatusPublicacao | string | null

@@ -252,6 +252,10 @@ export function App() {
       typeof produto.preco_atacado === 'number' && Number.isFinite(produto.preco_atacado)
         ? produto.preco_atacado
         : null
+    const gatilhoCat =
+      typeof produto.quantidade_gatilho_atacado === 'number' && Number.isFinite(produto.quantidade_gatilho_atacado)
+        ? produto.quantidade_gatilho_atacado
+        : null
     const itemBase: ItemCarrinho = {
       id: `${produto.id}-${Date.now()}`,
       produtoId: produto.id,
@@ -264,6 +268,7 @@ export function App() {
       metaPdv: {
         precoVarejoReferencia: produto.preco_varejo,
         precoAtacadoCatalogo: atacadoCat,
+        quantidadeGatilhoAtacadoCatalogo: gatilhoCat,
       },
       resultado: {
         precoUnitario: produto.preco_varejo,
@@ -278,6 +283,7 @@ export function App() {
         ativo: produto.ativo !== false,
         preco_varejo: produto.preco_varejo,
         preco_atacado: atacadoCat,
+        quantidade_gatilho_atacado: gatilhoCat,
       },
       1,
       precoCanonicoRef.current,

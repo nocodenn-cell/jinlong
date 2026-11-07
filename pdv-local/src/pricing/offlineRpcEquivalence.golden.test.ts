@@ -73,6 +73,7 @@ describe('Golden — Web ≡ Local (PRICE_RESOLUTION_CHAIN)', () => {
         ativo: true,
         precoVarejo: VAREJO,
         precoAtacado: PRODUTO.preco_atacado,
+        quantidadeGatilhoAtacado: null,
         quantidade: caso.qty,
         lojaId: LOJA,
         quantidadeMinimaAtacadoPadrao: MIN_PADRAO,

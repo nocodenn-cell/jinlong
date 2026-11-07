@@ -1,0 +1,117 @@
+{
+  "descricao": "D-11 paridade: mesma matriz consumida pelo spec TS (calcularPrecoCanonico) e pelo teste SQL (calcular_preco_produto, backend/scripts/d11-atacado-fonte-unica.test.mjs). Lojas são nomes ('L1', 'L2') mapeados para UUID no teste SQL. Quantidade é a do carrinho; a cadeia usa floor com mínimo 1 (quantidade 0 é inválida).",
+  "casos": [
+    {
+      "id": "varejo_sem_atacado",
+      "produto": { "preco_varejo": 100, "preco_atacado": null, "quantidade_gatilho_atacado": 0, "ativo": true },
+      "tiers": [],
+      "loja": null,
+      "quantidade": 5,
+      "esperado": { "ok": true, "preco": 100, "tipo": "VAREJO", "fonte": "varejo" }
+    },
+    {
+      "id": "produto_abaixo_do_gatilho",
+      "produto": { "preco_varejo": 100, "preco_atacado": 85, "quantidade_gatilho_atacado": 8, "ativo": true },
+      "tiers": [],
+      "loja": null,
+      "quantidade": 7,
+      "esperado": { "ok": true, "preco": 100, "tipo": "VAREJO", "fonte": "varejo" }
+    },
+    {
+      "id": "produto_no_gatilho",
+      "produto": { "preco_varejo": 100, "preco_atacado": 85, "quantidade_gatilho_atacado": 8, "ativo": true },
+      "tiers": [],
+      "loja": null,
+      "quantidade": 8,
+      "esperado": { "ok": true, "preco": 85, "tipo": "ATACADO", "fonte": "produto" }
+    },
+    {
+      "id": "produto_acima_do_gatilho",
+      "produto": { "preco_varejo": 100, "preco_atacado": 85, "quantidade_gatilho_atacado": 8, "ativo": true },
+      "tiers": [],
+      "loja": "L1",
+      "quantidade": 50,
+      "esperado": { "ok": true, "preco": 85, "tipo": "ATACADO", "fonte": "produto" }
+    },
+    {
+      "id": "gatilho_zero_invalido_ignorado",
+      "produto": { "preco_varejo": 100, "preco_atacado": 85, "quantidade_gatilho_atacado": 0, "ativo": true },
+      "tiers": [],
+      "loja": null,
+      "quantidade": 50,
+      "esperado": { "ok": true, "preco": 100, "tipo": "VAREJO", "fonte": "varejo" }
+    },
+    {
+      "id": "atacado_igual_varejo_invalido_ignorado",
+      "produto": { "preco_varejo": 100, "preco_atacado": 100, "quantidade_gatilho_atacado": 1, "ativo": true },
+      "tiers": [],
+      "loja": null,
+      "quantidade": 5,
+      "esperado": { "ok": true, "preco": 100, "tipo": "VAREJO", "fonte": "varejo" }
+    },
+    {
+      "id": "atacado_maior_varejo_invalido_ignorado",
+      "produto": { "preco_varejo": 100, "preco_atacado": 120, "quantidade_gatilho_atacado": 1, "ativo": true },
+      "tiers": [],
+      "loja": null,
+      "quantidade": 5,
+      "esperado": { "ok": true, "preco": 100, "tipo": "VAREJO", "fonte": "varejo" }
+    },
+    {
+      "id": "tier_ativo_vence_cadastro_transitorio",
+      "produto": { "preco_varejo": 100, "preco_atacado": 85, "quantidade_gatilho_atacado": 8, "ativo": true },
+      "tiers": [ { "quantidade_minima": 10, "preco_unitario": 80, "ativo": true, "loja": null } ],
+      "loja": null,
+      "quantidade": 10,
+      "esperado": { "ok": true, "preco": 80, "tipo": "ATACADO", "fonte": "tier" }
+    },
+    {
+      "id": "tier_inativo_ignorado",
+      "produto": { "preco_varejo": 100, "preco_atacado": 85, "quantidade_gatilho_atacado": 8, "ativo": true },
+      "tiers": [ { "quantidade_minima": 10, "preco_unitario": 80, "ativo": false, "loja": null } ],
+      "loja": null,
+      "quantidade": 10,
+      "esperado": { "ok": true, "preco": 85, "tipo": "ATACADO", "fonte": "produto" }
+    },
+    {
+      "id": "tier_de_outra_loja_ignorado",
+      "produto": { "preco_varejo": 100, "preco_atacado": 85, "quantidade_gatilho_atacado": 8, "ativo": true },
+      "tiers": [ { "quantidade_minima": 2, "preco_unitario": 90, "ativo": true, "loja": "L2" } ],
+      "loja": "L1",
+      "quantidade": 2,
+      "esperado": { "ok": true, "preco": 100, "tipo": "VAREJO", "fonte": "varejo" }
+    },
+    {
+      "id": "tier_da_loja_vence",
+      "produto": { "preco_varejo": 100, "preco_atacado": null, "quantidade_gatilho_atacado": 0, "ativo": true },
+      "tiers": [ { "quantidade_minima": 3, "preco_unitario": 95, "ativo": true, "loja": "L1" } ],
+      "loja": "L1",
+      "quantidade": 3,
+      "esperado": { "ok": true, "preco": 95, "tipo": "ATACADO", "fonte": "tier" }
+    },
+    {
+      "id": "produto_inativo",
+      "produto": { "preco_varejo": 100, "preco_atacado": 85, "quantidade_gatilho_atacado": 8, "ativo": false },
+      "tiers": [],
+      "loja": null,
+      "quantidade": 8,
+      "esperado": { "ok": false, "erro": "produto_nao_encontrado" }
+    },
+    {
+      "id": "quantidade_zero_invalida",
+      "produto": { "preco_varejo": 100, "preco_atacado": 85, "quantidade_gatilho_atacado": 8, "ativo": true },
+      "tiers": [],
+      "loja": null,
+      "quantidade": 0,
+      "esperado": { "ok": false, "erro": "quantidade_invalida" }
+    },
+    {
+      "id": "quantidade_fracionada_usa_floor",
+      "produto": { "preco_varejo": 100, "preco_atacado": 85, "quantidade_gatilho_atacado": 8, "ativo": true },
+      "tiers": [],
+      "loja": null,
+      "quantidade": 8.9,
+      "esperado": { "ok": true, "preco": 85, "tipo": "ATACADO", "fonte": "produto" }
+    }
+  ]
+}

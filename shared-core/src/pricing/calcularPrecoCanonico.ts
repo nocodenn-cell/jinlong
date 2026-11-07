@@ -22,8 +22,13 @@ export type CalcularPrecoCanonicoInput = {
   produtoId: string
   ativo: boolean
   precoVarejo: number
-  /** @deprecated Dado legado/sugestão de cadastro; não participa do runtime D0. */
+  /** produtos.preco_atacado — fonte única de atacado do cadastro (D-11). */
   precoAtacado: number | null
+  /**
+   * produtos.quantidade_gatilho_atacado (D-11). Null ou < 1 com preço de atacado
+   * não aplica a regra do cadastro (mesmo critério da RPC).
+   */
+  quantidadeGatilhoAtacado: number | null
   /** Quantidade do carrinho (pode ser fracionada); FLOOR igual à RPC. */
   quantidade: number
   lojaId: string | null
@@ -104,6 +109,7 @@ export function calcularPrecoCanonico(
     input.lojaId,
     qRpc,
   )
+  // Transitório (D-11): faixa ativa ainda vence, como na RPC até a execução do plano.
   if (tier) {
     return ok(
       Number(tier.precoUnitario),
@@ -111,6 +117,17 @@ export function calcularPrecoCanonico(
       'tier',
       tier.id,
     )
+  }
+
+  // Fonte única D-11: cadastro do produto. Mesmas condições da RPC.
+  if (
+    input.precoAtacado != null &&
+    input.quantidadeGatilhoAtacado != null &&
+    input.quantidadeGatilhoAtacado >= 1 &&
+    input.precoAtacado < input.precoVarejo &&
+    qRpc >= input.quantidadeGatilhoAtacado
+  ) {
+    return ok(Number(input.precoAtacado), 'ATACADO', 'produto')
   }
 
   return ok(Number(input.precoVarejo), 'VAREJO', 'varejo')

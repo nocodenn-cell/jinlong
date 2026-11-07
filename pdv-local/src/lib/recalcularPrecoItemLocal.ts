@@ -12,6 +12,13 @@ function resolverPrecoBaseCanonicoItem(item: ItemCarrinho): number {
   return item.precoOriginal ?? item.precoVariejo ?? item.precoUnitario ?? 0
 }
 
+function resolverGatilhoAtacadoItem(item: ItemCarrinho): number | null {
+  const meta = item.metaPdv as { quantidadeGatilhoAtacadoCatalogo?: number | null } | undefined
+  const v = meta?.quantidadeGatilhoAtacadoCatalogo
+  if (typeof v === "number" && Number.isFinite(v)) return v
+  return null
+}
+
 function resolverPrecoAtacadoItem(item: ItemCarrinho): number | null {
   const meta = item.metaPdv as { precoAtacadoCatalogo?: number | null } | undefined
   const v = meta?.precoAtacadoCatalogo
@@ -39,6 +46,7 @@ export function recalcularPrecoItemLocal(
       ativo: true,
       preco_varejo: precoVarejo,
       preco_atacado: resolverPrecoAtacadoItem(item),
+      quantidade_gatilho_atacado: resolverGatilhoAtacadoItem(item),
     },
     novaQuantidade,
     snap,

@@ -9,7 +9,6 @@
 - Segurança (plataforma): `pg_stat_statements` expõe texto de consultas a `PUBLIC`, e `net` deixa `anon` enfileirar HTTP. Ambos são do Supabase; pedir a revogação a quem administra o projeto
 - Regressão preexistente: `anon` não tem `INSERT` em `commercial_leads`, então o formulário comercial do site falha. Decidir se concede o INSERT (policy já existe) ou desativa o formulário
 - PDV-100 D-07: PIX e cartão geram recebível PENDENTE sem conta, porque a loja não tem `contas_financeiras` nem `financeiro_contas_forma` configurados. Configurar contas no ambiente e decidir se a venda deve bloquear sem conta (`docs/qa/PDV_100_1_DEFEITOS_E_DECISOES.md`)
-- PDV-100 D-11 (decisão): `produtos.preco_atacado` (17,90) é ignorado na venda; só as faixas de `precos_atacado` contam. Escolher a fonte oficial do atacado antes de liberar
 - PDV-100 D-05 (decisão): o troco e o valor recebido não são persistidos. Proposta com coluna nova em `vendas_pagamentos` e mudança no RPC v4 em `docs/qa/PDV_100_1_DEFEITOS_E_DECISOES.md`; depende de aprovação (migration + SSoT do fechamento)
 - Sprint final (golden flow do PDV): trabalho recuperado em `claude/jinlong-pdv-operational-validation-56c18a` (GO-LIVE-01, 44 commits à frente da main, publicado em 2026-11-05). Ainda não executado nesta sessão: stack E2E isolada, Playwright do fluxo (login, caixa, venda, pagamento dividido, cancelamento, devolução, fechamento, estoque e financeiro), e o alerta "Não foi possível concluir" após operação efetivada
 - Inventário: 55 worktrees e ~280 branches locais; muitos trabalhos sem upstream (ex.: `feat/pr2d-caixas-elegiveis-rpc` +32, `codex/pdv-pagamentos-desconto` +2, `claude/troca-reposicao-caixa-gerente` +1). Consolidar em uma solução por tema antes de novas implementações; não apagar worktrees de outros trabalhos
@@ -30,6 +29,8 @@
 - Decidir o lote de segurança das migrations 20261028100000–20261104180000 (adiadas no manifesto): a 20261104120000 (privilégios de anon) está aberta em produção e é a prioridade; depois 20261028110000, 20261028122000 e a cadeia de leads
 
 ## P1 — Falta para lançar (MVP)
+
+- D-11 (fonte única de atacado, PDV-100 D-11): desenho, migration `20261107120000` (com rollback, adiada no manifesto) e testes prontos na branch `claude/d11-atacado-fonte-unica-925cb7`, sem aplicação. Antes de qualquer aplicação: inventário de produção (`precos_atacado`, faixas de loja, multi-faixas) autorizado pelo dono; revisar o plano `d11_plano_migracao_faixas_atacado()`; corrigir os 6 produtos com `preco_atacado` e `quantidade_gatilho_atacado = 0` em homologação; ligar a seleção manual ao PDV; validar `sync-outbox` com o novo campo em homologação. Detalhes em `docs/planos/D11_ATACADO_FONTE_UNICA.md`
 
 - PDV-100 D-04 (decisão de produto): o carrinho aceita quantidade fracionada em qualquer produto, inclusive `unidade_medida = UN` (ex.: 2,5 chaleiras). Decidir se bloqueia por unidade ou mantém (balança)
 - PDV-100 D-05: `vendas_pagamentos` grava só o valor líquido. Persistir valor recebido e troco para auditar o dinheiro
@@ -109,6 +110,7 @@
 - Mostrar as parcelas do crédito no detalhe da venda (admin) e na 2ª via, depois da coluna existir na homologação
 
 ## Feito
+- 2026-11-07 — D-11 (fonte única de atacado): migration, rollback, testes PGlite e paridade TS/SQL na branch, sem aplicar; estratégia de migração depende do inventário de produção não autorizado
 - 2026-11-05 — 12 migrations da main (20261028100000 a 20261104180000) adiadas no manifesto: 8 de segurança (prioridade do dono) e 4 de funcionalidade; nenhuma aplicada em produção
 - 2026-11-02 — 4 migrations (`20261029155000`, `20261030120000`, `20261030130000`, `20261030140000`) adiadas no manifesto, com dependências e condição de aplicação; verificado em produção por leitura: ausentes, sem aplicação parcial. Teste de sessão sem JWT adicionado à troca de operador (17 testes)
 - 2026-11-05 — PR #655: types drift corrigido (`823142b6`, regenerado do artefato do CI); merge com a main (`24ba7082`) e push na branch do PR. Restam os gates de governança (label `deploy-prod:aprovado` e migrations `remote_ausente`)
@@ -118,4 +120,3 @@
 - 2026-11-05 — GO-LIVE-01: golden flow operacional executado na cópia `sec_gf01` (roteiro `backend/scripts/go-live-01-golden-flow.test.sql`, 34 asserções OK). Matriz e veredito NO-GO em `docs/qa/GO_LIVE_01_GOLDEN_FLOW.md`; E2E de interface bloqueado
 - 2026-11-04 — GO-LIVE-01: gate financeiro 35/35 na cópia `sec_gl01` com a migration `20261104180000` (títulos, caixa e produto fora do escopo respondem como inexistente). Commits locais `7d35133c` (fix) e `b41ca18a` (fixtures). Evidência em `docs/qa/evidencias/go-live-01_gate_financeiro_35_35.txt`
 - 2026-11-04 — Rollbacks de `20261028100000` e `20261028101000` escritos em `backend/supabase/rollback/` e testados em transação com ROLLBACK no banco local; rollback de `20261029155000` (em `ops/`) corrigido e testado. Homolog não alterado: aplicação interrompida por drift pré-existente
-- 2026-11-03 — PDV-100: a quantidade digitada no carrinho não corrompe mais o valor e apagar o campo não remove o item (`CaixaCartList.tsx`, 2 testes de regressão; `app/caixa` 393/393). Validação operacional em `docs/qa/PDV_100_RELATORIO_VALIDACAO.md`: NO-GO
