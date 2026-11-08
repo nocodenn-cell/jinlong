@@ -129,9 +129,11 @@ for (const locale of LOCALES) {
     })
 
     test('servidor real sem configuração: /pedido-demo responde 503 not_configured e valida', async ({ request }) => {
-      const ok = await request.post('/pedido-demo', { data: { name: 'Li Wei', store: 'Loja', contact: '11912345678', channel: 'whatsapp', segment: 'importados', idioma: locale, locale } })
+      // A rota só aceita a origem pública do site (verificação de origem); o e2e envia essa origem explicitamente.
+      const origem = process.env.NEXT_PUBLIC_SITE_URL?.trim() || 'https://jinlong.app'
+      const ok = await request.post('/pedido-demo', { data: { name: 'Li Wei', store: 'Loja', contact: '11912345678', channel: 'whatsapp', segment: 'importados', idioma: locale, locale }, headers: { origin: origem } })
       expect([503, 429]).toContain(ok.status())
-      const bad = await request.post('/pedido-demo', { data: { name: '', channel: 'x' }, headers: { 'x-forwarded-for': `10.0.0.${Math.floor(Math.random() * 250)}` } })
+      const bad = await request.post('/pedido-demo', { data: { name: '', channel: 'x' }, headers: { origin: origem, 'x-forwarded-for': `10.0.0.${Math.floor(Math.random() * 250)}` } })
       expect([400, 429]).toContain(bad.status())
     })
 

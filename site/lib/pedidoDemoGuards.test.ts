@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest'
-import { clientIpFrom, linhaDeLog, origemPermitida, origensPermitidas } from './pedidoDemoGuards'
+import { clientIpFrom, ehJson, linhaDeLog, origemPermitida, origensPermitidas } from './pedidoDemoGuards'
+
+describe('ehJson', () => {
+  it('aceita application/json com ou sem parâmetros e sem diferenciar caixa', () => {
+    expect(ehJson('application/json')).toBe(true)
+    expect(ehJson('application/json; charset=utf-8')).toBe(true)
+    expect(ehJson('APPLICATION/JSON')).toBe(true)
+  })
+  it('recusa text/plain com parâmetro application/json (CORS-safelisted) e ausência de cabeçalho', () => {
+    expect(ehJson('text/plain;foo=application/json')).toBe(false)
+    expect(ehJson('text/plain')).toBe(false)
+    expect(ehJson('application/jsonx')).toBe(false)
+    expect(ehJson(null)).toBe(false)
+  })
+})
 
 const headers = (h: Record<string, string>) => {
   const m = new Map(Object.entries(h).map(([k, v]) => [k.toLowerCase(), v]))

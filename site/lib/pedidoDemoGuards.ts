@@ -31,6 +31,16 @@ export function clientIpFrom(headers: HeaderSource): string {
   return 'sem-ip'
 }
 
+/**
+ * Content-Type exatamente application/json (essência do media type, sem parâmetros, sem diferenciar caixa).
+ * text/plain;foo=application/json NÃO passa: text/plain é CORS-safelisted, então um site de terceiros conseguiria
+ * enviar corpo JSON sem preflight se o servidor aceitasse uma substring.
+ */
+export function ehJson(contentType: string | null): boolean {
+  const essencia = (contentType ?? '').split(';')[0] ?? ''
+  return essencia.trim().toLowerCase() === 'application/json'
+}
+
 /** Origens aceitas para o POST: a origem pública do site e, opcionalmente, origens extras (previews), separadas por vírgula. */
 export function origensPermitidas(siteUrl: string, extras?: string): string[] {
   const set = new Set<string>()
