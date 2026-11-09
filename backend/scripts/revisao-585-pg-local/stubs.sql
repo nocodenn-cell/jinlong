@@ -12,3 +12,6 @@ CREATE TABLE public.produtos (id uuid DEFAULT gen_random_uuid(), nome text, prec
 CREATE FUNCTION public.fp_pode_empresa(uuid) RETURNS boolean LANGUAGE sql AS $$ SELECT true $$;
 CREATE FUNCTION public.fp_empresa_contexto(uuid DEFAULT NULL) RETURNS uuid LANGUAGE sql AS $$ SELECT NULL::uuid $$;
 CREATE FUNCTION public.plataforma_provisionar_empresa(jsonb, uuid) RETURNS jsonb LANGUAGE sql AS $$ SELECT '{}'::jsonb $$;
+-- usado por internal.token_gerente_fora_da_loja (fronteira de empresa, 20261028100000)
+CREATE OR REPLACE FUNCTION public.fp_empresa_da_loja(p_loja uuid) RETURNS uuid LANGUAGE sql STABLE SECURITY DEFINER
+  SET search_path = public, pg_temp AS $$ SELECT l.empresa_id FROM public.lojas l WHERE l.id = p_loja $$;

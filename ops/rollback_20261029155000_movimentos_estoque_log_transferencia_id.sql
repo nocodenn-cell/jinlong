@@ -14,11 +14,11 @@ BEGIN
     p_loja_origem, p_produto_id, 'TRANSFERENCIA_SAIDA', -p_quantidade, NULL, v_uid, p_observacao
   ) RETURNING id INTO v_transferencia_id;$r$);
   v_def := regexp_replace(v_def,
-    $e$INSERT INTO public\.movimentos_estoque_log\s*\(\s*loja_id\s*,\s*produto_id\s*,\s*tipo_codigo\s*,\s*quantidade_delta\s*,\s*remessa_id\s*,\s*usuario_id\s*,\s*observacao\s*,\s*transferencia_id\s*\)\s*VALUES\s*\(\s*p_loja_destino\s*,\s*p_produto_id\s*,\s*'TRANSFERENCIA_ENTRADA'\s*,\s*p_quantidade\s*,\s*NULL\s*,\s*v_uid\s*,\s*p_observacao\s*,\s*v_transferencia_id\s*\)\s*;$e$,
+    $e$INSERT INTO public\.movimentos_estoque_log\s*\(\s*loja_id\s*,\s*produto_id\s*,\s*tipo_codigo\s*,\s*quantidade_delta\s*,\s*remessa_id\s*,\s*usuario_id\s*,\s*observacao\s*,\s*transferencia_id\s*\)\s*VALUES\s*\(\s*p_loja_destino\s*,\s*([a-z_]+)\s*,\s*'TRANSFERENCIA_ENTRADA'\s*,\s*p_quantidade\s*,\s*NULL\s*,\s*v_uid\s*,\s*p_observacao\s*,\s*v_transferencia_id\s*\)\s*;$e$,
     $r$INSERT INTO public.movimentos_estoque_log (
     loja_id, produto_id, tipo_codigo, quantidade_delta, remessa_id, usuario_id, observacao
   ) VALUES (
-    p_loja_destino, p_produto_id, 'TRANSFERENCIA_ENTRADA', p_quantidade, NULL, v_uid, p_observacao
+    p_loja_destino, \1, 'TRANSFERENCIA_ENTRADA', p_quantidade, NULL, v_uid, p_observacao
   );$r$);
   -- Só os trechos que a migration introduz (transferencias_idempotencia também tem "transferencia_id ) VALUES").
   IF v_def ~ 'gen_random_uuid\(\)' OR v_def ~ 'p_observacao\s*,\s*v_transferencia_id' THEN

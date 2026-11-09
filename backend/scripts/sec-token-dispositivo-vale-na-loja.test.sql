@@ -26,7 +26,9 @@ INSERT INTO public.usuario_vinculos (usuario_id, empresa_id, loja_id, papel, ati
   ('fd200000-0000-4000-8000-000000000001', 'fd000001-0000-4000-8000-000000000001', 'fd100001-0000-4000-8000-000000000001', 'GERENTE', true),
   ('fd200000-0000-4000-8000-000000000002', 'fd000001-0000-4000-8000-000000000001', 'fd100001-0000-4000-8000-000000000001', 'GERENTE', false),
   ('fd200000-0000-4000-8000-000000000003', 'fd000001-0000-4000-8000-000000000001', 'fd100002-0000-4000-8000-000000000002', 'GERENTE', true),
-  ('fe200000-0000-4000-8000-000000000001', 'fd000002-0000-4000-8000-000000000002', 'fe100001-0000-4000-8000-000000000001', 'GERENTE', true);
+  ('fe200000-0000-4000-8000-000000000001', 'fd000002-0000-4000-8000-000000000002', 'fe100001-0000-4000-8000-000000000001', 'GERENTE', true)
+  -- o gatilho de usuarios já cria vínculos pelo perfil/loja: não duplicar
+ON CONFLICT DO NOTHING;
 
 -- Tokens de dispositivo (criado_por NULL): T1 válido em D1; T2 sem aprovador; T3 aprovador inativo; T4 sem loja.
 INSERT INTO public.tokens_desconto_gerente (token, expira_em, usado, loja_id, criado_por, aprovador_id) VALUES

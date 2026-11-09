@@ -16,6 +16,7 @@
 
 \set ON_ERROR_STOP on
 BEGIN;
+INSERT INTO public.empresas (id, nome) VALUES ('fa5e0000-0000-4000-8000-0000000000f1', 'Fixture empresa (suite SQL)') ON CONFLICT (id) DO NOTHING;
 
 DO $setup$
 DECLARE
@@ -24,7 +25,7 @@ DECLARE
 BEGIN
   INSERT INTO auth.users (id) VALUES (v_operador) ON CONFLICT (id) DO NOTHING;
 
-  INSERT INTO public.lojas (id, nome, codigo, ativo) VALUES (v_loja, 'GateA02 Loja', 'GATEA02', true)
+  INSERT INTO public.lojas (empresa_id, id, nome, codigo, ativo) VALUES ('fa5e0000-0000-4000-8000-0000000000f1', v_loja, 'GateA02 Loja', 'GATEA02', true)
   ON CONFLICT (id) DO UPDATE SET ativo = true;
 
   INSERT INTO public.usuarios (id, nome, perfil, ativo, loja_id)

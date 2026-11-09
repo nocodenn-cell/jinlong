@@ -29,11 +29,13 @@ GER="f9$(printf '%06x' $((RANDOM*RANDOM % 16777215)))-0000-4000-8000-00000000000
 OP="fa$(printf '%06x' $((RANDOM*RANDOM % 16777215)))-0000-4000-8000-000000000003"
 PROD="fb$(printf '%06x' $((RANDOM*RANDOM % 16777215)))-0000-4000-8000-000000000004"
 CAT="fc$(printf '%06x' $((RANDOM*RANDOM % 16777215)))-0000-4000-8000-000000000005"
+EMP="fd$(printf '%06x' $((RANDOM*RANDOM % 16777215)))-0000-4000-8000-000000000006"
 
 echo "== setup (commitado, banco descartável)"
 $P <<SQL >/dev/null
-INSERT INTO public.categorias (id, nome) VALUES ('$CAT', 'conc $SUF');
-INSERT INTO public.lojas (id, nome, codigo, ativo) VALUES ('$LOJA', 'conc $SUF', 'CONC$SUF', true);
+INSERT INTO public.empresas (id, nome) VALUES ('$EMP', 'conc $SUF');
+INSERT INTO public.categorias (id, nome, empresa_id) VALUES ('$CAT', 'conc $SUF', '$EMP');
+INSERT INTO public.lojas (id, nome, codigo, ativo, empresa_id) VALUES ('$LOJA', 'conc $SUF', 'CONC$SUF', true, '$EMP');
 INSERT INTO auth.users (id) VALUES ('$GER'), ('$OP');
 INSERT INTO public.usuarios (id, nome, perfil, ativo, loja_id) VALUES ('$GER', 'conc ger', 'GERENTE', true, '$LOJA'), ('$OP', 'conc op', 'OPERADOR', true, '$LOJA');
 INSERT INTO public.produtos (id, codigo_barras, nome, categoria_id, preco_varejo, origem, tem_nf, ativo, loja_id)

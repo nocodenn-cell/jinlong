@@ -24,8 +24,12 @@
     {
       "version": "20261029155000",
       "file": "backend/supabase/migrations/20261029155000_movimentos_estoque_log_transferencia_id.sql",
-      "reason": "Rastreabilidade de transferencias no kardex (issue #586). Altera internal.transferir_estoque_seguro, que move saldo entre lojas. Sem arquivo de rollback.",
+      "reason": "Rastreabilidade de transferencias no kardex (issue #586, PR #629). Adiciona movimentos_estoque_log.transferencia_id e reescreve internal.transferir_estoque_seguro, que move saldo entre lojas. Ausente em producao (verificado por leitura em 2026-11-02). Sem arquivo de rollback.",
       "owner": "Damatta (dono do produto)",
+      "dependencies": [
+        "20261029150000 (G14, ja aplicada em producao via lote de 2026-10-29; a migration foi reordenada para depois dela)",
+        "20261029120000 (S1, ja aplicada)"
+      ],
       "releaseCondition": "(a) arquivo de rollback criado e testado (remove coluna e restaura a funcao anterior) em banco descartavel; (b) testes de transferencia (saida e entrada com mesmo transferencia_id, saldo e idempotencia inalterados) verdes em homologacao; (c) PR que remove esta entrada com label deploy-prod:aprovado.",
       "decisionDoc": "docs/ops/MIGRATIONS_ADIADAS_2026-11-05.md"
     },
@@ -34,32 +38,90 @@
       "file": "backend/supabase/migrations/20261030100000_sec_token_dispositivo_vale_na_loja.sql",
       "reason": "Token emitido pelo dispositivo do PDV (validar_gerente) passa a valer na loja. Corrige bloqueio indevido do sync-outbox, mas muda regra de autorizacao de desconto. Depende de 20261028120100 (ja na mesma tranche de seguranca).",
       "owner": "Damatta (dono do produto)",
+      "dependencies": [
+        "20261028120100 (fora deste manifesto: ver docs/ops/MIGRATIONS_ADIADAS_2026-11-05.md)"
+      ],
       "releaseCondition": "(a) aprovacao especifica do dono sobre a regra de token de dispositivo, registrada no decisionDoc; (b) validacao presencial no PDV com token de dispositivo e com token de gerente fora da loja (deve recusar); (c) 20261028120100 aplicada antes; (d) PR que remove esta entrada com label deploy-prod:aprovado.",
       "decisionDoc": "docs/ops/MIGRATIONS_ADIADAS_2026-11-05.md"
     },
     {
       "version": "20261030120000",
       "file": "backend/supabase/migrations/20261030120000_nfe_conciliacao_duplicatas.sql",
-      "reason": "Conciliacao financeira da NF-e: duplicatas que nao somam o valor da NF geram conta a pagar errada (NF 100,00 com duplicata 60,00). Depende da consolidacao da NF-e (PR #653), ainda nao mergeada, e da S2 ja aplicada.",
+      "reason": "Conciliacao financeira da NF-e: duplicatas que nao somam o valor da NF geram conta a pagar errada (NF 100,00 com duplicata 60,00, reproduzido em homologacao em 2026-10-30). Altera internal.confirmar_importacao_nfe. Depende da consolidacao da NF-e (PR #653), ainda nao mergeada, e da S2 ja aplicada (20261029202813).",
       "owner": "Damatta (dono do produto)",
-      "releaseCondition": "(a) decisao do dono sobre o PR #653 registrada no decisionDoc; (b) teste SQL de conciliacao (duplicata menor, maior e dentro da tolerancia de 0,01) verde em homologacao; (c) confirmacao de que nenhuma NF-e em producao ficaria pendente sem duplicatas; (d) PR que remove esta entrada com label deploy-prod:aprovado.",
+      "dependencies": [
+        "internal.confirmar_importacao_nfe (existente em producao, com a S2 aplicada como 20261029202813)"
+      ],
+      "releaseCondition": "(a) decisao do dono sobre o PR #653 registrada no decisionDoc; (b) testes de conciliacao (duplicatas x valor exigivel, tolerancia R$ 0,01) adaptados ao esquema atual e verdes em homologacao (os scripts de NF-e de 2026-10-30 nao rodam no esquema atual); (c) confirmacao de que nenhuma NF-e em producao ficaria pendente sem duplicatas; (d) PR que remove esta entrada com label deploy-prod:aprovado.",
       "decisionDoc": "docs/ops/MIGRATIONS_ADIADAS_2026-11-05.md"
     },
     {
       "version": "20261030130000",
       "file": "backend/supabase/migrations/20261030130000_nfe_precisao_documental.sql",
-      "reason": "Precisao documental da NF-e: altera importar_nfe_transacao e o custo unitario (caso 7 x 3,335). Depende do parser (pdv-importados/lib/nfe/nfeParser.ts) ler vProd; banco sem o parser novo gera divergencia artificial.",
+      "reason": "Precisao documental da NF-e: adiciona colunas de precisao em importacoes_nfe_itens e altera importar_nfe_transacao e o custo unitario (caso 7 x 3,335). Depende do parser (pdv-importados/lib/nfe/nfeParser.ts) ler vProd; banco sem o parser novo gera divergencia artificial.",
       "owner": "Damatta (dono do produto)",
-      "releaseCondition": "(a) app pdv-importados com o parser que le vProd publicado e validado; (b) teste do caso 7 x 3,335 (custo sem arredondamento previo) verde em homologacao; (c) teste de importacao existente sem regressao; (d) PR que remove esta entrada com label deploy-prod:aprovado.",
+      "dependencies": [
+        "public.importacoes_nfe_itens (existente em producao)",
+        "Base da 20261030140000 (usa as colunas criadas aqui)"
+      ],
+      "releaseCondition": "(a) app pdv-importados com o parser que le vProd publicado e validado; (b) teste do caso 7 x 3,335 (custo sem arredondamento previo) verde em homologacao com o esquema atual; (c) teste de importacao existente sem regressao; (d) PR que remove esta entrada com label deploy-prod:aprovado.",
       "decisionDoc": "docs/ops/MIGRATIONS_ADIADAS_2026-11-05.md"
     },
     {
       "version": "20261030140000",
       "file": "backend/supabase/migrations/20261030140000_nfe_qtd_precisao.sql",
-      "reason": "Politica de quantidade comercial da NF-e: recusa importacao quando qCom x fator nao cabe em 3 casas de estoque (IMPORT_NFE_QTD_PRECISAO). A mensagem orientando o usuario depende do codigo da app; a app ainda nao foi verificada contra esta migration.",
+      "reason": "Politica de quantidade comercial da NF-e: recusa importacao quando qCom x fator nao cabe em 3 casas de estoque (IMPORT_NFE_QTD_PRECISAO). Adiciona quantidade_comercial_documento e unidade_comercial em importacoes_nfe_itens com CHECK. A mensagem orientando o usuario depende do codigo da app; a app ainda nao foi verificada contra esta migration.",
       "owner": "Damatta (dono do produto)",
-      "releaseCondition": "(a) app pdv-importados com a mensagem IMPORT_NFE_QTD_PRECISAO publicada e validada; (b) teste de qCom 1,0004 x 1000,00 recusado e de qCom comum aceito, em homologacao; (c) PR que remove esta entrada com label deploy-prod:aprovado.",
+      "dependencies": [
+        "20261030130000 (deve ser aplicada antes: usa as colunas de precisao documental)",
+        "public.importacoes_nfe_itens (existente em producao)"
+      ],
+      "releaseCondition": "(a) app pdv-importados com a mensagem IMPORT_NFE_QTD_PRECISAO publicada e validada; (b) teste de qCom 1,0004 x 1000,00 recusado e de qCom comum aceito, em homologacao; (c) 20261030130000 aplicada antes; (d) PR que remove esta entrada com label deploy-prod:aprovado.",
       "decisionDoc": "docs/ops/MIGRATIONS_ADIADAS_2026-11-05.md"
+    },
+    {
+      "version": "20261104120000",
+      "file": "backend/supabase/migrations/20261104120000_sec_anon_privilegios_minimos.sql",
+      "reason": "SEGURANCA (adiamento vindo da main, a confirmar pelo dono). CRITICO: privilegios minimos para anon. Confirmado que anon lia agregados de vendas de todas as empresas (v_vendas_dia). Remove grants de anon em 63 tabelas e 12 views.",
+      "dependencies": [],
+      "releaseCondition": "Autorizacao explicita do dono para aplicar o lote de seguranca em producao (runbook manual, janela autorizada, schema_migrations com a versao real), apos validacao em homologacao; depois PR que remove a entrada com label deploy-prod:aprovado."
+    },
+    {
+      "version": "20261104150000",
+      "file": "backend/supabase/migrations/20261104150000_commercial_leads_registro_rpc.sql",
+      "reason": "SEGURANCA (adiamento vindo da main, a confirmar pelo dono). SEC-02: registro de leads do site sem INSERT direto para anon; unico caminho publico e a RPC registrar_lead_comercial. Depende de a 20261104120000 ser aplicada antes e de o site usar a RPC.",
+      "dependencies": [
+        "20261104120000"
+      ],
+      "releaseCondition": "Autorizacao explicita do dono para aplicar o lote de seguranca em producao (runbook manual, janela autorizada, schema_migrations com a versao real), apos validacao em homologacao; depois PR que remove a entrada com label deploy-prod:aprovado."
+    },
+    {
+      "version": "20261104160000",
+      "file": "backend/supabase/migrations/20261104160000_commercial_leads_idempotencia.sql",
+      "reason": "FUNCIONALIDADE. JL-COM-03: idempotencia do registro de leads (evita leads duplicados em reenvio). Altera a mesma RPC da 20261104150000.",
+      "dependencies": [
+        "20261104150000"
+      ],
+      "releaseCondition": "Autorizacao explicita do dono + validacao em homologacao + PR que remove a entrada com label deploy-prod:aprovado."
+    },
+    {
+      "version": "20261104170000",
+      "file": "backend/supabase/migrations/20261104170000_commercial_leads_rate_limit.sql",
+      "reason": "SEGURANCA (adiamento vindo da main, a confirmar pelo dono). JL-COM-03: rate limit compartilhado no registro de leads (hash de IP, sem IP em texto puro). Altera a mesma RPC; dentro da cadeia de leads.",
+      "dependencies": [
+        "20261104150000",
+        "20261104160000"
+      ],
+      "releaseCondition": "Autorizacao explicita do dono para aplicar o lote de seguranca em producao (runbook manual, janela autorizada, schema_migrations com a versao real), apos validacao em homologacao; depois PR que remove a entrada com label deploy-prod:aprovado."
+    },
+    {
+      "version": "20261104180000",
+      "file": "backend/supabase/migrations/20261104180000_go_live01_titulo_caixa_fora_do_escopo.sql",
+      "reason": "SEGURANCA (adiamento vindo da main, a confirmar pelo dono). GO-LIVE-01: titulo ou caixa fora do escopo responde igual a inexistente (evita revelar existencia de recurso de outra loja).",
+      "dependencies": [
+        "20261104120000 (ordem)"
+      ],
+      "releaseCondition": "Autorizacao explicita do dono para aplicar o lote de seguranca em producao (runbook manual, janela autorizada, schema_migrations com a versao real), apos validacao em homologacao; depois PR que remove a entrada com label deploy-prod:aprovado."
     }
   ]
 }
