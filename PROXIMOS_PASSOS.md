@@ -2,6 +2,7 @@
 
 ## P0 — Quebrado/travado
 
+- Drift `migration-remote-drift` (PR #659): o check aponta para `yvdilcmxyjafnnsfdtam` (homolog, inferido pela coincidência das 27 versões; confirmar o valor do secret `SUPABASE_MIGRATION_CHECK_PROJECT_REF`, atualizado em 2026-11-06). Bloqueios: 10 adiadas aplicadas no homolog (`adiada_aplicada`, regra de produção aplicada ao homolog) e 12 versões sem par. Proposta de correção para revisão do dono; label `deploy-prod:aprovado` segue pendente.
 - PR #655: label `deploy-prod:aprovado` aplicado pelo dono (2026-11-05). Pendente: migrations `remote_ausente` (`migration-remote-drift` continua vermelho) (`20261028100000`–`20261030140000`, no `migration-remote-drift`). Types drift já corrigido em `823142b6`
 - Drift de migrations em produção: `jinlong` (`kbabmewnahysfvlybiak`) continua com 11 migrations sem registro e o check `migration-remote-drift` vermelho. Homolog já está reconciliado (481 versões, 31 aplicadas e registradas em 2026-11-04). Produção só com decisão e autorização próprias. Detalhes e matriz em `docs/runbooks/RECONCILIACAO_HOMOLOG_2026-11-04.md`
 - Homologação funcional incompleta: falta login real com contas de teste e os fluxos de escrita (PDV, vendas em espera, estoque, NF-e, financeiro, cancelamentos, concorrência). Só isolamento RLS e privilégios foram verificados (`docs/runbooks/RECONCILIACAO_HOMOLOG_2026-11-04.md`, seção 11)
