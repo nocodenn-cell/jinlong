@@ -10,7 +10,9 @@
 **/.env
 **/.env.local
 **/.env.*.local
+**/.env.capacity
 !**/.env.example
+!**/.env.staging.example
 
 # Logs e cache
 *.log

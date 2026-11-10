@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { assertCapacityTargetFromEnv } from './capacity-target-guard.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = path.resolve(__dirname, '..')
@@ -62,6 +63,14 @@ export function requireSupabaseEnv(): SupabaseEnv {
       'Defina SEED_DEV_PASSWORD ou PLAYWRIGHT_TEST_PASSWORD para autenticar o operador.',
     )
   }
+
+  // STG-01: stress/gate nunca apontam para produção (localhost ok; remoto exige allowlist).
+  const local = /localhost|127\.0\.0\.1|0\.0\.0\.0/.test(url)
+  if (!local) {
+    if (!process.env.CAPACITY_ENV) process.env.CAPACITY_ENV = 'staging'
+    assertCapacityTargetFromEnv(process.env)
+  }
+
   return { url, serviceKey, anonKey, operadorEmail, operadorPassword, gerenteEmail }
 }
 
