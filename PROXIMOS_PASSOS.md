@@ -3,6 +3,11 @@
 ## P0 — Quebrado/travado
 
 - Auditoria de prontidão comercial (2026-11-06, somente leitura): veredito NÃO PODE ENTRAR; 35% de prontidão por área. Bloqueadores P0-1 a P0-10 em `docs/auditorias/AUDITORIA_PRONTIDAO_COMERCIAL_2026-11-06.md` (§5). Aplicar `20261104120000` em produção com autorização é o primeiro item. Plano por fases A–F e decisões D-04 a D-15 em `docs/auditorias/PLANO_LIBERACAO_PRIMEIRO_CLIENTE_2026-11-06.md`; decisões do dono são a primeira pendência
+- Auditoria GitHub (2026-11-11, `docs/governance/GITHUB_AUDIT.md`): a proteção de `main` não exige nenhuma aprovação humana (só os 6 checks). Decidir revisão obrigatória + CODEOWNERS. Ação de configuração: exige autorização
+- Colisão de versão de migration (quebra `db push`/reset): `#537` × main em `20261010120000`; `#623` × main em `20261028120000`; `#675` × `#677` em `20261107120000`. Resolver antes de qualquer merge desses PRs
+- `#675` (D1–D6): não mesclar. Traz 5 migrations fora do manifesto de adiadas (`20261106100000`–`20261107120000`); o label `deploy-prod:aprovado` não autoriza deploy nem merge (regra do próprio manifesto)
+- Leads: `#677` recria `registrar_lead_comercial` e `commercial_lead_rate_check`, que `main` já tem como migrations deferidas (`20261104150000`–`170000`). Escolher a versão canônica antes de `#676`/`#677`. Os dois juntos, senão o formulário comercial segue quebrado
+- `#669` reescreve `20261104120000` (anon), que está em `main` como deferida (6.140 → 7.362 bytes); `#673` depende dela. Decidir qual versão vale
 - PR #655: label `deploy-prod:aprovado` aplicado pelo dono (2026-11-05). Pendente: migrations `remote_ausente` (`migration-remote-drift` continua vermelho) (`20261028100000`–`20261030140000`, no `migration-remote-drift`). Types drift já corrigido em `823142b6`
 - Drift de migrations em produção: `jinlong` (`kbabmewnahysfvlybiak`) continua com 11 migrations sem registro e o check `migration-remote-drift` vermelho. Homolog já está reconciliado (481 versões, 31 aplicadas e registradas em 2026-11-04). Produção só com decisão e autorização próprias. Detalhes e matriz em `docs/runbooks/RECONCILIACAO_HOMOLOG_2026-11-04.md`
 - Homologação funcional incompleta: falta login real com contas de teste e os fluxos de escrita (PDV, vendas em espera, estoque, NF-e, financeiro, cancelamentos, concorrência). Só isolamento RLS e privilégios foram verificados (`docs/runbooks/RECONCILIACAO_HOMOLOG_2026-11-04.md`, seção 11)
@@ -37,6 +42,11 @@
 - Gate de implantação: o grupo fiscal exige item `CONCLUIDO` mesmo sem fiscal, e não há item de contas e formas de pagamento (`pdv-importados/app/admin/implantacao/implantacaoCatalog.ts:74-75`; checklist, L-F1 e L-F5)
 - Plano do primeiro cliente: confirmar se inclui o recurso `financeiro` e o conteúdo real de `saas.planos`. Sem ele, a conta de PIX e cartão não pode ser criada pela tela (`docs/ops/INSTALACAO_CONTAS_FINANCEIRAS_FORMAS_PAGAMENTO.md`, R1)
 - Rollback de D4 apaga `valor_recebido` e `troco`: tirar snapshot (consulta §3.5) antes de qualquer rollback. Ensaiar a ordem D2 → D5 → D4 → D3 → D1 em homologação com backup lógico (`docs/ops/PLAYBOOK_ROLLBACK_E_SUPORTE_PRIMEIRO_CLIENTE.md`, §1 e §4)
+- Auditoria GitHub: três implementações concorrentes da mesma regra. M1 multiempresa em `#493`/`#496`/`#537`; fechamento de caixa com venda em espera em `#656` (D1 de `#675` faz o mesmo); fallback de RPC no sync-outbox em `#670`/`#674`. Escolher uma de cada
+- Auditoria GitHub: a cadeia P0 `#488`→`#498`→`#499`→`#500` tem commits contidos uns nos outros. Mesclar só `#500`, depois de corrigir o P1 do Codex; fechar os outros. Exige autorização
+- Auditoria GitHub: dependências sem sequência. Majors de actions `#636`/`#637` e `#547`/`#548`/`#549` com checks obrigatórios vermelhos; `#679` e `#546` mexem no mesmo lockfile. Mesclar em ordem (`docs/governance/GITHUB_CLEANUP_PLAN.md`, Onda 6)
+- Auditoria GitHub: branches. 21 locais com upstream removido e sem merge (risco de perda); 76 remotas com PR fechado sem merge; 27 remotas sem PR. Verificar commits únicos antes de qualquer exclusão (`docs/governance/GITHUB_CLEANUP_PLAN.md`, seção 5)
+- Auditoria GitHub: secret scanning, push protection e Dependabot alerts estão desativados num repositório público; actions sem pin por SHA. Decisão e ativação do dono
 - PDV-100 D-04 (decisão de produto): o carrinho aceita quantidade fracionada em qualquer produto, inclusive `unidade_medida = UN` (ex.: 2,5 chaleiras). Decidir se bloqueia por unidade ou mantém (balança)
 - PDV-100 D-05: `vendas_pagamentos` grava só o valor líquido. Persistir valor recebido e troco para auditar o dinheiro
 - PDV-100 D-06: venda em espera (EM_ESPERA) sobrevive ao fechamento do caixa sem aviso. Definir regra: bloquear, transferir ou descartar
@@ -92,8 +102,17 @@
 - Manual do operador: confirmar os gestos marcados como não verificados (quantidade na linha, Enter na busca, comprovante automático) e se o layout clássico está ativo (`MANUAL_OPERADOR_RESUMIDO.md`, seção de origem)
 
 ## Feito
-
+- 2026-11-11 — Auditoria dos 53 PRs abertos e das branches (somente leitura): `docs/governance/GITHUB_AUDIT.md`, `GITHUB_CLEANUP_PLAN.md` e `GITHUB_WORKFLOW.md`. Nenhuma ação no GitHub; decisões pendentes listadas no plano
 - 2026-11-07 — Documentação de instalação do primeiro cliente em `docs/ops/` (checklist F1, contas F2, usuários e PIN F3, playbook F6) e manual do operador 1.2 (F4). Nenhum código de produção alterado
+- 2026-11-07 — D2 (estorno em dinheiro de caixa fechado sai do caixa aberto) e D6 (preço de atacado exige quantidade mínima) escritas em `claude/plano-liberacao-d1-d3`, sem commit; vitest (666) e tsc passam; SQL completo não executado (sem Docker)
+- 2026-11-07 — D4 (valor recebido e troco em DINHEIRO) e D5 (PIX/cartão exigem conta financeira) escritas em `claude/plano-liberacao-d1-d3`, sem commit; teste SQL e tsc não executados (sem Docker e sem node_modules)
+- 2026-11-06 — D1 (fechamento bloqueado com venda em espera) e D3 (quantidade inteira em produto UN) escritas em `claude/plano-liberacao-d1-d3`, sem commit; teste em `backend/scripts/d1-d3-fechamento-espera-quantidade-un.test.sql` ainda não executado (sem Docker)
+- 2026-11-06 — Auditoria de prontidão comercial (somente leitura): NÃO PODE ENTRAR, 35%; relatório em docs/auditorias/AUDITORIA_PRONTIDAO_COMERCIAL_2026-11-06.md
+- 2026-11-05 — 12 migrations da main (20261028100000 a 20261104180000) adiadas no manifesto: 8 de segurança (prioridade do dono) e 4 de funcionalidade; nenhuma aplicada em produção
+- 2026-11-05 — PR #655: types drift corrigido (`823142b6`, regenerado do artefato do CI); merge com a main (`24ba7082`) e push na branch do PR. Restam os gates de governança (label `deploy-prod:aprovado` e migrations `remote_ausente`)
+- 2026-11-05 — Diagnóstico Fase 3 entregue, sem alterar produção: fluxos de escrita mapeados, catálogo de produção lido (A2 mitigada por trigger; `perfis` tem 3 linhas), plano de remediação, roadmap, matriz de testes, plano de backup. Entrada em `docs/FASE3_RELATORIO_EXECUTIVO.md`
+- 2026-11-05 — Estabilização da tranche: fixtures de 4 suítes corrigidas (todas passam), provisionamento reescrito para o contrato da 121000 (cadastro autorizado por contingência comprovado), teste de recuperação de acesso (REC-1 a REC-7), validação reproduzível em contêiner (`backend/scripts/tranche-seguranca-validar.sh`)
+
 - Revisar Termos e Privacidade (prometem emissão fiscal; fiscal é stub) e incluir o uso do contato do teste grátis pelo comercial (LGPD)
 - Provisionar empresa/loja nova para o cliente pelo wizard e validar o isolamento multiempresa (nenhum dado de outra loja visível); não usar o script de limpeza, que apaga dados de todos os tenants
 - Registrar restore drill com RTO a partir de um backup novo, tirado após a reconciliação de migrations
@@ -126,13 +145,3 @@
 - Mostrar as parcelas do crédito no detalhe da venda (admin) e na 2ª via, depois da coluna existir na homologação
 
 ## Feito
-- 2026-11-07 — D2 (estorno em dinheiro de caixa fechado sai do caixa aberto) e D6 (preço de atacado exige quantidade mínima) escritas em `claude/plano-liberacao-d1-d3`, sem commit; vitest (666) e tsc passam; SQL completo não executado (sem Docker)
-- 2026-11-07 — D4 (valor recebido e troco em DINHEIRO) e D5 (PIX/cartão exigem conta financeira) escritas em `claude/plano-liberacao-d1-d3`, sem commit; teste SQL e tsc não executados (sem Docker e sem node_modules)
-- 2026-11-06 — D1 (fechamento bloqueado com venda em espera) e D3 (quantidade inteira em produto UN) escritas em `claude/plano-liberacao-d1-d3`, sem commit; teste em `backend/scripts/d1-d3-fechamento-espera-quantidade-un.test.sql` ainda não executado (sem Docker)
-- 2026-11-06 — Auditoria de prontidão comercial (somente leitura): NÃO PODE ENTRAR, 35%; relatório em docs/auditorias/AUDITORIA_PRONTIDAO_COMERCIAL_2026-11-06.md
-- 2026-11-05 — 12 migrations da main (20261028100000 a 20261104180000) adiadas no manifesto: 8 de segurança (prioridade do dono) e 4 de funcionalidade; nenhuma aplicada em produção
-- 2026-11-02 — 4 migrations (`20261029155000`, `20261030120000`, `20261030130000`, `20261030140000`) adiadas no manifesto, com dependências e condição de aplicação; verificado em produção por leitura: ausentes, sem aplicação parcial. Teste de sessão sem JWT adicionado à troca de operador (17 testes)
-- 2026-11-05 — PR #655: types drift corrigido (`823142b6`, regenerado do artefato do CI); merge com a main (`24ba7082`) e push na branch do PR. Restam os gates de governança (label `deploy-prod:aprovado` e migrations `remote_ausente`)
-- 2026-11-05 — Diagnóstico Fase 3 entregue, sem alterar produção: fluxos de escrita mapeados, catálogo de produção lido (A2 mitigada por trigger; `perfis` tem 3 linhas), plano de remediação, roadmap, matriz de testes, plano de backup. Entrada em `docs/FASE3_RELATORIO_EXECUTIVO.md`
-- 2026-11-05 — Estabilização da tranche: fixtures de 4 suítes corrigidas (todas passam), provisionamento reescrito para o contrato da 121000 (cadastro autorizado por contingência comprovado), teste de recuperação de acesso (REC-1 a REC-7), validação reproduzível em contêiner (`backend/scripts/tranche-seguranca-validar.sh`)
-- 2026-11-05 — Tranche de segurança validada em banco descartável: SEC-04 corrigido (passa), rollbacks de 100000 e 110000 (cadeia idêntica ao baseline), definições de produção conferidas por md5; PR #660 atualizado
