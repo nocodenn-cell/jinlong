@@ -449,6 +449,96 @@
       "remoteOnlyVersion": "20261029202813",
       "reason": "S2 (D12) aplicada em produção via MCP apply_migration em 2026-10-29 (autorização explícita do responsável): schema_migrations.version gravado = timestamp real de aplicação (20261029202813); name=s2_nfe_vinculada_oc_sem_dupla_creditacao; conteúdo idêntico ao arquivo 20261029160000_s2_nfe_vinculada_oc_sem_dupla_creditacao.sql. Altera somente internal.confirmar_importacao_nfe(uuid). Pré-checagem: md5 do corpo 81896eeeee5c79aca84f240edb2b8b65 (5888 caracteres), nenhuma NF-e de produção vinculada a OC. Pós-aplicação (leitura): corpo com marcador S2 (D12), grants inalterados (EXECUTE de authenticated/service_role na wrapper pública; internal postgres/service_role).",
       "decisionDoc": "docs/regras-negocio/PLANO_APLICACAO_S2_PRODUCAO.md"
+    },
+    {
+      "gitOnlyVersion": "20261029120000",
+      "remoteOnlyVersion": "20261029153523",
+      "reason": "Reaplicação de `s1_autorizacao_vinculo_recebimento_transferencia` no homolog via MCP apply_migration, com version de timestamp diferente do arquivo local (drift de timestamp já documentado no runbook de reconciliação do homolog).",
+      "decisionDoc": "docs/runbooks/DECISOES_DRIFT_HOMOLOG_2026-11-07.md"
+    },
+    {
+      "gitOnlyVersion": "20261029130000",
+      "remoteOnlyVersion": "20261029161123",
+      "reason": "Reaplicação de `s1b_bloqueia_cnpj_distinto_todos_perfis` no homolog via MCP apply_migration, com version de timestamp diferente do arquivo local (drift de timestamp já documentado no runbook de reconciliação do homolog).",
+      "decisionDoc": "docs/runbooks/DECISOES_DRIFT_HOMOLOG_2026-11-07.md"
+    },
+    {
+      "gitOnlyVersion": "20261029130000",
+      "remoteOnlyVersion": "20261029161430",
+      "reason": "Registro de validação no homolog (rollback/reaplicação de `s1b_bloqueia_cnpj_distinto_todos_perfis`), sem arquivo próprio no repositório; a migration original está alinhada no repositório e no homolog.",
+      "decisionDoc": "docs/runbooks/DECISOES_DRIFT_HOMOLOG_2026-11-07.md"
+    },
+    {
+      "gitOnlyVersion": "20261029130000",
+      "remoteOnlyVersion": "20261029161519",
+      "reason": "Reaplicação de `s1b_bloqueia_cnpj_distinto_todos_perfis` no homolog via MCP apply_migration, com version de timestamp diferente do arquivo local (drift de timestamp já documentado no runbook de reconciliação do homolog).",
+      "decisionDoc": "docs/runbooks/DECISOES_DRIFT_HOMOLOG_2026-11-07.md"
+    },
+    {
+      "gitOnlyVersion": "20261029140000",
+      "remoteOnlyVersion": "20261029161826",
+      "reason": "Reaplicação de `s1c_conferencia_recebimento_por_vinculo` no homolog via MCP apply_migration, com version de timestamp diferente do arquivo local (drift de timestamp já documentado no runbook de reconciliação do homolog).",
+      "decisionDoc": "docs/runbooks/DECISOES_DRIFT_HOMOLOG_2026-11-07.md"
+    },
+    {
+      "gitOnlyVersion": "20261029150000",
+      "remoteOnlyVersion": "20261029162055",
+      "reason": "Reaplicação de `g14_produto_equivalencias_transferencia` no homolog via MCP apply_migration, com version de timestamp diferente do arquivo local (drift de timestamp já documentado no runbook de reconciliação do homolog).",
+      "decisionDoc": "docs/runbooks/DECISOES_DRIFT_HOMOLOG_2026-11-07.md"
+    },
+    {
+      "gitOnlyVersion": "20261029150000",
+      "remoteOnlyVersion": "20261029162335",
+      "reason": "Registro de validação no homolog (rollback/reaplicação de `g14_produto_equivalencias_transferencia`), sem arquivo próprio no repositório; a migration original está alinhada no repositório e no homolog.",
+      "decisionDoc": "docs/runbooks/DECISOES_DRIFT_HOMOLOG_2026-11-07.md"
+    },
+    {
+      "gitOnlyVersion": "20261029150000",
+      "remoteOnlyVersion": "20261029162411",
+      "reason": "Reaplicação de `g14_produto_equivalencias_transferencia` no homolog via MCP apply_migration, com version de timestamp diferente do arquivo local (drift de timestamp já documentado no runbook de reconciliação do homolog).",
+      "decisionDoc": "docs/runbooks/DECISOES_DRIFT_HOMOLOG_2026-11-07.md"
+    },
+    {
+      "gitOnlyVersion": "20261029140000",
+      "remoteOnlyVersion": "20261029162618",
+      "reason": "Registro de validação no homolog (rollback/reaplicação de `s1c_conferencia_recebimento_por_vinculo`), sem arquivo próprio no repositório; a migration original está alinhada no repositório e no homolog.",
+      "decisionDoc": "docs/runbooks/DECISOES_DRIFT_HOMOLOG_2026-11-07.md"
+    },
+    {
+      "gitOnlyVersion": "20261029140000",
+      "remoteOnlyVersion": "20261029162645",
+      "reason": "Reaplicação de `s1c_conferencia_recebimento_por_vinculo` no homolog via MCP apply_migration, com version de timestamp diferente do arquivo local (drift de timestamp já documentado no runbook de reconciliação do homolog).",
+      "decisionDoc": "docs/runbooks/DECISOES_DRIFT_HOMOLOG_2026-11-07.md"
+    },
+    {
+      "gitOnlyVersion": "20261029160000",
+      "remoteOnlyVersion": "20261029175741",
+      "reason": "Reaplicação de `s2_nfe_vinculada_oc_sem_dupla_creditacao` no homolog via MCP apply_migration, com version de timestamp diferente do arquivo local (drift de timestamp já documentado no runbook de reconciliação do homolog).",
+      "decisionDoc": "docs/runbooks/DECISOES_DRIFT_HOMOLOG_2026-11-07.md"
+    },
+    {
+      "gitOnlyVersion": "20261029120000",
+      "remoteOnlyVersion": "20261029163941",
+      "reason": "Reaplicação de `reaplica_s1_autorizacao_vinculo` no homolog. Conteúdo SQL idêntico (md5) ao de 20261029153523, já pareada.",
+      "decisionDoc": "docs/runbooks/DECISOES_DRIFT_HOMOLOG_2026-11-07.md"
+    },
+    {
+      "gitOnlyVersion": "20261029130000",
+      "remoteOnlyVersion": "20261029163953",
+      "reason": "Reaplicação de `reaplica_s1b_apos_validacao_s1` no homolog. Conteúdo idêntico (md5) ao de 20261029161123, já pareada.",
+      "decisionDoc": "docs/runbooks/DECISOES_DRIFT_HOMOLOG_2026-11-07.md"
+    },
+    {
+      "gitOnlyVersion": "20261029150000",
+      "remoteOnlyVersion": "20261029164014",
+      "reason": "Reaplicação de `reaplica_g14_apos_validacao_s1` no homolog. Conteúdo idêntico (md5) ao de 20261029162055, já pareada.",
+      "decisionDoc": "docs/runbooks/DECISOES_DRIFT_HOMOLOG_2026-11-07.md"
+    },
+    {
+      "gitOnlyVersion": "20261029130000",
+      "remoteOnlyVersion": "20261029163827",
+      "reason": "Rollback de validação `rollback_s1b_para_validar_s1` no homolog. Conteúdo idêntico (md5) ao de 20261029161430, já pareada.",
+      "decisionDoc": "docs/runbooks/DECISOES_DRIFT_HOMOLOG_2026-11-07.md"
     }
   ]
 }

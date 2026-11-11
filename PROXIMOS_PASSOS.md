@@ -2,7 +2,7 @@
 
 ## P0 — Quebrado/travado
 
-- Drift `migration-remote-drift` (PR #659): alvo confirmado pelo step do CI (secret = homolog `yvdilcmxyjafnnsfdtam`, sem expor valor). `adiada_aplicada` no homolog virou aviso (`41d112eb`). Continua vermelho por 27 versões só no homolog: 15 cobertas pelo registro `59c6508d` (fora desta branch) e 12 sem par, das quais 7 sem origem (`docs/runbooks/DRIFT_HOMOLOG_27_VERSOES_ORIGEM_2026-11-09.md`). Label `deploy-prod:aprovado` pendente
+- Drift `migration-remote-drift` (PR #659): alvo confirmado pelo step do CI (secret = homolog `yvdilcmxyjafnnsfdtam`, sem expor valor). `adiada_aplicada` no homolog virou aviso (`41d112eb`). Continua vermelho por 27 versões só no homolog: 15 cobertas pelo registro `59c6508d` (trazido para o PR em 2026-11-11) e 12 sem par, das quais 7 sem origem (`docs/runbooks/DRIFT_HOMOLOG_27_VERSOES_ORIGEM_2026-11-09.md`). Label `deploy-prod:aprovado` pendente
 - Auditoria GitHub (2026-11-11, `docs/governance/GITHUB_AUDIT.md`): a proteção de `main` não exige nenhuma aprovação humana (só os 6 checks). Decidir revisão obrigatória + CODEOWNERS. Ação de configuração: exige autorização
 - Colisão de versão de migration (quebra `db push`/reset): `#537` × main em `20261010120000`; `#623` × main em `20261028120000`; `#675` × `#677` em `20261107120000`. Resolver antes de qualquer merge desses PRs
 - `#675` (D1–D6): não mesclar. Traz 5 migrations fora do manifesto de adiadas (`20261106100000`–`20261107120000`); o label `deploy-prod:aprovado` não autoriza deploy nem merge (regra do próprio manifesto)

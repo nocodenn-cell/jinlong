@@ -40,7 +40,7 @@ As 27 versões se dividem em:
 | 20261107205702 | commercial_leads_rate_limit | arquivo `20261104170000_…` (commit `3dd427a1`) | nome; conteúdo não comparado |
 | 20261107210926 | commercial_leads_remove_anon_insert_policy | commit `60205a0b` (branch `claude/leads-migrations-servico-ip`) | SQL `20261107120000_…`, removido depois em `09bce7e8` |
 
-Tudo acima fora desta branch: `59c6508d`, `367916c9`, `60205a0b` e `d174cc6b` não estão em `main` nem neste PR.
+Atualização (2026-11-11): o registro de `59c6508d` (15 pares) e `DECISOES_DRIFT_HOMOLOG_2026-11-07.md` foram trazidos para este PR. Continuam fora: `367916c9`, `60205a0b` e `d174cc6b`.
 
 ## 3. Versões sem origem (7)
 
