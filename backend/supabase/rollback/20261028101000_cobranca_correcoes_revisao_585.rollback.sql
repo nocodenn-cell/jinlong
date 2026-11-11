@@ -1,30 +1,16 @@
--- Rollback de 20261028101000_cobranca_correcoes_revisao_585.sql (correções da revisão de segurança do PR #585).
--- Restaura public.cobranca_aplicar_evento e public.cobranca_registrar_assinatura às definições ANTERIORES à migration
--- (corpos lidos por pg_get_functiondef em produção, somente leitura, antes de qualquer aplicação), remove os objetos
--- criados pela migration e as cinco colunas *_pendente.
---
--- PERDA DE DADOS (irreversível por este script):
---   - DROP COLUMN apaga plano_pendente, addons_pendentes, qtd_lojas_pendente, qtd_caixas_pendente e pendente_desde:
---     upgrades pendentes de pagamento deixam de existir. Antes do rollback, conferir:
---       SELECT count(*) FROM saas.assinaturas WHERE plano_pendente IS NOT NULL OR pendente_desde IS NOT NULL;
---     Se houver linhas, decidir com o dono antes (aplicar o pendente ou registrar o pedido) — não há como reconstruir.
---   - DROP TABLE saas.assinar_locks apaga apenas travas temporárias do botão "Assinar" (sem valor histórico).
---   - Assinaturas que já foram suspensas por ESTORNO/CHARGEBACK pela versão nova permanecem SUSPENSA; a versão antiga
---     não as reativa sozinha. Não há reversão de status; isso é decisão operacional.
---
--- Pré-requisito: reverter ANTES, nesta ordem, 20261028110000 (se aplicada), que depende de internal.token_gerente_fora_da_loja
--- desta cadeia; a 20261028100000 é revertida por último (rollback próprio).
--- Permissões: a migration fez REVOKE de PUBLIC/anon/authenticated e GRANT EXECUTE a service_role nas quatro funções
--- de cobrança; em produção, antes da migration, a ACL era só postgres (owner) e service_role.
-
+-- Rollback de 20261028101000_cobranca_correcoes_revisao_585.sql (PR #620).
+-- Restaura cobranca_aplicar_evento e cobranca_registrar_assinatura com o corpo EXATO de produção antes do #620
+-- (pg_get_functiondef, 2026-10-28; md5 normalizado 047c297a… e e9085e0b…) e remove o que a migration criou.
+-- ORDEM: reverter ANTES o app (pdv-importados do #620 chama fp_sou_dono_da_empresa e cobranca_reservar_assinar).
+-- PERDA: upgrades pendentes ainda não pagos (colunas *_pendente) são descartados — conferir antes:
+--   SELECT empresa_id, plano_pendente, pendente_desde FROM saas.assinaturas WHERE plano_pendente IS NOT NULL;
 BEGIN;
 
--- 1) Funções de cobrança às definições anteriores (primeiro, para não haver referência à função nova).
 CREATE OR REPLACE FUNCTION public.cobranca_aplicar_evento(p_evento_id text, p_evento text, p_payload jsonb)
-RETURNS jsonb
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'public', 'saas', 'pg_temp'
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'saas', 'pg_temp'
 AS $function$
 DECLARE
   pay jsonb := p_payload->'payment';
@@ -118,10 +104,10 @@ BEGIN
 END $function$;
 
 CREATE OR REPLACE FUNCTION public.cobranca_registrar_assinatura(p_empresa uuid, p_plano text, p_addons text[], p_qtd_lojas integer, p_qtd_caixas integer, p_forma text, p_valor_centavos integer, p_asaas_customer text, p_asaas_subscription text, p_proximo_vencimento date)
-RETURNS void
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'public', 'saas', 'pg_temp'
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'saas', 'pg_temp'
 AS $function$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM saas.planos WHERE codigo = p_plano AND tipo = 'PLANO' AND ativo) THEN
@@ -147,24 +133,21 @@ BEGIN
     max_lojas = (SELECT max_lojas FROM saas.planos WHERE codigo = p_plano), updated_at = now() WHERE id = p_empresa;
 END $function$;
 
-REVOKE ALL ON FUNCTION public.cobranca_aplicar_evento(text, text, jsonb) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.cobranca_registrar_assinatura(uuid, text, text[], int, int, text, int, text, text, date) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.cobranca_aplicar_evento(text, text, jsonb) TO service_role;
-GRANT EXECUTE ON FUNCTION public.cobranca_registrar_assinatura(uuid, text, text[], int, int, text, int, text, text, date) TO service_role;
-
--- 2) Remove objetos criados pela migration (funções antes da tabela de locks, que elas usam).
 DROP FUNCTION IF EXISTS public.fp_sou_dono_da_empresa(uuid);
+DROP FUNCTION IF EXISTS public.cobranca_reservar_assinar(uuid, integer);
 DROP FUNCTION IF EXISTS public.cobranca_liberar_assinar(uuid);
-DROP FUNCTION IF EXISTS public.cobranca_reservar_assinar(uuid, int);
 DROP FUNCTION IF EXISTS internal.cobranca_aplicar_plano_pendente(uuid);
 DROP TABLE IF EXISTS saas.assinar_locks;
-
--- 3) Remove as colunas de upgrade pendente (ver PERDA DE DADOS no cabeçalho).
 ALTER TABLE saas.assinaturas
   DROP COLUMN IF EXISTS plano_pendente,
   DROP COLUMN IF EXISTS addons_pendentes,
   DROP COLUMN IF EXISTS qtd_lojas_pendente,
   DROP COLUMN IF EXISTS qtd_caixas_pendente,
   DROP COLUMN IF EXISTS pendente_desde;
+DO $ledger$ BEGIN
+  IF to_regclass('supabase_migrations.schema_migrations') IS NOT NULL THEN
+    DELETE FROM supabase_migrations.schema_migrations WHERE version = '20261028101000';
+  END IF;
+END $ledger$;
 
 COMMIT;

@@ -4,6 +4,11 @@
 
 - Recuperação de senha do ERP falhava sem mensagem clara (validação silenciosa e erro do Supabase em inglês). Correção em PR Draft; validar em produção após revisão. Conferir no Supabase (Authentication → URL Configuration) que o domínio do ERP está em Redirect URLs
 - Admin do Hub sem acesso à senha (`hub.jinlong.app/login`): o Hub não tem fluxo de recuperação. Usar o ERP em `/auth/esqueci-senha` (mesmo projeto Supabase `kbabmewnahysfvlybiak`, mesmo `auth.users`) e confirmar a conta em `commercial_admins`. Aguarda autorização explícita do dono para enviar o e-mail e redefinir
+- Auditoria GitHub (2026-11-11, `docs/governance/GITHUB_AUDIT.md`): a proteção de `main` não exige nenhuma aprovação humana (só os 6 checks). Decidir revisão obrigatória + CODEOWNERS. Ação de configuração: exige autorização
+- Colisão de versão de migration (quebra `db push`/reset): `#537` × main em `20261010120000`; `#623` × main em `20261028120000`; `#675` × `#677` em `20261107120000`. Resolver antes de qualquer merge desses PRs
+- `#675` (D1–D6): não mesclar. Traz 5 migrations fora do manifesto de adiadas (`20261106100000`–`20261107120000`); o label `deploy-prod:aprovado` não autoriza deploy nem merge (regra do próprio manifesto)
+- Leads: `#677` recria `registrar_lead_comercial` e `commercial_lead_rate_check`, que `main` já tem como migrations deferidas (`20261104150000`–`170000`). Escolher a versão canônica antes de `#676`/`#677`. Os dois juntos, senão o formulário comercial segue quebrado
+- `#669` reescreve `20261104120000` (anon), que está em `main` como deferida (6.140 → 7.362 bytes); `#673` depende dela. Decidir qual versão vale
 - PR #655: label `deploy-prod:aprovado` aplicado pelo dono (2026-11-05). Pendente: migrations `remote_ausente` (`migration-remote-drift` continua vermelho) (`20261028100000`–`20261030140000`, no `migration-remote-drift`). Types drift já corrigido em `823142b6`
 - Drift de migrations em produção: `jinlong` (`kbabmewnahysfvlybiak`) continua com 11 migrations sem registro e o check `migration-remote-drift` vermelho. Homolog já está reconciliado (481 versões, 31 aplicadas e registradas em 2026-11-04). Produção só com decisão e autorização próprias. Detalhes e matriz em `docs/runbooks/RECONCILIACAO_HOMOLOG_2026-11-04.md`
 - Homologação funcional incompleta: falta login real com contas de teste e os fluxos de escrita (PDV, vendas em espera, estoque, NF-e, financeiro, cancelamentos, concorrência). Só isolamento RLS e privilégios foram verificados (`docs/runbooks/RECONCILIACAO_HOMOLOG_2026-11-04.md`, seção 11)
@@ -33,6 +38,11 @@
 
 ## P1 — Falta para lançar (MVP)
 
+- Auditoria GitHub: três implementações concorrentes da mesma regra. M1 multiempresa em `#493`/`#496`/`#537`; fechamento de caixa com venda em espera em `#656` (D1 de `#675` faz o mesmo); fallback de RPC no sync-outbox em `#670`/`#674`. Escolher uma de cada
+- Auditoria GitHub: a cadeia P0 `#488`→`#498`→`#499`→`#500` tem commits contidos uns nos outros. Mesclar só `#500`, depois de corrigir o P1 do Codex; fechar os outros. Exige autorização
+- Auditoria GitHub: dependências sem sequência. Majors de actions `#636`/`#637` e `#547`/`#548`/`#549` com checks obrigatórios vermelhos; `#679` e `#546` mexem no mesmo lockfile. Mesclar em ordem (`docs/governance/GITHUB_CLEANUP_PLAN.md`, Onda 6)
+- Auditoria GitHub: branches. 21 locais com upstream removido e sem merge (risco de perda); 76 remotas com PR fechado sem merge; 27 remotas sem PR. Verificar commits únicos antes de qualquer exclusão (`docs/governance/GITHUB_CLEANUP_PLAN.md`, seção 5)
+- Auditoria GitHub: secret scanning, push protection e Dependabot alerts estão desativados num repositório público; actions sem pin por SHA. Decisão e ativação do dono
 - PDV-100 D-04 (decisão de produto): o carrinho aceita quantidade fracionada em qualquer produto, inclusive `unidade_medida = UN` (ex.: 2,5 chaleiras). Decidir se bloqueia por unidade ou mantém (balança)
 - PDV-100 D-05: `vendas_pagamentos` grava só o valor líquido. Persistir valor recebido e troco para auditar o dinheiro
 - PDV-100 D-06: venda em espera (EM_ESPERA) sobrevive ao fechamento do caixa sem aviso. Definir regra: bloquear, transferir ou descartar
@@ -113,6 +123,7 @@
 ## Feito
 - 2026-11-05 — Recuperação de senha: causa comprovada em Supabase local (validação nativa bloqueava o envio sem aviso; erro do Supabase exibido em inglês). Correção com testes unitários e E2E em branch; PR Draft pendente
 - 2026-11-05 — Diagnóstico somente leitura da recuperação de senha do Hub: Hub sem fluxo de recuperação; recuperação deve ser feita pelo ERP; nada alterado no Supabase
+- 2026-11-11 — Auditoria dos 53 PRs abertos e das branches (somente leitura): `docs/governance/GITHUB_AUDIT.md`, `GITHUB_CLEANUP_PLAN.md` e `GITHUB_WORKFLOW.md`. Nenhuma ação no GitHub; decisões pendentes listadas no plano
 - 2026-11-05 — 12 migrations da main (20261028100000 a 20261104180000) adiadas no manifesto: 8 de segurança (prioridade do dono) e 4 de funcionalidade; nenhuma aplicada em produção
 - 2026-11-05 — PR #655: types drift corrigido (`823142b6`, regenerado do artefato do CI); merge com a main (`24ba7082`) e push na branch do PR. Restam os gates de governança (label `deploy-prod:aprovado` e migrations `remote_ausente`)
 - 2026-11-05 — Diagnóstico Fase 3 entregue, sem alterar produção: fluxos de escrita mapeados, catálogo de produção lido (A2 mitigada por trigger; `perfis` tem 3 linhas), plano de remediação, roadmap, matriz de testes, plano de backup. Entrada em `docs/FASE3_RELATORIO_EXECUTIVO.md`
@@ -120,4 +131,3 @@
 - 2026-11-05 — Tranche de segurança validada em banco descartável: SEC-04 corrigido (passa), rollbacks de 100000 e 110000 (cadeia idêntica ao baseline), definições de produção conferidas por md5; PR #660 atualizado
 - 2026-11-05 — GO-LIVE-01: golden flow operacional executado na cópia `sec_gf01` (roteiro `backend/scripts/go-live-01-golden-flow.test.sql`, 34 asserções OK). Matriz e veredito NO-GO em `docs/qa/GO_LIVE_01_GOLDEN_FLOW.md`; E2E de interface bloqueado
 - 2026-11-04 — GO-LIVE-01: gate financeiro 35/35 na cópia `sec_gl01` com a migration `20261104180000` (títulos, caixa e produto fora do escopo respondem como inexistente). Commits locais `7d35133c` (fix) e `b41ca18a` (fixtures). Evidência em `docs/qa/evidencias/go-live-01_gate_financeiro_35_35.txt`
-- 2026-11-04 — Rollbacks de `20261028100000` e `20261028101000` escritos em `backend/supabase/rollback/` e testados em transação com ROLLBACK no banco local; rollback de `20261029155000` (em `ops/`) corrigido e testado. Homolog não alterado: aplicação interrompida por drift pré-existente
