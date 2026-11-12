@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { requireAdmin } from '@/lib/session'
+import { tentar } from '@/lib/seguro'
 import { CHANNEL_LABEL, formatDate, parseFilters, PERIOD_LABEL, PERIODS, PRODUCT_LABEL, PRODUCTS, STATUS_LABEL, STATUSES } from '@/lib/model'
 import { Shell, StatusBadge } from '../Shell'
 
@@ -8,7 +9,8 @@ export const dynamic = 'force-dynamic'
 export default async function LeadsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { repo, demo } = await requireAdmin()
   const f = parseFilters(await searchParams)
-  const leads = await repo.listLeads(f)
+  const r = await tentar('leads:listLeads', () => repo.listLeads(f), [])
+  const leads = r.value
   return (
     <Shell demo={demo} active="leads">
       <h1>Leads</h1>
@@ -40,6 +42,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
         <button type="submit" className="hub-btn">Filtrar</button>
         <Link href="/leads" className="hub-link">Limpar</Link>
       </form>
+      {r.falhou && <p className="hub-error" role="alert">Não foi possível carregar os leads agora. Tente de novo em instantes.</p>}
       <p className="hub-count" role="status">{leads.length} lead(s)</p>
       <div className="hub-table-wrap">
         <table className="hub-table">

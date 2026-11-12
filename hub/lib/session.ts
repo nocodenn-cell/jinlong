@@ -23,6 +23,9 @@ export async function requireAdmin(): Promise<{ repo: Repo; demo: boolean }> {
   if (!cfg) redirect('/login?e=config')
   const token = (await cookies()).get(ACCESS_COOKIE)?.value
   if (!token) redirect('/login')
-  if (!(await isAdmin(cfg, token))) redirect('/login?e=forbidden')
+  // Falha de rede/Supabase na checagem não é "sem acesso": mostra erro próprio em vez de quebrar a página.
+  const admin = await isAdmin(cfg, token).catch(() => null)
+  if (admin === null) redirect('/login?e=indisponivel')
+  if (!admin) redirect('/login?e=forbidden')
   return { repo: restRepo(cfg, token), demo: false }
 }

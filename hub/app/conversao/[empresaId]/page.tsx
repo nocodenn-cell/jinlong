@@ -6,6 +6,7 @@ import {
   prioridade, PRIORIDADE_LABEL, valorTabela,
 } from '@/lib/conversao'
 import { CHANNEL_LABEL, EVENT_LABEL, formatDate, isUuid, STATUS_LABEL, STATUSES } from '@/lib/model'
+import { tentar } from '@/lib/seguro'
 import { Shell, StatusBadge } from '../../Shell'
 import { converter, criarFicha, mudarEtapa, registrarContato, salvarAcompanhamento } from '../actions'
 
@@ -21,8 +22,21 @@ export default async function TrialPage({ params, searchParams }: {
   const { msg, erro } = await searchParams
   if (!isUuid(empresaId)) notFound()
   const { repo, demo } = await requireAdmin()
-  const [data, planos] = await Promise.all([repo.getTrial(empresaId), repo.listPlanos()])
+  const [dataR, planosR] = await Promise.all([
+    tentar('trial:getTrial', () => repo.getTrial(empresaId), null),
+    tentar('trial:listPlanos', () => repo.listPlanos(), []),
+  ])
+  if (dataR.falhou) {
+    return (
+      <Shell demo={demo} active="conversao">
+        <p><Link href="/conversao" className="hub-link">← Central de Conversão</Link></p>
+        <p className="hub-error" role="alert">Não foi possível carregar este teste grátis agora. Tente de novo em instantes.</p>
+      </Shell>
+    )
+  }
+  const data = dataR.value
   if (!data) notFound()
+  const planos = planosR.value
   const { trial: t, events } = data
   const l = t.lead
   const a = t.atividade
@@ -41,6 +55,7 @@ export default async function TrialPage({ params, searchParams }: {
       <h1>{t.empresa_nome}</h1>
       {msg && <p className="hub-msg" role="status">{msg.slice(0, 160)}</p>}
       {erro && <p className="hub-error" role="alert">{erro.slice(0, 160)}</p>}
+      {planosR.falhou && <p className="hub-error" role="alert">Lista de planos indisponível: a conversão fica desativada até ela voltar.</p>}
       {t.solicitou_contratacao_em && f !== 'cliente' && (
         <p className="hub-error" role="note"><strong>O cliente pediu para contratar</strong> em {formatDate(t.solicitou_contratacao_em)}. Entre em contato e, se aprovar, faça a conversão abaixo.</p>
       )}
