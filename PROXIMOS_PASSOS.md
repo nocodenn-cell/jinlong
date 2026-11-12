@@ -37,6 +37,8 @@
 
 ## P1 — Falta para lançar (MVP)
 
+- Hub (`hub/`): commitar e publicar as correções de resiliência do painel (branch `claude/admin-screen-error-7f1d71`, 8 arquivos alterados + 3 novos). Só depois do commit o deploy na Vercel (`nature-code-hub`) entra em produção. Exige autorização para commit/push
+- Hub: a migration `growth001_central_conversao` foi aplicada no `jinlong` com nome de registro próprio; o arquivo do repo é `20261023130000`. Reconciliar o registro de migrations de produção com o repo (ver drift acima)
 - Fiado no caixa: a tela aceita finalizar com saldo pendente, pede cliente e cria contas a receber (`pdv-importados/app/caixa/CaixaPageClient.tsx:1113-1120`). O escopo do primeiro cliente é sem fiado: bloquear no caixa ou no RPC (`docs/ops/INSTALACAO_PRIMEIRO_CLIENTE_CHECKLIST.md`, L-F2)
 - Senha do gerente (`pdv_config.gerente_senha_bcrypt`), `exigir_pin_operador` e `bloqueio_inatividade_min` são lidos pelo sistema, mas não há tela que os grave. Definir o procedimento de instalação ou criar a tela (`docs/ops/INSTALACAO_USUARIOS_PIN_TROCA_OPERADOR.md`, L1)
 - Gate de implantação: o grupo fiscal exige item `CONCLUIDO` mesmo sem fiscal, e não há item de contas e formas de pagamento (`pdv-importados/app/admin/implantacao/implantacaoCatalog.ts:74-75`; checklist, L-F1 e L-F5)
@@ -58,7 +60,6 @@
 - Fase 3 (performance): promover a migration `20260913090000` (validação de fuso sem `pg_timezone_names`, existe no repo e não está em produção) após reconciliação; medir antes/depois. Ver `docs/performance/DIAGNOSTICO_TIMEOUTS_E_PERFORMANCE.md`
 - Fase 3 (PDV offline): remover ou proteger o comando Tauri `sync_outbox` simulado (`pdv-local/src-tauri/src/main.rs:43`), que marca registros como ENVIADO sem enviar
 - Fase 3 (backup): rotina diária com `backend/scripts/backup-ro-postgres.sh` + `age` + SHA-256 + alerta + restauração mensal; RPO 24 h e RTO medidos. Ver `docs/backup/PLANO_OPERACIONAL_BACKUP_RESTAURACAO.md`
-
 - Verificar backup e PITR no painel (projeto `jinlong`, Database → Backups) e registrar retenção e último backup. Pré-requisito de qualquer autorização de produção (`docs/ops/BACKUP_RESTAURACAO_SEM_PITR.md`)
 - Cobrança do DONO indisponível em produção: `fp_sou_dono_da_empresa` e `cobranca_*` só existem após a `20261028101000` (adiada). Decidir a revisão da cobrança com esse custo de produto visível (`docs/ops/TRANCHE_VALIDACAO_2026-11-05.md` §4)
 - Recuperação de vendas offline com token revogado: não há reenvio com token novo no PDV (`pdv-local`). Itens em ERRO exigem tratamento manual com autorização do DONO (`docs/ops/RECUPERACAO_ACESSO_TOKENS.md` §4)
@@ -93,26 +94,6 @@
 - Rodar as suítes de psql (ap-payments, ar-receipts, sale-totals, financeiro-hardening, financial-adversarial, ux04, funcionario-dados-rls) num banco de homologação migrado, via npm run test:financial
 - Criar teste de reposição de estoque no cancelamento e teste ponta a ponta de auditoria (autor, data, alteração)
 - Definir preço real em saas.planos (hoje placeholder) e contrato de piloto sem NFC-e/SLA
-
-## P2 — Melhoria
-
-- Mensagens genéricas no caixa para `PAGAMENTO_SEM_CONTA_FINANCEIRA`, `CANCELAR_VENDA_CAIXA_ABERTO_AMBIGUO` e `CANCELAR_VENDA_CAIXA_FECHADO_SEM_CAIXA_ABERTO` (`pdv-importados/app/caixa/server/caixaErroOperador.ts`)
-- Texto de "Meu PIN do caixa" diz que o PIN serve para entrar, mas o código só o usa para desbloquear (`pdv-importados/src/lib/i18n/pt.json`, `meu_pin.subtitulo`)
-- Troca de PIN no primeiro uso (`trocar_no_primeiro_uso`) não comprovada na tela de bloqueio
-- Manual do operador: confirmar os gestos marcados como não verificados (quantidade na linha, Enter na busca, comprovante automático) e se o layout clássico está ativo (`MANUAL_OPERADOR_RESUMIDO.md`, seção de origem)
-
-## Feito
-- 2026-11-11 — Auditoria dos 53 PRs abertos e das branches (somente leitura): `docs/governance/GITHUB_AUDIT.md`, `GITHUB_CLEANUP_PLAN.md` e `GITHUB_WORKFLOW.md`. Nenhuma ação no GitHub; decisões pendentes listadas no plano
-- 2026-11-07 — Documentação de instalação do primeiro cliente em `docs/ops/` (checklist F1, contas F2, usuários e PIN F3, playbook F6) e manual do operador 1.2 (F4). Nenhum código de produção alterado
-- 2026-11-07 — D2 (estorno em dinheiro de caixa fechado sai do caixa aberto) e D6 (preço de atacado exige quantidade mínima) escritas em `claude/plano-liberacao-d1-d3`, sem commit; vitest (666) e tsc passam; SQL completo não executado (sem Docker)
-- 2026-11-07 — D4 (valor recebido e troco em DINHEIRO) e D5 (PIX/cartão exigem conta financeira) escritas em `claude/plano-liberacao-d1-d3`, sem commit; teste SQL e tsc não executados (sem Docker e sem node_modules)
-- 2026-11-06 — D1 (fechamento bloqueado com venda em espera) e D3 (quantidade inteira em produto UN) escritas em `claude/plano-liberacao-d1-d3`, sem commit; teste em `backend/scripts/d1-d3-fechamento-espera-quantidade-un.test.sql` ainda não executado (sem Docker)
-- 2026-11-06 — Auditoria de prontidão comercial (somente leitura): NÃO PODE ENTRAR, 35%; relatório em docs/auditorias/AUDITORIA_PRONTIDAO_COMERCIAL_2026-11-06.md
-- 2026-11-05 — 12 migrations da main (20261028100000 a 20261104180000) adiadas no manifesto: 8 de segurança (prioridade do dono) e 4 de funcionalidade; nenhuma aplicada em produção
-- 2026-11-05 — PR #655: types drift corrigido (`823142b6`, regenerado do artefato do CI); merge com a main (`24ba7082`) e push na branch do PR. Restam os gates de governança (label `deploy-prod:aprovado` e migrations `remote_ausente`)
-- 2026-11-05 — Diagnóstico Fase 3 entregue, sem alterar produção: fluxos de escrita mapeados, catálogo de produção lido (A2 mitigada por trigger; `perfis` tem 3 linhas), plano de remediação, roadmap, matriz de testes, plano de backup. Entrada em `docs/FASE3_RELATORIO_EXECUTIVO.md`
-- 2026-11-05 — Estabilização da tranche: fixtures de 4 suítes corrigidas (todas passam), provisionamento reescrito para o contrato da 121000 (cadastro autorizado por contingência comprovado), teste de recuperação de acesso (REC-1 a REC-7), validação reproduzível em contêiner (`backend/scripts/tranche-seguranca-validar.sh`)
-
 - Revisar Termos e Privacidade (prometem emissão fiscal; fiscal é stub) e incluir o uso do contato do teste grátis pelo comercial (LGPD)
 - Provisionar empresa/loja nova para o cliente pelo wizard e validar o isolamento multiempresa (nenhum dado de outra loja visível); não usar o script de limpeza, que apaga dados de todos os tenants
 - Registrar restore drill com RTO a partir de um backup novo, tirado após a reconciliação de migrations
@@ -125,6 +106,10 @@
 
 ## P2 — Melhoria
 
+- Mensagens genéricas no caixa para `PAGAMENTO_SEM_CONTA_FINANCEIRA`, `CANCELAR_VENDA_CAIXA_ABERTO_AMBIGUO` e `CANCELAR_VENDA_CAIXA_FECHADO_SEM_CAIXA_ABERTO` (`pdv-importados/app/caixa/server/caixaErroOperador.ts`)
+- Texto de "Meu PIN do caixa" diz que o PIN serve para entrar, mas o código só o usa para desbloquear (`pdv-importados/src/lib/i18n/pt.json`, `meu_pin.subtitulo`)
+- Troca de PIN no primeiro uso (`trocar_no_primeiro_uso`) não comprovada na tela de bloqueio
+- Manual do operador: confirmar os gestos marcados como não verificados (quantidade na linha, Enter na busca, comprovante automático) e se o layout clássico está ativo (`MANUAL_OPERADOR_RESUMIDO.md`, seção de origem)
 - PDV-100 D-08: a falha de "Enter antes da lista carregar" não foi reproduzida na 2ª rodada. Monitorar; sem reprodução não há correção
 - PDV-100 D-10: não é loop (contagem estável em idle). Nenhuma ação; manter monitoramento
 - PDV-100: salvar capturas de tela e vídeo dos fluxos em `docs/qa/evidencias/` (hoje só existem na sessão)
@@ -145,3 +130,13 @@
 - Mostrar as parcelas do crédito no detalhe da venda (admin) e na 2ª via, depois da coluna existir na homologação
 
 ## Feito
+- 2026-11-12 — hub.jinlong.app: painel quebrava (digest 226588760, "Falha ao acessar dados (400)"). Causa: a Central de Conversão (`20261023130000`) estava no `main` mas não no banco `jinlong`. Migration aplicada em produção após checagem; cada seção do hub agora degrada sozinha (`hub/lib/seguro.ts`) e há `hub/app/error.tsx`. Código ainda não commitado
+- 2026-11-11 — Auditoria dos 53 PRs abertos e das branches (somente leitura): `docs/governance/GITHUB_AUDIT.md`, `GITHUB_CLEANUP_PLAN.md` e `GITHUB_WORKFLOW.md`. Nenhuma ação no GitHub; decisões pendentes listadas no plano
+- 2026-11-07 — Documentação de instalação do primeiro cliente em `docs/ops/` (checklist F1, contas F2, usuários e PIN F3, playbook F6) e manual do operador 1.2 (F4). Nenhum código de produção alterado
+- 2026-11-07 — D2 (estorno em dinheiro de caixa fechado sai do caixa aberto) e D6 (preço de atacado exige quantidade mínima) escritas em `claude/plano-liberacao-d1-d3`, sem commit; vitest (666) e tsc passam; SQL completo não executado (sem Docker)
+- 2026-11-07 — D4 (valor recebido e troco em DINHEIRO) e D5 (PIX/cartão exigem conta financeira) escritas em `claude/plano-liberacao-d1-d3`, sem commit; teste SQL e tsc não executados (sem Docker e sem node_modules)
+- 2026-11-06 — D1 (fechamento bloqueado com venda em espera) e D3 (quantidade inteira em produto UN) escritas em `claude/plano-liberacao-d1-d3`, sem commit; teste em `backend/scripts/d1-d3-fechamento-espera-quantidade-un.test.sql` ainda não executado (sem Docker)
+- 2026-11-06 — Auditoria de prontidão comercial (somente leitura): NÃO PODE ENTRAR, 35%; relatório em docs/auditorias/AUDITORIA_PRONTIDAO_COMERCIAL_2026-11-06.md
+- 2026-11-05 — 12 migrations da main (20261028100000 a 20261104180000) adiadas no manifesto: 8 de segurança (prioridade do dono) e 4 de funcionalidade; nenhuma aplicada em produção
+- 2026-11-05 — PR #655: types drift corrigido (`823142b6`, regenerado do artefato do CI); merge com a main (`24ba7082`) e push na branch do PR. Restam os gates de governança (label `deploy-prod:aprovado` e migrations `remote_ausente`)
+- 2026-11-05 — Diagnóstico Fase 3 entregue, sem alterar produção: fluxos de escrita mapeados, catálogo de produção lido (A2 mitigada por trigger; `perfis` tem 3 linhas), plano de remediação, roadmap, matriz de testes, plano de backup. Entrada em `docs/FASE3_RELATORIO_EXECUTIVO.md`

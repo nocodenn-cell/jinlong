@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { requireAdmin } from '@/lib/session'
+import { tentar } from '@/lib/seguro'
 import { PRODUCT_LABEL, SUBSCRIPTION } from '@/lib/model'
 import { Shell } from '../Shell'
 import { updateCustomer } from './actions'
@@ -11,12 +12,14 @@ const SUB_LABEL = { ativo: 'Ativo', pausado: 'Pausado', cancelado: 'Cancelado' }
 export default async function CustomersPage({ searchParams }: { searchParams: Promise<{ msg?: string }> }) {
   const { repo, demo } = await requireAdmin()
   const { msg } = await searchParams
-  const customers = await repo.listCustomers()
+  const r = await tentar('clientes:listCustomers', () => repo.listCustomers(), [])
+  const customers = r.value
   return (
     <Shell demo={demo} active="clientes">
       <h1>Lojas contratadas</h1>
       <p className="hub-help">Acompanhamento simples. Plano e valor são campos livres, preparados para assinaturas futuras (nenhuma cobrança automática).</p>
       {msg && <p className="hub-msg" role="status">{msg.slice(0, 120)}</p>}
+      {r.falhou && <p className="hub-error" role="alert">Não foi possível carregar as lojas contratadas agora. Tente de novo em instantes.</p>}
       <div className="hub-table-wrap">
         <table className="hub-table">
           <caption className="hub-sr">Lojas contratadas</caption>
