@@ -2005,6 +2005,8 @@
     "redefinir_sucesso": "Senha atualizada. Redirecionando para o login…",
     "redefinir_erro_sessao": "Sessão de recuperação ausente. Solicite um novo link pelo login.",
     "redefinir_erro": "Não foi possível redefinir a senha. Tente novamente.",
+    "redefinir_erro_mesma_senha": "A nova senha precisa ser diferente da senha anterior.",
+    "redefinir_erro_fraca": "Esta senha é fraca ou muito comum. Escolha outra.",
     "alterar_titulo": "Trocar senha",
     "alterar_instrucao": "Informe a senha atual e a nova senha (mínimo {n} caracteres).",
     "alterar_atual": "Senha atual",

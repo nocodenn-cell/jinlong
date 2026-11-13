@@ -19,6 +19,8 @@ paths = [
   '''backend/scripts/sec04-token-gerente-tenant\.test\.sql''',
   '''pdv-importados/app/caixa/finalizarVendaValidation\.test\.ts''',
   '''pdv-importados/lib/caixa/resolveVendaIdForFinalize\.test\.ts''',
+  # Senhas de teste sintéticas (SenhaAntiga123 etc.) no teste de redefinição: casam com generic-api-key.
+  '''pdv-importados/app/auth/redefinir-senha/RedefinirSenhaForm\.test\.tsx''',
   '''backend/scripts/fase4-remessa-idempotencia-payload-hash\.test\.sql''',
   # Arquivos deno.lock: hashes de integridade SHA-256 de dependências
   # remotas/npm (formato nativo do lockfile do Deno) — alta entropia, não
