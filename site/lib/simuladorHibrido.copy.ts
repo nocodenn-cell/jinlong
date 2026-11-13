@@ -25,11 +25,11 @@ export interface SimuladorCopy {
 const pt: SimuladorCopy = {
   metaTitle: 'Simulador Simples puro x Simples híbrido (IBS/CBS 2027) | Jinlong',
   metaDescription:
-    'Atacadista no Simples Nacional: compare o custo de IBS e CBS dentro do DAS ou por fora (regime híbrido) e o crédito que seus clientes recebem. Prazo da opção para o 1º semestre de 2027: 30/10/2026.',
+    'Atacadista no Simples Nacional: compare o custo de IBS e CBS dentro do DAS ou por fora (regime híbrido) e o crédito que seus clientes recebem. Prazo da opção para o 1º semestre de 2027 encerrado em 30/10/2026; cancelamento possível até 20/12/2026.',
   eyebrow: 'Reforma Tributária 2027',
   title: 'Simples puro ou Simples híbrido?',
   lead: 'Se você vende no atacado para empresas, o seu cliente vai olhar quanto crédito de IBS e CBS a sua nota dá a partir de 2027. Compare as duas opções em segundos.',
-  deadline: 'Prazo para escolher o regime híbrido no 1º semestre de 2027: até 30/10/2026. Cancelamento possível de 03/11 a 20/12/2026; depois, novas janelas em março e setembro.',
+  deadline: 'O prazo para escolher o regime híbrido no 1º semestre de 2027 encerrou em 30/10/2026. Cancelamento possível de 03/11 a 20/12/2026; depois, novas janelas em março e setembro.',
   disclaimer: 'Estimativa — confirme com seu contador. Considera só o Anexo I (comércio) e a alíquota da CBS 2027 ainda não oficial.',
   inputs: {
     faturamento: 'Faturamento médio por mês (R$)',
@@ -47,8 +47,8 @@ const pt: SimuladorCopy = {
   table: { head: 'Por mês (estimativa)', puro: 'Simples puro', hibrido: 'Simples híbrido', das: 'DAS', porFora: 'IBS/CBS por fora', total: 'Custo total', credito: 'Crédito para seus clientes', faixa: 'Faixa', efetiva: 'Alíquota efetiva' },
   rec: {
     puro: 'Pelos números informados, o Simples puro tende a custar menos e o ganho de crédito dos seus clientes não compensa. Leve esta simulação ao seu contador.',
-    hibrido: 'Pelos números informados, o híbrido não custa mais para você e ainda dá mais crédito aos seus clientes. Vale conversar com seu contador antes de 30/10.',
-    avaliar: 'O híbrido custa mais para você, mas o crédito extra dos seus clientes é maior que esse custo. Se você conseguir repassar parte disso no preço do atacado, pode valer a pena. Decida com seu contador antes de 30/10.',
+    hibrido: 'Pelos números informados, o híbrido não custa mais para você e ainda dá mais crédito aos seus clientes. Como o prazo de 30/10/2026 já passou, confirme com seu contador a próxima janela (março) antes de mudar de regime.',
+    avaliar: 'O híbrido custa mais para você, mas o crédito extra dos seus clientes é maior que esse custo. Se você conseguir repassar parte disso no preço do atacado, pode valer a pena. Decida com seu contador antes da próxima janela, em março.',
     fora: 'Com essa receita, a empresa passa do limite do Simples Nacional (R$ 4,8 milhões em 12 meses). Este simulador não se aplica.',
   },
   extra: 'Diferença de custo no híbrido: {custo} por mês · Crédito a mais para seus clientes: {credito} por mês',
@@ -65,11 +65,11 @@ const pt: SimuladorCopy = {
 const zh: SimuladorCopy = {
   metaTitle: '简易税制 普通 vs 混合模式模拟器（2027 年 IBS/CBS）| Jinlong 金龙',
   metaDescription:
-    '巴西 Simples Nacional 批发商：比较 IBS 和 CBS 在 DAS 内缴纳或单独缴纳（混合模式）的成本，以及您的客户能获得的税收抵扣。2027 年上半年选择截止日期：2026 年 10 月 30 日。',
+    '巴西 Simples Nacional 批发商：比较 IBS 和 CBS 在 DAS 内缴纳或单独缴纳（混合模式）的成本，以及您的客户能获得的税收抵扣。2027 年上半年选择截止日期为 2026 年 10 月 30 日，已经过去；取消截止日期为 2026 年 12 月 20 日。',
   eyebrow: '2027 税制改革',
   title: '简易税制：普通模式还是混合模式？',
   lead: '如果您向企业批发销售，从 2027 年起，客户会关注您的发票能带来多少 IBS 和 CBS 抵扣。几秒钟比较两种选择。',
-  deadline: '2027 年上半年选择混合模式的截止日期：2026 年 10 月 30 日。可在 2026 年 11 月 3 日至 12 月 20 日取消；之后每年 3 月和 9 月可重新选择。',
+  deadline: '2027 年上半年选择混合模式的截止日期为 2026 年 10 月 30 日，已经过去。可在 2026 年 11 月 3 日至 12 月 20 日取消；之后在 3 月和 9 月可重新选择。',
   disclaimer: '仅为估算 — 请与您的会计师确认。仅适用于附表 I（商业），2027 年 CBS 税率尚未正式公布。',
   inputs: {
     faturamento: '月平均营业额（雷亚尔）',
@@ -87,8 +87,8 @@ const zh: SimuladorCopy = {
   table: { head: '每月（估算）', puro: '普通简易税制', hibrido: '混合简易税制', das: 'DAS', porFora: '单独缴纳 IBS/CBS', total: '总成本', credito: '给客户的抵扣', faixa: '级别', efetiva: '实际税率' },
   rec: {
     puro: '根据您输入的数据，普通模式成本较低，客户多得的抵扣不足以弥补。请把这个结果交给您的会计师。',
-    hibrido: '根据您输入的数据，混合模式不会增加您的成本，还能给客户更多抵扣。建议在 10 月 30 日前与会计师沟通。',
-    avaliar: '混合模式会增加您的成本，但客户多得的抵扣大于这部分成本。如果能在批发价中转嫁一部分，可能值得。请在 10 月 30 日前与会计师决定。',
+    hibrido: '根据您输入的数据，混合模式不会增加您的成本，还能给客户更多抵扣。由于 10 月 30 日的截止日期已经过去，请在下一个窗口（3 月）前与会计师确认。',
+    avaliar: '混合模式会增加您的成本，但客户多得的抵扣大于这部分成本。如果能在批发价中转嫁一部分，可能值得。请在下一个窗口（3 月）前与会计师决定。',
     fora: '按此收入，企业超过 Simples Nacional 上限（12 个月 480 万雷亚尔），本模拟器不适用。',
   },
   extra: '混合模式成本差额：每月 {custo} · 客户多得抵扣：每月 {credito}',
