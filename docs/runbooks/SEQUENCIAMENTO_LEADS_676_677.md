@@ -24,3 +24,18 @@ O homolog registra `20261107205637`, `20261107205702` e `20261107210926` com con
 - Ordem acima é a recomendada e não depende de nova decisão técnica.
 - O que exige ação humana: renomear a migration de `#675`, aplicar as adiadas do passo 1 com autorização, aplicar o label nos PRs que o exigem, e autorizar a reconciliação do homolog.
 - Esta branch não altera `#676` nem `#677`. Qualquer correção deles deve ser feita nas próprias branches, pelo responsável.
+
+## Decisões (2026-11-13)
+
+**1. Renomeação da migration de #675 (D2):** `20261107120000` vira `20261107121000`.
+- Motivo: `20261107121000` não existe em #675, #677 nem na `main`, e fica logo após o D5 (`20261107110000`), na ordem cronológica. `20261107120000` fica com #677.
+- Não está aplicada no homolog: o drift não lista essa versão como só-no-remoto.
+- Executa o dono da branch `claude/plano-liberacao-d1-d3` (PR #675, draft), porque é a branch dele:
+  - `git mv backend/supabase/migrations/20261107120000_d2_estorno_dinheiro_caixa_aberto.sql backend/supabase/migrations/20261107121000_d2_estorno_dinheiro_caixa_aberto.sql`
+  - `git mv backend/supabase/rollback/20261107120000_d2_estorno_dinheiro_caixa_aberto.rollback.sql backend/supabase/rollback/20261107121000_d2_estorno_dinheiro_caixa_aberto.rollback.sql`
+  - Atualizar as referências em `docs/auditorias/PLANO_LIBERACAO_PRIMEIRO_CLIENTE_2026-11-06.md`, `docs/ops/PLAYBOOK_ROLLBACK_E_SUPORTE_PRIMEIRO_CLIENTE.md` e `docs/governance/GITHUB_AUDIT.md`, e o cabeçalho de comentário dentro do próprio SQL.
+
+**2. Mecanismo de aceite de adiadas: fica o por ambiente (`MIGRATION_CHECK_ENV`, commit `41d112eb`).** Sai o `migration-check-project-deferred.json` de #676.
+- Motivo: a regra por ambiente vale para qualquer alvo, não depende de um ref fixo no repositório, já tem 29 testes e está ligada ao guarda do secret no workflow. O arquivo do #676 duplica a decisão, fixa o ref do homolog e não é verificado pelo guarda.
+- Em #676, o trabalho é: remover o arquivo e substituir `p0-migration-status.mjs` e o teste pelas versões desta branch.
+- Quem faz: o responsável por #676.
