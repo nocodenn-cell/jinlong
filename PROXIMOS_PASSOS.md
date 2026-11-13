@@ -3,7 +3,6 @@
 ## P0 — Quebrado/travado
 
 - Site Jinlong: formulário comercial da home falha em produção. `anon` não tem INSERT em `commercial_leads`; a correção (`#676` + `#677`) está bloqueada com checks vermelhos. A Fase 0 não detectou isso, porque o E2E intercepta o envio. "Formulário OK" só vale com validação real em Preview
-- Site Jinlong: FAB (`site/components/ContactFab.tsx`, `.jl-fab` em `site/styles/site.css:396`) sobrepõe o formulário de contato no mobile; não há lógica para recolhê-lo quando `#contato` está visível
 - Site Jinlong / Legal: Termos prometem emissão fiscal (SEFAZ/SAT) e o FAQ condiciona isso à conversa comercial; a fiscal é stub (ver item de Termos em P1). Alinhar só após decisão de produto e revisão jurídica
 - Auditoria GitHub (2026-11-11, `docs/governance/GITHUB_AUDIT.md`): a proteção de `main` não exige nenhuma aprovação humana (só os 6 checks). Decidir revisão obrigatória + CODEOWNERS. Ação de configuração: exige autorização
 - Colisão de versão de migration (quebra `db push`/reset): `#537` × main em `20261010120000`; `#623` × main em `20261028120000`; `#675` × `#677` em `20261107120000`. Resolver antes de qualquer merge desses PRs
@@ -132,6 +131,7 @@
 - Mostrar as parcelas do crédito no detalhe da venda (admin) e na 2ª via, depois da coluna existir na homologação
 
 ## Feito
+- 2026-11-13 — FAB do site recolhe enquanto `#contato` está visível (`site/components/FabAutoHide.tsx`), com teste E2E em Chromium, Firefox e mobile. Sem commit até a suíte completa passar
 - 2026-11-12 — Simulador híbrido: textos PT/ZH e fonte oficial agora dizem que o prazo de 30/10/2026 encerrou (cancelamento até 20/12/2026; próximas janelas em março e setembro). Teste de regressão em `site/lib/simuladorHibrido.copy.test.ts`. Sem commit; validação contábil pendente
 - 2026-11-12 — Análise da auditoria do site Jinlong contra o código em `site/` (idêntico a `2929b09a`): prazo tributário confirmado vencido; formulário e FAB confirmados como P0; protocolo, CTA do simulador e cookie PT confirmados como falsos positivos. Nenhum código alterado
 - 2026-11-12 — hub.jinlong.app: painel quebrava (digest 226588760, "Falha ao acessar dados (400)"). Causa: a Central de Conversão (`20261023130000`) estava no `main` mas não no banco `jinlong`. Migration aplicada em produção após checagem; cada seção do hub agora degrada sozinha (`hub/lib/seguro.ts`) e há `hub/app/error.tsx`. Código ainda não commitado
