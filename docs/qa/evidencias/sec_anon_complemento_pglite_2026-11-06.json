@@ -1,0 +1,56 @@
+{
+  "teste_regressao_antes_da_migration": "FALHOU como esperado: SEC_ANON_COMPL A: anon com privilégio em 15 relação(ões) de public",
+  "anon_select_vendas_antes": {
+    "n": 0
+  },
+  "default_acl_postgres_public_antes": [
+    {
+      "tipo": "S",
+      "acl": "{anon=rwU/postgres}"
+    },
+    {
+      "tipo": "r",
+      "acl": "{anon=arwdDxtm/postgres}"
+    }
+  ],
+  "antes_anon": {
+    "relacoes": 15,
+    "sequencias": 3
+  },
+  "depois_anon": {
+    "relacoes": 0,
+    "sequencias": 0
+  },
+  "authenticated_preservado_byte_a_byte": true,
+  "authenticated_antes_consulta": {
+    "n": 1
+  },
+  "authenticated_depois_consulta": {
+    "n": 1
+  },
+  "rpc_lead_antes": "ok",
+  "rpc_lead_depois": "ok",
+  "anon_select_vendas_depois": "ERRO: permission denied for table vendas",
+  "migracao_erro": null,
+  "reaplicacao_erro": null,
+  "views_depois": [
+    {
+      "relname": "v_legado_sem_invoker",
+      "opcoes": "{security_invoker=true}"
+    },
+    {
+      "relname": "v_vendas_dia",
+      "opcoes": "{security_invoker=true}"
+    }
+  ],
+  "default_acl_postgres_public_depois": [],
+  "teste_regressao_repo": "OK",
+  "colunas_produtos": {
+    "colunas_no_schema": 41,
+    "grants_coluna_anon_antes": 80,
+    "grants_coluna_anon_depois_migracao": 0,
+    "grants_coluna_anon_apos_rollback": 80,
+    "rollback_restaura_identico_ao_antes": true,
+    "preco_custo_anon_depois_migracao": []
+  }
+}
