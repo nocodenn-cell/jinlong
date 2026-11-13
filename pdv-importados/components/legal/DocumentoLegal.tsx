@@ -17,7 +17,7 @@ type Props = {
 
 function H({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="mt-10 mb-3 text-lg font-semibold text-[#bfa76a]">
+    <h2 className="mt-10 mb-3 text-lg font-semibold text-[var(--color-dragon-gold-cinzel)]">
       {children}
     </h2>
   )
@@ -34,7 +34,7 @@ export function DocumentoLegal({ destaque }: Props) {
         <header className="mb-8 border-b border-white/10 pb-6">
           <div className="mb-4 flex items-center gap-3">
             <DragonOuroLoader iconClassName="h-6 w-6" />
-            <span className="text-xs uppercase tracking-[0.2em] text-[#bfa76a]/70">
+            <span className="text-xs uppercase tracking-[0.2em] text-[color:color-mix(in_srgb,var(--color-dragon-gold-cinzel)_70%,transparent)]">
               Jīn Lóng · 金龍
             </span>
           </div>
@@ -46,7 +46,7 @@ export function DocumentoLegal({ destaque }: Props) {
             Tecnologia
           </p>
           {destaque ? (
-            <p className="mt-3 text-xs text-[#bfa76a]/80">
+            <p className="mt-3 text-xs text-[color:color-mix(in_srgb,var(--color-dragon-gold-cinzel)_80%,transparent)]">
               {destaque === 'termos'
                 ? 'Você acessou os Termos de Serviço. O documento abaixo cobre também a Política de Privacidade.'
                 : 'Você acessou a Política de Privacidade. O documento abaixo cobre também os Termos de Serviço.'}
@@ -190,7 +190,7 @@ export function DocumentoLegal({ destaque }: Props) {
             consentimento. Solicitações ao DPO pelo e-mail{' '}
             <a
               href="mailto:privacidade@fastproduct.app"
-              className="text-[#bfa76a] underline underline-offset-2"
+              className="text-[var(--color-dragon-gold-cinzel)] underline underline-offset-2"
             >
               privacidade@fastproduct.app
             </a>
@@ -279,7 +279,7 @@ export function DocumentoLegal({ destaque }: Props) {
           <span>Última atualização: 27/05/2026</span>
           <Link
             href="/login"
-            className="text-[#bfa76a]/80 underline underline-offset-2 transition-colors hover:text-[#bfa76a]"
+            className="text-[color:color-mix(in_srgb,var(--color-dragon-gold-cinzel)_80%,transparent)] underline underline-offset-2 transition-colors hover:text-[var(--color-dragon-gold-cinzel)]"
           >
             ← Voltar ao login
           </Link>

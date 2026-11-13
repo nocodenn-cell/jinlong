@@ -80,8 +80,7 @@ export function CaixaPdvTopBar({
           espaço no canto mais nobre da tela. */}
       <div className="flex min-w-0 flex-1 items-baseline gap-2">
         <span
-          className="shrink-0 text-2xl leading-none tracking-[0.08em] sm:text-[1.75rem]"
-          style={{ color: "#D4AF37" }}
+          className="shrink-0 text-2xl leading-none tracking-[0.08em] sm:text-[1.75rem] text-[var(--color-dragon-gold-luxury)]"
         >
           金龍
         </span>
