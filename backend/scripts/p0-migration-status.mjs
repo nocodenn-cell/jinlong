@@ -277,7 +277,29 @@ function loadDeferredVersions() {
  * do CLI) delas não bloqueia e é listado à parte. O inverso é violação de governança e BLOQUEIA: uma adiada que
  * aparece aplicada no remoto (`adiada_aplicada`).
  */
-export function separateDeferredMigrations({ blocking, missingInList }, rows, deferredVersions) {
+export const TARGET_ENVS = Object.freeze(["homolog", "producao"]);
+
+/**
+ * Ambiente-alvo do check (`MIGRATION_CHECK_ENV`). Fail-closed: ausente ou fora de TARGET_ENVS lança erro.
+ * Não há padrão: o significado de `adiada_aplicada` depende do ambiente (ver separateDeferredMigrations).
+ */
+export function resolveTargetEnv(raw) {
+  const value = String(raw ?? "").trim();
+  if (value === "") throw new Error("MIGRATION_CHECK_ENV ausente: defina `homolog` ou `producao`.");
+  if (!TARGET_ENVS.includes(value)) {
+    throw new Error(`MIGRATION_CHECK_ENV inválido (${JSON.stringify(value)}): use \`homolog\` ou \`producao\`.`);
+  }
+  return value;
+}
+
+/**
+ * Separa as adiadas. `targetEnv` é obrigatório (sem padrão):
+ * - `producao`: adiada aplicada no remoto é violação e BLOQUEIA (`adiada_aplicada`), como antes.
+ * - `homolog`: o manifesto é de produção. Adiada aplicada no homolog (com arquivo local igual ao remoto) vira
+ *   AVISO em `deferredApplied`, sem bloquear. Versão presente só no remoto continua bloqueando (remote_only).
+ */
+export function separateDeferredMigrations({ blocking, missingInList }, rows, deferredVersions, targetEnv) {
+  const env = resolveTargetEnv(targetEnv);
   const deferred = new Set(deferredVersions ?? []);
   if (deferred.size === 0) return { blocking, missingInList, deferredPending: [], deferredApplied: [] };
   const deferredPending = [];
@@ -292,9 +314,20 @@ export function separateDeferredMigrations({ blocking, missingInList }, rows, de
       if (!deferredPending.includes(version)) deferredPending.push(version);
     } else keptMissing.push(version);
   }
-  const deferredApplied = [...new Set((rows ?? []).map((r) => r.remote).filter((v) => v && deferred.has(v)))];
-  for (const version of deferredApplied) {
-    keptBlocking.push({ version, reason: "adiada_aplicada", remote: version });
+  let deferredApplied;
+  if (env === "producao") {
+    deferredApplied = [...new Set((rows ?? []).map((r) => r.remote).filter((v) => v && deferred.has(v)))];
+    for (const version of deferredApplied) {
+      keptBlocking.push({ version, reason: "adiada_aplicada", remote: version });
+    }
+  } else {
+    deferredApplied = [
+      ...new Set(
+        (rows ?? [])
+          .filter((r) => r.local !== null && r.local === r.remote && deferred.has(r.local))
+          .map((r) => r.local),
+      ),
+    ];
   }
   deferredPending.sort((a, b) => Number(a) - Number(b));
   return { blocking: keptBlocking, missingInList: keptMissing, deferredPending, deferredApplied };
@@ -519,6 +552,16 @@ function runMigrationListWithRetry(maxAttempts) {
 function main() {
   const opts = readArgs(process.argv.slice(2));
 
+  let targetEnv;
+  try {
+    targetEnv = resolveTargetEnv(process.env.MIGRATION_CHECK_ENV);
+  } catch (error) {
+    const message = String(error.message ?? error);
+    if (opts.json) console.log(JSON.stringify({ ok: false, error: "target_env_invalid", message }, null, 2));
+    else console.error(message);
+    process.exit(2);
+  }
+
   let stdout;
   let stderr = "";
   try {
@@ -611,6 +654,7 @@ function main() {
     { blocking: gatedBlocking, missingInList: gatedMissingInList },
     rows,
     deferredVersions,
+    targetEnv,
   );
   const baseRef = (process.env.MIGRATION_DRIFT_BASE_REF ?? "").trim();
   let baseVersions = null;
@@ -635,7 +679,7 @@ function main() {
   const status = deriveOverallStatus({
     blocking,
     humanGate,
-    deferred: deferredPending,
+    deferred: [...deferredPending, ...(targetEnv === "homolog" ? deferredApplied : [])],
     missingInList: blockingMissingInList,
     extraBlocking,
   });
@@ -661,7 +705,9 @@ function main() {
     })),
     humanGates: humanGate,
     deferredByGovernance: deferredPending,
-    deferredAppliedViolation: deferredApplied,
+    targetEnv,
+    deferredAppliedViolation: targetEnv === "producao" ? deferredApplied : [],
+    deferredAppliedAdvisory: targetEnv === "homolog" ? deferredApplied : [],
     baseRef: baseRef || null,
     prPendingNotOnBase: prPending,
     driftLegacyNumericMirror: legacyNumericMirror.map((d) => ({
@@ -702,6 +748,10 @@ function main() {
         console.log(`  - ${gate.version} (${gate.direction}; ${gate.reason}; doc=${gate.decisionDoc})`);
       }
       console.log("");
+    }
+    if (targetEnv === "homolog" && deferredApplied.length) {
+      console.log("Avisos (homolog): adiadas de PRODUÇÃO já aplicadas no homolog; a regra de produção não se aplica aqui e não bloqueia:");
+      console.log(`  ${deferredApplied.join(", ")}\n`);
     }
     if (deferredPending.length) {
       console.log("Adiadas pela governança (deferred-migrations.json; fora do remoto de propósito; não bloqueia):");
