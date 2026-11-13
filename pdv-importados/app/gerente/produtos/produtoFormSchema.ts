@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { validarParAtacado } from '@/lib/gerente/paresAtacado'
 
 export const optionalTexto = (max: number) =>
   z.string().nullable().optional().transform((s) => {
@@ -19,8 +20,12 @@ const codigoBarrasField = z
     'Código de barras: mínimo 3 caracteres ou deixe em branco',
   )
 
-const precoAtacadoRefine = (
-  data: { preco_varejo: number; preco_atacado: number | null },
+export const precoAtacadoRefine = (
+  data: {
+    preco_varejo: number
+    preco_atacado: number | null
+    quantidade_gatilho_atacado?: number | null
+  },
   ctx: z.RefinementCtx,
 ) => {
   if (data.preco_atacado !== null && data.preco_atacado >= data.preco_varejo) {
@@ -28,6 +33,21 @@ const precoAtacadoRefine = (
       code: z.ZodIssueCode.custom,
       path: ['preco_atacado'],
       message: 'O preço de atacado deve ser menor que o preço de varejo.',
+    })
+  }
+  // D6: preço de atacado sem quantidade mínima não vale na venda; preço e gatilho juntos.
+  const erroPar = validarParAtacado(data.preco_atacado, data.quantidade_gatilho_atacado ?? null)
+  if (erroPar === 'ATACADO_SEM_GATILHO') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['quantidade_gatilho_atacado'],
+      message: 'Informe a quantidade mínima do atacado: sem ela, o preço não vale na venda.',
+    })
+  } else if (erroPar === 'GATILHO_SEM_ATACADO') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['preco_atacado'],
+      message: 'Informe o preço de atacado ou deixe a quantidade mínima em branco.',
     })
   }
 }

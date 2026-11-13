@@ -185,6 +185,18 @@ function setupFixture() {
     INSERT INTO public.estoque(produto_id, loja_id, quantidade_atual) VALUES ('${produto}','${loja}',100000)
     ON CONFLICT (produto_id, loja_id) DO UPDATE SET quantidade_atual = 100000;
   `)
+  // D5 (20261107110000): PIX exige conta financeira vinculada à forma na loja.
+  runOnce(`
+    WITH c AS (
+      INSERT INTO public.contas_financeiras (id, loja_id, nome, tipo, ativo, data_inicial, criado_por)
+      SELECT gen_random_uuid(), '${loja}', 'Fixture conta D5 (concorrencia)', 'BANCO', true, current_date, '${gerente}'
+      WHERE NOT EXISTS (SELECT 1 FROM public.financeiro_contas_forma WHERE loja_id='${loja}' AND forma_pagamento='PIX')
+      RETURNING id
+    )
+    INSERT INTO public.financeiro_contas_forma (loja_id, forma_pagamento, conta_financeira_id)
+    SELECT '${loja}', f.forma, c.id FROM c CROSS JOIN unnest(ARRAY['PIX','CARTAO_DEBITO','CARTAO_CREDITO']) AS f(forma)
+    ON CONFLICT (loja_id, forma_pagamento) DO NOTHING;
+  `)
   runOnce(`
     INSERT INTO public.empresas (id, nome) VALUES ('fa5e0000-0000-4000-8000-0000000000f1', 'Fixture empresa (concorrencia)') ON CONFLICT (id) DO NOTHING;
     INSERT INTO public.configuracoes_gerais(empresa_id, chave, valor, tipo_dado) VALUES ('fa5e0000-0000-4000-8000-0000000000f1', 'comissao_padrao_percentual','5','percent')

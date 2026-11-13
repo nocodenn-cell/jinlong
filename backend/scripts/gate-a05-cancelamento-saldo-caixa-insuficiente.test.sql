@@ -17,8 +17,9 @@
 --      rejeitado explicitamente, sem drift entre as duas autoridades.
 --   2. POSITIVO — com suprimento cobrindo o estorno, o cancelamento conclui e
 --      as duas autoridades continuam iguais.
---   3. NÃO-REGRESSÃO — venda de caixa já FECHADO continua cancelável mesmo com
---      `saldo_atual` insuficiente (o guard só vale para caixa ABERTO).
+--   3. VENDA DE CAIXA FECHADO (D2, 20261107120000) — o estorno em dinheiro sai
+--      do caixa ABERTO da loja: o caixa fechado não muda e o aberto paga o
+--      estorno. Sem lastro no caixa aberto, o cancelamento é recusado.
 --
 -- Dados sintéticos, tudo dentro de uma transação com ROLLBACK.
 
@@ -182,6 +183,10 @@ DECLARE
   r record;
   v_status_venda text;
   v_status_caixa text;
+  v_operador uuid := 'f5000002-0000-4000-8000-000000000001';
+  v_caixa_aberto uuid;
+  v_saldo_fechado numeric(10,2);
+  v_saldo_aberto numeric(10,2);
 BEGIN
   PERFORM set_config('request.jwt.claim.sub', v_operador2::text, true);
 
@@ -214,15 +219,33 @@ BEGIN
     RAISE EXCEPTION 'GATE_A05_SETUP_FALHOU (fechado): caixa nao fechou (status=%)', v_status_caixa;
   END IF;
 
-  -- Caixa FECHADO com saldo insuficiente: o guard NÃO deve disparar.
+  -- Caixa FECHADO: o estorno em dinheiro sai do caixa ABERTO da loja (D2, 20261107120000),
+  -- que precisa ter lastro. Dá lastro ao caixa aberto da parte 1 e prova que o caixa
+  -- fechado não muda e o aberto paga o estorno.
+  SELECT id INTO v_caixa_aberto FROM public.caixas WHERE loja_id = v_loja AND status = 'ABERTO';
+  PERFORM set_config('request.jwt.claim.sub', v_operador::text, true);
+  PERFORM public.registrar_movimentacao(
+    v_caixa_aberto, 'suprimento', 'dinheiro', 100, 'gate-a05 lastro para estorno D2', 'TROCO',
+    NULL, NULL, gen_random_uuid()::text
+  );
+
   PERFORM set_config('request.jwt.claim.sub', v_gerente::text, true);
   PERFORM public.cancelar_venda_transacional(v_venda_id, 'gate-a05 cancelamento pos-fechamento');
 
   SELECT status INTO v_status_venda FROM public.vendas WHERE id = v_venda_id;
   IF v_status_venda IS DISTINCT FROM 'CANCELADA' THEN
-    RAISE EXCEPTION 'GATE_A05_FALHOU: guard bloqueou cancelamento de venda em caixa FECHADO (status=%)', v_status_venda;
+    RAISE EXCEPTION 'GATE_A05_FALHOU: cancelamento de venda em caixa FECHADO nao concluiu (status=%)', v_status_venda;
   END IF;
-  RAISE NOTICE 'Nao-regressao OK (A05): venda de caixa FECHADO segue cancelavel mesmo com saldo insuficiente.';
+
+  SELECT saldo_atual INTO v_saldo_fechado FROM public.caixas WHERE id = v_caixa_id;
+  SELECT saldo_atual INTO v_saldo_aberto FROM public.caixas WHERE id = v_caixa_aberto;
+  IF v_saldo_fechado <> 0 THEN
+    RAISE EXCEPTION 'GATE_A05_FALHOU: caixa FECHADO mudou apos estorno (saldo=%)', v_saldo_fechado;
+  END IF;
+  IF v_saldo_aberto <> 0 THEN
+    RAISE EXCEPTION 'GATE_A05_FALHOU: estorno deveria sair do caixa ABERTO (lastro 100 - estorno 100 = 0; saldo=%)', v_saldo_aberto;
+  END IF;
+  RAISE NOTICE 'Nao-regressao OK (A05): venda de caixa FECHADO cancelada; estorno saiu do caixa aberto (D2).';
 END
 $gate_a05_fechado$;
 

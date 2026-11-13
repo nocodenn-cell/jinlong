@@ -4,6 +4,7 @@ import {
   PRODUTO_IMPORT_MAX_ROWS,
 } from '@/lib/gerente/produtosCsvContract'
 import type { ImportCsvFatalReason, ImportCsvRowFailReason } from '@/lib/gerente/produtosImportRowMessages'
+import { validarParAtacado } from '@/lib/gerente/paresAtacado'
 
 /** Remove BOM UTF-8 do início do ficheiro. */
 export function stripLeadingBom(text: string): string {
@@ -206,6 +207,10 @@ export function parseAndValidateImportRow(
 
   const gatilhoRaw = parseIntOpcional(raw.quantidade_gatilho_atacado ?? '')
   if (!gatilhoRaw.ok) return { ok: false, reason: { t: 'gatilho_invalid' } }
+  // D6: preço de atacado exige quantidade mínima (e vice-versa). Reusa o motivo existente.
+  if (validarParAtacado(precoAtacadoRaw.value, gatilhoRaw.value)) {
+    return { ok: false, reason: { t: 'atacado_invalid' } }
+  }
 
   const unidadeRaw = parseUnidade(raw.unidade_medida ?? '')
   if (!unidadeRaw.ok) return { ok: false, reason: { t: 'unidade_invalid' } }

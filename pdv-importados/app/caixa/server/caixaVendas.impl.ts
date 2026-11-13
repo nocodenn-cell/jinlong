@@ -47,6 +47,7 @@ type PagamentoParcelaRpc = {
   forma_pagamento: FinalizarVendaInput['formaPagamento']
   valor: number
   parcelas?: number
+  valor_recebido?: number
 }
 
 type RpcCancelarVendaRow = { venda_id?: unknown; valor_estornado?: unknown }
@@ -306,6 +307,10 @@ export async function finalizarVendaCaixaImpl(
           valor: roundMoney2(p.valor),
           // Só envia quando > 1: banco sem a migration 20261021120000 ignora a chave (fica 1x), nunca falha.
           ...((p.parcelas ?? 1) > 1 ? { parcelas: p.parcelas } : {}),
+          // D4: só envia valor_recebido em DINHEIRO; banco sem a migration 20261107100000 ignora a chave.
+          ...(p.valorRecebido !== undefined && p.formaPagamento === 'DINHEIRO'
+            ? { valor_recebido: roundMoney2(p.valorRecebido) }
+            : {}),
         }),
       ),
       p_itens: itensRpc,

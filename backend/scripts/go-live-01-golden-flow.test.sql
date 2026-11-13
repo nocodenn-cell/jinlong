@@ -43,6 +43,12 @@ BEGIN
     INSERT INTO public.formas_pagamento (loja_id, codigo, nome, ativo) VALUES (la, forma, forma, true), (lb, forma, forma, true)
       ON CONFLICT (loja_id, codigo) DO UPDATE SET ativo = true;
   END LOOP;
+  -- D5 (D-07): PIX e cartão exigem conta financeira ativa na loja. Fixture com conta da loja A.
+  INSERT INTO public.contas_financeiras (loja_id, nome, tipo, ativo, data_inicial, criado_por)
+    VALUES (la, 'GF Banco A', 'BANCO', true, current_date, op);
+  INSERT INTO public.financeiro_contas_forma (loja_id, forma_pagamento, conta_financeira_id)
+    SELECT la, t.forma, c.id FROM unnest(ARRAY['PIX', 'CARTAO_CREDITO']) AS t(forma)
+    CROSS JOIN LATERAL (SELECT id FROM public.contas_financeiras WHERE loja_id = la AND nome = 'GF Banco A') c;
   INSERT INTO public.clientes (id, nome, limite_credito, loja_id, tipo) VALUES (cli, 'GF Cliente Fiado', 500, la, 'PF');
   INSERT INTO public.caixas (operador_id, status, data_abertura, valor_inicial, loja_id)
     VALUES (op, 'ABERTO', now(), 100, la) RETURNING id INTO cx;

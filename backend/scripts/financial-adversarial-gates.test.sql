@@ -61,6 +61,16 @@ SELECT gen_random_uuid() AS caixa, gen_random_uuid() AS outra_loja,
 -- ABERTO para o mesmo operador, e o seed já abre um para o OPERADOR.
 INSERT INTO public.caixas(id, operador_id, loja_id, status, valor_inicial)
 VALUES (:'caixa', NULL, :'loja', 'ABERTO', 1000);
+-- D5 (20261107110000): PIX/cartão exigem conta financeira vinculada à forma na loja.
+WITH c AS (
+  INSERT INTO public.contas_financeiras (id, loja_id, nome, tipo, ativo, data_inicial, criado_por)
+  SELECT gen_random_uuid(), :'loja', 'Fixture conta D5', 'BANCO', true, current_date, :'gerente_id'
+  WHERE NOT EXISTS (SELECT 1 FROM public.financeiro_contas_forma WHERE loja_id = :'loja' AND forma_pagamento = 'PIX')
+  RETURNING id
+)
+INSERT INTO public.financeiro_contas_forma (loja_id, forma_pagamento, conta_financeira_id)
+SELECT :'loja', f.forma, c.id FROM c CROSS JOIN unnest(ARRAY['PIX','CARTAO_DEBITO','CARTAO_CREDITO']) AS f(forma)
+ON CONFLICT (loja_id, forma_pagamento) DO NOTHING;
 INSERT INTO public.lojas(empresa_id, id, nome, codigo)
 VALUES ('fa5e0000-0000-4000-8000-0000000000f1', :'outra_loja', 'Loja adversarial', 'ADV-' || left(:'outra_loja', 8));
 INSERT INTO public.clientes(id, nome, loja_id) VALUES (:'cliente', 'Cliente adversarial', :'loja');

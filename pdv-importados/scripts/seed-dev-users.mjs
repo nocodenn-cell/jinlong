@@ -135,6 +135,48 @@ async function upsertUsuario(supabase, userId, { nome, perfil, idioma_preferido,
   if (error) throw error
 }
 
+/**
+ * Garante, na loja matriz, uma conta financeira vinculada às formas PIX, CARTAO_DEBITO e
+ * CARTAO_CREDITO (idempotente). Usa o mesmo papel de `criado_por` do gerente E2E.
+ */
+async function ensureFormasFinanceirasLojaMatriz(supabase, gerenteId) {
+  const { data: existentes, error: errExist } = await supabase
+    .from('financeiro_contas_forma')
+    .select('forma_pagamento')
+    .eq('loja_id', LOJA_MATRIZ_ID)
+  if (errExist) throw errExist
+  const formas = ['PIX', 'CARTAO_DEBITO', 'CARTAO_CREDITO']
+  const jaTem = new Set((existentes ?? []).map((r) => r.forma_pagamento))
+  if (formas.every((f) => jaTem.has(f))) return
+
+  const { data: conta, error: errConta } = await supabase
+    .from('contas_financeiras')
+    .insert({
+      loja_id: LOJA_MATRIZ_ID,
+      nome: 'E2E Conta Banco',
+      tipo: 'BANCO',
+      ativo: true,
+      data_inicial: new Date().toISOString().slice(0, 10),
+      criado_por: gerenteId,
+    })
+    .select('id')
+    .single()
+  if (errConta) throw errConta
+
+  const linhas = formas
+    .filter((f) => !jaTem.has(f))
+    .map((forma_pagamento) => ({
+      loja_id: LOJA_MATRIZ_ID,
+      forma_pagamento,
+      conta_financeira_id: conta.id,
+    }))
+  const { error: errForma } = await supabase
+    .from('financeiro_contas_forma')
+    .upsert(linhas, { onConflict: 'loja_id,forma_pagamento', ignoreDuplicates: true })
+  if (errForma) throw errForma
+  console.log('OK conta financeira E2E (PIX/cartão) na loja matriz')
+}
+
 async function main() {
   if (!url || !serviceKey) {
     console.error(
@@ -193,6 +235,10 @@ async function main() {
     idioma_preferido: 'pt',
   })
   console.log('OK GERENTE:', gerenteEmail, '→', gerente.id)
+
+  // D5 (20261107110000): PIX e cartão exigem conta financeira vinculada à forma na loja.
+  // Sem isto, as vendas E2E em PIX/cartão falham com PAGAMENTO_SEM_CONTA_FINANCEIRA.
+  await ensureFormasFinanceirasLojaMatriz(supabase, gerente.id)
 
   const operador = await ensureAuthUser(supabase, operadorEmail, password)
   await upsertUsuario(supabase, operador.id, {

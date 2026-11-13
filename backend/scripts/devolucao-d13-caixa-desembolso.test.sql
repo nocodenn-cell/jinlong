@@ -40,6 +40,13 @@ BEGIN
     INSERT INTO public.formas_pagamento (loja_id, codigo, nome, ativo) VALUES
       (pg_temp.lid(l), 'DINHEIRO', 'Dinheiro', true), (pg_temp.lid(l), 'PIX', 'Pix', true)
     ON CONFLICT (loja_id, codigo) DO UPDATE SET ativo = true;
+    -- D5 (20261107110000): PIX exige conta financeira vinculada à forma na loja.
+    INSERT INTO public.contas_financeiras (id, loja_id, nome, tipo, ativo, data_inicial, criado_por)
+    SELECT ('f7000007-0000-4000-8000-0000000000' || lpad(l::text, 2, '0'))::uuid, pg_temp.lid(l), 'D13 Banco ' || l, 'BANCO', true, current_date, pg_temp.gid(l)
+    WHERE NOT EXISTS (SELECT 1 FROM public.contas_financeiras WHERE id = ('f7000007-0000-4000-8000-0000000000' || lpad(l::text, 2, '0'))::uuid);
+    INSERT INTO public.financeiro_contas_forma (loja_id, forma_pagamento, conta_financeira_id)
+    SELECT pg_temp.lid(l), 'PIX', ('f7000007-0000-4000-8000-0000000000' || lpad(l::text, 2, '0'))::uuid
+    WHERE NOT EXISTS (SELECT 1 FROM public.financeiro_contas_forma WHERE loja_id = pg_temp.lid(l) AND forma_pagamento = 'PIX');
     INSERT INTO public.clientes (id, nome, loja_id, limite_credito) VALUES (pg_temp.cid(l), 'D13 Cliente ' || l, pg_temp.lid(l), 1000)
     ON CONFLICT (id) DO UPDATE SET loja_id = pg_temp.lid(l), limite_credito = 1000;
   END LOOP;
