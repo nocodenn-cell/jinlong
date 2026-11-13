@@ -82,3 +82,15 @@ Comparação do SQL armazenado em `supabase_migrations.schema_migrations.stateme
 | 20261029180712 | `20261029160000_s2_…` | diferente | patch só do homolog; idem |
 | 20261029163804, 20261029164844 | — | mesmo md5 entre si; rollback de validação | reparo do histórico do homolog (exige autorização) |
 | 20261029163850, 20261029181844 | — | rollback de validação | idem |
+
+## 7. Reparo do histórico do homolog (2026-11-12, autorizado pelo dono)
+
+Escopo: só `supabase_migrations.schema_migrations` do homolog `yvdilcmxyjafnnsfdtam`. Nenhuma função, tabela ou dado de negócio foi alterado; produção não foi tocada.
+
+- **Removidos (6):** `20261029163804`, `20261029163850`, `20261029164844`, `20261029181844` (rollbacks de validação) e `20261029164906`, `20261029180712` (variantes de G14 e S2).
+- **Por que é seguro para as variantes:** o estado atual do homolog bate com o repositório nos marcadores verificados: `internal.transferir_estoque_seguro` contém o G14 ajustado ("catálogo da empresa usa o mesmo produto_id") e não contém `TRANSFERENCIA_PRODUTO_SEM_EQUIVALENTE`, igual a `20261029150000_g14_…`; `internal.confirmar_importacao_nfe` contém `v_consumido`, igual a `20261029160000_s2_…`. Comparação por marcadores, não por corpo completo.
+- **Backup:** as 6 linhas completas foram copiadas antes, na mesma transação, para `internal.schema_migrations_reparo_backup_20261112` (sem acesso para `anon`/`authenticated`).
+- **Resultado:** histórico 487 → 481 versões; 0 restantes das 6.
+- **Reversão:** `INSERT INTO supabase_migrations.schema_migrations (version, statements, name, created_by, idempotency_key, rollback) SELECT version, statements, name, created_by, idempotency_key, rollback FROM internal.schema_migrations_reparo_backup_20261112;`
+
+Pendentes depois do reparo (5): `20261106140207` e `20261030002520` (resolvem-se nas branches de origem) e as 3 de leads (`20261107205637`, `20261107205702`, `20261107210926`), que dependem da escolha da versão canônica.
