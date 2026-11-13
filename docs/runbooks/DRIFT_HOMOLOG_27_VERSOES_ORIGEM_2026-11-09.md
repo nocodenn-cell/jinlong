@@ -94,3 +94,12 @@ Escopo: só `supabase_migrations.schema_migrations` do homolog `yvdilcmxyjafnnsf
 - **Reversão:** `INSERT INTO supabase_migrations.schema_migrations (version, statements, name, created_by, idempotency_key, rollback) SELECT version, statements, name, created_by, idempotency_key, rollback FROM internal.schema_migrations_reparo_backup_20261112;`
 
 Pendentes depois do reparo (5): `20261106140207` e `20261030002520` (resolvem-se nas branches de origem) e as 3 de leads (`20261107205637`, `20261107205702`, `20261107210926`), que dependem da escolha da versão canônica.
+
+## 8. Decisões (2026-11-12, tomadas por delegação do dono)
+
+1. **Label `deploy-prod:aprovado`: não aplicado.** Autorização explícita do dono é pré-requisito; nenhuma decisão técnica deste PR a substitui.
+2. **Leads (`20261107205637`, `20261107205702`, `20261107210926`): mantidos bloqueando.** O homolog roda uma versão que não é nenhuma das duas em aberto: #677 (`60205a0b`, `20261107120000`/`130000`) e a `main` (`20261104150000`–`170000`, deferidas). Escolher a canônica mexe nas migrations deferidas de produção, e #676 e #677 são PRs abertos e não-draft que o dono precisa sequenciar. Não escolhi.
+3. **`20261106140207` (branch `sec/contencao-dml-direto-a`, PR #671 aberto): não trazido para esta branch.** Entra quando #671 for mesclado; trazer agora misturaria escopo.
+4. **`20261030002520` (branch `claude/jl-pdv-02-sync-atomica`): não trazido.** Exige renomear o arquivo de versão `20261030120000` (colide com a NF-e) antes de qualquer merge.
+
+Efeito: `migration-remote-drift` continua vermelho por 5 versões, todas com destino já documentado. Nenhuma delas pode ser resolvida só com alterações nesta branch.
