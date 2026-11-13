@@ -1,27 +1,29 @@
+# Evidência sec02 (2026-11-07) — execução real em Postgres 16 descartável (container sec03-verify), NÃO no Supabase.
+# Schema mínimo: docs/qa/evidencias/sec02_bootstrap_minimo.sql. Migrations 150000, 160000 e 170000 aplicadas da branch.
+# Substitui a saída anterior (função de 12 argumentos, RPC chamada como anon). Roteiro: sec02_formulario_rpc_testes.sql.
 == 1 anon INSERT direto (esperado: permission denied)
-psql:<stdin>:7: ERROR:  permission denied for table commercial_leads
-HINT:  Grant the required privileges to the current role with: GRANT INSERT ON public.commercial_leads TO anon;
+ERROR:  permission denied for table commercial_leads
 == 2 anon SELECT direto (esperado: permission denied)
-psql:<stdin>:11: ERROR:  permission denied for table commercial_leads
-HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.commercial_leads TO anon;
-== 3 anon RPC valida (esperado: ok, 1 linha inserida)
-
-psql:<stdin>:16: ERROR:  permission denied for table commercial_leads
-HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.commercial_leads TO anon;
-== 4 invalidos (esperado: erro LEAD_*)
-psql:<stdin>:20: ERROR:  LEAD_PROTOCOLO_INVALIDO
-CONTEXT:  PL/pgSQL function registrar_lead_comercial(text,text,text,text,text,text,text,text,text,text,text,text) line 4 at RAISE
-psql:<stdin>:21: ERROR:  LEAD_NOME_INVALIDO
-CONTEXT:  PL/pgSQL function registrar_lead_comercial(text,text,text,text,text,text,text,text,text,text,text,text) line 7 at RAISE
-psql:<stdin>:22: ERROR:  LEAD_CANAL_INVALIDO
-CONTEXT:  PL/pgSQL function registrar_lead_comercial(text,text,text,text,text,text,text,text,text,text,text,text) line 16 at RAISE
-psql:<stdin>:23: ERROR:  LEAD_NOME_INVALIDO
-CONTEXT:  PL/pgSQL function registrar_lead_comercial(text,text,text,text,text,text,text,text,text,text,text,text) line 7 at RAISE
-psql:<stdin>:24: ERROR:  LEAD_CIDADE_INVALIDA
-CONTEXT:  PL/pgSQL function registrar_lead_comercial(text,text,text,text,text,text,text,text,text,text,text,text) line 25 at RAISE
-psql:<stdin>:25: ERROR:  LEAD_SEGMENTO_INVALIDO
-CONTEXT:  PL/pgSQL function registrar_lead_comercial(text,text,text,text,text,text,text,text,text,text,text,text) line 22 at RAISE
-psql:<stdin>:26: ERROR:  LEAD_WECHAT_INVALIDO
-CONTEXT:  PL/pgSQL function registrar_lead_comercial(text,text,text,text,text,text,text,text,text,text,text,text) line 28 at RAISE
-== 5 authenticated sem JWT nao lista leads de outros (tabela sem grant ou RLS)
-auth_select_leads|0
+ERROR:  permission denied for table commercial_leads
+== 3 anon chama a RPC (esperado: permission denied for function; anon não tem EXECUTE)
+ERROR:  permission denied for function registrar_lead_comercial
+== 4 service_role chama a RPC valida (esperado: ok, 1 linha inserida)
+JL-261104-ABCDEF
+linhas_apos_rpc|1
+== 5 service_role com entradas inválidas (esperado: erro LEAD_*)
+ERROR:  LEAD_PROTOCOLO_INVALIDO
+CONTEXT:  PL/pgSQL function registrar_lead_comercial(uuid,text,text,text,text,text,text,text,text,text,text,text,text,text) line 11 at RAISE
+ERROR:  LEAD_NOME_INVALIDO
+CONTEXT:  PL/pgSQL function registrar_lead_comercial(uuid,text,text,text,text,text,text,text,text,text,text,text,text,text) line 14 at RAISE
+ERROR:  LEAD_CANAL_INVALIDO
+CONTEXT:  PL/pgSQL function registrar_lead_comercial(uuid,text,text,text,text,text,text,text,text,text,text,text,text,text) line 23 at RAISE
+ERROR:  LEAD_NOME_INVALIDO
+CONTEXT:  PL/pgSQL function registrar_lead_comercial(uuid,text,text,text,text,text,text,text,text,text,text,text,text,text) line 14 at RAISE
+ERROR:  LEAD_CIDADE_INVALIDA
+CONTEXT:  PL/pgSQL function registrar_lead_comercial(uuid,text,text,text,text,text,text,text,text,text,text,text,text,text) line 32 at RAISE
+ERROR:  LEAD_SEGMENTO_INVALIDO
+CONTEXT:  PL/pgSQL function registrar_lead_comercial(uuid,text,text,text,text,text,text,text,text,text,text,text,text,text) line 29 at RAISE
+ERROR:  LEAD_WECHAT_INVALIDO
+CONTEXT:  PL/pgSQL function registrar_lead_comercial(uuid,text,text,text,text,text,text,text,text,text,text,text,text,text) line 35 at RAISE
+== 6 authenticated sem JWT nao lista leads de outros (tabela sem grant ou RLS)
+ERROR:  permission denied for table commercial_leads
