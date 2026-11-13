@@ -308,7 +308,7 @@ test("git alinhado NÃO justifica remote_only de outro par nem remote-only sem p
 });
 
 const HOMOLOG_REF = "yvdilcmxyjafnnsfdtam";
-const PROD_REF = "kbabmewnahysfvlybiak";
+const OUTRO_REF = "outroprojetoxxxxxxxxx"; // ref diferente do registro (não é produção)
 const REGISTRO_HOMOLOG = {
   checkProjectRef: HOMOLOG_REF,
   accepted: [{ version: "20261010120000", reason: "aplicada no homolog", decisionDoc: "docs/ops/deploy-governance.md" }],
@@ -327,9 +327,9 @@ test("adiada aplicada no projeto de verificação registrado vira HUMAN_GATE (ex
   assert.equal(deriveExitCode(status), 0);
 });
 
-test("mesma adiada aplicada, mas consultando o projeto de PRODUÇÃO, continua BLOQUEANTE", () => {
+test("mesma adiada aplicada, mas consultando outro projeto (ref diferente), continua BLOQUEANTE", () => {
   const blocking = [{ version: "20261010120000", reason: "adiada_aplicada", remote: "20261010120000" }];
-  const acc = acceptDeferredAppliedOnCheckProject({ blocking }, REGISTRO_HOMOLOG, PROD_REF);
+  const acc = acceptDeferredAppliedOnCheckProject({ blocking }, REGISTRO_HOMOLOG, OUTRO_REF);
   assert.deepEqual(acc.blocking, blocking);
   assert.deepEqual(acc.accepted, []);
   assert.equal(deriveExitCode(deriveOverallStatus({ blocking: acc.blocking, humanGate: acc.humanGate, missingInList: [], extraBlocking: [] })), 1);
