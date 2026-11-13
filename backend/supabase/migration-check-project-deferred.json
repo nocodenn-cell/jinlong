@@ -77,5 +77,112 @@
       "reason": "Aplicada no projeto de verificacao (homolog jinlong-homolog-palm) antes da governanca de adiadas. Nao e producao: a adiada continua no manifesto e NAO deve ser aplicada em producao sem a liberacao descrita no manifesto.",
       "decisionDoc": "docs/ops/deploy-governance.md"
     }
+  ],
+  "remoteOnlyAccepted": [
+    {
+      "version": "20261029153523",
+      "reason": "Aplicada/revertida/reaplicada via MCP no homolog de verificacao (jinlong-homolog-palm) em 2026-10-29; o registro de schema_migrations ficou com o timestamp de aplicacao, sem arquivo correspondente no repo. Historico do homolog, nao producao.",
+      "decisionDoc": "docs/ops/deploy-governance.md"
+    },
+    {
+      "version": "20261029161123",
+      "reason": "Aplicada/revertida/reaplicada via MCP no homolog de verificacao (jinlong-homolog-palm) em 2026-10-29; o registro de schema_migrations ficou com o timestamp de aplicacao, sem arquivo correspondente no repo. Historico do homolog, nao producao.",
+      "decisionDoc": "docs/ops/deploy-governance.md"
+    },
+    {
+      "version": "20261029161430",
+      "reason": "Aplicada/revertida/reaplicada via MCP no homolog de verificacao (jinlong-homolog-palm) em 2026-10-29; o registro de schema_migrations ficou com o timestamp de aplicacao, sem arquivo correspondente no repo. Historico do homolog, nao producao.",
+      "decisionDoc": "docs/ops/deploy-governance.md"
+    },
+    {
+      "version": "20261029161519",
+      "reason": "Aplicada/revertida/reaplicada via MCP no homolog de verificacao (jinlong-homolog-palm) em 2026-10-29; o registro de schema_migrations ficou com o timestamp de aplicacao, sem arquivo correspondente no repo. Historico do homolog, nao producao.",
+      "decisionDoc": "docs/ops/deploy-governance.md"
+    },
+    {
+      "version": "20261029161826",
+      "reason": "Aplicada/revertida/reaplicada via MCP no homolog de verificacao (jinlong-homolog-palm) em 2026-10-29; o registro de schema_migrations ficou com o timestamp de aplicacao, sem arquivo correspondente no repo. Historico do homolog, nao producao.",
+      "decisionDoc": "docs/ops/deploy-governance.md"
+    },
+    {
+      "version": "20261029162055",
+      "reason": "Aplicada/revertida/reaplicada via MCP no homolog de verificacao (jinlong-homolog-palm) em 2026-10-29; o registro de schema_migrations ficou com o timestamp de aplicacao, sem arquivo correspondente no repo. Historico do homolog, nao producao.",
+      "decisionDoc": "docs/ops/deploy-governance.md"
+    },
+    {
+      "version": "20261029162335",
+      "reason": "Aplicada/revertida/reaplicada via MCP no homolog de verificacao (jinlong-homolog-palm) em 2026-10-29; o registro de schema_migrations ficou com o timestamp de aplicacao, sem arquivo correspondente no repo. Historico do homolog, nao producao.",
+      "decisionDoc": "docs/ops/deploy-governance.md"
+    },
+    {
+      "version": "20261029162411",
+      "reason": "Aplicada/revertida/reaplicada via MCP no homolog de verificacao (jinlong-homolog-palm) em 2026-10-29; o registro de schema_migrations ficou com o timestamp de aplicacao, sem arquivo correspondente no repo. Historico do homolog, nao producao.",
+      "decisionDoc": "docs/ops/deploy-governance.md"
+    },
+    {
+      "version": "20261029162618",
+      "reason": "Aplicada/revertida/reaplicada via MCP no homolog de verificacao (jinlong-homolog-palm) em 2026-10-29; o registro de schema_migrations ficou com o timestamp de aplicacao, sem arquivo correspondente no repo. Historico do homolog, nao producao.",
+      "decisionDoc": "docs/ops/deploy-governance.md"
+    },
+    {
+      "version": "20261029162645",
+      "reason": "Aplicada/revertida/reaplicada via MCP no homolog de verificacao (jinlong-homolog-palm) em 2026-10-29; o registro de schema_migrations ficou com o timestamp de aplicacao, sem arquivo correspondente no repo. Historico do homolog, nao producao.",
+      "decisionDoc": "docs/ops/deploy-governance.md"
+    },
+    {
+      "version": "20261029163827",
+      "reason": "Aplicada/revertida/reaplicada via MCP no homolog de verificacao (jinlong-homolog-palm) em 2026-10-29; o registro de schema_migrations ficou com o timestamp de aplicacao, sem arquivo correspondente no repo. Historico do homolog, nao producao.",
+      "decisionDoc": "docs/ops/deploy-governance.md"
+    },
+    {
+      "version": "20261029163941",
+      "reason": "Aplicada/revertida/reaplicada via MCP no homolog de verificacao (jinlong-homolog-palm) em 2026-10-29; o registro de schema_migrations ficou com o timestamp de aplicacao, sem arquivo correspondente no repo. Historico do homolog, nao producao.",
+      "decisionDoc": "docs/ops/deploy-governance.md"
+    },
+    {
+      "version": "20261029163953",
+      "reason": "Aplicada/revertida/reaplicada via MCP no homolog de verificacao (jinlong-homolog-palm) em 2026-10-29; o registro de schema_migrations ficou com o timestamp de aplicacao, sem arquivo correspondente no repo. Historico do homolog, nao producao.",
+      "decisionDoc": "docs/ops/deploy-governance.md"
+    },
+    {
+      "version": "20261029164014",
+      "reason": "Aplicada/revertida/reaplicada via MCP no homolog de verificacao (jinlong-homolog-palm) em 2026-10-29; o registro de schema_migrations ficou com o timestamp de aplicacao, sem arquivo correspondente no repo. Historico do homolog, nao producao.",
+      "decisionDoc": "docs/ops/deploy-governance.md"
+    },
+    {
+      "version": "20261029175741",
+      "reason": "Aplicada/revertida/reaplicada via MCP no homolog de verificacao (jinlong-homolog-palm) em 2026-10-29; o registro de schema_migrations ficou com o timestamp de aplicacao, sem arquivo correspondente no repo. Historico do homolog, nao producao.",
+      "decisionDoc": "docs/ops/deploy-governance.md"
+    },
+    {
+      "version": "20261029181913",
+      "reason": "Aplicada/revertida/reaplicada via MCP no homolog de verificacao (jinlong-homolog-palm) em 2026-10-29; o registro de schema_migrations ficou com o timestamp de aplicacao, sem arquivo correspondente no repo. Historico do homolog, nao producao.",
+      "decisionDoc": "docs/ops/deploy-governance.md"
+    },
+    {
+      "version": "20261030002520",
+      "reason": "Aplicada via MCP no homolog de verificacao sem arquivo correspondente no repo. Historico do homolog, nao producao.",
+      "decisionDoc": "docs/ops/deploy-governance.md"
+    },
+    {
+      "version": "20261106140207",
+      "reason": "Aplicada via MCP no homolog de verificacao sem arquivo correspondente no repo. Historico do homolog, nao producao.",
+      "decisionDoc": "docs/ops/deploy-governance.md"
+    },
+    {
+      "version": "20261107205637",
+      "reason": "Aplicada via MCP no homolog de verificacao em 2026-11-07 (sessao de leads, PR #676/#677); o registro usa o timestamp de aplicacao. Arquivo correspondente existe no repo sob outro timestamp ou nome.",
+      "decisionDoc": "docs/ops/deploy-governance.md"
+    },
+    {
+      "version": "20261107205702",
+      "reason": "Aplicada via MCP no homolog de verificacao em 2026-11-07 (sessao de leads, PR #676/#677); o registro usa o timestamp de aplicacao. Arquivo correspondente existe no repo sob outro timestamp ou nome.",
+      "decisionDoc": "docs/ops/deploy-governance.md"
+    },
+    {
+      "version": "20261107210926",
+      "reason": "Aplicada via MCP no homolog de verificacao em 2026-11-07 (sessao de leads, PR #676/#677); o registro usa o timestamp de aplicacao. Arquivo correspondente existe no repo sob outro timestamp ou nome.",
+      "decisionDoc": "docs/ops/deploy-governance.md"
+    }
   ]
 }

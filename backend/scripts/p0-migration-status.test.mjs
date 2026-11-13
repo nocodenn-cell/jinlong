@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import test from "node:test";
 
 import {
   acceptDeferredAppliedOnCheckProject,
+  acceptRemoteOnlyOnCheckProject,
   analyze,
   applyHumanGateRegistry,
   deriveExitCode,
@@ -361,4 +363,47 @@ test("registro do projeto de verificação: lê válido e falha fechado quando m
   assert.throws(() => parseCheckProjectDeferredRegistry(JSON.stringify({ ...REGISTRO_HOMOLOG, checkProjectRef: "curto" })), /checkProjectRef/);
   assert.throws(() => parseCheckProjectDeferredRegistry(JSON.stringify({ ...REGISTRO_HOMOLOG, accepted: [{ version: "20261010120000", reason: "", decisionDoc: "x" }] })), /reason e decisionDoc/);
   assert.throws(() => parseCheckProjectDeferredRegistry(JSON.stringify({ ...REGISTRO_HOMOLOG, accepted: [REGISTRO_HOMOLOG.accepted[0], REGISTRO_HOMOLOG.accepted[0]] })), /duplicada/);
+});
+
+test("só-remoto registrado no projeto de verificação vira HUMAN_GATE; outro ref continua BLOQUEANTE", () => {
+  const registro = {
+    checkProjectRef: HOMOLOG_REF,
+    accepted: [],
+    remoteOnlyAccepted: [{ version: "20261107210926", reason: "aplicada no homolog", decisionDoc: "docs/ops/deploy-governance.md" }],
+  };
+  const ok = acceptRemoteOnlyOnCheckProject({ extraBlocking: ["20261107210926", "20269999999999"] }, registro, HOMOLOG_REF);
+  assert.deepEqual(ok.extraBlocking, ["20269999999999"]);
+  assert.deepEqual(ok.accepted, ["20261107210926"]);
+  assert.equal(ok.humanGate[0].divergence, "remote_only_no_projeto_de_verificacao");
+  const outro = acceptRemoteOnlyOnCheckProject({ extraBlocking: ["20261107210926"] }, registro, OUTRO_REF);
+  assert.deepEqual(outro.extraBlocking, ["20261107210926"]);
+  assert.deepEqual(outro.accepted, []);
+});
+
+test("registro real: aceita exatamente as 36 divergências reprovadas no CI do homolog (sem ref de outro projeto)", () => {
+  const raw = fs.readFileSync(new URL("../supabase/migration-check-project-deferred.json", import.meta.url), "utf8");
+  const registro = parseCheckProjectDeferredRegistry(raw);
+  const adiadas = [
+    "20261010120000", "20261023130000", "20261028100000", "20261028101000", "20261028110000",
+    "20261028120100", "20261028121000", "20261028122000", "20261029155000", "20261030100000",
+    "20261030120000", "20261030130000", "20261030140000", "20261104120000", "20261104150000",
+  ];
+  const soRemoto = [
+    "20261029153523", "20261029161123", "20261029161430", "20261029161519", "20261029161826",
+    "20261029162055", "20261029162335", "20261029162411", "20261029162618", "20261029162645",
+    "20261029163827", "20261029163941", "20261029163953", "20261029164014", "20261029175741",
+    "20261029181913", "20261030002520", "20261106140207", "20261107205637", "20261107205702",
+    "20261107210926",
+  ];
+  const blocking = adiadas.map((version) => ({ version, reason: "adiada_aplicada", remote: version }));
+  const a = acceptDeferredAppliedOnCheckProject({ blocking }, registro, HOMOLOG_REF);
+  assert.deepEqual(a.blocking, []);
+  assert.equal(a.accepted.length, 15);
+  const b = acceptRemoteOnlyOnCheckProject({ extraBlocking: soRemoto }, registro, HOMOLOG_REF);
+  assert.deepEqual(b.extraBlocking, []);
+  assert.equal(b.accepted.length, 21);
+  const c = acceptDeferredAppliedOnCheckProject({ blocking }, registro, OUTRO_REF);
+  const d = acceptRemoteOnlyOnCheckProject({ extraBlocking: soRemoto }, registro, OUTRO_REF);
+  assert.equal(c.blocking.length, 15);
+  assert.equal(d.extraBlocking.length, 21);
 });

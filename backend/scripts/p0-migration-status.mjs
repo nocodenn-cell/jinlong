@@ -312,7 +312,26 @@ export function parseCheckProjectDeferredRegistry(raw) {
     seen.add(version);
     return { version, reason, decisionDoc };
   });
-  return { checkProjectRef, accepted };
+  const remoteOnlyAccepted = (Array.isArray(payload.remoteOnlyAccepted) ? payload.remoteOnlyAccepted : []).map((entry, index) => {
+    if (!entry || typeof entry !== "object") {
+      throw new Error(`Registro de adiadas do projeto de verificação inválido: remoteOnlyAccepted[${index}] não é objeto.`);
+    }
+    const version = String(entry.version ?? "").trim();
+    const reason = String(entry.reason ?? "").trim();
+    const decisionDoc = String(entry.decisionDoc ?? "").trim();
+    if (!/^\d+$/.test(version)) {
+      throw new Error(`Registro de adiadas do projeto de verificação inválido: remoteOnlyAccepted[${index}].version inválida.`);
+    }
+    if (!reason || !decisionDoc) {
+      throw new Error(`Registro de adiadas do projeto de verificação inválido: remoteOnlyAccepted[${index}] exige reason e decisionDoc.`);
+    }
+    if (seen.has(version)) {
+      throw new Error(`Registro de adiadas do projeto de verificação inválido: versão duplicada ${version}.`);
+    }
+    seen.add(version);
+    return { version, reason, decisionDoc };
+  });
+  return { checkProjectRef, accepted, remoteOnlyAccepted };
 }
 
 function loadCheckProjectDeferredRegistry() {
@@ -320,6 +339,36 @@ function loadCheckProjectDeferredRegistry() {
     throw new Error(`Registro de adiadas do projeto de verificação obrigatório ausente: ${CHECK_PROJECT_DEFERRED_FILE}`);
   }
   return parseCheckProjectDeferredRegistry(fs.readFileSync(CHECK_PROJECT_DEFERRED_FILE, "utf8"));
+}
+
+/**
+ * Aceita versões SÓ-REMOTO (sem arquivo no repo) SOMENTE quando o ref consultado é o `checkProjectRef` do
+ * registro e a versão consta em `remoteOnlyAccepted`. Qualquer outro caso mantém o bloqueio.
+ */
+export function acceptRemoteOnlyOnCheckProject({ extraBlocking }, registry, checkRef) {
+  if (!registry || !checkRef || checkRef !== registry.checkProjectRef) {
+    return { extraBlocking, accepted: [], humanGate: [] };
+  }
+  const byVersion = new Map((registry.remoteOnlyAccepted ?? []).map((e) => [e.version, e]));
+  const accepted = [];
+  const humanGate = [];
+  const keptExtra = [];
+  for (const version of extraBlocking) {
+    const hit = byVersion.get(version);
+    if (hit) {
+      accepted.push(version);
+      humanGate.push({
+        version,
+        direction: "remote_only_check_project",
+        reason: hit.reason,
+        decisionDoc: hit.decisionDoc,
+        divergence: "remote_only_no_projeto_de_verificacao",
+      });
+    } else {
+      keptExtra.push(version);
+    }
+  }
+  return { extraBlocking: keptExtra, accepted, humanGate };
 }
 
 /**
@@ -667,7 +716,7 @@ function main() {
   const {
     blocking: gatedBlocking,
     missingInList: gatedMissingInList,
-    extraBlocking,
+    extraBlocking: extraBlockingRaw,
     humanGate,
   } = applyHumanGateRegistry(
     { blocking: initiallyBlocking, missingInList, extraBlocking: initiallyExtraBlocking },
@@ -704,7 +753,9 @@ function main() {
   }
   const checkRef = (process.env.SUPABASE_MIGRATION_CHECK_PROJECT_REF ?? "").trim();
   const checkAccept = acceptDeferredAppliedOnCheckProject({ blocking: deferredFilteredBlocking }, checkRegistry, checkRef);
-  const humanGateAll = [...humanGate, ...checkAccept.humanGate];
+  const remoteAccept = acceptRemoteOnlyOnCheckProject({ extraBlocking: extraBlockingRaw }, checkRegistry, checkRef);
+  const extraBlocking = remoteAccept.extraBlocking;
+  const humanGateAll = [...humanGate, ...checkAccept.humanGate, ...remoteAccept.humanGate];
   const deferredAppliedRemaining = deferredApplied.filter((v) => !checkAccept.accepted.includes(v));
   const baseRef = (process.env.MIGRATION_DRIFT_BASE_REF ?? "").trim();
   let baseVersions = null;
@@ -757,6 +808,7 @@ function main() {
     deferredByGovernance: deferredPending,
     deferredAppliedViolation: deferredAppliedRemaining,
     deferredAcceptedOnCheckProject: checkAccept.accepted,
+    remoteOnlyAcceptedOnCheckProject: remoteAccept.accepted,
     baseRef: baseRef || null,
     prPendingNotOnBase: prPending,
     driftLegacyNumericMirror: legacyNumericMirror.map((d) => ({

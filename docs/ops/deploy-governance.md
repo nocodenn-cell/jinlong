@@ -35,7 +35,7 @@ timestamp novo faria o próximo merge aplicá-la automaticamente e quebrar o PDV
 - `deploy-governance.yml`: PR que toque `backend/supabase/migrations/`, `backend/supabase/functions/`,
   `backend/supabase/config.toml` ou o manifesto exige o label `deploy-prod:aprovado`.
 - CODEOWNERS para `config.toml`, o manifesto e este documento.
-- `backend/supabase/migration-check-project-deferred.json`: adiadas que já estão aplicadas no **projeto de verificação do CI** (homolog `jinlong-homolog-palm`). O check `migration-remote-drift` aceita essas versões **só** quando `SUPABASE_MIGRATION_CHECK_PROJECT_REF` é exatamente o `checkProjectRef` do registro. Em qualquer outro projeto (produção inclusive), ou para versão fora do registro, a aplicação continua bloqueando (`adiada_aplicada`). Não libera produção: a adiada segue no manifesto e exige a liberação descrita nele.
+- `backend/supabase/migration-check-project-deferred.json`: adiadas que já estão aplicadas no **projeto de verificação do CI** (homolog `jinlong-homolog-palm`). O check `migration-remote-drift` aceita essas versões **só** quando `SUPABASE_MIGRATION_CHECK_PROJECT_REF` é exatamente o `checkProjectRef` do registro. Em qualquer outro projeto (produção inclusive), ou para versão fora do registro, a aplicação continua bloqueando (`adiada_aplicada`). O mesmo vale para `remoteOnlyAccepted`: versões que existem só no remoto do homolog (sem arquivo no repo), aceitas só com o ref do homolog. Não libera produção: a adiada segue no manifesto e exige a liberação descrita nele.
 
 ## Configurações externas
 1. ✅ **Feito pelo usuário em 2026-10-20 ~16:10 BRT.** **Supabase → Project Settings → Integrations → GitHub → desligar "Deploy to production"** (manter a
