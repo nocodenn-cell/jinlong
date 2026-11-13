@@ -342,6 +342,25 @@ export function deriveExitCode(status, warnOnly = false) {
   return 0;
 }
 
+/**
+ * Motivos de INTEGRIDADE: violações que nunca viram informativas, nem com --warn-only.
+ * `adiada_aplicada`: uma migration que a governança adiou apareceu aplicada no remoto.
+ */
+export const INTEGRITY_REASONS = new Set(["adiada_aplicada"]);
+
+export function hasIntegrityViolation(blocking) {
+  return (blocking ?? []).some((entry) => INTEGRITY_REASONS.has(entry?.reason));
+}
+
+/**
+ * Código de saída final. Integridade bloqueia sempre. Divergências comuns seguem `deriveExitCode`
+ * (com --warn-only, viram informativas).
+ */
+export function resolveExitCode({ status, warnOnly = false, blocking = [] }) {
+  if (hasIntegrityViolation(blocking)) return 1;
+  return deriveExitCode(status, warnOnly);
+}
+
 function listMigrationVersionsFromDisk() {
   const files = fs.readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith(".sql"));
   const versions = [];
@@ -742,7 +761,14 @@ function main() {
     }
   }
 
-  process.exit(deriveExitCode(status, opts.warnOnly));
+  const exitCode = resolveExitCode({ status, warnOnly: opts.warnOnly, blocking });
+  if (status === "BLOCKING_DRIFT" && exitCode === 0) {
+    console.log(
+      "MODO INFORMATIVO (--warn-only): divergência de migrations registrada acima e NÃO bloqueia este job. " +
+        "Ela continua visível nos logs. Integridade (adiada_aplicada) continua bloqueando.",
+    );
+  }
+  process.exit(exitCode);
 }
 
 const invokedPath = process.argv[1] ? path.resolve(process.argv[1]) : null;
