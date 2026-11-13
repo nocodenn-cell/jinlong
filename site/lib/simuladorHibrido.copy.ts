@@ -48,7 +48,7 @@ const pt: SimuladorCopy = {
   rec: {
     puro: 'Pelos números informados, o Simples puro tende a custar menos e o ganho de crédito dos seus clientes não compensa. Leve esta simulação ao seu contador.',
     hibrido: 'Pelos números informados, o híbrido não custa mais para você e ainda dá mais crédito aos seus clientes. Como o prazo de 30/10/2026 já passou, confirme com seu contador a próxima janela (março) antes de mudar de regime.',
-    avaliar: 'O híbrido custa mais para você, mas o crédito extra dos seus clientes é maior que esse custo. Se você conseguir repassar parte disso no preço do atacado, pode valer a pena. Decida com seu contador antes da próxima janela, em março.',
+    avaliar: 'O híbrido custa mais para você, mas o crédito extra dos seus clientes é maior que esse custo. Se você conseguir repassar parte disso no preço do atacado, pode valer a pena. Se você já optou pelo híbrido para o 1º semestre de 2027, o cancelamento só é possível até 20/12/2026. Se ainda não optou, decida com seu contador antes da próxima janela, em março.',
     fora: 'Com essa receita, a empresa passa do limite do Simples Nacional (R$ 4,8 milhões em 12 meses). Este simulador não se aplica.',
   },
   extra: 'Diferença de custo no híbrido: {custo} por mês · Crédito a mais para seus clientes: {credito} por mês',
@@ -88,7 +88,7 @@ const zh: SimuladorCopy = {
   rec: {
     puro: '根据您输入的数据，普通模式成本较低，客户多得的抵扣不足以弥补。请把这个结果交给您的会计师。',
     hibrido: '根据您输入的数据，混合模式不会增加您的成本，还能给客户更多抵扣。由于 10 月 30 日的截止日期已经过去，请在下一个窗口（3 月）前与会计师确认。',
-    avaliar: '混合模式会增加您的成本，但客户多得的抵扣大于这部分成本。如果能在批发价中转嫁一部分，可能值得。请在下一个窗口（3 月）前与会计师决定。',
+    avaliar: '混合模式会增加您的成本，但客户多得的抵扣大于这部分成本。如果能在批发价中转嫁一部分，可能值得。如果您已选择 2027 年上半年的混合模式，只能在 2026 年 12 月 20 日前取消。如果尚未选择，请在下一个窗口（3 月）前与会计师决定。',
     fora: '按此收入，企业超过 Simples Nacional 上限（12 个月 480 万雷亚尔），本模拟器不适用。',
   },
   extra: '混合模式成本差额：每月 {custo} · 客户多得抵扣：每月 {credito}',
