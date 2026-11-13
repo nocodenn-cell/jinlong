@@ -4,6 +4,7 @@ const ERRORS: Record<string, string> = {
   invalid: 'E-mail ou senha incorretos.',
   forbidden: 'Esta conta não tem acesso de administrador ao hub.',
   config: 'O hub ainda não está conectado ao banco (configuração pendente).',
+  indisponivel: 'Não foi possível verificar seu acesso agora. Tente de novo em instantes.',
 }
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ e?: string; origem?: string }> }) {
