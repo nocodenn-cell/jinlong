@@ -252,8 +252,8 @@ export function useCaixaVendasEmEspera(deps: UseCaixaVendasEmEsperaDeps) {
   )
 
   const handleDescartarEmEspera = useCallback(
-    async (id: string) => {
-      const res = await descartarVendaEmEsperaCaixa(id)
+    async (id: string, motivo: string) => {
+      const res = await descartarVendaEmEsperaCaixa(id, motivo)
       if (!res.ok) {
         setCaixaMensagem(res.error, { kind: "error" })
         return
@@ -270,6 +270,6 @@ export function useCaixaVendasEmEspera(deps: UseCaixaVendasEmEsperaDeps) {
     processandoEspera,
     handleNovaVendaOuEspera: () => executarOperacao(handleNovaVendaOuEspera),
     handleRetomarEmEspera: (id: string) => executarOperacao(() => handleRetomarEmEspera(id)),
-    handleDescartarEmEspera: (id: string) => executarOperacao(() => handleDescartarEmEspera(id)),
+    handleDescartarEmEspera: (id: string, motivo: string) => executarOperacao(() => handleDescartarEmEspera(id, motivo)),
   }
 }
