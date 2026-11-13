@@ -65,3 +65,20 @@ Observação: as três primeiras foram aplicadas e revertidas em validação; o 
 ## 5. Verificação proposta (incluída no workflow)
 
 Step `Confirm drift secret targets homolog (sem imprimir valor)`: compara o secret com `yvdilcmxyjafnnsfdtam` e imprime só `sim` ou `não`. Falha fechado se não bater, junto com `MIGRATION_CHECK_ENV=homolog`.
+
+## 6. Verificação de conteúdo (2026-11-12, somente leitura)
+
+Comparação do SQL armazenado em `supabase_migrations.schema_migrations.statements` do homolog com os arquivos do repositório, após remover comentários `--` e espaços (md5 do texto normalizado).
+
+| Versão (remoto) | Comparado com | Resultado | Encaminhamento |
+|---|---|---|---|
+| 20261029181913 | `20261029160000_s2_nfe_vinculada_oc_sem_dupla_creditacao.sql` (este PR) | **igual** (`cf6edb58…`) | par HUMAN_GATE registrado neste PR |
+| 20261106140207 | `367916c9` (`sec/contencao-dml-direto-a`) | **igual** | resolve-se quando essa branch entrar na `main`; não trazido aqui para não misturar escopo |
+| 20261030002520 | `d174cc6b` (`claude/jl-pdv-02-sync-atomica`) | **igual** | a branch precisa renomear o arquivo de `20261030120000` (colide com a NF-e) para `20261030002520` antes do merge |
+| 20261107205637 | `20261104160000_commercial_leads_idempotencia.sql` | diferente | homolog roda uma variante; escolher a versão canônica (ver PRs #676/#677) |
+| 20261107205702 | `20261104170000_commercial_leads_rate_limit.sql` | diferente | idem |
+| 20261107210926 | `60205a0b` / `cef06081` (`20261107120000_…`) | diferente | idem |
+| 20261029164906 | `20261029150000_g14_…` | diferente | variante só do homolog; versionar ou reparar o homolog |
+| 20261029180712 | `20261029160000_s2_…` | diferente | patch só do homolog; idem |
+| 20261029163804, 20261029164844 | — | mesmo md5 entre si; rollback de validação | reparo do histórico do homolog (exige autorização) |
+| 20261029163850, 20261029181844 | — | rollback de validação | idem |

@@ -539,6 +539,12 @@
       "remoteOnlyVersion": "20261029163827",
       "reason": "Rollback de validação `rollback_s1b_para_validar_s1` no homolog. Conteúdo idêntico (md5) ao de 20261029161430, já pareada.",
       "decisionDoc": "docs/runbooks/DECISOES_DRIFT_HOMOLOG_2026-11-07.md"
+    },
+    {
+      "gitOnlyVersion": "20261029160000",
+      "remoteOnlyVersion": "20261029181913",
+      "reason": "Reaplicação final de `s2_nfe_vinculada_oc_sem_dupla_creditacao` no homolog (`reaplica_s2_versao_final`, aplicada via MCP). Conteúdo SQL armazenado no homolog idêntico ao arquivo local 20261029160000 após normalização (sem comentários e espaços): md5 cf6edb583a9ac6ac0f26ee7f9f621edf dos dois lados, verificado por leitura em 2026-11-12.",
+      "decisionDoc": "docs/runbooks/DRIFT_HOMOLOG_27_VERSOES_ORIGEM_2026-11-09.md"
     }
   ]
 }
