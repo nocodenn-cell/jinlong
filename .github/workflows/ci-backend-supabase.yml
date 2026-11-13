@@ -397,6 +397,13 @@ jobs:
             exit 1
           fi
 
+      # Guarda: o alvo tem que ser EXATAMENTE a homologação. Roda antes de qualquer link/consulta remota.
+      # Não imprime o valor do ref (só o motivo da recusa). Ver scripts/ops/drift-target-guard.mjs.
+      - name: Guard — alvo do drift deve ser a homologação
+        env:
+          SUPABASE_MIGRATION_CHECK_PROJECT_REF: ${{ secrets.SUPABASE_MIGRATION_CHECK_PROJECT_REF }}
+        run: node scripts/ops/drift-target-guard.mjs
+
       - name: Link + compare Local vs Remote
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
