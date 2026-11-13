@@ -103,7 +103,15 @@ export default defineConfig({
   // closed" que mascara a causa real.
   timeout: 150_000,
   retries: process.env.CI ? 2 : 0,
-  reporter: process.env.CI ? 'github' : 'list',
+  // CI: relatório por spec (JSON + HTML) publicado como artefato pelo workflow.
+  // Sem isso, o job só mostra o resumo e não há como provar o resultado de cada spec (VAL-01).
+  reporter: process.env.CI
+    ? [
+        ['github'],
+        ['html', { outputFolder: 'playwright-report', open: 'never' }],
+        ['json', { outputFile: 'playwright-report/results.json' }],
+      ]
+    : 'list',
   use: {
     baseURL,
     trace: 'on-first-retry',
