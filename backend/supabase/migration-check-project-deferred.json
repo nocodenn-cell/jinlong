@@ -1,0 +1,81 @@
+{
+  "_doc": "Adiadas do manifesto (.github/deploy-governance/deferred-migrations.json) que JA estao aplicadas no projeto de verificacao do CI. Aceitas SOMENTE quando SUPABASE_MIGRATION_CHECK_PROJECT_REF == checkProjectRef; em qualquer outro projeto continuam bloqueando (adiada_aplicada). Ver docs/ops/deploy-governance.md.",
+  "checkProjectRef": "yvdilcmxyjafnnsfdtam",
+  "accepted": [
+    {
+      "version": "20261010120000",
+      "reason": "Aplicada no projeto de verificacao (homolog jinlong-homolog-palm) antes da governanca de adiadas. Nao e producao: a adiada continua no manifesto e NAO deve ser aplicada em producao sem a liberacao descrita no manifesto.",
+      "decisionDoc": "docs/ops/deploy-governance.md"
+    },
+    {
+      "version": "20261023130000",
+      "reason": "Aplicada no projeto de verificacao (homolog jinlong-homolog-palm) antes da governanca de adiadas. Nao e producao: a adiada continua no manifesto e NAO deve ser aplicada em producao sem a liberacao descrita no manifesto.",
+      "decisionDoc": "docs/ops/deploy-governance.md"
+    },
+    {
+      "version": "20261028100000",
+      "reason": "Aplicada no projeto de verificacao (homolog jinlong-homolog-palm) antes da governanca de adiadas. Nao e producao: a adiada continua no manifesto e NAO deve ser aplicada em producao sem a liberacao descrita no manifesto.",
+      "decisionDoc": "docs/ops/deploy-governance.md"
+    },
+    {
+      "version": "20261028101000",
+      "reason": "Aplicada no projeto de verificacao (homolog jinlong-homolog-palm) antes da governanca de adiadas. Nao e producao: a adiada continua no manifesto e NAO deve ser aplicada em producao sem a liberacao descrita no manifesto.",
+      "decisionDoc": "docs/ops/deploy-governance.md"
+    },
+    {
+      "version": "20261028110000",
+      "reason": "Aplicada no projeto de verificacao (homolog jinlong-homolog-palm) antes da governanca de adiadas. Nao e producao: a adiada continua no manifesto e NAO deve ser aplicada em producao sem a liberacao descrita no manifesto.",
+      "decisionDoc": "docs/ops/deploy-governance.md"
+    },
+    {
+      "version": "20261028120100",
+      "reason": "Aplicada no projeto de verificacao (homolog jinlong-homolog-palm) antes da governanca de adiadas. Nao e producao: a adiada continua no manifesto e NAO deve ser aplicada em producao sem a liberacao descrita no manifesto.",
+      "decisionDoc": "docs/ops/deploy-governance.md"
+    },
+    {
+      "version": "20261028121000",
+      "reason": "Aplicada no projeto de verificacao (homolog jinlong-homolog-palm) antes da governanca de adiadas. Nao e producao: a adiada continua no manifesto e NAO deve ser aplicada em producao sem a liberacao descrita no manifesto.",
+      "decisionDoc": "docs/ops/deploy-governance.md"
+    },
+    {
+      "version": "20261028122000",
+      "reason": "Aplicada no projeto de verificacao (homolog jinlong-homolog-palm) antes da governanca de adiadas. Nao e producao: a adiada continua no manifesto e NAO deve ser aplicada em producao sem a liberacao descrita no manifesto.",
+      "decisionDoc": "docs/ops/deploy-governance.md"
+    },
+    {
+      "version": "20261029155000",
+      "reason": "Aplicada no projeto de verificacao (homolog jinlong-homolog-palm) antes da governanca de adiadas. Nao e producao: a adiada continua no manifesto e NAO deve ser aplicada em producao sem a liberacao descrita no manifesto.",
+      "decisionDoc": "docs/ops/deploy-governance.md"
+    },
+    {
+      "version": "20261030100000",
+      "reason": "Aplicada no projeto de verificacao (homolog jinlong-homolog-palm) antes da governanca de adiadas. Nao e producao: a adiada continua no manifesto e NAO deve ser aplicada em producao sem a liberacao descrita no manifesto.",
+      "decisionDoc": "docs/ops/deploy-governance.md"
+    },
+    {
+      "version": "20261030120000",
+      "reason": "Aplicada no projeto de verificacao (homolog jinlong-homolog-palm) antes da governanca de adiadas. Nao e producao: a adiada continua no manifesto e NAO deve ser aplicada em producao sem a liberacao descrita no manifesto.",
+      "decisionDoc": "docs/ops/deploy-governance.md"
+    },
+    {
+      "version": "20261030130000",
+      "reason": "Aplicada no projeto de verificacao (homolog jinlong-homolog-palm) antes da governanca de adiadas. Nao e producao: a adiada continua no manifesto e NAO deve ser aplicada em producao sem a liberacao descrita no manifesto.",
+      "decisionDoc": "docs/ops/deploy-governance.md"
+    },
+    {
+      "version": "20261030140000",
+      "reason": "Aplicada no projeto de verificacao (homolog jinlong-homolog-palm) antes da governanca de adiadas. Nao e producao: a adiada continua no manifesto e NAO deve ser aplicada em producao sem a liberacao descrita no manifesto.",
+      "decisionDoc": "docs/ops/deploy-governance.md"
+    },
+    {
+      "version": "20261104120000",
+      "reason": "Aplicada no projeto de verificacao (homolog jinlong-homolog-palm) antes da governanca de adiadas. Nao e producao: a adiada continua no manifesto e NAO deve ser aplicada em producao sem a liberacao descrita no manifesto.",
+      "decisionDoc": "docs/ops/deploy-governance.md"
+    },
+    {
+      "version": "20261104150000",
+      "reason": "Aplicada no projeto de verificacao (homolog jinlong-homolog-palm) antes da governanca de adiadas. Nao e producao: a adiada continua no manifesto e NAO deve ser aplicada em producao sem a liberacao descrita no manifesto.",
+      "decisionDoc": "docs/ops/deploy-governance.md"
+    }
+  ]
+}
