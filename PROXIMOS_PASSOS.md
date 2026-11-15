@@ -3,6 +3,8 @@
 ## P0 — Quebrado/travado
 
 - Auditoria de prontidão comercial (2026-11-06, somente leitura): veredito NÃO PODE ENTRAR; 35% de prontidão por área. Bloqueadores P0-1 a P0-10 em `docs/auditorias/AUDITORIA_PRONTIDAO_COMERCIAL_2026-11-06.md` (§5). Aplicar `20261104120000` em produção com autorização é o primeiro item. Plano por fases A–F e decisões D-04 a D-15 em `docs/auditorias/PLANO_LIBERACAO_PRIMEIRO_CLIENTE_2026-11-06.md`; decisões do dono são a primeira pendência
+- Site Jinlong: formulário comercial da home falha em produção. `anon` não tem INSERT em `commercial_leads`; a correção (`#676` + `#677`) está bloqueada com checks vermelhos. A Fase 0 não detectou isso, porque o E2E intercepta o envio. "Formulário OK" só vale com validação real em Preview
+- Site Jinlong / Legal: Termos prometem emissão fiscal (SEFAZ/SAT) e o FAQ condiciona isso à conversa comercial; a fiscal é stub (ver item de Termos em P1). Alinhar só após decisão de produto e revisão jurídica
 - Auditoria GitHub (2026-11-11, `docs/governance/GITHUB_AUDIT.md`): a proteção de `main` não exige nenhuma aprovação humana (só os 6 checks). Decidir revisão obrigatória + CODEOWNERS. Ação de configuração: exige autorização
 - Colisão de versão de migration (quebra `db push`/reset): `#537` × main em `20261010120000`; `#623` × main em `20261028120000`; `#675` × `#677` em `20261107120000`. Resolver antes de qualquer merge desses PRs
 - `#675` (D1–D6): não mesclar. Traz 5 migrations fora do manifesto de adiadas (`20261106100000`–`20261107120000`); o label `deploy-prod:aprovado` não autoriza deploy nem merge (regra do próprio manifesto)
@@ -37,6 +39,11 @@
 
 ## P1 — Falta para lançar (MVP)
 
+- Site Jinlong: validar com o contador os textos do simulador híbrido já ajustados ao prazo vencido (`site/lib/simuladorHibrido.copy.ts`). Não publicar antes dessa revisão
+- Site Jinlong: `metadataBase` ausente (build usa localhost:3000 para imagens sociais); homes e simulador sem `og:image`/`twitter:image` em produção. Corrigir junto com canonical e hreflang
+- Site Jinlong: LCP mobile de laboratório 3.260 ms (PT) e 3.536 ms (ZH), acima de 2,5 s; CLS 0.000. Baseline em `fase0-main-2929b09a`; repetir a medição após cada incremento
+- Site Jinlong: demonstração com dados sintéticos e capturas reais só com material autorizado (homologação). Não publicar mockup como produto real
+- Site Jinlong: proposta de experiência autosserviço (jornada, classificação DISPONÍVEL / EM DESENVOLVIMENTO / PLANEJADO / NÃO EXISTE por módulo, demo isolada). A análise não foi concluída (erro de modelo em 2026-11-10 12:46); refazer. Preços dependem de `saas.planos` (placeholder)
 - Hub (`hub/`): commitar e publicar as correções de resiliência do painel (branch `claude/admin-screen-error-7f1d71`, 8 arquivos alterados + 3 novos). Só depois do commit o deploy na Vercel (`nature-code-hub`) entra em produção. Exige autorização para commit/push
 - Hub: a migration `growth001_central_conversao` foi aplicada no `jinlong` com nome de registro próprio; o arquivo do repo é `20261023130000`. Reconciliar o registro de migrations de produção com o repo (ver drift acima)
 - Fiado no caixa: a tela aceita finalizar com saldo pendente, pede cliente e cria contas a receber (`pdv-importados/app/caixa/CaixaPageClient.tsx:1113-1120`). O escopo do primeiro cliente é sem fiado: bloquear no caixa ou no RPC (`docs/ops/INSTALACAO_PRIMEIRO_CLIENTE_CHECKLIST.md`, L-F2)
@@ -105,6 +112,11 @@
 - Aplicar na homologação (jinlong-homolog-palm) a migration 20261021120000_vendas_pagamentos_parcelas_credito (coluna vendas_pagamentos.parcelas) antes de exibir parcelas no detalhe admin e na 2ª via do cupom
 
 ## P2 — Melhoria
+- PDV (caixa): conferir a grade do carrinho e o rail em 1280–1366 px (três colunas a partir de `md`); abaixo de ~1440 px a coluna de produto encolhe e a tabela pode rolar na horizontal
+
+- Site Jinlong: testes que faltam — sobreposição do FAB no formulário, relógio/fuso (America/Sao_Paulo) do simulador, consentimento de analytics. Cobrir antes da Fase 1
+- Site Jinlong: microtextos de 10,5–11 px, scroll lock no menu mobile, avisos de Autoprefixer em `site/styles/site.css:186,196,216`, SEO técnico (canonical das páginas legais, lastmod no sitemap, aliases `/pt-br` e `/zh-cn`)
+- Site Jinlong: worktree `site-fase0-baseline-20261110` (branch `site/fase0-baseline-20261110`) usa junctions para `node_modules` de outros worktrees. Remover só depois de registrar o baseline; conferir que a remoção não apaga as pastas de origem
 
 - Mensagens genéricas no caixa para `PAGAMENTO_SEM_CONTA_FINANCEIRA`, `CANCELAR_VENDA_CAIXA_ABERTO_AMBIGUO` e `CANCELAR_VENDA_CAIXA_FECHADO_SEM_CAIXA_ABERTO` (`pdv-importados/app/caixa/server/caixaErroOperador.ts`)
 - Texto de "Meu PIN do caixa" diz que o PIN serve para entrar, mas o código só o usa para desbloquear (`pdv-importados/src/lib/i18n/pt.json`, `meu_pin.subtitulo`)
@@ -130,13 +142,13 @@
 - Mostrar as parcelas do crédito no detalhe da venda (admin) e na 2ª via, depois da coluna existir na homologação
 
 ## Feito
+- 2026-11-14 — PDV (caixa): carrinho com preço sobreposto ao selo "Atacado" corrigido (grade única do cabeçalho e das linhas); stepper sem cantos/divisórias tortos (elementos nativos); topo das 3 colunas na mesma altura h-11; botões de cabeçalho, rail, pagamento e desconto padronizados
+- 2026-11-13 — FAB do site recolhe enquanto `#contato` está visível (`site/components/FabAutoHide.tsx`), com teste E2E em Chromium, Firefox e mobile. Sem commit até a suíte completa passar
+- 2026-11-12 — Simulador híbrido: textos PT/ZH e fonte oficial agora dizem que o prazo de 30/10/2026 encerrou (cancelamento até 20/12/2026; próximas janelas em março e setembro). Teste de regressão em `site/lib/simuladorHibrido.copy.test.ts`. Sem commit; validação contábil pendente
+- 2026-11-12 — Análise da auditoria do site Jinlong contra o código em `site/` (idêntico a `2929b09a`): prazo tributário confirmado vencido; formulário e FAB confirmados como P0; protocolo, CTA do simulador e cookie PT confirmados como falsos positivos. Nenhum código alterado
 - 2026-11-12 — hub.jinlong.app: painel quebrava (digest 226588760, "Falha ao acessar dados (400)"). Causa: a Central de Conversão (`20261023130000`) estava no `main` mas não no banco `jinlong`. Migration aplicada em produção após checagem; cada seção do hub agora degrada sozinha (`hub/lib/seguro.ts`) e há `hub/app/error.tsx`. Código ainda não commitado
 - 2026-11-11 — Auditoria dos 53 PRs abertos e das branches (somente leitura): `docs/governance/GITHUB_AUDIT.md`, `GITHUB_CLEANUP_PLAN.md` e `GITHUB_WORKFLOW.md`. Nenhuma ação no GitHub; decisões pendentes listadas no plano
 - 2026-11-07 — Documentação de instalação do primeiro cliente em `docs/ops/` (checklist F1, contas F2, usuários e PIN F3, playbook F6) e manual do operador 1.2 (F4). Nenhum código de produção alterado
 - 2026-11-07 — D2 (estorno em dinheiro de caixa fechado sai do caixa aberto) e D6 (preço de atacado exige quantidade mínima) escritas em `claude/plano-liberacao-d1-d3`, sem commit; vitest (666) e tsc passam; SQL completo não executado (sem Docker)
 - 2026-11-07 — D4 (valor recebido e troco em DINHEIRO) e D5 (PIX/cartão exigem conta financeira) escritas em `claude/plano-liberacao-d1-d3`, sem commit; teste SQL e tsc não executados (sem Docker e sem node_modules)
 - 2026-11-06 — D1 (fechamento bloqueado com venda em espera) e D3 (quantidade inteira em produto UN) escritas em `claude/plano-liberacao-d1-d3`, sem commit; teste em `backend/scripts/d1-d3-fechamento-espera-quantidade-un.test.sql` ainda não executado (sem Docker)
-- 2026-11-06 — Auditoria de prontidão comercial (somente leitura): NÃO PODE ENTRAR, 35%; relatório em docs/auditorias/AUDITORIA_PRONTIDAO_COMERCIAL_2026-11-06.md
-- 2026-11-05 — 12 migrations da main (20261028100000 a 20261104180000) adiadas no manifesto: 8 de segurança (prioridade do dono) e 4 de funcionalidade; nenhuma aplicada em produção
-- 2026-11-05 — PR #655: types drift corrigido (`823142b6`, regenerado do artefato do CI); merge com a main (`24ba7082`) e push na branch do PR. Restam os gates de governança (label `deploy-prod:aprovado` e migrations `remote_ausente`)
-- 2026-11-05 — Diagnóstico Fase 3 entregue, sem alterar produção: fluxos de escrita mapeados, catálogo de produção lido (A2 mitigada por trigger; `perfis` tem 3 linhas), plano de remediação, roadmap, matriz de testes, plano de backup. Entrada em `docs/FASE3_RELATORIO_EXECUTIVO.md`
