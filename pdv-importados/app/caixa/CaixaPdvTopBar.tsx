@@ -70,7 +70,7 @@ export function CaixaPdvTopBar({
   return (
     <header
       className={cn(
-        "shrink-0 px-3 sm:px-5 py-2 border-b flex flex-wrap items-center gap-x-3 gap-y-1.5",
+        "shrink-0 px-3 sm:px-5 py-2 border-b flex flex-wrap items-center gap-x-3 gap-y-2",
         "border-border bg-jl-surface-elev text-jl-fg-1 shadow-sm",
       )}
       style={fontStack ? { fontFamily: fontStack } : undefined}
@@ -91,24 +91,24 @@ export function CaixaPdvTopBar({
       </div>
 
       <div className="flex w-full min-w-0 flex-wrap items-center justify-end gap-x-2 gap-y-2 sm:w-auto sm:flex-nowrap">
-        <div className="flex min-w-0 flex-wrap items-center justify-end gap-1.5 text-xs sm:text-sm">
+        <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 text-xs sm:text-sm">
           {aberto ? (
             <span
-              className="max-w-44 truncate rounded-md border px-2 py-1 font-medium tabular-nums border-jl-border-1 bg-jl-surface-soft"
+              className="inline-flex h-9 max-w-44 items-center truncate rounded-md border px-3 font-medium tabular-nums border-jl-border-1 bg-jl-surface-soft"
               title={turnoText}
             >
               {turnoText}
             </span>
           ) : null}
           <span
-            className="max-w-56 truncate rounded-md border px-2 py-1 font-medium border-jl-border-1 bg-jl-surface-soft"
+            className="inline-flex h-9 max-w-56 items-center truncate rounded-md border px-3 font-medium border-jl-border-1 bg-jl-surface-soft"
             title={operadorText}
           >
             {operadorText}
           </span>
           {aberto && !caixaStatus.blindClosureEnabled ? (
             <span
-              className="max-w-48 truncate rounded-md border px-2 py-1 font-medium tabular-nums border-jl-border-1 bg-jl-surface-soft"
+              className="inline-flex h-9 max-w-48 items-center truncate rounded-md border px-3 font-medium tabular-nums border-jl-border-1 bg-jl-surface-soft"
               title={fundoText}
             >
               {fundoText}
@@ -118,7 +118,7 @@ export function CaixaPdvTopBar({
             <span
               title={printerDeviceName ?? "Impressora"}
               className={cn(
-                "max-w-40 truncate rounded-md border px-2 py-1 text-xs font-medium",
+                "inline-flex h-9 max-w-40 items-center truncate rounded-md border px-3 text-xs font-medium",
                 printerStatus === "connected"
                   ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700"
                   : printerStatus === "error"
@@ -132,14 +132,14 @@ export function CaixaPdvTopBar({
           )}
         </div>
 
-        <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-l pl-2 sm:pl-3 border-jl-border-1">
+        <div className="flex shrink-0 flex-wrap items-center gap-2 border-l pl-2 sm:pl-3 border-jl-border-1">
           {trocaSlot}
           {aberto ? (
             <Button
               type="button"
               size="sm"
               variant="outline"
-              className="text-xs font-semibold sm:text-sm"
+              className="h-9 text-xs font-semibold sm:text-sm"
               onClick={onFecharCaixa}
               disabled={processandoCaixa}
               aria-busy={processandoCaixa}
@@ -151,7 +151,7 @@ export function CaixaPdvTopBar({
               type="button"
               size="sm"
               variant="outline"
-              className="text-xs font-semibold sm:text-sm border-jl-border-1"
+              className="h-9 text-xs font-semibold sm:text-sm border-jl-border-1"
               onClick={onAbrirCaixa}
               disabled={carregandoStatus}
             >
@@ -162,7 +162,7 @@ export function CaixaPdvTopBar({
               type="button"
               size="sm"
               variant="outline"
-              className="text-xs font-semibold sm:text-sm border-jl-border-1"
+              className="h-9 text-xs font-semibold sm:text-sm border-jl-border-1"
               onClick={onAbrirCaixa}
               disabled={processandoCaixa || carregandoStatus}
               aria-busy={processandoCaixa}
@@ -173,6 +173,7 @@ export function CaixaPdvTopBar({
           <CaixaKeyboardShortcutsReference
             m={m}
             variant="classic"
+            className="h-9 w-9 px-0"
             open={atalhosAbertos}
             onOpenChange={onAtalhosOpenChange}
           />
@@ -182,7 +183,7 @@ export function CaixaPdvTopBar({
           <SignOutButton
             label={m.comum.sair}
             className={cn(
-              "rounded-md px-2.5 py-1 text-xs font-medium sm:text-sm",
+              "inline-flex h-9 items-center rounded-md px-3 text-xs font-medium sm:text-sm",
               "bg-jl-surface-soft text-jl-fg-1 border border-jl-border-1 hover:bg-jl-surface-elev",
             )}
           />

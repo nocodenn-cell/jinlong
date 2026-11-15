@@ -16,10 +16,10 @@ type Props = {
 export function CaixaVendedorSelect({ label, operadorSufixo, operadorId, vendedores, value, onChange, disabled }: Props) {
   if (!operadorId || vendedores.length < 2) return null
   return (
-    <label className="flex items-center gap-2 text-sm text-jl-fg-2" data-testid="caixa-vendedor">
+    <label className="flex h-10 items-center gap-2 text-sm text-jl-fg-2" data-testid="caixa-vendedor">
       <span className="shrink-0 font-semibold">{label}</span>
       <select
-        className="min-h-9 w-full rounded-md border border-jl-border-1 bg-jl-surface px-2 text-jl-fg-1"
+        className="h-10 w-full rounded-md border border-jl-border-1 bg-jl-surface px-2 text-jl-fg-1"
         value={value ?? operadorId}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}

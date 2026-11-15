@@ -19,6 +19,8 @@ type Props = {
   onToggleSom: () => void
   /** Quando true, o botão «Novo cupom» não é renderizado (ex.: classic com ação no trilho). */
   hideNovoCupom?: boolean
+  /** Quando true, o botão de som não é desenhado aqui (o chamador o põe na linha de cima, alinhado). */
+  hideSomToggle?: boolean
   /** PDV clássico: reduz altura quando há texto na busca (prepara área de staging). */
   compact?: boolean
   /**
@@ -44,6 +46,7 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
     somAtivo,
     onToggleSom,
     hideNovoCupom = false,
+    hideSomToggle = false,
     compact = false,
     temCandidatos = false,
     onNavegarCandidato,
@@ -74,19 +77,11 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
 
   return (
     <div className={cn("space-y-2", compact && "space-y-1")}>
-      <div className="flex items-center justify-end">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={onToggleSom}
-          aria-label={somAtivo ? m.caixa.som_feedback_ligado : m.caixa.som_feedback_desligado}
-          title={somAtivo ? m.caixa.som_feedback_ligado : m.caixa.som_feedback_desligado}
-          className="px-1.5 py-0.5 text-fg-subtle hover:text-fg"
-        >
-          {somAtivo ? <Volume2 className="h-4 w-4" aria-hidden /> : <VolumeX className="h-4 w-4" aria-hidden />}
-        </Button>
-      </div>
+      {hideSomToggle ? null : (
+        <div className="flex items-center justify-end">
+          <CaixaSomToggle m={m} somAtivo={somAtivo} onToggle={onToggleSom} />
+        </div>
+      )}
       <form
         onSubmit={onSubmit}
         className={cn("flex flex-col sm:flex-row", compact ? "gap-1.5 sm:gap-2" : "gap-2 sm:gap-3")}
@@ -175,3 +170,30 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
 })
 
 CaixaSearchBar.displayName = "CaixaSearchBar"
+
+/**
+ * Botão de feedback sonoro do PDV. Exportado para ficar na mesma linha do
+ * "Selecionar cliente" (mesma altura, h-8), e não solto acima da busca.
+ */
+export function CaixaSomToggle({
+  m,
+  somAtivo,
+  onToggle,
+}: {
+  m: Mensagens
+  somAtivo: boolean
+  onToggle: () => void
+}) {
+  const label = somAtivo ? m.caixa.som_feedback_ligado : m.caixa.som_feedback_desligado
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-label={label}
+      title={label}
+      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-fg-subtle transition-colors hover:bg-accent hover:text-fg"
+    >
+      {somAtivo ? <Volume2 className="h-4 w-4" aria-hidden /> : <VolumeX className="h-4 w-4" aria-hidden />}
+    </button>
+  )
+}

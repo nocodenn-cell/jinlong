@@ -83,30 +83,30 @@ export function CaixaDescontoComercialDinheiro({
 
   return (
     <details
-      className="rounded-lg border-2 border-slate-500 bg-white p-3 group"
+      className="group rounded-lg border border-jl-border-1 bg-jl-surface-soft p-3"
       data-testid="caixa-desconto-comercial-dinheiro"
     >
-      <summary className="flex cursor-pointer list-none items-center gap-2 text-[18px] font-bold text-slate-900 [&::-webkit-details-marker]:hidden">
-        <BadgePercent className="h-6 w-6 shrink-0" aria-hidden />
+      <summary className="flex h-11 cursor-pointer list-none items-center gap-2 text-sm font-semibold text-jl-fg-1 [&::-webkit-details-marker]:hidden">
+        <BadgePercent className="h-4 w-4 shrink-0 text-primary" aria-hidden />
         <span className="flex-1">{t.title}</span>
         <ChevronDown
-          className="h-5 w-5 shrink-0 transition-transform group-open:rotate-180"
+          className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180"
           aria-hidden
         />
       </summary>
-      <p className="mt-1 text-sm text-slate-700">{t.help}</p>
+      <p className="mt-1 text-xs leading-snug text-jl-fg-3">{t.help}</p>
       <fieldset disabled={disabled} className="mt-3 grid gap-2">
         <button
           type="button"
-          className="min-h-[56px] rounded-lg bg-brand-strong px-3 text-[18px] font-semibold text-white disabled:opacity-50"
+          className="h-10 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           onClick={aplicarRapido}
         >
           {t.quick}
         </button>
-        <label className="text-sm font-semibold text-slate-800">
+        <label className="text-xs font-medium text-jl-fg-2">
           {t.mode}
           <select
-            className="mt-1 min-h-[48px] w-full rounded border-2 border-slate-400 p-2 text-[18px]"
+            className="mt-1 h-10 w-full rounded-md border border-jl-border-1 bg-jl-surface px-2 text-sm text-jl-fg-1"
             value={mode}
             onChange={(e) => { setMode(e.target.value as 'percentual' | 'valor'); setValue(0) }}
           >
@@ -114,39 +114,39 @@ export function CaixaDescontoComercialDinheiro({
             <option value="valor">{t.amount}</option>
           </select>
         </label>
-        <label className="text-sm font-semibold text-slate-800">
+        <label className="text-xs font-medium text-jl-fg-2">
           {mode === 'percentual' ? t.percent : t.amount}
           <CaixaMoneyInput
-            className="mt-1 w-full rounded border-2 border-slate-400 p-2 text-[18px] font-semibold"
+            className="mt-1 h-10 w-full rounded-md border border-jl-border-1 bg-jl-surface px-2 text-sm font-semibold tabular-nums text-jl-fg-1"
             value={value}
             onValueChange={setValue}
             data-caixa-atalho-bloqueado="true"
           />
         </label>
-        <dl className="grid gap-1 rounded border border-slate-300 bg-slate-50 p-2 text-[16px]">
+        <dl className="grid gap-1 rounded-md border border-jl-border-1 bg-jl-surface p-2 text-sm">
           <div className="flex justify-between gap-2"><dt>{t.subtotal}</dt><dd>R$ {formatDecimalBRL(subtotal)}</dd></div>
-          <div className="flex justify-between gap-2 font-semibold text-brand-strong">
+          <div className="flex justify-between gap-2 font-semibold text-primary">
             <dt>{t.desconto}</dt>
             <dd>R$ {formatDecimalBRL(preview.descontoValor)} ({preview.percentual.toFixed(2)}%)</dd>
           </div>
-          <div className="flex justify-between gap-2 text-[18px] font-bold">
+          <div className="flex justify-between gap-2 text-base font-bold">
             <dt>{t.total}</dt>
             <dd>R$ {formatDecimalBRL(preview.totalFinal)}</dd>
           </div>
         </dl>
         <div className="flex flex-wrap gap-2">
-          <button type="button" className="min-h-[48px] flex-1 rounded bg-[var(--color-brand)] px-3 text-[16px] font-semibold text-white disabled:opacity-50" disabled={value <= 0} onClick={aplicar}>
+          <button type="button" className="h-10 flex-1 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50" disabled={value <= 0} onClick={aplicar}>
             {t.apply}
           </button>
           {descontoPercentualAtual > 0 ? (
-            <button type="button" className="min-h-[48px] rounded border-2 border-slate-500 px-3 text-[16px] font-semibold" onClick={onLimpar}>
+            <button type="button" className="h-10 rounded-md border border-jl-border-1 bg-jl-surface px-3 text-sm font-semibold text-jl-fg-1 hover:bg-jl-surface-soft" onClick={onLimpar}>
               {t.clear}
             </button>
           ) : null}
         </div>
-        {feedback ? <p role="alert" className="text-sm font-semibold text-red-700">{feedback}</p> : null}
+        {feedback ? <p role="alert" className="text-xs font-semibold text-destructive">{feedback}</p> : null}
         {!feedback && descontoPercentualAtual > 0 ? (
-          <p role="status" className="text-sm font-semibold text-brand-strong">{t.applied}</p>
+          <p role="status" className="text-xs font-semibold text-primary">{t.applied}</p>
         ) : null}
       </fieldset>
     </details>

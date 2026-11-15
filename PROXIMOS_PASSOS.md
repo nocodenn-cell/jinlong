@@ -101,6 +101,7 @@
 
 ## P2 — Melhoria
 
+- PDV (caixa): conferir a grade do carrinho e o rail em 1280–1366 px (três colunas a partir de `md`); abaixo de ~1440 px a coluna de produto encolhe e a tabela pode rolar na horizontal
 - PDV-100 D-08: a falha de "Enter antes da lista carregar" não foi reproduzida na 2ª rodada. Monitorar; sem reprodução não há correção
 - PDV-100 D-10: não é loop (contagem estável em idle). Nenhuma ação; manter monitoramento
 - PDV-100: salvar capturas de tela e vídeo dos fluxos em `docs/qa/evidencias/` (hoje só existem na sessão)
@@ -121,6 +122,7 @@
 - Mostrar as parcelas do crédito no detalhe da venda (admin) e na 2ª via, depois da coluna existir na homologação
 
 ## Feito
+- 2026-11-14 — PDV (caixa): carrinho com preço sobreposto ao selo "Atacado" corrigido (grade única do cabeçalho e das linhas); stepper sem cantos/divisórias tortos (elementos nativos); topo das 3 colunas na mesma altura h-11; botões de cabeçalho, rail, pagamento e desconto padronizados
 - 2026-11-12 — hub.jinlong.app: painel quebrava (digest 226588760, "Falha ao acessar dados (400)"). Causa: a Central de Conversão (`20261023130000`) estava no `main` mas não no banco `jinlong`. Migration aplicada em produção após checagem; cada seção do hub agora degrada sozinha (`hub/lib/seguro.ts`) e há `hub/app/error.tsx`. Código ainda não commitado
 - 2026-11-11 — Auditoria dos 53 PRs abertos e das branches (somente leitura): `docs/governance/GITHUB_AUDIT.md`, `GITHUB_CLEANUP_PLAN.md` e `GITHUB_WORKFLOW.md`. Nenhuma ação no GitHub; decisões pendentes listadas no plano
 - 2026-11-05 — 12 migrations da main (20261028100000 a 20261104180000) adiadas no manifesto: 8 de segurança (prioridade do dono) e 4 de funcionalidade; nenhuma aplicada em produção
@@ -130,4 +132,3 @@
 - 2026-11-05 — Estabilização da tranche: fixtures de 4 suítes corrigidas (todas passam), provisionamento reescrito para o contrato da 121000 (cadastro autorizado por contingência comprovado), teste de recuperação de acesso (REC-1 a REC-7), validação reproduzível em contêiner (`backend/scripts/tranche-seguranca-validar.sh`)
 - 2026-11-05 — Tranche de segurança validada em banco descartável: SEC-04 corrigido (passa), rollbacks de 100000 e 110000 (cadeia idêntica ao baseline), definições de produção conferidas por md5; PR #660 atualizado
 - 2026-11-05 — GO-LIVE-01: golden flow operacional executado na cópia `sec_gf01` (roteiro `backend/scripts/go-live-01-golden-flow.test.sql`, 34 asserções OK). Matriz e veredito NO-GO em `docs/qa/GO_LIVE_01_GOLDEN_FLOW.md`; E2E de interface bloqueado
-- 2026-11-04 — GO-LIVE-01: gate financeiro 35/35 na cópia `sec_gl01` com a migration `20261104180000` (títulos, caixa e produto fora do escopo respondem como inexistente). Commits locais `7d35133c` (fix) e `b41ca18a` (fixtures). Evidência em `docs/qa/evidencias/go-live-01_gate_financeiro_35_35.txt`
