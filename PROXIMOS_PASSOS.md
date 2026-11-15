@@ -107,6 +107,8 @@
 - Aplicar na homologação (jinlong-homolog-palm) a migration 20261021120000_vendas_pagamentos_parcelas_credito (coluna vendas_pagamentos.parcelas) antes de exibir parcelas no detalhe admin e na 2ª via do cupom
 
 ## P2 — Melhoria
+- PDV (caixa): conferir a grade do carrinho e o rail em 1280–1366 px (três colunas a partir de `md`); abaixo de ~1440 px a coluna de produto encolhe e a tabela pode rolar na horizontal
+
 - Site Jinlong: testes que faltam — sobreposição do FAB no formulário, relógio/fuso (America/Sao_Paulo) do simulador, consentimento de analytics. Cobrir antes da Fase 1
 - Site Jinlong: microtextos de 10,5–11 px, scroll lock no menu mobile, avisos de Autoprefixer em `site/styles/site.css:186,196,216`, SEO técnico (canonical das páginas legais, lastmod no sitemap, aliases `/pt-br` e `/zh-cn`)
 - Site Jinlong: worktree `site-fase0-baseline-20261110` (branch `site/fase0-baseline-20261110`) usa junctions para `node_modules` de outros worktrees. Remover só depois de registrar o baseline; conferir que a remoção não apaga as pastas de origem
@@ -131,6 +133,7 @@
 - Mostrar as parcelas do crédito no detalhe da venda (admin) e na 2ª via, depois da coluna existir na homologação
 
 ## Feito
+- 2026-11-14 — PDV (caixa): carrinho com preço sobreposto ao selo "Atacado" corrigido (grade única do cabeçalho e das linhas); stepper sem cantos/divisórias tortos (elementos nativos); topo das 3 colunas na mesma altura h-11; botões de cabeçalho, rail, pagamento e desconto padronizados
 - 2026-11-13 — FAB do site recolhe enquanto `#contato` está visível (`site/components/FabAutoHide.tsx`), com teste E2E em Chromium, Firefox e mobile. Sem commit até a suíte completa passar
 - 2026-11-12 — Simulador híbrido: textos PT/ZH e fonte oficial agora dizem que o prazo de 30/10/2026 encerrou (cancelamento até 20/12/2026; próximas janelas em março e setembro). Teste de regressão em `site/lib/simuladorHibrido.copy.test.ts`. Sem commit; validação contábil pendente
 - 2026-11-12 — Análise da auditoria do site Jinlong contra o código em `site/` (idêntico a `2929b09a`): prazo tributário confirmado vencido; formulário e FAB confirmados como P0; protocolo, CTA do simulador e cookie PT confirmados como falsos positivos. Nenhum código alterado
@@ -140,5 +143,3 @@
 - 2026-11-02 — 4 migrations (`20261029155000`, `20261030120000`, `20261030130000`, `20261030140000`) adiadas no manifesto, com dependências e condição de aplicação; verificado em produção por leitura: ausentes, sem aplicação parcial. Teste de sessão sem JWT adicionado à troca de operador (17 testes)
 - 2026-11-05 — PR #655: types drift corrigido (`823142b6`, regenerado do artefato do CI); merge com a main (`24ba7082`) e push na branch do PR. Restam os gates de governança (label `deploy-prod:aprovado` e migrations `remote_ausente`)
 - 2026-11-05 — Diagnóstico Fase 3 entregue, sem alterar produção: fluxos de escrita mapeados, catálogo de produção lido (A2 mitigada por trigger; `perfis` tem 3 linhas), plano de remediação, roadmap, matriz de testes, plano de backup. Entrada em `docs/FASE3_RELATORIO_EXECUTIVO.md`
-- 2026-11-05 — Estabilização da tranche: fixtures de 4 suítes corrigidas (todas passam), provisionamento reescrito para o contrato da 121000 (cadastro autorizado por contingência comprovado), teste de recuperação de acesso (REC-1 a REC-7), validação reproduzível em contêiner (`backend/scripts/tranche-seguranca-validar.sh`)
-- 2026-11-05 — Tranche de segurança validada em banco descartável: SEC-04 corrigido (passa), rollbacks de 100000 e 110000 (cadeia idêntica ao baseline), definições de produção conferidas por md5; PR #660 atualizado

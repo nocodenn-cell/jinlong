@@ -147,7 +147,7 @@ const PagamentoPanelImpl = forwardRef(function PagamentoPanelImpl(
               onValueChange={(value) => onAtualizarValor(0, value)}
               onKeyDown={enterVoltaParaBusca}
               data-caixa-atalho-bloqueado="true"
-              className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-right text-base font-semibold tabular-nums text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+              className="h-10 w-full rounded-md border border-border bg-background px-2 text-right text-base font-semibold tabular-nums text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
             />
           </div>
         </div>
@@ -278,15 +278,15 @@ const PagamentoPanelImpl = forwardRef(function PagamentoPanelImpl(
       {troco && pagamentos[0].valor > 0 ? (
         <div
           data-testid="caixa-troco-inline"
-          className={`flex items-baseline justify-between gap-3 rounded-md px-2.5 py-1.5 ${
+          className={`flex h-10 items-center justify-between gap-3 rounded-md px-2.5 ${
             troco.troco > 0 ? "bg-success/10" : "bg-muted/30"
           }`}
         >
-          <span className="text-xs font-medium text-muted-foreground">
+          <span className="text-sm font-medium text-muted-foreground">
             {m.caixa.pdv_pgto_troco_cliente}
           </span>
           <span
-            className={`text-lg font-bold tabular-nums ${
+            className={`text-base font-bold tabular-nums ${
               troco.troco > 0 ? "text-success" : "text-foreground"
             }`}
           >
@@ -296,7 +296,7 @@ const PagamentoPanelImpl = forwardRef(function PagamentoPanelImpl(
       ) : null}
 
       {dividido && temTroco ? (
-        <div className="flex justify-between gap-3 text-xs">
+        <div className="flex h-8 items-center justify-between gap-3 text-sm">
           <span className="font-medium text-success">{m.caixa.pdv_pgto_troco_cliente}</span>
           <span className="tabular-nums font-bold text-success">
             {moedaPrefixo} {formatDecimalBRL(diferenca)}
@@ -305,7 +305,7 @@ const PagamentoPanelImpl = forwardRef(function PagamentoPanelImpl(
       ) : null}
 
       {faltando ? (
-        <div className="flex justify-between gap-3 text-xs">
+        <div className="flex h-8 items-center justify-between gap-3 text-sm">
           <span className="font-medium text-destructive">{m.caixa.pdv_pgto_diferenca}</span>
           <span className="tabular-nums font-bold text-destructive">
             {moedaPrefixo} {formatDecimalBRL(Math.abs(diferenca))}
@@ -314,7 +314,7 @@ const PagamentoPanelImpl = forwardRef(function PagamentoPanelImpl(
       ) : null}
 
       {dividido && excessoInvalido ? (
-        <div className="flex justify-between gap-3 text-xs">
+        <div className="flex h-8 items-center justify-between gap-3 text-sm">
           <span className="font-medium text-destructive">
             {m.caixa.pdv_pgto_excesso_sem_dinheiro}
           </span>

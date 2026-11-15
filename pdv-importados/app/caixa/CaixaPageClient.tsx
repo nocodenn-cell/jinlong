@@ -55,7 +55,7 @@ import { formatDecimalBRL } from "@/lib/format/money"
 import { mensagemVendaOk } from "@/app/caixa/caixaMensagemVendaOk"
 import { painelGestaoHrefParaPerfil } from "@/app/caixa/caixaPainelGestao"
 import { CaixaHeader } from "@/app/caixa/CaixaHeader"
-import { CaixaSearchBar } from "@/app/caixa/CaixaSearchBar"
+import { CaixaSearchBar, CaixaSomToggle } from "@/app/caixa/CaixaSearchBar"
 import { CaixaOperadorContextBar } from "@/app/caixa/CaixaOperadorContextBar"
 import { CaixaCartList } from "@/app/caixa/CaixaCartList"
 import { CaixaPdvCartSaleBar } from "@/app/caixa/CaixaPdvCartSaleBar"
@@ -1709,14 +1709,24 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 metodoPagamentoPanel={metodoPagamentoSelector}
                 produtoPanel={
                   <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
-                    <CaixaOperadorContextBar
-                      m={m}
-                      idioma={idioma}
-                      configCaixaWeb={configCaixaWeb}
-                      clienteNome={clienteNome}
-                      onRemoverCliente={handleRemoverCliente}
-                      onSelecionarCliente={abrirSelecionarCliente}
-                    />
+                    {/* Faixa do topo (h-11), na mesma altura da faixa do carrinho e do painel da direita. */}
+                    <div className="flex h-11 shrink-0 items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <CaixaOperadorContextBar
+                          m={m}
+                          idioma={idioma}
+                          configCaixaWeb={configCaixaWeb}
+                          clienteNome={clienteNome}
+                          onRemoverCliente={handleRemoverCliente}
+                          onSelecionarCliente={abrirSelecionarCliente}
+                        />
+                      </div>
+                      <CaixaSomToggle
+                        m={m}
+                        somAtivo={somFeedbackAtivo}
+                        onToggle={() => setSomFeedbackAtivo((prev) => !prev)}
+                      />
+                    </div>
                     <div className="shrink-0">
                       <CaixaSearchBar
                         ref={buscaInputRef}
@@ -1729,6 +1739,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                         carregandoRegras={carregandoRegras}
                         somAtivo={somFeedbackAtivo}
                         onToggleSom={() => setSomFeedbackAtivo((prev) => !prev)}
+                        hideSomToggle
                         hideNovoCupom
                         compact={codigo.trim().length > 0}
                         temCandidatos={totalCandidatos > 0}
@@ -1806,16 +1817,20 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 moedaPrefixo={m.caixa.moeda_prefixo}
               />
             </section>
-            <aside className="hidden min-h-0 flex flex-col gap-2 rounded-xl border p-3 text-sm md:flex border-border bg-card text-foreground shadow-[0_2px_3px_0px_rgba(0,0,0,0.2)] rounded-[1.4rem]">
-              <button
-                type="button"
-                className="w-full rounded-md border px-3 py-2 text-center text-sm font-semibold disabled:pointer-events-none disabled:opacity-50 border-border bg-primary text-primary-foreground hover:bg-primary/90"
-                onClick={() => void handleNovaVendaOuEspera()}
-                disabled={processandoEspera || carregandoRegras || finalizando || caixaStatus?.status === "FECHADO"}
-              >
-                {m.caixa.nova_venda_espera}
-              </button>
-              <div className="border-t pt-2 text-xs font-semibold uppercase tracking-wide border-border text-muted-foreground">
+            <aside className="hidden min-h-0 flex-col rounded-xl border text-sm md:flex border-border bg-card text-foreground shadow-[0_2px_3px_0px_rgba(0,0,0,0.2)]">
+              {/* Faixa do topo: mesma altura (h-11) e mesma linha de base da faixa do carrinho e do cliente. */}
+              <div className="flex h-11 shrink-0 items-center border-b px-3 border-border">
+                <button
+                  type="button"
+                  className="inline-flex h-9 w-full items-center justify-center rounded-md px-3 text-sm font-semibold transition-colors disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90"
+                  onClick={() => void handleNovaVendaOuEspera()}
+                  disabled={processandoEspera || carregandoRegras || finalizando || caixaStatus?.status === "FECHADO"}
+                >
+                  {m.caixa.nova_venda_espera}
+                </button>
+              </div>
+              <div className="flex min-h-0 flex-1 flex-col gap-2 p-3">
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 {m.caixa.rail_titulo_operacoes}
               </div>
               <CaixaPdvOperacoesMenu
@@ -1861,6 +1876,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                   caixaAberto={isCaixaAberto(caixaStatus)}
                   refreshToken={turnoRefreshToken}
                 />
+              </div>
               </div>
             </aside>
           </div>
