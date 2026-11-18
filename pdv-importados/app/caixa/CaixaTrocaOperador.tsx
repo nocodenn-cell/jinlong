@@ -207,7 +207,7 @@ export function CaixaTrocaControles({ m, troca, userId }: { m: Mensagens; troca:
       {responsavel ? (
         <span
           data-testid="caixa-turno-de"
-          className="max-w-48 truncate rounded-md border px-2 py-1 text-xs font-medium border-jl-border-1 bg-jl-surface-soft sm:text-sm"
+          className="inline-flex h-9 max-w-48 items-center truncate rounded-md border px-3 text-xs font-medium border-jl-border-1 bg-jl-surface-soft sm:text-sm"
           title={caixaFmt(m.caixa.topbar_turno_de, { nome: responsavel })}
         >
           {caixaFmt(m.caixa.topbar_turno_de, { nome: responsavel })}
@@ -218,7 +218,7 @@ export function CaixaTrocaControles({ m, troca, userId }: { m: Mensagens; troca:
           type="button"
           size="sm"
           variant="outline"
-          className="text-xs font-semibold sm:text-sm border-jl-border-1"
+          className="h-9 text-xs font-semibold sm:text-sm border-jl-border-1"
           onClick={() => void troca.bloquear("MANUAL")}
           data-testid="caixa-btn-bloquear"
         >
@@ -230,7 +230,7 @@ export function CaixaTrocaControles({ m, troca, userId }: { m: Mensagens; troca:
         type="button"
         size="sm"
         variant="outline"
-        className="text-xs font-semibold sm:text-sm border-jl-border-1"
+        className="h-9 text-xs font-semibold sm:text-sm border-jl-border-1"
         onClick={troca.pedirTroca}
         disabled={troca.processando}
         data-testid="caixa-btn-trocar-operador"

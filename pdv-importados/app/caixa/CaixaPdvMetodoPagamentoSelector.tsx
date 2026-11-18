@@ -61,8 +61,10 @@ function CaixaPdvMetodoPagamentoSelectorImpl({
             className={cn(
               "relative flex min-h-[4.25rem] flex-col items-center justify-center gap-1 rounded-lg px-1 py-2",
               "text-xs font-semibold leading-none transition disabled:cursor-not-allowed disabled:opacity-50",
+              // Borda sempre de 1px: trocar para 2px no selecionado fazia o cartão crescer
+              // e deslocava a grade. O destaque vem de cor + anel interno (não ocupa espaço).
               selected
-                ? "border-2 border-primary bg-primary/10 text-primary shadow-sm"
+                ? "border border-primary bg-primary/10 text-primary shadow-[inset_0_0_0_1px_var(--color-brand)]"
                 : "border border-jl-border-1 bg-jl-surface-soft text-jl-fg-1 hover:bg-jl-surface-elev",
             )}
           >
