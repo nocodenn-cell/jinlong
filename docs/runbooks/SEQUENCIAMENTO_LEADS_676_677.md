@@ -39,3 +39,9 @@ O homolog registra `20261107205637`, `20261107205702` e `20261107210926` com con
 - Motivo: a regra por ambiente vale para qualquer alvo, não depende de um ref fixo no repositório, já tem 29 testes e está ligada ao guarda do secret no workflow. O arquivo do #676 duplica a decisão, fixa o ref do homolog e não é verificado pelo guarda.
 - Em #676, o trabalho é: remover o arquivo e substituir `p0-migration-status.mjs` e o teste pelas versões desta branch.
 - Quem faz: o responsável por #676.
+
+## Estado após o merge de #676 na main (2026-11-18)
+
+- #676 já está na `main` com `migration-check-project-deferred.json`. Este PR (#659) mantém o arquivo e combina os dois mecanismos.
+- Regra de precedência: `adiada_aplicada` é decidido pelo ambiente (`MIGRATION_CHECK_ENV`). A aceitação por `checkProjectRef` só vale quando o ambiente é `homolog`; em `producao` a adiada aplicada continua bloqueando, mesmo que o ref seja o do homolog.
+- Remoção do arquivo por projeto, se quiser, é decisão separada e deve passar pelo responsável da `main`.

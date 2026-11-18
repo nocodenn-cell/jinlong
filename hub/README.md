@@ -39,4 +39,4 @@ PGURL=postgres://…/descartavel npm run test:rls                            # p
 1. Aplicar `supabase/20261021115705_nature_code_commercial_hub.sql` (copiar para `backend/supabase/migrations/` com label `deploy-prod:aprovado`, ou SQL editor).
 2. Criar o usuário admin no Supabase Auth e: `insert into public.commercial_admins(user_id) values ('<uuid>');`
 3. Criar projeto Vercel (Hobby, R$0) com Root Directory `hub` e env `HUB_SUPABASE_URL`, `HUB_SUPABASE_ANON_KEY`.
-4. No projeto Vercel do site (`jinlong-site`): `SITE_DEMO_SUPABASE_URL`, `SITE_DEMO_SUPABASE_ANON_KEY`.
+4. No projeto Vercel do site (`jinlong-site`): `SITE_DEMO_SUPABASE_URL`, `SITE_DEMO_SUPABASE_SERVICE_ROLE_KEY` (só no servidor; nunca `NEXT_PUBLIC_*`), `SITE_DEMO_FORM_ATIVO=true` (padrão desligada).
