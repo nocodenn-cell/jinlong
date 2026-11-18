@@ -145,7 +145,7 @@ export interface FonteSimulador {
 }
 
 export const SIMULADOR_FONTES: readonly FonteSimulador[] = [
-  { id: 'prazo', label: 'Receita Federal — prazos 2027 (Res. CGSN nº 194/2026): opção até 30/10/2026, cancelamento 03/11 a 20/12/2026', url: 'https://www.gov.br/receitafederal/pt-br/assuntos/noticias/2026/setembro/simples-nacional-2027-entenda-os-novos-prazos-e-faca-sua-escolha-com-consciencia-e-tranquilidade', status: 'oficial' },
+  { id: 'prazo', label: 'Receita Federal — prazos 2027 (Res. CGSN nº 194/2026): opção encerrou em 30/10/2026; cancelamento 03/11 a 20/12/2026', url: 'https://www.gov.br/receitafederal/pt-br/assuntos/noticias/2026/setembro/simples-nacional-2027-entenda-os-novos-prazos-e-faca-sua-escolha-com-consciencia-e-tranquilidade', status: 'oficial' },
   { id: 'manual', label: 'Receita Federal — Manual da opção pelo regime regular do IBS e da CBS no Simples Nacional', url: 'https://www8.receita.fazenda.gov.br/SimplesNacional/Arquivos/manual/Manual%20op%C3%A7%C3%A3o%20regime%20regular%20IBS%20e%20CBS%20no%20Simples%20Nacional.pdf', status: 'oficial' },
   { id: 'serpro', label: 'Serpro — opção feita em servicos.receitafederal.gov.br/servico/regime-ibs-cbs; janelas seguintes em março e setembro', url: 'https://www.serpro.gov.br/menu/noticias/noticias-2026/opcao-simples-hibrido', status: 'oficial' },
   { id: 'lc214', label: 'LC 214/2025 — arts. 41 § 3º (opção), 47 § 9º II (crédito limitado ao DAS), 344 (IBS 0,1%), 347 (CBS − 0,1 p.p.)', url: 'https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp214.htm', status: 'oficial' },

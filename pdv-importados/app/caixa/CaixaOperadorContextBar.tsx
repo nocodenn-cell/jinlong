@@ -42,7 +42,7 @@ function CaixaOperadorContextBarImpl({
           type="button"
           data-testid="caixa-btn-selecionar-cliente"
           onClick={onSelecionarCliente}
-          className="app-chip inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-caption text-fg-subtle hover:text-fg"
+          className="app-chip inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-caption text-fg-subtle hover:text-fg"
         >
           <UserPlus className="h-3 w-3" aria-hidden />
           {m.caixa.selecionar_cliente_titulo}
@@ -56,7 +56,7 @@ function CaixaOperadorContextBarImpl({
       {clienteNome && (
         <span
           data-testid="caixa-chip-cliente"
-          className="app-chip inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-caption"
+          className="app-chip inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-caption"
         >
           <span className="text-fg-subtle">{m.caixa.cliente}:</span>
           <span className="font-semibold">{clienteNome}</span>

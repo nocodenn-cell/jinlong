@@ -394,6 +394,8 @@ section[id] { scroll-margin-top: var(--header-h); }
 
 /* ---------- Botão flutuante de contato ---------- */
 .jl-fab { position: fixed; right: 20px; bottom: 20px; z-index: 90; }
+/* Recolhido enquanto o formulário de contato está na tela (FabAutoHide): não cobre campos nem o envio. */
+.jl-fab[data-hidden] { visibility: hidden; opacity: 0; pointer-events: none; }
 .jl-fab summary { list-style: none; display: inline-flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 20px; border-radius: 999px; background: linear-gradient(110deg, var(--gold-3), var(--gold-deep)); color: #211b16; font-weight: 700; font-size: 14px; cursor: pointer; box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5); }
 .jl-fab summary::-webkit-details-marker { display: none; }
 .jl-fab ul { position: absolute; right: 0; bottom: 64px; min-width: 220px; background: #161b20; border: 1px solid rgba(189, 160, 106, 0.38); padding: 8px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6); }
