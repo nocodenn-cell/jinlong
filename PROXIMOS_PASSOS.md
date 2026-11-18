@@ -3,6 +3,8 @@
 ## P0 — Quebrado/travado
 
 - Drift `migration-remote-drift` (PR #659): alvo confirmado pelo step do CI (secret = homolog `yvdilcmxyjafnnsfdtam`, sem expor valor). `adiada_aplicada` no homolog virou aviso (`41d112eb`). Continua vermelho por 27 versões só no homolog: 15 cobertas pelo registro `59c6508d` (trazido para o PR em 2026-11-11) e 12 sem par; em 2026-11-12 mais 1 foi pareada por conteúdo idêntico (`20261029181913`), restam 11: 2 resolvem-se com as branches de origem (`sec/contencao-dml-direto-a`, `claude/jl-pdv-02-sync-atomica` com renomeação), 3 de leads exigem escolher a versão canônica e 6 foram removidas do histórico do homolog em 2026-11-12 com autorização (backup em `internal.schema_migrations_reparo_backup_20261112`); restam 5 (`docs/runbooks/DRIFT_HOMOLOG_27_VERSOES_ORIGEM_2026-11-09.md`). Label `deploy-prod:aprovado` pendente
+- Site Jinlong: formulário comercial da home falha em produção. `anon` não tem INSERT em `commercial_leads`; a correção (`#676` + `#677`) está bloqueada com checks vermelhos. A Fase 0 não detectou isso, porque o E2E intercepta o envio. "Formulário OK" só vale com validação real em Preview
+- Site Jinlong / Legal: Termos prometem emissão fiscal (SEFAZ/SAT) e o FAQ condiciona isso à conversa comercial; a fiscal é stub (ver item de Termos em P1). Alinhar só após decisão de produto e revisão jurídica
 - Auditoria GitHub (2026-11-11, `docs/governance/GITHUB_AUDIT.md`): a proteção de `main` não exige nenhuma aprovação humana (só os 6 checks). Decidir revisão obrigatória + CODEOWNERS. Ação de configuração: exige autorização
 - Colisão de versão de migration (quebra `db push`/reset): `#537` × main em `20261010120000`; `#623` × main em `20261028120000`; `#675` × `#677` em `20261107120000`. Resolver antes de qualquer merge desses PRs
 - `#675` (D1–D6): não mesclar. Traz 5 migrations fora do manifesto de adiadas (`20261106100000`–`20261107120000`); o label `deploy-prod:aprovado` não autoriza deploy nem merge (regra do próprio manifesto)
@@ -36,6 +38,13 @@
 - Decidir o lote de segurança das migrations 20261028100000–20261104180000 (adiadas no manifesto): a 20261104120000 (privilégios de anon) está aberta em produção e é a prioridade; depois 20261028110000, 20261028122000 e a cadeia de leads
 
 ## P1 — Falta para lançar (MVP)
+- Site Jinlong: validar com o contador os textos do simulador híbrido já ajustados ao prazo vencido (`site/lib/simuladorHibrido.copy.ts`). Não publicar antes dessa revisão
+- Site Jinlong: `metadataBase` ausente (build usa localhost:3000 para imagens sociais); homes e simulador sem `og:image`/`twitter:image` em produção. Corrigir junto com canonical e hreflang
+- Site Jinlong: LCP mobile de laboratório 3.260 ms (PT) e 3.536 ms (ZH), acima de 2,5 s; CLS 0.000. Baseline em `fase0-main-2929b09a`; repetir a medição após cada incremento
+- Site Jinlong: demonstração com dados sintéticos e capturas reais só com material autorizado (homologação). Não publicar mockup como produto real
+- Site Jinlong: proposta de experiência autosserviço (jornada, classificação DISPONÍVEL / EM DESENVOLVIMENTO / PLANEJADO / NÃO EXISTE por módulo, demo isolada). A análise não foi concluída (erro de modelo em 2026-11-10 12:46); refazer. Preços dependem de `saas.planos` (placeholder)
+- Hub (`hub/`): commitar e publicar as correções de resiliência do painel (branch `claude/admin-screen-error-7f1d71`, 8 arquivos alterados + 3 novos). Só depois do commit o deploy na Vercel (`nature-code-hub`) entra em produção. Exige autorização para commit/push
+- Hub: a migration `growth001_central_conversao` foi aplicada no `jinlong` com nome de registro próprio; o arquivo do repo é `20261023130000`. Reconciliar o registro de migrations de produção com o repo (ver drift acima)
 
 - Auditoria GitHub: três implementações concorrentes da mesma regra. M1 multiempresa em `#493`/`#496`/`#537`; fechamento de caixa com venda em espera em `#656` (D1 de `#675` faz o mesmo); fallback de RPC no sync-outbox em `#670`/`#674`. Escolher uma de cada
 - Auditoria GitHub: a cadeia P0 `#488`→`#498`→`#499`→`#500` tem commits contidos uns nos outros. Mesclar só `#500`, depois de corrigir o P1 do Codex; fechar os outros. Exige autorização
@@ -99,6 +108,11 @@
 - Aplicar na homologação (jinlong-homolog-palm) a migration 20261021120000_vendas_pagamentos_parcelas_credito (coluna vendas_pagamentos.parcelas) antes de exibir parcelas no detalhe admin e na 2ª via do cupom
 
 ## P2 — Melhoria
+- PDV (caixa): conferir a grade do carrinho e o rail em 1280–1366 px (três colunas a partir de `md`); abaixo de ~1440 px a coluna de produto encolhe e a tabela pode rolar na horizontal
+
+- Site Jinlong: testes que faltam — sobreposição do FAB no formulário, relógio/fuso (America/Sao_Paulo) do simulador, consentimento de analytics. Cobrir antes da Fase 1
+- Site Jinlong: microtextos de 10,5–11 px, scroll lock no menu mobile, avisos de Autoprefixer em `site/styles/site.css:186,196,216`, SEO técnico (canonical das páginas legais, lastmod no sitemap, aliases `/pt-br` e `/zh-cn`)
+- Site Jinlong: worktree `site-fase0-baseline-20261110` (branch `site/fase0-baseline-20261110`) usa junctions para `node_modules` de outros worktrees. Remover só depois de registrar o baseline; conferir que a remoção não apaga as pastas de origem
 
 - PDV-100 D-08: a falha de "Enter antes da lista carregar" não foi reproduzida na 2ª rodada. Monitorar; sem reprodução não há correção
 - PDV-100 D-10: não é loop (contagem estável em idle). Nenhuma ação; manter monitoramento
@@ -120,13 +134,13 @@
 - Mostrar as parcelas do crédito no detalhe da venda (admin) e na 2ª via, depois da coluna existir na homologação
 
 ## Feito
+- 2026-11-14 — PDV (caixa): carrinho com preço sobreposto ao selo "Atacado" corrigido (grade única do cabeçalho e das linhas); stepper sem cantos/divisórias tortos (elementos nativos); topo das 3 colunas na mesma altura h-11; botões de cabeçalho, rail, pagamento e desconto padronizados
+- 2026-11-13 — FAB do site recolhe enquanto `#contato` está visível (`site/components/FabAutoHide.tsx`), com teste E2E em Chromium, Firefox e mobile. Sem commit até a suíte completa passar
+- 2026-11-12 — Simulador híbrido: textos PT/ZH e fonte oficial agora dizem que o prazo de 30/10/2026 encerrou (cancelamento até 20/12/2026; próximas janelas em março e setembro). Teste de regressão em `site/lib/simuladorHibrido.copy.test.ts`. Sem commit; validação contábil pendente
+- 2026-11-12 — Análise da auditoria do site Jinlong contra o código em `site/` (idêntico a `2929b09a`): prazo tributário confirmado vencido; formulário e FAB confirmados como P0; protocolo, CTA do simulador e cookie PT confirmados como falsos positivos. Nenhum código alterado
+- 2026-11-12 — hub.jinlong.app: painel quebrava (digest 226588760, "Falha ao acessar dados (400)"). Causa: a Central de Conversão (`20261023130000`) estava no `main` mas não no banco `jinlong`. Migration aplicada em produção após checagem; cada seção do hub agora degrada sozinha (`hub/lib/seguro.ts`) e há `hub/app/error.tsx`. Código ainda não commitado
 - 2026-11-11 — Auditoria dos 53 PRs abertos e das branches (somente leitura): `docs/governance/GITHUB_AUDIT.md`, `GITHUB_CLEANUP_PLAN.md` e `GITHUB_WORKFLOW.md`. Nenhuma ação no GitHub; decisões pendentes listadas no plano
 - 2026-11-05 — 12 migrations da main (20261028100000 a 20261104180000) adiadas no manifesto: 8 de segurança (prioridade do dono) e 4 de funcionalidade; nenhuma aplicada em produção
 - 2026-11-02 — 4 migrations (`20261029155000`, `20261030120000`, `20261030130000`, `20261030140000`) adiadas no manifesto, com dependências e condição de aplicação; verificado em produção por leitura: ausentes, sem aplicação parcial. Teste de sessão sem JWT adicionado à troca de operador (17 testes)
 - 2026-11-05 — PR #655: types drift corrigido (`823142b6`, regenerado do artefato do CI); merge com a main (`24ba7082`) e push na branch do PR. Restam os gates de governança (label `deploy-prod:aprovado` e migrations `remote_ausente`)
 - 2026-11-05 — Diagnóstico Fase 3 entregue, sem alterar produção: fluxos de escrita mapeados, catálogo de produção lido (A2 mitigada por trigger; `perfis` tem 3 linhas), plano de remediação, roadmap, matriz de testes, plano de backup. Entrada em `docs/FASE3_RELATORIO_EXECUTIVO.md`
-- 2026-11-05 — Estabilização da tranche: fixtures de 4 suítes corrigidas (todas passam), provisionamento reescrito para o contrato da 121000 (cadastro autorizado por contingência comprovado), teste de recuperação de acesso (REC-1 a REC-7), validação reproduzível em contêiner (`backend/scripts/tranche-seguranca-validar.sh`)
-- 2026-11-05 — Tranche de segurança validada em banco descartável: SEC-04 corrigido (passa), rollbacks de 100000 e 110000 (cadeia idêntica ao baseline), definições de produção conferidas por md5; PR #660 atualizado
-- 2026-11-05 — GO-LIVE-01: golden flow operacional executado na cópia `sec_gf01` (roteiro `backend/scripts/go-live-01-golden-flow.test.sql`, 34 asserções OK). Matriz e veredito NO-GO em `docs/qa/GO_LIVE_01_GOLDEN_FLOW.md`; E2E de interface bloqueado
-- 2026-11-04 — GO-LIVE-01: gate financeiro 35/35 na cópia `sec_gl01` com a migration `20261104180000` (títulos, caixa e produto fora do escopo respondem como inexistente). Commits locais `7d35133c` (fix) e `b41ca18a` (fixtures). Evidência em `docs/qa/evidencias/go-live-01_gate_financeiro_35_35.txt`
-- 2026-11-04 — Rollbacks de `20261028100000` e `20261028101000` escritos em `backend/supabase/rollback/` e testados em transação com ROLLBACK no banco local; rollback de `20261029155000` (em `ops/`) corrigido e testado. Homolog não alterado: aplicação interrompida por drift pré-existente

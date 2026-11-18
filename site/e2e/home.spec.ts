@@ -149,6 +149,16 @@ for (const locale of LOCALES) {
       await expect(page.locator('.jl-fab a[href^="mailto:naturalcodedevelop@gmail.com"]')).toBeVisible()
     })
 
+    test('botão flutuante some enquanto o formulário de contato está visível', async ({ page }) => {
+      await openHome(page, locale)
+      const fab = page.locator('.jl-fab')
+      await expect(fab).toBeVisible()
+      await page.locator('#contato').scrollIntoViewIfNeeded()
+      await expect(fab).toBeHidden()
+      await page.evaluate(() => window.scrollTo(0, 0))
+      await expect(fab).toBeVisible()
+    })
+
     test('teclado: skip link é o primeiro foco e leva ao conteúdo', async ({ page, browserName }) => {
       test.skip(browserName === 'webkit', 'Safari não tabula links por padrão')
       await openHome(page, locale)

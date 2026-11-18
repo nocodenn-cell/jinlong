@@ -57,7 +57,9 @@ export async function mudarEtapa(form: FormData) {
 export async function converter(form: FormData) {
   const empresaId = empresaDo(form)
   const { repo } = await requireAdmin()
-  const p = parseConversao(form, await repo.listPlanos())
+  const planos = await repo.listPlanos().catch(() => null)
+  if (!planos) return back(empresaId, 'Não foi possível carregar os planos agora. Tente de novo.', true)
+  const p = parseConversao(form, planos)
   if (!p.ok) return back(empresaId, p.error, true)
   let valor = 0
   try {
