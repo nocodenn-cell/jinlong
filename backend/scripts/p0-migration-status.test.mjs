@@ -1,13 +1,17 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import test from "node:test";
 
 import {
+  acceptDeferredAppliedOnCheckProject,
+  acceptRemoteOnlyOnCheckProject,
   analyze,
   applyHumanGateRegistry,
   deriveExitCode,
   deriveOverallStatus,
   parseMigrationListOutput,
   parseMigrationListTable,
+  parseCheckProjectDeferredRegistry,
   parseDeferredManifest,
   parseHumanGateRegistry,
   separateDeferredMigrations,
@@ -303,4 +307,103 @@ test("git alinhado NÃO justifica remote_only de outro par nem remote-only sem p
   );
   assert.deepEqual(r.extraBlocking, ["20261009999999"]);
   assert.deepEqual(r.humanGate, []);
+});
+
+const HOMOLOG_REF = "yvdilcmxyjafnnsfdtam";
+const OUTRO_REF = "outroprojetoxxxxxxxxx"; // ref diferente do registro (não é produção)
+const REGISTRO_HOMOLOG = {
+  checkProjectRef: HOMOLOG_REF,
+  accepted: [{ version: "20261010120000", reason: "aplicada no homolog", decisionDoc: "docs/ops/deploy-governance.md" }],
+};
+
+test("adiada aplicada no projeto de verificação registrado vira HUMAN_GATE (exit 0)", () => {
+  const rows = [{ local: "20261010120000", remote: "20261010120000" }];
+  const { drift } = analyze(rows, ["20261010120000"]);
+  const r = separateDeferredMigrations({ blocking: drift, missingInList: [] }, rows, ["20261010120000"]);
+  const acc = acceptDeferredAppliedOnCheckProject({ blocking: r.blocking }, REGISTRO_HOMOLOG, HOMOLOG_REF);
+  assert.deepEqual(acc.blocking, []);
+  assert.deepEqual(acc.accepted, ["20261010120000"]);
+  assert.equal(acc.humanGate[0].divergence, "adiada_aplicada_no_projeto_de_verificacao");
+  const status = deriveOverallStatus({ blocking: acc.blocking, humanGate: acc.humanGate, deferred: r.deferredPending, missingInList: r.missingInList, extraBlocking: [] });
+  assert.equal(status, "HUMAN_GATE");
+  assert.equal(deriveExitCode(status), 0);
+});
+
+test("mesma adiada aplicada, mas consultando outro projeto (ref diferente), continua BLOQUEANTE", () => {
+  const blocking = [{ version: "20261010120000", reason: "adiada_aplicada", remote: "20261010120000" }];
+  const acc = acceptDeferredAppliedOnCheckProject({ blocking }, REGISTRO_HOMOLOG, OUTRO_REF);
+  assert.deepEqual(acc.blocking, blocking);
+  assert.deepEqual(acc.accepted, []);
+  assert.equal(deriveExitCode(deriveOverallStatus({ blocking: acc.blocking, humanGate: acc.humanGate, missingInList: [], extraBlocking: [] })), 1);
+});
+
+test("sem ref de verificação no ambiente (fail-closed) não aceita nada", () => {
+  const blocking = [{ version: "20261010120000", reason: "adiada_aplicada", remote: "20261010120000" }];
+  assert.deepEqual(acceptDeferredAppliedOnCheckProject({ blocking }, REGISTRO_HOMOLOG, "").blocking, blocking);
+  assert.deepEqual(acceptDeferredAppliedOnCheckProject({ blocking }, REGISTRO_HOMOLOG, undefined).blocking, blocking);
+});
+
+test("adiada aplicada fora do registro continua BLOQUEANTE, mesmo no projeto registrado", () => {
+  const blocking = [{ version: "20261028100000", reason: "adiada_aplicada", remote: "20261028100000" }];
+  const acc = acceptDeferredAppliedOnCheckProject({ blocking }, REGISTRO_HOMOLOG, HOMOLOG_REF);
+  assert.deepEqual(acc.blocking, blocking);
+  assert.deepEqual(acc.accepted, []);
+});
+
+test("drift que não é adiada_aplicada (ex.: remote_ausente de migration não adiada) não é aceito pelo registro", () => {
+  const blocking = [{ version: "20261010120000", reason: "remote_ausente", remote: null }];
+  assert.deepEqual(acceptDeferredAppliedOnCheckProject({ blocking }, REGISTRO_HOMOLOG, HOMOLOG_REF).blocking, blocking);
+});
+
+test("registro do projeto de verificação: lê válido e falha fechado quando malformado", () => {
+  const ok = parseCheckProjectDeferredRegistry(JSON.stringify(REGISTRO_HOMOLOG));
+  assert.equal(ok.checkProjectRef, HOMOLOG_REF);
+  assert.equal(ok.accepted[0].version, "20261010120000");
+  assert.throws(() => parseCheckProjectDeferredRegistry("{não é json"), /JSON malformado/);
+  assert.throws(() => parseCheckProjectDeferredRegistry(JSON.stringify({ ...REGISTRO_HOMOLOG, checkProjectRef: "curto" })), /checkProjectRef/);
+  assert.throws(() => parseCheckProjectDeferredRegistry(JSON.stringify({ ...REGISTRO_HOMOLOG, accepted: [{ version: "20261010120000", reason: "", decisionDoc: "x" }] })), /reason e decisionDoc/);
+  assert.throws(() => parseCheckProjectDeferredRegistry(JSON.stringify({ ...REGISTRO_HOMOLOG, accepted: [REGISTRO_HOMOLOG.accepted[0], REGISTRO_HOMOLOG.accepted[0]] })), /duplicada/);
+});
+
+test("só-remoto registrado no projeto de verificação vira HUMAN_GATE; outro ref continua BLOQUEANTE", () => {
+  const registro = {
+    checkProjectRef: HOMOLOG_REF,
+    accepted: [],
+    remoteOnlyAccepted: [{ version: "20261107210926", reason: "aplicada no homolog", decisionDoc: "docs/ops/deploy-governance.md" }],
+  };
+  const ok = acceptRemoteOnlyOnCheckProject({ extraBlocking: ["20261107210926", "20269999999999"] }, registro, HOMOLOG_REF);
+  assert.deepEqual(ok.extraBlocking, ["20269999999999"]);
+  assert.deepEqual(ok.accepted, ["20261107210926"]);
+  assert.equal(ok.humanGate[0].divergence, "remote_only_no_projeto_de_verificacao");
+  const outro = acceptRemoteOnlyOnCheckProject({ extraBlocking: ["20261107210926"] }, registro, OUTRO_REF);
+  assert.deepEqual(outro.extraBlocking, ["20261107210926"]);
+  assert.deepEqual(outro.accepted, []);
+});
+
+test("registro real: aceita exatamente as 36 divergências reprovadas no CI do homolog (sem ref de outro projeto)", () => {
+  const raw = fs.readFileSync(new URL("../supabase/migration-check-project-deferred.json", import.meta.url), "utf8");
+  const registro = parseCheckProjectDeferredRegistry(raw);
+  const adiadas = [
+    "20261010120000", "20261023130000", "20261028100000", "20261028101000", "20261028110000",
+    "20261028120100", "20261028121000", "20261028122000", "20261029155000", "20261030100000",
+    "20261030120000", "20261030130000", "20261030140000", "20261104120000", "20261104150000",
+  ];
+  const soRemoto = [
+    "20261029153523", "20261029161123", "20261029161430", "20261029161519", "20261029161826",
+    "20261029162055", "20261029162335", "20261029162411", "20261029162618", "20261029162645",
+    "20261029163827", "20261029163941", "20261029163953", "20261029164014", "20261029175741",
+    "20261029181913", "20261030002520", "20261106140207", "20261107205637", "20261107205702",
+    "20261107210926",
+  ];
+  const blocking = adiadas.map((version) => ({ version, reason: "adiada_aplicada", remote: version }));
+  const a = acceptDeferredAppliedOnCheckProject({ blocking }, registro, HOMOLOG_REF);
+  assert.deepEqual(a.blocking, []);
+  assert.equal(a.accepted.length, 15);
+  const b = acceptRemoteOnlyOnCheckProject({ extraBlocking: soRemoto }, registro, HOMOLOG_REF);
+  assert.deepEqual(b.extraBlocking, []);
+  assert.equal(b.accepted.length, 21);
+  const c = acceptDeferredAppliedOnCheckProject({ blocking }, registro, OUTRO_REF);
+  const d = acceptRemoteOnlyOnCheckProject({ extraBlocking: soRemoto }, registro, OUTRO_REF);
+  assert.equal(c.blocking.length, 15);
+  assert.equal(d.extraBlocking.length, 21);
 });

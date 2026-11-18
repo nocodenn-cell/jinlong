@@ -22,6 +22,8 @@ const MIGRATIONS_DIR = path.join(BACKEND_ROOT, "supabase", "migrations");
 const HUMAN_GATES_FILE = path.join(BACKEND_ROOT, "supabase", "migration-human-gates.json");
 /** Migrations adiadas pela governança de deploy (docs/ops/deploy-governance.md). */
 const DEFERRED_MANIFEST_FILE = path.join(BACKEND_ROOT, "..", ".github", "deploy-governance", "deferred-migrations.json");
+/** Adiadas já aplicadas no projeto de verificação (homolog) do CI; válidas só para o ref fixado nele. */
+const CHECK_PROJECT_DEFERRED_FILE = path.join(BACKEND_ROOT, "supabase", "migration-check-project-deferred.json");
 
 function readArgs(argv) {
   return {
@@ -270,6 +272,134 @@ export function parseDeferredManifest(raw) {
 function loadDeferredVersions() {
   if (!fs.existsSync(DEFERRED_MANIFEST_FILE)) return [];
   return parseDeferredManifest(fs.readFileSync(DEFERRED_MANIFEST_FILE, "utf8"));
+}
+
+/**
+ * Registro de adiadas JÁ aplicadas no projeto de verificação do CI (homolog). Só vale para o ref fixado em
+ * `checkProjectRef`: em qualquer outro projeto (ex.: produção) a aplicação continua sendo violação. Fail-closed.
+ */
+export function parseCheckProjectDeferredRegistry(raw) {
+  let payload;
+  try {
+    payload = JSON.parse(raw);
+  } catch {
+    throw new Error("Registro de adiadas do projeto de verificação inválido: JSON malformado.");
+  }
+  const checkProjectRef = String(payload?.checkProjectRef ?? "").trim();
+  if (!/^[a-z0-9]{20}$/.test(checkProjectRef)) {
+    throw new Error("Registro de adiadas do projeto de verificação inválido: checkProjectRef deve ter 20 caracteres [a-z0-9].");
+  }
+  if (!Array.isArray(payload.accepted)) {
+    throw new Error("Registro de adiadas do projeto de verificação inválido: campo accepted deve ser uma lista.");
+  }
+  const seen = new Set();
+  const accepted = payload.accepted.map((entry, index) => {
+    if (!entry || typeof entry !== "object") {
+      throw new Error(`Registro de adiadas do projeto de verificação inválido: accepted[${index}] não é objeto.`);
+    }
+    const version = String(entry.version ?? "").trim();
+    const reason = String(entry.reason ?? "").trim();
+    const decisionDoc = String(entry.decisionDoc ?? "").trim();
+    if (!/^\d+$/.test(version)) {
+      throw new Error(`Registro de adiadas do projeto de verificação inválido: accepted[${index}].version inválida.`);
+    }
+    if (!reason || !decisionDoc) {
+      throw new Error(`Registro de adiadas do projeto de verificação inválido: accepted[${index}] exige reason e decisionDoc.`);
+    }
+    if (seen.has(version)) {
+      throw new Error(`Registro de adiadas do projeto de verificação inválido: versão duplicada ${version}.`);
+    }
+    seen.add(version);
+    return { version, reason, decisionDoc };
+  });
+  const remoteOnlyAccepted = (Array.isArray(payload.remoteOnlyAccepted) ? payload.remoteOnlyAccepted : []).map((entry, index) => {
+    if (!entry || typeof entry !== "object") {
+      throw new Error(`Registro de adiadas do projeto de verificação inválido: remoteOnlyAccepted[${index}] não é objeto.`);
+    }
+    const version = String(entry.version ?? "").trim();
+    const reason = String(entry.reason ?? "").trim();
+    const decisionDoc = String(entry.decisionDoc ?? "").trim();
+    if (!/^\d+$/.test(version)) {
+      throw new Error(`Registro de adiadas do projeto de verificação inválido: remoteOnlyAccepted[${index}].version inválida.`);
+    }
+    if (!reason || !decisionDoc) {
+      throw new Error(`Registro de adiadas do projeto de verificação inválido: remoteOnlyAccepted[${index}] exige reason e decisionDoc.`);
+    }
+    if (seen.has(version)) {
+      throw new Error(`Registro de adiadas do projeto de verificação inválido: versão duplicada ${version}.`);
+    }
+    seen.add(version);
+    return { version, reason, decisionDoc };
+  });
+  return { checkProjectRef, accepted, remoteOnlyAccepted };
+}
+
+function loadCheckProjectDeferredRegistry() {
+  if (!fs.existsSync(CHECK_PROJECT_DEFERRED_FILE)) {
+    throw new Error(`Registro de adiadas do projeto de verificação obrigatório ausente: ${CHECK_PROJECT_DEFERRED_FILE}`);
+  }
+  return parseCheckProjectDeferredRegistry(fs.readFileSync(CHECK_PROJECT_DEFERRED_FILE, "utf8"));
+}
+
+/**
+ * Aceita versões SÓ-REMOTO (sem arquivo no repo) SOMENTE quando o ref consultado é o `checkProjectRef` do
+ * registro e a versão consta em `remoteOnlyAccepted`. Qualquer outro caso mantém o bloqueio.
+ */
+export function acceptRemoteOnlyOnCheckProject({ extraBlocking }, registry, checkRef) {
+  if (!registry || !checkRef || checkRef !== registry.checkProjectRef) {
+    return { extraBlocking, accepted: [], humanGate: [] };
+  }
+  const byVersion = new Map((registry.remoteOnlyAccepted ?? []).map((e) => [e.version, e]));
+  const accepted = [];
+  const humanGate = [];
+  const keptExtra = [];
+  for (const version of extraBlocking) {
+    const hit = byVersion.get(version);
+    if (hit) {
+      accepted.push(version);
+      humanGate.push({
+        version,
+        direction: "remote_only_check_project",
+        reason: hit.reason,
+        decisionDoc: hit.decisionDoc,
+        divergence: "remote_only_no_projeto_de_verificacao",
+      });
+    } else {
+      keptExtra.push(version);
+    }
+  }
+  return { extraBlocking: keptExtra, accepted, humanGate };
+}
+
+/**
+ * Aceita `adiada_aplicada` SOMENTE quando: (a) o ref do projeto consultado é exatamente o `checkProjectRef`
+ * do registro (CI de verificação); e (b) a versão consta no registro. Qualquer outro caso (ref ausente,
+ * ref diferente, versão fora do registro) mantém o bloqueio.
+ */
+export function acceptDeferredAppliedOnCheckProject({ blocking }, registry, checkRef) {
+  if (!registry || !checkRef || checkRef !== registry.checkProjectRef) {
+    return { blocking, accepted: [], humanGate: [] };
+  }
+  const byVersion = new Map(registry.accepted.map((e) => [e.version, e]));
+  const accepted = [];
+  const humanGate = [];
+  const keptBlocking = [];
+  for (const entry of blocking) {
+    const hit = entry.reason === "adiada_aplicada" ? byVersion.get(entry.version) : undefined;
+    if (hit) {
+      accepted.push(entry.version);
+      humanGate.push({
+        version: entry.version,
+        direction: "deferred_applied",
+        reason: hit.reason,
+        decisionDoc: hit.decisionDoc,
+        divergence: "adiada_aplicada_no_projeto_de_verificacao",
+      });
+    } else {
+      keptBlocking.push(entry);
+    }
+  }
+  return { blocking: keptBlocking, accepted, humanGate };
 }
 
 /**
@@ -586,7 +716,7 @@ function main() {
   const {
     blocking: gatedBlocking,
     missingInList: gatedMissingInList,
-    extraBlocking,
+    extraBlocking: extraBlockingRaw,
     humanGate,
   } = applyHumanGateRegistry(
     { blocking: initiallyBlocking, missingInList, extraBlocking: initiallyExtraBlocking },
@@ -612,6 +742,21 @@ function main() {
     rows,
     deferredVersions,
   );
+  let checkRegistry;
+  try {
+    checkRegistry = loadCheckProjectDeferredRegistry();
+  } catch (error) {
+    const message = String(error.message ?? error);
+    if (opts.json) console.log(JSON.stringify({ ok: false, error: "check_project_deferred_invalid", message }, null, 2));
+    else console.error(message);
+    process.exit(2);
+  }
+  const checkRef = (process.env.SUPABASE_MIGRATION_CHECK_PROJECT_REF ?? "").trim();
+  const checkAccept = acceptDeferredAppliedOnCheckProject({ blocking: deferredFilteredBlocking }, checkRegistry, checkRef);
+  const remoteAccept = acceptRemoteOnlyOnCheckProject({ extraBlocking: extraBlockingRaw }, checkRegistry, checkRef);
+  const extraBlocking = remoteAccept.extraBlocking;
+  const humanGateAll = [...humanGate, ...checkAccept.humanGate, ...remoteAccept.humanGate];
+  const deferredAppliedRemaining = deferredApplied.filter((v) => !checkAccept.accepted.includes(v));
   const baseRef = (process.env.MIGRATION_DRIFT_BASE_REF ?? "").trim();
   let baseVersions = null;
   if (baseRef) {
@@ -629,12 +774,12 @@ function main() {
     missingInList: blockingMissingInList,
     prPending,
   } = separatePrPendingMigrations(
-    { blocking: deferredFilteredBlocking, missingInList: deferredFilteredMissing },
+    { blocking: checkAccept.blocking, missingInList: deferredFilteredMissing },
     baseVersions,
   );
   const status = deriveOverallStatus({
     blocking,
-    humanGate,
+    humanGate: humanGateAll,
     deferred: deferredPending,
     missingInList: blockingMissingInList,
     extraBlocking,
@@ -659,9 +804,11 @@ function main() {
       reason: d.reason,
       remote: d.remote,
     })),
-    humanGates: humanGate,
+    humanGates: humanGateAll,
     deferredByGovernance: deferredPending,
-    deferredAppliedViolation: deferredApplied,
+    deferredAppliedViolation: deferredAppliedRemaining,
+    deferredAcceptedOnCheckProject: checkAccept.accepted,
+    remoteOnlyAcceptedOnCheckProject: remoteAccept.accepted,
     baseRef: baseRef || null,
     prPendingNotOnBase: prPending,
     driftLegacyNumericMirror: legacyNumericMirror.map((d) => ({
@@ -696,9 +843,9 @@ function main() {
     } else {
       console.log("Resultado: DRIFT BLOQUEANTE — ação sugerida: revisar migrations / projeto linkado.\n");
     }
-    if (humanGate.length) {
+    if (humanGateAll.length) {
       console.log("Divergências sob decisão humana:");
-      for (const gate of humanGate) {
+      for (const gate of humanGateAll) {
         console.log(`  - ${gate.version} (${gate.direction}; ${gate.reason}; doc=${gate.decisionDoc})`);
       }
       console.log("");

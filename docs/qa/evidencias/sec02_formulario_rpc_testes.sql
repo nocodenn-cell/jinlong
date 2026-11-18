@@ -10,22 +10,26 @@ ROLLBACK;
 BEGIN; SET LOCAL ROLE anon;
 SAVEPOINT b; select 'select', count(*) from public.commercial_leads; ROLLBACK TO b;
 ROLLBACK;
-\echo == 3 anon RPC valida (esperado: ok, 1 linha inserida)
+\echo == 3 anon chama a RPC (esperado: permission denied for function; anon não tem EXECUTE)
 BEGIN; SET LOCAL ROLE anon;
-select public.registrar_lead_comercial('JL-261104-ABCDEF','Maria Teste','Loja Teste','5511999999999','whatsapp','pt-BR','Sao Paulo','importados',NULL,'google','cpc','pedido-demo');
+SAVEPOINT e; select public.registrar_lead_comercial('44444444-4444-4444-8444-444444444444','JL-261104-ABCDEF','Maria Teste','Loja Teste','5511999999999','whatsapp','pt-BR','Sao Paulo','importados',NULL,'google','cpc','pedido-demo','198.51.100.1'); ROLLBACK TO e;
+ROLLBACK;
+\echo == 4 service_role chama a RPC valida (esperado: ok, 1 linha inserida)
+BEGIN; SET LOCAL ROLE service_role;
+select public.registrar_lead_comercial('44444444-4444-4444-8444-444444444444','JL-261104-ABCDEF','Maria Teste','Loja Teste','5511999999999','whatsapp','pt-BR','Sao Paulo','importados',NULL,'google','cpc','pedido-demo','198.51.100.1');
 select 'linhas_apos_rpc', count(*) from public.commercial_leads;
 ROLLBACK;
-\echo == 4 invalidos (esperado: erro LEAD_*)
-BEGIN; SET LOCAL ROLE anon;
-SAVEPOINT c1; select public.registrar_lead_comercial('XX-1','Maria','Loja','5511999999999','whatsapp','pt-BR'); ROLLBACK TO c1;
-SAVEPOINT c2; select public.registrar_lead_comercial('JL-261104-ABCDEF','M','Loja','5511999999999','whatsapp','pt-BR'); ROLLBACK TO c2;
-SAVEPOINT c3; select public.registrar_lead_comercial('JL-261104-ABCDEF','Maria','Loja','5511999999999','email','pt-BR'); ROLLBACK TO c3;
-SAVEPOINT c4; select public.registrar_lead_comercial('JL-261104-ABCDEF','Maria<script>','Loja','5511999999999','whatsapp','pt-BR'); ROLLBACK TO c4;
-SAVEPOINT c5; select public.registrar_lead_comercial('JL-261104-ABCDEF','Maria','Loja','5511999999999','whatsapp','pt-BR','x','importados',NULL,NULL,NULL,NULL); ROLLBACK TO c5;
-SAVEPOINT c6; select public.registrar_lead_comercial('JL-261104-ABCDEF','Maria','Loja','5511999999999','whatsapp','pt-BR',NULL,'hackers'); ROLLBACK TO c6;
-SAVEPOINT c7; select public.registrar_lead_comercial('JL-261104-ABCDEF','Maria','Loja','5511999999999','whatsapp','pt-BR',NULL,NULL,'ab c'); ROLLBACK TO c7;
+\echo == 5 service_role com entradas inválidas (esperado: erro LEAD_*)
+BEGIN; SET LOCAL ROLE service_role;
+SAVEPOINT c1; select public.registrar_lead_comercial('44444444-4444-4444-8444-444444444444','XX-1','Maria','Loja','5511999999999','whatsapp','pt-BR'); ROLLBACK TO c1;
+SAVEPOINT c2; select public.registrar_lead_comercial('44444444-4444-4444-8444-444444444444','JL-261104-ABCDEF','M','Loja','5511999999999','whatsapp','pt-BR'); ROLLBACK TO c2;
+SAVEPOINT c3; select public.registrar_lead_comercial('44444444-4444-4444-8444-444444444444','JL-261104-ABCDEF','Maria','Loja','5511999999999','email','pt-BR'); ROLLBACK TO c3;
+SAVEPOINT c4; select public.registrar_lead_comercial('44444444-4444-4444-8444-444444444444','JL-261104-ABCDEF','Maria<script>','Loja','5511999999999','whatsapp','pt-BR'); ROLLBACK TO c4;
+SAVEPOINT c5; select public.registrar_lead_comercial('44444444-4444-4444-8444-444444444444','JL-261104-ABCDEF','Maria','Loja','5511999999999','whatsapp','pt-BR','x','importados',NULL,NULL,NULL,NULL); ROLLBACK TO c5;
+SAVEPOINT c6; select public.registrar_lead_comercial('44444444-4444-4444-8444-444444444444','JL-261104-ABCDEF','Maria','Loja','5511999999999','whatsapp','pt-BR',NULL,'hackers'); ROLLBACK TO c6;
+SAVEPOINT c7; select public.registrar_lead_comercial('44444444-4444-4444-8444-444444444444','JL-261104-ABCDEF','Maria','Loja','5511999999999','whatsapp','pt-BR',NULL,NULL,'ab c'); ROLLBACK TO c7;
 ROLLBACK;
-\echo == 5 authenticated sem JWT nao lista leads de outros (tabela sem grant ou RLS)
+\echo == 6 authenticated sem JWT nao lista leads de outros (tabela sem grant ou RLS)
 BEGIN; SET LOCAL ROLE authenticated;
 SAVEPOINT d; select 'auth_select_leads', count(*) from public.commercial_leads; ROLLBACK TO d;
 ROLLBACK;

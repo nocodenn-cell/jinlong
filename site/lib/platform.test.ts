@@ -32,11 +32,14 @@ describe('isolamento: o site não acessa dados reais nem credenciais', () => {
     expect(hits.map((f) => path.relative(SITE_ROOT, f))).toEqual([])
   })
 
-  it('registro de demonstração: só anon + a função de registro do site, nunca service role nem outras tabelas', () => {
+  it('registro de demonstração: só a função de registro do site (service_role apenas no servidor, via variável), nunca createClient nem outras tabelas', () => {
     const src = fs.readFileSync(path.join(SITE_ROOT, 'lib/demoRequest.ts'), 'utf8')
-    expect(src).not.toMatch(/SERVICE_ROLE|service_role|createClient/)
+    // service_role é permitido só como nome da variável de ambiente lida no servidor (decisão do dono, 2026-11-07).
+    expect(src).not.toMatch(/createClient/)
+    const codigo = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
+    expect(codigo.replace(/SITE_DEMO_SUPABASE_SERVICE_ROLE_KEY/g, '')).not.toMatch(/SERVICE_ROLE|service_role/)
     expect([...src.matchAll(/process\.env\.(\w+)|env\.(\w+)/g)].map((m) => m[1] ?? m[2]).filter((n) => n !== 'env')).toEqual(
-      expect.arrayContaining(['SITE_DEMO_SUPABASE_URL', 'SITE_DEMO_SUPABASE_ANON_KEY']),
+      expect.arrayContaining(['SITE_DEMO_SUPABASE_URL', 'SITE_DEMO_SUPABASE_SERVICE_ROLE_KEY']),
     )
     expect([...src.matchAll(/rest\/v1\/([\w/]+)/g)].map((m) => m[1])).toEqual(['rpc/registrar_lead_comercial'])
   })

@@ -101,6 +101,8 @@ export interface DemoStoreRow extends DemoRequest {
   protocol: string
   product: 'jinlong'
   idempotencyKey: string
+  /** IP do visitante (lido pelo servidor, ver clientIpFrom). Vai ao banco como p_client_ip para o limite por IP. */
+  clientIp?: string
 }
 
 export interface DemoStore {
@@ -111,10 +113,14 @@ export interface DemoStore {
 type Env = Readonly<Record<string, string | undefined>>
 
 /** Confirmação/protocolo só voltam ao visitante DEPOIS que a função respondeu 2xx.
- * Gravação só pela função public.registrar_lead_comercial (RPC via REST, chave anon). Sem INSERT direto na tabela. */
+ * Gravação só pela função public.registrar_lead_comercial, chamada no servidor com service_role (EXECUTE restrito a
+ * service_role; anon não executa). A chave fica só em SITE_DEMO_SUPABASE_SERVICE_ROLE_KEY, nunca vai ao navegador. */
 export function supabaseDemoStore(env: Env = process.env, fetchImpl: typeof fetch = fetch): DemoStore | null {
+  // Flag reversível, padrão desligada: sem SITE_DEMO_FORM_ATIVO='true' não há persistência (503 not_configured)
+  // e nenhuma chamada ao banco. Para reativar, basta definir a variável no ambiente do site.
+  if (env.SITE_DEMO_FORM_ATIVO?.trim() !== 'true') return null
   const url = env.SITE_DEMO_SUPABASE_URL?.trim()
-  const key = env.SITE_DEMO_SUPABASE_ANON_KEY?.trim()
+  const key = env.SITE_DEMO_SUPABASE_SERVICE_ROLE_KEY?.trim()
   if (!url || !key || !/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/.test(url)) return null
   return {
     async insert(row) {
@@ -137,6 +143,7 @@ export function supabaseDemoStore(env: Env = process.env, fetchImpl: typeof fetc
             p_utm_source: row.utm_source ?? null,
             p_utm_medium: row.utm_medium ?? null,
             p_utm_campaign: row.utm_campaign ?? null,
+            p_client_ip: row.clientIp ?? null,
           }),
           signal: AbortSignal.timeout(8000),
         })
@@ -174,7 +181,7 @@ function respostaDeErroDaPersistencia(err: unknown): DemoResponse {
 
 export async function handleDemoRequest(
   input: unknown,
-  deps: { store: DemoStore | null; protocol?: () => string; newKey?: () => string },
+  deps: { store: DemoStore | null; protocol?: () => string; newKey?: () => string; clientIp?: string },
 ): Promise<DemoResponse> {
   const result = validateDemoRequest(input)
   if (!result.ok) return { status: 400, body: { ok: false, error: 'invalid', fields: result.errors } }
@@ -186,7 +193,7 @@ export async function handleDemoRequest(
   const raw = (input as Record<string, unknown> | null)?.idempotency_key
   const idempotencyKey = isIdempotencyKey(raw) ? raw : (deps.newKey ?? (() => crypto.randomUUID()))()
   try {
-    const gravado = await deps.store.insert({ ...result.data, protocol, product: 'jinlong', idempotencyKey })
+    const gravado = await deps.store.insert({ ...result.data, protocol, product: 'jinlong', idempotencyKey, clientIp: deps.clientIp })
     return { status: 201, body: { ok: true, protocol: gravado } }
   } catch (err) {
     return respostaDeErroDaPersistencia(err)
