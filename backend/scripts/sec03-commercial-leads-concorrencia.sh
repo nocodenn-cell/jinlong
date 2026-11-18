@@ -14,9 +14,10 @@ sql() { docker exec -i "$CONTAINER" psql -U postgres -d "$BANCO" -X -tA -c "$1";
 # Protocolo válido (formato JL-AAMMDD-XXXXXX, sem 0 e 1) a partir de um número.
 protocolo() { echo "JL-261104-$(printf '%06x' "$1" | tr '0123456789abcdef' 'ABCDEFGHJKMNPQRS')"; }
 
-# Uma tentativa: chave, protocolo, IP (X-Forwarded-For), nome, marcador de utm_source, arquivo de saída.
+# Uma tentativa: chave, protocolo, IP do visitante (p_client_ip, como o servidor do site envia), nome, marcador de
+# utm_source, arquivo de saída. A RPC roda como service_role (papel do servidor); anon não tem EXECUTE.
 tentativa() {
-  docker exec -i "$CONTAINER" psql -U postgres -d "$BANCO" -X -tA -c "begin; set local role anon; select set_config('request.headers', '{\"x-forwarded-for\":\"$3\"}', true); select public.registrar_lead_comercial('$1'::uuid, '$2', '$4', 'Loja Conc', '+5511900005555', 'whatsapp', 'pt-BR', NULL, NULL, NULL, '$5', NULL, NULL); commit;" > "$6" 2>&1
+  docker exec -i "$CONTAINER" psql -U postgres -d "$BANCO" -X -tA -c "begin; set local role service_role; select public.registrar_lead_comercial('$1'::uuid, '$2', '$4', 'Loja Conc', '+5511900005555', 'whatsapp', 'pt-BR', NULL, NULL, NULL, '$5', NULL, NULL, '$3'); commit;" > "$6" 2>&1
 }
 
 sql "delete from public.commercial_leads where utm_source like 'sec03-conc%'; delete from public.commercial_lead_rate_limit where bucket like 'ip:%';" >/dev/null
