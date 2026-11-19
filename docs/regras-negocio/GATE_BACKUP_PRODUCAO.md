@@ -2,13 +2,14 @@
 
 | Campo | Valor |
 |--------|--------|
-| **Data** | 2026-10-07 |
+| **Data** | 2026-10-07 (revalidado 2026-10-08) |
 | **Org Supabase** | NatureCode · `plan: free` (MCP `get_organization`) |
 | **Projeto** | `jinlong` · `ACTIVE_HEALTHY` · PG 17 · `sa-east-1` |
 | **RPO alvo** | 24h |
 | **RPO efetivamente garantido** | **`NÃO GARANTIDO`** |
 | **RTO alvo / esperado** | 4h úteis (restore drill CI + cutover humano) |
 | **Gate** | **`BACKUP_PRODUCTION_PENDING`** |
+| **Revalidação 2026-10-08** | `backup-scheduled.yml`: 10/10 runs recentes **failure**; restore sintético local **PASS** (não fecha o gate); ver [SPRINT_CONFIABILIDADE_OPERACIONAL_2026-10-08.md](../audits/SPRINT_CONFIABILIDADE_OPERACIONAL_2026-10-08.md) |
 
 ---
 
