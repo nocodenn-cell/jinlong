@@ -38,6 +38,7 @@ export default defineConfig({
   workers: 1,
   retries: 0,
   reporter: [['list'], ['html', { open: 'never', outputFolder: 'playwright-report-pdv100' }]],
+  globalSetup: './e2e/helpers/globalSetupLimpezaEsperas.ts',
   outputDir: 'test-results-pdv100',
   use: {
     baseURL: PDV100_BASE_URL,
