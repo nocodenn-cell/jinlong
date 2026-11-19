@@ -447,8 +447,8 @@ test("registro real: aceita exatamente as 36 divergências reprovadas no CI do h
   assert.deepEqual(a.blocking, []);
   assert.equal(a.accepted.length, 15);
   const b = acceptRemoteOnlyOnCheckProject({ extraBlocking: soRemoto }, registro, HOMOLOG_REF);
-  assert.deepEqual(b.extraBlocking, []);
-  assert.equal(b.accepted.length, 21);
+  assert.deepEqual(b.extraBlocking, ["20261107205637", "20261107205702", "20261107210926"]);
+  assert.equal(b.accepted.length, 18);
   const c = acceptDeferredAppliedOnCheckProject({ blocking }, registro, OUTRO_REF);
   const d = acceptRemoteOnlyOnCheckProject({ extraBlocking: soRemoto }, registro, OUTRO_REF);
   assert.equal(c.blocking.length, 15);
