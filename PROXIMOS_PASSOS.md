@@ -1,6 +1,7 @@
 # Próximos passos
 
 ## P0 — Quebrado/travado
+- Auditoria de integridade (`docs/ops/AUDITORIA_INTEGRIDADE_2026-11-19.md`): `descartada_por` das 2 esperas não reflete quem agiu (descarte por SQL, não pela RPC); trilha `pdv_operador_eventos` vazia; caixa aberto do Dono Demo desde 03/10 com venda de forte indício de teste (`2780fb0b…`, produto `fita`). Decisões do responsável pendentes (§7)
 - `20261023200000`, `20261119120000` e `120100` aplicadas em produção em 2026-11-19 (hash do D-06 igual ao homolog). Pendente: 2 esperas antigas em caixa fechado (descarte pelo dono) e `VALIDATE CONSTRAINT` da 120100. Sem ela, o fechamento de caixa quebra (`function internal.fp_operador_ativo_caixa does not exist`, teste reproduzível). Ver `docs/ops/PROCEDIMENTO_20261119120000_HOMOLOG.md`
 
 - Usuários E2E ativos na matriz de produção (`Gerente E2E` e `Dono E2E`): sem caixa aberto nem espera, desativar após decisão do dono. `Operador E2E` (`b7ec95bb…`) tem 2 esperas `EM_ESPERA`: resolver antes de desativar. `Dono Demo` (ativo) tem 1 caixa aberto desde 03/10. Ver `docs/ops/REVISAO_D1_D6_2026-11-19.md` §9
