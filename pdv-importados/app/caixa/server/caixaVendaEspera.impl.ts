@@ -232,12 +232,21 @@ export async function descartarVendaEmEsperaImpl(
   try {
     const { userId, idioma } = await getUsuarioAtual()
     if (!userId) return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_sessao_expirada') }
+    // RN-03: motivo obrigatório. A validação definitiva é do banco; aqui só evitamos a ida ao servidor.
+    if ((motivo ?? '').trim().length < 3) {
+      return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_descartar_motivo') }
+    }
     const supabase = await createClient()
     const { error } = await supabase.rpc('descartar_venda_em_espera', {
       p_id: id,
       p_motivo: motivo ?? null,
     })
-    if (error) return { ok: false, error: mensagemErroParaUsuario(error.message, idioma) }
+    if (error) {
+      if (error.message.includes('motivo_obrigatorio')) {
+        return { ok: false, error: caixaMsgServidor(idioma, 'err_srv_descartar_motivo') }
+      }
+      return { ok: false, error: mensagemErroParaUsuario(error.message, idioma) }
+    }
     return { ok: true }
   } catch (e) {
     return {

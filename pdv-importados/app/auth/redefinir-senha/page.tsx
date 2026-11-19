@@ -33,6 +33,8 @@ export default async function RedefinirSenhaPage() {
         erroCurta: L.senha_erro_curta,
         erroMismatch: L.senha_erro_mismatch,
         erroGenerico: L.redefinir_erro,
+        erroMesmaSenha: L.redefinir_erro_mesma_senha,
+        erroFraca: L.redefinir_erro_fraca,
       }}
     />
   )
