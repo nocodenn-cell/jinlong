@@ -41,6 +41,7 @@ on:
       - 'package-lock.json'
       - 'turbo.json'
       - '.github/workflows/ci-backend-supabase.yml'
+  # Push em main NÃO roda aqui: o drift de push é o workflow migration-drift-main.yml (sem filtro de caminhos).
   workflow_dispatch:
 
 jobs:
@@ -397,11 +398,37 @@ jobs:
             exit 1
           fi
 
+      # Modo do gate (docs/auditorias/RELATORIO_DRIFT_MIGRATIONS_PRODUCAO.md §23).
+      # Informativo SOMENTE em PR com diff confirmado, sem caminhos de produção e sem alterar o gate.
+      # Qualquer falha de git (fetch, referência ou diff) faz o passo falhar: fail-closed.
+      # adiada_aplicada bloqueia em qualquer modo (resolveExitCode).
+      - name: Modo do gate de drift
+        id: modo
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          GIT_REF: ${{ github.ref }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          : > changed-paths.txt
+          DIFF_OK=0
+          if [ "${EVENT_NAME}" = "pull_request" ]; then
+            test -n "${BASE_REF}"
+            git fetch --no-tags --depth=1 origin "${BASE_REF}"
+            git rev-parse --verify --quiet "origin/${BASE_REF}^{commit}" > /dev/null
+            git rev-parse --verify --quiet "HEAD^{commit}" > /dev/null
+            git diff --name-only "origin/${BASE_REF}" HEAD > changed-paths.txt
+            DIFF_OK=1
+          fi
+          cd backend
+          node scripts/drift-gate-mode.mjs --event "${EVENT_NAME}" --ref "${GIT_REF}" --changed ../changed-paths.txt --diff-ok "${DIFF_OK}"
+
       - name: Link + compare Local vs Remote
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_MIGRATION_CHECK_PROJECT_REF: ${{ secrets.SUPABASE_MIGRATION_CHECK_PROJECT_REF }}
           BASE_REF: ${{ github.base_ref }}
+          DRIFT_MODE: ${{ steps.modo.outputs.mode }}
         run: |
           set -euo pipefail
           cd backend
@@ -410,7 +437,9 @@ jobs:
             git fetch --no-tags --depth=1 origin "${BASE_REF}"
             export MIGRATION_DRIFT_BASE_REF="origin/${BASE_REF}"
           fi
-          node scripts/p0-migration-status.mjs
+          FLAG=""
+          if [ "${DRIFT_MODE}" = "informative" ]; then FLAG="--warn-only"; fi
+          node scripts/p0-migration-status.mjs ${FLAG}
 
   anti-replay-diagnostic-gate:
     runs-on: windows-latest
