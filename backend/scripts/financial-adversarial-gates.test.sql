@@ -64,7 +64,7 @@ VALUES (:'caixa', NULL, :'loja', 'ABERTO', 1000);
 -- D5 (20261107110000): PIX/cartão exigem conta financeira vinculada à forma na loja.
 WITH c AS (
   INSERT INTO public.contas_financeiras (id, loja_id, nome, tipo, ativo, data_inicial, criado_por)
-  SELECT gen_random_uuid(), :'loja', 'Fixture conta D5', 'BANCO', true, current_date, :'gerente_id'
+  SELECT gen_random_uuid(), :'loja', 'Fixture conta D5', 'BANCO', true, '2000-01-01'::date, :'gerente_id'
   WHERE NOT EXISTS (SELECT 1 FROM public.financeiro_contas_forma WHERE loja_id = :'loja' AND forma_pagamento = 'PIX')
   RETURNING id
 )

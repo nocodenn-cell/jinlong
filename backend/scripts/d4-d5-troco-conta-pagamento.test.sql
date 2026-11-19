@@ -81,7 +81,7 @@ BEGIN
 
   -- D5-2: conta vinculada à forma PIX na loja A => venda gravada
   INSERT INTO public.contas_financeiras (id, loja_id, nome, tipo, ativo, data_inicial, criado_por)
-    VALUES (conta, la, 'D4D5 Banco A', 'BANCO', true, current_date, op);
+    VALUES (conta, la, 'D4D5 Banco A', 'BANCO', true, '2000-01-01'::date, op);
   INSERT INTO public.financeiro_contas_forma (loja_id, forma_pagamento, conta_financeira_id)
     VALUES (la, 'PIX', conta);
   v1 := gen_random_uuid();

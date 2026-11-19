@@ -42,7 +42,7 @@ BEGIN
     ON CONFLICT (loja_id, codigo) DO UPDATE SET ativo = true;
     -- D5 (20261107110000): PIX exige conta financeira vinculada à forma na loja.
     INSERT INTO public.contas_financeiras (id, loja_id, nome, tipo, ativo, data_inicial, criado_por)
-    SELECT ('f7000007-0000-4000-8000-0000000000' || lpad(l::text, 2, '0'))::uuid, pg_temp.lid(l), 'D13 Banco ' || l, 'BANCO', true, current_date, pg_temp.gid(l)
+    SELECT ('f7000007-0000-4000-8000-0000000000' || lpad(l::text, 2, '0'))::uuid, pg_temp.lid(l), 'D13 Banco ' || l, 'BANCO', true, '2000-01-01'::date, pg_temp.gid(l)
     WHERE NOT EXISTS (SELECT 1 FROM public.contas_financeiras WHERE id = ('f7000007-0000-4000-8000-0000000000' || lpad(l::text, 2, '0'))::uuid);
     INSERT INTO public.financeiro_contas_forma (loja_id, forma_pagamento, conta_financeira_id)
     SELECT pg_temp.lid(l), 'PIX', ('f7000007-0000-4000-8000-0000000000' || lpad(l::text, 2, '0'))::uuid

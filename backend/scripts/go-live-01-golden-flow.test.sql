@@ -45,7 +45,7 @@ BEGIN
   END LOOP;
   -- D5 (D-07): PIX e cartão exigem conta financeira ativa na loja. Fixture com conta da loja A.
   INSERT INTO public.contas_financeiras (loja_id, nome, tipo, ativo, data_inicial, criado_por)
-    VALUES (la, 'GF Banco A', 'BANCO', true, current_date, op);
+    VALUES (la, 'GF Banco A', 'BANCO', true, '2000-01-01'::date, op);
   INSERT INTO public.financeiro_contas_forma (loja_id, forma_pagamento, conta_financeira_id)
     SELECT la, t.forma, c.id FROM unnest(ARRAY['PIX', 'CARTAO_CREDITO']) AS t(forma)
     CROSS JOIN LATERAL (SELECT id FROM public.contas_financeiras WHERE loja_id = la AND nome = 'GF Banco A') c;

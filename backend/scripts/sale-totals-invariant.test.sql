@@ -18,7 +18,7 @@ VALUES (:'fixture_operador',:'fixture_loja','ABERTO',0);
 -- D5 (20261107110000): PIX exige conta financeira vinculada à forma na loja.
 WITH c AS (
   INSERT INTO public.contas_financeiras (id, loja_id, nome, tipo, ativo, data_inicial, criado_por)
-  SELECT gen_random_uuid(), :'fixture_loja', 'Fixture conta D5', 'BANCO', true, current_date, :'fixture_operador'
+  SELECT gen_random_uuid(), :'fixture_loja', 'Fixture conta D5', 'BANCO', true, '2000-01-01'::date, :'fixture_operador'
   WHERE NOT EXISTS (SELECT 1 FROM public.financeiro_contas_forma WHERE loja_id = :'fixture_loja' AND forma_pagamento = 'PIX')
   RETURNING id
 )
