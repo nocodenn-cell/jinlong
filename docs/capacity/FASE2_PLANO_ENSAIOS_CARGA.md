@@ -14,7 +14,7 @@
 | G1 | Projeto Supabase **separado** de produção, com migrations aplicadas via `db reset`/`db push` a partir do Git | FASE 3+ |
 | G2 | App web apontando **somente** para esse projeto (URL preview/homolog) | FASE 3+ |
 | G3 | Seeds sintéticos (lojas L1…L50, operadores, produtos, estoque) — **zero** PII de cliente | FASE 3+ |
-| G4 | `GATE_ENV=staging` + `GATE_STAGING_PROJECT_REF` + `guard:no-prod-target` verdes | Scripts |
+| G4 | `CAPACITY_ENV=staging` + `CAPACITY_ALLOWED_PROJECT_REF` + `guard:capacity-target` + `guard:no-prod-target` (ver STG-01) | Scripts |
 | G5 | Credenciais de produção **ausentes** do shell de teste | Scripts |
 | G6 | Observabilidade mínima: Sentry staging, logs Supabase, métricas Vercel do preview | Medição |
 
@@ -26,15 +26,17 @@ Se G1 falhar: **parar**. Não há extrapolação segura a partir de laptop + DB 
 
 Premissa operacional (proposta, não comprovada): **2 caixas/loja**, **30 vendas/hora/caixa** no pico (= 1 venda / 2 min / caixa).
 
-| Cenário | Lojas | Caixas | Vendas/hora pico | Vendas/s médio | VU k6 sugeridos* |
-|---------|-------|--------|------------------|----------------|------------------|
-| Piloto | 1 | 2 | 60 | 0,017 | 2 |
-| Expansão | 5 | 10 | 300 | 0,083 | 10 |
-| Comercialização | 10 | 20 | 600 | 0,167 | 20 |
-| Crescimento | 25 | 50 | 1.500 | 0,417 | 50 |
-| Escala | 50 | 100 | 3.000 | 0,833 | 100 |
+| Cenário | Lojas | Caixas | Vendas/hora pico | Vendas/s médio | VU k6 sugeridos* | Fase custo zero |
+|---------|-------|--------|------------------|----------------|------------------|-----------------|
+| Piloto | 1 | 2 | 60 | 0,017 | 2 | **Sim — prioridade** |
+| Expansão | 5 | 10 | 300 | 0,083 | 10 | **Sim — prioridade** |
+| Comercialização | 10 | 20 | 600 | 0,167 | 20 | **Sim — teto inicial** |
+| Crescimento | 25 | 50 | 1.500 | 0,417 | 50 | Adiado (R$ 0 / Free) |
+| Escala | 50 | 100 | 3.000 | 0,833 | 100 | Adiado (R$ 0 / Free) |
 
 \* VU = virtual users = caixas simulados. Cada VU executa o ciclo de venda com `sleep` calibrado para ~30 vendas/h (≈ 120 s entre finalizações) + trabalho de busca/bipagem.
+
+**STG-01 rev. custo zero:** executar só 1 → 5 → 10; Next + k6 locais; sem Vercel Preview; resultados = camada C2 (não C3 produção). Ver `STG01_HOMOLOGACAO_ISOLADA.md` §2.
 
 ### 1.1 Mix de operações por VU (ciclo de 2 minutos)
 
@@ -53,7 +55,7 @@ Premissa operacional (proposta, não comprovada): **2 caixas/loja**, **30 vendas
 |------|---------|----------|
 | **Smoke** | 5 min | Scripts + auth + 1 venda |
 | **Pico** | 30–60 min | Cenário alvo com rampa 5 min |
-| **Sustentado (soak)** | **8–12 h** | Vazamento memória/conexões, DLQ, degradação |
+| **Sustentado (soak)** | **8–12 h** | Vazamento memória/conexões, DLQ, degradação — **adiado sob orçamento R$ 0 / Free** |
 | **Estresse** | 30 min | 2× pico do cenário; achar ponto de quebra |
 | **Spike** | 10 min | 0 → 2× em 1 min → sustentado |
 | **Continuidade** | ver §4 | Falhas injetadas |

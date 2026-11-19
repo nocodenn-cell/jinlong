@@ -5,10 +5,24 @@
 //
 // Falha (exit 1) se um arquivo de teste ou de ambiente de teste citar o ref de produção ou
 // qualquer host <ref de 20 letras>.supabase.co.
+//
+// SSoT dos refs de produção: docs/capacity/staging/prod-denylist.json (STG-01).
 import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const PROD_REF = 'kbabmewnahysfvlybiak'
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const DENYLIST = JSON.parse(
+  readFileSync(
+    join(__dirname, '..', 'docs', 'capacity', 'staging', 'prod-denylist.json'),
+    'utf8',
+  ),
+)
+/** Refs de produção conhecidos. */
+const PROD_REFS = new Set(
+  (DENYLIST.project_refs || []).map((r) => String(r).toLowerCase()),
+)
 // Ref real de projeto Supabase = 20 letras minúsculas. Hosts fictícios (test, xyz, example) não contam.
 const REAL_REF_HOST = /\b([a-z]{20})\.supabase\.co\b/g
 
@@ -28,9 +42,16 @@ function violationsIn(file) {
     return []
   }
   const found = []
-  if (text.includes(PROD_REF)) found.push(`referencia o ref de produção (${PROD_REF})`)
+  for (const ref of PROD_REFS) {
+    if (text.includes(ref)) found.push(`referencia o ref de produção (${ref})`)
+  }
   for (const match of text.matchAll(REAL_REF_HOST)) {
-    if (match[1] !== PROD_REF) found.push(`host Supabase real: ${match[0]}`)
+    const ref = match[1].toLowerCase()
+    if (PROD_REFS.has(ref)) {
+      found.push(`host Supabase de produção: ${match[0]}`)
+    } else {
+      found.push(`host Supabase real: ${match[0]}`)
+    }
   }
   return found
 }

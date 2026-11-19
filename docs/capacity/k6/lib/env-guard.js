@@ -1,10 +1,12 @@
 /**
  * Abort k6 if the target looks like production.
- * Used by every capacity scenario (FASE 2 skeleton).
+ * STG-01: staging exige allowlist positiva + denylist de refs via env
+ * (project refs de produção não são versionados).
  */
 
-const DEFAULT_BLOCKED = [
+const PROD_HOST_FRAGMENTS = [
   'jinlong.app',
+  'pdv-importados.vercel.app',
   'production',
   'prod-',
   '-prod.',
@@ -13,6 +15,15 @@ const DEFAULT_BLOCKED = [
 export function assertSafeCapacityTarget() {
   const env = (__ENV.CAPACITY_ENV || '').toLowerCase()
   const url = (__ENV.K6_SUPABASE_URL || '').toLowerCase()
+  const allowed = (
+    __ENV.CAPACITY_ALLOWED_PROJECT_REF ||
+    __ENV.GATE_STAGING_PROJECT_REF ||
+    ''
+  ).toLowerCase()
+  const blocked = (__ENV.CAPACITY_BLOCKED_PROJECT_REFS || '')
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean)
 
   if (!url) {
     throw new Error('K6_SUPABASE_URL ausente — recusando execução')
@@ -24,27 +35,47 @@ export function assertSafeCapacityTarget() {
     )
   }
 
-  if (env === 'local' && !/localhost|127\.0\.0\.1/.test(url)) {
-    throw new Error('CAPACITY_ENV=local exige URL localhost')
-  }
-
-  const extra = (__ENV.K6_BLOCKED_URL_FRAGMENTS || '')
-    .split(',')
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean)
-
-  for (const frag of [...DEFAULT_BLOCKED, ...extra]) {
+  for (const frag of PROD_HOST_FRAGMENTS) {
     if (url.includes(frag)) {
-      throw new Error(
-        `Alvo bloqueado: URL contém "${frag}". Capacidade só em staging/local.`,
-      )
+      throw new Error(`Alvo bloqueado: URL contém "${frag}"`)
     }
   }
 
-  const allowedRef = (__ENV.GATE_STAGING_PROJECT_REF || '').toLowerCase()
-  if (env === 'staging' && allowedRef && !url.includes(allowedRef)) {
+  for (const ref of blocked) {
+    if (url.includes(ref)) {
+      throw new Error('Alvo bloqueado: project ref consta em CAPACITY_BLOCKED_PROJECT_REFS')
+    }
+    if (allowed === ref) {
+      throw new Error('CAPACITY_ALLOWED_PROJECT_REF aponta para ref bloqueado')
+    }
+  }
+
+  if (env === 'local') {
+    if (!/localhost|127\.0\.0\.1/.test(url)) {
+      throw new Error('CAPACITY_ENV=local exige URL localhost')
+    }
+    return
+  }
+
+  if (blocked.length === 0) {
     throw new Error(
-      `K6_SUPABASE_URL não contém GATE_STAGING_PROJECT_REF=${allowedRef}`,
+      'CAPACITY_BLOCKED_PROJECT_REFS obrigatório em staging (ref de produção, não versionado)',
+    )
+  }
+
+  if (!/^[a-z0-9]{20}$/.test(allowed)) {
+    throw new Error(
+      'CAPACITY_ALLOWED_PROJECT_REF (20 chars) obrigatório para CAPACITY_ENV=staging',
+    )
+  }
+
+  const m = url.match(/https?:\/\/([a-z0-9]{20})\.supabase\.co/)
+  if (!m) {
+    throw new Error('K6_SUPABASE_URL deve ser https://<ref>.supabase.co')
+  }
+  if (m[1] !== allowed) {
+    throw new Error(
+      `ref da URL (${m[1]}) ≠ CAPACITY_ALLOWED_PROJECT_REF (${allowed})`,
     )
   }
 }
