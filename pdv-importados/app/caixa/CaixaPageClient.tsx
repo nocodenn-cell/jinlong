@@ -1123,6 +1123,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       formaPagamento: p.formaPagamento,
       valor: p.valor,
       ...(p.formaPagamento === "CARTAO_CREDITO" && (p.parcelas ?? 1) > 1 ? { parcelas: p.parcelas } : {}),
+      valorRecebido: undefined as number | undefined,
     }))
     const excesso = roundMoney2(totalPagamentos - totalLiquidoComGerente)
     if (excesso > EXCESSO_PAGAMENTO_EPS) {
@@ -1139,6 +1140,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         setCaixaMensagem(m.caixa.msg_pagamento_excesso_sem_dinheiro, { kind: "error" })
         return
       }
+      // D4: o valor entregue pelo cliente é o dinheiro informado antes do desconto do troco.
+      parcelasNormalizadas[idxDinheiro].valorRecebido = roundMoney2(dinheiroDisponivel)
       parcelasNormalizadas[idxDinheiro].valor = roundMoney2(dinheiroDisponivel - excesso)
     }
     const parcelasFiltradas = parcelasNormalizadas.filter((p) => p.valor > 0)
