@@ -1,8 +1,9 @@
 # Próximos passos
 
 ## P0 — Quebrado/travado
+- Wrapper `public.fechar_caixa_atomico` do homolog (o que o app chama) está fora do repositório. A `20261119120000` só cria `internal`, então a checagem D-06 não vale para o app em produção. Versionar o wrapper antes de qualquer aplicação (`docs/ops/PROCEDIMENTO_20261119120000_HOMOLOG.md`)
 
-- Usuários de teste ativos na loja matriz de produção (`Gerente E2E` e `Dono E2E`): desativar após decisão do dono. Não executado (2026-11-19)
+- Usuários E2E ativos na matriz de produção (`Gerente E2E` e `Dono E2E`): sem caixa aberto nem espera, desativar após decisão do dono. `Operador E2E` (`b7ec95bb…`) tem 2 esperas `EM_ESPERA`: resolver antes de desativar. `Dono Demo` (ativo) tem 1 caixa aberto desde 03/10. Ver `docs/ops/REVISAO_D1_D6_2026-11-19.md` §9
 - PR #657 (D-06 + RN-03) mesclado na `main` em 2026-11-19 (`9d27e0eb`), com migrations renomeadas para `20261119120000`/`20261119120100`. Confirmar em produção que as duas migrations e a tela nova entraram juntas (sem a tela, "Descartar" falha com `motivo_obrigatorio` e o caixa não fecha) e fazer smoke de descarte com motivo e fechamento com venda em espera
 - Senha do gerente (`pdv_config.gerente_senha_bcrypt`) só pode ser definida por SQL; sem ela não há desconto nem sangria acima do limite. Criar tela para o dono
 - Auditoria de prontidão comercial (2026-11-06, somente leitura): veredito NÃO PODE ENTRAR; 35% de prontidão por área. Bloqueadores P0-1 a P0-10 em `docs/auditorias/AUDITORIA_PRONTIDAO_COMERCIAL_2026-11-06.md` (§5). Aplicar `20261104120000` em produção com autorização é o primeiro item. Plano por fases A–F e decisões D-04 a D-15 em `docs/auditorias/PLANO_LIBERACAO_PRIMEIRO_CLIENTE_2026-11-06.md`; decisões do dono são a primeira pendência
@@ -44,9 +45,9 @@
 
 ## P1 — Falta para lançar (MVP)
 
-- Atacado D6 (produção): 6 produtos reais com atacado sem gatilho (`agua 1L`, `faca navalha`, `gato`, `cachorro pelúcia`, `PANELA AÇO`, `pendrive`) e 2 com gatilho sem atacado (`banco branco`, `caneca do budha`). Dono decide preço ou remoção. Não bloqueia venda (validação do app). Ver `docs/ops/REVISAO_D1_D6_2026-11-19.md`
-- Conta financeira da matriz (D5): cadastrar pela tela `/admin/financeiro` durante a implantação, com nome real e responsável confirmados. Até lá PIX e cartão não vendem na loja (proteção mantida). Não criar conta fictícia
-- Migrations D1–D6 e `20261119120000` (da `main`) não estão em produção. Aplicação só em janela autorizada, após pré-check final. Homologação: decidir a `20261119120000` (bloqueio `remote_ausente` do `migration-remote-drift`)
+- Atacado D6 (produção): 6 produtos com faixa em `precos_atacado` (mín. 6) sem gatilho na coluna; proposta de gatilho 6, do dono. `banco branco` e `caneca do budha` com gatilho 5 sem atacado: decidir preço ou remover gatilho. Não bloqueia venda. Ver `docs/ops/REVISAO_D1_D6_2026-11-19.md` §10
+- Conta financeira da matriz (D5): cadastrar pela tela `/admin/financeiro` na implantação, com nome real e responsável confirmados. Até lá PIX e cartão não vendem na loja (proteção mantida). Não criar conta fictícia
+- Migrations D1–D6 não estão em produção. `20261119120000` e `120100` já estão no homolog (verificado em 2026-11-19; corpo idêntico ao repositório). Produção só em janela autorizada, após versionar o wrapper
 - Site Jinlong: validar com o contador os textos do simulador híbrido já ajustados ao prazo vencido (`site/lib/simuladorHibrido.copy.ts`). Não publicar antes dessa revisão
 - Site Jinlong: `metadataBase` ausente (build usa localhost:3000 para imagens sociais); homes e simulador sem `og:image`/`twitter:image` em produção. Corrigir junto com canonical e hreflang
 - Site Jinlong: LCP mobile de laboratório 3.260 ms (PT) e 3.536 ms (ZH), acima de 2,5 s; CLS 0.000. Baseline em `fase0-main-2929b09a`; repetir a medição após cada incremento
@@ -156,6 +157,7 @@
 - Mostrar as parcelas do crédito no detalhe da venda (admin) e na 2ª via, depois da coluna existir na homologação
 
 ## Feito
+- 2026-11-19 — Revisão D1–D6 fechada: `sale-totals-invariant` passa com evidência positiva (avisos `OK`, asserções inalteradas); homolog verificado (`20261119120000` idêntica ao repositório); achado do wrapper `public` fora do repositório; usuários E2E e 8 produtos reais do D6 classificados sem alteração; PR #687 em draft (`docs/ops/PROCEDIMENTO_20261119120000_HOMOLOG.md`)
 - 2026-11-19 — Revisão D1–D6: pré-checks de produção (D3 limpo; D5 e D6 com pendências de dados, sem escrita); D1–D5 e golden flow validados em banco descartável; teste D1 passa a usar o descarte auditável (RN-03); decisão de manter D1 junto da checagem da `main`. Evidências em `docs/ops/REVISAO_D1_D6_2026-11-19.md`
 - 2026-11-19 — PR #675 mergeado na `main` (`16915328`) com `migration-remote-drift` vermelho e `Supabase local gates` pendente; nenhuma migration do PR aplicada em produção (leitura de `schema_migrations`)
 - 2026-11-19 — PDV: toda venda começa com o operador como vendedor (antes lembrava o último vendedor e gravava vendas seguintes no vendedor errado; decisão do dono). Cancelamento: comprovante e auditoria mostram o total devolvido e quem cancelou (antes R$ 0,00 em PIX/cartão/dividido e autor = operador da venda). Sem migration; testes de caixa, vendas e auditoria OK (480). PR #686
@@ -165,4 +167,3 @@
 - 2026-11-13 — FAB do site recolhe enquanto `#contato` está visível (`site/components/FabAutoHide.tsx`), com teste E2E em Chromium, Firefox e mobile. Sem commit até a suíte completa passar
 - 2026-11-12 — Simulador híbrido: textos PT/ZH e fonte oficial agora dizem que o prazo de 30/10/2026 encerrou (cancelamento até 20/12/2026; próximas janelas em março e setembro). Teste de regressão em `site/lib/simuladorHibrido.copy.test.ts`. Sem commit; validação contábil pendente
 - 2026-11-12 — Análise da auditoria do site Jinlong contra o código em `site/` (idêntico a `2929b09a`): prazo tributário confirmado vencido; formulário e FAB confirmados como P0; protocolo, CTA do simulador e cookie PT confirmados como falsos positivos. Nenhum código alterado
-- 2026-11-12 — hub.jinlong.app: painel quebrava (digest 226588760, "Falha ao acessar dados (400)"). Causa: a Central de Conversão (`20261023130000`) estava no `main` mas não no banco `jinlong`. Migration aplicada em produção após checagem; cada seção do hub agora degrada sozinha (`hub/lib/seguro.ts`) e há `hub/app/error.tsx`. Código ainda não commitado
