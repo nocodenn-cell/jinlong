@@ -60,7 +60,10 @@ BEGIN
   -- 2) espera do operador sem caixa (caixa_id NULL) também bloqueia o fechamento de cx
   INSERT INTO public.vendas_em_espera (loja_id, operador_id, caixa_id, numero_local, status)
     VALUES (la, op2, NULL, 2, 'EM_ESPERA') RETURNING id INTO esp2;
-  UPDATE public.vendas_em_espera SET status = 'DESCARTADA' WHERE id = esp1;
+  -- descarte pelo caminho auditável (RN-03): só o operador dono da espera descarta
+  PERFORM set_config('request.jwt.claim.sub', op::text, true);
+  PERFORM internal.descartar_venda_em_espera(esp1, 'teste D1 descarte');
+  PERFORM set_config('request.jwt.claim.sub', '', true);
   BEGIN
     UPDATE public.caixas SET status = 'FECHADO', data_fechamento = now(), valor_fechamento = 100,
       fechamento_diferenca = 0 WHERE id = cx2;
@@ -72,7 +75,9 @@ BEGIN
   END;
 
   -- 3) após descartar a espera, o fechamento de cx é liberado
-  UPDATE public.vendas_em_espera SET status = 'DESCARTADA' WHERE id = esp2;
+  PERFORM set_config('request.jwt.claim.sub', op2::text, true);
+  PERFORM internal.descartar_venda_em_espera(esp2, 'teste D1 descarte');
+  PERFORM set_config('request.jwt.claim.sub', '', true);
   UPDATE public.caixas SET status = 'FECHADO', data_fechamento = now(), valor_fechamento = 100,
     fechamento_diferenca = 0 WHERE id = cx;
   SELECT status INTO msg FROM public.caixas WHERE id = cx;
