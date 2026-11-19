@@ -156,7 +156,9 @@ async function ensureFormasFinanceirasLojaMatriz(supabase, gerenteId) {
       nome: 'E2E Conta Banco',
       tipo: 'BANCO',
       ativo: true,
-      data_inicial: new Date().toISOString().slice(0, 10),
+      // Data fixa no passado: a data UTC de hoje pode estar à frente do dia em São Paulo
+      // (regra de internal.financeiro_movimento compara com America/Sao_Paulo).
+      data_inicial: '2000-01-01',
       criado_por: gerenteId,
     })
     .select('id')
