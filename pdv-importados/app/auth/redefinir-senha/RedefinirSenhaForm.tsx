@@ -24,6 +24,8 @@ export type RedefinirSenhaLabels = {
   erroCurta: string
   erroMismatch: string
   erroGenerico: string
+  erroMesmaSenha: string
+  erroFraca: string
 }
 
 type Props = {
@@ -33,8 +35,22 @@ type Props = {
 }
 
 function mapPolicyError(code: string, L: RedefinirSenhaLabels): string {
-  if (code === 'TOO_SHORT') return L.erroCurta.replace('{n}', String(PASSWORD_MIN_LENGTH))
+  if (code === 'TOO_SHORT' || code === 'EMPTY') return L.erroCurta.replace('{n}', String(PASSWORD_MIN_LENGTH))
   if (code === 'MISMATCH') return L.erroMismatch
+  return L.erroGenerico
+}
+
+/**
+ * Traduz o erro do Supabase Auth para uma mensagem em português.
+ * Nunca exibe a mensagem em inglês do Supabase: ela não diz ao usuário o que fazer.
+ */
+export function mapUpdatePasswordError(
+  err: { code?: string; name?: string } | null | undefined,
+  L: RedefinirSenhaLabels
+): string {
+  if (err?.code === 'same_password') return L.erroMesmaSenha
+  if (err?.code === 'weak_password') return L.erroFraca
+  if (err?.name === 'AuthSessionMissingError' || err?.code === 'session_not_found') return L.erroSessao
   return L.erroGenerico
 }
 
@@ -59,7 +75,7 @@ export function RedefinirSenhaForm({ labels: L, locale, hasSession }: Props) {
       const supabase = createClient()
       const { error } = await supabase.auth.updateUser({ password: senha.trim() })
       if (error) {
-        setErro(error.message || L.erroGenerico)
+        setErro(mapUpdatePasswordError(error, L))
         return
       }
       setOk(true)
@@ -84,7 +100,9 @@ export function RedefinirSenhaForm({ labels: L, locale, hasSession }: Props) {
           {L.sucesso}
         </p>
       ) : (
-        <form onSubmit={onSubmit} className="flex w-full flex-col gap-6" data-testid="reset-password-form">
+        // noValidate: a validação é a do app (mensagem em português abaixo do campo);
+        // sem isso, o navegador bloqueia o envio com um balão nativo e a tela não mostra nada.
+        <form onSubmit={onSubmit} noValidate className="flex w-full flex-col gap-6" data-testid="reset-password-form">
           <div className="flex flex-col gap-2">
             <label htmlFor="reset-senha" className="login-premium-label">
               {L.novaSenha}

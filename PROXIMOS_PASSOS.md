@@ -2,9 +2,10 @@
 
 ## P0 — Quebrado/travado
 
-- PR #657 (D-06 + RN-03: fechar caixa bloqueado com venda em espera e descarte com motivo): migration e tela precisam entrar juntas. Com só a migration, o botão "Descartar" da `main` falha com `motivo_obrigatorio` e o operador não fecha o caixa (visto no banco local em 2026-11-19, que tinha as migrations do #657). Decidir e mesclar o #657 inteiro; na `main` atual o caixa ainda fecha com venda em espera
+- PR #657 (D-06 + RN-03) mesclado na `main` em 2026-11-19 (`9d27e0eb`), com migrations renomeadas para `20261119120000`/`20261119120100`. Confirmar em produção que as duas migrations e a tela nova entraram juntas (sem a tela, "Descartar" falha com `motivo_obrigatorio` e o caixa não fecha) e fazer smoke de descarte com motivo e fechamento com venda em espera
 - Senha do gerente (`pdv_config.gerente_senha_bcrypt`) só pode ser definida por SQL; sem ela não há desconto nem sangria acima do limite. Criar tela para o dono
-
+- Recuperação de senha do ERP falhava sem mensagem clara (validação silenciosa e erro do Supabase em inglês). Correção em PR Draft; validar em produção após revisão. Conferir no Supabase (Authentication → URL Configuration) que o domínio do ERP está em Redirect URLs
+- Admin do Hub sem acesso à senha (`hub.jinlong.app/login`): o Hub não tem fluxo de recuperação. Usar o ERP em `/auth/esqueci-senha` (mesmo projeto Supabase `kbabmewnahysfvlybiak`, mesmo `auth.users`) e confirmar a conta em `commercial_admins`. Aguarda autorização explícita do dono para enviar o e-mail e redefinir
 - Site Jinlong: formulário comercial da home falha em produção. `anon` não tem INSERT em `commercial_leads`; a correção (`#676` + `#677`) está bloqueada com checks vermelhos. A Fase 0 não detectou isso, porque o E2E intercepta o envio. "Formulário OK" só vale com validação real em Preview
 - Site Jinlong / Legal: Termos prometem emissão fiscal (SEFAZ/SAT) e o FAQ condiciona isso à conversa comercial; a fiscal é stub (ver item de Termos em P1). Alinhar só após decisão de produto e revisão jurídica
 - Auditoria GitHub (2026-11-11, `docs/governance/GITHUB_AUDIT.md`): a proteção de `main` não exige nenhuma aprovação humana (só os 6 checks). Decidir revisão obrigatória + CODEOWNERS. Ação de configuração: exige autorização
@@ -141,8 +142,8 @@
 - Mostrar as parcelas do crédito no detalhe da venda (admin) e na 2ª via, depois da coluna existir na homologação
 
 ## Feito
-- 2026-11-19 — PDV: toda venda começa com o operador como vendedor (antes lembrava o último vendedor e gravava vendas seguintes no vendedor errado; decisão do dono). Cancelamento: comprovante e auditoria mostram o total devolvido e quem cancelou (antes R$ 0,00 em PIX/cartão/dividido e autor = operador da venda). Sem migration; testes de caixa, vendas e auditoria OK (480). Nada commitado
-- 2026-11-19 — Validação operacional ponta a ponta no ambiente local (cadastro, entrada, PDV varejo/atacado, desconto, sangria/suprimento, fechamento, cancelamento, contas a pagar, relatórios, auditoria, RLS): `docs/auditoria/RELATORIO_VALIDACAO_OPERACIONAL_JINLONG.md`. Nada commitado
+- 2026-11-19 — PDV: toda venda começa com o operador como vendedor (antes lembrava o último vendedor e gravava vendas seguintes no vendedor errado; decisão do dono). Cancelamento: comprovante e auditoria mostram o total devolvido e quem cancelou (antes R$ 0,00 em PIX/cartão/dividido e autor = operador da venda). Sem migration; testes de caixa, vendas e auditoria OK (480). PR #686
+- 2026-11-19 — Validação operacional ponta a ponta no ambiente local (cadastro, entrada, PDV varejo/atacado, desconto, sangria/suprimento, fechamento, cancelamento, contas a pagar, relatórios, auditoria, RLS): `docs/auditoria/RELATORIO_VALIDACAO_OPERACIONAL_JINLONG.md`. PR #686
 - 2026-11-14 — PDV (caixa): carrinho com preço sobreposto ao selo "Atacado" corrigido (grade única do cabeçalho e das linhas); stepper sem cantos/divisórias tortos (elementos nativos); topo das 3 colunas na mesma altura h-11; botões de cabeçalho, rail, pagamento e desconto padronizados
 - 2026-11-13 — Drift do CI (`migration-remote-drift`, variante segura aprovada): 15 adiadas já aplicadas no homolog de verificação passam a ser aceitas por registro (`backend/supabase/migration-check-project-deferred.json`), preso ao ref do homolog e fail-closed para qualquer outro projeto. Também as 21 versões só-remoto do homolog, no mesmo registro (`remoteOnlyAccepted`). Manifesto e migrations intactos; produção não alterada. 31 testes do drift passando; guarda de governança OK sem label
 - 2026-11-13 — FAB do site recolhe enquanto `#contato` está visível (`site/components/FabAutoHide.tsx`), com teste E2E em Chromium, Firefox e mobile. Sem commit até a suíte completa passar

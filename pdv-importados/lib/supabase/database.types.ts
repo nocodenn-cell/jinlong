@@ -8175,7 +8175,9 @@ export type Database = {
           caixa_id: string | null
           cliente_id: string | null
           criada_em: string
+          descartada_em: string | null
           descartada_motivo: string | null
+          descartada_por: string | null
           desconto_gerente_percentual: number | null
           desconto_gerente_token: string | null
           id: string
@@ -8192,7 +8194,9 @@ export type Database = {
           caixa_id?: string | null
           cliente_id?: string | null
           criada_em?: string
+          descartada_em?: string | null
           descartada_motivo?: string | null
+          descartada_por?: string | null
           desconto_gerente_percentual?: number | null
           desconto_gerente_token?: string | null
           id?: string
@@ -8209,7 +8213,9 @@ export type Database = {
           caixa_id?: string | null
           cliente_id?: string | null
           criada_em?: string
+          descartada_em?: string | null
           descartada_motivo?: string | null
+          descartada_por?: string | null
           desconto_gerente_percentual?: number | null
           desconto_gerente_token?: string | null
           id?: string
@@ -8227,6 +8233,13 @@ export type Database = {
             columns: ["caixa_id"]
             isOneToOne: false
             referencedRelation: "caixas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendas_em_espera_descartada_por_fkey"
+            columns: ["descartada_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
             referencedColumns: ["id"]
           },
           {
