@@ -1,7 +1,7 @@
 # Próximos passos
 
 ## P0 — Quebrado/travado
-- `20261023200000` (troca de operador) aplicada em produção em 2026-11-19 (pré-requisito atendido). Pendente: `20261119120000` e `120100` em produção, com nova autorização. Sem ela, o fechamento de caixa quebra (`function internal.fp_operador_ativo_caixa does not exist`, teste reproduzível). Ver `docs/ops/PROCEDIMENTO_20261119120000_HOMOLOG.md`
+- `20261023200000`, `20261119120000` e `120100` aplicadas em produção em 2026-11-19 (hash do D-06 igual ao homolog). Pendente: 2 esperas antigas em caixa fechado (descarte pelo dono) e `VALIDATE CONSTRAINT` da 120100. Sem ela, o fechamento de caixa quebra (`function internal.fp_operador_ativo_caixa does not exist`, teste reproduzível). Ver `docs/ops/PROCEDIMENTO_20261119120000_HOMOLOG.md`
 
 - Usuários E2E ativos na matriz de produção (`Gerente E2E` e `Dono E2E`): sem caixa aberto nem espera, desativar após decisão do dono. `Operador E2E` (`b7ec95bb…`) tem 2 esperas `EM_ESPERA`: resolver antes de desativar. `Dono Demo` (ativo) tem 1 caixa aberto desde 03/10. Ver `docs/ops/REVISAO_D1_D6_2026-11-19.md` §9
 - PR #657 (D-06 + RN-03) mesclado na `main` em 2026-11-19 (`9d27e0eb`), com migrations renomeadas para `20261119120000`/`20261119120100`. Confirmar em produção que as duas migrations e a tela nova entraram juntas (sem a tela, "Descartar" falha com `motivo_obrigatorio` e o caixa não fecha) e fazer smoke de descarte com motivo e fechamento com venda em espera
@@ -47,7 +47,7 @@
 
 - Atacado D6 (produção): 6 produtos com faixa em `precos_atacado` (mín. 6) sem gatilho na coluna; proposta de gatilho 6, do dono. `banco branco` e `caneca do budha` com gatilho 5 sem atacado: decidir preço ou remover gatilho. Não bloqueia venda. Ver `docs/ops/REVISAO_D1_D6_2026-11-19.md` §10
 - Conta financeira da matriz (D5): cadastrar pela tela `/admin/financeiro` na implantação, com nome real e responsável confirmados. Até lá PIX e cartão não vendem na loja (proteção mantida). Não criar conta fictícia
-- Migrations D1–D6 não estão em produção. `20261119120000` e `120100` já estão no homolog (verificado em 2026-11-19; corpo idêntico ao repositório). Produção só em janela autorizada, após versionar o wrapper
+- Migrations D1–D6 ainda não estão em produção, exceto `20261023200000`, `20261119120000` e `120100` (2026-11-19). D1 (`20261106100000`) e D3–D5 seguem pendentes: aplicar só com janela e pré-check próprios.
 - Site Jinlong: validar com o contador os textos do simulador híbrido já ajustados ao prazo vencido (`site/lib/simuladorHibrido.copy.ts`). Não publicar antes dessa revisão
 - Site Jinlong: `metadataBase` ausente (build usa localhost:3000 para imagens sociais); homes e simulador sem `og:image`/`twitter:image` em produção. Corrigir junto com canonical e hreflang
 - Site Jinlong: LCP mobile de laboratório 3.260 ms (PT) e 3.536 ms (ZH), acima de 2,5 s; CLS 0.000. Baseline em `fase0-main-2929b09a`; repetir a medição após cada incremento

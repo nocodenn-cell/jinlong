@@ -96,3 +96,25 @@ Teste reproduzível em clone descartável do replay da `main` (`fechar-caixa-app
 **Nota sobre o registro de versão:** a ferramenta `apply_migration` grava com timestamp próprio e não aceita versão. Para manter o histórico igual ao arquivo do repositório, a aplicação foi feita via `execute_sql` numa transação que também inseriu `20261023200000` em `supabase_migrations.schema_migrations`, com o nome do arquivo. Isso registra uma aplicação real, não uma marcação artificial.
 
 **Pendente:** `20261119120000` e `120100` continuam não aplicadas em produção. Dependem de nova autorização, agora que o pré-requisito está atendido.
+
+---
+
+## 10. Registro de execução: `20261119120000` e `20261119120100` em produção (2026-11-19)
+
+**Autorizado pelo dono.** Aplicadas em produção (`kbabmewnahysfvlybiak`) numa única transação, na ordem do repositório, com os dois registros em `supabase_migrations.schema_migrations`.
+
+**Pré-checagens (antes da escrita):**
+- `20261023200000` registrada; `internal.fechar_caixa_atomico` com md5 `bb2afd1c…` (estado esperado após §9).
+- Coluna `descartada_motivo` existe (exigida pela 120100).
+- Esperas ativas: 2, ambas em caixa **já FECHADO** desde 18/07. A checagem D-06 só age no fechamento de caixa aberto, então não bloqueia nenhum caixa atual. O único caixa aberto não tem espera.
+
+**Pós-estado verificado:**
+- `internal.fechar_caixa_atomico` = md5 `d18bff3360c1e1c8ad36d37c94d9029c`, **idêntico ao homolog**, com a checagem `FECHAR_CAIXA_VENDAS_EM_ESPERA`.
+- `public.fechar_caixa_atomico` inalterado (`7bd4d4…`).
+- Coluna `descartada_por` criada; `CHECK vendas_em_espera_descarte_auditavel_chk` criado como `NOT VALID` (não revalida histórico); `internal.descartar_venda_em_espera` atualizada.
+- Esperas existentes: 2, inalteradas. Nenhum dado de venda ou caixa foi alterado.
+
+**Pendências técnicas (não bloqueiam):**
+- As 2 esperas antigas continuam `EM_ESPERA` num caixa fechado. Não afetam o fechamento, mas poluem a fila. Decisão do dono sobre descarte, com motivo, pelo procedimento auditável.
+- `VALIDATE CONSTRAINT` da 120100 só depois de conferir o histórico (contrato da migration).
+- Prova por teste de fluxo em produção não foi feita, para não criar dados de teste no banco real. A equivalência foi comprovada pelo hash do corpo com o homolog, que foi testado no fluxo do app (`fechar-caixa-app-flow-espera.test.sql`).
