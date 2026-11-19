@@ -56,6 +56,7 @@ BEGIN
   IF v.total_bruto <> 20.00 OR v.total_desconto <> 2.00 OR v.total_liquido <> 18.00 THEN
     RAISE EXCEPTION 'official_formula_failed: %', row_to_json(v);
   END IF;
+  RAISE NOTICE 'OK totais: formula oficial, multi-item, fracao e desconto percentual';
 END
 $test$;
 
@@ -68,6 +69,7 @@ BEGIN
   IF 18.01 = v.total_liquido THEN
     RAISE EXCEPTION 'one_cent_difference_was_not_detected';
   END IF;
+  RAISE NOTICE 'OK totais: centavo de diferenca detectado';
 END
 $test$;
 
@@ -141,6 +143,7 @@ BEGIN
 
   SELECT count(*) INTO v_count FROM public.itens_venda WHERE venda_id = v_venda_id;
   IF v_count <> 1 THEN RAISE EXCEPTION 'offline_rejection_changed_items: %', v_count; END IF;
+  RAISE NOTICE 'OK offline: retry idempotente sem duplicar itens e centavo recusado';
 END
 $test$;
 
@@ -239,7 +242,9 @@ BEGIN
   EXCEPTION WHEN OTHERS THEN
     IF SQLERRM NOT LIKE '%FINALIZAR_VENDA_CANONICA_PAGAMENTOS_EXCEDEM_TOTAL%' THEN RAISE; END IF;
   END;
+  RAISE NOTICE 'OK online: venda valida, retry, centavo no cabecalho e pagamento excedente recusados';
 END
 $test$;
 
+DO $f$ BEGIN RAISE NOTICE 'TESTE SALE-TOTALS CONCLUIDO'; END $f$;
 ROLLBACK;
