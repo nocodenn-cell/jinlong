@@ -1,4 +1,4 @@
--- Rollback de 20261104100000_vendas_em_espera_descarte_auditavel.sql
+-- Rollback de 20261119120100_vendas_em_espera_descarte_auditavel.sql (antes 20261104100000)
 -- Restaura a função anterior (motivo opcional, sem autor/data) e remove o CHECK e as colunas.
 -- PERDA DE DADOS: as colunas descartada_por e descartada_em, com os valores gravados depois
 -- da migration, são eliminadas. Exporte-as antes se houver descartes auditados que precisem

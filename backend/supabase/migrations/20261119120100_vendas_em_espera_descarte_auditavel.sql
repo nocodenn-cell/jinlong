@@ -2,10 +2,14 @@
 -- PDV-100.2 · RN-03 — descarte auditável de venda em espera (expand-contract).
 --
 -- DEPENDÊNCIA DE ORDEM: esta migration deve ser aplicada DEPOIS de
--- 20261103120000_fechar_caixa_bloqueia_vendas_em_espera (bloqueio do fechamento
+-- 20261119120000_fechar_caixa_bloqueia_vendas_em_espera (bloqueio do fechamento
 -- com venda EM_ESPERA/RETOMADA). Não há conflito de DDL: esta migration não altera
 -- fechar_caixa_atomico. Os testes de concorrência entre descarte e fechamento só
--- valem com a 20261103120000 aplicada.
+-- valem com a 20261119120000 aplicada.
+--
+-- 2026-11-19: renomeada de 20261104100000 para depois da última migration da main
+-- (a main já tinha 20261104120000–20261104180000; aplicar fora de ordem quebra o
+-- `db push`). Conteúdo inalterado.
 --
 -- EXPAND (esta migration, compatível com o código atual):
 --   1. Colunas novas, nulas, sem backfill: descartada_por, descartada_em.
@@ -24,7 +28,7 @@
 -- (fp_assert_loja) e o caixa é o da própria venda.
 --
 -- NÃO APLICAR em produção sem autorização expressa. Rollback:
--- backend/supabase/rollback/20261104100000_vendas_em_espera_descarte_auditavel.rollback.sql
+-- backend/supabase/rollback/20261119120100_vendas_em_espera_descarte_auditavel.rollback.sql
 -- ============================================================================
 
 BEGIN;

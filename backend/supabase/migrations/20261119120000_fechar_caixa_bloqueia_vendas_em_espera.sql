@@ -10,7 +10,14 @@
 -- Vendas CONVERTIDA e DESCARTADA não bloqueiam.
 --
 -- Mudança única: nova checagem após FECHAR_CAIXA_MOVIMENTACOES_PENDENTES. O corpo
--- restante é idêntico ao da versão anterior (copiado da definição vigente).
+-- restante é idêntico ao da versão vigente na main.
+--
+-- 2026-11-19: renomeada de 20261103120000 para depois da última migration da main.
+-- O corpo original tinha sido copiado de um banco sem a 20261023200000 (troca de
+-- operador, #634) e desfaria o patch dela. Os dois WHERE abaixo já trazem o patch:
+-- quem fecha é o operador ATIVO do caixa (`internal.fp_operador_ativo_caixa`) e a
+-- repetição idempotente vale para quem participou do turno
+-- (`internal.fp_participou_caixa`).
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION internal.fechar_caixa_atomico(p_operador_id uuid, p_valor_contado numeric, p_motivo text DEFAULT ''::text)
@@ -40,7 +47,7 @@ BEGIN
 
   SELECT c.id INTO v_caixa_id
   FROM public.caixas c
-  WHERE c.operador_id = p_operador_id AND c.status = 'ABERTO'
+  WHERE internal.fp_operador_ativo_caixa(c.id, c.operador_id) = p_operador_id AND c.status = 'ABERTO'
   ORDER BY c.data_abertura DESC
   LIMIT 1
   FOR UPDATE;
@@ -49,7 +56,7 @@ BEGIN
     SELECT c.id, c.valor_fechamento, c.fechamento_diferenca, c.data_fechamento
     INTO v_fechado
     FROM public.caixas c
-    WHERE c.operador_id = p_operador_id AND c.status = 'FECHADO'
+    WHERE (c.operador_id = p_operador_id OR internal.fp_participou_caixa(c.id, p_operador_id)) AND c.status = 'FECHADO'
     ORDER BY c.data_fechamento DESC NULLS LAST, c.data_abertura DESC
     LIMIT 1;
 
