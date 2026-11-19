@@ -118,3 +118,16 @@ Teste reproduzível em clone descartável do replay da `main` (`fechar-caixa-app
 - As 2 esperas antigas continuam `EM_ESPERA` num caixa fechado. Não afetam o fechamento, mas poluem a fila. Decisão do dono sobre descarte, com motivo, pelo procedimento auditável.
 - `VALIDATE CONSTRAINT` da 120100 só depois de conferir o histórico (contrato da migration).
 - Prova por teste de fluxo em produção não foi feita, para não criar dados de teste no banco real. A equivalência foi comprovada pelo hash do corpo com o homolog, que foi testado no fluxo do app (`fechar-caixa-app-flow-espera.test.sql`).
+
+---
+
+## 11. Descarte administrativo das 2 esperas antigas (2026-11-19)
+
+**Autorizado pelo dono** ("descarta as 2 esperas antigas com o motivo registrado").
+
+- Esperas: `174f885c…` e `17ca513c…`, `EM_ESPERA`, do `Operador E2E` (`b7ec95bb…`), no caixa `1b28f7bf…`, já FECHADO desde 18/07/2026.
+- Pré-checagem: nenhuma venda registrada no caixa após a criação das esperas.
+- Execução: `UPDATE` direto numa transação, com motivo, autor e data gravados (mesmos campos da RPC `descartar_venda_em_espera`). A RPC não foi usada porque só aceita o próprio operador da espera.
+- **Atribuição:** `descartada_por` recebe o id do operador da espera, porque a constraint exige um usuário. O motivo registra que o descarte foi administrativo, autorizado pelo dono e executado por suporte técnico via SQL.
+- Pós-estado: as 2 linhas estão `DESCARTADA`, com motivo, autor e data. Esperas ativas no banco: 0.
+- Pendência: `VALIDATE CONSTRAINT vendas_em_espera_descarte_auditavel_chk` continua não validado, por decisão do contrato da 120100.
