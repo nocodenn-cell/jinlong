@@ -74,3 +74,25 @@ Teste reproduzível em clone descartável do replay da `main` (`fechar-caixa-app
 1. Autorizar a `20261023200000` em produção (troca de operador), que é pré-requisito da `20261119120000`.
 2. Autorizar a janela da `20261119120000` e `120100` em produção, depois do item 1.
 3. Confirmar que o D1 (`20261106100000`) segue no PR, como camada extra independente do wrapper.
+
+---
+
+## 9. Registro de execução: `20261023200000` em produção (2026-11-19)
+
+**Autorizado pelo dono.** Aplicada em produção (`kbabmewnahysfvlybiak`) em uma transação, com o SQL do arquivo `backend/supabase/migrations/20261023200000_pdv_troca_operador_caixa.sql`.
+
+**Validação antes da escrita:**
+- Pré-checagens de produção: os 10 alvos de patch obrigatórios existem (1 ocorrência cada); nenhum objeto novo existia (tabela `caixa_operadores`, RPCs, trigger, políticas).
+- Clone do replay da `main` levado ao estado de produção pelo rollback existente: hashes de `public.fechar_caixa_atomico` e `internal.fechar_caixa_atomico` batem com produção (`7bd4d4…` e `3c3dab…`).
+- Migration aplicada no clone sem erro. Repositório `backend/scripts/pdv-troca-operador.test.mjs`: **17 testes ok**.
+- Cadeia completa no clone (`20261023200000` + `20261119120000` + `120100`): fluxo do app bloqueia com espera, descarta e fecha. Hash de `internal` = homolog (`d18bff33…`).
+
+**Pós-estado em produção (verificado):**
+- `supabase_migrations.schema_migrations` tem `20261023200000`.
+- `internal.fechar_caixa_atomico` = md5 `bb2afd1c…` (idêntico ao clone validado, sem D-06).
+- `public.fechar_caixa_atomico` = md5 `7bd4d4…` (inalterado).
+- Tabela `caixa_operadores` criada, 0 linhas. Trigger `trg_caixas_fechamento_operador` ativo. 6 RPCs criadas. 5 políticas de leitura de turno.
+
+**Nota sobre o registro de versão:** a ferramenta `apply_migration` grava com timestamp próprio e não aceita versão. Para manter o histórico igual ao arquivo do repositório, a aplicação foi feita via `execute_sql` numa transação que também inseriu `20261023200000` em `supabase_migrations.schema_migrations`, com o nome do arquivo. Isso registra uma aplicação real, não uma marcação artificial.
+
+**Pendente:** `20261119120000` e `120100` continuam não aplicadas em produção. Dependem de nova autorização, agora que o pré-requisito está atendido.

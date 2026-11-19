@@ -1,7 +1,7 @@
 # Próximos passos
 
 ## P0 — Quebrado/travado
-- Ordem de dependência para o fechamento com venda em espera: `20261023200000` (troca de operador) precisa estar em produção antes da `20261119120000`. Sem ela, o fechamento de caixa quebra (`function internal.fp_operador_ativo_caixa does not exist`, teste reproduzível). Ver `docs/ops/PROCEDIMENTO_20261119120000_HOMOLOG.md`
+- `20261023200000` (troca de operador) aplicada em produção em 2026-11-19 (pré-requisito atendido). Pendente: `20261119120000` e `120100` em produção, com nova autorização. Sem ela, o fechamento de caixa quebra (`function internal.fp_operador_ativo_caixa does not exist`, teste reproduzível). Ver `docs/ops/PROCEDIMENTO_20261119120000_HOMOLOG.md`
 
 - Usuários E2E ativos na matriz de produção (`Gerente E2E` e `Dono E2E`): sem caixa aberto nem espera, desativar após decisão do dono. `Operador E2E` (`b7ec95bb…`) tem 2 esperas `EM_ESPERA`: resolver antes de desativar. `Dono Demo` (ativo) tem 1 caixa aberto desde 03/10. Ver `docs/ops/REVISAO_D1_D6_2026-11-19.md` §9
 - PR #657 (D-06 + RN-03) mesclado na `main` em 2026-11-19 (`9d27e0eb`), com migrations renomeadas para `20261119120000`/`20261119120100`. Confirmar em produção que as duas migrations e a tela nova entraram juntas (sem a tela, "Descartar" falha com `motivo_obrigatorio` e o caixa não fecha) e fazer smoke de descarte com motivo e fechamento com venda em espera
