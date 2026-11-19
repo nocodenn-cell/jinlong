@@ -212,6 +212,17 @@ export type ComprovanteCancelamentoItem = Readonly<{
 export type ComprovanteCancelamentoDados = Readonly<{
   itens: ComprovanteCancelamentoItem[]
   operadorNome: string
+  /**
+   * Total devolvido ao cliente neste cancelamento, em todas as formas de pagamento:
+   * `total_liquido` menos o já estornado em devoluções/trocas anteriores
+   * (`venda_pos_venda_operacoes.valor_estornado`) — mesma conta de
+   * `internal.cancelar_venda_transacional` (`v_pendente_total`). `null` se não foi
+   * possível ler; o chamador cai no `valorEstornado` da action.
+   *
+   * Necessário porque o retorno da RPC (`valor_estornado`) é só a parte em
+   * DINHEIRO que sai da gaveta: em PIX/cartão ou pagamento dividido ele é 0.
+   */
+  totalEstornado: number | null
 }>
 
 /**
@@ -222,14 +233,18 @@ export type ComprovanteCancelamentoDados = Readonly<{
 export async function obterDadosComprovanteCancelamento(
   vendaId: string,
 ): Promise<ComprovanteCancelamentoDados> {
-  const vazio: ComprovanteCancelamentoDados = { itens: [], operadorNome: '—' }
+  const vazio: ComprovanteCancelamentoDados = {
+    itens: [],
+    operadorNome: '—',
+    totalEstornado: null,
+  }
   const authCheck = await assertGerenteSession()
   if (!authCheck.ok) return vazio
 
   try {
     const supabase = await createClient()
 
-    const [itensRes, usuarioRes] = await Promise.all([
+    const [itensRes, usuarioRes, vendaRes, posVendaRes] = await Promise.all([
       supabase
         .from('itens_venda')
         .select(
@@ -242,7 +257,22 @@ export async function obterDadosComprovanteCancelamento(
         .select('nome')
         .eq('id', authCheck.session.userId)
         .maybeSingle(),
+      supabase.from('vendas').select('total_liquido').eq('id', vendaId).maybeSingle(),
+      supabase
+        .from('venda_pos_venda_operacoes')
+        .select('valor_estornado')
+        .eq('venda_id', vendaId),
     ])
+
+    let totalEstornado: number | null = null
+    if (!vendaRes.error && vendaRes.data && !posVendaRes.error) {
+      const totalLiquido = Number(vendaRes.data.total_liquido ?? 0)
+      const jaDevolvido = (posVendaRes.data ?? []).reduce(
+        (soma, op) => soma + Number(op.valor_estornado ?? 0),
+        0,
+      )
+      totalEstornado = Math.max(0, Math.round((totalLiquido - jaDevolvido) * 100) / 100)
+    }
 
     const itens: ComprovanteCancelamentoItem[] = (itensRes.data ?? []).map((row) => {
       const produto = row.produto as { nome?: string | null } | { nome?: string | null }[] | null
@@ -257,6 +287,7 @@ export async function obterDadosComprovanteCancelamento(
     return {
       itens,
       operadorNome: usuarioRes.data?.nome ?? '—',
+      totalEstornado,
     }
   } catch {
     return vazio
