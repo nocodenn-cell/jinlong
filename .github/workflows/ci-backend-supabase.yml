@@ -397,10 +397,37 @@ jobs:
             exit 1
           fi
 
+      # Sem isto, `npx supabase` baixa a última CLI (v3), que recusa [inbucket] em config.toml.
+      # Instala só o workspace backend pelo lockfile, que fixa supabase 2.116.0 (mesma versão do script).
+      # Guarda: com MIGRATION_CHECK_ENV=homolog, adiadas de produção já aplicadas no homolog viram aviso. Se o secret
+      # apontasse para produção, essa regra esconderia violações reais. Por isso o secret precisa bater com o homolog.
+      # Só informa sim/não; o valor do secret não é impresso.
+      - name: Confirm drift secret targets homolog (sem imprimir valor)
+        env:
+          SUPABASE_MIGRATION_CHECK_PROJECT_REF: ${{ secrets.SUPABASE_MIGRATION_CHECK_PROJECT_REF }}
+          MIGRATION_CHECK_EXPECTED_REF: yvdilcmxyjafnnsfdtam
+        run: |
+          set -euo pipefail
+          if [ "${SUPABASE_MIGRATION_CHECK_PROJECT_REF}" = "${MIGRATION_CHECK_EXPECTED_REF}" ]; then
+            echo "Secret SUPABASE_MIGRATION_CHECK_PROJECT_REF corresponde ao homolog: sim"
+          else
+            echo "Secret SUPABASE_MIGRATION_CHECK_PROJECT_REF corresponde ao homolog: não (valor não exibido)."
+            echo "MIGRATION_CHECK_ENV=homolog exige o secret apontando para o homolog. Para produção, use MIGRATION_CHECK_ENV=producao."
+            exit 1
+          fi
+
+      - name: Install pinned Supabase CLI (backend workspace)
+        run: |
+          set -euo pipefail
+          npm ci --workspace backend --ignore-scripts --no-audit --no-fund
+          cd backend
+          npx --no-install supabase --version
+
       - name: Link + compare Local vs Remote
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_MIGRATION_CHECK_PROJECT_REF: ${{ secrets.SUPABASE_MIGRATION_CHECK_PROJECT_REF }}
+          MIGRATION_CHECK_ENV: homolog
           BASE_REF: ${{ github.base_ref }}
         run: |
           set -euo pipefail

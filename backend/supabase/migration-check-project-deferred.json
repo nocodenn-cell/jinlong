@@ -170,18 +170,13 @@
       "decisionDoc": "docs/ops/deploy-governance.md"
     },
     {
-      "version": "20261107205637",
-      "reason": "Aplicada via MCP no homolog de verificacao em 2026-11-07 (sessao de leads, PR #676/#677); o registro usa o timestamp de aplicacao. Arquivo correspondente existe no repo sob outro timestamp ou nome.",
+      "version": "20261104160000",
+      "reason": "Aplicada no homolog de verificacao em 2026-11-19 por reconciliacao autorizada pelo dono (conteudo identico ao arquivo da main, substituindo a variante 20261107205637). Historico do homolog, nao producao: continua no manifesto e NAO deve ser aplicada em producao sem a liberacao descrita no manifesto.",
       "decisionDoc": "docs/ops/deploy-governance.md"
     },
     {
-      "version": "20261107205702",
-      "reason": "Aplicada via MCP no homolog de verificacao em 2026-11-07 (sessao de leads, PR #676/#677); o registro usa o timestamp de aplicacao. Arquivo correspondente existe no repo sob outro timestamp ou nome.",
-      "decisionDoc": "docs/ops/deploy-governance.md"
-    },
-    {
-      "version": "20261107210926",
-      "reason": "Aplicada via MCP no homolog de verificacao em 2026-11-07 (sessao de leads, PR #676/#677); o registro usa o timestamp de aplicacao. Arquivo correspondente existe no repo sob outro timestamp ou nome.",
+      "version": "20261104170000",
+      "reason": "Aplicada no homolog de verificacao em 2026-11-19 por reconciliacao autorizada pelo dono (conteudo identico ao arquivo da main, substituindo a variante 20261107205702). Historico do homolog, nao producao: continua no manifesto e NAO deve ser aplicada em producao sem a liberacao descrita no manifesto.",
       "decisionDoc": "docs/ops/deploy-governance.md"
     }
   ]

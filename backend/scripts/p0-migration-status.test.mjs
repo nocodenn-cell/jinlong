@@ -14,6 +14,7 @@ import {
   parseCheckProjectDeferredRegistry,
   parseDeferredManifest,
   parseHumanGateRegistry,
+  resolveTargetEnv,
   separateDeferredMigrations,
   separatePrPendingMigrations,
 } from "./p0-migration-status.mjs";
@@ -235,7 +236,7 @@ test("migration adiada pela governança com remote_ausente não bloqueia e vira 
     { local: "20261010120000", remote: null },
   ];
   const { drift } = analyze(rows, ["20261009000000", "20261010120000"]);
-  const r = separateDeferredMigrations({ blocking: drift, missingInList: [] }, rows, ["20261010120000"]);
+  const r = separateDeferredMigrations({ blocking: drift, missingInList: [] }, rows, ["20261010120000"], "producao");
   assert.deepEqual(r.blocking, []);
   assert.deepEqual(r.deferredPending, ["20261010120000"]);
   assert.deepEqual(r.deferredApplied, []);
@@ -246,8 +247,8 @@ test("migration adiada pela governança com remote_ausente não bloqueia e vira 
 
 test("migration adiada que aparece aplicada no remoto é violação e BLOQUEIA", () => {
   const rows = [{ local: "20261010120000", remote: "20261010120000" }];
-  const { drift } = analyze(rows, ["20261010120000"]);
-  const r = separateDeferredMigrations({ blocking: drift, missingInList: [] }, rows, ["20261010120000"]);
+  const { drift } = analyze(rows, ["20261010120000"], "producao");
+  const r = separateDeferredMigrations({ blocking: drift, missingInList: [] }, rows, ["20261010120000"], "producao");
   assert.deepEqual(r.deferredApplied, ["20261010120000"]);
   assert.deepEqual(r.blocking.map((b) => b.reason), ["adiada_aplicada"]);
   const status = deriveOverallStatus({ blocking: r.blocking, deferred: r.deferredPending, missingInList: r.missingInList, extraBlocking: [] });
@@ -258,7 +259,7 @@ test("migration adiada que aparece aplicada no remoto é violação e BLOQUEIA",
 test("migration não adiada com remote_ausente continua bloqueando; adiada fora da tabela do CLI não", () => {
   const rows = [{ local: "20261022020000", remote: null }];
   const { drift } = analyze(rows, ["20261010120000", "20261022020000"]);
-  const r = separateDeferredMigrations({ blocking: drift, missingInList: ["20261010120000"] }, rows, ["20261010120000"]);
+  const r = separateDeferredMigrations({ blocking: drift, missingInList: ["20261010120000"] }, rows, ["20261010120000"], "producao");
   assert.deepEqual(r.blocking.map((b) => b.version), ["20261022020000"]);
   assert.deepEqual(r.missingInList, []);
   assert.deepEqual(r.deferredPending, ["20261010120000"]);
@@ -266,8 +267,8 @@ test("migration não adiada com remote_ausente continua bloqueando; adiada fora 
 
 test("sem manifesto (lista vazia) o comportamento é o estrito de antes", () => {
   const rows = [{ local: "20261010120000", remote: null }];
-  const { drift } = analyze(rows, ["20261010120000"]);
-  const r = separateDeferredMigrations({ blocking: drift, missingInList: [] }, rows, []);
+  const { drift } = analyze(rows, ["20261010120000"], "producao");
+  const r = separateDeferredMigrations({ blocking: drift, missingInList: [] }, rows, [], "producao");
   assert.deepEqual(r.blocking.map((b) => b.version), ["20261010120000"]);
   assert.deepEqual(r.deferredPending, []);
 });
@@ -309,6 +310,52 @@ test("git alinhado NÃO justifica remote_only de outro par nem remote-only sem p
   assert.deepEqual(r.humanGate, []);
 });
 
+test("ambiente-alvo: ausente ou inválido falha fechado; só homolog e producao são aceitos", () => {
+  for (const bad of [undefined, null, "", "  ", "prod", "HOMOLOG", "staging"]) {
+    assert.throws(() => resolveTargetEnv(bad), /MIGRATION_CHECK_ENV/);
+  }
+  assert.equal(resolveTargetEnv("homolog"), "homolog");
+  assert.equal(resolveTargetEnv(" producao "), "producao");
+});
+
+test("separateDeferredMigrations sem ambiente explícito falha (sem padrão)", () => {
+  const rows = [{ local: "20261010120000", remote: "20261010120000" }];
+  assert.throws(() => separateDeferredMigrations({ blocking: [], missingInList: [] }, rows, ["20261010120000"]), /MIGRATION_CHECK_ENV/);
+});
+
+test("homolog: adiada aplicada com arquivo igual ao remoto vira AVISO e não bloqueia (HUMAN_GATE, exit 0)", () => {
+  const rows = [{ local: "20261010120000", remote: "20261010120000" }];
+  const { drift } = analyze(rows, ["20261010120000"]);
+  const r = separateDeferredMigrations({ blocking: drift, missingInList: [] }, rows, ["20261010120000"], "homolog");
+  assert.deepEqual(r.blocking, []);
+  assert.deepEqual(r.deferredApplied, ["20261010120000"]);
+  const status = deriveOverallStatus({ blocking: r.blocking, deferred: [...r.deferredPending, ...r.deferredApplied], missingInList: r.missingInList, extraBlocking: [] });
+  assert.equal(status, "HUMAN_GATE");
+  assert.equal(deriveExitCode(status), 0);
+});
+
+test("producao: mesma adiada aplicada continua BLOQUEANDO (contraste com homolog)", () => {
+  const rows = [{ local: "20261010120000", remote: "20261010120000" }];
+  const { drift } = analyze(rows, ["20261010120000"]);
+  const r = separateDeferredMigrations({ blocking: drift, missingInList: [] }, rows, ["20261010120000"], "producao");
+  assert.deepEqual(r.blocking.map((b) => b.reason), ["adiada_aplicada"]);
+  assert.deepEqual(r.deferredApplied, ["20261010120000"]);
+});
+
+test("homolog: versão só no remoto (sem arquivo) continua fora do aviso, então segue bloqueando", () => {
+  const rows = [{ local: null, remote: "20261010120000" }];
+  const r = separateDeferredMigrations({ blocking: [], missingInList: [] }, rows, ["20261010120000"], "homolog");
+  assert.deepEqual(r.deferredApplied, []);
+});
+
+test("homolog: adiada com conteúdo divergente (local≠remoto) NÃO vira aviso; continua bloqueando", () => {
+  const rows = [{ local: "20261010120000", remote: "20261010999999" }];
+  const { drift } = analyze(rows, ["20261010120000"]);
+  const r = separateDeferredMigrations({ blocking: drift, missingInList: [] }, rows, ["20261010120000"], "homolog");
+  assert.deepEqual(r.deferredApplied, []);
+  assert.deepEqual(r.blocking.map((b) => b.reason), ["local_remote_diferentes"]);
+});
+
 const HOMOLOG_REF = "yvdilcmxyjafnnsfdtam";
 const OUTRO_REF = "outroprojetoxxxxxxxxx"; // ref diferente do registro (não é produção)
 const REGISTRO_HOMOLOG = {
@@ -319,7 +366,7 @@ const REGISTRO_HOMOLOG = {
 test("adiada aplicada no projeto de verificação registrado vira HUMAN_GATE (exit 0)", () => {
   const rows = [{ local: "20261010120000", remote: "20261010120000" }];
   const { drift } = analyze(rows, ["20261010120000"]);
-  const r = separateDeferredMigrations({ blocking: drift, missingInList: [] }, rows, ["20261010120000"]);
+  const r = separateDeferredMigrations({ blocking: drift, missingInList: [] }, rows, ["20261010120000"], "producao");
   const acc = acceptDeferredAppliedOnCheckProject({ blocking: r.blocking }, REGISTRO_HOMOLOG, HOMOLOG_REF);
   assert.deepEqual(acc.blocking, []);
   assert.deepEqual(acc.accepted, ["20261010120000"]);
@@ -400,8 +447,8 @@ test("registro real: aceita exatamente as 36 divergências reprovadas no CI do h
   assert.deepEqual(a.blocking, []);
   assert.equal(a.accepted.length, 15);
   const b = acceptRemoteOnlyOnCheckProject({ extraBlocking: soRemoto }, registro, HOMOLOG_REF);
-  assert.deepEqual(b.extraBlocking, []);
-  assert.equal(b.accepted.length, 21);
+  assert.deepEqual(b.extraBlocking, ["20261107205637", "20261107205702", "20261107210926"]);
+  assert.equal(b.accepted.length, 18);
   const c = acceptDeferredAppliedOnCheckProject({ blocking }, registro, OUTRO_REF);
   const d = acceptRemoteOnlyOnCheckProject({ extraBlocking: soRemoto }, registro, OUTRO_REF);
   assert.equal(c.blocking.length, 15);
