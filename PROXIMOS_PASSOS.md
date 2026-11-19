@@ -2,6 +2,9 @@
 
 ## P0 — Quebrado/travado
 
+- PR #657 (D-06 + RN-03: fechar caixa bloqueado com venda em espera e descarte com motivo): migration e tela precisam entrar juntas. Com só a migration, o botão "Descartar" da `main` falha com `motivo_obrigatorio` e o operador não fecha o caixa (visto no banco local em 2026-11-19, que tinha as migrations do #657). Decidir e mesclar o #657 inteiro; na `main` atual o caixa ainda fecha com venda em espera
+- Senha do gerente (`pdv_config.gerente_senha_bcrypt`) só pode ser definida por SQL; sem ela não há desconto nem sangria acima do limite. Criar tela para o dono
+
 - Site Jinlong: formulário comercial da home falha em produção. `anon` não tem INSERT em `commercial_leads`; a correção (`#676` + `#677`) está bloqueada com checks vermelhos. A Fase 0 não detectou isso, porque o E2E intercepta o envio. "Formulário OK" só vale com validação real em Preview
 - Site Jinlong / Legal: Termos prometem emissão fiscal (SEFAZ/SAT) e o FAQ condiciona isso à conversa comercial; a fiscal é stub (ver item de Termos em P1). Alinhar só após decisão de produto e revisão jurídica
 - Auditoria GitHub (2026-11-11, `docs/governance/GITHUB_AUDIT.md`): a proteção de `main` não exige nenhuma aprovação humana (só os 6 checks). Decidir revisão obrigatória + CODEOWNERS. Ação de configuração: exige autorização
@@ -109,6 +112,9 @@
 - Aplicar na homologação (jinlong-homolog-palm) a migration 20261021120000_vendas_pagamentos_parcelas_credito (coluna vendas_pagamentos.parcelas) antes de exibir parcelas no detalhe admin e na 2ª via do cupom
 
 ## P2 — Melhoria
+- Validação operacional 2026-11-19 (bugs menores): sangria/suprimento gravam motivo padrão "Troco inicial"; campo "Recebido" mantém o valor da venda anterior; mensagem de sucesso do gerente aparece como erro; códigos crus (`SENHA_INVALIDA`); entrada manual rotulada "Importação NF-e" no kardex; Curva ABC usa receita bruta; lista de vendas mostra operador como vendedor e só a 1ª forma do pagamento dividido; rótulo "· null ·" no seletor de título a pagar; venda cancelada continua PENDENTE na fila fiscal
+- SSoT: `produtos.estoque_minimo` × `estoque.estoque_minimo` e `produtos.preco_atacado`/`quantidade_gatilho_atacado` × `precos_atacado`. Manter `estoque` e `precos_atacado`
+- Contas a receber sem vencimento (inadimplência sempre zero); fornecedor só com nome e CNPJ; entrada de mercadoria em 4 etapas
 - PDV (caixa): conferir a grade do carrinho e o rail em 1280–1366 px (três colunas a partir de `md`); abaixo de ~1440 px a coluna de produto encolhe e a tabela pode rolar na horizontal
 
 - Site Jinlong: testes que faltam — sobreposição do FAB no formulário, relógio/fuso (America/Sao_Paulo) do simulador, consentimento de analytics. Cobrir antes da Fase 1
@@ -135,6 +141,8 @@
 - Mostrar as parcelas do crédito no detalhe da venda (admin) e na 2ª via, depois da coluna existir na homologação
 
 ## Feito
+- 2026-11-19 — PDV: toda venda começa com o operador como vendedor (antes lembrava o último vendedor e gravava vendas seguintes no vendedor errado; decisão do dono). Cancelamento: comprovante e auditoria mostram o total devolvido e quem cancelou (antes R$ 0,00 em PIX/cartão/dividido e autor = operador da venda). Sem migration; testes de caixa, vendas e auditoria OK (480). Nada commitado
+- 2026-11-19 — Validação operacional ponta a ponta no ambiente local (cadastro, entrada, PDV varejo/atacado, desconto, sangria/suprimento, fechamento, cancelamento, contas a pagar, relatórios, auditoria, RLS): `docs/auditoria/RELATORIO_VALIDACAO_OPERACIONAL_JINLONG.md`. Nada commitado
 - 2026-11-14 — PDV (caixa): carrinho com preço sobreposto ao selo "Atacado" corrigido (grade única do cabeçalho e das linhas); stepper sem cantos/divisórias tortos (elementos nativos); topo das 3 colunas na mesma altura h-11; botões de cabeçalho, rail, pagamento e desconto padronizados
 - 2026-11-13 — Drift do CI (`migration-remote-drift`, variante segura aprovada): 15 adiadas já aplicadas no homolog de verificação passam a ser aceitas por registro (`backend/supabase/migration-check-project-deferred.json`), preso ao ref do homolog e fail-closed para qualquer outro projeto. Também as 21 versões só-remoto do homolog, no mesmo registro (`remoteOnlyAccepted`). Manifesto e migrations intactos; produção não alterada. 31 testes do drift passando; guarda de governança OK sem label
 - 2026-11-13 — FAB do site recolhe enquanto `#contato` está visível (`site/components/FabAutoHide.tsx`), com teste E2E em Chromium, Firefox e mobile. Sem commit até a suíte completa passar
@@ -143,5 +151,3 @@
 - 2026-11-12 — hub.jinlong.app: painel quebrava (digest 226588760, "Falha ao acessar dados (400)"). Causa: a Central de Conversão (`20261023130000`) estava no `main` mas não no banco `jinlong`. Migration aplicada em produção após checagem; cada seção do hub agora degrada sozinha (`hub/lib/seguro.ts`) e há `hub/app/error.tsx`. Código ainda não commitado
 - 2026-11-11 — Auditoria dos 53 PRs abertos e das branches (somente leitura): `docs/governance/GITHUB_AUDIT.md`, `GITHUB_CLEANUP_PLAN.md` e `GITHUB_WORKFLOW.md`. Nenhuma ação no GitHub; decisões pendentes listadas no plano
 - 2026-11-07 — Desenho do endpoint protegido de `commercial_leads` (`docs/planos/LEADS_ENDPOINT_PROTEGIDO.md`) e guardas do servidor com testes (`site/lib/pedidoDemoGuards.ts`), flag `SITE_DEMO_FORM_ATIVO` reproduzida (padrão desligada). Suíte do site: 87 testes passando. Nenhuma migration aplicada
-- 2026-11-05 — 12 migrations da main (20261028100000 a 20261104180000) adiadas no manifesto: 8 de segurança (prioridade do dono) e 4 de funcionalidade; nenhuma aplicada em produção
-- 2026-11-05 — PR #655: types drift corrigido (`823142b6`, regenerado do artefato do CI); merge com a main (`24ba7082`) e push na branch do PR. Restam os gates de governança (label `deploy-prod:aprovado` e migrations `remote_ausente`)

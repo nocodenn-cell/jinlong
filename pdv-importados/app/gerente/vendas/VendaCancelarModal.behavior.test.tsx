@@ -153,6 +153,44 @@ describe('VendaCancelarModal — comprovante usa o valor realmente estornado', (
     expect(comprovanteRecebido!.totalLiquido).toBe(112.5)
   })
 
+  it('pagamento dividido/PIX: a action devolve 0 (sem dinheiro da gaveta), comprovante mostra o total devolvido ao cliente', async () => {
+    cancelarVendaGerenteActionMock.mockResolvedValue({
+      ok: true,
+      vendaId: VENDA_ATIVA.id,
+      valorEstornado: 0, // RPC: só a parte em DINHEIRO
+    })
+    obterDadosComprovanteCancelamentoMock.mockResolvedValue({
+      itens: [{ nome: 'Garrafa térmica', quantidade: 6, precoUnitario: 49.9 }],
+      operadorNome: 'Dono E2E',
+      totalEstornado: 299.4,
+    })
+
+    let comprovanteRecebido: ComprovanteCancelamento | null = null
+
+    act(() => {
+      root.render(
+        <VendaCancelarModal
+          venda={{ ...VENDA_ATIVA, total_liquido: 299.4, forma_pagamento: 'PIX' }}
+          locale="pt-BR"
+          m={m}
+          onClose={() => {}}
+          onCancelado={() => {}}
+          onComprovante={(c) => {
+            comprovanteRecebido = c
+          }}
+        />,
+      )
+    })
+
+    setTextarea(
+      container.querySelector('#motivo-cancelamento') as HTMLTextAreaElement,
+      'Cliente desistiu da compra',
+    )
+    await submitForm()
+
+    expect(comprovanteRecebido!.totalLiquido).toBe(299.4)
+  })
+
   it('erro no cancelamento: onComprovante nunca é chamado (nenhum recibo fantasma)', async () => {
     cancelarVendaGerenteActionMock.mockResolvedValue({ ok: false, error: 'venda ja cancelada' })
     const onComprovante = vi.fn()
