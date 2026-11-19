@@ -1,66 +1,76 @@
-# Procedimento — `20261119120000` (fechamento com venda em espera) no homolog
+# Procedimento — fechamento com venda em espera (`20261119120000` / `120100`)
 
-**Data das verificações:** 2026-11-19 · **Projeto homolog:** `yvdilcmxyjafnnsfdtam` · **Produção:** `kbabmewnahysfvlybiak`
-**Escopo:** pré-checagens, backup, aplicação, rollback e evidências. Todas as verificações abaixo são somente leitura. **Nada foi aplicado nem alterado** nesta rodada.
+**Data das verificações:** 2026-11-19 · **Homolog:** `yvdilcmxyjafnnsfdtam` · **Produção:** `kbabmewnahysfvlybiak`
+**Escopo:** origem do wrapper, comparação dos bancos, compatibilidade, rollback e evidências.
+**Nada foi aplicado nem alterado** em homolog ou produção nesta rodada. Verificações somente leitura, e testes em clones descartáveis.
+
+> **Correção:** a versão anterior deste documento dizia que o wrapper `public.fechar_caixa_atomico` estava fora do repositório. **Isso estava errado.** O wrapper é gerado pela `20261019140000`. A diferença real é outra: a ordem de dependência com a `20261023200000` (ver §3).
 
 ---
 
-## 1. Situação encontrada (somente leitura)
+## 1. Origem do wrapper `public.fechar_caixa_atomico`
 
-| Verificação | Resultado |
-|---|---|
-| `schema_migrations` do homolog contém `20261119120000` e `20261119120100` | **sim** (já registradas) |
-| Função `internal.fechar_caixa_atomico` no homolog contém a checagem `FECHAR_CAIXA_VENDAS_EM_ESPERA` | **sim** |
-| Corpo de `internal.fechar_caixa_atomico` no homolog vs. arquivo do repositório (md5 do corpo, LF) | **idêntico** (`d18bff3360c1e1c8ad36d37c94d9029c`) |
-| Coluna `vendas_em_espera.descartada_por` no homolog | **existe** |
-| Esperas ativas (`EM_ESPERA`/`RETOMADA`) no homolog | **0** |
-| Caixas `ABERTO` no homolog | **0** |
-| Trigger D1 `trg_caixas_bloqueia_fechamento_em_espera` em `public.caixas` | **ativo** (`O`) |
-| Produção: `20261119120000` / `120100` | **não aplicadas** |
+- `backend/supabase/migrations/20261019140000_multiempresa_fase2_guardas.sql` (§4, "Envelopes de escopo nas RPCs SECURITY DEFINER expostas a authenticated") gera, para cada RPC exposta ao `authenticated`, um **wrapper `public`** com checagens `fp_assert_loja` e uma chamada a `internal.<nome>`. O comentário gravado é `Envelope multiempresa (20261019140000): exige escopo de loja/empresa e delega para internal.<nome>`.
+- A função original (`public.fechar_caixa_atomico`, criada em `20261007190000` e ajustada em `20260929120000`, `20260902100200` e `20260621002600`) é movida para `internal`, e o `public` vira o envelope.
+- A `20261119120000` faz `CREATE OR REPLACE` em `internal.fechar_caixa_atomico`, com o D-06 e o patch de troca de operador já incluído.
+- O patch de troca de operador (`20261023200000`) altera o corpo de **todas** as funções `fechar_caixa_atomico` encontradas em `public` ou `internal` por substituição de texto (`internal.fp_troca_operador_patch`). Ele depende de as funções `internal.fp_operador_ativo_caixa` e `internal.fp_participou_caixa` existirem.
 
-**Conclusão:** a migration já está no homolog. Não há o que aplicar ali nesta etapa. O procedimento passa a ser de **verificação e de versionamento**, não de aplicação.
+## 2. Comparação dos bancos (somente leitura)
 
-## 2. Achado crítico: wrapper público fora do repositório
+| Objeto | Homolog | Produção | Repositório |
+|---|---|---|---|
+| `public.fechar_caixa_atomico` (envelope, `chama_internal`) | md5 `7bd4d4c4…`, 254 caracteres, delega | md5 `7bd4d4c4…`, 254 caracteres, delega | gerado por `20261019140000` |
+| `internal.fechar_caixa_atomico` | md5 `d18bff33…`, 3360 caracteres, **com D-06** | md5 `3c3dab6b…`, 2982 caracteres, **sem D-06 e sem patch de troca** | `20261119120000` = homolog (md5 validado) |
+| `internal.fp_operador_ativo_caixa` / `fp_participou_caixa` / `fp_troca_operador_patch` | existem | **não existem** | `20261023200000` |
+| `20261023200000` registrada | sim | **não** | em `main`, não está no manifesto de adiadas |
+| `20261119120000` / `120100` registradas | sim | não | em `main` |
+| `trg_caixas_bloqueia_fechamento_em_espera` (D1, `20261106100000`) | ativo | ausente | em `main`, pendente |
 
-- O app chama `rpc('fechar_caixa_atomico')` (`pdv-importados/app/caixa/server/cashSession.ts:185`), ou seja, **`public.fechar_caixa_atomico`**.
-- No homolog, `public.fechar_caixa_atomico` tem este corpo (não existe em nenhuma migration do repositório):
-  ```sql
-  SELECT public.fp_assert_loja(public.fp_loja_de('usuario', p_operador_id), false, 'fechar_caixa_atomico.p_operador_id');
-  SELECT * FROM internal.fechar_caixa_atomico(p_operador_id => p_operador_id, p_valor_contado => p_valor_contado, p_motivo => p_motivo);
-  ```
-- A migration `20261119120000` cria **apenas** `internal.fechar_caixa_atomico`. Nenhuma migration do repositório faz `public` chamar `internal`.
-- **Efeito:** no repositório, a checagem D-06 é código morto para o app. No homolog ela só funciona porque o wrapper foi alterado fora do versionamento (drift). Em produção, a `20261119120000` sozinha **não** ativaria a checagem para o app.
-- **Proteção efetiva hoje:** o trigger D1 (`20261106100000`) recusa o fechamento com venda em espera em qualquer caminho (RPC ou `UPDATE` direto). Está ativo no homolog. Por isso a decisão de manter o D1 é necessária.
+**Conclusão:** não há drift do wrapper. Homolog e produção têm o mesmo envelope. A diferença está no `internal`: produção ainda não recebeu a `20261023200000` (troca de operador) nem a `20261119120000` (D-06).
 
-## 3. Pré-requisitos antes de qualquer aplicação em produção
+## 3. Dependência de ordem (risco real)
 
-1. **Versionar o wrapper.** Criar migration nova (versão posterior a `20261119120100`) com o corpo acima, validada contra o homolog. Não editar `20261119120000` já registrada no homolog.
-2. **Decidir o destino do drift do wrapper.** Confirmar com quem aplicou o wrapper no homolog (fora do repositório). Registrar a versão no manifesto de decisões.
-3. **Rollback.** A `20261119120000` cria `internal.fechar_caixa_atomico` nova. O rollback exige restaurar o wrapper público ao estado anterior. **Esse estado anterior não está no repositório** (ver §2). Enquanto o item 1 não for resolvido, o rollback não é executável com segurança.
-4. **Janela de produção.** Sem autorização do dono, não há aplicação.
+Teste reproduzível em clone descartável do replay da `main` (`fechar-caixa-app-flow-espera.test.sql`, fluxo com `authenticated` e `auth.uid()` do operador):
 
-## 4. Backup (quando autorizado)
+| Cenário | Passo 1: fechar com espera aberta | Passo 2: descartar espera (RPC) | Passo 3: fechar após descarte |
+|---|---|---|---|
+| **A.** Controle, sem `20261119` (estado de produção hoje) | **OK** (caixa fecha com espera pendente) | — | — |
+| **B.** `20261119120000` + `120100` aplicadas (estado do homolog) | **ERRO** `FECHAR_CAIXA_VENDAS_EM_ESPERA` | OK | **OK** (FECHADO) |
+| **C.** `20261119120000` aplicada **sem** `20261023200000` | **ERRO** `function internal.fp_operador_ativo_caixa(uuid, uuid) does not exist` | OK | **ERRO** (mesma função ausente) |
 
-- Dump lógico de `public` e `internal` (somente as funções e triggers de caixa) antes de qualquer `CREATE OR REPLACE`.
-- Export de `pg_get_functiondef` de `public.fechar_caixa_atomico` e `internal.fechar_caixa_atomico`, com md5, guardado como evidência.
-- Snapshot de `caixas` e `vendas_em_espera` com contagens (linhas e status).
+- **A** mostra a lacuna real de produção: hoje o fechamento aceita venda em espera (a regra D-06 não existe lá; a proteção D1 do trigger também ainda não está).
+- **B** prova que a migration funciona no fluxo real do app.
+- **C** mostra o risco: aplicar a `20261119120000` isolada **impede o fechamento de caixa**, sem erro na aplicação da migration. Ela só falha em tempo de execução.
 
-## 5. Procedimento de aplicação (quando autorizado, após §3)
+**Regra:** `20261023200000` deve estar aplicada antes de `20261119120000`. O Supabase CLI aplica pendências em ordem de versão, então `20261023200000` vai antes quando as duas estiverem pendentes ao mesmo tempo. O risco aparece em aplicação manual, fora de ordem, ou com a `20261119` aplicada sozinha.
 
-1. Repetir as verificações de §1 no alvo.
-2. Aplicar a migration de wrapper (item 1 de §3) **antes** ou **junto** com `20261119120000`, em transação, com `ON_ERROR_STOP`.
-3. Conferir por `pg_get_functiondef` que o corpo de `public` delega para `internal` e que o corpo de `internal` tem `FECHAR_CAIXA_VENDAS_EM_ESPERA`.
-4. Smoke: com uma espera de teste em caixa aberto, `fechar_caixa_atomico` deve recusar com `FECHAR_CAIXA_VENDAS_EM_ESPERA`. Descartar a espera pela RPC auditável e refazer o fechamento.
-5. Registrar em `docs/ops/` o md5 final e a data.
+## 4. Estratégia
 
-## 6. Evidências desta rodada
+- **Não criar migration corretiva para o wrapper.** Não há o que corrigir nele. Uma migration nova para isso criaria drift sem motivo.
+- **Não editar a `20261119120000`.** Ela já está registrada no homolog. Editar o arquivo quebraria o md5 validado.
+- **Aplicar em produção, quando autorizado, nesta ordem:** `20261023200000` → `20261119120000` → `20261119120100`. Antes disso, a `20261023200000` precisa de autorização própria, porque altera o comportamento de troca de operador em várias RPCs. A decisão é do dono.
+- **Pré-checagem obrigatória antes da produção:** confirmar que `internal.fp_operador_ativo_caixa` e `internal.fp_participou_caixa` existem; se não existirem, parar.
 
-- Leitura de `schema_migrations`, `pg_proc`, `pg_trigger` e `information_schema.columns` no homolog (somente `SELECT`).
-- md5 do corpo de `internal.fechar_caixa_atomico`: idêntico ao repositório.
-- Teste D1 no clone de validação: passa (ver `docs/ops/REVISAO_D1_D6_2026-11-19.md`).
+## 5. Rollback
 
-## 7. Decisões que dependem do dono
+- **`20261119120000`:** `backend/supabase/rollback/20261119120000_fechar_caixa_bloqueia_vendas_em_espera.rollback.sql`. Restaura o corpo sem a checagem D-06. **Válido apenas em bancos com `20261023200000` aplicada.** Testado em clone: aplicar, reverter e rodar o fluxo do app dá `OK` no passo 1, que é o comportamento anterior.
+- **`20261119120100`:** rollback já existe em `backend/supabase/rollback/20261119120100_vendas_em_espera_descarte_auditavel.rollback.sql`.
+- **Limite:** o rollback da `120000` não reverte a `120100`. Reverter as duas exige a ordem inversa.
 
-- Aceitar a versão do wrapper do homolog como referência e versioná-la (§3.1)?
-- Quem aplicou o wrapper fora do repositório, e isso será documentado?
-- Quando a produção receberá as migrations do D1–D6 e da `20261119120000`?
+## 6. Backup (quando autorizado)
+
+- Export de `pg_get_functiondef` de `public.fechar_caixa_atomico` e `internal.fechar_caixa_atomico`, com md5, antes de qualquer `CREATE OR REPLACE`.
+- Snapshot de `caixas` e `vendas_em_espera` (contagem por status).
+
+## 7. Evidências
+
+- `backend/scripts/fechar-caixa-app-flow-espera.test.sql`: fluxo do app, imprime o desfecho de cada passo, sem impor estado.
+- Resultados A, B e C acima, em clones descartáveis criados e removidos nesta rodada.
+- Rollback testado (§5).
+- md5 e leituras de `pg_proc` e `schema_migrations` em homolog e produção, somente `SELECT`.
+
+## 8. Decisões que dependem do dono
+
+1. Autorizar a `20261023200000` em produção (troca de operador), que é pré-requisito da `20261119120000`.
+2. Autorizar a janela da `20261119120000` e `120100` em produção, depois do item 1.
+3. Confirmar que o D1 (`20261106100000`) segue no PR, como camada extra independente do wrapper.

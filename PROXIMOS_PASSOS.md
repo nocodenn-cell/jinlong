@@ -1,7 +1,7 @@
 # Próximos passos
 
 ## P0 — Quebrado/travado
-- Wrapper `public.fechar_caixa_atomico` do homolog (o que o app chama) está fora do repositório. A `20261119120000` só cria `internal`, então a checagem D-06 não vale para o app em produção. Versionar o wrapper antes de qualquer aplicação (`docs/ops/PROCEDIMENTO_20261119120000_HOMOLOG.md`)
+- Ordem de dependência para o fechamento com venda em espera: `20261023200000` (troca de operador) precisa estar em produção antes da `20261119120000`. Sem ela, o fechamento de caixa quebra (`function internal.fp_operador_ativo_caixa does not exist`, teste reproduzível). Ver `docs/ops/PROCEDIMENTO_20261119120000_HOMOLOG.md`
 
 - Usuários E2E ativos na matriz de produção (`Gerente E2E` e `Dono E2E`): sem caixa aberto nem espera, desativar após decisão do dono. `Operador E2E` (`b7ec95bb…`) tem 2 esperas `EM_ESPERA`: resolver antes de desativar. `Dono Demo` (ativo) tem 1 caixa aberto desde 03/10. Ver `docs/ops/REVISAO_D1_D6_2026-11-19.md` §9
 - PR #657 (D-06 + RN-03) mesclado na `main` em 2026-11-19 (`9d27e0eb`), com migrations renomeadas para `20261119120000`/`20261119120100`. Confirmar em produção que as duas migrations e a tela nova entraram juntas (sem a tela, "Descartar" falha com `motivo_obrigatorio` e o caixa não fecha) e fazer smoke de descarte com motivo e fechamento com venda em espera
@@ -157,7 +157,7 @@
 - Mostrar as parcelas do crédito no detalhe da venda (admin) e na 2ª via, depois da coluna existir na homologação
 
 ## Feito
-- 2026-11-19 — Revisão D1–D6 fechada: `sale-totals-invariant` passa com evidência positiva (avisos `OK`, asserções inalteradas); homolog verificado (`20261119120000` idêntica ao repositório); achado do wrapper `public` fora do repositório; usuários E2E e 8 produtos reais do D6 classificados sem alteração; PR #687 em draft (`docs/ops/PROCEDIMENTO_20261119120000_HOMOLOG.md`)
+- 2026-11-19 — Revisão D1–D6 fechada: `sale-totals-invariant` passa com evidência positiva (avisos `OK`, asserções inalteradas); homolog verificado (`20261119120000` idêntica ao repositório); wrapper verificado (gerado pela `20261019140000`, idêntico em homolog e produção); risco real: ordem da `20261023200000` antes da `20261119120000`; usuários E2E e 8 produtos reais do D6 classificados sem alteração; PR #687 em draft (`docs/ops/PROCEDIMENTO_20261119120000_HOMOLOG.md`)
 - 2026-11-19 — Revisão D1–D6: pré-checks de produção (D3 limpo; D5 e D6 com pendências de dados, sem escrita); D1–D5 e golden flow validados em banco descartável; teste D1 passa a usar o descarte auditável (RN-03); decisão de manter D1 junto da checagem da `main`. Evidências em `docs/ops/REVISAO_D1_D6_2026-11-19.md`
 - 2026-11-19 — PR #675 mergeado na `main` (`16915328`) com `migration-remote-drift` vermelho e `Supabase local gates` pendente; nenhuma migration do PR aplicada em produção (leitura de `schema_migrations`)
 - 2026-11-19 — PDV: toda venda começa com o operador como vendedor (antes lembrava o último vendedor e gravava vendas seguintes no vendedor errado; decisão do dono). Cancelamento: comprovante e auditoria mostram o total devolvido e quem cancelou (antes R$ 0,00 em PIX/cartão/dividido e autor = operador da venda). Sem migration; testes de caixa, vendas e auditoria OK (480). PR #686

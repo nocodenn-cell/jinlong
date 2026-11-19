@@ -1,6 +1,6 @@
 # Checklist de instalação — primeiro cliente (F1)
 
-> **Status em 2026-11-19 (pré-requisitos antes da implantação):** (1) usuários `Gerente E2E`, `Dono E2E` e `Operador E2E` ativos na matriz de produção, com 2 esperas do operador: resolver antes de desativar; (2) o wrapper `public.fechar_caixa_atomico` do homolog está fora do repositório: versionar antes de produção (`docs/ops/PROCEDIMENTO_20261119120000_HOMOLOG.md`); (3) conta financeira da loja (ver `INSTALACAO_CONTAS_FINANCEIRAS_FORMAS_PAGAMENTO.md`).
+> **Status em 2026-11-19 (pré-requisitos antes da implantação):** (1) usuários `Gerente E2E`, `Dono E2E` e `Operador E2E` ativos na matriz de produção, com 2 esperas do operador: resolver antes de desativar; (2) a `20261023200000` (troca de operador) precisa estar em produção antes da `20261119120000`; sem ela o fechamento de caixa quebra (`docs/ops/PROCEDIMENTO_20261119120000_HOMOLOG.md`); (3) conta financeira da loja (ver `INSTALACAO_CONTAS_FINANCEIRAS_FORMAS_PAGAMENTO.md`).
 
 **Data:** 2026-11-07 · **Plano:** `docs/auditorias/PLANO_LIBERACAO_PRIMEIRO_CLIENTE_2026-11-06.md` (fase F, PR F1)
 **Escopo contratado para o primeiro cliente:** web · loja única · um caixa · venda presencial · dinheiro, PIX, débito e crédito · **sem fiscal (sem NFC-e/NF-e emitidas pelo sistema)** · **sem fiado**.
