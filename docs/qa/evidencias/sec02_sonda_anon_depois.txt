@@ -1,0 +1,278 @@
+SELECT|extensions.pg_stat_statements_info|1
+SELECT|extensions.pg_stat_statements|4859
+SELECT|net._http_response|0
+DELETE|net._http_response|0
+SELECT|net.http_request_queue|0
+DELETE|net.http_request_queue|0
+psql:<stdin>:23: ERROR:  permission denied for table caixas
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.caixas TO anon;
+psql:<stdin>:26: ERROR:  permission denied for table caixas
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.caixas TO anon;
+psql:<stdin>:29: ERROR:  permission denied for table usuarios
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.usuarios TO anon;
+psql:<stdin>:32: ERROR:  permission denied for table usuarios
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.usuarios TO anon;
+psql:<stdin>:35: ERROR:  permission denied for table usuarios
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.usuarios TO anon;
+psql:<stdin>:38: ERROR:  permission denied for table usuarios
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.usuarios TO anon;
+psql:<stdin>:41: ERROR:  permission denied for table clientes
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.clientes TO anon;
+psql:<stdin>:44: ERROR:  permission denied for table clientes
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.clientes TO anon;
+psql:<stdin>:47: ERROR:  permission denied for view comissoes_ajustes_auditoria
+psql:<stdin>:50: ERROR:  permission denied for table comissoes_ajustes
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.comissoes_ajustes TO anon;
+psql:<stdin>:53: ERROR:  permission denied for table comissoes_ajustes
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.comissoes_ajustes TO anon;
+psql:<stdin>:56: ERROR:  permission denied for table comissoes_itens
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.comissoes_itens TO anon;
+psql:<stdin>:59: ERROR:  permission denied for table comissoes_itens
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.comissoes_itens TO anon;
+psql:<stdin>:62: ERROR:  permission denied for table comissoes_pagamentos_ajustes
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.comissoes_pagamentos_ajustes TO anon;
+psql:<stdin>:65: ERROR:  permission denied for table comissoes_pagamentos_ajustes
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.comissoes_pagamentos_ajustes TO anon;
+psql:<stdin>:68: ERROR:  permission denied for table comissoes_pagamentos
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.comissoes_pagamentos TO anon;
+psql:<stdin>:71: ERROR:  permission denied for table comissoes_pagamentos
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.comissoes_pagamentos TO anon;
+psql:<stdin>:74: ERROR:  permission denied for view comissoes_reconstrucao_auditoria
+psql:<stdin>:77: ERROR:  permission denied for table comissoes_regras_funcionario
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.comissoes_regras_funcionario TO anon;
+psql:<stdin>:80: ERROR:  permission denied for table comissoes_regras_funcionario
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.comissoes_regras_funcionario TO anon;
+psql:<stdin>:83: ERROR:  permission denied for table comissoes_regras_historico
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.comissoes_regras_historico TO anon;
+psql:<stdin>:86: ERROR:  permission denied for table comissoes_regras_historico
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.comissoes_regras_historico TO anon;
+psql:<stdin>:89: ERROR:  permission denied for view comissoes_saldo_operador
+psql:<stdin>:92: ERROR:  permission denied for view comissoes_vendedores_liquidas
+psql:<stdin>:95: ERROR:  permission denied for table comissoes_vendedores
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.comissoes_vendedores TO anon;
+psql:<stdin>:98: ERROR:  permission denied for table comissoes_vendedores
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.comissoes_vendedores TO anon;
+psql:<stdin>:101: ERROR:  permission denied for table configuracoes_gerais
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.configuracoes_gerais TO anon;
+psql:<stdin>:104: ERROR:  permission denied for table configuracoes_gerais
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.configuracoes_gerais TO anon;
+psql:<stdin>:107: ERROR:  permission denied for table vendas
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.vendas TO anon;
+psql:<stdin>:110: ERROR:  permission denied for table vendas
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.vendas TO anon;
+psql:<stdin>:113: ERROR:  permission denied for table devolucoes
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.devolucoes TO anon;
+psql:<stdin>:116: ERROR:  permission denied for table devolucoes
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.devolucoes TO anon;
+psql:<stdin>:119: ERROR:  permission denied for table documentos_fiscais_dlq
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.documentos_fiscais_dlq TO anon;
+psql:<stdin>:122: ERROR:  permission denied for table documentos_fiscais_dlq
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.documentos_fiscais_dlq TO anon;
+psql:<stdin>:125: ERROR:  permission denied for table documentos_fiscais_eventos
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.documentos_fiscais_eventos TO anon;
+psql:<stdin>:128: ERROR:  permission denied for table documentos_fiscais_eventos
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.documentos_fiscais_eventos TO anon;
+psql:<stdin>:131: ERROR:  permission denied for table documentos_fiscais_pendentes
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.documentos_fiscais_pendentes TO anon;
+psql:<stdin>:134: ERROR:  permission denied for table documentos_fiscais_pendentes
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.documentos_fiscais_pendentes TO anon;
+psql:<stdin>:137: ERROR:  permission denied for table usuarios
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.usuarios TO anon;
+psql:<stdin>:140: ERROR:  permission denied for table estoque_baixas
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.estoque_baixas TO anon;
+psql:<stdin>:143: ERROR:  permission denied for table estoque_reposicoes_cancelamento
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.estoque_reposicoes_cancelamento TO anon;
+psql:<stdin>:146: ERROR:  permission denied for table estoque_reposicoes_cancelamento
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.estoque_reposicoes_cancelamento TO anon;
+psql:<stdin>:149: ERROR:  permission denied for table estoque_reposicoes_devolucao
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.estoque_reposicoes_devolucao TO anon;
+psql:<stdin>:152: ERROR:  permission denied for table estoque_reposicoes_devolucao
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.estoque_reposicoes_devolucao TO anon;
+psql:<stdin>:155: ERROR:  permission denied for table estoque
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.estoque TO anon;
+psql:<stdin>:158: ERROR:  permission denied for table estoque
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.estoque TO anon;
+psql:<stdin>:161: ERROR:  permission denied for table feature_flags
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.feature_flags TO anon;
+psql:<stdin>:164: ERROR:  permission denied for table usuarios
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.usuarios TO anon;
+psql:<stdin>:167: ERROR:  permission denied for table fiscal_provider_config
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.fiscal_provider_config TO anon;
+psql:<stdin>:170: ERROR:  permission denied for table fiscal_provider_config
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.fiscal_provider_config TO anon;
+psql:<stdin>:173: ERROR:  permission denied for table formas_pagamento
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.formas_pagamento TO anon;
+psql:<stdin>:176: ERROR:  permission denied for table formas_pagamento
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.formas_pagamento TO anon;
+psql:<stdin>:179: ERROR:  permission denied for table usuarios
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.usuarios TO anon;
+psql:<stdin>:182: ERROR:  permission denied for table usuarios
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.usuarios TO anon;
+psql:<stdin>:185: ERROR:  permission denied for table usuarios
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.usuarios TO anon;
+psql:<stdin>:188: ERROR:  permission denied for table funcionarios_meta
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.funcionarios_meta TO anon;
+psql:<stdin>:191: ERROR:  permission denied for table funcionarios
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.funcionarios TO anon;
+psql:<stdin>:194: ERROR:  permission denied for table funcionarios
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.funcionarios TO anon;
+psql:<stdin>:197: ERROR:  permission denied for table historico_precos_produto
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.historico_precos_produto TO anon;
+psql:<stdin>:200: ERROR:  permission denied for table historico_precos_produto
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.historico_precos_produto TO anon;
+psql:<stdin>:203: ERROR:  permission denied for table usuarios
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.usuarios TO anon;
+psql:<stdin>:206: ERROR:  permission denied for table historico_tiers_crud
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.historico_tiers_crud TO anon;
+psql:<stdin>:209: ERROR:  permission denied for table implantacao_checklist_itens
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.implantacao_checklist_itens TO anon;
+psql:<stdin>:212: ERROR:  permission denied for table implantacao_checklist_itens
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.implantacao_checklist_itens TO anon;
+psql:<stdin>:215: ERROR:  permission denied for table implantacao_checklists
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.implantacao_checklists TO anon;
+psql:<stdin>:218: ERROR:  permission denied for table implantacao_checklists
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.implantacao_checklists TO anon;
+psql:<stdin>:221: ERROR:  permission denied for table usuarios
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.usuarios TO anon;
+psql:<stdin>:224: ERROR:  permission denied for table usuarios
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.usuarios TO anon;
+psql:<stdin>:227: ERROR:  permission denied for table usuarios
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.usuarios TO anon;
+psql:<stdin>:230: ERROR:  permission denied for table usuarios
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.usuarios TO anon;
+psql:<stdin>:233: ERROR:  permission denied for table usuarios
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.usuarios TO anon;
+psql:<stdin>:236: ERROR:  permission denied for table usuarios
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.usuarios TO anon;
+psql:<stdin>:239: ERROR:  permission denied for table usuarios
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.usuarios TO anon;
+psql:<stdin>:242: ERROR:  permission denied for table itens_venda
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.itens_venda TO anon;
+psql:<stdin>:245: ERROR:  permission denied for table usuarios
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.usuarios TO anon;
+psql:<stdin>:248: ERROR:  permission denied for table usuarios
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.usuarios TO anon;
+psql:<stdin>:251: ERROR:  permission denied for table marcas
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.marcas TO anon;
+psql:<stdin>:254: ERROR:  permission denied for table marcas
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.marcas TO anon;
+psql:<stdin>:257: ERROR:  permission denied for table movimentacoes_caixa
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.movimentacoes_caixa TO anon;
+psql:<stdin>:260: ERROR:  permission denied for table movimentacoes_caixa
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.movimentacoes_caixa TO anon;
+psql:<stdin>:263: ERROR:  permission denied for table usuarios
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.usuarios TO anon;
+psql:<stdin>:266: ERROR:  permission denied for table movimentos_caixa
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.movimentos_caixa TO anon;
+psql:<stdin>:269: ERROR:  permission denied for table usuarios
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.usuarios TO anon;
+psql:<stdin>:272: ERROR:  permission denied for table usuarios
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.usuarios TO anon;
+psql:<stdin>:275: ERROR:  permission denied for table ordens_compra_itens
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.ordens_compra_itens TO anon;
+psql:<stdin>:278: ERROR:  permission denied for table ordens_compra_itens
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.ordens_compra_itens TO anon;
+psql:<stdin>:281: ERROR:  permission denied for table ordens_compra
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.ordens_compra TO anon;
+psql:<stdin>:284: ERROR:  permission denied for table ordens_compra
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.ordens_compra TO anon;
+psql:<stdin>:287: ERROR:  permission denied for table usuarios
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.usuarios TO anon;
+psql:<stdin>:290: ERROR:  permission denied for table usuarios
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.usuarios TO anon;
+psql:<stdin>:293: ERROR:  permission denied for table usuarios
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.usuarios TO anon;
+psql:<stdin>:296: ERROR:  permission denied for table usuarios
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.usuarios TO anon;
+psql:<stdin>:299: ERROR:  permission denied for table usuarios
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.usuarios TO anon;
+psql:<stdin>:302: ERROR:  permission denied for table usuarios
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.usuarios TO anon;
+psql:<stdin>:305: ERROR:  permission denied for table usuarios
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.usuarios TO anon;
+psql:<stdin>:308: ERROR:  permission denied for table relatorio_settings
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.relatorio_settings TO anon;
+psql:<stdin>:311: ERROR:  permission denied for table usuarios
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.usuarios TO anon;
+psql:<stdin>:314: ERROR:  permission denied for table usuarios
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.usuarios TO anon;
+psql:<stdin>:317: ERROR:  permission denied for table usuarios
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.usuarios TO anon;
+psql:<stdin>:320: ERROR:  permission denied for table usuarios
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.usuarios TO anon;
+psql:<stdin>:323: ERROR:  permission denied for table tipos_movimento_estoque
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.tipos_movimento_estoque TO anon;
+psql:<stdin>:326: ERROR:  permission denied for table tipos_movimento_estoque
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.tipos_movimento_estoque TO anon;
+psql:<stdin>:329: ERROR:  permission denied for table tokens_desconto_gerente
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.tokens_desconto_gerente TO anon;
+psql:<stdin>:332: ERROR:  permission denied for table tokens_desconto_gerente
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.tokens_desconto_gerente TO anon;
+psql:<stdin>:335: ERROR:  permission denied for table transferencias_idempotencia
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.transferencias_idempotencia TO anon;
+psql:<stdin>:338: ERROR:  permission denied for table transferencias_idempotencia
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.transferencias_idempotencia TO anon;
+psql:<stdin>:341: ERROR:  permission denied for table usuarios
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.usuarios TO anon;
+psql:<stdin>:344: ERROR:  permission denied for table usuarios
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.usuarios TO anon;
+psql:<stdin>:347: ERROR:  permission denied for view v_clientes_gerente
+psql:<stdin>:350: ERROR:  permission denied for view v_estoque_baixo
+psql:<stdin>:353: ERROR:  permission denied for view v_estoque_ledger_divergencia
+psql:<stdin>:356: ERROR:  permission denied for view v_fiscal_doc_status_event_mismatch
+psql:<stdin>:359: ERROR:  permission denied for view v_kardex_unificado
+psql:<stdin>:362: ERROR:  permission denied for view v_top_produtos
+psql:<stdin>:365: ERROR:  permission denied for view v_venda_consistencia_anomalias
+psql:<stdin>:368: ERROR:  permission denied for view v_vendas_dia
+psql:<stdin>:371: ERROR:  permission denied for table venda_pos_venda_itens
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.venda_pos_venda_itens TO anon;
+psql:<stdin>:374: ERROR:  permission denied for table venda_pos_venda_itens
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.venda_pos_venda_itens TO anon;
+psql:<stdin>:377: ERROR:  permission denied for table venda_pos_venda_operacoes
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.venda_pos_venda_operacoes TO anon;
+psql:<stdin>:380: ERROR:  permission denied for table venda_pos_venda_operacoes
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.venda_pos_venda_operacoes TO anon;
+psql:<stdin>:383: ERROR:  permission denied for table vendas_canceladas_auditoria
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.vendas_canceladas_auditoria TO anon;
+psql:<stdin>:386: ERROR:  permission denied for table vendas_canceladas_auditoria
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.vendas_canceladas_auditoria TO anon;
+psql:<stdin>:389: ERROR:  permission denied for table vendas_pagamentos
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.vendas_pagamentos TO anon;
+psql:<stdin>:392: ERROR:  permission denied for table vendas_pagamentos
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.vendas_pagamentos TO anon;
+psql:<stdin>:395: ERROR:  permission denied for table vendas
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.vendas TO anon;
+psql:<stdin>:398: ERROR:  permission denied for table vendas
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.vendas TO anon;
+psql:<stdin>:401: ERROR:  permission denied for table vinculos_fornecedor_produto
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.vinculos_fornecedor_produto TO anon;
+psql:<stdin>:404: ERROR:  permission denied for table vinculos_fornecedor_produto
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.vinculos_fornecedor_produto TO anon;
+SELECT|realtime.messages|0
+psql:<stdin>:410: ERROR:  permission denied for table messages
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON realtime.messages TO anon;
+SELECT|realtime.subscription|0
+psql:<stdin>:416: ERROR:  permission denied for table subscription
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON realtime.subscription TO anon;
+SELECT|storage.buckets_analytics|0
+DELETE|storage.buckets_analytics|0
+SELECT|storage.buckets_vectors|0
+psql:<stdin>:428: ERROR:  permission denied for table buckets_vectors
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON storage.buckets_vectors TO anon;
+SELECT|storage.buckets|0
+psql:<stdin>:434: ERROR:  Direct deletion from storage tables is not allowed. Use the Storage API instead.
+HINT:  This prevents accidental data loss from orphaned objects.
+CONTEXT:  PL/pgSQL function storage.protect_delete() line 5 at RAISE
+SELECT|storage.objects|0
+psql:<stdin>:440: ERROR:  Direct deletion from storage tables is not allowed. Use the Storage API instead.
+HINT:  This prevents accidental data loss from orphaned objects.
+CONTEXT:  PL/pgSQL function storage.protect_delete() line 5 at RAISE
+SELECT|storage.s3_multipart_uploads_parts|0
+psql:<stdin>:446: ERROR:  permission denied for table s3_multipart_uploads_parts
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON storage.s3_multipart_uploads_parts TO anon;
+SELECT|storage.s3_multipart_uploads|0
+psql:<stdin>:452: ERROR:  permission denied for table s3_multipart_uploads
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON storage.s3_multipart_uploads TO anon;
+SELECT|storage.vector_indexes|0
+psql:<stdin>:458: ERROR:  permission denied for table vector_indexes
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON storage.vector_indexes TO anon;

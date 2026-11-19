@@ -39,11 +39,11 @@ export default async function CaixaPage() {
     redirect('/login?next=%2Fcaixa')
   }
   const perfil = usuarioData?.perfil ?? null
-  // Nome do funcionário (cadastro) antes do login: quem abre o caixa é identificado pelo nome.
+  // Nome do funcionário (cadastro) primeiro: `user_metadata` é editável pelo próprio usuário, o cadastro não.
   const nomeCadastro = typeof usuarioData?.nome === "string" ? usuarioData.nome.trim() : ""
   const operadorLabel =
-    (metaNome.length > 0 ? metaNome : null) ||
     (nomeCadastro.length > 0 ? nomeCadastro : null) ||
+    (metaNome.length > 0 ? metaNome : null) ||
     (emailLocalPart.length > 0 ? emailLocalPart : null) ||
     (user?.id ? user.id.slice(0, 8) : null) ||
     "—"

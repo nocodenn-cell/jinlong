@@ -157,13 +157,13 @@ function setupFixture() {
   const venda2 = uuid()
   const operador = uuid()
   runOnce(`
-    INSERT INTO public.lojas (id, nome, codigo, ativo) VALUES ('${loja}', 'ESTQCONC Loja', '${codigo}', true) ON CONFLICT (id) DO UPDATE SET ativo = true;
+    INSERT INTO public.empresas (id, nome) VALUES ('fa5e0000-0000-4000-8000-0000000000f1', 'Fixture empresa (concorrencia)') ON CONFLICT (id) DO NOTHING; INSERT INTO public.lojas (empresa_id, id, nome, codigo, ativo) VALUES ('fa5e0000-0000-4000-8000-0000000000f1', '${loja}', 'ESTQCONC Loja', '${codigo}', true) ON CONFLICT (id) DO UPDATE SET ativo = true;
     INSERT INTO auth.users (id) VALUES ('${operador}') ON CONFLICT (id) DO NOTHING;
     INSERT INTO public.usuarios (id, nome, perfil, ativo, loja_id, idioma_preferido)
     VALUES ('${operador}', 'ESTQCONC Operador', 'OPERADOR', true, '${loja}', 'pt')
     ON CONFLICT (id) DO UPDATE SET ativo = true, loja_id = EXCLUDED.loja_id;
     INSERT INTO public.caixas (id, operador_id, loja_id, status, valor_inicial) VALUES ('${caixa}', '${operador}', '${loja}', 'ABERTO', 100);
-    INSERT INTO public.categorias (id, nome) VALUES ('${categoria}', 'ESTQCONC Categoria') ON CONFLICT (id) DO UPDATE SET nome = EXCLUDED.nome;
+    INSERT INTO public.categorias (empresa_id, id, nome) VALUES ('fa5e0000-0000-4000-8000-0000000000f1', '${categoria}', 'ESTQCONC Categoria') ON CONFLICT (id) DO UPDATE SET nome = EXCLUDED.nome;
     INSERT INTO public.produtos (id, codigo_barras, nome, categoria_id, preco_varejo, origem, tem_nf, ativo, loja_id)
     VALUES ('${produto}', '${('7899' + produto.replace(/-/g, '')).slice(0, 13)}', 'ESTQCONC Produto', '${categoria}', 50, 'china_manual', false, true, '${loja}');
     INSERT INTO public.estoque (produto_id, loja_id, quantidade_atual, estoque_minimo) VALUES ('${produto}', '${loja}', 1, 0);

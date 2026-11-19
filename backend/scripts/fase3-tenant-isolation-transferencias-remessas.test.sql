@@ -16,6 +16,7 @@
 
 \set ON_ERROR_STOP on
 BEGIN;
+INSERT INTO public.empresas (id, nome) VALUES ('fa5e0000-0000-4000-8000-0000000000f1', 'Fixture empresa (suite SQL)') ON CONFLICT (id) DO NOTHING;
 
 DO $setup$
 DECLARE
@@ -31,10 +32,10 @@ BEGIN
   INSERT INTO auth.users (id) VALUES (v_gerente_a), (v_gerente_b), (v_dono)
   ON CONFLICT (id) DO NOTHING;
 
-  INSERT INTO public.lojas (id, nome, codigo, ativo) VALUES
-    (v_loja_a, 'Fase3 Loja A', 'FASE3-A', true),
-    (v_loja_b, 'Fase3 Loja B', 'FASE3-B', true),
-    (v_loja_c, 'Fase3 Loja C', 'FASE3-C', true)
+  INSERT INTO public.lojas (empresa_id, id, nome, codigo, ativo) VALUES
+    ('fa5e0000-0000-4000-8000-0000000000f1', v_loja_a, 'Fase3 Loja A', 'FASE3-A', true),
+    ('fa5e0000-0000-4000-8000-0000000000f1', v_loja_b, 'Fase3 Loja B', 'FASE3-B', true),
+    ('fa5e0000-0000-4000-8000-0000000000f1', v_loja_c, 'Fase3 Loja C', 'FASE3-C', true)
   ON CONFLICT (id) DO UPDATE SET ativo = true;
 
   INSERT INTO public.usuarios (id, nome, perfil, ativo, loja_id) VALUES
@@ -43,7 +44,7 @@ BEGIN
     (v_dono, 'Fase3 Dono', 'DONO', true, v_loja_a)
   ON CONFLICT (id) DO UPDATE SET perfil = EXCLUDED.perfil, ativo = true, loja_id = EXCLUDED.loja_id;
 
-  INSERT INTO public.categorias (id, nome) VALUES (v_categoria, 'Fase3 Categoria')
+  INSERT INTO public.categorias (empresa_id, id, nome) VALUES ('fa5e0000-0000-4000-8000-0000000000f1', v_categoria, 'Fase3 Categoria')
   ON CONFLICT (id) DO UPDATE SET nome = EXCLUDED.nome;
 
   INSERT INTO public.produtos (id, codigo_barras, nome, categoria_id, preco_varejo, origem, tem_nf, ativo, loja_id)

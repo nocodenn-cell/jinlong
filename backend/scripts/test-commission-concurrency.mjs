@@ -186,7 +186,8 @@ function setupFixture() {
     ON CONFLICT (produto_id, loja_id) DO UPDATE SET quantidade_atual = 100000;
   `)
   runOnce(`
-    INSERT INTO public.configuracoes_gerais(chave, valor, tipo_dado) VALUES ('comissao_padrao_percentual','5','percent')
+    INSERT INTO public.empresas (id, nome) VALUES ('fa5e0000-0000-4000-8000-0000000000f1', 'Fixture empresa (concorrencia)') ON CONFLICT (id) DO NOTHING;
+    INSERT INTO public.configuracoes_gerais(empresa_id, chave, valor, tipo_dado) VALUES ('fa5e0000-0000-4000-8000-0000000000f1', 'comissao_padrao_percentual','5','percent')
     ON CONFLICT (empresa_id, chave) DO UPDATE SET valor='5';
   `)
 

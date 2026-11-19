@@ -1,0 +1,7 @@
+Teste E2E do formulário comercial no homolog (jinlong-homolog-palm, yvdilcmxyjafnnsfdtam), 2026-11-04.
+Lead sintético: nome "TESTE E2E SEC-02 (lead sintetico)", loja "TESTE SEC-02 Loja Ficticia", contato +55 11 90000-0000, utm_source teste-sec02-e2e.
+Envio 1 (POST /pedido-demo do site em dev, apontado ao homolog): HTTP 201, protocolo JL-261104-GWNBGY. Linha id 7316baf6-2ca9-4485-ba68-58437d995732.
+Envio 2 (mesmo corpo): HTTP 201, protocolo JL-261104-BDT52J. Linha id d83fb307-af8b-46ad-8149-0697c7552dc1. Duplicidade: sem idempotencia.
+Limite de taxa (envios inválidos do mesmo IP): 400 x5, depois 429.
+CRM: usuario authenticated comum ve 0 leads (sem administrador em commercial_admins; nenhum admin de teste criado).
+Remocao: DELETE por IDs exatos (2 removidos), com filtros de protocolo e utm_source. Total de leads apos: 0 (estado anterior: 0).

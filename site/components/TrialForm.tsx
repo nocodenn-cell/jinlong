@@ -44,6 +44,8 @@ export function TrialForm({ copy, email, whatsappHref, locale }: TrialFormProps)
   const [errors, setErrors] = useState<DemoFieldError[]>([])
   const [values, setValues] = useState<Values>({ name: '', store: '', contact: '', segment: '', idioma: locale })
   const statusRef = useRef<HTMLDivElement>(null)
+  // Chave de idempotência da tentativa: a mesma para reenvios com o mesmo conteúdo; nova quando o conteúdo muda.
+  const attemptRef = useRef<{ key: string; fp: string } | null>(null)
 
   const segmentLabel = copy.segments.find((s) => s.value === values.segment)?.label ?? values.segment
   const summary = `${copy.mailSubject}\n\n${copy.name}: ${values.name}\n${copy.store}: ${values.store}\n${copy.contact}: ${values.contact}\n${copy.segment}: ${segmentLabel}`
@@ -69,14 +71,18 @@ export function TrialForm({ copy, email, whatsappHref, locale }: TrialFormProps)
       form.querySelector<HTMLElement>(`[name="${first}"]`)?.focus()
       return
     }
+    const fp = JSON.stringify(v)
+    if (!attemptRef.current || attemptRef.current.fp !== fp) attemptRef.current = { key: crypto.randomUUID(), fp }
     setState({ kind: 'sending' })
     try {
       const res = await fetch('/pedido-demo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...v, channel: 'whatsapp', locale, ...readUtms(window.location.search), website: g('website') }),
+        body: JSON.stringify({ ...v, channel: 'whatsapp', locale, ...readUtms(window.location.search), website: g('website'), idempotency_key: attemptRef.current.key }),
       })
       const body = (await res.json().catch(() => null)) as { ok?: boolean; protocol?: string; error?: string; fields?: DemoFieldError[] } | null
+      // 409: a chave já foi usada com outro conteúdo. A próxima tentativa começa com chave nova.
+      if (res.status === 409) attemptRef.current = null
       if (res.ok && body?.ok && body.protocol) {
         trackLead()
         setState({ kind: 'ok', protocol: body.protocol })

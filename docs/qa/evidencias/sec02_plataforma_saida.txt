@@ -1,0 +1,16 @@
+== pg_stat_statements (anon)
+pg_stat_statements linhas|4859
+== net (anon): enfileira requisicao HTTP
+net.http_get enfileirado (id)|t
+== graphql (anon)
+psql:<stdin>:15: ERROR:  permission denied for schema graphql
+LINE 1: select 'graphql.resolve', left(graphql.resolve('{ __typename...
+                                       ^
+== realtime.messages (anon): INSERT sem policy
+psql:<stdin>:19: ERROR:  no partition of relation "messages" found for row
+psql:<stdin>:19: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+== storage.objects (anon): INSERT sem policy
+psql:<stdin>:23: ERROR:  new row violates row-level security policy for table "objects"
+psql:<stdin>:23: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+== storage.buckets (anon): UPDATE do bucket publico
+storage bucket update anon linhas|0

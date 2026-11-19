@@ -29,9 +29,11 @@ END $$;
 DO $setup$
 DECLARE l int;
 BEGIN
+  -- Fixture: o trigger de multiempresa exige empresa_id nas lojas (migration 20261019120000).
+  INSERT INTO public.empresas (id, nome) VALUES ('f3000005-0000-4000-8000-0000000000e1', 'LCE Empresa') ON CONFLICT (id) DO NOTHING;
   FOR l IN 1..3 LOOP
-    INSERT INTO public.lojas (id, nome, codigo, ativo) VALUES (pg_temp.lid(l), 'LCE Loja ' || l, 'LCEL' || l, true)
-    ON CONFLICT (id) DO UPDATE SET ativo = true;
+    INSERT INTO public.lojas (id, nome, codigo, ativo, empresa_id) VALUES (pg_temp.lid(l), 'LCE Loja ' || l, 'LCEL' || l, true, 'f3000005-0000-4000-8000-0000000000e1')
+    ON CONFLICT (id) DO UPDATE SET ativo = true, empresa_id = EXCLUDED.empresa_id;
   END LOOP;
   PERFORM pg_temp.mk_user(1,  'LCE Gerente 1',  'GERENTE',  1);
   PERFORM pg_temp.mk_user(2,  'LCE Dono 1',     'DONO',     1);

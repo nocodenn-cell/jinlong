@@ -1,0 +1,17 @@
+# Gateway da stack E2E: roteia /rest/v1 e /auth/v1 para os serviços internos. Sem chave de API (localhost).
+_format_version: "2.1"
+services:
+  - name: rest
+    url: http://e2e_rest:3000/
+    routes:
+      - name: rest-v1
+        strip_path: true
+        paths: [/rest/v1/]
+  - name: auth
+    url: http://e2e_auth:9999/
+    routes:
+      - name: auth-v1
+        strip_path: true
+        paths: [/auth/v1/]
+plugins:
+  - name: cors

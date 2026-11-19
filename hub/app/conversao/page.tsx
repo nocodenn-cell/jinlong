@@ -4,6 +4,7 @@ import {
   FASE_LABEL, FASES, INTERESSE_LABEL, listarTrials, parseTrialFilters, PRIORIDADE_LABEL, PRIORIDADES, trialStats, type TrialRow,
 } from '@/lib/conversao'
 import { formatDate, STATUS_LABEL } from '@/lib/model'
+import { tentar } from '@/lib/seguro'
 import { Shell, StatusBadge } from '../Shell'
 
 export const dynamic = 'force-dynamic'
@@ -18,7 +19,8 @@ function Prazo({ t }: { t: TrialRow }) {
 export default async function ConversaoPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { repo, demo } = await requireAdmin()
   const f = parseTrialFilters(await searchParams)
-  const all = await repo.listTrials()
+  const r = await tentar('conversao:listTrials', () => repo.listTrials(), [])
+  const all = r.value
   const s = trialStats(all)
   const rows = listarTrials(all, f)
   return (
@@ -27,6 +29,7 @@ export default async function ConversaoPage({ searchParams }: { searchParams: Pr
       <p className="hub-help">
         Comerciantes que se cadastraram pelo teste grátis. Toda contratação é aprovada aqui, manualmente — nenhuma cobrança é criada automaticamente.
       </p>
+      {r.falhou && <p className="hub-error" role="alert">Não foi possível carregar os testes grátis agora. Tente de novo em instantes.</p>}
       <section className="hub-cards" aria-label="Resumo dos testes grátis">
         <Link className="hub-card hub-card--link" href="/conversao?fase=em_teste"><span>Em teste agora</span><strong>{s.emTeste}</strong></Link>
         <Link className="hub-card hub-card--link" href="/conversao?fase=expira_logo"><span>Expiram em até 3 dias</span><strong>{s.expiraLogo}</strong></Link>

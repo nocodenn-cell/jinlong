@@ -130,7 +130,7 @@ export function CaixaPdvCartSaleBar({
           <Button
             type="button"
             variant="outline"
-            className="min-h-11 shrink-0 border-jl-border-1 bg-jl-surface-soft text-jl-fg-2 hover:bg-jl-surface-soft/80 hover:text-jl-fg-1"
+            className="h-12 shrink-0 border-jl-border-1 bg-jl-surface-soft px-5 text-jl-fg-2 hover:bg-jl-surface-soft/80 hover:text-jl-fg-1"
             onClick={onExcluirVenda}
             disabled={excluirDisabled}
           >
@@ -139,7 +139,7 @@ export function CaixaPdvCartSaleBar({
 
           <Button
             type="button"
-            className="h-14 min-w-[11rem] shrink-0 bg-jl-accent px-8 text-base font-bold text-white shadow-sm hover:bg-jl-accent/90 disabled:opacity-60"
+            className="h-12 min-w-[11rem] shrink-0 bg-jl-accent px-8 text-base font-bold text-white shadow-sm hover:bg-jl-accent/90 disabled:opacity-60"
             onClick={onFinalizar}
             disabled={
               finalizando || itensLength === 0 || buscando || carregandoRegras

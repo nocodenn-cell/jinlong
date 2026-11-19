@@ -1,6 +1,6 @@
 "use client"
 
-import { memo } from "react"
+import { memo, type ReactNode } from "react"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
 import type { ThermalStatus } from "@/hooks/useThermalPrinter"
@@ -21,6 +21,8 @@ type Props = {
   printerDeviceName?: string | null
   atalhosAbertos: boolean
   onAtalhosOpenChange: (open: boolean) => void
+  /** Troca de operador (Turno de / Bloquear / Trocar operador). */
+  trocaSlot?: ReactNode
 }
 
 function CaixaHeaderImpl({
@@ -37,6 +39,7 @@ function CaixaHeaderImpl({
   printerDeviceName,
   atalhosAbertos,
   onAtalhosOpenChange,
+  trocaSlot,
 }: Props) {
   const fontStack =
     idioma === "zh"
@@ -58,6 +61,7 @@ function CaixaHeaderImpl({
         printerDeviceName={printerDeviceName}
         atalhosAbertos={atalhosAbertos}
         onAtalhosOpenChange={onAtalhosOpenChange}
+        trocaSlot={trocaSlot}
       />
     </div>
   )

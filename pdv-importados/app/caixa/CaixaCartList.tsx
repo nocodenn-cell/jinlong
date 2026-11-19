@@ -1,10 +1,10 @@
 "use client"
 
-import React, { memo } from "react"
+import React, { memo, useState } from "react"
 import { Minus, Plus } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { cn } from "@/lib/utils"
 import type { ItemCarrinhoComPreco } from "@/stores/carrinhoStore"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
@@ -16,6 +16,11 @@ import {
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { enterVoltaParaBusca } from "@/app/caixa/caixaFocoBusca"
 import { DragonIcon } from "@/components/icons/DragonIcon"
+import {
+  ajustarQuantidadeUnidade,
+  normalizarUnidadeMedida,
+  quantidadeValidaParaUnidade,
+} from "@shared/format/unidadeMedida"
 import { labelOrigemCaixa } from "@/lib/caixa/metaProdutoUi"
 import type { OrigemProdutoCaixa } from "@/app/caixa/caixaActionTypes"
 
@@ -88,16 +93,31 @@ const QuantidadeStepper = memo(function QuantidadeStepper({
   onRemover,
 }: StepperProps) {
   const isCompact = size === "sm"
-  const buttonSizeClass = isCompact ? "h-12 w-12 min-h-[48px] min-w-[48px]" : "h-14 w-14 min-h-[56px] min-w-[56px]"
+  // Medidas do stepper: os três elementos (−, campo, +) compartilham a mesma altura
+  // e são elementos nativos. Não usar <Button>/<Input> aqui: o `.fp-btn` e o
+  // `.fp-control` impõem raio e borda próprios, e as classes de borda/raio do
+  // Tailwind perdiam para eles — por isso os cantos e divisórias ficavam tortos.
+  const boxHeightClass = isCompact ? "h-12" : "h-14"
+  const buttonSizeClass = isCompact ? "h-12 w-12" : "h-14 w-14"
   const inputSizeClass = isCompact ? "h-12 w-16 text-base" : "h-14 w-20 text-lg"
-  const iconClass = isCompact ? "h-6 w-6" : "h-7 w-7"
+  const iconClass = isCompact ? "h-5 w-5" : "h-6 w-6"
+  const stepperBtnClass = cn(
+    "inline-flex shrink-0 items-center justify-center bg-muted text-foreground transition-colors",
+    "hover:bg-accent hover:text-primary focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/40",
+    "disabled:pointer-events-none disabled:opacity-50",
+    buttonSizeClass,
+  )
+  // Rascunho enquanto o operador digita: sem ele, cada tecla re-normaliza o campo
+  // (ex.: "1," vira "1" e o que vem depois é concatenado) e apagar tudo remove a linha.
+  const [rascunho, setRascunho] = useState<string | null>(null)
+  const unidadeDoItem = normalizarUnidadeMedida(item.metaPdv?.unidadeMedida)
 
   const handleDecrement = () => {
     if (item.quantidade <= 1) {
       onRemover(item.id)
       return
     }
-    const next = parseQuantidadeCaixaFromString(String(item.quantidade - 1))
+    const next = ajustarQuantidadeUnidade(item.quantidade, unidadeDoItem, -1)
     if (next < QUANTIDADE_CAIXA_MIN) {
       onRemover(item.id)
       return
@@ -106,48 +126,58 @@ const QuantidadeStepper = memo(function QuantidadeStepper({
   }
 
   const handleIncrement = () => {
-    onAlterarQuantidade(item.id, parseQuantidadeCaixaFromString(String(item.quantidade + 1)))
+    onAlterarQuantidade(item.id, ajustarQuantidadeUnidade(item.quantidade, unidadeDoItem, 1))
   }
 
   return (
     <div
-      className="inline-flex items-center rounded-md border border-border bg-background overflow-hidden"
+      className={cn(
+        "inline-flex items-stretch overflow-hidden rounded-md border border-border bg-background",
+        boxHeightClass,
+      )}
       role="group"
       aria-label={caixaFmt(m.caixa.aria_qtde_item, { nome: item.nome })}
     >
-      <Button
+      <button
         type="button"
-        variant="ghost"
-        size="icon"
-        className={`${buttonSizeClass} rounded-none border-r-2 border-slate-400 bg-slate-100 text-slate-900 hover:bg-slate-200 hover:text-primary`}
+        className={cn(stepperBtnClass, "border-r border-border")}
         aria-label={caixaFmt(m.caixa.aria_qtde_diminuir, { nome: item.nome })}
         onClick={handleDecrement}
       >
         <Minus className={iconClass} strokeWidth={3} aria-hidden="true" />
-      </Button>
-      <Input
+      </button>
+      <input
         type="number"
         inputMode="decimal"
         min={QUANTIDADE_CAIXA_MIN}
         step={QUANTIDADE_CAIXA_MIN}
-        value={item.quantidade}
+        value={rascunho ?? item.quantidade}
         aria-label={caixaFmt(m.caixa.aria_qtde_item, { nome: item.nome })}
-        onChange={(e) =>
-          onAlterarQuantidade(item.id, parseQuantidadeInput(e.target.value))
-        }
+        onChange={(e) => {
+          const raw = e.target.value
+          setRascunho(raw)
+          // Vazio/0 não remove a linha durante a digitação: remover é ação explícita (remover / −).
+          // Quantidade que a unidade do produto não aceita (ex.: 2,5 de UN) não é confirmada.
+          const quantidade = parseQuantidadeInput(raw)
+          if (quantidade > 0 && quantidadeValidaParaUnidade(quantidade, unidadeDoItem)) {
+            onAlterarQuantidade(item.id, quantidade)
+          }
+        }}
+        onBlur={() => setRascunho(null)}
         onKeyDown={enterVoltaParaBusca}
-        className={`${inputSizeClass} rounded-none border-0 text-center font-semibold tabular-nums px-1 bg-background focus-visible:ring-1 focus-visible:ring-primary/40`}
+        className={cn(
+          "min-w-0 border-0 bg-background text-center font-semibold tabular-nums text-foreground outline-none focus:ring-2 focus:ring-inset focus:ring-primary/40",
+          inputSizeClass,
+        )}
       />
-      <Button
+      <button
         type="button"
-        variant="ghost"
-        size="icon"
-        className={`${buttonSizeClass} rounded-none border-l-2 border-slate-400 bg-slate-100 text-slate-900 hover:bg-slate-200 hover:text-primary`}
+        className={cn(stepperBtnClass, "border-l border-border")}
         aria-label={caixaFmt(m.caixa.aria_qtde_aumentar, { nome: item.nome })}
         onClick={handleIncrement}
       >
         <Plus className={iconClass} strokeWidth={3} aria-hidden="true" />
-      </Button>
+      </button>
     </div>
   )
 })
@@ -161,6 +191,15 @@ type CartRowProps = {
   onRemover: (itemId: string) => void
 }
 
+/**
+ * Grade única do cabeçalho e das linhas da tabela do carrinho. Cabeçalho e linhas
+ * usam a MESMA string: é isso que mantém cada coluna alinhada. As larguras
+ * cabem o stepper (14,5rem), o rótulo "Atacado (min 6)" e o preço com "↓ desconto"
+ * sem sobrepor a coluna seguinte (antes, 5,5rem era menor que o texto).
+ */
+const CART_GRID_COLS =
+  "grid grid-cols-[minmax(7rem,1fr)_14.5rem_6rem_7rem_8.5rem] items-center gap-x-2 px-3"
+
 const CartRowDesktop = memo(function CartRowDesktop({
   m,
   item,
@@ -171,9 +210,7 @@ const CartRowDesktop = memo(function CartRowDesktop({
 }: CartRowProps) {
   const res = resultadoLinha(item)
   return (
-    <li
-      className="grid grid-cols-[minmax(6rem,2.2fr)_11rem_5rem_5.5rem_5.5rem] gap-2 px-3 py-3 items-center hover:bg-accent/50 transition-colors"
-    >
+    <li className={cn(CART_GRID_COLS, "py-3 transition-colors hover:bg-accent/50")}>
       <div className="flex flex-col min-w-0 gap-1">
         <div className="flex items-center gap-2 min-w-0">
           <span className="font-semibold truncate text-base text-foreground">{item.nome}</span>
@@ -193,7 +230,7 @@ const CartRowDesktop = memo(function CartRowDesktop({
           </span>
         ) : null}
       </div>
-      <div className="flex items-center justify-end gap-1">
+      <div className="flex items-center justify-end gap-1.5">
         <QuantidadeStepper
           m={m}
           item={item}
@@ -201,17 +238,15 @@ const CartRowDesktop = memo(function CartRowDesktop({
           onAlterarQuantidade={onAlterarQuantidade}
           onRemover={onRemover}
         />
-        <Button
+        <button
           type="button"
-          variant="ghost"
-          size="sm"
-          className="h-8 px-1 text-small text-muted-foreground hover:text-primary"
+          className="inline-flex h-12 shrink-0 items-center rounded-md px-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-primary"
           onClick={() => onRemover(item.id)}
         >
           {m.caixa.remover}
-        </Button>
+        </button>
       </div>
-      <div className="text-right tabular-nums text-base">
+      <div className="text-right tabular-nums text-base leading-tight">
         {res.tipoPreco === "ATACADO" && res.precoOriginal > res.precoUnitario ? (
           <div className="space-y-0.5">
             <div className="line-through text-foreground/55 text-xs">
@@ -227,7 +262,7 @@ const CartRowDesktop = memo(function CartRowDesktop({
           </span>
         )}
       </div>
-      <div className="text-right tabular-nums text-base">
+      <div className="text-right tabular-nums text-base leading-tight">
         <div>
           {moeda}{" "}
           {formatDecimal2(res.precoUnitario * item.quantidade, locale)}
@@ -400,7 +435,7 @@ function CaixaCartListInner({
     <>
       {/* Desktop: tabela */}
       <div className="hidden md:block">
-        <header className="grid grid-cols-[minmax(6rem,2.2fr)_11rem_5rem_5.5rem_5.5rem] gap-2 px-3 py-2 text-sm text-foreground/85 border-b border-border">
+        <header className={cn(CART_GRID_COLS, "h-11 border-b border-border text-sm font-semibold text-foreground/85")}>
           <span>{m.caixa.col_produto}</span>
           <span className="text-right">{m.caixa.col_qtde}</span>
           <span className="text-right">{m.caixa.col_unit}</span>
@@ -442,7 +477,7 @@ function CaixaCartListInner({
           <Button
             type="button"
             variant="outline"
-            className="flex h-14 min-h-[56px] w-full items-center justify-center gap-2 border-2 border-slate-500 text-[18px] font-semibold"
+            className="flex h-12 w-full items-center justify-center gap-2 text-base font-semibold"
             onClick={onAdicionarMaisItens}
             data-testid="caixa-adicionar-mais-itens"
           >

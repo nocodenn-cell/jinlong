@@ -13,19 +13,25 @@
 \set ON_ERROR_STOP on
 BEGIN;
 
-SELECT p.loja_id AS loja FROM public.produtos p
-WHERE p.preco_varejo > 0
-  AND EXISTS (SELECT 1 FROM public.usuarios u WHERE u.loja_id = p.loja_id AND u.ativo AND u.perfil = 'GERENTE')
-  AND EXISTS (SELECT 1 FROM public.usuarios u WHERE u.loja_id = p.loja_id AND u.ativo AND u.perfil = 'OPERADOR')
-ORDER BY p.loja_id, p.id LIMIT 1 \gset
-SELECT id AS gerente_id FROM public.usuarios WHERE perfil='GERENTE' AND ativo AND loja_id=:'loja' LIMIT 1 \gset
-SELECT id AS operador_id FROM public.usuarios WHERE perfil='OPERADOR' AND ativo AND loja_id=:'loja' LIMIT 1 \gset
+-- Fixture explícita (não depende do estado do banco): empresa, loja, GERENTE, OPERADOR e caixa aberto do operador.
+\set loja 'b0f00001-0000-4000-8000-0000000000a1'
+\set gerente_id 'b0f00002-0000-4000-8000-0000000000a1'
+\set operador_id 'b0f00002-0000-4000-8000-0000000000a2'
+INSERT INTO public.empresas (id, nome) VALUES ('b0f00000-0000-4000-8000-0000000000e1', 'ADV Empresa') ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.lojas (id, nome, codigo, empresa_id) VALUES (:'loja', 'ADV Loja', 'ADVA', 'b0f00000-0000-4000-8000-0000000000e1') ON CONFLICT (id) DO NOTHING;
+INSERT INTO auth.users (id, aud, role, email) VALUES (:'gerente_id', 'authenticated', 'authenticated', 'adv-ger@t.local'), (:'operador_id', 'authenticated', 'authenticated', 'adv-op@t.local') ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.usuarios (id, nome, perfil, ativo, loja_id) VALUES (:'gerente_id', 'ADV Gerente', 'GERENTE', true, :'loja'), (:'operador_id', 'ADV Operador', 'OPERADOR', true, :'loja') ON CONFLICT (id) DO UPDATE SET ativo = true, perfil = EXCLUDED.perfil, loja_id = EXCLUDED.loja_id;
 
 UPDATE public.caixas SET status = 'FECHADO', data_fechamento = now(), valor_fechamento = COALESCE(saldo_atual, 0), fechamento_diferenca = 0 WHERE loja_id=:'loja'::uuid AND status='ABERTO';
 INSERT INTO public.caixas(operador_id, loja_id, status, valor_inicial) VALUES (NULL, :'loja', 'ABERTO', 0);
 SELECT id AS caixa FROM public.caixas WHERE loja_id=:'loja' AND status='ABERTO' LIMIT 1 \gset
 UPDATE public.caixas SET valor_inicial=100000, saldo_atual=100000 WHERE id=:'caixa';
-UPDATE public.pdv_config SET limite_sangria_sem_gerente = 1 WHERE id = 1;
+-- Limite de sangria sem gerente = 1 PARA ESTA LOJA (a linha id=1 pode ser de outra loja e não vale aqui).
+-- A configuração do PDV que vale para a loja é a da EMPRESA (loja_id NULL), via fp_pdv_config_id.
+INSERT INTO public.pdv_config (id, loja_id, empresa_id, gerente_id, cfop_padrao, cst_padrao, regime_tributario, auto_enqueue_fiscal, tema_padrao, imprimir_cupom_auto, formato_impressao, idioma_padrao)
+SELECT coalesce((SELECT max(id) FROM public.pdv_config), 0) + 1, NULL, 'b0f00000-0000-4000-8000-0000000000e1', :'gerente_id', '5102', '00', 'SIMPLES_NACIONAL', false, 'noturno', true, 'TERMICA', 'pt' FROM public.pdv_config
+WHERE NOT EXISTS (SELECT 1 FROM public.pdv_config WHERE loja_id IS NULL AND empresa_id = 'b0f00000-0000-4000-8000-0000000000e1');
+UPDATE public.pdv_config SET limite_sangria_sem_gerente = 1 WHERE loja_id IS NULL AND empresa_id = 'b0f00000-0000-4000-8000-0000000000e1';
 
 SELECT gen_random_uuid() AS fornecedor, gen_random_uuid() AS conta_a, gen_random_uuid() AS conta_b \gset
 INSERT INTO public.fornecedores(id, cnpj, nome, loja_id)

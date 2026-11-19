@@ -41,3 +41,16 @@ export async function gotoApp(
 ) {
   return page.goto(resolveE2eUrl(path), { ...E2E_GOTO_DOMCONTENTLOADED, ...options })
 }
+
+/**
+ * Pronto para interação: o React já hidratou a página (há elementos com props do React).
+ * Clicar antes disso dispara só o HTML do SSR — o botão não faz nada (PDV-100.1, Playwright).
+ * Condição de estado, não timeout: espera o próprio React anexar os handlers.
+ */
+export async function esperarHidratacao(page: Page): Promise<void> {
+  await page.waitForFunction(() =>
+    Array.from(document.querySelectorAll('button')).some((el) =>
+      Object.keys(el).some((k) => k.startsWith('__reactProps')),
+    ),
+  )
+}

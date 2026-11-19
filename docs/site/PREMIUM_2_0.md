@@ -49,5 +49,5 @@ Real: o registro do pedido de demonstração (`commercial_leads`, insert-only co
 ## Homologação pendente
 
 O fluxo de ponta a ponta com gravação real depende de `SITE_DEMO_SUPABASE_URL` e
-`SITE_DEMO_SUPABASE_ANON_KEY` no ambiente de Preview. Sem elas, `/pedido-demo` responde 503 e a página
+`SITE_DEMO_SUPABASE_SERVICE_ROLE_KEY` no ambiente de Preview (só no servidor) e `SITE_DEMO_FORM_ATIVO=true` para ligar o formulário. Sem elas, `/pedido-demo` responde 503 e a página
 mostra WhatsApp/e-mail (comportamento coberto pelo E2E). Os testes usam mocks da rota.

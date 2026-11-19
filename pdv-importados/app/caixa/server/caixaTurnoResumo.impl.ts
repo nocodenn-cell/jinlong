@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { mensagemErroComSecao, mensagemErroDeExcecao } from '@/lib/errors/mensagemErroUsuario'
 import { idiomaOperadorParaErro } from '@/app/caixa/server/caixaErroOperador'
 import { caixaMsgOperador, caixaMsgServidor } from '@/app/caixa/server/caixaMensagensServidor'
+import { obterCaixaOperadoId } from '@/app/caixa/server/cashSession'
 
 export type TurnoResumoResult =
   | {
@@ -46,16 +47,11 @@ export async function obterResumoVendasTurnoImpl(): Promise<TurnoResumoResult> {
     if (!user) return { ok: false, error: await caixaMsgOperador( 'err_srv_sessao_curta') }
     const idioma = await idiomaOperadorParaErro()
 
-    const { data: caixa, error: caixaErr } = await supabase
-      .from('caixas')
-      .select('id')
-      .eq('operador_id', user.id)
-      .eq('status', 'ABERTO')
-      .order('data_abertura', { ascending: false })
-      .limit(1)
-      .maybeSingle()
+    // Caixa que o usuário opera agora (troca de operador: o resumo é do TURNO, não só das vendas dele).
+    const { caixaId: caixaOperado, error: caixaErr } = await obterCaixaOperadoId(supabase, user.id)
+    const caixa = caixaOperado ? { id: caixaOperado } : null
 
-    if (caixaErr) return { ok: false, error: mensagemErroComSecao('Caixa', caixaErr.message, idioma) }
+    if (caixaErr) return { ok: false, error: mensagemErroComSecao('Caixa', caixaErr, idioma) }
     if (!caixa) return { ok: true, quantidadeVendas: 0, totalRecebido: 0, totalRecebidoDinheiro: 0, totalAReceber: 0, caixaId: '' }
 
     // ✅ FASE 6: Reconciliação corrigida para pagamento parcial

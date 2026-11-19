@@ -154,6 +154,15 @@ function makeSupabase(opts?: { caixaAberto?: boolean }) {
           error: null,
         })
       }
+      // Caixa que o usuário opera agora (troca de operador): mesma autoridade do status do caixa.
+      if (name === 'obter_status_caixa_operador') {
+        return Promise.resolve({
+          data: state.caixaAberto
+            ? [{ status: 'ABERTO', caixa_id: '22222222-2222-2222-2222-222222222222' }]
+            : [{ status: 'FECHADO', caixa_id: null }],
+          error: null,
+        })
+      }
       return Promise.resolve({ data: {}, error: null })
     }),
   }

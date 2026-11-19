@@ -35,6 +35,7 @@ import {
 } from '@/lib/caixa/configuracoesGeraisCaixa'
 import { registrarAlertasLevesVenda } from '@/app/caixa/server/registrarAlertasLevesVenda'
 import { perfilPodeCancelarVenda } from '@/app/caixa/server/cancelarVendaPerfil'
+import { obterCaixaOperadoId } from '@/app/caixa/server/cashSession'
 import {
   captureVendaError,
   captureRpcVendaError,
@@ -239,27 +240,20 @@ export async function finalizarVendaCaixaImpl(
       }
     }
 
-    // Verificar caixa aberto
-    const { data: caixaExistente, error: caixaAbertoErr } = await supabase
-      .from('caixas')
-      .select('id')
-      .eq('operador_id', user.id)
-      .eq('status', 'ABERTO')
-      .order('data_abertura', { ascending: false })
-      .limit(1)
-      .maybeSingle()
+    // Verificar caixa aberto — o que o usuário OPERA agora (troca de operador: pode ser turno de outro responsável)
+    const { caixaId: caixaOperado, error: caixaAbertoErr } = await obterCaixaOperadoId(supabase, user.id)
 
     if (caixaAbertoErr) {
-      return { ok: false, error: caixaErroOperador(caixaAbertoErr.message, await idiomaOperadorParaErro()) }
+      return { ok: false, error: caixaErroOperador(caixaAbertoErr, await idiomaOperadorParaErro()) }
     }
-    if (!caixaExistente) {
+    if (!caixaOperado) {
       return {
         ok: false,
         error: caixaErroOperador('caixa fechado ao finalizar venda', await idiomaOperadorParaErro()),
       }
     }
 
-    const caixaId = caixaExistente.id
+    const caixaId = caixaOperado
 
     // ✅ VALIDAÇÃO FASE 5b: Se há saldo pendente, cliente_id é obrigatório
     const somaPagamentos = roundMoney2(input.pagamentos.reduce((acc, p) => acc + p.valor, 0))

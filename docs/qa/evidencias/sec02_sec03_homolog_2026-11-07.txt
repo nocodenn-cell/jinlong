@@ -1,0 +1,54 @@
+# Evidência: sec03 e sec02 no homolog (jinlong-homolog-palm, yvdilcmxyjafnnsfdtam), 2026-11-07
+
+Escopo: homolog apenas. Produção (kbabmewnahysfvlybiak) não foi tocada.
+Migrations aplicadas no homolog (autorizado pelo dono): 20261104160000 (commercial_leads_idempotencia) e
+20261104170000 (commercial_leads_rate_limit), com o conteúdo da branch. A 20261104150000 já estava no homolog com a
+RPC antiga (12 argumentos, anon com EXECUTE); a 160000 a substituiu.
+
+## sec03 (idempotência e limite), T1 a T11
+
+Executado em blocos (o MCP não mantém pg_temp entre chamadas). Resultado: todos os blocos passaram.
+
+- T1 + T2: primeiro envio grava 1 linha; reenvio idêntico devolve o protocolo original sem duplicar. OK
+- T3: chave reutilizada com conteúdo diferente -> LEAD_CHAVE_REUTILIZADA, nada gravado. OK
+- T4: nova tentativa legítima (chave nova) grava. OK
+- T5: 8 payloads inválidos -> código esperado, nenhuma linha gravada. OK
+- T6 + T7: 10 aceitas, 11ª LEAD_RATE_LIMIT; IP com espaços cai no mesmo bucket; IP malformado vai para sem-ip. OK
+- T8: janela de 10 minutos vencida libera nova tentativa. OK
+- T9: retenção remove bucket com janela vencida. OK
+- T10: salt ausente -> LEAD_RATE_INDISPONIVEL, nada gravado (fail-closed). OK
+- T11: anon não executa a RPC, não lê nem altera leads, não acessa tabelas de limite nem a checagem. OK
+
+Limpeza: 0 leads, 0 buckets, config com 1 linha (estado anterior ao teste).
+
+Não reproduzido: numa primeira tentativa, o T1 falhou com LEAD_RATE_LIMIT na segunda chamada. Não reproduzido
+depois: a mesma sequência passou nas reexecuções; um probe com chamadas repetidas mostrou o contador correto
+(1, 2, 4). A causa não foi identificada. Registrada aqui para não ser perdida.
+
+## concorrência (sec03-commercial-leads-concorrencia.sh)
+
+Não executado no homolog: o script usa docker/psql direto e commits paralelos, e não há conexão direta ao banco nesta
+sessão. Pendente.
+
+## sec02 (verificações equivalentes)
+
+Executadas num bloco que termina em exceção de propósito, então tudo é desfeito. Resultado:
+
+- 1 anon INSERT direto: negado. OK
+- 2 anon SELECT direto: negado. OK
+- 3 anon chama a RPC: negada. OK
+- 4 service_role chama a RPC válida: devolve protocolo, 1 linha. OK
+- 5 entradas inválidas: LEAD_PROTOCOLO_INVALIDO, LEAD_NOME_INVALIDO (x2), LEAD_CANAL_INVALIDO, LEAD_CIDADE_INVALIDA,
+  LEAD_SEGMENTO_INVALIDO, LEAD_WECHAT_INVALIDO. OK
+- 6 authenticated SELECT: não negado, por desenho. O papel tem SELECT e RLS ativa, com a policy
+  commercial_leads_admin_select (is_commercial_admin() = existe em commercial_admins com auth.uid()).
+  Confirmado com dados, em bloco que termina em exceção (tudo desfeito): com 1 lead no banco, usuário comum vê 0
+  e admin vê 1.
+
+## Achado resolvido: policy de INSERT para anon
+
+Policy `commercial_leads_anon_insert` (INSERT, TO anon, WITH CHECK status = 'novo') existia no homolog. Era inerte
+(anon sem privilégio de INSERT). Removida pela migração 20261107120000_commercial_leads_remove_anon_insert_policy,
+aplicada no homolog em 2026-11-07 com autorização do dono. Depois: políticas = admin_select e admin_update;
+anon_insert = false; anon executa a RPC = false; service_role executa a RPC = true. Produção não tocada: a migração
+segue adiada no manifesto (exige label deploy-prod:aprovado e autorização).

@@ -56,6 +56,8 @@ export function useCaixaPagamentos(
       // Parcela única: atualizar valor se for vazio/zerado
       if (old.length === 1) {
         const currentValor = old[0].valor
+        // Carrinho esvaziado: o recebido digitado era da venda anterior (D-09). Zera.
+        if (totalLiquidoComGerente <= 0.009) return [{ ...old[0], valor: 0 }]
         if (old[0].formaPagamento !== "DINHEIRO" || currentValor <= 0.009) {
           return [{ ...old[0], valor: roundMoney2(Math.max(0, totalLiquidoComGerente)) }]
         }

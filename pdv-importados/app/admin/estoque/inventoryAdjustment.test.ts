@@ -12,7 +12,7 @@ describe('createInventoryAdjustmentService', () => {
     const svc = createInventoryAdjustmentService(
       { rpc: vi.fn() } as never,
       'loja-1',
-      { adjustRpc, reader },
+      { adjustRpc, reader, unidadeDoProduto: async () => null },
     )
 
     const result = await svc.adjustInventory({
@@ -46,7 +46,7 @@ describe('createInventoryAdjustmentService', () => {
     const svc = createInventoryAdjustmentService(
       { rpc: vi.fn() } as never,
       'loja-1',
-      { adjustRpc, reader },
+      { adjustRpc, reader, unidadeDoProduto: async () => null },
     )
 
     const result = await svc.adjustInventory({
@@ -88,7 +88,7 @@ describe('createInventoryAdjustmentService', () => {
     const service = createInventoryAdjustmentService(
       { rpc: vi.fn() } as never,
       'loja-1',
-      { reader, adjustRpc },
+      { reader, adjustRpc, unidadeDoProduto: async () => null },
     )
     const result = await service.adjustInventory({
       productId: 'p1',

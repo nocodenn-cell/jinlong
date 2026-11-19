@@ -17,6 +17,7 @@ import {
 } from '@shared-core/src/inventory'
 import { createInventoryReader } from '@/app/admin/estoque/inventoryReader'
 import { resolveInventoryMessage } from '@/app/admin/estoque/inventoryMessages'
+import { primeiroItemComQuantidadeInvalida } from '@shared/format/unidadeMedida'
 
 export type AdjustEstoqueRpcFn = (args: {
   p_produto_id: string
@@ -30,9 +31,13 @@ export type AdjustEstoqueRpcFn = (args: {
   p_minimo_esperado: number | null
 }) => Promise<{ error: { message: string } | null }>
 
+export type UnidadeProdutoFn = (productId: string) => Promise<{ nome: string; unidade_medida: string | null } | null>
+
 export type InventoryAdjustmentDeps = {
   adjustRpc: AdjustEstoqueRpcFn
   reader: InventoryReader
+  /** RN-04: unidade cadastrada do produto. Quantidade fracionada em UN/CX/FD é recusada antes da RPC. */
+  unidadeDoProduto: UnidadeProdutoFn
 }
 
 function defaultDeps(supabase: SupabaseClient, lojaId: string): InventoryAdjustmentDeps {
@@ -42,6 +47,12 @@ function defaultDeps(supabase: SupabaseClient, lojaId: string): InventoryAdjustm
       return { error }
     },
     reader: createInventoryReader(supabase, lojaId),
+    unidadeDoProduto: async (productId) => {
+      // RPC existente (tenant-safe: fp_assert_loja/fp_assert_produto): não lê a tabela produtos diretamente.
+      const { data } = await supabase.rpc('obter_estoque_disponivel_transferencia', { p_loja_id: lojaId, p_produto_id: productId })
+      const linha = (Array.isArray(data) ? data[0] : data) as { unidade_medida: string | null } | null | undefined
+      return linha ? { nome: 'produto', unidade_medida: linha.unidade_medida ?? null } : null
+    },
   }
 }
 
@@ -71,6 +82,21 @@ export function createInventoryAdjustmentService(
           ok: false,
           error: resolveInventoryMessage('pt-BR', INVENTORY_ERROR_CODES.AUTH_REQUIRED),
           code: INVENTORY_ERROR_CODES.AUTH_REQUIRED,
+        }
+      }
+
+      const produto = await resolved.unidadeDoProduto(cmd.productId)
+      const invalida = produto
+        ? primeiroItemComQuantidadeInvalida(
+            [{ produtoId: cmd.productId, quantidade: cmd.quantity }],
+            [{ id: cmd.productId, nome: produto.nome, unidade_medida: produto.unidade_medida }],
+          )
+        : null
+      if (invalida) {
+        return {
+          ok: false,
+          error: `A quantidade de "${invalida.nome}" deve respeitar a unidade do produto (${invalida.unidade}).`,
+          code: INVENTORY_ERROR_CODES.QTY_INVALID,
         }
       }
 

@@ -1,4 +1,5 @@
 import type { OrigemProdutoCaixa, ProdutoCaixaDTO } from '@/app/caixa/caixaActionTypes'
+import { normalizarUnidadeMedida } from '@shared/format/unidadeMedida'
 
 /** Remove caracteres perigosos para padrão ILIKE. */
 export function sanitizeIlikeFragment(s: string): string {
@@ -43,6 +44,7 @@ export function mapProdutoRow(
     origem: OrigemProdutoCaixa
     tem_nf: boolean
     observacao: string | null
+    unidade_medida?: string | null
   },
   quantidade_estoque: number | null,
   estoque_minimo: number | null,
@@ -63,10 +65,11 @@ export function mapProdutoRow(
     origem: r.origem,
     tem_nf: Boolean(r.tem_nf),
     observacao: obs,
+    unidade_medida: normalizarUnidadeMedida(r.unidade_medida),
     quantidade_estoque,
     estoque_minimo,
   }
 }
 
 export const PRODUTO_COLS =
-  'id, nome, codigo_barras, codigo_interno, preco_varejo, preco_atacado, categoria_id, origem, tem_nf, observacao, ativo, status_publicacao' as const
+  'id, nome, codigo_barras, codigo_interno, preco_varejo, preco_atacado, categoria_id, origem, tem_nf, observacao, unidade_medida, ativo, status_publicacao' as const

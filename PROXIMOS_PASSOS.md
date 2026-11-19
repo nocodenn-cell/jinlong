@@ -2,6 +2,24 @@
 
 ## P0 — Quebrado/travado
 
+- Site Jinlong: formulário comercial da home falha em produção. `anon` não tem INSERT em `commercial_leads`; a correção (`#676` + `#677`) está bloqueada com checks vermelhos. A Fase 0 não detectou isso, porque o E2E intercepta o envio. "Formulário OK" só vale com validação real em Preview
+- Site Jinlong / Legal: Termos prometem emissão fiscal (SEFAZ/SAT) e o FAQ condiciona isso à conversa comercial; a fiscal é stub (ver item de Termos em P1). Alinhar só após decisão de produto e revisão jurídica
+- Auditoria GitHub (2026-11-11, `docs/governance/GITHUB_AUDIT.md`): a proteção de `main` não exige nenhuma aprovação humana (só os 6 checks). Decidir revisão obrigatória + CODEOWNERS. Ação de configuração: exige autorização
+- Colisão de versão de migration (quebra `db push`/reset): `#537` × main em `20261010120000`; `#623` × main em `20261028120000`; `#675` × `#677` em `20261107120000`. Resolver antes de qualquer merge desses PRs
+- `#675` (D1–D6): não mesclar. Traz 5 migrations fora do manifesto de adiadas (`20261106100000`–`20261107120000`); o label `deploy-prod:aprovado` não autoriza deploy nem merge (regra do próprio manifesto)
+- Leads: `#677` recria `registrar_lead_comercial` e `commercial_lead_rate_check`, que `main` já tem como migrations deferidas (`20261104150000`–`170000`). Escolher a versão canônica antes de `#676`/`#677`. Os dois juntos, senão o formulário comercial segue quebrado
+- `#669` reescreve `20261104120000` (anon), que está em `main` como deferida (6.140 → 7.362 bytes); `#673` depende dela. Decidir qual versão vale
+- PR #655: label `deploy-prod:aprovado` aplicado pelo dono (2026-11-05). Pendente: migrations `remote_ausente` (`migration-remote-drift` continua vermelho) (`20261028100000`–`20261030140000`, no `migration-remote-drift`). Types drift já corrigido em `823142b6`
+- Drift de migrations em produção: `jinlong` (`kbabmewnahysfvlybiak`) continua com 11 migrations sem registro e o check `migration-remote-drift` vermelho. Homolog já está reconciliado (481 versões, 31 aplicadas e registradas em 2026-11-04). Produção só com decisão e autorização próprias. Detalhes e matriz em `docs/runbooks/RECONCILIACAO_HOMOLOG_2026-11-04.md`
+- Homologação funcional incompleta: falta login real com contas de teste e os fluxos de escrita (PDV, vendas em espera, estoque, NF-e, financeiro, cancelamentos, concorrência). Só isolamento RLS e privilégios foram verificados (`docs/runbooks/RECONCILIACAO_HOMOLOG_2026-11-04.md`, seção 11)
+- Segurança (vazamento): as views `v_vendas_dia`, `v_top_produtos` e `v_venda_consistencia_anomalias` contornam o RLS e expõem vendas de todas as empresas para qualquer logado e para `anon` (confirmado no homolog com privilégios reais). Correção `20261104120000_sec_anon_privilegios_minimos.sql` aplicada no homolog em 2026-11-04 (confirmado: `anon` sem acesso). Falta aplicar em produção com decisão própria
+- Segurança (plataforma): `pg_stat_statements` expõe texto de consultas a `PUBLIC`, e `net` deixa `anon` enfileirar HTTP. Ambos são do Supabase; pedir a revogação a quem administra o projeto
+- Regressão preexistente: `anon` não tem `INSERT` em `commercial_leads`, então o formulário comercial do site falha. Decidir se concede o INSERT (policy já existe) ou desativa o formulário
+- PDV-100 D-07: PIX e cartão geram recebível PENDENTE sem conta, porque a loja não tem `contas_financeiras` nem `financeiro_contas_forma` configurados. Configurar contas no ambiente e decidir se a venda deve bloquear sem conta (`docs/qa/PDV_100_1_DEFEITOS_E_DECISOES.md`)
+- PDV-100 D-11 (decisão): `produtos.preco_atacado` (17,90) é ignorado na venda; só as faixas de `precos_atacado` contam. Escolher a fonte oficial do atacado antes de liberar
+- PDV-100 D-05 (decisão): o troco e o valor recebido não são persistidos. Proposta com coluna nova em `vendas_pagamentos` e mudança no RPC v4 em `docs/qa/PDV_100_1_DEFEITOS_E_DECISOES.md`; depende de aprovação (migration + SSoT do fechamento)
+- Sprint final (golden flow do PDV): trabalho recuperado em `claude/jinlong-pdv-operational-validation-56c18a` (GO-LIVE-01, 44 commits à frente da main, publicado em 2026-11-05). Ainda não executado nesta sessão: stack E2E isolada, Playwright do fluxo (login, caixa, venda, pagamento dividido, cancelamento, devolução, fechamento, estoque e financeiro), e o alerta "Não foi possível concluir" após operação efetivada
+- Inventário: 55 worktrees e ~280 branches locais; muitos trabalhos sem upstream (ex.: `feat/pr2d-caixas-elegiveis-rpc` +32, `codex/pdv-pagamentos-desconto` +2, `claude/troca-reposicao-caixa-gerente` +1). Consolidar em uma solução por tema antes de novas implementações; não apagar worktrees de outros trabalhos
 - Merge da PR #653 (consolidação NF-e com #654) bloqueado até o dono confirmar o registro de produção; decidir sobre o label `deploy-prod:aprovado`, que não foi aplicado (`docs/audits/CONSOLIDACAO_NFE_2026-11-01.md`)
 - Conta a pagar de NF-e sem conciliação: confirmação aceita duplicatas que não somam o valor da NF (NF 100,00 com duplicata 60,00 gera AP de 60,00). Reproduzido em homologação em 2026-10-30. Correção em `20261030120000` (commit 81daca66), aplicada em homologação fora do histórico de migrations; pendente registrar/aplicar formalmente e validar em produção antes de liberar (D-1)
 - Suíte de NF-e inexecutável no esquema atual: os 13 scripts `.test.sql`/`.mjs` não criam `empresa_id` (trigger `EMPRESA_ID_OBRIGATORIA`), e `nfe-conferencia-flx05-ui` espera `IMPORT_NFE_LOJA` enquanto o código retorna `ACESSO_LOJA_NEGADO`. Corrigir fixtures antes de qualquer PASSOU novo (D-4, D-5)
@@ -16,9 +34,44 @@
 - #620: CI corrigido (token entre empresas e tipos); revisar e aprovar; após merge, deploy manual das Edge Functions alteradas. #623: decidir o comportamento esperado sem ADMIN nos ~20 testes que ainda criam ADMIN; depois regenerar tipos
 - Decidir módulos marcados DRAFT já aplicados em produção (comissão #607, import intelligence #601): validar ou esconder do cliente
 - Congelar features até o corte do primeiro cliente (só hotfix P0 em produção)
+- Decidir o lote de segurança das migrations 20261028100000–20261104180000 (adiadas no manifesto): a 20261104120000 (privilégios de anon) está aberta em produção e é a prioridade; depois 20261028110000, 20261028122000 e a cadeia de leads
 
 ## P1 — Falta para lançar (MVP)
+- Site Jinlong: validar com o contador os textos do simulador híbrido já ajustados ao prazo vencido (`site/lib/simuladorHibrido.copy.ts`). Não publicar antes dessa revisão
+- Site Jinlong: `metadataBase` ausente (build usa localhost:3000 para imagens sociais); homes e simulador sem `og:image`/`twitter:image` em produção. Corrigir junto com canonical e hreflang
+- Site Jinlong: LCP mobile de laboratório 3.260 ms (PT) e 3.536 ms (ZH), acima de 2,5 s; CLS 0.000. Baseline em `fase0-main-2929b09a`; repetir a medição após cada incremento
+- Site Jinlong: demonstração com dados sintéticos e capturas reais só com material autorizado (homologação). Não publicar mockup como produto real
+- Site Jinlong: proposta de experiência autosserviço (jornada, classificação DISPONÍVEL / EM DESENVOLVIMENTO / PLANEJADO / NÃO EXISTE por módulo, demo isolada). A análise não foi concluída (erro de modelo em 2026-11-10 12:46); refazer. Preços dependem de `saas.planos` (placeholder)
+- Hub (`hub/`): commitar e publicar as correções de resiliência do painel (branch `claude/admin-screen-error-7f1d71`, 8 arquivos alterados + 3 novos). Só depois do commit o deploy na Vercel (`nature-code-hub`) entra em produção. Exige autorização para commit/push
+- Hub: a migration `growth001_central_conversao` foi aplicada no `jinlong` com nome de registro próprio; o arquivo do repo é `20261023130000`. Reconciliar o registro de migrations de produção com o repo (ver drift acima)
 
+- Formulário comercial (`commercial_leads`): dono decidiu `service_role` (2026-11-07); migrations `150000`/`160000`/`170000`, rollback da `170000` e site já ajustados na branch. Guarda de plataforma relaxada (2026-11-07): `service_role` só como nome de variável no servidor; suíte do site 89/89. Movido para nova migration (2026-11-07): as migrations `150000`/`160000`/`170000` voltaram ao original de `main` (guarda de governança); as correções `service_role` + `p_client_ip` estão em `20261107130000_commercial_leads_servico_e_ip.sql` (com rollback; adiada no manifesto; testada no homolog em transação com rollback, idempotente). Scripts `backend/scripts/sec03-*` e evidências `docs/qa/evidencias/sec02_*` atualizados e rodados em Postgres 16 descartável (não no Supabase real; ver `sec02_bootstrap_minimo.sql`). Homolog (`jinlong-homolog-palm`, `yvdilcmxyjafnnsfdtam`), 2026-11-07, autorizado pelo dono: 160000 e 170000 aplicadas; sec03 T1–T11 passou (limpo depois); sec02 equivalente passou exceto `authenticated` (tem SELECT com RLS admin, por desenho). Evidência: `docs/qa/evidencias/sec02_sec03_homolog_2026-11-07.txt`. Pendências: (1) explicar um `LEAD_RATE_LIMIT` inesperado visto numa tentativa, não reproduzido depois; (2) concorrência não rodada (sem conexão direta); (3) `20261107120000_commercial_leads_remove_anon_insert_policy.sql` aplicada no homolog (policy `commercial_leads_anon_insert` removida); falta levar a produção com label `deploy-prod:aprovado` e autorização; (4) RLS confirmado com dados: usuário comum vê 0, admin vê 1. Produção intacta. Ver `docs/planos/LEADS_ENDPOINT_PROTEGIDO.md` §4 e §9
+- Limite de taxa dos leads (`170000`): com a chamada do servidor, todos os visitantes contam como um IP só; corrigir antes de aplicar (ver §3 do plano) e confirmar `x-vercel-forwarded-for` em homolog
+- Auditoria GitHub: três implementações concorrentes da mesma regra. M1 multiempresa em `#493`/`#496`/`#537`; fechamento de caixa com venda em espera em `#656` (D1 de `#675` faz o mesmo); fallback de RPC no sync-outbox em `#670`/`#674`. Escolher uma de cada
+- Auditoria GitHub: a cadeia P0 `#488`→`#498`→`#499`→`#500` tem commits contidos uns nos outros. Mesclar só `#500`, depois de corrigir o P1 do Codex; fechar os outros. Exige autorização
+- Auditoria GitHub: dependências sem sequência. Majors de actions `#636`/`#637` e `#547`/`#548`/`#549` com checks obrigatórios vermelhos; `#679` e `#546` mexem no mesmo lockfile. Mesclar em ordem (`docs/governance/GITHUB_CLEANUP_PLAN.md`, Onda 6)
+- Auditoria GitHub: branches. 21 locais com upstream removido e sem merge (risco de perda); 76 remotas com PR fechado sem merge; 27 remotas sem PR. Verificar commits únicos antes de qualquer exclusão (`docs/governance/GITHUB_CLEANUP_PLAN.md`, seção 5)
+- Auditoria GitHub: secret scanning, push protection e Dependabot alerts estão desativados num repositório público; actions sem pin por SHA. Decisão e ativação do dono
+- PDV-100 D-04 (decisão de produto): o carrinho aceita quantidade fracionada em qualquer produto, inclusive `unidade_medida = UN` (ex.: 2,5 chaleiras). Decidir se bloqueia por unidade ou mantém (balança)
+- PDV-100 D-05: `vendas_pagamentos` grava só o valor líquido. Persistir valor recebido e troco para auditar o dinheiro
+- PDV-100 D-06: venda em espera (EM_ESPERA) sobrevive ao fechamento do caixa sem aviso. Definir regra: bloquear, transferir ou descartar
+- PDV-100: cenários ainda não testados na validação operacional: cancelamento e devolução (G1–G6), permissões negativas (A6, I9, R9), concorrência e cliques repetidos (Etapa 4), cliente e crédito, atacado, desconto e pagamento insuficiente. Ver `docs/qa/PDV_100_MATRIZ_COBERTURA.md`
+- PDV-100: rodar os specs Playwright `e2e/caixa-*.spec.ts` contra `http://localhost:3002` (fixar a porta no `playwright.config`; hoje o baseURL não foi confirmado)
+- PDV-100: testar leitor de código de barras, impressora térmica e Tauri. Nenhum equipamento foi usado na validação
+- Fase 3 (segurança): reconciliar o ledger de migrations (repo × produção) antes de aplicar qualquer SQL; depois homologar e aplicar `003_perfis` e `004_feature_flags`; homologar `002_vendas_dml_direto` com a matriz completa (`docs/security/MATRIZ_TESTES_HOMOLOGACAO_FASE3.md`) e só então aplicar em produção. Não aplicar `001_caixas` (o trigger `trg_caixas_fechado_imutavel` já está em produção). Ver `docs/security/PLANO_REMEDIACAO_VULNERABILIDADES.md`
+- Fase 3 (decisões do dono): reabertura de caixa via `retomar_caixa_atomico` (há RPC, sem tela), se `perfis` deve continuar existindo, se feature flags precisam de tela, teto de `valor_inicial` na abertura de caixa (N1)
+- Fase 3 (performance): promover a migration `20260913090000` (validação de fuso sem `pg_timezone_names`, existe no repo e não está em produção) após reconciliação; medir antes/depois. Ver `docs/performance/DIAGNOSTICO_TIMEOUTS_E_PERFORMANCE.md`
+- Fase 3 (PDV offline): remover ou proteger o comando Tauri `sync_outbox` simulado (`pdv-local/src-tauri/src/main.rs:43`), que marca registros como ENVIADO sem enviar
+- Fase 3 (backup): rotina diária com `backend/scripts/backup-ro-postgres.sh` + `age` + SHA-256 + alerta + restauração mensal; RPO 24 h e RTO medidos. Ver `docs/backup/PLANO_OPERACIONAL_BACKUP_RESTAURACAO.md`
+
+- Verificar backup e PITR no painel (projeto `jinlong`, Database → Backups) e registrar retenção e último backup. Pré-requisito de qualquer autorização de produção (`docs/ops/BACKUP_RESTAURACAO_SEM_PITR.md`)
+- Cobrança do DONO indisponível em produção: `fp_sou_dono_da_empresa` e `cobranca_*` só existem após a `20261028101000` (adiada). Decidir a revisão da cobrança com esse custo de produto visível (`docs/ops/TRANCHE_VALIDACAO_2026-11-05.md` §4)
+- Recuperação de vendas offline com token revogado: não há reenvio com token novo no PDV (`pdv-local`). Itens em ERRO exigem tratamento manual com autorização do DONO (`docs/ops/RECUPERACAO_ACESSO_TOKENS.md` §4)
+- Grants de escrita de `authenticated` em `tokens_desconto_gerente` e `tokens_autorizacao_operacao` (defesa em profundidade; hoje a RLS nega a escrita): revogar após decisão do dono
+- Testes de ambiente local: `c1-secdef` e `fase1-hardening-grants` falham no contêiner por ACL padrão e grants que diferem de produção (produção verificada por leitura: OK). Alinhar o snapshot de teste
+- `multiempresa-fase2-cobertura`: tabelas `comissoes_*` e outras sem `tenant_guard` nem isenção documentada. Produção tem RLS ligado e políticas só para `authenticated`; revisar tabela a tabela (pré-existente)
+- `corte-admin-pg-local/run.sh` não executado: exige cluster local com `PG_BIN`
+- Homologação isolada e confirmada antes de qualquer pedido de produção da tranche. O `jinlong-homolog-palm` não é limpo (ver `docs/ops/TRANCHE_VALIDACAO_2026-11-05.md` §8)
 - Autorizar o merge do PR #623 (remover ADMIN): conflito com a main resolvido na branch do PR (commit 193293d7, local, sem push); validação pendente de revisão
 - Kardex sem valor: `movimentos_estoque_log` só tem `quantidade_delta`. Criar `estoque_aplicar_movimento` como único escritor, com `custo_unitario` e `valor_total` (auditoria 2026-10-30, item 3 do backlog)
 - Tela de produto mostra `preco_custo_medio` = 0 (campo nunca gravado) e `atualizar_preco_varejo_produto` persiste preço sem aprovação nem simulação (auditoria 2026-10-30, Parte 2, itens 1 e 7)
@@ -40,8 +93,9 @@
 - Adicionar tenant_guard (ou isenção com motivo) nas tabelas da multiempresa-fase2 (funcionario_dados, comissoes_*, import_*); a verificação cruzada não achou vazamento, então é defesa em profundidade
 - Reescrever multiempresa-fase5 (espera EXECUTE de authenticated em decrementar_estoque_seguro, revogado de propósito em 20261023120000) e corrigir a contagem de RPCs do rollback da fase2 (65 vs 55)
 - Caixa: cancelamento de venda de caixa fechado não reflete no caixa aberto (S9b) e cancelamento com 2 caixas abertos sem caixa_id é aceito (S12); fechar no PR-2
+- GO-LIVE-01 (NO-GO): golden flow SQL passa na cópia `sec_gf01` (34 asserções OK, matriz em `docs/qa/GO_LIVE_01_GOLDEN_FLOW.md`). Falta: E2E de interface (BLOQUEADO: sem acesso aos `.env` do `pdv-importados` e a API local serve outro banco; ver matriz), concorrência de duas sessões (`pdv-meios-pagamento-concorrencia.sh`, `devolucao-concorrencia.sh`), comprovante e crédito de cliente
+- GO-LIVE-01: decidir aplicar `20261104180000` (títulos, caixa e produto fora do escopo) em `jinlong-homolog-palm`. Exige autorização explícita; o rollback foi verificado na cópia
 - Rodar as suítes de psql (ap-payments, ar-receipts, sale-totals, financeiro-hardening, financial-adversarial, ux04, funcionario-dados-rls) num banco de homologação migrado, via npm run test:financial
-- Alinhar o Supabase local (supabase_db_fastproduct tem 412 de 439 migrations) antes de rodar testes contra ele
 - Criar teste de reposição de estoque no cancelamento e teste ponta a ponta de auditoria (autor, data, alteração)
 - Definir preço real em saas.planos (hoje placeholder) e contrato de piloto sem NFC-e/SLA
 - Revisar Termos e Privacidade (prometem emissão fiscal; fiscal é stub) e incluir o uso do contato do teste grátis pelo comercial (LGPD)
@@ -50,11 +104,20 @@
 - Cobrar o primeiro ciclo manualmente (PIX/boleto)
 - Smoke presencial na máquina da loja (docs/runbooks/CHECKLIST_SMOKE_MAQUINA_LOJA.md)
 - Executar docs/runbooks/CHECKLIST_CORTE_PRIMEIRO_CLIENTE_PAGANTE.md
+- Testar a troca de operador na homologação com dois usuários reais (trocar, assumir, bloquear com PIN, fechar) antes do label deploy-prod:aprovado no #634
 - GROWTH-001: revisar e aprovar o PR da Central de Conversão; com autorização, aplicar a migration 20261023130000 (restaurada em 2026-11-01; #629 está em 20261029155000) e só depois publicar o hub (deploy do ERP deixa o autoatendimento de assinatura desligado)
 - Aplicar na homologação (jinlong-homolog-palm) a migration 20261021120000_vendas_pagamentos_parcelas_credito (coluna vendas_pagamentos.parcelas) antes de exibir parcelas no detalhe admin e na 2ª via do cupom
 
 ## P2 — Melhoria
+- PDV (caixa): conferir a grade do carrinho e o rail em 1280–1366 px (três colunas a partir de `md`); abaixo de ~1440 px a coluna de produto encolhe e a tabela pode rolar na horizontal
 
+- Site Jinlong: testes que faltam — sobreposição do FAB no formulário, relógio/fuso (America/Sao_Paulo) do simulador, consentimento de analytics. Cobrir antes da Fase 1
+- Site Jinlong: microtextos de 10,5–11 px, scroll lock no menu mobile, avisos de Autoprefixer em `site/styles/site.css:186,196,216`, SEO técnico (canonical das páginas legais, lastmod no sitemap, aliases `/pt-br` e `/zh-cn`)
+- Site Jinlong: worktree `site-fase0-baseline-20261110` (branch `site/fase0-baseline-20261110`) usa junctions para `node_modules` de outros worktrees. Remover só depois de registrar o baseline; conferir que a remoção não apaga as pastas de origem
+
+- PDV-100 D-08: a falha de "Enter antes da lista carregar" não foi reproduzida na 2ª rodada. Monitorar; sem reprodução não há correção
+- PDV-100 D-10: não é loop (contagem estável em idle). Nenhuma ação; manter monitoramento
+- PDV-100: salvar capturas de tela e vídeo dos fluxos em `docs/qa/evidencias/` (hoje só existem na sessão)
 - Dependabot (#544, #547, #548, #549): decidir a política de CI. A anon key é pública e pode ir para os secrets de Dependabot; `PLAYWRIGHT_TEST_PASSWORD` e `SUPABASE_ACCESS_TOKEN` não devem ir (risco de exfiltração por pacote de terceiro). Alternativa: tratar Dependabot como fork no workflow
 - Dependabot #546 (Sentry 11): import corrigido para `@sentry/nextjs/config` e branch atualizada com a main; validar CI e smoke de captura de erro
 - Dependabot #583: dependência fantasma `@testing-library/react` declarada e fixture de Storage corrigida; validar CI (inclui pglite 0.3→0.5)
@@ -72,14 +135,13 @@
 - Mostrar as parcelas do crédito no detalhe da venda (admin) e na 2ª via, depois da coluna existir na homologação
 
 ## Feito
-
-- 2026-11-01 — Consolidação NF-e: #654 integrada à #653 por merge (`0176677f`), Growth-001 restaurada em `20261023130000` (`dfdf9e41`), cinco testes SQL da PR-A adotados (`0a00201d`) e scripts de concorrência movidos para `backend/scripts/backlog-redesign/` (`99dbcaea`). Registro em `docs/audits/CONSOLIDACAO_NFE_2026-11-01.md`; não mergeado
-- 2026-10-30 — Validação em homologação (`jinlong-homolog-palm`, rollback): confirmação, repetição e reimportação passaram; conciliação de duplicatas e AP sem UNIQUE reproduzidos como defeito. Os 13 scripts `.test.sql`/`.mjs` de NF-e não executam no esquema atual (sem `empresa_id`). Relatório em `docs/audits/VALIDACAO_TESTES_NFE_HOMOLOG_2026-10-30.md`
-- 2026-10-30 — Auditoria de capacidades do ciclo de custos (16 etapas, somente leitura): nenhuma capacidade VALIDADA; motor de custo, rateio e precificação existem em `shared-core` sem ligação ao caminho NF-e; kardex sem valor. Relatório e backlog em `docs/audits/AUDITORIA_CUSTOS_RENTABILIDADE_2026-10-30.md`; sem alteração de código
-- 2026-10-30 — Conflito do PR #623 com a main resolvido em `assinatura/actions.ts` (DONO-only + flag GROWTH-001 preservados; testes e typecheck ok)
-- 2026-10-29 — Auditoria do Bloco de Importação (NF-e de entrada e pipeline internacional): 45% por critério explícito, 0 funcionalidades comprovadas, recomendação NO-GO. Relatório em `docs/audits/AUDITORIA_BLOCO_IMPORTACAO_2026-10-29.md`; sem alteração de código
-- 2026-10-29 — S1 validada em homologação (`yvdilcmxyjafnnsfdtam`): matriz de permissões final, testes do DONO, ciclos de rollback do S1b, S1c, G14 e S1; PR #648 aberto com o pacote (S1, S1c, S1b, G14), CI verde exceto o guard de governança. Não aplicado em produção
-- 2026-10-29 — Decisões D1–D14 registradas em `docs/regras-negocio/DECISOES_JINLONG_S1.md`
-- 2026-10-29 — NF-e de entrada com valor e sem duplicatas: mensagem operacional para `IMPORT_NFE_OBRIGACAO_SEM_DUPLICATA`, aviso na prévia e confirmação bloqueada na conferência (`notaObrigacao.ts`); sem alteração de migration/RPC. Não deployado
-- 2026-10-29 — `20261028120000` aplicada em produção (revoke dos 4 helpers de tenant): drill em main com success (backup 40776152513, checksum OK, contagens validadas); pré-checagem true/true/true; pós-checagem revogados e service_role_ok, md5 2fc3a718…; sem `permission denied` nos logs; drift do #630 verde
-- 2026-10-28 — Drift main × produção zerado: `20261022020000` (#625) registrada em produção como no-op (script do #641, SQL idêntico ao arquivo); #641 mergeado (598efcf0): o check respeita `deferred-migrations.json` e aceita duplicatas de pares com git alinhado. `migration-remote-drift` contra produção = HUMAN_GATE (só `20261010120000`, adiada)
+- 2026-11-14 — PDV (caixa): carrinho com preço sobreposto ao selo "Atacado" corrigido (grade única do cabeçalho e das linhas); stepper sem cantos/divisórias tortos (elementos nativos); topo das 3 colunas na mesma altura h-11; botões de cabeçalho, rail, pagamento e desconto padronizados
+- 2026-11-13 — Drift do CI (`migration-remote-drift`, variante segura aprovada): 15 adiadas já aplicadas no homolog de verificação passam a ser aceitas por registro (`backend/supabase/migration-check-project-deferred.json`), preso ao ref do homolog e fail-closed para qualquer outro projeto. Também as 21 versões só-remoto do homolog, no mesmo registro (`remoteOnlyAccepted`). Manifesto e migrations intactos; produção não alterada. 31 testes do drift passando; guarda de governança OK sem label
+- 2026-11-13 — FAB do site recolhe enquanto `#contato` está visível (`site/components/FabAutoHide.tsx`), com teste E2E em Chromium, Firefox e mobile. Sem commit até a suíte completa passar
+- 2026-11-12 — Simulador híbrido: textos PT/ZH e fonte oficial agora dizem que o prazo de 30/10/2026 encerrou (cancelamento até 20/12/2026; próximas janelas em março e setembro). Teste de regressão em `site/lib/simuladorHibrido.copy.test.ts`. Sem commit; validação contábil pendente
+- 2026-11-12 — Análise da auditoria do site Jinlong contra o código em `site/` (idêntico a `2929b09a`): prazo tributário confirmado vencido; formulário e FAB confirmados como P0; protocolo, CTA do simulador e cookie PT confirmados como falsos positivos. Nenhum código alterado
+- 2026-11-12 — hub.jinlong.app: painel quebrava (digest 226588760, "Falha ao acessar dados (400)"). Causa: a Central de Conversão (`20261023130000`) estava no `main` mas não no banco `jinlong`. Migration aplicada em produção após checagem; cada seção do hub agora degrada sozinha (`hub/lib/seguro.ts`) e há `hub/app/error.tsx`. Código ainda não commitado
+- 2026-11-11 — Auditoria dos 53 PRs abertos e das branches (somente leitura): `docs/governance/GITHUB_AUDIT.md`, `GITHUB_CLEANUP_PLAN.md` e `GITHUB_WORKFLOW.md`. Nenhuma ação no GitHub; decisões pendentes listadas no plano
+- 2026-11-07 — Desenho do endpoint protegido de `commercial_leads` (`docs/planos/LEADS_ENDPOINT_PROTEGIDO.md`) e guardas do servidor com testes (`site/lib/pedidoDemoGuards.ts`), flag `SITE_DEMO_FORM_ATIVO` reproduzida (padrão desligada). Suíte do site: 87 testes passando. Nenhuma migration aplicada
+- 2026-11-05 — 12 migrations da main (20261028100000 a 20261104180000) adiadas no manifesto: 8 de segurança (prioridade do dono) e 4 de funcionalidade; nenhuma aplicada em produção
+- 2026-11-05 — PR #655: types drift corrigido (`823142b6`, regenerado do artefato do CI); merge com a main (`24ba7082`) e push na branch do PR. Restam os gates de governança (label `deploy-prod:aprovado` e migrations `remote_ausente`)

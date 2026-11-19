@@ -185,7 +185,7 @@ function setupFixture() {
   // de reset entre execuções manuais locais.
   const codigo = `TIERCONC-${loja.slice(0, 8)}`
   runOnce(
-    `INSERT INTO public.lojas (id, nome, codigo, ativo) VALUES ('${loja}', 'TIERCONC Loja', '${codigo}', true) ON CONFLICT (id) DO UPDATE SET ativo = true;`,
+    `INSERT INTO public.empresas (id, nome) VALUES ('fa5e0000-0000-4000-8000-0000000000f1', 'Fixture empresa (concorrencia)') ON CONFLICT (id) DO NOTHING; INSERT INTO public.lojas (empresa_id, id, nome, codigo, ativo) VALUES ('fa5e0000-0000-4000-8000-0000000000f1', '${loja}', 'TIERCONC Loja', '${codigo}', true) ON CONFLICT (id) DO UPDATE SET ativo = true;`,
   )
   return { loja }
 }

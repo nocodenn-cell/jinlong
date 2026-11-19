@@ -129,9 +129,11 @@ for (const locale of LOCALES) {
     })
 
     test('servidor real sem configuração: /pedido-demo responde 503 not_configured e valida', async ({ request }) => {
-      const ok = await request.post('/pedido-demo', { data: { name: 'Li Wei', store: 'Loja', contact: '11912345678', channel: 'whatsapp', segment: 'importados', idioma: locale, locale } })
+      // A rota só aceita a origem pública do site (verificação de origem); o e2e envia essa origem explicitamente.
+      const origem = process.env.NEXT_PUBLIC_SITE_URL?.trim() || 'https://jinlong.app'
+      const ok = await request.post('/pedido-demo', { data: { name: 'Li Wei', store: 'Loja', contact: '11912345678', channel: 'whatsapp', segment: 'importados', idioma: locale, locale }, headers: { origin: origem } })
       expect([503, 429]).toContain(ok.status())
-      const bad = await request.post('/pedido-demo', { data: { name: '', channel: 'x' }, headers: { 'x-forwarded-for': `10.0.0.${Math.floor(Math.random() * 250)}` } })
+      const bad = await request.post('/pedido-demo', { data: { name: '', channel: 'x' }, headers: { origin: origem, 'x-forwarded-for': `10.0.0.${Math.floor(Math.random() * 250)}` } })
       expect([400, 429]).toContain(bad.status())
     })
 
@@ -147,6 +149,16 @@ for (const locale of LOCALES) {
       await openHome(page, locale)
       await page.locator('.jl-fab summary').click()
       await expect(page.locator('.jl-fab a[href^="mailto:naturalcodedevelop@gmail.com"]')).toBeVisible()
+    })
+
+    test('botão flutuante some enquanto o formulário de contato está visível', async ({ page }) => {
+      await openHome(page, locale)
+      const fab = page.locator('.jl-fab')
+      await expect(fab).toBeVisible()
+      await page.locator('#contato').scrollIntoViewIfNeeded()
+      await expect(fab).toBeHidden()
+      await page.evaluate(() => window.scrollTo(0, 0))
+      await expect(fab).toBeVisible()
     })
 
     test('teclado: skip link é o primeiro foco e leva ao conteúdo', async ({ page, browserName }) => {
