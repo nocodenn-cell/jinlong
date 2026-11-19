@@ -1,27 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
-import { aplicarVendedorAposVenda, lembrarVendedor, precisaDefinirVendedor, vendedorInicial } from './caixaVendedor'
-
-function mem() {
-  const m = new Map<string, string>()
-  return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v), removeItem: (k: string) => void m.delete(k), m }
-}
-const lista = [{ id: 'op', nome: 'Caixa' }, { id: 'v1', nome: 'Vendedora' }]
+import { aplicarVendedorAposVenda, precisaDefinirVendedor, vendedorInicial } from './caixaVendedor'
 
 describe('caixaVendedor', () => {
   it('padrão é o operador', () => {
-    expect(vendedorInicial('op', lista, mem())).toBe('op')
-  })
-  it('lembra o último vendedor do operador', () => {
-    const s = mem()
-    lembrarVendedor('op', 'v1', s)
-    expect(vendedorInicial('op', lista, s)).toBe('v1')
-    lembrarVendedor('op', 'op', s)
-    expect(s.m.size).toBe(0)
-  })
-  it('ignora vendedor lembrado que saiu da loja', () => {
-    const s = mem()
-    lembrarVendedor('op', 'sumiu', s)
-    expect(vendedorInicial('op', lista, s)).toBe('op')
+    expect(vendedorInicial('op')).toBe('op')
+    expect(vendedorInicial(null)).toBeNull()
   })
   it('só define vendedor quando diferente do operador', () => {
     expect(precisaDefinirVendedor('op', 'op')).toBe(false)
@@ -55,5 +38,18 @@ describe('CaixaPageClient: recuperação após timeout aplica o vendedor', () =>
     const ini = src.indexOf('const handleVerificarVendaPendente')
     const corpo = src.slice(ini, src.indexOf("res.code === 'VENDA_NAO_ENCONTRADA'", ini))
     expect(corpo).toContain('aplicarVendedorAposVenda(res.detalhe.id, userId, vendedorId, definirVendedorVendaCaixa)')
+  })
+})
+
+describe('CaixaPageClient: vendedor não passa de uma venda para a outra', () => {
+  it('depois de aplicar o vendedor, a próxima venda volta ao operador (venda normal e recuperada)', async () => {
+    const { readFileSync } = await import('node:fs')
+    const src = readFileSync(new URL('./CaixaPageClient.tsx', import.meta.url), 'utf8')
+    const aplicacoes = src.split('aplicarVendedorAposVenda(').length - 1
+    const resets = src.split('setVendedorId(vendedorInicial(userId))').length - 1
+    // 1 reset na carga inicial + 1 depois de cada aplicação do vendedor
+    expect(resets).toBe(aplicacoes + 1)
+    expect(src).not.toContain('localStorage.setItem(`jl:caixa:vendedor')
+    expect(src).not.toContain('lembrarVendedor')
   })
 })

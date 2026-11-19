@@ -174,34 +174,39 @@ export async function listarEventosAuditoria(
       .limit(LIMITE_POR_FONTE)
     if (filtro.inicio) q = q.gte('occurred_at', filtro.inicio)
     if (filtro.fim) q = q.lte('occurred_at', filtro.fim)
-    if (operadorFiltro) q = q.eq('operador_id', operadorFiltro)
+    // Sem filtro de operador no banco: `venda_eventos.operador_id` é o operador da
+    // VENDA, não quem cancelou. O filtro por usuário é aplicado abaixo sobre o autor.
 
     const { data, error } = await q
     const rows = error ? [] : (data ?? [])
 
-    // Enriquecimento opcional de motivo/valor estornado (batched, 1 query).
+    // Enriquecimento de motivo e autor (batched, 1 query). `operador_id` aqui é
+    // quem cancelou (auth.uid() no RPC). Não usamos `valor_estornado` desta tabela:
+    // é só o dinheiro que saiu da gaveta (0 em PIX/cartão/dividido).
     const saleIds = rows.map((r) => str(r.sale_id)).filter((v): v is string => v != null)
-    const motivoPorVenda = new Map<string, { motivo: string | null; valor: number | null }>()
+    const audPorVenda = new Map<string, { motivo: string | null; canceladoPor: string | null }>()
     if (saleIds.length > 0) {
       const { data: aud } = await supabase
         .from('vendas_canceladas_auditoria')
-        .select('venda_id, motivo, valor_estornado')
+        .select('venda_id, motivo, operador_id')
         .in('venda_id', saleIds)
       for (const a of aud ?? []) {
-        motivoPorVenda.set(String(a.venda_id), {
+        audPorVenda.set(String(a.venda_id), {
           motivo: str(a.motivo),
-          valor: a.valor_estornado == null ? null : num(a.valor_estornado),
+          canceladoPor: str(a.operador_id),
         })
       }
     }
 
     for (const r of rows) {
-      const opId = str(r.operador_id)
-      if (opId) operadorIds.add(opId)
       const saleId = str(r.sale_id)
-      const enriquecimento = saleId ? motivoPorVenda.get(saleId) : undefined
+      const enriquecimento = saleId ? audPorVenda.get(saleId) : undefined
+      const opId = enriquecimento?.canceladoPor ?? str(r.operador_id)
+      if (operadorFiltro && opId !== operadorFiltro) continue
+      if (opId) operadorIds.add(opId)
       const motivo = enriquecimento?.motivo ?? null
-      const valorEstornado = enriquecimento?.valor ?? num(r.total)
+      // Valor do cancelamento = total da venda gravado no evento (todas as formas).
+      const valorEstornado = num(r.total)
       eventos.push({
         id: `cancel:${r.id}`,
         tipo: 'CANCELAMENTO',

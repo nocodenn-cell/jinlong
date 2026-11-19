@@ -73,7 +73,9 @@ export function VendaCancelarModal({
             dataOriginal: vendaAtiva.data,
             dataCancelamento: new Date(),
             itens: dados.itens,
-            totalLiquido: res.valorEstornado,
+            // `res.valorEstornado` é só o dinheiro da gaveta (0 em PIX/cartão/dividido);
+            // o comprovante mostra o total devolvido ao cliente.
+            totalLiquido: dados.totalEstornado ?? res.valorEstornado,
             formaPagamentoLabel: labelFormaPagamentoVenda(vendaAtiva.forma_pagamento, m),
             motivo: motivoTrim,
             operadorNome: dados.operadorNome,

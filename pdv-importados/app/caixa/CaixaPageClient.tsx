@@ -100,7 +100,7 @@ import "@/styles/caixa-operacional.css"
 import { CaixaPdvOperadorTabs } from "@/app/caixa/CaixaPdvOperadorTabs"
 import { CaixaSelecionarClienteModal } from "@/app/caixa/CaixaSelecionarClienteModal"  // ✅ NOVO (Fase 5b)
 import { CaixaVendedorSelect } from "@/app/caixa/CaixaVendedorSelect"
-import { lembrarVendedor, aplicarVendedorAposVenda, vendedorInicial, type VendedorOpcao } from "@/app/caixa/caixaVendedor"
+import { aplicarVendedorAposVenda, vendedorInicial, type VendedorOpcao } from "@/app/caixa/caixaVendedor"
 import {
   CaixaTrocaAvisos,
   CaixaTrocaControles,
@@ -384,7 +384,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const [clienteId, setClienteId] = useState<string | null>(null)  // ✅ NOVO (Fase 5b)
   const [clienteNome, setClienteNome] = useState<string | null>(null)  // ✅ NOVO (Fase 5b) - para exibição
   const [selecionarClienteModalAberto, setSelecionarClienteModalAberto] = useState(false)  // ✅ NOVO (Fase 5b)
-  // Comissão P0: vendedor da venda (padrão = operador; lembrado por operador neste navegador).
+  // Comissão P0: vendedor da venda. Toda venda começa com o operador (não é lembrado).
   const [vendedores, setVendedores] = useState<VendedorOpcao[]>([])
   const [vendedorId, setVendedorId] = useState<string | null>(null)
   useEffect(() => {
@@ -392,7 +392,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     void listarVendedoresCaixa().then((r) => {
       if (!vivo || !r.ok) return
       setVendedores(r.vendedores)
-      setVendedorId(vendedorInicial(userId, r.vendedores, typeof window === "undefined" ? null : window.localStorage))
+      setVendedorId(vendedorInicial(userId))
     })
     return () => { vivo = false }
   }, [userId])
@@ -1289,6 +1289,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         if (!(await aplicarVendedorAposVenda(res.vendaId, userId, vendedorId, definirVendedorVendaCaixa))) {
           setCaixaMensagem(m.caixa.vendedor_nao_aplicado, { kind: "warning" })
         }
+        setVendedorId(vendedorInicial(userId))
         await recarregarStatusCaixa()
       } else if (res === timeoutResult) {
         // Desfecho DESCONHECIDO: o servidor pode ter concluído a venda depois do
@@ -1428,6 +1429,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         if (!(await aplicarVendedorAposVenda(res.detalhe.id, userId, vendedorId, definirVendedorVendaCaixa))) {
           setCaixaMensagem(m.caixa.vendedor_nao_aplicado, { kind: "warning" })
         }
+        setVendedorId(vendedorInicial(userId))
         await recarregarStatusCaixa()
         return
       }
@@ -1793,10 +1795,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                   vendedores={vendedores}
                   value={vendedorId}
                   disabled={finalizando}
-                  onChange={(id) => {
-                    setVendedorId(id)
-                    lembrarVendedor(userId, id, typeof window === "undefined" ? null : window.localStorage)
-                  }}
+                  onChange={(id) => setVendedorId(id)}
                 />
               </div>
               <CaixaPdvCartSaleBar
