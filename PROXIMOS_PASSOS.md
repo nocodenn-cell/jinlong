@@ -3,6 +3,8 @@
 ## P0 — Quebrado/travado
 
 - Auditoria de prontidão comercial (2026-11-06, somente leitura): veredito NÃO PODE ENTRAR; 35% de prontidão por área. Bloqueadores P0-1 a P0-10 em `docs/auditorias/AUDITORIA_PRONTIDAO_COMERCIAL_2026-11-06.md` (§5). Aplicar `20261104120000` em produção com autorização é o primeiro item. Plano por fases A–F e decisões D-04 a D-15 em `docs/auditorias/PLANO_LIBERACAO_PRIMEIRO_CLIENTE_2026-11-06.md`; decisões do dono são a primeira pendência
+- Recuperação de senha do ERP falhava sem mensagem clara (validação silenciosa e erro do Supabase em inglês). Correção em PR Draft; validar em produção após revisão. Conferir no Supabase (Authentication → URL Configuration) que o domínio do ERP está em Redirect URLs
+- Admin do Hub sem acesso à senha (`hub.jinlong.app/login`): o Hub não tem fluxo de recuperação. Usar o ERP em `/auth/esqueci-senha` (mesmo projeto Supabase `kbabmewnahysfvlybiak`, mesmo `auth.users`) e confirmar a conta em `commercial_admins`. Aguarda autorização explícita do dono para enviar o e-mail e redefinir
 - Site Jinlong: formulário comercial da home falha em produção. `anon` não tem INSERT em `commercial_leads`; a correção (`#676` + `#677`) está bloqueada com checks vermelhos. A Fase 0 não detectou isso, porque o E2E intercepta o envio. "Formulário OK" só vale com validação real em Preview
 - Site Jinlong / Legal: Termos prometem emissão fiscal (SEFAZ/SAT) e o FAQ condiciona isso à conversa comercial; a fiscal é stub (ver item de Termos em P1). Alinhar só após decisão de produto e revisão jurídica
 - Auditoria GitHub (2026-11-11, `docs/governance/GITHUB_AUDIT.md`): a proteção de `main` não exige nenhuma aprovação humana (só os 6 checks). Decidir revisão obrigatória + CODEOWNERS. Ação de configuração: exige autorização

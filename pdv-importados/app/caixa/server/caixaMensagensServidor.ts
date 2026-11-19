@@ -16,6 +16,7 @@ export type CaixaServidorMsgKey =
   | 'err_srv_converter_espera'
   | 'err_srv_devolver_espera'
   | 'err_srv_descartar_espera'
+  | 'err_srv_descartar_motivo'
   | 'err_srv_carregar_historico'
   | 'err_srv_carregar_detalhe'
   | 'err_srv_venda_invalida'
