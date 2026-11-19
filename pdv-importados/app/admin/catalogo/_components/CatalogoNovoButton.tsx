@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { Plus, ClipboardList } from 'lucide-react'
 import { ROUTES } from '@/lib/navigation/routes'
@@ -30,12 +30,17 @@ export function CatalogoNovoButton({
 }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
+  // O HTML do servidor já traz o botão, mas o onClick só existe depois da hidratação.
+  // Enquanto isso o botão fica desabilitado, para não parecer funcional e não ignorar o clique.
+  const pronto = useHidratado()
 
   return (
     <>
       <Button
         type="button"
         variant="secondary"
+        disabled={!pronto}
+        aria-busy={!pronto}
         onClick={() => setOpen(true)}
         className="gap-1.5"
         title={titleHint ? `${label} (${titleHint})` : label}
@@ -65,4 +70,11 @@ export function CatalogoNovoButton({
       />
     </>
   )
+}
+
+const semInscricao = () => () => {}
+
+/** `false` no servidor e durante a hidratação; `true` depois. Sem efeito e sem setState. */
+function useHidratado(): boolean {
+  return useSyncExternalStore(semInscricao, () => true, () => false)
 }
