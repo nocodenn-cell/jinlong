@@ -8271,7 +8271,9 @@ export type Database = {
           forma_pagamento: string
           id: string
           parcelas: number
+          troco: number | null
           valor: number
+          valor_recebido: number | null
           venda_id: string
         }
         Insert: {
@@ -8279,7 +8281,9 @@ export type Database = {
           forma_pagamento: string
           id?: string
           parcelas?: number
+          troco?: number | null
           valor: number
+          valor_recebido?: number | null
           venda_id: string
         }
         Update: {
@@ -8287,7 +8291,9 @@ export type Database = {
           forma_pagamento?: string
           id?: string
           parcelas?: number
+          troco?: number | null
           valor?: number
+          valor_recebido?: number | null
           venda_id?: string
         }
         Relationships: [

@@ -420,7 +420,14 @@ jobs:
       # `browserType.launch: Executable doesn't exist .../webkit-*/pw_run.sh`.
       - name: Install Playwright Chromium + WebKit
         timeout-minutes: 35
-        run: npx playwright install --with-deps chromium webkit
+        run: |
+          # Falha de DNS do runner (archive.ubuntu.com) é transitória: tenta de novo antes de falhar.
+          for i in 1 2 3; do
+            npx playwright install --with-deps chromium webkit && exit 0
+            echo "Instalação do Playwright falhou (tentativa $i); aguardando antes de repetir."
+            sleep 30
+          done
+          exit 1
 
       # Mesma stack local e efêmera do `e2e-critical`. Este job foi esquecido na
       # primeira correção e, por isso, continuou logando em PRODUÇÃO com as

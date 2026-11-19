@@ -56,9 +56,14 @@ export const pagamentoParcelaSchema = z.object({
   valor: z.number().positive('O valor da parcela deve ser maior que zero.'),
   /** Nº de parcelas do crédito (1..24). Opcional: ausente = 1x (contrato anterior). */
   parcelas: z.number().int().min(1).max(MAX_PARCELAS_CREDITO).optional(),
+  /** D4: dinheiro entregue pelo cliente (só DINHEIRO). Troco = valorRecebido - valor. */
+  valorRecebido: z.number().positive('O valor recebido deve ser maior que zero.').optional(),
 }).refine((p) => (p.parcelas ?? 1) === 1 || p.formaPagamento === 'CARTAO_CREDITO', {
   message: 'Parcelamento só existe no cartão de crédito.',
   path: ['parcelas'],
+}).refine((p) => p.valorRecebido === undefined || (p.formaPagamento === 'DINHEIRO' && p.valorRecebido >= p.valor), {
+  message: 'Valor recebido só existe em dinheiro e não pode ser menor que o valor da parcela.',
+  path: ['valorRecebido'],
 })
 
 /** true quando a forma da venda e todas as parcelas são DINHEIRO (pré-condição do desconto de gerente). */
