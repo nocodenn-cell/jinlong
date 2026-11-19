@@ -59,7 +59,9 @@ jobs:
       - name: Instalar Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # Versao fixa (a mesma de backend/package.json): 'latest' consulta a API do
+          # GitHub e falhou por rate limit em 2026-11-18 (run 44335874719).
+          version: 2.116.0
 
       - name: Instalar age (cifragem) e cliente postgres (psql)
         run: |
