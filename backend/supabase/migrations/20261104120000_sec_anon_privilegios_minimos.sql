@@ -114,6 +114,24 @@ REVOKE ALL ON FUNCTION public.trg_movimentos_estoque_log_bloquear_mutacao() FROM
 REVOKE EXECUTE ON FUNCTION internal.fp_contexto_servidor() FROM anon;
 REVOKE EXECUTE ON FUNCTION internal.fp_empresa_selecionada() FROM anon;
 
+-- 3) (correção) public.perfis existe em produção com SELECT para anon e não estava na lista
+--    acima. Sem esta revogação o bloco de prova abaixo aborta a migration inteira.
+--    Condicional: em bancos sem a tabela (ex.: homologação anterior) não falha.
+DO $perfis$
+BEGIN
+  IF to_regclass('public.perfis') IS NOT NULL THEN
+    REVOKE ALL ON TABLE public.perfis FROM anon;
+  END IF;
+END
+$perfis$;
+
+-- 4) (correção) Privilégios padrão: sem isto, toda tabela/sequência nova criada pelo papel
+--    postgres em public nasce com anon (rxtm em tabelas, USAGE/SELECT/UPDATE em sequências).
+REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM anon;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE ALL ON TABLES FROM anon;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE ALL ON SEQUENCES FROM anon;
+
+
 -- Prova: falha a migration inteira se alguma garantia não valer.
 DO $verify$
 DECLARE
@@ -129,6 +147,11 @@ BEGIN
               WHERE n.nspname = 'public' AND c.relkind IN ('r','v','p')
                 AND has_table_privilege('anon', c.oid, 'SELECT,INSERT,UPDATE,DELETE,REFERENCES,TRIGGER,TRUNCATE,MAINTAIN')) THEN
     RAISE EXCEPTION 'SEC_ANON: anon ainda tem privilégio em alguma relação de public';
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+              WHERE n.nspname = 'public' AND c.relkind = 'S'
+                AND (CASE WHEN c.relkind = 'S' THEN has_sequence_privilege('anon', c.oid, 'USAGE,SELECT,UPDATE') ELSE false END)) THEN
+    RAISE EXCEPTION 'SEC_ANON: anon ainda tem privilégio em sequência de public';
   END IF;
   IF has_function_privilege('anon', 'public.trg_caixas_fechado_imutavel()', 'EXECUTE')
      OR has_function_privilege('anon', 'public.texto_sem_acento(text)', 'EXECUTE')
