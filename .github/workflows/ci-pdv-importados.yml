@@ -616,6 +616,24 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+      # VAL-01: resultado por spec. O relatório (HTML + JSON) é a prova do resultado de cada
+      # arquivo; sem ele a VAL-01 não pode ser declarada verde.
+      - name: Resumo por spec do E2E (VAL-01)
+        if: always()
+        timeout-minutes: 2
+        run: node pdv-importados/scripts/e2e-resumo-por-spec.mjs pdv-importados/playwright-report/results.json
+
+      - name: Upload relatório Playwright (e2e-playwright)
+        if: always()
+        timeout-minutes: 3
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: e2e-playwright-report
+          path: |
+            pdv-importados/playwright-report/**
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Encerrar Supabase local
         if: always()
         timeout-minutes: 2
