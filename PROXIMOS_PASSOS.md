@@ -43,6 +43,8 @@
 
 ## P1 — Falta para lançar (MVP)
 
+- Central Comercial (CRM-001, PR desta branch): aplicar `hub/supabase/20261120120000_commercial_crm.sql` no homolog e ensaiar o hub com uma conta gestor e uma vendedor; depois produção (migration antes do deploy do hub, com `deploy-prod:aprovado`). Roteiro em `docs/hub/CRM_001_CENTRAL_COMERCIAL.md` §6
+- Preços oficiais: todo `saas.planos` está com `preco_placeholder = true`; propostas do CRM mostram o aviso. Definir os valores antes de enviar proposta real
 - Site Jinlong: validar com o contador os textos do simulador híbrido já ajustados ao prazo vencido (`site/lib/simuladorHibrido.copy.ts`). Não publicar antes dessa revisão
 - Site Jinlong: `metadataBase` ausente (build usa localhost:3000 para imagens sociais); homes e simulador sem `og:image`/`twitter:image` em produção. Corrigir junto com canonical e hreflang
 - Site Jinlong: LCP mobile de laboratório 3.260 ms (PT) e 3.536 ms (ZH), acima de 2,5 s; CLS 0.000. Baseline em `fase0-main-2929b09a`; repetir a medição após cada incremento
@@ -152,6 +154,7 @@
 - Mostrar as parcelas do crédito no detalhe da venda (admin) e na 2ª via, depois da coluna existir na homologação
 
 ## Feito
+- 2026-11-20 — CRM-001 Central Comercial no hub: etapas configuráveis e Kanban, responsável e papéis gestor/vendedor, agenda e alertas, propostas (preço só de `saas.planos`), conversão sem duplicidade, auditoria sem dados pessoais, painel com 12 indicadores rastreáveis, CI `ci-hub.yml`. Testes: 62 unitários + RLS/CRM em Postgres descartável
 - 2026-11-19 — PDV: toda venda começa com o operador como vendedor (antes lembrava o último vendedor e gravava vendas seguintes no vendedor errado; decisão do dono). Cancelamento: comprovante e auditoria mostram o total devolvido e quem cancelou (antes R$ 0,00 em PIX/cartão/dividido e autor = operador da venda). Sem migration; testes de caixa, vendas e auditoria OK (480). PR #686
 - 2026-11-19 — Validação operacional ponta a ponta no ambiente local (cadastro, entrada, PDV varejo/atacado, desconto, sangria/suprimento, fechamento, cancelamento, contas a pagar, relatórios, auditoria, RLS): `docs/auditoria/RELATORIO_VALIDACAO_OPERACIONAL_JINLONG.md`. PR #686
 - 2026-11-14 — PDV (caixa): carrinho com preço sobreposto ao selo "Atacado" corrigido (grade única do cabeçalho e das linhas); stepper sem cantos/divisórias tortos (elementos nativos); topo das 3 colunas na mesma altura h-11; botões de cabeçalho, rail, pagamento e desconto padronizados
@@ -161,4 +164,3 @@
 - 2026-11-12 — Análise da auditoria do site Jinlong contra o código em `site/` (idêntico a `2929b09a`): prazo tributário confirmado vencido; formulário e FAB confirmados como P0; protocolo, CTA do simulador e cookie PT confirmados como falsos positivos. Nenhum código alterado
 - 2026-11-12 — hub.jinlong.app: painel quebrava (digest 226588760, "Falha ao acessar dados (400)"). Causa: a Central de Conversão (`20261023130000`) estava no `main` mas não no banco `jinlong`. Migration aplicada em produção após checagem; cada seção do hub agora degrada sozinha (`hub/lib/seguro.ts`) e há `hub/app/error.tsx`. Código ainda não commitado
 - 2026-11-11 — Auditoria dos 53 PRs abertos e das branches (somente leitura): `docs/governance/GITHUB_AUDIT.md`, `GITHUB_CLEANUP_PLAN.md` e `GITHUB_WORKFLOW.md`. Nenhuma ação no GitHub; decisões pendentes listadas no plano
-- 2026-11-07 — Desenho do endpoint protegido de `commercial_leads` (`docs/planos/LEADS_ENDPOINT_PROTEGIDO.md`) e guardas do servidor com testes (`site/lib/pedidoDemoGuards.ts`), flag `SITE_DEMO_FORM_ATIVO` reproduzida (padrão desligada). Suíte do site: 87 testes passando. Nenhuma migration aplicada

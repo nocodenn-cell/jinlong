@@ -1,10 +1,14 @@
 import type { Atividade, Plano, Trial, TrialLead } from './conversao'
-import type { Customer, Lead, LeadEvent, LeadStatus, Product } from './model'
+import type { Activity, AuditRow, Member, Proposal } from './crm'
+import type { Customer, Lead, LeadEvent, LeadStatus, Origem, Product } from './model'
 
 /** DADOS FICTÍCIOS — nomes, lojas e contatos inventados, só para demonstração do layout. */
 const now = Date.now()
 const ago = (d: number, h = 0) => new Date(now - d * 86_400_000 - h * 3_600_000).toISOString()
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`
+/** Usuário logado no modo fictício (gestor) e uma vendedora fictícia. */
+export const DEMO_ME = 'a0000000-0000-4000-8000-000000000001'
+const DEMO_VEND = 'a0000000-0000-4000-8000-000000000002'
 
 const rows: Array<[string, string, string, 'whatsapp' | 'wechat', Product, LeadStatus, number]> = [
   ['Exemplo Wang (fictício)', 'Loja Fictícia Dragão', '11 90000-0001', 'whatsapp', 'jinlong', 'novo', 0],
@@ -14,9 +18,9 @@ const rows: Array<[string, string, string, 'whatsapp' | 'wechat', Product, LeadS
   ['Exemplo Souza (fictício)', 'Papelaria Modelo', '21 90000-0005', 'whatsapp', 'venddi', 'contratado', 9],
   ['Exemplo Zhang (fictício)', 'Calçados Amostra', '11 90000-0006', 'whatsapp', 'jinlong', 'contratado', 12],
   ['Exemplo Lima (fictício)', 'Loja Simulada Centro', '31 90000-0007', 'whatsapp', 'venddi', 'perdido', 15],
-  ['Exemplo Huang (fictício)', 'Bolsas Exemplo Bom Retiro', 'exemplo_huang', 'wechat', 'jinlong', 'novo', 0.3],
+  ['Exemplo Huang (fictício)', 'Bolsas Exemplo Bom Retiro', 'exemplo_huang', 'wechat', 'jinlong', 'qualificacao', 0.3],
   ['Exemplo Costa (fictício)', 'Eletrônicos Demo', '11 90000-0009', 'whatsapp', 'jinlong', 'demonstracao', 6],
-  ['Exemplo Liu (fictício)', 'Utilidades Fictícias', 'exemplo_liu', 'wechat', 'jinlong', 'contatado', 20],
+  ['Exemplo Liu (fictício)', 'Utilidades Fictícias', 'exemplo_liu', 'wechat', 'jinlong', 'negociacao', 20],
 ]
 
 export const DEMO_LEADS: Lead[] = rows.map(([name, store, contact, channel, product, status, d], i) => ({
@@ -29,10 +33,21 @@ export const DEMO_LEADS: Lead[] = rows.map(([name, store, contact, channel, prod
   channel,
   locale: channel === 'wechat' ? 'zh-CN' : 'pt-BR',
   status,
-  origem: 'site',
+  origem: (['site', 'site', 'indicacao', 'site', 'prospeccao', 'site', 'evento', 'site', 'indicacao', 'site'] as Origem[])[i],
   empresa_id: null,
   created_at: ago(d, i),
   updated_at: ago(d / 2, i),
+  owner_id: [null, DEMO_ME, DEMO_VEND, DEMO_ME, DEMO_VEND, DEMO_ME, DEMO_VEND, null, DEMO_ME, DEMO_VEND][i],
+  utm_campaign: ['feira-bras-nov', null, null, 'feira-bras-nov', null, 'google-atacado', null, 'google-atacado', null, null][i],
+  city: ['São Paulo', 'São Paulo', 'Campinas', 'São Paulo', 'Rio de Janeiro', 'São Paulo', 'Belo Horizonte', 'São Paulo', 'São Paulo', 'Guarulhos'][i],
+  uf: ['SP', 'SP', 'SP', 'SP', 'RJ', 'SP', 'MG', 'SP', 'SP', 'SP'][i],
+  email: i % 3 === 0 ? `exemplo${i + 1}@exemplo.test` : null,
+  funcionarios: [null, 4, 8, 12, 3, 6, null, null, 9, 5][i],
+  unidades: [null, 1, 1, 2, 1, 1, null, null, 1, 1][i],
+  primeiro_atendimento_em: status === 'novo' ? null : ago(d, i - 3),
+  ultimo_contato_em: status === 'novo' ? null : ago(Math.max(0, d - 1), i),
+  etapa_desde: ago(d / 2, i),
+  motivo_perda: status === 'perdido' ? 'Exemplo fictício: escolheu sistema mais barato' : null,
 }))
 
 export const DEMO_EVENTS: LeadEvent[] = [
@@ -87,4 +102,38 @@ export const DEMO_PLANOS: Plano[] = [
   { codigo: 'ATACADO', nome: 'Atacado', tipo: 'PLANO', preco_loja_centavos: 17900, preco_caixa_adicional_centavos: 3900, caixas_inclusos_por_loja: 1, max_lojas: 1, preco_placeholder: true },
   { codigo: 'REDE', nome: 'Rede', tipo: 'PLANO', preco_loja_centavos: 24900, preco_caixa_adicional_centavos: 3900, caixas_inclusos_por_loja: 1, max_lojas: null, preco_placeholder: true },
   { codigo: 'FISCAL', nome: 'Fiscal (NFC-e/NF-e)', tipo: 'ADDON', preco_loja_centavos: 5900, preco_caixa_adicional_centavos: 0, caixas_inclusos_por_loja: 0, max_lojas: null, preco_placeholder: true },
+]
+
+// ── CRM: equipe, agenda, propostas e auditoria FICTÍCIAS ─────────────────────
+export const DEMO_MEMBERS: Member[] = [
+  { user_id: DEMO_ME, nome: 'Gestora Exemplo (fictícia)', papel: 'gestor', ativo: true, email: 'gestora@exemplo.test' },
+  { user_id: DEMO_VEND, nome: 'Vendedor Exemplo (fictício)', papel: 'vendedor', ativo: true, email: 'vendedor@exemplo.test' },
+]
+const at = (d: number, h: number) => new Date(now + d * 86_400_000 + h * 3_600_000).toISOString()
+const atv = (n: number, lead: number, tipo: Activity['tipo'], titulo: string, quando: string, resp: string, feito: string | null = null, resultado: string | null = null): Activity => ({
+  id: id(500 + n), lead_id: id(lead), tipo, titulo, agendada_para: quando, responsavel_id: resp, concluida_em: feito, cancelada_em: null, resultado, created_at: ago(3),
+})
+export const DEMO_ACTIVITIES: Activity[] = [
+  atv(1, 3, 'demonstracao', 'Demonstração online do PDV (fictícia)', at(0, 2), DEMO_VEND),
+  atv(2, 9, 'demonstracao', 'Demonstração presencial (fictícia)', at(2, 1), DEMO_ME),
+  atv(3, 4, 'retorno', 'Retorno sobre a proposta (fictício)', at(-1, -2), DEMO_ME),
+  atv(4, 2, 'ligacao', 'Ligar para qualificar (fictício)', at(1, 3), DEMO_ME),
+  atv(5, 10, 'reuniao', 'Reunião de negociação (fictícia)', at(4, 0), DEMO_VEND),
+  atv(6, 4, 'demonstracao', 'Demonstração feita (fictícia)', ago(3), DEMO_ME, ago(3), 'Exemplo fictício: gostou do controle de atacado.'),
+]
+const prop = (n: number, lead: number, versao: number, status: Proposal['status'], plano: string | null, valor: number, tabela: number | null): Proposal => ({
+  id: id(600 + n), lead_id: id(lead), versao, plano_codigo: plano, addons: [], qtd_lojas: plano ? 1 : null, qtd_caixas: plano ? 1 : null,
+  valor_tabela_centavos: tabela, preco_tabela_provisorio: tabela !== null, valor_mensal_centavos: valor,
+  condicoes: 'Exemplo fictício: mensal, sem fidelidade.', validade: at(10, 0).slice(0, 10), status,
+  enviada_em: status === 'rascunho' ? null : ago(2), decidida_em: null, motivo: null, created_at: ago(2),
+})
+export const DEMO_PROPOSALS: Proposal[] = [
+  prop(1, 4, 1, 'enviada', 'ATACADO', 17900, 17900),
+  prop(2, 10, 1, 'em_negociacao', 'REDE', 22900, 24900),
+  prop(3, 9, 1, 'rascunho', 'BASICO', 9900, 9900),
+]
+export const DEMO_AUDIT: AuditRow[] = [
+  { id: 3, tabela: 'commercial_leads', registro: id(4), acao: 'UPDATE', ator: DEMO_ME, campos: ['etapa_desde', 'status'], antes: { status: 'demonstracao' }, depois: { status: 'proposta' }, criado_em: ago(1) },
+  { id: 2, tabela: 'commercial_leads', registro: id(4), acao: 'UPDATE', ator: DEMO_ME, campos: ['email', 'uf'], antes: { uf: null }, depois: { uf: 'SP' }, criado_em: ago(2) },
+  { id: 1, tabela: 'commercial_leads', registro: id(4), acao: 'UPDATE', ator: DEMO_ME, campos: ['owner_id'], antes: { owner_id: null }, depois: { owner_id: DEMO_ME }, criado_em: ago(4) },
 ]

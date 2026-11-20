@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { formatBRL, mensagemConversao, parseConversao, parseFollowup } from '@/lib/conversao'
+import { mensagemCrm } from '@/lib/crm'
 import { isUuid, parseNote, parseStatusChange } from '@/lib/model'
 import { RepoError } from '@/lib/repo'
 import { requireAdmin } from '@/lib/session'
@@ -13,7 +14,7 @@ const empresaDo = (form: FormData) => {
   const id = form.get('empresaId')
   return isUuid(id) ? id : redirect('/conversao')
 }
-const falha = (e: unknown) => (e instanceof RepoError ? e.message : 'Não foi possível salvar.')
+const falha = (e: unknown) => (e instanceof RepoError ? mensagemCrm(e.code, e.message) : 'Não foi possível salvar.')
 
 /** Cria a ficha comercial de um teste cujo lead não foi gerado no cadastro (idempotente). */
 export async function criarFicha(form: FormData) {
@@ -48,7 +49,7 @@ export async function mudarEtapa(form: FormData) {
   const { repo } = await requireAdmin()
   const p = parseStatusChange(form)
   if (!p.ok) return back(empresaId, p.error, true)
-  try { await repo.changeStatus(p.value.leadId, p.value.status) } catch (e) { back(empresaId, falha(e), true) }
+  try { await repo.changeStatus(p.value.leadId, p.value.status, p.value.motivo) } catch (e) { back(empresaId, falha(e), true) }
   revalidatePath('/conversao')
   back(empresaId, 'Etapa do funil atualizada.')
 }

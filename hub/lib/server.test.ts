@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
-import { isAdmin, jwtExp, signIn } from './auth'
+import { isAdmin, jwtExp, jwtSub, memberRole, signIn } from './auth'
 import { getConfig, isDemoMode } from './config'
 import { restRepo } from './repo'
 
@@ -33,6 +33,19 @@ describe('auth', () => {
     expect(await isAdmin(cfg, 't', f(false))).toBe(false)
     expect(await isAdmin(cfg, 't', f({ message: 'x' }, 401))).toBe(false)
   })
+  it('papel vem da RPC do banco; antes da migration cai no is_commercial_admin', async () => {
+    const f = (map: Record<string, [unknown, number]>) => (async (u: string) => { const k = Object.keys(map).find((x) => u.endsWith(x)) ?? ''; const [b, st] = map[k] ?? [null, 500]; return Response.json(b, { status: st }) }) as unknown as typeof fetch
+    expect(await memberRole(cfg, 't', f({ commercial_meu_papel: ['vendedor', 200] }))).toBe('vendedor')
+    expect(await memberRole(cfg, 't', f({ commercial_meu_papel: ['hacker', 200] }))).toBeNull()
+    expect(await memberRole(cfg, 't', f({ commercial_meu_papel: [null, 200] }))).toBeNull()
+    expect(await memberRole(cfg, 't', f({ commercial_meu_papel: [{}, 404], is_commercial_admin: [true, 200] }))).toBe('gestor')
+    await expect(memberRole(cfg, 't', f({ commercial_meu_papel: [{}, 503] }))).rejects.toThrow()
+  })
+  it('jwtSub só aceita uuid', () => {
+    const tok = (sub: unknown) => `x.${Buffer.from(JSON.stringify({ sub })).toString('base64url')}.y`
+    expect(jwtSub(tok('00000000-0000-4000-8000-000000000001'))).toBe('00000000-0000-4000-8000-000000000001')
+    expect(jwtSub(tok('x'))).toBeNull()
+  })
   it('jwtExp lê exp e tolera lixo', () => {
     const tok = `x.${Buffer.from(JSON.stringify({ exp: 123 })).toString('base64url')}.y`
     expect(jwtExp(tok)).toBe(123)
@@ -52,14 +65,31 @@ describe('repositório REST', () => {
       expect((i.headers as Record<string, string>).Authorization).toBe('Bearer user-jwt')
     }
   })
-  it('contratado gera histórico e loja contratada', async () => {
+  it('mudança de etapa vai pela RPC do banco (regras de transição lá), com motivo', async () => {
     const calls: Array<[string, RequestInit]> = []
-    const lead = { id: 'L', status: 'proposta', product: 'jinlong', store: 'S', contact: 'C' }
-    const f = (async (u: string, i: RequestInit = {}) => { calls.push([u, i]); return i.method ? new Response(null, { status: 201 }) : Response.json([lead]) }) as unknown as typeof fetch
-    await restRepo(cfg, 't', f).changeStatus('L', 'contratado')
-    expect(calls.map(([u, i]) => `${i.method ?? 'GET'} ${u.split('/rest/v1/')[1]?.split('?')[0]}`)).toEqual([
-      'GET commercial_leads', 'PATCH commercial_leads', 'POST commercial_lead_events', 'POST commercial_customers',
-    ])
+    const f = (async (u: string, i: RequestInit = {}) => { calls.push([u, i]); return new Response(null, { status: 204 }) }) as unknown as typeof fetch
+    await restRepo(cfg, 't', f).changeStatus('L', 'perdido', 'Caro')
+    expect(calls.map(([u, i]) => `${i.method} ${u.split('/rest/v1/')[1]}`)).toEqual(['POST rpc/commercial_lead_mover'])
+    expect(JSON.parse(String(calls[0]?.[1].body))).toEqual({ p_lead: 'L', p_para: 'perdido', p_motivo: 'Caro' })
+  })
+  it('escritas do CRM só por RPC commercial_* (nada de PATCH em etapa/responsável)', async () => {
+    const calls: string[] = []
+    const f = (async (u: string) => { calls.push(u.split('/rest/v1/')[1] ?? ''); return Response.json('00000000-0000-4000-8000-000000000001') }) as unknown as typeof fetch
+    const r = restRepo(cfg, 't', f)
+    await r.assignLead('L', null)
+    await r.updateLead('L', { uf: 'SP' })
+    await r.scheduleActivity({ leadId: 'L', tipo: 'ligacao', titulo: 'x', quando: '2026-11-21T12:00:00Z', responsavel: null })
+    await r.concludeActivity('A', 'ok', false)
+    await r.createProposal({ leadId: 'L', plano: 'BASICO', addons: [], qtdLojas: 1, qtdCaixas: 1, valorCentavos: null, condicoes: null, validade: '2026-12-01' })
+    await r.setProposalStatus('P', 'enviada', null)
+    await r.convertLead('L', 'P', 'aceite ok')
+    await r.saveMember({ email: 'a@b.co', nome: null, papel: 'vendedor', ativo: true })
+    await r.saveStage({ codigo: 'x_y', rotulo: 'X', ordem: 40, ativo: true })
+    expect(calls.every((c) => c.startsWith('rpc/commercial_'))).toBe(true)
+  })
+  it('lista paginada lê o total do Content-Range', async () => {
+    const f = (async () => new Response(JSON.stringify([{ id: 'a' }]), { status: 206, headers: { 'content-range': '25-25/51' } })) as unknown as typeof fetch
+    expect(await restRepo(cfg, 't', f).listLeadsPage({ q: '', status: null, product: null, period: 'all', page: 2 }, 'me')).toEqual({ rows: [{ id: 'a' }], total: 51 })
   })
 })
 
@@ -81,13 +111,6 @@ describe('Central de Conversão (repositório)', () => {
       .rejects.toMatchObject({ code: 'COMMERCIAL_JA_CLIENTE' })
     const g = (async () => Response.json({ message: 'relation "x" does not exist' }, { status: 400 })) as unknown as typeof fetch
     await expect(restRepo(cfg, 't', g).listTrials()).rejects.toMatchObject({ code: undefined })
-  })
-  it('lead de teste grátis não vira “contratado” pelo funil comum (só pela conversão)', async () => {
-    const calls: string[] = []
-    const lead = { id: 'L', status: 'proposta', origem: 'teste_gratis', product: 'jinlong', store: 'S', contact: 'C' }
-    const f = (async (u: string, i: RequestInit = {}) => { calls.push(i.method ?? 'GET'); return Response.json([lead]) }) as unknown as typeof fetch
-    await expect(restRepo(cfg, 't', f).changeStatus('L', 'contratado')).rejects.toThrow(/Central de Conversão/)
-    expect(calls).toEqual(['GET'])
   })
 })
 

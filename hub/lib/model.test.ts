@@ -8,7 +8,7 @@ const NOW = new Date('2026-10-20T12:00:00Z')
 
 describe('filtros', () => {
   it('ignora valores fora da lista e usa 30d por padrão', () => {
-    expect(parseFilters({ status: 'hack', product: 'erp', period: 'x', q: '  loja ' })).toEqual({ q: 'loja', status: null, product: null, period: '30d' })
+    expect(parseFilters({ status: 'Hack!', product: 'erp', period: 'x', q: '  loja ', owner: 'x', page: '-3' })).toEqual({ q: 'loja', status: null, product: null, period: '30d' })
     expect(parseFilters({ status: 'proposta', product: 'venddi', period: 'all' })).toMatchObject({ status: 'proposta', product: 'venddi', period: 'all' })
   })
   it('monta a query do PostgREST com status, produto, período e busca sanitizada', () => {
@@ -46,9 +46,22 @@ describe('validação das ações', () => {
     expect(parseNote(fd({ leadId: ID, kind: 'status', body: 'ok ok' })).ok).toBe(false)
     expect(parseNote(fd({ leadId: ID, kind: 'nota', body: 'x'.repeat(2001) })).ok).toBe(false)
   })
-  it('status só da lista', () => {
-    expect(parseStatusChange(fd({ leadId: ID, status: 'demonstracao' })).ok).toBe(true)
-    expect(parseStatusChange(fd({ leadId: ID, status: 'ganho' })).ok).toBe(false)
+  it('etapa: só código válido (a regra de transição é do banco); motivo opcional', () => {
+    expect(parseStatusChange(fd({ leadId: ID, status: 'demonstracao' }))).toEqual({ ok: true, value: { leadId: ID, status: 'demonstracao', motivo: null } })
+    expect(parseStatusChange(fd({ leadId: ID, status: 'perdido', motivo: ' Caro ' }))).toMatchObject({ ok: true, value: { motivo: 'Caro' } })
+    expect(parseStatusChange(fd({ leadId: ID, status: 'Ganho;drop' })).ok).toBe(false)
+    expect(parseStatusChange(fd({ leadId: ID, status: 'perdido', motivo: 'x'.repeat(501) })).ok).toBe(false)
+  })
+  it('filtros novos: origem, responsável e página', () => {
+    const me = '00000000-0000-4000-8000-0000000000aa'
+    const f = parseFilters({ origem: 'indicacao', owner: 'me', page: '3' })
+    expect(f).toMatchObject({ origem: 'indicacao', owner: 'me', page: 3 })
+    const q = new URLSearchParams(leadsQuery(f, NOW, { me, paginate: true }))
+    expect(q.get('origem')).toBe('eq.indicacao')
+    expect(q.get('owner_id')).toBe(`eq.${me}`)
+    expect(q.get('offset')).toBe('50')
+    expect(q.get('limit')).toBe('25')
+    expect(new URLSearchParams(leadsQuery({ ...f, owner: 'none' }, NOW)).get('owner_id')).toBe('is.null')
   })
   it('cliente: valor com vírgula, vazio vira null, negativo recusado', () => {
     expect(parseCustomerUpdate(fd({ id: ID, plan: '', monthly_value: '199,90', subscription_status: 'ativo' }))).toEqual({ ok: true, value: { id: ID, plan: null, monthly_value: 199.9, subscription_status: 'ativo' } })
