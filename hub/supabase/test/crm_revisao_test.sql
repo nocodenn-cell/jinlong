@@ -45,7 +45,7 @@ reset role;
 -- nome de membro fica fora da auditoria (LGPD)
 set role authenticated;
 select public.t_como('00000000-0000-0000-0000-00000000000a');
-select public.commercial_equipe_salvar('vend-c@exemplo.test', 'Nome Sigiloso Teste', 'vendedor', true);
+select public.commercial_equipe_salvar('vendedor.c@exemplo.test', 'Nome Sigiloso Teste', 'vendedor', true);
 do $$ begin
   if exists (select 1 from public.commercial_audit where tabela='commercial_admins' and (antes::text like '%Nome Sigiloso%' or depois::text like '%Nome Sigiloso%')) then
     raise exception 'FALHA: nome vazou para auditoria';
