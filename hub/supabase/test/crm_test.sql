@@ -293,7 +293,7 @@ do $$ declare r public.commercial_audit; begin
    where tabela = 'commercial_leads' and registro = (select id::text from t_ids where k = 'L2') and 'email' = any (campos)
    order by id desc limit 1;
   if r.id is null then raise exception 'FALHA: edição não auditada'; end if;
-  if r.ator <> '00000000-0000-0000-0000-00000000000c' then raise exception 'FALHA: ator da auditoria'; end if;
+  if r.ator <> '00000000-0000-0000-0000-00000000000a' then raise exception 'FALHA: ator da auditoria'; end if;
   if r.depois ? 'email' or r.depois ? 'observacoes' or r.depois::text like '%exemplo.test%' then raise exception 'FALHA: auditoria guardou dado pessoal'; end if;
   if not (r.depois ? 'uf' and r.depois ? 'funcionarios') then raise exception 'FALHA: auditoria sem valores não pessoais'; end if;
   if not exists (select 1 from public.commercial_audit where tabela = 'commercial_admins' and acao = 'INSERT') then raise exception 'FALHA: equipe não auditada'; end if;
