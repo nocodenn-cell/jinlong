@@ -130,9 +130,13 @@ export default async function TrialPage({ params, searchParams }: {
                   {STATUSES.filter((s) => s !== 'contratado' || l.status === 'contratado').map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
                 </select>
               </label>
+              <label>
+                <span>Motivo (perda ou reabertura)</span>
+                <input name="motivo" maxLength={500} />
+              </label>
               <button type="submit" className="hub-btn">Mudar etapa</button>
             </form>
-            <p className="hub-help">“Contratado” só pela conversão abaixo, que ajusta plano e assinatura.</p>
+            <p className="hub-help">“Convertido” só pela conversão abaixo, que ajusta plano e assinatura. <Link href={`/leads/${l.id}`}>Abrir ficha completa do lead</Link></p>
           </section>
 
           <section className="hub-panel" aria-labelledby="h-hist">

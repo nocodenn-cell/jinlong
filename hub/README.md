@@ -28,11 +28,19 @@ Acompanha quem se cadastrou pelo `/teste-gratis` do Jinlong: dados do dono, per�
   (rollback em `backend/supabase/rollback/`). **Ordem de deploy: migration antes do hub** (o hub passa a ler `origem`/`empresa_id` dos leads).
 - LGPD: só contato do dono (nome, e-mail, telefone do cadastro) e indicadores agregados; nenhum valor de venda ou dado de cliente final.
 
+## Central Comercial (CRM-001) — pipeline, agenda, propostas, equipe
+Detalhes, matriz e evidências: `docs/hub/CRM_001_CENTRAL_COMERCIAL.md`.
+- Papéis no banco: **gestor** (tudo; inclui Central de Conversão, clientes, equipe, auditoria) e **vendedor** (só os próprios leads e os sem responsável).
+  O admin atual vira gestor ao aplicar a migration.
+- Etapa, responsável, dados, agenda, propostas, conversão, equipe e etapas mudam **só por RPC** `commercial_*` (regras no banco).
+- Preço só de `saas.planos`; conversão exige proposta e não cria cobrança. Auditoria append-only sem valores pessoais.
+- Migration: `supabase/20261120120000_commercial_crm.sql` (NÃO aplicada; rollback em `supabase/rollback/`). **Ordem: migration antes do hub.**
+
 ## Rodar
 ```
 HUB_DEMO_DATA=ficticio npm run build && HUB_DEMO_DATA=ficticio npm start   # dados FICTÍCIOS, sem banco
 npm test                                                                   # unitários
-PGURL=postgres://…/descartavel npm run test:rls                            # prova de RLS + Central de Conversão
+PGURL=postgres://…/descartavel npm run test:rls                            # prova de RLS + Central de Conversão + CRM
 ```
 
 ## Para produção (requer autorização — nada disso foi feito)
