@@ -12,6 +12,15 @@ export interface Stage {
   ativo: boolean
 }
 
+/** Item do catálogo oficial (saas.planos) visível a qualquer membro. */
+export interface CatalogItem {
+  codigo: string
+  nome: string
+  tipo: 'PLANO' | 'ADDON'
+  preco_loja_centavos: number
+  preco_placeholder: boolean
+}
+
 export interface Member {
   user_id: string
   nome: string

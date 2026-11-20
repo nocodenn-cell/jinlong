@@ -1,7 +1,7 @@
 import 'server-only'
 import type { HubConfig } from './config'
 import type { Conversao, Interesse, Plano, Trial } from './conversao'
-import type { ActivityWithLead, AuditRow, DashActivity, DashLead, DashProposal, Member, NewLead, Papel, Proposal, ProposalInput, ProposalStatus, Stage, Activity } from './crm'
+import type { ActivityWithLead, AuditRow, CatalogItem, DashActivity, DashLead, DashProposal, Member, NewLead, Papel, Proposal, ProposalInput, ProposalStatus, Stage, Activity } from './crm'
 import { DEFAULT_STAGES, possiveisDuplicados } from './crm'
 import { DEMO_ACTIVITIES, DEMO_AUDIT, DEMO_CUSTOMERS, DEMO_EVENTS, DEMO_LEADS, DEMO_MEMBERS, DEMO_PLANOS, DEMO_PROPOSALS, DEMO_TRIAL_EVENTS, DEMO_TRIALS } from './demoData'
 import { CRM_LEAD_COLUMNS, filterLeads, leadsQuery, PAGE_SIZE, sanitizeSearch, type Customer, type Lead, type LeadEvent, type LeadFilters, type LeadStatus, type SubscriptionStatus } from './model'
@@ -32,11 +32,12 @@ export interface Repo {
   ensureTrialLead(empresaId: string): Promise<string>
   updateFollowup(leadId: string, v: { interesse: Interesse | null; proximo_contato: string | null }): Promise<void>
   listPlanos(): Promise<Plano[]>
+  /** Catálogo oficial para vendedores (sem a checagem de gestor de commercial_planos). */
+  listCatalogo(): Promise<CatalogItem[]>
   convertTrial(c: Conversao): Promise<{ valor_mensal_centavos: number; valor_tabela_centavos: number }>
   // Leads / funil
   listLeads(f: LeadFilters): Promise<Lead[]>
   listLeadsPage(f: LeadFilters, me: string): Promise<{ rows: Lead[]; total: number }>
-  statsSource(): Promise<Pick<Lead, 'status' | 'product' | 'created_at'>[]>
   dashboardSource(f: LeadFilters, me: string): Promise<DashSource>
   pipelineSource(f: LeadFilters, me: string): Promise<PipelineSource>
   recentLeads(n: number): Promise<Lead[]>
@@ -66,6 +67,14 @@ export interface Repo {
   listAudit(limit: number): Promise<AuditRow[]>
 }
 
+/** Remove order/limit de uma query montada por leadsQuery; a paginação é feita por all(). */
+function unpaged(qs: string): string {
+  const p = new URLSearchParams(qs)
+  p.delete('order')
+  p.delete('limit')
+  return p.toString()
+}
+
 export class RepoError extends Error {
   /** Código de regra de negócio levantado pelo banco (ex.: COMMERCIAL_JA_CLIENTE), quando houver. */
   constructor(message: string, readonly code?: string) { super(message) }
@@ -92,6 +101,17 @@ export function restRepo(cfg: HubConfig, token: string, fetchImpl: typeof fetch 
   }
   const rpc = <T>(fn: string, args: object = {}) => call<T>(`rpc/${fn}`, { method: 'POST', body: JSON.stringify(args), headers: { Prefer: '' } })
   const since = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString()
+  const PAGE = 1000
+  /** PostgREST corta cada resposta em api.max_rows (1000): lê em páginas até o fim, com ordem estável. */
+  async function all<T>(base: string, order: string): Promise<T[]> {
+    const out: T[] = []
+    for (let offset = 0; offset < 100_000; offset += PAGE) {
+      const page = await call<T[]>(`${base}&order=${order}&limit=${PAGE}&offset=${offset}`)
+      out.push(...page)
+      if (page.length < PAGE) break
+    }
+    return out
+  }
 
   const repo: Repo = {
     listTrials: () => rpc<Trial[]>('commercial_trials_listar'),
@@ -106,6 +126,7 @@ export function restRepo(cfg: HubConfig, token: string, fetchImpl: typeof fetch 
     ensureTrialLead: (empresaId) => rpc<string>('commercial_trial_garantir_lead', { p_empresa: empresaId }),
     updateFollowup: (leadId, v) => call(`commercial_leads?id=eq.${leadId}`, { method: 'PATCH', body: JSON.stringify(v) }),
     listPlanos: () => rpc<Plano[]>('commercial_planos'),
+    listCatalogo: () => rpc<CatalogItem[]>('commercial_catalogo_planos'),
     convertTrial: (c) => rpc('commercial_converter_trial', {
       p_empresa: c.empresaId, p_plano: c.plano, p_addons: c.addons, p_qtd_lojas: c.qtdLojas, p_qtd_caixas: c.qtdCaixas,
       p_forma: c.forma, p_valor_centavos: c.valorCentavos, p_observacao: c.observacao,
@@ -117,24 +138,22 @@ export function restRepo(cfg: HubConfig, token: string, fetchImpl: typeof fetch 
       const total = Number(res.headers.get('content-range')?.split('/')[1] ?? rows.length)
       return { rows, total: Number.isFinite(total) ? total : rows.length }
     },
-    statsSource: () => call(`commercial_leads?select=status,product,created_at&limit=10000`),
     async dashboardSource(f, me) {
-      const leads = await call<DashLead[]>(`commercial_leads?${leadsQuery({ ...f, q: '', status: null }, new Date(), { me, columns: DASH_LEAD_COLUMNS }).replace('limit=500', 'limit=5000')}`)
+      const leads = await all<DashLead>(`commercial_leads?${unpaged(leadsQuery({ ...f, q: '', status: null }, new Date(), { me, columns: DASH_LEAD_COLUMNS }))}`, 'id')
       const [activities, proposals] = await Promise.all([
-        call<DashActivity[]>('commercial_activities?select=lead_id,tipo,agendada_para,concluida_em,cancelada_em&concluida_em=is.null&cancelada_em=is.null&limit=5000'),
-        call<DashProposal[]>('commercial_proposals?select=lead_id,status,valor_mensal_centavos,enviada_em,versao&limit=10000'),
+        all<DashActivity>('commercial_activities?select=lead_id,tipo,agendada_para,concluida_em,cancelada_em&concluida_em=is.null&cancelada_em=is.null', 'id'),
+        all<DashProposal>('commercial_proposals?select=lead_id,status,valor_mensal_centavos,enviada_em,versao', 'id'),
       ])
       return { leads, activities, proposals }
     },
     async pipelineSource(f, me) {
-      const q = new URLSearchParams(leadsQuery({ ...f, q: '', status: null, period: 'all' }, new Date(), { me, columns: CRM_LEAD_COLUMNS }))
-      q.set('limit', '2000')
+      const q = new URLSearchParams(unpaged(leadsQuery({ ...f, q: '', status: null, period: 'all' }, new Date(), { me, columns: CRM_LEAD_COLUMNS })))
       // em aberto: todos; encerrados: só os que mudaram de etapa nos últimos 30 dias
       q.append('or', `(status.not.in.(contratado,perdido),etapa_desde.gte.${since(CLOSED_WINDOW_DAYS)})`)
       const [leads, proposals, pending] = await Promise.all([
-        call<Lead[]>(`commercial_leads?${q.toString()}`),
-        call<DashProposal[]>('commercial_proposals?select=lead_id,status,valor_mensal_centavos,enviada_em,versao&status=in.(enviada,em_negociacao)&limit=5000'),
-        call<PipelineSource['pending']>('commercial_activities?select=lead_id,tipo,agendada_para&concluida_em=is.null&cancelada_em=is.null&order=agendada_para&limit=5000'),
+        all<Lead>(`commercial_leads?${q.toString()}`, 'id'),
+        all<DashProposal>('commercial_proposals?select=lead_id,status,valor_mensal_centavos,enviada_em,versao&status=in.(enviada,em_negociacao)', 'id'),
+        all<PipelineSource['pending'][number]>('commercial_activities?select=lead_id,tipo,agendada_para&concluida_em=is.null&cancelada_em=is.null', 'agendada_para.asc,id.asc'),
       ])
       return { leads, proposals, pending }
     },
@@ -165,7 +184,7 @@ export function restRepo(cfg: HubConfig, token: string, fetchImpl: typeof fetch 
     }),
     async listAgenda(responsavel) {
       const filtro = responsavel ? `&responsavel_id=eq.${responsavel}` : ''
-      return call<ActivityWithLead[]>(`commercial_activities?select=${ACTIVITY_COLUMNS},lead:commercial_leads(id,store,name,status)&concluida_em=is.null&cancelada_em=is.null${filtro}&order=agendada_para&limit=500`)
+      return all<ActivityWithLead>(`commercial_activities?select=${ACTIVITY_COLUMNS},lead:commercial_leads(id,store,name,status)&concluida_em=is.null&cancelada_em=is.null${filtro}`, 'agendada_para.asc,id.asc')
     },
     scheduleActivity: (a) => rpc<string>('commercial_atividade_agendar', { p_lead: a.leadId, p_tipo: a.tipo, p_titulo: a.titulo, p_quando: a.quando, p_responsavel: a.responsavel }),
     concludeActivity: (id, resultado, cancelar) => rpc('commercial_atividade_concluir', { p_id: id, p_resultado: resultado, p_cancelar: cancelar }),
@@ -205,6 +224,7 @@ export function demoRepo(): Repo {
     ensureTrialLead: off,
     updateFollowup: off,
     listPlanos: async () => DEMO_PLANOS,
+    listCatalogo: async () => DEMO_PLANOS,
     convertTrial: off,
     listLeads: async (f) => filterLeads(leads, f),
     async listLeadsPage(f, me) {
@@ -212,7 +232,6 @@ export function demoRepo(): Repo {
       const page = f.page ?? 1
       return { rows: all.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), total: all.length }
     },
-    statsSource: async () => leads,
     dashboardSource: async (f, me) => ({ leads: filterLeads(leads, { ...f, q: '', status: null }, new Date(), me), activities: pending, proposals: DEMO_PROPOSALS }),
     async pipelineSource(f, me) {
       const lim = Date.now() - CLOSED_WINDOW_DAYS * 86_400_000

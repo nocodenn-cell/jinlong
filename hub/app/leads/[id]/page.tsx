@@ -23,7 +23,7 @@ export default async function LeadPage({ params, searchParams }: { params: Promi
   const [stages, members, planos] = await Promise.all([
     tentar('lead:listStages', () => repo.listStages(), DEFAULT_STAGES),
     tentar('lead:listMembers', () => repo.listMembers(), []),
-    tentar('lead:listPlanos', () => repo.listPlanos(), []),
+    tentar('lead:listCatalogo', () => repo.listCatalogo(), []),
   ])
   const { lead, events, customer, activities, proposals, duplicates, audit } = data
   const tipo = stageTipo(stages.value, lead.status)

@@ -90,7 +90,7 @@ export async function concludeActivity(form: FormData) {
 
 export async function createProposal(form: FormData) {
   const { repo } = await requireMember()
-  const planos = await repo.listPlanos().catch(() => null)
+  const planos = await repo.listCatalogo().catch(() => null)
   if (!planos) return back(form, leadDo(form), 'Catálogo de planos indisponível agora. Tente de novo.', true)
   const p = parseProposal(form, planos.filter((x) => x.tipo === 'PLANO').map((x) => x.codigo), planos.filter((x) => x.tipo === 'ADDON').map((x) => x.codigo))
   if (!p.ok) return back(form, leadDo(form), p.error, true)

@@ -12,7 +12,8 @@
 -- Leads de origem manual (indicacao, prospeccao, evento, whatsapp, outro) passam a origem 'site'.
 BEGIN;
 
-DROP FUNCTION IF EXISTS public.commercial_lead_mover(uuid, text, text), public.commercial_lead_atribuir(uuid, uuid),
+DROP FUNCTION IF EXISTS public.commercial_catalogo_planos(),
+  public.commercial_lead_mover(uuid, text, text), public.commercial_lead_atribuir(uuid, uuid),
   public.commercial_lead_atualizar(uuid, jsonb),
   public.commercial_lead_criar(text, text, text, text, text, text, text, text, text, text, boolean),
   public.commercial_atividade_agendar(uuid, text, text, timestamptz, uuid), public.commercial_atividade_concluir(uuid, text, boolean),

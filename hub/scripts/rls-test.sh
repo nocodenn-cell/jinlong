@@ -21,9 +21,14 @@ echo "Central de Conversão OK"
 # CRM-001 · Central Comercial: equipe, etapas, agenda, propostas, conversão, auditoria
 run "$DIR/supabase/20261120120000_commercial_crm.sql"
 run "$DIR/supabase/test/crm_test.sql"
+# Revisão do PR #688: fixes (catálogo p/ vendedor, LGPD na auditoria, conversão, travamentos) + regressão
+run "$DIR/supabase/20261120120100_commercial_crm_revisao.sql"
+run "$DIR/supabase/test/crm_revisao_test.sql"
 # Migration reaplicável (idempotente) e Central de Conversão continua funcionando depois do CRM
 run "$DIR/supabase/20261120120000_commercial_crm.sql"
+run "$DIR/supabase/20261120120100_commercial_crm_revisao.sql"
 # Rollback documentado roda e a migration volta limpa
 run "$DIR/supabase/rollback/20261120120000_commercial_crm.rollback.sql"
 run "$DIR/supabase/20261120120000_commercial_crm.sql"
+run "$DIR/supabase/20261120120100_commercial_crm_revisao.sql"
 echo "CRM OK"

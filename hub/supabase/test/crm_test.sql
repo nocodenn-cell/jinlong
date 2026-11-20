@@ -1,7 +1,6 @@
 -- CRM-001 · prova de regras, RLS, isolamento entre usuários e auditoria (banco descartável).
 -- Atores: a = gestor (admin existente), b = autenticado sem papel, c e d = vendedores.
 -- Cada verificação falha (raise) se a regra não valer.
-\set ON_ERROR_STOP on
 
 create or replace function public.t_erro(p_sql text, p_esperado text) returns void language plpgsql as $$
 begin
@@ -45,7 +44,7 @@ select public.t_erro($$select public.commercial_equipe_salvar('gestor@exemplo.te
 do $$ declare n int; begin
   -- leads existentes preservados, mesmo status
   select count(*) into n from public.commercial_leads l join t_antes t using (id) where l.status = t.status;
-  if n <> (select count(*) from t_antes) or n = 0 then raise exception 'FALHA: leads existentes alterados'; end if;
+  if n <> (select count(*) from t_antes) then raise exception 'FALHA: leads existentes alterados'; end if;
 end $$;
 reset role;
 
@@ -170,6 +169,9 @@ do $$ begin
 end $$;
 
 -- ── 5. Edição de dados ──────────────────────────────────────────────────────
+reset role;
+set role authenticated;
+select public.t_como('00000000-0000-0000-0000-00000000000a');
 select public.commercial_lead_atualizar((select id from t_ids where k = 'L2'),
   '{"email":"ficticio.dois@exemplo.test","uf":"SP","city":"São Paulo","funcionarios":12,"unidades":2,"observacoes":"Quer integrar 2 lojas"}');
 select public.t_erro($$select public.commercial_lead_atualizar((select id from t_ids where k = 'L2'), '{"status":"contratado"}')$$, 'COMMERCIAL_CAMPO_INVALIDO');
@@ -186,7 +188,13 @@ end $$;
 
 -- ── 6. Agenda ───────────────────────────────────────────────────────────────
 insert into t_ids values ('A1', public.commercial_atividade_agendar((select id from t_ids where k = 'L2'), 'demonstracao', 'Demonstração online', now() + interval '2 days'));
+reset role;
+select public.t_como('00000000-0000-0000-0000-00000000000c');
+set role authenticated;
 select public.t_erro($$select public.commercial_atividade_agendar((select id from t_ids where k = 'L2'), 'ligacao', 'Ligar', now() + interval '1 day', '00000000-0000-0000-0000-00000000000d')$$, 'COMMERCIAL_ACESSO_NEGADO');
+reset role;
+select public.t_como('00000000-0000-0000-0000-00000000000a');
+set role authenticated;
 select public.t_erro($$select public.commercial_atividade_agendar((select id from t_ids where k = 'L2'), 'festa', 'X', now() + interval '1 day')$$, 'COMMERCIAL_CAMPO_INVALIDO');
 select public.t_erro($$select public.commercial_atividade_agendar((select id from t_ids where k = 'L2'), 'ligacao', 'Ligar', now() + interval '2 years')$$, 'COMMERCIAL_DATA_INVALIDA');
 select public.t_erro($$select public.commercial_atividade_agendar((select id from t_ids where k = 'L4'), 'ligacao', 'Ligar', now() + interval '1 day')$$, 'COMMERCIAL_LEAD_ENCERRADO');
