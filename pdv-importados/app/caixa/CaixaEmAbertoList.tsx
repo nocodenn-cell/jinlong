@@ -7,6 +7,56 @@ import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { formatDecimalBRL } from "@/lib/format/money"
 import { cn } from "@/lib/utils"
 import { EmptyState, Loading } from "@/components/ui/feedback"
+import { vendaEmEsperaRetomadaPresa } from "@/app/caixa/vendasEmEsperaLista"
+
+function CabecalhoVendaEmEspera({
+  m,
+  venda,
+  disabled,
+  muted,
+  onRetomar,
+}: {
+  m: Mensagens
+  venda: VendaEmEsperaCard
+  disabled: boolean
+  muted: string
+  onRetomar: (id: string) => void
+}) {
+  const titulo = (
+    <>
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="text-sm font-semibold">
+          {caixaFmt(m.caixa.em_aberto_pedido, { n: String(venda.numeroLocal) })}
+        </span>
+        <span className="text-sm font-bold tabular-nums">
+          {m.caixa.moeda_prefixo} {formatDecimalBRL(venda.totalLiquido)}
+        </span>
+      </div>
+      <p className={cn("mt-0.5 text-small", muted)}>
+        {venda.qtdItens} {venda.qtdItens === 1 ? m.caixa.em_aberto_item : m.caixa.em_aberto_itens}
+      </p>
+    </>
+  )
+  if (!vendaEmEsperaRetomadaPresa(venda.status)) {
+    return (
+      <button
+        disabled={disabled}
+        type="button"
+        className="w-full text-left"
+        onClick={() => onRetomar(venda.id)}
+        title={m.caixa.em_aberto_retomar}
+      >
+        {titulo}
+      </button>
+    )
+  }
+  return (
+    <div>
+      {titulo}
+      <p className={cn("mt-0.5 text-small", muted)}>{m.caixa.em_aberto_retomada_presa}</p>
+    </div>
+  )
+}
 
 type Props = {
   m: Mensagens
@@ -45,25 +95,13 @@ function CaixaEmAbertoListImpl({
       {vendas.map((v) => (
         <li key={v.id}>
           <div className={cn("rounded-md p-2", card)}>
-            <button
+            <CabecalhoVendaEmEspera
+              m={m}
+              venda={v}
               disabled={disabled}
-              type="button"
-              className="w-full text-left"
-              onClick={() => onRetomar(v.id)}
-              title={m.caixa.em_aberto_retomar}
-            >
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="text-sm font-semibold">
-                  {caixaFmt(m.caixa.em_aberto_pedido, { n: String(v.numeroLocal) })}
-                </span>
-                <span className="text-sm font-bold tabular-nums">
-                  {m.caixa.moeda_prefixo} {formatDecimalBRL(v.totalLiquido)}
-                </span>
-              </div>
-              <p className={cn("mt-0.5 text-small", muted)}>
-                {v.qtdItens} {v.qtdItens === 1 ? m.caixa.em_aberto_item : m.caixa.em_aberto_itens}
-              </p>
-            </button>
+              muted={muted}
+              onRetomar={onRetomar}
+            />
             {descartandoId === v.id ? (
               <form
                 className="mt-1 flex flex-col gap-1"

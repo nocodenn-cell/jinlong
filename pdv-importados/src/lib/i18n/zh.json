@@ -1247,6 +1247,7 @@
     "em_aberto_item": "件",
     "em_aberto_itens": "件",
     "em_aberto_retomar": "恢复挂单",
+    "em_aberto_retomada_presa": "此挂单已恢复，但本机没有对应小票。丢弃后才能关闭收银台。",
     "em_aberto_descartar": "丢弃",
     "em_aberto_motivo_label": "丢弃原因",
     "em_aberto_motivo_confirmar": "确认丢弃",
