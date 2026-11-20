@@ -13,6 +13,8 @@ export type VendaEmEsperaCard = {
   qtdItens: number
   criadaEm: string
   atualizadaEm: string
+  /** Ausente em banco antigo: a tela trata como EM_ESPERA. */
+  status?: 'EM_ESPERA' | 'RETOMADA'
 }
 
 export type ColocarEmEsperaResult =
@@ -79,6 +81,7 @@ function mapCard(row: Record<string, unknown>): VendaEmEsperaCard {
     qtdItens: Number(row.qtd_itens ?? 0),
     criadaEm: String(row.criada_em ?? ''),
     atualizadaEm: String(row.atualizada_em ?? ''),
+    status: row.status === 'RETOMADA' ? 'RETOMADA' : 'EM_ESPERA',
   }
 }
 

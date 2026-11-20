@@ -1,6 +1,6 @@
 /**
- * Isolamento entre specs (E2E local): vendas EM_ESPERA deixadas por um spec bloqueiam o
- * fechamento do caixa do mesmo operador (regra D1, trigger trg_caixas_bloqueia_fechamento_em_espera).
+ * Isolamento entre specs (E2E local): vendas EM_ESPERA ou RETOMADA deixadas por um spec
+ * bloqueiam o fechamento do caixa (trigger D1 e fechar_caixa_atomico).
  * Antes de cada execução, descarta as esperas abertas dos usuários de teste `e2e-*@localhost.test`.
  *
  * Escopo: somente usuários de teste locais (e-mail `e2e-%@localhost.test`). Não toca dados reais.
@@ -33,7 +33,7 @@ export default async function globalSetupLimpezaEsperas() {
         descartada_por: operadorId,
         descartada_em: agora,
       })
-      .eq('status', 'EM_ESPERA')
+      .in('status', ['EM_ESPERA', 'RETOMADA'])
       .eq('operador_id', operadorId)
     if (error) throw error
   }

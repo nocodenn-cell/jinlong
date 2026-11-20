@@ -11,6 +11,7 @@ const m = {
     em_aberto_item: "item",
     em_aberto_itens: "itens",
     em_aberto_retomar: "Retomar",
+    em_aberto_retomada_presa: "Pedido retomado sem cupom nesta tela. Descarte para liberar o fechamento do caixa.",
     em_aberto_descartar: "Descartar",
     em_aberto_motivo_label: "Motivo do descarte",
     em_aberto_motivo_confirmar: "Confirmar descarte",
@@ -95,5 +96,40 @@ describe("CaixaEmAbertoList — motivo obrigatório no descarte (RN-03)", () => 
     flushSync(() => botao(/^Cancelar$/).click())
     expect(container.querySelector("input")).toBeNull()
     expect(onDescartar).not.toHaveBeenCalled()
+  })
+
+  it("EM_ESPERA retoma pelo título", () => {
+    const onRetomar = vi.fn()
+    flushSync(() => {
+      root.render(
+        <CaixaEmAbertoList m={m} vendas={[VENDA]} onRetomar={onRetomar} onDescartar={() => {}} />,
+      )
+    })
+    flushSync(() => botao(/Pedido #1/).click())
+    expect(onRetomar).toHaveBeenCalledWith("v-1")
+  })
+
+  it("RETOMADA órfã não retoma e o descarte continua disponível", () => {
+    const onRetomar = vi.fn()
+    const onDescartar = vi.fn()
+    flushSync(() => {
+      root.render(
+        <CaixaEmAbertoList
+          m={m}
+          vendas={[{ ...VENDA, id: "v-ret", status: "RETOMADA" }]}
+          onRetomar={onRetomar}
+          onDescartar={onDescartar}
+        />,
+      )
+    })
+    expect(container.textContent).toContain("Pedido retomado sem cupom nesta tela")
+    expect(onRetomar).not.toHaveBeenCalled()
+    flushSync(() => botao(/^Descartar$/).click())
+    digitar("Cupom perdido")
+    flushSync(() => {
+      container.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }))
+    })
+    expect(onRetomar).not.toHaveBeenCalled()
+    expect(onDescartar).toHaveBeenCalledWith("v-ret", "Cupom perdido")
   })
 })

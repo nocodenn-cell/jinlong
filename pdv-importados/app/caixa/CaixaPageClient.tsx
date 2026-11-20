@@ -62,6 +62,7 @@ import { CaixaPdvCartSaleBar } from "@/app/caixa/CaixaPdvCartSaleBar"
 import { CaixaPdvOperacoesMenu } from "@/app/caixa/CaixaPdvOperacoesMenu"
 import { CaixaRailTurnoSummary } from "@/app/caixa/CaixaRailTurnoSummary"
 import { CaixaEmAbertoList } from "@/app/caixa/CaixaEmAbertoList"
+import { vendasEmEsperaVisiveis } from "@/app/caixa/vendasEmEsperaLista"
 import { CaixaConsultaRapidaModal } from "@/app/caixa/CaixaConsultaRapidaModal"
 import { CaixaHistoricoSheet } from "@/app/caixa/CaixaHistoricoSheet"
 import { CaixaAbrirTurnoModal } from "@/app/caixa/CaixaAbrirTurnoModal"
@@ -1866,7 +1867,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
               <CaixaEmAbertoList
                 disabled={processandoEspera || finalizando}
                 m={m}
-                vendas={vendasEmEspera}
+                vendas={vendasEmEsperaVisiveis(vendasEmEspera, vendaEmEsperaOrigemId)}
                 carregando={carregandoEmEspera}
                 onRetomar={(id) => void handleRetomarEmEspera(id)}
                 onDescartar={(id, motivo) => void handleDescartarEmEspera(id, motivo)}
