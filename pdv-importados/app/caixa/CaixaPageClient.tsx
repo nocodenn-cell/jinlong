@@ -94,6 +94,7 @@ import {
   type MetodoPagamentoUi,
 } from "@/app/caixa/caixaMetodoPagamento"
 import { atualizarPedidoEspera } from "@/app/caixa/caixaAtualizacaoEspera"
+import type { ContextoCaixaRecuperacao } from "../../../shared-core/src/caixa/recuperacaoCarrinho"
 import { CaixaDescontoComercialDinheiro } from "@/app/caixa/CaixaDescontoComercialDinheiro"
 import { focarBuscaCaixa } from "@/app/caixa/caixaFocoBusca"
 import "@/styles/caixa-operacional.css"
@@ -398,6 +399,62 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   }, [userId])
   /** F1 alterna a referência de atalhos (renderizada no topbar). */
   const [atalhosReferenciaAberta, setAtalhosReferenciaAberta] = useState(false)
+
+  // Recuperação do cupom persistido (P0-3). Só decide com o status do caixa definitivo:
+  // com status carregando/erro o cupom antigo fica intocado e nada é restaurado.
+  // Pagamentos não são lidos do armazenamento (não são persistidos); o recebido segue
+  // o padrão de qualquer venda nova (total do cupom atual).
+  const [recuperacaoCarrinhoDecidida, setRecuperacaoCarrinhoDecidida] = useState(false)
+  const recuperacaoCarrinhoEmCurso = useRef(false)
+  const recuperarCarrinhoPersistido = useCarrinhoStore((s) => s.recuperarCarrinhoPersistido)
+  const definirCaixaSessao = useCarrinhoStore((s) => s.definirCaixaSessao)
+  useEffect(() => {
+    if (recuperacaoCarrinhoDecidida || recuperacaoCarrinhoEmCurso.current) return
+    const contexto: ContextoCaixaRecuperacao = carregandoStatus
+      ? { status: "carregando" }
+      : isCaixaAberto(caixaStatus)
+        ? { status: "aberto", caixaId: caixaStatus.caixaId }
+        : caixaStatus?.status === "FECHADO"
+          ? { status: "fechado" }
+          : { status: "erro" }
+    if (contexto.status === "carregando" || contexto.status === "erro") return
+    recuperacaoCarrinhoEmCurso.current = true
+    void recuperarCarrinhoPersistido({ userId, caixa: contexto }).then((decisao) => {
+      recuperacaoCarrinhoEmCurso.current = false
+      if (decisao.acao === "aguardar") return
+      setRecuperacaoCarrinhoDecidida(true)
+      if (decisao.acao === "verificar_finalizacao") {
+        // Venda possivelmente gravada: só o modal, que consulta a chave no servidor, decide.
+        setVendaPendenteModalAberto(true)
+        return
+      }
+      if (decisao.acao === "vazio" || decisao.acao === "descartar") {
+        if (decisao.acao === "descartar") {
+          setCaixaMensagem(m.caixa.msg_carrinho_anterior_descartado, { kind: "warning" })
+        }
+        // Waiting sale reservada pelo cupom descartado volta à lista (nunca se perde).
+        if (decisao.devolverEsperaId) {
+          void atualizarPedidoEspera(decisao.devolverEsperaId, devolverVendaEmEsperaCaixa,
+            (error) => setCaixaMensagem(error, { kind: "warning" }), m.caixa.err_srv_devolver_espera)
+        }
+      }
+    })
+  }, [
+    carregandoStatus,
+    caixaStatus,
+    m,
+    recuperacaoCarrinhoDecidida,
+    recuperarCarrinhoPersistido,
+    setCaixaMensagem,
+    userId,
+  ])
+  // Vincula o cupom ao turno aberto somente depois da recuperação (senão um cupom
+  // antigo seria sobrescrito antes de ser comparado com o turno persistido).
+  useEffect(() => {
+    if (recuperacaoCarrinhoDecidida && isCaixaAberto(caixaStatus)) {
+      definirCaixaSessao(caixaStatus.caixaId)
+    }
+  }, [caixaStatus, definirCaixaSessao, recuperacaoCarrinhoDecidida])
 
   const thermal = useThermalPrinter()
 
