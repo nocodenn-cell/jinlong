@@ -1,0 +1,14 @@
+{
+  "remote_migration_count": 392,
+  "remote_max_version": "20261006200048",
+  "has_any_20261007_tracked": false,
+  "has_calcular_valor_por_forma": false,
+  "has_fechamento_formas_snapshot": false,
+  "has_formas_conta_financeira_id": false,
+  "ssot004_insert_revoked": false,
+  "has_finalizar_v4": true,
+  "auth_cannot_update_estoque": true,
+  "auth_cannot_update_caixas": true,
+  "verdict": "NO-GO",
+  "queried_at": "2026-10-08T00:40Z"
+}

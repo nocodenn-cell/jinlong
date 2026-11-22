@@ -7,7 +7,7 @@
 
 ---
 
-## Estado operacional (2026-10-07)
+## Estado operacional (2026-10-07 · revalidado 2026-10-08)
 
 | Campo | Valor |
 |-------|-------|
@@ -15,12 +15,14 @@
 | Backup nativo / PITR | **Não** no Free |
 | Automação Opção B | Workflows em `.github/workflows/backup-*.yml` — **ativos, falhando** |
 | Últimos 30 runs `backup-scheduled` | **0 success / 30 failure** (PAM/JIT) |
+| Revalidação 2026-10-08 | 10/10 runs listados ainda **failure**; org continua Free |
 | RPO **alvo** | 24h |
 | RPO **efetivamente garantido** | **`NÃO GARANTIDO`** |
 | RTO **alvo / esperado** | 4h úteis |
-| Restore drill local (`pg_dump -Fc`) | `RESTORE_DRILL_PASS` (fase hardening) |
+| Restore drill local (`pg_dump -Fc`) | `RESTORE_DRILL_PASS` (fase hardening) + `RESTORE_DRILL_LOCAL_SYNTHETIC_PASS` (2026-10-08) |
 | Formato CI (age/sql) | `AUTOMATION_FORMAT_RESTORE_PASS` (isolado; não é dump prod) |
 | Gate | **`BACKUP_PRODUCTION_PENDING`** — ver [GATE_BACKUP_PRODUCAO.md](../regras-negocio/GATE_BACKUP_PRODUCAO.md) |
+| Sprint ops | [SPRINT_CONFIABILIDADE_OPERACIONAL_2026-10-08.md](../audits/SPRINT_CONFIABILIDADE_OPERACIONAL_2026-10-08.md) → **NO-GO** piloto com RPO |
 
 **Não afirmar SLA de RPO enquanto não houver artefato de produção com sucesso &lt; 25h.**
 
