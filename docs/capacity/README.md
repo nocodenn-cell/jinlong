@@ -1,21 +1,28 @@
-# Auditoria de Capacidade, Resiliência e Continuidade — Jinlong / FastProduct
+# Auditoria de Capacidade, Resiliência e Continuidade — Jinlong
 
-**Prioridade:** P0 — prontidão para comercialização SaaS  
-**Data início:** 2026-10-09  
-**Escopo desta entrega:** FASE 1 (inventário somente leitura) + FASE 2 (plano de ensaios)  
-**Proibido nesta fase:** carga em produção, alteração de infraestrutura remota, correções estruturais sem aprovação
+**Prioridade:** P0  
+**Orçamento adicional STG-01:** **R$ 0**  
+**Proibido até autorização:** provisionar, upgrade pago, carga em produção
 
 | Documento | Conteúdo |
 |-----------|----------|
-| [FASE1_INVENTARIO_CAPACIDADE_RESILIENCIA.md](./FASE1_INVENTARIO_CAPACIDADE_RESILIENCIA.md) | Arquitetura efetiva, caminho da venda, locks, offline, SPOF, isolamento |
-| [FASE2_PLANO_ENSAIOS_CARGA.md](./FASE2_PLANO_ENSAIOS_CARGA.md) | Cenários 1–50 lojas, k6, continuidade, critérios GO/NO-GO |
-| [k6/](./k6/) | Esqueleto de scripts k6 (não executáveis contra prod; exige staging) |
-| [checklists/PRE_EXECUCAO_STAGING.md](./checklists/PRE_EXECUCAO_STAGING.md) | Gate humano antes de FASE 3/4 |
+| [FASE1_INVENTARIO_CAPACIDADE_RESILIENCIA.md](./FASE1_INVENTARIO_CAPACIDADE_RESILIENCIA.md) | Inventário |
+| [FASE2_PLANO_ENSAIOS_CARGA.md](./FASE2_PLANO_ENSAIOS_CARGA.md) | Plano k6 (escada completa; execução inicial 1/5/10) |
+| [STG01_HOMOLOGACAO_ISOLADA.md](./STG01_HOMOLOGACAO_ISOLADA.md) | **Gate humano custo zero** — Trilha F (Free) / L (Docker) |
+| [staging/prod-denylist.json](./staging/prod-denylist.json) | Hosts de produção bloqueados |
+| [k6/](./k6/) | Esqueleto k6 |
+| [checklists/PRE_EXECUCAO_STAGING.md](./checklists/PRE_EXECUCAO_STAGING.md) | Checklist pré-carga |
 
-## Decisão preliminar (após FASE 1)
+## Capacidade (três camadas)
 
-**NO-GO para comercialização em escala** até existir homologação isolada e números medidos.
+| Camada | Significado | Agora |
+|--------|-------------|-------|
+| C1 Funcional | Piloto 1 loja + corretude | Comprovada em parte |
+| C2 Free/local | k6 em 1/5/10 lojas | **Não medida** |
+| C3 Produção | Compute real multi-loja | **Desconhecida** |
 
-**GO CONDICIONAL** para avançar à FASE 3 **somente após** provisionar staging separado de produção (hoje: staging inexistente — ver `docs/AMBIENTES_E_RELEASE.md`).
+## Decisão
 
-Capacidade comprovada hoje: **1 loja piloto** (operacional). Capacidade estimada para 5–50 lojas: **não medida**.
+**NO-GO** comercialização em escala.  
+**GO CONDICIONAL** piloto.  
+**STG-01:** aguardando autorização Trilha F e/ou L (R$ 0).
