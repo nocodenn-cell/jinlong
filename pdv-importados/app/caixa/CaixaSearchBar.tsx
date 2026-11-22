@@ -56,10 +56,17 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
   forwardedRef,
 ) {
   const innerRef = useRef<HTMLInputElement>(null)
+  const busy = buscando || carregandoRegras
 
+  // Foco inicial: o campo nasce desabilitado enquanto as regras carregam (`busy`),
+  // e `focus()` em input desabilitado é no-op. Por isso o efeito também depende de
+  // `busy`: ao habilitar, foca — mas só se o foco estiver solto (body/nulo), para
+  // não roubar o campo de parcela/quantidade que o operador esteja usando.
   useEffect(() => {
-    if (!compact) innerRef.current?.focus()
-  }, [compact])
+    if (compact || busy) return
+    const ativo = typeof document !== "undefined" ? document.activeElement : null
+    if (!ativo || ativo === document.body) innerRef.current?.focus()
+  }, [compact, busy])
 
   const setRef = useCallback(
     (el: HTMLInputElement | null) => {
@@ -72,8 +79,6 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
     },
     [forwardedRef],
   )
-
-  const busy = buscando || carregandoRegras
 
   return (
     <div className={cn("space-y-2", compact && "space-y-1")}>

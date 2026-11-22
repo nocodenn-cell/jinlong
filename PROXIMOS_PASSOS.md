@@ -2,6 +2,9 @@
 
 ## P0 — Quebrado/travado
 
+- PDV: carrinho antigo reidratado (`pdv-carrinho`, `shared-core/src/stores/unifiedCartStore.ts`) sem expiração, sem vínculo a turno/caixa e com `vendaFinalizacaoPendente` persistido. "Recebido" volta preenchido. Proposta: `version: 2` + `criadoEm`/`caixaId` no partialize; reidratação vira "retomar ou descartar" após 12 h ou de outro turno; Recebido nunca restaurado. Prioridade máxima; aguarda autorização
+- Análises › Produtos & Estoque e CRM & Auditoria: timeout. Causa provável: `v_estoque_ledger_divergencia` agrega todo o `movimentos_estoque_log` sem filtro; curva ABC e margem limitam só após agregar; `page.tsx` carrega todos os blocos em qualquer aba; erros de blocos são ignorados. Não aumentar timeout. Medir com EXPLAIN ANALYZE em staging antes de migration
+
 - PR #657 (D-06 + RN-03) mesclado na `main` em 2026-11-19 (`9d27e0eb`), com migrations renomeadas para `20261119120000`/`20261119120100`. Confirmar em produção que as duas migrations e a tela nova entraram juntas (sem a tela, "Descartar" falha com `motivo_obrigatorio` e o caixa não fecha) e fazer smoke de descarte com motivo e fechamento com venda em espera
 - Senha do gerente (`pdv_config.gerente_senha_bcrypt`) só pode ser definida por SQL; sem ela não há desconto nem sangria acima do limite. Criar tela para o dono
 - Auditoria de prontidão comercial (2026-11-06, somente leitura): veredito NÃO PODE ENTRAR; 35% de prontidão por área. Bloqueadores P0-1 a P0-10 em `docs/auditorias/AUDITORIA_PRONTIDAO_COMERCIAL_2026-11-06.md` (§5). Aplicar `20261104120000` em produção com autorização é o primeiro item. Plano por fases A–F e decisões D-04 a D-15 em `docs/auditorias/PLANO_LIBERACAO_PRIMEIRO_CLIENTE_2026-11-06.md`; decisões do dono são a primeira pendência
@@ -152,6 +155,7 @@
 - Mostrar as parcelas do crédito no detalhe da venda (admin) e na 2ª via, depois da coluna existir na homologação
 
 ## Feito
+- 2026-11-22 — PDV: campo de busca recebe foco ao habilitar (`CaixaSearchBar`, só se o foco estiver solto); KPI sem slot fantasma de sparkline e sem truncar valor monetário (`MetricCard`). Testes novos + 606 testes de caixa/UI/dashboard passando; tsc limpo. Sem commit
 - 2026-11-19 — PDV: toda venda começa com o operador como vendedor (antes lembrava o último vendedor e gravava vendas seguintes no vendedor errado; decisão do dono). Cancelamento: comprovante e auditoria mostram o total devolvido e quem cancelou (antes R$ 0,00 em PIX/cartão/dividido e autor = operador da venda). Sem migration; testes de caixa, vendas e auditoria OK (480). PR #686
 - 2026-11-19 — Validação operacional ponta a ponta no ambiente local (cadastro, entrada, PDV varejo/atacado, desconto, sangria/suprimento, fechamento, cancelamento, contas a pagar, relatórios, auditoria, RLS): `docs/auditoria/RELATORIO_VALIDACAO_OPERACIONAL_JINLONG.md`. PR #686
 - 2026-11-14 — PDV (caixa): carrinho com preço sobreposto ao selo "Atacado" corrigido (grade única do cabeçalho e das linhas); stepper sem cantos/divisórias tortos (elementos nativos); topo das 3 colunas na mesma altura h-11; botões de cabeçalho, rail, pagamento e desconto padronizados
@@ -161,4 +165,3 @@
 - 2026-11-12 — Análise da auditoria do site Jinlong contra o código em `site/` (idêntico a `2929b09a`): prazo tributário confirmado vencido; formulário e FAB confirmados como P0; protocolo, CTA do simulador e cookie PT confirmados como falsos positivos. Nenhum código alterado
 - 2026-11-12 — hub.jinlong.app: painel quebrava (digest 226588760, "Falha ao acessar dados (400)"). Causa: a Central de Conversão (`20261023130000`) estava no `main` mas não no banco `jinlong`. Migration aplicada em produção após checagem; cada seção do hub agora degrada sozinha (`hub/lib/seguro.ts`) e há `hub/app/error.tsx`. Código ainda não commitado
 - 2026-11-11 — Auditoria dos 53 PRs abertos e das branches (somente leitura): `docs/governance/GITHUB_AUDIT.md`, `GITHUB_CLEANUP_PLAN.md` e `GITHUB_WORKFLOW.md`. Nenhuma ação no GitHub; decisões pendentes listadas no plano
-- 2026-11-07 — Desenho do endpoint protegido de `commercial_leads` (`docs/planos/LEADS_ENDPOINT_PROTEGIDO.md`) e guardas do servidor com testes (`site/lib/pedidoDemoGuards.ts`), flag `SITE_DEMO_FORM_ATIVO` reproduzida (padrão desligada). Suíte do site: 87 testes passando. Nenhuma migration aplicada
