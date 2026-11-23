@@ -94,6 +94,8 @@ import {
   type MetodoPagamentoUi,
 } from "@/app/caixa/caixaMetodoPagamento"
 import { atualizarPedidoEspera } from "@/app/caixa/caixaAtualizacaoEspera"
+import { createClient as createBrowserSupabase } from "@/lib/supabase/client"
+import { getLojaIdUsuario, LOJA_MATRIZ_ID } from "@/lib/auth/lojaUsuario"
 import type { ContextoCaixaRecuperacao } from "../../../shared-core/src/caixa/recuperacaoCarrinho"
 import { CaixaDescontoComercialDinheiro } from "@/app/caixa/CaixaDescontoComercialDinheiro"
 import { focarBuscaCaixa } from "@/app/caixa/caixaFocoBusca"
@@ -155,6 +157,17 @@ type Props = {
   operadorLabel: string
   perfil: string | null
   userId: string | null
+}
+
+/** Loja da sessão para a recuperação do cupom; falha não bloqueia (decide sem checar loja). */
+async function resolverLojaRecuperacao(uid: string | null): Promise<string | undefined> {
+  if (!uid) return undefined
+  try {
+    return (await getLojaIdUsuario(createBrowserSupabase(), uid)) ?? LOJA_MATRIZ_ID
+  } catch (error) {
+    console.error("[caixa.recuperacao.loja]", error)
+    return undefined
+  }
 }
 
 export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, userId }: Props) {
@@ -419,7 +432,10 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           : { status: "erro" }
     if (contexto.status === "carregando" || contexto.status === "erro") return
     recuperacaoCarrinhoEmCurso.current = true
-    void recuperarCarrinhoPersistido({ userId, caixa: contexto }).then((decisao) => {
+    // A loja precisa estar resolvida antes da decisão (senão um cupom de outra loja passa).
+    void resolverLojaRecuperacao(userId)
+      .then((lojaId) => recuperarCarrinhoPersistido({ userId, lojaId, caixa: contexto }))
+      .then((decisao) => {
       recuperacaoCarrinhoEmCurso.current = false
       if (decisao.acao === "aguardar") return
       setRecuperacaoCarrinhoDecidida(true)
@@ -754,7 +770,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       [alterarQuantidade, enqueueLeitura, m.caixa.msg_fila_leituras_cheia, reprecificar, setCaixaMensagem],
     ),
     {
-      enabled: true,
+      enabled: recuperacaoCarrinhoDecidida,
       maxIntervalMs: 40,
       flushTimeoutMs: 100,
       minLength: 3,
@@ -1798,7 +1814,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                         onSubmit={handleAdicionar}
                         onNovoCupom={handleExcluirVendaConfirmado}
                         buscando={buscandoPipeline}
-                        carregandoRegras={carregandoRegras}
+                        // Sem cupom decidido (restaurar/descartar) não se aceita leitura: senão o item
+                        // entraria com caixaId nulo e seria descartado no próximo carregamento.
+                        carregandoRegras={carregandoRegras || !recuperacaoCarrinhoDecidida}
                         somAtivo={somFeedbackAtivo}
                         onToggleSom={() => setSomFeedbackAtivo((prev) => !prev)}
                         hideSomToggle

@@ -420,7 +420,8 @@ function resolveMaxDescontoGerente(
   return stateMax
 }
 
-export const useCartStore = create<CarrinhoState>()(
+function criarCarrinhoStore(skipHydration: boolean) {
+  const store = create<CarrinhoState>()(
   persist(
     (set, get) => ({
       itens: [],
@@ -455,8 +456,8 @@ export const useCartStore = create<CarrinhoState>()(
           return { acao: 'aguardar' }
         }
         // Hidratação só acontece aqui (skipHydration): antes disso o PDV não mostra cupom antigo.
-        await useCartStore.persist.rehydrate()
-        const s = useCartStore.getState()
+        await store.persist.rehydrate()
+        const s = store.getState()
         const decisao = decidirRecuperacaoCarrinho(
           {
             itens: s.itens,
@@ -599,6 +600,7 @@ export const useCartStore = create<CarrinhoState>()(
             ...totais,
             descontoGerenteToken: descontoAtivo ? token : null,
             maxDescontoGerentePercentual: maxPermitido,
+            atualizadoEm: new Date().toISOString(),
           }
         }),
 
@@ -615,6 +617,7 @@ export const useCartStore = create<CarrinhoState>()(
             ...totais,
             maxDescontoGerentePercentual: maxPermitido,
             descontoGerenteToken: descontoAtivo ? state.descontoGerenteToken : null,
+            atualizadoEm: new Date().toISOString(),
           }
         }),
 
@@ -666,7 +669,7 @@ export const useCartStore = create<CarrinhoState>()(
       // Não hidrata na criação do store: a hidratação acontece em
       // `recuperarCarrinhoPersistido`, depois que o caixa é conhecido. Assim um cupom
       // antigo nunca aparece antes da decisão de restaurar/descartar.
-      skipHydration: true,
+      skipHydration,
       // Só entram na memória as chaves do cupom. Qualquer outra chave gravada (ex.: um
       // valor recebido de versão antiga) é ignorada na hidratação.
       merge: (persistido, atual) => {
@@ -716,7 +719,16 @@ export const useCartStore = create<CarrinhoState>()(
       },
     },
   ),
-)
+  )
+  return store
+}
+
+/** Desktop (pdv-local): hidrata na criação, como antes. */
+export const useCartStore = criarCarrinhoStore(false)
+
+/** PDV web: hidrata só via recuperarCarrinhoPersistido, depois do status do caixa. */
+export const useCartStoreRecuperavel = criarCarrinhoStore(true)
+
 
 export function calcularTotais(itens: ItemCarrinho[]) {
   return recalcularTotais(itens)
