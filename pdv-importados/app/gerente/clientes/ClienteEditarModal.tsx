@@ -11,6 +11,7 @@ import { UserPlus, UserCog } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Field, Input, Checkbox } from '@/components/ui/forms'
 import { DragonModal } from '@/components/ui/DragonModal'
+import { useConfirmDialog } from '@/components/ui/useConfirmDialog'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages, type Mensagens } from '@/i18n/getMessages'
 import { emitGerenteToast } from '@/lib/gerente/toast'
@@ -60,6 +61,7 @@ export function ClienteEditarModal({
 }: Props) {
   const m = messages ?? getMessages(idioma)
   const editando = !!cliente
+  const { confirmar, dialogo } = useConfirmDialog()
 
   const [tipo, setTipo] = useState<'PF' | 'PJ'>(cliente?.tipo ?? 'PF')
   const [nome, setNome] = useState(cliente?.nome ?? '')
@@ -94,11 +96,20 @@ export function ClienteEditarModal({
     )
   }
 
-  const fechar = useCallback(() => {
-    if (sujo() && !confirm(m.clientes.confirmar_descartar)) return
+  const fechar = useCallback(async () => {
+    if (
+      sujo() &&
+      !(await confirmar({
+        titulo: m.clientes.confirmar_descartar,
+        mensagem: m.produtos.confirm_descartar_texto,
+        rotuloConfirmar: m.produtos.confirm_descartar_confirmar,
+        rotuloCancelar: m.produtos.confirm_descartar_continuar,
+      }))
+    )
+      return
     onClose()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nome, documento, email, telefone, endereco, limite, tipo, cliente, onClose, m])
+  }, [nome, documento, email, telefone, endereco, limite, tipo, cliente, onClose, m, confirmar])
 
   function handleTipo(t: 'PF' | 'PJ') {
     setTipo(t)
@@ -353,6 +364,7 @@ export function ClienteEditarModal({
           </div>
         ) : null}
       </form>
+      {dialogo}
     </DragonModal>
   )
 }

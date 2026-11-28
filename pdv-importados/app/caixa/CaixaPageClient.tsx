@@ -798,6 +798,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
    * chamado depois de colocarVendaEmEsperaCaixa) não passa por aqui: os
    * itens já foram salvos, não há o que confirmar.
    */
+  const [confirmExcluirVendaAberto, setConfirmExcluirVendaAberto] = useState(false)
   const handleExcluirVendaConfirmado = useCallback(() => {
     // Antes do confirm: com venda pendente não há o que descartar — o cupom pode
     // já ter virado venda. Vai direto para a recuperação.
@@ -805,11 +806,14 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       handleNovoCupom()
       return
     }
-    if (itens.length > 0 && !globalThis.confirm(m.caixa.cart_bar_excluir_confirmar)) {
+    // Confirmação no modal do PDV (foco inicial em Cancelar: Enter acidental não apaga o cupom),
+    // não mais `confirm()` do navegador — sprint UX 2026-11-27, onda A.
+    if (itens.length > 0) {
+      setConfirmExcluirVendaAberto(true)
       return
     }
     handleNovoCupom()
-  }, [itens.length, handleNovoCupom, m.caixa.cart_bar_excluir_confirmar])
+  }, [itens.length, handleNovoCupom])
 
   const {
     vendasEmEspera,
@@ -2083,6 +2087,21 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           if (!open) setConfirmacaoPendente(null)
         }}
         onConfirm={handleConfirmarAcaoSensivel}
+      />
+      <CaixaConfirmModal
+        open={confirmExcluirVendaAberto}
+        title={m.caixa.cart_bar_excluir_venda}
+        description={m.caixa.cart_bar_excluir_confirmar}
+        m={m}
+        initialFocus="cancel"
+        confirmLabel={m.caixa.cart_bar_excluir_venda}
+        onOpenChange={(open) => {
+          if (!open) setConfirmExcluirVendaAberto(false)
+        }}
+        onConfirm={() => {
+          setConfirmExcluirVendaAberto(false)
+          handleNovoCupom()
+        }}
       />
       {/* Recuperação de venda pendente (desfecho desconhecido após timeout,
           queda de rede ou reinício da aplicação). */}

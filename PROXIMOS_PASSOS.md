@@ -134,7 +134,8 @@
 - Site Jinlong: microtextos de 10,5–11 px, scroll lock no menu mobile, avisos de Autoprefixer em `site/styles/site.css:186,196,216`, SEO técnico (canonical das páginas legais, lastmod no sitemap, aliases `/pt-br` e `/zh-cn`)
 - Site Jinlong: worktree `site-fase0-baseline-20261110` (branch `site/fase0-baseline-20261110`) usa junctions para `node_modules` de outros worktrees. Remover só depois de registrar o baseline; conferir que a remoção não apaga as pastas de origem
 
-- Mensagens genéricas no caixa para `PAGAMENTO_SEM_CONTA_FINANCEIRA`, `CANCELAR_VENDA_CAIXA_ABERTO_AMBIGUO` e `CANCELAR_VENDA_CAIXA_FECHADO_SEM_CAIXA_ABERTO` (`pdv-importados/app/caixa/server/caixaErroOperador.ts`)
+- UX onda B/C: skeleton por rota (Vendas, Financeiro, Estoque, Relatórios) e mais pendências na tela Hoje (NF-e sem conferência, pedido de compra atrasado, caixa aberto há mais de 12 h)
+- Validar na tela real (com login e dados) o card "Pendências do dia" e as confirmações novas; nesta sprint só houve testes automatizados
 - Texto de "Meu PIN do caixa" diz que o PIN serve para entrar, mas o código só o usa para desbloquear (`pdv-importados/src/lib/i18n/pt.json`, `meu_pin.subtitulo`)
 - Troca de PIN no primeiro uso (`trocar_no_primeiro_uso`) não comprovada na tela de bloqueio
 - Manual do operador: confirmar os gestos marcados como não verificados (quantidade na linha, Enter na busca, comprovante automático) e se o layout clássico está ativo (`MANUAL_OPERADOR_RESUMIDO.md`, seção de origem)
@@ -158,6 +159,8 @@
 - Mostrar as parcelas do crédito no detalhe da venda (admin) e na 2ª via, depois da coluna existir na homologação
 
 ## Feito
+- 2026-11-28 — UX onda A: filtro "Só vencidos" em Dinheiro › A receber (atalho da tela Hoje cai filtrado); os 8 `confirm` nativos restantes (inclusive "Excluir venda" no PDV, agora com foco em Cancelar) passaram ao diálogo do Design System. Nenhum `confirm`/`alert` nativo nas telas
+- 2026-11-27 — Sprint UX/UI: caixa com mensagem acionável para 13 códigos do banco que caíam em "tente novamente" (pt/zh); tela Hoje com "Pendências do dia" (pagar vencidas/vencendo hoje, receber vencidas) com atalho filtrado; 9 `window.confirm`/`alert` trocados por diálogo do Design System (`useConfirmDialog`). Sem migration; guardas, typecheck e testes OK. Diagnóstico P0–P3: `docs/auditorias/SPRINT_UX_UI_INTELIGENCIA_2026-11-27.md`
 - 2026-11-19 — Revisão D1–D6 fechada: `sale-totals-invariant` passa com evidência positiva (avisos `OK`, asserções inalteradas); homolog verificado (`20261119120000` idêntica ao repositório); wrapper verificado (gerado pela `20261019140000`, idêntico em homolog e produção); risco real: ordem da `20261023200000` antes da `20261119120000`; usuários E2E e 8 produtos reais do D6 classificados sem alteração; PR #687 em draft (`docs/ops/PROCEDIMENTO_20261119120000_HOMOLOG.md`)
 - 2026-11-19 — Revisão D1–D6: pré-checks de produção (D3 limpo; D5 e D6 com pendências de dados, sem escrita); D1–D5 e golden flow validados em banco descartável; teste D1 passa a usar o descarte auditável (RN-03); decisão de manter D1 junto da checagem da `main`. Evidências em `docs/ops/REVISAO_D1_D6_2026-11-19.md`
 - 2026-11-19 — PR #675 mergeado na `main` (`16915328`) com `migration-remote-drift` vermelho e `Supabase local gates` pendente; nenhuma migration do PR aplicada em produção (leitura de `schema_migrations`)
@@ -166,5 +169,3 @@
 - 2026-11-14 — PDV (caixa): carrinho com preço sobreposto ao selo "Atacado" corrigido (grade única do cabeçalho e das linhas); stepper sem cantos/divisórias tortos (elementos nativos); topo das 3 colunas na mesma altura h-11; botões de cabeçalho, rail, pagamento e desconto padronizados
 - 2026-11-13 — Drift do CI (`migration-remote-drift`, variante segura aprovada): 15 adiadas já aplicadas no homolog de verificação passam a ser aceitas por registro (`backend/supabase/migration-check-project-deferred.json`), preso ao ref do homolog e fail-closed para qualquer outro projeto. Também as 21 versões só-remoto do homolog, no mesmo registro (`remoteOnlyAccepted`). Manifesto e migrations intactos; produção não alterada. 31 testes do drift passando; guarda de governança OK sem label
 - 2026-11-13 — FAB do site recolhe enquanto `#contato` está visível (`site/components/FabAutoHide.tsx`), com teste E2E em Chromium, Firefox e mobile. Sem commit até a suíte completa passar
-- 2026-11-12 — Simulador híbrido: textos PT/ZH e fonte oficial agora dizem que o prazo de 30/10/2026 encerrou (cancelamento até 20/12/2026; próximas janelas em março e setembro). Teste de regressão em `site/lib/simuladorHibrido.copy.test.ts`. Sem commit; validação contábil pendente
-- 2026-11-12 — Análise da auditoria do site Jinlong contra o código em `site/` (idêntico a `2929b09a`): prazo tributário confirmado vencido; formulário e FAB confirmados como P0; protocolo, CTA do simulador e cookie PT confirmados como falsos positivos. Nenhum código alterado
