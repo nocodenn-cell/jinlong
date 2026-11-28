@@ -43,6 +43,8 @@ type SearchParams = {
   limite?: string
   status?: string
   periodo?: string
+  /** Atalho "vence hoje" do painel Hoje: 'YYYY-MM-DD'. */
+  vence?: string
   fornecedor_id?: string
 }
 
@@ -77,6 +79,7 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
   const supabase = await createClient()
   const statusPagar = sp.status ?? 'todos'
   const periodoPagar = sp.periodo ?? ''
+  const venceDia = sp.vence && /^\d{4}-\d{2}-\d{2}$/.test(sp.vence) ? sp.vence : ''
   // Deep-link `?fornecedor_id=` (ex.: NF-e concluída, ficha de Fornecedores):
   // id que não é UUID é ignorado em vez de virar erro de query.
   const fornecedorIdPagar =
@@ -96,6 +99,7 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
     buscarContasPagarAction(1, {
       status: statusPagar,
       periodo: periodoPagar || undefined,
+      vencimento_dia: venceDia || undefined,
       fornecedor_id: fornecedorIdPagar || undefined,
     }),
     buscarFornecedoresPaginadosAction(1),

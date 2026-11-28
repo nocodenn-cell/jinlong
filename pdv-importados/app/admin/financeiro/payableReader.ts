@@ -74,6 +74,10 @@ export function createPayableReader(supabase: SupabaseClient): PayableReader {
         } else if (query.status && query.status !== 'todos') {
           qb = qb.eq('status', query.status.toUpperCase())
         }
+        if (query.vencimentoDia) {
+          // Dia exato, sempre em aberto: o contador "vence hoje" conta só títulos em aberto.
+          qb = qb.in('status', [...PAYABLE_STATUS_EM_ABERTO]).eq('vencimento', query.vencimentoDia)
+        }
         if (query.fornecedorId) {
           qb = qb.eq('fornecedor_id', query.fornecedorId)
         }

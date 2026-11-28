@@ -3,7 +3,10 @@ import { AlertTriangle, CheckCircle2, ChevronRight } from 'lucide-react'
 import { SectionCard } from '@/components/ui/admin-v2'
 import {
   linhasPendencias,
+  pendenciasComFalha,
   pendenciasIndisponiveis,
+  pendenciasTudoOk,
+  type IdPendencia,
   type PendenciasHoje,
 } from '../pendenciasHoje'
 import { formatNumberLocale } from '@/lib/format/money'
@@ -19,6 +22,7 @@ const T = {
   receberVencidas: { pt: 'Contas a receber vencidas', cn: '逾期应收账款' },
   pagarVenceHoje: { pt: 'Contas a pagar que vencem hoje', cn: '今日到期应付账款' },
   abrir: { pt: 'Abrir', cn: '打开' },
+  falha: { pt: 'não foi possível verificar', cn: '无法核对' },
 } as const
 
 /**
@@ -37,18 +41,31 @@ export function PendenciasHojeCard({
 }) {
   const linhas = linhasPendencias(pendencias)
   const indisponivel = pendenciasIndisponiveis(pendencias)
+  const falhas: IdPendencia[] = pendenciasComFalha(pendencias)
 
   return (
     <SectionCard title={T.titulo[lk]} subtitle={T.subtitulo[lk]}>
       <div data-testid="pendencias-hoje">
         {indisponivel ? (
           <p className="text-caption text-fg-subtle">{T.indisponivel[lk]}</p>
-        ) : linhas.length === 0 ? (
-          <p className="flex items-center gap-2 text-caption text-[var(--color-success-strong)]">
-            <CheckCircle2 size={14} aria-hidden />
-            {T.nada[lk]}
-          </p>
         ) : (
+          <>
+          {pendenciasTudoOk(pendencias) ? (
+            <p className="flex items-center gap-2 text-caption text-[var(--color-success-strong)]">
+              <CheckCircle2 size={14} aria-hidden />
+              {T.nada[lk]}
+            </p>
+          ) : null}
+          {falhas.length > 0 ? (
+            <ul className="mb-2 flex flex-col gap-1">
+              {falhas.map((id) => (
+                <li key={id} data-testid={`pendencia-falha-${id}`} className="text-caption text-fg-subtle">
+                  {T[id][lk]}: {T.falha[lk]}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {linhas.length > 0 ? (
           <ul className="flex flex-col gap-1.5">
             {linhas.map((l) => (
               <li key={l.id}>
@@ -78,6 +95,8 @@ export function PendenciasHojeCard({
               </li>
             ))}
           </ul>
+          ) : null}
+          </>
         )}
       </div>
     </SectionCard>

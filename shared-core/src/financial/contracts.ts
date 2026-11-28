@@ -75,6 +75,8 @@ export type ListPayablesQuery = {
   status?: string
   fornecedorId?: string
   periodo?: string
+  /** 'YYYY-MM-DD': só contas em aberto com vencimento nesse dia (atalho "vence hoje" do painel Hoje). */
+  vencimentoDia?: string
   termo?: string
 }
 

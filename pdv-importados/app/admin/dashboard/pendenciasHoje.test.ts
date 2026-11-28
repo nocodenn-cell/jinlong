@@ -2,7 +2,9 @@
 import { describe, expect, it } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
-  PENDENCIAS_HREF,
+  hrefPendencia,
+  pendenciasComFalha,
+  pendenciasTudoOk,
   contarPendenciasHoje,
   linhasPendencias,
   pendenciasIndisponiveis,
@@ -42,7 +44,7 @@ describe('contarPendenciasHoje', () => {
       return { count: 2, error: null }
     })
     const r = await contarPendenciasHoje(client, '2026-11-27')
-    expect(r).toEqual({ pagarVencidas: 3, pagarVenceHoje: 1, receberVencidas: 2 })
+    expect(r).toEqual({ hoje: '2026-11-27', pagarVencidas: 3, pagarVenceHoje: 1, receberVencidas: 2 })
 
     const pagar = chamadas.filter((c) => c.tabela === 'contas_pagar')
     for (const c of pagar) {
@@ -63,7 +65,7 @@ describe('contarPendenciasHoje', () => {
       c.tabela === 'contas_receber' ? 'throw' : { count: 0, error: c.filtros.some((f) => f[0] === 'eq') ? { message: 'x' } : null },
     )
     const r = await contarPendenciasHoje(client, '2026-11-27')
-    expect(r).toEqual({ pagarVencidas: 0, pagarVenceHoje: null, receberVencidas: null })
+    expect(r).toEqual({ hoje: '2026-11-27', pagarVencidas: 0, pagarVenceHoje: null, receberVencidas: null })
   })
 })
 
@@ -71,14 +73,22 @@ describe('linhasPendencias', () => {
   it('lista só o que tem quantidade, vencidas antes de "vence hoje", com link já filtrado', () => {
     const l = linhasPendencias({ pagarVencidas: 0, pagarVenceHoje: 2, receberVencidas: 5 })
     expect(l.map((x) => x.id)).toEqual(['receberVencidas', 'pagarVenceHoje'])
-    expect(l[0]).toMatchObject({ quantidade: 5, tom: 'danger', href: PENDENCIAS_HREF.receberVencidas })
+    expect(l[0]).toMatchObject({ quantidade: 5, tom: 'danger', href: hrefPendencia('receberVencidas', '2026-11-27') })
     expect(l[1].tom).toBe('warning')
-    expect(PENDENCIAS_HREF.pagarVencidas).toBe('/admin/financeiro?tab=pagar&status=atrasado')
+    expect(hrefPendencia('pagarVencidas', '2026-11-27')).toBe('/admin/financeiro?tab=pagar&status=atrasado')
+    expect(hrefPendencia('pagarVenceHoje', '2026-11-27')).toBe('/admin/financeiro?tab=pagar&vence=2026-11-27')
   })
 
   it('sem pendências → lista vazia; tudo null → indisponível', () => {
     expect(linhasPendencias({ pagarVencidas: 0, pagarVenceHoje: 0, receberVencidas: 0 })).toEqual([])
     expect(pendenciasIndisponiveis({ pagarVencidas: 0, pagarVenceHoje: null, receberVencidas: null })).toBe(false)
     expect(pendenciasIndisponiveis({ pagarVencidas: null, pagarVenceHoje: null, receberVencidas: null })).toBe(true)
+  })
+
+  it('falha de contagem não vira "nada pendente" nem some em silêncio', () => {
+    const p = { hoje: '2026-11-27', pagarVencidas: null, pagarVenceHoje: 0, receberVencidas: 0 }
+    expect(pendenciasComFalha(p)).toEqual(['pagarVencidas'])
+    expect(pendenciasTudoOk(p)).toBe(false)
+    expect(pendenciasTudoOk({ hoje: '2026-11-27', pagarVencidas: 0, pagarVenceHoje: 0, receberVencidas: 0 })).toBe(true)
   })
 })
