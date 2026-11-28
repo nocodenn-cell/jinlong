@@ -47,3 +47,27 @@ timestamp novo faria o próximo merge aplicá-la automaticamente e quebrar o PDV
 Não usar `[db.migrations] enabled = false` em `config.toml`: desligaria as migrations no `supabase db reset`
 do CI. Não adicionar `[remotes]` de produção: faria o passo `configure` sobrescrever auth/api de produção com
 os valores locais.
+
+## Estados do gate de drift (`migration-remote-drift`)
+
+O gate tem quatro estados. **Só PASS libera.** Nenhum outro estado é aprovação.
+
+| Estado | Código | Quando | Efeito no CI |
+|---|---|---|---|
+| PASS | 0 | comparação real concluída, sem drift (ALIGNED), ou com decisão humana já registrada (HUMAN_GATE) | job verde |
+| FAIL | 1 | drift bloqueante: divergência real entre Local e Remote | job vermelho |
+| ERROR | 2 | falha inesperada do script (parse, ref de base, status desconhecido) | job vermelho |
+| BLOCKED | 3 | infraestrutura indisponível: projeto pausado, sem acesso, sem `supabase link`, secrets ausentes, PR de fork | job vermelho com `::error title=BLOCKED::` |
+
+- **BLOCKED não é drift.** Indisponibilidade nunca é apresentada como divergência de migrations.
+- **SKIPPED não existe neste job.** Um job pulado conta como sucesso no branch protection; por isso o job não tem `if:` de pulo. Fork e falta de secrets viram BLOCKED explícito.
+- **Sem `continue-on-error` e sem `--warn-only`** no caminho do gate.
+- **Teste:** `backend/scripts/p0-migration-status.test.mjs` cobre os quatro estados e os casos de fail-closed (status desconhecido, comparação ausente, `warnOnly` não aprova BLOCKED).
+
+### Lacuna de branch protection (pendente, configuração externa)
+
+Em 2026-11-28, a proteção da `main` exige estes checks: `build-and-test`, `gitleaks`, `Supabase local gates (RLS smoke + scope + REST)`, `edge-functions-typecheck`, `outbox-contract` e `anti-replay-diagnostic-gate`.
+
+**`migration-remote-drift` não está entre eles, e `deploy-governance` também não está**, apesar da seção "Configurações externas" acima. Consequência: **hoje, nem FAIL nem BLOCKED do gate de drift impedem o merge pela branch protection.**
+
+Para o gate valer como barreira, um administrador do repositório precisa adicionar `migration-remote-drift` (e `deploy-governance`, se for a intenção do item 2 acima) como check obrigatório da `main`. Isso é configuração do GitHub, não do repositório, e não foi alterado nesta entrega.

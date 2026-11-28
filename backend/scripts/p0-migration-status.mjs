@@ -462,14 +462,40 @@ export function deriveOverallStatus({
   return "ALIGNED";
 }
 
+// Códigos de saída do gate. Só PASS (0) libera. Qualquer outro código não é aprovação.
+//   0 PASS     — comparação real concluída sem drift (ALIGNED) ou com decisão humana registrada (HUMAN_GATE)
+//   1 FAIL     — drift bloqueante (BLOCKING_DRIFT)
+//   2 ERROR    — falha inesperada do script (parse, ref de base, status desconhecido)
+//   3 BLOCKED  — infraestrutura indisponível (projeto pausado, sem acesso, sem link): NÃO é drift
+export const EXIT = { PASS: 0, FAIL: 1, ERROR: 2, BLOCKED: 3 };
+
+// Padrões de infraestrutura. Falha que casa aqui é BLOCKED; qualquer outra é ERROR.
+const INFRA_PATTERNS = [
+  /project is paused|paused/i,
+  /access token|not logged in|unauthorized|forbidden|\b401\b|\b403\b/i,
+  /not linked|no project linked|supabase link|project-ref/i,
+  /ENOTFOUND|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|getaddrinfo|timed out|network|Service Unavailable|\b50[0-4]\b/i,
+];
+
+export function classifyCliFailure(text) {
+  const t = String(text ?? "");
+  return INFRA_PATTERNS.some((re) => re.test(t)) ? "BLOCKED" : "ERROR";
+}
+
+// Fail-closed: status desconhecido, SKIPPED ou comparação ausente nunca saem com 0.
+export function exitCodeForStatus(status, { warnOnly = false, comparisonRan = true } = {}) {
+  if (status === "BLOCKED") return EXIT.BLOCKED;
+  if (status === "BLOCKING_DRIFT") return warnOnly ? EXIT.PASS : EXIT.FAIL;
+  if (status === "ALIGNED" || status === "HUMAN_GATE") {
+    // HUMAN_GATE não bloqueia CI: a decisão humana já foi tomada e revisada no PR que
+    // adicionou a entrada em migration-human-gates.json (reason + decisionDoc validados).
+    return comparisonRan ? EXIT.PASS : EXIT.BLOCKED;
+  }
+  return EXIT.ERROR; // SKIPPED, vazio ou valor não previsto
+}
+
 export function deriveExitCode(status, warnOnly = false) {
-  // HUMAN_GATE não bloqueia CI: a decisão humana já foi tomada e revisada no
-  // PR que adicionou a entrada em migration-human-gates.json (reason +
-  // decisionDoc obrigatórios, validados por parseHumanGateRegistry). Exigir
-  // um override manual a cada execução do gate seria fricção redundante —
-  // a aprovação já aconteceu no code review daquele registro.
-  if (status === "BLOCKING_DRIFT" && !warnOnly) return 1;
-  return 0;
+  return exitCodeForStatus(status, { warnOnly, comparisonRan: true });
 }
 
 function listMigrationVersionsFromDisk() {
@@ -664,6 +690,7 @@ function main() {
         JSON.stringify(
           {
             ok: false,
+            status: classifyCliFailure(`${stderr} ${e.message ?? ""}`),
             error: "supabase_cli_failed",
             message: String(e.message ?? e),
             stderr: stderr.trim(),
@@ -674,11 +701,16 @@ function main() {
         ),
       );
     } else {
+      const kind = classifyCliFailure(`${stderr}\n${e.message ?? ""}`);
+      if (kind === "BLOCKED") {
+        console.error("BLOCKED: infraestrutura indisponível para a comparação de migrations (NÃO é drift).\n");
+      }
       console.error("Falha ao executar `npx supabase migration list`.\n");
       if (stderr.trim()) console.error(stderr.trim() + "\n");
       console.error(hint);
     }
-    process.exit(2);
+    const kindFinal = classifyCliFailure(`${stderr}\n${e.message ?? ""}`);
+    process.exit(kindFinal === "BLOCKED" ? EXIT.BLOCKED : EXIT.ERROR);
   }
 
   const diskVersions = listMigrationVersionsFromDisk();

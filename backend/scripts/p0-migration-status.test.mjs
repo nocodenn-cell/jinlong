@@ -7,7 +7,10 @@ import {
   acceptRemoteOnlyOnCheckProject,
   analyze,
   applyHumanGateRegistry,
+  classifyCliFailure,
   deriveExitCode,
+  exitCodeForStatus,
+  EXIT,
   deriveOverallStatus,
   parseMigrationListOutput,
   parseMigrationListTable,
@@ -406,4 +409,61 @@ test("registro real: aceita exatamente as 36 divergências reprovadas no CI do h
   const d = acceptRemoteOnlyOnCheckProject({ extraBlocking: soRemoto }, registro, OUTRO_REF);
   assert.equal(c.blocking.length, 15);
   assert.equal(d.extraBlocking.length, 21);
+});
+
+// ---------------------------------------------------------------------------
+// Classificação PASS / FAIL / BLOCKED / SKIPPED (gate de drift, fail-closed).
+// BLOCKED = infraestrutura indisponível (não é drift). Nenhum estado que não
+// seja PASS real pode sair com 0.
+// ---------------------------------------------------------------------------
+
+test("PASS: comparação real sem drift (ALIGNED) sai com 0", () => {
+  assert.equal(exitCodeForStatus("ALIGNED", { comparisonRan: true }), EXIT.PASS);
+  assert.equal(exitCodeForStatus("ALIGNED"), 0);
+});
+
+test("PASS: decisão humana já registrada (HUMAN_GATE) sai com 0 só após comparação real", () => {
+  assert.equal(exitCodeForStatus("HUMAN_GATE", { comparisonRan: true }), 0);
+});
+
+test("PASS exige comparação real: ALIGNED sem comparação NÃO sai com 0", () => {
+  assert.equal(exitCodeForStatus("ALIGNED", { comparisonRan: false }), EXIT.BLOCKED);
+  assert.notEqual(exitCodeForStatus("ALIGNED", { comparisonRan: false }), 0);
+});
+
+test("FAIL: drift bloqueante sai com 1 e bloqueia merge", () => {
+  assert.equal(exitCodeForStatus("BLOCKING_DRIFT"), EXIT.FAIL);
+  assert.equal(exitCodeForStatus("BLOCKING_DRIFT", { warnOnly: false }), 1);
+});
+
+test("BLOCKED: infraestrutura indisponível sai com 3, nunca com 0", () => {
+  assert.equal(exitCodeForStatus("BLOCKED"), EXIT.BLOCKED);
+  assert.equal(exitCodeForStatus("BLOCKED", { warnOnly: true }), 3, "warnOnly não pode aprovar BLOCKED");
+});
+
+test("SKIPPED e status desconhecidos NUNCA saem com 0 (fail-closed)", () => {
+  for (const s of ["SKIPPED", "", undefined, null, "UNKNOWN", "pass", "OK"]) {
+    const code = exitCodeForStatus(s);
+    assert.notEqual(code, 0, `status ${JSON.stringify(s)} não pode ser aprovação`);
+    assert.equal(code, EXIT.ERROR);
+  }
+});
+
+test("indisponibilidade nunca vira drift: BLOCKED != FAIL", () => {
+  assert.notEqual(exitCodeForStatus("BLOCKED"), exitCodeForStatus("BLOCKING_DRIFT"));
+});
+
+test("classifica projeto pausado, sem acesso e rede como BLOCKED", () => {
+  assert.equal(classifyCliFailure("Target: project abc\nproject is paused\n"), "BLOCKED");
+  assert.equal(classifyCliFailure("Access token not provided. Supply an access token"), "BLOCKED");
+  assert.equal(classifyCliFailure("connect ENOTFOUND api.supabase.com"), "BLOCKED");
+  assert.equal(classifyCliFailure("request failed: 503 Service Unavailable"), "BLOCKED");
+  assert.equal(classifyCliFailure("Cannot find project ref. Have you run supabase link?"), "BLOCKED");
+});
+
+test("erro desconhecido do CLI é ERROR (não BLOCKED, e nunca aprovação)", () => {
+  assert.equal(classifyCliFailure("unexpected token in migration list output"), "ERROR");
+  assert.equal(classifyCliFailure(""), "ERROR");
+  assert.equal(classifyCliFailure(undefined), "ERROR");
+  assert.notEqual(exitCodeForStatus("ERROR"), 0);
 });
