@@ -96,6 +96,50 @@ const MSG_LIMITE_CREDITO: Record<IdiomaErro, string> = {
   zh: '销售超过客户信用额度 — 需要经理授权。',
 }
 
+/**
+ * Códigos do banco que não são falha transitória: "tente novamente" faria o operador repetir
+ * uma ação que nunca vai passar. Cada mensagem diz o motivo e a saída operacional
+ * (sprint UX 2026-11-27; antes todos caíam no MSG_PADRAO).
+ */
+const MSG_PAGAMENTO_SEM_CONTA: Record<IdiomaErro, string> = {
+  // Trigger `PAGAMENTO_SEM_CONTA_FINANCEIRA` (migration 20261107110000): a forma escolhida não tem
+  // conta financeira na loja. Só o gerente/dono resolve, em Dinheiro › Contas e saldos.
+  pt: 'Esta forma de pagamento ainda não tem conta financeira na loja. Use outra forma ou peça ao gerente para configurar em Dinheiro › Contas e saldos.',
+  zh: '该付款方式在门店尚未设置财务账户。请改用其他付款方式，或请经理在“资金 › 账户与余额”中设置。',
+}
+const MSG_CANCELAR_SEM_CAIXA_ABERTO: Record<IdiomaErro, string> = {
+  pt: 'Para estornar em dinheiro uma venda de caixa já fechado, é preciso ter um caixa aberto na loja. Abra o caixa e cancele novamente.',
+  zh: '退还已结算收银台的现金销售时，门店必须有一个已开启的收银台。请先开启收银台，再重新取消。',
+}
+const MSG_CANCELAR_CAIXA_AMBIGUO: Record<IdiomaErro, string> = {
+  pt: 'Há mais de um caixa aberto na loja e o estorno em dinheiro precisa sair de um só. Feche os caixas extras e cancele novamente.',
+  zh: '门店有多个已开启的收银台，现金退款只能从一个收银台支出。请先结算多余的收银台，再重新取消。',
+}
+const MSG_VENDA_JA_CANCELADA: Record<IdiomaErro, string> = {
+  pt: 'Esta venda já foi cancelada. Atualize a tela para ver a situação atual.',
+  zh: '该笔销售已被取消。请刷新页面查看最新状态。',
+}
+const MSG_VENDA_NAO_ENCONTRADA: Record<IdiomaErro, string> = {
+  pt: 'Venda não encontrada nesta loja. Atualize a tela e confira o número da venda.',
+  zh: '在本门店找不到该笔销售。请刷新页面并核对销售编号。',
+}
+const MSG_SEM_PERMISSAO: Record<IdiomaErro, string> = {
+  pt: 'Seu perfil não tem permissão para esta operação. Chame o gerente.',
+  zh: '您的角色无权执行此操作。请联系经理。',
+}
+const MSG_MOTIVO_OBRIGATORIO: Record<IdiomaErro, string> = {
+  pt: 'Informe o motivo (pelo menos 3 letras) para continuar.',
+  zh: '请填写原因（至少 3 个字符）后继续。',
+}
+const MSG_FECHAR_EM_USO: Record<IdiomaErro, string> = {
+  pt: 'Este caixa está com outro operador. Só ele, o gerente ou o dono podem fechá-lo.',
+  zh: '该收银台正由其他操作员使用。只有该操作员、经理或店主可以结算。',
+}
+const MSG_FECHAR_VALOR_DIVERGENTE: Record<IdiomaErro, string> = {
+  pt: 'Este caixa já foi fechado com outro valor contado. Confira o comprovante do fechamento no histórico.',
+  zh: '该收银台已按另一个清点金额结算。请在历史记录中查看结算凭证。',
+}
+
 function lower(raw: string): string {
   return raw.toLowerCase()
 }
@@ -131,9 +175,25 @@ export function caixaErroOperador(
 
   const l = lower(raw)
 
-  if (l.includes('sessão expirada') || l.includes('sessao expirada') || l.includes('jwt')) {
+  if (
+    l.includes('sessão expirada') ||
+    l.includes('sessao expirada') ||
+    l.includes('jwt') ||
+    l.includes('fechar_caixa_sessao_expirada') ||
+    l.includes('cancelar_venda_auth')
+  ) {
     return MSG_SESSAO[idioma]
   }
+  // Códigos específicos ANTES dos testes genéricos por substring ("caixa fechado", "pagamento"…).
+  if (l.includes('pagamento_sem_conta_financeira')) return MSG_PAGAMENTO_SEM_CONTA[idioma]
+  if (l.includes('cancelar_venda_caixa_fechado_sem_caixa_aberto')) return MSG_CANCELAR_SEM_CAIXA_ABERTO[idioma]
+  if (l.includes('cancelar_venda_caixa_aberto_ambiguo')) return MSG_CANCELAR_CAIXA_AMBIGUO[idioma]
+  if (l.includes('cancelar_venda_ja_cancelada')) return MSG_VENDA_JA_CANCELADA[idioma]
+  if (l.includes('cancelar_venda_nao_encontrada')) return MSG_VENDA_NAO_ENCONTRADA[idioma]
+  if (l.includes('fechar_caixa_em_uso_outro_operador')) return MSG_FECHAR_EM_USO[idioma]
+  if (l.includes('fechar_caixa_repeticao_valor_divergente')) return MSG_FECHAR_VALOR_DIVERGENTE[idioma]
+  if (l.includes('_sem_permissao')) return MSG_SEM_PERMISSAO[idioma]
+  if (l.includes('motivo_obrigatorio')) return MSG_MOTIVO_OBRIGATORIO[idioma]
   if (l.includes('fechar_caixa_movimentacoes_pendentes') || (l.includes('movimentação') && l.includes('pendente'))) {
     return MSG_MOVIMENTACOES_PENDENTES[idioma]
   }

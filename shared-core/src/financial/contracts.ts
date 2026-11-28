@@ -75,6 +75,8 @@ export type ListPayablesQuery = {
   status?: string
   fornecedorId?: string
   periodo?: string
+  /** 'YYYY-MM-DD': só contas em aberto com vencimento nesse dia (atalho "vence hoje" do painel Hoje). */
+  vencimentoDia?: string
   termo?: string
 }
 
@@ -137,6 +139,8 @@ export type ListReceivablesQuery = {
   de: string
   ate: string
   limite: number
+  /** Só títulos vencidos (vencimento < hoje, computado — item 13 do Plano Mestre). Opcional: ausente = todos. */
+  vencidos?: boolean
 }
 
 export type ListReceivablesResult =

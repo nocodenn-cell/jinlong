@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { useConfirmDialog } from '@/components/ui/useConfirmDialog'
 import { OperationalHubNav } from '@/components/ui/admin-v2/OperationalHubNav'
 import { calcularValorMensal, formatarBRL, type PlanoCatalogo } from '@/lib/cobranca/planos'
 import { tc, type ChaveTexto } from '@/lib/cobranca/textos'
@@ -17,6 +18,7 @@ export function AssinaturaContent({ idioma, assinatura, planos, faturas, podeGer
   const t = (k: ChaveTexto) => tc(idioma, k)
   const router = useRouter()
   const [pend, start] = useTransition()
+  const { confirmar, dialogo } = useConfirmDialog()
   const [msg, setMsg] = useState<string | null>(null)
   const [pix, setPix] = useState<{ payload: string; imagemBase64: string } | null>(null)
   const [plano, setPlano] = useState(assinatura?.plano ?? 'ATACADO')
@@ -153,13 +155,23 @@ export function AssinaturaContent({ idioma, assinatura, planos, faturas, podeGer
             )}
             {assinatura?.status && assinatura.status !== 'CANCELADA' ? (
               <button type="button" disabled={pend} className="rounded border border-red-700 px-4 py-2 text-red-700"
-                onClick={() => { if (!window.confirm(t('confirmarCancelar'))) return; start(async () => { const r = await cancelarAssinaturaAction(); setMsg(r.ok ? 'OK' : r.error); router.refresh() }) }}>
+                onClick={async () => {
+                  const ok = await confirmar({
+                    titulo: t('cancelar'),
+                    mensagem: t('confirmarCancelar'),
+                    rotuloConfirmar: t('cancelar'),
+                    rotuloCancelar: idioma === 'zh' ? '返回' : 'Voltar',
+                    idioma: idioma === 'zh' ? 'zh' : 'pt',
+                  })
+                  if (!ok) return
+                  start(async () => { const r = await cancelarAssinaturaAction(); setMsg(r.ok ? 'OK' : r.error); router.refresh() }) }}>
                 {t('cancelar')}
               </button>
             ) : null}
           </div>
         </section>
       ) : <p className="text-sm text-gray-600">{t('somenteDono')}</p>}
+      {dialogo}
     </main>
   )
 }

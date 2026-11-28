@@ -128,7 +128,8 @@
 - Site Jinlong: microtextos de 10,5–11 px, scroll lock no menu mobile, avisos de Autoprefixer em `site/styles/site.css:186,196,216`, SEO técnico (canonical das páginas legais, lastmod no sitemap, aliases `/pt-br` e `/zh-cn`)
 - Site Jinlong: worktree `site-fase0-baseline-20261110` (branch `site/fase0-baseline-20261110`) usa junctions para `node_modules` de outros worktrees. Remover só depois de registrar o baseline; conferir que a remoção não apaga as pastas de origem
 
-- Mensagens genéricas no caixa para `PAGAMENTO_SEM_CONTA_FINANCEIRA`, `CANCELAR_VENDA_CAIXA_ABERTO_AMBIGUO` e `CANCELAR_VENDA_CAIXA_FECHADO_SEM_CAIXA_ABERTO` (`pdv-importados/app/caixa/server/caixaErroOperador.ts`)
+- UX onda B/C: skeleton por rota (Vendas, Financeiro, Estoque, Relatórios) e mais pendências na tela Hoje (NF-e sem conferência, pedido de compra atrasado, caixa aberto há mais de 12 h)
+- Validar na tela real (com login e dados) o card "Pendências do dia" e as confirmações novas; nesta sprint só houve testes automatizados
 - Texto de "Meu PIN do caixa" diz que o PIN serve para entrar, mas o código só o usa para desbloquear (`pdv-importados/src/lib/i18n/pt.json`, `meu_pin.subtitulo`)
 - Troca de PIN no primeiro uso (`trocar_no_primeiro_uso`) não comprovada na tela de bloqueio
 - Manual do operador: confirmar os gestos marcados como não verificados (quantidade na linha, Enter na busca, comprovante automático) e se o layout clássico está ativo (`MANUAL_OPERADOR_RESUMIDO.md`, seção de origem)
@@ -152,6 +153,8 @@
 - Mostrar as parcelas do crédito no detalhe da venda (admin) e na 2ª via, depois da coluna existir na homologação
 
 ## Feito
+- 2026-11-28 — UX onda A: filtro "Só vencidos" em Dinheiro › A receber (atalho da tela Hoje cai filtrado); os 8 `confirm` nativos restantes (inclusive "Excluir venda" no PDV, agora com foco em Cancelar) passaram ao diálogo do Design System. Nenhum `confirm`/`alert` nativo nas telas
+- 2026-11-27 — Sprint UX/UI: caixa com mensagem acionável para 13 códigos do banco que caíam em "tente novamente" (pt/zh); tela Hoje com "Pendências do dia" (pagar vencidas/vencendo hoje, receber vencidas) com atalho filtrado; 9 `window.confirm`/`alert` trocados por diálogo do Design System (`useConfirmDialog`). Sem migration; guardas, typecheck e testes OK. Diagnóstico P0–P3: `docs/auditorias/SPRINT_UX_UI_INTELIGENCIA_2026-11-27.md`
 - 2026-11-19 — PDV: toda venda começa com o operador como vendedor (antes lembrava o último vendedor e gravava vendas seguintes no vendedor errado; decisão do dono). Cancelamento: comprovante e auditoria mostram o total devolvido e quem cancelou (antes R$ 0,00 em PIX/cartão/dividido e autor = operador da venda). Sem migration; testes de caixa, vendas e auditoria OK (480). PR #686
 - 2026-11-19 — Validação operacional ponta a ponta no ambiente local (cadastro, entrada, PDV varejo/atacado, desconto, sangria/suprimento, fechamento, cancelamento, contas a pagar, relatórios, auditoria, RLS): `docs/auditoria/RELATORIO_VALIDACAO_OPERACIONAL_JINLONG.md`. PR #686
 - 2026-11-14 — PDV (caixa): carrinho com preço sobreposto ao selo "Atacado" corrigido (grade única do cabeçalho e das linhas); stepper sem cantos/divisórias tortos (elementos nativos); topo das 3 colunas na mesma altura h-11; botões de cabeçalho, rail, pagamento e desconto padronizados
@@ -160,5 +163,3 @@
 - 2026-11-12 — Simulador híbrido: textos PT/ZH e fonte oficial agora dizem que o prazo de 30/10/2026 encerrou (cancelamento até 20/12/2026; próximas janelas em março e setembro). Teste de regressão em `site/lib/simuladorHibrido.copy.test.ts`. Sem commit; validação contábil pendente
 - 2026-11-12 — Análise da auditoria do site Jinlong contra o código em `site/` (idêntico a `2929b09a`): prazo tributário confirmado vencido; formulário e FAB confirmados como P0; protocolo, CTA do simulador e cookie PT confirmados como falsos positivos. Nenhum código alterado
 - 2026-11-12 — hub.jinlong.app: painel quebrava (digest 226588760, "Falha ao acessar dados (400)"). Causa: a Central de Conversão (`20261023130000`) estava no `main` mas não no banco `jinlong`. Migration aplicada em produção após checagem; cada seção do hub agora degrada sozinha (`hub/lib/seguro.ts`) e há `hub/app/error.tsx`. Código ainda não commitado
-- 2026-11-11 — Auditoria dos 53 PRs abertos e das branches (somente leitura): `docs/governance/GITHUB_AUDIT.md`, `GITHUB_CLEANUP_PLAN.md` e `GITHUB_WORKFLOW.md`. Nenhuma ação no GitHub; decisões pendentes listadas no plano
-- 2026-11-07 — Desenho do endpoint protegido de `commercial_leads` (`docs/planos/LEADS_ENDPOINT_PROTEGIDO.md`) e guardas do servidor com testes (`site/lib/pedidoDemoGuards.ts`), flag `SITE_DEMO_FORM_ATIVO` reproduzida (padrão desligada). Suíte do site: 87 testes passando. Nenhuma migration aplicada

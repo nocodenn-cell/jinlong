@@ -1,6 +1,7 @@
 'use client'
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { useConfirmDialog } from '@/components/ui/useConfirmDialog'
 import {
   excluirRegraComissao, salvarRegraComissao, simularRegraComissao,
   type OpcoesRegras, type PreviaRegra, type RegraComissaoLinha, type RegraInput,
@@ -23,6 +24,7 @@ export function RegrasComissaoClient({ regras, opcoes, t }: { regras: RegraComis
   const [f, setF] = useState<RegraInput>(vazio())
   const [msg, setMsg] = useState<string | null>(null)
   const [pendente, start] = useTransition()
+  const { confirmar, dialogo } = useConfirmDialog()
   const [sim, setSim] = useState({ vendedorId: '', produtoId: '', canal: 'VAREJO' as 'VAREJO' | 'ATACADO', data: hoje() })
   const [previa, setPrevia] = useState<PreviaRegra | null>(null)
   const set = <K extends keyof RegraInput>(k: K, v: RegraInput[K]) => setF((x) => ({ ...x, [k]: v }))
@@ -175,8 +177,8 @@ export function RegrasComissaoClient({ regras, opcoes, t }: { regras: RegraComis
                       })
                       if (!res.success) setMsg(res.error); router.refresh()
                     })}>{r.ativo ? t.regras_desativar : t.regras_ativar}</button>
-                    <button type="button" className="text-red-700 underline" onClick={() => {
-                      if (!window.confirm(t.regras_excluir_confirma)) return
+                    <button type="button" className="text-red-700 underline" onClick={async () => {
+                      if (!(await confirmar({ titulo: t.regras_excluir_confirma }))) return
                       start(async () => { const res = await excluirRegraComissao(r.id); if (!res.success) setMsg(res.error); router.refresh() })
                     }}>{t.regras_excluir}</button>
                   </td>
@@ -186,6 +188,7 @@ export function RegrasComissaoClient({ regras, opcoes, t }: { regras: RegraComis
           </table>
         )}
       </div>
+      {dialogo}
     </div>
   )
 }

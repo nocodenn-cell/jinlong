@@ -3339,6 +3339,8 @@
     "financeiro_filtro_mix": "未结/部分",
     "financeiro_filtro_so_aberto": "仅未结",
     "financeiro_filtro_so_parcial": "仅部分",
+    "financeiro_filtro_todos_vencimentos": "全部到期日",
+    "financeiro_filtro_so_vencidos": "仅逾期",
     "financeiro_chip_cliente": "客户：{{nome}}",
     "financeiro_chip_de": "从：{{data}}",
     "financeiro_chip_ate": "到：{{data}}",
