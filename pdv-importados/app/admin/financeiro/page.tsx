@@ -39,9 +39,12 @@ type SearchParams = {
   q?: string
   de?: string
   ate?: string
+  vencidos?: string
   limite?: string
   status?: string
   periodo?: string
+  /** Atalho "vence hoje" do painel Hoje: 'YYYY-MM-DD'. */
+  vence?: string
   fornecedor_id?: string
 }
 
@@ -76,6 +79,7 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
   const supabase = await createClient()
   const statusPagar = sp.status ?? 'todos'
   const periodoPagar = sp.periodo ?? ''
+  const venceDia = sp.vence && /^\d{4}-\d{2}-\d{2}$/.test(sp.vence) ? sp.vence : ''
   // Deep-link `?fornecedor_id=` (ex.: NF-e concluída, ficha de Fornecedores):
   // id que não é UUID é ignorado em vez de virar erro de query.
   const fornecedorIdPagar =
@@ -95,6 +99,7 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
     buscarContasPagarAction(1, {
       status: statusPagar,
       periodo: periodoPagar || undefined,
+      vencimento_dia: venceDia || undefined,
       fornecedor_id: fornecedorIdPagar || undefined,
     }),
     buscarFornecedoresPaginadosAction(1),
@@ -155,6 +160,15 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
         { value: 'PARCIAL', label: ui.financeiro_filtro_so_parcial },
       ],
     },
+    {
+      type: 'pills',
+      key: 'vencidos',
+      defaultValue: '0',
+      options: [
+        { value: '0', label: ui.financeiro_filtro_todos_vencimentos },
+        { value: '1', label: ui.financeiro_filtro_so_vencidos },
+      ],
+    },
   ]
 
   const activeParams: Record<string, string> = { tab: activeTab }
@@ -164,6 +178,7 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
   if (filters.nomeCliente) activeParams.cliente = filters.nomeCliente
   if (filters.de) activeParams.de = filters.de
   if (filters.ate) activeParams.ate = filters.ate
+  if (filters.vencidos) activeParams.vencidos = '1'
 
   const hrefWithout = (key: string) => {
     const p = new URLSearchParams(activeParams)
@@ -188,6 +203,7 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
   if (filters.de) chips.push({ key: 'de', label: ui.financeiro_chip_de.replace('{{data}}', filters.de) })
   if (filters.ate) chips.push({ key: 'ate', label: ui.financeiro_chip_ate.replace('{{data}}', filters.ate) })
   if (filters.opcao !== 'mix') chips.push({ key: 'opcao', label: statusChipLabel[filters.opcao] ?? filters.opcao })
+  if (filters.vencidos) chips.push({ key: 'vencidos', label: ui.financeiro_filtro_so_vencidos })
 
   // Hierarquia: valores em dinheiro (principal) acima; contagens e fila fiscal (apoio) abaixo.
   const kpiSection = (

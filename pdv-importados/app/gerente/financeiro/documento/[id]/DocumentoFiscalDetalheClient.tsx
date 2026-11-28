@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useCallback } from 'react'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { Button } from '@/components/ui/button'
+import { useConfirmDialog } from '@/components/ui/useConfirmDialog'
 import { SectionCard } from '@/components/ui/admin-v2'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import { reprocessarDocumentoFiscal } from '../../actions'
@@ -81,6 +82,7 @@ export function DocumentoFiscalDetalheClient({
   )
 
   const podeReprocessar = doc.status === 'ERRO' || doc.status === 'PENDENTE'
+  const { confirmar, dialogo } = useConfirmDialog()
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -137,10 +139,12 @@ export function DocumentoFiscalDetalheClient({
             variant="destructive"
             disabled={loadReprocessar}
             className="mt-4"
-            onClick={() => {
-              const ok = globalThis.confirm(
-                `Confirma reprocessar o documento ${doc.id.slice(0, 8)}…? O item voltará para a fila fiscal.`,
-              )
+            onClick={async () => {
+              const ok = await confirmar({
+                titulo: `Confirma reprocessar o documento ${doc.id.slice(0, 8)}…?`,
+                mensagem: 'O item voltará para a fila fiscal.',
+                rotuloConfirmar: 'Reprocessar',
+              })
               if (!ok) return
               void mutReprocessar(null)
             }}
@@ -186,6 +190,7 @@ export function DocumentoFiscalDetalheClient({
           </ol>
         )}
       </SectionCard>
+      {dialogo}
     </div>
   )
 }

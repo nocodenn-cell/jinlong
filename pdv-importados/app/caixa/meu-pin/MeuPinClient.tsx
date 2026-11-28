@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import type { Mensagens } from '@/i18n/getMessages'
+import { useConfirmDialog } from '@/components/ui/useConfirmDialog'
 import { definirMeuPinAction, listarPinsEquipeAction, resetarPinOperadorAction, type PinEquipeLinha } from './actions'
 
 type M = Mensagens['meu_pin']
@@ -12,6 +13,7 @@ export function MeuPinClient({ m, inicial, indisponivel }: { m: M; inicial: PinE
   const [conf, setConf] = useState('')
   const [msg, setMsg] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(indisponivel ? { tipo: 'erro', texto: m.erro_indisponivel } : null)
   const [pendente, start] = useTransition()
+  const { confirmar, dialogo } = useConfirmDialog()
   const eu = linhas.find((l) => l.eu)
   const equipe = linhas.filter((l) => !l.eu)
 
@@ -98,14 +100,15 @@ export function MeuPinClient({ m, inicial, indisponivel }: { m: M; inicial: PinE
                       type="button"
                       disabled={pendente}
                       className="rounded-md border px-3 py-1 text-xs"
-                      onClick={() =>
+                      onClick={async () => {
+                        // Confirma ANTES da transição: o diálogo é assíncrono e não deve prender `pendente`.
+                        if (!(await confirmar({ titulo: m.resetar_confirmar.replace('{nome}', l.nome), rotuloConfirmar: m.resetar }))) return
                         start(async () => {
-                          if (!globalThis.confirm(m.resetar_confirmar.replace('{nome}', l.nome))) return
                           const r = await resetarPinOperadorAction(l.usuario_id)
                           setMsg(r.ok ? { tipo: 'ok', texto: m.resetado } : { tipo: 'erro', texto: erroTexto(r.erro) })
                           await recarregar()
                         })
-                      }
+                      }}
                     >
                       {m.resetar}
                     </button>
@@ -116,6 +119,7 @@ export function MeuPinClient({ m, inicial, indisponivel }: { m: M; inicial: PinE
           </ul>
         </section>
       ) : null}
+      {dialogo}
     </div>
   )
 }

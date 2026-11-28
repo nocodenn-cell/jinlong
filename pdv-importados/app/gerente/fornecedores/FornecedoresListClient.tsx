@@ -19,6 +19,7 @@ import { DataTable, type Column } from '@/components/ui/DataTable'
 import { EmptyState, ErrorState, Loading } from '@/components/ui/feedback'
 import { CrudListShell, PageActions } from '@/components/ui/admin-v2'
 import { ConfirmActionButton } from '@/components/gerente/ConfirmActionButton'
+import { useConfirmDialog } from '@/components/ui/useConfirmDialog'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { getMessages } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
@@ -53,6 +54,7 @@ export function FornecedoresListClient({
   erroInicial = null,
 }: Props) {
   const m = getMessages(idioma)
+  const { confirmar, dialogo } = useConfirmDialog()
   const [fornecedores, setFornecedores] = useState<FornecedorListRow[]>(fornecedoresIniciais)
   const [hasMore, setHasMore] = useState(hasMoreInicial)
   const [loading, setLoading] = useState(false)
@@ -206,7 +208,7 @@ export function FornecedoresListClient({
   }
   async function onBulkExcluir() {
     const ids = [...selecionados]
-    if (!confirm(m.fornecedores.confirmar_bulk_exclusao.replace('{n}', String(ids.length)))) return
+    if (!(await confirmar({ titulo: m.fornecedores.confirmar_bulk_exclusao.replace('{n}', String(ids.length)) }))) return
     const r = await bulkExcluirFornecedoresAction(ids)
     if (!r.ok) {
       emitGerenteToast({ kind: 'error', message: r.error })
@@ -446,6 +448,7 @@ export function FornecedoresListClient({
           onSalvo={onSalvo}
         />
       )}
+      {dialogo}
     </>
   )
 }

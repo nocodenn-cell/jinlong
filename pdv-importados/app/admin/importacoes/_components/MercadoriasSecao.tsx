@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { useConfirmDialog } from '@/components/ui/useConfirmDialog'
 import { SectionCard } from '@/components/ui/admin-v2'
 import { formatarDecimal } from '@/lib/import/hub/decimais'
 import type { Item } from '@/lib/import/hub/dadosImportacoes'
@@ -37,6 +38,7 @@ export function MercadoriasSecao(props: {
 }) {
   const { t, itens, editavel } = props
   const { executar, pendente, erro } = useAcao(t)
+  const { confirmar, dialogo } = useConfirmDialog()
   const [form, setForm] = useState<ReturnType<typeof vazio> | null>(null)
   const [produtoNome, setProdutoNome] = useState('')
   const [busca, setBusca] = useState('')
@@ -114,8 +116,8 @@ export function MercadoriasSecao(props: {
                       <Button
                         type="button"
                         variant="ghost" size="sm"
-                        onClick={() => {
-                          if (window.confirm(t.confirmar_remocao)) executar(() => removerRascunhoAction(props.operacaoId, 'ITEM', i.id))
+                        onClick={async () => {
+                          if (await confirmar({ titulo: t.confirmar_remocao, rotuloConfirmar: t.remover, rotuloCancelar: t.cancelar })) executar(() => removerRascunhoAction(props.operacaoId, 'ITEM', i.id))
                         }}
                       >
                         {t.remover}
@@ -211,6 +213,7 @@ export function MercadoriasSecao(props: {
           </div>
         </form>
       ) : null}
+      {dialogo}
     </SectionCard>
   )
 }

@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
+import { useConfirmDialog } from '@/components/ui/useConfirmDialog'
 import { SectionCard, StatusBadge } from '@/components/ui/admin-v2'
 import { formatarDecimal } from '@/lib/import/hub/decimais'
 import type { Desconto, Despesa, Documento, Item, Tributo } from '@/lib/import/hub/dadosImportacoes'
@@ -31,6 +32,7 @@ type Form = { tipo: TipoLancamento; dados: Record<string, string> }
 export function LancamentosSecao(props: Props) {
   const { t, editavel } = props
   const { executar, pendente, erro } = useAcao(t)
+  const { confirmar, dialogo } = useConfirmDialog()
   const [form, setForm] = useState<Form | null>(null)
   const tk = (k: string) => (t as Record<string, string>)[k] ?? k
   const nomeItem = (id: string | null) => (id ? props.itens.find((i) => i.id === id)?.descricao ?? '—' : '—')
@@ -59,7 +61,7 @@ export function LancamentosSecao(props: Props) {
         <Button
           type="button"
           variant="ghost" size="sm"
-          onClick={() => { if (window.confirm(t.confirmar_remocao)) executar(() => removerRascunhoAction(props.operacaoId, tipo, id)) }}
+          onClick={async () => { if (await confirmar({ titulo: t.confirmar_remocao, rotuloConfirmar: t.remover, rotuloCancelar: t.cancelar })) executar(() => removerRascunhoAction(props.operacaoId, tipo, id)) }}
         >
           {t.remover}
         </Button>
@@ -213,6 +215,7 @@ export function LancamentosSecao(props: Props) {
           onSalvar={(dados) => executar(() => salvarLancamentoAction(props.operacaoId, form.tipo, dados), () => setForm(null), t.salvo)}
         />
       ) : null}
+      {dialogo}
     </div>
   )
 }

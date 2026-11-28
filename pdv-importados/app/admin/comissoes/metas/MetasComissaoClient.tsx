@@ -1,6 +1,7 @@
 'use client'
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { useConfirmDialog } from '@/components/ui/useConfirmDialog'
 import {
   definirDivisaoComissao, excluirMetaComissao, salvarConfigComissao, salvarMetaComissao,
   type ConfigComissao, type MetaComissao, type MetaInput, type VendaDivisao,
@@ -17,6 +18,7 @@ type Props = {
 export function MetasComissaoClient({ config, metas, vendas, vendedores, competencia, t }: Props) {
   const router = useRouter()
   const [pendente, start] = useTransition()
+  const { confirmar, dialogo } = useConfirmDialog()
   const [msg, setMsg] = useState<string | null>(null)
   const [cfg, setCfg] = useState(config)
   const novaMeta = (): MetaInput => ({ usuarioId: null, cargo: null, competenciaInicio: competencia, competenciaFim: null, faixas: [{ aPartirDe: 0, bonusPct: 0 }], ativo: true, descricao: null })
@@ -99,7 +101,7 @@ export function MetasComissaoClient({ config, metas, vendas, vendedores, compete
                   <td className="p-2">{x.faixas.map((f) => `≥ ${brl(f.aPartirDe)}: +${f.bonusPct}%`).join(' · ')}</td>
                   <td className="p-2 text-right whitespace-nowrap">
                     <button type="button" className="mr-3 underline" onClick={() => setM({ id: x.id, usuarioId: x.usuarioId, cargo: x.cargo, competenciaInicio: x.competenciaInicio, competenciaFim: x.competenciaFim, faixas: x.faixas, ativo: x.ativo, descricao: x.descricao })}>{t.regras_editar}</button>
-                    <button type="button" className="text-red-700 underline" onClick={() => { if (window.confirm(t.regras_excluir_confirma)) rodar(() => excluirMetaComissao(x.id)) }}>{t.regras_excluir}</button>
+                    <button type="button" className="text-red-700 underline" onClick={async () => { if (await confirmar({ titulo: t.regras_excluir_confirma })) rodar(() => excluirMetaComissao(x.id)) }}>{t.regras_excluir}</button>
                   </td>
                 </tr>
               ))}
@@ -136,6 +138,7 @@ export function MetasComissaoClient({ config, metas, vendas, vendedores, compete
           </tbody>
         </table>
       </section>
+      {dialogo}
     </div>
   )
 }
