@@ -137,6 +137,8 @@ export type ListReceivablesQuery = {
   de: string
   ate: string
   limite: number
+  /** Só títulos vencidos (vencimento < hoje, computado — item 13 do Plano Mestre). Opcional: ausente = todos. */
+  vencidos?: boolean
 }
 
 export type ListReceivablesResult =

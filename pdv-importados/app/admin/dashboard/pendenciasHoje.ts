@@ -23,7 +23,7 @@ export type PendenciasHoje = {
 export const PENDENCIAS_HREF = {
   pagarVencidas: `${ROUTES.admin.financeiro}?tab=pagar&status=atrasado`,
   pagarVenceHoje: `${ROUTES.admin.financeiro}?tab=pagar`,
-  receberVencidas: `${ROUTES.admin.financeiro}?tab=receber`,
+  receberVencidas: `${ROUTES.admin.financeiro}?tab=receber&vencidos=1`,
 } as const
 
 type CountRes = { count: number | null; error: unknown }

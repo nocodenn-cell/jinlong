@@ -39,6 +39,7 @@ type SearchParams = {
   q?: string
   de?: string
   ate?: string
+  vencidos?: string
   limite?: string
   status?: string
   periodo?: string
@@ -155,6 +156,15 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
         { value: 'PARCIAL', label: ui.financeiro_filtro_so_parcial },
       ],
     },
+    {
+      type: 'pills',
+      key: 'vencidos',
+      defaultValue: '0',
+      options: [
+        { value: '0', label: ui.financeiro_filtro_todos_vencimentos },
+        { value: '1', label: ui.financeiro_filtro_so_vencidos },
+      ],
+    },
   ]
 
   const activeParams: Record<string, string> = { tab: activeTab }
@@ -164,6 +174,7 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
   if (filters.nomeCliente) activeParams.cliente = filters.nomeCliente
   if (filters.de) activeParams.de = filters.de
   if (filters.ate) activeParams.ate = filters.ate
+  if (filters.vencidos) activeParams.vencidos = '1'
 
   const hrefWithout = (key: string) => {
     const p = new URLSearchParams(activeParams)
@@ -188,6 +199,7 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
   if (filters.de) chips.push({ key: 'de', label: ui.financeiro_chip_de.replace('{{data}}', filters.de) })
   if (filters.ate) chips.push({ key: 'ate', label: ui.financeiro_chip_ate.replace('{{data}}', filters.ate) })
   if (filters.opcao !== 'mix') chips.push({ key: 'opcao', label: statusChipLabel[filters.opcao] ?? filters.opcao })
+  if (filters.vencidos) chips.push({ key: 'vencidos', label: ui.financeiro_filtro_so_vencidos })
 
   // Hierarquia: valores em dinheiro (principal) acima; contagens e fila fiscal (apoio) abaixo.
   const kpiSection = (

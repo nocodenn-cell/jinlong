@@ -12,6 +12,8 @@ export type FinanceiroTituloFilters = {
   q: string
   de: string
   ate: string
+  /** `vencidos=1` na URL: só títulos vencidos (atalho "Pendências do dia" da tela Hoje). */
+  vencidos: boolean
 }
 
 export const DEFAULT_FIN_TITULO_FILTERS: FinanceiroTituloFilters = {
@@ -21,6 +23,7 @@ export const DEFAULT_FIN_TITULO_FILTERS: FinanceiroTituloFilters = {
   q: '',
   de: '',
   ate: '',
+  vencidos: false,
 }
 
 export type FinanceiroTituloListaRow = {
@@ -63,6 +66,7 @@ export function parseTituloFiltersFromSearchParams(
     q: pickParam(raw, 'q').slice(0, 200),
     de: pickParam(raw, 'de').slice(0, 12),
     ate: pickParam(raw, 'ate').slice(0, 12),
+    vencidos: pickParam(raw, 'vencidos') === '1',
     limite,
   }
 }
@@ -78,6 +82,7 @@ export function serializeTituloFiltersToSearchParams(
   if (f.q.trim()) sp.set('q', f.q.trim())
   if (f.de.trim()) sp.set('de', f.de.trim())
   if (f.ate.trim()) sp.set('ate', f.ate.trim())
+  if (f.vencidos) sp.set('vencidos', '1')
   if (limite !== 200) sp.set('limite', String(limite))
   return sp
 }
@@ -89,7 +94,8 @@ export function isDefaultTituloFilters(f: FinanceiroTituloFilters): boolean {
     !f.nomeCliente.trim() &&
     !f.q.trim() &&
     !f.de.trim() &&
-    !f.ate.trim()
+    !f.ate.trim() &&
+    !f.vencidos
   )
 }
 
@@ -110,6 +116,7 @@ export async function fetchContasReceberListagem(
     q: filters.q,
     de: filters.de,
     ate: filters.ate,
+    vencidos: filters.vencidos,
     limite,
   })
   if (!result.ok) {

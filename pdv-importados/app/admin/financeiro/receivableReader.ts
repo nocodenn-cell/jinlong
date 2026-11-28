@@ -116,7 +116,10 @@ export function createReceivableReader(supabase: SupabaseClient): ReceivableRead
 
         if (query.opcao === 'ABERTO') q = q.eq('status', 'ABERTO')
         else if (query.opcao === 'PARCIAL') q = q.eq('status', 'PARCIAL')
-        else q = q.in('status', ['ABERTO', 'PARCIAL'])
+        else q = q.in('status', [...RECEBER_STATUS_EM_ABERTO])
+
+        // Mesma regra de `contarRecebiveisVencidos` (atalho da tela Hoje leva para este filtro).
+        if (query.vencidos) q = q.not('vencimento', 'is', null).lt('vencimento', hojeYmd())
 
         if (query.de.trim() && isYmd(query.de)) {
           q = q.not('vencimento', 'is', null).gte('vencimento', query.de.trim())

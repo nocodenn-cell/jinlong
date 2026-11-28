@@ -45,8 +45,8 @@ Nenhum P0 novo de UX. Os P0 abertos do projeto são operacionais (migrations em 
 | # | Problema | Evidência | Estado |
 |---|---|---|---|
 | P2-1 | **Confirmações destrutivas com `window.confirm`/`window.alert` do navegador** em 9 pontos (excluir regra/meta de comissão, aprovar/pagar comissões, inativar conta financeira, remover lançamentos de importação, cancelar assinatura). O diálogo nativo mostra o domínio no título, tem botões no idioma do navegador (operador chinês vê "OK/Cancel" numa tela em zh), não destaca a ação perigosa e foge do tema. Erro de inativar conta aparecia em `alert()` | `FinanceiroContas.tsx:177,186`, `FechamentoClient.tsx:35`, `MetasComissaoClient.tsx:102`, `RegrasComissaoClient.tsx:179`, `LancamentosSecao.tsx:62`, `MercadoriasSecao.tsx:118`, `ResumoSecao.tsx:119`, `AssinaturaContent.tsx:156` | **Corrigido nesta sprint** |
-| P2-2 | Restam 3 confirmações nativas: `ConfirmActionButton` (2 usos, botões de `submit` que dependem do `preventDefault` síncrono) e o "descartar alterações" de `ClienteEditarModal` (diálogo dentro de diálogo) | `components/gerente/ConfirmActionButton.tsx:16`, `app/gerente/clientes/ClienteEditarModal.tsx:98` | Próxima onda |
-| P2-3 | "Contas a receber vencidas" não tem filtro na listagem: o atalho da tela Hoje leva à aba "A receber" sem filtro (a aba "A pagar" já aceita `status=atrasado`) | `lib/gerente/financeiroTitulosServer.ts:49-66` (sem parâmetro de vencidos) | Próxima onda |
+| P2-2 | Restavam 8 confirmações nativas (`globalThis.confirm`/`confirm`): `ConfirmActionButton`, descarte em `ClienteEditarModal` e `FornecedorEditarModal`, exclusão em lote de fornecedores, reprocessar documento fiscal, resetar PIN da equipe e **excluir venda no PDV** | `ConfirmActionButton.tsx`, `ClienteEditarModal.tsx:98`, `FornecedorEditarModal.tsx:47`, `FornecedoresListClient.tsx:209`, `DocumentoFiscalDetalheClient.tsx:141`, `MeuPinClient.tsx:103`, `CaixaPageClient.tsx:808` | **Corrigido na onda A** |
+| P2-3 | "Contas a receber vencidas" não tinha filtro na listagem: o atalho da tela Hoje levava à aba "A receber" sem filtro | `lib/gerente/financeiroTitulosServer.ts:49-66` | **Corrigido na onda A** (`vencidos=1`) |
 | P2-4 | Carregamento genérico: só `admin/loading.tsx` e `admin/dashboard/loading.tsx`; Vendas, Financeiro, Estoque e Relatórios usam o skeleton genérico do admin | `find app/admin -name loading.tsx` | Próxima onda |
 | P2-5 | Grade do carrinho do PDV em 1280–1366 px pode rolar na horizontal | backlog P2 | Próxima onda (precisa de teste visual) |
 | P2-6 | Texto de "Meu PIN do caixa" diz que o PIN serve para entrar; no web ele só desbloqueia o próprio caixa. No PDV desktop pode servir para entrar (o texto cita "próxima sincronização do PDV") | `src/lib/i18n/pt.json` (`meu_pin.subtitulo`), `app/caixa/server/caixaTrocaOperador.impl.ts:11,85-127` | Confirmar com o dono antes de mudar |
@@ -88,13 +88,24 @@ O card roda em paralelo com as consultas que a tela já fazia (mesmo `Promise.al
 
 ---
 
+### Onda A (2026-11-28)
+
+| Melhoria | Arquivos | Testes |
+|---|---|---|
+| Filtro "Só vencidos" em Dinheiro › A receber (`?vencidos=1`), com pílula na barra de filtros e chip removível; atalho da tela Hoje aponta para ele. Mesma regra de `contarRecebiveisVencidos` | `shared-core/src/financial/contracts.ts` (campo opcional), `receivableReader.ts`, `financeiroTitulosServer.ts`, `app/admin/financeiro/page.tsx`, `pendenciasHoje.ts`, `pt.json`/`zh.json` | `receivableReader.test.ts` (+2) |
+| `ConfirmActionButton` sobre o diálogo do DS (preserva `submit` com `requestSubmit`) | `components/gerente/ConfirmActionButton.tsx` | `ConfirmActionButton.behavior.test.tsx` (3) |
+| Descarte de alterações (cliente, fornecedor), exclusão em lote de fornecedores, reprocessar documento fiscal e resetar PIN no diálogo do DS | `ClienteEditarModal.tsx`, `FornecedorEditarModal.tsx`, `FornecedoresListClient.tsx`, `DocumentoFiscalDetalheClient.tsx`, `MeuPinClient.tsx` | suítes existentes |
+| PDV: "Excluir venda" usa o `CaixaConfirmModal` do caixa, com foco inicial em Cancelar (Enter acidental não apaga o cupom) | `app/caixa/CaixaPageClient.tsx` | suíte do caixa |
+
+Resultado: nenhum `confirm`/`alert` nativo em `app/` e `components/`.
+
 ## 5. Critérios de aceite
 
 | # | Critério | Como verificar |
 |---|---|---|
 | CA-1 | Nenhum dos 13 códigos listados devolve o texto genérico, em pt e zh | `caixaErroOperador.test.ts` |
 | CA-2 | Estorno sem caixa aberto não é confundido com "caixa fechado ao finalizar"; saldo insuficiente continua sugerindo suprimento | idem |
-| CA-3 | Nenhum `window.confirm`/`window.alert` direto em `app/` e `components/` (exceto P2-2) | `grep -rn "window\.confirm\|window\.alert" app components` |
+| CA-3 | Nenhum `confirm`/`alert` nativo (`window.`, `globalThis.` ou sem prefixo) em `app/` e `components/` | `grep -rn "window\.confirm\|window\.alert" app components` |
 | CA-4 | Confirmar só executa após clique no botão; Cancelar, Escape e clique fora não executam; botões em zh quando o texto é zh | `useConfirmDialog.behavior.test.tsx` |
 | CA-5 | Tela Hoje mostra cada pendência > 0 com link filtrado; sem pendência mostra "Nada pendente"; consulta com erro não vira zero | `pendenciasHoje.test.ts` |
 | CA-6 | Contagens usam as mesmas regras da listagem (status em aberto + `vencimento < hoje`) | `pendenciasHoje.test.ts` (filtros conferidos) |
@@ -121,7 +132,7 @@ Não verificado: comportamento na tela real com dados (não havia ambiente com l
 
 | Onda | Itens | Custo | Depende de |
 |---|---|---|---|
-| A (próxima) | P2-3 filtro "vencidas" em A receber; P2-2 `ConfirmActionButton` no diálogo do DS (reenviar o form com `requestSubmit` após confirmar) | Baixo | — |
+| A | Concluída em 2026-11-28 (P2-2 e P2-3) | Baixo | — |
 | B | P2-4 skeletons por rota (Vendas, Financeiro, Estoque, Relatórios); P2-5 grade do carrinho em 1280–1366 px com teste visual | Baixo/médio | Ambiente com dados para captura |
 | C | Pendências adicionais na tela Hoje: NF-e importada sem conferência, pedido de compra atrasado, caixa aberto há mais de 12 h | Médio | Confirmar leitores e RLS por perfil |
 | D | P1-3 fiado e P2-6 texto do PIN | Baixo | Decisão do dono |
