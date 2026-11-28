@@ -87,4 +87,16 @@ GRANT EXECUTE ON FUNCTION public.trg_caixas_fechado_imutavel() TO PUBLIC, anon, 
 GRANT EXECUTE ON FUNCTION public.trg_movimentos_estoque_log_bloquear_mutacao() TO PUBLIC, anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION internal.fp_contexto_servidor() TO anon;
 GRANT EXECUTE ON FUNCTION internal.fp_empresa_selecionada() TO anon;
+-- Correções posteriores à primeira versão (ver migration): perfis e privilégios padrão.
+DO $perfis_rb$
+BEGIN
+  IF to_regclass('public.perfis') IS NOT NULL THEN
+    GRANT MAINTAIN,REFERENCES,SELECT,TRIGGER ON TABLE public.perfis TO anon;
+  END IF;
+END
+$perfis_rb$;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT MAINTAIN,REFERENCES,SELECT,TRIGGER ON TABLES TO anon;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON SEQUENCES TO anon;
+-- Limitação: privilégios explícitos de anon em sequências não foram capturados antes da revogação;
+-- este rollback não os restaura (só o padrão acima).
 COMMIT;
