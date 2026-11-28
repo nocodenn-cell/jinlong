@@ -14,6 +14,25 @@ import type {
 } from '@shared-core/src/financial'
 import { FINANCIAL_ERROR_CODES, hojeYmd, isTituloVencido } from '@shared-core/src/financial'
 
+/** Status "em aberto" de contas a receber (KPIs do financeiro e contador de pendências do painel Hoje). */
+export const RECEBER_STATUS_EM_ABERTO = ['ABERTO', 'PARCIAL'] as const
+
+function receivableTable(supabase: SupabaseClient) {
+  return supabase.from('contas_receber')
+}
+
+/**
+ * Quantos títulos a receber em aberto estão vencidos (vencimento < hoje — computado, nunca status
+ * persistido; item 13 do Plano Mestre). Só contagem (`head: true`), sem trazer linhas.
+ */
+export async function contarRecebiveisVencidos(supabase: SupabaseClient, hoje: string = hojeYmd()) {
+  return receivableTable(supabase)
+    .select('id', { count: 'exact', head: true })
+    .in('status', [...RECEBER_STATUS_EM_ABERTO])
+    .not('vencimento', 'is', null)
+    .lt('vencimento', hoje)
+}
+
 /** Neutraliza os curingas de LIKE (`%`, `_`) num termo digitado pelo usuário. */
 export function escapeIlike(s: string): string {
   return s.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_')
@@ -37,13 +56,13 @@ async function resolveIdsByBusca(
   if (!needle) return null
   const pat = `%${escapeIlike(needle)}%`
   const [{ data: byDesc }, { data: cliQ }] = await Promise.all([
-    supabase.from('contas_receber').select('id').ilike('descricao', pat).limit(2000),
+    receivableTable(supabase).select('id').ilike('descricao', pat).limit(2000),
     supabase.from('clientes').select('id').ilike('nome', pat).limit(500),
   ])
   const fromCliIds = cliQ?.map((c) => c.id as string) ?? []
   let fromClienteTitulos: { id: string }[] = []
   if (fromCliIds.length > 0) {
-    const r = await supabase.from('contas_receber').select('id').in('cliente_id', fromCliIds).limit(2000)
+    const r = await receivableTable(supabase).select('id').in('cliente_id', fromCliIds).limit(2000)
     fromClienteTitulos = r.data ?? []
   }
   const set = new Set<string>()
@@ -92,8 +111,7 @@ export function createReceivableReader(supabase: SupabaseClient): ReceivableRead
           return { ok: true, titulos: [], capped: false }
         }
 
-        let q = supabase
-          .from('contas_receber')
+        let q = receivableTable(supabase)
           .select('id, valor_total, valor_aberto, status, descricao, vencimento, cliente_id, loja_id, venda_id, clientes(nome)')
 
         if (query.opcao === 'ABERTO') q = q.eq('status', 'ABERTO')

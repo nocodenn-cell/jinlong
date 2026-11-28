@@ -18,6 +18,8 @@ import { SalesTrendChartLazy } from './SalesTrendChartLazy'
 import { PaymentDonutChartLazy } from './PaymentDonutChartLazy'
 import { DashboardChart } from './_components/DashboardChart'
 import { CaixaShortcut } from './_components/CaixaShortcut'
+import { PendenciasHojeCard } from './_components/PendenciasHojeCard'
+import { contarPendenciasHoje } from './pendenciasHoje'
 import { DashboardFilters } from './_components/DashboardFilters'
 import { DashboardOrdersTable } from './_components/DashboardOrdersTable'
 import { DashboardKpiDrawer } from './_components/DashboardKpiDrawer'
@@ -156,7 +158,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   // Etapa 1 — tudo que NÃO depende do fuso do relatório, em paralelo com a leitura
   // do fuso. Antes: fuso → caixas → lote → estoque baixo → operadores, em série.
   // Flags e contagem de estoque baixo vêm do cache por request (o layout já leu).
-  const [relatorioTz, algumCaixaAberto, recentOrdersRes, estoqueBaixoRes, flagsVisuaisRes] =
+  const [relatorioTz, algumCaixaAberto, recentOrdersRes, estoqueBaixoRes, flagsVisuaisRes, pendenciasHoje] =
     await Promise.all([
       getRelatorioTimezone(supabase),
       // Observabilidade visual: algum caixa aberto agora? Best-effort — falha mantém "fechado".
@@ -169,6 +171,8 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
       statusDb ? recentOrdersQuery.eq('status', statusDb) : recentOrdersQuery,
       contarEstoqueBaixo(),
       lerFlagsVisuaisPdv(),
+      // Pendências do dia (contas vencidas/vencendo): best-effort, cada contagem falha sozinha.
+      contarPendenciasHoje(supabase),
     ])
   const { start, end, previousStart, previousEnd } = getPeriodRange(period, relatorioTz, now)
 
@@ -612,6 +616,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
 
   const sidePanel = (
     <>
+      <PendenciasHojeCard pendencias={pendenciasHoje} lk={lk} locale={locale} />
       <CaixaShortcut
         title={L.caixaShortcutTitle[lk]}
         status={algumCaixaAberto ? L.caixaShortcutStatusAberto[lk] : L.caixaShortcutStatusFechado[lk]}

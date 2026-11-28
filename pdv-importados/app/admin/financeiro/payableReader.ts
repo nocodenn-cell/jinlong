@@ -14,6 +14,13 @@ import { FINANCIAL_ERROR_CODES, hojeYmd, isTituloVencido } from '@shared-core/sr
 
 export const PAYABLES_PAGE_SIZE = 20
 
+/**
+ * Status "em aberto" de contas a pagar para o filtro "atrasado" (vencimento < hoje).
+ * 'ATRASADO' é valor de CHECK legado que nenhum writer grava — mantido por compatibilidade.
+ * Fonte única: a listagem (aqui) e o contador de pendências do painel Hoje usam esta lista.
+ */
+export const PAYABLE_STATUS_EM_ABERTO = ['PENDENTE', 'PARCIAL', 'ATRASADO'] as const
+
 const COLUMNS = `
   id, fornecedor_id, favorecido, descricao, valor_total, valor_pago, vencimento,
   status, nfe_numero, nfe_importacao_id, criado_em, loja_id,
@@ -63,7 +70,7 @@ export function createPayableReader(supabase: SupabaseClient): PayableReader {
           // (item 13 do Plano Mestre) — "atrasado" é sempre computado por
           // vencimento < hoje sobre status em aberto, nunca por igualdade
           // de status.
-          qb = qb.in('status', ['PENDENTE', 'PARCIAL', 'ATRASADO']).lt('vencimento', hoje)
+          qb = qb.in('status', [...PAYABLE_STATUS_EM_ABERTO]).lt('vencimento', hoje)
         } else if (query.status && query.status !== 'todos') {
           qb = qb.eq('status', query.status.toUpperCase())
         }
@@ -111,6 +118,21 @@ export function createPayableReader(supabase: SupabaseClient): PayableReader {
 
 function payableTable(supabase: SupabaseClient) {
   return supabase.from('contas_pagar')
+}
+
+/**
+ * Quantas contas a pagar em aberto estão vencidas (`vencimento < hoje`) ou vencem hoje — mesma regra
+ * do filtro "atrasado" da listagem. Só contagem (`head: true`), sem trazer linhas.
+ */
+export function contarContasPagarEmAberto(
+  supabase: SupabaseClient,
+  quando: 'vencidas' | 'vence_hoje',
+  hoje: string = hojeYmd(),
+) {
+  const q = payableTable(supabase)
+    .select('id', { count: 'exact', head: true })
+    .in('status', [...PAYABLE_STATUS_EM_ABERTO])
+  return quando === 'vencidas' ? q.lt('vencimento', hoje) : q.eq('vencimento', hoje)
 }
 
 export function readPayablePayments(supabase: SupabaseClient, contaId: string, lojaId: string) {

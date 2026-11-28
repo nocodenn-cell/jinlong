@@ -148,4 +148,40 @@ describe('caixaErroOperador: registro do fallback genérico', () => {
       console.error = original
     }
   })
+
+  // Sprint UX 2026-11-27: códigos do banco que não são transitórios não podem cair em
+  // "tente novamente" — o operador repetiria uma ação que nunca vai passar.
+  describe('códigos não transitórios têm mensagem própria (pt e zh)', () => {
+    const PADRAO_PT = 'Não foi possível concluir. Tente novamente.'
+    const PADRAO_ZH = '当前无法完成该操作。请稍后再试。'
+    const casos: Array<[string, string]> = [
+      ['PAGAMENTO_SEM_CONTA_FINANCEIRA', 'conta financeira'],
+      ['CANCELAR_VENDA_CAIXA_FECHADO_SEM_CAIXA_ABERTO', 'Abra o caixa'],
+      ['CANCELAR_VENDA_CAIXA_ABERTO_AMBIGUO', 'mais de um caixa aberto'],
+      ['CANCELAR_VENDA_JA_CANCELADA', 'já foi cancelada'],
+      ['CANCELAR_VENDA_NAO_ENCONTRADA', 'não encontrada'],
+      ['CANCELAR_VENDA_SEM_PERMISSAO', 'permissão'],
+      ['FECHAR_CAIXA_SEM_PERMISSAO', 'permissão'],
+      ['CANCELAR_VENDA_MOTIVO_OBRIGATORIO', 'motivo'],
+      ['motivo_obrigatorio', 'motivo'],
+      ['FECHAR_CAIXA_EM_USO_OUTRO_OPERADOR', 'outro operador'],
+      ['FECHAR_CAIXA_REPETICAO_VALOR_DIVERGENTE', 'já foi fechado'],
+      ['FECHAR_CAIXA_SESSAO_EXPIRADA', 'Sessão expirada'],
+      ['CANCELAR_VENDA_AUTH', 'Sessão expirada'],
+    ]
+    it.each(casos)('%s → mensagem acionável', (codigo, trecho) => {
+      const pt = caixaErroOperador(`ERROR: ${codigo}`)
+      expect(pt).not.toBe(PADRAO_PT)
+      expect(pt).toContain(trecho)
+      expect(caixaErroOperador(codigo, 'zh')).not.toBe(PADRAO_ZH)
+    })
+
+    it('estorno sem caixa aberto não vira "caixa fechado" de finalizar venda', () => {
+      expect(caixaErroOperador('CANCELAR_VENDA_CAIXA_FECHADO_SEM_CAIXA_ABERTO')).not.toContain('finalizar')
+    })
+
+    it('saldo de caixa insuficiente no estorno continua com a saída de suprimento', () => {
+      expect(caixaErroOperador('CANCELAR_VENDA_SALDO_CAIXA_INSUFICIENTE')).toContain('suprimento')
+    })
+  })
 })

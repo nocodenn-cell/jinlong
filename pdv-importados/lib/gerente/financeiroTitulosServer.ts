@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { createReceivableReader } from '@/app/admin/financeiro/receivableReader'
+import { RECEBER_STATUS_EM_ABERTO, createReceivableReader } from '@/app/admin/financeiro/receivableReader'
 import { hojeYmd } from '@shared-core/src/financial'
 
 /** Filtros da listagem de contas a receber (sincronizados com a URL). */
@@ -148,12 +148,12 @@ export async function fetchFinanceiroTitulosKpis(supabase: SupabaseClient): Prom
   const { count } = await supabase
     .from('contas_receber')
     .select('*', { count: 'exact', head: true })
-    .in('status', ['ABERTO', 'PARCIAL'])
+    .in('status', [...RECEBER_STATUS_EM_ABERTO])
 
   const { data: vals } = await supabase
     .from('contas_receber')
     .select('valor_aberto')
-    .in('status', ['ABERTO', 'PARCIAL'])
+    .in('status', [...RECEBER_STATUS_EM_ABERTO])
     .limit(KPI_SUM_CAP + 1)
 
   const rows = vals ?? []
@@ -167,14 +167,14 @@ export async function fetchFinanceiroTitulosKpis(supabase: SupabaseClient): Prom
   const { count: vencidosCount } = await supabase
     .from('contas_receber')
     .select('*', { count: 'exact', head: true })
-    .in('status', ['ABERTO', 'PARCIAL'])
+    .in('status', [...RECEBER_STATUS_EM_ABERTO])
     .not('vencimento', 'is', null)
     .lt('vencimento', hoje)
 
   const { data: vencidosVals } = await supabase
     .from('contas_receber')
     .select('valor_aberto')
-    .in('status', ['ABERTO', 'PARCIAL'])
+    .in('status', [...RECEBER_STATUS_EM_ABERTO])
     .not('vencimento', 'is', null)
     .lt('vencimento', hoje)
     .limit(KPI_SUM_CAP + 1)

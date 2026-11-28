@@ -68,10 +68,11 @@ test('gerente: regra por cargo com prévia, relatório CSV, metas, fechamento e 
   await foto(page, '04-metas-divisoes')
 
   await gotoApp(page, '/admin/comissoes/fechamento')
-  page.on('dialog', (d) => void d.accept())
   await page.getByTestId('fech-em_revisao').click()
   await expect(page.getByTestId('comissao-status-periodo')).toContainText(/revisão|审核/i, { timeout: 15_000 })
+  // Aprovar é ação perigosa: confirmação no diálogo do Design System (não mais window.confirm).
   await page.getByTestId('fech-aprovado').click()
+  await page.getByTestId('confirm-dialog-confirmar').click()
   await expect(page.getByTestId('comissao-status-periodo')).toContainText(/Aprovado|已批准/i, { timeout: 15_000 })
   const [exp] = await Promise.all([page.waitForEvent('download'), page.getByTestId('fech-export-contabil').click()])
   expect(fs.readFileSync((await exp.path())!, 'utf8')).toContain('total_a_pagar')
