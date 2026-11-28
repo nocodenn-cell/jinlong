@@ -156,6 +156,15 @@
         "20261104120000 (ordem)"
       ],
       "releaseCondition": "Autorização explícita do dono para aplicar o lote de segurança em produção (runbook manual, janela autorizada, schema_migrations com a versão real), após validação em homologação; depois PR que remove a entrada com label deploy-prod:aprovado."
+    },
+    {
+      "version": "20261106150000",
+      "file": "backend/supabase/migrations/20261106150000_sec_anon_complemento_privilegios.sql",
+      "reason": "Complemento de privilegios de anon (SEC-ANON). A 20261104120000 e adiada e nao pode ser aplicada em producao como esta: aborta no bloco de prova porque public.perfis tem SELECT para anon. Esta migration revoga anon em tabelas, views e sequencias de public e corrige DEFAULT PRIVILEGES do papel postgres. Producao (lido em 2026-11-06): 63 tabelas, 12 views e 6 sequencias com privilegio para anon. Homologacao: 0 tabelas e 0 views, 18 sequencias com privilegio.",
+      "dependencies": [
+        "20261104120000 (adiada; nao aplicar)"
+      ],
+      "releaseCondition": "Teste sec-anon-complemento.test.sql verde no CI + validacao dos acessos authenticated (tela admin de relatorios e fluxo de venda por perfil) em homologacao + autorizacao explicita do responsavel para aplicar em producao (runbook manual com transacao e schema_migrations com a versao real) + PR que remove esta entrada com label deploy-prod:aprovado."
     }
   ]
 }
