@@ -1,0 +1,64 @@
+# Hub comercial (hub/): tipos, testes unitários, build e prova de RLS/regras do CRM em Postgres descartável.
+# Roda só quando hub/ ou as migrations commercial_* mudam (custo de Actions controlado; ver docs/AUDITORIA_CUSTO_GITHUB_ACTIONS.md).
+# Nenhum segredo: o build usa dados fictícios e o teste de banco usa um Postgres de serviço, nunca o Supabase.
+name: CI hub comercial
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'hub/**'
+      - 'backend/supabase/migrations/*commercial*'
+      - 'backend/supabase/migrations/20261023130000_growth001_central_conversao.sql'
+      - '.github/workflows/ci-hub.yml'
+  workflow_dispatch:
+
+jobs:
+  app:
+    name: Hub · tipos, testes e build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: hub
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Instalar dependências (hub não é workspace; vitest igual ao da raiz)
+        run: npm install --no-audit --no-fund && npm install --no-save --no-audit --no-fund vitest@3.2.6
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Testes unitários
+        run: npx vitest run
+      - name: Build (dados fictícios, sem banco)
+        run: npx next build
+        env:
+          HUB_DEMO_DATA: ficticio
+
+  banco:
+    name: Hub · RLS e regras do CRM (Postgres descartável)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: RLS do hub + Central de Conversão + CRM-001 (inclui rollback e reaplicação)
+        run: bash hub/scripts/rls-test.sh
+        env:
+          PGURL: postgres://postgres:postgres@localhost:5432/postgres

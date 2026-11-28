@@ -87,3 +87,74 @@ input, select, textarea { min-height: 44px; padding: 8px 10px; border: 1px solid
 .hub-choice input { width: auto; min-height: 0; }
 .hub-block { display: grid; gap: 4px; font-weight: 600; font-size: 14px; }
 .hub-conv .hub-btn { justify-self: start; }
+/* ── Central Comercial (CRM-001) ─────────────────────────────────────────── */
+.hub-skip { position: absolute; left: -9999px; } .hub-skip:focus { left: 8px; top: 8px; z-index: 10; background: var(--white); padding: 8px 12px; }
+.hub-role { margin-left: 10px; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; vertical-align: middle; }
+.hub-role--gestor { background: #f3ecfb; color: #5a2d91; } .hub-role--vendedor { background: #eef3fb; color: #1d4b8f; }
+.hub-head { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.hub-head h1 { margin-bottom: 4px; }
+.hub-sub { margin: 0 0 12px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.hub-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.hub-btn--ghost { background: var(--white); color: var(--brand-d); border: 1px solid var(--brand); }
+.hub-btn--ghost:hover { background: #fdf3f3; }
+.hub-cards--kpi { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); margin-top: 12px; }
+.hub-card small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+.hub-card strong { display: block; }
+.hub-bar--ganha { background: linear-gradient(90deg, #1e6b37, #5fb37c); } .hub-bar--perdida { background: #9aa3ad; }
+.hub-badge--qualificacao { background: #e9f6f8; color: #145e6b; }
+.hub-badge--negociacao { background: #fff0e0; color: #8a4a00; }
+.hub-list { list-style: none; padding: 0; margin: 0; } .hub-list li { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.hub-table--compact th, .hub-table--compact td { padding: 6px 10px; font-size: 14px; }
+.hub-pager { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 12px; }
+.hub-stack { display: grid; gap: 16px; align-content: start; }
+.hub-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; align-items: end; }
+.hub-form-grid label { display: grid; gap: 4px; font-weight: 600; font-size: 14px; }
+.hub-form-grid .hub-choice { display: flex; }
+.hub-form-grid h3 { margin: 0; font-size: 15px; }
+.hub-span2 { grid-column: 1 / -1; }
+.hub-narrow { flex: 0 0 90px !important; }
+.hub-warn { background: #fff4d6; border: 1px solid var(--gold); color: #5c4400; padding: 8px 12px; border-radius: 8px; margin-bottom: 12px; }
+.hub-acts { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 8px; }
+.hub-acts > li { border: 1px solid var(--line); border-left: 4px solid var(--gold); border-radius: 8px; padding: 8px 10px; display: grid; gap: 6px; }
+.hub-acts > li.hub-acts--late { border-left-color: var(--brand); background: #fff8f8; }
+.hub-acts > li.hub-empty { border: 0; padding: 4px 0; }
+details > summary { cursor: pointer; font-weight: 600; color: var(--brand-d); min-height: 32px; display: list-item; }
+details[open] > summary { margin-bottom: 8px; }
+.hub-pstatus { font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: #eef0f2; }
+.hub-pstatus--enviada { background: #eef3fb; color: #1d4b8f; } .hub-pstatus--em_negociacao { background: #fff0e0; color: #8a4a00; }
+.hub-pstatus--aceita { background: #e8f5ec; color: #1e6b37; } .hub-pstatus--rascunho { background: #faf7f0; color: #5c4400; }
+.hub-conv h3 { margin: 0; font-size: 16px; }
+.hub-conv { border-top: 1px solid var(--line); padding-top: 12px; }
+.hub-count-inline { font-size: 13px; color: var(--muted); font-weight: 600; }
+.hub-tabs { display: flex; gap: 4px; background: var(--white); border: 1px solid var(--line); border-radius: 10px; padding: 4px; }
+.hub-tabs a { padding: 6px 12px; border-radius: 8px; text-decoration: none; font-weight: 600; color: var(--ink); }
+.hub-tabs a[aria-current="page"] { background: var(--brand); color: var(--white); }
+/* Kanban */
+.hub-kanban { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(240px, 1fr); gap: 12px; overflow-x: auto; padding-bottom: 12px; align-items: start; }
+.hub-kcol { background: #eef0f3; border-radius: 12px; padding: 10px; min-height: 160px; border: 2px dashed transparent; }
+.hub-kcol--over { border-color: var(--gold); background: #fbf6e8; }
+.hub-kcol--ganha { background: #e8f5ec; } .hub-kcol--perdida { background: #eceef0; }
+.hub-kcol header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+.hub-kcol h2 { font-size: 15px; margin: 0; } .hub-kcol header span { color: var(--muted); font-size: 13px; font-weight: 600; }
+.hub-kcol ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.hub-kcard { background: var(--white); border: 1px solid var(--line); border-radius: 10px; padding: 10px; display: grid; gap: 2px; cursor: grab; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+.hub-kcard:active { cursor: grabbing; }
+.hub-kcard a { text-decoration: none; } .hub-kcard > span { font-size: 14px; }
+.hub-kmeta { color: var(--muted); font-size: 12px !important; } .hub-kval { font-weight: 700; color: var(--brand-d); }
+.hub-kmove select { min-height: 32px; padding: 2px 6px; font-size: 13px; margin-top: 4px; }
+.hub-khint { font-size: 12px; color: var(--muted); margin: 0 0 8px; }
+.hub-kempty { color: var(--muted); text-align: center; padding: 12px; }
+.hub-dialog { border: 0; border-radius: 12px; padding: 20px; width: min(440px, 92vw); box-shadow: 0 10px 40px rgba(0,0,0,.25); }
+.hub-dialog::backdrop { background: rgba(0,0,0,.35); }
+.hub-dialog form { display: grid; gap: 12px; } .hub-dialog h2 { margin: 0; }
+@media (max-width: 760px) {
+  .hub-form-grid { grid-template-columns: 1fr; }
+  .hub-kanban { grid-auto-columns: 82%; scroll-snap-type: x mandatory; }
+  .hub-kcol { scroll-snap-align: start; }
+  .hub-top nav { gap: 0 10px; } .hub-top nav a { font-size: 14px; }
+  .hub-cards--kpi { grid-template-columns: 1fr 1fr; }
+  .hub-card strong { font-size: 22px; }
+}
+.hub-form-row > select, .hub-form-row > input { flex: 1 1 140px; width: auto; }
+.hub-table .hub-form-row > select { flex: 1 1 110px; }
+.hub-filters label:first-child:has(select) { flex: 0 1 260px; }

@@ -43,6 +43,8 @@
 
 ## P1 — Falta para lançar (MVP)
 
+- Central Comercial (CRM-001, PR desta branch): aplicar `hub/supabase/20261120120000_commercial_crm.sql` no homolog e ensaiar o hub com uma conta gestor e uma vendedor; depois produção (migration antes do deploy do hub, com `deploy-prod:aprovado`). Roteiro em `docs/hub/CRM_001_CENTRAL_COMERCIAL.md` §6
+- Preços oficiais: todo `saas.planos` está com `preco_placeholder = true`; propostas do CRM mostram o aviso. Definir os valores antes de enviar proposta real
 - Site Jinlong: validar com o contador os textos do simulador híbrido já ajustados ao prazo vencido (`site/lib/simuladorHibrido.copy.ts`). Não publicar antes dessa revisão
 - Site Jinlong: `metadataBase` ausente (build usa localhost:3000 para imagens sociais); homes e simulador sem `og:image`/`twitter:image` em produção. Corrigir junto com canonical e hreflang
 - Site Jinlong: LCP mobile de laboratório 3.260 ms (PT) e 3.536 ms (ZH), acima de 2,5 s; CLS 0.000. Baseline em `fase0-main-2929b09a`; repetir a medição após cada incremento
@@ -153,6 +155,7 @@
 - Mostrar as parcelas do crédito no detalhe da venda (admin) e na 2ª via, depois da coluna existir na homologação
 
 ## Feito
+- 2026-11-20 — CRM-001 Central Comercial no hub: etapas configuráveis e Kanban, responsável e papéis gestor/vendedor, agenda e alertas, propostas (preço só de `saas.planos`), conversão sem duplicidade, auditoria sem dados pessoais, painel com 12 indicadores rastreáveis, CI `ci-hub.yml`. Testes: 62 unitários + RLS/CRM em Postgres descartável
 - 2026-11-28 — UX onda A: filtro "Só vencidos" em Dinheiro › A receber (atalho da tela Hoje cai filtrado); os 8 `confirm` nativos restantes (inclusive "Excluir venda" no PDV, agora com foco em Cancelar) passaram ao diálogo do Design System. Nenhum `confirm`/`alert` nativo nas telas
 - 2026-11-27 — Sprint UX/UI: caixa com mensagem acionável para 13 códigos do banco que caíam em "tente novamente" (pt/zh); tela Hoje com "Pendências do dia" (pagar vencidas/vencendo hoje, receber vencidas) com atalho filtrado; 9 `window.confirm`/`alert` trocados por diálogo do Design System (`useConfirmDialog`). Sem migration; guardas, typecheck e testes OK. Diagnóstico P0–P3: `docs/auditorias/SPRINT_UX_UI_INTELIGENCIA_2026-11-27.md`
 - 2026-11-19 — PDV: toda venda começa com o operador como vendedor (antes lembrava o último vendedor e gravava vendas seguintes no vendedor errado; decisão do dono). Cancelamento: comprovante e auditoria mostram o total devolvido e quem cancelou (antes R$ 0,00 em PIX/cartão/dividido e autor = operador da venda). Sem migration; testes de caixa, vendas e auditoria OK (480). PR #686
@@ -162,4 +165,3 @@
 - 2026-11-13 — FAB do site recolhe enquanto `#contato` está visível (`site/components/FabAutoHide.tsx`), com teste E2E em Chromium, Firefox e mobile. Sem commit até a suíte completa passar
 - 2026-11-12 — Simulador híbrido: textos PT/ZH e fonte oficial agora dizem que o prazo de 30/10/2026 encerrou (cancelamento até 20/12/2026; próximas janelas em março e setembro). Teste de regressão em `site/lib/simuladorHibrido.copy.test.ts`. Sem commit; validação contábil pendente
 - 2026-11-12 — Análise da auditoria do site Jinlong contra o código em `site/` (idêntico a `2929b09a`): prazo tributário confirmado vencido; formulário e FAB confirmados como P0; protocolo, CTA do simulador e cookie PT confirmados como falsos positivos. Nenhum código alterado
-- 2026-11-12 — hub.jinlong.app: painel quebrava (digest 226588760, "Falha ao acessar dados (400)"). Causa: a Central de Conversão (`20261023130000`) estava no `main` mas não no banco `jinlong`. Migration aplicada em produção após checagem; cada seção do hub agora degrada sozinha (`hub/lib/seguro.ts`) e há `hub/app/error.tsx`. Código ainda não commitado

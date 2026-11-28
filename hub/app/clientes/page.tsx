@@ -16,8 +16,8 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
   const customers = r.value
   return (
     <Shell demo={demo} active="clientes">
-      <h1>Lojas contratadas</h1>
-      <p className="hub-help">Acompanhamento simples. Plano e valor são campos livres, preparados para assinaturas futuras (nenhuma cobrança automática).</p>
+      <h1>Clientes (lojas contratadas)</h1>
+      <p className="hub-help">Acompanhamento simples. Entram aqui só pela conversão (lead com proposta aceita ou teste grátis pela Central). Nenhuma cobrança automática.</p>
       {msg && <p className="hub-msg" role="status">{msg.slice(0, 120)}</p>}
       {r.falhou && <p className="hub-error" role="alert">Não foi possível carregar as lojas contratadas agora. Tente de novo em instantes.</p>}
       <div className="hub-table-wrap">

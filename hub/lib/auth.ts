@@ -39,6 +39,34 @@ export async function isAdmin(cfg: HubConfig, accessToken: string, fetchImpl: ty
   return res.ok && (await res.json()) === true
 }
 
+/**
+ * Papel na equipe comercial, verificado no servidor pela função do banco (a RLS usa as mesmas regras).
+ * Antes da migration CRM-001 a RPC não existe: cai no is_commercial_admin (admin = gestor), para o login não travar.
+ */
+export async function memberRole(cfg: HubConfig, accessToken: string, fetchImpl: typeof fetch = fetch): Promise<'gestor' | 'vendedor' | null> {
+  const res = await fetchImpl(`${cfg.url}/rest/v1/rpc/commercial_meu_papel`, {
+    method: 'POST',
+    headers: { apikey: cfg.anonKey, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: '{}',
+    cache: 'no-store',
+    signal: AbortSignal.timeout(8000),
+  })
+  if (res.status === 404) return (await isAdmin(cfg, accessToken, fetchImpl)) ? 'gestor' : null
+  if (!res.ok) throw new Error(`papel indisponível (${res.status})`)
+  const papel = await res.json()
+  return papel === 'gestor' || papel === 'vendedor' ? papel : null
+}
+
+/** sub (id do usuário) do JWT, só para filtros de tela ("meus leads"); a autorização é sempre do banco. */
+export function jwtSub(token: string): string | null {
+  try {
+    const payload = JSON.parse(Buffer.from(token.split('.')[1] ?? '', 'base64url').toString('utf8')) as { sub?: string }
+    return typeof payload.sub === 'string' && /^[0-9a-f-]{36}$/i.test(payload.sub) ? payload.sub : null
+  } catch {
+    return null
+  }
+}
+
 /** exp do JWT (sem validar assinatura — quem valida é o Supabase em cada chamada). */
 export function jwtExp(token: string): number | null {
   try {
