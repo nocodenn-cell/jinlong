@@ -34,7 +34,7 @@ export function AuthShell({ locale, brandSubtitle, children }: Props) {
         </div>
         <h1 className="login-premium-wordmark mb-8 text-center text-2xl">
           <span className="login-premium-wordmark-han">{brandSubtitle}</span>
-          <span className="mx-2 text-[#bfa76a]/45" aria-hidden>
+          <span className="mx-2 text-[color:color-mix(in_srgb,var(--color-dragon-gold-cinzel)_45%,transparent)]" aria-hidden>
             |
           </span>
           <span>Jīn Lóng</span>
