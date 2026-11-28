@@ -10,6 +10,7 @@ import { FinanceiroForm, FinanceiroField as Field } from './FinanceiroForm'
 import { CategoriaOptions, ContaOptions } from './FinanceiroOptions'
 import { executarFinanceiroLoja } from '../financeiroLojaActions'
 import { useRouter } from 'next/navigation'
+import { useConfirmDialog } from '@/components/ui/useConfirmDialog'
 
 const FORMAS = [
   { id: 'DINHEIRO', label: 'Dinheiro (gaveta / reserva)' },
@@ -172,9 +173,10 @@ export function FinanceiroContas({ data, labels }: { data: FinanceiroPainel; lab
   const [pendingInativar, setPendingInativar] = useState(false)
   const conta = data.contas.find((c) => c.id === selecionada) ?? null
   const contasForma = data.contas_forma ?? []
+  const { confirmar, avisar, dialogo } = useConfirmDialog()
 
   async function inativar(contaId: string) {
-    if (!window.confirm(labels.inativarConfirm)) return
+    if (!(await confirmar({ titulo: labels.inativarConfirm }))) return
     setPendingInativar(true)
     try {
       const result = await executarFinanceiroLoja({
@@ -183,7 +185,7 @@ export function FinanceiroContas({ data, labels }: { data: FinanceiroPainel; lab
         requestId: crypto.randomUUID(),
       })
       if (result.ok) router.refresh()
-      else window.alert(result.error)
+      else void avisar({ titulo: result.error })
     } finally {
       setPendingInativar(false)
     }
@@ -301,6 +303,7 @@ export function FinanceiroContas({ data, labels }: { data: FinanceiroPainel; lab
         <Field name="valor" label="Valor (R$)" type="number" />
         <Field name="data" label="Data efetiva" type="date" value={data.hoje} />
       </FinanceiroForm>
+      {dialogo}
     </div>
   )
 }

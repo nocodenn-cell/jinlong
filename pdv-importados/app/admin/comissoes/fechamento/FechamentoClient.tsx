@@ -1,6 +1,7 @@
 'use client'
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { useConfirmDialog } from '@/components/ui/useConfirmDialog'
 import { exportContabilComissao, transicionarPeriodoComissao, type LinhaVendedorPeriodo, type StatusPeriodo } from '@/app/gerente/comissoes/moduloActions'
 import { gerarCsvContabil } from '@/lib/comissao/relatorio'
 import { SeletorMes } from '../_modulo/SeletorMes'
@@ -18,6 +19,7 @@ export function FechamentoClient({ competencia, status, linhas, t }: { competenc
   const router = useRouter()
   const [msg, setMsg] = useState<string | null>(null)
   const [pendente, start] = useTransition()
+  const { confirmar, dialogo } = useConfirmDialog()
   return (
     <div className="admin-v2-stack">
       <div className="admin-v2-panel flex flex-wrap items-center gap-4 p-4">
@@ -31,8 +33,8 @@ export function FechamentoClient({ competencia, status, linhas, t }: { competenc
               disabled={pendente}
               data-testid={`fech-${a.para.toLowerCase()}`}
               className={'rounded-md px-3 py-1.5 text-sm font-semibold disabled:opacity-50 ' + (a.perigo ? 'bg-jl-accent text-white' : 'border border-jl-border-1')}
-              onClick={() => {
-                if (a.perigo && !window.confirm(t[`${a.chave}_confirma`] ?? '')) return
+              onClick={async () => {
+                if (a.perigo && !(await confirmar({ titulo: t[`${a.chave}_confirma`] ?? '' }))) return
                 start(async () => {
                   const r = await transicionarPeriodoComissao(competencia, a.para)
                   setMsg(r.success ? null : r.error)
@@ -60,6 +62,7 @@ export function FechamentoClient({ competencia, status, linhas, t }: { competenc
       <p className="text-xs text-jl-fg-2">{t.fech_aviso}</p>
       {msg ? <p role="alert" className="text-sm text-red-700">{msg}</p> : null}
       <TabelaVendedores linhas={linhas} t={t} />
+      {dialogo}
     </div>
   )
 }

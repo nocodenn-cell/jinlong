@@ -3103,6 +3103,8 @@
     "financeiro_filtro_mix": "Aberto/Parcial",
     "financeiro_filtro_so_aberto": "Só aberto",
     "financeiro_filtro_so_parcial": "Só parcial",
+    "financeiro_filtro_todos_vencimentos": "Todos os vencimentos",
+    "financeiro_filtro_so_vencidos": "Só vencidos",
     "financeiro_chip_cliente": "Cliente: {{nome}}",
     "financeiro_chip_de": "De: {{data}}",
     "financeiro_chip_ate": "Até: {{data}}",

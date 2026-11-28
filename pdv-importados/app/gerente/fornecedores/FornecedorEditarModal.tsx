@@ -5,6 +5,7 @@ import { Building2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Field, Input } from '@/components/ui/forms'
 import { DragonModal } from '@/components/ui/DragonModal'
+import { useConfirmDialog } from '@/components/ui/useConfirmDialog'
 import { getMessages } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { emitGerenteToast } from '@/lib/gerente/toast'
@@ -24,6 +25,7 @@ type Props = Readonly<{
 
 export function FornecedorEditarModal({ idioma, fornecedor, nomesExistentes = [], onClose, onSalvo }: Props) {
   const m = getMessages(idioma)
+  const { confirmar, dialogo } = useConfirmDialog()
   const editando = !!fornecedor
 
   const [nome, setNome] = useState(fornecedor?.nome ?? '')
@@ -43,11 +45,20 @@ export function FornecedorEditarModal({ idioma, fornecedor, nomesExistentes = []
     )
   }
 
-  const fechar = useCallback(() => {
-    if (sujo() && !confirm(m.fornecedores.confirmar_descartar)) return
+  const fechar = useCallback(async () => {
+    if (
+      sujo() &&
+      !(await confirmar({
+        titulo: m.fornecedores.confirmar_descartar,
+        mensagem: m.produtos.confirm_descartar_texto,
+        rotuloConfirmar: m.produtos.confirm_descartar_confirmar,
+        rotuloCancelar: m.produtos.confirm_descartar_continuar,
+      }))
+    )
+      return
     onClose()
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sujo lê estado atual do form
-  }, [nome, cnpj, fornecedor, onClose, m])
+  }, [nome, cnpj, fornecedor, onClose, m, confirmar])
 
   function validar(): boolean {
     const e: Record<string, string> = {}
@@ -155,6 +166,7 @@ export function FornecedorEditarModal({ idioma, fornecedor, nomesExistentes = []
           />
         </Field>
       </form>
+      {dialogo}
     </DragonModal>
   )
 }

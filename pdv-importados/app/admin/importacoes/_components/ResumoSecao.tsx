@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { useConfirmDialog } from '@/components/ui/useConfirmDialog'
 import { SectionCard } from '@/components/ui/admin-v2'
 import { formatarDecimal } from '@/lib/import/hub/decimais'
 import type { Cambio, Operacao } from '@/lib/import/hub/dadosImportacoes'
@@ -80,6 +81,7 @@ export function ResumoSecao(props: {
 
 function CambiosCard({ t, operacaoId, cambios, editavel }: { t: TextosImport; operacaoId: string; cambios: Cambio[]; editavel: boolean }) {
   const { executar, pendente, erro } = useAcao(t)
+  const { confirmar, dialogo } = useConfirmDialog()
   const vazio = { id: '', moeda: 'USD', taxa: '', fonte: 'DECLARADA_DI', data: '' }
   const [f, setF] = useState(vazio)
   const set = (k: keyof typeof vazio) => (v: string) => setF((s) => ({ ...s, [k]: v }))
@@ -115,8 +117,8 @@ function CambiosCard({ t, operacaoId, cambios, editavel }: { t: TextosImport; op
                     <Button
                       type="button"
                       variant="ghost" size="sm"
-                      onClick={() => {
-                        if (window.confirm(t.confirmar_remocao)) executar(() => removerRascunhoAction(operacaoId, 'CAMBIO', c.id))
+                      onClick={async () => {
+                        if (await confirmar({ titulo: t.confirmar_remocao, rotuloConfirmar: t.remover, rotuloCancelar: t.cancelar })) executar(() => removerRascunhoAction(operacaoId, 'CAMBIO', c.id))
                       }}
                     >
                       {t.remover}
@@ -153,6 +155,7 @@ function CambiosCard({ t, operacaoId, cambios, editavel }: { t: TextosImport; op
           </div>
         </form>
       ) : null}
+      {dialogo}
     </SectionCard>
   )
 }

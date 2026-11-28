@@ -290,4 +290,35 @@ describe('receivableReader', () => {
       ],
     })
   })
+
+  describe('filtro vencidos (atalho "Pendências do dia" da tela Hoje)', () => {
+    function espiao() {
+      const chamadas: Array<[string, ...unknown[]]> = []
+      const api: Record<string, unknown> = {}
+      for (const m of ['select', 'ilike', 'in', 'eq', 'not', 'gte', 'lte', 'lt', 'order', 'limit']) {
+        api[m] = (...a: unknown[]) => {
+          chamadas.push([m, ...a])
+          return api
+        }
+      }
+      api.then = (ok: (v: unknown) => unknown) => Promise.resolve({ data: [], error: null }).then(ok)
+      return { supabase: { from: vi.fn(() => api) } as never, chamadas }
+    }
+    const base = { opcao: 'mix' as const, clienteId: '', nomeCliente: '', q: '', de: '', ate: '', limite: 50 }
+
+    it('vencidos=true filtra vencimento < hoje e exclui sem vencimento', async () => {
+      const { supabase, chamadas } = espiao()
+      await createReceivableReader(supabase).list({ ...base, vencidos: true })
+      expect(chamadas).toContainEqual(['not', 'vencimento', 'is', null])
+      const lt = chamadas.find((c) => c[0] === 'lt')
+      expect(lt?.[1]).toBe('vencimento')
+      expect(String(lt?.[2])).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    })
+
+    it('sem o filtro, nenhum corte por vencimento', async () => {
+      const { supabase, chamadas } = espiao()
+      await createReceivableReader(supabase).list(base)
+      expect(chamadas.some((c) => c[0] === 'lt')).toBe(false)
+    })
+  })
 })

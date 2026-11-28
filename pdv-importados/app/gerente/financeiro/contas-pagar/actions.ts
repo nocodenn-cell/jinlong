@@ -102,6 +102,7 @@ export type ContasPagarFilters = {
   status?: string // 'todos' | 'pendente' | 'parcial' | 'atrasado' | 'pago' | 'cancelado'
   fornecedor_id?: string
   periodo?: string // 'YYYY-MM' (mês de vencimento)
+  vencimento_dia?: string // 'YYYY-MM-DD' (dia exato, só em aberto)
   termo?: string
 }
 
@@ -123,6 +124,7 @@ export async function buscarContasPagarAction(
       status: filters?.status,
       fornecedorId: filters?.fornecedor_id,
       periodo: filters?.periodo,
+      vencimentoDia: filters?.vencimento_dia,
       termo: filters?.termo,
     })
     if (!listed.ok) return { ok: false, error: listed.error }
