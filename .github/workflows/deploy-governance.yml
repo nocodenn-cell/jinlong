@@ -1,8 +1,9 @@
 # Guarda de governança de deploy — ver docs/ops/deploy-governance.md.
-# A integração GitHub->Supabase publica em produção a cada push na main
-# (migrations pendentes + Edge Functions). Este check impede que um PR que toque
-# esses caminhos entre na main sem o label explícito deploy-prod:aprovado e
-# protege as migrations adiadas (ex.: 20261010120000) contra edição/remoção.
+# Status (2026-11-06): o dono confirmou no painel do Supabase que "Deploy to production" está DESATIVADO
+# (alteração salva). A publicação automática não é mais tratada como risco ativo; este check continua
+# como barreira de governança: impede que um PR que toque migrations, functions, config.toml ou o manifesto
+# entre na main sem o label explícito deploy-prod:aprovado, e protege as migrations adiadas
+# (ex.: 20261010120000) contra edição/remoção. Este comentário não altera a lógica do check.
 name: Deploy governance
 
 on:
