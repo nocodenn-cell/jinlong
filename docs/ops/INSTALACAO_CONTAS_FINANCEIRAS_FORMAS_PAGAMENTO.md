@@ -1,5 +1,7 @@
 # Instalação — contas financeiras e formas de pagamento (F2)
 
+> **Status em 2026-11-19:** a loja matriz de produção ainda não tem conta financeira. O dono decidiu não criar contas fictícias. Esta etapa é feita na implantação, pela tela `/admin/financeiro`, com nome real e responsável confirmados. Sem ela, PIX e cartão não vendem. Ver `docs/ops/REVISAO_D1_D6_2026-11-19.md` §4.
+
 **Data:** 2026-11-07 · **Escopo:** web, loja única, sem fiscal, sem fiado · **Plano:** `docs/auditorias/PLANO_LIBERACAO_PRIMEIRO_CLIENTE_2026-11-06.md` (fase F, PR F2; decisão D-07 / P0-5)
 **Status deste documento:** instruções derivadas do código. **Nada foi executado** em produção, homologação ou banco. Itens marcados **NÃO COMPROVADO** não foram confirmados no código e precisam ser verificados na instalação.
 
