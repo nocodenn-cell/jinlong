@@ -2,6 +2,12 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { DEFAULT_PRICING_CONTEXT, type PricingContext } from '../pricing/types'
 import {
+  CARRINHO_PERSIST_VERSION,
+  decidirRecuperacaoCarrinho,
+  type ContextoCaixaRecuperacao,
+  type DecisaoRecuperacaoCarrinho,
+} from '../caixa/recuperacaoCarrinho'
+import {
   DEFAULT_MAX_DESCONTO_GERENTE_PERCENTUAL,
   aplicarDescontoGerenteSobreTotal,
   clampPercentualDesconto,
@@ -70,6 +76,24 @@ export interface CarrinhoState {
    * modelo antigo sem claim, o mesmo pedido era vendido de novo.
    */
   vendaEmEsperaOrigemId: string | null
+  /** Caixa (turno) em que o cupom foi montado. Persistido: cupom de outro turno não é retomado. */
+  caixaId: string | null
+  /** Início do cupom (primeiro item). Persistido apenas como metadado. */
+  criadoEm: string | null
+  /** Última alteração do cupom; base da validade temporal na recuperação. */
+  atualizadoEm: string | null
+  /** Vincula o cupom ao caixa aberto. Não altera itens. */
+  definirCaixaSessao: (caixaId: string | null) => void
+  /**
+   * Hidrata o cupom persistido e decide, com o contexto do caixa já carregado,
+   * se é restaurado, verificado pela chave de idempotência ou descartado.
+   * Não faz chamadas ao servidor: devolve a decisão e o chamador executa os efeitos.
+   */
+  recuperarCarrinhoPersistido: (opcoes: {
+    userId: string | null
+    lojaId?: string | null
+    caixa: ContextoCaixaRecuperacao
+  }) => Promise<DecisaoRecuperacaoCarrinho>
   adicionarItem: (item: ItemCarrinho) => void
   removerItem: (id: string) => void
   /** Repõe a última linha removida na posição original; no-op se buffer vazio. */
@@ -109,7 +133,7 @@ export interface CarrinhoState {
 
 type CartDiscountSlice = Pick<
   CarrinhoState,
-  'descontoGerentePercentual' | 'maxDescontoGerentePercentual'
+  'descontoGerentePercentual' | 'maxDescontoGerentePercentual' | 'criadoEm'
 >
 
 type CartPersistedContext = Pick<CarrinhoState, 'regras' | 'pricingCtx'>
@@ -199,13 +223,15 @@ function aplicarDescontoSobreTotais(
 function commitItensComTotais(
   state: CartDiscountSlice,
   novosItens: ItemCarrinho[],
-): ItensComTotais {
+): ItensComTotais & Pick<CarrinhoState, 'criadoEm' | 'atualizadoEm'> {
   const totais = aplicarDescontoSobreTotais(
     recalcularTotais(novosItens),
     state.descontoGerentePercentual,
     state.maxDescontoGerentePercentual,
   )
-  return { itens: novosItens, ...totais }
+  const agora = new Date().toISOString()
+  const criadoEm = novosItens.length === 0 ? null : (state.criadoEm ?? agora)
+  return { itens: novosItens, ...totais, criadoEm, atualizadoEm: agora }
 }
 
 function emptyCartFields(ctx: CartPersistedContext): Partial<CarrinhoState> {
@@ -227,6 +253,8 @@ function emptyCartFields(ctx: CartPersistedContext): Partial<CarrinhoState> {
     vendaIdempotencyKey: null,
     vendaFinalizacaoPendente: false,
     vendaEmEsperaOrigemId: null,
+    criadoEm: null,
+    atualizadoEm: null,
   }
 }
 
@@ -347,6 +375,28 @@ function applyItemDiscount(item: ItemCarrinho, descontoValor: number): ItemCarri
   })
 }
 
+/** Chaves do cupom que o store grava e aceita de volta (espelha o `partialize`). */
+const CHAVES_CUPOM_PERSISTIDO = [
+  'itens',
+  'caixaId',
+  'criadoEm',
+  'atualizadoEm',
+  'cartOwnerUserId',
+  'cartLojaId',
+  'totalBruto',
+  'totalDesconto',
+  'totalLiquido',
+  'totalItens',
+  'totalUnidades',
+  'descontoGerentePercentual',
+  'descontoGerenteValor',
+  'descontoGerenteToken',
+  'maxDescontoGerentePercentual',
+  'vendaIdempotencyKey',
+  'vendaFinalizacaoPendente',
+  'vendaEmEsperaOrigemId',
+] as const satisfies readonly (keyof CarrinhoState)[]
+
 let hydratedWithoutOwner = false
 
 function noteHydratedCart(state: Partial<CarrinhoState> | undefined): void {
@@ -370,7 +420,8 @@ function resolveMaxDescontoGerente(
   return stateMax
 }
 
-export const useCartStore = create<CarrinhoState>()(
+function criarCarrinhoStore(skipHydration: boolean) {
+  const store = create<CarrinhoState>()(
   persist(
     (set, get) => ({
       itens: [],
@@ -391,8 +442,49 @@ export const useCartStore = create<CarrinhoState>()(
       vendaIdempotencyKey: null,
       vendaFinalizacaoPendente: false,
       vendaEmEsperaOrigemId: null,
+      caixaId: null,
+      criadoEm: null,
+      atualizadoEm: null,
 
       setVendaEmEsperaOrigemId: (id) => set({ vendaEmEsperaOrigemId: id }),
+
+      definirCaixaSessao: (caixaId) => set({ caixaId }),
+
+      recuperarCarrinhoPersistido: async (opcoes) => {
+        // Contexto do caixa ainda não definitivo: não hidrata nem decide.
+        if (opcoes.caixa.status === 'carregando' || opcoes.caixa.status === 'erro') {
+          return { acao: 'aguardar' }
+        }
+        // Hidratação só acontece aqui (skipHydration): antes disso o PDV não mostra cupom antigo.
+        await store.persist.rehydrate()
+        const s = store.getState()
+        const decisao = decidirRecuperacaoCarrinho(
+          {
+            itens: s.itens,
+            cartOwnerUserId: s.cartOwnerUserId,
+            cartLojaId: s.cartLojaId,
+            caixaId: s.caixaId,
+            atualizadoEm: s.atualizadoEm,
+            vendaFinalizacaoPendente: s.vendaFinalizacaoPendente,
+            vendaIdempotencyKey: s.vendaIdempotencyKey,
+            vendaEmEsperaOrigemId: s.vendaEmEsperaOrigemId,
+          },
+          {
+            userId: opcoes.userId,
+            lojaId: opcoes.lojaId,
+            caixa: opcoes.caixa,
+            agora: Date.now(),
+          },
+        )
+        if (decisao.acao === 'restaurar' || decisao.acao === 'verificar_finalizacao') {
+          // Mantém o cupom (e a chave) para o PDV seguir com ele.
+          return decisao
+        }
+        // Não restaurar: nenhum item, pagamento ou chave sobrevive. A pendência de
+        // finalização já foi tratada acima (nunca cai aqui).
+        set({ ...emptyCartFields(s), caixaId: null })
+        return decisao
+      },
 
       garantirVendaIdempotencyKey: () => {
         const atual = get().vendaIdempotencyKey
@@ -508,6 +600,7 @@ export const useCartStore = create<CarrinhoState>()(
             ...totais,
             descontoGerenteToken: descontoAtivo ? token : null,
             maxDescontoGerentePercentual: maxPermitido,
+            atualizadoEm: new Date().toISOString(),
           }
         }),
 
@@ -524,6 +617,7 @@ export const useCartStore = create<CarrinhoState>()(
             ...totais,
             maxDescontoGerentePercentual: maxPermitido,
             descontoGerenteToken: descontoAtivo ? state.descontoGerenteToken : null,
+            atualizadoEm: new Date().toISOString(),
           }
         }),
 
@@ -571,11 +665,38 @@ export const useCartStore = create<CarrinhoState>()(
     }),
     {
       name: 'pdv-carrinho',
+      version: CARRINHO_PERSIST_VERSION,
+      // Não hidrata na criação do store: a hidratação acontece em
+      // `recuperarCarrinhoPersistido`, depois que o caixa é conhecido. Assim um cupom
+      // antigo nunca aparece antes da decisão de restaurar/descartar.
+      skipHydration,
+      // Só entram na memória as chaves do cupom. Qualquer outra chave gravada (ex.: um
+      // valor recebido de versão antiga) é ignorada na hidratação.
+      merge: (persistido, atual) => {
+        const p = (persistido ?? {}) as Partial<CarrinhoState>
+        const doCupom: Partial<CarrinhoState> = {}
+        for (const chave of CHAVES_CUPOM_PERSISTIDO) {
+          if (p[chave] !== undefined) (doCupom as Record<string, unknown>)[chave] = p[chave]
+        }
+        return { ...atual, ...doCupom }
+      },
+      // v1 não registrava caixa nem última atividade: sem isso não há como validar o
+      // cupom. Mantém os dados (para não perder finalização pendente); a decisão os
+      // descarta, exceto quando há finalização pendente, que vai ao servidor.
+      migrate: (persistido, versao) => {
+        const antigo = (persistido ?? {}) as Record<string, unknown>
+        if (versao >= CARRINHO_PERSIST_VERSION) return antigo as unknown as CarrinhoState
+        return { ...antigo, caixaId: null, criadoEm: null, atualizadoEm: null } as unknown as CarrinhoState
+      },
       // `regras`/`pricingCtx` são recarregadas no bootstrap a cada sessão; serializá-las
       // no localStorage a cada mutação (todo bip do caixa) é custo desnecessário no hot-path.
       // Persistimos só os dados do carrinho — itens/totais/dono/desconto — para rehidratar correto.
+      // Pagamentos (valor recebido, parcelas) NUNCA são persistidos.
       partialize: (state) => ({
         itens: state.itens,
+        caixaId: state.caixaId,
+        criadoEm: state.criadoEm,
+        atualizadoEm: state.atualizadoEm,
         cartOwnerUserId: state.cartOwnerUserId,
         cartLojaId: state.cartLojaId,
         totalBruto: state.totalBruto,
@@ -598,7 +719,16 @@ export const useCartStore = create<CarrinhoState>()(
       },
     },
   ),
-)
+  )
+  return store
+}
+
+/** Desktop (pdv-local): hidrata na criação, como antes. */
+export const useCartStore = criarCarrinhoStore(false)
+
+/** PDV web: hidrata só via recuperarCarrinhoPersistido, depois do status do caixa. */
+export const useCartStoreRecuperavel = criarCarrinhoStore(true)
+
 
 export function calcularTotais(itens: ItemCarrinho[]) {
   return recalcularTotais(itens)

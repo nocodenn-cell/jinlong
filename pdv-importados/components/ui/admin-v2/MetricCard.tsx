@@ -70,6 +70,7 @@ export function MetricCard({
 }: MetricCardProps) {
   const Icon = icon ? METRIC_ICONS[icon] : null
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const temSparkline = sparkData.length >= 2
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -147,24 +148,22 @@ export function MetricCard({
             className={cn(
               'font-semibold tabular-nums text-fg',
               // Valores longos (ex.: faixa de margem "R$ a R$") quebram em vez de esconder o limite superior.
+              // Valor monetário nunca é truncado com "…" (auditoria UI/UX P0-2): sem sparkline
+              // a linha tem a largura toda do card, então só cresce a fonte em ≥1400px.
               value.length > 16
                 ? 'whitespace-normal break-words text-body leading-tight [overflow-wrap:anywhere]'
-                : 'truncate text-h2 leading-none md:text-h1',
+                : cn('whitespace-nowrap text-h2 leading-none', !temSparkline && '2xl:text-h1'),
             )}
           >
             {value}
           </div>
         </div>
-        <div className="flex h-11 w-24 shrink-0 items-center justify-center">
-          {sparkData.length >= 2 ? (
-            <>
-              {sparkAriaLabel ? <span className="sr-only">{sparkAriaLabel}</span> : null}
-              <canvas ref={canvasRef} className="h-11 w-24 shrink-0" aria-hidden />
-            </>
-          ) : (
-            <div className="h-11 w-24" aria-hidden />
-          )}
-        </div>
+        {temSparkline ? (
+          <div className="flex h-11 w-16 shrink-0 items-center justify-center">
+            {sparkAriaLabel ? <span className="sr-only">{sparkAriaLabel}</span> : null}
+            <canvas ref={canvasRef} className="h-11 w-16 shrink-0" aria-hidden />
+          </div>
+        ) : null}
       </div>
 
       <div className="min-h-6">
